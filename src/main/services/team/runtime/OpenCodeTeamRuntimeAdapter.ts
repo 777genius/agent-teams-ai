@@ -1116,10 +1116,19 @@ function buildMemberBootstrapPrompt(
   const teamPrompt = input.prompt?.trim();
   const role = member.role?.trim() || member.workflow?.trim() || 'teammate';
   const workflow = member.workflow?.trim();
+  const isTeamLead =
+    member.name.trim().toLowerCase() === 'team-lead' || role.trim().toLowerCase() === 'team lead';
+  const identityLine = isTeamLead
+    ? `You are ${member.name}, the team lead for team "${input.teamName}".`
+    : `You are ${member.name}, a ${role} on team "${input.teamName}".`;
+  const messageTargets = isTeamLead
+    ? 'the human user or a teammate'
+    : 'the human user, team lead, or another teammate';
+  const senderRole = isTeamLead ? 'team lead' : 'OpenCode teammate';
   return [
     '<agent_teams_app_managed_bootstrap_briefing>',
     'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
-    `You are ${member.name}, a ${role} on team "${input.teamName}".`,
+    identityLine,
     teamPrompt ? `Team launch context:\n${teamPrompt}` : null,
     workflow ? `Workflow:\n${workflow}` : null,
     '',
@@ -1131,8 +1140,8 @@ function buildMemberBootstrapPrompt(
     'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
     'If the briefing says there are no actionable tasks, stay idle silently.',
     '',
-    'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
-    `Always set from="${member.name}" when sending a team message from this OpenCode teammate.`,
+    `When you need to message ${messageTargets}, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.`,
+    `Always set from="${member.name}" when sending a team message from this ${senderRole}.`,
     'Do not answer team/app messages only as plain assistant text when agent-teams_message_send is available.',
     '</agent_teams_app_managed_bootstrap_briefing>',
   ]

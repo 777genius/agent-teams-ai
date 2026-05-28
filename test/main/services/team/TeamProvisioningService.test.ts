@@ -4848,6 +4848,128 @@ describe('TeamProvisioningService', () => {
       });
     });
 
+    it('reports a runtime-backed OpenCode lead as a process member', async () => {
+      const teamName = 'pure-opencode-runtime-lead-team';
+      const projectPath = '/Users/test/project';
+      const runId = 'opencode-runtime-run';
+      writeLaunchConfig(teamName, projectPath, 'lead-session', []);
+      writeLaunchState(teamName, 'lead-session', {
+        'team-lead': {
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          hardFailureReason: undefined,
+          runtimePid: 333,
+          runtimeRunId: runId,
+          runtimeSessionId: 'session-team-lead',
+        },
+      });
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 333,
+          ppid: 1,
+          command: 'node /tmp/opencode-bridge.js --team-name pure-opencode-runtime-lead-team',
+        },
+      ]);
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '333': createPidusageStat(333, 456_000_000),
+      } as any);
+
+      const svc = new TeamProvisioningService();
+      (svc as any).runtimeAdapterRunByTeam.set(teamName, {
+        runId,
+        providerId: 'opencode',
+        cwd: projectPath,
+        members: {
+          'team-lead': {
+            memberName: 'team-lead',
+            providerId: 'opencode',
+            model: 'opencode/big-pickle',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            runtimePid: 333,
+            sessionId: 'session-team-lead',
+          },
+        },
+      });
+      (svc as any).aliveRunByTeam.set(teamName, runId);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+      expect(snapshot.members['team-lead']).toMatchObject({
+        alive: true,
+        backendType: 'process',
+        providerId: 'opencode',
+        runtimeModel: 'opencode/big-pickle',
+        runtimeSessionId: 'session-team-lead',
+      });
+    });
+
+    it('restores OpenCode lead runtime liveness from committed primary session evidence', async () => {
+      const teamName = 'pure-opencode-runtime-lead-restart-team';
+      const projectPath = '/Users/test/project';
+      const runId = 'opencode-runtime-run-after-restart';
+      const teamDir = path.join(tempTeamsBase, teamName);
+      fs.mkdirSync(teamDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          projectPath,
+          members: [
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              agentType: 'team-lead',
+              providerId: 'opencode',
+              model: 'opencode/big-pickle',
+            },
+          ],
+        }),
+        'utf8'
+      );
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        state: 'active',
+      });
+      await writeCommittedOpenCodeSessionStore({
+        teamName,
+        laneId: 'primary',
+        runId,
+        sessions: [
+          {
+            id: 'session-team-lead-after-restart',
+            teamName,
+            memberName: 'team-lead',
+            laneId: 'primary',
+            runId,
+            observedAt: '2026-04-22T12:00:00.000Z',
+            source: 'runtime_bootstrap_checkin',
+          },
+        ],
+      });
+
+      const svc = new TeamProvisioningService();
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+      expect(snapshot.members['team-lead']).toMatchObject({
+        alive: true,
+        backendType: 'process',
+        providerId: 'opencode',
+        runtimeModel: 'opencode/big-pickle',
+        runtimeSessionId: 'session-team-lead-after-restart',
+        livenessKind: 'confirmed_bootstrap',
+      });
+    });
+
     it('reconciles persisted launch state before building runtime snapshot metadata', async () => {
       const teamName = 'zz-runtime-snapshot-reconciles-before-live-metadata';
       const leadSessionId = 'lead-session';
@@ -14848,6 +14970,24 @@ describe('TeamProvisioningService', () => {
         })
       ).rejects.toThrow('launch boom');
 
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+              cwd: '/tmp/opencode-team',
+            }),
+            expect.objectContaining({
+              name: 'alice',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            }),
+          ],
+        })
+      );
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {},
       });
@@ -16798,6 +16938,12 @@ describe('TeamProvisioningService', () => {
           effort: 'medium',
           cwd: tempClaudeRoot,
           expectedMembers: [
+            expect.objectContaining({
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'big-pickle',
+            }),
             expect.objectContaining({
               name: 'bob',
               providerId: 'opencode',

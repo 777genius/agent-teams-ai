@@ -202,6 +202,75 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
+  it('builds a lead-specific OpenCode bootstrap prompt for team-lead sessions', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => ({
+      runId: 'run-1',
+      teamLaunchState: 'ready',
+      members: {
+        'team-lead': {
+          sessionId: 'oc-lead-session',
+          launchState: 'confirmed_alive',
+          runtimePid: 123,
+          model: 'openai/gpt-5.4-mini',
+          evidence: [
+            { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+          ],
+        },
+        alice: {
+          sessionId: 'oc-alice-session',
+          launchState: 'confirmed_alive',
+          runtimePid: 124,
+          model: 'openai/gpt-5.4-mini',
+          evidence: [
+            { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+          ],
+        },
+      },
+      warnings: [],
+      diagnostics: [],
+    }));
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-lead')),
+      launchOpenCodeTeam,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.launch(
+      launchInput({
+        expectedMembers: [
+          {
+            name: 'team-lead',
+            role: 'Team Lead',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            cwd: '/repo',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            cwd: '/repo',
+          },
+        ],
+      })
+    );
+
+    const command = launchOpenCodeTeam.mock.calls[0]?.[0];
+    const leadPrompt = command?.members.find((member) => member.name === 'team-lead')?.prompt;
+    expect(leadPrompt).toContain('You are team-lead, the team lead');
+    expect(leadPrompt).toContain('message the human user or a teammate');
+    expect(leadPrompt).toContain('Always set from="team-lead"');
+    expect(leadPrompt).not.toContain('human user, team lead, or another teammate');
+  });
+
   it('retries transient MCP readiness transport failures before prepare succeeds', async () => {
     const firstReadiness = readiness({
       state: 'mcp_unavailable',

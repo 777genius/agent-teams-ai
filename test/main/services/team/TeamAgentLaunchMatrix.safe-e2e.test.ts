@@ -144,6 +144,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.launchInputs).toHaveLength(1);
     expect(adapter.launchInputs[0]?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
       'alice',
       'bob',
     ]);
@@ -164,11 +165,28 @@ describe('Team agent launch matrix safe e2e', () => {
       runtimeModel: 'opencode/big-pickle',
     });
 
-    await expect(
-      fs.readFile(path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'), {
+    const launchState = JSON.parse(
+      await fs.readFile(path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'), {
         encoding: 'utf8',
       })
-    ).resolves.toContain('"teamLaunchState": "clean_success"');
+    ) as { expectedMembers: string[]; members: Record<string, unknown>; teamLaunchState: string };
+    expect(launchState.teamLaunchState).toBe('clean_success');
+    expect(launchState.expectedMembers).toEqual(['alice', 'bob']);
+    expect(Object.keys(launchState.members)).toEqual(['alice', 'bob']);
+    await expect(
+      readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: 'pure-opencode-safe-e2e',
+        laneId: 'primary',
+      })
+    ).resolves.toMatchObject({
+      committed: true,
+      sessions: expect.arrayContaining([
+        expect.objectContaining({ memberName: 'team-lead' }),
+        expect.objectContaining({ memberName: 'alice' }),
+        expect.objectContaining({ memberName: 'bob' }),
+      ]),
+    });
   });
 
   it('accepts pure OpenCode runtime bootstrap check-ins during adapter launch', async () => {
@@ -191,7 +209,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.bootstrapCheckins).toEqual([
       {
-        memberName: 'alice',
+        memberName: 'team-lead',
         runId,
         state: 'accepted',
       },
@@ -263,6 +281,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.launchInputs[0]?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
       'alice',
       'bob',
     ]);

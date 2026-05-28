@@ -3905,6 +3905,63 @@ Messages:
     expect(rows[0].read).toBe(false);
   });
 
+  it('routes OpenCode lead inbox rows through runtime relay when a lead session exists', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          {
+            name: 'team-lead',
+            agentType: 'team-lead',
+            providerId: 'opencode',
+            model: 'openrouter/test',
+          },
+        ],
+      })
+    );
+    seedLeadInbox(teamName, [
+      {
+        from: 'user',
+        to: 'team-lead',
+        text: 'Please coordinate.',
+        timestamp: '2026-02-23T17:06:00.000Z',
+        read: false,
+        messageId: 'opencode-lead-runtime-1',
+      },
+    ]);
+    vi.spyOn(service as any, 'hasDeliverableOpenCodeRuntimeSessionForRecipient').mockResolvedValue(
+      true
+    );
+    vi.spyOn(service, 'deliverOpenCodeMemberMessage').mockResolvedValue({
+      delivered: true,
+      diagnostics: [],
+    });
+
+    const relay = await service.relayInboxFileToLiveRecipient(teamName, 'team-lead');
+
+    expect(relay).toMatchObject({ kind: 'opencode_member', relayed: 1 });
+    expect((service as any).hasDeliverableOpenCodeRuntimeSessionForRecipient).toHaveBeenCalledWith(
+      teamName,
+      'team-lead'
+    );
+    expect(service.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        memberName: 'team-lead',
+        messageId: 'opencode-lead-runtime-1',
+        replyRecipient: 'user',
+      })
+    );
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/team-lead.json`) ?? '[]'
+    );
+    expect(rows[0].read).toBe(true);
+  });
+
   it('keeps failed OpenCode member inbox relay rows unread for retry', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';

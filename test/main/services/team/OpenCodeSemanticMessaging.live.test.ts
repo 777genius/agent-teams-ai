@@ -1,11 +1,12 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { readOpenCodeRuntimeLaneIndex } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+
 import {
   createOpenCodeLiveHarness,
   getRuntimeTranscript,
@@ -150,6 +151,140 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         }
         expect(reply).toMatchObject({
           from: memberName,
+          to: 'user',
+        });
+        expect(reply.text).toContain(expectedReply);
+      } finally {
+        await svc.stopTeam(teamName).catch(() => undefined);
+        await dispose();
+        await waitForOpenCodeLanesStopped(teamName);
+      }
+    },
+    300_000
+  );
+
+  it(
+    'relays a desktop inbox message to the OpenCode lead session and records the lead reply',
+    async () => {
+      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
+        tempDir,
+        selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+        projectPath: PROJECT_PATH,
+      });
+
+      const teamName = `opencode-lead-message-${Date.now()}`;
+      const leadName = 'team-lead';
+      const memberName = 'bob';
+      const expectedReply = `opencode-lead-message-e2e-${Date.now()}`;
+      const progressEvents: TeamProvisioningProgress[] = [];
+
+      try {
+        const { runId } = await svc.createTeam(
+          {
+            teamName,
+            cwd: PROJECT_PATH,
+            providerId: 'opencode',
+            model: selectedModel,
+            skipPermissions: true,
+            members: [
+              {
+                name: memberName,
+                role: 'Developer',
+                providerId: 'opencode',
+                model: selectedModel,
+              },
+            ],
+          },
+          (progress) => {
+            progressEvents.push(progress);
+          }
+        );
+
+        expect(runId).toBeTruthy();
+        const progressDump = progressEvents
+          .map((progress) =>
+            [
+              progress.state,
+              progress.message,
+              progress.messageSeverity,
+              progress.error,
+              progress.cliLogsTail,
+            ]
+              .filter(Boolean)
+              .join(' | ')
+          )
+          .join('\n');
+        expect(
+          progressEvents.some((progress) =>
+            progress.message.includes('OpenCode team launch is ready')
+          ),
+          progressDump
+        ).toBe(true);
+
+        const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(runtimeSnapshot.members[leadName]).toMatchObject({
+          alive: true,
+          runtimeModel: selectedModel,
+        });
+
+        const written = await new TeamInboxWriter().sendMessage(teamName, {
+          member: leadName,
+          from: 'user',
+          to: leadName,
+          source: 'user_sent',
+          text: [
+            `Reply to the app Messages UI with exactly: ${expectedReply}`,
+            `Use agent-teams_message_send with to="user" and from="${leadName}".`,
+            'Do not answer only as plain assistant text.',
+          ].join('\n'),
+        });
+
+        let lastRelay: Awaited<ReturnType<typeof svc.relayInboxFileToLiveRecipient>> | null = null;
+        const deadline = Date.now() + 90_000;
+        while (Date.now() < deadline) {
+          lastRelay = await svc.relayInboxFileToLiveRecipient(teamName, leadName, {
+            onlyMessageId: written.messageId,
+            source: 'ui-send',
+            deliveryMetadata: { replyRecipient: 'user' },
+          });
+          if (lastRelay.relayed >= 1) {
+            break;
+          }
+          if (
+            lastRelay.kind === 'opencode_lead_unsupported' ||
+            (lastRelay.lastDelivery?.delivered === false &&
+              lastRelay.lastDelivery.responsePending !== true)
+          ) {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 3_000));
+        }
+
+        expect(lastRelay).toMatchObject({
+          kind: 'opencode_member',
+          relayed: 1,
+        });
+
+        let reply: InboxMessage;
+        try {
+          reply = await waitForUserInboxReply(teamName, leadName, expectedReply, 90_000);
+        } catch (error) {
+          const transcript = await getRuntimeTranscript({
+            bridgeClient,
+            teamName,
+            memberName: leadName,
+            projectPath: PROJECT_PATH,
+          });
+          throw new Error(
+            `${error instanceof Error ? error.message : String(error)}\nLast relay: ${JSON.stringify(
+              lastRelay,
+              null,
+              2
+            )}\nTranscript: ${JSON.stringify(transcript, null, 2)}`
+          );
+        }
+        expect(reply).toMatchObject({
+          from: leadName,
           to: 'user',
         });
         expect(reply.text).toContain(expectedReply);

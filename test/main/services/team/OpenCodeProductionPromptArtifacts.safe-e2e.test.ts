@@ -63,7 +63,11 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     const launchInput = captureAdapter.launchInputs[0];
     expect(launchInput).toBeDefined();
     expect(launchInput?.prompt ?? '').toContain('production desktop app');
-    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual(['bob', 'jack']);
+    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
     expect(launchInput?.prompt?.length ?? 0).toBeGreaterThan(1_500);
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
@@ -78,7 +82,11 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(launchCommand?.leadPrompt).toContain('OpenCode members bootstrap silently');
     expect(launchCommand?.leadPrompt.length ?? 0).toBeGreaterThan(1_500);
     expect(launchCommand?.leadPrompt.length ?? 0).toBeLessThan(80_000);
-    expect(launchCommand?.members.map((member) => member.name)).toEqual(['bob', 'jack']);
+    expect(launchCommand?.members.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);

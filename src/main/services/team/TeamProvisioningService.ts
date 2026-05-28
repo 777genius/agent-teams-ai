@@ -9660,6 +9660,28 @@ export class TeamProvisioningService {
     };
   }
 
+  private async hasDeliverableOpenCodeRuntimeSessionForRecipient(
+    teamName: string,
+    memberName: string
+  ): Promise<boolean> {
+    const identity = await this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName).catch(
+      () => null
+    );
+    if (!identity?.ok) {
+      return false;
+    }
+    const runId = await this.resolveCurrentOpenCodeRuntimeRunId(teamName, identity.laneId);
+    if (!runId) {
+      return false;
+    }
+    return this.hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
+      teamName,
+      runId,
+      laneId: identity.laneId,
+      memberName: identity.canonicalMemberName,
+    });
+  }
+
   private async resolveOpenCodeMembersForRuntimeLane(
     teamName: string,
     laneId: string
@@ -14300,7 +14322,27 @@ export class TeamProvisioningService {
       if (!memberName) continue;
 
       const isLead = isLeadMember({ name: memberName, agentType: member.agentType });
-      if (isLead) {
+      const leadRuntimeMember = isLead ? getLiveRuntimeMember(memberName) : undefined;
+      const leadLaunchMember = isLead ? launchSnapshot?.members[memberName] : undefined;
+      const leadActiveRunMember = isLead ? activeRunMemberByName.get(memberName) : undefined;
+      const leadRuntimeModel =
+        leadRuntimeMember?.model?.trim() ||
+        leadActiveRunMember?.model?.trim() ||
+        leadLaunchMember?.model?.trim() ||
+        member.model?.trim() ||
+        undefined;
+      const leadProviderId =
+        normalizeOptionalTeamProviderId(leadActiveRunMember?.providerId) ??
+        normalizeOptionalTeamProviderId(leadRuntimeMember?.providerId) ??
+        normalizeOptionalTeamProviderId(leadLaunchMember?.providerId) ??
+        normalizeOptionalTeamProviderId(member.providerId) ??
+        inferTeamProviderIdFromModel(leadRuntimeModel) ??
+        (currentRuntimeAdapterRun?.providerId === 'opencode' &&
+        currentRuntimeAdapterRun.members?.[memberName]
+          ? 'opencode'
+          : undefined);
+      const useRuntimeSnapshotForLead = isLead && leadProviderId === 'opencode';
+      if (isLead && !useRuntimeSnapshotForLead) {
         const pid = run?.child?.pid;
         const usageStats = pid
           ? this.buildRuntimeProcessLoadStatsSafely(teamName, memberName, {
@@ -15986,6 +16028,7 @@ export class TeamProvisioningService {
         extraCliArgs: teamMeta?.extraCliArgs,
       },
       members: effectiveMembers,
+      leadName: leadMember?.name?.trim() || 'team-lead',
       prompt: [
         `Restarting OpenCode teammate "${targetRuntimeMember.name}" by user request.`,
         'This is an app-managed OpenCode-only runtime refresh. Re-establish the team sessions and continue from persisted team context.',
@@ -18806,6 +18849,31 @@ export class TeamProvisioningService {
     );
   }
 
+  private buildOpenCodePrimaryRuntimeMembers(input: {
+    request: TeamCreateRequest | TeamLaunchRequest;
+    members: TeamCreateRequest['members'];
+    launchCwd: string;
+    leadName?: string;
+  }): TeamCreateRequest['members'] {
+    const leadName = input.leadName?.trim() || 'team-lead';
+    const normalizedLeadName = leadName.toLowerCase();
+    const runtimeMembers = input.members.filter(
+      (member) => member.name.trim().toLowerCase() !== normalizedLeadName
+    );
+
+    return [
+      {
+        name: leadName,
+        role: 'Team Lead',
+        providerId: 'opencode',
+        model: input.request.model,
+        effort: input.request.effort,
+        cwd: input.launchCwd,
+      },
+      ...runtimeMembers,
+    ];
+  }
+
   private async materializeOpenCodeRuntimeAdapterDefaults<
     TRequest extends TeamCreateRequest | TeamLaunchRequest,
   >(params: {
@@ -20582,6 +20650,7 @@ export class TeamProvisioningService {
     return this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: launchRequest,
       members: effectiveMembers,
+      leadName: 'team-lead',
       prompt: launchRequest.prompt?.trim() ?? '',
       sourceWarning: undefined,
       onProgress,
@@ -20637,6 +20706,7 @@ export class TeamProvisioningService {
     return this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: launchRequest,
       members: effectiveMembers,
+      leadName: this.extractLeadNameFromConfigRaw(configRaw) ?? 'team-lead',
       prompt,
       sourceWarning: warning,
       onProgress,
@@ -20646,6 +20716,7 @@ export class TeamProvisioningService {
   private async runOpenCodeTeamRuntimeAdapterLaunch(input: {
     request: TeamCreateRequest | TeamLaunchRequest;
     members: TeamCreateRequest['members'];
+    leadName?: string;
     prompt: string;
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
@@ -20707,6 +20778,12 @@ export class TeamProvisioningService {
       state: 'active',
     });
     const launchCwd = this.getOpenCodeRuntimeLaunchCwd(input.request.cwd, input.members);
+    const runtimeMembers = this.buildOpenCodePrimaryRuntimeMembers({
+      request: input.request,
+      members: input.members,
+      launchCwd,
+      leadName: input.leadName,
+    });
     const launchInput: TeamRuntimeLaunchInput = {
       runId,
       laneId: 'primary',
@@ -20717,7 +20794,7 @@ export class TeamProvisioningService {
       model: input.request.model,
       effort: input.request.effort,
       skipPermissions: input.request.skipPermissions !== false,
-      expectedMembers: input.members.map((member) => ({
+      expectedMembers: runtimeMembers.map((member) => ({
         name: member.name,
         role: member.role,
         workflow: member.workflow,
@@ -20912,7 +20989,10 @@ export class TeamProvisioningService {
       result,
     });
     const members: Record<string, PersistedTeamLaunchMemberState> = {};
-    for (const member of input.expectedMembers) {
+    const persistedExpectedMembers = input.expectedMembers.filter(
+      (member) => !isLeadMember({ name: member.name })
+    );
+    for (const member of persistedExpectedMembers) {
       const evidence = committedResult.members[member.name];
       members[member.name] = this.toOpenCodePersistedLaunchMember(
         member,
@@ -20922,8 +21002,8 @@ export class TeamProvisioningService {
     }
     const snapshot = createPersistedLaunchSnapshot({
       teamName: input.teamName,
-      expectedMembers: input.expectedMembers.map((member) => member.name),
-      bootstrapExpectedMembers: input.expectedMembers.map((member) => member.name),
+      expectedMembers: persistedExpectedMembers.map((member) => member.name),
+      bootstrapExpectedMembers: persistedExpectedMembers.map((member) => member.name),
       leadSessionId: result.leadSessionId,
       launchPhase: committedResult.launchPhase,
       members,
@@ -22457,19 +22537,26 @@ export class TeamProvisioningService {
     );
     if (inboxName.trim().toLowerCase() === leadName?.toLowerCase()) {
       if (isOpenCodeRecipient) {
-        const diagnostic =
-          'opencode_lead_runtime_session_missing: OpenCode lead inbox relay is unsupported in v1; leaving inbox unread for durable retry/diagnostics.';
-        logger.warn(`[${teamName}] ${diagnostic} inbox=${inboxName}`);
+        const hasLeadSession = await this.hasDeliverableOpenCodeRuntimeSessionForRecipient(
+          teamName,
+          inboxName
+        );
+        if (!hasLeadSession) {
+          const diagnostic =
+            'opencode_lead_runtime_session_missing: OpenCode lead runtime session is not available; leaving inbox unread for durable retry/diagnostics.';
+          logger.warn(`[${teamName}] ${diagnostic} inbox=${inboxName}`);
+          return {
+            kind: 'opencode_lead_unsupported',
+            relayed: 0,
+            diagnostics: [diagnostic],
+          };
+        }
+      } else {
         return {
-          kind: 'opencode_lead_unsupported',
-          relayed: 0,
-          diagnostics: [diagnostic],
+          kind: 'native_lead',
+          relayed: this.isTeamAlive(teamName) ? await this.relayLeadInboxMessages(teamName) : 0,
         };
       }
-      return {
-        kind: 'native_lead',
-        relayed: this.isTeamAlive(teamName) ? await this.relayLeadInboxMessages(teamName) : 0,
-      };
     }
 
     if (isOpenCodeRecipient) {
@@ -25313,6 +25400,20 @@ export class TeamProvisioningService {
     );
     const activeRuntimeRunId =
       run?.runId?.trim() || currentRuntimeAdapterRun?.runId?.trim() || runId?.trim() || '';
+    const getCurrentRuntimeAdapterEvidence = (
+      memberName: string
+    ): TeamRuntimeMemberLaunchEvidence | undefined => {
+      const direct = currentRuntimeAdapterRun?.members?.[memberName];
+      if (direct) {
+        return direct;
+      }
+      return Object.entries(currentRuntimeAdapterRun?.members ?? {}).find(
+        ([candidateName, evidence]) =>
+          matchesTeamMemberIdentity(candidateName, memberName) ||
+          matchesTeamMemberIdentity(evidence.memberName ?? '', memberName)
+      )?.[1];
+    };
+    const committedPrimarySessionStatusByMember = new Map<string, MemberSpawnStatusEntry>();
     for (const persistedMember of Object.values(persistedLaunchSnapshot?.members ?? {})) {
       const memberName = persistedMember.name?.trim() ?? '';
       if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) {
@@ -25320,12 +25421,12 @@ export class TeamProvisioningService {
       }
       const activeRunMember = this.findEffectiveRunMember(run, memberName);
       const activeRunModel = activeRunMember?.model?.trim();
-      const evidenceModel = currentRuntimeAdapterRun?.members?.[memberName]?.model?.trim();
+      const currentRuntimeAdapterEvidence = getCurrentRuntimeAdapterEvidence(memberName);
+      const evidenceModel = currentRuntimeAdapterEvidence?.model?.trim();
       const activeRunProviderId =
         normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
         inferTeamProviderIdFromModel(activeRunModel ?? evidenceModel);
       const effectiveProviderId = activeRunProviderId ?? persistedMember.providerId;
-      const currentRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
       upsertMetadata(memberName, {
         backendType:
           effectiveProviderId === 'opencode'
@@ -25361,6 +25462,128 @@ export class TeamProvisioningService {
             ? { runtimeSessionId: persistedMember.runtimeSessionId }
             : {}),
       });
+    }
+
+    for (const [rawMemberName, evidence] of Object.entries(
+      currentRuntimeAdapterRun?.members ?? {}
+    )) {
+      const memberName = evidence.memberName?.trim() || rawMemberName.trim();
+      if (!memberName || memberName.toLowerCase() === 'user') {
+        continue;
+      }
+      if (this.isMemberRemovedInMeta(metaMembers, memberName)) {
+        continue;
+      }
+      const evidenceProviderId =
+        normalizeOptionalTeamProviderId(evidence.providerId) ??
+        currentRuntimeAdapterRun?.providerId;
+      const runtimeModel =
+        evidence.model?.trim() ||
+        this.findEffectiveRunMemberModel(run, memberName) ||
+        this.findConfiguredMemberModel(configuredMembers, memberName) ||
+        this.findMetaMemberModel(metaMembers, memberName);
+      upsertMetadata(memberName, {
+        backendType:
+          evidence.backendType ??
+          (evidenceProviderId === 'opencode'
+            ? 'process'
+            : metadataByMember.get(memberName)?.backendType),
+        providerId: evidenceProviderId,
+        alive: false,
+        livenessKind: evidence.livenessKind,
+        pidSource: evidence.pidSource,
+        runtimeDiagnostic: evidence.runtimeDiagnostic,
+        runtimeDiagnosticSeverity: evidence.runtimeDiagnosticSeverity,
+        ...(runtimeModel ? { model: runtimeModel } : {}),
+        ...(typeof evidence.runtimePid === 'number' && evidence.runtimePid > 0
+          ? { metricsPid: evidence.runtimePid }
+          : {}),
+        ...(evidence.sessionId ? { runtimeSessionId: evidence.sessionId } : {}),
+      });
+    }
+
+    const configuredLeadForRuntime = configuredMembers.find((member) => isLeadMember(member));
+    const primaryLeadProviderId =
+      normalizeOptionalTeamProviderId(configuredLeadForRuntime?.providerId) ??
+      inferTeamProviderIdFromModel(configuredLeadForRuntime?.model);
+    const shouldReadPrimaryOpenCodeCommittedSessions =
+      currentRuntimeAdapterRun?.providerId === 'opencode' || primaryLeadProviderId === 'opencode';
+    if (shouldReadPrimaryOpenCodeCommittedSessions) {
+      const primaryRunId = await this.resolveCurrentOpenCodeRuntimeRunId(teamName, 'primary').catch(
+        () => null
+      );
+      const committedEvidence = primaryRunId
+        ? await readCommittedOpenCodeBootstrapSessionEvidence({
+            teamsBasePath: getTeamsBasePath(),
+            teamName,
+            laneId: 'primary',
+          }).catch(() => null)
+        : null;
+      const committedActiveRunId = committedEvidence?.activeRunId?.trim() || null;
+      if (committedEvidence?.committed === true && committedActiveRunId === primaryRunId) {
+        for (const session of committedEvidence.sessions) {
+          if (session.runId !== primaryRunId) {
+            continue;
+          }
+          const memberName = session.memberName.trim();
+          if (
+            !memberName ||
+            memberName.toLowerCase() === 'user' ||
+            this.isMemberRemovedInMeta(metaMembers, memberName) ||
+            getCurrentRuntimeAdapterEvidence(memberName)
+          ) {
+            continue;
+          }
+          const configuredMember = configuredMembers.find((member) =>
+            matchesTeamMemberIdentity(member.name ?? '', memberName)
+          );
+          const metaMember = metaMembers.find((member) =>
+            matchesTeamMemberIdentity(member.name ?? '', memberName)
+          );
+          const runtimeModel =
+            this.findEffectiveRunMemberModel(run, memberName) ||
+            metaMember?.model?.trim() ||
+            configuredMember?.model?.trim() ||
+            undefined;
+          const memberProviderId =
+            normalizeOptionalTeamProviderId(metaMember?.providerId) ??
+            normalizeOptionalTeamProviderId(configuredMember?.providerId) ??
+            inferTeamProviderIdFromModel(runtimeModel) ??
+            (isLeadMember({
+              name: memberName,
+              agentType: metaMember?.agentType ?? configuredMember?.agentType,
+            }) && primaryLeadProviderId === 'opencode'
+              ? 'opencode'
+              : undefined);
+          if (memberProviderId !== 'opencode') {
+            continue;
+          }
+          const observedAt = session.observedAt ?? nowIso();
+          committedPrimarySessionStatusByMember.set(memberName, {
+            status: 'online',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            updatedAt: observedAt,
+            firstSpawnAcceptedAt: observedAt,
+            lastHeartbeatAt: observedAt,
+          });
+          upsertMetadata(memberName, {
+            backendType: 'process',
+            providerId: 'opencode',
+            alive: true,
+            livenessKind: 'confirmed_bootstrap',
+            pidSource: 'runtime_bootstrap',
+            runtimeDiagnostic: 'bootstrap confirmed',
+            runtimeDiagnosticSeverity: 'info',
+            ...(runtimeModel ? { model: runtimeModel } : {}),
+            runtimeSessionId: session.id,
+            runtimeLastSeenAt: observedAt,
+          });
+        }
+      }
     }
 
     const paneIds = [...metadataByMember.values()]
@@ -25425,7 +25648,7 @@ export class TeamProvisioningService {
     for (const [memberName, metadata] of metadataByMember.entries()) {
       const paneId = metadata.tmuxPaneId?.trim() ?? '';
       const launchMember = persistedLaunchSnapshot?.members[memberName];
-      const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+      const adapterEvidence = getCurrentRuntimeAdapterEvidence(memberName);
       const adapterStatus: MemberSpawnStatusEntry | undefined = adapterEvidence
         ? {
             status: adapterEvidence.hardFailure
@@ -25474,11 +25697,12 @@ export class TeamProvisioningService {
         launchMember
           ? this.buildLaunchMemberSpawnStatus(launchMember, metadata.model)
           : undefined;
+      const committedPrimarySessionStatus = committedPrimarySessionStatusByMember.get(memberName);
       const status = this.shouldPreferCurrentLaunchMemberStatus(trackedStatus, launchStatus)
         ? launchStatus
         : this.shouldPreferCurrentLaunchMemberStatus(trackedStatus, adapterStatus)
           ? adapterStatus
-          : (trackedStatus ?? adapterStatus ?? launchStatus);
+          : (trackedStatus ?? adapterStatus ?? launchStatus ?? committedPrimarySessionStatus);
       const resolved = resolveTeamMemberRuntimeLiveness({
         teamName,
         memberName,
@@ -37295,6 +37519,19 @@ export class TeamProvisioningService {
     } catch {
       logger.warn(`[${teamName}] Failed to parse config.json for launch fallback members`);
       return [];
+    }
+  }
+
+  private extractLeadNameFromConfigRaw(configRaw: string): string | null {
+    try {
+      const parsed = JSON.parse(configRaw) as { members?: TeamConfig['members'] };
+      if (!Array.isArray(parsed.members)) {
+        return null;
+      }
+      const lead = parsed.members.find((member) => isLeadMember(member));
+      return lead?.name?.trim() || null;
+    } catch {
+      return null;
     }
   }
 
