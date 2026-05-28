@@ -107,6 +107,25 @@ describe('buildProviderAwareCliEnv', () => {
     });
   });
 
+  it('returns narrow provider status stored credential allowlists', async () => {
+    const {
+      getAggregateProviderStatusStoredCredentialAllowlist,
+      getProviderStatusStoredCredentialAllowlist,
+    } = await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+    expect(getProviderStatusStoredCredentialAllowlist('anthropic')).toEqual([
+      'ANTHROPIC_AUTH_TOKEN',
+    ]);
+    expect(getProviderStatusStoredCredentialAllowlist('codex')).toEqual(['OPENAI_API_KEY']);
+    expect(getProviderStatusStoredCredentialAllowlist('gemini')).toBeUndefined();
+    expect(getProviderStatusStoredCredentialAllowlist('opencode')).toBeUndefined();
+    expect(getProviderStatusStoredCredentialAllowlist(undefined)).toBeUndefined();
+    expect(getAggregateProviderStatusStoredCredentialAllowlist()).toEqual([
+      'ANTHROPIC_AUTH_TOKEN',
+      'OPENAI_API_KEY',
+    ]);
+  });
+
   it('builds provider-pinned CLI env and returns provider-specific issues', async () => {
     getConfiguredConnectionIssuesMock.mockResolvedValue({
       anthropic: 'missing key',
@@ -232,6 +251,21 @@ describe('buildProviderAwareCliEnv', () => {
       }
     );
     expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('passes a stored API key decrypt allowlist through shared env building', async () => {
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await buildProviderAwareCliEnv({
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+    });
+
+    expect(applyAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(expect.any(Object), {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+    });
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
   it('builds shared env for generic CLI launches when no provider is specified', async () => {

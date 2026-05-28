@@ -10,7 +10,11 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
-import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
+import {
+  buildProviderAwareCliEnv,
+  getAggregateProviderStatusStoredCredentialAllowlist,
+  getProviderStatusStoredCredentialAllowlist,
+} from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
 import type {
@@ -838,12 +842,15 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private async buildCliEnv(
-    binaryPath: string
+    binaryPath: string,
+    options: { allowedStoredApiKeyEnvVarNames?: readonly string[] } = {}
   ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
     return buildProviderAwareCliEnv({
       binaryPath,
       allowStoredApiKeyDecryption: false,
-      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      allowedStoredApiKeyEnvVarNames: options.allowedStoredApiKeyEnvVarNames ?? [
+        'ANTHROPIC_AUTH_TOKEN',
+      ],
     });
   }
 
@@ -855,8 +862,7 @@ export class ClaudeMultimodelBridgeService {
       binaryPath,
       providerId,
       allowStoredApiKeyDecryption: false,
-      allowedStoredApiKeyEnvVarNames:
-        providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
+      allowedStoredApiKeyEnvVarNames: getProviderStatusStoredCredentialAllowlist(providerId),
     });
   }
 
@@ -1744,7 +1750,9 @@ export class ClaudeMultimodelBridgeService {
       );
     }
 
-    const { env, connectionIssues } = await this.buildCliEnv(binaryPath);
+    const { env, connectionIssues } = await this.buildCliEnv(binaryPath, {
+      allowedStoredApiKeyEnvVarNames: getAggregateProviderStatusStoredCredentialAllowlist(),
+    });
 
     try {
       const { stdout } = await execCli(binaryPath, ['runtime', 'status', '--json'], {

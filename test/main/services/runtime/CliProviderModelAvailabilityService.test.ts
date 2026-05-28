@@ -11,6 +11,12 @@ vi.mock('@main/utils/childProcess', () => ({
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
     buildProviderAwareCliEnvMock(...args),
+  getProviderStatusStoredCredentialAllowlist: (providerId?: string) =>
+    providerId === 'anthropic'
+      ? ['ANTHROPIC_AUTH_TOKEN']
+      : providerId === 'codex'
+        ? ['OPENAI_API_KEY']
+        : undefined,
 }));
 
 import {
@@ -182,6 +188,27 @@ describe('CliProviderModelAvailabilityService', () => {
         ],
         expect.objectContaining({
           env: { HOME: '/Users/tester' },
+        })
+      );
+    });
+  });
+
+  it('allows stored Codex API-key access for model probes', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      connectionIssues: {},
+    });
+    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+
+    const service = new CliProviderModelAvailabilityService();
+    service.getSnapshot(createContext(['gpt-5.4']));
+
+    await vi.waitFor(() => {
+      expect(buildProviderAwareCliEnvMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerId: 'codex',
+          allowStoredApiKeyDecryption: false,
+          allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
         })
       );
     });

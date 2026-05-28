@@ -1200,6 +1200,115 @@ describe('ProviderConnectionService', () => {
     expect(result.CODEX_API_KEY).toBe('openai-stored-key');
   });
 
+  it('mirrors a stored Codex OpenAI key when metadata-only status checks allow it', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'OPENAI_API_KEY',
+      value: 'openai-stored-key',
+    });
+    const hasPreferred = vi.fn().mockResolvedValue(true);
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'codex', undefined, {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
+    });
+
+    expect(hasPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(result.OPENAI_API_KEY).toBe('openai-stored-key');
+    expect(result.CODEX_API_KEY).toBe('openai-stored-key');
+  });
+
+  it('does not mirror a stored Codex OpenAI key during metadata-only checks without allowlist', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'OPENAI_API_KEY',
+      value: 'openai-stored-key',
+    });
+    const hasPreferred = vi.fn().mockResolvedValue(true);
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'codex', undefined, {
+      allowStoredApiKeyDecryption: false,
+    });
+
+    expect(hasPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(result.OPENAI_API_KEY).toBeUndefined();
+    expect(result.CODEX_API_KEY).toBeUndefined();
+  });
+
+  it('applies aggregate metadata-only allowlist without decrypting unrelated provider keys', async () => {
+    const lookupPreferred = vi.fn(async (envVarName: string) => {
+      if (envVarName === 'ANTHROPIC_AUTH_TOKEN') {
+        return { envVarName, value: 'anthropic-compatible-token' };
+      }
+      if (envVarName === 'OPENAI_API_KEY') {
+        return { envVarName, value: 'openai-stored-key' };
+      }
+      if (envVarName === 'GEMINI_API_KEY') {
+        return { envVarName, value: 'gemini-stored-key' };
+      }
+      return null;
+    });
+    const hasPreferred = vi.fn(async (envVarName: string) => envVarName === 'OPENAI_API_KEY');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', {
+            enabled: true,
+            baseUrl: 'http://localhost:1234',
+          }),
+      } as never
+    );
+
+    const result = await service.applyAllConfiguredConnectionEnv(
+      {},
+      {
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+      }
+    );
+
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:1234');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('anthropic-compatible-token');
+    expect(result.OPENAI_API_KEY).toBe('openai-stored-key');
+    expect(result.CODEX_API_KEY).toBe('openai-stored-key');
+    expect(result.GEMINI_API_KEY).toBeUndefined();
+    expect(lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_AUTH_TOKEN');
+    expect(lookupPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalledWith('GEMINI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalledWith('ANTHROPIC_API_KEY');
+  });
+
   it('keeps ambient OpenAI credentials for native Codex launches', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');

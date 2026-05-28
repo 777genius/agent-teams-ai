@@ -12,6 +12,14 @@ import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type ProviderEnvTargetId = CliProviderId | TeamProviderId | undefined;
 const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
+const PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST = {
+  anthropic: ['ANTHROPIC_AUTH_TOKEN'],
+  codex: ['OPENAI_API_KEY'],
+} as const;
+const AGGREGATE_PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST = [
+  'ANTHROPIC_AUTH_TOKEN',
+  'OPENAI_API_KEY',
+] as const;
 
 export interface ProviderAwareCliEnvOptions {
   binaryPath?: string | null;
@@ -28,6 +36,20 @@ export interface ProviderAwareCliEnvResult {
   env: NodeJS.ProcessEnv;
   connectionIssues: Partial<Record<CliProviderId, string>>;
   providerArgs: string[];
+}
+
+export function getProviderStatusStoredCredentialAllowlist(
+  providerId: ProviderEnvTargetId
+): readonly string[] | undefined {
+  if (providerId === 'anthropic' || providerId === 'codex') {
+    return PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST[providerId];
+  }
+
+  return undefined;
+}
+
+export function getAggregateProviderStatusStoredCredentialAllowlist(): readonly string[] {
+  return AGGREGATE_PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST;
 }
 
 function removeGlobalElectronRunAsNodeEnv(env: NodeJS.ProcessEnv): void {

@@ -3,7 +3,10 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
-import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
+import {
+  buildProviderAwareCliEnv,
+  getProviderStatusStoredCredentialAllowlist,
+} from './providerAwareCliEnv';
 import {
   buildProviderModelProbeArgs,
   classifyProviderModelProbeFailure,
@@ -194,8 +197,9 @@ export class CliProviderModelAvailabilityService {
         binaryPath: context.binaryPath,
         providerId: context.provider.providerId,
         allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames:
-          context.provider.providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
+        allowedStoredApiKeyEnvVarNames: getProviderStatusStoredCredentialAllowlist(
+          context.provider.providerId
+        ),
       }).then((result) => ({
         env: result.env,
         providerArgs: result.providerArgs ?? [],
