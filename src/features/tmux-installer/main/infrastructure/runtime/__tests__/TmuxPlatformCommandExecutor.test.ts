@@ -104,7 +104,7 @@ describe('TmuxPlatformCommandExecutor', () => {
     setPlatform('win32');
     const execInPreferredDistro = vi.fn(async () => ({
       exitCode: 0,
-      stdout: '  42   1 opencode runtime --team-name demo\n',
+      stdout: '  42   1  3.5  1024 opencode runtime --team-name demo\n',
       stderr: '',
     }));
     const executor = new TmuxPlatformCommandExecutor(
@@ -116,9 +116,20 @@ describe('TmuxPlatformCommandExecutor', () => {
     );
 
     await expect(executor.listRuntimeProcesses()).resolves.toEqual([
-      { pid: 42, ppid: 1, command: 'opencode runtime --team-name demo' },
+      {
+        pid: 42,
+        ppid: 1,
+        command: 'opencode runtime --team-name demo',
+        cpuPercent: 3.5,
+        rssBytes: 1024 * 1024,
+      },
     ]);
-    expect(execInPreferredDistro).toHaveBeenCalledWith(['ps', '-ax', '-o', 'pid=,ppid=,command=']);
+    expect(execInPreferredDistro).toHaveBeenCalledWith([
+      'ps',
+      '-ax',
+      '-o',
+      'pid=,ppid=,pcpu=,rss=,command=',
+    ]);
     expect(childProcess.execFile).not.toHaveBeenCalled();
   });
 });

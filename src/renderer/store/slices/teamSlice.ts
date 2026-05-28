@@ -219,6 +219,7 @@ const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const POST_PAINT_TEAM_ENRICHMENT_FALLBACK_MS = 500;
+const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
 const inFlightTeamDataRequests = new Map<string, Promise<TeamViewSnapshot>>();
 const inFlightRefreshTeamDataCalls = new Map<string, Set<symbol>>();
 const pendingFreshTeamDataRefreshes = new Set<string>();
@@ -1543,6 +1544,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     const runRefresh = async (): Promise<void> => {
       do {
+        const isFollowUpRefresh = pendingFreshGlobalTasksRefresh;
+        if (isFollowUpRefresh) {
+          await sleep(GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS);
+        }
         pendingFreshGlobalTasksRefresh = false;
 
         // Show skeleton only on the very first fetch — not on subsequent refreshes

@@ -687,6 +687,26 @@ type BootstrapTranscriptOutcome =
       reason: string;
     };
 
+interface BootstrapTranscriptIndexedLine {
+  startOffset: number;
+  endOffset: number;
+  timestampMs: number;
+  timestampText?: string;
+  agentName?: string | null;
+  text?: string | null;
+}
+
+interface BootstrapTranscriptFileIndex {
+  filePath: string;
+  size: number;
+  mtimeMs: number;
+  dev: number;
+  ino: number;
+  partialText: string;
+  partialStartOffset: number;
+  lines: BootstrapTranscriptIndexedLine[];
+}
+
 import type {
   ActiveToolCall,
   AgentActionMode,
@@ -754,6 +774,7 @@ import type {
 // its initial two-sample pass. Keep this above slow PowerShell startup time, or
 // the first sample can expire before the recursive second read and loop again.
 const RUNTIME_PIDUSAGE_OPTIONS = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
+const READ_PROCESS_COMMAND_TIMEOUT_MS = 1_000;
 
 interface RuntimeProcessUsageStats {
   rssBytes?: number;
@@ -3292,6 +3313,8 @@ export class TeamProvisioningService {
   private static readonly AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT = 60;
   private static readonly MAX_RUNTIME_TREE_PIDS_PER_ROOT = 64;
   private static readonly MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT = 512;
+  private static readonly RUNTIME_PROCESS_TABLE_CACHE_TTL_MS = 2_000;
+  private static readonly RUNTIME_PROCESS_USAGE_CACHE_TTL_MS = 2_000;
   private static readonly RUNTIME_PROCESS_TABLE_TIMEOUT_MS = 1_500;
   private static readonly RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS = 1_500;
   private static readonly RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS = 2_000;
@@ -3302,6 +3325,8 @@ export class TeamProvisioningService {
   private static readonly RETAINED_PROVISIONING_PROGRESS_TTL_MS = 5 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_ADVISORY_EVENT_TTL_MS = 24 * 60 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_LEAD_NOTICE_TTL_MS = 24 * 60 * 60_000;
+  private static readonly BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX = 20_000;
+  private static readonly BOOTSTRAP_TRANSCRIPT_FILE_INDEX_MAX = 512;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -3395,6 +3420,38 @@ export class TeamProvisioningService {
       rows: RuntimeTelemetryProcessTableRow[] | null;
       includesWindowsHostRows: boolean;
     }
+  >();
+  private runtimeProcessTableCache:
+    | {
+        expiresAtMs: number;
+        rows: RuntimeTelemetryProcessTableRow[] | null;
+      }
+    | undefined;
+  private runtimeProcessTableInFlight:
+    | Promise<RuntimeTelemetryProcessTableRow[] | null>
+    | undefined;
+  private readonly runtimeProcessUsageStatsCacheByPid = new Map<
+    number,
+    {
+      expiresAtMs: number;
+      stats: RuntimeProcessUsageStats | null;
+    }
+  >();
+  private readonly bootstrapTranscriptOutcomeCache = new Map<
+    string,
+    BootstrapTranscriptOutcome | null
+  >();
+  private readonly bootstrapTranscriptOutcomeInFlight = new Map<
+    string,
+    Promise<BootstrapTranscriptOutcome | null>
+  >();
+  private readonly bootstrapTranscriptFileIndexByPath = new Map<
+    string,
+    BootstrapTranscriptFileIndex
+  >();
+  private readonly bootstrapTranscriptFileIndexInFlight = new Map<
+    string,
+    Promise<BootstrapTranscriptFileIndex | null>
   >();
   private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
     string,
@@ -5126,6 +5183,7 @@ export class TeamProvisioningService {
       return execFileSync('ps', ['-p', String(pid), '-o', 'command='], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: READ_PROCESS_COMMAND_TIMEOUT_MS,
       }).trim();
     } catch {
       return null;
@@ -14084,8 +14142,9 @@ export class TeamProvisioningService {
     }
     let runtimeUsageTreesByRootPid = new Map<number, { pids: number[]; truncated: boolean }>();
     let usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
+    let runtimeProcessRowsForSnapshot: RuntimeTelemetryProcessTableRow[] | null = null;
     try {
-      const runtimeProcessRows =
+      runtimeProcessRowsForSnapshot =
         runtimeRootOwnersByPid.size > 0
           ? await this.readRuntimeProcessRowsForUsageSnapshot(teamName, {
               includeWindowsHostRows: process.platform === 'win32',
@@ -14093,18 +14152,31 @@ export class TeamProvisioningService {
           : null;
       this.addRuntimeRootOwnersFromProcessRows(
         teamName,
-        runtimeProcessRows,
+        runtimeProcessRowsForSnapshot,
         runtimeRootOwnersByPid
       );
       runtimeUsageTreesByRootPid = this.buildRuntimeUsageProcessTrees(
         [...runtimeUsageRootPids],
-        runtimeProcessRows,
+        runtimeProcessRowsForSnapshot,
         runtimeRootOwnersByPid
       );
       const runtimeUsagePids = [
         ...new Set([...runtimeUsageTreesByRootPid.values()].flatMap((tree) => tree.pids)),
       ];
-      usageStatsByPid = await this.readProcessUsageStatsByPid(runtimeUsagePids);
+      usageStatsByPid = this.buildProcessUsageStatsFromRows(
+        runtimeProcessRowsForSnapshot,
+        runtimeUsagePids
+      );
+      const pidsMissingUsageStats =
+        runtimeProcessRowsForSnapshot == null
+          ? runtimeUsagePids.filter((pid) => !usageStatsByPid.has(pid))
+          : [];
+      if (pidsMissingUsageStats.length > 0) {
+        const sampledUsageStats = await this.readProcessUsageStatsByPid(pidsMissingUsageStats);
+        for (const [pid, stats] of sampledUsageStats) {
+          usageStatsByPid.set(pid, stats);
+        }
+      }
     } catch (error) {
       logger.debug(
         `[${teamName}] Runtime telemetry sampling failed; continuing without resource metrics: ${
@@ -14409,6 +14481,7 @@ export class TeamProvisioningService {
         rssPid &&
         !usageStatsByPid.has(rssPid) &&
         isSharedOpenCodeHost &&
+        runtimeProcessRowsForSnapshot == null &&
         typeof rssPid === 'number' &&
         rssPid > 0
       ) {
@@ -25278,26 +25351,11 @@ export class TeamProvisioningService {
       }
     }
 
-    let processRows: RuntimeTelemetryProcessTableRow[] = [];
-    let processTableAvailable = true;
-    try {
-      processRows =
-        this.normalizeRuntimeProcessRowsForTelemetry(
-          await this.withRuntimeTelemetryTimeout(
-            listRuntimeProcessTableForCurrentPlatform(),
-            TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-            'process table runtime snapshot'
-          ),
-          process.platform === 'win32' ? 'wsl' : 'native'
-        ) ?? [];
-    } catch (error) {
-      processTableAvailable = false;
-      logger.debug(
-        `[${teamName}] Failed to read process table for runtime snapshot: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
+    const currentProcessRows = await this.readCurrentRuntimeProcessTableRows(
+      'process table runtime snapshot'
+    );
+    const processRows = currentProcessRows ?? [];
+    const processTableAvailable = currentProcessRows !== null;
     this.runtimeProcessRowsForUsageSnapshotByTeam.set(teamName, {
       expiresAtMs: Date.now() + TeamProvisioningService.AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS,
       generation: generationAtStart,
@@ -25667,6 +25725,8 @@ export class TeamProvisioningService {
       const pid = normalizeRuntimeTelemetryNumber(candidate.pid);
       const ppid = normalizeRuntimeTelemetryNumber(candidate.ppid);
       const command = typeof candidate.command === 'string' ? candidate.command.trim() : '';
+      const cpuPercent = normalizeRuntimeTelemetryNumber(candidate.cpuPercent);
+      const rssBytes = normalizeRuntimeTelemetryNumber(candidate.rssBytes);
       if (pid != null && pid > 0 && ppid != null && ppid >= 0 && command.length > 0) {
         const runtimeTelemetrySource =
           source ??
@@ -25679,11 +25739,76 @@ export class TeamProvisioningService {
           pid: Math.floor(pid),
           ppid: Math.floor(ppid),
           command,
+          ...(cpuPercent != null && cpuPercent >= 0 ? { cpuPercent } : {}),
+          ...(rssBytes != null && rssBytes >= 0 ? { rssBytes } : {}),
           ...(runtimeTelemetrySource ? { runtimeTelemetrySource } : {}),
         });
       }
     }
     return normalizedRows;
+  }
+
+  private async readCurrentRuntimeProcessTableRows(
+    label: string
+  ): Promise<RuntimeTelemetryProcessTableRow[] | null> {
+    const cached = this.runtimeProcessTableCache;
+    if (cached && cached.expiresAtMs > Date.now()) {
+      return cached.rows;
+    }
+
+    if (this.runtimeProcessTableInFlight) {
+      return this.runtimeProcessTableInFlight;
+    }
+
+    const request = this.withRuntimeTelemetryTimeout(
+      listRuntimeProcessTableForCurrentPlatform(),
+      TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
+      label
+    )
+      .then(
+        (rows) =>
+          this.normalizeRuntimeProcessRowsForTelemetry(
+            rows,
+            process.platform === 'win32' ? 'wsl' : 'native'
+          ) ?? []
+      )
+      .catch((error: unknown) => {
+        logger.debug(
+          `Failed to read process table for ${label}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return null;
+      })
+      .then((rows) => {
+        this.runtimeProcessTableCache = {
+          expiresAtMs: Date.now() + TeamProvisioningService.RUNTIME_PROCESS_TABLE_CACHE_TTL_MS,
+          rows,
+        };
+        return rows;
+      })
+      .finally(() => {
+        if (this.runtimeProcessTableInFlight === request) {
+          this.runtimeProcessTableInFlight = undefined;
+        }
+      });
+    this.runtimeProcessTableInFlight = request;
+    return request;
+  }
+
+  private findRuntimeProcessCommandByPid(
+    processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
+    pid: number
+  ): string | null {
+    if (!Array.isArray(processRows) || !Number.isFinite(pid) || pid <= 0) {
+      return null;
+    }
+    for (const row of processRows) {
+      if (row.pid === pid) {
+        return row.command.trim() || null;
+      }
+    }
+    return null;
   }
 
   private async readRuntimeProcessRowsForUsageSnapshot(
@@ -25709,16 +25834,9 @@ export class TeamProvisioningService {
     let runtimeProcessTableAvailable = rows != null;
     try {
       if (!rows) {
-        rows =
-          this.normalizeRuntimeProcessRowsForTelemetry(
-            await this.withRuntimeTelemetryTimeout(
-              listRuntimeProcessTableForCurrentPlatform(),
-              TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-              'process table runtime telemetry'
-            ),
-            process.platform === 'win32' ? 'wsl' : 'native'
-          ) ?? [];
-        runtimeProcessTableAvailable = true;
+        rows = await this.readCurrentRuntimeProcessTableRows('process table runtime telemetry');
+        runtimeProcessTableAvailable = rows != null;
+        rows = rows ?? [];
       }
     } catch (error) {
       logger.debug(
@@ -26046,6 +26164,28 @@ export class TeamProvisioningService {
     }
   }
 
+  private buildProcessUsageStatsFromRows(
+    processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
+    pids: readonly number[]
+  ): Map<number, RuntimeProcessUsageStats> {
+    const usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
+    const requestedPids = new Set(pids.filter((pid) => Number.isFinite(pid) && pid > 0));
+    if (!Array.isArray(processRows) || requestedPids.size === 0) {
+      return usageStatsByPid;
+    }
+
+    for (const row of processRows) {
+      if (!requestedPids.has(row.pid)) {
+        continue;
+      }
+      const usageStats = this.normalizeRuntimeProcessUsageStats(row);
+      if (usageStats) {
+        usageStatsByPid.set(row.pid, usageStats);
+      }
+    }
+    return usageStatsByPid;
+  }
+
   private async readProcessUsageStatsByPid(
     pids: readonly number[]
   ): Promise<Map<number, RuntimeProcessUsageStats>> {
@@ -26056,20 +26196,57 @@ export class TeamProvisioningService {
     }
 
     const usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
+    const pidsToRead: number[] = [];
+    const now = Date.now();
+    for (const pid of uniquePids) {
+      const cached = this.runtimeProcessUsageStatsCacheByPid.get(pid);
+      if (cached && cached.expiresAtMs > now) {
+        if (cached.stats) {
+          usageStatsByPid.set(pid, { ...cached.stats });
+        }
+        continue;
+      }
+      pidsToRead.push(pid);
+    }
+    if (pidsToRead.length === 0) {
+      return usageStatsByPid;
+    }
+
+    const rememberUsageStats = (
+      pid: number,
+      stats: RuntimeProcessUsageStats | null | undefined
+    ): void => {
+      const normalized = stats ? { ...stats } : null;
+      this.runtimeProcessUsageStatsCacheByPid.set(pid, {
+        expiresAtMs: Date.now() + TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
+        stats: normalized,
+      });
+      if (normalized) {
+        usageStatsByPid.set(pid, { ...normalized });
+      }
+    };
+
     const options = RUNTIME_PIDUSAGE_OPTIONS;
     try {
       const statsByPid = await this.withRuntimeTelemetryTimeout(
-        pidusage(uniquePids, options),
+        pidusage(pidsToRead, options),
         TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
         'pidusage batch runtime telemetry'
       );
+      const observedPids = new Set<number>();
       for (const [rawPid, stat] of Object.entries(
         statsByPid && typeof statsByPid === 'object' ? statsByPid : {}
       )) {
         const pid = Number.parseInt(rawPid, 10);
         const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
-        if (Number.isFinite(pid) && pid > 0 && usageStats) {
-          usageStatsByPid.set(pid, usageStats);
+        if (Number.isFinite(pid) && pid > 0) {
+          observedPids.add(pid);
+          rememberUsageStats(pid, usageStats);
+        }
+      }
+      for (const pid of pidsToRead) {
+        if (!observedPids.has(pid)) {
+          rememberUsageStats(pid, null);
         }
       }
       return usageStatsByPid;
@@ -26087,10 +26264,10 @@ export class TeamProvisioningService {
 
     for (
       let offset = 0;
-      offset < uniquePids.length;
+      offset < pidsToRead.length;
       offset += TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY
     ) {
-      const chunk = uniquePids.slice(
+      const chunk = pidsToRead.slice(
         offset,
         offset + TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY
       );
@@ -26103,13 +26280,12 @@ export class TeamProvisioningService {
               `pidusage runtime telemetry pid=${pid}`
             );
             const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
-            if (usageStats) {
-              usageStatsByPid.set(pid, usageStats);
-            }
+            rememberUsageStats(pid, usageStats);
           } catch (error) {
             if (error instanceof RuntimeTelemetryTimeoutError) {
               logger.debug(error.message);
             }
+            rememberUsageStats(pid, null);
             // Process likely exited between discovery and sampling.
           }
         })
@@ -30026,7 +30202,6 @@ export class TeamProvisioningService {
       contextMemberNames?: readonly string[];
     } = {}
   ): Promise<BootstrapTranscriptOutcome | null> {
-    let handle: fs.promises.FileHandle | null = null;
     const normalizedMemberName = memberName.trim().toLowerCase();
     const contextMemberNames = Array.from(
       new Set(
@@ -30035,14 +30210,472 @@ export class TeamProvisioningService {
           .filter(Boolean)
       )
     );
+    let stat: Awaited<ReturnType<typeof fs.promises.stat>>;
     try {
-      handle = await fs.promises.open(filePath, 'r');
-      const stat = await handle.stat();
+      stat = await fs.promises.stat(filePath);
       if (!stat.isFile() || stat.size <= 0) {
         return null;
       }
-      const start = Math.max(0, stat.size - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES);
-      const buffer = Buffer.alloc(stat.size - start);
+    } catch {
+      return null;
+    }
+
+    const cacheKey = [
+      filePath,
+      stat.mtimeMs,
+      stat.size,
+      sinceMs ?? '',
+      memberName.trim().toLowerCase(),
+      teamName.trim().toLowerCase(),
+      options.allowAnonymousFailure === true ? 'anonymous' : 'named',
+      contextMemberNames
+        .map((name) => name.toLowerCase())
+        .sort()
+        .join('\0'),
+    ].join('\0');
+    if (this.bootstrapTranscriptOutcomeCache.has(cacheKey)) {
+      const cached = this.bootstrapTranscriptOutcomeCache.get(cacheKey);
+      return cached ? { ...cached } : null;
+    }
+
+    const existing = this.bootstrapTranscriptOutcomeInFlight.get(cacheKey);
+    if (existing) {
+      const outcome = await existing;
+      return outcome ? { ...outcome } : null;
+    }
+
+    const request = this.scanRecentBootstrapTranscriptOutcome({
+      filePath,
+      statSize: stat.size,
+      statMtimeMs: stat.mtimeMs,
+      statDev: Number(stat.dev),
+      statIno: Number(stat.ino),
+      sinceMs,
+      normalizedMemberName,
+      contextMemberNames,
+      memberName,
+      teamName,
+      normalizedTeamName: teamName.trim().toLowerCase(),
+      allowAnonymousFailure: options.allowAnonymousFailure === true,
+    })
+      .then((outcome) => {
+        this.rememberBootstrapTranscriptOutcome(cacheKey, outcome);
+        return outcome;
+      })
+      .finally(() => {
+        if (this.bootstrapTranscriptOutcomeInFlight.get(cacheKey) === request) {
+          this.bootstrapTranscriptOutcomeInFlight.delete(cacheKey);
+        }
+      });
+    this.bootstrapTranscriptOutcomeInFlight.set(cacheKey, request);
+    const outcome = await request;
+    return outcome ? { ...outcome } : null;
+  }
+
+  private rememberBootstrapTranscriptOutcome(
+    cacheKey: string,
+    outcome: BootstrapTranscriptOutcome | null
+  ): void {
+    this.bootstrapTranscriptOutcomeCache.set(cacheKey, outcome ? { ...outcome } : null);
+    if (
+      this.bootstrapTranscriptOutcomeCache.size <=
+      TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX
+    ) {
+      return;
+    }
+    const oldestKey = this.bootstrapTranscriptOutcomeCache.keys().next().value;
+    if (oldestKey) {
+      this.bootstrapTranscriptOutcomeCache.delete(oldestKey);
+    }
+  }
+
+  private async scanRecentBootstrapTranscriptOutcome(input: {
+    filePath: string;
+    statSize: number;
+    statMtimeMs: number;
+    statDev: number;
+    statIno: number;
+    sinceMs: number | null;
+    normalizedMemberName: string;
+    contextMemberNames: readonly string[];
+    memberName: string;
+    teamName: string;
+    normalizedTeamName: string;
+    allowAnonymousFailure: boolean;
+  }): Promise<BootstrapTranscriptOutcome | null> {
+    const indexedLines = await this.readBootstrapTranscriptIndexedLines(input).catch(() => null);
+    if (indexedLines) {
+      return this.selectBootstrapTranscriptOutcomeFromIndexedLines(indexedLines, input);
+    }
+    return this.scanRecentBootstrapTranscriptOutcomeFromFile(input);
+  }
+
+  private async readBootstrapTranscriptIndexedLines(input: {
+    filePath: string;
+    statSize: number;
+    statMtimeMs: number;
+    statDev: number;
+    statIno: number;
+  }): Promise<BootstrapTranscriptIndexedLine[] | null> {
+    const cached = this.bootstrapTranscriptFileIndexByPath.get(input.filePath);
+    if (
+      cached &&
+      cached.size === input.statSize &&
+      cached.mtimeMs === input.statMtimeMs &&
+      cached.dev === input.statDev &&
+      cached.ino === input.statIno
+    ) {
+      return cached.lines;
+    }
+
+    const inFlightKey = `${input.filePath}\0${input.statSize}\0${input.statMtimeMs}`;
+    const existing = this.bootstrapTranscriptFileIndexInFlight.get(inFlightKey);
+    if (existing) {
+      const index = await existing;
+      return index?.lines ?? null;
+    }
+
+    const request = this.readBootstrapTranscriptFileIndex(input)
+      .then((index) => {
+        if (index) {
+          this.rememberBootstrapTranscriptFileIndex(index);
+        }
+        return index;
+      })
+      .finally(() => {
+        if (this.bootstrapTranscriptFileIndexInFlight.get(inFlightKey) === request) {
+          this.bootstrapTranscriptFileIndexInFlight.delete(inFlightKey);
+        }
+      });
+    this.bootstrapTranscriptFileIndexInFlight.set(inFlightKey, request);
+    const index = await request;
+    return index?.lines ?? null;
+  }
+
+  private rememberBootstrapTranscriptFileIndex(index: BootstrapTranscriptFileIndex): void {
+    this.bootstrapTranscriptFileIndexByPath.set(index.filePath, index);
+    if (
+      this.bootstrapTranscriptFileIndexByPath.size <=
+      TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_FILE_INDEX_MAX
+    ) {
+      return;
+    }
+    const oldestKey = this.bootstrapTranscriptFileIndexByPath.keys().next().value;
+    if (oldestKey) {
+      this.bootstrapTranscriptFileIndexByPath.delete(oldestKey);
+    }
+  }
+
+  private async readBootstrapTranscriptFileIndex(input: {
+    filePath: string;
+    statSize: number;
+    statMtimeMs: number;
+    statDev: number;
+    statIno: number;
+  }): Promise<BootstrapTranscriptFileIndex | null> {
+    const cached = this.bootstrapTranscriptFileIndexByPath.get(input.filePath);
+    if (
+      cached &&
+      input.statSize > cached.size &&
+      cached.dev === input.statDev &&
+      cached.ino === input.statIno &&
+      input.statMtimeMs >= cached.mtimeMs
+    ) {
+      const appended = await this.appendBootstrapTranscriptFileIndex(cached, input).catch(
+        () => null
+      );
+      if (appended) {
+        return appended;
+      }
+    }
+    return this.rebuildBootstrapTranscriptFileIndex(input);
+  }
+
+  private async rebuildBootstrapTranscriptFileIndex(input: {
+    filePath: string;
+    statSize: number;
+    statMtimeMs: number;
+    statDev: number;
+    statIno: number;
+  }): Promise<BootstrapTranscriptFileIndex | null> {
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      handle = await fs.promises.open(input.filePath, 'r');
+      const start = Math.max(
+        0,
+        input.statSize - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES
+      );
+      const buffer = Buffer.alloc(input.statSize - start);
+      if (buffer.length === 0) {
+        return {
+          filePath: input.filePath,
+          size: input.statSize,
+          mtimeMs: input.statMtimeMs,
+          dev: input.statDev,
+          ino: input.statIno,
+          partialText: '',
+          partialStartOffset: input.statSize,
+          lines: [],
+        };
+      }
+      await handle.read(buffer, 0, buffer.length, start);
+      let text = buffer.toString('utf8');
+      let offsetBase = start;
+      if (start > 0) {
+        const firstNewlineIndex = text.indexOf('\n');
+        if (firstNewlineIndex < 0) {
+          return {
+            filePath: input.filePath,
+            size: input.statSize,
+            mtimeMs: input.statMtimeMs,
+            dev: input.statDev,
+            ino: input.statIno,
+            partialText: '',
+            partialStartOffset: input.statSize,
+            lines: [],
+          };
+        }
+        const droppedText = text.slice(0, firstNewlineIndex + 1);
+        offsetBase += Buffer.byteLength(droppedText, 'utf8');
+        text = text.slice(firstNewlineIndex + 1);
+      }
+      const parsed = this.parseBootstrapTranscriptIndexChunk(text, offsetBase);
+      const index: BootstrapTranscriptFileIndex = {
+        filePath: input.filePath,
+        size: input.statSize,
+        mtimeMs: input.statMtimeMs,
+        dev: input.statDev,
+        ino: input.statIno,
+        partialText: parsed.partialText,
+        partialStartOffset: parsed.partialStartOffset,
+        lines: parsed.lines,
+      };
+      this.pruneBootstrapTranscriptFileIndex(index);
+      return index;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
+  private async appendBootstrapTranscriptFileIndex(
+    cached: BootstrapTranscriptFileIndex,
+    input: {
+      filePath: string;
+      statSize: number;
+      statMtimeMs: number;
+      statDev: number;
+      statIno: number;
+    }
+  ): Promise<BootstrapTranscriptFileIndex | null> {
+    if (cached.filePath !== input.filePath || input.statSize <= cached.size) {
+      return null;
+    }
+
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      handle = await fs.promises.open(input.filePath, 'r');
+      const appendSize = input.statSize - cached.size;
+      const buffer = Buffer.alloc(appendSize);
+      await handle.read(buffer, 0, buffer.length, cached.size);
+      const parsed = this.parseBootstrapTranscriptIndexChunk(
+        `${cached.partialText}${buffer.toString('utf8')}`,
+        cached.partialStartOffset
+      );
+      const index: BootstrapTranscriptFileIndex = {
+        filePath: input.filePath,
+        size: input.statSize,
+        mtimeMs: input.statMtimeMs,
+        dev: input.statDev,
+        ino: input.statIno,
+        partialText: parsed.partialText,
+        partialStartOffset: parsed.partialStartOffset,
+        lines: [...cached.lines, ...parsed.lines],
+      };
+      this.pruneBootstrapTranscriptFileIndex(index);
+      return index;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
+  private parseBootstrapTranscriptIndexChunk(
+    text: string,
+    offsetBase: number
+  ): {
+    lines: BootstrapTranscriptIndexedLine[];
+    partialText: string;
+    partialStartOffset: number;
+  } {
+    const lines: BootstrapTranscriptIndexedLine[] = [];
+    const parts = text.split('\n');
+    const hasTrailingNewline = text.endsWith('\n');
+    const completeCount = parts.length - 1;
+    let cursor = offsetBase;
+
+    for (let index = 0; index < completeCount; index += 1) {
+      const rawLine = parts[index] ?? '';
+      const lineStart = cursor;
+      const lineEnd = lineStart + Buffer.byteLength(rawLine, 'utf8') + 1;
+      const indexed = this.parseBootstrapTranscriptIndexedLine(rawLine, lineStart, lineEnd);
+      if (indexed) {
+        lines.push(indexed);
+      }
+      cursor = lineEnd;
+    }
+
+    const finalLine = hasTrailingNewline ? '' : (parts[parts.length - 1] ?? '');
+    if (!hasTrailingNewline && finalLine.length > 0) {
+      const lineStart = cursor;
+      const lineEnd = lineStart + Buffer.byteLength(finalLine, 'utf8');
+      const indexed = this.parseBootstrapTranscriptIndexedLine(finalLine, lineStart, lineEnd);
+      if (indexed) {
+        lines.push(indexed);
+        return { lines, partialText: '', partialStartOffset: lineEnd };
+      }
+      return { lines, partialText: finalLine, partialStartOffset: lineStart };
+    }
+
+    return { lines, partialText: '', partialStartOffset: cursor };
+  }
+
+  private parseBootstrapTranscriptIndexedLine(
+    rawLine: string,
+    startOffset: number,
+    endOffset: number
+  ): BootstrapTranscriptIndexedLine | null {
+    const line = rawLine.trim();
+    if (!line) {
+      return null;
+    }
+    let parsed: { timestamp?: unknown } | null = null;
+    try {
+      parsed = JSON.parse(line) as { timestamp?: unknown };
+    } catch {
+      return null;
+    }
+    const timestampText =
+      typeof parsed.timestamp === 'string' && parsed.timestamp.trim().length > 0
+        ? parsed.timestamp.trim()
+        : undefined;
+    const timestampMs = timestampText ? Date.parse(timestampText) : Number.NaN;
+    const agentName =
+      typeof (parsed as { agentName?: unknown }).agentName === 'string'
+        ? (parsed as { agentName?: string }).agentName?.trim().toLowerCase() || null
+        : null;
+    return {
+      startOffset,
+      endOffset,
+      timestampMs,
+      ...(timestampText ? { timestampText } : {}),
+      ...(agentName ? { agentName } : {}),
+      text: extractTranscriptMessageText(parsed),
+    };
+  }
+
+  private pruneBootstrapTranscriptFileIndex(index: BootstrapTranscriptFileIndex): void {
+    const cutoff = Math.max(0, index.size - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES);
+    index.lines = index.lines.filter((line) => line.startOffset >= cutoff);
+    if (index.partialStartOffset < cutoff) {
+      index.partialText = '';
+      index.partialStartOffset = index.size;
+    }
+  }
+
+  private selectBootstrapTranscriptOutcomeFromIndexedLines(
+    lines: readonly BootstrapTranscriptIndexedLine[],
+    input: {
+      sinceMs: number | null;
+      normalizedMemberName: string;
+      contextMemberNames: readonly string[];
+      memberName: string;
+      teamName: string;
+      allowAnonymousFailure: boolean;
+    }
+  ): BootstrapTranscriptOutcome | null {
+    const bootstrapContextMembers = new Set<string>();
+    for (const line of lines) {
+      if (
+        input.sinceMs != null &&
+        (!Number.isFinite(line.timestampMs) || line.timestampMs < input.sinceMs)
+      ) {
+        continue;
+      }
+      if (
+        line.agentName &&
+        !matchesObservedMemberNameForExpected(line.agentName, input.normalizedMemberName)
+      ) {
+        continue;
+      }
+      if (!line.text) {
+        continue;
+      }
+      for (const contextMemberName of input.contextMemberNames) {
+        if (isBootstrapTranscriptContextText(line.text, input.teamName, contextMemberName)) {
+          bootstrapContextMembers.add(contextMemberName.trim().toLowerCase());
+        }
+      }
+    }
+
+    const hasUnambiguousMatchingBootstrapContext =
+      bootstrapContextMembers.size === 1 && bootstrapContextMembers.has(input.normalizedMemberName);
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+      const line = lines[index];
+      if (!line) continue;
+      if (input.sinceMs != null) {
+        if (!Number.isFinite(line.timestampMs) || line.timestampMs < input.sinceMs) {
+          continue;
+        }
+      }
+      if (
+        line.agentName &&
+        !matchesObservedMemberNameForExpected(line.agentName, input.normalizedMemberName)
+      ) {
+        continue;
+      }
+      if (!line.text) continue;
+      const observedAt = line.timestampText ?? new Date().toISOString();
+      const reason = extractBootstrapFailureReason(line.text);
+      if (reason) {
+        if (
+          !line.agentName &&
+          input.allowAnonymousFailure !== true &&
+          !hasUnambiguousMatchingBootstrapContext
+        ) {
+          continue;
+        }
+        return { kind: 'failure', observedAt, reason };
+      }
+      const successSource = getBootstrapTranscriptSuccessSource(
+        line.text,
+        input.teamName,
+        input.memberName
+      );
+      if (successSource) {
+        return { kind: 'success', observedAt, source: successSource };
+      }
+    }
+
+    return null;
+  }
+
+  private async scanRecentBootstrapTranscriptOutcomeFromFile(input: {
+    filePath: string;
+    statSize: number;
+    sinceMs: number | null;
+    normalizedMemberName: string;
+    contextMemberNames: readonly string[];
+    memberName: string;
+    teamName: string;
+    allowAnonymousFailure: boolean;
+  }): Promise<BootstrapTranscriptOutcome | null> {
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      handle = await fs.promises.open(input.filePath, 'r');
+      const start = Math.max(
+        0,
+        input.statSize - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES
+      );
+      const buffer = Buffer.alloc(input.statSize - start);
       if (buffer.length === 0) {
         return null;
       }
@@ -30063,7 +30696,10 @@ export class TeamProvisioningService {
         }
         const timestampMs =
           typeof parsed.timestamp === 'string' ? Date.parse(parsed.timestamp) : Number.NaN;
-        if (sinceMs != null && (!Number.isFinite(timestampMs) || timestampMs < sinceMs)) {
+        if (
+          input.sinceMs != null &&
+          (!Number.isFinite(timestampMs) || timestampMs < input.sinceMs)
+        ) {
           continue;
         }
         const parsedAgentName =
@@ -30072,7 +30708,7 @@ export class TeamProvisioningService {
             : null;
         if (
           parsedAgentName &&
-          !matchesObservedMemberNameForExpected(parsedAgentName, normalizedMemberName)
+          !matchesObservedMemberNameForExpected(parsedAgentName, input.normalizedMemberName)
         ) {
           continue;
         }
@@ -30080,14 +30716,15 @@ export class TeamProvisioningService {
         if (!text) {
           continue;
         }
-        for (const contextMemberName of contextMemberNames) {
-          if (isBootstrapTranscriptContextText(text, teamName, contextMemberName)) {
+        for (const contextMemberName of input.contextMemberNames) {
+          if (isBootstrapTranscriptContextText(text, input.teamName, contextMemberName)) {
             bootstrapContextMembers.add(contextMemberName.trim().toLowerCase());
           }
         }
       }
       const hasUnambiguousMatchingBootstrapContext =
-        bootstrapContextMembers.size === 1 && bootstrapContextMembers.has(normalizedMemberName);
+        bootstrapContextMembers.size === 1 &&
+        bootstrapContextMembers.has(input.normalizedMemberName);
       for (let index = lines.length - 1; index >= 0; index -= 1) {
         const line = lines[index]?.trim();
         if (!line) continue;
@@ -30099,8 +30736,8 @@ export class TeamProvisioningService {
         }
         const timestampMs =
           typeof parsed.timestamp === 'string' ? Date.parse(parsed.timestamp) : Number.NaN;
-        if (sinceMs != null) {
-          if (!Number.isFinite(timestampMs) || timestampMs < sinceMs) {
+        if (input.sinceMs != null) {
+          if (!Number.isFinite(timestampMs) || timestampMs < input.sinceMs) {
             continue;
           }
         }
@@ -30110,7 +30747,7 @@ export class TeamProvisioningService {
             : null;
         if (
           parsedAgentName &&
-          !matchesObservedMemberNameForExpected(parsedAgentName, normalizedMemberName)
+          !matchesObservedMemberNameForExpected(parsedAgentName, input.normalizedMemberName)
         ) {
           continue;
         }
@@ -30124,14 +30761,18 @@ export class TeamProvisioningService {
         if (reason) {
           if (
             !parsedAgentName &&
-            options.allowAnonymousFailure !== true &&
+            input.allowAnonymousFailure !== true &&
             !hasUnambiguousMatchingBootstrapContext
           ) {
             continue;
           }
           return { kind: 'failure', observedAt, reason };
         }
-        const successSource = getBootstrapTranscriptSuccessSource(text, teamName, memberName);
+        const successSource = getBootstrapTranscriptSuccessSource(
+          text,
+          input.teamName,
+          input.memberName
+        );
         if (successSource) {
           return { kind: 'success', observedAt, source: successSource };
         }

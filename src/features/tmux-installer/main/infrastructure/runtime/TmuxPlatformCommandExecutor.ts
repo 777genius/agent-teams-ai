@@ -28,17 +28,21 @@ export interface RuntimeProcessTableRow {
   pid: number;
   ppid: number;
   command: string;
+  cpuPercent?: number;
+  rssBytes?: number;
 }
 
 export function parseRuntimeProcessTable(output: string): RuntimeProcessTableRow[] {
   const rows: RuntimeProcessTableRow[] = [];
   for (const line of output.split('\n')) {
-    const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
+    const match = /^\s*(\d+)\s+(\d+)\s+(?:(\d+(?:\.\d+)?)\s+(\d+)\s+)?(.*)$/.exec(line);
     if (!match) continue;
 
     const pid = Number.parseInt(match[1], 10);
     const ppid = Number.parseInt(match[2], 10);
-    const command = match[3]?.trim() ?? '';
+    const cpuPercent = match[3] != null ? Number.parseFloat(match[3]) : Number.NaN;
+    const rssKb = match[4] != null ? Number.parseInt(match[4], 10) : Number.NaN;
+    const command = match[5]?.trim() ?? '';
     if (
       Number.isFinite(pid) &&
       pid > 0 &&
@@ -46,7 +50,13 @@ export function parseRuntimeProcessTable(output: string): RuntimeProcessTableRow
       ppid >= 0 &&
       command.length > 0
     ) {
-      rows.push({ pid, ppid, command });
+      rows.push({
+        pid,
+        ppid,
+        command,
+        ...(Number.isFinite(cpuPercent) && cpuPercent >= 0 ? { cpuPercent } : {}),
+        ...(Number.isFinite(rssKb) && rssKb >= 0 ? { rssBytes: rssKb * 1024 } : {}),
+      });
     }
   }
   return rows;
@@ -169,7 +179,12 @@ export class TmuxPlatformCommandExecutor {
   async listRuntimeProcesses(): Promise<RuntimeProcessTableRow[]> {
     const result =
       process.platform === 'win32'
-        ? await this.#wslService.execInPreferredDistro(['ps', '-ax', '-o', 'pid=,ppid=,command='])
+        ? await this.#wslService.execInPreferredDistro([
+            'ps',
+            '-ax',
+            '-o',
+            'pid=,ppid=,pcpu=,rss=,command=',
+          ])
         : await this.#execNativePs();
     if (result.exitCode !== 0) {
       throw new Error(result.stderr || 'Failed to list runtime processes');
@@ -251,7 +266,7 @@ export class TmuxPlatformCommandExecutor {
     return new Promise((resolve) => {
       execFile(
         'ps',
-        ['-ax', '-o', 'pid=,ppid=,command='],
+        ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
         { env: process.env, timeout: 3_000, maxBuffer: 2 * 1024 * 1024 },
         (error, stdout, stderr) => {
           const errorCode =

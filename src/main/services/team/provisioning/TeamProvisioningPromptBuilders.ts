@@ -195,7 +195,6 @@ export function extractHeartbeatTimestamp(text: string, fallback?: string): stri
 export function extractBootstrapFailureReason(text: string): string | null {
   const trimmed = normalizeLaunchFailureReasonText(text) ?? text.trim();
   if (!trimmed) return null;
-  if (isBootstrapInstructionPrompt(trimmed)) return null;
   const lower = trimmed.toLowerCase();
   const looksLikeBootstrapFailure =
     lower.includes('bootstrap failed') ||
@@ -240,14 +239,16 @@ export function extractBootstrapFailureReason(text: string): string | null {
     lower.includes('not supported when using codex with a chatgpt account') ||
     lower.includes('please check the provided tool list');
   if (!looksLikeBootstrapFailure) return null;
+  if (isBootstrapInstructionPrompt(trimmed)) return null;
   return trimmed.slice(0, 280);
 }
 
 export function isBootstrapInstructionPrompt(text: string): boolean {
-  const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
-  if (!normalized.startsWith('you are bootstrapping into team ')) {
+  const prefix = text.trimStart().slice(0, 200).replace(/\s+/g, ' ').toLowerCase();
+  if (!prefix.startsWith('you are bootstrapping into team ')) {
     return false;
   }
+  const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
   return (
     normalized.includes('your first action is to call the mcp tool') &&
     (normalized.includes('member_briefing') || normalized.includes('lead_briefing'))
@@ -267,16 +268,29 @@ export function getBootstrapTranscriptSuccessSource(
   teamName: string,
   memberName: string
 ): BootstrapTranscriptSuccessSource | null {
-  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
-  if (!normalizedText) {
-    return null;
-  }
-
   const normalizedTeamName = teamName.trim().toLowerCase();
   const normalizedMemberName = memberName.trim().toLowerCase();
   if (!normalizedTeamName || !normalizedMemberName) {
     return null;
   }
+  const lowerText = text.toLowerCase();
+  if (
+    !lowerText ||
+    !lowerText.includes(normalizedTeamName) ||
+    !lowerText.includes(normalizedMemberName)
+  ) {
+    return null;
+  }
+  if (
+    !lowerText.includes('member briefing') &&
+    !lowerText.includes('bootstrap выполнен') &&
+    !lowerText.includes('команде') &&
+    !lowerText.includes('briefing')
+  ) {
+    return null;
+  }
+
+  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
 
   if (
     normalizedText.startsWith(
@@ -300,24 +314,32 @@ export function isBootstrapTranscriptContextText(
   teamName: string,
   memberName: string
 ): boolean {
-  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
   const normalizedTeamName = teamName.trim().toLowerCase();
   const normalizedMemberName = memberName.trim().toLowerCase();
-  if (!normalizedText || !normalizedTeamName || !normalizedMemberName) {
+  if (!normalizedTeamName || !normalizedMemberName) {
     return false;
   }
+  const lowerText = text.toLowerCase();
   if (
-    !normalizedText.includes(normalizedTeamName) ||
-    !normalizedText.includes(normalizedMemberName)
+    !lowerText ||
+    !lowerText.includes(normalizedTeamName) ||
+    !lowerText.includes(normalizedMemberName)
   ) {
     return false;
   }
-  return (
-    normalizedText.includes('bootstrap') ||
-    normalizedText.includes('bootstrapping') ||
-    normalizedText.includes('member briefing') ||
-    normalizedText.includes('task briefing')
-  );
+  if (
+    lowerText.includes('bootstrap') ||
+    lowerText.includes('bootstrapping') ||
+    lowerText.includes('member briefing') ||
+    lowerText.includes('task briefing')
+  ) {
+    return true;
+  }
+  if (!lowerText.includes('briefing')) {
+    return false;
+  }
+  const normalizedText = lowerText.replace(/\s+/g, ' ').trim();
+  return normalizedText.includes('member briefing') || normalizedText.includes('task briefing');
 }
 
 export function extractTranscriptTextContent(value: unknown): string[] {

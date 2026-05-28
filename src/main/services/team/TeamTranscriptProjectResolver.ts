@@ -21,6 +21,7 @@ const logger = createLogger('Service:TeamTranscriptProjectResolver');
 
 const SESSION_DISCOVERY_CACHE_TTL = 30_000;
 const TEAM_AFFINITY_SCAN_LINES = 40;
+const TEAM_AFFINITY_CACHE_MAX = 20_000;
 const ROOT_DISCOVERY_CONCURRENCY = 12;
 const FAST_CONTEXT_ROOT_DISCOVERY_MTIME_GRACE_MS = 24 * 60 * 60_000;
 
@@ -56,6 +57,21 @@ interface TeamTranscriptProjectContextOptions {
   forceRefresh?: boolean;
   includeTeamSubagentSessionDiscovery?: boolean;
 }
+
+interface TeamAffinityCacheEntry {
+  value: boolean;
+  statMtimeMs: number;
+  statSize: number;
+  finalForGrowth: boolean;
+}
+
+interface TeamAffinityObservedStat {
+  mtimeMs: number;
+  size: number;
+}
+
+const teamAffinityCache = new Map<string, TeamAffinityCacheEntry>();
+const teamAffinityInFlight = new Map<string, Promise<TeamAffinityCacheEntry>>();
 
 type ScannedSessionProjectMatch = Omit<SessionProjectMatch, 'projectPath'> & {
   projectPath?: string;
@@ -198,6 +214,17 @@ function entryContainsNestedTeamName(value: unknown, teamName: string, depth: nu
     }
     return entryContainsNestedTeamName(nested, teamName, depth + 1);
   });
+}
+
+function rememberTeamAffinity(cacheKey: string, entry: TeamAffinityCacheEntry): void {
+  teamAffinityCache.set(cacheKey, entry);
+  if (teamAffinityCache.size <= TEAM_AFFINITY_CACHE_MAX) {
+    return;
+  }
+  const oldestKey = teamAffinityCache.keys().next().value;
+  if (oldestKey) {
+    teamAffinityCache.delete(oldestKey);
+  }
 }
 
 function collectKnownSessionIds(config: TeamConfig): string[] {
@@ -994,12 +1021,62 @@ export class TeamTranscriptProjectResolver {
   }
 
   private async fileBelongsToTeam(filePath: string, teamName: string): Promise<boolean> {
+    const normalizedTeam = teamName.trim().toLowerCase();
+    if (!normalizedTeam) {
+      return false;
+    }
+
+    let stat: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stat = await fs.stat(filePath);
+      if (!stat.isFile()) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    const observedStat: TeamAffinityObservedStat = {
+      mtimeMs: Number(stat.mtimeMs),
+      size: Number(stat.size),
+    };
+
+    const cacheKey = `${filePath}\0${normalizedTeam}`;
+    const cached = teamAffinityCache.get(cacheKey);
+    if (
+      cached &&
+      (cached.finalForGrowth ||
+        (cached.statMtimeMs === observedStat.mtimeMs && cached.statSize === observedStat.size))
+    ) {
+      return cached.value;
+    }
+
+    const inFlightKey = `${cacheKey}\0${observedStat.mtimeMs}\0${observedStat.size}`;
+    const existing = teamAffinityInFlight.get(inFlightKey);
+    if (existing) {
+      return (await existing).value;
+    }
+
+    const promise = this.scanFileBelongsToTeam(filePath, normalizedTeam, observedStat).finally(
+      () => {
+        teamAffinityInFlight.delete(inFlightKey);
+      }
+    );
+    teamAffinityInFlight.set(inFlightKey, promise);
+    const entry = await promise;
+    rememberTeamAffinity(cacheKey, entry);
+    return entry.value;
+  }
+
+  private async scanFileBelongsToTeam(
+    filePath: string,
+    normalizedTeam: string,
+    stat: TeamAffinityObservedStat
+  ): Promise<TeamAffinityCacheEntry> {
     const stream = createReadStream(filePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    const normalizedTeam = teamName.trim().toLowerCase();
+    let inspected = 0;
 
     try {
-      let inspected = 0;
       for await (const line of rl) {
         const trimmed = line.trim();
         if (!trimmed) {
@@ -1011,15 +1088,30 @@ export class TeamTranscriptProjectResolver {
           const entry = JSON.parse(trimmed) as Record<string, unknown>;
           const directTeamName = extractDirectTeamName(entry);
           if (directTeamName === normalizedTeam) {
-            return true;
+            return {
+              value: true,
+              statMtimeMs: stat.mtimeMs,
+              statSize: stat.size,
+              finalForGrowth: true,
+            };
           }
           if (entryContainsNestedTeamName(entry, normalizedTeam)) {
-            return true;
+            return {
+              value: true,
+              statMtimeMs: stat.mtimeMs,
+              statSize: stat.size,
+              finalForGrowth: true,
+            };
           }
 
           const textContent = extractTextContent(entry);
           if (textContent && lineMentionsTeam(textContent, normalizedTeam)) {
-            return true;
+            return {
+              value: true,
+              statMtimeMs: stat.mtimeMs,
+              statSize: stat.size,
+              finalForGrowth: true,
+            };
           }
         } catch {
           // ignore malformed head lines
@@ -1030,12 +1122,22 @@ export class TeamTranscriptProjectResolver {
         }
       }
     } catch {
-      return false;
+      return {
+        value: false,
+        statMtimeMs: stat.mtimeMs,
+        statSize: stat.size,
+        finalForGrowth: false,
+      };
     } finally {
       rl.close();
       stream.destroy();
     }
 
-    return false;
+    return {
+      value: false,
+      statMtimeMs: stat.mtimeMs,
+      statSize: stat.size,
+      finalForGrowth: inspected >= TEAM_AFFINITY_SCAN_LINES,
+    };
   }
 }

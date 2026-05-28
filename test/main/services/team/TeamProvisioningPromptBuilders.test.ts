@@ -1,4 +1,7 @@
-import { buildGeminiPostLaunchHydrationPrompt } from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
+import {
+  buildGeminiPostLaunchHydrationPrompt,
+  getBootstrapTranscriptSuccessSource,
+} from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
 import { describe, expect, it } from 'vitest';
 
 import type { MemberSpawnStatusEntry, TeamCreateRequest } from '@shared/types';
@@ -55,5 +58,15 @@ describe('TeamProvisioningPromptBuilders', () => {
 
     expect(prompt).toContain('- @tom: bootstrap confirmed');
     expect(prompt).not.toContain('- @tom: failed to start');
+  });
+
+  it('recognizes bootstrap success text when member briefing is split by whitespace', () => {
+    expect(
+      getBootstrapTranscriptSuccessSource(
+        'Member\nbriefing for alice on team "demo-team" (demo-team).',
+        'demo-team',
+        'alice'
+      )
+    ).toBe('member_briefing');
   });
 });

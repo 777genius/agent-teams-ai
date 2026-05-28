@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamTranscriptProjectResolver } from '../../../../src/main/services/team/TeamTranscriptProjectResolver';
@@ -519,6 +518,48 @@ describe('TeamTranscriptProjectResolver', () => {
 
     expect(context?.projectDir).toBe(repaired.projectDir);
     expect(context?.config.projectPath).toBe(repairedProjectPath);
+  });
+
+  it('refreshes non-final team affinity cache when a short transcript grows', async () => {
+    await setupClaudeRoot();
+
+    const teamName = 'append-cache-team';
+    const staleProjectPath = '/Users/test/stale-project';
+    const repairedProjectPath = '/Users/test/repaired-project';
+    const staleProjectDir = path.join(tmpDir!, 'projects', encodePath(staleProjectPath));
+    await fs.mkdir(staleProjectDir, { recursive: true });
+    const repaired = await createSessionFile(repairedProjectPath, 'member-session');
+
+    await writeTeamConfig(teamName, {
+      name: 'Append Cache Team',
+      projectPath: staleProjectPath,
+      members: [{ name: 'alice', agentType: 'general-purpose', cwd: repairedProjectPath }],
+    });
+
+    const resolver = new TeamTranscriptProjectResolver();
+    const firstContext = await resolver.getContext(teamName, { forceRefresh: true });
+    expect(firstContext?.projectDir).toBe(staleProjectDir);
+
+    await fs.appendFile(
+      repaired.jsonlPath,
+      `${JSON.stringify({
+        type: 'user',
+        timestamp: '2026-04-18T10:01:00.000Z',
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Current durable team context:\n- Team name: ${teamName}\n- Member: alice`,
+            },
+          ],
+        },
+      })}\n`,
+      'utf8'
+    );
+
+    const secondContext = await resolver.getContext(teamName, { forceRefresh: true });
+    expect(secondContext?.projectDir).toBe(repaired.projectDir);
   });
 
   it('bounds root session discovery by team lifecycle in fast preview context', async () => {
