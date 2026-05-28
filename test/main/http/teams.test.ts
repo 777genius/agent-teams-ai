@@ -759,8 +759,132 @@ describe('HTTP team runtime routes', () => {
             teamName: 'demo-team',
           },
           runtimeSessionId: 'session_1',
+          targetId: 'target_1',
         })
       );
+    } finally {
+      await app.close();
+      await rm(repoDir, { force: true, recursive: true });
+    }
+  });
+
+  it('auto-resolves hosted GitHub action target from the local GitHub remote', async () => {
+    const { app, getRuntimeState, getTeamData, listHostedTargets, submitAgentGithubAction } =
+      await createApp();
+    const repoDir = await createTempGitHubRepository('git@github.com:Org/Repo.git');
+    getRuntimeState.mockResolvedValue({
+      teamName: 'demo-team',
+      isAlive: true,
+      runId: 'run-2',
+      progress: null,
+    });
+    getTeamData.mockResolvedValue({
+      config: { projectPath: repoDir },
+      members: [{ name: 'reviewer', currentTaskId: null, taskCount: 0 }],
+      teamName: 'demo-team',
+    } as unknown as TeamViewSnapshot);
+    listHostedTargets.mockResolvedValue([
+      {
+        connectionId: 'connection_1',
+        displayFullName: 'other/repo',
+        displayName: 'repo',
+        displayOwner: 'other',
+        fetchedAt: '2026-03-12T00:00:00.000Z',
+        githubRepositoryId: '999',
+        status: 'enabled',
+        targetId: 'target_other',
+      },
+      {
+        connectionId: 'connection_1',
+        displayFullName: 'org/repo',
+        displayName: 'repo',
+        displayOwner: 'org',
+        fetchedAt: '2026-03-12T00:00:00.000Z',
+        githubRepositoryId: '123',
+        status: 'enabled',
+        targetId: 'target_1',
+      },
+    ]);
+    submitAgentGithubAction.mockResolvedValue({
+      actionRequestId: 'action_1',
+      fetchedAt: '2026-03-12T00:00:00.000Z',
+      status: 'queued',
+    });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/hosted-integrations/github-actions',
+        payload: {
+          actionType: 'github.issue_comment.create',
+          localAttemptId: 'attempt_1',
+          memberName: 'reviewer',
+          payload: { body: 'Ready for review' },
+          runId: 'run-2',
+          runtimeSessionId: 'session_1',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(submitAgentGithubAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetId: 'target_1',
+        })
+      );
+    } finally {
+      await app.close();
+      await rm(repoDir, { force: true, recursive: true });
+    }
+  });
+
+  it('rejects hosted GitHub actions when no enabled target matches the local remote', async () => {
+    const { app, getRuntimeState, getTeamData, listHostedTargets, submitAgentGithubAction } =
+      await createApp();
+    const repoDir = await createTempGitHubRepository('https://github.com/org/repo.git');
+    getRuntimeState.mockResolvedValue({
+      teamName: 'demo-team',
+      isAlive: true,
+      runId: 'run-2',
+      progress: null,
+    });
+    getTeamData.mockResolvedValue({
+      config: { projectPath: repoDir },
+      members: [{ name: 'reviewer', currentTaskId: null, taskCount: 0 }],
+      teamName: 'demo-team',
+    } as unknown as TeamViewSnapshot);
+    listHostedTargets.mockResolvedValue([
+      {
+        connectionId: 'connection_1',
+        displayFullName: 'other/repo',
+        displayName: 'repo',
+        displayOwner: 'other',
+        fetchedAt: '2026-03-12T00:00:00.000Z',
+        githubRepositoryId: '999',
+        status: 'enabled',
+        targetId: 'target_other',
+      },
+    ]);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/hosted-integrations/github-actions',
+        payload: {
+          actionType: 'github.issue_comment.create',
+          localAttemptId: 'attempt_1',
+          memberName: 'reviewer',
+          payload: { body: 'Ready for review' },
+          runId: 'run-2',
+          runtimeSessionId: 'session_1',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error:
+          'hosted GitHub action rejected because no enabled GitHub target matches the local project',
+      });
+      expect(submitAgentGithubAction).not.toHaveBeenCalled();
     } finally {
       await app.close();
       await rm(repoDir, { force: true, recursive: true });

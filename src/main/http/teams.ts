@@ -17,7 +17,10 @@ import { isAbsolute, join } from 'path';
 import { promisify } from 'util';
 
 import type { HttpServices } from './index';
-import type { HostedGitHubActionCommandDto } from '@features/hosted-integrations/contracts';
+import type {
+  HostedGitHubActionCommandDto,
+  HostedGitHubRepositoryTargetDto,
+} from '@features/hosted-integrations/contracts';
 import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
   EffortLevel,
@@ -35,6 +38,9 @@ const execFileAsync = promisify(execFile);
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
+type HostedGitHubActionCommandDraft = Omit<HostedGitHubActionCommandDto, 'targetId'> & {
+  readonly targetId?: string;
+};
 
 class HttpBadRequestError extends Error {}
 class HttpFeatureUnavailableError extends Error {}
@@ -536,11 +542,12 @@ function getHostedIntegrationsFeature(
 function parseHostedGitHubActionCommand(
   teamName: string,
   body: unknown
-): HostedGitHubActionCommandDto {
+): HostedGitHubActionCommandDraft {
   const payload = withRuntimeTeamName(teamName, body);
   const memberName = assertTeammateNameField(payload.memberName, 'memberName');
   const runId = assertStringField(payload.runId, 'runId');
   const runtimeSessionId = assertStringField(payload.runtimeSessionId, 'runtimeSessionId');
+  const targetId = optionalStringField(payload.targetId);
   return {
     actionType: assertHostedGithubActionType(payload.actionType),
     localAttemptId: assertStringField(payload.localAttemptId, 'localAttemptId'),
@@ -555,7 +562,7 @@ function parseHostedGitHubActionCommand(
       teamName,
     },
     runtimeSessionId,
-    targetId: assertStringField(payload.targetId, 'targetId'),
+    ...(targetId ? { targetId } : {}),
     ...(optionalStringField(payload.correlationId)
       ? { correlationId: optionalStringField(payload.correlationId) }
       : {}),
@@ -582,7 +589,7 @@ function optionalStringField(value: unknown): string | undefined {
 
 async function assertHostedGitHubActionRuntimeAllowed(
   services: HttpServices,
-  command: HostedGitHubActionCommandDto
+  command: HostedGitHubActionCommandDraft
 ): Promise<{ activeMember: TeamMemberSnapshot; snapshot: TeamViewSnapshot }> {
   const teamName = command.runtimeMember.teamName;
   const runtimeState = await getTeamProvisioningService(services).getRuntimeState(teamName);
@@ -603,28 +610,63 @@ async function assertHostedGitHubActionRuntimeAllowed(
   return { activeMember, snapshot };
 }
 
-async function assertHostedGitHubActionTargetMatchesLocalProject(
+async function resolveHostedGitHubActionCommandTarget(
   feature: NonNullable<HttpServices['hostedIntegrationsFeature']>,
-  command: HostedGitHubActionCommandDto,
+  command: HostedGitHubActionCommandDraft,
   context: { activeMember: TeamMemberSnapshot; snapshot: TeamViewSnapshot }
-): Promise<void> {
+): Promise<HostedGitHubActionCommandDto> {
   const targets = await feature.listTargets();
-  const target = targets.find((item) => item.targetId === command.targetId.trim());
-  if (target?.status !== 'enabled') {
-    return;
-  }
   const projectPath = context.activeMember.cwd ?? context.snapshot.config?.projectPath;
   if (!projectPath) {
     throw new HttpBadRequestError('hosted GitHub action rejected because team project is unknown');
   }
 
   const remoteFullName = await readLocalGitHubRemoteFullName(projectPath);
-  const targetFullName = normalizeGitHubFullName(target.displayFullName);
-  if (!remoteFullName || remoteFullName !== targetFullName) {
+  if (!remoteFullName) {
     throw new HttpBadRequestError(
-      'hosted GitHub action rejected because local project does not match the enabled GitHub target'
+      'hosted GitHub action rejected because local project GitHub remote is unknown'
     );
   }
+
+  const providedTargetId = command.targetId?.trim();
+  if (providedTargetId) {
+    const target = targets.find((item) => item.targetId === providedTargetId);
+    if (target?.status !== 'enabled') {
+      throw new HttpBadRequestError(
+        'hosted GitHub action rejected because GitHub target is not enabled'
+      );
+    }
+    assertTargetMatchesLocalProject(target, remoteFullName);
+    return { ...command, targetId: target.targetId };
+  }
+
+  const matches = targets.filter(
+    (target) =>
+      target.status === 'enabled' &&
+      normalizeGitHubFullName(target.displayFullName) === remoteFullName
+  );
+  if (matches.length === 1) {
+    return { ...command, targetId: matches[0].targetId };
+  }
+  if (matches.length === 0) {
+    throw new HttpBadRequestError(
+      'hosted GitHub action rejected because no enabled GitHub target matches the local project'
+    );
+  }
+  throw new HttpBadRequestError(
+    'hosted GitHub action rejected because multiple enabled GitHub targets match the local project'
+  );
+}
+
+function assertTargetMatchesLocalProject(
+  target: HostedGitHubRepositoryTargetDto,
+  remoteFullName: string
+): void {
+  const targetFullName = normalizeGitHubFullName(target.displayFullName);
+  if (remoteFullName === targetFullName) return;
+  throw new HttpBadRequestError(
+    'hosted GitHub action rejected because local project does not match the enabled GitHub target'
+  );
 }
 
 async function readLocalGitHubRemoteFullName(projectPath: string): Promise<string | null> {
@@ -978,8 +1020,12 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         const command = parseHostedGitHubActionCommand(validatedTeamName.value!, request.body);
         const feature = getHostedIntegrationsFeature(services);
         const runtimeContext = await assertHostedGitHubActionRuntimeAllowed(services, command);
-        await assertHostedGitHubActionTargetMatchesLocalProject(feature, command, runtimeContext);
-        return reply.send(await feature.submitAgentGithubAction(command));
+        const resolvedCommand = await resolveHostedGitHubActionCommandTarget(
+          feature,
+          command,
+          runtimeContext
+        );
+        return reply.send(await feature.submitAgentGithubAction(resolvedCommand));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
