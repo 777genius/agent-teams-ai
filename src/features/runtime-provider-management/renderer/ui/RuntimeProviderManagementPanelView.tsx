@@ -26,6 +26,7 @@ import {
   getOpenCodeTeamModelRecommendation,
   isOpenCodeTeamModelRecommended,
 } from '@renderer/utils/openCodeModelRecommendations';
+import { isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic } from '@shared/utils/openCodeWindowsAccessDenied';
 import {
   AlertTriangle,
   Check,
@@ -785,6 +786,20 @@ function getRuntimeProviderDiagnosticRows(
     .map(([label, value]) => [label, String(value)]);
 }
 
+function isOpenCodeWindowsNodeModulesSymlinkPermissionError(
+  message: string,
+  diagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null | undefined
+): boolean {
+  const value = [
+    message,
+    diagnostics?.stderrPreview ?? '',
+    diagnostics?.stdoutPreview ?? '',
+    diagnostics?.likelyCause ?? '',
+    ...(diagnostics?.hints ?? []),
+  ].join('\n');
+  return isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic(value);
+}
+
 async function writeRuntimeProviderDiagnosticsToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
     try {
@@ -826,6 +841,10 @@ const RuntimeProviderErrorAlert = ({
   const [headline = message, ...detailLines] = message.trim().split(/\r?\n/);
   const fallbackDetails = detailLines.join('\n').trim();
   const hints = diagnostics?.hints ?? [];
+  const showWindowsSymlinkPermissionHint = isOpenCodeWindowsNodeModulesSymlinkPermissionError(
+    message,
+    diagnostics
+  );
   const copyText = useMemo(
     () => formatRuntimeProviderDiagnosticsCopyText(message, diagnostics),
     [diagnostics, message]
@@ -859,6 +878,11 @@ const RuntimeProviderErrorAlert = ({
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 whitespace-pre-wrap break-words font-medium leading-5">
             {headline || message}
+            {showWindowsSymlinkPermissionHint ? (
+              <span className="ml-2 inline-flex rounded border border-red-200/30 bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-red-50">
+                {t('runtimeProvider.diagnostics.windowsSymlinkAdminHint')}
+              </span>
+            ) : null}
           </div>
           <Button
             type="button"

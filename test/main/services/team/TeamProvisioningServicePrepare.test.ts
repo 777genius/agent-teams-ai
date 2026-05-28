@@ -1,5 +1,8 @@
 import { buildCodexWorkspaceTrustSettingsArgs } from '@features/workspace-trust/core/domain';
-import { OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
+import {
+  OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+  OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
+} from '@shared/utils/openCodeWindowsAccessDenied';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -1024,6 +1027,42 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.ready).toBe(false);
     expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
     expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+  });
+
+  it('keeps OpenCode managed node_modules symlink EPERM diagnostics specific during prepareForProvisioning', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: [],
+      warnings: [
+        [
+          'Runtime provider management command failed unexpectedly:',
+          "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
+          "-> 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Data\\opencode\\profiles\\abc123\\config\\opencode\\node_modules'",
+        ].join(' '),
+      ],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE]);
   });
 
   it('keeps OpenCode access-denied selected-model failures provider-scoped', async () => {
