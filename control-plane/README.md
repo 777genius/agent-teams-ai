@@ -37,6 +37,7 @@ NestJS is an outer framework, not the business architecture. Domain and applicat
 - [Phase 9 Desktop GitHub Integration Bridge Plan](docs/phase-9-desktop-github-integration-bridge-plan.md)
 - [Phase 10 Hosted GitHub App Operations Plan](docs/phase-10-hosted-github-app-operations-plan.md)
 - [Phase 11 Live E2E Release Gate Plan](docs/phase-11-live-e2e-release-gate-plan.md)
+- [Hosted GitHub App Operations Runbook](docs/hosted-github-app-operations.md)
 - [Edge Cases And Failure Modes](docs/edge-cases.md)
 - [Security And Privacy Model](docs/security-and-privacy.md)
 - [Public Error Contract](docs/error-contract.md)
@@ -116,6 +117,15 @@ pnpm --dir control-plane worker:smoke:dist
 pnpm --dir control-plane api:smoke
 pnpm --dir control-plane api:smoke:dist
 pnpm --dir control-plane config:hosted-failfast
+```
+
+Hosted staging smoke after deployment:
+
+```bash
+CONTROL_PLANE_HOSTED_SMOKE_BASE_URL=https://staging-control-plane.example.test \
+CONTROL_PLANE_HOSTED_SMOKE_EXPECTED_MODE=hosted-official-app \
+CONTROL_PLANE_HOSTED_SMOKE_EXPECTED_REVISION=<release revision> \
+pnpm --dir control-plane hosted:smoke
 ```
 
 DB-specific commands:
