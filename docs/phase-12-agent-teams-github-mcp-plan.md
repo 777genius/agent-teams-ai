@@ -179,6 +179,12 @@ Weak spots studied in local code:
 - Existing required MCP preflight tools do not include hosted GitHub tools, so
   removing old GitHub tools from the core MCP should not break launch preflight.
   GitHub MCP should have its own optional preflight when injected.
+- There are multiple controller type surfaces:
+  `src/types/agent-teams-controller.d.ts`,
+  `mcp-server/src/agent-teams-controller.d.ts`, and local narrowed controller
+  types in `mcp-server/src/controller.ts`. The split can compile in one package
+  and fail in another unless GitHub bridge methods and tool catalog declarations
+  are updated together or centralized.
 - Existing hosted action request id is stable over
   `localAttemptId + targetId + actionType + payloadFingerprint`. This is good
   after target resolution, but dangerous if MCP hides `localAttemptId` and then
@@ -199,6 +205,13 @@ Weak spots studied in local code:
   launch spec and identity hash. If GitHub MCP should be available through the
   OpenCode HTTP bridge, it needs a multi-managed-server model or a deliberate
   decision to keep GitHub MCP stdio/local-config only for V1.
+- OpenCode env helpers are currently keyed around one legacy app MCP launch:
+  `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND`,
+  `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY`,
+  `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON`, and optional child env JSON.
+  The multi-server env must be copied, snapshotted, cleared, redacted, and used
+  by managed-process cleanup, otherwise stale one-server OpenCode hosts can keep
+  hiding GitHub tools after reconnect/restart.
 - Current MCP utility `jsonTextContent()` serializes JSON as text but does not
   mark tool-level failures with `isError`. MCP spec recommends tool-originated
   errors be reported in the tool result, not as protocol-level JSON-RPC errors.
@@ -1359,6 +1372,20 @@ Compatibility rule:
 - `agent-teams-github` is optional and appears only when launch preflight
   enables it.
 
+Env lifecycle requirements:
+
+- `copyOpenCodeLocalMcpLaunchEnv()` copies the new multi-server env and still
+  preserves legacy single-server fallback;
+- `snapshotOpenCodeLocalMcpLaunchEnv()` returns a snapshot when either the new
+  env or the legacy env is complete;
+- `clearOpenCodeLocalMcpLaunchEnv()` clears both the new env and every legacy
+  key;
+- managed-process cleanup recognizes the new env marker in addition to legacy
+  `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_*` markers;
+- bridge diagnostics redact command env values but can show safe server names;
+- identity hash includes server names, command/args, remote URL, and redacted
+  env keys so toggling GitHub MCP forces reattach.
+
 Recommendation:
 
 Use this if Phase 12 should be complete for OpenCode teammates too.
@@ -1718,6 +1745,101 @@ Guard:
   before changing MCP tool descriptions;
 - raw submit must not bypass capability mapping in normal agent prompts.
 
+## Controller And Tool Catalog Contracts
+
+The GitHub split should not rely on implicit tool discovery or duplicated type
+definitions. The current core preflight already checks required operational
+tools through `tools/list`, and those required tools do not include hosted
+GitHub actions. Preserve that separation.
+
+Core MCP required tools stay limited to board/runtime launch health:
+
+```ts
+const CORE_MCP_REQUIRED_PREFLIGHT_TOOLS = [
+  ...AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+  'lead_briefing',
+  'runtime_bootstrap_checkin',
+  'runtime_deliver_message',
+  'runtime_task_event',
+  'runtime_heartbeat',
+] as const;
+```
+
+GitHub MCP gets its own catalog and optional preflight:
+
+```ts
+const GITHUB_MCP_REQUIRED_TOOL_NAMES = [
+  'github_integration_status',
+  'github_comment_issue',
+  'github_comment_pull_request',
+  'github_review_pull_request',
+  'github_action_status',
+] as const;
+
+const GITHUB_MCP_OPTIONAL_TOOL_NAMES = [
+  'github_create_check_run',
+  'github_raw_action_submit',
+] as const;
+```
+
+Rules:
+
+- do not add GitHub tools to `CORE_MCP_REQUIRED_PREFLIGHT_TOOLS`;
+- add `agent-teams-github` catalog in the new package instead of expanding the
+  core `AGENT_TEAMS_REGISTERED_TOOL_NAMES`;
+- keep old `hosted_github_action_submit/status` in the core catalog only during
+  the compatibility window and mark them deprecated;
+- run GitHub MCP preflight only when launch decision says
+  `hostedGithub.enabled=true`;
+- if GitHub preflight fails, fail that GitHub-enabled launch with a specific
+  diagnostic rather than silently launching a prompt that references missing
+  tools;
+- if GitHub is disconnected, skip GitHub preflight entirely and keep core
+  preflight behavior unchanged.
+
+Type synchronization requirement:
+
+```ts
+interface ControllerRuntimeGitHubBridgeApi {
+  hostedGithubActionSubmit(flags: Record<string, unknown>): Promise<unknown>;
+  hostedGithubActionStatus(flags: Record<string, unknown>): Promise<unknown>;
+}
+```
+
+Implementation options for controller declarations:
+
+### Option 1 - Centralize generated controller declarations
+
+🎯 7 🛡️ 9 🧠 7
+
+Approx changes: 180-360 lines.
+
+Generate or copy one declaration artifact into every consumer package from the
+controller package build.
+
+Recommended if this repo already has a clean declaration-generation path.
+
+### Option 2 - Keep duplicated declarations but add drift tests
+
+🎯 8 🛡️ 7 🧠 3
+
+Approx changes: 60-140 lines.
+
+Add a focused test that asserts every known declaration surface includes the
+runtime GitHub bridge API and MCP catalog exports.
+
+Recommended for this phase because it is smaller and preserves current package
+shape.
+
+### Option 3 - Use local `any` casts in GitHub MCP only
+
+🎯 3 🛡️ 3 🧠 1
+
+Approx changes: 10-30 lines.
+
+Fast, but it hides controller contract drift and will make future integration
+MCPs repeat the same unsafe workaround. Avoid.
+
 ## Idempotency
 
 Every mutating tool must send `localAttemptId`.
@@ -1870,6 +1992,81 @@ if (submitResult.ok && submitResult.status !== 'succeeded') {
     ...submitResult,
     nextAction: 'poll_status',
   };
+}
+```
+
+## MCP Cancellation And Progress Contract
+
+MCP cancellation is optional and race-prone. The spec allows a receiver to ignore
+cancellation when work already completed or cannot be cancelled. GitHub actions
+cross an external side-effect boundary, so MCP cancellation must not be modeled
+as GitHub action cancellation.
+
+Submit phases:
+
+```ts
+type GitHubMcpSubmitPhase =
+  | 'before_local_submit'
+  | 'local_submit_started'
+  | 'action_request_created'
+  | 'status_polling';
+```
+
+Rules:
+
+- if cancellation arrives in `before_local_submit`, abort local validation or
+  local waiting and do not submit;
+- once local submit starts, assume the action may be queued unless the bridge
+  clearly returns before acceptance;
+- after `action_request_created`, cancellation means "stop waiting in this MCP
+  call", not "cancel the GitHub action";
+- if `actionRequestId` is known, the agent can poll `github_action_status`;
+- if only `localAttemptId` is known, retry guidance must say to reuse that exact
+  id;
+- do not add `github_cancel_action` in this phase unless control-plane exposes a
+  real cancellation state machine and outbox cancellation semantics;
+- progress notifications are optional. They can be used later for long waits,
+  but V1 should not rely on provider clients rendering them.
+
+Illustrative safe handling:
+
+```ts
+async function executeMutatingTool(input: PublicToolInput, signal?: AbortSignal) {
+  const localAttemptId = input.localAttemptId ?? createLocalAttemptId(input.toolName);
+
+  if (signal?.aborted) {
+    return githubToolFailure({
+      ok: false,
+      localAttemptId,
+      safeError: {
+        code: 'HOSTED_GITHUB_CALL_CANCELLED_BEFORE_SUBMIT',
+        message: 'GitHub action was cancelled before it was submitted.',
+        retryable: true,
+      },
+      nextAction: 'retry_same_local_attempt_id',
+    });
+  }
+
+  const submitResult = await bridge.submitAction({
+    ...mapInput(input),
+    localAttemptId,
+  });
+
+  if (signal?.aborted && submitResult.actionRequestId) {
+    return githubToolFailure({
+      ok: false,
+      actionRequestId: submitResult.actionRequestId,
+      localAttemptId,
+      safeError: {
+        code: 'HOSTED_GITHUB_CALL_CANCELLED_AFTER_SUBMIT',
+        message: 'GitHub action may still be running. Poll status before retrying.',
+        retryable: false,
+      },
+      nextAction: 'poll_status',
+    });
+  }
+
+  return submitResult;
 }
 ```
 
@@ -2145,6 +2342,22 @@ Expected behavior:
   `github_action_status`.
 - Unknown mutation result must not blindly retry if backend reports unknown.
 
+### MCP client cancels after submit started
+
+Risk:
+
+- the MCP caller may send `notifications/cancelled` or hit a client timeout
+  after desktop/control-plane already accepted the request;
+- treating this as action cancellation can hide a comment that may still appear
+  on GitHub.
+
+Expected behavior:
+
+- cancellation before submit prevents submission;
+- cancellation after submit returns or persists polling guidance when possible;
+- no duplicate retry is recommended without the same `localAttemptId`;
+- no external cancellation claim is made unless backend status confirms it.
+
 ### Body contains reserved Agent Teams marker
 
 Expected behavior:
@@ -2283,6 +2496,24 @@ Expected behavior:
 - changing GitHub MCP enabled state forces reattach/restart for the app MCP
   bridge;
 - stale handle diagnostics include safe server names and reason codes only.
+
+### OpenCode multi-server env is only partially copied or cleared
+
+Risk:
+
+- legacy helpers can copy the old single-server env but drop
+  `CLAUDE_MULTIMODEL_APP_MCP_SERVERS_JSON`;
+- stale OpenCode serve processes can survive cleanup because cleanup markers
+  only detect the old one-server env.
+
+Expected behavior:
+
+- copy, snapshot, clear, redaction, diagnostics, and cleanup all know the new
+  multi-server env;
+- if both new and legacy env are present, the new list wins and legacy keys are
+  fallback only;
+- cleanup never kills user-owned OpenCode serve processes that lack Agent Teams
+  managed markers.
 
 ### Packaged app resource exists in source but not in signed bundle
 
@@ -2665,6 +2896,12 @@ From MCP official docs:
   across provider clients;
 - structured content and `outputSchema` are useful, but must be matched to the
   actual MCP SDK capabilities in this repository.
+- cancellation uses `notifications/cancelled` and can be ignored when the work
+  already completed or cannot be cancelled, so it must not be treated as GitHub
+  action cancellation after submit;
+- progress notifications are optional and require a caller-provided
+  `progressToken`, so V1 should use `github_action_status` as the reliable
+  progress/status mechanism.
 
 Plan consequence:
 
@@ -2674,6 +2911,8 @@ Plan consequence:
   backend action types and permission policies exist;
 - mention in future plans that commit authorship will be the GitHub App
   credential identity, not arbitrary agent/user identity.
+- keep MCP cancellation/progress support local to request handling until
+  control-plane exposes real provider-side cancellation semantics.
 
 ## Migration Plan
 
@@ -2993,6 +3232,13 @@ Recommended implementation:
 - include `agent-teams` and optional `agent-teams-github` in the managed list;
 - include the managed server list in the app MCP HTTP identity hash;
 - ensure reattach happens when GitHub MCP enabled state changes.
+- update `OpenCodeMcpBridgeEnv` copy/snapshot/clear helpers for
+  `CLAUDE_MULTIMODEL_APP_MCP_SERVERS_JSON`;
+- update `OpenCodeManagedHostProcessCleanup` managed markers so stale
+  app-owned hosts with the new env can be cleaned while user-owned OpenCode
+  hosts remain untouched;
+- update readiness/tool-availability diagnostics to report per-server missing
+  tools instead of collapsing GitHub tool absence into core MCP failure.
 
 Illustrative launcher output:
 
@@ -3109,6 +3355,18 @@ Add tests for:
 - idempotent submit hits are surfaced as existing action requests, not new
   mutations;
 - backend capability matrix is covered by tool-to-action tests.
+- core MCP preflight required tools do not include GitHub tools;
+- GitHub MCP required tool catalog is checked only when GitHub MCP is injected;
+- `AGENT_TEAMS_REGISTERED_TOOL_NAMES` keeps old hosted tools only during the
+  documented compatibility window;
+- controller declaration surfaces stay in sync for hosted GitHub runtime bridge
+  methods;
+- MCP cancellation before submit prevents bridge submission;
+- MCP cancellation after accepted submit returns polling guidance when
+  `actionRequestId` exists;
+- OpenCode env copy/snapshot/clear handles both multi-server and legacy env;
+- OpenCode managed-process cleanup recognizes the multi-server env marker
+  without matching unrelated user OpenCode serve processes.
 
 ### Step 9 - Smoke checks
 
@@ -3266,6 +3524,11 @@ MCP regression coverage.
   mapping.
 - Control-plane configuration failures for attribution renderer and content
   retention are surfaced as safe tool failures.
+- Core MCP preflight and GitHub MCP preflight are separate and tested.
+- MCP cancellation is treated as local request cancellation only, not external
+  GitHub action cancellation.
+- OpenCode multi-server env lifecycle is covered across copy, snapshot, clear,
+  cleanup, identity hash, and diagnostics.
 
 ## Acceptance Criteria
 
@@ -3302,6 +3565,8 @@ The phase is complete when:
   behavior have regression tests.
 - Misconfigured backend renderer/content retention states return safe MCP errors
   without queuing external actions.
+- Tool catalog, controller declaration drift, MCP cancellation, and OpenCode
+  multi-server env lifecycle are covered by focused regression tests.
 
 ## References Checked
 
@@ -3314,5 +3579,9 @@ The phase is complete when:
   <https://modelcontextprotocol.io/specification/2025-11-25/server/tools>
 - MCP schema reference:
   <https://modelcontextprotocol.io/specification/2025-11-25/schema>
+- MCP cancellation utility:
+  <https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/cancellation>
+- MCP progress utility:
+  <https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/progress>
 - MCP draft tools specification:
   <https://modelcontextprotocol.io/specification/draft/server/tools>
