@@ -811,4 +811,342 @@ describe('TeamTaskActivityIntervalService', () => {
 
     expect(result).toEqual({ changedTasks: 0, failed: true });
   });
+
+  describe('resumeActiveIntervalsForMembers (batch)', () => {
+    it('returns zero changes for an empty members list without scanning the tasks directory', () => {
+      const service = new TeamTaskActivityIntervalService();
+      const mutateSpy = vi.spyOn(
+        service as unknown as {
+          mutateTeamTasks: TeamTaskActivityIntervalService['resumeActiveIntervalsForMember'];
+        },
+        'mutateTeamTasks'
+      );
+
+      const result = service.resumeActiveIntervalsForMembers(
+        'alpha',
+        [],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(result).toEqual({ changedTasks: 0 });
+      expect(mutateSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns zero changes when all member names are blank', () => {
+      const service = new TeamTaskActivityIntervalService();
+      const mutateSpy = vi.spyOn(
+        service as unknown as {
+          mutateTeamTasks: TeamTaskActivityIntervalService['resumeActiveIntervalsForMember'];
+        },
+        'mutateTeamTasks'
+      );
+
+      const result = service.resumeActiveIntervalsForMembers(
+        'alpha',
+        ['', '   ', null as unknown as string],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(result).toEqual({ changedTasks: 0 });
+      expect(mutateSpy).not.toHaveBeenCalled();
+    });
+
+    it('produces the same per-task result as sequential single-member calls', async () => {
+      const baseTime = '2026-05-08T10:00:00.000Z';
+      const resumeAt = '2026-05-08T10:20:00.000Z';
+
+      async function seed(teamName: string): Promise<void> {
+        await writeTask(teamName, {
+          id: 'work-bob',
+          subject: 'Bob work',
+          owner: 'bob',
+          status: 'in_progress',
+          workIntervals: [{ startedAt: baseTime, completedAt: '2026-05-08T10:05:00.000Z' }],
+          historyEvents: [],
+        });
+        await writeTask(teamName, {
+          id: 'work-tom',
+          subject: 'Tom work',
+          owner: 'tom',
+          status: 'in_progress',
+          workIntervals: [{ startedAt: baseTime, completedAt: '2026-05-08T10:05:00.000Z' }],
+          historyEvents: [],
+        });
+        await writeTask(teamName, {
+          id: 'review-task',
+          subject: 'Review',
+          owner: 'alice',
+          status: 'completed',
+          reviewIntervals: [
+            {
+              reviewer: 'bob',
+              startedAt: '2026-05-08T10:06:00.000Z',
+              completedAt: '2026-05-08T10:08:00.000Z',
+            },
+          ],
+          historyEvents: [
+            {
+              id: 'event-review-started',
+              type: 'review_started',
+              timestamp: '2026-05-08T10:06:00.000Z',
+              actor: 'bob',
+            },
+          ],
+        });
+      }
+
+      await seed('seq');
+      const seqService = new TeamTaskActivityIntervalService();
+      seqService.resumeActiveIntervalsForMember('seq', 'bob', resumeAt);
+      seqService.resumeActiveIntervalsForMember('seq', 'tom', resumeAt);
+
+      await seed('batch');
+      const batchService = new TeamTaskActivityIntervalService();
+      const batchResult = batchService.resumeActiveIntervalsForMembers(
+        'batch',
+        ['bob', 'tom'],
+        resumeAt
+      );
+
+      expect(batchResult.changedTasks).toBe(3);
+      for (const id of ['work-bob', 'work-tom', 'review-task']) {
+        const seqTask = await readTask('seq', id);
+        const batchTask = await readTask('batch', id);
+        expect(batchTask.workIntervals).toEqual(seqTask.workIntervals);
+        expect(batchTask.reviewIntervals).toEqual(seqTask.reviewIntervals);
+        expect(batchTask.status).toBe(seqTask.status);
+      }
+    });
+
+    it('acquires the team lock once regardless of the number of members', async () => {
+      await writeTask('alpha', {
+        id: 'task-bob',
+        subject: 'Bob',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [],
+        historyEvents: [
+          {
+            id: 'event-work-started-bob',
+            type: 'status_changed',
+            from: 'pending',
+            to: 'in_progress',
+            timestamp: '2026-05-08T10:00:00.000Z',
+            actor: 'bob',
+          },
+        ],
+      });
+      await writeTask('alpha', {
+        id: 'task-tom',
+        subject: 'Tom',
+        owner: 'tom',
+        status: 'in_progress',
+        workIntervals: [],
+        historyEvents: [
+          {
+            id: 'event-work-started-tom',
+            type: 'status_changed',
+            from: 'pending',
+            to: 'in_progress',
+            timestamp: '2026-05-08T10:01:00.000Z',
+            actor: 'tom',
+          },
+        ],
+      });
+      await writeTask('alpha', {
+        id: 'task-zoe',
+        subject: 'Zoe',
+        owner: 'zoe',
+        status: 'in_progress',
+        workIntervals: [],
+        historyEvents: [
+          {
+            id: 'event-work-started-zoe',
+            type: 'status_changed',
+            from: 'pending',
+            to: 'in_progress',
+            timestamp: '2026-05-08T10:02:00.000Z',
+            actor: 'zoe',
+          },
+        ],
+      });
+
+      const service = new TeamTaskActivityIntervalService();
+      const mutateSpy = vi.spyOn(
+        service as unknown as {
+          mutateTeamTasks: TeamTaskActivityIntervalService['resumeActiveIntervalsForMember'];
+        },
+        'mutateTeamTasks'
+      );
+
+      const result = service.resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob', 'tom', 'zoe'],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(mutateSpy).toHaveBeenCalledTimes(1);
+      expect(result.changedTasks).toBe(3);
+    });
+
+    it('deduplicates member names that normalize to the same key', async () => {
+      await writeTask('alpha', {
+        id: 'work-task',
+        subject: 'Build',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [
+          { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        ],
+        historyEvents: [],
+      });
+
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob', 'BOB', '  bob  '],
+        '2026-05-08T10:20:00.000Z'
+      );
+      const task = await readTask('alpha', 'work-task');
+
+      expect(result.changedTasks).toBe(1);
+      expect(task.workIntervals).toEqual([
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        { startedAt: '2026-05-08T10:20:00.000Z' },
+      ]);
+    });
+
+    it('does not write task files when no listed member matches any task', async () => {
+      await writeTask('alpha', {
+        id: 'work-bob',
+        subject: 'Bob work',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [{ startedAt: '2026-05-08T10:00:00.000Z' }],
+        historyEvents: [],
+      });
+
+      const taskPath = path.join(tempDir, 'tasks', 'alpha', 'work-bob.json');
+      const beforeMtime = (await fs.stat(taskPath)).mtimeMs;
+      const beforeContents = await fs.readFile(taskPath, 'utf8');
+
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'alpha',
+        ['no-such-member', 'another-ghost'],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      const afterMtime = (await fs.stat(taskPath)).mtimeMs;
+      const afterContents = await fs.readFile(taskPath, 'utf8');
+
+      expect(result.changedTasks).toBe(0);
+      expect(afterMtime).toBe(beforeMtime);
+      expect(afterContents).toBe(beforeContents);
+    });
+
+    it('opens at most one work interval per task even when the owner is listed twice', async () => {
+      await writeTask('alpha', {
+        id: 'work-task',
+        subject: 'Build',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [
+          { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        ],
+        historyEvents: [],
+      });
+
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob', 'bob'],
+        '2026-05-08T10:20:00.000Z'
+      );
+      const task = await readTask('alpha', 'work-task');
+
+      expect(result.changedTasks).toBe(1);
+      expect(task.workIntervals).toEqual([
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        { startedAt: '2026-05-08T10:20:00.000Z' },
+      ]);
+    });
+
+    it('returns 0 changes for a non-existent team directory', async () => {
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'ghost-team',
+        ['bob'],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(result).toEqual({ changedTasks: 0 });
+    });
+
+    it('reports failure when task directory cannot be scanned', async () => {
+      await fs.mkdir(path.join(tempDir, 'tasks'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, 'tasks', 'alpha'), 'not a directory', 'utf8');
+
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob'],
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(result).toEqual({ changedTasks: 0, failed: true });
+    });
+
+    it('skips malformed task JSON files and still applies updates to valid ones', async () => {
+      await writeTask('alpha', {
+        id: 'good-task',
+        subject: 'Build',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [
+          { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        ],
+        historyEvents: [],
+      });
+      await fs.writeFile(
+        path.join(tempDir, 'tasks', 'alpha', 'broken-task.json'),
+        '{ this is not valid json',
+        'utf8'
+      );
+
+      const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob'],
+        '2026-05-08T10:20:00.000Z'
+      );
+      const goodTask = await readTask('alpha', 'good-task');
+
+      expect(result.changedTasks).toBe(1);
+      expect(goodTask.workIntervals).toEqual([
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        { startedAt: '2026-05-08T10:20:00.000Z' },
+      ]);
+    });
+
+    it('routes single-member resumeActiveIntervalsForMember through the batch implementation', async () => {
+      await writeTask('alpha', {
+        id: 'work-task',
+        subject: 'Build',
+        owner: 'bob',
+        status: 'in_progress',
+        workIntervals: [
+          { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        ],
+        historyEvents: [],
+      });
+
+      const service = new TeamTaskActivityIntervalService();
+      const batchSpy = vi.spyOn(service, 'resumeActiveIntervalsForMembers');
+
+      const result = service.resumeActiveIntervalsForMember(
+        'alpha',
+        'bob',
+        '2026-05-08T10:20:00.000Z'
+      );
+
+      expect(batchSpy).toHaveBeenCalledTimes(1);
+      expect(batchSpy).toHaveBeenCalledWith('alpha', ['bob'], '2026-05-08T10:20:00.000Z');
+      expect(result.changedTasks).toBe(1);
+    });
+  });
 });

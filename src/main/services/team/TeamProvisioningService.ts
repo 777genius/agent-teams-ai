@@ -3815,6 +3815,36 @@ export class TeamProvisioningService {
     }
   }
 
+  private resumeTaskActivityIntervalsForAliveMembers(
+    teamName: string,
+    memberNames: readonly string[],
+    at: string
+  ): void {
+    if (memberNames.length === 0) return;
+    const applied = this.getMemberTaskActivityResumeAppliedSet(teamName);
+    const pendingNames: string[] = [];
+    const pendingKeys: string[] = [];
+    const seen = new Set<string>();
+    for (const name of memberNames) {
+      const memberKey = this.normalizeMemberKeyForTaskActivity(name);
+      if (!memberKey || applied.has(memberKey) || seen.has(memberKey)) continue;
+      seen.add(memberKey);
+      pendingNames.push(name);
+      pendingKeys.push(memberKey);
+    }
+    if (pendingNames.length === 0) return;
+    const result = this.taskActivityIntervalService.resumeActiveIntervalsForMembers(
+      teamName,
+      pendingNames,
+      at
+    );
+    if (!result.failed) {
+      for (const key of pendingKeys) {
+        applied.add(key);
+      }
+    }
+  }
+
   private dropTaskActivityResumeMarkerForMember(teamName: string, memberName: string): void {
     const memberKey = this.normalizeMemberKeyForTaskActivity(memberName);
     if (!memberKey) return;
@@ -13983,13 +14013,19 @@ export class TeamProvisioningService {
           this.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
       });
       const runtimeObservedAt = nowIso();
+      const aliveMemberNames: string[] = [];
       for (const [memberName, entry] of Object.entries(nextStatuses)) {
         if (entry.runtimeAlive === true) {
-          this.resumeTaskActivityIntervalsForAliveMember(teamName, memberName, runtimeObservedAt);
+          aliveMemberNames.push(memberName);
         } else {
           this.dropTaskActivityResumeMarkerForMember(teamName, memberName);
         }
       }
+      this.resumeTaskActivityIntervalsForAliveMembers(
+        teamName,
+        aliveMemberNames,
+        runtimeObservedAt
+      );
       const expectedMembers = snapshot ? this.getPersistedLaunchMemberNames(snapshot) : undefined;
       const summary = expectedMembers
         ? summarizeMemberSpawnStatusRecord(expectedMembers, nextStatuses)

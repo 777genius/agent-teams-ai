@@ -2755,6 +2755,193 @@ describe('TeamProvisioningService', () => {
         resumeSpy.mockRestore();
       }
     });
+
+    it('routes alive-member batch through a single resumeActiveIntervalsForMembers call', () => {
+      const batchSpy = vi
+        .spyOn(TeamTaskActivityIntervalService.prototype, 'resumeActiveIntervalsForMembers')
+        .mockReturnValue({ changedTasks: 0 });
+      try {
+        const svc = new TeamProvisioningService();
+        const internals = svc as unknown as {
+          resumeTaskActivityIntervalsForAliveMembers: (
+            teamName: string,
+            memberNames: readonly string[],
+            at: string
+          ) => void;
+        };
+        const teamName = 'alive-members-batch-team';
+
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['alice', 'bob', 'carol'],
+          '2026-05-29T00:00:00.000Z'
+        );
+
+        expect(batchSpy).toHaveBeenCalledTimes(1);
+        expect(batchSpy).toHaveBeenCalledWith(
+          teamName,
+          ['alice', 'bob', 'carol'],
+          '2026-05-29T00:00:00.000Z'
+        );
+      } finally {
+        batchSpy.mockRestore();
+      }
+    });
+
+    it('skips members that are already marked applied and dedupes name aliases', () => {
+      const batchSpy = vi
+        .spyOn(TeamTaskActivityIntervalService.prototype, 'resumeActiveIntervalsForMembers')
+        .mockReturnValue({ changedTasks: 0 });
+      try {
+        const svc = new TeamProvisioningService();
+        const internals = svc as unknown as {
+          resumeTaskActivityIntervalsForAliveMembers: (
+            teamName: string,
+            memberNames: readonly string[],
+            at: string
+          ) => void;
+          resumeTaskActivityIntervalsForAliveMember: (
+            teamName: string,
+            memberName: string,
+            at: string
+          ) => void;
+        };
+        const teamName = 'alive-members-applied-team';
+
+        // Prime the applied set for 'alice' via the single-member path.
+        internals.resumeTaskActivityIntervalsForAliveMember(
+          teamName,
+          'alice',
+          '2026-05-29T00:00:00.000Z'
+        );
+        expect(batchSpy).toHaveBeenCalledTimes(1);
+        batchSpy.mockClear();
+
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['ALICE', 'alice', '  bob  ', 'bob', 'carol'],
+          '2026-05-29T00:00:10.000Z'
+        );
+
+        expect(batchSpy).toHaveBeenCalledTimes(1);
+        expect(batchSpy).toHaveBeenCalledWith(
+          teamName,
+          ['  bob  ', 'carol'],
+          '2026-05-29T00:00:10.000Z'
+        );
+      } finally {
+        batchSpy.mockRestore();
+      }
+    });
+
+    it('does not invoke the batch when there is no pending alive member', () => {
+      const batchSpy = vi
+        .spyOn(TeamTaskActivityIntervalService.prototype, 'resumeActiveIntervalsForMembers')
+        .mockReturnValue({ changedTasks: 0 });
+      try {
+        const svc = new TeamProvisioningService();
+        const internals = svc as unknown as {
+          resumeTaskActivityIntervalsForAliveMembers: (
+            teamName: string,
+            memberNames: readonly string[],
+            at: string
+          ) => void;
+        };
+        const teamName = 'alive-members-empty-team';
+
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          [],
+          '2026-05-29T00:00:00.000Z'
+        );
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['', '   '],
+          '2026-05-29T00:00:00.000Z'
+        );
+
+        expect(batchSpy).not.toHaveBeenCalled();
+      } finally {
+        batchSpy.mockRestore();
+      }
+    });
+
+    it('retries the alive-member batch when the previous batch reported failure', () => {
+      const batchSpy = vi
+        .spyOn(TeamTaskActivityIntervalService.prototype, 'resumeActiveIntervalsForMembers')
+        .mockReturnValueOnce({ changedTasks: 0, failed: true })
+        .mockReturnValueOnce({ changedTasks: 2 });
+      try {
+        const svc = new TeamProvisioningService();
+        const internals = svc as unknown as {
+          resumeTaskActivityIntervalsForAliveMembers: (
+            teamName: string,
+            memberNames: readonly string[],
+            at: string
+          ) => void;
+        };
+        const teamName = 'alive-members-retry-team';
+
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:00.000Z'
+        );
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:05.000Z'
+        );
+
+        expect(batchSpy).toHaveBeenCalledTimes(2);
+        expect(batchSpy).toHaveBeenNthCalledWith(
+          1,
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:00.000Z'
+        );
+        expect(batchSpy).toHaveBeenNthCalledWith(
+          2,
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:05.000Z'
+        );
+      } finally {
+        batchSpy.mockRestore();
+      }
+    });
+
+    it('does not re-invoke the batch on a subsequent call once members are applied', () => {
+      const batchSpy = vi
+        .spyOn(TeamTaskActivityIntervalService.prototype, 'resumeActiveIntervalsForMembers')
+        .mockReturnValue({ changedTasks: 0 });
+      try {
+        const svc = new TeamProvisioningService();
+        const internals = svc as unknown as {
+          resumeTaskActivityIntervalsForAliveMembers: (
+            teamName: string,
+            memberNames: readonly string[],
+            at: string
+          ) => void;
+        };
+        const teamName = 'alive-members-dedup-team';
+
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:00.000Z'
+        );
+        internals.resumeTaskActivityIntervalsForAliveMembers(
+          teamName,
+          ['alice', 'bob'],
+          '2026-05-29T00:00:05.000Z'
+        );
+
+        expect(batchSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        batchSpy.mockRestore();
+      }
+    });
   });
 
   describe('member spawn status launch reads', () => {

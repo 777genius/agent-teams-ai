@@ -321,6 +321,58 @@ function writeTaskFile(filePath: string, task: MutableTeamTask): void {
   fs.renameSync(tempPath, filePath);
 }
 
+function collectUniqueMemberKeys(memberNames: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const keys: string[] = [];
+  for (const name of memberNames) {
+    const key = normalizeMemberName(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    keys.push(key);
+  }
+  return keys;
+}
+
+function applyResumeIntervalsForMember(
+  task: MutableTeamTask,
+  memberKey: string,
+  at: string
+): boolean {
+  let changed = false;
+
+  if (
+    task.status === 'in_progress' &&
+    normalizeMemberName(task.owner) === memberKey &&
+    !hasOpenWorkInterval(task)
+  ) {
+    const activeStartedAt = getActiveWorkStartedAt(task);
+    task.workIntervals = [
+      ...(Array.isArray(task.workIntervals) ? task.workIntervals : []),
+      { startedAt: resumeStartIso(activeStartedAt, at) },
+    ];
+    changed = true;
+  }
+
+  const activeReview = getActiveReviewStart(task);
+  if (
+    task.status === 'completed' &&
+    activeReview &&
+    normalizeMemberName(activeReview.reviewer) === memberKey &&
+    !hasOpenReviewInterval(task, activeReview.reviewer)
+  ) {
+    task.reviewIntervals = [
+      ...(Array.isArray(task.reviewIntervals) ? task.reviewIntervals : []),
+      {
+        reviewer: activeReview.reviewer,
+        startedAt: resumeStartIso(activeReview.startedAt, at),
+      },
+    ];
+    changed = true;
+  }
+
+  return changed;
+}
+
 export class TeamTaskActivityIntervalService {
   private mutateTeamTasks(
     teamName: string,
@@ -403,42 +455,24 @@ export class TeamTaskActivityIntervalService {
     memberName: string,
     at = new Date().toISOString()
   ): ActivityIntervalResult {
-    const memberKey = normalizeMemberName(memberName);
-    if (!memberKey) return { changedTasks: 0 };
+    return this.resumeActiveIntervalsForMembers(teamName, [memberName], at);
+  }
+
+  resumeActiveIntervalsForMembers(
+    teamName: string,
+    memberNames: readonly string[],
+    at = new Date().toISOString()
+  ): ActivityIntervalResult {
+    const memberKeys = collectUniqueMemberKeys(memberNames);
+    if (memberKeys.length === 0) return { changedTasks: 0 };
 
     return this.mutateTeamTasks(teamName, (task) => {
       let changed = false;
-
-      if (
-        task.status === 'in_progress' &&
-        normalizeMemberName(task.owner) === memberKey &&
-        !hasOpenWorkInterval(task)
-      ) {
-        const activeStartedAt = getActiveWorkStartedAt(task);
-        task.workIntervals = [
-          ...(Array.isArray(task.workIntervals) ? task.workIntervals : []),
-          { startedAt: resumeStartIso(activeStartedAt, at) },
-        ];
-        changed = true;
+      for (const memberKey of memberKeys) {
+        if (applyResumeIntervalsForMember(task, memberKey, at)) {
+          changed = true;
+        }
       }
-
-      const activeReview = getActiveReviewStart(task);
-      if (
-        task.status === 'completed' &&
-        activeReview &&
-        normalizeMemberName(activeReview.reviewer) === memberKey &&
-        !hasOpenReviewInterval(task, activeReview.reviewer)
-      ) {
-        task.reviewIntervals = [
-          ...(Array.isArray(task.reviewIntervals) ? task.reviewIntervals : []),
-          {
-            reviewer: activeReview.reviewer,
-            startedAt: resumeStartIso(activeReview.startedAt, at),
-          },
-        ];
-        changed = true;
-      }
-
       return changed;
     });
   }
