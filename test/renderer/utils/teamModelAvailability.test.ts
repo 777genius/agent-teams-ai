@@ -544,7 +544,7 @@ describe('teamModelAvailability', () => {
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
   });
 
-  it('keeps both Anthropic Opus 4.7 and explicit Opus 4.6 in the fallback selector options', () => {
+  it('keeps Anthropic Opus 4.8, 4.7, and explicit Opus 4.6 in the fallback selector options', () => {
     expect(getAvailableTeamProviderModelOptions('anthropic')).toEqual([
       {
         value: '',
@@ -555,6 +555,13 @@ describe('teamModelAvailability', () => {
       },
       {
         value: 'opus',
+        label: 'Opus 4.8',
+        badgeLabel: 'Opus 4.8',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'claude-opus-4-7',
         label: 'Opus 4.7',
         badgeLabel: 'Opus 4.7',
         availabilityStatus: 'available',

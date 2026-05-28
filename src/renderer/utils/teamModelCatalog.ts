@@ -47,12 +47,17 @@ const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
 };
 
 const ANTHROPIC_ALIAS_LABELS = {
-  opus: 'Opus 4.7',
+  opus: 'Opus 4.8',
   sonnet: 'Sonnet 4.6',
   haiku: 'Haiku 4.5',
 } as const;
 
-const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = ['claude-opus-4-7', 'claude-opus-4-7[1m]'] as const;
+const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
+  'claude-opus-4-7',
+  'claude-opus-4-7[1m]',
+] as const;
 
 const ANTHROPIC_MODEL_ORDER = [
   'haiku',
@@ -60,6 +65,8 @@ const ANTHROPIC_MODEL_ORDER = [
   'claude-haiku-4-5',
   'opus',
   'opus[1m]',
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
   'claude-opus-4-7',
   'claude-opus-4-7[1m]',
   'claude-opus-4-6',
@@ -73,6 +80,8 @@ const ANTHROPIC_MODEL_ORDER = [
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   default: 'Default',
   ...ANTHROPIC_ALIAS_LABELS,
+  'claude-opus-4-8': 'Opus 4.8',
+  'claude-opus-4-8[1m]': 'Opus 4.8 (1M)',
   'claude-opus-4-7': 'Opus 4.7',
   'claude-opus-4-7[1m]': 'Opus 4.7 (1M)',
   'claude-sonnet-4-6': 'Sonnet 4.6',
@@ -99,7 +108,8 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
   {
     anthropic: [
       { value: '', label: 'Default', badgeLabel: 'Default' },
-      { value: 'opus', label: 'Opus 4.7', badgeLabel: 'Opus 4.7' },
+      { value: 'opus', label: 'Opus 4.8', badgeLabel: 'Opus 4.8' },
+      { value: 'claude-opus-4-7', label: 'Opus 4.7', badgeLabel: 'Opus 4.7' },
       { value: 'claude-opus-4-6', label: 'Opus 4.6', badgeLabel: 'Opus 4.6' },
       { value: 'sonnet', label: 'Sonnet 4.6', badgeLabel: 'Sonnet 4.6' },
       { value: 'haiku', label: 'Haiku 4.5', badgeLabel: 'Haiku 4.5' },
@@ -208,6 +218,8 @@ const SUPPORTED_ANTHROPIC_TEAM_MODELS = new Set<string>([
   'sonnet',
   'sonnet[1m]',
   'haiku',
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
   'claude-opus-4-7',
   'claude-opus-4-7[1m]',
   'claude-opus-4-6',

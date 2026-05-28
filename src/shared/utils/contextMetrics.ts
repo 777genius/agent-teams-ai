@@ -112,6 +112,7 @@ function isAnthropicNativeLongContextModel(modelName: string | undefined): boole
   }
 
   return (
+    normalized.startsWith('claude-opus-4-8') ||
     normalized.startsWith('claude-opus-4-7') ||
     normalized.startsWith('claude-opus-4-6') ||
     normalized.startsWith('claude-sonnet-4-6') ||

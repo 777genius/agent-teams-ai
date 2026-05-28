@@ -432,6 +432,13 @@ describe('team model availability Codex catalog integration', () => {
         availabilityReason: null,
       },
       {
+        value: 'claude-opus-4-7',
+        label: 'Opus 4.7',
+        badgeLabel: 'Opus 4.7',
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
         value: 'claude-opus-4-6',
         label: 'Opus 4.6',
         badgeLabel: 'Opus 4.6',

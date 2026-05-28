@@ -825,13 +825,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           'anthropic',
           getAnthropicDefaultTeamModel(false),
           runtimeProviderStatus
-        ) ?? 'Opus 4.7 (1M)';
+        ) ?? 'Opus 4.8 (1M)';
       const defaultLimitedContextModel =
         getRuntimeAwareProviderScopedTeamModelLabel(
           'anthropic',
           getAnthropicDefaultTeamModel(true),
           runtimeProviderStatus
-        ) ?? 'Opus 4.7';
+        ) ?? 'Opus 4.8';
 
       return t('modelSelector.defaultTooltip.anthropic', {
         longContextModel: defaultLongContextModel,
