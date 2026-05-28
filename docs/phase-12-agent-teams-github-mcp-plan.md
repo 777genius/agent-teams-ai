@@ -638,7 +638,38 @@ const githubBodySchema = z
 const githubNumberSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 const waitTimeoutMsSchema = z.number().int().min(1_000).max(600_000).optional();
+
+const localAttemptIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(/^[A-Za-z0-9._:-]+$/, 'localAttemptId must be URL/log safe');
 ```
+
+Why `localAttemptId` is stricter than a generic non-empty string:
+
+- control-plane normalizes request ids with `^[A-Za-z0-9._:-]+$`, no
+  whitespace, max 160 chars;
+- desktop derives the final `requestId` from local attempt, target, action type,
+  and payload fingerprint;
+- MCP should reject bad ids before the local bridge so agents get a clear tool
+  validation error.
+
+Generated id format:
+
+```ts
+function createLocalAttemptId(toolName: string, randomUUID: () => string): string {
+  return `github-mcp:${toolName}:${randomUUID()}`;
+}
+```
+
+Guard:
+
+- never use raw body text, PR title, file path, or user prompt text in generated
+  ids;
+- if the agent supplies an invalid id, fail before submission;
+- if MCP generates an id, include it in every success and failure result.
 
 Output contract:
 
@@ -1650,6 +1681,43 @@ Future actions:
 Do not add future tools until backend action types, policy capabilities, and
 outbox dispatch exist.
 
+## Backend Capability And Permission Matrix
+
+The MCP tool layer must align with the control-plane capability mapping. Do not
+let MCP expose a tool unless the backend action type, target policy capability,
+token broker permission, and dispatcher path all exist.
+
+Current backend-aligned matrix:
+
+| MCP tool                      | Backend action type                            | Policy capability              | Token permission        | Dispatcher |
+| ----------------------------- | ---------------------------------------------- | ------------------------------ | ----------------------- | ---------- |
+| `github_comment_issue`        | `github.issue_comment.create`                  | `github.issue_comment.request` | `issues:write`          | GraphQL    |
+| `github_comment_pull_request` | `github.pull_request_comment.create_top_level` | `github.pr_comment.request`    | `pull_requests:write`   | GraphQL    |
+| `github_review_pull_request`  | `github.pull_request_review.create`            | `github.pr_review.request`     | `pull_requests:write`   | GraphQL    |
+| `github_create_check_run`     | `github.check_run.create_or_update`            | `github.check_run.request`     | `checks:write`          | REST       |
+| `github_action_status`        | status endpoint                                | desktop/workspace scoped       | none on MCP status call | local/API  |
+
+Contract tests should assert this matrix in both directions:
+
+```ts
+expect(mapMcpToolToBackendAction('github_comment_pull_request')).toEqual({
+  actionType: 'github.pull_request_comment.create_top_level',
+  capability: 'github.pr_comment.request',
+});
+```
+
+Weak spot:
+
+- `github_comment_pull_request` may look like an issue comment because GitHub
+  PRs are also issues, but the control-plane intentionally maps it to
+  `pull_requests:write` through `github.pr_comment.request`.
+
+Guard:
+
+- if a future backend changes permission strategy, update the matrix and tests
+  before changing MCP tool descriptions;
+- raw submit must not bypass capability mapping in normal agent prompts.
+
 ## Idempotency
 
 Every mutating tool must send `localAttemptId`.
@@ -1804,6 +1872,51 @@ if (submitResult.ok && submitResult.status !== 'succeeded') {
   };
 }
 ```
+
+## Status Envelope Contract
+
+There are three status shapes in play:
+
+| Layer                       | Status values                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| control-plane domain        | `queued`, `dispatching`, `succeeded`, `failed`, `dead_lettered`                                       |
+| desktop hosted integrations | `queued`, `dispatching`, `processing`, `succeeded`, `failed`, `dead_lettered`, `cancelled`, `unknown` |
+| MCP tool result             | should preserve all desktop values and add `nextAction`                                               |
+
+MCP should not narrow status values to only the current control-plane domain
+union, because desktop already normalizes unknown/provider states for UI
+compatibility.
+
+Recommended type:
+
+```ts
+type GitHubMcpActionStatus =
+  | 'queued'
+  | 'dispatching'
+  | 'processing'
+  | 'succeeded'
+  | 'failed'
+  | 'dead_lettered'
+  | 'cancelled'
+  | 'unknown';
+
+function nextActionForStatus(
+  status: GitHubMcpActionStatus
+): GitHubMcpSubmitToolResult['nextAction'] {
+  if (status === 'queued' || status === 'dispatching' || status === 'processing') {
+    return 'poll_status';
+  }
+  return 'none';
+}
+```
+
+Idempotent submit contract:
+
+- control-plane submit can return an idempotent hit for an existing request;
+- desktop currently normalizes the response as action status;
+- MCP should preserve `actionRequestId`, `status`, and optionally expose
+  `idempotent: true` if the bridge returns it;
+- agents should treat idempotent hits as success and poll status, not resubmit.
 
 ## Error Model
 
@@ -2357,6 +2470,88 @@ Expected behavior:
 - if this cannot be guaranteed, defer `github_create_check_run` from the first
   split.
 
+### Agent supplies invalid `localAttemptId`
+
+Risk:
+
+- current low-level MCP accepts any non-empty string, but control-plane request
+  ids reject whitespace, long ids, and unsafe characters.
+
+Expected behavior:
+
+- GitHub MCP validates `localAttemptId` with the same safe character rules
+  before desktop submission;
+- generated ids are always safe;
+- invalid agent-supplied ids return a local validation error with
+  `nextAction: 'none'`.
+
+### Idempotent hit after retry is hidden from agent
+
+Risk:
+
+- submit retry can hit an existing request id, but the agent may not understand
+  that no new action was queued.
+
+Expected behavior:
+
+- bridge preserves an `idempotent` flag when available;
+- MCP result states that the existing action request was reused;
+- next action is status polling, not another mutation call.
+
+### Control-plane policy changes after request is queued
+
+Risk:
+
+- target policy can allow request submission but deny dispatch later after
+  permissions change.
+
+Expected behavior:
+
+- request status moves to terminal failure/dead-letter with safe authorization
+  error;
+- MCP status returns the safe error and no retry guidance;
+- agents do not try to bypass by direct GitHub CLI.
+
+### Attribution renderer settings are missing
+
+Risk:
+
+- control-plane requires a default avatar URL and allowed avatar origins to
+  render trusted attribution.
+
+Expected behavior:
+
+- launch/status diagnostics should distinguish "GitHub connected" from "GitHub
+  action renderer misconfigured";
+- MCP returns safe validation/configuration error;
+- no raw avatar URL or config value is logged.
+
+### Control-plane content retention is disabled
+
+Risk:
+
+- request use case requires external content retention before queuing GitHub
+  actions.
+
+Expected behavior:
+
+- MCP surfaces safe configuration error;
+- action is not queued;
+- diagnostics point to control-plane hosted operations config, not agent input.
+
+### GraphQL query succeeds but mutation response lacks node id
+
+Risk:
+
+- target lookup can succeed and mutation can return an unexpected shape without
+  a comment/review id.
+
+Expected behavior:
+
+- backend marks provider rejected or unknown based on mutation attempt state;
+- MCP status tells the agent to poll or stop based on final status;
+- no blind retry with a new `localAttemptId`.
+
 ## Security Rules
 
 - GitHub MCP never imports Octokit, GraphQL client, REST client, or GitHub SDK.
@@ -2610,6 +2805,37 @@ export class AgentTeamsControllerGitHubBridge implements RuntimeGitHubBridge {
   }
 }
 ```
+
+Bridge result normalization:
+
+```ts
+type HostedBridgeSubmitResponse = Readonly<{
+  actionRequestId: string;
+  status: GitHubMcpActionStatus;
+  githubUrl?: string;
+  safeError?: SafeToolError;
+  idempotent?: boolean;
+}>;
+
+function normalizeBridgeSubmitResult(
+  response: HostedBridgeSubmitResponse,
+  localAttemptId: string
+): GitHubMcpSubmitToolResult & { idempotent?: boolean } {
+  return {
+    ok: response.safeError === undefined,
+    actionRequestId: response.actionRequestId,
+    githubUrl: response.githubUrl,
+    localAttemptId,
+    nextAction: nextActionForStatus(response.status),
+    status: response.status,
+    ...(response.idempotent === undefined ? {} : { idempotent: response.idempotent }),
+    ...(response.safeError === undefined ? {} : { safeError: response.safeError }),
+  };
+}
+```
+
+Do not let the MCP bridge invent status values. It should pass through desktop
+normalized statuses and only add agent guidance.
 
 ### Step 3 - Add GitHub MCP tools
 
@@ -2871,12 +3097,18 @@ Add tests for:
   `structuredContent`;
 - body schema rejects empty, oversized, NUL-containing, and reserved-marker
   content before bridge submission;
+- `localAttemptId` schema rejects whitespace, overly long, and unsafe ids before
+  bridge submission;
 - wait timeout is clamped to the same min/max as existing MCP runtime tools;
 - remote parser accepts SSH/HTTPS GitHub.com forms and rejects GitHub Enterprise
   in V1;
 - raw remotes with credentials are never logged;
 - status lookup for unknown/cross-workspace action id returns safe not-found;
 - stale target cache cannot authorize a mutation without control-plane approval.
+- status normalization preserves `processing`, `cancelled`, and `unknown`;
+- idempotent submit hits are surfaced as existing action requests, not new
+  mutations;
+- backend capability matrix is covered by tool-to-action tests.
 
 ### Step 9 - Smoke checks
 
@@ -3029,6 +3261,11 @@ MCP regression coverage.
 - GitHub MCP does not require a FastMCP major upgrade unless explicitly proven.
 - Live E2E has a sandbox allowlist and cannot mutate arbitrary real
   repositories by accident.
+- MCP status contract preserves the desktop hosted status union.
+- MCP tool mapping matches control-plane capability and token permission
+  mapping.
+- Control-plane configuration failures for attribution renderer and content
+  retention are surfaced as safe tool failures.
 
 ## Acceptance Criteria
 
@@ -3061,6 +3298,10 @@ The phase is complete when:
   remote parsing behavior have regression tests.
 - FastMCP dependency decision is documented: stay on current version or upgrade
   in a separate verified commit.
+- `localAttemptId`, status normalization, idempotent hit, and capability matrix
+  behavior have regression tests.
+- Misconfigured backend renderer/content retention states return safe MCP errors
+  without queuing external actions.
 
 ## References Checked
 
