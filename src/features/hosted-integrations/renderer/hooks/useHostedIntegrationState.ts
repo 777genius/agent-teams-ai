@@ -98,6 +98,13 @@ export function useHostedIntegrationState(
         ),
       configure: (controlPlaneBaseUrl: string) =>
         run(() => api!.configure({ controlPlaneBaseUrl })),
+      completePairing: (pairingCode: string) =>
+        run(() =>
+          api!.completePairing({
+            desktopDisplayName: 'Agent Teams Desktop',
+            pairingCode,
+          })
+        ),
       disableTarget: (targetId: string) => run(() => api!.disableTarget({ targetId })),
       dismissSetup: (setupSessionId: string) =>
         run(() => api!.dismissGitHubSetup({ setupSessionId })),
@@ -112,8 +119,10 @@ export function useHostedIntegrationState(
       refreshSetup: (setupSessionId: string) =>
         run(() => api!.refreshGitHubSetup({ setupSessionId })),
       refreshTargets: () => run(() => api!.listTargets()),
+      rotateSessionToken: () => run(() => api!.rotateSessionToken()),
       revokeSession: () => run(() => api!.revokeSession()),
       startGitHubSetup: () => run(() => api!.startGitHubSetup()),
+      startPairing: () => run(() => api!.startPairing(), { refresh: false }),
     }),
     [api, refresh, run]
   );

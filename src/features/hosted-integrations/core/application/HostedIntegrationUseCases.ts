@@ -59,9 +59,14 @@ export class HostedIntegrationUseCases {
   public async configure(
     input: ConfigureHostedIntegrationRequestDto
   ): Promise<HostedIntegrationStateDto> {
+    const currentState = await this.ports.stateStore.readState();
     const baseUrl = normalizeControlPlaneBaseUrl(input.controlPlaneBaseUrl, {
       allowLocalhostHttp: this.options.allowLocalhostHttp === true,
     });
+    if (controlPlaneOriginChanged(currentState.controlPlaneBaseUrl, baseUrl.origin)) {
+      await this.ports.tokenStore.clearToken();
+      await this.ports.stateStore.markSessionRevoked();
+    }
     await this.ports.stateStore.saveControlPlaneBaseUrl(baseUrl);
     return this.getState();
   }
@@ -73,7 +78,7 @@ export class HostedIntegrationUseCases {
     const result = await this.ports.connection.bootstrapWorkspace(input);
     await this.ports.tokenStore.writeToken(result.token);
     await this.ports.stateStore.saveSession(result.session);
-    return this.refreshAfterAuthChange();
+    return this.refreshAfterAuthChange(result.token);
   }
 
   public async startPairing(): Promise<StartHostedPairingResponseDto> {
@@ -88,7 +93,7 @@ export class HostedIntegrationUseCases {
     const result = await this.ports.pairing.completePairing(input);
     await this.ports.tokenStore.writeToken(result.token);
     await this.ports.stateStore.saveSession(result.session);
-    return this.refreshAfterAuthChange();
+    return this.refreshAfterAuthChange(result.token);
   }
 
   public async startGitHubSetup(): Promise<HostedGitHubSetupSessionDto> {
@@ -211,8 +216,31 @@ export class HostedIntegrationUseCases {
     return this.ports.stateStore.readState();
   }
 
-  private async refreshAfterAuthChange(): Promise<HostedIntegrationStateDto> {
+  public async rotateSessionToken(): Promise<HostedIntegrationStateDto> {
+    await this.assertSecureStoreAvailable();
+    const state = await this.ports.stateStore.readState();
     const token = await this.requireToken();
+    const desktopClientId = state.session?.desktopClientId?.trim();
+    if (!desktopClientId) {
+      throwHostedIntegrationError(
+        hostedIntegrationError(
+          'HOSTED_INTEGRATION_SESSION_REQUIRED',
+          'Hosted integration is not connected.',
+          'auth'
+        )
+      );
+    }
+    const rotation = await this.ports.connection.rotateSessionToken(
+      token,
+      desktopClientId,
+      buildRotationRequestId(desktopClientId, this.ports.clock.now())
+    );
+    await this.ports.tokenStore.writeToken(rotation.token);
+    return this.refreshAfterAuthChange(rotation.token);
+  }
+
+  private async refreshAfterAuthChange(tokenOverride?: string): Promise<HostedIntegrationStateDto> {
+    const token = tokenOverride ?? (await this.requireToken());
     const session = await this.ports.connection.getMe(token);
     await this.ports.stateStore.saveSession(session);
     await this.refreshConnections().catch(() => []);
@@ -257,4 +285,20 @@ export class HostedIntegrationUseCases {
       )
     );
   }
+}
+
+function controlPlaneOriginChanged(
+  previousBaseUrl: string | undefined,
+  nextOrigin: string
+): boolean {
+  if (!previousBaseUrl) return false;
+  try {
+    return new URL(previousBaseUrl).origin !== nextOrigin;
+  } catch {
+    return true;
+  }
+}
+
+function buildRotationRequestId(desktopClientId: string, now: Date): string {
+  return `desktop-token-rotation:${desktopClientId}:${now.toISOString()}`;
 }

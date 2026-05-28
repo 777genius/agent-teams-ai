@@ -94,6 +94,25 @@ export class ControlPlaneHttpClient
     );
   }
 
+  public async rotateSessionToken(
+    token: string,
+    desktopClientId: string,
+    rotationRequestId: string
+  ): Promise<{ token: string }> {
+    const response = await this.request(
+      'POST',
+      `/api/desktop/v1/clients/${encodeURIComponent(desktopClientId)}/rotate-token`,
+      {
+        body: { rotationRequestId },
+        token,
+      }
+    );
+    const record = asRecord(response);
+    return {
+      token: readRequiredString(record.desktopToken ?? record.token, 'desktopToken'),
+    };
+  }
+
   public async startPairing(token: string): Promise<StartHostedPairingResponseDto> {
     const response = asRecord(
       await this.request('POST', '/api/desktop/v1/pairing/start', { token })

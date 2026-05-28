@@ -14,4 +14,5 @@ export const HOSTED_INTEGRATIONS_LIST_TARGETS = 'hosted-integrations:list-target
 export const HOSTED_INTEGRATIONS_ENABLE_TARGET = 'hosted-integrations:enable-target';
 export const HOSTED_INTEGRATIONS_DISABLE_TARGET = 'hosted-integrations:disable-target';
 export const HOSTED_INTEGRATIONS_GET_ACTION_STATUS = 'hosted-integrations:get-action-status';
+export const HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN = 'hosted-integrations:rotate-session-token';
 export const HOSTED_INTEGRATIONS_REVOKE_SESSION = 'hosted-integrations:revoke-session';

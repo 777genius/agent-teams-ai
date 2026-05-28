@@ -1,10 +1,13 @@
 import { useState } from 'react';
 
-import { Github, Loader2, Plug, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { Github, KeyRound, Loader2, Plug, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { useHostedIntegrationState } from './hooks/useHostedIntegrationState';
 
-import type { HostedGitHubAvailableRepositoryDto } from '../contracts';
+import type {
+  HostedGitHubAvailableRepositoryDto,
+  StartHostedPairingResponseDto,
+} from '../contracts';
 
 const buttonClass =
   'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50';
@@ -15,6 +18,8 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
   const [availableRepositories, setAvailableRepositories] = useState<
     readonly HostedGitHubAvailableRepositoryDto[]
   >([]);
+  const [pairingCode, setPairingCode] = useState('');
+  const [pairingSession, setPairingSession] = useState<StartHostedPairingResponseDto | null>(null);
 
   const configuredBaseUrl = state?.controlPlaneBaseUrl ?? '';
   const activeSetup = state?.activeSetup;
@@ -25,6 +30,22 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
     const result = await actions.listAvailableRepositories(connectionId);
     if (Array.isArray(result)) {
       setAvailableRepositories(result);
+    }
+  }
+
+  async function startPairing(): Promise<void> {
+    const result = await actions.startPairing();
+    if (result) {
+      setPairingSession(result);
+      setPairingCode(result.pairingCode);
+    }
+  }
+
+  async function completePairing(): Promise<void> {
+    const result = await actions.completePairing(pairingCode);
+    if (result) {
+      setPairingSession(null);
+      setPairingCode('');
     }
   }
 
@@ -88,7 +109,36 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
             <ShieldCheck className="size-3.5" />
             Connect
           </button>
+          <button
+            className={buttonClass}
+            disabled={busy || !connected}
+            onClick={() => void startPairing()}
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+          >
+            <KeyRound className="size-3.5" />
+            Pair
+          </button>
         </div>
+        {(pairingSession || !connected) && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <input
+              aria-label="Pairing code"
+              value={pairingCode}
+              onChange={(event) => setPairingCode(event.target.value)}
+              placeholder="Pairing code"
+              className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:ring-1 focus:ring-blue-400"
+            />
+            <button
+              className={buttonClass}
+              disabled={busy || !configuredBaseUrl || !pairingCode.trim()}
+              onClick={() => void completePairing()}
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+            >
+              <KeyRound className="size-3.5" />
+              Complete pairing
+            </button>
+          </div>
+        )}
         {state?.session && (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
             <span>
@@ -234,7 +284,12 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
               </div>
               <button
                 className={buttonClass}
-                disabled={busy || target.status === 'disabled'}
+                disabled={
+                  busy ||
+                  target.status === 'disabled' ||
+                  target.status === 'deleted' ||
+                  target.status === 'revoked'
+                }
                 onClick={() => void actions.disableTarget(target.targetId)}
                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
               >
@@ -247,15 +302,26 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
       )}
 
       {state?.session && (
-        <button
-          className={buttonClass}
-          disabled={busy}
-          onClick={() => void actions.revokeSession()}
-          style={{ borderColor: 'rgba(239,68,68,0.35)', color: '#f87171' }}
-        >
-          <Trash2 className="size-3.5" />
-          Revoke desktop connection
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={buttonClass}
+            disabled={busy}
+            onClick={() => void actions.rotateSessionToken()}
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+          >
+            <KeyRound className="size-3.5" />
+            Rotate token
+          </button>
+          <button
+            className={buttonClass}
+            disabled={busy}
+            onClick={() => void actions.revokeSession()}
+            style={{ borderColor: 'rgba(239,68,68,0.35)', color: '#f87171' }}
+          >
+            <Trash2 className="size-3.5" />
+            Revoke desktop connection
+          </button>
+        </div>
       )}
 
       {error && (

@@ -42,5 +42,6 @@ export interface HostedIntegrationsElectronApi {
   getActionStatus(
     input: GetHostedGitHubActionStatusRequestDto
   ): Promise<HostedGitHubActionStatusDto>;
+  rotateSessionToken(): Promise<HostedIntegrationStateDto>;
   revokeSession(): Promise<HostedIntegrationDesktopSessionDto | null>;
 }

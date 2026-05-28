@@ -45,15 +45,15 @@ export function normalizeHostedGitHubSetupSession(
   const input = isRecord(value) ? value : {};
   const setupSessionId = readString(input.setupSessionId) || fallbackSessionId;
   const state = normalizeSetupState(readString(input.state) || readString(input.status));
+  const setupUrl = readString(input.setupUrl) || readString(input.installUrl);
+  const safeError = input.safeError ?? input.safeFailure;
   return {
     setupSessionId,
     state,
-    ...(readString(input.setupUrl) ? { setupUrl: readString(input.setupUrl) } : {}),
+    ...(setupUrl ? { setupUrl } : {}),
     ...(readString(input.expiresAt) ? { expiresAt: readString(input.expiresAt) } : {}),
     ...(readString(input.connectionId) ? { connectionId: readString(input.connectionId) } : {}),
-    ...(input.safeError === undefined
-      ? {}
-      : { safeError: normalizeHostedSafeError(input.safeError) }),
+    ...(safeError === undefined ? {} : { safeError: normalizeHostedSafeError(safeError) }),
     fetchedAt: nowIso(),
   };
 }
@@ -86,7 +86,8 @@ export function normalizeHostedGitHubRepositoryTarget(
   return {
     targetId: readString(target.targetId) || readString(target.id),
     connectionId: readString(target.integrationConnectionId) || readString(target.connectionId),
-    githubRepositoryId: readString(binding.githubRepositoryId),
+    githubRepositoryId:
+      readString(binding.githubRepositoryId) || readString(binding.providerRepositoryId),
     displayOwner: readString(binding.displayOwner),
     displayName: readString(binding.displayName),
     displayFullName: readString(binding.displayFullName),
@@ -109,22 +110,27 @@ export function normalizeHostedGitHubAvailableRepository(
   connectionId: string
 ): HostedGitHubAvailableRepositoryDto {
   const input = isRecord(value) ? value : {};
+  const target = isRecord(input.target) ? input.target : {};
+  const targetId =
+    readString(input.targetId) || readString(target.targetId) || readString(target.id);
   return {
     connectionId,
-    githubRepositoryId: readString(input.githubRepositoryId),
+    githubRepositoryId:
+      readString(input.githubRepositoryId) || readString(input.providerRepositoryId),
     displayOwner: readString(input.displayOwner),
     displayName: readString(input.displayName),
     displayFullName: readString(input.displayFullName),
     ...(typeof input.private === 'boolean' ? { private: input.private } : {}),
     ...(typeof input.archived === 'boolean' ? { archived: input.archived } : {}),
     available: input.available !== false,
-    ...(readString(input.targetId) ? { targetId: readString(input.targetId) } : {}),
+    ...(targetId ? { targetId } : {}),
     fetchedAt: nowIso(),
   };
 }
 
 export function normalizeHostedGitHubActionStatus(value: unknown): HostedGitHubActionStatusDto {
   const input = isRecord(value) ? value : {};
+  const safeError = input.safeError ?? input.safeFailure;
   return {
     actionRequestId: readString(input.actionRequestId) || readString(input.id),
     ...(readString(input.requestId) ? { requestId: readString(input.requestId) } : {}),
@@ -132,9 +138,7 @@ export function normalizeHostedGitHubActionStatus(value: unknown): HostedGitHubA
     ...(readString(input.actionType) ? { actionType: readString(input.actionType) } : {}),
     status: normalizeActionStatus(readString(input.status)),
     ...(readString(input.githubUrl) ? { githubUrl: readString(input.githubUrl) } : {}),
-    ...(input.safeError === undefined
-      ? {}
-      : { safeError: normalizeHostedSafeError(input.safeError) }),
+    ...(safeError === undefined ? {} : { safeError: normalizeHostedSafeError(safeError) }),
     ...(readString(input.createdAt) ? { createdAt: readString(input.createdAt) } : {}),
     ...(readString(input.updatedAt) ? { updatedAt: readString(input.updatedAt) } : {}),
     fetchedAt: nowIso(),
@@ -155,6 +159,12 @@ function normalizeSetupState(value: string): HostedGitHubSetupState {
     return value;
   }
   if (value === 'started') return 'pending_installation';
+  if (value === 'install_url_created') return 'pending_installation';
+  if (value === 'installation_callback_received' || value === 'claim_oauth_started') {
+    return 'pending_claim';
+  }
+  if (value === 'claim_bound') return 'connected';
+  if (value === 'failed' || value === 'oauth_failed' || value === 'claim_failed') return 'failed';
   if (value === 'completed') return 'connected';
   return 'idle';
 }
@@ -162,6 +172,7 @@ function normalizeSetupState(value: string): HostedGitHubSetupState {
 function normalizeActionStatus(value: string): HostedGitHubActionStatus {
   if (
     value === 'queued' ||
+    value === 'dispatching' ||
     value === 'processing' ||
     value === 'succeeded' ||
     value === 'failed' ||
@@ -174,7 +185,15 @@ function normalizeActionStatus(value: string): HostedGitHubActionStatus {
 }
 
 function normalizeTargetStatus(value: string): HostedGitHubRepositoryTargetStatus {
-  if (value === 'enabled' || value === 'disabled' || value === 'deleted') return value;
+  if (
+    value === 'enabled' ||
+    value === 'disabled' ||
+    value === 'deleted' ||
+    value === 'stale' ||
+    value === 'revoked'
+  ) {
+    return value;
+  }
   return 'unknown';
 }
 

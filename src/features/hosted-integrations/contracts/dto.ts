@@ -79,7 +79,13 @@ export interface HostedGitHubConnectionDto {
   readonly fetchedAt: string;
 }
 
-export type HostedGitHubRepositoryTargetStatus = 'enabled' | 'disabled' | 'deleted' | 'unknown';
+export type HostedGitHubRepositoryTargetStatus =
+  | 'enabled'
+  | 'disabled'
+  | 'deleted'
+  | 'stale'
+  | 'revoked'
+  | 'unknown';
 
 export interface HostedGitHubRepositoryTargetDto {
   readonly targetId: string;
@@ -112,6 +118,7 @@ export interface HostedGitHubAvailableRepositoryDto {
 
 export type HostedGitHubActionStatus =
   | 'queued'
+  | 'dispatching'
   | 'processing'
   | 'succeeded'
   | 'failed'
@@ -215,6 +222,9 @@ export interface HostedGitHubActionCommandDto {
   readonly actionType: HostedGitHubActionType;
   readonly payload: unknown;
   readonly localAttemptId: string;
+  readonly runId?: string;
+  readonly runtimeSessionId?: string;
+  readonly memberName?: string;
   readonly correlationId?: string;
   readonly runtimeMember: HostedGitHubActionRuntimeMemberDto;
 }

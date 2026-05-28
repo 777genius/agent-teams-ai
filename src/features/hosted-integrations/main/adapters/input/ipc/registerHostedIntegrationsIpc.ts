@@ -13,6 +13,7 @@ import {
   HOSTED_INTEGRATIONS_REFRESH_CONNECTIONS,
   HOSTED_INTEGRATIONS_REFRESH_GITHUB_SETUP,
   HOSTED_INTEGRATIONS_REVOKE_SESSION,
+  HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN,
   HOSTED_INTEGRATIONS_START_GITHUB_SETUP,
   HOSTED_INTEGRATIONS_START_PAIRING,
 } from '../../../../contracts';
@@ -81,6 +82,7 @@ export function registerHostedIntegrationsIpc(
     HOSTED_INTEGRATIONS_GET_ACTION_STATUS,
     (_event, input: GetHostedGitHubActionStatusRequestDto) => feature.getActionStatus(input)
   );
+  ipcMain.handle(HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN, () => feature.rotateSessionToken());
   ipcMain.handle(HOSTED_INTEGRATIONS_REVOKE_SESSION, () => feature.revokeSession());
 }
 
@@ -101,6 +103,7 @@ export function removeHostedIntegrationsIpc(ipcMain: IpcMain): void {
     HOSTED_INTEGRATIONS_ENABLE_TARGET,
     HOSTED_INTEGRATIONS_DISABLE_TARGET,
     HOSTED_INTEGRATIONS_GET_ACTION_STATUS,
+    HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN,
     HOSTED_INTEGRATIONS_REVOKE_SESSION,
   ]) {
     ipcMain.removeHandler(channel);

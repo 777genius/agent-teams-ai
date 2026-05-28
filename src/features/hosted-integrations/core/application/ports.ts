@@ -49,6 +49,11 @@ export interface ControlPlaneConnectionPort {
   bootstrapWorkspace(
     input: BootstrapHostedWorkspaceRequestDto
   ): Promise<{ session: HostedIntegrationDesktopSessionDto; token: string }>;
+  rotateSessionToken(
+    token: string,
+    desktopClientId: string,
+    rotationRequestId: string
+  ): Promise<{ token: string }>;
   revokeSession(token: string, desktopClientId: string): Promise<void>;
 }
 

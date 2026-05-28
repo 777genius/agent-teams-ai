@@ -60,6 +60,7 @@ export interface HostedIntegrationsFeatureFacade {
   getActionStatus(
     input: GetHostedGitHubActionStatusRequestDto
   ): Promise<HostedGitHubActionStatusDto>;
+  rotateSessionToken(): Promise<HostedIntegrationStateDto>;
   revokeSession(): Promise<HostedIntegrationDesktopSessionDto | null>;
 }
 
@@ -105,6 +106,7 @@ export function createHostedIntegrationsFeature(
     openSetupUrl: (input) => useCases.openSetupUrl(input),
     refreshConnections: () => useCases.refreshConnections(),
     refreshGitHubSetup: (input) => useCases.refreshGitHubSetup(input),
+    rotateSessionToken: () => useCases.rotateSessionToken(),
     revokeSession: async () => (await useCases.revokeSession()).session ?? null,
     startGitHubSetup: () => useCases.startGitHubSetup(),
     startPairing: () => useCases.startPairing(),

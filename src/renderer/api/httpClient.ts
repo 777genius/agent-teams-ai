@@ -1452,6 +1452,7 @@ export class HttpAPIClient implements ElectronAPI {
       },
     }),
     revokeSession: async () => null,
+    rotateSessionToken: async () => this.getHostedIntegrationsBrowserState(),
     startGitHubSetup: async () => ({
       fetchedAt: new Date().toISOString(),
       setupSessionId: '',

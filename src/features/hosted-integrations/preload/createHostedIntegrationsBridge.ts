@@ -13,6 +13,7 @@ import {
   HOSTED_INTEGRATIONS_REFRESH_CONNECTIONS,
   HOSTED_INTEGRATIONS_REFRESH_GITHUB_SETUP,
   HOSTED_INTEGRATIONS_REVOKE_SESSION,
+  HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN,
   HOSTED_INTEGRATIONS_START_GITHUB_SETUP,
   HOSTED_INTEGRATIONS_START_PAIRING,
   type HostedIntegrationsElectronApi,
@@ -58,6 +59,7 @@ export function createHostedIntegrationsBridge(
     refreshConnections: () => ipcRenderer.invoke(HOSTED_INTEGRATIONS_REFRESH_CONNECTIONS),
     refreshGitHubSetup: (input: RefreshGitHubSetupRequestDto) =>
       ipcRenderer.invoke(HOSTED_INTEGRATIONS_REFRESH_GITHUB_SETUP, input),
+    rotateSessionToken: () => ipcRenderer.invoke(HOSTED_INTEGRATIONS_ROTATE_SESSION_TOKEN),
     revokeSession: () => ipcRenderer.invoke(HOSTED_INTEGRATIONS_REVOKE_SESSION),
     startGitHubSetup: () => ipcRenderer.invoke(HOSTED_INTEGRATIONS_START_GITHUB_SETUP),
     startPairing: () => ipcRenderer.invoke(HOSTED_INTEGRATIONS_START_PAIRING),
