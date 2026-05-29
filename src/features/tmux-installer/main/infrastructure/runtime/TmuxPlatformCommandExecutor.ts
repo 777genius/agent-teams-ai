@@ -28,11 +28,36 @@ export interface RuntimeProcessTableRow {
   pid: number;
   ppid: number;
   command: string;
+  cpuPercent?: number;
+  rssBytes?: number;
 }
 
 export function parseRuntimeProcessTable(output: string): RuntimeProcessTableRow[] {
   const rows: RuntimeProcessTableRow[] = [];
   for (const line of output.split('\n')) {
+    const enrichedMatch = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.*)$/.exec(line);
+    if (enrichedMatch) {
+      const pid = Number.parseInt(enrichedMatch[1], 10);
+      const ppid = Number.parseInt(enrichedMatch[2], 10);
+      const cpuPercent = Number(enrichedMatch[3]);
+      const rssKb = Number(enrichedMatch[4]);
+      const command = enrichedMatch[5]?.trim() ?? '';
+      if (
+        Number.isFinite(pid) &&
+        pid > 0 &&
+        Number.isFinite(ppid) &&
+        ppid >= 0 &&
+        Number.isFinite(cpuPercent) &&
+        cpuPercent >= 0 &&
+        Number.isFinite(rssKb) &&
+        rssKb >= 0 &&
+        command.length > 0
+      ) {
+        rows.push({ pid, ppid, command, cpuPercent, rssBytes: Math.round(rssKb * 1024) });
+        continue;
+      }
+    }
+
     const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
     if (!match) continue;
 
@@ -169,7 +194,12 @@ export class TmuxPlatformCommandExecutor {
   async listRuntimeProcesses(): Promise<RuntimeProcessTableRow[]> {
     const result =
       process.platform === 'win32'
-        ? await this.#wslService.execInPreferredDistro(['ps', '-ax', '-o', 'pid=,ppid=,command='])
+        ? await this.#wslService.execInPreferredDistro([
+            'ps',
+            '-ax',
+            '-o',
+            'pid=,ppid=,pcpu=,rss=,command=',
+          ])
         : await this.#execNativePs();
     if (result.exitCode !== 0) {
       throw new Error(result.stderr || 'Failed to list runtime processes');
@@ -251,7 +281,7 @@ export class TmuxPlatformCommandExecutor {
     return new Promise((resolve) => {
       execFile(
         'ps',
-        ['-ax', '-o', 'pid=,ppid=,command='],
+        ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
         { env: process.env, timeout: 3_000, maxBuffer: 2 * 1024 * 1024 },
         (error, stdout, stderr) => {
           const errorCode =

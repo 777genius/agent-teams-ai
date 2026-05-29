@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { parseRuntimeProcessTable } from '@features/tmux-installer/main';
+import { describe, expect, it } from 'vitest';
 
 describe('parseRuntimeProcessTable', () => {
   it('parses pid, ppid and command rows', () => {
@@ -9,6 +8,15 @@ describe('parseRuntimeProcessTable', () => {
     ).toEqual([
       { pid: 10, ppid: 1, command: '/bin/zsh' },
       { pid: 11, ppid: 10, command: 'node runtime --team-name demo' },
+    ]);
+  });
+
+  it('parses optional cpu and rss columns', () => {
+    expect(
+      parseRuntimeProcessTable('  10   1  3.5  120000 /bin/zsh\n  11  10  0.1  42 node demo')
+    ).toEqual([
+      { pid: 10, ppid: 1, command: '/bin/zsh', cpuPercent: 3.5, rssBytes: 122_880_000 },
+      { pid: 11, ppid: 10, command: 'node demo', cpuPercent: 0.1, rssBytes: 43_008 },
     ]);
   });
 

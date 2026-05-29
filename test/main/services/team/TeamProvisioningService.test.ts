@@ -620,6 +620,9 @@ type TeamProvisioningServicePrivateHarness = {
   applyProcessBootstrapTransportOverlay: (
     input: Record<string, unknown>
   ) => Record<string, unknown>;
+  readProcessUsageStatsByPid: (
+    pids: readonly number[]
+  ) => Promise<Map<number, { rssBytes?: number; cpuPercent?: number }>>;
 };
 
 function privateHarness(svc: TeamProvisioningService): TeamProvisioningServicePrivateHarness {
@@ -4747,8 +4750,9 @@ describe('TeamProvisioningService', () => {
       };
       vi.mocked(pidusage).mockResolvedValueOnce(usageByPid);
 
-      const first = await (svc as any).readProcessUsageStatsByPid([111]);
-      const second = await (svc as any).readProcessUsageStatsByPid([111]);
+      const harness = privateHarness(svc);
+      const first = await harness.readProcessUsageStatsByPid([111]);
+      const second = await harness.readProcessUsageStatsByPid([111]);
 
       expect(pidusage).toHaveBeenCalledTimes(1);
       expect(pidusage).toHaveBeenCalledWith([111], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
