@@ -93,6 +93,9 @@ const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
 
+const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
+const TEAM_SECTION_PAGE_SIZE = 24;
+
 interface CreateTeamDialogLoadingFallbackProps {
   readonly isCopy: boolean;
   readonly onClose: () => void;
@@ -515,12 +518,16 @@ const ActiveTeamCard = ({
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const electronMode = isElectronMode();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [teamSectionVisibleCountByKey, setTeamSectionVisibleCountByKey] = useState<
+    Record<string, number>
+  >({});
   const {
     teams,
     teamsLoading,
@@ -1207,10 +1214,17 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
     const activeFiltered = filteredTeams.filter((t) => !t.deletedAt);
     const deletedFiltered = filteredTeams.filter((t) => t.deletedAt);
+    const shouldPageTeamSections = !searchQuery.trim() && !hasActiveFilters;
+    const selectedProjectSectionKey = currentProjectPath
+      ? `project:${normalizePath(currentProjectPath)}`
+      : 'project';
+    const otherTeamsSectionKey = currentProjectPath
+      ? `other:${normalizePath(currentProjectPath)}`
+      : 'other';
     const activeSections = currentProjectPath
       ? [
           {
-            key: 'project',
+            key: selectedProjectSectionKey,
             title: t('list.sections.projectTeams', {
               project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
             }),
@@ -1219,7 +1233,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             ),
           },
           {
-            key: 'other',
+            key: otherTeamsSectionKey,
             title: t('list.sections.otherTeams'),
             teams: activeFiltered.filter(
               (team) => !teamMatchesProjectSelection(team, currentProjectPath)
@@ -1238,58 +1252,113 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       <>
         {activeSections.map((section, sectionIndex) => (
           <section key={section.key} className={sectionIndex > 0 ? 'mt-6' : undefined}>
-            {section.title ? (
-              <div className="mb-2 flex items-center gap-2">
-                <h3 className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                  {section.title}
-                </h3>
-                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-1.5 py-0.5 text-[10px] font-medium leading-none text-[var(--color-text-secondary)]">
-                  {section.teams.length}
-                </span>
-              </div>
-            ) : null}
-            <div className="team-row-zebra-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {section.teams.map((team) => {
-                const status = resolveTeamStatus(
-                  team,
-                  team.teamName,
-                  aliveTeams,
-                  getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-                  leadActivityByTeam
-                );
-                const teamColorSet = team.color
-                  ? getTeamColorSet(team.color)
-                  : nameColorSet(team.displayName);
-                const matchesCurrentProject = currentProjectPath
-                  ? teamMatchesProjectSelection(team, currentProjectPath)
-                  : false;
-                return (
-                  <ActiveTeamCard
-                    key={team.teamName}
-                    team={team}
-                    status={status}
-                    teamColorSet={teamColorSet}
-                    isLight={isLight}
-                    matchesCurrentProject={matchesCurrentProject}
-                    currentProjectPath={currentProjectPath}
-                    branchName={
-                      team.projectPath
-                        ? (branchByPath[normalizePath(team.projectPath)] ?? undefined)
-                        : undefined
-                    }
-                    taskCounts={taskCountsByTeam.get(team.teamName)}
-                    launchingTeamName={launchingTeamName}
-                    stoppingTeamName={stoppingTeamName}
-                    onOpenTeam={openTeamTab}
-                    onLaunchTeam={handleLaunchTeam}
-                    onStopTeam={handleStopTeam}
-                    onCopyTeam={handleCopyTeam}
-                    onDeleteTeam={handleDeleteTeam}
-                    t={t}
-                  />
-                );
-              })}
-            </div>
+            {(() => {
+              const paged =
+                shouldPageTeamSections && section.teams.length > TEAM_SECTION_INITIAL_VISIBLE_COUNT;
+              const requestedVisibleCount =
+                teamSectionVisibleCountByKey[section.key] ?? TEAM_SECTION_INITIAL_VISIBLE_COUNT;
+              const visibleCount = paged
+                ? Math.min(section.teams.length, requestedVisibleCount)
+                : section.teams.length;
+              const visibleTeams = section.teams.slice(0, visibleCount);
+              const canShowMore = paged && visibleCount < section.teams.length;
+              const canShowLess = paged && visibleCount > TEAM_SECTION_INITIAL_VISIBLE_COUNT;
+
+              return (
+                <>
+                  {section.title ? (
+                    <div className="mb-2 flex items-center gap-2">
+                      <h3 className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                        {section.title}
+                      </h3>
+                      <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-1.5 py-0.5 text-[10px] font-medium leading-none text-[var(--color-text-secondary)]">
+                        {section.teams.length}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="team-row-zebra-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {visibleTeams.map((team) => {
+                      const status = resolveTeamStatus(
+                        team,
+                        team.teamName,
+                        aliveTeams,
+                        getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
+                        leadActivityByTeam
+                      );
+                      const teamColorSet = team.color
+                        ? getTeamColorSet(team.color)
+                        : nameColorSet(team.displayName);
+                      const matchesCurrentProject = currentProjectPath
+                        ? teamMatchesProjectSelection(team, currentProjectPath)
+                        : false;
+                      return (
+                        <ActiveTeamCard
+                          key={team.teamName}
+                          team={team}
+                          status={status}
+                          teamColorSet={teamColorSet}
+                          isLight={isLight}
+                          matchesCurrentProject={matchesCurrentProject}
+                          currentProjectPath={currentProjectPath}
+                          branchName={
+                            team.projectPath
+                              ? (branchByPath[normalizePath(team.projectPath)] ?? undefined)
+                              : undefined
+                          }
+                          taskCounts={taskCountsByTeam.get(team.teamName)}
+                          launchingTeamName={launchingTeamName}
+                          stoppingTeamName={stoppingTeamName}
+                          onOpenTeam={openTeamTab}
+                          onLaunchTeam={handleLaunchTeam}
+                          onStopTeam={handleStopTeam}
+                          onCopyTeam={handleCopyTeam}
+                          onDeleteTeam={handleDeleteTeam}
+                          t={t}
+                        />
+                      );
+                    })}
+                  </div>
+                  {(canShowMore || canShowLess) && (
+                    <div className="mt-3 flex items-center justify-center gap-3">
+                      {canShowMore ? (
+                        <button
+                          type="button"
+                          className="rounded px-2.5 py-1 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                          onClick={() =>
+                            setTeamSectionVisibleCountByKey((prev) => ({
+                              ...prev,
+                              [section.key]: Math.min(
+                                section.teams.length,
+                                visibleCount + TEAM_SECTION_PAGE_SIZE
+                              ),
+                            }))
+                          }
+                        >
+                          {tCommon('actions.showMore')}
+                        </button>
+                      ) : null}
+                      {canShowLess ? (
+                        <button
+                          type="button"
+                          className="rounded px-2.5 py-1 text-xs text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                          onClick={() =>
+                            setTeamSectionVisibleCountByKey((prev) => ({
+                              ...prev,
+                              [section.key]: Math.max(
+                                TEAM_SECTION_INITIAL_VISIBLE_COUNT,
+                                visibleCount - TEAM_SECTION_PAGE_SIZE
+                              ),
+                            }))
+                          }
+                        >
+                          {tCommon('actions.showLess')}
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </section>
         ))}
 
