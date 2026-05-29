@@ -28,7 +28,7 @@ const DEFAULT_MIN_WIDTH = 3;
 const GRID_SCOPE_KEY = 'kanban-grid-layout:global:v2';
 const SKELETON_HIDE_DELAY_MS = 500;
 const SKELETON_HIDE_DELAY_MS_ON_MODE_SWITCH = 750;
-const RESIZE_HANDLES: ResizeHandleAxis[] = ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'];
+const RESIZE_HANDLES: ResizeHandleAxis[] = ['s', 'e', 'se'];
 const WidthAwareGridLayout = WidthProvider(ReactGridLayout);
 
 export interface KanbanGridColumn {
