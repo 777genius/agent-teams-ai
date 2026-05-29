@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamTranscriptProjectResolver } from '../../../../src/main/services/team/TeamTranscriptProjectResolver';
@@ -519,6 +518,53 @@ describe('TeamTranscriptProjectResolver', () => {
 
     expect(context?.projectDir).toBe(repaired.projectDir);
     expect(context?.config.projectPath).toBe(repairedProjectPath);
+  });
+
+  it('refreshes team affinity cache when a transcript file changes', async () => {
+    await setupClaudeRoot();
+
+    const teamName = 'vector-room-55555552';
+    const staleProjectPath = '/Users/test/hookplex';
+    const repairedProjectPath = '/Users/test/plugin-kit-ai';
+    const staleProjectDir = path.join(tmpDir!, 'projects', encodePath(staleProjectPath));
+    await fs.mkdir(staleProjectDir, { recursive: true });
+    const repaired = await createTeamAwareSessionFile(
+      repairedProjectPath,
+      'lead-1',
+      teamName,
+      'text'
+    );
+
+    await writeTeamConfig(teamName, {
+      name: 'My Team',
+      projectPath: staleProjectPath,
+      members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
+    });
+
+    const resolver = new TeamTranscriptProjectResolver();
+    const firstContext = await resolver.getContext(teamName, { forceRefresh: true });
+
+    expect(firstContext?.projectDir).toBe(repaired.projectDir);
+
+    await fs.writeFile(
+      repaired.jsonlPath,
+      `${JSON.stringify({
+        type: 'assistant',
+        timestamp: '2026-04-18T10:01:00.000Z',
+        cwd: repairedProjectPath,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Resolver probe output without team context' }],
+        },
+      })}\n`,
+      'utf8'
+    );
+    const updatedAt = new Date(Date.now() + 5_000);
+    await fs.utimes(repaired.jsonlPath, updatedAt, updatedAt);
+
+    const secondContext = await resolver.getContext(teamName, { forceRefresh: true });
+
+    expect(secondContext?.projectDir).toBe(staleProjectDir);
   });
 
   it('bounds root session discovery by team lifecycle in fast preview context', async () => {

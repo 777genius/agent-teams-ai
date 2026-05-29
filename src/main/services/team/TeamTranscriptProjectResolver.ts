@@ -21,6 +21,7 @@ const logger = createLogger('Service:TeamTranscriptProjectResolver');
 
 const SESSION_DISCOVERY_CACHE_TTL = 30_000;
 const TEAM_AFFINITY_SCAN_LINES = 40;
+const TEAM_AFFINITY_FILE_CACHE_MAX_ENTRIES = 4_096;
 const ROOT_DISCOVERY_CONCURRENCY = 12;
 const FAST_CONTEXT_ROOT_DISCOVERY_MTIME_GRACE_MS = 24 * 60 * 60_000;
 
@@ -236,11 +237,19 @@ export interface TeamTranscriptProjectLiveBaseContext {
   config: TeamConfig;
 }
 
+interface TeamAffinityFileCacheEntry {
+  mtimeMs: number;
+  size: number;
+  belongsToTeam: boolean;
+}
+
 export class TeamTranscriptProjectResolver {
   private readonly contextCache = new Map<
     string,
     { value: TeamTranscriptProjectContext; expiresAt: number }
   >();
+
+  private readonly teamAffinityFileCache = new Map<string, TeamAffinityFileCacheEntry>();
 
   constructor(
     private readonly configReader: TeamTranscriptProjectConfigReader = new TeamConfigReader()
@@ -994,9 +1003,31 @@ export class TeamTranscriptProjectResolver {
   }
 
   private async fileBelongsToTeam(filePath: string, teamName: string): Promise<boolean> {
+    const normalizedTeam = teamName.trim().toLowerCase();
+    if (!normalizedTeam) {
+      return false;
+    }
+
+    let fileStat: { mtimeMs: number; size: number; isFile: () => boolean };
+    try {
+      fileStat = await fs.stat(filePath);
+    } catch {
+      return false;
+    }
+
+    if (!fileStat.isFile()) {
+      return false;
+    }
+
+    const cacheKey = this.buildTeamAffinityFileCacheKey(filePath, normalizedTeam);
+    const cached = this.teamAffinityFileCache.get(cacheKey);
+    if (cached && cached.mtimeMs === fileStat.mtimeMs && cached.size === fileStat.size) {
+      return cached.belongsToTeam;
+    }
+
     const stream = createReadStream(filePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    const normalizedTeam = teamName.trim().toLowerCase();
+    let belongsToTeam = false;
 
     try {
       let inspected = 0;
@@ -1011,15 +1042,18 @@ export class TeamTranscriptProjectResolver {
           const entry = JSON.parse(trimmed) as Record<string, unknown>;
           const directTeamName = extractDirectTeamName(entry);
           if (directTeamName === normalizedTeam) {
-            return true;
+            belongsToTeam = true;
+            break;
           }
           if (entryContainsNestedTeamName(entry, normalizedTeam)) {
-            return true;
+            belongsToTeam = true;
+            break;
           }
 
           const textContent = extractTextContent(entry);
           if (textContent && lineMentionsTeam(textContent, normalizedTeam)) {
-            return true;
+            belongsToTeam = true;
+            break;
           }
         } catch {
           // ignore malformed head lines
@@ -1036,6 +1070,28 @@ export class TeamTranscriptProjectResolver {
       stream.destroy();
     }
 
-    return false;
+    this.setTeamAffinityFileCacheEntry(cacheKey, {
+      mtimeMs: fileStat.mtimeMs,
+      size: fileStat.size,
+      belongsToTeam,
+    });
+    return belongsToTeam;
+  }
+
+  private buildTeamAffinityFileCacheKey(filePath: string, normalizedTeam: string): string {
+    return `${normalizedTeam}\0${filePath}`;
+  }
+
+  private setTeamAffinityFileCacheEntry(cacheKey: string, entry: TeamAffinityFileCacheEntry): void {
+    if (
+      !this.teamAffinityFileCache.has(cacheKey) &&
+      this.teamAffinityFileCache.size >= TEAM_AFFINITY_FILE_CACHE_MAX_ENTRIES
+    ) {
+      const oldestKey = this.teamAffinityFileCache.keys().next().value;
+      if (oldestKey) {
+        this.teamAffinityFileCache.delete(oldestKey);
+      }
+    }
+    this.teamAffinityFileCache.set(cacheKey, entry);
   }
 }
