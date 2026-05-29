@@ -613,6 +613,11 @@ type TeamProvisioningServicePrivateHarness = {
     ...segments: string[]
   ) => string;
   mergeAndRemoveDuplicateInboxes: (teamName: string, baseNames: Set<string>) => Promise<void>;
+  readProcessCommandByPid: (pid: number) => string | null;
+  readCachedProcessCommandByPid: (pid: number) => string | null;
+  readProcessUsageStatsByPid: (
+    pids: readonly number[]
+  ) => Promise<Map<number, { rssBytes?: number; cpuPercent?: number }>>;
   getLiveTeamAgentRuntimeMetadata: (
     teamName: string
   ) => Promise<Map<string, Record<string, unknown>>>;
@@ -627,6 +632,10 @@ type TeamProvisioningServicePrivateHarness = {
   applyProcessBootstrapTransportOverlay: (
     input: Record<string, unknown>
   ) => Record<string, unknown>;
+};
+
+type TeamProvisioningServiceRuntimeCommandCacheStatics = {
+  RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS: number;
 };
 
 function privateHarness(svc: TeamProvisioningService): TeamProvisioningServicePrivateHarness {
@@ -4890,6 +4899,23 @@ describe('TeamProvisioningService', () => {
       expect(stats.get(333)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
     });
 
+    it('caches runtime process usage stats for repeated reads', async () => {
+      const svc = new TeamProvisioningService();
+      const usageByPid: Record<string, ReturnType<typeof createPidusageStat>> = {
+        '111': createPidusageStat(111, 123_000_000, 7),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce(usageByPid);
+
+      const harness = privateHarness(svc);
+      const first = await harness.readProcessUsageStatsByPid([111]);
+      const second = await harness.readProcessUsageStatsByPid([111]);
+
+      expect(pidusage).toHaveBeenCalledTimes(1);
+      expect(pidusage).toHaveBeenCalledWith([111], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
+      expect(first.get(111)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
+      expect(second.get(111)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
+    });
+
     it('falls back to direct agent process lookup when tmux pane pid lookup is unavailable', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
@@ -5650,6 +5676,102 @@ describe('TeamProvisioningService', () => {
         pid: 74735,
         runtimeDiagnostic: 'verified runtime process detected by targeted pid check',
       });
+    });
+
+    it('does not run targeted pid verification when a non-empty process table misses the pid', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            {
+              name: 'alice',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              agentId: 'alice@vector-room-13',
+              backendType: 'process',
+              runtimePid: 74735,
+              tmuxPaneId: 'process:74735',
+            },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          providerId: 'codex',
+          model: 'gpt-5.4-mini',
+          agentId: 'alice@vector-room-13',
+          backendType: 'process',
+          runtimePid: 74735,
+          tmuxPaneId: 'process:74735',
+        },
+      ]);
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValueOnce([
+        {
+          pid: 111,
+          ppid: 1,
+          command: '/usr/bin/other-process',
+        },
+      ]);
+      const targetedRead = vi.spyOn(svc as any, 'readProcessCommandByPid').mockReturnValue(
+        '/Users/belief/.bun/bin/bun cli.js --agent-id alice@vector-room-13 --agent-name alice --team-name vector-room-13 --model gpt-5.4-mini'
+      );
+
+      const metadata = await (svc as any).getLiveTeamAgentRuntimeMetadata('vector-room-13');
+
+      expect(targetedRead).not.toHaveBeenCalled();
+      expect(metadata.get('alice')?.livenessKind).not.toBe('runtime_process');
+    });
+
+    it('caches targeted process command reads for liveness checks', () => {
+      const svc = new TeamProvisioningService();
+      const harness = privateHarness(svc);
+      const directRead = vi
+        .spyOn(harness, 'readProcessCommandByPid')
+        .mockReturnValue('/usr/bin/codex --agent-id alice@runtime-team');
+
+      expect(harness.readCachedProcessCommandByPid(74735)).toBe(
+        '/usr/bin/codex --agent-id alice@runtime-team'
+      );
+      expect(harness.readCachedProcessCommandByPid(74735)).toBe(
+        '/usr/bin/codex --agent-id alice@runtime-team'
+      );
+
+      expect(directRead).toHaveBeenCalledTimes(1);
+    });
+
+    it('expires cached targeted process command misses quickly', () => {
+      vi.useFakeTimers();
+      const svc = new TeamProvisioningService();
+      const harness = privateHarness(svc);
+      const runtimeCommandCacheStatics =
+        TeamProvisioningService as unknown as TeamProvisioningServiceRuntimeCommandCacheStatics;
+      const originalMissTtl = runtimeCommandCacheStatics.RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS;
+      runtimeCommandCacheStatics.RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS = 25;
+      const directRead = vi.spyOn(harness, 'readProcessCommandByPid').mockReturnValue(null);
+
+      try {
+        expect(harness.readCachedProcessCommandByPid(74735)).toBeNull();
+        expect(harness.readCachedProcessCommandByPid(74735)).toBeNull();
+        expect(directRead).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(26);
+
+        expect(harness.readCachedProcessCommandByPid(74735)).toBeNull();
+        expect(directRead).toHaveBeenCalledTimes(2);
+      } finally {
+        runtimeCommandCacheStatics.RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS = originalMissTtl;
+      }
     });
 
     it('does not let removed base member metadata hide an active suffixed member', async () => {

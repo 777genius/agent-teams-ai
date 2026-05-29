@@ -807,11 +807,16 @@ import type {
 // its initial two-sample pass. Keep this above slow PowerShell startup time, or
 // the first sample can expire before the recursive second read and loop again.
 const RUNTIME_PIDUSAGE_OPTIONS = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
-const READ_PROCESS_COMMAND_TIMEOUT_MS = 1_000;
+const READ_PROCESS_COMMAND_TIMEOUT_MS = 300;
 
 interface RuntimeProcessUsageStats {
   rssBytes?: number;
   cpuPercent?: number;
+}
+
+interface RuntimeProcessCommandCacheEntry {
+  expiresAtMs: number;
+  command: string | null;
 }
 
 interface RuntimeProcessLoadStats extends RuntimeProcessUsageStats {
@@ -3347,7 +3352,10 @@ export class TeamProvisioningService {
   private static readonly MAX_RUNTIME_TREE_PIDS_PER_ROOT = 64;
   private static readonly MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT = 512;
   private static readonly RUNTIME_PROCESS_TABLE_CACHE_TTL_MS = 2_000;
-  private static readonly RUNTIME_PROCESS_USAGE_CACHE_TTL_MS = 2_000;
+  private static readonly RUNTIME_PROCESS_USAGE_CACHE_TTL_MS = 30_000;
+  private static readonly RUNTIME_PROCESS_COMMAND_CACHE_TTL_MS = 10_000;
+  private static readonly RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS = 15_000;
+  private static readonly RUNTIME_PROCESS_COMMAND_CACHE_MAX = 2_048;
   private static readonly RUNTIME_PROCESS_TABLE_TIMEOUT_MS = 1_500;
   private static readonly RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS = 1_500;
   private static readonly RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS = 2_000;
@@ -3470,6 +3478,10 @@ export class TeamProvisioningService {
       expiresAtMs: number;
       stats: RuntimeProcessUsageStats | null;
     }
+  >();
+  private readonly runtimeProcessCommandCacheByPid = new Map<
+    number,
+    RuntimeProcessCommandCacheEntry
   >();
   private readonly bootstrapTranscriptOutcomeCache = new Map<
     string,
@@ -5305,6 +5317,55 @@ export class TeamProvisioningService {
     } catch {
       return null;
     }
+  }
+
+  private readCachedProcessCommandByPid(pid: number): string | null {
+    if (!Number.isFinite(pid) || pid <= 0) {
+      return null;
+    }
+
+    const now = Date.now();
+    const cached = this.runtimeProcessCommandCacheByPid.get(pid);
+    if (cached && cached.expiresAtMs > now) {
+      return cached.command;
+    }
+
+    const command = this.readProcessCommandByPid(pid);
+    const normalizedCommand = command?.trim() || null;
+    const ttlMs = normalizedCommand
+      ? TeamProvisioningService.RUNTIME_PROCESS_COMMAND_CACHE_TTL_MS
+      : TeamProvisioningService.RUNTIME_PROCESS_COMMAND_MISS_CACHE_TTL_MS;
+    this.rememberRuntimeProcessCommand(pid, normalizedCommand, now + ttlMs);
+    return normalizedCommand;
+  }
+
+  private rememberRuntimeProcessCommand(
+    pid: number,
+    command: string | null,
+    expiresAtMs: number
+  ): void {
+    if (
+      this.runtimeProcessCommandCacheByPid.size >=
+      TeamProvisioningService.RUNTIME_PROCESS_COMMAND_CACHE_MAX
+    ) {
+      const now = Date.now();
+      for (const [cachedPid, cached] of this.runtimeProcessCommandCacheByPid) {
+        if (cached.expiresAtMs <= now) {
+          this.runtimeProcessCommandCacheByPid.delete(cachedPid);
+        }
+      }
+    }
+    while (
+      this.runtimeProcessCommandCacheByPid.size >=
+      TeamProvisioningService.RUNTIME_PROCESS_COMMAND_CACHE_MAX
+    ) {
+      const oldestPid = this.runtimeProcessCommandCacheByPid.keys().next().value;
+      if (oldestPid === undefined) {
+        break;
+      }
+      this.runtimeProcessCommandCacheByPid.delete(oldestPid);
+    }
+    this.runtimeProcessCommandCacheByPid.set(pid, { expiresAtMs, command });
   }
 
   private isOpenCodeServeCommand(command: string): boolean {
@@ -14646,7 +14707,6 @@ export class TeamProvisioningService {
         rssPid > 0
       ) {
         try {
-          this.runtimeProcessUsageStatsCacheByPid.delete(rssPid);
           const refreshedUsageStats = (await this.readProcessUsageStatsByPid([rssPid])).get(rssPid);
           if (refreshedUsageStats) {
             usageStatsByPid.set(rssPid, refreshedUsageStats);
@@ -25938,9 +25998,13 @@ export class TeamProvisioningService {
           runtimePid: targetedRuntimePid,
         })
       ) {
+        const shouldUseTargetedDirectPidRead =
+          !memberProcessTableAvailable || memberProcessRows.length === 0;
         const targetedCommand =
           this.findRuntimeProcessCommandByPid(memberProcessRows, targetedRuntimePid) ??
-          this.readProcessCommandByPid(targetedRuntimePid);
+          (shouldUseTargetedDirectPidRead
+            ? this.readCachedProcessCommandByPid(targetedRuntimePid)
+            : null);
         if (targetedCommand) {
           resolved = resolveTeamMemberRuntimeLiveness({
             ...livenessInput,

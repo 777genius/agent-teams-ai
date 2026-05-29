@@ -112,6 +112,8 @@ let pendingSendIdCounter = 0;
 const FLOATING_COMPOSER_MIN_WIDTH = 350;
 const FLOATING_COMPOSER_MAX_WIDTH = 500;
 const FLOATING_COMPOSER_TEXT_BUFFER = 4;
+const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
+const EMPTY_SKILL_CATALOG = [] as const;
 
 function createPendingSendId(): string {
   const randomId = globalThis.crypto?.randomUUID?.();
@@ -189,12 +191,9 @@ export const MessageComposer = ({
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [teamSelectorOpen, setTeamSelectorOpen] = useState(false);
   const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
+  const crossTeamTargetsFetchedRef = useRef(false);
   const allCrossTeamTargets = useStore(useShallow((s) => s.crossTeamTargets));
   const fetchCrossTeamTargets = useStore((s) => s.fetchCrossTeamTargets);
-
-  useEffect(() => {
-    void fetchCrossTeamTargets();
-  }, [fetchCrossTeamTargets]);
 
   const refreshAliveTeams = useCallback(async () => {
     try {
@@ -206,13 +205,13 @@ export const MessageComposer = ({
   }, []);
 
   useEffect(() => {
-    void refreshAliveTeams();
-  }, [refreshAliveTeams]);
-
-  useEffect(() => {
     if (!teamSelectorOpen) return;
+    if (!crossTeamTargetsFetchedRef.current) {
+      crossTeamTargetsFetchedRef.current = true;
+      void fetchCrossTeamTargets();
+    }
     void refreshAliveTeams();
-  }, [teamSelectorOpen, refreshAliveTeams]);
+  }, [fetchCrossTeamTargets, refreshAliveTeams, teamSelectorOpen]);
 
   // Always filter out current team on the UI side (store is global, shared across tabs)
   const crossTeamTargets = useMemo(
@@ -273,6 +272,15 @@ export const MessageComposer = ({
   const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
   const draft = useComposerDraft(teamName);
   const appliedRevisionRequestIdRef = useRef<string | null>(null);
+  const textHasTeamMentionTrigger = draft.text.includes('@');
+  const textHasTaskMentionTrigger = draft.text.includes('#');
+  const textHasSlashCommandTrigger = stripEncodedTaskReferenceMetadata(draft.text)
+    .trimStart()
+    .startsWith('/');
+  const taskSuggestionDataEnabled =
+    textHasTaskMentionTrigger || draft.chips.length > 0 || revisionRequest != null;
+  const teamSuggestionDataEnabled = textHasTeamMentionTrigger;
+  const slashCommandDataEnabled = textHasSlashCommandTrigger;
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
@@ -293,30 +301,43 @@ export const MessageComposer = ({
     );
   }, [members]);
 
-  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
-  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName, {
+    enabled: teamSuggestionDataEnabled,
+  });
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName, {
+    enabled: taskSuggestionDataEnabled,
+  });
   // Project skills as slash command suggestions
   const projectSkills = useStore(
-    useShallow((s) => (projectPath ? (s.skillsProjectCatalogByProjectPath[projectPath] ?? []) : []))
+    useShallow((s) =>
+      slashCommandDataEnabled && projectPath
+        ? (s.skillsProjectCatalogByProjectPath[projectPath] ?? EMPTY_SKILL_CATALOG)
+        : EMPTY_SKILL_CATALOG
+    )
   );
-  const userSkills = useStore(useShallow((s) => s.skillsUserCatalog));
+  const userSkills = useStore(
+    useShallow((s) => (slashCommandDataEnabled ? s.skillsUserCatalog : EMPTY_SKILL_CATALOG))
+  );
   const fetchSkillsCatalog = useStore((s) => s.fetchSkillsCatalog);
   const isLaunchBlocking = isProvisioning && !isTeamAlive;
 
-  // Fetch skills catalog for the team's project on mount / project change
+  // Fetch the catalog only when slash suggestions are actually needed.
   useEffect(() => {
+    if (!slashCommandDataEnabled) return;
     void fetchSkillsCatalog(projectPath ?? undefined);
-  }, [fetchSkillsCatalog, projectPath]);
+  }, [fetchSkillsCatalog, projectPath, slashCommandDataEnabled]);
 
   const slashCommandSuggestions = useMemo<MentionSuggestion[]>(
     () =>
-      buildSlashCommandSuggestions(
-        getSuggestedSlashCommandsForProvider(leadProviderId),
-        projectSkills,
-        userSkills,
-        leadProviderId
-      ),
-    [leadProviderId, projectSkills, userSkills]
+      slashCommandDataEnabled
+        ? buildSlashCommandSuggestions(
+            getSuggestedSlashCommandsForProvider(leadProviderId),
+            projectSkills,
+            userSkills,
+            leadProviderId
+          )
+        : EMPTY_MENTION_SUGGESTIONS,
+    [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills]
   );
 
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
