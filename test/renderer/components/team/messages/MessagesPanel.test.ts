@@ -8,6 +8,7 @@ import {
   MessagesPanel,
   reconcilePendingRepliesByMember,
 } from '@renderer/components/team/messages/MessagesPanel';
+import { setTeamMessagesSidebarUiState } from '@renderer/components/team/sidebar/teamSidebarUiState';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
@@ -326,6 +327,68 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(host.textContent).not.toContain('timeline-loading');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('persists sidebar scroll position after scroll settles', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'm-1', text: 'hello' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-1',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    vi.mocked(setTeamMessagesSidebarUiState).mockClear();
+    const scrollContainer = host.querySelector('.overflow-y-auto') as HTMLDivElement | null;
+    expect(scrollContainer).not.toBeNull();
+
+    await act(async () => {
+      scrollContainer!.scrollTop = 320;
+      scrollContainer!.dispatchEvent(new Event('scroll', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(setTeamMessagesSidebarUiState).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+      await Promise.resolve();
+    });
+
+    expect(setTeamMessagesSidebarUiState).toHaveBeenCalledWith(
+      'atlas-hq',
+      expect.objectContaining({ messagesScrollTop: 320 })
+    );
 
     await act(async () => {
       root.unmount();

@@ -87,6 +87,7 @@ const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
 const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
 const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
+const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
 
 interface MessagesPanelProps {
   teamName: string;
@@ -551,6 +552,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [messagesScrollTop, setMessagesScrollTop] = useState(
     initialSidebarStateRef.current.messagesScrollTop
   );
+  const messagesScrollTopRef = useRef(initialSidebarStateRef.current.messagesScrollTop);
+  const messagesScrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
     initialSidebarStateRef.current.bottomSheetSnapIndex
   );
@@ -565,9 +568,42 @@ export const MessagesPanel = memo(function MessagesPanel({
     setMessagesCollapsed(initialSidebarStateRef.current.messagesCollapsed);
     setMessagesSearchBarVisible(initialSidebarStateRef.current.messagesSearchBarVisible);
     setExpandedItemKey(initialSidebarStateRef.current.expandedItemKey);
+    messagesScrollTopRef.current = initialSidebarStateRef.current.messagesScrollTop;
     setMessagesScrollTop(initialSidebarStateRef.current.messagesScrollTop);
     setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
   }, [teamName]);
+
+  useEffect(
+    () => () => {
+      if (messagesScrollPersistTimerRef.current) {
+        clearTimeout(messagesScrollPersistTimerRef.current);
+        messagesScrollPersistTimerRef.current = null;
+      }
+    },
+    []
+  );
+
+  const persistMessagesScrollTop = useCallback((nextScrollTop: number): void => {
+    messagesScrollTopRef.current = nextScrollTop;
+    if (messagesScrollPersistTimerRef.current) {
+      clearTimeout(messagesScrollPersistTimerRef.current);
+    }
+    messagesScrollPersistTimerRef.current = setTimeout(() => {
+      messagesScrollPersistTimerRef.current = null;
+      setMessagesScrollTop((current) =>
+        Math.abs(current - messagesScrollTopRef.current) < 1
+          ? current
+          : messagesScrollTopRef.current
+      );
+    }, MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS);
+  }, []);
+
+  const handleSidebarScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>): void => {
+      persistMessagesScrollTop(event.currentTarget.scrollTop);
+    },
+    [persistMessagesScrollTop]
+  );
 
   useEffect(() => {
     setTeamMessagesSidebarUiState(teamName, {
@@ -1355,7 +1391,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         <div
           ref={sidebarScrollRef}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-14 pr-3 pt-2"
-          onScroll={(e) => setMessagesScrollTop(e.currentTarget.scrollTop)}
+          onScroll={handleSidebarScroll}
         >
           <div className="pl-3">
             {defaultComposerSection}
