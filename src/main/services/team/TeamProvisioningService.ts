@@ -25620,9 +25620,18 @@ export class TeamProvisioningService {
     if (!stat || typeof stat !== 'object') {
       return undefined;
     }
-    const candidate = stat as { memory?: unknown; cpu?: unknown };
-    const rssBytes = normalizeRuntimeTelemetryNumber(candidate.memory);
-    const cpuPercent = normalizeRuntimeTelemetryNumber(candidate.cpu);
+    const candidate = stat as {
+      memory?: unknown;
+      cpu?: unknown;
+      rssBytes?: unknown;
+      cpuPercent?: unknown;
+    };
+    const rssBytes =
+      normalizeRuntimeTelemetryNumber(candidate.memory) ??
+      normalizeRuntimeTelemetryNumber(candidate.rssBytes);
+    const cpuPercent =
+      normalizeRuntimeTelemetryNumber(candidate.cpu) ??
+      normalizeRuntimeTelemetryNumber(candidate.cpuPercent);
     const normalized: RuntimeProcessUsageStats = {
       ...(rssBytes != null && rssBytes >= 0 ? { rssBytes } : {}),
       ...(cpuPercent != null && cpuPercent >= 0 ? { cpuPercent } : {}),
@@ -25840,6 +25849,10 @@ export class TeamProvisioningService {
       const pids: number[] = [];
       let truncated = false;
       const rootProcessRow = rowByPid.get(rootPid);
+      if (!rootProcessRow) {
+        usageTreesByRootPid.set(rootPid, { pids: [], truncated: false });
+        continue;
+      }
       if (process.platform === 'win32' && rootProcessRow?.runtimeTelemetrySource === 'wsl') {
         usageTreesByRootPid.set(rootPid, { pids: [], truncated: false });
         continue;

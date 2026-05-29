@@ -3494,6 +3494,142 @@ describe('TeamProvisioningService', () => {
       });
     });
 
+    it('uses process table CPU and RSS values before falling back to pidusage', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', model: 'gpt-5.4-mini' },
+          ],
+        })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@runtime-team',
+          tmuxPaneId: '%1',
+          backendType: 'tmux',
+        },
+      ]);
+      (svc as any).aliveRunByTeam.set('runtime-team', 'run-1');
+      (svc as any).runs.set('run-1', {
+        runId: 'run-1',
+        child: { pid: 111 },
+        request: { model: 'gpt-5.4' },
+        processKilled: false,
+        cancelRequested: false,
+        spawnContext: null,
+      });
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([
+          [
+            '%1',
+            {
+              paneId: '%1',
+              panePid: 222,
+              currentCommand: 'codex',
+            },
+          ],
+        ])
+      );
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 111,
+          ppid: 1,
+          command: '/usr/bin/node lead.js',
+          cpuPercent: 3.5,
+          rssBytes: 123_000_000,
+        },
+        {
+          pid: 222,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id alice@runtime-team --agent-name alice --team-name runtime-team --model gpt-5.4-mini',
+          cpuPercent: 7,
+          rssBytes: 456_000_000,
+        },
+      ]);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(pidusage).not.toHaveBeenCalled();
+      expect(snapshot.members['team-lead']).toMatchObject({
+        pid: 111,
+        cpuPercent: 3.5,
+        rssBytes: 123_000_000,
+      });
+      expect(snapshot.members.alice).toMatchObject({
+        pid: 222,
+        cpuPercent: 7,
+        rssBytes: 456_000_000,
+      });
+    });
+
+    it('does not fall back to pidusage for root pids missing from an available process table', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', model: 'gpt-5.4-mini' },
+          ],
+        })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@runtime-team',
+          tmuxPaneId: '%1',
+          backendType: 'tmux',
+        },
+      ]);
+      (svc as any).aliveRunByTeam.set('runtime-team', 'run-1');
+      (svc as any).runs.set('run-1', {
+        runId: 'run-1',
+        child: { pid: 111 },
+        request: { model: 'gpt-5.4' },
+        processKilled: false,
+        cancelRequested: false,
+        spawnContext: null,
+      });
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([
+          [
+            '%1',
+            {
+              paneId: '%1',
+              panePid: 222,
+              currentCommand: 'codex',
+            },
+          ],
+        ])
+      );
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 999,
+          ppid: 1,
+          command: '/usr/bin/node unrelated.js',
+          cpuPercent: 1.5,
+          rssBytes: 12_000_000,
+        },
+      ]);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(pidusage).not.toHaveBeenCalled();
+      expect(snapshot.members['team-lead']).toMatchObject({
+        pid: 111,
+      });
+      expect(snapshot.members['team-lead'].cpuPercent).toBeUndefined();
+      expect(snapshot.members['team-lead'].rssBytes).toBeUndefined();
+      expect(snapshot.members.alice).toMatchObject({
+        pid: 222,
+      });
+      expect(snapshot.members.alice.cpuPercent).toBeUndefined();
+      expect(snapshot.members.alice.rssBytes).toBeUndefined();
+    });
+
     it('captures CPU and memory history on runtime snapshots', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
