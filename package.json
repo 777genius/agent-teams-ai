@@ -396,7 +396,7 @@
     "overrides": {
       "@hono/node-server@1": "1.19.13",
       "@xmldom/xmldom": "0.8.13",
-      "axios": "1.15.2",
+      "axios": "1.16.1",
       "brace-expansion@1": "1.1.13",
       "brace-expansion@2": "2.0.3",
       "brace-expansion@5": "5.0.6",
