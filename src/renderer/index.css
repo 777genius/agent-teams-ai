@@ -1451,15 +1451,6 @@ a[href],
   }
 }
 
-@keyframes composer-orbit-border {
-  0% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: -100;
-  }
-}
-
 .message-composer-orbit-surface {
   isolation: isolate;
   --message-composer-orbit-stroke: rgba(129, 140, 248, 0.92);
@@ -1551,10 +1542,8 @@ a[href],
 .message-composer-orbit-path,
 .message-composer-orbit-glow {
   stroke-dasharray: 9 91;
-  animation: composer-orbit-border 19s linear infinite;
   stroke-linecap: butt;
   stroke-linejoin: round;
-  will-change: stroke-dashoffset;
 }
 
 .message-composer-orbit-path {
@@ -1567,16 +1556,6 @@ a[href],
   stroke-width: 3px;
   stroke: var(--message-composer-orbit-glow-stroke);
   opacity: 0.28;
-}
-
-.message-composer-orbit-path-secondary,
-.message-composer-orbit-glow-secondary {
-  animation-delay: -9.5s;
-}
-
-.message-composer-orbit-surface:focus-within .message-composer-orbit-path,
-.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
-  animation-duration: 14.5s;
 }
 
 .message-composer-orbit-surface:focus-within .message-composer-orbit-path {
@@ -1692,9 +1671,7 @@ a[href],
 @media (prefers-reduced-motion: reduce) {
   .kanban-comment-badge-pulse,
   .member-launch-diagnostics-pulse,
-  .member-launch-diagnostics-pulse::after,
-  .message-composer-orbit-path,
-  .message-composer-orbit-glow {
+  .member-launch-diagnostics-pulse::after {
     animation: none;
   }
 }
