@@ -4740,6 +4740,22 @@ describe('TeamProvisioningService', () => {
       expect(stats.get(333)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
     });
 
+    it('caches runtime process usage stats for repeated reads', async () => {
+      const svc = new TeamProvisioningService();
+      const usageByPid: Record<string, ReturnType<typeof createPidusageStat>> = {
+        '111': createPidusageStat(111, 123_000_000, 7),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce(usageByPid);
+
+      const first = await (svc as any).readProcessUsageStatsByPid([111]);
+      const second = await (svc as any).readProcessUsageStatsByPid([111]);
+
+      expect(pidusage).toHaveBeenCalledTimes(1);
+      expect(pidusage).toHaveBeenCalledWith([111], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
+      expect(first.get(111)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
+      expect(second.get(111)).toEqual({ rssBytes: 123_000_000, cpuPercent: 7 });
+    });
+
     it('falls back to direct agent process lookup when tmux pane pid lookup is unavailable', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
