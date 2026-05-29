@@ -86,6 +86,7 @@ const PaneLazyFallback = (): React.JSX.Element => {
 
 const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.JSX.Element => {
   const [hasActivated, setHasActivated] = useState(isActive);
+  const shouldRenderContent = hasActivated && (tab.type !== 'teams' || isActive);
 
   useEffect(() => {
     if (isActive) {
@@ -95,7 +96,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
 
   return (
     <div className="absolute inset-0 flex" style={{ display: isActive ? 'flex' : 'none' }}>
-      {hasActivated && (
+      {shouldRenderContent && (
         <Suspense fallback={<PaneLazyFallback />}>
           {tab.type === 'dashboard' && <DashboardView />}
           {tab.type === 'notifications' && <NotificationsView />}
