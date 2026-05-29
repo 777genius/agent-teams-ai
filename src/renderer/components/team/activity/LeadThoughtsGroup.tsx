@@ -13,18 +13,12 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { CompactMarkdownPreview } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
   CARD_BORDER_STYLE,
   CARD_ICON_MUTED,
-  CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
@@ -797,7 +791,7 @@ const LeadThoughtsGroupRowComponent = ({
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref} style={{ overflowAnchor: 'none' }}>
       <article
-        className="group rounded-md [overflow:clip]"
+        className="activity-timeline-card group rounded-md [overflow:clip]"
         style={{
           backgroundColor: zebraShade ? CARD_BG_ZEBRA : CARD_BG,
           border: hasApiError ? '1px solid rgba(248, 113, 113, 0.3)' : CARD_BORDER_STYLE,
@@ -866,27 +860,14 @@ const LeadThoughtsGroupRowComponent = ({
                 </div>
               </div>
               {compactPreviewMarkdown ? (
-                <TooltipProvider delayDuration={1000}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <CompactMarkdownPreview
-                          content={compactPreviewMarkdown}
-                          className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                          teamColorByName={teamColorByName}
-                          onTeamClick={onTeamClick}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      align="start"
-                      className="max-w-sm whitespace-normal break-words"
-                    >
-                      {compactPreviewTooltipText}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div title={compactPreviewTooltipText ?? undefined}>
+                  <CompactMarkdownPreview
+                    content={compactPreviewMarkdown}
+                    className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                    teamColorByName={teamColorByName}
+                    onTeamClick={onTeamClick}
+                  />
+                </div>
               ) : null}
             </div>
           ) : !isBodyVisible ? (
@@ -951,27 +932,14 @@ const LeadThoughtsGroupRowComponent = ({
                 </div>
               </div>
               {compactPreviewMarkdown ? (
-                <TooltipProvider delayDuration={1000}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <CompactMarkdownPreview
-                          content={compactPreviewMarkdown}
-                          className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                          teamColorByName={teamColorByName}
-                          onTeamClick={onTeamClick}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      align="start"
-                      className="max-w-sm whitespace-normal break-words"
-                    >
-                      {compactPreviewTooltipText}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div title={compactPreviewTooltipText ?? undefined}>
+                  <CompactMarkdownPreview
+                    content={compactPreviewMarkdown}
+                    className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                    teamColorByName={teamColorByName}
+                    onTeamClick={onTeamClick}
+                  />
+                </div>
               ) : null}
             </div>
           ) : (
