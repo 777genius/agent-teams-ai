@@ -3306,6 +3306,7 @@ export class TeamProvisioningService {
   private static readonly RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS = 750;
   private static readonly RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY = 16;
   private static readonly MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 500;
+  private static readonly PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 2_000;
   private static readonly LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
   private static readonly RETAINED_PROVISIONING_PROGRESS_TTL_MS = 5 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_ADVISORY_EVENT_TTL_MS = 24 * 60 * 60_000;
@@ -3445,7 +3446,7 @@ export class TeamProvisioningService {
     {
       expiresAtMs: number;
       generation: number;
-      runId: string;
+      runId: string | null;
       snapshot: MemberSpawnStatusesSnapshot;
     }
   >();
@@ -13821,6 +13822,17 @@ export class TeamProvisioningService {
     source?: 'live' | 'persisted' | 'merged';
   }> {
     const readPersistedStatuses = async (resolvedRunId: string | null) => {
+      const generationAtStart = this.getMemberSpawnStatusesCacheGeneration(teamName);
+      const cached = this.memberSpawnStatusesSnapshotCache.get(teamName);
+      if (
+        cached &&
+        cached.expiresAtMs > Date.now() &&
+        cached.runId === resolvedRunId &&
+        cached.generation === generationAtStart
+      ) {
+        return this.cloneMemberSpawnStatusesSnapshot(cached.snapshot);
+      }
+
       const repairSnapshot = await this.readTaskActivityRepairLaunchSnapshot(teamName);
       this.repairStaleTaskActivityIntervalsOnce(teamName, repairSnapshot);
       const { snapshot, statuses } = await this.reconcilePersistedLaunchState(teamName);
@@ -13842,7 +13854,7 @@ export class TeamProvisioningService {
       const summary = expectedMembers
         ? summarizeMemberSpawnStatusRecord(expectedMembers, nextStatuses)
         : undefined;
-      return {
+      const persistedSnapshot = {
         statuses: nextStatuses,
         runId: resolvedRunId,
         teamLaunchState: summary
@@ -13854,6 +13866,20 @@ export class TeamProvisioningService {
         summary: summary ?? snapshot?.summary,
         source: 'persisted' as const,
       };
+      if (
+        this.getMemberSpawnStatusesCacheGeneration(teamName) === generationAtStart &&
+        this.getTrackedRunId(teamName) === resolvedRunId
+      ) {
+        this.memberSpawnStatusesSnapshotCache.set(teamName, {
+          expiresAtMs:
+            Date.now() +
+            TeamProvisioningService.PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
+          generation: generationAtStart,
+          runId: resolvedRunId,
+          snapshot: this.cloneMemberSpawnStatusesSnapshot(persistedSnapshot),
+        });
+      }
+      return persistedSnapshot;
     };
 
     const runId = this.getTrackedRunId(teamName);

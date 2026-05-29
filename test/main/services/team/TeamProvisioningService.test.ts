@@ -620,6 +620,12 @@ type TeamProvisioningServicePrivateHarness = {
   applyProcessBootstrapTransportOverlay: (
     input: Record<string, unknown>
   ) => Record<string, unknown>;
+  reconcilePersistedLaunchState: (
+    teamName: string
+  ) => Promise<{
+    snapshot: null;
+    statuses: Record<string, never>;
+  }>;
   readProcessUsageStatsByPid: (
     pids: readonly number[]
   ) => Promise<Map<number, { rssBytes?: number; cpuPercent?: number }>>;
@@ -21081,6 +21087,24 @@ describe('TeamProvisioningService', () => {
       kind: 'failure',
       reason: 'bootstrap failed: model not found during teammate startup',
     });
+  });
+
+  it('caches persisted member spawn statuses between close polling reads', async () => {
+    const teamName = 'zz-unit-persisted-status-cache';
+    const svc = new TeamProvisioningService();
+    const harness = privateHarness(svc);
+    harness.reconcilePersistedLaunchState = vi.fn(async () => ({
+      snapshot: null,
+      statuses: {},
+    }));
+    harness.attachLiveRuntimeMetadataToStatuses = vi.fn(async (_teamName, statuses) => statuses);
+
+    const first = await svc.getMemberSpawnStatuses(teamName);
+    const second = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(first).toEqual(second);
+    expect(harness.reconcilePersistedLaunchState).toHaveBeenCalledTimes(1);
+    expect(harness.attachLiveRuntimeMetadataToStatuses).toHaveBeenCalledTimes(1);
   });
 
   it('does not heal cleanup-finalized launch failures from stale bootstrap-state confirmation', async () => {
