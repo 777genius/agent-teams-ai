@@ -23,6 +23,7 @@ import type {
 const logger = createLogger('Service:TeamTaskReader');
 const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
 const ALL_TASKS_CACHE_TTL_MS = 5_000;
+const TASK_FILE_CACHE_MAX_ENTRIES = 8_192;
 
 interface CachedAllTasks {
   value: (TeamTask & { teamName: string })[];
@@ -34,8 +35,45 @@ interface InFlightAllTasks {
   generationAtStart: number;
 }
 
+interface TaskFileSignature {
+  size: number;
+  mtimeMs: number;
+  ctimeMs: number;
+  dev: number;
+  ino: number;
+}
+
+interface CachedTaskFile {
+  signature: TaskFileSignature;
+  task: TeamTask | null;
+}
+
 function cloneTasks<T>(tasks: T[]): T[] {
   return structuredClone(tasks);
+}
+
+function cloneTask(task: TeamTask): TeamTask {
+  return structuredClone(task);
+}
+
+function buildTaskFileSignature(stat: fs.Stats): TaskFileSignature {
+  return {
+    size: stat.size,
+    mtimeMs: stat.mtimeMs,
+    ctimeMs: stat.ctimeMs,
+    dev: stat.dev,
+    ino: stat.ino,
+  };
+}
+
+function taskFileSignaturesEqual(a: TaskFileSignature, b: TaskFileSignature): boolean {
+  return (
+    a.size === b.size &&
+    a.mtimeMs === b.mtimeMs &&
+    a.ctimeMs === b.ctimeMs &&
+    a.dev === b.dev &&
+    a.ino === b.ino
+  );
 }
 
 /**
@@ -82,10 +120,47 @@ export class TeamTaskReader {
   private static allTasksCache: CachedAllTasks | null = null;
   private static allTasksInFlight: InFlightAllTasks | null = null;
   private static allTasksGeneration = 0;
+  private static taskFileCache = new Map<string, CachedTaskFile>();
 
   static invalidateAllTasksCache(): void {
     TeamTaskReader.allTasksCache = null;
+    TeamTaskReader.taskFileCache.clear();
     TeamTaskReader.allTasksGeneration += 1;
+  }
+
+  private static getCachedTaskFile(
+    taskPath: string,
+    signature: TaskFileSignature
+  ): TeamTask | null | undefined {
+    const cached = TeamTaskReader.taskFileCache.get(taskPath);
+    if (!cached) {
+      return undefined;
+    }
+    if (!taskFileSignaturesEqual(cached.signature, signature)) {
+      TeamTaskReader.taskFileCache.delete(taskPath);
+      return undefined;
+    }
+    return cached.task ? cloneTask(cached.task) : null;
+  }
+
+  private static setCachedTaskFile(
+    taskPath: string,
+    signature: TaskFileSignature,
+    task: TeamTask | null
+  ): void {
+    if (
+      !TeamTaskReader.taskFileCache.has(taskPath) &&
+      TeamTaskReader.taskFileCache.size >= TASK_FILE_CACHE_MAX_ENTRIES
+    ) {
+      const oldestKey = TeamTaskReader.taskFileCache.keys().next().value;
+      if (oldestKey) {
+        TeamTaskReader.taskFileCache.delete(oldestKey);
+      }
+    }
+    TeamTaskReader.taskFileCache.set(taskPath, {
+      signature,
+      task: task ? cloneTask(task) : null,
+    });
   }
 
   /**
@@ -147,6 +222,15 @@ export class TeamTaskReader {
         const fileStat = await fs.promises.stat(taskPath);
         if (!fileStat.isFile() || fileStat.size > MAX_TASK_FILE_BYTES) {
           logger.debug(`Skipping suspicious task file: ${taskPath}`);
+          TeamTaskReader.taskFileCache.delete(taskPath);
+          continue;
+        }
+        const signature = buildTaskFileSignature(fileStat);
+        const cachedTask = TeamTaskReader.getCachedTaskFile(taskPath, signature);
+        if (cachedTask !== undefined) {
+          if (cachedTask) {
+            tasks.push(cachedTask);
+          }
           continue;
         }
         const raw = await readFileUtf8WithTimeout(taskPath, 5_000);
@@ -154,6 +238,7 @@ export class TeamTaskReader {
         // Skip internal CLI tracking entries (spawned subagent bookkeeping)
         const metadata = parsed.metadata as Record<string, unknown> | undefined;
         if (metadata?._internal === true) {
+          TeamTaskReader.setCachedTaskFile(taskPath, signature, null);
           continue;
         }
         const subject = typeof parsed.subject === 'string' ? parsed.subject : '';
@@ -361,10 +446,13 @@ export class TeamTaskReader {
               : undefined,
         } satisfies Record<keyof TeamTask, unknown>;
         if (task.status === 'deleted') {
+          TeamTaskReader.setCachedTaskFile(taskPath, signature, null);
           continue;
         }
+        TeamTaskReader.setCachedTaskFile(taskPath, signature, task);
         tasks.push(task);
       } catch {
+        TeamTaskReader.taskFileCache.delete(taskPath);
         logger.debug(`Skipping invalid task file: ${taskPath}`);
       }
       processed++;
