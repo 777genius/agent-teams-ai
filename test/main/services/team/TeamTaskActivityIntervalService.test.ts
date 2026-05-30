@@ -547,6 +547,44 @@ describe('TeamTaskActivityIntervalService', () => {
     expect(jsonParseSpy).not.toHaveBeenCalled();
   });
 
+  it('skips the task lock after an unchanged batched resume no-op pass', async () => {
+    await writeTask('alpha', {
+      id: 'bob-task',
+      subject: 'Bob work',
+      owner: 'bob',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-05-08T10:00:00.000Z' }],
+      historyEvents: [],
+    });
+
+    const service = new TeamTaskActivityIntervalService();
+    expect(
+      service.resumeActiveIntervalsForMembers(
+        'alpha',
+        ['bob'],
+        '2026-05-08T10:20:00.000Z'
+      ).changedTasks
+    ).toBe(0);
+
+    const mutateWithLockSpy = vi.spyOn(
+      TeamTaskActivityIntervalService.prototype as unknown as {
+        mutateTeamTasksWithLock: (
+          teamName: string,
+          run: () => { changedTasks: number; failed?: boolean }
+        ) => { changedTasks: number; failed?: boolean };
+      },
+      'mutateTeamTasksWithLock'
+    );
+    const secondResult = service.resumeActiveIntervalsForMembers(
+      'alpha',
+      ['bob'],
+      '2026-05-08T10:25:00.000Z'
+    );
+
+    expect(secondResult.changedTasks).toBe(0);
+    expect(mutateWithLockSpy).not.toHaveBeenCalled();
+  });
+
   it('refreshes batched resume cache when a task file changes', async () => {
     await writeTask('alpha', {
       id: 'bob-task',

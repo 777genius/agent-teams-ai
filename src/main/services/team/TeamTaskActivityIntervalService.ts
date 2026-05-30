@@ -333,6 +333,10 @@ function writeTaskFile(filePath: string, task: MutableTeamTask): void {
 export class TeamTaskActivityIntervalService {
   private readonly resumeMembersCache = new Map<string, ResumeMembersCacheEntry>();
 
+  private getBoardStateLockPath(teamName: string): string {
+    return `${path.join(getTeamsBasePath(), teamName, 'board-state')}.lock`;
+  }
+
   private mutateTeamTasksWithLock(
     teamName: string,
     run: () => ActivityIntervalResult
@@ -519,6 +523,18 @@ export class TeamTaskActivityIntervalService {
     );
     if (memberKeys.size === 0) return { changedTasks: 0 };
     const memberKey = this.makeMemberSetKey(memberKeys);
+
+    const cachedBeforeLock = this.resumeMembersCache.get(teamName);
+    if (cachedBeforeLock?.memberKey === memberKey) {
+      const beforeLockSignature = this.readTaskDirectorySignature(teamName);
+      if (
+        beforeLockSignature &&
+        cachedBeforeLock.signatureKey === beforeLockSignature.key &&
+        !fs.existsSync(this.getBoardStateLockPath(teamName))
+      ) {
+        return { changedTasks: 0 };
+      }
+    }
 
     const result = this.mutateTeamTasksWithLock(teamName, () => {
       const beforeSignature = this.readTaskDirectorySignature(teamName);
