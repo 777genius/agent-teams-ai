@@ -567,6 +567,118 @@ const MemberRuntimeTelemetryStrip = memo(function MemberRuntimeTelemetryStrip({
   );
 });
 
+interface MemberActionButtonProps {
+  label: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+const MemberActionButton = memo(function MemberActionButton({
+  label,
+  children,
+  onClick,
+}: MemberActionButtonProps): React.JSX.Element {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+
+  return (
+    <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      {tooltipOpen ? <TooltipContent side="bottom">{label}</TooltipContent> : null}
+    </Tooltip>
+  );
+});
+
+interface MemberQuickActionsProps {
+  onSendMessage?: () => void;
+  onAssignTask?: () => void;
+}
+
+const MemberQuickActions = memo(function MemberQuickActions({
+  onSendMessage,
+  onAssignTask,
+}: MemberQuickActionsProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      <MemberActionButton label={t('members.actions.sendMessage')} onClick={onSendMessage}>
+        <MessageSquare size={13} />
+      </MemberActionButton>
+      <MemberActionButton label={t('members.actions.assignTask')} onClick={onAssignTask}>
+        <Plus size={13} />
+      </MemberActionButton>
+    </div>
+  );
+});
+
+interface MemberTaskProgressBadgeProps {
+  showStartingSkeleton: boolean;
+  memberTaskCount: number;
+  completed: number;
+  totalTasks: number;
+  progressPercent: number;
+}
+
+const MemberTaskProgressBadge = memo(function MemberTaskProgressBadge({
+  showStartingSkeleton,
+  memberTaskCount,
+  completed,
+  totalTasks,
+  progressPercent,
+}: MemberTaskProgressBadgeProps): React.JSX.Element {
+  if (showStartingSkeleton) {
+    return (
+      <div className="shrink-0" aria-hidden="true">
+        <div
+          className="skeleton-shimmer h-[18px] w-[62px] rounded-full border"
+          style={{
+            backgroundColor: 'var(--skeleton-base-dim)',
+            borderColor: 'var(--color-border)',
+          }}
+        />
+        <div
+          className="skeleton-shimmer mx-1 mt-1 h-[2px] w-10 rounded-full"
+          style={{ backgroundColor: 'var(--skeleton-base)' }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="shrink-0"
+      title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
+    >
+      <Badge
+        variant="secondary"
+        className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
+      >
+        {memberTaskCount} {memberTaskCount === 1 ? 'task' : 'tasks'}
+      </Badge>
+      {totalTasks > 0 && (
+        <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+      {/* NOTE: lead context bar disabled - usage formula is inaccurate */}
+    </div>
+  );
+});
+
 export const MemberCard = memo(function MemberCard({
   teamName,
   member,
@@ -1416,75 +1528,15 @@ export const MemberCard = memo(function MemberCard({
                 {isRemoved ? 'removed' : displayPresenceLabel}
               </Badge>
             ) : null}
-            {showStartingSkeleton ? (
-              <div className="shrink-0" aria-hidden="true">
-                <div
-                  className="skeleton-shimmer h-[18px] w-[62px] rounded-full border"
-                  style={{
-                    backgroundColor: 'var(--skeleton-base-dim)',
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-                <div
-                  className="skeleton-shimmer mx-1 mt-1 h-[2px] w-10 rounded-full"
-                  style={{ backgroundColor: 'var(--skeleton-base)' }}
-                />
-              </div>
-            ) : (
-              <div
-                className="shrink-0"
-                title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
-              >
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
-                >
-                  {member.taskCount} {member.taskCount === 1 ? 'task' : 'tasks'}
-                </Badge>
-                {totalTasks > 0 && (
-                  <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                )}
-                {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
-              </div>
-            )}
+            <MemberTaskProgressBadge
+              showStartingSkeleton={showStartingSkeleton}
+              memberTaskCount={member.taskCount}
+              completed={completed}
+              totalTasks={totalTasks}
+              progressPercent={progressPercent}
+            />
             {!isRemoved && (
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSendMessage?.();
-                      }}
-                    >
-                      <MessageSquare size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{t('members.actions.sendMessage')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAssignTask?.();
-                      }}
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{t('members.actions.assignTask')}</TooltipContent>
-                </Tooltip>
-              </div>
+              <MemberQuickActions onSendMessage={onSendMessage} onAssignTask={onAssignTask} />
             )}
             {canRestoreMember ? (
               <Tooltip>
