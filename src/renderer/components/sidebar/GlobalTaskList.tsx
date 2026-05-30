@@ -223,77 +223,139 @@ interface GlobalTaskRowProps {
   ownerColorName?: string | null;
 }
 
-const GlobalTaskRow = memo(function GlobalTaskRow({
-  task,
-  isPinned,
-  isArchived,
-  isNew,
-  teamOffline,
-  renamingKey,
-  hideTeamName,
-  hideProjectName,
-  showTeamName,
-  onTogglePin,
-  onToggleArchive,
-  onMarkUnread,
-  onRename,
-  onDelete,
-  onRenameComplete,
-  onRenameCancel,
-  getDisplaySubject,
-  ownerColorName,
-}: GlobalTaskRowProps): React.JSX.Element {
-  const taskRenamingKey = `${task.teamName}:${task.id}`;
-  const effectiveRenamingKey = renamingKey === taskRenamingKey ? renamingKey : null;
+function taskCommentsDisplayEqual(
+  prev: GlobalTask['comments'],
+  next: GlobalTask['comments']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return (prev?.length ?? 0) === (next?.length ?? 0);
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    if (prev[i].id !== next[i].id || prev[i].createdAt !== next[i].createdAt) {
+      return false;
+    }
+  }
+  return true;
+}
 
-  const handleTogglePin = useCallback(() => {
-    onTogglePin(task.teamName, task.id);
-  }, [onTogglePin, task.id, task.teamName]);
-
-  const handleToggleArchive = useCallback(() => {
-    onToggleArchive(task.teamName, task.id);
-  }, [onToggleArchive, task.id, task.teamName]);
-
-  const handleMarkUnread = useCallback(() => {
-    onMarkUnread(task.teamName, task.id);
-  }, [onMarkUnread, task.id, task.teamName]);
-
-  const handleRename = useCallback(() => {
-    onRename(task.teamName, task.id);
-  }, [onRename, task.id, task.teamName]);
-
-  const handleDelete = useCallback(() => {
-    void onDelete(task.teamName, task.id);
-  }, [onDelete, task.id, task.teamName]);
-
+function taskSidebarFieldsEqual(prev: GlobalTask, next: GlobalTask): boolean {
   return (
-    <TaskContextMenu
-      task={task}
-      isPinned={isPinned}
-      isArchived={isArchived}
-      onTogglePin={handleTogglePin}
-      onToggleArchive={handleToggleArchive}
-      onMarkUnread={handleMarkUnread}
-      onRename={handleRename}
-      onDelete={handleDelete}
-    >
-      <AnimatedHeightReveal animate={isNew}>
-        <SidebarTaskItem
-          task={task}
-          hideTeamName={hideTeamName}
-          hideProjectName={hideProjectName}
-          showTeamName={showTeamName}
-          teamOffline={teamOffline}
-          renamingKey={effectiveRenamingKey}
-          onRenameComplete={onRenameComplete}
-          onRenameCancel={onRenameCancel}
-          getDisplaySubject={getDisplaySubject}
-          ownerColorName={ownerColorName}
-        />
-      </AnimatedHeightReveal>
-    </TaskContextMenu>
+    prev === next ||
+    (prev.id === next.id &&
+      prev.teamName === next.teamName &&
+      prev.teamDisplayName === next.teamDisplayName &&
+      prev.teamDeleted === next.teamDeleted &&
+      prev.subject === next.subject &&
+      prev.owner === next.owner &&
+      prev.status === next.status &&
+      prev.createdAt === next.createdAt &&
+      prev.updatedAt === next.updatedAt &&
+      prev.projectPath === next.projectPath &&
+      prev.reviewState === next.reviewState &&
+      prev.kanbanColumn === next.kanbanColumn &&
+      prev.deletedAt === next.deletedAt &&
+      taskCommentsDisplayEqual(prev.comments, next.comments))
   );
-});
+}
+
+function effectiveRenamingKey(task: GlobalTask, renamingKey: string | null): string | null {
+  const taskRenamingKey = `${task.teamName}:${task.id}`;
+  return renamingKey === taskRenamingKey ? renamingKey : null;
+}
+
+const GlobalTaskRow = memo(
+  function GlobalTaskRow({
+    task,
+    isPinned,
+    isArchived,
+    isNew,
+    teamOffline,
+    renamingKey,
+    hideTeamName,
+    hideProjectName,
+    showTeamName,
+    onTogglePin,
+    onToggleArchive,
+    onMarkUnread,
+    onRename,
+    onDelete,
+    onRenameComplete,
+    onRenameCancel,
+    getDisplaySubject,
+    ownerColorName,
+  }: GlobalTaskRowProps): React.JSX.Element {
+    const taskRenamingKey = `${task.teamName}:${task.id}`;
+    const effectiveRenamingKey = renamingKey === taskRenamingKey ? renamingKey : null;
+
+    const handleTogglePin = useCallback(() => {
+      onTogglePin(task.teamName, task.id);
+    }, [onTogglePin, task.id, task.teamName]);
+
+    const handleToggleArchive = useCallback(() => {
+      onToggleArchive(task.teamName, task.id);
+    }, [onToggleArchive, task.id, task.teamName]);
+
+    const handleMarkUnread = useCallback(() => {
+      onMarkUnread(task.teamName, task.id);
+    }, [onMarkUnread, task.id, task.teamName]);
+
+    const handleRename = useCallback(() => {
+      onRename(task.teamName, task.id);
+    }, [onRename, task.id, task.teamName]);
+
+    const handleDelete = useCallback(() => {
+      void onDelete(task.teamName, task.id);
+    }, [onDelete, task.id, task.teamName]);
+
+    return (
+      <TaskContextMenu
+        task={task}
+        isPinned={isPinned}
+        isArchived={isArchived}
+        onTogglePin={handleTogglePin}
+        onToggleArchive={handleToggleArchive}
+        onMarkUnread={handleMarkUnread}
+        onRename={handleRename}
+        onDelete={handleDelete}
+      >
+        <AnimatedHeightReveal animate={isNew}>
+          <SidebarTaskItem
+            task={task}
+            hideTeamName={hideTeamName}
+            hideProjectName={hideProjectName}
+            showTeamName={showTeamName}
+            teamOffline={teamOffline}
+            renamingKey={effectiveRenamingKey}
+            onRenameComplete={onRenameComplete}
+            onRenameCancel={onRenameCancel}
+            getDisplaySubject={getDisplaySubject}
+            ownerColorName={ownerColorName}
+          />
+        </AnimatedHeightReveal>
+      </TaskContextMenu>
+    );
+  },
+  (prev, next) =>
+    taskSidebarFieldsEqual(prev.task, next.task) &&
+    prev.isPinned === next.isPinned &&
+    prev.isArchived === next.isArchived &&
+    prev.isNew === next.isNew &&
+    prev.teamOffline === next.teamOffline &&
+    effectiveRenamingKey(prev.task, prev.renamingKey) ===
+      effectiveRenamingKey(next.task, next.renamingKey) &&
+    prev.hideTeamName === next.hideTeamName &&
+    prev.hideProjectName === next.hideProjectName &&
+    prev.showTeamName === next.showTeamName &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onToggleArchive === next.onToggleArchive &&
+    prev.onMarkUnread === next.onMarkUnread &&
+    prev.onRename === next.onRename &&
+    prev.onDelete === next.onDelete &&
+    prev.onRenameComplete === next.onRenameComplete &&
+    prev.onRenameCancel === next.onRenameCancel &&
+    prev.getDisplaySubject === next.getDisplaySubject &&
+    prev.ownerColorName === next.ownerColorName
+);
 
 interface TaskRowsProps {
   tasks: GlobalTask[];

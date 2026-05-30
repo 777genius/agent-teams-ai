@@ -35,6 +35,7 @@ interface StoreState {
 
 const storeState = {} as StoreState;
 const toggleCollapsedGroup = vi.fn();
+const sidebarTaskItemRenderSpy = vi.hoisted(() => vi.fn());
 const taskLocalState = {
   isPinned: vi.fn(() => false),
   isArchived: vi.fn(() => false),
@@ -103,8 +104,9 @@ vi.mock('../../../../src/renderer/components/sidebar/SidebarTaskItem', () => ({
     task: GlobalTask;
     hideProjectName?: boolean;
     teamOffline?: boolean;
-  }) =>
-    React.createElement(
+  }) => {
+    sidebarTaskItemRenderSpy(task.id);
+    return React.createElement(
       'div',
       {
         'data-testid': 'sidebar-task-item',
@@ -112,7 +114,8 @@ vi.mock('../../../../src/renderer/components/sidebar/SidebarTaskItem', () => ({
         'data-team-offline': teamOffline ? 'true' : 'false',
       },
       task.subject
-    ),
+    );
+  },
 }));
 
 vi.mock('../../../../src/renderer/components/sidebar/TaskFiltersPopover', () => ({
@@ -236,6 +239,7 @@ describe('GlobalTaskList project grouping', () => {
     taskLocalState.togglePin.mockClear();
     taskLocalState.toggleArchive.mockClear();
     taskLocalState.renameTask.mockClear();
+    sidebarTaskItemRenderSpy.mockClear();
     setElectronApiForTest(undefined);
     localStorage.clear();
     localStorage.setItem('sidebarTasksGrouping', 'project');
@@ -598,6 +602,59 @@ describe('GlobalTaskList project grouping', () => {
     expect(visibleSubjects(host)).not.toContain('Task 10');
     expect(findButton(host, 'Show more')).not.toBeNull();
     expect(findButton(host, 'Show less')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not rerender unchanged task rows when refreshed task objects keep the same visible fields', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1), makeTask(2)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(sidebarTaskItemRenderSpy).toHaveBeenCalledTimes(2);
+    sidebarTaskItemRenderSpy.mockClear();
+
+    storeState.globalTasks = [makeTask(1), makeTask(2, { subject: 'Task 2 updated' })];
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    expect(visibleSubjects(host)).toEqual(['Task 1', 'Task 2 updated']);
+    expect(sidebarTaskItemRenderSpy.mock.calls.map(([taskId]) => taskId)).toEqual(['task-2']);
+
+    sidebarTaskItemRenderSpy.mockClear();
+    storeState.globalTasks = [
+      makeTask(1, {
+        comments: [
+          {
+            id: 'comment-1',
+            author: 'alice',
+            text: 'note',
+            createdAt: '2026-04-18T11:00:00.000Z',
+            type: 'regular',
+          },
+        ],
+      }),
+      makeTask(2, { subject: 'Task 2 updated' }),
+    ];
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    expect(sidebarTaskItemRenderSpy.mock.calls.map(([taskId]) => taskId)).toEqual(['task-1']);
 
     await act(async () => {
       root.unmount();
