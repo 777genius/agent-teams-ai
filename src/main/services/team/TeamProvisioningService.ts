@@ -30323,7 +30323,6 @@ export class TeamProvisioningService {
       contextMemberNames?: readonly string[];
     } = {}
   ): Promise<BootstrapTranscriptOutcome | null> {
-    let handle: fs.promises.FileHandle | null = null;
     const normalizedMemberName = memberName.trim().toLowerCase();
     const contextMemberNames = Array.from(
       new Set(
@@ -30341,8 +30340,11 @@ export class TeamProvisioningService {
       contextMemberNames,
     });
     try {
-      handle = await fs.promises.open(filePath, 'r');
-      const stat = await handle.stat();
+      // Stat without opening: on a cache hit we must NOT open the file. During a
+      // tracked launch the per-member lookup cache is bypassed, so this scan runs
+      // for every recent session file x every member x every poll; opening before
+      // the cache check turned every one of those into a wasted open() syscall.
+      const stat = await fs.promises.stat(filePath);
       if (!stat.isFile() || stat.size <= 0) {
         return null;
       }
@@ -30351,9 +30353,9 @@ export class TeamProvisioningService {
         return cached.outcome;
       }
       // Parse the transcript tail once per (filePath, mtime, size) and share it
-      // across members. The per-member filter/scan below is byte-for-byte the same
-      // logic as before; only the redundant read + JSON.parse is now memoized.
-      const parsedLines = await this.getParsedBootstrapTranscriptTail(handle, filePath, stat);
+      // across members. getParsedBootstrapTranscriptTail opens the file ITSELF only
+      // when its parse cache misses, so a shared-cache hit also avoids the open.
+      const parsedLines = await this.getParsedBootstrapTranscriptTail(filePath, stat);
       const shouldCollectBootstrapContext = options.allowAnonymousFailure !== true;
       const bootstrapContextMembers = new Set<string>();
       const candidates: BootstrapTranscriptOutcomeCandidate[] = [];
@@ -30433,11 +30435,7 @@ export class TeamProvisioningService {
       return outcome;
     } catch {
       return null;
-    } finally {
-      await handle?.close().catch(() => undefined);
     }
-
-    return null;
   }
 
   private buildBootstrapTranscriptOutcomeCacheKey(input: {
@@ -30464,7 +30462,6 @@ export class TeamProvisioningService {
   }
 
   private async getParsedBootstrapTranscriptTail(
-    handle: fs.promises.FileHandle,
     filePath: string,
     stat: { mtimeMs: number; size: number }
   ): Promise<ParsedBootstrapTranscriptTailLine[]> {
@@ -30476,9 +30473,17 @@ export class TeamProvisioningService {
     const start = Math.max(0, stat.size - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES);
     const length = stat.size - start;
     if (length > 0) {
-      const buffer = Buffer.alloc(length);
-      await handle.read(buffer, 0, length, start);
-      const rawLines = buffer.toString('utf8').split('\n');
+      // Open lazily: only a genuine parse-cache miss (file changed since last
+      // parse) reaches here, so we never open a file whose tail is already cached.
+      const handle = await fs.promises.open(filePath, 'r');
+      let rawLines: string[];
+      try {
+        const buffer = Buffer.alloc(length);
+        await handle.read(buffer, 0, length, start);
+        rawLines = buffer.toString('utf8').split('\n');
+      } finally {
+        await handle.close().catch(() => undefined);
+      }
       if (start > 0) {
         rawLines.shift();
       }
