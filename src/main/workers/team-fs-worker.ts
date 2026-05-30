@@ -645,7 +645,7 @@ function applyCachedTaskReadResult(
     bumpSkipReason(taskDiag.skipReasons, cached.skipReason);
     return;
   }
-  tasks.push(cloneCached(cached.task));
+  tasks.push(cached.task);
 }
 
 function pruneTaskFileCache(
@@ -960,7 +960,7 @@ async function listTeams(
     if (dependencyFingerprint.cacheSafe && cached?.fingerprint === dependencyFingerprint.value) {
       cached.lastUsedAt = nowMs();
       diag.cacheHits++;
-      return cloneCached(cached.summary);
+      return cached.summary;
     }
     diag.cacheMisses++;
 
