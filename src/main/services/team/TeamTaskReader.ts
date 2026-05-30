@@ -566,28 +566,31 @@ export class TeamTaskReader {
   }
 
   async getAllTasks(): Promise<(TeamTask & { teamName: string })[]> {
+    const tasks = await this.getAllTasksProjectionSnapshot();
+    return cloneTasks(tasks);
+  }
+
+  async getAllTasksProjectionSnapshot(): Promise<readonly (TeamTask & { teamName: string })[]> {
     const startedAt = Date.now();
     const cached = TeamTaskReader.allTasksCache;
     if (cached && cached.expiresAt > Date.now()) {
-      const cloned = cloneTasks(cached.value);
       const ms = Date.now() - startedAt;
       if (ms >= 1500) {
-        logger.warn(`[getAllTasks] cache clone slow ms=${ms} tasks=${cloned.length}`);
+        logger.warn(`[getAllTasks] cache read slow ms=${ms} tasks=${cached.value.length}`);
       }
-      return cloned;
+      return cached.value;
     }
 
     if (TeamTaskReader.allTasksInFlight?.generationAtStart === TeamTaskReader.allTasksGeneration) {
       const waitedAt = Date.now();
       const tasks = await TeamTaskReader.allTasksInFlight.promise;
-      const cloned = cloneTasks(tasks);
       const ms = Date.now() - startedAt;
       if (ms >= 1500) {
         logger.warn(
-          `[getAllTasks] in-flight wait slow ms=${ms} waitMs=${Date.now() - waitedAt} tasks=${cloned.length}`
+          `[getAllTasks] in-flight wait slow ms=${ms} waitMs=${Date.now() - waitedAt} tasks=${tasks.length}`
         );
       }
-      return cloned;
+      return tasks;
     }
 
     const request = this.readAllTasksUncached();
@@ -604,12 +607,11 @@ export class TeamTaskReader {
           expiresAt: Date.now() + ALL_TASKS_CACHE_TTL_MS,
         };
       }
-      const cloned = cloneTasks(tasks);
       const ms = Date.now() - startedAt;
       if (ms >= 1500) {
-        logger.warn(`[getAllTasks] total slow ms=${ms} tasks=${cloned.length}`);
+        logger.warn(`[getAllTasks] total slow ms=${ms} tasks=${tasks.length}`);
       }
-      return cloned;
+      return tasks;
     } finally {
       if (TeamTaskReader.allTasksInFlight?.promise === request) {
         TeamTaskReader.allTasksInFlight = null;

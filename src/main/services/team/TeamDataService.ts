@@ -1107,7 +1107,13 @@ export class TeamDataService {
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
-    const rawTasks = await this.taskReader.getAllTasks();
+    const taskReader = this.taskReader as TeamTaskReader & {
+      getAllTasksProjectionSnapshot?: () => Promise<readonly (TeamTask & { teamName: string })[]>;
+    };
+    const rawTasks =
+      typeof taskReader.getAllTasksProjectionSnapshot === 'function'
+        ? await taskReader.getAllTasksProjectionSnapshot()
+        : await taskReader.getAllTasks();
     const teamInfoMap = await this.readGlobalTaskTeamInfo(rawTasks);
 
     const MAX_GLOBAL_TASKS_EXPORTED = 500;
