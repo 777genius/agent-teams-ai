@@ -1524,7 +1524,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -1612,7 +1612,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -1724,7 +1724,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -2233,6 +2233,71 @@ describe('TeamDataService', () => {
       reviewState: 'review',
       kanbanColumn: 'review',
     });
+  });
+
+  it('caps global task projections before building lightweight comment payloads', async () => {
+    const rawTasks = Array.from({ length: 501 }, (_, index) => ({
+      id: `task-${index}`,
+      teamName: index === 0 ? 'old-team' : 'my-team',
+      subject: `Task ${index}`,
+      status: 'pending' as const,
+      owner: 'bob',
+      createdAt: `2026-03-01T00:${String(index % 60).padStart(2, '0')}:00.000Z`,
+      updatedAt: `2026-03-01T${String(Math.floor(index / 60)).padStart(2, '0')}:${String(
+        index % 60
+      ).padStart(2, '0')}:00.000Z`,
+      comments: [
+        {
+          id: `comment-${index}`,
+          author: 'bob',
+          text: `Comment ${index}`,
+          createdAt: '2026-03-01T09:00:00.000Z',
+          type: 'comment' as const,
+        },
+      ],
+    }));
+    const getState = vi.fn(async (teamName: string) => ({
+      teamName,
+      reviewers: [],
+      tasks: {},
+    }));
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(async () => [
+          {
+            teamName: 'my-team',
+            displayName: 'My team',
+            projectPath: '/repo',
+          },
+          {
+            teamName: 'old-team',
+            displayName: 'Old team',
+            projectPath: '/old-repo',
+          },
+        ]),
+      } as never,
+      {
+        getAllTasks: vi.fn(async () => rawTasks),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {
+        getState,
+      } as never
+    );
+
+    const tasks = await service.getAllTasks();
+
+    expect(tasks).toHaveLength(500);
+    expect(tasks[0]?.id).toBe('task-500');
+    expect(tasks.some((task) => task.id === 'task-0')).toBe(false);
+    expect(tasks[0]?.comments?.[0]).toMatchObject({
+      id: 'comment-500',
+      text: 'Comment 500',
+    });
+    expect(getState).not.toHaveBeenCalledWith('old-team');
   });
 
   it('lets kanban approved overlay win over stale review history in global task projections', async () => {

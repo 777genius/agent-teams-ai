@@ -1041,9 +1041,21 @@ export class TeamDataService {
 
     const deletedTeams = new Set(teams.filter((t) => t.deletedAt).map((t) => t.teamName));
 
-    const teamNames = [
-      ...new Set(rawTasks.map((t) => t.teamName).filter((n) => teamInfoMap.has(n))),
-    ];
+    const MAX_GLOBAL_TASKS_EXPORTED = 500;
+    let tasksToExport = rawTasks.filter((task) => teamInfoMap.has(task.teamName));
+    if (tasksToExport.length > MAX_GLOBAL_TASKS_EXPORTED) {
+      // Prefer newest first before reading kanban and building the lightweight IPC projection.
+      tasksToExport = tasksToExport
+        .slice()
+        .sort((a, b) => {
+          const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
+          const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
+          return bt - at;
+        })
+        .slice(0, MAX_GLOBAL_TASKS_EXPORTED);
+    }
+
+    const teamNames = [...new Set(tasksToExport.map((task) => task.teamName))];
     const kanbanByTeam = new Map<string, KanbanState>();
     await Promise.all(
       teamNames.map(async (teamName) => {
@@ -1058,10 +1070,7 @@ export class TeamDataService {
 
     const out: GlobalTask[] = [];
     let processed = 0;
-    for (const task of rawTasks) {
-      if (!teamInfoMap.has(task.teamName)) {
-        continue;
-      }
+    for (const task of tasksToExport) {
       const info = teamInfoMap.get(task.teamName)!;
       const kanbanTaskState = kanbanByTeam.get(task.teamName)?.tasks[task.id];
       const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
@@ -1115,18 +1124,6 @@ export class TeamDataService {
       if (processed % TASK_MAP_YIELD_EVERY === 0) {
         await yieldToEventLoop();
       }
-    }
-
-    // Hard cap: keep renderer responsive even with huge task sets.
-    const MAX_GLOBAL_TASKS_EXPORTED = 500;
-    if (out.length > MAX_GLOBAL_TASKS_EXPORTED) {
-      // Prefer newest first if timestamps exist.
-      out.sort((a, b) => {
-        const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
-        const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
-        return bt - at;
-      });
-      return out.slice(0, MAX_GLOBAL_TASKS_EXPORTED);
     }
 
     return out;
