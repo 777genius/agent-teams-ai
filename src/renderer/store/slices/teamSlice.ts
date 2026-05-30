@@ -128,7 +128,10 @@ import {
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
 } from '../team/teamScopedStateCleanup';
-import { structurallyShareTeamSnapshot } from '../team/teamSnapshotStructuralSharing';
+import {
+  structurallySharePlainValue,
+  structurallyShareTeamSnapshot,
+} from '../team/teamSnapshotStructuralSharing';
 import { parseToolApprovalSettings } from '../team/teamToolApprovalSettings';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 import {
@@ -1572,12 +1575,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             isInitialFetch: wasFirst,
           });
 
-          set({
-            globalTasks: tasks,
+          set((state) => ({
+            globalTasks: structurallySharePlainValue(state.globalTasks, tasks),
             globalTasksLoading: false,
             globalTasksInitialized: true,
             globalTasksError: null,
-          });
+          }));
         } catch (error) {
           if (!isContextRequestScopeCurrent(get, requestScope)) {
             continue;
