@@ -599,6 +599,15 @@ interface PersistedRuntimeMemberLike {
   runtimeSessionId?: string;
 }
 
+interface PersistedTeamConfigCacheEntry {
+  path: string;
+  size: number;
+  mtimeMs: number;
+  ctimeMs: number;
+  projectPath: string | null;
+  members: PersistedRuntimeMemberLike[];
+}
+
 type RelayInboxMessage = InboxMessage & { messageId: string };
 
 interface RelayInboxMessageView {
@@ -3472,6 +3481,7 @@ export class TeamProvisioningService {
       stats: RuntimeProcessUsageStats | null;
     }
   >();
+  private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
   private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
     string,
     {
@@ -3764,6 +3774,7 @@ export class TeamProvisioningService {
     this.liveTeamAgentRuntimeMetadataCache.delete(teamName);
     this.liveTeamAgentRuntimeMetadataInFlightByTeam.delete(teamName);
     this.runtimeProcessRowsForUsageSnapshotByTeam.delete(teamName);
+    this.persistedTeamConfigCache.delete(teamName);
     // CPU/RSS samples are TTL-bound and do not decide liveness; keeping them
     // avoids repeated pidusage forks when launch-state churn invalidates snapshots.
   }
@@ -31581,32 +31592,74 @@ export class TeamProvisioningService {
     }
   }
 
-  private readPersistedTeamProjectPath(teamName: string): string | null {
+  private clonePersistedRuntimeMember(
+    member: PersistedRuntimeMemberLike
+  ): PersistedRuntimeMemberLike {
+    return { ...member };
+  }
+
+  private isPersistedRuntimeMemberLike(member: unknown): member is PersistedRuntimeMemberLike {
+    return !!member && typeof member === 'object';
+  }
+
+  private readPersistedTeamConfig(teamName: string): PersistedTeamConfigCacheEntry | null {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(configPath);
+    } catch {
+      this.persistedTeamConfigCache.delete(teamName);
+      return null;
+    }
+
+    const cached = this.persistedTeamConfigCache.get(teamName);
+    if (
+      cached &&
+      cached.path === configPath &&
+      cached.size === stat.size &&
+      cached.mtimeMs === stat.mtimeMs &&
+      cached.ctimeMs === stat.ctimeMs
+    ) {
+      return cached;
+    }
+
     try {
       const raw = fs.readFileSync(configPath, 'utf8');
-      const parsed = JSON.parse(raw) as { projectPath?: unknown };
+      const parsed = JSON.parse(raw) as { projectPath?: unknown; members?: unknown };
       const projectPath = typeof parsed.projectPath === 'string' ? parsed.projectPath.trim() : '';
-      return projectPath || null;
+      const members = Array.isArray(parsed.members)
+        ? parsed.members
+            .filter((member): member is PersistedRuntimeMemberLike =>
+              this.isPersistedRuntimeMemberLike(member)
+            )
+            .map((member) => this.clonePersistedRuntimeMember(member))
+        : [];
+      const entry: PersistedTeamConfigCacheEntry = {
+        path: configPath,
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        ctimeMs: stat.ctimeMs,
+        projectPath: projectPath || null,
+        members,
+      };
+      this.persistedTeamConfigCache.set(teamName, entry);
+      return entry;
     } catch {
+      this.persistedTeamConfigCache.delete(teamName);
       return null;
     }
   }
 
+  private readPersistedTeamProjectPath(teamName: string): string | null {
+    return this.readPersistedTeamConfig(teamName)?.projectPath ?? null;
+  }
+
   private readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[] {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    try {
-      const raw = fs.readFileSync(configPath, 'utf8');
-      const parsed = JSON.parse(raw) as { members?: unknown };
-      if (!Array.isArray(parsed.members)) {
-        return [];
-      }
-      return parsed.members.filter((member): member is PersistedRuntimeMemberLike => {
-        return !!member && typeof member === 'object';
-      });
-    } catch {
-      return [];
-    }
+    return (
+      this.readPersistedTeamConfig(teamName)?.members.map((member) =>
+        this.clonePersistedRuntimeMember(member)
+      ) ?? []
+    );
   }
 
   private listPersistedTeamNames(): string[] {

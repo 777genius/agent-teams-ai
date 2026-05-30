@@ -664,6 +664,8 @@ type TeamProvisioningServicePrivateHarness = {
     teamName: string,
     options?: { allowAnonymousFailure?: boolean; contextMemberNames?: readonly string[] }
   ) => Promise<{ kind: string; observedAt: string; source?: string; reason?: string } | null>;
+  readPersistedRuntimeMembers: (teamName: string) => Array<Record<string, unknown>>;
+  readPersistedTeamProjectPath: (teamName: string) => string | null;
 };
 
 function privateHarness(svc: TeamProvisioningService): TeamProvisioningServicePrivateHarness {
@@ -878,6 +880,51 @@ describe('TeamProvisioningService', () => {
       const svc = new TeamProvisioningService();
       await expect(svc.warmup()).resolves.not.toThrow();
       expect(spawnCli).toHaveBeenCalled();
+    });
+  });
+
+  describe('persisted team config cache', () => {
+    it('returns defensive runtime member copies and refreshes when config changes', () => {
+      const teamName = 'persisted-config-cache-team';
+      const teamDir = path.join(tempTeamsBase, teamName);
+      const configPath = path.join(teamDir, 'config.json');
+      fs.mkdirSync(teamDir, { recursive: true });
+      fs.writeFileSync(
+        configPath,
+        JSON.stringify({
+          projectPath: '/repo-one',
+          members: [{ name: 'alice', agentId: 'agent-alice' }],
+        }),
+        'utf8'
+      );
+
+      const svc = new TeamProvisioningService();
+      const internals = privateHarness(svc);
+      const firstMembers = internals.readPersistedRuntimeMembers(teamName);
+      firstMembers[0]!.name = 'mutated';
+
+      expect(internals.readPersistedRuntimeMembers(teamName)[0]).toMatchObject({
+        name: 'alice',
+        agentId: 'agent-alice',
+      });
+      expect(internals.readPersistedTeamProjectPath(teamName)).toBe('/repo-one');
+
+      fs.writeFileSync(
+        configPath,
+        JSON.stringify({
+          projectPath: '/repo-two',
+          members: [{ name: 'bob', agentId: 'agent-bob' }],
+        }),
+        'utf8'
+      );
+      const refreshedAt = new Date(Date.now() + 5_000);
+      fs.utimesSync(configPath, refreshedAt, refreshedAt);
+
+      expect(internals.readPersistedRuntimeMembers(teamName)[0]).toMatchObject({
+        name: 'bob',
+        agentId: 'agent-bob',
+      });
+      expect(internals.readPersistedTeamProjectPath(teamName)).toBe('/repo-two');
     });
   });
 

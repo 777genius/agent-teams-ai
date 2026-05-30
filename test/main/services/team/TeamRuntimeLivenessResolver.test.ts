@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
+  extractCliArgValues,
   resolveTeamMemberRuntimeLiveness,
   sanitizeProcessCommandForDiagnostics,
 } from '@main/services/team/TeamRuntimeLivenessResolver';
+import { describe, expect, it } from 'vitest';
 
 const NOW = '2026-04-24T12:00:00.000Z';
 
@@ -237,5 +237,15 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
     expect(
       sanitizeProcessCommandForDiagnostics('node runtime --api-key sk-123 --token=abc --safe ok')
     ).toBe('node runtime --api-key [redacted] --token=[redacted] --safe ok');
+  });
+
+  it('keeps cached CLI arg extraction immutable for callers', () => {
+    const command =
+      'node runtime --team-name demo --agent-id "agent alice" --agent-id agent-bob';
+    const first = extractCliArgValues(command, '--agent-id');
+    first.push('mutated');
+
+    expect(extractCliArgValues(command, '--agent-id')).toEqual(['agent alice', 'agent-bob']);
+    expect(extractCliArgValues(command, '--team-name')).toEqual(['demo']);
   });
 });

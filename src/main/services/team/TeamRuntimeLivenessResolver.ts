@@ -45,6 +45,8 @@ export interface ResolvedTeamMemberRuntimeLiveness {
 const SHELL_COMMAND_NAMES = new Set(['sh', 'bash', 'zsh', 'fish', 'dash', 'login', 'tmux']);
 const SECRET_FLAG_PATTERN =
   /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
+const CLI_ARG_VALUES_CACHE_MAX_COMMANDS = 1_000;
+const cliArgValuesCache = new Map<string, Map<string, string[]>>();
 
 function basenameCommand(command: string | undefined): string {
   const firstToken = command?.trim().split(/\s+/, 1)[0] ?? '';
@@ -69,6 +71,16 @@ function escapeRegexLiteral(value: string): string {
 }
 
 export function extractCliArgValues(command: string, argName: string): string[] {
+  const cachedByArg = cliArgValuesCache.get(command);
+  const cachedValues = cachedByArg?.get(argName);
+  if (cachedValues) {
+    if (cachedByArg) {
+      cliArgValuesCache.delete(command);
+      cliArgValuesCache.set(command, cachedByArg);
+    }
+    return [...cachedValues];
+  }
+
   const escapedArg = escapeRegexLiteral(argName);
   const pattern = new RegExp(
     `(?:^|\\s)${escapedArg}(?:=|\\s+)("([^"]*)"|'([^']*)'|([^\\s]+))`,
@@ -80,7 +92,16 @@ export function extractCliArgValues(command: string, argName: string): string[] 
     const value = (match[2] ?? match[3] ?? match[4] ?? '').trim();
     if (value) values.push(value);
   }
-  return values;
+  const nextByArg = cachedByArg ?? new Map<string, string[]>();
+  nextByArg.set(argName, values);
+  cliArgValuesCache.delete(command);
+  cliArgValuesCache.set(command, nextByArg);
+  while (cliArgValuesCache.size > CLI_ARG_VALUES_CACHE_MAX_COMMANDS) {
+    const oldestKey = cliArgValuesCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    cliArgValuesCache.delete(oldestKey);
+  }
+  return [...values];
 }
 
 export function commandArgEquals(
