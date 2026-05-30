@@ -465,6 +465,58 @@ describe('TeamTaskActivityIntervalService', () => {
     ]);
   });
 
+  it('resumes active intervals for multiple members in a single pass', async () => {
+    await writeTask('alpha', {
+      id: 'bob-task',
+      subject: 'Bob work',
+      owner: 'bob',
+      status: 'in_progress',
+      workIntervals: [
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+      ],
+      historyEvents: [],
+    });
+    await writeTask('alpha', {
+      id: 'alice-task',
+      subject: 'Alice work',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [
+        { startedAt: '2026-05-08T11:00:00.000Z', completedAt: '2026-05-08T11:05:00.000Z' },
+      ],
+      historyEvents: [],
+    });
+    await writeTask('alpha', {
+      id: 'carol-task',
+      subject: 'Carol work',
+      owner: 'carol',
+      status: 'in_progress',
+      workIntervals: [
+        { startedAt: '2026-05-08T12:00:00.000Z', completedAt: '2026-05-08T12:05:00.000Z' },
+      ],
+      historyEvents: [],
+    });
+
+    const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMembers(
+      'alpha',
+      ['bob', 'alice'],
+      '2026-05-08T10:20:00.000Z'
+    );
+    const bobTask = await readTask('alpha', 'bob-task');
+    const aliceTask = await readTask('alpha', 'alice-task');
+    const carolTask = await readTask('alpha', 'carol-task');
+
+    // Both listed members resumed in one pass; a member outside the set is untouched.
+    expect(result.changedTasks).toBe(2);
+    expect((bobTask.workIntervals as unknown[]).at(-1)).toEqual({
+      startedAt: '2026-05-08T10:20:00.000Z',
+    });
+    expect((aliceTask.workIntervals as unknown[]).at(-1)).toEqual({
+      startedAt: '2026-05-08T10:20:00.000Z',
+    });
+    expect(carolTask.workIntervals).toHaveLength(1);
+  });
+
   it('reopens and closes lead work intervals across activity changes', async () => {
     await writeTask('alpha', {
       id: 'lead-task',

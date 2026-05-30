@@ -13895,14 +13895,17 @@ export class TeamProvisioningService {
           this.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
       });
       const runtimeObservedAt = nowIso();
-      for (const [memberName, entry] of Object.entries(nextStatuses)) {
-        if (entry.runtimeAlive === true) {
-          this.taskActivityIntervalService.resumeActiveIntervalsForMember(
-            teamName,
-            memberName,
-            runtimeObservedAt
-          );
-        }
+      const aliveMemberNames = Object.entries(nextStatuses)
+        .filter(([, entry]) => entry.runtimeAlive === true)
+        .map(([memberName]) => memberName);
+      if (aliveMemberNames.length > 0) {
+        // Resume all alive members in a single locked task-file pass per cycle
+        // instead of one synchronous lock + full task read per member.
+        this.taskActivityIntervalService.resumeActiveIntervalsForMembers(
+          teamName,
+          aliveMemberNames,
+          runtimeObservedAt
+        );
       }
       const expectedMembers = snapshot ? this.getPersistedLaunchMemberNames(snapshot) : undefined;
       const summary = expectedMembers

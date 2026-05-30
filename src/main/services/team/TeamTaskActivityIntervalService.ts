@@ -443,6 +443,62 @@ export class TeamTaskActivityIntervalService {
     });
   }
 
+  /**
+   * Batched equivalent of resumeActiveIntervalsForMember for several members in a
+   * single task-file pass. During launch the live-status loop resumes every alive
+   * member every audit cycle; doing that per member meant one synchronous
+   * file-lock + read of every task file PER member PER cycle. This applies the
+   * identical per-member resume logic against a member set in one locked pass, so
+   * the mutations are exactly the same but the lock + reads happen once per cycle
+   * instead of once per member.
+   */
+  resumeActiveIntervalsForMembers(
+    teamName: string,
+    memberNames: readonly string[],
+    at = new Date().toISOString()
+  ): ActivityIntervalResult {
+    const memberKeys = new Set(
+      memberNames.map((name) => normalizeMemberName(name)).filter((key): key is string => !!key)
+    );
+    if (memberKeys.size === 0) return { changedTasks: 0 };
+
+    return this.mutateTeamTasks(teamName, (task) => {
+      let changed = false;
+
+      if (
+        task.status === 'in_progress' &&
+        memberKeys.has(normalizeMemberName(task.owner)) &&
+        !hasOpenWorkInterval(task)
+      ) {
+        const activeStartedAt = getActiveWorkStartedAt(task);
+        task.workIntervals = [
+          ...(Array.isArray(task.workIntervals) ? task.workIntervals : []),
+          { startedAt: resumeStartIso(activeStartedAt, at) },
+        ];
+        changed = true;
+      }
+
+      const activeReview = getActiveReviewStart(task);
+      if (
+        task.status === 'completed' &&
+        activeReview &&
+        memberKeys.has(normalizeMemberName(activeReview.reviewer)) &&
+        !hasOpenReviewInterval(task, activeReview.reviewer)
+      ) {
+        task.reviewIntervals = [
+          ...(Array.isArray(task.reviewIntervals) ? task.reviewIntervals : []),
+          {
+            reviewer: activeReview.reviewer,
+            startedAt: resumeStartIso(activeReview.startedAt, at),
+          },
+        ];
+        changed = true;
+      }
+
+      return changed;
+    });
+  }
+
   repairStaleIntervalsAfterCrash(
     teamName: string,
     launchSnapshot?: PersistedTeamLaunchSnapshot | null
