@@ -16,6 +16,7 @@ interface LeadSessionMessageExtractorOptions {
   leadName: string;
   leadSessionId: string;
   maxMessages: number;
+  rawLines?: readonly string[];
 }
 
 function getMessageText(message: ParsedMessage): string {
@@ -98,50 +99,61 @@ export async function extractLeadSessionMessagesFromJsonl({
   leadName,
   leadSessionId,
   maxMessages,
+  rawLines,
 }: LeadSessionMessageExtractorOptions): Promise<InboxMessage[]> {
   if (maxMessages <= 0) return [];
 
   const parsedMessagesReversed: ParsedMessage[] = [];
   const seenScanKeys = new Set<string>();
-  const handle = await fs.promises.open(jsonlPath, 'r');
+  const collectLine = (rawLine: string | undefined): void => {
+    const trimmed = rawLine?.trim();
+    if (!trimmed) return;
 
-  try {
-    const stat = await handle.stat();
-    const fileSize = stat.size;
-
-    let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
-    while (scanBytes <= MAX_SCAN_BYTES) {
-      const start = Math.max(0, fileSize - scanBytes);
-      const buffer = Buffer.alloc(scanBytes);
-      await handle.read(buffer, 0, scanBytes, start);
-      const chunk = buffer.toString('utf8');
-
-      const lines = chunk.split(/\r?\n/);
-      const fromIndex = start > 0 ? 1 : 0;
-
-      for (let i = lines.length - 1; i >= fromIndex; i--) {
-        const trimmed = lines[i]?.trim();
-        if (!trimmed) continue;
-
-        let parsed: ParsedMessage | null = null;
-        try {
-          parsed = parseJsonlLine(trimmed);
-        } catch {
-          parsed = null;
-        }
-        if (!parsed || parsed.isSidechain) continue;
-
-        const scanKey = buildScanKey(parsed, trimmed);
-        if (seenScanKeys.has(scanKey)) continue;
-        seenScanKeys.add(scanKey);
-        parsedMessagesReversed.push(parsed);
-      }
-
-      if (scanBytes === fileSize) break;
-      scanBytes = Math.min(fileSize, scanBytes * 2);
+    let parsed: ParsedMessage | null = null;
+    try {
+      parsed = parseJsonlLine(trimmed);
+    } catch {
+      parsed = null;
     }
-  } finally {
-    await handle.close();
+    if (!parsed || parsed.isSidechain) return;
+
+    const scanKey = buildScanKey(parsed, trimmed);
+    if (seenScanKeys.has(scanKey)) return;
+    seenScanKeys.add(scanKey);
+    parsedMessagesReversed.push(parsed);
+  };
+
+  if (rawLines) {
+    for (let i = rawLines.length - 1; i >= 0; i--) {
+      collectLine(rawLines[i]);
+    }
+  } else {
+    const handle = await fs.promises.open(jsonlPath, 'r');
+
+    try {
+      const stat = await handle.stat();
+      const fileSize = stat.size;
+
+      let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
+      while (scanBytes <= MAX_SCAN_BYTES) {
+        const start = Math.max(0, fileSize - scanBytes);
+        const buffer = Buffer.alloc(scanBytes);
+        await handle.read(buffer, 0, scanBytes, start);
+        const chunk = buffer.toString('utf8');
+
+        const lines = chunk.split(/\r?\n/);
+        const fromIndex = start > 0 ? 1 : 0;
+
+        for (let i = lines.length - 1; i >= fromIndex; i--) {
+          collectLine(lines[i]);
+        }
+
+        if (scanBytes === fileSize) break;
+        scanBytes = Math.min(fileSize, scanBytes * 2);
+      }
+    } finally {
+      await handle.close();
+    }
   }
 
   const parsedMessages = parsedMessagesReversed.reverse();

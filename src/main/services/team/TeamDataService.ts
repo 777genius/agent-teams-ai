@@ -3245,20 +3245,12 @@ export class TeamDataService {
     return sessionIds;
   }
 
-  private async extractLeadAssistantTextsFromJsonl(
-    jsonlPath: string,
-    leadName: string,
-    leadSessionId: string,
-    maxTexts: number
-  ): Promise<InboxMessage[]> {
-    if (maxTexts <= 0) return [];
-
+  private async readLeadSessionJsonlTailLines(jsonlPath: string): Promise<string[]> {
     const MAX_SCAN_BYTES = 8 * 1024 * 1024;
     const INITIAL_SCAN_BYTES = 256 * 1024;
 
     const rawLinesReversed: string[] = [];
     const seenRawLines = new Set<string>();
-    const seenMessageIds = new Set<string>();
     const handle = await fs.promises.open(jsonlPath, 'r');
     try {
       const stat = await handle.stat();
@@ -3289,7 +3281,17 @@ export class TeamDataService {
       await handle.close();
     }
 
-    const rawLines = rawLinesReversed.reverse();
+    return rawLinesReversed.reverse();
+  }
+
+  private async extractLeadAssistantTextsFromJsonlLines(
+    rawLines: readonly string[],
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]> {
+    if (maxTexts <= 0) return [];
+    const seenMessageIds = new Set<string>();
     const texts: InboxMessage[] = [];
     let syntheticBuffer: {
       firstMsg: Record<string, unknown>;
@@ -3475,13 +3477,15 @@ export class TeamDataService {
     }
 
     const parse = async (): Promise<InboxMessage[]> => {
+      const rawLines = await this.readLeadSessionJsonlTailLines(jsonlPath);
       const [assistantTexts, commandResults] = await Promise.all([
-        this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
+        this.extractLeadAssistantTextsFromJsonlLines(rawLines, leadName, leadSessionId, maxTexts),
         extractLeadSessionMessagesFromJsonl({
           jsonlPath,
           leadName,
           leadSessionId,
           maxMessages: maxTexts,
+          rawLines,
         }),
       ]);
       const combined = [...assistantTexts, ...commandResults];
