@@ -749,4 +749,62 @@ describe('TeamTranscriptProjectResolver', () => {
     expect(entry?.size).toBe(999_999); // cache recorded the precomputed stat -> no re-stat
     expect(entry?.mtimeMs).toBe(123_456);
   });
+
+  // The head-window scan reads chunks + splits on '\n' (not readline). These lock the
+  // byte-exact equivalence: CRLF endings, a final line with no trailing newline, a
+  // multi-byte char straddling the 64KB read boundary, and the 40-line window bound.
+  const teamTextLine = (team: string) =>
+    JSON.stringify({
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'text', text: `Team name: ${team}` }] },
+    });
+  const noiseLine = (i: number) =>
+    JSON.stringify({ type: 'user', message: { role: 'user', content: `noise ${i}` } });
+
+  it('matches with CRLF line endings and a final line that has no trailing newline', async () => {
+    await setupClaudeRoot();
+    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const team = 'crlf-team';
+    const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/crlf'));
+    await fs.mkdir(projectDir, { recursive: true });
+    const jsonlPath = path.join(projectDir, 'c.jsonl');
+    // CRLF separators; the matching line is last and has NO trailing newline.
+    await fs.writeFile(
+      jsonlPath,
+      `${noiseLine(0)}\r\n${noiseLine(1)}\r\n${teamTextLine(team)}`,
+      'utf8'
+    );
+    expect(await resolver.fileBelongsToTeam(jsonlPath, team)).toBe(true);
+  });
+
+  it('matches a team mention located past the 64KB read boundary with multi-byte content', async () => {
+    await setupClaudeRoot();
+    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const team = 'boundary-team';
+    const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/mb'));
+    await fs.mkdir(projectDir, { recursive: true });
+    const jsonlPath = path.join(projectDir, 'mb.jsonl');
+    // ~40KB of 2-byte Cyrillic per line: the first two lines (~80KB) push the matching
+    // third line past the 64KB read chunk and force a multi-byte char to straddle the
+    // chunk boundary, which the StringDecoder must stitch back together.
+    const big = 'я'.repeat(20_000);
+    const heavy = (i: number) =>
+      JSON.stringify({ type: 'user', message: { role: 'user', content: `${big} ${i}` } });
+    await fs.writeFile(jsonlPath, `${heavy(0)}\n${heavy(1)}\n${teamTextLine(team)}\n`, 'utf8');
+    expect(await resolver.fileBelongsToTeam(jsonlPath, team)).toBe(true);
+  });
+
+  it('ignores a team mention that appears only after the 40-line head window', async () => {
+    await setupClaudeRoot();
+    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const team = 'late-team';
+    const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/late'));
+    await fs.mkdir(projectDir, { recursive: true });
+    const jsonlPath = path.join(projectDir, 'late.jsonl');
+    // 40 non-matching lines fill the head window; the mention is on line 41.
+    const lines = Array.from({ length: 40 }, (_, i) => noiseLine(i));
+    lines.push(teamTextLine(team));
+    await fs.writeFile(jsonlPath, `${lines.join('\n')}\n`, 'utf8');
+    expect(await resolver.fileBelongsToTeam(jsonlPath, team)).toBe(false);
+  });
 });

@@ -8,10 +8,10 @@ import {
 } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { createReadStream, type Dirent } from 'fs';
+import { type Dirent } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as readline from 'readline';
+import { StringDecoder } from 'string_decoder';
 
 import { TeamConfigReader } from './TeamConfigReader';
 
@@ -21,6 +21,10 @@ const logger = createLogger('Service:TeamTranscriptProjectResolver');
 
 const SESSION_DISCOVERY_CACHE_TTL = 30_000;
 const TEAM_AFFINITY_SCAN_LINES = 40;
+// Read size for the head-window affinity scan. Read in chunks (not the whole file)
+// so a transcript whose head holds the team's first TEAM_AFFINITY_SCAN_LINES lines
+// is decided after reading just those, not the entire (possibly huge) file.
+const TEAM_AFFINITY_READ_CHUNK_BYTES = 64 * 1024;
 const TEAM_AFFINITY_FILE_CACHE_MAX_ENTRIES = 4_096;
 const ROOT_DISCOVERY_CONCURRENCY = 12;
 const FAST_CONTEXT_ROOT_DISCOVERY_MTIME_GRACE_MS = 24 * 60 * 60_000;
@@ -1066,49 +1070,83 @@ export class TeamTranscriptProjectResolver {
       }
     }
 
-    const stream = createReadStream(filePath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    // Read the head window with a bounded chunked read plus a plain newline split
+    // instead of readline. readline's async line iterator runs an expensive Unicode
+    // line-break regex and stream/string-decoder machinery per chunk, which showed up
+    // as a top main-thread cost during launch. JSONL is strictly newline-delimited and
+    // each line is trim()'d (so a trailing CR from a CRLF ending is dropped), so a plain
+    // newline split is both cheaper and more correct here: it will not split on a bare
+    // CR or a Unicode line/paragraph separator that appears inside a JSON string value.
+    // A StringDecoder preserves multi-byte UTF-8 sequences that straddle a chunk
+    // boundary. Semantics are byte-identical to the old readline loop: inspect up to
+    // TEAM_AFFINITY_SCAN_LINES non-empty lines, first match wins via early break, and a
+    // final line is honored even without a trailing newline.
     let belongsToTeam = false;
     let inspected = 0;
 
+    const inspectHeadLine = (rawLine: string): boolean => {
+      const trimmed = rawLine.trim();
+      if (!trimmed) {
+        return false;
+      }
+      inspected += 1;
+      try {
+        const entry = JSON.parse(trimmed) as Record<string, unknown>;
+        const directTeamName = extractDirectTeamName(entry);
+        if (directTeamName === normalizedTeam) {
+          belongsToTeam = true;
+          return true;
+        }
+        if (entryContainsNestedTeamName(entry, normalizedTeam)) {
+          belongsToTeam = true;
+          return true;
+        }
+        const textContent = extractTextContent(entry);
+        if (textContent && lineMentionsTeam(textContent, normalizedTeam)) {
+          belongsToTeam = true;
+          return true;
+        }
+      } catch {
+        // ignore malformed head lines
+      }
+      return inspected >= TEAM_AFFINITY_SCAN_LINES;
+    };
+
+    let handle: fs.FileHandle | null = null;
     try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-          continue;
-        }
-
-        inspected += 1;
-        try {
-          const entry = JSON.parse(trimmed) as Record<string, unknown>;
-          const directTeamName = extractDirectTeamName(entry);
-          if (directTeamName === normalizedTeam) {
-            belongsToTeam = true;
-            break;
+      handle = await fs.open(filePath, 'r');
+      const decoder = new StringDecoder('utf8');
+      const chunk = Buffer.allocUnsafe(TEAM_AFFINITY_READ_CHUNK_BYTES);
+      let pending = '';
+      let position = 0;
+      let stop = false;
+      while (!stop) {
+        const { bytesRead } = await handle.read(chunk, 0, chunk.length, position);
+        if (bytesRead <= 0) {
+          // EOF: flush the decoder and honor a final line with no trailing newline.
+          pending += decoder.end();
+          if (pending.length > 0) {
+            inspectHeadLine(pending);
           }
-          if (entryContainsNestedTeamName(entry, normalizedTeam)) {
-            belongsToTeam = true;
-            break;
-          }
-
-          const textContent = extractTextContent(entry);
-          if (textContent && lineMentionsTeam(textContent, normalizedTeam)) {
-            belongsToTeam = true;
-            break;
-          }
-        } catch {
-          // ignore malformed head lines
-        }
-
-        if (inspected >= TEAM_AFFINITY_SCAN_LINES) {
           break;
+        }
+        position += bytesRead;
+        pending += decoder.write(chunk.subarray(0, bytesRead));
+        let newlineIndex = pending.indexOf('\n');
+        while (newlineIndex !== -1) {
+          const line = pending.slice(0, newlineIndex);
+          pending = pending.slice(newlineIndex + 1);
+          if (inspectHeadLine(line)) {
+            stop = true;
+            break;
+          }
+          newlineIndex = pending.indexOf('\n');
         }
       }
     } catch {
       return false;
     } finally {
-      rl.close();
-      stream.destroy();
+      await handle?.close().catch(() => undefined);
     }
 
     this.setTeamAffinityFileCacheEntry(cacheKey, {
