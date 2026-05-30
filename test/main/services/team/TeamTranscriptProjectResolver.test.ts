@@ -636,6 +636,12 @@ describe('TeamTranscriptProjectResolver', () => {
     belongsToTeam: boolean;
     headWindowFull: boolean;
   };
+  type HeadMetadataCacheEntry = {
+    mtimeMs: number;
+    size: number;
+    inspectedLineCount: number;
+    lines: unknown[];
+  };
   type ResolverProbe = {
     fileBelongsToTeam: (
       filePath: string,
@@ -644,6 +650,7 @@ describe('TeamTranscriptProjectResolver', () => {
     ) => Promise<boolean>;
     buildTeamAffinityFileCacheKey: (filePath: string, normalizedTeam: string) => string;
     teamAffinityFileCache: Map<string, AffinityCacheEntry>;
+    teamAffinityHeadMetadataCache: Map<string, HeadMetadataCacheEntry>;
   };
 
   it('caches a full-head-window negative and stops re-scanning a growing non-matching transcript', async () => {
@@ -748,6 +755,49 @@ describe('TeamTranscriptProjectResolver', () => {
     const entry = resolver.teamAffinityFileCache.get(key);
     expect(entry?.size).toBe(999_999); // cache recorded the precomputed stat -> no re-stat
     expect(entry?.mtimeMs).toBe(123_456);
+  });
+
+  it('reuses parsed head metadata across different team lookups for the same file signature', async () => {
+    await setupClaudeRoot();
+    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache'));
+    await fs.mkdir(projectDir, { recursive: true });
+    const jsonlPath = path.join(projectDir, 'shared.jsonl');
+    await fs.writeFile(
+      jsonlPath,
+      [
+        teamTextLine('alpha-team'),
+        JSON.stringify({
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'tool_use', input: { teamName: 'beta-team' } }],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const fileStat = await fs.stat(jsonlPath);
+    expect(await resolver.fileBelongsToTeam(jsonlPath, 'alpha-team', fileStat)).toBe(true);
+    await fs.unlink(jsonlPath);
+    expect(await resolver.fileBelongsToTeam(jsonlPath, 'beta-team', fileStat)).toBe(true);
+    expect(await resolver.fileBelongsToTeam(jsonlPath, 'missing-team', fileStat)).toBe(false);
+
+    expect(resolver.teamAffinityHeadMetadataCache.size).toBe(1);
+    expect(resolver.teamAffinityHeadMetadataCache.get(jsonlPath)?.inspectedLineCount).toBe(2);
+    expect(resolver.teamAffinityFileCache.get(`alpha-team\0${jsonlPath}`)).toMatchObject({
+      belongsToTeam: true,
+      headWindowFull: false,
+    });
+    expect(resolver.teamAffinityFileCache.get(`beta-team\0${jsonlPath}`)).toMatchObject({
+      belongsToTeam: true,
+      headWindowFull: false,
+    });
+    expect(resolver.teamAffinityFileCache.get(`missing-team\0${jsonlPath}`)).toMatchObject({
+      belongsToTeam: false,
+      headWindowFull: false,
+    });
   });
 
   // The head-window scan reads chunks + splits on '\n' (not readline). These lock the

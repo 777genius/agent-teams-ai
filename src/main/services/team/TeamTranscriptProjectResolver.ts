@@ -26,6 +26,7 @@ const TEAM_AFFINITY_SCAN_LINES = 40;
 // is decided after reading just those, not the entire (possibly huge) file.
 const TEAM_AFFINITY_READ_CHUNK_BYTES = 64 * 1024;
 const TEAM_AFFINITY_FILE_CACHE_MAX_ENTRIES = 4_096;
+const TEAM_AFFINITY_HEAD_METADATA_CACHE_MAX_ENTRIES = 4_096;
 const ROOT_DISCOVERY_CONCURRENCY = 12;
 const FAST_CONTEXT_ROOT_DISCOVERY_MTIME_GRACE_MS = 24 * 60 * 60_000;
 
@@ -151,23 +152,7 @@ function extractTextContent(entry: Record<string, unknown>): string | null {
   return null;
 }
 
-function extractDirectTeamName(entry: Record<string, unknown>): string | null {
-  if (typeof entry.teamName === 'string') {
-    return entry.teamName.trim().toLowerCase();
-  }
-
-  const process = entry.process as Record<string, unknown> | undefined;
-  const processTeam = process?.team as Record<string, unknown> | undefined;
-  if (typeof processTeam?.teamName === 'string') {
-    return processTeam.teamName.trim().toLowerCase();
-  }
-
-  return null;
-}
-
-function lineMentionsTeam(text: string, teamName: string): boolean {
-  const normalizedText = text.trim().toLowerCase();
-  const normalizedTeam = teamName.trim().toLowerCase();
+function lineMentionsNormalizedTeam(normalizedText: string, normalizedTeam: string): boolean {
   if (!normalizedText.includes(normalizedTeam)) {
     return false;
   }
@@ -183,26 +168,52 @@ function lineMentionsTeam(text: string, teamName: string): boolean {
   );
 }
 
-function entryContainsNestedTeamName(value: unknown, teamName: string, depth: number = 0): boolean {
+function collectNestedTeamNames(value: unknown, teamNames: Set<string>, depth: number = 0): void {
   if (!value || depth > 8 || typeof value !== 'object') {
-    return false;
+    return;
   }
 
   if (Array.isArray(value)) {
-    return value.some((item) => entryContainsNestedTeamName(item, teamName, depth + 1));
+    for (const item of value) {
+      collectNestedTeamNames(item, teamNames, depth + 1);
+    }
+    return;
   }
 
   const entry = value as Record<string, unknown>;
-  if (typeof entry.teamName === 'string' && entry.teamName.trim().toLowerCase() === teamName) {
-    return true;
+  if (typeof entry.teamName === 'string') {
+    const normalizedTeamName = entry.teamName.trim().toLowerCase();
+    if (normalizedTeamName) {
+      teamNames.add(normalizedTeamName);
+    }
   }
 
-  return Object.entries(entry).some(([key, nested]) => {
+  for (const [key, nested] of Object.entries(entry)) {
     if (key === 'teamName') {
-      return false;
+      continue;
     }
-    return entryContainsNestedTeamName(nested, teamName, depth + 1);
-  });
+    collectNestedTeamNames(nested, teamNames, depth + 1);
+  }
+}
+
+function parseTeamAffinityHeadLine(rawLine: string): TeamAffinityHeadLineMetadata {
+  const empty: TeamAffinityHeadLineMetadata = {
+    nestedTeamNames: new Set<string>(),
+    normalizedTextContent: null,
+  };
+
+  try {
+    const entry = JSON.parse(rawLine) as Record<string, unknown>;
+    const nestedTeamNames = new Set<string>();
+    collectNestedTeamNames(entry, nestedTeamNames);
+    const textContent = extractTextContent(entry);
+    return {
+      nestedTeamNames,
+      normalizedTextContent: textContent ? textContent.trim().toLowerCase() : null,
+    };
+  } catch {
+    return empty;
+  }
 }
 
 function collectKnownSessionIds(config: TeamConfig): string[] {
@@ -253,6 +264,23 @@ interface TeamAffinityFileCacheEntry {
   headWindowFull: boolean;
 }
 
+interface TeamAffinityHeadLineMetadata {
+  nestedTeamNames: Set<string>;
+  normalizedTextContent: string | null;
+}
+
+interface TeamAffinityHeadMetadataCacheEntry {
+  mtimeMs: number;
+  size: number;
+  inspectedLineCount: number;
+  lines: TeamAffinityHeadLineMetadata[];
+}
+
+interface TeamAffinityEvaluation {
+  belongsToTeam: boolean;
+  inspectedLineCount: number;
+}
+
 export class TeamTranscriptProjectResolver {
   private readonly contextCache = new Map<
     string,
@@ -260,6 +288,10 @@ export class TeamTranscriptProjectResolver {
   >();
 
   private readonly teamAffinityFileCache = new Map<string, TeamAffinityFileCacheEntry>();
+  private readonly teamAffinityHeadMetadataCache = new Map<
+    string,
+    TeamAffinityHeadMetadataCacheEntry
+  >();
 
   constructor(
     private readonly configReader: TeamTranscriptProjectConfigReader = new TeamConfigReader()
@@ -1070,46 +1102,63 @@ export class TeamTranscriptProjectResolver {
       }
     }
 
-    // Read the head window with a bounded chunked read plus a plain newline split
-    // instead of readline. readline's async line iterator runs an expensive Unicode
-    // line-break regex and stream/string-decoder machinery per chunk, which showed up
-    // as a top main-thread cost during launch. JSONL is strictly newline-delimited and
-    // each line is trim()'d (so a trailing CR from a CRLF ending is dropped), so a plain
-    // newline split is both cheaper and more correct here: it will not split on a bare
-    // CR or a Unicode line/paragraph separator that appears inside a JSON string value.
-    // A StringDecoder preserves multi-byte UTF-8 sequences that straddle a chunk
-    // boundary. Semantics are byte-identical to the old readline loop: inspect up to
-    // TEAM_AFFINITY_SCAN_LINES non-empty lines, first match wins via early break, and a
-    // final line is honored even without a trailing newline.
-    let belongsToTeam = false;
-    let inspected = 0;
+    const headMetadata = await this.getTeamAffinityHeadMetadata(filePath, fileStat);
+    if (!headMetadata) {
+      return false;
+    }
+    const evaluation = this.evaluateTeamAffinityHeadMetadata(headMetadata, normalizedTeam);
 
+    this.setTeamAffinityFileCacheEntry(cacheKey, {
+      mtimeMs: fileStat.mtimeMs,
+      size: fileStat.size,
+      belongsToTeam: evaluation.belongsToTeam,
+      headWindowFull: evaluation.inspectedLineCount >= TEAM_AFFINITY_SCAN_LINES,
+    });
+    return evaluation.belongsToTeam;
+  }
+
+  private evaluateTeamAffinityHeadMetadata(
+    metadata: TeamAffinityHeadMetadataCacheEntry,
+    normalizedTeam: string
+  ): TeamAffinityEvaluation {
+    let inspectedLineCount = 0;
+    for (const line of metadata.lines) {
+      inspectedLineCount += 1;
+      if (line.nestedTeamNames.has(normalizedTeam)) {
+        return { belongsToTeam: true, inspectedLineCount };
+      }
+      if (
+        line.normalizedTextContent &&
+        lineMentionsNormalizedTeam(line.normalizedTextContent, normalizedTeam)
+      ) {
+        return { belongsToTeam: true, inspectedLineCount };
+      }
+    }
+    return { belongsToTeam: false, inspectedLineCount: metadata.inspectedLineCount };
+  }
+
+  private async getTeamAffinityHeadMetadata(
+    filePath: string,
+    fileStat: { mtimeMs: number; size: number }
+  ): Promise<TeamAffinityHeadMetadataCacheEntry | null> {
+    const cached = this.teamAffinityHeadMetadataCache.get(filePath);
+    if (cached && cached.mtimeMs === fileStat.mtimeMs && cached.size === fileStat.size) {
+      return cached;
+    }
+    if (cached) {
+      this.teamAffinityHeadMetadataCache.delete(filePath);
+    }
+
+    const lines: TeamAffinityHeadLineMetadata[] = [];
+    let inspectedLineCount = 0;
     const inspectHeadLine = (rawLine: string): boolean => {
       const trimmed = rawLine.trim();
       if (!trimmed) {
         return false;
       }
-      inspected += 1;
-      try {
-        const entry = JSON.parse(trimmed) as Record<string, unknown>;
-        const directTeamName = extractDirectTeamName(entry);
-        if (directTeamName === normalizedTeam) {
-          belongsToTeam = true;
-          return true;
-        }
-        if (entryContainsNestedTeamName(entry, normalizedTeam)) {
-          belongsToTeam = true;
-          return true;
-        }
-        const textContent = extractTextContent(entry);
-        if (textContent && lineMentionsTeam(textContent, normalizedTeam)) {
-          belongsToTeam = true;
-          return true;
-        }
-      } catch {
-        // ignore malformed head lines
-      }
-      return inspected >= TEAM_AFFINITY_SCAN_LINES;
+      inspectedLineCount += 1;
+      lines.push(parseTeamAffinityHeadLine(trimmed));
+      return inspectedLineCount >= TEAM_AFFINITY_SCAN_LINES;
     };
 
     let handle: fs.FileHandle | null = null;
@@ -1144,18 +1193,19 @@ export class TeamTranscriptProjectResolver {
         }
       }
     } catch {
-      return false;
+      return null;
     } finally {
       await handle?.close().catch(() => undefined);
     }
 
-    this.setTeamAffinityFileCacheEntry(cacheKey, {
+    const entry = {
       mtimeMs: fileStat.mtimeMs,
       size: fileStat.size,
-      belongsToTeam,
-      headWindowFull: inspected >= TEAM_AFFINITY_SCAN_LINES,
-    });
-    return belongsToTeam;
+      inspectedLineCount,
+      lines,
+    };
+    this.setTeamAffinityHeadMetadataCacheEntry(filePath, entry);
+    return entry;
   }
 
   private buildTeamAffinityFileCacheKey(filePath: string, normalizedTeam: string): string {
@@ -1173,5 +1223,21 @@ export class TeamTranscriptProjectResolver {
       }
     }
     this.teamAffinityFileCache.set(cacheKey, entry);
+  }
+
+  private setTeamAffinityHeadMetadataCacheEntry(
+    filePath: string,
+    entry: TeamAffinityHeadMetadataCacheEntry
+  ): void {
+    if (
+      !this.teamAffinityHeadMetadataCache.has(filePath) &&
+      this.teamAffinityHeadMetadataCache.size >= TEAM_AFFINITY_HEAD_METADATA_CACHE_MAX_ENTRIES
+    ) {
+      const oldestKey = this.teamAffinityHeadMetadataCache.keys().next().value;
+      if (oldestKey) {
+        this.teamAffinityHeadMetadataCache.delete(oldestKey);
+      }
+    }
+    this.teamAffinityHeadMetadataCache.set(filePath, entry);
   }
 }
