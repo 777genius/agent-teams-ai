@@ -357,8 +357,16 @@ const LeadThoughtItem = memo(
 
     useLayoutEffect(() => {
       const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+
+      if (!shouldAnimateOnMount) {
+        initialAnimationCompletedRef.current = true;
+        resetWrapperStyles();
+        return;
+      }
+
       const content = contentRef.current;
-      if (!wrapper || !content) return;
+      if (!content) return;
 
       const applyTransition = (targetHeight: number): void => {
         wrapper.style.transition = [
@@ -405,12 +413,6 @@ const LeadThoughtItem = memo(
       const syncHeight = (nextHeight: number, animateFromZero: boolean): void => {
         const previousHeight = previousHeightRef.current;
         previousHeightRef.current = nextHeight;
-
-        if (!shouldAnimateOnMount) {
-          initialAnimationCompletedRef.current = true;
-          resetWrapperStyles();
-          return;
-        }
 
         if (previousHeight === null) {
           if (nextHeight > 0 && animateFromZero) {

@@ -79,6 +79,7 @@ interface SidebarTaskItemProps {
   onRenameCancel?: () => void;
   /** Returns a custom display subject if the task was renamed locally */
   getDisplaySubject?: (task: GlobalTask) => string | undefined;
+  ownerColorName?: string | null;
 }
 
 export const SidebarTaskItem = memo(function SidebarTaskItem({
@@ -91,11 +92,17 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   onRenameComplete,
   onRenameCancel,
   getDisplaySubject,
+  ownerColorName,
 }: SidebarTaskItemProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
-  const teamMembers = useStore(useShallow((s) => s.teamByName[task.teamName]?.members));
+  const shouldResolveOwnerColorFromStore = ownerColorName === undefined;
+  const teamMembers = useStore(
+    useShallow((s) =>
+      shouldResolveOwnerColorFromStore ? s.teamByName[task.teamName]?.members : undefined
+    )
+  );
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
   const { isLight } = useTheme();
 
@@ -142,12 +149,17 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   );
   const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, tCommon('tasks.date.yesterday'));
 
+  const resolvedOwnerColorName = useMemo(() => {
+    if (!task.owner) return null;
+    if (!shouldResolveOwnerColorFromStore) return ownerColorName;
+    if (!teamMembers) return null;
+    return buildMemberColorMap(teamMembers).get(task.owner) ?? null;
+  }, [ownerColorName, shouldResolveOwnerColorFromStore, task.owner, teamMembers]);
+
   const ownerColorSet = useMemo(() => {
-    if (!teamMembers || !task.owner) return null;
-    const colorMap = buildMemberColorMap(teamMembers);
-    const colorName = colorMap.get(task.owner);
+    const colorName = resolvedOwnerColorName;
     return colorName ? getTeamColorSet(colorName) : null;
-  }, [teamMembers, task.owner]);
+  }, [resolvedOwnerColorName]);
 
   const ownerTextColor = useMemo(() => {
     if (!ownerColorSet) return undefined;

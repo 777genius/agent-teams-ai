@@ -10,6 +10,7 @@ import { cn } from '@renderer/lib/utils';
 import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { projectColor } from '@renderer/utils/projectColor';
 import {
@@ -212,6 +213,7 @@ interface GlobalTaskRowProps {
   onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
   onRenameCancel: () => void;
   getDisplaySubject: TaskDisplaySubjectResolver;
+  ownerColorName?: string | null;
 }
 
 const GlobalTaskRow = memo(function GlobalTaskRow({
@@ -232,6 +234,7 @@ const GlobalTaskRow = memo(function GlobalTaskRow({
   onRenameComplete,
   onRenameCancel,
   getDisplaySubject,
+  ownerColorName,
 }: GlobalTaskRowProps): React.JSX.Element {
   const taskRenamingKey = `${task.teamName}:${task.id}`;
   const effectiveRenamingKey = renamingKey === taskRenamingKey ? renamingKey : null;
@@ -278,6 +281,7 @@ const GlobalTaskRow = memo(function GlobalTaskRow({
           onRenameComplete={onRenameComplete}
           onRenameCancel={onRenameCancel}
           getDisplaySubject={getDisplaySubject}
+          ownerColorName={ownerColorName}
         />
       </AnimatedHeightReveal>
     </TaskContextMenu>
@@ -492,6 +496,25 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     provisioningState,
     teams,
   ]);
+
+  const memberColorByTeam = useMemo(() => {
+    const result = new Map<string, Map<string, string>>();
+    for (const team of teams) {
+      if (team.members && team.members.length > 0) {
+        result.set(team.teamName, buildMemberColorMap(team.members));
+      }
+    }
+    return result;
+  }, [teams]);
+
+  const getOwnerColorName = useCallback(
+    (task: GlobalTask): string | null | undefined => {
+      if (!task.owner) return null;
+      const teamColorMap = memberColorByTeam.get(task.teamName);
+      return teamColorMap ? (teamColorMap.get(task.owner) ?? null) : undefined;
+    },
+    [memberColorByTeam]
+  );
 
   const setGroupingMode = (mode: TaskGroupingMode): void => {
     setGroupingModeState(mode);
@@ -839,6 +862,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
               isNew={isNewTask(task)}
               showTeamName
               teamOffline={offlineTeamNames.has(task.teamName)}
+              ownerColorName={getOwnerColorName(task)}
               renamingKey={renamingTaskKey}
               onTogglePin={handleToggleTaskPin}
               onToggleArchive={handleToggleTaskArchive}
@@ -942,6 +966,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
               isNew={isNewTask(task)}
               showTeamName
               teamOffline={offlineTeamNames.has(task.teamName)}
+              ownerColorName={getOwnerColorName(task)}
               renamingKey={renamingTaskKey}
               onTogglePin={handleToggleTaskPin}
               onToggleArchive={handleToggleTaskArchive}
@@ -1023,6 +1048,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                           hideTeamName
                           hideProjectName
                           teamOffline={offlineTeamNames.has(task.teamName)}
+                          ownerColorName={getOwnerColorName(task)}
                           renamingKey={renamingTaskKey}
                           onTogglePin={handleToggleTaskPin}
                           onToggleArchive={handleToggleTaskArchive}
@@ -1121,6 +1147,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                           isArchived={taskLocalState.isArchived(task.teamName, task.id)}
                           isNew={isNewTask(task)}
                           teamOffline={offlineTeamNames.has(task.teamName)}
+                          ownerColorName={getOwnerColorName(task)}
                           renamingKey={renamingTaskKey}
                           onTogglePin={handleToggleTaskPin}
                           onToggleArchive={handleToggleTaskArchive}
