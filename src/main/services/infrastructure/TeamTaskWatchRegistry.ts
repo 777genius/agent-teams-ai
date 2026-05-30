@@ -71,7 +71,6 @@ export class TeamTaskWatchRegistry {
   private reconcileTimer: NodeJS.Timeout | null = null;
   private targets = new Set<string>();
   private targetKey = '';
-  private initialTargetsCaptured = false;
   private closed = false;
   private generation = 0;
   private reconcileInProgress = false;
@@ -164,8 +163,7 @@ export class TeamTaskWatchRegistry {
       const targets = await this.collectTargets();
       const nextKey = targets.join('\n');
       if (nextKey !== this.targetKey) {
-        const addedTargets = targets.filter((target) => !this.targets.has(target));
-        await this.rebuildWatcher(targets, nextKey, addedTargets);
+        await this.applyTargetSet(targets, nextKey);
       }
     } catch (error) {
       if (options.rethrowErrors) {
@@ -184,38 +182,57 @@ export class TeamTaskWatchRegistry {
     }
   }
 
-  private async rebuildWatcher(
-    targets: string[],
-    nextKey: string,
-    addedTargets: string[]
-  ): Promise<void> {
-    const generation = this.generation + 1;
-    this.generation = generation;
-
-    const previousWatcher = this.watcher;
-    this.watcher = null;
-    if (previousWatcher) {
-      await this.closeWatcher(previousWatcher);
+  private async applyTargetSet(targets: string[], nextKey: string): Promise<void> {
+    if (this.closed) {
+      return;
     }
-
-    if (this.closed || generation !== this.generation) {
+    // First time: create the watcher with the full target set. ignoreInitial keeps
+    // the app-startup baseline silent so old files are not replayed.
+    if (!this.watcher) {
+      this.createWatcher(targets, nextKey);
       return;
     }
 
-    const nextWatcher = watch(targets, {
+    // Incrementally update the existing watcher rather than tearing it down and
+    // recreating it. A full rebuild re-opens an fd for EVERY watched file (kqueue
+    // on macOS opens one fd per file), so during a launch that adds dirs in bursts
+    // it re-opened the entire (large) watched set repeatedly. add()/unwatch() touch
+    // only the delta. emitExistingFilesForNewTargets still backfills files that
+    // already exist in newly added dirs, preserving the previous event surface
+    // (chokidar's own add() scan only re-confirms those same files, idempotently).
+    const nextSet = new Set(targets);
+    const addedTargets = targets.filter((target) => !this.targets.has(target));
+    const removedTargets = [...this.targets].filter((target) => !nextSet.has(target));
+    const generation = this.generation;
+
+    if (removedTargets.length > 0) {
+      this.watcher.unwatch(removedTargets);
+    }
+    if (addedTargets.length > 0) {
+      this.watcher.add(addedTargets);
+    }
+    this.targets = nextSet;
+    this.targetKey = nextKey;
+
+    if (addedTargets.length > 0) {
+      await this.emitExistingFilesForNewTargets(addedTargets, generation);
+    }
+  }
+
+  private createWatcher(targets: string[], nextKey: string): void {
+    const generation = this.generation + 1;
+    this.generation = generation;
+
+    const watcher = watch(targets, {
       ignoreInitial: true,
       ignorePermissionErrors: true,
       followSymlinks: false,
       depth: 0,
     });
 
-    this.watcher = nextWatcher;
+    this.watcher = watcher;
     this.targets = new Set(targets);
     this.targetKey = nextKey;
-    // First registry build is app startup baseline and must not emit old files.
-    // Later rebuilds can emit existing files only for newly added targets.
-    const shouldEmitExistingFiles = this.initialTargetsCaptured;
-    this.initialTargetsCaptured = true;
 
     const handleEvent = (eventType: TeamTaskWatchEventType, changedPath?: string): void => {
       if (this.closed || generation !== this.generation || !changedPath) {
@@ -229,7 +246,7 @@ export class TeamTaskWatchRegistry {
 
       // addDir/unlinkDir can make the watch target set stale immediately.
       // Debounced so a burst of dir events (e.g. a team launch) coalesces into one
-      // rebuild; periodic reconciliation is the backup path if an event is missed.
+      // reconcile; periodic reconciliation is the backup path if an event is missed.
       if (this.shouldReconcile(eventType, relativePath)) {
         this.scheduleReconcile();
       }
@@ -241,20 +258,16 @@ export class TeamTaskWatchRegistry {
       this.options.onChange(eventType, relativePath);
     };
 
-    nextWatcher.on('add', (changedPath) => handleEvent('add', changedPath));
-    nextWatcher.on('change', (changedPath) => handleEvent('change', changedPath));
-    nextWatcher.on('unlink', (changedPath) => handleEvent('unlink', changedPath));
-    nextWatcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
-    nextWatcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
-    nextWatcher.on('error', (error) => {
+    watcher.on('add', (changedPath) => handleEvent('add', changedPath));
+    watcher.on('change', (changedPath) => handleEvent('change', changedPath));
+    watcher.on('unlink', (changedPath) => handleEvent('unlink', changedPath));
+    watcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
+    watcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
+    watcher.on('error', (error) => {
       if (!this.closed && generation === this.generation) {
         this.options.onError(error);
       }
     });
-
-    if (shouldEmitExistingFiles) {
-      await this.emitExistingFilesForNewTargets(addedTargets, generation);
-    }
   }
 
   private async emitExistingFilesForNewTargets(

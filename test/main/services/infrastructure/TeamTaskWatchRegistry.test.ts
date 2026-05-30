@@ -9,6 +9,8 @@ type MockChokidarWatcher = {
   handlers: Map<string, Array<(...args: unknown[]) => void>>;
   on: (event: string, handler: (...args: unknown[]) => void) => MockChokidarWatcher;
   emit: (event: string, ...args: unknown[]) => void;
+  add: (paths: string | string[]) => void;
+  unwatch: (paths: string | string[]) => void;
   close: ReturnType<typeof vi.fn>;
 };
 
@@ -22,6 +24,15 @@ const chokidarMock = vi.hoisted(() => {
       close: vi.fn().mockResolvedValue(undefined),
       emit(event: string, ...args: unknown[]) {
         for (const h of watcher.handlers.get(event) ?? []) h(...args);
+      },
+      add(paths: string | string[]) {
+        for (const p of (Array.isArray(paths) ? paths : [paths]).map((x) => String(x))) {
+          if (!watcher.targets.includes(p)) watcher.targets.push(p);
+        }
+      },
+      unwatch(paths: string | string[]) {
+        const drop = new Set((Array.isArray(paths) ? paths : [paths]).map((x) => String(x)));
+        watcher.targets = watcher.targets.filter((t) => !drop.has(t));
       },
     } as MockChokidarWatcher;
     watcher.on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
@@ -168,7 +179,7 @@ describe('TeamTaskWatchRegistry scoping', () => {
     expect(targets).toContain(path.normalize(path.join(root, 'beta')));
   });
 
-  it('coalesces a burst of addDir events into a single watcher rebuild', async () => {
+  it('coalesces a burst of addDir events into a single incremental watcher update', async () => {
     const registry = new TeamTaskWatchRegistry({
       kind: 'teams',
       rootPath: root,
@@ -190,8 +201,9 @@ describe('TeamTaskWatchRegistry scoping', () => {
     const finalTargets = latestTargets();
     await registry.close();
 
-    // Exactly one rebuild despite 4 addDir events, and it picked up the new dir.
-    expect(chokidarMock.instances.length).toBe(instancesAfterStart + 1);
+    // Coalesced into a single reconcile; the watcher is updated incrementally
+    // (no teardown/recreate, so no new chokidar instance) and now includes the dir.
+    expect(chokidarMock.instances.length).toBe(instancesAfterStart);
     expect(finalTargets).toContain(path.normalize(path.join(root, 'delta')));
   });
 });
