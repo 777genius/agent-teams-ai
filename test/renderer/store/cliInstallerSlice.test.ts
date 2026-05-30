@@ -65,6 +65,7 @@ import {
 } from '@renderer/store/slices/cliInstallerSlice';
 import {
   CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+  CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
   type CliProviderId,
 } from '@shared/types/cliInstaller';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -612,6 +613,76 @@ describe('cliInstallerSlice', () => {
       expect(merged.providers.find((provider) => provider.providerId === 'codex')).toMatchObject({
         statusMessage: CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
       });
+    });
+
+    it('does not let a scoped runtime-status error overwrite a connected provider', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          backend: { kind: 'anthropic', label: 'Anthropic' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+          models: [],
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers[0]).toBe(current.providers[0]);
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('oauth_token');
+    });
+
+    it('allows a real disconnected provider snapshot to replace a connected provider', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          backend: { kind: 'anthropic', label: 'Anthropic' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'verified',
+          statusMessage: null,
+          models: [],
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers[0]).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'verified',
+        statusMessage: null,
+      });
+      expect(merged.authLoggedIn).toBe(false);
+      expect(merged.authMethod).toBeNull();
     });
 
     it('drops hydrated hidden Gemini when a fresh frontend status omits it', () => {
@@ -1467,6 +1538,41 @@ describe('cliInstallerSlice', () => {
         verificationState: 'error',
         statusMessage: 'Failed to refresh anthropic status',
       });
+      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+    });
+
+    it('keeps an already connected provider visible when a status refresh errors', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected via Anthropic subscription',
+            models: ['claude-sonnet-4-5'],
+            backend: { kind: 'anthropic', label: 'Anthropic' },
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
+        new Error(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE)
+      );
+
+      await useStore.getState().fetchCliProviderStatus('anthropic');
+
+      const provider = useStore
+        .getState()
+        .cliStatus?.providers.find((candidate) => candidate.providerId === 'anthropic');
+      expect(useStore.getState().cliStatusError).toBe(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE);
+      expect(provider).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+        verificationState: 'verified',
+        statusMessage: 'Connected via Anthropic subscription',
+        models: ['claude-sonnet-4-5'],
+      });
+      expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
     });
 

@@ -1,5 +1,6 @@
 import { execCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE } from '@shared/types/cliInstaller';
 import { createLogger } from '@shared/utils/logger';
 import {
   createDefaultCliExtensionCapabilities,
@@ -413,7 +414,7 @@ function createRuntimeStatusErrorProviderStatus(
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',
-    statusMessage: 'Provider status unavailable',
+    statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage,
   };
 }

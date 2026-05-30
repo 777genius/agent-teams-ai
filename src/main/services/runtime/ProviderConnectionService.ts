@@ -41,6 +41,11 @@ interface StoredApiKeyAccessOptions {
   allowedStoredApiKeyEnvVarNames?: readonly string[];
 }
 
+interface CodexLaunchSnapshotRefreshOptions {
+  refreshRuntimeMissing?: boolean;
+  refreshBlockedLaunch?: boolean;
+}
+
 const PROVIDER_CAPABILITIES: Record<
   CliProviderId,
   Pick<CliProviderConnectionInfo, 'supportsOAuth' | 'supportsApiKey' | 'configurableAuthModes'>
@@ -605,6 +610,7 @@ export class ProviderConnectionService {
 
     const snapshot = await this.getCodexLaunchSnapshot(env, {
       refreshRuntimeMissing: true,
+      refreshBlockedLaunch: true,
     });
     applyCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
@@ -687,6 +693,7 @@ export class ProviderConnectionService {
 
     const snapshot = await this.getCodexLaunchSnapshot(env, {
       refreshRuntimeMissing: true,
+      refreshBlockedLaunch: true,
     });
     applyCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
@@ -771,6 +778,7 @@ export class ProviderConnectionService {
 
     const snapshot = await this.getCodexLaunchSnapshot(env, {
       refreshRuntimeMissing: true,
+      refreshBlockedLaunch: true,
     });
     const runtimeEnv = { ...env };
     applyCodexRuntimeContextEnv(runtimeEnv, snapshot);
@@ -882,6 +890,7 @@ export class ProviderConnectionService {
 
     const snapshot = await this.getCodexLaunchSnapshot(env, {
       refreshRuntimeMissing: true,
+      refreshBlockedLaunch: true,
     });
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
@@ -1267,10 +1276,21 @@ export class ProviderConnectionService {
 
   private async getCodexLaunchSnapshot(
     env: NodeJS.ProcessEnv,
-    options?: { refreshRuntimeMissing?: boolean }
+    options?: CodexLaunchSnapshotRefreshOptions
   ): Promise<CodexAccountSnapshotDto> {
     let snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
-    if (!options?.refreshRuntimeMissing || snapshot.appServerState !== 'runtime-missing') {
+    const readiness = evaluateCodexLaunchReadiness({
+      preferredAuthMode: snapshot.preferredAuthMode,
+      managedAccount: snapshot.managedAccount,
+      apiKey: snapshot.apiKey,
+      appServerState: snapshot.appServerState,
+      appServerStatusMessage: snapshot.appServerStatusMessage,
+      localActiveChatgptAccountPresent: snapshot.localActiveChatgptAccountPresent,
+    });
+    const shouldRefresh =
+      (options?.refreshRuntimeMissing === true && snapshot.appServerState === 'runtime-missing') ||
+      (options?.refreshBlockedLaunch === true && !readiness.launchAllowed);
+    if (!shouldRefresh) {
       return snapshot;
     }
 
@@ -1280,7 +1300,7 @@ export class ProviderConnectionService {
         env
       );
     } catch {
-      // Keep the original runtime-missing snapshot so callers still report the concrete issue.
+      // Keep the original blocked snapshot so callers still report the concrete issue.
     }
 
     return snapshot;

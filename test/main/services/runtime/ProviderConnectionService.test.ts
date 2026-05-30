@@ -1426,6 +1426,82 @@ describe('ProviderConnectionService', () => {
     expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
   });
 
+  it('refreshes a stale blocked Codex snapshot before reporting an auth issue', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const staleMissingAuthSnapshot = createCodexSnapshot({
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage:
+        'Codex native requires OPENAI_API_KEY or CODEX_API_KEY, or a connected ChatGPT account.',
+      launchReadinessState: 'missing_auth',
+      managedAccount: null,
+      requiresOpenaiAuth: true,
+      localAccountArtifactsPresent: true,
+      localActiveChatgptAccountPresent: true,
+    });
+    const refreshSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(staleMissingAuthSnapshot),
+      refreshSnapshot,
+    });
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'codex');
+
+    expect(issue).toBeNull();
+    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+  });
+
+  it('does not refresh a stale Codex auth snapshot when launch env already provides an API key', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const refreshSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          effectiveAuthMode: null,
+          launchAllowed: false,
+          launchIssueMessage:
+            'Codex native requires OPENAI_API_KEY or CODEX_API_KEY, or a connected ChatGPT account.',
+          launchReadinessState: 'missing_auth',
+          managedAccount: null,
+          requiresOpenaiAuth: true,
+          localAccountArtifactsPresent: true,
+          localActiveChatgptAccountPresent: true,
+        })
+      ),
+      refreshSnapshot,
+    });
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        CODEX_API_KEY: 'native-key',
+      },
+      'codex'
+    );
+
+    expect(issue).toBeNull();
+    expect(refreshSnapshot).not.toHaveBeenCalled();
+  });
+
   it('refreshes a runtime-missing Codex snapshot before mutating strict launch env', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');

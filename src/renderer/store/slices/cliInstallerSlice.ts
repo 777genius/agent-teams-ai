@@ -4,7 +4,10 @@
 
 import { api } from '@renderer/api';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
-import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import {
+  CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+  CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+} from '@shared/types/cliInstaller';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
@@ -195,12 +198,38 @@ function isOpenCodeRuntimeMissingSnapshot(provider: CliProviderStatus | undefine
   );
 }
 
+function isProviderStatusUnavailableSnapshot(provider: CliProviderStatus | undefined): boolean {
+  return (
+    provider?.verificationState === 'error' &&
+    provider.statusMessage === CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE
+  );
+}
+
+function shouldKeepConnectedProviderDuringStatusUnavailable(
+  currentProvider: CliProviderStatus | undefined,
+  incomingProvider: CliProviderStatus | undefined
+): boolean {
+  if (!currentProvider || !incomingProvider) {
+    return false;
+  }
+
+  return (
+    isHydratedMultimodelProviderStatus(currentProvider) &&
+    currentProvider.authenticated &&
+    isProviderStatusUnavailableSnapshot(incomingProvider)
+  );
+}
+
 function shouldPreserveCurrentProviderStatus(
   currentProvider: CliProviderStatus | undefined,
   incomingProvider: CliProviderStatus
 ): boolean {
   if (!currentProvider) {
     return false;
+  }
+
+  if (shouldKeepConnectedProviderDuringStatusUnavailable(currentProvider, incomingProvider)) {
+    return true;
   }
 
   if (hasOpenCodeModels(currentProvider) && isOpenCodeRuntimeMissingSnapshot(incomingProvider)) {
@@ -242,6 +271,10 @@ function mergePreservedHydratedProviderStatus(
   incomingProvider: CliProviderStatus,
   currentProvider: CliProviderStatus
 ): CliProviderStatus {
+  if (shouldKeepConnectedProviderDuringStatusUnavailable(currentProvider, incomingProvider)) {
+    return currentProvider;
+  }
+
   if (isDeferredMultimodelProviderStatus(incomingProvider)) {
     return currentProvider;
   }
@@ -638,17 +671,23 @@ function createProviderStatusErrorSnapshot(params: {
       backend: null,
     } satisfies CliProviderStatus);
 
-  return {
+  const errorProvider: CliProviderStatus = {
     ...currentProvider,
     providerId: params.providerId,
     displayName: currentProvider.displayName ?? getProviderDisplayName(params.providerId),
     authenticated: false,
     authMethod: null,
-    verificationState: 'error',
-    modelCatalogRefreshState: 'error',
+    verificationState: 'error' as const,
+    modelCatalogRefreshState: 'error' as const,
     statusMessage: params.message,
     detailMessage: null,
   };
+
+  if (shouldKeepConnectedProviderDuringStatusUnavailable(currentProvider, errorProvider)) {
+    return currentProvider;
+  }
+
+  return errorProvider;
 }
 
 // =============================================================================

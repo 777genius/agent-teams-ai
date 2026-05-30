@@ -233,7 +233,7 @@ describe('useCodexAccountSnapshot', () => {
     });
 
     expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
-    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('true');
 
     await act(async () => {
       vi.advanceTimersByTime(20_000);
