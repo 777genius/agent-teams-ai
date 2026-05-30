@@ -25,6 +25,10 @@ export function setTeamWatchScopeChangeListener(listener: (() => void) | null): 
   scopeChangeListener = listener;
 }
 
+export function notifyTeamWatchScopeChanged(): void {
+  scopeChangeListener?.();
+}
+
 function collectAliveTeams(scope: Set<string>): void {
   if (!aliveTeamsProvider) {
     return;

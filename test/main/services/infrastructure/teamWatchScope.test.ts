@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   computeTeamWatchScope,
   markTeamEngaged,
+  notifyTeamWatchScopeChanged,
   resetTeamWatchScopeForTests,
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
@@ -51,6 +52,13 @@ describe('teamWatchScope', () => {
     setTeamWatchScopeChangeListener(listener);
     markTeamEngaged('y', 0);
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('can notify after alive team scope changes outside engagement', () => {
+    const listener = vi.fn();
+    setTeamWatchScopeChangeListener(listener);
+    notifyTeamWatchScopeChanged();
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it('survives a throwing alive provider (watcher falls back safely)', () => {
