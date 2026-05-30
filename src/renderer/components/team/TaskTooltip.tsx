@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
@@ -65,16 +65,36 @@ interface TaskTooltipProps {
   side?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-/**
- * Tooltip that shows task summary on hover over any #taskId link.
- * Reads task data from the current team in the store.
- */
 export const TaskTooltip = memo(function TaskTooltip({
   taskId,
   teamName,
   children,
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+  }, []);
+
+  return (
+    <Tooltip open={open} onOpenChange={handleOpenChange}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      {open ? <TaskTooltipContent taskId={taskId} teamName={teamName} side={side} /> : null}
+    </Tooltip>
+  );
+});
+
+interface TaskTooltipContentProps {
+  taskId: string;
+  teamName?: string;
+  side: 'top' | 'bottom' | 'left' | 'right';
+}
+
+const TaskTooltipContent = memo(function TaskTooltipContent({
+  taskId,
+  teamName,
+  side,
+}: TaskTooltipContentProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
   const { selectedTeamName, selectedTeamData, selectedTeamMembers, globalTasks, teamByName } =
     useStore(
@@ -127,7 +147,7 @@ export const TaskTooltip = memo(function TaskTooltip({
   );
 
   // If task not found, render children without tooltip
-  if (!task) return children;
+  if (!task) return null;
 
   const column = getEffectiveColumn(task);
   const statusColor = STATUS_COLORS[column] ?? STATUS_COLORS.pending;
@@ -142,63 +162,60 @@ export const TaskTooltip = memo(function TaskTooltip({
     : null;
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side} className="max-w-xs space-y-1.5 p-2.5">
-        {resolvedTeamName ? (
-          <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
-            {resolvedTeamDisplayName || resolvedTeamName}
-          </div>
-        ) : null}
-        {/* Subject */}
-        <div className="text-xs font-medium text-[var(--color-text)]">
-          <span className="text-[var(--color-text-muted)]">{formatTaskDisplayLabel(task)}</span>{' '}
-          {task.subject}
+    <TooltipContent side={side} className="max-w-xs space-y-1.5 p-2.5">
+      {resolvedTeamName ? (
+        <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+          {resolvedTeamDisplayName || resolvedTeamName}
         </div>
+      ) : null}
+      {/* Subject */}
+      <div className="text-xs font-medium text-[var(--color-text)]">
+        <span className="text-[var(--color-text-muted)]">{formatTaskDisplayLabel(task)}</span>{' '}
+        {task.subject}
+      </div>
 
-        {/* Status badge */}
-        <div className="flex items-center gap-2">
+      {/* Status badge */}
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-block rounded px-1.5 py-0.5 text-[10px] font-medium"
+          style={{ color: statusColor.text, backgroundColor: statusColor.bg }}
+        >
+          {label}
+        </span>
+        {isTeamTaskNeedsFixActionable(task) ? (
           <span
-            className="inline-block rounded px-1.5 py-0.5 text-[10px] font-medium"
-            style={{ color: statusColor.text, backgroundColor: statusColor.bg }}
+            className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
           >
-            {label}
+            {REVIEW_STATE_DISPLAY.needsFix.label}
           </span>
-          {isTeamTaskNeedsFixActionable(task) ? (
-            <span
-              className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-            >
-              {REVIEW_STATE_DISPLAY.needsFix.label}
-            </span>
-          ) : null}
-
-          {/* Owner */}
-          {task.owner && members.length > 0 ? (
-            <MemberBadge
-              name={task.owner}
-              color={colorMap.get(task.owner)}
-              teamName={resolvedTeamName}
-            />
-          ) : task.owner ? (
-            <span className="text-[10px] text-[var(--color-text-secondary)]">{task.owner}</span>
-          ) : (
-            <span className="text-[10px] text-[var(--color-text-muted)]">
-              {t('tasks.unassigned')}
-            </span>
-          )}
-        </div>
-
-        {/* Description — full markdown with scroll */}
-        {task.description ? (
-          <div className="max-h-[200px] overflow-y-auto text-[10px]">
-            <MarkdownViewer
-              content={linkifyTaskIdsInMarkdown(task.description, task.descriptionTaskRefs)}
-              maxHeight="max-h-none"
-              bare
-            />
-          </div>
         ) : null}
-      </TooltipContent>
-    </Tooltip>
+
+        {/* Owner */}
+        {task.owner && members.length > 0 ? (
+          <MemberBadge
+            name={task.owner}
+            color={colorMap.get(task.owner)}
+            teamName={resolvedTeamName}
+          />
+        ) : task.owner ? (
+          <span className="text-[10px] text-[var(--color-text-secondary)]">{task.owner}</span>
+        ) : (
+          <span className="text-[10px] text-[var(--color-text-muted)]">
+            {t('tasks.unassigned')}
+          </span>
+        )}
+      </div>
+
+      {/* Description — full markdown with scroll */}
+      {task.description ? (
+        <div className="max-h-[200px] overflow-y-auto text-[10px]">
+          <MarkdownViewer
+            content={linkifyTaskIdsInMarkdown(task.description, task.descriptionTaskRefs)}
+            maxHeight="max-h-none"
+            bare
+          />
+        </div>
+      ) : null}
+    </TooltipContent>
   );
 });
