@@ -3403,30 +3403,32 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <TeamMessagesPanelBridge position="inline" {...sharedMessagesPanelProps} />
               )}
 
-              <ReviewDialog
-                open={requestChangesTaskId !== null}
-                teamName={teamName}
-                taskId={requestChangesTaskId}
-                members={members}
-                onCancel={() => setRequestChangesTaskId(null)}
-                onSubmit={(comment, taskRefs) => {
-                  if (!requestChangesTaskId) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await updateKanban(teamName, requestChangesTaskId, {
-                        op: 'request_changes',
-                        comment,
-                        taskRefs,
-                      });
-                      setRequestChangesTaskId(null);
-                    } catch {
-                      // error state is handled in the store and shown in the view
+              {requestChangesTaskId !== null && (
+                <ReviewDialog
+                  open={true}
+                  teamName={teamName}
+                  taskId={requestChangesTaskId}
+                  members={members}
+                  onCancel={() => setRequestChangesTaskId(null)}
+                  onSubmit={(comment, taskRefs) => {
+                    if (!requestChangesTaskId) {
+                      return;
                     }
-                  })();
-                }}
-              />
+                    void (async () => {
+                      try {
+                        await updateKanban(teamName, requestChangesTaskId, {
+                          op: 'request_changes',
+                          comment,
+                          taskRefs,
+                        });
+                        setRequestChangesTaskId(null);
+                      } catch {
+                        // error state is handled in the store and shown in the view
+                      }
+                    })();
+                  }}
+                />
+              )}
 
               <TeamMemberDetailDialogBridge
                 open={selectedMember !== null}
@@ -3511,108 +3513,120 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </Suspense>
               )}
 
-              <EditTeamDialog
-                open={editDialogOpen}
-                teamName={teamName}
-                currentName={data.config.name}
-                currentDescription={data.config.description ?? ''}
-                currentColor={data.config.color ?? ''}
-                currentMembers={membersWithLiveBranches.filter((m) => !isLeadMember(m))}
-                leadMember={membersWithLiveBranches.find((m) => isLeadMember(m)) ?? null}
-                resolvedMemberColorMap={resolvedMemberColorMap}
-                isTeamAlive={data.isAlive && !isTeamProvisioning}
-                isTeamProvisioning={isTeamProvisioning}
-                projectPath={data.config.projectPath}
-                onClose={() => setEditDialogOpen(false)}
-                onChangeLeadRuntime={handleChangeLeadRuntime}
-                onSaved={() => void selectTeam(teamName)}
-              />
+              {editDialogOpen && (
+                <EditTeamDialog
+                  open={editDialogOpen}
+                  teamName={teamName}
+                  currentName={data.config.name}
+                  currentDescription={data.config.description ?? ''}
+                  currentColor={data.config.color ?? ''}
+                  currentMembers={membersWithLiveBranches.filter((m) => !isLeadMember(m))}
+                  leadMember={membersWithLiveBranches.find((m) => isLeadMember(m)) ?? null}
+                  resolvedMemberColorMap={resolvedMemberColorMap}
+                  isTeamAlive={data.isAlive && !isTeamProvisioning}
+                  isTeamProvisioning={isTeamProvisioning}
+                  projectPath={data.config.projectPath}
+                  onClose={() => setEditDialogOpen(false)}
+                  onChangeLeadRuntime={handleChangeLeadRuntime}
+                  onSaved={() => void selectTeam(teamName)}
+                />
+              )}
 
-              <AddMemberDialog
-                open={addMemberDialogOpen}
-                teamName={teamName}
-                existingNames={membersWithLiveBranches.map((m) => m.name)}
-                existingMembers={membersWithLiveBranches}
-                projectPath={data.config.projectPath}
-                adding={addingMemberLoading}
-                onClose={() => setAddMemberDialogOpen(false)}
-                onAdd={(entries: AddMemberEntry[]) => {
-                  setAddingMemberLoading(true);
-                  void (async () => {
-                    try {
-                      for (const entry of entries) {
-                        await addMember(teamName, {
-                          name: entry.name,
-                          role: entry.role,
-                          workflow: entry.workflow,
-                          isolation: entry.isolation,
-                          providerId: entry.providerId,
-                          model: entry.model,
-                          effort: entry.effort,
-                          mcpPolicy: entry.mcpPolicy,
-                        });
+              {addMemberDialogOpen && (
+                <AddMemberDialog
+                  open={addMemberDialogOpen}
+                  teamName={teamName}
+                  existingNames={membersWithLiveBranches.map((m) => m.name)}
+                  existingMembers={membersWithLiveBranches}
+                  projectPath={data.config.projectPath}
+                  adding={addingMemberLoading}
+                  onClose={() => setAddMemberDialogOpen(false)}
+                  onAdd={(entries: AddMemberEntry[]) => {
+                    setAddingMemberLoading(true);
+                    void (async () => {
+                      try {
+                        for (const entry of entries) {
+                          await addMember(teamName, {
+                            name: entry.name,
+                            role: entry.role,
+                            workflow: entry.workflow,
+                            isolation: entry.isolation,
+                            providerId: entry.providerId,
+                            model: entry.model,
+                            effort: entry.effort,
+                            mcpPolicy: entry.mcpPolicy,
+                          });
+                        }
+                        setAddMemberDialogOpen(false);
+                      } catch {
+                        // error shown via store
+                      } finally {
+                        setAddingMemberLoading(false);
                       }
-                      setAddMemberDialogOpen(false);
-                    } catch {
-                      // error shown via store
-                    } finally {
-                      setAddingMemberLoading(false);
-                    }
-                  })();
-                }}
-              />
+                    })();
+                  }}
+                />
+              )}
 
-              <Dialog
-                open={removeMemberConfirm !== null}
-                onOpenChange={(open) => {
-                  if (!open) setRemoveMemberConfirm(null);
-                }}
-              >
-                <DialogContent className="max-w-sm">
-                  <DialogHeader>
-                    <DialogTitle>{t('detail.removeMember.title')}</DialogTitle>
-                    <DialogDescription>
-                      {t('detail.removeMember.description', { member: removeMemberConfirm })}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="ghost" size="sm" onClick={() => setRemoveMemberConfirm(null)}>
-                      {t('detail.actions.cancel')}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        const name = removeMemberConfirm;
-                        setRemoveMemberConfirm(null);
-                        closeSelectedMemberDialog();
-                        if (name) void removeMember(teamName, name);
-                      }}
-                    >
-                      {t('detail.actions.remove')}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {removeMemberConfirm !== null && (
+                <Dialog
+                  open={true}
+                  onOpenChange={(open) => {
+                    if (!open) setRemoveMemberConfirm(null);
+                  }}
+                >
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>{t('detail.removeMember.title')}</DialogTitle>
+                      <DialogDescription>
+                        {t('detail.removeMember.description', { member: removeMemberConfirm })}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRemoveMemberConfirm(null)}
+                      >
+                        {t('detail.actions.cancel')}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const name = removeMemberConfirm;
+                          setRemoveMemberConfirm(null);
+                          closeSelectedMemberDialog();
+                          if (name) void removeMember(teamName, name);
+                        }}
+                      >
+                        {t('detail.actions.remove')}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
 
-              <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-                <DialogContent className="max-w-sm">
-                  <DialogHeader>
-                    <DialogTitle>{t('detail.deleteTeam.title')}</DialogTitle>
-                    <DialogDescription>
-                      {t('detail.deleteTeam.description', { team: data.config.name })}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(false)}>
-                      {t('detail.actions.cancel')}
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
-                      {t('detail.actions.delete')}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {deleteConfirmOpen && (
+                <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>{t('detail.deleteTeam.title')}</DialogTitle>
+                      <DialogDescription>
+                        {t('detail.deleteTeam.description', { team: data.config.name })}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(false)}>
+                        {t('detail.actions.cancel')}
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
+                        {t('detail.actions.delete')}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               {launchDialogOpen && (
                 <Suspense
@@ -3711,20 +3725,22 @@ export const TeamDetailView = memo(function TeamDetailView({
                 onDeleteTask={handleDeleteTask}
               />
 
-              <TrashDialog
-                open={trashOpen}
-                tasks={deletedTasks}
-                onClose={() => setTrashOpen(false)}
-                onRestore={(taskId) => {
-                  void (async () => {
-                    try {
-                      await restoreTask(teamName, taskId);
-                    } catch {
-                      // error via store
-                    }
-                  })();
-                }}
-              />
+              {trashOpen && (
+                <TrashDialog
+                  open={trashOpen}
+                  tasks={deletedTasks}
+                  onClose={() => setTrashOpen(false)}
+                  onRestore={(taskId) => {
+                    void (async () => {
+                      try {
+                        await restoreTask(teamName, taskId);
+                      } catch {
+                        // error via store
+                      }
+                    })();
+                  }}
+                />
+              )}
 
               {reviewDialogState.open && (
                 <Suspense fallback={null}>
