@@ -3247,41 +3247,25 @@ export class TeamDataService {
 
   private async readLeadSessionJsonlTailLines(jsonlPath: string): Promise<string[]> {
     const MAX_SCAN_BYTES = 8 * 1024 * 1024;
-    const INITIAL_SCAN_BYTES = 256 * 1024;
-
-    const rawLinesReversed: string[] = [];
-    const seenRawLines = new Set<string>();
     const handle = await fs.promises.open(jsonlPath, 'r');
     try {
       const stat = await handle.stat();
       const fileSize = stat.size;
+      const scanBytes = Math.min(MAX_SCAN_BYTES, fileSize);
+      const start = Math.max(0, fileSize - scanBytes);
+      const buffer = Buffer.alloc(scanBytes);
+      await handle.read(buffer, 0, scanBytes, start);
+      const chunk = buffer.toString('utf8');
 
-      let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
-      while (scanBytes <= MAX_SCAN_BYTES) {
-        const start = Math.max(0, fileSize - scanBytes);
-        const buffer = Buffer.alloc(scanBytes);
-        await handle.read(buffer, 0, scanBytes, start);
-        const chunk = buffer.toString('utf8');
-
-        const lines = chunk.split(/\r?\n/);
-        const fromIndex = start > 0 ? 1 : 0;
-
-        for (let i = lines.length - 1; i >= fromIndex; i--) {
-          const trimmed = lines[i]?.trim();
-          if (!trimmed) continue;
-          if (seenRawLines.has(trimmed)) continue;
-          seenRawLines.add(trimmed);
-          rawLinesReversed.push(trimmed);
-        }
-
-        if (scanBytes === fileSize) break;
-        scanBytes = Math.min(fileSize, scanBytes * 2);
-      }
+      const lines = chunk.split(/\r?\n/);
+      const fromIndex = start > 0 ? 1 : 0;
+      return lines
+        .slice(fromIndex)
+        .map((line) => line.trim())
+        .filter(Boolean);
     } finally {
       await handle.close();
     }
-
-    return rawLinesReversed.reverse();
   }
 
   private async extractLeadAssistantTextsFromJsonlLines(
