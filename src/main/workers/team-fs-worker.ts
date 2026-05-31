@@ -848,6 +848,7 @@ async function readPersistentTaskProjectionCache(
       parsed.optionKey !== optionKey
     ) {
       taskDiag.persistentCacheMisses++;
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
       return null;
     }
     if (!isRecord(parsed.entries)) {
