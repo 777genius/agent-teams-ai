@@ -60,10 +60,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
     diagnostics: [],
   };
 
-  const rows = await (
+  const listProcessRows =
     options.listProcessRows ??
-    (platform === 'win32' ? listWindowsProcessTable : listRuntimeProcessTableForCurrentPlatform)
-  )();
+    (platform === 'win32'
+      ? listWindowsProcessTable
+      : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
+  const rows = await listProcessRows();
   const excludePids = options.excludePids ?? new Set<number>();
   const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];
   const readDetails =

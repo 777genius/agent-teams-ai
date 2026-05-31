@@ -32,6 +32,10 @@ export interface RuntimeProcessTableRow {
   rssBytes?: number;
 }
 
+export interface ListRuntimeProcessesOptions {
+  bypassCache?: boolean;
+}
+
 /**
  * Short-lived cache window for the global process table.
  *
@@ -218,9 +222,11 @@ export class TmuxPlatformCommandExecutor {
     return new Map([...info.entries()].map(([paneId, pane]) => [paneId, pane.panePid]));
   }
 
-  async listRuntimeProcesses(): Promise<RuntimeProcessTableRow[]> {
+  async listRuntimeProcesses(
+    options: ListRuntimeProcessesOptions = {}
+  ): Promise<RuntimeProcessTableRow[]> {
     const cached = this.#runtimeProcessTableCache;
-    if (cached && cached.expiresAtMs > Date.now()) {
+    if (options.bypassCache !== true && cached && cached.expiresAtMs > Date.now()) {
       return cached.rows;
     }
     if (this.#runtimeProcessTableInFlight) {

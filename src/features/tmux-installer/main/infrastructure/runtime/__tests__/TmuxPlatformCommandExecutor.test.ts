@@ -152,4 +152,39 @@ describe('TmuxPlatformCommandExecutor', () => {
     ]);
     expect(childProcess.execFile).not.toHaveBeenCalled();
   });
+
+  it('can bypass the runtime process table cache for fresh process reads', async () => {
+    setPlatform('win32');
+    const execInPreferredDistro = vi
+      .fn()
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: '  42   1  1.0  128 opencode runtime --team-name demo --agent-id alice@demo\n',
+        stderr: '',
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: '  43   1  1.0  128 opencode runtime --team-name demo --agent-id alice@demo\n',
+        stderr: '',
+      });
+    const executor = new TmuxPlatformCommandExecutor(
+      {
+        execInPreferredDistro,
+        getPersistedPreferredDistroSync: () => 'Ubuntu',
+      } as never,
+      {} as never
+    );
+
+    await expect(executor.listRuntimeProcesses()).resolves.toEqual([
+      expect.objectContaining({ pid: 42 }),
+    ]);
+    await expect(executor.listRuntimeProcesses()).resolves.toEqual([
+      expect.objectContaining({ pid: 42 }),
+    ]);
+    await expect(executor.listRuntimeProcesses({ bypassCache: true })).resolves.toEqual([
+      expect.objectContaining({ pid: 43 }),
+    ]);
+
+    expect(execInPreferredDistro).toHaveBeenCalledTimes(2);
+  });
 });

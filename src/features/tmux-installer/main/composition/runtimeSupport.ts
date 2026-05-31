@@ -1,5 +1,6 @@
 import { TmuxStatusSourceAdapter } from '../adapters/output/sources/TmuxStatusSourceAdapter';
 import {
+  type ListRuntimeProcessesOptions,
   type RuntimeProcessTableRow,
   type TmuxPaneRuntimeInfo,
   TmuxPlatformCommandExecutor,
@@ -34,10 +35,10 @@ export async function listTmuxPaneRuntimeInfoForCurrentPlatform(
   return runtimeCommandExecutor.listPaneRuntimeInfo(paneIds);
 }
 
-export async function listRuntimeProcessTableForCurrentPlatform(): Promise<
-  RuntimeProcessTableRow[]
-> {
-  return runtimeCommandExecutor.listRuntimeProcesses();
+export async function listRuntimeProcessTableForCurrentPlatform(
+  options: ListRuntimeProcessesOptions = {}
+): Promise<RuntimeProcessTableRow[]> {
+  return runtimeCommandExecutor.listRuntimeProcesses(options);
 }
 
 export async function sendKeysToTmuxPaneForCurrentPlatform(

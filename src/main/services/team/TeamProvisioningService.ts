@@ -10522,6 +10522,7 @@ export class TeamProvisioningService {
     peekAutoResumeService()?.cancelPendingAutoResume(teamName);
     this.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
     this.invalidateRuntimeSnapshotCaches(teamName);
+    this.runtimeProcessRowsForUsageSnapshotByTeam.delete(teamName);
     this.retainedClaudeLogsByTeam.delete(teamName);
     this.persistedTranscriptClaudeLogsCache.delete(teamName);
     this.leadInboxRelayInFlight.delete(teamName);
@@ -25554,7 +25555,10 @@ export class TeamProvisioningService {
         }
       }
     }
-    if (processRowsReadForMetadata) {
+    if (
+      processRowsReadForMetadata &&
+      this.getRuntimeSnapshotCacheGeneration(teamName) === generationAtStart
+    ) {
       const sampledAtMs = Date.now();
       this.runtimeProcessRowsForUsageSnapshotByTeam.set(teamName, {
         expiresAtMs:
