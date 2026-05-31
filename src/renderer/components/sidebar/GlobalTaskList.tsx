@@ -163,6 +163,15 @@ const dateCategoryLabels: Record<string, string> = {
 };
 
 type ProjectTaskGroupData = ReturnType<typeof groupTasksByProject>[number];
+const EMPTY_TASKS: GlobalTask[] = [];
+const EMPTY_PROJECT_GROUPS: ProjectTaskGroupData[] = [];
+const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
+  Today: [],
+  Yesterday: [],
+  'Previous 7 Days': [],
+  Older: [],
+};
+const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
 
 function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
   if (!query.trim()) return tasks;
@@ -1316,12 +1325,21 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   const sortedPinnedTasks = useMemo(() => sortTasksByFreshness(pinnedTasks), [pinnedTasks]);
 
   const sortedFlat = useMemo(
-    () => applySortMode(normalTasks, sortMode, readState),
-    [normalTasks, sortMode, readState]
+    () => (groupingMode === 'none' ? applySortMode(normalTasks, sortMode, readState) : EMPTY_TASKS),
+    [groupingMode, normalTasks, sortMode, readState]
   );
-  const grouped = useMemo(() => groupTasksByDate(normalTasks), [normalTasks]);
-  const categories = useMemo(() => getNonEmptyTaskCategories(grouped), [grouped]);
-  const projectGroups = useMemo(() => groupTasksByProject(normalTasks), [normalTasks]);
+  const grouped = useMemo(
+    () => (groupingMode === 'time' ? groupTasksByDate(normalTasks) : EMPTY_DATE_GROUPS),
+    [groupingMode, normalTasks]
+  );
+  const categories = useMemo(
+    () => (groupingMode === 'time' ? getNonEmptyTaskCategories(grouped) : EMPTY_DATE_CATEGORIES),
+    [grouped, groupingMode]
+  );
+  const projectGroups = useMemo(
+    () => (groupingMode === 'project' ? groupTasksByProject(normalTasks) : EMPTY_PROJECT_GROUPS),
+    [groupingMode, normalTasks]
+  );
 
   // Collapsed group keys for each grouping mode
   const projectGroupKeys = useMemo(
