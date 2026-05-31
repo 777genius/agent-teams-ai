@@ -1,0 +1,236 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #1a1a2e;
+  padding: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Calculator container ---- */
+#app {
+  width: clamp(260px, 90vw, 360px);
+  background: #16213e;
+  border-radius: 20px;
+  padding: clamp(14px, 4vw, 24px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ---- Display ---- */
+#display {
+  background: #0f3460;
+  border-radius: 14px;
+  padding: clamp(12px, 3vw, 20px);
+  margin-bottom: clamp(12px, 3vw, 18px);
+  min-height: 90px;
+  text-align: right;
+  color: #e0e0e0;
+  overflow: hidden;
+  position: relative;
+}
+
+#expression {
+  font-size: clamp(12px, 3.5vw, 15px);
+  color: #8fa8c8;
+  min-height: 22px;
+  word-break: break-all;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+#result {
+  font-size: clamp(26px, 8vw, 36px);
+  font-weight: 300;
+  min-height: 44px;
+  word-break: break-all;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  transition: color 0.15s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+/* ---- Button grid ---- */
+#buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(6px, 1.8vw, 10px);
+}
+
+/* ---- Base button ---- */
+button {
+  font-size: clamp(17px, 5vw, 22px);
+  padding: clamp(12px, 3.5vw, 18px) 0;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #1a1a40;
+  color: #e0e0e0;
+  font-weight: 400;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ripple-like highlight on tap */
+button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+button:active::after {
+  opacity: 1;
+}
+
+/* Hover */
+button:hover {
+  background: #262655;
+}
+
+/* Active press */
+button:active {
+  transform: scale(0.94);
+  background: #2e2e65;
+}
+
+/* Keyboard focus ring */
+button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(83, 52, 131, 0.6);
+  z-index: 1;
+}
+
+/* ---- Function keys (C, +/-, backspace) ---- */
+[data-action="clear"],
+[data-action="sign"],
+[data-action="backspace"] {
+  background: #0f3460;
+  color: #8fbceb;
+  font-weight: 500;
+}
+
+[data-action="clear"]:hover,
+[data-action="sign"]:hover,
+[data-action="backspace"]:hover {
+  background: #154178;
+}
+
+[data-action="clear"]:active,
+[data-action="sign"]:active,
+[data-action="backspace"]:active {
+  background: #1b4f8f;
+  transform: scale(0.94);
+}
+
+/* ---- Operator keys ---- */
+[data-action="operator"] {
+  background: #533483;
+  color: #d9c4f0;
+  font-weight: 500;
+}
+
+[data-action="operator"]:hover {
+  background: #6544a3;
+}
+
+[data-action="operator"]:active {
+  background: #7654b3;
+  transform: scale(0.94);
+}
+
+/* ---- Equals key ---- */
+[data-action="equals"] {
+  background: linear-gradient(135deg, #e94560, #d63251);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgba(233, 69, 96, 0.3);
+}
+
+[data-action="equals"]:hover {
+  background: linear-gradient(135deg, #f05575, #e04060);
+  box-shadow: 0 4px 16px rgba(233, 69, 96, 0.4);
+}
+
+[data-action="equals"]:active {
+  background: linear-gradient(135deg, #ff6585, #f05070);
+  transform: scale(0.94);
+  box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+}
+
+/* ---- Zero button span ---- */
+#btn-zero {
+  grid-column: span 2;
+}
+
+/* ---- Responsive: narrow screens ---- */
+@media (max-width: 320px) {
+  #app {
+    border-radius: 14px;
+  }
+
+  button {
+    border-radius: 10px;
+    padding: 10px 0;
+  }
+
+  #display {
+    border-radius: 10px;
+    min-height: 76px;
+  }
+}
+
+/* ---- Responsive: wider desktop ---- */
+@media (min-width: 600px) {
+  #app {
+    width: 360px;
+  }
+
+  button {
+    padding: 20px 0;
+    font-size: 22px;
+  }
+
+  #result {
+    font-size: 38px;
+  }
+
+  #expression {
+    font-size: 16px;
+  }
+}
+
+/* ---- Reduced motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+
+  button::after {
+    transition: none;
+  }
+
+  #expression, #result {
+    transition: none;
+  }
+}

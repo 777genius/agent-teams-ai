@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <title>Калькулятор</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="display" role="status" aria-live="polite" aria-label="Результат">
+      <div id="expression" aria-hidden="true"></div>
+      <div id="result">0</div>
+    </div>
+    <div id="buttons">
+      <button type="button" data-action="clear" aria-label="Очистить">C</button>
+      <button type="button" data-action="sign" aria-label="Сменить знак">±</button>
+      <button type="button" data-action="backspace" aria-label="Удалить символ">⌫</button>
+      <button type="button" data-action="operator" data-value="/" aria-label="Разделить">÷</button>
+
+      <button type="button" data-action="digit" data-value="7">7</button>
+      <button type="button" data-action="digit" data-value="8">8</button>
+      <button type="button" data-action="digit" data-value="9">9</button>
+      <button type="button" data-action="operator" data-value="*" aria-label="Умножить">×</button>
+
+      <button type="button" data-action="digit" data-value="4">4</button>
+      <button type="button" data-action="digit" data-value="5">5</button>
+      <button type="button" data-action="digit" data-value="6">6</button>
+      <button type="button" data-action="operator" data-value="-" aria-label="Вычесть">−</button>
+
+      <button type="button" data-action="digit" data-value="1">1</button>
+      <button type="button" data-action="digit" data-value="2">2</button>
+      <button type="button" data-action="digit" data-value="3">3</button>
+      <button type="button" data-action="operator" data-value="+" aria-label="Сложить">+</button>
+
+      <button type="button" data-action="digit" data-value="0" id="btn-zero">0</button>
+      <button type="button" data-action="decimal" aria-label="Десятичная точка">.</button>
+      <button type="button" data-action="equals" aria-label="Равно">=</button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
