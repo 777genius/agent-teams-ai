@@ -280,14 +280,87 @@ function getStringField(obj: StructuredMessage, key: string): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
+const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
+const MAX_ACTIVITY_ITEM_CACHE_ENTRIES = 500;
+const activityTimestampCache = new Map<string, string>();
+const activityDisplayTextCache = new Map<string, string>();
+const activityStructuredMessageCache = new Map<string, StructuredMessage | null>();
+const activityIdleSemanticCache = new Map<string, ReturnType<typeof classifyIdleNotification>>();
+const activityNoiseMessageCache = new Map<string, boolean>();
+const activityStrippedTextCache = new Map<string, string | null>();
+
+function getCachedActivityValue<T>(cache: Map<string, T>, key: string, buildValue: () => T): T {
+  if (cache.has(key)) return cache.get(key) as T;
+
+  const value = buildValue();
+  if (cache.size >= MAX_ACTIVITY_ITEM_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+  cache.set(key, value);
+  return value;
+}
+
+function parseStructuredAgentMessageCached(text: string): StructuredMessage | null {
+  return getCachedActivityValue(activityStructuredMessageCache, text, () =>
+    parseStructuredAgentMessage(text)
+  );
+}
+
+function classifyIdleNotificationCached(
+  message: InboxMessage
+): ReturnType<typeof classifyIdleNotification> {
+  return getCachedActivityValue(activityIdleSemanticCache, message.text, () =>
+    classifyIdleNotification(message)
+  );
+}
+
+function getStrippedActivityTextCached({
+  message,
+  structured,
+  hasBootstrapDisplay,
+  isCrossTeamAny,
+}: {
+  message: InboxMessage;
+  structured: StructuredMessage | null;
+  hasBootstrapDisplay: boolean;
+  isCrossTeamAny: boolean;
+}): string | null {
+  if (structured) return null;
+
+  const cacheKey = encodeCacheParts([
+    message.text ?? '',
+    message.from ?? '',
+    message.to ?? '',
+    message.source ?? '',
+    hasBootstrapDisplay ? '1' : '0',
+    isCrossTeamAny ? '1' : '0',
+  ]);
+
+  return getCachedActivityValue(activityStrippedTextCache, cacheKey, () => {
+    let stripped = getSanitizedInboxMessageText(message).trim();
+    if (!hasBootstrapDisplay) {
+      stripped = stripAgentBlocks(stripped).trim();
+    }
+    if (!stripped) return null;
+    if (isCrossTeamAny) {
+      stripped = stripCrossTeamPrefix(stripped);
+    }
+    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  });
+}
+
 /** Check if a message renders as a compact noise row (idle, shutdown, etc.). */
 export function isNoiseMessage(text: string): boolean {
-  return (
-    getIdleNoiseLabel(text) !== null ||
-    ((): boolean => {
-      const parsed = parseStructuredAgentMessage(text);
-      return parsed !== null && getNoiseLabel(parsed) !== null;
-    })()
+  return getCachedActivityValue(
+    activityNoiseMessageCache,
+    text,
+    () =>
+      getIdleNoiseLabel(text) !== null ||
+      (() => {
+        const parsed = parseStructuredAgentMessageCached(text);
+        return parsed !== null && getNoiseLabel(parsed) !== null;
+      })()
   );
 }
 
@@ -717,10 +790,6 @@ const AUTH_ERROR_PATTERNS = [
   /unauthorized/i,
 ];
 
-const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
-const activityTimestampCache = new Map<string, string>();
-const activityDisplayTextCache = new Map<string, string>();
-
 function getLocalDayCacheKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
@@ -919,7 +988,7 @@ export const ActivityItem = memo(
       [message.timestamp]
     );
 
-    const structured = parseStructuredAgentMessage(message.text);
+    const structured = parseStructuredAgentMessageCached(message.text);
     const bootstrapDisplay = getBootstrapPromptDisplay(message);
     const bootstrapAcknowledgement = getBootstrapAcknowledgementDisplay(message);
     // Only flag agent messages as rate-limited, not user's own quotes
@@ -930,7 +999,7 @@ export const ActivityItem = memo(
     const isAuthError = isApiError && AUTH_ERROR_PATTERNS.some((p) => p.test(message.text));
     // Never collapse rate limit messages as noise — they must be visible
     const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
-    const idleSemantic = classifyIdleNotification(message);
+    const idleSemantic = classifyIdleNotificationCached(message);
 
     const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
     const isManaged = collapseMode === 'managed';
@@ -973,21 +1042,16 @@ export const ActivityItem = memo(
     const isSystemMessage = message.from === 'system';
 
     // Strip agent-only blocks + normalize escape sequences (before linkification)
-    const strippedText = useMemo(() => {
-      if (structured) return null;
-      let stripped = getSanitizedInboxMessageText(message).trim();
-      if (!bootstrapDisplay) {
-        stripped = stripAgentBlocks(stripped).trim();
-      }
-      if (!stripped) return null; // All content was agent-only blocks → show summary instead
-      // Strip cross-team metadata tag (e.g. `<cross-team from="team.lead" depth="0" />\n`)
-      // — kept in stored text for CLI agents / durable artifacts.
-      if (isCrossTeamAny) {
-        stripped = stripCrossTeamPrefix(stripped);
-      }
-      // Normalize literal \n from historical CLI-produced text to real newlines
-      return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-    }, [structured, message, bootstrapDisplay, isCrossTeamAny]);
+    const strippedText = useMemo(
+      () =>
+        getStrippedActivityTextCached({
+          message,
+          structured,
+          hasBootstrapDisplay: bootstrapDisplay !== null,
+          isCrossTeamAny,
+        }),
+      [structured, message, bootstrapDisplay, isCrossTeamAny]
+    );
     const standaloneSlashCommand = useMemo(
       () => (strippedText ? parseStandaloneSlashCommand(strippedText) : null),
       [strippedText]
