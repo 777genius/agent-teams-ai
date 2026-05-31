@@ -4,6 +4,7 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 import type { TaskRef } from '@shared/types';
 
 const TASK_REF_REGEX = /#([A-Za-z0-9-]+)\b/g;
+const EXACT_TASK_REF_REGEX = /^#([A-Za-z0-9-]+)$/;
 const TASK_META_START = '\u2063';
 const TASK_META_END = '\u2064';
 const ZERO_WIDTH_ALPHABET = ['\u200B', '\u200C', '\u200D', '\u2060'] as const;
@@ -214,39 +215,157 @@ export function parseTaskLinkHref(href: string): ParsedTaskLinkHref | null {
   }
 }
 
+function findClosingBacktickRun(text: string, start: number, runLength: number): number {
+  const marker = '`'.repeat(runLength);
+  return text.indexOf(marker, start + runLength);
+}
+
+function findClosingFence(text: string, start: number, fence: string): number {
+  let lineStart = text.indexOf('\n', start);
+  while (lineStart !== -1) {
+    lineStart += 1;
+    if (text.startsWith(fence, lineStart)) {
+      const lineEnd = text.indexOf('\n', lineStart);
+      return lineEnd === -1 ? text.length : lineEnd + 1;
+    }
+    lineStart = text.indexOf('\n', lineStart);
+  }
+  return -1;
+}
+
+function findMarkdownLinkEnd(text: string, start: number): number {
+  const closeBracket = text.indexOf(']', start + 1);
+  if (closeBracket === -1 || text[closeBracket + 1] !== '(') return -1;
+
+  let index = closeBracket + 2;
+  let parenDepth = 1;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === '\\') {
+      index += 2;
+      continue;
+    }
+    if (char === '(') {
+      parenDepth += 1;
+    } else if (char === ')') {
+      parenDepth -= 1;
+      if (parenDepth === 0) return index + 1;
+    }
+    index += 1;
+  }
+
+  return -1;
+}
+
 export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): string {
   if (!text) return text;
 
   const orderedTaskRefs = taskRefs ?? [];
   let taskRefIndex = 0;
+
+  const consumeStructuredTaskRef = (ref: string): TaskRef | undefined => {
+    if (
+      taskRefIndex < orderedTaskRefs.length &&
+      orderedTaskRefs[taskRefIndex]?.displayId.toLowerCase() === ref.toLowerCase()
+    ) {
+      return orderedTaskRefs[taskRefIndex++];
+    }
+    return undefined;
+  };
+
+  const buildLink = (raw: string, ref: string): string => {
+    const structuredTaskRef = consumeStructuredTaskRef(ref);
+    const href = structuredTaskRef ? buildTaskLinkHref(structuredTaskRef) : `task://${ref}`;
+    return `[${raw}](${href})`;
+  };
+
+  const linkifyPlainText = (value: string): string => {
+    let result = '';
+    let cursor = 0;
+
+    for (const match of value.matchAll(TASK_REF_REGEX)) {
+      const raw = match[0];
+      const ref = match[1];
+      const start = match.index ?? -1;
+      if (start < 0) continue;
+
+      result += value.slice(cursor, start);
+      const preceding = start > 0 ? value[start - 1] : undefined;
+      if (!isAllowedTaskRefBoundary(preceding)) {
+        result += raw;
+        cursor = start + raw.length;
+        continue;
+      }
+
+      result += buildLink(raw, ref);
+      cursor = start + raw.length;
+    }
+
+    result += value.slice(cursor);
+    return result;
+  };
+
   let result = '';
   let cursor = 0;
 
-  for (const match of text.matchAll(TASK_REF_REGEX)) {
-    const raw = match[0];
-    const ref = match[1];
-    const start = match.index ?? -1;
-    if (start < 0) continue;
+  while (cursor < text.length) {
+    const char = text[cursor];
 
-    result += text.slice(cursor, start);
-    const preceding = start > 0 ? text[start - 1] : undefined;
-    if (!isAllowedTaskRefBoundary(preceding)) {
-      result += raw;
-      cursor = start + raw.length;
-      continue;
+    if (char === '[') {
+      const linkEnd = findMarkdownLinkEnd(text, cursor);
+      if (linkEnd !== -1) {
+        const closeBracket = text.indexOf(']', cursor + 1);
+        const label = text.slice(cursor + 1, closeBracket);
+        const labelMatch = EXACT_TASK_REF_REGEX.exec(label);
+        if (labelMatch) {
+          consumeStructuredTaskRef(labelMatch[1]);
+        }
+        result += text.slice(cursor, linkEnd);
+        cursor = linkEnd;
+        continue;
+      }
     }
 
-    const structuredTaskRef =
-      taskRefIndex < orderedTaskRefs.length &&
-      orderedTaskRefs[taskRefIndex]?.displayId.toLowerCase() === ref.toLowerCase()
-        ? orderedTaskRefs[taskRefIndex++]
-        : undefined;
-    const href = structuredTaskRef ? buildTaskLinkHref(structuredTaskRef) : `task://${ref}`;
-    result += `[${raw}](${href})`;
-    cursor = start + raw.length;
+    if (char === '`') {
+      const run = /^`+/.exec(text.slice(cursor))?.[0] ?? '`';
+
+      if (
+        run.length >= 3 &&
+        (cursor === 0 || text[cursor - 1] === '\n') &&
+        (text[cursor + run.length] === undefined || /\s/.test(text[cursor + run.length]))
+      ) {
+        const fenceEnd = findClosingFence(text, cursor, run);
+        if (fenceEnd !== -1) {
+          result += text.slice(cursor, fenceEnd);
+          cursor = fenceEnd;
+          continue;
+        }
+      }
+
+      const codeEnd = findClosingBacktickRun(text, cursor, run.length);
+      if (codeEnd !== -1) {
+        const code = text.slice(cursor + run.length, codeEnd);
+        const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
+        if (codeMatch) {
+          result += buildLink(code.trim(), codeMatch[1]);
+        } else {
+          result += text.slice(cursor, codeEnd + run.length);
+        }
+        cursor = codeEnd + run.length;
+        continue;
+      }
+    }
+
+    let nextSpecial = text.length;
+    const nextLink = text.indexOf('[', cursor + 1);
+    const nextCode = text.indexOf('`', cursor + 1);
+    if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
+    if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
+
+    result += linkifyPlainText(text.slice(cursor, nextSpecial));
+    cursor = nextSpecial;
   }
 
-  result += text.slice(cursor);
   return result;
 }
 
