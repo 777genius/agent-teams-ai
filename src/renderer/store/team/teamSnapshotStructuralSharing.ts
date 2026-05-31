@@ -14,15 +14,25 @@ export function structurallySharePlainValue<T>(previous: T, next: T): T {
   }
 
   if (Array.isArray(previous) && Array.isArray(next)) {
-    let changed = previous.length !== next.length;
-    const result = next.map((nextItem, index) => {
-      const sharedItem = structurallySharePlainValue(previous[index], nextItem);
-      if (!Object.is(sharedItem, previous[index])) {
-        changed = true;
+    const hasLengthChange = previous.length !== next.length;
+    let result: unknown[] | null = hasLengthChange ? new Array(next.length) : null;
+
+    for (let index = 0; index < next.length; index += 1) {
+      const previousItem = previous[index];
+      const sharedItem = structurallySharePlainValue(previousItem, next[index]);
+
+      if (result) {
+        result[index] = sharedItem;
+      } else if (!Object.is(sharedItem, previousItem)) {
+        result = new Array(next.length);
+        for (let copyIndex = 0; copyIndex < index; copyIndex += 1) {
+          result[copyIndex] = previous[copyIndex];
+        }
+        result[index] = sharedItem;
       }
-      return sharedItem;
-    });
-    return changed ? (result as T) : previous;
+    }
+
+    return result ? (result as T) : previous;
   }
 
   if (isPlainObject(previous) && isPlainObject(next)) {
@@ -30,21 +40,26 @@ export function structurallySharePlainValue<T>(previous: T, next: T): T {
     const nextRecord = next as Record<string, unknown>;
     const previousKeys = Object.keys(previousRecord);
     const nextKeys = Object.keys(nextRecord);
-    let changed = previousKeys.length !== nextKeys.length;
-    const result: Record<string, unknown> = {};
+    const hasKeyCountChange = previousKeys.length !== nextKeys.length;
+    let result: Record<string, unknown> | null = hasKeyCountChange ? {} : null;
 
-    for (const key of nextKeys) {
-      if (!Object.prototype.hasOwnProperty.call(previousRecord, key)) {
-        changed = true;
-      }
+    for (let index = 0; index < nextKeys.length; index += 1) {
+      const key = nextKeys[index];
+      const hasPreviousKey = Object.prototype.hasOwnProperty.call(previousRecord, key);
       const sharedValue = structurallySharePlainValue(previousRecord[key], nextRecord[key]);
-      if (!Object.is(sharedValue, previousRecord[key])) {
-        changed = true;
+      if (result) {
+        result[key] = sharedValue;
+      } else if (!hasPreviousKey || !Object.is(sharedValue, previousRecord[key])) {
+        result = {};
+        for (let copyIndex = 0; copyIndex < index; copyIndex += 1) {
+          const previousKey = nextKeys[copyIndex];
+          result[previousKey] = previousRecord[previousKey];
+        }
+        result[key] = sharedValue;
       }
-      result[key] = sharedValue;
     }
 
-    return changed ? (result as T) : previous;
+    return result ? (result as T) : previous;
   }
 
   return next;
