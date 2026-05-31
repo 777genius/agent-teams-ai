@@ -35,6 +35,8 @@ interface TeamSummaryLike {
   teamName: string;
   displayName: string;
   projectPath: string;
+  leadSessionId?: string;
+  sessionHistory?: string[];
 }
 
 interface GlobalTaskLike {
@@ -249,6 +251,31 @@ describe('team slice context races', () => {
     expect(store.getState().teams).toEqual([]);
     expect(store.getState().teamByName).toEqual({});
     expect(store.getState().teamsLoading).toBe(false);
+  });
+
+  it('preserves team list references when a refresh returns unchanged teams', async () => {
+    const store = createSliceStore();
+    const team = {
+      teamName: 'atlas-hq-15',
+      displayName: 'Atlas HQ',
+      projectPath: '/repo',
+      leadSessionId: 'lead-session',
+      sessionHistory: ['previous-session'],
+    };
+    apiMock.teams.list.mockResolvedValueOnce([team]).mockResolvedValueOnce([{ ...team }]);
+
+    await store.getState().fetchTeams();
+    const firstTeams = store.getState().teams;
+    const firstTeamByName = store.getState().teamByName;
+    const firstTeamBySessionId = store.getState().teamBySessionId;
+
+    await store.getState().fetchTeams();
+
+    expect(store.getState().teams).toBe(firstTeams);
+    expect(store.getState().teamByName).toBe(firstTeamByName);
+    expect(store.getState().teamBySessionId).toBe(firstTeamBySessionId);
+    expect(store.getState().teamBySessionId['lead-session']).toBe(firstTeams[0]);
+    expect(store.getState().teamBySessionId['previous-session']).toBe(firstTeams[0]);
   });
 
   it('reruns a pending global task refresh for the current context instead of applying stale tasks', async () => {

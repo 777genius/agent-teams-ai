@@ -492,6 +492,45 @@ function isSelectedTeamLoadStillCurrent(
   );
 }
 
+function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
+  teamByName: Record<string, TeamSummary>;
+  teamBySessionId: Record<string, TeamSummary>;
+} {
+  const teamByName: Record<string, TeamSummary> = {};
+  const teamBySessionId: Record<string, TeamSummary> = {};
+  for (const team of teams) {
+    teamByName[team.teamName] = team;
+    if (team.leadSessionId) {
+      teamBySessionId[team.leadSessionId] = team;
+    }
+    if (Array.isArray(team.sessionHistory)) {
+      for (const sid of team.sessionHistory) {
+        if (typeof sid === 'string' && sid) {
+          teamBySessionId[sid] = team;
+        }
+      }
+    }
+  }
+  return { teamByName, teamBySessionId };
+}
+
+function removeProvisioningSnapshotsForTeams(
+  snapshots: Record<string, TeamSummary>,
+  teams: readonly TeamSummary[]
+): Record<string, TeamSummary> {
+  let nextSnapshots = snapshots;
+  for (const team of teams) {
+    if (!Object.prototype.hasOwnProperty.call(nextSnapshots, team.teamName)) {
+      continue;
+    }
+    if (nextSnapshots === snapshots) {
+      nextSnapshots = { ...snapshots };
+    }
+    delete nextSnapshots[team.teamName];
+  }
+  return nextSnapshots;
+}
+
 function schedulePostPaintTeamEnrichments(params: {
   teamName: string;
   requestNonce: number;
@@ -1485,32 +1524,36 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       ) {
         return;
       }
-      const teamByName: Record<string, TeamSummary> = {};
-      const teamBySessionId: Record<string, TeamSummary> = {};
-      for (const team of teams) {
-        teamByName[team.teamName] = team;
-        if (team.leadSessionId) {
-          teamBySessionId[team.leadSessionId] = team;
-        }
-        if (Array.isArray(team.sessionHistory)) {
-          for (const sid of team.sessionHistory) {
-            if (typeof sid === 'string' && sid) {
-              teamBySessionId[sid] = team;
-            }
-          }
-        }
-      }
       // Atomic update: set teams AND clean up provisioning snapshots in one call
       // to prevent any render cycle with duplicate cards.
       set((state) => {
-        const nextSnapshots = { ...state.provisioningSnapshotByTeam };
-        for (const team of teams) {
-          delete nextSnapshots[team.teamName];
+        const nextTeams = structurallySharePlainValue(state.teams, teams);
+        const indexes = buildTeamSummaryIndexes(nextTeams);
+        const nextTeamByName = structurallySharePlainValue(state.teamByName, indexes.teamByName);
+        const nextTeamBySessionId = structurallySharePlainValue(
+          state.teamBySessionId,
+          indexes.teamBySessionId
+        );
+        const nextSnapshots = removeProvisioningSnapshotsForTeams(
+          state.provisioningSnapshotByTeam,
+          nextTeams
+        );
+
+        if (
+          nextTeams === state.teams &&
+          nextTeamByName === state.teamByName &&
+          nextTeamBySessionId === state.teamBySessionId &&
+          nextSnapshots === state.provisioningSnapshotByTeam &&
+          state.teamsLoading === false &&
+          state.teamsError === null
+        ) {
+          return {};
         }
+
         return {
-          teams,
-          teamByName,
-          teamBySessionId,
+          teams: nextTeams,
+          teamByName: nextTeamByName,
+          teamBySessionId: nextTeamBySessionId,
           teamsLoading: false,
           teamsError: null,
           provisioningSnapshotByTeam: nextSnapshots,
