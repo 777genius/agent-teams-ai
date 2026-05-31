@@ -6,6 +6,7 @@ import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -347,6 +348,7 @@ interface GlobalTaskRowProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  isLight: boolean;
   onTogglePin: TaskRowAction;
   onToggleArchive: TaskRowAction;
   onMarkUnread: TaskRowAction;
@@ -409,6 +411,7 @@ const GlobalTaskRow = memo(
     hideTeamName,
     hideProjectName,
     showTeamName,
+    isLight,
     onTogglePin,
     onToggleArchive,
     onMarkUnread,
@@ -459,6 +462,7 @@ const GlobalTaskRow = memo(
             hideTeamName={hideTeamName}
             hideProjectName={hideProjectName}
             showTeamName={showTeamName}
+            isLight={isLight}
             teamOffline={teamOffline}
             renamingKey={effectiveRenamingKey}
             onRenameComplete={onRenameComplete}
@@ -481,6 +485,7 @@ const GlobalTaskRow = memo(
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
+    prev.isLight === next.isLight &&
     prev.onTogglePin === next.onTogglePin &&
     prev.onToggleArchive === next.onToggleArchive &&
     prev.onMarkUnread === next.onMarkUnread &&
@@ -504,6 +509,7 @@ interface TaskRowsProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  isLight: boolean;
   showTeamHeader?: boolean;
   pinnedOverride?: boolean;
   archivedOverride?: boolean;
@@ -594,6 +600,7 @@ const TaskRows = memo(function TaskRows({
   hideTeamName,
   hideProjectName,
   showTeamName,
+  isLight,
   showTeamHeader,
   pinnedOverride,
   archivedOverride,
@@ -625,6 +632,7 @@ const TaskRows = memo(function TaskRows({
             hideTeamName={hideTeamName}
             hideProjectName={hideProjectName}
             showTeamName={showTeamName}
+            isLight={isLight}
             teamOffline={isTeamOffline(task.teamName)}
             ownerColorName={getOwnerColorName(task)}
             renamingKey={renamingKey}
@@ -668,6 +676,7 @@ function areTaskRowsPropsEqual(prev: TaskRowsProps, next: TaskRowsProps): boolea
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
+    prev.isLight === next.isLight &&
     prev.showTeamHeader === next.showTeamHeader &&
     prev.pinnedOverride === next.pinnedOverride &&
     prev.archivedOverride === next.archivedOverride &&
@@ -710,6 +719,7 @@ interface ProjectTaskGroupProps {
   isNewTask: (task: GlobalTask) => boolean;
   isTeamOffline: TeamBooleanResolver;
   renamingKey: string | null;
+  isLight: boolean;
   formatTeamHeader: TeamHeaderFormatter;
   onToggleGroup: (projectKey: string) => void;
   onVisibleCountChange: ProjectGroupVisibleCountChange;
@@ -737,6 +747,7 @@ const ProjectTaskGroup = memo(
     isNewTask,
     isTeamOffline,
     renamingKey,
+    isLight,
     formatTeamHeader,
     onToggleGroup,
     onVisibleCountChange,
@@ -799,6 +810,7 @@ const ProjectTaskGroup = memo(
             isArchived={isArchived}
             isNewTask={isNewTask}
             isTeamOffline={isTeamOffline}
+            isLight={isLight}
             hideTeamName
             hideProjectName
             showTeamHeader
@@ -860,6 +872,7 @@ const ProjectTaskGroup = memo(
     prev.showMoreLabel === next.showMoreLabel &&
     prev.showLessLabel === next.showLessLabel &&
     prev.renamingKey === next.renamingKey &&
+    prev.isLight === next.isLight &&
     prev.formatTeamHeader === next.formatTeamHeader &&
     prev.onToggleGroup === next.onToggleGroup &&
     prev.onVisibleCountChange === next.onVisibleCountChange &&
@@ -902,6 +915,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   onFiltersPopoverOpenChange: externalOnFiltersPopoverOpenChange,
 }: GlobalTaskListProps = {}): React.JSX.Element {
   const { t } = useAppTranslation('common');
+  const { isLight } = useTheme();
   const {
     globalTasks,
     globalTasksLoading,
@@ -1498,6 +1512,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
             isArchived={taskLocalState.isArchived}
             isNewTask={isNewTask}
             isTeamOffline={isTeamOffline}
+            isLight={isLight}
             pinnedOverride={true}
             archivedOverride={false}
             showTeamName
@@ -1601,6 +1616,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
             isArchived={taskLocalState.isArchived}
             isNewTask={isNewTask}
             isTeamOffline={isTeamOffline}
+            isLight={isLight}
             showTeamName
             renamingKey={renamingTaskKey}
             onTogglePin={handleToggleTaskPin}
@@ -1634,6 +1650,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                 isArchived={taskLocalState.isArchived}
                 isNewTask={isNewTask}
                 isTeamOffline={isTeamOffline}
+                isLight={isLight}
                 renamingKey={renamingTaskKey}
                 formatTeamHeader={formatTeamHeader}
                 onToggleGroup={handleToggleProjectGroup}
@@ -1682,6 +1699,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                     isArchived={taskLocalState.isArchived}
                     isNewTask={isNewTask}
                     isTeamOffline={isTeamOffline}
+                    isLight={isLight}
                     showTeamHeader
                     formatTeamHeader={formatTeamHeader}
                     renamingKey={renamingTaskKey}

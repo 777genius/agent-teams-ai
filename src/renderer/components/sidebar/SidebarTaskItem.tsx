@@ -69,6 +69,8 @@ interface SidebarTaskItemProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  /** Optional theme value from list parents to avoid one theme subscription per row. */
+  isLight?: boolean;
   /** Pauses the in-progress spinner when the parent team is offline. */
   teamOffline?: boolean;
   /** The composite key "teamName:taskId" of the task being renamed, or null */
@@ -82,18 +84,19 @@ interface SidebarTaskItemProps {
   ownerColorName?: string | null;
 }
 
-export const SidebarTaskItem = memo(function SidebarTaskItem({
+const SidebarTaskItemContent = ({
   task,
   hideTeamName,
   hideProjectName,
   showTeamName,
+  isLight,
   teamOffline = false,
   renamingKey,
   onRenameComplete,
   onRenameCancel,
   getDisplaySubject,
   ownerColorName,
-}: SidebarTaskItemProps): React.JSX.Element {
+}: SidebarTaskItemProps & { isLight: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
@@ -104,7 +107,6 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
     )
   );
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
-  const { isLight } = useTheme();
 
   const isRenaming = renamingKey === `${task.teamName}:${task.id}`;
   const displaySubject = getDisplaySubject?.(task) ?? task.subject;
@@ -317,4 +319,18 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
       )}
     </button>
   );
+};
+
+const ThemedSidebarTaskItem = (props: SidebarTaskItemProps): React.JSX.Element => {
+  const { isLight } = useTheme();
+  return <SidebarTaskItemContent {...props} isLight={isLight} />;
+};
+
+export const SidebarTaskItem = memo(function SidebarTaskItem(
+  props: SidebarTaskItemProps
+): React.JSX.Element {
+  if (typeof props.isLight === 'boolean') {
+    return <SidebarTaskItemContent {...props} isLight={props.isLight} />;
+  }
+  return <ThemedSidebarTaskItem {...props} />;
 });
