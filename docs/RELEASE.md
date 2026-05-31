@@ -109,6 +109,17 @@ git status
 git push origin <branch>
 ```
 
+Before starting the app release workflow, check whether the orchestrator has
+new commits that must be included in the packaged runtime:
+
+- Pull and push the orchestrator repo first.
+- If the orchestrator changed after the current `runtime.lock.json` `sourceRef`,
+  bump the orchestrator `package.json` runtime version, create and push the
+  matching `v<RUNTIME_VERSION>` tag, then update `runtime.lock.json` in this repo
+  to the same `version`, `sourceRef`, `releaseTag`, and runtime asset filenames.
+- Do not start the app release workflow while `runtime.lock.json` still points
+  at an older orchestrator tag.
+
 ### 2. Create tag and push
 
 ```bash
