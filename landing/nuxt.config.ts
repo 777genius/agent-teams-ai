@@ -7,12 +7,16 @@ declare const process: {
   env: Record<string, string | undefined>;
 };
 
-const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || "https://777genius.github.io/agent-teams-ai";
+const siteUrl =
+  process.env.AGENT_TEAMS_LANDING_SITE_URL ||
+  process.env.NUXT_PUBLIC_SITE_URL ||
+  "https://777genius.github.io/agent-teams-ai";
 const githubRepo = process.env.NUXT_PUBLIC_GITHUB_REPO || "777genius/agent-teams-ai";
 const githubReleasesUrl = `https://github.com/${githubRepo}/releases`;
 const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "qyeNuDjFqoDALK8eB02jMTOWUz006BdIhiqiAip3U00x7I";
 const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || muxPlaybackId;
-const docsSiteUrl = process.env.NUXT_PUBLIC_DOCS_SITE_URL || "";
+const docsSiteUrl =
+  process.env.AGENT_TEAMS_DOCS_SITE_URL || process.env.NUXT_PUBLIC_DOCS_SITE_URL || "";
 const baseURL = process.env.NUXT_APP_BASE_URL || "/";
 const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
