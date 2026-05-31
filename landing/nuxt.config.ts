@@ -18,6 +18,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultSeoTitle = "Agent Teams - AI Agent Orchestration for Developers";
 const defaultSeoDescription = "Free, open-source desktop app for AI agent teams. Start with a free model with no auth, then connect Claude, Codex, or OpenCode when you need more models.";
 const defaultSeoImage = `${siteUrl.replace(/\/+$/, "")}/og-image-agent-teams-v6.png`;
+const robots = process.env.NUXT_PUBLIC_ROBOTS || "noindex, nofollow";
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-01-19",
@@ -29,7 +30,7 @@ export default defineNuxtConfig({
       title: defaultSeoTitle,
       meta: [
         { name: "description", content: defaultSeoDescription },
-        { name: "robots", content: "noindex, nofollow" },
+        { name: "robots", content: robots },
         { property: "og:title", content: defaultSeoTitle },
         { property: "og:description", content: defaultSeoDescription },
         { property: "og:type", content: "website" },

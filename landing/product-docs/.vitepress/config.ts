@@ -21,15 +21,20 @@ const normalizeBase = (value: string) => {
 const withTrailingSlash = (value: string) => `${trimTrailingSlash(value)}/`;
 
 const appBase = normalizeBase(process.env.NUXT_APP_BASE_URL || "/");
-const base = appBase === "/" ? "/docs/" : `${appBase}docs/`;
-const siteUrl = trimTrailingSlash(
-  process.env.NUXT_PUBLIC_SITE_URL || "https://777genius.github.io/agent-teams-ai"
+const embeddedDocsBase = appBase === "/" ? "/docs/" : `${appBase}docs/`;
+const base = process.env.VITEPRESS_BASE ? normalizeBase(process.env.VITEPRESS_BASE) : embeddedDocsBase;
+const landingSiteUrl = trimTrailingSlash(
+  process.env.VITEPRESS_LANDING_SITE_URL ||
+    process.env.NUXT_PUBLIC_SITE_URL ||
+    "https://777genius.github.io/agent-teams-ai"
 );
 const publicBaseUrl =
-  appBase === "/" || siteUrl.endsWith(trimTrailingSlash(appBase))
-    ? withTrailingSlash(siteUrl)
-    : `${withTrailingSlash(siteUrl)}${appBase.replace(/^\/+/, "")}`;
-const docsUrl = `${publicBaseUrl}docs/`;
+  appBase === "/" || landingSiteUrl.endsWith(trimTrailingSlash(appBase))
+    ? withTrailingSlash(landingSiteUrl)
+    : `${withTrailingSlash(landingSiteUrl)}${appBase.replace(/^\/+/, "")}`;
+const docsUrl = process.env.VITEPRESS_SITE_URL
+  ? withTrailingSlash(process.env.VITEPRESS_SITE_URL)
+  : `${publicBaseUrl}docs/`;
 const downloadUrl = `${publicBaseUrl}download/`;
 const ruDownloadUrl = `${publicBaseUrl}ru/download/`;
 const ogImageUrl = `${publicBaseUrl}og-image-agent-teams-v6.png`;
@@ -130,7 +135,11 @@ const ruGuide: DefaultTheme.SidebarItem[] = [
 ];
 
 const rootNav: DefaultTheme.NavItem[] = [
-  { text: "Guide", link: "/guide/beginner-workflow", activeMatch: "^/guide/(?!troubleshooting(?:/|$))" },
+  {
+    text: "Guide",
+    link: "/guide/beginner-workflow",
+    activeMatch: "^/guide/(?!troubleshooting(?:/|$))"
+  },
   { text: "Developers", link: "/developers/", activeMatch: "^/developers/" },
   { text: "Reference", link: "/reference/concepts", activeMatch: "^/reference/" },
   {
