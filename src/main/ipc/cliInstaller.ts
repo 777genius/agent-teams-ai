@@ -48,6 +48,7 @@ const cachedStatus = new Map<
 let statusCacheGeneration = 0;
 const STATUS_CACHE_TTL_MS = 5_000;
 const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
+const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 
 function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
@@ -120,8 +121,14 @@ function resetProviderRuntimeRequestLimiter(): void {
   }
 }
 
+function getProviderRuntimeRequestLimit(): number {
+  return process.env[PARALLEL_PROVIDER_STATUS_ENV] === '1'
+    ? MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS
+    : 1;
+}
+
 function acquireProviderRuntimeRequestSlot(): Promise<void> {
-  if (activeProviderRuntimeRequestCount < MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS) {
+  if (activeProviderRuntimeRequestCount < getProviderRuntimeRequestLimit()) {
     activeProviderRuntimeRequestCount += 1;
     return Promise.resolve();
   }

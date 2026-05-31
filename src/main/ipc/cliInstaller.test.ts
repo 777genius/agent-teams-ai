@@ -5,7 +5,7 @@ import {
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '@preload/constants/ipcChannels';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { initializeCliInstallerHandlers, registerCliInstallerHandlers } from './cliInstaller';
 
@@ -34,6 +34,12 @@ interface Deferred<T> {
 }
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
+
+const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 function createDeferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
@@ -137,7 +143,48 @@ function setupHandlers(service: CliInstallerService): ReturnType<typeof createIp
 }
 
 describe('cliInstaller IPC provider runtime scheduling', () => {
-  test('runs different provider status requests concurrently up to the provider limit', async () => {
+  test('runs provider status requests sequentially by default', async () => {
+    const started: CliProviderId[] = [];
+    const deferredByProvider = new Map<CliProviderId, Deferred<CliProviderStatus | null>>();
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((providerId: CliProviderId) => {
+        started.push(providerId);
+        const deferred = createDeferred<CliProviderStatus | null>();
+        deferredByProvider.set(providerId, deferred);
+        return deferred.promise;
+      }),
+    });
+    const { invoke } = setupHandlers(service);
+
+    const requests = (['anthropic', 'codex', 'opencode', 'gemini'] as CliProviderId[]).map(
+      (providerId) =>
+        invoke<IpcResult<CliProviderStatus | null>>(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId)
+    );
+
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic']);
+
+    deferredByProvider.get('anthropic')?.resolve(createProviderStatus('anthropic'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex']);
+
+    deferredByProvider.get('codex')?.resolve(createProviderStatus('codex'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex', 'opencode']);
+
+    deferredByProvider.get('opencode')?.resolve(createProviderStatus('opencode'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex', 'opencode', 'gemini']);
+
+    deferredByProvider.get('gemini')?.resolve(createProviderStatus('gemini'));
+
+    const results = await Promise.all(requests);
+    expect(results.every((result) => result.success)).toBe(true);
+  });
+
+  test('runs different provider status requests concurrently when the parallel flag is enabled', async () => {
+    vi.stubEnv(PARALLEL_PROVIDER_STATUS_ENV, '1');
+
     const started: CliProviderId[] = [];
     const deferredByProvider = new Map<CliProviderId, Deferred<CliProviderStatus | null>>();
     const service = createInstallerService({
@@ -258,12 +305,18 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     );
 
     await flushMicrotasks();
-    expect(started).toEqual(['anthropic', 'codex', 'opencode']);
+    expect(started).toEqual(['anthropic']);
 
     initializeCliInstallerHandlers(replacementService);
 
     deferredByProvider.get('anthropic')?.resolve(createProviderStatus('anthropic'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex']);
+
     deferredByProvider.get('codex')?.resolve(createProviderStatus('codex'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex', 'opencode']);
+
     deferredByProvider.get('opencode')?.resolve(createProviderStatus('opencode'));
     await flushMicrotasks();
 
@@ -294,14 +347,20 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     );
 
     await flushMicrotasks();
-    expect(started).toEqual(['anthropic', 'codex', 'opencode']);
+    expect(started).toEqual(['anthropic']);
 
     deferredByProvider.get('anthropic')?.reject(new Error('provider failed'));
     await flushMicrotasks();
-    expect(started).toEqual(['anthropic', 'codex', 'opencode', 'gemini']);
+    expect(started).toEqual(['anthropic', 'codex']);
 
     deferredByProvider.get('codex')?.resolve(createProviderStatus('codex'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex', 'opencode']);
+
     deferredByProvider.get('opencode')?.resolve(createProviderStatus('opencode'));
+    await flushMicrotasks();
+    expect(started).toEqual(['anthropic', 'codex', 'opencode', 'gemini']);
+
     deferredByProvider.get('gemini')?.resolve(createProviderStatus('gemini'));
 
     const results = await Promise.all(requests);
