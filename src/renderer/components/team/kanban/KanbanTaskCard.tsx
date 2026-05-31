@@ -108,6 +108,44 @@ function areKanbanTaskStatesEqual(
   );
 }
 
+function getTaskDependencyIds(task: TeamTaskWithKanban): string[] {
+  return [...(task.blockedBy ?? []), ...(task.blocks ?? [])].filter((id) => id.length > 0);
+}
+
+function getDependencyTaskSignature(task: TeamTask | undefined): string {
+  if (!task) return '';
+  const kanbanTask = task as Partial<TeamTaskWithKanban>;
+  return [
+    task.id,
+    task.displayId ?? '',
+    task.subject,
+    task.status,
+    task.reviewState ?? '',
+    kanbanTask.kanbanColumn ?? '',
+  ].join('\u001f');
+}
+
+function areTaskMapDependenciesEqual(
+  prevTask: TeamTaskWithKanban,
+  nextTask: TeamTaskWithKanban,
+  prevTaskMap: Map<string, TeamTask>,
+  nextTaskMap: Map<string, TeamTask>
+): boolean {
+  const dependencyIds = new Set([
+    ...getTaskDependencyIds(prevTask),
+    ...getTaskDependencyIds(nextTask),
+  ]);
+  for (const taskId of dependencyIds) {
+    if (
+      getDependencyTaskSignature(prevTaskMap.get(taskId)) !==
+      getDependencyTaskSignature(nextTaskMap.get(taskId))
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function createCommentPulseState(
   taskKey: string,
   comments: readonly TaskComment[],
@@ -682,7 +720,7 @@ export const KanbanTaskCard = memo(
     areKanbanTaskStatesEqual(prev.kanbanTaskState, next.kanbanTaskState) &&
     prev.hasReviewers === next.hasReviewers &&
     prev.compact === next.compact &&
-    prev.taskMap === next.taskMap &&
+    areTaskMapDependenciesEqual(prev.task, next.task, prev.taskMap, next.taskMap) &&
     prev.memberColorMap === next.memberColorMap &&
     prev.hasLiveTaskLogs === next.hasLiveTaskLogs &&
     prev.onRequestReview === next.onRequestReview &&

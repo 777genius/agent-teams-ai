@@ -242,6 +242,55 @@ describe('KanbanTaskCard comment badge pulse', () => {
     });
   });
 
+  it('skips rerender when an unrelated taskMap entry changes', async () => {
+    const memberColorMap = new Map([['alice', 'blue']]);
+    const { root } = await renderTaskCard({
+      task: { ...baseTask, blockedBy: [], blocks: [], comments: [] },
+      taskMap: new Map([['other-task', { ...baseTask, id: 'other-task', subject: 'Other task' }]]),
+      memberColorMap,
+    });
+
+    unreadCommentCountMock.calls = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, blockedBy: [], blocks: [], comments: [] },
+      taskMap: new Map([
+        ['other-task', { ...baseTask, id: 'other-task', subject: 'Updated unrelated task' }],
+      ]),
+      memberColorMap,
+    });
+
+    expect(unreadCommentCountMock.calls).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('rerenders when a displayed dependency task changes', async () => {
+    const memberColorMap = new Map([['alice', 'blue']]);
+    const blockedTask = { ...baseTask, id: 'dep-1', displayId: 'dep1', subject: 'Dependency A' };
+    const { root } = await renderTaskCard({
+      task: { ...baseTask, blockedBy: ['dep-1'], blocks: [], comments: [] },
+      taskMap: new Map([['dep-1', blockedTask]]),
+      memberColorMap,
+    });
+
+    unreadCommentCountMock.calls = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, blockedBy: ['dep-1'], blocks: [], comments: [] },
+      taskMap: new Map([['dep-1', { ...blockedTask, subject: 'Dependency B', status: 'done' }]]),
+      memberColorMap,
+    });
+
+    expect(unreadCommentCountMock.calls).toBeGreaterThan(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
   it('rerenders when a hidden task field changes so click handlers stay current', async () => {
     const taskMap = new Map();
     const memberColorMap = new Map([['alice', 'blue']]);
