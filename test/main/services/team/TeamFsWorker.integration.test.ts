@@ -598,9 +598,11 @@ describe('team-fs-worker integration', () => {
     );
 
     const firstWorker = createWorker(workerPath);
+    let firstTaskKeys: string[] = [];
     try {
       const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
       expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      firstTaskKeys = Object.keys(first.tasks[0] as Record<string, unknown>);
       expect(first.diag?.cacheMisses).toBe(1);
       expect(first.diag?.persistentCacheWrites).toBe(1);
     } finally {
@@ -611,6 +613,9 @@ describe('team-fs-worker integration', () => {
     try {
       const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
       expect(second.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      expect(Object.keys(second.tasks[0] as Record<string, unknown>)).toEqual(
+        firstTaskKeys
+      );
       expect(second.diag?.cacheHits).toBe(0);
       expect(second.diag?.cacheMisses).toBe(0);
       expect(second.diag?.persistentCacheLoads).toBe(1);

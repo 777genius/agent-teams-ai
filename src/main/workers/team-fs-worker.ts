@@ -736,16 +736,76 @@ function normalizePersistentTaskReadResult(
   if (task.teamName !== teamName) return null;
   if (typeof task.id !== 'string') return null;
   if (typeof task.subject !== 'string') return null;
-  if (
-    task.status !== 'pending' &&
-    task.status !== 'in_progress' &&
-    task.status !== 'completed' &&
-    task.status !== 'deleted'
-  ) {
-    return null;
-  }
+  const status =
+    task.status === 'pending' ||
+    task.status === 'in_progress' ||
+    task.status === 'completed' ||
+    task.status === 'deleted'
+      ? task.status
+      : null;
+  if (!status) return null;
 
-  return { task };
+  return { task: restorePersistentTaskProjectionShape(task, teamName, status) };
+}
+
+function restorePersistentTaskProjectionShape(
+  task: Record<string, unknown>,
+  teamName: string,
+  status: string
+): Record<string, unknown> {
+  const id = typeof task.id === 'string' ? task.id : '';
+  const subject = typeof task.subject === 'string' ? task.subject : '';
+  const displayId = task.displayId;
+  const reviewState = normalizeFallbackReviewState(task.reviewState, status);
+  return {
+    id,
+    displayId:
+      typeof displayId === 'string' && displayId.trim().length > 0
+        ? displayId.trim()
+        : deriveTaskDisplayId(id),
+    subject,
+    description: typeof task.description === 'string' ? task.description : undefined,
+    descriptionTaskRefs: Array.isArray(task.descriptionTaskRefs)
+      ? task.descriptionTaskRefs
+      : undefined,
+    activeForm: typeof task.activeForm === 'string' ? task.activeForm : undefined,
+    prompt: typeof task.prompt === 'string' ? task.prompt : undefined,
+    promptTaskRefs: Array.isArray(task.promptTaskRefs) ? task.promptTaskRefs : undefined,
+    owner: typeof task.owner === 'string' ? task.owner : undefined,
+    createdBy: typeof task.createdBy === 'string' ? task.createdBy : undefined,
+    status,
+    workIntervals: Array.isArray(task.workIntervals) ? task.workIntervals : undefined,
+    reviewIntervals: Array.isArray(task.reviewIntervals) ? task.reviewIntervals : undefined,
+    historyEvents: Array.isArray(task.historyEvents) ? task.historyEvents : undefined,
+    blocks: Array.isArray(task.blocks) ? task.blocks : undefined,
+    blockedBy: Array.isArray(task.blockedBy) ? task.blockedBy : undefined,
+    related: Array.isArray(task.related)
+      ? (task.related as unknown[]).filter((id): id is string => typeof id === 'string')
+      : undefined,
+    createdAt: typeof task.createdAt === 'string' ? task.createdAt : undefined,
+    updatedAt: typeof task.updatedAt === 'string' ? task.updatedAt : undefined,
+    projectPath: typeof task.projectPath === 'string' ? task.projectPath : undefined,
+    comments: Array.isArray(task.comments) ? task.comments : undefined,
+    needsClarification:
+      task.needsClarification === 'lead' || task.needsClarification === 'user'
+        ? task.needsClarification
+        : undefined,
+    reviewState,
+    deletedAt: undefined,
+    attachments: Array.isArray(task.attachments) ? task.attachments : undefined,
+    sourceMessageId:
+      typeof task.sourceMessageId === 'string' && task.sourceMessageId.trim()
+        ? task.sourceMessageId.trim()
+        : undefined,
+    sourceMessage:
+      isRecord(task.sourceMessage) &&
+      typeof task.sourceMessage.text === 'string' &&
+      typeof task.sourceMessage.from === 'string' &&
+      typeof task.sourceMessage.timestamp === 'string'
+        ? task.sourceMessage
+        : undefined,
+    teamName,
+  };
 }
 
 function normalizePersistentTaskProjectionEntry(
