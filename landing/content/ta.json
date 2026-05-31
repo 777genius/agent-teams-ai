@@ -1,7 +1,7 @@
 {
   "hero": {
     "title": "Agent Teams",
-    "subtitle": "நீங்கள் CTO, agents உங்கள் குழு. அவை tasks-ஐ தானாக நடத்தும், ஒருவருக்கொருவர் செய்தி அனுப்பும், code review செய்யும். நீங்கள் kanban board-ஐ பார்த்து காபி குடிக்கலாம்."
+    "subtitle": "நீங்கள் Boss, agents உங்கள் குழு. அவை tasks-ஐ தானாக நடத்தும், ஒருவருக்கொருவர் செய்தி அனுப்பும், code review செய்யும். நீங்கள் kanban board-ஐ பார்த்து காபி குடிக்கலாம்."
   },
   "features": [
     {
