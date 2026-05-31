@@ -26006,15 +26006,13 @@ export class TeamProvisioningService {
   ): { rows: RuntimeTelemetryProcessTableRow[] | null } | null {
     const cached = this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName);
     const nowMs = Date.now();
-    if (
-      !cached ||
-      cached.expiresAtMs <= nowMs ||
-      cached.runId !== runId ||
-      cached.generation !== this.getRuntimeSnapshotCacheGeneration(teamName)
-    ) {
+    if (!cached || cached.expiresAtMs <= nowMs || cached.runId !== runId) {
       return null;
     }
 
+    // Process table rows are sampled global OS state. Do not tie reuse to
+    // runtime snapshot generation: launch progress invalidates runtime metadata
+    // frequently, and the age gate below keeps liveness freshness bounded.
     const sampledAtMs =
       typeof cached.sampledAtMs === 'number' && Number.isFinite(cached.sampledAtMs)
         ? cached.sampledAtMs

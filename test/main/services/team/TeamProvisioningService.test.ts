@@ -144,6 +144,7 @@ import {
   listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
+  type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import {
@@ -203,6 +204,10 @@ import pidusage from 'pidusage';
 const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
   process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
 const ORIGINAL_RUNTIME_PIDUSAGE_ENABLED = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+
+type RuntimeTelemetryProcessTableRow = RuntimeProcessTableRow & {
+  runtimeTelemetrySource?: 'native' | 'wsl' | 'windows-host';
+};
 
 function restoreRuntimePidusageTelemetryEnv() {
   if (ORIGINAL_RUNTIME_PIDUSAGE_ENABLED === undefined) {
@@ -658,6 +663,22 @@ type TeamProvisioningServicePrivateHarness = {
     pids: readonly number[]
   ) => Promise<Map<number, { rssBytes?: number; cpuPercent?: number }>>;
   readRuntimeProcessRowsForUsageSnapshot: (teamName: string) => Promise<unknown[] | null>;
+  readCachedRuntimeProcessRowsForLiveRuntimeMetadata: (
+    teamName: string,
+    runId: string | null
+  ) => { rows: RuntimeTelemetryProcessTableRow[] | null } | null;
+  runtimeProcessRowsForUsageSnapshotByTeam: Map<
+    string,
+    {
+      expiresAtMs: number;
+      generation: number;
+      runId: string | null;
+      sampledAtMs: number;
+      rows: RuntimeTelemetryProcessTableRow[] | null;
+      includesWindowsHostRows: boolean;
+    }
+  >;
+  getRuntimeSnapshotCacheGeneration: (teamName: string) => number;
   invalidateRuntimeSnapshotCaches: (teamName: string) => void;
   aliveRunByTeam: Map<string, string>;
   readRecentBootstrapTranscriptOutcome: (
@@ -3766,6 +3787,41 @@ describe('TeamProvisioningService', () => {
 
       expect(listRuntimeProcessTableForCurrentPlatform).toHaveBeenCalledTimes(1);
       expect(secondRows).toEqual(firstRows);
+      vi.useRealTimers();
+    });
+
+    it('keeps fresh live runtime process rows across snapshot invalidations', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-05-03T12:00:00.000Z'));
+      const svc = new TeamProvisioningService();
+      const harness = privateHarness(svc);
+      const rows: RuntimeTelemetryProcessTableRow[] = [
+        {
+          pid: 111,
+          ppid: 1,
+          command: '/usr/bin/node lead.js',
+          cpuPercent: 3.5,
+          rssBytes: 123_000_000,
+          runtimeTelemetrySource: 'native',
+        },
+      ];
+      harness.runtimeProcessRowsForUsageSnapshotByTeam.set('runtime-team', {
+        expiresAtMs: Date.now() + 60_000,
+        generation: harness.getRuntimeSnapshotCacheGeneration('runtime-team'),
+        runId: 'run-1',
+        sampledAtMs: Date.now(),
+        rows,
+        includesWindowsHostRows: false,
+      });
+
+      harness.invalidateRuntimeSnapshotCaches('runtime-team');
+      vi.setSystemTime(new Date('2026-05-03T12:00:04.000Z'));
+
+      const cached = harness.readCachedRuntimeProcessRowsForLiveRuntimeMetadata(
+        'runtime-team',
+        'run-1'
+      );
+      expect(cached).toEqual({ rows });
       vi.useRealTimers();
     });
 
