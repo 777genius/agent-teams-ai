@@ -70,7 +70,7 @@ function escapeRegexLiteral(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export function extractCliArgValues(command: string, argName: string): string[] {
+function getCachedCliArgValues(command: string, argName: string): readonly string[] {
   if (!command.includes(argName)) {
     return [];
   }
@@ -82,7 +82,7 @@ export function extractCliArgValues(command: string, argName: string): string[] 
       cliArgValuesCache.delete(command);
       cliArgValuesCache.set(command, cachedByArg);
     }
-    return [...cachedValues];
+    return cachedValues;
   }
 
   const escapedArg = escapeRegexLiteral(argName);
@@ -105,6 +105,11 @@ export function extractCliArgValues(command: string, argName: string): string[] 
     if (oldestKey === undefined) break;
     cliArgValuesCache.delete(oldestKey);
   }
+  return values;
+}
+
+export function extractCliArgValues(command: string, argName: string): string[] {
+  const values = getCachedCliArgValues(command, argName);
   return [...values];
 }
 
@@ -116,7 +121,7 @@ export function commandArgEquals(
   const normalizedExpected = expected?.trim();
   if (!normalizedExpected) return false;
   if (!command.includes(argName)) return false;
-  return extractCliArgValues(command, argName).some((value) => value === normalizedExpected);
+  return getCachedCliArgValues(command, argName).some((value) => value === normalizedExpected);
 }
 
 function collectDescendants(
