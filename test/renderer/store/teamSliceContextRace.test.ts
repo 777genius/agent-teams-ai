@@ -326,6 +326,36 @@ describe('team slice context races', () => {
     expect(store.getState().globalTasksLoading).toBe(false);
   });
 
+  it('coalesces concurrent initial global task refreshes for the same context', async () => {
+    const store = createSliceStore();
+    const initialTasks = deferred<GlobalTaskLike[]>();
+    apiMock.teams.getAllTasks.mockReturnValueOnce(initialTasks.promise);
+
+    const firstFetch = store.getState().fetchAllTasks();
+    const secondFetch = store.getState().fetchAllTasks();
+
+    initialTasks.resolve([
+      {
+        id: 'initial-task',
+        subject: 'Initial task',
+        status: 'todo',
+        teamName: 'initial-team',
+        teamDisplayName: 'Initial Team',
+        projectPath: '/initial/project',
+        comments: [],
+      },
+    ]);
+
+    await Promise.all([firstFetch, secondFetch]);
+
+    expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
+    expect(store.getState().globalTasks).toEqual([
+      expect.objectContaining({ id: 'initial-task', teamName: 'initial-team' }),
+    ]);
+    expect(store.getState().globalTasksInitialized).toBe(true);
+    expect(store.getState().globalTasksLoading).toBe(false);
+  });
+
   it('ignores global tasks loaded before a context epoch reset with the same context id', async () => {
     const store = createSliceStore();
     const localTasks = deferred<GlobalTaskLike[]>();

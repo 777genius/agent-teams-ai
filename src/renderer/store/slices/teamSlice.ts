@@ -247,6 +247,7 @@ const pendingFreshTeamMemberActivityMetaRefreshes = new Set<string>();
 const pendingTeamPendingReplyRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let latestTeamsFetchRequestId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
+let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
 interface RefreshTeamDataOptions {
   withDedup?: boolean;
@@ -1642,7 +1643,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   fetchAllTasks: async () => {
     if (inFlightGlobalTasksRefresh) {
-      pendingFreshGlobalTasksRefresh = true;
+      const inFlightScope = inFlightGlobalTasksRefreshScope;
+      if (
+        get().globalTasksInitialized ||
+        (inFlightScope && !isContextRequestScopeCurrent(get, inFlightScope))
+      ) {
+        pendingFreshGlobalTasksRefresh = true;
+      }
       await inFlightGlobalTasksRefresh;
       return;
     }
@@ -1658,6 +1665,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           set({ globalTasksLoading: true, globalTasksError: null });
         }
         const requestScope = captureContextRequestScope(get);
+        inFlightGlobalTasksRefreshScope = requestScope;
         const oldTasks = get().globalTasks;
         try {
           const tasks = await withTimeout(
@@ -1706,6 +1714,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const request = runRefresh().finally(() => {
       if (inFlightGlobalTasksRefresh === request) {
         inFlightGlobalTasksRefresh = null;
+        inFlightGlobalTasksRefreshScope = null;
       }
     });
     inFlightGlobalTasksRefresh = request;
