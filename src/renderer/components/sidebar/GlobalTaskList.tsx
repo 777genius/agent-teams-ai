@@ -59,7 +59,7 @@ import {
 } from './taskFiltersState';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask, TeamSummary } from '@shared/types';
+import type { GlobalTask, LeadActivityState, TeamSummary } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -216,33 +216,65 @@ let cachedSidebarTeamsDerived: SidebarTeamsDerived = {
   statusSummaries: [],
   memberColorByTeam: new Map(),
 };
+let cachedLeadOfflineTeamsSignature = '';
+let cachedLeadOfflineTeamNames: string[] = [];
 
-function encodeSignatureParts(parts: readonly unknown[]): string {
-  return parts
-    .map((part) => {
-      const text = part == null ? '' : String(part);
-      return `${text.length}:${text}`;
-    })
-    .join('|');
+function appendSignaturePart(signature: string, part: unknown): string {
+  const text = part == null ? '' : String(part);
+  return `${signature}${text.length}:${text}|`;
 }
 
 function buildSidebarTeamsSignature(teams: readonly TeamSummary[]): string {
-  const parts: unknown[] = [];
+  let signature = '';
   for (const team of teams) {
-    parts.push(
-      team.teamName,
-      team.displayName,
-      team.projectPath,
-      team.lastActivity,
-      team.partialLaunchFailure ? 1 : 0,
-      team.teamLaunchState
-    );
+    signature = appendSignaturePart(signature, team.teamName);
+    signature = appendSignaturePart(signature, team.displayName);
+    signature = appendSignaturePart(signature, team.projectPath);
+    signature = appendSignaturePart(signature, team.lastActivity);
+    signature = appendSignaturePart(signature, team.partialLaunchFailure ? 1 : 0);
+    signature = appendSignaturePart(signature, team.teamLaunchState);
     for (const member of team.members ?? []) {
       const colorMember = member as TeamMemberColorInput;
-      parts.push(colorMember.name, colorMember.color, colorMember.agentType, colorMember.removedAt);
+      signature = appendSignaturePart(signature, colorMember.name);
+      signature = appendSignaturePart(signature, colorMember.color);
+      signature = appendSignaturePart(signature, colorMember.agentType);
+      signature = appendSignaturePart(signature, colorMember.removedAt);
     }
   }
-  return encodeSignatureParts(parts);
+  return signature;
+}
+
+function buildTeamNamesIdentityKey(teams: readonly TeamSummary[]): string {
+  let signature = '';
+  for (const team of teams) {
+    signature = appendSignaturePart(signature, team.teamName);
+  }
+  return signature;
+}
+
+function selectLeadOfflineTeamNames(
+  leadActivityByTeam: Partial<Record<string, LeadActivityState>>
+): string[] {
+  const offlineTeamNames: string[] = [];
+  for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
+    if (activity === 'offline') {
+      offlineTeamNames.push(teamName);
+    }
+  }
+  offlineTeamNames.sort();
+
+  let signature = '';
+  for (const teamName of offlineTeamNames) {
+    signature = appendSignaturePart(signature, teamName);
+  }
+
+  if (signature === cachedLeadOfflineTeamsSignature) {
+    return cachedLeadOfflineTeamNames;
+  }
+
+  cachedLeadOfflineTeamsSignature = signature;
+  cachedLeadOfflineTeamNames = offlineTeamNames;
+  return cachedLeadOfflineTeamNames;
 }
 
 function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsDerived {
@@ -260,7 +292,7 @@ function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsD
 
   cachedSidebarTeamsSignature = signature;
   cachedSidebarTeamsDerived = {
-    identityKey: encodeSignatureParts(teams.map((team) => team.teamName)),
+    identityKey: buildTeamNamesIdentityKey(teams),
     filterTeams: teams.map((team) => ({
       teamName: team.teamName,
       displayName: team.displayName,
@@ -865,7 +897,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     repositoryGroupsError,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
-    leadActivityByTeam,
+    leadOfflineTeamNames,
   } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
@@ -886,7 +918,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       repositoryGroupsError: s.repositoryGroupsError,
       provisioningRuns: s.provisioningRuns,
       currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
-      leadActivityByTeam: s.leadActivityByTeam,
+      leadOfflineTeamNames: selectLeadOfflineTeamNames(s.leadActivityByTeam),
     }))
   );
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
@@ -1007,6 +1039,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
 
   const offlineTeamNames = useMemo(() => {
     const result = new Set<string>();
+    const leadOfflineTeams = new Set(leadOfflineTeamNames);
     if (aliveTeamsInitialized) {
       const teamSummariesByName = new Map<string, TeamSummary>();
       for (const team of sidebarTeams.statusSummaries) {
@@ -1019,29 +1052,31 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       }
 
       for (const team of teamSummariesByName.values()) {
+        if (leadOfflineTeams.has(team.teamName)) {
+          result.add(team.teamName);
+          continue;
+        }
         const status = resolveTeamStatus(
           team,
           team.teamName,
           aliveTeams,
           getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-          leadActivityByTeam
+          {}
         );
         if (!isTeamListStatusRunning(status)) {
           result.add(team.teamName);
         }
       }
     }
-    for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
-      if (activity === 'offline') {
-        result.add(teamName);
-      }
+    for (const teamName of leadOfflineTeamNames) {
+      result.add(teamName);
     }
     return result;
   }, [
     aliveTeams,
     aliveTeamsInitialized,
     globalTasks,
-    leadActivityByTeam,
+    leadOfflineTeamNames,
     provisioningState,
     sidebarTeams.statusSummaries,
   ]);
