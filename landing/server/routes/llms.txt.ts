@@ -1,4 +1,5 @@
 import { defaultLocale, getLocalizedPagePath, sitemapPages, supportedLocales } from "~/data/i18n";
+import { normalizeDocsSiteUrl } from "~/utils/docsUrl";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
@@ -11,6 +12,7 @@ export default defineEventHandler((event) => {
   const githubUrl = `https://github.com/${githubRepo}`;
   const releasesUrl = `${githubUrl}/releases`;
   const toSiteUrl = (path: string) => `${siteUrl}${path === "/" ? "/" : `/${path.replace(/^\/+/, "")}`}`;
+  const docsSiteUrl = normalizeDocsSiteUrl(config.public.docsSiteUrl) || toSiteUrl("/docs/");
 
   setHeader(event, "content-type", "text/plain; charset=utf-8");
 
@@ -32,8 +34,8 @@ export default defineEventHandler((event) => {
 
 - Homepage (${defaultLocale}): ${toSiteUrl("/")}
 - Download: ${toSiteUrl("/download")}
-- Documentation: ${toSiteUrl("/docs/")}
-- Documentation llms.txt: ${toSiteUrl("/docs/llms.txt")}
+- Documentation: ${docsSiteUrl}
+- Documentation llms.txt: ${docsSiteUrl}llms.txt
 - GitHub repository: ${githubUrl}
 - Releases: ${releasesUrl}
 - Sitemap: ${toSiteUrl("/sitemap.xml")}

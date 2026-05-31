@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { mdiMenu, mdiClose, mdiGithub } from '@mdi/js';
+import { buildDocsHref } from '~/utils/docsUrl';
 
 const { t, locale } = useI18n();
 const { repoUrl } = useGithubRepo();
-const { baseURL } = useRuntimeConfig().app;
+const runtimeConfig = useRuntimeConfig();
+const { baseURL } = runtimeConfig.app;
 const menuOpen = ref(false);
 
-const withBase = (path: string) => `${baseURL.replace(/\/?$/, '/')}${path.replace(/^\/+/, '')}`;
-const docsHref = computed(() => withBase(locale.value === 'ru' ? 'docs/ru/' : 'docs/'));
+const docsHref = computed(() => buildDocsHref({
+  locale: locale.value,
+  docsSiteUrl: runtimeConfig.public.docsSiteUrl,
+  embeddedBaseURL: baseURL,
+}));
 const isRu = computed(() => locale.value === 'ru');
 const openMenuLabel = computed(() => (isRu.value ? 'Открыть меню' : 'Open menu'));
 const closeMenuLabel = computed(() => (isRu.value ? 'Закрыть меню' : 'Close menu'));

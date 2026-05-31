@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import robotLeadLounge from "~/assets/images/footer/robot-lead-lounge-v1.webp";
+import { buildDocsHref } from "~/utils/docsUrl";
 
 const { t, locale } = useI18n();
 const { repoUrl } = useGithubRepo();
-const { baseURL } = useRuntimeConfig().app;
+const runtimeConfig = useRuntimeConfig();
+const { baseURL } = runtimeConfig.app;
 const year = new Date().getFullYear();
 const authorLabel = computed(() => locale.value === 'ru' ? 'Автор' : 'Author');
-const docsHref = computed(() => {
-  const base = baseURL.replace(/\/?$/, '/');
-  return `${base}${locale.value === 'ru' ? 'docs/ru/' : 'docs/'}`;
-});
+const docsHref = computed(() => buildDocsHref({
+  locale: locale.value,
+  docsSiteUrl: runtimeConfig.public.docsSiteUrl,
+  embeddedBaseURL: baseURL,
+}));
 </script>
 
 <template>

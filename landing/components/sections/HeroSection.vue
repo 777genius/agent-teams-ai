@@ -4,10 +4,12 @@ import {
   mdiDownload,
 } from "@mdi/js";
 import { getLocalizedHeroMessages, type HeroMessagePhase } from "~/data/heroScene";
+import { buildDocsHref } from "~/utils/docsUrl";
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
-const { baseURL } = useRuntimeConfig().app;
+const runtimeConfig = useRuntimeConfig();
+const { baseURL } = runtimeConfig.app;
 const heroRef = ref<HTMLElement | null>(null);
 const activeHeroMessageIndex = ref(0);
 const heroMessagePhase = ref<HeroMessagePhase>("cooldown");
@@ -21,7 +23,6 @@ const downloadStore = useDownloadStore();
 const { resolve, data: releaseData } = useReleaseDownloads();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
 const { selectedDownloadAsset } = useDownloadAssetPresentation();
-const withBase = (path: string) => `${baseURL.replace(/\/?$/, "/")}${path.replace(/^\/+/, "")}`;
 
 useCyberHeroParallax(heroRef);
 
@@ -71,7 +72,11 @@ const heroDownloadUrl = computed(() => {
   return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
 });
 
-const docsHref = computed(() => withBase(locale.value === "ru" ? "docs/ru/" : "docs/"));
+const docsHref = computed(() => buildDocsHref({
+  locale: locale.value,
+  docsSiteUrl: runtimeConfig.public.docsSiteUrl,
+  embeddedBaseURL: baseURL,
+}));
 const downloadActionSubtitle = computed(() => {
   if (!selectedDownloadAsset.value) {
     return locale.value === "ru"

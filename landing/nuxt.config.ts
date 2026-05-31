@@ -12,6 +12,7 @@ const githubRepo = process.env.NUXT_PUBLIC_GITHUB_REPO || "777genius/agent-teams
 const githubReleasesUrl = `https://github.com/${githubRepo}/releases`;
 const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "qyeNuDjFqoDALK8eB02jMTOWUz006BdIhiqiAip3U00x7I";
 const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || muxPlaybackId;
+const docsSiteUrl = process.env.NUXT_PUBLIC_DOCS_SITE_URL || "";
 const baseURL = process.env.NUXT_APP_BASE_URL || "/";
 const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -144,6 +145,7 @@ export default defineNuxtConfig({
       siteUrl,
       githubRepo,
       githubReleasesUrl,
+      docsSiteUrl,
       muxPlaybackId,
       muxBackgroundPlaybackId
     }

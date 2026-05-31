@@ -21,7 +21,7 @@ Landing and docs are deployed as separate Render Static Sites from the `main` br
 Landing:
 
 ```bash
-corepack enable && pnpm install --frozen-lockfile --ignore-scripts && NUXT_PUBLIC_SITE_URL=$RENDER_EXTERNAL_URL NUXT_PUBLIC_ROBOTS="index, follow" pnpm --filter agent-teams-landing generate
+corepack enable && pnpm install --frozen-lockfile --ignore-scripts && NUXT_PUBLIC_SITE_URL=$RENDER_EXTERNAL_URL NUXT_PUBLIC_DOCS_SITE_URL=https://agent-teams-ai-docs.onrender.com NUXT_PUBLIC_ROBOTS="index, follow" pnpm --filter agent-teams-landing generate
 ```
 
 Publish path: `landing/.output/public`
@@ -45,3 +45,4 @@ When a custom landing domain is attached, update `VITEPRESS_LANDING_SITE_URL` on
 - Theme auto-detection: localStorage -> system preference -> fallback `light`.
 - Hero video uses the Mux Player embed. Set `NUXT_PUBLIC_MUX_PLAYBACK_ID` to override the default playback id without changing the code.
 - Hero background can use a separate Mux asset via `NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID`; otherwise it reuses `NUXT_PUBLIC_MUX_PLAYBACK_ID`.
+- Set `NUXT_PUBLIC_DOCS_SITE_URL` when the docs are deployed as a separate static site.
