@@ -61,28 +61,23 @@ type MemberBadgeContentProps = Omit<MemberBadgeProps, 'isLight'> & {
   isLight: boolean;
 };
 
-const MemberBadgeContent = memo(
+type MemberBadgeResolvedContentProps = MemberBadgeContentProps & {
+  resolvedAvatarUrl?: string;
+};
+
+const MemberBadgeResolvedContent = memo(
   ({
     name,
     color,
     teamName,
     isLight,
     size = 'sm',
-    avatarUrl,
+    resolvedAvatarUrl,
     hideAvatar,
     onClick,
     disableHoverCard,
-  }: MemberBadgeContentProps): React.JSX.Element => {
+  }: MemberBadgeResolvedContentProps): React.JSX.Element => {
     const colors = getTeamColorSet(color ?? '');
-    const effectiveAvatarTeamName = useStore((s) =>
-      hideAvatar || avatarUrl != null ? null : (teamName ?? s.selectedTeamName)
-    );
-    const teamMembers = useStore((s) =>
-      effectiveAvatarTeamName
-        ? selectResolvedMembersForTeamName(s, effectiveAvatarTeamName)
-        : EMPTY_TEAM_MEMBERS
-    );
-    const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
     const avatarSize = size === 'md' ? 32 : size === 'sm' ? 24 : 18;
     const avatarClass = size === 'md' ? 'size-6' : size === 'sm' ? 'size-5' : 'size-4';
     const textClass = size === 'md' ? 'text-xs' : size === 'sm' ? 'text-[10px]' : 'text-[9px]';
@@ -96,7 +91,7 @@ const MemberBadgeContent = memo(
 
     const avatar = (
       <img
-        src={avatarUrl ?? avatarMap.get(name) ?? agentAvatarUrl(name, avatarSize)}
+        src={resolvedAvatarUrl ?? agentAvatarUrl(name, avatarSize)}
         alt=""
         className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
         loading="lazy"
@@ -145,6 +140,28 @@ const MemberBadgeContent = memo(
     );
   }
 );
+
+MemberBadgeResolvedContent.displayName = 'MemberBadgeResolvedContent';
+
+const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): React.JSX.Element => {
+  const effectiveAvatarTeamName = useStore((s) => props.teamName ?? s.selectedTeamName);
+  const teamMembers = useStore((s) =>
+    effectiveAvatarTeamName
+      ? selectResolvedMembersForTeamName(s, effectiveAvatarTeamName)
+      : EMPTY_TEAM_MEMBERS
+  );
+  const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
+  return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={avatarMap.get(props.name)} />;
+});
+
+MemberBadgeWithResolvedAvatar.displayName = 'MemberBadgeWithResolvedAvatar';
+
+const MemberBadgeContent = memo((props: MemberBadgeContentProps): React.JSX.Element => {
+  if (props.hideAvatar || props.avatarUrl != null) {
+    return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={props.avatarUrl} />;
+  }
+  return <MemberBadgeWithResolvedAvatar {...props} />;
+});
 
 MemberBadgeContent.displayName = 'MemberBadgeContent';
 
