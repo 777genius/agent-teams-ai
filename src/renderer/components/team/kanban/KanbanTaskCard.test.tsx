@@ -10,6 +10,7 @@ const unreadBadgeMock = vi.hoisted(() => ({
 
 const unreadCommentCountMock = vi.hoisted(() => ({
   value: 0,
+  calls: 0,
 }));
 
 vi.mock('@renderer/components/team/MemberBadge', () => ({
@@ -71,7 +72,10 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 vi.mock('@renderer/hooks/useUnreadCommentCount', () => ({
-  useUnreadCommentCount: () => unreadCommentCountMock.value,
+  useUnreadCommentCount: () => {
+    unreadCommentCountMock.calls += 1;
+    return unreadCommentCountMock.value;
+  },
 }));
 
 /* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
@@ -188,6 +192,7 @@ async function rerenderStrictTaskCard(
 afterEach(() => {
   unreadBadgeMock.props.length = 0;
   unreadCommentCountMock.value = 0;
+  unreadCommentCountMock.calls = 0;
 });
 
 async function renderTaskCard(
@@ -209,6 +214,56 @@ async function renderTaskCard(
 describe('KanbanTaskCard comment badge pulse', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('skips rerender when refreshed task objects keep the same snapshot', async () => {
+    const taskMap = new Map();
+    const memberColorMap = new Map([['alice', 'blue']]);
+    const { root } = await renderTaskCard({
+      task: { ...baseTask, comments: [] },
+      taskMap,
+      memberColorMap,
+    });
+
+    expect(unreadCommentCountMock.calls).toBeGreaterThan(0);
+    unreadCommentCountMock.calls = 0;
+
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [] },
+      taskMap,
+      memberColorMap,
+    });
+
+    expect(unreadCommentCountMock.calls).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('rerenders when a hidden task field changes so click handlers stay current', async () => {
+    const taskMap = new Map();
+    const memberColorMap = new Map([['alice', 'blue']]);
+    const { root } = await renderTaskCard({
+      task: { ...baseTask, comments: [] },
+      taskMap,
+      memberColorMap,
+    });
+
+    unreadCommentCountMock.calls = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [], description: 'Updated hidden details' },
+      taskMap,
+      memberColorMap,
+    });
+
+    expect(unreadCommentCountMock.calls).toBeGreaterThan(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
   });
 
   it('does not pulse on initial render with existing comments', async () => {

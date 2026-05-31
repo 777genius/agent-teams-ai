@@ -83,6 +83,30 @@ interface CommentPulseSyncAction {
 }
 
 const EMPTY_TASK_COMMENTS: readonly TaskComment[] = [];
+const taskCardSignatureCache = new WeakMap<TeamTaskWithKanban, string>();
+
+function getTaskCardSignature(task: TeamTaskWithKanban): string {
+  const cached = taskCardSignatureCache.get(task);
+  if (cached !== undefined) return cached;
+
+  const signature = JSON.stringify(task);
+  taskCardSignatureCache.set(task, signature);
+  return signature;
+}
+
+function areKanbanTaskStatesEqual(
+  prev: KanbanTaskState | undefined,
+  next: KanbanTaskState | undefined
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return !prev && !next;
+  return (
+    prev.column === next.column &&
+    prev.reviewer === next.reviewer &&
+    prev.errorDescription === next.errorDescription &&
+    prev.movedAt === next.movedAt
+  );
+}
 
 function createCommentPulseState(
   taskKey: string,
@@ -652,10 +676,10 @@ export const KanbanTaskCard = memo(
     );
   },
   (prev, next) =>
-    prev.task === next.task &&
+    getTaskCardSignature(prev.task) === getTaskCardSignature(next.task) &&
     prev.teamName === next.teamName &&
     prev.columnId === next.columnId &&
-    prev.kanbanTaskState === next.kanbanTaskState &&
+    areKanbanTaskStatesEqual(prev.kanbanTaskState, next.kanbanTaskState) &&
     prev.hasReviewers === next.hasReviewers &&
     prev.compact === next.compact &&
     prev.taskMap === next.taskMap &&
