@@ -17,7 +17,7 @@ describe('activityRenderCache', () => {
   it('builds stable task reference signatures', () => {
     const refs: TaskRef[] = [
       { taskId: 'task-1', displayId: '#1', teamName: 'team-a' },
-      { taskId: 'task-2', displayId: '#2' },
+      { taskId: 'task-2', displayId: '#2', teamName: '' },
     ];
 
     expect(taskRefsCacheSignature(refs)).toBe('6:task-1|2:#1|6:team-a|6:task-2|2:#2|0:');

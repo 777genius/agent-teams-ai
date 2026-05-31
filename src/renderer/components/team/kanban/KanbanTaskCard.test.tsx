@@ -279,7 +279,9 @@ describe('KanbanTaskCard comment badge pulse', () => {
     unreadCommentCountMock.calls = 0;
     await rerenderTaskCard(root, {
       task: { ...baseTask, blockedBy: ['dep-1'], blocks: [], comments: [] },
-      taskMap: new Map([['dep-1', { ...blockedTask, subject: 'Dependency B', status: 'done' }]]),
+      taskMap: new Map([
+        ['dep-1', { ...blockedTask, subject: 'Dependency B', status: 'completed' }],
+      ]),
       memberColorMap,
     });
 

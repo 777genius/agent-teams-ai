@@ -21,6 +21,7 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
     currentTask?: TeamTaskWithKanban | null;
     reviewTask?: TeamTaskWithKanban | null;
     runtimeEntry?: TeamAgentRuntimeEntry;
+    onOpenTask?: () => void;
     onRestartMember?: (memberName: string) => void;
     onSkipMemberForLaunch?: (memberName: string) => void;
     onRestoreMember?: (memberName: string) => void;
@@ -34,6 +35,7 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
       spawnLaunchState,
       currentTask,
       reviewTask,
+      onOpenTask,
       onRestartMember,
       onSkipMemberForLaunch,
       onRestoreMember,
@@ -45,6 +47,17 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
       spawnError ?? '',
       currentTask
         ? React.createElement('span', { 'data-testid': `current-${member.name}` }, currentTask.id)
+        : null,
+      currentTask && onOpenTask
+        ? React.createElement(
+            'button',
+            {
+              'data-testid': `open-task-${member.name}`,
+              type: 'button',
+              onClick: onOpenTask,
+            },
+            'open'
+          )
         : null,
       reviewTask
         ? React.createElement('span', { 'data-testid': `review-${member.name}` }, reviewTask.id)
@@ -338,6 +351,100 @@ describe('MemberList spawn-status memoization', () => {
 
     expect(host.querySelector('[aria-label="Loading team members"]')).toBeNull();
     expect(host.querySelector('[data-testid="member-team-lead"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('refreshes row action handlers when parent callbacks change', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const firstOpenTask = vi.fn();
+    const secondOpenTask = vi.fn();
+    const task = activeTask();
+    const activeMember = { ...member, currentTaskId: task.id };
+    const taskMap = new Map([[task.id, task]]);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members: [activeMember],
+          taskMap,
+          isTeamAlive: true,
+          onOpenTask: firstOpenTask,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    host.querySelector<HTMLButtonElement>('[data-testid="open-task-bob"]')?.click();
+    expect(firstOpenTask).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members: [activeMember],
+          taskMap,
+          isTeamAlive: true,
+          onOpenTask: secondOpenTask,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    host.querySelector<HTMLButtonElement>('[data-testid="open-task-bob"]')?.click();
+    expect(firstOpenTask).toHaveBeenCalledTimes(1);
+    expect(secondOpenTask).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('rerenders cards when visible member configuration changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members: [member],
+          isTeamAlive: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
+    memberCardRenderSpy.mockClear();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members: [
+            {
+              ...member,
+              isolation: 'worktree',
+              providerBackendId: 'opencode-cli',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              mcpPolicy: { mode: 'appOnly' },
+            },
+          ],
+          isTeamAlive: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

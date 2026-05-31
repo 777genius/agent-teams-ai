@@ -75,19 +75,30 @@ function areResolvedMembersEquivalent(
     const rightMember = right[index];
     if (
       leftMember.name !== rightMember.name ||
+      leftMember.agentId !== rightMember.agentId ||
       leftMember.status !== rightMember.status ||
       leftMember.currentTaskId !== rightMember.currentTaskId ||
       leftMember.taskCount !== rightMember.taskCount ||
+      leftMember.lastActiveAt !== rightMember.lastActiveAt ||
+      leftMember.messageCount !== rightMember.messageCount ||
       leftMember.color !== rightMember.color ||
       leftMember.agentType !== rightMember.agentType ||
       leftMember.role !== rightMember.role ||
       leftMember.workflow !== rightMember.workflow ||
+      leftMember.isolation !== rightMember.isolation ||
       leftMember.providerId !== rightMember.providerId ||
+      leftMember.providerBackendId !== rightMember.providerBackendId ||
       leftMember.model !== rightMember.model ||
       leftMember.effort !== rightMember.effort ||
+      leftMember.selectedFastMode !== rightMember.selectedFastMode ||
+      leftMember.resolvedFastMode !== rightMember.resolvedFastMode ||
+      leftMember.laneId !== rightMember.laneId ||
+      leftMember.laneKind !== rightMember.laneKind ||
+      leftMember.laneOwnerProviderId !== rightMember.laneOwnerProviderId ||
       leftMember.cwd !== rightMember.cwd ||
       leftMember.gitBranch !== rightMember.gitBranch ||
       leftMember.removedAt !== rightMember.removedAt ||
+      !areMemberMcpPoliciesEquivalent(leftMember.mcpPolicy, rightMember.mcpPolicy) ||
       leftMember.runtimeAdvisory?.kind !== rightMember.runtimeAdvisory?.kind ||
       leftMember.runtimeAdvisory?.observedAt !== rightMember.runtimeAdvisory?.observedAt ||
       leftMember.runtimeAdvisory?.retryUntil !== rightMember.runtimeAdvisory?.retryUntil ||
@@ -100,6 +111,22 @@ function areResolvedMembersEquivalent(
   }
 
   return true;
+}
+
+function areMemberMcpPoliciesEquivalent(
+  left: ResolvedTeamMember['mcpPolicy'],
+  right: ResolvedTeamMember['mcpPolicy']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  return (
+    left.mode === right.mode &&
+    left.scopes?.user === right.scopes?.user &&
+    left.scopes?.project === right.scopes?.project &&
+    left.scopes?.local === right.scopes?.local &&
+    (left.serverNames ?? []).length === (right.serverNames ?? []).length &&
+    (left.serverNames ?? []).every((serverName, index) => serverName === right.serverNames?.[index])
+  );
 }
 
 function areTaskStatusCountsMapsEquivalent(
@@ -553,6 +580,10 @@ function areMemberListPropsEqual(
     prev.isTeamAlive === next.isTeamAlive &&
     prev.isTeamProvisioning === next.isTeamProvisioning &&
     prev.leadActivity === next.leadActivity &&
+    prev.onMemberClick === next.onMemberClick &&
+    prev.onSendMessage === next.onSendMessage &&
+    prev.onAssignTask === next.onAssignTask &&
+    prev.onOpenTask === next.onOpenTask &&
     prev.onRestartMember === next.onRestartMember &&
     prev.onSkipMemberForLaunch === next.onSkipMemberForLaunch &&
     prev.onRestoreMember === next.onRestoreMember &&

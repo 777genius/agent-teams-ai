@@ -5,6 +5,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -177,6 +178,7 @@ import type { SessionInjection } from './session-injection-types';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
+  KanbanColumnId,
   KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
@@ -292,6 +294,7 @@ interface CreateTaskDialogState {
 }
 
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
+const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
 
@@ -362,18 +365,30 @@ function areResolvedMembersEqual(
     const nextMember = next[i];
     if (
       prevMember.name !== nextMember.name ||
+      prevMember.agentId !== nextMember.agentId ||
       prevMember.status !== nextMember.status ||
       prevMember.currentTaskId !== nextMember.currentTaskId ||
+      prevMember.taskCount !== nextMember.taskCount ||
+      prevMember.lastActiveAt !== nextMember.lastActiveAt ||
+      prevMember.messageCount !== nextMember.messageCount ||
       prevMember.color !== nextMember.color ||
       prevMember.agentType !== nextMember.agentType ||
       prevMember.role !== nextMember.role ||
       prevMember.workflow !== nextMember.workflow ||
+      prevMember.isolation !== nextMember.isolation ||
       prevMember.providerId !== nextMember.providerId ||
+      prevMember.providerBackendId !== nextMember.providerBackendId ||
       prevMember.model !== nextMember.model ||
       prevMember.effort !== nextMember.effort ||
+      prevMember.selectedFastMode !== nextMember.selectedFastMode ||
+      prevMember.resolvedFastMode !== nextMember.resolvedFastMode ||
+      prevMember.laneId !== nextMember.laneId ||
+      prevMember.laneKind !== nextMember.laneKind ||
+      prevMember.laneOwnerProviderId !== nextMember.laneOwnerProviderId ||
       prevMember.cwd !== nextMember.cwd ||
       prevMember.gitBranch !== nextMember.gitBranch ||
       prevMember.removedAt !== nextMember.removedAt ||
+      !areMemberMcpPoliciesEqual(prevMember.mcpPolicy, nextMember.mcpPolicy) ||
       prevMember.runtimeAdvisory?.kind !== nextMember.runtimeAdvisory?.kind ||
       prevMember.runtimeAdvisory?.observedAt !== nextMember.runtimeAdvisory?.observedAt ||
       prevMember.runtimeAdvisory?.retryUntil !== nextMember.runtimeAdvisory?.retryUntil ||
@@ -386,6 +401,22 @@ function areResolvedMembersEqual(
   }
 
   return true;
+}
+
+function areMemberMcpPoliciesEqual(
+  prev: ResolvedTeamMember['mcpPolicy'],
+  next: ResolvedTeamMember['mcpPolicy']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return prev === next;
+  return (
+    prev.mode === next.mode &&
+    prev.scopes?.user === next.scopes?.user &&
+    prev.scopes?.project === next.scopes?.project &&
+    prev.scopes?.local === next.scopes?.local &&
+    (prev.serverNames ?? []).length === (next.serverNames ?? []).length &&
+    (prev.serverNames ?? []).every((serverName, index) => serverName === next.serverNames?.[index])
+  );
 }
 
 function useStableActiveMembers(
@@ -935,7 +966,6 @@ interface LeadLoadBridgeProps {
 
 const pendingRepliesCacheByTeam = new Map<string, Record<string, number>>();
 const pendingRepliesListenersByTeam = new Map<string, Set<() => void>>();
-let pendingReplyRefreshSourceSequence = 0;
 
 function getPendingRepliesSnapshot(teamName: string): Record<string, number> {
   let snapshot = pendingRepliesCacheByTeam.get(teamName);
@@ -1441,11 +1471,8 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
   ...props
 }: TeamMessagesPanelBridgeProps): React.JSX.Element {
   const pendingRepliesByMember = useTeamPendingReplies(teamName);
-  const pendingReplyRefreshSourceId = useRef<string | null>(null);
-  if (pendingReplyRefreshSourceId.current === null) {
-    pendingReplyRefreshSourceSequence += 1;
-    pendingReplyRefreshSourceId.current = `team-messages:${pendingReplyRefreshSourceSequence}`;
-  }
+  const pendingReplyRefreshSourceId = useId();
+  const pendingReplyRefreshSourceKey = `team-messages:${pendingReplyRefreshSourceId}`;
   const { leadActivity, leadContextUpdatedAt, syncTeamPendingReplyRefresh } = useStore(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
@@ -1458,15 +1485,21 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
     const hasPendingReplies = Object.keys(pendingRepliesByMember).length > 0;
     syncTeamPendingReplyRefresh(
       teamName,
-      pendingReplyRefreshSourceId.current!,
+      pendingReplyRefreshSourceKey,
       Boolean(isTeamAlive) && hasPendingReplies,
       TEAM_PENDING_REPLY_REFRESH_DELAY_MS
     );
 
     return () => {
-      syncTeamPendingReplyRefresh(teamName, pendingReplyRefreshSourceId.current!, false);
+      syncTeamPendingReplyRefresh(teamName, pendingReplyRefreshSourceKey, false);
     };
-  }, [isTeamAlive, pendingRepliesByMember, syncTeamPendingReplyRefresh, teamName]);
+  }, [
+    isTeamAlive,
+    pendingRepliesByMember,
+    pendingReplyRefreshSourceKey,
+    syncTeamPendingReplyRefresh,
+    teamName,
+  ]);
 
   const handlePendingReplyChange = useCallback(
     (updater: PendingRepliesUpdater) => {
@@ -1494,11 +1527,8 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
 }: TeamSidebarRailBridgeProps): React.JSX.Element {
   const teamName = messagesPanelProps.teamName;
   const pendingRepliesByMember = useTeamPendingReplies(teamName);
-  const pendingReplyRefreshSourceId = useRef<string | null>(null);
-  if (pendingReplyRefreshSourceId.current === null) {
-    pendingReplyRefreshSourceSequence += 1;
-    pendingReplyRefreshSourceId.current = `team-sidebar:${pendingReplyRefreshSourceSequence}`;
-  }
+  const pendingReplyRefreshSourceId = useId();
+  const pendingReplyRefreshSourceKey = `team-sidebar:${pendingReplyRefreshSourceId}`;
   const { leadActivity, leadContextUpdatedAt, syncTeamPendingReplyRefresh } = useStore(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
@@ -1510,17 +1540,18 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
     const hasPendingReplies = Object.keys(pendingRepliesByMember).length > 0;
     syncTeamPendingReplyRefresh(
       teamName,
-      pendingReplyRefreshSourceId.current!,
+      pendingReplyRefreshSourceKey,
       Boolean(messagesPanelProps.isTeamAlive) && hasPendingReplies,
       TEAM_PENDING_REPLY_REFRESH_DELAY_MS
     );
 
     return () => {
-      syncTeamPendingReplyRefresh(teamName, pendingReplyRefreshSourceId.current!, false);
+      syncTeamPendingReplyRefresh(teamName, pendingReplyRefreshSourceKey, false);
     };
   }, [
     messagesPanelProps.isTeamAlive,
     pendingRepliesByMember,
+    pendingReplyRefreshSourceKey,
     syncTeamPendingReplyRefresh,
     teamName,
   ]);
@@ -2088,10 +2119,27 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const leadSessionId = data?.config.leadSessionId ?? null;
+  const sessionHistorySource = data?.config.sessionHistory;
   const sessionHistoryKey = useMemo(
-    () => (data?.config.sessionHistory ?? []).join('|'),
-    [data?.config.sessionHistory]
+    () => (sessionHistorySource ?? EMPTY_SESSION_HISTORY).join('|'),
+    [sessionHistorySource]
   );
+  const sessionHistoryCacheRef = useRef<{ key: string; value: readonly string[] }>({
+    key: '',
+    value: EMPTY_SESSION_HISTORY,
+  });
+  const sessionHistory = useMemo(() => {
+    if (!sessionHistorySource || sessionHistorySource.length === 0) {
+      return EMPTY_SESSION_HISTORY;
+    }
+    const cached = sessionHistoryCacheRef.current;
+    if (cached.key === sessionHistoryKey) {
+      return cached.value;
+    }
+    const value = [...sessionHistorySource];
+    sessionHistoryCacheRef.current = { key: sessionHistoryKey, value };
+    return value;
+  }, [sessionHistoryKey, sessionHistorySource]);
 
   useEffect(() => {
     if (!isThisTabActive || !projectId) return;
@@ -2103,8 +2151,8 @@ export const TeamDetailView = memo(function TeamDetailView({
     void (async () => {
       try {
         const result = await loadTeamSessionMetadata(api, projectId, {
-          leadSessionId: data?.config.leadSessionId ?? null,
-          sessionHistory: data?.config.sessionHistory ?? [],
+          leadSessionId,
+          sessionHistory,
         });
         if (!cancelled) {
           setSessions(result);
@@ -2123,7 +2171,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     return () => {
       cancelled = true;
     };
-  }, [data?.config.leadSessionId, isThisTabActive, projectId, sessionHistoryKey]);
+  }, [isThisTabActive, leadSessionId, projectId, sessionHistory]);
 
   // Live git branch tracking for the lead project and member worktrees
   const teamProjectPath = data?.config.projectPath?.trim() ?? null;
@@ -2166,8 +2214,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const leadBranch = leadProjectPath
     ? (trackedBranches[normalizePath(leadProjectPath)] ?? null)
     : null;
+  const hasSelectedTeamData = data !== null;
   const membersWithLiveBranches = useMemo(() => {
-    if (!data) return [];
+    if (!hasSelectedTeamData) return [];
 
     return members.map((member) => {
       const memberPath = member.cwd?.trim();
@@ -2191,7 +2240,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
       return nextMember;
     });
-  }, [leadBranch, members, trackedBranches]);
+  }, [hasSelectedTeamData, leadBranch, members, trackedBranches]);
   const resolvedMemberColorMap = useMemo(
     () => buildMemberColorMap(membersWithLiveBranches),
     [membersWithLiveBranches]
@@ -2395,9 +2444,12 @@ export const TeamDetailView = memo(function TeamDetailView({
     });
   }, []);
 
-  const handleCreateTaskFromMessage = useCallback((subject: string, description: string) => {
-    openCreateTaskDialog(subject, description);
-  }, []);
+  const handleCreateTaskFromMessage = useCallback(
+    (subject: string, description: string) => {
+      openCreateTaskDialog(subject, description);
+    },
+    [openCreateTaskDialog]
+  );
 
   const handleReplyToMessage = useCallback((message: { from: string; text: string }) => {
     setSendDialogRecipient(message.from);
@@ -2569,7 +2621,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
     },
 
-    []
+    [openCreateTaskDialog]
   );
 
   const handleStopTeam = useCallback(async (): Promise<void> => {
