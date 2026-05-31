@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@renderer/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
@@ -80,7 +79,13 @@ import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
+import type {
+  InboxMessage,
+  ResolvedTeamMember,
+  TaskRef,
+  TeamSummary,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface TimeWindow {
   start: number;
@@ -93,6 +98,83 @@ const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
 const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
+const EMPTY_TEAM_NAMES: string[] = [];
+const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
+
+interface TeamMentionMeta {
+  teamNames: string[];
+  teamColorByName: ReadonlyMap<string, string>;
+}
+
+interface TeamMentionEntry {
+  teamName: string;
+  displayName: string;
+  color: string;
+  deletedAt: string;
+}
+
+let cachedTeamMentionSignature = '';
+let cachedTeamMentionMeta: TeamMentionMeta = {
+  teamNames: EMPTY_TEAM_NAMES,
+  teamColorByName: EMPTY_TEAM_COLOR_MAP,
+};
+
+function encodeTeamMentionParts(parts: readonly string[]): string {
+  return parts.map((part) => `${part.length}:${part}`).join('|');
+}
+
+function compareTeamMentionEntries(a: TeamMentionEntry, b: TeamMentionEntry): number {
+  return (
+    a.teamName.localeCompare(b.teamName, undefined, { sensitivity: 'base' }) ||
+    a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })
+  );
+}
+
+function selectMessagesPanelTeamMentionMeta(teams: readonly TeamSummary[]): TeamMentionMeta {
+  const entries = teams
+    .map((team) => ({
+      teamName: team.teamName ?? '',
+      displayName: team.displayName ?? '',
+      color: team.color ?? '',
+      deletedAt: team.deletedAt ?? '',
+    }))
+    .sort(compareTeamMentionEntries);
+  const signature = encodeTeamMentionParts(
+    entries.flatMap((entry) => [entry.teamName, entry.displayName, entry.color, entry.deletedAt])
+  );
+
+  if (signature === cachedTeamMentionSignature) {
+    return cachedTeamMentionMeta;
+  }
+
+  if (entries.length === 0) {
+    cachedTeamMentionSignature = signature;
+    cachedTeamMentionMeta = {
+      teamNames: EMPTY_TEAM_NAMES,
+      teamColorByName: EMPTY_TEAM_COLOR_MAP,
+    };
+    return cachedTeamMentionMeta;
+  }
+
+  const teamNames: string[] = [];
+  const teamColorByName = new Map<string, string>();
+
+  for (const entry of entries) {
+    if (!entry.deletedAt && entry.teamName) {
+      teamNames.push(entry.teamName);
+    }
+    if (entry.teamName) {
+      teamColorByName.set(entry.teamName, entry.color);
+    }
+    if (entry.displayName) {
+      teamColorByName.set(entry.displayName, entry.color);
+    }
+  }
+
+  cachedTeamMentionSignature = signature;
+  cachedTeamMentionMeta = { teamNames, teamColorByName };
+  return cachedTeamMentionMeta;
+}
 
 interface MessagesPanelProps {
   teamName: string;
@@ -286,7 +368,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     lastSendMessageResult,
     clearSendMessageRuntimeDiagnostics,
     refreshSendMessageRuntimeDeliveryStatus,
-    teams,
+    teamMentionMeta,
     openTeamTab,
     messages,
     messagesState,
@@ -303,7 +385,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       lastSendMessageResult: s.lastSendMessageResult,
       clearSendMessageRuntimeDiagnostics: s.clearSendMessageRuntimeDiagnostics,
       refreshSendMessageRuntimeDeliveryStatus: s.refreshSendMessageRuntimeDeliveryStatus,
-      teams: s.teams,
+      teamMentionMeta: selectMessagesPanelTeamMentionMeta(s.teams),
       openTeamTab: s.openTeamTab,
       messages: selectTeamMessages(s, teamName),
       messagesState: teamName ? s.teamMessagesByName[teamName] : undefined,
@@ -721,7 +803,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const readState = useMemo(() => ({ readSet, getMessageKey: toMessageKey }), [readSet]);
 
-  const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
+  const { teamNames, teamColorByName } = teamMentionMeta;
 
   const handleMarkAllRead = useCallback(() => {
     const keys = filteredMessages
