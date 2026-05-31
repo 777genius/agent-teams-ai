@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
-import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getAppDataPath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import type { TeamSummary, TeamTask } from '@shared/types';
@@ -30,6 +30,7 @@ interface ListTeamsPayload {
 
 interface GetAllTasksPayload {
   tasksBase: string;
+  projectionCacheBase: string;
   maxTaskBytes: number;
   maxTaskReadMs: number;
   concurrency: number;
@@ -61,6 +62,7 @@ function summarizeWorkerPayload(payload: WorkerRequest['payload']): Record<strin
   }
   return {
     tasksBase: payload.tasksBase,
+    projectionCacheBase: payload.projectionCacheBase,
     concurrency: payload.concurrency,
     maxTaskReadMs: payload.maxTaskReadMs,
     maxTaskBytes: payload.maxTaskBytes,
@@ -280,6 +282,7 @@ export class TeamFsWorkerClient {
   }): Promise<{ tasks: (TeamTask & { teamName: string })[]; diag?: WorkerDiag }> {
     const payload: GetAllTasksPayload = {
       tasksBase: getTasksBasePath(),
+      projectionCacheBase: path.join(getAppDataPath(), 'cache', 'team-task-projections'),
       maxTaskBytes: options.maxTaskBytes,
       maxTaskReadMs: options.maxTaskReadMs ?? DEFAULT_READ_TIMEOUT_MS,
       concurrency: options.concurrency ?? DEFAULT_CONCURRENCY,

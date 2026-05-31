@@ -1,9 +1,8 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { Worker } from 'worker_threads';
-
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { Worker } from 'worker_threads';
 
 import { createPersistedLaunchSummaryProjection } from '../../../../src/main/services/team/TeamLaunchSummaryProjection';
 
@@ -112,13 +111,15 @@ async function callListTeams(
 
 async function callGetAllTasks(
   worker: Worker,
-  tasksBase: string
+  tasksBase: string,
+  projectionCacheBase = path.join(path.dirname(tasksBase), 'projection-cache')
 ): Promise<{
   tasks: unknown[];
   diag?: Record<string, unknown>;
 }> {
   const { result, diag } = await callWorker(worker, 'getAllTasks', {
     tasksBase,
+    projectionCacheBase,
     maxTaskBytes: 256 * 1024,
     maxTaskReadMs: 5_000,
     concurrency: 2,
@@ -574,6 +575,120 @@ describe('team-fs-worker integration', () => {
       expect(changed.diag?.cacheMisses).toBe(1);
     } finally {
       await worker.terminate();
+    }
+  });
+
+  it('reuses persisted task projections after a worker restart', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'persistent-task-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      path.join(tasksDir, '1.json'),
+      JSON.stringify({
+        id: '1',
+        subject: 'Persisted subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      expect(first.diag?.cacheMisses).toBe(1);
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      expect(second.diag?.cacheHits).toBe(0);
+      expect(second.diag?.cacheMisses).toBe(0);
+      expect(second.diag?.persistentCacheLoads).toBe(1);
+      expect(second.diag?.persistentCacheHits).toBe(1);
+    } finally {
+      await secondWorker.terminate();
+    }
+  });
+
+  it('falls back to task JSON when persisted projections are stale or corrupt', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'stale-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    const taskPath = path.join(tasksDir, '1.json');
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Original subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ subject: 'Original subject' });
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Changed subject with a different size',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const changedWorker = createWorker(workerPath);
+    try {
+      const changed = await callGetAllTasks(changedWorker, tasksBase, projectionCacheBase);
+      expect(changed.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Changed subject with a different size',
+      });
+      expect(changed.diag?.persistentCacheLoads).toBe(1);
+      expect(changed.diag?.persistentCacheHits).toBe(0);
+      expect(changed.diag?.persistentCacheMisses).toBe(1);
+      expect(changed.diag?.cacheMisses).toBe(1);
+    } finally {
+      await changedWorker.terminate();
+    }
+
+    const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+    await fs.writeFile(path.join(projectionCacheBase, 'v1', cacheFiles[0]), '{bad json', 'utf8');
+
+    const corruptWorker = createWorker(workerPath);
+    try {
+      const recovered = await callGetAllTasks(corruptWorker, tasksBase, projectionCacheBase);
+      expect(recovered.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Changed subject with a different size',
+      });
+      expect(recovered.diag?.persistentCacheReadFailures).toBe(1);
+      expect(recovered.diag?.cacheMisses).toBe(1);
+    } finally {
+      await corruptWorker.terminate();
     }
   });
 });
