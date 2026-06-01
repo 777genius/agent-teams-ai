@@ -1,0 +1,97 @@
+{
+  "name": "@777genius/subscription-runtime",
+  "version": "0.1.0-main.0",
+  "description": "Provider-neutral subscription runtime for backend workers, Codex subscription execution, and pluggable session custody.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/777genius/subscription-runtime.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./provider-codex": {
+      "types": "./dist/provider-codex/index.d.ts",
+      "import": "./dist/provider-codex/index.js",
+      "default": "./dist/provider-codex/index.js"
+    },
+    "./worker-core": {
+      "types": "./dist/worker-core/index.d.ts",
+      "import": "./dist/worker-core/index.js",
+      "default": "./dist/worker-core/index.js"
+    },
+    "./worker-codex": {
+      "types": "./dist/worker-codex/index.d.ts",
+      "import": "./dist/worker-codex/index.js",
+      "default": "./dist/worker-codex/index.js"
+    },
+    "./queue-core": {
+      "types": "./dist/queue-core/index.d.ts",
+      "import": "./dist/queue-core/index.js",
+      "default": "./dist/queue-core/index.js"
+    },
+    "./queue-bullmq": {
+      "types": "./dist/queue-bullmq/index.d.ts",
+      "import": "./dist/queue-bullmq/index.js",
+      "default": "./dist/queue-bullmq/index.js"
+    },
+    "./store-local-file": {
+      "types": "./dist/store-local-file/index.d.ts",
+      "import": "./dist/store-local-file/index.js",
+      "default": "./dist/store-local-file/index.js"
+    },
+    "./store-github-actions-secret": {
+      "types": "./dist/store-github-actions-secret/index.d.ts",
+      "import": "./dist/store-github-actions-secret/index.js",
+      "default": "./dist/store-github-actions-secret/index.js"
+    },
+    "./runner-github-action": {
+      "types": "./dist/runner-github-action/index.d.ts",
+      "import": "./dist/runner-github-action/index.js",
+      "default": "./dist/runner-github-action/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "docs",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/rewrite-dist-esm-imports.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer"
+  },
+  "dependencies": {
+    "libsodium-wrappers": "^0.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

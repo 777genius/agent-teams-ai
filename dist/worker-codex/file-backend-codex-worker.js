@@ -1,0 +1,304 @@
+import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, } from "@777genius/subscription-runtime/core";
+import { CodexAppServerExecutionEngine, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, sessionArtifactFromCodexAuthJson, } from "@777genius/subscription-runtime/provider-codex";
+import { createLocalFileBackendRuntimeAdapters } from "@777genius/subscription-runtime/store-local-file";
+import { SubscriptionWorkerError, } from "@777genius/subscription-runtime/worker-core";
+import { NodeProcessRunner } from "./node-process-runner.js";
+import { NullWorkerObservability } from "./observability.js";
+import { StableWorkerWorkspace } from "./temp-workspace.js";
+export class FileBackendCodexWorker {
+    options;
+    workerId;
+    workerState = "created";
+    redactor = new DefaultRedactor();
+    runner;
+    workspace;
+    observability;
+    clock;
+    sessionDriver;
+    agentDriver;
+    sessionStore;
+    runtime;
+    ownedWorkspace;
+    constructor(options) {
+        this.options = options;
+        this.workerId =
+            options.workerId ??
+                `file-backend-codex:${hashText(options.providerInstanceId).slice(0, 12)}`;
+        assertWorkerOptions(options);
+        this.runner = options.runner ?? new NodeProcessRunner();
+        this.ownedWorkspace = options.workspace
+            ? null
+            : new StableWorkerWorkspace(join(options.stateRootDir, "workspaces", hashText(this.workerId)));
+        this.workspace = options.workspace ?? this.ownedWorkspace;
+        this.observability = options.observability ?? new NullWorkerObservability();
+        this.clock = options.clock ?? systemClock;
+        const { sessionStore, leaseStore } = createLocalFileBackendRuntimeAdapters({
+            providerId: "codex",
+            rootDir: join(options.stateRootDir, "sessions"),
+            encryptionKey: options.encryptionKey,
+            metadata: { adapter: "file-backend-codex-worker" },
+        });
+        this.sessionStore = sessionStore;
+        this.sessionDriver = new CodexCliSessionDriver({
+            codexBinaryPath: options.codexBinaryPath,
+            ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
+            refreshMode: "lazy-refresh",
+        });
+        const fallback = new PackagedCodexJsonExecutionEngine({
+            codexBinaryPath: options.codexBinaryPath,
+            ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
+            ...(options.taskTimeoutMs ? { timeoutMs: options.taskTimeoutMs } : {}),
+        });
+        this.agentDriver = new CodexJsonAgentDriver({
+            engine: new CodexAppServerExecutionEngine({
+                codexBinaryPath: options.codexBinaryPath,
+                ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
+                ...(options.taskTimeoutMs ? { timeoutMs: options.taskTimeoutMs } : {}),
+                ...(options.appServerProcessFactory
+                    ? { processFactory: options.appServerProcessFactory }
+                    : {}),
+                ...(options.executionProfile
+                    ? { executionProfile: options.executionProfile }
+                    : {}),
+                cleanThreadPrewarm: options.cleanThreadPrewarm ?? true,
+                fallback,
+            }),
+            sessionMaterializer: new CodexWorkerCacheSessionPoolMaterializer({
+                cacheKey: `codex:${options.providerInstanceId}`,
+                slots: options.sessionCacheSlots ?? 1,
+                rootDir: join(options.stateRootDir, "codex-cache", this.workerId),
+            }),
+            model: options.model ?? "gpt-5.5",
+            reasoningEffort: options.reasoningEffort ?? "low",
+            ...(options.warmupPrompt === false
+                ? {}
+                : { warmupPrompt: options.warmupPrompt ?? defaultWarmupPrompt }),
+        });
+        this.runtime = createSubscriptionRuntime({
+            policy: {
+                custodyMode: "local-only",
+                requireNoBackendPlaintext: false,
+                requireWritebackBeforeTask: true,
+                requireCompareAndSwap: true,
+                allowInteractiveSetupInRuntime: false,
+                allowedProviderIds: [this.sessionDriver.providerId],
+                allowedAgentIds: [this.agentDriver.agentId],
+                allowedStoreIds: [sessionStore.storeId],
+                allowedRunnerIds: [this.runner.runnerId],
+                requestedTaskMode: "structured-prompt",
+                refreshPolicy: {
+                    minFreshMs: options.refreshFreshnessMs ?? 15 * 60 * 1000,
+                    refreshBeforeExpiryMs: options.refreshBeforeExpiryMs ?? 5 * 60 * 1000,
+                    maxSessionAgeMs: options.maxSessionAgeMs ?? 24 * 60 * 60 * 1000,
+                },
+            },
+            sessionDriver: this.sessionDriver,
+            agentDriver: this.agentDriver,
+            sessionStore,
+            leaseStore,
+            runner: this.runner,
+            workspace: this.workspace,
+            redactor: this.redactor,
+            observability: this.observability,
+            clock: this.clock,
+            idGenerator: new DeterministicIdGenerator(),
+        });
+    }
+    get state() {
+        return this.workerState;
+    }
+    async start() {
+        if (this.workerState === "disposed") {
+            throw new SubscriptionWorkerError("subscription_worker_disposed", "Codex worker has been disposed.");
+        }
+        if (this.workerState !== "created" && this.workerState !== "failed") {
+            throw new SubscriptionWorkerError("subscription_worker_already_started", "Codex worker is already started.");
+        }
+        this.workerState = "started";
+    }
+    async seedCodexAuthJsonFile(authJsonPath) {
+        const authJson = await readFile(authJsonPath, "utf8");
+        await this.seedCodexAuthJson(authJson);
+    }
+    async seedCodexAuthJson(authJson) {
+        const existing = await this.sessionStore.read({
+            providerInstanceId: this.options.providerInstanceId,
+            expectedProviderId: "codex",
+            purpose: "health-check",
+        });
+        if (existing)
+            return;
+        const artifact = sessionArtifactFromCodexAuthJson(authJson);
+        await this.sessionStore.write({
+            providerInstanceId: this.options.providerInstanceId,
+            expectedGeneration: 0,
+            nextArtifact: artifact,
+            idempotencyKey: `seed:${hashText(authJson)}`,
+            leaseId: "seed-local-file-backend",
+        });
+    }
+    async prewarm() {
+        this.assertStarted();
+        this.workerState = "prewarming";
+        const session = await this.sessionStore.read({
+            providerInstanceId: this.options.providerInstanceId,
+            expectedProviderId: "codex",
+            purpose: "run",
+        });
+        if (!session) {
+            this.workerState = "failed";
+            throw new SubscriptionWorkerError("subscription_worker_prewarm_failed", "Codex session is missing.");
+        }
+        const workspace = await this.workspace.create({
+            purpose: "run-task",
+            isolation: "temp-dir",
+        });
+        try {
+            const result = await this.agentDriver.prewarmSession({
+                session: session.artifact,
+                redactor: this.redactor,
+                workspacePath: workspace.path,
+                runner: this.runner,
+                abortSignal: new AbortController().signal,
+            });
+            this.workerState = "ready";
+            return {
+                status: result.reusable ? "ready" : "skipped",
+                warmedAt: result.warmedAt,
+                warnings: result.warnings ?? [],
+                details: {
+                    mode: result.mode,
+                    reusable: String(result.reusable),
+                    ...(result.engine
+                        ? {
+                            engine: result.engine.kind,
+                            engineReusable: String(result.engine.reusable),
+                        }
+                        : {}),
+                },
+            };
+        }
+        catch (error) {
+            this.workerState = "failed";
+            throw error;
+        }
+        finally {
+            await workspace.dispose?.();
+        }
+    }
+    async run(job) {
+        this.assertStarted();
+        const result = await this.runtime.refreshThenRunTask({
+            providerInstanceId: this.options.providerInstanceId,
+            task: {
+                kind: job.kind ?? "structured-prompt",
+                prompt: job.prompt,
+                ...(job.outputSchemaName
+                    ? { outputSchemaName: job.outputSchemaName }
+                    : {}),
+                ...(job.metadata ? { metadata: job.metadata } : {}),
+            },
+            runContext: {
+                runId: job.runId ?? `local-${randomUUID()}`,
+                attempt: 1,
+                abortSignal: job.abortSignal ?? new AbortController().signal,
+            },
+        });
+        if (result.status !== "completed") {
+            throw new SubscriptionWorkerError("subscription_worker_run_failed", result.safeMessage, { details: { reason: result.reason } });
+        }
+        return taskResultToOutput(result.task);
+    }
+    async health() {
+        try {
+            const health = await this.runtime.healthCheck({
+                providerInstanceId: this.options.providerInstanceId,
+            });
+            if (health.status === "healthy") {
+                return {
+                    status: "healthy",
+                    state: this.workerState,
+                    checkedAt: this.clock.now(),
+                    warnings: health.warnings,
+                };
+            }
+            return {
+                status: "unhealthy",
+                state: this.workerState,
+                checkedAt: this.clock.now(),
+                failures: health.failures.map((failure) => ({
+                    code: failure.code,
+                    safeMessage: failure.safeMessage,
+                })),
+                warnings: health.warnings,
+            };
+        }
+        catch (error) {
+            return {
+                status: "unhealthy",
+                state: "failed",
+                checkedAt: this.clock.now(),
+                failures: [
+                    {
+                        code: "subscription_worker_health_failed",
+                        safeMessage: error instanceof Error ? error.message : "Codex health failed.",
+                    },
+                ],
+                warnings: [],
+            };
+        }
+    }
+    async dispose() {
+        if (this.workerState === "disposed")
+            return;
+        this.workerState = "draining";
+        try {
+            await this.agentDriver.dispose();
+        }
+        finally {
+            await this.ownedWorkspace?.dispose();
+            this.workerState = "disposed";
+        }
+    }
+    assertStarted() {
+        if (this.workerState === "disposed") {
+            throw new SubscriptionWorkerError("subscription_worker_disposed", "Codex worker has been disposed.");
+        }
+        if (this.workerState === "created") {
+            throw new SubscriptionWorkerError("subscription_worker_not_started", "Codex worker has not been started.");
+        }
+    }
+}
+function taskResultToOutput(result) {
+    if (result.status === "failed") {
+        throw new SubscriptionWorkerError("subscription_worker_run_failed", result.failure.safeMessage, { details: { code: result.failure.code } });
+    }
+    return {
+        outputText: result.outputText,
+        structuredOutput: result.structuredOutput,
+        warnings: result.warnings,
+    };
+}
+function assertWorkerOptions(options) {
+    if (!options.providerInstanceId.trim()) {
+        throw new Error("file_backend_codex_provider_instance_required");
+    }
+    if (!options.stateRootDir.trim()) {
+        throw new Error("file_backend_codex_state_root_required");
+    }
+    if (!options.codexBinaryPath.trim()) {
+        throw new Error("file_backend_codex_binary_required");
+    }
+}
+function hashText(value) {
+    return createHash("sha256").update(value).digest("hex");
+}
+const systemClock = {
+    now: () => new Date(),
+    monotonicMs: () => performance.now(),
+};
+const defaultWarmupPrompt = "Return exactly OK.";
+//# sourceMappingURL=file-backend-codex-worker.js.map

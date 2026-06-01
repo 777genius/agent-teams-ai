@@ -1,0 +1,1 @@
+{"version":3,"file":"codex-cli-temp-cleanup.d.ts","sourceRoot":"","sources":["../../src/provider-codex/codex-cli-temp-cleanup.ts"],"names":[],"mappings":"AAUA,wBAAsB,2BAA2B,CAAC,KAAK,EAAE;IACvD,QAAQ,CAAC,QAAQ,EAAE,MAAM,CAAC;IAC1B,QAAQ,CAAC,aAAa,EAAE,MAAM,CAAC;CAChC,GAAG,OAAO,CAAC,IAAI,CAAC,CAkBhB;AAED,wBAAgB,gCAAgC,CAAC,KAAK,EAAE,OAAO,GAAG,OAAO,CAiBxE"}

@@ -1,0 +1,28 @@
+import { defineConfig } from "vitest/config";
+
+const alias = {
+  "@777genius/subscription-runtime/core": "/src/core/index.ts",
+  "@777genius/subscription-runtime/provider-codex":
+    "/src/provider-codex/index.ts",
+  "@777genius/subscription-runtime/worker-core": "/src/worker-core/index.ts",
+  "@777genius/subscription-runtime/worker-codex": "/src/worker-codex/index.ts",
+  "@777genius/subscription-runtime/queue-core": "/src/queue-core/index.ts",
+  "@777genius/subscription-runtime/queue-bullmq": "/src/queue-bullmq/index.ts",
+  "@777genius/subscription-runtime/store-local-file":
+    "/src/store-local-file/index.ts",
+  "@777genius/subscription-runtime/store-github-actions-secret":
+    "/src/store-github-actions-secret/index.ts",
+  "@777genius/subscription-runtime/runner-github-action":
+    "/src/runner-github-action/index.ts",
+  "@777genius/subscription-runtime/testing": "/src/testing/index.ts",
+};
+
+export default defineConfig({
+  test: {
+    include: ["src/**/*.test.ts"],
+    globals: true,
+  },
+  resolve: {
+    alias,
+  },
+});
