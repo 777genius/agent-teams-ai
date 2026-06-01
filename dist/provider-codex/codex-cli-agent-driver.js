@@ -48,7 +48,7 @@ export class CodexCliAgentDriver {
                 ],
                 cwd: input.workspace.path,
                 env: {
-                    ...pruneCodexChildEnv(this.options.sourceEnv ?? {}),
+                    ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
                     HOME: tempHome,
                     CODEX_HOME: tempCodexHome,
                     CI: "true",

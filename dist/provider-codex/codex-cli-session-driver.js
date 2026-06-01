@@ -48,7 +48,7 @@ export class CodexCliSessionDriver {
                 args: plan.args,
                 cwd: plan.cwd,
                 env: {
-                    ...pruneCodexChildEnv(this.options.sourceEnv ?? {}),
+                    ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
                     ...plan.env,
                 },
                 stdin: new TextEncoder().encode("Respond with OK only."),

@@ -28,7 +28,7 @@ export class PackagedCodexJsonExecutionEngine {
             args,
             cwd: input.workspacePath,
             env: {
-                ...pruneCodexChildEnv(this.options.sourceEnv ?? {}),
+                ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
                 ...input.session.env,
                 CI: "true",
             },

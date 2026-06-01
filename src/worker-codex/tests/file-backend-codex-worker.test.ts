@@ -50,6 +50,7 @@ describe("FileBackendCodexWorker", () => {
         },
       });
       expect(appServer.spawnCount).toBe(1);
+      expect(appServer.envs[0]).toMatchObject({ PATH: process.env.PATH });
       expect(appServer.prompts).toEqual(["Return exactly OK."]);
       await worker.dispose();
       await expect(worker.run({ prompt: "hello" })).rejects.toThrow(
@@ -84,9 +85,13 @@ describe("FileBackendCodexWorker", () => {
 class FakeAppServerFactory {
   spawnCount = 0;
   readonly prompts: string[] = [];
+  readonly envs: Readonly<Record<string, string>>[] = [];
 
-  readonly create = () => {
+  readonly create = (input: {
+    readonly env: Readonly<Record<string, string>>;
+  }) => {
     this.spawnCount += 1;
+    this.envs.push(input.env);
     return new FakeAppServerProcess((prompt) => this.prompts.push(prompt));
   };
 }

@@ -122,7 +122,7 @@ export class CodexAppServerExecutionEngine {
         }
         const client = new CodexAppServerClient({
             codexBinaryPath: this.options.codexBinaryPath,
-            sourceEnv: this.options.sourceEnv ?? {},
+            sourceEnv: this.options.sourceEnv ?? process.env,
             processFactory: this.options.processFactory ?? spawnCodexAppServerProcess,
             session: input.session,
             workspacePath: input.workspacePath,
@@ -162,7 +162,7 @@ class CodexAppServerClient {
     async start() {
         this.exited = false;
         const env = {
-            ...pruneCodexChildEnv(this.options.sourceEnv),
+            ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
             ...this.options.session.env,
             CI: "true",
         };
