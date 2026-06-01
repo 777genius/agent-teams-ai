@@ -3,13 +3,13 @@
 Provider-neutral runtime for running subscription-backed AI workers without binding
 host applications to a specific agent implementation.
 
-This repository exists because "use a subscription login from a backend" is not
-just an SDK wrapper. A production worker has to handle session custody,
-refresh, writeback, concurrency, process isolation, queue semantics, redaction,
-and performance tuning at the same time. The hard part is not starting one
-Codex process. The hard part is doing it repeatedly, safely, quickly, and in a
-shape that can later support Claude or another subscription-backed agent
-without rewriting the host application.
+This repository provides the runtime pieces needed to use subscription-backed AI
+agents from backend services and CI jobs. It coordinates session custody,
+refresh, writeback, concurrency, process isolation, queue semantics, redaction
+and performance tuning while keeping host applications independent from any
+single provider. Codex is the first production adapter, and the package layout
+is designed so Claude or another subscription-backed agent can be added without
+rewriting the host application.
 
 Install the current GitHub version:
 
@@ -41,15 +41,15 @@ import { createLocalFileBackendRuntimeAdapters } from "@777genius/subscription-r
 - `store-github-actions-secret` - no-plaintext GitHub Actions secret store.
 - `runner-github-action` - GitHub Actions runtime adapter.
 
-## Why This Is Hard
+## Design Goals
 
-Subscription-backed execution looks simple from the outside:
+Subscription-backed execution has a short happy path:
 
 1. keep a login session somewhere;
 2. run an agent with that session;
 3. return the result.
 
-That simple flow breaks down quickly in production:
+The runtime exists to keep that path reliable once it is used by real services:
 
 - sessions rotate and a refreshed token must be written back atomically;
 - two workers can refresh the same account at the same time;
@@ -70,11 +70,12 @@ That simple flow breaks down quickly in production:
 
 This is why the package is split into ports, provider adapters, storage
 adapters, queue adapters and runner adapters. Each module carries a different
-piece of the complexity instead of pushing it into one large service class.
+operational responsibility instead of pushing all behavior into one large
+service class.
 
-## Complexity Map
+## Architecture Map
 
-| Module | Main responsibility | Hard parts | Why it exists |
+| Module | Main responsibility | Reliability responsibilities | Why it exists |
 | --- | --- | --- | --- |
 | `core` | Provider-neutral contracts, runtime policy, state machines, generation hashes, redaction | Keeps session modes, refresh policy, writeback policy, leases, idempotency and safe errors consistent without importing Codex, GitHub, BullMQ or filesystem code | This is the stable domain layer. New providers should plug into this instead of changing host applications |
 | `provider-codex` | Codex auth parsing, refresh, process execution, app-server execution, JSON execution, fallback classification | Codex sessions can rotate, the CLI can fail in multiple ways, app-server can request unsupported tools, stdout/stderr must be redacted, startup latency must be reduced without storing plaintext auth in durable state | Encapsulates all Codex-specific behavior so the rest of the runtime remains provider-neutral |
@@ -87,18 +88,18 @@ piece of the complexity instead of pushing it into one large service class.
 | `runner-github-action` | GitHub Actions process runner boundary | Redacts stdout/stderr, preserves required process env, avoids leaking tokens, normalizes process failures | Keeps action runtime execution safe and testable |
 | `testing` | Contract tests, fake providers, fake stores and canaries | Makes every adapter prove stale generation handling, idempotency, no-secret logs and reconnect behavior | Prevents each new adapter from silently weakening the runtime guarantees |
 
-Rough complexity score for the complete feature set:
+Implementation depth by area:
 
-| Area | Confidence | Reliability pressure | Complexity | Notes |
-| --- | ---: | ---: | ---: | --- |
-| Provider-neutral runtime model | 8/10 | 8/10 | 7/10 | The model is stable, but it has to stay strict enough for future providers |
-| Codex backend execution | 8/10 | 8/10 | 8/10 | Most complexity is in process lifecycle, app-server behavior and refresh conflicts |
-| Local file backend mode | 8/10 | 7/10 | 6/10 | Good for single-host or shared-volume deployments, not a multi-replica distributed lock |
-| GitHub Actions no-plaintext mode | 8/10 | 9/10 | 8/10 | Security boundary is strong, but OIDC, encrypted secrets and workflow behavior are operationally complex |
-| Queue and worker orchestration | 8/10 | 8/10 | 7/10 | Hard because failed or slow agent tasks must not break queue correctness |
-| Demo and external consumption | 8/10 | 7/10 | 5/10 | GitHub dependency and committed `dist` make usage simple, but release discipline still matters |
+| Area | Stability | Reliability focus | Notes |
+| --- | --- | --- | --- |
+| Provider-neutral runtime model | Stable domain layer | strict policy negotiation, state transitions, safe errors | The model has to stay strict enough for future providers |
+| Codex backend execution | Production adapter with fallback | process lifecycle, app-server behavior, refresh conflicts | Codex is provider-specific, but host apps use provider-neutral contracts |
+| Local file backend mode | First backend custody option | encrypted records, CAS, local leases | Good for single-host or shared-volume deployments, not a multi-replica distributed lock |
+| GitHub Actions no-plaintext mode | CI custody option | encrypted secret writeback, no plaintext SaaS boundary | Designed for GitHub-hosted runners and ephemeral workflows |
+| Queue and worker orchestration | Backend workload layer | bounded slots, retries, leases, graceful shutdown | Failed or slow agent tasks must not break queue correctness |
+| Demo and external consumption | Integration layer | GitHub dependency, committed `dist`, Docker smoke path | Keeps the package usable outside its original monorepo |
 
-## Feature Complexity By Package
+## Package Responsibilities
 
 ### `core`
 
@@ -155,8 +156,8 @@ Important edge cases handled here:
 
 ### `provider-codex`
 
-`provider-codex` is the highest-risk provider adapter because it bridges a
-backend library to the Codex CLI and Codex app-server protocol.
+`provider-codex` is the provider adapter with the most moving parts because it
+bridges a backend library to the Codex CLI and Codex app-server protocol.
 
 It owns:
 
@@ -182,10 +183,10 @@ It owns:
   - app-server protocol failures;
 - redaction of stdout, stderr, JSON events and error messages.
 
-The hard part is that Codex is optimized for an interactive coding agent, while
-backend workloads often need API-like behavior: "take this prompt, return a
-compact result, do not inspect files, do not ask for approvals, do not leak
-session state, and do it many times in parallel".
+The key engineering point is that Codex is optimized for an interactive coding
+agent, while backend workloads often need API-like behavior: "take this prompt,
+return a compact result, do not inspect files, do not ask for approvals, do not
+leak session state, and do it many times in parallel".
 
 Performance work in this package:
 
@@ -229,7 +230,7 @@ It owns:
 - graceful disposal;
 - safe rejection of queued work during shutdown.
 
-Why this is not just `Promise.all`:
+Why the pool exists:
 
 - Codex workers consume memory and CPU, so parallelism must be bounded;
 - a backend endpoint may receive more work than it can run immediately;
@@ -254,7 +255,7 @@ It wires together:
 - exec fallback;
 - observability hooks.
 
-The hard part is sequencing:
+The execution sequence is explicit:
 
 1. load encrypted session;
 2. acquire or respect refresh lease;
@@ -292,8 +293,8 @@ It owns:
 - idempotent enqueue;
 - graceful processor stop.
 
-The hard part is keeping queue semantics correct when workers are slow or
-processes shut down:
+Queue semantics need to stay correct when workers are slow or processes shut
+down:
 
 - a claimed task can finish after shutdown begins;
 - a claim can expire and become visible again;
@@ -331,8 +332,8 @@ Important edge cases:
 
 ### `store-local-file`
 
-`store-local-file` is the simplest backend custody mode, but it still needs real
-safety guarantees.
+`store-local-file` is the first backend custody mode. It keeps the deployment
+simple while preserving the safety guarantees the runtime needs.
 
 It owns:
 
@@ -390,7 +391,7 @@ credentials. GitHub Actions can refresh inside the runner, encrypt the updated
 secret for GitHub, then ask the backend to coordinate and authorize writeback
 without sending raw `refresh_token`, `access_token`, `id_token` or auth JSON.
 
-Why this is complex:
+Why this path is separate:
 
 - GitHub-hosted runners are ephemeral;
 - refreshed sessions must survive between workflow runs;
@@ -518,7 +519,7 @@ next to it for performance.
 
 ## Concurrency And Refresh Safety
 
-Rotating subscription sessions are the hardest state-management problem in this
+Rotating subscription sessions are the main state-management concern in this
 repository.
 
 The dangerous scenario:
@@ -542,15 +543,15 @@ This matters because backend worker pools can run multiple slots for the same
 provider account. Without coordination, scaling the service would make auth less
 reliable.
 
-## Implementation Lessons From Real Integration
+## Implementation Notes From Real Integration
 
 The following notes are intentionally concrete. They describe classes of issues
 that appeared during implementation and integration work, plus the design choice
-that prevents the same class of issue from becoming a production incident. This
-section is not meant to make the project look complicated. It is here because
-these are the places where a naive implementation usually fails.
+that prevents the same class of issue from becoming a production incident. They
+are included so maintainers and integrators can understand the reliability
+boundaries without reading every source file first.
 
-### Child process environment was not just a detail
+### Child process environment matters in containers
 
 Observed symptom:
 
@@ -733,7 +734,7 @@ Why it matters:
   workflows;
 - those two environments have different custody models;
 - mixing them into one storage abstraction without explicit security rules would
-  be easier to code and much easier to get wrong.
+  make the secure path harder to reason about.
 
 ### Queue semantics had to account for slow agent tasks
 
@@ -786,7 +787,7 @@ Why it matters:
   internal source paths;
 - the packaging model has to work in local dev, CI and Docker.
 
-## Failure Modes The Runtime Guards Against
+## Failure Modes Covered By The Runtime
 
 This table is useful when reviewing the codebase because most modules exist to
 block one or more of these failure modes.
@@ -809,7 +810,7 @@ block one or more of these failure modes.
 
 ## Code Traceability
 
-The complexity above maps directly to implementation files. This section is a
+The behavior above maps directly to implementation files. This section is a
 reading guide for reviewers who want to verify that the README is describing the
 actual code, not an aspirational design.
 
@@ -912,7 +913,7 @@ long because each step records a boundary:
 13. mark writeback committed;
 14. return the refreshed session to the task path.
 
-That sequencing is why `core` has more state than a simple SDK wrapper. It is
+That sequencing is why `core` has more state than a single SDK call. It is
 the difference between "works once" and "does not corrupt auth under retries and
 parallel jobs".
 
@@ -1037,8 +1038,9 @@ client sends anything:
 - forbidden value patterns such as `Bearer ...` and Codex auth JSON fields;
 - encrypted value must look like a sufficiently long base64 sealed box.
 
-This is why the GitHub path is not just another file store. It has to preserve
-writeback semantics without giving the coordinating backend raw credentials.
+This is why the GitHub path is separate from the local file store. It has to
+preserve writeback semantics without giving the coordinating backend raw
+credentials.
 
 ### `worker-core`, `queue-core` and `queue-bullmq` code details
 
@@ -1090,7 +1092,7 @@ There are two runner styles:
 - limits captured output;
 - normalizes process failures into safe messages.
 
-`NodeProcessRunner` is intentionally simpler because backend Codex execution
+`NodeProcessRunner` is intentionally smaller because backend Codex execution
 uses provider-controlled env pruning and local process management. It still
 handles timeout, abort and SIGTERM/SIGKILL cleanup, which matters when a worker
 pool is shutting down.
@@ -1310,7 +1312,7 @@ The rule is that new providers implement `core` ports. They should not add
 provider-specific branches inside host applications. A host service should keep
 using `worker-core`, queues and stores while swapping provider adapters.
 
-## Packaging And Monorepo Complexity
+## Packaging And Monorepo Layout
 
 This repository is published as one GitHub-installable package with subpath
 exports, not as many generated mirror repositories.
@@ -1380,9 +1382,10 @@ This is the part that makes the library reusable. A demo app, ReviewRouter and
 another backend service can all consume the same package without inheriting each
 other's framework or deployment decisions.
 
-## What Would Be Easy But Wrong
+## Shortcuts The Design Avoids
 
-Several simpler implementations were intentionally avoided:
+Several shorter implementations were intentionally avoided because they tend to
+create operational issues later:
 
 - storing Codex `auth.json` directly in a local file next to the worker state;
 - refreshing on every request with no lease or generation check;
