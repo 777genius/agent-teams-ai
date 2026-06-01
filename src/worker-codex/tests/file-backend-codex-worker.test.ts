@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execPath } from "node:process";
+import type { RunnerPort } from "@777genius/subscription-runtime/core";
 import { describe, expect, it } from "vitest";
 import { FileBackendCodexWorker } from "../index";
 import { NodeProcessRunner } from "../node-process-runner";
@@ -77,6 +78,71 @@ describe("FileBackendCodexWorker", () => {
       );
     } finally {
       await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("waits and retries when another slot is refreshing the same provider session", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-"));
+    const runner = new RefreshingFakeRunner();
+    const appServer = new FakeAppServerFactory();
+    const key = new Uint8Array(32).fill(9);
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const first = new FileBackendCodexWorker({
+      workerId: "slot-1",
+      providerInstanceId: "codex:test",
+      stateRootDir: rootDir,
+      codexBinaryPath: "codex",
+      encryptionKey: key,
+      appServerProcessFactory: appServer.create,
+      runner,
+      clock,
+      refreshConflictRetryMaxMs: 2_000,
+    });
+    const second = new FileBackendCodexWorker({
+      workerId: "slot-2",
+      providerInstanceId: "codex:test",
+      stateRootDir: rootDir,
+      codexBinaryPath: "codex",
+      encryptionKey: key,
+      appServerProcessFactory: appServer.create,
+      runner,
+      clock,
+      refreshConflictRetryMaxMs: 2_000,
+    });
+
+    try {
+      await first.start();
+      await second.start();
+      await first.seedCodexAuthJson(
+        JSON.stringify({
+          ...JSON.parse(validAuthJson),
+          tokens: {
+            refresh_token: "refresh-token",
+            access_token: "access-token",
+            expiry: "2026-05-31T00:06:00.000Z",
+          },
+          last_refresh: "2026-05-30T23:00:00.000Z",
+        }),
+      );
+
+      await expect(
+        Promise.all([
+          first.run({ prompt: "first" }),
+          second.run({ prompt: "second" }),
+        ]),
+      ).resolves.toEqual([
+        { outputText: "OK", warnings: [] },
+        { outputText: "OK", warnings: [] },
+      ]);
+      expect(runner.runCount).toBe(1);
+      expect(appServer.prompts).toEqual(["first", "second"]);
+    } finally {
+      await first.dispose();
+      await second.dispose();
       await rm(rootDir, { recursive: true, force: true });
     }
   });
@@ -170,6 +236,41 @@ class FakeAppServerProcess extends EventEmitter {
 class FakeReadable extends EventEmitter {
   setEncoding(): this {
     return this;
+  }
+}
+
+class RefreshingFakeRunner implements RunnerPort {
+  readonly runnerId = "node-process";
+  readonly capabilities = {
+    runnerId: this.runnerId,
+    supportsEnvAllowlist: true,
+    supportsWorkingDirectory: true,
+    supportsTimeout: true,
+    supportsAbortSignal: true,
+    supportsOutputRedaction: true,
+    supportsReadOnlySandbox: true,
+    readOnlyFilesystem: true,
+    platform: "node-process" as const,
+  };
+  runCount = 0;
+
+  async run(input: Parameters<RunnerPort["run"]>[0]) {
+    this.runCount += 1;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const authPath = input.env.REVIEWROUTER_CODEX_AUTH_PATH;
+    if (!authPath) {
+      throw new Error("missing_auth_path");
+    }
+    const { readFile, writeFile } = await import("node:fs/promises");
+    const auth = JSON.parse(await readFile(authPath, "utf8")) as {
+      tokens: { access_token?: string; expiry?: string };
+      last_refresh?: string;
+    };
+    auth.tokens.access_token = `access-token-refreshed-${this.runCount}`;
+    auth.tokens.expiry = "2026-05-31T23:00:00.000Z";
+    auth.last_refresh = "2026-05-31T00:05:00.000Z";
+    await writeFile(authPath, JSON.stringify(auth), "utf8");
+    return { exitCode: 0, stdout: "OK", stderr: "", durationMs: 50 };
   }
 }
 

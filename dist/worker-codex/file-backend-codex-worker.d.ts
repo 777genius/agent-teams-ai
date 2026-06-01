@@ -19,6 +19,7 @@ export type FileBackendCodexWorkerOptions = {
     readonly refreshFreshnessMs?: number;
     readonly refreshBeforeExpiryMs?: number;
     readonly maxSessionAgeMs?: number;
+    readonly refreshConflictRetryMaxMs?: number;
     readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
     readonly appServerProcessFactory?: CodexAppServerProcessFactory;
     readonly executionProfile?: CodexExecutionProfile;

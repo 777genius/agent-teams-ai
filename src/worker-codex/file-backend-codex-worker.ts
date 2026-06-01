@@ -9,6 +9,7 @@ import {
   type ObservabilityPort,
   type ProviderTask,
   type ProviderTaskResult,
+  type RefreshThenRunResult,
   type RedactorPort,
   type RuntimeDeps,
 } from "@777genius/subscription-runtime/core";
@@ -53,6 +54,7 @@ export type FileBackendCodexWorkerOptions = {
   readonly refreshFreshnessMs?: number;
   readonly refreshBeforeExpiryMs?: number;
   readonly maxSessionAgeMs?: number;
+  readonly refreshConflictRetryMaxMs?: number;
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
   readonly appServerProcessFactory?: CodexAppServerProcessFactory;
   readonly executionProfile?: CodexExecutionProfile;
@@ -288,31 +290,50 @@ export class FileBackendCodexWorker implements SubscriptionWorker<
     job: FileBackendCodexWorkerJob,
   ): Promise<FileBackendCodexWorkerResult> {
     this.assertStarted();
-    const result = await this.runtime.refreshThenRunTask({
-      providerInstanceId: this.options.providerInstanceId,
-      task: {
-        kind: job.kind ?? "structured-prompt",
-        prompt: job.prompt,
-        ...(job.outputSchemaName
-          ? { outputSchemaName: job.outputSchemaName }
-          : {}),
-        ...(job.metadata ? { metadata: job.metadata } : {}),
-      },
-      runContext: {
-        runId: job.runId ?? `local-${randomUUID()}`,
-        attempt: 1,
-        abortSignal: job.abortSignal ?? new AbortController().signal,
-      },
-    });
+    const runId = job.runId ?? `local-${randomUUID()}`;
+    const abortSignal = job.abortSignal ?? new AbortController().signal;
+    const startedAt = this.clock.monotonicMs();
+    const retryMaxMs = this.options.refreshConflictRetryMaxMs ?? 30_000;
+    let attempt = 1;
 
-    if (result.status !== "completed") {
+    while (true) {
+      const result = await this.runtime.refreshThenRunTask({
+        providerInstanceId: this.options.providerInstanceId,
+        task: {
+          kind: job.kind ?? "structured-prompt",
+          prompt: job.prompt,
+          ...(job.outputSchemaName
+            ? { outputSchemaName: job.outputSchemaName }
+            : {}),
+          ...(job.metadata ? { metadata: job.metadata } : {}),
+        },
+        runContext: {
+          runId,
+          attempt,
+          abortSignal,
+        },
+      });
+
+      if (result.status === "completed") {
+        return taskResultToOutput(result.task);
+      }
+
+      if (
+        shouldRetryRefreshConflict(result) &&
+        !abortSignal.aborted &&
+        this.clock.monotonicMs() - startedAt < retryMaxMs
+      ) {
+        await delay(refreshConflictDelayMs(attempt), abortSignal);
+        attempt += 1;
+        continue;
+      }
+
       throw new SubscriptionWorkerError(
         "subscription_worker_run_failed",
         result.safeMessage,
         { details: { reason: result.reason } },
       );
     }
-    return taskResultToOutput(result.task);
   }
 
   async health(): Promise<SubscriptionWorkerHealth> {
@@ -397,6 +418,36 @@ function taskResultToOutput(
     structuredOutput: result.structuredOutput,
     warnings: result.warnings,
   };
+}
+
+function shouldRetryRefreshConflict(result: RefreshThenRunResult): boolean {
+  if (result.status !== "blocked") return false;
+  if (result.reason === "stale_generation") return true;
+  return (
+    result.reason === "permission_required" &&
+    /session refresh is already leased/i.test(result.safeMessage)
+  );
+}
+
+function refreshConflictDelayMs(attempt: number): number {
+  return Math.min(1_000, 100 * 2 ** Math.max(0, attempt - 1));
+}
+
+function delay(ms: number, abortSignal: AbortSignal): Promise<void> {
+  if (abortSignal.aborted) {
+    return Promise.reject(new Error("subscription_worker_run_aborted"));
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    abortSignal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(new Error("subscription_worker_run_aborted"));
+      },
+      { once: true },
+    );
+  });
 }
 
 function assertWorkerOptions(options: FileBackendCodexWorkerOptions): void {
