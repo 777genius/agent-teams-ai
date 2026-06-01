@@ -242,6 +242,17 @@ function canReviveOutboxItem(status: MemberWorkSyncOutboxItem['status']): boolea
   return status === 'superseded' || (!isOutboxTerminal(status) && status !== 'pending');
 }
 
+function applyOptionalNextAttemptAt(
+  item: MemberWorkSyncOutboxItem,
+  nextAttemptAt: string | undefined
+): void {
+  if (nextAttemptAt) {
+    item.nextAttemptAt = nextAttemptAt;
+    return;
+  }
+  delete item.nextAttemptAt;
+}
+
 function canClaimOutboxItem(item: MemberWorkSyncOutboxItem, nowIso: string): boolean {
   if (item.status !== 'pending' && item.status !== 'failed_retryable') {
     return false;
@@ -730,12 +741,7 @@ export class JsonMemberWorkSyncStore
                     status: 'pending',
                     updatedAt: input.nowIso,
                   };
-                  const nextAttemptAt = input.nextAttemptAt ?? current.nextAttemptAt;
-                  if (nextAttemptAt) {
-                    next.nextAttemptAt = nextAttemptAt;
-                  } else {
-                    delete next.nextAttemptAt;
-                  }
+                  applyOptionalNextAttemptAt(next, input.nextAttemptAt);
                   delete next.claimedBy;
                   delete next.claimedAt;
                   delete next.lastError;
@@ -761,12 +767,7 @@ export class JsonMemberWorkSyncStore
                   status: 'pending',
                   updatedAt: input.nowIso,
                 };
-                const nextAttemptAt = input.nextAttemptAt ?? current.nextAttemptAt;
-                if (nextAttemptAt) {
-                  next.nextAttemptAt = nextAttemptAt;
-                } else {
-                  delete next.nextAttemptAt;
-                }
+                applyOptionalNextAttemptAt(next, input.nextAttemptAt);
                 delete next.claimedBy;
                 delete next.claimedAt;
                 delete next.lastError;

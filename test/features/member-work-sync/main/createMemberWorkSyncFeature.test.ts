@@ -1423,6 +1423,114 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('delivers native stale pending-work recovery nudges despite noisy global metrics', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-native-stale-pending';
+    const memberName = 'alice';
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Start assigned pending work',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      nudgeDeliveryWake,
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      let agendaFingerprint = '';
+      await waitForAssertion(async () => {
+        const status = await feature.getStatus({ teamName, memberName });
+        expect(status).toMatchObject({
+          state: 'needs_sync',
+          providerId: 'codex',
+          diagnostics: expect.arrayContaining(['no_current_report']),
+          agenda: {
+            items: [
+              expect.objectContaining({
+                reason: 'owned_pending_task',
+                evidence: expect.objectContaining({ status: 'pending' }),
+              }),
+            ],
+          },
+        });
+        agendaFingerprint = status.agenda.fingerprint;
+      });
+      expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
+      expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+
+      await seedNativeStaleInProgressBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        agendaFingerprint,
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('Work sync check');
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+          },
+        });
+      });
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('delivers targeted OpenCode nudges even when global phase2 metrics are noisy', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -2557,7 +2665,7 @@ describe('createMemberWorkSyncFeature composition', () => {
             memberName,
             toolUseId: 'tool-1',
             toolName: 'bash',
-            startedAt: '2026-05-05T12:00:00.000Z',
+            startedAt: new Date(Date.now()).toISOString(),
             source: 'runtime',
           },
         }),
@@ -2635,6 +2743,109 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
         expect(journal).toContain('"event":"member_busy"');
         expect(journal).toContain('"event":"nudge_delivered"');
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('clears stale retry delay and recovers when tool activity finishes without agenda changes', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const tasks = [
+      {
+        id: 'task-1',
+        displayId: '11111111',
+        subject: 'Ship sync after tool finish',
+        status: 'pending',
+        owner: memberName,
+      },
+    ];
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => tasks),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({
+        type: 'tool-activity',
+        teamName,
+        detail: JSON.stringify({
+          action: 'start',
+          activity: {
+            memberName,
+            toolUseId: 'tool-1',
+            toolName: 'bash',
+            startedAt: new Date(Date.now()).toISOString(),
+            source: 'runtime',
+          },
+        }),
+      } as never);
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
+        const outboxItems = Object.values(
+          await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+        );
+        expect(outboxItems).toEqual([
+          expect.objectContaining({
+            status: 'failed_retryable',
+            lastError: 'member_busy:active_tool_activity',
+            nextAttemptAt: expect.any(String),
+          }),
+        ]);
+      });
+
+      feature.noteTeamChange({
+        type: 'tool-activity',
+        teamName,
+        detail: JSON.stringify({
+          action: 'finish',
+          memberName,
+          toolUseId: 'tool-1',
+          finishedAt: new Date(Date.now() - 120_000).toISOString(),
+        }),
+      } as never);
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        const outboxItems = Object.values(
+          await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+        );
+        expect(outboxItems).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+          }),
+        ]);
       });
     } finally {
       await feature.dispose();
@@ -3236,6 +3447,235 @@ describe('createMemberWorkSyncFeature composition', () => {
         terminal: 0,
       });
       expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toHaveLength(1);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('refreshes a legacy still_working report without a lease during nudge dispatch', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Wake after missing lease',
+            status: 'in_progress',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      canDispatchNudges: vi.fn(async () => true),
+    });
+
+    try {
+      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      const current = await feature.refreshStatus({ teamName, memberName });
+      await expect(
+        feature.report({
+          teamName,
+          memberName,
+          state: 'still_working',
+          agendaFingerprint: current.agenda.fingerprint,
+          reportToken: current.reportToken,
+          taskIds: ['task-1'],
+          source: 'test',
+        })
+      ).resolves.toMatchObject({
+        accepted: true,
+        status: { state: 'still_working', report: { accepted: true } },
+      });
+
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      const acceptedStatus = await store.read({ teamName, memberName });
+      const legacyReport = { ...acceptedStatus!.report! };
+      delete legacyReport.expiresAt;
+      await store.write({
+        ...acceptedStatus!,
+        evaluatedAt: new Date(Date.now() - 7 * 60_000).toISOString(),
+        report: legacyReport,
+      });
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 1,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toHaveLength(1);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('repairs a legacy working status when the stored agenda is empty', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => []),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      canDispatchNudges: vi.fn(async () => true),
+    });
+
+    try {
+      const current = await feature.refreshStatus({ teamName, memberName });
+      expect(current.state).toBe('caught_up');
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.write({
+        ...current,
+        state: 'still_working',
+        report: {
+          teamName,
+          memberName,
+          state: 'still_working',
+          agendaFingerprint: current.agenda.fingerprint,
+          reportedAt: current.evaluatedAt,
+          expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+          accepted: true,
+        },
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 0,
+        delivered: 0,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      const repaired = await store.read({ teamName, memberName });
+      expect(repaired).toMatchObject({
+        state: 'caught_up',
+        diagnostics: expect.arrayContaining(['agenda_empty']),
+      });
+      expect(repaired?.report).toBeUndefined();
+      expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toHaveLength(0);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('refreshes stale caught_up status during nudge dispatch when new work appears', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    let tasks: Array<{
+      id: string;
+      displayId: string;
+      subject: string;
+      status: 'pending';
+      owner: string;
+    }> = [];
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => tasks),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      canDispatchNudges: vi.fn(async () => true),
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const current = await feature.refreshStatus({ teamName, memberName });
+      expect(current.state).toBe('caught_up');
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.write({
+        ...current,
+        evaluatedAt: new Date(Date.now() - 7 * 60_000).toISOString(),
+      });
+      tasks = [
+        {
+          id: 'task-1',
+          displayId: '11111111',
+          subject: 'Wake after missed task event',
+          status: 'pending',
+          owner: memberName,
+        },
+      ];
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 1,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      );
+      expect(nudges).toHaveLength(1);
+      expect(nudges[0]?.text).toContain('11111111');
+      await expect(store.read({ teamName, memberName })).resolves.toMatchObject({
+        state: 'needs_sync',
+        agenda: {
+          items: [expect.objectContaining({ taskId: 'task-1' })],
+        },
+      });
     } finally {
       await feature.dispose();
     }

@@ -144,6 +144,9 @@ export class TeamTaskStallJournal {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return [];
       }
+      if (error instanceof SyntaxError) {
+        return [];
+      }
       throw error;
     }
   }

@@ -529,6 +529,17 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'native_stale_in_progress' });
   });
 
+  it('activates stale native in-progress recovery when a legacy accepted report has no lease', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({
+          diagnostics: ['report_lease_missing'],
+        }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'native_stale_in_progress' });
+  });
+
   it('does not activate stale native in-progress recovery when the accepted report state is still current', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
@@ -683,7 +694,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'lead_targeted_shadow_collecting' });
   });
 
-  it('does not activate stale native in-progress recovery for multiple or non-in-progress work items', () => {
+  it('activates stale native assigned-work recovery for pending and multi-item safe agendas', () => {
     const baseItem = nativeStaleInProgressStatus().agenda.items[0]!;
 
     expect(
@@ -702,7 +713,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
         }),
         metrics: staleMetrics(),
       })
-    ).toEqual({ active: false, reason: 'blocking_metrics' });
+    ).toEqual({ active: true, reason: 'native_stale_in_progress' });
 
     expect(
       decideMemberWorkSyncNudgeActivation({
@@ -723,7 +734,41 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
         }),
         metrics: staleMetrics(),
       })
-    ).toEqual({ active: false, reason: 'blocking_metrics' });
+    ).toEqual({ active: true, reason: 'native_stale_assigned_work' });
+
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({
+          agenda: {
+            ...nativeStaleInProgressStatus().agenda,
+            items: [
+              baseItem,
+              {
+                taskId: 'task-review',
+                displayId: '#2',
+                subject: 'Review current request',
+                kind: 'review',
+                assignee: 'alice',
+                priority: 'review_requested',
+                reason: 'current_cycle_review_assigned',
+                evidence: {
+                  status: 'completed',
+                  owner: 'bob',
+                  reviewer: 'alice',
+                  reviewState: 'review',
+                  reviewCycleId: 'evt-review-request',
+                  reviewRequestEventId: 'evt-review-request',
+                  reviewObligation: 'review_pickup_required',
+                  canBypassPhase2: true,
+                  historyEventIds: ['evt-review-request'],
+                },
+              },
+            ],
+          },
+        }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'native_stale_assigned_work' });
   });
 
   it('does not activate stale native in-progress recovery for needsFix, review, blocked dependency, or clarification agenda items', () => {

@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildActionableWorkAgenda,
   validateMemberWorkSyncReport,
 } from '@features/member-work-sync/core/domain';
+import { describe, expect, it } from 'vitest';
 
 const nowIso = '2026-04-29T00:00:00.000Z';
 const hash = (value: string) => `h${value.length}`;
@@ -24,6 +23,17 @@ function agendaWithWork() {
         owner: 'bob',
       },
     ],
+    hash,
+  });
+}
+
+function emptyAgenda() {
+  return buildActionableWorkAgenda({
+    teamName: 'team-a',
+    memberName: 'bob',
+    generatedAt: nowIso,
+    members: [{ name: 'bob' }],
+    tasks: [],
     hash,
   });
 }
@@ -119,6 +129,27 @@ describe('validateMemberWorkSyncReport', () => {
     expect(result).toMatchObject({
       ok: false,
       code: 'caught_up_rejected_actionable_items_exist',
+    });
+  });
+
+  it('rejects still_working when the agenda is empty', () => {
+    const agenda = emptyAgenda();
+    const result = validateMemberWorkSyncReport({
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: agenda.fingerprint,
+      },
+      agenda,
+      nowIso,
+      activeMemberNames: ['bob'],
+      tokenValidation: validToken,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'still_working_rejected_agenda_empty',
     });
   });
 

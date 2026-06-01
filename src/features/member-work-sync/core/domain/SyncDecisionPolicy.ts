@@ -10,6 +10,18 @@ export interface SyncDecision {
   diagnostics: string[];
 }
 
+function getWorkLeaseDiagnostic(
+  report: MemberWorkSyncReport,
+  nowIso: string
+): 'report_lease_missing' | 'report_lease_expired' | null {
+  const expiresAtMs = Date.parse(report.expiresAt ?? '');
+  const nowMs = Date.parse(nowIso);
+  if (!Number.isFinite(expiresAtMs) || !Number.isFinite(nowMs)) {
+    return 'report_lease_missing';
+  }
+  return expiresAtMs <= nowMs ? 'report_lease_expired' : null;
+}
+
 export function decideMemberWorkSyncStatus(input: {
   agenda: MemberWorkSyncAgenda;
   latestAcceptedReport?: MemberWorkSyncReport | null;
@@ -25,7 +37,8 @@ export function decideMemberWorkSyncStatus(input: {
       state: 'caught_up',
       diagnostics: ['agenda_empty'],
       acceptedReport:
-        input.latestAcceptedReport?.agendaFingerprint === input.agenda.fingerprint
+        input.latestAcceptedReport?.state === 'caught_up' &&
+        input.latestAcceptedReport.agendaFingerprint === input.agenda.fingerprint
           ? input.latestAcceptedReport
           : undefined,
     };
@@ -38,13 +51,18 @@ export function decideMemberWorkSyncStatus(input: {
   if (report.agendaFingerprint !== input.agenda.fingerprint) {
     return { state: 'needs_sync', diagnostics: ['report_fingerprint_stale'] };
   }
-  if (report.expiresAt && Date.parse(report.expiresAt) <= Date.parse(input.nowIso)) {
-    return { state: 'needs_sync', diagnostics: ['report_lease_expired'] };
-  }
   if (report.state === 'still_working') {
+    const leaseDiagnostic = getWorkLeaseDiagnostic(report, input.nowIso);
+    if (leaseDiagnostic) {
+      return { state: 'needs_sync', diagnostics: [leaseDiagnostic] };
+    }
     return { state: 'still_working', acceptedReport: report, diagnostics: ['lease_still_working'] };
   }
   if (report.state === 'blocked') {
+    const leaseDiagnostic = getWorkLeaseDiagnostic(report, input.nowIso);
+    if (leaseDiagnostic) {
+      return { state: 'needs_sync', diagnostics: [leaseDiagnostic] };
+    }
     return { state: 'blocked', acceptedReport: report, diagnostics: ['lease_blocked'] };
   }
 

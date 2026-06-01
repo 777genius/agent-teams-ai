@@ -1,7 +1,7 @@
+import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
-import * as fs from 'fs/promises';
 
 import { TeamTaskStallJournal } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallJournal';
 import { setClaudeBasePathOverride } from '../../../../../src/main/utils/pathDecoder';
@@ -100,5 +100,44 @@ describe('TeamTaskStallJournal', () => {
       epochKey: string;
     }>;
     expect(saved.map((entry) => entry.epochKey)).toEqual(['task-codex:epoch-1']);
+  });
+
+  it('recovers from an invalid journal file on the next scan', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    const teamDir = path.join(tmpDir, 'teams', 'demo');
+    await fs.mkdir(teamDir, { recursive: true });
+    const journalPath = path.join(teamDir, 'stall-monitor-journal.json');
+    await fs.writeFile(journalPath, '{bad json', 'utf8');
+
+    const journal = new TeamTaskStallJournal();
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch-1',
+      reason: 'Potential work stall',
+    } as const;
+
+    await expect(
+      journal.reconcileScan({
+        teamName: 'demo',
+        evaluations: [evaluation],
+        activeTaskIds: ['task-a'],
+        now: '2026-04-19T12:10:00.000Z',
+      })
+    ).resolves.toEqual([]);
+
+    const saved = JSON.parse(await fs.readFile(journalPath, 'utf8')) as Array<{
+      epochKey: string;
+      state: string;
+    }>;
+    expect(saved).toEqual([
+      expect.objectContaining({
+        epochKey: 'task-a:epoch-1',
+        state: 'suspected',
+      }),
+    ]);
   });
 });

@@ -43,7 +43,7 @@ export class TeamTaskStallJournalWorkSyncCooldown implements MemberWorkSyncWatch
       );
       const parsed = JSON.parse(raw) as unknown;
       if (!Array.isArray(parsed)) {
-        return true;
+        return false;
       }
       const now = parseTime(input.nowIso) ?? Date.now();
       return parsed.some((entry): boolean => {
@@ -54,8 +54,8 @@ export class TeamTaskStallJournalWorkSyncCooldown implements MemberWorkSyncWatch
         const alertedAt = parseTime(row.alertedAt);
         return alertedAt != null && now - alertedAt <= this.cooldownMs;
       });
-    } catch (error) {
-      return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+    } catch {
+      return false;
     }
   }
 }

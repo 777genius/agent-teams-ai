@@ -1,10 +1,10 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import type {
   MemberWorkSyncNudgePayload,
   MemberWorkSyncStatus,
@@ -428,6 +428,101 @@ describe('JsonMemberWorkSyncStore', () => {
       outcome: 'existing',
       item: { status: 'delivered', deliveredMessageId: 'message-1' },
     });
+  });
+
+  it('clears stale retry delay when a fresh reconcile revives the same outbox item', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const revived = await store.ensurePending({ ...input, nowIso: '2026-04-29T00:03:00.000Z' });
+
+    expect(revived).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'pending', attemptGeneration: 1 },
+    });
+    expect(revived.item).not.toHaveProperty('nextAttemptAt');
+    expect(revived.item).not.toHaveProperty('lastError');
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({ id: input.id, attemptGeneration: 2 });
+  });
+
+  it('keeps an explicitly requested retry delay when reviving an outbox item', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const revived = await store.ensurePending({
+      ...input,
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    });
+
+    expect(revived.item).toMatchObject({
+      status: 'pending',
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+    });
+    await expect(
+      store.claimDue({
+        teamName: 'team-a',
+        claimedBy: 'dispatcher-b',
+        nowIso: '2026-04-29T00:04:00.000Z',
+        limit: 1,
+      })
+    ).resolves.toEqual([]);
   });
 
   it('finds recent recovery outbox rows by logical intent key', async () => {

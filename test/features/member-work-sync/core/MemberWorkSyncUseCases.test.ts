@@ -524,6 +524,33 @@ describe('MemberWorkSync use cases', () => {
     expect(result.status.state).toBe('caught_up');
   });
 
+  it('rejects still_working on an empty agenda without recording a working status', async () => {
+    const { deps, store } = createDeps({ items: [] });
+    const reader = new MemberWorkSyncReconciler(deps);
+    const reporter = new MemberWorkSyncReporter(deps);
+    const current = await reader.execute({ teamName: 'team-a', memberName: 'bob' });
+
+    const result = await reporter.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working',
+      agendaFingerprint: current.agenda.fingerprint,
+      reportToken: current.reportToken,
+      source: 'test',
+    });
+
+    expect(result.accepted).toBe(false);
+    expect(result.code).toBe('still_working_rejected_agenda_empty');
+    expect(result.status.state).toBe('caught_up');
+    expect(store.writes.at(-1)).toMatchObject({
+      state: 'caught_up',
+      report: {
+        accepted: false,
+        rejectionCode: 'still_working_rejected_agenda_empty',
+      },
+    });
+  });
+
   it('marks status inactive when the team runtime is not active', async () => {
     const { deps } = createDeps({ teamActive: false });
     const status = await new MemberWorkSyncReconciler(deps).execute({

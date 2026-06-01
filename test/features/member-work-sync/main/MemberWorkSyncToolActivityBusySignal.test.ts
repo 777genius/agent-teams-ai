@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { MemberWorkSyncToolActivityBusySignal } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncToolActivityBusySignal';
+import { describe, expect, it } from 'vitest';
 
 import type { TeamChangeEvent, ToolActivityEventPayload } from '@shared/types';
 
@@ -139,6 +138,45 @@ describe('MemberWorkSyncToolActivityBusySignal', () => {
         teamName: 'team-a',
         memberName: 'bob',
         nowIso: '2026-04-29T00:00:15.000Z',
+      })
+    ).resolves.toEqual({ busy: false });
+  });
+
+  it('expires stale active tools when the finish event is missing', async () => {
+    const signal = new MemberWorkSyncToolActivityBusySignal({
+      busyGraceMs: 90_000,
+      activeToolStaleMs: 10 * 60_000,
+    });
+
+    signal.noteTeamChange(
+      toolEvent('team-a', {
+        action: 'start',
+        activity: {
+          memberName: 'bob',
+          toolUseId: 'tool-1',
+          toolName: 'bash',
+          startedAt: '2026-04-29T00:00:00.000Z',
+          source: 'runtime',
+        },
+      })
+    );
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:09:59.000Z',
+      })
+    ).resolves.toMatchObject({
+      busy: true,
+      reason: 'active_tool_activity',
+    });
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:10:00.000Z',
       })
     ).resolves.toEqual({ busy: false });
   });

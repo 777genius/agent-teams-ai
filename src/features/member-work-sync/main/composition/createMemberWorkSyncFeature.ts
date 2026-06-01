@@ -63,11 +63,44 @@ import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 import type { TeamChangeEvent } from '@shared/types';
 
 const STALE_STATUS_MAX_AGE_MS = 2 * 60_000;
+const CAUGHT_UP_STATUS_MAX_AGE_MS = 5 * 60_000;
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
+function isAcceptedWorkLeaseStatus(status: MemberWorkSyncStatus): boolean {
+  return (
+    status.report?.accepted === true &&
+    (status.state === 'still_working' || status.state === 'blocked')
+  );
+}
+
+function getAcceptedWorkLeaseStaleness(
+  status: MemberWorkSyncStatus,
+  nowMs: number
+): 'missing' | 'expired' | null {
+  if (!isAcceptedWorkLeaseStatus(status)) {
+    return null;
+  }
+
+  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
+  if (!Number.isFinite(reportExpiresAtMs) || !Number.isFinite(nowMs)) {
+    return 'missing';
+  }
+  return reportExpiresAtMs <= nowMs ? 'expired' : null;
+}
+
+function isEmptyAgendaStaleState(status: MemberWorkSyncStatus): boolean {
+  return (
+    status.agenda.items.length === 0 &&
+    (status.state === 'needs_sync' ||
+      status.state === 'still_working' ||
+      status.state === 'blocked' ||
+      status.state === 'unknown')
+  );
+}
+
 function statusNeedsBackgroundRefresh(status: MemberWorkSyncStatus, nowMs: number): boolean {
-  if (status.agenda.items.length === 0) {
-    return false;
+  if (isEmptyAgendaStaleState(status)) {
+    return true;
   }
 
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
@@ -75,17 +108,19 @@ function statusNeedsBackgroundRefresh(status: MemberWorkSyncStatus, nowMs: numbe
     return true;
   }
 
+  if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
+    return true;
+  }
+
+  if (status.agenda.items.length === 0) {
+    return false;
+  }
+
   if (status.state === 'needs_sync' && nowMs - evaluatedAtMs > STALE_STATUS_MAX_AGE_MS) {
     return true;
   }
 
-  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
-  return (
-    status.report?.accepted === true &&
-    Number.isFinite(reportExpiresAtMs) &&
-    reportExpiresAtMs <= nowMs &&
-    (status.state === 'still_working' || status.state === 'blocked')
-  );
+  return getAcceptedWorkLeaseStaleness(status, nowMs) !== null;
 }
 
 function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: number): string[] {
@@ -93,6 +128,10 @@ function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: numb
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
   if (!Number.isFinite(evaluatedAtMs)) {
     diagnostics.push('status_evaluated_at_invalid');
+  } else if (isEmptyAgendaStaleState(status)) {
+    diagnostics.push('empty_agenda_state_refresh_enqueued');
+  } else if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
+    diagnostics.push('caught_up_stale_refresh_enqueued');
   } else if (
     status.agenda.items.length > 0 &&
     ['needs_sync', 'still_working', 'blocked'].includes(status.state) &&
@@ -101,13 +140,10 @@ function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: numb
     diagnostics.push('status_stale_refresh_enqueued');
   }
 
-  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
-  if (
-    status.report?.accepted &&
-    Number.isFinite(reportExpiresAtMs) &&
-    reportExpiresAtMs <= nowMs &&
-    (status.state === 'still_working' || status.state === 'blocked')
-  ) {
+  const leaseStaleness = getAcceptedWorkLeaseStaleness(status, nowMs);
+  if (leaseStaleness === 'missing') {
+    diagnostics.push('accepted_report_lease_missing_refresh_enqueued');
+  } else if (leaseStaleness === 'expired') {
     diagnostics.push('accepted_report_lease_expired_refresh_enqueued');
   }
 
