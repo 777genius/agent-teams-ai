@@ -292,7 +292,7 @@
       "cancel": "取消",
       "delete": "删除",
       "editCode": "编辑代码",
-      "launch": "发射",
+      "launch": "发送",
       "remove": "消除",
       "stop": "停止",
       "task": "任务",
@@ -323,8 +323,8 @@
     "loadingSidebar": "正在加载团队侧边栏",
     "offline": {
       "offline": "团队离线",
-      "partialFailed": "上次发射中途失败",
-      "partialMissing": "上次发射中途失败 - {{missing}}/{{expected}} 队友没有加入",
+      "partialFailed": "上次发送中途失败",
+      "partialMissing": "上次发送中途失败 - {{missing}}/{{expected}} 队友没有加入",
       "reconciling": "上次发布仍在协调中"
     },
     "previous": "上一篇：{{paths}}",
@@ -338,7 +338,7 @@
     "solo": "独奏",
     "status": {
       "active": "活跃",
-      "launching": "发射…",
+      "launching": "发送…",
       "running": "跑步"
     },
     "telemetry": {
@@ -965,7 +965,7 @@
     "comments": {
       "renderLimit": "显示最新的 {{formattedCount}} 评论以保持 UI 响应。",
       "badges": {
-        "approved": "得到正式认可的",
+        "approved": "已批准",
         "reviewRequested": "已请求审核"
       },
       "unknownTime": "未知时间",
@@ -1004,11 +1004,11 @@
       "reviewRequested": "已请求审核",
       "reviewStarted": "审核开始",
       "changesRequested": "要求更改",
-      "approved": "得到正式认可的",
+      "approved": "已批准",
       "unknownEvent": "未知事件"
     },
     "reviewStates": {
-      "approved": "得到正式认可的",
+      "approved": "已批准",
       "needsFix": "需要修复",
       "inReview": "审核中"
     }
@@ -1274,8 +1274,8 @@
       "createSchedule": "创建计划任务",
       "creating": "正在创建…",
       "goToDashboard": "转到控制台",
-      "launchTeam": "发射团队",
-      "launching": "发射…",
+      "launchTeam": "发送团队",
+      "launching": "发送…",
       "relaunchTeam": "重新启动团队",
       "relaunching": "重新启动…",
       "saveChanges": "保存更改",
@@ -1302,7 +1302,7 @@
     },
     "prepare": {
       "action": {
-        "launch": "发射",
+        "launch": "发送",
         "relaunch": "重新启动"
       },
       "blocked": "运行时环境不可用 - {{action}} 被阻止",
@@ -1347,7 +1347,7 @@
     "title": {
       "createSchedule": "创建计划任务",
       "editSchedule": "编辑日程",
-      "launch": "发射团队",
+      "launch": "发送团队",
       "relaunch": "重新启动团队"
     },
     "errors": {
@@ -1377,8 +1377,8 @@
       "deleteForever": "永久删除",
       "deletePermanently": "永久删除",
       "deleteTeam": "删除团队",
-      "launching": "发射…",
-      "launchTeam": "发射团队",
+      "launching": "发送…",
+      "launchTeam": "发送团队",
       "relaunchTeam": "重新启动团队",
       "restore": "恢复",
       "restoreTeam": "恢复队伍",
@@ -1413,18 +1413,18 @@
     "noMatches": "没有符合当前筛选条件的团队",
     "partial": {
       "pending": "上次发布仍在协调中。",
-      "skipped": "上次发射跳过了队友。",
+      "skipped": "上次发送跳过了队友。",
       "skippedWithCount": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_few": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_many": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_one": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_other": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "stopped": "上次发射在所有队友加入之前停止了。",
-      "stoppedWithCount": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_few": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_many": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_one": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_other": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。"
+      "stopped": "上次发送在所有队友加入之前停止了。",
+      "stoppedWithCount": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_few": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_many": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_one": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_other": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。"
     },
     "searchPlaceholder": "搜寻队伍…",
     "sections": {
@@ -1436,7 +1436,7 @@
     "status": {
       "active": "活跃",
       "deleted": "已删除",
-      "launching": "发射…",
+      "launching": "发送…",
       "offline": "离线",
       "partialFailure": "启动中途失败",
       "partialPending": "引导挂起",
@@ -2125,7 +2125,7 @@
         "teamProvisionedAllJoined": "团队配置 - 所有 {{count}} 队友都加入",
         "teamProvisionedStillJoining": "团队已配置 - 队友仍在加入",
         "launchFinishedWithErrors": "启动完成但出现错误 - {{count}}/{{total}} 队友启动失败",
-        "launchContinuedSkipped": "发射继续 - {{count}}/{{total}} 队友跳过",
+        "launchContinuedSkipped": "发送继续 - {{count}}/{{total}} 队友跳过",
         "teamLaunchedLeadOnline": "团队启动 - 在线领导",
         "teamLaunchedAllJoined": "团队启动 - 所有 {{count}} 队友加入"
       },
@@ -2133,9 +2133,9 @@
         "launchFailed": "启动失败",
         "launchDetails": "发布详情",
         "launchFinishedWithErrors": "启动完成但有错误",
-        "launchContinuedSkipped": "与跳过的队友一起继续发射",
+        "launchContinuedSkipped": "与跳过的队友一起继续发送",
         "coreTeamReady": "核心团队准备就绪",
-        "finishingLaunch": "完成发射",
+        "finishingLaunch": "完成发送",
         "teamLaunched": "团队启动",
         "launchingTeam": "启动团队"
       }
@@ -2268,7 +2268,7 @@
       "inProgress": "进行中",
       "review": "审核",
       "done": "完毕",
-      "approved": "得到正式认可的"
+      "approved": "已批准"
     }
   },
   "worktreeGitReadiness": {
@@ -2314,7 +2314,7 @@
       "actionableItems": "可操作的项目",
       "fingerprint": "指纹",
       "report": "报告",
-      "none": "没有任何",
+      "none": "无",
       "shadowWouldNudge": "影子会轻推",
       "yes": "是的",
       "no": "不",
@@ -2451,7 +2451,7 @@
     "title": "跑步队",
     "status": {
       "active": "活跃",
-      "provisioning": "发射",
+      "provisioning": "发送",
       "idle": "跑步"
     },
     "noProject": "没有项目"

@@ -322,7 +322,7 @@
           "description": "哪些目标状态会触发通知",
           "label": "通知这些状态",
           "options": {
-            "approved": "得到正式认可的",
+            "approved": "已批准",
             "completed": "完全的",
             "deleted": "已删除",
             "in_progress": "开始",

@@ -295,8 +295,8 @@
       "deleteForever": "永久删除",
       "deletePermanently": "永久删除",
       "deleteTeam": "删除团队",
-      "launching": "发射…",
-      "launchTeam": "发射团队",
+      "launching": "发送…",
+      "launchTeam": "发送团队",
       "relaunchTeam": "重新启动团队",
       "restore": "恢复",
       "restoreTeam": "恢复队伍",
@@ -307,7 +307,7 @@
     "status": {
       "active": "活跃",
       "deleted": "已删除",
-      "launching": "发射…",
+      "launching": "发送…",
       "offline": "离线",
       "partialFailure": "启动中途失败",
       "partialPending": "引导挂起",
@@ -316,18 +316,18 @@
     },
     "partial": {
       "pending": "上次发布仍在协调中。",
-      "skipped": "上次发射跳过了队友。",
+      "skipped": "上次发送跳过了队友。",
       "skippedWithCount": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_few": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_many": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_one": "上次发布跳过了 {{count}}/{{expected}} 队友。",
       "skippedWithCount_other": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "stopped": "上次发射在所有队友加入之前停止了。",
-      "stoppedWithCount": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_few": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_many": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_one": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_other": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。"
+      "stopped": "上次发送在所有队友加入之前停止了。",
+      "stoppedWithCount": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_few": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_many": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_one": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_other": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。"
     },
     "noDescription": "无描述",
     "solo": "独奏",
@@ -614,7 +614,7 @@
     "groupByLabel": "分组依据：",
     "groupByAria": "分组依据",
     "groupModes": {
-      "none": "没有任何",
+      "none": "无",
       "project": "项目",
       "time": "时间"
     },
@@ -739,9 +739,9 @@
       "todo": "待办事项",
       "inProgress": "进行中",
       "needsFix": "需要修复",
-      "done": "完毕",
-      "review": "审核",
-      "approved": "得到正式认可的"
+      "done": "结束",
+      "review": "审核中",
+      "approved": "已批准"
     }
   },
   "sessionItem": {
