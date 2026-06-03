@@ -662,7 +662,7 @@
     "unpin": "取消固定",
     "pin": "固定",
     "rename": "重命名",
-    "markUnread": "Token 为未读",
+    "markUnread": "标记为未读",
     "unarchive": "取消存档",
     "archive": "档案",
     "deleteTask": "删除任务"
@@ -695,7 +695,7 @@
     "recommended": "推荐",
     "unavailable": "不可用",
     "cannotSelectYet": "尚无法选择该后端。",
-    "auto": "汽车",
+    "auto": "自动",
     "autoCurrently": "自动（当前：{{backend}}）",
     "audience": {
       "internal": "内部的"
@@ -754,17 +754,17 @@
     "row": {
       "team": "团队",
       "subagent": "子智能体",
-      "markAsRead": "Token 为已读",
+      "markAsRead": "标记为已读",
       "delete": "删除",
       "viewInSession": "在会话中查看"
     },
     "title": "通知",
     "loading": "正在加载通知…",
     "actions": {
-      "markFilteredAsRead": "将已过滤 Token 为已读",
-      "markAllAsRead": "全部 Token 为已读",
-      "markFilteredRead": "Token 已过滤阅读",
-      "markAllRead": "Token 全部已读",
+      "markFilteredAsRead": "将筛选结果标记为已读",
+      "markAllAsRead": "全部标记为已读",
+      "markFilteredRead": "将筛选结果标记为已读",
+      "markAllRead": "全部标记为已读",
       "clearFilteredNotifications": "清除过滤的通知",
       "clearAllNotifications": "清除所有通知",
       "clickToConfirm": "点击确认",
