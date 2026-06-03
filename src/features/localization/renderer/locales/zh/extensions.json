@@ -527,7 +527,7 @@
     "reviewHint": "首先检查复制的文件，然后在下一步中确认导入。",
     "reviewLabel": "导入此技能",
     "errors": {
-      "missingSkillFile": "这个文件夹看起来还不像技能。它需要 SKILL.md、Skill.md 或 Skill.md 文件。",
+      "missingSkillFile": "这个文件夹看起来还不像技能。它需要 SKILL.md、Skill.md 或 skill.md 文件。",
       "symbolicLinks": "该文件夹包含符号链接。导入真实文件而不是链接。",
       "tooManyFiles": "该技能文件夹太大，无法一次导入。删除多余的文件并重试。",
       "tooLarge": "该技能文件夹太大，无法安全导入。修剪大量资产并重试。",

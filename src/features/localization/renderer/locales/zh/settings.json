@@ -644,19 +644,19 @@
           "name": "人为 API 密钥",
           "title": "API 密钥",
           "description": "使用直接 Anthropic API 密钥进行 API 计费访问。当您切换回来时，您的 Anthropic 订阅会话仍然可用。",
-          "placeholder": "sk-蚂蚁-…"
+          "placeholder": "sk-ant-…"
         },
         "codex": {
           "name": "Codex API 密钥",
           "title": "API 密钥",
           "description": "使用 OpenAI API 密钥作为辅助 Codex 认证路径。如果您将 Codex 切换到 API 密钥模式，应用会将 OPENAI_API_KEY 镜像到 CODEX_API_KEY 以进行本机启动。",
-          "placeholder": "sk-项目-…"
+          "placeholder": "sk-proj-…"
         },
         "gemini": {
           "name": "Gemini API 密钥",
           "title": "API 访问权限",
           "description": "对 Gemini API 后端使用“GEMINI_API_KEY”。 CLI SDK 和 ADC 不需要它。",
-          "placeholder": "艾莎…"
+          "placeholder": "AIza…"
         }
       }
     },
@@ -687,7 +687,7 @@
         "title": "将 Codex CLI 安装到应用数据中"
       },
       "rateLimits": {
-        "credits": "制作人员",
+        "credits": "积分",
         "creditsDescription": "积分与基于窗口的订阅使用情况分开显示，并且可能不适用于计划支持的 ChatGPT 会话。",
         "noSecondaryWindow": "Codex 未返回此帐户快照的辅助窗口。",
         "notReported": "未报道",
