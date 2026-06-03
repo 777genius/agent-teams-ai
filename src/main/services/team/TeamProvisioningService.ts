@@ -3286,6 +3286,17 @@ interface OpenCodeMemberInboxDelivery {
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }
 
+class InboxRelayInFlightTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InboxRelayInFlightTimeoutError';
+  }
+}
+
+function isInboxRelayInFlightTimeoutError(error: unknown): error is InboxRelayInFlightTimeoutError {
+  return error instanceof InboxRelayInFlightTimeoutError;
+}
+
 type OpenCodeVisibleReplyCorrelation = NonNullable<
   OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
 >;
@@ -3444,6 +3455,15 @@ function getOpenCodeInboxRelayPriority(
   return 0;
 }
 
+function getMemberInboxRelayPriority(
+  message: Pick<InboxMessage, 'messageKind' | 'source'>
+): number {
+  if (message.messageKind === 'member_work_sync_nudge') {
+    return 30;
+  }
+  return 0;
+}
+
 function getLeadInboxRelayPriority(message: Pick<InboxMessage, 'messageKind'>): number {
   if (message.messageKind === 'member_work_sync_nudge') {
     return 30;
@@ -3476,6 +3496,13 @@ function compareOpenCodeInboxRelayMessagesByPriority(
   b: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string }
 ): number {
   return compareInboxRelayMessages(a, b, getOpenCodeInboxRelayPriority);
+}
+
+function compareMemberInboxRelayMessagesByPriority(
+  a: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string },
+  b: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string }
+): number {
+  return compareInboxRelayMessages(a, b, getMemberInboxRelayPriority);
 }
 
 function compareLeadInboxRelayMessagesByPriority(
@@ -3527,6 +3554,7 @@ export class TeamProvisioningService {
   private static readonly RETAINED_PROVISIONING_PROGRESS_TTL_MS = 5 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_ADVISORY_EVENT_TTL_MS = 24 * 60 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_LEAD_NOTICE_TTL_MS = 24 * 60 * 60_000;
+  private static readonly INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS = 2 * 60_000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -11659,6 +11687,33 @@ export class TeamProvisioningService {
 
   private getOpenCodeMemberRelayKey(teamName: string, memberName: string): string {
     return `opencode:${this.getMemberRelayKey(teamName, memberName)}`;
+  }
+
+  private async waitForInboxRelayInFlight<T>(input: {
+    promise: Promise<T>;
+    relayName: string;
+    relayKey: string;
+  }): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      return await Promise.race([
+        input.promise,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new InboxRelayInFlightTimeoutError(
+                `${input.relayName} timed out after ${TeamProvisioningService.INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS}ms: ${input.relayKey}`
+              )
+            );
+          }, TeamProvisioningService.INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   private normalizeRelayCandidateText(text: string): string {
@@ -23201,7 +23256,23 @@ export class TeamProvisioningService {
     const relayKey = this.getMemberRelayKey(teamName, memberName);
     const existing = this.memberInboxRelayInFlight.get(relayKey);
     if (existing) {
-      return existing;
+      try {
+        return await this.waitForInboxRelayInFlight({
+          promise: existing,
+          relayName: 'member_inbox_relay',
+          relayKey,
+        });
+      } catch (error) {
+        if (!isInboxRelayInFlightTimeoutError(error)) {
+          throw error;
+        }
+        logger.warn(`[${teamName}] member_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+        return 0;
+      } finally {
+        if (this.memberInboxRelayInFlight.get(relayKey) === existing) {
+          this.memberInboxRelayInFlight.delete(relayKey);
+        }
+      }
     }
 
     const work = (async (): Promise<number> => {
@@ -23274,7 +23345,9 @@ export class TeamProvisioningService {
       if (actionableUnread.length === 0) return 0;
 
       const MAX_RELAY = 10;
-      const batch = actionableUnread.slice(0, MAX_RELAY);
+      const batch = [...actionableUnread]
+        .sort(compareMemberInboxRelayMessagesByPriority)
+        .slice(0, MAX_RELAY);
 
       this.armSilentTeammateForward(run, memberName, 'member_inbox_relay');
       const rememberedRelayIds = this.rememberPendingInboxRelayCandidates(run, memberName, batch);
@@ -23355,7 +23428,17 @@ export class TeamProvisioningService {
 
     this.memberInboxRelayInFlight.set(relayKey, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'member_inbox_relay',
+        relayKey,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      logger.warn(`[${teamName}] member_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+      return 0;
     } finally {
       if (this.memberInboxRelayInFlight.get(relayKey) === work) {
         this.memberInboxRelayInFlight.delete(relayKey);
@@ -23521,7 +23604,37 @@ export class TeamProvisioningService {
     if (existing) {
       const onlyMessageId = options.onlyMessageId?.trim();
       if (!onlyMessageId) {
-        return existing;
+        try {
+          return await this.waitForInboxRelayInFlight({
+            promise: existing,
+            relayName: 'opencode_member_inbox_relay',
+            relayKey,
+          });
+        } catch (error) {
+          if (!isInboxRelayInFlightTimeoutError(error)) {
+            throw error;
+          }
+          const diagnostic = `opencode_member_inbox_relay_timed_out: ${getErrorMessage(error)}`;
+          logger.warn(`[${teamName}] ${diagnostic}`);
+          return {
+            relayed: 0,
+            attempted: 0,
+            delivered: 0,
+            failed: 1,
+            lastDelivery: {
+              delivered: false,
+              accepted: false,
+              responsePending: false,
+              reason: 'opencode_member_inbox_relay_timed_out',
+              diagnostics: [diagnostic],
+            },
+            diagnostics: [diagnostic],
+          };
+        } finally {
+          if (this.openCodeMemberInboxRelayInFlight.get(relayKey) === existing) {
+            this.openCodeMemberInboxRelayInFlight.delete(relayKey);
+          }
+        }
       }
       const inboxMessages = await this.inboxReader
         .getMessagesFor(teamName, memberName)
@@ -24012,7 +24125,31 @@ export class TeamProvisioningService {
 
     this.openCodeMemberInboxRelayInFlight.set(relayKey, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'opencode_member_inbox_relay',
+        relayKey,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      const diagnostic = `opencode_member_inbox_relay_timed_out: ${getErrorMessage(error)}`;
+      logger.warn(`[${teamName}] ${diagnostic}`);
+      return {
+        relayed: 0,
+        attempted: options.onlyMessageId ? 1 : 0,
+        delivered: 0,
+        failed: 1,
+        lastDelivery: {
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          reason: 'opencode_member_inbox_relay_timed_out',
+          diagnostics: [diagnostic],
+        },
+        diagnostics: [diagnostic],
+      };
     } finally {
       if (this.openCodeMemberInboxRelayInFlight.get(relayKey) === work) {
         this.openCodeMemberInboxRelayInFlight.delete(relayKey);
@@ -24321,7 +24458,23 @@ export class TeamProvisioningService {
   async relayLeadInboxMessages(teamName: string): Promise<number> {
     const existing = this.leadInboxRelayInFlight.get(teamName);
     if (existing) {
-      return existing;
+      try {
+        return await this.waitForInboxRelayInFlight({
+          promise: existing,
+          relayName: 'lead_inbox_relay',
+          relayKey: teamName,
+        });
+      } catch (error) {
+        if (!isInboxRelayInFlightTimeoutError(error)) {
+          throw error;
+        }
+        logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+        return 0;
+      } finally {
+        if (this.leadInboxRelayInFlight.get(teamName) === existing) {
+          this.leadInboxRelayInFlight.delete(teamName);
+        }
+      }
     }
 
     const work = (async (): Promise<number> => {
@@ -24877,7 +25030,17 @@ export class TeamProvisioningService {
 
     this.leadInboxRelayInFlight.set(teamName, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'lead_inbox_relay',
+        relayKey: teamName,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+      return 0;
     } finally {
       if (this.leadInboxRelayInFlight.get(teamName) === work) {
         this.leadInboxRelayInFlight.delete(teamName);

@@ -1630,6 +1630,81 @@ Messages:
     expect(payload).toContain('Please retry with logging enabled.');
   });
 
+  it('prioritizes member work-sync nudges over older ordinary member relay rows', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'alice', [
+      ...Array.from({ length: 11 }, (_, index) => ({
+        from: 'team-lead',
+        text: `Routine relay row ${index + 1}.`,
+        timestamp: `2026-02-23T10:${String(index).padStart(2, '0')}:00.000Z`,
+        read: false,
+        messageId: `m-ordinary-${index + 1}`,
+      })),
+      {
+        from: 'system',
+        text: 'Call member_work_sync_status, then member_work_sync_report.',
+        timestamp: '2026-02-23T10:30:00.000Z',
+        read: false,
+        messageId: 'm-work-sync-late',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'alice');
+
+    expect(relayed).toBe(10);
+    const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
+    expect(payload).toContain('1) From: system');
+    expect(payload).toContain('MessageId: m-work-sync-late');
+    expect(payload).toContain('Message kind: member_work_sync_nudge');
+    expect(payload).not.toContain('MessageId: m-ordinary-11');
+  });
+
+  it('retries a work-sync nudge after member relay times out before stdin write completes', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      seedConfig(teamName);
+      seedMemberInbox(teamName, 'alice', [
+        {
+          from: 'system',
+          text: 'Call member_work_sync_status, then member_work_sync_report.',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: false,
+          messageId: 'm-work-sync-retry',
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: 'agenda_sync',
+        },
+      ]);
+
+      const { writeSpy } = attachAliveRun(service, teamName);
+      writeSpy.mockImplementationOnce(() => true);
+
+      const firstRelay = service.relayMemberInboxMessages(teamName, 'alice');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(writeSpy).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      await expect(firstRelay).resolves.toBe(0);
+      vi.mocked(console.warn).mockClear();
+
+      const secondRelay = await service.relayMemberInboxMessages(teamName, 'alice');
+
+      expect(secondRelay).toBe(1);
+      expect(writeSpy).toHaveBeenCalledTimes(2);
+      const secondPayload = String(writeSpy.mock.calls[1]?.[0] ?? '');
+      expect(secondPayload).toContain('MessageId: m-work-sync-retry');
+      expect(secondPayload).toContain('Message kind: member_work_sync_nudge');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('marks exact teammate relay copies with relayOfMessageId', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -3829,6 +3904,129 @@ Messages:
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('times out a hung existing OpenCode member relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `opencode:${teamName}:jack`;
+    try {
+      (
+        service as unknown as {
+          openCodeMemberInboxRelayInFlight: Map<string, Promise<unknown>>;
+        }
+      ).openCodeMemberInboxRelayInFlight.set(relayKey, new Promise(() => undefined));
+
+      const relay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toMatchObject({
+        attempted: 0,
+        delivered: 0,
+        failed: 1,
+        lastDelivery: {
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          reason: 'opencode_member_inbox_relay_timed_out',
+        },
+      });
+      expect(
+        (
+          service as unknown as {
+            openCodeMemberInboxRelayInFlight: Map<string, Promise<unknown>>;
+          }
+        ).openCodeMemberInboxRelayInFlight.has(relayKey)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'opencode_member_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('times out a hung existing lead relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      (
+        service as unknown as {
+          leadInboxRelayInFlight: Map<string, Promise<number>>;
+        }
+      ).leadInboxRelayInFlight.set(teamName, new Promise(() => undefined));
+
+      const relay = service.relayLeadInboxMessages(teamName);
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toBe(0);
+      expect(
+        (
+          service as unknown as {
+            leadInboxRelayInFlight: Map<string, Promise<number>>;
+          }
+        ).leadInboxRelayInFlight.has(teamName)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'lead_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('times out a hung existing member relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `${teamName}:alice`;
+    try {
+      (
+        service as unknown as {
+          memberInboxRelayInFlight: Map<string, Promise<number>>;
+        }
+      ).memberInboxRelayInFlight.set(relayKey, new Promise(() => undefined));
+
+      const relay = service.relayMemberInboxMessages(teamName, 'alice');
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toBe(0);
+      expect(
+        (
+          service as unknown as {
+            memberInboxRelayInFlight: Map<string, Promise<number>>;
+          }
+        ).memberInboxRelayInFlight.has(relayKey)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'member_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not convert non-timeout member relay failures into timeout results', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `${teamName}:alice`;
+    const rejected = Promise.reject(new Error('relay failed'));
+    rejected.catch(() => undefined);
+    (
+      service as unknown as {
+        memberInboxRelayInFlight: Map<string, Promise<number>>;
+      }
+    ).memberInboxRelayInFlight.set(relayKey, rejected);
+
+    await expect(service.relayMemberInboxMessages(teamName, 'alice')).rejects.toThrow(
+      'relay failed'
+    );
+    expect(vi.mocked(console.warn)).not.toHaveBeenCalled();
   });
 
   it('treats an already-read specific OpenCode inbox row as delivered for UI-send relay', async () => {
