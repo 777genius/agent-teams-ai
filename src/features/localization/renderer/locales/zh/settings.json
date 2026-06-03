@@ -534,10 +534,10 @@
   },
   "workspaceProfiles": {
     "actions": {
-      "addProfile": "添加个人资料",
+      "addProfile": "添加配置文件",
       "cancel": "取消",
-      "deleteProfile": "删除个人资料",
-      "editProfile": "编辑个人资料",
+      "deleteProfile": "删除配置文件",
+      "editProfile": "编辑配置文件",
       "save": "保存"
     },
     "authMethods": {
@@ -549,7 +549,7 @@
     "deleteConfirm": {
       "confirmLabel": "删除",
       "message": "您确定要删除“{{name}}”吗？此操作无法撤消。",
-      "title": "删除个人资料"
+      "title": "删除配置文件"
     },
     "description": "保存 SSH 连接配置文件以便快速重新连接",
     "empty": {
@@ -557,10 +557,10 @@
       "title": "没有保存的配置文件"
     },
     "form": {
-      "authentication": "验证",
+      "authentication": "认证",
       "host": "主机",
-      "name": "姓名",
-      "passwordPrompt": "连接时系统将提示词您输入密码。",
+      "name": "名称",
+      "passwordPrompt": "连接时系统会提示您输入密码。",
       "port": "端口",
       "privateKeyPath": "私钥路径",
       "username": "用户名",
@@ -586,7 +586,7 @@
     },
     "description": "连接到远程计算机以查看在那里运行的 Claude Code 会话",
     "form": {
-      "authentication": "验证",
+      "authentication": "认证",
       "host": "主机",
       "password": "密码",
       "port": "端口",

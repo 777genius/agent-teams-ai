@@ -231,7 +231,7 @@
     },
     "anthropicContext": {
       "defaultSetting": "默认上下文设置",
-      "description": "此次发布的人择环境是整个团队范围内的：{{mode}}。使用引导运行时面板的限制上下文复选框来更改它。",
+      "description": "此次启动的 Anthropic 上下文是团队范围的：{{mode}}。使用主运行时面板的“限制上下文”复选框来更改它。",
       "limitEnabled": "启用 200K 限制"
     },
     "mcp": {
@@ -292,7 +292,7 @@
       "cancel": "取消",
       "delete": "删除",
       "editCode": "编辑代码",
-      "launch": "发送",
+      "launch": "启动",
       "remove": "消除",
       "stop": "停止",
       "task": "任务",
@@ -323,9 +323,9 @@
     "loadingSidebar": "正在加载团队侧边栏",
     "offline": {
       "offline": "团队离线",
-      "partialFailed": "上次发送中途失败",
-      "partialMissing": "上次发送中途失败 - {{missing}}/{{expected}} 队友没有加入",
-      "reconciling": "上次发布仍在协调中"
+      "partialFailed": "上次启动中途失败",
+      "partialMissing": "上次启动中途失败 - {{missing}}/{{expected}} 队友没有加入",
+      "reconciling": "上次启动仍在协调中"
     },
     "previous": "上一篇：{{paths}}",
     "removeMember": {
@@ -338,7 +338,7 @@
     "solo": "独奏",
     "status": {
       "active": "活跃",
-      "launching": "发送…",
+      "launching": "正在启动…",
       "running": "运行中"
     },
     "telemetry": {
@@ -526,8 +526,8 @@
       "cancel": "取消",
       "saveResolution": "保存分辨率",
       "editManually": "手动编辑",
-      "useOriginal": "使用原装",
-      "keepCurrent": "保持最新状态"
+      "useOriginal": "使用原始版本",
+      "keepCurrent": "保留当前版本"
     },
     "fullDiffLoading": {
       "titleOne": "准备完整的差异",
@@ -1274,8 +1274,8 @@
       "createSchedule": "创建计划任务",
       "creating": "正在创建…",
       "goToDashboard": "转到控制台",
-      "launchTeam": "发送团队",
-      "launching": "发送…",
+      "launchTeam": "启动团队",
+      "launching": "正在启动…",
       "relaunchTeam": "重新启动团队",
       "relaunching": "重新启动…",
       "saveChanges": "保存更改",
@@ -1302,7 +1302,7 @@
     },
     "prepare": {
       "action": {
-        "launch": "发送",
+        "launch": "启动",
         "relaunch": "重新启动"
       },
       "blocked": "运行时环境不可用 - {{action}} 被阻止",
@@ -1317,7 +1317,7 @@
       "someProvidersNeedAttention": "部分选定提供商需要注意。"
     },
     "prompt": {
-      "label": "迅速的",
+      "label": "提示词",
       "oneShotPrefix": "该提示词将被传递到",
       "oneShotSuffix": "用于一次性执行",
       "saved": "已保存",
@@ -1360,8 +1360,8 @@
       "openCodeLeadModelRequired": "OpenCode 引线需要选定的模型。",
       "openCodeTeammateRequired": "OpenCode 领导者需要至少一名 OpenCode 队友。",
       "selectWorkingDirectory": "选择工作目录（cwd）",
-      "fixMemberNames": "在发布前修复成员名称",
-      "memberNamesUnique": "发布前成员名称必须是唯一的"
+      "fixMemberNames": "启动前修复成员名称",
+      "memberNamesUnique": "启动前成员名称必须是唯一的"
     },
     "optionalSettings": {
       "relaunchTitle": "重新启动设置",
@@ -1377,8 +1377,8 @@
       "deleteForever": "永久删除",
       "deletePermanently": "永久删除",
       "deleteTeam": "删除团队",
-      "launching": "发送…",
-      "launchTeam": "发送团队",
+      "launching": "正在启动…",
+      "launchTeam": "启动团队",
       "relaunchTeam": "重新启动团队",
       "restore": "恢复",
       "restoreTeam": "恢复队伍",
@@ -1412,19 +1412,19 @@
     "noDescription": "无描述",
     "noMatches": "没有符合当前筛选条件的团队",
     "partial": {
-      "pending": "上次发布仍在协调中。",
-      "skipped": "上次发送跳过了队友。",
-      "skippedWithCount": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "skippedWithCount_few": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "skippedWithCount_many": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "skippedWithCount_one": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "skippedWithCount_other": "上次发布跳过了 {{count}}/{{expected}} 队友。",
-      "stopped": "上次发送在所有队友加入之前停止了。",
-      "stoppedWithCount": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_few": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_many": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_one": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。",
-      "stoppedWithCount_other": "上次发送在 {{count}}/{{expected}} 队友加入之前停止。"
+      "pending": "上次启动仍在协调中。",
+      "skipped": "上次启动跳过了队友。",
+      "skippedWithCount": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_few": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_many": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_one": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_other": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "stopped": "上次启动在所有队友加入之前停止了。",
+      "stoppedWithCount": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_few": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_many": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_one": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_other": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。"
     },
     "searchPlaceholder": "搜寻队伍…",
     "sections": {
@@ -1436,7 +1436,7 @@
     "status": {
       "active": "活跃",
       "deleted": "已删除",
-      "launching": "发送…",
+      "launching": "正在启动…",
       "offline": "离线",
       "partialFailure": "启动中途失败",
       "partialPending": "引导挂起",
@@ -1678,7 +1678,7 @@
       "more_many": "+{{count}} 更多"
     },
     "provisioning": {
-      "launchDetails": "发布详情",
+      "launchDetails": "启动详情",
       "launchDetailsDescription": "详细的团队启动进度、实时输出和 CLI 日志。"
     }
   },
@@ -1811,7 +1811,7 @@
       "syncWithTeammates": "与队友同步模型",
       "anthropicTeamWide": "全团队人性化",
       "runtimeInheritance": "领先运行时适用于队友，除非他们设置自己的提供商或模型。",
-      "anthropicContextLimit": "此次发布的 Anthropic 运行时的 200K 上下文限制是团队范围内的，包括自定义的 Anthropic 团队成员。"
+      "anthropicContextLimit": "此次启动的 Anthropic 运行时的 200K 上下文限制是团队范围内的，包括自定义的 Anthropic 团队成员。"
     },
     "runtimeLogs": {
       "autoRefresh": "自动刷新",
@@ -2103,12 +2103,12 @@
         "teammatesFailedRatio": "{{count}}/{{total}} 队友启动失败"
       },
       "skipped": {
-        "memberSkipped": "{{name}} 跳过本次发布",
-        "memberSkippedWithReason": "本次发布跳过了 {{name}} - {{reason}}",
+        "memberSkipped": "{{name}} 跳过本次启动",
+        "memberSkippedWithReason": "本次启动跳过了 {{name}} - {{reason}}",
         "memberSkippedCompact": "{{name}} 已跳过",
         "teammatesSkipped": "{{count}} 队友跳过",
         "teammatesSkippedList": "跳过的队友：{{list}}",
-        "teammatesSkippedRatio": "{{count}}/{{total}} 队友跳过了本次发布"
+        "teammatesSkippedRatio": "{{count}}/{{total}} 队友跳过了本次启动"
       },
       "joining": {
         "teammatesStillJoining": "{{count}} 队友仍在加入",
@@ -2125,17 +2125,17 @@
         "teamProvisionedAllJoined": "团队配置 - 所有 {{count}} 队友都加入",
         "teamProvisionedStillJoining": "团队已配置 - 队友仍在加入",
         "launchFinishedWithErrors": "启动完成但出现错误 - {{count}}/{{total}} 队友启动失败",
-        "launchContinuedSkipped": "发送继续 - {{count}}/{{total}} 队友跳过",
+        "launchContinuedSkipped": "启动继续 - {{count}}/{{total}} 队友跳过",
         "teamLaunchedLeadOnline": "团队启动 - 在线领导",
         "teamLaunchedAllJoined": "团队启动 - 所有 {{count}} 队友加入"
       },
       "panel": {
         "launchFailed": "启动失败",
-        "launchDetails": "发布详情",
+        "launchDetails": "启动详情",
         "launchFinishedWithErrors": "启动完成但有错误",
-        "launchContinuedSkipped": "与跳过的队友一起继续发送",
+        "launchContinuedSkipped": "与跳过的队友一起继续启动",
         "coreTeamReady": "核心团队准备就绪",
-        "finishingLaunch": "完成发送",
+        "finishingLaunch": "正在完成启动",
         "teamLaunched": "团队启动",
         "launchingTeam": "启动团队"
       }
