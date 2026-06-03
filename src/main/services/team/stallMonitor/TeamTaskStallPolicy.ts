@@ -304,6 +304,7 @@ function buildOpenCodeNoProgressEpochKey(args: {
 
 function buildAlertEvaluation(args: {
   task: TeamTask;
+  memberName?: string;
   branch: TaskStallBranch;
   signal: TaskStallSignal;
   progressSignal?: TaskProgressSignal;
@@ -313,6 +314,7 @@ function buildAlertEvaluation(args: {
   return {
     status: 'alert',
     taskId: args.task.id,
+    ...(args.memberName ? { memberName: args.memberName } : {}),
     branch: args.branch,
     signal: args.signal,
     ...(args.progressSignal ? { progressSignal: args.progressSignal } : {}),
@@ -330,6 +332,7 @@ function buildOpenCodeNoProgressAlertEvaluation(args: {
   return {
     status: 'alert',
     taskId: args.task.id,
+    memberName: args.owner,
     branch: 'work',
     signal: 'mid_turn_after_touch',
     progressSignal: 'unknown',
@@ -488,6 +491,7 @@ export class TeamTaskStallPolicy {
 
     return buildAlertEvaluation({
       task,
+      memberName: task.owner,
       branch: 'work',
       signal,
       progressSignal: progressClassification.signal,
@@ -595,6 +599,7 @@ export class TeamTaskStallPolicy {
 
     return buildAlertEvaluation({
       task,
+      memberName: resolvedReviewer.reviewer,
       branch: 'review',
       signal,
       touch: reviewContext.lastMeaningfulTouch,

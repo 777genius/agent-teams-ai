@@ -1,5 +1,9 @@
+import { createLogger } from '@shared/utils/logger';
+
 import type { TeamLogSourceTracker } from '../TeamLogSourceTracker';
 import type { TeamChangeEvent } from '@shared/types';
+
+const logger = createLogger('Service:ActiveTeamRegistry');
 
 interface TeamAliveProcessesReader {
   listAliveProcessTeams(): Promise<string[]>;
@@ -23,6 +27,8 @@ function unrefBackgroundTimer(timer: ReturnType<typeof setInterval>): void {
 
 export class ActiveTeamRegistry {
   private readonly activeTeams = new Set<string>();
+  private readonly activationInFlight = new Set<string>();
+  private activationGeneration = 0;
   private reconcileTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -41,8 +47,7 @@ export class ActiveTeamRegistry {
       (event.type === 'lead-activity' && event.detail !== 'offline')
     ) {
       if (!this.activeTeams.has(event.teamName)) {
-        this.activeTeams.add(event.teamName);
-        void this.teamLogSourceTracker.enableTracking(event.teamName, 'stall_monitor');
+        void this.activateTeam(event.teamName);
       }
       return;
     }
@@ -70,6 +75,7 @@ export class ActiveTeamRegistry {
   }
 
   async stop(): Promise<void> {
+    this.activationGeneration += 1;
     if (this.reconcileTimer) {
       clearInterval(this.reconcileTimer);
       this.reconcileTimer = null;
@@ -85,6 +91,7 @@ export class ActiveTeamRegistry {
   }
 
   async reconcile(): Promise<void> {
+    const reconcileGeneration = this.activationGeneration;
     const aliveTeams = await this.teamDataService.listAliveProcessTeams();
     const aliveSet = new Set(aliveTeams);
 
@@ -92,8 +99,7 @@ export class ActiveTeamRegistry {
       if (this.activeTeams.has(teamName)) {
         continue;
       }
-      this.activeTeams.add(teamName);
-      await this.teamLogSourceTracker.enableTracking(teamName, 'stall_monitor');
+      await this.activateTeam(teamName, reconcileGeneration);
     }
 
     for (const teamName of [...this.activeTeams]) {
@@ -102,6 +108,43 @@ export class ActiveTeamRegistry {
       }
       this.activeTeams.delete(teamName);
       await this.teamLogSourceTracker.disableTracking(teamName, 'stall_monitor');
+    }
+  }
+
+  private async activateTeam(
+    teamName: string,
+    expectedGeneration = this.activationGeneration
+  ): Promise<void> {
+    if (expectedGeneration !== this.activationGeneration) {
+      return;
+    }
+    if (this.activeTeams.has(teamName) || this.activationInFlight.has(teamName)) {
+      return;
+    }
+
+    this.activationInFlight.add(teamName);
+    const activationGeneration = this.activationGeneration;
+    try {
+      await this.teamLogSourceTracker.enableTracking(teamName, 'stall_monitor');
+      if (activationGeneration !== this.activationGeneration) {
+        await this.disableStaleActivation(teamName);
+        return;
+      }
+      this.activeTeams.add(teamName);
+    } catch (error) {
+      logger.warn(`Failed to enable stall-monitor tracking for ${teamName}: ${String(error)}`);
+    } finally {
+      this.activationInFlight.delete(teamName);
+    }
+  }
+
+  private async disableStaleActivation(teamName: string): Promise<void> {
+    try {
+      await this.teamLogSourceTracker.disableTracking(teamName, 'stall_monitor');
+    } catch (error) {
+      logger.warn(
+        `Failed to disable stale stall-monitor tracking for ${teamName}: ${String(error)}`
+      );
     }
   }
 }
