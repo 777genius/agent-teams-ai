@@ -2,155 +2,155 @@
   "store": {
     "actions": {
       "addCustom": "添加自定义",
-      "openDashboard": "打开挂板",
+      "openDashboard": "打开控制台",
       "refreshCatalog": "刷新目录"
     },
     "capabilities": {
-      "mcp": "磁共振:{{status}}",
-      "plugins": "插件: {{status}}",
-      "skills": "技能:{{status}}"
+      "mcp": "MCP：{{status}}",
+      "plugins": "插件：{{status}}",
+      "skills": "技能：{{status}}"
     },
-    "desktopOnly": "只有桌面应用程序可用 。",
+    "desktopOnly": "仅在桌面应用中可用。",
     "provider": {
-      "checkingStatus": "正在检查提供者状态...",
+      "checkingStatus": "正在检查提供商状态…",
       "connected": "已连接",
-      "loading": "正在装入...",
+      "loading": "加载中…",
       "needsSetup": "需要设置",
       "readyToConfigure": "准备配置",
       "unsupported": "不支持"
     },
     "runtime": {
-      "checkingAvailabilityDescription": "扩展需要配置的运行时间来管理插件,MCP服务器,技能和供应商连接.",
-      "checkingAvailabilityTitle": "检查扩展运行时间可用性",
-      "failedToStartDescription": "在运行时间通过启动健康检查之前,延长时间将被禁用。 打开Dash板修理或重新安装.",
-      "failedToStartTitle": "已找到配置的运行时间, 但启动失败",
-      "multimodelCapabilitiesDescription": "提供方的支持可因各节而异. 插件仅在运行时间明确宣布支持时显示 。",
-      "multimodelCapabilitiesTitle": "多模式运行时间能力",
-      "needsSignInDescription": "{{runtime}}被发现了{{version}},但插件安装被禁用,直到从Dashboard上签名.",
-      "needsSignInTitle": "{{runtime}}需要登录",
-      "notAvailableDescription": "扩展功能在运行时间安装之前被禁用. 打开Dash板安装并重试.",
-      "notAvailableTitle": "配置的运行时间不可用",
-      "readyDescription": "插件可以从此页{{versionSuffix}}安装.",
-      "readyTitle": "{{runtime}}准备好了",
-      "requiredForMutations": "安装或卸载扩展需要配置的运行时间. 从Dashboard上安装或修复."
+      "checkingAvailabilityDescription": "扩展需要配置的运行时来管理插件、MCP 服务器、技能和提供商连接。",
+      "checkingAvailabilityTitle": "检查扩展运行时可用性",
+      "failedToStartDescription": "在运行时通过其启动运行状况检查之前，扩展将被禁用。打开控制台进行修复或重新安装。",
+      "failedToStartTitle": "已找到配置的运行时但启动失败",
+      "multimodelCapabilitiesDescription": "不同功能的提供商支持可能不同。仅当运行时明确声明支持时才会显示插件。",
+      "multimodelCapabilitiesTitle": "多模型运行时功能",
+      "needsSignInDescription": "找到了 {{runtime}}{{version}}，但在您从控制台登录之前，插件安装将被禁用。",
+      "needsSignInTitle": "{{runtime}} 需要登录",
+      "notAvailableDescription": "在安装运行时之前，扩展将被禁用。打开控制台进行安装并重试。",
+      "notAvailableTitle": "配置的运行时不可用",
+      "readyDescription": "可以从此页面安装插件 {{versionSuffix}}。",
+      "readyTitle": "{{runtime}} 已准备好",
+      "requiredForMutations": "安装或卸载扩展需要配置的运行时。从控制台安装或修复它。"
     },
-    "sessionsRestartWarning": "运行会话在重新启动前不会接收扩展更改 。",
+    "sessionsRestartWarning": "正在运行的会话在重新启动之前不会获取扩展更改。",
     "tabs": {
       "apiKeys": {
-        "description": "在线服务的秘密密钥 。 在此添加它们, 这样插件, 服务器和集成可以连接和工作 。",
-        "label": "API 苏维埃社会主义共和国 键"
+        "description": "在线服务的密钥。将它们添加到此处，以便插件、服务器和集成可以连接和工作。",
+        "label": "API 密钥"
       },
       "mcpServers": {
-        "description": "连接到外部工具和应用程序 。 他们让运行时间读取数据或者做超过这个应用程序的行动.",
-        "label": "MCP 苏维埃社会主义共和国 服务器"
+        "description": "与外部工具和应用的连接。它们让运行时读取数据或执行此应用之外的操作。",
+        "label": "MCP 服务器"
       },
       "plugins": {
-        "description": "跑步时间加一点 在多模型模式中,当支持时,它们目前适用于Anthropic会话。 更广泛的提供者支助正在发展之中。",
+        "description": "运行时的小附加组件。在多模型模式下，它们当前适用于受支持的 Anthropic 会话。更广泛的提供商支持正在开发中。",
         "label": "插件"
       },
       "skills": {
-        "description": "为普通工作准备的指令。 它们有助于运行时间更一致地处理可重复的任务.",
+        "description": "常见工作的现成说明。它们帮助运行时更一致地处理可重复的任务。",
         "label": "技能"
       }
     },
     "title": "扩展"
   },
   "pluginsPanel": {
-    "activeFilters": "{{count}}活动",
-    "browseByFit": "以适合方式浏览",
+    "activeFilters": "{{count}} 活跃",
+    "browseByFit": "按适合浏览",
     "capabilities": "能力",
     "categories": "类别",
     "clearAllFilters": "清除所有过滤器",
     "clearFilters": "清除过滤器",
     "counts": {
-      "capabilities": "{{count}}能力",
-      "categories": "{{count}}类别",
-      "plugins": "{{count}}插件",
-      "capabilities_few": "{{count}}能力",
-      "capabilities_many": "{{count}}能力",
-      "capabilities_one": "{{count}}能力",
-      "capabilities_other": "{{count}}能力",
-      "categories_few": "{{count}}类别",
-      "categories_many": "{{count}}类别",
-      "categories_one": "{{count}}类别",
-      "categories_other": "{{count}}类别",
-      "plugins_few": "{{count}}插件",
-      "plugins_many": "{{count}}插件",
-      "plugins_one": "{{count}}插件",
-      "plugins_other": "{{count}}插件"
+      "capabilities": "{{count}} 能力",
+      "categories": "{{count}} 类别",
+      "plugins": "{{count}} 插件",
+      "capabilities_few": "{{count}} 能力",
+      "capabilities_many": "{{count}} 能力",
+      "capabilities_one": "{{count}} 能力",
+      "capabilities_other": "{{count}} 能力",
+      "categories_few": "{{count}} 类别",
+      "categories_many": "{{count}} 类别",
+      "categories_one": "{{count}} 类别",
+      "categories_other": "{{count}} 类别",
+      "plugins_few": "{{count}} 插件",
+      "plugins_many": "{{count}} 插件",
+      "plugins_one": "{{count}} 插件",
+      "plugins_other": "{{count}} 插件"
     },
     "empty": {
-      "description": "稍后检查新插件",
-      "filteredDescription": "尝试调整搜索或过滤标准",
-      "filteredTitle": "没有匹配过滤器的插件",
+      "description": "稍后回来查看新插件",
+      "filteredDescription": "尝试调整您的搜索或过滤条件",
+      "filteredTitle": "没有插件符合您的过滤器",
       "title": "没有可用的插件"
     },
-    "filterDescription": "按类别、能力或安装状态缩小目录。",
-    "installedOnly": "仅安装",
-    "providerSupportNotice": "目前只为Anthropic(克劳德)会议保证插件支持。 我们正在支持插件 跨所有代理。",
-    "resultsUpdateInstantly": "精炼过滤器时立即更新结果。",
-    "searchPlaceholder": "搜索插件...",
-    "selectedCount": "{{count}}选中",
-    "showing": "显示{{shown}}页:1{{total}}插件",
+    "filterDescription": "按类别、功能或安装状态缩小目录范围。",
+    "installedOnly": "仅已安装",
+    "providerSupportNotice": "目前仅保证 Anthropic (Claude) 会话的插件支持。我们正在努力支持所有智能体的插件。",
+    "resultsUpdateInstantly": "当您优化过滤器时，结果会立即更新。",
+    "searchPlaceholder": "搜索插件…",
+    "selectedCount": "已选择 {{count}}",
+    "showing": "正在显示 {{shown}} / {{total}} 个插件",
     "sort": {
       "category": "类别",
-      "nameAsc": "名称 A- Z",
-      "nameDesc": "名字为Z - A级",
-      "popular": "大众"
+      "nameAsc": "名称 A-Z",
+      "nameDesc": "名称 Z-A",
+      "popular": "受欢迎的"
     },
-    "activeFilters_few": "{{count}}活动",
-    "activeFilters_many": "{{count}}活动",
-    "activeFilters_one": "{{count}}活动",
-    "activeFilters_other": "{{count}}活动",
-    "selectedCount_few": "{{count}}选中",
-    "selectedCount_many": "{{count}}选中",
-    "selectedCount_one": "{{count}}选中",
-    "selectedCount_other": "{{count}}选中"
+    "activeFilters_few": "{{count}} 活跃",
+    "activeFilters_many": "{{count}} 活跃",
+    "activeFilters_one": "{{count}} 活跃",
+    "activeFilters_other": "{{count}} 活跃",
+    "selectedCount_few": "已选择 {{count}}",
+    "selectedCount_many": "已选择 {{count}}",
+    "selectedCount_one": "已选择 {{count}}",
+    "selectedCount_other": "已选择 {{count}}"
   },
   "customMcp": {
     "actions": {
       "add": "添加",
       "cancel": "取消",
       "install": "安装",
-      "installing": "安装中..."
+      "installing": "正在安装…"
     },
-    "description": "在没有目录的情况下手动添加服务器 。",
+    "description": "手动添加服务器，无需目录。",
     "errors": {
       "installFailed": "安装失败",
-      "invalidServerName": "无效的服务器名称 。 使用字母数字字符,破折号,下划线,点.",
-      "npmPackageRequired": "需要 npm 软件包名称",
-      "serverNameRequired": "需要服务器名称",
-      "serverUrlRequired": "需要服务器 URL"
+      "invalidServerName": "服务器名称无效。使用字母数字字符、破折号、下划线、点。",
+      "npmPackageRequired": "npm 包名是必需的",
+      "serverNameRequired": "服务器名称为必填项",
+      "serverUrlRequired": "服务器 URL 为必填项"
     },
     "fields": {
       "environmentVariables": "环境变量",
-      "headers": "页眉",
-      "npmPackage": "npm 软件包",
+      "headers": "标头",
+      "npmPackage": "npm 包",
       "scope": "范围",
       "serverName": "服务器名称",
-      "serverUrl": "服务器 URL",
+      "serverUrl": "服务器地址",
       "transport": "运输",
       "transportType": "运输类型",
-      "versionOptional": "版本( 可选)"
+      "versionOptional": "版本（可选）"
     },
     "title": "添加自定义 MCP 服务器",
     "transport": {
-      "httpSse": "ZXCVKEN0ZXCV / ZXCVTKEN1ZXCV",
-      "stdio": "Stdio (npm) (英语)."
+      "httpSse": "HTTP/SSE",
+      "stdio": "Stdio (npm)"
     },
     "placeholders": {
-      "headerName": "页眉 - Name",
-      "envVarName": "ENV_VAR_NAME 苏维埃社会主义共和国",
+      "headerName": "标头名称",
+      "envVarName": "ENV_VAR_NAME",
       "serverName": "我的服务器",
-      "latest": "最新消息",
+      "latest": "最新的",
       "value": "价值",
-      "serverUrl": "https://api.example.com/mcp 苏维埃社会主义共和国"
+      "serverUrl": "https://api.example.com/mcp"
     }
   },
   "mcpDetail": {
     "auth": {
-      "remoteMayNeedHeaders": "远程 MCP服务器可能仍然需要自定义头或API密钥,即使登记册没有描述它们. 如果安装后连接失败, 请检查提供者 docs 。",
-      "required": "此服务器需要认证"
+      "remoteMayNeedHeaders": "即使注册表没有描述，远程 MCP 服务器可能仍然需要自定义标头或 API 密钥。如果安装后连接失败，请检查提供商文档。",
+      "required": "该服务器需要认证"
     },
     "diagnostics": {
       "launchTarget": "发射目标"
@@ -158,15 +158,15 @@
     "form": {
       "autoFilled": "自动填充",
       "environmentVariables": "环境变量",
-      "headers": "页眉",
+      "headers": "标头",
       "scope": "范围",
       "serverName": "服务器名称"
     },
     "install": {
-      "httpTransport": "HTTP: (英语).{{transport}}",
-      "manualSetupDescription": "此服务器需要手动设置 。 检查仓库以获取安装指令 。",
+      "httpTransport": "HTTP：{{transport}}",
+      "manualSetupDescription": "该服务器需要手动设置。检查仓库以获取安装说明。",
       "manualSetupRequired": "需要手动设置",
-      "npmPackage": "注:{{package}}",
+      "npmPackage": "npm: {{package}}",
       "manage": "管理安装",
       "install": "安装服务器"
     },
@@ -177,25 +177,25 @@
     },
     "metadata": {
       "author": "作者",
-      "githubStars": "GitHub 星号",
+      "githubStars": "GitHub 之星",
       "hosting": "托管",
       "installType": "安装类型",
-      "license": "许可证",
-      "published": "已出版",
+      "license": "执照",
+      "published": "已发表",
       "source": "来源",
-      "updated": "更新",
+      "updated": "已更新",
       "version": "版本"
     },
     "scope": {
-      "local": "当地",
+      "local": "本地",
       "project": "项目"
     },
     "tools": {
-      "title": "工具 ({{count}})",
-      "title_few": "工具 ({{count}})",
-      "title_many": "工具 ({{count}})",
-      "title_one": "工具 ({{count}})",
-      "title_other": "工具 ({{count}})"
+      "title": "工具（{{count}}）",
+      "title_few": "工具（{{count}}）",
+      "title_many": "工具（{{count}}）",
+      "title_one": "工具（{{count}}）",
+      "title_other": "工具（{{count}}）"
     },
     "placeholders": {
       "serverName": "我的服务器"
@@ -205,86 +205,86 @@
     "actions": {
       "cancel": "取消",
       "createSkill": "创建技能",
-      "preparing": "准备...",
-      "reviewAndCreate": "审查和创建",
-      "reviewAndSave": "审查并保存",
+      "preparing": "正在准备…",
+      "reviewAndCreate": "审核和创建",
+      "reviewAndSave": "查看并保存",
       "saveSkill": "保存技能"
     },
     "advanced": {
-      "customDescription": "此技能使用自定义的标记下格式, 因此在此直接编辑 。",
-      "customTitle": "2. SKILL.md编辑器.",
-      "description": "大多数人可以跳过这个。 只有在您想要直接控制原始标记下文件时才打开 。",
+      "customDescription": "该技能使用自定义的 markdown 格式，所以直接在这里编辑。",
+      "customTitle": "2.SKILL.md 编辑器",
+      "description": "大多数人可以跳过这一点。仅当您想直接控制原始 Markdown 文件时才打开它。",
       "hide": "隐藏高级编辑器",
       "resetFromStructuredFields": "从结构化字段重置",
       "show": "显示高级编辑器",
-      "title": "4. 高级 SKILL.md 编辑器"
+      "title": "4.高级 SKILL.md 编辑器"
     },
     "basics": {
-      "description": "给这种技能一个明确的名字,选择谁可以使用它,并决定它应该住在哪里.",
-      "title": "1. 基本情况"
+      "description": "给这个技能一个清晰的名称，选择谁可以使用它，并决定它应该存在的位置。",
+      "title": "1. 基础知识"
     },
     "description": {
-      "create": "用简单的语言描述工作流程,审查将要创建的文件,然后保存它。",
-      "edit": "更新此技能, 审查由此产生的文件更改, 然后保存它 。"
+      "create": "用通俗易懂的语言描述工作流程，查看将创建的文件，然后保存。",
+      "edit": "更新此技能，查看生成的文件更改，然后保存。"
     },
     "extraFiles": {
-      "addedFiles": "添加的文件:",
+      "addedFiles": "添加的文件：",
       "assets": "资产",
-      "assetsDescription": "添加截图或捆绑的介质,前提是它们有助于解释工作流程.",
-      "description": "只有当支持文件、脚本或资产的技能确实需要时,才添加它们。",
-      "lockedForEdits": "根和文件夹已锁定用于编辑",
-      "optionalDescription": "添加将包含在审查中的启动文件,并与 `SKILL.md` 一起编写.",
+      "assetsDescription": "仅当屏幕截图或捆绑媒体有助于解释工作流程时才添加它们。",
+      "description": "仅当该技能确实需要时才添加支持文档、脚本或资产。",
+      "lockedForEdits": "根目录和文件夹已锁定以进行编辑",
+      "optionalDescription": "添加将包含在评论中并与“SKILL.md”一起编写的入门文件。",
       "optionalTitle": "可选文件",
-      "references": "参考资料",
-      "referencesDescription": "添加支持文件、 链接或运行时间可以查看的例子 。",
+      "references": "参考",
+      "referencesDescription": "添加运行时可以查看的支持文档、链接或示例。",
       "scripts": "脚本",
-      "scriptsDescription": "添加帮助命令或设置注释. 在分享这种技能之前仔细审查。",
+      "scriptsDescription": "添加帮助命令或设置注释。在分享此技能之前请仔细查看。",
       "title": "3. 额外文件"
     },
     "fields": {
       "compatibility": "兼容性",
-      "description": "说明",
+      "description": "描述",
       "folderName": "文件夹名称",
-      "folderNameHint": "我们从技能名称中自动提出这个建议,所以审查立即进行。",
-      "invocation": "应如何使用",
-      "license": "许可证",
+      "folderNameHint": "我们会根据技能名称自动建议此操作，以便立即进行审核。",
+      "invocation": "应该如何使用",
+      "license": "执照",
       "name": "技能名称",
-      "notes": "额外纸条或护栏",
-      "root": "在哪里储存",
-      "scope": "谁能用呢?",
-      "steps": "接下来的主要步骤",
-      "whenToUse": "什么时候才能找到这个"
+      "notes": "额外注释或护栏",
+      "root": "存放在哪里",
+      "scope": "谁可以使用它",
+      "steps": "需要遵循的主要步骤",
+      "whenToUse": "何时达到这个目标"
     },
     "instructions": {
-      "description": "这些章节为您生成技能文件, 因此您不需要编辑降标, 除非您想要 。",
-      "locked": "结构化字段被锁定,因为您切换到下面的手动`SKILL.md`编辑.",
-      "title": "2. 指示"
+      "description": "这些部分会为您生成技能文件，因此除非您愿意，否则不需要编辑 Markdown。",
+      "locked": "结构化字段被锁定，因为您切换到下面的手动“SKILL.md”编辑。",
+      "title": "2. 使用说明"
     },
     "invocation": {
-      "auto": "可自动使用",
-      "manualOnly": "只有在你要求的时候"
+      "auto": "可以自动使用",
+      "manualOnly": "只有当你要求的时候"
     },
     "placeholders": {
-      "description": "这种技巧能帮助什么",
-      "name": "写简洁的技巧名称",
-      "notes": "示例:列出缺失的测试,回归和风险假设.",
-      "steps": "1. 检查有关档案。\n2. 先解释主要风险。\n3. 提出最安全的解决办法。",
-      "whenToUse": "示例: 当任务为代码检讨或错误分类请求时使用此功能 。",
-      "license": "MIT 苏维埃社会主义共和国",
-      "compatibility": "圆形码,光标"
+      "description": "这项技能有什么帮助",
+      "name": "写出简洁的技能名称",
+      "notes": "示例：指出缺失的测试、回归和风险假设。",
+      "steps": "1.检查相关文件。 2、先说明主要风险。 3.提出最安全的修复建议。",
+      "whenToUse": "示例：当任务是代码审核或错误分类请求时使用此选项。",
+      "license": "麻省理工学院",
+      "compatibility": "Claude Code，光标"
     },
     "review": {
-      "creating": "创造技能",
-      "hint": "首先审查文件更改,然后在下一步确认保存 。",
+      "creating": "创建技能",
+      "hint": "首先查看文件更改，然后在下一步中确认保存。",
       "saving": "保存此技能"
     },
     "root": {
-      "codexOnly": "- 只有代码",
+      "codexOnly": "- 仅 Codex",
       "shared": "- 共享"
     },
     "scope": {
-      "project": "项目:{{project}}",
-      "projectUnavailable": "无法执行的项目",
+      "project": "项目：{{project}}",
+      "projectUnavailable": "项目不可用",
       "user": "用户"
     },
     "title": {
@@ -297,10 +297,10 @@
       "cancel": "取消",
       "delete": "删除",
       "deleteSkill": "删除技能",
-      "deleting": "正在删除...",
+      "deleting": "正在删除…",
       "editSkill": "编辑技能",
       "openFolder": "打开文件夹",
-      "openSkillFile": "打开 SKILL.md",
+      "openSkillFile": "打开技能.md",
       "retry": "重试"
     },
     "badges": {
@@ -308,381 +308,381 @@
       "autoUse": "自动使用",
       "hasScripts": "有脚本",
       "manualUse": "手动使用",
-      "references": "参考资料",
-      "storedIn": "存放于{{root}}"
+      "references": "参考",
+      "storedIn": "存储在 {{root}} 中"
     },
     "deleteDialog": {
-      "description": "删除此技能并移动到回收站?",
-      "descriptionWithName": "删除\"{{name}}\"并将其移动到垃圾堆? 如果需要, 您可以稍后从回收站恢复它 。",
-      "title": "删除技能?"
+      "description": "删除该技能并将其移至垃圾箱？",
+      "descriptionWithName": "删除“{{name}}”并将其移至垃圾箱？如果需要，您可以稍后从“垃圾箱”中恢复它。",
+      "title": "删除技能？"
     },
-    "descriptionFallback": "检查发现了技能元数据和原始指令.",
+    "descriptionFallback": "检查发现的技能元数据和原始指令。",
     "errors": {
       "deleteFailed": "删除技能失败",
-      "loadFailed": "无法装入此技能 。"
+      "loadFailed": "无法加载该技能。"
     },
     "files": {
-      "advancedDetails": "高级文件细节",
+      "advancedDetails": "高级文件详细信息",
       "assets": "资产",
-      "references": "参考资料",
+      "references": "参考",
       "scripts": "脚本",
-      "storedAt": "存放于"
+      "storedAt": "存储于"
     },
     "includes": {
       "assets": "资产",
-      "instructionsOnly": "只是技巧指导",
-      "references": "参考文献",
+      "instructionsOnly": "只是技能说明",
+      "references": "参考",
       "scripts": "脚本"
     },
     "invocation": {
-      "auto": "匹配任务时自动运行 。",
-      "manualOnly": "只有在你明确要求的时候才能跑"
+      "auto": "匹配任务时自动运行。",
+      "manualOnly": "仅当您明确要求时才运行。"
     },
     "issues": {
-      "bundledScripts": "此技能包括捆绑的脚本",
-      "reviewCarefully": "在使用之前仔细审查一下这个技能"
+      "bundledScripts": "该技能包括捆绑脚本",
+      "reviewCarefully": "使用此技能之前请仔细查看"
     },
-    "loading": "正在装入技能细节...",
+    "loading": "正在加载技能详细信息…",
     "scope": {
-      "personal": "你的个人能力",
-      "projectOnly": "只有这个项目"
+      "personal": "你的个人技能",
+      "projectOnly": "仅此项目"
     },
     "summary": {
       "howUsed": "如何使用",
-      "included": "怎么会这样",
-      "whoCanUse": "谁能用呢?"
+      "included": "附带什么",
+      "whoCanUse": "谁可以使用它"
     },
-    "titleFallback": "技能细节"
+    "titleFallback": "技能详情"
   },
   "skillsPanel": {
     "actions": {
       "createSkill": "创建技能",
-      "import": "导入"
+      "import": "进口"
     },
     "badges": {
       "assets": "资产",
       "hasScripts": "有脚本",
-      "needsAttention": "需要关注",
-      "references": "参考资料",
-      "storedIn": "存放于{{root}}"
+      "needsAttention": "需要注意",
+      "references": "参考",
+      "storedIn": "存储在 {{root}} 中"
     },
-    "configuredRuntime": "已配置的运行时间",
+    "configuredRuntime": "配置的运行时",
     "counts": {
-      "codexOnly": "{{count}} 苏维埃社会主义共和国 仅编码",
-      "personal": "{{count}}个人",
-      "project": "{{count}}项目",
-      "shared": "共享 {{count}}",
-      "total": "{{count}}共计",
-      "codexOnly_few": "{{count}} 苏维埃社会主义共和国 仅编码",
-      "codexOnly_many": "{{count}} 苏维埃社会主义共和国 仅编码",
-      "codexOnly_one": "{{count}} 苏维埃社会主义共和国 仅编码",
-      "codexOnly_other": "{{count}} 苏维埃社会主义共和国 仅编码",
-      "personal_few": "{{count}}个人",
-      "personal_many": "{{count}}个人",
-      "personal_one": "{{count}}个人",
-      "personal_other": "{{count}}个人",
-      "project_few": "{{count}}项目",
-      "project_many": "{{count}}项目",
-      "project_one": "{{count}}项目",
-      "project_other": "{{count}}项目",
-      "shared_few": "共享 {{count}}",
-      "shared_many": "共享 {{count}}",
-      "shared_one": "共享 {{count}}",
-      "shared_other": "共享 {{count}}",
-      "total_few": "{{count}}共计",
-      "total_many": "{{count}}共计",
-      "total_one": "{{count}}共计",
-      "total_other": "{{count}}共计"
+      "codexOnly": "{{count}} 仅限 Codex",
+      "personal": "{{count}} 个人",
+      "project": "{{count}} 项目",
+      "shared": "{{count}} 共享",
+      "total": "{{count}} 总计",
+      "codexOnly_few": "{{count}} 仅限 Codex",
+      "codexOnly_many": "{{count}} 仅限 Codex",
+      "codexOnly_one": "{{count}} 仅限 Codex",
+      "codexOnly_other": "{{count}} 仅限 Codex",
+      "personal_few": "{{count}} 个人",
+      "personal_many": "{{count}} 个人",
+      "personal_one": "{{count}} 个人",
+      "personal_other": "{{count}} 个人",
+      "project_few": "{{count}} 项目",
+      "project_many": "{{count}} 项目",
+      "project_one": "{{count}} 项目",
+      "project_other": "{{count}} 项目",
+      "shared_few": "{{count}} 共享",
+      "shared_many": "{{count}} 共享",
+      "shared_one": "{{count}} 共享",
+      "shared_other": "{{count}} 共享",
+      "total_few": "{{count}} 总计",
+      "total_many": "{{count}} 总计",
+      "total_one": "{{count}} 总计",
+      "total_other": "{{count}} 总计"
     },
     "empty": {
-      "noMatches": "没有与搜索相匹配的技能",
-      "noMatchesDescription": "尝试不同的搜索术语或切换过滤器 。",
+      "noMatches": "没有符合您搜索条件的技能",
+      "noMatchesDescription": "尝试不同的搜索词或切换过滤器。",
       "noSkills": "还没有技能",
-      "noSkillsDescription": "创建您的第一个教授可重复工作流程的技能, 或者导入您已经使用的工作流程 。"
+      "noSkillsDescription": "创建您的第一项技能来教授可重复的工作流程，或导入您已经使用的技能。"
     },
     "filters": {
       "all": "所有技能",
-      "codexOnly": "仅编码",
+      "codexOnly": "仅 Codex",
       "hasScripts": "有脚本",
-      "needsAttention": "需要关注",
-      "personal": "个人",
+      "needsAttention": "需要注意",
+      "personal": "个人的",
       "project": "项目",
       "shared": "共享"
     },
     "hero": {
-      "codexAvailable": "使用 `.codex` 当一个技能应该只保留 Codex 时.",
-      "codexUnavailable": "现有的`.codex`技能在这里仍然可以编辑,但新的 Codex 唯一技能需要启用 Codex 运行时间.",
-      "description": "技能是可重复使用的指示,有助于运行时间更一致地处理同样的任务.",
-      "guidance": "将个人技能用于所有你想要的习惯。 将工程技能用于仅在一个代码库内讲得通的工作流程.",
-      "personalContext": "你现在只看到个人技能",
-      "projectContext": "您看到的是{{project}}的技能 加上您的个人技能。",
+      "codexAvailable": "当技能应仅适用于 Codex 时，请使用“.codex”。",
+      "codexUnavailable": "现有的“.codex”技能在此处保持可编辑状态，但新的仅限 Codex 的技能需要启用 Codex 运行时。",
+      "description": "技能是可重用的指令，可帮助运行时更一致地处理同类任务。",
+      "guidance": "使用个人技能来养成你想要的随处习惯。将项目技能用于仅在一个代码库中有意义的工作流程。",
+      "personalContext": "您现在只能看到您的个人技能。",
+      "projectContext": "您正在看到 {{project}} 的技能以及您的个人技能。",
       "title": "教授可重复的工作"
     },
     "invocation": {
       "auto": "适合时自动运行",
-      "manualOnly": "只当您明确要求时运行"
+      "manualOnly": "仅在您明确要求时运行"
     },
     "loading": {
-      "loading": "正在装入技能...",
-      "refreshing": "刷新技能中..."
+      "loading": "技能加载中…",
+      "refreshing": "技能刷新…"
     },
-    "runtimeAudience": "`.claude`,`.cursor`和`.agents`的共享技能可以提供给{{audience}}. 存储在`.codex`中的技能在 Codex 支持可用时只保留 Codex.",
+    "runtimeAudience": "{{audience}} 可以使用“.claude”、“.cursor”和“.agents”中的共享技能。当 Codex 支持可用时，存储在“.codex”中的技能仅适用于 Codex。",
     "scope": {
-      "project": "这个项目",
-      "user": "个人"
+      "project": "此项目",
+      "user": "个人的"
     },
-    "searchPlaceholder": "以技能名称或它能帮助什么搜索...",
+    "searchPlaceholder": "按技能名称或它的帮助进行搜索…",
     "sections": {
       "personal": {
-        "description": "随处可见你想要的卫生用品和指示",
+        "description": "您想要的习惯和说明随处可见。",
         "title": "个人技能"
       },
       "project": {
-        "description": "只有这个密码库才有意义的工作流程。",
+        "description": "仅对此代码库有意义的工作流程。",
         "title": "项目技能"
       }
     },
     "sort": {
-      "label": "排序技能",
-      "name": "名称",
-      "recent": "近期"
+      "label": "排序技巧",
+      "name": "姓名",
+      "recent": "最近的"
     },
     "status": {
-      "hasScripts": "包括脚本, 所以仔细审查",
-      "needsAttention": "依赖它之前需要注意",
+      "hasScripts": "包含脚本，请仔细查看",
+      "needsAttention": "在依赖它之前需要注意",
       "ready": "准备使用"
     },
     "success": {
-      "created": "技能创建成功 。",
-      "imported": "成功导入技能 。",
-      "saved": "技能保存成功 。"
+      "created": "技能创建成功。",
+      "imported": "技能导入成功。",
+      "saved": "技能保存成功。"
     }
   },
   "pluginDetail": {
-    "unknown": "未知数",
+    "unknown": "未知",
     "metadata": {
       "author": "作者",
       "category": "类别",
       "source": "来源",
       "version": "版本",
       "capabilities": "能力",
-      "installs": "安装"
+      "installs": "安装量"
     },
     "scope": {
-      "label": "范围:",
+      "label": "范围：",
       "options": {
-        "user": "用户( 全球)",
-        "project": "项目(分摊)",
-        "local": "当地( 被忽略)"
+        "user": "用户（全球）",
+        "project": "项目（共享）",
+        "local": "本地（gitignored）"
       }
     },
     "links": {
       "homepage": "主页",
-      "contact": "联系人"
+      "contact": "接触"
     },
     "readme": {
-      "loading": "正在装入 ZXCVTKEN0ZXCV...",
-      "empty": "没有ZXCVKEN0ZXCV。"
+      "loading": "正在加载自述文件…",
+      "empty": "没有可用的自述文件。"
     }
   },
   "skillImport": {
     "title": "导入技能",
-    "description": "选择一个已有的技能文件夹, 审查要复制的内容, 然后导入到您支持的技能位置 。",
+    "description": "选择一个现有技能文件夹，查看将复制的内容，然后将其导入到您支持的技能位置之一。",
     "steps": {
       "chooseFolder": {
-        "title": "1. 选择技能文件夹",
-        "description": "此文件夹应该已经包含 `SKILL.md`, `Skill.md`, 或 `skill.md` 文件 。"
+        "title": "1.选择技能文件夹",
+        "description": "该文件夹应该已包含“SKILL.md”、“Skill.md”或“skill.md”文件。"
       },
       "location": {
-        "title": "2. 决定属于何处",
-        "description": "个人技能随处可见。 项目技能只为一个代码库出现."
+        "title": "2. 决定它所属的地方",
+        "description": "个人技能无处不在。项目技能仅针对一个代码库显示。"
       }
     },
     "fields": {
       "sourceFolder": "源文件夹",
       "destinationFolderName": "目标文件夹名称",
-      "audience": "谁能用呢?",
-      "storage": "在哪里储存"
+      "audience": "谁可以使用它",
+      "storage": "存放在哪里"
     },
     "placeholders": {
-      "defaultFolderName": "源文件夹名称的默认值"
+      "defaultFolderName": "默认为源文件夹名称"
     },
     "actions": {
       "browse": "浏览",
       "cancel": "取消",
-      "preparing": "准备...",
-      "reviewAndImport": "审查和导入",
+      "preparing": "正在准备…",
+      "reviewAndImport": "审核和导入",
       "importSkill": "导入技能",
       "backToImport": "返回导入"
     },
     "scope": {
       "user": "用户",
-      "project": "项目:{{project}}",
-      "projectUnavailable": "无法执行的项目"
+      "project": "项目：{{project}}",
+      "projectUnavailable": "项目不可用"
     },
     "rootSuffix": {
-      "codexOnly": "- 只有代码",
+      "codexOnly": "- 仅 Codex",
       "shared": "- 共享"
     },
-    "reviewHint": "首先审查复制的文件,然后在下一步确认导入.",
+    "reviewHint": "首先检查复制的文件，然后在下一步中确认导入。",
     "reviewLabel": "导入此技能",
     "errors": {
-      "missingSkillFile": "此文件夹看起来还不是技能 。 它需要一个SKILL.md,Skill.md,或技能Md文件.",
-      "symbolicLinks": "此文件夹包含符号链接 。 导入真实文件而不是链接 。",
-      "tooManyFiles": "此技能文件夹太大, 无法同时导入 。 删除额外文件并再次尝试 。",
-      "tooLarge": "此技能文件夹太大, 无法安全导入 。 调整大资产,再试一次。",
-      "invalidFolderName": "用字母、数字、点、破折号或下划线选择一个更简单的目的文件夹名称。",
-      "mustBeDirectory": "选择要导入的文件夹, 而不是一个文件 。",
-      "reviewFailed": "审查导入更改失败",
-      "importFailed": "导入技能失败"
+      "missingSkillFile": "这个文件夹看起来还不像技能。它需要 SKILL.md、Skill.md 或 Skill.md 文件。",
+      "symbolicLinks": "该文件夹包含符号链接。导入真实文件而不是链接。",
+      "tooManyFiles": "该技能文件夹太大，无法一次导入。删除多余的文件并重试。",
+      "tooLarge": "该技能文件夹太大，无法安全导入。修剪大量资产并重试。",
+      "invalidFolderName": "使用字母、数字、点、破折号或下划线选择一个更简单的目标文件夹名称。",
+      "mustBeDirectory": "选择要导入的文件夹，而不是单个文件。",
+      "reviewFailed": "无法审核导入更改",
+      "importFailed": "技能导入失败"
     }
   },
   "mcpPanel": {
     "sort": {
-      "nameAsc": "名称 A-Z",
-      "nameDesc": "名称 Z A",
+      "nameAsc": "名称 A→Z",
+      "nameDesc": "名称 Z→A",
       "toolsDesc": "大多数工具"
     },
     "health": {
-      "title": "MCP 苏维埃社会主义共和国 健康状况",
-      "checkingViaRuntime": "通过{{runtime}}检查已安装的ZXVTOKEN0ZXCV服务器.",
-      "lastChecked": "上次选中的 {{time}}",
-      "description": "从此页面运行诊断,以验证已安装的MCP连接.",
-      "checking": "正在检查...",
+      "title": "MCP 健康状况",
+      "checkingViaRuntime": "通过 {{runtime}} 检查已安装的 MCP 服务器…",
+      "lastChecked": "最后检查 {{time}}",
+      "description": "从此页面运行诊断以验证已安装的 MCP 连接。",
+      "checking": "检查…",
       "checkStatus": "检查状态"
     },
     "diagnostics": {
-      "title": "运行时间 MCP 诊断",
-      "serversCount": "{{count}}服务器",
+      "title": "运行时 MCP 诊断",
+      "serversCount": "{{count}} 服务器",
       "serversCount_one": "{{count}} 服务器",
-      "serversCount_other": "{{count}}服务器",
-      "waiting": "等待诊断结果...",
+      "serversCount_other": "{{count}} 服务器",
+      "waiting": "等待诊断结果…",
       "disableReasons": {
-        "checkingRuntimeStatus": "正在检查运行时间状态...",
-        "checkingRuntimeAvailability": "正在检查运行时间可用性...",
-        "runtimeFailedToStart": "已找到配置的运行时间, 但启动失败 。 打开Dash板进行修理或重新安装.",
-        "runtimeRequired": "需要配置的运行时间 。 从Dashboard上安装或修复."
+        "checkingRuntimeStatus": "正在检查运行时状态…",
+        "checkingRuntimeAvailability": "检查运行时可用性…",
+        "runtimeFailedToStart": "已找到配置的运行时，但启动失败。打开控制台进行修复或重新安装。",
+        "runtimeRequired": "需要配置的运行时。从控制台安装或修复它。"
       },
-      "serversCount_few": "{{count}}服务器",
-      "serversCount_many": "{{count}}服务器"
+      "serversCount_few": "{{count}} 服务器",
+      "serversCount_many": "{{count}} 服务器"
     },
-    "searchPlaceholder": "搜索 MCP 服务器...",
+    "searchPlaceholder": "搜索 MCP 服务器…",
     "runtime": {
-      "notAvailable": "{{runtime}}不详",
-      "notInstalled": "{{runtime}}未安装",
-      "requiredDescription": "MCP 健康检查要求{{runtime}}。去Dashboard安装或修复它。"
+      "notAvailable": "{{runtime}} 不可用",
+      "notInstalled": "{{runtime}} 未安装",
+      "requiredDescription": "MCP 运行状况检查需要 {{runtime}}。转至控制台进行安装或修复。"
     },
     "empty": {
       "searchTitle": "未找到服务器",
       "title": "没有可用的 MCP 服务器",
-      "searchDescription": "尝试不同的搜索名词",
-      "description": "稍后检查新服务器"
+      "searchDescription": "尝试不同的搜索词",
+      "description": "稍后回来查看新服务器"
     },
-    "loadMore": "装入更多"
+    "loadMore": "加载更多"
   },
   "apiKeys": {
-    "description": "安全存储 API 键,用于安装 MCP 服务器时自动填充.",
+    "description": "安全存储 API 密钥，以便在安装 MCP 服务器时自动填充。",
     "storage": {
-      "osKeychain": "密钥通过{{backend}}加密,并以限制文件权限存储(只有所有者).",
-      "localEncryption": "OS 密钥链不可用 - 密钥在本地用 AES-256加密. 为了加强保护,安装密钥环服务(gnome-keyring,kwallet)."
+      "osKeychain": "密钥通过 {{backend}} 加密并以受限文件权限存储（仅限所有者）。",
+      "localEncryption": "操作系统钥匙串不可用 - 密钥使用 AES-256 在本地加密。为了获得更强的保护，请安装密钥环服务（gnome-keyring、kwallet）。"
     },
     "actions": {
       "add": "添加 API 密钥",
-      "addFirst": "添加您的第一个密钥",
+      "addFirst": "添加您的第一把钥匙",
       "edit": "编辑",
-      "copied": "已复制！",
-      "copyEnvVarName": "复制环境变量名",
+      "copied": "复制了！",
+      "copyEnvVarName": "复制环境变量名称",
       "confirmDelete": "再次点击确认",
       "delete": "删除"
     },
     "empty": {
-      "title": "没有保存 ZXCVKEN0ZXCV 密钥",
-      "description": "在安装 MCP 服务器时将密钥添加到自动填充环境变量中."
+      "title": "未保存 API 密钥",
+      "description": "安装 MCP 服务器时添加密钥以自动填充环境变量。"
     },
     "form": {
       "addTitle": "添加 API 密钥",
       "editTitle": "编辑 API 密钥",
-      "addDescription": "在MCP服务器安装中存储用于自动填充的API密钥.",
-      "editDescription": "更新关键细节 。 您必须重新输入值 。",
-      "keychainUnavailable": "OS 键链不可用 - 用 AES-256 本地加密的键. 为OS级保护安装 gnome- keyring 。",
-      "name": "名称",
-      "namePlaceholder": "例如,OpenAI生产",
+      "addDescription": "存储 API 密钥以便在 MCP 服务器安装中自动填充。",
+      "editDescription": "更新关键细节。您必须重新输入该值。",
+      "keychainUnavailable": "操作系统钥匙串不可用 - 使用 AES-256 在本地加密的密钥。安装 gnome-keyring 以实现操作系统级别的保护。",
+      "name": "姓名",
+      "namePlaceholder": "例如 OpenAI 制作",
       "environmentVariableName": "环境变量名称",
-      "envVarPlaceholder": "例如,OPENAI_API_KEY",
-      "value": "数值",
-      "reenterValue": "重新输入密钥值",
-      "valuePlaceholder": "嘘...",
+      "envVarPlaceholder": "例如 OPENAI_API_KEY",
+      "value": "价值",
+      "reenterValue": "重新输入键值",
+      "valuePlaceholder": "sk-…",
       "scope": "范围",
-      "userScopeLabel": "用户( 全球)",
-      "projectScopeLabel": "项目:{{project}}",
-      "projectUnavailable": "无法执行的项目",
-      "boundTo": "界于{{path}}",
+      "userScopeLabel": "用户（全球）",
+      "projectScopeLabel": "项目：{{project}}",
+      "projectUnavailable": "项目不可用",
+      "boundTo": "绑定到 {{path}}",
       "cancel": "取消",
-      "saving": "正在保存...",
+      "saving": "保存…",
       "update": "更新",
       "save": "保存",
       "errors": {
-        "invalidEnvVarFormat": "用字母,数字,下划线 必须以字母或下划线开头 。",
-        "nameRequired": "需要名称",
-        "envVarRequired": "需要环境变量名称",
-        "invalidEnvVar": "无效的环境变量名称",
-        "valueRequired": "需要关键值",
-        "projectScopeRequiresProject": "工程范围 API 密钥需要运行中的项目",
+        "invalidEnvVarFormat": "使用字母、数字、下划线。必须以字母或下划线开头。",
+        "nameRequired": "姓名为必填项",
+        "envVarRequired": "环境变量名称为必填项",
+        "invalidEnvVar": "环境变量名称无效",
+        "valueRequired": "键值必填",
+        "projectScopeRequiresProject": "项目范围的 API 密钥需要一个活动项目",
         "saveFailed": "保存失败"
       }
     }
   },
   "skillReview": {
-    "title": "审查技能变化",
-    "description": "{{reviewLabel}}先预览文件系统更改. 在下文确认之前,没有文字。",
-    "noPreview": "没有可用的预览 。",
-    "confirmPromptPrefix": "查看下面的 diff, 然后使用",
-    "confirmPromptSuffix": "应用这些修改。",
-    "noChanges": "尚未检测到文件更改 。",
+    "title": "查看技能变更",
+    "description": "{{reviewLabel}} 首先预览文件系统更改。在您确认以下内容之前，不会写入任何内容。",
+    "noPreview": "没有可用的预览。",
+    "confirmPromptPrefix": "查看下面的差异，然后使用",
+    "confirmPromptSuffix": "应用这些更改。",
+    "noChanges": "尚未检测到文件更改。",
     "binaryBadge": "二进制",
-    "binaryPreviewHidden": "未显示二进制文件预览 。 文件将被复制为-is 。",
+    "binaryPreviewHidden": "不显示二进制文件预览。文件将按原样复制。",
     "summary": {
       "fileChanges": "{{count}} 文件更改",
       "fileChanges_one": "{{count}} 文件更改",
       "fileChanges_other": "{{count}} 文件更改",
-      "new": "{{count}}新设",
-      "updated": "更新 {{count}}",
-      "removed": "{{count}}删除",
+      "new": "{{count}} 新",
+      "updated": "{{count}} 已更新",
+      "removed": "{{count}} 已删除",
       "binary": "{{count}} 二进制",
       "fileChanges_few": "{{count}} 文件更改",
       "fileChanges_many": "{{count}} 文件更改"
     }
   },
   "mcpCard": {
-    "toolsCount": "{{count}}工具",
+    "toolsCount": "{{count}} 工具",
     "toolsCount_one": "{{count}} 工具",
-    "toolsCount_other": "{{count}}工具",
-    "envCount": "{{count}}内存",
-    "envCount_one": "{{count}} 掩体",
-    "envCount_other": "{{count}}内存",
-    "auth": "自动",
-    "byAuthor": "由{{author}}公司制作",
+    "toolsCount_other": "{{count}} 工具",
+    "envCount": "{{count}} 环境",
+    "envCount_one": "{{count}} 环境",
+    "envCount_other": "{{count}} 环境",
+    "auth": "授权",
+    "byAuthor": "通过 {{author}}",
     "hosting": {
-      "remote": "远程",
-      "local": "当地",
-      "both": "两者"
+      "remote": "偏僻的",
+      "local": "本地",
+      "both": "两个都"
     },
-    "toolsCount_few": "{{count}}工具",
-    "toolsCount_many": "{{count}}工具",
-    "envCount_few": "{{count}}内存",
-    "envCount_many": "{{count}}内存",
+    "toolsCount_few": "{{count}} 工具",
+    "toolsCount_many": "{{count}} 工具",
+    "envCount_few": "{{count}} 环境",
+    "envCount_many": "{{count}} 环境",
     "repository": "仓库",
     "website": "网站"
   },
   "installButton": {
-    "installing": "安装中...",
-    "removing": "删除...",
-    "done": "写好了",
+    "installing": "正在安装…",
+    "removing": "正在删除…",
+    "done": "完毕",
     "retry": "重试",
     "uninstall": "卸载",
     "install": "安装"
   },
   "pluginCard": {
-    "official": "官方"
+    "official": "官方的"
   }
 }

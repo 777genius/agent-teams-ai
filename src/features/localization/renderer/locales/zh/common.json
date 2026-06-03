@@ -15,49 +15,49 @@
     "copyToClipboard": "复制到剪贴板",
     "moreActions": "更多操作",
     "closeDialog": "关闭对话框",
-    "goToDashboard": "转到仪表盘",
+    "goToDashboard": "转到控制台",
     "or": "或",
     "hide": "隐藏",
     "resetSelection": "重置选择"
   },
   "code": {
-    "line": "{{line}}线",
-    "lines": "{{from}}-{{to}}",
-    "moreLines": "(单位:千美元){{count}}更多线条... )",
-    "moreLines_few": "(单位:千美元){{count}}更多线条... )",
-    "moreLines_many": "(单位:千美元){{count}}更多线条... )",
-    "moreLines_one": "(单位:千美元){{count}}更多线条... )",
-    "moreLines_other": "(单位:千美元){{count}}更多线条... )",
+    "line": "第 {{line}} 行",
+    "lines": "第 {{from}}-{{to}} 行",
+    "moreLines": "（{{count}} 更多行…）",
+    "moreLines_few": "（{{count}} 更多行…）",
+    "moreLines_many": "（{{count}} 更多行…）",
+    "moreLines_one": "（{{count}} 更多行…）",
+    "moreLines_other": "（{{count}} 更多行…）",
     "code": "代码",
     "preview": "预览",
-    "markdownPreview": "标记下预览",
-    "linesParenthesized": "(行数){{from}}- 怎么样?{{to}}页:1",
-    "mermaidSyntaxError": "美人鱼语法错误"
+    "markdownPreview": "Markdown 预览",
+    "linesParenthesized": "（第 {{from}}-{{to}} 行）",
+    "mermaidSyntaxError": "Mermaid 语法错误"
   },
   "contextBadge": {
-    "badge": "背景情况",
+    "badge": "上下文",
     "breakdown": {
-      "text": "文字",
-      "thinking": "思维"
+      "text": "文本",
+      "thinking": "思考"
     },
     "detailsAria": "上下文注入细节",
-    "sectionSummary": "{{title}} ({{count}}) ~ {{tokens}} 标志",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} Token",
     "sections": {
-      "claudeMdFiles": "CLAUDE.md 文档",
-      "mentionedFiles": "引用文件",
+      "claudeMdFiles": "CLAUDE.md 文件",
+      "mentionedFiles": "提及的文件",
       "taskCoordination": "任务协调",
-      "thinkingText": "思维+ 文字",
+      "thinkingText": "思考 + 文本",
       "toolOutputs": "工具输出",
-      "userMessages": "用户信件"
+      "userMessages": "用户消息"
     },
-    "title": "在此转弯时输入新上下文",
-    "tokenCount": "~{{tokens}} 符号",
-    "totalNewTokens": "新证券共计",
-    "turn": "转动 {{turn}}",
-    "sectionSummary_few": "{{title}} ({{count}}) ~ {{tokens}} 标志",
-    "sectionSummary_many": "{{title}} ({{count}}) ~ {{tokens}} 标志",
-    "sectionSummary_one": "{{title}} ({{count}}) ~ {{tokens}} 标志",
-    "sectionSummary_other": "{{title}} ({{count}}) ~ {{tokens}} 标志"
+    "title": "本轮注入的新上下文",
+    "tokenCount": "~{{tokens}} Token",
+    "totalNewTokens": "新增 Token 总数",
+    "turn": "第 {{turn}} 轮",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} Token",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} Token",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} Token",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} Token"
   },
   "locales": {
     "emptyMessage": "未找到语言。",
@@ -93,120 +93,120 @@
       "vi": "越南语",
       "zh": "中文"
     },
-    "searchPlaceholder": "搜索语言...",
-    "selectPlaceholder": "选择应用语言...",
-    "systemWithResolved": "系统 - {{locale}}"
+    "searchPlaceholder": "搜索语言…",
+    "selectPlaceholder": "选择应用语言…",
+    "systemWithResolved": "系统-{{locale}}"
   },
   "members": {
     "emptyMessage": "未找到成员。",
-    "searchPlaceholder": "搜索成员...",
+    "searchPlaceholder": "搜索成员…",
     "unassigned": "未分配",
     "teammateFallback": "队友"
   },
   "providerRuntime": {
     "codex": {
       "install": {
-        "checking": "检查中",
-        "downloading": "下载",
-        "installCli": "安装代码CLI",
-        "installing": "安装",
+        "checking": "检查",
+        "downloading": "正在下载",
+        "installCli": "安装 Codex CLI",
+        "installing": "安装中",
         "retryInstall": "重试安装"
       }
     }
   },
   "search": {
     "noMatchingSuggestions": "没有匹配的建议",
-    "searching": "搜索中...",
-    "searchingFiles": "正在搜索文件...",
-    "findInConversation": "在对话中查找...",
+    "searching": "正在搜索…",
+    "searchingFiles": "正在搜索文件…",
+    "findInConversation": "在对话中查找…",
     "resultCount": "{{current}} / {{total}}",
     "resultCountCapped": "{{current}} / {{total}}+",
-    "noResults": "无结果",
-    "previousResultShortcut": "上一个结果 (Shift+Enter)",
-    "nextResultShortcut": "下一个结果 (Enter)",
-    "closeShortcut": "关闭 (Esc)",
-    "nothingFound": "未找到内容",
-    "placeholder": "搜索..."
+    "noResults": "没有结果",
+    "previousResultShortcut": "上一个结果（Shift+Enter）",
+    "nextResultShortcut": "下一个结果（Enter）",
+    "closeShortcut": "关闭（Esc）",
+    "nothingFound": "未找到任何内容",
+    "placeholder": "搜索…"
   },
   "schedules": {
     "actions": {
-      "addSchedule": "添加计划",
+      "addSchedule": "添加计划任务",
       "clearFilters": "清除过滤器",
-      "createSchedule": "创建计划",
+      "createSchedule": "创建计划任务",
       "delete": "删除",
       "edit": "编辑",
       "pause": "暂停",
-      "resume": "继续",
-      "runNow": "快点跑"
+      "resume": "恢复",
+      "runNow": "立即运行"
     },
     "empty": {
-      "description": "在任何团队中创建一个调度, 将 Claude 任务执行自动化, 并带有 cron 表达式 。 所有球队的日程表将在此登场.",
-      "noMatches": "没有匹配当前过滤器的时间表",
-      "title": "无计划任务"
+      "description": "在任何团队上创建一个计划任务，以使用 cron 表达式自动执行 Claude 任务。所有团队的计划任务都会出现在这里。",
+      "noMatches": "没有与当前过滤器匹配的计划任务",
+      "title": "没有计划任务"
     },
     "filters": {
-      "allTeams": "所有小组"
+      "allTeams": "所有团队"
     },
     "item": {
-      "loadingRunHistory": "正在装入运行历史...",
-      "nextRun": "下一个:{{value}}",
-      "noRunsYet": "尚未运行"
+      "loadingRunHistory": "正在加载运行历史记录…",
+      "nextRun": "下次运行： {{value}}",
+      "noRunsYet": "尚无运行记录"
     },
-    "loading": "正在装入时间表...",
-    "searchPlaceholder": "搜索时间表...",
+    "loading": "加载计划任务…",
+    "searchPlaceholder": "搜索计划任务…",
     "status": {
-      "active": "活动",
-      "all": "全体",
-      "disabled": "已禁用",
-      "paused": "暂停"
+      "active": "活跃",
+      "all": "全部",
+      "disabled": "已停用",
+      "paused": "已暂停"
     },
-    "title": "附表"
+    "title": "计划任务"
   },
   "sessions": {
     "actions": {
       "hide": "隐藏",
-      "pin": "键",
-      "unhide": "弃"
+      "pin": "固定",
+      "unhide": "取消隐藏"
     },
     "empty": {
-      "noMatchingSessions": "没有匹配会话",
-      "noMatchingSessionsDescription": "这个项目还没有匹配的会话 。",
-      "noMatchingSessionsFiltered": "尝试另一个查询或重置提供者过滤器 。",
+      "noMatchingSessions": "没有匹配的会话",
+      "noMatchingSessionsDescription": "该项目还没有匹配的会话。",
+      "noMatchingSessionsFiltered": "尝试其他查询或重置提供商过滤器。",
       "noSessions": "未找到会话",
-      "noSessionsDescription": "这个项目还没有开庭",
-      "selectProject": "选择查看会话的工程"
+      "noSessionsDescription": "该项目还没有会话",
+      "selectProject": "选择一个项目来查看会话"
     },
     "errors": {
-      "loading": "装入会话出错"
+      "loading": "加载会话时出错"
     },
-    "loadedMatchingMore": "{{count}} 匹配会话至今已加载 - 滚动到加载更多 。",
-    "loadingMore": "正在装入更多会话...",
-    "pinned": "固定",
+    "loadedMatchingMore": "当前已加载 {{count}} 匹配会话 - 向下滚动以加载更多内容。",
+    "loadingMore": "正在加载更多会话…",
+    "pinned": "已固定",
     "scrollToLoadMore": "滚动加载更多",
     "search": {
       "clear": "清除会话搜索",
-      "placeholder": "搜索会话..."
+      "placeholder": "搜索会话…"
     },
     "selection": {
       "cancel": "取消选择",
       "exitMode": "退出选择模式",
-      "hideSelected": "隐藏选中的会话",
-      "pinSelected": "固定选中的会话",
+      "hideSelected": "隐藏选定的会话",
+      "pinSelected": "固定选定的会话",
       "selectSessions": "选择会话",
-      "selected": "{{count}}选中",
-      "unhideSelected": "取消选中会话",
-      "selected_few": "{{count}}选中",
-      "selected_many": "{{count}}选中",
-      "selected_one": "{{count}}选中",
-      "selected_other": "{{count}}选中"
+      "selected": "已选择 {{count}}",
+      "unhideSelected": "取消隐藏选定的会话",
+      "selected_few": "已选择 {{count}}",
+      "selected_many": "已选择 {{count}}",
+      "selected_one": "已选择 {{count}}",
+      "selected_other": "已选择 {{count}}"
     },
     "sort": {
-      "byContext": "按内容",
-      "byContextTooltip": "按上下文的消费排序",
+      "byContext": "按上下文",
+      "byContextTooltip": "按上下文消耗排序",
       "byRecentTooltip": "按最近排序",
-      "contextLoadedOnly": "背景排序只排序已装入的会话 。"
+      "contextLoadedOnly": "上下文排序仅对加载的会话进行排名。"
     },
-    "title": "会议",
+    "title": "会话",
     "visibility": {
       "hideHidden": "隐藏隐藏的会话",
       "showHidden": "显示隐藏的会话"
@@ -214,285 +214,285 @@
     "worktree": {
       "switch": "切换工作树"
     },
-    "loadedMatchingMore_few": "{{count}} 匹配会话至今已加载 - 滚动到加载更多 。",
-    "loadedMatchingMore_many": "{{count}} 匹配会话至今已加载 - 滚动到加载更多 。",
-    "loadedMatchingMore_one": "{{count}} 匹配会话至今已加载 - 滚动到加载更多 。",
-    "loadedMatchingMore_other": "{{count}} 匹配会话至今已加载 - 滚动到加载更多 。",
-    "failedToLoad": "装入会话失败",
-    "loading": "正在装入会话...",
+    "loadedMatchingMore_few": "当前已加载 {{count}} 匹配会话 - 向下滚动以加载更多内容。",
+    "loadedMatchingMore_many": "当前已加载 {{count}} 匹配会话 - 向下滚动以加载更多内容。",
+    "loadedMatchingMore_one": "当前已加载 {{count}} 匹配会话 - 向下滚动以加载更多内容。",
+    "loadedMatchingMore_other": "当前已加载 {{count}} 匹配会话 - 向下滚动以加载更多内容。",
+    "failedToLoad": "加载会话失败",
+    "loading": "正在加载会话…",
     "filter": {
       "title": "过滤会话"
     },
-    "count": "{{count}}届会",
-    "count_one": "{{count}}会议",
-    "count_other": "{{count}}届会",
-    "count_few": "{{count}}届会",
-    "count_many": "{{count}}届会",
-    "inProgress": "会话正在进行中..."
+    "count": "{{count}} 会话",
+    "count_one": "{{count}} 会话",
+    "count_other": "{{count}} 会话",
+    "count_few": "{{count}} 会话",
+    "count_many": "{{count}} 会话",
+    "inProgress": "会话正在进行中…"
   },
   "states": {
-    "loading": "加载中...",
+    "loading": "加载中…",
     "offline": "离线",
-    "online": "在线",
+    "online": "在线的",
     "unknown": "未知",
     "error": "错误"
   },
   "markdown": {
-    "imageFallback": "[图:{{label}}[. ]",
-    "largeContentNotice": "内容非常大({{count}}字符). 显示原始预览以保持用户界面响应 。",
-    "largeContentTitle": "大型内容显示为原始, 以防止 UI 冻结",
-    "raw": "原始内容",
+    "imageFallback": "[图片：{{label}}]",
+    "largeContentNotice": "内容非常大（{{count}} 字符）。显示原始预览以保持 UI 响应。",
+    "largeContentTitle": "大内容显示为原始内容以防止 UI 冻结",
+    "raw": "生的",
     "rawPreview": "原始预览",
-    "renderMarkdown": "降温标记",
-    "showAll": "全部显示",
+    "renderMarkdown": "渲染 Markdown",
+    "showAll": "显示全部",
     "showMore": "显示更多",
-    "showRaw": "显示原始",
+    "showRaw": "显示原始数据",
     "showingChars": "显示 {{shown}} / {{total}} 字符",
-    "largeContentNotice_few": "内容非常大({{count}}字符). 显示原始预览以保持用户界面响应 。",
-    "largeContentNotice_many": "内容非常大({{count}}字符). 显示原始预览以保持用户界面响应 。",
-    "largeContentNotice_one": "内容非常大({{count}}字符). 显示原始预览以保持用户界面响应 。",
-    "largeContentNotice_other": "内容非常大({{count}}字符). 显示原始预览以保持用户界面响应 。"
+    "largeContentNotice_few": "内容非常大（{{count}} 字符）。显示原始预览以保持 UI 响应。",
+    "largeContentNotice_many": "内容非常大（{{count}} 字符）。显示原始预览以保持 UI 响应。",
+    "largeContentNotice_one": "内容非常大（{{count}} 字符）。显示原始预览以保持 UI 响应。",
+    "largeContentNotice_other": "内容非常大（{{count}} 字符）。显示原始预览以保持 UI 响应。"
   },
   "terminal": {
-    "checkOutputForDetails": "检查上面的终端输出详情",
-    "closingInSeconds": "在 {{count}}s 关闭...",
-    "closingInSeconds_few": "在 {{count}}s 关闭...",
-    "closingInSeconds_many": "在 {{count}}s 关闭...",
-    "closingInSeconds_one": "在 {{count}}s 关闭...",
-    "closingInSeconds_other": "在 {{count}}s 关闭...",
-    "completedSuccessfully": "已成功完成",
-    "exitCode": "(出口代码{{code}}).",
+    "checkOutputForDetails": "检查上面的终端输出以了解详细信息",
+    "closingInSeconds": "结束于 {{count}}…",
+    "closingInSeconds_few": "结束于 {{count}}…",
+    "closingInSeconds_many": "结束于 {{count}}…",
+    "closingInSeconds_one": "结束于 {{count}}…",
+    "closingInSeconds_other": "结束于 {{count}}…",
+    "completedSuccessfully": "成功完成",
+    "exitCode": "（退出代码 {{code}}）",
     "processFailed": "进程失败",
     "title": "终端"
   },
   "tokens": {
-    "accumulatedWithoutDuplication": "整个届会累积而无重复",
-    "cacheRead": "缓存已读",
-    "cacheWrite": "快取写入",
-    "costUsd": "费用(ZXCVTKEN0ZXCV)",
-    "inputTokens": "输入键",
-    "model": "型号",
-    "outputTokens": "输出键",
-    "phase": "阶段{{phase}}页:1{{total}}",
-    "promptInputShare": "{{percent}} 快速输入的%",
+    "accumulatedWithoutDuplication": "整个会话持续时间累计，无重复",
+    "cacheRead": "缓存读取",
+    "cacheWrite": "缓存写入",
+    "costUsd": "成本（美元）",
+    "inputTokens": "输入 Token",
+    "model": "模型",
+    "outputTokens": "输出 Token",
+    "phase": "相 {{phase}}/{{total}}",
+    "promptInputShare": "提示词输入的 {{percent}}%",
     "taskCoordination": "任务协调",
-    "thinkingText": "思维+ 文字",
+    "thinkingText": "思考+文字",
     "toolOutputs": "工具输出",
-    "total": "共计",
-    "userMessages": "用户信件",
-    "visibleContext": "可见背景",
-    "includesClaudeMd": "包括CLUDE.md×{{count}}",
-    "claudeMd": "ZXCVKEN0ZXCV.MD 维基百科中的相关条目: 维基文库中相关的原始文献: 维基文库中相关的原始文献: 维基语录",
-    "mentionedFiles": "@ 文件",
-    "percentValue": "(单位:千美元){{percent}}(百分比)",
-    "approxTokens": "~{{tokens}} 符号",
-    "approxTokensParenthesized": "(~~) (中文(简体) ).{{tokens}}页:1"
+    "total": "总计",
+    "userMessages": "用户消息",
+    "visibleContext": "可见的上下文",
+    "includesClaudeMd": "包括。CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@文件",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} Token",
+    "approxTokensParenthesized": "(~{{tokens}})"
   },
   "list": {
     "actions": {
       "copyTeam": "复制团队",
       "createTeam": "创建团队",
-      "deleteForever": "永远删除",
+      "deleteForever": "永久删除",
       "deletePermanently": "永久删除",
       "deleteTeam": "删除团队",
-      "launching": "正在发射...",
-      "launchTeam": "发射队",
-      "relaunchTeam": "发射队",
+      "launching": "发射…",
+      "launchTeam": "发射团队",
+      "relaunchTeam": "重新启动团队",
       "restore": "恢复",
-      "restoreTeam": "恢复小组",
+      "restoreTeam": "恢复队伍",
       "retry": "重试",
-      "stopTeam": "停止小组",
-      "stopping": "正在停止中..."
+      "stopTeam": "停队",
+      "stopping": "停止…"
     },
     "status": {
-      "active": "活动",
-      "deleted": "删除",
-      "launching": "正在发射...",
+      "active": "活跃",
+      "deleted": "已删除",
+      "launching": "发射…",
       "offline": "离线",
-      "partialFailure": "发射失败的路段",
-      "partialPending": "拖带待处理",
+      "partialFailure": "启动中途失败",
+      "partialPending": "引导挂起",
       "partialSkipped": "启动跳过的成员",
-      "running": "运行"
+      "running": "跑步"
     },
     "partial": {
-      "pending": "上次发射还在调和",
-      "skipped": "上次发射已经跳过了队友",
-      "skippedWithCount": "最后一次发射跳过{{count}}/{{expected}}队友.",
-      "skippedWithCount_few": "最后一次发射跳过{{count}}/{{expected}}队友.",
-      "skippedWithCount_many": "最后一次发射跳过{{count}}/{{expected}}队友.",
-      "skippedWithCount_one": "最后一次发射跳过{{count}}/{{expected}}队友.",
-      "skippedWithCount_other": "最后一次发射跳过{{count}}/{{expected}}队友.",
-      "stopped": "最后一次发射在所有队友加入之前就停止了.",
-      "stoppedWithCount": "最后一次发射在{{count}}/{{expected}}队友加入之前停止.",
-      "stoppedWithCount_few": "最后一次发射在{{count}}/{{expected}}队友加入之前停止.",
-      "stoppedWithCount_many": "最后一次发射在{{count}}/{{expected}}队友加入之前停止.",
-      "stoppedWithCount_one": "最后一次发射在{{count}}/{{expected}}队友加入之前停止.",
-      "stoppedWithCount_other": "最后一次发射在{{count}}/{{expected}}队友加入之前停止."
+      "pending": "上次发布仍在协调中。",
+      "skipped": "上次发射跳过了队友。",
+      "skippedWithCount": "上次发布跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_few": "上次发布跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_many": "上次发布跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_one": "上次发布跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_other": "上次发布跳过了 {{count}}/{{expected}} 队友。",
+      "stopped": "上次发射在所有队友加入之前停止了。",
+      "stoppedWithCount": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_few": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_many": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_one": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_other": "上次发射在 {{count}}/{{expected}} 队友加入之前停止。"
     },
-    "noDescription": "无说明",
+    "noDescription": "无描述",
     "solo": "独奏",
-    "membersCount": "成员:{{count}}",
-    "membersCount_few": "成员:{{count}}",
-    "membersCount_many": "成员:{{count}}",
-    "membersCount_one": "成员:{{count}}",
-    "membersCount_other": "成员:{{count}}",
-    "all": "全体",
-    "moreCount": "+ 键{{count}}更多",
-    "moreCount_one": "+ 键{{count}}更多",
-    "moreCount_other": "+ 键{{count}}更多",
-    "moreCount_few": "+ 键{{count}}更多",
-    "moreCount_many": "+ 键{{count}}更多"
+    "membersCount": "成员：{{count}}",
+    "membersCount_few": "成员：{{count}}",
+    "membersCount_many": "成员：{{count}}",
+    "membersCount_one": "成员： {{count}}",
+    "membersCount_other": "成员：{{count}}",
+    "all": "全部",
+    "moreCount": "+{{count}} 更多",
+    "moreCount_one": "+{{count}} 更多",
+    "moreCount_other": "+{{count}} 更多",
+    "moreCount_few": "+{{count}} 更多",
+    "moreCount_many": "+{{count}} 更多"
   },
   "runtimeProvider": {
     "defaults": {
-      "scopeDescriptionAllProjects": "默认没有自己的 OpenCode 覆盖的每个工程 。",
-      "scopeDescriptionProject": "只覆盖选中的项目 。 运行队伍不变.",
-      "setAllProjectsDefault": "设置全部项目默认值",
-      "setProjectDefault": "设定工程默认",
-      "validationContext": "验证背景",
+      "scopeDescriptionAllProjects": "每个没有自己的 OpenCode 覆盖的项目的默认值。",
+      "scopeDescriptionProject": "仅覆盖选定的项目。运行团队没有变化。",
+      "setAllProjectsDefault": "设置所有项目默认值",
+      "setProjectDefault": "设置项目默认值",
+      "validationContext": "验证上下文",
       "projectOverrideContext": "项目覆盖上下文",
-      "selectProjectHint": "在测试本地模型或保存默认值之前选择一个项目 。",
-      "allProjectsHint": "测试使用{{project}}. 默认适用,除非项目有超标。",
-      "projectHint": "保存只覆盖 {{project}}."
+      "selectProjectHint": "在测试本地模型或保存默认值之前选择一个项目。",
+      "allProjectsHint": "测试使用 {{project}}。除非项目有覆盖，否则应用默认值。",
+      "projectHint": "保存仅覆盖 {{project}}。"
     }
   },
   "sessionContext": {
     "header": {
-      "title": "背景情况",
+      "title": "上下文",
       "closePanel": "关闭面板",
-      "phase": "阶段:",
-      "current": "当前",
-      "view": "视图:",
+      "phase": "阶段：",
+      "current": "当前的",
+      "view": "看法：",
       "category": "类别",
-      "bySize": "按大小"
+      "bySize": "按尺寸"
     },
     "metrics": {
-      "unavailable": "无法获取",
-      "contextUsed": "使用的背景",
-      "promptInput": "提示输入",
-      "visibleContext": "可见背景",
-      "ofContext": "上下文",
-      "ofPrompt": "时速",
-      "codexTelemetryUnavailable": "Codex 即时侧用尚未被当前运行时间遥测显示, 因此“ 即时输入” 和“ 上下文” 不可用, 而不是显示假零 。",
-      "sessionCost": "会议费用:",
-      "parentPlus": "父词 +",
-      "subagents": "子剂",
+      "unavailable": "不可用",
+      "contextUsed": "使用的上下文",
+      "promptInput": "提示词输入",
+      "visibleContext": "可见的上下文",
+      "ofContext": "上下文的",
+      "ofPrompt": "提示词的",
+      "codexTelemetryUnavailable": "当前运行时遥测尚未公开 Codex 提示词侧使用情况，因此提示词输入和使用的上下文保持不可用，而不是显示假零。",
+      "sessionCost": "会话费用：",
+      "parentPlus": "家长+",
+      "subagents": "子智能体",
       "details": "细节"
     },
     "help": {
       "contextUsed": {
-        "title": "使用的背景",
-        "description": "正在占用模型上下文窗口的快速输入加输出符 。"
+        "title": "使用的上下文",
+        "description": "提示词输入以及当前占据模型上下文窗口的输出 Token。"
       },
       "promptInput": {
-        "title": "提示输入",
-        "description": "托肯斯在一代之前就被送到模型了. 对于克劳德,这包括`input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+        "title": "提示词输入",
+        "description": "在生成之前发送到模型的 Token。对于 Claude 来说，这包括“input_tokens + cache_creation_input_tokens + cache_read_input_tokens”。"
       },
       "visibleContext": {
-        "title": "可见背景",
-        "description": "可检查的即时输入子集:文件,CLAUDE.md,工具输出,用户信息,以及您可以直接优化的类似注入."
+        "title": "可见的上下文",
+        "description": "提示词输入的可检查子集：文件、CLAUDE.md、工具输出、用户消息以及可以直接优化的类似注入。"
       },
       "availability": {
         "title": "可用性",
-        "description": "如果供应商运行时间尚未显示即时侧用量,则面板显示没有指标,而不是假装为零。"
+        "description": "如果提供商运行时尚未公开提示词侧使用情况，面板会将指标显示为不可用，而不是假装它们为零。"
       }
     },
     "items": {
-      "turn": "@ 翻转 {{turn}}",
-      "tokensApprox": "~{{tokens}} 符号",
-      "toolsCount": "{{count}}工具",
+      "turn": "@第 {{turn}} 轮",
+      "tokensApprox": "~{{tokens}} Token",
+      "toolsCount": "{{count}} 工具",
       "toolsCount_one": "{{count}} 工具",
-      "toolsCount_other": "{{count}}工具",
-      "toolsCount_few": "{{count}}工具",
-      "toolsCount_many": "{{count}}工具",
-      "itemsCount": "{{count}}项目",
-      "itemsCount_one": "{{count}}项目",
-      "itemsCount_other": "{{count}}项目",
-      "itemsCount_few": "{{count}}项目",
-      "itemsCount_many": "{{count}}项目",
-      "missing": "缺少",
-      "thinking": "思维",
-      "text": "文字"
+      "toolsCount_other": "{{count}} 工具",
+      "toolsCount_few": "{{count}} 工具",
+      "toolsCount_many": "{{count}} 工具",
+      "itemsCount": "{{count}} 项目",
+      "itemsCount_one": "{{count}} 项目",
+      "itemsCount_other": "{{count}} 项目",
+      "itemsCount_few": "{{count}} 项目",
+      "itemsCount_many": "{{count}} 项目",
+      "missing": "丢失的",
+      "thinking": "思考",
+      "text": "文本"
     },
-    "empty": "此会话中没有检测到上下文注入",
+    "empty": "此会话中未检测到上下文注入",
     "view": {
       "grouped": "分组",
-      "flat": "平面"
+      "flat": "平坦的"
     },
-    "claudeMdFiles": "CLAUDE.md 文档",
-    "mentionedFiles": "引用文件"
+    "claudeMdFiles": "CLAUDE.md 文件",
+    "mentionedFiles": "提及的文件"
   },
   "chat": {
     "subagent": {
-      "fallbackName": "副剂",
-      "shutdownConfirmed": "关闭确认",
+      "fallbackName": "子智能体",
+      "shutdownConfirmed": "已确认关闭",
       "summary": {
-        "tools": "{{count}}工具",
+        "tools": "{{count}} 工具",
         "tools_one": "{{count}} 工具",
-        "tools_other": "{{count}}工具",
-        "tools_few": "{{count}}工具",
-        "tools_many": "{{count}}工具"
+        "tools_other": "{{count}} 工具",
+        "tools_few": "{{count}} 工具",
+        "tools_many": "{{count}} 工具"
       },
       "meta": {
         "type": "类型",
-        "duration": "会期",
-        "model": "型号",
-        "id": "身份证"
+        "duration": "持续时间",
+        "model": "模型",
+        "id": "ID"
       },
       "metrics": {
-        "contextWindow": "背景窗口",
-        "contextUsage": "背景使用情况",
+        "contextWindow": "上下文窗口",
+        "contextUsage": "上下文使用",
         "mainContext": "主要背景",
-        "totalOutput": "产出共计",
-        "turns": "(单位:千美元){{count}}转弯).",
-        "turns_one": "(单位:千美元){{count}}转弯).",
-        "turns_other": "(单位:千美元){{count}}转弯).",
-        "subagentContext": "子代理上下文",
-        "phase": "{{phase}}阶段",
-        "turns_few": "(单位:千美元){{count}}转弯).",
-        "turns_many": "(单位:千美元){{count}}转弯)."
+        "totalOutput": "总产量",
+        "turns": "（{{count}} 转）",
+        "turns_one": "({{count}} 转)",
+        "turns_other": "（{{count}} 转）",
+        "subagentContext": "子智能体上下文",
+        "phase": "相 {{phase}}",
+        "turns_few": "（{{count}} 转）",
+        "turns_many": "（{{count}} 转）"
       },
       "trace": {
-        "title": "执行追踪"
+        "title": "执行跟踪"
       }
     },
     "user": {
-      "you": "你们",
+      "you": "你",
       "showMore": "显示更多",
-      "showLess": "显示较少",
-      "backgroundTask": "背景任务",
-      "exitCode": "出口 {{code}}",
-      "imagesAttached": "附上的 {{count}} 图像",
-      "imagesAttached_one": "{{count}} 图像附着",
-      "imagesAttached_few": "附上的 {{count}} 图像",
-      "imagesAttached_many": "附上的 {{count}} 图像",
-      "imagesAttached_other": "附上的 {{count}} 图像"
+      "showLess": "收起",
+      "backgroundTask": "后台任务",
+      "exitCode": "退出 {{code}}",
+      "imagesAttached": "附 {{count}} 图片",
+      "imagesAttached_one": "附 {{count}} 图片",
+      "imagesAttached_few": "附 {{count}} 图片",
+      "imagesAttached_many": "附 {{count}} 图片",
+      "imagesAttached_other": "附 {{count}} 图片"
     },
     "compact": {
       "toggle": "切换压缩内容",
-      "contextCompacted": "背景紧凑",
-      "freedTokens": "(单位:千美元){{tokens}}(释放)",
-      "phase": "{{phase}}阶段",
-      "conversationCompacted": "已压缩",
-      "summary": "将以前的信件摘要保存上下文 。 完整的对话历史保存在会话文件中.",
+      "contextCompacted": "上下文压缩",
+      "freedTokens": "({{tokens}} 已释放)",
+      "phase": "相 {{phase}}",
+      "conversationCompacted": "对话压缩",
+      "summary": "对之前的消息进行了总结以保存上下文。完整的对话历史记录保存在会话文件中。",
       "compacted": "压缩"
     },
     "executionTrace": {
       "empty": "无执行项目",
-      "nested": "巢穴: {{name}}",
-      "input": "投入"
+      "nested": "嵌套：{{name}}",
+      "input": "输入"
     },
     "items": {
-      "empty": "无要显示的项目"
+      "empty": "没有可显示的项目"
     },
     "tools": {
-      "teammateSpawned": "队友产卵",
-      "shutdownRequested": "要求关闭 - >",
+      "teammateSpawned": "队友生成",
+      "shutdownRequested": "请求关闭 ->",
       "noResultReceived": "未收到结果",
-      "duration": "会期: {{duration}}",
+      "duration": "持续时间：{{duration}}",
       "result": "结果",
       "write": {
-        "createdFile": "创建文件",
+        "createdFile": "已创建文件",
         "wroteToFile": "写入文件"
       },
       "skill": {
@@ -501,27 +501,27 @@
       }
     },
     "lastOutput": {
-      "requestInterrupted": "被用户中断的请求",
-      "planReadyForApproval": "准备核准计划"
+      "requestInterrupted": "请求被用户中断",
+      "planReadyForApproval": "计划已准备好等待批准"
     },
     "empty": {
       "icon": "💬",
-      "title": "没有对话历史",
-      "description": "此会话尚未包含任何消息 。"
+      "title": "没有对话历史记录",
+      "description": "此会话尚不包含任何消息。"
     },
     "context": {
-      "remainingPercent": "(单位:千美元){{percent}}剩余百分比)",
-      "count": "背景情况({{count}})",
-      "count_one": "背景情况({{count}})",
-      "count_other": "背景情况({{count}})",
-      "count_few": "背景情况({{count}})",
-      "count_many": "背景情况({{count}})"
+      "remainingPercent": "({{percent}}%剩余)",
+      "count": "上下文（{{count}}）",
+      "count_one": "上下文（{{count}}）",
+      "count_other": "上下文（{{count}}）",
+      "count_few": "上下文（{{count}}）",
+      "count_many": "上下文（{{count}}）"
     },
-    "scrollToBottom": "向下滚动",
-    "bottom": "底层",
+    "scrollToBottom": "滚动到底部",
+    "bottom": "底部",
     "teammateMessage": {
-      "message": "消息",
-      "resent": "拒绝",
+      "message": "信息",
+      "resent": "重新发送",
       "fallback": "队友消息"
     },
     "system": {
@@ -530,310 +530,310 @@
   },
   "tmuxInstaller": {
     "summaryTitle": "tmux 未安装",
-    "detectedOs": "探测到的OS: {{os}}",
-    "runtimePath": "运行时间路径: {{path}}",
-    "phase": "阶段:{{phase}}",
+    "detectedOs": "检测到的操作系统：{{os}}",
+    "runtimePath": "运行时路径：{{path}}",
+    "phase": "相位：{{phase}}",
     "actions": {
       "cancel": "取消",
-      "manualGuide": "手册指南",
+      "manualGuide": "手动引导",
       "hideSetupSteps": "隐藏设置步骤",
-      "showSetupSteps": "显示设置步骤( {{count}})",
-      "showSetupSteps_one": "显示设置步骤( {{count}})",
-      "showSetupSteps_other": "显示设置步骤( {{count}})",
+      "showSetupSteps": "显示设置步骤 ({{count}})",
+      "showSetupSteps_one": "显示设置步骤 ({{count}})",
+      "showSetupSteps_other": "显示设置步骤 ({{count}})",
       "recheck": "重新检查",
-      "showSetupSteps_few": "显示设置步骤( {{count}})",
-      "showSetupSteps_many": "显示设置步骤( {{count}})"
+      "showSetupSteps_few": "显示设置步骤 ({{count}})",
+      "showSetupSteps_many": "显示设置步骤 ({{count}})"
     },
     "installerProgress": "安装进度",
     "input": {
-      "placeholder": "向安装器发送输入",
+      "placeholder": "将输入发送给安装程序",
       "send": "发送输入",
-      "passwordNotice": "密码输入直接发送到安装终端,不添加到日志输出中."
+      "passwordNotice": "密码输入直接发送到安装程序终端，不会添加到日志输出中。"
     },
     "details": {
-      "show": "显示细节",
-      "hide": "隐藏细节"
+      "show": "显示详情",
+      "hide": "隐藏详细信息"
     }
   },
   "commandPalette": {
     "noRecentActivity": "最近没有活动",
-    "sessionsCount": "{{count}}届会",
-    "sessionsCount_one": "{{count}}会议",
-    "sessionsCount_other": "{{count}}届会",
+    "sessionsCount": "{{count}} 会话",
+    "sessionsCount_one": "{{count}} 会话",
+    "sessionsCount_other": "{{count}} 会话",
     "mode": {
       "searchProjects": "搜索项目",
       "searchAcrossProjects": "搜索所有项目",
-      "searchInProject": "在工程中搜索"
+      "searchInProject": "在项目中搜索"
     },
     "currentProject": "当前项目",
-    "global": "全球",
+    "global": "全球的",
     "placeholders": {
-      "projects": "搜索项目...",
-      "conversations": "搜索对话..."
+      "projects": "搜索项目…",
+      "conversations": "搜索对话…"
     },
     "empty": {
-      "noProjectsForQuery": "找不到“ {{query}}” 的项目",
-      "noProjects": "未找到工程",
-      "minChars": "至少输入2个要搜索的字符",
-      "noFastResults": "“{{query}}”的近期会议没有快速结果",
-      "noResults": "未发现“ {{query}}” 的结果"
+      "noProjectsForQuery": "未找到“{{query}}”的项目",
+      "noProjects": "未找到项目",
+      "minChars": "输入至少 2 个字符进行搜索",
+      "noFastResults": "在最近的会话中没有“{{query}}”的快速结果",
+      "noResults": "未找到“{{query}}”的结果"
     },
     "footer": {
-      "projectsCount": "{{count}}项目",
-      "projectsCount_one": "{{count}}项目",
-      "projectsCount_other": "{{count}}项目",
-      "results": "{{count}} {{speed}}结果",
-      "results_one": "{{count}} {{speed}}结果",
-      "results_other": "{{count}} {{speed}}结果",
-      "resultsAcrossProjects": "{{count}} {{speed}}所有项目的成果",
-      "resultsAcrossProjects_one": "{{count}} {{speed}}所有项目的结果",
-      "resultsAcrossProjects_other": "{{count}} {{speed}}所有项目的成果",
-      "fastPrefix": "快速",
-      "typeToSearch": "要搜索的类型",
+      "projectsCount": "{{count}} 项目",
+      "projectsCount_one": "{{count}} 项目",
+      "projectsCount_other": "{{count}} 项目",
+      "results": "{{count}} {{speed}} 结果",
+      "results_one": "{{count}} {{speed}} 结果",
+      "results_other": "{{count}} {{speed}} 结果",
+      "resultsAcrossProjects": "{{count}} {{speed}} 所有项目的结果",
+      "resultsAcrossProjects_one": "{{count}} {{speed}} 所有项目的结果",
+      "resultsAcrossProjects_other": "{{count}} {{speed}} 所有项目的结果",
+      "fastPrefix": "快速地",
+      "typeToSearch": "输入搜索",
       "navigate": "导航",
       "select": "选择",
       "open": "打开",
-      "global": "全球",
+      "global": "全球的",
       "close": "关闭",
-      "results_few": "{{count}} {{speed}}结果",
-      "results_many": "{{count}} {{speed}}结果",
-      "resultsAcrossProjects_few": "{{count}} {{speed}}所有项目的成果",
-      "resultsAcrossProjects_many": "{{count}} {{speed}}所有项目的成果",
-      "projectsCount_few": "{{count}}项目",
-      "projectsCount_many": "{{count}}项目",
+      "results_few": "{{count}} {{speed}} 结果",
+      "results_many": "{{count}} {{speed}} 结果",
+      "resultsAcrossProjects_few": "{{count}} {{speed}} 所有项目的结果",
+      "resultsAcrossProjects_many": "{{count}} {{speed}} 所有项目的结果",
+      "projectsCount_few": "{{count}} 项目",
+      "projectsCount_many": "{{count}} 项目",
       "upDownKey": "↑↓",
-      "escapeKey": "埃斯克语"
+      "escapeKey": "Esc 键"
     },
-    "sessionsCount_few": "{{count}}届会",
-    "sessionsCount_many": "{{count}}届会"
+    "sessionsCount_few": "{{count}} 会话",
+    "sessionsCount_many": "{{count}} 会话"
   },
   "tasksPanel": {
     "title": "任务",
-    "searchPlaceholder": "搜索任务...",
-    "pinned": "固定",
-    "groupByLabel": "分组方式:",
-    "groupByAria": "分组",
+    "searchPlaceholder": "搜索任务…",
+    "pinned": "已固定",
+    "groupByLabel": "分组依据：",
+    "groupByAria": "分组依据",
     "groupModes": {
-      "none": "无",
+      "none": "没有任何",
       "project": "项目",
       "time": "时间"
     },
-    "showArchived": "显示存档",
-    "hideArchived": "隐藏存档",
+    "showArchived": "显示已存档",
+    "hideArchived": "隐藏已存档",
     "empty": {
       "noMatchingTasks": "没有匹配的任务",
       "noTasks": "未找到任务"
     },
-    "teamLabel": "团队: {{team}}",
+    "teamLabel": "队伍：{{team}}",
     "showMore": "显示更多",
-    "showLess": "显示较少",
+    "showLess": "收起",
     "deleteConfirm": {
       "title": "删除任务",
-      "message": "将任务 #{{taskId}} 移动到垃圾堆中吗?",
+      "message": "将任务 #{{taskId}} 移至垃圾箱？",
       "confirmLabel": "删除",
       "cancelLabel": "取消"
     },
     "deleteFailed": {
       "title": "删除任务失败",
-      "fallbackMessage": "发生了意外错误",
-      "confirmLabel": "还好"
+      "fallbackMessage": "发生意外错误",
+      "confirmLabel": "好的"
     },
     "sort": {
-      "byTime": "时间",
-      "byUnread": "由未读",
-      "byProject": "按项目分列",
+      "byTime": "按时间",
+      "byUnread": "未读",
+      "byProject": "按项目",
       "byTeam": "按团队"
     }
   },
   "toolViewer": {
-    "input": "投入",
-    "replaceAll": "(替换全部)",
-    "noInputRecorded": "此工具调用没有记录输入 。",
+    "input": "输入",
+    "replaceAll": "（全部替换）",
+    "noInputRecorded": "没有记录此工具调用的输入。",
     "agent": {
-      "action": "动作",
+      "action": "行动",
       "teammate": "队友",
       "team": "团队",
-      "runtime": "运行时间",
+      "runtime": "运行时",
       "type": "类型",
-      "startupInstructionsHidden": "启动指令隐藏在UI中."
+      "startupInstructionsHidden": "启动指令隐藏在 UI 中。"
     }
   },
   "taskContextMenu": {
-    "unpin": "撤销",
-    "pin": "键",
+    "unpin": "取消固定",
+    "pin": "固定",
     "rename": "重命名",
-    "markUnread": "标记为未读",
-    "unarchive": "无存档",
-    "archive": "存档",
+    "markUnread": "Token 为未读",
+    "unarchive": "取消存档",
+    "archive": "档案",
     "deleteTask": "删除任务"
   },
   "updateDialog": {
     "closeDialog": "关闭对话框",
-    "updateAvailable": "可更新",
-    "updateReady": "更新准备",
-    "noReleaseNotes": "没有可用的发行注释 。",
+    "updateAvailable": "可用更新",
+    "updateReady": "更新就绪",
+    "noReleaseNotes": "没有可用的发行说明。",
     "viewOnGitHub": "在 GitHub 上查看",
-    "later": "回头见",
-    "restartNow": "重新开始",
+    "later": "之后",
+    "restartNow": "立即重新启动",
     "download": "下载"
   },
   "errorBoundary": {
-    "title": "出问题了",
-    "description": "应用程序中发生了意外错误 。 您可以尝试重新装入页面或重新设置错误状态 。",
-    "componentStack": "组件堆栈",
+    "title": "出了点问题",
+    "description": "应用中发生意外错误。您可以尝试重新加载页面或重置错误状态。",
+    "componentStack": "组件栈",
     "tryAgain": "再试一次",
-    "copied": "复制",
-    "copyErrorDetails": "复制错误细节",
-    "reportBugOnGitHub": "GitHub 上的报告错误",
-    "reloadApp": "重新装入 App",
-    "diagnosticsNotice": "GitHub 错误报告和复制的诊断包括错误消息,堆栈痕迹,app版本,活动标签,选中团队,任务上下文,以及环境细节."
+    "copied": "已复制",
+    "copyErrorDetails": "复制错误详细信息",
+    "reportBugOnGitHub": "在 GitHub 上报告错误",
+    "reloadApp": "重新加载应用",
+    "diagnosticsNotice": "GitHub 错误报告和复制的诊断信息包括错误消息、堆栈跟踪、应用版本、活动选项卡、选定的团队、任务上下文和环境详细信息。"
   },
   "runtimeBackendSelector": {
-    "label": "运行时间后端",
-    "resolved": "决定:{{backend}}",
-    "current": "当前",
-    "recommended": "建议",
-    "unavailable": "无法获取",
-    "cannotSelectYet": "此后端尚未选中 。",
-    "auto": "自动",
-    "autoCurrently": "自动( 目前: {{backend}})",
+    "label": "运行时后端",
+    "resolved": "已解决：{{backend}}",
+    "current": "当前的",
+    "recommended": "推荐",
+    "unavailable": "不可用",
+    "cannotSelectYet": "尚无法选择该后端。",
+    "auto": "汽车",
+    "autoCurrently": "自动（当前：{{backend}}）",
     "audience": {
-      "internal": "内部"
+      "internal": "内部的"
     },
     "states": {
-      "locked": "已锁定",
-      "disabled": "已禁用",
+      "locked": "锁定",
+      "disabled": "已停用",
       "authRequired": "需要认证",
-      "runtimeMissing": "缺少运行时间",
-      "degraded": "有辱人格",
-      "unavailable": "无法获取"
+      "runtimeMissing": "运行时缺失",
+      "degraded": "降级",
+      "unavailable": "不可用"
     }
   },
   "providerModelBadges": {
-    "checking": "检查中",
-    "unavailable": "无法获取",
+    "checking": "检查",
+    "unavailable": "不可用",
     "checkFailed": "检查失败",
     "free": "免费",
-    "freeTooltip": "由OpenCode元数据报告. 可用性和限制可能会改变。"
+    "freeTooltip": "由 OpenCode 元数据报告。可用性和限制可能会发生变化。"
   },
   "taskFilters": {
-    "status": "状态",
+    "status": "地位",
     "clearAll": "全部清除",
-    "selectAll": "全部选择",
+    "selectAll": "选择全部",
     "team": "团队",
-    "allTeams": "所有小组",
-    "searchTeams": "搜索组...",
-    "noTeamsFound": "没有找到团队",
+    "allTeams": "所有团队",
+    "searchTeams": "搜寻队伍…",
+    "noTeamsFound": "未找到队伍",
     "project": "项目",
     "allProjects": "所有项目",
-    "searchProjects": "搜索项目...",
-    "noProjects": "无项目",
+    "searchProjects": "搜索项目…",
+    "noProjects": "没有项目",
     "comments": "评论",
-    "apply": "应用",
+    "apply": "申请",
     "read": {
-      "all": "全体",
+      "all": "全部",
       "unread": "未读",
-      "read": "读取"
+      "read": "读"
     },
     "statusOptions": {
-      "todo": "TODO 苏维埃社会主义共和国",
-      "inProgress": "在ZXCVKEN0ZXCV",
-      "needsFix": "NEEDS ZXCV 1ZXCV",
-      "done": "DONE 苏维埃社会主义共和国",
-      "review": "REVIEW 苏维埃社会主义共和国",
-      "approved": "APPROVED 苏维埃社会主义共和国"
+      "todo": "待办事项",
+      "inProgress": "进行中",
+      "needsFix": "需要修复",
+      "done": "完毕",
+      "review": "审核",
+      "approved": "得到正式认可的"
     }
   },
   "sessionItem": {
-    "totalContext": "总背景: {{tokens}} 令牌",
-    "context": "背景:{{tokens}}",
-    "phase": "阶段{{phase}}编号:",
-    "compactedTo": "(与{{tokens}}协议)"
+    "totalContext": "总上下文：{{tokens}} Token",
+    "context": "上下文：{{tokens}}",
+    "phase": "{{phase}} 相：",
+    "compactedTo": "（压缩为 {{tokens}}）"
   },
   "notifications": {
     "row": {
       "team": "团队",
-      "subagent": "子剂",
-      "markAsRead": "标记为已读",
+      "subagent": "子智能体",
+      "markAsRead": "Token 为已读",
       "delete": "删除",
       "viewInSession": "在会话中查看"
     },
     "title": "通知",
-    "loading": "正在装入通知...",
+    "loading": "正在加载通知…",
     "actions": {
-      "markFilteredAsRead": "将过滤后标记为已读",
-      "markAllAsRead": "全部标为已读",
-      "markFilteredRead": "已过滤已读",
-      "markAllRead": "标记全部已读",
-      "clearFilteredNotifications": "清除过滤通知",
-      "clearAllNotifications": "清除全部通知",
+      "markFilteredAsRead": "将已过滤 Token 为已读",
+      "markAllAsRead": "全部 Token 为已读",
+      "markFilteredRead": "Token 已过滤阅读",
+      "markAllRead": "Token 全部已读",
+      "clearFilteredNotifications": "清除过滤的通知",
+      "clearAllNotifications": "清除所有通知",
       "clickToConfirm": "点击确认",
       "clearFiltered": "清除过滤",
       "clearAll": "全部清除"
     },
     "counts": {
-      "unreadInFilter": "{{count}} 过滤器未读",
-      "unreadInFilter_one": "{{count}} 过滤器未读",
-      "unreadInFilter_few": "{{count}} 过滤器未读",
-      "unreadInFilter_many": "{{count}} 过滤器未读",
-      "unreadInFilter_other": "{{count}} 过滤器未读",
-      "inFilter": "{{count}}在过滤器中",
-      "inFilter_one": "{{count}}在过滤器中",
-      "inFilter_few": "{{count}}在过滤器中",
-      "inFilter_many": "{{count}}在过滤器中",
-      "inFilter_other": "{{count}}在过滤器中",
-      "unread": "{{count}}未读",
-      "unread_one": "{{count}}未读",
-      "unread_few": "{{count}}未读",
-      "unread_many": "{{count}}未读",
-      "unread_other": "{{count}}未读",
-      "total": "{{count}}共计",
-      "total_one": "{{count}}共计",
-      "total_few": "{{count}}共计",
-      "total_many": "{{count}}共计",
-      "total_other": "{{count}}共计"
+      "unreadInFilter": "{{count}} 过滤器中未读",
+      "unreadInFilter_one": "{{count}} 过滤器中未读",
+      "unreadInFilter_few": "{{count}} 过滤器中未读",
+      "unreadInFilter_many": "{{count}} 过滤器中未读",
+      "unreadInFilter_other": "{{count}} 过滤器中未读",
+      "inFilter": "过滤器中的 {{count}}",
+      "inFilter_one": "过滤器中的 {{count}}",
+      "inFilter_few": "过滤器中的 {{count}}",
+      "inFilter_many": "过滤器中的 {{count}}",
+      "inFilter_other": "过滤器中的 {{count}}",
+      "unread": "{{count}} 未读",
+      "unread_one": "{{count}} 未读",
+      "unread_few": "{{count}} 未读",
+      "unread_many": "{{count}} 未读",
+      "unread_other": "{{count}} 未读",
+      "total": "{{count}} 总计",
+      "total_one": "{{count}} 总计",
+      "total_few": "{{count}} 总计",
+      "total_many": "{{count}} 总计",
+      "total_other": "{{count}} 总计"
     },
     "filters": {
-      "other": "其他人员"
+      "other": "其他"
     },
     "empty": {
       "noMatching": "没有匹配的通知",
       "noNotifications": "无通知",
       "tryDifferentFilter": "尝试不同的过滤器",
-      "allCaughtUp": "你们都赶上了!"
+      "allCaughtUp": "你们都被抓住了！"
     }
   },
   "updates": {
-    "restartToUpdate": "重新开始更新",
-    "updateApp": "更新应用程序",
-    "downloadedRestartTooltip": "更新下载, 重新启动以应用",
+    "restartToUpdate": "重启即可更新",
+    "updateApp": "更新应用",
+    "downloadedRestartTooltip": "更新已下载，重启即可应用",
     "newVersionAvailable": "新版本可用",
-    "updatingApp": "更新应用程序",
-    "updateReady": "更新就绪",
-    "restartNow": "重新开始"
+    "updatingApp": "正在更新应用",
+    "updateReady": "更新准备就绪",
+    "restartNow": "立即重新启动"
   },
   "layout": {
     "github": "GitHub",
-    "discord": "调色板",
+    "discord": "不和谐",
     "expandSidebar": "展开侧边栏",
-    "collapseSidebarShortcut": "折叠侧边栏( {{shortcut}})",
-    "sidebarView": "边栏视图",
+    "collapseSidebarShortcut": "折叠侧边栏（{{shortcut}}）",
+    "sidebarView": "侧边栏视图",
     "resizeSidebar": "调整侧边栏大小",
-    "closeTab": "关闭标签",
-    "openedFromSearch": "从搜索打开",
+    "closeTab": "关闭选项卡",
+    "openedFromSearch": "从搜索中打开",
     "pinnedSession": "固定会话",
-    "jumpToSection": "跳转到区域",
-    "newTab": "新建标签",
-    "newTabDashboard": "新建标签( 磁盘)",
+    "jumpToSection": "跳转至部分",
+    "newTab": "新标签页",
+    "newTabDashboard": "新选项卡（控制台）",
     "refreshSession": "刷新会话",
-    "refreshSessionWithShortcut": "刷新会话( {{shortcut}})",
-    "loadingTab": "正在装入标签",
+    "refreshSessionWithShortcut": "刷新会话 ({{shortcut}})",
+    "loadingTab": "加载选项卡",
     "menu": {
       "teams": "团队",
       "settings": "设置",
       "extensions": "扩展",
       "search": "搜索",
-      "schedules": "附表",
+      "schedules": "计划任务",
       "docs": "文档",
       "exportMarkdown": "导出为 Markdown",
       "exportJson": "导出为 JSON",
@@ -841,38 +841,38 @@
       "analyzeSession": "分析会话"
     },
     "tabMenu": {
-      "closeTabs": "关闭 {{count}} 标签",
-      "closeTabs_one": "关闭 {{count}} 标签",
-      "closeTabs_few": "关闭 {{count}} 标签",
-      "closeTabs_many": "关闭 {{count}} 标签",
-      "closeTabs_other": "关闭 {{count}} 标签",
-      "closeTab": "关闭标签",
-      "closeOtherTabs": "关闭其他标签",
-      "splitRight": "向右分割",
-      "splitLeft": "向左分割",
-      "pinToSidebar": "平移到侧边栏",
-      "unpinFromSidebar": "从侧边栏撤消",
+      "closeTabs": "关闭 {{count}} 选项卡",
+      "closeTabs_one": "关闭 {{count}} 选项卡",
+      "closeTabs_few": "关闭 {{count}} 选项卡",
+      "closeTabs_many": "关闭 {{count}} 选项卡",
+      "closeTabs_other": "关闭 {{count}} 选项卡",
+      "closeTab": "关闭选项卡",
+      "closeOtherTabs": "关闭其他选项卡",
+      "splitRight": "右分割",
+      "splitLeft": "左分割",
+      "pinToSidebar": "固定到侧边栏",
+      "unpinFromSidebar": "从侧边栏取消固定",
       "hideFromSidebar": "从侧边栏隐藏",
-      "unhideFromSidebar": "从侧边栏解开",
-      "closeAllTabs": "关闭全部标签"
+      "unhideFromSidebar": "从侧边栏取消隐藏",
+      "closeAllTabs": "关闭所有选项卡"
     },
     "sections": {
       "team": "团队",
-      "sessions": "会议",
-      "kanban": "坎班语Name",
+      "sessions": "会话",
+      "kanban": "看板",
       "claudeLogs": "日志",
-      "messages": "信件"
+      "messages": "消息"
     }
   },
   "editorFormatting": {
-    "bold": "粗体",
+    "bold": "大胆的",
     "italic": "斜体",
     "strike": "罢工",
     "code": "代码"
   },
   "diff": {
-    "changed": "已更改",
-    "noChangesDetected": "未检测到变化"
+    "changed": "改变了",
+    "noChangesDetected": "未检测到任何变化"
   },
   "codexLogin": {
     "copyLoginLinkAndCode": "复制 ChatGPT 登录链接和代码",
@@ -888,13 +888,13 @@
     "restore": "恢复"
   },
   "context": {
-    "local": "当地",
+    "local": "本地",
     "switchingTo": "切换到 {{workspace}}",
-    "loadingWorkspace": "正在装入工作空间",
+    "loadingWorkspace": "正在加载工作区",
     "switchWorkspace": "切换工作空间"
   },
   "repositories": {
-    "noneAvailable": "没有可用的寄存器",
+    "noneAvailable": "没有可用的仓库",
     "remove": "删除仓库"
   },
   "export": {
@@ -902,26 +902,26 @@
     "sessionTitle": "导出会话"
   },
   "brand": {
-    "claude": "Claude"
+    "claude": "克洛德"
   },
   "sessionReport": {
     "noSessionData": "没有可用的会话数据",
-    "title": "会议报告"
+    "title": "会话报告"
   },
   "sessionFilters": {
     "project": {
-      "selectProject": "选择工程"
+      "selectProject": "选择项目"
     }
   },
   "tasks": {
     "date": {
-      "updatedPrefix": "上调",
-      "updatedYesterday": "昨天上楼了",
-      "yesterday": "昨日来"
+      "updatedPrefix": "更新",
+      "updatedYesterday": "昨天更新",
+      "yesterday": "昨天"
     },
     "reviewState": {
-      "needsFix": "需要修改"
+      "needsFix": "需要修复"
     },
-    "unassigned": "未指定"
+    "unassigned": "未分配的"
   }
 }

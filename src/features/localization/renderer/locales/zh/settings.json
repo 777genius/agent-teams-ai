@@ -1,22 +1,22 @@
 {
   "tabs": {
     "advanced": {
-      "description": "动力用户选项:导出/导入配置,重设默认,以及原始配置编辑.",
+      "description": "高级用户选项：导出/导入配置、重置默认值和编辑原始配置。",
       "label": "高级"
     },
     "general": {
-      "description": "核心应用程序首选如主题,语言,显示密度,以及启动行为.",
+      "description": "核心应用首选项，例如主题、语言、显示密度和启动行为。",
       "label": "常规"
     },
-    "infoAriaLabel": "何谓{{label}}? 。 。 。",
+    "infoAriaLabel": "{{label}} 是什么？",
     "notifications": {
-      "description": "控制何时以及如何通知代理活动、任务完成和错误。",
+      "description": "控制您何时以及如何收到有关智能体活动、任务完成和错误的通知。",
       "label": "通知"
     }
   },
   "view": {
-    "description": "管理您的应用程序偏好",
-    "loading": "正在装入设置...",
+    "description": "管理您的应用首选项",
+    "loading": "正在加载设置…",
     "title": "设置"
   },
   "runtimeProvider": {
@@ -26,139 +26,139 @@
     },
     "defaults": {
       "allProjects": "所有项目",
-      "allProjectsHint": "测试使用{{project}}. 默认适用,除非项目有超标。",
-      "loadingContexts": "正在装入上下文...",
-      "projectHint": "保存只覆盖 {{project}}.",
+      "allProjectsHint": "测试使用 {{project}}。除非项目有覆盖，否则应用默认值。",
+      "loadingContexts": "正在加载上下文…",
+      "projectHint": "保存仅覆盖 {{project}}。",
       "projectOverrideContext": "项目覆盖上下文",
-      "scopeDescriptionAllProjects": "默认没有自己的 OpenCode 覆盖的每个工程 。",
-      "scopeDescriptionProject": "只覆盖选中的项目 。 运行队伍不变.",
-      "selectProjectContext": "选择工程上下文",
-      "selectProjectHint": "在测试本地模型或保存默认值之前选择一个项目 。",
+      "scopeDescriptionAllProjects": "每个没有自己的 OpenCode 覆盖的项目的默认值。",
+      "scopeDescriptionProject": "仅覆盖选定的项目。运行团队没有变化。",
+      "selectProjectContext": "选择项目上下文",
+      "selectProjectHint": "在测试本地模型或保存默认值之前选择一个项目。",
       "selectValidationContext": "选择验证上下文",
-      "setAllProjectsDefault": "设置全部项目默认值",
-      "setProjectDefault": "设定工程默认",
-      "thisProject": "这个项目",
+      "setAllProjectsDefault": "设置所有项目默认值",
+      "setProjectDefault": "设置项目默认值",
+      "thisProject": "此项目",
       "title": "OpenCode 默认值",
-      "validationContext": "验证背景"
+      "validationContext": "验证上下文"
     },
     "diagnostics": {
-      "copied": "复制的诊断",
-      "copiedShort": "复制",
+      "copied": "已复制诊断信息",
+      "copiedShort": "已复制",
       "copy": "复制诊断",
-      "hints": "提示",
-      "likelyCause": "可能的原因是:",
-      "windowsSymlinkAdminHint": "Windows: 以管理员身份运行 Agent Teams AI"
+      "hints": "提示词",
+      "likelyCause": "可能的原因：",
+      "windowsSymlinkAdminHint": "Windows：以管理员身份运行 Agent Teams AI"
     },
     "models": {
-      "alreadyDefault": "这已经是所选的 OpenCode 默认值 。",
-      "empty": "没有找到模型 。",
-      "emptyFree": "没有找到免费模型 。",
-      "emptyRecommended": "未找到推荐的模型 。",
-      "emptyRecommendedFree": "未找到推荐的自由模型 。",
-      "freeOnly": "仅自由",
-      "launchableDescription": "您可以在团队拾取器中测试或使用的路由:本地配置,免费内置模型,以及当前默认.",
-      "launchableTitle": "可启动的 OpenCode 模型",
-      "loadingRoutes": "正在装入 OpenCode 模式路线...",
-      "noRoutesMatch": "没有OpenCode模式路线匹配\"{{query}}\".",
-      "noneReported": "尚未报告可发射的OpenCode模型路线。 在 OpenCode 中配置本地路由, 或者使用提供商标签来检查目录提供者 。",
-      "recommendedOnly": "仅建议",
-      "searchPlaceholder": "搜索模式",
-      "selectProjectBeforeTesting": "在测试模型前选择项目上下文 。",
-      "selectProjectBeforeTestingDefaults": "在测试或保存 OpenCode 默认值之前选择工程上下文 。",
-      "useInTeamPicker": "用于团队拾取器",
-      "testInProgress": "模型测试已在运行。",
-      "validationContextRequired": "请先在上方选择验证上下文, 才能启用 Test 和 Set default。保存到 team picker 只会为新团队记录 route。",
-      "actionsUnavailable": "操作暂时不可用。",
-      "defaultSaveInProgress": "正在保存 OpenCode default。",
-      "routeUnavailableAuth": "此 provider 需要先完成身份验证, 才能使用此模型。",
-      "routeUnavailableFailed": "此 model route 未通过上次 execution test。",
-      "routeUnavailableGeneric": "此 model route 当前无法使用。",
-      "routeUnavailableUnknown": "此模型是当前 OpenCode default, 但尚未出现在 live catalog 中。"
+      "alreadyDefault": "这已经是选定的 OpenCode 默认值。",
+      "empty": "未找到模型。",
+      "emptyFree": "未找到免费模型。",
+      "emptyRecommended": "未找到推荐模型。",
+      "emptyRecommendedFree": "未找到推荐的免费模型。",
+      "freeOnly": "仅免费",
+      "launchableDescription": "来自 OpenCode 配置、免费内置模型和当前默认值的已知路由。本地路由在准备团队启动之前需要成功测试。",
+      "launchableTitle": "OpenCode 模型路由",
+      "loadingRoutes": "正在加载 OpenCode 模型路由…",
+      "noRoutesMatch": "没有 OpenCode 模型路由与“{{query}}”匹配。",
+      "noneReported": "尚未报告 OpenCode 模型路由。在 OpenCode 中配置本地路由或​​使用“提供商”选项卡检查目录提供商。",
+      "recommendedOnly": "仅推荐",
+      "searchPlaceholder": "搜索模型",
+      "selectProjectBeforeTesting": "在测试模型之前选择项目上下文。",
+      "selectProjectBeforeTestingDefaults": "在测试或保存 OpenCode 默认值之前选择项目上下文。",
+      "testInProgress": "模型测试已经开始。",
+      "useInTeamPicker": "保存用于团队选择器",
+      "validationContextRequired": "选择上面的验证上下文以启用测试并设置默认值。保存团队选择器仅存储新团队的路由。",
+      "actionsUnavailable": "暂时无法执行操作。",
+      "defaultSaveInProgress": "正在保存 OpenCode 默认值。",
+      "routeUnavailableAuth": "该提供商需要先进行认证，然后才能使用该模型。",
+      "routeUnavailableFailed": "该模型路由未能通过最后一次执行测试。",
+      "routeUnavailableGeneric": "该模型路由目前无法使用。",
+      "routeUnavailableUnknown": "该模型是当前 OpenCode 默认模型，但在实时目录中尚不可用。"
     },
     "providers": {
-      "catalog": "OpenCode 提供者目录",
-      "countFallback": "OpenCode 供应商",
-      "description": "{{count}}。首先显示连接和推荐的提供者。",
-      "loadMore": "装入更多提供者",
-      "loading": "正在装入 OpenCode 提供者",
-      "noMatches": "没有提供者匹配搜索。",
-      "noneReported": "管理运行时间未报告 OpenCode 提供者 。",
-      "recommended": "建议",
+      "catalog": "OpenCode 提供商目录",
+      "countFallback": "OpenCode 提供商",
+      "description": "{{count}}。首先显示已连接和推荐的提供商。",
+      "loadMore": "加载更多提供商",
+      "loading": "加载 OpenCode 提供商",
+      "noMatches": "没有提供商与该搜索匹配。",
+      "noneReported": "托管运行时未报告 OpenCode 提供商。",
+      "recommended": "推荐",
       "refreshCatalog": "刷新目录",
-      "searchPlaceholder": "搜索提供者",
-      "description_few": "{{count}}。首先显示连接和推荐的提供者。",
-      "description_many": "{{count}}。首先显示连接和推荐的提供者。",
-      "description_one": "{{count}}。首先显示连接和推荐的提供者。",
-      "description_other": "{{count}}。首先显示连接和推荐的提供者。"
+      "searchPlaceholder": "搜索提供商",
+      "description_few": "{{count}}。首先显示已连接和推荐的提供商。",
+      "description_many": "{{count}}。首先显示已连接和推荐的提供商。",
+      "description_one": "{{count}}。首先显示已连接和推荐的提供商。",
+      "description_other": "{{count}}。首先显示已连接和推荐的提供商。"
     },
     "setup": {
-      "loading": "正在装入提供者设置..."
+      "loading": "正在加载提供商设置…"
     },
     "summary": {
-      "defaultModel": "OpenCode 默认值: {{model}}",
-      "loading": "正在装入管理的 OpenCode 运行时间、 连接的提供者和模型默认...",
-      "source": "资料来源:{{source}}。",
-      "title": "OpenCode 运行时间"
+      "defaultModel": "OpenCode 默认：{{model}}",
+      "loading": "正在加载托管 OpenCode 运行时、连接的提供商和模型默认值…",
+      "source": "来源：{{source}}",
+      "title": "OpenCode 运行时"
     },
     "tabs": {
       "models": "模型",
-      "providers": "供应商"
+      "providers": "提供商"
     },
     "modelRoutes": {
-      "searchPlaceholder": "搜索模式路线"
+      "searchPlaceholder": "搜索模型路由"
     },
     "badges": {
-      "usedInTeamPicker": "选手用的",
+      "usedInTeamPicker": "为团队选择器保存",
       "free": "免费",
-      "local": "当地",
-      "configured": "配置",
+      "local": "本地",
+      "configured": "已配置",
+      "knownRoute": "已知路由",
       "connected": "已连接",
-      "verified": "已核实",
+      "verified": "已验证",
       "needsTest": "需要测试",
       "failed": "失败",
-      "unknown": "不详",
-      "default": "默认",
-      "knownRoute": "已知 route"
+      "unknown": "未知",
+      "default": "默认"
     },
     "compatibleEndpoint": {
-      "baseUrlPlaceholder": "http://localhost:1234 苏维埃社会主义共和国"
+      "baseUrlPlaceholder": "http://localhost:1234"
     }
   },
   "general": {
     "agentLanguage": {
-      "description": "代理通信语言",
-      "descriptionWithDetected": "代理通信语言(发现:{{detected}})",
-      "emptyMessage": "未找到语言 。",
+      "description": "智能体沟通语言",
+      "descriptionWithDetected": "智能体沟通语言（检测到：{{detected}}）",
+      "emptyMessage": "未找到语言。",
       "label": "语言",
-      "searchPlaceholder": "搜索语言...",
-      "selectPlaceholder": "选择语言...",
-      "title": "代理语言"
+      "searchPlaceholder": "搜索语言…",
+      "selectPlaceholder": "选择语言…",
+      "title": "智能体语言"
     },
     "appLanguage": {
-      "description": "应用程序接口的语言.",
+      "description": "应用界面的语言。",
       "label": "语言",
-      "title": "App 语言"
+      "title": "应用语言"
     },
     "appearance": {
       "autoExpandAIGroups": {
-        "description": "在打开记录或收到新消息时自动扩展每个响应转折",
-        "label": "默认扩展 AI 响应"
+        "description": "打开记录或收到新消息时自动展开每个响应回合",
+        "label": "默认展开 AI 响应"
       },
       "nativeTitleBar": {
-        "description": "使用默认系统窗口框架而不是自定义标题栏",
-        "label": "使用本地标题栏",
+        "description": "使用默认的系统窗口框架而不是自定义标题栏",
+        "label": "使用原生标题栏",
         "restartConfirm": {
-          "confirmLabel": "重新开始",
-          "message": "应用程序需要重新启动以应用标题栏更改 。 现在重新开始?",
-          "title": "需要重新启动"
+          "confirmLabel": "重启",
+          "message": "应用需要重新启动才能应用标题栏更改。现在重新启动？",
+          "title": "需要重启"
         }
       },
       "theme": {
         "description": "选择您喜欢的颜色主题",
         "label": "主题",
         "options": {
-          "dark": "阴暗",
-          "light": "光线",
+          "dark": "深色",
+          "light": "浅色",
           "system": "系统"
         }
       },
@@ -166,7 +166,7 @@
     },
     "browserAccess": {
       "serverMode": {
-        "description": "启动 HTTP 服务器从浏览器访问UI 或嵌入 Iframes",
+        "description": "启动 HTTP 服务器以从浏览器访问 UI 或嵌入 iframe 中",
         "label": "启用服务器模式"
       },
       "title": "浏览器访问"
@@ -174,86 +174,86 @@
     "localClaudeRoot": {
       "actions": {
         "selectFolder": "选择文件夹",
-        "selectFolderManually": "手工选择文件夹",
+        "selectFolderManually": "手动选择文件夹",
         "useAutoDetect": "使用自动检测",
         "useFolder": "使用文件夹",
         "usePath": "使用路径",
         "useThisPath": "使用此路径",
-        "useWsl": "使用Linux/WSL吗?"
+        "useWsl": "使用 Linux/WSL？"
       },
       "confirm": {
         "noProjectsDir": {
-          "message": "此文件夹不含“ 项目” 目录 。 继续?",
-          "title": "未找到工程目录"
+          "message": "该文件夹不包含“projects”目录。仍要继续吗？",
+          "title": "找不到项目目录"
         },
         "notClaudeDir": {
-          "message": "这个文件夹被命名为\"{{folderName}}\",而不是\".claude\". 继续?",
-          "title": "选中的文件夹不是. claude"
+          "message": "该文件夹名为“{{folderName}}”，而不是“.claude”。仍要继续吗？",
+          "title": "所选文件夹不是。claude"
         },
         "noWslPaths": {
-          "message": "无法自动找到 Claude 数据的 WSL distros 。 手动选择文件夹吗?",
-          "title": "无 ZXCVTKEN0ZXCV 找到克劳德路径"
+          "message": "无法自动找到带有 Claude 数据的 WSL 发行版。手动选择文件夹？",
+          "title": "未找到 WSL Claude 路径"
         },
         "wslNoProjectsDir": {
-          "message": "\"{{path}}\"不包含\"项目\"目录. 继续?",
-          "title": "WSL 路径缺失项目目录"
+          "message": "“{{path}}”不包含“projects”目录。仍要继续吗？",
+          "title": "WSL 路径缺少项目目录"
         }
       },
       "current": {
-        "autoDetected": "自动探测: {{path}}",
-        "autoDetectedPath": "使用自动检测路径",
+        "autoDetected": "自动检测到：{{path}}",
+        "autoDetectedPath": "使用自动检测的路径",
         "customPath": "使用自定义路径",
         "label": "当前本地根"
       },
-      "description": "选择哪个本地文件夹被当作您的 Claude 数据根",
+      "description": "选择将哪个本地文件夹视为您的 Claude 数据根",
       "errors": {
-        "detectWslFailed": "检测 WSL 失败 克劳德根路径",
-        "loadFailed": "装入本地 Claude 根设置失败",
-        "updateFailed": "更新 Claude root 失败"
+        "detectWslFailed": "无法检测 WSL Claude 根路径",
+        "loadFailed": "无法加载本地 Claude 根目录 设置",
+        "updateFailed": "Claude 根目录更新失败"
       },
-      "title": "当地克劳德·根",
+      "title": "本地 Claude 根目录",
       "wslModal": {
-        "closeAriaLabel": "关闭 WSL 路径模式",
-        "description": "检测到的WSL分发量和克劳德根候选人",
+        "closeAriaLabel": "关闭 WSL 路径对话框",
+        "description": "检测到的 WSL 发行版和 Claude 根候选",
         "noProjectsDir": "未检测到项目目录",
-        "title": "选择 WSL 克劳德根"
+        "title": "选择 WSL Claude 根目录"
       }
     },
     "privacy": {
       "telemetry": {
-        "description": "通过发送匿名崩溃和性能数据帮助改进应用程序",
+        "description": "通过发送匿名崩溃和性能数据来帮助改进应用",
         "label": "发送崩溃报告"
       },
       "title": "隐私"
     },
     "server": {
-      "runningOn": "运行中",
-      "standaloneModeDescription": "以独立模式运行 。 HTTP服务器始终活跃. 没有系统通知 -- -- 通知触发器只记录在应用程序中。",
+      "runningOn": "运行于",
+      "standaloneModeDescription": "以独立模式运行。 HTTP 服务器始终处于活动状态。系统通知不可用 - 通知触发器仅记录在应用中。",
       "title": "服务器"
     },
     "startup": {
       "launchAtLogin": {
-        "description": "登录时自动启动应用程序",
+        "description": "登录时自动启动应用",
         "label": "登录时启动"
       },
       "showDockIcon": {
-        "description": "在端口显示应用程序图标( MacOS)",
-        "label": "显示端口图标"
+        "description": "在 Dock 中显示应用图标 (macOS)",
+        "label": "显示Dock图标"
       },
       "title": "启动"
     }
   },
   "notifications": {
     "dev": {
-      "descriptionPrefix": "通知在开发模式中可能行不通。 macOS将应用程序识别为\"Electron\"(bundle ID).",
-      "descriptionSuffix": ")代替生产应用名称. 检查系统设置 > 通知 > 电子以验证权限 。",
-      "title": "Dev 模式"
+      "descriptionPrefix": "通知可能无法在开发模式下工作。 macOS 将应用标识为“Electron”（捆绑 ID",
+      "descriptionSuffix": ") 而不是生产应用名称。检查系统设置 > 通知 > Electron 以验证权限。",
+      "title": "开发模式"
     },
     "ignoredRepositories": {
-      "description": "这些寄存器发出的通知将被忽略",
-      "empty": "没有忽略寄存器",
-      "selectPlaceholder": "选择要忽略的仓库...",
-      "title": "已忽略仓库"
+      "description": "来自这些仓库的通知将被忽略",
+      "empty": "没有忽略任何仓库",
+      "selectPlaceholder": "选择要忽略的仓库…",
+      "title": "忽略的仓库"
     },
     "settings": {
       "enabled": {
@@ -261,114 +261,114 @@
         "label": "启用系统通知"
       },
       "sound": {
-        "description": "当通知出现时播放声音",
+        "description": "出现通知时播放声音",
         "label": "播放声音"
       },
       "subagentErrors": {
-        "description": "检测并通知子代理会话中的错误",
-        "label": "包含子代理错误"
+        "description": "检测并通知子智能体会话中的错误",
+        "label": "包括子智能体错误"
       },
       "title": "通知设置"
     },
     "snooze": {
-      "clear": "清除 Snooze",
-      "description": "临时暂停通知",
-      "descriptionWithTime": "喷到{{time}}",
-      "label": "Snooze 通知",
+      "clear": "取消暂停",
+      "description": "暂时暂停通知",
+      "descriptionWithTime": "暂停至 {{time}}",
+      "label": "暂停通知",
       "options": {
-        "15": "15分钟",
-        "30": "30分钟",
-        "60": "1小时",
-        "120": "2小时",
-        "240": "4小时",
-        "-1": "到明天为止"
+        "15": "15 分钟",
+        "30": "30 分钟",
+        "60": "1 小时",
+        "120": "2 小时",
+        "240": "4 小时",
+        "-1": "直到明天"
       },
-      "selectDuration": "选择持续时间..."
+      "selectDuration": "选择持续时间…"
     },
     "taskCompletion": {
-      "description": "克劳德完成任务时获得本地OS通知 - 声音,横幅,和Dock/taskbar徽章. 工作在macOS,Linux,和Windows上.",
-      "installPlugin": "安装 Claude- Notifics-go 插件",
+      "description": "当 Claude 完成任务时接收原生操作系统通知 - 声音、横幅和 Dock/任务栏徽章。适用于 macOS、Linux 和 Windows。",
+      "installPlugin": "安装 claude-notifications-go 插件",
       "title": "任务完成通知"
     },
     "team": {
       "allTasksCompleted": {
-        "description": "当团队中的每一项任务达到完成状态时通知",
+        "description": "当团队中的每项任务达到完成状态时发出通知",
         "label": "所有任务已完成"
       },
       "autoResumeOnRateLimit": {
-        "description": "当克劳德报告重设时间时,在限制重排后为团队主力安排后续的推力",
-        "label": "费率限制后自动恢复"
+        "description": "当 Claude 报告重置时间时，在限额重置后为团队领导安排后续继续",
+        "label": "速率限制后自动恢复"
       },
       "clarifications": {
-        "description": "当任务需要输入时显示本地 OS 通知",
+        "description": "当任务需要您的输入时显示原生操作系统通知",
         "label": "任务澄清通知"
       },
       "crossTeamMessage": {
-        "description": "当另一个团队发出消息时通知",
-        "label": "跨团队信件通知"
+        "description": "当有来自其他团队的消息到达时发出通知",
+        "label": "跨团队消息通知"
       },
       "leadInbox": {
-        "description": "通知队友向队长发送信息的时间",
-        "label": "铅信箱通知"
+        "description": "当队友向团队负责人发送消息时发出通知",
+        "label": "潜在客户收件箱通知"
       },
       "statusChange": {
-        "description": "当任务状态发生变化时显示本地 OS 通知",
-        "label": "任务状态更改通知",
+        "description": "当任务状态更改时显示原生操作系统通知",
+        "label": "任务状态变更通知",
         "onlySolo": {
-          "description": "只在球队没有队友时通知",
-          "label": "仅在独奏模式下"
+          "description": "仅当团队没有队友时通知",
+          "label": "仅在单人模式下"
         },
         "statuses": {
-          "description": "哪个目标状态触发通知",
-          "label": "通知这些状况",
+          "description": "哪些目标状态会触发通知",
+          "label": "通知这些状态",
           "options": {
-            "approved": "核定数",
-            "completed": "已完成",
-            "deleted": "删除",
+            "approved": "得到正式认可的",
+            "completed": "完全的",
+            "deleted": "已删除",
             "in_progress": "开始",
-            "needsFix": "需要修改",
-            "pending": "待决",
-            "review": "审查"
+            "needsFix": "需要修复",
+            "pending": "待办的",
+            "review": "审核"
           }
         }
       },
       "taskComments": {
-        "description": "代理评论任务时显示本地 OS 通知",
-        "label": "任务注释通知"
+        "description": "当智能体对任务发表评论时显示原生操作系统通知",
+        "label": "任务评论通知"
       },
       "taskCreated": {
-        "description": "创建新任务时显示本地 OS 通知",
+        "description": "创建新任务时显示原生操作系统通知",
         "label": "任务创建通知"
       },
       "teamLaunched": {
-        "description": "当一个团队完成发射并准备就绪时通知",
-        "label": "小组发出通知"
+        "description": "当团队完成启动并准备就绪时发出通知",
+        "label": "团队启动通知"
       },
       "title": "团队通知",
       "toolApproval": {
-        "description": "当一个工具需要您批准时通知( Allow/ Deny), 而应用程序没有焦点",
-        "label": "工具核准通知"
+        "description": "当应用未聚焦时工具需要您的批准（允许/拒绝）时发出通知",
+        "label": "工具批准通知"
       },
       "userInbox": {
-        "description": "队友给你发信息时通知",
+        "description": "当队友给你发送消息时通知",
         "label": "用户收件箱通知"
       }
     },
     "test": {
       "action": "发送测试",
-      "description": "发送测试通知以验证交付",
+      "description": "发送测试通知以验证送达情况",
       "failedToSend": "发送测试通知失败",
       "label": "测试通知",
-      "sending": "正在发送...",
-      "sent": "发送!",
+      "sending": "正在发送…",
+      "sent": "发送！",
       "unknownError": "未知错误"
     }
   },
   "advanced": {
     "about": {
-      "appIconAlt": "应用程序图标",
-      "description": "集合自主平行工作的AI代理团队,跨团队沟通,在kanban板上管理任务——内置代码审查,直播过程监控,以及完整的工具可见度.",
-      "standalone": "独立",
+      "appIconAlt": "应用图标",
+      "description": "组建 AIAgent Team，这些团队可以并行自主工作、跨团队沟通并在看板上管理任务 - 具有内置代码审核、实时流程监控和完整的工具可见性。",
+      "standalone": "独立式",
       "title": "关于",
       "version": "版本 {{version}}"
     },
@@ -381,31 +381,31 @@
       "title": "配置"
     },
     "updates": {
-      "available": "页:1{{version}}可用",
+      "available": "v{{version}} 可用",
       "check": "检查更新",
-      "checking": "正在检查...",
-      "ready": "更新就绪",
-      "unknownVersion": "不详",
-      "upToDate": "最新数据"
+      "checking": "检查…",
+      "ready": "更新准备就绪",
+      "unknownVersion": "未知",
+      "upToDate": "最新"
     },
-    "appName": "特工团队AI"
+    "appName": "Agent TeamAI"
   },
   "configEditor": {
     "errors": {
-      "loadFailed": "装入配置失败",
+      "loadFailed": "加载配置失败",
       "saveFailed": "保存配置失败"
     },
     "footer": {
-      "autoSave": "编辑后自动更改保存",
+      "autoSave": "更改编辑后自动保存",
       "toClose": "关闭",
-      "escapeKey": "埃斯科"
+      "escapeKey": "Esc 键"
     },
-    "loading": "正在装入配置...",
+    "loading": "正在加载配置…",
     "status": {
       "invalidJson": "无效的 JSON",
       "saveFailed": "保存失败",
       "saved": "已保存",
-      "saving": "正在保存..."
+      "saving": "保存…"
     },
     "title": "编辑配置"
   },
@@ -416,180 +416,180 @@
       "title": "添加自定义触发器"
     },
     "builtin": {
-      "description": "默认触发随应用程序而来。 您可以启用或禁用它们并自定义它们的图案 。",
+      "description": "应用附带的默认触发器。您可以启用或禁用它们并自定义它们的模式。",
       "title": "内置触发器"
     },
     "card": {
-      "builtinBadge": "内建",
-      "collapseAriaLabel": "折叠",
-      "deleteAriaLabel": "删除触发",
-      "editNameAriaLabel": "编辑名称",
-      "expandAriaLabel": "扩展"
+      "builtinBadge": "内置",
+      "collapseAriaLabel": "坍塌",
+      "deleteAriaLabel": "删除触发器",
+      "editNameAriaLabel": "编辑姓名",
+      "expandAriaLabel": "扩张"
     },
     "color": {
-      "customHexTitle": "自定义六进制颜色",
+      "customHexTitle": "自定义十六进制颜色",
       "invalidHex": "无效的十六进制"
     },
     "configuration": {
-      "alertIfGreaterThan": "警告如果 >",
-      "emptyPatternHint": "留空以匹配所有内容 。 使用JavaScript regex语法.",
-      "errorStatusDescription": "当工具执行报告错误时触发( is error: true).",
-      "tokensUnit": "符号",
-      "matchPatternPlaceholder": "例如,错误QQ失败XX例外"
+      "alertIfGreaterThan": "如果 > 则发出警报",
+      "emptyPatternHint": "留空以匹配所有内容。使用 JavaScript 正则表达式语法。",
+      "errorStatusDescription": "当工具执行报告错误 (is_error: true) 时触发。",
+      "tokensUnit": "Token",
+      "matchPatternPlaceholder": "例如，错误|失败|异常"
     },
     "custom": {
-      "description": "创建自己的触发器以获取特定模式或工具输出的通知。",
-      "empty": "尚未配置自定义触发器 。",
+      "description": "创建您自己的触发器以获取特定模式或工具输出的通知。",
+      "empty": "尚未配置自定义触发器。",
       "title": "自定义触发器"
     },
     "errors": {
-      "invalidRegexPattern": "无效的正则图案"
+      "invalidRegexPattern": "无效的正则表达式模式"
     },
     "fields": {
       "contentType": "内容类型",
-      "matchField": "匹配字段",
-      "matchPattern": "匹配模式( Regex)",
-      "scopeToolName": "范围/ 工具名称",
-      "scopeToolNameOptional": "范围/ 工具名称( 可选)",
-      "threshold": "阈值",
-      "tokenType": "托肯类型",
-      "triggerNamePlaceholder": "例如,构建失败提醒",
-      "triggerNameRequired": "触发名称 *"
+      "matchField": "比赛场地",
+      "matchPattern": "匹配模式（正则表达式）",
+      "scopeToolName": "范围/工具名称",
+      "scopeToolNameOptional": "范围/工具名称（可选）",
+      "threshold": "临界点",
+      "tokenType": "Token 类型",
+      "triggerNamePlaceholder": "例如，构建失败警报",
+      "triggerNameRequired": "触发器名称 *"
     },
     "ignorePatterns": {
-      "hint": "按 Enter 键可添加。 如果模式匹配, 则跳过通知 。",
-      "placeholder": "添加忽略 regex...",
+      "hint": "按 Enter 键添加。如果任何模式匹配，则跳过通知。",
+      "placeholder": "添加忽略正则表达式…",
       "removeAriaLabel": "删除忽略模式",
-      "summary": "高级:排除规则",
-      "title": "忽略图案( 如果匹配则滑动)"
+      "summary": "高级：排除规则",
+      "title": "忽略模式（如果匹配则跳过）"
     },
     "options": {
       "contentTypes": {
         "text": "文本输出",
-        "thinking": "思维",
+        "thinking": "思考",
         "tool_result": "工具结果",
         "tool_use": "工具使用"
       },
       "matchFields": {
-        "args": "参数",
+        "args": "论点",
         "command": "命令",
         "content": "内容",
-        "description": "说明",
+        "description": "描述",
         "file_path": "文件路径",
-        "fullInput": "全部输入( JSON)",
-        "glob": "Glob 过滤器",
-        "new_string": "新字符串",
-        "old_string": "旧字符串",
-        "path": "路径",
+        "fullInput": "完整输入 (JSON)",
+        "glob": "全局过滤器",
+        "new_string": "新弦",
+        "old_string": "旧弦",
+        "path": "小路",
         "pattern": "图案",
-        "prompt": "提示",
-        "query": "查询",
+        "prompt": "迅速的",
+        "query": "询问",
         "skill": "技能名称",
-        "subagent_type": "副剂类型",
-        "text": "文本内容",
+        "subagent_type": "子智能体类型",
+        "text": "文字内容",
         "thinking": "思考内容",
-        "url": "URL 苏维埃社会主义共和国"
+        "url": "URL"
       },
       "modes": {
         "content_match": "内容模式",
         "error_status": "执行错误",
-        "token_threshold": "高调使用"
+        "token_threshold": "高 Token 使用率"
       },
       "tokenTypes": {
-        "input": "输入键",
-        "output": "输出键",
-        "total": "共计"
+        "input": "输入 Token",
+        "output": "输出 Token",
+        "total": "Token 总数"
       },
       "toolNames": {
-        "anyTool": "任意工具"
+        "anyTool": "任何工具"
       }
     },
     "preview": {
-      "defaultTestTriggerName": "测试触发器",
-      "detectedSuffix": "错误会被检测到",
-      "more": "...还有{{count}}更多",
-      "more_few": "...还有{{count}}更多",
-      "more_many": "...还有{{count}}更多",
-      "more_one": "...还有{{count}}更多",
-      "more_other": "...还有{{count}}更多",
-      "testTrigger": "测试触发器",
-      "testing": "测试...",
+      "defaultTestTriggerName": "测试触发",
+      "detectedSuffix": "错误将会被检测到",
+      "more": "…以及 {{count}} 更多",
+      "more_few": "…以及 {{count}} 更多",
+      "more_many": "…以及 {{count}} 更多",
+      "more_one": "…以及 {{count}} 更多",
+      "more_other": "…以及 {{count}} 更多",
+      "testTrigger": "测试触发",
+      "testing": "测试…",
       "title": "预览",
-      "truncatedWarning": "搜索提前停止( 超时或计数限制) 。 实际匹配可能更高。",
+      "truncatedWarning": "搜索提前停止（超时或计数限制）。实际匹配可能会更高。",
       "viewSession": "查看会话"
     },
     "repositoryScope": {
-      "empty": "没有选择寄存器 - 触发适用于所有寄存器",
-      "hint": "当选择寄存器时,这只触发这些寄存器中的错误。",
-      "placeholder": "选择要添加的仓库...",
-      "summary": "高级:仓库范围",
-      "title": "对仓库的限制( 仅适用于选定的寄存器)"
+      "empty": "未选择仓库 - 触发器适用于所有仓库",
+      "hint": "选择仓库后，仅当这些仓库中出现错误时才会触发此触发器。",
+      "placeholder": "选择要添加的仓库…",
+      "summary": "高级：仓库范围",
+      "title": "限制仓库（仅适用于选定的仓库）"
     },
     "sections": {
       "configuration": "配置",
       "dotColor": "点颜色",
-      "generalInfo": "常规信息",
+      "generalInfo": "一般信息",
       "triggerCondition": "触发条件"
     }
   },
   "workspaceProfiles": {
     "actions": {
-      "addProfile": "添加配置文件",
+      "addProfile": "添加个人资料",
       "cancel": "取消",
-      "deleteProfile": "删除配置文件",
-      "editProfile": "编辑配置文件",
+      "deleteProfile": "删除个人资料",
+      "editProfile": "编辑个人资料",
       "save": "保存"
     },
     "authMethods": {
-      "agent": "SSH 苏维埃社会主义共和国 探员",
-      "auto": "自动( 从 SSH 配置)",
+      "agent": "SSH 代理",
+      "auto": "自动（来自 SSH 配置）",
       "password": "密码",
       "privateKey": "私钥"
     },
     "deleteConfirm": {
       "confirmLabel": "删除",
-      "message": "您确定要删除“ {{name}}” 吗? 这一点是无法消除的。",
-      "title": "删除配置文件"
+      "message": "您确定要删除“{{name}}”吗？此操作无法撤消。",
+      "title": "删除个人资料"
     },
-    "description": "保存 SSH 连接配置用于快速重联",
+    "description": "保存 SSH 连接配置文件以便快速重新连接",
     "empty": {
       "description": "添加 SSH 配置文件以快速连接",
-      "title": "没有保存配置文件"
+      "title": "没有保存的配置文件"
     },
     "form": {
-      "authentication": "认证",
-      "host": "东道主",
-      "name": "名称",
-      "passwordPrompt": "连接时会提醒您密码 。",
-      "port": "端口",
+      "authentication": "验证",
+      "host": "主持人",
+      "name": "姓名",
+      "passwordPrompt": "连接时系统将提示词您输入密码。",
+      "port": "港口",
       "privateKeyPath": "私钥路径",
       "username": "用户名",
       "namePlaceholder": "我的服务器",
-      "hostPlaceholder": "主机名称或IP",
+      "hostPlaceholder": "主机名或 IP",
       "usernamePlaceholder": "用户"
     },
-    "loading": "正在装入配置文件...",
-    "title": "工作空间简介"
+    "loading": "正在加载配置文件…",
+    "title": "工作区配置文件"
   },
   "connection": {
     "actions": {
       "connect": "连接",
-      "connecting": "正在连接...",
-      "disconnect": "断开连接",
+      "connecting": "正在连接…",
+      "disconnect": "断开",
       "testConnection": "测试连接",
-      "testing": "测试..."
+      "testing": "测试…"
     },
     "currentMode": {
       "description": "会话文件的数据源",
       "label": "当前模式",
-      "local": "当地({{path}})"
+      "local": "本地 ({{path}})"
     },
-    "description": "连接到远程机器以查看在那里运行的 Claude 代码会话",
+    "description": "连接到远程计算机以查看在那里运行的 Claude Code 会话",
     "form": {
-      "authentication": "认证",
-      "host": "东道主",
+      "authentication": "验证",
+      "host": "主持人",
       "password": "密码",
-      "port": "端口",
+      "port": "港口",
       "privateKeyPath": "私钥路径",
       "username": "用户名",
       "hostPlaceholder": "主机名或 SSH 配置别名",
@@ -599,14 +599,14 @@
       "title": "保存的配置文件"
     },
     "ssh": {
-      "title": "ZXCVKEN0ZXCV 连接"
+      "title": "SSH 连接"
     },
     "status": {
-      "connectedTo": "已连接到 {{host}}",
+      "connectedTo": "连接到 {{host}}",
       "remoteSessions": "通过 SSH 查看远程会话"
     },
     "test": {
-      "failed": "连接失败: {{error}}",
+      "failed": "连接失败：{{error}}",
       "success": "连接成功",
       "unknownError": "未知错误"
     },
@@ -616,379 +616,379 @@
     "actions": {
       "cancel": "取消",
       "cancelLogin": "取消登录",
-      "connectChatGpt": "连接 ChatGPT",
+      "connectChatGpt": "连接聊天 GPT",
       "delete": "删除",
       "disable": "禁用",
-      "disconnectAccount": "断开账户",
+      "disconnectAccount": "断开帐户连接",
       "generateLink": "生成链接",
       "openLogin": "打开登录",
-      "reconnectAnthropic": "重新连接 Anthropic",
+      "reconnectAnthropic": "重新连接人类",
       "refresh": "刷新",
-      "replaceKey": "替换密钥",
-      "saveEndpoint": "保存结束点",
+      "replaceKey": "更换钥匙",
+      "saveEndpoint": "保存端点",
       "saveKey": "保存密钥",
-      "saving": "正在保存...",
+      "saving": "保存…",
       "setApiKey": "设置 API 密钥",
       "updateKey": "更新密钥",
       "useCode": "使用代码"
     },
     "apiKey": {
-      "loadingStoredCredentials": "正在装入存储的证书...",
+      "loadingStoredCredentials": "正在加载存储的凭据…",
       "projectScope": "项目",
       "scope": "范围",
-      "storedIn": "存放于{{backend}}",
+      "storedIn": "存储在 {{backend}} 中",
       "userScope": "用户",
-      "storedInApp": "存储在应用程序中",
+      "storedInApp": "存储在应用中",
       "providers": {
         "anthropic": {
-          "name": "ZXCVKEN0ZXCV 键",
+          "name": "人为 API 密钥",
           "title": "API 密钥",
-          "description": "使用直Anthropic API密钥进行API传动访问. 您的 Anthropic 订阅会话在切换回时仍然可用 。",
-          "placeholder": "SK -ANT - -这..."
+          "description": "使用直接 Anthropic API 密钥进行 API 计费访问。当您切换回来时，您的 Anthropic 订阅会话仍然可用。",
+          "placeholder": "sk-蚂蚁-…"
         },
         "codex": {
-          "name": "代码API 密钥",
+          "name": "Codex API 密钥",
           "title": "API 密钥",
-          "description": "使用 OpenAI API 键作为二级代码认证路径. 如果您将 Codex 切换到 API 密钥模式,该应用将会将 OPENAI_API_KEY 反射为 CODEX_API_KEY 用于本地发射.",
-          "placeholder": "sk -proj - -这..."
+          "description": "使用 OpenAI API 密钥作为辅助 Codex 认证路径。如果您将 Codex 切换到 API 密钥模式，应用会将 OPENAI_API_KEY 镜像到 CODEX_API_KEY 以进行本机启动。",
+          "placeholder": "sk-项目-…"
         },
         "gemini": {
-          "name": "双子座 API 密钥",
+          "name": "Gemini API 密钥",
           "title": "API 访问权限",
-          "description": "使用`GEMINI_API_KEY`为双子座ZXCVKEN1ZXCV后端. CLI ZXVKEN3ZXCV和ADC不要求这样做.",
-          "placeholder": "艾尔扎..."
+          "description": "对 Gemini API 后端使用“GEMINI_API_KEY”。 CLI SDK 和 ADC 不需要它。",
+          "placeholder": "艾莎…"
         }
       }
     },
     "codex": {
       "account": {
-        "appServer": "应用服务器: {{state}}",
+        "appServer": "应用服务器：{{state}}",
         "connected": "已连接",
-        "description": "管理本地的 Codex app-server 账户会话, 授权订阅支持的本地启动 。",
-        "loginInProgress": "正在登录",
-        "plan": "计划:{{plan}}",
+        "description": "管理本地 Codex 应用服务器帐户会话，为订阅支持的本机启动提供支持。",
+        "loginInProgress": "登录正在进行中",
+        "plan": "计划：{{plan}}",
         "reconnectRequired": "需要重新连接",
-        "title": "ChatGPT 账户",
+        "title": "聊天 GPT 帐户",
         "hints": {
-          "autoUsesApiKeyUntilChatgpt": "{{message}} 苏维埃社会主义共和国 自动会继续使用检测到的API密钥,直到ChatGPT连接.",
-          "detectedApiKeyNeedsApiMode": "{{message}} 苏维埃社会主义共和国 检测到的API密钥仅在您切换到API密钥模式后使用.",
-          "localArtifactsNoSession": "Codex CLI目前未报告运行中的ChatGPT账户. 本地 Codex 账户数据已存在,但没有选择活动管理会话 。 使用限制仅在Codex CLI看到后出现.",
-          "noActiveAccount": "Codex CLI目前未报告运行中的ChatGPT账户. 使用限制仅在Codex CLI看到后出现.",
-          "reconnectBeforeUsage": "Codex有一个本地选择的ChatGPT账户,但当前会话需要重新连接才能在此加载使用限制.",
-          "usageLimitsAfterReport": "用法限制在Codex为连接的ChatGPT账户报告后在此出现."
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto 将继续使用检测到的 API 密钥，直到连接 ChatGPT。",
+          "detectedApiKeyNeedsApiMode": "{{message}} 检测到的 API 密钥仅在您将 Codex 切换到 API 密钥模式后使用。",
+          "localArtifactsNoSession": "Codex CLI 当前报告没有有效的 ChatGPT 帐户。本地 Codex 帐户数据存在，但未选择有效的托管会话。仅当 Codex CLI 看到用量限制后，此处才会显示用量限制。",
+          "noActiveAccount": "Codex CLI 当前报告没有有效的 ChatGPT 帐户。仅当 Codex CLI 看到用量限制后，此处才会显示用量限制。",
+          "reconnectBeforeUsage": "Codex 有一个本地选择的 ChatGPT 帐户，但当前会话需要重新连接才能在此处加载用量限制。",
+          "usageLimitsAfterReport": "Codex 报告连接的 ChatGPT 帐户的用量限制后，此处会显示用量限制。"
         }
       },
       "install": {
-        "checking": "检查中",
-        "downloading": "下载",
-        "installCli": "安装代码CLI",
-        "installing": "安装",
+        "checking": "检查",
+        "downloading": "正在下载",
+        "installCli": "安装 Codex CLI",
+        "installing": "安装中",
         "retryInstall": "重试安装",
-        "title": "在应用数据中安装代码CLI"
+        "title": "将 Codex CLI 安装到应用数据中"
       },
       "rateLimits": {
-        "credits": "贷项",
-        "creditsDescription": "信用与基于窗口的订阅使用分开显示,可能无法用于计划支持的ChatGPT会话.",
-        "noSecondaryWindow": "Codex 没有返回此账户快照的二级窗口 。",
-        "notReported": "未报告",
-        "primaryReset": "初级重置",
+        "credits": "制作人员",
+        "creditsDescription": "积分与基于窗口的订阅使用情况分开显示，并且可能不适用于计划支持的 ChatGPT 会话。",
+        "noSecondaryWindow": "Codex 未返回此帐户快照的辅助窗口。",
+        "notReported": "未报道",
+        "primaryReset": "主要重置",
         "primaryUsed": "主要使用",
         "primaryWindow": "主窗口",
-        "remainingLeft": "{{value}}左边",
-        "remainingUnknown": "剩余未知",
-        "secondaryReset": "二级重置",
-        "secondaryUsed": "二级",
-        "secondaryWindow": "二级窗口",
-        "usedQuotaNote": "这些百分比显示使用的配额,而不是剩余的配额。",
-        "weeklyReset": "每周重设",
-        "weeklyUsed": "每周使用次数",
-        "weeklyUsedOneWeek": "每周使用(1w)",
+        "remainingLeft": "{{value}} 左",
+        "remainingUnknown": "仍未知",
+        "secondaryReset": "二次复位",
+        "secondaryUsed": "二次使用",
+        "secondaryWindow": "辅助窗口",
+        "usedQuotaNote": "这些百分比显示已用配额，而不是剩余配额。",
+        "weeklyReset": "每周重置",
+        "weeklyUsed": "每周使用",
+        "weeklyUsedOneWeek": "每周使用（1w）",
         "weeklyWindow": "每周窗口",
         "secondaryFallback": "中学",
-        "secondaryWindowNote": "周限在{{window}}窗口中单独显示.",
-        "usageExplanationGeneric": "显示用过配额, 而非剩余配额 。",
-        "usageExplanationWindowOnly": "在当前 {{window}} 窗口中显示使用配额, 而不是保留配额 。",
-        "usageExplanationWithRemaining": "{{used}}使用 - 关于{{remaining}}留在当前{{window}}图标。"
+        "secondaryWindowNote": "每周限制单独显示在 {{window}} 窗口中。",
+        "usageExplanationGeneric": "显示已用配额，而不是剩余配额。",
+        "usageExplanationWindowOnly": "显示当前 {{window}} 窗口中已使用的配额，而不是剩余配额。",
+        "usageExplanationWithRemaining": "已使用 {{used}}；当前 {{window}} 窗口约剩余 {{remaining}}。"
       }
     },
     "compatibleEndpoint": {
-      "authToken": "证书",
-      "authTokenMissing": "未配置 Auth 令牌 。",
-      "baseUrl": "ZXCVKEN0ZXCV基地",
-      "description": "使用 Anthropic 兼容本地运行时间终点 。",
-      "keepSavedToken": "留空以保留保存的符号",
-      "title": "本地/ 兼容端点",
-      "tokenStatus": "托肯 {{status}}",
+      "authToken": "认证 Token",
+      "authTokenMissing": "未配置认证 Token。",
+      "baseUrl": "基本 URL",
+      "description": "使用与 Anthropic 兼容的本地运行时端点。",
+      "keepSavedToken": "留空以保留保存的 Token",
+      "title": "本地/兼容端点",
+      "tokenStatus": "Token {{status}}",
       "validation": {
-        "baseUrlRequired": "需要URL基地",
-        "firstPartyAnthropic": "使用自动、 订阅或 API 键用于第一当事方 Anthropic",
-        "httpRequired": "Base URL 必须使用 http:// 或 https://",
-        "invalidUrl": "无效的 URL",
-        "noCredentials": "基地URL不得包括全权证书"
+        "baseUrlRequired": "基本 URL 为必填项",
+        "firstPartyAnthropic": "对第一方 Anthropic 使用自动、订阅或 API 密钥",
+        "httpRequired": "基本 URL 必须使用 http:// 或 https://",
+        "invalidUrl": "无效 URL",
+        "noCredentials": "基本 URL 不得包含凭据"
       },
       "status": {
-        "endpointDisabledTokenKept": "端点已禁用 。 保存了保存的纪念物。",
-        "endpointSaved": "结束点已保存",
-        "endpointSavedTokenMissing": "结尾已保存 。 未配置 Auth 令牌 。"
+        "endpointDisabledTokenKept": "端点已禁用。保存的 Token 被保留。",
+        "endpointSaved": "端点已保存",
+        "endpointSavedTokenMissing": "端点已保存。未配置认证 Token。"
       }
     },
     "connection": {
-      "authenticationMethod": "认证方法",
+      "authenticationMethod": "认证方式",
       "descriptions": {
-        "anthropic": "选择应用启动的 Anthropic 会话如何认证 。",
-        "codex": "在本地运行时间启动时选择 Codex 是否更喜欢您的 ChatGPT 订阅, 还是选择 API 密钥 。",
-        "gemini": "配置可选的 API 访问 。 CLI ZXKEN2ZXCV和ADC仍然自动被发现.",
-        "opencode": "OpenCode认证和提供者目录由OpenCode运行时间管理."
+        "anthropic": "选择应用启动的 Anthropic 会话的认证方式。",
+        "codex": "选择当本机运行时启动时，Codex 是否应该首选您的 ChatGPT 订阅或 API 密钥。",
+        "gemini": "配置可选的 API 访问权限。 CLI SDK 和 ADC 仍会自动发现。",
+        "opencode": "OpenCode 认证和提供商库存由 OpenCode 运行时管理。"
       },
-      "method": "连接方法",
-      "mode": "模式: {{mode}}",
-      "selected": "选中",
-      "switching": "正在切换...",
-      "title": "连接"
+      "method": "连接方式",
+      "mode": "模式：{{mode}}",
+      "selected": "已选择",
+      "switching": "交换…",
+      "title": "联系"
     },
     "connectionCards": {
       "apiKey": {
         "title": "API 密钥"
       },
       "anthropic": {
-        "apiKeyDescription": "使用ANTHROPIC_API_KEY和Anthropic ZXCVKEN1ZXCV计费.",
-        "autoDescription": "使用 Anthropic 运行时默认和最佳本地证书可用 。",
-        "hint": "自动保存 Anthropic 的默认本地证书分辨率 。",
-        "subscriptionDescription": "使用本地的 Anthropic 签名和订阅权限 。",
-        "subscriptionTitle": "人类订阅"
+        "apiKeyDescription": "使用 ANTHROPIC_API_KEY 和 Anthropic API 计费。",
+        "autoDescription": "使用 Anthropic 运行时默认值和可用的最佳本地凭据。",
+        "hint": "Auto 使 Anthropic 保持其默认的本地凭证解析。",
+        "subscriptionDescription": "使用您本地的 Anthropic 登录会话和订阅访问权限。",
+        "subscriptionTitle": "人择订阅"
       },
       "auto": {
-        "title": "自动"
+        "title": "汽车"
       },
       "codex": {
-        "apiKeyDescription": "使用OPENAI_API_KEY和CODEX_API_KEY为本地的Codex发射计费.",
-        "autoDescription": "优先使用您的 ChatGPT 账户和订阅 。 仅在需要时使用 API 密钥模式.",
-        "chatgptDescription": "使用您连接的 ChatGPT 账户和 Codex 订阅 。",
-        "chatgptTitle": "ChatGPT 账户",
-        "hint": "Codex总是贯穿本土运行时间. 自动在返回到 API 密钥证书之前,更喜欢您的 ChatGPT 账户 。"
+        "apiKeyDescription": "使用 OPENAI_API_KEY 和 CODEX_API_KEY 计费进行本机 Codex 启动。",
+        "autoDescription": "首选您的 ChatGPT 帐户和订阅。仅在需要时使用 API 密钥模式。",
+        "chatgptDescription": "使用您连接的 ChatGPT 帐户和 Codex 订阅。",
+        "chatgptTitle": "聊天 GPT 帐户",
+        "hint": "Codex 始终在本机运行时运行。 Auto 在回退到 API 密钥凭据之前更喜欢使用您的 ChatGPT 帐户。"
       }
     },
-    "description": "管理每个提供者的连接方式,并在支持时管理哪个后端的多模式运行时间应该使用.",
+    "description": "管理每个提供商的连接方式，以及在支持时多模型运行时应使用哪个后端。",
     "fastMode": {
       "defaultOff": "默认关闭",
-      "description": "在解析模型和运行时间允许时,默认应用Claude Code Fast模式用于新的Anthropic团队启动.",
-      "disabledHint": "新的Anthropic发射保持正常速度,除非一个团队明确启用快速模式.",
-      "enabledHint": "新的Anthropic发射将在解析模型支持时默认请求快速模式.",
-      "notExposed": "此 Anthropic 运行时间不显示快模式 。",
-      "preferFast": "首选快",
-      "title": "快模式默认",
-      "unavailableForRuntime": "此 Anthropic 运行时间目前无法使用快速模式 。"
+      "description": "当解析的模型和运行时允许时，默认为新的 Anthropic 团队启动应用于 Claude Code Fast 模式。",
+      "disabledHint": "除非团队明确启用快速模式，否则新的 Anthropic 发布将保持正常速度。",
+      "enabledHint": "当解析的模型支持快速模式时，新的 Anthropic 启动将默认请求快速模式。",
+      "notExposed": "此 Anthropic 运行时未公开快速模式。",
+      "preferFast": "喜欢快",
+      "title": "默认快速模式",
+      "unavailableForRuntime": "目前，快速模式对此 Anthropic 运行时不可用。"
     },
     "alerts": {
-      "anthropicApiKeyMissing": "选择了 API 密钥模式,但是还没有Anthropic API证书可用.",
-      "anthropicStoredKeyAvailable": "保存的 API 密钥是可用的,但应用程序启动的Anthropic会话仅在切换到 API 密钥模式后才使用.",
-      "anthropicSubscriptionMissing": "选择了 Athropic 订阅模式 。 与 Anthropic 签约使用此提供者 。",
-      "authTokenMissing": "未配置 Auth 令牌 。 许多本地的Anthropic兼容端点需要非空代币.",
-      "chatgptLoginPending": "等待 ChatGPT 账户登录完成...",
-      "chatgptLoginStarting": "开始 ChatGPT 登录...",
-      "codexApiKeyMissing": "选择了 API 密钥模式,但还没有OPENAI_API_KEY或CODEX_API_KEY证书可用.",
-      "codexLocalArtifactsNoSession": "Codex CLI目前没有活跃的ChatGPT账户. 本地 Codex 账户数据已存在,但没有选择活动管理会话 。",
-      "codexNeedsReconnect": "Codex有一个本地选择的ChatGPT账户,但当前会话需要重新连接.",
-      "codexNoChatgptAccount": "Codex CLI目前没有活跃的ChatGPT账户. 连接 ChatGPT 以使用您的订阅 。",
-      "codexNoCredential": "尚没有 ChatGPT 账户或 API 密钥 。",
-      "geminiApiUnavailable": "双子座 API目前无法使用. 在此配置 `GEMINI_API_KEY` 或使用有效的 Google ADC 证书 。",
-      "withApiKeyFallback": "{{message}} 苏维埃社会主义共和国 切换到API密钥模式,使用检测到的API密钥."
+      "anthropicApiKeyMissing": "已选择 API 密钥模式，但尚无可用的 Anthropic API 凭证。",
+      "anthropicStoredKeyAvailable": "已保存的 API 密钥可用，但应用启动的 Anthropic 会话仅在您切换到 API 密钥模式后才使用它。",
+      "anthropicSubscriptionMissing": "选择人择订阅模式。登录 Anthropic 以使用此提供商。",
+      "authTokenMissing": "未配置认证 Token。许多本地 Anthropic 兼容端点需要非空 Token。",
+      "chatgptLoginPending": "等待 ChatGPT 帐户登录完成…",
+      "chatgptLoginStarting": "正在开始 ChatGPT 登录…",
+      "codexApiKeyMissing": "选择了 API 密钥模式，但尚无可用的 OPENAI_API_KEY 或 CODEX_API_KEY 凭据。",
+      "codexLocalArtifactsNoSession": "Codex CLI 目前没有有效的 ChatGPT 帐户。本地 Codex 帐户数据存在，但未选择有效的托管会话。",
+      "codexNeedsReconnect": "Codex 有一个本地选择的 ChatGPT 帐户，但当前会话需要重新连接。",
+      "codexNoChatgptAccount": "Codex CLI 目前没有有效的 ChatGPT 帐户。连接 ChatGPT 以使用您的订阅。",
+      "codexNoCredential": "尚无可用的 ChatGPT 帐户或 API 密钥。",
+      "geminiApiUnavailable": "Gemini API 目前不可用。在此处配置“GEMINI_API_KEY”或使用有效的 Google ADC 凭据。",
+      "withApiKeyFallback": "{{message}} 切换到 API 密钥模式以使用检测到的 API 密钥。"
     },
     "authModeDescriptions": {
       "anthropic": {
-        "apiKey": "强制启动 Anthropic 会话使用 API 密钥证书 。",
-        "auto": "使用运行时间默认行为 。 此应用程序中保存的 API 密钥仅在切换到 API 密钥模式后使用.",
-        "oauth": "强制应用启动的 Anthropic 会话使用本地的 Anthropic 订阅会话 。"
+        "apiKey": "强制应用启动的 Anthropic 会话使用 API 密钥凭证。",
+        "auto": "使用运行时默认行为。仅当您切换到 API 密钥模式后，才会使用此应用中保存的 API 密钥。",
+        "oauth": "强制应用启动的 Anthropic 会话使用本地 Anthropic 订阅会话。"
       },
       "codex": {
-        "apiKey": "强制本土代码发射使用OPENAI_API_KEY / CODEX_API_KEY计费.",
-        "auto": "优先使用您的 ChatGPT 账户 。 仅在需要的时候才返回到 API 密钥模式.",
-        "chatgpt": "强制本地代码启动使用您连接的 ChatGPT 账户和订阅 。"
+        "apiKey": "强制本机 Codex 启动使用 OPENAI_API_KEY / CODEX_API_KEY 计费。",
+        "auto": "首选您的 ChatGPT 帐户（如果可用）。仅在需要时回退到 API 密钥模式。",
+        "chatgpt": "强制本机 Codex 启动以使用您连接的 ChatGPT 帐户和订阅。"
       }
     },
     "progress": {
-      "applyingConnectionChanges": "正在应用连接更改...",
-      "refreshingProviderStatus": "正在刷新提供者状态...",
-      "savingCompatibleEndpoint": "保存兼容的终点...",
-      "switchingAnthropicSubscription": "正在切换到 Anthropic 订阅...",
-      "switchingApiKey": "正在切换到 API 密钥...",
-      "switchingApiKeyMode": "正在切换到 API 密钥模式...",
-      "switchingAuto": "正在切换到自动...",
-      "switchingChatgpt": "正在切换到 ChatGPT 账户模式..."
+      "applyingConnectionChanges": "正在应用连接更改…",
+      "refreshingProviderStatus": "正在刷新提供商状态…",
+      "savingCompatibleEndpoint": "正在保存兼容端点…",
+      "switchingAnthropicSubscription": "正在切换到 Anthropic 订阅…",
+      "switchingApiKey": "正在切换到 API 密钥…",
+      "switchingApiKeyMode": "正在切换到 API 密钥模式…",
+      "switchingAuto": "切换到自动…",
+      "switchingChatgpt": "正在切换到 ChatGPT 帐户模式…"
     },
-    "provider": "供应商",
+    "provider": "提供商",
     "runtime": {
       "descriptions": {
-        "anthropic": "Anthropic目前没有单独的运行时间后端选择器.",
-        "codex": "Codex现在只运行于本地运行时路径.",
-        "gemini": "选择双子座运行时的后端多模型应使用哪个 。",
-        "opencode": "OpenCode使用自己的管理运行时主机. 桌面目前只显示状态 。"
+        "anthropic": "Anthropic 目前没有单独的运行时后端选择器。",
+        "codex": "Codex 现在仅通过本机运行时路径运行。",
+        "gemini": "选择应使用哪个 Gemini 运行时后端多模型。",
+        "opencode": "OpenCode 使用自己的托管运行时主机。桌面当前仅公开状态。"
       },
-      "title": "运行时间",
-      "updating": "更新运行时间..."
+      "title": "运行时",
+      "updating": "正在更新运行时…"
     },
-    "runtimeSummary": "运行时间: {{runtime}}",
+    "runtimeSummary": "运行时：{{runtime}}",
     "status": {
-      "configured": "配置",
-      "enabled": "已启用",
+      "configured": "已配置",
+      "enabled": "启用",
       "notConfigured": "未配置",
       "notSet": "未设置",
-      "off": "关",
-      "unknown": "未知数"
+      "off": "离开",
+      "unknown": "未知"
     },
-    "title": "提供者设置",
+    "title": "提供商设置",
     "usage": {
       "apiKey": "使用 API 密钥",
-      "apiKeyRequired": "需要的 API 密钥",
-      "compatibleEndpoint": "使用兼容的终点",
+      "apiKeyRequired": "需要 API 密钥",
+      "compatibleEndpoint": "使用兼容端点",
       "notConnected": "未连接",
       "usingMethod": "使用 {{method}}"
     },
     "errors": {
-      "apiKeyDeletedRefreshFailed": "API密钥已删除, 但无法刷新提供者状态 。",
-      "apiKeySavedRefreshFailed": "API 密钥已保存, 但无法刷新提供者状态 。",
-      "connectionUpdatedRefreshFailed": "连接已更新, 但更新提供者状态失败 。",
+      "apiKeyDeletedRefreshFailed": "API 密钥已删除，但无法刷新提供商状态。",
+      "apiKeySavedRefreshFailed": "API 密钥已保存，但无法刷新提供商状态。",
+      "connectionUpdatedRefreshFailed": "连接已更新，但无法刷新提供商状态。",
       "deleteApiKey": "删除 API 密钥失败",
       "disableEndpoint": "禁用端点失败",
-      "endpointDisabledRefreshFailed": "端点已禁用, 但无法刷新提供者状态 。",
-      "endpointSavedRefreshFailed": "端点已保存, 但无法刷新提供者状态 。",
-      "refreshCodexAccount": "刷新 Codex 账户失败",
-      "saveApiKey": "保存 API 密钥失败",
+      "endpointDisabledRefreshFailed": "端点已禁用，但无法刷新提供商状态。",
+      "endpointSavedRefreshFailed": "端点已保存，但无法刷新提供商状态。",
+      "refreshCodexAccount": "刷新 Codex 帐户失败",
+      "saveApiKey": "无法保存 API 密钥",
       "saveEndpoint": "保存端点失败",
-      "updateAnthropicFastMode": "更新 Anthropic 快模式失败",
+      "updateAnthropicFastMode": "无法更新 Anthropic Fast 模式",
       "updateConnection": "更新连接失败",
-      "updateRuntimeBackend": "更新运行时间后端失败",
-      "apiKeyRequired": "需要API键"
+      "updateRuntimeBackend": "无法更新运行时后端",
+      "apiKeyRequired": "需要 API 密钥"
     },
     "connectionUi": {
       "authMode": {
-        "auto": "自动",
-        "oauth": "订阅/ OAuth",
-        "chatgpt": "ChatGPT 账户",
+        "auto": "汽车",
+        "oauth": "订阅/OAuth",
+        "chatgpt": "聊天 GPT 帐户",
         "apiKey": "API 密钥",
-        "anthropicSubscription": "人类订阅"
+        "anthropicSubscription": "人择订阅"
       },
       "authMethod": {
         "apiKey": "API 密钥",
-        "apiKeyHelper": "API 密钥帮助器",
-        "oauth": "奥奥特",
-        "claudeSubscription": "克劳德订阅",
-        "geminiCli": "双子座 CLI",
-        "googleAccount": "谷歌账户",
-        "serviceAccount": "服务账户"
+        "apiKeyHelper": "API 密钥助手",
+        "oauth": "开放认证",
+        "claudeSubscription": "Claude 订阅",
+        "geminiCli": "Gemini 命令行界面",
+        "googleAccount": "谷歌帐户",
+        "serviceAccount": "服务帐户"
       },
       "runtime": {
-        "codexNative": "本地代码",
-        "currentRuntime": "当前运行时间",
-        "selectedRuntime": "选中运行时间",
-        "summary": "{{prefix}}编号:{{runtime}}"
+        "codexNative": "Codex 本机",
+        "currentRuntime": "当前运行时",
+        "selectedRuntime": "选定运行时",
+        "summary": "{{prefix}}: {{runtime}}"
       },
       "status": {
-        "checking": "正在检查...",
+        "checking": "检查…",
+        "modelsAvailable": "可选模型",
         "checked": "已检查",
-        "providerActivity": "提供者活动",
+        "providerActivity": "提供商活动",
         "notConnected": "未连接",
-        "startingChatGptLogin": "开始 ChatGPT 登录...",
-        "waitingForChatGptLogin": "正在等待 ChatGPT 账户登录...",
-        "chatGptVerificationDegraded": "检测到 ChatGPT 账户 - 账户验证正在退化 。",
-        "chatGptAccountReady": "已准备好 ChatGPT 账户",
-        "apiKeyReady": "ZXCVKEN0ZXCV 密钥已准备好",
-        "codexLocalAccountNeedsReconnect": "Codex有一个本地选择的ChatGPT账户,但当前会话需要重新连接.",
-        "codexNoActiveManagedSession": "Codex CLI报告没有活动查特GPT登录. 本地 Codex 账户数据已存在,但没有选择活动管理会话 。",
-        "codexNoActiveChatGptLogin": "Codex CLI 报告未激活 ChatGPT 登录",
-        "connectChatGptForSubscription": "连接 ChatGPT 账户以使用您的 Codex 订阅 。",
-        "codexNativeReady": "本地代码已就绪",
-        "codexNativeUnavailable": "无法使用本地编码",
-        "unavailableInCurrentRuntime": "当前运行时间不可用",
+        "startingChatGptLogin": "正在开始 ChatGPT 登录…",
+        "waitingForChatGptLogin": "正在等待 ChatGPT 帐户登录…",
+        "chatGptVerificationDegraded": "检测到 ChatGPT 帐户 - 帐户验证当前已降级。",
+        "chatGptAccountReady": "ChatGPT 帐户已准备就绪",
+        "apiKeyReady": "API 密钥已准备就绪",
+        "codexLocalAccountNeedsReconnect": "Codex 有一个本地选择的 ChatGPT 帐户，但当前会话需要重新连接。",
+        "codexNoActiveManagedSession": "Codex CLI 报告没有有效的 ChatGPT 登录。本地 Codex 帐户数据存在，但未选择有效的托管会话。",
+        "codexNoActiveChatGptLogin": "Codex CLI 报告没有有效的 ChatGPT 登录",
+        "connectChatGptForSubscription": "连接 ChatGPT 帐户以使用您的 Codex 订阅。",
+        "codexNativeReady": "Codex 原生就绪",
+        "codexNativeUnavailable": "Codex 原生不可用",
+        "unavailableInCurrentRuntime": "当前运行时不可用",
         "connectedViaApiKey": "通过 API 密钥连接",
-        "apiKeyConfiguredNotVerified": "配置了 API 密钥,但尚未验证",
-        "apiKeyModeMissingCredential": "选择了 API 密钥模式,但没有配置 API 密钥",
-        "connectedVia": "通过{{method}}连接",
-        "unableToVerify": "无法校验",
-        "modelsAvailable": "模型可用"
+        "apiKeyConfiguredNotVerified": "API 密钥已配置，但尚未验证",
+        "apiKeyModeMissingCredential": "选择了 API 密钥模式，但未配置 API 密钥",
+        "connectedVia": "通过 {{method}} 连接",
+        "unableToVerify": "无法验证"
       },
       "mode": {
-        "selectedAuth": "选中的认证: {{authMode}}",
-        "preferredAuth": "首选认证: {{authMode}}"
+        "selectedAuth": "所选作者：{{authMode}}",
+        "preferredAuth": "首选授权：{{authMode}}"
       },
       "credential": {
-        "apiKeyConfigured": "API 密钥配置",
-        "savedApiKeyAvailable": "管理中保存可用的 API 密钥",
-        "apiKeyAlsoConfigured": "API 密钥也在管理中配置",
+        "apiKeyConfigured": "API 密钥已配置",
+        "savedApiKeyAvailable": "已保存的 API 密钥可在“管理”中使用",
+        "apiKeyAlsoConfigured": "API 密钥也在“管理”中配置",
         "apiKeyConfiguredInManage": "API 密钥在管理中配置",
-        "apiKeyFallbackInManage": "API 密钥作为倒置管理中也可以使用",
-        "availableAsFallback": "{{summary}} - 以倒置形式提供",
-        "savedApiKeyAvailableIfSwitch": "如果您切换到 API 密钥模式, 管理中可保存 API 密钥",
-        "availableIfSwitch": "{{summary}} - 切换到API键模式时可用",
-        "autoWillUseUntilChatGpt": "{{summary}} - 自动使用,直到ChatGPT连接为止"
+        "apiKeyFallbackInManage": "API 密钥也可在“管理”中用作备用",
+        "availableAsFallback": "{{summary}} - 可作为备用",
+        "savedApiKeyAvailableIfSwitch": "如果您切换到 API 密钥模式，保存的 API 密钥可在“管理”中使用",
+        "availableIfSwitch": "{{summary}} - 如果切换到 API 密钥模式则可用",
+        "autoWillUseUntilChatGpt": "{{summary}} - 自动将使用此直到 ChatGPT 连接"
       },
       "actions": {
         "connect": "连接",
-        "connectAnthropic": "连接Anthropic",
-        "connectChatGpt": "连接 ChatGPT",
-        "disconnect": "断开连接",
+        "connectAnthropic": "连接人类",
+        "connectChatGpt": "连接聊天 GPT",
+        "disconnect": "断开",
         "openLogin": "打开登录"
       },
       "disconnect": {
-        "anthropicTitle": "断开Anthropic订阅?",
-        "anthropic": "从 Claude CLI 运行时间中删除本地的 Anthropic 订阅会话 。",
-        "anthropicWithApiKey": "从 Claude CLI 运行时间中删除本地的 Anthropic 订阅会话 。 管理保存的 API 密钥 。",
-        "geminiTitle": "断开双子座CLI?",
-        "gemini": "这清除了本地的双子座 ZXCVKEN0ZXCV会话元数据. 外部的ADC证书和保存的API密钥不删除."
+        "anthropicTitle": "断开 Anthropic 订阅？",
+        "anthropic": "这将从 Claude CLI 运行时中删除本地 Anthropic 订阅会话。",
+        "anthropicWithApiKey": "这将从 Claude CLI 运行时中删除本地 Anthropic 订阅会话。管理中保存的 API 密钥仍然可用。",
+        "geminiTitle": "断开 Gemini CLI？",
+        "gemini": "这将清除本地 Gemini CLI 会话元数据。外部 ADC 凭据和保存的 API 密钥不会被删除。"
       }
     }
   },
   "cliRuntime": {
     "actions": {
       "checkForUpdates": "检查更新",
-      "checking": "正在检查...",
+      "checking": "检查…",
       "extensions": "扩展",
       "installRuntime": "安装 {{runtime}}",
       "manage": "管理",
       "recheck": "重新检查",
-      "reinstallRuntime": "莱因斯托尔 {{runtime}}",
+      "reinstallRuntime": "重新安装 {{runtime}}",
       "retry": "重试",
       "update": "更新"
     },
     "installer": {
-      "checkingLatest": "正在检查最新版本...",
-      "downloading": "正在下载...",
+      "checkingLatest": "正在检查最新版本…",
+      "downloading": "正在下载…",
       "failed": "安装失败",
       "installed": "已安装 v{{version}}",
-      "installing": "安装中...",
-      "latest": "最新消息",
-      "verifying": "正在验证校验和..."
+      "installing": "正在安装…",
+      "latest": "最新的",
+      "verifying": "正在验证校验和…"
     },
     "labels": {
-      "multimodel": "多模式"
+      "multimodel": "多模型"
     },
     "loading": {
-      "aiProviders": "正在检查 AI 提供者...",
-      "claudeCli": "正在检查克劳德CLI..."
+      "aiProviders": "检查 AI 提供商…",
+      "claudeCli": "检查 Claude CLI…"
     },
     "provider": {
-      "backend": "后端: {{backend}}",
-      "loadingModels": "正在装入模型...",
-      "modelsUnavailable": "此运行时间构建无法使用的模型",
-      "runtime": "运行时间: {{runtime}}"
+      "backend": "后端：{{backend}}",
+      "loadingModels": "正在加载模型…",
+      "modelsUnavailable": "模型不适用于此运行时构建",
+      "runtime": "运行时：{{runtime}}"
     },
     "providerTerminal": {
       "authFailed": "认证失败",
-      "authUpdated": "更新认证",
-      "loggedOut": "供应商已登录",
+      "authUpdated": "认证已更新",
+      "loggedOut": "提供商已注销",
       "login": "登录",
-      "logout": "注销",
+      "logout": "退出",
       "logoutFailed": "注销失败"
     },
     "status": {
-      "configuredNotFound": "未找到配置的 {{runtime}} 。",
-      "foundButFailed": "发现 {{runtime}} 失败启动",
-      "healthCheckFailed": "配置的 {{runtime}} 失败启动健康检查.",
-      "notInstalled": "{{runtime}}未安装"
+      "configuredNotFound": "未找到配置的 {{runtime}}。",
+      "foundButFailed": "找到 {{runtime}} 但启动失败",
+      "healthCheckFailed": "配置的 {{runtime}} 启动运行状况检查失败。",
+      "notInstalled": "{{runtime}} 未安装"
     },
-    "title": "CLI 苏维埃社会主义共和国 运行时间"
+    "title": "CLI 运行时"
   },
   "cliStatus": {
-    "versionUpgrade": "v{{current}} - > v{{latest}}"
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
   }
 }
