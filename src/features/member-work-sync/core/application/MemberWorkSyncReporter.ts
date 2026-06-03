@@ -6,6 +6,7 @@ import {
   finalizeMemberWorkSyncAgenda,
   MemberWorkSyncReconciler,
 } from './MemberWorkSyncReconciler';
+import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type {
   MemberWorkSyncReport,
@@ -42,10 +43,11 @@ export class MemberWorkSyncReporter {
     const source = await this.deps.agendaSource.loadAgenda(request);
     const agenda = finalizeMemberWorkSyncAgenda(this.deps, source);
     const nowIso = this.deps.clock.now().toISOString();
-    const teamActive = this.deps.lifecycle
-      ? await this.deps.lifecycle.isTeamActive(agenda.teamName)
-      : true;
-    if (!teamActive) {
+    const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+    });
+    if (!runtimeActivity.teamActive) {
       const status = await this.reconciler.execute(request);
       const rejectedStatus = await this.recordRejectedReport(
         status,
@@ -56,6 +58,21 @@ export class MemberWorkSyncReporter {
         accepted: false,
         code: 'team_runtime_inactive',
         message: 'Team runtime is not active. Restart the team before reporting work sync state.',
+        status: rejectedStatus,
+      };
+    }
+    if (!runtimeActivity.memberActive) {
+      const status = await this.reconciler.execute(request);
+      const rejectedStatus = await this.recordRejectedReport(
+        status,
+        request,
+        'member_runtime_inactive'
+      );
+      return {
+        accepted: false,
+        code: 'member_runtime_inactive',
+        message:
+          'Member runtime is not active. Restart this teammate before reporting work sync state.',
         status: rejectedStatus,
       };
     }

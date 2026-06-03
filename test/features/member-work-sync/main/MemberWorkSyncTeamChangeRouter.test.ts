@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { MemberWorkSyncTeamChangeRouter } from '@features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter';
+import { describe, expect, it, vi } from 'vitest';
 
 function createRouter(activeMembers: string[] = ['alice', 'bob']) {
   const queue = {
@@ -96,13 +95,25 @@ describe('MemberWorkSyncTeamChangeRouter', () => {
     });
   });
 
-  it('drops queued work when the team goes offline', () => {
+  it('refreshes member runtime state when the team goes offline', async () => {
     const { queue, router } = createRouter();
 
     router.noteTeamChange({ type: 'lead-activity', teamName: 'team-a', detail: 'offline' });
+    await Promise.resolve();
 
     expect(queue.dropTeam).toHaveBeenCalledWith('team-a');
-    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'alice',
+      triggerReason: 'runtime_activity',
+      runAfterMs: 0,
+    });
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+      triggerReason: 'runtime_activity',
+      runAfterMs: 0,
+    });
   });
 
   it('routes member-turn-settled events to one member reconcile', () => {

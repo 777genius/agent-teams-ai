@@ -3,6 +3,7 @@ import { decideMemberWorkSyncStatus } from '../domain';
 import { appendMemberWorkSyncAudit, reasonToAuditEvent } from './MemberWorkSyncAudit';
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
 import { finalizeMemberWorkSyncAgenda } from './MemberWorkSyncReconciler';
+import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type {
   MemberWorkSyncAgenda,
@@ -14,6 +15,9 @@ import type { MemberWorkSyncAuditEventName, MemberWorkSyncUseCaseDeps } from './
 const MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR = 2;
 const MEMBER_WORK_SYNC_RETRY_BASE_MINUTES = 10;
 const MEMBER_WORK_SYNC_RETRY_MAX_MINUTES = 60;
+const MEMBER_WORK_SYNC_NUDGE_DISPATCH_ITEM_TIMEOUT_MS = 2 * 60_000;
+const MEMBER_WORK_SYNC_NUDGE_DISPATCH_TEAM_TIMEOUT_MS = 2 * 60_000;
+const MEMBER_WORK_SYNC_NUDGE_CLAIM_TIMEOUT_MS = 30_000;
 const AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX = 'agenda-sync-still-stuck:';
 
 export interface MemberWorkSyncNudgeDispatchSummary {
@@ -28,10 +32,30 @@ export interface MemberWorkSyncNudgeDispatchOptions {
   claimedBy: string;
   teamNames: string[];
   limit?: number;
+  itemTimeoutMs?: number;
+  teamTimeoutMs?: number;
+  claimTimeoutMs?: number;
 }
 
 function emptySummary(): MemberWorkSyncNudgeDispatchSummary {
   return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+}
+
+function addSummary(
+  left: MemberWorkSyncNudgeDispatchSummary,
+  right: MemberWorkSyncNudgeDispatchSummary
+): MemberWorkSyncNudgeDispatchSummary {
+  return {
+    claimed: left.claimed + right.claimed,
+    delivered: left.delivered + right.delivered,
+    superseded: left.superseded + right.superseded,
+    retryable: left.retryable + right.retryable,
+    terminal: left.terminal + right.terminal,
+  };
+}
+
+function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+  timer.unref?.();
 }
 
 function addMinutes(iso: string, minutes: number): string {
@@ -116,6 +140,22 @@ function reviewPickupRequestIdsStillMatch(
   return payloadIds.length > 0 && payloadIds.every((id) => agendaIds.includes(id));
 }
 
+interface MemberWorkSyncNudgeDispatchRun {
+  cancelled: boolean;
+  parent?: MemberWorkSyncNudgeDispatchRun;
+}
+
+function isDispatchRunCancelled(run?: MemberWorkSyncNudgeDispatchRun): boolean {
+  let current: MemberWorkSyncNudgeDispatchRun | undefined = run;
+  while (current) {
+    if (current.cancelled) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
 export class MemberWorkSyncNudgeDispatcher {
   constructor(private readonly deps: MemberWorkSyncUseCaseDeps) {}
 
@@ -129,28 +169,275 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     const nowIso = this.deps.clock.now().toISOString();
-    const summary = emptySummary();
-    for (const teamName of [
-      ...new Set(options.teamNames.map((name) => name.trim()).filter(Boolean)),
-    ]) {
-      const claimed = await outbox.claimDue({
-        teamName,
-        claimedBy: options.claimedBy,
-        nowIso,
-        limit: options.limit ?? 10,
-      });
-      summary.claimed += claimed.length;
-      for (const item of claimed) {
-        const result = await this.dispatchItem(item, nowIso);
-        summary[result] += 1;
+    const itemTimeoutMs = Math.max(
+      1,
+      options.itemTimeoutMs ?? MEMBER_WORK_SYNC_NUDGE_DISPATCH_ITEM_TIMEOUT_MS
+    );
+    const teamTimeoutMs = Math.max(
+      1,
+      options.teamTimeoutMs ?? MEMBER_WORK_SYNC_NUDGE_DISPATCH_TEAM_TIMEOUT_MS
+    );
+    const claimTimeoutMs = Math.max(
+      1,
+      options.claimTimeoutMs ?? MEMBER_WORK_SYNC_NUDGE_CLAIM_TIMEOUT_MS
+    );
+    const teamNames = [...new Set(options.teamNames.map((name) => name.trim()).filter(Boolean))];
+    const summaries = await Promise.allSettled(
+      teamNames.map((teamName) =>
+        this.dispatchTeamWithTimeout(teamName, options, nowIso, {
+          itemTimeoutMs,
+          teamTimeoutMs,
+          claimTimeoutMs,
+        })
+      )
+    );
+
+    let summary = emptySummary();
+    for (const [index, result] of summaries.entries()) {
+      if (result.status === 'fulfilled') {
+        summary = addSummary(summary, result.value);
+      } else {
+        this.deps.logger?.warn('member work sync team nudge dispatch failed', {
+          teamName: teamNames[index],
+          error: String(result.reason),
+        });
       }
     }
     return summary;
   }
 
+  private async dispatchTeamWithTimeout(
+    teamName: string,
+    options: MemberWorkSyncNudgeDispatchOptions,
+    nowIso: string,
+    timeouts: { itemTimeoutMs: number; teamTimeoutMs: number; claimTimeoutMs: number }
+  ): Promise<MemberWorkSyncNudgeDispatchSummary> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const run: MemberWorkSyncNudgeDispatchRun = { cancelled: false };
+    const work = this.dispatchTeam(teamName, options, nowIso, timeouts, run);
+    void work.catch(() => undefined);
+
+    try {
+      const result = await Promise.race([
+        work,
+        new Promise<'timeout'>((resolve) => {
+          timeout = setTimeout(() => {
+            run.cancelled = true;
+            resolve('timeout');
+          }, timeouts.teamTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+      if (result !== 'timeout') {
+        return result;
+      }
+      this.deps.logger?.warn('member work sync team nudge dispatch timed out', {
+        teamName,
+        timeoutMs: timeouts.teamTimeoutMs,
+      });
+      return emptySummary();
+    } finally {
+      run.cancelled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async dispatchTeam(
+    teamName: string,
+    options: MemberWorkSyncNudgeDispatchOptions,
+    nowIso: string,
+    timeouts: { itemTimeoutMs: number; claimTimeoutMs: number },
+    run: MemberWorkSyncNudgeDispatchRun
+  ): Promise<MemberWorkSyncNudgeDispatchSummary> {
+    const summary = emptySummary();
+    const claimed = await this.claimDueWithTimeout(teamName, options, nowIso, timeouts, run);
+    if (!claimed || isDispatchRunCancelled(run)) {
+      return summary;
+    }
+
+    summary.claimed += claimed.length;
+    for (const item of claimed) {
+      if (isDispatchRunCancelled(run)) {
+        break;
+      }
+      const result = await this.dispatchItemWithTimeout(item, nowIso, timeouts.itemTimeoutMs, run);
+      summary[result] += 1;
+    }
+    return summary;
+  }
+
+  private async claimDueWithTimeout(
+    teamName: string,
+    options: MemberWorkSyncNudgeDispatchOptions,
+    nowIso: string,
+    timeouts: { claimTimeoutMs: number },
+    run: MemberWorkSyncNudgeDispatchRun
+  ): Promise<MemberWorkSyncOutboxItem[] | null> {
+    const outbox = this.deps.outboxStore;
+    if (!outbox) {
+      return null;
+    }
+
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const work = outbox.claimDue({
+      teamName,
+      claimedBy: options.claimedBy,
+      nowIso,
+      limit: options.limit ?? 10,
+    });
+    void work.catch(() => undefined);
+
+    try {
+      const result = await Promise.race([
+        work,
+        new Promise<'timeout'>((resolve) => {
+          timeout = setTimeout(() => resolve('timeout'), timeouts.claimTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+      if (result !== 'timeout') {
+        return isDispatchRunCancelled(run) ? null : result;
+      }
+      this.deps.logger?.warn('member work sync nudge claim timed out', {
+        teamName,
+        timeoutMs: timeouts.claimTimeoutMs,
+      });
+      return null;
+    } catch (error) {
+      this.deps.logger?.warn('member work sync nudge claim failed', {
+        teamName,
+        error: String(error),
+      });
+      return null;
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async dispatchItemWithTimeout(
+    item: MemberWorkSyncOutboxItem,
+    nowIso: string,
+    timeoutMs: number,
+    run: MemberWorkSyncNudgeDispatchRun
+  ): Promise<keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'>> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const itemRun: MemberWorkSyncNudgeDispatchRun = { cancelled: false, parent: run };
+    const work = this.dispatchItem(item, nowIso, itemRun);
+    void work.catch(() => undefined);
+
+    try {
+      const result = await Promise.race<
+        keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'> | 'timeout'
+      >([
+        work,
+        new Promise<'timeout'>((resolve) => {
+          timeout = setTimeout(() => {
+            itemRun.cancelled = true;
+            resolve('timeout');
+          }, timeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+      if (result !== 'timeout') {
+        return result;
+      }
+      await this.tryMarkDispatchItemRetryable(
+        item,
+        nowIso,
+        `nudge dispatch item timed out after ${timeoutMs}ms`,
+        timeoutMs,
+        run
+      );
+      return 'retryable';
+    } catch (error) {
+      await this.tryMarkDispatchItemRetryable(item, nowIso, String(error), timeoutMs, run);
+      return 'retryable';
+    } finally {
+      itemRun.cancelled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async tryMarkDispatchItemRetryable(
+    item: MemberWorkSyncOutboxItem,
+    nowIso: string,
+    error: string,
+    timeoutMs: number,
+    run?: MemberWorkSyncNudgeDispatchRun
+  ): Promise<void> {
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const markTimeoutMs = Math.min(Math.max(1, timeoutMs), 5_000);
+    const work = this.markDispatchItemRetryable(item, nowIso, error, run);
+    void work.catch(() => undefined);
+
+    try {
+      const result = await Promise.race([
+        work.then(() => 'marked' as const),
+        new Promise<'timeout'>((resolve) => {
+          timeout = setTimeout(() => resolve('timeout'), markTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+      if (result === 'timeout') {
+        this.deps.logger?.warn('member work sync nudge retry mark timed out', {
+          teamName: item.teamName,
+          memberName: item.memberName,
+          outboxId: item.id,
+          timeoutMs: markTimeoutMs,
+          error,
+        });
+      }
+    } catch (markError) {
+      this.deps.logger?.warn('member work sync nudge retry mark failed', {
+        teamName: item.teamName,
+        memberName: item.memberName,
+        outboxId: item.id,
+        error: String(markError),
+      });
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async markDispatchItemRetryable(
+    item: MemberWorkSyncOutboxItem,
+    nowIso: string,
+    error: string,
+    run?: MemberWorkSyncNudgeDispatchRun
+  ): Promise<void> {
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
+    await this.deps.outboxStore?.markFailed({
+      teamName: item.teamName,
+      id: item.id,
+      attemptGeneration: item.attemptGeneration,
+      error,
+      retryable: true,
+      nowIso,
+      nextAttemptAt: nextRetryAt(item, nowIso),
+    });
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
+    await this.appendDispatchAudit(item, 'nudge_retryable', error);
+  }
+
   private async dispatchItem(
     item: MemberWorkSyncOutboxItem,
-    nowIso: string
+    nowIso: string,
+    run: MemberWorkSyncNudgeDispatchRun
   ): Promise<keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'>> {
     const outbox = this.deps.outboxStore;
     const inbox = this.deps.inboxNudge;
@@ -158,7 +445,13 @@ export class MemberWorkSyncNudgeDispatcher {
       return 'terminal';
     }
 
+    if (isDispatchRunCancelled(run)) {
+      return 'retryable';
+    }
     const revalidation = await this.revalidate(item, nowIso);
+    if (isDispatchRunCancelled(run)) {
+      return 'retryable';
+    }
     if (!revalidation.ok) {
       if (revalidation.retryable) {
         await outbox.markFailed({
@@ -170,6 +463,9 @@ export class MemberWorkSyncNudgeDispatcher {
           nowIso,
           nextAttemptAt: revalidation.nextAttemptAt ?? nextRetryAt(item, nowIso),
         });
+        if (isDispatchRunCancelled(run)) {
+          return 'retryable';
+        }
         await this.appendDispatchAudit(
           item,
           reasonToAuditEvent(revalidation.reason),
@@ -178,8 +474,8 @@ export class MemberWorkSyncNudgeDispatcher {
         return 'retryable';
       }
       if (revalidation.reason.startsWith('review_pickup_delivery_unavailable:')) {
-        await this.markReviewPickupDeliveryUnavailable(item, nowIso, revalidation.reason);
-        return 'superseded';
+        await this.markReviewPickupDeliveryUnavailable(item, nowIso, revalidation.reason, run);
+        return isDispatchRunCancelled(run) ? 'retryable' : 'superseded';
       }
       await outbox.markSuperseded({
         teamName: item.teamName,
@@ -187,11 +483,17 @@ export class MemberWorkSyncNudgeDispatcher {
         reason: revalidation.reason,
         nowIso,
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'nudge_superseded', revalidation.reason);
       return 'superseded';
     }
 
     try {
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       const inserted = await inbox.insertIfAbsent({
         teamName: item.teamName,
         memberName: item.memberName,
@@ -200,6 +502,9 @@ export class MemberWorkSyncNudgeDispatcher {
         payload: item.payload,
         timestamp: nowIso,
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       if (inserted.conflict) {
         await outbox.markFailed({
           teamName: item.teamName,
@@ -209,6 +514,9 @@ export class MemberWorkSyncNudgeDispatcher {
           retryable: false,
           nowIso,
         });
+        if (isDispatchRunCancelled(run)) {
+          return 'retryable';
+        }
         await this.appendDispatchAudit(item, 'nudge_skipped', 'inbox_payload_conflict');
         return 'terminal';
       }
@@ -218,7 +526,8 @@ export class MemberWorkSyncNudgeDispatcher {
           inserted.messageId,
           inserted.inserted,
           revalidation.providerId,
-          nowIso
+          nowIso,
+          run
         );
       }
       await outbox.markDelivered({
@@ -228,15 +537,25 @@ export class MemberWorkSyncNudgeDispatcher {
         deliveredMessageId: inserted.messageId,
         nowIso,
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'nudge_delivered', 'inbox_inserted');
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.scheduleDeliveryWake(
         item,
         inserted.messageId,
         inserted.inserted,
-        revalidation.providerId
+        revalidation.providerId,
+        run
       );
-      return 'delivered';
+      return isDispatchRunCancelled(run) ? 'retryable' : 'delivered';
     } catch (error) {
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await outbox.markFailed({
         teamName: item.teamName,
         id: item.id,
@@ -246,6 +565,9 @@ export class MemberWorkSyncNudgeDispatcher {
         nowIso,
         nextAttemptAt: nextRetryAt(item, nowIso),
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'nudge_retryable', String(error));
       return 'retryable';
     }
@@ -256,7 +578,8 @@ export class MemberWorkSyncNudgeDispatcher {
     messageId: string,
     inserted: boolean,
     providerId: MemberWorkSyncStatus['providerId'] | undefined,
-    nowIso: string
+    nowIso: string,
+    run: MemberWorkSyncNudgeDispatchRun
   ): Promise<keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'>> {
     const outbox = this.deps.outboxStore;
     const delivery = this.deps.reviewPickupDelivery;
@@ -264,11 +587,15 @@ export class MemberWorkSyncNudgeDispatcher {
       await this.markReviewPickupDeliveryUnavailable(
         item,
         nowIso,
-        'review_pickup_delivery_port_unavailable'
+        'review_pickup_delivery_port_unavailable',
+        run
       );
-      return 'superseded';
+      return isDispatchRunCancelled(run) ? 'retryable' : 'superseded';
     }
 
+    if (isDispatchRunCancelled(run)) {
+      return 'retryable';
+    }
     const outcome = await delivery.deliver({
       teamName: item.teamName,
       memberName: item.memberName,
@@ -278,6 +605,9 @@ export class MemberWorkSyncNudgeDispatcher {
       inserted,
       nowIso,
     });
+    if (isDispatchRunCancelled(run)) {
+      return 'retryable';
+    }
 
     if (outcome.ok) {
       await outbox.markDelivered({
@@ -289,7 +619,13 @@ export class MemberWorkSyncNudgeDispatcher {
         deliveryDiagnostics: outcome.diagnostics,
         nowIso,
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'review_pickup_member_nudge_delivered', outcome.state);
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'nudge_delivered', `review_pickup:${outcome.state}`);
       return 'delivered';
     }
@@ -304,13 +640,16 @@ export class MemberWorkSyncNudgeDispatcher {
         nowIso,
         nextAttemptAt: outcome.retryAfterIso ?? nextRetryAt(item, nowIso),
       });
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
       await this.appendDispatchAudit(item, 'review_pickup_wake_failed_retryable', outcome.message);
       return 'retryable';
     }
 
     if (outcome.reason === 'capability_absent') {
-      await this.markReviewPickupDeliveryUnavailable(item, nowIso, outcome.message);
-      return 'superseded';
+      await this.markReviewPickupDeliveryUnavailable(item, nowIso, outcome.message, run);
+      return isDispatchRunCancelled(run) ? 'retryable' : 'superseded';
     }
 
     await outbox.markFailed({
@@ -321,6 +660,9 @@ export class MemberWorkSyncNudgeDispatcher {
       retryable: false,
       nowIso,
     });
+    if (isDispatchRunCancelled(run)) {
+      return 'retryable';
+    }
     await this.appendDispatchAudit(item, 'nudge_skipped', outcome.message);
     return 'terminal';
   }
@@ -328,26 +670,40 @@ export class MemberWorkSyncNudgeDispatcher {
   private async markReviewPickupDeliveryUnavailable(
     item: MemberWorkSyncOutboxItem,
     nowIso: string,
-    reason: string
+    reason: string,
+    run?: MemberWorkSyncNudgeDispatchRun
   ): Promise<void> {
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
     await this.deps.outboxStore?.markSuperseded({
       teamName: item.teamName,
       id: item.id,
       reason,
       nowIso,
     });
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
     await this.appendDispatchAudit(item, 'review_pickup_delivery_unavailable', reason);
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
     await this.appendDispatchAudit(item, 'review_pickup_escalated', reason);
-    await this.notifyReviewPickupEscalation(item, nowIso, reason);
+    if (isDispatchRunCancelled(run)) {
+      return;
+    }
+    await this.notifyReviewPickupEscalation(item, nowIso, reason, run);
   }
 
   private async notifyReviewPickupEscalation(
     item: MemberWorkSyncOutboxItem,
     nowIso: string,
-    reason: string
+    reason: string,
+    run?: MemberWorkSyncNudgeDispatchRun
   ): Promise<void> {
     const escalation = this.deps.reviewPickupEscalation;
-    if (!escalation) {
+    if (!escalation || isDispatchRunCancelled(run)) {
       return;
     }
 
@@ -395,11 +751,15 @@ export class MemberWorkSyncNudgeDispatcher {
     | { ok: true; providerId?: MemberWorkSyncStatus['providerId'] }
     | { ok: false; reason: string; retryable: boolean; nextAttemptAt?: string }
   > {
-    const teamActive = this.deps.lifecycle
-      ? await this.deps.lifecycle.isTeamActive(item.teamName)
-      : true;
-    if (!teamActive) {
+    const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
+      teamName: item.teamName,
+      memberName: item.memberName,
+    });
+    if (!runtimeActivity.teamActive) {
       return { ok: false, reason: 'team_inactive', retryable: false };
+    }
+    if (!runtimeActivity.memberActive) {
+      return { ok: false, reason: 'member_runtime_inactive', retryable: false };
     }
 
     const previous = await this.deps.statusStore.read({
@@ -424,7 +784,7 @@ export class MemberWorkSyncNudgeDispatcher {
       agenda,
       latestAcceptedReport: previous.report?.accepted ? previous.report : null,
       nowIso,
-      inactive: source.inactive || !teamActive,
+      inactive: source.inactive || runtimeActivity.inactive,
     });
     const providerId = source.providerId ?? previous.providerId;
     const { report: _previousReport, ...previousWithoutReport } = previous;
@@ -533,19 +893,44 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     const taskIds = item.payload.taskRefs.map((taskRef) => taskRef.taskId);
-    if (
-      this.deps.watchdogCooldown &&
-      (await this.deps.watchdogCooldown.hasRecentNudge({
-        teamName: item.teamName,
-        memberName: item.memberName,
-        taskIds,
-        nowIso,
-      }))
-    ) {
-      return { ok: false, reason: 'watchdog_cooldown_active', retryable: true };
+    const watchdogCooldown = await this.resolveWatchdogCooldown(item, taskIds, nowIso);
+    if (watchdogCooldown.active) {
+      return {
+        ok: false,
+        reason: 'watchdog_cooldown_active',
+        retryable: true,
+        ...(watchdogCooldown.retryAfterIso
+          ? { nextAttemptAt: watchdogCooldown.retryAfterIso }
+          : {}),
+      };
     }
 
     return { ok: true, ...(providerId ? { providerId } : {}) };
+  }
+
+  private async resolveWatchdogCooldown(
+    item: MemberWorkSyncOutboxItem,
+    taskIds: string[],
+    nowIso: string
+  ): Promise<{ active: boolean; retryAfterIso?: string }> {
+    const watchdogCooldown = this.deps.watchdogCooldown;
+    if (!watchdogCooldown) {
+      return { active: false };
+    }
+    const input = {
+      teamName: item.teamName,
+      memberName: item.memberName,
+      taskIds,
+      nowIso,
+    };
+    if (watchdogCooldown.getRecentNudgeCooldown) {
+      const result = await watchdogCooldown.getRecentNudgeCooldown(input);
+      return {
+        active: result.active,
+        ...(result.retryAfterIso ? { retryAfterIso: result.retryAfterIso } : {}),
+      };
+    }
+    return { active: await watchdogCooldown.hasRecentNudge(input) };
   }
 
   private async revalidateProofMissingRecovery(
@@ -578,9 +963,10 @@ export class MemberWorkSyncNudgeDispatcher {
     item: MemberWorkSyncOutboxItem,
     messageId: string,
     inserted: boolean,
-    providerId?: MemberWorkSyncStatus['providerId']
+    providerId?: MemberWorkSyncStatus['providerId'],
+    run?: MemberWorkSyncNudgeDispatchRun
   ): Promise<void> {
-    if (!this.deps.nudgeDeliveryWake) {
+    if (!this.deps.nudgeDeliveryWake || isDispatchRunCancelled(run)) {
       return;
     }
 

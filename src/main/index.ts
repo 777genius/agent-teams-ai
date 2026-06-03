@@ -40,7 +40,10 @@ import {
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
+  hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
+  isRuntimeMemberActivityUncertainForWorkSync,
+  isRuntimeMemberActiveForWorkSync,
   type MemberWorkSyncFeatureFacade,
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
@@ -1820,7 +1823,10 @@ async function initializeServices(): Promise<void> {
   teammateToolTracker = new TeammateToolTracker(
     teamMemberLogsFinder,
     teamLogSourceTracker,
-    forwardTeamChange
+    (event) => {
+      forwardTeamChange(event);
+      memberWorkSyncFeature?.noteTeamChange(event);
+    }
   );
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
@@ -1878,41 +1884,140 @@ async function initializeServices(): Promise<void> {
   });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
-  const hasMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean> => {
+  const getMemberWorkSyncRuntimeSnapshot = async (input: {
+    teamName: string;
+    memberName?: string;
+  }) => {
+    const timeoutMs = 15_000;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const snapshot = teamProvisioningService.getTeamAgentRuntimeSnapshot(input.teamName);
+    void snapshot.catch(() => undefined);
     try {
-      const snapshot = await teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName);
-      return hasWorkSyncActiveRuntime(snapshot);
+      return await Promise.race([
+        snapshot,
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => {
+            memberWorkSyncLogger.warn('member work sync runtime snapshot timed out', {
+              teamName: input.teamName,
+              ...(input.memberName ? { memberName: input.memberName } : {}),
+              timeoutMs,
+            });
+            resolve(null);
+          }, timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  };
+  const getMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot({ teamName });
+      if (!snapshot) {
+        return null;
+      }
+      const active = hasWorkSyncActiveRuntime(snapshot);
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot)) {
+        return null;
+      }
+      return active;
     } catch (error) {
       memberWorkSyncLogger.warn('member work sync runtime activity check failed', {
         teamName,
         error: String(error),
       });
-      return false;
+      return null;
+    }
+  };
+  const getMemberWorkSyncMemberRuntimeActivity = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot(input);
+      if (!snapshot) {
+        return null;
+      }
+      const active = isRuntimeMemberActiveForWorkSync(snapshot, input.memberName);
+      if (!active && isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName)) {
+        return null;
+      }
+      return active;
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync member runtime activity check failed', {
+        teamName: input.teamName,
+        memberName: input.memberName,
+        error: String(error),
+      });
+      return null;
     }
   };
   const isTeamActiveForMemberWorkSync = async (teamName: string): Promise<boolean> => {
-    if (
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
       teamProvisioningService.isTeamAlive(teamName) ||
       teamProvisioningService.hasProvisioningRun(teamName)
-    ) {
-      return true;
-    }
-    return hasMemberWorkSyncRuntimeActivity(teamName);
+    );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
-    if (teamProvisioningService.isTeamAlive(teamName)) {
-      return true;
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
     }
-    return hasMemberWorkSyncRuntimeActivity(teamName);
+    return teamProvisioningService.isTeamAlive(teamName);
+  };
+  const isMemberActiveForMemberWorkSync = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean> => {
+    const runtimeActive = await getMemberWorkSyncMemberRuntimeActivity(input);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
+      teamProvisioningService.isTeamAlive(input.teamName) ||
+      teamProvisioningService.hasProvisioningRun(input.teamName)
+    );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
+    const teams = (await teamDataService.listTeams()).filter((team) => !team.deletedAt);
+    const activeChecks = await Promise.allSettled(
+      teams.map(async (team) => {
+        try {
+          return {
+            teamName: team.teamName,
+            active: await isTeamActiveForMemberWorkSync(team.teamName),
+          };
+        } catch (error) {
+          memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
+            teamName: team.teamName,
+            error: String(error),
+          });
+          return {
+            teamName: team.teamName,
+            active:
+              teamProvisioningService.isTeamAlive(team.teamName) ||
+              teamProvisioningService.hasProvisioningRun(team.teamName),
+          };
+        }
+      })
+    );
     const activeTeamNames: string[] = [];
-    for (const team of await teamDataService.listTeams()) {
-      if (team.deletedAt) {
+    for (const check of activeChecks) {
+      if (check.status === 'rejected') {
+        memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
+          error: String(check.reason),
+        });
         continue;
       }
-      if (await isTeamActiveForMemberWorkSync(team.teamName)) {
-        activeTeamNames.push(team.teamName);
+      if (check.value.active) {
+        activeTeamNames.push(check.value.teamName);
       }
     }
     return activeTeamNames;
@@ -1924,6 +2029,7 @@ async function initializeServices(): Promise<void> {
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
     isTeamActive: isTeamActiveForMemberWorkSync,
+    isMemberActive: isMemberActiveForMemberWorkSync,
     canDispatchNudges: canDispatchMemberWorkSyncNudges,
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
     extraBusySignals: [

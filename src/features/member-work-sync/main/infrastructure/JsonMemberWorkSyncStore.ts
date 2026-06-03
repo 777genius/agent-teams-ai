@@ -283,7 +283,7 @@ function isStaleClaim(claimedAt: string | undefined, nowIso: string): boolean {
   return (
     claimedAtMs != null &&
     nowMs != null &&
-    nowMs - claimedAtMs >= MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS
+    (claimedAtMs > nowMs || nowMs - claimedAtMs >= MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS)
   );
 }
 
@@ -298,6 +298,18 @@ function applyOptionalNextAttemptAt(
   delete item.nextAttemptAt;
 }
 
+function isNextAttemptDue(nextAttemptAt: string | undefined, nowIso: string): boolean {
+  if (!nextAttemptAt) {
+    return true;
+  }
+  const nextAttemptAtMs = parseIsoMs(nextAttemptAt);
+  if (nextAttemptAtMs == null) {
+    return true;
+  }
+  const nowMs = parseIsoMs(nowIso);
+  return nowMs != null && nextAttemptAtMs <= nowMs;
+}
+
 function canClaimOutboxItem(item: MemberWorkSyncOutboxItem, nowIso: string): boolean {
   if (item.status === 'claimed') {
     return isStaleClaim(item.claimedAt ?? item.updatedAt, nowIso);
@@ -305,10 +317,7 @@ function canClaimOutboxItem(item: MemberWorkSyncOutboxItem, nowIso: string): boo
   if (item.status !== 'pending' && item.status !== 'failed_retryable') {
     return false;
   }
-  if (!item.nextAttemptAt) {
-    return true;
-  }
-  return item.nextAttemptAt <= nowIso;
+  return isNextAttemptDue(item.nextAttemptAt, nowIso);
 }
 
 function canClaimOutboxRoute(route: OutboxIndexRoute, nowIso: string): boolean {
@@ -317,7 +326,7 @@ function canClaimOutboxRoute(route: OutboxIndexRoute, nowIso: string): boolean {
   }
   return (
     (route.status === 'pending' || route.status === 'failed_retryable') &&
-    (!route.nextAttemptAt || route.nextAttemptAt <= nowIso)
+    isNextAttemptDue(route.nextAttemptAt, nowIso)
   );
 }
 
@@ -958,7 +967,7 @@ export class JsonMemberWorkSyncStore
 
   async markDelivered(input: MemberWorkSyncOutboxMarkDeliveredInput): Promise<void> {
     await this.updateOutboxItem(input.teamName, input.id, (current) => {
-      if (current?.attemptGeneration !== input.attemptGeneration) {
+      if (current?.attemptGeneration !== input.attemptGeneration || current.status !== 'claimed') {
         return current;
       }
       const next: MemberWorkSyncOutboxItem = {
@@ -993,7 +1002,10 @@ export class JsonMemberWorkSyncStore
 
   async markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void> {
     await this.updateOutboxItem(input.teamName, input.id, (current) => {
-      if (current?.attemptGeneration !== input.attemptGeneration) {
+      if (
+        current?.attemptGeneration !== input.attemptGeneration ||
+        isOutboxTerminal(current.status)
+      ) {
         return current;
       }
       const next: MemberWorkSyncOutboxItem = {

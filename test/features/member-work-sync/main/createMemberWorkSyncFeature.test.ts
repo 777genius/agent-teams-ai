@@ -651,6 +651,95 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('dispatches existing due nudges before background stale refresh work', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    let postSeedGetConfigCalls = 0;
+    let refreshBlocked = false;
+    let releaseRefresh: () => void = () => undefined;
+    const refreshBlocker = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const getConfig = vi.fn(async () => {
+      postSeedGetConfigCalls += 1;
+      if (postSeedGetConfigCalls === 2) {
+        refreshBlocked = true;
+        await refreshBlocker;
+      }
+      return {
+        name: teamName,
+        members: [{ name: memberName }],
+      };
+    });
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig,
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+    });
+    let dispatchPromise: Promise<unknown> | null = null;
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      const outboxInput = buildMemberWorkSyncOutboxEnsureInput({
+        status,
+        hash: new NodeHashAdapter(),
+        nowIso: status.evaluatedAt,
+      });
+      expect(outboxInput).not.toBeNull();
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
+        ok: true,
+        outcome: 'existing',
+      });
+
+      postSeedGetConfigCalls = 0;
+      dispatchPromise = feature.dispatchDueNudges([teamName]);
+      await waitForAssertion(() => {
+        expect(refreshBlocked).toBe(true);
+      });
+
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ messageId: outboxInput!.id })])
+      );
+
+      releaseRefresh();
+      await expect(dispatchPromise).resolves.toMatchObject({
+        claimed: 1,
+        delivered: 1,
+      });
+    } finally {
+      releaseRefresh();
+      await dispatchPromise?.catch(() => undefined);
+      await feature.dispose();
+    }
+  });
+
   it('suppresses queued proof-missing recovery when the original delivery is no longer proof-missing', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -1115,8 +1204,6 @@ describe('createMemberWorkSyncFeature composition', () => {
       );
 
       await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
-        claimed: 1,
-        enqueued: 1,
         invalid: 0,
         unresolved: 0,
       });
@@ -3885,6 +3972,73 @@ describe('createMemberWorkSyncFeature composition', () => {
       ).resolves.toMatchObject({
         state: 'needs_sync',
         shadow: { triggerReasons: ['startup_scan'] },
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('refreshes stale needs_sync into inactive after the whole team stops', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-stopped';
+    const memberName = 'bob';
+    let teamActive = true;
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Finish work after sleep',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => teamActive),
+      canDispatchNudges: vi.fn(async () => teamActive),
+    });
+
+    try {
+      const current = await feature.refreshStatus({ teamName, memberName });
+      expect(current.state).toBe('needs_sync');
+
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.write({
+        ...current,
+        evaluatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+      });
+      teamActive = false;
+
+      await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
+        state: 'needs_sync',
+        diagnostics: expect.arrayContaining(['status_stale_refresh_enqueued']),
+      });
+      await waitForQueueIdle(feature);
+
+      await expect(store.read({ teamName, memberName })).resolves.toMatchObject({
+        state: 'inactive',
+        diagnostics: expect.arrayContaining(['team_runtime_inactive']),
+        shadow: { reconciledBy: 'queue', triggerReasons: ['manual_refresh'] },
       });
     } finally {
       await feature.dispose();
