@@ -21,6 +21,7 @@
   },
   "main": "dist-electron/main/index.cjs",
   "scripts": {
+    "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
     "dev": "node ./scripts/dev-with-runtime.mjs",
     "dev:mcp": "node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222",
     "dev:kill": "node bin/kill-dev.js",
@@ -453,6 +454,8 @@
       "@radix-ui/react-dismissable-layer@1.1.11": "patches/@radix-ui__react-dismissable-layer@1.1.11.patch",
       "@radix-ui/react-popper@1.2.8": "patches/@radix-ui__react-popper@1.2.8.patch",
       "@radix-ui/react-select@2.2.6": "patches/@radix-ui__react-select@2.2.6.patch",
+      "@radix-ui/react-slot@1.2.3": "patches/@radix-ui__react-slot@1.2.3.patch",
+      "@radix-ui/react-slot@1.2.4": "patches/@radix-ui__react-slot@1.2.4.patch",
       "@radix-ui/react-tooltip@1.2.8": "patches/@radix-ui__react-tooltip@1.2.8.patch",
       "@radix-ui/react-menu@2.1.16": "patches/@radix-ui__react-menu@2.1.16.patch",
       "@radix-ui/react-checkbox@1.3.3": "patches/@radix-ui__react-checkbox@1.3.3.patch"

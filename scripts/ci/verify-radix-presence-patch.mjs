@@ -25,16 +25,42 @@ const patchChecks = [
   },
   {
     packageName: '@radix-ui/react-select',
-    requiredMarkers: ['useGuardedNodeSetter', 'setContentRef', 'setItemTextNodeRef'],
+    requiredMarkers: [
+      'useGuardedNodeSetter',
+      'setContentRef',
+      'setItemTextNodeRef',
+      'textValueRef',
+      'nextTextValue',
+    ],
     forbiddenSnippets: [
       '(node) => setContent(node)',
       '(node) => setItemTextNode(node)',
+      'forwardedRef,\n      (node) => contentContext.itemRefCallback?.(node, value, disabled)',
+      'itemContext.onItemTextChange,\n      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled)',
+      'setTextValue((prevTextValue) => prevTextValue || (node?.textContent ?? "").trim());',
       'onTriggerChange: setTrigger,',
       'onValueNodeChange: setValueNode,',
       'onViewportChange: setViewport,',
       'ref: setContentWrapper,',
       'setSelectedItem(node);',
       'setSelectedItemText(node);',
+    ],
+  },
+  {
+    packageName: '@radix-ui/react-slot',
+    requiredMarkers: ['composedRef', 'React.useMemo'],
+    forbiddenSnippets: [
+      'props2.ref = forwardedRef ? (0, import_react_compose_refs.composeRefs)(forwardedRef, childrenRef) : childrenRef;',
+      'props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;',
+    ],
+  },
+  {
+    packageName: '@radix-ui/react-slot',
+    resolverFromPackage: '@radix-ui/react-select',
+    requiredMarkers: ['composedRef', 'React.useMemo'],
+    forbiddenSnippets: [
+      'props2.ref = forwardedRef ? (0, import_react_compose_refs.composeRefs)(forwardedRef, childrenRef) : childrenRef;',
+      'props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;',
     ],
   },
   {
