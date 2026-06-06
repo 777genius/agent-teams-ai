@@ -201,6 +201,19 @@ vi.mock('@renderer/components/ui/tabs', () => ({
 }));
 
 vi.mock('@renderer/components/runtime/ProviderRuntimeBackendSelector', () => ({
+  buildProviderRuntimeBackendSummaryText: () => ({
+    auto: 'Auto',
+    autoCurrently: (backend: string) => `Auto (currently: ${backend})`,
+    audienceInternal: 'Internal',
+    states: {
+      locked: 'Locked',
+      disabled: 'Disabled',
+      authRequired: 'Auth required',
+      runtimeMissing: 'Runtime missing',
+      degraded: 'Degraded',
+      unavailable: 'Unavailable',
+    },
+  }),
   ProviderRuntimeBackendSelector: ({
     provider,
     onSelect,

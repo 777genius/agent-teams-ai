@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { CodexRecentProjectsSourceAdapter } from '@features/recent-projects/main/adapters/output/sources/CodexRecentProjectsSourceAdapter';
 
@@ -6,15 +7,17 @@ import type { LoggerPort } from '@features/recent-projects/core/application/port
 import type { CodexAppServerClient } from '@features/recent-projects/main/infrastructure/codex/CodexAppServerClient';
 import type { RecentProjectIdentityResolver } from '@features/recent-projects/main/infrastructure/identity/RecentProjectIdentityResolver';
 
-function createLogger(): LoggerPort & {
-  info: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
+type LoggerMock = LoggerPort & {
+  info: Mock<LoggerPort['info']>;
+  warn: Mock<LoggerPort['warn']>;
+  error: Mock<LoggerPort['error']>;
+};
+
+function createLogger(): LoggerMock {
   return {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    info: vi.fn<LoggerPort['info']>(),
+    warn: vi.fn<LoggerPort['warn']>(),
+    error: vi.fn<LoggerPort['error']>(),
   };
 }
 

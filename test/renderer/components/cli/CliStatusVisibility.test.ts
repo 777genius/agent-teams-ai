@@ -129,6 +129,7 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeBackendSelector', async () 
     typeof import('@renderer/components/runtime/ProviderRuntimeBackendSelector')
   >('@renderer/components/runtime/ProviderRuntimeBackendSelector');
   return {
+    buildProviderRuntimeBackendSummaryText: actual.buildProviderRuntimeBackendSummaryText,
     getProviderRuntimeBackendSummary: actual.getProviderRuntimeBackendSummary,
   };
 });

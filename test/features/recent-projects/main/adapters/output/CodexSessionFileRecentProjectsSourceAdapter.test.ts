@@ -4,19 +4,22 @@ import path from 'node:path';
 
 import { CodexSessionFileRecentProjectsSourceAdapter } from '@features/recent-projects/main/adapters/output/sources/CodexSessionFileRecentProjectsSourceAdapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
 import type { RecentProjectIdentityResolver } from '@features/recent-projects/main/infrastructure/identity/RecentProjectIdentityResolver';
 
-function createLogger(): LoggerPort & {
-  info: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
+type LoggerMock = LoggerPort & {
+  info: Mock<LoggerPort['info']>;
+  warn: Mock<LoggerPort['warn']>;
+  error: Mock<LoggerPort['error']>;
+};
+
+function createLogger(): LoggerMock {
   return {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    info: vi.fn<LoggerPort['info']>(),
+    warn: vi.fn<LoggerPort['warn']>(),
+    error: vi.fn<LoggerPort['error']>(),
   };
 }
 

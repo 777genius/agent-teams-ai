@@ -37,21 +37,21 @@ function createSession(overrides?: {
     });
   const close = overrides?.close ?? vi.fn().mockResolvedValue(undefined);
 
-  const session = {
+  const session: CodexAppServerSession = {
     initializeResponse: {
       userAgent: 'codex-test',
       codexHome: '/Users/tester/.codex',
       platformFamily: 'darwin',
       platformOs: 'macos',
     },
-    request,
-    notify: vi.fn().mockResolvedValue(undefined),
+    request: request as CodexAppServerSession['request'],
+    notify: vi.fn().mockResolvedValue(undefined) as CodexAppServerSession['notify'],
     onNotification: vi.fn((listener: (method: string, params: unknown) => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
-    }),
-    close,
-  } satisfies CodexAppServerSession;
+    }) as CodexAppServerSession['onNotification'],
+    close: close as CodexAppServerSession['close'],
+  };
 
   return {
     session,

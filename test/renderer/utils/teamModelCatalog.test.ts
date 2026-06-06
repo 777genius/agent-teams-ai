@@ -1,4 +1,5 @@
 import {
+  getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
   isAnthropicOneMillionContextTeamModel,
   isAnthropicSonnetOneMillionContextTeamModel,
@@ -42,6 +43,22 @@ describe('teamModelCatalog', () => {
       'claude-sonnet-4-6',
       'claude-sonnet-4-6[1m]',
     ]);
+  });
+
+  it('does not add duplicate Anthropic Opus 4.8 fallback badges when the runtime reports the opus alias', () => {
+    const models = getVisibleTeamProviderModels('anthropic', [
+      'opus',
+      'claude-opus-4-6',
+      'sonnet',
+      'haiku',
+    ]);
+
+    expect(models).toContain('opus');
+    expect(models).not.toContain('claude-opus-4-8');
+    expect(models).toContain('claude-opus-4-8[1m]');
+
+    const labels = models.map((model) => getTeamModelBadgeLabel('anthropic', model));
+    expect(labels.filter((label) => label === 'Opus 4.8')).toHaveLength(1);
   });
 
   it('orders OpenCode free models before paid models', () => {

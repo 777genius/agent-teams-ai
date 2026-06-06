@@ -72,7 +72,12 @@ function createStubbedServiceHarness() {
   const service = new TeamMemberRuntimeAdvisoryService(logsFinder as never);
   const advisoryByFilePath = new Map<string, MemberRuntimeAdvisory | null>();
   const readRecentApiRetryAdvisory = vi
-    .spyOn(service as never, 'readRecentApiRetryAdvisory' as never)
+    .spyOn(
+      service as unknown as {
+        readRecentApiRetryAdvisory: (filePath: string) => Promise<MemberRuntimeAdvisory | null>;
+      },
+      'readRecentApiRetryAdvisory'
+    )
     .mockImplementation(async (...args: unknown[]) => {
       const filePath = String(args[0] ?? '');
       if (advisoryByFilePath.has(filePath)) {

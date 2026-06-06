@@ -667,7 +667,17 @@ function getSupplementalVisibleModels(
     return models;
   }
 
-  return [...models, ...ANTHROPIC_VISIBLE_MODEL_FALLBACKS];
+  const existingLabels = new Set(
+    models
+      .map((model) => getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase())
+      .filter((label): label is string => Boolean(label))
+  );
+  const supplementalModels = ANTHROPIC_VISIBLE_MODEL_FALLBACKS.filter((model) => {
+    const label = getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase();
+    return !label || !existingLabels.has(label);
+  });
+
+  return [...models, ...supplementalModels];
 }
 
 export function getVisibleTeamProviderModels(

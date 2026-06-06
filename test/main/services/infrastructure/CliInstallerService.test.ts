@@ -80,6 +80,7 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
   })),
+  getProviderStatusStoredCredentialAllowlist: vi.fn(() => undefined),
 }));
 
 vi.mock('@main/utils/cliAuthDiagLog', () => ({
@@ -542,7 +543,12 @@ describe('CliInstallerService', () => {
     it('falls back to the installed launcher path when --version reports unknown', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/Users/tester/.local/bin/claude');
-      vi.spyOn(service as never, 'inferInstalledCliVersionFromPath').mockResolvedValue('2.1.101');
+      vi.spyOn(
+        service as unknown as {
+          inferInstalledCliVersionFromPath: (binaryPath: string) => Promise<string | null>;
+        },
+        'inferInstalledCliVersionFromPath'
+      ).mockResolvedValue('2.1.101');
       vi.mocked(execCli)
         .mockResolvedValueOnce({ stdout: 'unknown', stderr: '' })
         .mockResolvedValueOnce({

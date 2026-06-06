@@ -25,6 +25,27 @@ import type {
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
 
+type TeamDataServicePrivate = {
+  extractLeadAssistantTextsFromJsonlLines(
+    rawLines: readonly string[],
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]>;
+  getLeadSessionJsonlPaths(projectDir: string): Promise<Map<string, string>>;
+  extractLeadSessionTextsFromJsonl(
+    jsonlPath: string,
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]>;
+  extractLeadSessionTexts(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+};
+
+function teamDataServicePrivate(service: TeamDataService): TeamDataServicePrivate {
+  return service as unknown as TeamDataServicePrivate;
+}
+
 function createLeadAssistantEntry(
   uuid: string,
   timestamp: string,
@@ -4690,7 +4711,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4698,7 +4719,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4730,11 +4751,11 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
         const [rawLines, leadName, leadSessionId, maxTexts] = args as [
           readonly string[],
@@ -4752,7 +4773,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4782,12 +4803,12 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let appended = false;
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
         const [rawLines, leadName, leadSessionId, maxTexts] = args as [
           readonly string[],
@@ -4818,7 +4839,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4847,7 +4868,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let releaseFirstInvocation = () => {};
@@ -4856,7 +4877,7 @@ describe('TeamDataService', () => {
       firstInvocationStartedResolve = resolve;
     });
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
         const [rawLines, leadName, leadSessionId, maxTexts] = args as [
           readonly string[],
@@ -4879,7 +4900,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4922,7 +4943,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4956,7 +4977,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4964,7 +4985,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4988,7 +5009,7 @@ describe('TeamDataService', () => {
     ]);
     await fs.appendFile(jsonlPath, '{"type":"assistant"', 'utf8');
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4996,7 +5017,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -5036,7 +5057,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -5044,7 +5065,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -5073,12 +5094,12 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let shouldFail = true;
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonlLines' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
         const [rawLines, leadName, leadSessionId, maxTexts] = args as [
           readonly string[],
@@ -5098,7 +5119,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -5124,10 +5145,10 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const firstSpy = vi.spyOn(firstService as never, 'extractLeadAssistantTextsFromJsonlLines' as never);
+    const firstSpy = vi.spyOn(teamDataServicePrivate(firstService), 'extractLeadAssistantTextsFromJsonlLines');
     const secondSpy = vi.spyOn(
-      secondService as never,
-      'extractLeadAssistantTextsFromJsonlLines' as never
+      teamDataServicePrivate(secondService),
+      'extractLeadAssistantTextsFromJsonlLines'
     );
     const firstExtract = (
       firstService as unknown as {
@@ -5136,7 +5157,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(firstService);
     const secondExtract = (
@@ -5146,7 +5167,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(secondService);
 
@@ -5177,10 +5198,10 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockResolvedValue(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockResolvedValue(
       new Map([['lead-1', '/fast-project/lead-1.jsonl']])
     );
-    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue([
       {
         from: 'fast-lead',
         text: 'Fast path recovered lead thought from the known lead session.',
@@ -5228,7 +5249,7 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
       (...args: unknown[]) => {
         const [projectDir] = args as [string];
         if (projectDir === '/actual-project') {
@@ -5237,7 +5258,7 @@ describe('TeamDataService', () => {
         return Promise.resolve(new Map());
       }
     );
-    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue([
       {
         from: 'actual-lead',
         text: 'Fallback path recovered lead thought from the repaired context.',
@@ -5292,7 +5313,7 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
       (...args: unknown[]) => {
         const [projectDir] = args as [string];
         if (projectDir === '/current-project') {
@@ -5304,7 +5325,7 @@ describe('TeamDataService', () => {
       }
     );
     const extractSpy = vi
-      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
       .mockResolvedValue([
         {
           from: 'current-lead',
@@ -5366,11 +5387,11 @@ describe('TeamDataService', () => {
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
     const getPathsSpy = vi
-      .spyOn(service as never, 'getLeadSessionJsonlPaths' as never)
+      .spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths')
       .mockResolvedValueOnce(new Map([['lead-history', '/same-project/lead-history.jsonl']]))
       .mockResolvedValueOnce(new Map([['lead-current', '/same-project/lead-current.jsonl']]));
     const extractSpy = vi
-      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
       .mockResolvedValue([
         {
           from: 'current-lead',
@@ -5974,7 +5995,7 @@ describe('TeamDataService', () => {
       ],
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
       {
         from: 'team-lead',
         text: 'Lead summary',
@@ -6028,7 +6049,7 @@ describe('TeamDataService', () => {
       resolveMembers: resolveMembersSpy,
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
       {
         from: 'team-lead',
         text: 'Lead summary',
@@ -6110,7 +6131,7 @@ describe('TeamDataService', () => {
       },
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockImplementation(
       () => {
         order.push('leadTexts:start');
         throw new Error('lead sync fail');

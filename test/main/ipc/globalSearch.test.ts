@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { ProjectScanner } from '../../../src/main/services/discovery/ProjectScanner';
 
@@ -9,19 +10,24 @@ import type { Project, SearchSessionsResult } from '../../../src/main/types';
  */
 describe('Global Search - ProjectScanner.searchAllProjects', () => {
   let projectScanner: ProjectScanner;
-  let mockScan: ReturnType<typeof vi.fn>;
-  let mockSearchSessions: ReturnType<typeof vi.fn>;
+  let mockScan: Mock<() => Promise<Project[]>>;
+  let mockSearchSessions: Mock<
+    (projectId: string, query: string, maxResults?: number) => Promise<SearchSessionsResult>
+  >;
 
   beforeEach(() => {
     // Create a real ProjectScanner instance
     projectScanner = new ProjectScanner();
 
     // Mock the scan() method
-    mockScan = vi.fn();
+    mockScan = vi.fn<() => Promise<Project[]>>();
     projectScanner.scan = mockScan;
 
     // Mock the sessionSearcher.searchSessions() method
-    mockSearchSessions = vi.fn();
+    mockSearchSessions =
+      vi.fn<
+        (projectId: string, query: string, maxResults?: number) => Promise<SearchSessionsResult>
+      >();
     // @ts-expect-error - Accessing private property for testing
     projectScanner.sessionSearcher = {
       searchSessions: mockSearchSessions,

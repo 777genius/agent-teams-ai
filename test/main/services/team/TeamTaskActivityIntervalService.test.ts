@@ -1169,11 +1169,14 @@ describe('TeamTaskActivityIntervalService', () => {
   describe('resumeActiveIntervalsForMembers (batch)', () => {
     it('returns zero changes for an empty members list without scanning the tasks directory', () => {
       const service = new TeamTaskActivityIntervalService();
-      const mutateSpy = vi.spyOn(
+      const lockSpy = vi.spyOn(
         service as unknown as {
-          mutateTeamTasks: TeamTaskActivityIntervalService['resumeActiveIntervalsForMember'];
+          mutateTeamTasksWithLock: (
+            teamName: string,
+            run: () => { changedTasks: number; failed?: boolean }
+          ) => { changedTasks: number; failed?: boolean };
         },
-        'mutateTeamTasks'
+        'mutateTeamTasksWithLock'
       );
 
       const result = service.resumeActiveIntervalsForMembers(
@@ -1183,7 +1186,7 @@ describe('TeamTaskActivityIntervalService', () => {
       );
 
       expect(result).toEqual({ changedTasks: 0 });
-      expect(mutateSpy).not.toHaveBeenCalled();
+      expect(lockSpy).not.toHaveBeenCalled();
     });
 
     it('returns zero changes when all member names are blank', () => {
@@ -1326,11 +1329,14 @@ describe('TeamTaskActivityIntervalService', () => {
       });
 
       const service = new TeamTaskActivityIntervalService();
-      const mutateSpy = vi.spyOn(
+      const lockSpy = vi.spyOn(
         service as unknown as {
-          mutateTeamTasks: TeamTaskActivityIntervalService['resumeActiveIntervalsForMember'];
+          mutateTeamTasksWithLock: (
+            teamName: string,
+            run: () => { changedTasks: number; failed?: boolean }
+          ) => { changedTasks: number; failed?: boolean };
         },
-        'mutateTeamTasks'
+        'mutateTeamTasksWithLock'
       );
 
       const result = service.resumeActiveIntervalsForMembers(
@@ -1339,7 +1345,7 @@ describe('TeamTaskActivityIntervalService', () => {
         '2026-05-08T10:20:00.000Z'
       );
 
-      expect(mutateSpy).toHaveBeenCalledTimes(1);
+      expect(lockSpy).toHaveBeenCalledTimes(1);
       expect(result.changedTasks).toBe(3);
     });
 
@@ -1477,7 +1483,7 @@ describe('TeamTaskActivityIntervalService', () => {
       ]);
     });
 
-    it('routes single-member resumeActiveIntervalsForMember through the batch implementation', async () => {
+    it('resumes single-member intervals through the member noop-cache path', async () => {
       await writeTask('alpha', {
         id: 'work-task',
         subject: 'Build',
@@ -1490,17 +1496,19 @@ describe('TeamTaskActivityIntervalService', () => {
       });
 
       const service = new TeamTaskActivityIntervalService();
-      const batchSpy = vi.spyOn(service, 'resumeActiveIntervalsForMembers');
 
       const result = service.resumeActiveIntervalsForMember(
         'alpha',
         'bob',
         '2026-05-08T10:20:00.000Z'
       );
+      const task = await readTask('alpha', 'work-task');
 
-      expect(batchSpy).toHaveBeenCalledTimes(1);
-      expect(batchSpy).toHaveBeenCalledWith('alpha', ['bob'], '2026-05-08T10:20:00.000Z');
       expect(result.changedTasks).toBe(1);
+      expect(task.workIntervals).toEqual([
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+        { startedAt: '2026-05-08T10:20:00.000Z' },
+      ]);
     });
   });
 });
