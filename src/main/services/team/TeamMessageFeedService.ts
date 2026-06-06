@@ -85,18 +85,21 @@ function resolveLeadName(config: TeamConfig): string {
   return lead?.name?.trim() || 'team-lead';
 }
 
-function resolveSyntheticBootstrapTimestamp(config: TeamConfig, member: TeamConfigMember): string {
+function resolveSyntheticBootstrapTimestamp(
+  config: TeamConfig,
+  member: TeamConfigMember
+): string | null {
   const raw = member.joinedAt ?? (config as { createdAt?: unknown }).createdAt;
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
     return new Date(raw).toISOString();
   }
   if (typeof raw === 'string') {
     const parsed = Date.parse(raw);
-    if (Number.isFinite(parsed)) {
+    if (Number.isFinite(parsed) && parsed > 0) {
       return new Date(parsed).toISOString();
     }
   }
-  return new Date(0).toISOString();
+  return null;
 }
 
 function buildSyntheticBootstrapDisplayPrompt(
@@ -122,7 +125,10 @@ Call member_briefing directly yourself. Do NOT use Agent, any subagent, or a del
 After member_briefing succeeds, wait for instructions from the lead and use team mailbox/task tools normally.`;
 }
 
-function buildSyntheticBootstrapMessages(config: TeamConfig): InboxMessage[] {
+function buildSyntheticBootstrapMessages(
+  config: TeamConfig,
+  fallbackTimestampForMessage: (messageId: string) => string
+): InboxMessage[] {
   const members = Array.isArray(config.members) ? config.members : [];
   const leadName = resolveLeadName(config);
   const normalizedLeadName = leadName.trim().toLowerCase();
@@ -134,15 +140,20 @@ function buildSyntheticBootstrapMessages(config: TeamConfig): InboxMessage[] {
         member.name.trim().toLowerCase() !== normalizedLeadName &&
         member.removedAt == null
     )
-    .map((member) => ({
-      from: leadName,
-      to: member.name,
-      text: buildSyntheticBootstrapDisplayPrompt(config, member),
-      timestamp: resolveSyntheticBootstrapTimestamp(config, member),
-      read: true,
-      source: 'system_notification' as const,
-      messageId: `bootstrap-start:${config.name}:${member.name}`,
-    }));
+    .map((member) => {
+      const messageId = `bootstrap-start:${config.name}:${member.name}`;
+      return {
+        from: leadName,
+        to: member.name,
+        text: buildSyntheticBootstrapDisplayPrompt(config, member),
+        timestamp:
+          resolveSyntheticBootstrapTimestamp(config, member) ??
+          fallbackTimestampForMessage(messageId),
+        read: true,
+        source: 'system_notification' as const,
+        messageId,
+      };
+    });
 }
 
 function isVisibleTeamMessage(message: InboxMessage): boolean {
@@ -429,6 +440,7 @@ export class TeamMessageFeedService {
   private readonly dirtyTeams = new Set<string>();
   private readonly inFlightByTeam = new Map<string, InFlightTeamMessageFeed>();
   private readonly generationByTeam = new Map<string, number>();
+  private readonly syntheticBootstrapTimestampByMessageId = new Map<string, string>();
 
   constructor(private readonly deps: TeamMessageFeedDeps) {}
 
@@ -485,6 +497,17 @@ export class TeamMessageFeedService {
 
   private getGeneration(teamName: string): number {
     return this.generationByTeam.get(teamName) ?? 0;
+  }
+
+  private getSyntheticBootstrapFallbackTimestamp(messageId: string): string {
+    const existing = this.syntheticBootstrapTimestampByMessageId.get(messageId);
+    if (existing) {
+      return existing;
+    }
+
+    const timestamp = new Date(Date.now()).toISOString();
+    this.syntheticBootstrapTimestampByMessageId.set(messageId, timestamp);
+    return timestamp;
   }
 
   private refreshCleanExpiredCacheInBackground(
@@ -554,7 +577,9 @@ export class TeamMessageFeedService {
     const sourceMs = Date.now() - sourceStartedAt;
 
     const normalizeStartedAt = Date.now();
-    const syntheticMessages = buildSyntheticBootstrapMessages(config);
+    const syntheticMessages = buildSyntheticBootstrapMessages(config, (messageId) =>
+      this.getSyntheticBootstrapFallbackTimestamp(messageId)
+    );
     let messages = [...inboxMessages, ...leadTexts, ...sentMessages, ...syntheticMessages].filter(
       isVisibleTeamMessage
     );

@@ -120,6 +120,40 @@ describe('TeamMessageFeedService', () => {
     expect(feed.messages[0].text).toContain('member_briefing');
   });
 
+  it('does not stamp synthetic bootstrap prompts with Unix epoch when config has no join time', async () => {
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => ({
+        name: 'opencode-test',
+        members: [
+          { name: 'team-lead', role: 'Lead' },
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode' as const,
+            model: 'openrouter/big-pickle',
+          },
+        ],
+      })),
+      getInboxMessages: vi.fn(async () => []),
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const first = await service.getFeed('opencode-test');
+
+    expect(first.messages).toHaveLength(1);
+    expect(first.messages[0].messageId).toBe('bootstrap-start:opencode-test:alice');
+    expect(first.messages[0].timestamp).toBe('2026-04-19T18:46:40.000Z');
+    expect(first.messages[0].timestamp).not.toBe('1970-01-01T00:00:00.000Z');
+
+    vi.setSystemTime(new Date('2026-04-19T18:47:00.000Z'));
+    service.invalidate('opencode-test');
+    const refreshed = await service.getFeed('opencode-test');
+
+    expect(refreshed.messages[0].timestamp).toBe(first.messages[0].timestamp);
+    expect(refreshed.feedRevision).toBe(first.feedRevision);
+  });
+
   it('does not hide user-authored text just because it resembles an internal prompt', async () => {
     const service = new TeamMessageFeedService({
       getConfig: vi.fn(async () => config),
