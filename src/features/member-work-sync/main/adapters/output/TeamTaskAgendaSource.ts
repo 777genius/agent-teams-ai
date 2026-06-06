@@ -10,6 +10,8 @@ import {
   normalizeMemberName,
 } from '../../../core/domain';
 
+import { mergeTeamMembers } from './mergeTeamMembers';
+
 import type {
   MemberWorkSyncAgendaSourcePort,
   MemberWorkSyncAgendaSourceResult,
@@ -19,7 +21,7 @@ import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
-import type { TeamMember } from '@shared/types';
+import type { TeamMember, TeamProviderId } from '@shared/types';
 
 export interface TeamTaskAgendaSourceDeps {
   configReader: Pick<TeamConfigReader, 'getConfig'>;
@@ -34,26 +36,21 @@ function memberKey(member: Pick<TeamMember, 'name'>): string {
   return normalizeMemberName(member.name);
 }
 
-function mergeMembers(configMembers: TeamMember[], metaMembers: TeamMember[]): TeamMember[] {
-  const byName = new Map<string, TeamMember>();
-  for (const member of configMembers) {
-    const key = memberKey(member);
-    if (key) {
-      byName.set(key, member);
-    }
+function providerIdFromBackend(providerBackendId: unknown): TeamProviderId | undefined {
+  const normalized = typeof providerBackendId === 'string' ? providerBackendId.trim() : '';
+  if (normalized === 'codex-native') {
+    return 'codex';
   }
-  for (const member of metaMembers) {
-    const key = memberKey(member);
-    if (key) {
-      byName.set(key, { ...byName.get(key), ...member });
-    }
+  if (normalized === 'opencode-cli') {
+    return 'opencode';
   }
-  return [...byName.values()];
+  return undefined;
 }
 
 function toMemberLike(member: TeamMember): MemberWorkSyncMemberLike {
   const providerId =
     normalizeOptionalTeamProviderId(member.providerId) ??
+    providerIdFromBackend(member.providerBackendId) ??
     inferTeamProviderIdFromModel(member.model);
   return {
     name: member.name,
@@ -74,7 +71,7 @@ export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
     }
 
     const metaMembers = await this.deps.membersMetaStore.getMembers(teamName);
-    return mergeMembers(config.members ?? [], metaMembers)
+    return mergeTeamMembers(config.members ?? [], metaMembers)
       .filter((member) => !member.removedAt)
       .map((member) => normalizeMemberName(member.name))
       .filter((memberName) => memberName.length > 0 && !isReservedMemberName(memberName))
@@ -107,7 +104,7 @@ export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
       this.deps.kanbanManager.getState(input.teamName),
       this.deps.membersMetaStore.getMembers(input.teamName),
     ]);
-    const members = mergeMembers(config.members ?? [], metaMembers);
+    const members = mergeTeamMembers(config.members ?? [], metaMembers);
     const activeMemberNames = members
       .filter((member) => !member.removedAt)
       .map((member) => normalizeMemberName(member.name))
@@ -116,6 +113,7 @@ export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
     const member = members.find((candidate) => memberKey(candidate) === normalizedMemberName);
     const providerId =
       normalizeOptionalTeamProviderId(member?.providerId) ??
+      providerIdFromBackend(member?.providerBackendId) ??
       inferTeamProviderIdFromModel(member?.model);
 
     const agenda = buildActionableWorkAgenda({
