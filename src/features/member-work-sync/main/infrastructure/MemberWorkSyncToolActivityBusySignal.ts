@@ -30,6 +30,10 @@ function parseIsoMs(value: string | undefined, fallbackMs: number): number {
   return Number.isFinite(parsed) ? parsed : fallbackMs;
 }
 
+function parseEventIsoMs(value: string | undefined, nowMs: number): number {
+  return Math.min(parseIsoMs(value, nowMs), nowMs);
+}
+
 function addMsIso(baseIso: string, ms: number): string {
   return new Date(Date.parse(baseIso) + ms).toISOString();
 }
@@ -136,7 +140,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
       return;
     }
     const state = this.getOrCreateState(teamName, memberName);
-    const startedAtMs = parseIsoMs(startedAt, Date.now());
+    const startedAtMs = parseEventIsoMs(startedAt, Date.now());
     state.activeToolStartedAtByToolId.set(normalizedToolUseId, new Date(startedAtMs).toISOString());
     state.recentBusyUntilByToolId.delete(normalizedToolUseId);
   }
@@ -151,7 +155,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     if (!memberName.trim() || !normalizedToolUseId) {
       return;
     }
-    const finishedAtMs = parseIsoMs(finishedAt, Date.now());
+    const finishedAtMs = parseEventIsoMs(finishedAt, Date.now());
     const busyUntilIso = new Date(finishedAtMs + this.busyGraceMs).toISOString();
     const state = this.getOrCreateState(teamName, memberName);
     state.activeToolStartedAtByToolId.delete(normalizedToolUseId);

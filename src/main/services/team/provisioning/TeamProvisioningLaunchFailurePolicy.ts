@@ -1,7 +1,4 @@
-import {
-  isProvisionedButNotAliveFailureReason,
-  stripProcessTableUnavailableDiagnosticSuffix,
-} from '@shared/utils/teamLaunchFailureReason';
+import { stripProcessTableUnavailableDiagnosticSuffix } from '@shared/utils/teamLaunchFailureReason';
 
 import { mentionsProcessTableUnavailable } from './TeamProvisioningLaunchDiagnostics';
 import { isBootstrapInstructionPrompt } from './TeamProvisioningPromptBuilders';
@@ -72,7 +69,20 @@ export function isBootstrapMcpResourceReadFailureReason(reason?: string): boolea
 }
 
 export function isBootstrapCheckInTimeoutFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'Teammate was registered but did not bootstrap-confirm before timeout.';
+  const text = reason?.trim();
+  if (!text) {
+    return false;
+  }
+  if (text === 'Teammate was registered but did not bootstrap-confirm before timeout.') {
+    return true;
+  }
+  const normalized = text.toLowerCase();
+  return (
+    normalized.includes('bootstrap prompt was submitted') &&
+    normalized.includes('did not bootstrap-confirm') &&
+    normalized.includes('submitted-confirmation timeout') &&
+    normalized.includes('last transport stage: bootstrap_submitted')
+  );
 }
 
 export function isBootstrapInstructionPromptFailureReason(reason?: string): boolean {

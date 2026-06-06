@@ -3,8 +3,8 @@ import {
   isAutoClearableLaunchFailureReason,
   isBootstrapCheckInTimeoutFailureReason,
   isBootstrapInstructionPromptFailureReason,
-  isCliProvisionedButNotAliveFailureReason,
   isBootstrapMcpResourceReadFailureReason,
+  isCliProvisionedButNotAliveFailureReason,
   isConfigRegistrationFailureReason,
   isLaunchCleanupBootstrapIncompleteFailureReason,
   isLaunchGraceWindowFailureReason,
@@ -69,6 +69,16 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
       )
     ).toBe(true);
     expect(
+      isBootstrapCheckInTimeoutFailureReason(
+        'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before submitted-confirmation timeout (3m). Last transport stage: bootstrap_submitted'
+      )
+    ).toBe(true);
+    expect(
+      isBootstrapCheckInTimeoutFailureReason(
+        'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before timeout.'
+      )
+    ).toBe(false);
+    expect(
       isBootstrapInstructionPromptFailureReason(
         'You are bootstrapping into team atlas. Your first action is to call the MCP tool member_briefing.'
       )
@@ -107,6 +117,16 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'Teammate did not join within the launch grace window.; process table unavailable'
       )
     ).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(
+        'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before submitted-confirmation timeout (3m). Last transport stage: bootstrap_submitted'
+      )
+    ).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(
+        'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before timeout.'
+      )
+    ).toBe(false);
     expect(
       isAutoClearableLaunchFailureReason(
         'CLI process exited (code 1) \u2014 team provisioned but not alive'

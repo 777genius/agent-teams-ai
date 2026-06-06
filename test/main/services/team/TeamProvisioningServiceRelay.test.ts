@@ -1630,6 +1630,81 @@ Messages:
     expect(payload).toContain('Please retry with logging enabled.');
   });
 
+  it('prioritizes member work-sync nudges over older ordinary member relay rows', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'alice', [
+      ...Array.from({ length: 11 }, (_, index) => ({
+        from: 'team-lead',
+        text: `Routine relay row ${index + 1}.`,
+        timestamp: `2026-02-23T10:${String(index).padStart(2, '0')}:00.000Z`,
+        read: false,
+        messageId: `m-ordinary-${index + 1}`,
+      })),
+      {
+        from: 'system',
+        text: 'Call member_work_sync_status, then member_work_sync_report.',
+        timestamp: '2026-02-23T10:30:00.000Z',
+        read: false,
+        messageId: 'm-work-sync-late',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'alice');
+
+    expect(relayed).toBe(10);
+    const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
+    expect(payload).toContain('1) From: system');
+    expect(payload).toContain('MessageId: m-work-sync-late');
+    expect(payload).toContain('Message kind: member_work_sync_nudge');
+    expect(payload).not.toContain('MessageId: m-ordinary-11');
+  });
+
+  it('retries a work-sync nudge after member relay times out before stdin write completes', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      seedConfig(teamName);
+      seedMemberInbox(teamName, 'alice', [
+        {
+          from: 'system',
+          text: 'Call member_work_sync_status, then member_work_sync_report.',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: false,
+          messageId: 'm-work-sync-retry',
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: 'agenda_sync',
+        },
+      ]);
+
+      const { writeSpy } = attachAliveRun(service, teamName);
+      writeSpy.mockImplementationOnce(() => true);
+
+      const firstRelay = service.relayMemberInboxMessages(teamName, 'alice');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(writeSpy).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      await expect(firstRelay).resolves.toBe(0);
+      vi.mocked(console.warn).mockClear();
+
+      const secondRelay = await service.relayMemberInboxMessages(teamName, 'alice');
+
+      expect(secondRelay).toBe(1);
+      expect(writeSpy).toHaveBeenCalledTimes(2);
+      const secondPayload = String(writeSpy.mock.calls[1]?.[0] ?? '');
+      expect(secondPayload).toContain('MessageId: m-work-sync-retry');
+      expect(secondPayload).toContain('Message kind: member_work_sync_nudge');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('marks exact teammate relay copies with relayOfMessageId', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -3445,6 +3520,9 @@ Messages:
       },
     ]);
     const deliverSpy = vi.spyOn(service, 'deliverOpenCodeMemberMessage');
+    const logSpy = vi
+      .spyOn(service as any, 'logOpenCodePromptDeliveryEvent')
+      .mockImplementation(() => undefined);
 
     const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
     const expectedReason = 'opencode_inbox_attachment_payload_unavailable: att-1';
@@ -3469,6 +3547,18 @@ Messages:
       status: 'failed_terminal',
       lastReason: expectedReason,
     });
+    expect(logSpy).toHaveBeenCalledWith(
+      'opencode_prompt_delivery_terminal_failure',
+      expect.objectContaining({
+        inboxMessageId: 'opencode-attachment-1',
+        status: 'failed_terminal',
+        lastReason: expectedReason,
+      }),
+      expect.objectContaining({
+        attachmentPayloadUnavailable: true,
+        reason: expectedReason,
+      })
+    );
   });
 
   it('rebuilds missing OpenCode prompt ledger rows from unread inbox on startup scan', async () => {
@@ -3721,6 +3811,224 @@ Messages:
     }
   });
 
+  it('keeps an already-read work-sync nudge pending when it is queued behind an active relay', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      hoisted.files.set(
+        `/mock/teams/${teamName}/config.json`,
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/my-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+          ],
+        })
+      );
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Older watcher message.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-inflight-old',
+        },
+      ]);
+
+      const oldDeliveryStarted = createDeferred<void>();
+      const releaseOldDelivery = createDeferred<void>();
+      vi.spyOn(service, 'deliverOpenCodeMemberMessage').mockImplementation(
+        async (_teamName, input) => {
+          if (input.messageId === 'opencode-inflight-old') {
+            oldDeliveryStarted.resolve(undefined);
+            await releaseOldDelivery.promise;
+          }
+          return { delivered: true, diagnostics: [] };
+        }
+      );
+      const wakeSpy = vi
+        .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+        .mockImplementation(() => undefined);
+
+      const watcherRelay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+      await oldDeliveryStarted.promise;
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Older watcher message.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-inflight-old',
+        },
+        {
+          from: 'system',
+          to: 'jack',
+          text: 'Call member_work_sync_status, then member_work_sync_report.',
+          timestamp: '2026-02-23T17:00:01.000Z',
+          read: true,
+          messageId: 'work-sync-read-queued',
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: 'agenda_sync',
+        },
+      ]);
+
+      await expect(
+        service.relayOpenCodeMemberInboxMessages(teamName, 'jack', {
+          onlyMessageId: 'work-sync-read-queued',
+          source: 'watchdog',
+        })
+      ).resolves.toMatchObject({
+        attempted: 1,
+        delivered: 0,
+        failed: 0,
+        lastDelivery: {
+          delivered: true,
+          accepted: false,
+          responsePending: true,
+          reason: 'opencode_work_sync_read_commit_waiting_for_active_relay',
+        },
+      });
+      expect(wakeSpy).toHaveBeenCalledWith({
+        teamName,
+        memberName: 'jack',
+        messageId: 'work-sync-read-queued',
+        delayMs: 500,
+      });
+
+      releaseOldDelivery.resolve(undefined);
+      await watcherRelay;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('times out a hung existing OpenCode member relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `opencode:${teamName}:jack`;
+    try {
+      (
+        service as unknown as {
+          openCodeMemberInboxRelayInFlight: Map<string, Promise<unknown>>;
+        }
+      ).openCodeMemberInboxRelayInFlight.set(relayKey, new Promise(() => undefined));
+
+      const relay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toMatchObject({
+        attempted: 0,
+        delivered: 0,
+        failed: 1,
+        lastDelivery: {
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          reason: 'opencode_member_inbox_relay_timed_out',
+        },
+      });
+      expect(
+        (
+          service as unknown as {
+            openCodeMemberInboxRelayInFlight: Map<string, Promise<unknown>>;
+          }
+        ).openCodeMemberInboxRelayInFlight.has(relayKey)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'opencode_member_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('times out a hung existing lead relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      (
+        service as unknown as {
+          leadInboxRelayInFlight: Map<string, Promise<number>>;
+        }
+      ).leadInboxRelayInFlight.set(teamName, new Promise(() => undefined));
+
+      const relay = service.relayLeadInboxMessages(teamName);
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toBe(0);
+      expect(
+        (
+          service as unknown as {
+            leadInboxRelayInFlight: Map<string, Promise<number>>;
+          }
+        ).leadInboxRelayInFlight.has(teamName)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'lead_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('times out a hung existing member relay in-flight lock', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `${teamName}:alice`;
+    try {
+      (
+        service as unknown as {
+          memberInboxRelayInFlight: Map<string, Promise<number>>;
+        }
+      ).memberInboxRelayInFlight.set(relayKey, new Promise(() => undefined));
+
+      const relay = service.relayMemberInboxMessages(teamName, 'alice');
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      await expect(relay).resolves.toBe(0);
+      expect(
+        (
+          service as unknown as {
+            memberInboxRelayInFlight: Map<string, Promise<number>>;
+          }
+        ).memberInboxRelayInFlight.has(relayKey)
+      ).toBe(false);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'member_inbox_relay_timed_out'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not convert non-timeout member relay failures into timeout results', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const relayKey = `${teamName}:alice`;
+    const rejected = Promise.reject(new Error('relay failed'));
+    rejected.catch(() => undefined);
+    (
+      service as unknown as {
+        memberInboxRelayInFlight: Map<string, Promise<number>>;
+      }
+    ).memberInboxRelayInFlight.set(relayKey, rejected);
+
+    await expect(service.relayMemberInboxMessages(teamName, 'alice')).rejects.toThrow(
+      'relay failed'
+    );
+    expect(vi.mocked(console.warn)).not.toHaveBeenCalled();
+  });
+
   it('treats an already-read specific OpenCode inbox row as delivered for UI-send relay', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -3760,6 +4068,68 @@ Messages:
       lastDelivery: { delivered: true },
     });
     expect(deliverSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not treat an already-read work-sync nudge as delivered without the work-sync proof path', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'system',
+        to: 'jack',
+        text: 'Call member_work_sync_status, then member_work_sync_report.',
+        timestamp: '2026-02-23T17:02:00.000Z',
+        read: true,
+        messageId: 'work-sync-read-1',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+        taskRefs: [{ taskId: 'task-1', teamName }],
+      },
+    ]);
+    const deliverSpy = vi.spyOn(service, 'deliverOpenCodeMemberMessage').mockResolvedValue({
+      delivered: true,
+      accepted: false,
+      responsePending: true,
+      reason: 'member_work_sync_report_required',
+      diagnostics: ['member_work_sync_report_required'],
+    });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack', {
+      onlyMessageId: 'work-sync-read-1',
+      source: 'watchdog',
+    });
+
+    expect(deliverSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        memberName: 'jack',
+        messageId: 'work-sync-read-1',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+      })
+    );
+    expect(relay).toMatchObject({
+      attempted: 1,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: {
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        reason: 'member_work_sync_report_required',
+      },
+    });
   });
 
   it('routes watcher inbox changes for OpenCode members through direct runtime relay', async () => {
@@ -4357,7 +4727,10 @@ Messages:
         ],
       })
     );
-    hoisted.files.set(`${teamsBasePath}/${teamName}/inboxes/${memberName}.json`, JSON.stringify([]));
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/${memberName}.json`,
+      JSON.stringify([])
+    );
     (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
       ok: true,
       canonicalMemberName: memberName,
@@ -4415,7 +4788,10 @@ Messages:
         ],
       })
     );
-    hoisted.files.set(`${teamsBasePath}/${teamName}/inboxes/${memberName}.json`, JSON.stringify([]));
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/${memberName}.json`,
+      JSON.stringify([])
+    );
     (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
       ok: true,
       canonicalMemberName: memberName,

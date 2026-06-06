@@ -55,6 +55,10 @@ export function getTeamTaskStallActivationGraceMs(): number {
   return readInt(process.env.CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS, 60_000);
 }
 
+export function getTeamTaskStallAlertCooldownMs(): number {
+  return readInt(process.env.CLAUDE_TEAM_TASK_STALL_ALERT_COOLDOWN_MS, 10 * 60_000);
+}
+
 export function getOpenCodeWeakStartStallThresholdMs(): number {
   // Shorter OpenCode threshold for "started work" comments that do not contain concrete progress.
   return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 100_000);

@@ -30,13 +30,14 @@ function createDeferred<T>(): Deferred<T> {
 }
 
 async function flushAsyncWork(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let i = 0; i < 8; i += 1) {
+    await Promise.resolve();
+  }
 }
 
 describe('TeamReconcileDrainScheduler', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     mockYieldToEventLoop.mockReset();
   });
@@ -172,6 +173,72 @@ describe('TeamReconcileDrainScheduler', () => {
     scheduler.schedule('team-a', { source: 'task', detail: 'task-2.json' });
     await flushAsyncWork();
     expect(run).toHaveBeenCalledTimes(2);
+
+    scheduler.dispose();
+  });
+
+  it('times out a hung run so pending team reconciles can continue', async () => {
+    vi.useFakeTimers();
+    mockYieldToEventLoop.mockResolvedValue(undefined);
+    const hungRun = createDeferred<void>();
+    const run = vi
+      .fn<(teamName: string, trigger: TeamReconcileTrigger) => Promise<void>>()
+      .mockImplementationOnce(async () => {
+        await hungRun.promise;
+      })
+      .mockResolvedValueOnce(undefined);
+    const scheduler = createTeamReconcileDrainScheduler({
+      run,
+      runTimeoutMs: 10,
+    });
+
+    scheduler.schedule('team-a', { source: 'inbox', detail: 'inboxes/alice.json' });
+    await flushAsyncWork();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    scheduler.schedule('team-a', { source: 'task', detail: 'task-2.json' });
+    await flushAsyncWork();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+    await flushAsyncWork();
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenNthCalledWith(2, 'team-a', {
+      source: 'task',
+      detail: 'task-2.json',
+    });
+
+    scheduler.dispose();
+  });
+
+  it('retries the timed out trigger when no newer event arrived', async () => {
+    vi.useFakeTimers();
+    mockYieldToEventLoop.mockResolvedValue(undefined);
+    const hungRun = createDeferred<void>();
+    const run = vi
+      .fn<(teamName: string, trigger: TeamReconcileTrigger) => Promise<void>>()
+      .mockImplementationOnce(async () => {
+        await hungRun.promise;
+      })
+      .mockResolvedValueOnce(undefined);
+    const scheduler = createTeamReconcileDrainScheduler({
+      run,
+      runTimeoutMs: 10,
+    });
+
+    scheduler.schedule('team-a', { source: 'inbox', detail: 'inboxes/alice.json' });
+    await flushAsyncWork();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+    await flushAsyncWork();
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenNthCalledWith(2, 'team-a', {
+      source: 'inbox',
+      detail: 'inboxes/alice.json',
+    });
 
     scheduler.dispose();
   });

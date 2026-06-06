@@ -56,6 +56,7 @@ export interface MemberWorkSyncReportTokenPort {
 
 export interface MemberWorkSyncLifecyclePort {
   isTeamActive(teamName: string): Promise<boolean> | boolean;
+  isMemberActive?(input: { teamName: string; memberName: string }): Promise<boolean> | boolean;
 }
 
 export interface MemberWorkSyncLoggerPort {
@@ -71,6 +72,7 @@ export type MemberWorkSyncAuditEventName =
   | 'turn_settled_ignored'
   | 'queue_enqueued'
   | 'queue_coalesced'
+  | 'queue_retry_scheduled'
   | 'queue_reconciled'
   | 'queue_dropped'
   | 'reconcile_started'
@@ -197,6 +199,12 @@ export interface MemberWorkSyncWatchdogCooldownPort {
     taskIds: string[];
     nowIso: string;
   }): Promise<boolean>;
+  getRecentNudgeCooldown?(input: {
+    teamName: string;
+    memberName: string;
+    taskIds: string[];
+    nowIso: string;
+  }): Promise<{ active: boolean; retryAfterIso?: string }>;
 }
 
 export interface MemberWorkSyncBusySignalPort {

@@ -288,4 +288,45 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
       endpointLabel: 'codex exec --json',
     });
   });
+
+  it('preserves an active Codex custom provider endpoint label through snapshot merge', () => {
+    const provider = createBaseCodexProvider();
+    const customProvider = {
+      enabled: true,
+      active: true,
+      baseUrl: 'https://gateway.example.com/v1',
+      model: 'gateway-codex-model',
+      issueMessage: null,
+    };
+
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      {
+        ...provider,
+        backend: {
+          ...provider.backend!,
+          endpointLabel: customProvider.baseUrl,
+        },
+        connection: {
+          ...provider.connection!,
+          configuredAuthMode: 'api_key',
+          codex: {
+            ...provider.connection!.codex!,
+            preferredAuthMode: 'api_key',
+            effectiveAuthMode: 'api_key',
+            customProvider,
+          },
+        },
+      },
+      {
+        ...createReadyChatgptSnapshot(),
+        preferredAuthMode: 'api_key',
+        effectiveAuthMode: 'api_key',
+        launchReadinessState: 'ready_api_key',
+        managedAccount: null,
+      }
+    );
+
+    expect(merged.backend?.endpointLabel).toBe('https://gateway.example.com/v1');
+    expect(merged.connection?.codex?.customProvider).toEqual(customProvider);
+  });
 });

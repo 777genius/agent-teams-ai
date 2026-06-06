@@ -454,6 +454,49 @@ describe('buildProviderAwareCliEnv', () => {
     ]);
   });
 
+  it('returns Codex custom provider launch args after API-key env application', async () => {
+    applyConfiguredConnectionEnvMock.mockImplementation(async (env: NodeJS.ProcessEnv) => {
+      env.OPENAI_API_KEY = 'stored-key';
+      env.CODEX_API_KEY = 'stored-key';
+      return env;
+    });
+    const customSettings = JSON.stringify({
+      codex: {
+        forced_login_method: 'api',
+        agent_teams_custom_provider: {
+          config_overrides: [
+            'model_provider="agent_teams_custom"',
+            'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+            'model_providers.agent_teams_custom.base_url="https://gateway.example.com/v1"',
+            'model_providers.agent_teams_custom.wire_api="responses"',
+            'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+          ],
+        },
+      },
+    });
+    getConfiguredConnectionLaunchArgsMock.mockResolvedValue(['--settings', customSettings]);
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      binaryPath: '/mock/claude-multimodel',
+      providerId: 'codex',
+    });
+
+    expect(getConfiguredConnectionLaunchArgsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      }),
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+    expect(result.providerArgs).toEqual(['--settings', customSettings]);
+    expect(result.env.OPENAI_API_KEY).toBe('stored-key');
+    expect(result.env.CODEX_API_KEY).toBe('stored-key');
+  });
+
   it('passes Codex env refreshed by strict credential application into launch args and issue checks', async () => {
     applyConfiguredConnectionEnvMock.mockImplementation(
       async (env: NodeJS.ProcessEnv, providerId: string) => {

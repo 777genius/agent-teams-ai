@@ -276,6 +276,26 @@ describe('TeamLaunchFailureArtifactPack', () => {
     });
   });
 
+  it('extracts startup checkpoint runtime stages and keeps stdin warning secondary', () => {
+    const input = {
+      teamName: 'artifact-team',
+      runId: 'run-startup-checkpoint',
+      reason:
+        'alice: Teammate process alice@signal-ops did not become runtime_ready: timed out waiting for runtime_ready; last runtime stage: startup_checkpoint: commands_agents_loaded Last stderr: Warning: no stdin data received in 3s, proceeding without it.',
+      progressTraceLines: [
+        'startup_checkpoint detail=commands_agents_loaded',
+        'Warning: no stdin data received in 3s, proceeding without it.',
+      ],
+    };
+
+    expect(classifyLaunchFailureArtifact(input).code).toBe('process_readiness_timeout');
+    expect(extractLaunchBootstrapTransportBreadcrumb(input)).toMatchObject({
+      lastTransportStage: 'startup_checkpoint: commands_agents_loaded',
+      noStdinWarning: true,
+      bootstrapSubmitted: false,
+    });
+  });
+
   it('keeps inbox poller bootstrap stalls out of stdin_missing classification', () => {
     const input = {
       teamName: 'artifact-team',

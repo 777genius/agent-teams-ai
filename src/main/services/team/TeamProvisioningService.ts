@@ -1478,7 +1478,11 @@ function classifyDeterministicBootstrapFailure(reason: string): {
 }
 
 function getPreflightPingArgs(providerId: TeamProviderId | undefined): string[] {
-  return buildProviderPreflightPingArgs(providerId);
+  const codexCustomModel =
+    resolveTeamProviderId(providerId) === 'codex'
+      ? ProviderConnectionService.getInstance().getConfiguredCodexCustomProviderModel()
+      : null;
+  return buildProviderPreflightPingArgs(providerId, { modelOverride: codexCustomModel });
 }
 
 function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {
@@ -3286,6 +3290,17 @@ interface OpenCodeMemberInboxDelivery {
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }
 
+class InboxRelayInFlightTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InboxRelayInFlightTimeoutError';
+  }
+}
+
+function isInboxRelayInFlightTimeoutError(error: unknown): error is InboxRelayInFlightTimeoutError {
+  return error instanceof InboxRelayInFlightTimeoutError;
+}
+
 type OpenCodeVisibleReplyCorrelation = NonNullable<
   OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
 >;
@@ -3444,6 +3459,15 @@ function getOpenCodeInboxRelayPriority(
   return 0;
 }
 
+function getMemberInboxRelayPriority(
+  message: Pick<InboxMessage, 'messageKind' | 'source'>
+): number {
+  if (message.messageKind === 'member_work_sync_nudge') {
+    return 30;
+  }
+  return 0;
+}
+
 function getLeadInboxRelayPriority(message: Pick<InboxMessage, 'messageKind'>): number {
   if (message.messageKind === 'member_work_sync_nudge') {
     return 30;
@@ -3476,6 +3500,13 @@ function compareOpenCodeInboxRelayMessagesByPriority(
   b: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string }
 ): number {
   return compareInboxRelayMessages(a, b, getOpenCodeInboxRelayPriority);
+}
+
+function compareMemberInboxRelayMessagesByPriority(
+  a: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string },
+  b: Pick<InboxMessage, 'messageKind' | 'source' | 'timestamp'> & { messageId: string }
+): number {
+  return compareInboxRelayMessages(a, b, getMemberInboxRelayPriority);
 }
 
 function compareLeadInboxRelayMessagesByPriority(
@@ -3527,6 +3558,7 @@ export class TeamProvisioningService {
   private static readonly RETAINED_PROVISIONING_PROGRESS_TTL_MS = 5 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_ADVISORY_EVENT_TTL_MS = 24 * 60 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_LEAD_NOTICE_TTL_MS = 24 * 60 * 60_000;
+  private static readonly INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS = 2 * 60_000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -6162,6 +6194,27 @@ export class TeamProvisioningService {
     return enabled;
   }
 
+  private async markOpenCodePromptLedgerFailedTerminal(input: {
+    ledger: OpenCodePromptDeliveryLedgerStore;
+    id: string;
+    reason: string;
+    diagnostics?: string[];
+    failedAt: string;
+    eventContext?: Record<string, unknown>;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    const failed = await input.ledger.markFailedTerminal({
+      id: input.id,
+      reason: input.reason,
+      ...(input.diagnostics ? { diagnostics: input.diagnostics } : {}),
+      failedAt: input.failedAt,
+    });
+    this.logOpenCodePromptDeliveryEvent('opencode_prompt_delivery_terminal_failure', failed, {
+      reason: input.reason,
+      ...(input.eventContext ?? {}),
+    });
+    return failed;
+  }
+
   private async findOpenCodeVisibleReplyByRelayOfMessageId(input: {
     teamName: string;
     replyRecipient?: string | null;
@@ -7243,7 +7296,8 @@ export class TeamProvisioningService {
         input.ledgerRecord.maxSessionRefreshAttempts ??
         OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
       if ((input.ledgerRecord.sessionRefreshAttempts ?? 0) >= maxSessionRefreshAttempts) {
-        return await input.ledger.markFailedTerminal({
+        return await this.markOpenCodePromptLedgerFailedTerminal({
+          ledger: input.ledger,
           id: input.ledgerRecord.id,
           reason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
           diagnostics: [
@@ -7251,6 +7305,11 @@ export class TeamProvisioningService {
             `OpenCode session stayed stale while observing an accepted prompt after ${maxSessionRefreshAttempts} attempt(s).`,
           ],
           failedAt: now,
+          eventContext: {
+            observeOnlyAfterAcceptedPrompt: true,
+            sessionRefreshAttempts: input.ledgerRecord.sessionRefreshAttempts ?? 0,
+            maxSessionRefreshAttempts,
+          },
         });
       }
       const delayMs = OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS;
@@ -7287,7 +7346,8 @@ export class TeamProvisioningService {
         input.ledgerRecord.maxSessionRefreshAttempts ??
         OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
       if ((input.ledgerRecord.sessionRefreshAttempts ?? 0) >= maxSessionRefreshAttempts) {
-        return await input.ledger.markFailedTerminal({
+        return await this.markOpenCodePromptLedgerFailedTerminal({
+          ledger: input.ledger,
           id: input.ledgerRecord.id,
           reason: 'opencode_session_refresh_loop_after_resolved_behavior_changed',
           diagnostics: [
@@ -7295,6 +7355,11 @@ export class TeamProvisioningService {
             `OpenCode session stayed stale after ${maxSessionRefreshAttempts} session refresh attempt(s).`,
           ],
           failedAt: now,
+          eventContext: {
+            retry: true,
+            sessionRefreshAttempts: input.ledgerRecord.sessionRefreshAttempts ?? 0,
+            maxSessionRefreshAttempts,
+          },
         });
       }
       const delayMs = this.getOpenCodeDeliveryNextDelayMs({
@@ -7338,10 +7403,12 @@ export class TeamProvisioningService {
       input.ledgerRecord.attempts >= input.ledgerRecord.maxAttempts &&
       !canScheduleNoAssistantRecoveryRetry
     ) {
-      return await input.ledger.markFailedTerminal({
+      return await this.markOpenCodePromptLedgerFailedTerminal({
+        ledger: input.ledger,
         id: input.ledgerRecord.id,
         reason: input.reason,
         failedAt: now,
+        eventContext: { retry: input.retry },
       });
     }
     const delayMs = this.getOpenCodeDeliveryNextDelayMs({
@@ -11624,6 +11691,33 @@ export class TeamProvisioningService {
 
   private getOpenCodeMemberRelayKey(teamName: string, memberName: string): string {
     return `opencode:${this.getMemberRelayKey(teamName, memberName)}`;
+  }
+
+  private async waitForInboxRelayInFlight<T>(input: {
+    promise: Promise<T>;
+    relayName: string;
+    relayKey: string;
+  }): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      return await Promise.race([
+        input.promise,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new InboxRelayInFlightTimeoutError(
+                `${input.relayName} timed out after ${TeamProvisioningService.INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS}ms: ${input.relayKey}`
+              )
+            );
+          }, TeamProvisioningService.INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   private normalizeRelayCandidateText(text: string): string {
@@ -23166,7 +23260,23 @@ export class TeamProvisioningService {
     const relayKey = this.getMemberRelayKey(teamName, memberName);
     const existing = this.memberInboxRelayInFlight.get(relayKey);
     if (existing) {
-      return existing;
+      try {
+        return await this.waitForInboxRelayInFlight({
+          promise: existing,
+          relayName: 'member_inbox_relay',
+          relayKey,
+        });
+      } catch (error) {
+        if (!isInboxRelayInFlightTimeoutError(error)) {
+          throw error;
+        }
+        logger.warn(`[${teamName}] member_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+        return 0;
+      } finally {
+        if (this.memberInboxRelayInFlight.get(relayKey) === existing) {
+          this.memberInboxRelayInFlight.delete(relayKey);
+        }
+      }
     }
 
     const work = (async (): Promise<number> => {
@@ -23239,7 +23349,9 @@ export class TeamProvisioningService {
       if (actionableUnread.length === 0) return 0;
 
       const MAX_RELAY = 10;
-      const batch = actionableUnread.slice(0, MAX_RELAY);
+      const batch = [...actionableUnread]
+        .sort(compareMemberInboxRelayMessagesByPriority)
+        .slice(0, MAX_RELAY);
 
       this.armSilentTeammateForward(run, memberName, 'member_inbox_relay');
       const rememberedRelayIds = this.rememberPendingInboxRelayCandidates(run, memberName, batch);
@@ -23320,7 +23432,17 @@ export class TeamProvisioningService {
 
     this.memberInboxRelayInFlight.set(relayKey, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'member_inbox_relay',
+        relayKey,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      logger.warn(`[${teamName}] member_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+      return 0;
     } finally {
       if (this.memberInboxRelayInFlight.get(relayKey) === work) {
         this.memberInboxRelayInFlight.delete(relayKey);
@@ -23486,13 +23608,66 @@ export class TeamProvisioningService {
     if (existing) {
       const onlyMessageId = options.onlyMessageId?.trim();
       if (!onlyMessageId) {
-        return existing;
+        try {
+          return await this.waitForInboxRelayInFlight({
+            promise: existing,
+            relayName: 'opencode_member_inbox_relay',
+            relayKey,
+          });
+        } catch (error) {
+          if (!isInboxRelayInFlightTimeoutError(error)) {
+            throw error;
+          }
+          const diagnostic = `opencode_member_inbox_relay_timed_out: ${getErrorMessage(error)}`;
+          logger.warn(`[${teamName}] ${diagnostic}`);
+          return {
+            relayed: 0,
+            attempted: 0,
+            delivered: 0,
+            failed: 1,
+            lastDelivery: {
+              delivered: false,
+              accepted: false,
+              responsePending: false,
+              reason: 'opencode_member_inbox_relay_timed_out',
+              diagnostics: [diagnostic],
+            },
+            diagnostics: [diagnostic],
+          };
+        } finally {
+          if (this.openCodeMemberInboxRelayInFlight.get(relayKey) === existing) {
+            this.openCodeMemberInboxRelayInFlight.delete(relayKey);
+          }
+        }
       }
       const inboxMessages = await this.inboxReader
         .getMessagesFor(teamName, memberName)
         .catch(() => []);
       const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
       if (targetMessage?.read) {
+        if (targetMessage.messageKind === 'member_work_sync_nudge') {
+          this.scheduleOpenCodeMemberInboxDeliveryWake({
+            teamName,
+            memberName,
+            messageId: onlyMessageId,
+            delayMs: 500,
+          });
+          const diagnostic = `opencode_work_sync_read_commit_waiting_for_active_relay: ${onlyMessageId}`;
+          return {
+            relayed: 0,
+            attempted: 1,
+            delivered: 0,
+            failed: 0,
+            lastDelivery: {
+              delivered: true,
+              accepted: false,
+              responsePending: true,
+              reason: 'opencode_work_sync_read_commit_waiting_for_active_relay',
+              diagnostics: [diagnostic],
+            },
+            diagnostics: [diagnostic],
+          };
+        }
         return {
           relayed: 0,
           attempted: 1,
@@ -23576,7 +23751,7 @@ export class TeamProvisioningService {
       const onlyMessageId = options.onlyMessageId?.trim();
       if (onlyMessageId) {
         const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
-        if (targetMessage?.read) {
+        if (targetMessage?.read && targetMessage.messageKind !== 'member_work_sync_nudge') {
           return {
             relayed: 0,
             attempted: 1,
@@ -23603,8 +23778,13 @@ export class TeamProvisioningService {
       }
       const unread = inboxMessages
         .filter((message): message is InboxMessage & { messageId: string } => {
-          if (message.read) return false;
           if (onlyMessageId && message.messageId !== onlyMessageId) return false;
+          if (
+            message.read &&
+            (!onlyMessageId || message.messageKind !== 'member_work_sync_nudge')
+          ) {
+            return false;
+          }
           if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
           return this.hasStableMessageId(message);
         })
@@ -23813,17 +23993,14 @@ export class TeamProvisioningService {
                 pendingRecord
               );
             }
-            failedRecord = await promptLedger.markFailedTerminal({
+            failedRecord = await this.markOpenCodePromptLedgerFailedTerminal({
+              ledger: promptLedger,
               id: pendingRecord.id,
               reason: attachmentPayloads.reason,
               diagnostics: attachmentPayloads.diagnostics,
               failedAt: nowIso(),
+              eventContext: { attachmentPayloadUnavailable: true },
             });
-            this.logOpenCodePromptDeliveryEvent(
-              'opencode_prompt_delivery_response_observed',
-              failedRecord,
-              { attachmentPayloadUnavailable: true }
-            );
           } catch (error) {
             const diagnostic = `opencode_inbox_attachment_terminal_ledger_failed: ${getErrorMessage(
               error
@@ -23952,7 +24129,31 @@ export class TeamProvisioningService {
 
     this.openCodeMemberInboxRelayInFlight.set(relayKey, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'opencode_member_inbox_relay',
+        relayKey,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      const diagnostic = `opencode_member_inbox_relay_timed_out: ${getErrorMessage(error)}`;
+      logger.warn(`[${teamName}] ${diagnostic}`);
+      return {
+        relayed: 0,
+        attempted: options.onlyMessageId ? 1 : 0,
+        delivered: 0,
+        failed: 1,
+        lastDelivery: {
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          reason: 'opencode_member_inbox_relay_timed_out',
+          diagnostics: [diagnostic],
+        },
+        diagnostics: [diagnostic],
+      };
     } finally {
       if (this.openCodeMemberInboxRelayInFlight.get(relayKey) === work) {
         this.openCodeMemberInboxRelayInFlight.delete(relayKey);
@@ -24261,7 +24462,23 @@ export class TeamProvisioningService {
   async relayLeadInboxMessages(teamName: string): Promise<number> {
     const existing = this.leadInboxRelayInFlight.get(teamName);
     if (existing) {
-      return existing;
+      try {
+        return await this.waitForInboxRelayInFlight({
+          promise: existing,
+          relayName: 'lead_inbox_relay',
+          relayKey: teamName,
+        });
+      } catch (error) {
+        if (!isInboxRelayInFlightTimeoutError(error)) {
+          throw error;
+        }
+        logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+        return 0;
+      } finally {
+        if (this.leadInboxRelayInFlight.get(teamName) === existing) {
+          this.leadInboxRelayInFlight.delete(teamName);
+        }
+      }
     }
 
     const work = (async (): Promise<number> => {
@@ -24817,7 +25034,17 @@ export class TeamProvisioningService {
 
     this.leadInboxRelayInFlight.set(teamName, work);
     try {
-      return await work;
+      return await this.waitForInboxRelayInFlight({
+        promise: work,
+        relayName: 'lead_inbox_relay',
+        relayKey: teamName,
+      });
+    } catch (error) {
+      if (!isInboxRelayInFlightTimeoutError(error)) {
+        throw error;
+      }
+      logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${getErrorMessage(error)}`);
+      return 0;
     } finally {
       if (this.leadInboxRelayInFlight.get(teamName) === work) {
         this.leadInboxRelayInFlight.delete(teamName);

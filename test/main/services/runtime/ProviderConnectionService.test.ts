@@ -43,7 +43,11 @@ describe('ProviderConnectionService', () => {
 
   function createConfig(
     authMode: 'auto' | 'oauth' | 'api_key' = 'auto',
-    compatibleEndpoint: { enabled: boolean; baseUrl: string } = { enabled: false, baseUrl: '' }
+    compatibleEndpoint: { enabled: boolean; baseUrl: string } = { enabled: false, baseUrl: '' },
+    codex: Partial<{
+      preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+      customProvider: { enabled: boolean; baseUrl: string; model: string };
+    }> = {}
   ) {
     return {
       providerConnections: {
@@ -53,7 +57,12 @@ describe('ProviderConnectionService', () => {
           compatibleEndpoint,
         },
         codex: {
-          preferredAuthMode: 'auto' as const,
+          preferredAuthMode: codex.preferredAuthMode ?? ('auto' as const),
+          customProvider: codex.customProvider ?? {
+            enabled: false,
+            baseUrl: '',
+            model: '',
+          },
         },
       },
       runtime: {
@@ -2178,6 +2187,232 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(args).toEqual(['-c', 'forced_login_method="api"']);
+  });
+
+  it('adds custom provider settings for managed Codex API-key launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'api',
+          agent_teams_custom_provider: {
+            config_overrides: [
+              'model_provider="agent_teams_custom"',
+              'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+              'model_providers.agent_teams_custom.base_url="https://gateway.example.com/v1"',
+              'model_providers.agent_teams_custom.wire_api="responses"',
+              'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+            ],
+          },
+        },
+      }),
+    ]);
+  });
+
+  it('adds direct -c custom provider settings for direct Codex API-key launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'http://127.0.0.1:8080/v1',
+              model: 'local-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/usr/local/bin/codex'
+    );
+
+    expect(args).toEqual([
+      '-c',
+      'forced_login_method="api"',
+      '-c',
+      'model_provider="agent_teams_custom"',
+      '-c',
+      'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+      '-c',
+      'model_providers.agent_teams_custom.base_url="http://127.0.0.1:8080/v1"',
+      '-c',
+      'model_providers.agent_teams_custom.wire_api="responses"',
+      '-c',
+      'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+    ]);
+  });
+
+  it('does not pass custom provider settings when Codex resolves to ChatGPT mode', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'chatgpt',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          preferredAuthMode: 'chatgpt',
+          effectiveAuthMode: 'chatgpt',
+          apiKey: {
+            available: true,
+            source: 'stored',
+            sourceLabel: 'Stored in app',
+          },
+        })
+      ),
+    } as never);
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']);
+  });
+
+  it('synthesizes the Codex model catalog from the custom provider model', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const directCatalog = vi.fn().mockResolvedValue(null);
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+    service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);
+
+    const enriched = await service.enrichProviderStatus({
+      providerId: 'codex',
+      displayName: 'Codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'api_key',
+      verificationState: 'verified',
+      models: ['gpt-5.4'],
+      subscriptionRateLimits: {
+        primary: null,
+        secondary: null,
+      },
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'app-server' },
+      },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: {
+          plugins: { status: 'unsupported', ownership: 'shared' },
+          mcp: { status: 'supported', ownership: 'shared' },
+          skills: { status: 'supported', ownership: 'shared' },
+          apiKeys: { status: 'supported', ownership: 'shared' },
+        },
+      },
+    });
+
+    expect(directCatalog).not.toHaveBeenCalled();
+    expect(enriched.models).toEqual(['gateway-codex-model']);
+    expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gateway-codex-model');
+    expect(enriched.modelCatalog?.models).toHaveLength(1);
+    expect(enriched.modelCatalog?.models[0]).toMatchObject({
+      id: 'gateway-codex-model',
+      launchModel: 'gateway-codex-model',
+      supportsFastMode: false,
+      source: 'static-fallback',
+    });
+    expect(enriched.subscriptionRateLimits).toBeNull();
+    expect(enriched.backend?.endpointLabel).toBe('https://gateway.example.com/v1');
+    expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
+      dynamic: false,
+      source: 'static-fallback',
+    });
   });
 
   it('prefers the orchestrator Codex model catalog over the legacy direct app-server fallback', async () => {

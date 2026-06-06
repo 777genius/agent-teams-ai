@@ -226,6 +226,8 @@ const WORKSPACE_TRUST_FAILURE_PATTERN =
 const BOOTSTRAP_TRANSPORT_EVIDENCE_PATTERN = new RegExp(
   [
     'mailbox_bootstrap_written',
+    'startup_checkpoint',
+    'last runtime stage',
     'bootstrap_prompt_observed',
     'bootstrap_submit_attempted',
     'bootstrap_submitted',
@@ -341,13 +343,15 @@ export function extractLaunchBootstrapTransportBreadcrumb(
 ): LaunchBootstrapTransportBreadcrumb {
   const parts = collectLaunchFailureSearchParts(input);
   const combined = parts.join('\n');
-  const lastStageMatches = [...combined.matchAll(/last transport stage:\s*([^;\n]+)/gi)];
+  const lastStageMatches = [
+    ...combined.matchAll(/last (?:transport|runtime) stage:\s*([^;\n]+)/gi),
+  ];
   const retryableMatches = [
     ...combined.matchAll(/bootstrap_submit_rejected[^\n]*(?:retryable[=:]\s*(true|false))/gi),
   ];
   const evidence = firstEvidence(
     parts,
-    /bootstrap_submit_|mailbox_bootstrap_written|bootstrap_prompt_observed|bootstrap_submitted|last transport stage|no stdin data received|local prompt handler/i
+    /bootstrap_submit_|mailbox_bootstrap_written|startup_checkpoint|bootstrap_prompt_observed|bootstrap_submitted|last (?:transport|runtime) stage|no stdin data received|local prompt handler/i
   ).map(redactLaunchFailureArtifactText);
   const retryableRaw = retryableMatches.at(-1)?.[1]?.toLowerCase();
   return {

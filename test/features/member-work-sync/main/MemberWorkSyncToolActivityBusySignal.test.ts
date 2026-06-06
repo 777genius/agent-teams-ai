@@ -1,5 +1,5 @@
 import { MemberWorkSyncToolActivityBusySignal } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncToolActivityBusySignal';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamChangeEvent, ToolActivityEventPayload } from '@shared/types';
 
@@ -179,5 +179,81 @@ describe('MemberWorkSyncToolActivityBusySignal', () => {
         nowIso: '2026-04-29T00:10:00.000Z',
       })
     ).resolves.toEqual({ busy: false });
+  });
+
+  it('bounds future tool timestamps so busy state cannot sleep nudges for too long', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-04-29T00:00:00.000Z'));
+
+      const activeSignal = new MemberWorkSyncToolActivityBusySignal({
+        busyGraceMs: 90_000,
+        activeToolStaleMs: 10 * 60_000,
+      });
+
+      activeSignal.noteTeamChange(
+        toolEvent('team-a', {
+          action: 'start',
+          activity: {
+            memberName: 'bob',
+            toolUseId: 'tool-1',
+            toolName: 'bash',
+            startedAt: '2026-04-29T01:00:00.000Z',
+            source: 'runtime',
+          },
+        })
+      );
+
+      await expect(
+        activeSignal.isBusy({
+          teamName: 'team-a',
+          memberName: 'bob',
+          nowIso: '2026-04-29T00:09:59.000Z',
+        })
+      ).resolves.toMatchObject({
+        busy: true,
+        reason: 'active_tool_activity',
+      });
+
+      await expect(
+        activeSignal.isBusy({
+          teamName: 'team-a',
+          memberName: 'bob',
+          nowIso: '2026-04-29T00:10:00.000Z',
+        })
+      ).resolves.toEqual({ busy: false });
+
+      const finishSignal = new MemberWorkSyncToolActivityBusySignal({ busyGraceMs: 90_000 });
+      finishSignal.noteTeamChange(
+        toolEvent('team-a', {
+          action: 'finish',
+          memberName: 'bob',
+          toolUseId: 'tool-2',
+          finishedAt: '2026-04-29T01:00:00.000Z',
+        })
+      );
+
+      await expect(
+        finishSignal.isBusy({
+          teamName: 'team-a',
+          memberName: 'bob',
+          nowIso: '2026-04-29T00:01:29.000Z',
+        })
+      ).resolves.toMatchObject({
+        busy: true,
+        reason: 'recent_tool_activity',
+        retryAfterIso: '2026-04-29T00:01:30.000Z',
+      });
+
+      await expect(
+        finishSignal.isBusy({
+          teamName: 'team-a',
+          memberName: 'bob',
+          nowIso: '2026-04-29T00:01:30.000Z',
+        })
+      ).resolves.toEqual({ busy: false });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

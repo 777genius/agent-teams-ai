@@ -56,6 +56,29 @@ function isTurnSettledReconcile(status: MemberWorkSyncStatus): boolean {
   return status.shadow?.triggerReasons?.includes('turn_settled') === true;
 }
 
+function parseTime(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : null;
+}
+
+function hasActiveAcceptedWorkLease(status: MemberWorkSyncStatus): boolean {
+  const report = status.report;
+  if (
+    report?.accepted !== true ||
+    report.agendaFingerprint !== status.agenda.fingerprint ||
+    (report.state !== 'still_working' && report.state !== 'blocked')
+  ) {
+    return false;
+  }
+
+  const evaluatedAtMs = parseTime(status.evaluatedAt);
+  const expiresAtMs = parseTime(report.expiresAt);
+  return evaluatedAtMs != null && expiresAtMs != null && expiresAtMs > evaluatedAtMs;
+}
+
 function shouldPlanStatusOnlyRecovery(input: {
   status: MemberWorkSyncStatus;
   baseInput: MemberWorkSyncOutboxEnsureInput;
@@ -68,7 +91,7 @@ function shouldPlanStatusOnlyRecovery(input: {
     input.baseInput.payload.workSyncIntent === 'agenda_sync' &&
     input.baseInput.payload.workSyncIntentKey === undefined &&
     input.existingItemStatus === 'delivered' &&
-    input.status.report?.accepted !== true
+    !hasActiveAcceptedWorkLease(input.status)
   );
 }
 
@@ -84,16 +107,8 @@ function shouldPlanAgendaSyncRefreshRecovery(input: {
     input.baseInput.payload.workSyncIntentKey === undefined &&
     input.existingItem.status === 'delivered' &&
     input.existingItem.agendaFingerprint === input.baseInput.agendaFingerprint &&
-    input.status.report?.accepted !== true
+    !hasActiveAcceptedWorkLease(input.status)
   );
-}
-
-function parseTime(value: string | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? time : null;
 }
 
 function isDeliveredStillStuckRecoveryReason(reason: MemberWorkSyncNudgeActivationReason): boolean {
@@ -125,7 +140,7 @@ function shouldPlanDeliveredStillStuckRecovery(input: {
     input.baseInput.payload.workSyncIntentKey !== undefined ||
     !recoverableExistingItem ||
     input.existingItem.agendaFingerprint !== input.baseInput.agendaFingerprint ||
-    input.status.report?.accepted === true ||
+    hasActiveAcceptedWorkLease(input.status) ||
     !isDeliveredStillStuckRecoveryReason(input.activationReason)
   ) {
     return false;

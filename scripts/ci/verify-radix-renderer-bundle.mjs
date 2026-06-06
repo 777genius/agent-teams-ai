@@ -27,6 +27,9 @@ const requiredMarkers = [
   'setSelectedItemRef',
   'setSelectedItemTextRef',
   'setItemTextNodeRef',
+  'textValueRef',
+  'nextTextValue',
+  'composedRef',
   'setControlRef',
   'setBubbleInputRef',
 ];
@@ -35,6 +38,12 @@ const forbiddenSnippets = [
   '(node) => setContent(node)',
   '(node2) => setNode(node2)',
   '(node) => setItemTextNode(node)',
+  'forwardedRef,\n      (node) => contentContext.itemRefCallback?.(node, value, disabled)',
+  'forwardedRef,\n      (node2) => contentContext.itemRefCallback?.(node2, value, disabled)',
+  'itemContext.onItemTextChange,\n      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled)',
+  'itemContext.onItemTextChange,\n      (node2) => contentContext.itemTextRefCallback?.(node2, itemContext.value, itemContext.disabled)',
+  'setTextValue((prevTextValue) => prevTextValue || (node?.textContent ?? "").trim());',
+  'setTextValue((prevTextValue) => prevTextValue || (node2?.textContent ?? "").trim());',
   'onContentChange: setContent,',
   'onTriggerChange: setTrigger,',
   'onValueNodeChange: setValueNode,',
@@ -46,6 +55,7 @@ const forbiddenSnippets = [
   'useComposedRefs(forwardedRef, setBubbleInput)',
   'useComposedRefs)(forwardedRef, setControl)',
   'useComposedRefs)(forwardedRef, setBubbleInput)',
+  'props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;',
 ];
 
 const failures = [];

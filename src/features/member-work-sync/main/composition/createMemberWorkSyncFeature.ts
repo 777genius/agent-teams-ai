@@ -228,6 +228,7 @@ export function createMemberWorkSyncFeature(deps: {
   kanbanManager: TeamKanbanManager;
   membersMetaStore: TeamMembersMetaStore;
   isTeamActive?: (teamName: string) => Promise<boolean> | boolean;
+  isMemberActive?: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean;
   canDispatchNudges?: (teamName: string) => Promise<boolean> | boolean;
   listLifecycleActiveTeamNames?: () => Promise<string[]>;
   queueQuietWindowMs?: number;
@@ -312,7 +313,14 @@ export function createMemberWorkSyncFeature(deps: {
     ...(deps.reviewPickupEscalation ? { reviewPickupEscalation: deps.reviewPickupEscalation } : {}),
     reportToken,
     auditJournal,
-    ...(deps.isTeamActive ? { lifecycle: { isTeamActive: deps.isTeamActive } } : {}),
+    ...(deps.isTeamActive
+      ? {
+          lifecycle: {
+            isTeamActive: deps.isTeamActive,
+            ...(deps.isMemberActive ? { isMemberActive: deps.isMemberActive } : {}),
+          },
+        }
+      : {}),
     logger: deps.logger,
   };
   const diagnosticsReader = new MemberWorkSyncDiagnosticsReader(useCaseDeps);
@@ -327,6 +335,16 @@ export function createMemberWorkSyncFeature(deps: {
     superseded: 0,
     retryable: 0,
     terminal: 0,
+  });
+  const addNudgeDispatchSummaries = (
+    left: MemberWorkSyncNudgeDispatchSummary,
+    right: MemberWorkSyncNudgeDispatchSummary
+  ): MemberWorkSyncNudgeDispatchSummary => ({
+    claimed: left.claimed + right.claimed,
+    delivered: left.delivered + right.delivered,
+    superseded: left.superseded + right.superseded,
+    retryable: left.retryable + right.retryable,
+    terminal: left.terminal + right.terminal,
   });
   const filterNudgeDispatchReadyTeamNames = async (teamNames: string[]): Promise<string[]> => {
     const uniqueTeamNames = [...new Set(teamNames.map((name) => name.trim()).filter(Boolean))];
@@ -401,22 +419,30 @@ export function createMemberWorkSyncFeature(deps: {
     if (readyTeamNames.length === 0) {
       return emptyNudgeDispatchSummary();
     }
+    const dispatchReadyNudges = () =>
+      nudgeDispatcher.dispatchDue({
+        teamNames: readyTeamNames,
+        claimedBy,
+      });
+    const initialSummary = await dispatchReadyNudges();
     if (options.refreshBackgroundStaleStatuses !== false) {
       await refreshBackgroundStaleStatuses(readyTeamNames);
+      return addNudgeDispatchSummaries(initialSummary, await dispatchReadyNudges());
     }
-    return nudgeDispatcher.dispatchDue({
-      teamNames: readyTeamNames,
-      claimedBy,
-    });
+    return initialSummary;
   };
   const queue = new MemberWorkSyncEventQueue({
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
       await reconciler.execute(request, context);
+      if (context.isCancelled?.()) {
+        return;
+      }
       await dispatchNudgesForReadyTeams([request.teamName], `member-work-sync:${process.pid}`, {
         refreshBackgroundStaleStatuses: false,
       });
     },
     isTeamActive: deps.isTeamActive ?? (() => true),
+    reconcileInactiveTeams: true,
     ...(deps.queueQuietWindowMs != null ? { quietWindowMs: deps.queueQuietWindowMs } : {}),
     auditJournal,
     logger: deps.logger,

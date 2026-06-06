@@ -5,6 +5,8 @@ import * as path from 'path';
 import { atomicWriteAsync } from '../atomicWrite';
 import { withFileLock } from '../fileLock';
 
+import { getTeamTaskStallAlertCooldownMs } from './featureGates';
+
 import type {
   TaskStallEvaluation,
   TaskStallJournalEntry,
@@ -15,7 +17,28 @@ function isValidState(value: unknown): value is TaskStallJournalState {
   return value === 'suspected' || value === 'alert_ready' || value === 'alerted';
 }
 
+function parseTime(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+export interface TeamTaskStallJournalOptions {
+  alertCooldownMs?: number;
+}
+
 export class TeamTaskStallJournal {
+  private readonly alertCooldownMs: number;
+
+  constructor(options: TeamTaskStallJournalOptions = {}) {
+    this.alertCooldownMs =
+      options.alertCooldownMs != null && options.alertCooldownMs > 0
+        ? options.alertCooldownMs
+        : getTeamTaskStallAlertCooldownMs();
+  }
+
   private getFilePath(teamName: string): string {
     return path.join(getTeamsBasePath(), teamName, 'stall-monitor-journal.json');
   }
@@ -67,6 +90,7 @@ export class TeamTaskStallJournal {
             epochKey,
             teamName: args.teamName,
             taskId: evaluation.taskId,
+            ...(evaluation.memberName ? { memberName: evaluation.memberName } : {}),
             branch: evaluation.branch,
             signal: evaluation.signal,
             state: 'suspected',
@@ -78,7 +102,23 @@ export class TeamTaskStallJournal {
         }
 
         existing.updatedAt = args.now;
+        if (evaluation.memberName) {
+          existing.memberName = evaluation.memberName;
+        }
         if (existing.state === 'alerted') {
+          const nowMs = parseTime(args.now) ?? Date.now();
+          const alertedAtMs = parseTime(existing.alertedAt);
+          if (
+            alertedAtMs != null &&
+            alertedAtMs <= nowMs &&
+            nowMs - alertedAtMs < this.alertCooldownMs
+          ) {
+            continue;
+          }
+
+          existing.state = 'alert_ready';
+          existing.consecutiveScans += 1;
+          readyEvaluations.push(evaluation);
           continue;
         }
 
@@ -138,6 +178,9 @@ export class TeamTaskStallJournal {
         )
         .map((entry) => ({
           ...entry,
+          ...(typeof entry.memberName === 'string' && entry.memberName.trim()
+            ? { memberName: entry.memberName }
+            : {}),
           ...(entry.alertedAt ? { alertedAt: entry.alertedAt } : {}),
         }));
     } catch (error) {

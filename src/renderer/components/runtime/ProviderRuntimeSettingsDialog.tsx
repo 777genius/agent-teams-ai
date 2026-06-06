@@ -27,6 +27,7 @@ import {
   CodexLoginUserCodeBadge,
 } from '@renderer/components/runtime/CodexLoginLinkCopyButton';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -70,7 +71,14 @@ import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@sha
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
 type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini';
-type PendingConnectionAction = 'auto' | 'oauth' | 'chatgpt' | 'api_key' | 'compatible' | null;
+type PendingConnectionAction =
+  | 'auto'
+  | 'oauth'
+  | 'chatgpt'
+  | 'api_key'
+  | 'compatible'
+  | 'codex-custom-provider'
+  | null;
 
 interface ConnectionMethodCardOption {
   readonly authMode: CliProviderAuthMode;
@@ -163,6 +171,7 @@ const API_KEY_PROVIDER_TRANSLATION_KEYS = {
 
 const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR = 'ANTHROPIC_AUTH_TOKEN';
 const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_NAME = 'Anthropic-compatible Auth Token';
+const CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH = 200;
 const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 
 function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProviderId {
@@ -226,6 +235,50 @@ function validateAnthropicCompatibleBaseUrl(
     }
   } catch {
     return t('providerRuntime.compatibleEndpoint.validation.invalidUrl');
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Base URL is required when custom endpoint is enabled.';
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'Base URL must use http:// or https://.';
+    }
+    if (url.username || url.password) {
+      return 'Base URL must not include username or password.';
+    }
+    if (url.search || url.hash) {
+      return 'Base URL must not include query string or fragment.';
+    }
+  } catch {
+    return 'Base URL must be a valid URL.';
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderModel(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Model id is required when custom endpoint is enabled.';
+  }
+
+  if (trimmed.length > CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH) {
+    return `Model id must be ${CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH} characters or fewer.`;
+  }
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const code = trimmed.charCodeAt(index);
+    if (code <= 31 || code === 127) {
+      return 'Model id must not include newlines or control characters.';
+    }
   }
 
   return null;
@@ -808,6 +861,12 @@ export const ProviderRuntimeSettingsDialog = ({
   const [compatibleTokenValue, setCompatibleTokenValue] = useState('');
   const [compatibleEndpointError, setCompatibleEndpointError] = useState<string | null>(null);
   const [compatibleEndpointStatus, setCompatibleEndpointStatus] = useState<string | null>(null);
+  const [codexCustomProviderEnabled, setCodexCustomProviderEnabled] = useState(false);
+  const [codexCustomProviderBaseUrl, setCodexCustomProviderBaseUrl] = useState('');
+  const [codexCustomProviderModel, setCodexCustomProviderModel] = useState('');
+  const [codexCustomProviderApiKeyValue, setCodexCustomProviderApiKeyValue] = useState('');
+  const [codexCustomProviderError, setCodexCustomProviderError] = useState<string | null>(null);
+  const [codexCustomProviderStatus, setCodexCustomProviderStatus] = useState<string | null>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
   const apiKeys = useStore((s) => s.apiKeys);
@@ -854,6 +913,12 @@ export const ProviderRuntimeSettingsDialog = ({
     setCompatibleTokenValue('');
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
+    setCodexCustomProviderEnabled(false);
+    setCodexCustomProviderBaseUrl('');
+    setCodexCustomProviderModel('');
+    setCodexCustomProviderApiKeyValue('');
+    setCodexCustomProviderError(null);
+    setCodexCustomProviderStatus(null);
   }, [open]);
 
   useEffect(() => {
@@ -861,6 +926,8 @@ export const ProviderRuntimeSettingsDialog = ({
     setRuntimeError(null);
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
+    setCodexCustomProviderError(null);
+    setCodexCustomProviderStatus(null);
   }, [selectedProviderId]);
 
   useEffect(() => {
@@ -891,6 +958,11 @@ export const ProviderRuntimeSettingsDialog = ({
     .compatibleEndpoint ?? {
     enabled: false,
     baseUrl: '',
+  };
+  const codexCustomProviderConfig = appConfig?.providerConnections?.codex.customProvider ?? {
+    enabled: false,
+    baseUrl: '',
+    model: '',
   };
   const selectedCompatibleToken = findPreferredApiKeyEntry(
     apiKeys,
@@ -939,6 +1011,32 @@ export const ProviderRuntimeSettingsDialog = ({
       nextConnection.configuredAuthMode =
         appConfig?.providerConnections?.codex.preferredAuthMode ??
         mergedStatusProvider.connection.configuredAuthMode;
+      if (nextConnection.codex) {
+        nextConnection.codex = {
+          ...nextConnection.codex,
+          preferredAuthMode:
+            appConfig?.providerConnections?.codex.preferredAuthMode ??
+            nextConnection.codex.preferredAuthMode,
+          customProvider: {
+            ...(nextConnection.codex.customProvider ?? {
+              enabled: false,
+              active: false,
+              baseUrl: '',
+              model: '',
+              issueMessage: null,
+            }),
+            enabled: codexCustomProviderConfig.enabled,
+            active:
+              codexCustomProviderConfig.enabled &&
+              (appConfig?.providerConnections?.codex.preferredAuthMode ??
+                mergedStatusProvider.connection.configuredAuthMode) === 'api_key' &&
+              validateCodexCustomProviderBaseUrl(codexCustomProviderConfig.baseUrl) === null &&
+              validateCodexCustomProviderModel(codexCustomProviderConfig.model) === null,
+            baseUrl: codexCustomProviderConfig.baseUrl,
+            model: codexCustomProviderConfig.model,
+          },
+        };
+      }
     }
 
     if (statusApiKeyConfig) {
@@ -965,6 +1063,9 @@ export const ProviderRuntimeSettingsDialog = ({
     appConfig?.providerConnections?.anthropic.authMode,
     appConfig?.providerConnections?.codex.preferredAuthMode,
     codexAccount.snapshot,
+    codexCustomProviderConfig.baseUrl,
+    codexCustomProviderConfig.enabled,
+    codexCustomProviderConfig.model,
     selectedCompatibleToken,
     selectedApiKey,
     statusApiKeyConfig,
@@ -982,6 +1083,25 @@ export const ProviderRuntimeSettingsDialog = ({
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
   }, [anthropicCompatibleConfig.baseUrl, open, selectedProviderId]);
+
+  useEffect(() => {
+    if (!open || selectedProviderId !== 'codex') {
+      return;
+    }
+
+    setCodexCustomProviderEnabled(codexCustomProviderConfig.enabled);
+    setCodexCustomProviderBaseUrl(codexCustomProviderConfig.baseUrl);
+    setCodexCustomProviderModel(codexCustomProviderConfig.model);
+    setCodexCustomProviderApiKeyValue('');
+    setCodexCustomProviderError(null);
+    setCodexCustomProviderStatus(null);
+  }, [
+    codexCustomProviderConfig.baseUrl,
+    codexCustomProviderConfig.enabled,
+    codexCustomProviderConfig.model,
+    open,
+    selectedProviderId,
+  ]);
 
   const selectedProviderLoading = selectedProvider
     ? providerStatusLoading[selectedProvider.providerId] === true
@@ -1136,6 +1256,28 @@ export const ProviderRuntimeSettingsDialog = ({
     (anthropicCompatibleTokenConfigured ? t('providerRuntime.status.configured') : null);
   const anthropicCompatibleMissingToken =
     anthropicCompatibleEndpointEnabled && !anthropicCompatibleTokenConfigured;
+  const codexCustomProvider =
+    selectedProvider?.providerId === 'codex'
+      ? (selectedProvider.connection?.codex?.customProvider ?? null)
+      : null;
+  const codexCustomProviderPersistedEnabled =
+    codexCustomProvider?.enabled ?? codexCustomProviderConfig.enabled;
+  const codexCustomProviderActive = codexCustomProvider?.active === true;
+  const codexCustomProviderIssueMessage = codexCustomProvider?.issueMessage ?? null;
+  const codexCustomProviderApiKeyConfigured = Boolean(
+    selectedProvider?.providerId === 'codex' &&
+    (selectedApiKey || selectedProvider.connection?.apiKeyConfigured)
+  );
+  const codexCustomProviderApiKeyStatus =
+    selectedApiKey?.maskedValue ??
+    (selectedProvider?.providerId === 'codex'
+      ? selectedProvider.connection?.apiKeySourceLabel
+      : null) ??
+    (codexCustomProviderApiKeyConfigured ? t('providerRuntime.status.configured') : null);
+  const codexCustomProviderInactiveMessage =
+    codexCustomProviderPersistedEnabled && configuredAuthMode !== 'api_key'
+      ? 'Custom endpoint is saved but inactive because Codex is not in API key mode.'
+      : null;
 
   useEffect(() => {
     if (!showApiKeyForm) {
@@ -1194,6 +1336,8 @@ export const ProviderRuntimeSettingsDialog = ({
             return t('providerRuntime.progress.switchingApiKeyMode');
           case 'auto':
             return t('providerRuntime.progress.switchingAuto');
+          case 'codex-custom-provider':
+            return 'Saving Codex custom endpoint';
           default:
             return t('providerRuntime.progress.applyingConnectionChanges');
         }
@@ -1435,6 +1579,146 @@ export const ProviderRuntimeSettingsDialog = ({
           await onRefreshProvider?.('anthropic');
         } catch {
           setConnectionError(t('providerRuntime.errors.endpointDisabledRefreshFailed'));
+        }
+      }
+
+      setConnectionSaving(false);
+      setPendingConnectionAction(null);
+    }
+  };
+
+  const handleSaveCodexCustomProvider = async (): Promise<void> => {
+    if (selectedProvider?.providerId !== 'codex' || !apiKeyConfig) {
+      return;
+    }
+
+    const baseUrl = codexCustomProviderBaseUrl.trim();
+    const model = codexCustomProviderModel.trim();
+    const shouldEnable = codexCustomProviderEnabled;
+    if (shouldEnable) {
+      const baseUrlError = validateCodexCustomProviderBaseUrl(baseUrl);
+      if (baseUrlError) {
+        setCodexCustomProviderError(baseUrlError);
+        setCodexCustomProviderStatus(null);
+        return;
+      }
+
+      const modelError = validateCodexCustomProviderModel(model);
+      if (modelError) {
+        setCodexCustomProviderError(modelError);
+        setCodexCustomProviderStatus(null);
+        return;
+      }
+    } else if (baseUrl) {
+      const baseUrlError = validateCodexCustomProviderBaseUrl(baseUrl);
+      if (baseUrlError) {
+        setCodexCustomProviderError(baseUrlError);
+        setCodexCustomProviderStatus(null);
+        return;
+      }
+    }
+
+    if (!shouldEnable && model) {
+      const modelError = validateCodexCustomProviderModel(model);
+      if (modelError) {
+        setCodexCustomProviderError(modelError);
+        setCodexCustomProviderStatus(null);
+        return;
+      }
+    }
+
+    setConnectionSaving(true);
+    setPendingConnectionAction('codex-custom-provider');
+    setConnectionError(null);
+    setCodexCustomProviderError(null);
+    setCodexCustomProviderStatus(null);
+    let updateSucceeded = false;
+
+    try {
+      if (codexCustomProviderApiKeyValue.trim()) {
+        await saveApiKey({
+          id: selectedApiKey?.id,
+          name: apiKeyConfig.name,
+          envVarName: apiKeyConfig.envVarName,
+          value: codexCustomProviderApiKeyValue.trim(),
+          scope: selectedApiKey?.scope ?? 'user',
+        });
+      }
+
+      await updateConfig('providerConnections', {
+        codex: {
+          ...(shouldEnable ? { preferredAuthMode: 'api_key' as const } : {}),
+          customProvider: {
+            enabled: shouldEnable,
+            baseUrl,
+            model,
+          },
+        },
+      });
+      updateSucceeded = true;
+      setCodexCustomProviderApiKeyValue('');
+      setCodexCustomProviderStatus(
+        shouldEnable
+          ? 'Custom endpoint saved. Codex API key mode is selected.'
+          : 'Custom endpoint disabled. Saved endpoint, model, and key were kept.'
+      );
+    } catch (error) {
+      setCodexCustomProviderError(
+        error instanceof Error ? error.message : 'Failed to save Codex custom endpoint.'
+      );
+    } finally {
+      if (updateSucceeded) {
+        try {
+          await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
+          await onRefreshProvider?.('codex');
+        } catch {
+          setConnectionError('Codex custom endpoint saved, but provider status refresh failed.');
+        }
+      }
+
+      setConnectionSaving(false);
+      setPendingConnectionAction(null);
+    }
+  };
+
+  const handleDisableCodexCustomProvider = async (): Promise<void> => {
+    if (selectedProvider?.providerId !== 'codex') {
+      return;
+    }
+
+    setConnectionSaving(true);
+    setPendingConnectionAction('codex-custom-provider');
+    setConnectionError(null);
+    setCodexCustomProviderError(null);
+    setCodexCustomProviderStatus(null);
+    let updateSucceeded = false;
+
+    try {
+      await updateConfig('providerConnections', {
+        codex: {
+          customProvider: {
+            enabled: false,
+            baseUrl: codexCustomProviderConfig.baseUrl,
+            model: codexCustomProviderConfig.model,
+          },
+        },
+      });
+      updateSucceeded = true;
+      setCodexCustomProviderEnabled(false);
+      setCodexCustomProviderStatus(
+        'Custom endpoint disabled. Saved endpoint, model, and key were kept.'
+      );
+    } catch (error) {
+      setCodexCustomProviderError(
+        error instanceof Error ? error.message : 'Failed to disable Codex custom endpoint.'
+      );
+    } finally {
+      if (updateSucceeded) {
+        try {
+          await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
+          await onRefreshProvider?.('codex');
+        } catch {
+          setConnectionError('Codex custom endpoint disabled, but provider status refresh failed.');
         }
       }
 
@@ -1886,6 +2170,255 @@ export const ProviderRuntimeSettingsDialog = ({
                           <Save className="mr-1 size-3.5" />
                         )}
                         {t('providerRuntime.actions.saveEndpoint')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedProvider.providerId === 'codex' ? (
+                  <div
+                    data-testid="codex-custom-provider-panel"
+                    className="space-y-3 rounded-md border p-3"
+                    style={{ borderColor: 'var(--color-border-subtle)' }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                          Custom API endpoint
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          Route Codex API-key launches through an app-managed custom provider.
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span
+                          className="rounded-full px-2 py-0.5"
+                          style={{
+                            color: codexCustomProviderPersistedEnabled
+                              ? '#86efac'
+                              : 'var(--color-text-muted)',
+                            backgroundColor: codexCustomProviderPersistedEnabled
+                              ? 'rgba(74, 222, 128, 0.14)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                          }}
+                        >
+                          {codexCustomProviderPersistedEnabled ? 'enabled' : 'off'}
+                        </span>
+                        {codexCustomProviderPersistedEnabled ? (
+                          <span
+                            className="rounded-full px-2 py-0.5"
+                            style={{
+                              color: codexCustomProviderActive
+                                ? '#86efac'
+                                : 'var(--color-text-muted)',
+                              backgroundColor: codexCustomProviderActive
+                                ? 'rgba(74, 222, 128, 0.14)'
+                                : 'rgba(255, 255, 255, 0.05)',
+                            }}
+                          >
+                            {codexCustomProviderActive ? 'active' : 'inactive'}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-xs">
+                      <Checkbox
+                        checked={codexCustomProviderEnabled}
+                        disabled={connectionBusy}
+                        onCheckedChange={(checked) => {
+                          setCodexCustomProviderEnabled(checked === true);
+                          setCodexCustomProviderError(null);
+                          setCodexCustomProviderStatus(null);
+                        }}
+                      />
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
+                        Enable custom endpoint for Codex API-key launches
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="codex-custom-provider-base-url" className="text-xs">
+                          Base URL
+                        </Label>
+                        <Input
+                          id="codex-custom-provider-base-url"
+                          data-testid="codex-custom-provider-base-url"
+                          value={codexCustomProviderBaseUrl}
+                          onChange={(event) => {
+                            setCodexCustomProviderBaseUrl(event.currentTarget.value);
+                            setCodexCustomProviderError(null);
+                            setCodexCustomProviderStatus(null);
+                          }}
+                          placeholder="https://gateway.example.com/v1"
+                          className="h-9 text-sm"
+                          disabled={connectionBusy}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="codex-custom-provider-model" className="text-xs">
+                          Model id
+                        </Label>
+                        <Input
+                          id="codex-custom-provider-model"
+                          data-testid="codex-custom-provider-model"
+                          value={codexCustomProviderModel}
+                          onChange={(event) => {
+                            setCodexCustomProviderModel(event.currentTarget.value);
+                            setCodexCustomProviderError(null);
+                            setCodexCustomProviderStatus(null);
+                          }}
+                          placeholder="gateway-model-id"
+                          className="h-9 text-sm"
+                          disabled={connectionBusy}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="codex-custom-provider-api-key" className="text-xs">
+                        API key
+                      </Label>
+                      <Input
+                        id="codex-custom-provider-api-key"
+                        data-testid="codex-custom-provider-api-key"
+                        type="password"
+                        value={codexCustomProviderApiKeyValue}
+                        onChange={(event) => {
+                          setCodexCustomProviderApiKeyValue(event.currentTarget.value);
+                          setCodexCustomProviderError(null);
+                          setCodexCustomProviderStatus(null);
+                        }}
+                        placeholder={
+                          codexCustomProviderApiKeyConfigured
+                            ? 'Keep saved OPENAI_API_KEY'
+                            : apiKeyConfig?.placeholder
+                        }
+                        className="h-9 text-sm"
+                        disabled={connectionBusy || apiKeySaving}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className="rounded-full px-2 py-0.5"
+                        style={{
+                          color: codexCustomProviderApiKeyConfigured
+                            ? '#86efac'
+                            : 'var(--color-text-muted)',
+                          backgroundColor: codexCustomProviderApiKeyConfigured
+                            ? 'rgba(74, 222, 128, 0.14)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                        }}
+                      >
+                        API key:{' '}
+                        {codexCustomProviderApiKeyConfigured
+                          ? t('providerRuntime.status.configured')
+                          : t('providerRuntime.status.notSet')}
+                      </span>
+                      {codexCustomProviderApiKeyStatus ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {codexCustomProviderApiKeyStatus}
+                        </span>
+                      ) : null}
+                      {codexCustomProviderPersistedEnabled && codexCustomProvider?.baseUrl ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {codexCustomProvider.baseUrl}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div
+                      className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                      style={{
+                        borderColor: 'rgba(245, 158, 11, 0.25)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                        color: '#fbbf24',
+                      }}
+                    >
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                      <span>
+                        Endpoint must support the Codex Responses API. Chat Completions-only
+                        gateways may fail at launch or model probe time.
+                      </span>
+                    </div>
+
+                    {codexCustomProviderError ? (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(248, 113, 113, 0.25)',
+                          backgroundColor: 'rgba(248, 113, 113, 0.06)',
+                          color: '#fca5a5',
+                        }}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{codexCustomProviderError}</span>
+                      </div>
+                    ) : codexCustomProviderStatus ? (
+                      <div
+                        className="rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(74, 222, 128, 0.22)',
+                          backgroundColor: 'rgba(74, 222, 128, 0.06)',
+                          color: '#86efac',
+                        }}
+                      >
+                        {codexCustomProviderStatus}
+                      </div>
+                    ) : codexCustomProviderIssueMessage ||
+                      codexCustomProviderInactiveMessage ||
+                      (codexCustomProviderPersistedEnabled &&
+                        !codexCustomProviderApiKeyConfigured) ? (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(245, 158, 11, 0.25)',
+                          backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                          color: '#fbbf24',
+                        }}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>
+                          {codexCustomProviderIssueMessage ??
+                            codexCustomProviderInactiveMessage ??
+                            'Custom endpoint is enabled, but no OPENAI_API_KEY is configured.'}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div className="flex justify-end gap-2">
+                      {codexCustomProviderPersistedEnabled ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={connectionBusy}
+                          onClick={() => void handleDisableCodexCustomProvider()}
+                        >
+                          {t('providerRuntime.actions.disable')}
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={
+                          connectionBusy ||
+                          apiKeySaving ||
+                          (codexCustomProviderEnabled &&
+                            (!codexCustomProviderBaseUrl.trim() ||
+                              !codexCustomProviderModel.trim()))
+                        }
+                        onClick={() => void handleSaveCodexCustomProvider()}
+                      >
+                        {connectionSaving && pendingConnectionAction === 'codex-custom-provider' ? (
+                          <Loader2 className="mr-1 size-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1 size-3.5" />
+                        )}
+                        Save endpoint
                       </Button>
                     </div>
                   </div>

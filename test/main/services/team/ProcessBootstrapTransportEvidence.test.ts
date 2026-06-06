@@ -96,6 +96,30 @@ describe('ProcessBootstrapTransportEvidence', () => {
     expect(summary?.lastStage).toBe('process spawned');
   });
 
+  it('surfaces headless startup checkpoints as transport progress', () => {
+    const summary = summarizeProcessBootstrapTransportEvents([
+      {
+        type: 'cli_started',
+        timestamp: '2026-05-07T10:00:00.000Z',
+        detail: 'teammateRuntime=headless',
+      },
+      {
+        type: 'startup_checkpoint',
+        timestamp: '2026-05-07T10:00:01.000Z',
+        detail: 'commands_agents_loaded',
+      },
+    ]);
+
+    expect(summary).toMatchObject({
+      submitted: false,
+      hasProgress: true,
+      lastStage: 'startup checkpoint: commands_agents_loaded',
+    });
+    expect(buildProcessBootstrapTimeoutDiagnostic(summary!)).toBe(
+      'Bootstrap prompt was not submitted before timeout. Last transport stage: startup checkpoint: commands_agents_loaded'
+    );
+  });
+
   it('builds stable pending and timeout diagnostics from the last transport stage', () => {
     const summary = summarizeProcessBootstrapTransportEvents([
       {

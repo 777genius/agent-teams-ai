@@ -348,6 +348,11 @@ export function useSettingsHandlers({
           },
           codex: {
             preferredAuthMode: 'auto',
+            customProvider: {
+              enabled: false,
+              baseUrl: '',
+              model: '',
+            },
           },
         },
         runtime: {

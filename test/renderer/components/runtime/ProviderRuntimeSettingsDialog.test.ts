@@ -19,6 +19,11 @@ interface StoreState {
       };
       codex: {
         preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+        customProvider: {
+          enabled: boolean;
+          baseUrl: string;
+          model: string;
+        };
       };
     };
   };
@@ -113,6 +118,25 @@ vi.mock('@renderer/components/ui/button', () => ({
       },
       children
     ),
+}));
+
+vi.mock('@renderer/components/ui/checkbox', () => ({
+  Checkbox: ({
+    checked,
+    disabled,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    disabled?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) =>
+    React.createElement('input', {
+      type: 'checkbox',
+      checked: Boolean(checked),
+      disabled,
+      onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+        onCheckedChange?.(event.currentTarget.checked),
+    }),
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
@@ -282,6 +306,13 @@ function createCodexProvider(
           Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured)
             ? 'ready_api_key'
             : 'missing_auth',
+        customProvider: {
+          enabled: false,
+          active: false,
+          baseUrl: '',
+          model: '',
+          issueMessage: null,
+        },
         ...overrides?.codex,
       },
     },
@@ -487,6 +518,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
         },
         codex: {
           preferredAuthMode: 'auto',
+          customProvider: {
+            enabled: false,
+            baseUrl: '',
+            model: '',
+          },
         },
       },
     };
@@ -518,6 +554,10 @@ describe('ProviderRuntimeSettingsDialog', () => {
             codex: {
               ...storeState.appConfig.providerConnections.codex,
               ...(nextProviderConnections.codex ?? {}),
+              customProvider: {
+                ...storeState.appConfig.providerConnections.codex.customProvider,
+                ...(nextProviderConnections.codex?.customProvider ?? {}),
+              },
             },
           },
         };
@@ -995,6 +1035,166 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Use an OpenAI API key as a secondary Codex auth path.');
     expect(host.textContent).toContain('Set API key');
     expect(host.textContent).toContain('Connect ChatGPT');
+  });
+
+  it('saves a Codex custom provider profile and reuses OPENAI_API_KEY storage', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createCodexProvider({
+              authenticated: false,
+              authMethod: null,
+              apiKeyConfigured: false,
+              apiKeySource: null,
+              apiKeySourceLabel: null,
+            }),
+          ],
+          initialProviderId: 'codex',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Custom API endpoint');
+    const enabledInput = host.querySelector(
+      '[data-testid="codex-custom-provider-panel"] input[type="checkbox"]'
+    ) as HTMLInputElement | null;
+    const baseUrlInput = host.querySelector(
+      '[data-testid="codex-custom-provider-base-url"]'
+    ) as HTMLInputElement | null;
+    const modelInput = host.querySelector(
+      '[data-testid="codex-custom-provider-model"]'
+    ) as HTMLInputElement | null;
+    const apiKeyInput = host.querySelector(
+      '[data-testid="codex-custom-provider-api-key"]'
+    ) as HTMLInputElement | null;
+    expect(enabledInput).not.toBeNull();
+    expect(baseUrlInput).not.toBeNull();
+    expect(modelInput).not.toBeNull();
+    expect(apiKeyInput).not.toBeNull();
+
+    await act(async () => {
+      enabledInput!.click();
+      setInputValue(baseUrlInput!, 'https://gateway.example.com/v1');
+      setInputValue(modelInput!, 'gateway-codex-model');
+      setInputValue(apiKeyInput!, 'sk-test');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.saveApiKey).toHaveBeenCalledWith({
+      id: undefined,
+      name: 'Codex API Key',
+      envVarName: 'OPENAI_API_KEY',
+      value: 'sk-test',
+      scope: 'user',
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      codex: {
+        preferredAuthMode: 'api_key',
+        customProvider: {
+          enabled: true,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: 'gateway-codex-model',
+        },
+      },
+    });
+    expect(codexAccountHookState.refresh).toHaveBeenCalledWith({
+      includeRateLimits: true,
+      forceRefreshToken: true,
+    });
+    expect(onRefreshProvider).toHaveBeenCalledWith('codex');
+  });
+
+  it('disables Codex custom provider without deleting its saved key or profile fields', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.codex = {
+      preferredAuthMode: 'api_key',
+      customProvider: {
+        enabled: true,
+        baseUrl: 'https://gateway.example.com/v1',
+        model: 'gateway-codex-model',
+      },
+    };
+    storeState.apiKeys = [
+      {
+        id: 'openai-key',
+        envVarName: 'OPENAI_API_KEY',
+        scope: 'user',
+        name: 'Codex API Key',
+        maskedValue: 'sk-...xyz',
+      },
+    ];
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createCodexProvider({
+              authenticated: true,
+              authMethod: 'api_key',
+              configuredAuthMode: 'api_key',
+              apiKeyConfigured: true,
+              apiKeySource: 'stored',
+              apiKeySourceLabel: 'Stored in app',
+              codex: {
+                preferredAuthMode: 'api_key',
+                effectiveAuthMode: 'api_key',
+                customProvider: {
+                  enabled: true,
+                  active: true,
+                  baseUrl: 'https://gateway.example.com/v1',
+                  model: 'gateway-codex-model',
+                  issueMessage: null,
+                },
+              },
+            }),
+          ],
+          initialProviderId: 'codex',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('sk-...xyz');
+
+    await act(async () => {
+      findButtonByText(host, 'Disable').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: false,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: 'gateway-codex-model',
+        },
+      },
+    });
+    expect(storeState.deleteApiKey).not.toHaveBeenCalled();
+    expect(onRefreshProvider).toHaveBeenCalledWith('codex');
   });
 
   it('explains the missing Codex ChatGPT login without mixing it up with the detected API key', async () => {

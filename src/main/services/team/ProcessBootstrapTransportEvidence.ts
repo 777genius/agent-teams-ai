@@ -54,6 +54,7 @@ const TRANSPORT_STAGE_LABELS: Record<string, string> = {
   process_spawned: 'process spawned',
   stdout_attached: 'stdout attached',
   cli_started: 'CLI started',
+  startup_checkpoint: 'startup checkpoint',
   runtime_ready: 'runtime ready',
   inbox_poller_ready: 'inbox poller ready',
   mailbox_bootstrap_written: 'bootstrap mailbox row written',

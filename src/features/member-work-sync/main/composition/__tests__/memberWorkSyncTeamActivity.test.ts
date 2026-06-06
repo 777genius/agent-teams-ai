@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
   isRuntimeEntryActiveForWorkSync,
+  isRuntimeMemberActiveForWorkSync,
+  isRuntimeMemberActivityUncertainForWorkSync,
 } from '../memberWorkSyncTeamActivity';
 
 import type { TeamAgentRuntimeEntry, TeamAgentRuntimeSnapshot } from '@shared/types';
@@ -39,14 +42,49 @@ describe('member work sync team activity', () => {
   });
 
   it('treats a confirmed bootstrap runtime entry as active', () => {
+    for (const pidSource of ['agent_process_table', 'opencode_bridge'] as const) {
+      expect(
+        isRuntimeEntryActiveForWorkSync(
+          createRuntimeEntry({
+            livenessKind: 'confirmed_bootstrap',
+            pidSource,
+            runtimeLastSeenAt: '2026-05-18T19:44:47.000Z',
+          })
+        )
+      ).toBe(true);
+    }
+  });
+
+  it('does not treat bootstrap-only confirmation as active runtime evidence', () => {
+    for (const pidSource of [
+      undefined,
+      'runtime_bootstrap',
+      'persisted_metadata',
+      'tmux_child',
+      'tmux_pane',
+    ] as const) {
+      expect(
+        isRuntimeEntryActiveForWorkSync(
+          createRuntimeEntry({
+            livenessKind: 'confirmed_bootstrap',
+            ...(pidSource ? { pidSource } : {}),
+          })
+        )
+      ).toBe(false);
+    }
+  });
+
+  it('does not count lead runtime entries as work-sync active teammates', () => {
     expect(
       isRuntimeEntryActiveForWorkSync(
         createRuntimeEntry({
-          livenessKind: 'confirmed_bootstrap',
-          runtimeLastSeenAt: '2026-05-18T19:44:47.000Z',
+          memberName: 'team-lead',
+          backendType: 'lead',
+          livenessKind: undefined,
+          pidSource: 'lead_process',
         })
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('does not treat inactive liveness diagnostics as active by themselves', () => {
@@ -77,6 +115,12 @@ describe('member work sync team activity', () => {
     expect(
       hasWorkSyncActiveRuntime(
         createRuntimeSnapshot({
+          'team-lead': createRuntimeEntry({
+            memberName: 'team-lead',
+            backendType: 'lead',
+            livenessKind: undefined,
+            pidSource: 'lead_process',
+          }),
           alice: createRuntimeEntry({ alive: false, livenessKind: 'stale_metadata' }),
           bob: createRuntimeEntry({ memberName: 'bob', livenessKind: 'runtime_process' }),
         })
@@ -88,6 +132,12 @@ describe('member work sync team activity', () => {
     expect(
       hasWorkSyncActiveRuntime(
         createRuntimeSnapshot({
+          'team-lead': createRuntimeEntry({
+            memberName: 'team-lead',
+            backendType: 'lead',
+            livenessKind: undefined,
+            pidSource: 'lead_process',
+          }),
           alice: createRuntimeEntry({ alive: false, livenessKind: 'stale_metadata' }),
           bob: createRuntimeEntry({
             memberName: 'bob',
@@ -97,6 +147,50 @@ describe('member work sync team activity', () => {
         })
       )
     ).toBe(false);
+  });
+
+  it('checks active runtime evidence for a specific teammate', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({ memberName: 'alice', livenessKind: 'runtime_process' }),
+      bob: createRuntimeEntry({ memberName: 'bob', alive: false, livenessKind: 'stale_metadata' }),
+    });
+
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'ALICE')).toBe(true);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'bob')).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'team-lead')).toBe(false);
+  });
+
+  it('treats process table unavailability as uncertain runtime activity', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        alive: false,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table unavailable',
+      }),
+      bob: createRuntimeEntry({ memberName: 'bob', alive: false, livenessKind: 'stale_metadata' }),
+    });
+
+    expect(hasWorkSyncActiveRuntime(snapshot)).toBe(false);
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice')).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'bob')).toBe(false);
+  });
+
+  it('recognizes process table is unavailable diagnostics as uncertain runtime activity', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        alive: false,
+        livenessKind: 'confirmed_bootstrap',
+        pidSource: 'runtime_bootstrap',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+      }),
+    });
+
+    expect(hasWorkSyncActiveRuntime(snapshot)).toBe(false);
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice')).toBe(true);
   });
 
   it('handles missing snapshots as inactive', () => {

@@ -67,6 +67,13 @@ export interface CliProviderConnectionInfo {
     launchAllowed: boolean;
     launchIssueMessage: string | null;
     launchReadinessState: CodexLaunchReadinessState;
+    customProvider?: {
+      enabled: boolean;
+      active: boolean;
+      baseUrl: string;
+      model: string;
+      issueMessage: string | null;
+    };
   } | null;
 }
 

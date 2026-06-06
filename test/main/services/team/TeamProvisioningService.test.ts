@@ -711,9 +711,7 @@ type TeamProvisioningServicePrivateHarness = {
   applyProcessBootstrapTransportOverlay: (
     input: Record<string, unknown>
   ) => Record<string, unknown>;
-  reconcilePersistedLaunchState: (
-    teamName: string
-  ) => Promise<{
+  reconcilePersistedLaunchState: (teamName: string) => Promise<{
     snapshot: null;
     statuses: Record<string, never>;
   }>;
@@ -1150,6 +1148,104 @@ describe('TeamProvisioningService', () => {
         })
       );
       expect(nextRecord.status).toBe('retry_scheduled');
+    });
+
+    it('emits a terminal failure event when exhausted work-sync proof retries fail', async () => {
+      const svc = new TeamProvisioningService();
+      const taskRefs = [{ taskId: 'task-1', displayId: 'task-1', teamName: 'team-a' }];
+      const record = {
+        id: 'opencode-prompt:work-sync-proof-missing',
+        teamName: 'team-a',
+        memberName: 'atlas',
+        laneId: 'secondary:opencode:atlas',
+        runId: 'run-1',
+        runtimeSessionId: 'ses-1',
+        inboxMessageId: 'msg-work-sync-proof-missing',
+        inboxTimestamp: '2026-05-18T08:31:00.000Z',
+        source: 'watcher',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+        replyRecipient: 'team-lead',
+        actionMode: 'do',
+        taskRefs,
+        payloadHash: 'sha256:work-sync',
+        status: 'retry_scheduled',
+        responseState: 'responded_non_visible_tool',
+        attempts: 3,
+        maxAttempts: 3,
+        acceptanceUnknown: false,
+        nextAttemptAt: null,
+        lastAttemptAt: '2026-05-18T08:31:30.000Z',
+        lastObservedAt: '2026-05-18T08:31:45.000Z',
+        acceptedAt: '2026-05-18T08:31:30.000Z',
+        respondedAt: '2026-05-18T08:31:45.000Z',
+        failedAt: null,
+        inboxReadCommittedAt: null,
+        inboxReadCommitError: null,
+        prePromptCursor: null,
+        postPromptCursor: null,
+        deliveredUserMessageId: 'delivered-1',
+        observedAssistantMessageId: 'assistant-1',
+        observedAssistantPreview: null,
+        observedToolCallNames: ['member_work_sync_status'],
+        observedVisibleMessageId: null,
+        visibleReplyMessageId: null,
+        visibleReplyInbox: null,
+        visibleReplyCorrelation: null,
+        lastReason: 'member_work_sync_report_required',
+        diagnostics: ['member_work_sync_report_required'],
+        createdAt: '2026-05-18T08:31:00.000Z',
+        updatedAt: '2026-05-18T08:31:45.000Z',
+      };
+      const failedRecord = {
+        ...record,
+        status: 'failed_terminal',
+        failedAt: '2026-05-18T08:32:00.000Z',
+        updatedAt: '2026-05-18T08:32:00.000Z',
+      };
+      const ledger = {
+        markFailedTerminal: vi.fn(async () => failedRecord),
+        markNextAttemptScheduled: vi.fn(),
+      };
+      const harness = svc as unknown as {
+        scheduleOpenCodePromptDeliveryWatchdog: ReturnType<typeof vi.fn>;
+        logOpenCodePromptDeliveryEvent: ReturnType<typeof vi.fn>;
+        scheduleOpenCodePromptLedgerFollowUp(input: {
+          ledger: typeof ledger;
+          ledgerRecord: typeof record;
+          teamName: string;
+          memberName: string;
+          retry: boolean;
+          reason: string;
+        }): Promise<typeof failedRecord>;
+      };
+      harness.scheduleOpenCodePromptDeliveryWatchdog = vi.fn();
+      harness.logOpenCodePromptDeliveryEvent = vi.fn();
+
+      const nextRecord = await harness.scheduleOpenCodePromptLedgerFollowUp({
+        ledger,
+        ledgerRecord: record,
+        teamName: 'team-a',
+        memberName: 'atlas',
+        retry: true,
+        reason: 'member_work_sync_report_required',
+      });
+
+      expect(nextRecord).toBe(failedRecord);
+      expect(ledger.markFailedTerminal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: record.id,
+          reason: 'member_work_sync_report_required',
+        })
+      );
+      expect(harness.logOpenCodePromptDeliveryEvent).toHaveBeenCalledWith(
+        'opencode_prompt_delivery_terminal_failure',
+        failedRecord,
+        expect.objectContaining({
+          reason: 'member_work_sync_report_required',
+          retry: true,
+        })
+      );
     });
 
     it('uses stamped OpenCode session-refresh evidence instead of stale historical diagnostics', async () => {
@@ -16725,8 +16821,7 @@ describe('TeamProvisioningService', () => {
         return launchIdentity;
       });
       (svc as any).buildTeamRuntimeLaunchArgsPlan = vi.fn(async (input) => ({
-        fastModeArgs:
-          input.launchIdentity === launchIdentity ? ['--test-codex-fast-mode'] : [],
+        fastModeArgs: input.launchIdentity === launchIdentity ? ['--test-codex-fast-mode'] : [],
         runtimeTurnSettledHookArgs: [],
         providerArgs: [],
         settingsArgs: [],
@@ -21326,7 +21421,8 @@ describe('TeamProvisioningService', () => {
           status: 'failed',
           lastAttemptAt: Date.parse(acceptedAt),
           lastObservedAt: Date.parse(failureAt),
-          failureReason: 'Teammate was registered but did not bootstrap-confirm before timeout.',
+          failureReason:
+            'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before submitted-confirmation timeout (3m). Last transport stage: bootstrap_submitted',
         },
       ],
       failureAt
@@ -22260,9 +22356,10 @@ describe('TeamProvisioningService', () => {
     expect(bobOutcome).toBeNull();
     // The transcript tail is parsed once and shared: a single cache entry for the
     // file rather than one parse per member.
-    expect((svc as unknown as Record<string, Map<string, unknown>>).parsedBootstrapTranscriptTailCache.size).toBe(
-      1
-    );
+    expect(
+      (svc as unknown as Record<string, Map<string, unknown>>).parsedBootstrapTranscriptTailCache
+        .size
+    ).toBe(1);
   });
 
   it('caches persisted bootstrap transcript outcome lookup between close polling reads', async () => {
@@ -24523,12 +24620,10 @@ describe('TeamProvisioningService', () => {
       scheduled: true,
       reason: 'scheduled',
     }));
-    const sendMessageToRun = vi.fn(
-      async (targetRun: LeadRelayPriorityTestRun, message: string) => {
-        deliveredPrompt = message;
-        targetRun.leadRelayCapture?.resolveOnce('');
-      }
-    );
+    const sendMessageToRun = vi.fn(async (targetRun: LeadRelayPriorityTestRun, message: string) => {
+      deliveredPrompt = message;
+      targetRun.leadRelayCapture?.resolveOnce('');
+    });
 
     harness.runs.set(run.runId, run);
     harness.aliveRunByTeam.set(teamName, run.runId);
@@ -25854,23 +25949,22 @@ describe('TeamProvisioningService', () => {
   it('does not keep healed confirmed-bootstrap status alive when refreshed runtime metadata is an error', async () => {
     const svc = new TeamProvisioningService();
     const harness = privateHarness(svc);
-    harness.getLiveTeamAgentRuntimeMetadata = vi.fn(
-      () =>
-        Promise.resolve(
-          new Map([
-            [
-              'tom',
-              {
-                alive: false,
-                model: 'sonnet',
-                livenessKind: 'not_found',
-                pidSource: 'process_table',
-                runtimeDiagnostic: 'Runtime process crashed',
-                runtimeDiagnosticSeverity: 'error',
-              },
-            ],
-          ])
-        )
+    harness.getLiveTeamAgentRuntimeMetadata = vi.fn(() =>
+      Promise.resolve(
+        new Map([
+          [
+            'tom',
+            {
+              alive: false,
+              model: 'sonnet',
+              livenessKind: 'not_found',
+              pidSource: 'process_table',
+              runtimeDiagnostic: 'Runtime process crashed',
+              runtimeDiagnosticSeverity: 'error',
+            },
+          ],
+        ])
+      )
     );
 
     const result = await harness.attachLiveRuntimeMetadataToStatuses('signal-ops', {

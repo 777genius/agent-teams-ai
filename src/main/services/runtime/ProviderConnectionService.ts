@@ -12,7 +12,10 @@ import {
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
-import type { AnthropicCompatibleEndpointConfig } from '../infrastructure/ConfigManager';
+import type {
+  AnthropicCompatibleEndpointConfig,
+  CodexCustomProviderConfig,
+} from '../infrastructure/ConfigManager';
 import type {
   CodexAccountAuthMode,
   CodexAccountSnapshotDto,
@@ -27,6 +30,7 @@ import type {
   CliProviderAuthMode,
   CliProviderConnectionInfo,
   CliProviderId,
+  CliProviderModelCatalog,
   CliProviderReasoningEffort,
   CliProviderStatus,
 } from '@shared/types';
@@ -84,6 +88,9 @@ const CODEX_NATIVE_API_KEY_ENV_VAR = 'CODEX_API_KEY';
 const CODEX_CLI_PATH_ENV_VAR = 'CODEX_CLI_PATH';
 const CODEX_HOME_ENV_VAR = 'CODEX_HOME';
 const CODEX_FORCED_LOGIN_METHOD_ENV_VAR = 'CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD';
+const CODEX_CUSTOM_PROVIDER_ID = 'agent_teams_custom';
+const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
+const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
@@ -276,15 +283,127 @@ function isCodexExecBinary(binaryPath?: string | null): boolean {
   );
 }
 
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function buildCodexCustomProviderConfigOverrides(config: CodexCustomProviderConfig): string[] {
+  return [
+    `model_provider=${tomlString(CODEX_CUSTOM_PROVIDER_ID)}`,
+    `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.name=${tomlString(CODEX_CUSTOM_PROVIDER_NAME)}`,
+    `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.base_url=${tomlString(config.baseUrl.trim())}`,
+    `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.wire_api="responses"`,
+    `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.env_key=${tomlString(CODEX_NATIVE_API_KEY_ENV_VAR)}`,
+  ];
+}
+
+function buildCodexLaunchArgs(
+  binaryPath: string | null | undefined,
+  loginMethod: 'chatgpt' | 'api',
+  configOverrides: readonly string[] = []
+): string[] {
+  if (isCodexExecBinary(binaryPath)) {
+    return [
+      '-c',
+      `forced_login_method="${loginMethod}"`,
+      ...configOverrides.flatMap((override) => ['-c', override]),
+    ];
+  }
+
+  const codexSettings: Record<string, unknown> = { forced_login_method: loginMethod };
+  if (configOverrides.length > 0) {
+    codexSettings[CODEX_CUSTOM_PROVIDER_SETTINGS_KEY] = {
+      config_overrides: [...configOverrides],
+    };
+  }
+
+  return ['--settings', JSON.stringify({ codex: codexSettings })];
+}
+
 function buildCodexForcedLoginLaunchArgs(
   binaryPath: string | null | undefined,
   loginMethod: 'chatgpt' | 'api'
 ): string[] {
-  if (isCodexExecBinary(binaryPath)) {
-    return ['-c', `forced_login_method="${loginMethod}"`];
+  return buildCodexLaunchArgs(binaryPath, loginMethod);
+}
+
+function isCodexCustomProviderBaseUrlUsable(baseUrl: string): boolean {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) {
+    return false;
   }
 
-  return ['--settings', JSON.stringify({ codex: { forced_login_method: loginMethod } })];
+  try {
+    const url = new URL(trimmed);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isCodexCustomProviderModelUsable(model: string): boolean {
+  const trimmed = model.trim();
+  if (trimmed.length === 0 || trimmed.length > 200) {
+    return false;
+  }
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const code = trimmed.charCodeAt(index);
+    if (code <= 31 || code === 127) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function createCodexCustomProviderCatalog(
+  config: CodexCustomProviderConfig
+): CliProviderModelCatalog {
+  const model = config.model.trim();
+  const now = new Date();
+  const staleAt = new Date(now.getTime() + 10 * 60_000);
+  return {
+    schemaVersion: 1,
+    providerId: 'codex',
+    source: 'static-fallback',
+    status: 'ready',
+    fetchedAt: now.toISOString(),
+    staleAt: staleAt.toISOString(),
+    defaultModelId: model,
+    defaultLaunchModel: model,
+    models: [
+      {
+        id: model,
+        launchModel: model,
+        displayName: model,
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        supportsFastMode: false,
+        inputModalities: ['text'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'static-fallback',
+        badgeLabel: 'custom',
+        statusMessage: `Custom endpoint: ${config.baseUrl.trim()}`,
+      },
+    ],
+    diagnostics: {
+      configReadState: 'skipped',
+      appServerState: 'healthy',
+      message:
+        'Using app-managed Codex custom provider profile. Runtime support is verified during launch or model probe.',
+      code: 'agent-teams-custom-provider',
+    },
+  };
 }
 
 function applyCodexRuntimeContextEnv(
@@ -424,6 +543,66 @@ export class ProviderConnectionService {
     }
 
     return null;
+  }
+
+  private getRawCodexCustomProvider(): CodexCustomProviderConfig {
+    const config = this.configManager.getConfig().providerConnections.codex.customProvider;
+    return {
+      enabled: config.enabled === true,
+      baseUrl: config.baseUrl.trim(),
+      model: config.model.trim(),
+    };
+  }
+
+  private getConfiguredCodexCustomProviderIssue(): string | null {
+    const config = this.getRawCodexCustomProvider();
+    if (config.enabled !== true) {
+      return null;
+    }
+
+    if (this.getConfiguredAuthMode('codex') !== 'api_key') {
+      return 'Codex custom provider is enabled but inactive because Codex auth mode is not API key.';
+    }
+
+    if (!config.baseUrl) {
+      return 'Codex custom provider is enabled, but no base URL is configured.';
+    }
+
+    if (!isCodexCustomProviderBaseUrlUsable(config.baseUrl)) {
+      return 'Codex custom provider base URL must use http:// or https:// and must not include credentials, query, or fragment.';
+    }
+
+    if (!config.model) {
+      return 'Codex custom provider is enabled, but no model is configured.';
+    }
+
+    if (!isCodexCustomProviderModelUsable(config.model)) {
+      return 'Codex custom provider model must be 200 characters or fewer and must not include control characters.';
+    }
+
+    return null;
+  }
+
+  private getConfiguredCodexCustomProvider(): CodexCustomProviderConfig | null {
+    const config = this.getRawCodexCustomProvider();
+    if (
+      config.enabled !== true ||
+      this.getConfiguredAuthMode('codex') !== 'api_key' ||
+      !isCodexCustomProviderBaseUrlUsable(config.baseUrl) ||
+      !isCodexCustomProviderModelUsable(config.model)
+    ) {
+      return null;
+    }
+
+    return {
+      enabled: true,
+      baseUrl: config.baseUrl,
+      model: config.model,
+    };
+  }
+
+  getConfiguredCodexCustomProviderModel(): string | null {
+    return this.getConfiguredCodexCustomProvider()?.model ?? null;
   }
 
   private getConfiguredAnthropicCompatibleEndpoint(): AnthropicCompatibleEndpointConfig | null {
@@ -776,6 +955,14 @@ export class ProviderConnectionService {
       return null;
     }
 
+    const customProviderIssue =
+      this.getConfiguredAuthMode('codex') === 'api_key'
+        ? this.getConfiguredCodexCustomProviderIssue()
+        : null;
+    if (customProviderIssue) {
+      return customProviderIssue;
+    }
+
     const snapshot = await this.getCodexLaunchSnapshot(env, {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
@@ -902,11 +1089,16 @@ export class ProviderConnectionService {
     });
 
     if (readiness.effectiveAuthMode === 'chatgpt') {
-      return buildCodexForcedLoginLaunchArgs(binaryPath, 'chatgpt');
+      return buildCodexLaunchArgs(binaryPath, 'chatgpt');
     }
 
     if (readiness.effectiveAuthMode === 'api_key') {
-      return buildCodexForcedLoginLaunchArgs(binaryPath, 'api');
+      const customProvider = this.getConfiguredCodexCustomProvider();
+      return buildCodexLaunchArgs(
+        binaryPath,
+        'api',
+        customProvider ? buildCodexCustomProviderConfigOverrides(customProvider) : []
+      );
     }
 
     return [];
@@ -927,6 +1119,47 @@ export class ProviderConnectionService {
 
     if (provider.providerId !== 'codex') {
       return withConnection;
+    }
+
+    const customProvider = this.getConfiguredCodexCustomProvider();
+    if (customProvider) {
+      const catalog = createCodexCustomProviderCatalog(customProvider);
+      const model = catalog.defaultLaunchModel ?? customProvider.model;
+      const statusMessage =
+        withConnection.statusMessage ??
+        (withConnection.connection?.apiKeyConfigured
+          ? 'Codex custom provider configured'
+          : 'Codex custom provider configured. API key is not set.');
+
+      return {
+        ...withConnection,
+        models: [model],
+        modelCatalog: catalog,
+        subscriptionRateLimits: null,
+        backend: withConnection.backend
+          ? {
+              ...withConnection.backend,
+              endpointLabel: customProvider.baseUrl,
+            }
+          : {
+              kind: CODEX_NATIVE_BACKEND_ID,
+              label: 'Codex native',
+              endpointLabel: customProvider.baseUrl,
+            },
+        runtimeCapabilities: {
+          ...withConnection.runtimeCapabilities,
+          modelCatalog: {
+            dynamic: false,
+            source: catalog.source,
+          },
+          reasoningEffort: {
+            supported: true,
+            values: ['low', 'medium', 'high'] satisfies CliProviderReasoningEffort[],
+            configPassthrough: true,
+          },
+        },
+        statusMessage,
+      };
     }
 
     try {
@@ -1140,6 +1373,14 @@ export class ProviderConnectionService {
           : (externalCredential?.label ?? null);
     const compatibleEndpoint =
       providerId === 'anthropic' ? await this.getAnthropicCompatibleEndpointConnectionInfo() : null;
+    const codexCustomProvider =
+      providerId === 'codex'
+        ? {
+            config: this.getRawCodexCustomProvider(),
+            issueMessage: this.getConfiguredCodexCustomProviderIssue(),
+            active: Boolean(this.getConfiguredCodexCustomProvider()),
+          }
+        : null;
 
     return {
       ...capabilities,
@@ -1165,6 +1406,13 @@ export class ProviderConnectionService {
               launchAllowed: codexSnapshot.launchAllowed,
               launchIssueMessage: codexSnapshot.launchIssueMessage,
               launchReadinessState: codexSnapshot.launchReadinessState,
+              customProvider: {
+                enabled: codexCustomProvider?.config.enabled ?? false,
+                active: codexCustomProvider?.active ?? false,
+                baseUrl: codexCustomProvider?.config.baseUrl ?? '',
+                model: codexCustomProvider?.config.model ?? '',
+                issueMessage: codexCustomProvider?.issueMessage ?? null,
+              },
             }
           : null,
     };

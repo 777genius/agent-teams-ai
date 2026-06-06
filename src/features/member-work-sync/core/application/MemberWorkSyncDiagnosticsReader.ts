@@ -1,6 +1,7 @@
 import { decideMemberWorkSyncStatus } from '../domain';
 
 import { finalizeMemberWorkSyncAgenda } from './MemberWorkSyncReconciler';
+import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
@@ -17,13 +18,14 @@ export class MemberWorkSyncDiagnosticsReader {
     const source = await this.deps.agendaSource.loadAgenda(request);
     const agenda = finalizeMemberWorkSyncAgenda(this.deps, source);
     const nowIso = this.deps.clock.now().toISOString();
-    const teamActive = this.deps.lifecycle
-      ? await this.deps.lifecycle.isTeamActive(agenda.teamName)
-      : true;
+    const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+    });
     const decision = decideMemberWorkSyncStatus({
       agenda,
       nowIso,
-      inactive: source.inactive || !teamActive,
+      inactive: source.inactive || runtimeActivity.inactive,
     });
 
     return {
@@ -39,7 +41,7 @@ export class MemberWorkSyncDiagnosticsReader {
       evaluatedAt: nowIso,
       diagnostics: [
         ...agenda.diagnostics,
-        ...(!teamActive ? ['team_runtime_inactive'] : []),
+        ...runtimeActivity.diagnostics,
         ...decision.diagnostics,
         'status_snapshot_not_persisted',
       ],
