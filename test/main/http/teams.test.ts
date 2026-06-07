@@ -1,7 +1,7 @@
+import { registerTeamRoutes } from '@main/http/teams';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
-import { registerTeamRoutes } from '@main/http/teams';
 import type { HttpServices } from '@main/http';
 import type {
   TeamCreateConfigRequest,
@@ -177,6 +177,50 @@ describe('HTTP team runtime routes', () => {
         fastMode: 'on',
         limitContext: true,
       });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('overlays team get snapshots with live runtime state', async () => {
+    const { app, getTeamData, getRuntimeState } = await createApp();
+    getTeamData.mockResolvedValue({
+      teamName: 'demo-team',
+      config: null,
+      tasks: [],
+      members: [],
+      messages: [],
+      processes: [],
+      kanban: null,
+      isAlive: false,
+    } as unknown as TeamViewSnapshot);
+    getRuntimeState.mockResolvedValue({
+      teamName: 'demo-team',
+      isAlive: true,
+      runId: 'run-opencode',
+      progress: {
+        runId: 'run-opencode',
+        teamName: 'demo-team',
+        state: 'ready',
+        message: 'Ready',
+        startedAt: '2026-03-12T00:00:00.000Z',
+        updatedAt: '2026-03-12T00:00:01.000Z',
+      },
+    });
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/demo-team',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        teamName: 'demo-team',
+        isAlive: true,
+      });
+      expect(getTeamData).toHaveBeenCalledWith('demo-team');
+      expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
     } finally {
       await app.close();
     }
@@ -786,10 +830,10 @@ describe('HTTP team runtime routes', () => {
       drainRuntimeTurnSettledEvents: vi.fn(),
       getQueueDiagnostics: vi.fn(() => queueDiagnostics),
       dispose: vi.fn(),
-    };
+    } as unknown as NonNullable<HttpServices['memberWorkSyncFeature']>;
     registerTeamRoutes(app, {
       ...mocks.services,
-      memberWorkSyncFeature: memberWorkSyncFeature as any,
+      memberWorkSyncFeature,
     });
     await app.ready();
 

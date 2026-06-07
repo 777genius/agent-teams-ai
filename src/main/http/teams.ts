@@ -518,6 +518,25 @@ function getMemberWorkSyncFeature(
   return services.memberWorkSyncFeature;
 }
 
+async function getTeamDataWithRuntimeOverlay(
+  services: HttpServices,
+  teamName: string
+): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataService']>['getTeamData']>>> {
+  const data = await getTeamDataService(services).getTeamData(teamName);
+  let runtimeState: Awaited<
+    ReturnType<NonNullable<HttpServices['teamProvisioningService']>['getRuntimeState']>
+  > | null = null;
+  try {
+    runtimeState = (await services.teamProvisioningService?.getRuntimeState(teamName)) ?? null;
+  } catch {
+    runtimeState = null;
+  }
+
+  return typeof runtimeState?.isAlive === 'boolean'
+    ? { ...data, isAlive: runtimeState.isAlive }
+    : data;
+}
+
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
   app.get('/api/teams', async (_request, reply) => {
     try {
@@ -563,7 +582,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       await services.teamProvisioningService?.repairStaleTaskActivityIntervalsBeforeSnapshot?.(
         teamName
       );
-      return reply.send(await getTeamDataService(services).getTeamData(teamName));
+      return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));
