@@ -146,6 +146,9 @@ export function GraphView({
     showTasks: config?.showTasks ?? true,
     showProcesses: config?.showProcesses ?? true,
     showEdges: config?.showEdges ?? false,
+    showSpaceEffects:
+      config?.showSpaceEffects ??
+      ((config?.showHexGrid ?? true) || (config?.showStarField ?? true)),
     paused: !(config?.animationEnabled ?? true),
   });
   const effectivePaused = filters.paused || suspendAnimation;
@@ -1064,8 +1067,8 @@ export function GraphView({
     >
       <GraphCanvas
         ref={canvasHandle}
-        showHexGrid={config?.showHexGrid ?? true}
-        showStarField={config?.showStarField ?? true}
+        showHexGrid={filters.showSpaceEffects && (config?.showHexGrid ?? true)}
+        showStarField={filters.showSpaceEffects && (config?.showStarField ?? true)}
         bloomIntensity={config?.bloomIntensity ?? 0.6}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}

@@ -12,6 +12,8 @@ export interface GraphConfigPort {
   showHexGrid?: boolean;
   /** Whether to show depth star field */
   showStarField?: boolean;
+  /** Whether to show animated/decorative space effects by default */
+  showSpaceEffects?: boolean;
   /** Bloom post-processing intensity (0 = off, 1 = default) */
   bloomIntensity?: number;
 

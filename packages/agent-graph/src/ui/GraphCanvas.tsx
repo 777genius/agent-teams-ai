@@ -246,18 +246,21 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           ctx.clearRect(0, 0, w, h);
 
           // 1. Background (screen space)
-          const backgroundDt = Math.min(
-            Math.max(
-              lastBackgroundTimeRef.current == null
-                ? 0
-                : state.time - lastBackgroundTimeRef.current,
-              0
-            ),
-            0.1
-          );
+          const shouldAnimateSpaceEffects = showHexGrid || showStarField;
+          if (shouldAnimateSpaceEffects) {
+            const backgroundDt = Math.min(
+              Math.max(
+                lastBackgroundTimeRef.current == null
+                  ? 0
+                  : state.time - lastBackgroundTimeRef.current,
+                0
+              ),
+              0.1
+            );
+            updateDepthParticles(starsRef.current, w, h, backgroundDt);
+            updateShootingStarField(shootingStarsRef.current, w, h, backgroundDt);
+          }
           lastBackgroundTimeRef.current = state.time;
-          updateDepthParticles(starsRef.current, w, h, backgroundDt);
-          updateShootingStarField(shootingStarsRef.current, w, h, backgroundDt);
           drawBackground(ctx, w, h, starsRef.current, shootingStarsRef.current, cam, state.time, {
             showHexGrid,
             showStarField,

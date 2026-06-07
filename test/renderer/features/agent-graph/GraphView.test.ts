@@ -202,6 +202,26 @@ describe('GraphView pan interactions', () => {
     expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(true);
   });
 
+  it('can opt out of animated space effects through config', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false, showSpaceEffects: false },
+        })
+      );
+    });
+
+    expect(
+      (hoisted.graphControlsProps?.filters as { showSpaceEffects: boolean }).showSpaceEffects
+    ).toBe(false);
+  });
+
   it('starts panning when dragging from a hit-tested edge instead of getting stuck on edge selection', async () => {
     const source: GraphNode = {
       id: 'member:alice',
@@ -590,6 +610,7 @@ describe('GraphView pan interactions', () => {
         showTasks: boolean;
         showProcesses: boolean;
         showEdges: boolean;
+        showSpaceEffects: boolean;
         paused: boolean;
       };
       onFiltersChange: (filters: {
@@ -598,6 +619,7 @@ describe('GraphView pan interactions', () => {
         showTasks: boolean;
         showProcesses: boolean;
         showEdges: boolean;
+        showSpaceEffects: boolean;
         paused: boolean;
       }) => void;
     } | null;
