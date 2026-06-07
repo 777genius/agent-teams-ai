@@ -1,4 +1,4 @@
-import { BoundaryViolationError } from "@777genius/subscription-runtime/core";
+import { BoundaryViolationError } from "@vioxen/subscription-runtime/core";
 const forbiddenPlaintextKeys = [
     "access_token",
     "refresh_token",

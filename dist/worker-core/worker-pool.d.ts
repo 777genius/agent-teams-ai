@@ -1,4 +1,4 @@
-import type { SubscriptionWorkerPrewarmResult, SubscriptionWorkerState, WorkerPoolHealth, WorkerPoolOptions, WorkerPoolRestartOptions, WorkerPoolRunOptions, WorkerPoolStats } from "./types";
+import type { SubscriptionWorkerPrewarmResult, SubscriptionWorkerState, WorkerPoolHealth, WorkerPoolOptions, WorkerPoolRestartOptions, WorkerPoolRunOptions, WorkerPoolStats } from "./types.js";
 export declare class BoundedSubscriptionWorkerPool<Job, Result> {
     private readonly options;
     private readonly slots;

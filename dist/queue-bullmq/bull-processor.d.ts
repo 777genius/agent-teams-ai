@@ -1,5 +1,5 @@
-import type { BoundedSubscriptionWorkerPool } from "@777genius/subscription-runtime/worker-core";
-import type { BullLikeJob } from "./bull-types";
+import type { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
+import type { BullLikeJob } from "./bull-types.js";
 export type BullSubscriptionProcessorOptions<Job, Result> = {
     readonly workerPool: Pick<BoundedSubscriptionWorkerPool<Job, Result>, "run" | "stats">;
     readonly mapJob?: (job: BullLikeJob<Job>) => Job;

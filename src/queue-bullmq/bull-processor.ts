@@ -1,4 +1,4 @@
-import type { BoundedSubscriptionWorkerPool } from "@777genius/subscription-runtime/worker-core";
+import type { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
 import { decodeBullSubscriptionRuntimeJob } from "./bull-runtime-envelope";
 import type { BullLikeJob } from "./bull-types";
 

@@ -10,7 +10,7 @@ import type {
   SessionRefreshPolicy,
   SessionValidationResult,
   WorkspaceHandle,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +27,7 @@ import {
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
 import {
   codexAuthJsonFormatVersion,
+  defaultCodexModel,
   codexProviderId,
   codexSessionCapabilities,
 } from "./capabilities";
@@ -34,6 +35,7 @@ import { classifyCodexFailure } from "./failure-classifier";
 
 export type CodexCliSessionDriverOptions = {
   readonly codexBinaryPath?: string;
+  readonly model?: string;
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
   readonly refreshMode?: ProviderCapabilities["refreshMode"];
 };
@@ -91,6 +93,7 @@ export class CodexCliSessionDriver implements ProviderSessionDriver {
         tempCodexHome,
         emptyWorkingDirectory,
         authJsonPath,
+        model: this.options.model ?? defaultCodexModel,
       });
 
       await input.runner.run({

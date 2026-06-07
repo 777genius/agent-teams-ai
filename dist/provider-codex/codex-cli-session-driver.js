@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { codexAuthJsonFromArtifact, sessionArtifactFromCodexAuthJson, validateCodexSessionArtifact, } from "./codex-auth-json-codec.js";
 import { buildCodexRefreshBootstrapPlan, readCodexAuthJsonFreshness, pruneCodexChildEnv, } from "./codex-cli-domain.js";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup.js";
-import { codexAuthJsonFormatVersion, codexProviderId, codexSessionCapabilities, } from "./capabilities.js";
+import { codexAuthJsonFormatVersion, defaultCodexModel, codexProviderId, codexSessionCapabilities, } from "./capabilities.js";
 import { classifyCodexFailure } from "./failure-classifier.js";
 export class CodexCliSessionDriver {
     options;
@@ -42,6 +42,7 @@ export class CodexCliSessionDriver {
                 tempCodexHome,
                 emptyWorkingDirectory,
                 authJsonPath,
+                model: this.options.model ?? defaultCodexModel,
             });
             await input.runner.run({
                 command: plan.command,

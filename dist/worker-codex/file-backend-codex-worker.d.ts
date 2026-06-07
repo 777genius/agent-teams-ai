@@ -1,6 +1,6 @@
-import { type ClockPort, type ObservabilityPort, type ProviderTask, type RuntimeDeps } from "@777genius/subscription-runtime/core";
-import { type CodexExecutionProfile, type CodexAppServerProcessFactory, type CodexReasoningEffort } from "@777genius/subscription-runtime/provider-codex";
-import { type SubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState } from "@777genius/subscription-runtime/worker-core";
+import { type ClockPort, type ObservabilityPort, type ProviderTask, type RuntimeDeps } from "@vioxen/subscription-runtime/core";
+import { type CodexExecutionProfile, type CodexAppServerProcessFactory, type CodexReasoningEffort } from "@vioxen/subscription-runtime/provider-codex";
+import { type SubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState } from "@vioxen/subscription-runtime/worker-core";
 export type FileBackendCodexWorkerOptions = {
     readonly workerId?: string;
     readonly providerInstanceId: string;

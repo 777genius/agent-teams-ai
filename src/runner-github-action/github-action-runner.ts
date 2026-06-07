@@ -4,8 +4,8 @@ import type {
   ProcessResult,
   RedactorPort,
   RunnerPort,
-} from "@777genius/subscription-runtime/core";
-import { DefaultRedactor } from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { githubActionRunnerCapabilities } from "./capabilities";
 
 const defaultMaxCapturedOutputBytes = 256_000;

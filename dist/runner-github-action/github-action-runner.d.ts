@@ -1,11 +1,11 @@
-import type { OutputSink, ProcessResult, RedactorPort, RunnerPort } from "@777genius/subscription-runtime/core";
+import type { OutputSink, ProcessResult, RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
 export type GitHubActionRunnerOptions = {
     readonly redactor?: RedactorPort;
     readonly maxCapturedOutputBytes?: number;
 };
 export declare class GitHubActionRunner implements RunnerPort {
     readonly runnerId: string;
-    readonly capabilities: import("@777genius/subscription-runtime/core").RunnerCapabilities;
+    readonly capabilities: import("@vioxen/subscription-runtime/core").RunnerCapabilities;
     private readonly redactor;
     private readonly maxCapturedOutputBytes;
     constructor(options?: GitHubActionRunnerOptions);

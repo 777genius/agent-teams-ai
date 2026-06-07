@@ -1,5 +1,5 @@
-export * from "./github-actions-secret-store";
-export * from "./github-secret-encryption";
-export * from "./manifest";
-export * from "./no-plaintext-boundary";
+export * from "./github-actions-secret-store.js";
+export * from "./github-secret-encryption.js";
+export * from "./manifest.js";
+export * from "./no-plaintext-boundary.js";
 //# sourceMappingURL=index.d.ts.map

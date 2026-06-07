@@ -47,6 +47,7 @@ export declare function buildCodexRefreshBootstrapPlan(input: {
     readonly tempCodexHome: string;
     readonly emptyWorkingDirectory: string;
     readonly authJsonPath: string;
+    readonly model?: string;
 }): {
     readonly command: string;
     readonly args: readonly string[];

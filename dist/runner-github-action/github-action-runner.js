@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { DefaultRedactor } from "@777genius/subscription-runtime/core";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { githubActionRunnerCapabilities } from "./capabilities.js";
 const defaultMaxCapturedOutputBytes = 256_000;
 export class GitHubActionRunner {

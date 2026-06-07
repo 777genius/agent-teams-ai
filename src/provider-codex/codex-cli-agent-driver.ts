@@ -5,7 +5,7 @@ import type {
   ProviderTaskResult,
   SessionArtifact,
   WorkspaceHandle,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,6 +16,7 @@ import {
   codexAgentCapabilities,
   codexAgentId,
   codexProviderId,
+  defaultCodexModel,
 } from "./capabilities";
 import { classifyCodexFailure } from "./failure-classifier";
 
@@ -73,7 +74,7 @@ export class CodexCliAgentDriver implements AgentDriver {
           "exec",
           "--skip-git-repo-check",
           "--model",
-          this.options.model ?? "gpt-5.5",
+          this.options.model ?? defaultCodexModel,
           "--",
           input.task.prompt,
         ],

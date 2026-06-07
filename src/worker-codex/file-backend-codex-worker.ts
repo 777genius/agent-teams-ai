@@ -12,7 +12,7 @@ import {
   type RefreshThenRunResult,
   type RedactorPort,
   type RuntimeDeps,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import {
   CodexAppServerExecutionEngine,
   CodexCliSessionDriver,
@@ -20,18 +20,19 @@ import {
   CodexJsonAgentDriver,
   CodexWorkerCacheSessionPoolMaterializer,
   PackagedCodexJsonExecutionEngine,
+  defaultCodexModel,
   type CodexAppServerProcessFactory,
   type CodexReasoningEffort,
   sessionArtifactFromCodexAuthJson,
-} from "@777genius/subscription-runtime/provider-codex";
-import { createLocalFileBackendRuntimeAdapters } from "@777genius/subscription-runtime/store-local-file";
+} from "@vioxen/subscription-runtime/provider-codex";
+import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 import {
   SubscriptionWorkerError,
   type SubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
-} from "@777genius/subscription-runtime/worker-core";
+} from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "./node-process-runner";
 import { NullWorkerObservability } from "./observability";
 import { StableWorkerWorkspace } from "./temp-workspace";
@@ -125,6 +126,7 @@ export class FileBackendCodexWorker implements SubscriptionWorker<
 
     this.sessionDriver = new CodexCliSessionDriver({
       codexBinaryPath: options.codexBinaryPath,
+      model: options.model ?? defaultCodexModel,
       ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
       refreshMode: "lazy-refresh",
     });
@@ -152,7 +154,7 @@ export class FileBackendCodexWorker implements SubscriptionWorker<
         cacheKey: `codex:${options.providerInstanceId}`,
         slots: options.sessionCacheSlots ?? 1,
       }),
-      model: options.model ?? "gpt-5.5",
+      model: options.model ?? defaultCodexModel,
       reasoningEffort: options.reasoningEffort ?? "low",
       ...(options.warmupPrompt === false
         ? {}

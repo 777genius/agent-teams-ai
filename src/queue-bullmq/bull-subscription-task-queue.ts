@@ -2,7 +2,7 @@ import type {
   SubscriptionQueueEnqueueInput,
   SubscriptionQueueEnqueueResult,
   SubscriptionRetryPolicy,
-} from "@777genius/subscription-runtime/queue-core";
+} from "@vioxen/subscription-runtime/queue-core";
 import { encodeBullSubscriptionRuntimeJob } from "./bull-runtime-envelope";
 import type { BullLikeQueue } from "./bull-types";
 

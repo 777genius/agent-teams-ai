@@ -16,7 +16,7 @@ Install the current GitHub version:
 ```json
 {
   "dependencies": {
-    "@777genius/subscription-runtime": "github:777genius/subscription-runtime#main"
+    "@vioxen/subscription-runtime": "github:vioxen/subscription-runtime#main"
   }
 }
 ```
@@ -24,15 +24,21 @@ Install the current GitHub version:
 Use subpath exports:
 
 ```ts
-import { createSubscriptionRuntime } from "@777genius/subscription-runtime/core";
-import { FileBackendCodexWorker } from "@777genius/subscription-runtime/worker-codex";
-import { createLocalFileBackendRuntimeAdapters } from "@777genius/subscription-runtime/store-local-file";
+import { createSubscriptionRuntime } from "@vioxen/subscription-runtime/core";
+import { FileBackendCodexWorker } from "@vioxen/subscription-runtime/worker-codex";
+import {
+  ClaudeRuntimeTaskExecutionEngine,
+  ClaudeTaskAgentDriver,
+} from "@vioxen/subscription-runtime/provider-claude";
+import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 ```
 
 ## Modules
 
 - `core` - provider-neutral ports, policy, state machines and redaction.
 - `provider-codex` - Codex session refresh and execution adapters.
+- `provider-claude` - Claude OAuth session validation, injectable task driver
+  ports and an optional concrete bridge to `claude-runtime`.
 - `worker-core` - bounded worker pool contracts.
 - `worker-codex` - file-backed Codex worker assembly.
 - `queue-core` - host-neutral queue contracts.
@@ -213,6 +219,41 @@ Important edge cases handled here:
 - stdout or stderr contains token-looking fields;
 - materialized auth must be deleted on release and must not live under the
   durable encrypted store directory.
+
+### `provider-claude`
+
+`provider-claude` keeps Claude execution behind the same provider-neutral task
+port as Codex. Hosts can inject their own `ClaudeTaskExecutionEngine`, or use
+`ClaudeRuntimeTaskExecutionEngine` at the composition root when `claude-runtime`
+is installed next to the application. The combined driver also implements the
+streaming task port, so host apps can observe provider-neutral text, tool, usage
+and warning events without importing Claude BG internals.
+
+The concrete bridge loads `claude-runtime` dynamically, so this package does not
+take a hard dependency on Claude internals. It requires a Claude OAuth session
+artifact with `configDir`, because the underlying Claude BG runtime needs the
+real Claude config directory for process execution and state files.
+Claude BG provider construction lives in a dedicated runtime-context factory;
+the task execution engine only builds commands, streams provider-neutral events
+and aggregates the final task result.
+
+Example composition:
+
+```ts
+import {
+  ClaudeBgProviderDriver,
+  ClaudeRuntimeTaskExecutionEngine,
+} from "@vioxen/subscription-runtime/provider-claude";
+
+const claudeDriver = new ClaudeBgProviderDriver({
+  engine: new ClaudeRuntimeTaskExecutionEngine(),
+  model: "sonnet",
+});
+```
+
+This is intentionally still a task adapter. Claude BG run ids, transcript
+offsets and cleanup details stay inside the provider adapter unless a product
+workflow needs a public managed-run contract.
 
 ### `worker-core`
 
@@ -783,7 +824,7 @@ Why it matters:
 
 - a library that works only inside its original monorepo is not a real
   reusable package;
-- consumers should import `@777genius/subscription-runtime/worker-codex`, not
+- consumers should import `@vioxen/subscription-runtime/worker-codex`, not
   internal source paths;
 - the packaging model has to work in local dev, CI and Docker.
 
@@ -1125,11 +1166,11 @@ The package has to work outside its own source tree. Packed-consumer checks
 verify that a real external project can import public subpaths from the built
 package:
 
-- `@777genius/subscription-runtime/core`;
-- `@777genius/subscription-runtime/provider-codex`;
-- `@777genius/subscription-runtime/worker-core`;
-- `@777genius/subscription-runtime/worker-codex`;
-- `@777genius/subscription-runtime/store-local-file`;
+- `@vioxen/subscription-runtime/core`;
+- `@vioxen/subscription-runtime/provider-codex`;
+- `@vioxen/subscription-runtime/worker-core`;
+- `@vioxen/subscription-runtime/worker-codex`;
+- `@vioxen/subscription-runtime/store-local-file`;
 - queue and runner modules.
 
 This catches mistakes that normal TypeScript tests inside the repository can
@@ -1299,9 +1340,8 @@ GitHub-hosted CI cannot rely on local persistent files. The intended shape is:
 
 The architecture is designed for more than Codex.
 
-Future packages can be added as siblings:
+Additional packages can be added as siblings:
 
-- `provider-claude`;
 - `provider-openrouter`;
 - `store-postgres`;
 - `store-redis`;
@@ -1322,7 +1362,7 @@ That choice keeps consumer setup simple:
 ```json
 {
   "dependencies": {
-    "@777genius/subscription-runtime": "github:777genius/subscription-runtime#main"
+    "@vioxen/subscription-runtime": "github:vioxen/subscription-runtime#main"
   }
 }
 ```
@@ -1405,8 +1445,8 @@ Docker deployment, multiple consumers and future providers.
 ## Backend Codex Worker
 
 ```ts
-import { BoundedSubscriptionWorkerPool } from "@777genius/subscription-runtime/worker-core";
-import { FileBackendCodexWorker } from "@777genius/subscription-runtime/worker-codex";
+import { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
+import { FileBackendCodexWorker } from "@vioxen/subscription-runtime/worker-codex";
 
 const pool = new BoundedSubscriptionWorkerPool({
   poolId: "codex-workers",
@@ -1419,7 +1459,7 @@ const pool = new BoundedSubscriptionWorkerPool({
       stateRootDir: "/var/lib/subscription-runtime",
       codexBinaryPath: "/usr/local/bin/codex",
       encryptionKey: process.env.SUBSCRIPTION_RUNTIME_FILE_KEY!,
-      model: "gpt-5.5",
+      model: "gpt-5-codex",
       reasoningEffort: "low",
     }),
 });
@@ -1432,4 +1472,4 @@ const result = await pool.run({
 ```
 
 For a complete HTTP + BullMQ service, see
-[`777genius/subscription-runtime-demo`](https://github.com/777genius/subscription-runtime-demo).
+[`vioxen/subscription-runtime-demo`](https://github.com/vioxen/subscription-runtime-demo).

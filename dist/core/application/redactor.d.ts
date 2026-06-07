@@ -1,4 +1,4 @@
-import type { RedactorPort } from "../ports";
+import type { RedactorPort } from "../ports/index.js";
 export declare class DefaultRedactor implements RedactorPort {
     private readonly secrets;
     registerSecret(value: string | Uint8Array, label?: string): void;

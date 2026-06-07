@@ -2,7 +2,7 @@ import type {
   ObservabilityPort,
   RuntimeEvent,
   RuntimeMetric,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 
 export class NullWorkerObservability implements ObservabilityPort {
   emit(event: RuntimeEvent): void {

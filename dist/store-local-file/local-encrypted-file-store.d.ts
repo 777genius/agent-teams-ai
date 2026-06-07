@@ -1,4 +1,4 @@
-import { type SessionArtifact, type SessionEnvelope, type SessionStoreCapabilities, type SessionStorePort, type SessionWriteResult } from "@777genius/subscription-runtime/core";
+import { type SessionArtifact, type SessionEnvelope, type SessionStoreCapabilities, type SessionStorePort, type SessionWriteResult } from "@vioxen/subscription-runtime/core";
 export declare const localEncryptedFileStoreCapabilities: SessionStoreCapabilities;
 export type LocalEncryptedFileStoreOptions = {
     readonly providerId: string;
@@ -9,7 +9,7 @@ export type LocalEncryptedFileStoreOptions = {
 export declare class LocalEncryptedFileStore implements SessionStorePort {
     private readonly options;
     readonly storeId: string;
-    readonly custody: import("@777genius/subscription-runtime/core").CustodyMode;
+    readonly custody: import("@vioxen/subscription-runtime/core").CustodyMode;
     readonly capabilities: SessionStoreCapabilities;
     private readonly encryptionKey;
     constructor(options: LocalEncryptedFileStoreOptions);

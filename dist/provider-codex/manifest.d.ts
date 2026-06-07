@@ -5,8 +5,8 @@ export declare const codexProviderManifest: {
     packageVersion: string;
     protocolVersion: 1;
     capabilities: {
-        session: import("@777genius/subscription-runtime/core").ProviderCapabilities;
-        agent: import("@777genius/subscription-runtime/core").AgentCapabilities;
+        session: import("@vioxen/subscription-runtime/core").ProviderCapabilities;
+        agent: import("@vioxen/subscription-runtime/core").AgentCapabilities;
     };
     experimental: false;
     minimumCoreVersion: string;

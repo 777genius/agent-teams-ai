@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, } from "@777genius/subscription-runtime/core";
-import { CodexAppServerExecutionEngine, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, sessionArtifactFromCodexAuthJson, } from "@777genius/subscription-runtime/provider-codex";
-import { createLocalFileBackendRuntimeAdapters } from "@777genius/subscription-runtime/store-local-file";
-import { SubscriptionWorkerError, } from "@777genius/subscription-runtime/worker-core";
+import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, } from "@vioxen/subscription-runtime/core";
+import { CodexAppServerExecutionEngine, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, sessionArtifactFromCodexAuthJson, } from "@vioxen/subscription-runtime/provider-codex";
+import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
+import { SubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "./node-process-runner.js";
 import { NullWorkerObservability } from "./observability.js";
 import { StableWorkerWorkspace } from "./temp-workspace.js";
@@ -44,6 +44,7 @@ export class FileBackendCodexWorker {
         this.sessionStore = sessionStore;
         this.sessionDriver = new CodexCliSessionDriver({
             codexBinaryPath: options.codexBinaryPath,
+            model: options.model ?? defaultCodexModel,
             ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
             refreshMode: "lazy-refresh",
         });
@@ -70,7 +71,7 @@ export class FileBackendCodexWorker {
                 cacheKey: `codex:${options.providerInstanceId}`,
                 slots: options.sessionCacheSlots ?? 1,
             }),
-            model: options.model ?? "gpt-5.5",
+            model: options.model ?? defaultCodexModel,
             reasoningEffort: options.reasoningEffort ?? "low",
             ...(options.warmupPrompt === false
                 ? {}

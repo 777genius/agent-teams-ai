@@ -5,7 +5,7 @@ import {
   computeSessionGenerationHash,
   type SessionArtifact,
   type SessionWriteResult,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import {
   GitHubActionsSecretStore,
   assertEncryptedWritebackRequestIsNoCustody,

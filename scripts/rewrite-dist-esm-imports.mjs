@@ -29,7 +29,7 @@ function walk(directory) {
       walk(fullPath);
       continue;
     }
-    if (entry.isFile() && fullPath.endsWith(".js")) {
+    if (entry.isFile() && (fullPath.endsWith(".js") || fullPath.endsWith(".d.ts"))) {
       rewriteFile(fullPath);
     }
   }

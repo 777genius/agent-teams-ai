@@ -1,4 +1,4 @@
-import type { SubscriptionQueueClaim, SubscriptionQueueEnqueueInput, SubscriptionQueueEnqueueResult, SubscriptionQueueFailResult, SubscriptionRetryPolicy, SubscriptionTaskQueuePort } from "./types";
+import type { SubscriptionQueueClaim, SubscriptionQueueEnqueueInput, SubscriptionQueueEnqueueResult, SubscriptionQueueFailResult, SubscriptionRetryPolicy, SubscriptionTaskQueuePort } from "./types.js";
 export declare class InMemorySubscriptionTaskQueue<Job, Result = unknown> implements SubscriptionTaskQueuePort<Job, Result> {
     readonly queueId: string;
     private readonly records;

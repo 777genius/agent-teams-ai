@@ -1,4 +1,4 @@
-import type { ProviderTaskResult, RedactorPort, RunnerPort } from "@777genius/subscription-runtime/core";
+import type { ProviderTaskResult, RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
 export type CodexReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 export type CodexMaterializedSession = {
     readonly home: string;
@@ -90,5 +90,7 @@ export declare function buildCodexJsonExecArgs(input: {
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
 }): readonly string[];
-export declare function codexExecutionFailure(error: unknown): ProviderTaskResult;
+export declare function codexExecutionFailure(error: unknown): Extract<ProviderTaskResult, {
+    readonly status: "failed";
+}>;
 //# sourceMappingURL=codex-json-execution-engine.d.ts.map

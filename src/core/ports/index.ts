@@ -9,6 +9,7 @@ import type {
   ProviderCapabilities,
   ProviderFailure,
   ProviderTask,
+  ProviderTaskEvent,
   ProviderTaskResult,
   RefreshedSession,
   RuntimeEvent,
@@ -80,6 +81,17 @@ export interface AgentDriver {
   }): Promise<ProviderTaskResult>;
 
   classifyRunFailure(error: unknown): ProviderFailure;
+}
+
+export interface StreamingAgentDriver extends AgentDriver {
+  streamTask(input: {
+    readonly session: SessionArtifact | null;
+    readonly task: ProviderTask;
+    readonly workspace: WorkspaceHandle;
+    readonly runner: RunnerPort;
+    readonly redactor: RedactorPort;
+    readonly abortSignal: AbortSignal;
+  }): AsyncIterable<ProviderTaskEvent>;
 }
 
 export interface SubscriptionProviderDriver extends ProviderSessionDriver {

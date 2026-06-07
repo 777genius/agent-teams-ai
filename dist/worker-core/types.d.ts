@@ -1,4 +1,4 @@
-import type { ObservabilityPort, ProviderTask, ProviderTaskResult, RuntimeEvent, RuntimeWarning } from "@777genius/subscription-runtime/core";
+import type { ObservabilityPort, ProviderTask, ProviderTaskResult, RuntimeEvent, RuntimeWarning } from "@vioxen/subscription-runtime/core";
 export type SubscriptionWorkerState = "created" | "starting" | "started" | "prewarming" | "ready" | "draining" | "disposed" | "failed";
 export type SubscriptionWorkerHealth = {
     readonly status: "healthy";

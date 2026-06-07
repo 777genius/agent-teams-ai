@@ -1,4 +1,4 @@
-import type { RunnerCapabilities } from "@777genius/subscription-runtime/core";
+import type { RunnerCapabilities } from "@vioxen/subscription-runtime/core";
 
 export const githubActionRunnerCapabilities: RunnerCapabilities = {
   runnerId: "github-action",

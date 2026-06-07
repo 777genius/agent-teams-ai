@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoundedSubscriptionWorkerPool } from "@777genius/subscription-runtime/worker-core";
+import { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
 import {
   InMemorySubscriptionTaskQueue,
   SubscriptionQueueProcessor,
@@ -11,7 +11,7 @@ import type {
   SubscriptionWorker,
   SubscriptionWorkerRunOptions,
   SubscriptionWorkerState,
-} from "@777genius/subscription-runtime/worker-core";
+} from "@vioxen/subscription-runtime/worker-core";
 
 describe("subscription queue core", () => {
   it("deduplicates enqueue by idempotency key", async () => {

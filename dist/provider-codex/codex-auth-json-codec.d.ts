@@ -1,4 +1,4 @@
-import type { ProviderFailure, SessionArtifact, SessionValidationResult } from "@777genius/subscription-runtime/core";
+import type { ProviderFailure, SessionArtifact, SessionValidationResult } from "@vioxen/subscription-runtime/core";
 export declare function sessionArtifactFromCodexAuthJson(authJsonBytes: string): SessionArtifact;
 export declare function codexAuthJsonFromArtifact(session: SessionArtifact): string;
 export declare function validateCodexSessionArtifact(session: SessionArtifact): SessionValidationResult;

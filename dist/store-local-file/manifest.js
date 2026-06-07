@@ -3,7 +3,7 @@ import { localEncryptedFileStoreCapabilities } from "./local-encrypted-file-stor
 export const localEncryptedFileStoreManifest = {
     adapterId: "store.local-encrypted-file",
     adapterKind: "store",
-    packageName: "@777genius/subscription-runtime/store-local-file",
+    packageName: "@vioxen/subscription-runtime/store-local-file",
     packageVersion: "0.0.0",
     protocolVersion: 1,
     capabilities: localEncryptedFileStoreCapabilities,
@@ -14,7 +14,7 @@ export const localEncryptedFileStoreManifest = {
 export const localFileLeaseStoreManifest = {
     adapterId: "lease.local-file",
     adapterKind: "lease-store",
-    packageName: "@777genius/subscription-runtime/store-local-file",
+    packageName: "@vioxen/subscription-runtime/store-local-file",
     packageVersion: "0.0.0",
     protocolVersion: 1,
     capabilities: localFileLeaseStoreCapabilities,

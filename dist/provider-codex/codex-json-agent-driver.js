@@ -1,4 +1,4 @@
-import { codexJsonAgentCapabilities, codexJsonAgentId, codexProviderId, } from "./capabilities.js";
+import { codexJsonAgentCapabilities, codexJsonAgentId, codexProviderId, defaultCodexModel, } from "./capabilities.js";
 import { classifyCodexFailure } from "./failure-classifier.js";
 import { PackagedCodexJsonExecutionEngine, codexExecutionFailure, } from "./codex-json-execution-engine.js";
 import { CodexEphemeralSessionMaterializer, sessionArtifactHash, } from "./codex-session-materializer.js";
@@ -21,12 +21,13 @@ export class CodexJsonAgentDriver {
                     ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
                     ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
                 });
-        this.model = options.model ?? "gpt-5.5";
+        this.model = options.model ?? defaultCodexModel;
         this.reasoningEffort = options.reasoningEffort ?? "low";
         this.sessionMaterializer =
             options.sessionMaterializer ?? new CodexEphemeralSessionMaterializer();
     }
     async runTask(input) {
+        const startedAt = Date.now();
         if (!input.session) {
             return {
                 status: "failed",
@@ -35,6 +36,10 @@ export class CodexJsonAgentDriver {
                     retryable: false,
                     reconnectRequired: true,
                     safeMessage: "Codex requires a session artifact.",
+                },
+                telemetry: {
+                    durationMs: Date.now() - startedAt,
+                    finishReason: "provider_error",
                 },
                 warnings: [],
             };
@@ -45,16 +50,15 @@ export class CodexJsonAgentDriver {
                 session: input.session,
                 redactor: input.redactor,
             });
+            const outputSchemaName = input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
             const result = await this.engine.run({
                 prompt: input.task.prompt,
-                outputSchema: input.task.outputSchemaName
-                    ? { name: input.task.outputSchemaName }
-                    : undefined,
+                outputSchema: outputSchemaName ? { name: outputSchemaName } : undefined,
                 session: materialized,
                 workspacePath: input.workspace.path,
                 runner: input.runner,
                 redactor: input.redactor,
-                model: this.model,
+                model: input.task.controls?.model ?? this.model,
                 reasoningEffort: this.reasoningEffort,
                 abortSignal: input.abortSignal,
             });
@@ -62,11 +66,22 @@ export class CodexJsonAgentDriver {
                 status: "completed",
                 outputText: result.outputText,
                 structuredOutput: result.structuredOutput,
+                telemetry: {
+                    durationMs: Date.now() - startedAt,
+                    finishReason: "completed",
+                },
                 warnings: result.warnings,
             };
         }
         catch (error) {
-            return codexExecutionFailure(error);
+            const failure = codexExecutionFailure(error);
+            return {
+                ...failure,
+                telemetry: {
+                    durationMs: Date.now() - startedAt,
+                    finishReason: finishReasonForFailure(failure.failure.code),
+                },
+            };
         }
         finally {
             await materialized?.release();
@@ -143,5 +158,12 @@ export class CodexJsonAgentDriver {
             throw error;
         }
     }
+}
+function finishReasonForFailure(code) {
+    if (code === "task_cancelled")
+        return "cancelled";
+    if (code === "task_timeout")
+        return "timeout";
+    return "provider_error";
 }
 //# sourceMappingURL=codex-json-agent-driver.js.map

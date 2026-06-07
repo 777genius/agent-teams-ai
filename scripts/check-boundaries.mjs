@@ -30,6 +30,17 @@ const forbidden = [
     message: "provider-codex must not depend on workers, queues, or stores",
   },
   {
+    from: /^src\/provider-claude\//,
+    imports: [
+      /@777genius\/subscription-runtime\/provider-codex/,
+      /@777genius\/subscription-runtime\/worker-/,
+      /@777genius\/subscription-runtime\/queue-/,
+      /@777genius\/subscription-runtime\/store-/,
+    ],
+    message:
+      "provider-claude must not depend on Codex, workers, queues, or stores",
+  },
+  {
     from: /^src\/queue-core\//,
     imports: [/bullmq/, /bull\b/, /@777genius\/subscription-runtime\/queue-bullmq/],
     message: "queue-core must stay queue implementation neutral",

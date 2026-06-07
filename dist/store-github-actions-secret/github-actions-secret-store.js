@@ -1,4 +1,4 @@
-import { computeSessionGenerationHash, } from "@777genius/subscription-runtime/core";
+import { computeSessionGenerationHash, } from "@vioxen/subscription-runtime/core";
 import { encryptGitHubSecretValue, } from "./github-secret-encryption.js";
 import { assertNoPlaintextSessionFields, assertLooksLikeGitHubSealedBox, } from "./no-plaintext-boundary.js";
 export const githubActionsSecretStoreCapabilities = {

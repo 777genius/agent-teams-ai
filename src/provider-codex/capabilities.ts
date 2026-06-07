@@ -2,12 +2,13 @@ import type {
   AgentCapabilities,
   ProviderEnvironmentPolicy,
   ProviderCapabilities,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 
 export const codexProviderId = "codex";
 export const codexAgentId = "codex-cli";
 export const codexJsonAgentId = "codex-json";
 export const codexAuthJsonFormatVersion = "codex-auth-json-v1";
+export const defaultCodexModel = "gpt-5-codex";
 
 export const codexEnvironmentPolicy: ProviderEnvironmentPolicy = {
   inheritHostEnvironment: false,
@@ -64,12 +65,20 @@ export const codexAgentCapabilities: AgentCapabilities = {
   providerId: codexProviderId,
   taskModes: ["review", "structured-prompt", "health-check"],
   historyMode: "none",
+  executionModes: ["task"],
+  toolPolicyMode: "provider-enforced",
+  outputModes: ["text", "json", "schema-json"],
   supportsReviewTasks: true,
   supportsStructuredOutput: true,
   supportsToolCalling: false,
   supportsRepositoryContext: true,
   supportsInlineFindings: true,
   requiresWritableWorkspace: false,
+  supportsUsageTelemetry: false,
+  supportsCostTelemetry: false,
+  supportsProviderRunId: false,
+  supportsAbort: true,
+  supportsCleanup: true,
   maxRuntimeMs: 600_000,
 };
 

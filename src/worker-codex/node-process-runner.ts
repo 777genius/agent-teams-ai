@@ -3,7 +3,7 @@ import type {
   OutputSink,
   ProcessResult,
   RunnerPort,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 
 export type NodeProcessRunnerOptions = {
   readonly killGraceMs?: number;

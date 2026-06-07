@@ -1,4 +1,4 @@
-import type { FinalizedLease, LeaseAcquireResult, LeaseStoreCapabilities, LeaseStorePort, WritebackCommitResult } from "@777genius/subscription-runtime/core";
+import type { FinalizedLease, LeaseAcquireResult, LeaseStoreCapabilities, LeaseStorePort, WritebackCommitResult } from "@vioxen/subscription-runtime/core";
 export declare const localFileLeaseStoreCapabilities: LeaseStoreCapabilities;
 export type LocalFileLeaseStoreOptions = {
     readonly rootDir: string;

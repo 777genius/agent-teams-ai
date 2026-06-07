@@ -1,5 +1,5 @@
-import { LocalEncryptedFileStore } from "./local-encrypted-file-store";
-import { LocalFileLeaseStore } from "./local-file-lease-store";
+import { LocalEncryptedFileStore } from "./local-encrypted-file-store.js";
+import { LocalFileLeaseStore } from "./local-file-lease-store.js";
 export type LocalFileBackendRuntimeAdaptersOptions = {
     readonly providerId: string;
     readonly rootDir: string;

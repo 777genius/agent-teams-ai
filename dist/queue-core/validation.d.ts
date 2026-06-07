@@ -1,4 +1,4 @@
-import type { SubscriptionRetryPolicy } from "./types";
+import type { SubscriptionRetryPolicy } from "./types.js";
 export declare const defaultSubscriptionRetryPolicy: SubscriptionRetryPolicy;
 export declare function assertRetryPolicy(policy: SubscriptionRetryPolicy): void;
 export declare function computeBackoffDelayMs(input: {

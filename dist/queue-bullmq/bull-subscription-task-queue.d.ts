@@ -1,5 +1,5 @@
-import type { SubscriptionQueueEnqueueInput, SubscriptionQueueEnqueueResult, SubscriptionRetryPolicy } from "@777genius/subscription-runtime/queue-core";
-import type { BullLikeQueue } from "./bull-types";
+import type { SubscriptionQueueEnqueueInput, SubscriptionQueueEnqueueResult, SubscriptionRetryPolicy } from "@vioxen/subscription-runtime/queue-core";
+import type { BullLikeQueue } from "./bull-types.js";
 export type BullSubscriptionTaskQueueOptions<Job> = {
     readonly queue: BullLikeQueue<Job>;
     readonly jobName?: string;
