@@ -91,6 +91,7 @@ const CODEX_FORCED_LOGIN_METHOD_ENV_VAR = 'CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD
 const CODEX_CUSTOM_PROVIDER_ID = 'agent_teams_custom';
 const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
 const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
+const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_SERVICE_TIER_FLEX_OVERRIDE = 'service_tier="flex"';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
@@ -326,12 +327,13 @@ function buildCodexLaunchArgs(
       config_overrides: [...customProviderConfigOverrides],
     };
   }
+  if (cliConfigOverrides.length > 0) {
+    codexSettings[CODEX_LAUNCH_CONFIG_SETTINGS_KEY] = {
+      config_overrides: [...cliConfigOverrides],
+    };
+  }
 
-  return [
-    '--settings',
-    JSON.stringify({ codex: codexSettings }),
-    ...cliConfigOverrides.flatMap((override) => ['-c', override]),
-  ];
+  return ['--settings', JSON.stringify({ codex: codexSettings })];
 }
 
 function buildCodexForcedLoginLaunchArgs(

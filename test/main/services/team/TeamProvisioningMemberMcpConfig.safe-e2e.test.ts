@@ -214,11 +214,29 @@ function configureAppOwnedFlexServiceTierProviderArgs(svc: TeamProvisioningServi
     geminiRuntimeAuth: null,
     providerArgs: [
       '--settings',
-      '{"codex":{"forced_login_method":"chatgpt"}}',
-      '-c',
-      'service_tier="flex"',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
+        },
+      }),
     ],
   }));
+}
+
+function buildCodexLaunchConfigSettingsArgs(overrides: string[]): string[] {
+  return [
+    '--settings',
+    JSON.stringify({
+      codex: {
+        agent_teams_launch_config: {
+          config_overrides: overrides,
+        },
+      },
+    }),
+  ];
 }
 
 function createCodexFastLaunchIdentity() {
@@ -249,19 +267,57 @@ function configureCodexFastLaunchIdentity(svc: TeamProvisioningService): void {
 }
 
 function expectAppOwnedFlexServiceTierBeforeFastMode(args: string[] | undefined): void {
-  expect(args).toEqual(expect.arrayContaining(['-c', 'features.fast_mode=true']));
-  const flexIndex = args?.indexOf('service_tier="flex"') ?? -1;
-  const fastIndex = args?.indexOf('service_tier="fast"') ?? -1;
+  const overrides = readCodexLaunchConfigOverrides(args);
+  expect(overrides).toEqual(
+    expect.arrayContaining([
+      'service_tier="flex"',
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ])
+  );
+  const flexIndex = overrides.indexOf('service_tier="flex"');
+  const fastIndex = overrides.indexOf('service_tier="fast"');
   expect(flexIndex).toBeGreaterThanOrEqual(0);
   expect(fastIndex).toBeGreaterThan(flexIndex);
+  expect(args).not.toContain('-c');
+}
+
+function readCodexLaunchConfigOverrides(args: string[] | undefined): string[] {
+  if (!args) {
+    return [];
+  }
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--settings') {
+      continue;
+    }
+    const value = args[index + 1];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        codex?: { agent_teams_launch_config?: { config_overrides?: unknown } };
+      };
+      const overrides = parsed.codex?.agent_teams_launch_config?.config_overrides;
+      if (Array.isArray(overrides)) {
+        return overrides.filter((override): override is string => typeof override === 'string');
+      }
+    } catch {
+      // Ignore non-JSON settings values.
+    }
+  }
+  return [];
 }
 
 function expectAppOwnedFlexServiceTierBeforeFastModeCommand(
   command: string | undefined
 ): void {
-  expect(command).toContain(`'features.fast_mode=true'`);
-  const flexIndex = command?.indexOf(`'service_tier="flex"'`) ?? -1;
-  const fastIndex = command?.indexOf(`'service_tier="fast"'`) ?? -1;
+  expect(command).toContain('features.fast_mode=true');
+  expect(command).not.toContain("'-c'");
+  const flexIndex = command?.indexOf('service_tier=') ?? -1;
+  const escapedFastIndex = command?.indexOf('service_tier=\\"fast\\"') ?? -1;
+  const plainFastIndex = command?.indexOf('service_tier="fast"') ?? -1;
+  const fastIndex = escapedFastIndex >= 0 ? escapedFastIndex : plainFastIndex;
   expect(flexIndex).toBeGreaterThanOrEqual(0);
   expect(fastIndex).toBeGreaterThan(flexIndex);
 }
@@ -280,9 +336,12 @@ function configureAppOwnedFlexFastRuntimeArgsPlan(svc: TeamProvisioningService):
       }>;
     }
   ).buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => ({
-    fastModeArgs: ['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'],
+    fastModeArgs: buildCodexLaunchConfigSettingsArgs([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]),
     runtimeTurnSettledHookArgs: [],
-    providerArgs: ['-c', 'service_tier="flex"'],
+    providerArgs: buildCodexLaunchConfigSettingsArgs(['service_tier="flex"']),
     settingsArgs: [],
     extraArgs: [],
     inheritedProviderArgs: [],

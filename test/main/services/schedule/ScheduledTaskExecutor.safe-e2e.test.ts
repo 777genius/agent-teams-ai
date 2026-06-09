@@ -66,6 +66,33 @@ async function waitForSpawn(): Promise<void> {
   expect(mockSpawnCli).toHaveBeenCalled();
 }
 
+function readCodexLaunchConfigOverrides(args: string[] | undefined): string[] {
+  if (!args) {
+    return [];
+  }
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--settings') {
+      continue;
+    }
+    const value = args[index + 1];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        codex?: { agent_teams_launch_config?: { config_overrides?: unknown } };
+      };
+      const overrides = parsed.codex?.agent_teams_launch_config?.config_overrides;
+      if (Array.isArray(overrides)) {
+        return overrides.filter((override): override is string => typeof override === 'string');
+      }
+    } catch {
+      // Ignore non-JSON settings values.
+    }
+  }
+  return [];
+}
+
 function createCodexSnapshot(codexHome: string): CodexAccountSnapshotDto {
   return {
     preferredAuthMode: 'auto',
@@ -180,11 +207,16 @@ describe('ScheduledTaskExecutor safe e2e', () => {
     await waitForSpawn();
 
     const launchArgs = mockSpawnCli.mock.calls[0]?.[1] as string[] | undefined;
-    expect(launchArgs).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="flex"', '-c', 'features.fast_mode=true'])
+    const overrides = readCodexLaunchConfigOverrides(launchArgs);
+    expect(overrides).toEqual(
+      expect.arrayContaining([
+        'service_tier="flex"',
+        'service_tier="fast"',
+        'features.fast_mode=true',
+      ])
     );
-    const flexIndex = launchArgs?.indexOf('service_tier="flex"') ?? -1;
-    const fastIndex = launchArgs?.indexOf('service_tier="fast"') ?? -1;
+    const flexIndex = overrides.indexOf('service_tier="flex"');
+    const fastIndex = overrides.indexOf('service_tier="fast"');
     expect(flexIndex).toBeGreaterThanOrEqual(0);
     expect(fastIndex).toBeGreaterThan(flexIndex);
 

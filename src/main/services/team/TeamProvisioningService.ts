@@ -172,6 +172,10 @@ import {
   resolveGeminiRuntimeAuth,
 } from '../runtime/geminiRuntimeAuth';
 import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
+import {
+  buildProviderControlPlaneCliCommandArgs,
+  buildProviderLaunchCliCommandArgs,
+} from '../runtime/providerCliCommandArgs';
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
 import {
   buildProviderPreflightPingArgs,
@@ -1539,7 +1543,7 @@ function buildMissingCliError(): Error {
 }
 
 function buildProviderCliCommandArgs(providerArgs: string[], args: string[]): string[] {
-  return mergeJsonSettingsArgs([...providerArgs, ...args]);
+  return buildProviderLaunchCliCommandArgs(providerArgs, args);
 }
 
 interface ProviderModelListCommandResponse {
@@ -4690,7 +4694,7 @@ export class TeamProvisioningService {
     const providerArgs = params.providerArgs ?? [];
     const modelListPromise = execCli(
       params.claudePath,
-      buildProviderCliCommandArgs(providerArgs, [
+      buildProviderControlPlaneCliCommandArgs(providerArgs, [
         'model',
         'list',
         '--json',
@@ -4707,7 +4711,7 @@ export class TeamProvisioningService {
       params.providerId === 'codex' || params.providerId === 'anthropic'
         ? execCli(
             params.claudePath,
-            buildProviderCliCommandArgs(providerArgs, [
+            buildProviderControlPlaneCliCommandArgs(providerArgs, [
               'runtime',
               'status',
               '--json',
@@ -19673,7 +19677,7 @@ export class TeamProvisioningService {
     try {
       const { stdout } = await execCli(
         claudePath,
-        buildProviderCliCommandArgs(providerArgs, [
+        buildProviderControlPlaneCliCommandArgs(providerArgs, [
           'model',
           'list',
           '--json',
@@ -19732,7 +19736,7 @@ export class TeamProvisioningService {
   ): Promise<string | null> {
     const { stdout } = await execCli(
       claudePath,
-      buildProviderCliCommandArgs(providerArgs, [
+      buildProviderControlPlaneCliCommandArgs(providerArgs, [
         'runtime',
         'status',
         '--json',
@@ -39131,7 +39135,7 @@ export class TeamProvisioningService {
     try {
       const runtimeStatus = await execCli(
         claudePath,
-        buildProviderCliCommandArgs(providerArgs, [
+        buildProviderControlPlaneCliCommandArgs(providerArgs, [
           'runtime',
           'status',
           '--json',
@@ -39166,7 +39170,7 @@ export class TeamProvisioningService {
       try {
         const authStatus = await execCli(
           claudePath,
-          buildProviderCliCommandArgs(providerArgs, [
+          buildProviderControlPlaneCliCommandArgs(providerArgs, [
             'auth',
             'status',
             '--json',

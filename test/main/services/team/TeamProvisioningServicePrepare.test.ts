@@ -2335,7 +2335,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(spawnedArgLists.some((args) => args.includes('-p'))).toBe(false);
   });
 
-  it('passes provider launch args before codex runtime status subcommands', async () => {
+  it('strips Codex config overrides from runtime status control-plane commands', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({
         providers: {
@@ -2359,7 +2359,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       providerId: 'codex',
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="flex"',
+      ],
     });
 
     expect(result.warning).toBeUndefined();
@@ -2473,7 +2478,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
-  it('passes provider launch args before auth status fallback subcommands', async () => {
+  it('strips Codex config overrides from auth status fallback control-plane commands', async () => {
     execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
       if (args.includes('runtime')) {
         throw new Error('runtime status failed');
@@ -2497,7 +2502,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       providerId: 'codex',
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="flex"',
+      ],
     });
 
     expect(result.warning).toContain('runtime status was unavailable');
@@ -2557,7 +2567,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       'codex',
-      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']
+      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="flex"']
     );
 
     expect(result.warning).toBeUndefined();
@@ -2567,6 +2577,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       [
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="flex"',
         '-p',
         'Output only the single word PONG.',
         '--output-format',
@@ -2955,7 +2967,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(getCodexModelCatalog).not.toHaveBeenCalled();
   });
 
-  it('passes provider launch args before model-list catalog subcommands', async () => {
+  it('strips Codex config overrides from model-list control-plane commands', async () => {
     execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
       if (args.includes('model')) {
         return {
@@ -2999,10 +3011,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         PATH: '/usr/bin',
         SHELL: '/bin/zsh',
       },
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="flex"',
+      ],
       limitContext: false,
     });
 
+    for (const call of execCliMock.mock.calls) {
+      expect(call[1]).not.toContain('-c');
+    }
     expect(execCliMock).toHaveBeenCalledWith(
       '/fake/claude',
       [

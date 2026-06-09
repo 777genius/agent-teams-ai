@@ -2251,9 +2251,14 @@ describe('ProviderConnectionService', () => {
 
     expect(args).toEqual([
       '--settings',
-      '{"codex":{"forced_login_method":"chatgpt"}}',
-      '-c',
-      'service_tier="flex"',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
+        },
+      }),
     ]);
   });
 
@@ -2285,9 +2290,14 @@ describe('ProviderConnectionService', () => {
 
     expect(args).toEqual([
       '--settings',
-      '{"codex":{"forced_login_method":"api"}}',
-      '-c',
-      'service_tier="flex"',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'api',
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
+        },
+      }),
     ]);
   });
 
@@ -2373,10 +2383,11 @@ describe('ProviderConnectionService', () => {
               'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
             ],
           },
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
         },
       }),
-      '-c',
-      'service_tier="flex"',
     ]);
   });
 
@@ -2482,9 +2493,14 @@ describe('ProviderConnectionService', () => {
 
     expect(args).toEqual([
       '--settings',
-      '{"codex":{"forced_login_method":"chatgpt"}}',
-      '-c',
-      'service_tier="flex"',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
+        },
+      }),
     ]);
   });
 

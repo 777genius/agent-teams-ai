@@ -63,6 +63,30 @@ function createMockProcess() {
   return proc;
 }
 
+function readCodexLaunchConfigOverrides(args: string[]): string[] {
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--settings') {
+      continue;
+    }
+    const value = args[index + 1];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        codex?: { agent_teams_launch_config?: { config_overrides?: unknown } };
+      };
+      const overrides = parsed.codex?.agent_teams_launch_config?.config_overrides;
+      if (Array.isArray(overrides)) {
+        return overrides.filter((override): override is string => typeof override === 'string');
+      }
+    } catch {
+      // Ignore non-JSON settings values.
+    }
+  }
+  return [];
+}
+
 function makeRequest(overrides?: Partial<ExecutionRequest>): ExecutionRequest {
   return {
     runId: 'run-001',
@@ -495,9 +519,10 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
-    );
+    expect(readCodexLaunchConfigOverrides(args)).toEqual([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]);
 
     proc.emit('close', 0);
   });
@@ -506,7 +531,16 @@ describe('ScheduledTaskExecutor', () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { ...process.env, SHELL: '/bin/zsh' },
       connectionIssues: {},
-      providerArgs: ['-c', 'service_tier="flex"'],
+      providerArgs: [
+        '--settings',
+        JSON.stringify({
+          codex: {
+            agent_teams_launch_config: {
+              config_overrides: ['service_tier="flex"'],
+            },
+          },
+        }),
+      ],
     });
     const proc = createMockProcess();
     mockSpawnCli.mockReturnValue(proc);
@@ -528,8 +562,9 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    const flexIndex = args.indexOf('service_tier="flex"');
-    const fastIndex = args.indexOf('service_tier="fast"');
+    const overrides = readCodexLaunchConfigOverrides(args);
+    const flexIndex = overrides.indexOf('service_tier="flex"');
+    const fastIndex = overrides.indexOf('service_tier="fast"');
     expect(flexIndex).toBeGreaterThanOrEqual(0);
     expect(fastIndex).toBeGreaterThan(flexIndex);
 
@@ -557,8 +592,9 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).not.toContain('service_tier="fast"');
-    expect(args).not.toContain('features.fast_mode=true');
+    expect(readCodexLaunchConfigOverrides(args)).not.toEqual(
+      expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
+    );
 
     proc.emit('close', 0);
   });
@@ -585,8 +621,9 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).not.toContain('service_tier="fast"');
-    expect(args).not.toContain('features.fast_mode=true');
+    expect(readCodexLaunchConfigOverrides(args)).not.toEqual(
+      expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
+    );
 
     proc.emit('close', 0);
   });
@@ -612,9 +649,10 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
-    );
+    expect(readCodexLaunchConfigOverrides(args)).toEqual([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]);
 
     proc.emit('close', 0);
   });

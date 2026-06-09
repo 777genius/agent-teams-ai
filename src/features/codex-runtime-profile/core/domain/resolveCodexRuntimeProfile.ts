@@ -307,6 +307,15 @@ export function reconcileCodexRuntimeSelections(params: {
 
 export function buildCodexFastModeArgs(resolvedFastMode: boolean | null | undefined): string[] {
   return resolvedFastMode === true
-    ? ['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true']
+    ? [
+        '--settings',
+        JSON.stringify({
+          codex: {
+            agent_teams_launch_config: {
+              config_overrides: ['service_tier="fast"', 'features.fast_mode=true'],
+            },
+          },
+        }),
+      ]
     : [];
 }

@@ -131,4 +131,37 @@ describe('mergeJsonSettingsArgs', () => {
       hooks: { Stop: [appHook] },
     });
   });
+
+  it('merges config override arrays in order', () => {
+    const merged = mergeJsonSettingsArgs([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="flex"'],
+          },
+        },
+      }),
+      '--settings',
+      JSON.stringify({
+        codex: {
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="fast"', 'features.fast_mode=true'],
+          },
+        },
+      }),
+    ]);
+
+    expect(JSON.parse(getSettingsValues(merged)[0] ?? '{}')).toEqual({
+      codex: {
+        agent_teams_launch_config: {
+          config_overrides: [
+            'service_tier="flex"',
+            'service_tier="fast"',
+            'features.fast_mode=true',
+          ],
+        },
+      },
+    });
+  });
 });

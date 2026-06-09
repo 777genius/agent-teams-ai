@@ -226,10 +226,14 @@ describe('resolveCodexRuntimeProfile', () => {
 
   it('builds official per-run Codex fast config overrides only for resolved Fast', () => {
     expect(buildCodexFastModeArgs(true)).toEqual([
-      '-c',
-      'service_tier="fast"',
-      '-c',
-      'features.fast_mode=true',
+      '--settings',
+      JSON.stringify({
+        codex: {
+          agent_teams_launch_config: {
+            config_overrides: ['service_tier="fast"', 'features.fast_mode=true'],
+          },
+        },
+      }),
     ]);
     expect(buildCodexFastModeArgs(false)).toEqual([]);
     expect(buildCodexFastModeArgs(null)).toEqual([]);

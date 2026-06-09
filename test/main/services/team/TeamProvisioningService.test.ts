@@ -17511,9 +17511,15 @@ describe('TeamProvisioningService', () => {
     ).rejects.toThrow('spawn EINVAL');
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
-    expect(launchArgs).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
-    );
+    const settingsIndex = launchArgs.indexOf('--settings');
+    const settings = JSON.parse(launchArgs[settingsIndex + 1] ?? '{}') as {
+      codex?: { agent_teams_launch_config?: { config_overrides?: string[] } };
+    };
+    expect(settings.codex?.agent_teams_launch_config?.config_overrides).toEqual([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]);
+    expect(launchArgs).not.toContain('-c');
   });
 
   describe('safe app launch matrix', () => {
