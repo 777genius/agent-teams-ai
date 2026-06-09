@@ -1327,6 +1327,122 @@ describe("FileBackendClaudeWorker", () => {
       await rm(rootDir, { recursive: true, force: true });
     }
   });
+
+  it("protects logical Claude thread state from concurrent worker updates", async () => {
+    const rootDir = await tempRoot();
+    const sharedWorkspacePath = join(rootDir, "shared-workspace");
+    const engines = [
+      new RecordingClaudeEngine({
+        outputText: "slot-1",
+        sessionIds: ["session-a", "session-a2"],
+        writeTranscripts: true,
+        delayMs: 20,
+      }),
+      new RecordingClaudeEngine({
+        outputText: "slot-2",
+        sessionIds: ["session-b", "session-b2"],
+        writeTranscripts: true,
+        delayMs: 20,
+      }),
+    ];
+    const workers: FileBackendClaudeWorker[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<
+      FileBackendClaudeWorkerThreadJob,
+      FileBackendClaudeWorkerThreadResult
+    >({
+      poolId: "claude-thread-concurrent-pool",
+      slots: 2,
+      workerFactory: ({ slotIndex, workerId }) => {
+        const worker = new FileBackendClaudeWorker({
+          workerId,
+          providerInstanceId: `claude-thread-concurrent-${slotIndex + 1}`,
+          stateRootDir: rootDir,
+          encryptionKey: encryptionKey(),
+          engine: engines[slotIndex]!,
+          workspace: new FixedWorkspace(sharedWorkspacePath),
+          workspacePath: sharedWorkspacePath,
+        });
+        workers.push(worker);
+        return worker;
+      },
+    });
+
+    try {
+      await pool.start();
+      await Promise.all(
+        workers.map((worker) =>
+          worker.seedClaudeOAuth({ oauthToken: `${worker.workerId}-token` }),
+        ),
+      );
+
+      const outcomes = await Promise.allSettled([
+        pool.run({
+          threadId: "logical-concurrent-thread",
+          prompt: "first concurrent",
+        }),
+        pool.run({
+          threadId: "logical-concurrent-thread",
+          prompt: "second concurrent",
+        }),
+      ]);
+      const fulfilled = outcomes.filter(
+        (
+          outcome,
+        ): outcome is PromiseFulfilledResult<FileBackendClaudeWorkerThreadResult> =>
+          outcome.status === "fulfilled",
+      );
+      const rejected = outcomes.filter(
+        (outcome): outcome is PromiseRejectedResult =>
+          outcome.status === "rejected",
+      );
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(fulfilled[0]!.value.thread).toMatchObject({
+        generation: 1,
+        threadId: "logical-concurrent-thread",
+      });
+      expect(rejected[0]!.reason).toBeInstanceOf(Error);
+      expect((rejected[0]!.reason as Error).message).toContain(
+        "Worker pool slot failed to run a task.",
+      );
+
+      const afterConflict = await pool.run({
+        threadId: "logical-concurrent-thread",
+        prompt: "after conflict",
+      });
+      const afterConflictEngineIndex = engines.findIndex((engine) =>
+        engine.records.some((record) => record.prompt === "after conflict"),
+      );
+      expect(afterConflictEngineIndex).toBeGreaterThanOrEqual(0);
+      const afterConflictRecord =
+        engines[afterConflictEngineIndex]?.records.find(
+          (record) => record.prompt === "after conflict",
+        );
+
+      expect(afterConflict.thread).toMatchObject({
+        generation: 2,
+        latestSessionId: afterConflict.telemetry?.providerSessionId,
+      });
+      expect(afterConflictRecord?.runtimeThread).toEqual({
+        threadId: "logical-concurrent-thread",
+        resumeSessionId: fulfilled[0]!.value.thread.latestSessionId,
+      });
+      await expect(
+        readFile(
+          fakeClaudeTranscriptPath(
+            workers[afterConflictEngineIndex]!.configDir,
+            sharedWorkspacePath,
+            fulfilled[0]!.value.thread.latestSessionId!,
+          ),
+          "utf8",
+        ),
+      ).resolves.toContain("concurrent");
+    } finally {
+      await pool.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
 });
 
 class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
@@ -1346,6 +1462,7 @@ class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
       readonly throwMessage?: string;
       readonly sessionIds?: readonly string[];
       readonly writeTranscripts?: boolean;
+      readonly delayMs?: number;
     } = {},
   ) {}
 
@@ -1353,6 +1470,9 @@ class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
     input: ClaudeTaskEngineInput,
   ): Promise<ClaudeTaskExecutionResult> {
     this.records.push(input);
+    if (this.options.delayMs) {
+      await new Promise((resolve) => setTimeout(resolve, this.options.delayMs));
+    }
     if (this.options.throwMessage) {
       throw new Error(this.options.throwMessage);
     }
