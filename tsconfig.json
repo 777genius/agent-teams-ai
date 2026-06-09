@@ -28,6 +28,9 @@
       "@vioxen/subscription-runtime/worker-codex": [
         "src/worker-codex/index.ts"
       ],
+      "@vioxen/subscription-runtime/worker-claude": [
+        "src/worker-claude/index.ts"
+      ],
       "@vioxen/subscription-runtime/queue-core": [
         "src/queue-core/index.ts"
       ],

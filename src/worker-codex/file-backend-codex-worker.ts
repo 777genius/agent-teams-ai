@@ -33,9 +33,9 @@ import {
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
 } from "@vioxen/subscription-runtime/worker-core";
-import { NodeProcessRunner } from "./node-process-runner";
-import { NullWorkerObservability } from "./observability";
-import { StableWorkerWorkspace } from "./temp-workspace";
+import { NodeProcessRunner } from "../worker-local/node-process-runner";
+import { NullWorkerObservability } from "../worker-local/observability";
+import { StableWorkerWorkspace } from "../worker-local/temp-workspace";
 
 export type FileBackendCodexWorkerOptions = {
   readonly workerId?: string;
