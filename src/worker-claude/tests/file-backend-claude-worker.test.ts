@@ -1202,6 +1202,131 @@ describe("FileBackendClaudeWorker", () => {
       await rm(rootDir, { recursive: true, force: true });
     }
   });
+
+  it("retries a quota-limited logical Claude thread on another account without advancing the failed attempt", async () => {
+    const rootDir = await tempRoot();
+    const sharedWorkspacePath = join(rootDir, "shared-workspace");
+    const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
+    const accountCapacityStore = new InMemoryWorkerAccountCapacityStore();
+    const engines = [
+      new RecordingClaudeEngine({
+        outputText: "account-a-slot-1",
+        sessionIds: ["session-a"],
+        writeTranscripts: true,
+      }),
+      new RecordingClaudeEngine({
+        throwMessage: "rate_limit_exceeded",
+      }),
+      new RecordingClaudeEngine({
+        outputText: "account-b-slot-3",
+        sessionIds: ["session-c"],
+        writeTranscripts: true,
+      }),
+    ];
+    const workers: FileBackendClaudeWorker[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<
+      FileBackendClaudeWorkerThreadJob,
+      FileBackendClaudeWorkerThreadResult
+    >({
+      poolId: "claude-thread-quota-retry-pool",
+      slots: 3,
+      clock,
+      retryPolicy: {
+        maxAttempts: 3,
+        retryOnSlotCapacityUnavailable: true,
+      },
+      workerFactory: accountCapacityAwareWorkerFactory({
+        accountCapacityStore,
+        clock,
+        workerFactory: ({ slotIndex, workerId }) => {
+          const worker = new FileBackendClaudeWorker({
+            workerId,
+            providerInstanceId: `claude-thread-quota-retry-${slotIndex + 1}`,
+            stateRootDir: rootDir,
+            encryptionKey: encryptionKey(),
+            engine: engines[slotIndex]!,
+            workspace: new FixedWorkspace(sharedWorkspacePath),
+            workspacePath: sharedWorkspacePath,
+            capacityPolicy: {
+              ...(slotIndex === 0 ? { softMaxRunsPerWindow: 1 } : {}),
+              windowMs: 60_000,
+              quotaCooldownMs: 60_000,
+            },
+            clock,
+          });
+          workers.push(worker);
+          return worker as unknown as SubscriptionWorker<
+            FileBackendClaudeWorkerThreadJob,
+            FileBackendClaudeWorkerThreadResult
+          >;
+        },
+      }),
+    });
+
+    try {
+      await pool.start();
+      await workers[0]!.seedClaudeOAuth({ oauthToken: "account-a-token" });
+      await workers[1]!.seedClaudeOAuth({ oauthToken: "account-a-token" });
+      await workers[2]!.seedClaudeOAuth({ oauthToken: "account-b-token" });
+
+      const first = await pool.run({
+        threadId: "logical-quota-retry-thread",
+        prompt: "remember QQUOTARETRY",
+      });
+      const second = await pool.run({
+        threadId: "logical-quota-retry-thread",
+        prompt: "recall QQUOTARETRY",
+      });
+
+      expect(first).toMatchObject({
+        outputText: "account-a-slot-1",
+        thread: {
+          generation: 1,
+          latestSessionId: "session-a",
+          latestWorkerId: "claude-thread-quota-retry-pool:slot-1",
+        },
+      });
+      expect(second).toMatchObject({
+        outputText: "account-b-slot-3",
+        thread: {
+          generation: 2,
+          latestSessionId: "session-c",
+          latestWorkerId: "claude-thread-quota-retry-pool:slot-3",
+        },
+      });
+      expect(engines[1]!.records[0]?.runtimeThread).toEqual({
+        threadId: "logical-quota-retry-thread",
+        resumeSessionId: "session-a",
+      });
+      expect(engines[2]!.records[0]?.runtimeThread).toEqual({
+        threadId: "logical-quota-retry-thread",
+        resumeSessionId: "session-a",
+      });
+      expect(engines[1]!.records.map((record) => record.prompt)).toEqual([
+        "recall QQUOTARETRY",
+      ]);
+      expect(engines[2]!.records.map((record) => record.prompt)).toEqual([
+        "recall QQUOTARETRY",
+      ]);
+      await expect(
+        readFile(
+          fakeClaudeTranscriptPath(
+            workers[2]!.configDir,
+            sharedWorkspacePath,
+            "session-a",
+          ),
+          "utf8",
+        ),
+      ).resolves.toContain("remember QQUOTARETRY");
+      expect(workers[1]!.capacity()).toMatchObject({
+        availability: "cooldown",
+        reason: "quota_limited",
+      });
+    } finally {
+      await pool.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
 });
 
 class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
