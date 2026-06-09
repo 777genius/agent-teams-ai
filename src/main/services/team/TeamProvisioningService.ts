@@ -15647,9 +15647,9 @@ export class TeamProvisioningService {
         : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
       ...(memberSpec.model ? ['--model', memberSpec.model] : []),
       ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+      ...runtimeArgsPlan.providerArgs,
       ...runtimeArgsPlan.fastModeArgs,
       ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.providerArgs,
       ...runtimeArgsPlan.settingsArgs,
     ]);
     const command = buildDirectTmuxRestartCommand({
@@ -15857,9 +15857,9 @@ export class TeamProvisioningService {
         : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
       ...(memberSpec.model ? ['--model', memberSpec.model] : []),
       ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+      ...runtimeArgsPlan.providerArgs,
       ...runtimeArgsPlan.fastModeArgs,
       ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.providerArgs,
       ...runtimeArgsPlan.settingsArgs,
     ]);
 
@@ -21473,12 +21473,12 @@ export class TeamProvisioningService {
           : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
         ...(launchModelArg ? ['--model', launchModelArg] : []),
         ...(launchIdentity.resolvedEffort ? ['--effort', launchIdentity.resolvedEffort] : []),
+        ...runtimeArgsPlan.providerArgs,
         ...runtimeArgsPlan.fastModeArgs,
         ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
         ...(request.worktree ? ['--worktree', request.worktree] : []),
         ...buildDesktopTeammateModeCliArgs(teammateModeDecision),
         ...runtimeArgsPlan.extraArgs,
-        ...runtimeArgsPlan.providerArgs,
         ...runtimeArgsPlan.settingsArgs,
         ...runtimeArgsPlan.inheritedProviderArgs,
       ]);
@@ -23246,6 +23246,7 @@ export class TeamProvisioningService {
       if (launchIdentity.resolvedEffort) {
         launchArgs.push('--effort', launchIdentity.resolvedEffort);
       }
+      launchArgs.push(...runtimeArgsPlan.providerArgs);
       launchArgs.push(...runtimeArgsPlan.fastModeArgs);
       launchArgs.push(...runtimeArgsPlan.runtimeTurnSettledHookArgs);
       if (request.worktree) {
@@ -23253,7 +23254,6 @@ export class TeamProvisioningService {
       }
       launchArgs.push(...buildDesktopTeammateModeCliArgs(teammateModeDecision));
       launchArgs.push(...runtimeArgsPlan.extraArgs);
-      launchArgs.push(...runtimeArgsPlan.providerArgs);
       launchArgs.push(...runtimeArgsPlan.settingsArgs);
       // When the lead uses a different provider than some teammates (e.g., anthropic lead
       // with codex teammates), the lead needs the teammate provider's launch args so they
@@ -28945,10 +28945,18 @@ export class TeamProvisioningService {
     return next;
   }
 
+  private shouldOverlayPrimaryBootstrapTruth(run: ProvisioningRun): boolean {
+    return (
+      run.isLaunch ||
+      run.deterministicBootstrap === true ||
+      (run.mixedSecondaryLanes?.length ?? 0) > 0
+    );
+  }
+
   private async overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(
     run: ProvisioningRun
   ): Promise<void> {
-    if (!run.isLaunch) {
+    if (!this.shouldOverlayPrimaryBootstrapTruth(run)) {
       return;
     }
 
@@ -29055,7 +29063,7 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     snapshot: PersistedTeamLaunchSnapshot | null
   ): Promise<PersistedTeamLaunchSnapshot | null> {
-    if (!run.isLaunch || !snapshot) {
+    if (!this.shouldOverlayPrimaryBootstrapTruth(run) || !snapshot) {
       return snapshot;
     }
 

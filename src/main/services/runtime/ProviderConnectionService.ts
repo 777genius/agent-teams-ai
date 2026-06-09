@@ -92,6 +92,7 @@ const CODEX_CUSTOM_PROVIDER_ID = 'agent_teams_custom';
 const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
 const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
+const CODEX_SERVICE_TIER_FLEX_OVERRIDE = 'service_tier="flex"';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
@@ -300,31 +301,45 @@ function buildCodexCustomProviderConfigOverrides(config: CodexCustomProviderConf
 function buildCodexLaunchArgs(
   binaryPath: string | null | undefined,
   loginMethod: 'chatgpt' | 'api',
-  configOverrides: readonly string[] = []
+  options: {
+    customProviderConfigOverrides?: readonly string[];
+    cliConfigOverrides?: readonly string[];
+  } = {}
 ): string[] {
+  const customProviderConfigOverrides = options.customProviderConfigOverrides ?? [];
+  const cliConfigOverrides = [
+    CODEX_SERVICE_TIER_FLEX_OVERRIDE,
+    ...(options.cliConfigOverrides ?? []),
+  ];
   if (isCodexExecBinary(binaryPath)) {
     return [
       '-c',
       `forced_login_method="${loginMethod}"`,
-      ...configOverrides.flatMap((override) => ['-c', override]),
+      ...customProviderConfigOverrides.flatMap((override) => ['-c', override]),
+      ...cliConfigOverrides.flatMap((override) => ['-c', override]),
     ];
   }
 
   const codexSettings: Record<string, unknown> = { forced_login_method: loginMethod };
-  if (configOverrides.length > 0) {
+  if (customProviderConfigOverrides.length > 0) {
     codexSettings[CODEX_CUSTOM_PROVIDER_SETTINGS_KEY] = {
-      config_overrides: [...configOverrides],
+      config_overrides: [...customProviderConfigOverrides],
     };
   }
 
-  return ['--settings', JSON.stringify({ codex: codexSettings })];
+  return [
+    '--settings',
+    JSON.stringify({ codex: codexSettings }),
+    ...cliConfigOverrides.flatMap((override) => ['-c', override]),
+  ];
 }
 
 function buildCodexForcedLoginLaunchArgs(
   binaryPath: string | null | undefined,
-  loginMethod: 'chatgpt' | 'api'
+  loginMethod: 'chatgpt' | 'api',
+  cliConfigOverrides: readonly string[] = []
 ): string[] {
-  return buildCodexLaunchArgs(binaryPath, loginMethod);
+  return buildCodexLaunchArgs(binaryPath, loginMethod, { cliConfigOverrides });
 }
 
 function isCodexCustomProviderBaseUrlUsable(baseUrl: string): boolean {
@@ -1094,11 +1109,11 @@ export class ProviderConnectionService {
 
     if (readiness.effectiveAuthMode === 'api_key') {
       const customProvider = this.getConfiguredCodexCustomProvider();
-      return buildCodexLaunchArgs(
-        binaryPath,
-        'api',
-        customProvider ? buildCodexCustomProviderConfigOverrides(customProvider) : []
-      );
+      return buildCodexLaunchArgs(binaryPath, 'api', {
+        customProviderConfigOverrides: customProvider
+          ? buildCodexCustomProviderConfigOverrides(customProvider)
+          : [],
+      });
     }
 
     return [];

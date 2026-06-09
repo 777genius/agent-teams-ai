@@ -29108,6 +29108,149 @@ describe('TeamProvisioningService', () => {
     expect(snapshot.summary.failedCount).toBe(2);
   });
 
+  it('keeps primary bootstrap-confirmed members alive for mixed create provisioning snapshots', async () => {
+    const teamName = 'mixed-create-primary-bootstrap-truth';
+    const startedAt = '2026-06-09T10:45:16.280Z';
+    const exactOpenCodeReason = 'OpenCode secondary lane failed during launch.';
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['tom', 'jack']);
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'tom',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse('2026-06-09T10:45:19.167Z'),
+          lastObservedAt: Date.parse('2026-06-09T10:45:24.561Z'),
+        },
+        {
+          name: 'jack',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse('2026-06-09T10:45:21.968Z'),
+          lastObservedAt: Date.parse('2026-06-09T10:45:29.917Z'),
+        },
+      ],
+      '2026-06-09T10:45:29.937Z'
+    );
+    const run = createMemberSpawnRun({
+      teamName,
+      runId: 'run-mixed-create-primary-bootstrap-truth',
+      startedAt,
+      expectedMembers: ['tom', 'jack'],
+      memberSpawnStatuses: new Map([
+        [
+          'tom',
+          createMemberSpawnStatusEntry({
+            status: 'error',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            error: 'Teammate was never spawned during launch.',
+            hardFailureReason: 'Teammate was never spawned during launch.',
+            firstSpawnAcceptedAt: undefined,
+          }),
+        ],
+        [
+          'jack',
+          createMemberSpawnStatusEntry({
+            status: 'error',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            error: 'Teammate was never spawned during launch.',
+            hardFailureReason: 'Teammate was never spawned during launch.',
+            firstSpawnAcceptedAt: undefined,
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = false;
+    run.deterministicBootstrap = true;
+    run.provisioningComplete = true;
+    run.request = {
+      teamName,
+      cwd: '/Users/test/proj',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      members: [],
+    };
+    run.effectiveMembers = [
+      { name: 'tom', providerId: 'codex', model: 'gpt-5.5' },
+      { name: 'jack', providerId: 'anthropic', model: 'haiku' },
+    ];
+    run.mixedSecondaryLanes = [
+      {
+        laneId: 'secondary:opencode:alice',
+        providerId: 'opencode',
+        member: {
+          name: 'alice',
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+        },
+        runId: 'lane-run-alice',
+        state: 'finished',
+        result: {
+          runId: 'lane-run-alice',
+          teamName,
+          launchPhase: 'finished',
+          teamLaunchState: 'partial_failure',
+          members: {
+            alice: {
+              memberName: 'alice',
+              providerId: 'opencode',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: exactOpenCodeReason,
+              diagnostics: [exactOpenCodeReason],
+            },
+          },
+          warnings: [],
+          diagnostics: [exactOpenCodeReason],
+        },
+        warnings: [],
+        diagnostics: [exactOpenCodeReason],
+      },
+    ];
+    run.detectedSessionId = 'lead-session';
+
+    const svc = new TeamProvisioningService();
+    const snapshot = await (
+      svc as unknown as {
+        persistLaunchStateSnapshot: (
+          inputRun: ReturnType<typeof createMemberSpawnRun>,
+          phase: 'finished'
+        ) => Promise<{
+          members: Record<string, Record<string, unknown>>;
+          summary: { confirmedCount: number; failedCount: number };
+        }>;
+      }
+    ).persistLaunchStateSnapshot(run, 'finished');
+
+    expect(snapshot.members.tom).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+    });
+    expect(snapshot.members.jack).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+    });
+    expect(snapshot.members.alice).toMatchObject({
+      launchState: 'failed_to_start',
+      hardFailureReason: exactOpenCodeReason,
+    });
+    expect(snapshot.summary.confirmedCount).toBe(2);
+    expect(snapshot.summary.failedCount).toBe(1);
+  });
+
   it('reconciles persisted mixed launch-state when primary bootstrap members were marked missing', async () => {
     const teamName = 'atlas-hq-source-aware-persisted';
     const exactOpenCodeReason =

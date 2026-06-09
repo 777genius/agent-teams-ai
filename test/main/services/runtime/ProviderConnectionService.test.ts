@@ -1744,7 +1744,12 @@ describe('ProviderConnectionService', () => {
       'codex'
     );
 
-    expect(args).toEqual(['-c', 'forced_login_method="chatgpt"']);
+    expect(args).toEqual([
+      '-c',
+      'forced_login_method="chatgpt"',
+      '-c',
+      'service_tier="flex"',
+    ]);
   });
 
   it('reports a pinned Codex ChatGPT mode as a missing active CLI login instead of flattening it to generic auth advice', async () => {
@@ -2024,7 +2029,14 @@ describe('ProviderConnectionService', () => {
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/opt/codex/bin/codex.cmd',
-      ['-c', 'forced_login_method="chatgpt"', 'login', 'status'],
+      [
+        '-c',
+        'forced_login_method="chatgpt"',
+        '-c',
+        'service_tier="flex"',
+        'login',
+        'status',
+      ],
       expect.objectContaining({
         timeout: 5_000,
         windowsHide: true,
@@ -2237,7 +2249,12 @@ describe('ProviderConnectionService', () => {
       '/mock/claude-multimodel'
     );
 
-    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']);
+    expect(args).toEqual([
+      '--settings',
+      '{"codex":{"forced_login_method":"chatgpt"}}',
+      '-c',
+      'service_tier="flex"',
+    ]);
   });
 
   it('returns an api forced_login_method override for Codex API-key launches', async () => {
@@ -2266,7 +2283,12 @@ describe('ProviderConnectionService', () => {
       '/mock/claude-multimodel'
     );
 
-    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"api"}}']);
+    expect(args).toEqual([
+      '--settings',
+      '{"codex":{"forced_login_method":"api"}}',
+      '-c',
+      'service_tier="flex"',
+    ]);
   });
 
   it('keeps codex exec style config overrides for direct Codex binary launches', async () => {
@@ -2295,7 +2317,12 @@ describe('ProviderConnectionService', () => {
       '/usr/local/bin/codex'
     );
 
-    expect(args).toEqual(['-c', 'forced_login_method="api"']);
+    expect(args).toEqual([
+      '-c',
+      'forced_login_method="api"',
+      '-c',
+      'service_tier="flex"',
+    ]);
   });
 
   it('adds custom provider settings for managed Codex API-key launches', async () => {
@@ -2348,6 +2375,8 @@ describe('ProviderConnectionService', () => {
           },
         },
       }),
+      '-c',
+      'service_tier="flex"',
     ]);
   });
 
@@ -2398,6 +2427,8 @@ describe('ProviderConnectionService', () => {
       'model_providers.agent_teams_custom.wire_api="responses"',
       '-c',
       'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+      '-c',
+      'service_tier="flex"',
     ]);
   });
 
@@ -2449,7 +2480,12 @@ describe('ProviderConnectionService', () => {
       '/mock/claude-multimodel'
     );
 
-    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']);
+    expect(args).toEqual([
+      '--settings',
+      '{"codex":{"forced_login_method":"chatgpt"}}',
+      '-c',
+      'service_tier="flex"',
+    ]);
   });
 
   it('synthesizes the Codex model catalog from the custom provider model', async () => {

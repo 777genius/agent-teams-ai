@@ -139,8 +139,6 @@ export class ScheduledTaskExecutor {
 
     validateFastModeLaunchConfig(request.config);
 
-    const args = this.buildArgs(request);
-
     const providerId =
       request.config.providerId === 'codex' || request.config.providerId === 'gemini'
         ? request.config.providerId
@@ -160,7 +158,7 @@ export class ScheduledTaskExecutor {
       throw new Error(connectionIssue);
     }
 
-    args.push(...providerArgs);
+    const args = this.buildArgs(request, providerArgs);
     const launchArgs = mergeJsonSettingsArgs(args);
 
     logger.info(`[${request.runId}] Spawning: ${binaryPath} ${launchArgs.join(' ')}`);
@@ -216,7 +214,7 @@ export class ScheduledTaskExecutor {
     return this.activeProcesses.size;
   }
 
-  private buildArgs(request: ExecutionRequest): string[] {
+  private buildArgs(request: ExecutionRequest, providerArgs: string[] = []): string[] {
     const { config, maxTurns, maxBudgetUsd } = request;
     const args: string[] = [
       '-p',
@@ -241,6 +239,7 @@ export class ScheduledTaskExecutor {
       args.push('--effort', config.effort);
     }
 
+    args.push(...providerArgs);
     args.push(...buildProviderFastModeArgs(config));
 
     if (config.skipPermissions !== false) {
