@@ -105,6 +105,7 @@ export type WorkerPoolOptions<Job, Result> = {
   readonly slots: number;
   readonly workerFactory: SubscriptionWorkerFactory<Job, Result>;
   readonly clock?: WorkerPoolClock;
+  readonly scheduler?: WorkerPoolScheduler;
   readonly slotSelector?: WorkerSlotSelector<Job>;
   readonly retryPolicy?: WorkerPoolRetryPolicy;
   readonly maxQueueSize?: number;
@@ -117,6 +118,13 @@ export type WorkerPoolOptions<Job, Result> = {
 export type WorkerPoolClock = {
   now(): Date;
 };
+
+export type WorkerPoolScheduler = {
+  setTimeout(callback: () => void, delayMs: number): WorkerPoolTimerHandle;
+  clearTimeout(handle: WorkerPoolTimerHandle): void;
+};
+
+export type WorkerPoolTimerHandle = unknown;
 
 export type WorkerPoolRunOptions = {
   readonly idempotencyKey?: string;

@@ -12,6 +12,7 @@ import type {
   WorkerPoolRetryPolicy,
   WorkerPoolSlotSnapshot,
   WorkerPoolStats,
+  WorkerPoolTimerHandle,
 } from "./types";
 import { SubscriptionWorkerError } from "./errors";
 
@@ -40,7 +41,7 @@ export class BoundedSubscriptionWorkerPool<Job, Result> {
   private restartedCount = 0;
   private inFlightCount = 0;
   private cooldownDrainAt: number | null = null;
-  private cooldownDrainTimer: ReturnType<typeof setTimeout> | null = null;
+  private cooldownDrainTimer: WorkerPoolTimerHandle | null = null;
 
   constructor(private readonly options: WorkerPoolOptions<Job, Result>) {
     if (!options.poolId.trim()) {
@@ -521,7 +522,7 @@ export class BoundedSubscriptionWorkerPool<Job, Result> {
 
     this.clearCooldownDrainTimer();
     this.cooldownDrainAt = nextCooldownAt;
-    this.cooldownDrainTimer = setTimeout(() => {
+    this.cooldownDrainTimer = this.setTimer(() => {
       this.cooldownDrainAt = null;
       this.cooldownDrainTimer = null;
       this.drainQueue();
@@ -530,7 +531,7 @@ export class BoundedSubscriptionWorkerPool<Job, Result> {
 
   private clearCooldownDrainTimer(): void {
     if (this.cooldownDrainTimer) {
-      clearTimeout(this.cooldownDrainTimer);
+      this.clearTimer(this.cooldownDrainTimer);
       this.cooldownDrainTimer = null;
     }
     this.cooldownDrainAt = null;
@@ -588,6 +589,21 @@ export class BoundedSubscriptionWorkerPool<Job, Result> {
 
   private now(): Date {
     return this.options.clock?.now() ?? new Date();
+  }
+
+  private setTimer(callback: () => void, delayMs: number): WorkerPoolTimerHandle {
+    return (
+      this.options.scheduler?.setTimeout(callback, delayMs) ??
+      setTimeout(callback, delayMs)
+    );
+  }
+
+  private clearTimer(handle: WorkerPoolTimerHandle): void {
+    if (this.options.scheduler) {
+      this.options.scheduler.clearTimeout(handle);
+      return;
+    }
+    clearTimeout(handle as ReturnType<typeof setTimeout>);
   }
 }
 

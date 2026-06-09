@@ -25,6 +25,7 @@ import {
   InMemoryWorkerAccountCapacityStore,
   accountCapacityAwareWorkerFactory,
   type SubscriptionWorker,
+  type WorkerPoolScheduler,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   FileBackendClaudeWorker,
@@ -578,6 +579,86 @@ describe("FileBackendClaudeWorker", () => {
     }
   });
 
+  it("drains queued Claude account cooldown work after account reset", async () => {
+    const rootDir = await tempRoot();
+    const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+    const scheduler = new ManualScheduler();
+    const accountCapacityStore = new InMemoryWorkerAccountCapacityStore();
+    const telemetry = [
+      new MutableRateLimitTelemetry(rateLimitSnapshot(clock.now(), {
+        five_hour: { usedPercentage: 92, resetsAt: resetAt },
+      })),
+      new MutableRateLimitTelemetry(rateLimitSnapshot(clock.now(), {
+        five_hour: { usedPercentage: 12, resetsAt: resetAt },
+      })),
+    ];
+    const engines = [
+      new RecordingClaudeEngine({ outputText: "slot-1" }),
+      new RecordingClaudeEngine({ outputText: "slot-2" }),
+    ];
+    const workers: FileBackendClaudeWorker[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<
+      FileBackendClaudeWorkerJob,
+      FileBackendClaudeWorkerResult
+    >({
+      poolId: "claude-account-queue-pool",
+      slots: 2,
+      clock,
+      scheduler,
+      workerFactory: accountCapacityAwareWorkerFactory({
+        accountCapacityStore,
+        clock,
+        workerFactory: ({ slotIndex, workerId }) => {
+          const worker = new FileBackendClaudeWorker({
+            workerId,
+            providerInstanceId: `claude-account-queue-${slotIndex + 1}`,
+            stateRootDir: rootDir,
+            encryptionKey: encryptionKey(),
+            engine: engines[slotIndex]!,
+            rateLimitTelemetry: telemetry[slotIndex]!,
+            capacityPolicy: {
+              rateLimitMinRemainingPercent: 10,
+            },
+            clock,
+          });
+          workers.push(worker);
+          return worker;
+        },
+      }),
+    });
+
+    try {
+      await pool.start();
+      await Promise.all(
+        workers.map((worker) =>
+          worker.seedClaudeOAuth({ oauthToken: "shared-account-token" }),
+        ),
+      );
+
+      const queued = pool.run({ prompt: "after-reset" });
+
+      expect(pool.stats().queued).toBe(1);
+      expect(scheduler.delays()).toEqual([60 * 60 * 1000]);
+      expect(engines[0]!.records).toHaveLength(0);
+      expect(engines[1]!.records).toHaveLength(0);
+
+      clock.advanceMs(60 * 60 * 1000 + 1);
+      scheduler.runNext();
+
+      await expect(queued).resolves.toMatchObject({
+        outputText: "slot-1",
+      });
+      expect(engines[0]!.records.map((record) => record.prompt)).toEqual([
+        "after-reset",
+      ]);
+      expect(pool.stats().queued).toBe(0);
+    } finally {
+      await pool.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("retries the same job on another Claude worker after quota cooldown", async () => {
     const rootDir = await tempRoot();
     const engines = [
@@ -943,6 +1024,39 @@ class MutableRateLimitTelemetry implements ClaudeRateLimitTelemetrySource {
 
   set(snapshot: ClaudeRateLimitTelemetrySnapshot | null): void {
     this.snapshot = snapshot;
+  }
+}
+
+class ManualScheduler implements WorkerPoolScheduler {
+  private nextId = 1;
+  private readonly timers = new Map<
+    number,
+    { readonly callback: () => void; readonly delayMs: number }
+  >();
+
+  setTimeout(callback: () => void, delayMs: number): number {
+    const id = this.nextId;
+    this.nextId += 1;
+    this.timers.set(id, { callback, delayMs });
+    return id;
+  }
+
+  clearTimeout(handle: unknown): void {
+    this.timers.delete(Number(handle));
+  }
+
+  delays(): number[] {
+    return Array.from(this.timers.values(), (timer) => timer.delayMs);
+  }
+
+  runNext(): void {
+    const entry = this.timers.entries().next().value;
+    if (!entry) {
+      throw new Error("manual_scheduler_empty");
+    }
+    const [id, timer] = entry;
+    this.timers.delete(id);
+    timer.callback();
   }
 }
 
