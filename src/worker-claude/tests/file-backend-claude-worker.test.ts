@@ -659,6 +659,87 @@ describe("FileBackendClaudeWorker", () => {
     }
   });
 
+  it("removes aborted queued Claude account cooldown work before reset drain", async () => {
+    const rootDir = await tempRoot();
+    const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+    const scheduler = new ManualScheduler();
+    const accountCapacityStore = new InMemoryWorkerAccountCapacityStore();
+    const telemetry = [
+      new MutableRateLimitTelemetry(rateLimitSnapshot(clock.now(), {
+        five_hour: { usedPercentage: 92, resetsAt: resetAt },
+      })),
+      new MutableRateLimitTelemetry(rateLimitSnapshot(clock.now(), {
+        five_hour: { usedPercentage: 12, resetsAt: resetAt },
+      })),
+    ];
+    const engines = [
+      new RecordingClaudeEngine({ outputText: "slot-1" }),
+      new RecordingClaudeEngine({ outputText: "slot-2" }),
+    ];
+    const workers: FileBackendClaudeWorker[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<
+      FileBackendClaudeWorkerJob,
+      FileBackendClaudeWorkerResult
+    >({
+      poolId: "claude-account-abort-queue-pool",
+      slots: 2,
+      clock,
+      scheduler,
+      workerFactory: accountCapacityAwareWorkerFactory({
+        accountCapacityStore,
+        clock,
+        workerFactory: ({ slotIndex, workerId }) => {
+          const worker = new FileBackendClaudeWorker({
+            workerId,
+            providerInstanceId: `claude-account-abort-queue-${slotIndex + 1}`,
+            stateRootDir: rootDir,
+            encryptionKey: encryptionKey(),
+            engine: engines[slotIndex]!,
+            rateLimitTelemetry: telemetry[slotIndex]!,
+            capacityPolicy: {
+              rateLimitMinRemainingPercent: 10,
+            },
+            clock,
+          });
+          workers.push(worker);
+          return worker;
+        },
+      }),
+    });
+
+    try {
+      await pool.start();
+      await Promise.all(
+        workers.map((worker) =>
+          worker.seedClaudeOAuth({ oauthToken: "shared-account-token" }),
+        ),
+      );
+
+      const controller = new AbortController();
+      const queued = pool.run(
+        { prompt: "must-not-run" },
+        { abortSignal: controller.signal },
+      );
+      expect(pool.stats().queued).toBe(1);
+
+      controller.abort();
+
+      await expect(queued).rejects.toThrow("Worker pool run was aborted");
+      expect(pool.stats().queued).toBe(0);
+
+      clock.advanceMs(60 * 60 * 1000 + 1);
+      scheduler.runNext();
+
+      expect(engines[0]!.records).toHaveLength(0);
+      expect(engines[1]!.records).toHaveLength(0);
+      expect(pool.stats().queued).toBe(0);
+    } finally {
+      await pool.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("retries the same job on another Claude worker after quota cooldown", async () => {
     const rootDir = await tempRoot();
     const engines = [
