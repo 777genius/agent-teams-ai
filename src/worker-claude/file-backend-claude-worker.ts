@@ -788,7 +788,9 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
         ...(capacity.details ?? {}),
         providerInstanceId: this.options.providerInstanceId,
         configDir: this.configDir,
-        ...(this.quotaGroup ? { quotaGroup: this.quotaGroup } : {}),
+        ...(this.quotaGroup
+          ? { accountId: this.quotaGroup, quotaGroup: this.quotaGroup }
+          : {}),
       },
     };
   }

@@ -6,6 +6,7 @@ export type SubscriptionWorkerErrorCode =
   | "subscription_worker_prewarm_failed"
   | "subscription_worker_run_failed"
   | "subscription_worker_health_failed"
+  | "subscription_worker_account_unavailable"
   | "subscription_worker_shutdown_timeout"
   | "subscription_worker_pool_draining"
   | "subscription_worker_pool_queue_full"

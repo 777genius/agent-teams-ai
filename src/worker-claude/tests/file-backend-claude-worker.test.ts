@@ -107,6 +107,12 @@ describe("FileBackendClaudeWorker", () => {
       expect(firstCapacity.details?.quotaGroup).toBe(
         secondCapacity.details?.quotaGroup,
       );
+      expect(firstCapacity.details?.accountId).toBe(
+        firstCapacity.details?.quotaGroup,
+      );
+      expect(secondCapacity.details?.accountId).toBe(
+        secondCapacity.details?.quotaGroup,
+      );
       expect(firstCapacity.details).toMatchObject({
         providerInstanceId: "claude-a",
         configDir: workers[0]!.configDir,

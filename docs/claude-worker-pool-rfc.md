@@ -97,6 +97,34 @@ export interface CapacityAwareSubscriptionWorker<Job, Result>
 }
 ```
 
+Add a provider-neutral account capacity boundary for subscription runtimes where
+many worker slots can share one quota domain:
+
+```ts
+export type WorkerAccountCapacityStore = {
+  read(input: { accountId: string; now?: Date }): WorkerCapacitySnapshot | null;
+  observe(input: WorkerAccountLimitSignal): void;
+  clear(input: { accountId: string }): void;
+};
+```
+
+`worker-core/AccountCapacityAwareWorker` wraps any
+`SubscriptionWorker<Job, Result>`. It never parses Claude or Codex credentials.
+It only reads provider-neutral capacity details:
+
+- `accountId`: preferred provider-neutral quota/account key;
+- `quotaGroup`: backwards-compatible provider adapter key;
+- `subscriptionAccountId`: optional host-facing account key.
+
+If one wrapped worker reports an account-level cooldown or quota exhaustion,
+the shared `WorkerAccountCapacityStore` makes every sibling worker with the same
+account id unavailable until the reset time expires. Different accounts remain
+available. This keeps host apps and generic queues free of Claude-specific
+state, while still allowing provider adapters to expose safe quota signals.
+Hosts should prefer `accountCapacityAwareWorkerFactory()` when wiring
+`BoundedSubscriptionWorkerPool`, so account policy stays outside provider
+worker constructors.
+
 The pool can support a `slotSelector` policy:
 
 ```ts
@@ -157,6 +185,9 @@ that as passive telemetry, not as an active usage API:
   the slot until the local capacity window resets;
 - failure classifier: quota/rate-limit failures mark the slot
   `quota_exhausted` or `cooldown`;
+- account-aware decorator: when one slot sees a provider account-level limit,
+  all slots with the same `accountId`/`quotaGroup` stop receiving work until
+  the reset time;
 - in-flight work is allowed to finish unless the host aborts it.
 
 Tests must reproduce limit states with fake telemetry snapshots instead of
@@ -221,6 +252,10 @@ If no slots are available, behavior must be configured:
 Unit tests:
 
 - pool skips idle slots in `cooldown` and chooses the next available slot;
+- account-aware worker propagates a limit from one worker to all siblings with
+  the same account id without affecting another account;
+- account cooldown expires at the provider reset time and the worker becomes
+  assignable again;
 - quota failure marks a slot exhausted and retries an idempotent job on another
   slot when retry policy allows it;
 - prewarm failures degrade one slot without destroying the whole pool when the
