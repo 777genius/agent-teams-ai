@@ -463,6 +463,79 @@ describe("FileBackendClaudeWorker", () => {
     }
   });
 
+  it("rejects transcript bundle paths that traverse outside the target config dir", async () => {
+    const rootDir = await tempRoot();
+    const bundleRoot = join(rootDir, "bundles");
+    const bundleId = "malicious-bundle";
+    const bundleDir = join(bundleRoot, "bundles", bundleId);
+    const targetConfigDir = join(rootDir, "target-config");
+    const escapedPath = join(rootDir, "escape.txt");
+    const store = new FileClaudeTranscriptBundleStore(bundleRoot);
+
+    try {
+      await mkdir(bundleDir, { recursive: true });
+      await writeFile(
+        join(bundleDir, "manifest.json"),
+        `${JSON.stringify({
+          bundleId,
+          cwd: rootDir,
+          sessionId: "session-a",
+          sourceConfigDir: join(rootDir, "source-config"),
+          files: ["safe/../../escape.txt"],
+          capturedAt: "2026-06-01T00:00:00.000Z",
+        })}\n`,
+      );
+      await writeFile(join(bundleDir, "escape.txt"), "must not escape", "utf8");
+
+      await expect(
+        store.materialize({
+          bundleId,
+          targetConfigDir,
+        }),
+      ).rejects.toThrow("claude_safe_relative_path_required");
+      await expect(readFile(escapedPath, "utf8")).rejects.toThrow();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects transcript bundle payloads that are not regular files", async () => {
+    const rootDir = await tempRoot();
+    const bundleRoot = join(rootDir, "bundles");
+    const bundleId = "directory-payload-bundle";
+    const bundleDir = join(bundleRoot, "bundles", bundleId);
+    const filesDir = join(bundleDir, "files");
+    const relativePath = "projects/workspace/session-a.jsonl";
+    const targetConfigDir = join(rootDir, "target-config");
+    const targetPath = join(targetConfigDir, relativePath);
+    const store = new FileClaudeTranscriptBundleStore(bundleRoot);
+
+    try {
+      await mkdir(join(filesDir, relativePath), { recursive: true });
+      await writeFile(
+        join(bundleDir, "manifest.json"),
+        `${JSON.stringify({
+          bundleId,
+          cwd: rootDir,
+          sessionId: "session-a",
+          sourceConfigDir: join(rootDir, "source-config"),
+          files: [relativePath],
+          capturedAt: "2026-06-01T00:00:00.000Z",
+        })}\n`,
+      );
+
+      await expect(
+        store.materialize({
+          bundleId,
+          targetConfigDir,
+        }),
+      ).rejects.toThrow("claude_transcript_bundle_file_invalid");
+      await expect(readFile(targetPath, "utf8")).rejects.toThrow();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("reports cooldown from Claude rate-limit telemetry and restores after reset", async () => {
     const rootDir = await tempRoot();
     const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));

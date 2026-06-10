@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { cp, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile, } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { cp, lstat, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile, } from "node:fs/promises";
+import { dirname, isAbsolute, join, posix, relative, win32 } from "node:path";
 export class ClaudeLogicalThreadConflictError extends Error {
     threadId;
     expectedGeneration;
@@ -128,6 +128,10 @@ export class FileClaudeTranscriptBundleStore {
         for (const file of bundle.files) {
             const relativePath = requireSafeRelativePath(file);
             const sourcePath = join(filesDir, relativePath);
+            const sourceStats = await lstat(sourcePath);
+            if (!sourceStats.isFile()) {
+                throw new Error("claude_transcript_bundle_file_invalid");
+            }
             const targetPath = join(targetConfigDir, relativePath);
             await mkdir(dirname(targetPath), { recursive: true, mode: 0o700 });
             await cp(sourcePath, targetPath, { force: true });
@@ -226,14 +230,20 @@ function requireSafeId(value) {
     return value;
 }
 function requireSafeRelativePath(value) {
+    const normalizedInput = value.replace(/\\/g, "/");
+    const normalizedPath = posix.normalize(normalizedInput);
     if (value.length === 0 ||
+        value.includes("\0") ||
         isAbsolute(value) ||
-        value === ".." ||
-        value.startsWith(`..${"/"}`) ||
-        value.startsWith(`..${"\\"}`)) {
+        win32.isAbsolute(value) ||
+        /^[A-Za-z]:/u.test(value) ||
+        normalizedPath === "." ||
+        normalizedPath === ".." ||
+        normalizedPath.startsWith("../") ||
+        normalizedInput.split("/").includes("..")) {
         throw new Error("claude_safe_relative_path_required");
     }
-    return value;
+    return normalizedPath;
 }
 function isNodeError(error) {
     return error instanceof Error && "code" in error;
