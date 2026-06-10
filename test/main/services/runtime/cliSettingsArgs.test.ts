@@ -138,7 +138,7 @@ describe('mergeJsonSettingsArgs', () => {
       JSON.stringify({
         codex: {
           agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
+            config_overrides: ['model_reasoning_summary="auto"'],
           },
         },
       }),
@@ -156,7 +156,7 @@ describe('mergeJsonSettingsArgs', () => {
       codex: {
         agent_teams_launch_config: {
           config_overrides: [
-            'service_tier="flex"',
+            'model_reasoning_summary="auto"',
             'service_tier="fast"',
             'features.fast_mode=true',
           ],

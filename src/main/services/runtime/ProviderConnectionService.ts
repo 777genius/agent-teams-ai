@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import path from 'node:path';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
 import { execCli } from '@main/utils/childProcess';
@@ -11,6 +10,8 @@ import {
 
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
+
+import { isCodexExecBinary } from './codexCliBinary';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -93,8 +94,8 @@ const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
 const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
 const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
-const CODEX_SERVICE_TIER_FLEX_OVERRIDE = 'service_tier="flex"';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
+const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
 const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
@@ -271,20 +272,6 @@ async function verifyAnthropicApiKeyWithApi(
   }
 }
 
-function isCodexExecBinary(binaryPath?: string | null): boolean {
-  const binaryName = path.basename(binaryPath?.trim() ?? '').toLowerCase();
-  return (
-    binaryName === 'codex' ||
-    binaryName === 'codex.exe' ||
-    binaryName === 'codex.cmd' ||
-    binaryName === 'codex.bat' ||
-    binaryName === 'codex-cli' ||
-    binaryName === 'codex-cli.exe' ||
-    binaryName === 'codex-cli.cmd' ||
-    binaryName === 'codex-cli.bat'
-  );
-}
-
 function tomlString(value: string): string {
   return JSON.stringify(value);
 }
@@ -308,10 +295,7 @@ function buildCodexLaunchArgs(
   } = {}
 ): string[] {
   const customProviderConfigOverrides = options.customProviderConfigOverrides ?? [];
-  const cliConfigOverrides = [
-    CODEX_SERVICE_TIER_FLEX_OVERRIDE,
-    ...(options.cliConfigOverrides ?? []),
-  ];
+  const cliConfigOverrides = [...(options.cliConfigOverrides ?? [])];
   if (isCodexExecBinary(binaryPath)) {
     return [
       '-c',
@@ -469,7 +453,11 @@ async function checkCodexCliLoginStatus({
   env: NodeJS.ProcessEnv;
 }): Promise<CodexCliLoginStatusCheckResult> {
   const executable = binaryPath?.trim() || 'codex';
-  const args = [...buildCodexForcedLoginLaunchArgs(executable, 'chatgpt'), 'login', 'status'];
+  const args = [
+    ...buildCodexForcedLoginLaunchArgs(executable, 'chatgpt', CODEX_LOGIN_STATUS_CONFIG_OVERRIDES),
+    'login',
+    'status',
+  ];
 
   try {
     const result = await execCli(executable, args, {

@@ -193,6 +193,45 @@ describe('CliProviderModelAvailabilityService', () => {
     });
   });
 
+  it('uses Codex exec model probe args for the direct Codex binary', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      providerArgs: ['-c', 'forced_login_method="chatgpt"'],
+      connectionIssues: {},
+    });
+    execCliMock.mockResolvedValue({
+      stdout: '{"type":"agent_message","message":"PONG"}',
+      stderr: '',
+    });
+
+    const service = new CliProviderModelAvailabilityService();
+    service.getSnapshot({
+      ...createContext(['gpt-5.4']),
+      binaryPath: '/usr/local/bin/codex',
+    });
+
+    await vi.waitFor(() => {
+      expect(execCliMock).toHaveBeenCalledWith(
+        '/usr/local/bin/codex',
+        [
+          '-c',
+          'forced_login_method="chatgpt"',
+          'exec',
+          '--ignore-user-config',
+          '--json',
+          '--skip-git-repo-check',
+          '--ephemeral',
+          '--model',
+          'gpt-5.4',
+          'Output only the single word PONG.',
+        ],
+        expect.objectContaining({
+          env: { HOME: '/Users/tester' },
+        })
+      );
+    });
+  });
+
   it('allows stored Codex API-key access for model probes', async () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { HOME: '/Users/tester' },

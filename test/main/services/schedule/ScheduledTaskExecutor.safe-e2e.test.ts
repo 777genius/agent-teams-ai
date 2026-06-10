@@ -185,7 +185,7 @@ describe('ScheduledTaskExecutor safe e2e', () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 
-  it('orders app-owned Codex flex service tier before scheduled explicit fast mode args', async () => {
+  it('passes scheduled explicit Codex fast mode args without obsolete flex tier', async () => {
     const child = createFakeChildProcess();
     mockSpawnCli.mockReturnValue(child as unknown as ChildProcess);
 
@@ -210,15 +210,11 @@ describe('ScheduledTaskExecutor safe e2e', () => {
     const overrides = readCodexLaunchConfigOverrides(launchArgs);
     expect(overrides).toEqual(
       expect.arrayContaining([
-        'service_tier="flex"',
         'service_tier="fast"',
         'features.fast_mode=true',
       ])
     );
-    const flexIndex = overrides.indexOf('service_tier="flex"');
-    const fastIndex = overrides.indexOf('service_tier="fast"');
-    expect(flexIndex).toBeGreaterThanOrEqual(0);
-    expect(fastIndex).toBeGreaterThan(flexIndex);
+    expect(overrides).not.toContain('service_tier="flex"');
 
     const spawnOptions = mockSpawnCli.mock.calls[0]?.[2] as
       | { env?: NodeJS.ProcessEnv; cwd?: string }

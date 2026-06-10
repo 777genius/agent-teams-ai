@@ -2363,7 +2363,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
         '-c',
-        'service_tier="flex"',
+        'service_tier="fast"',
       ],
     });
 
@@ -2506,7 +2506,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
         '-c',
-        'service_tier="flex"',
+        'service_tier="fast"',
       ],
     });
 
@@ -2567,7 +2567,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       'codex',
-      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="flex"']
+      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="fast"']
     );
 
     expect(result.warning).toBeUndefined();
@@ -2578,7 +2578,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
         '-c',
-        'service_tier="flex"',
+        'service_tier="fast"',
         '-p',
         'Output only the single word PONG.',
         '--output-format',
@@ -3015,7 +3015,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
         '-c',
-        'service_tier="flex"',
+        'service_tier="fast"',
       ],
       limitContext: false,
     });

@@ -1744,12 +1744,7 @@ describe('ProviderConnectionService', () => {
       'codex'
     );
 
-    expect(args).toEqual([
-      '-c',
-      'forced_login_method="chatgpt"',
-      '-c',
-      'service_tier="flex"',
-    ]);
+    expect(args).toEqual(['-c', 'forced_login_method="chatgpt"']);
   });
 
   it('reports a pinned Codex ChatGPT mode as a missing active CLI login instead of flattening it to generic auth advice', async () => {
@@ -2033,7 +2028,7 @@ describe('ProviderConnectionService', () => {
         '-c',
         'forced_login_method="chatgpt"',
         '-c',
-        'service_tier="flex"',
+        'service_tier="fast"',
         'login',
         'status',
       ],
@@ -2254,9 +2249,6 @@ describe('ProviderConnectionService', () => {
       JSON.stringify({
         codex: {
           forced_login_method: 'chatgpt',
-          agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
-          },
         },
       }),
     ]);
@@ -2293,9 +2285,6 @@ describe('ProviderConnectionService', () => {
       JSON.stringify({
         codex: {
           forced_login_method: 'api',
-          agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
-          },
         },
       }),
     ]);
@@ -2327,12 +2316,7 @@ describe('ProviderConnectionService', () => {
       '/usr/local/bin/codex'
     );
 
-    expect(args).toEqual([
-      '-c',
-      'forced_login_method="api"',
-      '-c',
-      'service_tier="flex"',
-    ]);
+    expect(args).toEqual(['-c', 'forced_login_method="api"']);
   });
 
   it('adds custom provider settings for managed Codex API-key launches', async () => {
@@ -2382,9 +2366,6 @@ describe('ProviderConnectionService', () => {
               'model_providers.agent_teams_custom.wire_api="responses"',
               'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
             ],
-          },
-          agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
           },
         },
       }),
@@ -2438,8 +2419,6 @@ describe('ProviderConnectionService', () => {
       'model_providers.agent_teams_custom.wire_api="responses"',
       '-c',
       'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
-      '-c',
-      'service_tier="flex"',
     ]);
   });
 
@@ -2496,9 +2475,6 @@ describe('ProviderConnectionService', () => {
       JSON.stringify({
         codex: {
           forced_login_method: 'chatgpt',
-          agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
-          },
         },
       }),
     ]);

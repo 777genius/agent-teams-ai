@@ -3,11 +3,13 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
+import { isCodexExecBinary } from './codexCliBinary';
 import {
   buildProviderAwareCliEnv,
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
 import {
+  buildCodexExecModelProbeArgs,
   buildProviderModelProbeArgs,
   classifyProviderModelProbeFailure,
   getProviderModelProbeTimeoutMs,
@@ -162,6 +164,18 @@ function classifyFailedProbe(
   };
 }
 
+function buildModelProbeCommandArgs(
+  context: ProviderModelAvailabilityContext,
+  providerArgs: string[],
+  modelId: string
+): string[] {
+  if (context.provider.providerId === 'codex' && isCodexExecBinary(context.binaryPath)) {
+    return [...providerArgs, ...buildCodexExecModelProbeArgs(modelId)];
+  }
+
+  return [...providerArgs, ...buildProviderModelProbeArgs(modelId)];
+}
+
 export class CliProviderModelAvailabilityService {
   private readonly cache = new Map<string, ProviderModelAvailabilityCacheEntry>();
   private readonly queue: (() => void)[] = [];
@@ -281,7 +295,7 @@ export class CliProviderModelAvailabilityService {
       const { env, providerArgs } = await entry.cliEnvPromise;
       const { stdout } = await execCli(
         context.binaryPath,
-        [...providerArgs, ...buildProviderModelProbeArgs(modelId)],
+        buildModelProbeCommandArgs(context, providerArgs, modelId),
         {
           timeout: getProviderModelProbeTimeoutMs(context.provider.providerId),
           env,

@@ -203,7 +203,7 @@ function configureLaunchStubs(svc: TeamProvisioningService): void {
   overrides.startFilesystemMonitor = vi.fn();
 }
 
-function configureAppOwnedFlexServiceTierProviderArgs(svc: TeamProvisioningService): void {
+function configureCodexProviderLaunchArgs(svc: TeamProvisioningService): void {
   (
     svc as unknown as {
       buildProvisioningEnv: ProvisioningServiceOverrides['buildProvisioningEnv'];
@@ -217,9 +217,6 @@ function configureAppOwnedFlexServiceTierProviderArgs(svc: TeamProvisioningServi
       JSON.stringify({
         codex: {
           forced_login_method: 'chatgpt',
-          agent_teams_launch_config: {
-            config_overrides: ['service_tier="flex"'],
-          },
         },
       }),
     ],
@@ -266,19 +263,12 @@ function configureCodexFastLaunchIdentity(svc: TeamProvisioningService): void {
   ).resolveAndValidateLaunchIdentity = vi.fn(async () => fastLaunchIdentity);
 }
 
-function expectAppOwnedFlexServiceTierBeforeFastMode(args: string[] | undefined): void {
+function expectExplicitFastModeWithoutFlex(args: string[] | undefined): void {
   const overrides = readCodexLaunchConfigOverrides(args);
   expect(overrides).toEqual(
-    expect.arrayContaining([
-      'service_tier="flex"',
-      'service_tier="fast"',
-      'features.fast_mode=true',
-    ])
+    expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
   );
-  const flexIndex = overrides.indexOf('service_tier="flex"');
-  const fastIndex = overrides.indexOf('service_tier="fast"');
-  expect(flexIndex).toBeGreaterThanOrEqual(0);
-  expect(fastIndex).toBeGreaterThan(flexIndex);
+  expect(overrides).not.toContain('service_tier="flex"');
   expect(args).not.toContain('-c');
 }
 
@@ -309,20 +299,18 @@ function readCodexLaunchConfigOverrides(args: string[] | undefined): string[] {
   return [];
 }
 
-function expectAppOwnedFlexServiceTierBeforeFastModeCommand(
-  command: string | undefined
-): void {
+function expectExplicitFastModeWithoutFlexCommand(command: string | undefined): void {
   expect(command).toContain('features.fast_mode=true');
   expect(command).not.toContain("'-c'");
-  const flexIndex = command?.indexOf('service_tier=') ?? -1;
   const escapedFastIndex = command?.indexOf('service_tier=\\"fast\\"') ?? -1;
   const plainFastIndex = command?.indexOf('service_tier="fast"') ?? -1;
   const fastIndex = escapedFastIndex >= 0 ? escapedFastIndex : plainFastIndex;
-  expect(flexIndex).toBeGreaterThanOrEqual(0);
-  expect(fastIndex).toBeGreaterThan(flexIndex);
+  expect(fastIndex).toBeGreaterThanOrEqual(0);
+  expect(command).not.toContain('service_tier=\\"flex\\"');
+  expect(command).not.toContain('service_tier="flex"');
 }
 
-function configureAppOwnedFlexFastRuntimeArgsPlan(svc: TeamProvisioningService): void {
+function configureExplicitFastRuntimeArgsPlan(svc: TeamProvisioningService): void {
   (
     svc as unknown as {
       buildTeamRuntimeLaunchArgsPlan: () => Promise<{
@@ -341,7 +329,14 @@ function configureAppOwnedFlexFastRuntimeArgsPlan(svc: TeamProvisioningService):
       'features.fast_mode=true',
     ]),
     runtimeTurnSettledHookArgs: [],
-    providerArgs: buildCodexLaunchConfigSettingsArgs(['service_tier="flex"']),
+    providerArgs: [
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+        },
+      }),
+    ],
     settingsArgs: [],
     extraArgs: [],
     inheritedProviderArgs: [],
@@ -512,7 +507,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     }
   });
 
-  it('createTeam keeps Codex app-owned flex service tier before explicit fast mode args', async () => {
+  it('createTeam sends explicit Codex fast mode args without obsolete flex tier', async () => {
     const teamName = 'codex-fast-tier-order-create';
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex fast tier project-'));
 
@@ -521,7 +516,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
-    configureAppOwnedFlexServiceTierProviderArgs(svc);
+    configureCodexProviderLaunchArgs(svc);
     configureCodexFastLaunchIdentity(svc);
     svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
 
@@ -543,7 +538,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       runId = created.runId;
 
       const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
-      expectAppOwnedFlexServiceTierBeforeFastMode(launchArgs);
+      expectExplicitFastModeWithoutFlex(launchArgs);
 
       await svc.cancelProvisioning(runId);
       runId = undefined;
@@ -555,7 +550,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     }
   });
 
-  it('launchTeam keeps Codex app-owned flex service tier before explicit fast mode args', async () => {
+  it('launchTeam sends explicit Codex fast mode args without obsolete flex tier', async () => {
     const teamName = 'codex-fast-tier-order-launch';
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex fast tier launch project-'));
     writeCodexTeamWithAppOnlyMeta(teamName);
@@ -565,7 +560,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
-    configureAppOwnedFlexServiceTierProviderArgs(svc);
+    configureCodexProviderLaunchArgs(svc);
     configureCodexFastLaunchIdentity(svc);
     svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
 
@@ -587,7 +582,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       runId = launched.runId;
 
       const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
-      expectAppOwnedFlexServiceTierBeforeFastMode(launchArgs);
+      expectExplicitFastModeWithoutFlex(launchArgs);
 
       await svc.cancelProvisioning(runId);
       runId = undefined;
@@ -774,7 +769,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       (
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
-      configureAppOwnedFlexFastRuntimeArgsPlan(svc);
+      configureExplicitFastRuntimeArgsPlan(svc);
       (
         svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
       ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
@@ -794,7 +789,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           '--strict-mcp-config',
         ])
       );
-      expectAppOwnedFlexServiceTierBeforeFastMode(restartArgs);
+      expectExplicitFastModeWithoutFlex(restartArgs);
       restartMcpConfigPath = extractMcpConfigPathFromArgs(restartArgs ?? []);
       expectAppOnlyMcpConfigPath(restartMcpConfigPath);
 
@@ -809,7 +804,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     }
   });
 
-  it('restartMember direct tmux sends Codex app-owned flex service tier before explicit fast mode args', async () => {
+  it('restartMember direct tmux sends explicit Codex fast mode args without obsolete flex tier', async () => {
     const teamName = 'codex-fast-tier-tmux-restart';
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex tmux restart project-'));
     writeProjectMcpConfig(projectDir);
@@ -888,7 +883,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       (
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
-      configureAppOwnedFlexFastRuntimeArgsPlan(svc);
+      configureExplicitFastRuntimeArgsPlan(svc);
       (
         svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
       ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
@@ -905,7 +900,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       expect(paneId).toBe('%7');
       expect(command).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
       expect(command).toContain("'--mcp-config'");
-      expectAppOwnedFlexServiceTierBeforeFastModeCommand(command);
+      expectExplicitFastModeWithoutFlexCommand(command);
 
       await svc.cancelProvisioning(runId);
       runId = undefined;

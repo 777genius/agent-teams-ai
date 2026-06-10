@@ -527,50 +527,6 @@ describe('ScheduledTaskExecutor', () => {
     proc.emit('close', 0);
   });
 
-  it('orders Codex app-owned flex service tier before explicit fast mode', async () => {
-    buildProviderAwareCliEnvMock.mockResolvedValue({
-      env: { ...process.env, SHELL: '/bin/zsh' },
-      connectionIssues: {},
-      providerArgs: [
-        '--settings',
-        JSON.stringify({
-          codex: {
-            agent_teams_launch_config: {
-              config_overrides: ['service_tier="flex"'],
-            },
-          },
-        }),
-      ],
-    });
-    const proc = createMockProcess();
-    mockSpawnCli.mockReturnValue(proc);
-
-    const executor = new ScheduledTaskExecutor();
-    void executor.execute(
-      makeRequest({
-        config: {
-          cwd: '/tmp/project',
-          prompt: 'do it',
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model: 'gpt-5.4',
-          fastMode: 'on',
-          resolvedFastMode: true,
-        },
-      })
-    );
-    await flushAsync();
-
-    const args = mockSpawnCli.mock.calls[0][1] as string[];
-    const overrides = readCodexLaunchConfigOverrides(args);
-    const flexIndex = overrides.indexOf('service_tier="flex"');
-    const fastIndex = overrides.indexOf('service_tier="fast"');
-    expect(flexIndex).toBeGreaterThanOrEqual(0);
-    expect(fastIndex).toBeGreaterThan(flexIndex);
-
-    proc.emit('close', 0);
-  });
-
   it('does not include Codex fast config when resolved fast mode is false', async () => {
     const proc = createMockProcess();
     mockSpawnCli.mockReturnValue(proc);

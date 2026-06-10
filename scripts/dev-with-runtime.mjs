@@ -24,6 +24,34 @@ const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
 const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
 const runtimeDisplayName = 'teams orchestrator';
 
+function prependPathEntries(entries) {
+  const currentPath = process.env.PATH ?? '';
+  const currentEntries = new Set(currentPath.split(path.delimiter).filter(Boolean));
+  const nextEntries = [];
+
+  for (const entry of entries) {
+    if (!entry || currentEntries.has(entry) || !fs.existsSync(entry)) {
+      continue;
+    }
+    nextEntries.push(entry);
+  }
+
+  if (nextEntries.length > 0) {
+    process.env.PATH = [...nextEntries, currentPath].filter(Boolean).join(path.delimiter);
+  }
+}
+
+function augmentRuntimeToolPath() {
+  const bunInstall = process.env.BUN_INSTALL?.trim();
+  const home = os.homedir();
+  prependPathEntries([
+    bunInstall ? path.join(bunInstall, 'bin') : '',
+    home ? path.join(home, '.bun', 'bin') : '',
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+  ]);
+}
+
 function runOrExit(cmd, args, options = {}) {
   const result = spawnSyncWithWindowsShell(cmd, args, {
     stdio: 'inherit',
@@ -506,6 +534,7 @@ async function resolveRuntimeCli() {
 }
 
 async function main() {
+  augmentRuntimeToolPath();
   const resolvedRuntime = await resolveRuntimeCli();
 
   if (shouldPrintRuntimePath) {

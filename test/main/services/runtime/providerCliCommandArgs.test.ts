@@ -9,14 +9,14 @@ describe('providerCliCommandArgs', () => {
   it('preserves launch-only config overrides for provider launch commands', () => {
     expect(
       buildProviderLaunchCliCommandArgs(
-        ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="flex"'],
+        ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="fast"'],
         ['-p', 'Output only PONG']
       )
     ).toEqual([
       '--settings',
       '{"codex":{"forced_login_method":"chatgpt"}}',
       '-c',
-      'service_tier="flex"',
+      'service_tier="fast"',
       '-p',
       'Output only PONG',
     ]);
@@ -29,7 +29,7 @@ describe('providerCliCommandArgs', () => {
           '--settings',
           '{"codex":{"forced_login_method":"chatgpt"}}',
           '-c',
-          'service_tier="flex"',
+          'service_tier="fast"',
           '--config',
           'features.fast_mode=true',
           '-c=model_reasoning_effort="high"',
