@@ -191,6 +191,47 @@ describe("FileBackendClaudeWorker", () => {
     }
   });
 
+  it("persists a late capacity account id update across worker restarts", async () => {
+    const rootDir = await tempRoot();
+    const key = encryptionKey();
+    const first = new FileBackendClaudeWorker({
+      providerInstanceId: "claude-capacity-restart",
+      stateRootDir: rootDir,
+      encryptionKey: key,
+      engine: new RecordingClaudeEngine(),
+    });
+    const restarted = new FileBackendClaudeWorker({
+      providerInstanceId: "claude-capacity-restart",
+      stateRootDir: rootDir,
+      encryptionKey: key,
+      engine: new RecordingClaudeEngine(),
+    });
+
+    try {
+      await first.start();
+      await first.seedClaudeOAuth({ oauthToken: "restart-oauth-token" });
+      await first.seedClaudeOAuth({
+        oauthToken: "restart-oauth-token",
+        capacityAccountId: "claude-account-main",
+      });
+      expect(first.capacity().details?.accountId).toBe("claude-account-main");
+      await first.dispose();
+
+      await restarted.start();
+      await restarted.seedClaudeOAuth({ oauthToken: "restart-oauth-token" });
+
+      expect(restarted.capacity().details?.accountId).toBe(
+        "claude-account-main",
+      );
+    } finally {
+      await Promise.all([
+        first.dispose().catch(() => undefined),
+        restarted.dispose().catch(() => undefined),
+      ]);
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("can opt into spending warmup prompt prewarm", async () => {
     const rootDir = await tempRoot();
     const engine = new RecordingClaudeEngine({ outputText: "OK" });

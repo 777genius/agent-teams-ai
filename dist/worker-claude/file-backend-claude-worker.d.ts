@@ -115,6 +115,7 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
     private rateLimitCapacity;
     private rollCapacityWindow;
     private rememberQuotaGroup;
+    private withStoredCapacityAccountId;
     private withCapacityDetails;
     private assertStoredSessionHasConfigDir;
     private assertStarted;

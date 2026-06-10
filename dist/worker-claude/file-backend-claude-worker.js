@@ -149,16 +149,39 @@ export class FileBackendClaudeWorker {
         this.workerState = "started";
     }
     async seedClaudeOAuth(input) {
+        const capacityAccountId = normalizeCapacityAccountId(input.capacityAccountId) ??
+            normalizeCapacityAccountId(this.options.capacityAccountId);
         const existing = await this.sessionStore.read({
             providerInstanceId: this.options.providerInstanceId,
             expectedProviderId: "claude",
             purpose: "health-check",
         });
         if (existing) {
-            this.rememberQuotaGroup(existing.artifact, input.capacityAccountId);
+            const updatedArtifact = this.withStoredCapacityAccountId(existing.artifact, capacityAccountId);
+            if (updatedArtifact) {
+                const write = await this.sessionStore.write({
+                    providerInstanceId: this.options.providerInstanceId,
+                    expectedGeneration: existing.generation,
+                    nextArtifact: updatedArtifact,
+                    idempotencyKey: `seed-capacity-account:${hashText(capacityAccountId)}`,
+                    leaseId: "seed-local-file-backend",
+                });
+                if (write.status === "accepted" ||
+                    write.status === "idempotent_replay") {
+                    this.rememberQuotaGroup(updatedArtifact);
+                    return;
+                }
+                const latest = await this.sessionStore.read({
+                    providerInstanceId: this.options.providerInstanceId,
+                    expectedProviderId: "claude",
+                    purpose: "health-check",
+                });
+                this.rememberQuotaGroup(latest?.artifact ?? existing.artifact, capacityAccountId);
+                return;
+            }
+            this.rememberQuotaGroup(existing.artifact, capacityAccountId);
             return;
         }
-        const capacityAccountId = normalizeCapacityAccountId(input.capacityAccountId ?? this.options.capacityAccountId);
         const metadata = {
             ...(input.metadata ?? {}),
             ...(capacityAccountId
@@ -576,6 +599,36 @@ export class FileBackendClaudeWorker {
             this.quotaGroup = null;
             this.capacityAccountId = null;
         }
+    }
+    withStoredCapacityAccountId(session, capacityAccountId) {
+        if (!capacityAccountId)
+            return null;
+        let validation;
+        try {
+            validation = validateClaudeSessionArtifact(session);
+        }
+        catch {
+            return null;
+        }
+        const storedCapacityAccountId = normalizeCapacityAccountId(validation.session.metadata?.[claudeCapacityAccountIdMetadataKey]);
+        if (storedCapacityAccountId === capacityAccountId)
+            return null;
+        return sessionArtifactFromClaudeOAuth({
+            oauthToken: validation.session.oauthToken,
+            ...(validation.session.configDir
+                ? { configDir: validation.session.configDir }
+                : {}),
+            ...(validation.session.refreshedAt
+                ? { refreshedAt: validation.session.refreshedAt }
+                : {}),
+            ...(validation.session.expiresAt
+                ? { expiresAt: validation.session.expiresAt }
+                : {}),
+            metadata: {
+                ...(validation.session.metadata ?? {}),
+                [claudeCapacityAccountIdMetadataKey]: capacityAccountId,
+            },
+        });
     }
     withCapacityDetails(capacity) {
         return {

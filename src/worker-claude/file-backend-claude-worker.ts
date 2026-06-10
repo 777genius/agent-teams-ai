@@ -287,19 +287,49 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     readonly expiresAt?: string;
     readonly metadata?: Readonly<Record<string, string>>;
   }): Promise<void> {
+    const capacityAccountId =
+      normalizeCapacityAccountId(input.capacityAccountId) ??
+      normalizeCapacityAccountId(this.options.capacityAccountId);
     const existing = await this.sessionStore.read({
       providerInstanceId: this.options.providerInstanceId,
       expectedProviderId: "claude",
       purpose: "health-check",
     });
     if (existing) {
-      this.rememberQuotaGroup(existing.artifact, input.capacityAccountId);
+      const updatedArtifact = this.withStoredCapacityAccountId(
+        existing.artifact,
+        capacityAccountId,
+      );
+      if (updatedArtifact) {
+        const write = await this.sessionStore.write({
+          providerInstanceId: this.options.providerInstanceId,
+          expectedGeneration: existing.generation,
+          nextArtifact: updatedArtifact,
+          idempotencyKey: `seed-capacity-account:${hashText(capacityAccountId!)}`,
+          leaseId: "seed-local-file-backend",
+        });
+        if (
+          write.status === "accepted" ||
+          write.status === "idempotent_replay"
+        ) {
+          this.rememberQuotaGroup(updatedArtifact);
+          return;
+        }
+        const latest = await this.sessionStore.read({
+          providerInstanceId: this.options.providerInstanceId,
+          expectedProviderId: "claude",
+          purpose: "health-check",
+        });
+        this.rememberQuotaGroup(
+          latest?.artifact ?? existing.artifact,
+          capacityAccountId,
+        );
+        return;
+      }
+      this.rememberQuotaGroup(existing.artifact, capacityAccountId);
       return;
     }
 
-    const capacityAccountId = normalizeCapacityAccountId(
-      input.capacityAccountId ?? this.options.capacityAccountId,
-    );
     const metadata = {
       ...(input.metadata ?? {}),
       ...(capacityAccountId
@@ -784,7 +814,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
 
   private rememberQuotaGroup(
     session: SessionArtifact,
-    capacityAccountIdOverride?: string,
+    capacityAccountIdOverride?: string | null,
   ): void {
     try {
       const validation = validateClaudeSessionArtifact(session);
@@ -802,6 +832,39 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       this.quotaGroup = null;
       this.capacityAccountId = null;
     }
+  }
+
+  private withStoredCapacityAccountId(
+    session: SessionArtifact,
+    capacityAccountId: string | null,
+  ): SessionArtifact | null {
+    if (!capacityAccountId) return null;
+    let validation;
+    try {
+      validation = validateClaudeSessionArtifact(session);
+    } catch {
+      return null;
+    }
+    const storedCapacityAccountId = normalizeCapacityAccountId(
+      validation.session.metadata?.[claudeCapacityAccountIdMetadataKey],
+    );
+    if (storedCapacityAccountId === capacityAccountId) return null;
+    return sessionArtifactFromClaudeOAuth({
+      oauthToken: validation.session.oauthToken,
+      ...(validation.session.configDir
+        ? { configDir: validation.session.configDir }
+        : {}),
+      ...(validation.session.refreshedAt
+        ? { refreshedAt: validation.session.refreshedAt }
+        : {}),
+      ...(validation.session.expiresAt
+        ? { expiresAt: validation.session.expiresAt }
+        : {}),
+      metadata: {
+        ...(validation.session.metadata ?? {}),
+        [claudeCapacityAccountIdMetadataKey]: capacityAccountId,
+      },
+    });
   }
 
   private withCapacityDetails(
@@ -935,7 +998,9 @@ function hashText(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function normalizeCapacityAccountId(value: string | undefined): string | null {
+function normalizeCapacityAccountId(
+  value: string | null | undefined,
+): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
