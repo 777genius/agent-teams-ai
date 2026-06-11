@@ -644,6 +644,32 @@ function getRuntimeCatalogLaunchModels(
   return models.length > 0 ? models : null;
 }
 
+function isOpenCodeSummaryOnlyModelList(
+  models: readonly string[],
+  providerStatus?: RuntimeAwareProviderStatus | null
+): boolean {
+  if (providerStatus?.modelCatalog?.providerId !== 'opencode') {
+    return false;
+  }
+
+  const trimmedModels = models.map((model) => model.trim()).filter(Boolean);
+  if (trimmedModels.length !== 1) {
+    return false;
+  }
+
+  const summaryModel = trimmedModels[0].toLowerCase();
+  const catalogDefaultIds = [
+    providerStatus.modelCatalog.defaultLaunchModel,
+    providerStatus.modelCatalog.defaultModelId,
+    providerStatus.modelCatalog.models.find((model) => model.isDefault)?.launchModel,
+    providerStatus.modelCatalog.models.find((model) => model.isDefault)?.id,
+  ]
+    .map((model) => model?.trim().toLowerCase())
+    .filter((model): model is string => Boolean(model));
+
+  return summaryModel === 'opencode/big-pickle' || catalogDefaultIds.includes(summaryModel);
+}
+
 function mergeModelLists(primary: readonly string[], supplemental: readonly string[]): string[] {
   const merged = new Map<string, string>();
   for (const model of [...primary, ...supplemental]) {
@@ -689,7 +715,9 @@ export function getVisibleTeamProviderModels(
   const catalogModels =
     providerId === 'opencode' ? getRuntimeCatalogLaunchModels(providerId, providerStatus) : null;
   const sourceModels =
-    providerId === 'opencode' && catalogModels && !hasExplicitModels
+    providerId === 'opencode' &&
+    catalogModels &&
+    (!hasExplicitModels || isOpenCodeSummaryOnlyModelList(models, providerStatus))
       ? mergeModelLists(catalogModels, models)
       : models;
 

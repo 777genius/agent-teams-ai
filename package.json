@@ -431,6 +431,7 @@
       "qs": "6.15.2",
       "rollup": "4.59.0",
       "serialize-javascript": "7.0.5",
+      "shell-quote": "1.8.4",
       "simple-git": "3.36.0",
       "smol-toml": "1.6.1",
       "srvx": "0.11.13",

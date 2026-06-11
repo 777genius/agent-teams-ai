@@ -1995,8 +1995,8 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).not.toContain('Authenticated');
     expect(host.textContent).not.toContain('Providers:');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toContain(
-      '245, 158, 11'
+    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
+      /(?:245,\s*158,\s*11|#f59e0b)/i
     );
 
     await act(async () => {
@@ -2073,8 +2073,8 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Providers: 0/2 connected');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toContain(
-      '245, 158, 11'
+    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
+      /(?:245,\s*158,\s*11|#f59e0b)/i
     );
 
     await act(async () => {
