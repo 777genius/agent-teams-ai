@@ -15,6 +15,7 @@ import {
   waitForOpenCodeLanesStopped,
   waitForOpenCodePeerRelay,
   waitForUserInboxReply,
+  waitUntil,
 } from './openCodeLiveTestHarness';
 
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
@@ -154,6 +155,139 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
           to: 'user',
         });
         expect(reply.text).toContain(expectedReply);
+      } finally {
+        await svc.stopTeam(teamName).catch(() => undefined);
+        await dispose();
+        await waitForOpenCodeLanesStopped(teamName);
+      }
+    },
+    300_000
+  );
+
+  it(
+    'delivers concurrent desktop messages to OpenCode members sharing one primary lane',
+    async () => {
+      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
+        tempDir,
+        selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+        projectPath: PROJECT_PATH,
+      });
+
+      const teamName = `opencode-concurrent-lane-message-${Date.now()}`;
+      const aliceMessageId = `ui-concurrent-alice-${Date.now()}`;
+      const bobMessageId = `ui-concurrent-bob-${Date.now()}`;
+      const aliceToken = `opencode-concurrent-alice-token-${Date.now()}`;
+      const bobToken = `opencode-concurrent-bob-token-${Date.now()}`;
+      const progressEvents: TeamProvisioningProgress[] = [];
+
+      try {
+        const { runId } = await svc.createTeam(
+          {
+            teamName,
+            cwd: PROJECT_PATH,
+            providerId: 'opencode',
+            model: selectedModel,
+            skipPermissions: true,
+            members: [
+              {
+                name: 'alice',
+                role: 'Developer',
+                providerId: 'opencode',
+                model: selectedModel,
+              },
+              {
+                name: 'bob',
+                role: 'Developer',
+                providerId: 'opencode',
+                model: selectedModel,
+              },
+            ],
+          },
+          (progress) => {
+            progressEvents.push(progress);
+          }
+        );
+
+        expect(runId).toBeTruthy();
+        const progressDump = progressEvents
+          .map((progress) =>
+            [
+              progress.state,
+              progress.message,
+              progress.messageSeverity,
+              progress.error,
+              progress.cliLogsTail,
+            ]
+              .filter(Boolean)
+              .join(' | ')
+          )
+          .join('\n');
+        expect(
+          progressEvents.some((progress) =>
+            progress.message.includes('OpenCode team launch is ready')
+          ),
+          progressDump
+        ).toBe(true);
+
+        const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(runtimeSnapshot.members.alice).toMatchObject({
+          alive: true,
+          runtimeModel: selectedModel,
+        });
+        expect(runtimeSnapshot.members.bob).toMatchObject({
+          alive: true,
+          runtimeModel: selectedModel,
+        });
+        await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject({
+          lanes: {
+            primary: {
+              state: 'active',
+            },
+          },
+        });
+
+        const [aliceDelivery, bobDelivery] = await Promise.all([
+          svc.deliverOpenCodeMemberMessage(teamName, {
+            memberName: 'alice',
+            messageId: aliceMessageId,
+            replyRecipient: 'user',
+            text: `This is a concurrent delivery smoke. Remember token ${aliceToken}. No user-visible reply is required.`,
+          }),
+          svc.deliverOpenCodeMemberMessage(teamName, {
+            memberName: 'bob',
+            messageId: bobMessageId,
+            replyRecipient: 'user',
+            text: `This is a concurrent delivery smoke. Remember token ${bobToken}. No user-visible reply is required.`,
+          }),
+        ]);
+
+        for (const delivery of [aliceDelivery, bobDelivery]) {
+          expect(delivery.delivered).toBe(true);
+          expect(delivery.diagnostics?.join('\n') ?? '').not.toContain(
+            'OpenCode bridge command lease already active'
+          );
+        }
+
+        await Promise.all([
+          waitUntil(async () => {
+            const transcript = await getRuntimeTranscript({
+              bridgeClient,
+              teamName,
+              memberName: 'alice',
+              projectPath: PROJECT_PATH,
+            });
+            return JSON.stringify(transcript).includes(aliceToken);
+          }, 30_000),
+          waitUntil(async () => {
+            const transcript = await getRuntimeTranscript({
+              bridgeClient,
+              teamName,
+              memberName: 'bob',
+              projectPath: PROJECT_PATH,
+            });
+            return JSON.stringify(transcript).includes(bobToken);
+          }, 30_000),
+        ]);
       } finally {
         await svc.stopTeam(teamName).catch(() => undefined);
         await dispose();

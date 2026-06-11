@@ -17,6 +17,7 @@ import {
 import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
+  OpenCodeBridgeCommandLeaseError,
   type OpenCodeBridgeCommandLeaseStore,
   type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
@@ -25,6 +26,7 @@ import {
   type OpenCodeBridgeHandshakePort,
   OpenCodeStateChangingBridgeCommandService,
   type OpenCodeStateChangingBridgeDiagnosticsSink,
+  resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
   type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 
@@ -64,6 +66,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
@@ -250,6 +253,100 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
     expect(bridge.calls[0].body.preconditions.commandLeaseId).toBe('lease-2');
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('tries acquiring the lease once more after the wait deadline elapses', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    let acquireAttempts = 0;
+    const fakeLeaseStore = {
+      acquire: vi.fn(
+        async (input: {
+          teamName: string;
+          laneId?: string | null;
+          runId: string | null;
+          command: OpenCodeBridgeCommandName;
+          ttlMs: number;
+        }) => {
+          acquireAttempts += 1;
+          if (acquireAttempts === 1) {
+            throw new OpenCodeBridgeCommandLeaseError(
+              'OpenCode bridge command lease already active: lease-1'
+            );
+          }
+          return {
+            leaseId: 'lease-2',
+            teamName: input.teamName,
+            laneId: input.laneId ?? null,
+            runId: input.runId,
+            command: input.command,
+            holderPeer: 'claude_team' as const,
+            acquiredAt: now.toISOString(),
+            expiresAt: new Date(now.getTime() + input.ttlMs).toISOString(),
+            state: 'active' as const,
+          };
+        }
+      ),
+      release: vi.fn(async () => {}),
+      getActive: vi.fn(async () => null),
+    } as unknown as OpenCodeBridgeCommandLeaseStore;
+    const service = new OpenCodeStateChangingBridgeCommandService({
+      expectedClientIdentity: clientIdentity,
+      handshakePort,
+      leaseStore: fakeLeaseStore,
+      ledger,
+      bridge,
+      manifestReader,
+      diagnostics,
+      requestIdFactory: () => 'cmd-1',
+      diagnosticIdFactory: () => 'diag-1',
+      clock: () => now,
+      leaseAcquireTimeoutMs: 50,
+      leaseAcquireRetryDelayMs: 60,
+    });
+
+    await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(fakeLeaseStore.acquire).toHaveBeenCalledTimes(2);
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body.preconditions.commandLeaseId).toBe('lease-2');
+  });
+
+  it('uses the command lease ttl as the default lease acquisition wait', () => {
+    expect(
+      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+        leaseTtlMs: 50_000,
+      })
+    ).toBe(50_000);
+    expect(
+      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+        leaseTtlMs: 1_000,
+      })
+    ).toBe(10_000);
+    expect(
+      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+        configuredTimeoutMs: 200,
+        leaseTtlMs: 50_000,
+      })
+    ).toBe(200);
   });
 
   it('records unknown outcome after timeout and blocks retry before a duplicate bridge call', async () => {

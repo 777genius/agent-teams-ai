@@ -143,8 +143,8 @@ import {
   listRuntimeProcessTableForCurrentPlatform,
   listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
-  sendKeysToTmuxPaneForCurrentPlatform,
   type RuntimeProcessTableRow,
+  sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import {
@@ -155,6 +155,10 @@ import {
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { OPEN_CODE_BRIDGE_SCHEMA_VERSION } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import {
+  buildOpenCodePromptDeliveryRecordId,
+  hashOpenCodePromptDeliveryPayload,
+} from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeManifestPath,
@@ -171,7 +175,10 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '@main/services/team/opencode/store/RuntimeStoreManifest';
-import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import {
+  OpenCodeTeamRuntimeAdapter,
+  type OpenCodeTeamRuntimeMessageResult,
+} from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { getTeamBootstrapStatePath } from '@main/services/team/TeamBootstrapStateReader';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -621,6 +628,7 @@ async function configureOpenCodeBobDeliveryService(input: {
   svc: TeamProvisioningService;
   sendMessageToMember: ReturnType<typeof vi.fn>;
   observeMessageDelivery?: ReturnType<typeof vi.fn>;
+  omitObserveMessageDelivery?: boolean;
   memberModel?: string;
 }): Promise<void> {
   const registry = new TeamRuntimeAdapterRegistry([
@@ -631,7 +639,9 @@ async function configureOpenCodeBobDeliveryService(input: {
       reconcile: vi.fn(),
       stop: vi.fn(),
       sendMessageToMember: input.sendMessageToMember,
-      observeMessageDelivery: input.observeMessageDelivery ?? vi.fn(),
+      ...(input.omitObserveMessageDelivery
+        ? {}
+        : { observeMessageDelivery: input.observeMessageDelivery ?? vi.fn() }),
     } as any,
   ]);
   input.svc.setRuntimeAdapterRegistry(registry);
@@ -723,6 +733,11 @@ type TeamProvisioningServicePrivateHarness = {
     teamName: string,
     runId: string | null
   ) => { rows: RuntimeTelemetryProcessTableRow[] | null } | null;
+  sendOpenCodeMemberMessageToRuntimeSerialized: (input: {
+    teamName: string;
+    laneId: string;
+    send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
+  }) => Promise<OpenCodeTeamRuntimeMessageResult>;
   runtimeProcessRowsForUsageSnapshotByTeam: Map<
     string,
     {
@@ -8331,6 +8346,96 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('serializes OpenCode runtime sends by lane', async () => {
+      const svc = new TeamProvisioningService();
+      const harness = privateHarness(svc);
+      const firstStarted = createDeferred<void>();
+      const releaseFirst = createDeferred<void>();
+      const secondStarted = vi.fn();
+
+      const first = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+        teamName: 'team-a',
+        laneId: 'primary',
+        send: async () => {
+          firstStarted.resolve(undefined);
+          await releaseFirst.promise;
+          return {
+            ok: true,
+            providerId: 'opencode',
+            memberName: 'bob',
+            diagnostics: [],
+          };
+        },
+      });
+      await firstStarted.promise;
+
+      const second = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+        teamName: 'team-a',
+        laneId: 'primary',
+        send: async () => {
+          secondStarted();
+          return {
+            ok: true,
+            providerId: 'opencode',
+            memberName: 'jack',
+            diagnostics: [],
+          };
+        },
+      });
+
+      await Promise.resolve();
+      expect(secondStarted).not.toHaveBeenCalled();
+
+      releaseFirst.resolve(undefined);
+      await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+      expect(secondStarted).toHaveBeenCalledTimes(1);
+    });
+
+    it('continues queued OpenCode lane sends after a failed send', async () => {
+      const svc = new TeamProvisioningService();
+      const harness = privateHarness(svc);
+      const firstStarted = createDeferred<void>();
+      const releaseFirst = createDeferred<void>();
+      const secondStarted = vi.fn();
+
+      const first = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+        teamName: 'team-a',
+        laneId: 'primary',
+        send: async () => {
+          firstStarted.resolve(undefined);
+          await releaseFirst.promise;
+          throw new Error('lease conflict');
+        },
+      });
+      await firstStarted.promise;
+
+      const second = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+        teamName: 'team-a',
+        laneId: 'primary',
+        send: async () => {
+          secondStarted();
+          return {
+            ok: true,
+            providerId: 'opencode',
+            memberName: 'jack',
+            diagnostics: [],
+          };
+        },
+      });
+
+      await Promise.resolve();
+      expect(secondStarted).not.toHaveBeenCalled();
+
+      releaseFirst.resolve(undefined);
+      await expect(first).rejects.toThrow('lease conflict');
+      await expect(second).resolves.toMatchObject({
+        ok: true,
+        providerId: 'opencode',
+        memberName: 'jack',
+      });
+      expect(secondStarted).toHaveBeenCalledTimes(1);
+    });
+
     it('does not deliver direct OpenCode messages when recovery leaves the lane inactive', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
@@ -10878,6 +10983,596 @@ describe('TeamProvisioningService', () => {
       expect(ledgerEnvelope.data[0].diagnostics).toContain(
         'opencode_prompt_acceptance_missing_runtime_prompt_id'
       );
+    });
+
+    it('recovers legacy accepted OpenCode delivery records without prompt proof', async () => {
+      const svc = new TeamProvisioningService();
+      const observeMessageDelivery = vi.fn(async () => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: 'bob',
+        sessionId: 'oc-session-bob',
+        responseObservation: {
+          state: 'prompt_not_indexed',
+          deliveredUserMessageId: null,
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'delivered_prompt_anchor_not_found_in_limited_history',
+        },
+        diagnostics: ['still not indexed'],
+      }));
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_recovered',
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({
+        svc,
+        sendMessageToMember,
+        observeMessageDelivery,
+      });
+
+      const laneId = 'secondary:opencode:bob';
+      const inboxMessageId = 'msg-legacy-missing-proof';
+      const recordId = buildOpenCodePromptDeliveryRecordId({
+        teamName: 'team-a',
+        memberName: 'bob',
+        laneId,
+        inboxMessageId,
+      });
+      const payloadHash = hashOpenCodePromptDeliveryPayload({
+        text: 'Please handle this.',
+        replyRecipient: 'user',
+        actionMode: 'ask',
+        taskRefs: [],
+        source: 'watcher',
+      });
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId,
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      await fsPromises.mkdir(path.dirname(ledgerPath), { recursive: true });
+      await fsPromises.writeFile(
+        ledgerPath,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            updatedAt: '2026-04-25T10:01:00.000Z',
+            data: [
+              {
+                id: recordId,
+                teamName: 'team-a',
+                memberName: 'bob',
+                laneId,
+                runId: 'opencode-run-bob',
+                runtimeSessionId: 'oc-session-bob',
+                runtimePromptMessageId: null,
+                runtimePromptMessageIds: [],
+                lastRuntimePromptMessageId: null,
+                lastDeliveryAttemptIdWithAcceptedPrompt: null,
+                inboxMessageId,
+                inboxTimestamp: '2026-04-25T10:00:00.000Z',
+                source: 'watcher',
+                messageKind: null,
+                workSyncIntent: null,
+                replyRecipient: 'user',
+                actionMode: 'ask',
+                taskRefs: [],
+                payloadHash,
+                status: 'accepted',
+                responseState: 'prompt_not_indexed',
+                attempts: 1,
+                maxAttempts: 3,
+                acceptanceUnknown: false,
+                nextAttemptAt: '2026-04-25T10:00:01.000Z',
+                lastAttemptAt: '2026-04-25T10:00:00.000Z',
+                lastObservedAt: '2026-04-25T10:00:02.000Z',
+                acceptedAt: null,
+                respondedAt: null,
+                failedAt: null,
+                inboxReadCommittedAt: null,
+                inboxReadCommitError: null,
+                prePromptCursor: null,
+                postPromptCursor: null,
+                deliveredUserMessageId: null,
+                observedAssistantMessageId: null,
+                observedAssistantPreview: null,
+                observedToolCallNames: [],
+                observedVisibleMessageId: null,
+                visibleReplyMessageId: null,
+                visibleReplyInbox: null,
+                visibleReplyCorrelation: null,
+                lastReason: 'delivered_prompt_anchor_not_found_in_limited_history',
+                diagnostics: [
+                  'opencode_message_delivery_exception: OpenCode bridge command lease already active: lease-1',
+                ],
+                createdAt: '2026-04-25T10:00:00.000Z',
+                updatedAt: '2026-04-25T10:00:02.000Z',
+              },
+            ],
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Please handle this.',
+          messageId: inboxMessageId,
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        ledgerStatus: 'accepted',
+        ledgerRecordId: recordId,
+      });
+
+      expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
+      expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+
+      const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          status: string;
+          runtimePromptMessageId: string | null;
+          runtimePromptMessageIds: string[];
+          acceptanceUnknown: boolean;
+          acceptedAt: string | null;
+          attempts: number;
+          diagnostics: string[];
+        }>;
+      };
+      expect(ledgerEnvelope.data[0]).toMatchObject({
+        status: 'accepted',
+        runtimePromptMessageId: 'msg_prompt_recovered',
+        runtimePromptMessageIds: ['msg_prompt_recovered'],
+        acceptanceUnknown: false,
+        attempts: 2,
+      });
+      expect(ledgerEnvelope.data[0].acceptedAt).toBeTruthy();
+      expect(ledgerEnvelope.data[0].diagnostics).toContain(
+        'opencode_accepted_prompt_missing_runtime_prompt_id_recovered'
+      );
+    });
+
+    it('recovers legacy accepted OpenCode active blockers before queueing newer messages', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-25T10:00:05.000Z'));
+
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_recovered',
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+
+      const laneId = 'secondary:opencode:bob';
+      const legacyMessageId = 'msg-legacy-active-blocker';
+      const nextMessageId = 'msg-next-behind-legacy';
+      const recordId = buildOpenCodePromptDeliveryRecordId({
+        teamName: 'team-a',
+        memberName: 'bob',
+        laneId,
+        inboxMessageId: legacyMessageId,
+      });
+      const payloadHash = hashOpenCodePromptDeliveryPayload({
+        text: 'Please handle the first thing.',
+        replyRecipient: 'user',
+        actionMode: 'ask',
+        taskRefs: [],
+        source: 'watcher',
+      });
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId,
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      await fsPromises.mkdir(path.dirname(ledgerPath), { recursive: true });
+      await fsPromises.writeFile(
+        ledgerPath,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            updatedAt: '2026-04-25T10:00:02.000Z',
+            data: [
+              {
+                id: recordId,
+                teamName: 'team-a',
+                memberName: 'bob',
+                laneId,
+                runId: 'opencode-run-bob',
+                runtimeSessionId: 'oc-session-bob',
+                runtimePromptMessageId: null,
+                runtimePromptMessageIds: [],
+                lastRuntimePromptMessageId: null,
+                lastDeliveryAttemptIdWithAcceptedPrompt: null,
+                inboxMessageId: legacyMessageId,
+                inboxTimestamp: '2026-04-25T10:00:00.000Z',
+                source: 'watcher',
+                messageKind: null,
+                workSyncIntent: null,
+                replyRecipient: 'user',
+                actionMode: 'ask',
+                taskRefs: [],
+                payloadHash,
+                status: 'accepted',
+                responseState: 'prompt_not_indexed',
+                attempts: 1,
+                maxAttempts: 3,
+                acceptanceUnknown: false,
+                nextAttemptAt: '2026-04-25T10:00:01.000Z',
+                lastAttemptAt: '2026-04-25T10:00:00.000Z',
+                lastObservedAt: '2026-04-25T10:00:02.000Z',
+                acceptedAt: null,
+                respondedAt: null,
+                failedAt: null,
+                inboxReadCommittedAt: null,
+                inboxReadCommitError: null,
+                prePromptCursor: null,
+                postPromptCursor: null,
+                deliveredUserMessageId: null,
+                observedAssistantMessageId: null,
+                observedAssistantPreview: null,
+                observedToolCallNames: [],
+                observedVisibleMessageId: null,
+                visibleReplyMessageId: null,
+                visibleReplyInbox: null,
+                visibleReplyCorrelation: null,
+                lastReason: 'delivered_prompt_anchor_not_found_in_limited_history',
+                diagnostics: [
+                  'opencode_message_delivery_exception: OpenCode bridge command lease already active: lease-1',
+                ],
+                createdAt: '2026-04-25T10:00:00.000Z',
+                updatedAt: '2026-04-25T10:00:02.000Z',
+              },
+            ],
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Please handle the second thing.',
+          messageId: nextMessageId,
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:05.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        ledgerStatus: 'failed_retryable',
+        queuedBehindMessageId: legacyMessageId,
+      });
+
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+
+      const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          id: string;
+          status: string;
+          acceptanceUnknown: boolean;
+          nextAttemptAt: string | null;
+          lastReason: string | null;
+          diagnostics: string[];
+        }>;
+      };
+      expect(ledgerEnvelope.data[0]).toMatchObject({
+        id: recordId,
+        status: 'failed_retryable',
+        acceptanceUnknown: true,
+        nextAttemptAt: '2026-04-25T10:00:05.000Z',
+        lastReason: 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id',
+      });
+      expect(ledgerEnvelope.data[0].diagnostics).toContain(
+        'opencode_accepted_prompt_missing_runtime_prompt_id_recovered'
+      );
+    });
+
+    it('retries legacy accepted OpenCode records without prompt proof when observe is unavailable', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-25T10:00:05.000Z'));
+
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_recovered_without_observe',
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({
+        svc,
+        sendMessageToMember,
+        omitObserveMessageDelivery: true,
+      });
+
+      const laneId = 'secondary:opencode:bob';
+      const inboxMessageId = 'msg-legacy-no-observe';
+      const recordId = buildOpenCodePromptDeliveryRecordId({
+        teamName: 'team-a',
+        memberName: 'bob',
+        laneId,
+        inboxMessageId,
+      });
+      const payloadHash = hashOpenCodePromptDeliveryPayload({
+        text: 'Please handle this.',
+        replyRecipient: 'user',
+        actionMode: 'ask',
+        taskRefs: [],
+        source: 'watcher',
+      });
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId,
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      await fsPromises.mkdir(path.dirname(ledgerPath), { recursive: true });
+      await fsPromises.writeFile(
+        ledgerPath,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            updatedAt: '2026-04-25T10:00:02.000Z',
+            data: [
+              {
+                id: recordId,
+                teamName: 'team-a',
+                memberName: 'bob',
+                laneId,
+                runId: 'opencode-run-bob',
+                runtimeSessionId: 'oc-session-bob',
+                runtimePromptMessageId: null,
+                runtimePromptMessageIds: [],
+                lastRuntimePromptMessageId: null,
+                lastDeliveryAttemptIdWithAcceptedPrompt: null,
+                inboxMessageId,
+                inboxTimestamp: '2026-04-25T10:00:00.000Z',
+                source: 'watcher',
+                messageKind: null,
+                workSyncIntent: null,
+                replyRecipient: 'user',
+                actionMode: 'ask',
+                taskRefs: [],
+                payloadHash,
+                status: 'accepted',
+                responseState: 'prompt_not_indexed',
+                attempts: 1,
+                maxAttempts: 3,
+                acceptanceUnknown: false,
+                nextAttemptAt: '2026-04-25T10:30:00.000Z',
+                lastAttemptAt: '2026-04-25T10:00:00.000Z',
+                lastObservedAt: '2026-04-25T10:00:02.000Z',
+                acceptedAt: null,
+                respondedAt: null,
+                failedAt: null,
+                inboxReadCommittedAt: null,
+                inboxReadCommitError: null,
+                prePromptCursor: null,
+                postPromptCursor: null,
+                deliveredUserMessageId: null,
+                observedAssistantMessageId: null,
+                observedAssistantPreview: null,
+                observedToolCallNames: [],
+                observedVisibleMessageId: null,
+                visibleReplyMessageId: null,
+                visibleReplyInbox: null,
+                visibleReplyCorrelation: null,
+                lastReason: 'delivered_prompt_anchor_not_found_in_limited_history',
+                diagnostics: [
+                  'opencode_message_delivery_exception: OpenCode bridge command lease already active: lease-1',
+                ],
+                createdAt: '2026-04-25T10:00:00.000Z',
+                updatedAt: '2026-04-25T10:00:02.000Z',
+              },
+            ],
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Please handle this.',
+          messageId: inboxMessageId,
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        ledgerStatus: 'retry_scheduled',
+        ledgerRecordId: recordId,
+      });
+
+      expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deliveryAttemptId: expect.stringContaining(recordId),
+          messageId: inboxMessageId,
+          memberName: 'bob',
+        })
+      );
+
+      const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          status: string;
+          runtimePromptMessageId: string | null;
+          acceptanceUnknown: boolean;
+          attempts: number;
+          diagnostics: string[];
+        }>;
+      };
+      expect(ledgerEnvelope.data[0]).toMatchObject({
+        status: 'retry_scheduled',
+        runtimePromptMessageId: 'msg_prompt_recovered_without_observe',
+        acceptanceUnknown: false,
+        attempts: 2,
+      });
+      expect(ledgerEnvelope.data[0].diagnostics).toContain(
+        'opencode_accepted_prompt_missing_runtime_prompt_id_recovered'
+      );
+    });
+
+    it('does not resend accepted OpenCode prompts with runtime proof when observe is unavailable', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-25T10:00:05.000Z'));
+
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_duplicate_should_not_send',
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({
+        svc,
+        sendMessageToMember,
+        omitObserveMessageDelivery: true,
+      });
+
+      const laneId = 'secondary:opencode:bob';
+      const inboxMessageId = 'msg-accepted-proof-no-observe';
+      const recordId = buildOpenCodePromptDeliveryRecordId({
+        teamName: 'team-a',
+        memberName: 'bob',
+        laneId,
+        inboxMessageId,
+      });
+      const payloadHash = hashOpenCodePromptDeliveryPayload({
+        text: 'Please handle this.',
+        replyRecipient: 'user',
+        actionMode: 'ask',
+        taskRefs: [],
+        source: 'watcher',
+      });
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId,
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      await fsPromises.mkdir(path.dirname(ledgerPath), { recursive: true });
+      await fsPromises.writeFile(
+        ledgerPath,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            updatedAt: '2026-04-25T10:00:02.000Z',
+            data: [
+              {
+                id: recordId,
+                teamName: 'team-a',
+                memberName: 'bob',
+                laneId,
+                runId: 'opencode-run-bob',
+                runtimeSessionId: 'oc-session-bob',
+                runtimePromptMessageId: 'msg_prompt_already_accepted',
+                runtimePromptMessageIds: ['msg_prompt_already_accepted'],
+                lastRuntimePromptMessageId: 'msg_prompt_already_accepted',
+                lastDeliveryAttemptIdWithAcceptedPrompt: 'attempt-1',
+                inboxMessageId,
+                inboxTimestamp: '2026-04-25T10:00:00.000Z',
+                source: 'watcher',
+                messageKind: null,
+                workSyncIntent: null,
+                replyRecipient: 'user',
+                actionMode: 'ask',
+                taskRefs: [],
+                payloadHash,
+                status: 'accepted',
+                responseState: 'not_observed',
+                attempts: 1,
+                maxAttempts: 3,
+                acceptanceUnknown: false,
+                nextAttemptAt: '2026-04-25T10:00:01.000Z',
+                lastAttemptAt: '2026-04-25T10:00:00.000Z',
+                lastObservedAt: '2026-04-25T10:00:02.000Z',
+                acceptedAt: '2026-04-25T10:00:00.500Z',
+                respondedAt: null,
+                failedAt: null,
+                inboxReadCommittedAt: null,
+                inboxReadCommitError: null,
+                prePromptCursor: null,
+                postPromptCursor: null,
+                deliveredUserMessageId: null,
+                observedAssistantMessageId: null,
+                observedAssistantPreview: null,
+                observedToolCallNames: [],
+                observedVisibleMessageId: null,
+                visibleReplyMessageId: null,
+                visibleReplyInbox: null,
+                visibleReplyCorrelation: null,
+                lastReason: 'assistant_response_pending',
+                diagnostics: [],
+                createdAt: '2026-04-25T10:00:00.000Z',
+                updatedAt: '2026-04-25T10:00:02.000Z',
+              },
+            ],
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Please handle this.',
+          messageId: inboxMessageId,
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        ledgerStatus: 'accepted',
+        ledgerRecordId: recordId,
+        reason: 'opencode_delivery_observe_bridge_unavailable',
+      });
+
+      expect(sendMessageToMember).not.toHaveBeenCalled();
     });
 
     it('marks OpenCode payload hash mismatch terminal without sending a duplicate prompt', async () => {
