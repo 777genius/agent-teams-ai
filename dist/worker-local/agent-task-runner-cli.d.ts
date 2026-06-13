@@ -46,5 +46,7 @@ export type RuntimeAgentTaskWorkerFactoryInput = {
 };
 export type RuntimeAgentTaskWorkerFactory = (input: RuntimeAgentTaskWorkerFactoryInput) => RuntimeAgentTaskWorker;
 export declare function runSubscriptionAgentTaskCli(argv?: string[], io?: SubscriptionAgentTaskCliIo, workerFactory?: RuntimeAgentTaskWorkerFactory): Promise<number>;
+export declare function resolveRequestCwd(workspaceRoot: string, requestedCwd: string): string;
+export declare function pruneClaudeChildEnv(env: Readonly<Record<string, string | undefined>>): Readonly<Record<string, string | undefined>>;
 export {};
 //# sourceMappingURL=agent-task-runner-cli.d.ts.map

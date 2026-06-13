@@ -45,6 +45,7 @@ describe("subscription runtime agent-task runner CLI", () => {
           },
         }),
         env: {
+          PATH: "/usr/bin",
           SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY:
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
           CLAUDE_CODE_OAUTH_TOKEN: "claude-token",
@@ -59,6 +60,11 @@ describe("subscription runtime agent-task runner CLI", () => {
       providerInstanceId: "claude-a",
       model: "sonnet",
     });
+    expect(calls.factory?.env).toMatchObject({
+      PATH: "/usr/bin",
+    });
+    expect(calls.factory?.env).not.toHaveProperty("SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY");
+    expect(calls.factory?.env).not.toHaveProperty("CLAUDE_CODE_OAUTH_TOKEN");
     expect(calls.seed).toBe("claude-token");
     expect(calls.job).toMatchObject({
       runId: "run-1",
@@ -192,6 +198,38 @@ describe("subscription runtime agent-task runner CLI", () => {
     expect(exitCode).toBe(2);
     expect(factoryCalled).toBe(false);
     expect(stderr.join("")).toContain("SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required");
+  });
+
+  it("rejects request cwd values outside the current workspace", async () => {
+    for (const cwd of ["/", "../escape"]) {
+      let factoryCalled = false;
+      const stderr: string[] = [];
+      const exitCode = await runSubscriptionAgentTaskCli(
+        ["--provider", "codex", "--ephemeral"],
+        fakeIo({
+          stderr,
+          stdin: JSON.stringify({
+            protocolVersion: 1,
+            cwd,
+            task: {
+              kind: "structured-prompt",
+              prompt: "hello",
+            },
+          }),
+          env: {
+            CODEX_AUTH_JSON_PATH: "/tmp/auth.json",
+          },
+        }),
+        () => {
+          factoryCalled = true;
+          throw new Error("should not construct");
+        },
+      );
+
+      expect(exitCode).toBe(2);
+      expect(factoryCalled).toBe(false);
+      expect(stderr.join("")).toContain("Agent task cwd must stay within the current workspace.");
+    }
   });
 });
 

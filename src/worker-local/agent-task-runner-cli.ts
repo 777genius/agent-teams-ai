@@ -2,7 +2,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   agentTaskProtocolVersion,
@@ -109,8 +109,9 @@ export async function runSubscriptionAgentTaskCli(
         args.inputPath ? await readFile(args.inputPath, "utf8") : await io.readStdin(),
       ),
     );
-    const cwd = resolve(io.cwd(), request.cwd ?? ".");
+    const cwd = resolveRequestCwd(io.cwd(), request.cwd ?? ".");
     const env = io.env();
+    const workerEnv = args.provider === "claude" ? pruneClaudeChildEnv(env) : env;
     const stateRootDir =
       args.stateRootDir ??
       (args.ephemeral
@@ -137,7 +138,7 @@ export async function runSubscriptionAgentTaskCli(
       providerInstanceId,
       encryptionKey,
       cwd,
-      env,
+      env: workerEnv,
       ...(args.model ? { model: args.model } : {}),
       ...(timeoutMs ? { timeoutMs } : {}),
       ...(args.claudePath ? { claudePath: args.claudePath } : {}),
@@ -163,6 +164,38 @@ export async function runSubscriptionAgentTaskCli(
       await rm(tempStateRoot, { recursive: true, force: true }).catch(() => {});
     }
   }
+}
+
+export function resolveRequestCwd(workspaceRoot: string, requestedCwd: string): string {
+  const root = resolve(workspaceRoot);
+  const resolved = resolve(root, requestedCwd);
+  const rel = relative(root, resolved);
+  if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
+    return resolved;
+  }
+  throw new Error("Agent task cwd must stay within the current workspace.");
+}
+
+export function pruneClaudeChildEnv(
+  env: Readonly<Record<string, string | undefined>>,
+): Readonly<Record<string, string | undefined>> {
+  const allowed = new Set([
+    "CI",
+    "CLAUDE_CONFIG_DIR",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "PATH",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+  ]);
+  return Object.fromEntries(
+    Object.entries(env).filter(([key, value]) =>
+      value !== undefined &&
+      (allowed.has(key) || key.startsWith("LC_"))
+    ),
+  );
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
