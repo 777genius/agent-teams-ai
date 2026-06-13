@@ -76,6 +76,7 @@ export interface AgentCommandLike {
     readonly mode: "initial" | "followup";
     readonly model: string;
     readonly permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
+    readonly pluginDirs?: readonly string[];
     readonly prompt: string;
     readonly settings?: string;
     readonly strictMcpConfig?: boolean;

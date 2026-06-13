@@ -335,6 +335,7 @@ describe("Claude provider adapter", () => {
     ]);
     const engine = new ClaudeRuntimeTaskExecutionEngine({
       commandTimeoutMs: 1234,
+      pluginDirs: ["/opt/quanta-plugin"],
       pollIntervalMs: 10,
       runtimeModuleLoader: async () => fakeRuntimeModule,
       providerModuleLoader: async () => fakeProviderModule(fakeProvider),
@@ -385,6 +386,7 @@ describe("Claude provider adapter", () => {
       maxTurns: 5,
       model: "claude-sonnet-test",
       permissionMode: "dontAsk",
+      pluginDirs: ["/opt/quanta-plugin"],
       prompt: "review",
       settings: "/tmp/claude-statusline-settings.json",
       strictMcpConfig: true,

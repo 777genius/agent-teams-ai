@@ -33,6 +33,7 @@ import {
 } from "./claude-bg-runtime-context";
 
 export type ClaudeRuntimeTaskExecutionEngineOptions = ClaudeBgRuntimeContextOptions & {
+  readonly pluginDirs?: readonly string[];
   readonly settingsPath?: string;
 };
 
@@ -232,6 +233,7 @@ export class ClaudeRuntimeTaskExecutionEngine
           : "followup",
       model: input.model,
       permissionMode: mapPermissionMode(input.permissionMode),
+      ...(this.options.pluginDirs === undefined ? {} : { pluginDirs: this.options.pluginDirs }),
       prompt: input.prompt,
       ...(this.options.settingsPath === undefined
         ? {}
