@@ -1,4 +1,4 @@
-import type { AgentCapabilities, CompiledRuntimePolicy, ProviderCapabilities, RuntimeExecutionPlan, RuntimePolicy, RuntimeWarning, RunnerCapabilities, SessionStoreCapabilities } from "../domain/types";
+import type { AgentCapabilities, CompiledRuntimePolicy, ProviderCapabilities, RuntimeExecutionPlan, RuntimePolicy, RuntimeWarning, RunnerCapabilities, SessionStoreCapabilities } from "../domain/types.js";
 export type CapabilityDecision = {
     readonly status: "accepted";
     readonly compiledPolicy: CompiledRuntimePolicy;

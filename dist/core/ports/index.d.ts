@@ -1,4 +1,4 @@
-import type { AgentCapabilities, FinalizedLease, IdempotencyKeyInput, LeaseAcquireResult, LeaseStoreCapabilities, PreparedSessionWrite, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTask, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionFreshnessAssessment, SessionArtifact, SessionEnvelope, SessionRefreshPolicy, SessionReadPurpose, SessionStoreCapabilities, SessionValidationResult, SessionWriteResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult, OutputSink } from "../domain/types";
+import type { AgentCapabilities, FinalizedLease, IdempotencyKeyInput, LeaseAcquireResult, LeaseStoreCapabilities, PreparedSessionWrite, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTask, ProviderTaskEvent, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionFreshnessAssessment, SessionArtifact, SessionEnvelope, SessionRefreshPolicy, SessionReadPurpose, SessionStoreCapabilities, SessionValidationResult, SessionWriteResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult, OutputSink } from "../domain/types.js";
 export interface ProviderSessionDriver {
     readonly providerId: string;
     readonly supportedArtifactKinds: readonly SessionArtifact["kind"][];
@@ -44,6 +44,16 @@ export interface AgentDriver {
         readonly abortSignal: AbortSignal;
     }): Promise<ProviderTaskResult>;
     classifyRunFailure(error: unknown): ProviderFailure;
+}
+export interface StreamingAgentDriver extends AgentDriver {
+    streamTask(input: {
+        readonly session: SessionArtifact | null;
+        readonly task: ProviderTask;
+        readonly workspace: WorkspaceHandle;
+        readonly runner: RunnerPort;
+        readonly redactor: RedactorPort;
+        readonly abortSignal: AbortSignal;
+    }): AsyncIterable<ProviderTaskEvent>;
 }
 export interface SubscriptionProviderDriver extends ProviderSessionDriver {
     readonly agentId: string;
@@ -155,7 +165,7 @@ export interface IdGeneratorPort {
     operationId(prefix: string): string;
 }
 export type RuntimeDeps = {
-    readonly policy: import("../domain/types").RuntimePolicy;
+    readonly policy: import("../domain/types.js").RuntimePolicy;
     readonly sessionDriver: ProviderSessionDriver | NoSessionDriver;
     readonly agentDriver: AgentDriver;
     readonly sessionStore?: SessionStorePort;

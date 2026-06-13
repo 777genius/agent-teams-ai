@@ -1,4 +1,4 @@
-import type { SessionArtifact } from "./types";
+import type { SessionArtifact } from "./types.js";
 export declare function computeSessionGenerationHash(input: {
     readonly artifact: SessionArtifact;
     readonly salt?: string;

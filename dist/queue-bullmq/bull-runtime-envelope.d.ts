@@ -1,4 +1,4 @@
-import type { SubscriptionQueueEnqueueInput } from "@777genius/subscription-runtime/queue-core";
+import type { SubscriptionQueueEnqueueInput } from "@vioxen/subscription-runtime/queue-core";
 declare const envelopeMarker = "__subscriptionRuntime";
 declare const envelopeVersion = 1;
 type BullSubscriptionRuntimeEnvelope<Job> = {

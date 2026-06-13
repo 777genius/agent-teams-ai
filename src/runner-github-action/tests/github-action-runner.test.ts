@@ -1,6 +1,6 @@
 import { execPath } from "node:process";
 import { describe, expect, it } from "vitest";
-import { DefaultRedactor } from "@777genius/subscription-runtime/core";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { GitHubActionRunner, githubActionRunnerManifest } from "../index";
 
 describe("GitHub Action runner adapter", () => {

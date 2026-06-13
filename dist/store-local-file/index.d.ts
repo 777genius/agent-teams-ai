@@ -1,5 +1,5 @@
-export * from "./local-file-backend-adapters";
-export * from "./local-file-lease-store";
-export * from "./local-encrypted-file-store";
-export * from "./manifest";
+export * from "./local-file-backend-adapters.js";
+export * from "./local-file-lease-store.js";
+export * from "./local-encrypted-file-store.js";
+export * from "./manifest.js";
 //# sourceMappingURL=index.d.ts.map

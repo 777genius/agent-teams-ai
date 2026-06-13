@@ -6,11 +6,12 @@ import type {
   RedactorPort,
   SessionArtifact,
   WorkspaceHandle,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import {
   codexJsonAgentCapabilities,
   codexJsonAgentId,
   codexProviderId,
+  defaultCodexModel,
 } from "./capabilities";
 import { classifyCodexFailure } from "./failure-classifier";
 import {
@@ -63,7 +64,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
             ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
             ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
           });
-    this.model = options.model ?? "gpt-5.5";
+    this.model = options.model ?? defaultCodexModel;
     this.reasoningEffort = options.reasoningEffort ?? "low";
     this.sessionMaterializer =
       options.sessionMaterializer ?? new CodexEphemeralSessionMaterializer();
@@ -77,6 +78,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
     readonly redactor: RedactorPort;
     readonly abortSignal: AbortSignal;
   }): Promise<ProviderTaskResult> {
+    const startedAt = Date.now();
     if (!input.session) {
       return {
         status: "failed",
@@ -85,6 +87,10 @@ export class CodexJsonAgentDriver implements AgentDriver {
           retryable: false,
           reconnectRequired: true,
           safeMessage: "Codex requires a session artifact.",
+        },
+        telemetry: {
+          durationMs: Date.now() - startedAt,
+          finishReason: "provider_error",
         },
         warnings: [],
       };
@@ -98,16 +104,16 @@ export class CodexJsonAgentDriver implements AgentDriver {
         session: input.session,
         redactor: input.redactor,
       });
+      const outputSchemaName =
+        input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
       const result = await this.engine.run({
         prompt: input.task.prompt,
-        outputSchema: input.task.outputSchemaName
-          ? { name: input.task.outputSchemaName }
-          : undefined,
+        outputSchema: outputSchemaName ? { name: outputSchemaName } : undefined,
         session: materialized,
         workspacePath: input.workspace.path,
         runner: input.runner,
         redactor: input.redactor,
-        model: this.model,
+        model: input.task.controls?.model ?? this.model,
         reasoningEffort: this.reasoningEffort,
         abortSignal: input.abortSignal,
       });
@@ -116,10 +122,21 @@ export class CodexJsonAgentDriver implements AgentDriver {
         status: "completed",
         outputText: result.outputText,
         structuredOutput: result.structuredOutput,
+        telemetry: {
+          durationMs: Date.now() - startedAt,
+          finishReason: "completed",
+        },
         warnings: result.warnings,
       };
     } catch (error) {
-      return codexExecutionFailure(error);
+      const failure = codexExecutionFailure(error);
+      return {
+        ...failure,
+        telemetry: {
+          durationMs: Date.now() - startedAt,
+          finishReason: finishReasonForFailure(failure.failure.code),
+        },
+      };
     } finally {
       await materialized?.release();
     }
@@ -216,4 +233,17 @@ export class CodexJsonAgentDriver implements AgentDriver {
       throw error;
     }
   }
+}
+
+function finishReasonForFailure(
+  code: ProviderFailure["code"],
+):
+  | "completed"
+  | "max_turns"
+  | "cancelled"
+  | "timeout"
+  | "provider_error" {
+  if (code === "task_cancelled") return "cancelled";
+  if (code === "task_timeout") return "timeout";
+  return "provider_error";
 }

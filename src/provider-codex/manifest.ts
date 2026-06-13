@@ -1,4 +1,4 @@
-import type { RuntimeAdapterManifest } from "@777genius/subscription-runtime/core";
+import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
 import {
   codexJsonAgentCapabilities,
   codexSessionCapabilities,
@@ -7,7 +7,7 @@ import {
 export const codexProviderManifest = {
   adapterId: "provider.codex-cli",
   adapterKind: "combined-provider",
-  packageName: "@777genius/subscription-runtime/provider-codex",
+  packageName: "@vioxen/subscription-runtime/provider-codex",
   packageVersion: "0.0.0",
   protocolVersion: 1,
   capabilities: {

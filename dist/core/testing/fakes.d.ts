@@ -1,5 +1,5 @@
-import type { AgentCapabilities, LeaseStoreCapabilities, ProviderTask, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionArtifact, SessionEnvelope, SessionStoreCapabilities, SessionValidationResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult } from "../domain/types";
-import type { AgentDriver, LeaseStorePort, NoSessionDriver, ObservabilityPort, ProviderSessionDriver, RunnerPort, RuntimeDeps, SessionStorePort, WorkspacePort } from "../ports";
+import type { AgentCapabilities, LeaseStoreCapabilities, ProviderTask, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionArtifact, SessionEnvelope, SessionStoreCapabilities, SessionValidationResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult } from "../domain/types.js";
+import type { AgentDriver, LeaseStorePort, NoSessionDriver, ObservabilityPort, ProviderSessionDriver, RunnerPort, RuntimeDeps, SessionStorePort, WorkspacePort } from "../ports/index.js";
 export declare const fakeProviderCapabilities: ProviderCapabilities;
 export declare const fakeAgentCapabilities: AgentCapabilities;
 export declare const fakeStaticProviderCapabilities: ProviderCapabilities;

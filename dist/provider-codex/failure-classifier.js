@@ -3,6 +3,30 @@ export function classifyCodexFailure(error) {
     const message = error instanceof Error ? error.message : String(error);
     const state = classifyCodexRuntimeFailure(message);
     switch (state) {
+        case "task_cancelled":
+            return {
+                code: "task_cancelled",
+                retryable: false,
+                reconnectRequired: false,
+                safeMessage: "Codex task was cancelled.",
+                causeCategory: state,
+            };
+        case "task_timeout":
+            return {
+                code: "task_timeout",
+                retryable: true,
+                reconnectRequired: false,
+                safeMessage: "Codex task timed out.",
+                causeCategory: state,
+            };
+        case "provider_output_invalid":
+            return {
+                code: "provider_output_invalid",
+                retryable: true,
+                reconnectRequired: false,
+                safeMessage: "Codex provider output was invalid.",
+                causeCategory: state,
+            };
         case "needs_reconnect":
             return {
                 code: "needs_reconnect",

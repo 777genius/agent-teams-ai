@@ -1,4 +1,4 @@
-import type { AgentCapabilities, ProviderCapabilities, RuntimePolicy, RunnerCapabilities, SessionStoreCapabilities } from "../domain/types";
+import type { AgentCapabilities, ProviderCapabilities, RuntimePolicy, RunnerCapabilities, SessionStoreCapabilities } from "../domain/types.js";
 export declare const subscriptionRuntimeCoreVersion = "0.0.0";
 export declare const subscriptionRuntimeProtocolVersion = 1;
 export type RuntimeAdapterKind = "provider-session" | "agent" | "combined-provider" | "store" | "lease-store" | "runner" | "workspace" | "setup" | "observability";

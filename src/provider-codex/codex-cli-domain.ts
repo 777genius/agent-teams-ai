@@ -109,6 +109,15 @@ export function readCodexAuthJsonFreshness(input: {
 
 export function classifyCodexRuntimeFailure(message: string): string {
   const normalized = message.toLowerCase();
+  if (isCodexCancelledFailure(normalized)) {
+    return "task_cancelled";
+  }
+  if (isCodexTimeoutFailure(normalized)) {
+    return "task_timeout";
+  }
+  if (isCodexInvalidOutputFailure(normalized)) {
+    return "provider_output_invalid";
+  }
   if (isCodexQuotaOrRateLimitFailure(normalized)) {
     return "quota_limited";
   }
@@ -128,6 +137,39 @@ export function classifyCodexRuntimeFailure(message: string): string {
     return "permission_required";
   }
   return "unknown_auth_state";
+}
+
+function isCodexCancelledFailure(normalizedMessage: string): boolean {
+  return (
+    normalizedMessage.includes("node_process_runner_aborted") ||
+    normalizedMessage.includes("subscription_worker_run_aborted") ||
+    normalizedMessage.includes("codex_app_server_aborted") ||
+    normalizedMessage.includes("codex_app_server_turn_aborted") ||
+    normalizedMessage.includes("aborterror") ||
+    /\baborted\b/.test(normalizedMessage)
+  );
+}
+
+function isCodexTimeoutFailure(normalizedMessage: string): boolean {
+  return (
+    normalizedMessage.includes("node_process_runner_timeout") ||
+    normalizedMessage.includes("codex_app_server_request_timeout") ||
+    normalizedMessage.includes("codex_app_server_turn_timeout") ||
+    /\btimeout\b/.test(normalizedMessage) ||
+    /\btimed out\b/.test(normalizedMessage)
+  );
+}
+
+function isCodexInvalidOutputFailure(normalizedMessage: string): boolean {
+  return (
+    normalizedMessage.includes("codex_json_event_invalid") ||
+    normalizedMessage.includes("codex_json_final_message_missing") ||
+    normalizedMessage.includes("codex_structured_output_invalid") ||
+    normalizedMessage.includes("codex_json_output_too_large") ||
+    normalizedMessage.includes("codex_app_server_final_message_missing") ||
+    normalizedMessage.includes("codex_app_server_structured_output_invalid") ||
+    normalizedMessage.includes("codex_app_server_output_too_large")
+  );
 }
 
 function isCodexQuotaOrRateLimitFailure(normalizedMessage: string): boolean {
@@ -168,16 +210,19 @@ export function buildCodexRefreshBootstrapPlan(input: {
   readonly tempCodexHome: string;
   readonly emptyWorkingDirectory: string;
   readonly authJsonPath: string;
+  readonly model?: string;
 }): {
   readonly command: string;
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
   readonly cwd: string;
 } {
+  const model = input.model?.trim();
   return {
     command: input.codexBinaryPath,
     args: [
       "exec",
+      ...(model ? ["--model", model] : []),
       "--sandbox",
       "read-only",
       "--ignore-rules",

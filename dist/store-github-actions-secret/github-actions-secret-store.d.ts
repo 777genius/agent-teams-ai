@@ -1,5 +1,5 @@
-import { type SessionArtifact, type SessionEnvelope, type SessionStoreCapabilities, type SessionStorePort, type SessionWriteResult } from "@777genius/subscription-runtime/core";
-import { type GitHubRepositoryPublicKey } from "./github-secret-encryption";
+import { type SessionArtifact, type SessionEnvelope, type SessionStoreCapabilities, type SessionStorePort, type SessionWriteResult } from "@vioxen/subscription-runtime/core";
+import { type GitHubRepositoryPublicKey } from "./github-secret-encryption.js";
 export type EncryptedWritebackRequest = {
     readonly leaseId: string;
     readonly providerInstanceId: string;
@@ -37,7 +37,7 @@ export type GitHubActionsSecretStoreOptions = {
 export declare class GitHubActionsSecretStore implements SessionStorePort {
     private readonly options;
     readonly storeId: string;
-    readonly custody: import("@777genius/subscription-runtime/core").CustodyMode;
+    readonly custody: import("@vioxen/subscription-runtime/core").CustodyMode;
     readonly capabilities: SessionStoreCapabilities;
     constructor(options: GitHubActionsSecretStoreOptions);
     read(input: {

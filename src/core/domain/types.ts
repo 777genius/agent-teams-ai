@@ -125,6 +125,13 @@ export type AgentHistoryMode =
   | "none"
   | "host-managed-thread"
   | "provider-thread";
+export type AgentExecutionMode = "task" | "streaming-task" | "managed-run";
+export type ToolPolicyMode =
+  | "none"
+  | "provider-enforced"
+  | "host-filtered"
+  | "unsupported";
+export type OutputMode = "text" | "json" | "schema-json";
 
 export type AgentCapabilities = {
   readonly agentId: string;
@@ -139,6 +146,15 @@ export type AgentCapabilities = {
   readonly requiresWritableWorkspace: boolean;
   readonly maxPromptBytes?: number;
   readonly maxRuntimeMs: number;
+  readonly executionModes?: readonly AgentExecutionMode[];
+  readonly toolPolicyMode?: ToolPolicyMode;
+  readonly outputModes?: readonly OutputMode[];
+  readonly supportsStreaming?: boolean;
+  readonly supportsUsageTelemetry?: boolean;
+  readonly supportsCostTelemetry?: boolean;
+  readonly supportsProviderRunId?: boolean;
+  readonly supportsAbort?: boolean;
+  readonly supportsCleanup?: boolean;
 };
 
 export type SessionStoreCapabilities = {
@@ -252,6 +268,8 @@ export type ProviderFailureCode =
   | "provider_session_invalid"
   | "provider_output_invalid"
   | "task_mode_unsupported"
+  | "task_cancelled"
+  | "task_timeout"
   | "stale_generation"
   | "backend_unavailable"
   | "unknown_runtime_failure";
@@ -270,10 +288,93 @@ export type SessionValidationResult =
 
 export type ProviderTaskKind = "review" | "structured-prompt" | "health-check";
 
+export type AgentUsage = {
+  readonly inputTokens?: number;
+  readonly outputTokens?: number;
+  readonly totalTokens?: number;
+};
+
+export type AgentCost = {
+  readonly amount: number;
+  readonly currency: "USD";
+};
+
+export type AgentToolCall = {
+  readonly id?: string;
+  readonly name: string;
+  readonly status?: "started" | "completed" | "failed" | "denied";
+  readonly safeInput?: Readonly<Record<string, unknown>>;
+  readonly safeInputPreview?: string;
+  readonly safeOutputPreview?: string;
+};
+
+export type ProviderTaskControls = {
+  readonly model?: string;
+  readonly maxTurns?: number;
+  readonly allowedTools?: readonly string[];
+  readonly permissionMode?: "read-only" | "preapproved" | "allow-edits" | "bypass" | "none";
+  readonly responseFormat?: "text" | "json";
+  readonly outputSchemaName?: string;
+};
+
+export type ProviderTaskTelemetry = {
+  readonly providerRunId?: string;
+  readonly providerSessionId?: string;
+  readonly durationMs?: number;
+  readonly turns?: number;
+  readonly usage?: AgentUsage;
+  readonly cost?: AgentCost;
+  readonly toolCalls?: readonly AgentToolCall[];
+  readonly finishReason?:
+    | "completed"
+    | "max_turns"
+    | "cancelled"
+    | "timeout"
+    | "provider_error";
+};
+
+export type ProviderTaskEvent =
+  | {
+      readonly type: "started";
+      readonly occurredAt: Date;
+      readonly telemetry?: ProviderTaskTelemetry;
+    }
+  | {
+      readonly type: "text_delta";
+      readonly occurredAt: Date;
+      readonly text: string;
+      readonly telemetry?: ProviderTaskTelemetry;
+    }
+  | {
+      readonly type: "tool_call";
+      readonly occurredAt: Date;
+      readonly toolCall: AgentToolCall;
+      readonly telemetry?: ProviderTaskTelemetry;
+    }
+  | {
+      readonly type: "usage";
+      readonly occurredAt: Date;
+      readonly usage: AgentUsage;
+      readonly telemetry?: ProviderTaskTelemetry;
+    }
+  | {
+      readonly type: "warning";
+      readonly occurredAt: Date;
+      readonly warning: RuntimeWarning;
+      readonly telemetry?: ProviderTaskTelemetry;
+    }
+  | {
+      readonly type: "completed";
+      readonly occurredAt: Date;
+      readonly result: ProviderTaskResult;
+      readonly telemetry?: ProviderTaskTelemetry;
+    };
+
 export type ProviderTask = {
   readonly kind: ProviderTaskKind;
   readonly prompt: string;
   readonly outputSchemaName?: string;
+  readonly controls?: ProviderTaskControls;
   readonly metadata?: Readonly<Record<string, string>>;
 };
 
@@ -282,11 +383,13 @@ export type ProviderTaskResult =
       readonly status: "completed";
       readonly outputText: string;
       readonly structuredOutput?: unknown;
+      readonly telemetry?: ProviderTaskTelemetry;
       readonly warnings: readonly RuntimeWarning[];
     }
   | {
       readonly status: "failed";
       readonly failure: ProviderFailure;
+      readonly telemetry?: ProviderTaskTelemetry;
       readonly warnings: readonly RuntimeWarning[];
     };
 

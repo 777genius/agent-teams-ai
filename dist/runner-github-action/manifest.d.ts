@@ -4,7 +4,7 @@ export declare const githubActionRunnerManifest: {
     packageName: string;
     packageVersion: string;
     protocolVersion: 1;
-    capabilities: import("@777genius/subscription-runtime/core").RunnerCapabilities;
+    capabilities: import("@vioxen/subscription-runtime/core").RunnerCapabilities;
     experimental: false;
     minimumCoreVersion: string;
 };

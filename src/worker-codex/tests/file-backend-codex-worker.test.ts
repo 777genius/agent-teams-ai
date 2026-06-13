@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execPath } from "node:process";
-import type { RunnerPort } from "@777genius/subscription-runtime/core";
+import type { RunnerPort } from "@vioxen/subscription-runtime/core";
 import { describe, expect, it } from "vitest";
 import { FileBackendCodexWorker } from "../index";
 import { NodeProcessRunner } from "../node-process-runner";

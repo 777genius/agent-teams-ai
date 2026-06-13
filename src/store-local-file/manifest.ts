@@ -1,11 +1,11 @@
-import type { RuntimeAdapterManifest } from "@777genius/subscription-runtime/core";
+import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
 import { localFileLeaseStoreCapabilities } from "./local-file-lease-store";
 import { localEncryptedFileStoreCapabilities } from "./local-encrypted-file-store";
 
 export const localEncryptedFileStoreManifest = {
   adapterId: "store.local-encrypted-file",
   adapterKind: "store",
-  packageName: "@777genius/subscription-runtime/store-local-file",
+  packageName: "@vioxen/subscription-runtime/store-local-file",
   packageVersion: "0.0.0",
   protocolVersion: 1,
   capabilities: localEncryptedFileStoreCapabilities,
@@ -17,7 +17,7 @@ export const localEncryptedFileStoreManifest = {
 export const localFileLeaseStoreManifest = {
   adapterId: "lease.local-file",
   adapterKind: "lease-store",
-  packageName: "@777genius/subscription-runtime/store-local-file",
+  packageName: "@vioxen/subscription-runtime/store-local-file",
   packageVersion: "0.0.0",
   protocolVersion: 1,
   capabilities: localFileLeaseStoreCapabilities,

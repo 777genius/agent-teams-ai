@@ -1,5 +1,5 @@
-import type { RedactorPort, SessionArtifact } from "@777genius/subscription-runtime/core";
-import type { CodexMaterializedSession } from "./codex-json-execution-engine";
+import type { RedactorPort, SessionArtifact } from "@vioxen/subscription-runtime/core";
+import type { CodexMaterializedSession } from "./codex-json-execution-engine.js";
 export type CodexSessionPrewarmResult = {
     readonly mode: "ephemeral" | "worker-cache";
     readonly home: string;

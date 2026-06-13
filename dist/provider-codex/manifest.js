@@ -2,7 +2,7 @@ import { codexJsonAgentCapabilities, codexSessionCapabilities, } from "./capabil
 export const codexProviderManifest = {
     adapterId: "provider.codex-cli",
     adapterKind: "combined-provider",
-    packageName: "@777genius/subscription-runtime/provider-codex",
+    packageName: "@vioxen/subscription-runtime/provider-codex",
     packageVersion: "0.0.0",
     protocolVersion: 1,
     capabilities: {

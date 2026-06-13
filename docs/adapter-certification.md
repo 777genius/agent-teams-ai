@@ -34,6 +34,15 @@ pnpm exec vitest run packages/features/codex-oauth-rotating/src/tests/codex-oaut
 - Does not require interactive auth during runtime.
 - Has contract tests for validate, refresh success, refresh no-op, reconnect,
   quota or permission failure, and redaction.
+- For task agents, reports provider-neutral telemetry when available: turns,
+  usage, cost, provider run id, provider session id, finish reason and safe tool
+  calls.
+- Proves abort, timeout, invalid output, output-size guard, cleanup and
+  provider output format drift behavior.
+- Declares whether tool policy is provider-enforced, host-filtered or
+  unsupported.
+- Streaming adapters emit provider-neutral task events and never expose raw
+  provider SDK event payloads directly to host apps.
 
 ## Store Adapter Gate
 

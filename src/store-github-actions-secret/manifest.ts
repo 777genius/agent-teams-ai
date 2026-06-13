@@ -1,10 +1,10 @@
-import type { RuntimeAdapterManifest } from "@777genius/subscription-runtime/core";
+import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
 import { githubActionsSecretStoreCapabilities } from "./github-actions-secret-store";
 
 export const githubActionsSecretStoreManifest = {
   adapterId: "store.github-actions-secret",
   adapterKind: "store",
-  packageName: "@777genius/subscription-runtime/store-github-actions-secret",
+  packageName: "@vioxen/subscription-runtime/store-github-actions-secret",
   packageVersion: "0.0.0",
   protocolVersion: 1,
   capabilities: githubActionsSecretStoreCapabilities,

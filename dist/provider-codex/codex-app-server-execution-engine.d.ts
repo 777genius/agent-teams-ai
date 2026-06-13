@@ -1,6 +1,6 @@
-import type { RedactorPort, RunnerPort } from "@777genius/subscription-runtime/core";
-import type { CodexExecutionProfile } from "./codex-execution-profile";
-import type { CodexExecutionEngine, CodexExecutionPrewarmResult, CodexExecutionResult, CodexMaterializedSession, CodexReasoningEffort } from "./codex-json-execution-engine";
+import type { RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
+import type { CodexExecutionProfile } from "./codex-execution-profile.js";
+import type { CodexExecutionEngine, CodexExecutionPrewarmResult, CodexExecutionResult, CodexMaterializedSession, CodexReasoningEffort } from "./codex-json-execution-engine.js";
 export type CodexAppServerExecutionEngineOptions = {
     readonly codexBinaryPath: string;
     readonly sourceEnv?: Readonly<Record<string, string | undefined>>;

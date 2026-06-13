@@ -1,53 +1,174 @@
 #!/usr/bin/env node
 import { readdir, readFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 
-const rootDir = new URL("..", import.meta.url).pathname;
-const srcDir = join(rootDir, "src");
+const rootDir = process.env.SUBSCRIPTION_RUNTIME_BOUNDARY_ROOT_DIR
+  ? resolve(process.env.SUBSCRIPTION_RUNTIME_BOUNDARY_ROOT_DIR)
+  : new URL("..", import.meta.url).pathname;
+const srcDir = process.env.SUBSCRIPTION_RUNTIME_BOUNDARY_SRC_DIR
+  ? resolve(process.env.SUBSCRIPTION_RUNTIME_BOUNDARY_SRC_DIR)
+  : join(rootDir, "src");
+
+const packageJson = JSON.parse(
+  await readFile(join(rootDir, "package.json"), "utf8"),
+);
+if (typeof packageJson.name !== "string" || packageJson.name.length === 0) {
+  throw new Error("package.json name is required for boundary checks");
+}
+
+const currentPackageName = packageJson.name;
+const legacyPackageNames = ["@777genius/subscription-runtime"];
+const runtimePackageNames = [currentPackageName, ...legacyPackageNames];
+const runtimePackagePattern = runtimePackageNames.map(escapeRegExp).join("|");
+
+function runtimeSubpathPattern(subpathPattern) {
+  return new RegExp(`^(?:${runtimePackagePattern})/${subpathPattern}`);
+}
+
+function internalPathPattern(subpathPattern) {
+  return new RegExp(`(?:^|/)${subpathPattern}`);
+}
 
 const forbidden = [
   {
     from: /^src\/core\//,
     imports: [
-      /@777genius\/subscription-runtime\/provider-/,
-      /@777genius\/subscription-runtime\/worker-/,
-      /@777genius\/subscription-runtime\/queue-/,
-      /@777genius\/subscription-runtime\/store-/,
-      /@777genius\/subscription-runtime\/runner-/,
+      runtimeSubpathPattern("(?:provider-|worker-|queue-|store-|runner-)"),
+      internalPathPattern("(?:provider-|worker-|queue-|store-|runner-)"),
       /bullmq/,
       /codex/i,
+      /claude/i,
       /github/i,
     ],
     message: "core must stay provider and adapter neutral",
   },
   {
+    from: /^src\/agent-task\//,
+    imports: [
+      runtimeSubpathPattern("(?:provider-|worker-|queue-|store-|runner-)"),
+      internalPathPattern("(?:provider-|worker-|queue-|store-|runner-)"),
+      /bullmq/,
+      /claude/i,
+      /codex/i,
+      /github/i,
+    ],
+    message: "agent-task must stay provider and adapter neutral",
+  },
+  {
     from: /^src\/provider-codex\//,
     imports: [
-      /@777genius\/subscription-runtime\/worker-/,
-      /@777genius\/subscription-runtime\/queue-/,
-      /@777genius\/subscription-runtime\/store-/,
+      runtimeSubpathPattern("provider-claude"),
+      runtimeSubpathPattern("(?:worker-|queue-|store-|runner-)"),
+      internalPathPattern("(?:provider-claude|worker-|queue-|store-|runner-)"),
+      /claude/i,
     ],
-    message: "provider-codex must not depend on workers, queues, or stores",
+    message:
+      "provider-codex must not depend on Claude, workers, queues, stores, or runners",
+  },
+  {
+    from: /^src\/provider-claude\//,
+    imports: [
+      runtimeSubpathPattern("provider-codex"),
+      runtimeSubpathPattern("(?:worker-|queue-|store-|runner-)"),
+      internalPathPattern("(?:provider-codex|worker-|queue-|store-|runner-)"),
+      /codex/i,
+    ],
+    message:
+      "provider-claude must not depend on Codex, workers, queues, stores, or runners",
+  },
+  {
+    from: /^src\/worker-core\//,
+    imports: [
+      runtimeSubpathPattern(
+        "(?:provider-|worker-(?:codex|claude)|queue-|store-|runner-)",
+      ),
+      internalPathPattern(
+        "(?:provider-|worker-(?:codex|claude)|queue-|store-|runner-)",
+      ),
+      /bullmq/,
+      /claude/i,
+      /codex/i,
+      /github/i,
+    ],
+    message: "worker-core must stay provider and adapter neutral",
+  },
+  {
+    from: /^src\/worker-codex\//,
+    imports: [
+      runtimeSubpathPattern("(?:provider-claude|worker-claude|queue-)"),
+      internalPathPattern("(?:provider-claude|worker-claude|queue-)"),
+      /bullmq/,
+      /claude/i,
+    ],
+    message:
+      "worker-codex must not depend on Claude or queue implementations",
+  },
+  {
+    from: /^src\/worker-claude\//,
+    imports: [
+      runtimeSubpathPattern("(?:provider-codex|worker-codex|queue-)"),
+      internalPathPattern("(?:provider-codex|worker-codex|queue-)"),
+      /bullmq/,
+      /codex/i,
+    ],
+    message:
+      "worker-claude must not depend on Codex or queue implementations",
   },
   {
     from: /^src\/queue-core\//,
-    imports: [/bullmq/, /bull\b/, /@777genius\/subscription-runtime\/queue-bullmq/],
+    imports: [
+      /bullmq/,
+      /bull\b/,
+      runtimeSubpathPattern(
+        "(?:provider-|worker-(?:codex|claude)|queue-bullmq|store-|runner-)",
+      ),
+      internalPathPattern(
+        "(?:provider-|worker-(?:codex|claude)|queue-bullmq|store-|runner-)",
+      ),
+    ],
     message: "queue-core must stay queue implementation neutral",
   },
   {
+    from: /^src\/runner-github-action\//,
+    imports: [
+      runtimeSubpathPattern("(?:provider-|worker-|queue-|store-)"),
+      internalPathPattern("(?:provider-|worker-|queue-|store-)"),
+      /bullmq/,
+      /claude/i,
+      /codex/i,
+    ],
+    message:
+      "runner-github-action must not depend on providers, workers, queues, or stores",
+  },
+  {
     from: /^src\/store-local-file\//,
-    imports: [/provider-codex/, /codex/i, /bullmq/],
+    imports: [
+      runtimeSubpathPattern("(?:provider-|queue-)"),
+      internalPathPattern("(?:provider-|queue-)"),
+      /provider-/,
+      /codex/i,
+      /claude/i,
+      /bullmq/,
+    ],
     message: "store-local-file must not know providers or queues",
   },
   {
     from: /^src\/store-github-actions-secret\//,
-    imports: [/provider-codex/, /codex/i, /bullmq/],
+    imports: [
+      runtimeSubpathPattern("(?:provider-|queue-)"),
+      internalPathPattern("(?:provider-|queue-)"),
+      /provider-/,
+      /codex/i,
+      /claude/i,
+      /bullmq/,
+    ],
     message: "store-github-actions-secret must not know providers or queues",
   },
 ];
 
-const importPattern =
+const staticImportPattern =
   /(?:import|export)\s+(?:type\s+)?(?:[^'"]+\s+from\s+)?["']([^"']+)["']/g;
+const dynamicImportPattern = /import\s*\(\s*["']([^"']+)["']\s*\)/g;
 
 const violations = [];
 for (const file of await listFiles(srcDir)) {
@@ -57,7 +178,18 @@ for (const file of await listFiles(srcDir)) {
   if (text.includes("@reviewrouter/")) {
     violations.push(`${rel}: runtime package must not import @reviewrouter/*`);
   }
-  const imports = [...text.matchAll(importPattern)].map((match) => match[1]);
+  const imports = extractImports(text);
+  for (const specifier of imports) {
+    if (
+      legacyPackageNames.some(
+        (name) => specifier === name || specifier.startsWith(`${name}/`),
+      )
+    ) {
+      violations.push(
+        `${rel}: runtime package must not import legacy package scope: ${specifier}`,
+      );
+    }
+  }
   for (const rule of forbidden) {
     if (!rule.from.test(rel)) continue;
     for (const specifier of imports) {
@@ -76,6 +208,13 @@ if (violations.length > 0) {
 
 console.log("Architecture boundaries OK.");
 
+function extractImports(text) {
+  return [
+    ...[...text.matchAll(staticImportPattern)].map((match) => match[1]),
+    ...[...text.matchAll(dynamicImportPattern)].map((match) => match[1]),
+  ];
+}
+
 async function listFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
@@ -85,4 +224,8 @@ async function listFiles(dir) {
     else files.push(fullPath);
   }
   return files;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

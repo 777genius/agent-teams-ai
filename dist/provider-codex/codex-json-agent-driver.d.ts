@@ -1,6 +1,6 @@
-import type { AgentDriver, ProviderFailure, ProviderTask, ProviderTaskResult, RedactorPort, SessionArtifact, WorkspaceHandle } from "@777genius/subscription-runtime/core";
-import { type CodexExecutionEngine, type CodexReasoningEffort } from "./codex-json-execution-engine";
-import { type CodexSessionMaterializer, type CodexSessionPrewarmResult } from "./codex-session-materializer";
+import type { AgentDriver, ProviderFailure, ProviderTask, ProviderTaskResult, RedactorPort, SessionArtifact, WorkspaceHandle } from "@vioxen/subscription-runtime/core";
+import { type CodexExecutionEngine, type CodexReasoningEffort } from "./codex-json-execution-engine.js";
+import { type CodexSessionMaterializer, type CodexSessionPrewarmResult } from "./codex-session-materializer.js";
 type CodexJsonAgentDriverBaseOptions = {
     readonly model?: string;
     readonly reasoningEffort?: CodexReasoningEffort;
@@ -18,7 +18,7 @@ export declare class CodexJsonAgentDriver implements AgentDriver {
     private readonly options;
     readonly agentId = "codex-json";
     readonly providerId = "codex";
-    readonly capabilities: import("@777genius/subscription-runtime/core").AgentCapabilities;
+    readonly capabilities: import("@vioxen/subscription-runtime/core").AgentCapabilities;
     private readonly engine;
     private readonly model;
     private readonly reasoningEffort;

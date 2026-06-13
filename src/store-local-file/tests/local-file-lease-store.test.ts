@@ -16,14 +16,14 @@ import {
   DeterministicIdGenerator,
   type RuntimeDeps,
   type SessionArtifact,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import {
   FakeAgentDriver,
   FakeProviderSessionDriver,
   FakeRunner,
   FakeWorkspace,
   MemoryObservability,
-} from "@777genius/subscription-runtime/testing";
+} from "@vioxen/subscription-runtime/testing";
 import {
   createLocalFileBackendRuntimeAdapters,
   decodeLocalFileBackendEncryptionKey,

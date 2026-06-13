@@ -1,10 +1,10 @@
-import type { RuntimeAdapterManifest } from "@777genius/subscription-runtime/core";
+import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
 import { githubActionRunnerCapabilities } from "./capabilities";
 
 export const githubActionRunnerManifest = {
   adapterId: "runner.github-action",
   adapterKind: "runner",
-  packageName: "@777genius/subscription-runtime/runner-github-action",
+  packageName: "@vioxen/subscription-runtime/runner-github-action",
   packageVersion: "0.0.0",
   protocolVersion: 1,
   capabilities: githubActionRunnerCapabilities,

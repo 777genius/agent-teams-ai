@@ -2,7 +2,7 @@ import { githubActionRunnerCapabilities } from "./capabilities.js";
 export const githubActionRunnerManifest = {
     adapterId: "runner.github-action",
     adapterKind: "runner",
-    packageName: "@777genius/subscription-runtime/runner-github-action",
+    packageName: "@vioxen/subscription-runtime/runner-github-action",
     packageVersion: "0.0.0",
     protocolVersion: 1,
     capabilities: githubActionRunnerCapabilities,

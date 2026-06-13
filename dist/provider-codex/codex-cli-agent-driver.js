@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { codexAuthJsonFromArtifact } from "./codex-auth-json-codec.js";
 import { pruneCodexChildEnv } from "./codex-cli-domain.js";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup.js";
-import { codexAgentCapabilities, codexAgentId, codexProviderId, } from "./capabilities.js";
+import { codexAgentCapabilities, codexAgentId, codexProviderId, defaultCodexModel, } from "./capabilities.js";
 import { classifyCodexFailure } from "./failure-classifier.js";
 export class CodexCliAgentDriver {
     options;
@@ -42,7 +42,7 @@ export class CodexCliAgentDriver {
                     "exec",
                     "--skip-git-repo-check",
                     "--model",
-                    this.options.model ?? "gpt-5.5",
+                    this.options.model ?? defaultCodexModel,
                     "--",
                     input.task.prompt,
                 ],

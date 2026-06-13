@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { computeSessionGenerationHash, } from "@777genius/subscription-runtime/core";
+import { computeSessionGenerationHash, } from "@vioxen/subscription-runtime/core";
 const storageVersion = "local-encrypted-file-store-v1";
 const encryptionAlgorithm = "aes-256-gcm";
 const nonceBytes = 12;

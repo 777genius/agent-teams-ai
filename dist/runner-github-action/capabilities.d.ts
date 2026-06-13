@@ -1,3 +1,3 @@
-import type { RunnerCapabilities } from "@777genius/subscription-runtime/core";
+import type { RunnerCapabilities } from "@vioxen/subscription-runtime/core";
 export declare const githubActionRunnerCapabilities: RunnerCapabilities;
 //# sourceMappingURL=capabilities.d.ts.map

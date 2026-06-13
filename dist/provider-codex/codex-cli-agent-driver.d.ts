@@ -1,4 +1,4 @@
-import type { AgentDriver, ProviderFailure, ProviderTask, ProviderTaskResult, SessionArtifact, WorkspaceHandle } from "@777genius/subscription-runtime/core";
+import type { AgentDriver, ProviderFailure, ProviderTask, ProviderTaskResult, SessionArtifact, WorkspaceHandle } from "@vioxen/subscription-runtime/core";
 export type CodexCliAgentDriverOptions = {
     readonly codexBinaryPath?: string;
     readonly model?: string;
@@ -9,7 +9,7 @@ export declare class CodexCliAgentDriver implements AgentDriver {
     private readonly options;
     readonly agentId = "codex-cli";
     readonly providerId = "codex";
-    readonly capabilities: import("@777genius/subscription-runtime/core").AgentCapabilities;
+    readonly capabilities: import("@vioxen/subscription-runtime/core").AgentCapabilities;
     constructor(options?: CodexCliAgentDriverOptions);
     runTask(input: {
         readonly session: SessionArtifact | null;

@@ -2,7 +2,7 @@ import type {
   ProviderTaskResult,
   RedactorPort,
   RunnerPort,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import { classifyCodexFailure } from "./failure-classifier";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 
@@ -217,7 +217,9 @@ export function buildCodexJsonExecArgs(input: {
   ];
 }
 
-export function codexExecutionFailure(error: unknown): ProviderTaskResult {
+export function codexExecutionFailure(
+  error: unknown,
+): Extract<ProviderTaskResult, { readonly status: "failed" }> {
   return {
     status: "failed",
     failure: classifyCodexFailure(error),

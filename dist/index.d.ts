@@ -1,5 +1,6 @@
 export * as core from "./core/index.js";
 export * as providerCodex from "./provider-codex/index.js";
+export * as providerClaude from "./provider-claude/index.js";
 export * as workerCore from "./worker-core/index.js";
 export * as workerCodex from "./worker-codex/index.js";
 export * as queueCore from "./queue-core/index.js";

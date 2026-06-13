@@ -1,4 +1,4 @@
-import type { WorkspaceHandle, WorkspacePort } from "@777genius/subscription-runtime/core";
+import type { WorkspaceHandle, WorkspacePort } from "@vioxen/subscription-runtime/core";
 export declare class TempWorkspace implements WorkspacePort {
     private readonly prefix;
     readonly workspaceId = "temp-workspace";

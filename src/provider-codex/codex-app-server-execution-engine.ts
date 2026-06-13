@@ -4,7 +4,7 @@ import { EventEmitter, once as onceEvent } from "node:events";
 import type {
   RedactorPort,
   RunnerPort,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import type {
   CodexExecutionProfile,

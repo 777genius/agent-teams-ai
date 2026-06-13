@@ -1,4 +1,4 @@
-import type { ProviderFailure } from "@777genius/subscription-runtime/core";
+import type { ProviderFailure } from "@vioxen/subscription-runtime/core";
 import { classifyCodexRuntimeFailure } from "./codex-cli-domain";
 
 export function classifyCodexFailure(error: unknown): ProviderFailure {
@@ -6,6 +6,30 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
   const state = classifyCodexRuntimeFailure(message);
 
   switch (state) {
+    case "task_cancelled":
+      return {
+        code: "task_cancelled",
+        retryable: false,
+        reconnectRequired: false,
+        safeMessage: "Codex task was cancelled.",
+        causeCategory: state,
+      };
+    case "task_timeout":
+      return {
+        code: "task_timeout",
+        retryable: true,
+        reconnectRequired: false,
+        safeMessage: "Codex task timed out.",
+        causeCategory: state,
+      };
+    case "provider_output_invalid":
+      return {
+        code: "provider_output_invalid",
+        retryable: true,
+        reconnectRequired: false,
+        safeMessage: "Codex provider output was invalid.",
+        causeCategory: state,
+      };
     case "needs_reconnect":
       return {
         code: "needs_reconnect",

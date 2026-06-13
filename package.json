@@ -1,5 +1,5 @@
 {
-  "name": "@777genius/subscription-runtime",
+  "name": "@vioxen/subscription-runtime",
   "version": "0.1.0-main.0",
   "description": "Provider-neutral subscription runtime for backend workers, Codex subscription execution, and pluggable session custody.",
   "license": "UNLICENSED",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/777genius/subscription-runtime.git"
+    "url": "git+https://github.com/vioxen/subscription-runtime.git"
   },
   "exports": {
     ".": {
@@ -26,6 +26,11 @@
       "types": "./dist/provider-codex/index.d.ts",
       "import": "./dist/provider-codex/index.js",
       "default": "./dist/provider-codex/index.js"
+    },
+    "./provider-claude": {
+      "types": "./dist/provider-claude/index.d.ts",
+      "import": "./dist/provider-claude/index.js",
+      "default": "./dist/provider-claude/index.js"
     },
     "./worker-core": {
       "types": "./dist/worker-core/index.d.ts",
@@ -88,6 +93,14 @@
   },
   "dependencies": {
     "libsodium-wrappers": "^0.8.4"
+  },
+  "peerDependencies": {
+    "claude-runtime": "0.0.0"
+  },
+  "peerDependenciesMeta": {
+    "claude-runtime": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

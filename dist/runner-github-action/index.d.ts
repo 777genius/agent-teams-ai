@@ -1,4 +1,4 @@
-export * from "./capabilities";
-export * from "./github-action-runner";
-export * from "./manifest";
+export * from "./capabilities.js";
+export * from "./github-action-runner.js";
+export * from "./manifest.js";
 //# sourceMappingURL=index.d.ts.map

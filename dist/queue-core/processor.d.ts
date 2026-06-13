@@ -1,5 +1,5 @@
-import type { BoundedSubscriptionWorkerPool } from "@777genius/subscription-runtime/worker-core";
-import type { QueueProcessorState, QueueProcessorStats, SubscriptionRetryPolicy, SubscriptionTaskQueuePort } from "./types";
+import type { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
+import type { QueueProcessorState, QueueProcessorStats, SubscriptionRetryPolicy, SubscriptionTaskQueuePort } from "./types.js";
 export type SubscriptionQueueProcessorOptions<Job, Result> = {
     readonly queue: SubscriptionTaskQueuePort<Job, Result>;
     readonly workerPool: Pick<BoundedSubscriptionWorkerPool<Job, Result>, "run" | "stats">;

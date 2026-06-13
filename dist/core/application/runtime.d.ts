@@ -1,5 +1,5 @@
-import type { CompiledRuntimePolicy, ProviderTask, ProviderTaskResult, RefreshSessionResult, RefreshThenRunResult, RunContext, RuntimeHealthCheckResult, RuntimeExecutionPlan } from "../domain/types";
-import type { RuntimeDeps } from "../ports";
+import type { CompiledRuntimePolicy, ProviderTask, ProviderTaskResult, RefreshSessionResult, RefreshThenRunResult, RunContext, RuntimeHealthCheckResult, RuntimeExecutionPlan } from "../domain/types.js";
+import type { RuntimeDeps } from "../ports/index.js";
 export type SubscriptionRuntime = {
     readonly capabilities: CompiledRuntimePolicy;
     readonly executionPlan: RuntimeExecutionPlan;

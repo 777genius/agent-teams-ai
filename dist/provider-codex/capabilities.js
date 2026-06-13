@@ -2,6 +2,7 @@ export const codexProviderId = "codex";
 export const codexAgentId = "codex-cli";
 export const codexJsonAgentId = "codex-json";
 export const codexAuthJsonFormatVersion = "codex-auth-json-v1";
+export const defaultCodexModel = "gpt-5-codex";
 export const codexEnvironmentPolicy = {
     inheritHostEnvironment: false,
     allowlist: ["PATH", "HOME", "CI", "CODEX_HOME"],
@@ -55,12 +56,20 @@ export const codexAgentCapabilities = {
     providerId: codexProviderId,
     taskModes: ["review", "structured-prompt", "health-check"],
     historyMode: "none",
+    executionModes: ["task"],
+    toolPolicyMode: "provider-enforced",
+    outputModes: ["text", "json", "schema-json"],
     supportsReviewTasks: true,
     supportsStructuredOutput: true,
     supportsToolCalling: false,
     supportsRepositoryContext: true,
     supportsInlineFindings: true,
     requiresWritableWorkspace: false,
+    supportsUsageTelemetry: false,
+    supportsCostTelemetry: false,
+    supportsProviderRunId: false,
+    supportsAbort: true,
+    supportsCleanup: true,
     maxRuntimeMs: 600_000,
 };
 export const codexJsonAgentCapabilities = {

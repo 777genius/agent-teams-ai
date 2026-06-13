@@ -1,5 +1,5 @@
-import type { AgentDriver, ProviderSessionDriver, RedactorPort, SessionStorePort } from "../ports";
-import type { SessionArtifact } from "../domain/types";
+import type { AgentDriver, ProviderSessionDriver, RedactorPort, SessionStorePort } from "../ports/index.js";
+import type { SessionArtifact } from "../domain/types.js";
 export type ProviderDriverTestFixture = {
     readonly driver: ProviderSessionDriver;
     readonly goodSession: SessionArtifact;

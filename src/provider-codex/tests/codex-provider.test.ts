@@ -3,16 +3,16 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DefaultRedactor } from "@777genius/subscription-runtime/core";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import {
   agentDriverContract,
   providerSessionDriverContract,
-} from "@777genius/subscription-runtime/testing";
+} from "@vioxen/subscription-runtime/testing";
 import type {
   ProcessResult,
   RunnerPort,
   RunnerCapabilities,
-} from "@777genius/subscription-runtime/core";
+} from "@vioxen/subscription-runtime/core";
 import {
   CodexCliAgentDriver,
   CodexCliProviderDriver,
@@ -28,6 +28,7 @@ import {
   codexJsonAgentCapabilities,
   codexProviderManifest,
   codexSessionCapabilities,
+  defaultCodexModel,
   sessionArtifactFromCodexAuthJson,
   validateCodexSessionArtifact,
 } from "../index";
@@ -92,6 +93,21 @@ describe("Codex provider adapter", () => {
     ).toBe("unknown_auth_state");
   });
 
+  it("classifies execution lifecycle and output failures", () => {
+    expect(classifyCodexRuntimeFailure("node_process_runner_aborted")).toBe(
+      "task_cancelled",
+    );
+    expect(
+      classifyCodexRuntimeFailure("node_process_runner_timeout:50000"),
+    ).toBe("task_timeout");
+    expect(classifyCodexRuntimeFailure("codex_json_event_invalid")).toBe(
+      "provider_output_invalid",
+    );
+    expect(
+      classifyCodexRuntimeFailure("codex_app_server_structured_output_invalid"),
+    ).toBe("provider_output_invalid");
+  });
+
   it("recognizes transient Codex temp cleanup races", () => {
     const error = Object.assign(
       new Error(
@@ -115,8 +131,17 @@ describe("Codex provider adapter", () => {
     ]);
     expect(codexAgentCapabilities.agentId).toBe("codex-cli");
     expect(codexAgentCapabilities.providerId).toBe("codex");
+    expect(codexAgentCapabilities.executionModes).toEqual(["task"]);
+    expect(codexAgentCapabilities.toolPolicyMode).toBe("provider-enforced");
+    expect(codexAgentCapabilities.supportsAbort).toBe(true);
     expect(codexJsonAgentCapabilities.agentId).toBe("codex-json");
     expect(codexJsonAgentCapabilities.providerId).toBe("codex");
+    expect(codexJsonAgentCapabilities.outputModes).toEqual([
+      "text",
+      "json",
+      "schema-json",
+    ]);
+    expect(defaultCodexModel).toBe("gpt-5-codex");
   });
 
   it("supports lazy refresh freshness checks from Codex auth metadata", async () => {
@@ -241,6 +266,7 @@ describe("Codex provider adapter", () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-provider-test-"));
     const driver = new CodexCliSessionDriver({
       codexBinaryPath: "/bin/codex-test",
+      model: "gpt-refresh-test",
       sourceEnv: {
         PATH: "/usr/bin",
         GITHUB_TOKEN: "must-not-pass",
@@ -257,6 +283,8 @@ describe("Codex provider adapter", () => {
       });
 
       expect(result.providerState).toBe("refreshed");
+      expect(runner.lastArgs).toContain("--model");
+      expect(runner.lastArgs).toContain("gpt-refresh-test");
       expect(runner.lastEnv?.GITHUB_TOKEN).toBeUndefined();
       expect(runner.lastEnv?.CODEX_HOME).toBeTruthy();
       expect(new TextDecoder().decode(result.artifact.bytes)).toContain(
@@ -291,6 +319,29 @@ describe("Codex provider adapter", () => {
       });
       expect(runner.lastArgs).toContain("gpt-test");
       expect(runner.lastArgs).toContain("inspect diff");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the shared Codex default model when none is configured", async () => {
+    const runner = new StaticRunner("review output");
+    const workspace = await mkdtemp(join(tmpdir(), "codex-agent-default-model-"));
+    const driver = new CodexCliAgentDriver({
+      codexBinaryPath: "/bin/codex-test",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "inspect diff" },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(runner.lastArgs).toContain(defaultCodexModel);
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
@@ -366,11 +417,58 @@ describe("Codex provider adapter", () => {
       expect(result).toMatchObject({
         status: "completed",
         outputText: "json review output",
+        telemetry: {
+          finishReason: "completed",
+        },
       });
+      expect(result.telemetry?.durationMs).toEqual(expect.any(Number));
       expect(runner.lastArgs).toContain("--json");
       expect(runner.lastArgs).toContain("-");
       expect(runner.lastStdin).toBe("inspect diff");
       expect(runner.lastEnv?.CODEX_HOME).toBeTruthy();
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("uses task controls for provider-neutral model and schema selection", async () => {
+    const runner = new StaticRunner(
+      `${JSON.stringify({
+        type: "agent_message",
+        message: JSON.stringify({ verdict: "APPROVE" }),
+      })}\n`,
+    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-controls-test-"));
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "default-model",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "inspect diff",
+          controls: {
+            model: "task-model",
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+      expect(runner.lastArgs).toContain("task-model");
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
@@ -442,7 +540,10 @@ describe("Codex provider adapter", () => {
       expect(result).toMatchObject({
         status: "failed",
         failure: {
-          code: "unknown_runtime_failure",
+          code: "provider_output_invalid",
+        },
+        telemetry: {
+          finishReason: "provider_error",
         },
       });
     } finally {
@@ -786,7 +887,15 @@ describe("Codex provider adapter", () => {
         abortSignal: controller.signal,
       });
 
-      expect(result.status).toBe("failed");
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "task_cancelled",
+        },
+        telemetry: {
+          finishReason: "cancelled",
+        },
+      });
       expect(fallback.prompts).toEqual([]);
     } finally {
       await driver.dispose();
@@ -984,6 +1093,7 @@ const runnerCapabilities: RunnerCapabilities = {
 class RefreshingRunner implements RunnerPort {
   readonly runnerId = "codex-test-runner";
   readonly capabilities = runnerCapabilities;
+  lastArgs: readonly string[] = [];
   lastEnv: Readonly<Record<string, string>> | null = null;
 
   constructor(private readonly nextAuthJson: string) {}
@@ -992,6 +1102,7 @@ class RefreshingRunner implements RunnerPort {
     readonly env: Readonly<Record<string, string>>;
     readonly args: readonly string[];
   }): Promise<ProcessResult> {
+    this.lastArgs = input.args;
     this.lastEnv = input.env;
     const codexHome = input.env.CODEX_HOME;
     if (!codexHome) throw new Error("missing_codex_home");
