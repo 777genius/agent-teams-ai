@@ -87,7 +87,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "subscription-runtime-agent-task": "./dist/agent-task/cli.js"
+    "subscription-runtime-agent-task": "./dist/agent-task/cli.js",
+    "subscription-runtime-run-agent-task": "./dist/worker-local/agent-task-runner-cli.js"
   },
   "files": [
     "dist",

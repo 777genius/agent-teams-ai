@@ -27,6 +27,7 @@ export type FileBackendCodexWorkerOptions = {
     readonly observability?: ObservabilityPort;
     readonly runner?: RuntimeDeps["runner"];
     readonly workspace?: RuntimeDeps["workspace"];
+    readonly workspacePath?: string;
     readonly clock?: ClockPort;
 };
 export type FileBackendCodexWorkerJob = {
@@ -34,6 +35,7 @@ export type FileBackendCodexWorkerJob = {
     readonly prompt: string;
     readonly kind?: ProviderTask["kind"];
     readonly outputSchemaName?: string;
+    readonly controls?: ProviderTask["controls"];
     readonly abortSignal?: AbortSignal;
     readonly metadata?: Readonly<Record<string, string>>;
 };

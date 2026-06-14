@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { loadAgentTaskHandler, runAgentTaskBridge } from "./bridge.js";
 export async function runAgentTaskCli(argv = process.argv.slice(2), io = defaultIo) {
@@ -89,7 +89,18 @@ const defaultIo = {
         return process.cwd();
     },
 };
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (await isMainModule()) {
     process.exitCode = await runAgentTaskCli();
+}
+async function isMainModule() {
+    if (!process.argv[1])
+        return false;
+    const modulePath = fileURLToPath(import.meta.url);
+    try {
+        return (await realpath(modulePath)) === (await realpath(process.argv[1]));
+    }
+    catch {
+        return modulePath === process.argv[1];
+    }
 }
 //# sourceMappingURL=cli.js.map

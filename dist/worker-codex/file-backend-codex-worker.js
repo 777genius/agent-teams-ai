@@ -31,7 +31,8 @@ export class FileBackendCodexWorker {
         this.runner = options.runner ?? new NodeProcessRunner();
         this.ownedWorkspace = options.workspace
             ? null
-            : new StableWorkerWorkspace(join(options.stateRootDir, "workspaces", hashText(this.workerId)));
+            : new StableWorkerWorkspace(options.workspacePath ??
+                join(options.stateRootDir, "workspaces", hashText(this.workerId)));
         this.workspace = options.workspace ?? this.ownedWorkspace;
         this.observability = options.observability ?? new NullWorkerObservability();
         this.clock = options.clock ?? systemClock;
@@ -205,6 +206,7 @@ export class FileBackendCodexWorker {
                     ...(job.outputSchemaName
                         ? { outputSchemaName: job.outputSchemaName }
                         : {}),
+                    ...(job.controls ? { controls: job.controls } : {}),
                     ...(job.metadata ? { metadata: job.metadata } : {}),
                 },
                 runContext: {

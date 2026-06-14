@@ -2,6 +2,7 @@ import type { ProviderTaskEvent } from "@vioxen/subscription-runtime/core";
 import type { ClaudeTaskEngineInput, ClaudeTaskExecutionEngine, ClaudeTaskExecutionResult } from "./claude-task-agent-driver.js";
 import { type ClaudeBgRuntimeContextOptions } from "./claude-bg-runtime-context.js";
 export type ClaudeRuntimeTaskExecutionEngineOptions = ClaudeBgRuntimeContextOptions & {
+    readonly pluginDirs?: readonly string[];
     readonly settingsPath?: string;
 };
 export declare class ClaudeRuntimeTaskExecutionEngine implements ClaudeTaskExecutionEngine {

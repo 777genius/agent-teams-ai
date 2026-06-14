@@ -63,6 +63,7 @@ export type FileBackendCodexWorkerOptions = {
   readonly observability?: ObservabilityPort;
   readonly runner?: RuntimeDeps["runner"];
   readonly workspace?: RuntimeDeps["workspace"];
+  readonly workspacePath?: string;
   readonly clock?: ClockPort;
 };
 
@@ -71,6 +72,7 @@ export type FileBackendCodexWorkerJob = {
   readonly prompt: string;
   readonly kind?: ProviderTask["kind"];
   readonly outputSchemaName?: string;
+  readonly controls?: ProviderTask["controls"];
   readonly abortSignal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, string>>;
 };
@@ -110,7 +112,8 @@ export class FileBackendCodexWorker implements SubscriptionWorker<
     this.ownedWorkspace = options.workspace
       ? null
       : new StableWorkerWorkspace(
-          join(options.stateRootDir, "workspaces", hashText(this.workerId)),
+          options.workspacePath ??
+            join(options.stateRootDir, "workspaces", hashText(this.workerId)),
         );
     this.workspace = options.workspace ?? this.ownedWorkspace!;
     this.observability = options.observability ?? new NullWorkerObservability();
@@ -306,6 +309,7 @@ export class FileBackendCodexWorker implements SubscriptionWorker<
           ...(job.outputSchemaName
             ? { outputSchemaName: job.outputSchemaName }
             : {}),
+          ...(job.controls ? { controls: job.controls } : {}),
           ...(job.metadata ? { metadata: job.metadata } : {}),
         },
         runContext: {

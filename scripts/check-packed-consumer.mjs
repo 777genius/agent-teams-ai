@@ -26,6 +26,54 @@ try {
   );
   run("npm", ["install", "--silent", tarball], { cwd: tempDir });
   await writeFile(
+    join(tempDir, "handler.mjs"),
+    [
+      "export async function runAgentTask(request) {",
+      "  return { protocolVersion: 1, status: 'completed', outputText: `handler:${request.task.prompt}`, warnings: [] };",
+      "}",
+    ].join("\n"),
+  );
+  const handlerBinSmoke = spawnSync(
+    join(tempDir, "node_modules/.bin/subscription-runtime-agent-task"),
+    ["--handler", "./handler.mjs", "--format", "result-json"],
+    {
+      cwd: tempDir,
+      encoding: "utf8",
+      input: JSON.stringify({
+        protocolVersion: 1,
+        task: { kind: "structured-prompt", prompt: "packaged handler bin smoke" },
+      }),
+    },
+  );
+  if (
+    handlerBinSmoke.status !== 0 ||
+    !handlerBinSmoke.stdout.includes("handler:packaged handler bin smoke")
+  ) {
+    process.stderr.write(handlerBinSmoke.stdout);
+    process.stderr.write(handlerBinSmoke.stderr);
+    throw new Error("packed handler bin smoke failed");
+  }
+  const binSmoke = spawnSync(
+    join(tempDir, "node_modules/.bin/subscription-runtime-run-agent-task"),
+    ["--provider", "claude", "--state-root", join(tempDir, "state"), "--format", "result-json"],
+    {
+      cwd: tempDir,
+      encoding: "utf8",
+      input: JSON.stringify({
+        protocolVersion: 1,
+        task: { kind: "structured-prompt", prompt: "packaged bin smoke" },
+      }),
+    },
+  );
+  if (
+    binSmoke.status !== 2 ||
+    !binSmoke.stderr.includes("SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required")
+  ) {
+    process.stderr.write(binSmoke.stdout);
+    process.stderr.write(binSmoke.stderr);
+    throw new Error("packed bin smoke failed");
+  }
+  await writeFile(
     join(tempDir, "smoke.mjs"),
     [
       "import { createSubscriptionRuntime } from '@vioxen/subscription-runtime/core';",

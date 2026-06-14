@@ -28,7 +28,9 @@ import {
 } from "@vioxen/subscription-runtime/agent-task";
 ```
 
-The package also exposes a CLI:
+The package exposes two CLIs.
+
+Handler bridge, for apps that already have a JS/TS handler:
 
 ```sh
 subscription-runtime-agent-task --handler ./handler.mjs --input request.json
@@ -36,6 +38,23 @@ subscription-runtime-agent-task --handler ./handler.mjs --input request.json
 
 CLI output defaults to event NDJSON. Use `--format result-json` when the caller
 only needs the terminal result.
+
+Provider worker bridge, for apps that cannot import TypeScript runtime code
+directly, e.g. Python `qa-rig`:
+
+```sh
+subscription-runtime-run-agent-task \
+  --provider claude \
+  --state-root /var/lib/subscription-runtime \
+  --input request.json
+```
+
+This CLI reads the same `AgentTaskRequest` JSON, runs it through
+`worker-claude` or `worker-codex`, and writes the same result/event protocol.
+Durable mode requires `SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY` plus provider
+credentials such as `CLAUDE_CODE_OAUTH_TOKEN` or `CODEX_AUTH_JSON_PATH`.
+`--ephemeral` is available for sandbox tests where the caller supplies a fresh
+provider credential and does not need durable session state.
 
 ## Request Shape
 
