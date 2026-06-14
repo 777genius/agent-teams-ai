@@ -12,7 +12,7 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
     try {
         const args = parseArgs(argv);
         const request = parseAgentTaskRequest(JSON.parse(args.inputPath ? await readFile(args.inputPath, "utf8") : await io.readStdin()));
-        const cwd = resolveRequestCwd(io.cwd(), request.cwd ?? ".");
+        const cwd = await resolveRequestCwd(io.cwd(), request.cwd ?? ".");
         const env = io.env();
         const workerEnv = args.provider === "claude" ? pruneClaudeChildEnv(env) : env;
         const stateRootDir = args.stateRootDir ??
@@ -62,9 +62,15 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
         }
     }
 }
-export function resolveRequestCwd(workspaceRoot, requestedCwd) {
-    const root = resolve(workspaceRoot);
-    const resolved = resolve(root, requestedCwd);
+export async function resolveRequestCwd(workspaceRoot, requestedCwd) {
+    const root = await realpath(resolve(workspaceRoot));
+    let resolved;
+    try {
+        resolved = await realpath(resolve(root, requestedCwd));
+    }
+    catch {
+        throw new Error("Agent task cwd must stay within the current workspace.");
+    }
     const rel = relative(root, resolved);
     if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
         return resolved;

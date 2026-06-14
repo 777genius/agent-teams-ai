@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   runSubscriptionAgentTaskCli,
@@ -231,6 +234,49 @@ describe("subscription runtime agent-task runner CLI", () => {
       expect(stderr.join("")).toContain("Agent task cwd must stay within the current workspace.");
     }
   });
+
+  it("rejects request cwd symlinks that resolve outside the current workspace", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "subscription-runtime-agent-task-cwd-"));
+    const workspaceDir = join(tempDir, "workspace");
+    const outsideDir = join(tempDir, "outside");
+    const linkDir = join(workspaceDir, "outside-link");
+    await mkdir(workspaceDir);
+    await mkdir(outsideDir);
+    await symlink(outsideDir, linkDir);
+
+    try {
+      let factoryCalled = false;
+      const stderr: string[] = [];
+      const exitCode = await runSubscriptionAgentTaskCli(
+        ["--provider", "codex", "--ephemeral"],
+        fakeIo({
+          cwd: workspaceDir,
+          stderr,
+          stdin: JSON.stringify({
+            protocolVersion: 1,
+            cwd: "outside-link",
+            task: {
+              kind: "structured-prompt",
+              prompt: "hello",
+            },
+          }),
+          env: {
+            CODEX_AUTH_JSON_PATH: "/tmp/auth.json",
+          },
+        }),
+        () => {
+          factoryCalled = true;
+          throw new Error("should not construct");
+        },
+      );
+
+      expect(exitCode).toBe(2);
+      expect(factoryCalled).toBe(false);
+      expect(stderr.join("")).toContain("Agent task cwd must stay within the current workspace.");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
 });
 
 function fakeFactory(calls: {
@@ -268,6 +314,7 @@ function fakeIo(input: {
   readonly stdout?: string[];
   readonly stderr?: string[];
   readonly env: Readonly<Record<string, string | undefined>>;
+  readonly cwd?: string;
 }): SubscriptionAgentTaskCliIo {
   return {
     async readStdin() {
@@ -280,7 +327,7 @@ function fakeIo(input: {
       input.stderr?.push(chunk);
     },
     cwd() {
-      return "/workspace/repo";
+      return input.cwd ?? process.cwd();
     },
     env() {
       return input.env;
