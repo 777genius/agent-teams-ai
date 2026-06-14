@@ -710,14 +710,15 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     await renderPanel();
 
+    const sourceButton = getTabButton('Terminal UI Smoke');
     const source = getTabDragElement('Terminal UI Smoke');
     const target = getTabDragElement('Logs');
     setElementRect(source, { left: 0, width: 120 });
     setElementRect(target, { left: 128, width: 120 });
 
     await act(async () => {
-      dispatchMockPointerEvent(source, 'pointerdown', { clientX: 24, clientY: 10 });
-      dispatchMockPointerEvent(source, 'pointermove', { clientX: 240, clientY: 12 });
+      dispatchMockPointerEvent(sourceButton, 'pointerdown', { clientX: 24, clientY: 10 });
+      dispatchMockPointerEvent(sourceButton, 'pointermove', { clientX: 240, clientY: 12 });
       await flushMicrotasks();
     });
 
@@ -742,6 +743,42 @@ describe('terminal workspace panel fixture-e2e', () => {
       document.querySelector('[data-testid="agent-team-terminal-tab-drop-indicator"]')
     ).toBeNull();
     expect(getVisibleTabLabels()).toEqual(['Logs', 'Terminal UI Smoke']);
+  });
+
+  it('keeps the close hit target out of tab dragging while closing the tab', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-2', 'Logs', 'pane-2'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+
+    const source = getTabDragElement('Logs');
+    const target = getTabDragElement('Terminal UI Smoke');
+    const closeButton = getTabCloseButton('Logs');
+    setElementRect(source, { left: 128, width: 120 });
+    setElementRect(target, { left: 0, width: 120 });
+
+    await act(async () => {
+      dispatchMockPointerEvent(closeButton, 'pointerdown', { clientX: 235, clientY: 10 });
+      dispatchMockPointerEvent(closeButton, 'pointermove', { clientX: 16, clientY: 11 });
+      closeButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await flushMicrotasks();
+    });
+
+    expect(getVisibleTabLabels()).toEqual(['Terminal UI Smoke', 'Logs']);
+    expect(document.querySelector('[data-testid="agent-team-terminal-tab-drop-indicator"]')).toBe(
+      null
+    );
+    expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
+      kind: 'close_tab',
+      tab_id: 'tab-2',
+    });
   });
 
   it('shows tab switching progress in the terminal history area instead of the tab label', async () => {

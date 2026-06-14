@@ -1608,7 +1608,7 @@ const TerminalMuxTabs = ({
       !event.isPrimary ||
       editingTabId === tab.tab_id ||
       busy ||
-      (target instanceof HTMLElement && target.closest('button,input,textarea,select,a'))
+      (target instanceof HTMLElement && shouldIgnoreTerminalTabDragTarget(target))
     ) {
       return;
     }
@@ -1961,12 +1961,16 @@ const TerminalMuxTabs = ({
                               variant="ghost"
                               size="sm"
                               className={cn(
-                                'pointer-events-none absolute bottom-0 right-0 top-0 h-7 w-7 rounded-none border-0 bg-transparent p-0 text-slate-500 opacity-0 transition-[background-color,color,opacity] duration-150 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
+                                'pointer-events-none absolute bottom-0 right-0 top-0 z-20 h-7 w-7 rounded-none border-0 bg-transparent p-0 text-slate-500 opacity-0 transition-[background-color,color,opacity] duration-150 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
                                 pendingClose && 'pointer-events-auto opacity-100'
                               )}
                               aria-label={`Close terminal tab ${label}`}
+                              data-terminal-tab-drag-ignore="true"
                               data-testid="agent-team-terminal-close-mux-tab"
                               disabled={!canCloseVisibleTabs || (busy && !pendingClose)}
+                              onPointerDown={(event) => {
+                                event.stopPropagation();
+                              }}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void requestCloseTab(tab);
@@ -3220,6 +3224,10 @@ function reorderTerminalTabsById(
 
   withoutSource.splice(placementMode === 'after' ? targetIndex + 1 : targetIndex, 0, sourceTabId);
   return withoutSource;
+}
+
+function shouldIgnoreTerminalTabDragTarget(target: HTMLElement): boolean {
+  return Boolean(target.closest('[data-terminal-tab-drag-ignore="true"],input,textarea,select,a'));
 }
 
 function resolveTerminalTabColor(colorId: TerminalTabColorId | undefined): TerminalTabColorOption {
