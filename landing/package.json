@@ -50,5 +50,8 @@
     "vitepress": "2.0.0-alpha.17",
     "vitepress-codeblock-collapse": "^1.0.0",
     "vitepress-plugin-llms": "^1.12.2"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
   }
 }
