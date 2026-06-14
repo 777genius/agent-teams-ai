@@ -4003,7 +4003,7 @@ packages:
     version: 0.1.0
 
   '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
-    resolution: {integrity: sha512-SahuhcibTVCPruu7mS9Pw4pQM0PBbR5HBkCncfetPNVvvzquRFCRvsz3rIqdq0fecQ1DEfsUqxKfLOLXOWpLeQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
+    resolution: {integrity: sha512-/Sonl5vwonrfnZJic8EkITDlLN2psVseNkM5syKbbQq/3mbg0mqQugoGVAkkvUY/SjuK+nBVeziTy1ikYV4D8Q==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-gateway-node@file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz':

@@ -47,7 +47,6 @@ import {
   Folder,
   GitBranch,
   Github,
-  GripVertical,
   Loader2,
   Palette,
   Pencil,
@@ -80,6 +79,7 @@ export interface TerminalWorkspacePanelProps {
 }
 
 const COMMAND_HISTORY_LIMIT = 80;
+const COMMAND_RUNS_STORAGE_LIMIT = COMMAND_HISTORY_LIMIT * 4;
 const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
 const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
@@ -463,7 +463,9 @@ const TerminalWorkspaceKernelView = ({
   const terminalScreenElementRef = useRef<TerminalScreenElementHandle | null>(null);
   const [commandDockElement, setCommandDockElement] =
     useState<TerminalCommandDockElementHandle | null>(null);
-  const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>([]);
+  const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>(() =>
+    readStoredTerminalCommandRuns(teamName)
+  );
   const commandHistoryPersistenceRef = useRef<{
     hasPersistedSnapshot: boolean;
     hasRestoredHistory: boolean | null;
@@ -627,6 +629,14 @@ const TerminalWorkspaceKernelView = ({
     activeScreen?.sequence,
     activeScreenLines,
   ]);
+
+  useEffect(() => {
+    setCommandRuns(readStoredTerminalCommandRuns(teamName));
+  }, [teamName]);
+
+  useEffect(() => {
+    persistTerminalCommandRuns(teamName, commandRuns);
+  }, [commandRuns, teamName]);
 
   useEffect(() => {
     autoAttachAttemptRef.current = null;
@@ -1349,20 +1359,9 @@ const TerminalMuxTabs = ({
                                 startRenameTab(tab, label);
                               }}
                             >
-                              <GripVertical
-                                size={10}
-                                className="shrink-0 text-slate-500"
-                                aria-hidden="true"
-                              />
                               {pendingFocus ? (
                                 <Loader2 size={12} className="shrink-0 animate-spin" />
-                              ) : (
-                                <Terminal
-                                  size={12}
-                                  className="shrink-0"
-                                  style={{ color: active ? color.accent : undefined }}
-                                />
-                              )}
+                              ) : null}
                               <span className="min-w-0 truncate">{label}</span>
                             </button>
                           </TerminalButtonTooltip>
@@ -1964,6 +1963,85 @@ function persistCommandHistory(teamName: string, entries: readonly string[]): vo
   }
 }
 
+function readStoredTerminalCommandRuns(teamName: string): TerminalCommandRunPresentation[] {
+  const raw = readStoredValue(storageKey(teamName, 'command-runs'));
+  if (!raw) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return capTerminalCommandRuns(
+      parsed
+        .map((entry) => normalizeStoredTerminalCommandRun(entry))
+        .filter((entry): entry is TerminalCommandRunPresentation => entry !== null)
+    );
+  } catch {
+    return [];
+  }
+}
+
+function normalizeStoredTerminalCommandRun(value: unknown): TerminalCommandRunPresentation | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const clientEventId =
+    typeof value.clientEventId === 'string' && value.clientEventId.trim()
+      ? value.clientEventId.trim()
+      : null;
+  const command = typeof value.command === 'string' ? value.command.trim() : '';
+  const paneId = typeof value.paneId === 'string' && value.paneId.trim() ? value.paneId : null;
+  const sessionId =
+    typeof value.sessionId === 'string' && value.sessionId.trim() ? value.sessionId : null;
+  const startedAtMs =
+    typeof value.startedAtMs === 'number' && Number.isFinite(value.startedAtMs)
+      ? value.startedAtMs
+      : 0;
+  const status = isTerminalCommandRunPresentationStatus(value.status) ? value.status : 'unknown';
+
+  if (!clientEventId || !command || !paneId || !sessionId) {
+    return null;
+  }
+
+  const run: TerminalCommandRunPresentation = {
+    clientEventId,
+    command,
+    paneId,
+    sessionId,
+    startedAtMs,
+    status,
+  };
+
+  if (typeof value.durationMs === 'number' && Number.isFinite(value.durationMs)) {
+    run.durationMs = Math.max(0, value.durationMs);
+  }
+  if (typeof value.exitCode === 'number' && Number.isFinite(value.exitCode)) {
+    run.exitCode = Math.trunc(value.exitCode);
+  }
+
+  return run;
+}
+
+function isTerminalCommandRunPresentationStatus(
+  value: unknown
+): value is TerminalCommandRunPresentation['status'] {
+  return value === 'failed' || value === 'running' || value === 'succeeded' || value === 'unknown';
+}
+
+function persistTerminalCommandRuns(
+  teamName: string,
+  runs: readonly TerminalCommandRunPresentation[]
+): void {
+  try {
+    window.localStorage.setItem(
+      storageKey(teamName, 'command-runs'),
+      JSON.stringify(capTerminalCommandRuns(runs))
+    );
+  } catch {
+    // Best-effort command presentation persistence.
+  }
+}
+
 function formatMuxTabTitle(tab: TerminalMuxTab, index: number): string {
   return tab.title?.trim() || `Tab ${index + 1}`;
 }
@@ -2235,7 +2313,30 @@ export function upsertTerminalCommandRun(
       ? runs.map((run, index) => (index === existingIndex ? { ...run, ...next } : run))
       : [...runs, next];
 
-  return merged.slice(-COMMAND_HISTORY_LIMIT);
+  return capTerminalCommandRuns(merged);
+}
+
+function capTerminalCommandRuns(
+  runs: readonly TerminalCommandRunPresentation[]
+): TerminalCommandRunPresentation[] {
+  const countsByPane = new Map<string, number>();
+  const keptReversed: TerminalCommandRunPresentation[] = [];
+
+  for (let index = runs.length - 1; index >= 0; index -= 1) {
+    const run = runs[index];
+    if (!run) continue;
+
+    const scopeKey = `${run.sessionId}\u001f${run.paneId}`;
+    const count = countsByPane.get(scopeKey) ?? 0;
+    if (count >= COMMAND_HISTORY_LIMIT) {
+      continue;
+    }
+
+    countsByPane.set(scopeKey, count + 1);
+    keptReversed.push(run);
+  }
+
+  return keptReversed.reverse().slice(-COMMAND_RUNS_STORAGE_LIMIT);
 }
 
 export function settleTerminalCommandRuns(

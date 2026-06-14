@@ -109,6 +109,39 @@ describe('terminal workspace panel internals fixture-e2e', () => {
     expect(appended[0]?.clientEventId).toBe('event-3');
   });
 
+  it('caps command presentation metadata per pane during busy multi-tab sessions', () => {
+    let runs = [
+      createRun({
+        clientEventId: 'build-command',
+        command: 'pnpm build',
+        paneId: 'pane-build',
+      }),
+    ];
+
+    for (let index = 0; index < 96; index += 1) {
+      runs = upsertTerminalCommandRun(
+        runs,
+        createRun({
+          clientEventId: `test-command-${index}`,
+          command: `printf TEST_${index}\\n`,
+          paneId: 'pane-tests',
+          startedAtMs: 20_000 + index,
+        }),
+        'running'
+      );
+    }
+
+    expect(runs.find((run) => run.clientEventId === 'build-command')).toMatchObject({
+      command: 'pnpm build',
+      paneId: 'pane-build',
+    });
+    expect(runs.filter((run) => run.paneId === 'pane-tests')).toHaveLength(80);
+    expect(runs.find((run) => run.clientEventId === 'test-command-15')).toBeUndefined();
+    expect(runs.find((run) => run.clientEventId === 'test-command-16')).toMatchObject({
+      command: 'printf TEST_16\\n',
+    });
+  });
+
   it('settles a running command as succeeded when output appears before the next prompt', () => {
     const run = createRun({ command: "printf 'ok\\n'", startedAtMs: 1000 });
     const next = settleTerminalCommandRuns(

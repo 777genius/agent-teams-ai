@@ -858,6 +858,175 @@ describe('terminal workspace panel fixture-e2e', () => {
     });
   });
 
+  it('keeps metadata for quiet tabs while another tab is used heavily', async () => {
+    const tabs = [
+      createTab('tab-1', 'Build', 'pane-build'),
+      createTab('tab-2', 'Tests', 'pane-tests'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-1',
+      tabs,
+    });
+    await renderPanel();
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'build-command',
+      command: 'pnpm build',
+      paneId: 'pane-build',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 750,
+    });
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs,
+    });
+    await renderPanel();
+
+    await act(async () => {
+      const dock = getRequiredElement('mock-terminal-command-dock');
+      for (let index = 0; index < 96; index += 1) {
+        dock.dispatchEvent(
+          new CustomEvent('tp-terminal-command-started', {
+            bubbles: true,
+            detail: {
+              clientEventId: `test-command-${index}`,
+              command: `printf TEST_${index}\\n`,
+              paneId: 'pane-tests',
+              sessionId: 'session-1',
+              startedAtMs: 20_000 + index,
+            },
+          })
+        );
+      }
+      await flushMicrotasks();
+    });
+
+    expect(getLatestScreenCommandMetadata()).toHaveLength(80);
+    expect(getLatestScreenCommandMetadata().at(0)).toMatchObject({
+      clientEventId: 'test-command-16',
+      command: 'printf TEST_16\\n',
+    });
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [
+        { text: 'shell % pnpm build' },
+        { text: 'build completed' },
+        { text: 'shell %' },
+      ],
+      focusedTabId: 'tab-1',
+      sequence: 21,
+      tabs,
+    });
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'build-command',
+        command: 'pnpm build',
+        paneId: 'pane-build',
+        status: 'succeeded',
+      }),
+    ]);
+  });
+
+  it('restores command presentation metadata across remounts for recovered history', async () => {
+    const tabs = [
+      createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    const restoredLines = [
+      { text: 'shell % printf TP_RESTORE_OK\\n' },
+      { text: 'TP_RESTORE_OK' },
+      { text: 'shell % ls __tp_restore_missing__' },
+      { text: 'ls: __tp_restore_missing__: No such file or directory' },
+      { text: 'shell %' },
+    ];
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedLines: restoredLines,
+      tabs,
+    });
+    await renderPanel();
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'restore-ok',
+      command: 'printf TP_RESTORE_OK\\n',
+      paneId: 'pane-1',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 345,
+    });
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'restore-missing',
+      command: 'ls __tp_restore_missing__',
+      paneId: 'pane-1',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 220,
+    });
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: restoredLines,
+      sequence: 9,
+      tabs,
+    });
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'restore-ok',
+        command: 'printf TP_RESTORE_OK\\n',
+        status: 'succeeded',
+      }),
+      expect.objectContaining({
+        clientEventId: 'restore-missing',
+        command: 'ls __tp_restore_missing__',
+        status: 'failed',
+      }),
+    ]);
+    expect(
+      getLatestScreenCommandMetadata().every((metadata) => typeof metadata.durationMs === 'number')
+    ).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+    root = createRoot(host);
+    panelFixture.createWorkspaceKernel.mockClear();
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedLines: restoredLines,
+      sequence: 10,
+      tabs,
+    });
+
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'restore-ok',
+        command: 'printf TP_RESTORE_OK\\n',
+        status: 'succeeded',
+      }),
+      expect.objectContaining({
+        clientEventId: 'restore-missing',
+        command: 'ls __tp_restore_missing__',
+        status: 'failed',
+      }),
+    ]);
+    expect(JSON.parse(window.localStorage.getItem(storageKey('command-runs')) ?? '[]')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          clientEventId: 'restore-ok',
+          status: 'succeeded',
+        }),
+        expect.objectContaining({
+          clientEventId: 'restore-missing',
+          status: 'failed',
+        }),
+      ])
+    );
+  });
+
   it('routes settings controls into kernel commands and runtime actions', async () => {
     await renderPanel({ settingsOpen: true });
     const kernel = currentKernel();
