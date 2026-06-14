@@ -429,6 +429,7 @@
       "brace-expansion@5": "5.0.6",
       "defu": "6.1.5",
       "devalue": "5.8.1",
+      "esbuild": "0.28.1",
       "fast-uri": "3.1.2",
       "file-type@21": "21.3.2",
       "flatted": "3.4.2",
