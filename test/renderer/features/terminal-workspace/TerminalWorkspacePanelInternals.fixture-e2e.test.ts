@@ -251,6 +251,52 @@ describe('terminal workspace panel internals fixture-e2e', () => {
       outputLines: ['dquote> _OK\\n"', 'TP_QUOTE_OK'],
     });
   });
+
+  it('keeps the latest repeated command running when an older identical command completed', () => {
+    expect(
+      inferTerminalCommandCompletion(
+        [
+          'shell % pnpm test',
+          'old run passed',
+          'shell %',
+          'shell % pnpm test',
+          'new run still streaming',
+        ],
+        'pnpm test'
+      )
+    ).toEqual({
+      completed: false,
+      outputLines: [],
+    });
+  });
+
+  it('settles the latest repeated command using only its latest output block', () => {
+    expect(
+      inferTerminalCommandCompletion(
+        [
+          'shell % pnpm test',
+          'old run passed',
+          'shell %',
+          'shell % pnpm test',
+          'pnpm ERR! latest run failed',
+          'shell %',
+        ],
+        'pnpm test'
+      )
+    ).toEqual({
+      completed: true,
+      outputLines: ['pnpm ERR! latest run failed'],
+    });
+  });
+
+  it('infers ANSI-colored terminal errors as failures', () => {
+    expect(
+      inferTerminalCommandOutputStatus(['\u001b[31mfatal:\u001b[0m not a git repository'])
+    ).toBe('failed');
+    expect(inferTerminalCommandOutputStatus(['\u001b[1;31mError:\u001b[0m build failed'])).toBe(
+      'failed'
+    );
+  });
 });
 
 function createRun(

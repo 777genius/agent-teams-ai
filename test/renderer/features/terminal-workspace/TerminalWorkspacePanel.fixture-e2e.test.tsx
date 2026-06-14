@@ -300,6 +300,59 @@ describe('terminal workspace panel fixture-e2e', () => {
     ]);
   });
 
+  it('preserves and restores long command history across empty startup snapshots and remounts', async () => {
+    const restoredHistory = Array.from({ length: 96 }, (_, index) =>
+      index % 2 === 0
+        ? `(venv312) (base) belief@MacBook-Pro-belief terminal-ui-smoke % echo restored-${index}`
+        : `pnpm test restored-${index}`
+    );
+    const expectedRestoredHistory = Array.from({ length: 96 }, (_, index) =>
+      index % 2 === 0 ? `echo restored-${index}` : `pnpm test restored-${index}`
+    ).slice(-80);
+    window.localStorage.setItem(storageKey('command-history'), JSON.stringify(restoredHistory));
+
+    await renderPanel();
+
+    expect(panelFixture.createWorkspaceKernel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialCommandHistoryEntries: expectedRestoredHistory,
+      })
+    );
+    expect(JSON.parse(window.localStorage.getItem(storageKey('command-history')) ?? '[]')).toEqual(
+      restoredHistory
+    );
+
+    const longRuntimeHistory = Array.from(
+      { length: 101 },
+      (_, index) => `printf LONG_HISTORY_${index}\\n`
+    );
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      commandHistoryEntries: longRuntimeHistory,
+    });
+    await renderPanel();
+
+    const cappedRuntimeHistory = longRuntimeHistory.slice(-80);
+    expect(JSON.parse(window.localStorage.getItem(storageKey('command-history')) ?? '[]')).toEqual(
+      cappedRuntimeHistory
+    );
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+    root = createRoot(host);
+    panelFixture.createWorkspaceKernel.mockClear();
+    nextSnapshot = createWorkspaceSnapshot();
+
+    await renderPanel();
+
+    expect(panelFixture.createWorkspaceKernel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialCommandHistoryEntries: cappedRuntimeHistory,
+      })
+    );
+  });
+
   it('shows cwd, git branch, prompt label, and powered-by GitHub link in the command area', async () => {
     await renderPanel();
 
@@ -380,6 +433,42 @@ describe('terminal workspace panel fixture-e2e', () => {
       kind: 'new_tab',
       title: 'Tab 2',
     });
+  });
+
+  it('surfaces mux command failures and allows tab actions to be retried', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockReset();
+    kernel.commands.dispatchMuxCommand.mockRejectedValueOnce(new Error('mux gateway unavailable'));
+
+    await clickButton('Create terminal tab');
+
+    expect(document.body.textContent).toContain('mux gateway unavailable');
+    expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledTimes(1);
+
+    kernel.commands.dispatchMuxCommand.mockResolvedValue(undefined);
+    await clickButton('Create terminal tab');
+
+    expect(
+      kernel.commands.dispatchMuxCommand.mock.calls.slice(-2).map(([, command]) => command)
+    ).toEqual([
+      {
+        kind: 'rename_tab',
+        tab_id: 'tab-prewarmed',
+        title: 'Tab 2',
+      },
+      {
+        kind: 'focus_tab',
+        tab_id: 'tab-prewarmed',
+      },
+    ]);
   });
 
   it('keeps mux controls inert when the backend reports tab actions unavailable', async () => {
@@ -638,6 +727,137 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(metadata[0]?.durationMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('keeps command lifecycle metadata scoped to the active tab during rapid tab switching', async () => {
+    const tabs = [
+      createTab('tab-1', 'Build', 'pane-build'),
+      createTab('tab-2', 'Tests', 'pane-tests'),
+      createTab('tab-3', 'Logs', 'pane-logs'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-1',
+      tabs,
+    });
+    await renderPanel();
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'build-command',
+      command: 'pnpm build',
+      paneId: 'pane-build',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 500,
+    });
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'build-command',
+        command: 'pnpm build',
+        status: 'running',
+      }),
+    ]);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs,
+    });
+    await renderPanel();
+    expect(getLatestScreenCommandMetadata()).toEqual([]);
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'test-command',
+      command: 'pnpm test -- --runInBand',
+      paneId: 'pane-tests',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 250,
+    });
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'test-command',
+        command: 'pnpm test -- --runInBand',
+        status: 'running',
+      }),
+    ]);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [
+        { text: 'shell % pnpm build' },
+        { text: 'Build completed' },
+        { text: 'shell %' },
+      ],
+      focusedTabId: 'tab-1',
+      sequence: 11,
+      tabs,
+    });
+    await renderPanel();
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'build-command',
+        command: 'pnpm build',
+        status: 'succeeded',
+      }),
+    ]);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [
+        { text: 'shell % pnpm test -- --runInBand' },
+        { text: 'pnpm ERR! fixture test failed' },
+        { text: 'shell %' },
+      ],
+      focusedTabId: 'tab-2',
+      sequence: 12,
+      tabs,
+    });
+    await renderPanel();
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'test-command',
+        command: 'pnpm test -- --runInBand',
+        status: 'failed',
+      }),
+    ]);
+  });
+
+  it('caps command presentation metadata during long active terminal sessions', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+    await renderPanel();
+
+    await act(async () => {
+      const dock = getRequiredElement('mock-terminal-command-dock');
+      for (let index = 0; index < 95; index += 1) {
+        dock.dispatchEvent(
+          new CustomEvent('tp-terminal-command-started', {
+            bubbles: true,
+            detail: {
+              clientEventId: `long-command-${index}`,
+              command: `printf LONG_${index}\\n`,
+              paneId: 'pane-1',
+              sessionId: 'session-1',
+              startedAtMs: 10_000 + index,
+            },
+          })
+        );
+      }
+      await flushMicrotasks();
+    });
+
+    const metadata = getLatestScreenCommandMetadata();
+    expect(metadata).toHaveLength(80);
+    expect(metadata[0]).toMatchObject({
+      clientEventId: 'long-command-15',
+      command: 'printf LONG_15\\n',
+      status: 'running',
+    });
+    expect(metadata.at(-1)).toMatchObject({
+      clientEventId: 'long-command-94',
+      command: 'printf LONG_94\\n',
+      status: 'running',
+    });
+  });
+
   it('routes settings controls into kernel commands and runtime actions', async () => {
     await renderPanel({ settingsOpen: true });
     const kernel = currentKernel();
@@ -655,6 +875,46 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(kernel.commands.bootstrap).toHaveBeenCalled();
     expect(kernel.commands.refreshSessions).toHaveBeenCalled();
     expect(stopTeamRuntime).toHaveBeenCalledWith(TEAM_NAME);
+  });
+
+  it('reattaches sessions after connection loss and recovery without duplicating stable attaches', async () => {
+    const controls = {
+      canCreateTab: false,
+      canFocusTab: false,
+    };
+    nextSnapshot = createWorkspaceSnapshot({
+      connectionState: 'closed',
+      controls,
+    });
+    await renderPanel();
+    const kernel = currentKernel();
+
+    expect(kernel.commands.attachSession).not.toHaveBeenCalled();
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      connectionState: 'ready',
+      controls,
+    });
+    await renderPanel();
+    expect(kernel.commands.attachSession).toHaveBeenCalledTimes(1);
+    expect(kernel.commands.attachSession).toHaveBeenLastCalledWith('session-1');
+
+    await renderPanel();
+    expect(kernel.commands.attachSession).toHaveBeenCalledTimes(1);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      connectionState: 'closed',
+      controls,
+    });
+    await renderPanel();
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      connectionState: 'ready',
+      controls,
+    });
+    await renderPanel();
+
+    expect(kernel.commands.attachSession).toHaveBeenCalledTimes(2);
+    expect(kernel.commands.attachSession).toHaveBeenLastCalledWith('session-1');
   });
 
   it('renders bootstrap failures without constructing a workspace kernel', async () => {
@@ -984,6 +1244,22 @@ async function clickTextButton(text: string): Promise<void> {
 
   await act(async () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await flushMicrotasks();
+  });
+}
+
+async function dispatchCommandDockEvent(
+  type: string,
+  detail: Record<string, unknown>
+): Promise<void> {
+  const dock = getRequiredElement('mock-terminal-command-dock');
+  await act(async () => {
+    dock.dispatchEvent(
+      new CustomEvent(type, {
+        bubbles: true,
+        detail,
+      })
+    );
     await flushMicrotasks();
   });
 }

@@ -83,6 +83,10 @@ const COMMAND_HISTORY_LIMIT = 80;
 const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
 const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
+const ANSI_ESCAPE_SEQUENCE_PATTERN = new RegExp(
+  `${String.fromCharCode(27)}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`,
+  'gu'
+);
 type TerminalWorkspaceSnapshot = ReturnType<WorkspaceKernel['getSnapshot']>;
 type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
@@ -460,6 +464,27 @@ const TerminalWorkspaceKernelView = ({
   const [commandDockElement, setCommandDockElement] =
     useState<TerminalCommandDockElementHandle | null>(null);
   const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>([]);
+  const commandHistoryPersistenceRef = useRef<{
+    hasPersistedSnapshot: boolean;
+    hasRestoredHistory: boolean | null;
+    teamName: string;
+  }>({
+    hasPersistedSnapshot: false,
+    hasRestoredHistory: null,
+    teamName,
+  });
+  const activeScreen = snapshot.attachedSession?.focused_screen ?? null;
+  const activeScreenLines = activeScreen?.surface.lines;
+  const activeCommandSessionId =
+    snapshot.selection.activeSessionId ?? snapshot.catalog.sessions[0]?.session_id ?? null;
+  const activeCommandPaneId = activeScreen?.pane_id ?? null;
+  const activeCommandRuns = useMemo(
+    () =>
+      commandRuns.filter(
+        (run) => run.sessionId === activeCommandSessionId && run.paneId === activeCommandPaneId
+      ),
+    [activeCommandPaneId, activeCommandSessionId, commandRuns]
+  );
 
   const scrollTerminalToLatest = useCallback((): void => {
     const scroll = (): void => {
@@ -554,34 +579,54 @@ const TerminalWorkspaceKernelView = ({
   }, [commandDockElement, scrollTerminalToLatest]);
 
   useEffect(() => {
-    const screenLines =
-      snapshot.attachedSession?.focused_screen?.surface.lines.map((line) => line.text) ?? [];
+    const screenLines = activeScreenLines?.map((line) => line.text) ?? [];
     if (screenLines.length === 0) {
       return;
     }
 
-    setCommandRuns((current) => settleTerminalCommandRuns(current, screenLines, Date.now(), false));
-  }, [snapshot.attachedSession?.focused_screen?.sequence]);
+    setCommandRuns((current) =>
+      settleScopedTerminalCommandRuns(
+        current,
+        activeCommandSessionId,
+        activeCommandPaneId,
+        screenLines,
+        Date.now(),
+        false
+      )
+    );
+  }, [activeCommandPaneId, activeCommandSessionId, activeScreen?.sequence, activeScreenLines]);
 
   useEffect(() => {
-    if (!commandRuns.some((run) => run.status === 'running')) {
+    if (!activeCommandRuns.some((run) => run.status === 'running')) {
       return undefined;
     }
 
-    const screenLines =
-      snapshot.attachedSession?.focused_screen?.surface.lines.map((line) => line.text) ?? [];
+    const screenLines = activeScreenLines?.map((line) => line.text) ?? [];
     if (screenLines.length === 0) {
       return undefined;
     }
 
     const timer = window.setTimeout(() => {
       setCommandRuns((current) =>
-        settleTerminalCommandRuns(current, screenLines, Date.now(), true)
+        settleScopedTerminalCommandRuns(
+          current,
+          activeCommandSessionId,
+          activeCommandPaneId,
+          screenLines,
+          Date.now(),
+          true
+        )
       );
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [commandRuns, snapshot.attachedSession?.focused_screen?.sequence]);
+  }, [
+    activeCommandPaneId,
+    activeCommandRuns,
+    activeCommandSessionId,
+    activeScreen?.sequence,
+    activeScreenLines,
+  ]);
 
   useEffect(() => {
     autoAttachAttemptRef.current = null;
@@ -598,7 +643,30 @@ const TerminalWorkspaceKernelView = ({
   }, [teamName, terminalDisplay.fontScale, terminalDisplay.lineWrap]);
 
   useEffect(() => {
+    const persistence = commandHistoryPersistenceRef.current;
+    if (persistence.teamName !== teamName) {
+      persistence.teamName = teamName;
+      persistence.hasRestoredHistory = null;
+      persistence.hasPersistedSnapshot = false;
+    }
+
+    if (persistence.hasRestoredHistory === null) {
+      persistence.hasRestoredHistory = (readStoredCommandHistory(teamName)?.length ?? 0) > 0;
+    }
+
+    if (
+      snapshot.commandHistory.entries.length === 0 &&
+      persistence.hasRestoredHistory &&
+      !persistence.hasPersistedSnapshot
+    ) {
+      return;
+    }
+
     persistCommandHistory(teamName, snapshot.commandHistory.entries);
+    persistence.hasPersistedSnapshot = true;
+    if (snapshot.commandHistory.entries.length > 0) {
+      persistence.hasRestoredHistory = false;
+    }
   }, [snapshot.commandHistory.entries, teamName]);
 
   useEffect(() => {
@@ -776,7 +844,7 @@ const TerminalWorkspaceKernelView = ({
           kernel={kernel}
           placement="terminal"
           terminalPromptLabel={formatTerminalPromptLabel(projectPath)}
-          commandPresentationMetadata={commandRuns}
+          commandPresentationMetadata={activeCommandRuns}
         />
         <div slot="command-dock" className="grid min-w-0 shrink-0 grid-rows-[auto_auto]">
           <TerminalWorkingDirectoryBar projectPath={projectPath} gitBranch={gitBranch} />
@@ -2211,6 +2279,45 @@ export function settleTerminalCommandRuns(
   return changed ? next : runs;
 }
 
+function settleScopedTerminalCommandRuns(
+  runs: TerminalCommandRunPresentation[],
+  sessionId: string | null,
+  paneId: string | null,
+  screenLines: readonly string[],
+  nowMs: number,
+  allowEmptyCompletion: boolean
+): TerminalCommandRunPresentation[] {
+  if (!sessionId || !paneId) {
+    return runs;
+  }
+
+  const scopedRuns = runs.filter((run) => run.sessionId === sessionId && run.paneId === paneId);
+  if (scopedRuns.length === 0) {
+    return runs;
+  }
+
+  const settledScopedRuns = settleTerminalCommandRuns(
+    scopedRuns,
+    screenLines,
+    nowMs,
+    allowEmptyCompletion
+  );
+  if (settledScopedRuns === scopedRuns) {
+    return runs;
+  }
+
+  let scopedIndex = 0;
+  return runs.map((run) => {
+    if (run.sessionId !== sessionId || run.paneId !== paneId) {
+      return run;
+    }
+
+    const settledRun = settledScopedRuns[scopedIndex];
+    scopedIndex += 1;
+    return settledRun ?? run;
+  });
+}
+
 export function inferTerminalCommandCompletion(
   lines: readonly string[],
   command: string
@@ -2296,7 +2403,7 @@ function normalizeCommandForPromptMatch(command: string): string {
 export function inferTerminalCommandOutputStatus(
   outputLines: readonly string[]
 ): TerminalCommandRunPresentation['status'] {
-  const output = outputLines.join('\n').toLowerCase();
+  const output = stripAnsiEscapeSequences(outputLines.join('\n')).toLowerCase();
   if (
     /(?:^|\n)\s*(?:fatal|error):/u.test(output) ||
     /(?:^|\n)\s*(?:npm|pnpm|yarn)\s+err!?/u.test(output) ||
@@ -2311,6 +2418,10 @@ export function inferTerminalCommandOutputStatus(
   }
 
   return 'succeeded';
+}
+
+function stripAnsiEscapeSequences(value: string): string {
+  return value.replace(ANSI_ESCAPE_SEQUENCE_PATTERN, '');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
