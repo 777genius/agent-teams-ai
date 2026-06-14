@@ -29,10 +29,22 @@ export class FileBackendCodexWorker {
                 `file-backend-codex:${hashText(options.providerInstanceId).slice(0, 12)}`;
         assertWorkerOptions(options);
         this.runner = options.runner ?? new NodeProcessRunner();
+        // SAFETY (iliya — data-loss fix): derive a PRIVATE workspace path under
+        // stateRootDir; do NOT fall back to `options.workspacePath`. The owned
+        // StableWorkerWorkspace `rm -rf`s its rootDir on dispose, so when the caller
+        // passes its real cwd as workspacePath (the agent-task-runner-cli does:
+        // `workspacePath: input.cwd`), disposing this worker DELETES the caller's
+        // working directory — observed wiping a whole repo checkout on a *failed*
+        // codex run (the dispose runs on the failure path too). The claude worker
+        // (file-backend-claude-worker.ts:161-168) already derives a private path for
+        // exactly this reason; this matches it. `options.workspacePath` (an existing
+        // caller checkout) must never be owned/deleted by the worker. Suggest also
+        // hardening StableWorkerWorkspace.dispose() to refuse paths it didn't create
+        // / outside the state+temp roots, as defense-in-depth.
+        const defaultWorkspacePath = join(options.stateRootDir, "workspaces", hashText(this.workerId));
         this.ownedWorkspace = options.workspace
             ? null
-            : new StableWorkerWorkspace(options.workspacePath ??
-                join(options.stateRootDir, "workspaces", hashText(this.workerId)));
+            : new StableWorkerWorkspace(defaultWorkspacePath);
         this.workspace = options.workspace ?? this.ownedWorkspace;
         this.observability = options.observability ?? new NullWorkerObservability();
         this.clock = options.clock ?? systemClock;
