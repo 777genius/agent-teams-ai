@@ -152,6 +152,19 @@ describe("agent-task JSON adapter kit", () => {
     expect(run.events[0]?.occurredAt).toBe("2026-06-13T12:00:00.000Z");
   });
 
+  it("rejects oversized task system prompts before provider dispatch", () => {
+    expect(() =>
+      parseAgentTaskRequest({
+        protocolVersion: agentTaskProtocolVersion,
+        task: {
+          kind: "review",
+          prompt: "Review this diff.",
+          systemPrompt: "x".repeat(256 * 1024 + 1),
+        },
+      }),
+    ).toThrow("request.task.systemPrompt exceeds 262144 bytes");
+  });
+
   it("turns an unterminated provider stream into a failed terminal event", async () => {
     const request = createAgentTaskRequest({
       task: {

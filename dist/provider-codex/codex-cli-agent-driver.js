@@ -45,10 +45,7 @@ export class CodexCliAgentDriver {
                     "--model",
                     this.options.model ?? defaultCodexModel,
                     "--",
-                    composeCodexPrompt({
-                        prompt: input.task.prompt,
-                        systemPrompt: input.task.systemPrompt,
-                    }),
+                    "-",
                 ],
                 cwd: input.workspace.path,
                 env: {
@@ -57,6 +54,10 @@ export class CodexCliAgentDriver {
                     CODEX_HOME: tempCodexHome,
                     CI: "true",
                 },
+                stdin: new TextEncoder().encode(composeCodexPrompt({
+                    prompt: input.task.prompt,
+                    systemPrompt: input.task.systemPrompt,
+                })),
                 timeoutMs: this.options.timeoutMs ?? this.capabilities.maxRuntimeMs,
                 abortSignal: input.abortSignal,
             });

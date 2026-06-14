@@ -67,6 +67,8 @@ const failureCodes = new Set<ProviderFailureCode>([
   "unknown_runtime_failure",
 ]);
 
+const agentTaskSystemPromptMaxBytes = 256 * 1024;
+
 export function createAgentTaskRequest(
   input: Omit<AgentTaskRequest, "protocolVersion">,
 ): AgentTaskRequest {
@@ -343,10 +345,25 @@ function parseAgentTaskPayload(value: unknown, path: string): AgentTaskPayload {
       `${path}.prompt must not be empty`,
     );
   }
+  const parsedSystemPrompt = optionalStringField(
+    input,
+    "systemPrompt",
+    `${path}.systemPrompt`,
+  );
+  const systemPrompt = parsedSystemPrompt.systemPrompt;
+  if (
+    systemPrompt !== undefined &&
+    Buffer.byteLength(systemPrompt, "utf8") > agentTaskSystemPromptMaxBytes
+  ) {
+    throw protocolError(
+      "agent_task_request_invalid",
+      `${path}.systemPrompt exceeds ${agentTaskSystemPromptMaxBytes} bytes`,
+    );
+  }
   return {
     kind: kind as ProviderTaskKind,
     prompt,
-    ...optionalStringField(input, "systemPrompt", `${path}.systemPrompt`),
+    ...parsedSystemPrompt,
     ...optionalStringField(input, "outputSchemaName", `${path}.outputSchemaName`),
     ...optionalControlsField(input, "controls", `${path}.controls`),
     ...optionalMetadataField(input, "metadata", `${path}.metadata`),
