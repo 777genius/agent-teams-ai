@@ -121,16 +121,11 @@ export class ClaudeTaskAgentDriver {
         const allowedTools = input.task.controls?.allowedTools ?? this.options.allowedTools;
         const permissionMode = input.task.controls?.permissionMode;
         const outputSchemaName = input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
-        if (this.options.appendSystemPrompt !== undefined) {
+        const appendSystemPrompt = mergeSystemPrompts(this.options.appendSystemPrompt, input.task.systemPrompt);
+        if (appendSystemPrompt !== undefined) {
             engineInput = {
                 ...engineInput,
-                appendSystemPrompt: this.options.appendSystemPrompt,
-            };
-        }
-        if (input.task.systemPrompt !== undefined) {
-            engineInput = {
-                ...engineInput,
-                appendSystemPrompt: input.task.systemPrompt,
+                appendSystemPrompt,
             };
         }
         if (maxTurns !== undefined) {
@@ -163,6 +158,14 @@ export class ClaudeTaskAgentDriver {
             warnings: validation.warnings,
         };
     }
+}
+function mergeSystemPrompts(base, task) {
+    const parts = [base, task]
+        .map((value) => value?.trim())
+        .filter((value) => !!value);
+    if (parts.length === 0)
+        return undefined;
+    return parts.join("\n\n");
 }
 function failedClaudeTask(failure, startedAt) {
     return {

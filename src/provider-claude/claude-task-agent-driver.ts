@@ -243,16 +243,14 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
     const permissionMode = input.task.controls?.permissionMode;
     const outputSchemaName =
       input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
-    if (this.options.appendSystemPrompt !== undefined) {
+    const appendSystemPrompt = mergeSystemPrompts(
+      this.options.appendSystemPrompt,
+      input.task.systemPrompt,
+    );
+    if (appendSystemPrompt !== undefined) {
       engineInput = {
         ...engineInput,
-        appendSystemPrompt: this.options.appendSystemPrompt,
-      };
-    }
-    if (input.task.systemPrompt !== undefined) {
-      engineInput = {
-        ...engineInput,
-        appendSystemPrompt: input.task.systemPrompt,
+        appendSystemPrompt,
       };
     }
     if (maxTurns !== undefined) {
@@ -285,6 +283,17 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
       warnings: validation.warnings,
     };
   }
+}
+
+function mergeSystemPrompts(
+  base: string | undefined,
+  task: string | undefined,
+): string | undefined {
+  const parts = [base, task]
+    .map((value) => value?.trim())
+    .filter((value): value is string => !!value);
+  if (parts.length === 0) return undefined;
+  return parts.join("\n\n");
 }
 
 function failedClaudeTask(

@@ -219,7 +219,7 @@ describe("Claude provider adapter", () => {
     });
   });
 
-  it("lets per-task system prompts override configured Claude runtime prompts", async () => {
+  it("merges per-task system prompts with configured Claude runtime prompts", async () => {
     const engine = new RecordingClaudeEngine();
     const driver = new ClaudeTaskAgentDriver({
       appendSystemPrompt: "default system",
@@ -241,7 +241,7 @@ describe("Claude provider adapter", () => {
 
     expect(engine.records[0]).toMatchObject({
       prompt: "inspect diff",
-      appendSystemPrompt: "task-specific system",
+      appendSystemPrompt: "default system\n\ntask-specific system",
     });
   });
 
