@@ -5,15 +5,15 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@terminal-platform/design-tokens': file:../terminal-platform/sdk/packages/design-tokens
-  '@terminal-platform/foundation': file:../terminal-platform/sdk/packages/foundation
-  '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
-  '@terminal-platform/workspace-adapter-websocket': file:../terminal-platform/sdk/packages/workspace-adapter-websocket
-  '@terminal-platform/workspace-contracts': file:../terminal-platform/sdk/packages/workspace-contracts
-  '@terminal-platform/workspace-core': file:../terminal-platform/sdk/packages/workspace-core
-  '@terminal-platform/workspace-elements': file:../terminal-platform/sdk/packages/workspace-elements
-  '@terminal-platform/workspace-gateway-node': file:../terminal-platform/sdk/packages/workspace-gateway-node
-  '@terminal-platform/workspace-react': file:../terminal-platform/sdk/packages/workspace-react
+  '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
+  '@terminal-platform/foundation': file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
+  '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+  '@terminal-platform/workspace-adapter-websocket': file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz
+  '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
+  '@terminal-platform/workspace-core': file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
+  '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
+  '@terminal-platform/workspace-gateway-node': file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
+  '@terminal-platform/workspace-react': file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz
   '@hono/node-server@1': 1.19.13
   '@xmldom/xmldom': 0.8.13
   axios: 1.16.1
@@ -245,32 +245,32 @@ importers:
         specifier: ^3.13.24
         version: 3.13.24(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@terminal-platform/design-tokens':
-        specifier: file:../terminal-platform/sdk/packages/design-tokens
-        version: file:../terminal-platform/sdk/packages/design-tokens
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
       '@terminal-platform/foundation':
-        specifier: file:../terminal-platform/sdk/packages/foundation
-        version: file:../terminal-platform/sdk/packages/foundation
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
       '@terminal-platform/runtime-types':
-        specifier: file:../terminal-platform/sdk/packages/runtime-types
-        version: file:../terminal-platform/sdk/packages/runtime-types
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
       '@terminal-platform/workspace-adapter-websocket':
-        specifier: file:../terminal-platform/sdk/packages/workspace-adapter-websocket
-        version: file:../terminal-platform/sdk/packages/workspace-adapter-websocket
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz
       '@terminal-platform/workspace-contracts':
-        specifier: file:../terminal-platform/sdk/packages/workspace-contracts
-        version: file:../terminal-platform/sdk/packages/workspace-contracts
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
       '@terminal-platform/workspace-core':
-        specifier: file:../terminal-platform/sdk/packages/workspace-core
-        version: file:../terminal-platform/sdk/packages/workspace-core
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
       '@terminal-platform/workspace-elements':
-        specifier: file:../terminal-platform/sdk/packages/workspace-elements
-        version: file:../terminal-platform/sdk/packages/workspace-elements
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
       '@terminal-platform/workspace-gateway-node':
-        specifier: file:../terminal-platform/sdk/packages/workspace-gateway-node
-        version: file:../terminal-platform/sdk/packages/workspace-gateway-node
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
       '@terminal-platform/workspace-react':
-        specifier: file:../terminal-platform/sdk/packages/workspace-react
-        version: file:../terminal-platform/sdk/packages/workspace-react(@types/react@19.2.14)(react@19.2.4)
+        specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz(@types/react@19.2.14)(react@19.2.4)
       '@tiptap/extension-placeholder':
         specifier: ^3.20.4
         version: 3.20.4(@tiptap/extensions@3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4))
@@ -428,8 +428,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.9.0))
       terminal-platform-node:
-        specifier: file:../terminal-platform/crates/terminal-node-napi/package/artifacts/local
-        version: file:../terminal-platform/crates/terminal-node-napi/package/artifacts/local
+        specifier: file:vendor/terminal-platform/terminal-platform-node-stub
+        version: file:vendor/terminal-platform/terminal-platform-node-stub
       unified:
         specifier: ^11.0.5
         version: 11.0.5
@@ -4445,32 +4445,41 @@ packages:
   '@tanstack/virtual-core@3.14.0':
     resolution: {integrity: sha512-JLANqGy/D6k4Ujmh8Tr25lGimuOXNiaVyXaCAZS0W+1390sADdGnyUdSWNIfd49gebtIxGMij4IktRVzrdr12Q==}
 
-  '@terminal-platform/design-tokens@file:../terminal-platform/sdk/packages/design-tokens':
-    resolution: {directory: ../terminal-platform/sdk/packages/design-tokens, type: directory}
+  '@terminal-platform/design-tokens@file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz':
+    resolution: {integrity: sha512-9okcXBfeHhYh/DYkF1ebA7222XYjMGXBYT4Plf2Up59f94quYq5BXnibdeG8Qx90hMdd7kT5V/JnM895MEHheQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/foundation@file:../terminal-platform/sdk/packages/foundation':
-    resolution: {directory: ../terminal-platform/sdk/packages/foundation, type: directory}
+  '@terminal-platform/foundation@file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz':
+    resolution: {integrity: sha512-qAII9WtwZWq5S88dFjYKzjJppmCxtvow1PUFaYFKfg64S2Kgjgr09B53FNBATnsGJspOf2d6vr1kJyzLjjlulg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/runtime-types@file:../terminal-platform/sdk/packages/runtime-types':
-    resolution: {directory: ../terminal-platform/sdk/packages/runtime-types, type: directory}
+  '@terminal-platform/runtime-types@file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz':
+    resolution: {integrity: sha512-QlZf6nWOuubBI25DFaH95yyibmRRNrivbhBuOrFIJExAd4G484eBoeH2rGh8QZNXPdq2mkYa86tEzZJgIitvdg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-adapter-websocket@file:../terminal-platform/sdk/packages/workspace-adapter-websocket':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-adapter-websocket, type: directory}
+  '@terminal-platform/workspace-adapter-websocket@file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz':
+    resolution: {integrity: sha512-c4VQ304vS36fttidLVam6kEuQSANdbIYhaGctLGv9v1TkTVzUpKqIPvEFFVc/obAK4cRFP4l1vcXuYcpaaYVNw==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-contracts@file:../terminal-platform/sdk/packages/workspace-contracts':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-contracts, type: directory}
+  '@terminal-platform/workspace-contracts@file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz':
+    resolution: {integrity: sha512-SAnRPEO0wS3dSo8o9xDMnIljSueF/4/8DQa0vAKmiUmbiiJaeb+QwcQNUxrHhWyJTMdlL/kDb1mzTwrNKPTYAA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-core@file:../terminal-platform/sdk/packages/workspace-core':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-core, type: directory}
+  '@terminal-platform/workspace-core@file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz':
+    resolution: {integrity: sha512-um0aD5dd1boSvKPqNgf8Brv4hL4qJSiZEl4Cx1ULHVKr+uqwcR2jtB0m9RqRjUOMa5w15PDv6cCwmiGXQnY4yA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-elements@file:../terminal-platform/sdk/packages/workspace-elements':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-elements, type: directory}
+  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
+    resolution: {integrity: sha512-SahuhcibTVCPruu7mS9Pw4pQM0PBbR5HBkCncfetPNVvvzquRFCRvsz3rIqdq0fecQ1DEfsUqxKfLOLXOWpLeQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-gateway-node@file:../terminal-platform/sdk/packages/workspace-gateway-node':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-gateway-node, type: directory}
+  '@terminal-platform/workspace-gateway-node@file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz':
+    resolution: {integrity: sha512-xaWGQXhzlkV3K/UYka/zpS/fQaOq8KLmT3yyMY+UCuZ8cY9nVqIORC9duVtlAsKr5qrWV5b2YtsoSSuqQcJOsA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz}
+    version: 0.1.0
 
-  '@terminal-platform/workspace-react@file:../terminal-platform/sdk/packages/workspace-react':
-    resolution: {directory: ../terminal-platform/sdk/packages/workspace-react, type: directory}
+  '@terminal-platform/workspace-react@file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz':
+    resolution: {integrity: sha512-78YVsm/SuVYZNdcwUeWTO34i/GmX3ZtAquzwiH6Ox9lcUebmo/7BRHaDbzgswn1yThKhy0tsF9eGYUd2V0KzBQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz}
+    version: 0.1.0
     peerDependencies:
       react: '>=19.0.0 <20'
 
@@ -10566,9 +10575,8 @@ packages:
     resolution: {integrity: sha512-yYrrsWnrXMcdsnu/7YMYAofM1ktpL5By7vZhf15CrXijWWrEYZks5AXBudalfSWJLlnen/QUJUB5aoB0kqZUGA==}
     engines: {node: '>=6.0.0'}
 
-  terminal-platform-node@file:../terminal-platform/crates/terminal-node-napi/package/artifacts/local:
-    resolution: {directory: ../terminal-platform/crates/terminal-node-napi/package/artifacts/local, type: directory}
-    engines: {node: '>=18'}
+  terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub:
+    resolution: {directory: vendor/terminal-platform/terminal-platform-node-stub, type: directory}
 
   terser@5.46.0:
     resolution: {integrity: sha512-jTwoImyr/QbOWFFso3YoU3ik0jBBDJ6JTOQiy/J2YxVJdZCc+5u7skhNwiOR3FQIygFqVUPHl7qbbxtjW2K3Qg==}
@@ -15556,49 +15564,49 @@ snapshots:
 
   '@tanstack/virtual-core@3.14.0': {}
 
-  '@terminal-platform/design-tokens@file:../terminal-platform/sdk/packages/design-tokens': {}
+  '@terminal-platform/design-tokens@file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz': {}
 
-  '@terminal-platform/foundation@file:../terminal-platform/sdk/packages/foundation': {}
+  '@terminal-platform/foundation@file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz': {}
 
-  '@terminal-platform/runtime-types@file:../terminal-platform/sdk/packages/runtime-types': {}
+  '@terminal-platform/runtime-types@file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz': {}
 
-  '@terminal-platform/workspace-adapter-websocket@file:../terminal-platform/sdk/packages/workspace-adapter-websocket':
+  '@terminal-platform/workspace-adapter-websocket@file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz':
     dependencies:
-      '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
-      '@terminal-platform/workspace-contracts': file:../terminal-platform/sdk/packages/workspace-contracts
+      '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+      '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
 
-  '@terminal-platform/workspace-contracts@file:../terminal-platform/sdk/packages/workspace-contracts':
+  '@terminal-platform/workspace-contracts@file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz':
     dependencies:
-      '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
+      '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
 
-  '@terminal-platform/workspace-core@file:../terminal-platform/sdk/packages/workspace-core':
+  '@terminal-platform/workspace-core@file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz':
     dependencies:
-      '@terminal-platform/foundation': file:../terminal-platform/sdk/packages/foundation
-      '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
-      '@terminal-platform/workspace-contracts': file:../terminal-platform/sdk/packages/workspace-contracts
+      '@terminal-platform/foundation': file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
+      '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+      '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
 
-  '@terminal-platform/workspace-elements@file:../terminal-platform/sdk/packages/workspace-elements':
+  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
     dependencies:
-      '@terminal-platform/design-tokens': file:../terminal-platform/sdk/packages/design-tokens
-      '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
-      '@terminal-platform/workspace-core': file:../terminal-platform/sdk/packages/workspace-core
+      '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
+      '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+      '@terminal-platform/workspace-core': file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
       lit: 3.3.2
 
-  '@terminal-platform/workspace-gateway-node@file:../terminal-platform/sdk/packages/workspace-gateway-node':
+  '@terminal-platform/workspace-gateway-node@file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz':
     dependencies:
-      '@terminal-platform/runtime-types': file:../terminal-platform/sdk/packages/runtime-types
-      '@terminal-platform/workspace-adapter-websocket': file:../terminal-platform/sdk/packages/workspace-adapter-websocket
-      '@terminal-platform/workspace-contracts': file:../terminal-platform/sdk/packages/workspace-contracts
+      '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
+      '@terminal-platform/workspace-adapter-websocket': file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz
+      '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@terminal-platform/workspace-react@file:../terminal-platform/sdk/packages/workspace-react(@types/react@19.2.14)(react@19.2.4)':
+  '@terminal-platform/workspace-react@file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz(@types/react@19.2.14)(react@19.2.4)':
     dependencies:
       '@lit/react': 1.0.8(@types/react@19.2.14)
-      '@terminal-platform/workspace-core': file:../terminal-platform/sdk/packages/workspace-core
-      '@terminal-platform/workspace-elements': file:../terminal-platform/sdk/packages/workspace-elements
+      '@terminal-platform/workspace-core': file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
+      '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
       react: 19.2.4
     transitivePeerDependencies:
       - '@types/react'
@@ -23309,7 +23317,7 @@ snapshots:
       mkdirp: 0.5.6
       rimraf: 2.6.3
 
-  terminal-platform-node@file:../terminal-platform/crates/terminal-node-napi/package/artifacts/local: {}
+  terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub: {}
 
   terser@5.46.0:
     dependencies:

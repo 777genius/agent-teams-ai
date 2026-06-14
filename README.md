@@ -107,6 +107,7 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
 - [FAQ](#faq)
 - [Development](#development)
   - [Developer architecture docs](#developer-architecture-docs)
+  - [Terminal Platform integration](#terminal-platform-integration)
 - [Tech stack](#tech-stack)
   - [Debug teammate runtimes](#debug-teammate-runtimes)
   - [Build for distribution](#build-for-distribution)
@@ -308,6 +309,27 @@ Use `pnpm dev:mcp` when you want an MCP browser/debugging tool to attach to the 
 Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`.
 
 The desktop app auto-discovers Claude Code projects from `~/.claude/`.
+
+### Terminal Platform integration
+
+Fresh clones install Terminal Platform SDK packages from `vendor/terminal-platform`, so
+`pnpm install --frozen-lockfile` does not require a sibling `../terminal-platform` checkout.
+Those artifacts are pinned in `vendor/terminal-platform/manifest.json` and can be refreshed from a
+local Terminal Platform checkout with:
+
+```bash
+CLAUDE_TERMINAL_PLATFORM_ROOT=/path/to/terminal-platform pnpm terminal-platform:pack
+```
+
+For local Terminal Platform development, build Terminal Platform first, then run this app with the
+same environment variable:
+
+```bash
+CLAUDE_TERMINAL_PLATFORM_ROOT=/path/to/terminal-platform pnpm dev:mcp
+```
+
+When the variable is set, the Electron build aliases Terminal Platform SDK imports to that local
+checkout and the terminal runtime loads `terminal-platform-node` from the local native artifact.
 
 ### Debug teammate runtimes
 

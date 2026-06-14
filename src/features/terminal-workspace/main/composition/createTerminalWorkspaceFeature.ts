@@ -2,9 +2,9 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { startWorkspaceGatewayNodeServer } from '@terminal-platform/workspace-gateway-node';
-import { TerminalNodeClient } from 'terminal-platform-node';
 
 import type {
   TerminalWorkspaceBootstrap,
@@ -16,6 +16,7 @@ import type {
   WorkspaceGatewayNodeServerHandle,
   WorkspaceRuntimeClientPort,
 } from '@terminal-platform/workspace-gateway-node';
+import type { TerminalNodeClient as TerminalNodeClientInstance } from 'terminal-platform-node';
 
 const READY_TIMEOUT_MS = 15_000;
 const READY_POLL_MS = 200;
@@ -25,6 +26,16 @@ const LEGACY_TERMINAL_PLATFORM_ROOT_ENV = 'TERMINAL_PLATFORM_ROOT';
 const TERMINAL_DAEMON_BINARY_ENV = 'CLAUDE_TERMINAL_DAEMON_BINARY';
 
 type TerminalDaemonChildProcess = ReturnType<typeof spawn>;
+
+interface TerminalNodeClientConstructor {
+  fromRuntimeSlug(runtimeSlug: string): TerminalNodeClientInstance;
+}
+
+interface TerminalNodeHandshakeInfo {
+  handshake: Awaited<ReturnType<WorkspaceRuntimeClientPort['handshake']>>;
+}
+
+type TerminalNodeCreatedSession = Awaited<ReturnType<WorkspaceRuntimeClientPort['createSession']>>;
 
 interface TerminalWorkspaceFeatureDeps {
   teamsBasePath: string;
@@ -38,6 +49,8 @@ interface TerminalRuntimeRecord {
   daemon: TeamTerminalDaemonSupervisor;
   gateway: WorkspaceGatewayNodeServerHandle;
 }
+
+let terminalNodeClientConstructorPromise: Promise<TerminalNodeClientConstructor> | null = null;
 
 export interface TerminalWorkspaceFeatureFacade {
   getBootstrap(request: TerminalWorkspaceBootstrapRequest): Promise<TerminalWorkspaceBootstrap>;
@@ -128,6 +141,7 @@ async function startRuntime(
   });
   await daemon.ensureRunning();
 
+  const TerminalNodeClient = await loadTerminalNodeClientConstructor();
   const client = TerminalNodeClient.fromRuntimeSlug(runtimeSlug);
   const projectPath = await resolveExistingDirectory(request.projectPath);
   await ensureInitialNativeSession(client, {
@@ -255,6 +269,7 @@ class TeamTerminalDaemonSupervisor {
 
   private async isReady(): Promise<boolean> {
     try {
+      const TerminalNodeClient = await loadTerminalNodeClientConstructor();
       const client = TerminalNodeClient.fromRuntimeSlug(this.#runtimeSlug);
       await client.handshakeInfo();
       await client.close().catch(() => undefined);
@@ -266,7 +281,7 @@ class TeamTerminalDaemonSupervisor {
 }
 
 async function ensureInitialNativeSession(
-  client: TerminalNodeClient,
+  client: TerminalNodeClientInstance,
   input: { title: string; cwd: string | null }
 ): Promise<void> {
   const sessions = await client.listSessions();
@@ -284,10 +299,10 @@ async function ensureInitialNativeSession(
   });
 }
 
-function createRuntimeClientPort(client: TerminalNodeClient): WorkspaceRuntimeClientPort {
+function createRuntimeClientPort(client: TerminalNodeClientInstance): WorkspaceRuntimeClientPort {
   return {
     async handshake() {
-      return (await client.handshakeInfo()).handshake;
+      return ((await client.handshakeInfo()) as TerminalNodeHandshakeInfo).handshake;
     },
     listSessions: () => client.listSessions(),
     listSavedSessions: () => client.listSavedSessions(),
@@ -311,7 +326,7 @@ function createRuntimeClientPort(client: TerminalNodeClient): WorkspaceRuntimeCl
       if (backend !== 'native') {
         throw new Error(`Unsupported terminal backend ${backend}`);
       }
-      return client.createNativeSession(request);
+      return (await client.createNativeSession(request)) as TerminalNodeCreatedSession;
     },
     importSession: (route, title) => client.importSession(route, title ?? null),
     getSavedSession: (sessionId) => client.savedSession(sessionId),
@@ -370,6 +385,43 @@ function buildRuntimeSlug(teamName: string): string {
   return `agent-teams-terminal-${createHash('sha256').update(teamName).digest('hex').slice(0, 16)}`;
 }
 
+async function loadTerminalNodeClientConstructor(): Promise<TerminalNodeClientConstructor> {
+  terminalNodeClientConstructorPromise ??= importTerminalNodeClientConstructor();
+  return terminalNodeClientConstructorPromise;
+}
+
+async function importTerminalNodeClientConstructor(): Promise<TerminalNodeClientConstructor> {
+  const specifier = resolveTerminalNodePackageSpecifier();
+  const module = (await import(specifier)) as {
+    TerminalNodeClient?: TerminalNodeClientConstructor;
+    default?: { TerminalNodeClient?: TerminalNodeClientConstructor };
+  };
+  const TerminalNodeClient = module.TerminalNodeClient ?? module.default?.TerminalNodeClient;
+  if (!TerminalNodeClient) {
+    throw new Error(`terminal-platform-node did not export TerminalNodeClient from ${specifier}`);
+  }
+  return TerminalNodeClient;
+}
+
+function resolveTerminalNodePackageSpecifier(): string {
+  const explicitRoot = resolveExplicitTerminalPlatformRoot();
+  if (!explicitRoot) {
+    return 'terminal-platform-node';
+  }
+
+  return pathToFileURL(
+    path.join(
+      explicitRoot,
+      'crates',
+      'terminal-node-napi',
+      'package',
+      'artifacts',
+      'local',
+      'index.mjs'
+    )
+  ).href;
+}
+
 async function resolveExistingDirectory(value: string | null | undefined): Promise<string | null> {
   const candidate = value?.trim();
   if (!candidate) {
@@ -407,14 +459,19 @@ async function resolveDaemonBinaryPath(): Promise<string> {
 }
 
 function resolveTerminalPlatformRoot(): string {
-  const explicit =
-    process.env[TERMINAL_PLATFORM_ROOT_ENV]?.trim() ||
-    process.env[LEGACY_TERMINAL_PLATFORM_ROOT_ENV]?.trim();
+  const explicit = resolveExplicitTerminalPlatformRoot();
   if (explicit) {
-    return path.resolve(explicit);
+    return explicit;
   }
 
   return path.resolve(process.cwd(), '../terminal-platform');
+}
+
+function resolveExplicitTerminalPlatformRoot(): string | null {
+  const explicit =
+    process.env[TERMINAL_PLATFORM_ROOT_ENV]?.trim() ||
+    process.env[LEGACY_TERMINAL_PLATFORM_ROOT_ENV]?.trim();
+  return explicit ? path.resolve(explicit) : null;
 }
 
 function resolveDefaultShell(): string {

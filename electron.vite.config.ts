@@ -10,6 +10,8 @@ import type { Plugin } from 'vite'
 // This avoids pnpm symlink issues with electron-builder's asar packaging.
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
 const prodDeps = Object.keys(pkg.dependencies || {})
+const terminalPlatformLocalRoot = resolveTerminalPlatformLocalRoot()
+const terminalPlatformSdkAliases = createTerminalPlatformSdkAliases()
 
 // Fastify and its plugins rely on runtime module resolution that breaks when bundled.
 const runtimeExternalDeps = new Set([
@@ -75,6 +77,31 @@ function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugi
   ]
 }
 
+function resolveTerminalPlatformLocalRoot(): string | null {
+  const value =
+    process.env.CLAUDE_TERMINAL_PLATFORM_ROOT?.trim() || process.env.TERMINAL_PLATFORM_ROOT?.trim()
+  return value ? resolve(__dirname, value) : null
+}
+
+function createTerminalPlatformSdkAliases(): Record<string, string> {
+  if (!terminalPlatformLocalRoot) return {}
+
+  const sdkPackage = (name: string) =>
+    resolve(terminalPlatformLocalRoot, 'sdk', 'packages', name, 'dist', 'index.js')
+
+  return {
+    '@terminal-platform/design-tokens': sdkPackage('design-tokens'),
+    '@terminal-platform/foundation': sdkPackage('foundation'),
+    '@terminal-platform/runtime-types': sdkPackage('runtime-types'),
+    '@terminal-platform/workspace-adapter-websocket': sdkPackage('workspace-adapter-websocket'),
+    '@terminal-platform/workspace-contracts': sdkPackage('workspace-contracts'),
+    '@terminal-platform/workspace-core': sdkPackage('workspace-core'),
+    '@terminal-platform/workspace-elements': sdkPackage('workspace-elements'),
+    '@terminal-platform/workspace-gateway-node': sdkPackage('workspace-gateway-node'),
+    '@terminal-platform/workspace-react': sdkPackage('workspace-react'),
+  }
+}
+
 export default defineConfig({
   main: {
     plugins: [
@@ -92,7 +119,8 @@ export default defineConfig({
         '@features': resolve(__dirname, 'src/features'),
         '@main': resolve(__dirname, 'src/main'),
         '@shared': resolve(__dirname, 'src/shared'),
-        '@preload': resolve(__dirname, 'src/preload')
+        '@preload': resolve(__dirname, 'src/preload'),
+        ...terminalPlatformSdkAliases
       }
     },
     build: {
@@ -179,14 +207,7 @@ export default defineConfig({
           __dirname,
           'src/renderer/vendor/radixComposeRefs.ts'
         ),
-        '@terminal-platform/workspace-elements': resolve(
-          __dirname,
-          '../terminal-platform/sdk/packages/workspace-elements/dist/index.js'
-        ),
-        '@terminal-platform/workspace-react': resolve(
-          __dirname,
-          '../terminal-platform/sdk/packages/workspace-react/dist/index.js'
-        ),
+        ...terminalPlatformSdkAliases,
         '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },

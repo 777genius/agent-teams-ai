@@ -2,7 +2,6 @@ import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } 
 import { createPortal } from 'react-dom';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { isElectronMode } from '@renderer/api';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1440,7 +1439,7 @@ const TerminalWorkingDirectoryBar = ({
   const { t } = useAppTranslation('team');
   const label = formatWorkingDirectory(projectPath);
   const openTerminalPlatformRepository = useCallback((): void => {
-    if (isElectronMode()) {
+    if (window.electronAPI?.openExternal) {
       void window.electronAPI.openExternal(TERMINAL_PLATFORM_GITHUB_URL);
       return;
     }
