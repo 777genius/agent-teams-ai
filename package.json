@@ -40,6 +40,7 @@
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
     "stage-terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs",
+    "ensure-terminal-platform-runtime": "node ./scripts/ensure-terminal-platform-runtime.mjs",
     "clean:runtime": "node ./scripts/stage-runtime.mjs --clean",
     "clean:terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs --clean",
     "terminal-platform:pack": "node ./scripts/terminal-platform/pack-sdk-artifacts.cjs",

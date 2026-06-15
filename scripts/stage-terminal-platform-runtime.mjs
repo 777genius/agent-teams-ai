@@ -25,6 +25,7 @@ Options:
   --platform <key>      Runtime platform key. Defaults to the current platform.
   --release-tag <tag>   Release tag to download from. Defaults to terminal-platform.lock.json.
   --archive <path>      Stage from a local runtime archive instead of GitHub.
+  --ensure              Skip staging when the locked runtime is already present.
   --clean               Remove staged runtime files and keep resources/terminal-platform/.gitkeep.
   --help                Show this message.
 `);
@@ -34,6 +35,7 @@ function parseArgs(argv) {
   const parsed = {
     archive: null,
     clean: false,
+    ensure: false,
     help: false,
     platform: null,
     releaseTag: null,
@@ -47,6 +49,10 @@ function parseArgs(argv) {
     }
     if (arg === '--clean') {
       parsed.clean = true;
+      continue;
+    }
+    if (arg === '--ensure') {
+      parsed.ensure = true;
       continue;
     }
     if (arg === '--archive') {
@@ -126,6 +132,36 @@ function cleanRuntimeDir() {
       continue;
     }
     fs.rmSync(path.join(runtimeDir, entry.name), { recursive: true, force: true });
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function acquireStageLock(lockFilePath) {
+  const waitDeadline = Date.now() + 120_000;
+  let announcedWait = false;
+
+  while (true) {
+    try {
+      return await fs.promises.open(lockFilePath, 'wx');
+    } catch (error) {
+      if (error?.code !== 'EEXIST') {
+        throw error;
+      }
+
+      if (!announcedWait) {
+        process.stdout.write('Waiting for another terminal-platform runtime stage to finish...\n');
+        announcedWait = true;
+      }
+
+      if (Date.now() >= waitDeadline) {
+        throw new Error(`Timed out waiting for terminal-platform runtime stage lock: ${lockFilePath}`);
+      }
+
+      await sleep(750);
+    }
   }
 }
 
@@ -270,6 +306,15 @@ function verifyStagedRuntime(lock, asset, platformKey) {
   }
 }
 
+function isStagedRuntimeValid(lock, asset, platformKey) {
+  try {
+    verifyStagedRuntime(lock, asset, platformKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function stageRuntime(options) {
   const lock = readLock();
   const platformKey = options.platform?.trim() || getDefaultPlatformKey();
@@ -278,44 +323,71 @@ async function stageRuntime(options) {
     throw new Error(`terminal-platform.lock.json has no asset for ${platformKey}`);
   }
 
-  const releaseTag = getReleaseTag(lock, options.releaseTag);
-  const workDir = path.join(downloadRoot, `stage-${platformKey}-${process.pid}-${Date.now()}`);
-  const asset = options.archive
-    ? lockedAsset
-    : await resolveReleaseManifestAsset(lock, releaseTag, platformKey, lockedAsset, workDir);
-  const archivePath = path.join(workDir, asset.file);
-  const extractDir = path.join(workDir, 'extracted');
+  if (options.ensure && isStagedRuntimeValid(lock, lockedAsset, platformKey)) {
+    process.stdout.write(
+      `Using staged terminal-platform runtime ${lock.version} for ${platformKey}\n`
+    );
+    return;
+  }
 
-  fs.rmSync(workDir, { recursive: true, force: true });
-  fs.mkdirSync(workDir, { recursive: true });
+  fs.mkdirSync(downloadRoot, { recursive: true });
+  const stageLockPath = path.join(downloadRoot, `stage-${platformKey}.lock`);
+  const lockHandle = options.ensure ? await acquireStageLock(stageLockPath) : null;
 
   try {
-    if (options.archive) {
-      fs.copyFileSync(path.resolve(options.archive), archivePath);
-    } else {
-      const url = getReleaseAssetUrl(lock, releaseTag, asset);
+    if (options.ensure && lockHandle && isStagedRuntimeValid(lock, lockedAsset, platformKey)) {
       process.stdout.write(
-        `Downloading ${asset.file} from ${lock.releaseRepository}@${releaseTag}\n`
+        `Using staged terminal-platform runtime ${lock.version} for ${platformKey}\n`
       );
-      if (!downloadReleaseAssetWithGh(lock, releaseTag, asset, archivePath)) {
-        await downloadFile(url, archivePath);
-      }
+      return;
     }
 
-    verifyChecksum(archivePath, asset);
-    process.stdout.write(`Extracting ${asset.file}\n`);
-    extractArchive(archivePath, extractDir, asset.archiveKind);
+    const releaseTag = getReleaseTag(lock, options.releaseTag);
+    const workDir = path.join(downloadRoot, `stage-${platformKey}-${process.pid}-${Date.now()}`);
+    const asset = options.archive
+      ? lockedAsset
+      : await resolveReleaseManifestAsset(lock, releaseTag, platformKey, lockedAsset, workDir);
+    const archivePath = path.join(workDir, asset.file);
+    const extractDir = path.join(workDir, 'extracted');
 
-    const payloadDir = findRuntimePayloadDir(extractDir, asset);
-    cleanRuntimeDir();
-    fs.cpSync(payloadDir, runtimeDir, { recursive: true });
-    if (process.platform !== 'win32' && platformKey !== 'win32-x64') {
-      fs.chmodSync(path.join(runtimeDir, asset.binaryName), 0o755);
-    }
-    verifyStagedRuntime(lock, asset, platformKey);
-    process.stdout.write(`Staged terminal-platform runtime ${lock.version} for ${platformKey}\n`);
-  } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
+    fs.mkdirSync(workDir, { recursive: true });
+
+    try {
+      if (options.archive) {
+        fs.copyFileSync(path.resolve(options.archive), archivePath);
+      } else {
+        const url = getReleaseAssetUrl(lock, releaseTag, asset);
+        process.stdout.write(
+          `Downloading ${asset.file} from ${lock.releaseRepository}@${releaseTag}\n`
+        );
+        if (!downloadReleaseAssetWithGh(lock, releaseTag, asset, archivePath)) {
+          await downloadFile(url, archivePath);
+        }
+      }
+
+      verifyChecksum(archivePath, asset);
+      process.stdout.write(`Extracting ${asset.file}\n`);
+      extractArchive(archivePath, extractDir, asset.archiveKind);
+
+      const payloadDir = findRuntimePayloadDir(extractDir, asset);
+      cleanRuntimeDir();
+      fs.cpSync(payloadDir, runtimeDir, { recursive: true });
+      if (process.platform !== 'win32' && platformKey !== 'win32-x64') {
+        fs.chmodSync(path.join(runtimeDir, asset.binaryName), 0o755);
+      }
+      verifyStagedRuntime(lock, asset, platformKey);
+      process.stdout.write(
+        `Staged terminal-platform runtime ${lock.version} for ${platformKey}\n`
+      );
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
+  } finally {
+    if (lockHandle) {
+      await lockHandle.close();
+      fs.rmSync(stageLockPath, { force: true });
+    }
   }
 }
 

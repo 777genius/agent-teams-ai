@@ -43,6 +43,7 @@ describe('stage-terminal-platform-runtime script e2e', () => {
         process.execPath,
         [
           'scripts/stage-terminal-platform-runtime.mjs',
+          '--ensure',
           '--platform',
           platformKey,
           '--archive',
@@ -65,6 +66,32 @@ describe('stage-terminal-platform-runtime script e2e', () => {
       expect(
         fsSync.existsSync(path.join(stageDir, asset.packageDirName, 'native', 'manifest.json'))
       ).toBe(true);
+
+      const ensureResult = spawnSync(
+        process.execPath,
+        [
+          'scripts/stage-terminal-platform-runtime.mjs',
+          '--ensure',
+          '--platform',
+          platformKey,
+          '--archive',
+          archivePath,
+        ],
+        {
+          cwd: repoRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            CLAUDE_TERMINAL_PLATFORM_DOWNLOAD_ROOT: downloadDir,
+            CLAUDE_TERMINAL_PLATFORM_STAGE_DIR: stageDir,
+          },
+        }
+      );
+      expect(ensureResult.status, formatProcessOutput(ensureResult)).toBe(0);
+      expect(ensureResult.stdout).toContain(
+        `Using staged terminal-platform runtime ${lock.version} for ${platformKey}`
+      );
+      expect(ensureResult.stdout).not.toContain('Extracting');
 
       const cleanResult = spawnSync(
         process.execPath,
