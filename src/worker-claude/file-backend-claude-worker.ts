@@ -165,7 +165,9 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     );
     this.ownedWorkspace = options.workspace
       ? null
-      : new StableWorkerWorkspace(defaultWorkspacePath);
+      : new StableWorkerWorkspace(defaultWorkspacePath, {
+          allowedRootDir: options.stateRootDir,
+        });
     this.workspace = options.workspace ?? this.ownedWorkspace!;
     this.stableWorkspacePath = options.workspace
       ? (options.workspacePath ?? null)

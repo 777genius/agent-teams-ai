@@ -3,7 +3,10 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execPath } from "node:process";
-import type { RunnerPort } from "@vioxen/subscription-runtime/core";
+import type {
+  RunnerPort,
+  WorkspacePort,
+} from "@vioxen/subscription-runtime/core";
 import { describe, expect, it } from "vitest";
 import { FileBackendCodexWorker } from "../index";
 import { NodeProcessRunner } from "../node-process-runner";
@@ -105,6 +108,35 @@ describe("FileBackendCodexWorker", () => {
       ).rejects.toThrow("job.systemPrompt exceeds 262144 bytes");
     } finally {
       await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects ambiguous custom workspace options", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-"));
+    const customWorkspace: WorkspacePort = {
+      workspaceId: "custom-test-workspace",
+      capabilities: {
+        workspaceId: "custom-test-workspace",
+        supportsContainer: false,
+        supportsExistingCheckout: true,
+        supportsTempDir: false,
+      },
+      async create() {
+        return { path: rootDir };
+      },
+    };
+
+    try {
+      expect(() => new FileBackendCodexWorker({
+        providerInstanceId: "codex:test",
+        stateRootDir: rootDir,
+        workspace: customWorkspace,
+        workspacePath: join(rootDir, "borrowed"),
+        codexBinaryPath: "codex",
+        encryptionKey: new Uint8Array(32).fill(3),
+      })).toThrow("file_backend_codex_workspace_conflict");
+    } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
   });

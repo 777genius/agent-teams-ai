@@ -33,7 +33,9 @@ export class FileBackendCodexWorker {
         const defaultWorkspacePath = join(options.stateRootDir, "workspaces", hashText(this.workerId));
         this.ownedWorkspace = options.workspace
             ? null
-            : new StableWorkerWorkspace(defaultWorkspacePath);
+            : new StableWorkerWorkspace(defaultWorkspacePath, {
+                allowedRootDir: options.stateRootDir,
+            });
         this.workspace =
             options.workspace ??
                 (options.workspacePath
@@ -338,6 +340,9 @@ function assertWorkerOptions(options) {
     }
     if (!options.codexBinaryPath.trim()) {
         throw new Error("file_backend_codex_binary_required");
+    }
+    if (options.workspace && options.workspacePath) {
+        throw new Error("file_backend_codex_workspace_conflict");
     }
 }
 function hashText(value) {

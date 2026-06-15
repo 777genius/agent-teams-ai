@@ -13,6 +13,7 @@ export declare class TempWorkspace implements WorkspacePort {
 }
 export declare class StableWorkerWorkspace implements WorkspacePort {
     private readonly rootDir;
+    private readonly options;
     readonly workspaceId = "stable-worker-workspace";
     readonly capabilities: {
         workspaceId: string;
@@ -20,7 +21,9 @@ export declare class StableWorkerWorkspace implements WorkspacePort {
         supportsExistingCheckout: boolean;
         supportsContainer: boolean;
     };
-    constructor(rootDir: string);
+    constructor(rootDir: string, options?: {
+        readonly allowedRootDir?: string;
+    });
     create(): Promise<WorkspaceHandle>;
     dispose(): Promise<void>;
 }

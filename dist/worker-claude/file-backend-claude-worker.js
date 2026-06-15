@@ -48,7 +48,9 @@ export class FileBackendClaudeWorker {
         const defaultWorkspacePath = join(options.stateRootDir, "workspaces", hashText(this.workerId));
         this.ownedWorkspace = options.workspace
             ? null
-            : new StableWorkerWorkspace(defaultWorkspacePath);
+            : new StableWorkerWorkspace(defaultWorkspacePath, {
+                allowedRootDir: options.stateRootDir,
+            });
         this.workspace = options.workspace ?? this.ownedWorkspace;
         this.stableWorkspacePath = options.workspace
             ? (options.workspacePath ?? null)
