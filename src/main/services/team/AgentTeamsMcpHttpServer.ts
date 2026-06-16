@@ -9,6 +9,7 @@ import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { killProcessTree, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
+import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
@@ -1111,6 +1112,7 @@ export class AgentTeamsMcpHttpServer {
       [MCP_HTTP_LAUNCH_SPEC_HASH_ENV]: expectedIdentity.launchSpecHash,
       [MCP_HTTP_OWNER_INSTANCE_ID_ENV]: expectedIdentity.ownerInstanceId,
     });
+    ensureMinimumNodeOldSpaceEnv(childEnv);
     const child = spawnProcess(launchSpec.command, args, childEnv);
 
     const clearIfCurrent = (): void => {

@@ -272,6 +272,42 @@ describe('AgentTeamsMcpHttpServer', () => {
     expect(spawnProcess).not.toHaveBeenCalled();
   });
 
+  it('raises inherited low NODE_OPTIONS heap for the managed MCP HTTP child', async () => {
+    const previousNodeOptions = process.env.NODE_OPTIONS;
+    process.env.NODE_OPTIONS = '--max-old-space-size=64';
+    const child = new FakeChildProcess(41064);
+    const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
+    const server = new AgentTeamsMcpHttpServer({
+      statePath: null,
+      resolveLaunchSpec: async () => ({
+        command: 'node',
+        args: ['mcp-server/dist/index.js'],
+      }),
+      allocatePort: async () => 41064,
+      spawnProcess: spawnProcess as AgentTeamsMcpHttpServerDeps['spawnProcess'],
+      waitForPort: vi.fn(async () => undefined),
+    });
+
+    try {
+      await server.ensureStarted();
+
+      expect(spawnProcess).toHaveBeenCalledWith(
+        'node',
+        expect.any(Array),
+        expect.objectContaining({
+          NODE_OPTIONS: '--max-old-space-size=2048',
+        })
+      );
+    } finally {
+      await server.stop();
+      if (previousNodeOptions === undefined) {
+        delete process.env.NODE_OPTIONS;
+      } else {
+        process.env.NODE_OPTIONS = previousNodeOptions;
+      }
+    }
+  });
+
   it('cancels an in-flight start before spawn when shutdown disables future starts', async () => {
     let resolveLaunchSpec!: (launchSpec: { command: string; args: string[] }) => void;
     const launchSpecPromise = new Promise<{ command: string; args: string[] }>((resolve) => {

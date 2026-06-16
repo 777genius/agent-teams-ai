@@ -63,6 +63,7 @@ import {
   spawnCli,
 } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
+import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
 import {
   encodePath,
   extractBaseDir,
@@ -1729,6 +1730,7 @@ function normalizeTeamRuntimeNodeEnv(env: NodeJS.ProcessEnv): void {
   if (env.NODE_ENV === 'test') {
     env.NODE_ENV = 'development';
   }
+  ensureMinimumNodeOldSpaceEnv(env);
 }
 
 function buildProviderFastModeArgs(
