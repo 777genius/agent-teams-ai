@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Funzionalità",
+    "screenshots": "Screenshot",
+    "docs": "Documentazione",
+    "comparison": "Confronta",
+    "download": "Scarica",
+    "pricing": "Gratis",
+    "faq": "FAQ",
+    "viewOnGithub": "Vedi su GitHub",
+    "openMenu": "Apri menu",
+    "closeMenu": "Chiudi menu",
+    "short": {
+      "screenshots": "Foto",
+      "docs": "Docs",
+      "download": "Scarica",
+      "comparison": "Confronta",
+      "pricing": "Gratis"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Scarica ora",
+    "ctaPrimary": "Scarica per {platform}",
+    "ctaSecondary": "Confronta",
+    "ctaDocs": "Documentazione",
+    "preview": "Anteprima del prodotto",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Bacheca Kanban",
+      "openSource": "Open source"
+    },
+    "watchDemo": "Guarda la demo",
+    "videoUnavailable": "Video non disponibile",
+    "supportedProviders": "Provider AI supportati",
+    "slogan": "Ottieni tanto facendo pochissimo",
+    "platformDefault": "Per la tua piattaforma",
+    "guidesSetup": "Guide e configurazione",
+    "videoFrameLabel": "Guarda la demo di Agent Teams",
+    "commandFeed": "Feed dei comandi del team",
+    "liveDemo": "Demo dal vivo",
+    "demoVideoTitle": "Video demo di Agent Teams",
+    "demoTitle": "Demo di Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo del team di agenti",
+      "live": "DAL VIVO",
+      "waiting": "In attesa di task...",
+      "activity": {
+        "authMiddleware": "Implementazione del middleware di autenticazione...",
+        "unitTests": "Scrittura di test unitari per l'API...",
+        "reviewPr": "Revisione delle modifiche della PR #42...",
+        "ciPipeline": "Configurazione della pipeline CI/CD...",
+        "refactorDatabase": "Refactoring del livello database..."
+      },
+      "tasks": {
+        "authApi": "API di autenticazione",
+        "unitTests": "Test unitari",
+        "ciSetup": "Configurazione CI"
+      },
+      "columns": {
+        "todo": "DA FARE",
+        "progress": "IN CORSO",
+        "review": "REVISIONE",
+        "done": "FATTO"
+      }
+    }
+  },
+  "download": {
+    "title": "Scarica",
+    "detected": "Rilevato",
+    "systemRequirements": "Requisiti di sistema",
+    "version": "Versione {version}",
+    "readyToStart": "Pronto per iniziare!"
+  },
+  "theme": {
+    "dark": "Scuro",
+    "light": "Chiaro"
+  },
+  "language": {
+    "label": "Lingua",
+    "search": "Cerca lingua…"
+  },
+  "features": {
+    "sectionTitle": "Tutto ciò che serve per l'orchestrazione di agenti AI",
+    "sectionSubtitle": "Strumenti potenti che fanno funzionare davvero la collaborazione multi-agente."
+  },
+  "pricing": {
+    "sectionTitle": "Installazione gratuita. Modello gratuito incluso.",
+    "sectionSubtitle": "Inizia subito con un modello gratuito senza autenticazione - nessun account, chiave API o carta di credito. Connetti Claude, Codex, OpenCode/OpenRouter o l'accesso di altri provider solo quando vuoi più modelli.",
+    "getStarted": "Scarica ora",
+    "popular": "Gratis",
+    "freeModelCallout": "Modello gratuito senza autenticazione incluso",
+    "note": "Agent Teams non ha un piano a pagamento. Il modello gratuito senza autenticazione ti permette di provarlo subito; l'utilizzo a pagamento dei provider è facoltativo e controllato dal provider che scegli."
+  },
+  "testimonials": {
+    "sectionTitle": "Cosa dicono gli sviluppatori",
+    "sectionSubtitle": "Feedback reali da chi crea davvero",
+    "showMore": "Mostra di più",
+    "showLess": "Mostra di meno",
+    "feedbackCta": "Vuoi condividere la tua esperienza? Apri una issue su"
+  },
+  "faq": {
+    "sectionTitle": "Hai domande? Abbiamo le risposte",
+    "subtitle": "Tutto ciò che devi sapere su Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Come ci confrontiamo",
+    "sectionSubtitle": "Confronto funzionalità per funzionalità con altri strumenti di coding AI.",
+    "feature": "Funzionalità",
+    "robotBubble": "Giudica tu stesso",
+    "features": {
+      "crossTeam": "Comunicazione tra team",
+      "agentMessaging": "Messaggistica tra agenti",
+      "linkedTasks": "Task collegati",
+      "sessionAnalysis": "Analisi della sessione",
+      "taskAttachments": "Allegati ai task",
+      "hunkReview": "Revisione a livello di hunk",
+      "codeEditor": "Editor di codice integrato",
+      "fullAutonomy": "Autonomia completa",
+      "taskDeps": "Dipendenze tra task",
+      "reviewWorkflow": "Flusso di revisione",
+      "zeroSetup": "Configurazione zero",
+      "kanban": "Bacheca Kanban",
+      "execLog": "Log di esecuzione",
+      "liveProcesses": "Processi dal vivo",
+      "runtimeLoad": "CPU/RAM per membro del team",
+      "perTaskReview": "Revisione del codice per task",
+      "flexAutonomy": "Autonomia flessibile",
+      "worktree": "Isolamento worktree Git",
+      "multiAgent": "Membri del team AI misti",
+      "liveWorkGraph": "Mappa del team dal vivo",
+      "liveTeam": "Membri del team dal vivo",
+      "teamWorkspace": "Spazio di lavoro del team",
+      "launchProof": "Stato di avvio dei membri del team",
+      "orgGovernance": "Organigramma / governance",
+      "budgetControls": "Controlli di budget",
+      "price": "Prezzo"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Guardalo in azione",
+    "sectionSubtitle": "Screenshot reali dall'app — bacheca Kanban, revisione del codice, team di agenti e altro ancora."
+  },
+  "common": {
+    "learnMore": "Scopri di più",
+    "statusLabel": "Stato:",
+    "previous": "Precedente",
+    "next": "Successivo"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Orchestrazione di agenti AI per sviluppatori",
+    "robotBubble": "Sto aspettando",
+    "links": {
+      "github": "GitHub",
+      "author": "Autore",
+      "docs": "Documentazione"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Orchestrazione di agenti AI per sviluppatori",
+    "homeDescription": "App desktop gratuita e open source per team di agenti AI. Inizia con un modello gratuito senza autenticazione, poi connetti Claude, Codex o OpenCode quando ti servono più modelli.",
+    "downloadTitle": "Scarica Agent Teams per macOS, Windows e Linux",
+    "downloadDescription": "Scarica Agent Teams per macOS, Windows e Linux. App desktop gratuita e open source per team di agenti Claude, Codex e OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Pagina non trovata",
+    "notFoundDescription": "La pagina che stai cercando non esiste o è stata spostata.",
+    "genericTitle": "Qualcosa è andato storto",
+    "genericDescription": "Si è verificato un errore imprevisto. Riprova più tardi.",
+    "goHome": "Vai alla homepage"
+  }
+}

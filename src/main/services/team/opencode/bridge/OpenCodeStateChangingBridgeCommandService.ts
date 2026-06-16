@@ -83,7 +83,7 @@ export class OpenCodeStateChangingBridgeCommandService {
   private readonly requestIdFactory: () => string;
   private readonly diagnosticIdFactory: () => string;
   private readonly clock: () => Date;
-  private readonly leaseAcquireTimeoutMs: number;
+  private readonly leaseAcquireTimeoutMs: number | null;
   private readonly leaseAcquireRetryDelayMs: number;
 
   constructor(options: OpenCodeStateChangingBridgeCommandServiceOptions) {
@@ -98,8 +98,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     this.diagnosticIdFactory =
       options.diagnosticIdFactory ?? (() => `opencode-bridge-diagnostic-${randomUUID()}`);
     this.clock = options.clock ?? (() => new Date());
-    this.leaseAcquireTimeoutMs =
-      options.leaseAcquireTimeoutMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS;
+    this.leaseAcquireTimeoutMs = options.leaseAcquireTimeoutMs ?? null;
     this.leaseAcquireRetryDelayMs =
       options.leaseAcquireRetryDelayMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS;
   }
@@ -274,10 +273,13 @@ export class OpenCodeStateChangingBridgeCommandService {
     command: OpenCodeBridgeCommandName;
     ttlMs: number;
   }): Promise<OpenCodeBridgeCommandLease> {
-    const deadlineMs = Date.now() + Math.max(0, this.leaseAcquireTimeoutMs);
-    let lastError: unknown = null;
-
-    do {
+    const deadlineMs =
+      Date.now() +
+      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+        configuredTimeoutMs: this.leaseAcquireTimeoutMs,
+        leaseTtlMs: input.ttlMs,
+      });
+    while (true) {
       try {
         return await this.leaseStore.acquire(input);
       } catch (error) {
@@ -287,15 +289,12 @@ export class OpenCodeStateChangingBridgeCommandService {
         ) {
           throw error;
         }
-        lastError = error;
         if (Date.now() >= deadlineMs) {
           throw error;
         }
         await sleep(Math.max(1, this.leaseAcquireRetryDelayMs));
       }
-    } while (Date.now() < deadlineMs);
-
-    throw lastError instanceof Error ? lastError : new Error('OpenCode bridge lease unavailable');
+    }
   }
 
   private async appendUnknownOutcomeDiagnostic(input: {
@@ -385,6 +384,16 @@ function commandRequiresRuntimeStoreManifestPrecondition(
   command: OpenCodeBridgeCommandName
 ): boolean {
   return command !== 'opencode.sendMessage';
+}
+
+export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {
+  configuredTimeoutMs?: number | null;
+  leaseTtlMs: number;
+}): number {
+  if (typeof input.configuredTimeoutMs === 'number') {
+    return Math.max(0, input.configuredTimeoutMs);
+  }
+  return Math.max(DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS, Math.max(0, input.leaseTtlMs));
 }
 
 function stringifyError(error: unknown): string {

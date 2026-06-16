@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { ListDashboardRecentProjectsUseCase } from '@features/recent-projects/core/application/use-cases/ListDashboardRecentProjectsUseCase';
 
@@ -33,15 +34,17 @@ function makeCandidate(overrides: Partial<RecentProjectCandidate> = {}): RecentP
   };
 }
 
-function createLogger(): LoggerPort & {
-  info: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
+type LoggerMock = LoggerPort & {
+  info: Mock<LoggerPort['info']>;
+  warn: Mock<LoggerPort['warn']>;
+  error: Mock<LoggerPort['error']>;
+};
+
+function createLogger(): LoggerMock {
   return {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    info: vi.fn<LoggerPort['info']>(),
+    warn: vi.fn<LoggerPort['warn']>(),
+    error: vi.fn<LoggerPort['error']>(),
   };
 }
 

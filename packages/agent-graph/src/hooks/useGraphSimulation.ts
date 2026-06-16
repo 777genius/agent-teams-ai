@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { createCompleteEffect, createSpawnEffect, type VisualEffect } from '../canvas/draw-effects';
 import { ANIM_SPEED, NODE } from '../constants/canvas-constants';
 import { getStateColor } from '../constants/colors';
+import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 import {
   buildStableSlotLayoutSnapshot,
   resolveNearestGridOwnerTarget,
   resolveNearestSlotAssignment,
+  type SlotFrame,
   snapshotToWorldBounds,
+  type StableRect,
+  type StableSlotLayoutSnapshot,
   translateSlotFrame,
   validateStableSlotLayout,
-  type StableSlotLayoutSnapshot,
-  type StableRect,
-  type SlotFrame,
 } from '../layout/stableSlots';
-import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 
+import type { WorldBounds } from '../layout/launchAnchor';
 import type {
   GraphEdge,
   GraphLayoutPort,
@@ -22,8 +24,6 @@ import type {
   GraphOwnerSlotAssignment,
   GraphParticle,
 } from '../ports/types';
-import type { WorldBounds } from '../layout/launchAnchor';
-import { createCompleteEffect, createSpawnEffect, type VisualEffect } from '../canvas/draw-effects';
 
 export interface SimulationState {
   nodes: GraphNode[];
@@ -31,6 +31,11 @@ export interface SimulationState {
   particles: GraphParticle[];
   effects: VisualEffect[];
   time: number;
+}
+
+export interface OwnerColumnGroupRect {
+  ownerId: string;
+  rect: StableRect;
 }
 
 export interface UseGraphSimulationResult {
@@ -69,6 +74,7 @@ export interface UseGraphSimulationResult {
   getLaunchAnchorWorldPosition: (leadNodeId: string) => { x: number; y: number } | null;
   getActivityWorldRect: (nodeId: string) => StableRect | null;
   getLogWorldRect: (nodeId: string) => StableRect | null;
+  getOwnerColumnGroupRects: () => readonly OwnerColumnGroupRect[];
   getExtraWorldBounds: () => WorldBounds[];
 }
 
@@ -88,6 +94,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   const launchAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
   const activityRectByNodeIdRef = useRef(new Map<string, StableRect>());
   const logRectByNodeIdRef = useRef(new Map<string, StableRect>());
+  const ownerColumnGroupRectsRef = useRef<OwnerColumnGroupRect[]>([]);
   const extraWorldBoundsRef = useRef<WorldBounds[]>([]);
 
   const prevNodeIdsRef = useRef(new Set<string>());
@@ -115,6 +122,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           launchAnchorPositionsRef,
           activityRectByNodeIdRef,
           logRectByNodeIdRef,
+          ownerColumnGroupRectsRef,
           extraWorldBoundsRef,
         });
         return;
@@ -136,6 +144,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           launchAnchorPositionsRef,
           activityRectByNodeIdRef,
           logRectByNodeIdRef,
+          ownerColumnGroupRectsRef,
           extraWorldBoundsRef,
           fillMissingFallbackPositions: true,
         });
@@ -149,6 +158,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       launchAnchorPositionsRef,
       activityRectByNodeIdRef,
       logRectByNodeIdRef,
+      ownerColumnGroupRectsRef,
       extraWorldBoundsRef,
     });
   }, []);
@@ -270,6 +280,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       launchAnchorPositionsRef.current.clear();
       activityRectByNodeIdRef.current.clear();
       logRectByNodeIdRef.current.clear();
+      ownerColumnGroupRectsRef.current = [];
       extraWorldBoundsRef.current = [];
       layoutSnapshotRef.current = null;
       lastValidSnapshotByTeamRef.current.clear();
@@ -290,6 +301,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
         launchAnchorPositionsRef.current.get(leadNodeId) ?? null,
       getActivityWorldRect: (nodeId: string) => activityRectByNodeIdRef.current.get(nodeId) ?? null,
       getLogWorldRect: (nodeId: string) => logRectByNodeIdRef.current.get(nodeId) ?? null,
+      getOwnerColumnGroupRects: () => ownerColumnGroupRectsRef.current,
       getExtraWorldBounds: () => extraWorldBoundsRef.current,
     }),
     [
@@ -360,6 +372,7 @@ function commitSnapshotGeometry(args: {
   launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
   activityRectByNodeIdRef: { current: Map<string, StableRect> };
   logRectByNodeIdRef: { current: Map<string, StableRect> };
+  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
   extraWorldBoundsRef: { current: WorldBounds[] };
   fillMissingFallbackPositions?: boolean;
 }): void {
@@ -373,6 +386,7 @@ function commitSnapshotGeometry(args: {
     launchAnchorPositionsRef,
     activityRectByNodeIdRef,
     logRectByNodeIdRef,
+    ownerColumnGroupRectsRef,
     extraWorldBoundsRef,
     fillMissingFallbackPositions = false,
   } = args;
@@ -389,7 +403,19 @@ function commitSnapshotGeometry(args: {
   logRectByNodeIdRef.current.clear();
   extraWorldBoundsRef.current = snapshotToWorldBounds(snapshot);
 
-  for (const frame of getTranslatedMemberFrames(snapshot, dragOwnerPositionsRef.current)) {
+  const translatedMemberFrames = getTranslatedMemberFrames(snapshot, dragOwnerPositionsRef.current);
+  ownerColumnGroupRectsRef.current = [
+    {
+      ownerId: snapshot.leadNodeId ?? snapshot.leadSlotFrame.ownerId,
+      rect: snapshot.leadSlotFrame.boardBandRect,
+    },
+    ...translatedMemberFrames.map((frame) => ({
+      ownerId: frame.ownerId,
+      rect: frame.boardBandRect,
+    })),
+  ];
+
+  for (const frame of translatedMemberFrames) {
     activityRectByNodeIdRef.current.set(frame.ownerId, frame.activityColumnRect);
     logRectByNodeIdRef.current.set(frame.ownerId, frame.logColumnRect);
   }
@@ -409,6 +435,7 @@ function resetToFallbackLayout(args: {
   launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
   activityRectByNodeIdRef: { current: Map<string, StableRect> };
   logRectByNodeIdRef: { current: Map<string, StableRect> };
+  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
   extraWorldBoundsRef: { current: WorldBounds[] };
 }): void {
   const {
@@ -417,6 +444,7 @@ function resetToFallbackLayout(args: {
     launchAnchorPositionsRef,
     activityRectByNodeIdRef,
     logRectByNodeIdRef,
+    ownerColumnGroupRectsRef,
     extraWorldBoundsRef,
   } = args;
 
@@ -424,6 +452,7 @@ function resetToFallbackLayout(args: {
   launchAnchorPositionsRef.current.clear();
   activityRectByNodeIdRef.current.clear();
   logRectByNodeIdRef.current.clear();
+  ownerColumnGroupRectsRef.current = [];
   extraWorldBoundsRef.current = [];
   fallbackPositionNodes(nodes);
   KanbanLayoutEngine.layout(nodes);

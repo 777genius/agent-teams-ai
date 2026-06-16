@@ -15,6 +15,7 @@ export type MemberWorkSyncNudgeActivationReason =
   | MemberWorkSyncTargetedRecoveryReason
   | 'review_pickup_required'
   | 'native_stale_in_progress'
+  | 'native_stale_assigned_work'
   | 'status_not_nudgeable'
   | 'blocking_metrics'
   | 'phase2_not_ready';
@@ -59,6 +60,30 @@ function parseTime(value: string | undefined): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
+function hasActiveAcceptedWorkLease(status: MemberWorkSyncStatus): boolean {
+  const report = status.report;
+  if (
+    report?.accepted !== true ||
+    report.agendaFingerprint !== status.agenda.fingerprint ||
+    (report.state !== 'still_working' && report.state !== 'blocked')
+  ) {
+    return false;
+  }
+
+  const evaluatedAtMs = parseTime(status.evaluatedAt);
+  const expiresAtMs = parseTime(report.expiresAt);
+  return evaluatedAtMs != null && expiresAtMs != null && expiresAtMs > evaluatedAtMs;
+}
+
+function hasNoCurrentAcceptedWorkProof(status: MemberWorkSyncStatus): boolean {
+  return (
+    status.diagnostics.includes('no_current_report') ||
+    status.diagnostics.includes('report_lease_missing') ||
+    status.diagnostics.includes('report_lease_expired') ||
+    status.diagnostics.includes('report_fingerprint_stale')
+  );
+}
+
 function eventsForMember(
   status: MemberWorkSyncStatus,
   metrics: MemberWorkSyncTeamMetrics
@@ -67,16 +92,6 @@ function eventsForMember(
   return metrics.recentEvents
     .filter((event) => normalizeMemberName(event.memberName) === memberName)
     .sort((left, right) => left.recordedAt.localeCompare(right.recordedAt));
-}
-
-function hasAcceptedReportForCurrentFingerprint(
-  status: MemberWorkSyncStatus,
-  metrics: MemberWorkSyncTeamMetrics
-): boolean {
-  return eventsForMember(status, metrics).some(
-    (event) =>
-      event.kind === 'report_accepted' && event.agendaFingerprint === status.agenda.fingerprint
-  );
 }
 
 function isDifferentFingerprintBoundary(
@@ -104,10 +119,18 @@ function getCurrentFingerprintStableSinceMs(
     return recordedAt != null && recordedAt <= nowMs;
   });
   let latestDifferentFingerprintMs = Number.NEGATIVE_INFINITY;
+  let latestAcceptedReportMs = Number.NEGATIVE_INFINITY;
   for (const event of memberEvents) {
     const recordedAt = parseTime(event.recordedAt);
     if (recordedAt != null && isDifferentFingerprintBoundary(event, currentFingerprint)) {
       latestDifferentFingerprintMs = Math.max(latestDifferentFingerprintMs, recordedAt);
+    }
+    if (
+      recordedAt != null &&
+      event.kind === 'report_accepted' &&
+      event.agendaFingerprint === currentFingerprint
+    ) {
+      latestAcceptedReportMs = Math.max(latestAcceptedReportMs, recordedAt);
     }
   }
 
@@ -117,7 +140,8 @@ function getCurrentFingerprintStableSinceMs(
       event.state === 'needs_sync' &&
       event.agendaFingerprint === currentFingerprint &&
       recordedAt != null &&
-      recordedAt >= latestDifferentFingerprintMs
+      recordedAt >= latestDifferentFingerprintMs &&
+      recordedAt > latestAcceptedReportMs
       ? [recordedAt]
       : [];
   });
@@ -125,39 +149,62 @@ function getCurrentFingerprintStableSinceMs(
   return currentNeedsSyncEventTimes.length > 0 ? Math.min(...currentNeedsSyncEventTimes) : null;
 }
 
-function isNativeStaleInProgressCandidate(input: {
+function isNativeStaleWorkItem(status: MemberWorkSyncStatus['agenda']['items'][number]): boolean {
+  return (
+    status.kind === 'work' &&
+    ((status.reason === 'owned_in_progress_task' && status.evidence.status === 'in_progress') ||
+      (status.reason === 'owned_pending_task' && status.evidence.status === 'pending'))
+  );
+}
+
+function isNativeStaleEligibleItem(
+  status: MemberWorkSyncStatus['agenda']['items'][number]
+): boolean {
+  return isNativeStaleWorkItem(status) || isStrictReviewPickupItem(status);
+}
+
+function getNativeStaleWorkRecoveryReason(input: {
   status: MemberWorkSyncStatus;
   metrics: MemberWorkSyncTeamMetrics;
-}): boolean {
+}): 'native_stale_in_progress' | 'native_stale_assigned_work' | null {
   const { status, metrics } = input;
   if (
     status.state !== 'needs_sync' ||
     status.shadow?.wouldNudge !== true ||
-    !status.diagnostics.includes('no_current_report') ||
+    !hasNoCurrentAcceptedWorkProof(status) ||
     !status.providerId ||
     !NATIVE_STALE_IN_PROGRESS_PROVIDERS.has(status.providerId) ||
     isLeadLikeMemberName(status.memberName) ||
-    status.agenda.items.length !== 1 ||
-    hasAcceptedReportForCurrentFingerprint(status, metrics)
+    status.agenda.items.length === 0 ||
+    hasActiveAcceptedWorkLease(status)
   ) {
-    return false;
+    return null;
   }
 
-  const [item] = status.agenda.items;
-  if (
-    item.kind !== 'work' ||
-    item.reason !== 'owned_in_progress_task' ||
-    item.evidence.status !== 'in_progress'
-  ) {
-    return false;
+  if (!status.agenda.items.every(isNativeStaleEligibleItem)) {
+    return null;
+  }
+  if (!status.agenda.items.some(isNativeStaleWorkItem)) {
+    return null;
   }
 
   const nowMs = parseTime(metrics.generatedAt) ?? parseTime(status.evaluatedAt);
   if (nowMs == null) {
-    return false;
+    return null;
   }
   const stableSinceMs = getCurrentFingerprintStableSinceMs(status, metrics, nowMs);
-  return stableSinceMs != null && nowMs - stableSinceMs >= NATIVE_STALE_IN_PROGRESS_MIN_AGE_MS;
+  if (stableSinceMs == null || nowMs - stableSinceMs < NATIVE_STALE_IN_PROGRESS_MIN_AGE_MS) {
+    return null;
+  }
+
+  return status.agenda.items.every(
+    (item) =>
+      item.kind === 'work' &&
+      item.reason === 'owned_in_progress_task' &&
+      item.evidence.status === 'in_progress'
+  )
+    ? 'native_stale_in_progress'
+    : 'native_stale_assigned_work';
 }
 
 function isReviewPickupRequiredCandidate(status: MemberWorkSyncStatus): boolean {
@@ -184,8 +231,9 @@ export function decideMemberWorkSyncNudgeActivation(input: {
     return { active: true, reason: 'review_pickup_required' };
   }
 
-  if (isNativeStaleInProgressCandidate(input)) {
-    return { active: true, reason: 'native_stale_in_progress' };
+  const nativeStaleWorkReason = getNativeStaleWorkRecoveryReason(input);
+  if (nativeStaleWorkReason) {
+    return { active: true, reason: nativeStaleWorkReason };
   }
 
   const targetedRecovery = decideMemberWorkSyncTargetedRecovery(input.status);

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
@@ -27,6 +28,7 @@ interface ListTeamsPayload {
 
 interface GetAllTasksPayload {
   tasksBase: string;
+  projectionCacheBase?: string;
   maxTaskBytes: number;
   maxTaskReadMs: number;
   concurrency: number;
@@ -96,6 +98,12 @@ interface GetAllTasksDiag {
   cacheMisses: number;
   cacheWriteSkips: number;
   cacheEvictions: number;
+  persistentCacheHits: number;
+  persistentCacheMisses: number;
+  persistentCacheLoads: number;
+  persistentCacheWrites: number;
+  persistentCacheReadFailures: number;
+  persistentCacheWriteFailures: number;
   totalMs: number;
 }
 
@@ -105,6 +113,12 @@ interface TaskReadDiag {
   cacheHits: number;
   cacheMisses: number;
   cacheWriteSkips: number;
+  persistentCacheHits: number;
+  persistentCacheMisses: number;
+  persistentCacheLoads: number;
+  persistentCacheWrites: number;
+  persistentCacheReadFailures: number;
+  persistentCacheWriteFailures: number;
 }
 
 const MAX_LAUNCH_STATE_BYTES = 32 * 1024;
@@ -118,6 +132,10 @@ const REVIEW_LIFECYCLE_EVENTS = new Set([
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
 const TEAM_SUMMARY_CACHE_MAX_ENTRIES = 1000;
 const TASK_FILE_CACHE_MAX_ENTRIES = 10000;
+const PERSISTENT_TASK_PROJECTION_CACHE_VERSION = 1;
+const PERSISTENT_TASK_PROJECTION_CACHE_DIR = 'v1';
+const MAX_PERSISTENT_TASK_PROJECTION_CACHE_BYTES = 16 * 1024 * 1024;
+const CACHEABLE_TASK_SKIP_REASONS = new Set(['task_internal', 'task_deleted']);
 const BOOTSTRAP_STATE_FILE = 'bootstrap-state.json';
 const BOOTSTRAP_JOURNAL_FILE = 'bootstrap-journal.jsonl';
 
@@ -156,6 +174,11 @@ interface TaskFileCacheEntry {
   result: CachedTaskReadResult;
   tasksBase: string;
   lastUsedAt: number;
+}
+
+interface PersistentTaskProjectionCacheEntry {
+  fingerprint: string;
+  result: CachedTaskReadResult;
 }
 
 const teamSummaryCache = new Map<string, TeamSummaryCacheEntry>();
@@ -350,6 +373,14 @@ function cloneCached<T>(value: T): T {
   return typeof structuredClone === 'function'
     ? structuredClone(value)
     : (JSON.parse(JSON.stringify(value)) as T);
+}
+
+function dateFromFingerprintMs(ms: unknown): Date | null {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0) {
+    return null;
+  }
+  const date = new Date(ms);
+  return Number.isFinite(date.getTime()) ? date : null;
 }
 
 async function statPathFingerprint(filePath: string): Promise<PathFingerprint> {
@@ -609,15 +640,15 @@ async function cacheTaskReadResultIfStable(
   fingerprintBeforeCacheSafe: boolean,
   result: CachedTaskReadResult,
   taskDiag: TaskReadDiag
-): Promise<void> {
+): Promise<boolean> {
   if (!fingerprintBeforeCacheSafe) {
     taskDiag.cacheWriteSkips++;
-    return;
+    return false;
   }
   const after = await statPathFingerprint(taskPath);
   if (!isCacheSafeFingerprint(after) || fingerprintToString(after) !== fingerprintBefore) {
     taskDiag.cacheWriteSkips++;
-    return;
+    return false;
   }
   taskFileCache.set(cacheKey, {
     fingerprint: fingerprintBefore,
@@ -625,6 +656,7 @@ async function cacheTaskReadResultIfStable(
     tasksBase,
     lastUsedAt: nowMs(),
   });
+  return true;
 }
 
 function applyCachedTaskReadResult(
@@ -637,7 +669,7 @@ function applyCachedTaskReadResult(
     bumpSkipReason(taskDiag.skipReasons, cached.skipReason);
     return;
   }
-  tasks.push(cloneCached(cached.task));
+  tasks.push(cached.task);
 }
 
 function pruneTaskFileCache(
@@ -656,6 +688,242 @@ function pruneTaskFileCache(
     if (typeof oldest !== 'string') break;
     taskFileCache.delete(oldest);
     diag.cacheEvictions++;
+  }
+}
+
+function getPersistentTaskProjectionCachePath(
+  payload: GetAllTasksPayload,
+  teamName: string
+): string | null {
+  const base = typeof payload.projectionCacheBase === 'string' ? payload.projectionCacheBase : '';
+  if (!base.trim()) return null;
+  const digest = createHash('sha256')
+    .update(payload.tasksBase)
+    .update('\0')
+    .update(teamName)
+    .digest('hex');
+  return path.join(base, PERSISTENT_TASK_PROJECTION_CACHE_DIR, `${digest}.json`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSafeTaskProjectionFileName(file: string): boolean {
+  return (
+    file.endsWith('.json') &&
+    !file.startsWith('.') &&
+    !file.includes('/') &&
+    !file.includes('\\') &&
+    file !== '.lock' &&
+    file !== '.highwatermark'
+  );
+}
+
+function normalizePersistentTaskReadResult(
+  value: unknown,
+  teamName: string
+): CachedTaskReadResult | null {
+  if (!isRecord(value)) return null;
+
+  const skipReason = value.skipReason;
+  if (typeof skipReason === 'string') {
+    return CACHEABLE_TASK_SKIP_REASONS.has(skipReason) ? { skipReason } : null;
+  }
+
+  const task = value.task;
+  if (!isRecord(task)) return null;
+  if (task.teamName !== teamName) return null;
+  if (typeof task.id !== 'string') return null;
+  if (typeof task.subject !== 'string') return null;
+  const status =
+    task.status === 'pending' ||
+    task.status === 'in_progress' ||
+    task.status === 'completed' ||
+    task.status === 'deleted'
+      ? task.status
+      : null;
+  if (!status) return null;
+  if (status === 'deleted') return null;
+
+  return { task: restorePersistentTaskProjectionShape(task, teamName, status) };
+}
+
+function restorePersistentTaskProjectionShape(
+  task: Record<string, unknown>,
+  teamName: string,
+  status: string
+): Record<string, unknown> {
+  const id = typeof task.id === 'string' ? task.id : '';
+  const subject = typeof task.subject === 'string' ? task.subject : '';
+  const displayId = task.displayId;
+  const reviewState = normalizeFallbackReviewState(task.reviewState, status);
+  return {
+    id,
+    displayId:
+      typeof displayId === 'string' && displayId.trim().length > 0
+        ? displayId.trim()
+        : deriveTaskDisplayId(id),
+    subject,
+    description: typeof task.description === 'string' ? task.description : undefined,
+    descriptionTaskRefs: Array.isArray(task.descriptionTaskRefs)
+      ? task.descriptionTaskRefs
+      : undefined,
+    activeForm: typeof task.activeForm === 'string' ? task.activeForm : undefined,
+    prompt: typeof task.prompt === 'string' ? task.prompt : undefined,
+    promptTaskRefs: Array.isArray(task.promptTaskRefs) ? task.promptTaskRefs : undefined,
+    owner: typeof task.owner === 'string' ? task.owner : undefined,
+    createdBy: typeof task.createdBy === 'string' ? task.createdBy : undefined,
+    status,
+    workIntervals: normalizeWorkIntervals(task),
+    reviewIntervals: normalizeReviewIntervals(task),
+    historyEvents: normalizeHistoryEvents(task),
+    blocks: Array.isArray(task.blocks) ? task.blocks : undefined,
+    blockedBy: Array.isArray(task.blockedBy) ? task.blockedBy : undefined,
+    related: Array.isArray(task.related)
+      ? (task.related as unknown[]).filter((id): id is string => typeof id === 'string')
+      : undefined,
+    createdAt: typeof task.createdAt === 'string' ? task.createdAt : undefined,
+    updatedAt: typeof task.updatedAt === 'string' ? task.updatedAt : undefined,
+    projectPath: typeof task.projectPath === 'string' ? task.projectPath : undefined,
+    comments: normalizeComments(task),
+    needsClarification:
+      task.needsClarification === 'lead' || task.needsClarification === 'user'
+        ? task.needsClarification
+        : undefined,
+    reviewState,
+    deletedAt: undefined,
+    attachments: Array.isArray(task.attachments) ? task.attachments : undefined,
+    sourceMessageId:
+      typeof task.sourceMessageId === 'string' && task.sourceMessageId.trim()
+        ? task.sourceMessageId.trim()
+        : undefined,
+    sourceMessage:
+      isRecord(task.sourceMessage) &&
+      typeof task.sourceMessage.text === 'string' &&
+      typeof task.sourceMessage.from === 'string' &&
+      typeof task.sourceMessage.timestamp === 'string'
+        ? task.sourceMessage
+        : undefined,
+    teamName,
+  };
+}
+
+function normalizePersistentTaskProjectionEntry(
+  value: unknown,
+  teamName: string
+): PersistentTaskProjectionCacheEntry | null {
+  if (!isRecord(value) || typeof value.fingerprint !== 'string') return null;
+  const result = normalizePersistentTaskReadResult(value.result, teamName);
+  return result ? { fingerprint: value.fingerprint, result } : null;
+}
+
+async function readPersistentTaskProjectionCache(
+  payload: GetAllTasksPayload,
+  teamName: string,
+  optionKey: string,
+  taskDiag: TaskReadDiag
+): Promise<Map<string, PersistentTaskProjectionCacheEntry> | null> {
+  const cachePath = getPersistentTaskProjectionCachePath(payload, teamName);
+  if (!cachePath) return null;
+
+  try {
+    const stat = await fs.promises.stat(cachePath);
+    if (!stat.isFile() || stat.size > MAX_PERSISTENT_TASK_PROJECTION_CACHE_BYTES) {
+      taskDiag.persistentCacheReadFailures++;
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+      return null;
+    }
+    const raw = await fs.promises.readFile(cachePath, 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      taskDiag.persistentCacheReadFailures++;
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+      return null;
+    }
+    if (
+      parsed.version !== PERSISTENT_TASK_PROJECTION_CACHE_VERSION ||
+      parsed.tasksBase !== payload.tasksBase ||
+      parsed.teamName !== teamName ||
+      parsed.optionKey !== optionKey
+    ) {
+      taskDiag.persistentCacheMisses++;
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+      return null;
+    }
+    if (!isRecord(parsed.entries)) {
+      taskDiag.persistentCacheReadFailures++;
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+      return null;
+    }
+
+    const entries = new Map<string, PersistentTaskProjectionCacheEntry>();
+    for (const [file, entry] of Object.entries(parsed.entries)) {
+      if (!isSafeTaskProjectionFileName(file)) continue;
+      const normalized = normalizePersistentTaskProjectionEntry(entry, teamName);
+      if (normalized) {
+        entries.set(file, normalized);
+      }
+    }
+    taskDiag.persistentCacheLoads++;
+    return entries;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+      return null;
+    }
+    taskDiag.persistentCacheReadFailures++;
+    await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+    return null;
+  }
+}
+
+function shouldWritePersistentTaskProjectionCache(
+  previous: ReadonlyMap<string, PersistentTaskProjectionCacheEntry> | null,
+  next: ReadonlyMap<string, PersistentTaskProjectionCacheEntry>,
+  taskDiag: TaskReadDiag
+): boolean {
+  if (next.size === 0) return false;
+  if (!previous) return true;
+  if (previous.size !== next.size) return true;
+  return taskDiag.persistentCacheMisses > 0 || taskDiag.cacheMisses > 0;
+}
+
+async function writePersistentTaskProjectionCache(
+  payload: GetAllTasksPayload,
+  teamName: string,
+  optionKey: string,
+  entries: ReadonlyMap<string, PersistentTaskProjectionCacheEntry>,
+  taskDiag: TaskReadDiag
+): Promise<void> {
+  const cachePath = getPersistentTaskProjectionCachePath(payload, teamName);
+  if (!cachePath || entries.size === 0) return;
+
+  const body = {
+    version: PERSISTENT_TASK_PROJECTION_CACHE_VERSION,
+    tasksBase: payload.tasksBase,
+    teamName,
+    optionKey,
+    writtenAt: nowMs(),
+    entries: Object.fromEntries(entries),
+  };
+  const raw = JSON.stringify(body);
+  if (Buffer.byteLength(raw, 'utf8') > MAX_PERSISTENT_TASK_PROJECTION_CACHE_BYTES) {
+    taskDiag.persistentCacheWriteFailures++;
+    await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+    return;
+  }
+  const tmpPath = `${cachePath}.${process.pid}.${Date.now()}.${Math.random()
+    .toString(36)
+    .slice(2)}.tmp`;
+
+  try {
+    await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
+    await fs.promises.writeFile(tmpPath, raw, 'utf8');
+    await fs.promises.rename(tmpPath, cachePath);
+    taskDiag.persistentCacheWrites++;
+  } catch {
+    taskDiag.persistentCacheWriteFailures++;
+    await fs.promises.rm(tmpPath, { force: true }).catch(() => undefined);
   }
 }
 
@@ -952,7 +1220,7 @@ async function listTeams(
     if (dependencyFingerprint.cacheSafe && cached?.fingerprint === dependencyFingerprint.value) {
       cached.lastUsedAt = nowMs();
       diag.cacheHits++;
-      return cloneCached(cached.summary);
+      return cached.summary;
     }
     diag.cacheMisses++;
 
@@ -1410,6 +1678,12 @@ async function readTasksDirForTeam(
     cacheHits: 0,
     cacheMisses: 0,
     cacheWriteSkips: 0,
+    persistentCacheHits: 0,
+    persistentCacheMisses: 0,
+    persistentCacheLoads: 0,
+    persistentCacheWrites: 0,
+    persistentCacheReadFailures: 0,
+    persistentCacheWriteFailures: 0,
   };
   let entries: string[];
   try {
@@ -1424,6 +1698,13 @@ async function readTasksDirForTeam(
   const tasks: unknown[] = [];
   const liveCacheKeys = new Set<string>();
   const optionKey = makeTaskOptionKey(payload);
+  const persistentCache = await readPersistentTaskProjectionCache(
+    payload,
+    teamName,
+    optionKey,
+    taskDiag
+  );
+  const nextPersistentEntries = new Map<string, PersistentTaskProjectionCacheEntry>();
   for (const file of entries) {
     if (
       !file.endsWith('.json') ||
@@ -1456,40 +1737,78 @@ async function readTasksDirForTeam(
         cached.lastUsedAt = nowMs();
         taskDiag.cacheHits++;
         applyCachedTaskReadResult(cached.result, tasks, taskDiag);
+        nextPersistentEntries.set(file, {
+          fingerprint,
+          result: cloneCached(cached.result),
+        });
         continue;
+      }
+
+      const persistentEntry = persistentCache?.get(file);
+      if (fingerprintCacheSafe && persistentEntry?.fingerprint === fingerprint) {
+        const result = cloneCached(persistentEntry.result);
+        taskFileCache.set(cacheKey, {
+          fingerprint,
+          result: cloneCached(result),
+          tasksBase: payload.tasksBase,
+          lastUsedAt: nowMs(),
+        });
+        taskDiag.persistentCacheHits++;
+        applyCachedTaskReadResult(result, tasks, taskDiag);
+        nextPersistentEntries.set(file, {
+          fingerprint,
+          result: cloneCached(result),
+        });
+        continue;
+      }
+      if (persistentCache) {
+        taskDiag.persistentCacheMisses++;
       }
       taskDiag.cacheMisses++;
 
-      const stat = await fs.promises.stat(taskPath);
       const raw = await readFileUtf8WithTimeout(taskPath, payload.maxTaskReadMs);
       const parsed = JSON.parse(raw) as ParsedTask;
       const metadata = parsed.metadata;
       if (metadata?._internal === true) {
         taskDiag.skipped++;
         bumpSkipReason(taskDiag.skipReasons, 'task_internal');
-        await cacheTaskReadResultIfStable(
+        const result: CachedTaskReadResult = { skipReason: 'task_internal' };
+        const cachedStable = await cacheTaskReadResultIfStable(
           cacheKey,
           taskPath,
           payload.tasksBase,
           fingerprint,
           fingerprintCacheSafe,
-          { skipReason: 'task_internal' },
+          result,
           taskDiag
         );
+        if (cachedStable) {
+          nextPersistentEntries.set(file, {
+            fingerprint,
+            result: cloneCached(result),
+          });
+        }
         continue;
       }
       if (parsed.status === 'deleted') {
         taskDiag.skipped++;
         bumpSkipReason(taskDiag.skipReasons, 'task_deleted');
-        await cacheTaskReadResultIfStable(
+        const result: CachedTaskReadResult = { skipReason: 'task_deleted' };
+        const cachedStable = await cacheTaskReadResultIfStable(
           cacheKey,
           taskPath,
           payload.tasksBase,
           fingerprint,
           fingerprintCacheSafe,
-          { skipReason: 'task_deleted' },
+          result,
           taskDiag
         );
+        if (cachedStable) {
+          nextPersistentEntries.set(file, {
+            fingerprint,
+            result: cloneCached(result),
+          });
+        }
         continue;
       }
 
@@ -1504,11 +1823,12 @@ async function readTasksDirForTeam(
         typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined;
       let updatedAt: string | undefined;
       try {
+        const birthtime = dateFromFingerprintMs(pathFingerprint.birthtimeMs);
+        const mtime = dateFromFingerprintMs(pathFingerprint.mtimeMs);
         if (!createdAt) {
-          const bt = stat.birthtime.getTime();
-          createdAt = (bt > 0 ? stat.birthtime : stat.mtime).toISOString();
+          createdAt = (birthtime ?? mtime)?.toISOString();
         }
-        updatedAt = stat.mtime.toISOString();
+        updatedAt = mtime?.toISOString();
       } catch {
         /* ignore */
       }
@@ -1559,7 +1879,7 @@ async function readTasksDirForTeam(
         status,
         workIntervals: normalizeWorkIntervals(parsed),
         reviewIntervals: normalizeReviewIntervals(parsed),
-        historyEvents: normalizeHistoryEvents(parsed),
+        historyEvents,
         blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as unknown[]) : undefined,
         blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as unknown[]) : undefined,
         related: Array.isArray(parsed.related)
@@ -1590,15 +1910,22 @@ async function readTasksDirForTeam(
         teamName,
       };
       tasks.push(task);
-      await cacheTaskReadResultIfStable(
+      const result: CachedTaskReadResult = { task };
+      const cachedStable = await cacheTaskReadResultIfStable(
         cacheKey,
         taskPath,
         payload.tasksBase,
         fingerprint,
         fingerprintCacheSafe,
-        { task },
+        result,
         taskDiag
       );
+      if (cachedStable) {
+        nextPersistentEntries.set(file, {
+          fingerprint,
+          result: cloneCached(result),
+        });
+      }
     } catch (error) {
       taskDiag.skipped++;
       const code = (error as NodeJS.ErrnoException).code;
@@ -1609,6 +1936,22 @@ async function readTasksDirForTeam(
       }
     }
   }
+  if (persistentCache && nextPersistentEntries.size === 0) {
+    const cachePath = getPersistentTaskProjectionCachePath(payload, teamName);
+    if (cachePath) {
+      await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
+    }
+  } else if (
+    shouldWritePersistentTaskProjectionCache(persistentCache, nextPersistentEntries, taskDiag)
+  ) {
+    await writePersistentTaskProjectionCache(
+      payload,
+      teamName,
+      optionKey,
+      nextPersistentEntries,
+      taskDiag
+    );
+  }
   return { tasks, taskDiag, liveCacheKeys };
 }
 
@@ -1617,6 +1960,12 @@ function mergeTaskDiag(target: GetAllTasksDiag, source: TaskReadDiag): void {
   target.cacheHits += source.cacheHits;
   target.cacheMisses += source.cacheMisses;
   target.cacheWriteSkips += source.cacheWriteSkips;
+  target.persistentCacheHits += source.persistentCacheHits;
+  target.persistentCacheMisses += source.persistentCacheMisses;
+  target.persistentCacheLoads += source.persistentCacheLoads;
+  target.persistentCacheWrites += source.persistentCacheWrites;
+  target.persistentCacheReadFailures += source.persistentCacheReadFailures;
+  target.persistentCacheWriteFailures += source.persistentCacheWriteFailures;
   for (const [reason, count] of Object.entries(source.skipReasons)) {
     target.skipReasons[reason] = (target.skipReasons[reason] || 0) + count;
   }
@@ -1639,6 +1988,12 @@ async function getAllTasks(
     cacheMisses: 0,
     cacheWriteSkips: 0,
     cacheEvictions: 0,
+    persistentCacheHits: 0,
+    persistentCacheMisses: 0,
+    persistentCacheLoads: 0,
+    persistentCacheWrites: 0,
+    persistentCacheReadFailures: 0,
+    persistentCacheWriteFailures: 0,
     totalMs: 0,
   };
 

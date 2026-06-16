@@ -1,9 +1,10 @@
+import { withFileLock } from '@main/services/team/fileLock';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { withFileLock } from '@main/services/team/fileLock';
+const canAssertPosixPermissions = process.platform !== 'win32' && process.getuid?.() !== 0;
 
 describe('withFileLock', () => {
   let tmpDir: string;
@@ -111,4 +112,24 @@ describe('withFileLock', () => {
     expect(result).toBe('created');
     expect(fs.existsSync(`${nested}.lock`)).toBe(false);
   });
+
+  it.skipIf(!canAssertPosixPermissions)(
+    'rethrows fatal errors while creating missing lock directory',
+    async () => {
+      const readonlyDir = path.join(tmpDir, 'readonly');
+      fs.mkdirSync(readonlyDir, 0o555);
+      const nested = path.join(readonlyDir, 'missing', 'test.json');
+
+      try {
+        await expect(
+          withFileLock(nested, async () => 'ok', {
+            acquireTimeoutMs: 25,
+            retryIntervalMs: 1,
+          })
+        ).rejects.toMatchObject({ code: 'EACCES' });
+      } finally {
+        fs.chmodSync(readonlyDir, 0o755);
+      }
+    }
+  );
 });

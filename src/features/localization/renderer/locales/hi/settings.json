@@ -46,7 +46,8 @@
       "copiedShort": "Copied",
       "copy": "निदान की प्रतिलिपि",
       "hints": "हिंट",
-      "likelyCause": "समान कारण:"
+      "likelyCause": "समान कारण:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI को Administrator के रूप में चलाएं"
     },
     "models": {
       "alreadyDefault": "यह पहले से ही चयनित OpenCode डिफ़ॉल्ट है।",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "खोज मॉडल",
       "selectProjectBeforeTesting": "परीक्षण मॉडल से पहले परियोजना संदर्भ का चयन करें।",
       "selectProjectBeforeTestingDefaults": "OpenCode डिफ़ॉल्ट परीक्षण या सहेजने से पहले एक परियोजना संदर्भ का चयन करें।",
-      "useInTeamPicker": "टीम पिकर में उपयोग करें"
+      "useInTeamPicker": "टीम पिकर में उपयोग करें",
+      "testInProgress": "मॉडल टेस्ट पहले से चल रहा है।",
+      "validationContextRequired": "Test और Set default सक्षम करने के लिए ऊपर validation context चुनें। team picker के लिए सेव करने से सिर्फ नई टीमों की route सेव होती है।",
+      "actionsUnavailable": "Actions अस्थायी रूप से उपलब्ध नहीं हैं।",
+      "defaultSaveInProgress": "OpenCode default सेव हो रहा है।",
+      "routeUnavailableAuth": "इस model का उपयोग करने से पहले इस provider को authentication चाहिए।",
+      "routeUnavailableFailed": "यह model route पिछले execution test में विफल रहा।",
+      "routeUnavailableGeneric": "यह model route अभी उपयोग नहीं किया जा सकता।",
+      "routeUnavailableUnknown": "यह model वर्तमान OpenCode default है, लेकिन अभी live catalog में उपलब्ध नहीं है।"
     },
     "providers": {
       "catalog": "ओपनकोड प्रदाता सूची",
@@ -108,7 +117,8 @@
       "needsTest": "परीक्षण",
       "failed": "असफल",
       "unknown": "अज्ञात",
-      "default": "डिफ़ॉल्ट"
+      "default": "डिफ़ॉल्ट",
+      "knownRoute": "ज्ञात route"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API कुंजी विन्यास, लेकिन अभी तक सत्यापित नहीं",
         "apiKeyModeMissingCredential": "API कुंजी मोड चुना गया है, लेकिन कोई API कुंजी कॉन्फ़िगर किया गया है",
         "connectedVia": "कनेक्टेड by {{method}}",
-        "unableToVerify": "सत्यापित करने में असमर्थ"
+        "unableToVerify": "सत्यापित करने में असमर्थ",
+        "modelsAvailable": "मॉडल उपलब्ध हैं"
       },
       "mode": {
         "selectedAuth": "चयनित auth: {{authMode}}",

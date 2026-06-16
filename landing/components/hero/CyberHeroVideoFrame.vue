@@ -1,6 +1,5 @@
 <script setup lang="ts">
-const { locale } = useI18n();
-const isRu = computed(() => locale.value === "ru");
+const { t } = useI18n();
 </script>
 
 <template>
@@ -8,12 +7,12 @@ const isRu = computed(() => locale.value === "ru");
     id="hero-demo"
     class="cyber-video-frame"
     role="region"
-    :aria-label="isRu ? 'Смотреть демо Agent Teams' : 'Watch Agent Teams demo'"
+    :aria-label="t('hero.videoFrameLabel')"
   >
     <div class="cyber-video-frame__bezel" aria-hidden="true" />
     <div class="cyber-video-frame__status" aria-hidden="true">
-      <span>{{ isRu ? 'Командная лента' : 'Team command feed' }}</span>
-      <span>{{ isRu ? 'Живое демо' : 'Live demo' }}</span>
+      <span>{{ t('hero.commandFeed') }}</span>
+      <span>{{ t('hero.liveDemo') }}</span>
     </div>
     <div class="cyber-video-frame__content">
       <HeroDemoVideo />

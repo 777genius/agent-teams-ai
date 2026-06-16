@@ -177,6 +177,55 @@ describe('TeamInboxWriter', () => {
     });
   });
 
+  it('updates an existing member-work-sync row text when message kind and payload hash match', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'sync your work state',
+      source: 'system_notification',
+      messageId: 'work-sync-1',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncPayloadHash: 'sha256:work-sync',
+    });
+
+    const result = await writer.updateMessageText('my-team', {
+      member: 'alice',
+      messageId: 'work-sync-1',
+      text: 'sync your work state\nRequired control API: pass controlUrl "http://127.0.0.1:43123" in both member_work_sync_status and member_work_sync_report.',
+      expectedMessageKind: 'member_work_sync_nudge',
+      expectedWorkSyncPayloadHash: 'sha256:work-sync',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result).toEqual({ found: true, updated: true });
+    expect(persisted[0]?.text).toContain('controlUrl "http://127.0.0.1:43123"');
+    expect(persisted[0]?.workSyncPayloadHash).toBe('sha256:work-sync');
+  });
+
+  it('does not update member-work-sync row text when payload hash mismatches', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'sync your work state',
+      source: 'system_notification',
+      messageId: 'work-sync-1',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncPayloadHash: 'sha256:work-sync',
+    });
+
+    const result = await writer.updateMessageText('my-team', {
+      member: 'alice',
+      messageId: 'work-sync-1',
+      text: 'should not write',
+      expectedMessageKind: 'member_work_sync_nudge',
+      expectedWorkSyncPayloadHash: 'sha256:different',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result).toEqual({ found: true, updated: false });
+    expect(persisted[0]?.text).toBe('sync your work state');
+  });
+
   it('preserves provided message identity fields for dedup across live and persisted rows', async () => {
     const result = await writer.sendMessage('my-team', {
       member: 'alice',

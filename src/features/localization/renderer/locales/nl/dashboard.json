@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Al ingelogd?",
+      "becomeSponsor": "Word sponsor",
+      "cancel": "Annuleren",
+      "checkNow": "Nu controleren",
+      "checkUpdates": "Controleren op updates",
+      "checking": "Controleren...",
+      "connect": "Verbinden",
+      "extensions": "Extensies",
+      "login": "Inloggen",
+      "manage": "Beheren",
+      "manageProviders": "Providers beheren",
+      "plan": "Abonnement",
+      "recheck": "Opnieuw controleren",
+      "recheckProvider": "{{provider}} opnieuw controleren",
+      "retry": "Opnieuw proberen",
+      "updateTo": "Bijwerken naar v{{version}}",
+      "useCode": "Code gebruiken"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud is een full-modal AI-inferentieplatform dat ontwikkelaars één AI-API biedt voor toegang tot videogeneratie, beeldgeneratie en LLM-API's. In plaats van meerdere leveranciersintegraties te beheren, maak je één keer verbinding en krijg je uniforme toegang tot meer dan 300 zorgvuldig geselecteerde modellen voor alle modaliteiten. Bekijk de nieuwe coding-plan-promotie van Atlas Cloud voor budgetvriendelijkere API-toegang.",
+      "openCodeProvider": "OpenCode-provider",
+      "plan": "Atlas Cloud coding-abonnement",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Kon CLI-status niet controleren",
+      "installationFailed": "Installatie mislukt",
+      "refreshFailed": "Kon niet controleren op updates. Controleer je netwerkverbinding en probeer het opnieuw.",
+      "runtimeUpdatedRefreshFailed": "Runtime bijgewerkt, maar kon providerstatus niet vernieuwen."
+    },
+    "hints": {
+      "backgroundStatus": "De status van {{runtime}} wordt op de achtergrond gecontroleerd.",
+      "codexApiKeyFallback": "{{hint}} API-sleutel-fallback is beschikbaar als je de authenticatiemodus wijzigt.",
+      "codexAutoApiKey": "{{hint}} Auto blijft de API-sleutel gebruiken totdat ChatGPT is verbonden.",
+      "codexFinishLogin": "Voltooi het inloggen bij ChatGPT in de browser. Voer de getoonde code in indien gevraagd.",
+      "codexNoActiveLogin": "Gebruikslimieten verschijnen pas nadat Codex CLI een actief ChatGPT-account ziet. Op dit moment meldt het geen actieve ChatGPT-login.",
+      "codexNoActiveManagedSession": "Gebruikslimieten verschijnen pas nadat Codex CLI een actief ChatGPT-account ziet. Er bestaan lokale Codex-accountgegevens, maar er is op dit moment geen actieve beheerde sessie geselecteerd.",
+      "codexReconnectNeeded": "Gebruikslimieten verschijnen pas nadat Codex de momenteel geselecteerde ChatGPT-sessie vernieuwt. Op dit moment moet de lokale sessie opnieuw verbinden.",
+      "firstCheckSlow": "De eerste controle kan tot 30 seconden duren",
+      "loginRequiredForTeams": "Door sessies en projecten bladeren werkt zonder inloggen. Inloggen is alleen nodig om agentteams uit te voeren.",
+      "troubleshootTitle": "Als je zeker weet dat je ingelogd bent, probeer dan deze stappen:"
+    },
+    "installer": {
+      "checkingLatest": "Nieuwste versie controleren...",
+      "downloading": "{{runtime}} downloaden...",
+      "installing": "{{runtime}} installeren...",
+      "success": "{{runtime}} v{{version}} is geïnstalleerd",
+      "verifying": "Checksum verifiëren..."
+    },
+    "labels": {
+      "apiKeyRequired": "API-sleutel vereist",
+      "comingSoon": "Binnenkort beschikbaar",
+      "collapseProviderDetails": "Providerdetails inklappen",
+      "expandProviderDetails": "Providerdetails uitklappen",
+      "generateLink": "Link genereren",
+      "loadingRateLimits": "Limieten laden",
+      "loggedOut": "Provider uitgelogd",
+      "loginAuthFailed": "Authenticatie mislukt",
+      "loginAuthUpdated": "Authenticatie bijgewerkt",
+      "loginComplete": "Inloggen voltooid",
+      "loginFailed": "Inloggen mislukt",
+      "loginTitle": "Inloggen",
+      "logoutFailed": "Uitloggen mislukt",
+      "logoutTitle": "Uitloggen",
+      "notLoggedIn": "Niet ingelogd",
+      "openLogin": "Inloggen openen",
+      "providerActionRequired": "Actie van provider vereist",
+      "resets": "wordt {{time}} gereset",
+      "runtimeLoginTitle": "{{runtime}} inloggen"
+    },
+    "loading": {
+      "aiProviders": "AI-providers controleren...",
+      "claudeCli": "Claude CLI controleren..."
+    },
+    "provider": {
+      "authenticated": "Geauthenticeerd",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Authenticatie controleren...",
+      "checkingProviders": "Providers controleren...",
+      "configuredLocalCount": "{{count}} lokaal geconfigureerd",
+      "configuredLocalCount_few": "{{count}} lokaal geconfigureerd",
+      "configuredLocalCount_many": "{{count}} lokaal geconfigureerd",
+      "configuredLocalCount_one": "{{count}} lokaal geconfigureerd",
+      "configuredLocalCount_other": "{{count}} lokaal geconfigureerd",
+      "configuredLocalTitle": "Lokale OpenCode-routes geïmporteerd uit je OpenCode-configuratie.",
+      "connectedCount": "Providers: {{connected}}/{{denominator}} verbonden",
+      "freeModels": "Gratis modellen",
+      "freeModelsTitle": "OpenCode bevat gratis modelopties zoals Big Pickle indien beschikbaar in je configuratie. OpenRouter via OpenCode kan ook gratis modellen tonen, maar niet elk OpenCode/OpenRouter-model is gratis. Beschikbaarheid en limieten kunnen veranderen.",
+      "loadingModels": "Modellen laden...",
+      "modelsUnavailable": "Modellen niet beschikbaar voor deze runtime-build",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} geverifieerd",
+      "verifiedCount_few": "{{count}} geverifieerd",
+      "verifiedCount_many": "{{count}} geverifieerd",
+      "verifiedCount_one": "{{count}} geverifieerd",
+      "verifiedCount_other": "{{count}} geverifieerd",
+      "verifiedTitle": "OpenCode-routes met een succesvol uitvoeringsbewijs."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "De geconfigureerde {{runtime}} is niet geslaagd voor de opstartcontrole.",
+      "configuredNotFound": "De geconfigureerde {{runtime}} is niet gevonden.",
+      "foundButFailed": "{{runtime}} is gevonden maar kon niet starten",
+      "healthCheckFailedDescription": "De app heeft de geconfigureerde {{runtime}} gevonden, maar de opstartcontrole is mislukt. Herstel of installeer het opnieuw en probeer het dan opnieuw.",
+      "install": "{{runtime}} installeren",
+      "installRequiredDescription": "{{runtime}} is vereist voor teamprovisioning en sessiebeheer. Installeer het om aan de slag te gaan.",
+      "isRequired": "{{runtime}} is vereist",
+      "reinstall": "{{runtime}} opnieuw installeren"
+    },
+    "runtimeInstall": {
+      "checking": "Controleren",
+      "codexTitle": "Codex CLI in app-data installeren",
+      "downloading": "Downloaden",
+      "downloadingPercent": "Downloaden {{percent}}%",
+      "install": "Installeren",
+      "installing": "Installeren",
+      "openCodeTitle": "OpenCode-runtime in app-data installeren",
+      "retryInstall": "Installatie opnieuw proberen"
+    },
+    "troubleshoot": {
+      "again": "opnieuw",
+      "authStatusCommand": "je geconfigureerde CLI-authenticatiestatuscommando",
+      "checkLoggedIn": "- controleer of het \"Logged in\" toont",
+      "click": "Klik",
+      "loginCommand": "het runtime-logincommando",
+      "logoutCommand": "het runtime-logoutcommando",
+      "openTerminal": "Open je terminal en voer uit:",
+      "reloginPrefix": "Als het zegt dat je ingelogd bent maar de app dit niet ziet, probeer dan:",
+      "sameRuntime": "Zorg ervoor dat de CLI in je terminal dezelfde runtime is die de app gebruikt",
+      "statusCacheHint": "- soms wordt de status enkele seconden gecachet",
+      "then": "vervolgens"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Een of meer providers staan in API-sleutelmodus, maar er is geen API-sleutel geconfigureerd. Open Providers beheren om sleutels toe te voegen of de verbindingsmodus te wijzigen.",
+      "multipleApiKeysNeedAttention": "Een of meer providers staan in API-sleutelmodus en hebben aandacht nodig. Open Providers beheren om opgeslagen sleutels te bekijken of de verbindingsmodus te wijzigen.",
+      "notAuthenticated": "{{runtime}} is geïnstalleerd maar je bent niet geauthenticeerd. Inloggen is vereist voor teamprovisioning en AI-functies.",
+      "singleApiKeyMissing": "{{provider}} staat in API-sleutelmodus, maar er is geen API-sleutel geconfigureerd. Open Providers beheren om een sleutel toe te voegen of de verbindingsmodus te wijzigen.",
+      "singleApiKeyNeedsAttention": "{{provider}} staat in API-sleutelmodus, maar is niet verbonden. Open Providers beheren om de opgeslagen sleutel te bekijken of de verbindingsmodus te wijzigen."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Selecteer een projectmap",
+    "selectFolder": "Map selecteren",
+    "failedToLoad": "Kon projecten niet laden",
+    "retry": "Opnieuw proberen",
+    "noProjects": "Geen projecten gevonden",
+    "noMatches": "Geen resultaten voor \"{{query}}\"",
+    "noRecentProjects": "Geen recente projecten gevonden",
+    "emptyDescription": "Recente Claude- en Codex-activiteit verschijnt hier.",
+    "loadMore": "Meer laden",
+    "card": {
+      "deleted": "Verwijderd",
+      "projectFolderMissing": "Projectmap bestaat niet meer",
+      "taskCounts": {
+        "active": "{{count}} actief",
+        "active_one": "{{count}} actief",
+        "active_other": "{{count}} actief",
+        "active_few": "{{count}} actief",
+        "active_many": "{{count}} actief",
+        "pending": "{{count}} in behandeling",
+        "pending_one": "{{count}} in behandeling",
+        "pending_other": "{{count}} in behandeling",
+        "pending_few": "{{count}} in behandeling",
+        "pending_many": "{{count}} in behandeling",
+        "done": "{{count}} voltooid",
+        "done_one": "{{count}} voltooid",
+        "done_other": "{{count}} voltooid",
+        "done_few": "{{count}} voltooid",
+        "done_many": "{{count}} voltooid"
+      }
+    },
+    "title": "Recente projecten",
+    "searchResults": "Zoekresultaten",
+    "searchPlaceholder": "Projecten zoeken..."
+  },
+  "actions": {
+    "selectTeam": "Team selecteren",
+    "or": "of",
+    "clearSearch": "Zoekopdracht wissen"
+  },
+  "windowsAdmin": {
+    "title": "Windows-beheerdersmodus aanbevolen",
+    "description": "Controles van de OpenCode-runtime kunnen verlopen wanneer Agent Teams AI niet verhoogd is. Start de app opnieuw met Als administrator uitvoeren voordat je OpenCode-teams start."
+  },
+  "webPreview": {
+    "title": "Open de desktop-app voor volledige functionaliteit",
+    "description": "De browserversie is nog in ontwikkeling. Projectacties, integraties en live statusupdates kunnen hier beperkt zijn. Gebruik de desktop-app om betrouwbaar toegang te krijgen tot alle functies."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Nieuwe versie beschikbaar",
+    "restartNow": "Nu opnieuw starten",
+    "viewDetails": "Details bekijken"
+  }
+}

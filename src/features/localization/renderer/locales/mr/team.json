@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "संदेशातून टास्क तयार करा",
+      "editMessage": "संदेश संपादित करा",
+      "expandMessage": "संदेश विस्तृत करा",
+      "replyToMessage": "संदेशाला उत्तर द्या",
+      "restartTeam": "टीम रीस्टार्ट करा"
+    },
+    "authError": {
+      "description": "प्रमाणीकरण अयशस्वी. टीम रीस्टार्ट केल्याने सत्र रिफ्रेश होईल आणि ही समस्या सुटू शकते. समस्या कायम राहिल्यास, तुमचे API क्रेडेन्शियल्स तपासा किंवा नंतर पुन्हा प्रयत्न करा."
+    },
+    "automation": {
+      "reviewPickup": "सहकाऱ्याला पुनरावलोकन हाती घेण्यास सांगितले",
+      "stallNudge": "सहकाऱ्याला थांबलेले टास्क सुरू ठेवण्यास सांगितले",
+      "workSyncBody": "सहकाऱ्याला सध्याचे काम सिंक करण्यास सांगितले"
+    },
+    "badges": {
+      "automation": "ऑटोमेशन",
+      "bootstrap": "बूटस्ट्रॅप",
+      "command": "कमांड",
+      "comment": "टिप्पणी",
+      "live": "लाइव्ह",
+      "note": "नोट",
+      "rateLimited": "दर मर्यादित",
+      "restart": "रीस्टार्ट",
+      "result": "परिणाम",
+      "session": "सत्र",
+      "stallNudge": "स्टॉल नज",
+      "start": "सुरू",
+      "workSync": "वर्क सिंक",
+      "agentError": "एजंट त्रुटी",
+      "apiError": "API त्रुटी"
+    },
+    "bootstrap": {
+      "acknowledged": "बूटस्ट्रॅप स्वीकारले",
+      "restarting": "सहकारी रीस्टार्ट करत आहे",
+      "starting": "सहकारी सुरू करत आहे"
+    },
+    "rawJson": "कच्चा JSON",
+    "unread": "न वाचलेले",
+    "thoughts": {
+      "count": "{{count}} विचार",
+      "count_one": "{{count}} विचार",
+      "expand": "विचार विस्तृत करा",
+      "showMore": "अधिक दाखवा",
+      "showLess": "कमी दाखवा",
+      "count_few": "{{count}} विचार",
+      "count_many": "{{count}} विचार",
+      "count_other": "{{count}} विचार",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - विचार"
+    },
+    "timeline": {
+      "loadingMessages": "संदेश लोड होत आहेत...",
+      "noMessages": "कोणतेही संदेश नाहीत",
+      "emptyHint": "क्रियाकलाप पाहण्यासाठी एखाद्या सदस्याला संदेश पाठवा.",
+      "newSession": "नवीन सत्र",
+      "olderCount": "+{{count}} जुने",
+      "showMore": "आणखी {{count}} दाखवा",
+      "showAll": "सर्व दाखवा",
+      "olderCount_one": "+{{count}} जुने",
+      "olderCount_few": "+{{count}} जुने",
+      "olderCount_many": "+{{count}} जुने",
+      "olderCount_other": "+{{count}} जुने"
+    },
+    "pendingReplies": {
+      "title": "उत्तरांची वाट पाहत आहे",
+      "openMember": "सदस्य उघडा",
+      "messageSentAwaitingReply": "संदेश पाठवला, उत्तराची वाट पाहत आहे",
+      "awaitingReply": "उत्तराची वाट पाहत आहे",
+      "externalTeam": "बाह्य टीम",
+      "crossTeamAwaitingReply": "क्रॉस-टीम संदेश पाठवला, उत्तराची वाट पाहत आहे",
+      "user": "वापरकर्ता",
+      "awaitingApproval": "मंजुरीची वाट पाहत आहे"
+    },
+    "reply": {
+      "replyingTo": "यांना उत्तर देत आहे",
+      "action": "उत्तर द्या"
+    },
+    "activeTasks": {
+      "inProgress": "प्रगतीपथावर",
+      "expandInProgress": "प्रगतीपथावरील विस्तृत करा",
+      "collapseInProgress": "प्रगतीपथावरील संकुचित करा",
+      "reviewing": "पुनरावलोकन करत आहे",
+      "workingOn": "यावर काम करत आहे"
+    },
+    "expandDialog": {
+      "description": "विस्तृत संदेश दृश्य"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "तयार करा",
+      "creating": "तयार करत आहे...",
+      "openExisting": "विद्यमान टीम उघडा",
+      "skipPreflightAndCreate": "प्रीफ्लाइट वगळा आणि तयार करा"
+    },
+    "conflict": {
+      "description": "एकाच डिरेक्टरीमध्ये दोन टीम्स चालवणे जोखमीचे आहे - त्या समान फाइल्स संपादित करताना संघर्ष करू शकतात. पृथक्करणासाठी वेगळी डिरेक्टरी किंवा git worktree वापरण्याचा विचार करा.",
+      "title": "या वर्किंग डिरेक्टरीसाठी आधीच दुसरी टीम \"{{team}}\" चालू आहे",
+      "workingDirectory": "वर्किंग डिरेक्टरी:"
+    },
+    "description": {
+      "copy": "विद्यमान टीमवर आधारित नवीन टीम तयार करा.",
+      "create": "तुमची टीम सेट करा आणि ती कशी सुरू होते ते निवडा."
+    },
+    "errors": {
+      "nameExists": "टीम नाव आधीच अस्तित्वात आहे",
+      "nameLaunching": "या नावाची टीम सध्या सुरू होत आहे",
+      "createConfigFailed": "टीम कॉन्फिग तयार करणे अयशस्वी",
+      "loadProjectsFailed": "प्रकल्प लोड करणे अयशस्वी"
+    },
+    "fields": {
+      "color": "रंग (ऐच्छिक)",
+      "description": "वर्णन (ऐच्छिक)",
+      "prompt": "टीम लीडसाठी प्रॉम्प्ट (ऐच्छिक)",
+      "teamName": "टीम नाव"
+    },
+    "launchAfterCreate": {
+      "description": "स्थानिक Claude CLI द्वारे टीम लगेच सुरू करा.",
+      "label": "तयार केल्यानंतर कमांड चालवा"
+    },
+    "localOnly": "फक्त स्थानिक Electron मोडमध्ये उपलब्ध.",
+    "onDisk": "डिस्कवर:",
+    "placeholders": {
+      "description": "टीमच्या उद्देशाचे संक्षिप्त वर्णन",
+      "prompt": "प्रोव्हिजनिंग दरम्यान टीम लीडसाठी सूचना..."
+    },
+    "saved": "जतन केले",
+    "solo": {
+      "description": "फक्त टीम लीड (मुख्य प्रक्रिया) सुरू होईल - कोणतेही सहकारी तयार केले जाणार नाहीत. तुमच्या निवडलेल्या रनटाइममध्ये (Claude Code, Codex, OpenCode, Gemini) नियमित एजंट सत्रासारखे काम करते, पण नियोजनासाठी टास्क बोर्डच्या प्रवेशासह. सहकारी समन्वय ओव्हरहेड टाळून टोकन्स वाचवते. तुम्ही टीम सेटिंग्जमधून नंतर सदस्य जोडू शकता.",
+      "label": "एकल टीम"
+    },
+    "title": {
+      "copy": "टीम कॉपी करा",
+      "create": "टीम तयार करा"
+    },
+    "optional": {
+      "launchSettingsTitle": "ऐच्छिक लॉन्च सेटिंग्ज",
+      "launchSettingsDescription": "तुम्हाला गरज असेल तेव्हा प्रॉम्प्ट, सुरक्षा आणि CLI ओव्हरराइड्स येथे राहतात.",
+      "teamDetailsTitle": "ऐच्छिक टीम तपशील",
+      "teamDetailsDescription": "डीफॉल्ट फ्लो संक्षिप्त ठेवा आणि तुम्हाला अतिरिक्त संदर्भ किंवा कस्टम रंग हवा असेल तेव्हाच हे उघडा."
+    },
+    "prepare": {
+      "unsupportedPreload": "सध्याची preload आवृत्ती team:prepareProvisioning ला समर्थन देत नाही. dev अॅप रीस्टार्ट करा.",
+      "selectWorkingDirectory": "लॉन्च एन्व्हायर्न्मेंट पडताळण्यासाठी एक वर्किंग डिरेक्टरी निवडा.",
+      "someProvidersNeedAttention": "काही निवडलेल्या प्रोव्हायडर्सना लक्ष देण्याची गरज आहे.",
+      "readyWithNotes": "सर्व निवडलेले प्रोव्हायडर्स तयार आहेत, नोट्ससह.",
+      "ready": "सर्व निवडलेले प्रोव्हायडर्स तयार आहेत.",
+      "failed": "निवडलेले प्रोव्हायडर्स तयार करणे अयशस्वी",
+      "checkingProviders": "निवडलेले प्रोव्हायडर्स तपासत आहे...",
+      "preparingEnvironment": "एन्व्हायर्न्मेंट तयार करत आहे...",
+      "selectedProvidersReadyWithNotes": "निवडलेले प्रोव्हायडर्स तयार (नोट्ससह)",
+      "selectedProvidersReady": "निवडलेले प्रोव्हायडर्स तयार"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "नावात किमान एक अक्षर किंवा अंक असणे आवश्यक आहे",
+      "nameTooLong": "नाव खूप लांब आहे (कमाल 128 अक्षरे)",
+      "selectWorkingDirectory": "वर्किंग डिरेक्टरी निवडा (cwd)",
+      "memberNameRequired": "सदस्य नाव रिकामे असू शकत नाही",
+      "memberNameInvalid": "सदस्य नाव अल्फान्यूमेरिकने सुरू झाले पाहिजे, फक्त [a-zA-Z0-9._-] वापरा, कमाल 128 अक्षरे",
+      "memberNamesUnique": "सदस्य नावे अद्वितीय असणे आवश्यक आहे",
+      "openCodeLeadModelRequired": "OpenCode लीडला निवडलेले मॉडेल आवश्यक आहे.",
+      "openCodeTeammateRequired": "OpenCode लीडला किमान एक OpenCode सहकारी आवश्यक आहे.",
+      "teamLaunching": "टीम सध्या सुरू होत आहे",
+      "teamNameExists": "टीम नाव आधीच अस्तित्वात आहे",
+      "checkFormFields": "फॉर्म फील्ड्स तपासा"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "रद्द करा",
+      "save": "जतन करा"
+    },
+    "addMemberLockReason": "टीम लाइव्ह असताना नवीन सहकारी जोडण्यासाठी समर्पित सदस्य जोडा डायलॉग वापरा.",
+    "description": "टीम नाव, वर्णन आणि रंग बदला",
+    "errors": {
+      "changesSavedRefreshFailed": "टीम बदल जतन केले गेले, पण नवीनतम दृश्य रिफ्रेश करणे अयशस्वी: {{message}}",
+      "liveRenameBlocked": "टीम लाइव्ह असताना विद्यमान सहकाऱ्यांचे नाव बदलता येत नाही. नाव बदललेले: {{names}}",
+      "memberNameEmpty": "सदस्य नाव रिकामे असू शकत नाही",
+      "memberNameInvalid": "सदस्य नाव अल्फान्यूमेरिकने सुरू झाले पाहिजे, फक्त [a-zA-Z0-9._-] वापरा, कमाल 128 अक्षरे",
+      "memberNameNumericSuffix": "सदस्य नाव \"{{name}}\" अनुमत नाही (Claude CLI ऑटो-सफिक्ससाठी राखीव). त्याऐवजी \"{{base}}\" वापरा.",
+      "memberNameReserved": "सदस्य नाव \"{{name}}\" राखीव आहे",
+      "memberNamesUnique": "जतन करण्यापूर्वी सदस्य नावे अद्वितीय असणे आवश्यक आहे",
+      "newLiveTeammates": "टीम लाइव्ह असताना समर्पित सदस्य जोडा डायलॉगमधून नवीन सहकारी जोडा. टीम संपादित करा फक्त विद्यमान सहकारी अपडेट करण्यास समर्थन देते.",
+      "provisioning": "प्रोव्हिजनिंग अद्याप सुरू असताना टीम सेटिंग्ज संपादित करता येत नाहीत. लॉन्च पूर्ण होण्याची वाट पाहा, मग पुन्हा प्रयत्न करा.",
+      "restartFailedMany": "टीम जतन केली, पण या सहकाऱ्यांना रीस्टार्ट करणे अयशस्वी: {{failures}}",
+      "restartFailedOne": "टीम जतन केली, पण या सहकाऱ्याला रीस्टार्ट करणे अयशस्वी: {{failures}}",
+      "saveFailed": "जतन करणे अयशस्वी",
+      "settingsChanged": "हा डायलॉग उघडा असताना टीम सेटिंग्ज बदलल्या. ते पुन्हा उघडा आणि जतन करण्यापूर्वी नवीनतम स्थिती तपासा.",
+      "settingsSavedMembersAndRefreshFailed": "टीम सेटिंग्ज जतन केल्या, पण सदस्य बदल अयशस्वी: {{message}}. रिफ्रेश देखील अयशस्वी: {{refreshError}}",
+      "settingsSavedMembersFailed": "टीम सेटिंग्ज जतन केल्या, पण सदस्य बदल अयशस्वी: {{message}}",
+      "settingsSavedRefreshFailed": "टीम सेटिंग्ज जतन केल्या, पण नवीनतम दृश्य रिफ्रेश करणे अयशस्वी: {{message}}",
+      "teamNameEmpty": "टीम नाव रिकामे असू शकत नाही",
+      "unsupportedMixedPrimaryMutation": "मिश्र OpenCode टीम्समधील प्राथमिक-मालकीच्या सहकाऱ्यांचे लाइव्ह संपादन अद्याप समर्थित नाही. टीम थांबवा, रोस्टर संपादित करा, मग पुन्हा सुरू करा. प्रभावित: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "रंग (ऐच्छिक)",
+      "description": "वर्णन",
+      "name": "नाव"
+    },
+    "memberRestartWarning": "जतन केल्याने भूमिका, वर्कफ्लो, worktree पृथक्करण, प्रोव्हायडर, मॉडेल, प्रयत्न किंवा MCP प्रवेश बदल लागू करण्यासाठी या सहकाऱ्याला रीस्टार्ट केले जाईल.",
+    "notices": {
+      "liveRenameBlocked": "विद्यमान सहकाऱ्यांचे नाव बदलल्यामुळे लाइव्ह जतन अवरोधित आहे. ते ओळख बदल मागे घ्या किंवा प्रथम टीम थांबवा.",
+      "newLiveTeammates": "टीम लाइव्ह असताना टीम संपादित करा मधून नवीन सहकारी जोडता येत नाहीत. त्याऐवजी सदस्य जोडा डायलॉग वापरा.",
+      "provisioning": "टीम प्रोव्हिजनिंग अद्याप सुरू आहे. लॉन्च पूर्ण होईपर्यंत संपादन तात्पुरते लॉक केले आहे.",
+      "restartMany": "जतन केल्याने भूमिका, वर्कफ्लो, worktree पृथक्करण, प्रोव्हायडर, मॉडेल, प्रयत्न किंवा MCP प्रवेश बदल लागू करण्यासाठी या सहकाऱ्यांना रीस्टार्ट किंवा पुन्हा सुरू केले जाईल: {{names}}.",
+      "restartOne": "जतन केल्याने भूमिका, वर्कफ्लो, worktree पृथक्करण, प्रोव्हायडर, मॉडेल, प्रयत्न किंवा MCP प्रवेश बदल लागू करण्यासाठी या सहकाऱ्याला रीस्टार्ट किंवा पुन्हा सुरू केले जाईल: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "मिश्र OpenCode टीम्समधील प्राथमिक-मालकीच्या सहकाऱ्यांचे लाइव्ह संपादन/काढून टाकणे यासाठी टीम थांबवून पुन्हा सुरू करणे आवश्यक आहे: {{names}}."
+    },
+    "placeholders": {
+      "description": "टीम वर्णन (ऐच्छिक)",
+      "teamName": "टीम नाव"
+    },
+    "teamLead": {
+      "changeRuntime": "लीड रनटाइम बदला",
+      "changeRuntimeDescription": "लीड प्रोव्हायडर, मॉडेल किंवा प्रयत्न बदलण्यासाठी टीम पुन्हा सुरू करा उघडा.",
+      "modelLockReason": "टीम लीड रनटाइम टीम पुन्हा सुरू करा मधून व्यवस्थापित केला जातो.",
+      "readOnlyHint": "टीम लीडचे नाव आणि भूमिका येथे फक्त-वाचनीय राहतात. प्रोव्हायडर, मॉडेल किंवा प्रयत्न बदलण्यासाठी लीड पंक्तीवरील रनटाइम पॅनेल उघडा.",
+      "role": "टीम लीड"
+    },
+    "title": "टीम संपादित करा"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "सदस्य काढा",
+      "removeAria": "{{name}} काढा",
+      "restore": "सदस्य पुनर्संचयित करा",
+      "restoreAria": "{{name}} पुनर्संचयित करा"
+    },
+    "anthropicContext": {
+      "defaultSetting": "डीफॉल्ट संदर्भ सेटिंग",
+      "description": "या लॉन्चसाठी Anthropic संदर्भ टीम-व्यापी आहे: {{mode}}. ते बदलण्यासाठी लीड रनटाइम पॅनेलचा संदर्भ मर्यादित करा चेकबॉक्स वापरा.",
+      "limitEnabled": "200K मर्यादा सक्षम"
+    },
+    "mcp": {
+      "buttonInherit": "MCP वारसा",
+      "buttonScopes": "MCP व्याप्ती",
+      "chooseScopes": "व्याप्ती निवडा",
+      "inheritLead": "लीडकडून वारसा",
+      "lockedInfo": "सर्व सहकाऱ्यांसाठी फक्त Agent Teams MCP सक्षम आहे. हा सहकारी फक्त Agent Teams सर्व्हरसह सुरू होईल.",
+      "mode": "MCP मोड",
+      "scopes": {
+        "local": "स्थानिक",
+        "project": "प्रकल्प",
+        "user": "वापरकर्ता"
+      },
+      "serverNames": "सर्व्हर नावे",
+      "settingInfo": "Agent Teams MCP या सहकाऱ्याला फक्त Agent Teams सर्व्हरसह सुरू करते. व्याप्ती आणि allowlist मोड फक्त या सहकारी लॉन्चलाच लागू होतात.",
+      "strictAllowlist": "कठोर allowlist",
+      "tooltip": "{{label}}: या सदस्याचे MCP वारसा धोरण नियंत्रित करा",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} प्रोव्हायडर, {{model}}",
+      "currentLeadRuntime": "सध्याचा लीड रनटाइम",
+      "default": "डीफॉल्ट",
+      "inheritedTooltip": "सिंक सक्षम असताना प्रोव्हायडर, मॉडेल आणि प्रयत्न लीडकडून वारशाने मिळतात.",
+      "leadSuffix": "{{label}} (लीड)",
+      "liveDisabled": "टीम लाइव्ह असताना प्रोव्हायडर, मॉडेल आणि प्रयत्न बदल अक्षम आहेत. ते सुरक्षितपणे लागू करण्यासाठी टीम पुन्हा कनेक्ट करा.",
+      "lockedActionFallback": "लीड रनटाइम बदल टीम पुन्हा सुरू करा उघडतात, जिथे प्रोव्हायडर, मॉडेल आणि प्रयत्न अपडेट करता येतात.",
+      "restartWholeTeam": "ते रनटाइम बदल जतन केल्याने संपूर्ण टीम रीस्टार्ट होते."
+    },
+    "nameAria": "सदस्य {{index}} नाव",
+    "nameFallback": "सदस्य {{index}}",
+    "noRole": "कोणतीही भूमिका नाही",
+    "removed": "काढले",
+    "workflow": {
+      "addTooltip": "सहकारी वर्कफ्लो जोडा",
+      "editTooltip": "सहकारी वर्कफ्लो संपादित करा",
+      "label": "वर्कफ्लो (ऐच्छिक)",
+      "placeholder": "हा एजंट कसा वागावा, इतरांशी कसा संवाद साधावा...",
+      "saved": "जतन केले"
+    },
+    "worktree": {
+      "description": "हा सहकारी वेगळ्या git worktree मध्ये चालवा. बदल लागू करा/नाकारा त्या worktree ला लक्ष्य करते, लीड वर्कस्पेसला नाही.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "सदस्य जोडा",
+      "description": "{{teamName}} मध्ये नवीन सदस्य जोडा"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "जोडा",
+      "cancel": "रद्द करा",
+      "delete": "हटवा",
+      "editCode": "कोड संपादित करा",
+      "launch": "सुरू करा",
+      "remove": "काढा",
+      "stop": "थांबवा",
+      "task": "टास्क",
+      "visualize": "व्हिज्युअलाइझ करा"
+    },
+    "deleteTeam": {
+      "description": "टीम \"{{team}}\" हटवायची? ही क्रिया अपरिवर्तनीय आहे. सर्व टीम डेटा आणि टास्क हटवली जातील.",
+      "title": "टीम हटवा"
+    },
+    "draft": {
+      "descriptionPrefix": "ही एक मसुदा टीम आहे -",
+      "descriptionSuffix": "{{count}} {{member}} सह कॉन्फिगर केले आहे पण अद्याप CLI ने प्रोव्हिजन केलेले नाही. मॉडेल निवडण्यासाठी आणि टीम सुरू करण्यासाठी सुरू करा क्लिक करा.",
+      "descriptionSuffix_few": "{{count}} {{member}} सह कॉन्फिगर केले आहे पण अद्याप CLI ने प्रोव्हिजन केलेले नाही. मॉडेल निवडण्यासाठी आणि टीम सुरू करण्यासाठी सुरू करा क्लिक करा.",
+      "descriptionSuffix_many": "{{count}} {{member}} सह कॉन्फिगर केले आहे पण अद्याप CLI ने प्रोव्हिजन केलेले नाही. मॉडेल निवडण्यासाठी आणि टीम सुरू करण्यासाठी सुरू करा क्लिक करा.",
+      "descriptionSuffix_one": "{{count}} {{member}} सह कॉन्फिगर केले आहे पण अद्याप CLI ने प्रोव्हिजन केलेले नाही. मॉडेल निवडण्यासाठी आणि टीम सुरू करण्यासाठी सुरू करा क्लिक करा.",
+      "descriptionSuffix_other": "{{count}} {{member}} सह कॉन्फिगर केले आहे पण अद्याप CLI ने प्रोव्हिजन केलेले नाही. मॉडेल निवडण्यासाठी आणि टीम सुरू करण्यासाठी सुरू करा क्लिक करा.",
+      "member": "सदस्य",
+      "member_few": "सदस्य",
+      "member_many": "सदस्य",
+      "member_one": "सदस्य",
+      "member_other": "सदस्य",
+      "title": "टीम अद्याप सुरू झाली नाही"
+    },
+    "invalidTab": "अवैध टीम टॅब",
+    "kanbanSafeData": "kanban पूर्णपणे लोड करणे अयशस्वी. सुरक्षित डेटा दाखवत आहे.",
+    "loadFailed": "टीम लोड करणे अयशस्वी",
+    "loading": "टीम लोड होत आहे",
+    "loadingSidebar": "टीम साइडबार लोड होत आहे",
+    "offline": {
+      "offline": "टीम ऑफलाइन आहे",
+      "partialFailed": "शेवटचे सुरू होणे मध्येच अयशस्वी",
+      "partialMissing": "शेवटचे सुरू होणे मध्येच अयशस्वी - {{missing}}/{{expected}} सहकारी सामील झाले नाहीत",
+      "reconciling": "शेवटचे सुरू होणे अजूनही समन्वयित होत आहे"
+    },
+    "previous": "मागील: {{paths}}",
+    "removeMember": {
+      "description": "टीममधून \"{{member}}\" काढायचे? टास्क आणि संदेश जतन केले जातील, पण हे नाव पुन्हा वापरता येणार नाही.",
+      "title": "सदस्य काढा"
+    },
+    "sections": {
+      "team": "टीम"
+    },
+    "solo": "एकल",
+    "status": {
+      "active": "सक्रिय",
+      "launching": "सुरू करत आहे...",
+      "running": "चालू आहे"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "मेमरी"
+    },
+    "tooltips": {
+      "deleteTeam": "टीम हटवा",
+      "editTeam": "टीम संपादित करा",
+      "editUnavailableProvisioning": "प्रोव्हिजनिंग अद्याप सुरू असताना टीम संपादित करा उपलब्ध नाही",
+      "openBuiltInEditor": "प्रकल्प अंगभूत एडिटरमध्ये उघडा",
+      "openTeamGraph": "टीम ग्राफ उघडा",
+      "stopTeam": "टीम थांबवा"
+    },
+    "waitingForProvisioning": "प्रोव्हिजनिंग पूर्ण झाल्यावर टीम डेटा दिसेल",
+    "context": {
+      "title": "संदर्भ",
+      "loading": "लोड होत आहे...",
+      "noSessionLoaded": "कोणतेही सत्र लोड केले नाही",
+      "closePanel": "{{team}} संदर्भ पॅनेल बंद करा",
+      "loadingContext": "संदर्भ लोड होत आहे...",
+      "openLeadSession": "संदर्भ पाहण्यासाठी टीम लीड सत्र उघडा."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "स्वीकारा",
+        "discard": "टाकून द्या",
+        "discardTooltip": "या फाइलसाठी सर्व संपादने टाकून द्या",
+        "keepMyDraft": "माझा मसुदा ठेवा",
+        "reject": "नाकारा",
+        "reloadFromDisk": "डिस्कवरून पुन्हा लोड करा",
+        "restore": "पुनर्संचयित करा",
+        "restoreTooltip": "पूर्वावलोकनातून ही फाइल डिस्कवर तयार/पुनर्संचयित करा",
+        "saveFile": "फाइल जतन करा",
+        "saveFileTooltip": "फाइल डिस्कवर जतन करा"
+      },
+      "badges": {
+        "deleted": "हटवले",
+        "manualReview": "मॅन्युअल पुनरावलोकन",
+        "new": "नवीन",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "सध्याचा डिस्क",
+        "file-history": "फाइल इतिहास",
+        "git-fallback": "Git फॉलबॅक",
+        "ledger-exact": "टास्क लेजर",
+        "ledger-snapshot": "लेजर स्नॅपशॉट",
+        "snippet-reconstruction": "पुनर्रचित",
+        "unavailable": "मजकूर उपलब्ध नाही"
+      },
+      "contentUnavailable": {
+        "badge": "मजकूर उपलब्ध नाही",
+        "description": "लेजरने या बदलासाठी मेटाडेटा नोंदवला, पण पूर्ण मजकूर सामग्री उपलब्ध नाही. याचा अर्थ सहसा बायनरी, मोठी किंवा फक्त-हॅश सामग्री असा होतो.",
+        "safety": "असुरक्षित डिस्क लेखन टाळण्यासाठी या फाइलसाठी स्वयंचलित स्वीकार/नकार अक्षम आहे.",
+        "title": "मजकूर सामग्री उपलब्ध नाही"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "पूर्ण मजकूर सामग्री उपलब्ध नसल्यामुळे स्वीकार/नकार अक्षम आहे.",
+        "acceptRejectMissingOnDisk": "फाइल डिस्कवर गहाळ असताना स्वीकार/नकार अक्षम आहे.",
+        "rejectBaselineUnavailable": "मूळ बेसलाइन उपलब्ध नसल्यामुळे नकार अक्षम आहे.",
+        "rejectContentUnavailable": "पूर्ण मजकूर सामग्री उपलब्ध नसल्यामुळे नकार अक्षम आहे.",
+        "rejectManualLedgerReview": "या लेजर बदलात बायनरी, मोठी किंवा अनुपलब्ध सामग्री असल्यामुळे नकार अक्षम आहे."
+      },
+      "externalChange": {
+        "changedOnDisk": "डिस्कवर बदलले",
+        "deletedOnDisk": "डिस्कवर हटवले",
+        "recreatedOnDisk": "डिस्कवर पुन्हा तयार केले"
+      },
+      "missingOnDisk": {
+        "badge": "डिस्कवर गहाळ",
+        "description": "आम्ही अद्याप एजंट लॉग्समधून पूर्वावलोकन दाखवू शकतो, पण तुमची फाइलसिस्टम सिंकमध्ये नाही.",
+        "restorePrefix": "वापरा",
+        "restoreSuffix": "पूर्वावलोकन सामग्री डिस्कवर परत लिहिण्यासाठी.",
+        "restoreUnavailable": "स्वयंचलितपणे पुनर्संचयित करण्यासाठी पूर्ण फाइल सामग्री उपलब्ध नाही.",
+        "title": "फाइल डिस्कवर गहाळ आहे"
+      },
+      "pathChange": {
+        "from": "{{path}} पासून",
+        "to": "{{path}} पर्यंत"
+      },
+      "worktree": {
+        "isolated": "पृथक worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} प्रलंबित",
+        "pending_one": "{{count}} प्रलंबित",
+        "pending_other": "{{count}} प्रलंबित",
+        "accepted": "{{count}} स्वीकारले",
+        "accepted_one": "{{count}} स्वीकारले",
+        "accepted_other": "{{count}} स्वीकारले",
+        "rejected": "{{count}} नाकारले",
+        "rejected_one": "{{count}} नाकारले",
+        "rejected_other": "{{count}} नाकारले",
+        "acrossFiles": "{{count}} फाइल्समध्ये",
+        "acrossFiles_one": "{{count}} फाइलमध्ये",
+        "acrossFiles_other": "{{count}} फाइल्समध्ये",
+        "edited": "{{count}} संपादित",
+        "edited_one": "{{count}} संपादित",
+        "edited_other": "{{count}} संपादित",
+        "pending_few": "{{count}} प्रलंबित",
+        "pending_many": "{{count}} प्रलंबित",
+        "accepted_few": "{{count}} स्वीकारले",
+        "accepted_many": "{{count}} स्वीकारले",
+        "rejected_few": "{{count}} नाकारले",
+        "rejected_many": "{{count}} नाकारले",
+        "acrossFiles_few": "{{count}} फाइल्समध्ये",
+        "acrossFiles_many": "{{count}} फाइल्समध्ये",
+        "edited_few": "{{count}} संपादित",
+        "edited_many": "{{count}} संपादित"
+      },
+      "actions": {
+        "auto": "ऑटो",
+        "undo": "पूर्ववत करा",
+        "acceptAll": "सर्व स्वीकारा",
+        "rejectAll": "सर्व नाकारा",
+        "applying": "लागू करत आहे...",
+        "applyRejections": "नकार लागू करा"
+      },
+      "tooltips": {
+        "autoOn": "शेवटपर्यंत स्क्रोल केल्यावर फाइल्स पाहिलेल्या म्हणून ऑटो-चिन्हांकित करा (चालू)",
+        "autoOff": "शेवटपर्यंत स्क्रोल केल्यावर फाइल्स पाहिलेल्या म्हणून ऑटो-चिन्हांकित करा (बंद)",
+        "undo": "शेवटचे पुनरावलोकन ऑपरेशन पूर्ववत करा (Ctrl+Z)",
+        "acceptAll": "सर्व फाइल्समधील सर्व बदल स्वीकारा",
+        "rejectAll": "सर्व फाइल्समधील सर्व सुरक्षितपणे नाकारता येणारे बदल नाकारा",
+        "rejectAllDisabled": "कोणत्याही प्रलंबित फाइलला नाकारण्यासाठी सुरक्षित मूळ बेसलाइन नाही.",
+        "applyRejections": "नाकारलेले हंक्स डिस्कवर लागू करा; स्वीकारलेले बदल जसेच्या तसे ठेवले जातात"
+      }
+    },
+    "diffError": {
+      "title": "diff दृश्य रेंडर करणे अयशस्वी",
+      "unexpected": "diff रेंडर करताना एक अनपेक्षित त्रुटी आली.",
+      "actions": {
+        "retry": "पुन्हा प्रयत्न करा"
+      },
+      "raw": {
+        "show": "कच्चा diff डेटा दाखवा",
+        "file": "फाइल: {{file}}",
+        "original": "--- मूळ",
+        "modified": "+++ सुधारित",
+        "charsTotal": "... (एकूण {{count}} अक्षरे)",
+        "charsTotal_one": "... (एकूण {{count}} अक्षर)",
+        "charsTotal_other": "... (एकूण {{count}} अक्षरे)",
+        "charsTotal_few": "... (एकूण {{count}} अक्षरे)",
+        "charsTotal_many": "... (एकूण {{count}} अक्षरे)"
+      }
+    },
+    "fileTree": {
+      "viewed": "पाहिले",
+      "badges": {
+        "new": "नवीन",
+        "deleted": "हटवले"
+      },
+      "collapseFolder": "{{name}} संकुचित करा",
+      "expandFolder": "{{name}} विस्तृत करा",
+      "empty": {
+        "noChangedFiles": "कोणत्याही बदललेल्या फाइल्स नाहीत",
+        "noMatchingFiles": "जुळणाऱ्या कोणत्याही फाइल्स नाहीत"
+      },
+      "searchPlaceholder": "फाइल्स शोधा…",
+      "filters": {
+        "unresolved": "निराकरण न झालेले",
+        "rejected": "नाकारलेले",
+        "new": "नवीन",
+        "clear": "साफ करा"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "मागील चंक",
+      "nextChunk": "पुढील चंक",
+      "rejectChange": "बदल नाकारा (⌘N)",
+      "acceptChange": "बदल स्वीकारा (⌘Y)",
+      "undo": "पूर्ववत करा",
+      "keep": "ठेवा",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "संघर्ष आढळला",
+      "description": "एजंटच्या बदलांनंतर ही फाइल सुधारित केली गेली आहे",
+      "cancel": "रद्द करा",
+      "saveResolution": "निराकरण जतन करा",
+      "editManually": "मॅन्युअली संपादित करा",
+      "useOriginal": "मूळ वापरा",
+      "keepCurrent": "सध्याचे ठेवा"
+    },
+    "fullDiffLoading": {
+      "titleOne": "पूर्ण Diff तयार करत आहे",
+      "titleMany": "{{count}} पूर्ण Diffs तयार करत आहे",
+      "subtitleForFile": "{{file}} साठी अचूक एडिटर diff अंतिम करत आहे.",
+      "subtitleCurrentFile": "सध्याच्या फाइलसाठी अचूक एडिटर diff अंतिम करत आहे.",
+      "subtitleMany": "सध्या लोड होत असलेल्या फाइल्ससाठी अचूक आधी/नंतर बेसलाइन्स निराकरण करत आहे.",
+      "previewsReady": "{{count}} पूर्वावलोकने तयार",
+      "previewsReady_one": "{{count}} पूर्वावलोकन तयार",
+      "editorViewLoading": "एडिटर दृश्य लोड होत आहे",
+      "filesInProgress": "{{count}} फाइल्स प्रगतीपथावर",
+      "filesInProgress_one": "{{count}} फाइल प्रगतीपथावर",
+      "filesReady": "{{ready}}/{{total}} फाइल्स तयार",
+      "progressDescription": "{{ready}} तयार, {{loading}} अजूनही लोड होत आहेत. उर्वरित बेसलाइन्स निराकरण होत असताना पूर्वावलोकन diffs खाली दृश्यमान राहतात.",
+      "singleDescription": "अचूक बेसलाइन निराकरण होत असताना पूर्वावलोकन diffs खाली दृश्यमान राहतात.",
+      "previewsReady_few": "{{count}} पूर्वावलोकने तयार",
+      "previewsReady_many": "{{count}} पूर्वावलोकने तयार",
+      "previewsReady_other": "{{count}} पूर्वावलोकने तयार",
+      "filesInProgress_few": "{{count}} फाइल्स प्रगतीपथावर",
+      "filesInProgress_many": "{{count}} फाइल्स प्रगतीपथावर",
+      "filesInProgress_other": "{{count}} फाइल्स प्रगतीपथावर"
+    },
+    "fileMissingPrefix": "फाइल डिस्कवर गहाळ आहे. हा diff फक्त एजंट लॉग्समधील पूर्वावलोकन असू शकतो. वापरा",
+    "restore": "पुनर्संचयित करा",
+    "fileMissingSuffix": "फाइल डिस्कवर तयार करण्यासाठी.",
+    "filePlaceholder": {
+      "loading": "लोड होत आहे",
+      "description": "या फाइलसाठी पूर्ण एडिटर diff तयार करत आहे."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} लेजर ऑब्जेक्ट्स प्रक्रिया केले",
+      "ledgerObjectsProcessed_one": "{{count}} लेजर ऑब्जेक्ट प्रक्रिया केले",
+      "ledgerObjectsProcessed_other": "{{count}} लेजर ऑब्जेक्ट्स प्रक्रिया केले",
+      "ledgerObjectsProcessed_few": "{{count}} लेजर ऑब्जेक्ट्स प्रक्रिया केले",
+      "ledgerObjectsProcessed_many": "{{count}} लेजर ऑब्जेक्ट्स प्रक्रिया केले",
+      "phases": {
+        "readingLedger": "टास्क लेजर वाचत आहे...",
+        "resolvingFiles": "फाइल स्थिती निराकरण करत आहे...",
+        "checkingWorktree": "worktree संदर्भ तपासत आहे...",
+        "preparingDiffs": "पुनरावलोकन diffs तयार करत आहे..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} पाहिले"
+    },
+    "scope": {
+      "readMore": "अधिक वाचा",
+      "tiers": {
+        "exact": {
+          "title": "टास्क व्याप्ती अचूकपणे निश्चित केली",
+          "detail": "सत्र लॉगमध्ये सुरुवात आणि पूर्तता दोन्ही मार्कर सापडले. diff मध्ये फक्त या विशिष्ट टास्क दरम्यान केलेले बदल समाविष्ट आहेत - समान फाइल्स सुधारित केलेली इतर टास्क वगळली आहेत."
+        },
+        "endEstimated": {
+          "title": "शेवटची सीमा अंदाजित",
+          "detail": "फक्त सुरुवातीचा मार्कर सापडला - टास्कला अद्याप पूर्तता मार्कर नाही. टास्क सुरुवातीपासून सत्र शेवटपर्यंतचे बदल दाखवले आहेत. याच सत्रात या नंतर इतर टास्क चालल्या असल्यास, त्यांचे बदल देखील समाविष्ट असू शकतात."
+        },
+        "startEstimated": {
+          "title": "सुरुवातीची सीमा अंदाजित",
+          "detail": "फक्त पूर्तता मार्कर सापडला - कामाची सुरुवात कॅप्चर झाली नाही. याच सत्रात या आधी इतर टास्क चालल्या असल्यास, समान फाइल्समधील त्यांचे बदल देखील समाविष्ट असू शकतात."
+        },
+        "allSession": {
+          "title": "सर्व सत्र बदल दाखवत आहे",
+          "detail": "सत्र लॉगमध्ये कोणतेही टास्क मार्कर सापडले नाहीत. या टास्कला वेगळे करता येत नाही - संपूर्ण सत्रातील सर्व फाइल बदल, इतर टास्कमधील बदलांसह, दाखवले आहेत. हे जुन्या CLI आवृत्त्या किंवा गैर-मानक वर्कफ्लोसह घडू शकते."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "टास्क लेजरने कॅप्चर केलेले बदल",
+          "detail": "एजंट या टास्कवर काम करत असताना ऑर्केस्ट्रेटरने हे फाइल बदल कॅप्चर केले.",
+          "badge": "लेजर अचूक"
+        },
+        "limited": {
+          "title": "मर्यादित पुनरावलोकनक्षमतेसह कॅप्चर केलेले बदल",
+          "detail": "ऑर्केस्ट्रेटरने या टास्कसाठी हे फाइल बदल कॅप्चर केले, पण किमान एक बदल स्नॅपशॉट किंवा फक्त-मेटाडेटा स्रोतावरून कॅप्चर केला गेला. उपलब्ध तिथे अचूक मजकूर diffs पुनरावलोकन करा; बायनरी किंवा अनुपलब्ध सामग्रीला मॅन्युअल पुनरावलोकन आवश्यक असू शकते.",
+          "mixedBadge": "मिश्र पुनरावलोकनक्षमता",
+          "needsReviewBadge": "पुनरावलोकन आवश्यक"
+        }
+      },
+      "workInterval": {
+        "title": "जतन केलेल्या कार्य अंतरानुसार व्याप्ती",
+        "detail": "सत्र लॉगमध्ये टास्क सुरुवात मार्कर उपलब्ध नव्हता, म्हणून diff ची व्याप्ती बोर्डवर संग्रहित टास्क कार्य अंतरानुसार आहे.",
+        "badge": "अंतरानुसार व्याप्ती"
+      },
+      "confidence": {
+        "high": "उच्च विश्वास",
+        "medium": "मध्यम विश्वास",
+        "low": "कमी विश्वास",
+        "bestEffort": "सर्वोत्तम प्रयत्न"
+      }
+    },
+    "shortcuts": {
+      "title": "कीबोर्ड शॉर्टकट्स",
+      "actions": {
+        "nextChange": "पुढील बदल",
+        "previousChange": "मागील बदल",
+        "nextFile": "पुढील फाइल",
+        "previousFile": "मागील फाइल",
+        "acceptChange": "बदल स्वीकारा",
+        "rejectChange": "बदल नाकारा",
+        "saveFile": "फाइल जतन करा",
+        "undo": "पूर्ववत करा",
+        "redo": "पुन्हा करा",
+        "toggleShortcuts": "शॉर्टकट्स टॉगल करा",
+        "closeDialog": "डायलॉग बंद करा"
+      }
+    },
+    "timeline": {
+      "empty": "कोणत्याही संपादन घटना नाहीत",
+      "titleWithCount": "संपादन टाइमलाइन ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "कोणतेही पुनरावलोकनयोग्य फाइल बदल नाहीत"
+    },
+    "empty": {
+      "noSafeDiff": "कोणताही सुरक्षित diff उपलब्ध नाही",
+      "noFileChangesRecorded": "कोणतेही फाइल बदल नोंदवले नाहीत",
+      "noSafeDiffDescription": "टास्क लेजरने या टास्कसाठी सुरक्षित फाइल diff उघड केला नाही.",
+      "noSafeDiffDiagnosticsDescription": "टास्क लेजरने या टास्कसाठी सुरक्षित फाइल diff उघड केला नाही. खालील डायग्नॉस्टिक्स का ते स्पष्ट करतात.",
+      "noFileEventsYet": "टास्क लेजरमध्ये अद्याप या टास्कसाठी कोणत्याही फाइल घटना नाहीत.",
+      "noFileEvents": "टास्क लेजरमध्ये या टास्कसाठी कोणत्याही फाइल घटना नाहीत."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "संदेश तळ शीट कृती",
+      "collapseAll": "सर्व संदेश संकुचित करा",
+      "collapseSheet": "शीट संकुचित करा",
+      "expandAll": "सर्व संदेश विस्तृत करा",
+      "expandSheet": "शीट विस्तृत करा",
+      "floatComposer": "कंपोझर फ्लोट करा",
+      "floatMessagesComposer": "संदेश कंपोझर फ्लोट करा",
+      "hideSearch": "शोध लपवा",
+      "loadOlder": "जुने संदेश लोड करा",
+      "markAllRead": "सर्व वाचलेले म्हणून चिन्हांकित करा",
+      "messageActions": "संदेश कृती",
+      "moveMessagesToBottomSheet": "संदेश तळ शीटवर हलवा",
+      "moveMessagesToSidebar": "संदेश साइडबारवर हलवा",
+      "moveToBottomSheet": "तळ शीटवर हलवा",
+      "moveToInline": "इनलाइनमध्ये हलवा",
+      "moveToSidebar": "साइडबारवर हलवा",
+      "panelActions": "संदेश पॅनेल कृती",
+      "searchMessages": "संदेश शोधा"
+    },
+    "delivery": {
+      "copied": "कॉपी केले",
+      "copyDebugDetails": "डीबग तपशील कॉपी करा",
+      "details": "तपशील",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "संदेश पॅनेल मोड",
+    "title": "संदेश",
+    "unread": {
+      "new": "{{count}} नवीन",
+      "unread": "{{count}} न वाचलेले",
+      "new_few": "{{count}} नवीन",
+      "new_many": "{{count}} नवीन",
+      "new_one": "{{count}} नवीन",
+      "new_other": "{{count}} नवीन",
+      "unread_few": "{{count}} न वाचलेले",
+      "unread_many": "{{count}} न वाचलेले",
+      "unread_one": "{{count}} न वाचलेले",
+      "unread_other": "{{count}} न वाचलेले"
+    },
+    "filter": {
+      "ariaLabel": "संदेश फिल्टर करा",
+      "tooltip": "संदेश फिल्टर करा",
+      "from": "कडून",
+      "to": "कडे",
+      "noData": "कोणताही डेटा नाही",
+      "showStatusUpdates": "स्थिती अपडेट्स दाखवा (निष्क्रिय/शटडाउन)",
+      "actions": {
+        "reset": "रीसेट करा",
+        "save": "जतन करा"
+      }
+    },
+    "status": {
+      "title": "स्थिती"
+    },
+    "actionMode": {
+      "label": "कृती मोड"
+    },
+    "search": {
+      "placeholder": "शोधा..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "कॉन्फिगर केले",
+      "connected": "कनेक्ट केले",
+      "failed": "अयशस्वी",
+      "free": "मोफत",
+      "local": "स्थानिक",
+      "needsTest": "चाचणी आवश्यक",
+      "verified": "पडताळले",
+      "unavailable": "उपलब्ध नाही",
+      "issue": "समस्या"
+    },
+    "customModelId": "कस्टम मॉडेल id",
+    "label": "मॉडेल (ऐच्छिक)",
+    "multimodelRequired": "Codex आणि Gemini ला मल्टीमॉडेल मोड आवश्यक आहे.",
+    "openCode": {
+      "allSources": "सर्व OpenCode स्रोत",
+      "filterSource": "{{source}} फिल्टर करा",
+      "filterSources": "OpenCode स्रोत फिल्टर करा",
+      "freeOnly": "फक्त मोफत",
+      "freeTooltip": "OpenCode हे मॉडेल मोफत म्हणून चिन्हांकित करते.",
+      "loadingModels": "OpenCode मॉडेल्स लोड होत आहेत...",
+      "noSourcesFound": "कोणतेही स्रोत सापडले नाहीत.",
+      "recommendedOnly": "फक्त शिफारस केलेले",
+      "searchSources": "स्रोत शोधा",
+      "sourcesCount": "{{count}} OpenCode स्रोत",
+      "sourcesCount_few": "{{count}} OpenCode स्रोत",
+      "sourcesCount_many": "{{count}} OpenCode स्रोत",
+      "sourcesCount_one": "{{count}} OpenCode स्रोत",
+      "sourcesCount_other": "{{count}} OpenCode स्रोत"
+    },
+    "reason": "कारण: {{reason}}",
+    "runtimeModelsSyncing": "स्पष्ट मॉडेल्स सध्याच्या रनटाइममधून लोड होतात. यादी सिंक होत असताना डीफॉल्ट उपलब्ध राहते.",
+    "fastMode": {
+      "codexLabel": "फास्ट मोड (2x क्रेडिट्स)",
+      "optionalLabel": "फास्ट मोड (ऐच्छिक)",
+      "defaultOff": "डीफॉल्ट (बंद)",
+      "fast": "फास्ट",
+      "off": "बंद",
+      "defaultFast": "डीफॉल्ट (फास्ट)",
+      "defaultResolvesTo": "डीफॉल्ट सध्या {{mode}} वर निराकरण होते.",
+      "runtimeBackedHint": "फास्ट मोड रनटाइम-समर्थित आहे आणि निराकरण केलेले Anthropic लॉन्च मॉडेल त्याला समर्थन देते तेव्हाच अनलॉक होतो."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Anthropic किंमत दस्तऐवज वाचा"
+    },
+    "searchModels": "मॉडेल्स शोधा",
+    "defaultModel": "डीफॉल्ट",
+    "empty": {
+      "noSearchMatches": "या शोधाशी कोणतीही मॉडेल्स जुळत नाहीत.",
+      "recommendedFreeOpenCode": "सध्याच्या रनटाइम यादीत कोणतीही शिफारस केलेली मोफत OpenCode मॉडेल्स उपलब्ध नाहीत.",
+      "freeOpenCode": "सध्याच्या रनटाइम यादीत कोणतीही मोफत OpenCode मॉडेल्स उपलब्ध नाहीत.",
+      "recommendedOpenCode": "सध्याच्या रनटाइम यादीत कोणतीही शिफारस केलेली OpenCode मॉडेल्स उपलब्ध नाहीत.",
+      "noModels": "सध्याच्या रनटाइम यादीत कोणतीही मॉडेल्स उपलब्ध नाहीत."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode टीम लॉन्चसाठी तयार नाही",
+      "freeModelsAvailableTitle": "OpenCode मोफत मॉडेल्स उपलब्ध आहेत",
+      "providerNotConnectedTitle": "OpenCode प्रोव्हायडर कनेक्ट केलेला नाही",
+      "readyTitle": "OpenCode तयार आहे",
+      "readyMessage": "OpenCode ने प्रोव्हायडर तयारी उत्तीर्ण केली. या टीमसाठी OpenCode मॉडेल्स वापरण्यासाठी ते निवडा.",
+      "useOpenCode": "OpenCode वापरा",
+      "badges": {
+        "check": "तपासा",
+        "install": "इन्स्टॉल करा",
+        "free": "मोफत",
+        "setup": "सेटअप"
+      },
+      "summary": {
+        "checking": "OpenCode स्थिती: रनटाइम तपासत आहे",
+        "status": "OpenCode स्थिती: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "टीम लॉन्च अवरोधित",
+        "providerOptional": "प्रोव्हायडर कनेक्शन ऐच्छिक",
+        "providerModelsNeedSetup": "प्रोव्हायडर-समर्थित मॉडेल्सना सेटअप आवश्यक",
+        "teamLaunchReady": "टीम लॉन्च तयार",
+        "runtimeDetected": "रनटाइम आढळला",
+        "runtimeMissing": "रनटाइम गहाळ",
+        "freeWithoutAuth": "ऑथशिवाय मोफत मॉडेल्स उपलब्ध",
+        "providerConnected": "प्रोव्हायडर कनेक्ट केला",
+        "providerNotConnected": "प्रोव्हायडर कनेक्ट केलेला नाही"
+      },
+      "messages": {
+        "checking": "अॅप अद्याप OpenCode रनटाइम तपासत आहे. प्रोव्हायडर स्थिती पूर्ण होण्याची वाट पाहा, मग पुन्हा प्रयत्न करा.",
+        "unsupported": "OpenCode इन्स्टॉल केलेले नाही, सापडले नाही, किंवा आढळलेला रनटाइम समर्थित नाही. OpenCode इन्स्टॉल किंवा अपडेट करा, मग प्रोव्हायडर स्थिती रिफ्रेश करा. तुम्ही मुख्यपृष्ठावरील इन्स्टॉल बटण देखील वापरू शकता.",
+        "freeAvailable": "OpenCode आढळले. तुम्ही प्रोव्हायडर कनेक्ट न करता Big Pickle सारखी मोफत OpenCode मॉडेल्स वापरू शकता. प्रोव्हायडर-समर्थित मॉडेल्स हवी असताना फक्त प्रोव्हायडर कनेक्ट करा.",
+        "noFreeListed": "OpenCode आढळले, पण अद्याप कोणतेही मोफत OpenCode मॉडेल सूचीबद्ध नाही. प्रोव्हायडर स्थिती रिफ्रेश करा, किंवा प्रोव्हायडर-समर्थित मॉडेल्ससाठी OpenCode मध्ये प्रोव्हायडर कनेक्ट करा.",
+        "launchBlocked": "OpenCode इन्स्टॉल आणि प्रमाणित आहे, पण Agent Teams लॉन्च तयारी अवरोधित आहे.",
+        "ready": "OpenCode टीम लॉन्चसाठी तयार आहे."
+      },
+      "loadingRuntime": "OpenCode रनटाइम स्थिती अद्याप लोड होत आहे."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping पुष्टी झाली नाही",
+      "note": "नोट"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode कॉन्फिग",
+      "builtinFree": "मोफत अंगभूत",
+      "connectedProviders": "कनेक्ट केलेले प्रोव्हायडर्स",
+      "otherCatalog": "इतर OpenCode कॅटलॉग"
+    },
+    "pricing": {
+      "free": "मोफत",
+      "inputShort": "इन {{rate}}",
+      "outputShort": "आउट {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "इनपुट: {{rate}} प्रति 1M टोकन्स",
+      "outputTitle": "आउटपुट: {{rate}} प्रति 1M टोकन्स",
+      "cacheReadTitle": "कॅश रीड: {{rate}} प्रति 1M टोकन्स",
+      "cacheWriteTitle": "कॅश राइट: {{rate}} प्रति 1M टोकन्स"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Anthropic-सुसंगत एंडपॉइंट डीफॉल्ट मॉडेल वापरते.\nसध्या {{model}} वर निराकरण होते.",
+      "anthropicCompatible": "Anthropic-सुसंगत एंडपॉइंट डीफॉल्ट मॉडेल वापरते.",
+      "anthropic": "Claude टीम डीफॉल्ट मॉडेल वापरते.\n1M संदर्भासह {{longContextModel}} वर, किंवा संदर्भ मर्यादित करा सक्षम असताना 200K संदर्भासह {{limitedContextModel}} वर निराकरण होते.",
+      "openCodeWithResolved": "OpenCode डीफॉल्ट मॉडेल वापरते.\nसध्या {{model}} वर निराकरण होते.",
+      "openCode": "OpenCode रनटाइम डीफॉल्ट मॉडेल वापरते.",
+      "runtime": "निवडलेल्या प्रोव्हायडरसाठी रनटाइम डीफॉल्ट वापरते."
+    },
+    "multimodelOff": "मल्टीमॉडेल बंद",
+    "unavailableInRuntime": "सध्याच्या रनटाइममध्ये उपलब्ध नाही"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "रद्द करा",
+      "delete": "हटवा",
+      "markResolved": "निराकरण झाले म्हणून चिन्हांकित करा",
+      "save": "जतन करा"
+    },
+    "attachments": {
+      "commentAttachment": "टिप्पणी संलग्नक",
+      "fromComments": "टिप्पण्यांमधून",
+      "preview": "{{filename}} पूर्वावलोकन"
+    },
+    "changes": {
+      "badges": {
+        "attention": "लक्ष",
+        "noSafeDiff": "कोणताही सुरक्षित diff नाही"
+      },
+      "empty": {
+        "noFileChangesRecorded": "कोणतेही फाइल बदल नोंदवले नाहीत",
+        "noFileChangesRecordedYet": "अद्याप कोणतेही फाइल बदल नोंदवले नाहीत",
+        "noReviewableChangesRecovered": "कोणतेही पुनरावलोकनयोग्य फाइल बदल पुनर्प्राप्त झाले नाहीत",
+        "noSafeDiffAvailable": "कोणताही सुरक्षित diff उपलब्ध नाही"
+      },
+      "loadFailed": "टास्क बदल सारांश लोड करणे अयशस्वी",
+      "loading": "बदल लोड होत आहेत...",
+      "fileCount": "{{count}} फाइल्स",
+      "fileRowsHidden": "{{count}} फाइल पंक्ती लपवल्या",
+      "moreDiagnostics": "{{count}} अधिक डायग्नॉस्टिक्स",
+      "moreFiles": "{{count}} अधिक फाइल्स",
+      "openInEditor": "एडिटरमध्ये उघडा",
+      "openTask": "टास्क {{subject}} उघडा",
+      "refresh": "बदल रिफ्रेश करा",
+      "refreshFailed": "रिफ्रेश अयशस्वी: {{error}}",
+      "refreshing": "रिफ्रेश करत आहे",
+      "refreshingChanges": "बदल रिफ्रेश करत आहे...",
+      "refreshTeamChanges": "टीम बदल रिफ्रेश करा",
+      "refreshShort": "रिफ्रेश",
+      "reviewDiff": "diff पुनरावलोकन करा",
+      "reviewTaskDiff": "टास्क diff पुनरावलोकन करा",
+      "scannedCandidateTasks": "{{eligible}} पैकी {{requested}} उमेदवार टास्क स्कॅन केले",
+      "tasksDeferred": "या पासमध्ये {{count}} टास्क पुढे ढकलले",
+      "title": "बदल",
+      "fileCount_few": "{{count}} फाइल्स",
+      "fileCount_many": "{{count}} फाइल्स",
+      "fileCount_one": "{{count}} फाइल",
+      "fileCount_other": "{{count}} फाइल्स",
+      "fileRowsHidden_few": "{{count}} फाइल पंक्ती लपवल्या",
+      "fileRowsHidden_many": "{{count}} फाइल पंक्ती लपवल्या",
+      "fileRowsHidden_one": "{{count}} फाइल पंक्ती लपवली",
+      "fileRowsHidden_other": "{{count}} फाइल पंक्ती लपवल्या",
+      "moreDiagnostics_few": "{{count}} अधिक डायग्नॉस्टिक्स",
+      "moreDiagnostics_many": "{{count}} अधिक डायग्नॉस्टिक्स",
+      "moreDiagnostics_one": "{{count}} अधिक डायग्नॉस्टिक",
+      "moreDiagnostics_other": "{{count}} अधिक डायग्नॉस्टिक्स",
+      "moreFiles_few": "{{count}} अधिक फाइल्स",
+      "moreFiles_many": "{{count}} अधिक फाइल्स",
+      "moreFiles_one": "{{count}} अधिक फाइल",
+      "moreFiles_other": "{{count}} अधिक फाइल्स",
+      "tasksDeferred_few": "या पासमध्ये {{count}} टास्क पुढे ढकलले",
+      "tasksDeferred_many": "या पासमध्ये {{count}} टास्क पुढे ढकलले",
+      "tasksDeferred_one": "या पासमध्ये {{count}} टास्क पुढे ढकलले",
+      "tasksDeferred_other": "या पासमध्ये {{count}} टास्क पुढे ढकलले"
+    },
+    "clarification": {
+      "awaitingLead": "टीम लीडकडून स्पष्टीकरणाची वाट पाहत आहे",
+      "awaitingUser": "तुमच्याकडून स्पष्टीकरणाची वाट पाहत आहे"
+    },
+    "description": {
+      "add": "वर्णन जोडण्यासाठी क्लिक करा...",
+      "edit": "वर्णन संपादित करा",
+      "placeholder": "टास्क वर्णन (markdown ला समर्थन देते)"
+    },
+    "loading": {
+      "fetchingTeamData": "टीम डेटा आणत आहे",
+      "title": "टास्क लोड होत आहे..."
+    },
+    "logs": {
+      "newArriving": "नवीन टास्क लॉग्स येत आहेत"
+    },
+    "notFound": "टास्क सापडले नाही",
+    "related": {
+      "blockedBy": "यांनी अवरोधित केले",
+      "blocks": "अवरोधित करते",
+      "linkedFrom": "यांच्याकडून लिंक केले",
+      "links": "लिंक्स",
+      "title": "संबंधित टास्क"
+    },
+    "review": {
+      "reviewer": "पुनरावलोकनकर्ता: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "संलग्नके",
+      "changes": "बदल",
+      "comments": "टिप्पण्या",
+      "description": "वर्णन",
+      "taskLogs": "टास्क लॉग्स",
+      "workflowHistory": "वर्कफ्लो इतिहास"
+    },
+    "unassigned": "नियुक्त नाही",
+    "workflow": {
+      "implementationTimeTitle": "जतन केलेल्या कार्य अंतरांवरून अंमलबजावणी वेळ",
+      "inProgressTime": "प्रगतीपथावरील वेळ {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "UI प्रतिसादक्षम ठेवण्यासाठी सर्वात अलीकडील {{formattedCount}} टिप्पण्या दाखवत आहे.",
+      "badges": {
+        "approved": "मंजूर",
+        "reviewRequested": "पुनरावलोकन विनंती केली"
+      },
+      "unknownTime": "अज्ञात वेळ",
+      "actions": {
+        "reply": "उत्तर द्या",
+        "replyToComment": "टिप्पणीला उत्तर द्या",
+        "showMore": "अधिक टिप्पण्या दाखवा ({{visible}}/{{total}})",
+        "cancelReply": "उत्तर रद्द करा",
+        "comment": "टिप्पणी"
+      },
+      "attachments": {
+        "previewAlt": "संलग्नक पूर्वावलोकन",
+        "downloadFailed": "डाउनलोड अयशस्वी"
+      },
+      "replyingTo": "यांना उत्तर देत आहे",
+      "input": {
+        "placeholder": "टिप्पणी जोडा... (पाठवण्यासाठी Enter)",
+        "charsLeft": "{{count}} अक्षरे शिल्लक",
+        "charsLeft_one": "{{count}} अक्षर शिल्लक",
+        "charsLeft_other": "{{count}} अक्षरे शिल्लक",
+        "charsLeft_few": "{{count}} अक्षरे शिल्लक",
+        "charsLeft_many": "{{count}} अक्षरे शिल्लक"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "कोणताही वर्कफ्लो इतिहास नोंदवला नाही",
+      "currentImplementationInterval": "सध्याचे अंमलबजावणी अंतर",
+      "implementationIntervalEnded": "या संक्रमणावर अंमलबजावणी अंतर संपले",
+      "runningPrefix": "चालू ",
+      "createdAs": "म्हणून तयार केले",
+      "by": "द्वारे",
+      "reassigned": "पुन्हा नियुक्त केले",
+      "assignedTo": "यांना नियुक्त केले",
+      "unassignedFrom": "यांच्याकडून नियुक्ती काढली",
+      "ownerChanged": "मालक बदलला",
+      "reviewRequested": "पुनरावलोकन विनंती केली",
+      "reviewStarted": "पुनरावलोकन सुरू झाले",
+      "changesRequested": "बदल विनंती केली",
+      "approved": "मंजूर",
+      "unknownEvent": "अज्ञात घटना"
+    },
+    "reviewStates": {
+      "approved": "मंजूर",
+      "needsFix": "दुरुस्ती आवश्यक",
+      "inReview": "पुनरावलोकनात"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "नियुक्त व्यक्ती",
+      "assigneeOptional": "नियुक्त व्यक्ती (ऐच्छिक)",
+      "blockedByOptional": "यांनी अवरोधित केलेली टास्क (ऐच्छिक)",
+      "blockedBySummary": "टास्क यांनी अवरोधित होईल: {{tasks}}",
+      "cancel": "रद्द करा",
+      "create": "तयार करा",
+      "creating": "तयार करत आहे...",
+      "description": "टास्क टीमच्या tasks/ डिरेक्टरीमध्ये तयार होईल आणि Kanban बोर्डवर दिसेल.",
+      "descriptionOptional": "वर्णन (ऐच्छिक)",
+      "detailsPlaceholder": "टास्क तपशील (markdown ला समर्थन देते)",
+      "hideOptionalFields": "ऐच्छिक फील्ड्स लपवा",
+      "offlineNotice": {
+        "after": "- अंमलबजावणी सुरू करण्यासाठी टीम सुरू करा.",
+        "before": "टीम ऑफलाइन आहे. टास्क येथे जोडले जाईल"
+      },
+      "promptOptional": "नियुक्त व्यक्तीसाठी प्रॉम्प्ट (ऐच्छिक)",
+      "promptPlaceholder": "टीम सदस्यासाठी कस्टम सूचना...",
+      "relatedOptional": "संबंधित टास्क (ऐच्छिक)",
+      "relatedSummary": "संबंधित: {{tasks}}",
+      "saved": "जतन केले",
+      "searchTasks": "टास्क शोधा...",
+      "selectMember": "एक सदस्य निवडा",
+      "selectMemberOptional": "सदस्य निवडा...",
+      "showOptionalFields": "ऐच्छिक फील्ड्स दाखवा",
+      "startImmediately": "लगेच सुरू करा",
+      "startOfflineHint": "टीम ऑफलाइन आहे. टास्क लगेच सुरू करण्यासाठी प्रथम टीम सुरू करा.",
+      "subject": "विषय",
+      "subjectPlaceholder": "काय करायचे आहे?",
+      "title": "टास्क तयार करा",
+      "todo": "करायचे आहे"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "यांनी अवरोधित केले",
+        "blocks": "अवरोधित करते",
+        "id": "ID",
+        "owner": "मालक",
+        "status": "स्थिती",
+        "subject": "विषय"
+      },
+      "empty": "या टीममध्ये कोणतीही टास्क नाहीत",
+      "filters": {
+        "allOwners": "सर्व मालक",
+        "allStatuses": "सर्व स्थिती",
+        "ownerAria": "मालकानुसार टास्क फिल्टर करा",
+        "statusAria": "स्थितीनुसार टास्क फिल्टर करा"
+      },
+      "showing": "{{total}} पैकी {{shown}} दाखवत आहे"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "टास्क {{completed}}/{{total}} पूर्ण",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "नियुक्त नाही",
+    "teamPrefix": "टीम:",
+    "openTask": "टास्क उघडा",
+    "deleteConfirm": {
+      "title": "टास्क हटवा",
+      "message": "टास्क #{{taskId}} कचऱ्यात हलवायचे?",
+      "confirmLabel": "हटवा",
+      "cancelLabel": "रद्द करा"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "रद्द करा",
+      "closeEditor": "एडिटर बंद करा",
+      "closeTab": "टॅब बंद करा",
+      "closeTooltip": "एडिटर बंद करा (Esc)",
+      "discard": "टाकून द्या",
+      "discardAndClose": "टाकून द्या आणि बंद करा",
+      "keep": "ठेवा",
+      "keepMine": "माझे ठेवा",
+      "keyboardShortcuts": "कीबोर्ड शॉर्टकट्स",
+      "overwrite": "ओव्हरराइट करा",
+      "refreshAria": "रिफ्रेश करा (F5)",
+      "refreshTooltip": "git स्थिती रिफ्रेश करा (F5)",
+      "reload": "पुन्हा लोड करा",
+      "retry": "पुन्हा प्रयत्न करा",
+      "save": "जतन करा",
+      "saveAllAndClose": "सर्व जतन करा आणि बंद करा"
+    },
+    "ariaLabel": "प्रकल्प एडिटर",
+    "dialogs": {
+      "conflictDescription": "तुम्ही उघडल्यापासून फाइल बाह्यरित्या सुधारित केली गेली आहे. तुमच्या बदलांनी ओव्हरराइट करायची?",
+      "conflictTitle": "जतन संघर्ष",
+      "unsavedDescription": "तुमच्याकडे जतन न केलेले बदल आहेत. तुम्हाला काय करायचे आहे?",
+      "unsavedFileDescription": "या फाइलमध्ये जतन न केलेले बदल आहेत. तुम्हाला काय करायचे आहे?",
+      "unsavedTitle": "जतन न केलेले बदल"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "नाव रिकामे असू शकत नाही",
+        "invalidName": "अवैध नाव",
+        "invalidCharacters": "नावात अवैध अक्षरे आहेत",
+        "nameTooLong": "नाव खूप लांब आहे"
+      },
+      "placeholders": {
+        "fileName": "फाइल नाव...",
+        "folderName": "फोल्डर नाव..."
+      },
+      "aria": {
+        "newFileName": "नवीन फाइल नाव",
+        "newFolderName": "नवीन फोल्डर नाव"
+      }
+    },
+    "draftRecovered": "मागील सत्रातील जतन न केलेले बदल पुनर्प्राप्त केले.",
+    "externalChange": {
+      "changed": "फाइल डिस्कवर बदलली.",
+      "deleted": "फाइल आता डिस्कवर अस्तित्वात नाही."
+    },
+    "saveFailed": "जतन अयशस्वी: {{error}}",
+    "sidebar": {
+      "explorer": "एक्सप्लोरर",
+      "hide": "साइडबार लपवा",
+      "hideWithShortcut": "साइडबार लपवा ({{shortcut}})",
+      "show": "साइडबार दाखवा",
+      "showWithShortcut": "साइडबार दाखवा ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "फाइल्समध्ये शोधा",
+      "closeSearch": "शोध बंद करा",
+      "closeSearchShortcut": "शोध बंद करा (Esc)",
+      "searchPlaceholder": "शोधा...",
+      "matchCase": "केस जुळवा",
+      "matchCaseToggle": "Aa",
+      "noResults": "कोणतेही परिणाम सापडले नाहीत",
+      "resultsSummary": "{{fileCount}} फाइल्समध्ये {{count}} जुळण्या",
+      "resultsSummary_one": "{{fileCount}} फाइल्समध्ये {{count}} जुळणी",
+      "truncated": "(छाटले)",
+      "resultsSummary_few": "{{fileCount}} फाइल्समध्ये {{count}} जुळण्या",
+      "resultsSummary_many": "{{fileCount}} फाइल्समध्ये {{count}} जुळण्या",
+      "resultsSummary_other": "{{fileCount}} फाइल्समध्ये {{count}} जुळण्या"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "फाइल्स लोड करणे अयशस्वी: {{error}}",
+      "loading": "फाइल्स लोड होत आहेत...",
+      "empty": "कोणत्याही फाइल्स सापडल्या नाहीत",
+      "dropForProjectRoot": "प्रकल्प रूटसाठी येथे टाका",
+      "moveToTrash": "कचऱ्यात हलवा",
+      "moveToTrashConfirm": "\"{{name}}\" कचऱ्यात हलवायचे?",
+      "cancel": "रद्द करा"
+    },
+    "goToLine": {
+      "title": "ओळीवर जा",
+      "position": "(सध्याचे: {{current}}, एकूण: {{total}})",
+      "placeholder": "ओळ क्रमांक, +ऑफसेट, -ऑफसेट, किंवा %",
+      "go": "जा"
+    },
+    "searchPanel": {
+      "previousMatch": "मागील जुळणी",
+      "nextMatch": "पुढील जुळणी",
+      "close": "बंद करा",
+      "replacePlaceholder": "बदला",
+      "replace": "बदला",
+      "replaceNext": "पुढील बदला",
+      "all": "सर्व",
+      "replaceAll": "सर्व बदला"
+    },
+    "statusBar": {
+      "position": "ओळ {{line}}, स्तंभ {{col}}",
+      "enableWatcher": "फाइल वॉचर सक्षम करा",
+      "disableWatcher": "फाइल वॉचर अक्षम करा",
+      "watch": "वॉच",
+      "watching": "वॉच करत आहे",
+      "watchExternalChanges": "बाह्य बदलांसाठी वॉच करा",
+      "disableExternalWatcher": "बाह्य बदल वॉचर अक्षम करा",
+      "encodingUtf8": "UTF-8",
+      "spaces": "स्पेसेस: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "पूर्वावलोकन लोड होत आहे...",
+      "openFullSize": "पूर्ण-आकाराचे पूर्वावलोकन उघडा",
+      "openSystemViewer": "सिस्टम व्ह्यूअरमध्ये उघडा"
+    },
+    "quickOpen": {
+      "title": "जलद उघडा",
+      "searchPlaceholder": "नावाने फाइल्स शोधा...",
+      "loading": "फाइल्स लोड होत आहेत...",
+      "empty": "कोणत्याही फाइल्स सापडल्या नाहीत"
+    },
+    "errorBoundary": {
+      "crashed": "एडिटर क्रॅश झाला",
+      "unknownError": "अज्ञात त्रुटी"
+    },
+    "binaryPlaceholder": {
+      "file": "बायनरी फाइल ({{size}})"
+    },
+    "unsavedChanges": "जतन न केलेले बदल",
+    "empty": {
+      "selectFile": "संपादित करण्यासाठी ट्रीमधून एक फाइल निवडा"
+    },
+    "search": {
+      "toggleReplace": "बदला टॉगल करा",
+      "placeholder": "शोधा"
+    },
+    "shortcuts": {
+      "title": "कीबोर्ड शॉर्टकट्स",
+      "groups": {
+        "fileOperations": "फाइल ऑपरेशन्स",
+        "search": "शोध",
+        "navigation": "नेव्हिगेशन",
+        "editing": "संपादन",
+        "markdown": "Markdown",
+        "general": "सामान्य"
+      },
+      "actions": {
+        "quickOpen": "जलद उघडा",
+        "save": "जतन करा",
+        "saveAll": "सर्व जतन करा",
+        "closeTab": "टॅब बंद करा",
+        "findInFile": "फाइलमध्ये शोधा",
+        "searchInFiles": "फाइल्समध्ये शोधा",
+        "goToLine": "ओळीवर जा",
+        "nextTab": "पुढील टॅब",
+        "previousTab": "मागील टॅब",
+        "cycleTabs": "टॅब्स सायकल करा",
+        "toggleSidebar": "साइडबार टॉगल करा",
+        "undo": "पूर्ववत करा",
+        "redo": "पुन्हा करा",
+        "selectNextMatch": "पुढील जुळणी निवडा",
+        "toggleComment": "टिप्पणी टॉगल करा",
+        "splitPreview": "स्प्लिट पूर्वावलोकन",
+        "fullPreview": "पूर्ण पूर्वावलोकन",
+        "closeEditor": "एडिटर बंद करा"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "शब्द रॅप सक्षम करा",
+      "disableWordWrap": "शब्द रॅप अक्षम करा",
+      "closeSplitPreview": "स्प्लिट पूर्वावलोकन बंद करा",
+      "closePreview": "पूर्वावलोकन बंद करा"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "वेळापत्रक तयार करा",
+      "creating": "तयार करत आहे...",
+      "goToDashboard": "डॅशबोर्डवर जा",
+      "launchTeam": "टीम सुरू करा",
+      "launching": "सुरू करत आहे...",
+      "relaunchTeam": "टीम पुन्हा सुरू करा",
+      "relaunching": "पुन्हा सुरू करत आहे...",
+      "saveChanges": "बदल जतन करा",
+      "saving": "जतन करत आहे..."
+    },
+    "billing": {
+      "prefix": "15 जून, 2026 पासून, Anthropic बिल करते",
+      "readArticle": "Anthropic लेख वाचा",
+      "suffix": "आणि Agent SDK वापर मासिक Agent SDK क्रेडिटमधून, परस्परसंवादी Claude Code मर्यादांपासून वेगळा. क्रेडिट प्रत्येक बिलिंग चक्रात रीसेट होते आणि न वापरलेले क्रेडिट पुढे जात नाही."
+    },
+    "conflict": {
+      "description": "एकाच डिरेक्टरीमध्ये दोन टीम्स चालवणे जोखमीचे आहे - त्या समान फाइल्स संपादित करताना संघर्ष करू शकतात. पृथक्करणासाठी वेगळी डिरेक्टरी किंवा git worktree वापरण्याचा विचार करा.",
+      "title": "या वर्किंग डिरेक्टरीसाठी आधीच दुसरी टीम \"{{team}}\" चालू आहे",
+      "workingDirectory": "वर्किंग डिरेक्टरी:"
+    },
+    "description": {
+      "createSchedule": "स्वयंचलित Claude टास्क अंमलबजावणी नियोजित करा",
+      "createScheduleForTeam": "टीम \"{{team}}\" साठी स्वयंचलित रन नियोजित करा",
+      "editSchedule": "टीम \"{{team}}\" साठी वेळापत्रक संपादित करत आहे",
+      "launchPrefix": "टीम सुरू करा",
+      "launchSuffix": "स्थानिक Claude CLI द्वारे.",
+      "relaunchPrefix": "सध्याचा रन थांबवा",
+      "relaunchSuffix": "आणि स्थानिक Claude CLI द्वारे पुन्हा सुरू करा."
+    },
+    "prepare": {
+      "action": {
+        "launch": "सुरू करा",
+        "relaunch": "पुन्हा सुरू करा"
+      },
+      "blocked": "रनटाइम एन्व्हायर्न्मेंट उपलब्ध नाही - {{action}} अवरोधित आहे",
+      "checkingProviders": "निवडलेले प्रोव्हायडर्स तपासत आहे...",
+      "failed": "निवडलेले प्रोव्हायडर्स तयार करणे अयशस्वी",
+      "preflight": "{{action}} पूर्वी त्रुटी पकडण्यासाठी प्री-फ्लाइट तपासणी",
+      "preparingEnvironment": "एन्व्हायर्न्मेंट तयार करत आहे...",
+      "ready": "सर्व निवडलेले प्रोव्हायडर्स तयार आहेत.",
+      "readyWithNotes": "सर्व निवडलेले प्रोव्हायडर्स तयार आहेत, नोट्ससह.",
+      "unsupportedPreload": "सध्याची preload आवृत्ती team:prepareProvisioning ला समर्थन देत नाही. dev अॅप रीस्टार्ट करा.",
+      "selectWorkingDirectory": "लॉन्च एन्व्हायर्न्मेंट पडताळण्यासाठी एक वर्किंग डिरेक्टरी निवडा.",
+      "someProvidersNeedAttention": "काही निवडलेल्या प्रोव्हायडर्सना लक्ष देण्याची गरज आहे."
+    },
+    "prompt": {
+      "label": "प्रॉम्प्ट",
+      "oneShotPrefix": "हा प्रॉम्प्ट यांना पाठवला जाईल",
+      "oneShotSuffix": "एक-शॉट अंमलबजावणीसाठी",
+      "saved": "जतन केले",
+      "schedulePlaceholder": "वेळापत्रकानुसार अंमलात आणण्यासाठी Claude साठी सूचना...",
+      "teamLeadOptional": "टीम लीडसाठी प्रॉम्प्ट (ऐच्छिक)",
+      "teamLeadPlaceholder": "टीम लीडसाठी सूचना..."
+    },
+    "providerChanged": "प्रोव्हायडर {{from}} वरून {{to}} वर बदलला. मागील लीड सत्र पुन्हा सुरू केले जाणार नाही, आणि नवीन रनटाइम योग्यरित्या लागू होण्यासाठी लीड ताज्या संदर्भासह सुरू होईल.",
+    "relaunchFreshSession": "टीम पुन्हा सुरू केल्याने ताजे लीड सत्र सुरू होते. टिकाऊ टीम स्थिती, टास्क बोर्ड आणि सदस्य कॉन्फिगरेशन लॉन्च प्रॉम्प्टमध्ये पुन्हा भरले जातात.",
+    "relaunchWarning": {
+      "description": "या सेटिंग्ज जतन केल्याने सध्याची टीम प्रक्रिया थांबेल, अपडेट केलेला रोस्टर टिकवला जाईल, आणि नवीन रनटाइमसह टीम पुन्हा सुरू होईल.",
+      "title": "पुन्हा सुरू केल्याने सध्याचा टीम रन रीस्टार्ट होईल"
+    },
+    "schedule": {
+      "labelOptional": "लेबल (ऐच्छिक)",
+      "labelPlaceholder": "उदा., दैनिक कोड पुनरावलोकन, रात्रीच्या चाचण्या...",
+      "maxBudgetUsd": "कमाल बजेट (USD)",
+      "maxTurns": "कमाल वळणे",
+      "noLimit": "कोणतीही मर्यादा नाही",
+      "noMatches": "तुमच्या शोधाशी कोणतीही टीम्स जुळत नाहीत.",
+      "noTeams": "कोणत्याही टीम्स उपलब्ध नाहीत. प्रथम एक टीम तयार करा.",
+      "searchTeams": "टीम्स शोधा...",
+      "selectTeam": "एक टीम निवडा...",
+      "team": "टीम",
+      "title": "वेळापत्रक"
+    },
+    "title": {
+      "createSchedule": "वेळापत्रक तयार करा",
+      "editSchedule": "वेळापत्रक संपादित करा",
+      "launch": "टीम सुरू करा",
+      "relaunch": "टीम पुन्हा सुरू करा"
+    },
+    "errors": {
+      "loadProjectsFailed": "प्रकल्प लोड करणे अयशस्वी",
+      "saveScheduleFailed": "वेळापत्रक जतन करणे अयशस्वी",
+      "relaunchFailed": "टीम पुन्हा सुरू करणे अयशस्वी",
+      "launchFailed": "टीम सुरू करणे अयशस्वी"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode लीडला निवडलेले मॉडेल आवश्यक आहे.",
+      "openCodeTeammateRequired": "OpenCode लीडला किमान एक OpenCode सहकारी आवश्यक आहे.",
+      "selectWorkingDirectory": "वर्किंग डिरेक्टरी निवडा (cwd)",
+      "fixMemberNames": "सुरू करण्यापूर्वी सदस्य नावे दुरुस्त करा",
+      "memberNamesUnique": "सुरू करण्यापूर्वी सदस्य नावे अद्वितीय असणे आवश्यक आहे"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "पुन्हा सुरू करण्याच्या सेटिंग्ज",
+      "title": "ऐच्छिक लॉन्च सेटिंग्ज",
+      "relaunchDescription": "टीम रीस्टार्ट करण्यापूर्वी रोस्टर आणि लीड रनटाइम तपासा.",
+      "description": "लॉन्च फ्लो प्रकल्प पथावर केंद्रित ठेवा आणि तुम्हाला अतिरिक्त नियंत्रण हवे असेल तेव्हाच हे विस्तृत करा."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "टीम कॉपी करा",
+      "createTeam": "टीम तयार करा",
+      "deleteForever": "कायमचे हटवा",
+      "deletePermanently": "कायमस्वरूपी हटवा",
+      "deleteTeam": "टीम हटवा",
+      "launching": "सुरू करत आहे...",
+      "launchTeam": "टीम सुरू करा",
+      "relaunchTeam": "टीम पुन्हा सुरू करा",
+      "restore": "पुनर्संचयित करा",
+      "restoreTeam": "टीम पुनर्संचयित करा",
+      "retry": "पुन्हा प्रयत्न करा",
+      "stopTeam": "टीम थांबवा",
+      "stopping": "थांबवत आहे..."
+    },
+    "electronOnly": {
+      "description": "ब्राउझर मोडमध्ये, स्थानिक `~/.claude/teams` डिरेक्टरीजचा प्रवेश उपलब्ध नाही.",
+      "title": "टीम्स फक्त Electron मोडमध्ये उपलब्ध आहे"
+    },
+    "empty": {
+      "description": "सुरुवात करण्यासाठी येथे एक टीम तयार करा. ती आपोआप यादीत दिसेल.",
+      "localOnly": "टीम तयार करणे फक्त स्थानिक Electron मोडमध्ये उपलब्ध आहे.",
+      "title": "कोणत्याही टीम्स सापडल्या नाहीत"
+    },
+    "filter": {
+      "clearAll": "सर्व साफ करा",
+      "label": "टीम्स फिल्टर करा",
+      "projectPriority": "प्रकल्प प्राधान्य",
+      "status": "स्थिती"
+    },
+    "loadFailed": "टीम्स लोड करणे अयशस्वी",
+    "loading": "टीम्स लोड होत आहेत...",
+    "localOnly": "फक्त स्थानिक Electron मोडमध्ये उपलब्ध.",
+    "membersCount": "सदस्य: {{count}}",
+    "membersCount_few": "सदस्य: {{count}}",
+    "membersCount_many": "सदस्य: {{count}}",
+    "membersCount_one": "सदस्य: {{count}}",
+    "membersCount_other": "सदस्य: {{count}}",
+    "noDescription": "कोणतेही वर्णन नाही",
+    "noMatches": "सध्याच्या फिल्टर्सशी जुळणाऱ्या कोणत्याही टीम्स नाहीत",
+    "partial": {
+      "pending": "शेवटचे सुरू होणे अजूनही समन्वयित होत आहे.",
+      "skipped": "शेवटच्या सुरू होण्याने सहकारी वगळले आहेत.",
+      "skippedWithCount": "शेवटच्या सुरू होण्याने {{count}}/{{expected}} सहकारी वगळला.",
+      "skippedWithCount_few": "शेवटच्या सुरू होण्याने {{count}}/{{expected}} सहकारी वगळले.",
+      "skippedWithCount_many": "शेवटच्या सुरू होण्याने {{count}}/{{expected}} सहकारी वगळले.",
+      "skippedWithCount_one": "शेवटच्या सुरू होण्याने {{count}}/{{expected}} सहकारी वगळला.",
+      "skippedWithCount_other": "शेवटच्या सुरू होण्याने {{count}}/{{expected}} सहकारी वगळले.",
+      "stopped": "सर्व सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले.",
+      "stoppedWithCount": "{{count}}/{{expected}} सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले.",
+      "stoppedWithCount_few": "{{count}}/{{expected}} सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले.",
+      "stoppedWithCount_many": "{{count}}/{{expected}} सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले.",
+      "stoppedWithCount_one": "{{count}}/{{expected}} सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले.",
+      "stoppedWithCount_other": "{{count}}/{{expected}} सहकारी सामील होण्यापूर्वी शेवटचे सुरू होणे थांबले."
+    },
+    "searchPlaceholder": "टीम्स शोधा...",
+    "sections": {
+      "otherTeams": "इतर टीम्स",
+      "projectTeams": "{{project}} साठी टीम्स",
+      "selectedProject": "निवडलेला प्रकल्प"
+    },
+    "solo": "एकल",
+    "status": {
+      "active": "सक्रिय",
+      "deleted": "हटवले",
+      "launching": "सुरू करत आहे...",
+      "offline": "ऑफलाइन",
+      "partialFailure": "सुरू होणे मध्येच अयशस्वी",
+      "partialPending": "बूटस्ट्रॅप प्रलंबित",
+      "partialSkipped": "सुरू होताना सदस्य वगळला",
+      "running": "चालू आहे"
+    },
+    "title": "टीम निवडा",
+    "trash": "कचरा ({{count}})",
+    "trash_few": "कचरा ({{count}})",
+    "trash_many": "कचरा ({{count}})",
+    "trash_one": "कचरा ({{count}})",
+    "trash_other": "कचरा ({{count}})",
+    "deleteDraft": {
+      "title": "मसुदा हटवा",
+      "message": "मसुदा टीम \"{{teamName}}\" हटवायची? हे पूर्ववत करता येणार नाही.",
+      "confirmLabel": "हटवा",
+      "cancelLabel": "रद्द करा"
+    },
+    "moveToTrash": {
+      "title": "कचऱ्यात हलवा",
+      "message": "टीम \"{{teamName}}\" कचऱ्यात हलवायची? तुम्ही ती नंतर पुनर्संचयित करू शकता.",
+      "confirmLabel": "कचऱ्यात हलवा",
+      "cancelLabel": "रद्द करा"
+    },
+    "deleteForever": {
+      "title": "कायमस्वरूपी हटवा",
+      "message": "टीम \"{{teamName}}\" कायमस्वरूपी हटवायची? सर्व डेटा गमावला जाईल.",
+      "confirmLabel": "कायमचे हटवा",
+      "cancelLabel": "रद्द करा"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "टीप: क्रॉस-टीम संदेश लक्ष्य टीम लीडकडे जातात. उत्तर तुमच्याऐवजी तुमच्या टीम लीडकडे परत यावे असे तुम्हाला वाटत असल्यास, ते संदेशात स्पष्टपणे सांगा."
+    },
+    "attachments": {
+      "attachFiles": "फाइल्स संलग्न करा (पेस्ट करा किंवा ड्रॅग आणि ड्रॉप करा)",
+      "unavailable": "संलग्नके उपलब्ध नाहीत",
+      "disabledHint": "ऑनलाइन टीम लीड आणि ऑनलाइन OpenCode सहकाऱ्यांसाठी फाइल संलग्नकांना समर्थन आहे. संलग्नके काढा किंवा प्राप्तकर्ता बदला.",
+      "restrictions": {
+        "crossTeam": "क्रॉस-टीम संदेशांसाठी फाइल संलग्नकांना समर्थन नाही",
+        "teamOffline": "फाइल्स संलग्न करण्यासाठी टीम ऑनलाइन असणे आवश्यक आहे",
+        "unsupportedRecipient": "फाइल्स टीम लीड किंवा OpenCode सहकाऱ्यांना पाठवता येतात",
+        "openCodeOffline": "OpenCode सहकाऱ्यांसाठी फाइल्स संलग्न करण्यासाठी टीम ऑनलाइन असणे आवश्यक आहे",
+        "sending": "फाइल्स जोडण्यापूर्वी सध्याचा संदेश पाठवणे पूर्ण होण्याची वाट पाहा",
+        "maximumReached": "कमाल संलग्नके पोहोचली",
+        "leadOnly": "फाइल्स फक्त टीम लीडला पाठवता येतात"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "स्लॅश कमांड्सना लाइव्ह टीम लीड आवश्यक आहे आणि संलग्नकांसह पाठवता येत नाहीत",
+        "crossTeam": "स्लॅश कमांड्स फक्त सध्याच्या टीम लीडवर चालवता येतात",
+        "notLead": "स्लॅश कमांड्स फक्त टीम लीडला पाठवता येतात",
+        "leadOffline": "स्लॅश कमांड्सना टीम लीड ऑनलाइन असणे आवश्यक आहे"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "अलीकडील क्रॉस-टीम विनंती पुन्हा वापरली",
+      "teamOffline": "टीम ऑफलाइन"
+    },
+    "revision": {
+      "editing": "मागील संदेश संपादित करत आहे",
+      "cancel": "रद्द करा",
+      "tooltip": "एजंटला मागील संदेशाकडे दुर्लक्ष करण्यास आणि तो कंपोझरमध्ये पुनर्संचयित करण्यास सांगा."
+    },
+    "input": {
+      "charsLeft": "{{count}} अक्षरे शिल्लक",
+      "charsLeft_one": "{{count}} अक्षर शिल्लक",
+      "charsLeft_other": "{{count}} अक्षरे शिल्लक",
+      "teamLaunchingPlaceholder": "टीम सुरू होत आहे... संदेश इनबॉक्स वितरणासाठी रांगेत लावला जाईल.",
+      "crossTeamPlaceholder": "{{team}} ला क्रॉस-टीम संदेश...",
+      "teamFallback": "टीम",
+      "placeholder": "संदेश लिहा... (पाठवण्यासाठी Enter, नवीन ओळीसाठी Shift+Enter)",
+      "slashTip": "टीप: कोणत्याही Claude कमांड्स चालवण्यासाठी तुम्ही \"/\" वापरू शकता.",
+      "charsLeft_few": "{{count}} अक्षरे शिल्लक",
+      "charsLeft_many": "{{count}} अक्षरे शिल्लक"
+    },
+    "teamSelector": {
+      "thisTeam": "ही टीम",
+      "current": "सध्याची",
+      "online": "ऑनलाइन",
+      "offline": "ऑफलाइन",
+      "onlineTitle": "ऑनलाइन",
+      "offlineTitle": "ऑफलाइन"
+    },
+    "recipient": {
+      "select": "निवडा...",
+      "searchPlaceholder": "शोधा...",
+      "noResults": "कोणतेही परिणाम नाहीत"
+    },
+    "actions": {
+      "voiceToText": "आवाज ते मजकूर",
+      "send": "पाठवा",
+      "sendingUnavailableLaunching": "टीम सुरू होत असताना पाठवणे उपलब्ध नाही"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "लॉग्स फिल्टर करा",
+      "tooltip": "लॉग्स फिल्टर करा",
+      "sections": {
+        "stream": "स्ट्रीम",
+        "content": "मजकूर"
+      },
+      "kinds": {
+        "output": "आउटपुट",
+        "thinking": "विचार",
+        "tool": "टूल कॉल्स"
+      },
+      "actions": {
+        "reset": "रीसेट करा",
+        "save": "जतन करा"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} कच्च्या ओळी",
+    "rawLineCount_one": "{{formattedCount}} कच्ची ओळ",
+    "rawLinesCaptured": "{{count}} कॅप्चर केले",
+    "emptyRawLogs": "{{count}}; अद्याप कोणतेही असिस्टंट/टूल आउटपुट नाही.",
+    "noLogsYet": "अद्याप कोणतेही लॉग्स नाहीत.",
+    "teamNotRunning": "टीम चालू नाही.",
+    "searchPlaceholder": "लॉग्स शोधा...",
+    "clearSearch": "शोध साफ करा",
+    "newCount": "+{{count}} नवीन",
+    "loading": "लोड होत आहे...",
+    "showMore": "अधिक दाखवा",
+    "noLogsCaptured": "कोणतेही लॉग्स कॅप्चर केले नाहीत.",
+    "noMatchingLogs": "जुळणारे कोणतेही लॉग्स नाहीत.",
+    "rawLineCount_few": "{{formattedCount}} कच्च्या ओळी",
+    "rawLineCount_many": "{{formattedCount}} कच्च्या ओळी",
+    "rawLineCount_other": "{{formattedCount}} कच्च्या ओळी",
+    "openFullscreen": "फुलस्क्रीन लॉग्स उघडा",
+    "fullscreen": "फुलस्क्रीन",
+    "viewingFullscreen": "फुलस्क्रीन मोडमध्ये पाहत आहे",
+    "logsTitle": "लॉग्स",
+    "sourceSelect": {
+      "placeholder": "लॉग स्रोत निवडा...",
+      "searchPlaceholder": "लॉग स्रोत शोधा...",
+      "emptyMessage": "कोणतेही लॉग स्रोत सापडले नाहीत.",
+      "ariaLabel": "लॉग स्रोत",
+      "leadLabel": "लीड",
+      "selectSourceEmpty": "एक लॉग स्रोत निवडा.",
+      "leadDescription": "टीम लीड",
+      "removedLabel": "काढले",
+      "removedDescription": "काढले"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "बाह्य टीम",
+      "process": {
+        "startedBy": "यांनी सुरू केले:",
+        "at": "येथे:",
+        "openUrl": "URL उघडा"
+      },
+      "overflow": {
+        "hiddenTasks": "लपवलेली टास्क",
+        "empty": "कोणतीही लपवलेली टास्क उपलब्ध नाहीत."
+      },
+      "member": {
+        "lead": "लीड",
+        "workingOn": "यावर काम करत आहे",
+        "recentTools": "अलीकडील टूल्स",
+        "spawn": {
+          "waitingToStart": "सुरू होण्याची वाट पाहत आहे",
+          "starting": "सुरू होत आहे",
+          "failed": "अयशस्वी"
+        },
+        "state": {
+          "active": "सक्रिय",
+          "idle": "निष्क्रिय",
+          "offline": "ऑफलाइन",
+          "runningTool": "टूल चालवत आहे"
+        },
+        "activeTool": {
+          "running": "टूल चालवत आहे",
+          "failed": "टूल अयशस्वी",
+          "finished": "टूल पूर्ण झाले"
+        },
+        "actions": {
+          "message": "संदेश",
+          "profile": "प्रोफाइल",
+          "task": "टास्क"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "लॉग्स",
+      "loading": "लॉग्स लोड होत आहेत",
+      "more": "+{{count}} अधिक",
+      "more_one": "+{{count}} अधिक",
+      "more_other": "+{{count}} अधिक",
+      "more_few": "+{{count}} अधिक",
+      "more_many": "+{{count}} अधिक",
+      "unsupportedProvider": "असमर्थित प्रोव्हायडर",
+      "openCodeLogsDelayed": "OpenCode लॉग्स विलंबित",
+      "logsUnavailable": "लॉग्स उपलब्ध नाहीत",
+      "noRecentLogs": "अलीकडील कोणतेही लॉग्स नाहीत",
+      "toolError": "टूल त्रुटी",
+      "toolResult": "टूल परिणाम",
+      "toolUse": "टूल वापर",
+      "thinking": "विचार",
+      "error": "त्रुटी",
+      "logEvent": "लॉग घटना",
+      "noErrorOutput": "कोणतेही त्रुटी आउटपुट नाही",
+      "noOutput": "कोणतेही आउटपुट नाही",
+      "noInput": "कोणतेही इनपुट नाही"
+    },
+    "blockingEdge": {
+      "title": "अवरोधक अवलंबित्व",
+      "blocks": "अवरोधित करते",
+      "close": "बंद करा",
+      "blockingHiddenTasks": "लपवलेली टास्क अवरोधित करत आहे",
+      "blockedHiddenTasks": "अवरोधित लपवलेली टास्क",
+      "links_one": "{{count}} लिंक",
+      "links_other": "{{count}} लिंक्स",
+      "hiddenBlockingLinks_one": "{{count}} लपवलेली अवरोधक लिंक",
+      "hiddenBlockingLinks_other": "{{count}} लपवलेल्या अवरोधक लिंक्स",
+      "hiddenTaskStack": "लपवलेला टास्क स्टॅक",
+      "hiddenTasks_one": "{{count}} लपवलेले टास्क",
+      "hiddenTasks_other": "{{count}} लपवलेली टास्क",
+      "task": "टास्क",
+      "openBlockerStack": "अवरोधक स्टॅक उघडा",
+      "openBlockedStack": "अवरोधित स्टॅक उघडा",
+      "openBlockerTask": "अवरोधक टास्क उघडा",
+      "openBlockedTask": "अवरोधित टास्क उघडा"
+    },
+    "activityHud": {
+      "activity": "क्रियाकलाप",
+      "noRecentActivity": "अलीकडील कोणताही क्रियाकलाप नाही",
+      "more": "+{{count}} अधिक",
+      "more_one": "+{{count}} अधिक",
+      "more_other": "+{{count}} अधिक",
+      "more_few": "+{{count}} अधिक",
+      "more_many": "+{{count}} अधिक"
+    },
+    "provisioning": {
+      "launchDetails": "लॉन्च तपशील",
+      "launchDetailsDescription": "तपशीलवार टीम लॉन्च प्रगती, लाइव्ह आउटपुट आणि CLI लॉग्स."
+    }
+  },
+  "projectPath": {
+    "label": "प्रकल्प",
+    "source": {
+      "claude": "Claude ने शोधले",
+      "codex": "Codex ने शोधले",
+      "mixed": "Claude आणि Codex ने शोधले"
+    },
+    "deleted": {
+      "title": "प्रकल्प फोल्डर आता अस्तित्वात नाही",
+      "label": "हटवले"
+    },
+    "mode": {
+      "projectList": "प्रकल्प यादीतून",
+      "customPath": "कस्टम पथ"
+    },
+    "loadingProjects": "प्रकल्प लोड होत आहेत...",
+    "selectProject": "एक प्रकल्प निवडा...",
+    "searchPlaceholder": "नाव किंवा पथानुसार प्रकल्प शोधा",
+    "empty": "काहीही सापडले नाही",
+    "selectFromList": "यादीतून एक प्रकल्प निवडा",
+    "noProjects": "कोणतेही प्रकल्प सापडले नाहीत, कस्टम पथावर बदला.",
+    "customWorkingDirectory": "कस्टम वर्किंग डिरेक्टरी",
+    "browse": "ब्राउझ करा",
+    "createAutomatically": "डिरेक्टरी अस्तित्वात नसल्यास, ती आपोआप तयार केली जाईल."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "स्थानिक रनटाइम लोड",
+      "description": "फक्त पालक आणि बाल प्रक्रिया. रिमोट LLM इन्फरन्स समाविष्ट नाही.",
+      "cpu": "CPU",
+      "memory": "मेमरी",
+      "summedRss": "एकत्रित RSS",
+      "sharedHost": "शेअर केलेले OpenCode होस्ट मेट्रिक. ते या सदस्यासाठी अनन्य नाही.",
+      "processTreeCapped": "या नमुन्यासाठी प्रक्रिया ट्री मर्यादित केले होते.",
+      "rssHint": "RSS मध्ये शेअर केलेली पाने समाविष्ट असू शकतात, म्हणून ते अनन्य मेमरी नव्हे तर लोड संकेत म्हणून वाचणे सर्वोत्तम आहे."
+    },
+    "editor": {
+      "title": "सदस्य",
+      "addMember": "सदस्य जोडा",
+      "editAsJson": "JSON म्हणून संपादित करा",
+      "runInSeparateWorktrees": "सहकारी वेगळ्या worktrees मध्ये चालवा",
+      "agentTeamsMcpOnly": "फक्त Agent Teams MCP",
+      "removedCount": "काढले ({{count}})",
+      "removedModelLockReason": "काढलेले सदस्य सॉफ्ट डिलीट इतिहासासाठी ठेवले जातात. सेटिंग्ज संपादित करण्यासाठी त्यांना पुनर्संचयित करा.",
+      "memberNamesUnique": "सदस्य नावे अद्वितीय असणे आवश्यक आहे"
+    },
+    "stats": {
+      "computing": "आकडेवारी गणना करत आहे...",
+      "empty": "कोणतीही आकडेवारी उपलब्ध नाही",
+      "lines": "ओळी",
+      "linesInfo": "अंदाजे. Edit आणि Write टूल्ससाठी अचूक. Bash फाइल लेखन कमांड पॅटर्न्स (heredoc, echo, sed) वरून अंदाजित आहे आणि कमी नोंदवले जाऊ शकते.",
+      "files": "फाइल्स",
+      "toolCalls": "टूल कॉल्स",
+      "tokens": "टोकन्स",
+      "toolUsage": "टूल वापर",
+      "filesTouched": "स्पर्श केलेल्या फाइल्स ({{count}})",
+      "viewAllChanges": "सर्व बदल पाहा",
+      "showLess": "कमी दाखवा",
+      "moreFiles": "+{{count}} अधिक",
+      "footer": "{{count}} सत्रे · {{computedAgo}} गणना केली",
+      "footer_one": "{{count}} सत्र · {{computedAgo}} गणना केली",
+      "footer_few": "{{count}} सत्रे · {{computedAgo}} गणना केली",
+      "footer_many": "{{count}} सत्रे · {{computedAgo}} गणना केली",
+      "footer_other": "{{count}} सत्रे · {{computedAgo}} गणना केली"
+    },
+    "logs": {
+      "searching": "लॉग्स शोधत आहे...",
+      "empty": "कोणतेही लॉग्स सापडले नाहीत",
+      "waitingForTaskActivity": "टास्क प्रगतीपथावर आहे - सत्र क्रियाकलापाची वाट पाहत आहे (ऑटो-रिफ्रेशिंग)...",
+      "noTaskActivity": "अद्याप या टास्कसाठी कोणताही सत्र क्रियाकलाप नाही",
+      "noMemberActivity": "या सदस्याचा अद्याप कोणताही नोंदवलेला सत्र क्रियाकलाप नाही",
+      "leadSessionTooltip": "पूर्ण टीम लीड सत्र लॉग्स - जागतिक ऑर्केस्ट्रेशन संदर्भासाठी उपयुक्त, या एजंटसाठी विशिष्ट नाही",
+      "memberSessionTooltip": "पूर्ण टिकाऊ सहकारी सत्र लॉग्स - सबएजंट फाइलऐवजी रूट सदस्य सत्रात काम चालते तेव्हा उपयुक्त",
+      "startedAt": "{{time}} सुरू झाले",
+      "active": "सक्रिय",
+      "showDetails": "तपशील दाखवा",
+      "hideDetails": "तपशील लपवा",
+      "loadingDetails": "तपशील लोड होत आहेत...",
+      "failedToLoadDetails": "तपशील लोड करणे अयशस्वी"
+    },
+    "detail": {
+      "relaunchOpenCode": "OpenCode पुन्हा सुरू करा",
+      "restart": "रीस्टार्ट करा",
+      "legacyLogsFallback": "लेगसी लॉग्स फॉलबॅक",
+      "copyDiagnostics": "डायग्नॉस्टिक्स कॉपी करा",
+      "pid": "PID {{pid}}",
+      "removedAt": "{{date}} काढले",
+      "failedToRestartMember": "सदस्य रीस्टार्ट करणे अयशस्वी",
+      "sendMessage": "संदेश पाठवा",
+      "assignTask": "टास्क नियुक्त करा",
+      "remove": "काढा"
+    },
+    "list": {
+      "loading": "टीम सदस्य लोड होत आहेत",
+      "unavailable": "सदस्य रोस्टर उपलब्ध नाही",
+      "unavailableDescription": "{{count}} सहकारी टीम मेटाडेटावरून ज्ञात आहेत, पण रोस्टर तपशील गहाळ आहेत.",
+      "unavailableDescription_one": "{{count}} सहकारी टीम मेटाडेटावरून ज्ञात आहे, पण रोस्टर तपशील गहाळ आहेत.",
+      "soloLeadOnly": "एकल टीम - फक्त लीड",
+      "removedCount": "काढले ({{count}})",
+      "unavailableDescription_few": "{{count}} सहकारी टीम मेटाडेटावरून ज्ञात आहेत, पण रोस्टर तपशील गहाळ आहेत.",
+      "unavailableDescription_many": "{{count}} सहकारी टीम मेटाडेटावरून ज्ञात आहेत, पण रोस्टर तपशील गहाळ आहेत.",
+      "unavailableDescription_other": "{{count}} सहकारी टीम मेटाडेटावरून ज्ञात आहेत, पण रोस्टर तपशील गहाळ आहेत."
+    },
+    "executionLog": {
+      "empty": "दाखवण्यासाठी काहीही नाही",
+      "emptyUserMessage": "{{time}} - (रिकामे)",
+      "agentInstructions": "एजंट सूचना",
+      "memberTurn": "{{member}} वळण",
+      "agentTurn": "एजंट वळण",
+      "turn": "वळण"
+    },
+    "recentMessages": {
+      "latest": "नवीनतम संदेश",
+      "latestForMember": "नवीनतम संदेश - {{member}}",
+      "loadMore": "अधिक लोड करा",
+      "expand": "विस्तृत करा",
+      "collapse": "संकुचित करा"
+    },
+    "leadModel": {
+      "defaultModel": "डीफॉल्ट",
+      "providerModelAria": "{{provider}} प्रोव्हायडर, {{model}}",
+      "leadShort": "लीड",
+      "teamLead": "टीम लीड",
+      "syncWithTeammates": "सहकाऱ्यांसह मॉडेल सिंक करा",
+      "anthropicTeamWide": "Anthropic टीम-व्यापी",
+      "runtimeInheritance": "सहकारी स्वतःचा प्रोव्हायडर किंवा मॉडेल सेट करत नाहीत तोपर्यंत लीड रनटाइम त्यांना लागू होतो.",
+      "anthropicContextLimit": "या लॉन्चमध्ये Anthropic रनटाइमसाठी 200K संदर्भ मर्यादा टीम-व्यापी आहे, कस्टम Anthropic सहकाऱ्यांसह."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "ऑटो-रिफ्रेश",
+      "wrapLines": "ओळी रॅप करा",
+      "loadingTail": "प्रक्रिया लॉग टेल लोड होत आहे...",
+      "empty": "या सदस्यासाठी अद्याप कोणतीही प्रक्रिया लॉग फाइल कॅप्चर केली नाही.",
+      "copy": "कॉपी करा",
+      "fileEmpty": "प्रक्रिया लॉग फाइल रिकामी आहे.",
+      "showingLast": "शेवटचे {{bytes}} दाखवत आहे.",
+      "showing": "{{bytes}} दाखवत आहे."
+    },
+    "tasks": {
+      "empty": "या सदस्याला कोणतीही टास्क नियुक्त केलेली नाहीत"
+    },
+    "messages": {
+      "loadOlder": "जुने संदेश लोड करा",
+      "filters": {
+        "all": "सर्व",
+        "messages": "संदेश",
+        "comments": "टिप्पण्या"
+      },
+      "empty": {
+        "loading": "क्रियाकलाप लोड होत आहे...",
+        "noComments": "या सदस्यासाठी कोणत्याही टिप्पण्या नाहीत",
+        "noLoadedMessages": "या सदस्यासाठी अद्याप कोणतेही लोड केलेले संदेश नाहीत",
+        "noMessages": "या सदस्यासह कोणतेही संदेश नाहीत",
+        "noLoadedActivity": "या सदस्यासाठी अद्याप कोणताही लोड केलेला क्रियाकलाप नाही",
+        "noActivity": "या सदस्यासह कोणताही क्रियाकलाप नाही"
+      }
+    },
+    "actions": {
+      "openProfile": "प्रोफाइल उघडा",
+      "editRole": "भूमिका संपादित करा",
+      "sendMessage": "संदेश पाठवा",
+      "assignTask": "टास्क नियुक्त करा"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "कस्टम भूमिका टाका..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} वेळापत्रके",
+    "count_one": "{{count}} वेळापत्रक",
+    "count_other": "{{count}} वेळापत्रके",
+    "nextRun": "पुढील: {{next}}",
+    "actions": {
+      "runNow": "आता चालवा",
+      "edit": "संपादित करा",
+      "pause": "थांबवा",
+      "resume": "पुन्हा सुरू करा",
+      "delete": "हटवा",
+      "addSchedule": "वेळापत्रक जोडा"
+    },
+    "runHistory": {
+      "loading": "रन इतिहास लोड होत आहे...",
+      "empty": "अद्याप कोणताही रन नाही"
+    },
+    "count_few": "{{count}} वेळापत्रके",
+    "count_many": "{{count}} वेळापत्रके",
+    "runLog": {
+      "title": "रन लॉग",
+      "exitCode": "एक्झिट {{code}}",
+      "retryCount": "पुन्हा प्रयत्न {{count}}/{{max}}",
+      "stillRunning": "टास्क अजूनही चालू आहे...",
+      "loadingLogs": "लॉग्स लोड होत आहेत...",
+      "errors": "त्रुटी",
+      "close": "बंद करा"
+    },
+    "cron": {
+      "expression": "Cron अभिव्यक्ती",
+      "highFrequencyWarning": "उच्च वारंवारता वेळापत्रक (5 मिनिटांपेक्षा कमी अंतर)",
+      "nextRuns": "पुढील रन:",
+      "timezone": "टाइमझोन",
+      "selectTimezone": "टाइमझोन निवडा",
+      "warmUpTime": "वॉर्म-अप वेळ",
+      "warmUpDescription": "नियोजित अंमलबजावणीपूर्वी निवडलेले प्रोव्हायडर्स तयार करते",
+      "errors": {
+        "enterExpression": "एक cron अभिव्यक्ती टाका",
+        "invalidExpression": "अवैध cron अभिव्यक्ती"
+      },
+      "presets": {
+        "everyHour": "दर तासाला",
+        "everySixHours": "दर 6 तासांनी",
+        "dailyAtNine": "दररोज सकाळी 9 वाजता",
+        "weekdaysAtNine": "आठवड्याच्या दिवशी सकाळी 9 वाजता",
+        "mondayAtNine": "सोमवारी सकाळी 9 वाजता",
+        "everyThirtyMinutes": "दर 30 मिनिटांनी"
+      },
+      "warmUpOptions": {
+        "none": "वॉर्म-अप नाही",
+        "fiveMinutes": "5 मि",
+        "tenMinutes": "10 मि",
+        "fifteenMinutes": "15 मि",
+        "thirtyMinutes": "30 मि"
+      }
+    },
+    "empty": {
+      "title": "अद्याप कोणतीही वेळापत्रके नाहीत",
+      "description": "cron वेळापत्रकानुसार Claude टास्क आपोआप चालवण्यासाठी एक वेळापत्रक तयार करा."
+    },
+    "title": "वेळापत्रके",
+    "status": {
+      "active": "सक्रिय",
+      "paused": "थांबवले",
+      "disabled": "अक्षम"
+    },
+    "runStatus": {
+      "pending": "प्रलंबित",
+      "warmingUp": "वॉर्म होत आहे",
+      "warm": "वॉर्म",
+      "running": "चालू आहे",
+      "completed": "पूर्ण",
+      "failed": "अयशस्वी",
+      "interrupted": "व्यत्यय आला",
+      "cancelled": "रद्द केले"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode स्थानिक मॉडेल्स फक्त-प्रॉम्प्ट मर्यादांऐवजी OpenCode संदर्भ बजेट वापरू शकतात.",
+    "description": "या सहकाऱ्याने वापरलेल्या प्रोव्हायडर आणि मॉडेलसाठी OpenCode कॉन्फिगमध्ये जुळणाऱ्या मर्यादा जोडा. हे स्थानिक मॉडेल्सची संदर्भ विंडो ओव्हरफ्लो होण्यापूर्वी OpenCode ला कॉम्पॅक्ट आणि प्रून करण्यास मदत करते.",
+    "replacePrefix": "बदला",
+    "and": "आणि",
+    "replaceSuffix": "तुमच्या OpenCode सेटअपमधील प्रोव्हायडर आणि मॉडेल ID सह. प्रॉम्प्ट सूचना जसे की",
+    "promptInstructionsSuffix": "कमकुवत आहेत कारण मॉडेल त्या वाचण्यापूर्वी विनंती एकत्र केली जाते.",
+    "providerLimits": "प्रोव्हायडर मर्यादा",
+    "compactionConfig": "कॉम्पॅक्शन कॉन्फिग"
+  },
+  "sessions": {
+    "noProjectPath": "कोणताही प्रकल्प पथ लिंक केलेला नाही",
+    "provisioningHint": "टीम प्रोव्हिजनिंगनंतर सत्रे दिसतील",
+    "projectNotFound": "प्रकल्प सापडला नाही",
+    "loading": "सत्रे लोड होत आहेत...",
+    "empty": "कोणतीही सत्रे सापडली नाहीत",
+    "showAllSessions": "सर्व सत्रांसाठी दाखवा",
+    "lead": "लीड",
+    "removeFilter": "फिल्टर काढा",
+    "filterBySession": "या सत्रानुसार फिल्टर करा",
+    "openSession": "सत्र उघडा",
+    "title": "सत्रे"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "रद्द करा",
+    "moreWarningsHidden": "{{count}} अधिक इशारे लपवले",
+    "diagnostics": "डायग्नॉस्टिक्स",
+    "liveOutput": "लाइव्ह आउटपुट",
+    "diagnosticsCopied": "डायग्नॉस्टिक्स कॉपी केले",
+    "copyDiagnostics": "डायग्नॉस्टिक्स कॉपी करा",
+    "copied": "कॉपी केले",
+    "noOutput": "अद्याप कोणतेही आउटपुट कॅप्चर केले नाही.",
+    "cliLogs": "CLI लॉग्स",
+    "steps": {
+      "starting": "सुरू होत आहे",
+      "configuring": "टीम सेटअप",
+      "assembling": "सदस्य सामील होत आहेत",
+      "finalizing": "अंतिम करत आहे"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "तपासत आहे...",
+        "ready": "ठीक",
+        "notes": "ठीक (नोट्स)",
+        "failed": "त्रुटी",
+        "pending": "वाट पाहत आहे"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI बायनरी गहाळ",
+        "openCodeRuntimeMissing": "OpenCode रनटाइम गहाळ",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows प्रवेश अवरोधित",
+        "openCodeNoOutput": "OpenCode रनटाइम तपासणीने कोणतेही आउटपुट दिले नाही",
+        "openCodeMcpUnreachable": "OpenCode अॅप MCP पोहोचण्याजोगे नाही",
+        "workingDirectoryMissing": "वर्किंग डिरेक्टरी गहाळ",
+        "cliBinaryCouldNotStart": "CLI बायनरी सुरू करता आली नाही",
+        "cliPreflightIncomplete": "CLI प्रीफ्लाइट पूर्ण झाले नाही",
+        "authenticationRequired": "प्रमाणीकरण आवश्यक",
+        "runtimeProviderNotConfigured": "रनटाइम प्रोव्हायडर कॉन्फिगर केलेला नाही",
+        "cliPreflightFailed": "CLI प्रीफ्लाइट अयशस्वी",
+        "selectedModelCompatible": "निवडलेले मॉडेल सुसंगत",
+        "selectedModelCompatibilityPending": "निवडलेले मॉडेल सुसंगतता प्रलंबित",
+        "selectedModelAvailable": "निवडलेले मॉडेल उपलब्ध",
+        "selectedModelVerified": "निवडलेले मॉडेल पडताळले",
+        "selectedModelUnavailable": "निवडलेले मॉडेल उपलब्ध नाही",
+        "selectedModelTimedOut": "निवडलेले मॉडेल पडताळणी टाइम आउट झाली",
+        "selectedModelCheckFailed": "निवडलेले मॉडेल तपासणी अयशस्वी",
+        "selectedModelDeferred": "निवडलेले मॉडेल पडताळणी पुढे ढकलली",
+        "selectedModelPingNotConfirmed": "निवडलेले मॉडेल ping पुष्टी झाली नाही",
+        "readyWithNotes": "नोट्ससह तयार",
+        "needsAttention": "लक्ष आवश्यक"
+      },
+      "modelChecksSummary": "निवडलेले मॉडेल तपासण्या - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} मॉडेल उपलब्ध नाही",
+        "unavailable_one": "{{count}} मॉडेल उपलब्ध नाही",
+        "unavailable_other": "{{count}} मॉडेल्स उपलब्ध नाहीत",
+        "checkFailed": "{{count}} मॉडेल तपासणी अयशस्वी",
+        "checkFailed_one": "{{count}} मॉडेल तपासणी अयशस्वी",
+        "checkFailed_other": "{{count}} मॉडेल्स तपासणी अयशस्वी",
+        "timedOut": "{{count}} मॉडेल टाइम आउट झाले",
+        "timedOut_one": "{{count}} मॉडेल टाइम आउट झाले",
+        "timedOut_other": "{{count}} मॉडेल्स टाइम आउट झाली",
+        "deferred": "{{count}} पडताळणी पुढे ढकलली",
+        "deferred_one": "{{count}} पडताळणी पुढे ढकलली",
+        "deferred_other": "{{count}} पडताळणी पुढे ढकलली",
+        "pingNotConfirmed": "{{count}} ping पुष्टी झाली नाही",
+        "pingNotConfirmed_one": "{{count}} ping पुष्टी झाली नाही",
+        "pingNotConfirmed_other": "{{count}} ping पुष्टी झाली नाही",
+        "compatibilityPending": "{{count}} सुसंगत, सखोल पडताळणी प्रलंबित",
+        "compatibilityPending_one": "{{count}} सुसंगत, सखोल पडताळणी प्रलंबित",
+        "compatibilityPending_other": "{{count}} सुसंगत, सखोल पडताळणी प्रलंबित",
+        "compatible": "{{count}} सुसंगत",
+        "compatible_one": "{{count}} सुसंगत",
+        "compatible_other": "{{count}} सुसंगत",
+        "checking": "{{count}} तपासत आहे",
+        "checking_one": "{{count}} तपासत आहे",
+        "checking_other": "{{count}} तपासत आहे",
+        "available": "{{count}} उपलब्ध",
+        "available_one": "{{count}} उपलब्ध",
+        "available_other": "{{count}} उपलब्ध",
+        "verified": "{{count}} पडताळले",
+        "verified_one": "{{count}} पडताळले",
+        "verified_other": "{{count}} पडताळले",
+        "unavailable_few": "{{count}} मॉडेल्स उपलब्ध नाहीत",
+        "unavailable_many": "{{count}} मॉडेल्स उपलब्ध नाहीत",
+        "checkFailed_few": "{{count}} मॉडेल्स तपासणी अयशस्वी",
+        "checkFailed_many": "{{count}} मॉडेल्स तपासणी अयशस्वी",
+        "timedOut_few": "{{count}} मॉडेल्स टाइम आउट झाली",
+        "timedOut_many": "{{count}} मॉडेल्स टाइम आउट झाली",
+        "deferred_few": "{{count}} पडताळणी पुढे ढकलली",
+        "deferred_many": "{{count}} पडताळणी पुढे ढकलली",
+        "pingNotConfirmed_few": "{{count}} ping पुष्टी झाली नाही",
+        "pingNotConfirmed_many": "{{count}} ping पुष्टी झाली नाही",
+        "compatibilityPending_few": "{{count}} सुसंगत, सखोल पडताळणी प्रलंबित",
+        "compatibilityPending_many": "{{count}} सुसंगत, सखोल पडताळणी प्रलंबित",
+        "compatible_few": "{{count}} सुसंगत",
+        "compatible_many": "{{count}} सुसंगत",
+        "checking_few": "{{count}} तपासत आहे",
+        "checking_many": "{{count}} तपासत आहे",
+        "available_few": "{{count}} उपलब्ध",
+        "available_many": "{{count}} उपलब्ध",
+        "verified_few": "{{count}} पडताळले",
+        "verified_many": "{{count}} पडताळले"
+      },
+      "openProviderSettings": "{{provider}} सेटिंग्ज उघडा",
+      "copied": "कॉपी केले",
+      "copyDiagnostics": "डायग्नॉस्टिक्स कॉपी करा",
+      "deepVerificationPending": "सखोल पडताळणी अजूनही चालू आहे. OpenCode मोफत मॉडेल्सना सुमारे 20 सेकंद लागू शकतात.",
+      "progress": {
+        "checkingSelectedProviders": "निवडलेले प्रोव्हायडर्स समांतरपणे तपासत आहे...",
+        "checkingProvider": "{{provider}} प्रोव्हायडर तपासत आहे...",
+        "checkingProviders": "{{providers}} प्रोव्हायडर्स तपासत आहे..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "फोल्डर परवानग्या दुरुस्त करा किंवा प्रकल्प वापरकर्ता-लेखनयोग्य फोल्डरमध्ये हलवा. प्रशासक म्हणून चालवणे फक्त तात्पुरता उपाय आहे.",
+        "openCodeBridgeNoOutput": "अॅप आणि OpenCode रनटाइम रीस्टार्ट करा, मग पुन्हा प्रयत्न करा. पुन्हा झाल्यास, डायग्नॉस्टिक्स कॉपी करा.",
+        "workingDirectoryMissing": "विद्यमान वर्किंग डिरेक्टरी निवडा, मग हा डायलॉग पुन्हा उघडा.",
+        "authenticationRequired": "Claude CLI मध्ये आवश्यक प्रोव्हायडर प्रमाणित करा, मग हा डायलॉग पुन्हा उघडा.",
+        "runtimeProviderNotConfigured": "निवडलेला प्रोव्हायडर रनटाइम कॉन्फिगर करा, मग हा डायलॉग पुन्हा उघडा.",
+        "openCodeRuntimeMissing": "प्रोव्हायडर स्थिती कार्डवरून OpenCode रनटाइम इन्स्टॉल करा किंवा पुन्हा प्रयत्न करा, मग हा डायलॉग पुन्हा उघडा.",
+        "openCodeAppMcpUnreachable": "OpenCode अॅप MCP ब्रिज रिफ्रेश करण्यासाठी लॉन्च पुन्हा प्रयत्न करा. पुन्हा झाल्यास, अॅप आणि OpenCode रनटाइम रीस्टार्ट करा.",
+        "cliBinaryMissing": "स्थानिक Claude CLI बायनरी अस्तित्वात आहे आणि सुरू करता येते याची खात्री करा, मग हा डायलॉग पुन्हा उघडा.",
+        "default": "वरील समस्या सोडवा, मग हा डायलॉग पुन्हा उघडा.",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI प्रशासक म्हणून चालवा, मग लॉन्च पुन्हा प्रयत्न करा."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} सहकारी परवानगी मंजुरीची वाट पाहत आहे",
+      "nameListWithMore": "{{names}}, +{{count}} अधिक",
+      "waitingForOpenCode": "OpenCode ची वाट पाहत आहे: {{names}}",
+      "bootstrapStalled": "बूटस्ट्रॅप थांबले: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode ची वाट पाहत आहे: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "बूटस्ट्रॅप थांबले",
+        "shellOnly": "फक्त-शेल",
+        "waitingForBootstrap": "बूटस्ट्रॅपची वाट पाहत आहे",
+        "bootstrapUnconfirmed": "बूटस्ट्रॅप अपुष्ट",
+        "awaitingPermission": "परवानगीची वाट पाहत आहे",
+        "waitingForRuntime": "रनटाइमची वाट पाहत आहे",
+        "shellOnlyLower": "फक्त-शेल",
+        "waitingForBootstrapLower": "बूटस्ट्रॅपची वाट पाहत आहे",
+        "bootstrapUnconfirmedLower": "बूटस्ट्रॅप अपुष्ट",
+        "awaitingPermissionLower": "परवानगीची वाट पाहत आहे",
+        "waitingForRuntimeLower": "रनटाइमची वाट पाहत आहे"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} सुरू होण्यात अयशस्वी",
+        "teammatesFailedToStart": "{{count}} सहकारी सुरू होण्यात अयशस्वी",
+        "teammatesFailedRatio": "{{count}}/{{total}} सहकारी सुरू होण्यात अयशस्वी"
+      },
+      "skipped": {
+        "memberSkipped": "या लॉन्चसाठी {{name}} वगळला",
+        "memberSkippedWithReason": "या लॉन्चसाठी {{name}} वगळला - {{reason}}",
+        "memberSkippedCompact": "{{name}} वगळला",
+        "teammatesSkipped": "{{count}} सहकारी वगळले",
+        "teammatesSkippedList": "वगळलेले सहकारी: {{list}}",
+        "teammatesSkippedRatio": "या लॉन्चसाठी {{count}}/{{total}} सहकारी वगळले"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} सहकारी अजूनही सामील होत आहेत",
+        "teammatesStillJoining_one": "{{count}} सहकारी अजूनही सामील होत आहे",
+        "teammatesStillJoining_few": "{{count}} सहकारी अजूनही सामील होत आहेत",
+        "teammatesStillJoining_many": "{{count}} सहकारी अजूनही सामील होत आहेत",
+        "teammatesStillJoining_other": "{{count}} सहकारी अजूनही सामील होत आहेत",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} सहकारी पुष्टी झाले"
+      },
+      "ready": {
+        "leadOnline": "लीड ऑनलाइन",
+        "allTeammatesJoined": "सर्व {{count}} सहकारी सामील झाले",
+        "teamProvisionedLeadOnline": "टीम प्रोव्हिजन केली - लीड ऑनलाइन",
+        "teamProvisionedAllJoined": "टीम प्रोव्हिजन केली - सर्व {{count}} सहकारी सामील झाले",
+        "teamProvisionedStillJoining": "टीम प्रोव्हिजन केली - सहकारी अजूनही सामील होत आहेत",
+        "launchFinishedWithErrors": "लॉन्च त्रुटींसह पूर्ण झाले - {{count}}/{{total}} सहकारी सुरू होण्यात अयशस्वी",
+        "launchContinuedSkipped": "लॉन्च सुरू राहिले - {{count}}/{{total}} सहकारी वगळले",
+        "teamLaunchedLeadOnline": "टीम सुरू झाली - लीड ऑनलाइन",
+        "teamLaunchedAllJoined": "टीम सुरू झाली - सर्व {{count}} सहकारी सामील झाले"
+      },
+      "panel": {
+        "launchFailed": "लॉन्च अयशस्वी",
+        "launchDetails": "लॉन्च तपशील",
+        "launchFinishedWithErrors": "लॉन्च त्रुटींसह पूर्ण झाले",
+        "launchContinuedSkipped": "वगळलेल्या सहकाऱ्यांसह लॉन्च सुरू राहिले",
+        "coreTeamReady": "मुख्य टीम तयार",
+        "finishingLaunch": "लॉन्च पूर्ण करत आहे",
+        "teamLaunched": "टीम सुरू झाली",
+        "launchingTeam": "टीम सुरू करत आहे"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "लाइव्ह रनटाइम स्थिती",
+    "description": "फक्त-दृश्य हार्टबीट आणि लॉन्च स्थिती. प्रक्रिया नियंत्रणे खाली राहतात.",
+    "source": "स्रोत: {{source}}",
+    "lane": "{{lane}} लेन",
+    "diagnosticOnly": "फक्त डायग्नॉस्टिक",
+    "updated": "{{value}} अपडेट केले",
+    "states": {
+      "running": "चालू आहे",
+      "starting": "सुरू होत आहे",
+      "waiting": "वाट पाहत आहे",
+      "degraded": "लक्ष आवश्यक",
+      "stopped": "थांबले",
+      "unknown": "अज्ञात"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "अचूक टास्क लॉग्स",
+      "loading": "अचूक टास्क लॉग्स लोड होत आहेत...",
+      "description": "लॉग्समध्ये वापरलेल्या समान अंमलबजावणी-लॉग कंपोनंट्ससह रेंडर केलेले अचूक ट्रान्स्क्रिप्ट तुकडे.",
+      "emptyTitle": "अद्याप कोणतीही अचूक टास्क लॉग्स नाहीत",
+      "emptyDescription": "स्पष्ट टास्क-लिंक केलेला ट्रान्स्क्रिप्ट मेटाडेटा उपलब्ध असताना अचूक ट्रान्स्क्रिप्ट बंडल्स येथे दिसतील.",
+      "summaryOnly": "फक्त सारांश"
+    },
+    "executionSessions": {
+      "title": "अंमलबजावणी सत्रे",
+      "online": "ऑनलाइन",
+      "updating": "अपडेट करत आहे...",
+      "description": "लेगसी सत्र-केंद्रित ट्रान्स्क्रिप्ट ब्राउझिंग आणि पूर्वावलोकने."
+    },
+    "stream": {
+      "title": "टास्क लॉग स्ट्रीम"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "टास्क {{taskId}} रद्द करा",
+      "cancel": "रद्द करा",
+      "moveBackToTodoConfirm": "हे टास्क परत करायचे आहे वर हलवायचे आणि टीमला सूचित करायचे?",
+      "confirm": "पुष्टी करा",
+      "keep": "ठेवा",
+      "changesNeedAttention": "बदलांना लक्ष आवश्यक",
+      "changes": "बदल",
+      "deleteTask": "टास्क हटवा",
+      "taskLogsActive": "टास्क लॉग्स सक्रिय",
+      "newTaskLogsArriving": "नवीन टास्क लॉग्स येत आहेत",
+      "awaitingUser": "वापरकर्त्याची वाट पाहत आहे",
+      "awaitingLead": "लीडची वाट पाहत आहे",
+      "blockedBy": "यांनी अवरोधित केले",
+      "blocks": "अवरोधित करते",
+      "start": "सुरू करा",
+      "complete": "पूर्ण करा",
+      "approve": "मंजूर करा",
+      "requestReview": "पुनरावलोकन विनंती करा",
+      "manualReview": "मॅन्युअल पुनरावलोकन",
+      "requestChanges": "बदल विनंती करा"
+    },
+    "filter": {
+      "title": "टास्क फिल्टर करा",
+      "session": "सत्र",
+      "allSessions": "सर्व सत्रे",
+      "teammate": "सहकारी",
+      "unassigned": "(नियुक्त नाही)",
+      "column": "स्तंभ",
+      "clearAll": "सर्व साफ करा"
+    },
+    "board": {
+      "addTask": "टास्क जोडा",
+      "noTasks": "कोणतीही टास्क नाहीत",
+      "showMore": "आणखी {{count}} दाखवा",
+      "hiddenCount": "{{count}} लपवले",
+      "trash": "कचरा",
+      "gridView": "ग्रिड दृश्य",
+      "columnsView": "स्तंभ दृश्य"
+    },
+    "trash": {
+      "title": "कचरा",
+      "empty": "कोणतीही हटवलेली टास्क नाहीत",
+      "subject": "विषय",
+      "owner": "मालक",
+      "deleted": "हटवले",
+      "unassigned": "नियुक्त नाही",
+      "restoreTask": "टास्क पुनर्संचयित करा",
+      "restore": "पुनर्संचयित करा",
+      "close": "बंद करा"
+    },
+    "sort": {
+      "title": "टास्क क्रमवारी लावा",
+      "sortBy": "यानुसार क्रमवारी लावा",
+      "reset": "रीसेट करा",
+      "options": {
+        "updatedAt": {
+          "label": "शेवटचे अपडेट",
+          "description": "अलीकडे अपडेट केलेले प्रथम"
+        },
+        "createdAt": {
+          "label": "तयार केले",
+          "description": "नवीनतम प्रथम"
+        },
+        "owner": {
+          "label": "मालक",
+          "description": "नियुक्त व्यक्तीनुसार वर्णानुक्रमे"
+        },
+        "manual": {
+          "label": "मॅन्युअल",
+          "description": "ड्रॅग-अँड-ड्रॉप क्रम"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "शोध साफ करा",
+      "tasks": "टास्क",
+      "createdAgo": "{{time}} तयार केले",
+      "updatedAgo": "{{time}} अपडेट केले",
+      "placeholder": "टास्क शोधा... (#id किंवा मजकूर)"
+    },
+    "grid": {
+      "addTask": "टास्क जोडा",
+      "noTasks": "कोणतीही टास्क नाहीत"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "करायचे आहे",
+      "inProgress": "प्रगतीपथावर",
+      "review": "पुनरावलोकन",
+      "done": "पूर्ण",
+      "approved": "मंजूर"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "सहकारी worktrees साठी Git रिपॉझिटरी स्थिती तपासत आहे...",
+    "ready": "Git worktrees तयार आहेत.",
+    "readyOnBranch": "{{branch}} शाखेवर Git worktrees तयार आहेत.",
+    "needsSetup": "Worktree पृथक्करणाला Git सेटअप आवश्यक आहे",
+    "initialCommitNotice": "प्रारंभिक कमिट क्रिया संदेशासह सर्व सध्याच्या फाइल्स स्टेज आणि कमिट करते",
+    "initializeRepository": "Git रिपॉझिटरी आरंभ करा",
+    "createInitialCommit": "प्रारंभिक कमिट तयार करा",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "सेटिंग्ज",
+    "autoAllowAllTools": "सर्व टूल्स ऑटो-अनुमती द्या",
+    "autoAllowFileEdits": "फाइल संपादने ऑटो-अनुमती द्या (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "सुरक्षित कमांड्स ऑटो-अनुमती द्या (git, pnpm, npm, ls...)",
+    "onTimeout": "टाइमआउटवर:",
+    "after": "नंतर",
+    "secondsShort": "से",
+    "timeoutActions": {
+      "wait": "कायम वाट पाहा",
+      "allow": "अनुमती द्या",
+      "deny": "नाकारा"
+    },
+    "submit": "सबमिट करा",
+    "allow": "अनुमती द्या",
+    "deny": "नाकारा",
+    "allowAll": "सर्व अनुमती द्या",
+    "pendingCount": "{{count}} प्रलंबित",
+    "autoActionIn": "{{time}} मध्ये ऑटो-{{action}}",
+    "diff": {
+      "previewChanges": "बदल पूर्वावलोकन करा",
+      "readingFile": "फाइल वाचत आहे...",
+      "binaryFile": "बायनरी फाइल - पूर्वावलोकन करता येत नाही",
+      "truncated": "फाइल 2MB वर छाटली - diff अपूर्ण असू शकतो",
+      "newFile": "नवीन फाइल"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "सदस्य वर्क सिंक",
+      "actionableItems": "कृतीयोग्य आयटम्स",
+      "fingerprint": "फिंगरप्रिंट",
+      "report": "अहवाल",
+      "none": "काहीही नाही",
+      "shadowWouldNudge": "शॅडो नज करेल",
+      "yes": "होय",
+      "no": "नाही",
+      "moreActionableItems": "{{count}} अधिक कृतीयोग्य आयटम",
+      "diagnostics": "डायग्नॉस्टिक्स: {{diagnostics}}"
+    },
+    "title": "सदस्य वर्क सिंक",
+    "loadingDiagnostics": "सदस्य वर्क सिंक डायग्नॉस्टिक्स लोड होत आहेत.",
+    "diagnosticsUnavailable": "सदस्य वर्क सिंक डायग्नॉस्टिक्स उपलब्ध नाहीत."
+  },
+  "advancedCli": {
+    "title": "प्रगत",
+    "useWorktree": "worktree वापरा",
+    "recent": "अलीकडील",
+    "commandPreview": "कमांड पूर्वावलोकन",
+    "customArguments": "कस्टम आर्ग्युमेंट्स",
+    "validate": "पडताळा",
+    "validation": {
+      "allFlagsValid": "सर्व फ्लॅग्स वैध",
+      "unknownFlags": "अज्ञात: {{flags}}",
+      "protectedFlags": "संरक्षित: {{flags}}",
+      "failed": "पडताळणी अयशस्वी"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} पूर्वी",
+    "stoppedAgo": "{{time}} पूर्वी थांबले",
+    "running": "चालू आहे",
+    "stopped": "थांबले",
+    "stopProcess": "प्रक्रिया थांबवा (SIGTERM)",
+    "kill": "Kill करा",
+    "openInBrowser": "ब्राउझरमध्ये उघडा",
+    "open": "उघडा",
+    "pid": "PID{{pid}}",
+    "title": "CLI प्रक्रिया"
+  },
+  "taskActivity": {
+    "loadingDetails": "क्रियाकलाप तपशील लोड होत आहेत...",
+    "contextUnavailable": "या क्रियाकलापासाठी तपशीलवार ट्रान्स्क्रिप्ट संदर्भ आता उपलब्ध नाही.",
+    "loading": "टास्क क्रियाकलाप लोड होत आहे...",
+    "lowSignalOnly": "अद्याप कोणताही मुख्य टास्क क्रियाकलाप सापडला नाही. खालील टास्क लॉग स्ट्रीममध्ये कमी-स्तरीय अंमलबजावणी तपशील उपलब्ध आहेत.",
+    "empty": "उपलब्ध ट्रान्स्क्रिप्ट्समध्ये अद्याप कोणताही स्पष्ट टास्क क्रियाकलाप सापडला नाही. जुने किंवा ह्युरिस्टिक सत्र लॉग्स अद्याप खाली अंमलबजावणी सत्रांमध्ये उपलब्ध असू शकतात.",
+    "title": "टास्क क्रियाकलाप",
+    "description": "ट्रान्स्क्रिप्ट मेटाडेटावरून या टास्कशी लिंक केलेला मुख्य स्पष्ट रनटाइम क्रियाकलाप."
+  },
+  "sendMessage": {
+    "title": "संदेश पाठवा",
+    "description": "टीम सदस्याला थेट संदेश पाठवा.",
+    "recipientLabel": "प्राप्तकर्ता",
+    "selectMemberPlaceholder": "सदस्य निवडा...",
+    "messageLabel": "संदेश",
+    "placeholder": "तुमचा संदेश लिहा... (पाठवण्यासाठी Enter)",
+    "send": "पाठवा",
+    "sending": "पाठवत आहे...",
+    "charsLeft": "{{count}} अक्षरे शिल्लक",
+    "saved": "जतन केले",
+    "attachments": {
+      "teamOnlineRequired": "फाइल्स संलग्न करण्यासाठी टीम ऑनलाइन असणे आवश्यक आहे",
+      "recipientUnsupported": "फाइल्स टीम लीड किंवा OpenCode सहकाऱ्यांना पाठवता येतात",
+      "openCodeOnlineRequired": "OpenCode सहकाऱ्यांसाठी फाइल्स संलग्न करण्यासाठी टीम ऑनलाइन असणे आवश्यक आहे",
+      "disabledHint": "ऑनलाइन टीम लीड आणि ऑनलाइन OpenCode सहकाऱ्यांसाठी फाइल संलग्नकांना समर्थन आहे. संलग्नके काढा किंवा प्राप्तकर्ता बदला.",
+      "attachFiles": "फाइल्स संलग्न करा (पेस्ट करा किंवा ड्रॅग आणि ड्रॉप करा)",
+      "unavailable": "संलग्नके उपलब्ध नाहीत"
+    },
+    "quote": {
+      "remove": "कोट काढा",
+      "replyingTo": "यांना उत्तर देत आहे"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "उत्तर रद्द करा",
+    "replyingTo": "यांना उत्तर देत आहे",
+    "placeholder": "टिप्पणी जोडा... (पाठवण्यासाठी Enter)",
+    "attachFile": "फाइल संलग्न करा (किंवा पेस्ट करा)",
+    "voiceToText": "आवाज ते मजकूर",
+    "comment": "टिप्पणी",
+    "charsLeft": "{{count}} अक्षरे शिल्लक",
+    "saved": "जतन केले",
+    "awaitingReplyFrom": "यांच्याकडून उत्तराची वाट पाहत आहे",
+    "or": "किंवा"
+  },
+  "taskAttachments": {
+    "dropImageHere": "इमेज येथे टाका",
+    "attachImage": "इमेज संलग्न करा",
+    "pasteOrDragDrop": "किंवा पेस्ट करा / ड्रॅग-ड्रॉप करा",
+    "fromOriginalMessage": "मूळ संदेशातून",
+    "dropFilesHere": "फाइल्स येथे टाका",
+    "loading": "संलग्नके लोड होत आहेत..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "सर्व टूल्स ऑटो-मंजूर करा",
+    "autonomousModeDescription": "स्वायत्त मोड: टीम टूल्स पुष्टीशिवाय अंमलात येतात. अविश्वसनीय कोडसह सावध राहा.",
+    "manualModeDescription": "मॅन्युअल मोड: तुम्ही प्रत्येक टूल कॉल रिअल-टाइममध्ये मंजूर किंवा नाकाराल."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "अंमलबजावणी",
+      "process": "प्रक्रिया"
+    },
+    "filters": {
+      "all": "सर्व"
+    },
+    "logs": {
+      "title": "लॉग्स",
+      "loading": "सदस्य लॉग स्ट्रीम लोड होत आहे...",
+      "emptyTitle": "या सदस्यासाठी अद्याप कोणत्याही लॉग स्ट्रीम नोंदी सापडल्या नाहीत.",
+      "emptyDescription": "उपलब्ध असताना सदस्य-व्याप्तीचे ट्रान्स्क्रिप्ट किंवा रनटाइम लॉग्स येथे दिसतील."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "काय बदलण्याची गरज आहे ते वर्णन करा... (सबमिट करण्यासाठी Enter)",
+    "submit": "सबमिट करा",
+    "charsLeft": "{{count}} अक्षरे शिल्लक",
+    "saved": "जतन केले",
+    "title": "बदल विनंती करा"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "डॅशबोर्ड उघडा",
+      "openTeam": "टीम उघडा",
+      "cancel": "रद्द करा"
+    },
+    "membersJson": {
+      "hide": "JSON लपवा"
+    },
+    "optional": {
+      "badge": "ऐच्छिक"
+    }
+  },
+  "runningTeams": {
+    "title": "चालू असलेल्या टीम्स",
+    "status": {
+      "active": "सक्रिय",
+      "provisioning": "सुरू होत आहे",
+      "idle": "चालू आहे"
+    },
+    "noProject": "कोणताही प्रकल्प नाही"
+  },
+  "layout": {
+    "maxPanesReached": "कमाल {{count}} पॅन्स पोहोचले"
+  },
+  "codexReconnect": {
+    "description": "तुमचे Codex सत्र शिळे दिसते. सुरू ठेवण्यासाठी पुन्हा कनेक्ट करा.",
+    "useCode": "कोड वापरा",
+    "generating": "तयार करत आहे...",
+    "openLogin": "लॉगिन उघडा",
+    "generateLink": "लिंक तयार करा"
+  },
+  "effortLevel": {
+    "label": "प्रयत्न स्तर (ऐच्छिक)",
+    "maxDescription": "कमाल मॉडेलला कठीण टास्कसाठी सर्वाधिक तर्क वेळ देते."
+  },
+  "contextLimit": {
+    "limitTo200k": "संदर्भ 200K टोकन्सपर्यंत मर्यादित करा",
+    "always200k": "(या मॉडेलसाठी नेहमी 200K)",
+    "tooltipContent": "समर्थित असताना लॉन्च 200K-टोकन संदर्भ विंडोमध्ये ठेवते.",
+    "tooltipTitle": "संदर्भ मर्यादा"
+  },
+  "roleSelect": {
+    "noRole": "कोणतीही भूमिका नाही",
+    "customRole": "कस्टम भूमिका...",
+    "searchPlaceholder": "भूमिका शोधा...",
+    "empty": "कोणत्याही भूमिका सापडल्या नाहीत.",
+    "reservedRole": "ही भूमिका राखीव आहे",
+    "emptyCustomRole": "भूमिका रिकामी असू शकत नाही"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

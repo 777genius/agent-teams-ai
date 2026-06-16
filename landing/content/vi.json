@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Ban la Boss, cac agent la doi cua ban. Chung tu xu ly task, nhan tin voi nhau va review code cho nhau. Ban chi can nhin bang kanban va uong ca phe."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Doi agent",
+      "description": "Tao cac doi voi vai tro khac nhau. Agent lam viec song song, tu chu, giao tiep voi nhau va cong tac giua cac doi."
+    },
+    {
+      "id": "kanban",
+      "title": "Bang Kanban",
+      "description": "Trang thai task cap nhat theo thoi gian thuc khi agent lam viec. Keo tha, gan viec va review tren mot bang truc quan."
+    },
+    {
+      "id": "codeReview",
+      "title": "Review code",
+      "description": "Xem diff theo tung task voi chap nhan, tu choi va binh luan. Trinh soan code tich hop co ho tro Git."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Giao tiep giua doi",
+      "description": "Agent nhan tin trong cung doi va giua cac doi. Tin nhan truc tiep, binh luan task va hanh dong nhanh."
+    },
+    {
+      "id": "soloMode",
+      "title": "Che do solo",
+      "description": "Bat dau voi mot agent tu quan ly task. Khi can them suc manh, mo rong thanh ca doi."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Tien trinh live",
+      "description": "Xem agent dang chay, mo URL trong trinh duyet, theo doi token va context phien theo thoi gian thuc."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams la gi?",
+      "answer": "Ung dung desktop de dieu phoi cac doi agent AI voi lop dieu phoi cuc bo rieng. Agent co vai tro, lam viec tu chu, cong tac qua bang kanban va co the chay tren Anthropic hoac Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Co that su mien phi khong?",
+      "answer": "Co. Ung dung mien phi va ma nguon mo, ban co the bat dau voi model mien phi khong can xac thuc - khong dang ky, khong API key, khong can the tin dung. Neu can them model, ket noi Claude, Codex, OpenCode/OpenRouter hoac provider duoc ho tro."
+    },
+    {
+      "id": "platforms",
+      "question": "Ho tro nen tang nao?",
+      "answer": "macOS (Apple Silicon va Intel), Windows va Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Hoat dong nhu the nao?",
+      "answer": "Cai ung dung, tao doi, gan vai tro. Agent bat dau lam viec song song. Ban theo doi tien do tren kanban, review diff va trao doi truc tiep voi agent."
+    },
+    {
+      "id": "privacy",
+      "question": "Code cua toi co rieng tu khong?",
+      "answer": "Moi thu chay cuc bo tren may cua ban. Khong co du lieu gui toi server ben ngoai. Code, hoi thoai va hoat dong agent deu duoc giu rieng tu."
+    },
+    {
+      "id": "requirements",
+      "question": "Can gi de bat dau?",
+      "answer": "Chi can cai ung dung - bat dau voi model mien phi khong can xac thuc, sau do ket noi model provider trong UI khi can."
+    }
+  ],
+  "download": {
+    "title": "Tai xuong",
+    "note": "Chon nen tang cua ban va bat dau xay dung voi doi agent AI."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Cuoi cung cung co cong cu giup toi quan ly AI agent nhu mot doi engineering. Bang kanban rat huu ich cho cong viec song song."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Che do solo hoan hao cho task nhanh. Khi can them luc, toi tao ca doi trong vai giay."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Workflow review code rat hay: diff theo task, chap nhan/tu choi, binh luan. Giong mot doi thuc su nghe theo huong dan."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Theo doi tien trinh live va context cuc ky huu ich. Toi thay ro tung agent dang lam gi."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Onboarding zero-setup la that: cai app, dang nhap mot lan, 5 phut sau agent da lam tren codebase."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "No thay doi cach toi prototype. Toi tao doi cho tung phan stack va cho chung lam song song."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Mien phi",
+      "price": "$0",
+      "period": "",
+      "description": "Bat dau voi model mien phi co san, khong can xac thuc. Khong dang ky, khong API key, khong the tin dung.",
+      "features": [
+        "Model mien phi khong can xac thuc cho lan chay dau",
+        "Khong can tai khoan hoac dang nhap provider de thu",
+        "Tuy chon ket noi Claude, Codex va OpenCode",
+        "Khong gioi han doi agent",
+        "Kanban cap nhat thoi gian thuc",
+        "Review code voi diff",
+        "Giao tiep giua doi",
+        "Che do solo va team"
+      ],
+      "highlighted": true
+    }
+  ]
+}

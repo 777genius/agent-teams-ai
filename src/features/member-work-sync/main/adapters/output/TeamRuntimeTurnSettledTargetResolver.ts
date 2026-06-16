@@ -7,6 +7,8 @@ import path from 'path';
 
 import { isReservedMemberName, normalizeMemberName } from '../../../core/domain';
 
+import { mergeTeamMembers } from './mergeTeamMembers';
+
 import type {
   RuntimeTurnSettledTargetResolution,
   RuntimeTurnSettledTargetResolverPort,
@@ -14,7 +16,7 @@ import type {
 import type { RuntimeTurnSettledEvent } from '../../../core/domain';
 import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import type { TeamMember, TeamSummary } from '@shared/types';
+import type { TeamMember, TeamProviderId, TeamSummary } from '@shared/types';
 
 export interface RuntimeTurnSettledTeamSource {
   listTeams(): Promise<TeamSummary[]>;
@@ -38,26 +40,21 @@ function memberKey(member: Pick<TeamMember, 'name'>): string {
   return normalizeMemberName(member.name);
 }
 
-function mergeMembers(configMembers: TeamMember[], metaMembers: TeamMember[]): TeamMember[] {
-  const byName = new Map<string, TeamMember>();
-  for (const member of configMembers) {
-    const key = memberKey(member);
-    if (key) {
-      byName.set(key, member);
-    }
+function providerIdFromBackend(providerBackendId: unknown): TeamProviderId | undefined {
+  const normalized = typeof providerBackendId === 'string' ? providerBackendId.trim() : '';
+  if (normalized === 'codex-native') {
+    return 'codex';
   }
-  for (const member of metaMembers) {
-    const key = memberKey(member);
-    if (key) {
-      byName.set(key, { ...byName.get(key), ...member });
-    }
+  if (normalized === 'opencode-cli') {
+    return 'opencode';
   }
-  return [...byName.values()];
+  return undefined;
 }
 
-function providerForMember(member: TeamMember | undefined): string | undefined {
+function providerForMember(member: TeamMember | undefined): TeamProviderId | undefined {
   return (
     normalizeOptionalTeamProviderId(member?.providerId) ??
+    providerIdFromBackend(member?.providerBackendId) ??
     inferTeamProviderIdFromModel(member?.model)
   );
 }
@@ -202,7 +199,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
 
     const normalizedTarget = normalizeMemberName(memberName);
     return (
-      mergeMembers(config.members ?? [], metaMembers).find(
+      mergeTeamMembers(config.members ?? [], metaMembers).find(
         (member) => !member.removedAt && memberKey(member) === normalizedTarget
       ) ?? null
     );

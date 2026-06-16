@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "वैशिष्ट्ये",
+    "screenshots": "स्क्रीनशॉट्स",
+    "docs": "दस्तऐवजीकरण",
+    "comparison": "तुलना करा",
+    "download": "डाउनलोड",
+    "pricing": "मोफत",
+    "faq": "FAQ",
+    "viewOnGithub": "GitHub वर पाहा",
+    "openMenu": "मेनू उघडा",
+    "closeMenu": "मेनू बंद करा",
+    "short": {
+      "screenshots": "शॉट्स",
+      "docs": "दस्तऐवज",
+      "download": "मिळवा",
+      "comparison": "तुलना",
+      "pricing": "मोफत"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "आता डाउनलोड करा",
+    "ctaPrimary": "{platform} साठी डाउनलोड करा",
+    "ctaSecondary": "तुलना करा",
+    "ctaDocs": "दस्तऐवजीकरण",
+    "preview": "उत्पादन पूर्वावलोकन",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban बोर्ड",
+      "openSource": "ओपन सोर्स"
+    },
+    "watchDemo": "डेमो पाहा",
+    "videoUnavailable": "व्हिडिओ उपलब्ध नाही",
+    "supportedProviders": "समर्थित AI प्रोव्हायडर्स",
+    "slogan": "खूप कमी करून खूप काही साध्य करा",
+    "platformDefault": "तुमच्या प्लॅटफॉर्मसाठी",
+    "guidesSetup": "मार्गदर्शक आणि सेटअप",
+    "videoFrameLabel": "Agent Teams डेमो पाहा",
+    "commandFeed": "टीम कमांड फीड",
+    "liveDemo": "लाइव्ह डेमो",
+    "demoVideoTitle": "Agent Teams डेमो व्हिडिओ",
+    "demoTitle": "Agent Teams डेमो",
+    "demo": {
+      "ariaLabel": "एजंट टीम डेमो",
+      "live": "LIVE",
+      "waiting": "टास्कची वाट पाहत आहे...",
+      "activity": {
+        "authMiddleware": "ऑथ मिडलवेअर अंमलात आणत आहे...",
+        "unitTests": "API साठी युनिट टेस्ट्स लिहित आहे...",
+        "reviewPr": "PR #42 बदलांचे पुनरावलोकन करत आहे...",
+        "ciPipeline": "CI/CD पाइपलाइन सेट करत आहे...",
+        "refactorDatabase": "डेटाबेस लेयर रिफॅक्टर करत आहे..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "युनिट टेस्ट्स",
+        "ciSetup": "CI सेटअप"
+      },
+      "columns": {
+        "todo": "करायचे आहे",
+        "progress": "प्रगतीपथावर",
+        "review": "पुनरावलोकन",
+        "done": "पूर्ण"
+      }
+    }
+  },
+  "download": {
+    "title": "डाउनलोड",
+    "detected": "आढळले",
+    "systemRequirements": "सिस्टम आवश्यकता",
+    "version": "आवृत्ती {version}",
+    "readyToStart": "सुरू करण्यास तयार!"
+  },
+  "theme": {
+    "dark": "गडद",
+    "light": "उजळ"
+  },
+  "language": {
+    "label": "भाषा",
+    "search": "भाषा शोधा…"
+  },
+  "features": {
+    "sectionTitle": "AI एजंट ऑर्केस्ट्रेशनसाठी आवश्यक असलेले सर्व काही",
+    "sectionSubtitle": "शक्तिशाली टूल्स जे मल्टी-एजंट सहयोग खरोखर काम करण्यास सक्षम करतात."
+  },
+  "pricing": {
+    "sectionTitle": "इन्स्टॉल करण्यास मोफत. मोफत मॉडेल समाविष्ट.",
+    "sectionSubtitle": "ऑथशिवाय मोफत मॉडेलसह त्वरित सुरुवात करा - कोणतेही खाते, API की किंवा क्रेडिट कार्ड नाही. अधिक मॉडेल्स हवे असताना Claude, Codex, OpenCode/OpenRouter किंवा इतर प्रोव्हायडर प्रवेश कनेक्ट करा.",
+    "getStarted": "आता डाउनलोड करा",
+    "popular": "मोफत",
+    "freeModelCallout": "ऑथशिवाय मोफत मॉडेल समाविष्ट",
+    "note": "Agent Teams ला कोणताही सशुल्क स्तर नाही. ऑथशिवाय मोफत मॉडेल तुम्हाला लगेच वापरून पाहू देते; सशुल्क प्रोव्हायडर वापर ऐच्छिक आहे आणि तुम्ही निवडलेल्या प्रोव्हायडरद्वारे नियंत्रित होतो."
+  },
+  "testimonials": {
+    "sectionTitle": "डेव्हलपर्स काय म्हणतात",
+    "sectionSubtitle": "खऱ्या बिल्डर्सकडून खरा अभिप्राय",
+    "showMore": "अधिक दाखवा",
+    "showLess": "कमी दाखवा",
+    "feedbackCta": "तुमचा अनुभव शेअर करायचा आहे? यावर इश्यू उघडा"
+  },
+  "faq": {
+    "sectionTitle": "प्रश्न आहेत? आमच्याकडे उत्तरे आहेत",
+    "subtitle": "Agent Teams बद्दल तुम्हाला आवश्यक असलेले सर्व काही"
+  },
+  "comparison": {
+    "sectionTitle": "आम्ही कशी तुलना करतो",
+    "sectionSubtitle": "इतर AI कोडिंग टूल्ससह वैशिष्ट्य-दर-वैशिष्ट्य तुलना.",
+    "feature": "वैशिष्ट्य",
+    "robotBubble": "स्वतः ठरवा",
+    "features": {
+      "crossTeam": "क्रॉस-टीम संवाद",
+      "agentMessaging": "एजंट-ते-एजंट संदेशवहन",
+      "linkedTasks": "लिंक केलेली टास्क",
+      "sessionAnalysis": "सत्र विश्लेषण",
+      "taskAttachments": "टास्क संलग्नके",
+      "hunkReview": "हंक-स्तरीय पुनरावलोकन",
+      "codeEditor": "अंगभूत कोड एडिटर",
+      "fullAutonomy": "पूर्ण स्वायत्तता",
+      "taskDeps": "टास्क अवलंबित्वे",
+      "reviewWorkflow": "पुनरावलोकन वर्कफ्लो",
+      "zeroSetup": "शून्य सेटअप",
+      "kanban": "Kanban बोर्ड",
+      "execLog": "अंमलबजावणी लॉग्स",
+      "liveProcesses": "लाइव्ह प्रोसेसेस",
+      "runtimeLoad": "प्रति सहकारी CPU/RAM",
+      "perTaskReview": "प्रति-टास्क कोड पुनरावलोकन",
+      "flexAutonomy": "लवचिक स्वायत्तता",
+      "worktree": "Git worktree पृथक्करण",
+      "multiAgent": "मिश्र AI सहकारी",
+      "liveWorkGraph": "लाइव्ह टीम नकाशा",
+      "liveTeam": "लाइव्ह सहकारी",
+      "teamWorkspace": "टीम वर्कस्पेस",
+      "launchProof": "सहकारी लॉन्च स्थिती",
+      "orgGovernance": "ऑर्ग चार्ट / प्रशासन",
+      "budgetControls": "बजेट नियंत्रणे",
+      "price": "किंमत"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "ते प्रत्यक्षात पाहा",
+    "sectionSubtitle": "अॅपमधील खरे स्क्रीनशॉट्स — kanban बोर्ड, कोड पुनरावलोकन, एजंट टीम्स आणि बरेच काही."
+  },
+  "common": {
+    "learnMore": "अधिक जाणून घ्या",
+    "statusLabel": "स्थिती:",
+    "previous": "मागील",
+    "next": "पुढील"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "डेव्हलपर्ससाठी AI एजंट ऑर्केस्ट्रेशन",
+    "robotBubble": "मी वाट पाहत आहे",
+    "links": {
+      "github": "GitHub",
+      "author": "लेखक",
+      "docs": "दस्तऐवजीकरण"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - डेव्हलपर्ससाठी AI एजंट ऑर्केस्ट्रेशन",
+    "homeDescription": "AI एजंट टीम्ससाठी मोफत, ओपन-सोर्स डेस्कटॉप अॅप. ऑथशिवाय मोफत मॉडेलसह सुरुवात करा, मग अधिक मॉडेल्सची गरज असताना Claude, Codex किंवा OpenCode कनेक्ट करा.",
+    "downloadTitle": "macOS, Windows आणि Linux साठी Agent Teams डाउनलोड करा",
+    "downloadDescription": "macOS, Windows आणि Linux साठी Agent Teams डाउनलोड करा. Claude, Codex आणि OpenCode एजंट टीम्ससाठी मोफत ओपन-सोर्स डेस्कटॉप अॅप."
+  },
+  "error": {
+    "notFoundTitle": "पृष्ठ सापडले नाही",
+    "notFoundDescription": "तुम्ही शोधत असलेले पृष्ठ अस्तित्वात नाही किंवा हलवले गेले आहे.",
+    "genericTitle": "काहीतरी चूक झाली",
+    "genericDescription": "एक अनपेक्षित त्रुटी आली. कृपया नंतर पुन्हा प्रयत्न करा.",
+    "goHome": "मुख्यपृष्ठावर जा"
+  }
+}

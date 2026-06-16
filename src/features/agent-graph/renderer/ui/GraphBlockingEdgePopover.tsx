@@ -21,26 +21,47 @@ function isOverflowNode(
   return Boolean(node?.kind === 'task' && node.isOverflowStack);
 }
 
-function describeNode(node: GraphNode | undefined, fallback: string): string {
+interface BlockingEdgeLabels {
+  hiddenTaskStack: string;
+  hiddenTasks: (count: number) => string;
+  task: string;
+  openBlockerStack: string;
+  openBlockedStack: string;
+  openBlockerTask: string;
+  openBlockedTask: string;
+}
+
+function describeNode(
+  node: GraphNode | undefined,
+  fallback: string,
+  labels: Pick<BlockingEdgeLabels, 'hiddenTaskStack' | 'hiddenTasks' | 'task'>
+): string {
   if (!node) return fallback;
   if (isOverflowNode(node)) {
     return node.overflowCount && node.overflowCount > 1
-      ? `${node.overflowCount} hidden tasks`
-      : 'Hidden task stack';
+      ? labels.hiddenTasks(node.overflowCount)
+      : labels.hiddenTaskStack;
   }
   if (isTaskNode(node)) {
-    return `${node.displayId ?? node.label} - ${node.sublabel ?? 'Task'}`;
+    return `${node.displayId ?? node.label} - ${node.sublabel ?? labels.task}`;
   }
   return node.label;
 }
 
-function getActionLabel(node: GraphNode | undefined, role: 'blocker' | 'blocked'): string | null {
+function getActionLabel(
+  node: GraphNode | undefined,
+  role: 'blocker' | 'blocked',
+  labels: Pick<
+    BlockingEdgeLabels,
+    'openBlockerStack' | 'openBlockedStack' | 'openBlockerTask' | 'openBlockedTask'
+  >
+): string | null {
   if (!node) return null;
   if (isOverflowNode(node)) {
-    return role === 'blocker' ? 'Open blocker stack' : 'Open blocked stack';
+    return role === 'blocker' ? labels.openBlockerStack : labels.openBlockedStack;
   }
   if (isTaskNode(node)) {
-    return role === 'blocker' ? 'Open blocker task' : 'Open blocked task';
+    return role === 'blocker' ? labels.openBlockerTask : labels.openBlockedTask;
   }
   return null;
 }
@@ -71,10 +92,19 @@ export const GraphBlockingEdgePopover = ({
     [teamData?.tasks]
   );
   const relationCount = edge.aggregateCount ?? 1;
-  const sourceLabel = describeNode(sourceNode, edge.source);
-  const targetLabel = describeNode(targetNode, edge.target);
-  const sourceActionLabel = getActionLabel(sourceNode, 'blocker');
-  const targetActionLabel = getActionLabel(targetNode, 'blocked');
+  const labels: BlockingEdgeLabels = {
+    hiddenTaskStack: t('agentGraph.blockingEdge.hiddenTaskStack'),
+    hiddenTasks: (count) => t('agentGraph.blockingEdge.hiddenTasks', { count }),
+    task: t('agentGraph.blockingEdge.task'),
+    openBlockerStack: t('agentGraph.blockingEdge.openBlockerStack'),
+    openBlockedStack: t('agentGraph.blockingEdge.openBlockedStack'),
+    openBlockerTask: t('agentGraph.blockingEdge.openBlockerTask'),
+    openBlockedTask: t('agentGraph.blockingEdge.openBlockedTask'),
+  };
+  const sourceLabel = describeNode(sourceNode, edge.source, labels);
+  const targetLabel = describeNode(targetNode, edge.target, labels);
+  const sourceActionLabel = getActionLabel(sourceNode, 'blocker', labels);
+  const targetActionLabel = getActionLabel(targetNode, 'blocked', labels);
   const sourceHiddenTasks = resolveEdgeTaskPreview(sourceNode, edge.sourceTaskIds, tasksById);
   const targetHiddenTasks = resolveEdgeTaskPreview(targetNode, edge.targetTaskIds, tasksById);
 
@@ -111,7 +141,7 @@ export const GraphBlockingEdgePopover = ({
             variant="outline"
             className="border-red-500/30 px-1.5 py-0 text-[10px] text-red-300"
           >
-            {relationCount} links
+            {t('agentGraph.blockingEdge.links', { count: relationCount })}
           </Badge>
         )}
       </div>

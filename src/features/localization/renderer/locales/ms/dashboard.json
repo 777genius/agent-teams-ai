@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Sudah log masuk?",
+      "becomeSponsor": "Jadi penaja",
+      "cancel": "Batal",
+      "checkNow": "Semak sekarang",
+      "checkUpdates": "Semak Kemas Kini",
+      "checking": "Menyemak...",
+      "connect": "Sambung",
+      "extensions": "Sambungan",
+      "login": "Log masuk",
+      "manage": "Urus",
+      "manageProviders": "Urus Pembekal",
+      "plan": "Pelan",
+      "recheck": "Semak semula",
+      "recheckProvider": "Semak semula {{provider}}",
+      "retry": "Cuba lagi",
+      "updateTo": "Kemas kini ke v{{version}}",
+      "useCode": "Guna kod"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud ialah platform inferens AI modal penuh yang memberikan pembangun satu API AI tunggal untuk mengakses penjanaan video, penjanaan imej, dan API LLM. Daripada menguruskan pelbagai integrasi vendor, anda bersambung sekali dan mendapat akses bersatu kepada 300+ model terpilih merentas semua modaliti. Lihat promosi pelan pengekodan baharu Atlas Cloud untuk akses API yang lebih jimat.",
+      "openCodeProvider": "Pembekal OpenCode",
+      "plan": "Pelan pengekodan Atlas Cloud",
+      "sponsor": "Penaja"
+    },
+    "errors": {
+      "checkStatusFailed": "Gagal menyemak status CLI",
+      "installationFailed": "Pemasangan gagal",
+      "refreshFailed": "Gagal menyemak kemas kini. Semak sambungan rangkaian anda dan cuba lagi.",
+      "runtimeUpdatedRefreshFailed": "Runtime dikemas kini, tetapi gagal menyegarkan status pembekal."
+    },
+    "hints": {
+      "backgroundStatus": "Status {{runtime}} akan disemak di latar belakang.",
+      "codexApiKeyFallback": "{{hint}} Sandaran kunci API tersedia jika anda menukar mod pengesahan.",
+      "codexAutoApiKey": "{{hint}} Auto akan terus menggunakan kunci API sehingga ChatGPT disambungkan.",
+      "codexFinishLogin": "Selesaikan log masuk ChatGPT dalam pelayar. Masukkan kod yang dipaparkan jika diminta.",
+      "codexNoActiveLogin": "Had penggunaan muncul hanya selepas Codex CLI melihat akaun ChatGPT yang aktif. Buat masa ini ia melaporkan tiada log masuk ChatGPT yang aktif.",
+      "codexNoActiveManagedSession": "Had penggunaan muncul hanya selepas Codex CLI melihat akaun ChatGPT yang aktif. Data akaun Codex tempatan wujud, tetapi tiada sesi terurus aktif yang dipilih buat masa ini.",
+      "codexReconnectNeeded": "Had penggunaan muncul hanya selepas Codex menyegarkan sesi ChatGPT yang dipilih kini. Buat masa ini sesi tempatan perlu disambung semula.",
+      "firstCheckSlow": "Semakan pertama mungkin mengambil masa sehingga 30 saat",
+      "loginRequiredForTeams": "Melayari sesi dan projek berfungsi tanpa log masuk. Log masuk hanya diperlukan untuk menjalankan pasukan agen.",
+      "troubleshootTitle": "Jika anda pasti anda sudah log masuk, cuba langkah-langkah ini:"
+    },
+    "installer": {
+      "checkingLatest": "Menyemak versi terkini...",
+      "downloading": "Memuat turun {{runtime}}...",
+      "installing": "Memasang {{runtime}}...",
+      "success": "Berjaya memasang {{runtime}} v{{version}}",
+      "verifying": "Mengesahkan checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "Kunci API diperlukan",
+      "comingSoon": "Akan datang",
+      "collapseProviderDetails": "Runtuhkan butiran pembekal",
+      "expandProviderDetails": "Kembangkan butiran pembekal",
+      "generateLink": "Jana pautan",
+      "loadingRateLimits": "Had kadar dimuatkan",
+      "loggedOut": "Pembekal telah log keluar",
+      "loginAuthFailed": "Pengesahan gagal",
+      "loginAuthUpdated": "Pengesahan dikemas kini",
+      "loginComplete": "Log masuk selesai",
+      "loginFailed": "Log masuk gagal",
+      "loginTitle": "Log masuk",
+      "logoutFailed": "Log keluar gagal",
+      "logoutTitle": "Log keluar",
+      "notLoggedIn": "Belum log masuk",
+      "openLogin": "Buka log masuk",
+      "providerActionRequired": "Tindakan pembekal diperlukan",
+      "resets": "ditetap semula {{time}}",
+      "runtimeLoginTitle": "Log Masuk {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Menyemak Pembekal AI...",
+      "claudeCli": "Menyemak Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Disahkan",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Menyemak pengesahan...",
+      "checkingProviders": "Menyemak pembekal...",
+      "configuredLocalCount": "{{count}} dikonfigurasi setempat",
+      "configuredLocalCount_few": "{{count}} dikonfigurasi setempat",
+      "configuredLocalCount_many": "{{count}} dikonfigurasi setempat",
+      "configuredLocalCount_one": "{{count}} dikonfigurasi setempat",
+      "configuredLocalCount_other": "{{count}} dikonfigurasi setempat",
+      "configuredLocalTitle": "Laluan OpenCode tempatan diimport daripada konfigurasi OpenCode anda.",
+      "connectedCount": "Pembekal: {{connected}}/{{denominator}} disambung",
+      "freeModels": "Model percuma",
+      "freeModelsTitle": "OpenCode merangkumi pilihan model percuma seperti Big Pickle apabila tersedia dalam persediaan anda. OpenRouter melalui OpenCode juga boleh mendedahkan model percuma, tetapi tidak setiap model OpenCode/OpenRouter adalah percuma. Ketersediaan dan had mungkin berubah.",
+      "loadingModels": "Memuatkan model...",
+      "modelsUnavailable": "Model tidak tersedia untuk binaan runtime ini",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} disahkan",
+      "verifiedCount_few": "{{count}} disahkan",
+      "verifiedCount_many": "{{count}} disahkan",
+      "verifiedCount_one": "{{count}} disahkan",
+      "verifiedCount_other": "{{count}} disahkan",
+      "verifiedTitle": "Laluan OpenCode dengan bukti pelaksanaan yang berjaya."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} yang dikonfigurasi gagal semakan kesihatan permulaannya.",
+      "configuredNotFound": "{{runtime}} yang dikonfigurasi tidak ditemui.",
+      "foundButFailed": "{{runtime}} ditemui tetapi gagal dimulakan",
+      "healthCheckFailedDescription": "Aplikasi menemui {{runtime}} yang dikonfigurasi, tetapi semakan kesihatan permulaannya gagal. Baiki atau pasang semula, kemudian cuba lagi.",
+      "install": "Pasang {{runtime}}",
+      "installRequiredDescription": "{{runtime}} diperlukan untuk peruntukan pasukan dan pengurusan sesi. Pasangnya untuk bermula.",
+      "isRequired": "{{runtime}} diperlukan",
+      "reinstall": "Pasang semula {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Menyemak",
+      "codexTitle": "Pasang Codex CLI ke dalam data aplikasi",
+      "downloading": "Memuat turun",
+      "downloadingPercent": "Memuat turun {{percent}}%",
+      "install": "Pasang",
+      "installing": "Memasang",
+      "openCodeTitle": "Pasang runtime OpenCode ke dalam data aplikasi",
+      "retryInstall": "Cuba pasang lagi"
+    },
+    "troubleshoot": {
+      "again": "lagi",
+      "authStatusCommand": "arahan status pengesahan CLI yang anda konfigurasikan",
+      "checkLoggedIn": "- semak jika ia memaparkan \"Logged in\"",
+      "click": "Klik",
+      "loginCommand": "arahan log masuk runtime",
+      "logoutCommand": "arahan log keluar runtime",
+      "openTerminal": "Buka terminal anda dan jalankan:",
+      "reloginPrefix": "Jika ia menyatakan sudah log masuk tetapi aplikasi tidak melihatnya, cuba:",
+      "sameRuntime": "Pastikan CLI dalam terminal anda adalah runtime yang sama dengan yang digunakan aplikasi",
+      "statusCacheHint": "- kadangkala status di-cache untuk beberapa saat",
+      "then": "kemudian"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Satu atau lebih pembekal ditetapkan ke mod kunci API, tetapi tiada kunci API dikonfigurasi. Buka Urus Pembekal untuk menambah kunci atau menukar mod sambungan.",
+      "multipleApiKeysNeedAttention": "Satu atau lebih pembekal ditetapkan ke mod kunci API dan memerlukan perhatian. Buka Urus Pembekal untuk menyemak kunci yang disimpan atau menukar mod sambungan.",
+      "notAuthenticated": "{{runtime}} telah dipasang tetapi anda belum disahkan. Log masuk diperlukan untuk peruntukan pasukan dan ciri AI.",
+      "singleApiKeyMissing": "{{provider}} ditetapkan ke mod kunci API, tetapi tiada kunci API dikonfigurasi. Buka Urus Pembekal untuk menambah kunci atau menukar mod sambungan.",
+      "singleApiKeyNeedsAttention": "{{provider}} ditetapkan ke mod kunci API, tetapi ia tidak disambung. Buka Urus Pembekal untuk menyemak kunci yang disimpan atau menukar mod sambungan."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Pilih folder projek",
+    "selectFolder": "Pilih Folder",
+    "failedToLoad": "Gagal memuatkan projek",
+    "retry": "Cuba lagi",
+    "noProjects": "Tiada projek ditemui",
+    "noMatches": "Tiada padanan untuk \"{{query}}\"",
+    "noRecentProjects": "Tiada projek terkini ditemui",
+    "emptyDescription": "Aktiviti Claude dan Codex terkini akan dipaparkan di sini.",
+    "loadMore": "Muat lagi",
+    "card": {
+      "deleted": "Dipadam",
+      "projectFolderMissing": "Folder projek tidak lagi wujud",
+      "taskCounts": {
+        "active": "{{count}} aktif",
+        "active_one": "{{count}} aktif",
+        "active_other": "{{count}} aktif",
+        "active_few": "{{count}} aktif",
+        "active_many": "{{count}} aktif",
+        "pending": "{{count}} tertangguh",
+        "pending_one": "{{count}} tertangguh",
+        "pending_other": "{{count}} tertangguh",
+        "pending_few": "{{count}} tertangguh",
+        "pending_many": "{{count}} tertangguh",
+        "done": "{{count}} selesai",
+        "done_one": "{{count}} selesai",
+        "done_other": "{{count}} selesai",
+        "done_few": "{{count}} selesai",
+        "done_many": "{{count}} selesai"
+      }
+    },
+    "title": "Projek Terkini",
+    "searchResults": "Hasil Carian",
+    "searchPlaceholder": "Cari projek..."
+  },
+  "actions": {
+    "selectTeam": "Pilih Pasukan",
+    "or": "atau",
+    "clearSearch": "Kosongkan carian"
+  },
+  "windowsAdmin": {
+    "title": "Mod Pentadbir Windows disyorkan",
+    "description": "Semakan runtime OpenCode boleh tamat masa apabila Agent Teams AI tidak dinaik taraf. Mulakan semula aplikasi dengan Run as administrator sebelum melancarkan pasukan OpenCode."
+  },
+  "webPreview": {
+    "title": "Buka aplikasi desktop untuk fungsi penuh",
+    "description": "Versi pelayar masih dalam pembangunan. Tindakan projek, integrasi, dan kemas kini status langsung mungkin terhad di sini. Gunakan aplikasi desktop untuk mengakses semua ciri dengan boleh dipercayai."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Versi baharu tersedia",
+    "restartNow": "Mulakan semula sekarang",
+    "viewDetails": "Lihat butiran"
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "ஏற்கனவே உள்நுழைந்துள்ளீர்களா?",
+      "becomeSponsor": "ஸ்பான்சராகுங்கள்",
+      "cancel": "ரத்துசெய்",
+      "checkNow": "இப்போது சரிபார்",
+      "checkUpdates": "புதுப்பிப்புகளைச் சரிபார்",
+      "checking": "சரிபார்க்கிறது...",
+      "connect": "இணை",
+      "extensions": "நீட்டிப்புகள்",
+      "login": "உள்நுழைவு",
+      "manage": "நிர்வகி",
+      "manageProviders": "வழங்குநர்களை நிர்வகி",
+      "plan": "திட்டம்",
+      "recheck": "மீண்டும் சரிபார்",
+      "recheckProvider": "{{provider}} ஐ மீண்டும் சரிபார்",
+      "retry": "மீண்டும் முயற்சி",
+      "updateTo": "v{{version}} க்கு புதுப்பி",
+      "useCode": "குறியீட்டைப் பயன்படுத்து"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud என்பது ஒரு முழு-modal AI inference தளமாகும், இது டெவலப்பர்களுக்கு வீடியோ உருவாக்கம், படம் உருவாக்கம் மற்றும் LLM API களை அணுகுவதற்கு ஒரே AI API ஐ வழங்குகிறது. பல விற்பனையாளர் ஒருங்கிணைப்புகளை நிர்வகிப்பதற்குப் பதிலாக, நீங்கள் ஒருமுறை இணைந்து, அனைத்து modality களிலும் 300+ தேர்ந்தெடுக்கப்பட்ட மாதிரிகளுக்கு ஒருங்கிணைந்த அணுகலைப் பெறுகிறீர்கள். மிகவும் சிக்கனமான API அணுகலுக்கு Atlas Cloud இன் புதிய coding திட்ட விளம்பரத்தைப் பாருங்கள்.",
+      "openCodeProvider": "OpenCode வழங்குநர்",
+      "plan": "Atlas Cloud coding திட்டம்",
+      "sponsor": "ஸ்பான்சர்"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI நிலையைச் சரிபார்க்க முடியவில்லை",
+      "installationFailed": "நிறுவல் தோல்வியடைந்தது",
+      "refreshFailed": "புதுப்பிப்புகளைச் சரிபார்க்க முடியவில்லை. உங்கள் நெட்வொர்க் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+      "runtimeUpdatedRefreshFailed": "Runtime புதுப்பிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} நிலை பின்னணியில் சரிபார்க்கப்படும்.",
+      "codexApiKeyFallback": "{{hint}} நீங்கள் auth பயன்முறையை மாற்றினால் API key fallback கிடைக்கும்.",
+      "codexAutoApiKey": "{{hint}} ChatGPT இணைக்கப்படும் வரை Auto API key ஐத் தொடர்ந்து பயன்படுத்தும்.",
+      "codexFinishLogin": "உலாவியில் ChatGPT உள்நுழைவை முடிக்கவும். கேட்கப்பட்டால் காட்டப்படும் குறியீட்டை உள்ளிடவும்.",
+      "codexNoActiveLogin": "Codex CLI ஒரு செயலில் உள்ள ChatGPT கணக்கைப் பார்த்த பிறகே பயன்பாட்டு வரம்புகள் தோன்றும். இப்போது அது செயலில் உள்ள ChatGPT உள்நுழைவு இல்லை எனப் புகாரளிக்கிறது.",
+      "codexNoActiveManagedSession": "Codex CLI ஒரு செயலில் உள்ள ChatGPT கணக்கைப் பார்த்த பிறகே பயன்பாட்டு வரம்புகள் தோன்றும். உள்ளூர் Codex கணக்கு தரவு உள்ளது, ஆனால் இப்போது செயலில் உள்ள managed session எதுவும் தேர்ந்தெடுக்கப்படவில்லை.",
+      "codexReconnectNeeded": "தற்போது தேர்ந்தெடுக்கப்பட்ட ChatGPT session ஐ Codex புதுப்பித்த பிறகே பயன்பாட்டு வரம்புகள் தோன்றும். இப்போது உள்ளூர் session ஐ மீண்டும் இணைக்க வேண்டும்.",
+      "firstCheckSlow": "முதல் சரிபார்ப்பு 30 வினாடிகள் வரை எடுக்கலாம்",
+      "loginRequiredForTeams": "உலாவல் sessions மற்றும் projects உள்நுழைவு இல்லாமல் வேலை செய்கின்றன. agent teams ஐ இயக்க மட்டுமே உள்நுழைவு தேவை.",
+      "troubleshootTitle": "நீங்கள் உள்நுழைந்துள்ளீர்கள் என்று உறுதியாக இருந்தால், இந்த படிகளை முயற்சிக்கவும்:"
+    },
+    "installer": {
+      "checkingLatest": "சமீபத்திய பதிப்பைச் சரிபார்க்கிறது...",
+      "downloading": "{{runtime}} பதிவிறக்குகிறது...",
+      "installing": "{{runtime}} நிறுவுகிறது...",
+      "success": "{{runtime}} v{{version}} வெற்றிகரமாக நிறுவப்பட்டது",
+      "verifying": "checksum சரிபார்க்கிறது..."
+    },
+    "labels": {
+      "apiKeyRequired": "API key தேவை",
+      "comingSoon": "விரைவில் வரும்",
+      "collapseProviderDetails": "வழங்குநர் விவரங்களைச் சுருக்கு",
+      "expandProviderDetails": "வழங்குநர் விவரங்களை விரிவாக்கு",
+      "generateLink": "இணைப்பை உருவாக்கு",
+      "loadingRateLimits": "வரம்புகள் ஏற்றப்படுகின்றன",
+      "loggedOut": "வழங்குநர் வெளியேறியது",
+      "loginAuthFailed": "அங்கீகாரம் தோல்வியடைந்தது",
+      "loginAuthUpdated": "அங்கீகாரம் புதுப்பிக்கப்பட்டது",
+      "loginComplete": "உள்நுழைவு முடிந்தது",
+      "loginFailed": "உள்நுழைவு தோல்வியடைந்தது",
+      "loginTitle": "உள்நுழைவு",
+      "logoutFailed": "வெளியேறுதல் தோல்வியடைந்தது",
+      "logoutTitle": "வெளியேறு",
+      "notLoggedIn": "உள்நுழையவில்லை",
+      "openLogin": "உள்நுழைவைத் திற",
+      "providerActionRequired": "வழங்குநர் நடவடிக்கை தேவை",
+      "resets": "{{time}} மீட்டமைக்கப்படும்",
+      "runtimeLoginTitle": "{{runtime}} உள்நுழைவு"
+    },
+    "loading": {
+      "aiProviders": "AI வழங்குநர்களைச் சரிபார்க்கிறது...",
+      "claudeCli": "Claude CLI ஐச் சரிபார்க்கிறது..."
+    },
+    "provider": {
+      "authenticated": "அங்கீகரிக்கப்பட்டது",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "அங்கீகாரத்தைச் சரிபார்க்கிறது...",
+      "checkingProviders": "வழங்குநர்களைச் சரிபார்க்கிறது...",
+      "configuredLocalCount": "{{count}} கட்டமைக்கப்பட்ட உள்ளூர்",
+      "configuredLocalCount_few": "{{count}} கட்டமைக்கப்பட்ட உள்ளூர்",
+      "configuredLocalCount_many": "{{count}} கட்டமைக்கப்பட்ட உள்ளூர்",
+      "configuredLocalCount_one": "{{count}} கட்டமைக்கப்பட்ட உள்ளூர்",
+      "configuredLocalCount_other": "{{count}} கட்டமைக்கப்பட்ட உள்ளூர்",
+      "configuredLocalTitle": "உங்கள் OpenCode கட்டமைப்பிலிருந்து இறக்குமதி செய்யப்பட்ட உள்ளூர் OpenCode routes.",
+      "connectedCount": "வழங்குநர்கள்: {{connected}}/{{denominator}} இணைக்கப்பட்டது",
+      "freeModels": "இலவச மாதிரிகள்",
+      "freeModelsTitle": "உங்கள் அமைப்பில் கிடைக்கும்போது OpenCode ஆனது Big Pickle போன்ற இலவச மாதிரி விருப்பங்களைக் கொண்டுள்ளது. OpenCode வழியாக OpenRouter ஆனதும் இலவச மாதிரிகளை வெளிப்படுத்தலாம், ஆனால் ஒவ்வொரு OpenCode/OpenRouter மாதிரியும் இலவசம் அல்ல. கிடைக்கும்தன்மை மற்றும் வரம்புகள் மாறலாம்.",
+      "loadingModels": "மாதிரிகளை ஏற்றுகிறது...",
+      "modelsUnavailable": "இந்த runtime build க்கு மாதிரிகள் கிடைக்கவில்லை",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} சரிபார்க்கப்பட்டது",
+      "verifiedCount_few": "{{count}} சரிபார்க்கப்பட்டது",
+      "verifiedCount_many": "{{count}} சரிபார்க்கப்பட்டது",
+      "verifiedCount_one": "{{count}} சரிபார்க்கப்பட்டது",
+      "verifiedCount_other": "{{count}} சரிபார்க்கப்பட்டது",
+      "verifiedTitle": "வெற்றிகரமான execution proof உடன் OpenCode routes."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "கட்டமைக்கப்பட்ட {{runtime}} அதன் startup health check இல் தோல்வியடைந்தது.",
+      "configuredNotFound": "கட்டமைக்கப்பட்ட {{runtime}} கண்டறியப்படவில்லை.",
+      "foundButFailed": "{{runtime}} கண்டறியப்பட்டது ஆனால் தொடங்க முடியவில்லை",
+      "healthCheckFailedDescription": "கட்டமைக்கப்பட்ட {{runtime}} ஐ பயன்பாடு கண்டறிந்தது, ஆனால் அதன் startup health check தோல்வியடைந்தது. அதைப் பழுதுபார்க்கவும் அல்லது மீண்டும் நிறுவவும், பிறகு மீண்டும் முயற்சிக்கவும்.",
+      "install": "{{runtime}} ஐ நிறுவு",
+      "installRequiredDescription": "team provisioning மற்றும் session மேலாண்மைக்கு {{runtime}} தேவை. தொடங்க அதை நிறுவவும்.",
+      "isRequired": "{{runtime}} தேவை",
+      "reinstall": "{{runtime}} ஐ மீண்டும் நிறுவு"
+    },
+    "runtimeInstall": {
+      "checking": "சரிபார்க்கிறது",
+      "codexTitle": "Codex CLI ஐ app data இல் நிறுவு",
+      "downloading": "பதிவிறக்குகிறது",
+      "downloadingPercent": "{{percent}}% பதிவிறக்குகிறது",
+      "install": "நிறுவு",
+      "installing": "நிறுவுகிறது",
+      "openCodeTitle": "OpenCode runtime ஐ app data இல் நிறுவு",
+      "retryInstall": "நிறுவலை மீண்டும் முயற்சி"
+    },
+    "troubleshoot": {
+      "again": "மீண்டும்",
+      "authStatusCommand": "உங்கள் கட்டமைக்கப்பட்ட CLI auth status கட்டளை",
+      "checkLoggedIn": "- அது \"Logged in\" எனக் காட்டுகிறதா எனச் சரிபார்க்கவும்",
+      "click": "கிளிக் செய்",
+      "loginCommand": "runtime உள்நுழைவு கட்டளை",
+      "logoutCommand": "runtime வெளியேறுதல் கட்டளை",
+      "openTerminal": "உங்கள் terminal ஐத் திறந்து இயக்கவும்:",
+      "reloginPrefix": "உள்நுழைந்துள்ளதாக அது கூறினாலும் பயன்பாடு அதைப் பார்க்கவில்லை எனில், முயற்சிக்கவும்:",
+      "sameRuntime": "உங்கள் terminal இல் உள்ள CLI பயன்பாடு பயன்படுத்தும் அதே runtime என்பதை உறுதிப்படுத்தவும்",
+      "statusCacheHint": "- சில நேரங்களில் நிலை சில வினாடிகளுக்கு cache செய்யப்படும்",
+      "then": "பிறகு"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "ஒன்று அல்லது அதற்கு மேற்பட்ட வழங்குநர்கள் API key பயன்முறையில் அமைக்கப்பட்டுள்ளனர், ஆனால் API key எதுவும் கட்டமைக்கப்படவில்லை. keys ஐச் சேர்க்க அல்லது இணைப்பு பயன்முறையை மாற்ற Manage Providers ஐத் திறக்கவும்.",
+      "multipleApiKeysNeedAttention": "ஒன்று அல்லது அதற்கு மேற்பட்ட வழங்குநர்கள் API key பயன்முறையில் அமைக்கப்பட்டுள்ளனர், கவனம் தேவை. சேமிக்கப்பட்ட keys ஐ மதிப்பாய்வு செய்ய அல்லது இணைப்பு பயன்முறையை மாற்ற Manage Providers ஐத் திறக்கவும்.",
+      "notAuthenticated": "{{runtime}} நிறுவப்பட்டுள்ளது ஆனால் நீங்கள் அங்கீகரிக்கப்படவில்லை. team provisioning மற்றும் AI அம்சங்களுக்கு உள்நுழைவு தேவை.",
+      "singleApiKeyMissing": "{{provider}} API key பயன்முறையில் அமைக்கப்பட்டுள்ளது, ஆனால் API key எதுவும் கட்டமைக்கப்படவில்லை. ஒரு key ஐச் சேர்க்க அல்லது இணைப்பு பயன்முறையை மாற்ற Manage Providers ஐத் திறக்கவும்.",
+      "singleApiKeyNeedsAttention": "{{provider}} API key பயன்முறையில் அமைக்கப்பட்டுள்ளது, ஆனால் அது இணைக்கப்படவில்லை. சேமிக்கப்பட்ட key ஐ மதிப்பாய்வு செய்ய அல்லது இணைப்பு பயன்முறையை மாற்ற Manage Providers ஐத் திறக்கவும்."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "ஒரு project folder ஐத் தேர்ந்தெடு",
+    "selectFolder": "Folder ஐத் தேர்ந்தெடு",
+    "failedToLoad": "projects ஐ ஏற்ற முடியவில்லை",
+    "retry": "மீண்டும் முயற்சி",
+    "noProjects": "எந்த project களும் கிடைக்கவில்லை",
+    "noMatches": "\"{{query}}\" க்கு பொருத்தங்கள் இல்லை",
+    "noRecentProjects": "சமீபத்திய project கள் எதுவும் கிடைக்கவில்லை",
+    "emptyDescription": "சமீபத்திய Claude மற்றும் Codex செயல்பாடு இங்கே தோன்றும்.",
+    "loadMore": "மேலும் ஏற்று",
+    "card": {
+      "deleted": "நீக்கப்பட்டது",
+      "projectFolderMissing": "project folder இனி இல்லை",
+      "taskCounts": {
+        "active": "{{count}} செயலில்",
+        "active_one": "{{count}} செயலில்",
+        "active_other": "{{count}} செயலில்",
+        "active_few": "{{count}} செயலில்",
+        "active_many": "{{count}} செயலில்",
+        "pending": "{{count}} நிலுவையில்",
+        "pending_one": "{{count}} நிலுவையில்",
+        "pending_other": "{{count}} நிலுவையில்",
+        "pending_few": "{{count}} நிலுவையில்",
+        "pending_many": "{{count}} நிலுவையில்",
+        "done": "{{count}} முடிந்தது",
+        "done_one": "{{count}} முடிந்தது",
+        "done_other": "{{count}} முடிந்தது",
+        "done_few": "{{count}} முடிந்தது",
+        "done_many": "{{count}} முடிந்தது"
+      }
+    },
+    "title": "சமீபத்திய Projects",
+    "searchResults": "தேடல் முடிவுகள்",
+    "searchPlaceholder": "projects ஐத் தேடு..."
+  },
+  "actions": {
+    "selectTeam": "Team ஐத் தேர்ந்தெடு",
+    "or": "அல்லது",
+    "clearSearch": "தேடலை அழி"
+  },
+  "windowsAdmin": {
+    "title": "Windows Administrator பயன்முறை பரிந்துரைக்கப்படுகிறது",
+    "description": "Agent Teams AI elevated இல்லாதபோது OpenCode runtime சரிபார்ப்புகள் காலாவதியாகலாம். OpenCode teams ஐ தொடங்குவதற்கு முன் பயன்பாட்டை Run as administrator உடன் மறுதொடக்கம் செய்யவும்."
+  },
+  "webPreview": {
+    "title": "முழு செயல்பாட்டிற்கு desktop பயன்பாட்டைத் திறக்கவும்",
+    "description": "உலாவி பதிப்பு இன்னும் உருவாக்கத்தில் உள்ளது. project நடவடிக்கைகள், ஒருங்கிணைப்புகள் மற்றும் நேரடி நிலை புதுப்பிப்புகள் இங்கே வரம்புக்குட்பட்டதாக இருக்கலாம். அனைத்து அம்சங்களையும் நம்பகமாக அணுக desktop பயன்பாட்டைப் பயன்படுத்தவும்."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "புதிய பதிப்பு கிடைக்கிறது",
+    "restartNow": "இப்போது மறுதொடக்கம்",
+    "viewDetails": "விவரங்களைக் காண்"
+  }
+}

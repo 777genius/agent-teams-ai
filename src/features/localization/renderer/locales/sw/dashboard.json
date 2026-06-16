@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Tayari umeingia?",
+      "becomeSponsor": "Kuwa mfadhili",
+      "cancel": "Ghairi",
+      "checkNow": "Kagua sasa",
+      "checkUpdates": "Kagua Masasisho",
+      "checking": "Inakagua...",
+      "connect": "Unganisha",
+      "extensions": "Viendelezi",
+      "login": "Ingia",
+      "manage": "Dhibiti",
+      "manageProviders": "Dhibiti Watoa Huduma",
+      "plan": "Mpango",
+      "recheck": "Kagua tena",
+      "recheckProvider": "Kagua tena {{provider}}",
+      "retry": "Jaribu tena",
+      "updateTo": "Sasisha hadi v{{version}}",
+      "useCode": "Tumia msimbo"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud ni jukwaa la utabiri wa AI lenye modali kamili linalowapa watengenezaji API moja ya AI kufikia uzalishaji wa video, uzalishaji wa picha, na API za LLM. Badala ya kudhibiti uunganishaji wa wachuuzi wengi, unaunganisha mara moja na kupata ufikiaji wa pamoja wa modeli 300+ zilizoteuliwa katika modali zote. Angalia ofa mpya ya mpango wa uandishi wa msimbo wa Atlas Cloud kwa ufikiaji wa API wa bei nafuu zaidi.",
+      "openCodeProvider": "Mtoa huduma wa OpenCode",
+      "plan": "Mpango wa uandishi wa msimbo wa Atlas Cloud",
+      "sponsor": "Mfadhili"
+    },
+    "errors": {
+      "checkStatusFailed": "Imeshindwa kukagua hali ya CLI",
+      "installationFailed": "Usakinishaji umeshindwa",
+      "refreshFailed": "Imeshindwa kukagua masasisho. Kagua muunganisho wako wa mtandao na ujaribu tena.",
+      "runtimeUpdatedRefreshFailed": "Runtime imesasishwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma."
+    },
+    "hints": {
+      "backgroundStatus": "Hali ya {{runtime}} itakaguliwa kwenye usuli.",
+      "codexApiKeyFallback": "{{hint}} Mbadala wa ufunguo wa API unapatikana ukibadilisha hali ya uthibitishaji.",
+      "codexAutoApiKey": "{{hint}} Otomatiki itaendelea kutumia ufunguo wa API hadi ChatGPT iunganishwe.",
+      "codexFinishLogin": "Maliza kuingia kwa ChatGPT kwenye kivinjari. Weka msimbo unaoonyeshwa ukiulizwa.",
+      "codexNoActiveLogin": "Vikomo vya matumizi vinaonekana tu baada ya Codex CLI kuona akaunti hai ya ChatGPT. Sasa hivi inaripoti hakuna kuingia hai kwa ChatGPT.",
+      "codexNoActiveManagedSession": "Vikomo vya matumizi vinaonekana tu baada ya Codex CLI kuona akaunti hai ya ChatGPT. Data ya akaunti ya Codex ya ndani ipo, lakini hakuna kipindi hai kilichodhibitiwa kilichochaguliwa sasa hivi.",
+      "codexReconnectNeeded": "Vikomo vya matumizi vinaonekana tu baada ya Codex kuonyesha upya kipindi cha ChatGPT kilichochaguliwa kwa sasa. Sasa hivi kipindi cha ndani kinahitaji kuunganishwa tena.",
+      "firstCheckSlow": "Ukaguzi wa kwanza unaweza kuchukua hadi sekunde 30",
+      "loginRequiredForTeams": "Kuvinjari vipindi na miradi hufanya kazi bila kuingia. Kuingia kunahitajika tu kuendesha timu za wakala.",
+      "troubleshootTitle": "Ikiwa una uhakika umeingia, jaribu hatua hizi:"
+    },
+    "installer": {
+      "checkingLatest": "Inakagua toleo jipya zaidi...",
+      "downloading": "Inapakua {{runtime}}...",
+      "installing": "Inasakinisha {{runtime}}...",
+      "success": "Imesakinisha {{runtime}} v{{version}} kwa mafanikio",
+      "verifying": "Inathibitisha checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "Ufunguo wa API unahitajika",
+      "comingSoon": "Inakuja hivi karibuni",
+      "collapseProviderDetails": "Kunja maelezo ya mtoa huduma",
+      "expandProviderDetails": "Panua maelezo ya mtoa huduma",
+      "generateLink": "Tengeneza kiungo",
+      "loadingRateLimits": "Vikomo vya kiwango vinapakia",
+      "loggedOut": "Mtoa huduma ametoka",
+      "loginAuthFailed": "Uthibitishaji umeshindwa",
+      "loginAuthUpdated": "Uthibitishaji umesasishwa",
+      "loginComplete": "Kuingia kumekamilika",
+      "loginFailed": "Kuingia kumeshindwa",
+      "loginTitle": "Ingia",
+      "logoutFailed": "Kutoka kumeshindwa",
+      "logoutTitle": "Toka",
+      "notLoggedIn": "Hujaingia",
+      "openLogin": "Fungua kuingia",
+      "providerActionRequired": "Hatua ya mtoa huduma inahitajika",
+      "resets": "inaweka upya {{time}}",
+      "runtimeLoginTitle": "Kuingia kwa {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Inakagua Watoa Huduma wa AI...",
+      "claudeCli": "Inakagua Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Imethibitishwa",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Inakagua uthibitishaji...",
+      "checkingProviders": "Inakagua watoa huduma...",
+      "configuredLocalCount": "{{count}} ya ndani imesanidiwa",
+      "configuredLocalCount_few": "{{count}} za ndani zimesanidiwa",
+      "configuredLocalCount_many": "{{count}} za ndani zimesanidiwa",
+      "configuredLocalCount_one": "{{count}} ya ndani imesanidiwa",
+      "configuredLocalCount_other": "{{count}} za ndani zimesanidiwa",
+      "configuredLocalTitle": "Njia za OpenCode za ndani zilizoletwa kutoka usanidi wako wa OpenCode.",
+      "connectedCount": "Watoa huduma: {{connected}}/{{denominator}} wameunganishwa",
+      "freeModels": "Modeli za bure",
+      "freeModelsTitle": "OpenCode inajumuisha chaguo za modeli za bure kama vile Big Pickle zinapopatikana katika usanidi wako. OpenRouter kupitia OpenCode inaweza pia kuonyesha modeli za bure, lakini si kila modeli ya OpenCode/OpenRouter ni bure. Upatikanaji na vikomo vinaweza kubadilika.",
+      "loadingModels": "Inapakia modeli...",
+      "modelsUnavailable": "Modeli hazipatikani kwa toleo hili la runtime",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} imethibitishwa",
+      "verifiedCount_few": "{{count}} zimethibitishwa",
+      "verifiedCount_many": "{{count}} zimethibitishwa",
+      "verifiedCount_one": "{{count}} imethibitishwa",
+      "verifiedCount_other": "{{count}} zimethibitishwa",
+      "verifiedTitle": "Njia za OpenCode zenye uthibitisho wa utekelezaji uliofaulu."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} iliyosanidiwa imeshindwa ukaguzi wake wa afya wa uanzishaji.",
+      "configuredNotFound": "{{runtime}} iliyosanidiwa haikupatikana.",
+      "foundButFailed": "{{runtime}} ilipatikana lakini imeshindwa kuanza",
+      "healthCheckFailedDescription": "Programu ilipata {{runtime}} iliyosanidiwa, lakini ukaguzi wake wa afya wa uanzishaji umeshindwa. Irekebishe au isakinishe upya, kisha ujaribu tena.",
+      "install": "Sakinisha {{runtime}}",
+      "installRequiredDescription": "{{runtime}} inahitajika kwa ugavi wa timu na usimamizi wa vipindi. Isakinishe ili kuanza.",
+      "isRequired": "{{runtime}} inahitajika",
+      "reinstall": "Sakinisha tena {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Inakagua",
+      "codexTitle": "Sakinisha Codex CLI ndani ya data ya programu",
+      "downloading": "Inapakua",
+      "downloadingPercent": "Inapakua {{percent}}%",
+      "install": "Sakinisha",
+      "installing": "Inasakinisha",
+      "openCodeTitle": "Sakinisha runtime ya OpenCode ndani ya data ya programu",
+      "retryInstall": "Jaribu tena kusakinisha"
+    },
+    "troubleshoot": {
+      "again": "tena",
+      "authStatusCommand": "amri yako ya hali ya uthibitishaji ya CLI iliyosanidiwa",
+      "checkLoggedIn": "- kagua kama inaonyesha \"Umeingia\"",
+      "click": "Bofya",
+      "loginCommand": "amri ya kuingia ya runtime",
+      "logoutCommand": "amri ya kutoka ya runtime",
+      "openTerminal": "Fungua terminal yako na uendeshe:",
+      "reloginPrefix": "Ikiwa inasema umeingia lakini programu haioni, jaribu:",
+      "sameRuntime": "Hakikisha CLI katika terminal yako ni runtime ile ile inayotumiwa na programu",
+      "statusCacheHint": "- wakati mwingine hali huhifadhiwa akibani kwa sekunde chache",
+      "then": "kisha"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Mtoa huduma mmoja au zaidi umewekwa kwenye hali ya ufunguo wa API, lakini hakuna ufunguo wa API uliosanidiwa. Fungua Dhibiti Watoa Huduma ili kuongeza funguo au kubadilisha hali ya muunganisho.",
+      "multipleApiKeysNeedAttention": "Mtoa huduma mmoja au zaidi umewekwa kwenye hali ya ufunguo wa API na unahitaji uangalifu. Fungua Dhibiti Watoa Huduma ili kukagua funguo zilizohifadhiwa au kubadilisha hali ya muunganisho.",
+      "notAuthenticated": "{{runtime}} imesakinishwa lakini hujathibitishwa. Kuingia kunahitajika kwa ugavi wa timu na vipengele vya AI.",
+      "singleApiKeyMissing": "{{provider}} amewekwa kwenye hali ya ufunguo wa API, lakini hakuna ufunguo wa API uliosanidiwa. Fungua Dhibiti Watoa Huduma ili kuongeza ufunguo au kubadilisha hali ya muunganisho.",
+      "singleApiKeyNeedsAttention": "{{provider}} amewekwa kwenye hali ya ufunguo wa API, lakini hajaunganishwa. Fungua Dhibiti Watoa Huduma ili kukagua ufunguo uliohifadhiwa au kubadilisha hali ya muunganisho."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Chagua folda ya mradi",
+    "selectFolder": "Chagua Folda",
+    "failedToLoad": "Imeshindwa kupakia miradi",
+    "retry": "Jaribu tena",
+    "noProjects": "Hakuna miradi iliyopatikana",
+    "noMatches": "Hakuna inayolingana na \"{{query}}\"",
+    "noRecentProjects": "Hakuna miradi ya hivi karibuni iliyopatikana",
+    "emptyDescription": "Shughuli za hivi karibuni za Claude na Codex zitaonekana hapa.",
+    "loadMore": "Pakia zaidi",
+    "card": {
+      "deleted": "Imefutwa",
+      "projectFolderMissing": "Folda ya mradi haipo tena",
+      "taskCounts": {
+        "active": "{{count}} inaendelea",
+        "active_one": "{{count}} inaendelea",
+        "active_other": "{{count}} zinaendelea",
+        "active_few": "{{count}} zinaendelea",
+        "active_many": "{{count}} zinaendelea",
+        "pending": "{{count}} inasubiri",
+        "pending_one": "{{count}} inasubiri",
+        "pending_other": "{{count}} zinasubiri",
+        "pending_few": "{{count}} zinasubiri",
+        "pending_many": "{{count}} zinasubiri",
+        "done": "{{count}} imekamilika",
+        "done_one": "{{count}} imekamilika",
+        "done_other": "{{count}} zimekamilika",
+        "done_few": "{{count}} zimekamilika",
+        "done_many": "{{count}} zimekamilika"
+      }
+    },
+    "title": "Miradi ya Hivi Karibuni",
+    "searchResults": "Matokeo ya Utafutaji",
+    "searchPlaceholder": "Tafuta miradi..."
+  },
+  "actions": {
+    "selectTeam": "Chagua Timu",
+    "or": "au",
+    "clearSearch": "Futa utafutaji"
+  },
+  "windowsAdmin": {
+    "title": "Hali ya Msimamizi wa Windows inapendekezwa",
+    "description": "Ukaguzi wa runtime ya OpenCode unaweza kuisha muda Agent Teams AI isipopandishwa hadhi. Anzisha upya programu kwa Endesha kama msimamizi kabla ya kuzindua timu za OpenCode."
+  },
+  "webPreview": {
+    "title": "Fungua programu ya eneo-kazi kwa utendaji kamili",
+    "description": "Toleo la kivinjari bado liko katika maendeleo. Vitendo vya mradi, miunganisho, na masasisho ya hali ya moja kwa moja vinaweza kuwa na vikomo hapa. Tumia programu ya eneo-kazi kufikia vipengele vyote kwa uhakika."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Toleo jipya linapatikana",
+    "restartNow": "Anzisha upya sasa",
+    "viewDetails": "Tazama maelezo"
+  }
+}

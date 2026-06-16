@@ -3,8 +3,13 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
-import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
+import { isCodexExecBinary } from './codexCliBinary';
 import {
+  buildProviderAwareCliEnv,
+  getProviderStatusStoredCredentialAllowlist,
+} from './providerAwareCliEnv';
+import {
+  buildCodexExecModelProbeArgs,
   buildProviderModelProbeArgs,
   classifyProviderModelProbeFailure,
   getProviderModelProbeTimeoutMs,
@@ -159,6 +164,18 @@ function classifyFailedProbe(
   };
 }
 
+function buildModelProbeCommandArgs(
+  context: ProviderModelAvailabilityContext,
+  providerArgs: string[],
+  modelId: string
+): string[] {
+  if (context.provider.providerId === 'codex' && isCodexExecBinary(context.binaryPath)) {
+    return [...providerArgs, ...buildCodexExecModelProbeArgs(modelId)];
+  }
+
+  return [...providerArgs, ...buildProviderModelProbeArgs(modelId)];
+}
+
 export class CliProviderModelAvailabilityService {
   private readonly cache = new Map<string, ProviderModelAvailabilityCacheEntry>();
   private readonly queue: (() => void)[] = [];
@@ -194,8 +211,9 @@ export class CliProviderModelAvailabilityService {
         binaryPath: context.binaryPath,
         providerId: context.provider.providerId,
         allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames:
-          context.provider.providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
+        allowedStoredApiKeyEnvVarNames: getProviderStatusStoredCredentialAllowlist(
+          context.provider.providerId
+        ),
       }).then((result) => ({
         env: result.env,
         providerArgs: result.providerArgs ?? [],
@@ -277,7 +295,7 @@ export class CliProviderModelAvailabilityService {
       const { env, providerArgs } = await entry.cliEnvPromise;
       const { stdout } = await execCli(
         context.binaryPath,
-        [...providerArgs, ...buildProviderModelProbeArgs(modelId)],
+        buildModelProbeCommandArgs(context, providerArgs, modelId),
         {
           timeout: getProviderModelProbeTimeoutMs(context.provider.providerId),
           env,

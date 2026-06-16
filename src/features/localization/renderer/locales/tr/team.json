@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Mesajdan görev oluştur",
+      "editMessage": "Mesajı düzenle",
+      "expandMessage": "Mesajı genişlet",
+      "replyToMessage": "Mesajı yanıtla",
+      "restartTeam": "Ekibi yeniden başlat"
+    },
+    "authError": {
+      "description": "Kimlik doğrulama başarısız oldu. Ekibi yeniden başlatmak oturumu yeniler ve bu sorunu çözebilir. Sorun devam ederse API kimlik bilgilerinizi kontrol edin veya daha sonra tekrar deneyin."
+    },
+    "automation": {
+      "reviewPickup": "Takım arkadaşından incelemeyi devralması istendi",
+      "stallNudge": "Takım arkadaşından durmuş göreve devam etmesi istendi",
+      "workSyncBody": "Takım arkadaşından mevcut işi senkronize etmesi istendi"
+    },
+    "badges": {
+      "automation": "otomasyon",
+      "bootstrap": "bootstrap",
+      "command": "komut",
+      "comment": "Yorum",
+      "live": "canlı",
+      "note": "not",
+      "rateLimited": "Hız Sınırlı",
+      "restart": "yeniden başlatma",
+      "result": "sonuç",
+      "session": "oturum",
+      "stallNudge": "durma hatırlatması",
+      "start": "başlat",
+      "workSync": "iş senkronizasyonu",
+      "agentError": "Agent Hatası",
+      "apiError": "API Hatası"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap onaylandı",
+      "restarting": "Takım arkadaşı yeniden başlatılıyor",
+      "starting": "Takım arkadaşı başlatılıyor"
+    },
+    "rawJson": "Ham JSON",
+    "unread": "Okunmamış",
+    "thoughts": {
+      "count": "{{count}} düşünce",
+      "count_one": "{{count}} düşünce",
+      "expand": "Düşünceleri genişlet",
+      "showMore": "Daha fazla göster",
+      "showLess": "Daha az göster",
+      "count_few": "{{count}} düşünce",
+      "count_many": "{{count}} düşünce",
+      "count_other": "{{count}} düşünce",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - düşünceler"
+    },
+    "timeline": {
+      "loadingMessages": "Mesajlar yükleniyor...",
+      "noMessages": "Mesaj yok",
+      "emptyHint": "Etkinliği görmek için bir üyeye mesaj gönderin.",
+      "newSession": "Yeni oturum",
+      "olderCount": "+{{count}} eski",
+      "showMore": "{{count}} tane daha göster",
+      "showAll": "Tümünü göster",
+      "olderCount_one": "+{{count}} eski",
+      "olderCount_few": "+{{count}} eski",
+      "olderCount_many": "+{{count}} eski",
+      "olderCount_other": "+{{count}} eski"
+    },
+    "pendingReplies": {
+      "title": "Yanıtlar bekleniyor",
+      "openMember": "Üyeyi aç",
+      "messageSentAwaitingReply": "Mesaj gönderildi, yanıt bekleniyor",
+      "awaitingReply": "yanıt bekleniyor",
+      "externalTeam": "harici ekip",
+      "crossTeamAwaitingReply": "Ekipler arası mesaj gönderildi, yanıt bekleniyor",
+      "user": "kullanıcı",
+      "awaitingApproval": "onay bekleniyor"
+    },
+    "reply": {
+      "replyingTo": "Şuna yanıt veriliyor:",
+      "action": "Yanıtla"
+    },
+    "activeTasks": {
+      "inProgress": "Devam ediyor",
+      "expandInProgress": "Devam edenleri genişlet",
+      "collapseInProgress": "Devam edenleri daralt",
+      "reviewing": "inceliyor",
+      "workingOn": "üzerinde çalışıyor"
+    },
+    "expandDialog": {
+      "description": "Genişletilmiş mesaj görünümü"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Oluştur",
+      "creating": "Oluşturuluyor...",
+      "openExisting": "Mevcut Ekibi Aç",
+      "skipPreflightAndCreate": "Ön kontrolü atla ve oluştur"
+    },
+    "conflict": {
+      "description": "Aynı dizinde iki ekip çalıştırmak risklidir - aynı dosyaları düzenlerken çakışabilirler. Yalıtım için farklı bir dizin veya bir git worktree kullanmayı düşünün.",
+      "title": "Bu çalışma dizini için başka bir \"{{team}}\" ekibi zaten çalışıyor",
+      "workingDirectory": "Çalışma dizini:"
+    },
+    "description": {
+      "copy": "Mevcut bir ekibe dayalı yeni bir ekip oluşturun.",
+      "create": "Ekibinizi kurun ve nasıl başlayacağını seçin."
+    },
+    "errors": {
+      "nameExists": "Ekip adı zaten mevcut",
+      "nameLaunching": "Bu ada sahip bir ekip şu anda başlatılıyor",
+      "createConfigFailed": "Ekip yapılandırması oluşturulamadı",
+      "loadProjectsFailed": "Projeler yüklenemedi"
+    },
+    "fields": {
+      "color": "Renk (isteğe bağlı)",
+      "description": "Açıklama (isteğe bağlı)",
+      "prompt": "Ekip lideri için komut istemi (isteğe bağlı)",
+      "teamName": "Ekip adı"
+    },
+    "launchAfterCreate": {
+      "description": "Ekibi yerel Claude CLI aracılığıyla hemen başlat.",
+      "label": "Oluşturduktan sonra komutu çalıştır"
+    },
+    "localOnly": "Yalnızca yerel Electron modunda kullanılabilir.",
+    "onDisk": "Diskte:",
+    "placeholders": {
+      "description": "Ekibin amacının kısa açıklaması",
+      "prompt": "Sağlama sırasında ekip lideri için talimatlar..."
+    },
+    "saved": "Kaydedildi",
+    "solo": {
+      "description": "Yalnızca ekip lideri (ana süreç) başlatılacak - hiçbir takım arkadaşı oluşturulmayacak. Seçtiğiniz çalışma zamanında (Claude Code, Codex, OpenCode, Gemini) normal bir agent oturumu gibi çalışır, ancak planlama için görev panosuna erişim sağlar. Takım arkadaşı koordinasyon yükünden kaçınarak token tasarrufu yapar. Üyeleri daha sonra ekip ayarlarından ekleyebilirsiniz.",
+      "label": "Tekli ekip"
+    },
+    "title": {
+      "copy": "Ekibi Kopyala",
+      "create": "Ekip Oluştur"
+    },
+    "optional": {
+      "launchSettingsTitle": "İsteğe bağlı başlatma ayarları",
+      "launchSettingsDescription": "Komut istemi, güvenlik ve CLI geçersiz kılmaları ihtiyaç duyduğunuzda burada bulunur.",
+      "teamDetailsTitle": "İsteğe bağlı ekip ayrıntıları",
+      "teamDetailsDescription": "Varsayılan akışı kompakt tutun ve yalnızca ekstra bağlam veya özel bir renk istediğinizde bunu açın."
+    },
+    "prepare": {
+      "unsupportedPreload": "Geçerli preload sürümü team:prepareProvisioning öğesini desteklemiyor. Geliştirme uygulamasını yeniden başlatın.",
+      "selectWorkingDirectory": "Başlatma ortamını doğrulamak için bir çalışma dizini seçin.",
+      "someProvidersNeedAttention": "Seçili bazı sağlayıcıların ilgilenilmesi gerekiyor.",
+      "readyWithNotes": "Seçili tüm sağlayıcılar hazır, notlarla birlikte.",
+      "ready": "Seçili tüm sağlayıcılar hazır.",
+      "failed": "Seçili sağlayıcılar hazırlanamadı",
+      "checkingProviders": "Seçili sağlayıcılar kontrol ediliyor...",
+      "preparingEnvironment": "Ortam hazırlanıyor...",
+      "selectedProvidersReadyWithNotes": "Seçili sağlayıcılar hazır (notlarla birlikte)",
+      "selectedProvidersReady": "Seçili sağlayıcılar hazır"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Ad en az bir harf veya rakam içermelidir",
+      "nameTooLong": "Ad çok uzun (en fazla 128 karakter)",
+      "selectWorkingDirectory": "Çalışma dizinini seçin (cwd)",
+      "memberNameRequired": "Üye adı boş olamaz",
+      "memberNameInvalid": "Üye adı alfasayısal ile başlamalı, yalnızca [a-zA-Z0-9._-] kullanmalı, en fazla 128 karakter olmalıdır",
+      "memberNamesUnique": "Üye adları benzersiz olmalıdır",
+      "openCodeLeadModelRequired": "OpenCode lideri seçili bir model gerektirir.",
+      "openCodeTeammateRequired": "OpenCode lideri en az bir OpenCode takım arkadaşı gerektirir.",
+      "teamLaunching": "Ekip şu anda başlatılıyor",
+      "teamNameExists": "Ekip adı zaten mevcut",
+      "checkFormFields": "Form alanlarını kontrol edin"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "İptal",
+      "save": "Kaydet"
+    },
+    "addMemberLockReason": "Ekip canlıyken yeni takım arkadaşları eklemek için özel Üye ekle iletişim kutusunu kullanın.",
+    "description": "Ekip adını, açıklamasını ve rengini değiştir",
+    "errors": {
+      "changesSavedRefreshFailed": "Ekip değişiklikleri kaydedildi, ancak en son görünüm yenilenemedi: {{message}}",
+      "liveRenameBlocked": "Mevcut takım arkadaşları ekip canlıyken yeniden adlandırılamaz. yeniden adlandırılan: {{names}}",
+      "memberNameEmpty": "Üye adı boş olamaz",
+      "memberNameInvalid": "Üye adı alfasayısal ile başlamalı, yalnızca [a-zA-Z0-9._-] kullanmalı, en fazla 128 karakter olmalıdır",
+      "memberNameNumericSuffix": "\"{{name}}\" üye adına izin verilmiyor (Claude CLI otomatik son ekine ayrılmıştır). Bunun yerine \"{{base}}\" kullanın.",
+      "memberNameReserved": "\"{{name}}\" üye adı ayrılmıştır",
+      "memberNamesUnique": "Kaydetmeden önce üye adları benzersiz olmalıdır",
+      "newLiveTeammates": "Ekip canlıyken yeni takım arkadaşlarını özel Üye ekle iletişim kutusundan ekleyin. Ekibi Düzenle yalnızca mevcut takım arkadaşlarını güncellemeyi destekler.",
+      "provisioning": "Sağlama hâlâ devam ederken ekip ayarları düzenlenemez. Başlatmanın bitmesini bekleyin, ardından tekrar deneyin.",
+      "restartFailedMany": "Ekip kaydedildi, ancak şu takım arkadaşları yeniden başlatılamadı: {{failures}}",
+      "restartFailedOne": "Ekip kaydedildi, ancak şu takım arkadaşı yeniden başlatılamadı: {{failures}}",
+      "saveFailed": "Kaydedilemedi",
+      "settingsChanged": "Bu iletişim kutusu açıkken ekip ayarları değişti. Kaydetmeden önce yeniden açıp en son durumu gözden geçirin.",
+      "settingsSavedMembersAndRefreshFailed": "Ekip ayarları kaydedildi, ancak üye değişiklikleri başarısız oldu: {{message}}. Yenileme de başarısız oldu: {{refreshError}}",
+      "settingsSavedMembersFailed": "Ekip ayarları kaydedildi, ancak üye değişiklikleri başarısız oldu: {{message}}",
+      "settingsSavedRefreshFailed": "Ekip ayarları kaydedildi, ancak en son görünüm yenilenemedi: {{message}}",
+      "teamNameEmpty": "Ekip adı boş olamaz",
+      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşlarında canlı düzenlemeler henüz desteklenmiyor. Ekibi durdurun, kadroyu düzenleyin, ardından yeniden başlatın. Etkilenenler: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Renk (isteğe bağlı)",
+      "description": "Açıklama",
+      "name": "Ad"
+    },
+    "memberRestartWarning": "Kaydetme; rol, iş akışı, worktree yalıtımı, sağlayıcı, model, çaba veya MCP erişim değişikliklerini uygulamak için bu takım arkadaşını yeniden başlatacak.",
+    "notices": {
+      "liveRenameBlocked": "Mevcut takım arkadaşları yeniden adlandırıldığı için canlı kaydetme engellendi. Bu kimlik değişikliklerini geri alın veya önce ekibi durdurun.",
+      "newLiveTeammates": "Ekip canlıyken Ekibi Düzenle'den yeni takım arkadaşları eklenemez. Bunun yerine Üye ekle iletişim kutusunu kullanın.",
+      "provisioning": "Ekip sağlama hâlâ devam ediyor. Başlatma bitene kadar düzenleme geçici olarak kilitli.",
+      "restartMany": "Kaydetme; rol, iş akışı, worktree yalıtımı, sağlayıcı, model, çaba veya MCP erişim değişikliklerini uygulamak için bu takım arkadaşlarını yeniden başlatacak veya baştan başlatacaktır: {{names}}.",
+      "restartOne": "Kaydetme; rol, iş akışı, worktree yalıtımı, sağlayıcı, model, çaba veya MCP erişim değişikliklerini uygulamak için bu takım arkadaşını yeniden başlatacak veya baştan başlatacaktır: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşları için canlı düzenlemeler/kaldırmalar ekibin durdurulup yeniden başlatılmasını gerektirir: {{names}}."
+    },
+    "placeholders": {
+      "description": "Ekip açıklaması (isteğe bağlı)",
+      "teamName": "Ekip adı"
+    },
+    "teamLead": {
+      "changeRuntime": "Lider çalışma zamanını değiştir",
+      "changeRuntimeDescription": "Lider sağlayıcısını, modelini veya çabasını değiştirmek için Ekibi Yeniden Başlat'ı açın.",
+      "modelLockReason": "Ekip lideri çalışma zamanı Ekibi Yeniden Başlat'tan yönetilir.",
+      "readOnlyHint": "Ekip lideri adı ve rolü burada salt okunur kalır. Sağlayıcıyı, modeli veya çabayı değiştirmek için lider satırındaki çalışma zamanı panelini açın.",
+      "role": "Ekip Lideri"
+    },
+    "title": "Ekibi Düzenle"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Üyeyi kaldır",
+      "removeAria": "{{name}} öğesini kaldır",
+      "restore": "Üyeyi geri yükle",
+      "restoreAria": "{{name}} öğesini geri yükle"
+    },
+    "anthropicContext": {
+      "defaultSetting": "varsayılan bağlam ayarı",
+      "description": "Anthropic bağlamı bu başlatma için ekip genelidir: {{mode}}. Bunu değiştirmek için lider çalışma zamanı panelinin Bağlamı sınırla onay kutusunu kullanın.",
+      "limitEnabled": "200K limiti etkin"
+    },
+    "mcp": {
+      "buttonInherit": "MCP devral",
+      "buttonScopes": "MCP kapsamları",
+      "chooseScopes": "Kapsamları seç",
+      "inheritLead": "Lideri devral",
+      "lockedInfo": "Tüm takım arkadaşları için yalnızca Agent Teams MCP etkindir. Bu takım arkadaşı yalnızca Agent Teams sunucusuyla başlatılacak.",
+      "mode": "MCP modu",
+      "scopes": {
+        "local": "yerel",
+        "project": "proje",
+        "user": "kullanıcı"
+      },
+      "serverNames": "Sunucu adları",
+      "settingInfo": "Agent Teams MCP, bu takım arkadaşını yalnızca Agent Teams sunucusuyla başlatır. Kapsam ve izin listesi modları yalnızca bu takım arkadaşı başlatmasına uygulanır.",
+      "strictAllowlist": "Katı izin listesi",
+      "tooltip": "{{label}}: Bu üyenin MCP devralma politikasını kontrol edin",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} sağlayıcısı, {{model}}",
+      "currentLeadRuntime": "Geçerli lider çalışma zamanı",
+      "default": "Varsayılan",
+      "inheritedTooltip": "Senkronizasyon etkinken sağlayıcı, model ve çaba liderden devralınır.",
+      "leadSuffix": "{{label}} (lider)",
+      "liveDisabled": "Ekip canlıyken sağlayıcı, model ve çaba değişiklikleri devre dışıdır. Bunları güvenli şekilde uygulamak için ekibe yeniden bağlanın.",
+      "lockedActionFallback": "Lider çalışma zamanı değişiklikleri, sağlayıcı, model ve çabanın güncellenebileceği Ekibi Yeniden Başlat'ı açar.",
+      "restartWholeTeam": "Bu çalışma zamanı değişikliklerini kaydetmek tüm ekibi yeniden başlatır."
+    },
+    "nameAria": "Üye {{index}} adı",
+    "nameFallback": "üye {{index}}",
+    "noRole": "Rol yok",
+    "removed": "Kaldırıldı",
+    "workflow": {
+      "addTooltip": "Takım arkadaşı iş akışı ekle",
+      "editTooltip": "Takım arkadaşı iş akışını düzenle",
+      "label": "İş akışı (isteğe bağlı)",
+      "placeholder": "Bu agent'ın nasıl davranması, diğerleriyle nasıl etkileşim kurması gerektiği...",
+      "saved": "Kaydedildi"
+    },
+    "worktree": {
+      "description": "Bu takım arkadaşını ayrı bir git worktree'de çalıştır. Değişiklikleri uygula/reddet, lider çalışma alanını değil o worktree'yi hedefler.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Üye Ekle",
+      "description": "{{teamName}} ekibine yeni üyeler ekle"
+    },
+    "placeholders": {
+      "name": "uye-adi",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Ekle",
+      "cancel": "İptal",
+      "delete": "Sil",
+      "editCode": "Kodu düzenle",
+      "launch": "Başlat",
+      "remove": "Kaldır",
+      "stop": "Durdur",
+      "task": "Görev",
+      "visualize": "Görselleştir"
+    },
+    "deleteTeam": {
+      "description": "\"{{team}}\" ekibi silinsin mi? Bu işlem geri alınamaz. Tüm ekip verileri ve görevler silinecek.",
+      "title": "Ekibi sil"
+    },
+    "draft": {
+      "descriptionPrefix": "Bu bir taslak ekip -",
+      "descriptionSuffix": "{{count}} {{member}} ile yapılandırıldı ancak henüz CLI tarafından sağlanmadı. Bir model seçip ekibi başlatmak için Başlat'a tıklayın.",
+      "descriptionSuffix_few": "{{count}} {{member}} ile yapılandırıldı ancak henüz CLI tarafından sağlanmadı. Bir model seçip ekibi başlatmak için Başlat'a tıklayın.",
+      "descriptionSuffix_many": "{{count}} {{member}} ile yapılandırıldı ancak henüz CLI tarafından sağlanmadı. Bir model seçip ekibi başlatmak için Başlat'a tıklayın.",
+      "descriptionSuffix_one": "{{count}} {{member}} ile yapılandırıldı ancak henüz CLI tarafından sağlanmadı. Bir model seçip ekibi başlatmak için Başlat'a tıklayın.",
+      "descriptionSuffix_other": "{{count}} {{member}} ile yapılandırıldı ancak henüz CLI tarafından sağlanmadı. Bir model seçip ekibi başlatmak için Başlat'a tıklayın.",
+      "member": "üye",
+      "member_few": "üye",
+      "member_many": "üye",
+      "member_one": "üye",
+      "member_other": "üye",
+      "title": "Ekip henüz başlatılmadı"
+    },
+    "invalidTab": "Geçersiz ekip sekmesi",
+    "kanbanSafeData": "Kanban tam olarak yüklenemedi. Güvenli veri gösteriliyor.",
+    "loadFailed": "Ekip yüklenemedi",
+    "loading": "Ekip yükleniyor",
+    "loadingSidebar": "Ekip kenar çubuğu yükleniyor",
+    "offline": {
+      "offline": "Ekip çevrimdışı",
+      "partialFailed": "Son başlatma yarıda başarısız oldu",
+      "partialMissing": "Son başlatma yarıda başarısız oldu - {{missing}}/{{expected}} takım arkadaşı katılmadı",
+      "reconciling": "Son başlatma hâlâ uzlaştırılıyor"
+    },
+    "previous": "Önceki: {{paths}}",
+    "removeMember": {
+      "description": "\"{{member}}\" ekipten kaldırılsın mı? Görevler ve mesajlar korunacak, ancak bu ad yeniden kullanılamaz.",
+      "title": "Üyeyi kaldır"
+    },
+    "sections": {
+      "team": "Ekip"
+    },
+    "solo": "Tekli",
+    "status": {
+      "active": "Etkin",
+      "launching": "Başlatılıyor...",
+      "running": "Çalışıyor"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Bellek"
+    },
+    "tooltips": {
+      "deleteTeam": "Ekibi sil",
+      "editTeam": "Ekibi düzenle",
+      "editUnavailableProvisioning": "Sağlama hâlâ devam ederken ekibi düzenleme kullanılamaz",
+      "openBuiltInEditor": "Projeyi yerleşik düzenleyicide aç",
+      "openTeamGraph": "Ekip grafiğini aç",
+      "stopTeam": "Ekibi durdur"
+    },
+    "waitingForProvisioning": "Sağlama tamamlandığında ekip verileri görünecek",
+    "context": {
+      "title": "Bağlam",
+      "loading": "Yükleniyor...",
+      "noSessionLoaded": "Yüklenmiş oturum yok",
+      "closePanel": "{{team}} bağlam panelini kapat",
+      "loadingContext": "Bağlam yükleniyor...",
+      "openLeadSession": "Bağlamı görüntülemek için ekip lideri oturumunu açın."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Kabul et",
+        "discard": "At",
+        "discardTooltip": "Bu dosya için tüm düzenlemeleri at",
+        "keepMyDraft": "Taslağımı koru",
+        "reject": "Reddet",
+        "reloadFromDisk": "Diskten yeniden yükle",
+        "restore": "Geri yükle",
+        "restoreTooltip": "Önizlemeden bu dosyayı diskte oluştur/geri yükle",
+        "saveFile": "Dosyayı Kaydet",
+        "saveFileTooltip": "Dosyayı diske kaydet"
+      },
+      "badges": {
+        "deleted": "SİLİNDİ",
+        "manualReview": "MANUEL İNCELEME",
+        "new": "YENİ",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Geçerli Disk",
+        "file-history": "Dosya Geçmişi",
+        "git-fallback": "Git Yedeği",
+        "ledger-exact": "Görev Defteri",
+        "ledger-snapshot": "Defter Anlık Görüntüsü",
+        "snippet-reconstruction": "Yeniden Oluşturuldu",
+        "unavailable": "İçerik kullanılamıyor"
+      },
+      "contentUnavailable": {
+        "badge": "İçerik kullanılamıyor",
+        "description": "Defter bu değişiklik için meta veri kaydetti, ancak tam metin içeriği mevcut değil. Bu genellikle ikili, büyük veya yalnızca hash içeriği anlamına gelir.",
+        "safety": "Güvensiz disk yazmalarını önlemek için bu dosya için otomatik kabul etme/reddetme devre dışıdır.",
+        "title": "Metin içeriği kullanılamıyor"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Tam metin içeriği kullanılamadığı için Kabul Et/Reddet devre dışıdır.",
+        "acceptRejectMissingOnDisk": "Dosya diskte eksikken Kabul Et/Reddet devre dışıdır.",
+        "rejectBaselineUnavailable": "Orijinal temel kullanılamadığı için Reddet devre dışıdır.",
+        "rejectContentUnavailable": "Tam metin içeriği kullanılamadığı için Reddet devre dışıdır.",
+        "rejectManualLedgerReview": "Bu defter değişikliği ikili, büyük veya kullanılamayan içeriğe sahip olduğu için Reddet devre dışıdır."
+      },
+      "externalChange": {
+        "changedOnDisk": "Diskte değiştirildi",
+        "deletedOnDisk": "Diskten silindi",
+        "recreatedOnDisk": "Diskte yeniden oluşturuldu"
+      },
+      "missingOnDisk": {
+        "badge": "Diskte eksik",
+        "description": "Agent günlüklerinden bir önizleme gösterebiliriz, ancak dosya sisteminiz senkronize değil.",
+        "restorePrefix": "Önizleme içeriğini diske geri yazmak için",
+        "restoreSuffix": "kullanın.",
+        "restoreUnavailable": "Otomatik olarak geri yüklemek için tam dosya içeriği mevcut değil.",
+        "title": "Dosya diskte eksik"
+      },
+      "pathChange": {
+        "from": "{{path}} yolundan",
+        "to": "{{path}} yoluna"
+      },
+      "worktree": {
+        "isolated": "Yalıtılmış worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} beklemede",
+        "pending_one": "{{count}} beklemede",
+        "pending_other": "{{count}} beklemede",
+        "accepted": "{{count}} kabul edildi",
+        "accepted_one": "{{count}} kabul edildi",
+        "accepted_other": "{{count}} kabul edildi",
+        "rejected": "{{count}} reddedildi",
+        "rejected_one": "{{count}} reddedildi",
+        "rejected_other": "{{count}} reddedildi",
+        "acrossFiles": "{{count}} dosya genelinde",
+        "acrossFiles_one": "{{count}} dosya genelinde",
+        "acrossFiles_other": "{{count}} dosya genelinde",
+        "edited": "{{count}} düzenlendi",
+        "edited_one": "{{count}} düzenlendi",
+        "edited_other": "{{count}} düzenlendi",
+        "pending_few": "{{count}} beklemede",
+        "pending_many": "{{count}} beklemede",
+        "accepted_few": "{{count}} kabul edildi",
+        "accepted_many": "{{count}} kabul edildi",
+        "rejected_few": "{{count}} reddedildi",
+        "rejected_many": "{{count}} reddedildi",
+        "acrossFiles_few": "{{count}} dosya genelinde",
+        "acrossFiles_many": "{{count}} dosya genelinde",
+        "edited_few": "{{count}} düzenlendi",
+        "edited_many": "{{count}} düzenlendi"
+      },
+      "actions": {
+        "auto": "Otomatik",
+        "undo": "Geri al",
+        "acceptAll": "Tümünü Kabul Et",
+        "rejectAll": "Tümünü Reddet",
+        "applying": "Uygulanıyor...",
+        "applyRejections": "Reddetmeleri Uygula"
+      },
+      "tooltips": {
+        "autoOn": "Sona kaydırıldığında dosyaları görüntülendi olarak otomatik işaretle (AÇIK)",
+        "autoOff": "Sona kaydırıldığında dosyaları görüntülendi olarak otomatik işaretle (KAPALI)",
+        "undo": "Son inceleme işlemini geri al (Ctrl+Z)",
+        "acceptAll": "Tüm dosyalardaki tüm değişiklikleri kabul et",
+        "rejectAll": "Tüm dosyalardaki güvenli şekilde reddedilebilir tüm değişiklikleri reddet",
+        "rejectAllDisabled": "Bekleyen hiçbir dosyanın reddedilecek güvenli bir orijinal temeli yok.",
+        "applyRejections": "Reddedilen hunk'ları diske uygula; kabul edilen değişiklikler olduğu gibi korunur"
+      }
+    },
+    "diffError": {
+      "title": "Fark görünümü işlenemedi",
+      "unexpected": "Fark işlenirken beklenmeyen bir hata oluştu.",
+      "actions": {
+        "retry": "Yeniden dene"
+      },
+      "raw": {
+        "show": "Ham fark verilerini göster",
+        "file": "Dosya: {{file}}",
+        "original": "--- Orijinal",
+        "modified": "+++ Değiştirilmiş",
+        "charsTotal": "... (toplam {{count}} karakter)",
+        "charsTotal_one": "... (toplam {{count}} karakter)",
+        "charsTotal_other": "... (toplam {{count}} karakter)",
+        "charsTotal_few": "... (toplam {{count}} karakter)",
+        "charsTotal_many": "... (toplam {{count}} karakter)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Görüntülendi",
+      "badges": {
+        "new": "yeni",
+        "deleted": "silindi"
+      },
+      "collapseFolder": "{{name}} öğesini daralt",
+      "expandFolder": "{{name}} öğesini genişlet",
+      "empty": {
+        "noChangedFiles": "Değiştirilmiş dosya yok",
+        "noMatchingFiles": "Eşleşen dosya yok"
+      },
+      "searchPlaceholder": "Dosyalarda ara…",
+      "filters": {
+        "unresolved": "Çözülmemiş",
+        "rejected": "Reddedildi",
+        "new": "Yeni",
+        "clear": "Temizle"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Önceki parça",
+      "nextChunk": "Sonraki parça",
+      "rejectChange": "Değişikliği reddet (⌘N)",
+      "acceptChange": "Değişikliği kabul et (⌘Y)",
+      "undo": "Geri al",
+      "keep": "Koru",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Çakışma Algılandı",
+      "description": "Bu dosya, agent'ın değişikliklerinden bu yana değiştirildi",
+      "cancel": "İptal",
+      "saveResolution": "Çözümü Kaydet",
+      "editManually": "Manuel Düzenle",
+      "useOriginal": "Orijinali Kullan",
+      "keepCurrent": "Geçerli Olanı Koru"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Tam Fark Hazırlanıyor",
+      "titleMany": "{{count}} Tam Fark Hazırlanıyor",
+      "subtitleForFile": "{{file}} için tam düzenleyici farkı sonlandırılıyor.",
+      "subtitleCurrentFile": "Geçerli dosya için tam düzenleyici farkı sonlandırılıyor.",
+      "subtitleMany": "Şu anda yüklenen dosyalar için tam öncesi/sonrası temeller çözümleniyor.",
+      "previewsReady": "{{count}} önizleme hazır",
+      "previewsReady_one": "{{count}} önizleme hazır",
+      "editorViewLoading": "Düzenleyici görünümü yükleniyor",
+      "filesInProgress": "{{count}} dosya işleniyor",
+      "filesInProgress_one": "{{count}} dosya işleniyor",
+      "filesReady": "{{ready}}/{{total}} dosya hazır",
+      "progressDescription": "{{ready}} hazır, {{loading}} hâlâ yükleniyor. Kalan temeller çözümlenirken önizleme farkları aşağıda görünür kalır.",
+      "singleDescription": "Tam temel çözümlenirken önizleme farkları aşağıda görünür kalır.",
+      "previewsReady_few": "{{count}} önizleme hazır",
+      "previewsReady_many": "{{count}} önizleme hazır",
+      "previewsReady_other": "{{count}} önizleme hazır",
+      "filesInProgress_few": "{{count}} dosya işleniyor",
+      "filesInProgress_many": "{{count}} dosya işleniyor",
+      "filesInProgress_other": "{{count}} dosya işleniyor"
+    },
+    "fileMissingPrefix": "Dosya diskte eksik. Bu fark yalnızca agent günlüklerinden bir önizleme olabilir. Dosyayı diskte oluşturmak için",
+    "restore": "Geri yükle",
+    "fileMissingSuffix": "kullanın.",
+    "filePlaceholder": {
+      "loading": "Yükleniyor",
+      "description": "Bu dosya için tam bir düzenleyici farkı hazırlanıyor."
+    },
+    "loading": {
+      "diff": "FARK",
+      "ledgerObjectsProcessed": "{{count}} defter nesnesi işlendi",
+      "ledgerObjectsProcessed_one": "{{count}} defter nesnesi işlendi",
+      "ledgerObjectsProcessed_other": "{{count}} defter nesnesi işlendi",
+      "ledgerObjectsProcessed_few": "{{count}} defter nesnesi işlendi",
+      "ledgerObjectsProcessed_many": "{{count}} defter nesnesi işlendi",
+      "phases": {
+        "readingLedger": "Görev defteri okunuyor...",
+        "resolvingFiles": "Dosya durumları çözümleniyor...",
+        "checkingWorktree": "Worktree bağlamı kontrol ediliyor...",
+        "preparingDiffs": "İnceleme farkları hazırlanıyor..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} görüntülendi"
+    },
+    "scope": {
+      "readMore": "Daha fazla oku",
+      "tiers": {
+        "exact": {
+          "title": "Görev kapsamı tam olarak belirlendi",
+          "detail": "Oturum günlüğünde hem başlangıç hem de tamamlanma işaretçileri bulundu. Fark yalnızca bu belirli görev sırasında yapılan değişiklikleri içerir - aynı dosyaları değiştiren diğer görevler hariç tutulur."
+        },
+        "endEstimated": {
+          "title": "Bitiş sınırı tahmin edildi",
+          "detail": "Yalnızca başlangıç işaretçisi bulundu - görevin henüz tamamlanma işaretçisi yok. Görev başlangıcından oturum sonuna kadar olan değişiklikler gösterilir. Aynı oturumda bundan sonra başka görevler çalıştıysa, onların değişiklikleri de dahil edilebilir."
+        },
+        "startEstimated": {
+          "title": "Başlangıç sınırı tahmin edildi",
+          "detail": "Yalnızca tamamlanma işaretçisi bulundu - işin başlangıcı yakalanmadı. Aynı oturumda bundan önce başka görevler çalıştıysa, onların aynı dosyalardaki değişiklikleri de dahil edilebilir."
+        },
+        "allSession": {
+          "title": "Tüm oturum değişiklikleri gösteriliyor",
+          "detail": "Oturum günlüğünde görev işaretçisi bulunamadı. Bu görev yalıtılamıyor - diğer görevlerin değişiklikleri dahil tüm oturumdan tüm dosya değişiklikleri gösterilir. Bu, eski CLI sürümleri veya standart olmayan iş akışlarıyla olabilir."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Değişiklikler görev defteri tarafından yakalandı",
+          "detail": "Orkestratör, agent bu görev üzerinde çalışırken bu dosya değişikliklerini yakaladı.",
+          "badge": "Defter tam"
+        },
+        "limited": {
+          "title": "Değişiklikler sınırlı incelenebilirlikle yakalandı",
+          "detail": "Orkestratör bu görev için bu dosya değişikliklerini yakaladı, ancak en az bir değişiklik bir anlık görüntüden veya yalnızca meta veri kaynağından yakalandı. Mevcut olduğunda tam metin farklarını inceleyin; ikili veya kullanılamayan içerik manuel inceleme gerektirebilir.",
+          "mixedBadge": "Karışık incelenebilirlik",
+          "needsReviewBadge": "İnceleme gerekiyor"
+        }
+      },
+      "workInterval": {
+        "title": "Kalıcı iş aralığıyla kapsamlandı",
+        "detail": "Görev başlangıç işaretçisi oturum günlüğünde mevcut değildi, bu yüzden fark, panoda saklanan görev iş aralığıyla kapsamlandırılır.",
+        "badge": "Aralık kapsamlı"
+      },
+      "confidence": {
+        "high": "Yüksek güven",
+        "medium": "Orta güven",
+        "low": "Düşük güven",
+        "bestEffort": "En iyi çaba"
+      }
+    },
+    "shortcuts": {
+      "title": "Klavye Kısayolları",
+      "actions": {
+        "nextChange": "Sonraki değişiklik",
+        "previousChange": "Önceki değişiklik",
+        "nextFile": "Sonraki dosya",
+        "previousFile": "Önceki dosya",
+        "acceptChange": "Değişikliği kabul et",
+        "rejectChange": "Değişikliği reddet",
+        "saveFile": "Dosyayı kaydet",
+        "undo": "Geri al",
+        "redo": "Yinele",
+        "toggleShortcuts": "Kısayolları aç/kapat",
+        "closeDialog": "İletişim kutusunu kapat"
+      }
+    },
+    "timeline": {
+      "empty": "Düzenleme olayı yok",
+      "titleWithCount": "Düzenleme Zaman Çizelgesi ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "İncelenebilir dosya değişikliği yok"
+    },
+    "empty": {
+      "noSafeDiff": "Güvenli fark mevcut değil",
+      "noFileChangesRecorded": "Kaydedilmiş dosya değişikliği yok",
+      "noSafeDiffDescription": "Görev defteri bu görev için güvenli bir dosya farkı sunmadı.",
+      "noSafeDiffDiagnosticsDescription": "Görev defteri bu görev için güvenli bir dosya farkı sunmadı. Aşağıdaki tanılamalar nedenini açıklıyor.",
+      "noFileEventsYet": "Görev defterinin bu görev için henüz dosya olayı yok.",
+      "noFileEvents": "Görev defterinin bu görev için dosya olayı yok."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Mesaj alt sayfa eylemleri",
+      "collapseAll": "Tüm mesajları daralt",
+      "collapseSheet": "Sayfayı daralt",
+      "expandAll": "Tüm mesajları genişlet",
+      "expandSheet": "Sayfayı genişlet",
+      "floatComposer": "Yazma alanını kaydır",
+      "floatMessagesComposer": "Mesaj yazma alanını kaydır",
+      "hideSearch": "Aramayı gizle",
+      "loadOlder": "Eski mesajları yükle",
+      "markAllRead": "Tümünü okundu işaretle",
+      "messageActions": "Mesaj eylemleri",
+      "moveMessagesToBottomSheet": "Mesajları alt sayfaya taşı",
+      "moveMessagesToSidebar": "Mesajları kenar çubuğuna taşı",
+      "moveToBottomSheet": "Alt sayfaya taşı",
+      "moveToInline": "Satır içine taşı",
+      "moveToSidebar": "Kenar çubuğuna taşı",
+      "panelActions": "Mesaj paneli eylemleri",
+      "searchMessages": "Mesajlarda ara"
+    },
+    "delivery": {
+      "copied": "Kopyalandı",
+      "copyDebugDetails": "Hata ayıklama ayrıntılarını kopyala",
+      "details": "Ayrıntılar",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Mesaj paneli modu",
+    "title": "Mesajlar",
+    "unread": {
+      "new": "{{count}} yeni",
+      "unread": "{{count}} okunmamış",
+      "new_few": "{{count}} yeni",
+      "new_many": "{{count}} yeni",
+      "new_one": "{{count}} yeni",
+      "new_other": "{{count}} yeni",
+      "unread_few": "{{count}} okunmamış",
+      "unread_many": "{{count}} okunmamış",
+      "unread_one": "{{count}} okunmamış",
+      "unread_other": "{{count}} okunmamış"
+    },
+    "filter": {
+      "ariaLabel": "Mesajları filtrele",
+      "tooltip": "Mesajları filtrele",
+      "from": "Kimden",
+      "to": "Kime",
+      "noData": "Veri yok",
+      "showStatusUpdates": "Durum güncellemelerini göster (boşta/kapatma)",
+      "actions": {
+        "reset": "Sıfırla",
+        "save": "Kaydet"
+      }
+    },
+    "status": {
+      "title": "Durum"
+    },
+    "actionMode": {
+      "label": "Eylem modu"
+    },
+    "search": {
+      "placeholder": "Ara..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Yapılandırılmış",
+      "connected": "Bağlandı",
+      "failed": "Başarısız",
+      "free": "Ücretsiz",
+      "local": "Yerel",
+      "needsTest": "Test gerekiyor",
+      "verified": "Doğrulandı",
+      "unavailable": "Kullanılamıyor",
+      "issue": "Sorun"
+    },
+    "customModelId": "Özel model kimliği",
+    "label": "Model (isteğe bağlı)",
+    "multimodelRequired": "Codex ve Gemini, Çoklu model modu gerektirir.",
+    "openCode": {
+      "allSources": "Tüm OpenCode kaynakları",
+      "filterSource": "{{source}} filtrele",
+      "filterSources": "OpenCode kaynaklarını filtrele",
+      "freeOnly": "Yalnızca ücretsiz",
+      "freeTooltip": "OpenCode bu modeli ücretsiz olarak işaretliyor.",
+      "loadingModels": "OpenCode modelleri yükleniyor...",
+      "noSourcesFound": "Kaynak bulunamadı.",
+      "recommendedOnly": "Yalnızca önerilen",
+      "searchSources": "Kaynaklarda ara",
+      "sourcesCount": "{{count}} OpenCode kaynağı",
+      "sourcesCount_few": "{{count}} OpenCode kaynağı",
+      "sourcesCount_many": "{{count}} OpenCode kaynağı",
+      "sourcesCount_one": "{{count}} OpenCode kaynağı",
+      "sourcesCount_other": "{{count}} OpenCode kaynağı"
+    },
+    "reason": "Neden: {{reason}}",
+    "runtimeModelsSyncing": "Açık modeller geçerli çalışma zamanından yüklenir. Liste senkronize olurken Varsayılan kullanılabilir kalır.",
+    "fastMode": {
+      "codexLabel": "Hızlı mod (2x kredi)",
+      "optionalLabel": "Hızlı mod (isteğe bağlı)",
+      "defaultOff": "Varsayılan (Kapalı)",
+      "fast": "Hızlı",
+      "off": "Kapalı",
+      "defaultFast": "Varsayılan (Hızlı)",
+      "defaultResolvesTo": "Varsayılan şu anda {{mode}} olarak çözümleniyor.",
+      "runtimeBackedHint": "Hızlı mod çalışma zamanı destekli olup yalnızca çözümlenen Anthropic başlatma modeli desteklediğinde açılır."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Anthropic fiyatlandırma dokümanlarını oku"
+    },
+    "searchModels": "Modellerde ara",
+    "defaultModel": "Varsayılan",
+    "empty": {
+      "noSearchMatches": "Bu aramayla eşleşen model yok.",
+      "recommendedFreeOpenCode": "Geçerli çalışma zamanı listesinde önerilen ücretsiz OpenCode modeli yok.",
+      "freeOpenCode": "Geçerli çalışma zamanı listesinde ücretsiz OpenCode modeli yok.",
+      "recommendedOpenCode": "Geçerli çalışma zamanı listesinde önerilen OpenCode modeli yok.",
+      "noModels": "Geçerli çalışma zamanı listesinde model yok."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode ekip başlatması için hazır değil",
+      "freeModelsAvailableTitle": "OpenCode ücretsiz modeller mevcut",
+      "providerNotConnectedTitle": "OpenCode sağlayıcısı bağlı değil",
+      "readyTitle": "OpenCode hazır",
+      "readyMessage": "OpenCode sağlayıcı hazırlığını geçti. Bu ekip için OpenCode modellerini kullanmak için seçin.",
+      "useOpenCode": "OpenCode'u kullan",
+      "badges": {
+        "check": "Kontrol et",
+        "install": "Kur",
+        "free": "Ücretsiz",
+        "setup": "Kurulum"
+      },
+      "summary": {
+        "checking": "OpenCode durumu: çalışma zamanı kontrol ediliyor",
+        "status": "OpenCode durumu: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "ekip başlatması engellendi",
+        "providerOptional": "sağlayıcı bağlantısı isteğe bağlı",
+        "providerModelsNeedSetup": "sağlayıcı destekli modeller kurulum gerektiriyor",
+        "teamLaunchReady": "ekip başlatması hazır",
+        "runtimeDetected": "çalışma zamanı algılandı",
+        "runtimeMissing": "çalışma zamanı eksik",
+        "freeWithoutAuth": "kimlik doğrulaması olmadan ücretsiz modeller mevcut",
+        "providerConnected": "sağlayıcı bağlandı",
+        "providerNotConnected": "sağlayıcı bağlı değil"
+      },
+      "messages": {
+        "checking": "Uygulama hâlâ OpenCode çalışma zamanını kontrol ediyor. Sağlayıcı durumunun bitmesini bekleyin, ardından tekrar deneyin.",
+        "unsupported": "OpenCode kurulu değil, bulunamadı veya algılanan çalışma zamanı desteklenmiyor. OpenCode'u kurun veya güncelleyin, ardından sağlayıcı durumunu yenileyin. Ayrıca ana sayfadaki Kur düğmesini de kullanabilirsiniz.",
+        "freeAvailable": "OpenCode algılandı. Bir sağlayıcı bağlamadan Big Pickle gibi ücretsiz OpenCode modellerini kullanabilirsiniz. Yalnızca sağlayıcı destekli modeller istediğinizde bir sağlayıcı bağlayın.",
+        "noFreeListed": "OpenCode algılandı, ancak henüz hiçbir ücretsiz OpenCode modeli listelenmedi. Sağlayıcı durumunu yenileyin veya sağlayıcı destekli modeller için OpenCode'da bir sağlayıcı bağlayın.",
+        "launchBlocked": "OpenCode kurulu ve kimlik doğrulaması yapılmış, ancak Agent Teams başlatma hazırlığı engellendi.",
+        "ready": "OpenCode ekip başlatması için hazır."
+      },
+      "loadingRuntime": "OpenCode çalışma zamanı durumu hâlâ yükleniyor."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping onaylanmadı",
+      "note": "Not"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode yapılandırması",
+      "builtinFree": "Ücretsiz yerleşik",
+      "connectedProviders": "Bağlı sağlayıcılar",
+      "otherCatalog": "Diğer OpenCode kataloğu"
+    },
+    "pricing": {
+      "free": "Ücretsiz",
+      "inputShort": "giriş {{rate}}",
+      "outputShort": "çıkış {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Girdi: 1M token başına {{rate}}",
+      "outputTitle": "Çıktı: 1M token başına {{rate}}",
+      "cacheReadTitle": "Önbellek okuma: 1M token başına {{rate}}",
+      "cacheWriteTitle": "Önbellek yazma: 1M token başına {{rate}}"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Anthropic uyumlu uç nokta varsayılan modelini kullanır.\nŞu anda {{model}} olarak çözümleniyor.",
+      "anthropicCompatible": "Anthropic uyumlu uç nokta varsayılan modelini kullanır.",
+      "anthropic": "Claude ekip varsayılan modelini kullanır.\n1M bağlamla {{longContextModel}} olarak veya Bağlamı sınırla etkinleştirildiğinde 200K bağlamla {{limitedContextModel}} olarak çözümlenir.",
+      "openCodeWithResolved": "OpenCode varsayılan modelini kullanır.\nŞu anda {{model}} olarak çözümleniyor.",
+      "openCode": "OpenCode çalışma zamanı varsayılan modelini kullanır.",
+      "runtime": "Seçili sağlayıcı için çalışma zamanı varsayılanını kullanır."
+    },
+    "multimodelOff": "Çoklu model kapalı",
+    "unavailableInRuntime": "Geçerli çalışma zamanında kullanılamıyor"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "İptal",
+      "delete": "Sil",
+      "markResolved": "Çözüldü olarak işaretle",
+      "save": "Kaydet"
+    },
+    "attachments": {
+      "commentAttachment": "Yorum eki",
+      "fromComments": "Yorumlardan",
+      "preview": "{{filename}} önizle"
+    },
+    "changes": {
+      "badges": {
+        "attention": "dikkat",
+        "noSafeDiff": "güvenli fark yok"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Kaydedilmiş dosya değişikliği yok",
+        "noFileChangesRecordedYet": "Henüz kaydedilmiş dosya değişikliği yok",
+        "noReviewableChangesRecovered": "İncelenebilir dosya değişikliği kurtarılmadı",
+        "noSafeDiffAvailable": "Güvenli fark mevcut değil"
+      },
+      "loadFailed": "Görev değişiklikleri özeti yüklenemedi",
+      "loading": "Değişiklikler yükleniyor...",
+      "fileCount": "{{count}} dosya",
+      "fileRowsHidden": "{{count}} dosya satırı gizli",
+      "moreDiagnostics": "{{count}} tanılama daha",
+      "moreFiles": "{{count}} dosya daha",
+      "openInEditor": "Düzenleyicide aç",
+      "openTask": "{{subject}} görevini aç",
+      "refresh": "Değişiklikleri yenile",
+      "refreshFailed": "Yenileme başarısız oldu: {{error}}",
+      "refreshing": "Yenileniyor",
+      "refreshingChanges": "Değişiklikler yenileniyor...",
+      "refreshTeamChanges": "Ekip değişikliklerini yenile",
+      "refreshShort": "Yenile",
+      "reviewDiff": "Farkı incele",
+      "reviewTaskDiff": "Görev farkını incele",
+      "scannedCandidateTasks": "{{eligible}} aday görevden {{requested}} tanesi tarandı",
+      "tasksDeferred": "Bu geçişte {{count}} görev ertelendi",
+      "title": "Değişiklikler",
+      "fileCount_few": "{{count}} dosya",
+      "fileCount_many": "{{count}} dosya",
+      "fileCount_one": "{{count}} dosya",
+      "fileCount_other": "{{count}} dosya",
+      "fileRowsHidden_few": "{{count}} dosya satırı gizli",
+      "fileRowsHidden_many": "{{count}} dosya satırı gizli",
+      "fileRowsHidden_one": "{{count}} dosya satırı gizli",
+      "fileRowsHidden_other": "{{count}} dosya satırı gizli",
+      "moreDiagnostics_few": "{{count}} tanılama daha",
+      "moreDiagnostics_many": "{{count}} tanılama daha",
+      "moreDiagnostics_one": "{{count}} tanılama daha",
+      "moreDiagnostics_other": "{{count}} tanılama daha",
+      "moreFiles_few": "{{count}} dosya daha",
+      "moreFiles_many": "{{count}} dosya daha",
+      "moreFiles_one": "{{count}} dosya daha",
+      "moreFiles_other": "{{count}} dosya daha",
+      "tasksDeferred_few": "Bu geçişte {{count}} görev ertelendi",
+      "tasksDeferred_many": "Bu geçişte {{count}} görev ertelendi",
+      "tasksDeferred_one": "Bu geçişte {{count}} görev ertelendi",
+      "tasksDeferred_other": "Bu geçişte {{count}} görev ertelendi"
+    },
+    "clarification": {
+      "awaitingLead": "Ekip liderinden açıklama bekleniyor",
+      "awaitingUser": "Sizden açıklama bekleniyor"
+    },
+    "description": {
+      "add": "Açıklama eklemek için tıklayın...",
+      "edit": "Açıklamayı düzenle",
+      "placeholder": "Görev açıklaması (markdown destekler)"
+    },
+    "loading": {
+      "fetchingTeamData": "Ekip verileri alınıyor",
+      "title": "Görev yükleniyor..."
+    },
+    "logs": {
+      "newArriving": "Yeni görev günlükleri geliyor"
+    },
+    "notFound": "Görev bulunamadı",
+    "related": {
+      "blockedBy": "Şununla engellendi:",
+      "blocks": "Şunu engelliyor:",
+      "linkedFrom": "Şuradan bağlandı:",
+      "links": "Bağlantılar",
+      "title": "İlgili görevler"
+    },
+    "review": {
+      "reviewer": "İnceleyen: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Ekler",
+      "changes": "Değişiklikler",
+      "comments": "Yorumlar",
+      "description": "Açıklama",
+      "taskLogs": "Görev Günlükleri",
+      "workflowHistory": "İş Akışı Geçmişi"
+    },
+    "unassigned": "Atanmamış",
+    "workflow": {
+      "implementationTimeTitle": "Kalıcı iş aralıklarından uygulama süresi",
+      "inProgressTime": "Devam süresi {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Arayüzü duyarlı tutmak için en son {{formattedCount}} yorum gösteriliyor.",
+      "badges": {
+        "approved": "Onaylandı",
+        "reviewRequested": "İnceleme istendi"
+      },
+      "unknownTime": "bilinmeyen zaman",
+      "actions": {
+        "reply": "Yanıtla",
+        "replyToComment": "Yoruma yanıt ver",
+        "showMore": "Daha fazla yorum göster ({{visible}}/{{total}})",
+        "cancelReply": "Yanıtı iptal et",
+        "comment": "Yorum"
+      },
+      "attachments": {
+        "previewAlt": "Ek önizlemesi",
+        "downloadFailed": "İndirme başarısız oldu"
+      },
+      "replyingTo": "Şuna yanıt veriliyor:",
+      "input": {
+        "placeholder": "Bir yorum ekleyin... (göndermek için Enter)",
+        "charsLeft": "{{count}} karakter kaldı",
+        "charsLeft_one": "{{count}} karakter kaldı",
+        "charsLeft_other": "{{count}} karakter kaldı",
+        "charsLeft_few": "{{count}} karakter kaldı",
+        "charsLeft_many": "{{count}} karakter kaldı"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Kaydedilmiş iş akışı geçmişi yok",
+      "currentImplementationInterval": "Geçerli uygulama aralığı",
+      "implementationIntervalEnded": "Uygulama aralığı bu geçişte sona erdi",
+      "runningPrefix": "çalışıyor ",
+      "createdAs": "Şu olarak oluşturuldu:",
+      "by": "tarafından",
+      "reassigned": "Yeniden atandı",
+      "assignedTo": "Şuna atandı:",
+      "unassignedFrom": "Şundan atama kaldırıldı:",
+      "ownerChanged": "Sahip değiştirildi",
+      "reviewRequested": "İnceleme istendi",
+      "reviewStarted": "İnceleme başladı",
+      "changesRequested": "Değişiklik istendi",
+      "approved": "Onaylandı",
+      "unknownEvent": "Bilinmeyen olay"
+    },
+    "reviewStates": {
+      "approved": "Onaylandı",
+      "needsFix": "Düzeltme gerekir",
+      "inReview": "İncelemede"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Atanan kişi",
+      "assigneeOptional": "Atanan kişi (isteğe bağlı)",
+      "blockedByOptional": "Engelleyen görevler (isteğe bağlı)",
+      "blockedBySummary": "Görev şununla engellenecek: {{tasks}}",
+      "cancel": "İptal",
+      "create": "Oluştur",
+      "creating": "Oluşturuluyor...",
+      "description": "Görev, ekibin tasks/ dizininde oluşturulacak ve Kanban panosunda görünecek.",
+      "descriptionOptional": "Açıklama (isteğe bağlı)",
+      "detailsPlaceholder": "Görev ayrıntıları (markdown destekler)",
+      "hideOptionalFields": "İsteğe bağlı alanları gizle",
+      "offlineNotice": {
+        "after": "- yürütmeyi başlatmak için ekibi başlatın.",
+        "before": "Ekip çevrimdışı. Görev şuraya eklenecek:"
+      },
+      "promptOptional": "Atanan kişi için komut istemi (isteğe bağlı)",
+      "promptPlaceholder": "Ekip üyesi için özel talimatlar...",
+      "relatedOptional": "İlgili görevler (isteğe bağlı)",
+      "relatedSummary": "İlgili: {{tasks}}",
+      "saved": "Kaydedildi",
+      "searchTasks": "Görevlerde ara...",
+      "selectMember": "Bir üye seç",
+      "selectMemberOptional": "Üye seç...",
+      "showOptionalFields": "İsteğe bağlı alanları göster",
+      "startImmediately": "Hemen başlat",
+      "startOfflineHint": "Ekip çevrimdışı. Görevleri hemen başlatmak için önce ekibi başlatın.",
+      "subject": "Konu",
+      "subjectPlaceholder": "Ne yapılması gerekiyor?",
+      "title": "Görev Oluştur",
+      "todo": "YAPILACAK"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Engelleyen",
+        "blocks": "Engelliyor",
+        "id": "Kimlik",
+        "owner": "Sahip",
+        "status": "Durum",
+        "subject": "Konu"
+      },
+      "empty": "Bu ekipte görev yok",
+      "filters": {
+        "allOwners": "Tüm sahipler",
+        "allStatuses": "Tüm durumlar",
+        "ownerAria": "Görevleri sahibe göre filtrele",
+        "statusAria": "Görevleri duruma göre filtrele"
+      },
+      "showing": "{{total}} öğeden {{shown}} tanesi gösteriliyor"
+    },
+    "status": {
+      "completed": "tamamlandı",
+      "deleted": "silindi",
+      "inProgress": "devam_ediyor",
+      "pending": "beklemede"
+    },
+    "statusSummary": {
+      "progressAria": "Görevler {{completed}}/{{total}} tamamlandı",
+      "inProgress": "{{count}} devam_ediyor",
+      "inProgress_one": "{{count}} devam_ediyor",
+      "inProgress_other": "{{count}} devam_ediyor",
+      "inProgress_few": "{{count}} devam_ediyor",
+      "inProgress_many": "{{count}} devam_ediyor",
+      "pending": "{{count}} beklemede",
+      "pending_one": "{{count}} beklemede",
+      "pending_other": "{{count}} beklemede",
+      "pending_few": "{{count}} beklemede",
+      "pending_many": "{{count}} beklemede",
+      "completed": "{{count}} tamamlandı",
+      "completed_one": "{{count}} tamamlandı",
+      "completed_other": "{{count}} tamamlandı",
+      "completed_few": "{{count}} tamamlandı",
+      "completed_many": "{{count}} tamamlandı"
+    },
+    "unassigned": "Atanmamış",
+    "teamPrefix": "Ekip:",
+    "openTask": "Görevi aç",
+    "deleteConfirm": {
+      "title": "Görevi sil",
+      "message": "#{{taskId}} görevi çöpe taşınsın mı?",
+      "confirmLabel": "Sil",
+      "cancelLabel": "İptal"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "İptal",
+      "closeEditor": "Düzenleyiciyi kapat",
+      "closeTab": "Sekmeyi kapat",
+      "closeTooltip": "Düzenleyiciyi kapat (Esc)",
+      "discard": "At",
+      "discardAndClose": "At ve Kapat",
+      "keep": "Koru",
+      "keepMine": "Benimkini koru",
+      "keyboardShortcuts": "Klavye kısayolları",
+      "overwrite": "Üzerine yaz",
+      "refreshAria": "Yenile (F5)",
+      "refreshTooltip": "Git durumunu yenile (F5)",
+      "reload": "Yeniden yükle",
+      "retry": "Yeniden dene",
+      "save": "Kaydet",
+      "saveAllAndClose": "Tümünü Kaydet ve Kapat"
+    },
+    "ariaLabel": "Proje Düzenleyici",
+    "dialogs": {
+      "conflictDescription": "Dosya, siz açtığınızdan beri harici olarak değiştirildi. Değişikliklerinizle üzerine yazılsın mı?",
+      "conflictTitle": "Kaydetme Çakışması",
+      "unsavedDescription": "Kaydedilmemiş değişiklikleriniz var. Ne yapmak istersiniz?",
+      "unsavedFileDescription": "Bu dosyada kaydedilmemiş değişiklikler var. Ne yapmak istersiniz?",
+      "unsavedTitle": "Kaydedilmemiş Değişiklikler"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Ad boş olamaz",
+        "invalidName": "Geçersiz ad",
+        "invalidCharacters": "Ad geçersiz karakterler içeriyor",
+        "nameTooLong": "Ad çok uzun"
+      },
+      "placeholders": {
+        "fileName": "Dosya adı...",
+        "folderName": "Klasör adı..."
+      },
+      "aria": {
+        "newFileName": "Yeni dosya adı",
+        "newFolderName": "Yeni klasör adı"
+      }
+    },
+    "draftRecovered": "Önceki oturumdan kaydedilmemiş değişiklikler kurtarıldı.",
+    "externalChange": {
+      "changed": "Dosya diskte değiştirildi.",
+      "deleted": "Dosya artık diskte mevcut değil."
+    },
+    "saveFailed": "Kaydetme başarısız oldu: {{error}}",
+    "sidebar": {
+      "explorer": "Gezgin",
+      "hide": "Kenar çubuğunu gizle",
+      "hideWithShortcut": "Kenar çubuğunu gizle ({{shortcut}})",
+      "show": "Kenar çubuğunu göster",
+      "showWithShortcut": "Kenar çubuğunu göster ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Dosyalarda Ara",
+      "closeSearch": "Aramayı kapat",
+      "closeSearchShortcut": "Aramayı kapat (Esc)",
+      "searchPlaceholder": "Ara...",
+      "matchCase": "Büyük/Küçük Harf Eşleştir",
+      "matchCaseToggle": "Aa",
+      "noResults": "Sonuç bulunamadı",
+      "resultsSummary": "{{fileCount}} dosyada {{count}} eşleşme",
+      "resultsSummary_one": "{{fileCount}} dosyada {{count}} eşleşme",
+      "truncated": "(kısaltıldı)",
+      "resultsSummary_few": "{{fileCount}} dosyada {{count}} eşleşme",
+      "resultsSummary_many": "{{fileCount}} dosyada {{count}} eşleşme",
+      "resultsSummary_other": "{{fileCount}} dosyada {{count}} eşleşme"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Dosyalar yüklenemedi: {{error}}",
+      "loading": "Dosyalar yükleniyor...",
+      "empty": "Dosya bulunamadı",
+      "dropForProjectRoot": "Proje kökü için buraya bırakın",
+      "moveToTrash": "Çöpe Taşı",
+      "moveToTrashConfirm": "\"{{name}}\" çöpe taşınsın mı?",
+      "cancel": "İptal"
+    },
+    "goToLine": {
+      "title": "Satıra Git",
+      "position": "(geçerli: {{current}}, toplam: {{total}})",
+      "placeholder": "Satır numarası, +ofset, -ofset veya %",
+      "go": "Git"
+    },
+    "searchPanel": {
+      "previousMatch": "Önceki Eşleşme",
+      "nextMatch": "Sonraki Eşleşme",
+      "close": "Kapat",
+      "replacePlaceholder": "Değiştir",
+      "replace": "Değiştir",
+      "replaceNext": "Sonrakini Değiştir",
+      "all": "Tümü",
+      "replaceAll": "Tümünü Değiştir"
+    },
+    "statusBar": {
+      "position": "Sat {{line}}, Süt {{col}}",
+      "enableWatcher": "Dosya izleyiciyi etkinleştir",
+      "disableWatcher": "Dosya izleyiciyi devre dışı bırak",
+      "watch": "izle",
+      "watching": "izleniyor",
+      "watchExternalChanges": "Harici değişiklikleri izle",
+      "disableExternalWatcher": "Harici değişiklik izleyiciyi devre dışı bırak",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Boşluklar: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Önizleme yükleniyor...",
+      "openFullSize": "Tam boyut önizlemeyi aç",
+      "openSystemViewer": "Sistem Görüntüleyicide Aç"
+    },
+    "quickOpen": {
+      "title": "Hızlı Aç",
+      "searchPlaceholder": "Dosyaları ada göre ara...",
+      "loading": "Dosyalar yükleniyor...",
+      "empty": "Dosya bulunamadı"
+    },
+    "errorBoundary": {
+      "crashed": "Düzenleyici çöktü",
+      "unknownError": "Bilinmeyen hata"
+    },
+    "binaryPlaceholder": {
+      "file": "İkili dosya ({{size}})"
+    },
+    "unsavedChanges": "Kaydedilmemiş değişiklikler",
+    "empty": {
+      "selectFile": "Düzenlemek için ağaçtan bir dosya seçin"
+    },
+    "search": {
+      "toggleReplace": "Değiştirmeyi Aç/Kapat",
+      "placeholder": "Ara"
+    },
+    "shortcuts": {
+      "title": "Klavye Kısayolları",
+      "groups": {
+        "fileOperations": "Dosya İşlemleri",
+        "search": "Arama",
+        "navigation": "Gezinme",
+        "editing": "Düzenleme",
+        "markdown": "Markdown",
+        "general": "Genel"
+      },
+      "actions": {
+        "quickOpen": "Hızlı Aç",
+        "save": "Kaydet",
+        "saveAll": "Tümünü Kaydet",
+        "closeTab": "Sekmeyi Kapat",
+        "findInFile": "Dosyada Bul",
+        "searchInFiles": "Dosyalarda Ara",
+        "goToLine": "Satıra Git",
+        "nextTab": "Sonraki Sekme",
+        "previousTab": "Önceki Sekme",
+        "cycleTabs": "Sekmeler Arasında Geçiş",
+        "toggleSidebar": "Kenar Çubuğunu Aç/Kapat",
+        "undo": "Geri Al",
+        "redo": "Yinele",
+        "selectNextMatch": "Sonraki Eşleşmeyi Seç",
+        "toggleComment": "Yorumu Aç/Kapat",
+        "splitPreview": "Bölünmüş Önizleme",
+        "fullPreview": "Tam Önizleme",
+        "closeEditor": "Düzenleyiciyi Kapat"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Sözcük kaydırmayı etkinleştir",
+      "disableWordWrap": "Sözcük kaydırmayı devre dışı bırak",
+      "closeSplitPreview": "Bölünmüş önizlemeyi kapat",
+      "closePreview": "Önizlemeyi kapat"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Zamanlama Oluştur",
+      "creating": "Oluşturuluyor...",
+      "goToDashboard": "Panoya git",
+      "launchTeam": "Ekibi başlat",
+      "launching": "Başlatılıyor...",
+      "relaunchTeam": "Ekibi yeniden başlat",
+      "relaunching": "Yeniden başlatılıyor...",
+      "saveChanges": "Değişiklikleri Kaydet",
+      "saving": "Kaydediliyor..."
+    },
+    "billing": {
+      "prefix": "15 Haziran 2026'dan itibaren Anthropic",
+      "readArticle": "Anthropic makalesini oku",
+      "suffix": "ve Agent SDK kullanımını, etkileşimli Claude Code limitlerinden ayrı olarak aylık Agent SDK kredisinden faturalandırır. Kredi her faturalandırma döneminde sıfırlanır ve kullanılmayan kredi devredilmez."
+    },
+    "conflict": {
+      "description": "Aynı dizinde iki ekip çalıştırmak risklidir - aynı dosyaları düzenlerken çakışabilirler. Yalıtım için farklı bir dizin veya bir git worktree kullanmayı düşünün.",
+      "title": "Bu çalışma dizini için başka bir \"{{team}}\" ekibi zaten çalışıyor",
+      "workingDirectory": "Çalışma dizini:"
+    },
+    "description": {
+      "createSchedule": "Otomatik Claude görev yürütmesini zamanla",
+      "createScheduleForTeam": "\"{{team}}\" ekibi için otomatik çalıştırmaları zamanla",
+      "editSchedule": "\"{{team}}\" ekibi için zamanlama düzenleniyor",
+      "launchPrefix": "Ekibi başlat",
+      "launchSuffix": "yerel Claude CLI aracılığıyla.",
+      "relaunchPrefix": "Şunun geçerli çalıştırmasını durdur:",
+      "relaunchSuffix": "ve yerel Claude CLI aracılığıyla yeniden başlat."
+    },
+    "prepare": {
+      "action": {
+        "launch": "başlatma",
+        "relaunch": "yeniden başlatma"
+      },
+      "blocked": "Çalışma zamanı ortamı kullanılamıyor - {{action}} engellendi",
+      "checkingProviders": "Seçili sağlayıcılar kontrol ediliyor...",
+      "failed": "Seçili sağlayıcılar hazırlanamadı",
+      "preflight": "{{action}} öncesi hataları yakalamak için ön kontrol",
+      "preparingEnvironment": "Ortam hazırlanıyor...",
+      "ready": "Seçili tüm sağlayıcılar hazır.",
+      "readyWithNotes": "Seçili tüm sağlayıcılar hazır, notlarla birlikte.",
+      "unsupportedPreload": "Geçerli preload sürümü team:prepareProvisioning öğesini desteklemiyor. Geliştirme uygulamasını yeniden başlatın.",
+      "selectWorkingDirectory": "Başlatma ortamını doğrulamak için bir çalışma dizini seçin.",
+      "someProvidersNeedAttention": "Seçili bazı sağlayıcıların ilgilenilmesi gerekiyor."
+    },
+    "prompt": {
+      "label": "Komut İstemi",
+      "oneShotPrefix": "Bu komut istemi şuraya iletilecek:",
+      "oneShotSuffix": "tek seferlik yürütme için",
+      "saved": "Kaydedildi",
+      "schedulePlaceholder": "Claude'un zamanlamaya göre yürütmesi için talimatlar...",
+      "teamLeadOptional": "Ekip lideri için komut istemi (isteğe bağlı)",
+      "teamLeadPlaceholder": "Ekip lideri için talimatlar..."
+    },
+    "providerChanged": "Sağlayıcı {{from}} öğesinden {{to}} öğesine değiştirildi. Önceki lider oturumu devam ettirilmeyecek ve yeni çalışma zamanının doğru uygulanması için lider taze bağlamla başlayacak.",
+    "relaunchFreshSession": "Ekip yeniden başlatma taze bir lider oturumu başlatır. Kalıcı ekip durumu, görev panosu ve üye yapılandırması başlatma komut istemine yeniden yüklenir.",
+    "relaunchWarning": {
+      "description": "Bu ayarları kaydetmek geçerli ekip sürecini durduracak, güncellenmiş kadroyu kalıcı hale getirecek ve ekibi yeni çalışma zamanıyla yeniden başlatacaktır.",
+      "title": "Yeniden başlatma geçerli ekip çalıştırmasını yeniden başlatacak"
+    },
+    "schedule": {
+      "labelOptional": "Etiket (isteğe bağlı)",
+      "labelPlaceholder": "ör. Günlük kod incelemesi, Gece testleri...",
+      "maxBudgetUsd": "Maks. bütçe (USD)",
+      "maxTurns": "Maks. tur",
+      "noLimit": "Limit yok",
+      "noMatches": "Aramanızla eşleşen ekip yok.",
+      "noTeams": "Kullanılabilir ekip yok. Önce bir ekip oluşturun.",
+      "searchTeams": "Ekiplerde ara...",
+      "selectTeam": "Bir ekip seç...",
+      "team": "Ekip",
+      "title": "Zamanlama"
+    },
+    "title": {
+      "createSchedule": "Zamanlama Oluştur",
+      "editSchedule": "Zamanlamayı Düzenle",
+      "launch": "Ekibi Başlat",
+      "relaunch": "Ekibi Yeniden Başlat"
+    },
+    "errors": {
+      "loadProjectsFailed": "Projeler yüklenemedi",
+      "saveScheduleFailed": "Zamanlama kaydedilemedi",
+      "relaunchFailed": "Ekip yeniden başlatılamadı",
+      "launchFailed": "Ekip başlatılamadı"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode lideri seçili bir model gerektirir.",
+      "openCodeTeammateRequired": "OpenCode lideri en az bir OpenCode takım arkadaşı gerektirir.",
+      "selectWorkingDirectory": "Çalışma dizinini seçin (cwd)",
+      "fixMemberNames": "Başlatmadan önce üye adlarını düzeltin",
+      "memberNamesUnique": "Başlatmadan önce üye adları benzersiz olmalıdır"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Yeniden başlatma ayarları",
+      "title": "İsteğe bağlı başlatma ayarları",
+      "relaunchDescription": "Ekibi yeniden başlatmadan önce kadroyu ve lider çalışma zamanını gözden geçirin.",
+      "description": "Başlatma akışını proje yoluna odaklı tutun ve yalnızca ekstra kontrol istediğinizde bunu genişletin."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Ekibi kopyala",
+      "createTeam": "Ekip Oluştur",
+      "deleteForever": "Kalıcı olarak sil",
+      "deletePermanently": "Kalıcı olarak sil",
+      "deleteTeam": "Ekibi sil",
+      "launching": "Başlatılıyor...",
+      "launchTeam": "Ekibi başlat",
+      "relaunchTeam": "Ekibi yeniden başlat",
+      "restore": "Geri yükle",
+      "restoreTeam": "Ekibi geri yükle",
+      "retry": "Yeniden dene",
+      "stopTeam": "Ekibi durdur",
+      "stopping": "Durduruluyor..."
+    },
+    "electronOnly": {
+      "description": "Tarayıcı modunda, yerel `~/.claude/teams` dizinlerine erişim kullanılamaz.",
+      "title": "Ekipler yalnızca Electron modunda kullanılabilir"
+    },
+    "empty": {
+      "description": "Başlamak için burada bir ekip oluşturun. Listede otomatik olarak görünecek.",
+      "localOnly": "Ekip oluşturma yalnızca yerel Electron modunda kullanılabilir.",
+      "title": "Ekip bulunamadı"
+    },
+    "filter": {
+      "clearAll": "Tümünü temizle",
+      "label": "Ekipleri filtrele",
+      "projectPriority": "Proje önceliği",
+      "status": "Durum"
+    },
+    "loadFailed": "Ekipler yüklenemedi",
+    "loading": "Ekipler yükleniyor...",
+    "localOnly": "Yalnızca yerel Electron modunda kullanılabilir.",
+    "membersCount": "Üyeler: {{count}}",
+    "membersCount_few": "Üyeler: {{count}}",
+    "membersCount_many": "Üyeler: {{count}}",
+    "membersCount_one": "Üye: {{count}}",
+    "membersCount_other": "Üyeler: {{count}}",
+    "noDescription": "Açıklama yok",
+    "noMatches": "Geçerli filtrelerle eşleşen ekip yok",
+    "partial": {
+      "pending": "Son başlatma hâlâ uzlaştırılıyor.",
+      "skipped": "Son başlatma takım arkadaşlarını atladı.",
+      "skippedWithCount": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_few": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_many": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_one": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_other": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "stopped": "Son başlatma tüm takım arkadaşları katılmadan durdu.",
+      "stoppedWithCount": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_few": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_many": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_one": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_other": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu."
+    },
+    "searchPlaceholder": "Ekiplerde ara...",
+    "sections": {
+      "otherTeams": "Diğer ekipler",
+      "projectTeams": "{{project}} için ekipler",
+      "selectedProject": "seçili proje"
+    },
+    "solo": "Tekli",
+    "status": {
+      "active": "Etkin",
+      "deleted": "Silindi",
+      "launching": "Başlatılıyor...",
+      "offline": "Çevrimdışı",
+      "partialFailure": "Başlatma yarıda başarısız oldu",
+      "partialPending": "Bootstrap beklemede",
+      "partialSkipped": "Başlatma üyeyi atladı",
+      "running": "Çalışıyor"
+    },
+    "title": "Ekip Seç",
+    "trash": "Çöp ({{count}})",
+    "trash_few": "Çöp ({{count}})",
+    "trash_many": "Çöp ({{count}})",
+    "trash_one": "Çöp ({{count}})",
+    "trash_other": "Çöp ({{count}})",
+    "deleteDraft": {
+      "title": "Taslağı sil",
+      "message": "\"{{teamName}}\" taslak ekibi silinsin mi? Bu geri alınamaz.",
+      "confirmLabel": "Sil",
+      "cancelLabel": "İptal"
+    },
+    "moveToTrash": {
+      "title": "Çöpe taşı",
+      "message": "\"{{teamName}}\" ekibi çöpe taşınsın mı? Daha sonra geri yükleyebilirsiniz.",
+      "confirmLabel": "Çöpe taşı",
+      "cancelLabel": "İptal"
+    },
+    "deleteForever": {
+      "title": "Kalıcı olarak sil",
+      "message": "\"{{teamName}}\" ekibi kalıcı olarak silinsin mi? Tüm veriler kaybolacak.",
+      "confirmLabel": "Kalıcı olarak sil",
+      "cancelLabel": "İptal"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "İpucu: Ekipler arası mesajlar hedef ekip liderine gider. Yanıtın size değil de ekip liderinize geri gelmesini istiyorsanız, bunu mesajda açıkça belirtin."
+    },
+    "attachments": {
+      "attachFiles": "Dosya ekle (yapıştır veya sürükle bırak)",
+      "unavailable": "Ekler kullanılamıyor",
+      "disabledHint": "Dosya ekleri çevrimiçi ekip lideri ve çevrimiçi OpenCode takım arkadaşları için desteklenir. Ekleri kaldırın veya alıcıyı değiştirin.",
+      "restrictions": {
+        "crossTeam": "Ekipler arası mesajlar için dosya ekleri desteklenmiyor",
+        "teamOffline": "Dosya eklemek için ekip çevrimiçi olmalıdır",
+        "unsupportedRecipient": "Dosyalar ekip liderine veya OpenCode takım arkadaşlarına gönderilebilir",
+        "openCodeOffline": "OpenCode takım arkadaşları için dosya eklemek üzere ekip çevrimiçi olmalıdır",
+        "sending": "Dosya eklemeden önce geçerli mesajın gönderilmesini bekleyin",
+        "maximumReached": "Maksimum ek sayısına ulaşıldı",
+        "leadOnly": "Dosyalar yalnızca ekip liderine gönderilebilir"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Eğik çizgi komutları canlı bir ekip lideri gerektirir ve eklerle gönderilemez",
+        "crossTeam": "Eğik çizgi komutları yalnızca geçerli ekip liderinde çalıştırılabilir",
+        "notLead": "Eğik çizgi komutları yalnızca ekip liderine gönderilebilir",
+        "leadOffline": "Eğik çizgi komutları ekip liderinin çevrimiçi olmasını gerektirir"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Son ekipler arası istek yeniden kullanıldı",
+      "teamOffline": "Ekip çevrimdışı"
+    },
+    "revision": {
+      "editing": "Önceki mesaj düzenleniyor",
+      "cancel": "İptal",
+      "tooltip": "Agent'tan önceki mesajı yok saymasını ve onu yazma alanına geri yüklemesini iste."
+    },
+    "input": {
+      "charsLeft": "{{count}} karakter kaldı",
+      "charsLeft_one": "{{count}} karakter kaldı",
+      "charsLeft_other": "{{count}} karakter kaldı",
+      "teamLaunchingPlaceholder": "Ekip başlatılıyor... mesaj gelen kutusu teslimatı için kuyruğa alınacak.",
+      "crossTeamPlaceholder": "{{team}} ekibine ekipler arası mesaj...",
+      "teamFallback": "ekip",
+      "placeholder": "Bir mesaj yazın... (göndermek için Enter, yeni satır için Shift+Enter)",
+      "slashTip": "İpucu: Herhangi bir Claude komutunu çalıştırmak için \"/\" kullanabilirsiniz.",
+      "charsLeft_few": "{{count}} karakter kaldı",
+      "charsLeft_many": "{{count}} karakter kaldı"
+    },
+    "teamSelector": {
+      "thisTeam": "Bu ekip",
+      "current": "geçerli",
+      "online": "çevrimiçi",
+      "offline": "çevrimdışı",
+      "onlineTitle": "Çevrimiçi",
+      "offlineTitle": "Çevrimdışı"
+    },
+    "recipient": {
+      "select": "Seç...",
+      "searchPlaceholder": "Ara...",
+      "noResults": "Sonuç yok"
+    },
+    "actions": {
+      "voiceToText": "Sesten metne",
+      "send": "Gönder",
+      "sendingUnavailableLaunching": "Ekip başlatılırken gönderme kullanılamaz"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Günlükleri filtrele",
+      "tooltip": "Günlükleri filtrele",
+      "sections": {
+        "stream": "Akış",
+        "content": "İçerik"
+      },
+      "kinds": {
+        "output": "Çıktı",
+        "thinking": "Düşünme",
+        "tool": "Araç çağrıları"
+      },
+      "actions": {
+        "reset": "Sıfırla",
+        "save": "Kaydet"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} ham satır",
+    "rawLineCount_one": "{{formattedCount}} ham satır",
+    "rawLinesCaptured": "{{count}} yakalandı",
+    "emptyRawLogs": "{{count}}; henüz hiçbiri asistan/araç çıktısı değil.",
+    "noLogsYet": "Henüz günlük yok.",
+    "teamNotRunning": "Ekip çalışmıyor.",
+    "searchPlaceholder": "Günlüklerde ara...",
+    "clearSearch": "Aramayı temizle",
+    "newCount": "+{{count}} yeni",
+    "loading": "Yükleniyor...",
+    "showMore": "Daha fazla göster",
+    "noLogsCaptured": "Yakalanan günlük yok.",
+    "noMatchingLogs": "Eşleşen günlük yok.",
+    "rawLineCount_few": "{{formattedCount}} ham satır",
+    "rawLineCount_many": "{{formattedCount}} ham satır",
+    "rawLineCount_other": "{{formattedCount}} ham satır",
+    "openFullscreen": "Tam ekran günlükleri aç",
+    "fullscreen": "Tam ekran",
+    "viewingFullscreen": "Tam ekran modunda görüntüleniyor",
+    "logsTitle": "Günlükler",
+    "sourceSelect": {
+      "placeholder": "Günlük kaynağı seç...",
+      "searchPlaceholder": "Günlük kaynaklarında ara...",
+      "emptyMessage": "Günlük kaynağı bulunamadı.",
+      "ariaLabel": "Günlük kaynağı",
+      "leadLabel": "Lider",
+      "selectSourceEmpty": "Bir günlük kaynağı seçin.",
+      "leadDescription": "Ekip Lideri",
+      "removedLabel": "kaldırıldı",
+      "removedDescription": "Kaldırıldı"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Harici ekip",
+      "process": {
+        "startedBy": "Başlatan:",
+        "at": "Zaman:",
+        "openUrl": "URL'yi aç"
+      },
+      "overflow": {
+        "hiddenTasks": "Gizli görevler",
+        "empty": "Kullanılabilir gizli görev yok."
+      },
+      "member": {
+        "lead": "Lider",
+        "workingOn": "üzerinde çalışıyor",
+        "recentTools": "Son araçlar",
+        "spawn": {
+          "waitingToStart": "başlamayı bekliyor",
+          "starting": "başlıyor",
+          "failed": "başarısız"
+        },
+        "state": {
+          "active": "etkin",
+          "idle": "boşta",
+          "offline": "çevrimdışı",
+          "runningTool": "araç çalıştırıyor"
+        },
+        "activeTool": {
+          "running": "Araç çalışıyor",
+          "failed": "Araç başarısız oldu",
+          "finished": "Araç tamamlandı"
+        },
+        "actions": {
+          "message": "Mesaj",
+          "profile": "Profil",
+          "task": "Görev"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Günlükler",
+      "loading": "Günlükler yükleniyor",
+      "more": "+{{count}} daha",
+      "more_one": "+{{count}} daha",
+      "more_other": "+{{count}} daha",
+      "more_few": "+{{count}} daha",
+      "more_many": "+{{count}} daha",
+      "unsupportedProvider": "Desteklenmeyen sağlayıcı",
+      "openCodeLogsDelayed": "OpenCode günlükleri gecikti",
+      "logsUnavailable": "Günlükler kullanılamıyor",
+      "noRecentLogs": "Son günlük yok",
+      "toolError": "Araç hatası",
+      "toolResult": "Araç sonucu",
+      "toolUse": "Araç kullanımı",
+      "thinking": "Düşünme",
+      "error": "Hata",
+      "logEvent": "Günlük olayı",
+      "noErrorOutput": "Hata çıktısı yok",
+      "noOutput": "Çıktı yok",
+      "noInput": "Girdi yok"
+    },
+    "blockingEdge": {
+      "title": "Engelleyen Bağımlılık",
+      "blocks": "engelliyor",
+      "close": "Kapat",
+      "blockingHiddenTasks": "Engelleyen gizli görevler",
+      "blockedHiddenTasks": "Engellenen gizli görevler",
+      "links_one": "{{count}} bağlantı",
+      "links_other": "{{count}} bağlantı",
+      "hiddenBlockingLinks_one": "{{count}} gizli engelleyen bağlantı",
+      "hiddenBlockingLinks_other": "{{count}} gizli engelleyen bağlantı",
+      "hiddenTaskStack": "Gizli görev yığını",
+      "hiddenTasks_one": "{{count}} gizli görev",
+      "hiddenTasks_other": "{{count}} gizli görev",
+      "task": "Görev",
+      "openBlockerStack": "Engelleyici yığınını aç",
+      "openBlockedStack": "Engellenen yığınını aç",
+      "openBlockerTask": "Engelleyici görevi aç",
+      "openBlockedTask": "Engellenen görevi aç"
+    },
+    "activityHud": {
+      "activity": "Etkinlik",
+      "noRecentActivity": "Son etkinlik yok",
+      "more": "+{{count}} daha",
+      "more_one": "+{{count}} daha",
+      "more_other": "+{{count}} daha",
+      "more_few": "+{{count}} daha",
+      "more_many": "+{{count}} daha"
+    },
+    "provisioning": {
+      "launchDetails": "Başlatma ayrıntıları",
+      "launchDetailsDescription": "Ayrıntılı ekip başlatma ilerlemesi, canlı çıktı ve CLI günlükleri."
+    }
+  },
+  "projectPath": {
+    "label": "Proje",
+    "source": {
+      "claude": "Claude tarafından bulundu",
+      "codex": "Codex tarafından bulundu",
+      "mixed": "Claude ve Codex tarafından bulundu"
+    },
+    "deleted": {
+      "title": "Proje klasörü artık mevcut değil",
+      "label": "Silindi"
+    },
+    "mode": {
+      "projectList": "Proje listesinden",
+      "customPath": "Özel yol"
+    },
+    "loadingProjects": "Projeler yükleniyor...",
+    "selectProject": "Bir proje seç...",
+    "searchPlaceholder": "Projeyi ada veya yola göre ara",
+    "empty": "Hiçbir şey bulunamadı",
+    "selectFromList": "Listeden bir proje seçin",
+    "noProjects": "Proje bulunamadı, özel yola geçin.",
+    "customWorkingDirectory": "Özel çalışma dizini",
+    "browse": "Gözat",
+    "createAutomatically": "Dizin mevcut değilse otomatik olarak oluşturulacaktır."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Yerel çalışma zamanı yükü",
+      "description": "Yalnızca üst ve alt süreçler. Uzak LLM çıkarımı dahil değildir.",
+      "cpu": "CPU",
+      "memory": "Bellek",
+      "summedRss": "toplam RSS",
+      "sharedHost": "Paylaşılan OpenCode ana bilgisayar metriği. Bu üyeye özel değildir.",
+      "processTreeCapped": "Süreç ağacı bu örnek için sınırlandırıldı.",
+      "rssHint": "RSS paylaşılan sayfaları içerebilir, bu yüzden özel bellek değil bir yük sinyali olarak okunması en iyisidir."
+    },
+    "editor": {
+      "title": "Üyeler",
+      "addMember": "Üye ekle",
+      "editAsJson": "JSON olarak düzenle",
+      "runInSeparateWorktrees": "Takım arkadaşlarını ayrı worktree'lerde çalıştır",
+      "agentTeamsMcpOnly": "Yalnızca Agent Teams MCP",
+      "removedCount": "Kaldırıldı ({{count}})",
+      "removedModelLockReason": "Kaldırılan üyeler yumuşak silme geçmişi için korunur. Ayarları düzenlemek için onları geri yükleyin.",
+      "memberNamesUnique": "Üye adları benzersiz olmalıdır"
+    },
+    "stats": {
+      "computing": "İstatistikler hesaplanıyor...",
+      "empty": "İstatistik yok",
+      "lines": "Satırlar",
+      "linesInfo": "Yaklaşık. Edit ve Write araçları için doğrudur. Bash dosya yazmaları komut kalıplarından (heredoc, echo, sed) tahmin edilir ve eksik bildirilebilir.",
+      "files": "Dosyalar",
+      "toolCalls": "Araç Çağrıları",
+      "tokens": "Token",
+      "toolUsage": "Araç Kullanımı",
+      "filesTouched": "Dokunulan Dosyalar ({{count}})",
+      "viewAllChanges": "Tüm Değişiklikleri Görüntüle",
+      "showLess": "Daha az göster",
+      "moreFiles": "+{{count}} daha",
+      "footer": "{{count}} oturum · {{computedAgo}} hesaplandı",
+      "footer_one": "{{count}} oturum · {{computedAgo}} hesaplandı",
+      "footer_few": "{{count}} oturum · {{computedAgo}} hesaplandı",
+      "footer_many": "{{count}} oturum · {{computedAgo}} hesaplandı",
+      "footer_other": "{{count}} oturum · {{computedAgo}} hesaplandı"
+    },
+    "logs": {
+      "searching": "Günlükler aranıyor...",
+      "empty": "Günlük bulunamadı",
+      "waitingForTaskActivity": "Görev devam ediyor - oturum etkinliği bekleniyor (otomatik yenileniyor)...",
+      "noTaskActivity": "Bu görev için henüz oturum etkinliği yok",
+      "noMemberActivity": "Bu üyenin henüz kaydedilmiş oturum etkinliği yok",
+      "leadSessionTooltip": "Tam ekip lideri oturum günlükleri - genel orkestrasyon bağlamı için yararlı, bu agent'a özel değil",
+      "memberSessionTooltip": "Tam kalıcı takım arkadaşı oturum günlükleri - iş bir alt agent dosyası yerine bir kök üye oturumunda çalıştığında yararlı",
+      "startedAt": "başladı {{time}}",
+      "active": "etkin",
+      "showDetails": "Ayrıntıları göster",
+      "hideDetails": "Ayrıntıları gizle",
+      "loadingDetails": "Ayrıntılar yükleniyor...",
+      "failedToLoadDetails": "Ayrıntılar yüklenemedi"
+    },
+    "detail": {
+      "relaunchOpenCode": "OpenCode'u yeniden başlat",
+      "restart": "Yeniden başlat",
+      "legacyLogsFallback": "Eski Günlükler Yedeği",
+      "copyDiagnostics": "Tanılamayı kopyala",
+      "pid": "PID {{pid}}",
+      "removedAt": "Kaldırıldı {{date}}",
+      "failedToRestartMember": "Üye yeniden başlatılamadı",
+      "sendMessage": "Mesaj Gönder",
+      "assignTask": "Görev Ata",
+      "remove": "Kaldır"
+    },
+    "list": {
+      "loading": "Ekip üyeleri yükleniyor",
+      "unavailable": "Üye kadrosu kullanılamıyor",
+      "unavailableDescription": "{{count}} takım arkadaşı ekip meta verilerinden biliniyor, ancak kadro ayrıntıları eksik.",
+      "unavailableDescription_one": "{{count}} takım arkadaşı ekip meta verilerinden biliniyor, ancak kadro ayrıntıları eksik.",
+      "soloLeadOnly": "Tekli ekip - yalnızca lider",
+      "removedCount": "Kaldırıldı ({{count}})",
+      "unavailableDescription_few": "{{count}} takım arkadaşı ekip meta verilerinden biliniyor, ancak kadro ayrıntıları eksik.",
+      "unavailableDescription_many": "{{count}} takım arkadaşı ekip meta verilerinden biliniyor, ancak kadro ayrıntıları eksik.",
+      "unavailableDescription_other": "{{count}} takım arkadaşı ekip meta verilerinden biliniyor, ancak kadro ayrıntıları eksik."
+    },
+    "executionLog": {
+      "empty": "Görüntülenecek bir şey yok",
+      "emptyUserMessage": "{{time}} - (boş)",
+      "agentInstructions": "Agent talimatları",
+      "memberTurn": "{{member}} turu",
+      "agentTurn": "Agent turu",
+      "turn": "tur"
+    },
+    "recentMessages": {
+      "latest": "En son mesajlar",
+      "latestForMember": "En son mesajlar - {{member}}",
+      "loadMore": "Daha fazla yükle",
+      "expand": "Genişlet",
+      "collapse": "Daralt"
+    },
+    "leadModel": {
+      "defaultModel": "Varsayılan",
+      "providerModelAria": "{{provider}} sağlayıcısı, {{model}}",
+      "leadShort": "lider",
+      "teamLead": "Ekip Lideri",
+      "syncWithTeammates": "Modeli takım arkadaşlarıyla senkronize et",
+      "anthropicTeamWide": "Anthropic ekip geneli",
+      "runtimeInheritance": "Takım arkadaşları kendi sağlayıcılarını veya modellerini ayarlamadıkça lider çalışma zamanı onlara uygulanır.",
+      "anthropicContextLimit": "200K bağlam limiti, bu başlatmada özel Anthropic takım arkadaşları dahil olmak üzere Anthropic çalışma zamanları için ekip genelidir."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Otomatik yenile",
+      "wrapLines": "Satırları kaydır",
+      "loadingTail": "Süreç günlüğü sonu yükleniyor...",
+      "empty": "Bu üye için henüz yakalanmış süreç günlüğü dosyası yok.",
+      "copy": "Kopyala",
+      "fileEmpty": "Süreç günlüğü dosyası boş.",
+      "showingLast": "Son {{bytes}} gösteriliyor.",
+      "showing": "{{bytes}} gösteriliyor."
+    },
+    "tasks": {
+      "empty": "Bu üyeye atanmış görev yok"
+    },
+    "messages": {
+      "loadOlder": "Eski mesajları yükle",
+      "filters": {
+        "all": "Tümü",
+        "messages": "Mesajlar",
+        "comments": "Yorumlar"
+      },
+      "empty": {
+        "loading": "Etkinlik yükleniyor...",
+        "noComments": "Bu üye için yorum yok",
+        "noLoadedMessages": "Bu üye için henüz yüklenmiş mesaj yok",
+        "noMessages": "Bu üyeyle mesaj yok",
+        "noLoadedActivity": "Bu üye için henüz yüklenmiş etkinlik yok",
+        "noActivity": "Bu üyeyle etkinlik yok"
+      }
+    },
+    "actions": {
+      "openProfile": "Profili aç",
+      "editRole": "Rolü düzenle",
+      "sendMessage": "Mesaj gönder",
+      "assignTask": "Görev ata"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Özel rol girin..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} zamanlama",
+    "count_one": "{{count}} zamanlama",
+    "count_other": "{{count}} zamanlama",
+    "nextRun": "Sonraki: {{next}}",
+    "actions": {
+      "runNow": "Şimdi çalıştır",
+      "edit": "Düzenle",
+      "pause": "Duraklat",
+      "resume": "Devam ettir",
+      "delete": "Sil",
+      "addSchedule": "Zamanlama Ekle"
+    },
+    "runHistory": {
+      "loading": "Çalıştırma geçmişi yükleniyor...",
+      "empty": "Henüz çalıştırma yok"
+    },
+    "count_few": "{{count}} zamanlama",
+    "count_many": "{{count}} zamanlama",
+    "runLog": {
+      "title": "Çalıştırma Günlüğü",
+      "exitCode": "çıkış {{code}}",
+      "retryCount": "yeniden deneme {{count}}/{{max}}",
+      "stillRunning": "Görev hâlâ çalışıyor...",
+      "loadingLogs": "Günlükler yükleniyor...",
+      "errors": "Hatalar",
+      "close": "Kapat"
+    },
+    "cron": {
+      "expression": "Cron ifadesi",
+      "highFrequencyWarning": "Yüksek frekanslı zamanlama (5 dakikadan kısa aralık)",
+      "nextRuns": "Sonraki çalıştırmalar:",
+      "timezone": "Saat dilimi",
+      "selectTimezone": "Saat dilimi seç",
+      "warmUpTime": "Isınma süresi",
+      "warmUpDescription": "Zamanlanmış yürütmeden önce seçili sağlayıcıları hazırlar",
+      "errors": {
+        "enterExpression": "Bir cron ifadesi girin",
+        "invalidExpression": "Geçersiz cron ifadesi"
+      },
+      "presets": {
+        "everyHour": "Her saat",
+        "everySixHours": "Her 6 saatte",
+        "dailyAtNine": "Her gün 09:00'da",
+        "weekdaysAtNine": "Hafta içi 09:00'da",
+        "mondayAtNine": "Pazartesi 09:00'da",
+        "everyThirtyMinutes": "Her 30 dakikada"
+      },
+      "warmUpOptions": {
+        "none": "Isınma yok",
+        "fiveMinutes": "5 dk",
+        "tenMinutes": "10 dk",
+        "fifteenMinutes": "15 dk",
+        "thirtyMinutes": "30 dk"
+      }
+    },
+    "empty": {
+      "title": "Henüz zamanlama yok",
+      "description": "Claude görevlerini cron zamanlamasıyla otomatik olarak çalıştırmak için bir zamanlama oluşturun."
+    },
+    "title": "Zamanlamalar",
+    "status": {
+      "active": "Etkin",
+      "paused": "Duraklatıldı",
+      "disabled": "Devre dışı"
+    },
+    "runStatus": {
+      "pending": "Beklemede",
+      "warmingUp": "Isınıyor",
+      "warm": "Hazır",
+      "running": "Çalışıyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız",
+      "interrupted": "Kesildi",
+      "cancelled": "İptal edildi"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode yerel modelleri, yalnızca komut istemi limitleri yerine bir OpenCode bağlam bütçesi kullanabilir.",
+    "description": "Bu takım arkadaşı tarafından kullanılan sağlayıcı ve model için OpenCode yapılandırmasına eşleşen limitler ekleyin. Bu, OpenCode'un yerel modeller bağlam pencerelerini taşırmadan önce sıkıştırıp budamasına yardımcı olur.",
+    "replacePrefix": "Şunu değiştirin:",
+    "and": "ve",
+    "replaceSuffix": "OpenCode kurulumunuzdaki sağlayıcı ve model kimlikleriyle. Şunun gibi komut istemi talimatları:",
+    "promptInstructionsSuffix": "daha zayıftır çünkü istek model bunları okumadan önce birleştirilir.",
+    "providerLimits": "Sağlayıcı limitleri",
+    "compactionConfig": "Sıkıştırma yapılandırması"
+  },
+  "sessions": {
+    "noProjectPath": "Bağlı proje yolu yok",
+    "provisioningHint": "Ekip sağlamasından sonra oturumlar görünecek",
+    "projectNotFound": "Proje bulunamadı",
+    "loading": "Oturumlar yükleniyor...",
+    "empty": "Oturum bulunamadı",
+    "showAllSessions": "Tüm oturumlar için göster",
+    "lead": "lider",
+    "removeFilter": "Filtreyi kaldır",
+    "filterBySession": "Bu oturuma göre filtrele",
+    "openSession": "Oturumu aç",
+    "title": "Oturumlar"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "İptal",
+    "moreWarningsHidden": "{{count}} uyarı daha gizli",
+    "diagnostics": "Tanılamalar",
+    "liveOutput": "Canlı çıktı",
+    "diagnosticsCopied": "Tanılamalar kopyalandı",
+    "copyDiagnostics": "Tanılamaları kopyala",
+    "copied": "Kopyalandı",
+    "noOutput": "Henüz yakalanan çıktı yok.",
+    "cliLogs": "CLI günlükleri",
+    "steps": {
+      "starting": "Başlatılıyor",
+      "configuring": "Ekip kurulumu",
+      "assembling": "Üyeler katılıyor",
+      "finalizing": "Sonlandırılıyor"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "kontrol ediliyor...",
+        "ready": "OK",
+        "notes": "OK (notlar)",
+        "failed": "HATA",
+        "pending": "bekleniyor"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI ikili dosyası eksik",
+        "openCodeRuntimeMissing": "OpenCode çalışma zamanı eksik",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows erişimi engellendi",
+        "openCodeNoOutput": "OpenCode çalışma zamanı kontrolü çıktı döndürmedi",
+        "openCodeMcpUnreachable": "OpenCode uygulama MCP'sine ulaşılamıyor",
+        "workingDirectoryMissing": "Çalışma dizini eksik",
+        "cliBinaryCouldNotStart": "CLI ikili dosyası başlatılamadı",
+        "cliPreflightIncomplete": "CLI ön kontrolü tamamlanmadı",
+        "authenticationRequired": "Kimlik doğrulama gerekli",
+        "runtimeProviderNotConfigured": "Çalışma zamanı sağlayıcısı yapılandırılmadı",
+        "cliPreflightFailed": "CLI ön kontrolü başarısız oldu",
+        "selectedModelCompatible": "Seçili model uyumlu",
+        "selectedModelCompatibilityPending": "Seçili model uyumluluğu beklemede",
+        "selectedModelAvailable": "Seçili model mevcut",
+        "selectedModelVerified": "Seçili model doğrulandı",
+        "selectedModelUnavailable": "Seçili model kullanılamıyor",
+        "selectedModelTimedOut": "Seçili model doğrulaması zaman aşımına uğradı",
+        "selectedModelCheckFailed": "Seçili model kontrolü başarısız oldu",
+        "selectedModelDeferred": "Seçili model doğrulaması ertelendi",
+        "selectedModelPingNotConfirmed": "Seçili model ping'i onaylanmadı",
+        "readyWithNotes": "Notlarla hazır",
+        "needsAttention": "İlgilenilmesi gerekiyor"
+      },
+      "modelChecksSummary": "Seçili model kontrolleri - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model kullanılamıyor",
+        "unavailable_one": "{{count}} model kullanılamıyor",
+        "unavailable_other": "{{count}} model kullanılamıyor",
+        "checkFailed": "{{count}} model kontrolü başarısız oldu",
+        "checkFailed_one": "{{count}} model kontrolü başarısız oldu",
+        "checkFailed_other": "{{count}} model kontrolü başarısız oldu",
+        "timedOut": "{{count}} model zaman aşımına uğradı",
+        "timedOut_one": "{{count}} model zaman aşımına uğradı",
+        "timedOut_other": "{{count}} model zaman aşımına uğradı",
+        "deferred": "{{count}} doğrulama ertelendi",
+        "deferred_one": "{{count}} doğrulama ertelendi",
+        "deferred_other": "{{count}} doğrulama ertelendi",
+        "pingNotConfirmed": "{{count}} ping onaylanmadı",
+        "pingNotConfirmed_one": "{{count}} ping onaylanmadı",
+        "pingNotConfirmed_other": "{{count}} ping onaylanmadı",
+        "compatibilityPending": "{{count}} uyumlu, derin doğrulama beklemede",
+        "compatibilityPending_one": "{{count}} uyumlu, derin doğrulama beklemede",
+        "compatibilityPending_other": "{{count}} uyumlu, derin doğrulama beklemede",
+        "compatible": "{{count}} uyumlu",
+        "compatible_one": "{{count}} uyumlu",
+        "compatible_other": "{{count}} uyumlu",
+        "checking": "{{count}} kontrol ediliyor",
+        "checking_one": "{{count}} kontrol ediliyor",
+        "checking_other": "{{count}} kontrol ediliyor",
+        "available": "{{count}} mevcut",
+        "available_one": "{{count}} mevcut",
+        "available_other": "{{count}} mevcut",
+        "verified": "{{count}} doğrulandı",
+        "verified_one": "{{count}} doğrulandı",
+        "verified_other": "{{count}} doğrulandı",
+        "unavailable_few": "{{count}} model kullanılamıyor",
+        "unavailable_many": "{{count}} model kullanılamıyor",
+        "checkFailed_few": "{{count}} model kontrolü başarısız oldu",
+        "checkFailed_many": "{{count}} model kontrolü başarısız oldu",
+        "timedOut_few": "{{count}} model zaman aşımına uğradı",
+        "timedOut_many": "{{count}} model zaman aşımına uğradı",
+        "deferred_few": "{{count}} doğrulama ertelendi",
+        "deferred_many": "{{count}} doğrulama ertelendi",
+        "pingNotConfirmed_few": "{{count}} ping onaylanmadı",
+        "pingNotConfirmed_many": "{{count}} ping onaylanmadı",
+        "compatibilityPending_few": "{{count}} uyumlu, derin doğrulama beklemede",
+        "compatibilityPending_many": "{{count}} uyumlu, derin doğrulama beklemede",
+        "compatible_few": "{{count}} uyumlu",
+        "compatible_many": "{{count}} uyumlu",
+        "checking_few": "{{count}} kontrol ediliyor",
+        "checking_many": "{{count}} kontrol ediliyor",
+        "available_few": "{{count}} mevcut",
+        "available_many": "{{count}} mevcut",
+        "verified_few": "{{count}} doğrulandı",
+        "verified_many": "{{count}} doğrulandı"
+      },
+      "openProviderSettings": "{{provider}} ayarlarını aç",
+      "copied": "Kopyalandı",
+      "copyDiagnostics": "Tanılamaları kopyala",
+      "deepVerificationPending": "Derin doğrulama hâlâ çalışıyor. OpenCode ücretsiz modelleri yaklaşık 20 saniye sürebilir.",
+      "progress": {
+        "checkingSelectedProviders": "Seçili sağlayıcılar paralel olarak kontrol ediliyor...",
+        "checkingProvider": "{{provider}} sağlayıcısı kontrol ediliyor...",
+        "checkingProviders": "{{providers}} sağlayıcıları kontrol ediliyor..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Klasör izinlerini düzeltin veya projeyi kullanıcı tarafından yazılabilir bir klasöre taşıyın. Yönetici olarak çalıştırmak yalnızca geçici bir çözümdür.",
+        "openCodeBridgeNoOutput": "Uygulamayı ve OpenCode çalışma zamanını yeniden başlatın, ardından tekrar deneyin. Tekrarlarsa tanılamaları kopyalayın.",
+        "workingDirectoryMissing": "Mevcut bir çalışma dizini seçin, ardından bu iletişim kutusunu yeniden açın.",
+        "authenticationRequired": "Gerekli sağlayıcıyı Claude CLI'de doğrulayın, ardından bu iletişim kutusunu yeniden açın.",
+        "runtimeProviderNotConfigured": "Seçili sağlayıcı çalışma zamanını yapılandırın, ardından bu iletişim kutusunu yeniden açın.",
+        "openCodeRuntimeMissing": "Sağlayıcı durum kartından OpenCode çalışma zamanını kurun veya yeniden deneyin, ardından bu iletişim kutusunu yeniden açın.",
+        "openCodeAppMcpUnreachable": "OpenCode uygulama MCP köprüsünü yenilemek için başlatmayı yeniden deneyin. Tekrarlarsa uygulamayı ve OpenCode çalışma zamanını yeniden başlatın.",
+        "cliBinaryMissing": "Yerel Claude CLI ikili dosyasının var olduğundan ve başlatılabildiğinden emin olun, ardından bu iletişim kutusunu yeniden açın.",
+        "default": "Yukarıdaki sorunu çözün, ardından bu iletişim kutusunu yeniden açın.",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI'yi Yönetici olarak çalıştırın, ardından başlatmayı yeniden deneyin."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} takım arkadaşı izin onayı bekliyor",
+      "nameListWithMore": "{{names}}, +{{count}} daha",
+      "waitingForOpenCode": "OpenCode bekleniyor: {{names}}",
+      "bootstrapStalled": "Bootstrap durdu: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode bekleniyor: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap durdu",
+        "shellOnly": "Yalnızca kabuk",
+        "waitingForBootstrap": "Bootstrap bekleniyor",
+        "bootstrapUnconfirmed": "Bootstrap onaylanmadı",
+        "awaitingPermission": "İzin bekleniyor",
+        "waitingForRuntime": "Çalışma zamanı bekleniyor",
+        "shellOnlyLower": "yalnızca kabuk",
+        "waitingForBootstrapLower": "bootstrap bekleniyor",
+        "bootstrapUnconfirmedLower": "bootstrap onaylanmadı",
+        "awaitingPermissionLower": "izin bekleniyor",
+        "waitingForRuntimeLower": "çalışma zamanı bekleniyor"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} başlatılamadı",
+        "teammatesFailedToStart": "{{count}} takım arkadaşı başlatılamadı",
+        "teammatesFailedRatio": "{{count}}/{{total}} takım arkadaşı başlatılamadı"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} bu başlatma için atlandı",
+        "memberSkippedWithReason": "{{name}} bu başlatma için atlandı - {{reason}}",
+        "memberSkippedCompact": "{{name}} atlandı",
+        "teammatesSkipped": "{{count}} takım arkadaşı atlandı",
+        "teammatesSkippedList": "Atlanan takım arkadaşları: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} takım arkadaşı bu başlatma için atlandı"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} takım arkadaşı hâlâ katılıyor",
+        "teammatesStillJoining_one": "{{count}} takım arkadaşı hâlâ katılıyor",
+        "teammatesStillJoining_few": "{{count}} takım arkadaşı hâlâ katılıyor",
+        "teammatesStillJoining_many": "{{count}} takım arkadaşı hâlâ katılıyor",
+        "teammatesStillJoining_other": "{{count}} takım arkadaşı hâlâ katılıyor",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} takım arkadaşı onaylandı"
+      },
+      "ready": {
+        "leadOnline": "Lider çevrimiçi",
+        "allTeammatesJoined": "Tüm {{count}} takım arkadaşı katıldı",
+        "teamProvisionedLeadOnline": "Ekip sağlandı - lider çevrimiçi",
+        "teamProvisionedAllJoined": "Ekip sağlandı - tüm {{count}} takım arkadaşı katıldı",
+        "teamProvisionedStillJoining": "Ekip sağlandı - takım arkadaşları hâlâ katılıyor",
+        "launchFinishedWithErrors": "Başlatma hatalarla bitti - {{count}}/{{total}} takım arkadaşı başlatılamadı",
+        "launchContinuedSkipped": "Başlatma devam etti - {{count}}/{{total}} takım arkadaşı atlandı",
+        "teamLaunchedLeadOnline": "Ekip başlatıldı - lider çevrimiçi",
+        "teamLaunchedAllJoined": "Ekip başlatıldı - tüm {{count}} takım arkadaşı katıldı"
+      },
+      "panel": {
+        "launchFailed": "Başlatma başarısız oldu",
+        "launchDetails": "Başlatma ayrıntıları",
+        "launchFinishedWithErrors": "Başlatma hatalarla bitti",
+        "launchContinuedSkipped": "Başlatma atlanan takım arkadaşlarıyla devam etti",
+        "coreTeamReady": "Çekirdek ekip hazır",
+        "finishingLaunch": "Başlatma bitiriliyor",
+        "teamLaunched": "Ekip başlatıldı",
+        "launchingTeam": "Ekip başlatılıyor"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Canlı çalışma zamanı durumu",
+    "description": "Yalnızca görüntüleme amaçlı kalp atışı ve başlatma durumu. Süreç kontrolleri aşağıda kalır.",
+    "source": "kaynak: {{source}}",
+    "lane": "{{lane}} şeridi",
+    "diagnosticOnly": "Yalnızca tanılama",
+    "updated": "güncellendi {{value}}",
+    "states": {
+      "running": "Çalışıyor",
+      "starting": "Başlatılıyor",
+      "waiting": "Bekleniyor",
+      "degraded": "İlgilenilmesi gerekiyor",
+      "stopped": "Durduruldu",
+      "unknown": "Bilinmiyor"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Tam Görev Günlükleri",
+      "loading": "Tam görev günlükleri yükleniyor...",
+      "description": "Günlüklerde kullanılan aynı yürütme günlüğü bileşenleriyle işlenen tam transkript dilimleri.",
+      "emptyTitle": "Henüz tam görev günlüğü yok",
+      "emptyDescription": "Açık görev bağlantılı transkript meta verileri mevcut olduğunda tam transkript paketleri burada görünecek.",
+      "summaryOnly": "yalnızca özet"
+    },
+    "executionSessions": {
+      "title": "Yürütme Oturumları",
+      "online": "Çevrimiçi",
+      "updating": "Güncelleniyor...",
+      "description": "Eski oturum odaklı transkript tarama ve önizlemeleri."
+    },
+    "stream": {
+      "title": "Görev Günlüğü Akışı"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "{{taskId}} görevini iptal et",
+      "cancel": "İptal",
+      "moveBackToTodoConfirm": "Bu görev YAPILACAK'a geri taşınsın ve ekip bilgilendirilsin mi?",
+      "confirm": "Onayla",
+      "keep": "Koru",
+      "changesNeedAttention": "Değişikliklerin ilgilenilmesi gerekiyor",
+      "changes": "Değişiklikler",
+      "deleteTask": "Görevi sil",
+      "taskLogsActive": "Görev günlükleri etkin",
+      "newTaskLogsArriving": "Yeni görev günlükleri geliyor",
+      "awaitingUser": "Kullanıcı bekleniyor",
+      "awaitingLead": "Lider bekleniyor",
+      "blockedBy": "Şununla engellendi:",
+      "blocks": "Şunu engelliyor:",
+      "start": "Başlat",
+      "complete": "Tamamla",
+      "approve": "Onayla",
+      "requestReview": "İnceleme iste",
+      "manualReview": "Manuel inceleme",
+      "requestChanges": "Değişiklik iste"
+    },
+    "filter": {
+      "title": "Görevleri filtrele",
+      "session": "Oturum",
+      "allSessions": "Tüm oturumlar",
+      "teammate": "Takım arkadaşı",
+      "unassigned": "(atanmamış)",
+      "column": "Sütun",
+      "clearAll": "Tümünü temizle"
+    },
+    "board": {
+      "addTask": "Görev ekle",
+      "noTasks": "Görev yok",
+      "showMore": "{{count}} tane daha göster",
+      "hiddenCount": "{{count}} gizli",
+      "trash": "Çöp",
+      "gridView": "Izgara görünümü",
+      "columnsView": "Sütun görünümü"
+    },
+    "trash": {
+      "title": "Çöp",
+      "empty": "Silinmiş görev yok",
+      "subject": "Konu",
+      "owner": "Sahip",
+      "deleted": "Silindi",
+      "unassigned": "Atanmamış",
+      "restoreTask": "Görevi geri yükle",
+      "restore": "Geri yükle",
+      "close": "Kapat"
+    },
+    "sort": {
+      "title": "Görevleri sırala",
+      "sortBy": "Sıralama ölçütü",
+      "reset": "Sıfırla",
+      "options": {
+        "updatedAt": {
+          "label": "Son güncelleme",
+          "description": "Önce yakın zamanda güncellenenler"
+        },
+        "createdAt": {
+          "label": "Oluşturulma",
+          "description": "Önce en yeni"
+        },
+        "owner": {
+          "label": "Sahip",
+          "description": "Atanan kişiye göre alfabetik"
+        },
+        "manual": {
+          "label": "Manuel",
+          "description": "Sürükle bırak sırası"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Aramayı temizle",
+      "tasks": "Görevler",
+      "createdAgo": "oluşturuldu {{time}}",
+      "updatedAgo": "güncellendi {{time}}",
+      "placeholder": "Görevlerde ara... (#id veya metin)"
+    },
+    "grid": {
+      "addTask": "Görev ekle",
+      "noTasks": "Görev yok"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "YAPILACAK",
+      "inProgress": "DEVAM EDİYOR",
+      "review": "İNCELEME",
+      "done": "BİTTİ",
+      "approved": "ONAYLANDI"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Takım arkadaşı worktree'leri için Git deposu durumu kontrol ediliyor...",
+    "ready": "Git worktree'leri hazır.",
+    "readyOnBranch": "Git worktree'leri {{branch}} dalında hazır.",
+    "needsSetup": "Worktree yalıtımı Git kurulumu gerektiriyor",
+    "initialCommitNotice": "İlk commit eylemi tüm geçerli dosyaları şu mesajla hazırlar ve commit'ler:",
+    "initializeRepository": "Git deposunu başlat",
+    "createInitialCommit": "İlk commit'i oluştur",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Ayarlar",
+    "autoAllowAllTools": "Tüm araçlara otomatik izin ver",
+    "autoAllowFileEdits": "Dosya düzenlemelerine otomatik izin ver (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Güvenli komutlara otomatik izin ver (git, pnpm, npm, ls...)",
+    "onTimeout": "Zaman aşımında:",
+    "after": "sonra",
+    "secondsShort": "sn",
+    "timeoutActions": {
+      "wait": "Sonsuza kadar bekle",
+      "allow": "İzin ver",
+      "deny": "Reddet"
+    },
+    "submit": "Gönder",
+    "allow": "İzin ver",
+    "deny": "Reddet",
+    "allowAll": "Tümüne izin ver",
+    "pendingCount": "{{count}} beklemede",
+    "autoActionIn": "{{time}} içinde otomatik {{action}}",
+    "diff": {
+      "previewChanges": "Değişiklikleri önizle",
+      "readingFile": "Dosya okunuyor...",
+      "binaryFile": "İkili dosya - önizlenemiyor",
+      "truncated": "Dosya 2MB'de kısaltıldı - fark eksik olabilir",
+      "newFile": "Yeni dosya"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Üye iş senkronizasyonu",
+      "actionableItems": "Eyleme geçirilebilir öğeler",
+      "fingerprint": "Parmak izi",
+      "report": "Rapor",
+      "none": "yok",
+      "shadowWouldNudge": "Gölge hatırlatırdı",
+      "yes": "evet",
+      "no": "hayır",
+      "moreActionableItems": "{{count}} eyleme geçirilebilir öğe daha",
+      "diagnostics": "Tanılamalar: {{diagnostics}}"
+    },
+    "title": "Üye iş senkronizasyonu",
+    "loadingDiagnostics": "Üye iş senkronizasyonu tanılamaları yükleniyor.",
+    "diagnosticsUnavailable": "Üye iş senkronizasyonu tanılamaları kullanılamıyor."
+  },
+  "advancedCli": {
+    "title": "Gelişmiş",
+    "useWorktree": "Worktree kullan",
+    "recent": "Son",
+    "commandPreview": "Komut önizlemesi",
+    "customArguments": "Özel argümanlar",
+    "validate": "Doğrula",
+    "validation": {
+      "allFlagsValid": "Tüm bayraklar geçerli",
+      "unknownFlags": "Bilinmeyen: {{flags}}",
+      "protectedFlags": "Korumalı: {{flags}}",
+      "failed": "Doğrulama başarısız oldu"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} önce",
+    "stoppedAgo": "durduruldu {{time}} önce",
+    "running": "Çalışıyor",
+    "stopped": "Durduruldu",
+    "stopProcess": "Süreci durdur (SIGTERM)",
+    "kill": "Sonlandır",
+    "openInBrowser": "Tarayıcıda aç",
+    "open": "Aç",
+    "pid": "PID{{pid}}",
+    "title": "CLI Süreçleri"
+  },
+  "taskActivity": {
+    "loadingDetails": "Etkinlik ayrıntıları yükleniyor...",
+    "contextUnavailable": "Bu etkinlik için ayrıntılı transkript bağlamı artık mevcut değil.",
+    "loading": "Görev etkinliği yükleniyor...",
+    "lowSignalOnly": "Henüz önemli görev etkinliği bulunamadı. Düşük düzeyli yürütme ayrıntıları aşağıda Görev Günlüğü Akışı'nda mevcuttur.",
+    "empty": "Mevcut transkriptlerde henüz açık görev etkinliği bulunamadı. Eski veya sezgisel oturum günlükleri yine de aşağıda Yürütme Oturumları'nda mevcut olabilir.",
+    "title": "Görev Etkinliği",
+    "description": "Transkript meta verilerinden bu göreve bağlı önemli açık çalışma zamanı etkinliği."
+  },
+  "sendMessage": {
+    "title": "Mesaj Gönder",
+    "description": "Bir ekip üyesine doğrudan mesaj gönderin.",
+    "recipientLabel": "Alıcı",
+    "selectMemberPlaceholder": "Üye seç...",
+    "messageLabel": "Mesaj",
+    "placeholder": "Mesajınızı yazın... (göndermek için Enter)",
+    "send": "Gönder",
+    "sending": "Gönderiliyor...",
+    "charsLeft": "{{count}} karakter kaldı",
+    "saved": "Kaydedildi",
+    "attachments": {
+      "teamOnlineRequired": "Dosya eklemek için ekip çevrimiçi olmalıdır",
+      "recipientUnsupported": "Dosyalar ekip liderine veya OpenCode takım arkadaşlarına gönderilebilir",
+      "openCodeOnlineRequired": "OpenCode takım arkadaşları için dosya eklemek üzere ekip çevrimiçi olmalıdır",
+      "disabledHint": "Dosya ekleri çevrimiçi ekip lideri ve çevrimiçi OpenCode takım arkadaşları için desteklenir. Ekleri kaldırın veya alıcıyı değiştirin.",
+      "attachFiles": "Dosya ekle (yapıştır veya sürükle bırak)",
+      "unavailable": "Ekler kullanılamıyor"
+    },
+    "quote": {
+      "remove": "Alıntıyı kaldır",
+      "replyingTo": "Şuna yanıt veriliyor:"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Yanıtı iptal et",
+    "replyingTo": "Şuna yanıt veriliyor:",
+    "placeholder": "Bir yorum ekleyin... (göndermek için Enter)",
+    "attachFile": "Dosya ekle (veya yapıştır)",
+    "voiceToText": "Sesten metne",
+    "comment": "Yorum",
+    "charsLeft": "{{count}} karakter kaldı",
+    "saved": "Kaydedildi",
+    "awaitingReplyFrom": "Şundan yanıt bekleniyor:",
+    "or": "veya"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Görseli buraya bırakın",
+    "attachImage": "Görsel ekle",
+    "pasteOrDragDrop": "veya yapıştır / sürükle bırak",
+    "fromOriginalMessage": "Orijinal mesajdan",
+    "dropFilesHere": "Dosyaları buraya bırakın",
+    "loading": "Ekler yükleniyor..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Tüm araçları otomatik onayla",
+    "autonomousModeDescription": "Özerk mod: ekip araçları onay olmadan çalışır. Güvenilmeyen kodla dikkatli olun.",
+    "manualModeDescription": "Manuel mod: her araç çağrısını gerçek zamanlı olarak onaylar veya reddedersiniz."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Yürütme",
+      "process": "Süreç"
+    },
+    "filters": {
+      "all": "Tümü"
+    },
+    "logs": {
+      "title": "Günlükler",
+      "loading": "Üye günlük akışı yükleniyor...",
+      "emptyTitle": "Bu üye için henüz günlük akışı girişi bulunamadı.",
+      "emptyDescription": "Üye kapsamlı transkript veya çalışma zamanı günlükleri mevcut olduğunda burada görünecek."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Neyin değişmesi gerektiğini açıklayın... (göndermek için Enter)",
+    "submit": "Gönder",
+    "charsLeft": "{{count}} karakter kaldı",
+    "saved": "Kaydedildi",
+    "title": "Değişiklik İste"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Panoyu Aç",
+      "openTeam": "Ekibi aç",
+      "cancel": "İptal"
+    },
+    "membersJson": {
+      "hide": "JSON'ı gizle"
+    },
+    "optional": {
+      "badge": "İsteğe bağlı"
+    }
+  },
+  "runningTeams": {
+    "title": "Çalışan Ekipler",
+    "status": {
+      "active": "Etkin",
+      "provisioning": "Başlatılıyor",
+      "idle": "Çalışıyor"
+    },
+    "noProject": "Proje yok"
+  },
+  "layout": {
+    "maxPanesReached": "Maksimum {{count}} bölmeye ulaşıldı"
+  },
+  "codexReconnect": {
+    "description": "Codex oturumunuz eski görünüyor. Devam etmek için yeniden bağlanın.",
+    "useCode": "Kodu kullan",
+    "generating": "Oluşturuluyor...",
+    "openLogin": "Girişi aç",
+    "generateLink": "Bağlantı oluştur"
+  },
+  "effortLevel": {
+    "label": "Çaba düzeyi (isteğe bağlı)",
+    "maxDescription": "Maks, zor görevler için modele en fazla muhakeme süresini verir."
+  },
+  "contextLimit": {
+    "limitTo200k": "Bağlamı 200K token ile sınırla",
+    "always200k": "(bu model için her zaman 200K)",
+    "tooltipContent": "Desteklendiğinde başlatmaları 200K token'lık bir bağlam penceresi içinde tutar.",
+    "tooltipTitle": "Bağlam limiti"
+  },
+  "roleSelect": {
+    "noRole": "Rol yok",
+    "customRole": "Özel rol...",
+    "searchPlaceholder": "Rollerde ara...",
+    "empty": "Rol bulunamadı.",
+    "reservedRole": "Bu rol ayrılmıştır",
+    "emptyCustomRole": "Rol boş olamaz"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

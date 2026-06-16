@@ -332,17 +332,27 @@ export function useCodexAccountSnapshot(options: {
     [applySnapshot, electronMode, options.enabled]
   );
 
+  const waitingForInitialRefresh =
+    electronMode &&
+    options.enabled &&
+    initialRefreshDelayMs > 0 &&
+    snapshot === null &&
+    !initialRefreshAttempted;
+  const effectiveLoading = loading || waitingForInitialRefresh;
+  const effectiveRateLimitsLoading =
+    rateLimitsLoading || (waitingForInitialRefresh && options.includeRateLimits === true);
+
   return useMemo(
     () => ({
       snapshot,
-      loading,
-      rateLimitsLoading,
+      loading: effectiveLoading,
+      rateLimitsLoading: effectiveRateLimitsLoading,
       error,
       refresh,
       startChatgptLogin: (mode) => runAction(() => api.startCodexChatgptLogin({ mode })),
       cancelChatgptLogin: () => runAction(() => api.cancelCodexChatgptLogin()),
       logout: () => runAction(() => api.logoutCodexAccount()),
     }),
-    [error, loading, rateLimitsLoading, refresh, runAction, snapshot]
+    [effectiveLoading, effectiveRateLimitsLoading, error, refresh, runAction, snapshot]
   );
 }

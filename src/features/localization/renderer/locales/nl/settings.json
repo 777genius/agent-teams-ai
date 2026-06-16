@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Opties voor gevorderde gebruikers: configuratie exporteren/importeren, standaardwaarden resetten en ruwe configuratie bewerken.",
+      "label": "Geavanceerd"
+    },
+    "general": {
+      "description": "Kern-app-voorkeuren zoals thema, taal, weergavedichtheid en opstartgedrag.",
+      "label": "Algemeen"
+    },
+    "infoAriaLabel": "Wat is {{label}}?",
+    "notifications": {
+      "description": "Bepaal wanneer en hoe je meldingen krijgt over agentactiviteit, voltooide taken en fouten.",
+      "label": "Meldingen"
+    }
+  },
+  "view": {
+    "description": "Beheer je app-voorkeuren",
+    "loading": "Instellingen laden...",
+    "title": "Instellingen"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Annuleren",
+      "test": "Testen"
+    },
+    "defaults": {
+      "allProjects": "Alle projecten",
+      "allProjectsHint": "Tests gebruiken {{project}}. De standaard geldt tenzij een project een override heeft.",
+      "loadingContexts": "Contexten laden...",
+      "projectHint": "Opslaan overschrijft alleen {{project}}.",
+      "projectOverrideContext": "Projectoverridecontext",
+      "scopeDescriptionAllProjects": "Standaard voor elk project dat geen eigen OpenCode-override heeft.",
+      "scopeDescriptionProject": "Overschrijf alleen het geselecteerde project. Actieve teams worden niet gewijzigd.",
+      "selectProjectContext": "Projectcontext selecteren",
+      "selectProjectHint": "Selecteer een project voordat je lokale modellen test of standaardwaarden opslaat.",
+      "selectValidationContext": "Validatiecontext selecteren",
+      "setAllProjectsDefault": "Standaard voor alle projecten instellen",
+      "setProjectDefault": "Projectstandaard instellen",
+      "thisProject": "Dit project",
+      "title": "OpenCode-standaarden",
+      "validationContext": "Validatiecontext"
+    },
+    "diagnostics": {
+      "copied": "Diagnostiek gekopieerd",
+      "copiedShort": "Gekopieerd",
+      "copy": "Diagnostiek kopiëren",
+      "hints": "Tips",
+      "likelyCause": "Waarschijnlijke oorzaak:",
+      "windowsSymlinkAdminHint": "Windows: voer Agent Teams AI uit als administrator"
+    },
+    "models": {
+      "alreadyDefault": "Dit is al de geselecteerde OpenCode-standaard.",
+      "empty": "Geen modellen gevonden.",
+      "emptyFree": "Geen gratis modellen gevonden.",
+      "emptyRecommended": "Geen aanbevolen modellen gevonden.",
+      "emptyRecommendedFree": "Geen aanbevolen gratis modellen gevonden.",
+      "freeOnly": "Alleen gratis",
+      "launchableDescription": "Bekende routes uit de OpenCode-configuratie, gratis ingebouwde modellen en de huidige standaard. Lokale routes hebben een succesvolle test nodig voordat ze klaar zijn voor teamstarts.",
+      "launchableTitle": "OpenCode-modelroutes",
+      "loadingRoutes": "OpenCode-modelroutes laden...",
+      "noRoutesMatch": "Geen OpenCode-modelroutes komen overeen met \"{{query}}\".",
+      "noneReported": "Er zijn nog geen OpenCode-modelroutes gerapporteerd. Configureer een lokale route in OpenCode of gebruik het tabblad Providers om catalogusproviders te inspecteren.",
+      "recommendedOnly": "Alleen aanbevolen",
+      "searchPlaceholder": "Modellen zoeken",
+      "selectProjectBeforeTesting": "Selecteer een projectcontext voordat je modellen test.",
+      "selectProjectBeforeTestingDefaults": "Selecteer een projectcontext voordat je OpenCode-standaarden test of opslaat.",
+      "testInProgress": "Modeltest is al bezig.",
+      "useInTeamPicker": "Opslaan voor teamkiezer",
+      "validationContextRequired": "Selecteer hierboven een validatiecontext om Testen en Standaard instellen in te schakelen. Opslaan voor de teamkiezer bewaart de route alleen voor nieuwe teams.",
+      "actionsUnavailable": "Acties zijn tijdelijk niet beschikbaar.",
+      "defaultSaveInProgress": "OpenCode-standaard wordt opgeslagen.",
+      "routeUnavailableAuth": "Deze provider vereist authenticatie voordat dit model kan worden gebruikt.",
+      "routeUnavailableFailed": "Deze modelroute is niet geslaagd voor de laatste uitvoeringstest.",
+      "routeUnavailableGeneric": "Deze modelroute kan op dit moment niet worden gebruikt.",
+      "routeUnavailableUnknown": "Dit model is de huidige OpenCode-standaard, maar het is nog niet beschikbaar in de live catalogus."
+    },
+    "providers": {
+      "catalog": "OpenCode-providercatalogus",
+      "countFallback": "OpenCode-providers",
+      "description": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
+      "loadMore": "Meer providers laden",
+      "loading": "OpenCode-providers laden",
+      "noMatches": "Geen providers komen overeen met die zoekopdracht.",
+      "noneReported": "Geen OpenCode-providers gerapporteerd door de beheerde runtime.",
+      "recommended": "Aanbevolen",
+      "refreshCatalog": "Catalogus vernieuwen",
+      "searchPlaceholder": "Providers zoeken",
+      "description_few": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
+      "description_many": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
+      "description_one": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
+      "description_other": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond."
+    },
+    "setup": {
+      "loading": "Providerconfiguratie laden..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode-standaard: {{model}}",
+      "loading": "Beheerde OpenCode-runtime, verbonden providers en modelstandaarden laden...",
+      "source": "Bron: {{source}}",
+      "title": "OpenCode-runtime"
+    },
+    "tabs": {
+      "models": "Modellen",
+      "providers": "Providers"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Modelroutes zoeken"
+    },
+    "badges": {
+      "usedInTeamPicker": "Opgeslagen voor teamkiezer",
+      "free": "gratis",
+      "local": "lokaal",
+      "configured": "geconfigureerd",
+      "knownRoute": "bekende route",
+      "connected": "verbonden",
+      "verified": "geverifieerd",
+      "needsTest": "test nodig",
+      "failed": "mislukt",
+      "unknown": "onbekend",
+      "default": "standaard"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Taal voor agentcommunicatie",
+      "descriptionWithDetected": "Taal voor agentcommunicatie (gedetecteerd: {{detected}})",
+      "emptyMessage": "Geen taal gevonden.",
+      "label": "Taal",
+      "searchPlaceholder": "Taal zoeken...",
+      "selectPlaceholder": "Taal selecteren...",
+      "title": "Agenttaal"
+    },
+    "appLanguage": {
+      "description": "Taal voor de applicatie-interface.",
+      "label": "Taal",
+      "title": "App-taal"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Klap elke responsbeurt automatisch uit bij het openen van een transcript of het ontvangen van een nieuw bericht",
+        "label": "AI-antwoorden standaard uitklappen"
+      },
+      "nativeTitleBar": {
+        "description": "Gebruik het standaard systeemvensterframe in plaats van de aangepaste titelbalk",
+        "label": "Native titelbalk gebruiken",
+        "restartConfirm": {
+          "confirmLabel": "Opnieuw starten",
+          "message": "De app moet opnieuw worden gestart om de titelbalkwijziging toe te passen. Nu opnieuw starten?",
+          "title": "Opnieuw starten vereist"
+        }
+      },
+      "theme": {
+        "description": "Kies je voorkeurskleurthema",
+        "label": "Thema",
+        "options": {
+          "dark": "Donker",
+          "light": "Licht",
+          "system": "Systeem"
+        }
+      },
+      "title": "Weergave"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Start een HTTP-server om de UI vanuit een browser te benaderen of in iframes in te sluiten",
+        "label": "Servermodus inschakelen"
+      },
+      "title": "Browsertoegang"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Map selecteren",
+        "selectFolderManually": "Map handmatig selecteren",
+        "useAutoDetect": "Automatische detectie gebruiken",
+        "useFolder": "Map gebruiken",
+        "usePath": "Pad gebruiken",
+        "useThisPath": "Dit pad gebruiken",
+        "useWsl": "Gebruik je Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Deze map bevat geen \"projects\"-directory. Toch doorgaan?",
+          "title": "Geen projects-directory gevonden"
+        },
+        "notClaudeDir": {
+          "message": "Deze map heet \"{{folderName}}\", niet \".claude\". Toch doorgaan?",
+          "title": "Geselecteerde map is niet .claude"
+        },
+        "noWslPaths": {
+          "message": "Kon niet automatisch WSL-distributies met Claude-gegevens vinden. Map handmatig selecteren?",
+          "title": "Geen WSL-Claude-paden gevonden"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" bevat geen \"projects\"-directory. Toch doorgaan?",
+          "title": "WSL-pad mist projects-directory"
+        }
+      },
+      "current": {
+        "autoDetected": "Automatisch gedetecteerd: {{path}}",
+        "autoDetectedPath": "Automatisch gedetecteerd pad gebruiken",
+        "customPath": "Aangepast pad gebruiken",
+        "label": "Huidige lokale root"
+      },
+      "description": "Kies welke lokale map als je Claude-data-root wordt behandeld",
+      "errors": {
+        "detectWslFailed": "Kon WSL-Claude-rootpaden niet detecteren",
+        "loadFailed": "Kon lokale Claude-rootinstellingen niet laden",
+        "updateFailed": "Kon Claude-root niet bijwerken"
+      },
+      "title": "Lokale Claude-root",
+      "wslModal": {
+        "closeAriaLabel": "WSL-padvenster sluiten",
+        "description": "Gedetecteerde WSL-distributies en Claude-rootkandidaten",
+        "noProjectsDir": "Geen projects-directory gedetecteerd",
+        "title": "WSL-Claude-root selecteren"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Help de app verbeteren door anonieme crash- en prestatiegegevens te verzenden",
+        "label": "Crashrapporten verzenden"
+      },
+      "title": "Privacy"
+    },
+    "server": {
+      "runningOn": "Actief op",
+      "standaloneModeDescription": "Wordt uitgevoerd in standalone-modus. De HTTP-server is altijd actief. Systeemmeldingen zijn niet beschikbaar - meldingstriggers worden alleen in de app gelogd.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Start de app automatisch wanneer je inlogt",
+        "label": "Starten bij inloggen"
+      },
+      "showDockIcon": {
+        "description": "Toon het app-pictogram in de dock (macOS)",
+        "label": "Dock-pictogram tonen"
+      },
+      "title": "Opstarten"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Meldingen werken mogelijk niet in ontwikkelmodus. macOS identificeert de app als \"Electron\" (bundle-ID",
+      "descriptionSuffix": ") in plaats van de productie-app-naam. Controleer Systeeminstellingen > Meldingen > Electron om de machtigingen te verifiëren.",
+      "title": "Ontwikkelmodus"
+    },
+    "ignoredRepositories": {
+      "description": "Meldingen van deze repositories worden genegeerd",
+      "empty": "Geen repositories genegeerd",
+      "selectPlaceholder": "Selecteer repository om te negeren...",
+      "title": "Genegeerde repositories"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Toon systeemmeldingen voor fouten en gebeurtenissen",
+        "label": "Systeemmeldingen inschakelen"
+      },
+      "sound": {
+        "description": "Speel een geluid af wanneer meldingen verschijnen",
+        "label": "Geluid afspelen"
+      },
+      "subagentErrors": {
+        "description": "Detecteer en meld fouten in subagent-sessies",
+        "label": "Subagent-fouten meenemen"
+      },
+      "title": "Meldingsinstellingen"
+    },
+    "snooze": {
+      "clear": "Sluimer wissen",
+      "description": "Meldingen tijdelijk pauzeren",
+      "descriptionWithTime": "Gesluimerd tot {{time}}",
+      "label": "Meldingen sluimeren",
+      "options": {
+        "15": "15 minuten",
+        "30": "30 minuten",
+        "60": "1 uur",
+        "120": "2 uur",
+        "240": "4 uur",
+        "-1": "Tot morgen"
+      },
+      "selectDuration": "Duur selecteren..."
+    },
+    "taskCompletion": {
+      "description": "Krijg native OS-meldingen wanneer Claude taken voltooit - geluiden, banners en Dock-/taakbalkbadges. Werkt op macOS, Linux en Windows.",
+      "installPlugin": "claude-notifications-go-plugin installeren",
+      "title": "Meldingen bij taakvoltooiing"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Meld wanneer elke taak in een team de status voltooid bereikt",
+        "label": "Alle taken voltooid"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Wanneer Claude een resettijd rapporteert, plan een vervolgsignaal voor de teamlead in nadat de limiet is gereset",
+        "label": "Automatisch hervatten na ratelimiet"
+      },
+      "clarifications": {
+        "description": "Toon native OS-meldingen wanneer een taak je invoer nodig heeft",
+        "label": "Meldingen voor taakverduidelijking"
+      },
+      "crossTeamMessage": {
+        "description": "Meld wanneer er een bericht van een ander team binnenkomt",
+        "label": "Meldingen voor berichten tussen teams"
+      },
+      "leadInbox": {
+        "description": "Meld wanneer teamleden berichten naar de teamlead sturen",
+        "label": "Meldingen voor lead-inbox"
+      },
+      "statusChange": {
+        "description": "Toon native OS-meldingen wanneer de status van een taak verandert",
+        "label": "Meldingen voor statuswijziging van taak",
+        "onlySolo": {
+          "description": "Meld alleen wanneer het team geen teamleden heeft",
+          "label": "Alleen in Solo-modus"
+        },
+        "statuses": {
+          "description": "Welke doelstatussen een melding activeren",
+          "label": "Meld bij deze statussen",
+          "options": {
+            "approved": "Goedgekeurd",
+            "completed": "Voltooid",
+            "deleted": "Verwijderd",
+            "in_progress": "Gestart",
+            "needsFix": "Te herstellen",
+            "pending": "In behandeling",
+            "review": "Review"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Toon native OS-meldingen wanneer agents opmerkingen op taken plaatsen",
+        "label": "Meldingen voor taakopmerkingen"
+      },
+      "taskCreated": {
+        "description": "Toon native OS-meldingen wanneer een nieuwe taak wordt aangemaakt",
+        "label": "Meldingen voor aangemaakte taken"
+      },
+      "teamLaunched": {
+        "description": "Meld wanneer een team klaar is met starten en gereed is",
+        "label": "Meldingen voor gestart team"
+      },
+      "title": "Teammeldingen",
+      "toolApproval": {
+        "description": "Meld wanneer een tool je goedkeuring nodig heeft (Toestaan/Weigeren) terwijl de app niet gefocust is",
+        "label": "Meldingen voor toolgoedkeuring"
+      },
+      "userInbox": {
+        "description": "Meld wanneer teamleden berichten naar je sturen",
+        "label": "Meldingen voor gebruikersinbox"
+      }
+    },
+    "test": {
+      "action": "Test verzenden",
+      "description": "Verstuur een testmelding om de bezorging te verifiëren",
+      "failedToSend": "Kon testmelding niet verzenden",
+      "label": "Testmelding",
+      "sending": "Verzenden...",
+      "sent": "Verzonden!",
+      "unknownError": "Onbekende fout"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "App-pictogram",
+      "description": "Stel AI-agentteams samen die autonoom en parallel werken, communiceren tussen teams en taken beheren op een Kanban-bord - met ingebouwde codereview, live procesmonitoring en volledige toolzichtbaarheid.",
+      "standalone": "Standalone",
+      "title": "Over",
+      "version": "Versie {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Configuratie bewerken",
+      "exportConfig": "Configuratie exporteren",
+      "importConfig": "Configuratie importeren",
+      "openInEditor": "Openen in editor",
+      "resetToDefaults": "Terugzetten naar standaard",
+      "title": "Configuratie"
+    },
+    "updates": {
+      "available": "v{{version}} beschikbaar",
+      "check": "Controleren op updates",
+      "checking": "Controleren...",
+      "ready": "Update klaar",
+      "unknownVersion": "onbekend",
+      "upToDate": "Up-to-date"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Kon configuratie niet laden",
+      "saveFailed": "Kon configuratie niet opslaan"
+    },
+    "footer": {
+      "autoSave": "Wijzigingen worden automatisch opgeslagen na het bewerken",
+      "toClose": "om te sluiten",
+      "escapeKey": "Esc"
+    },
+    "loading": "Configuratie laden...",
+    "status": {
+      "invalidJson": "Ongeldige JSON",
+      "saveFailed": "Opslaan mislukt",
+      "saved": "Opgeslagen",
+      "saving": "Opslaan..."
+    },
+    "title": "Configuratie bewerken"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Annuleren",
+      "submit": "Trigger toevoegen",
+      "title": "Aangepaste trigger toevoegen"
+    },
+    "builtin": {
+      "description": "Standaardtriggers die bij de applicatie horen. Je kunt ze in- of uitschakelen en hun patronen aanpassen.",
+      "title": "Ingebouwde triggers"
+    },
+    "card": {
+      "builtinBadge": "Ingebouwd",
+      "collapseAriaLabel": "Inklappen",
+      "deleteAriaLabel": "Trigger verwijderen",
+      "editNameAriaLabel": "Naam bewerken",
+      "expandAriaLabel": "Uitklappen"
+    },
+    "color": {
+      "customHexTitle": "Aangepaste hex-kleur",
+      "invalidHex": "Ongeldige hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Waarschuw als >",
+      "emptyPatternHint": "Laat leeg om alle inhoud te matchen. Gebruikt JavaScript-regex-syntaxis.",
+      "errorStatusDescription": "Wordt geactiveerd wanneer een tooluitvoering een fout rapporteert (is_error: true).",
+      "tokensUnit": "tokens",
+      "matchPatternPlaceholder": "bijv. error|failed|exception"
+    },
+    "custom": {
+      "description": "Maak je eigen triggers om meldingen te krijgen voor specifieke patronen of tooluitvoer.",
+      "empty": "Nog geen aangepaste triggers geconfigureerd.",
+      "title": "Aangepaste triggers"
+    },
+    "errors": {
+      "invalidRegexPattern": "Ongeldig regex-patroon"
+    },
+    "fields": {
+      "contentType": "Inhoudstype",
+      "matchField": "Matchveld",
+      "matchPattern": "Matchpatroon (regex)",
+      "scopeToolName": "Scope / toolnaam",
+      "scopeToolNameOptional": "Scope / toolnaam (optioneel)",
+      "threshold": "Drempel",
+      "tokenType": "Tokentype",
+      "triggerNamePlaceholder": "bijv. Waarschuwing bij buildfout",
+      "triggerNameRequired": "Triggernaam *"
+    },
+    "ignorePatterns": {
+      "hint": "Druk op Enter om toe te voegen. De melding wordt overgeslagen als een patroon overeenkomt.",
+      "placeholder": "Negeer-regex toevoegen...",
+      "removeAriaLabel": "Negeerpatroon verwijderen",
+      "summary": "Geavanceerd: uitsluitingsregels",
+      "title": "Negeerpatronen (overslaan bij overeenkomst)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Tekstuitvoer",
+        "thinking": "Denken",
+        "tool_result": "Toolresultaat",
+        "tool_use": "Toolgebruik"
+      },
+      "matchFields": {
+        "args": "Argumenten",
+        "command": "Commando",
+        "content": "Inhoud",
+        "description": "Beschrijving",
+        "file_path": "Bestandspad",
+        "fullInput": "Volledige invoer (JSON)",
+        "glob": "Glob-filter",
+        "new_string": "Nieuwe tekst",
+        "old_string": "Oude tekst",
+        "path": "Pad",
+        "pattern": "Patroon",
+        "prompt": "Prompt",
+        "query": "Zoekopdracht",
+        "skill": "Skillnaam",
+        "subagent_type": "Subagent-type",
+        "text": "Tekstinhoud",
+        "thinking": "Denkinhoud",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Inhoudspatroon",
+        "error_status": "Uitvoeringsfout",
+        "token_threshold": "Hoog tokengebruik"
+      },
+      "tokenTypes": {
+        "input": "Invoertokens",
+        "output": "Uitvoertokens",
+        "total": "Totaal aantal tokens"
+      },
+      "toolNames": {
+        "anyTool": "Elke tool"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Testtrigger",
+      "detectedSuffix": "fouten zouden zijn gedetecteerd",
+      "more": "...en {{count}} meer",
+      "more_few": "...en {{count}} meer",
+      "more_many": "...en {{count}} meer",
+      "more_one": "...en {{count}} meer",
+      "more_other": "...en {{count}} meer",
+      "testTrigger": "Testtrigger",
+      "testing": "Testen...",
+      "title": "Voorbeeld",
+      "truncatedWarning": "Zoeken vroegtijdig gestopt (time-out of aantallimiet). Het werkelijke aantal overeenkomsten kan hoger zijn.",
+      "viewSession": "Sessie bekijken"
+    },
+    "repositoryScope": {
+      "empty": "Geen repositories geselecteerd - trigger geldt voor alle repositories",
+      "hint": "Wanneer repositories zijn geselecteerd, wordt deze trigger alleen geactiveerd voor fouten in die repositories.",
+      "placeholder": "Selecteer repository om toe te voegen...",
+      "summary": "Geavanceerd: repository-scope",
+      "title": "Beperken tot repositories (geldt alleen voor geselecteerde repositories)"
+    },
+    "sections": {
+      "configuration": "Configuratie",
+      "dotColor": "Stipkleur",
+      "generalInfo": "Algemene info",
+      "triggerCondition": "Triggervoorwaarde"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Profiel toevoegen",
+      "cancel": "Annuleren",
+      "deleteProfile": "Profiel verwijderen",
+      "editProfile": "Profiel bewerken",
+      "save": "Opslaan"
+    },
+    "authMethods": {
+      "agent": "SSH-agent",
+      "auto": "Auto (uit SSH-config)",
+      "password": "Wachtwoord",
+      "privateKey": "Privésleutel"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Verwijderen",
+      "message": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "title": "Profiel verwijderen"
+    },
+    "description": "Sla SSH-verbindingsprofielen op voor snel opnieuw verbinden",
+    "empty": {
+      "description": "Voeg een SSH-profiel toe om snel verbinding te maken",
+      "title": "Geen opgeslagen profielen"
+    },
+    "form": {
+      "authentication": "Authenticatie",
+      "host": "Host",
+      "name": "Naam",
+      "passwordPrompt": "Je wordt om het wachtwoord gevraagd bij het verbinden.",
+      "port": "Poort",
+      "privateKeyPath": "Pad naar privésleutel",
+      "username": "Gebruikersnaam",
+      "namePlaceholder": "Mijn server",
+      "hostPlaceholder": "hostnaam of IP",
+      "usernamePlaceholder": "gebruiker"
+    },
+    "loading": "Profielen laden...",
+    "title": "Werkruimteprofielen"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Verbinden",
+      "connecting": "Verbinden...",
+      "disconnect": "Verbinding verbreken",
+      "testConnection": "Verbinding testen",
+      "testing": "Testen..."
+    },
+    "currentMode": {
+      "description": "Gegevensbron voor sessiebestanden",
+      "label": "Huidige modus",
+      "local": "Lokaal ({{path}})"
+    },
+    "description": "Maak verbinding met een externe machine om Claude Code-sessies te bekijken die daar worden uitgevoerd",
+    "form": {
+      "authentication": "Authenticatie",
+      "host": "Host",
+      "password": "Wachtwoord",
+      "port": "Poort",
+      "privateKeyPath": "Pad naar privésleutel",
+      "username": "Gebruikersnaam",
+      "hostPlaceholder": "hostnaam of SSH-config-alias",
+      "usernamePlaceholder": "gebruiker"
+    },
+    "savedProfiles": {
+      "title": "Opgeslagen profielen"
+    },
+    "ssh": {
+      "title": "SSH-verbinding"
+    },
+    "status": {
+      "connectedTo": "Verbonden met {{host}}",
+      "remoteSessions": "Externe sessies bekijken via SSH"
+    },
+    "test": {
+      "failed": "Verbinding mislukt: {{error}}",
+      "success": "Verbinding geslaagd",
+      "unknownError": "Onbekende fout"
+    },
+    "title": "Externe verbinding"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Annuleren",
+      "cancelLogin": "Inloggen annuleren",
+      "connectChatGpt": "ChatGPT verbinden",
+      "delete": "Verwijderen",
+      "disable": "Uitschakelen",
+      "disconnectAccount": "Account loskoppelen",
+      "generateLink": "Link genereren",
+      "openLogin": "Inloggen openen",
+      "reconnectAnthropic": "Anthropic opnieuw verbinden",
+      "refresh": "Vernieuwen",
+      "replaceKey": "Sleutel vervangen",
+      "saveEndpoint": "Endpoint opslaan",
+      "saveKey": "Sleutel opslaan",
+      "saving": "Opslaan...",
+      "setApiKey": "API-sleutel instellen",
+      "updateKey": "Sleutel bijwerken",
+      "useCode": "Code gebruiken"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Opgeslagen inloggegevens laden...",
+      "projectScope": "Project",
+      "scope": "Scope",
+      "storedIn": "Opgeslagen in {{backend}}",
+      "userScope": "Gebruiker",
+      "storedInApp": "Opgeslagen in app",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API-sleutel",
+          "title": "API-sleutel",
+          "description": "Gebruik een directe Anthropic API-sleutel voor API-gefactureerde toegang. Je Anthropic-abonnementssessie blijft beschikbaar wanneer je terugschakelt.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API-sleutel",
+          "title": "API-sleutel",
+          "description": "Gebruik een OpenAI API-sleutel als secundair Codex-authenticatiepad. Als je Codex naar API-sleutelmodus overschakelt, spiegelt de app OPENAI_API_KEY naar CODEX_API_KEY voor native starts.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API-sleutel",
+          "title": "API-toegang",
+          "description": "Gebruik `GEMINI_API_KEY` voor de Gemini API-backend. CLI SDK en ADC vereisen dit niet.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Verbonden",
+        "description": "Beheer de lokale Codex-app-server-accountsessie die abonnementsgebaseerde native starts mogelijk maakt.",
+        "loginInProgress": "Inloggen bezig",
+        "plan": "Abonnement: {{plan}}",
+        "reconnectRequired": "Opnieuw verbinden vereist",
+        "title": "ChatGPT-account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto blijft de gedetecteerde API-sleutel gebruiken totdat ChatGPT is verbonden.",
+          "detectedApiKeyNeedsApiMode": "{{message}} De gedetecteerde API-sleutel wordt pas gebruikt nadat je Codex naar API-sleutelmodus overschakelt.",
+          "localArtifactsNoSession": "Codex CLI rapporteert momenteel geen actief ChatGPT-account. Er bestaan lokale Codex-accountgegevens, maar er is geen actieve beheerde sessie geselecteerd. Gebruikslimieten verschijnen hier pas nadat Codex CLI er een ziet.",
+          "noActiveAccount": "Codex CLI rapporteert momenteel geen actief ChatGPT-account. Gebruikslimieten verschijnen hier pas nadat Codex CLI er een ziet.",
+          "reconnectBeforeUsage": "Codex heeft een lokaal geselecteerd ChatGPT-account, maar de huidige sessie moet opnieuw verbinden voordat gebruikslimieten hier kunnen laden.",
+          "usageLimitsAfterReport": "Gebruikslimieten verschijnen hier nadat Codex ze rapporteert voor het verbonden ChatGPT-account."
+        }
+      },
+      "install": {
+        "checking": "Controleren",
+        "downloading": "Downloaden",
+        "installCli": "Codex CLI installeren",
+        "installing": "Installeren",
+        "retryInstall": "Installatie opnieuw proberen",
+        "title": "Codex CLI in app-data installeren"
+      },
+      "rateLimits": {
+        "credits": "Credits",
+        "creditsDescription": "Credits worden afzonderlijk getoond van venstergebaseerd abonnementsgebruik en zijn mogelijk niet beschikbaar voor abonnementsgebaseerde ChatGPT-sessies.",
+        "noSecondaryWindow": "Codex heeft geen secundair venster geretourneerd voor deze accountsnapshot.",
+        "notReported": "Niet gerapporteerd",
+        "primaryReset": "Primaire reset",
+        "primaryUsed": "Primair gebruikt",
+        "primaryWindow": "Primair venster",
+        "remainingLeft": "{{value}} over",
+        "remainingUnknown": "Resterend onbekend",
+        "secondaryReset": "Secundaire reset",
+        "secondaryUsed": "Secundair gebruikt",
+        "secondaryWindow": "Secundair venster",
+        "usedQuotaNote": "Deze percentages tonen gebruikte quota, niet resterende quota.",
+        "weeklyReset": "Wekelijkse reset",
+        "weeklyUsed": "Wekelijks gebruikt",
+        "weeklyUsedOneWeek": "Wekelijks gebruikt (1w)",
+        "weeklyWindow": "Wekelijks venster",
+        "secondaryFallback": "secundair",
+        "secondaryWindowNote": " Wekelijkse limieten worden afzonderlijk getoond in het {{window}}-venster.",
+        "usageExplanationGeneric": "Toont gebruikte quota, niet resterende quota.",
+        "usageExplanationWindowOnly": "Toont gebruikte quota in het huidige {{window}}-venster, niet resterende quota.",
+        "usageExplanationWithRemaining": "{{used}} gebruikt - ongeveer {{remaining}} over in het huidige {{window}}-venster."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth-token",
+      "authTokenMissing": "Auth-token is niet geconfigureerd.",
+      "baseUrl": "Basis-URL",
+      "description": "Gebruik een Anthropic-compatibel lokaal runtime-endpoint.",
+      "keepSavedToken": "Laat leeg om het opgeslagen token te behouden",
+      "title": "Lokaal / compatibel endpoint",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Basis-URL is vereist",
+        "firstPartyAnthropic": "Gebruik Auto, Abonnement of API-sleutel voor first-party Anthropic",
+        "httpRequired": "Basis-URL moet http:// of https:// gebruiken",
+        "invalidUrl": "Ongeldige URL",
+        "noCredentials": "Basis-URL mag geen inloggegevens bevatten"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint uitgeschakeld. Opgeslagen token is behouden.",
+        "endpointSaved": "Endpoint opgeslagen",
+        "endpointSavedTokenMissing": "Endpoint opgeslagen. Auth-token is niet geconfigureerd."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Authenticatiemethode",
+      "descriptions": {
+        "anthropic": "Kies hoe door de app gestarte Anthropic-sessies authenticeren.",
+        "codex": "Kies of Codex je ChatGPT-abonnement of een API-sleutel moet verkiezen wanneer de native runtime start.",
+        "gemini": "Configureer optionele API-toegang. CLI SDK en ADC worden nog steeds automatisch gedetecteerd.",
+        "opencode": "OpenCode-authenticatie en providerinventaris worden beheerd door de OpenCode-runtime."
+      },
+      "method": "Verbindingsmethode",
+      "mode": "Modus: {{mode}}",
+      "selected": "Geselecteerd",
+      "switching": "Overschakelen...",
+      "title": "Verbinding"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API-sleutel"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Gebruik ANTHROPIC_API_KEY en Anthropic API-facturering.",
+        "autoDescription": "Gebruik de Anthropic-runtimestandaarden en de beste beschikbare lokale inloggegevens.",
+        "hint": "Auto houdt Anthropic op de standaard lokale credential-resolutie.",
+        "subscriptionDescription": "Gebruik je lokale Anthropic-aanmeldsessie en abonnementstoegang.",
+        "subscriptionTitle": "Anthropic-abonnement"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Gebruik OPENAI_API_KEY- en CODEX_API_KEY-facturering voor native Codex-starts.",
+        "autoDescription": "Verkies je ChatGPT-account en abonnement. Gebruik de API-sleutelmodus alleen indien nodig.",
+        "chatgptDescription": "Gebruik je verbonden ChatGPT-account en Codex-abonnement.",
+        "chatgptTitle": "ChatGPT-account",
+        "hint": "Codex draait altijd via de native runtime. Auto verkiest je ChatGPT-account voordat het terugvalt op API-sleutel-inloggegevens."
+      }
+    },
+    "description": "Beheer hoe elke provider verbinding maakt en, indien ondersteund, welke backend de multimodel-runtime moet gebruiken.",
+    "fastMode": {
+      "defaultOff": "Standaard uit",
+      "description": "Pas de Claude Code Fast-modus standaard toe voor nieuwe Anthropic-teamstarts wanneer het opgeloste model en de runtime dit toestaan.",
+      "disabledHint": "Nieuwe Anthropic-starts blijven op normale snelheid tenzij een team de Fast-modus expliciet inschakelt.",
+      "enabledHint": "Nieuwe Anthropic-starts vragen standaard de Fast-modus aan wanneer het opgeloste model dit ondersteunt.",
+      "notExposed": "Deze Anthropic-runtime stelt de Fast-modus niet beschikbaar.",
+      "preferFast": "Fast verkiezen",
+      "title": "Fast-modus standaard",
+      "unavailableForRuntime": "De Fast-modus is momenteel niet beschikbaar voor deze Anthropic-runtime."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API-sleutelmodus is geselecteerd, maar er is nog geen Anthropic API-credential beschikbaar.",
+      "anthropicStoredKeyAvailable": "Er is een opgeslagen API-sleutel beschikbaar, maar door de app gestarte Anthropic-sessies gebruiken deze pas nadat je naar API-sleutelmodus overschakelt.",
+      "anthropicSubscriptionMissing": "Anthropic-abonnementsmodus is geselecteerd. Log in met Anthropic om deze provider te gebruiken.",
+      "authTokenMissing": "Auth-token is niet geconfigureerd. Veel lokale Anthropic-compatibele endpoints vereisen een niet-leeg token.",
+      "chatgptLoginPending": "Wachten tot het inloggen op het ChatGPT-account is voltooid...",
+      "chatgptLoginStarting": "ChatGPT-login starten...",
+      "codexApiKeyMissing": "API-sleutelmodus is geselecteerd, maar er is nog geen OPENAI_API_KEY- of CODEX_API_KEY-credential beschikbaar.",
+      "codexLocalArtifactsNoSession": "Codex CLI heeft momenteel geen actief ChatGPT-account. Er bestaan lokale Codex-accountgegevens, maar er is geen actieve beheerde sessie geselecteerd.",
+      "codexNeedsReconnect": "Codex heeft een lokaal geselecteerd ChatGPT-account, maar de huidige sessie moet opnieuw verbinden.",
+      "codexNoChatgptAccount": "Codex CLI heeft momenteel geen actief ChatGPT-account. Verbind ChatGPT om je abonnement te gebruiken.",
+      "codexNoCredential": "Er is nog geen ChatGPT-account of API-sleutel beschikbaar.",
+      "geminiApiUnavailable": "De Gemini API is momenteel niet beschikbaar. Configureer hier `GEMINI_API_KEY` of gebruik geldige Google ADC-inloggegevens.",
+      "withApiKeyFallback": "{{message}} Schakel naar API-sleutelmodus om de gedetecteerde API-sleutel te gebruiken."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Forceer door de app gestarte Anthropic-sessies om een API-sleutel-credential te gebruiken.",
+        "auto": "Gebruik het standaardgedrag van de runtime. Opgeslagen API-sleutels in deze app worden pas gebruikt nadat je naar API-sleutelmodus overschakelt.",
+        "oauth": "Forceer door de app gestarte Anthropic-sessies om de lokale Anthropic-abonnementssessie te gebruiken."
+      },
+      "codex": {
+        "apiKey": "Forceer native Codex-starts om OPENAI_API_KEY-/CODEX_API_KEY-facturering te gebruiken.",
+        "auto": "Verkies je ChatGPT-account wanneer het beschikbaar is. Val alleen terug op API-sleutelmodus wanneer dat nodig is.",
+        "chatgpt": "Forceer native Codex-starts om je verbonden ChatGPT-account en abonnement te gebruiken."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Verbindingswijzigingen toepassen...",
+      "refreshingProviderStatus": "Providerstatus vernieuwen...",
+      "savingCompatibleEndpoint": "Compatibel endpoint opslaan...",
+      "switchingAnthropicSubscription": "Overschakelen naar Anthropic-abonnement...",
+      "switchingApiKey": "Overschakelen naar API-sleutel...",
+      "switchingApiKeyMode": "Overschakelen naar API-sleutelmodus...",
+      "switchingAuto": "Overschakelen naar Auto...",
+      "switchingChatgpt": "Overschakelen naar ChatGPT-accountmodus..."
+    },
+    "provider": "Provider",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic heeft momenteel geen aparte runtime-backendkiezer.",
+        "codex": "Codex draait nu alleen via het native runtime-pad.",
+        "gemini": "Kies welke Gemini-runtime-backend multimodel moet gebruiken.",
+        "opencode": "OpenCode gebruikt zijn eigen beheerde runtime-host. Desktop stelt momenteel alleen de status beschikbaar."
+      },
+      "title": "Runtime",
+      "updating": "Runtime bijwerken..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "geconfigureerd",
+      "enabled": "Ingeschakeld",
+      "notConfigured": "Niet geconfigureerd",
+      "notSet": "niet ingesteld",
+      "off": "Uit",
+      "unknown": "Onbekend"
+    },
+    "title": "Providerinstellingen",
+    "usage": {
+      "apiKey": "API-sleutel wordt gebruikt",
+      "apiKeyRequired": "API-sleutel vereist",
+      "compatibleEndpoint": "Compatibel endpoint wordt gebruikt",
+      "notConnected": "Niet verbonden",
+      "usingMethod": "{{method}} wordt gebruikt"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API-sleutel verwijderd, maar kon providerstatus niet vernieuwen.",
+      "apiKeySavedRefreshFailed": "API-sleutel opgeslagen, maar kon providerstatus niet vernieuwen.",
+      "connectionUpdatedRefreshFailed": "Verbinding bijgewerkt, maar kon providerstatus niet vernieuwen.",
+      "deleteApiKey": "Kon API-sleutel niet verwijderen",
+      "disableEndpoint": "Kon endpoint niet uitschakelen",
+      "endpointDisabledRefreshFailed": "Endpoint uitgeschakeld, maar kon providerstatus niet vernieuwen.",
+      "endpointSavedRefreshFailed": "Endpoint opgeslagen, maar kon providerstatus niet vernieuwen.",
+      "refreshCodexAccount": "Kon Codex-account niet vernieuwen",
+      "saveApiKey": "Kon API-sleutel niet opslaan",
+      "saveEndpoint": "Kon endpoint niet opslaan",
+      "updateAnthropicFastMode": "Kon Anthropic Fast-modus niet bijwerken",
+      "updateConnection": "Kon verbinding niet bijwerken",
+      "updateRuntimeBackend": "Kon runtime-backend niet bijwerken",
+      "apiKeyRequired": "API-sleutel is vereist"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Abonnement / OAuth",
+        "chatgpt": "ChatGPT-account",
+        "apiKey": "API-sleutel",
+        "anthropicSubscription": "Anthropic-abonnement"
+      },
+      "authMethod": {
+        "apiKey": "API-sleutel",
+        "apiKeyHelper": "API-sleutel-helper",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude-abonnement",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google-account",
+        "serviceAccount": "serviceaccount"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "Huidige runtime",
+        "selectedRuntime": "Geselecteerde runtime",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Controleren...",
+        "modelsAvailable": "Modellen beschikbaar",
+        "checked": "Gecontroleerd",
+        "providerActivity": "Provideractiviteit",
+        "notConnected": "Niet verbonden",
+        "startingChatGptLogin": "ChatGPT-login starten...",
+        "waitingForChatGptLogin": "Wachten op inloggen ChatGPT-account...",
+        "chatGptVerificationDegraded": "ChatGPT-account gedetecteerd - accountverificatie is momenteel verminderd.",
+        "chatGptAccountReady": "ChatGPT-account gereed",
+        "apiKeyReady": "API-sleutel gereed",
+        "codexLocalAccountNeedsReconnect": "Codex heeft een lokaal geselecteerd ChatGPT-account, maar de huidige sessie moet opnieuw verbinden.",
+        "codexNoActiveManagedSession": "Codex CLI rapporteert geen actieve ChatGPT-login. Er bestaan lokale Codex-accountgegevens, maar er is geen actieve beheerde sessie geselecteerd.",
+        "codexNoActiveChatGptLogin": "Codex CLI rapporteert geen actieve ChatGPT-login",
+        "connectChatGptForSubscription": "Verbind een ChatGPT-account om je Codex-abonnement te gebruiken.",
+        "codexNativeReady": "Codex native gereed",
+        "codexNativeUnavailable": "Codex native niet beschikbaar",
+        "unavailableInCurrentRuntime": "Niet beschikbaar in huidige runtime",
+        "connectedViaApiKey": "Verbonden via API-sleutel",
+        "apiKeyConfiguredNotVerified": "API-sleutel geconfigureerd, maar nog niet geverifieerd",
+        "apiKeyModeMissingCredential": "API-sleutelmodus geselecteerd, maar er is geen API-sleutel geconfigureerd",
+        "connectedVia": "Verbonden via {{method}}",
+        "unableToVerify": "Kan niet verifiëren"
+      },
+      "mode": {
+        "selectedAuth": "Geselecteerde authenticatie: {{authMode}}",
+        "preferredAuth": "Voorkeursauthenticatie: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API-sleutel is geconfigureerd",
+        "savedApiKeyAvailable": "Opgeslagen API-sleutel beschikbaar in Beheren",
+        "apiKeyAlsoConfigured": "API-sleutel ook geconfigureerd in Beheren",
+        "apiKeyConfiguredInManage": "API-sleutel is geconfigureerd in Beheren",
+        "apiKeyFallbackInManage": "API-sleutel ook beschikbaar in Beheren als fallback",
+        "availableAsFallback": "{{summary}} - beschikbaar als fallback",
+        "savedApiKeyAvailableIfSwitch": "Opgeslagen API-sleutel beschikbaar in Beheren als je naar API-sleutelmodus overschakelt",
+        "availableIfSwitch": "{{summary}} - beschikbaar als je naar API-sleutelmodus overschakelt",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto gebruikt dit totdat ChatGPT is verbonden"
+      },
+      "actions": {
+        "connect": "Verbinden",
+        "connectAnthropic": "Anthropic verbinden",
+        "connectChatGpt": "ChatGPT verbinden",
+        "disconnect": "Verbinding verbreken",
+        "openLogin": "Inloggen openen"
+      },
+      "disconnect": {
+        "anthropicTitle": "Anthropic-abonnement loskoppelen?",
+        "anthropic": "Dit verwijdert de lokale Anthropic-abonnementssessie uit de Claude CLI-runtime.",
+        "anthropicWithApiKey": "Dit verwijdert de lokale Anthropic-abonnementssessie uit de Claude CLI-runtime. Opgeslagen API-sleutels in Beheren blijven beschikbaar.",
+        "geminiTitle": "Gemini CLI loskoppelen?",
+        "gemini": "Dit wist de lokale Gemini CLI-sessiemetadata. Externe ADC-inloggegevens en opgeslagen API-sleutels worden niet verwijderd."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Controleren op updates",
+      "checking": "Controleren...",
+      "extensions": "Extensies",
+      "installRuntime": "{{runtime}} installeren",
+      "manage": "Beheren",
+      "recheck": "Opnieuw controleren",
+      "reinstallRuntime": "{{runtime}} opnieuw installeren",
+      "retry": "Opnieuw proberen",
+      "update": "Bijwerken"
+    },
+    "installer": {
+      "checkingLatest": "Nieuwste versie controleren...",
+      "downloading": "Downloaden...",
+      "failed": "Installatie mislukt",
+      "installed": "v{{version}} geïnstalleerd",
+      "installing": "Installeren...",
+      "latest": "latest",
+      "verifying": "Checksum verifiëren..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "AI-providers controleren...",
+      "claudeCli": "Claude CLI controleren..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Modellen laden...",
+      "modelsUnavailable": "Modellen niet beschikbaar voor deze runtime-build",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Authenticatie mislukt",
+      "authUpdated": "Authenticatie bijgewerkt",
+      "loggedOut": "Provider uitgelogd",
+      "login": "Inloggen",
+      "logout": "Uitloggen",
+      "logoutFailed": "Uitloggen mislukt"
+    },
+    "status": {
+      "configuredNotFound": "De geconfigureerde {{runtime}} is niet gevonden.",
+      "foundButFailed": "{{runtime}} is gevonden maar kon niet starten",
+      "healthCheckFailed": "De geconfigureerde {{runtime}} is niet geslaagd voor de opstartcontrole.",
+      "notInstalled": "{{runtime}} niet geïnstalleerd"
+    },
+    "title": "CLI-runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

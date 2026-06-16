@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -53,10 +55,11 @@ export const KanbanSortPopover = ({
   onSortChange,
 }: KanbanSortPopoverProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [open, setOpen] = useState(false);
   const isNonDefault = sort.field !== 'updatedAt';
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -77,66 +80,68 @@ export const KanbanSortPopover = ({
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('kanban.sort.title')}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-56 p-0">
-        <div className="p-3">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            {t('kanban.sort.sortBy')}
-          </p>
-          <div className="space-y-0.5">
-            {SORT_OPTIONS.map((option) => {
-              const isSelected = sort.field === option.field;
-              return (
-                <button
-                  key={option.field}
-                  type="button"
-                  className={cn(
-                    'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                    isSelected
-                      ? 'bg-blue-500/15 text-blue-300'
-                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]'
-                  )}
-                  onClick={() => onSortChange({ field: option.field })}
-                >
-                  <span
+      {open ? (
+        <PopoverContent align="end" className="w-56 p-0">
+          <div className="p-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+              {t('kanban.sort.sortBy')}
+            </p>
+            <div className="space-y-0.5">
+              {SORT_OPTIONS.map((option) => {
+                const isSelected = sort.field === option.field;
+                return (
+                  <button
+                    key={option.field}
+                    type="button"
                     className={cn(
-                      'shrink-0',
-                      isSelected ? 'text-blue-400' : 'text-[var(--color-text-muted)]'
+                      'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                      isSelected
+                        ? 'bg-blue-500/15 text-blue-300'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]'
                     )}
+                    onClick={() => onSortChange({ field: option.field })}
                   >
-                    {option.icon}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-medium">{t(option.labelKey)}</div>
-                    <div
+                    <span
                       className={cn(
-                        'text-[10px]',
-                        isSelected ? 'text-blue-300/70' : 'text-[var(--color-text-muted)]'
+                        'shrink-0',
+                        isSelected ? 'text-blue-400' : 'text-[var(--color-text-muted)]'
                       )}
                     >
-                      {t(option.descriptionKey)}
+                      {option.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium">{t(option.labelKey)}</div>
+                      <div
+                        className={cn(
+                          'text-[10px]',
+                          isSelected ? 'text-blue-300/70' : 'text-[var(--color-text-muted)]'
+                        )}
+                      >
+                        {t(option.descriptionKey)}
+                      </div>
                     </div>
-                  </div>
-                  {isSelected && (
-                    <ArrowDownUp size={12} className="ml-auto shrink-0 text-blue-400" />
-                  )}
-                </button>
-              );
-            })}
+                    {isSelected && (
+                      <ArrowDownUp size={12} className="ml-auto shrink-0 text-blue-400" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        {isNonDefault && (
-          <div className="flex justify-end border-t border-[var(--color-border)] p-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              onClick={() => onSortChange({ field: 'updatedAt' })}
-            >
-              {t('kanban.sort.reset')}
-            </Button>
-          </div>
-        )}
-      </PopoverContent>
+          {isNonDefault && (
+            <div className="flex justify-end border-t border-[var(--color-border)] p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                onClick={() => onSortChange({ field: 'updatedAt' })}
+              >
+                {t('kanban.sort.reset')}
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      ) : null}
     </Popover>
   );
 };

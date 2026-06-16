@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Kanselahin",
+    "close": "Isara",
+    "copied": "Nakopya",
+    "copyUrl": "Kopyahin ang URL",
+    "open": "Buksan",
+    "reveal": "Ipakita",
+    "retry": "Subukang muli",
+    "save": "I-save",
+    "showLess": "Magpakita ng mas kaunti",
+    "showMore": "Magpakita pa",
+    "refresh": "I-refresh",
+    "reset": "I-reset",
+    "copyToClipboard": "Kopyahin sa clipboard",
+    "moreActions": "Higit pang aksyon",
+    "closeDialog": "Isara ang dialog",
+    "goToDashboard": "Pumunta sa Dashboard",
+    "or": "o",
+    "hide": "Itago",
+    "resetSelection": "I-reset ang pagpili"
+  },
+  "code": {
+    "line": "linya {{line}}",
+    "lines": "mga linya {{from}}-{{to}}",
+    "moreLines": "({{count}} pang linya...)",
+    "moreLines_few": "({{count}} pang linya...)",
+    "moreLines_many": "({{count}} pang linya...)",
+    "moreLines_one": "({{count}} pang linya...)",
+    "moreLines_other": "({{count}} pang linya...)",
+    "code": "Code",
+    "preview": "Preview",
+    "markdownPreview": "Markdown Preview",
+    "linesParenthesized": "(mga linya {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid syntax error"
+  },
+  "contextBadge": {
+    "badge": "Context",
+    "breakdown": {
+      "text": "Text",
+      "thinking": "Thinking"
+    },
+    "detailsAria": "Mga detalye ng context injection",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sections": {
+      "claudeMdFiles": "Mga CLAUDE.md File",
+      "mentionedFiles": "Mga Nabanggit na File",
+      "taskCoordination": "Task Coordination",
+      "thinkingText": "Thinking + Text",
+      "toolOutputs": "Mga Tool Output",
+      "userMessages": "Mga Mensahe ng User"
+    },
+    "title": "Bagong Context na Idinagdag sa Turn na Ito",
+    "tokenCount": "~{{tokens}} token",
+    "totalNewTokens": "Kabuuang bagong token",
+    "turn": "Turn {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} token"
+  },
+  "locales": {
+    "emptyMessage": "Walang nahanap na wika.",
+    "names": {
+      "ar": "Arabic",
+      "bn": "Bengali",
+      "de": "German",
+      "en": "English",
+      "es": "Spanish",
+      "fa": "Persian",
+      "fil": "Filipino",
+      "fr": "French",
+      "hi": "Hindi",
+      "id": "Indonesian",
+      "it": "Italian",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "mr": "Marathi",
+      "ms": "Malay",
+      "nl": "Dutch",
+      "pl": "Polish",
+      "pt": "Portuguese",
+      "ro": "Romanian",
+      "ru": "Russian",
+      "sw": "Swahili",
+      "system": "System",
+      "ta": "Tamil",
+      "te": "Telugu",
+      "th": "Thai",
+      "tr": "Turkish",
+      "uk": "Ukrainian",
+      "ur": "Urdu",
+      "vi": "Vietnamese",
+      "zh": "Chinese"
+    },
+    "searchPlaceholder": "Maghanap ng wika...",
+    "selectPlaceholder": "Piliin ang wika ng app...",
+    "systemWithResolved": "System - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Walang nahanap na miyembro.",
+    "searchPlaceholder": "Maghanap ng miyembro...",
+    "unassigned": "Hindi nakatalaga",
+    "teammateFallback": "teammate"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Sinusuri",
+        "downloading": "Dina-download",
+        "installCli": "I-install ang Codex CLI",
+        "installing": "Ini-install",
+        "retryInstall": "Subukang muli ang pag-install"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Walang tumutugmang suhestiyon",
+    "searching": "Naghahanap...",
+    "searchingFiles": "Naghahanap ng mga file...",
+    "findInConversation": "Maghanap sa pag-uusap...",
+    "resultCount": "{{current}} ng {{total}}",
+    "resultCountCapped": "{{current}} ng {{total}}+",
+    "noResults": "Walang resulta",
+    "previousResultShortcut": "Nakaraang resulta (Shift+Enter)",
+    "nextResultShortcut": "Susunod na resulta (Enter)",
+    "closeShortcut": "Isara (Esc)",
+    "nothingFound": "Walang nahanap",
+    "placeholder": "Maghanap..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Magdagdag ng Schedule",
+      "clearFilters": "I-clear ang mga filter",
+      "createSchedule": "Lumikha ng Schedule",
+      "delete": "Tanggalin",
+      "edit": "I-edit",
+      "pause": "I-pause",
+      "resume": "Ituloy",
+      "runNow": "Patakbuhin ngayon"
+    },
+    "empty": {
+      "description": "Lumikha ng schedule sa anumang team para i-automate ang execution ng Claude task gamit ang mga cron expression. Lalabas dito ang mga schedule mula sa lahat ng team.",
+      "noMatches": "Walang schedule na tumutugma sa kasalukuyang mga filter",
+      "title": "Walang naka-schedule na task"
+    },
+    "filters": {
+      "allTeams": "Lahat ng team"
+    },
+    "item": {
+      "loadingRunHistory": "Niloload ang kasaysayan ng pagtakbo...",
+      "nextRun": "Susunod: {{value}}",
+      "noRunsYet": "Wala pang pagtakbo"
+    },
+    "loading": "Niloload ang mga schedule...",
+    "searchPlaceholder": "Maghanap ng mga schedule...",
+    "status": {
+      "active": "Aktibo",
+      "all": "Lahat",
+      "disabled": "Naka-disable",
+      "paused": "Naka-pause"
+    },
+    "title": "Mga Schedule"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Itago",
+      "pin": "I-pin",
+      "unhide": "Ipakita"
+    },
+    "empty": {
+      "noMatchingSessions": "Walang tumutugmang session",
+      "noMatchingSessionsDescription": "Wala pang tumutugmang session ang proyektong ito.",
+      "noMatchingSessionsFiltered": "Subukan ang ibang query o i-reset ang provider filter.",
+      "noSessions": "Walang nahanap na session",
+      "noSessionsDescription": "Wala pang session ang proyektong ito",
+      "selectProject": "Pumili ng proyekto para tingnan ang mga session"
+    },
+    "errors": {
+      "loading": "May error sa pag-load ng mga session"
+    },
+    "loadedMatchingMore": "{{count}} tumutugmang session ang na-load sa ngayon - mag-scroll pababa para mag-load pa.",
+    "loadingMore": "Niloload pa ang mga session...",
+    "pinned": "Naka-pin",
+    "scrollToLoadMore": "Mag-scroll para mag-load pa",
+    "search": {
+      "clear": "I-clear ang paghahanap ng session",
+      "placeholder": "Maghanap ng mga session..."
+    },
+    "selection": {
+      "cancel": "Kanselahin ang pagpili",
+      "exitMode": "Lumabas sa selection mode",
+      "hideSelected": "Itago ang mga napiling session",
+      "pinSelected": "I-pin ang mga napiling session",
+      "selectSessions": "Pumili ng mga session",
+      "selected": "{{count}} napili",
+      "unhideSelected": "Ipakita ang mga napiling session",
+      "selected_few": "{{count}} napili",
+      "selected_many": "{{count}} napili",
+      "selected_one": "{{count}} napili",
+      "selected_other": "{{count}} napili"
+    },
+    "sort": {
+      "byContext": "Ayon sa Context",
+      "byContextTooltip": "Ayusin ayon sa paggamit ng context",
+      "byRecentTooltip": "Ayusin ayon sa kamakailan",
+      "contextLoadedOnly": "Ang pag-ayos ayon sa context ay nagra-rank lang ng mga na-load na session."
+    },
+    "title": "Mga Session",
+    "visibility": {
+      "hideHidden": "Itago ang mga nakatagong session",
+      "showHidden": "Ipakita ang mga nakatagong session"
+    },
+    "worktree": {
+      "switch": "Lumipat ng Worktree"
+    },
+    "loadedMatchingMore_few": "{{count}} tumutugmang session ang na-load sa ngayon - mag-scroll pababa para mag-load pa.",
+    "loadedMatchingMore_many": "{{count}} tumutugmang session ang na-load sa ngayon - mag-scroll pababa para mag-load pa.",
+    "loadedMatchingMore_one": "{{count}} tumutugmang session ang na-load sa ngayon - mag-scroll pababa para mag-load pa.",
+    "loadedMatchingMore_other": "{{count}} tumutugmang session ang na-load sa ngayon - mag-scroll pababa para mag-load pa.",
+    "failedToLoad": "Nabigong i-load ang session",
+    "loading": "Niloload ang session...",
+    "filter": {
+      "title": "I-filter ang mga session"
+    },
+    "count": "{{count}} session",
+    "count_one": "{{count}} session",
+    "count_other": "{{count}} session",
+    "count_few": "{{count}} session",
+    "count_many": "{{count}} session",
+    "inProgress": "Isinasagawa ang session..."
+  },
+  "states": {
+    "loading": "Niloload...",
+    "offline": "Offline",
+    "online": "Online",
+    "unknown": "Hindi alam",
+    "error": "Error"
+  },
+  "markdown": {
+    "imageFallback": "[Larawan: {{label}}]",
+    "largeContentNotice": "Napakalaki ng content ({{count}} chars). Ipinapakita ang raw preview para manatiling responsive ang UI.",
+    "largeContentTitle": "Ipinapakita ang malaking content bilang raw para maiwasan ang pag-freeze ng UI",
+    "raw": "Raw",
+    "rawPreview": "Raw preview",
+    "renderMarkdown": "I-render ang markdown",
+    "showAll": "Ipakita lahat",
+    "showMore": "Magpakita pa",
+    "showRaw": "Ipakita ang raw",
+    "showingChars": "Ipinapakita ang {{shown}} / {{total}} chars",
+    "largeContentNotice_few": "Napakalaki ng content ({{count}} chars). Ipinapakita ang raw preview para manatiling responsive ang UI.",
+    "largeContentNotice_many": "Napakalaki ng content ({{count}} chars). Ipinapakita ang raw preview para manatiling responsive ang UI.",
+    "largeContentNotice_one": "Napakalaki ng content ({{count}} chars). Ipinapakita ang raw preview para manatiling responsive ang UI.",
+    "largeContentNotice_other": "Napakalaki ng content ({{count}} chars). Ipinapakita ang raw preview para manatiling responsive ang UI."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Tingnan ang terminal output sa itaas para sa mga detalye",
+    "closingInSeconds": "Magsasara sa loob ng {{count}}s...",
+    "closingInSeconds_few": "Magsasara sa loob ng {{count}}s...",
+    "closingInSeconds_many": "Magsasara sa loob ng {{count}}s...",
+    "closingInSeconds_one": "Magsasara sa loob ng {{count}}s...",
+    "closingInSeconds_other": "Magsasara sa loob ng {{count}}s...",
+    "completedSuccessfully": "Matagumpay na natapos",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "Nabigo ang proseso",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Naipon sa buong session nang walang duplikasyon",
+    "cacheRead": "Cache Read",
+    "cacheWrite": "Cache Write",
+    "costUsd": "Gastos (USD)",
+    "inputTokens": "Input Token",
+    "model": "Model",
+    "outputTokens": "Output Token",
+    "phase": "Phase {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% ng prompt input",
+    "taskCoordination": "Task Coordination",
+    "thinkingText": "Thinking + Text",
+    "toolOutputs": "Mga Tool Output",
+    "total": "Kabuuan",
+    "userMessages": "Mga Mensahe ng User",
+    "visibleContext": "Visible Context",
+    "includesClaudeMd": "kasama ang CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} token",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Kopyahin ang team",
+      "createTeam": "Lumikha ng Team",
+      "deleteForever": "Tanggalin nang permanente",
+      "deletePermanently": "Tanggalin nang permanente",
+      "deleteTeam": "Tanggalin ang team",
+      "launching": "Inilulunsad...",
+      "launchTeam": "Ilunsad ang team",
+      "relaunchTeam": "Ilunsad muli ang team",
+      "restore": "Ibalik",
+      "restoreTeam": "Ibalik ang team",
+      "retry": "Subukang muli",
+      "stopTeam": "Ihinto ang team",
+      "stopping": "Inihihinto..."
+    },
+    "status": {
+      "active": "Aktibo",
+      "deleted": "Tinanggal",
+      "launching": "Inilulunsad...",
+      "offline": "Offline",
+      "partialFailure": "Nabigo ang paglunsad sa kalagitnaan",
+      "partialPending": "Nakabinbin ang bootstrap",
+      "partialSkipped": "Nilaktawan ng paglunsad ang miyembro",
+      "running": "Tumatakbo"
+    },
+    "partial": {
+      "pending": "Nire-reconcile pa ang huling paglunsad.",
+      "skipped": "May nilaktawang teammate ang huling paglunsad.",
+      "skippedWithCount": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_few": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_many": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_one": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_other": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "stopped": "Huminto ang huling paglunsad bago sumali ang lahat ng teammate.",
+      "stoppedWithCount": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_few": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_many": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_one": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_other": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate."
+    },
+    "noDescription": "Walang paglalarawan",
+    "solo": "Solo",
+    "membersCount": "Mga miyembro: {{count}}",
+    "membersCount_few": "Mga miyembro: {{count}}",
+    "membersCount_many": "Mga miyembro: {{count}}",
+    "membersCount_one": "Miyembro: {{count}}",
+    "membersCount_other": "Mga miyembro: {{count}}",
+    "all": "Lahat",
+    "moreCount": "+{{count}} pa",
+    "moreCount_one": "+{{count}} pa",
+    "moreCount_other": "+{{count}} pa",
+    "moreCount_few": "+{{count}} pa",
+    "moreCount_many": "+{{count}} pa"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Default para sa bawat proyekto na walang sariling OpenCode override.",
+      "scopeDescriptionProject": "I-override lang ang napiling proyekto. Hindi babaguhin ang mga tumatakbong team.",
+      "setAllProjectsDefault": "Itakda ang default para sa lahat ng proyekto",
+      "setProjectDefault": "Itakda ang default ng proyekto",
+      "validationContext": "Validation context",
+      "projectOverrideContext": "Project override context",
+      "selectProjectHint": "Pumili ng proyekto bago subukan ang mga lokal na model o mag-save ng mga default.",
+      "allProjectsHint": "Gumagamit ang mga test ng {{project}}. Nalalapat ang default maliban kung may override ang isang proyekto.",
+      "projectHint": "Ino-override lang ng pag-save ang {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Context",
+      "closePanel": "Isara ang panel",
+      "phase": "Phase:",
+      "current": "Kasalukuyan",
+      "view": "View:",
+      "category": "Kategorya",
+      "bySize": "Ayon sa Laki"
+    },
+    "metrics": {
+      "unavailable": "Hindi available",
+      "contextUsed": "Context na Ginamit",
+      "promptInput": "Prompt Input",
+      "visibleContext": "Visible Context",
+      "ofContext": "ng context",
+      "ofPrompt": "ng prompt",
+      "codexTelemetryUnavailable": "Hindi pa inilalantad ng kasalukuyang runtime telemetry ang prompt-side usage ng Codex, kaya nananatiling hindi available ang Prompt Input at Context na Ginamit sa halip na magpakita ng pekeng zero.",
+      "sessionCost": "Gastos ng Session:",
+      "parentPlus": "parent +",
+      "subagents": "mga subagent",
+      "details": "mga detalye"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Context na Ginamit",
+        "description": "Prompt input kasama ang mga output token na kasalukuyang sumasakop sa context window ng model."
+      },
+      "promptInput": {
+        "title": "Prompt Input",
+        "description": "Mga token na ipinadala sa model bago ang generation. Para sa Claude, kasama dito ang `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Visible Context",
+        "description": "Ang masusuring bahagi ng prompt input: mga file, CLAUDE.md, mga tool output, mga mensahe ng user, at katulad na mga injection na direkta mong maoo-optimize."
+      },
+      "availability": {
+        "title": "Availability",
+        "description": "Kung hindi pa inilalantad ng isang provider runtime ang prompt-side usage, ipinapakita ng panel ang mga metric bilang hindi available sa halip na magpanggap na zero ang mga ito."
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} token",
+      "toolsCount": "{{count}} tool",
+      "toolsCount_one": "{{count}} tool",
+      "toolsCount_other": "{{count}} tool",
+      "toolsCount_few": "{{count}} tool",
+      "toolsCount_many": "{{count}} tool",
+      "itemsCount": "{{count}} item",
+      "itemsCount_one": "{{count}} item",
+      "itemsCount_other": "{{count}} item",
+      "itemsCount_few": "{{count}} item",
+      "itemsCount_many": "{{count}} item",
+      "missing": "nawawala",
+      "thinking": "Thinking",
+      "text": "Text"
+    },
+    "empty": "Walang natukoy na context injection sa session na ito",
+    "view": {
+      "grouped": "Naka-grupo",
+      "flat": "Flat"
+    },
+    "claudeMdFiles": "Mga CLAUDE.md File",
+    "mentionedFiles": "Mga Nabanggit na File"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Nakumpirma ang shutdown",
+      "summary": {
+        "tools": "{{count}} tool",
+        "tools_one": "{{count}} tool",
+        "tools_other": "{{count}} tool",
+        "tools_few": "{{count}} tool",
+        "tools_many": "{{count}} tool"
+      },
+      "meta": {
+        "type": "Uri",
+        "duration": "Tagal",
+        "model": "Model",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Context Window",
+        "contextUsage": "Paggamit ng Context",
+        "mainContext": "Main Context",
+        "totalOutput": "Kabuuang Output",
+        "turns": "({{count}} turn)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} turn)",
+        "subagentContext": "Subagent Context",
+        "phase": "Phase {{phase}}",
+        "turns_few": "({{count}} turn)",
+        "turns_many": "({{count}} turn)"
+      },
+      "trace": {
+        "title": "Execution Trace"
+      }
+    },
+    "user": {
+      "you": "Ikaw",
+      "showMore": "Magpakita pa",
+      "showLess": "Magpakita ng mas kaunti",
+      "backgroundTask": "Background task",
+      "exitCode": "exit {{code}}",
+      "imagesAttached": "{{count}} larawang naka-attach",
+      "imagesAttached_one": "{{count}} larawang naka-attach",
+      "imagesAttached_few": "{{count}} larawang naka-attach",
+      "imagesAttached_many": "{{count}} larawang naka-attach",
+      "imagesAttached_other": "{{count}} larawang naka-attach"
+    },
+    "compact": {
+      "toggle": "I-toggle ang compacted content",
+      "contextCompacted": "Na-compact ang context",
+      "freedTokens": "({{tokens}} napalaya)",
+      "phase": "Phase {{phase}}",
+      "conversationCompacted": "Na-compact ang Pag-uusap",
+      "summary": "Nilagom ang mga nakaraang mensahe para makatipid ng context. Napreserba ang buong kasaysayan ng pag-uusap sa session file.",
+      "compacted": "Na-compact"
+    },
+    "executionTrace": {
+      "empty": "Walang execution item",
+      "nested": "Nested: {{name}}",
+      "input": "Input"
+    },
+    "items": {
+      "empty": "Walang item na ipapakita"
+    },
+    "tools": {
+      "teammateSpawned": "Na-spawn ang teammate",
+      "shutdownRequested": "Hiniling ang shutdown ->",
+      "noResultReceived": "Walang natanggap na resulta",
+      "duration": "Tagal: {{duration}}",
+      "result": "Resulta",
+      "write": {
+        "createdFile": "Nilikhang file",
+        "wroteToFile": "Isinulat sa file"
+      },
+      "skill": {
+        "instructions": "Mga Tagubilin sa Skill",
+        "unknown": "Hindi Kilalang Skill"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Inabala ng user ang request",
+      "planReadyForApproval": "Handa na ang Plano para sa Pag-apruba"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Walang kasaysayan ng pag-uusap",
+      "description": "Wala pang mensahe ang session na ito."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% natitira)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "Mag-scroll pababa",
+    "bottom": "Ibaba",
+    "teammateMessage": {
+      "message": "Mensahe",
+      "resent": "Ipinadalang muli",
+      "fallback": "Mensahe ng teammate"
+    },
+    "system": {
+      "label": "System"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "Hindi naka-install ang tmux",
+    "detectedOs": "Natukoy na OS: {{os}}",
+    "runtimePath": "Runtime path: {{path}}",
+    "phase": "Phase: {{phase}}",
+    "actions": {
+      "cancel": "Kanselahin",
+      "manualGuide": "Manual na gabay",
+      "hideSetupSteps": "Itago ang mga hakbang sa setup",
+      "showSetupSteps": "Ipakita ang mga hakbang sa setup ({{count}})",
+      "showSetupSteps_one": "Ipakita ang hakbang sa setup ({{count}})",
+      "showSetupSteps_other": "Ipakita ang mga hakbang sa setup ({{count}})",
+      "recheck": "Suriing muli",
+      "showSetupSteps_few": "Ipakita ang mga hakbang sa setup ({{count}})",
+      "showSetupSteps_many": "Ipakita ang mga hakbang sa setup ({{count}})"
+    },
+    "installerProgress": "Progreso ng installer",
+    "input": {
+      "placeholder": "Magpadala ng input sa installer",
+      "send": "Magpadala ng input",
+      "passwordNotice": "Direktang ipinapadala ang password input sa terminal ng installer at hindi idinaragdag sa log output."
+    },
+    "details": {
+      "show": "Ipakita ang mga detalye",
+      "hide": "Itago ang mga detalye"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Walang kamakailang aktibidad",
+    "sessionsCount": "{{count}} session",
+    "sessionsCount_one": "{{count}} session",
+    "sessionsCount_other": "{{count}} session",
+    "mode": {
+      "searchProjects": "Maghanap ng mga proyekto",
+      "searchAcrossProjects": "Maghanap sa lahat ng proyekto",
+      "searchInProject": "Maghanap sa proyekto"
+    },
+    "currentProject": "Kasalukuyang proyekto",
+    "global": "Global",
+    "placeholders": {
+      "projects": "Maghanap ng mga proyekto...",
+      "conversations": "Maghanap ng mga pag-uusap..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Walang nahanap na proyekto para sa \"{{query}}\"",
+      "noProjects": "Walang nahanap na proyekto",
+      "minChars": "Mag-type ng hindi bababa sa 2 character para maghanap",
+      "noFastResults": "Walang mabilis na resulta sa kamakailang mga session para sa \"{{query}}\"",
+      "noResults": "Walang nahanap na resulta para sa \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} proyekto",
+      "projectsCount_one": "{{count}} proyekto",
+      "projectsCount_other": "{{count}} proyekto",
+      "results": "{{count}} {{speed}}resulta",
+      "results_one": "{{count}} {{speed}}resulta",
+      "results_other": "{{count}} {{speed}}resulta",
+      "resultsAcrossProjects": "{{count}} {{speed}}resulta sa lahat ng proyekto",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}resulta sa lahat ng proyekto",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}resulta sa lahat ng proyekto",
+      "fastPrefix": "mabilis ",
+      "typeToSearch": "Mag-type para maghanap",
+      "navigate": "mag-navigate",
+      "select": "pumili",
+      "open": "buksan",
+      "global": "global",
+      "close": "isara",
+      "results_few": "{{count}} {{speed}}resulta",
+      "results_many": "{{count}} {{speed}}resulta",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}resulta sa lahat ng proyekto",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}resulta sa lahat ng proyekto",
+      "projectsCount_few": "{{count}} proyekto",
+      "projectsCount_many": "{{count}} proyekto",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} session",
+    "sessionsCount_many": "{{count}} session"
+  },
+  "tasksPanel": {
+    "title": "Mga Task",
+    "searchPlaceholder": "Maghanap ng mga task...",
+    "pinned": "Naka-pin",
+    "groupByLabel": "Igrupo ayon sa:",
+    "groupByAria": "Igrupo ayon sa",
+    "groupModes": {
+      "none": "Wala",
+      "project": "Proyekto",
+      "time": "Oras"
+    },
+    "showArchived": "Ipakita ang naka-archive",
+    "hideArchived": "Itago ang naka-archive",
+    "empty": {
+      "noMatchingTasks": "Walang tumutugmang task",
+      "noTasks": "Walang nahanap na task"
+    },
+    "teamLabel": "Team: {{team}}",
+    "showMore": "Magpakita pa",
+    "showLess": "Magpakita ng mas kaunti",
+    "deleteConfirm": {
+      "title": "Tanggalin ang task",
+      "message": "Ilipat ang task #{{taskId}} sa trash?",
+      "confirmLabel": "Tanggalin",
+      "cancelLabel": "Kanselahin"
+    },
+    "deleteFailed": {
+      "title": "Nabigong tanggalin ang task",
+      "fallbackMessage": "May naganap na hindi inaasahang error",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "Ayon sa oras",
+      "byUnread": "Ayon sa hindi nabasa",
+      "byProject": "Ayon sa proyekto",
+      "byTeam": "Ayon sa team"
+    }
+  },
+  "toolViewer": {
+    "input": "Input",
+    "replaceAll": "(palitan lahat)",
+    "noInputRecorded": "Walang naitalang input para sa tool call na ito.",
+    "agent": {
+      "action": "aksyon",
+      "teammate": "teammate",
+      "team": "team",
+      "runtime": "runtime",
+      "type": "uri",
+      "startupInstructionsHidden": "Nakatago sa UI ang mga startup instruction."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "I-unpin",
+    "pin": "I-pin",
+    "rename": "Palitan ang pangalan",
+    "markUnread": "Markahan bilang hindi nabasa",
+    "unarchive": "I-unarchive",
+    "archive": "I-archive",
+    "deleteTask": "Tanggalin ang task"
+  },
+  "updateDialog": {
+    "closeDialog": "Isara ang dialog",
+    "updateAvailable": "May available na update",
+    "updateReady": "Handa na ang Update",
+    "noReleaseNotes": "Walang available na release notes.",
+    "viewOnGitHub": "Tingnan sa GitHub",
+    "later": "Mamaya",
+    "restartNow": "I-restart ngayon",
+    "download": "I-download"
+  },
+  "errorBoundary": {
+    "title": "May naganap na mali",
+    "description": "May naganap na hindi inaasahang error sa application. Maaari mong subukang i-reload ang page o i-reset ang error state.",
+    "componentStack": "Component Stack",
+    "tryAgain": "Subukang Muli",
+    "copied": "Nakopya",
+    "copyErrorDetails": "Kopyahin ang mga Detalye ng Error",
+    "reportBugOnGitHub": "Mag-ulat ng Bug sa GitHub",
+    "reloadApp": "I-reload ang App",
+    "diagnosticsNotice": "Kasama sa mga ulat ng bug sa GitHub at sa mga kinopyang diagnostics ang mensahe ng error, mga stack trace, bersyon ng app, aktibong tab, napiling team, task context, at mga detalye ng environment."
+  },
+  "runtimeBackendSelector": {
+    "label": "Runtime backend",
+    "resolved": "Resolved: {{backend}}",
+    "current": "Kasalukuyan",
+    "recommended": "Inirerekomenda",
+    "unavailable": "Hindi available",
+    "cannotSelectYet": "Hindi pa mapipili ang backend na ito.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (kasalukuyan: {{backend}})",
+    "audience": {
+      "internal": "Internal"
+    },
+    "states": {
+      "locked": "Naka-lock",
+      "disabled": "Naka-disable",
+      "authRequired": "Kailangan ng auth",
+      "runtimeMissing": "Nawawala ang runtime",
+      "degraded": "Degraded",
+      "unavailable": "Hindi available"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Sinusuri",
+    "unavailable": "Hindi available",
+    "checkFailed": "Nabigo ang pagsuri",
+    "free": "Libre",
+    "freeTooltip": "Iniulat ng OpenCode metadata. Maaaring magbago ang availability at mga limitasyon."
+  },
+  "taskFilters": {
+    "status": "Status",
+    "clearAll": "I-clear lahat",
+    "selectAll": "Piliin lahat",
+    "team": "Team",
+    "allTeams": "Lahat ng team",
+    "searchTeams": "Maghanap ng mga team...",
+    "noTeamsFound": "Walang nahanap na team",
+    "project": "Proyekto",
+    "allProjects": "Lahat ng Proyekto",
+    "searchProjects": "Maghanap ng mga proyekto...",
+    "noProjects": "Walang proyekto",
+    "comments": "Mga Komento",
+    "apply": "Ilapat",
+    "read": {
+      "all": "Lahat",
+      "unread": "Hindi nabasa",
+      "read": "Nabasa"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "GINAGAWA",
+      "needsFix": "KAILANGANG AYUSIN",
+      "done": "TAPOS",
+      "review": "REVIEW",
+      "approved": "INAPRUBAHAN"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Kabuuang Context: {{tokens}} token",
+    "context": "Context: {{tokens}}",
+    "phase": "Phase {{phase}}:",
+    "compactedTo": "(na-compact sa {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "team",
+      "subagent": "subagent",
+      "markAsRead": "Markahan bilang nabasa",
+      "delete": "Tanggalin",
+      "viewInSession": "Tingnan sa session"
+    },
+    "title": "Mga Notification",
+    "loading": "Niloload ang mga notification...",
+    "actions": {
+      "markFilteredAsRead": "Markahan ang na-filter bilang nabasa",
+      "markAllAsRead": "Markahan lahat bilang nabasa",
+      "markFilteredRead": "Markahan ang na-filter na nabasa",
+      "markAllRead": "Markahan lahat na nabasa",
+      "clearFilteredNotifications": "I-clear ang mga na-filter na notification",
+      "clearAllNotifications": "I-clear ang lahat ng notification",
+      "clickToConfirm": "I-click para kumpirmahin",
+      "clearFiltered": "I-clear ang na-filter",
+      "clearAll": "I-clear lahat"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} hindi nabasa sa filter",
+      "unreadInFilter_one": "{{count}} hindi nabasa sa filter",
+      "unreadInFilter_few": "{{count}} hindi nabasa sa filter",
+      "unreadInFilter_many": "{{count}} hindi nabasa sa filter",
+      "unreadInFilter_other": "{{count}} hindi nabasa sa filter",
+      "inFilter": "{{count}} sa filter",
+      "inFilter_one": "{{count}} sa filter",
+      "inFilter_few": "{{count}} sa filter",
+      "inFilter_many": "{{count}} sa filter",
+      "inFilter_other": "{{count}} sa filter",
+      "unread": "{{count}} hindi nabasa",
+      "unread_one": "{{count}} hindi nabasa",
+      "unread_few": "{{count}} hindi nabasa",
+      "unread_many": "{{count}} hindi nabasa",
+      "unread_other": "{{count}} hindi nabasa",
+      "total": "{{count}} kabuuan",
+      "total_one": "{{count}} kabuuan",
+      "total_few": "{{count}} kabuuan",
+      "total_many": "{{count}} kabuuan",
+      "total_other": "{{count}} kabuuan"
+    },
+    "filters": {
+      "other": "Iba pa"
+    },
+    "empty": {
+      "noMatching": "Walang tumutugmang notification",
+      "noNotifications": "Walang notification",
+      "tryDifferentFilter": "Subukan ang ibang filter",
+      "allCaughtUp": "Wala ka nang dapat abutan!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "I-restart para mag-update",
+    "updateApp": "I-update ang app",
+    "downloadedRestartTooltip": "Na-download ang update, i-restart para ilapat",
+    "newVersionAvailable": "May bagong bersyon na available",
+    "updatingApp": "Ina-update ang app",
+    "updateReady": "Handa na ang update",
+    "restartNow": "I-restart ngayon"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "I-expand ang sidebar",
+    "collapseSidebarShortcut": "I-collapse ang sidebar ({{shortcut}})",
+    "sidebarView": "Sidebar view",
+    "resizeSidebar": "I-resize ang sidebar",
+    "closeTab": "Isara ang tab",
+    "openedFromSearch": "Binuksan mula sa paghahanap",
+    "pinnedSession": "Naka-pin na session",
+    "jumpToSection": "Tumalon sa seksyon",
+    "newTab": "Bagong tab",
+    "newTabDashboard": "Bagong tab (Dashboard)",
+    "refreshSession": "I-refresh ang session",
+    "refreshSessionWithShortcut": "I-refresh ang Session ({{shortcut}})",
+    "loadingTab": "Niloload ang tab",
+    "menu": {
+      "teams": "Mga Team",
+      "settings": "Mga Setting",
+      "extensions": "Extensions",
+      "search": "Maghanap",
+      "schedules": "Mga Schedule",
+      "docs": "Docs",
+      "exportMarkdown": "I-export bilang Markdown",
+      "exportJson": "I-export bilang JSON",
+      "exportPlainText": "I-export bilang Plain Text",
+      "analyzeSession": "Suriin ang Session"
+    },
+    "tabMenu": {
+      "closeTabs": "Isara ang {{count}} Tab",
+      "closeTabs_one": "Isara ang {{count}} Tab",
+      "closeTabs_few": "Isara ang {{count}} Tab",
+      "closeTabs_many": "Isara ang {{count}} Tab",
+      "closeTabs_other": "Isara ang {{count}} Tab",
+      "closeTab": "Isara ang Tab",
+      "closeOtherTabs": "Isara ang Ibang Tab",
+      "splitRight": "Hatiin sa Kanan",
+      "splitLeft": "Hatiin sa Kaliwa",
+      "pinToSidebar": "I-pin sa Sidebar",
+      "unpinFromSidebar": "I-unpin mula sa Sidebar",
+      "hideFromSidebar": "Itago mula sa Sidebar",
+      "unhideFromSidebar": "Ipakita mula sa Sidebar",
+      "closeAllTabs": "Isara ang Lahat ng Tab"
+    },
+    "sections": {
+      "team": "Team",
+      "sessions": "Mga Session",
+      "kanban": "Kanban",
+      "claudeLogs": "Mga Log",
+      "messages": "Mga Mensahe"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strike",
+    "code": "Code"
+  },
+  "diff": {
+    "changed": "Binago",
+    "noChangesDetected": "Walang natukoy na pagbabago"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Kopyahin ang ChatGPT login link at code",
+    "copyLoginLink": "Kopyahin ang ChatGPT login link",
+    "copyFailed": "Nabigo ang pagkopya",
+    "copyLinkAndCode": "Kopyahin ang link + code",
+    "copyLink": "Kopyahin ang link",
+    "enterCodeOnLoginPage": "Ilagay ang code na ito sa ChatGPT login page"
+  },
+  "window": {
+    "minimize": "I-minimize",
+    "maximize": "I-maximize",
+    "restore": "Ibalik"
+  },
+  "context": {
+    "local": "Lokal",
+    "switchingTo": "Lumilipat sa {{workspace}}",
+    "loadingWorkspace": "Niloload ang workspace",
+    "switchWorkspace": "Lumipat ng Workspace"
+  },
+  "repositories": {
+    "noneAvailable": "Walang available na repository",
+    "remove": "Tanggalin ang repository"
+  },
+  "export": {
+    "session": "I-export ang session",
+    "sessionTitle": "I-export ang Session"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Walang available na session data",
+    "title": "Session Report"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Pumili ng Proyekto"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "upd",
+      "updatedYesterday": "upd kahapon",
+      "yesterday": "Kahapon"
+    },
+    "reviewState": {
+      "needsFix": "Kailangang Ayusin"
+    },
+    "unassigned": "hindi nakatalaga"
+  }
+}

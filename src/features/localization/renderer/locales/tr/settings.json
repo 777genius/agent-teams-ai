@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "İleri düzey kullanıcı seçenekleri: yapılandırmayı dışa/içe aktarma, varsayılanlara sıfırlama ve ham yapılandırma düzenleme.",
+      "label": "Gelişmiş"
+    },
+    "general": {
+      "description": "Tema, dil, görüntü yoğunluğu ve başlangıç davranışı gibi temel uygulama tercihleri.",
+      "label": "Genel"
+    },
+    "infoAriaLabel": "{{label}} nedir?",
+    "notifications": {
+      "description": "Agent etkinliği, görev tamamlamaları ve hatalar hakkında ne zaman ve nasıl bilgilendirileceğinizi kontrol edin.",
+      "label": "Bildirimler"
+    }
+  },
+  "view": {
+    "description": "Uygulama tercihlerinizi yönetin",
+    "loading": "Ayarlar yükleniyor...",
+    "title": "Ayarlar"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "İptal",
+      "test": "Test et"
+    },
+    "defaults": {
+      "allProjects": "Tüm projeler",
+      "allProjectsHint": "Testler {{project}} kullanır. Bir projenin geçersiz kılması olmadıkça varsayılan geçerlidir.",
+      "loadingContexts": "Bağlamlar yükleniyor...",
+      "projectHint": "Kaydetme yalnızca {{project}} öğesini geçersiz kılar.",
+      "projectOverrideContext": "Proje geçersiz kılma bağlamı",
+      "scopeDescriptionAllProjects": "Kendi OpenCode geçersiz kılması olmayan her proje için varsayılan.",
+      "scopeDescriptionProject": "Yalnızca seçili projeyi geçersiz kıl. Çalışan ekipler değiştirilmez.",
+      "selectProjectContext": "Proje bağlamını seç",
+      "selectProjectHint": "Yerel modelleri test etmeden veya varsayılanları kaydetmeden önce bir proje seçin.",
+      "selectValidationContext": "Doğrulama bağlamını seç",
+      "setAllProjectsDefault": "Tüm projeler varsayılanını ayarla",
+      "setProjectDefault": "Proje varsayılanını ayarla",
+      "thisProject": "Bu proje",
+      "title": "OpenCode varsayılanları",
+      "validationContext": "Doğrulama bağlamı"
+    },
+    "diagnostics": {
+      "copied": "Tanılama kopyalandı",
+      "copiedShort": "Kopyalandı",
+      "copy": "Tanılamayı kopyala",
+      "hints": "İpuçları",
+      "likelyCause": "Olası neden:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI'yi Yönetici olarak çalıştırın"
+    },
+    "models": {
+      "alreadyDefault": "Bu zaten seçili OpenCode varsayılanı.",
+      "empty": "Model bulunamadı.",
+      "emptyFree": "Ücretsiz model bulunamadı.",
+      "emptyRecommended": "Önerilen model bulunamadı.",
+      "emptyRecommendedFree": "Önerilen ücretsiz model bulunamadı.",
+      "freeOnly": "Yalnızca ücretsiz",
+      "launchableDescription": "OpenCode yapılandırmasından bilinen rotalar, ücretsiz yerleşik modeller ve geçerli varsayılan. Yerel rotalar, ekip başlatmaları için hazır olmadan önce başarılı bir test gerektirir.",
+      "launchableTitle": "OpenCode model rotaları",
+      "loadingRoutes": "OpenCode model rotaları yükleniyor...",
+      "noRoutesMatch": "\"{{query}}\" ile eşleşen OpenCode model rotası yok.",
+      "noneReported": "Henüz OpenCode model rotası bildirilmedi. OpenCode'da yerel bir rota yapılandırın veya katalog sağlayıcılarını incelemek için Sağlayıcılar sekmesini kullanın.",
+      "recommendedOnly": "Yalnızca önerilen",
+      "searchPlaceholder": "Modellerde ara",
+      "selectProjectBeforeTesting": "Modelleri test etmeden önce bir proje bağlamı seçin.",
+      "selectProjectBeforeTestingDefaults": "OpenCode varsayılanlarını test etmeden veya kaydetmeden önce bir proje bağlamı seçin.",
+      "testInProgress": "Model testi zaten çalışıyor.",
+      "useInTeamPicker": "Ekip seçicisi için kaydet",
+      "validationContextRequired": "Test ve Varsayılan olarak ayarla seçeneklerini etkinleştirmek için yukarıdan bir doğrulama bağlamı seçin. Ekip seçicisi için kaydetmek yalnızca yeni ekipler için rotayı saklar.",
+      "actionsUnavailable": "Eylemler geçici olarak kullanılamıyor.",
+      "defaultSaveInProgress": "OpenCode varsayılanı kaydediliyor.",
+      "routeUnavailableAuth": "Bu model kullanılabilmeden önce bu sağlayıcı kimlik doğrulama gerektirir.",
+      "routeUnavailableFailed": "Bu model rotası son yürütme testinde başarısız oldu.",
+      "routeUnavailableGeneric": "Bu model rotası şu anda kullanılamıyor.",
+      "routeUnavailableUnknown": "Bu model geçerli OpenCode varsayılanı, ancak henüz canlı katalogda mevcut değil."
+    },
+    "providers": {
+      "catalog": "OpenCode sağlayıcı kataloğu",
+      "countFallback": "OpenCode sağlayıcıları",
+      "description": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
+      "loadMore": "Daha fazla sağlayıcı yükle",
+      "loading": "OpenCode sağlayıcıları yükleniyor",
+      "noMatches": "Bu aramayla eşleşen sağlayıcı yok.",
+      "noneReported": "Yönetilen çalışma zamanı tarafından bildirilen OpenCode sağlayıcısı yok.",
+      "recommended": "Önerilen",
+      "refreshCatalog": "Kataloğu yenile",
+      "searchPlaceholder": "Sağlayıcılarda ara",
+      "description_few": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
+      "description_many": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
+      "description_one": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
+      "description_other": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir."
+    },
+    "setup": {
+      "loading": "Sağlayıcı kurulumu yükleniyor..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode varsayılanı: {{model}}",
+      "loading": "Yönetilen OpenCode çalışma zamanı, bağlı sağlayıcılar ve model varsayılanları yükleniyor...",
+      "source": "Kaynak: {{source}}",
+      "title": "OpenCode çalışma zamanı"
+    },
+    "tabs": {
+      "models": "Modeller",
+      "providers": "Sağlayıcılar"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Model rotalarında ara"
+    },
+    "badges": {
+      "usedInTeamPicker": "Ekip seçicisi için kaydedildi",
+      "free": "ücretsiz",
+      "local": "yerel",
+      "configured": "yapılandırılmış",
+      "knownRoute": "bilinen rota",
+      "connected": "bağlı",
+      "verified": "doğrulanmış",
+      "needsTest": "test gerekiyor",
+      "failed": "başarısız",
+      "unknown": "bilinmiyor",
+      "default": "varsayılan"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Agent iletişimi için dil",
+      "descriptionWithDetected": "Agent iletişimi için dil (algılanan: {{detected}})",
+      "emptyMessage": "Dil bulunamadı.",
+      "label": "Dil",
+      "searchPlaceholder": "Dil ara...",
+      "selectPlaceholder": "Dil seç...",
+      "title": "Agent Dili"
+    },
+    "appLanguage": {
+      "description": "Uygulama arayüzü için dil.",
+      "label": "Dil",
+      "title": "Uygulama Dili"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Bir transkript açarken veya yeni bir mesaj alırken her yanıt turunu otomatik olarak genişlet",
+        "label": "AI yanıtlarını varsayılan olarak genişlet"
+      },
+      "nativeTitleBar": {
+        "description": "Özel başlık çubuğu yerine varsayılan sistem pencere çerçevesini kullan",
+        "label": "Yerel başlık çubuğunu kullan",
+        "restartConfirm": {
+          "confirmLabel": "Yeniden başlat",
+          "message": "Başlık çubuğu değişikliğini uygulamak için uygulamanın yeniden başlatılması gerekiyor. Şimdi yeniden başlatılsın mı?",
+          "title": "Yeniden başlatma gerekli"
+        }
+      },
+      "theme": {
+        "description": "Tercih ettiğiniz renk temasını seçin",
+        "label": "Tema",
+        "options": {
+          "dark": "Koyu",
+          "light": "Açık",
+          "system": "Sistem"
+        }
+      },
+      "title": "Görünüm"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Arayüze bir tarayıcıdan erişmek veya iframe'lere yerleştirmek için bir HTTP sunucusu başlat",
+        "label": "Sunucu modunu etkinleştir"
+      },
+      "title": "Tarayıcı Erişimi"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Klasör Seç",
+        "selectFolderManually": "Klasörü Manuel Seç",
+        "useAutoDetect": "Otomatik Algılamayı Kullan",
+        "useFolder": "Klasörü Kullan",
+        "usePath": "Yolu Kullan",
+        "useThisPath": "Bu Yolu Kullan",
+        "useWsl": "Linux/WSL mi kullanıyorsunuz?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Bu klasör bir \"projects\" dizini içermiyor. Yine de devam edilsin mi?",
+          "title": "projects dizini bulunamadı"
+        },
+        "notClaudeDir": {
+          "message": "Bu klasör \".claude\" değil, \"{{folderName}}\" olarak adlandırılmış. Yine de devam edilsin mi?",
+          "title": "Seçili klasör .claude değil"
+        },
+        "noWslPaths": {
+          "message": "Claude verisi olan WSL dağıtımları otomatik olarak bulunamadı. Klasör manuel olarak seçilsin mi?",
+          "title": "WSL Claude yolu bulunamadı"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" bir \"projects\" dizini içermiyor. Yine de devam edilsin mi?",
+          "title": "WSL yolunda projects dizini eksik"
+        }
+      },
+      "current": {
+        "autoDetected": "Otomatik algılandı: {{path}}",
+        "autoDetectedPath": "Otomatik algılanan yol kullanılıyor",
+        "customPath": "Özel yol kullanılıyor",
+        "label": "Geçerli Yerel Kök"
+      },
+      "description": "Hangi yerel klasörün Claude veri kökünüz olarak değerlendirileceğini seçin",
+      "errors": {
+        "detectWslFailed": "WSL Claude kök yolları algılanamadı",
+        "loadFailed": "Yerel Claude kök ayarları yüklenemedi",
+        "updateFailed": "Claude kökü güncellenemedi"
+      },
+      "title": "Yerel Claude Kökü",
+      "wslModal": {
+        "closeAriaLabel": "WSL yol penceresini kapat",
+        "description": "Algılanan WSL dağıtımları ve Claude kök adayları",
+        "noProjectsDir": "projects dizini algılanmadı",
+        "title": "WSL Claude Kökünü Seç"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Anonim çökme ve performans verisi göndererek uygulamanın iyileştirilmesine yardımcı olun",
+        "label": "Çökme raporları gönder"
+      },
+      "title": "Gizlilik"
+    },
+    "server": {
+      "runningOn": "Çalıştığı yer",
+      "standaloneModeDescription": "Bağımsız modda çalışıyor. HTTP sunucusu her zaman etkindir. Sistem bildirimleri kullanılamaz - bildirim tetikleyicileri yalnızca uygulama içinde günlüğe kaydedilir.",
+      "title": "Sunucu"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Oturum açtığınızda uygulamayı otomatik olarak başlat",
+        "label": "Oturum açıldığında başlat"
+      },
+      "showDockIcon": {
+        "description": "Uygulama simgesini dock'ta göster (macOS)",
+        "label": "Dock simgesini göster"
+      },
+      "title": "Başlangıç"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Bildirimler geliştirme modunda çalışmayabilir. macOS, uygulamayı üretim uygulama adı yerine \"Electron\" olarak tanımlar (paket kimliği",
+      "descriptionSuffix": "). İzinleri doğrulamak için Sistem Ayarları > Bildirimler > Electron yolunu kontrol edin.",
+      "title": "Geliştirme Modu"
+    },
+    "ignoredRepositories": {
+      "description": "Bu depolardan gelen bildirimler yok sayılacak",
+      "empty": "Yok sayılan depo yok",
+      "selectPlaceholder": "Yok sayılacak depoyu seç...",
+      "title": "Yok Sayılan Depolar"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Hatalar ve olaylar için sistem bildirimlerini göster",
+        "label": "Sistem Bildirimlerini Etkinleştir"
+      },
+      "sound": {
+        "description": "Bildirimler göründüğünde bir ses çal",
+        "label": "Ses çal"
+      },
+      "subagentErrors": {
+        "description": "Alt agent oturumlarındaki hataları algıla ve bildir",
+        "label": "Alt agent hatalarını dahil et"
+      },
+      "title": "Bildirim Ayarları"
+    },
+    "snooze": {
+      "clear": "Ertelemeyi Temizle",
+      "description": "Bildirimleri geçici olarak duraklat",
+      "descriptionWithTime": "{{time}} saatine kadar ertelendi",
+      "label": "Bildirimleri ertele",
+      "options": {
+        "15": "15 dakika",
+        "30": "30 dakika",
+        "60": "1 saat",
+        "120": "2 saat",
+        "240": "4 saat",
+        "-1": "Yarına kadar"
+      },
+      "selectDuration": "Süre seç..."
+    },
+    "taskCompletion": {
+      "description": "Claude görevleri bitirdiğinde yerel işletim sistemi bildirimleri alın - sesler, başlıklar ve Dock/görev çubuğu rozetleri. macOS, Linux ve Windows'ta çalışır.",
+      "installPlugin": "claude-notifications-go eklentisini kur",
+      "title": "Görev Tamamlama Bildirimleri"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Bir ekipteki her görev tamamlandı durumuna ulaştığında bildir",
+        "label": "Tüm görevler tamamlandı"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claude bir sıfırlama zamanı bildirdiğinde, limit sıfırlandıktan sonra ekip liderine bir hatırlatma planla",
+        "label": "Hız limitinden sonra otomatik devam et"
+      },
+      "clarifications": {
+        "description": "Bir görev girdinize ihtiyaç duyduğunda yerel işletim sistemi bildirimleri göster",
+        "label": "Görev açıklaması bildirimleri"
+      },
+      "crossTeamMessage": {
+        "description": "Başka bir ekipten bir mesaj geldiğinde bildir",
+        "label": "Ekipler arası mesaj bildirimleri"
+      },
+      "leadInbox": {
+        "description": "Takım arkadaşları ekip liderine mesaj gönderdiğinde bildir",
+        "label": "Lider gelen kutusu bildirimleri"
+      },
+      "statusChange": {
+        "description": "Bir görevin durumu değiştiğinde yerel işletim sistemi bildirimleri göster",
+        "label": "Görev durumu değişikliği bildirimleri",
+        "onlySolo": {
+          "description": "Yalnızca ekipte takım arkadaşı olmadığında bildir",
+          "label": "Yalnızca Tekli modda"
+        },
+        "statuses": {
+          "description": "Hangi hedef durumların bildirim tetiklediği",
+          "label": "Bu durumlarda bildir",
+          "options": {
+            "approved": "Onaylandı",
+            "completed": "Tamamlandı",
+            "deleted": "Silindi",
+            "in_progress": "Başladı",
+            "needsFix": "Düzeltme Gerekir",
+            "pending": "Beklemede",
+            "review": "İnceleme"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Agent'lar görevlere yorum yaptığında yerel işletim sistemi bildirimleri göster",
+        "label": "Görev yorumu bildirimleri"
+      },
+      "taskCreated": {
+        "description": "Yeni bir görev oluşturulduğunda yerel işletim sistemi bildirimleri göster",
+        "label": "Görev oluşturuldu bildirimleri"
+      },
+      "teamLaunched": {
+        "description": "Bir ekip başlatmayı bitirip hazır olduğunda bildir",
+        "label": "Ekip başlatıldı bildirimleri"
+      },
+      "title": "Ekip Bildirimleri",
+      "toolApproval": {
+        "description": "Uygulama odakta değilken bir araç onayınızı (İzin Ver/Reddet) gerektirdiğinde bildir",
+        "label": "Araç onayı bildirimleri"
+      },
+      "userInbox": {
+        "description": "Takım arkadaşları size mesaj gönderdiğinde bildir",
+        "label": "Kullanıcı gelen kutusu bildirimleri"
+      }
+    },
+    "test": {
+      "action": "Test Gönder",
+      "description": "Teslimatı doğrulamak için bir test bildirimi gönder",
+      "failedToSend": "Test bildirimi gönderilemedi",
+      "label": "Test bildirimi",
+      "sending": "Gönderiliyor...",
+      "sent": "Gönderildi!",
+      "unknownError": "Bilinmeyen hata"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Uygulama simgesi",
+      "description": "Paralel olarak özerk çalışan, ekipler arası iletişim kuran ve kanban panosunda görevleri yöneten yapay zeka agent ekipleri oluşturun - yerleşik kod incelemesi, canlı süreç izleme ve tam araç görünürlüğü ile.",
+      "standalone": "Bağımsız",
+      "title": "Hakkında",
+      "version": "Sürüm {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Yapılandırmayı Düzenle",
+      "exportConfig": "Yapılandırmayı Dışa Aktar",
+      "importConfig": "Yapılandırmayı İçe Aktar",
+      "openInEditor": "Düzenleyicide Aç",
+      "resetToDefaults": "Varsayılanlara Sıfırla",
+      "title": "Yapılandırma"
+    },
+    "updates": {
+      "available": "v{{version}} mevcut",
+      "check": "Güncellemeleri Kontrol Et",
+      "checking": "Kontrol ediliyor...",
+      "ready": "Güncelleme hazır",
+      "unknownVersion": "bilinmiyor",
+      "upToDate": "Güncel"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Yapılandırma yüklenemedi",
+      "saveFailed": "Yapılandırma kaydedilemedi"
+    },
+    "footer": {
+      "autoSave": "Değişiklikler düzenlemeden sonra otomatik kaydedilir",
+      "toClose": "kapatmak için",
+      "escapeKey": "Esc"
+    },
+    "loading": "Yapılandırma yükleniyor...",
+    "status": {
+      "invalidJson": "Geçersiz JSON",
+      "saveFailed": "Kaydetme başarısız oldu",
+      "saved": "Kaydedildi",
+      "saving": "Kaydediliyor..."
+    },
+    "title": "Yapılandırmayı Düzenle"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "İptal",
+      "submit": "Tetikleyici Ekle",
+      "title": "Özel Tetikleyici Ekle"
+    },
+    "builtin": {
+      "description": "Uygulamayla birlikte gelen varsayılan tetikleyiciler. Bunları etkinleştirebilir veya devre dışı bırakabilir ve kalıplarını özelleştirebilirsiniz.",
+      "title": "Yerleşik Tetikleyiciler"
+    },
+    "card": {
+      "builtinBadge": "Yerleşik",
+      "collapseAriaLabel": "Daralt",
+      "deleteAriaLabel": "Tetikleyiciyi sil",
+      "editNameAriaLabel": "Adı düzenle",
+      "expandAriaLabel": "Genişlet"
+    },
+    "color": {
+      "customHexTitle": "Özel hex renk",
+      "invalidHex": "Geçersiz hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Şundan büyükse uyar:",
+      "emptyPatternHint": "Tüm içerikle eşleştirmek için boş bırakın. JavaScript regex sözdizimi kullanır.",
+      "errorStatusDescription": "Bir araç yürütmesi bir hata bildirdiğinde tetiklenir (is_error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "ör. error|failed|exception"
+    },
+    "custom": {
+      "description": "Belirli kalıplar veya araç çıktıları için bildirim almak üzere kendi tetikleyicilerinizi oluşturun.",
+      "empty": "Henüz özel tetikleyici yapılandırılmadı.",
+      "title": "Özel Tetikleyiciler"
+    },
+    "errors": {
+      "invalidRegexPattern": "Geçersiz regex kalıbı"
+    },
+    "fields": {
+      "contentType": "İçerik Türü",
+      "matchField": "Eşleşme Alanı",
+      "matchPattern": "Eşleşme Kalıbı (Regex)",
+      "scopeToolName": "Kapsam / Araç Adı",
+      "scopeToolNameOptional": "Kapsam / Araç Adı (isteğe bağlı)",
+      "threshold": "Eşik",
+      "tokenType": "Token Türü",
+      "triggerNamePlaceholder": "ör. Derleme Hatası Uyarısı",
+      "triggerNameRequired": "Tetikleyici Adı *"
+    },
+    "ignorePatterns": {
+      "hint": "Eklemek için Enter'a basın. Herhangi bir kalıp eşleşirse bildirim atlanır.",
+      "placeholder": "Yok sayma regex'i ekle...",
+      "removeAriaLabel": "Yok sayma kalıbını kaldır",
+      "summary": "Gelişmiş: Hariç Tutma Kuralları",
+      "title": "Yok Sayma Kalıpları (eşleşirse atla)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Metin Çıktısı",
+        "thinking": "Düşünme",
+        "tool_result": "Araç Sonucu",
+        "tool_use": "Araç Kullanımı"
+      },
+      "matchFields": {
+        "args": "Argümanlar",
+        "command": "Komut",
+        "content": "İçerik",
+        "description": "Açıklama",
+        "file_path": "Dosya Yolu",
+        "fullInput": "Tam Girdi (JSON)",
+        "glob": "Glob Filtresi",
+        "new_string": "Yeni Dize",
+        "old_string": "Eski Dize",
+        "path": "Yol",
+        "pattern": "Kalıp",
+        "prompt": "Komut İstemi",
+        "query": "Sorgu",
+        "skill": "Beceri Adı",
+        "subagent_type": "Alt Agent Türü",
+        "text": "Metin İçeriği",
+        "thinking": "Düşünme İçeriği",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "İçerik Kalıbı",
+        "error_status": "Yürütme Hatası",
+        "token_threshold": "Yüksek Token Kullanımı"
+      },
+      "tokenTypes": {
+        "input": "Girdi Token'ları",
+        "output": "Çıktı Token'ları",
+        "total": "Toplam Token"
+      },
+      "toolNames": {
+        "anyTool": "Herhangi Bir Araç"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Test Tetikleyicisi",
+      "detectedSuffix": "hata algılanmış olurdu",
+      "more": "...ve {{count}} tane daha",
+      "more_few": "...ve {{count}} tane daha",
+      "more_many": "...ve {{count}} tane daha",
+      "more_one": "...ve {{count}} tane daha",
+      "more_other": "...ve {{count}} tane daha",
+      "testTrigger": "Tetikleyiciyi Test Et",
+      "testing": "Test ediliyor...",
+      "title": "Önizleme",
+      "truncatedWarning": "Arama erken durdu (zaman aşımı veya sayı limiti). Gerçek eşleşmeler daha yüksek olabilir.",
+      "viewSession": "Oturumu Görüntüle"
+    },
+    "repositoryScope": {
+      "empty": "Seçili depo yok - tetikleyici tüm depolara uygulanır",
+      "hint": "Depolar seçildiğinde, bu tetikleyici yalnızca o depolardaki hatalar için çalışır.",
+      "placeholder": "Eklenecek depoyu seç...",
+      "summary": "Gelişmiş: Depo Kapsamı",
+      "title": "Depolarla Sınırla (yalnızca seçili depolara uygulanır)"
+    },
+    "sections": {
+      "configuration": "Yapılandırma",
+      "dotColor": "Nokta Rengi",
+      "generalInfo": "Genel Bilgi",
+      "triggerCondition": "Tetikleme Koşulu"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Profil Ekle",
+      "cancel": "İptal",
+      "deleteProfile": "Profili sil",
+      "editProfile": "Profili düzenle",
+      "save": "Kaydet"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Otomatik (SSH Yapılandırmasından)",
+      "password": "Parola",
+      "privateKey": "Özel Anahtar"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Sil",
+      "message": "\"{{name}}\" profilini silmek istediğinizden emin misiniz? Bu geri alınamaz.",
+      "title": "Profili Sil"
+    },
+    "description": "Hızlı yeniden bağlanma için SSH bağlantı profillerini kaydedin",
+    "empty": {
+      "description": "Hızlı bağlanmak için bir SSH profili ekleyin",
+      "title": "Kaydedilmiş profil yok"
+    },
+    "form": {
+      "authentication": "Kimlik Doğrulama",
+      "host": "Ana Bilgisayar",
+      "name": "Ad",
+      "passwordPrompt": "Bağlanırken parola istenecektir.",
+      "port": "Port",
+      "privateKeyPath": "Özel Anahtar Yolu",
+      "username": "Kullanıcı Adı",
+      "namePlaceholder": "Sunucum",
+      "hostPlaceholder": "ana bilgisayar adı veya IP",
+      "usernamePlaceholder": "kullanıcı"
+    },
+    "loading": "Profiller yükleniyor...",
+    "title": "Çalışma Alanı Profilleri"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Bağlan",
+      "connecting": "Bağlanıyor...",
+      "disconnect": "Bağlantıyı kes",
+      "testConnection": "Bağlantıyı Test Et",
+      "testing": "Test ediliyor..."
+    },
+    "currentMode": {
+      "description": "Oturum dosyaları için veri kaynağı",
+      "label": "Geçerli Mod",
+      "local": "Yerel ({{path}})"
+    },
+    "description": "Orada çalışan Claude Code oturumlarını görüntülemek için uzak bir makineye bağlanın",
+    "form": {
+      "authentication": "Kimlik Doğrulama",
+      "host": "Ana Bilgisayar",
+      "password": "Parola",
+      "port": "Port",
+      "privateKeyPath": "Özel Anahtar Yolu",
+      "username": "Kullanıcı Adı",
+      "hostPlaceholder": "ana bilgisayar adı veya SSH yapılandırma takma adı",
+      "usernamePlaceholder": "kullanıcı"
+    },
+    "savedProfiles": {
+      "title": "Kaydedilmiş Profiller"
+    },
+    "ssh": {
+      "title": "SSH Bağlantısı"
+    },
+    "status": {
+      "connectedTo": "{{host}} öğesine bağlandı",
+      "remoteSessions": "SSH aracılığıyla uzak oturumlar görüntüleniyor"
+    },
+    "test": {
+      "failed": "Bağlantı başarısız oldu: {{error}}",
+      "success": "Bağlantı başarılı",
+      "unknownError": "Bilinmeyen hata"
+    },
+    "title": "Uzak Bağlantı"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "İptal",
+      "cancelLogin": "Girişi iptal et",
+      "connectChatGpt": "ChatGPT'ye bağlan",
+      "delete": "Sil",
+      "disable": "Devre dışı bırak",
+      "disconnectAccount": "Hesabın bağlantısını kes",
+      "generateLink": "Bağlantı oluştur",
+      "openLogin": "Girişi aç",
+      "reconnectAnthropic": "Anthropic'e yeniden bağlan",
+      "refresh": "Yenile",
+      "replaceKey": "Anahtarı değiştir",
+      "saveEndpoint": "Uç noktayı kaydet",
+      "saveKey": "Anahtarı kaydet",
+      "saving": "Kaydediliyor...",
+      "setApiKey": "API anahtarı ayarla",
+      "updateKey": "Anahtarı güncelle",
+      "useCode": "Kodu kullan"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Saklanan kimlik bilgileri yükleniyor...",
+      "projectScope": "Proje",
+      "scope": "Kapsam",
+      "storedIn": "{{backend}} içinde saklanır",
+      "userScope": "Kullanıcı",
+      "storedInApp": "Uygulamada saklanır",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Anahtarı",
+          "title": "API anahtarı",
+          "description": "API faturalı erişim için doğrudan bir Anthropic API anahtarı kullanın. Geri döndüğünüzde Anthropic abonelik oturumunuz kullanılabilir kalır.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Anahtarı",
+          "title": "API anahtarı",
+          "description": "İkincil bir Codex kimlik doğrulama yolu olarak bir OpenAI API anahtarı kullanın. Codex'i API anahtarı moduna geçirirseniz, uygulama yerel başlatmalar için OPENAI_API_KEY'i CODEX_API_KEY'e yansıtır.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Anahtarı",
+          "title": "API erişimi",
+          "description": "Gemini API arka ucu için `GEMINI_API_KEY` kullanın. CLI SDK ve ADC bunu gerektirmez.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "Uygulama sunucusu: {{state}}",
+        "connected": "Bağlandı",
+        "description": "Abonelik destekli yerel başlatmaları besleyen yerel Codex uygulama sunucusu hesap oturumunu yönetin.",
+        "loginInProgress": "Giriş devam ediyor",
+        "plan": "Plan: {{plan}}",
+        "reconnectRequired": "Yeniden bağlanma gerekli",
+        "title": "ChatGPT hesabı",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Otomatik mod, ChatGPT bağlanana kadar algılanan API anahtarını kullanmaya devam eder.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Algılanan API anahtarı yalnızca Codex'i API anahtarı moduna geçirdikten sonra kullanılır.",
+          "localArtifactsNoSession": "Codex CLI şu anda etkin bir ChatGPT hesabı bildirmiyor. Yerel Codex hesap verisi mevcut, ancak etkin bir yönetilen oturum seçili değil. Kullanım limitleri burada yalnızca Codex CLI bir tane gördükten sonra görünür.",
+          "noActiveAccount": "Codex CLI şu anda etkin bir ChatGPT hesabı bildirmiyor. Kullanım limitleri burada yalnızca Codex CLI bir tane gördükten sonra görünür.",
+          "reconnectBeforeUsage": "Codex'in yerel olarak seçili bir ChatGPT hesabı var, ancak kullanım limitleri burada yüklenmeden önce geçerli oturumun yeniden bağlanması gerekiyor.",
+          "usageLimitsAfterReport": "Kullanım limitleri, Codex bunları bağlı ChatGPT hesabı için bildirdikten sonra burada görünür."
+        }
+      },
+      "install": {
+        "checking": "Kontrol ediliyor",
+        "downloading": "İndiriliyor",
+        "installCli": "Codex CLI kur",
+        "installing": "Kuruluyor",
+        "retryInstall": "Kurulumu yeniden dene",
+        "title": "Codex CLI'yi uygulama verilerine kur"
+      },
+      "rateLimits": {
+        "credits": "Krediler",
+        "creditsDescription": "Krediler, pencere tabanlı abonelik kullanımından ayrı olarak gösterilir ve plan destekli ChatGPT oturumları için kullanılamayabilir.",
+        "noSecondaryWindow": "Codex bu hesap anlık görüntüsü için ikincil bir pencere döndürmedi.",
+        "notReported": "Bildirilmedi",
+        "primaryReset": "Birincil sıfırlama",
+        "primaryUsed": "Birincil kullanılan",
+        "primaryWindow": "Birincil pencere",
+        "remainingLeft": "{{value}} kaldı",
+        "remainingUnknown": "Kalan bilinmiyor",
+        "secondaryReset": "İkincil sıfırlama",
+        "secondaryUsed": "İkincil kullanılan",
+        "secondaryWindow": "İkincil pencere",
+        "usedQuotaNote": "Bu yüzdeler kalan kotayı değil, kullanılan kotayı gösterir.",
+        "weeklyReset": "Haftalık sıfırlama",
+        "weeklyUsed": "Haftalık kullanılan",
+        "weeklyUsedOneWeek": "Haftalık kullanılan (1 hf)",
+        "weeklyWindow": "Haftalık pencere",
+        "secondaryFallback": "ikincil",
+        "secondaryWindowNote": " Haftalık limitler {{window}} penceresinde ayrı olarak gösterilir.",
+        "usageExplanationGeneric": "Kalan kotayı değil, kullanılan kotayı gösterir.",
+        "usageExplanationWindowOnly": "Geçerli {{window}} penceresinde kalan kotayı değil, kullanılan kotayı gösterir.",
+        "usageExplanationWithRemaining": "{{used}} kullanıldı - geçerli {{window}} penceresinde yaklaşık {{remaining}} kaldı."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Kimlik doğrulama belirteci",
+      "authTokenMissing": "Kimlik doğrulama belirteci yapılandırılmadı.",
+      "baseUrl": "Temel URL",
+      "description": "Anthropic uyumlu bir yerel çalışma zamanı uç noktası kullanın.",
+      "keepSavedToken": "Kaydedilmiş belirteci korumak için boş bırakın",
+      "title": "Yerel / uyumlu uç nokta",
+      "tokenStatus": "Belirteç {{status}}",
+      "validation": {
+        "baseUrlRequired": "Temel URL gereklidir",
+        "firstPartyAnthropic": "Birinci taraf Anthropic için Otomatik, Abonelik veya API anahtarı kullanın",
+        "httpRequired": "Temel URL http:// veya https:// kullanmalıdır",
+        "invalidUrl": "Geçersiz URL",
+        "noCredentials": "Temel URL kimlik bilgileri içermemelidir"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Uç nokta devre dışı bırakıldı. Kaydedilmiş belirteç korundu.",
+        "endpointSaved": "Uç nokta kaydedildi",
+        "endpointSavedTokenMissing": "Uç nokta kaydedildi. Kimlik doğrulama belirteci yapılandırılmadı."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Kimlik doğrulama yöntemi",
+      "descriptions": {
+        "anthropic": "Uygulama tarafından başlatılan Anthropic oturumlarının nasıl kimlik doğrulayacağını seçin.",
+        "codex": "Yerel çalışma zamanı başlatıldığında Codex'in ChatGPT aboneliğinizi mi yoksa bir API anahtarını mı tercih edeceğini seçin.",
+        "gemini": "İsteğe bağlı API erişimini yapılandırın. CLI SDK ve ADC hâlâ otomatik olarak keşfedilir.",
+        "opencode": "OpenCode kimlik doğrulaması ve sağlayıcı envanteri OpenCode çalışma zamanı tarafından yönetilir."
+      },
+      "method": "Bağlantı yöntemi",
+      "mode": "Mod: {{mode}}",
+      "selected": "Seçili",
+      "switching": "Geçiliyor...",
+      "title": "Bağlantı"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API anahtarı"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY ve Anthropic API faturalandırmasını kullanın.",
+        "autoDescription": "Anthropic çalışma zamanı varsayılanlarını ve mevcut en iyi yerel kimlik bilgisini kullanın.",
+        "hint": "Otomatik mod, Anthropic'i varsayılan yerel kimlik bilgisi çözümlemesinde tutar.",
+        "subscriptionDescription": "Yerel Anthropic oturum açma oturumunuzu ve abonelik erişiminizi kullanın.",
+        "subscriptionTitle": "Anthropic aboneliği"
+      },
+      "auto": {
+        "title": "Otomatik"
+      },
+      "codex": {
+        "apiKeyDescription": "Yerel Codex başlatmaları için OPENAI_API_KEY ve CODEX_API_KEY faturalandırmasını kullanın.",
+        "autoDescription": "ChatGPT hesabınızı ve aboneliğinizi tercih edin. API anahtarı modunu yalnızca gerekirse kullanın.",
+        "chatgptDescription": "Bağlı ChatGPT hesabınızı ve Codex aboneliğinizi kullanın.",
+        "chatgptTitle": "ChatGPT hesabı",
+        "hint": "Codex her zaman yerel çalışma zamanı üzerinden çalışır. Otomatik mod, API anahtarı kimlik bilgilerine geri dönmeden önce ChatGPT hesabınızı tercih eder."
+      }
+    },
+    "description": "Her sağlayıcının nasıl bağlandığını ve desteklendiğinde çoklu model çalışma zamanının hangi arka ucu kullanması gerektiğini yönetin.",
+    "fastMode": {
+      "defaultOff": "Varsayılan Kapalı",
+      "description": "Çözümlenen model ve çalışma zamanı izin verdiğinde yeni Anthropic ekip başlatmaları için Claude Code Hızlı modunu varsayılan olarak uygula.",
+      "disabledHint": "Bir ekip Hızlı modu açıkça etkinleştirmedikçe yeni Anthropic başlatmaları normal hızda kalır.",
+      "enabledHint": "Çözümlenen model desteklediğinde yeni Anthropic başlatmaları varsayılan olarak Hızlı mod isteyecek.",
+      "notExposed": "Bu Anthropic çalışma zamanı Hızlı modu sunmuyor.",
+      "preferFast": "Hızlıyı Tercih Et",
+      "title": "Hızlı mod varsayılanı",
+      "unavailableForRuntime": "Hızlı mod şu anda bu Anthropic çalışma zamanı için kullanılamıyor."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API anahtarı modu seçili, ancak henüz bir Anthropic API kimlik bilgisi mevcut değil.",
+      "anthropicStoredKeyAvailable": "Kaydedilmiş bir API anahtarı mevcut, ancak uygulama tarafından başlatılan Anthropic oturumları bunu yalnızca API anahtarı moduna geçtikten sonra kullanır.",
+      "anthropicSubscriptionMissing": "Anthropic abonelik modu seçili. Bu sağlayıcıyı kullanmak için Anthropic ile giriş yapın.",
+      "authTokenMissing": "Kimlik doğrulama belirteci yapılandırılmadı. Birçok yerel Anthropic uyumlu uç nokta boş olmayan bir belirteç gerektirir.",
+      "chatgptLoginPending": "ChatGPT hesap girişinin tamamlanması bekleniyor...",
+      "chatgptLoginStarting": "ChatGPT girişi başlatılıyor...",
+      "codexApiKeyMissing": "API anahtarı modu seçili, ancak henüz bir OPENAI_API_KEY veya CODEX_API_KEY kimlik bilgisi mevcut değil.",
+      "codexLocalArtifactsNoSession": "Codex CLI'de şu anda etkin bir ChatGPT hesabı yok. Yerel Codex hesap verisi mevcut, ancak etkin bir yönetilen oturum seçili değil.",
+      "codexNeedsReconnect": "Codex'in yerel olarak seçili bir ChatGPT hesabı var, ancak geçerli oturumun yeniden bağlanması gerekiyor.",
+      "codexNoChatgptAccount": "Codex CLI'de şu anda etkin bir ChatGPT hesabı yok. Aboneliğinizi kullanmak için ChatGPT'ye bağlanın.",
+      "codexNoCredential": "Henüz bir ChatGPT hesabı veya API anahtarı mevcut değil.",
+      "geminiApiUnavailable": "Gemini API şu anda kullanılamıyor. Burada `GEMINI_API_KEY` yapılandırın veya geçerli Google ADC kimlik bilgilerini kullanın.",
+      "withApiKeyFallback": "{{message}} Algılanan API anahtarını kullanmak için API anahtarı moduna geçin."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Uygulama tarafından başlatılan Anthropic oturumlarını bir API anahtarı kimlik bilgisi kullanmaya zorla.",
+        "auto": "Çalışma zamanı varsayılan davranışını kullan. Bu uygulamadaki kaydedilmiş API anahtarları yalnızca API anahtarı moduna geçtikten sonra kullanılır.",
+        "oauth": "Uygulama tarafından başlatılan Anthropic oturumlarını yerel Anthropic abonelik oturumunu kullanmaya zorla."
+      },
+      "codex": {
+        "apiKey": "Yerel Codex başlatmalarını OPENAI_API_KEY / CODEX_API_KEY faturalandırmasını kullanmaya zorla.",
+        "auto": "ChatGPT hesabınız mevcut olduğunda onu tercih et. Yalnızca gerektiğinde API anahtarı moduna geri dön.",
+        "chatgpt": "Yerel Codex başlatmalarını bağlı ChatGPT hesabınızı ve aboneliğinizi kullanmaya zorla."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Bağlantı değişiklikleri uygulanıyor...",
+      "refreshingProviderStatus": "Sağlayıcı durumu yenileniyor...",
+      "savingCompatibleEndpoint": "Uyumlu uç nokta kaydediliyor...",
+      "switchingAnthropicSubscription": "Anthropic aboneliğine geçiliyor...",
+      "switchingApiKey": "API anahtarına geçiliyor...",
+      "switchingApiKeyMode": "API anahtarı moduna geçiliyor...",
+      "switchingAuto": "Otomatik moda geçiliyor...",
+      "switchingChatgpt": "ChatGPT hesabı moduna geçiliyor..."
+    },
+    "provider": "Sağlayıcı",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic'in şu anda ayrı bir çalışma zamanı arka ucu seçicisi yok.",
+        "codex": "Codex artık yalnızca yerel çalışma zamanı yolu üzerinden çalışıyor.",
+        "gemini": "Çoklu modelin hangi Gemini çalışma zamanı arka ucunu kullanması gerektiğini seçin.",
+        "opencode": "OpenCode kendi yönetilen çalışma zamanı ana bilgisayarını kullanır. Masaüstü şu anda yalnızca durumu sunar."
+      },
+      "title": "Çalışma Zamanı",
+      "updating": "Çalışma zamanı güncelleniyor..."
+    },
+    "runtimeSummary": "Çalışma zamanı: {{runtime}}",
+    "status": {
+      "configured": "yapılandırılmış",
+      "enabled": "Etkin",
+      "notConfigured": "Yapılandırılmamış",
+      "notSet": "ayarlanmadı",
+      "off": "Kapalı",
+      "unknown": "Bilinmiyor"
+    },
+    "title": "Sağlayıcı Ayarları",
+    "usage": {
+      "apiKey": "API anahtarı kullanılıyor",
+      "apiKeyRequired": "API anahtarı gerekli",
+      "compatibleEndpoint": "Uyumlu uç nokta kullanılıyor",
+      "notConnected": "Bağlı değil",
+      "usingMethod": "{{method}} kullanılıyor"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API anahtarı silindi, ancak sağlayıcı durumu yenilenemedi.",
+      "apiKeySavedRefreshFailed": "API anahtarı kaydedildi, ancak sağlayıcı durumu yenilenemedi.",
+      "connectionUpdatedRefreshFailed": "Bağlantı güncellendi, ancak sağlayıcı durumu yenilenemedi.",
+      "deleteApiKey": "API anahtarı silinemedi",
+      "disableEndpoint": "Uç nokta devre dışı bırakılamadı",
+      "endpointDisabledRefreshFailed": "Uç nokta devre dışı bırakıldı, ancak sağlayıcı durumu yenilenemedi.",
+      "endpointSavedRefreshFailed": "Uç nokta kaydedildi, ancak sağlayıcı durumu yenilenemedi.",
+      "refreshCodexAccount": "Codex hesabı yenilenemedi",
+      "saveApiKey": "API anahtarı kaydedilemedi",
+      "saveEndpoint": "Uç nokta kaydedilemedi",
+      "updateAnthropicFastMode": "Anthropic Hızlı modu güncellenemedi",
+      "updateConnection": "Bağlantı güncellenemedi",
+      "updateRuntimeBackend": "Çalışma zamanı arka ucu güncellenemedi",
+      "apiKeyRequired": "API anahtarı gereklidir"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Otomatik",
+        "oauth": "Abonelik / OAuth",
+        "chatgpt": "ChatGPT hesabı",
+        "apiKey": "API anahtarı",
+        "anthropicSubscription": "Anthropic aboneliği"
+      },
+      "authMethod": {
+        "apiKey": "API anahtarı",
+        "apiKeyHelper": "API anahtarı yardımcısı",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude aboneliği",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google hesabı",
+        "serviceAccount": "hizmet hesabı"
+      },
+      "runtime": {
+        "codexNative": "Codex yerel",
+        "currentRuntime": "Geçerli çalışma zamanı",
+        "selectedRuntime": "Seçili çalışma zamanı",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Kontrol ediliyor...",
+        "modelsAvailable": "Modeller mevcut",
+        "checked": "Kontrol edildi",
+        "providerActivity": "Sağlayıcı Etkinliği",
+        "notConnected": "Bağlı değil",
+        "startingChatGptLogin": "ChatGPT girişi başlatılıyor...",
+        "waitingForChatGptLogin": "ChatGPT hesap girişi bekleniyor...",
+        "chatGptVerificationDegraded": "ChatGPT hesabı algılandı - hesap doğrulaması şu anda düşük performanslı.",
+        "chatGptAccountReady": "ChatGPT hesabı hazır",
+        "apiKeyReady": "API anahtarı hazır",
+        "codexLocalAccountNeedsReconnect": "Codex'in yerel olarak seçili bir ChatGPT hesabı var, ancak geçerli oturumun yeniden bağlanması gerekiyor.",
+        "codexNoActiveManagedSession": "Codex CLI etkin bir ChatGPT girişi bildirmiyor. Yerel Codex hesap verisi mevcut, ancak etkin bir yönetilen oturum seçili değil.",
+        "codexNoActiveChatGptLogin": "Codex CLI etkin bir ChatGPT girişi bildirmiyor",
+        "connectChatGptForSubscription": "Codex aboneliğinizi kullanmak için bir ChatGPT hesabı bağlayın.",
+        "codexNativeReady": "Codex yerel hazır",
+        "codexNativeUnavailable": "Codex yerel kullanılamıyor",
+        "unavailableInCurrentRuntime": "Geçerli çalışma zamanında kullanılamıyor",
+        "connectedViaApiKey": "API anahtarı aracılığıyla bağlandı",
+        "apiKeyConfiguredNotVerified": "API anahtarı yapılandırıldı, ancak henüz doğrulanmadı",
+        "apiKeyModeMissingCredential": "API anahtarı modu seçili, ancak yapılandırılmış bir API anahtarı yok",
+        "connectedVia": "{{method}} aracılığıyla bağlandı",
+        "unableToVerify": "Doğrulanamıyor"
+      },
+      "mode": {
+        "selectedAuth": "Seçili kimlik doğrulama: {{authMode}}",
+        "preferredAuth": "Tercih edilen kimlik doğrulama: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API anahtarı yapılandırıldı",
+        "savedApiKeyAvailable": "Kaydedilmiş API anahtarı Yönet'te mevcut",
+        "apiKeyAlsoConfigured": "API anahtarı ayrıca Yönet'te yapılandırıldı",
+        "apiKeyConfiguredInManage": "API anahtarı Yönet'te yapılandırıldı",
+        "apiKeyFallbackInManage": "API anahtarı ayrıca yedek olarak Yönet'te mevcut",
+        "availableAsFallback": "{{summary}} - yedek olarak mevcut",
+        "savedApiKeyAvailableIfSwitch": "API anahtarı moduna geçerseniz kaydedilmiş API anahtarı Yönet'te mevcut",
+        "availableIfSwitch": "{{summary}} - API anahtarı moduna geçerseniz mevcut",
+        "autoWillUseUntilChatGpt": "{{summary}} - Otomatik mod, ChatGPT bağlanana kadar bunu kullanır"
+      },
+      "actions": {
+        "connect": "Bağlan",
+        "connectAnthropic": "Anthropic'e bağlan",
+        "connectChatGpt": "ChatGPT'ye bağlan",
+        "disconnect": "Bağlantıyı kes",
+        "openLogin": "Girişi Aç"
+      },
+      "disconnect": {
+        "anthropicTitle": "Anthropic aboneliğinin bağlantısı kesilsin mi?",
+        "anthropic": "Bu, yerel Anthropic abonelik oturumunu Claude CLI çalışma zamanından kaldırır.",
+        "anthropicWithApiKey": "Bu, yerel Anthropic abonelik oturumunu Claude CLI çalışma zamanından kaldırır. Yönet'teki kaydedilmiş API anahtarları kullanılabilir kalır.",
+        "geminiTitle": "Gemini CLI bağlantısı kesilsin mi?",
+        "gemini": "Bu, yerel Gemini CLI oturum meta verilerini temizler. Harici ADC kimlik bilgileri ve kaydedilmiş API anahtarları kaldırılmaz."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Güncellemeleri Kontrol Et",
+      "checking": "Kontrol ediliyor...",
+      "extensions": "Eklentiler",
+      "installRuntime": "{{runtime}} kur",
+      "manage": "Yönet",
+      "recheck": "Yeniden kontrol et",
+      "reinstallRuntime": "{{runtime}} yeniden kur",
+      "retry": "Yeniden dene",
+      "update": "Güncelle"
+    },
+    "installer": {
+      "checkingLatest": "En son sürüm kontrol ediliyor...",
+      "downloading": "İndiriliyor...",
+      "failed": "Kurulum başarısız oldu",
+      "installed": "v{{version}} kuruldu",
+      "installing": "Kuruluyor...",
+      "latest": "en son",
+      "verifying": "Sağlama toplamı doğrulanıyor..."
+    },
+    "labels": {
+      "multimodel": "Çoklu model"
+    },
+    "loading": {
+      "aiProviders": "Yapay Zeka Sağlayıcıları kontrol ediliyor...",
+      "claudeCli": "Claude CLI kontrol ediliyor..."
+    },
+    "provider": {
+      "backend": "Arka uç: {{backend}}",
+      "loadingModels": "Modeller yükleniyor...",
+      "modelsUnavailable": "Bu çalışma zamanı yapısı için modeller kullanılamıyor",
+      "runtime": "Çalışma zamanı: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Kimlik doğrulama başarısız oldu",
+      "authUpdated": "Kimlik doğrulama güncellendi",
+      "loggedOut": "Sağlayıcı oturumu kapatıldı",
+      "login": "Giriş yap",
+      "logout": "Oturumu kapat",
+      "logoutFailed": "Oturum kapatma başarısız oldu"
+    },
+    "status": {
+      "configuredNotFound": "Yapılandırılmış {{runtime}} bulunamadı.",
+      "foundButFailed": "{{runtime}} bulundu ancak başlatılamadı",
+      "healthCheckFailed": "Yapılandırılmış {{runtime}}, başlangıç sağlık kontrolünde başarısız oldu.",
+      "notInstalled": "{{runtime}} kurulu değil"
+    },
+    "title": "CLI Çalışma Zamanı"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

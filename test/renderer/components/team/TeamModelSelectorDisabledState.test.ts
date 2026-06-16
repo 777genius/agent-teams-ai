@@ -60,6 +60,7 @@ vi.mock('@renderer/components/ui/tabs', () => {
 const storeState = {
   cliStatus: null as unknown,
   cliStatusLoading: false,
+  cliProviderStatusLoading: {} as Record<string, boolean>,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
 };
@@ -109,8 +110,10 @@ import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSe
 describe('TeamModelSelector disabled Codex models', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    Reflect.deleteProperty(window, 'electronAPI');
     storeState.cliStatus = null;
     storeState.cliStatusLoading = false;
+    storeState.cliProviderStatusLoading = {};
     storeState.fetchCliProviderStatus.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
@@ -124,6 +127,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows only Default while Codex runtime models are still loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(window, 'electronAPI', { value: {}, configurable: true });
     storeState.cliStatusLoading = true;
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -142,6 +146,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('Default');
+    expect(host.querySelector('[data-testid="provider-activity-status-codex"]')).not.toBeNull();
     expect(host.textContent).not.toContain('5.1 Codex Mini');
     expect(host.textContent).not.toContain('5.3 Codex Spark');
     const defaultButton = Array.from(host.querySelectorAll('button')).find((button) =>
@@ -268,6 +273,68 @@ describe('TeamModelSelector disabled Codex models', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('shows a temporary New ribbon for Opus 4.8 during the launch window', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 4, 31));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'opus',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const opus48Button = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.trim().startsWith('Opus 4.8')
+    );
+    expect(opus48Button?.textContent).toContain('New');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+    dateNowSpy.mockRestore();
+  });
+
+  it('hides the Opus 4.8 New ribbon after the launch window expires', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 5, 12));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'opus',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const opus48Button = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.trim().startsWith('Opus 4.8')
+    );
+    expect(opus48Button?.textContent).not.toContain('New');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+    dateNowSpy.mockRestore();
   });
 
   it('uses the runtime-reported Codex list and clears stale unsupported selections', async () => {

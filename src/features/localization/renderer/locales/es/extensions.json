@@ -589,7 +589,11 @@
     "actions": {
       "add": "Añadir API Key",
       "addFirst": "Añade tu primera llave",
-      "edit": "Editar"
+      "edit": "Editar",
+      "copied": "Copiado!",
+      "copyEnvVarName": "Copiar nombre de variable env",
+      "confirmDelete": "Haga clic otra vez para confirmar",
+      "delete": "Eliminar"
     },
     "empty": {
       "title": "No se guardan las teclas ZXCV",

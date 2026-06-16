@@ -32,10 +32,7 @@ const result = spawnSyncWithWindowsShell(
     'exec',
     'vitest',
     'run',
-    '--maxWorkers',
-    '1',
-    '--minWorkers',
-    '1',
+    '--maxWorkers=1',
     'test/main/utils/AgentCliLaunch.live-e2e.test.ts',
   ],
   {

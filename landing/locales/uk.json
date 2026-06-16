@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Можливості",
+    "screenshots": "Знімки екрана",
+    "docs": "Документація",
+    "comparison": "Порівняти",
+    "download": "Завантажити",
+    "pricing": "Безплатно",
+    "faq": "Часті запитання",
+    "viewOnGithub": "Переглянути на GitHub",
+    "openMenu": "Відкрити меню",
+    "closeMenu": "Закрити меню",
+    "short": {
+      "screenshots": "Знімки",
+      "docs": "Доки",
+      "download": "Отримати",
+      "comparison": "Порівняти",
+      "pricing": "Безплатно"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Завантажити зараз",
+    "ctaPrimary": "Завантажити для {platform}",
+    "ctaSecondary": "Порівняти",
+    "ctaDocs": "Документація",
+    "preview": "Попередній перегляд продукту",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Дошка Kanban",
+      "openSource": "Відкритий код"
+    },
+    "watchDemo": "Дивитися демо",
+    "videoUnavailable": "Відео недоступне",
+    "supportedProviders": "Підтримувані AI-провайдери",
+    "slogan": "Робіть більше, докладаючи менше зусиль",
+    "platformDefault": "Для вашої платформи",
+    "guidesSetup": "Посібники та налаштування",
+    "videoFrameLabel": "Дивитися демо Agent Teams",
+    "commandFeed": "Стрічка дій команди",
+    "liveDemo": "Демо наживо",
+    "demoVideoTitle": "Демовідео Agent Teams",
+    "demoTitle": "Демо Agent Teams",
+    "demo": {
+      "ariaLabel": "Демо команди агентів",
+      "live": "НАЖИВО",
+      "waiting": "Очікування завдань...",
+      "activity": {
+        "authMiddleware": "Реалізація проміжного ПЗ автентифікації...",
+        "unitTests": "Написання модульних тестів для API...",
+        "reviewPr": "Перегляд змін PR #42...",
+        "ciPipeline": "Налаштування конвеєра CI/CD...",
+        "refactorDatabase": "Рефакторинг шару бази даних..."
+      },
+      "tasks": {
+        "authApi": "API автентифікації",
+        "unitTests": "Модульні тести",
+        "ciSetup": "Налаштування CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "У ПРОЦЕСІ",
+        "review": "ПЕРЕГЛЯД",
+        "done": "ГОТОВО"
+      }
+    }
+  },
+  "download": {
+    "title": "Завантажити",
+    "detected": "Виявлено",
+    "systemRequirements": "Системні вимоги",
+    "version": "Версія {version}",
+    "readyToStart": "Готово до роботи!"
+  },
+  "theme": {
+    "dark": "Темна",
+    "light": "Світла"
+  },
+  "language": {
+    "label": "Мова",
+    "search": "Пошук мови…"
+  },
+  "features": {
+    "sectionTitle": "Усе, що потрібно для оркестрування AI-агентів",
+    "sectionSubtitle": "Потужні інструменти, які роблять співпрацю кількох агентів справді робочою."
+  },
+  "pricing": {
+    "sectionTitle": "Безплатне встановлення. Безплатна модель включена.",
+    "sectionSubtitle": "Почніть одразу з безплатною моделлю без автентифікації — без облікового запису, API-ключа чи кредитної картки. Підключайте Claude, Codex, OpenCode/OpenRouter чи доступ до інших провайдерів, лише коли захочете більше моделей.",
+    "getStarted": "Завантажити зараз",
+    "popular": "Безплатно",
+    "freeModelCallout": "Безплатна модель без автентифікації включена",
+    "note": "Agent Teams не має платного тарифу. Безплатна модель без автентифікації дає змогу спробувати її одразу; платне використання провайдерів є необов'язковим і контролюється обраним вами провайдером."
+  },
+  "testimonials": {
+    "sectionTitle": "Що кажуть розробники",
+    "sectionSubtitle": "Реальні відгуки від реальних творців",
+    "showMore": "Показати більше",
+    "showLess": "Показати менше",
+    "feedbackCta": "Хочете поділитися своїм досвідом? Відкрийте issue на"
+  },
+  "faq": {
+    "sectionTitle": "Маєте запитання? У нас є відповіді",
+    "subtitle": "Усе, що потрібно знати про Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Як ми порівнюємося",
+    "sectionSubtitle": "Порівняння функція за функцією з іншими AI-інструментами для кодування.",
+    "feature": "Функція",
+    "robotBubble": "Судіть самі",
+    "features": {
+      "crossTeam": "Зв'язок між командами",
+      "agentMessaging": "Обмін повідомленнями між агентами",
+      "linkedTasks": "Пов'язані завдання",
+      "sessionAnalysis": "Аналіз сесій",
+      "taskAttachments": "Вкладення до завдань",
+      "hunkReview": "Перегляд на рівні фрагментів",
+      "codeEditor": "Вбудований редактор коду",
+      "fullAutonomy": "Повна автономія",
+      "taskDeps": "Залежності завдань",
+      "reviewWorkflow": "Робочий процес перегляду",
+      "zeroSetup": "Нульове налаштування",
+      "kanban": "Дошка Kanban",
+      "execLog": "Журнали виконання",
+      "liveProcesses": "Процеси наживо",
+      "runtimeLoad": "CPU/RAM на учасника",
+      "perTaskReview": "Код-рев'ю для кожного завдання",
+      "flexAutonomy": "Гнучка автономія",
+      "worktree": "Ізоляція через Git worktree",
+      "multiAgent": "Змішані AI-учасники",
+      "liveWorkGraph": "Карта команди наживо",
+      "liveTeam": "Учасники наживо",
+      "teamWorkspace": "Робочий простір команди",
+      "launchProof": "Статус запуску учасників",
+      "orgGovernance": "Оргструктура / керування",
+      "budgetControls": "Контроль бюджету",
+      "price": "Ціна"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Подивіться в дії",
+    "sectionSubtitle": "Справжні знімки екрана із застосунку — дошка Kanban, код-рев'ю, команди агентів і не тільки."
+  },
+  "common": {
+    "learnMore": "Дізнатися більше",
+    "statusLabel": "Статус:",
+    "previous": "Назад",
+    "next": "Далі"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Оркестрування AI-агентів для розробників",
+    "robotBubble": "Я чекаю",
+    "links": {
+      "github": "GitHub",
+      "author": "Автор",
+      "docs": "Документація"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Оркестрування AI-агентів для розробників",
+    "homeDescription": "Безплатний десктопний застосунок з відкритим кодом для команд AI-агентів. Почніть із безплатної моделі без автентифікації, а потім підключайте Claude, Codex чи OpenCode, коли потрібно більше моделей.",
+    "downloadTitle": "Завантажте Agent Teams для macOS, Windows та Linux",
+    "downloadDescription": "Завантажте Agent Teams для macOS, Windows та Linux. Безплатний десктопний застосунок з відкритим кодом для команд агентів Claude, Codex та OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Сторінку не знайдено",
+    "notFoundDescription": "Сторінка, яку ви шукаєте, не існує або була переміщена.",
+    "genericTitle": "Щось пішло не так",
+    "genericDescription": "Сталася неочікувана помилка. Будь ласка, спробуйте пізніше.",
+    "goHome": "На головну сторінку"
+  }
+}

@@ -33,16 +33,13 @@ import {
 import { atomicWriteAsync } from './atomicWrite';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
-import {
-  getLiveLeadProcessMessageKey,
-  mergeLiveLeadProcessMessages,
-} from './mergeLiveLeadProcessMessages';
+import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
-import { TeamConfigReader } from './TeamConfigReader';
+import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -73,6 +70,7 @@ import type {
   KanbanColumnId,
   KanbanState,
   MessagesPage,
+  PersistedTeamLaunchSnapshot,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -111,6 +109,7 @@ const TASK_MAP_YIELD_EVERY = 250;
 const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
+const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 const MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE =
   'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.';
 
@@ -218,6 +217,12 @@ interface EligibleTaskCommentNotification {
   summary: string;
 }
 
+interface TaskCommentNotificationTeamContext {
+  deletedAt?: string;
+  leadName?: string;
+  leadSessionId?: string;
+}
+
 interface TaskChangeLogSourceSnapshot {
   projectFingerprint: string | null;
   logSourceGeneration: string | null;
@@ -228,6 +233,36 @@ interface FileWatchReconcileDiagnostics {
   burstCount: number;
   windowStartedAt: number;
   lastPressureLogAt: number;
+}
+
+interface GlobalTaskTeamInfo {
+  displayName: string;
+  projectPath?: string;
+  deletedAt?: string;
+}
+
+async function mapLimitLocal<T, R>(
+  items: readonly T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, limit), items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) {
+          return;
+        }
+        results[index] = await mapper(items[index]);
+      }
+    })
+  );
+
+  return results;
 }
 
 function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
@@ -420,8 +455,69 @@ export class TeamDataService {
     return readConfigForUiSnapshot(this.configReader, teamName);
   }
 
+  private async readGlobalTaskTeamInfoFromListTeams(): Promise<Map<string, GlobalTaskTeamInfo>> {
+    const teams = await this.configReader.listTeams();
+    const teamInfoMap = new Map<string, GlobalTaskTeamInfo>();
+    for (const team of teams) {
+      teamInfoMap.set(team.teamName, {
+        displayName: team.displayName,
+        projectPath: team.projectPath,
+        deletedAt: team.deletedAt,
+      });
+    }
+    return teamInfoMap;
+  }
+
+  private async readGlobalTaskTeamInfo(
+    rawTasks: readonly (TeamTask & { teamName: string })[]
+  ): Promise<Map<string, GlobalTaskTeamInfo>> {
+    const canReadConfigDirectly =
+      typeof (this.configReader as { getConfigSnapshot?: unknown }).getConfigSnapshot ===
+        'function' ||
+      typeof (this.configReader as { getConfig?: unknown }).getConfig === 'function';
+    if (!canReadConfigDirectly) {
+      return this.readGlobalTaskTeamInfoFromListTeams();
+    }
+
+    const teamNames = [...new Set(rawTasks.map((task) => task.teamName))];
+    const entries = await mapLimitLocal(
+      teamNames,
+      GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY,
+      async (teamName) => {
+        const config = await readConfigForUiSnapshot(this.configReader, teamName).catch(() => null);
+        const displayName = config?.name?.trim();
+        if (!config || !displayName) {
+          return null;
+        }
+        return [
+          teamName,
+          {
+            displayName,
+            projectPath: resolveProjectPathFromConfig(config),
+            deletedAt: typeof config.deletedAt === 'string' ? config.deletedAt : undefined,
+          },
+        ] as const;
+      }
+    );
+
+    if (entries.some((entry) => entry === null)) {
+      return this.readGlobalTaskTeamInfoFromListTeams();
+    }
+
+    return new Map(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null));
+  }
+
   private invalidateGlobalTaskProjectionCache(): void {
     TeamTaskReader.invalidateAllTasksCache();
+  }
+
+  private async readTasksForUiSnapshot(teamName: string): Promise<readonly TeamTask[]> {
+    const snapshotReader = this.taskReader as TeamTaskReader & {
+      getTasksProjectionSnapshot?: (teamName: string) => Promise<readonly TeamTask[]>;
+    };
+    return typeof snapshotReader.getTasksProjectionSnapshot === 'function'
+      ? snapshotReader.getTasksProjectionSnapshot(teamName)
+      : this.taskReader.getTasks(teamName);
   }
 
   private getController(teamName: string): AgentTeamsController {
@@ -503,9 +599,12 @@ export class TeamDataService {
 
   private async getMemberRuntimeAdvisoriesForSnapshot(
     teamName: string,
-    members: readonly Pick<TeamMemberSnapshot, 'name' | 'removedAt'>[]
+    members: readonly Pick<TeamMemberSnapshot, 'name' | 'removedAt'>[],
+    observedAfterMs: number | null = null
   ): Promise<Map<string, NonNullable<TeamMemberSnapshot['runtimeAdvisory']>>> {
-    const request = this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members);
+    const request = this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members, {
+      observedAfterMs,
+    });
     const timeoutToken = Symbol('member-runtime-advisory-timeout');
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     const timeout = new Promise<typeof timeoutToken>((resolve) => {
@@ -531,6 +630,27 @@ export class TeamDataService {
     }
 
     return result;
+  }
+
+  private getRuntimeAdvisoryObservedAfterMs(
+    launchSnapshot: PersistedTeamLaunchSnapshot | null
+  ): number | null {
+    if (!launchSnapshot) {
+      return null;
+    }
+
+    const candidates = [
+      launchSnapshot.updatedAt,
+      ...Object.values(launchSnapshot.members).flatMap((member) => [
+        member.lastEvaluatedAt,
+        member.firstSpawnAcceptedAt,
+        member.lastHeartbeatAt,
+      ]),
+    ];
+    const validTimes = candidates
+      .map((value) => (typeof value === 'string' ? Date.parse(value) : Number.NaN))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return validTimes.length > 0 ? Math.min(...validTimes) : null;
   }
 
   private async synthesizeLeadMemberIfMissing(
@@ -927,7 +1047,7 @@ export class TeamDataService {
         : null;
 
     const [tasks, kanbanState, presenceIndex] = await Promise.all([
-      this.taskReader.getTasks(teamName).catch(() => [] as TeamTask[]),
+      this.readTasksForUiSnapshot(teamName).catch(() => [] as readonly TeamTask[]),
       this.kanbanManager
         .getState(teamName)
         .catch(() => ({ teamName, reviewers: [], tasks: {} }) as KanbanState),
@@ -983,19 +1103,21 @@ export class TeamDataService {
       worktree: meta.worktree,
       extraCliArgs: meta.extraCliArgs,
       limitContext: meta.limitContext,
-      members: members.map((member) => ({
-        name: member.name,
-        role: member.role,
-        workflow: member.workflow,
-        isolation: member.isolation,
-        cwd: member.cwd,
-        providerId: member.providerId,
-        providerBackendId: member.providerBackendId,
-        model: member.model,
-        effort: member.effort,
-        fastMode: member.fastMode,
-        mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-      })),
+      members: members
+        .filter((member) => !member.removedAt)
+        .map((member) => ({
+          name: member.name,
+          role: member.role,
+          workflow: member.workflow,
+          isolation: member.isolation,
+          cwd: member.cwd,
+          providerId: member.providerId,
+          providerBackendId: member.providerBackendId,
+          model: member.model,
+          effort: member.effort,
+          fastMode: member.fastMode,
+          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+        })),
     };
   }
 
@@ -1021,26 +1143,30 @@ export class TeamDataService {
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
-    const rawTasks = await this.taskReader.getAllTasks();
-    const teams = await this.configReader.listTeams();
+    const taskReader = this.taskReader as TeamTaskReader & {
+      getAllTasksProjectionSnapshot?: () => Promise<readonly (TeamTask & { teamName: string })[]>;
+    };
+    const rawTasks =
+      typeof taskReader.getAllTasksProjectionSnapshot === 'function'
+        ? await taskReader.getAllTasksProjectionSnapshot()
+        : await taskReader.getAllTasks();
+    const teamInfoMap = await this.readGlobalTaskTeamInfo(rawTasks);
 
-    const teamInfoMap = new Map<
-      string,
-      { displayName: string; projectPath?: string; deletedAt?: string }
-    >();
-    for (const team of teams) {
-      teamInfoMap.set(team.teamName, {
-        displayName: team.displayName,
-        projectPath: team.projectPath,
-        deletedAt: team.deletedAt,
-      });
+    const MAX_GLOBAL_TASKS_EXPORTED = 500;
+    let tasksToExport = rawTasks.filter((task) => teamInfoMap.has(task.teamName));
+    if (tasksToExport.length > MAX_GLOBAL_TASKS_EXPORTED) {
+      // Prefer newest first before reading kanban and building the lightweight IPC projection.
+      tasksToExport = tasksToExport
+        .slice()
+        .sort((a, b) => {
+          const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
+          const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
+          return bt - at;
+        })
+        .slice(0, MAX_GLOBAL_TASKS_EXPORTED);
     }
 
-    const deletedTeams = new Set(teams.filter((t) => t.deletedAt).map((t) => t.teamName));
-
-    const teamNames = [
-      ...new Set(rawTasks.map((t) => t.teamName).filter((n) => teamInfoMap.has(n))),
-    ];
+    const teamNames = [...new Set(tasksToExport.map((task) => task.teamName))];
     const kanbanByTeam = new Map<string, KanbanState>();
     await Promise.all(
       teamNames.map(async (teamName) => {
@@ -1055,10 +1181,7 @@ export class TeamDataService {
 
     const out: GlobalTask[] = [];
     let processed = 0;
-    for (const task of rawTasks) {
-      if (!teamInfoMap.has(task.teamName)) {
-        continue;
-      }
+    for (const task of tasksToExport) {
       const info = teamInfoMap.get(task.teamName)!;
       const kanbanTaskState = kanbanByTeam.get(task.teamName)?.tasks[task.id];
       const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
@@ -1106,24 +1229,12 @@ export class TeamDataService {
         kanbanColumn,
         teamName: task.teamName,
         teamDisplayName: info.displayName,
-        teamDeleted: deletedTeams.has(task.teamName) || undefined,
+        teamDeleted: Boolean(info.deletedAt) || undefined,
       });
       processed++;
       if (processed % TASK_MAP_YIELD_EVERY === 0) {
         await yieldToEventLoop();
       }
-    }
-
-    // Hard cap: keep renderer responsive even with huge task sets.
-    const MAX_GLOBAL_TASKS_EXPORTED = 500;
-    if (out.length > MAX_GLOBAL_TASKS_EXPORTED) {
-      // Prefer newest first if timestamps exist.
-      out.sort((a, b) => {
-        const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
-        const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
-        return bt - at;
-      });
-      return out.slice(0, MAX_GLOBAL_TASKS_EXPORTED);
     }
 
     return out;
@@ -1312,7 +1423,7 @@ export class TeamDataService {
         label: 'tasks',
         createFallback: () => [],
         warningText: 'Tasks failed to load',
-        load: () => this.taskReader.getTasks(teamName),
+        load: () => this.readTasksForUiSnapshot(teamName),
       })
     );
     const [
@@ -1349,7 +1460,7 @@ export class TeamDataService {
     if (launchStateStepResult.warning) warnings.push(launchStateStepResult.warning);
     if (kanbanStateStepResult.warning) warnings.push(kanbanStateStepResult.warning);
 
-    const tasks: TeamTask[] = tasksStepResult.value;
+    const tasks: readonly TeamTask[] = tasksStepResult.value;
     const inboxNames: string[] = inboxNamesStepResult.value;
     mark('postStart');
 
@@ -1410,7 +1521,11 @@ export class TeamDataService {
     mark('resolveMembers');
 
     try {
-      const runtimeAdvisories = await this.getMemberRuntimeAdvisoriesForSnapshot(teamName, members);
+      const runtimeAdvisories = await this.getMemberRuntimeAdvisoriesForSnapshot(
+        teamName,
+        members,
+        this.getRuntimeAdvisoryObservedAfterMs(launchSnapshot)
+      );
       for (const member of members) {
         const advisory = runtimeAdvisories.get(member.name);
         if (advisory) {
@@ -1498,9 +1613,6 @@ export class TeamDataService {
   ): Promise<MessagesPage> {
     const feed = await this.messageFeedService.getFeed(teamName);
     const newestDurableMessages = feed.messages;
-    const durableMessageIndexByKey = new Map(
-      newestDurableMessages.map((message, index) => [getLiveLeadProcessMessageKey(message), index])
-    );
     let messages = newestDurableMessages;
 
     if (options.cursor) {
@@ -1527,55 +1639,12 @@ export class TeamDataService {
 
     // Merge live lead thoughts against the full durable newest-page history so we do not
     // re-introduce persisted thoughts that have simply paged off the first durable page.
-    const displayMessages = mergeLiveLeadProcessMessages(
-      newestDurableMessages,
-      options.liveMessages
-    ).slice(0, options.limit);
-
-    if (displayMessages.length === 0) {
-      return {
-        messages: displayMessages,
-        nextCursor: null,
-        hasMore: false,
-        feedRevision: feed.feedRevision,
-      };
-    }
-
-    let lastDurableDisplayed: InboxMessage | null = null;
-    for (let index = displayMessages.length - 1; index >= 0; index -= 1) {
-      const candidate = displayMessages[index];
-      if (durableMessageIndexByKey.has(getLiveLeadProcessMessageKey(candidate))) {
-        lastDurableDisplayed = candidate;
-        break;
-      }
-    }
-
-    if (!lastDurableDisplayed) {
-      const boundary = displayMessages[displayMessages.length - 1];
-      return {
-        messages: displayMessages,
-        nextCursor:
-          newestDurableMessages.length > 0
-            ? `${boundary.timestamp}|${boundary.messageId ?? ''}`
-            : null,
-        hasMore: newestDurableMessages.length > 0,
-        feedRevision: feed.feedRevision,
-      };
-    }
-
-    const durableIndex =
-      durableMessageIndexByKey.get(getLiveLeadProcessMessageKey(lastDurableDisplayed)) ??
-      Number.POSITIVE_INFINITY;
-    const durableHasMore = durableIndex < newestDurableMessages.length - 1;
-
-    return {
-      messages: displayMessages,
-      nextCursor: durableHasMore
-        ? `${lastDurableDisplayed.timestamp}|${lastDurableDisplayed.messageId ?? ''}`
-        : null,
-      hasMore: durableHasMore,
+    return mergeLiveLeadProcessMessagesPage({
+      durableMessages: newestDurableMessages,
+      liveMessages: options.liveMessages,
+      limit: options.limit,
       feedRevision: feed.feedRevision,
-    };
+    });
   }
 
   async getMessageFeed(
@@ -1801,14 +1870,22 @@ export class TeamDataService {
       throw new Error(`Member "${name}" already exists`);
     }
 
+    const memberProviderId = normalizeOptionalTeamProviderId(request.providerId);
+    const memberProviderBackendId = memberProviderId
+      ? migrateProviderBackendId(memberProviderId, request.providerBackendId)
+      : request.providerBackendId;
     const newMember: TeamMember = {
       name,
       role: request.role?.trim() || undefined,
       workflow: request.workflow?.trim() || undefined,
       isolation: request.isolation === 'worktree' ? ('worktree' as const) : undefined,
-      providerId: normalizeOptionalTeamProviderId(request.providerId),
+      providerId: memberProviderId,
+      ...(memberProviderBackendId ? { providerBackendId: memberProviderBackendId } : {}),
       model: request.model?.trim() || undefined,
       effort: isTeamEffortLevel(request.effort) ? request.effort : undefined,
+      ...(request.fastMode === 'inherit' || request.fastMode === 'on' || request.fastMode === 'off'
+        ? { fastMode: request.fastMode }
+        : {}),
       mcpPolicy: normalizeTeamMemberMcpPolicy(request.mcpPolicy),
       agentType: 'general-purpose',
       joinedAt: Date.now(),
@@ -1873,13 +1950,17 @@ export class TeamDataService {
         nextByName.add(name.toLowerCase());
         const prev = existingByName.get(name.toLowerCase());
         const isSameActiveMember = Boolean(prev && prev.removedAt == null);
+        const providerId = normalizeOptionalTeamProviderId(member.providerId);
+        const providerBackendId = providerId
+          ? migrateProviderBackendId(providerId, member.providerBackendId)
+          : member.providerBackendId;
         return {
           name,
           role: member.role?.trim() || undefined,
           workflow: member.workflow?.trim() || undefined,
           isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId: normalizeOptionalTeamProviderId(member.providerId),
-          providerBackendId: migrateProviderBackendId(member.providerId, member.providerBackendId),
+          providerId,
+          providerBackendId,
           model: member.model?.trim() || undefined,
           effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
           fastMode:
@@ -2441,6 +2522,11 @@ export class TeamDataService {
           await this.processTaskCommentNotifications(team.teamName, undefined, {
             seedHistoricalIfJournalMissing: true,
             recoverPending: true,
+            teamContext: {
+              deletedAt: team.deletedAt,
+              leadName: team.leadName,
+              leadSessionId: team.leadSessionId,
+            },
           });
         } catch (error) {
           logger.warn(
@@ -2722,20 +2808,28 @@ export class TeamDataService {
     options?: {
       seedHistoricalIfJournalMissing?: boolean;
       recoverPending?: boolean;
+      teamContext?: TaskCommentNotificationTeamContext;
     }
   ): Promise<void> {
     const seedHistoricalIfJournalMissing = options?.seedHistoricalIfJournalMissing === true;
     const recoverPending = options?.recoverPending === true;
-    let config: TeamConfig | null = null;
-    try {
-      config = await readConfigForUiSnapshot(this.configReader, teamName);
-    } catch {
-      return;
-    }
-    if (!config || config.deletedAt) return;
+    const teamContext = options?.teamContext;
+    if (teamContext?.deletedAt) return;
 
-    const leadName = this.resolveLeadNameFromConfig(config);
-    const leadSessionId = config.leadSessionId;
+    let leadName = teamContext?.leadName?.trim() ?? '';
+    let leadSessionId = teamContext?.leadSessionId;
+    if (!leadName) {
+      let config: TeamConfig | null = null;
+      try {
+        config = await readConfigForUiSnapshot(this.configReader, teamName);
+      } catch {
+        return;
+      }
+      if (!config || config.deletedAt) return;
+
+      leadName = this.resolveLeadNameFromConfig(config);
+      leadSessionId = config.leadSessionId;
+    }
     if (!leadName.trim()) return;
 
     const journalExists = await this.taskCommentNotificationJournal.exists(teamName);
@@ -3160,12 +3254,11 @@ export class TeamDataService {
       }
     } finally {
       const current = this.fileWatchReconcileDiagnostics.get(teamName);
-      if (!current) {
-        return;
-      }
-      current.inFlight = Math.max(0, current.inFlight - 1);
-      if (current.inFlight === 0 && Date.now() - current.windowStartedAt > 30_000) {
-        this.fileWatchReconcileDiagnostics.delete(teamName);
+      if (current) {
+        current.inFlight = Math.max(0, current.inFlight - 1);
+        if (current.inFlight === 0 && Date.now() - current.windowStartedAt > 30_000) {
+          this.fileWatchReconcileDiagnostics.delete(teamName);
+        }
       }
     }
   }
@@ -3210,51 +3303,37 @@ export class TeamDataService {
     return sessionIds;
   }
 
-  private async extractLeadAssistantTextsFromJsonl(
-    jsonlPath: string,
+  private async readLeadSessionJsonlTailLines(jsonlPath: string): Promise<string[]> {
+    const MAX_SCAN_BYTES = 8 * 1024 * 1024;
+    const handle = await fs.promises.open(jsonlPath, 'r');
+    try {
+      const stat = await handle.stat();
+      const fileSize = stat.size;
+      const scanBytes = Math.min(MAX_SCAN_BYTES, fileSize);
+      const start = Math.max(0, fileSize - scanBytes);
+      const buffer = Buffer.alloc(scanBytes);
+      await handle.read(buffer, 0, scanBytes, start);
+      const chunk = buffer.toString('utf8');
+
+      const lines = chunk.split(/\r?\n/);
+      const fromIndex = start > 0 ? 1 : 0;
+      return lines
+        .slice(fromIndex)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } finally {
+      await handle.close();
+    }
+  }
+
+  private async extractLeadAssistantTextsFromJsonlLines(
+    rawLines: readonly string[],
     leadName: string,
     leadSessionId: string,
     maxTexts: number
   ): Promise<InboxMessage[]> {
     if (maxTexts <= 0) return [];
-
-    const MAX_SCAN_BYTES = 8 * 1024 * 1024;
-    const INITIAL_SCAN_BYTES = 256 * 1024;
-
-    const rawLinesReversed: string[] = [];
-    const seenRawLines = new Set<string>();
     const seenMessageIds = new Set<string>();
-    const handle = await fs.promises.open(jsonlPath, 'r');
-    try {
-      const stat = await handle.stat();
-      const fileSize = stat.size;
-
-      let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
-      while (scanBytes <= MAX_SCAN_BYTES) {
-        const start = Math.max(0, fileSize - scanBytes);
-        const buffer = Buffer.alloc(scanBytes);
-        await handle.read(buffer, 0, scanBytes, start);
-        const chunk = buffer.toString('utf8');
-
-        const lines = chunk.split(/\r?\n/);
-        const fromIndex = start > 0 ? 1 : 0;
-
-        for (let i = lines.length - 1; i >= fromIndex; i--) {
-          const trimmed = lines[i]?.trim();
-          if (!trimmed) continue;
-          if (seenRawLines.has(trimmed)) continue;
-          seenRawLines.add(trimmed);
-          rawLinesReversed.push(trimmed);
-        }
-
-        if (scanBytes === fileSize) break;
-        scanBytes = Math.min(fileSize, scanBytes * 2);
-      }
-    } finally {
-      await handle.close();
-    }
-
-    const rawLines = rawLinesReversed.reverse();
     const texts: InboxMessage[] = [];
     let syntheticBuffer: {
       firstMsg: Record<string, unknown>;
@@ -3440,13 +3519,15 @@ export class TeamDataService {
     }
 
     const parse = async (): Promise<InboxMessage[]> => {
+      const rawLines = await this.readLeadSessionJsonlTailLines(jsonlPath);
       const [assistantTexts, commandResults] = await Promise.all([
-        this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
+        this.extractLeadAssistantTextsFromJsonlLines(rawLines, leadName, leadSessionId, maxTexts),
         extractLeadSessionMessagesFromJsonl({
           jsonlPath,
           leadName,
           leadSessionId,
           maxMessages: maxTexts,
+          rawLines,
         }),
       ]);
       const combined = [...assistantTexts, ...commandResults];

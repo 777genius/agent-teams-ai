@@ -1,6 +1,6 @@
+import { TeamRuntimeTurnSettledTargetResolver } from '@features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import { describe, expect, it, vi } from 'vitest';
 
-import { TeamRuntimeTurnSettledTargetResolver } from '@features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import type { TeamConfig } from '@shared/types';
 
 describe('TeamRuntimeTurnSettledTargetResolver', () => {
@@ -123,6 +123,48 @@ describe('TeamRuntimeTurnSettledTargetResolver', () => {
       resolver.resolve({
         schemaVersion: 1,
         provider: 'codex',
+        hookEventName: 'Stop',
+        sourceId: 'source-1',
+        payloadHash: 'hash',
+        recordedAt: '2026-04-29T12:00:00.000Z',
+        sessionId: 'ses-1',
+        teamName: 'team-a',
+        memberName: 'jack',
+      })
+    ).resolves.toEqual({ ok: false, reason: 'provider_mismatch' });
+  });
+
+  it('preserves config provider metadata when member meta lacks provider fields', async () => {
+    const resolver = new TeamRuntimeTurnSettledTargetResolver({
+      teamSource: {
+        listTeams: vi.fn(async () => []),
+        getConfig: vi.fn(async () => ({
+          name: 'team-a',
+          members: [
+            {
+              name: 'Jack',
+              providerBackendId: 'codex-native',
+              model: 'opencode/openai/gpt-oss',
+            },
+          ],
+        }) satisfies TeamConfig),
+      },
+      membersMetaStore: {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'Jack',
+            role: 'developer',
+            agentType: 'general-purpose',
+            color: 'blue',
+          },
+        ]),
+      } as never,
+    });
+
+    await expect(
+      resolver.resolve({
+        schemaVersion: 1,
+        provider: 'opencode',
         hookEventName: 'Stop',
         sourceId: 'source-1',
         payloadHash: 'hash',

@@ -7,7 +7,16 @@
     "download": "Скачать",
     "pricing": "Бесплатно",
     "faq": "FAQ",
-    "viewOnGithub": "GitHub"
+    "viewOnGithub": "GitHub",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "short": {
+      "screenshots": "Скрины",
+      "docs": "Док",
+      "download": "Скачать",
+      "comparison": "Сравн.",
+      "pricing": "Беспл."
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "Open Source"
     },
     "watchDemo": "Смотреть демо",
-    "videoUnavailable": "Видео недоступно"
+    "videoUnavailable": "Видео недоступно",
+    "supportedProviders": "Поддерживаем AI-провайдеры",
+    "slogan": "Делайте много, почти ничего не делая",
+    "platformDefault": "Для вашей платформы",
+    "guidesSetup": "Гайды и настройка",
+    "videoFrameLabel": "Смотреть демо Agent Teams",
+    "commandFeed": "Командная лента",
+    "liveDemo": "Живое демо",
+    "demoVideoTitle": "Демо-видео Agent Teams",
+    "demoTitle": "Демо Agent Teams",
+    "demo": {
+      "ariaLabel": "Демо команды агентов",
+      "live": "LIVE",
+      "waiting": "Ожидание задач...",
+      "activity": {
+        "authMiddleware": "Реализация auth middleware...",
+        "unitTests": "Написание unit-тестов для API...",
+        "reviewPr": "Ревью изменений PR #42...",
+        "ciPipeline": "Настройка CI/CD pipeline...",
+        "refactorDatabase": "Рефакторинг слоя базы данных..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit-тесты",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "В РАБОТЕ",
+        "review": "РЕВЬЮ",
+        "done": "ГОТОВО"
+      }
+    }
   },
   "download": {
     "title": "Скачать",
     "detected": "Определено",
     "systemRequirements": "Системные требования",
-    "version": "Версия {version}"
+    "version": "Версия {version}",
+    "readyToStart": "Готов начать!"
   },
   "theme": {
     "dark": "Тёмная",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "Реальные скриншоты приложения — канбан-доска, код-ревью, команды агентов и многое другое."
   },
   "common": {
-    "learnMore": "Подробнее"
+    "learnMore": "Подробнее",
+    "statusLabel": "Статус:",
+    "previous": "Предыдущий",
+    "next": "Следующий"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "Я жду",
     "links": {
       "github": "GitHub",
+      "author": "Автор",
       "docs": "Документация"
     }
   },

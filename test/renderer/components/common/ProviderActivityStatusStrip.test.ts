@@ -292,6 +292,43 @@ describe('ProviderActivityStatusStrip', () => {
     });
   });
 
+  it('does not mask finished Codex native provider errors as model loading', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    let root!: ReturnType<typeof createRoot>;
+    await act(async () => {
+      root = renderStrip(host, {
+        cliStatus: createMultimodelStatus([
+          createProvider({
+            providerId: 'codex',
+            displayName: 'Codex',
+            supported: true,
+            verificationState: 'error',
+            statusMessage: 'Failed to refresh Codex status',
+            backend: {
+              kind: 'codex-native',
+              label: 'Codex native',
+              endpointLabel: 'codex exec --json',
+            },
+            models: [],
+            modelAvailability: [],
+          }),
+        ]),
+      });
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Codex');
+    expect(host.textContent).toContain('Failed to refresh Codex status');
+    expect(host.textContent).not.toContain('Checking...');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('masks a negative Codex bootstrap state while source placeholder loading is still active', async () => {
     const sourceCliStatus = createMultimodelStatus([
       createProvider({

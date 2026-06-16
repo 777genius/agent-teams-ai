@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "तुम्ही Boss आहात आणि agents तुमची team आहे. ते tasks स्वतः हाताळतात, एकमेकांना messages करतात आणि code review करतात. तुम्ही फक्त kanban board पाहता आणि coffee पिता."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agent teams",
+      "description": "वेगवेगळ्या roles असलेल्या teams तयार करा. Agents parallel आणि autonomous काम करतात, एकमेकांशी बोलतात आणि teams मधे collaborate करतात."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Agents काम करत असताना task status realtime बदलतो. Drag, assign, review - सगळे visual board वर."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "प्रत्येक task साठी diff view, accept, reject आणि comments. Git support असलेला built-in code editor."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Teams मधला संवाद",
+      "description": "Agents team मध्ये आणि teams मधे messages करतात. Direct messages, task comments आणि quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mode",
+      "description": "स्वतः tasks manage करणाऱ्या एका agent पासून सुरुवात करा. जास्त power हवी तेव्हा full team करा."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processes",
+      "description": "Running agents पहा, browser मध्ये URLs उघडा आणि token usage व session context realtime monitor करा."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams म्हणजे काय?",
+      "answer": "Local coordination layer सह AI agent teams orchestrate करणारा desktop app. Agents ना roles असतात, ते autonomous काम करतात, kanban board वर collaborate करतात आणि Anthropic किंवा Codex वर run होऊ शकतात."
+    },
+    {
+      "id": "isFree",
+      "question": "हे खरंच free आहे का?",
+      "answer": "हो. App free आणि open source आहे. Auth न लागणाऱ्या free model ने सुरुवात करू शकता - registration, API key किंवा credit card नाही. जास्त models हवे असतील तर Claude, Codex, OpenCode/OpenRouter किंवा supported provider connect करा."
+    },
+    {
+      "id": "platforms",
+      "question": "कोणते platforms support आहेत?",
+      "answer": "macOS (Apple Silicon आणि Intel), Windows आणि Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "हे कसे काम करते?",
+      "answer": "App install करा, team तयार करा, roles assign करा. Agents parallel काम सुरू करतात. तुम्ही kanban वर progress पाहता, diffs review करता आणि agents शी directly बोलता."
+    },
+    {
+      "id": "privacy",
+      "question": "माझा code private राहतो का?",
+      "answer": "सगळे तुमच्या machine वर locally चालते. Data external servers कडे जात नाही. Code, conversations आणि agent activity private राहते."
+    },
+    {
+      "id": "requirements",
+      "question": "सुरुवात करण्यासाठी काय पाहिजे?",
+      "answer": "फक्त app install करा - auth नसलेल्या free model ने सुरुवात करा, नंतर गरज लागल्यावर UI मधून provider-backed models connect करा."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "तुमचा platform निवडा आणि AI agent teams सोबत build करायला सुरुवात करा."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "वेगवेगळ्या roles असलेल्या teams तयार करा. Agents parallel आणि autonomous काम करतात, एकमेकांशी बोलतात आणि teams मधे collaborate करतात."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "स्वतः tasks manage करणाऱ्या एका agent पासून सुरुवात करा. जास्त power हवी तेव्हा full team करा."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "प्रत्येक task साठी diff view, accept, reject आणि comments. Git support असलेला built-in code editor."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Running agents पहा, browser मध्ये URLs उघडा आणि token usage व session context realtime monitor करा."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "फक्त app install करा - auth नसलेल्या free model ने सुरुवात करा, नंतर गरज लागल्यावर UI मधून provider-backed models connect करा."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agents team मध्ये आणि teams मधे messages करतात. Direct messages, task comments आणि quick actions."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Free",
+      "price": "$0",
+      "period": "",
+      "description": "हो. App free आणि open source आहे. Auth न लागणाऱ्या free model ने सुरुवात करू शकता - registration, API key किंवा credit card नाही. जास्त models हवे असतील तर Claude, Codex, OpenCode/OpenRouter किंवा supported provider connect करा.",
+      "features": [
+        "Agent teams",
+        "Kanban board",
+        "Code review",
+        "Teams मधला संवाद",
+        "Solo mode",
+        "Live processes",
+        "माझा code private राहतो का?",
+        "सुरुवात करण्यासाठी काय पाहिजे?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

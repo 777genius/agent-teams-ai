@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "گزینه‌های کاربران حرفه‌ای: خروجی/ورودی پیکربندی، بازنشانی پیش‌فرض‌ها و ویرایش پیکربندی خام.",
+      "label": "پیشرفته"
+    },
+    "general": {
+      "description": "ترجیحات اصلی برنامه مانند پوسته، زبان، تراکم نمایش و رفتار راه‌اندازی.",
+      "label": "عمومی"
+    },
+    "infoAriaLabel": "{{label}} چیست؟",
+    "notifications": {
+      "description": "کنترل اینکه چه زمانی و چگونه درباره فعالیت عامل، تکمیل وظایف و خطاها مطلع می‌شوید.",
+      "label": "اعلان‌ها"
+    }
+  },
+  "view": {
+    "description": "ترجیحات برنامه خود را مدیریت کنید",
+    "loading": "در حال بارگذاری تنظیمات...",
+    "title": "تنظیمات"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "لغو",
+      "test": "تست"
+    },
+    "defaults": {
+      "allProjects": "همه پروژه‌ها",
+      "allProjectsHint": "تست‌ها از {{project}} استفاده می‌کنند. پیش‌فرض اعمال می‌شود مگر آنکه پروژه‌ای بازنویسی داشته باشد.",
+      "loadingContexts": "در حال بارگذاری بافت‌ها...",
+      "projectHint": "ذخیره فقط {{project}} را بازنویسی می‌کند.",
+      "projectOverrideContext": "بافت بازنویسی پروژه",
+      "scopeDescriptionAllProjects": "پیش‌فرض برای هر پروژه‌ای که بازنویسی OpenCode مخصوص خود را ندارد.",
+      "scopeDescriptionProject": "فقط پروژه انتخاب‌شده را بازنویسی می‌کند. تیم‌های در حال اجرا تغییر نمی‌کنند.",
+      "selectProjectContext": "انتخاب بافت پروژه",
+      "selectProjectHint": "پیش از تست مدل‌های محلی یا ذخیره پیش‌فرض‌ها، یک پروژه انتخاب کنید.",
+      "selectValidationContext": "انتخاب بافت اعتبارسنجی",
+      "setAllProjectsDefault": "تنظیم پیش‌فرض همه پروژه‌ها",
+      "setProjectDefault": "تنظیم پیش‌فرض پروژه",
+      "thisProject": "این پروژه",
+      "title": "پیش‌فرض‌های OpenCode",
+      "validationContext": "بافت اعتبارسنجی"
+    },
+    "diagnostics": {
+      "copied": "عیب‌یابی کپی شد",
+      "copiedShort": "کپی شد",
+      "copy": "کپی عیب‌یابی",
+      "hints": "نکات",
+      "likelyCause": "علت احتمالی:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI را به‌عنوان مدیر اجرا کنید"
+    },
+    "models": {
+      "alreadyDefault": "این از قبل پیش‌فرض انتخاب‌شده OpenCode است.",
+      "empty": "هیچ مدلی یافت نشد.",
+      "emptyFree": "هیچ مدل رایگانی یافت نشد.",
+      "emptyRecommended": "هیچ مدل توصیه‌شده‌ای یافت نشد.",
+      "emptyRecommendedFree": "هیچ مدل رایگان توصیه‌شده‌ای یافت نشد.",
+      "freeOnly": "فقط رایگان",
+      "launchableDescription": "مسیرهای شناخته‌شده از پیکربندی OpenCode، مدل‌های رایگان داخلی و پیش‌فرض فعلی. مسیرهای محلی پیش از آماده شدن برای راه‌اندازی تیم به یک تست موفق نیاز دارند.",
+      "launchableTitle": "مسیرهای مدل OpenCode",
+      "loadingRoutes": "در حال بارگذاری مسیرهای مدل OpenCode...",
+      "noRoutesMatch": "هیچ مسیر مدل OpenCode با «{{query}}» منطبق نیست.",
+      "noneReported": "هنوز هیچ مسیر مدل OpenCode گزارش نشده است. یک مسیر محلی در OpenCode پیکربندی کنید یا از زبانه ارائه‌دهندگان برای بررسی ارائه‌دهندگان کاتالوگ استفاده کنید.",
+      "recommendedOnly": "فقط توصیه‌شده",
+      "searchPlaceholder": "جستجوی مدل‌ها",
+      "selectProjectBeforeTesting": "پیش از تست مدل‌ها، یک بافت پروژه انتخاب کنید.",
+      "selectProjectBeforeTestingDefaults": "پیش از تست یا ذخیره پیش‌فرض‌های OpenCode، یک بافت پروژه انتخاب کنید.",
+      "testInProgress": "تست مدل از قبل در حال اجرا است.",
+      "useInTeamPicker": "ذخیره برای انتخاب‌گر تیم",
+      "validationContextRequired": "برای فعال کردن تست و تنظیم پیش‌فرض، یک بافت اعتبارسنجی در بالا انتخاب کنید. ذخیره برای انتخاب‌گر تیم فقط مسیر را برای تیم‌های جدید ذخیره می‌کند.",
+      "actionsUnavailable": "اقدامات موقتاً در دسترس نیستند.",
+      "defaultSaveInProgress": "پیش‌فرض OpenCode در حال ذخیره است.",
+      "routeUnavailableAuth": "این ارائه‌دهنده پیش از استفاده از این مدل به احراز هویت نیاز دارد.",
+      "routeUnavailableFailed": "این مسیر مدل در آخرین تست اجرای خود ناموفق بود.",
+      "routeUnavailableGeneric": "این مسیر مدل در حال حاضر قابل استفاده نیست.",
+      "routeUnavailableUnknown": "این مدل پیش‌فرض فعلی OpenCode است، اما هنوز در کاتالوگ زنده در دسترس نیست."
+    },
+    "providers": {
+      "catalog": "کاتالوگ ارائه‌دهندگان OpenCode",
+      "countFallback": "ارائه‌دهندگان OpenCode",
+      "description": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند.",
+      "loadMore": "بارگذاری ارائه‌دهندگان بیشتر",
+      "loading": "در حال بارگذاری ارائه‌دهندگان OpenCode",
+      "noMatches": "هیچ ارائه‌دهنده‌ای با آن جستجو منطبق نیست.",
+      "noneReported": "هیچ ارائه‌دهنده OpenCode توسط زمان اجرای مدیریت‌شده گزارش نشده است.",
+      "recommended": "توصیه‌شده",
+      "refreshCatalog": "تازه‌سازی کاتالوگ",
+      "searchPlaceholder": "جستجوی ارائه‌دهندگان",
+      "description_few": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند.",
+      "description_many": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند.",
+      "description_one": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند.",
+      "description_other": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند."
+    },
+    "setup": {
+      "loading": "در حال بارگذاری راه‌اندازی ارائه‌دهنده..."
+    },
+    "summary": {
+      "defaultModel": "پیش‌فرض OpenCode: {{model}}",
+      "loading": "در حال بارگذاری زمان اجرای مدیریت‌شده OpenCode، ارائه‌دهندگان متصل و پیش‌فرض‌های مدل...",
+      "source": "منبع: {{source}}",
+      "title": "زمان اجرای OpenCode"
+    },
+    "tabs": {
+      "models": "مدل‌ها",
+      "providers": "ارائه‌دهندگان"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "جستجوی مسیرهای مدل"
+    },
+    "badges": {
+      "usedInTeamPicker": "ذخیره‌شده برای انتخاب‌گر تیم",
+      "free": "رایگان",
+      "local": "محلی",
+      "configured": "پیکربندی‌شده",
+      "knownRoute": "مسیر شناخته‌شده",
+      "connected": "متصل",
+      "verified": "تأییدشده",
+      "needsTest": "نیازمند تست",
+      "failed": "ناموفق",
+      "unknown": "نامشخص",
+      "default": "پیش‌فرض"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "زبان برای ارتباط عامل",
+      "descriptionWithDetected": "زبان برای ارتباط عامل (شناسایی‌شده: {{detected}})",
+      "emptyMessage": "هیچ زبانی یافت نشد.",
+      "label": "زبان",
+      "searchPlaceholder": "جستجوی زبان...",
+      "selectPlaceholder": "انتخاب زبان...",
+      "title": "زبان عامل"
+    },
+    "appLanguage": {
+      "description": "زبان برای رابط کاربری برنامه.",
+      "label": "زبان",
+      "title": "زبان برنامه"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "هنگام باز کردن یک رونوشت یا دریافت پیام جدید، هر نوبت پاسخ را به‌طور خودکار گسترش بده",
+        "label": "گسترش پاسخ‌های هوش مصنوعی به‌صورت پیش‌فرض"
+      },
+      "nativeTitleBar": {
+        "description": "به‌جای نوار عنوان سفارشی، از قاب پنجره پیش‌فرض سیستم استفاده کن",
+        "label": "استفاده از نوار عنوان بومی",
+        "restartConfirm": {
+          "confirmLabel": "راه‌اندازی مجدد",
+          "message": "برنامه برای اعمال تغییر نوار عنوان باید راه‌اندازی مجدد شود. اکنون راه‌اندازی مجدد شود؟",
+          "title": "راه‌اندازی مجدد لازم است"
+        }
+      },
+      "theme": {
+        "description": "پوسته رنگی مورد علاقه خود را انتخاب کنید",
+        "label": "پوسته",
+        "options": {
+          "dark": "تیره",
+          "light": "روشن",
+          "system": "سیستم"
+        }
+      },
+      "title": "ظاهر"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "برای دسترسی به رابط کاربری از یک مرورگر یا جاسازی در iframe، یک سرور HTTP راه‌اندازی کن",
+        "label": "فعال‌سازی حالت سرور"
+      },
+      "title": "دسترسی مرورگر"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "انتخاب پوشه",
+        "selectFolderManually": "انتخاب پوشه به‌صورت دستی",
+        "useAutoDetect": "استفاده از شناسایی خودکار",
+        "useFolder": "استفاده از پوشه",
+        "usePath": "استفاده از مسیر",
+        "useThisPath": "استفاده از این مسیر",
+        "useWsl": "از Linux/WSL استفاده می‌کنید؟"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "این پوشه شامل دایرکتوری «projects» نیست. به هر حال ادامه می‌دهید؟",
+          "title": "دایرکتوری projects یافت نشد"
+        },
+        "notClaudeDir": {
+          "message": "نام این پوشه «{{folderName}}» است، نه «.claude». به هر حال ادامه می‌دهید؟",
+          "title": "پوشه انتخاب‌شده .claude نیست"
+        },
+        "noWslPaths": {
+          "message": "نتوانستیم توزیع‌های WSL با داده Claude را به‌طور خودکار پیدا کنیم. پوشه را به‌صورت دستی انتخاب می‌کنید؟",
+          "title": "هیچ مسیر Claude در WSL یافت نشد"
+        },
+        "wslNoProjectsDir": {
+          "message": "«{{path}}» شامل دایرکتوری «projects» نیست. به هر حال ادامه می‌دهید؟",
+          "title": "مسیر WSL فاقد دایرکتوری projects است"
+        }
+      },
+      "current": {
+        "autoDetected": "شناسایی‌شده خودکار: {{path}}",
+        "autoDetectedPath": "در حال استفاده از مسیر شناسایی‌شده خودکار",
+        "customPath": "در حال استفاده از مسیر سفارشی",
+        "label": "ریشه محلی فعلی"
+      },
+      "description": "انتخاب کنید کدام پوشه محلی به‌عنوان ریشه داده Claude شما در نظر گرفته شود",
+      "errors": {
+        "detectWslFailed": "شناسایی مسیرهای ریشه Claude در WSL ناموفق بود",
+        "loadFailed": "بارگذاری تنظیمات ریشه محلی Claude ناموفق بود",
+        "updateFailed": "به‌روزرسانی ریشه Claude ناموفق بود"
+      },
+      "title": "ریشه محلی Claude",
+      "wslModal": {
+        "closeAriaLabel": "بستن پنجره مسیر WSL",
+        "description": "توزیع‌های WSL شناسایی‌شده و نامزدهای ریشه Claude",
+        "noProjectsDir": "هیچ دایرکتوری projects شناسایی نشد",
+        "title": "انتخاب ریشه Claude در WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "با ارسال داده‌های ناشناس خرابی و عملکرد به بهبود برنامه کمک کنید",
+        "label": "ارسال گزارش‌های خرابی"
+      },
+      "title": "حریم خصوصی"
+    },
+    "server": {
+      "runningOn": "در حال اجرا روی",
+      "standaloneModeDescription": "در حال اجرا در حالت مستقل. سرور HTTP همیشه فعال است. اعلان‌های سیستم در دسترس نیستند - محرک‌های اعلان فقط در داخل برنامه ثبت می‌شوند.",
+      "title": "سرور"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "هنگام ورود، برنامه را به‌طور خودکار راه‌اندازی کن",
+        "label": "راه‌اندازی هنگام ورود"
+      },
+      "showDockIcon": {
+        "description": "نمایش نماد برنامه در dock (macOS)",
+        "label": "نمایش نماد dock"
+      },
+      "title": "راه‌اندازی"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "اعلان‌ها ممکن است در حالت توسعه کار نکنند. macOS برنامه را به‌جای نام برنامه تولیدی، به‌عنوان «Electron» شناسایی می‌کند (شناسه بسته",
+      "descriptionSuffix": "). برای تأیید مجوزها به System Settings > Notifications > Electron مراجعه کنید.",
+      "title": "حالت توسعه"
+    },
+    "ignoredRepositories": {
+      "description": "اعلان‌های این مخازن نادیده گرفته می‌شوند",
+      "empty": "هیچ مخزنی نادیده گرفته نشده است",
+      "selectPlaceholder": "انتخاب مخزن برای نادیده گرفتن...",
+      "title": "مخازن نادیده‌گرفته‌شده"
+    },
+    "settings": {
+      "enabled": {
+        "description": "نمایش اعلان‌های سیستم برای خطاها و رویدادها",
+        "label": "فعال‌سازی اعلان‌های سیستم"
+      },
+      "sound": {
+        "description": "هنگام ظاهر شدن اعلان‌ها صدا پخش کن",
+        "label": "پخش صدا"
+      },
+      "subagentErrors": {
+        "description": "شناسایی و اطلاع‌رسانی درباره خطاها در نشست‌های زیرعامل",
+        "label": "شامل کردن خطاهای زیرعامل"
+      },
+      "title": "تنظیمات اعلان"
+    },
+    "snooze": {
+      "clear": "پاک کردن تعویق",
+      "description": "توقف موقت اعلان‌ها",
+      "descriptionWithTime": "به تعویق افتاده تا {{time}}",
+      "label": "تعویق اعلان‌ها",
+      "options": {
+        "15": "۱۵ دقیقه",
+        "30": "۳۰ دقیقه",
+        "60": "۱ ساعت",
+        "120": "۲ ساعت",
+        "240": "۴ ساعت",
+        "-1": "تا فردا"
+      },
+      "selectDuration": "انتخاب مدت..."
+    },
+    "taskCompletion": {
+      "description": "هنگامی که Claude وظایف را به پایان می‌رساند، اعلان‌های بومی سیستم‌عامل دریافت کنید - صداها، بنرها و نشان‌های Dock/نوار وظیفه. روی macOS، Linux و Windows کار می‌کند.",
+      "installPlugin": "نصب پلاگین claude-notifications-go",
+      "title": "اعلان‌های تکمیل وظیفه"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "هنگامی که هر وظیفه در یک تیم به وضعیت تکمیل‌شده می‌رسد اطلاع بده",
+        "label": "همه وظایف تکمیل شدند"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "هنگامی که Claude زمان بازنشانی را گزارش می‌دهد، یک تلنگر پیگیری برای سرتیم پس از بازنشانی محدودیت زمان‌بندی کن",
+        "label": "ازسرگیری خودکار پس از محدودیت نرخ"
+      },
+      "clarifications": {
+        "description": "هنگامی که یک وظیفه به ورودی شما نیاز دارد، اعلان‌های بومی سیستم‌عامل نمایش بده",
+        "label": "اعلان‌های شفاف‌سازی وظیفه"
+      },
+      "crossTeamMessage": {
+        "description": "هنگامی که پیامی از تیم دیگری می‌رسد اطلاع بده",
+        "label": "اعلان‌های پیام بین‌تیمی"
+      },
+      "leadInbox": {
+        "description": "هنگامی که هم‌تیمی‌ها به سرتیم پیام می‌فرستند اطلاع بده",
+        "label": "اعلان‌های صندوق ورودی سرتیم"
+      },
+      "statusChange": {
+        "description": "هنگامی که وضعیت یک وظیفه تغییر می‌کند، اعلان‌های بومی سیستم‌عامل نمایش بده",
+        "label": "اعلان‌های تغییر وضعیت وظیفه",
+        "onlySolo": {
+          "description": "فقط زمانی اطلاع بده که تیم هیچ هم‌تیمی ندارد",
+          "label": "فقط در حالت تک‌نفره"
+        },
+        "statuses": {
+          "description": "کدام وضعیت‌های هدف یک اعلان را فعال می‌کنند",
+          "label": "اطلاع‌رسانی در این وضعیت‌ها",
+          "options": {
+            "approved": "تأییدشده",
+            "completed": "تکمیل‌شده",
+            "deleted": "حذف‌شده",
+            "in_progress": "آغازشده",
+            "needsFix": "نیازمند رفع",
+            "pending": "در انتظار",
+            "review": "بازبینی"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "هنگامی که عامل‌ها روی وظایف نظر می‌دهند، اعلان‌های بومی سیستم‌عامل نمایش بده",
+        "label": "اعلان‌های نظر وظیفه"
+      },
+      "taskCreated": {
+        "description": "هنگامی که یک وظیفه جدید ایجاد می‌شود، اعلان‌های بومی سیستم‌عامل نمایش بده",
+        "label": "اعلان‌های ایجاد وظیفه"
+      },
+      "teamLaunched": {
+        "description": "هنگامی که یک تیم راه‌اندازی را به پایان رسانده و آماده است اطلاع بده",
+        "label": "اعلان‌های راه‌اندازی تیم"
+      },
+      "title": "اعلان‌های تیم",
+      "toolApproval": {
+        "description": "هنگامی که یک ابزار به تأیید شما نیاز دارد (اجازه/رد) در حالی که برنامه در فوکوس نیست اطلاع بده",
+        "label": "اعلان‌های تأیید ابزار"
+      },
+      "userInbox": {
+        "description": "هنگامی که هم‌تیمی‌ها به شما پیام می‌فرستند اطلاع بده",
+        "label": "اعلان‌های صندوق ورودی کاربر"
+      }
+    },
+    "test": {
+      "action": "ارسال تست",
+      "description": "یک اعلان تست برای تأیید تحویل ارسال کنید",
+      "failedToSend": "ارسال اعلان تست ناموفق بود",
+      "label": "اعلان تست",
+      "sending": "در حال ارسال...",
+      "sent": "ارسال شد!",
+      "unknownError": "خطای نامشخص"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "نماد برنامه",
+      "description": "تیم‌های عامل هوش مصنوعی را سرهم کنید که به‌طور مستقل و موازی کار می‌کنند، بین تیم‌ها ارتباط برقرار می‌کنند و وظایف را روی یک تخته kanban مدیریت می‌کنند - با بازبینی کد داخلی، نظارت زنده بر فرایند و دید کامل ابزار.",
+      "standalone": "مستقل",
+      "title": "درباره",
+      "version": "نسخه {{version}}"
+    },
+    "configuration": {
+      "editConfig": "ویرایش پیکربندی",
+      "exportConfig": "خروجی پیکربندی",
+      "importConfig": "ورودی پیکربندی",
+      "openInEditor": "باز کردن در ویرایشگر",
+      "resetToDefaults": "بازنشانی به پیش‌فرض‌ها",
+      "title": "پیکربندی"
+    },
+    "updates": {
+      "available": "نسخه {{version}} در دسترس است",
+      "check": "بررسی به‌روزرسانی‌ها",
+      "checking": "در حال بررسی...",
+      "ready": "به‌روزرسانی آماده است",
+      "unknownVersion": "نامشخص",
+      "upToDate": "به‌روز"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "بارگذاری پیکربندی ناموفق بود",
+      "saveFailed": "ذخیره پیکربندی ناموفق بود"
+    },
+    "footer": {
+      "autoSave": "تغییرات پس از ویرایش به‌طور خودکار ذخیره می‌شوند",
+      "toClose": "برای بستن",
+      "escapeKey": "Esc"
+    },
+    "loading": "در حال بارگذاری پیکربندی...",
+    "status": {
+      "invalidJson": "JSON نامعتبر",
+      "saveFailed": "ذخیره ناموفق بود",
+      "saved": "ذخیره شد",
+      "saving": "در حال ذخیره..."
+    },
+    "title": "ویرایش پیکربندی"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "لغو",
+      "submit": "افزودن محرک",
+      "title": "افزودن محرک سفارشی"
+    },
+    "builtin": {
+      "description": "محرک‌های پیش‌فرضی که همراه برنامه می‌آیند. می‌توانید آن‌ها را فعال یا غیرفعال کرده و الگوهایشان را سفارشی کنید.",
+      "title": "محرک‌های داخلی"
+    },
+    "card": {
+      "builtinBadge": "داخلی",
+      "collapseAriaLabel": "جمع کردن",
+      "deleteAriaLabel": "حذف محرک",
+      "editNameAriaLabel": "ویرایش نام",
+      "expandAriaLabel": "گسترش"
+    },
+    "color": {
+      "customHexTitle": "رنگ hex سفارشی",
+      "invalidHex": "hex نامعتبر"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "هشدار اگر >",
+      "emptyPatternHint": "برای تطبیق با تمام محتوا خالی بگذارید. از نحو regex جاوااسکریپت استفاده می‌کند.",
+      "errorStatusDescription": "زمانی فعال می‌شود که اجرای یک ابزار خطایی گزارش کند (is_error: true).",
+      "tokensUnit": "توکن",
+      "matchPatternPlaceholder": "مثلاً error|failed|exception"
+    },
+    "custom": {
+      "description": "محرک‌های خود را ایجاد کنید تا برای الگوها یا خروجی‌های ابزار خاص مطلع شوید.",
+      "empty": "هنوز هیچ محرک سفارشی پیکربندی نشده است.",
+      "title": "محرک‌های سفارشی"
+    },
+    "errors": {
+      "invalidRegexPattern": "الگوی regex نامعتبر"
+    },
+    "fields": {
+      "contentType": "نوع محتوا",
+      "matchField": "فیلد تطبیق",
+      "matchPattern": "الگوی تطبیق (Regex)",
+      "scopeToolName": "دامنه / نام ابزار",
+      "scopeToolNameOptional": "دامنه / نام ابزار (اختیاری)",
+      "threshold": "آستانه",
+      "tokenType": "نوع توکن",
+      "triggerNamePlaceholder": "مثلاً هشدار شکست ساخت",
+      "triggerNameRequired": "نام محرک *"
+    },
+    "ignorePatterns": {
+      "hint": "برای افزودن Enter را فشار دهید. اگر هر الگویی مطابقت کند، اعلان رد می‌شود.",
+      "placeholder": "افزودن regex نادیده‌گیری...",
+      "removeAriaLabel": "حذف الگوی نادیده‌گیری",
+      "summary": "پیشرفته: قوانین استثنا",
+      "title": "الگوهای نادیده‌گیری (در صورت مطابقت رد شود)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "خروجی متنی",
+        "thinking": "تفکر",
+        "tool_result": "نتیجه ابزار",
+        "tool_use": "استفاده از ابزار"
+      },
+      "matchFields": {
+        "args": "آرگومان‌ها",
+        "command": "فرمان",
+        "content": "محتوا",
+        "description": "توضیح",
+        "file_path": "مسیر فایل",
+        "fullInput": "ورودی کامل (JSON)",
+        "glob": "فیلتر Glob",
+        "new_string": "رشته جدید",
+        "old_string": "رشته قدیمی",
+        "path": "مسیر",
+        "pattern": "الگو",
+        "prompt": "پرامپت",
+        "query": "پرس‌وجو",
+        "skill": "نام مهارت",
+        "subagent_type": "نوع زیرعامل",
+        "text": "محتوای متنی",
+        "thinking": "محتوای تفکر",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "الگوی محتوا",
+        "error_status": "خطای اجرا",
+        "token_threshold": "مصرف بالای توکن"
+      },
+      "tokenTypes": {
+        "input": "توکن‌های ورودی",
+        "output": "توکن‌های خروجی",
+        "total": "کل توکن‌ها"
+      },
+      "toolNames": {
+        "anyTool": "هر ابزاری"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "محرک تست",
+      "detectedSuffix": "خطا شناسایی می‌شد",
+      "more": "...و {{count}} مورد دیگر",
+      "more_few": "...و {{count}} مورد دیگر",
+      "more_many": "...و {{count}} مورد دیگر",
+      "more_one": "...و {{count}} مورد دیگر",
+      "more_other": "...و {{count}} مورد دیگر",
+      "testTrigger": "محرک تست",
+      "testing": "در حال تست...",
+      "title": "پیش‌نمایش",
+      "truncatedWarning": "جستجو زودتر متوقف شد (انقضای زمان یا محدودیت تعداد). تطابق‌های واقعی ممکن است بیشتر باشد.",
+      "viewSession": "مشاهده نشست"
+    },
+    "repositoryScope": {
+      "empty": "هیچ مخزنی انتخاب نشده است - محرک برای همه مخازن اعمال می‌شود",
+      "hint": "هنگامی که مخازن انتخاب می‌شوند، این محرک فقط برای خطاهای آن مخازن فعال می‌شود.",
+      "placeholder": "انتخاب مخزن برای افزودن...",
+      "summary": "پیشرفته: دامنه مخزن",
+      "title": "محدود کردن به مخازن (فقط برای مخازن انتخاب‌شده اعمال می‌شود)"
+    },
+    "sections": {
+      "configuration": "پیکربندی",
+      "dotColor": "رنگ نقطه",
+      "generalInfo": "اطلاعات عمومی",
+      "triggerCondition": "شرط محرک"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "افزودن نمایه",
+      "cancel": "لغو",
+      "deleteProfile": "حذف نمایه",
+      "editProfile": "ویرایش نمایه",
+      "save": "ذخیره"
+    },
+    "authMethods": {
+      "agent": "عامل SSH",
+      "auto": "خودکار (از پیکربندی SSH)",
+      "password": "رمز عبور",
+      "privateKey": "کلید خصوصی"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "حذف",
+      "message": "آیا مطمئنید که می‌خواهید «{{name}}» را حذف کنید؟ این عمل قابل بازگشت نیست.",
+      "title": "حذف نمایه"
+    },
+    "description": "نمایه‌های اتصال SSH را برای اتصال مجدد سریع ذخیره کنید",
+    "empty": {
+      "description": "برای اتصال سریع یک نمایه SSH اضافه کنید",
+      "title": "هیچ نمایه ذخیره‌شده‌ای نیست"
+    },
+    "form": {
+      "authentication": "احراز هویت",
+      "host": "میزبان",
+      "name": "نام",
+      "passwordPrompt": "هنگام اتصال، رمز عبور از شما خواسته خواهد شد.",
+      "port": "درگاه",
+      "privateKeyPath": "مسیر کلید خصوصی",
+      "username": "نام کاربری",
+      "namePlaceholder": "سرور من",
+      "hostPlaceholder": "نام میزبان یا IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "در حال بارگذاری نمایه‌ها...",
+    "title": "نمایه‌های فضای کاری"
+  },
+  "connection": {
+    "actions": {
+      "connect": "اتصال",
+      "connecting": "در حال اتصال...",
+      "disconnect": "قطع اتصال",
+      "testConnection": "تست اتصال",
+      "testing": "در حال تست..."
+    },
+    "currentMode": {
+      "description": "منبع داده برای فایل‌های نشست",
+      "label": "حالت فعلی",
+      "local": "محلی ({{path}})"
+    },
+    "description": "برای مشاهده نشست‌های Claude Code در حال اجرا، به یک ماشین راه دور متصل شوید",
+    "form": {
+      "authentication": "احراز هویت",
+      "host": "میزبان",
+      "password": "رمز عبور",
+      "port": "درگاه",
+      "privateKeyPath": "مسیر کلید خصوصی",
+      "username": "نام کاربری",
+      "hostPlaceholder": "نام میزبان یا نام مستعار پیکربندی SSH",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "نمایه‌های ذخیره‌شده"
+    },
+    "ssh": {
+      "title": "اتصال SSH"
+    },
+    "status": {
+      "connectedTo": "متصل به {{host}}",
+      "remoteSessions": "در حال مشاهده نشست‌های راه دور از طریق SSH"
+    },
+    "test": {
+      "failed": "اتصال ناموفق بود: {{error}}",
+      "success": "اتصال موفق بود",
+      "unknownError": "خطای نامشخص"
+    },
+    "title": "اتصال راه دور"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "لغو",
+      "cancelLogin": "لغو ورود",
+      "connectChatGpt": "اتصال ChatGPT",
+      "delete": "حذف",
+      "disable": "غیرفعال کردن",
+      "disconnectAccount": "قطع اتصال حساب",
+      "generateLink": "تولید پیوند",
+      "openLogin": "باز کردن ورود",
+      "reconnectAnthropic": "اتصال مجدد Anthropic",
+      "refresh": "تازه‌سازی",
+      "replaceKey": "جایگزینی کلید",
+      "saveEndpoint": "ذخیره نقطه پایانی",
+      "saveKey": "ذخیره کلید",
+      "saving": "در حال ذخیره...",
+      "setApiKey": "تنظیم کلید API",
+      "updateKey": "به‌روزرسانی کلید",
+      "useCode": "استفاده از کد"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "در حال بارگذاری اعتبارنامه‌های ذخیره‌شده...",
+      "projectScope": "پروژه",
+      "scope": "دامنه",
+      "storedIn": "ذخیره‌شده در {{backend}}",
+      "userScope": "کاربر",
+      "storedInApp": "ذخیره‌شده در برنامه",
+      "providers": {
+        "anthropic": {
+          "name": "کلید API Anthropic",
+          "title": "کلید API",
+          "description": "از یک کلید API مستقیم Anthropic برای دسترسی صورتحساب‌محور API استفاده کنید. نشست اشتراک Anthropic شما هنگام بازگشت در دسترس می‌ماند.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "کلید API Codex",
+          "title": "کلید API",
+          "description": "از یک کلید API OpenAI به‌عنوان مسیر احراز هویت ثانویه Codex استفاده کنید. اگر Codex را به حالت کلید API تغییر دهید، برنامه OPENAI_API_KEY را برای راه‌اندازی‌های بومی در CODEX_API_KEY بازتاب می‌دهد.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "کلید API Gemini",
+          "title": "دسترسی API",
+          "description": "از `GEMINI_API_KEY` برای بک‌اند Gemini API استفاده کنید. CLI SDK و ADC به آن نیاز ندارند.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "سرور برنامه: {{state}}",
+        "connected": "متصل",
+        "description": "نشست حساب سرور برنامه محلی Codex را که راه‌اندازی‌های بومی پشتیبانی‌شده با اشتراک را تأمین می‌کند مدیریت کنید.",
+        "loginInProgress": "ورود در حال انجام",
+        "plan": "پلن: {{plan}}",
+        "reconnectRequired": "اتصال مجدد لازم است",
+        "title": "حساب ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} حالت خودکار تا زمان اتصال ChatGPT از کلید API شناسایی‌شده استفاده خواهد کرد.",
+          "detectedApiKeyNeedsApiMode": "{{message}} کلید API شناسایی‌شده فقط پس از تغییر Codex به حالت کلید API استفاده می‌شود.",
+          "localArtifactsNoSession": "Codex CLI در حال حاضر هیچ حساب فعال ChatGPT را گزارش نمی‌کند. داده‌های محلی حساب Codex وجود دارد، اما هیچ نشست مدیریت‌شده فعالی انتخاب نشده است. محدودیت‌های استفاده فقط پس از آنکه Codex CLI یکی را ببیند اینجا ظاهر می‌شوند.",
+          "noActiveAccount": "Codex CLI در حال حاضر هیچ حساب فعال ChatGPT را گزارش نمی‌کند. محدودیت‌های استفاده فقط پس از آنکه Codex CLI یکی را ببیند اینجا ظاهر می‌شوند.",
+          "reconnectBeforeUsage": "Codex یک حساب ChatGPT به‌صورت محلی انتخاب‌شده دارد، اما نشست فعلی پیش از آنکه محدودیت‌های استفاده اینجا بارگذاری شوند نیازمند اتصال مجدد است.",
+          "usageLimitsAfterReport": "محدودیت‌های استفاده پس از آنکه Codex آن‌ها را برای حساب ChatGPT متصل گزارش کند اینجا ظاهر می‌شوند."
+        }
+      },
+      "install": {
+        "checking": "در حال بررسی",
+        "downloading": "در حال دانلود",
+        "installCli": "نصب Codex CLI",
+        "installing": "در حال نصب",
+        "retryInstall": "تلاش مجدد برای نصب",
+        "title": "نصب Codex CLI در داده‌های برنامه"
+      },
+      "rateLimits": {
+        "credits": "اعتبارها",
+        "creditsDescription": "اعتبارها جدا از مصرف اشتراک پنجره‌محور نمایش داده می‌شوند و ممکن است برای نشست‌های ChatGPT پشتیبانی‌شده با پلن در دسترس نباشند.",
+        "noSecondaryWindow": "Codex برای این تصویر لحظه‌ای حساب، پنجره ثانویه‌ای برنگرداند.",
+        "notReported": "گزارش نشده",
+        "primaryReset": "بازنشانی اولیه",
+        "primaryUsed": "استفاده‌شده اولیه",
+        "primaryWindow": "پنجره اولیه",
+        "remainingLeft": "{{value}} باقی‌مانده",
+        "remainingUnknown": "باقی‌مانده نامشخص",
+        "secondaryReset": "بازنشانی ثانویه",
+        "secondaryUsed": "استفاده‌شده ثانویه",
+        "secondaryWindow": "پنجره ثانویه",
+        "usedQuotaNote": "این درصدها سهمیه استفاده‌شده را نشان می‌دهند، نه سهمیه باقی‌مانده.",
+        "weeklyReset": "بازنشانی هفتگی",
+        "weeklyUsed": "استفاده‌شده هفتگی",
+        "weeklyUsedOneWeek": "استفاده‌شده هفتگی (۱ هفته)",
+        "weeklyWindow": "پنجره هفتگی",
+        "secondaryFallback": "ثانویه",
+        "secondaryWindowNote": " محدودیت‌های هفتگی به‌طور جداگانه در پنجره {{window}} نمایش داده می‌شوند.",
+        "usageExplanationGeneric": "سهمیه استفاده‌شده را نشان می‌دهد، نه سهمیه باقی‌مانده.",
+        "usageExplanationWindowOnly": "سهمیه استفاده‌شده در پنجره {{window}} فعلی را نشان می‌دهد، نه سهمیه باقی‌مانده.",
+        "usageExplanationWithRemaining": "{{used}} استفاده‌شده - حدود {{remaining}} در پنجره {{window}} فعلی باقی‌مانده."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "توکن احراز هویت",
+      "authTokenMissing": "توکن احراز هویت پیکربندی نشده است.",
+      "baseUrl": "URL پایه",
+      "description": "از یک نقطه پایانی زمان اجرای محلی سازگار با Anthropic استفاده کنید.",
+      "keepSavedToken": "برای نگه داشتن توکن ذخیره‌شده خالی بگذارید",
+      "title": "نقطه پایانی محلی / سازگار",
+      "tokenStatus": "توکن {{status}}",
+      "validation": {
+        "baseUrlRequired": "URL پایه لازم است",
+        "firstPartyAnthropic": "برای Anthropic دست‌اول از خودکار، اشتراک یا کلید API استفاده کنید",
+        "httpRequired": "URL پایه باید از http:// یا https:// استفاده کند",
+        "invalidUrl": "URL نامعتبر",
+        "noCredentials": "URL پایه نباید شامل اعتبارنامه‌ها باشد"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "نقطه پایانی غیرفعال شد. توکن ذخیره‌شده نگه داشته شد.",
+        "endpointSaved": "نقطه پایانی ذخیره شد",
+        "endpointSavedTokenMissing": "نقطه پایانی ذخیره شد. توکن احراز هویت پیکربندی نشده است."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "روش احراز هویت",
+      "descriptions": {
+        "anthropic": "انتخاب کنید نشست‌های Anthropic راه‌اندازی‌شده توسط برنامه چگونه احراز هویت شوند.",
+        "codex": "انتخاب کنید Codex هنگام راه‌اندازی زمان اجرای بومی، اشتراک ChatGPT شما را ترجیح دهد یا یک کلید API را.",
+        "gemini": "دسترسی API اختیاری را پیکربندی کنید. CLI SDK و ADC همچنان به‌طور خودکار کشف می‌شوند.",
+        "opencode": "احراز هویت OpenCode و فهرست ارائه‌دهنده توسط زمان اجرای OpenCode مدیریت می‌شوند."
+      },
+      "method": "روش اتصال",
+      "mode": "حالت: {{mode}}",
+      "selected": "انتخاب‌شده",
+      "switching": "در حال تعویض...",
+      "title": "اتصال"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "کلید API"
+      },
+      "anthropic": {
+        "apiKeyDescription": "از ANTHROPIC_API_KEY و صورتحساب API Anthropic استفاده کنید.",
+        "autoDescription": "از پیش‌فرض‌های زمان اجرای Anthropic و بهترین اعتبارنامه محلی در دسترس استفاده کنید.",
+        "hint": "حالت خودکار، Anthropic را روی تعیین اعتبارنامه محلی پیش‌فرض خود نگه می‌دارد.",
+        "subscriptionDescription": "از نشست ورود محلی Anthropic و دسترسی اشتراکی خود استفاده کنید.",
+        "subscriptionTitle": "اشتراک Anthropic"
+      },
+      "auto": {
+        "title": "خودکار"
+      },
+      "codex": {
+        "apiKeyDescription": "از صورتحساب OPENAI_API_KEY و CODEX_API_KEY برای راه‌اندازی‌های بومی Codex استفاده کنید.",
+        "autoDescription": "حساب و اشتراک ChatGPT خود را ترجیح دهید. فقط در صورت نیاز از حالت کلید API استفاده کنید.",
+        "chatgptDescription": "از حساب ChatGPT متصل و اشتراک Codex خود استفاده کنید.",
+        "chatgptTitle": "حساب ChatGPT",
+        "hint": "Codex همیشه از طریق زمان اجرای بومی اجرا می‌شود. حالت خودکار پیش از بازگشت به اعتبارنامه‌های کلید API، حساب ChatGPT شما را ترجیح می‌دهد."
+      }
+    },
+    "description": "مدیریت کنید هر ارائه‌دهنده چگونه متصل می‌شود و، هنگام پشتیبانی، زمان اجرای چندمدلی باید از کدام بک‌اند استفاده کند.",
+    "fastMode": {
+      "defaultOff": "پیش‌فرض خاموش",
+      "description": "هنگامی که مدل و زمان اجرای تعیین‌شده اجازه دهند، حالت Fast مربوط به Claude Code را به‌طور پیش‌فرض برای راه‌اندازی‌های تیم جدید Anthropic اعمال کن.",
+      "disabledHint": "راه‌اندازی‌های جدید Anthropic روی سرعت عادی می‌مانند مگر آنکه یک تیم صراحتاً حالت Fast را فعال کند.",
+      "enabledHint": "راه‌اندازی‌های جدید Anthropic هنگامی که مدل تعیین‌شده پشتیبانی کند، به‌طور پیش‌فرض حالت Fast را درخواست خواهند کرد.",
+      "notExposed": "این زمان اجرای Anthropic حالت Fast را افشا نمی‌کند.",
+      "preferFast": "ترجیح Fast",
+      "title": "پیش‌فرض حالت Fast",
+      "unavailableForRuntime": "حالت Fast در حال حاضر برای این زمان اجرای Anthropic در دسترس نیست."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "حالت کلید API انتخاب شده است، اما هنوز هیچ اعتبارنامه API Anthropic در دسترس نیست.",
+      "anthropicStoredKeyAvailable": "یک کلید API ذخیره‌شده در دسترس است، اما نشست‌های Anthropic راه‌اندازی‌شده توسط برنامه تنها پس از تغییر شما به حالت کلید API از آن استفاده می‌کنند.",
+      "anthropicSubscriptionMissing": "حالت اشتراک Anthropic انتخاب شده است. برای استفاده از این ارائه‌دهنده با Anthropic وارد شوید.",
+      "authTokenMissing": "توکن احراز هویت پیکربندی نشده است. بسیاری از نقاط پایانی محلی سازگار با Anthropic به یک توکن غیرخالی نیاز دارند.",
+      "chatgptLoginPending": "در انتظار اتمام ورود حساب ChatGPT...",
+      "chatgptLoginStarting": "در حال شروع ورود ChatGPT...",
+      "codexApiKeyMissing": "حالت کلید API انتخاب شده است، اما هنوز هیچ اعتبارنامه OPENAI_API_KEY یا CODEX_API_KEY در دسترس نیست.",
+      "codexLocalArtifactsNoSession": "Codex CLI در حال حاضر هیچ حساب فعال ChatGPT ندارد. داده‌های محلی حساب Codex وجود دارد، اما هیچ نشست مدیریت‌شده فعالی انتخاب نشده است.",
+      "codexNeedsReconnect": "Codex یک حساب ChatGPT به‌صورت محلی انتخاب‌شده دارد، اما نشست فعلی نیازمند اتصال مجدد است.",
+      "codexNoChatgptAccount": "Codex CLI در حال حاضر هیچ حساب فعال ChatGPT ندارد. برای استفاده از اشتراک خود ChatGPT را متصل کنید.",
+      "codexNoCredential": "هنوز هیچ حساب ChatGPT یا کلید API در دسترس نیست.",
+      "geminiApiUnavailable": "Gemini API در حال حاضر در دسترس نیست. `GEMINI_API_KEY` را اینجا پیکربندی کنید یا از اعتبارنامه‌های معتبر Google ADC استفاده کنید.",
+      "withApiKeyFallback": "{{message}} برای استفاده از کلید API شناسایی‌شده به حالت کلید API تغییر دهید."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "نشست‌های Anthropic راه‌اندازی‌شده توسط برنامه را وادار به استفاده از اعتبارنامه کلید API کن.",
+        "auto": "از رفتار پیش‌فرض زمان اجرا استفاده کن. کلیدهای API ذخیره‌شده در این برنامه تنها پس از تغییر به حالت کلید API استفاده می‌شوند.",
+        "oauth": "نشست‌های Anthropic راه‌اندازی‌شده توسط برنامه را وادار به استفاده از نشست اشتراک محلی Anthropic کن."
+      },
+      "codex": {
+        "apiKey": "راه‌اندازی‌های بومی Codex را وادار به استفاده از صورتحساب OPENAI_API_KEY / CODEX_API_KEY کن.",
+        "auto": "هنگامی که حساب ChatGPT شما در دسترس است آن را ترجیح بده. فقط در صورت نیاز به حالت کلید API بازگرد.",
+        "chatgpt": "راه‌اندازی‌های بومی Codex را وادار به استفاده از حساب ChatGPT متصل و اشتراک شما کن."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "در حال اعمال تغییرات اتصال...",
+      "refreshingProviderStatus": "در حال تازه‌سازی وضعیت ارائه‌دهنده...",
+      "savingCompatibleEndpoint": "در حال ذخیره نقطه پایانی سازگار...",
+      "switchingAnthropicSubscription": "در حال تعویض به اشتراک Anthropic...",
+      "switchingApiKey": "در حال تعویض به کلید API...",
+      "switchingApiKeyMode": "در حال تعویض به حالت کلید API...",
+      "switchingAuto": "در حال تعویض به خودکار...",
+      "switchingChatgpt": "در حال تعویض به حالت حساب ChatGPT..."
+    },
+    "provider": "ارائه‌دهنده",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic در حال حاضر انتخاب‌گر بک‌اند زمان اجرای جداگانه‌ای ندارد.",
+        "codex": "Codex اکنون فقط از طریق مسیر زمان اجرای بومی اجرا می‌شود.",
+        "gemini": "انتخاب کنید چندمدلی باید از کدام بک‌اند زمان اجرای Gemini استفاده کند.",
+        "opencode": "OpenCode از میزبان زمان اجرای مدیریت‌شده خود استفاده می‌کند. دسکتاپ در حال حاضر فقط وضعیت را افشا می‌کند."
+      },
+      "title": "زمان اجرا",
+      "updating": "در حال به‌روزرسانی زمان اجرا..."
+    },
+    "runtimeSummary": "زمان اجرا: {{runtime}}",
+    "status": {
+      "configured": "پیکربندی‌شده",
+      "enabled": "فعال",
+      "notConfigured": "پیکربندی‌نشده",
+      "notSet": "تنظیم‌نشده",
+      "off": "خاموش",
+      "unknown": "نامشخص"
+    },
+    "title": "تنظیمات ارائه‌دهنده",
+    "usage": {
+      "apiKey": "در حال استفاده از کلید API",
+      "apiKeyRequired": "کلید API لازم است",
+      "compatibleEndpoint": "در حال استفاده از نقطه پایانی سازگار",
+      "notConnected": "متصل نیست",
+      "usingMethod": "در حال استفاده از {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "کلید API حذف شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
+      "apiKeySavedRefreshFailed": "کلید API ذخیره شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
+      "connectionUpdatedRefreshFailed": "اتصال به‌روزرسانی شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
+      "deleteApiKey": "حذف کلید API ناموفق بود",
+      "disableEndpoint": "غیرفعال کردن نقطه پایانی ناموفق بود",
+      "endpointDisabledRefreshFailed": "نقطه پایانی غیرفعال شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
+      "endpointSavedRefreshFailed": "نقطه پایانی ذخیره شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
+      "refreshCodexAccount": "تازه‌سازی حساب Codex ناموفق بود",
+      "saveApiKey": "ذخیره کلید API ناموفق بود",
+      "saveEndpoint": "ذخیره نقطه پایانی ناموفق بود",
+      "updateAnthropicFastMode": "به‌روزرسانی حالت Fast مربوط به Anthropic ناموفق بود",
+      "updateConnection": "به‌روزرسانی اتصال ناموفق بود",
+      "updateRuntimeBackend": "به‌روزرسانی بک‌اند زمان اجرا ناموفق بود",
+      "apiKeyRequired": "کلید API لازم است"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "خودکار",
+        "oauth": "اشتراک / OAuth",
+        "chatgpt": "حساب ChatGPT",
+        "apiKey": "کلید API",
+        "anthropicSubscription": "اشتراک Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "کلید API",
+        "apiKeyHelper": "کمک‌کننده کلید API",
+        "oauth": "OAuth",
+        "claudeSubscription": "اشتراک Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "حساب Google",
+        "serviceAccount": "حساب سرویس"
+      },
+      "runtime": {
+        "codexNative": "Codex بومی",
+        "currentRuntime": "زمان اجرای فعلی",
+        "selectedRuntime": "زمان اجرای انتخاب‌شده",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "در حال بررسی...",
+        "modelsAvailable": "مدل‌ها در دسترس هستند",
+        "checked": "بررسی‌شده",
+        "providerActivity": "فعالیت ارائه‌دهنده",
+        "notConnected": "متصل نیست",
+        "startingChatGptLogin": "در حال شروع ورود ChatGPT...",
+        "waitingForChatGptLogin": "در انتظار ورود حساب ChatGPT...",
+        "chatGptVerificationDegraded": "حساب ChatGPT شناسایی شد - تأیید حساب در حال حاضر کاهش‌یافته است.",
+        "chatGptAccountReady": "حساب ChatGPT آماده است",
+        "apiKeyReady": "کلید API آماده است",
+        "codexLocalAccountNeedsReconnect": "Codex یک حساب ChatGPT به‌صورت محلی انتخاب‌شده دارد، اما نشست فعلی نیازمند اتصال مجدد است.",
+        "codexNoActiveManagedSession": "Codex CLI هیچ ورود فعال ChatGPT را گزارش نمی‌کند. داده‌های محلی حساب Codex وجود دارد، اما هیچ نشست مدیریت‌شده فعالی انتخاب نشده است.",
+        "codexNoActiveChatGptLogin": "Codex CLI هیچ ورود فعال ChatGPT را گزارش نمی‌کند",
+        "connectChatGptForSubscription": "برای استفاده از اشتراک Codex خود یک حساب ChatGPT متصل کنید.",
+        "codexNativeReady": "Codex بومی آماده است",
+        "codexNativeUnavailable": "Codex بومی در دسترس نیست",
+        "unavailableInCurrentRuntime": "در زمان اجرای فعلی در دسترس نیست",
+        "connectedViaApiKey": "متصل از طریق کلید API",
+        "apiKeyConfiguredNotVerified": "کلید API پیکربندی شد، اما هنوز تأیید نشده است",
+        "apiKeyModeMissingCredential": "حالت کلید API انتخاب شد، اما هیچ کلید API پیکربندی نشده است",
+        "connectedVia": "متصل از طریق {{method}}",
+        "unableToVerify": "تأیید ممکن نیست"
+      },
+      "mode": {
+        "selectedAuth": "احراز هویت انتخاب‌شده: {{authMode}}",
+        "preferredAuth": "احراز هویت ترجیحی: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "کلید API پیکربندی شده است",
+        "savedApiKeyAvailable": "کلید API ذخیره‌شده در بخش مدیریت در دسترس است",
+        "apiKeyAlsoConfigured": "کلید API نیز در بخش مدیریت پیکربندی شده است",
+        "apiKeyConfiguredInManage": "کلید API در بخش مدیریت پیکربندی شده است",
+        "apiKeyFallbackInManage": "کلید API نیز در بخش مدیریت به‌عنوان جایگزین در دسترس است",
+        "availableAsFallback": "{{summary}} - در دسترس به‌عنوان جایگزین",
+        "savedApiKeyAvailableIfSwitch": "اگر به حالت کلید API تغییر دهید، کلید API ذخیره‌شده در بخش مدیریت در دسترس است",
+        "availableIfSwitch": "{{summary}} - در صورت تغییر به حالت کلید API در دسترس است",
+        "autoWillUseUntilChatGpt": "{{summary}} - حالت خودکار تا زمان اتصال ChatGPT از این استفاده خواهد کرد"
+      },
+      "actions": {
+        "connect": "اتصال",
+        "connectAnthropic": "اتصال Anthropic",
+        "connectChatGpt": "اتصال ChatGPT",
+        "disconnect": "قطع اتصال",
+        "openLogin": "باز کردن ورود"
+      },
+      "disconnect": {
+        "anthropicTitle": "اشتراک Anthropic قطع شود؟",
+        "anthropic": "این کار نشست اشتراک محلی Anthropic را از زمان اجرای Claude CLI حذف می‌کند.",
+        "anthropicWithApiKey": "این کار نشست اشتراک محلی Anthropic را از زمان اجرای Claude CLI حذف می‌کند. کلیدهای API ذخیره‌شده در بخش مدیریت در دسترس می‌مانند.",
+        "geminiTitle": "Gemini CLI قطع شود؟",
+        "gemini": "این کار فراداده نشست محلی Gemini CLI را پاک می‌کند. اعتبارنامه‌های خارجی ADC و کلیدهای API ذخیره‌شده حذف نمی‌شوند."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "بررسی به‌روزرسانی‌ها",
+      "checking": "در حال بررسی...",
+      "extensions": "افزونه‌ها",
+      "installRuntime": "نصب {{runtime}}",
+      "manage": "مدیریت",
+      "recheck": "بررسی مجدد",
+      "reinstallRuntime": "نصب مجدد {{runtime}}",
+      "retry": "تلاش مجدد",
+      "update": "به‌روزرسانی"
+    },
+    "installer": {
+      "checkingLatest": "در حال بررسی آخرین نسخه...",
+      "downloading": "در حال دانلود...",
+      "failed": "نصب ناموفق بود",
+      "installed": "نسخه {{version}} نصب شد",
+      "installing": "در حال نصب...",
+      "latest": "latest",
+      "verifying": "در حال تأیید checksum..."
+    },
+    "labels": {
+      "multimodel": "چندمدلی"
+    },
+    "loading": {
+      "aiProviders": "در حال بررسی ارائه‌دهندگان هوش مصنوعی...",
+      "claudeCli": "در حال بررسی Claude CLI..."
+    },
+    "provider": {
+      "backend": "بک‌اند: {{backend}}",
+      "loadingModels": "در حال بارگذاری مدل‌ها...",
+      "modelsUnavailable": "مدل‌ها برای این نسخه زمان اجرا در دسترس نیستند",
+      "runtime": "زمان اجرا: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "احراز هویت ناموفق بود",
+      "authUpdated": "احراز هویت به‌روزرسانی شد",
+      "loggedOut": "ارائه‌دهنده خارج شد",
+      "login": "ورود",
+      "logout": "خروج",
+      "logoutFailed": "خروج ناموفق بود"
+    },
+    "status": {
+      "configuredNotFound": "{{runtime}} پیکربندی‌شده یافت نشد.",
+      "foundButFailed": "{{runtime}} یافت شد اما در راه‌اندازی ناموفق بود",
+      "healthCheckFailed": "{{runtime}} پیکربندی‌شده در بررسی سلامت راه‌اندازی خود ناموفق بود.",
+      "notInstalled": "{{runtime}} نصب نشده است"
+    },
+    "title": "زمان اجرای CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

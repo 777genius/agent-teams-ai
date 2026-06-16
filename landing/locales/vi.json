@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Tính năng",
+    "screenshots": "Ảnh chụp màn hình",
+    "docs": "Tài liệu",
+    "comparison": "So sánh",
+    "download": "Tải xuống",
+    "pricing": "Miễn phí",
+    "faq": "Hỏi đáp",
+    "viewOnGithub": "Xem trên GitHub",
+    "openMenu": "Mở menu",
+    "closeMenu": "Đóng menu",
+    "short": {
+      "screenshots": "Ảnh",
+      "docs": "Tài liệu",
+      "download": "Tải",
+      "comparison": "So sánh",
+      "pricing": "Miễn phí"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Tải xuống ngay",
+    "ctaPrimary": "Tải cho {platform}",
+    "ctaSecondary": "So sánh",
+    "ctaDocs": "Tài liệu",
+    "preview": "Xem trước sản phẩm",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Bảng Kanban",
+      "openSource": "Mã nguồn mở"
+    },
+    "watchDemo": "Xem demo",
+    "videoUnavailable": "Video không khả dụng",
+    "supportedProviders": "Nhà cung cấp AI được hỗ trợ",
+    "slogan": "Làm được nhiều việc bằng cách làm rất ít",
+    "platformDefault": "Cho nền tảng của bạn",
+    "guidesSetup": "Hướng dẫn và thiết lập",
+    "videoFrameLabel": "Xem demo Agent Teams",
+    "commandFeed": "Luồng lệnh của đội ngũ",
+    "liveDemo": "Demo trực tiếp",
+    "demoVideoTitle": "Video demo Agent Teams",
+    "demoTitle": "Demo Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo đội ngũ agent",
+      "live": "TRỰC TIẾP",
+      "waiting": "Đang chờ tác vụ...",
+      "activity": {
+        "authMiddleware": "Đang triển khai middleware xác thực...",
+        "unitTests": "Đang viết unit test cho API...",
+        "reviewPr": "Đang xem xét thay đổi của PR #42...",
+        "ciPipeline": "Đang thiết lập pipeline CI/CD...",
+        "refactorDatabase": "Đang tái cấu trúc tầng cơ sở dữ liệu..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit test",
+        "ciSetup": "Thiết lập CI"
+      },
+      "columns": {
+        "todo": "CẦN LÀM",
+        "progress": "ĐANG LÀM",
+        "review": "XEM XÉT",
+        "done": "HOÀN THÀNH"
+      }
+    }
+  },
+  "download": {
+    "title": "Tải xuống",
+    "detected": "Đã phát hiện",
+    "systemRequirements": "Yêu cầu hệ thống",
+    "version": "Phiên bản {version}",
+    "readyToStart": "Sẵn sàng bắt đầu!"
+  },
+  "theme": {
+    "dark": "Tối",
+    "light": "Sáng"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "search": "Tìm ngôn ngữ…"
+  },
+  "features": {
+    "sectionTitle": "Mọi thứ bạn cần để điều phối agent AI",
+    "sectionSubtitle": "Các công cụ mạnh mẽ giúp việc cộng tác đa agent thực sự hiệu quả."
+  },
+  "pricing": {
+    "sectionTitle": "Cài đặt miễn phí. Bao gồm mô hình miễn phí.",
+    "sectionSubtitle": "Bắt đầu ngay lập tức với một mô hình miễn phí không cần xác thực - không cần tài khoản, API key hay thẻ tín dụng. Kết nối Claude, Codex, OpenCode/OpenRouter hoặc nhà cung cấp khác chỉ khi bạn muốn thêm mô hình.",
+    "getStarted": "Tải xuống ngay",
+    "popular": "Miễn phí",
+    "freeModelCallout": "Bao gồm mô hình miễn phí không cần xác thực",
+    "note": "Agent Teams không có gói trả phí. Mô hình miễn phí không cần xác thực cho phép bạn dùng thử ngay; việc sử dụng nhà cung cấp trả phí là tùy chọn và do nhà cung cấp bạn chọn kiểm soát."
+  },
+  "testimonials": {
+    "sectionTitle": "Lập trình viên nói gì",
+    "sectionSubtitle": "Phản hồi thực tế từ những người xây dựng thực sự",
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "feedbackCta": "Muốn chia sẻ trải nghiệm của bạn? Hãy mở một issue trên"
+  },
+  "faq": {
+    "sectionTitle": "Có câu hỏi? Chúng tôi có câu trả lời",
+    "subtitle": "Mọi điều bạn cần biết về Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Chúng tôi so với đối thủ",
+    "sectionSubtitle": "So sánh từng tính năng với các công cụ lập trình AI khác.",
+    "feature": "Tính năng",
+    "robotBubble": "Bạn tự đánh giá",
+    "features": {
+      "crossTeam": "Giao tiếp giữa các đội ngũ",
+      "agentMessaging": "Nhắn tin giữa các agent",
+      "linkedTasks": "Tác vụ liên kết",
+      "sessionAnalysis": "Phân tích phiên",
+      "taskAttachments": "Tệp đính kèm tác vụ",
+      "hunkReview": "Xem xét theo từng đoạn",
+      "codeEditor": "Trình soạn thảo mã tích hợp",
+      "fullAutonomy": "Tự chủ hoàn toàn",
+      "taskDeps": "Phụ thuộc tác vụ",
+      "reviewWorkflow": "Quy trình xem xét",
+      "zeroSetup": "Không cần thiết lập",
+      "kanban": "Bảng Kanban",
+      "execLog": "Nhật ký thực thi",
+      "liveProcesses": "Tiến trình trực tiếp",
+      "runtimeLoad": "CPU/RAM trên mỗi thành viên",
+      "perTaskReview": "Xem xét mã theo từng tác vụ",
+      "flexAutonomy": "Tự chủ linh hoạt",
+      "worktree": "Cô lập bằng Git worktree",
+      "multiAgent": "Thành viên AI hỗn hợp",
+      "liveWorkGraph": "Bản đồ đội ngũ trực tiếp",
+      "liveTeam": "Thành viên trực tiếp",
+      "teamWorkspace": "Không gian làm việc của đội ngũ",
+      "launchProof": "Trạng thái khởi chạy thành viên",
+      "orgGovernance": "Sơ đồ tổ chức / quản trị",
+      "budgetControls": "Kiểm soát ngân sách",
+      "price": "Giá"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Xem nó hoạt động",
+    "sectionSubtitle": "Ảnh chụp màn hình thực tế từ ứng dụng — bảng kanban, xem xét mã, đội ngũ agent và hơn thế nữa."
+  },
+  "common": {
+    "learnMore": "Tìm hiểu thêm",
+    "statusLabel": "Trạng thái:",
+    "previous": "Trước",
+    "next": "Tiếp"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Điều phối agent AI cho lập trình viên",
+    "robotBubble": "Tôi đang chờ",
+    "links": {
+      "github": "GitHub",
+      "author": "Tác giả",
+      "docs": "Tài liệu"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Điều phối agent AI cho lập trình viên",
+    "homeDescription": "Ứng dụng máy tính mã nguồn mở miễn phí cho các đội ngũ agent AI. Bắt đầu với một mô hình miễn phí không cần xác thực, rồi kết nối Claude, Codex hoặc OpenCode khi bạn cần thêm mô hình.",
+    "downloadTitle": "Tải Agent Teams cho macOS, Windows và Linux",
+    "downloadDescription": "Tải Agent Teams cho macOS, Windows và Linux. Ứng dụng máy tính mã nguồn mở miễn phí cho các đội ngũ agent Claude, Codex và OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Không tìm thấy trang",
+    "notFoundDescription": "Trang bạn đang tìm không tồn tại hoặc đã được di chuyển.",
+    "genericTitle": "Đã xảy ra lỗi",
+    "genericDescription": "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.",
+    "goHome": "Về trang chủ"
+  }
+}

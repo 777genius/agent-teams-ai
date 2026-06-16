@@ -7,13 +7,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
-import { useStore } from '@renderer/store';
-import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { renderLinkifiedText } from '@renderer/utils/linkifiedText';
 import {
   agentAvatarUrl,
-  buildMemberAvatarMap,
   buildMemberLaunchPresentation,
   displayMemberName,
   isOpenCodeRelaunchActionable,
@@ -72,8 +69,10 @@ export interface RuntimeTelemetryScale {
 }
 
 interface MemberCardProps {
+  teamName?: string;
   member: ResolvedTeamMember;
   memberColor: string;
+  avatarUrl?: string;
   fullBleedSurface?: boolean;
   runtimeSummary?: string;
   runtimeEntry?: TeamAgentRuntimeEntry;
@@ -98,6 +97,7 @@ interface MemberCardProps {
   spawnRuntimeAlive?: boolean;
   isLaunchSettling?: boolean;
   runtimeTelemetryScale?: RuntimeTelemetryScale;
+  renderRuntimeTelemetryStrip?: boolean;
   onOpenTask?: () => void;
   onOpenReviewTask?: () => void;
   onClick?: () => void;
@@ -301,53 +301,8 @@ function normalizeRuntimeTelemetrySamples(history: unknown): TeamAgentRuntimeRes
   return (Array.isArray(history) ? history : []).filter(isRuntimeTelemetrySampleLike);
 }
 
-function buildRuntimeTelemetryTitle(
-  runtimeEntry: TeamAgentRuntimeEntry | undefined
-): string | undefined {
-  if (!runtimeEntry) {
-    return undefined;
-  }
-  if (normalizeRuntimeTelemetrySamples(runtimeEntry?.resourceHistory).length === 0) {
-    return undefined;
-  }
-
-  const lines = [
-    'CPU includes parent + child processes.',
-    'Local CPU excludes remote LLM inference.',
-  ];
-  if (runtimeEntry.runtimeLoadScope === 'shared-host') {
-    lines.push('Shared OpenCode host metric; not exclusive to this member.');
-  }
-  if (runtimeEntry.runtimeLoadTruncated) {
-    lines.push('Process tree was capped for this sample.');
-  }
-
-  const detailParts = [
-    runtimeEntry.pid ? `root PID ${runtimeEntry.pid}` : undefined,
-    runtimeEntry.processCount ? `${runtimeEntry.processCount} processes` : undefined,
-    runtimeEntry.runtimeLoadScope ? `scope ${runtimeEntry.runtimeLoadScope}` : undefined,
-    'sample 5s',
-  ].filter((part): part is string => Boolean(part));
-  if (detailParts.length > 0) {
-    lines.push(detailParts.join(' · '));
-  }
-
-  const aggregateCpuLabel = formatRuntimeTelemetryPercent(runtimeEntry.cpuPercent);
-  const primaryCpuLabel = formatRuntimeTelemetryPercent(runtimeEntry.primaryCpuPercent);
-  const childCpuLabel = formatRuntimeTelemetryPercent(runtimeEntry.childCpuPercent);
-  const rssLabel = formatRuntimeTelemetryBytes(runtimeEntry.rssBytes);
-  const splitParts = [
-    aggregateCpuLabel ? `CPU ${aggregateCpuLabel}` : undefined,
-    primaryCpuLabel ? `root ${primaryCpuLabel}` : undefined,
-    childCpuLabel ? `children ${childCpuLabel}` : undefined,
-    rssLabel ? `RSS ${rssLabel}` : undefined,
-  ].filter((part): part is string => Boolean(part));
-  if (splitParts.length > 0) {
-    lines.push(splitParts.join(' · '));
-  }
-
-  lines.push('RSS is summed process RSS and can include shared pages.');
-  return lines.join('\n');
+function hasRuntimeTelemetrySamples(history: unknown): boolean {
+  return Array.isArray(history) && history.some(isRuntimeTelemetrySampleLike);
 }
 
 const RuntimeTelemetryTooltipContent = ({
@@ -612,13 +567,128 @@ const MemberRuntimeTelemetryStrip = memo(function MemberRuntimeTelemetryStrip({
   );
 });
 
+interface MemberActionButtonProps {
+  label: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+const MemberActionButton = memo(function MemberActionButton({
+  label,
+  children,
+  onClick,
+}: MemberActionButtonProps): React.JSX.Element {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+
+  return (
+    <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      {tooltipOpen ? <TooltipContent side="bottom">{label}</TooltipContent> : null}
+    </Tooltip>
+  );
+});
+
+interface MemberQuickActionsProps {
+  onSendMessage?: () => void;
+  onAssignTask?: () => void;
+}
+
+const MemberQuickActions = memo(function MemberQuickActions({
+  onSendMessage,
+  onAssignTask,
+}: MemberQuickActionsProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      <MemberActionButton label={t('members.actions.sendMessage')} onClick={onSendMessage}>
+        <MessageSquare size={13} />
+      </MemberActionButton>
+      <MemberActionButton label={t('members.actions.assignTask')} onClick={onAssignTask}>
+        <Plus size={13} />
+      </MemberActionButton>
+    </div>
+  );
+});
+
+interface MemberTaskProgressBadgeProps {
+  showStartingSkeleton: boolean;
+  memberTaskCount: number;
+  completed: number;
+  totalTasks: number;
+  progressPercent: number;
+}
+
+const MemberTaskProgressBadge = memo(function MemberTaskProgressBadge({
+  showStartingSkeleton,
+  memberTaskCount,
+  completed,
+  totalTasks,
+  progressPercent,
+}: MemberTaskProgressBadgeProps): React.JSX.Element {
+  if (showStartingSkeleton) {
+    return (
+      <div className="shrink-0" aria-hidden="true">
+        <div
+          className="skeleton-shimmer h-[18px] w-[62px] rounded-full border"
+          style={{
+            backgroundColor: 'var(--skeleton-base-dim)',
+            borderColor: 'var(--color-border)',
+          }}
+        />
+        <div
+          className="skeleton-shimmer mx-1 mt-1 h-[2px] w-10 rounded-full"
+          style={{ backgroundColor: 'var(--skeleton-base)' }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="shrink-0"
+      title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
+    >
+      <Badge
+        variant="secondary"
+        className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
+      >
+        {memberTaskCount} {memberTaskCount === 1 ? 'task' : 'tasks'}
+      </Badge>
+      {totalTasks > 0 && (
+        <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+      {/* NOTE: lead context bar disabled - usage formula is inaccurate */}
+    </div>
+  );
+});
+
 export const MemberCard = memo(function MemberCard({
+  teamName,
   member,
   memberColor,
+  avatarUrl,
   fullBleedSurface = true,
   runtimeSummary,
   runtimeEntry,
   runtimeRunId,
+  renderRuntimeTelemetryStrip = true,
   taskCounts,
   isTeamAlive,
   isTeamProvisioning,
@@ -654,17 +724,12 @@ export const MemberCard = memo(function MemberCard({
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
   // );
-  const selectedTeamName = useStore((s) => s.selectedTeamName);
   const [retryingLaunch, setRetryingLaunch] = useState(false);
   const [retryLaunchError, setRetryLaunchError] = useState<string | null>(null);
   const [skippingLaunch, setSkippingLaunch] = useState(false);
   const [skipLaunchError, setSkipLaunchError] = useState<string | null>(null);
   const [restoringMember, setRestoringMember] = useState(false);
   const [restoreMemberError, setRestoreMemberError] = useState<string | null>(null);
-  const teamMembers = useStore((s) =>
-    selectedTeamName ? selectResolvedMembersForTeamName(s, selectedTeamName) : []
-  );
-  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
   const bootstrapConfirmedProvisionedButNotAlive =
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
   const hasUnsafeBootstrapConfirmedProvisionedButNotAlive =
@@ -759,8 +824,10 @@ export const MemberCard = memo(function MemberCard({
     : visibleReviewTask
       ? `Reviewing task: #${deriveTaskDisplayId(visibleReviewTask.id)}`
       : undefined;
-  const runtimeTelemetryTitle = buildRuntimeTelemetryTitle(runtimeEntry);
-  const showRuntimeTelemetryTooltip = Boolean(runtimeTelemetryTitle);
+  const showRuntimeTelemetryTooltip = useMemo(
+    () => hasRuntimeTelemetrySamples(runtimeEntry?.resourceHistory),
+    [runtimeEntry?.resourceHistory]
+  );
   const rowTitle = showRuntimeTelemetryTooltip ? undefined : activityTitle;
   const runtimeTelemetryTooltipIdRef = useRef<string | null>(null);
   if (runtimeTelemetryTooltipIdRef.current == null) {
@@ -881,7 +948,7 @@ export const MemberCard = memo(function MemberCard({
   const launchDiagnosticsPayload = useMemo(
     () =>
       buildMemberLaunchDiagnosticsPayload({
-        teamName: selectedTeamName,
+        teamName,
         runId: runtimeRunId,
         memberName: member.name,
         member,
@@ -900,7 +967,7 @@ export const MemberCard = memo(function MemberCard({
       runtimeAdvisoryLabel,
       runtimeAdvisoryTitle,
       runtimeRunId,
-      selectedTeamName,
+      teamName,
       spawnEntry,
       effectiveSpawnLaunchState,
       spawnLivenessSource,
@@ -1063,7 +1130,7 @@ export const MemberCard = memo(function MemberCard({
           }
         }}
       >
-        {!isRemoved ? (
+        {!isRemoved && renderRuntimeTelemetryStrip ? (
           <MemberRuntimeTelemetryStrip runtimeEntry={runtimeEntry} scale={runtimeTelemetryScale} />
         ) : null}
         <div className="pointer-events-none absolute inset-0 z-10 rounded transition-colors group-hover:bg-white/5" />
@@ -1077,7 +1144,7 @@ export const MemberCard = memo(function MemberCard({
               }}
             >
               <img
-                src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name)}
+                src={avatarUrl ?? agentAvatarUrl(member.name)}
                 alt={member.name}
                 className="size-7 rounded-full bg-[var(--color-surface-raised)]"
                 loading="lazy"
@@ -1461,75 +1528,15 @@ export const MemberCard = memo(function MemberCard({
                 {isRemoved ? 'removed' : displayPresenceLabel}
               </Badge>
             ) : null}
-            {showStartingSkeleton ? (
-              <div className="shrink-0" aria-hidden="true">
-                <div
-                  className="skeleton-shimmer h-[18px] w-[62px] rounded-full border"
-                  style={{
-                    backgroundColor: 'var(--skeleton-base-dim)',
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-                <div
-                  className="skeleton-shimmer mx-1 mt-1 h-[2px] w-10 rounded-full"
-                  style={{ backgroundColor: 'var(--skeleton-base)' }}
-                />
-              </div>
-            ) : (
-              <div
-                className="shrink-0"
-                title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
-              >
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
-                >
-                  {member.taskCount} {member.taskCount === 1 ? 'task' : 'tasks'}
-                </Badge>
-                {totalTasks > 0 && (
-                  <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                )}
-                {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
-              </div>
-            )}
+            <MemberTaskProgressBadge
+              showStartingSkeleton={showStartingSkeleton}
+              memberTaskCount={member.taskCount}
+              completed={completed}
+              totalTasks={totalTasks}
+              progressPercent={progressPercent}
+            />
             {!isRemoved && (
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSendMessage?.();
-                      }}
-                    >
-                      <MessageSquare size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{t('members.actions.sendMessage')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAssignTask?.();
-                      }}
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{t('members.actions.assignTask')}</TooltipContent>
-                </Tooltip>
-              </div>
+              <MemberQuickActions onSendMessage={onSendMessage} onAssignTask={onAssignTask} />
             )}
             {canRestoreMember ? (
               <Tooltip>
@@ -1585,14 +1592,16 @@ export const MemberCard = memo(function MemberCard({
       onOpenChange={handleRuntimeTelemetryTooltipOpenChange}
     >
       <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
-      <TooltipContent
-        side="left"
-        align="start"
-        sideOffset={8}
-        className="border-blue-400/20 bg-[var(--color-surface)] p-3 shadow-xl shadow-black/30"
-      >
-        <RuntimeTelemetryTooltipContent runtimeEntry={runtimeEntry} />
-      </TooltipContent>
+      {runtimeTelemetryTooltipOpen ? (
+        <TooltipContent
+          side="left"
+          align="start"
+          sideOffset={8}
+          className="border-blue-400/20 bg-[var(--color-surface)] p-3 shadow-xl shadow-black/30"
+        >
+          <RuntimeTelemetryTooltipContent runtimeEntry={runtimeEntry} />
+        </TooltipContent>
+      ) : null}
     </Tooltip>
   );
 });

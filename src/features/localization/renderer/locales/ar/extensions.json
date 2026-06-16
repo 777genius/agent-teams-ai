@@ -589,7 +589,11 @@
     "actions": {
       "add": "مضافا إليها API المفتاح",
       "addFirst": "أضف مفتاحك الأول",
-      "edit": "Edit"
+      "edit": "Edit",
+      "copied": "تم النسخ!",
+      "copyEnvVarName": "نسخ اسم متغير env",
+      "confirmDelete": "انقر مرة أخرى للتأكيد",
+      "delete": "حذف"
     },
     "empty": {
       "title": "لا API المفاتيح الموفرة",

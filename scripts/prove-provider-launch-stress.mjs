@@ -76,10 +76,7 @@ const result = spawnSyncWithWindowsShell(
     'exec',
     'vitest',
     'run',
-    '--maxWorkers',
-    '1',
-    '--minWorkers',
-    '1',
+    '--maxWorkers=1',
     'test/main/services/team/ProviderLaunchStress.live-e2e.test.ts',
   ],
   {

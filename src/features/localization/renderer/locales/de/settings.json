@@ -46,7 +46,8 @@
       "copiedShort": "gekreppt",
       "copy": "Kopieren von Diagnosen",
       "hints": "Hinweise",
-      "likelyCause": "Ursache:"
+      "likelyCause": "Ursache:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI als Administrator ausführen"
     },
     "models": {
       "alreadyDefault": "Dies ist bereits der ausgewählte OpenCode Standard.",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "Suchmodelle",
       "selectProjectBeforeTesting": "Wählen Sie vor dem Testen einen Projektkontext aus.",
       "selectProjectBeforeTestingDefaults": "Wählen Sie vor dem Testen oder Speichern von OpenCode-Standards einen Projektkontext aus.",
-      "useInTeamPicker": "Einsatz im Team Picker"
+      "useInTeamPicker": "Einsatz im Team Picker",
+      "testInProgress": "Der Modelltest läuft bereits.",
+      "validationContextRequired": "Wählen Sie oben einen validation context aus, um Test und Set default zu aktivieren. Speichern für team picker speichert nur die route für neue Teams.",
+      "actionsUnavailable": "Aktionen sind vorübergehend nicht verfügbar.",
+      "defaultSaveInProgress": "OpenCode default wird gespeichert.",
+      "routeUnavailableAuth": "Dieser provider benötigt eine Authentifizierung, bevor dieses Modell verwendet werden kann.",
+      "routeUnavailableFailed": "Diese model route ist beim letzten execution test fehlgeschlagen.",
+      "routeUnavailableGeneric": "Diese model route kann derzeit nicht verwendet werden.",
+      "routeUnavailableUnknown": "Dieses Modell ist der aktuelle OpenCode default, aber noch nicht im live catalog verfügbar."
     },
     "providers": {
       "catalog": "OpenCode Anbieter Katalog",
@@ -108,7 +117,8 @@
       "needsTest": "Bedarfsprüfung",
       "failed": "gescheitert",
       "unknown": "unbekannt",
-      "default": "Standard"
+      "default": "Standard",
+      "knownRoute": "bekannte route"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API Schlüssel konfiguriert, aber noch nicht überprüft",
         "apiKeyModeMissingCredential": "API Schlüsselmodus ausgewählt, aber nein API Schlüssel konfiguriert",
         "connectedVia": "Vernetzt über {{method}}",
-        "unableToVerify": "Unfähig zu überprüfen"
+        "unableToVerify": "Unfähig zu überprüfen",
+        "modelsAvailable": "Modelle verfügbar"
       },
       "mode": {
         "selectedAuth": "Ausgewählte Auth: {{authMode}}",

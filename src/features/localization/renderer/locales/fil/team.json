@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Lumikha ng task mula sa mensahe",
+      "editMessage": "I-edit ang mensahe",
+      "expandMessage": "I-expand ang mensahe",
+      "replyToMessage": "Sumagot sa mensahe",
+      "restartTeam": "I-restart ang team"
+    },
+    "authError": {
+      "description": "Nabigo ang authentication. Ang pag-restart ng team ay magre-refresh ng session at maaaring lutasin ang isyung ito. Kung magpatuloy ang problema, tingnan ang iyong mga API credential o subukang muli mamaya."
+    },
+    "automation": {
+      "reviewPickup": "Hiniling sa teammate na kunin ang review",
+      "stallNudge": "Hiniling sa teammate na ituloy ang naantalang task",
+      "workSyncBody": "Hiniling sa teammate na i-sync ang kasalukuyang trabaho"
+    },
+    "badges": {
+      "automation": "automation",
+      "bootstrap": "bootstrap",
+      "command": "command",
+      "comment": "Komento",
+      "live": "live",
+      "note": "note",
+      "rateLimited": "Rate Limited",
+      "restart": "restart",
+      "result": "result",
+      "session": "session",
+      "stallNudge": "stall nudge",
+      "start": "start",
+      "workSync": "work sync",
+      "agentError": "Agent Error",
+      "apiError": "API Error"
+    },
+    "bootstrap": {
+      "acknowledged": "Nakilala ang bootstrap",
+      "restarting": "Nire-restart ang teammate",
+      "starting": "Sinisimulan ang teammate"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "Hindi nabasa",
+    "thoughts": {
+      "count": "{{count}} kaisipan",
+      "count_one": "{{count}} kaisipan",
+      "expand": "I-expand ang mga kaisipan",
+      "showMore": "Magpakita pa",
+      "showLess": "Magpakita ng mas kaunti",
+      "count_few": "{{count}} kaisipan",
+      "count_many": "{{count}} kaisipan",
+      "count_other": "{{count}} kaisipan",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - mga kaisipan"
+    },
+    "timeline": {
+      "loadingMessages": "Niloload ang mga mensahe...",
+      "noMessages": "Walang mensahe",
+      "emptyHint": "Magpadala ng mensahe sa isang miyembro para makita ang aktibidad.",
+      "newSession": "Bagong session",
+      "olderCount": "+{{count}} mas luma",
+      "showMore": "Magpakita ng {{count}} pa",
+      "showAll": "Ipakita lahat",
+      "olderCount_one": "+{{count}} mas luma",
+      "olderCount_few": "+{{count}} mas luma",
+      "olderCount_many": "+{{count}} mas luma",
+      "olderCount_other": "+{{count}} mas luma"
+    },
+    "pendingReplies": {
+      "title": "Naghihintay ng sagot",
+      "openMember": "Buksan ang miyembro",
+      "messageSentAwaitingReply": "Naipadala ang mensahe, naghihintay ng sagot",
+      "awaitingReply": "naghihintay ng sagot",
+      "externalTeam": "external na team",
+      "crossTeamAwaitingReply": "Naipadala ang cross-team na mensahe, naghihintay ng sagot",
+      "user": "user",
+      "awaitingApproval": "naghihintay ng pag-apruba"
+    },
+    "reply": {
+      "replyingTo": "Sumasagot kay",
+      "action": "Sumagot"
+    },
+    "activeTasks": {
+      "inProgress": "Ginagawa",
+      "expandInProgress": "I-expand ang ginagawa",
+      "collapseInProgress": "I-collapse ang ginagawa",
+      "reviewing": "sinusuri",
+      "workingOn": "ginagawa"
+    },
+    "expandDialog": {
+      "description": "Naka-expand na view ng mensahe"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Lumikha",
+      "creating": "Lumilikha...",
+      "openExisting": "Buksan ang Umiiral na Team",
+      "skipPreflightAndCreate": "Laktawan ang preflight at lumikha"
+    },
+    "conflict": {
+      "description": "Mapanganib ang pagpapatakbo ng dalawang team sa parehong directory - maaaring magkasalungat sila sa pag-edit ng parehong mga file. Isaalang-alang ang paggamit ng ibang directory o git worktree para sa isolation.",
+      "title": "May isa pang team na \"{{team}}\" na tumatakbo na para sa working directory na ito",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "copy": "Lumikha ng bagong team batay sa isang umiiral na.",
+      "create": "I-set up ang iyong team at piliin kung paano ito magsisimula."
+    },
+    "errors": {
+      "nameExists": "Umiiral na ang pangalan ng team",
+      "nameLaunching": "May team na may ganitong pangalan na kasalukuyang inilulunsad",
+      "createConfigFailed": "Nabigong lumikha ng team config",
+      "loadProjectsFailed": "Nabigong i-load ang mga proyekto"
+    },
+    "fields": {
+      "color": "Kulay (opsyonal)",
+      "description": "Paglalarawan (opsyonal)",
+      "prompt": "Prompt para sa team lead (opsyonal)",
+      "teamName": "Pangalan ng team"
+    },
+    "launchAfterCreate": {
+      "description": "Simulan agad ang team sa pamamagitan ng lokal na Claude CLI.",
+      "label": "Patakbuhin ang command pagkatapos lumikha"
+    },
+    "localOnly": "Available lang sa lokal na Electron mode.",
+    "onDisk": "Sa disk:",
+    "placeholders": {
+      "description": "Maikling paglalarawan ng layunin ng team",
+      "prompt": "Mga tagubilin para sa team lead sa panahon ng provisioning..."
+    },
+    "saved": "Na-save",
+    "solo": {
+      "description": "Ang team lead lang (main process) ang sisimulan - walang teammate na isi-spawn. Gumagana tulad ng regular na agent session sa iyong piniling runtime (Claude Code, Codex, OpenCode, Gemini) ngunit may access sa task board para sa pagpaplano. Nagtitipid ng token sa pamamagitan ng pag-iwas sa overhead ng koordinasyon ng teammate. Maaari kang magdagdag ng mga miyembro mamaya mula sa mga setting ng team.",
+      "label": "Solo team"
+    },
+    "title": {
+      "copy": "Kopyahin ang Team",
+      "create": "Lumikha ng Team"
+    },
+    "optional": {
+      "launchSettingsTitle": "Mga opsyonal na launch setting",
+      "launchSettingsDescription": "Naririto ang prompt, safety, at mga CLI override kapag kailangan mo ang mga ito.",
+      "teamDetailsTitle": "Mga opsyonal na detalye ng team",
+      "teamDetailsDescription": "Panatilihing compact ang default na flow at buksan lang ito kapag gusto mo ng karagdagang context o custom na kulay."
+    },
+    "prepare": {
+      "unsupportedPreload": "Hindi sinusuportahan ng kasalukuyang preload version ang team:prepareProvisioning. I-restart ang dev app.",
+      "selectWorkingDirectory": "Pumili ng working directory para i-validate ang launch environment.",
+      "someProvidersNeedAttention": "May ilang napiling provider na nangangailangan ng atensyon.",
+      "readyWithNotes": "Handa na ang lahat ng napiling provider, may mga nota.",
+      "ready": "Handa na ang lahat ng napiling provider.",
+      "failed": "Nabigong ihanda ang mga napiling provider",
+      "checkingProviders": "Sinusuri ang mga napiling provider...",
+      "preparingEnvironment": "Inihahanda ang environment...",
+      "selectedProvidersReadyWithNotes": "Handa na ang mga napiling provider (may mga nota)",
+      "selectedProvidersReady": "Handa na ang mga napiling provider"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Ang pangalan ay dapat maglaman ng kahit isang letra o numero",
+      "nameTooLong": "Masyadong mahaba ang pangalan (max 128 chars)",
+      "selectWorkingDirectory": "Pumili ng working directory (cwd)",
+      "memberNameRequired": "Hindi maaaring blangko ang pangalan ng miyembro",
+      "memberNameInvalid": "Ang pangalan ng miyembro ay dapat magsimula sa alphanumeric, gumamit lang ng [a-zA-Z0-9._-], max 128 chars",
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi",
+      "openCodeLeadModelRequired": "Nangangailangan ang OpenCode lead ng napiling model.",
+      "openCodeTeammateRequired": "Nangangailangan ang OpenCode lead ng kahit isang OpenCode teammate.",
+      "teamLaunching": "Kasalukuyang inilulunsad ang team",
+      "teamNameExists": "Umiiral na ang pangalan ng team",
+      "checkFormFields": "Tingnan ang mga field ng form"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "save": "I-save"
+    },
+    "addMemberLockReason": "Gamitin ang dedikadong Add member dialog para magdagdag ng mga bagong teammate habang live ang team.",
+    "description": "Baguhin ang pangalan, paglalarawan at kulay ng team",
+    "errors": {
+      "changesSavedRefreshFailed": "Na-save ang mga pagbabago sa team, ngunit nabigong i-refresh ang pinakabagong view: {{message}}",
+      "liveRenameBlocked": "Hindi maaaring palitan ang pangalan ng mga umiiral na teammate habang live ang team. pinalitan ng pangalan: {{names}}",
+      "memberNameEmpty": "Hindi maaaring blangko ang pangalan ng miyembro",
+      "memberNameInvalid": "Ang pangalan ng miyembro ay dapat magsimula sa alphanumeric, gumamit lang ng [a-zA-Z0-9._-], max 128 chars",
+      "memberNameNumericSuffix": "Hindi pinapayagan ang pangalan ng miyembro na \"{{name}}\" (nakareserba para sa Claude CLI auto-suffix). Gamitin ang \"{{base}}\" sa halip.",
+      "memberNameReserved": "Nakareserba ang pangalan ng miyembro na \"{{name}}\"",
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi bago mag-save",
+      "newLiveTeammates": "Magdagdag ng mga bagong teammate mula sa dedikadong Add member dialog habang live ang team. Sinusuportahan lang ng Edit Team ang pag-update ng mga umiiral na teammate.",
+      "provisioning": "Hindi maaaring i-edit ang mga setting ng team habang isinasagawa pa ang provisioning. Maghintay na matapos ang paglunsad, pagkatapos ay subukang muli.",
+      "restartFailedMany": "Na-save ang team, ngunit nabigong i-restart ang mga teammate na ito: {{failures}}",
+      "restartFailedOne": "Na-save ang team, ngunit nabigong i-restart ang teammate na ito: {{failures}}",
+      "saveFailed": "Nabigong mag-save",
+      "settingsChanged": "Nabago ang mga setting ng team habang bukas ang dialog na ito. Buksang muli ito at suriin ang pinakabagong state bago mag-save.",
+      "settingsSavedMembersAndRefreshFailed": "Na-save ang mga setting ng team, ngunit nabigo ang mga pagbabago sa miyembro: {{message}}. Nabigo rin ang pag-refresh: {{refreshError}}",
+      "settingsSavedMembersFailed": "Na-save ang mga setting ng team, ngunit nabigo ang mga pagbabago sa miyembro: {{message}}",
+      "settingsSavedRefreshFailed": "Na-save ang mga setting ng team, ngunit nabigong i-refresh ang pinakabagong view: {{message}}",
+      "teamNameEmpty": "Hindi maaaring blangko ang pangalan ng team",
+      "unsupportedMixedPrimaryMutation": "Hindi pa sinusuportahan ang mga live na pag-edit sa mga primary-owned na teammate sa mga mixed na OpenCode team. Ihinto ang team, i-edit ang roster, pagkatapos ay ilunsad muli. Apektado: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Kulay (opsyonal)",
+      "description": "Paglalarawan",
+      "name": "Pangalan"
+    },
+    "memberRestartWarning": "Ang pag-save ay magre-restart sa teammate na ito para ilapat ang mga pagbabago sa role, workflow, worktree isolation, provider, model, effort, o MCP access.",
+    "notices": {
+      "liveRenameBlocked": "Naka-block ang live save dahil pinalitan ng pangalan ang mga umiiral na teammate. Ibalik ang mga pagbabago sa identity na iyon o ihinto muna ang team.",
+      "newLiveTeammates": "Hindi maaaring magdagdag ng mga bagong teammate mula sa Edit Team habang live ang team. Gamitin ang Add member dialog sa halip.",
+      "provisioning": "Isinasagawa pa ang team provisioning. Pansamantalang naka-lock ang pag-edit hanggang matapos ang paglunsad.",
+      "restartMany": "Ang pag-save ay magre-restart o magre-relaunch sa mga teammate na ito para ilapat ang mga pagbabago sa role, workflow, worktree isolation, provider, model, effort, o MCP access: {{names}}.",
+      "restartOne": "Ang pag-save ay magre-restart o magre-relaunch sa teammate na ito para ilapat ang mga pagbabago sa role, workflow, worktree isolation, provider, model, effort, o MCP access: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Ang mga live na pag-edit/pagtanggal para sa mga primary-owned na teammate sa mga mixed na OpenCode team ay nangangailangan ng paghinto at pag-relaunch ng team: {{names}}."
+    },
+    "placeholders": {
+      "description": "Paglalarawan ng team (opsyonal)",
+      "teamName": "Pangalan ng team"
+    },
+    "teamLead": {
+      "changeRuntime": "Palitan ang lead runtime",
+      "changeRuntimeDescription": "Buksan ang Relaunch Team para palitan ang lead provider, model, o effort.",
+      "modelLockReason": "Ang team lead runtime ay pinamamahalaan mula sa Relaunch Team.",
+      "readOnlyHint": "Ang pangalan at role ng team lead ay nananatiling read-only dito. Buksan ang runtime panel sa lead row para palitan ang provider, model, o effort.",
+      "role": "Team Lead"
+    },
+    "title": "I-edit ang Team"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Tanggalin ang miyembro",
+      "removeAria": "Tanggalin si {{name}}",
+      "restore": "Ibalik ang miyembro",
+      "restoreAria": "Ibalik si {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "default na context setting",
+      "description": "Ang Anthropic context ay team-wide para sa paglunsad na ito: {{mode}}. Gamitin ang Limit context checkbox ng lead runtime panel para palitan ito.",
+      "limitEnabled": "Naka-enable ang 200K limit"
+    },
+    "mcp": {
+      "buttonInherit": "MCP inherit",
+      "buttonScopes": "MCP scopes",
+      "chooseScopes": "Pumili ng mga scope",
+      "inheritLead": "Mana mula sa lead",
+      "lockedInfo": "Naka-enable ang Agent Teams MCP only para sa lahat ng teammate. Maglulunsad ang teammate na ito gamit lang ang Agent Teams server.",
+      "mode": "MCP mode",
+      "scopes": {
+        "local": "local",
+        "project": "project",
+        "user": "user"
+      },
+      "serverNames": "Mga pangalan ng server",
+      "settingInfo": "Inilulunsad ng Agent Teams MCP ang teammate na ito gamit lang ang Agent Teams server. Ang scope at allowlist mode ay nalalapat lang sa paglunsad ng teammate na ito.",
+      "strictAllowlist": "Strict allowlist",
+      "tooltip": "{{label}}: Kontrolin ang MCP inheritance policy ng miyembrong ito",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} provider, {{model}}",
+      "currentLeadRuntime": "Kasalukuyang lead runtime",
+      "default": "Default",
+      "inheritedTooltip": "Ang provider, model, at effort ay minana mula sa lead habang naka-enable ang sync.",
+      "leadSuffix": "{{label}} (lead)",
+      "liveDisabled": "Naka-disable ang mga pagbabago sa provider, model, at effort habang live ang team. Ikonekta muli ang team para ilapat ang mga ito nang ligtas.",
+      "lockedActionFallback": "Binubuksan ng mga pagbabago sa lead runtime ang Relaunch Team, kung saan maaaring i-update ang provider, model, at effort.",
+      "restartWholeTeam": "Ang pag-save ng mga pagbabagong iyon sa runtime ay magre-restart sa buong team."
+    },
+    "nameAria": "Pangalan ng miyembro {{index}}",
+    "nameFallback": "miyembro {{index}}",
+    "noRole": "Walang role",
+    "removed": "Tinanggal",
+    "workflow": {
+      "addTooltip": "Magdagdag ng workflow ng teammate",
+      "editTooltip": "I-edit ang workflow ng teammate",
+      "label": "Workflow (opsyonal)",
+      "placeholder": "Paano dapat kumilos ang agent na ito, makipag-ugnayan sa iba...",
+      "saved": "Na-save"
+    },
+    "worktree": {
+      "description": "Patakbuhin ang teammate na ito sa hiwalay na git worktree. Ang pag-apply/pag-reject ng mga pagbabago ay nakatuon sa worktree na iyon, hindi sa lead workspace.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Magdagdag ng Mga Miyembro",
+      "description": "Magdagdag ng mga bagong miyembro sa {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Idagdag",
+      "cancel": "Kanselahin",
+      "delete": "Tanggalin",
+      "editCode": "I-edit ang code",
+      "launch": "Ilunsad",
+      "remove": "Tanggalin",
+      "stop": "Ihinto",
+      "task": "Task",
+      "visualize": "I-visualize"
+    },
+    "deleteTeam": {
+      "description": "Tanggalin ang team na \"{{team}}\"? Hindi na maibabalik ang aksyon na ito. Tatanggalin ang lahat ng data at task ng team.",
+      "title": "Tanggalin ang team"
+    },
+    "draft": {
+      "descriptionPrefix": "Ito ay draft na team -",
+      "descriptionSuffix": "ay na-configure na may {{count}} {{member}} ngunit hindi pa na-provision ng CLI. I-click ang Launch para pumili ng model at simulan ang team.",
+      "descriptionSuffix_few": "ay na-configure na may {{count}} {{member}} ngunit hindi pa na-provision ng CLI. I-click ang Launch para pumili ng model at simulan ang team.",
+      "descriptionSuffix_many": "ay na-configure na may {{count}} {{member}} ngunit hindi pa na-provision ng CLI. I-click ang Launch para pumili ng model at simulan ang team.",
+      "descriptionSuffix_one": "ay na-configure na may {{count}} {{member}} ngunit hindi pa na-provision ng CLI. I-click ang Launch para pumili ng model at simulan ang team.",
+      "descriptionSuffix_other": "ay na-configure na may {{count}} {{member}} ngunit hindi pa na-provision ng CLI. I-click ang Launch para pumili ng model at simulan ang team.",
+      "member": "mga miyembro",
+      "member_few": "mga miyembro",
+      "member_many": "mga miyembro",
+      "member_one": "miyembro",
+      "member_other": "mga miyembro",
+      "title": "Hindi pa nailulunsad ang team"
+    },
+    "invalidTab": "Invalid na team tab",
+    "kanbanSafeData": "Nabigong ganap na i-load ang kanban. Ipinapakita ang safe na data.",
+    "loadFailed": "Nabigong i-load ang team",
+    "loading": "Niloload ang team",
+    "loadingSidebar": "Niloload ang team sidebar",
+    "offline": {
+      "offline": "Offline ang team",
+      "partialFailed": "Nabigo ang huling paglunsad sa kalagitnaan",
+      "partialMissing": "Nabigo ang huling paglunsad sa kalagitnaan - {{missing}}/{{expected}} na teammate ang hindi sumali",
+      "reconciling": "Nire-reconcile pa ang huling paglunsad"
+    },
+    "previous": "Nakaraan: {{paths}}",
+    "removeMember": {
+      "description": "Tanggalin si \"{{member}}\" mula sa team? Mapepreserba ang mga task at mensahe, ngunit hindi na magagamit muli ang pangalang ito.",
+      "title": "Tanggalin ang miyembro"
+    },
+    "sections": {
+      "team": "Team"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktibo",
+      "launching": "Inilulunsad...",
+      "running": "Tumatakbo"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memory"
+    },
+    "tooltips": {
+      "deleteTeam": "Tanggalin ang team",
+      "editTeam": "I-edit ang team",
+      "editUnavailableProvisioning": "Hindi available ang pag-edit ng team habang isinasagawa pa ang provisioning",
+      "openBuiltInEditor": "Buksan ang proyekto sa built-in editor",
+      "openTeamGraph": "Buksan ang team graph",
+      "stopTeam": "Ihinto ang team"
+    },
+    "waitingForProvisioning": "Lalabas ang data ng team kapag natapos ang provisioning",
+    "context": {
+      "title": "Context",
+      "loading": "Niloload...",
+      "noSessionLoaded": "Walang naka-load na session",
+      "closePanel": "Isara ang context panel ng {{team}}",
+      "loadingContext": "Niloload ang context...",
+      "openLeadSession": "Buksan ang team lead session para tingnan ang context."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Tanggapin",
+        "discard": "Itapon",
+        "discardTooltip": "Itapon ang lahat ng edit para sa file na ito",
+        "keepMyDraft": "Panatilihin ang aking draft",
+        "reject": "Tanggihan",
+        "reloadFromDisk": "I-reload mula sa disk",
+        "restore": "Ibalik",
+        "restoreTooltip": "Lumikha/ibalik ang file na ito sa disk mula sa preview",
+        "saveFile": "I-save ang File",
+        "saveFileTooltip": "I-save ang file sa disk"
+      },
+      "badges": {
+        "deleted": "TINANGGAL",
+        "manualReview": "MANUAL NA REVIEW",
+        "new": "BAGO",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Kasalukuyang Disk",
+        "file-history": "File History",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "Task Ledger",
+        "ledger-snapshot": "Ledger Snapshot",
+        "snippet-reconstruction": "Muling Binuo",
+        "unavailable": "Hindi available ang content"
+      },
+      "contentUnavailable": {
+        "badge": "Hindi available ang content",
+        "description": "Nagtala ang ledger ng metadata para sa pagbabagong ito, ngunit hindi available ang buong text content. Karaniwang nangangahulugan ito ng binary, malaki, o hash-only na content.",
+        "safety": "Naka-disable ang awtomatikong accept/reject para sa file na ito para maiwasan ang mga hindi ligtas na disk write.",
+        "title": "Hindi available ang text content"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Naka-disable ang Accept/Reject dahil hindi available ang buong text content.",
+        "acceptRejectMissingOnDisk": "Naka-disable ang Accept/Reject habang nawawala ang file sa disk.",
+        "rejectBaselineUnavailable": "Naka-disable ang Reject dahil hindi available ang orihinal na baseline.",
+        "rejectContentUnavailable": "Naka-disable ang Reject dahil hindi available ang buong text content.",
+        "rejectManualLedgerReview": "Naka-disable ang Reject dahil ang ledger change na ito ay may binary, malaki, o hindi available na content."
+      },
+      "externalChange": {
+        "changedOnDisk": "Nabago sa disk",
+        "deletedOnDisk": "Tinanggal sa disk",
+        "recreatedOnDisk": "Muling nilikha sa disk"
+      },
+      "missingOnDisk": {
+        "badge": "Nawawala sa disk",
+        "description": "Maaari pa rin kaming magpakita ng preview mula sa mga agent log, ngunit hindi naka-sync ang iyong filesystem.",
+        "restorePrefix": "Gamitin ang",
+        "restoreSuffix": "para isulat muli ang preview content sa disk.",
+        "restoreUnavailable": "Hindi available ang buong content ng file para awtomatikong maibalik.",
+        "title": "Nawawala ang file sa disk"
+      },
+      "pathChange": {
+        "from": "Mula sa {{path}}",
+        "to": "Sa {{path}}"
+      },
+      "worktree": {
+        "isolated": "Naka-isolate na worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} nakabinbin",
+        "pending_one": "{{count}} nakabinbin",
+        "pending_other": "{{count}} nakabinbin",
+        "accepted": "{{count}} tinanggap",
+        "accepted_one": "{{count}} tinanggap",
+        "accepted_other": "{{count}} tinanggap",
+        "rejected": "{{count}} tinanggihan",
+        "rejected_one": "{{count}} tinanggihan",
+        "rejected_other": "{{count}} tinanggihan",
+        "acrossFiles": "sa {{count}} na file",
+        "acrossFiles_one": "sa {{count}} na file",
+        "acrossFiles_other": "sa {{count}} na file",
+        "edited": "{{count}} na-edit",
+        "edited_one": "{{count}} na-edit",
+        "edited_other": "{{count}} na-edit",
+        "pending_few": "{{count}} nakabinbin",
+        "pending_many": "{{count}} nakabinbin",
+        "accepted_few": "{{count}} tinanggap",
+        "accepted_many": "{{count}} tinanggap",
+        "rejected_few": "{{count}} tinanggihan",
+        "rejected_many": "{{count}} tinanggihan",
+        "acrossFiles_few": "sa {{count}} na file",
+        "acrossFiles_many": "sa {{count}} na file",
+        "edited_few": "{{count}} na-edit",
+        "edited_many": "{{count}} na-edit"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "I-undo",
+        "acceptAll": "Tanggapin Lahat",
+        "rejectAll": "Tanggihan Lahat",
+        "applying": "Inilalapat...",
+        "applyRejections": "Ilapat ang mga Pagtanggi"
+      },
+      "tooltips": {
+        "autoOn": "Awtomatikong markahan ang mga file bilang nakita kapag na-scroll hanggang dulo (ON)",
+        "autoOff": "Awtomatikong markahan ang mga file bilang nakita kapag na-scroll hanggang dulo (OFF)",
+        "undo": "I-undo ang huling review operation (Ctrl+Z)",
+        "acceptAll": "Tanggapin ang lahat ng pagbabago sa lahat ng file",
+        "rejectAll": "Tanggihan ang lahat ng ligtas na maaaring tanggihang pagbabago sa lahat ng file",
+        "rejectAllDisabled": "Walang nakabinbing file na may safe na orihinal na baseline para tanggihan.",
+        "applyRejections": "Ilapat ang mga tinanggihang hunk sa disk; pinapanatili ang mga tinanggap na pagbabago kung ano sila"
+      }
+    },
+    "diffError": {
+      "title": "Nabigong i-render ang diff view",
+      "unexpected": "May naganap na hindi inaasahang error habang nire-render ang diff.",
+      "actions": {
+        "retry": "Subukang muli"
+      },
+      "raw": {
+        "show": "Ipakita ang raw na diff data",
+        "file": "File: {{file}}",
+        "original": "--- Original",
+        "modified": "+++ Modified",
+        "charsTotal": "... ({{count}} chars total)",
+        "charsTotal_one": "... ({{count}} char total)",
+        "charsTotal_other": "... ({{count}} chars total)",
+        "charsTotal_few": "... ({{count}} chars total)",
+        "charsTotal_many": "... ({{count}} chars total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Nakita",
+      "badges": {
+        "new": "bago",
+        "deleted": "tinanggal"
+      },
+      "collapseFolder": "I-collapse ang {{name}}",
+      "expandFolder": "I-expand ang {{name}}",
+      "empty": {
+        "noChangedFiles": "Walang binagong file",
+        "noMatchingFiles": "Walang tumutugmang file"
+      },
+      "searchPlaceholder": "Maghanap ng mga file…",
+      "filters": {
+        "unresolved": "Hindi pa naayos",
+        "rejected": "Tinanggihan",
+        "new": "Bago",
+        "clear": "I-clear"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Nakaraang chunk",
+      "nextChunk": "Susunod na chunk",
+      "rejectChange": "Tanggihan ang pagbabago (⌘N)",
+      "acceptChange": "Tanggapin ang pagbabago (⌘Y)",
+      "undo": "I-undo",
+      "keep": "Panatilihin",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Natukoy ang Conflict",
+      "description": "Nabago ang file na ito mula nang gawin ang mga pagbabago ng agent",
+      "cancel": "Kanselahin",
+      "saveResolution": "I-save ang Resolution",
+      "editManually": "I-edit nang Manu-mano",
+      "useOriginal": "Gamitin ang Orihinal",
+      "keepCurrent": "Panatilihin ang Kasalukuyan"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Inihahanda ang Buong Diff",
+      "titleMany": "Inihahanda ang {{count}} na Buong Diff",
+      "subtitleForFile": "Tinatapos ang eksaktong editor diff para sa {{file}}.",
+      "subtitleCurrentFile": "Tinatapos ang eksaktong editor diff para sa kasalukuyang file.",
+      "subtitleMany": "Nireresolba ang eksaktong before/after na baseline para sa mga file na kasalukuyang niloload.",
+      "previewsReady": "{{count}} preview na handa",
+      "previewsReady_one": "{{count}} preview na handa",
+      "editorViewLoading": "Niloload ang editor view",
+      "filesInProgress": "{{count}} file na ginagawa",
+      "filesInProgress_one": "{{count}} file na ginagawa",
+      "filesReady": "{{ready}}/{{total}} file na handa",
+      "progressDescription": "{{ready}} handa, {{loading}} niloload pa. Mananatiling nakikita ang preview diff sa ibaba habang nireresolba ang natitirang mga baseline.",
+      "singleDescription": "Mananatiling nakikita ang preview diff sa ibaba habang nireresolba ang eksaktong baseline.",
+      "previewsReady_few": "{{count}} preview na handa",
+      "previewsReady_many": "{{count}} preview na handa",
+      "previewsReady_other": "{{count}} preview na handa",
+      "filesInProgress_few": "{{count}} file na ginagawa",
+      "filesInProgress_many": "{{count}} file na ginagawa",
+      "filesInProgress_other": "{{count}} file na ginagawa"
+    },
+    "fileMissingPrefix": "Nawawala ang file sa disk. Maaaring preview lang mula sa mga agent log ang diff na ito. Gamitin ang",
+    "restore": "Ibalik",
+    "fileMissingSuffix": "para likhain ang file sa disk.",
+    "filePlaceholder": {
+      "loading": "Niloload",
+      "description": "Inihahanda ang buong editor diff para sa file na ito."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} ledger object ang naproseso",
+      "ledgerObjectsProcessed_one": "{{count}} ledger object ang naproseso",
+      "ledgerObjectsProcessed_other": "{{count}} ledger object ang naproseso",
+      "ledgerObjectsProcessed_few": "{{count}} ledger object ang naproseso",
+      "ledgerObjectsProcessed_many": "{{count}} ledger object ang naproseso",
+      "phases": {
+        "readingLedger": "Binabasa ang task ledger...",
+        "resolvingFiles": "Nireresolba ang mga file state...",
+        "checkingWorktree": "Sinusuri ang worktree context...",
+        "preparingDiffs": "Inihahanda ang mga review diff..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} nakita"
+    },
+    "scope": {
+      "readMore": "Magbasa pa",
+      "tiers": {
+        "exact": {
+          "title": "Tumpak na natukoy ang task scope",
+          "detail": "Parehong nahanap ang start at completion marker sa session log. Kasama sa diff ang mga pagbabago lang na ginawa sa panahon ng partikular na task na ito - hindi kasama ang ibang task na nagbago sa parehong mga file."
+        },
+        "endEstimated": {
+          "title": "Tinatayang end boundary",
+          "detail": "Ang start marker lang ang nahanap - wala pang completion marker ang task. Ipinapakita ang mga pagbabago mula sa simula ng task hanggang sa dulo ng session. Kung may ibang task na tumakbo pagkatapos nito sa parehong session, maaaring kasama rin ang kanilang mga pagbabago."
+        },
+        "startEstimated": {
+          "title": "Tinatayang start boundary",
+          "detail": "Ang completion marker lang ang nahanap - hindi nakuha ang simula ng trabaho. Kung may ibang task na tumakbo bago ito sa parehong session, maaaring kasama rin ang kanilang mga pagbabago sa parehong mga file."
+        },
+        "allSession": {
+          "title": "Ipinapakita ang lahat ng pagbabago sa session",
+          "detail": "Walang nahanap na task marker sa session log. Hindi maihihiwalay ang task na ito - ipinapakita ang lahat ng pagbabago sa file mula sa buong session, kasama ang mga pagbabago mula sa ibang task. Maaari itong mangyari sa mga lumang bersyon ng CLI o hindi karaniwang workflow."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Mga pagbabagong nakuha ng task ledger",
+          "detail": "Nakuha ng orchestrator ang mga pagbabagong ito sa file habang ginagawa ng agent ang task na ito.",
+          "badge": "Ledger exact"
+        },
+        "limited": {
+          "title": "Mga pagbabagong nakuha na may limitadong reviewability",
+          "detail": "Nakuha ng orchestrator ang mga pagbabagong ito sa file para sa task na ito, ngunit kahit isang pagbabago ang nakuha mula sa snapshot o metadata-only na pinagmulan. Suriin ang mga eksaktong text diff kung saan available; maaaring mangailangan ng manu-manong review ang binary o hindi available na content.",
+          "mixedBadge": "Mixed reviewability",
+          "needsReviewBadge": "Kailangang suriin"
+        }
+      },
+      "workInterval": {
+        "title": "Naka-scope ayon sa naka-persist na work interval",
+        "detail": "Hindi available ang task start marker sa session log, kaya naka-scope ang diff ayon sa task work interval na naka-store sa board.",
+        "badge": "Interval scoped"
+      },
+      "confidence": {
+        "high": "Mataas na kumpiyansa",
+        "medium": "Katamtamang kumpiyansa",
+        "low": "Mababang kumpiyansa",
+        "bestEffort": "Best effort"
+      }
+    },
+    "shortcuts": {
+      "title": "Mga Keyboard Shortcut",
+      "actions": {
+        "nextChange": "Susunod na pagbabago",
+        "previousChange": "Nakaraang pagbabago",
+        "nextFile": "Susunod na file",
+        "previousFile": "Nakaraang file",
+        "acceptChange": "Tanggapin ang pagbabago",
+        "rejectChange": "Tanggihan ang pagbabago",
+        "saveFile": "I-save ang file",
+        "undo": "I-undo",
+        "redo": "I-redo",
+        "toggleShortcuts": "I-toggle ang mga shortcut",
+        "closeDialog": "Isara ang dialog"
+      }
+    },
+    "timeline": {
+      "empty": "Walang edit event",
+      "titleWithCount": "Edit Timeline ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Walang masusuring pagbabago sa file"
+    },
+    "empty": {
+      "noSafeDiff": "Walang available na safe diff",
+      "noFileChangesRecorded": "Walang naitalang pagbabago sa file",
+      "noSafeDiffDescription": "Hindi inilantad ng task ledger ang safe na file diff para sa task na ito.",
+      "noSafeDiffDiagnosticsDescription": "Hindi inilantad ng task ledger ang safe na file diff para sa task na ito. Ipinapaliwanag ng diagnostics sa ibaba kung bakit.",
+      "noFileEventsYet": "Wala pang file event ang task ledger para sa task na ito.",
+      "noFileEvents": "Walang file event ang task ledger para sa task na ito."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Mga aksyon ng message bottom sheet",
+      "collapseAll": "I-collapse lahat ng mensahe",
+      "collapseSheet": "I-collapse ang sheet",
+      "expandAll": "I-expand lahat ng mensahe",
+      "expandSheet": "I-expand ang sheet",
+      "floatComposer": "I-float ang composer",
+      "floatMessagesComposer": "I-float ang messages composer",
+      "hideSearch": "Itago ang paghahanap",
+      "loadOlder": "Mag-load ng mga lumang mensahe",
+      "markAllRead": "Markahan lahat bilang nabasa",
+      "messageActions": "Mga aksyon sa mensahe",
+      "moveMessagesToBottomSheet": "Ilipat ang mga mensahe sa bottom sheet",
+      "moveMessagesToSidebar": "Ilipat ang mga mensahe sa sidebar",
+      "moveToBottomSheet": "Ilipat sa bottom sheet",
+      "moveToInline": "Ilipat sa inline",
+      "moveToSidebar": "Ilipat sa sidebar",
+      "panelActions": "Mga aksyon ng message panel",
+      "searchMessages": "Maghanap ng mga mensahe"
+    },
+    "delivery": {
+      "copied": "Nakopya",
+      "copyDebugDetails": "Kopyahin ang mga debug detail",
+      "details": "Mga detalye",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Mode ng message panel",
+    "title": "Mga Mensahe",
+    "unread": {
+      "new": "{{count}} bago",
+      "unread": "{{count}} hindi nabasa",
+      "new_few": "{{count}} bago",
+      "new_many": "{{count}} bago",
+      "new_one": "{{count}} bago",
+      "new_other": "{{count}} bago",
+      "unread_few": "{{count}} hindi nabasa",
+      "unread_many": "{{count}} hindi nabasa",
+      "unread_one": "{{count}} hindi nabasa",
+      "unread_other": "{{count}} hindi nabasa"
+    },
+    "filter": {
+      "ariaLabel": "I-filter ang mga mensahe",
+      "tooltip": "I-filter ang mga mensahe",
+      "from": "Mula kay",
+      "to": "Kay",
+      "noData": "Walang data",
+      "showStatusUpdates": "Ipakita ang mga status update (idle/shutdown)",
+      "actions": {
+        "reset": "I-reset",
+        "save": "I-save"
+      }
+    },
+    "status": {
+      "title": "Status"
+    },
+    "actionMode": {
+      "label": "Action mode"
+    },
+    "search": {
+      "placeholder": "Maghanap..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Naka-configure",
+      "connected": "Konektado",
+      "failed": "Nabigo",
+      "free": "Libre",
+      "local": "Lokal",
+      "needsTest": "Kailangan ng test",
+      "verified": "Na-verify",
+      "unavailable": "Hindi available",
+      "issue": "Isyu"
+    },
+    "customModelId": "Custom model id",
+    "label": "Model (opsyonal)",
+    "multimodelRequired": "Nangangailangan ang Codex at Gemini ng Multimodel mode.",
+    "openCode": {
+      "allSources": "Lahat ng OpenCode source",
+      "filterSource": "I-filter ang {{source}}",
+      "filterSources": "I-filter ang mga OpenCode source",
+      "freeOnly": "Libre lang",
+      "freeTooltip": "Minarkahan ng OpenCode ang model na ito bilang libre.",
+      "loadingModels": "Niloload ang mga OpenCode model...",
+      "noSourcesFound": "Walang nahanap na source.",
+      "recommendedOnly": "Inirerekomenda lang",
+      "searchSources": "Maghanap ng mga source",
+      "sourcesCount": "{{count}} OpenCode source",
+      "sourcesCount_few": "{{count}} OpenCode source",
+      "sourcesCount_many": "{{count}} OpenCode source",
+      "sourcesCount_one": "{{count}} OpenCode source",
+      "sourcesCount_other": "{{count}} OpenCode source"
+    },
+    "reason": "Dahilan: {{reason}}",
+    "runtimeModelsSyncing": "Niloload ang mga explicit na model mula sa kasalukuyang runtime. Mananatiling available ang Default habang sini-sync ang listahan.",
+    "fastMode": {
+      "codexLabel": "Fast mode (2x credit)",
+      "optionalLabel": "Fast mode (opsyonal)",
+      "defaultOff": "Default (Off)",
+      "fast": "Fast",
+      "off": "Off",
+      "defaultFast": "Default (Fast)",
+      "defaultResolvesTo": "Kasalukuyang nireresolba ang Default sa {{mode}}.",
+      "runtimeBackedHint": "Ang Fast mode ay runtime-backed at nag-a-unlock lang kapag sinusuportahan ito ng na-resolve na Anthropic launch model."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Basahin ang Anthropic pricing docs"
+    },
+    "searchModels": "Maghanap ng mga model",
+    "defaultModel": "Default",
+    "empty": {
+      "noSearchMatches": "Walang model na tumutugma sa paghahanap na ito.",
+      "recommendedFreeOpenCode": "Walang inirerekomendang libreng OpenCode model na available sa kasalukuyang runtime list.",
+      "freeOpenCode": "Walang libreng OpenCode model na available sa kasalukuyang runtime list.",
+      "recommendedOpenCode": "Walang inirerekomendang OpenCode model na available sa kasalukuyang runtime list.",
+      "noModels": "Walang model na available sa kasalukuyang runtime list."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "Hindi handa ang OpenCode para sa team launch",
+      "freeModelsAvailableTitle": "May available na mga libreng OpenCode model",
+      "providerNotConnectedTitle": "Hindi konektado ang OpenCode provider",
+      "readyTitle": "Handa na ang OpenCode",
+      "readyMessage": "Pumasa ang OpenCode sa provider readiness. Piliin ito para gumamit ng mga OpenCode model para sa team na ito.",
+      "useOpenCode": "Gamitin ang OpenCode",
+      "badges": {
+        "check": "Suriin",
+        "install": "I-install",
+        "free": "Libre",
+        "setup": "Setup"
+      },
+      "summary": {
+        "checking": "OpenCode status: sinusuri ang runtime",
+        "status": "OpenCode status: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "naka-block ang team launch",
+        "providerOptional": "opsyonal ang provider connection",
+        "providerModelsNeedSetup": "kailangan ng setup ang provider-backed na mga model",
+        "teamLaunchReady": "handa na ang team launch",
+        "runtimeDetected": "natukoy ang runtime",
+        "runtimeMissing": "nawawala ang runtime",
+        "freeWithoutAuth": "available ang mga libreng model nang walang auth",
+        "providerConnected": "konektado ang provider",
+        "providerNotConnected": "hindi konektado ang provider"
+      },
+      "messages": {
+        "checking": "Sinusuri pa ng app ang OpenCode runtime. Maghintay na matapos ang provider status, pagkatapos ay subukang muli.",
+        "unsupported": "Hindi naka-install, hindi nahanap, o hindi sinusuportahan ang natukoy na runtime ng OpenCode. I-install o i-update ang OpenCode, pagkatapos ay i-refresh ang provider status. Maaari mo ring gamitin ang Install button sa home page.",
+        "freeAvailable": "Natukoy ang OpenCode. Maaari kang gumamit ng mga libreng OpenCode model tulad ng Big Pickle nang walang kinokonektang provider. Kumonekta ng provider lang kapag gusto mo ng provider-backed na mga model.",
+        "noFreeListed": "Natukoy ang OpenCode, ngunit wala pang libreng OpenCode model na nakalista. I-refresh ang provider status, o kumonekta ng provider sa OpenCode para sa provider-backed na mga model.",
+        "launchBlocked": "Naka-install at authenticated ang OpenCode, ngunit naka-block ang Agent Teams launch readiness.",
+        "ready": "Handa na ang OpenCode para sa team launch."
+      },
+      "loadingRuntime": "Niloload pa ang OpenCode runtime status."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Hindi nakumpirma ang ping",
+      "note": "Note"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode config",
+      "builtinFree": "Libreng built-in",
+      "connectedProviders": "Mga konektadong provider",
+      "otherCatalog": "Iba pang OpenCode catalog"
+    },
+    "pricing": {
+      "free": "Libre",
+      "inputShort": "in {{rate}}",
+      "outputShort": "out {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Input: {{rate}} bawat 1M token",
+      "outputTitle": "Output: {{rate}} bawat 1M token",
+      "cacheReadTitle": "Cache read: {{rate}} bawat 1M token",
+      "cacheWriteTitle": "Cache write: {{rate}} bawat 1M token"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Ginagamit ang default model ng Anthropic-compatible na endpoint.\nKasalukuyang nireresolba sa {{model}}.",
+      "anthropicCompatible": "Ginagamit ang default model ng Anthropic-compatible na endpoint.",
+      "anthropic": "Ginagamit ang default model ng Claude team.\nNireresolba sa {{longContextModel}} na may 1M context, o {{limitedContextModel}} na may 200K context kapag naka-enable ang Limit context.",
+      "openCodeWithResolved": "Ginagamit ang OpenCode default model.\nKasalukuyang nireresolba sa {{model}}.",
+      "openCode": "Ginagamit ang default model ng OpenCode runtime.",
+      "runtime": "Ginagamit ang runtime default para sa napiling provider."
+    },
+    "multimodelOff": "Naka-off ang Multimodel",
+    "unavailableInRuntime": "Hindi available sa kasalukuyang runtime"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "delete": "Tanggalin",
+      "markResolved": "Markahan bilang naayos",
+      "save": "I-save"
+    },
+    "attachments": {
+      "commentAttachment": "Attachment ng komento",
+      "fromComments": "Mula sa mga komento",
+      "preview": "I-preview ang {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "atensyon",
+        "noSafeDiff": "walang safe diff"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Walang naitalang pagbabago sa file",
+        "noFileChangesRecordedYet": "Wala pang naitalang pagbabago sa file",
+        "noReviewableChangesRecovered": "Walang nareco na masusuring pagbabago sa file",
+        "noSafeDiffAvailable": "Walang available na safe diff"
+      },
+      "loadFailed": "Nabigong i-load ang buod ng mga pagbabago sa task",
+      "loading": "Niloload ang mga pagbabago...",
+      "fileCount": "{{count}} file",
+      "fileRowsHidden": "{{count}} file row na nakatago",
+      "moreDiagnostics": "{{count}} pang diagnostics",
+      "moreFiles": "{{count}} pang file",
+      "openInEditor": "Buksan sa editor",
+      "openTask": "Buksan ang task na {{subject}}",
+      "refresh": "I-refresh ang mga pagbabago",
+      "refreshFailed": "Nabigo ang pag-refresh: {{error}}",
+      "refreshing": "Nire-refresh",
+      "refreshingChanges": "Nire-refresh ang mga pagbabago...",
+      "refreshTeamChanges": "I-refresh ang mga pagbabago ng team",
+      "refreshShort": "I-refresh",
+      "reviewDiff": "Suriin ang diff",
+      "reviewTaskDiff": "Suriin ang task diff",
+      "scannedCandidateTasks": "Na-scan ang {{requested}} ng {{eligible}} na kandidatong task",
+      "tasksDeferred": "{{count}} task ang ipinagpaliban sa pass na ito",
+      "title": "Mga Pagbabago",
+      "fileCount_few": "{{count}} file",
+      "fileCount_many": "{{count}} file",
+      "fileCount_one": "{{count}} file",
+      "fileCount_other": "{{count}} file",
+      "fileRowsHidden_few": "{{count}} file row na nakatago",
+      "fileRowsHidden_many": "{{count}} file row na nakatago",
+      "fileRowsHidden_one": "{{count}} file row na nakatago",
+      "fileRowsHidden_other": "{{count}} file row na nakatago",
+      "moreDiagnostics_few": "{{count}} pang diagnostics",
+      "moreDiagnostics_many": "{{count}} pang diagnostics",
+      "moreDiagnostics_one": "{{count}} pang diagnostics",
+      "moreDiagnostics_other": "{{count}} pang diagnostics",
+      "moreFiles_few": "{{count}} pang file",
+      "moreFiles_many": "{{count}} pang file",
+      "moreFiles_one": "{{count}} pang file",
+      "moreFiles_other": "{{count}} pang file",
+      "tasksDeferred_few": "{{count}} task ang ipinagpaliban sa pass na ito",
+      "tasksDeferred_many": "{{count}} task ang ipinagpaliban sa pass na ito",
+      "tasksDeferred_one": "{{count}} task ang ipinagpaliban sa pass na ito",
+      "tasksDeferred_other": "{{count}} task ang ipinagpaliban sa pass na ito"
+    },
+    "clarification": {
+      "awaitingLead": "Naghihintay ng paglilinaw mula sa team lead",
+      "awaitingUser": "Naghihintay ng paglilinaw mula sa iyo"
+    },
+    "description": {
+      "add": "I-click para magdagdag ng paglalarawan...",
+      "edit": "I-edit ang paglalarawan",
+      "placeholder": "Paglalarawan ng task (sinusuportahan ang markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Kinukuha ang data ng team",
+      "title": "Niloload ang task..."
+    },
+    "logs": {
+      "newArriving": "May dumarating na bagong task log"
+    },
+    "notFound": "Hindi nahanap ang task",
+    "related": {
+      "blockedBy": "Hinaharangan ng",
+      "blocks": "Hinaharangan",
+      "linkedFrom": "Naka-link mula sa",
+      "links": "Mga link",
+      "title": "Mga kaugnay na task"
+    },
+    "review": {
+      "reviewer": "Reviewer: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Mga Attachment",
+      "changes": "Mga Pagbabago",
+      "comments": "Mga Komento",
+      "description": "Paglalarawan",
+      "taskLogs": "Mga Task Log",
+      "workflowHistory": "Kasaysayan ng Workflow"
+    },
+    "unassigned": "Hindi nakatalaga",
+    "workflow": {
+      "implementationTimeTitle": "Oras ng implementasyon mula sa mga naka-persist na work interval",
+      "inProgressTime": "Oras na ginagawa {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Ipinapakita ang pinakabagong {{formattedCount}} na komento para manatiling responsive ang UI.",
+      "badges": {
+        "approved": "Inaprubahan",
+        "reviewRequested": "Hiniling ang review"
+      },
+      "unknownTime": "hindi alam na oras",
+      "actions": {
+        "reply": "Sumagot",
+        "replyToComment": "Sumagot sa komento",
+        "showMore": "Magpakita pa ng mga komento ({{visible}}/{{total}})",
+        "cancelReply": "Kanselahin ang sagot",
+        "comment": "Magkomento"
+      },
+      "attachments": {
+        "previewAlt": "Preview ng attachment",
+        "downloadFailed": "Nabigo ang download"
+      },
+      "replyingTo": "Sumasagot kay",
+      "input": {
+        "placeholder": "Magdagdag ng komento... (Enter para ipadala)",
+        "charsLeft": "{{count}} char na natitira",
+        "charsLeft_one": "{{count}} char na natitira",
+        "charsLeft_other": "{{count}} char na natitira",
+        "charsLeft_few": "{{count}} char na natitira",
+        "charsLeft_many": "{{count}} char na natitira"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Walang naitalang kasaysayan ng workflow",
+      "currentImplementationInterval": "Kasalukuyang implementation interval",
+      "implementationIntervalEnded": "Natapos ang implementation interval sa transition na ito",
+      "runningPrefix": "tumatakbo ",
+      "createdAs": "Nilikha bilang",
+      "by": "ni",
+      "reassigned": "Inilipat",
+      "assignedTo": "Itinalaga kay",
+      "unassignedFrom": "Inalis kay",
+      "ownerChanged": "Nabago ang may-ari",
+      "reviewRequested": "Hiniling ang review",
+      "reviewStarted": "Nagsimula ang review",
+      "changesRequested": "Hiniling ang mga pagbabago",
+      "approved": "Inaprubahan",
+      "unknownEvent": "Hindi kilalang event"
+    },
+    "reviewStates": {
+      "approved": "Inaprubahan",
+      "needsFix": "Kailangang ayusin",
+      "inReview": "Sinusuri"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Assignee",
+      "assigneeOptional": "Assignee (opsyonal)",
+      "blockedByOptional": "Mga task na humaharang (opsyonal)",
+      "blockedBySummary": "Haharangin ang task ng: {{tasks}}",
+      "cancel": "Kanselahin",
+      "create": "Lumikha",
+      "creating": "Lumilikha...",
+      "description": "Lilikhain ang task sa tasks/ directory ng team at lalabas sa Kanban board.",
+      "descriptionOptional": "Paglalarawan (opsyonal)",
+      "detailsPlaceholder": "Mga detalye ng task (sinusuportahan ang markdown)",
+      "hideOptionalFields": "Itago ang mga opsyonal na field",
+      "offlineNotice": {
+        "after": "- ilunsad ang team para simulan ang execution.",
+        "before": "Offline ang team. Idadagdag ang task sa"
+      },
+      "promptOptional": "Prompt para sa assignee (opsyonal)",
+      "promptPlaceholder": "Custom na mga tagubilin para sa miyembro ng team...",
+      "relatedOptional": "Mga kaugnay na task (opsyonal)",
+      "relatedSummary": "Kaugnay: {{tasks}}",
+      "saved": "Na-save",
+      "searchTasks": "Maghanap ng mga task...",
+      "selectMember": "Pumili ng miyembro",
+      "selectMemberOptional": "Pumili ng miyembro...",
+      "showOptionalFields": "Ipakita ang mga opsyonal na field",
+      "startImmediately": "Simulan agad",
+      "startOfflineHint": "Offline ang team. Ilunsad muna ang team para simulan agad ang mga task.",
+      "subject": "Paksa",
+      "subjectPlaceholder": "Ano ang kailangang gawin?",
+      "title": "Lumikha ng Task",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Hinaharangan Ng",
+        "blocks": "Hinaharangan",
+        "id": "ID",
+        "owner": "May-ari",
+        "status": "Status",
+        "subject": "Paksa"
+      },
+      "empty": "Walang task sa team na ito",
+      "filters": {
+        "allOwners": "Lahat ng may-ari",
+        "allStatuses": "Lahat ng status",
+        "ownerAria": "I-filter ang mga task ayon sa may-ari",
+        "statusAria": "I-filter ang mga task ayon sa status"
+      },
+      "showing": "Ipinapakita ang {{shown}} ng {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "Mga task {{completed}}/{{total}} na natapos",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "Hindi nakatalaga",
+    "teamPrefix": "Team:",
+    "openTask": "Buksan ang task",
+    "deleteConfirm": {
+      "title": "Tanggalin ang task",
+      "message": "Ilipat ang task #{{taskId}} sa trash?",
+      "confirmLabel": "Tanggalin",
+      "cancelLabel": "Kanselahin"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "closeEditor": "Isara ang editor",
+      "closeTab": "Isara ang tab",
+      "closeTooltip": "Isara ang editor (Esc)",
+      "discard": "Itapon",
+      "discardAndClose": "Itapon at Isara",
+      "keep": "Panatilihin",
+      "keepMine": "Panatilihin ang akin",
+      "keyboardShortcuts": "Mga keyboard shortcut",
+      "overwrite": "I-overwrite",
+      "refreshAria": "I-refresh (F5)",
+      "refreshTooltip": "I-refresh ang git status (F5)",
+      "reload": "I-reload",
+      "retry": "Subukang muli",
+      "save": "I-save",
+      "saveAllAndClose": "I-save Lahat at Isara"
+    },
+    "ariaLabel": "Project Editor",
+    "dialogs": {
+      "conflictDescription": "Nabago ang file nang panlabas mula nang buksan mo ito. I-overwrite gamit ang iyong mga pagbabago?",
+      "conflictTitle": "Save Conflict",
+      "unsavedDescription": "May mga hindi na-save na pagbabago ka. Ano ang gusto mong gawin?",
+      "unsavedFileDescription": "May mga hindi na-save na pagbabago ang file na ito. Ano ang gusto mong gawin?",
+      "unsavedTitle": "Mga Hindi Na-save na Pagbabago"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Hindi maaaring blangko ang pangalan",
+        "invalidName": "Invalid na pangalan",
+        "invalidCharacters": "Naglalaman ng invalid na character ang pangalan",
+        "nameTooLong": "Masyadong mahaba ang pangalan"
+      },
+      "placeholders": {
+        "fileName": "Pangalan ng file...",
+        "folderName": "Pangalan ng folder..."
+      },
+      "aria": {
+        "newFileName": "Pangalan ng bagong file",
+        "newFolderName": "Pangalan ng bagong folder"
+      }
+    },
+    "draftRecovered": "Narecover ang mga hindi na-save na pagbabago mula sa nakaraang session.",
+    "externalChange": {
+      "changed": "Nabago ang file sa disk.",
+      "deleted": "Wala na ang file sa disk."
+    },
+    "saveFailed": "Nabigo ang pag-save: {{error}}",
+    "sidebar": {
+      "explorer": "Explorer",
+      "hide": "Itago ang sidebar",
+      "hideWithShortcut": "Itago ang sidebar ({{shortcut}})",
+      "show": "Ipakita ang sidebar",
+      "showWithShortcut": "Ipakita ang sidebar ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Maghanap sa Mga File",
+      "closeSearch": "Isara ang paghahanap",
+      "closeSearchShortcut": "Isara ang paghahanap (Esc)",
+      "searchPlaceholder": "Maghanap...",
+      "matchCase": "Match Case",
+      "matchCaseToggle": "Aa",
+      "noResults": "Walang nahanap na resulta",
+      "resultsSummary": "{{count}} tumugma sa {{fileCount}} na file",
+      "resultsSummary_one": "{{count}} tumugma sa {{fileCount}} na file",
+      "truncated": "(pinaikli)",
+      "resultsSummary_few": "{{count}} tumugma sa {{fileCount}} na file",
+      "resultsSummary_many": "{{count}} tumugma sa {{fileCount}} na file",
+      "resultsSummary_other": "{{count}} tumugma sa {{fileCount}} na file"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Nabigong i-load ang mga file: {{error}}",
+      "loading": "Niloload ang mga file...",
+      "empty": "Walang nahanap na file",
+      "dropForProjectRoot": "I-drop dito para sa project root",
+      "moveToTrash": "Ilipat sa Trash",
+      "moveToTrashConfirm": "Ilipat ang \"{{name}}\" sa Trash?",
+      "cancel": "Kanselahin"
+    },
+    "goToLine": {
+      "title": "Pumunta sa Linya",
+      "position": "(kasalukuyan: {{current}}, kabuuan: {{total}})",
+      "placeholder": "Numero ng linya, +offset, -offset, o %",
+      "go": "Pumunta"
+    },
+    "searchPanel": {
+      "previousMatch": "Nakaraang Tumugma",
+      "nextMatch": "Susunod na Tumugma",
+      "close": "Isara",
+      "replacePlaceholder": "Palitan",
+      "replace": "Palitan",
+      "replaceNext": "Palitan ang Susunod",
+      "all": "Lahat",
+      "replaceAll": "Palitan Lahat"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Col {{col}}",
+      "enableWatcher": "Paganahin ang file watcher",
+      "disableWatcher": "I-disable ang file watcher",
+      "watch": "watch",
+      "watching": "watching",
+      "watchExternalChanges": "Bantayan ang mga panlabas na pagbabago",
+      "disableExternalWatcher": "I-disable ang external change watcher",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Spaces: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Niloload ang preview...",
+      "openFullSize": "Buksan ang full-size na preview",
+      "openSystemViewer": "Buksan sa System Viewer"
+    },
+    "quickOpen": {
+      "title": "Quick Open",
+      "searchPlaceholder": "Maghanap ng mga file ayon sa pangalan...",
+      "loading": "Niloload ang mga file...",
+      "empty": "Walang nahanap na file"
+    },
+    "errorBoundary": {
+      "crashed": "Nag-crash ang editor",
+      "unknownError": "Hindi kilalang error"
+    },
+    "binaryPlaceholder": {
+      "file": "Binary file ({{size}})"
+    },
+    "unsavedChanges": "Mga hindi na-save na pagbabago",
+    "empty": {
+      "selectFile": "Pumili ng file mula sa tree para i-edit"
+    },
+    "search": {
+      "toggleReplace": "I-toggle ang Replace",
+      "placeholder": "Maghanap"
+    },
+    "shortcuts": {
+      "title": "Mga Keyboard Shortcut",
+      "groups": {
+        "fileOperations": "Mga File Operation",
+        "search": "Paghahanap",
+        "navigation": "Navigation",
+        "editing": "Pag-edit",
+        "markdown": "Markdown",
+        "general": "Pangkalahatan"
+      },
+      "actions": {
+        "quickOpen": "Quick Open",
+        "save": "I-save",
+        "saveAll": "I-save Lahat",
+        "closeTab": "Isara ang Tab",
+        "findInFile": "Maghanap sa File",
+        "searchInFiles": "Maghanap sa Mga File",
+        "goToLine": "Pumunta sa Linya",
+        "nextTab": "Susunod na Tab",
+        "previousTab": "Nakaraang Tab",
+        "cycleTabs": "I-cycle ang mga Tab",
+        "toggleSidebar": "I-toggle ang Sidebar",
+        "undo": "I-undo",
+        "redo": "I-redo",
+        "selectNextMatch": "Piliin ang Susunod na Tumugma",
+        "toggleComment": "I-toggle ang Komento",
+        "splitPreview": "Split Preview",
+        "fullPreview": "Full Preview",
+        "closeEditor": "Isara ang Editor"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Paganahin ang word wrap",
+      "disableWordWrap": "I-disable ang word wrap",
+      "closeSplitPreview": "Isara ang split preview",
+      "closePreview": "Isara ang preview"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Lumikha ng Schedule",
+      "creating": "Lumilikha...",
+      "goToDashboard": "Pumunta sa Dashboard",
+      "launchTeam": "Ilunsad ang team",
+      "launching": "Inilulunsad...",
+      "relaunchTeam": "Ilunsad muli ang team",
+      "relaunching": "Inilulunsad muli...",
+      "saveChanges": "I-save ang mga Pagbabago",
+      "saving": "Sine-save..."
+    },
+    "billing": {
+      "prefix": "Simula Hunyo 15, 2026, sinisingil ng Anthropic ang",
+      "readArticle": "Basahin ang artikulo ng Anthropic",
+      "suffix": "at ang paggamit ng Agent SDK mula sa buwanang Agent SDK credit, hiwalay sa mga interactive na limitasyon ng Claude Code. Nagre-reset ang credit bawat billing cycle at hindi nire-roll over ang hindi nagamit na credit."
+    },
+    "conflict": {
+      "description": "Mapanganib ang pagpapatakbo ng dalawang team sa parehong directory - maaaring magkasalungat sila sa pag-edit ng parehong mga file. Isaalang-alang ang paggamit ng ibang directory o git worktree para sa isolation.",
+      "title": "May isa pang team na \"{{team}}\" na tumatakbo na para sa working directory na ito",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "createSchedule": "Mag-schedule ng awtomatikong execution ng Claude task",
+      "createScheduleForTeam": "Mag-schedule ng awtomatikong pagtakbo para sa team na \"{{team}}\"",
+      "editSchedule": "Ine-edit ang schedule para sa team na \"{{team}}\"",
+      "launchPrefix": "Simulan ang team",
+      "launchSuffix": "sa pamamagitan ng lokal na Claude CLI.",
+      "relaunchPrefix": "Ihinto ang kasalukuyang pagtakbo para sa",
+      "relaunchSuffix": "at simulan itong muli sa pamamagitan ng lokal na Claude CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "ilunsad",
+        "relaunch": "ilunsad muli"
+      },
+      "blocked": "Hindi available ang runtime environment - naka-block ang {{action}}",
+      "checkingProviders": "Sinusuri ang mga napiling provider...",
+      "failed": "Nabigong ihanda ang mga napiling provider",
+      "preflight": "Pre-flight check para mahuli ang mga error bago mag-{{action}}",
+      "preparingEnvironment": "Inihahanda ang environment...",
+      "ready": "Handa na ang lahat ng napiling provider.",
+      "readyWithNotes": "Handa na ang lahat ng napiling provider, may mga nota.",
+      "unsupportedPreload": "Hindi sinusuportahan ng kasalukuyang preload version ang team:prepareProvisioning. I-restart ang dev app.",
+      "selectWorkingDirectory": "Pumili ng working directory para i-validate ang launch environment.",
+      "someProvidersNeedAttention": "May ilang napiling provider na nangangailangan ng atensyon."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "Ipapasa ang prompt na ito sa",
+      "oneShotSuffix": "para sa one-shot na execution",
+      "saved": "Na-save",
+      "schedulePlaceholder": "Mga tagubilin para sa Claude na isasagawa ayon sa schedule...",
+      "teamLeadOptional": "Prompt para sa team lead (opsyonal)",
+      "teamLeadPlaceholder": "Mga tagubilin para sa team lead..."
+    },
+    "providerChanged": "Nabago ang provider mula {{from}} sa {{to}}. Hindi ituloy ang nakaraang lead session, at magsisimula ang lead na may sariwang context para tama ang pagkakalapat ng bagong runtime.",
+    "relaunchFreshSession": "Ang relaunch ng team ay nagsisimula ng sariwang lead session. Ang matibay na team state, task board, at member configuration ay muling nire-rehydrate sa launch prompt.",
+    "relaunchWarning": {
+      "description": "Ang pag-save ng mga setting na ito ay maghihinto sa kasalukuyang team process, magpe-persist ng na-update na roster, at maglulunsad muli ng team gamit ang bagong runtime.",
+      "title": "Magre-restart ang relaunch sa kasalukuyang pagtakbo ng team"
+    },
+    "schedule": {
+      "labelOptional": "Label (opsyonal)",
+      "labelPlaceholder": "hal., Araw-araw na code review, Gabing test...",
+      "maxBudgetUsd": "Max na badyet (USD)",
+      "maxTurns": "Max na turn",
+      "noLimit": "Walang limitasyon",
+      "noMatches": "Walang team na tumutugma sa iyong paghahanap.",
+      "noTeams": "Walang available na team. Lumikha muna ng team.",
+      "searchTeams": "Maghanap ng mga team...",
+      "selectTeam": "Pumili ng team...",
+      "team": "Team",
+      "title": "Schedule"
+    },
+    "title": {
+      "createSchedule": "Lumikha ng Schedule",
+      "editSchedule": "I-edit ang Schedule",
+      "launch": "Ilunsad ang Team",
+      "relaunch": "Ilunsad Muli ang Team"
+    },
+    "errors": {
+      "loadProjectsFailed": "Nabigong i-load ang mga proyekto",
+      "saveScheduleFailed": "Nabigong i-save ang schedule",
+      "relaunchFailed": "Nabigong ilunsad muli ang team",
+      "launchFailed": "Nabigong ilunsad ang team"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "Nangangailangan ang OpenCode lead ng napiling model.",
+      "openCodeTeammateRequired": "Nangangailangan ang OpenCode lead ng kahit isang OpenCode teammate.",
+      "selectWorkingDirectory": "Pumili ng working directory (cwd)",
+      "fixMemberNames": "Ayusin ang mga pangalan ng miyembro bago ilunsad",
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi bago ilunsad"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Mga relaunch setting",
+      "title": "Mga opsyonal na launch setting",
+      "relaunchDescription": "Suriin ang roster at lead runtime bago i-restart ang team.",
+      "description": "Panatilihing nakatuon ang launch flow sa project path at i-expand lang ito kapag gusto mo ng karagdagang kontrol."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Kopyahin ang team",
+      "createTeam": "Lumikha ng Team",
+      "deleteForever": "Tanggalin nang permanente",
+      "deletePermanently": "Tanggalin nang permanente",
+      "deleteTeam": "Tanggalin ang team",
+      "launching": "Inilulunsad...",
+      "launchTeam": "Ilunsad ang team",
+      "relaunchTeam": "Ilunsad muli ang team",
+      "restore": "Ibalik",
+      "restoreTeam": "Ibalik ang team",
+      "retry": "Subukang muli",
+      "stopTeam": "Ihinto ang team",
+      "stopping": "Inihihinto..."
+    },
+    "electronOnly": {
+      "description": "Sa browser mode, hindi available ang access sa mga lokal na `~/.claude/teams` directory.",
+      "title": "Available lang ang Teams sa Electron mode"
+    },
+    "empty": {
+      "description": "Lumikha ng team dito para makapagsimula. Awtomatiko itong lalabas sa listahan.",
+      "localOnly": "Available lang ang paglikha ng team sa lokal na Electron mode.",
+      "title": "Walang nahanap na team"
+    },
+    "filter": {
+      "clearAll": "I-clear lahat",
+      "label": "I-filter ang mga team",
+      "projectPriority": "Project priority",
+      "status": "Status"
+    },
+    "loadFailed": "Nabigong i-load ang mga team",
+    "loading": "Niloload ang mga team...",
+    "localOnly": "Available lang sa lokal na Electron mode.",
+    "membersCount": "Mga miyembro: {{count}}",
+    "membersCount_few": "Mga miyembro: {{count}}",
+    "membersCount_many": "Mga miyembro: {{count}}",
+    "membersCount_one": "Miyembro: {{count}}",
+    "membersCount_other": "Mga miyembro: {{count}}",
+    "noDescription": "Walang paglalarawan",
+    "noMatches": "Walang team na tumutugma sa kasalukuyang mga filter",
+    "partial": {
+      "pending": "Nire-reconcile pa ang huling paglunsad.",
+      "skipped": "May nilaktawang teammate ang huling paglunsad.",
+      "skippedWithCount": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_few": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_many": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_one": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "skippedWithCount_other": "Nilaktawan ng huling paglunsad ang {{count}}/{{expected}} na teammate.",
+      "stopped": "Huminto ang huling paglunsad bago sumali ang lahat ng teammate.",
+      "stoppedWithCount": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_few": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_many": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_one": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate.",
+      "stoppedWithCount_other": "Huminto ang huling paglunsad bago sumali ang {{count}}/{{expected}} na teammate."
+    },
+    "searchPlaceholder": "Maghanap ng mga team...",
+    "sections": {
+      "otherTeams": "Iba pang team",
+      "projectTeams": "Mga team para sa {{project}}",
+      "selectedProject": "napiling proyekto"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktibo",
+      "deleted": "Tinanggal",
+      "launching": "Inilulunsad...",
+      "offline": "Offline",
+      "partialFailure": "Nabigo ang paglunsad sa kalagitnaan",
+      "partialPending": "Nakabinbin ang bootstrap",
+      "partialSkipped": "Nilaktawan ng paglunsad ang miyembro",
+      "running": "Tumatakbo"
+    },
+    "title": "Pumili ng Team",
+    "trash": "Trash ({{count}})",
+    "trash_few": "Trash ({{count}})",
+    "trash_many": "Trash ({{count}})",
+    "trash_one": "Trash ({{count}})",
+    "trash_other": "Trash ({{count}})",
+    "deleteDraft": {
+      "title": "Tanggalin ang draft",
+      "message": "Tanggalin ang draft na team na \"{{teamName}}\"? Hindi na ito maibabalik.",
+      "confirmLabel": "Tanggalin",
+      "cancelLabel": "Kanselahin"
+    },
+    "moveToTrash": {
+      "title": "Ilipat sa trash",
+      "message": "Ilipat ang team na \"{{teamName}}\" sa trash? Maaari mo itong ibalik mamaya.",
+      "confirmLabel": "Ilipat sa trash",
+      "cancelLabel": "Kanselahin"
+    },
+    "deleteForever": {
+      "title": "Tanggalin nang permanente",
+      "message": "Tanggalin ang team na \"{{teamName}}\" nang permanente? Mawawala ang lahat ng data.",
+      "confirmLabel": "Tanggalin nang permanente",
+      "cancelLabel": "Kanselahin"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Tip: Ang mga cross-team na mensahe ay napupunta sa lead ng target na team. Kung gusto mong bumalik ang sagot sa iyong team lead sa halip na sa iyo, sabihin iyon nang tahasan sa mensahe."
+    },
+    "attachments": {
+      "attachFiles": "Mag-attach ng mga file (i-paste o i-drag & drop)",
+      "unavailable": "Hindi available ang mga attachment",
+      "disabledHint": "Sinusuportahan ang mga file attachment para sa online na team lead at online na mga OpenCode teammate. Tanggalin ang mga attachment o palitan ang tatanggap.",
+      "restrictions": {
+        "crossTeam": "Hindi sinusuportahan ang mga file attachment para sa cross-team na mensahe",
+        "teamOffline": "Dapat online ang team para mag-attach ng mga file",
+        "unsupportedRecipient": "Maaaring ipadala ang mga file sa team lead o mga OpenCode teammate",
+        "openCodeOffline": "Dapat online ang team para mag-attach ng mga file para sa mga OpenCode teammate",
+        "sending": "Hintaying matapos ipadala ang kasalukuyang mensahe bago magdagdag ng mga file",
+        "maximumReached": "Naabot na ang maximum na attachment",
+        "leadOnly": "Maaari lang ipadala ang mga file sa team lead"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Nangangailangan ang mga slash command ng live na team lead at hindi maipapadala kasama ng mga attachment",
+        "crossTeam": "Maaari lang patakbuhin ang mga slash command sa kasalukuyang team lead",
+        "notLead": "Maaari lang ipadala ang mga slash command sa team lead",
+        "leadOffline": "Nangangailangan ang mga slash command na online ang team lead"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Muling ginamit ang kamakailang cross-team na request",
+      "teamOffline": "Offline ang team"
+    },
+    "revision": {
+      "editing": "Ine-edit ang nakaraang mensahe",
+      "cancel": "Kanselahin",
+      "tooltip": "Hilingin sa agent na huwag pansinin ang nakaraang mensahe at ibalik ito sa composer."
+    },
+    "input": {
+      "charsLeft": "{{count}} char na natitira",
+      "charsLeft_one": "{{count}} char na natitira",
+      "charsLeft_other": "{{count}} char na natitira",
+      "teamLaunchingPlaceholder": "Inilulunsad ang team... ipipila ang mensahe para sa inbox delivery.",
+      "crossTeamPlaceholder": "Cross-team na mensahe sa {{team}}...",
+      "teamFallback": "team",
+      "placeholder": "Magsulat ng mensahe... (Enter para ipadala, Shift+Enter para sa bagong linya)",
+      "slashTip": "Tip: Maaari mong gamitin ang \"/\" para patakbuhin ang anumang Claude command.",
+      "charsLeft_few": "{{count}} char na natitira",
+      "charsLeft_many": "{{count}} char na natitira"
+    },
+    "teamSelector": {
+      "thisTeam": "Team na ito",
+      "current": "kasalukuyan",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "Pumili...",
+      "searchPlaceholder": "Maghanap...",
+      "noResults": "Walang resulta"
+    },
+    "actions": {
+      "voiceToText": "Voice to text",
+      "send": "Ipadala",
+      "sendingUnavailableLaunching": "Hindi available ang pagpapadala habang inilulunsad ang team"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "I-filter ang mga log",
+      "tooltip": "I-filter ang mga log",
+      "sections": {
+        "stream": "Stream",
+        "content": "Content"
+      },
+      "kinds": {
+        "output": "Output",
+        "thinking": "Thinking",
+        "tool": "Tool calls"
+      },
+      "actions": {
+        "reset": "I-reset",
+        "save": "I-save"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} raw na linya",
+    "rawLineCount_one": "{{formattedCount}} raw na linya",
+    "rawLinesCaptured": "{{count}} nakuha",
+    "emptyRawLogs": "{{count}}; wala pang assistant/tool output.",
+    "noLogsYet": "Wala pang log.",
+    "teamNotRunning": "Hindi tumatakbo ang team.",
+    "searchPlaceholder": "Maghanap ng mga log...",
+    "clearSearch": "I-clear ang paghahanap",
+    "newCount": "+{{count}} bago",
+    "loading": "Niloload...",
+    "showMore": "Magpakita pa",
+    "noLogsCaptured": "Walang nakuhang log.",
+    "noMatchingLogs": "Walang tumutugmang log.",
+    "rawLineCount_few": "{{formattedCount}} raw na linya",
+    "rawLineCount_many": "{{formattedCount}} raw na linya",
+    "rawLineCount_other": "{{formattedCount}} raw na linya",
+    "openFullscreen": "Buksan ang fullscreen na mga log",
+    "fullscreen": "Fullscreen",
+    "viewingFullscreen": "Tinitingnan sa fullscreen mode",
+    "logsTitle": "Mga Log",
+    "sourceSelect": {
+      "placeholder": "Pumili ng log source...",
+      "searchPlaceholder": "Maghanap ng mga log source...",
+      "emptyMessage": "Walang nahanap na log source.",
+      "ariaLabel": "Log source",
+      "leadLabel": "Lead",
+      "selectSourceEmpty": "Pumili ng log source.",
+      "leadDescription": "Team Lead",
+      "removedLabel": "tinanggal",
+      "removedDescription": "Tinanggal"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "External na team",
+      "process": {
+        "startedBy": "Sinimulan ni:",
+        "at": "Sa:",
+        "openUrl": "Buksan ang URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Mga nakatagong task",
+        "empty": "Walang available na nakatagong task."
+      },
+      "member": {
+        "lead": "Lead",
+        "workingOn": "ginagawa",
+        "recentTools": "Mga kamakailang tool",
+        "spawn": {
+          "waitingToStart": "naghihintay magsimula",
+          "starting": "nagsisimula",
+          "failed": "nabigo"
+        },
+        "state": {
+          "active": "aktibo",
+          "idle": "idle",
+          "offline": "offline",
+          "runningTool": "nagpapatakbo ng tool"
+        },
+        "activeTool": {
+          "running": "Nagpapatakbo ng tool",
+          "failed": "Nabigo ang tool",
+          "finished": "Natapos ang tool"
+        },
+        "actions": {
+          "message": "Mensahe",
+          "profile": "Profile",
+          "task": "Task"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Mga Log",
+      "loading": "Niloload ang mga log",
+      "more": "+{{count}} pa",
+      "more_one": "+{{count}} pa",
+      "more_other": "+{{count}} pa",
+      "more_few": "+{{count}} pa",
+      "more_many": "+{{count}} pa",
+      "unsupportedProvider": "Hindi sinusuportahang provider",
+      "openCodeLogsDelayed": "Naantala ang mga OpenCode log",
+      "logsUnavailable": "Hindi available ang mga log",
+      "noRecentLogs": "Walang kamakailang log",
+      "toolError": "Tool error",
+      "toolResult": "Tool result",
+      "toolUse": "Tool use",
+      "thinking": "Thinking",
+      "error": "Error",
+      "logEvent": "Log event",
+      "noErrorOutput": "Walang error output",
+      "noOutput": "Walang output",
+      "noInput": "Walang input"
+    },
+    "blockingEdge": {
+      "title": "Blocking Dependency",
+      "blocks": "hinaharangan",
+      "close": "Isara",
+      "blockingHiddenTasks": "Mga humaharang na nakatagong task",
+      "blockedHiddenTasks": "Mga hinarang na nakatagong task",
+      "links_one": "{{count}} link",
+      "links_other": "{{count}} link",
+      "hiddenBlockingLinks_one": "{{count}} nakatagong blocking link",
+      "hiddenBlockingLinks_other": "{{count}} nakatagong blocking link",
+      "hiddenTaskStack": "Hidden task stack",
+      "hiddenTasks_one": "{{count}} nakatagong task",
+      "hiddenTasks_other": "{{count}} nakatagong task",
+      "task": "Task",
+      "openBlockerStack": "Buksan ang blocker stack",
+      "openBlockedStack": "Buksan ang blocked stack",
+      "openBlockerTask": "Buksan ang blocker task",
+      "openBlockedTask": "Buksan ang blocked task"
+    },
+    "activityHud": {
+      "activity": "Aktibidad",
+      "noRecentActivity": "Walang kamakailang aktibidad",
+      "more": "+{{count}} pa",
+      "more_one": "+{{count}} pa",
+      "more_other": "+{{count}} pa",
+      "more_few": "+{{count}} pa",
+      "more_many": "+{{count}} pa"
+    },
+    "provisioning": {
+      "launchDetails": "Mga detalye ng paglunsad",
+      "launchDetailsDescription": "Detalyadong progreso ng paglunsad ng team, live na output at mga CLI log."
+    }
+  },
+  "projectPath": {
+    "label": "Proyekto",
+    "source": {
+      "claude": "Nahanap ng Claude",
+      "codex": "Nahanap ng Codex",
+      "mixed": "Nahanap ng Claude at Codex"
+    },
+    "deleted": {
+      "title": "Wala na ang folder ng proyekto",
+      "label": "Tinanggal"
+    },
+    "mode": {
+      "projectList": "Mula sa listahan ng proyekto",
+      "customPath": "Custom na path"
+    },
+    "loadingProjects": "Niloload ang mga proyekto...",
+    "selectProject": "Pumili ng proyekto...",
+    "searchPlaceholder": "Maghanap ng proyekto ayon sa pangalan o path",
+    "empty": "Walang nahanap",
+    "selectFromList": "Pumili ng proyekto mula sa listahan",
+    "noProjects": "Walang nahanap na proyekto, lumipat sa custom na path.",
+    "customWorkingDirectory": "Custom na working directory",
+    "browse": "Mag-browse",
+    "createAutomatically": "Kung hindi umiiral ang directory, awtomatiko itong lilikhain."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Lokal na runtime load",
+      "description": "Parent at child process lang. Hindi kasama ang remote LLM inference.",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "summedRss": "summed RSS",
+      "sharedHost": "Shared OpenCode host metric. Hindi ito eksklusibo sa miyembrong ito.",
+      "processTreeCapped": "Na-cap ang process tree para sa sample na ito.",
+      "rssHint": "Maaaring kasama sa RSS ang mga shared page, kaya pinakamahusay itong basahin bilang load signal, hindi eksklusibong memory."
+    },
+    "editor": {
+      "title": "Mga Miyembro",
+      "addMember": "Magdagdag ng miyembro",
+      "editAsJson": "I-edit bilang JSON",
+      "runInSeparateWorktrees": "Patakbuhin ang mga teammate sa hiwalay na worktree",
+      "agentTeamsMcpOnly": "Agent Teams MCP only",
+      "removedCount": "Tinanggal ({{count}})",
+      "removedModelLockReason": "Pinapanatili ang mga tinanggal na miyembro para sa soft delete history. Ibalik ang mga ito para i-edit ang mga setting.",
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi"
+    },
+    "stats": {
+      "computing": "Kinakalkula ang mga stat...",
+      "empty": "Walang available na stat",
+      "lines": "Mga Linya",
+      "linesInfo": "Tinatantya. Tumpak para sa mga Edit at Write tool. Tinatantya ang mga Bash file write mula sa mga command pattern (heredoc, echo, sed) at maaaring kulang sa ulat.",
+      "files": "Mga File",
+      "toolCalls": "Mga Tool Call",
+      "tokens": "Mga Token",
+      "toolUsage": "Paggamit ng Tool",
+      "filesTouched": "Mga File na Nahawakan ({{count}})",
+      "viewAllChanges": "Tingnan ang Lahat ng Pagbabago",
+      "showLess": "Magpakita ng mas kaunti",
+      "moreFiles": "+{{count}} pa",
+      "footer": "{{count}} session · kinalkula {{computedAgo}}",
+      "footer_one": "{{count}} session · kinalkula {{computedAgo}}",
+      "footer_few": "{{count}} session · kinalkula {{computedAgo}}",
+      "footer_many": "{{count}} session · kinalkula {{computedAgo}}",
+      "footer_other": "{{count}} session · kinalkula {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Naghahanap ng mga log...",
+      "empty": "Walang nahanap na log",
+      "waitingForTaskActivity": "Ginagawa ang task - naghihintay ng session activity (awtomatikong nire-refresh)...",
+      "noTaskActivity": "Wala pang session activity para sa task na ito",
+      "noMemberActivity": "Wala pang naitalang session activity ang miyembrong ito",
+      "leadSessionTooltip": "Buong team lead session log - kapaki-pakinabang para sa global orchestration context, hindi partikular sa agent na ito",
+      "memberSessionTooltip": "Buong persistent teammate session log - kapaki-pakinabang kapag tumakbo ang trabaho sa root member session sa halip na sa subagent file",
+      "startedAt": "nagsimula {{time}}",
+      "active": "aktibo",
+      "showDetails": "Ipakita ang mga detalye",
+      "hideDetails": "Itago ang mga detalye",
+      "loadingDetails": "Niloload ang mga detalye...",
+      "failedToLoadDetails": "Nabigong i-load ang mga detalye"
+    },
+    "detail": {
+      "relaunchOpenCode": "Ilunsad muli ang OpenCode",
+      "restart": "I-restart",
+      "legacyLogsFallback": "Legacy Logs Fallback",
+      "copyDiagnostics": "Kopyahin ang diagnostics",
+      "pid": "PID {{pid}}",
+      "removedAt": "Tinanggal {{date}}",
+      "failedToRestartMember": "Nabigong i-restart ang miyembro",
+      "sendMessage": "Magpadala ng Mensahe",
+      "assignTask": "Magtalaga ng Task",
+      "remove": "Tanggalin"
+    },
+    "list": {
+      "loading": "Niloload ang mga miyembro ng team",
+      "unavailable": "Hindi available ang member roster",
+      "unavailableDescription": "{{count}} teammate ang kilala mula sa team metadata, ngunit nawawala ang mga detalye ng roster.",
+      "unavailableDescription_one": "{{count}} teammate ang kilala mula sa team metadata, ngunit nawawala ang mga detalye ng roster.",
+      "soloLeadOnly": "Solo team - lead lang",
+      "removedCount": "Tinanggal ({{count}})",
+      "unavailableDescription_few": "{{count}} teammate ang kilala mula sa team metadata, ngunit nawawala ang mga detalye ng roster.",
+      "unavailableDescription_many": "{{count}} teammate ang kilala mula sa team metadata, ngunit nawawala ang mga detalye ng roster.",
+      "unavailableDescription_other": "{{count}} teammate ang kilala mula sa team metadata, ngunit nawawala ang mga detalye ng roster."
+    },
+    "executionLog": {
+      "empty": "Walang ipapakita",
+      "emptyUserMessage": "{{time}} - (blangko)",
+      "agentInstructions": "Mga tagubilin ng agent",
+      "memberTurn": "Turn ni {{member}}",
+      "agentTurn": "Turn ng agent",
+      "turn": "turn"
+    },
+    "recentMessages": {
+      "latest": "Pinakabagong mensahe",
+      "latestForMember": "Pinakabagong mensahe - {{member}}",
+      "loadMore": "Mag-load pa",
+      "expand": "I-expand",
+      "collapse": "I-collapse"
+    },
+    "leadModel": {
+      "defaultModel": "Default",
+      "providerModelAria": "{{provider}} provider, {{model}}",
+      "leadShort": "lead",
+      "teamLead": "Team Lead",
+      "syncWithTeammates": "I-sync ang model sa mga teammate",
+      "anthropicTeamWide": "Anthropic team-wide",
+      "runtimeInheritance": "Nalalapat ang lead runtime sa mga teammate maliban kung magtakda sila ng sarili nilang provider o model.",
+      "anthropicContextLimit": "Ang 200K context limit ay team-wide para sa mga Anthropic runtime sa paglunsad na ito, kasama ang mga custom na Anthropic teammate."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Auto-refresh",
+      "wrapLines": "I-wrap ang mga linya",
+      "loadingTail": "Niloload ang process log tail...",
+      "empty": "Wala pang nakuhang process log file para sa miyembrong ito.",
+      "copy": "Kopyahin",
+      "fileEmpty": "Blangko ang process log file.",
+      "showingLast": "Ipinapakita ang huling {{bytes}}.",
+      "showing": "Ipinapakita ang {{bytes}}."
+    },
+    "tasks": {
+      "empty": "Walang task na nakatalaga sa miyembrong ito"
+    },
+    "messages": {
+      "loadOlder": "Mag-load ng mga lumang mensahe",
+      "filters": {
+        "all": "Lahat",
+        "messages": "Mga Mensahe",
+        "comments": "Mga Komento"
+      },
+      "empty": {
+        "loading": "Niloload ang aktibidad...",
+        "noComments": "Walang komento para sa miyembrong ito",
+        "noLoadedMessages": "Wala pang naka-load na mensahe para sa miyembrong ito",
+        "noMessages": "Walang mensahe sa miyembrong ito",
+        "noLoadedActivity": "Wala pang naka-load na aktibidad para sa miyembrong ito",
+        "noActivity": "Walang aktibidad sa miyembrong ito"
+      }
+    },
+    "actions": {
+      "openProfile": "Buksan ang profile",
+      "editRole": "I-edit ang role",
+      "sendMessage": "Magpadala ng mensahe",
+      "assignTask": "Magtalaga ng task"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Maglagay ng custom na role..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} schedule",
+    "count_one": "{{count}} schedule",
+    "count_other": "{{count}} schedule",
+    "nextRun": "Susunod: {{next}}",
+    "actions": {
+      "runNow": "Patakbuhin ngayon",
+      "edit": "I-edit",
+      "pause": "I-pause",
+      "resume": "Ituloy",
+      "delete": "Tanggalin",
+      "addSchedule": "Magdagdag ng Schedule"
+    },
+    "runHistory": {
+      "loading": "Niloload ang kasaysayan ng pagtakbo...",
+      "empty": "Wala pang pagtakbo"
+    },
+    "count_few": "{{count}} schedule",
+    "count_many": "{{count}} schedule",
+    "runLog": {
+      "title": "Run Log",
+      "exitCode": "exit {{code}}",
+      "retryCount": "retry {{count}}/{{max}}",
+      "stillRunning": "Tumatakbo pa ang task...",
+      "loadingLogs": "Niloload ang mga log...",
+      "errors": "Mga Error",
+      "close": "Isara"
+    },
+    "cron": {
+      "expression": "Cron expression",
+      "highFrequencyWarning": "High frequency na schedule (mas mababa sa 5 min na interval)",
+      "nextRuns": "Mga susunod na pagtakbo:",
+      "timezone": "Timezone",
+      "selectTimezone": "Pumili ng timezone",
+      "warmUpTime": "Warm-up time",
+      "warmUpDescription": "Inihahanda ang mga napiling provider bago ang naka-schedule na execution",
+      "errors": {
+        "enterExpression": "Maglagay ng cron expression",
+        "invalidExpression": "Invalid na cron expression"
+      },
+      "presets": {
+        "everyHour": "Bawat oras",
+        "everySixHours": "Bawat 6 oras",
+        "dailyAtNine": "Araw-araw nang 9am",
+        "weekdaysAtNine": "Mga karaniwang araw nang 9am",
+        "mondayAtNine": "Lunes nang 9am",
+        "everyThirtyMinutes": "Bawat 30 min"
+      },
+      "warmUpOptions": {
+        "none": "Walang warm-up",
+        "fiveMinutes": "5 min",
+        "tenMinutes": "10 min",
+        "fifteenMinutes": "15 min",
+        "thirtyMinutes": "30 min"
+      }
+    },
+    "empty": {
+      "title": "Wala pang schedule",
+      "description": "Lumikha ng schedule para awtomatikong magpatakbo ng mga Claude task sa isang cron schedule."
+    },
+    "title": "Mga Schedule",
+    "status": {
+      "active": "Aktibo",
+      "paused": "Naka-pause",
+      "disabled": "Naka-disable"
+    },
+    "runStatus": {
+      "pending": "Nakabinbin",
+      "warmingUp": "Nagwa-warm up",
+      "warm": "Warm",
+      "running": "Tumatakbo",
+      "completed": "Tapos na",
+      "failed": "Nabigo",
+      "interrupted": "Naantala",
+      "cancelled": "Kinansela"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Maaaring gumamit ang mga lokal na OpenCode model ng OpenCode context budget sa halip na prompt-only na mga limitasyon.",
+    "description": "Magdagdag ng tumutugmang mga limitasyon sa OpenCode config para sa provider at model na ginagamit ng teammate na ito. Tinutulungan nito ang OpenCode na mag-compact at mag-prune bago umapaw ang mga lokal na model sa kanilang context window.",
+    "replacePrefix": "Palitan ang",
+    "and": "at",
+    "replaceSuffix": "ng provider at model ID mula sa iyong OpenCode setup. Ang mga prompt instruction tulad ng",
+    "promptInstructionsSuffix": "ay mas mahina dahil binubuo ang request bago basahin ng model ang mga ito.",
+    "providerLimits": "Mga limitasyon ng provider",
+    "compactionConfig": "Compaction config"
+  },
+  "sessions": {
+    "noProjectPath": "Walang naka-link na project path",
+    "provisioningHint": "Lalabas ang mga session pagkatapos ng team provisioning",
+    "projectNotFound": "Hindi nahanap ang proyekto",
+    "loading": "Niloload ang mga session...",
+    "empty": "Walang nahanap na session",
+    "showAllSessions": "Ipakita para sa lahat ng session",
+    "lead": "lead",
+    "removeFilter": "Tanggalin ang filter",
+    "filterBySession": "I-filter ayon sa session na ito",
+    "openSession": "Buksan ang session",
+    "title": "Mga Session"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Kanselahin",
+    "moreWarningsHidden": "{{count}} pang babala na nakatago",
+    "diagnostics": "Diagnostics",
+    "liveOutput": "Live na output",
+    "diagnosticsCopied": "Nakopya ang diagnostics",
+    "copyDiagnostics": "Kopyahin ang diagnostics",
+    "copied": "Nakopya",
+    "noOutput": "Wala pang nakuhang output.",
+    "cliLogs": "Mga CLI log",
+    "steps": {
+      "starting": "Nagsisimula",
+      "configuring": "Team setup",
+      "assembling": "Sumasali ang mga miyembro",
+      "finalizing": "Tinatapos"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "sinusuri...",
+        "ready": "OK",
+        "notes": "OK (mga nota)",
+        "failed": "ERR",
+        "pending": "naghihintay"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Nawawala ang CLI binary",
+        "openCodeRuntimeMissing": "Nawawala ang OpenCode runtime",
+        "openCodeWindowsAccessBlocked": "Naka-block ang OpenCode Windows access",
+        "openCodeNoOutput": "Walang ibinalik na output ang OpenCode runtime check",
+        "openCodeMcpUnreachable": "Hindi maabot ang OpenCode app MCP",
+        "workingDirectoryMissing": "Nawawala ang working directory",
+        "cliBinaryCouldNotStart": "Hindi masimulan ang CLI binary",
+        "cliPreflightIncomplete": "Hindi natapos ang CLI preflight",
+        "authenticationRequired": "Kailangan ng authentication",
+        "runtimeProviderNotConfigured": "Hindi naka-configure ang runtime provider",
+        "cliPreflightFailed": "Nabigo ang CLI preflight",
+        "selectedModelCompatible": "Compatible ang napiling model",
+        "selectedModelCompatibilityPending": "Nakabinbin ang compatibility ng napiling model",
+        "selectedModelAvailable": "Available ang napiling model",
+        "selectedModelVerified": "Na-verify ang napiling model",
+        "selectedModelUnavailable": "Hindi available ang napiling model",
+        "selectedModelTimedOut": "Nag-time out ang verification ng napiling model",
+        "selectedModelCheckFailed": "Nabigo ang pagsuri sa napiling model",
+        "selectedModelDeferred": "Ipinagpaliban ang verification ng napiling model",
+        "selectedModelPingNotConfirmed": "Hindi nakumpirma ang ping ng napiling model",
+        "readyWithNotes": "Handa na may mga nota",
+        "needsAttention": "Kailangan ng atensyon"
+      },
+      "modelChecksSummary": "Mga pagsuri sa napiling model - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model na hindi available",
+        "unavailable_one": "{{count}} model na hindi available",
+        "unavailable_other": "{{count}} model na hindi available",
+        "checkFailed": "{{count}} model na nabigo sa pagsuri",
+        "checkFailed_one": "{{count}} model na nabigo sa pagsuri",
+        "checkFailed_other": "{{count}} model na nabigo sa pagsuri",
+        "timedOut": "{{count}} model na nag-time out",
+        "timedOut_one": "{{count}} model na nag-time out",
+        "timedOut_other": "{{count}} model na nag-time out",
+        "deferred": "{{count}} verification na ipinagpaliban",
+        "deferred_one": "{{count}} verification na ipinagpaliban",
+        "deferred_other": "{{count}} verification na ipinagpaliban",
+        "pingNotConfirmed": "{{count}} ping na hindi nakumpirma",
+        "pingNotConfirmed_one": "{{count}} ping na hindi nakumpirma",
+        "pingNotConfirmed_other": "{{count}} ping na hindi nakumpirma",
+        "compatibilityPending": "{{count}} compatible, nakabinbin ang deep verification",
+        "compatibilityPending_one": "{{count}} compatible, nakabinbin ang deep verification",
+        "compatibilityPending_other": "{{count}} compatible, nakabinbin ang deep verification",
+        "compatible": "{{count}} compatible",
+        "compatible_one": "{{count}} compatible",
+        "compatible_other": "{{count}} compatible",
+        "checking": "{{count}} sinusuri",
+        "checking_one": "{{count}} sinusuri",
+        "checking_other": "{{count}} sinusuri",
+        "available": "{{count}} available",
+        "available_one": "{{count}} available",
+        "available_other": "{{count}} available",
+        "verified": "{{count}} na-verify",
+        "verified_one": "{{count}} na-verify",
+        "verified_other": "{{count}} na-verify",
+        "unavailable_few": "{{count}} model na hindi available",
+        "unavailable_many": "{{count}} model na hindi available",
+        "checkFailed_few": "{{count}} model na nabigo sa pagsuri",
+        "checkFailed_many": "{{count}} model na nabigo sa pagsuri",
+        "timedOut_few": "{{count}} model na nag-time out",
+        "timedOut_many": "{{count}} model na nag-time out",
+        "deferred_few": "{{count}} verification na ipinagpaliban",
+        "deferred_many": "{{count}} verification na ipinagpaliban",
+        "pingNotConfirmed_few": "{{count}} ping na hindi nakumpirma",
+        "pingNotConfirmed_many": "{{count}} ping na hindi nakumpirma",
+        "compatibilityPending_few": "{{count}} compatible, nakabinbin ang deep verification",
+        "compatibilityPending_many": "{{count}} compatible, nakabinbin ang deep verification",
+        "compatible_few": "{{count}} compatible",
+        "compatible_many": "{{count}} compatible",
+        "checking_few": "{{count}} sinusuri",
+        "checking_many": "{{count}} sinusuri",
+        "available_few": "{{count}} available",
+        "available_many": "{{count}} available",
+        "verified_few": "{{count}} na-verify",
+        "verified_many": "{{count}} na-verify"
+      },
+      "openProviderSettings": "Buksan ang mga setting ng {{provider}}",
+      "copied": "Nakopya",
+      "copyDiagnostics": "Kopyahin ang diagnostics",
+      "deepVerificationPending": "Tumatakbo pa ang deep verification. Ang mga libreng OpenCode model ay maaaring tumagal nang halos 20 segundo.",
+      "progress": {
+        "checkingSelectedProviders": "Sinusuri ang mga napiling provider nang parallel...",
+        "checkingProvider": "Sinusuri ang {{provider}} provider...",
+        "checkingProviders": "Sinusuri ang {{providers}} na provider..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Ayusin ang mga folder permission o ilipat ang proyekto sa folder na nasusulatan ng user. Pansamantalang solusyon lang ang pagpapatakbo bilang administrator.",
+        "openCodeBridgeNoOutput": "I-restart ang app at OpenCode runtime, pagkatapos ay subukang muli. Kung uulit ito, kopyahin ang diagnostics.",
+        "workingDirectoryMissing": "Pumili ng umiiral na working directory, pagkatapos ay buksang muli ang dialog na ito.",
+        "authenticationRequired": "I-authenticate ang kinakailangang provider sa Claude CLI, pagkatapos ay buksang muli ang dialog na ito.",
+        "runtimeProviderNotConfigured": "I-configure ang napiling provider runtime, pagkatapos ay buksang muli ang dialog na ito.",
+        "openCodeRuntimeMissing": "I-install o subukang muli ang OpenCode runtime mula sa provider status card, pagkatapos ay buksang muli ang dialog na ito.",
+        "openCodeAppMcpUnreachable": "Subukang muli ang paglunsad para i-refresh ang OpenCode app MCP bridge. Kung uulit ito, i-restart ang app at OpenCode runtime.",
+        "cliBinaryMissing": "Tiyaking umiiral ang lokal na Claude CLI binary at masisimulan ito, pagkatapos ay buksang muli ang dialog na ito.",
+        "default": "Lutasin ang isyu sa itaas, pagkatapos ay buksang muli ang dialog na ito.",
+        "openCodeNodeModulesSymlinkPermission": "Patakbuhin ang Agent Teams AI bilang Administrator, pagkatapos ay subukang muli ang paglunsad."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} teammate na naghihintay ng pag-apruba ng permiso",
+      "nameListWithMore": "{{names}}, +{{count}} pa",
+      "waitingForOpenCode": "Naghihintay para sa OpenCode: {{names}}",
+      "bootstrapStalled": "Naantala ang bootstrap: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Naghihintay para sa OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Naantala ang bootstrap",
+        "shellOnly": "Shell-only",
+        "waitingForBootstrap": "Naghihintay ng bootstrap",
+        "bootstrapUnconfirmed": "Hindi nakumpirma ang bootstrap",
+        "awaitingPermission": "Naghihintay ng permiso",
+        "waitingForRuntime": "Naghihintay ng runtime",
+        "shellOnlyLower": "shell-only",
+        "waitingForBootstrapLower": "naghihintay ng bootstrap",
+        "bootstrapUnconfirmedLower": "hindi nakumpirma ang bootstrap",
+        "awaitingPermissionLower": "naghihintay ng permiso",
+        "waitingForRuntimeLower": "naghihintay ng runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "Nabigong magsimula si {{name}}",
+        "teammatesFailedToStart": "{{count}} teammate ang nabigong magsimula",
+        "teammatesFailedRatio": "{{count}}/{{total}} teammate ang nabigong magsimula"
+      },
+      "skipped": {
+        "memberSkipped": "Nilaktawan si {{name}} para sa paglunsad na ito",
+        "memberSkippedWithReason": "Nilaktawan si {{name}} para sa paglunsad na ito - {{reason}}",
+        "memberSkippedCompact": "Nilaktawan si {{name}}",
+        "teammatesSkipped": "{{count}} teammate ang nilaktawan",
+        "teammatesSkippedList": "Mga nilaktawang teammate: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} teammate ang nilaktawan para sa paglunsad na ito"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} teammate ang sumasali pa",
+        "teammatesStillJoining_one": "{{count}} teammate ang sumasali pa",
+        "teammatesStillJoining_few": "{{count}} teammate ang sumasali pa",
+        "teammatesStillJoining_many": "{{count}} teammate ang sumasali pa",
+        "teammatesStillJoining_other": "{{count}} teammate ang sumasali pa",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} teammate ang nakumpirma"
+      },
+      "ready": {
+        "leadOnline": "Online ang lead",
+        "allTeammatesJoined": "Lahat ng {{count}} teammate ay sumali",
+        "teamProvisionedLeadOnline": "Na-provision ang team - online ang lead",
+        "teamProvisionedAllJoined": "Na-provision ang team - lahat ng {{count}} teammate ay sumali",
+        "teamProvisionedStillJoining": "Na-provision ang team - sumasali pa ang mga teammate",
+        "launchFinishedWithErrors": "Natapos ang paglunsad na may mga error - {{count}}/{{total}} teammate ang nabigong magsimula",
+        "launchContinuedSkipped": "Nagpatuloy ang paglunsad - {{count}}/{{total}} teammate ang nilaktawan",
+        "teamLaunchedLeadOnline": "Nailunsad ang team - online ang lead",
+        "teamLaunchedAllJoined": "Nailunsad ang team - lahat ng {{count}} teammate ay sumali"
+      },
+      "panel": {
+        "launchFailed": "Nabigo ang paglunsad",
+        "launchDetails": "Mga detalye ng paglunsad",
+        "launchFinishedWithErrors": "Natapos ang paglunsad na may mga error",
+        "launchContinuedSkipped": "Nagpatuloy ang paglunsad na may mga nilaktawang teammate",
+        "coreTeamReady": "Handa na ang core team",
+        "finishingLaunch": "Tinatapos ang paglunsad",
+        "teamLaunched": "Nailunsad ang team",
+        "launchingTeam": "Inilulunsad ang team"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Live runtime status",
+    "description": "Display-only na heartbeat at launch state. Nananatili sa ibaba ang mga process control.",
+    "source": "source: {{source}}",
+    "lane": "{{lane}} lane",
+    "diagnosticOnly": "Diagnostic lang",
+    "updated": "na-update {{value}}",
+    "states": {
+      "running": "Tumatakbo",
+      "starting": "Nagsisimula",
+      "waiting": "Naghihintay",
+      "degraded": "Kailangan ng atensyon",
+      "stopped": "Naihinto",
+      "unknown": "Hindi alam"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Mga Eksaktong Task Log",
+      "loading": "Niloload ang mga eksaktong task log...",
+      "description": "Mga eksaktong transcript slice na nire-render gamit ang parehong execution-log na bahagi na ginagamit sa Logs.",
+      "emptyTitle": "Wala pang eksaktong task log",
+      "emptyDescription": "Lalabas dito ang mga eksaktong transcript bundle kapag available ang explicit na task-linked na transcript metadata.",
+      "summaryOnly": "buod lang"
+    },
+    "executionSessions": {
+      "title": "Mga Execution Session",
+      "online": "Online",
+      "updating": "Ina-update...",
+      "description": "Legacy na session-centric na pag-browse at preview ng transcript."
+    },
+    "stream": {
+      "title": "Task Log Stream"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Kanselahin ang task {{taskId}}",
+      "cancel": "Kanselahin",
+      "moveBackToTodoConfirm": "Ibalik ang task na ito sa TODO at abisuhan ang team?",
+      "confirm": "Kumpirmahin",
+      "keep": "Panatilihin",
+      "changesNeedAttention": "Kailangan ng atensyon ang mga pagbabago",
+      "changes": "Mga Pagbabago",
+      "deleteTask": "Tanggalin ang task",
+      "taskLogsActive": "Aktibo ang task log",
+      "newTaskLogsArriving": "May dumarating na bagong task log",
+      "awaitingUser": "Naghihintay sa user",
+      "awaitingLead": "Naghihintay sa lead",
+      "blockedBy": "Hinaharangan ng",
+      "blocks": "Hinaharangan",
+      "start": "Simulan",
+      "complete": "Tapusin",
+      "approve": "Aprubahan",
+      "requestReview": "Humiling ng review",
+      "manualReview": "Manual na review",
+      "requestChanges": "Humiling ng mga pagbabago"
+    },
+    "filter": {
+      "title": "I-filter ang mga task",
+      "session": "Session",
+      "allSessions": "Lahat ng session",
+      "teammate": "Teammate",
+      "unassigned": "(hindi nakatalaga)",
+      "column": "Column",
+      "clearAll": "I-clear lahat"
+    },
+    "board": {
+      "addTask": "Magdagdag ng task",
+      "noTasks": "Walang task",
+      "showMore": "Magpakita ng {{count}} pa",
+      "hiddenCount": "{{count}} nakatago",
+      "trash": "Trash",
+      "gridView": "Grid view",
+      "columnsView": "Columns view"
+    },
+    "trash": {
+      "title": "Trash",
+      "empty": "Walang tinanggal na task",
+      "subject": "Paksa",
+      "owner": "May-ari",
+      "deleted": "Tinanggal",
+      "unassigned": "Hindi nakatalaga",
+      "restoreTask": "Ibalik ang task",
+      "restore": "Ibalik",
+      "close": "Isara"
+    },
+    "sort": {
+      "title": "Ayusin ang mga task",
+      "sortBy": "Ayusin ayon sa",
+      "reset": "I-reset",
+      "options": {
+        "updatedAt": {
+          "label": "Huling na-update",
+          "description": "Kamakailang na-update muna"
+        },
+        "createdAt": {
+          "label": "Nilikha",
+          "description": "Pinakabago muna"
+        },
+        "owner": {
+          "label": "May-ari",
+          "description": "Ayon sa alpabeto sa pamamagitan ng assignee"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Drag-and-drop na pagkakasunod"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "I-clear ang paghahanap",
+      "tasks": "Mga Task",
+      "createdAgo": "nilikha {{time}}",
+      "updatedAgo": "na-update {{time}}",
+      "placeholder": "Maghanap ng mga task... (#id o text)"
+    },
+    "grid": {
+      "addTask": "Magdagdag ng task",
+      "noTasks": "Walang task"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "GINAGAWA",
+      "review": "REVIEW",
+      "done": "TAPOS",
+      "approved": "INAPRUBAHAN"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Sinusuri ang status ng Git repository para sa mga teammate worktree...",
+    "ready": "Handa na ang mga Git worktree.",
+    "readyOnBranch": "Handa na ang mga Git worktree sa branch {{branch}}.",
+    "needsSetup": "Nangangailangan ng Git setup ang worktree isolation",
+    "initialCommitNotice": "Ang initial commit action ay nagsa-stage at nagko-commit ng lahat ng kasalukuyang file na may mensaheng",
+    "initializeRepository": "Simulan ang Git repository",
+    "createInitialCommit": "Lumikha ng initial commit",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Mga Setting",
+    "autoAllowAllTools": "Awtomatikong payagan ang lahat ng tool",
+    "autoAllowFileEdits": "Awtomatikong payagan ang mga file edit (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Awtomatikong payagan ang mga ligtas na command (git, pnpm, npm, ls...)",
+    "onTimeout": "Sa timeout:",
+    "after": "pagkatapos ng",
+    "secondsShort": "seg",
+    "timeoutActions": {
+      "wait": "Maghintay nang walang hanggan",
+      "allow": "Payagan",
+      "deny": "Tanggihan"
+    },
+    "submit": "Isumite",
+    "allow": "Payagan",
+    "deny": "Tanggihan",
+    "allowAll": "Payagan lahat",
+    "pendingCount": "{{count}} nakabinbin",
+    "autoActionIn": "Auto-{{action}} sa {{time}}",
+    "diff": {
+      "previewChanges": "I-preview ang mga pagbabago",
+      "readingFile": "Binabasa ang file...",
+      "binaryFile": "Binary file - hindi mai-preview",
+      "truncated": "Pinaikli ang file sa 2MB - maaaring hindi kumpleto ang diff",
+      "newFile": "Bagong file"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Member work sync",
+      "actionableItems": "Mga naaaksyunang item",
+      "fingerprint": "Fingerprint",
+      "report": "Ulat",
+      "none": "wala",
+      "shadowWouldNudge": "Mag-uudyok sana ang shadow",
+      "yes": "oo",
+      "no": "hindi",
+      "moreActionableItems": "{{count}} pang naaaksyunang item",
+      "diagnostics": "Diagnostics: {{diagnostics}}"
+    },
+    "title": "Member work sync",
+    "loadingDiagnostics": "Niloload ang member work sync diagnostics.",
+    "diagnosticsUnavailable": "Hindi available ang member work sync diagnostics."
+  },
+  "advancedCli": {
+    "title": "Advanced",
+    "useWorktree": "Gumamit ng worktree",
+    "recent": "Kamakailan",
+    "commandPreview": "Command preview",
+    "customArguments": "Mga custom na argument",
+    "validate": "I-validate",
+    "validation": {
+      "allFlagsValid": "Valid ang lahat ng flag",
+      "unknownFlags": "Hindi alam: {{flags}}",
+      "protectedFlags": "Protektado: {{flags}}",
+      "failed": "Nabigo ang validation"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} na ang nakalipas",
+    "stoppedAgo": "naihinto {{time}} na ang nakalipas",
+    "running": "Tumatakbo",
+    "stopped": "Naihinto",
+    "stopProcess": "Ihinto ang proseso (SIGTERM)",
+    "kill": "Patayin",
+    "openInBrowser": "Buksan sa browser",
+    "open": "Buksan",
+    "pid": "PID{{pid}}",
+    "title": "Mga CLI Process"
+  },
+  "taskActivity": {
+    "loadingDetails": "Niloload ang mga detalye ng aktibidad...",
+    "contextUnavailable": "Hindi na available ang detalyadong transcript context para sa aktibidad na ito.",
+    "loading": "Niloload ang aktibidad ng task...",
+    "lowSignalOnly": "Wala pang nahanap na pangunahing task activity. Available ang mga low-level na detalye ng execution sa ibaba sa Task Log Stream.",
+    "empty": "Wala pang nahanap na explicit na task activity sa mga available na transcript. Maaaring available pa rin ang mga lumang o heuristic na session log sa ibaba sa Execution Sessions.",
+    "title": "Aktibidad ng Task",
+    "description": "Pangunahing explicit na runtime activity na naka-link sa task na ito mula sa transcript metadata."
+  },
+  "sendMessage": {
+    "title": "Magpadala ng Mensahe",
+    "description": "Magpadala ng direktang mensahe sa isang miyembro ng team.",
+    "recipientLabel": "Tatanggap",
+    "selectMemberPlaceholder": "Pumili ng miyembro...",
+    "messageLabel": "Mensahe",
+    "placeholder": "Magsulat ng iyong mensahe... (Enter para ipadala)",
+    "send": "Ipadala",
+    "sending": "Nagpapadala...",
+    "charsLeft": "{{count}} char na natitira",
+    "saved": "Na-save",
+    "attachments": {
+      "teamOnlineRequired": "Dapat online ang team para mag-attach ng mga file",
+      "recipientUnsupported": "Maaaring ipadala ang mga file sa team lead o mga OpenCode teammate",
+      "openCodeOnlineRequired": "Dapat online ang team para mag-attach ng mga file para sa mga OpenCode teammate",
+      "disabledHint": "Sinusuportahan ang mga file attachment para sa online na team lead at online na mga OpenCode teammate. Tanggalin ang mga attachment o palitan ang tatanggap.",
+      "attachFiles": "Mag-attach ng mga file (i-paste o i-drag & drop)",
+      "unavailable": "Hindi available ang mga attachment"
+    },
+    "quote": {
+      "remove": "Tanggalin ang quote",
+      "replyingTo": "Sumasagot kay"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Kanselahin ang sagot",
+    "replyingTo": "Sumasagot kay",
+    "placeholder": "Magdagdag ng komento... (Enter para ipadala)",
+    "attachFile": "Mag-attach ng file (o i-paste)",
+    "voiceToText": "Voice to text",
+    "comment": "Magkomento",
+    "charsLeft": "{{count}} char na natitira",
+    "saved": "Na-save",
+    "awaitingReplyFrom": "Naghihintay ng sagot mula kay",
+    "or": "o"
+  },
+  "taskAttachments": {
+    "dropImageHere": "I-drop ang larawan dito",
+    "attachImage": "Mag-attach ng larawan",
+    "pasteOrDragDrop": "o i-paste / i-drag-drop",
+    "fromOriginalMessage": "Mula sa orihinal na mensahe",
+    "dropFilesHere": "I-drop ang mga file dito",
+    "loading": "Niloload ang mga attachment..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Awtomatikong aprubahan ang lahat ng tool",
+    "autonomousModeDescription": "Autonomous mode: nag-e-execute ang mga team tool nang walang kumpirmasyon. Mag-ingat sa hindi mapagkakatiwalaang code.",
+    "manualModeDescription": "Manual mode: aaprubahan o tatanggihan mo ang bawat tool call nang real time."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Execution",
+      "process": "Process"
+    },
+    "filters": {
+      "all": "Lahat"
+    },
+    "logs": {
+      "title": "Mga Log",
+      "loading": "Niloload ang member log stream...",
+      "emptyTitle": "Wala pang nahanap na log stream entry para sa miyembrong ito.",
+      "emptyDescription": "Lalabas dito ang mga member-scoped na transcript o runtime log kapag available."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Ilarawan kung ano ang kailangang baguhin... (Enter para isumite)",
+    "submit": "Isumite",
+    "charsLeft": "{{count}} char na natitira",
+    "saved": "Na-save",
+    "title": "Humiling ng mga Pagbabago"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Buksan ang Dashboard",
+      "openTeam": "Buksan ang team",
+      "cancel": "Kanselahin"
+    },
+    "membersJson": {
+      "hide": "Itago ang JSON"
+    },
+    "optional": {
+      "badge": "Opsyonal"
+    }
+  },
+  "runningTeams": {
+    "title": "Mga Tumatakbong Team",
+    "status": {
+      "active": "Aktibo",
+      "provisioning": "Inilulunsad",
+      "idle": "Tumatakbo"
+    },
+    "noProject": "Walang proyekto"
+  },
+  "layout": {
+    "maxPanesReached": "Naabot ang maximum na {{count}} pane"
+  },
+  "codexReconnect": {
+    "description": "Mukhang luma na ang iyong Codex session. Kumonekta muli para magpatuloy.",
+    "useCode": "Gamitin ang code",
+    "generating": "Bumubuo...",
+    "openLogin": "Buksan ang login",
+    "generateLink": "Bumuo ng link"
+  },
+  "effortLevel": {
+    "label": "Effort level (opsyonal)",
+    "maxDescription": "Binibigyan ng Max ang model ng pinakamaraming oras sa pangangatwiran para sa mahihirap na task."
+  },
+  "contextLimit": {
+    "limitTo200k": "Limitahan ang context sa 200K na token",
+    "always200k": "(palaging 200K para sa model na ito)",
+    "tooltipContent": "Pinapanatili ang mga paglunsad sa loob ng 200K-token na context window kapag sinusuportahan.",
+    "tooltipTitle": "Context limit"
+  },
+  "roleSelect": {
+    "noRole": "Walang role",
+    "customRole": "Custom na role...",
+    "searchPlaceholder": "Maghanap ng mga role...",
+    "empty": "Walang nahanap na role.",
+    "reservedRole": "Nakareserba ang role na ito",
+    "emptyCustomRole": "Hindi maaaring blangko ang role"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

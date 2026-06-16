@@ -1827,9 +1827,9 @@ OpenCode lead rule:
 
 - Mixed team with native Codex/Claude/Gemini lead: keep the existing `relayLeadInboxMessages()` path.
 - OpenCode teammate or secondary lane: use `relayOpenCodeMemberInboxMessages()`.
-- Pure OpenCode lead inbox in v1: do not mark messages read and do not report delivery success unless a real stored OpenCode `team-lead` session exists. Return a diagnostic like `opencode_lead_runtime_session_missing`.
+- Pure OpenCode lead inbox: launch and store a real OpenCode `team-lead` runtime session, then relay through `relayOpenCodeMemberInboxMessages()`. Do not mark messages read unless that delivery is accepted.
 - Do not fake lead delivery by sending to a random teammate session. That would make messages appear delivered while the actual recipient never saw them.
-- A future explicit OpenCode lead lane can reuse this selector by teaching the bridge to create/store a `team-lead` session and by passing `agent: "team-lead"` where the bridge supports it. That is not part of this v1 seam.
+- If the stored `team-lead` session is missing, keep the row retryable instead of falling back to another teammate.
 
 FileWatcher change:
 
@@ -2967,13 +2967,12 @@ it('routes native lead inbox relay through the legacy stdin path', async () => {
 ```
 
 ```ts
-it('does not silently consume pure OpenCode lead inbox when no lead session exists', async () => {
-  // Configure a pure OpenCode runtime-adapter team where isTeamAlive() is true via runtimeAdapterRunByTeam.
-  // Ensure there is no stored OpenCode session record for the canonical lead name.
+it('relays pure OpenCode lead inbox through the stored lead session', async () => {
+  // Configure a pure OpenCode runtime-adapter team with a stored team-lead session.
   // Seed inboxes/<lead>.json with one unread message.
   // Call relayInboxFileToLiveRecipient(teamName, leadName).
-  // Assert diagnostics include opencode_lead_runtime_session_missing.
-  // Assert the inbox row remains unread and no teammate session received the prompt.
+  // Assert the relay kind is opencode_member and the prompt targets team-lead.
+  // Assert the inbox row is marked read only after accepted runtime delivery.
 });
 ```
 
@@ -3464,8 +3463,8 @@ Avoid heavy E2E until targeted tests pass.
 - UI direct sends to live OpenCode teammates either confirm runtime delivery or show a visible warning; there is no log-only post-send delivery failure.
 - Persisted inbox messages addressed to OpenCode teammates are live-relayed to their runtime lanes, while native teammates keep file-watch behavior and lead keeps lead relay behavior.
 - OpenCode inbox relay is direct-to-runtime and does not reuse native `relayMemberInboxMessages()` / `SendMessage` forwarding.
-- Pure OpenCode lead inbox delivery is not silently consumed: without a real OpenCode lead session, rows remain unread and diagnostics say `opencode_lead_runtime_session_missing` or equivalent.
+- Pure OpenCode lead inbox delivery uses the stored `team-lead` runtime session and does not silently fall back to another teammate.
 - Renderer send-message actions return `SendMessageResult` on success and reject on real send failure, so pending-reply cleanup is not dependent on dead `.catch()` paths.
 - `message_send` cannot create `from: "user", to: "user"` rows; user-directed MCP replies require a configured teammate sender.
 - OpenCode replies appear in Messages UI without frontend fake state.
-- Tests cover native default, OpenCode override, assignment protocol, tool alias canonicalization, tool proof, taskRefs persistence, user-directed sender guard, local recipient canonicalization, direct-message runtime delivery result visibility, OpenCode reply feed projection, OpenCode-targeted inbox relay/dedupe, unsupported OpenCode lead diagnostics, launch identity injection, lane-scoped manifest activeRunId recovery, and runtime delivery team-change event shape.
+- Tests cover native default, OpenCode override, assignment protocol, tool alias canonicalization, tool proof, taskRefs persistence, user-directed sender guard, local recipient canonicalization, direct-message runtime delivery result visibility, OpenCode reply feed projection, OpenCode-targeted inbox relay/dedupe, pure OpenCode lead relay, launch identity injection, lane-scoped manifest activeRunId recovery, and runtime delivery team-change event shape.

@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('MemberWorkSyncEventQueue', () => {
   beforeEach(() => {
@@ -230,6 +229,29 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('can reconcile inactive teams when the caller needs inactive statuses refreshed', async () => {
+    const reconcile = vi.fn(async () => undefined);
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      reconcile,
+      isTeamActive: () => false,
+      reconcileInactiveTeams: true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'manual_refresh' });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(reconcile).toHaveBeenCalledWith(
+      { teamName: 'team-a', memberName: 'bob' },
+      expect.objectContaining({
+        reconciledBy: 'queue',
+        triggerReasons: ['manual_refresh'],
+      })
+    );
+    await queue.stop();
+    expect(queue.getDiagnostics()).toMatchObject({ dropped: 0, reconciled: 1 });
+  });
+
   it('runs one follow-up pass when events arrive during an active reconcile', async () => {
     let release: () => void = () => {
       throw new Error('reconcile did not start');
@@ -368,6 +390,212 @@ describe('MemberWorkSyncEventQueue', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     expect(reconciles).toHaveLength(2);
+    await queue.stop();
+  });
+
+  it('retries a failed reconcile with bounded backoff', async () => {
+    const reconciles: unknown[] = [];
+    const auditEvents: string[] = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      maxRetryAttempts: 2,
+      reconcile: async (request) => {
+        reconciles.push(request);
+        if (reconciles.length === 1) {
+          throw new Error('transient');
+        }
+      },
+      isTeamActive: () => true,
+      auditJournal: {
+        append: async (event) => {
+          auditEvents.push(event.event);
+        },
+      },
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(reconciles).toHaveLength(1);
+    expect(queue.getDiagnostics()).toMatchObject({ failed: 1, queued: 1, reconciled: 0 });
+    expect(auditEvents).toEqual(['queue_enqueued', 'queue_retry_scheduled']);
+
+    await vi.advanceTimersByTimeAsync(9);
+    expect(reconciles).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reconciles).toHaveLength(2);
+    expect(queue.getDiagnostics()).toMatchObject({ failed: 1, queued: 0, reconciled: 1 });
+
+    await queue.stop();
+  });
+
+  it('times out a hung reconcile and retries so the member cannot stay running forever', async () => {
+    let reconcileCalls = 0;
+    const auditEvents: string[] = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      reconcileTimeoutMs: 20,
+      maxRetryAttempts: 1,
+      reconcile: async () => {
+        reconcileCalls += 1;
+        if (reconcileCalls === 1) {
+          await new Promise<void>(() => undefined);
+        }
+      },
+      isTeamActive: () => true,
+      auditJournal: {
+        append: async (event) => {
+          auditEvents.push(event.event);
+        },
+      },
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(reconcileCalls).toBe(1);
+    expect(queue.getDiagnostics()).toMatchObject({ running: 1, queued: 0, failed: 0 });
+
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(queue.getDiagnostics()).toMatchObject({
+      running: 0,
+      queued: 1,
+      failed: 1,
+      reconciled: 0,
+    });
+    expect(auditEvents).toEqual(['queue_enqueued', 'queue_retry_scheduled']);
+
+    await vi.advanceTimersByTimeAsync(9);
+    expect(reconcileCalls).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(reconcileCalls).toBe(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      running: 0,
+      queued: 0,
+      failed: 1,
+      reconciled: 1,
+    });
+    expect(auditEvents).toEqual([
+      'queue_enqueued',
+      'queue_retry_scheduled',
+      'queue_reconciled',
+    ]);
+
+    await queue.stop();
+  });
+
+  it('marks a timed-out reconcile context as cancelled for late continuations', async () => {
+    let releaseFirst: () => void = () => {
+      throw new Error('first reconcile did not start');
+    };
+    let reconcileCalls = 0;
+    const lateSideEffects: string[] = [];
+    const cancellationChecks: boolean[] = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      reconcileTimeoutMs: 20,
+      maxRetryAttempts: 1,
+      reconcile: async (_request, context) => {
+        reconcileCalls += 1;
+        if (reconcileCalls === 1) {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+          const cancelled = context.isCancelled?.() === true;
+          cancellationChecks.push(cancelled);
+          if (!cancelled) {
+            lateSideEffects.push('first');
+          }
+          return;
+        }
+
+        const cancelled = context.isCancelled?.() === true;
+        cancellationChecks.push(cancelled);
+        if (!cancelled) {
+          lateSideEffects.push('retry');
+        }
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(20);
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(lateSideEffects).toEqual(['retry']);
+
+    releaseFirst();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(cancellationChecks).toEqual([false, true]);
+    expect(lateSideEffects).toEqual(['retry']);
+
+    await queue.stop();
+  });
+
+  it('drops a failed reconcile after the retry budget is exhausted', async () => {
+    const reconcile = vi.fn(async () => {
+      throw new Error('still failing');
+    });
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      maxRetryAttempts: 1,
+      reconcile,
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      dropped: 1,
+      failed: 2,
+      queued: 0,
+      reconciled: 0,
+    });
+
+    await queue.stop();
+  });
+
+  it('resets retry budget when a fresh event joins a queued retry item', async () => {
+    const reconcile = vi.fn(async () => {
+      throw new Error('still failing');
+    });
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      maxRetryAttempts: 1,
+      reconcile,
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(queue.getDiagnostics()).toMatchObject({ failed: 1, queued: 1, dropped: 0 });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      dropped: 0,
+      failed: 2,
+      queued: 1,
+      reconciled: 0,
+    });
+
     await queue.stop();
   });
 });

@@ -187,6 +187,138 @@ describe('TeamTaskStallPolicy', () => {
   });
 
   it.each([
+    ['completed', { status: 'completed' }],
+    ['approved', { status: 'in_progress', reviewState: 'approved' }],
+    ['soft-deleted', { status: 'in_progress', deletedAt: '2026-04-19T12:05:00.000Z' }],
+  ] as const)('does not treat %s blockers as active stall blockers', (_label, blockerState) => {
+    const blocker: TeamTask = {
+      id: 'task-blocker',
+      displayId: 'block123',
+      subject: 'Finished dependency',
+      ...blockerState,
+    };
+    const task: TeamTask = {
+      id: 'task-a',
+      displayId: 'abcd1234',
+      subject: 'Task A',
+      owner: 'alice',
+      status: 'in_progress',
+      blockedBy: [` ${blocker.id} `],
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+    const snapshot = createSnapshot({
+      activeTasks: [task],
+      allTasksById: new Map([
+        [task.id, task],
+        [blocker.id, blocker],
+      ]),
+      inProgressTasks: [task],
+      recordsByTaskId: new Map([[task.id, [createRecord()]]]),
+      exactRowsByFilePath: new Map([
+        [
+          '/tmp/session.jsonl',
+          [
+            createExactRow({
+              messageUuid: 'msg-touch',
+              toolUseIds: ['tool-1'],
+            }),
+            createExactRow({
+              sourceOrder: 2,
+              messageUuid: 'msg-turn-end',
+              systemSubtype: 'turn_duration',
+              parsedMessage: createParsedMessage({
+                uuid: 'msg-turn-end',
+                type: 'system',
+              }),
+            }),
+          ],
+        ],
+      ]),
+    });
+
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:30:00.000Z'),
+      task,
+      snapshot,
+    });
+
+    expect(evaluation).toMatchObject({
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+    });
+  });
+
+  it.each([
+    ['in-progress', { status: 'in_progress' }],
+    ['completed in review', { status: 'completed', reviewState: 'review' }],
+  ] as const)('still skips work tasks with %s blockers', (_label, blockerState) => {
+    const blocker: TeamTask = {
+      id: 'task-blocker',
+      displayId: 'block123',
+      subject: 'Unfinished dependency',
+      ...blockerState,
+    };
+    const task: TeamTask = {
+      id: 'task-a',
+      displayId: 'abcd1234',
+      subject: 'Task A',
+      owner: 'alice',
+      status: 'in_progress',
+      blockedBy: [blocker.id],
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:30:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        activeTasks: [task, blocker],
+        allTasksById: new Map([
+          [task.id, task],
+          [blocker.id, blocker],
+        ]),
+        inProgressTasks: [task, blocker],
+      }),
+    });
+
+    expect(evaluation).toMatchObject({
+      status: 'skip',
+      taskId: 'task-a',
+      skipReason: 'task_blocked',
+    });
+  });
+
+  it('keeps work tasks blocked when a blocker id cannot be resolved', () => {
+    const task: TeamTask = {
+      id: 'task-a',
+      displayId: 'abcd1234',
+      subject: 'Task A',
+      owner: 'alice',
+      status: 'in_progress',
+      blockedBy: ['missing-blocker'],
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:30:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        activeTasks: [task],
+        allTasksById: new Map([[task.id, task]]),
+        inProgressTasks: [task],
+      }),
+    });
+
+    expect(evaluation).toMatchObject({
+      status: 'skip',
+      taskId: 'task-a',
+      skipReason: 'task_blocked',
+    });
+  });
+
+  it.each([
     ['turn_ended_after_touch', 4],
     ['touch_then_other_turns', 5],
     ['mid_turn_after_touch', 10],

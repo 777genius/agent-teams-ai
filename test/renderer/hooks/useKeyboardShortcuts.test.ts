@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { isEditableShortcutTarget } from '@renderer/hooks/useKeyboardShortcuts';
+import {
+  isEditableShortcutEventTarget,
+  isEditableShortcutTarget,
+} from '@renderer/hooks/useKeyboardShortcuts';
 
 describe('isEditableShortcutTarget', () => {
   it('treats native form fields as editable shortcut targets', () => {
@@ -24,5 +27,29 @@ describe('isEditableShortcutTarget', () => {
 
   it('does not mark regular buttons as editable targets', () => {
     expect(isEditableShortcutTarget(document.createElement('button'))).toBe(false);
+  });
+
+  it('treats shadow DOM textareas as editable shortcut event targets', () => {
+    const host = document.createElement('div');
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+    const textarea = document.createElement('textarea');
+    shadowRoot.appendChild(textarea);
+    document.body.appendChild(host);
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'w',
+      code: 'KeyW',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [textarea, shadowRoot, host, document, window],
+    });
+
+    expect(isEditableShortcutEventTarget(event)).toBe(true);
+
+    host.remove();
   });
 });

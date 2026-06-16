@@ -5,7 +5,9 @@ import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdent
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import {
   isOpenCodeWindowsAccessDeniedDiagnostic,
+  isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic,
   OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+  OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
 
@@ -1042,14 +1044,31 @@ export function getProvisioningFailureHint(
   const hasOpenCodeAccessDeniedDetail = failedOpenCodeChecks.some((check) =>
     check.details.some(isOpenCodeWindowsAccessDeniedDiagnostic)
   );
+  const hasOpenCodeNodeModulesSymlinkPermissionDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic)
+  );
   const hasOpenCodeBridgeNoOutputDetail = failedOpenCodeChecks.some((check) =>
     check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
   );
   const normalizedMessage = message?.trim() ?? '';
+  const hasOpenCodeNodeModulesSymlinkPermissionMessage =
+    failedOpenCodeChecks.length > 0 &&
+    (normalizedMessage === OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE ||
+      (!hasFailedNonOpenCodeCheck &&
+        isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic(normalizedMessage)));
   const hasOpenCodeAccessDeniedMessage =
     failedOpenCodeChecks.length > 0 &&
     (normalizedMessage === OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE ||
       (!hasFailedNonOpenCodeCheck && isOpenCodeWindowsAccessDeniedDiagnostic(normalizedMessage)));
+  if (
+    hasOpenCodeNodeModulesSymlinkPermissionDetail ||
+    hasOpenCodeNodeModulesSymlinkPermissionMessage
+  ) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeNodeModulesSymlinkPermission') ??
+      'Run Agent Teams AI as Administrator, then retry launch.'
+    );
+  }
   if (hasOpenCodeAccessDeniedDetail || hasOpenCodeAccessDeniedMessage) {
     return (
       t?.('provisioning.providerStatus.failureHints.openCodeAccessDenied') ??

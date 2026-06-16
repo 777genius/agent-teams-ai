@@ -94,6 +94,11 @@ export class FileWatcher extends EventEmitter {
   private todosPath: string;
   private teamsPath: string;
   private tasksPath: string;
+  // Optional scope for team-root/task watching (alive ∪ engaged teams). Inboxes
+  // and the teams root are always watched. Null => watch every team (fallback).
+  private teamWatchScopeProvider: (() => ReadonlySet<string> | null) | null = null;
+  private teamsRegistry: TeamTaskWatchRegistry | null = null;
+  private tasksRegistry: TeamTaskWatchRegistry | null = null;
   private dataCache: DataCache;
   private fsProvider: FileSystemProvider;
   private notificationManager: NotificationManager | null = null;
@@ -127,7 +132,7 @@ export class FileWatcher extends EventEmitter {
   private disposed = false;
   /** Timestamp when this FileWatcher instance was created (used to distinguish old vs new files).
    * Floored to second granularity because filesystem birthtimeMs may have lower resolution
-   * than Date.now() — without this, a file created in the same millisecond-window could
+   * than Date.now() - without this, a file created in the same millisecond-window could
    * appear older than the watcher on some platforms (e.g. ext4 on Linux). */
   private readonly instanceCreatedAt = Math.floor(Date.now() / 1000) * 1000;
 
@@ -246,6 +251,31 @@ export class FileWatcher extends EventEmitter {
   /**
    * Sets the filesystem provider. Used when switching between local and SSH modes.
    */
+  /**
+   * Inject the provider that decides which teams' team-root and task artifacts
+   * are watched (typically alive ∪ engaged teams). The teams root and every
+   * team's inboxes are always watched. Returning null (or leaving the provider
+   * unset) watches every team - the safe fallback / original behavior.
+   *
+   * Only the chokidar registry path is scoped; the EMFILE polling fallback still
+   * watches every team so a scope change can never be mistaken for a deletion.
+   */
+  setTeamWatchScopeProvider(provider: (() => ReadonlySet<string> | null) | null): void {
+    this.teamWatchScopeProvider = provider;
+  }
+
+  /**
+   * Recompute the watched team set immediately, e.g. right after a team launches,
+   * stops, or becomes engaged in the UI. Safe to call frequently: it no-ops when
+   * the resolved target set is unchanged and coalesces with in-flight reconciles.
+   */
+  async refreshTeamWatchScope(): Promise<void> {
+    await Promise.all([
+      this.teamsRegistry?.requestReconcile(),
+      this.tasksRegistry?.requestReconcile(),
+    ]);
+  }
+
   setFileSystemProvider(provider: FileSystemProvider): void {
     this.fsProvider = provider;
   }
@@ -545,7 +575,14 @@ export class FileWatcher extends EventEmitter {
         }
       },
       onError,
+      getScopedTeamNames: () => this.teamWatchScopeProvider?.() ?? null,
     });
+
+    if (watcherType === 'teams') {
+      this.teamsRegistry = registry;
+    } else {
+      this.tasksRegistry = registry;
+    }
 
     try {
       await registry.start();

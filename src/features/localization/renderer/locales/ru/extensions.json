@@ -589,7 +589,11 @@
     "actions": {
       "add": "Добавить API key",
       "addFirst": "Добавить первый key",
-      "edit": "Редактировать"
+      "edit": "Редактировать",
+      "copied": "Скопировано!",
+      "copyEnvVarName": "Копировать имя env-переменной",
+      "confirmDelete": "Нажмите еще раз для подтверждения",
+      "delete": "Удалить"
     },
     "empty": {
       "title": "API keys не сохранены",

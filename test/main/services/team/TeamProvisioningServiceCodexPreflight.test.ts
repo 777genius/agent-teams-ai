@@ -39,7 +39,7 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
-type CodexProbeHarness = TeamProvisioningService & {
+type CodexProbeHarness = {
   probeClaudeRuntime: (
     claudePath: string,
     cwd: string,
@@ -89,9 +89,19 @@ describe('TeamProvisioningService Codex create-team preflight', () => {
   it('uses refreshed Codex provider env for both runtime probe and deep one-shot preflight', async () => {
     const service = new TeamProvisioningService();
     const harness = service as unknown as CodexProbeHarness;
-    const probeClaudeRuntime = vi.spyOn(harness, 'probeClaudeRuntime').mockResolvedValue({});
+    const probeClaudeRuntime = vi
+      .spyOn(
+        harness as unknown as { probeClaudeRuntime: CodexProbeHarness['probeClaudeRuntime'] },
+        'probeClaudeRuntime'
+      )
+      .mockResolvedValue({});
     const runProviderOneShotDiagnostic = vi
-      .spyOn(harness, 'runProviderOneShotDiagnostic')
+      .spyOn(
+        harness as unknown as {
+          runProviderOneShotDiagnostic: CodexProbeHarness['runProviderOneShotDiagnostic'];
+        },
+        'runProviderOneShotDiagnostic'
+      )
       .mockResolvedValue({});
 
     const result = await service.prepareForProvisioning(tempRoot, {

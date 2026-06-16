@@ -1,11 +1,12 @@
 import type { TeamViewSnapshot } from '@shared/types';
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value == null || typeof value !== 'object') {
+function arePlainObjectPair(previous: object, next: object): boolean {
+  const previousPrototype = Object.getPrototypeOf(previous);
+  if (previousPrototype !== Object.prototype && previousPrototype !== null) {
     return false;
   }
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  const nextPrototype = Object.getPrototypeOf(next);
+  return nextPrototype === Object.prototype || nextPrototype === null;
 }
 
 export function structurallySharePlainValue<T>(previous: T, next: T): T {
@@ -13,38 +14,70 @@ export function structurallySharePlainValue<T>(previous: T, next: T): T {
     return previous;
   }
 
-  if (Array.isArray(previous) && Array.isArray(next)) {
-    let changed = previous.length !== next.length;
-    const result = next.map((nextItem, index) => {
-      const sharedItem = structurallySharePlainValue(previous[index], nextItem);
-      if (!Object.is(sharedItem, previous[index])) {
-        changed = true;
-      }
-      return sharedItem;
-    });
-    return changed ? (result as T) : previous;
+  if (
+    previous == null ||
+    next == null ||
+    typeof previous !== 'object' ||
+    typeof next !== 'object'
+  ) {
+    return next;
   }
 
-  if (isPlainObject(previous) && isPlainObject(next)) {
+  if (Array.isArray(previous) && Array.isArray(next)) {
+    const hasLengthChange = previous.length !== next.length;
+    let result: unknown[] | null = hasLengthChange ? new Array(next.length) : null;
+
+    for (let index = 0; index < next.length; index += 1) {
+      const previousItem = previous[index];
+      const nextItem = next[index];
+      const sharedItem = Object.is(previousItem, nextItem)
+        ? previousItem
+        : structurallySharePlainValue(previousItem, nextItem);
+
+      if (result) {
+        result[index] = sharedItem;
+      } else if (!Object.is(sharedItem, previousItem)) {
+        result = new Array(next.length);
+        for (let copyIndex = 0; copyIndex < index; copyIndex += 1) {
+          result[copyIndex] = previous[copyIndex];
+        }
+        result[index] = sharedItem;
+      }
+    }
+
+    return result ? (result as T) : previous;
+  }
+
+  if (arePlainObjectPair(previous, next)) {
     const previousRecord = previous as Record<string, unknown>;
     const nextRecord = next as Record<string, unknown>;
     const previousKeys = Object.keys(previousRecord);
     const nextKeys = Object.keys(nextRecord);
-    let changed = previousKeys.length !== nextKeys.length;
-    const result: Record<string, unknown> = {};
+    const hasKeyCountChange = previousKeys.length !== nextKeys.length;
+    let result: Record<string, unknown> | null = hasKeyCountChange ? {} : null;
 
-    for (const key of nextKeys) {
-      if (!Object.prototype.hasOwnProperty.call(previousRecord, key)) {
-        changed = true;
+    for (let index = 0; index < nextKeys.length; index += 1) {
+      const key = nextKeys[index];
+      const hasPreviousKey = Object.prototype.hasOwnProperty.call(previousRecord, key);
+      const previousValue = previousRecord[key];
+      const nextValue = nextRecord[key];
+      const sharedValue =
+        hasPreviousKey && Object.is(previousValue, nextValue)
+          ? previousValue
+          : structurallySharePlainValue(previousValue, nextValue);
+      if (result) {
+        result[key] = sharedValue;
+      } else if (!hasPreviousKey || !Object.is(sharedValue, previousValue)) {
+        result = {};
+        for (let copyIndex = 0; copyIndex < index; copyIndex += 1) {
+          const previousKey = nextKeys[copyIndex];
+          result[previousKey] = previousRecord[previousKey];
+        }
+        result[key] = sharedValue;
       }
-      const sharedValue = structurallySharePlainValue(previousRecord[key], nextRecord[key]);
-      if (!Object.is(sharedValue, previousRecord[key])) {
-        changed = true;
-      }
-      result[key] = sharedValue;
     }
 
-    return changed ? (result as T) : previous;
+    return result ? (result as T) : previous;
   }
 
   return next;

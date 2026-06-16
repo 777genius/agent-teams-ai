@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "copied": "Đã sao chép",
+    "copyUrl": "Sao chép URL",
+    "open": "Mở",
+    "reveal": "Hiện trong thư mục",
+    "retry": "Thử lại",
+    "save": "Lưu",
+    "showLess": "Thu gọn",
+    "showMore": "Xem thêm",
+    "refresh": "Làm mới",
+    "reset": "Đặt lại",
+    "copyToClipboard": "Sao chép vào bộ nhớ tạm",
+    "moreActions": "Thêm thao tác",
+    "closeDialog": "Đóng hộp thoại",
+    "goToDashboard": "Đến Bảng điều khiển",
+    "or": "hoặc",
+    "hide": "Ẩn",
+    "resetSelection": "Đặt lại lựa chọn"
+  },
+  "code": {
+    "line": "dòng {{line}}",
+    "lines": "dòng {{from}}-{{to}}",
+    "moreLines": "(thêm {{count}} dòng...)",
+    "moreLines_few": "(thêm {{count}} dòng...)",
+    "moreLines_many": "(thêm {{count}} dòng...)",
+    "moreLines_one": "(thêm {{count}} dòng...)",
+    "moreLines_other": "(thêm {{count}} dòng...)",
+    "code": "Mã",
+    "preview": "Xem trước",
+    "markdownPreview": "Xem trước Markdown",
+    "linesParenthesized": "(dòng {{from}}-{{to}})",
+    "mermaidSyntaxError": "Lỗi cú pháp Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Ngữ cảnh",
+    "breakdown": {
+      "text": "Văn bản",
+      "thinking": "Suy nghĩ"
+    },
+    "detailsAria": "Chi tiết nội dung ngữ cảnh được thêm vào",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sections": {
+      "claudeMdFiles": "Tệp CLAUDE.md",
+      "mentionedFiles": "Tệp được nhắc đến",
+      "taskCoordination": "Điều phối tác vụ",
+      "thinkingText": "Suy nghĩ + Văn bản",
+      "toolOutputs": "Kết quả công cụ",
+      "userMessages": "Tin nhắn người dùng"
+    },
+    "title": "Ngữ cảnh mới được thêm vào trong lượt này",
+    "tokenCount": "~{{tokens}} token",
+    "totalNewTokens": "Tổng token mới",
+    "turn": "Lượt {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} token"
+  },
+  "locales": {
+    "emptyMessage": "Không tìm thấy ngôn ngữ nào.",
+    "names": {
+      "ar": "Tiếng Ả Rập",
+      "bn": "Tiếng Bengal",
+      "de": "Tiếng Đức",
+      "en": "Tiếng Anh",
+      "es": "Tiếng Tây Ban Nha",
+      "fa": "Tiếng Ba Tư",
+      "fil": "Tiếng Philippines",
+      "fr": "Tiếng Pháp",
+      "hi": "Tiếng Hindi",
+      "id": "Tiếng Indonesia",
+      "it": "Tiếng Ý",
+      "ja": "Tiếng Nhật",
+      "ko": "Tiếng Hàn",
+      "mr": "Tiếng Marathi",
+      "ms": "Tiếng Mã Lai",
+      "nl": "Tiếng Hà Lan",
+      "pl": "Tiếng Ba Lan",
+      "pt": "Tiếng Bồ Đào Nha",
+      "ro": "Tiếng Romania",
+      "ru": "Tiếng Nga",
+      "sw": "Tiếng Swahili",
+      "system": "Hệ thống",
+      "ta": "Tiếng Tamil",
+      "te": "Tiếng Telugu",
+      "th": "Tiếng Thái",
+      "tr": "Tiếng Thổ Nhĩ Kỳ",
+      "uk": "Tiếng Ukraina",
+      "ur": "Tiếng Urdu",
+      "vi": "Tiếng Việt",
+      "zh": "Tiếng Trung"
+    },
+    "searchPlaceholder": "Tìm ngôn ngữ...",
+    "selectPlaceholder": "Chọn ngôn ngữ ứng dụng...",
+    "systemWithResolved": "Hệ thống - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Không tìm thấy thành viên nào.",
+    "searchPlaceholder": "Tìm thành viên...",
+    "unassigned": "Chưa phân công",
+    "teammateFallback": "thành viên"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Đang kiểm tra",
+        "downloading": "Đang tải",
+        "installCli": "Cài đặt Codex CLI",
+        "installing": "Đang cài đặt",
+        "retryInstall": "Thử cài đặt lại"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Không có gợi ý phù hợp",
+    "searching": "Đang tìm...",
+    "searchingFiles": "Đang tìm tệp...",
+    "findInConversation": "Tìm trong cuộc hội thoại...",
+    "resultCount": "{{current}} trên {{total}}",
+    "resultCountCapped": "{{current}} trên {{total}}+",
+    "noResults": "Không có kết quả",
+    "previousResultShortcut": "Kết quả trước (Shift+Enter)",
+    "nextResultShortcut": "Kết quả tiếp (Enter)",
+    "closeShortcut": "Đóng (Esc)",
+    "nothingFound": "Không tìm thấy gì",
+    "placeholder": "Tìm kiếm..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Thêm lịch",
+      "clearFilters": "Xóa bộ lọc",
+      "createSchedule": "Tạo lịch",
+      "delete": "Xóa",
+      "edit": "Chỉnh sửa",
+      "pause": "Tạm dừng",
+      "resume": "Tiếp tục",
+      "runNow": "Chạy ngay"
+    },
+    "empty": {
+      "description": "Tạo lịch trên bất kỳ đội ngũ nào để tự động hóa việc thực thi tác vụ Claude bằng biểu thức cron. Lịch từ tất cả các đội ngũ sẽ xuất hiện ở đây.",
+      "noMatches": "Không có lịch nào khớp với bộ lọc hiện tại",
+      "title": "Không có tác vụ theo lịch"
+    },
+    "filters": {
+      "allTeams": "Tất cả đội ngũ"
+    },
+    "item": {
+      "loadingRunHistory": "Đang tải lịch sử chạy...",
+      "nextRun": "Tiếp theo: {{value}}",
+      "noRunsYet": "Chưa có lần chạy nào"
+    },
+    "loading": "Đang tải lịch...",
+    "searchPlaceholder": "Tìm lịch...",
+    "status": {
+      "active": "Đang hoạt động",
+      "all": "Tất cả",
+      "disabled": "Đã tắt",
+      "paused": "Đã tạm dừng"
+    },
+    "title": "Lịch"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Ẩn",
+      "pin": "Ghim",
+      "unhide": "Bỏ ẩn"
+    },
+    "empty": {
+      "noMatchingSessions": "Không có phiên phù hợp",
+      "noMatchingSessionsDescription": "Dự án này chưa có phiên nào phù hợp.",
+      "noMatchingSessionsFiltered": "Hãy thử truy vấn khác hoặc đặt lại bộ lọc nhà cung cấp.",
+      "noSessions": "Không tìm thấy phiên nào",
+      "noSessionsDescription": "Dự án này chưa có phiên nào",
+      "selectProject": "Chọn một dự án để xem các phiên"
+    },
+    "errors": {
+      "loading": "Lỗi khi tải các phiên"
+    },
+    "loadedMatchingMore": "Đã tải {{count}} phiên phù hợp cho đến nay - cuộn xuống để tải thêm.",
+    "loadingMore": "Đang tải thêm phiên...",
+    "pinned": "Đã ghim",
+    "scrollToLoadMore": "Cuộn để tải thêm",
+    "search": {
+      "clear": "Xóa tìm kiếm phiên",
+      "placeholder": "Tìm phiên..."
+    },
+    "selection": {
+      "cancel": "Hủy lựa chọn",
+      "exitMode": "Thoát chế độ lựa chọn",
+      "hideSelected": "Ẩn các phiên đã chọn",
+      "pinSelected": "Ghim các phiên đã chọn",
+      "selectSessions": "Chọn phiên",
+      "selected": "Đã chọn {{count}}",
+      "unhideSelected": "Bỏ ẩn các phiên đã chọn",
+      "selected_few": "Đã chọn {{count}}",
+      "selected_many": "Đã chọn {{count}}",
+      "selected_one": "Đã chọn {{count}}",
+      "selected_other": "Đã chọn {{count}}"
+    },
+    "sort": {
+      "byContext": "Theo ngữ cảnh",
+      "byContextTooltip": "Sắp xếp theo mức tiêu thụ ngữ cảnh",
+      "byRecentTooltip": "Sắp xếp theo gần đây",
+      "contextLoadedOnly": "Sắp xếp theo ngữ cảnh chỉ xếp hạng các phiên đã tải."
+    },
+    "title": "Phiên",
+    "visibility": {
+      "hideHidden": "Ẩn các phiên đã ẩn",
+      "showHidden": "Hiện các phiên đã ẩn"
+    },
+    "worktree": {
+      "switch": "Chuyển Worktree"
+    },
+    "loadedMatchingMore_few": "Đã tải {{count}} phiên phù hợp cho đến nay - cuộn xuống để tải thêm.",
+    "loadedMatchingMore_many": "Đã tải {{count}} phiên phù hợp cho đến nay - cuộn xuống để tải thêm.",
+    "loadedMatchingMore_one": "Đã tải {{count}} phiên phù hợp cho đến nay - cuộn xuống để tải thêm.",
+    "loadedMatchingMore_other": "Đã tải {{count}} phiên phù hợp cho đến nay - cuộn xuống để tải thêm.",
+    "failedToLoad": "Không thể tải phiên",
+    "loading": "Đang tải phiên...",
+    "filter": {
+      "title": "Lọc phiên"
+    },
+    "count": "{{count}} phiên",
+    "count_one": "{{count}} phiên",
+    "count_other": "{{count}} phiên",
+    "count_few": "{{count}} phiên",
+    "count_many": "{{count}} phiên",
+    "inProgress": "Phiên đang diễn ra..."
+  },
+  "states": {
+    "loading": "Đang tải...",
+    "offline": "Ngoại tuyến",
+    "online": "Trực tuyến",
+    "unknown": "Không xác định",
+    "error": "Lỗi"
+  },
+  "markdown": {
+    "imageFallback": "[Hình ảnh: {{label}}]",
+    "largeContentNotice": "Nội dung rất lớn ({{count}} ký tự). Đang hiển thị bản xem trước thô để giữ giao diện phản hồi nhanh.",
+    "largeContentTitle": "Nội dung lớn được hiển thị dạng thô để tránh treo giao diện",
+    "raw": "Thô",
+    "rawPreview": "Xem trước thô",
+    "renderMarkdown": "Hiển thị markdown",
+    "showAll": "Hiện tất cả",
+    "showMore": "Xem thêm",
+    "showRaw": "Hiện dạng thô",
+    "showingChars": "Đang hiển thị {{shown}} / {{total}} ký tự",
+    "largeContentNotice_few": "Nội dung rất lớn ({{count}} ký tự). Đang hiển thị bản xem trước thô để giữ giao diện phản hồi nhanh.",
+    "largeContentNotice_many": "Nội dung rất lớn ({{count}} ký tự). Đang hiển thị bản xem trước thô để giữ giao diện phản hồi nhanh.",
+    "largeContentNotice_one": "Nội dung rất lớn ({{count}} ký tự). Đang hiển thị bản xem trước thô để giữ giao diện phản hồi nhanh.",
+    "largeContentNotice_other": "Nội dung rất lớn ({{count}} ký tự). Đang hiển thị bản xem trước thô để giữ giao diện phản hồi nhanh."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Xem kết quả terminal ở trên để biết chi tiết",
+    "closingInSeconds": "Đóng sau {{count}} giây...",
+    "closingInSeconds_few": "Đóng sau {{count}} giây...",
+    "closingInSeconds_many": "Đóng sau {{count}} giây...",
+    "closingInSeconds_one": "Đóng sau {{count}} giây...",
+    "closingInSeconds_other": "Đóng sau {{count}} giây...",
+    "completedSuccessfully": "Hoàn tất thành công",
+    "exitCode": "(mã thoát {{code}})",
+    "processFailed": "Tiến trình thất bại",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Được tích lũy trên toàn bộ phiên mà không trùng lặp",
+    "cacheRead": "Đọc bộ nhớ đệm",
+    "cacheWrite": "Ghi bộ nhớ đệm",
+    "costUsd": "Chi phí (USD)",
+    "inputTokens": "Token đầu vào",
+    "model": "Mô hình",
+    "outputTokens": "Token đầu ra",
+    "phase": "Giai đoạn {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% đầu vào prompt",
+    "taskCoordination": "Điều phối tác vụ",
+    "thinkingText": "Suy nghĩ + Văn bản",
+    "toolOutputs": "Kết quả công cụ",
+    "total": "Tổng",
+    "userMessages": "Tin nhắn người dùng",
+    "visibleContext": "Ngữ cảnh hiển thị",
+    "includesClaudeMd": "gồm cả CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@tệp",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} token",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Sao chép đội ngũ",
+      "createTeam": "Tạo đội ngũ",
+      "deleteForever": "Xóa vĩnh viễn",
+      "deletePermanently": "Xóa vĩnh viễn",
+      "deleteTeam": "Xóa đội ngũ",
+      "launching": "Đang khởi chạy...",
+      "launchTeam": "Khởi chạy đội ngũ",
+      "relaunchTeam": "Khởi chạy lại đội ngũ",
+      "restore": "Khôi phục",
+      "restoreTeam": "Khôi phục đội ngũ",
+      "retry": "Thử lại",
+      "stopTeam": "Dừng đội ngũ",
+      "stopping": "Đang dừng..."
+    },
+    "status": {
+      "active": "Đang hoạt động",
+      "deleted": "Đã xóa",
+      "launching": "Đang khởi chạy...",
+      "offline": "Ngoại tuyến",
+      "partialFailure": "Khởi chạy thất bại giữa chừng",
+      "partialPending": "Đang chờ khởi tạo",
+      "partialSkipped": "Khởi chạy đã bỏ qua thành viên",
+      "running": "Đang chạy"
+    },
+    "partial": {
+      "pending": "Lần khởi chạy gần nhất vẫn đang đối soát.",
+      "skipped": "Lần khởi chạy gần nhất đã bỏ qua một số thành viên.",
+      "skippedWithCount": "Lần khởi chạy gần nhất đã bỏ qua {{count}}/{{expected}} thành viên.",
+      "skippedWithCount_few": "Lần khởi chạy gần nhất đã bỏ qua {{count}}/{{expected}} thành viên.",
+      "skippedWithCount_many": "Lần khởi chạy gần nhất đã bỏ qua {{count}}/{{expected}} thành viên.",
+      "skippedWithCount_one": "Lần khởi chạy gần nhất đã bỏ qua {{count}}/{{expected}} thành viên.",
+      "skippedWithCount_other": "Lần khởi chạy gần nhất đã bỏ qua {{count}}/{{expected}} thành viên.",
+      "stopped": "Lần khởi chạy gần nhất đã dừng trước khi tất cả thành viên tham gia.",
+      "stoppedWithCount": "Lần khởi chạy gần nhất đã dừng trước khi {{count}}/{{expected}} thành viên tham gia.",
+      "stoppedWithCount_few": "Lần khởi chạy gần nhất đã dừng trước khi {{count}}/{{expected}} thành viên tham gia.",
+      "stoppedWithCount_many": "Lần khởi chạy gần nhất đã dừng trước khi {{count}}/{{expected}} thành viên tham gia.",
+      "stoppedWithCount_one": "Lần khởi chạy gần nhất đã dừng trước khi {{count}}/{{expected}} thành viên tham gia.",
+      "stoppedWithCount_other": "Lần khởi chạy gần nhất đã dừng trước khi {{count}}/{{expected}} thành viên tham gia."
+    },
+    "noDescription": "Không có mô tả",
+    "solo": "Solo",
+    "membersCount": "Thành viên: {{count}}",
+    "membersCount_few": "Thành viên: {{count}}",
+    "membersCount_many": "Thành viên: {{count}}",
+    "membersCount_one": "Thành viên: {{count}}",
+    "membersCount_other": "Thành viên: {{count}}",
+    "all": "Tất cả",
+    "moreCount": "+{{count}} nữa",
+    "moreCount_one": "+{{count}} nữa",
+    "moreCount_other": "+{{count}} nữa",
+    "moreCount_few": "+{{count}} nữa",
+    "moreCount_many": "+{{count}} nữa"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Mặc định cho mọi dự án không có ghi đè OpenCode riêng.",
+      "scopeDescriptionProject": "Chỉ ghi đè dự án đã chọn. Các đội ngũ đang chạy không bị thay đổi.",
+      "setAllProjectsDefault": "Đặt mặc định cho tất cả dự án",
+      "setProjectDefault": "Đặt mặc định cho dự án",
+      "validationContext": "Ngữ cảnh xác thực",
+      "projectOverrideContext": "Ngữ cảnh ghi đè dự án",
+      "selectProjectHint": "Chọn một dự án trước khi kiểm thử mô hình cục bộ hoặc lưu mặc định.",
+      "allProjectsHint": "Kiểm thử sử dụng {{project}}. Mặc định áp dụng trừ khi một dự án có ghi đè riêng.",
+      "projectHint": "Việc lưu chỉ ghi đè {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Ngữ cảnh",
+      "closePanel": "Đóng bảng",
+      "phase": "Giai đoạn:",
+      "current": "Hiện tại",
+      "view": "Chế độ xem:",
+      "category": "Danh mục",
+      "bySize": "Theo kích thước"
+    },
+    "metrics": {
+      "unavailable": "Không khả dụng",
+      "contextUsed": "Ngữ cảnh đã dùng",
+      "promptInput": "Đầu vào prompt",
+      "visibleContext": "Ngữ cảnh hiển thị",
+      "ofContext": "trên ngữ cảnh",
+      "ofPrompt": "trên prompt",
+      "codexTelemetryUnavailable": "Mức sử dụng phía prompt của Codex chưa được runtime telemetry hiện tại cung cấp, nên Đầu vào prompt và Ngữ cảnh đã dùng vẫn không khả dụng thay vì hiển thị số không giả.",
+      "sessionCost": "Chi phí phiên:",
+      "parentPlus": "cha +",
+      "subagents": "subagent",
+      "details": "chi tiết"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Ngữ cảnh đã dùng",
+        "description": "Đầu vào prompt cộng với token đầu ra hiện đang chiếm dụng cửa sổ ngữ cảnh của mô hình."
+      },
+      "promptInput": {
+        "title": "Đầu vào prompt",
+        "description": "Token được gửi tới mô hình trước khi sinh nội dung. Với Claude, con số này bao gồm `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Ngữ cảnh hiển thị",
+        "description": "Tập con có thể kiểm tra của đầu vào prompt: tệp, CLAUDE.md, kết quả công cụ, tin nhắn người dùng và các nội dung tương tự mà bạn có thể tối ưu trực tiếp."
+      },
+      "availability": {
+        "title": "Khả dụng",
+        "description": "Nếu một runtime nhà cung cấp chưa cung cấp mức sử dụng phía prompt, bảng sẽ hiển thị các chỉ số là không khả dụng thay vì giả vờ chúng bằng không."
+      }
+    },
+    "items": {
+      "turn": "@Lượt {{turn}}",
+      "tokensApprox": "~{{tokens}} token",
+      "toolsCount": "{{count}} công cụ",
+      "toolsCount_one": "{{count}} công cụ",
+      "toolsCount_other": "{{count}} công cụ",
+      "toolsCount_few": "{{count}} công cụ",
+      "toolsCount_many": "{{count}} công cụ",
+      "itemsCount": "{{count}} mục",
+      "itemsCount_one": "{{count}} mục",
+      "itemsCount_other": "{{count}} mục",
+      "itemsCount_few": "{{count}} mục",
+      "itemsCount_many": "{{count}} mục",
+      "missing": "thiếu",
+      "thinking": "Suy nghĩ",
+      "text": "Văn bản"
+    },
+    "empty": "Không phát hiện nội dung ngữ cảnh nào được thêm vào trong phiên này",
+    "view": {
+      "grouped": "Theo nhóm",
+      "flat": "Phẳng"
+    },
+    "claudeMdFiles": "Tệp CLAUDE.md",
+    "mentionedFiles": "Tệp được nhắc đến"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Đã xác nhận tắt",
+      "summary": {
+        "tools": "{{count}} công cụ",
+        "tools_one": "{{count}} công cụ",
+        "tools_other": "{{count}} công cụ",
+        "tools_few": "{{count}} công cụ",
+        "tools_many": "{{count}} công cụ"
+      },
+      "meta": {
+        "type": "Loại",
+        "duration": "Thời lượng",
+        "model": "Mô hình",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Cửa sổ ngữ cảnh",
+        "contextUsage": "Mức sử dụng ngữ cảnh",
+        "mainContext": "Ngữ cảnh chính",
+        "totalOutput": "Tổng đầu ra",
+        "turns": "({{count}} lượt)",
+        "turns_one": "({{count}} lượt)",
+        "turns_other": "({{count}} lượt)",
+        "subagentContext": "Ngữ cảnh subagent",
+        "phase": "Giai đoạn {{phase}}",
+        "turns_few": "({{count}} lượt)",
+        "turns_many": "({{count}} lượt)"
+      },
+      "trace": {
+        "title": "Dấu vết thực thi"
+      }
+    },
+    "user": {
+      "you": "Bạn",
+      "showMore": "Xem thêm",
+      "showLess": "Thu gọn",
+      "backgroundTask": "Tác vụ nền",
+      "exitCode": "thoát {{code}}",
+      "imagesAttached": "Đã đính kèm {{count}} hình ảnh",
+      "imagesAttached_one": "Đã đính kèm {{count}} hình ảnh",
+      "imagesAttached_few": "Đã đính kèm {{count}} hình ảnh",
+      "imagesAttached_many": "Đã đính kèm {{count}} hình ảnh",
+      "imagesAttached_other": "Đã đính kèm {{count}} hình ảnh"
+    },
+    "compact": {
+      "toggle": "Bật/tắt nội dung đã nén",
+      "contextCompacted": "Ngữ cảnh đã nén",
+      "freedTokens": "(đã giải phóng {{tokens}})",
+      "phase": "Giai đoạn {{phase}}",
+      "conversationCompacted": "Cuộc hội thoại đã nén",
+      "summary": "Các tin nhắn trước đó đã được tóm tắt để tiết kiệm ngữ cảnh. Toàn bộ lịch sử hội thoại được giữ lại trong tệp phiên.",
+      "compacted": "Đã nén"
+    },
+    "executionTrace": {
+      "empty": "Không có mục thực thi nào",
+      "nested": "Lồng nhau: {{name}}",
+      "input": "Đầu vào"
+    },
+    "items": {
+      "empty": "Không có mục nào để hiển thị"
+    },
+    "tools": {
+      "teammateSpawned": "Đã tạo thành viên",
+      "shutdownRequested": "Đã yêu cầu tắt ->",
+      "noResultReceived": "Không nhận được kết quả",
+      "duration": "Thời lượng: {{duration}}",
+      "result": "Kết quả",
+      "write": {
+        "createdFile": "Đã tạo tệp",
+        "wroteToFile": "Đã ghi vào tệp"
+      },
+      "skill": {
+        "instructions": "Hướng dẫn kỹ năng",
+        "unknown": "Kỹ năng không xác định"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Yêu cầu bị người dùng ngắt",
+      "planReadyForApproval": "Kế hoạch sẵn sàng để phê duyệt"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Không có lịch sử hội thoại",
+      "description": "Phiên này chưa chứa tin nhắn nào."
+    },
+    "context": {
+      "remainingPercent": "(còn {{percent}}%)",
+      "count": "Ngữ cảnh ({{count}})",
+      "count_one": "Ngữ cảnh ({{count}})",
+      "count_other": "Ngữ cảnh ({{count}})",
+      "count_few": "Ngữ cảnh ({{count}})",
+      "count_many": "Ngữ cảnh ({{count}})"
+    },
+    "scrollToBottom": "Cuộn xuống dưới cùng",
+    "bottom": "Dưới cùng",
+    "teammateMessage": {
+      "message": "Tin nhắn",
+      "resent": "Đã gửi lại",
+      "fallback": "Tin nhắn của thành viên"
+    },
+    "system": {
+      "label": "Hệ thống"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux chưa được cài đặt",
+    "detectedOs": "Hệ điều hành được phát hiện: {{os}}",
+    "runtimePath": "Đường dẫn runtime: {{path}}",
+    "phase": "Giai đoạn: {{phase}}",
+    "actions": {
+      "cancel": "Hủy",
+      "manualGuide": "Hướng dẫn thủ công",
+      "hideSetupSteps": "Ẩn các bước thiết lập",
+      "showSetupSteps": "Hiện các bước thiết lập ({{count}})",
+      "showSetupSteps_one": "Hiện bước thiết lập ({{count}})",
+      "showSetupSteps_other": "Hiện các bước thiết lập ({{count}})",
+      "recheck": "Kiểm tra lại",
+      "showSetupSteps_few": "Hiện các bước thiết lập ({{count}})",
+      "showSetupSteps_many": "Hiện các bước thiết lập ({{count}})"
+    },
+    "installerProgress": "Tiến trình trình cài đặt",
+    "input": {
+      "placeholder": "Gửi đầu vào tới trình cài đặt",
+      "send": "Gửi đầu vào",
+      "passwordNotice": "Đầu vào mật khẩu được gửi trực tiếp tới terminal của trình cài đặt và không được thêm vào kết quả nhật ký."
+    },
+    "details": {
+      "show": "Hiện chi tiết",
+      "hide": "Ẩn chi tiết"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Không có hoạt động gần đây",
+    "sessionsCount": "{{count}} phiên",
+    "sessionsCount_one": "{{count}} phiên",
+    "sessionsCount_other": "{{count}} phiên",
+    "mode": {
+      "searchProjects": "Tìm dự án",
+      "searchAcrossProjects": "Tìm trên tất cả dự án",
+      "searchInProject": "Tìm trong dự án"
+    },
+    "currentProject": "Dự án hiện tại",
+    "global": "Toàn cục",
+    "placeholders": {
+      "projects": "Tìm dự án...",
+      "conversations": "Tìm cuộc hội thoại..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Không tìm thấy dự án nào cho \"{{query}}\"",
+      "noProjects": "Không tìm thấy dự án nào",
+      "minChars": "Nhập ít nhất 2 ký tự để tìm kiếm",
+      "noFastResults": "Không có kết quả nhanh trong các phiên gần đây cho \"{{query}}\"",
+      "noResults": "Không tìm thấy kết quả nào cho \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} dự án",
+      "projectsCount_one": "{{count}} dự án",
+      "projectsCount_other": "{{count}} dự án",
+      "results": "{{count}} kết quả {{speed}}",
+      "results_one": "{{count}} kết quả {{speed}}",
+      "results_other": "{{count}} kết quả {{speed}}",
+      "resultsAcrossProjects": "{{count}} kết quả {{speed}}trên tất cả dự án",
+      "resultsAcrossProjects_one": "{{count}} kết quả {{speed}}trên tất cả dự án",
+      "resultsAcrossProjects_other": "{{count}} kết quả {{speed}}trên tất cả dự án",
+      "fastPrefix": "nhanh ",
+      "typeToSearch": "Nhập để tìm kiếm",
+      "navigate": "điều hướng",
+      "select": "chọn",
+      "open": "mở",
+      "global": "toàn cục",
+      "close": "đóng",
+      "results_few": "{{count}} kết quả {{speed}}",
+      "results_many": "{{count}} kết quả {{speed}}",
+      "resultsAcrossProjects_few": "{{count}} kết quả {{speed}}trên tất cả dự án",
+      "resultsAcrossProjects_many": "{{count}} kết quả {{speed}}trên tất cả dự án",
+      "projectsCount_few": "{{count}} dự án",
+      "projectsCount_many": "{{count}} dự án",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} phiên",
+    "sessionsCount_many": "{{count}} phiên"
+  },
+  "tasksPanel": {
+    "title": "Tác vụ",
+    "searchPlaceholder": "Tìm tác vụ...",
+    "pinned": "Đã ghim",
+    "groupByLabel": "Nhóm theo:",
+    "groupByAria": "Nhóm theo",
+    "groupModes": {
+      "none": "Không",
+      "project": "Dự án",
+      "time": "Thời gian"
+    },
+    "showArchived": "Hiện mục lưu trữ",
+    "hideArchived": "Ẩn mục lưu trữ",
+    "empty": {
+      "noMatchingTasks": "Không có tác vụ phù hợp",
+      "noTasks": "Không tìm thấy tác vụ nào"
+    },
+    "teamLabel": "Đội ngũ: {{team}}",
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "deleteConfirm": {
+      "title": "Xóa tác vụ",
+      "message": "Chuyển tác vụ #{{taskId}} vào thùng rác?",
+      "confirmLabel": "Xóa",
+      "cancelLabel": "Hủy"
+    },
+    "deleteFailed": {
+      "title": "Không thể xóa tác vụ",
+      "fallbackMessage": "Đã xảy ra lỗi không mong muốn",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "Theo thời gian",
+      "byUnread": "Theo chưa đọc",
+      "byProject": "Theo dự án",
+      "byTeam": "Theo đội ngũ"
+    }
+  },
+  "toolViewer": {
+    "input": "Đầu vào",
+    "replaceAll": "(thay thế tất cả)",
+    "noInputRecorded": "Không có đầu vào nào được ghi cho lệnh gọi công cụ này.",
+    "agent": {
+      "action": "thao tác",
+      "teammate": "thành viên",
+      "team": "đội ngũ",
+      "runtime": "runtime",
+      "type": "loại",
+      "startupInstructionsHidden": "Hướng dẫn khởi động được ẩn trong giao diện."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Bỏ ghim",
+    "pin": "Ghim",
+    "rename": "Đổi tên",
+    "markUnread": "Đánh dấu chưa đọc",
+    "unarchive": "Bỏ lưu trữ",
+    "archive": "Lưu trữ",
+    "deleteTask": "Xóa tác vụ"
+  },
+  "updateDialog": {
+    "closeDialog": "Đóng hộp thoại",
+    "updateAvailable": "Có bản cập nhật",
+    "updateReady": "Bản cập nhật sẵn sàng",
+    "noReleaseNotes": "Không có ghi chú phát hành nào.",
+    "viewOnGitHub": "Xem trên GitHub",
+    "later": "Để sau",
+    "restartNow": "Khởi động lại ngay",
+    "download": "Tải xuống"
+  },
+  "errorBoundary": {
+    "title": "Đã xảy ra lỗi",
+    "description": "Đã xảy ra lỗi không mong muốn trong ứng dụng. Bạn có thể thử tải lại trang hoặc đặt lại trạng thái lỗi.",
+    "componentStack": "Component Stack",
+    "tryAgain": "Thử lại",
+    "copied": "Đã sao chép",
+    "copyErrorDetails": "Sao chép chi tiết lỗi",
+    "reportBugOnGitHub": "Báo lỗi trên GitHub",
+    "reloadApp": "Tải lại ứng dụng",
+    "diagnosticsNotice": "Báo lỗi trên GitHub và thông tin chẩn đoán đã sao chép bao gồm thông báo lỗi, stack trace, phiên bản ứng dụng, tab đang hoạt động, đội ngũ đã chọn, ngữ cảnh tác vụ và chi tiết môi trường."
+  },
+  "runtimeBackendSelector": {
+    "label": "Backend runtime",
+    "resolved": "Đã giải quyết: {{backend}}",
+    "current": "Hiện tại",
+    "recommended": "Khuyến nghị",
+    "unavailable": "Không khả dụng",
+    "cannotSelectYet": "Backend này chưa thể được chọn.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (hiện tại: {{backend}})",
+    "audience": {
+      "internal": "Nội bộ"
+    },
+    "states": {
+      "locked": "Đã khóa",
+      "disabled": "Đã tắt",
+      "authRequired": "Cần xác thực",
+      "runtimeMissing": "Thiếu runtime",
+      "degraded": "Suy giảm",
+      "unavailable": "Không khả dụng"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Đang kiểm tra",
+    "unavailable": "Không khả dụng",
+    "checkFailed": "Kiểm tra thất bại",
+    "free": "Miễn phí",
+    "freeTooltip": "Được báo cáo bởi metadata của OpenCode. Khả dụng và giới hạn có thể thay đổi."
+  },
+  "taskFilters": {
+    "status": "Trạng thái",
+    "clearAll": "Xóa tất cả",
+    "selectAll": "Chọn tất cả",
+    "team": "Đội ngũ",
+    "allTeams": "Tất cả đội ngũ",
+    "searchTeams": "Tìm đội ngũ...",
+    "noTeamsFound": "Không tìm thấy đội ngũ nào",
+    "project": "Dự án",
+    "allProjects": "Tất cả dự án",
+    "searchProjects": "Tìm dự án...",
+    "noProjects": "Không có dự án",
+    "comments": "Bình luận",
+    "apply": "Áp dụng",
+    "read": {
+      "all": "Tất cả",
+      "unread": "Chưa đọc",
+      "read": "Đã đọc"
+    },
+    "statusOptions": {
+      "todo": "CẦN LÀM",
+      "inProgress": "ĐANG LÀM",
+      "needsFix": "CẦN SỬA",
+      "done": "HOÀN THÀNH",
+      "review": "XEM XÉT",
+      "approved": "ĐÃ DUYỆT"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Tổng ngữ cảnh: {{tokens}} token",
+    "context": "Ngữ cảnh: {{tokens}}",
+    "phase": "Giai đoạn {{phase}}:",
+    "compactedTo": "(đã nén còn {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "đội ngũ",
+      "subagent": "subagent",
+      "markAsRead": "Đánh dấu đã đọc",
+      "delete": "Xóa",
+      "viewInSession": "Xem trong phiên"
+    },
+    "title": "Thông báo",
+    "loading": "Đang tải thông báo...",
+    "actions": {
+      "markFilteredAsRead": "Đánh dấu mục đã lọc là đã đọc",
+      "markAllAsRead": "Đánh dấu tất cả là đã đọc",
+      "markFilteredRead": "Đánh dấu mục đã lọc là đã đọc",
+      "markAllRead": "Đánh dấu tất cả đã đọc",
+      "clearFilteredNotifications": "Xóa các thông báo đã lọc",
+      "clearAllNotifications": "Xóa tất cả thông báo",
+      "clickToConfirm": "Nhấp để xác nhận",
+      "clearFiltered": "Xóa mục đã lọc",
+      "clearAll": "Xóa tất cả"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} chưa đọc trong bộ lọc",
+      "unreadInFilter_one": "{{count}} chưa đọc trong bộ lọc",
+      "unreadInFilter_few": "{{count}} chưa đọc trong bộ lọc",
+      "unreadInFilter_many": "{{count}} chưa đọc trong bộ lọc",
+      "unreadInFilter_other": "{{count}} chưa đọc trong bộ lọc",
+      "inFilter": "{{count}} trong bộ lọc",
+      "inFilter_one": "{{count}} trong bộ lọc",
+      "inFilter_few": "{{count}} trong bộ lọc",
+      "inFilter_many": "{{count}} trong bộ lọc",
+      "inFilter_other": "{{count}} trong bộ lọc",
+      "unread": "{{count}} chưa đọc",
+      "unread_one": "{{count}} chưa đọc",
+      "unread_few": "{{count}} chưa đọc",
+      "unread_many": "{{count}} chưa đọc",
+      "unread_other": "{{count}} chưa đọc",
+      "total": "{{count}} tổng cộng",
+      "total_one": "{{count}} tổng cộng",
+      "total_few": "{{count}} tổng cộng",
+      "total_many": "{{count}} tổng cộng",
+      "total_other": "{{count}} tổng cộng"
+    },
+    "filters": {
+      "other": "Khác"
+    },
+    "empty": {
+      "noMatching": "Không có thông báo phù hợp",
+      "noNotifications": "Không có thông báo",
+      "tryDifferentFilter": "Hãy thử bộ lọc khác",
+      "allCaughtUp": "Bạn đã xem hết!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Khởi động lại để cập nhật",
+    "updateApp": "Cập nhật ứng dụng",
+    "downloadedRestartTooltip": "Đã tải bản cập nhật, khởi động lại để áp dụng",
+    "newVersionAvailable": "Có phiên bản mới",
+    "updatingApp": "Đang cập nhật ứng dụng",
+    "updateReady": "Bản cập nhật sẵn sàng",
+    "restartNow": "Khởi động lại ngay"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Mở rộng thanh bên",
+    "collapseSidebarShortcut": "Thu gọn thanh bên ({{shortcut}})",
+    "sidebarView": "Chế độ xem thanh bên",
+    "resizeSidebar": "Thay đổi kích thước thanh bên",
+    "closeTab": "Đóng tab",
+    "openedFromSearch": "Đã mở từ tìm kiếm",
+    "pinnedSession": "Phiên đã ghim",
+    "jumpToSection": "Nhảy đến mục",
+    "newTab": "Tab mới",
+    "newTabDashboard": "Tab mới (Bảng điều khiển)",
+    "refreshSession": "Làm mới phiên",
+    "refreshSessionWithShortcut": "Làm mới phiên ({{shortcut}})",
+    "loadingTab": "Đang tải tab",
+    "menu": {
+      "teams": "Đội ngũ",
+      "settings": "Cài đặt",
+      "extensions": "Tiện ích mở rộng",
+      "search": "Tìm kiếm",
+      "schedules": "Lịch",
+      "docs": "Tài liệu",
+      "exportMarkdown": "Xuất dưới dạng Markdown",
+      "exportJson": "Xuất dưới dạng JSON",
+      "exportPlainText": "Xuất dưới dạng văn bản thuần",
+      "analyzeSession": "Phân tích phiên"
+    },
+    "tabMenu": {
+      "closeTabs": "Đóng {{count}} tab",
+      "closeTabs_one": "Đóng {{count}} tab",
+      "closeTabs_few": "Đóng {{count}} tab",
+      "closeTabs_many": "Đóng {{count}} tab",
+      "closeTabs_other": "Đóng {{count}} tab",
+      "closeTab": "Đóng tab",
+      "closeOtherTabs": "Đóng các tab khác",
+      "splitRight": "Chia sang phải",
+      "splitLeft": "Chia sang trái",
+      "pinToSidebar": "Ghim vào thanh bên",
+      "unpinFromSidebar": "Bỏ ghim khỏi thanh bên",
+      "hideFromSidebar": "Ẩn khỏi thanh bên",
+      "unhideFromSidebar": "Bỏ ẩn khỏi thanh bên",
+      "closeAllTabs": "Đóng tất cả tab"
+    },
+    "sections": {
+      "team": "Đội ngũ",
+      "sessions": "Phiên",
+      "kanban": "Kanban",
+      "claudeLogs": "Nhật ký",
+      "messages": "Tin nhắn"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Đậm",
+    "italic": "Nghiêng",
+    "strike": "Gạch ngang",
+    "code": "Mã"
+  },
+  "diff": {
+    "changed": "Đã thay đổi",
+    "noChangesDetected": "Không phát hiện thay đổi nào"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Sao chép liên kết đăng nhập ChatGPT và mã",
+    "copyLoginLink": "Sao chép liên kết đăng nhập ChatGPT",
+    "copyFailed": "Sao chép thất bại",
+    "copyLinkAndCode": "Sao chép liên kết + mã",
+    "copyLink": "Sao chép liên kết",
+    "enterCodeOnLoginPage": "Nhập mã này trên trang đăng nhập ChatGPT"
+  },
+  "window": {
+    "minimize": "Thu nhỏ",
+    "maximize": "Phóng to",
+    "restore": "Khôi phục"
+  },
+  "context": {
+    "local": "Cục bộ",
+    "switchingTo": "Đang chuyển sang {{workspace}}",
+    "loadingWorkspace": "Đang tải không gian làm việc",
+    "switchWorkspace": "Chuyển không gian làm việc"
+  },
+  "repositories": {
+    "noneAvailable": "Không có kho lưu trữ nào",
+    "remove": "Xóa kho lưu trữ"
+  },
+  "export": {
+    "session": "Xuất phiên",
+    "sessionTitle": "Xuất phiên"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Không có dữ liệu phiên nào",
+    "title": "Báo cáo phiên"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Chọn dự án"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "cập nhật",
+      "updatedYesterday": "cập nhật hôm qua",
+      "yesterday": "Hôm qua"
+    },
+    "reviewState": {
+      "needsFix": "Cần sửa"
+    },
+    "unassigned": "chưa phân công"
+  }
+}

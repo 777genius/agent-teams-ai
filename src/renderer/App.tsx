@@ -9,7 +9,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
 import { type SplashSceneHandle, startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
-import { useTheme } from './hooks/useTheme';
+import { useThemeController } from './hooks/useTheme';
 import { api } from './api';
 import { useStore } from './store';
 
@@ -33,7 +33,7 @@ const SPLASH_REDUCED_AVATAR_READY_MAX_WAIT_MS = 160;
 
 export const App = (): React.JSX.Element => {
   // Initialize theme on app load
-  useTheme();
+  useThemeController();
   const appConfig = useStore((s) => s.appConfig);
 
   // Upgrade the static preload splash, then dismiss it after the scene is visible.

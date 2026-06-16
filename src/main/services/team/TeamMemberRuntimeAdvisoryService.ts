@@ -44,6 +44,10 @@ interface RuntimeAdvisoryLogsFinder {
   ): Promise<RuntimeAdvisoryLogFileRef[]>;
 }
 
+interface RuntimeAdvisoryLookupOptions {
+  observedAfterMs?: number | null;
+}
+
 const LOOKBACK_MS = 10 * 60 * 1000;
 const CACHE_TTL_MS = 30_000;
 const TAIL_BYTES = 64 * 1024;
@@ -59,6 +63,7 @@ interface CachedRuntimeAdvisory {
 
 interface CachedTeamBatchAdvisories {
   membersSignature: string;
+  observedAfterScopeKey: string;
   value: Map<string, MemberRuntimeAdvisory>;
   expiresAt: number;
 }
@@ -138,7 +143,8 @@ export class TeamMemberRuntimeAdvisoryService {
 
   async getMemberAdvisories(
     teamName: string,
-    members: readonly Pick<ResolvedTeamMember, 'name' | 'removedAt'>[]
+    members: readonly Pick<ResolvedTeamMember, 'name' | 'removedAt'>[],
+    options?: RuntimeAdvisoryLookupOptions
   ): Promise<Map<string, MemberRuntimeAdvisory>> {
     const activeMembers = members.filter((member) => !member.removedAt);
     if (activeMembers.length === 0) {
@@ -147,19 +153,32 @@ export class TeamMemberRuntimeAdvisoryService {
 
     const teamKey = this.normalizeToken(teamName);
     const membersSignature = this.buildMembersSignature(activeMembers);
+    const observedAfterMs = this.normalizeObservedAfterMs(options?.observedAfterMs);
+    const scopeKey = this.buildObservedAfterScopeKey(observedAfterMs);
     const now = Date.now();
     const cachedBatch = this.teamBatchCacheByTeam.get(teamKey);
-    if (cachedBatch?.membersSignature === membersSignature && cachedBatch.expiresAt > now) {
+    if (
+      cachedBatch?.membersSignature === membersSignature &&
+      cachedBatch.observedAfterScopeKey === scopeKey &&
+      cachedBatch.expiresAt > now
+    ) {
       return this.materializeBatchAdvisories(activeMembers, cachedBatch.value);
     }
 
-    const inFlightKey = `${teamKey}::${membersSignature}`;
+    const inFlightKey = `${teamKey}::${membersSignature}::${scopeKey}`;
     const existingRequest = this.inFlightBatchRequests.get(inFlightKey);
     if (existingRequest) {
       return this.materializeBatchAdvisories(activeMembers, await existingRequest);
     }
 
-    const request = this.loadBatchAdvisories(teamName, teamKey, activeMembers, membersSignature);
+    const request = this.loadBatchAdvisories(
+      teamName,
+      teamKey,
+      activeMembers,
+      membersSignature,
+      observedAfterMs,
+      scopeKey
+    );
     this.inFlightBatchRequests.set(inFlightKey, request);
 
     try {
@@ -173,17 +192,19 @@ export class TeamMemberRuntimeAdvisoryService {
 
   async getMemberAdvisory(
     teamName: string,
-    memberName: string
+    memberName: string,
+    options?: RuntimeAdvisoryLookupOptions
   ): Promise<MemberRuntimeAdvisory | null> {
     const teamKey = this.normalizeToken(teamName);
-    const cacheKey = this.getMemberCacheKey(teamName, memberName);
+    const observedAfterMs = this.normalizeObservedAfterMs(options?.observedAfterMs);
+    const cacheKey = this.getMemberCacheKey(teamName, memberName, observedAfterMs);
     const cached = this.memberCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.value ? this.cloneAdvisory(cached.value) : null;
     }
 
     const generationAtStart = this.cacheGenerationByTeam.get(teamKey) ?? 0;
-    const advisory = await this.findRecentMemberAdvisory(teamName, memberName);
+    const advisory = await this.findRecentMemberAdvisory(teamName, memberName, observedAfterMs);
     if ((this.cacheGenerationByTeam.get(teamKey) ?? 0) === generationAtStart) {
       this.memberCache.set(cacheKey, {
         value: advisory,
@@ -197,7 +218,9 @@ export class TeamMemberRuntimeAdvisoryService {
     teamName: string,
     teamKey: string,
     activeMembers: readonly Pick<ResolvedTeamMember, 'name'>[],
-    membersSignature: string
+    membersSignature: string,
+    observedAfterMs: number | null,
+    observedAfterScopeKey: string
   ): Promise<Map<string, MemberRuntimeAdvisory>> {
     const startedAt = performance.now();
     const now = Date.now();
@@ -209,7 +232,7 @@ export class TeamMemberRuntimeAdvisoryService {
 
     for (const member of activeMembers) {
       const normalizedMemberName = this.normalizeToken(member.name);
-      const cacheKey = `${teamKey}::${normalizedMemberName}`;
+      const cacheKey = this.getMemberCacheKey(teamName, member.name, observedAfterMs);
       const cached = this.memberCache.get(cacheKey);
       if (cached && cached.expiresAt > now) {
         memberCacheHits += 1;
@@ -224,14 +247,18 @@ export class TeamMemberRuntimeAdvisoryService {
     }
 
     if (membersToFetch.length > 0) {
-      const fetched = await this.findRecentMemberAdvisories(teamName, membersToFetch);
+      const fetched = await this.findRecentMemberAdvisories(
+        teamName,
+        membersToFetch,
+        observedAfterMs
+      );
       const fetchedAt = Date.now();
       const cacheStillCurrent =
         (this.cacheGenerationByTeam.get(teamKey) ?? 0) === generationAtStart;
       for (const [memberName, advisory] of fetched) {
         const normalizedMemberName = this.normalizeToken(memberName);
         if (cacheStillCurrent) {
-          this.memberCache.set(`${teamKey}::${normalizedMemberName}`, {
+          this.memberCache.set(this.getMemberCacheKey(teamName, memberName, observedAfterMs), {
             value: advisory,
             expiresAt: fetchedAt + CACHE_TTL_MS,
           });
@@ -245,6 +272,7 @@ export class TeamMemberRuntimeAdvisoryService {
     if ((this.cacheGenerationByTeam.get(teamKey) ?? 0) === generationAtStart) {
       this.teamBatchCacheByTeam.set(teamKey, {
         membersSignature,
+        observedAfterScopeKey,
         value: this.cloneNormalizedAdvisories(result),
         expiresAt: Date.now() + CACHE_TTL_MS,
       });
@@ -260,8 +288,24 @@ export class TeamMemberRuntimeAdvisoryService {
     return result;
   }
 
-  private getMemberCacheKey(teamName: string, memberName: string): string {
-    return `${this.normalizeToken(teamName)}::${this.normalizeToken(memberName)}`;
+  private getMemberCacheKey(
+    teamName: string,
+    memberName: string,
+    observedAfterMs?: number | null
+  ): string {
+    return `${this.normalizeToken(teamName)}::${this.normalizeToken(memberName)}::${this.buildObservedAfterScopeKey(
+      observedAfterMs
+    )}`;
+  }
+
+  private normalizeObservedAfterMs(value: number | null | undefined): number | null {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0
+      ? Math.floor(value)
+      : null;
+  }
+
+  private buildObservedAfterScopeKey(observedAfterMs: number | null | undefined): string {
+    return observedAfterMs == null ? 'recent' : `after:${observedAfterMs}`;
   }
 
   private buildMembersSignature(members: readonly Pick<ResolvedTeamMember, 'name'>[]): string {
@@ -302,9 +346,14 @@ export class TeamMemberRuntimeAdvisoryService {
 
   private async findRecentMemberAdvisory(
     teamName: string,
-    memberName: string
+    memberName: string,
+    observedAfterMs: number | null
   ): Promise<MemberRuntimeAdvisory | null> {
-    const openCodeAdvisory = await this.findRecentOpenCodeDeliveryAdvisory(teamName, memberName);
+    const openCodeAdvisory = await this.findRecentOpenCodeDeliveryAdvisory(
+      teamName,
+      memberName,
+      observedAfterMs
+    );
     if (openCodeAdvisory) {
       return openCodeAdvisory;
     }
@@ -312,20 +361,23 @@ export class TeamMemberRuntimeAdvisoryService {
     const summaries = await this.logsFinder.findMemberLogs(
       teamName,
       memberName,
-      Date.now() - LOOKBACK_MS
+      Math.max(Date.now() - LOOKBACK_MS, observedAfterMs ?? 0)
     );
     return this.findRecentMemberAdvisoryInFiles(
-      summaries.flatMap((summary) => summary.filePath ?? [])
+      summaries.flatMap((summary) => summary.filePath ?? []),
+      observedAfterMs
     );
   }
 
   private async findRecentMemberAdvisories(
     teamName: string,
-    memberNames: readonly string[]
+    memberNames: readonly string[],
+    observedAfterMs: number | null
   ): Promise<readonly (readonly [string, MemberRuntimeAdvisory | null])[]> {
     const openCodeAdvisories = await this.findRecentOpenCodeDeliveryAdvisories(
       teamName,
-      memberNames
+      memberNames,
+      observedAfterMs
     );
     const remainingMemberNames = memberNames.filter(
       (memberName) => !openCodeAdvisories.has(memberName)
@@ -340,7 +392,8 @@ export class TeamMemberRuntimeAdvisoryService {
       try {
         const logAdvisories = await this.findRecentMemberAdvisoriesFromBatchRefs(
           teamName,
-          remainingMemberNames
+          remainingMemberNames,
+          observedAfterMs
         );
         const logMap = new Map(logAdvisories);
         return memberNames.map(
@@ -365,12 +418,13 @@ export class TeamMemberRuntimeAdvisoryService {
         const summaries = await this.logsFinder.findMemberLogs(
           teamName,
           memberName,
-          Date.now() - LOOKBACK_MS
+          Math.max(Date.now() - LOOKBACK_MS, observedAfterMs ?? 0)
         );
         return [
           memberName,
           await this.findRecentMemberAdvisoryInFiles(
-            summaries.flatMap((summary) => summary.filePath ?? [])
+            summaries.flatMap((summary) => summary.filePath ?? []),
+            observedAfterMs
           ),
         ] as const;
       }
@@ -384,15 +438,21 @@ export class TeamMemberRuntimeAdvisoryService {
 
   private async findRecentOpenCodeDeliveryAdvisory(
     teamName: string,
-    memberName: string
+    memberName: string,
+    observedAfterMs: number | null
   ): Promise<MemberRuntimeAdvisory | null> {
-    const advisories = await this.findRecentOpenCodeDeliveryAdvisories(teamName, [memberName]);
+    const advisories = await this.findRecentOpenCodeDeliveryAdvisories(
+      teamName,
+      [memberName],
+      observedAfterMs
+    );
     return advisories.get(memberName) ?? null;
   }
 
   private async findRecentOpenCodeDeliveryAdvisories(
     teamName: string,
-    memberNames: readonly string[]
+    memberNames: readonly string[],
+    observedAfterMs: number | null
   ): Promise<Map<string, MemberRuntimeAdvisory>> {
     const activeMembersByKey = new Map<string, string>();
     for (const memberName of memberNames) {
@@ -438,7 +498,11 @@ export class TeamMemberRuntimeAdvisoryService {
 
     const memberKeysWithRecentErrors = new Set<string>();
     for (const [memberKey, records] of recordsByMember) {
-      if (records.some((record) => this.isOpenCodeDeliveryAdvisoryCandidate(record, now))) {
+      if (
+        records.some((record) =>
+          this.isOpenCodeDeliveryAdvisoryCandidate(record, now, observedAfterMs)
+        )
+      ) {
         memberKeysWithRecentErrors.add(memberKey);
       }
     }
@@ -468,7 +532,13 @@ export class TeamMemberRuntimeAdvisoryService {
       }
       const originalName = activeMembersByKey.get(memberKey);
       const advisory = originalName
-        ? this.buildOpenCodeDeliveryAdvisoryFromRecords(originalName, records, now, proofIndex)
+        ? this.buildOpenCodeDeliveryAdvisoryFromRecords(
+            originalName,
+            records,
+            now,
+            proofIndex,
+            observedAfterMs
+          )
         : null;
       if (advisory && originalName) {
         result.set(originalName, advisory);
@@ -489,7 +559,8 @@ export class TeamMemberRuntimeAdvisoryService {
     memberName: string,
     records: readonly OpenCodePromptDeliveryLedgerRecord[],
     now: number,
-    proofIndex: OpenCodeRuntimeDeliveryProofIndex
+    proofIndex: OpenCodeRuntimeDeliveryProofIndex,
+    observedAfterMs: number | null
   ): MemberRuntimeAdvisory | null {
     const ordered = records
       .slice()
@@ -499,7 +570,7 @@ export class TeamMemberRuntimeAdvisoryService {
           getOpenCodeRuntimeDeliveryRecordTimeMs(left)
       );
     const latestError = ordered.find((record) => {
-      return this.isOpenCodeDeliveryAdvisoryCandidate(record, now);
+      return this.isOpenCodeDeliveryAdvisoryCandidate(record, now, observedAfterMs);
     });
     if (!latestError) {
       return null;
@@ -584,8 +655,13 @@ export class TeamMemberRuntimeAdvisoryService {
 
   private isOpenCodeDeliveryAdvisoryCandidate(
     record: OpenCodePromptDeliveryLedgerRecord,
-    now: number
+    now: number,
+    observedAfterMs: number | null
   ): boolean {
+    const observedAt = getOpenCodeRuntimeDeliveryRecordTimeMs(record);
+    if (observedAfterMs != null && Number.isFinite(observedAt) && observedAt < observedAfterMs) {
+      return false;
+    }
     if (!isPotentialOpenCodeRuntimeDeliveryError(record)) {
       return false;
     }
@@ -595,13 +671,13 @@ export class TeamMemberRuntimeAdvisoryService {
     ) {
       return true;
     }
-    const observedAt = getOpenCodeRuntimeDeliveryRecordTimeMs(record);
     return Number.isFinite(observedAt) && now - observedAt <= OPENCODE_DELIVERY_ERROR_LOOKBACK_MS;
   }
 
   private async findRecentMemberAdvisoriesFromBatchRefs(
     teamName: string,
-    memberNames: readonly string[]
+    memberNames: readonly string[],
+    observedAfterMs: number | null
   ): Promise<readonly (readonly [string, MemberRuntimeAdvisory | null])[]> {
     const memberNamesByKey = new Map<string, string>();
     for (const memberName of memberNames) {
@@ -614,7 +690,7 @@ export class TeamMemberRuntimeAdvisoryService {
     const refs = await this.logsFinder.findRecentMemberLogFileRefsByMember!(
       teamName,
       memberNames,
-      Date.now() - LOOKBACK_MS
+      Math.max(Date.now() - LOOKBACK_MS, observedAfterMs ?? 0)
     );
     const refsByMember = new Map<string, RuntimeAdvisoryLogFileRef[]>();
     for (const ref of refs) {
@@ -641,15 +717,19 @@ export class TeamMemberRuntimeAdvisoryService {
           seenFilePaths.add(ref.filePath);
           return [ref.filePath];
         });
-      return [memberName, await this.findRecentMemberAdvisoryInFiles(filePaths)] as const;
+      return [
+        memberName,
+        await this.findRecentMemberAdvisoryInFiles(filePaths, observedAfterMs),
+      ] as const;
     });
   }
 
   private async findRecentMemberAdvisoryInFiles(
-    filePaths: readonly string[]
+    filePaths: readonly string[],
+    observedAfterMs: number | null
   ): Promise<MemberRuntimeAdvisory | null> {
     for (const filePath of filePaths) {
-      const advisory = await this.readRecentApiRetryAdvisory(filePath);
+      const advisory = await this.readRecentApiRetryAdvisory(filePath, observedAfterMs);
       if (advisory) {
         return advisory;
       }
@@ -658,7 +738,8 @@ export class TeamMemberRuntimeAdvisoryService {
   }
 
   private async readRecentApiRetryAdvisory(
-    filePath: string
+    filePath: string,
+    observedAfterMs: number | null = null
   ): Promise<MemberRuntimeAdvisory | null> {
     let handle: fs.FileHandle | null = null;
     try {
@@ -682,7 +763,8 @@ export class TeamMemberRuntimeAdvisoryService {
       for (let index = lines.length - 1; index >= 0; index -= 1) {
         const line = lines[index]?.trim() ?? '';
         const advisory =
-          this.extractApiRetryAdvisory(line, now) ?? this.extractApiErrorAdvisory(line, now);
+          this.extractApiRetryAdvisory(line, now, observedAfterMs) ??
+          this.extractApiErrorAdvisory(line, now, observedAfterMs);
         if (advisory) {
           return advisory;
         }
@@ -695,7 +777,11 @@ export class TeamMemberRuntimeAdvisoryService {
     }
   }
 
-  private extractApiRetryAdvisory(line: string, now = Date.now()): MemberRuntimeAdvisory | null {
+  private extractApiRetryAdvisory(
+    line: string,
+    now = Date.now(),
+    observedAfterMs: number | null = null
+  ): MemberRuntimeAdvisory | null {
     if (
       !line ||
       (!line.includes('"subtype":"api_error"') && !line.includes('"subtype": "api_error"'))
@@ -735,6 +821,9 @@ export class TeamMemberRuntimeAdvisoryService {
       if (!retryInMs || !Number.isFinite(observedAt)) {
         return null;
       }
+      if (observedAfterMs != null && observedAt < observedAfterMs) {
+        return null;
+      }
 
       const retryUntil = observedAt + retryInMs;
       if (retryUntil <= now) {
@@ -760,7 +849,11 @@ export class TeamMemberRuntimeAdvisoryService {
     }
   }
 
-  private extractApiErrorAdvisory(line: string, now = Date.now()): MemberRuntimeAdvisory | null {
+  private extractApiErrorAdvisory(
+    line: string,
+    now = Date.now(),
+    observedAfterMs: number | null = null
+  ): MemberRuntimeAdvisory | null {
     if (
       !line ||
       (!line.includes('"isApiErrorMessage":true') &&
@@ -789,6 +882,9 @@ export class TeamMemberRuntimeAdvisoryService {
       const observedAt =
         typeof parsed.timestamp === 'string' ? Date.parse(parsed.timestamp) : Number.NaN;
       if (!Number.isFinite(observedAt) || observedAt < now - LOOKBACK_MS) {
+        return null;
+      }
+      if (observedAfterMs != null && observedAt < observedAfterMs) {
         return null;
       }
 

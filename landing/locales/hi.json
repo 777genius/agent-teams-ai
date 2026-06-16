@@ -7,7 +7,16 @@
     "download": "डाउनलोड",
     "pricing": "मुफ़्त",
     "faq": "FAQ",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "मेनू खोलें",
+    "closeMenu": "मेनू बंद करें",
+    "short": {
+      "screenshots": "शॉट्स",
+      "docs": "Docs",
+      "download": "डाउनलोड",
+      "comparison": "तुलना",
+      "pricing": "मुफ्त"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "ओपन सोर्स"
     },
     "watchDemo": "डेमो देखें",
-    "videoUnavailable": "वीडियो उपलब्ध नहीं"
+    "videoUnavailable": "वीडियो उपलब्ध नहीं",
+    "supportedProviders": "समर्थित AI providers",
+    "slogan": "बहुत कम करके बहुत कुछ करें",
+    "platformDefault": "आपके platform के लिए",
+    "guidesSetup": "Guides और setup",
+    "videoFrameLabel": "Agent Teams demo देखें",
+    "commandFeed": "Team command feed",
+    "liveDemo": "Live demo",
+    "demoVideoTitle": "Agent Teams demo video",
+    "demoTitle": "Agent Teams demo",
+    "demo": {
+      "ariaLabel": "Agent team demo",
+      "live": "LIVE",
+      "waiting": "Tasks का इंतज़ार...",
+      "activity": {
+        "authMiddleware": "Auth middleware implement हो रहा है...",
+        "unitTests": "API के लिए unit tests लिखे जा रहे हैं...",
+        "reviewPr": "PR #42 changes review हो रहे हैं...",
+        "ciPipeline": "CI/CD pipeline setup हो रही है...",
+        "refactorDatabase": "Database layer refactor हो रही है..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit tests",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "IN PROGRESS",
+        "review": "REVIEW",
+        "done": "DONE"
+      }
+    }
   },
   "download": {
     "title": "डाउनलोड",
     "detected": "पहचाना गया",
     "systemRequirements": "सिस्टम आवश्यकताएँ",
-    "version": "संस्करण {version}"
+    "version": "संस्करण {version}",
+    "readyToStart": "शुरू करने के लिए तैयार!"
   },
   "theme": {
     "dark": "डार्क",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "ऐप के असली स्क्रीनशॉट — कानबन बोर्ड, कोड रिव्यू, एजेंट टीमें, और बहुत कुछ।"
   },
   "common": {
-    "learnMore": "और जानें"
+    "learnMore": "और जानें",
+    "statusLabel": "स्थिति:",
+    "previous": "पिछला",
+    "next": "अगला"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "मैं इंतज़ार कर रहा हूँ",
     "links": {
       "github": "GitHub",
+      "author": "लेखक",
       "docs": "दस्तावेज़"
     }
   },

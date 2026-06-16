@@ -1,6 +1,6 @@
-import { type JSX, useCallback, useEffect, useRef, useState } from 'react';
+import { Component, type JSX, useCallback, useEffect, useRef, useState } from 'react';
 
-import type { CSSProperties, MutableRefObject, PropsWithChildren, Ref } from 'react';
+import type { CSSProperties, PropsWithChildren, ReactNode, Ref } from 'react';
 
 export const ENTRY_REVEAL_ANIMATION_MS = 700;
 export const ENTRY_REVEAL_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -18,11 +18,69 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
     ref(value);
     return;
   }
-  const mutableRef = ref as MutableRefObject<T | null>;
+  const mutableRef = ref as { current: T | null };
   mutableRef.current = value;
 }
 
-export const AnimatedHeightReveal = ({
+function needsAnimatedWrapper(props: AnimatedHeightRevealProps): boolean {
+  return Boolean(props.animate || props.className || props.style || props.containerRef);
+}
+
+const AnimatedHeightRevealPassthrough = ({ children }: PropsWithChildren): JSX.Element => (
+  // eslint-disable-next-line react/jsx-no-useless-fragment -- preserves a DOM-free passthrough slot.
+  <>{children}</>
+);
+
+class AnimatedHeightRevealSlot extends Component<AnimatedHeightRevealProps> {
+  private hasRenderedInner = needsAnimatedWrapper(this.props);
+
+  // eslint-disable-next-line sonarjs/function-return-type -- latch intentionally switches from passthrough to animated slot once.
+  render(): ReactNode {
+    const { animate, className, style, containerRef, children } = this.props;
+    const needsWrapper = needsAnimatedWrapper(this.props);
+    if (needsWrapper) {
+      this.hasRenderedInner = true;
+    }
+
+    if (!this.hasRenderedInner) {
+      return <AnimatedHeightRevealPassthrough>{children}</AnimatedHeightRevealPassthrough>;
+    }
+
+    return (
+      <AnimatedHeightRevealInner
+        animate={animate}
+        className={className}
+        style={style}
+        containerRef={containerRef}
+      >
+        {children}
+      </AnimatedHeightRevealInner>
+    );
+  }
+}
+
+export const AnimatedHeightReveal = (props: AnimatedHeightRevealProps): JSX.Element => {
+  // Latch the inner (hook-bearing, animating) variant for the lifetime of this slot.
+  // A call site that only passes `animate` (e.g. animate={isNewItem}) flips it true->false
+  // on the render right after the item appears. Without the latch the returned element type
+  // would switch from AnimatedHeightRevealInner to a bare Fragment on that flip, so React
+  // would unmount the inner subtree mid-reveal - aborting the entry animation and remounting
+  // the children (losing focus/internal state). Once the inner variant has rendered we keep
+  // rendering it so the element type stays stable; items that never need it keep the
+  // hook-free fast path.
+  return (
+    <AnimatedHeightRevealSlot
+      animate={props.animate}
+      className={props.className}
+      style={props.style}
+      containerRef={props.containerRef}
+    >
+      {props.children}
+    </AnimatedHeightRevealSlot>
+  );
+};
+
+const AnimatedHeightRevealInner = ({
   animate,
   className,
   style,

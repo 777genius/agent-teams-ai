@@ -5,6 +5,8 @@ packages:
   - packages/agent-graph
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
+  - '@esbuild/*'
+  - esbuild
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:

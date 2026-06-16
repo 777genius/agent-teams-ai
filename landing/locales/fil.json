@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Mga Feature",
+    "screenshots": "Mga Screenshot",
+    "docs": "Dokumentasyon",
+    "comparison": "Ikumpara",
+    "download": "I-download",
+    "pricing": "Libre",
+    "faq": "FAQ",
+    "viewOnGithub": "Tingnan sa GitHub",
+    "openMenu": "Buksan ang menu",
+    "closeMenu": "Isara ang menu",
+    "short": {
+      "screenshots": "Shots",
+      "docs": "Docs",
+      "download": "Kunin",
+      "comparison": "Ikumpara",
+      "pricing": "Libre"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "I-download Ngayon",
+    "ctaPrimary": "I-download para sa {platform}",
+    "ctaSecondary": "Ikumpara",
+    "ctaDocs": "Dokumentasyon",
+    "preview": "Preview ng produkto",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban Board",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Panoorin ang Demo",
+    "videoUnavailable": "Hindi available ang video",
+    "supportedProviders": "Mga sinusuportahang AI provider",
+    "slogan": "Magawa ang marami sa pamamagitan ng kaunting paggawa",
+    "platformDefault": "Para sa iyong platform",
+    "guidesSetup": "Mga gabay at setup",
+    "videoFrameLabel": "Panoorin ang demo ng Agent Teams",
+    "commandFeed": "Team command feed",
+    "liveDemo": "Live na demo",
+    "demoVideoTitle": "Demo video ng Agent Teams",
+    "demoTitle": "Demo ng Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo ng agent team",
+      "live": "LIVE",
+      "waiting": "Naghihintay ng mga task...",
+      "activity": {
+        "authMiddleware": "Ini-implement ang auth middleware...",
+        "unitTests": "Sumusulat ng unit test para sa API...",
+        "reviewPr": "Sinusuri ang mga pagbabago sa PR #42...",
+        "ciPipeline": "Itinatakda ang CI/CD pipeline...",
+        "refactorDatabase": "Nire-refactor ang database layer..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit test",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "GINAGAWA",
+        "review": "REVIEW",
+        "done": "TAPOS"
+      }
+    }
+  },
+  "download": {
+    "title": "I-download",
+    "detected": "Natukoy",
+    "systemRequirements": "Mga kinakailangan sa sistema",
+    "version": "Bersyon {version}",
+    "readyToStart": "Handa nang magsimula!"
+  },
+  "theme": {
+    "dark": "Madilim",
+    "light": "Maliwanag"
+  },
+  "language": {
+    "label": "Wika",
+    "search": "Maghanap ng wika…"
+  },
+  "features": {
+    "sectionTitle": "Lahat ng kailangan mo para sa AI agent orchestration",
+    "sectionSubtitle": "Mga makapangyarihang tool na talagang nagpapagana sa multi-agent collaboration."
+  },
+  "pricing": {
+    "sectionTitle": "Libreng i-install. Kasama ang libreng model.",
+    "sectionSubtitle": "Magsimula agad gamit ang isang libreng model na walang auth - walang account, API key, o credit card. Ikonekta ang Claude, Codex, OpenCode/OpenRouter, o ibang provider access kapag gusto mo ng mas maraming model.",
+    "getStarted": "I-download Ngayon",
+    "popular": "Libre",
+    "freeModelCallout": "Kasama ang libreng model na walang auth",
+    "note": "Walang bayad na tier ang Agent Teams. Pinapayagan ka ng libreng model na walang auth na subukan ito kaagad; opsyonal ang bayad na paggamit ng provider at kontrolado ng provider na pipiliin mo."
+  },
+  "testimonials": {
+    "sectionTitle": "Ano ang sinasabi ng mga developer",
+    "sectionSubtitle": "Tunay na feedback mula sa mga tunay na builder",
+    "showMore": "Magpakita pa",
+    "showLess": "Magpakita ng mas kaunti",
+    "feedbackCta": "Gusto mo bang ibahagi ang iyong karanasan? Magbukas ng issue sa"
+  },
+  "faq": {
+    "sectionTitle": "May mga tanong? May mga sagot kami",
+    "subtitle": "Lahat ng kailangan mong malaman tungkol sa Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Paano kami ikinukumpara",
+    "sectionSubtitle": "Feature-by-feature na paghahambing sa iba pang AI coding tool.",
+    "feature": "Feature",
+    "robotBubble": "Ikaw ang humusga",
+    "features": {
+      "crossTeam": "Cross-team na komunikasyon",
+      "agentMessaging": "Agent-to-agent na pagmemensahe",
+      "linkedTasks": "Mga naka-link na task",
+      "sessionAnalysis": "Pagsusuri ng session",
+      "taskAttachments": "Mga attachment ng task",
+      "hunkReview": "Hunk-level na review",
+      "codeEditor": "Built-in na code editor",
+      "fullAutonomy": "Buong autonomy",
+      "taskDeps": "Mga dependency ng task",
+      "reviewWorkflow": "Review workflow",
+      "zeroSetup": "Walang setup",
+      "kanban": "Kanban board",
+      "execLog": "Mga execution log",
+      "liveProcesses": "Mga live na proseso",
+      "runtimeLoad": "CPU/RAM bawat teammate",
+      "perTaskReview": "Code review bawat task",
+      "flexAutonomy": "Nababagong autonomy",
+      "worktree": "Git worktree isolation",
+      "multiAgent": "Pinaghalong AI teammate",
+      "liveWorkGraph": "Live na team map",
+      "liveTeam": "Mga live na teammate",
+      "teamWorkspace": "Team workspace",
+      "launchProof": "Status ng paglunsad ng teammate",
+      "orgGovernance": "Org chart / governance",
+      "budgetControls": "Mga kontrol sa badyet",
+      "price": "Presyo"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Tingnan ito sa aksyon",
+    "sectionSubtitle": "Mga tunay na screenshot mula sa app — kanban board, code review, agent teams, at higit pa."
+  },
+  "common": {
+    "learnMore": "Matuto pa",
+    "statusLabel": "Status:",
+    "previous": "Nakaraan",
+    "next": "Susunod"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI agent orchestration para sa mga developer",
+    "robotBubble": "Naghihintay ako",
+    "links": {
+      "github": "GitHub",
+      "author": "May-akda",
+      "docs": "Dokumentasyon"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI Agent Orchestration para sa mga Developer",
+    "homeDescription": "Libre at open-source na desktop app para sa AI agent teams. Magsimula sa isang libreng model na walang auth, pagkatapos ay ikonekta ang Claude, Codex, o OpenCode kapag kailangan mo ng mas maraming model.",
+    "downloadTitle": "I-download ang Agent Teams para sa macOS, Windows, at Linux",
+    "downloadDescription": "I-download ang Agent Teams para sa macOS, Windows, at Linux. Libre at open-source na desktop app para sa mga agent team ng Claude, Codex, at OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Hindi nahanap ang page",
+    "notFoundDescription": "Ang page na hinahanap mo ay hindi umiiral o inilipat na.",
+    "genericTitle": "May naganap na mali",
+    "genericDescription": "May naganap na hindi inaasahang error. Pakisubukang muli mamaya.",
+    "goHome": "Pumunta sa homepage"
+  }
+}

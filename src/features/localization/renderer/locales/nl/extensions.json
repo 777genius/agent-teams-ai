@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Aangepast toevoegen",
+      "openDashboard": "Dashboard openen",
+      "refreshCatalog": "Catalogus vernieuwen"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Skills: {{status}}"
+    },
+    "desktopOnly": "Alleen beschikbaar in de desktop-app.",
+    "provider": {
+      "checkingStatus": "Providerstatus controleren...",
+      "connected": "Verbonden",
+      "loading": "Laden...",
+      "needsSetup": "Configuratie nodig",
+      "readyToConfigure": "Klaar om te configureren",
+      "unsupported": "Niet ondersteund"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Extensies hebben de geconfigureerde runtime nodig om plugins, MCP-servers, skills en providerverbindingen te beheren.",
+      "checkingAvailabilityTitle": "Beschikbaarheid van extensie-runtime controleren",
+      "failedToStartDescription": "Extensies zijn uitgeschakeld totdat de runtime de opstartcontrole doorstaat. Open het Dashboard om het te herstellen of opnieuw te installeren.",
+      "failedToStartTitle": "De geconfigureerde runtime is gevonden maar kon niet starten",
+      "multimodelCapabilitiesDescription": "Providerondersteuning kan per sectie verschillen. Plugins worden alleen getoond waar de runtime expliciet ondersteuning aangeeft.",
+      "multimodelCapabilitiesTitle": "Multimodel-runtimemogelijkheden",
+      "needsSignInDescription": "{{runtime}} is gevonden{{version}}, maar plugin-installaties zijn uitgeschakeld totdat je inlogt vanuit het Dashboard.",
+      "needsSignInTitle": "{{runtime}} vereist inloggen",
+      "notAvailableDescription": "Extensies zijn uitgeschakeld totdat de runtime is geïnstalleerd. Open het Dashboard om het te installeren en probeer het opnieuw.",
+      "notAvailableTitle": "De geconfigureerde runtime is niet beschikbaar",
+      "readyDescription": "Plugins kunnen vanaf deze pagina worden geïnstalleerd{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} is klaar",
+      "requiredForMutations": "De geconfigureerde runtime is vereist om extensies te installeren of te verwijderen. Installeer of herstel het via het Dashboard."
+    },
+    "sessionsRestartWarning": "Lopende sessies nemen extensiewijzigingen pas over na een herstart.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Geheime sleutels voor onlinediensten. Voeg ze hier toe zodat plugins, servers en integraties verbinding kunnen maken en werken.",
+        "label": "API-sleutels"
+      },
+      "mcpServers": {
+        "description": "Verbindingen met externe tools en apps. Hiermee kan de runtime gegevens lezen of acties uitvoeren buiten deze app.",
+        "label": "MCP-servers"
+      },
+      "plugins": {
+        "description": "Kleine add-ons voor de runtime. In multimodel-modus zijn ze momenteel van toepassing op Anthropic-sessies indien ondersteund. Bredere providerondersteuning is in ontwikkeling.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "Kant-en-klare instructies voor veelvoorkomende taken. Ze helpen de runtime herhaalbare taken consistenter af te handelen.",
+        "label": "Skills"
+      }
+    },
+    "title": "Extensies"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} actief",
+    "browseByFit": "Bladeren op geschiktheid",
+    "capabilities": "Mogelijkheden",
+    "categories": "Categorieën",
+    "clearAllFilters": "Alle filters wissen",
+    "clearFilters": "Filters wissen",
+    "counts": {
+      "capabilities": "{{count}} mogelijkheden",
+      "categories": "{{count}} categorieën",
+      "plugins": "{{count}} plugins",
+      "capabilities_few": "{{count}} mogelijkheden",
+      "capabilities_many": "{{count}} mogelijkheden",
+      "capabilities_one": "{{count}} mogelijkheden",
+      "capabilities_other": "{{count}} mogelijkheden",
+      "categories_few": "{{count}} categorieën",
+      "categories_many": "{{count}} categorieën",
+      "categories_one": "{{count}} categorieën",
+      "categories_other": "{{count}} categorieën",
+      "plugins_few": "{{count}} plugins",
+      "plugins_many": "{{count}} plugins",
+      "plugins_one": "{{count}} plugins",
+      "plugins_other": "{{count}} plugins"
+    },
+    "empty": {
+      "description": "Kom later terug voor nieuwe plugins",
+      "filteredDescription": "Probeer je zoekopdracht of filtercriteria aan te passen",
+      "filteredTitle": "Geen plugins komen overeen met je filters",
+      "title": "Geen plugins beschikbaar"
+    },
+    "filterDescription": "Verfijn de catalogus op categorie, mogelijkheid of geïnstalleerde status.",
+    "installedOnly": "Alleen geïnstalleerd",
+    "providerSupportNotice": "Pluginondersteuning is momenteel alleen gegarandeerd voor Anthropic-sessies (Claude). We werken eraan om plugins voor alle agents te ondersteunen.",
+    "resultsUpdateInstantly": "Resultaten worden direct bijgewerkt terwijl je filters verfijnt.",
+    "searchPlaceholder": "Plugins zoeken...",
+    "selectedCount": "{{count}} geselecteerd",
+    "showing": "{{shown}} van {{total}} plugins getoond",
+    "sort": {
+      "category": "Categorie",
+      "nameAsc": "Naam A-Z",
+      "nameDesc": "Naam Z-A",
+      "popular": "Populair"
+    },
+    "activeFilters_few": "{{count}} actief",
+    "activeFilters_many": "{{count}} actief",
+    "activeFilters_one": "{{count}} actief",
+    "activeFilters_other": "{{count}} actief",
+    "selectedCount_few": "{{count}} geselecteerd",
+    "selectedCount_many": "{{count}} geselecteerd",
+    "selectedCount_one": "{{count}} geselecteerd",
+    "selectedCount_other": "{{count}} geselecteerd"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Toevoegen",
+      "cancel": "Annuleren",
+      "install": "Installeren",
+      "installing": "Installeren..."
+    },
+    "description": "Voeg handmatig een server toe zonder de catalogus.",
+    "errors": {
+      "installFailed": "Installatie mislukt",
+      "invalidServerName": "Ongeldige servernaam. Gebruik alfanumerieke tekens, koppeltekens, underscores en punten.",
+      "npmPackageRequired": "npm-pakketnaam is vereist",
+      "serverNameRequired": "Servernaam is vereist",
+      "serverUrlRequired": "Server-URL is vereist"
+    },
+    "fields": {
+      "environmentVariables": "Omgevingsvariabelen",
+      "headers": "Headers",
+      "npmPackage": "npm-pakket",
+      "scope": "Scope",
+      "serverName": "Servernaam",
+      "serverUrl": "Server-URL",
+      "transport": "Transport",
+      "transportType": "Transporttype",
+      "versionOptional": "Versie (optioneel)"
+    },
+    "title": "Aangepaste MCP-server toevoegen",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "waarde",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Externe MCP-servers kunnen nog steeds aangepaste headers of API-sleutels vereisen, zelfs als het register die niet beschrijft. Als de verbinding na de installatie mislukt, raadpleeg dan de providerdocumentatie.",
+      "required": "Deze server vereist authenticatie"
+    },
+    "diagnostics": {
+      "launchTarget": "Startdoel"
+    },
+    "form": {
+      "autoFilled": "Automatisch ingevuld",
+      "environmentVariables": "Omgevingsvariabelen",
+      "headers": "Headers",
+      "scope": "Scope",
+      "serverName": "Servernaam"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Deze server vereist handmatige configuratie. Raadpleeg de repository voor installatie-instructies.",
+      "manualSetupRequired": "Handmatige configuratie vereist",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Installatie beheren",
+      "install": "Server installeren"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repository",
+      "website": "Website"
+    },
+    "metadata": {
+      "author": "Auteur",
+      "githubStars": "GitHub-sterren",
+      "hosting": "Hosting",
+      "installType": "Installatietype",
+      "license": "Licentie",
+      "published": "Gepubliceerd",
+      "source": "Bron",
+      "updated": "Bijgewerkt",
+      "version": "Versie"
+    },
+    "scope": {
+      "local": "Lokaal",
+      "project": "Project"
+    },
+    "tools": {
+      "title": "Tools ({{count}})",
+      "title_few": "Tools ({{count}})",
+      "title_many": "Tools ({{count}})",
+      "title_one": "Tools ({{count}})",
+      "title_other": "Tools ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Annuleren",
+      "createSkill": "Skill aanmaken",
+      "preparing": "Voorbereiden...",
+      "reviewAndCreate": "Controleren en aanmaken",
+      "reviewAndSave": "Controleren en opslaan",
+      "saveSkill": "Skill opslaan"
+    },
+    "advanced": {
+      "customDescription": "Deze skill gebruikt een aangepast markdown-formaat, dus bewerk het hier rechtstreeks.",
+      "customTitle": "2. SKILL.md-editor",
+      "description": "De meeste mensen kunnen dit overslaan. Open het alleen als je directe controle over het ruwe markdown-bestand wilt.",
+      "hide": "Geavanceerde editor verbergen",
+      "resetFromStructuredFields": "Resetten vanuit gestructureerde velden",
+      "show": "Geavanceerde editor tonen",
+      "title": "4. Geavanceerde SKILL.md-editor"
+    },
+    "basics": {
+      "description": "Geef deze skill een duidelijke naam, kies wie het kan gebruiken en bepaal waar het moet komen te staan.",
+      "title": "1. Basis"
+    },
+    "description": {
+      "create": "Beschrijf de workflow in gewone taal, controleer de bestanden die worden aangemaakt en sla het vervolgens op.",
+      "edit": "Werk deze skill bij, controleer de resulterende bestandswijzigingen en sla het vervolgens op."
+    },
+    "extraFiles": {
+      "addedFiles": "Toegevoegde bestanden:",
+      "assets": "Assets",
+      "assetsDescription": "Voeg alleen screenshots of gebundelde media toe als ze helpen de workflow uit te leggen.",
+      "description": "Voeg alleen ondersteunende documenten, scripts of assets toe als deze skill ze echt nodig heeft.",
+      "lockedForEdits": "Root en map zijn vergrendeld voor bewerkingen",
+      "optionalDescription": "Voeg startbestanden toe die worden meegenomen in de controle en samen met `SKILL.md` worden weggeschreven.",
+      "optionalTitle": "Optionele bestanden",
+      "references": "Referenties",
+      "referencesDescription": "Voeg ondersteunende documenten, links of voorbeelden toe die de runtime kan raadplegen.",
+      "scripts": "Scripts",
+      "scriptsDescription": "Voeg hulpcommando's of configuratienotities toe. Controleer zorgvuldig voordat je deze skill deelt.",
+      "title": "3. Extra bestanden"
+    },
+    "fields": {
+      "compatibility": "Compatibiliteit",
+      "description": "Beschrijving",
+      "folderName": "Mapnaam",
+      "folderNameHint": "We stellen dit automatisch voor op basis van de skillnaam, zodat de controle direct werkt.",
+      "invocation": "Hoe het moet worden gebruikt",
+      "license": "Licentie",
+      "name": "Skillnaam",
+      "notes": "Extra notities of vangrails",
+      "root": "Waar het op te slaan",
+      "scope": "Wie het kan gebruiken",
+      "steps": "Belangrijkste te volgen stappen",
+      "whenToUse": "Wanneer je dit moet gebruiken"
+    },
+    "instructions": {
+      "description": "Deze secties genereren het skillbestand voor je, dus je hoeft geen markdown te bewerken tenzij je dat wilt.",
+      "locked": "Gestructureerde velden zijn vergrendeld omdat je hieronder bent overgeschakeld naar handmatige `SKILL.md`-bewerking.",
+      "title": "2. Instructies"
+    },
+    "invocation": {
+      "auto": "Kan automatisch worden gebruikt",
+      "manualOnly": "Alleen wanneer je erom vraagt"
+    },
+    "placeholders": {
+      "description": "Waar deze skill bij helpt",
+      "name": "Schrijf een beknopte skillnaam",
+      "notes": "Voorbeeld: Wijs op ontbrekende tests, regressies en riskante aannames.",
+      "steps": "1. Inspecteer de relevante bestanden.\n2. Leg eerst het belangrijkste risico uit.\n3. Stel de veiligste oplossing voor.",
+      "whenToUse": "Voorbeeld: Gebruik dit wanneer de taak een codereview of bug-triageverzoek is.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Een skill aanmaken",
+      "hint": "Controleer eerst de bestandswijzigingen en bevestig daarna het opslaan in de volgende stap.",
+      "saving": "Deze skill opslaan"
+    },
+    "root": {
+      "codexOnly": " - Alleen Codex",
+      "shared": " - Gedeeld"
+    },
+    "scope": {
+      "project": "Project: {{project}}",
+      "projectUnavailable": "Project niet beschikbaar",
+      "user": "Gebruiker"
+    },
+    "title": {
+      "create": "Skill aanmaken",
+      "edit": "Skill bewerken"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Annuleren",
+      "delete": "Verwijderen",
+      "deleteSkill": "Skill verwijderen",
+      "deleting": "Verwijderen...",
+      "editSkill": "Skill bewerken",
+      "openFolder": "Map openen",
+      "openSkillFile": "SKILL.md openen",
+      "retry": "Opnieuw proberen"
+    },
+    "badges": {
+      "assets": "Assets",
+      "autoUse": "Automatisch gebruik",
+      "hasScripts": "Bevat scripts",
+      "manualUse": "Handmatig gebruik",
+      "references": "Referenties",
+      "storedIn": "Opgeslagen in {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Deze skill verwijderen en naar de Prullenbak verplaatsen?",
+      "descriptionWithName": "\"{{name}}\" verwijderen en naar de Prullenbak verplaatsen? Je kunt het later indien nodig herstellen vanuit de Prullenbak.",
+      "title": "Skill verwijderen?"
+    },
+    "descriptionFallback": "Bekijk gevonden skill-metadata en ruwe instructies.",
+    "errors": {
+      "deleteFailed": "Kon skill niet verwijderen",
+      "loadFailed": "Kan deze skill niet laden."
+    },
+    "files": {
+      "advancedDetails": "Geavanceerde bestandsdetails",
+      "assets": "Assets",
+      "references": "Referenties",
+      "scripts": "Scripts",
+      "storedAt": "Opgeslagen op"
+    },
+    "includes": {
+      "assets": "assets",
+      "instructionsOnly": "Alleen de skill-instructies",
+      "references": "referenties",
+      "scripts": "scripts"
+    },
+    "invocation": {
+      "auto": "Wordt automatisch uitgevoerd wanneer het bij de taak past.",
+      "manualOnly": "Wordt alleen uitgevoerd wanneer je er expliciet om vraagt."
+    },
+    "issues": {
+      "bundledScripts": "Deze skill bevat gebundelde scripts",
+      "reviewCarefully": "Controleer deze skill zorgvuldig voordat je het gebruikt"
+    },
+    "loading": "Skill-details laden...",
+    "scope": {
+      "personal": "Je persoonlijke skills",
+      "projectOnly": "Alleen dit project"
+    },
+    "summary": {
+      "howUsed": "Hoe het wordt gebruikt",
+      "included": "Wat erbij hoort",
+      "whoCanUse": "Wie het kan gebruiken"
+    },
+    "titleFallback": "Skill-details"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Skill aanmaken",
+      "import": "Importeren"
+    },
+    "badges": {
+      "assets": "Assets",
+      "hasScripts": "Bevat scripts",
+      "needsAttention": "Aandacht nodig",
+      "references": "Referenties",
+      "storedIn": "Opgeslagen in {{root}}"
+    },
+    "configuredRuntime": "de geconfigureerde runtime",
+    "counts": {
+      "codexOnly": "{{count}} alleen Codex",
+      "personal": "{{count}} persoonlijk",
+      "project": "{{count}} project",
+      "shared": "{{count}} gedeeld",
+      "total": "{{count}} totaal",
+      "codexOnly_few": "{{count}} alleen Codex",
+      "codexOnly_many": "{{count}} alleen Codex",
+      "codexOnly_one": "{{count}} alleen Codex",
+      "codexOnly_other": "{{count}} alleen Codex",
+      "personal_few": "{{count}} persoonlijk",
+      "personal_many": "{{count}} persoonlijk",
+      "personal_one": "{{count}} persoonlijk",
+      "personal_other": "{{count}} persoonlijk",
+      "project_few": "{{count}} project",
+      "project_many": "{{count}} project",
+      "project_one": "{{count}} project",
+      "project_other": "{{count}} project",
+      "shared_few": "{{count}} gedeeld",
+      "shared_many": "{{count}} gedeeld",
+      "shared_one": "{{count}} gedeeld",
+      "shared_other": "{{count}} gedeeld",
+      "total_few": "{{count}} totaal",
+      "total_many": "{{count}} totaal",
+      "total_one": "{{count}} totaal",
+      "total_other": "{{count}} totaal"
+    },
+    "empty": {
+      "noMatches": "Geen skills komen overeen met je zoekopdracht",
+      "noMatchesDescription": "Probeer een andere zoekterm of wijzig de filters.",
+      "noSkills": "Nog geen skills",
+      "noSkillsDescription": "Maak je eerste skill aan om een herhaalbare workflow aan te leren, of importeer er een die je al gebruikt."
+    },
+    "filters": {
+      "all": "Alle skills",
+      "codexOnly": "Alleen Codex",
+      "hasScripts": "Bevat scripts",
+      "needsAttention": "Aandacht nodig",
+      "personal": "Persoonlijk",
+      "project": "Project",
+      "shared": "Gedeeld"
+    },
+    "hero": {
+      "codexAvailable": "Gebruik `.codex` wanneer een skill alleen voor Codex moet blijven.",
+      "codexUnavailable": "Bestaande `.codex`-skills blijven hier bewerkbaar, maar nieuwe skills die alleen voor Codex zijn, vereisen dat de Codex-runtime is ingeschakeld.",
+      "description": "Skills zijn herbruikbare instructies die de runtime helpen hetzelfde soort taak consistenter af te handelen.",
+      "guidance": "Gebruik persoonlijke skills voor gewoonten die je overal wilt. Gebruik projectskills voor workflows die alleen binnen één codebase zinvol zijn.",
+      "personalContext": "Je ziet op dit moment alleen je persoonlijke skills.",
+      "projectContext": "Je ziet skills voor {{project}} plus je persoonlijke skills.",
+      "title": "Herhaalbaar werk aanleren"
+    },
+    "invocation": {
+      "auto": "Wordt automatisch uitgevoerd wanneer het past",
+      "manualOnly": "Wordt alleen uitgevoerd wanneer je er expliciet om vraagt"
+    },
+    "loading": {
+      "loading": "Skills laden...",
+      "refreshing": "Skills vernieuwen..."
+    },
+    "runtimeAudience": "Gedeelde skills in `.claude`, `.cursor` en `.agents` zijn beschikbaar voor {{audience}}. Skills die in `.codex` zijn opgeslagen, blijven alleen voor Codex wanneer Codex-ondersteuning beschikbaar is.",
+    "scope": {
+      "project": "Dit project",
+      "user": "Persoonlijk"
+    },
+    "searchPlaceholder": "Zoeken op skillnaam of waar het bij helpt...",
+    "sections": {
+      "personal": {
+        "description": "Gewoonten en instructies die je overal beschikbaar wilt hebben.",
+        "title": "Persoonlijke skills"
+      },
+      "project": {
+        "description": "Workflows die alleen zinvol zijn voor deze codebase.",
+        "title": "Projectskills"
+      }
+    },
+    "sort": {
+      "label": "Skills sorteren",
+      "name": "Naam",
+      "recent": "Recent"
+    },
+    "status": {
+      "hasScripts": "Bevat scripts, controleer het dus zorgvuldig",
+      "needsAttention": "Aandacht nodig voordat je erop vertrouwt",
+      "ready": "Klaar voor gebruik"
+    },
+    "success": {
+      "created": "Skill succesvol aangemaakt.",
+      "imported": "Skill succesvol geïmporteerd.",
+      "saved": "Skill succesvol opgeslagen."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Onbekend",
+    "metadata": {
+      "author": "Auteur",
+      "category": "Categorie",
+      "source": "Bron",
+      "version": "Versie",
+      "capabilities": "Mogelijkheden",
+      "installs": "Installaties"
+    },
+    "scope": {
+      "label": "Scope:",
+      "options": {
+        "user": "Gebruiker (globaal)",
+        "project": "Project (gedeeld)",
+        "local": "Lokaal (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Startpagina",
+      "contact": "Contact"
+    },
+    "readme": {
+      "loading": "README laden...",
+      "empty": "Geen README beschikbaar."
+    }
+  },
+  "skillImport": {
+    "title": "Skill importeren",
+    "description": "Kies een bestaande skillmap, controleer wat er wordt gekopieerd en importeer het vervolgens naar een van je ondersteunde skill-locaties.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Kies een skillmap",
+        "description": "Dit moet een map zijn die al een `SKILL.md`-, `Skill.md`- of `skill.md`-bestand bevat."
+      },
+      "location": {
+        "title": "2. Bepaal waar het thuishoort",
+        "description": "Persoonlijke skills werken overal. Projectskills verschijnen alleen voor één codebase."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Bronmap",
+      "destinationFolderName": "Naam van bestemmingsmap",
+      "audience": "Wie het kan gebruiken",
+      "storage": "Waar het op te slaan"
+    },
+    "placeholders": {
+      "defaultFolderName": "Standaard de naam van de bronmap"
+    },
+    "actions": {
+      "browse": "Bladeren",
+      "cancel": "Annuleren",
+      "preparing": "Voorbereiden...",
+      "reviewAndImport": "Controleren en importeren",
+      "importSkill": "Skill importeren",
+      "backToImport": "Terug naar importeren"
+    },
+    "scope": {
+      "user": "Gebruiker",
+      "project": "Project: {{project}}",
+      "projectUnavailable": "Project niet beschikbaar"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Alleen Codex",
+      "shared": " - Gedeeld"
+    },
+    "reviewHint": "Controleer eerst de gekopieerde bestanden en bevestig daarna de import in de volgende stap.",
+    "reviewLabel": "Deze skill importeren",
+    "errors": {
+      "missingSkillFile": "Deze map lijkt nog geen skill te zijn. Het heeft een SKILL.md-, Skill.md- of skill.md-bestand nodig.",
+      "symbolicLinks": "Deze map bevat symbolische links. Importeer de echte bestanden in plaats van links.",
+      "tooManyFiles": "Deze skillmap is te groot om in één keer te importeren. Verwijder extra bestanden en probeer het opnieuw.",
+      "tooLarge": "Deze skillmap is te groot om veilig te importeren. Verklein grote assets en probeer het opnieuw.",
+      "invalidFolderName": "Kies een eenvoudiger naam voor de bestemmingsmap met letters, cijfers, punten, koppeltekens of underscores.",
+      "mustBeDirectory": "Kies een map om te importeren, geen enkel bestand.",
+      "reviewFailed": "Kon importwijzigingen niet controleren",
+      "importFailed": "Kon skill niet importeren"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Naam A→Z",
+      "nameDesc": "Naam Z→A",
+      "toolsDesc": "Meeste tools"
+    },
+    "health": {
+      "title": "MCP-statusoverzicht",
+      "checkingViaRuntime": "Geïnstalleerde MCP-servers controleren via {{runtime}} ...",
+      "lastChecked": "Laatst gecontroleerd {{time}}",
+      "description": "Voer diagnostiek uit vanaf deze pagina om de connectiviteit van geïnstalleerde MCP te verifiëren.",
+      "checking": "Controleren...",
+      "checkStatus": "Status controleren"
+    },
+    "diagnostics": {
+      "title": "Runtime MCP-diagnostiek",
+      "serversCount": "{{count}} servers",
+      "serversCount_one": "{{count}} server",
+      "serversCount_other": "{{count}} servers",
+      "waiting": "Wachten op diagnostiekresultaten...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Runtimestatus controleren...",
+        "checkingRuntimeAvailability": "Beschikbaarheid van runtime controleren...",
+        "runtimeFailedToStart": "De geconfigureerde runtime is gevonden maar kon niet starten. Open het Dashboard om het te herstellen of opnieuw te installeren.",
+        "runtimeRequired": "De geconfigureerde runtime is vereist. Installeer of herstel het via het Dashboard."
+      },
+      "serversCount_few": "{{count}} servers",
+      "serversCount_many": "{{count}} servers"
+    },
+    "searchPlaceholder": "MCP-servers zoeken...",
+    "runtime": {
+      "notAvailable": "{{runtime}} niet beschikbaar",
+      "notInstalled": "{{runtime}} niet geïnstalleerd",
+      "requiredDescription": "MCP-statuscontroles vereisen {{runtime}}. Ga naar het Dashboard om het te installeren of te herstellen."
+    },
+    "empty": {
+      "searchTitle": "Geen servers gevonden",
+      "title": "Geen MCP-servers beschikbaar",
+      "searchDescription": "Probeer een andere zoekterm",
+      "description": "Kom later terug voor nieuwe servers"
+    },
+    "loadMore": "Meer laden"
+  },
+  "apiKeys": {
+    "description": "Sla API-sleutels veilig op om automatisch in te vullen bij het installeren van MCP-servers.",
+    "storage": {
+      "osKeychain": "Sleutels worden versleuteld via {{backend}} en opgeslagen met beperkte bestandsrechten (alleen eigenaar).",
+      "localEncryption": "OS-sleutelhanger niet beschikbaar - sleutels worden lokaal versleuteld met AES-256. Installeer voor sterkere bescherming een sleutelhangerdienst (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "API-sleutel toevoegen",
+      "addFirst": "Voeg je eerste sleutel toe",
+      "edit": "Bewerken",
+      "copied": "Gekopieerd!",
+      "copyEnvVarName": "Naam omgevingsvariabele kopiëren",
+      "confirmDelete": "Klik nogmaals om te bevestigen",
+      "delete": "Verwijderen"
+    },
+    "empty": {
+      "title": "Geen API-sleutels opgeslagen",
+      "description": "Voeg sleutels toe om omgevingsvariabelen automatisch in te vullen bij het installeren van MCP-servers."
+    },
+    "form": {
+      "addTitle": "API-sleutel toevoegen",
+      "editTitle": "API-sleutel bewerken",
+      "addDescription": "Sla een API-sleutel op om automatisch in te vullen bij MCP-serverinstallaties.",
+      "editDescription": "Werk de sleuteldetails bij. Je moet de waarde opnieuw invoeren.",
+      "keychainUnavailable": "OS-sleutelhanger niet beschikbaar - sleutels lokaal versleuteld met AES-256. Installeer gnome-keyring voor bescherming op OS-niveau.",
+      "name": "Naam",
+      "namePlaceholder": "bijv. OpenAI Production",
+      "environmentVariableName": "Naam omgevingsvariabele",
+      "envVarPlaceholder": "bijv. OPENAI_API_KEY",
+      "value": "Waarde",
+      "reenterValue": "Sleutelwaarde opnieuw invoeren",
+      "valuePlaceholder": "sk-...",
+      "scope": "Scope",
+      "userScopeLabel": "Gebruiker (globaal)",
+      "projectScopeLabel": "Project: {{project}}",
+      "projectUnavailable": "Project niet beschikbaar",
+      "boundTo": "Gekoppeld aan {{path}}",
+      "cancel": "Annuleren",
+      "saving": "Opslaan...",
+      "update": "Bijwerken",
+      "save": "Opslaan",
+      "errors": {
+        "invalidEnvVarFormat": "Gebruik letters, cijfers en underscores. Moet beginnen met een letter of underscore.",
+        "nameRequired": "Naam is vereist",
+        "envVarRequired": "Naam van omgevingsvariabele is vereist",
+        "invalidEnvVar": "Ongeldige naam omgevingsvariabele",
+        "valueRequired": "Sleutelwaarde is vereist",
+        "projectScopeRequiresProject": "Projectgebonden API-sleutels vereisen een actief project",
+        "saveFailed": "Opslaan mislukt"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Skillwijzigingen controleren",
+    "description": "{{reviewLabel}} toont eerst een voorbeeld van de bestandssysteemwijzigingen. Er wordt niets weggeschreven totdat je hieronder bevestigt.",
+    "noPreview": "Geen voorbeeld beschikbaar.",
+    "confirmPromptPrefix": "Bekijk de diff hieronder en gebruik vervolgens",
+    "confirmPromptSuffix": "om deze wijzigingen toe te passen.",
+    "noChanges": "Nog geen bestandswijzigingen gedetecteerd.",
+    "binaryBadge": "binair",
+    "binaryPreviewHidden": "Voorbeeld van binair bestand wordt niet getoond. Het bestand wordt as-is gekopieerd.",
+    "summary": {
+      "fileChanges": "{{count}} bestandswijzigingen",
+      "fileChanges_one": "{{count}} bestandswijziging",
+      "fileChanges_other": "{{count}} bestandswijzigingen",
+      "new": "{{count}} nieuw",
+      "updated": "{{count}} bijgewerkt",
+      "removed": "{{count}} verwijderd",
+      "binary": "{{count}} binair",
+      "fileChanges_few": "{{count}} bestandswijzigingen",
+      "fileChanges_many": "{{count}} bestandswijzigingen"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} tools",
+    "toolsCount_one": "{{count}} tool",
+    "toolsCount_other": "{{count}} tools",
+    "envCount": "{{count}} env's",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} env's",
+    "auth": "Auth",
+    "byAuthor": "door {{author}}",
+    "hosting": {
+      "remote": "Extern",
+      "local": "Lokaal",
+      "both": "Beide"
+    },
+    "toolsCount_few": "{{count}} tools",
+    "toolsCount_many": "{{count}} tools",
+    "envCount_few": "{{count}} env's",
+    "envCount_many": "{{count}} env's",
+    "repository": "Repository",
+    "website": "Website"
+  },
+  "installButton": {
+    "installing": "Installeren...",
+    "removing": "Verwijderen...",
+    "done": "Klaar",
+    "retry": "Opnieuw proberen",
+    "uninstall": "Verwijderen",
+    "install": "Installeren"
+  },
+  "pluginCard": {
+    "official": "Officieel"
+  }
+}

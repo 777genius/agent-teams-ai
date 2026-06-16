@@ -38,11 +38,15 @@ import {
   isConnectionManagedRuntimeProvider,
   isOpenCodeCatalogHydrating,
   isProviderInventoryOnlyFallback,
+  shouldMaskCodexNegativeBootstrapState,
   shouldShowProviderConnectAction,
   shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
-import { getProviderRuntimeBackendSummary } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
+import {
+  buildProviderRuntimeBackendSummaryText,
+  getProviderRuntimeBackendSummary,
+} from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import {
   getProviderTerminalCommand,
   getProviderTerminalLogoutCommand,
@@ -112,6 +116,9 @@ const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
 
 /** Minimum banner height — prevents layout shift between states (loading → installed → checking). */
 const BANNER_MIN_H = 'min-h-[4.25rem]';
+const INSTALLED_BANNER_BACKGROUND =
+  'color-mix(in srgb, var(--color-surface-raised) 30%, transparent)';
+const PROVIDER_STATUS_CARD_BACKGROUND = 'var(--color-surface-raised)';
 const ANTHROPIC_LIMIT_REFRESH_INTERVAL_MS = 60 * 1000;
 const SHOW_ATLAS_CLOUD_OPENCODE_BANNER = false;
 const ATLAS_CLOUD_OPENCODE_PROVIDER_ID = 'atlascloud';
@@ -478,19 +485,6 @@ function isCodexSnapshotPending(
   return provider.providerId === 'codex' && codexSnapshotPending;
 }
 
-function shouldMaskCodexNegativeBootstrapState(
-  sourceProvider: CliProviderStatus | null,
-  mergedProvider: CliProviderStatus
-): boolean {
-  return (
-    sourceProvider?.providerId === 'codex' &&
-    sourceProvider.statusMessage === 'Checking...' &&
-    mergedProvider.providerId === 'codex' &&
-    mergedProvider.connection?.codex?.launchReadinessState === 'missing_auth' &&
-    mergedProvider.connection.codex.login.status === 'idle'
-  );
-}
-
 function getProviderStatusColor(statusText: string, authenticated: boolean): string {
   if (statusText === 'Checking...') {
     return 'var(--color-text-secondary)';
@@ -839,6 +833,11 @@ const InstalledBanner = ({
 }: InstalledBannerProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
+  const runtimeBackendSummaryText = useMemo(
+    () => buildProviderRuntimeBackendSummaryText(commonT),
+    [commonT]
+  );
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const styles = VARIANT_STYLES[variant];
   const visibleProviders = useMemo(
@@ -856,7 +855,7 @@ const InstalledBanner = ({
       className={`mb-6 rounded-lg border-l-4 px-4 ${
         showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'
       }`}
-      style={{ borderColor: styles.border, backgroundColor: styles.bg }}
+      style={{ borderColor: styles.border, backgroundColor: INSTALLED_BANNER_BACKGROUND }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -966,7 +965,7 @@ const InstalledBanner = ({
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
               ? getProviderCurrentRuntimeSummary(provider, settingsT)
-              : getProviderRuntimeBackendSummary(provider);
+              : getProviderRuntimeBackendSummary(provider, runtimeBackendSummaryText);
             const connectionModeSummary = getProviderConnectionModeSummary(provider, settingsT);
             const credentialSummary = getProviderCredentialSummary(provider, settingsT);
             const dashboardRateLimits = getDashboardRateLimitsForProvider(provider);
@@ -991,7 +990,8 @@ const InstalledBanner = ({
             const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
             const maskNegativeBootstrapState = shouldMaskCodexNegativeBootstrapState(
               sourceProvider,
-              provider
+              provider,
+              { providerLoading }
             );
             const showSkeleton =
               shouldShowProviderStatusSkeleton(provider, providerLoading) ||
@@ -1037,7 +1037,7 @@ const InstalledBanner = ({
               <div
                 key={provider.providerId}
                 className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-md p-2"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                style={{ backgroundColor: PROVIDER_STATUS_CARD_BACKGROUND }}
               >
                 <div className="col-span-2 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

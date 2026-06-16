@@ -1,3 +1,5 @@
+import { type JSX, memo, useCallback, useState } from 'react';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { MessageSquare } from 'lucide-react';
 
@@ -7,17 +9,22 @@ interface UnreadCommentsBadgeProps {
   pulseKey?: number;
 }
 
-export const UnreadCommentsBadge = ({
+export const UnreadCommentsBadge = memo(function UnreadCommentsBadge({
   unreadCount,
   totalCount,
   pulseKey,
-}: UnreadCommentsBadgeProps): React.JSX.Element | null => {
+}: UnreadCommentsBadgeProps): JSX.Element | null {
+  const [open, setOpen] = useState(false);
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+  }, []);
+
   if (totalCount === 0) return null;
 
   const shouldPulse = (pulseKey ?? 0) > 0;
 
   return (
-    <Tooltip>
+    <Tooltip open={open} onOpenChange={handleOpenChange}>
       <TooltipTrigger asChild>
         <span className="relative inline-flex size-6 shrink-0 items-center justify-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]">
           <span
@@ -38,11 +45,13 @@ export const UnreadCommentsBadge = ({
           </span>
         </span>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        {unreadCount > 0
-          ? `${unreadCount} unread comments, ${totalCount} total`
-          : `${totalCount} comments`}
-      </TooltipContent>
+      {open ? (
+        <TooltipContent side="top">
+          {unreadCount > 0
+            ? `${unreadCount} unread comments, ${totalCount} total`
+            : `${totalCount} comments`}
+        </TooltipContent>
+      ) : null}
     </Tooltip>
   );
-};
+});

@@ -1,12 +1,12 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+
 import {
   buildOpenCodeScenarioTeamRequest,
   buildScenarioRuntimeMessageInput,
@@ -63,7 +63,7 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     const launchInput = captureAdapter.launchInputs[0];
     expect(launchInput).toBeDefined();
     expect(launchInput?.prompt ?? '').toContain('production desktop app');
-    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual(['bob', 'jack']);
+    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
     expect(launchInput?.prompt?.length ?? 0).toBeGreaterThan(1_500);
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
@@ -78,7 +78,7 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(launchCommand?.leadPrompt).toContain('OpenCode members bootstrap silently');
     expect(launchCommand?.leadPrompt.length ?? 0).toBeGreaterThan(1_500);
     expect(launchCommand?.leadPrompt.length ?? 0).toBeLessThan(80_000);
-    expect(launchCommand?.members.map((member) => member.name)).toEqual(['bob', 'jack']);
+    expect(launchCommand?.members.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);
@@ -87,6 +87,12 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
       expect(member.prompt).toContain('AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1');
       expect(member.prompt).toContain('agent-teams_message_send');
       expect(member.prompt).toContain('Launch bootstrap is a silent attach');
+      expect(member.prompt).toContain(
+        'That bootstrap restriction is only about team registry/startup files'
+      );
+      expect(member.prompt).toContain(
+        'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+      );
       expect(member.prompt).toContain('stay idle silently');
       expect(member.prompt).not.toContain('Call SendMessage');
       expect(member.prompt).not.toContain('Use SendMessage');
@@ -125,6 +131,8 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(directCommand?.text).toContain('Include source="runtime_delivery"');
     expect(directCommand?.text).toContain('Include relayOfMessageId="semantic-direct-');
     expect(directCommand?.text).toContain('Action mode for this message: ask.');
+    expect(directCommand?.text).toContain('Action mode ASK is read-only');
+    expect(directCommand?.text).not.toContain('If this delivered message assigns implementation');
     expect(directCommand?.text).toContain('You must not end this turn empty.');
     expect(directCommand?.text).toContain('include taskRefs exactly as provided');
     expect(directCommand?.text).toContain('"displayId":"59560c95"');
@@ -137,6 +145,8 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(peerCommand?.text).toContain('to="jack"');
     expect(peerCommand?.text).toContain('from="bob"');
     expect(peerCommand?.text).toContain('Action mode for this message: delegate.');
+    expect(peerCommand?.text).toContain('Action mode DELEGATE is orchestration-only');
+    expect(peerCommand?.text).not.toContain('If this delivered message assigns implementation');
     expect(peerCommand?.text).toContain('"displayId":"3375c939"');
     expect(peerCommand?.taskRefs).toEqual([
       { taskId: 'task-3375c939-peer-relay', displayId: '3375c939', teamName },

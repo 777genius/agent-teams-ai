@@ -109,7 +109,7 @@ function normalizeProjectPathCandidate(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function resolveProjectPathFromConfig(
+export function resolveProjectPathFromConfig(
   config: Pick<TeamConfig, 'projectPath' | 'projectPathHistory' | 'members'>
 ): string | undefined {
   const direct = normalizeProjectPathCandidate(config.projectPath);
@@ -220,6 +220,26 @@ function cloneConfig(config: TeamConfig): TeamConfig {
 
 function cloneTeamSummaries(teams: readonly TeamSummary[]): TeamSummary[] {
   return structuredClone([...teams]);
+}
+
+// Deep-freeze a team-summary snapshot so it can be shared by every listTeams() reader
+// (and concurrent in-flight awaiters) instead of deep-cloning all summaries on every
+// call -- that per-read structuredClone was the single largest memory allocator during
+// launch. Consumers treat the result as read-only (audited: all iterate / map / filter
+// / serialize, none mutate), and freezing turns any stray future mutation into a loud
+// error instead of silent cross-caller corruption.
+function freezeTeamSummariesDeep(teams: TeamSummary[]): TeamSummary[] {
+  const freeze = (value: unknown): void => {
+    if (!value || typeof value !== 'object' || Object.isFrozen(value)) {
+      return;
+    }
+    Object.freeze(value);
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      freeze(nested);
+    }
+  };
+  freeze(teams);
+  return teams;
 }
 
 function classifyConfigReadTiming(timing: {
@@ -353,15 +373,23 @@ export class TeamConfigReader {
     const teamsBasePath = getTeamsBasePath();
     const cached = TeamConfigReader.listTeamsCacheByBasePath.get(teamsBasePath);
     if (cached && cached.expiresAt > Date.now()) {
-      return cloneTeamSummaries(cached.value);
+      // Frozen, independent snapshot -> safe to hand out directly. The per-read
+      // structuredClone that used to be here was the top memory allocator on launch.
+      return cached.value;
     }
 
     const existingRequest = TeamConfigReader.listTeamsInFlightByBasePath.get(teamsBasePath);
     if (existingRequest?.generationAtStart === TeamConfigReader.listTeamsGeneration) {
-      return cloneTeamSummaries(await existingRequest.promise);
+      return existingRequest.promise;
     }
 
-    const request = this.listTeamsUncached(teamsBasePath);
+    // Build ONE frozen, independent snapshot shared by this load's cache entry, its
+    // in-flight awaiters, and every later reader. cloneTeamSummaries() makes the copy
+    // independent of any cached config the (worker or fallback) loader may return;
+    // freezing then lets all readers share it without per-call deep clones.
+    const request = this.listTeamsUncached(teamsBasePath).then((teams) =>
+      freezeTeamSummariesDeep(cloneTeamSummaries(teams))
+    );
     const generationAtStart = TeamConfigReader.listTeamsGeneration;
     TeamConfigReader.listTeamsInFlightByBasePath.set(teamsBasePath, {
       promise: request,
@@ -369,14 +397,14 @@ export class TeamConfigReader {
     });
 
     try {
-      const teams = await request;
+      const frozenTeams = await request;
       if (TeamConfigReader.listTeamsGeneration === generationAtStart) {
         TeamConfigReader.listTeamsCacheByBasePath.set(teamsBasePath, {
-          value: cloneTeamSummaries(teams),
+          value: frozenTeams,
           expiresAt: Date.now() + LIST_TEAMS_CACHE_TTL_MS,
         });
       }
-      return cloneTeamSummaries(teams);
+      return frozenTeams;
     } finally {
       if (TeamConfigReader.listTeamsInFlightByBasePath.get(teamsBasePath)?.promise === request) {
         TeamConfigReader.listTeamsInFlightByBasePath.delete(teamsBasePath);

@@ -19,10 +19,11 @@ export function linkifyMentionsInMarkdown(
   text: string,
   memberColorMap: Map<string, string>
 ): string {
-  if (memberColorMap.size === 0) return text;
+  if (memberColorMap.size === 0 || !text.includes('@')) return text;
 
   // Sort by name length descending for greedy matching
   const names = [...memberColorMap.keys()].sort((a, b) => b.length - a.length);
+  const canonicalNameByLower = new Map(names.map((name) => [name.toLowerCase(), name]));
   const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const pattern = new RegExp(
     // eslint-disable-next-line no-useless-escape -- backslash-quote and backslash-hyphen needed in template literal for RegExp
@@ -32,7 +33,7 @@ export function linkifyMentionsInMarkdown(
 
   return text.replace(pattern, (_match: string, prefix: string, name: string) => {
     // Find the canonical name (case-insensitive lookup)
-    const canonical = names.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
+    const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
     const color = memberColorMap.get(canonical) ?? '';
     return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
   });
@@ -51,10 +52,11 @@ export function linkifyTeamMentionsInMarkdown(
   teamNames: ReadonlySet<string> | readonly string[]
 ): string {
   const names: readonly string[] = Array.isArray(teamNames) ? teamNames : [...teamNames];
-  if (names.length === 0) return text;
+  if (names.length === 0 || !text.includes('@')) return text;
 
   // Sort by name length descending for greedy matching
   const sorted = [...names].sort((a, b) => b.length - a.length);
+  const canonicalNameByLower = new Map(sorted.map((name) => [name.toLowerCase(), name]));
   const escaped = sorted.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const pattern = new RegExp(
     // eslint-disable-next-line no-useless-escape -- backslash-quote and backslash-hyphen needed in template literal for RegExp
@@ -63,7 +65,7 @@ export function linkifyTeamMentionsInMarkdown(
   );
 
   return text.replace(pattern, (_match: string, prefix: string, name: string) => {
-    const canonical = sorted.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
+    const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
     return `${prefix}[${canonical}](team://${encodeURIComponent(canonical)})`;
   });
 }

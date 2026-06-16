@@ -1,6 +1,5 @@
+import { readJsonlLines } from '@main/utils/jsonlLineReader';
 import { createLogger } from '@shared/utils/logger';
-import { createReadStream } from 'fs';
-import * as readline from 'readline';
 
 import { type TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { countLineChanges } from './UnifiedLineCounter';
@@ -179,10 +178,7 @@ export class MemberStatsComputer {
     };
 
     try {
-      const stream = createReadStream(filePath, { encoding: 'utf8' });
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-      for await (const line of rl) {
+      for await (const line of readJsonlLines(filePath)) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
@@ -332,9 +328,6 @@ export class MemberStatsComputer {
           // Skip malformed lines
         }
       }
-
-      rl.close();
-      stream.destroy();
     } catch (err) {
       logger.debug(`Failed to parse file ${filePath}: ${String(err)}`);
     }

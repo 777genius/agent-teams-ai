@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Vipengele",
+    "screenshots": "Picha za skrini",
+    "docs": "Nyaraka",
+    "comparison": "Linganisha",
+    "download": "Pakua",
+    "pricing": "Bure",
+    "faq": "Maswali",
+    "viewOnGithub": "Tazama kwenye GitHub",
+    "openMenu": "Fungua menyu",
+    "closeMenu": "Funga menyu",
+    "short": {
+      "screenshots": "Picha",
+      "docs": "Nyaraka",
+      "download": "Pakua",
+      "comparison": "Linganisha",
+      "pricing": "Bure"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Pakua Sasa",
+    "ctaPrimary": "Pakua kwa {platform}",
+    "ctaSecondary": "Linganisha",
+    "ctaDocs": "Nyaraka",
+    "preview": "Onyesho la awali la bidhaa",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Ubao wa Kanban",
+      "openSource": "Chanzo Huria"
+    },
+    "watchDemo": "Tazama Onyesho",
+    "videoUnavailable": "Video haipatikani",
+    "supportedProviders": "Watoa huduma za AI wanaoungwa mkono",
+    "slogan": "Kamilisha mengi kwa kufanya kidogo",
+    "platformDefault": "Kwa jukwaa lako",
+    "guidesSetup": "Miongozo na usanidi",
+    "videoFrameLabel": "Tazama onyesho la Agent Teams",
+    "commandFeed": "Mlisho wa amri za timu",
+    "liveDemo": "Onyesho la moja kwa moja",
+    "demoVideoTitle": "Video ya onyesho la Agent Teams",
+    "demoTitle": "Onyesho la Agent Teams",
+    "demo": {
+      "ariaLabel": "Onyesho la timu ya wakala",
+      "live": "MOJA KWA MOJA",
+      "waiting": "Inasubiri kazi...",
+      "activity": {
+        "authMiddleware": "Inatekeleza middleware ya uthibitishaji...",
+        "unitTests": "Inaandika majaribio ya kitengo kwa API...",
+        "reviewPr": "Inakagua mabadiliko ya PR #42...",
+        "ciPipeline": "Inasanidi pipeline ya CI/CD...",
+        "refactorDatabase": "Inarekebisha tabaka la hifadhidata..."
+      },
+      "tasks": {
+        "authApi": "API ya Uthibitishaji",
+        "unitTests": "Majaribio ya kitengo",
+        "ciSetup": "Usanidi wa CI"
+      },
+      "columns": {
+        "todo": "ZA KUFANYA",
+        "progress": "ZINAENDELEA",
+        "review": "UKAGUZI",
+        "done": "ZIMEKAMILIKA"
+      }
+    }
+  },
+  "download": {
+    "title": "Pakua",
+    "detected": "Imegunduliwa",
+    "systemRequirements": "Mahitaji ya mfumo",
+    "version": "Toleo {version}",
+    "readyToStart": "Tayari kuanza!"
+  },
+  "theme": {
+    "dark": "Giza",
+    "light": "Mwanga"
+  },
+  "language": {
+    "label": "Lugha",
+    "search": "Tafuta lugha…"
+  },
+  "features": {
+    "sectionTitle": "Kila kitu unachohitaji kwa uratibu wa wakala wa AI",
+    "sectionSubtitle": "Zana zenye nguvu zinazofanya ushirikiano wa mawakala wengi ufanye kazi kweli."
+  },
+  "pricing": {
+    "sectionTitle": "Bure kusakinisha. Modeli ya bure imejumuishwa.",
+    "sectionSubtitle": "Anza papo hapo na modeli ya bure bila uthibitishaji - hakuna akaunti, ufunguo wa API, au kadi ya mkopo. Unganisha Claude, Codex, OpenCode/OpenRouter, au ufikiaji wa mtoa huduma mwingine pale tu unapotaka modeli zaidi.",
+    "getStarted": "Pakua Sasa",
+    "popular": "Bure",
+    "freeModelCallout": "Modeli ya bure bila uthibitishaji imejumuishwa",
+    "note": "Agent Teams haina kiwango cha kulipia. Modeli ya bure bila uthibitishaji inakuruhusu kuijaribu mara moja; matumizi ya mtoa huduma yanayolipiwa ni ya hiari na yanadhibitiwa na mtoa huduma unayechagua."
+  },
+  "testimonials": {
+    "sectionTitle": "Watengenezaji wanasemaje",
+    "sectionSubtitle": "Maoni halisi kutoka kwa wajenzi halisi",
+    "showMore": "Onyesha zaidi",
+    "showLess": "Onyesha kidogo",
+    "feedbackCta": "Unataka kushiriki uzoefu wako? Fungua tatizo kwenye"
+  },
+  "faq": {
+    "sectionTitle": "Una maswali? Tuna majibu",
+    "subtitle": "Kila kitu unachohitaji kujua kuhusu Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Jinsi tunavyolinganishwa",
+    "sectionSubtitle": "Ulinganishaji wa kipengele kwa kipengele na zana nyingine za uandishi wa msimbo za AI.",
+    "feature": "Kipengele",
+    "robotBubble": "Amua mwenyewe",
+    "features": {
+      "crossTeam": "Mawasiliano baina ya timu",
+      "agentMessaging": "Ujumbe wa wakala kwa wakala",
+      "linkedTasks": "Kazi zilizounganishwa",
+      "sessionAnalysis": "Uchambuzi wa kipindi",
+      "taskAttachments": "Viambatisho vya kazi",
+      "hunkReview": "Ukaguzi wa kiwango cha kipande",
+      "codeEditor": "Kihariri cha msimbo kilichojengwa ndani",
+      "fullAutonomy": "Uhuru kamili",
+      "taskDeps": "Utegemezi wa kazi",
+      "reviewWorkflow": "Mtiririko wa ukaguzi",
+      "zeroSetup": "Hakuna usanidi",
+      "kanban": "Ubao wa Kanban",
+      "execLog": "Kumbukumbu za utekelezaji",
+      "liveProcesses": "Michakato hai",
+      "runtimeLoad": "CPU/RAM kwa kila mwanachama",
+      "perTaskReview": "Ukaguzi wa msimbo kwa kila kazi",
+      "flexAutonomy": "Uhuru unaonyumbulika",
+      "worktree": "Utengaji wa worktree ya Git",
+      "multiAgent": "Wanachama wa AI waliochanganyika",
+      "liveWorkGraph": "Ramani hai ya timu",
+      "liveTeam": "Wanachama hai",
+      "teamWorkspace": "Eneo la kazi la timu",
+      "launchProof": "Hali ya uzinduzi wa mwanachama",
+      "orgGovernance": "Chati ya shirika / utawala",
+      "budgetControls": "Vidhibiti vya bajeti",
+      "price": "Bei"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Iangalie ikifanya kazi",
+    "sectionSubtitle": "Picha halisi za skrini kutoka kwa programu — ubao wa kanban, ukaguzi wa msimbo, timu za wakala, na zaidi."
+  },
+  "common": {
+    "learnMore": "Jifunze zaidi",
+    "statusLabel": "Hali:",
+    "previous": "Iliyopita",
+    "next": "Inayofuata"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Uratibu wa wakala wa AI kwa watengenezaji",
+    "robotBubble": "Ninasubiri",
+    "links": {
+      "github": "GitHub",
+      "author": "Mwandishi",
+      "docs": "Nyaraka"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Uratibu wa Wakala wa AI kwa Watengenezaji",
+    "homeDescription": "Programu ya eneo-kazi ya bure, chanzo huria kwa timu za wakala wa AI. Anza na modeli ya bure bila uthibitishaji, kisha unganisha Claude, Codex, au OpenCode unapohitaji modeli zaidi.",
+    "downloadTitle": "Pakua Agent Teams kwa macOS, Windows, na Linux",
+    "downloadDescription": "Pakua Agent Teams kwa macOS, Windows, na Linux. Programu ya eneo-kazi ya bure ya chanzo huria kwa timu za wakala za Claude, Codex, na OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Ukurasa haukupatikana",
+    "notFoundDescription": "Ukurasa unaoutafuta haupo au umehamishwa.",
+    "genericTitle": "Hitilafu fulani imetokea",
+    "genericDescription": "Hitilafu isiyotarajiwa imetokea. Tafadhali jaribu tena baadaye.",
+    "goHome": "Nenda kwenye ukurasa wa nyumbani"
+  }
+}

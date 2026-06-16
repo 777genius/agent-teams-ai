@@ -44,10 +44,7 @@ const result = spawnSyncWithWindowsShell(
     'exec',
     'vitest',
     'run',
-    '--maxWorkers',
-    '1',
-    '--minWorkers',
-    '1',
+    '--maxWorkers=1',
     'test/main/services/team/OpenCodeTeamProvisioning.live.test.ts',
   ],
   {

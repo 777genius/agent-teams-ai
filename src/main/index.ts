@@ -40,7 +40,10 @@ import {
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
-  hasWorkSyncActiveRuntime,
+  hasUncertainWorkSyncRuntimeActivity,
+  hasWorkSyncReachableRuntime,
+  isRuntimeMemberActivityUncertainForWorkSync,
+  isRuntimeMemberActiveForWorkSync,
   type MemberWorkSyncFeatureFacade,
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
@@ -57,11 +60,22 @@ import {
   removeRuntimeProviderManagementIpc,
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
+import {
+  createTerminalWorkspaceFeature,
+  registerTerminalWorkspaceIpc,
+  removeTerminalWorkspaceIpc,
+  type TerminalWorkspaceFeatureFacade,
+} from '@features/terminal-workspace/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
+import {
+  computeTeamWatchScope,
+  setAliveTeamsProvider,
+  setTeamWatchScopeChangeListener,
+} from '@main/services/infrastructure/teamWatchScope';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -251,6 +265,11 @@ const logger = createLogger('App');
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
+
+if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
+  app.disableHardwareAcceleration();
+  logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
+}
 
 function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   return diagnostics.some(
@@ -910,6 +929,7 @@ let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
+let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
@@ -1412,8 +1432,23 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     }
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
+
+  // Scope team-root/task file watching to alive + UI-engaged teams so it no longer
+  // scales with the number of teams on disk. Inboxes and the teams root stay fully
+  // watched, so cross-team delivery, the lead inbox relay, and notifications are
+  // unaffected. Unsetting the provider on cleanup reverts to watching every team.
+  setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
+  setTeamWatchScopeChangeListener(() => {
+    void context.fileWatcher.refreshTeamWatchScope();
+  });
+  context.fileWatcher.setTeamWatchScopeProvider(() => computeTeamWatchScope());
+  void context.fileWatcher.refreshTeamWatchScope();
+
   teamChangeCleanup = () => {
     context.fileWatcher.off('team-change', teamChangeHandler);
+    setAliveTeamsProvider(null);
+    setTeamWatchScopeChangeListener(null);
+    context.fileWatcher.setTeamWatchScopeProvider(null);
     reconcileScheduler?.dispose();
   };
 
@@ -1795,7 +1830,10 @@ async function initializeServices(): Promise<void> {
   teammateToolTracker = new TeammateToolTracker(
     teamMemberLogsFinder,
     teamLogSourceTracker,
-    forwardTeamChange
+    (event) => {
+      forwardTeamChange(event);
+      memberWorkSyncFeature?.noteTeamChange(event);
+    }
   );
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
@@ -1852,42 +1890,145 @@ async function initializeServices(): Promise<void> {
     logger: createLogger('Feature:RecentProjects'),
   });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature();
+  terminalWorkspaceFeature = createTerminalWorkspaceFeature({
+    teamsBasePath: getTeamsBasePath(),
+    logger: createLogger('Feature:TerminalWorkspace'),
+  });
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
-  const hasMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean> => {
+  const getMemberWorkSyncRuntimeSnapshot = async (input: {
+    teamName: string;
+    memberName?: string;
+  }) => {
+    const timeoutMs = 15_000;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const snapshot = teamProvisioningService.getTeamAgentRuntimeSnapshot(input.teamName);
+    void snapshot.catch(() => undefined);
     try {
-      const snapshot = await teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName);
-      return hasWorkSyncActiveRuntime(snapshot);
+      return await Promise.race([
+        snapshot,
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => {
+            memberWorkSyncLogger.warn('member work sync runtime snapshot timed out', {
+              teamName: input.teamName,
+              ...(input.memberName ? { memberName: input.memberName } : {}),
+              timeoutMs,
+            });
+            resolve(null);
+          }, timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  };
+  const getMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot({ teamName });
+      if (!snapshot) {
+        return null;
+      }
+      const active = hasWorkSyncReachableRuntime(snapshot);
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot)) {
+        return null;
+      }
+      return active;
     } catch (error) {
       memberWorkSyncLogger.warn('member work sync runtime activity check failed', {
         teamName,
         error: String(error),
       });
-      return false;
+      return null;
+    }
+  };
+  const getMemberWorkSyncMemberRuntimeActivity = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot(input);
+      if (!snapshot) {
+        return null;
+      }
+      const active = isRuntimeMemberActiveForWorkSync(snapshot, input.memberName);
+      if (!active && isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName)) {
+        return null;
+      }
+      return active;
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync member runtime activity check failed', {
+        teamName: input.teamName,
+        memberName: input.memberName,
+        error: String(error),
+      });
+      return null;
     }
   };
   const isTeamActiveForMemberWorkSync = async (teamName: string): Promise<boolean> => {
-    if (
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
       teamProvisioningService.isTeamAlive(teamName) ||
       teamProvisioningService.hasProvisioningRun(teamName)
-    ) {
-      return true;
-    }
-    return hasMemberWorkSyncRuntimeActivity(teamName);
+    );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
-    if (teamProvisioningService.isTeamAlive(teamName)) {
-      return true;
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
     }
-    return hasMemberWorkSyncRuntimeActivity(teamName);
+    return teamProvisioningService.isTeamAlive(teamName);
+  };
+  const isMemberActiveForMemberWorkSync = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean> => {
+    const runtimeActive = await getMemberWorkSyncMemberRuntimeActivity(input);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
+      teamProvisioningService.isTeamAlive(input.teamName) ||
+      teamProvisioningService.hasProvisioningRun(input.teamName)
+    );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
+    const teams = (await teamDataService.listTeams()).filter((team) => !team.deletedAt);
+    const activeChecks = await Promise.allSettled(
+      teams.map(async (team) => {
+        try {
+          return {
+            teamName: team.teamName,
+            active: await isTeamActiveForMemberWorkSync(team.teamName),
+          };
+        } catch (error) {
+          memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
+            teamName: team.teamName,
+            error: String(error),
+          });
+          return {
+            teamName: team.teamName,
+            active:
+              teamProvisioningService.isTeamAlive(team.teamName) ||
+              teamProvisioningService.hasProvisioningRun(team.teamName),
+          };
+        }
+      })
+    );
     const activeTeamNames: string[] = [];
-    for (const team of await teamDataService.listTeams()) {
-      if (team.deletedAt) {
+    for (const check of activeChecks) {
+      if (check.status === 'rejected') {
+        memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
+          error: String(check.reason),
+        });
         continue;
       }
-      if (await isTeamActiveForMemberWorkSync(team.teamName)) {
-        activeTeamNames.push(team.teamName);
+      if (check.value.active) {
+        activeTeamNames.push(check.value.teamName);
       }
     }
     return activeTeamNames;
@@ -1899,6 +2040,7 @@ async function initializeServices(): Promise<void> {
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
     isTeamActive: isTeamActiveForMemberWorkSync,
+    isMemberActive: isMemberActiveForMemberWorkSync,
     canDispatchNudges: canDispatchMemberWorkSyncNudges,
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
     extraBusySignals: [
@@ -1906,19 +2048,27 @@ async function initializeServices(): Promise<void> {
         isBusy: (input) => teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
       },
     ],
-    resolveControlUrl: async () => getTeamControlApiBaseUrl(),
+    resolveControlUrl: async () => {
+      if (!httpServer.isRunning()) {
+        await startHttpServer(handleModeSwitch);
+      }
+      return getTeamControlApiBaseUrl();
+    },
     proofMissingRecoveryGuard: {
       shouldDispatch: async (input) => {
+        const isOpenCodeRecipient = await teamProvisioningService
+          .isOpenCodeRuntimeRecipient(input.teamName, input.memberName)
+          .catch(() => false);
+        if (!isOpenCodeRecipient) {
+          return { ok: true };
+        }
+
         const status = await teamProvisioningService.getOpenCodeRuntimeDeliveryStatus(
           input.teamName,
           input.originalMessageId
         );
         if (!status) {
-          return {
-            ok: false,
-            reason: 'proof_missing_recovery_record_missing',
-            retryable: false,
-          };
+          return { ok: true };
         }
 
         const impact = status.userVisibleImpact;
@@ -2102,18 +2252,24 @@ async function initializeServices(): Promise<void> {
       ? memberWorkSyncFeature.scheduleProofMissingRecovery(input)
       : Promise.resolve({ scheduled: false, reason: 'invalid' })
   );
+  teamProvisioningService.setMemberWorkSyncAcceptedReportChecker(async (input) => {
+    if (!memberWorkSyncFeature) {
+      return false;
+    }
+    const status = await memberWorkSyncFeature.getStatus(input);
+    const report = status.report;
+    if (report?.accepted !== true || report.agendaFingerprint !== status.agenda.fingerprint) {
+      return false;
+    }
+    if (report.state !== 'still_working' && report.state !== 'blocked') {
+      return true;
+    }
+    const expiresAtMs = Date.parse(report.expiresAt ?? '');
+    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+  });
   scheduleStartupTask(() => {
-    void teamDataService
-      .listTeams()
-      .then(async (teams) => {
-        const lifecycleActiveTeamNames = teams
-          .filter(
-            (team) =>
-              !team.deletedAt &&
-              (teamProvisioningService.isTeamAlive(team.teamName) ||
-                teamProvisioningService.hasProvisioningRun(team.teamName))
-          )
-          .map((team) => team.teamName);
+    void listMemberWorkSyncLifecycleActiveTeamNames()
+      .then(async (lifecycleActiveTeamNames) => {
         await memberWorkSyncFeature?.replayPendingReports(lifecycleActiveTeamNames);
         await memberWorkSyncFeature?.enqueueStartupScan(lifecycleActiveTeamNames);
       })
@@ -2195,6 +2351,7 @@ async function initializeServices(): Promise<void> {
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
+  registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
@@ -2391,6 +2548,8 @@ async function shutdownServices(): Promise<void> {
     codexAccountFeature = null;
     await runShutdownStep('member work sync dispose', () => memberWorkSyncFeature?.dispose());
     memberWorkSyncFeature = null;
+    await runShutdownStep('terminal workspace dispose', () => terminalWorkspaceFeature?.dispose());
+    terminalWorkspaceFeature = null;
 
     if (ptyTerminalService) {
       await runShutdownStep('PTY terminals kill', () => ptyTerminalService.killAll());
@@ -2401,6 +2560,7 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
+      removeTerminalWorkspaceIpc(ipcMain);
       removeMemberWorkSyncIpc(ipcMain);
       removeMemberLogStreamIpc(ipcMain);
     });

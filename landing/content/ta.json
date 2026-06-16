@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "நீங்கள் Boss, agents உங்கள் குழு. அவை tasks-ஐ தானாக நடத்தும், ஒருவருக்கொருவர் செய்தி அனுப்பும், code review செய்யும். நீங்கள் kanban board-ஐ பார்த்து காபி குடிக்கலாம்."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agent குழுக்கள்",
+      "description": "வேறு வேறு roles உடன் குழுக்கள் உருவாக்குங்கள். Agents parallel ஆக தானாக வேலை செய்து, பேசிக் கொண்டு, குழுக்களுக்குள் இணைந்து செயல்படும்."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Agents வேலை செய்யும் போது task status நேரடியாக மாறும். Drag, assign, review - எல்லாம் ஒரு visual board-ல்."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "ஒவ்வொரு task-க்கும் diff view, accept, reject, comment. Git support உடன் built-in code editor."
+    },
+    {
+      "id": "crossTeam",
+      "title": "குழுக்கள் இடையேயான தொடர்பு",
+      "description": "Agents ஒரே குழுவிலும் பல குழுக்களிடையிலும் message செய்கின்றன. Direct messages, task comments, quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mode",
+      "description": "தன் tasks-ஐ தானாக நிர்வகிக்கும் ஒரு agent-இல் தொடங்குங்கள். அதிக சக்தி தேவைப்பட்டால் முழு குழுவாக விரிவாக்குங்கள்."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processes",
+      "description": "இயங்கும் agents-ஐ பார்க்கவும், browser-ல் URLs திறக்கவும், token usage மற்றும் session context-ஐ real time-ல் கண்காணிக்கவும்."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams என்றால் என்ன?",
+      "answer": "உள்ளூர் coordination layer உடன் AI agent குழுக்களை இயக்கும் desktop app. Agents-க்கு roles இருக்கும், அவை autonomous ஆக வேலை செய்யும், kanban board மூலம் collaborate செய்யும், Anthropic அல்லது Codex-ல் இயங்கும்."
+    },
+    {
+      "id": "isFree",
+      "question": "இது உண்மையில் இலவசமா?",
+      "answer": "ஆம். App இலவசமும் open source-மும். Auth இல்லாத free model-ல் தொடங்கலாம் - பதிவு, API key, credit card எதுவும் தேவையில்லை. மேலும் models வேண்டுமெனில் Claude, Codex, OpenCode/OpenRouter அல்லது supported provider-ஐ இணைக்கவும்."
+    },
+    {
+      "id": "platforms",
+      "question": "எந்த platforms support?",
+      "answer": "macOS (Apple Silicon மற்றும் Intel), Windows, Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "எப்படி வேலை செய்கிறது?",
+      "answer": "App install செய்யுங்கள், team உருவாக்குங்கள், roles assign செய்யுங்கள். Agents parallel ஆக வேலை தொடங்கும். நீங்கள் kanban-ல் progress பார்க்கலாம், diffs review செய்யலாம், agents-ுடன் நேரடியாக பேசலாம்."
+    },
+    {
+      "id": "privacy",
+      "question": "என் code private ஆக இருக்குமா?",
+      "answer": "எல்லாம் உங்கள் machine-ல் locally ஓடும். Data வெளி servers-க்கு அனுப்பப்படாது. Code, conversations, agent activity அனைத்தும் private."
+    },
+    {
+      "id": "requirements",
+      "question": "தொடங்க என்ன தேவை?",
+      "answer": "App install செய்தாலே போதும் - auth இல்லாத free model-ல் தொடங்கி, தேவைப்பட்டால் UI-யில் provider-backed models இணைக்கவும்."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "உங்கள் platform-ஐ தேர்ந்தெடுத்து AI agent குழுக்களுடன் build செய்ய தொடங்குங்கள்."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "வேறு வேறு roles உடன் குழுக்கள் உருவாக்குங்கள். Agents parallel ஆக தானாக வேலை செய்து, பேசிக் கொண்டு, குழுக்களுக்குள் இணைந்து செயல்படும்."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "தன் tasks-ஐ தானாக நிர்வகிக்கும் ஒரு agent-இல் தொடங்குங்கள். அதிக சக்தி தேவைப்பட்டால் முழு குழுவாக விரிவாக்குங்கள்."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "ஒவ்வொரு task-க்கும் diff view, accept, reject, comment. Git support உடன் built-in code editor."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "இயங்கும் agents-ஐ பார்க்கவும், browser-ல் URLs திறக்கவும், token usage மற்றும் session context-ஐ real time-ல் கண்காணிக்கவும்."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "App install செய்தாலே போதும் - auth இல்லாத free model-ல் தொடங்கி, தேவைப்பட்டால் UI-யில் provider-backed models இணைக்கவும்."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agents ஒரே குழுவிலும் பல குழுக்களிடையிலும் message செய்கின்றன. Direct messages, task comments, quick actions."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "இலவசம்",
+      "price": "$0",
+      "period": "",
+      "description": "ஆம். App இலவசமும் open source-மும். Auth இல்லாத free model-ல் தொடங்கலாம் - பதிவு, API key, credit card எதுவும் தேவையில்லை. மேலும் models வேண்டுமெனில் Claude, Codex, OpenCode/OpenRouter அல்லது supported provider-ஐ இணைக்கவும்.",
+      "features": [
+        "Agent குழுக்கள்",
+        "Kanban board",
+        "Code review",
+        "குழுக்கள் இடையேயான தொடர்பு",
+        "Solo mode",
+        "Live processes",
+        "என் code private ஆக இருக்குமா?",
+        "தொடங்க என்ன தேவை?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

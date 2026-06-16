@@ -229,6 +229,71 @@ describe('TeamDataWorkerClient', () => {
     client.dispose();
   });
 
+  it('does not deduplicate getMessagesPage calls with different live overlays', async () => {
+    const { TeamDataWorkerClient } = await import(
+      '../../../../src/main/services/team/TeamDataWorkerClient'
+    );
+    const client = new TeamDataWorkerClient();
+
+    await Promise.all([
+      client.getMessagesPage('my-team', {
+        cursor: null,
+        limit: 50,
+        liveMessages: [
+          {
+            from: 'team-lead',
+            text: 'first',
+            timestamp: '2026-02-23T10:00:00.000Z',
+            read: true,
+            source: 'lead_process',
+            messageId: 'live-1',
+          },
+        ],
+      }),
+      client.getMessagesPage('my-team', {
+        cursor: null,
+        limit: 50,
+        liveMessages: [
+          {
+            from: 'team-lead',
+            text: 'second',
+            timestamp: '2026-02-23T10:00:01.000Z',
+            read: true,
+            source: 'lead_process',
+            messageId: 'live-2',
+          },
+        ],
+      }),
+    ]);
+
+    expect(hoisted.workers).toHaveLength(1);
+    expect(hoisted.workers[0].messages).toHaveLength(2);
+    expect(hoisted.workers[0].messages[0]).toMatchObject({
+      op: 'getMessagesPage',
+      payload: {
+        teamName: 'my-team',
+        options: {
+          cursor: null,
+          limit: 50,
+          liveMessages: [expect.objectContaining({ messageId: 'live-1' })],
+        },
+      },
+    });
+    expect(hoisted.workers[0].messages[1]).toMatchObject({
+      op: 'getMessagesPage',
+      payload: {
+        teamName: 'my-team',
+        options: {
+          cursor: null,
+          limit: 50,
+          liveMessages: [expect.objectContaining({ messageId: 'live-2' })],
+        },
+      },
+    });
+
+    client.dispose();
+  });
+
   it('sends best-effort message feed invalidation to the worker', async () => {
     const { TeamDataWorkerClient } = await import(
       '../../../../src/main/services/team/TeamDataWorkerClient'

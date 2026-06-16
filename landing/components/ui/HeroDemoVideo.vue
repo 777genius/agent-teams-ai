@@ -2,19 +2,15 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { mdiPlay } from "@mdi/js";
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const config = useRuntimeConfig();
 const muxAccentColor = "#00f0ff";
 const muxPrimaryColor = "#e6fbff";
 const muxSecondaryColor = "#020617";
 
 const muxPlaybackId = computed(() => String(config.public.muxPlaybackId || "").trim());
-const videoTitle = computed(() => (
-  locale.value === "ru" ? "Демо-видео Agent Teams" : "Agent Teams demo video"
-));
-const muxVideoTitle = computed(() => (
-  locale.value === "ru" ? "Демо Agent Teams" : "Agent Teams demo"
-));
+const videoTitle = computed(() => t("hero.demoVideoTitle"));
+const muxVideoTitle = computed(() => t("hero.demoTitle"));
 const muxPlayerUrl = computed(() => {
   if (!muxPlaybackId.value) return "";
 

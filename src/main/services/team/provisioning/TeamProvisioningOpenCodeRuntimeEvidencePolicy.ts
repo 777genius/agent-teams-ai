@@ -600,6 +600,10 @@ export function isBootstrapMemberEvidenceCurrentForMember(
     typeof current.runtimeRunId === 'string' ? current.runtimeRunId.trim() : '';
   const bootstrapRuntimeRunId =
     typeof bootstrapMember.runtimeRunId === 'string' ? bootstrapMember.runtimeRunId.trim() : '';
+  const hasSameRuntimeRunId =
+    currentRuntimeRunId.length > 0 &&
+    bootstrapRuntimeRunId.length > 0 &&
+    currentRuntimeRunId === bootstrapRuntimeRunId;
   if (
     currentRuntimeRunId.length > 0 &&
     bootstrapRuntimeRunId.length > 0 &&
@@ -631,10 +635,18 @@ export function isBootstrapMemberEvidenceCurrentForMember(
   const hasDurableSpawnBoundary =
     Number.isFinite(firstSpawnAcceptedMs) &&
     (!Number.isFinite(lastEvaluatedMs) || firstSpawnAcceptedMs <= lastEvaluatedMs);
-  const boundaryMs = hasDurableSpawnBoundary ? firstSpawnAcceptedMs : NaN;
-  const hasCompatibleRuntimeRunIdForSkew =
-    currentRuntimeRunId.length === 0 ||
-    (bootstrapRuntimeRunId.length > 0 && currentRuntimeRunId === bootstrapRuntimeRunId);
+  const currentBoundaryMs = hasDurableSpawnBoundary ? firstSpawnAcceptedMs : NaN;
+  const sameRunBootstrapBoundaryMs =
+    evidenceKind === 'confirmation' && hasSameRuntimeRunId && hasDurableBootstrapSpawnAcceptedAt
+      ? bootstrapFirstSpawnAcceptedMs
+      : NaN;
+  const boundaryMs =
+    Number.isFinite(currentBoundaryMs) && Number.isFinite(sameRunBootstrapBoundaryMs)
+      ? Math.min(currentBoundaryMs, sameRunBootstrapBoundaryMs)
+      : Number.isFinite(currentBoundaryMs)
+        ? currentBoundaryMs
+        : sameRunBootstrapBoundaryMs;
+  const hasCompatibleRuntimeRunIdForSkew = currentRuntimeRunId.length === 0 || hasSameRuntimeRunId;
   const withinBootstrapConfirmationClockSkew =
     evidenceKind === 'confirmation' &&
     Number.isFinite(boundaryMs) &&

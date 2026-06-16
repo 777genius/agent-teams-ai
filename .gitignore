@@ -15,6 +15,9 @@ electron.vite.config.*.mjs
 .runtime-download/
 resources/runtime/*
 !resources/runtime/.gitkeep
+.terminal-platform-download/
+resources/terminal-platform/*
+!resources/terminal-platform/.gitkeep
 
 # IDE
 .vscode/

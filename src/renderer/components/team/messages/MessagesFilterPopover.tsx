@@ -6,12 +6,13 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useStore } from '@renderer/store';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { Filter } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
 
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
+
+const EMPTY_OPTIONS: string[] = [];
+const EMPTY_COLOR_MAP = new Map<string, string>();
 
 export interface MessagesFilterState {
   from: Set<string>;
@@ -74,10 +75,19 @@ export const MessagesFilterPopover = ({
     }
   }, [open, filter.from, filter.to, filter.showNoise]);
 
-  const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const colorMap = useMemo(
+    () => (open ? buildMemberColorMap(members) : EMPTY_COLOR_MAP),
+    [members, open]
+  );
 
-  const fromOptions = useMemo(() => collectFromOptions(messages), [messages]);
-  const toOptions = useMemo(() => collectToOptions(messages), [messages]);
+  const fromOptions = useMemo(
+    () => (open ? collectFromOptions(messages) : EMPTY_OPTIONS),
+    [messages, open]
+  );
+  const toOptions = useMemo(
+    () => (open ? collectToOptions(messages) : EMPTY_OPTIONS),
+    [messages, open]
+  );
 
   const activeCount = (filter.from.size > 0 ? 1 : 0) + (filter.to.size > 0 ? 1 : 0);
   const draftCount = (draft.from.size > 0 ? 1 : 0) + (draft.to.size > 0 ? 1 : 0);
@@ -133,102 +143,107 @@ export const MessagesFilterPopover = ({
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('messages.filter.tooltip')}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="flex max-h-[70vh] w-72 flex-col p-0">
-        {/* Scrollable filter sections */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="border-b border-[var(--color-border)] p-3">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-              {t('messages.filter.from')}
-            </p>
-            <div className="space-y-1">
-              {fromOptions.length === 0 ? (
-                <p className="text-xs italic text-[var(--color-text-muted)]">
-                  {t('messages.filter.noData')}
-                </p>
-              ) : (
-                fromOptions.map((name) => (
-                  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
-                  <label
-                    key={name}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
-                  >
-                    <Checkbox
-                      checked={draft.from.has(name)}
-                      onCheckedChange={() => toggleFrom(name)}
-                    />
-                    <MemberBadge
-                      name={name}
-                      color={colorMap.get(name)}
-                      teamName={teamName}
-                      size="sm"
-                      hideAvatar={name === 'user'}
-                    />
-                  </label>
-                ))
-              )}
+      {open ? (
+        <PopoverContent align="end" className="flex max-h-[70vh] w-72 flex-col p-0">
+          {/* Scrollable filter sections */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="border-b border-[var(--color-border)] p-3">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                {t('messages.filter.from')}
+              </p>
+              <div className="space-y-1">
+                {fromOptions.length === 0 ? (
+                  <p className="text-xs italic text-[var(--color-text-muted)]">
+                    {t('messages.filter.noData')}
+                  </p>
+                ) : (
+                  fromOptions.map((name) => (
+                    // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
+                    <label
+                      key={name}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+                    >
+                      <Checkbox
+                        checked={draft.from.has(name)}
+                        onCheckedChange={() => toggleFrom(name)}
+                      />
+                      <MemberBadge
+                        name={name}
+                        color={colorMap.get(name)}
+                        teamName={teamName}
+                        size="sm"
+                        hideAvatar={name === 'user'}
+                      />
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="border-b border-[var(--color-border)] p-3">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                {t('messages.filter.to')}
+              </p>
+              <div className="space-y-1">
+                {toOptions.length === 0 ? (
+                  <p className="text-xs italic text-[var(--color-text-muted)]">
+                    {t('messages.filter.noData')}
+                  </p>
+                ) : (
+                  toOptions.map((name) => (
+                    // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
+                    <label
+                      key={name}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+                    >
+                      <Checkbox
+                        checked={draft.to.has(name)}
+                        onCheckedChange={() => toggleTo(name)}
+                      />
+                      <MemberBadge
+                        name={name}
+                        color={colorMap.get(name)}
+                        teamName={teamName}
+                        size="sm"
+                        hideAvatar={name === 'user'}
+                      />
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-          <div className="border-b border-[var(--color-border)] p-3">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-              {t('messages.filter.to')}
-            </p>
-            <div className="space-y-1">
-              {toOptions.length === 0 ? (
-                <p className="text-xs italic text-[var(--color-text-muted)]">
-                  {t('messages.filter.noData')}
-                </p>
-              ) : (
-                toOptions.map((name) => (
-                  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
-                  <label
-                    key={name}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
-                  >
-                    <Checkbox checked={draft.to.has(name)} onCheckedChange={() => toggleTo(name)} />
-                    <MemberBadge
-                      name={name}
-                      color={colorMap.get(name)}
-                      teamName={teamName}
-                      size="sm"
-                      hideAvatar={name === 'user'}
-                    />
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Fixed bottom section */}
-        <div className="shrink-0 border-t border-[var(--color-border)]">
-          <div className="border-b border-[var(--color-border)] p-3">
-            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox
-                checked={draft.showNoise}
-                onCheckedChange={() =>
-                  setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))
-                }
-              />
-              <span>{t('messages.filter.showStatusUpdates')}</span>
-            </label>
+          {/* Fixed bottom section */}
+          <div className="shrink-0 border-t border-[var(--color-border)]">
+            <div className="border-b border-[var(--color-border)] p-3">
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
+              <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
+                <Checkbox
+                  checked={draft.showNoise}
+                  onCheckedChange={() =>
+                    setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))
+                  }
+                />
+                <span>{t('messages.filter.showStatusUpdates')}</span>
+              </label>
+            </div>
+            <div className="flex justify-between gap-2 p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                disabled={draftCount === 0 && !draft.showNoise}
+                onClick={handleReset}
+              >
+                {t('messages.filter.actions.reset')}
+              </Button>
+              <Button size="sm" className="h-7 px-3 text-[11px]" onClick={handleSave}>
+                {t('messages.filter.actions.save')}
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-between gap-2 p-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              disabled={draftCount === 0 && !draft.showNoise}
-              onClick={handleReset}
-            >
-              {t('messages.filter.actions.reset')}
-            </Button>
-            <Button size="sm" className="h-7 px-3 text-[11px]" onClick={handleSave}>
-              {t('messages.filter.actions.save')}
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
+        </PopoverContent>
+      ) : null}
     </Popover>
   );
 };

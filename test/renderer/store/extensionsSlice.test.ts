@@ -255,6 +255,11 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       },
       codex: {
         preferredAuthMode: 'auto',
+        customProvider: {
+          enabled: false,
+          baseUrl: '',
+          model: '',
+        },
       },
     },
     runtime: {

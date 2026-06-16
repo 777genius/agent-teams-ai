@@ -3,8 +3,8 @@
  * argument building, cancellation, and error handling.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'events';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ExecutionRequest } from '../../../../src/main/services/schedule/ScheduledTaskExecutor';
 
@@ -61,6 +61,30 @@ function createMockProcess() {
   proc.stderr = new EventEmitter();
   proc.pid = 12345;
   return proc;
+}
+
+function readCodexLaunchConfigOverrides(args: string[]): string[] {
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--settings') {
+      continue;
+    }
+    const value = args[index + 1];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        codex?: { agent_teams_launch_config?: { config_overrides?: unknown } };
+      };
+      const overrides = parsed.codex?.agent_teams_launch_config?.config_overrides;
+      if (Array.isArray(overrides)) {
+        return overrides.filter((override): override is string => typeof override === 'string');
+      }
+    } catch {
+      // Ignore non-JSON settings values.
+    }
+  }
+  return [];
 }
 
 function makeRequest(overrides?: Partial<ExecutionRequest>): ExecutionRequest {
@@ -495,9 +519,10 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
-    );
+    expect(readCodexLaunchConfigOverrides(args)).toEqual([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]);
 
     proc.emit('close', 0);
   });
@@ -523,32 +548,40 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).not.toContain('service_tier="fast"');
-    expect(args).not.toContain('features.fast_mode=true');
+    expect(readCodexLaunchConfigOverrides(args)).not.toEqual(
+      expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
+    );
 
     proc.emit('close', 0);
   });
 
-  it('rejects explicit Codex schedule Fast before spawn when saved eligibility is false', async () => {
+  it('runs a standard Codex schedule when saved Fast eligibility is false', async () => {
+    const proc = createMockProcess();
+    mockSpawnCli.mockReturnValue(proc);
+
     const executor = new ScheduledTaskExecutor();
 
-    await expect(
-      executor.execute(
-        makeRequest({
-          config: {
-            cwd: '/tmp/project',
-            prompt: 'do it',
-            providerId: 'codex',
-            providerBackendId: 'codex-native',
-            model: 'gpt-5.4-mini',
-            fastMode: 'on',
-            resolvedFastMode: false,
-          },
-        })
-      )
-    ).rejects.toThrow('Codex Fast mode was requested');
+    void executor.execute(
+      makeRequest({
+        config: {
+          cwd: '/tmp/project',
+          prompt: 'do it',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+          fastMode: 'on',
+          resolvedFastMode: false,
+        },
+      })
+    );
+    await flushAsync();
 
-    expect(mockSpawnCli).not.toHaveBeenCalled();
+    const args = mockSpawnCli.mock.calls[0][1] as string[];
+    expect(readCodexLaunchConfigOverrides(args)).not.toEqual(
+      expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
+    );
+
+    proc.emit('close', 0);
   });
 
   it('does not hard-code Codex Fast schedules to GPT-5.4 when saved eligibility is true', async () => {
@@ -572,9 +605,10 @@ describe('ScheduledTaskExecutor', () => {
     await flushAsync();
 
     const args = mockSpawnCli.mock.calls[0][1] as string[];
-    expect(args).toEqual(
-      expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
-    );
+    expect(readCodexLaunchConfigOverrides(args)).toEqual([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]);
 
     proc.emit('close', 0);
   });

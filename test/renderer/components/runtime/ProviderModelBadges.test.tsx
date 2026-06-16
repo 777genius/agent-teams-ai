@@ -341,6 +341,16 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent?.match(/Opus 4\.6/g)).toHaveLength(1);
   });
 
+  it('does not render duplicate Anthropic Opus 4.8 model badges when the runtime reports the opus alias', () => {
+    const host = render(<ProviderModelBadges providerId="anthropic" models={['opus']} />);
+    const renderedModelLabels = Array.from(host.firstElementChild?.children ?? [])
+      .map((badge) => badge.firstElementChild?.textContent ?? '')
+      .filter(Boolean);
+
+    expect(renderedModelLabels.filter((label) => label === 'Opus 4.8')).toHaveLength(1);
+    expect(renderedModelLabels).toContain('Opus 4.8 (1M)');
+  });
+
   it('collapses long model lists and expands them inline without an internal scroll area', () => {
     const models = Array.from(
       { length: 18 },

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 
 const getCachedShellEnvMock = vi.fn<() => NodeJS.ProcessEnv | null>();
+const readClaudeUserAnthropicSettingsAuthEnvMock = vi.fn();
 const execCliMock = vi.fn<
   (
     binaryPath: string | null,
@@ -34,6 +35,11 @@ vi.mock('@main/utils/childProcess', () => ({
   ) => execCliMock(binaryPath, args, options),
 }));
 
+vi.mock('@main/services/runtime/claudeUserSettingsEnv', () => ({
+  readClaudeUserAnthropicSettingsAuthEnv: () =>
+    readClaudeUserAnthropicSettingsAuthEnvMock(),
+}));
+
 describe('ProviderConnectionService', () => {
   const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
   const originalCodexApiKey = process.env.CODEX_API_KEY;
@@ -43,7 +49,11 @@ describe('ProviderConnectionService', () => {
 
   function createConfig(
     authMode: 'auto' | 'oauth' | 'api_key' = 'auto',
-    compatibleEndpoint: { enabled: boolean; baseUrl: string } = { enabled: false, baseUrl: '' }
+    compatibleEndpoint: { enabled: boolean; baseUrl: string } = { enabled: false, baseUrl: '' },
+    codex: Partial<{
+      preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+      customProvider: { enabled: boolean; baseUrl: string; model: string };
+    }> = {}
   ) {
     return {
       providerConnections: {
@@ -53,7 +63,12 @@ describe('ProviderConnectionService', () => {
           compatibleEndpoint,
         },
         codex: {
-          preferredAuthMode: 'auto' as const,
+          preferredAuthMode: codex.preferredAuthMode ?? ('auto' as const),
+          customProvider: codex.customProvider ?? {
+            enabled: false,
+            baseUrl: '',
+            model: '',
+          },
         },
       },
       runtime: {
@@ -130,6 +145,7 @@ describe('ProviderConnectionService', () => {
     vi.resetModules();
     vi.clearAllMocks();
     getCachedShellEnvMock.mockReturnValue({});
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue(null);
     execCliMock.mockResolvedValue({ stdout: 'Logged in using ChatGPT', stderr: '' });
     delete process.env.OPENAI_API_KEY;
     delete process.env.CODEX_API_KEY;
@@ -402,6 +418,202 @@ describe('ProviderConnectionService', () => {
     expect(lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_AUTH_TOKEN');
     expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:1234');
     expect(result.ANTHROPIC_AUTH_TOKEN).toBe('shell-local-token');
+    expect(result.ANTHROPIC_API_KEY).toBe('');
+  });
+
+  it('imports Anthropic-compatible auth from Claude user settings in auto mode', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'ccs-internal-managed',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).toHaveBeenCalledTimes(1);
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:15721');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('ccs-internal-managed');
+    expect(result.ANTHROPIC_API_KEY).toBe('');
+  });
+
+  it('imports Anthropic API key auth from Claude user settings in auto mode', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_API_KEY: 'sk-ant-settings',
+      ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+      ANTHROPIC_AUTH_TOKEN: 'ignored-token',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).toHaveBeenCalledTimes(1);
+    expect(result.ANTHROPIC_BASE_URL).toBe('https://api.anthropic.com');
+    expect(result.ANTHROPIC_API_KEY).toBe('sk-ant-settings');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+  });
+
+  it('does not let Claude user settings override explicit Anthropic-compatible env', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'settings-token',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_AUTH_TOKEN: 'env-token',
+      },
+      'anthropic'
+    );
+
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('env-token');
+  });
+
+  it('does not import Claude user settings when OAuth mode is selected', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'settings-token',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('oauth'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).not.toHaveBeenCalled();
+    expect(result.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    expect(result.ANTHROPIC_API_KEY).toBeUndefined();
+  });
+
+  it('does not import Claude user settings when API key mode is selected', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'settings-token',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+    const issue = await service.getConfiguredConnectionIssue(result, 'anthropic');
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).not.toHaveBeenCalled();
+    expect(result.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    expect(result.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(issue).toContain('Anthropic API key mode is enabled');
+  });
+
+  it('can disable Claude user settings import for generic augment envs', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'settings-token',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.augmentConfiguredConnectionEnv({}, 'anthropic', undefined, {
+      allowClaudeUserSettingsAuthEnv: false,
+    });
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).not.toHaveBeenCalled();
+    expect(result.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    expect(result.ANTHROPIC_API_KEY).toBeUndefined();
+  });
+
+  it('prefers app-managed Anthropic-compatible endpoint over Claude user settings', async () => {
+    readClaudeUserAnthropicSettingsAuthEnvMock.mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+      ANTHROPIC_AUTH_TOKEN: 'settings-token',
+    });
+    const lookupPreferred = vi.fn(async (envVarName: string) =>
+      envVarName === 'ANTHROPIC_AUTH_TOKEN'
+        ? {
+            envVarName,
+            value: 'stored-local-token',
+          }
+        : null
+    );
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', {
+            enabled: true,
+            baseUrl: 'http://localhost:1234',
+          }),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+
+    expect(readClaudeUserAnthropicSettingsAuthEnvMock).not.toHaveBeenCalled();
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:1234');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('stored-local-token');
     expect(result.ANTHROPIC_API_KEY).toBe('');
   });
 
@@ -1200,6 +1412,115 @@ describe('ProviderConnectionService', () => {
     expect(result.CODEX_API_KEY).toBe('openai-stored-key');
   });
 
+  it('mirrors a stored Codex OpenAI key when metadata-only status checks allow it', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'OPENAI_API_KEY',
+      value: 'openai-stored-key',
+    });
+    const hasPreferred = vi.fn().mockResolvedValue(true);
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'codex', undefined, {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
+    });
+
+    expect(hasPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(result.OPENAI_API_KEY).toBe('openai-stored-key');
+    expect(result.CODEX_API_KEY).toBe('openai-stored-key');
+  });
+
+  it('does not mirror a stored Codex OpenAI key during metadata-only checks without allowlist', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'OPENAI_API_KEY',
+      value: 'openai-stored-key',
+    });
+    const hasPreferred = vi.fn().mockResolvedValue(true);
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv({}, 'codex', undefined, {
+      allowStoredApiKeyDecryption: false,
+    });
+
+    expect(hasPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(result.OPENAI_API_KEY).toBeUndefined();
+    expect(result.CODEX_API_KEY).toBeUndefined();
+  });
+
+  it('applies aggregate metadata-only allowlist without decrypting unrelated provider keys', async () => {
+    const lookupPreferred = vi.fn(async (envVarName: string) => {
+      if (envVarName === 'ANTHROPIC_AUTH_TOKEN') {
+        return { envVarName, value: 'anthropic-compatible-token' };
+      }
+      if (envVarName === 'OPENAI_API_KEY') {
+        return { envVarName, value: 'openai-stored-key' };
+      }
+      if (envVarName === 'GEMINI_API_KEY') {
+        return { envVarName, value: 'gemini-stored-key' };
+      }
+      return null;
+    });
+    const hasPreferred = vi.fn(async (envVarName: string) => envVarName === 'OPENAI_API_KEY');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        hasPreferred,
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', {
+            enabled: true,
+            baseUrl: 'http://localhost:1234',
+          }),
+      } as never
+    );
+
+    const result = await service.applyAllConfiguredConnectionEnv(
+      {},
+      {
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+      }
+    );
+
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:1234');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('anthropic-compatible-token');
+    expect(result.OPENAI_API_KEY).toBe('openai-stored-key');
+    expect(result.CODEX_API_KEY).toBe('openai-stored-key');
+    expect(result.GEMINI_API_KEY).toBeUndefined();
+    expect(lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_AUTH_TOKEN');
+    expect(lookupPreferred).toHaveBeenCalledWith('OPENAI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalledWith('GEMINI_API_KEY');
+    expect(lookupPreferred).not.toHaveBeenCalledWith('ANTHROPIC_API_KEY');
+  });
+
   it('keeps ambient OpenAI credentials for native Codex launches', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
@@ -1424,6 +1745,82 @@ describe('ProviderConnectionService', () => {
 
     expect(issue).toBeNull();
     expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+  });
+
+  it('refreshes a stale blocked Codex snapshot before reporting an auth issue', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const staleMissingAuthSnapshot = createCodexSnapshot({
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage:
+        'Codex native requires OPENAI_API_KEY or CODEX_API_KEY, or a connected ChatGPT account.',
+      launchReadinessState: 'missing_auth',
+      managedAccount: null,
+      requiresOpenaiAuth: true,
+      localAccountArtifactsPresent: true,
+      localActiveChatgptAccountPresent: true,
+    });
+    const refreshSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(staleMissingAuthSnapshot),
+      refreshSnapshot,
+    });
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'codex');
+
+    expect(issue).toBeNull();
+    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+  });
+
+  it('does not refresh a stale Codex auth snapshot when launch env already provides an API key', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const refreshSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          effectiveAuthMode: null,
+          launchAllowed: false,
+          launchIssueMessage:
+            'Codex native requires OPENAI_API_KEY or CODEX_API_KEY, or a connected ChatGPT account.',
+          launchReadinessState: 'missing_auth',
+          managedAccount: null,
+          requiresOpenaiAuth: true,
+          localAccountArtifactsPresent: true,
+          localActiveChatgptAccountPresent: true,
+        })
+      ),
+      refreshSnapshot,
+    });
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        CODEX_API_KEY: 'native-key',
+      },
+      'codex'
+    );
+
+    expect(issue).toBeNull();
+    expect(refreshSnapshot).not.toHaveBeenCalled();
   });
 
   it('refreshes a runtime-missing Codex snapshot before mutating strict launch env', async () => {
@@ -1830,7 +2227,14 @@ describe('ProviderConnectionService', () => {
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/opt/codex/bin/codex.cmd',
-      ['-c', 'forced_login_method="chatgpt"', 'login', 'status'],
+      [
+        '-c',
+        'forced_login_method="chatgpt"',
+        '-c',
+        'service_tier="fast"',
+        'login',
+        'status',
+      ],
       expect.objectContaining({
         timeout: 5_000,
         windowsHide: true,
@@ -2043,7 +2447,14 @@ describe('ProviderConnectionService', () => {
       '/mock/claude-multimodel'
     );
 
-    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']);
+    expect(args).toEqual([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+        },
+      }),
+    ]);
   });
 
   it('returns an api forced_login_method override for Codex API-key launches', async () => {
@@ -2072,7 +2483,14 @@ describe('ProviderConnectionService', () => {
       '/mock/claude-multimodel'
     );
 
-    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"api"}}']);
+    expect(args).toEqual([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'api',
+        },
+      }),
+    ]);
   });
 
   it('keeps codex exec style config overrides for direct Codex binary launches', async () => {
@@ -2102,6 +2520,239 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(args).toEqual(['-c', 'forced_login_method="api"']);
+  });
+
+  it('adds custom provider settings for managed Codex API-key launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'api',
+          agent_teams_custom_provider: {
+            config_overrides: [
+              'model_provider="agent_teams_custom"',
+              'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+              'model_providers.agent_teams_custom.base_url="https://gateway.example.com/v1"',
+              'model_providers.agent_teams_custom.wire_api="responses"',
+              'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+            ],
+          },
+        },
+      }),
+    ]);
+  });
+
+  it('adds direct -c custom provider settings for direct Codex API-key launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'http://127.0.0.1:8080/v1',
+              model: 'local-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/usr/local/bin/codex'
+    );
+
+    expect(args).toEqual([
+      '-c',
+      'forced_login_method="api"',
+      '-c',
+      'model_provider="agent_teams_custom"',
+      '-c',
+      'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+      '-c',
+      'model_providers.agent_teams_custom.base_url="http://127.0.0.1:8080/v1"',
+      '-c',
+      'model_providers.agent_teams_custom.wire_api="responses"',
+      '-c',
+      'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+    ]);
+  });
+
+  it('does not pass custom provider settings when Codex resolves to ChatGPT mode', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'chatgpt',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          preferredAuthMode: 'chatgpt',
+          effectiveAuthMode: 'chatgpt',
+          apiKey: {
+            available: true,
+            source: 'stored',
+            sourceLabel: 'Stored in app',
+          },
+        })
+      ),
+    } as never);
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual([
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+        },
+      }),
+    ]);
+  });
+
+  it('synthesizes the Codex model catalog from the custom provider model', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const directCatalog = vi.fn().mockResolvedValue(null);
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', { enabled: false, baseUrl: '' }, {
+            preferredAuthMode: 'api_key',
+            customProvider: {
+              enabled: true,
+              baseUrl: 'https://gateway.example.com/v1',
+              model: 'gateway-codex-model',
+            },
+          }),
+      } as never
+    );
+    service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);
+
+    const enriched = await service.enrichProviderStatus({
+      providerId: 'codex',
+      displayName: 'Codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'api_key',
+      verificationState: 'verified',
+      models: ['gpt-5.4'],
+      subscriptionRateLimits: {
+        primary: null,
+        secondary: null,
+      },
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'app-server' },
+      },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: {
+          plugins: { status: 'unsupported', ownership: 'shared' },
+          mcp: { status: 'supported', ownership: 'shared' },
+          skills: { status: 'supported', ownership: 'shared' },
+          apiKeys: { status: 'supported', ownership: 'shared' },
+        },
+      },
+    });
+
+    expect(directCatalog).not.toHaveBeenCalled();
+    expect(enriched.models).toEqual(['gateway-codex-model']);
+    expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gateway-codex-model');
+    expect(enriched.modelCatalog?.models).toHaveLength(1);
+    expect(enriched.modelCatalog?.models[0]).toMatchObject({
+      id: 'gateway-codex-model',
+      launchModel: 'gateway-codex-model',
+      supportsFastMode: false,
+      source: 'static-fallback',
+    });
+    expect(enriched.subscriptionRateLimits).toBeNull();
+    expect(enriched.backend?.endpointLabel).toBe('https://gateway.example.com/v1');
+    expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
+      dynamic: false,
+      source: 'static-fallback',
+    });
   });
 
   it('prefers the orchestrator Codex model catalog over the legacy direct app-server fallback', async () => {

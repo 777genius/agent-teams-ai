@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { MemberWorkSyncTaskImpactResolver } from '@features/member-work-sync/main/adapters/input/MemberWorkSyncTaskImpactResolver';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamTask } from '@shared/types';
 
@@ -112,7 +111,7 @@ describe('MemberWorkSyncTaskImpactResolver', () => {
         subject: 'Depends on display id',
         status: 'pending',
         owner: 'tom',
-        blockedBy: ['11111111'],
+        blockedBy: [' 11111111 '],
       },
     ];
     const resolver = new MemberWorkSyncTaskImpactResolver({
@@ -120,6 +119,116 @@ describe('MemberWorkSyncTaskImpactResolver', () => {
       kanbanManager: { getState: vi.fn(async () => ({ tasks: {} })) },
       activeMemberSource: {
         loadActiveMemberNames: vi.fn(async () => ['alice', 'team-lead', 'tom']),
+      },
+    } as never);
+
+    await expect(resolver.resolve({ teamName: 'team-a', taskId: 'task-a' })).resolves.toEqual({
+      memberNames: ['alice', 'tom'],
+      fallbackTeamWide: false,
+      diagnostics: [],
+    });
+  });
+
+  it('targets dependent owners when a display-id dependency is ambiguous but includes the changed task', async () => {
+    const tasks: TeamTask[] = [
+      {
+        id: 'task-a',
+        displayId: '#11111111',
+        subject: 'Changed dependency',
+        status: 'in_progress',
+        owner: 'alice',
+      },
+      {
+        id: 'task-duplicate',
+        displayId: '#11111111',
+        subject: 'Duplicate display id',
+        status: 'completed',
+        owner: 'zoe',
+      },
+      {
+        id: 'task-b',
+        subject: 'Depends on ambiguous display id',
+        status: 'pending',
+        owner: 'tom',
+        blockedBy: [' 11111111 '],
+      },
+    ];
+    const resolver = new MemberWorkSyncTaskImpactResolver({
+      taskReader: { getTasks: vi.fn(async () => tasks) },
+      kanbanManager: { getState: vi.fn(async () => ({ tasks: {} })) },
+      activeMemberSource: {
+        loadActiveMemberNames: vi.fn(async () => ['alice', 'team-lead', 'tom', 'zoe']),
+      },
+    } as never);
+
+    await expect(resolver.resolve({ teamName: 'team-a', taskId: 'task-a' })).resolves.toEqual({
+      memberNames: ['alice', 'tom'],
+      fallbackTeamWide: false,
+      diagnostics: [],
+    });
+  });
+
+  it('falls back team-wide when the changed task reference is ambiguous', async () => {
+    const tasks: TeamTask[] = [
+      {
+        id: 'task-a',
+        displayId: '#11111111',
+        subject: 'First duplicate',
+        status: 'in_progress',
+        owner: 'alice',
+      },
+      {
+        id: 'task-b',
+        displayId: '#11111111',
+        subject: 'Second duplicate',
+        status: 'pending',
+        owner: 'tom',
+      },
+    ];
+    const resolver = new MemberWorkSyncTaskImpactResolver({
+      taskReader: { getTasks: vi.fn(async () => tasks) },
+      kanbanManager: { getState: vi.fn(async () => ({ tasks: {} })) },
+      activeMemberSource: {
+        loadActiveMemberNames: vi.fn(async () => ['alice', 'team-lead', 'tom']),
+      },
+    } as never);
+
+    await expect(resolver.resolve({ teamName: 'team-a', taskId: '#11111111' })).resolves.toEqual({
+      memberNames: [],
+      fallbackTeamWide: true,
+      diagnostics: ['task_reference_ambiguous'],
+    });
+  });
+
+  it('prefers canonical task ids over colliding display ids', async () => {
+    const tasks: TeamTask[] = [
+      {
+        id: 'task-a',
+        displayId: '#11111111',
+        subject: 'Changed dependency',
+        status: 'completed',
+        owner: 'alice',
+      },
+      {
+        id: 'task-collision',
+        displayId: '#task-a',
+        subject: 'Display collision',
+        status: 'in_progress',
+        owner: 'zoe',
+      },
+      {
+        id: 'task-b',
+        subject: 'Depends on canonical id',
+        status: 'pending',
+        owner: 'tom',
+        blockedBy: ['task-a'],
+      },
+    ];
+    const resolver = new MemberWorkSyncTaskImpactResolver({
+      taskReader: { getTasks: vi.fn(async () => tasks) },
+      kanbanManager: { getState: vi.fn(async () => ({ tasks: {} })) },
+      activeMemberSource: {
+        loadActiveMemberNames: vi.fn(async () => ['alice', 'team-lead', 'tom', 'zoe']),
       },
     } as never);
 

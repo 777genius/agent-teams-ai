@@ -589,7 +589,11 @@
     "actions": {
       "add": "Adicionar chave API",
       "addFirst": "Adicionar sua primeira chave",
-      "edit": "Editar"
+      "edit": "Editar",
+      "copied": "Copiado!",
+      "copyEnvVarName": "Copiar nome da variável env",
+      "confirmDelete": "Clique novamente para confirmar",
+      "delete": "Excluir"
     },
     "empty": {
       "title": "Nenhuma chave API salva",

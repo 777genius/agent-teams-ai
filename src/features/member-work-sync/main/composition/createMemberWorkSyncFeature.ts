@@ -63,13 +63,102 @@ import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 import type { TeamChangeEvent } from '@shared/types';
 
 const STALE_STATUS_MAX_AGE_MS = 2 * 60_000;
+const CAUGHT_UP_STATUS_MAX_AGE_MS = 5 * 60_000;
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
+
+function isAcceptedWorkLeaseStatus(status: MemberWorkSyncStatus): boolean {
+  return (
+    status.report?.accepted === true &&
+    (status.state === 'still_working' || status.state === 'blocked')
+  );
+}
+
+function getAcceptedWorkLeaseStaleness(
+  status: MemberWorkSyncStatus,
+  nowMs: number
+): 'missing' | 'expired' | null {
+  if (!isAcceptedWorkLeaseStatus(status)) {
+    return null;
+  }
+
+  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
+  if (!Number.isFinite(reportExpiresAtMs) || !Number.isFinite(nowMs)) {
+    return 'missing';
+  }
+  return reportExpiresAtMs <= nowMs ? 'expired' : null;
+}
+
+function getReportTokenStaleness(
+  status: MemberWorkSyncStatus,
+  nowMs: number
+): 'missing' | 'expired' | null {
+  if (!status.reportToken?.trim()) {
+    return 'missing';
+  }
+
+  const tokenExpiresAtMs = Date.parse(status.reportTokenExpiresAt ?? '');
+  if (!Number.isFinite(tokenExpiresAtMs) || !Number.isFinite(nowMs)) {
+    return 'missing';
+  }
+
+  return tokenExpiresAtMs <= nowMs ? 'expired' : null;
+}
+
+function isEmptyAgendaStaleState(status: MemberWorkSyncStatus): boolean {
+  return (
+    status.agenda.items.length === 0 &&
+    (status.state === 'needs_sync' ||
+      status.state === 'still_working' ||
+      status.state === 'blocked' ||
+      status.state === 'unknown')
+  );
+}
+
+function statusNeedsBackgroundRefresh(status: MemberWorkSyncStatus, nowMs: number): boolean {
+  if (getReportTokenStaleness(status, nowMs) !== null) {
+    return true;
+  }
+
+  if (isEmptyAgendaStaleState(status)) {
+    return true;
+  }
+
+  const evaluatedAtMs = Date.parse(status.evaluatedAt);
+  if (!Number.isFinite(evaluatedAtMs)) {
+    return true;
+  }
+
+  if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
+    return true;
+  }
+
+  if (status.agenda.items.length === 0) {
+    return false;
+  }
+
+  if (status.state === 'needs_sync' && nowMs - evaluatedAtMs > STALE_STATUS_MAX_AGE_MS) {
+    return true;
+  }
+
+  return getAcceptedWorkLeaseStaleness(status, nowMs) !== null;
+}
 
 function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: number): string[] {
   const diagnostics: string[] = [];
+  const tokenStaleness = getReportTokenStaleness(status, nowMs);
+  if (tokenStaleness === 'missing') {
+    diagnostics.push('report_token_missing_refresh_enqueued');
+  } else if (tokenStaleness === 'expired') {
+    diagnostics.push('report_token_expired_refresh_enqueued');
+  }
+
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
   if (!Number.isFinite(evaluatedAtMs)) {
     diagnostics.push('status_evaluated_at_invalid');
+  } else if (isEmptyAgendaStaleState(status)) {
+    diagnostics.push('empty_agenda_state_refresh_enqueued');
+  } else if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
+    diagnostics.push('caught_up_stale_refresh_enqueued');
   } else if (
     status.agenda.items.length > 0 &&
     ['needs_sync', 'still_working', 'blocked'].includes(status.state) &&
@@ -78,17 +167,20 @@ function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: numb
     diagnostics.push('status_stale_refresh_enqueued');
   }
 
-  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
-  if (
-    status.report?.accepted &&
-    Number.isFinite(reportExpiresAtMs) &&
-    reportExpiresAtMs <= nowMs &&
-    (status.state === 'still_working' || status.state === 'blocked')
-  ) {
+  const leaseStaleness = getAcceptedWorkLeaseStaleness(status, nowMs);
+  if (leaseStaleness === 'missing') {
+    diagnostics.push('accepted_report_lease_missing_refresh_enqueued');
+  } else if (leaseStaleness === 'expired') {
     diagnostics.push('accepted_report_lease_expired_refresh_enqueued');
   }
 
   return [...new Set(diagnostics)];
+}
+
+function shouldRefreshStatusSynchronously(stalenessDiagnostics: string[]): boolean {
+  return stalenessDiagnostics.some(
+    (diagnostic) => diagnostic !== 'caught_up_stale_refresh_enqueued'
+  );
 }
 
 export function buildMemberWorkSyncRuntimeTurnSettledEnvironment(input: {
@@ -169,6 +261,7 @@ export function createMemberWorkSyncFeature(deps: {
   kanbanManager: TeamKanbanManager;
   membersMetaStore: TeamMembersMetaStore;
   isTeamActive?: (teamName: string) => Promise<boolean> | boolean;
+  isMemberActive?: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean;
   canDispatchNudges?: (teamName: string) => Promise<boolean> | boolean;
   listLifecycleActiveTeamNames?: () => Promise<string[]>;
   queueQuietWindowMs?: number;
@@ -253,7 +346,14 @@ export function createMemberWorkSyncFeature(deps: {
     ...(deps.reviewPickupEscalation ? { reviewPickupEscalation: deps.reviewPickupEscalation } : {}),
     reportToken,
     auditJournal,
-    ...(deps.isTeamActive ? { lifecycle: { isTeamActive: deps.isTeamActive } } : {}),
+    ...(deps.isTeamActive
+      ? {
+          lifecycle: {
+            isTeamActive: deps.isTeamActive,
+            ...(deps.isMemberActive ? { isMemberActive: deps.isMemberActive } : {}),
+          },
+        }
+      : {}),
     logger: deps.logger,
   };
   const diagnosticsReader = new MemberWorkSyncDiagnosticsReader(useCaseDeps);
@@ -268,6 +368,16 @@ export function createMemberWorkSyncFeature(deps: {
     superseded: 0,
     retryable: 0,
     terminal: 0,
+  });
+  const addNudgeDispatchSummaries = (
+    left: MemberWorkSyncNudgeDispatchSummary,
+    right: MemberWorkSyncNudgeDispatchSummary
+  ): MemberWorkSyncNudgeDispatchSummary => ({
+    claimed: left.claimed + right.claimed,
+    delivered: left.delivered + right.delivered,
+    superseded: left.superseded + right.superseded,
+    retryable: left.retryable + right.retryable,
+    terminal: left.terminal + right.terminal,
   });
   const filterNudgeDispatchReadyTeamNames = async (teamNames: string[]): Promise<string[]> => {
     const uniqueTeamNames = [...new Set(teamNames.map((name) => name.trim()).filter(Boolean))];
@@ -290,25 +400,82 @@ export function createMemberWorkSyncFeature(deps: {
     );
     return readiness.filter((item) => item.ready).map((item) => item.teamName);
   };
+  const refreshBackgroundStaleStatuses = async (teamNames: string[]): Promise<void> => {
+    const nowMs = clock.now().getTime();
+    let refreshed = 0;
+    for (const teamName of teamNames) {
+      let memberNames: string[];
+      try {
+        memberNames = await agendaSource.loadActiveMemberNames(teamName);
+      } catch (error) {
+        deps.logger?.warn('member work sync background refresh member scan failed', {
+          teamName,
+          error: String(error),
+        });
+        continue;
+      }
+
+      for (const memberName of memberNames) {
+        try {
+          const status = await store.read({ teamName, memberName });
+          if (status && !statusNeedsBackgroundRefresh(status, nowMs)) {
+            continue;
+          }
+          await reconciler.execute(
+            { teamName, memberName },
+            {
+              reconciledBy: 'queue',
+              triggerReasons: [status ? 'manual_refresh' : 'startup_scan'],
+            }
+          );
+          refreshed += 1;
+        } catch (error) {
+          deps.logger?.warn('member work sync background refresh failed', {
+            teamName,
+            memberName,
+            error: String(error),
+          });
+        }
+      }
+    }
+
+    if (refreshed > 0) {
+      deps.logger?.debug('member work sync background stale refresh completed', { refreshed });
+    }
+  };
   const dispatchNudgesForReadyTeams = async (
     teamNames: string[],
-    claimedBy: string
+    claimedBy: string,
+    options: { refreshBackgroundStaleStatuses?: boolean } = {}
   ): Promise<MemberWorkSyncNudgeDispatchSummary> => {
     const readyTeamNames = await filterNudgeDispatchReadyTeamNames(teamNames);
     if (readyTeamNames.length === 0) {
       return emptyNudgeDispatchSummary();
     }
-    return nudgeDispatcher.dispatchDue({
-      teamNames: readyTeamNames,
-      claimedBy,
-    });
+    const dispatchReadyNudges = () =>
+      nudgeDispatcher.dispatchDue({
+        teamNames: readyTeamNames,
+        claimedBy,
+      });
+    const initialSummary = await dispatchReadyNudges();
+    if (options.refreshBackgroundStaleStatuses !== false) {
+      await refreshBackgroundStaleStatuses(readyTeamNames);
+      return addNudgeDispatchSummaries(initialSummary, await dispatchReadyNudges());
+    }
+    return initialSummary;
   };
   const queue = new MemberWorkSyncEventQueue({
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
       await reconciler.execute(request, context);
-      await dispatchNudgesForReadyTeams([request.teamName], `member-work-sync:${process.pid}`);
+      if (context.isCancelled?.()) {
+        return;
+      }
+      await dispatchNudgesForReadyTeams([request.teamName], `member-work-sync:${process.pid}`, {
+        refreshBackgroundStaleStatuses: false,
+      });
     },
     isTeamActive: deps.isTeamActive ?? (() => true),
+    reconcileInactiveTeams: true,
     ...(deps.queueQuietWindowMs != null ? { quietWindowMs: deps.queueQuietWindowMs } : {}),
     auditJournal,
     logger: deps.logger,
@@ -370,6 +537,21 @@ export function createMemberWorkSyncFeature(deps: {
     const stalenessDiagnostics = getStatusStalenessDiagnostics(status, clock.now().getTime());
     if (stalenessDiagnostics.length === 0) {
       return status;
+    }
+    if (shouldRefreshStatusSynchronously(stalenessDiagnostics)) {
+      try {
+        return await reconciler.execute(request, {
+          reconciledBy: 'request',
+          triggerReasons: ['manual_refresh'],
+        });
+      } catch (error) {
+        deps.logger?.warn('member work sync synchronous status refresh failed', {
+          teamName: status.teamName,
+          memberName: status.memberName,
+          diagnostics: stalenessDiagnostics,
+          error: String(error),
+        });
+      }
     }
     queue.enqueue({
       teamName: status.teamName,

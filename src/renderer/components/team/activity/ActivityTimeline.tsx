@@ -83,6 +83,8 @@ export interface TimelineViewport {
   scrollMargin?: number;
   /** Enable virtualization (wired in a follow-up; ignored for now). */
   virtualizationEnabled?: boolean;
+  /** Optional row-count gate for compact hosts that need virtualization earlier. */
+  virtualizationRowThreshold?: number;
 }
 
 interface ActivityTimelineProps {
@@ -692,7 +694,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   const shouldVirtualize =
     viewport?.virtualizationEnabled === true &&
     viewport.scrollElementRef != null &&
-    renderRows.length >= VIRTUALIZATION_ROW_THRESHOLD;
+    renderRows.length >= (viewport.virtualizationRowThreshold ?? VIRTUALIZATION_ROW_THRESHOLD);
 
   // DOM-measured distance from the scroll container's scroll origin to the
   // timeline root. We avoid re-measuring on every scroll: the offset only

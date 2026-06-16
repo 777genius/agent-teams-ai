@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Вже ввійшли?",
+      "becomeSponsor": "Стати спонсором",
+      "cancel": "Скасувати",
+      "checkNow": "Перевірити зараз",
+      "checkUpdates": "Перевірити оновлення",
+      "checking": "Перевірка...",
+      "connect": "Підключити",
+      "extensions": "Розширення",
+      "login": "Увійти",
+      "manage": "Керувати",
+      "manageProviders": "Керувати провайдерами",
+      "plan": "План",
+      "recheck": "Перевірити ще раз",
+      "recheckProvider": "Перевірити ще раз {{provider}}",
+      "retry": "Повторити",
+      "updateTo": "Оновити до v{{version}}",
+      "useCode": "Використати код"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud — це повномодальна платформа AI-інференсу, яка дає розробникам єдиний AI API для доступу до генерації відео, генерації зображень та LLM API. Замість керування багатьма інтеграціями постачальників ви підключаєтесь один раз і отримуєте уніфікований доступ до понад 300 ретельно відібраних моделей усіх модальностей. Ознайомтеся з новою акцією Atlas Cloud на план для кодування для бюджетнішого доступу до API.",
+      "openCodeProvider": "Провайдер OpenCode",
+      "plan": "План для кодування Atlas Cloud",
+      "sponsor": "Спонсор"
+    },
+    "errors": {
+      "checkStatusFailed": "Не вдалося перевірити статус CLI",
+      "installationFailed": "Не вдалося встановити",
+      "refreshFailed": "Не вдалося перевірити оновлення. Перевірте мережеве з'єднання та спробуйте знову.",
+      "runtimeUpdatedRefreshFailed": "Середовище оновлено, але не вдалося оновити статус провайдера."
+    },
+    "hints": {
+      "backgroundStatus": "Статус {{runtime}} буде перевірено у фоновому режимі.",
+      "codexApiKeyFallback": "{{hint}} Резервний варіант з API-ключем доступний, якщо ви зміните режим автентифікації.",
+      "codexAutoApiKey": "{{hint}} Auto продовжуватиме використовувати API-ключ, доки не буде підключено ChatGPT.",
+      "codexFinishLogin": "Завершіть вхід у ChatGPT у браузері. Введіть показаний код, якщо буде запит.",
+      "codexNoActiveLogin": "Ліміти використання з'являються лише після того, як Codex CLI побачить активний обліковий запис ChatGPT. Зараз він повідомляє про відсутність активного входу в ChatGPT.",
+      "codexNoActiveManagedSession": "Ліміти використання з'являються лише після того, як Codex CLI побачить активний обліковий запис ChatGPT. Локальні дані облікового запису Codex існують, але зараз не вибрано жодної активної керованої сесії.",
+      "codexReconnectNeeded": "Ліміти використання з'являються лише після того, як Codex оновить поточну вибрану сесію ChatGPT. Зараз локальній сесії потрібне повторне підключення.",
+      "firstCheckSlow": "Перша перевірка може зайняти до 30 секунд",
+      "loginRequiredForTeams": "Перегляд сесій і проєктів працює без входу. Вхід потрібен лише для запуску команд агентів.",
+      "troubleshootTitle": "Якщо ви впевнені, що ввійшли, спробуйте ці кроки:"
+    },
+    "installer": {
+      "checkingLatest": "Перевірка найновішої версії...",
+      "downloading": "Завантаження {{runtime}}...",
+      "installing": "Встановлення {{runtime}}...",
+      "success": "{{runtime}} v{{version}} успішно встановлено",
+      "verifying": "Перевірка контрольної суми..."
+    },
+    "labels": {
+      "apiKeyRequired": "Потрібен API-ключ",
+      "comingSoon": "Незабаром",
+      "collapseProviderDetails": "Згорнути деталі провайдера",
+      "expandProviderDetails": "Розгорнути деталі провайдера",
+      "generateLink": "Згенерувати посилання",
+      "loadingRateLimits": "Завантаження лімітів",
+      "loggedOut": "Провайдер вийшов із системи",
+      "loginAuthFailed": "Помилка автентифікації",
+      "loginAuthUpdated": "Автентифікацію оновлено",
+      "loginComplete": "Вхід завершено",
+      "loginFailed": "Не вдалося ввійти",
+      "loginTitle": "Вхід",
+      "logoutFailed": "Не вдалося вийти",
+      "logoutTitle": "Вихід",
+      "notLoggedIn": "Не ввійшли",
+      "openLogin": "Відкрити вхід",
+      "providerActionRequired": "Потрібна дія провайдера",
+      "resets": "скидання {{time}}",
+      "runtimeLoginTitle": "Вхід {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Перевірка AI-провайдерів...",
+      "claudeCli": "Перевірка Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Автентифіковано",
+      "backend": "Бекенд: {{backend}}",
+      "checkingAuthentication": "Перевірка автентифікації...",
+      "checkingProviders": "Перевірка провайдерів...",
+      "configuredLocalCount": "{{count}} налаштованих локальних",
+      "configuredLocalCount_few": "{{count}} налаштовані локальні",
+      "configuredLocalCount_many": "{{count}} налаштованих локальних",
+      "configuredLocalCount_one": "{{count}} налаштований локальний",
+      "configuredLocalCount_other": "{{count}} налаштованих локальних",
+      "configuredLocalTitle": "Локальні маршрути OpenCode, імпортовані з вашої конфігурації OpenCode.",
+      "connectedCount": "Провайдери: {{connected}}/{{denominator}} підключено",
+      "freeModels": "Безплатні моделі",
+      "freeModelsTitle": "OpenCode включає безплатні варіанти моделей, як-от Big Pickle, коли вони доступні у вашій конфігурації. OpenRouter через OpenCode також може надавати безплатні моделі, але не кожна модель OpenCode/OpenRouter є безплатною. Доступність і ліміти можуть змінюватися.",
+      "loadingModels": "Завантаження моделей...",
+      "modelsUnavailable": "Моделі недоступні для цієї збірки середовища",
+      "runtime": "Середовище: {{runtime}}",
+      "verifiedCount": "{{count}} перевірено",
+      "verifiedCount_few": "{{count}} перевірено",
+      "verifiedCount_many": "{{count}} перевірено",
+      "verifiedCount_one": "{{count}} перевірено",
+      "verifiedCount_other": "{{count}} перевірено",
+      "verifiedTitle": "Маршрути OpenCode з успішним підтвердженням виконання."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "Налаштоване середовище {{runtime}} не пройшло перевірку працездатності під час запуску.",
+      "configuredNotFound": "Налаштоване середовище {{runtime}} не знайдено.",
+      "foundButFailed": "{{runtime}} знайдено, але не вдалося запустити",
+      "healthCheckFailedDescription": "Застосунок знайшов налаштоване середовище {{runtime}}, але його перевірка працездатності під час запуску не вдалася. Відремонтуйте або перевстановіть його, а потім повторіть.",
+      "install": "Встановити {{runtime}}",
+      "installRequiredDescription": "{{runtime}} потрібен для розгортання команд і керування сесіями. Встановіть його, щоб почати.",
+      "isRequired": "Потрібен {{runtime}}",
+      "reinstall": "Перевстановити {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Перевірка",
+      "codexTitle": "Встановити Codex CLI у дані застосунку",
+      "downloading": "Завантаження",
+      "downloadingPercent": "Завантаження {{percent}}%",
+      "install": "Встановити",
+      "installing": "Встановлення",
+      "openCodeTitle": "Встановити середовище OpenCode у дані застосунку",
+      "retryInstall": "Повторити встановлення"
+    },
+    "troubleshoot": {
+      "again": "знову",
+      "authStatusCommand": "вашу налаштовану команду перевірки статусу автентифікації CLI",
+      "checkLoggedIn": "- перевірте, чи показує \"Logged in\"",
+      "click": "Натисніть",
+      "loginCommand": "команду входу середовища",
+      "logoutCommand": "команду виходу середовища",
+      "openTerminal": "Відкрийте термінал і виконайте:",
+      "reloginPrefix": "Якщо там сказано, що ви ввійшли, але застосунок цього не бачить, спробуйте:",
+      "sameRuntime": "Переконайтеся, що CLI у вашому терміналі — те саме середовище, яке використовує застосунок",
+      "statusCacheHint": "- інколи статус кешується на кілька секунд",
+      "then": "потім"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Один або кілька провайдерів встановлено в режим API-ключа, але жодного API-ключа не налаштовано. Відкрийте «Керувати провайдерами», щоб додати ключі або змінити режим підключення.",
+      "multipleApiKeysNeedAttention": "Один або кілька провайдерів встановлено в режим API-ключа й вони потребують уваги. Відкрийте «Керувати провайдерами», щоб переглянути збережені ключі або змінити режим підключення.",
+      "notAuthenticated": "{{runtime}} встановлено, але ви не автентифіковані. Вхід потрібен для розгортання команд і функцій AI.",
+      "singleApiKeyMissing": "{{provider}} встановлено в режим API-ключа, але жодного API-ключа не налаштовано. Відкрийте «Керувати провайдерами», щоб додати ключ або змінити режим підключення.",
+      "singleApiKeyNeedsAttention": "{{provider}} встановлено в режим API-ключа, але він не підключений. Відкрийте «Керувати провайдерами», щоб переглянути збережений ключ або змінити режим підключення."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Виберіть теку проєкту",
+    "selectFolder": "Вибрати теку",
+    "failedToLoad": "Не вдалося завантажити проєкти",
+    "retry": "Повторити",
+    "noProjects": "Проєктів не знайдено",
+    "noMatches": "Немає збігів для \"{{query}}\"",
+    "noRecentProjects": "Недавніх проєктів не знайдено",
+    "emptyDescription": "Недавня активність Claude та Codex з'явиться тут.",
+    "loadMore": "Завантажити більше",
+    "card": {
+      "deleted": "Видалено",
+      "projectFolderMissing": "Теки проєкту більше не існує",
+      "taskCounts": {
+        "active": "{{count}} активних",
+        "active_one": "{{count}} активне",
+        "active_other": "{{count}} активних",
+        "active_few": "{{count}} активні",
+        "active_many": "{{count}} активних",
+        "pending": "{{count}} в очікуванні",
+        "pending_one": "{{count}} в очікуванні",
+        "pending_other": "{{count}} в очікуванні",
+        "pending_few": "{{count}} в очікуванні",
+        "pending_many": "{{count}} в очікуванні",
+        "done": "{{count}} виконано",
+        "done_one": "{{count}} виконано",
+        "done_other": "{{count}} виконано",
+        "done_few": "{{count}} виконано",
+        "done_many": "{{count}} виконано"
+      }
+    },
+    "title": "Недавні проєкти",
+    "searchResults": "Результати пошуку",
+    "searchPlaceholder": "Пошук проєктів..."
+  },
+  "actions": {
+    "selectTeam": "Вибрати команду",
+    "or": "або",
+    "clearSearch": "Очистити пошук"
+  },
+  "windowsAdmin": {
+    "title": "Рекомендується режим адміністратора Windows",
+    "description": "Перевірки середовища OpenCode можуть завершуватися тайм-аутом, якщо Agent Teams AI не запущено з підвищеними правами. Перезапустіть застосунок із «Запуск від імені адміністратора» перед запуском команд OpenCode."
+  },
+  "webPreview": {
+    "title": "Відкрийте десктопний застосунок для повної функціональності",
+    "description": "Браузерна версія ще в розробці. Дії з проєктами, інтеграції та оновлення стану в реальному часі тут можуть бути обмежені. Використовуйте десктопний застосунок для надійного доступу до всіх функцій."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Доступна нова версія",
+    "restartNow": "Перезапустити зараз",
+    "viewDetails": "Переглянути деталі"
+  }
+}

@@ -7,7 +7,11 @@ import {
   deriveWorkActivityTimerAnchor,
   syncMemberActivityTimer,
 } from '@renderer/utils/memberActivityTimer';
-import { buildMemberColorMap, shouldDisplayMemberCurrentTask } from '@renderer/utils/memberHelpers';
+import {
+  buildMemberAvatarMap,
+  buildMemberColorMap,
+  shouldDisplayMemberCurrentTask,
+} from '@renderer/utils/memberHelpers';
 import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -71,19 +75,30 @@ function areResolvedMembersEquivalent(
     const rightMember = right[index];
     if (
       leftMember.name !== rightMember.name ||
+      leftMember.agentId !== rightMember.agentId ||
       leftMember.status !== rightMember.status ||
       leftMember.currentTaskId !== rightMember.currentTaskId ||
       leftMember.taskCount !== rightMember.taskCount ||
+      leftMember.lastActiveAt !== rightMember.lastActiveAt ||
+      leftMember.messageCount !== rightMember.messageCount ||
       leftMember.color !== rightMember.color ||
       leftMember.agentType !== rightMember.agentType ||
       leftMember.role !== rightMember.role ||
       leftMember.workflow !== rightMember.workflow ||
+      leftMember.isolation !== rightMember.isolation ||
       leftMember.providerId !== rightMember.providerId ||
+      leftMember.providerBackendId !== rightMember.providerBackendId ||
       leftMember.model !== rightMember.model ||
       leftMember.effort !== rightMember.effort ||
+      leftMember.selectedFastMode !== rightMember.selectedFastMode ||
+      leftMember.resolvedFastMode !== rightMember.resolvedFastMode ||
+      leftMember.laneId !== rightMember.laneId ||
+      leftMember.laneKind !== rightMember.laneKind ||
+      leftMember.laneOwnerProviderId !== rightMember.laneOwnerProviderId ||
       leftMember.cwd !== rightMember.cwd ||
       leftMember.gitBranch !== rightMember.gitBranch ||
       leftMember.removedAt !== rightMember.removedAt ||
+      !areMemberMcpPoliciesEquivalent(leftMember.mcpPolicy, rightMember.mcpPolicy) ||
       leftMember.runtimeAdvisory?.kind !== rightMember.runtimeAdvisory?.kind ||
       leftMember.runtimeAdvisory?.observedAt !== rightMember.runtimeAdvisory?.observedAt ||
       leftMember.runtimeAdvisory?.retryUntil !== rightMember.runtimeAdvisory?.retryUntil ||
@@ -96,6 +111,22 @@ function areResolvedMembersEquivalent(
   }
 
   return true;
+}
+
+function areMemberMcpPoliciesEquivalent(
+  left: ResolvedTeamMember['mcpPolicy'],
+  right: ResolvedTeamMember['mcpPolicy']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  return (
+    left.mode === right.mode &&
+    left.scopes?.user === right.scopes?.user &&
+    left.scopes?.project === right.scopes?.project &&
+    left.scopes?.local === right.scopes?.local &&
+    (left.serverNames ?? []).length === (right.serverNames ?? []).length &&
+    (left.serverNames ?? []).every((serverName, index) => serverName === right.serverNames?.[index])
+  );
 }
 
 function areTaskStatusCountsMapsEquivalent(
@@ -275,28 +306,6 @@ function isRuntimeResourceSampleLike(value: unknown): value is TeamAgentRuntimeR
   return Boolean(value) && typeof value === 'object';
 }
 
-function areRuntimeResourceSamplesEquivalent(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (!isRuntimeResourceSampleLike(left) || !isRuntimeResourceSampleLike(right)) {
-    return false;
-  }
-  return (
-    left.timestamp === right.timestamp &&
-    left.cpuPercent === right.cpuPercent &&
-    left.rssBytes === right.rssBytes &&
-    left.primaryCpuPercent === right.primaryCpuPercent &&
-    left.primaryRssBytes === right.primaryRssBytes &&
-    left.childCpuPercent === right.childCpuPercent &&
-    left.childRssBytes === right.childRssBytes &&
-    left.processCount === right.processCount &&
-    left.runtimeLoadScope === right.runtimeLoadScope &&
-    left.runtimeLoadTruncated === right.runtimeLoadTruncated &&
-    left.pidSource === right.pidSource &&
-    left.pid === right.pid &&
-    left.runtimePid === right.runtimePid
-  );
-}
-
 function areMemberRuntimeEntriesEquivalent(
   left: Map<string, TeamAgentRuntimeEntry> | undefined,
   right: Map<string, TeamAgentRuntimeEntry> | undefined
@@ -308,13 +317,6 @@ function areMemberRuntimeEntriesEquivalent(
     const rightEntry = right.get(key);
     const leftDiagnostics = Array.isArray(leftEntry.diagnostics) ? leftEntry.diagnostics : [];
     const rightDiagnostics = Array.isArray(rightEntry?.diagnostics) ? rightEntry.diagnostics : [];
-    const rightResourceHistoryCandidate = rightEntry?.resourceHistory;
-    const leftResourceHistory = Array.isArray(leftEntry.resourceHistory)
-      ? leftEntry.resourceHistory
-      : [];
-    const rightResourceHistory = Array.isArray(rightResourceHistoryCandidate)
-      ? rightResourceHistoryCandidate
-      : [];
     if (
       leftEntry.memberName !== rightEntry?.memberName ||
       leftEntry.alive !== rightEntry?.alive ||
@@ -348,16 +350,104 @@ function areMemberRuntimeEntriesEquivalent(
       leftEntry.runtimeLastSeenAt !== rightEntry?.runtimeLastSeenAt ||
       leftEntry.historicalBootstrapConfirmed !== rightEntry?.historicalBootstrapConfirmed ||
       leftDiagnostics.length !== rightDiagnostics.length ||
-      !leftDiagnostics.every((value, index) => value === rightDiagnostics[index]) ||
-      leftResourceHistory.length !== rightResourceHistory.length ||
-      !leftResourceHistory.every((value, index) =>
-        areRuntimeResourceSamplesEquivalent(value, rightResourceHistory[index])
-      )
+      !leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
     ) {
       return false;
     }
   }
   return true;
+}
+
+const MEMBER_CARD_RUNTIME_TELEMETRY_CACHE_MS = 30_000;
+
+interface CachedMemberRuntimeEntry {
+  signature: string;
+  cachedAt: number;
+  entry: TeamAgentRuntimeEntry;
+}
+
+function buildMemberRuntimeCardSignature(entry: TeamAgentRuntimeEntry): string {
+  const diagnostics = Array.isArray(entry.diagnostics) ? entry.diagnostics : [];
+  return [
+    entry.memberName,
+    entry.alive,
+    entry.restartable,
+    entry.backendType,
+    entry.providerId,
+    entry.providerBackendId,
+    entry.laneId,
+    entry.laneKind,
+    entry.pid,
+    entry.runtimeModel,
+    entry.processCount,
+    entry.runtimeLoadScope,
+    entry.runtimeLoadTruncated,
+    entry.livenessKind,
+    entry.pidSource,
+    entry.processCommand,
+    entry.paneId,
+    entry.panePid,
+    entry.paneCurrentCommand,
+    entry.runtimePid,
+    entry.runtimeSessionId,
+    entry.runtimeDiagnostic,
+    entry.runtimeDiagnosticSeverity,
+    entry.runtimeLastSeenAt,
+    entry.historicalBootstrapConfirmed,
+    diagnostics.join('\u001f'),
+  ].join('\u001e');
+}
+
+function buildCachedMemberRuntimeEntries(
+  runtimeEntries: Map<string, TeamAgentRuntimeEntry> | undefined,
+  cache: Map<string, CachedMemberRuntimeEntry>,
+  nowMs: number
+): Map<string, TeamAgentRuntimeEntry> | undefined {
+  if (!runtimeEntries) {
+    cache.clear();
+    return undefined;
+  }
+
+  const nextEntries = new Map<string, TeamAgentRuntimeEntry>();
+  const seenMemberNames = new Set<string>();
+  for (const [memberName, entry] of runtimeEntries) {
+    seenMemberNames.add(memberName);
+    const signature = buildMemberRuntimeCardSignature(entry);
+    const cached = cache.get(memberName);
+    if (
+      !cached ||
+      cached.signature !== signature ||
+      nowMs - cached.cachedAt >= MEMBER_CARD_RUNTIME_TELEMETRY_CACHE_MS
+    ) {
+      cache.set(memberName, { signature, cachedAt: nowMs, entry });
+      nextEntries.set(memberName, entry);
+      continue;
+    }
+    nextEntries.set(memberName, cached.entry);
+  }
+
+  for (const memberName of cache.keys()) {
+    if (!seenMemberNames.has(memberName)) {
+      cache.delete(memberName);
+    }
+  }
+
+  return nextEntries.size > 0 ? nextEntries : undefined;
+}
+
+function reuseRuntimeEntriesMapIfUnchanged(
+  previous: Map<string, TeamAgentRuntimeEntry> | undefined,
+  next: Map<string, TeamAgentRuntimeEntry> | undefined
+): Map<string, TeamAgentRuntimeEntry> | undefined {
+  if (previous === next) return previous;
+  if (!previous || !next) return next;
+  if (previous.size !== next.size) return next;
+  for (const [memberName, entry] of next) {
+    if (previous.get(memberName) !== entry) {
+      return next;
+    }
+  }
+  return previous;
 }
 
 function isFiniteNonNegative(value: number | undefined): value is number {
@@ -449,6 +539,28 @@ function buildRuntimeTelemetryScale(
   return scale.memoryCapBytes != null || scale.cpuCapPercent != null ? scale : undefined;
 }
 
+function buildActivityTimerRuntimeSignature(
+  members: readonly ResolvedTeamMember[],
+  runtimeEntries: Map<string, TeamAgentRuntimeEntry> | undefined
+): string {
+  if (!runtimeEntries || members.length === 0) {
+    return '';
+  }
+
+  return members
+    .map((member) => {
+      const entry = runtimeEntries.get(member.name);
+      return [
+        member.name,
+        entry?.alive,
+        entry?.livenessKind,
+        entry?.runtimeDiagnosticSeverity,
+        entry?.runtimeDiagnostic,
+      ].join('\u001f');
+    })
+    .join('\u001e');
+}
+
 function areMemberListPropsEqual(
   prev: Readonly<MemberListProps>,
   next: Readonly<MemberListProps>
@@ -468,6 +580,10 @@ function areMemberListPropsEqual(
     prev.isTeamAlive === next.isTeamAlive &&
     prev.isTeamProvisioning === next.isTeamProvisioning &&
     prev.leadActivity === next.leadActivity &&
+    prev.onMemberClick === next.onMemberClick &&
+    prev.onSendMessage === next.onSendMessage &&
+    prev.onAssignTask === next.onAssignTask &&
+    prev.onOpenTask === next.onOpenTask &&
     prev.onRestartMember === next.onRestartMember &&
     prev.onSkipMemberForLaunch === next.onSkipMemberForLaunch &&
     prev.onRestoreMember === next.onRestoreMember &&
@@ -480,9 +596,11 @@ function areMemberListPropsEqual(
 // ---------------------------------------------------------------------------
 
 interface MemberCardRowProps {
+  teamName: string;
   member: ResolvedTeamMember;
   isRemoved: boolean;
   memberColor: string;
+  avatarUrl?: string;
   fullBleedSurface: boolean;
   currentTask: TeamTaskWithKanban | null;
   reviewTask: TeamTaskWithKanban | null;
@@ -506,6 +624,7 @@ interface MemberCardRowProps {
   leadActivity?: LeadActivityState;
   isLaunchSettling?: boolean;
   runtimeTelemetryScale?: RuntimeTelemetryScale;
+  renderRuntimeTelemetryStrip?: boolean;
   onOpenTask?: (taskId: string) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
@@ -516,9 +635,11 @@ interface MemberCardRowProps {
 }
 
 const MemberCardRow = memo(function MemberCardRow({
+  teamName,
   member,
   isRemoved,
   memberColor,
+  avatarUrl,
   fullBleedSurface,
   currentTask,
   reviewTask,
@@ -542,6 +663,7 @@ const MemberCardRow = memo(function MemberCardRow({
   leadActivity,
   isLaunchSettling,
   runtimeTelemetryScale,
+  renderRuntimeTelemetryStrip,
   onOpenTask,
   onMemberClick,
   onSendMessage,
@@ -567,8 +689,10 @@ const MemberCardRow = memo(function MemberCardRow({
 
   return (
     <MemberCard
+      teamName={teamName}
       member={member}
       memberColor={memberColor}
+      avatarUrl={avatarUrl}
       fullBleedSurface={fullBleedSurface}
       taskCounts={taskCounts}
       isTeamAlive={isTeamAlive}
@@ -593,6 +717,7 @@ const MemberCardRow = memo(function MemberCardRow({
       spawnRuntimeAlive={spawnRuntimeAlive}
       isLaunchSettling={isLaunchSettling}
       runtimeTelemetryScale={runtimeTelemetryScale}
+      renderRuntimeTelemetryStrip={renderRuntimeTelemetryStrip}
       onOpenTask={currentTask ? handleOpenTask : undefined}
       onOpenReviewTask={reviewTask ? handleOpenReviewTask : undefined}
       onClick={handleClick}
@@ -726,6 +851,23 @@ export const MemberList = memo(function MemberList({
   const { t } = useAppTranslation('team');
   const containerRef = useRef<HTMLDivElement>(null);
   const [isWide, setIsWide] = useState(false);
+  const [runtimeTelemetryPreviewActive, setRuntimeTelemetryPreviewActive] = useState(false);
+  const memberRuntimeEntriesRef = useRef(memberRuntimeEntries);
+  const memberRuntimeEntryCacheRef = useRef(new Map<string, CachedMemberRuntimeEntry>());
+  const displayedRuntimeEntriesRef = useRef<Map<string, TeamAgentRuntimeEntry> | undefined>(
+    undefined
+  );
+  memberRuntimeEntriesRef.current = memberRuntimeEntries;
+  const [runtimeTelemetryCacheNowMs, setRuntimeTelemetryCacheNowMs] = useState(() => Date.now());
+  const hasMemberRuntimeEntries = Boolean(memberRuntimeEntries && memberRuntimeEntries.size > 0);
+
+  useEffect(() => {
+    if (!hasMemberRuntimeEntries) return;
+    const intervalId = window.setInterval(() => {
+      setRuntimeTelemetryCacheNowMs(Date.now());
+    }, MEMBER_CARD_RUNTIME_TELEMETRY_CACHE_MS);
+    return () => window.clearInterval(intervalId);
+  }, [hasMemberRuntimeEntries]);
 
   const handleResize = useCallback((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
@@ -742,6 +884,25 @@ export const MemberList = memo(function MemberList({
     observer.observe(el);
     return () => observer.disconnect();
   }, [handleResize]);
+
+  const activateRuntimeTelemetryPreview = useCallback(() => {
+    setRuntimeTelemetryPreviewActive(true);
+  }, []);
+
+  const deactivateRuntimeTelemetryPreview = useCallback(() => {
+    setRuntimeTelemetryPreviewActive(false);
+  }, []);
+
+  const handleRuntimeTelemetryPreviewBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const nextTarget = event.relatedTarget;
+      if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+        return;
+      }
+      deactivateRuntimeTelemetryPreview();
+    },
+    [deactivateRuntimeTelemetryPreview]
+  );
 
   const gridClass = isWide ? 'grid grid-cols-2 gap-1' : 'grid grid-cols-1 gap-1';
   const activeMembers = useMemo(
@@ -761,8 +922,29 @@ export const MemberList = memo(function MemberList({
     [activeMembers]
   );
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
+  const cardRuntimeEntries = useMemo(() => {
+    const nextEntries = buildCachedMemberRuntimeEntries(
+      memberRuntimeEntries,
+      memberRuntimeEntryCacheRef.current,
+      runtimeTelemetryCacheNowMs
+    );
+    const reusedEntries = reuseRuntimeEntriesMapIfUnchanged(
+      displayedRuntimeEntriesRef.current,
+      nextEntries
+    );
+    displayedRuntimeEntriesRef.current = reusedEntries;
+    return reusedEntries;
+  }, [memberRuntimeEntries, runtimeTelemetryCacheNowMs]);
   const runtimeTelemetryScale = useMemo(
-    () => buildRuntimeTelemetryScale(activeMembers, memberRuntimeEntries),
+    () =>
+      runtimeTelemetryPreviewActive
+        ? buildRuntimeTelemetryScale(activeMembers, cardRuntimeEntries)
+        : undefined,
+    [activeMembers, cardRuntimeEntries, runtimeTelemetryPreviewActive]
+  );
+  const activityTimerRuntimeSignature = useMemo(
+    () => buildActivityTimerRuntimeSignature(activeMembers, memberRuntimeEntries),
     [activeMembers, memberRuntimeEntries]
   );
   // Pre-compute reviewer->task map to avoid O(n*n) scan per member.
@@ -821,9 +1003,10 @@ export const MemberList = memo(function MemberList({
   useEffect(() => {
     if (!taskMap) return;
     const nowMs = Date.now();
+    const latestRuntimeEntries = memberRuntimeEntriesRef.current;
     for (const member of activeMembers) {
       const spawnEntry = memberSpawnStatuses?.get(member.name);
-      const runtimeEntry = memberRuntimeEntries?.get(member.name);
+      const runtimeEntry = latestRuntimeEntries?.get(member.name);
       const running = isMemberActivityTimerRunning(member, spawnEntry, runtimeEntry);
       const currentTaskCandidate = member.currentTaskId
         ? (taskMap.get(member.currentTaskId) ?? null)
@@ -876,10 +1059,10 @@ export const MemberList = memo(function MemberList({
     }
   }, [
     activeMembers,
+    activityTimerRuntimeSignature,
     getActivityTimerRunId,
     isMemberActivityTimerRunning,
     isTeamAlive,
-    memberRuntimeEntries,
     memberSpawnStatuses,
     reviewTaskByMember,
     taskMap,
@@ -925,11 +1108,21 @@ export const MemberList = memo(function MemberList({
   }
 
   return (
-    <div ref={containerRef} className="runtime-telemetry-list flex flex-col gap-1">
+    <div
+      ref={containerRef}
+      className="runtime-telemetry-list flex flex-col gap-1"
+      onPointerEnter={activateRuntimeTelemetryPreview}
+      onPointerLeave={deactivateRuntimeTelemetryPreview}
+      onFocusCapture={activateRuntimeTelemetryPreview}
+      onBlurCapture={handleRuntimeTelemetryPreviewBlur}
+    >
       <div className={gridClass}>
         {activeMembers.map((member) => {
           const spawnEntry = memberSpawnStatuses?.get(member.name);
-          const runtimeEntry = memberRuntimeEntries?.get(member.name);
+          const liveRuntimeEntry = memberRuntimeEntries?.get(member.name);
+          const cardRuntimeEntry = cardRuntimeEntries?.get(member.name);
+          const runtimeEntry = liveRuntimeEntry;
+          const displayRuntimeEntry = cardRuntimeEntry ?? liveRuntimeEntry;
           const bootstrapConfirmedProvisionedButNotAlive =
             isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
           const hasUnsafeProvisionedButNotAliveEvidence =
@@ -1012,22 +1205,24 @@ export const MemberList = memo(function MemberList({
           return (
             <MemberCardRow
               key={member.name}
+              teamName={teamName}
               member={member}
               isRemoved={false}
               memberColor={colorMap.get(member.name) ?? 'blue'}
+              avatarUrl={avatarMap.get(member.name)}
               fullBleedSurface={!isWide}
               currentTask={currentTask}
               reviewTask={reviewTask}
               currentTaskTimer={currentTaskTimer}
               reviewTaskTimer={reviewTaskTimer}
-              currentTaskTimerRunning={activityTimerRunning}
-              reviewTaskTimerRunning={activityTimerRunning}
+              currentTaskTimerRunning={currentTask !== null && activityTimerRunning}
+              reviewTaskTimerRunning={reviewTask !== null && activityTimerRunning}
               awaitingReply={
                 isTeamAlive !== false && Boolean(pendingRepliesByMember?.[member.name])
               }
               taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
-              runtimeSummary={buildRuntimeSummary(member, spawnEntry, runtimeEntry)}
-              runtimeEntry={runtimeEntry}
+              runtimeSummary={buildRuntimeSummary(member, spawnEntry, displayRuntimeEntry)}
+              runtimeEntry={displayRuntimeEntry}
               runtimeRunId={runtimeRunId}
               spawnStatus={effectiveSpawnStatus}
               spawnEntry={spawnEntry}
@@ -1044,6 +1239,7 @@ export const MemberList = memo(function MemberList({
               leadActivity={leadActivity}
               isLaunchSettling={isLaunchSettling}
               runtimeTelemetryScale={runtimeTelemetryScale}
+              renderRuntimeTelemetryStrip={runtimeTelemetryPreviewActive}
               onOpenTask={onOpenTask}
               onMemberClick={onMemberClick}
               onSendMessage={onSendMessage}
@@ -1064,9 +1260,11 @@ export const MemberList = memo(function MemberList({
             {removedMembers.map((member) => (
               <MemberCardRow
                 key={member.name}
+                teamName={teamName}
                 member={member}
                 isRemoved={true}
                 memberColor={colorMap.get(member.name) ?? 'blue'}
+                avatarUrl={avatarMap.get(member.name)}
                 fullBleedSurface={!isWide}
                 currentTask={null}
                 reviewTask={null}
@@ -1090,6 +1288,7 @@ export const MemberList = memo(function MemberList({
                 leadActivity={leadActivity}
                 isLaunchSettling={false}
                 runtimeTelemetryScale={runtimeTelemetryScale}
+                renderRuntimeTelemetryStrip={runtimeTelemetryPreviewActive}
                 onOpenTask={onOpenTask}
                 onMemberClick={onMemberClick}
                 onSendMessage={onSendMessage}

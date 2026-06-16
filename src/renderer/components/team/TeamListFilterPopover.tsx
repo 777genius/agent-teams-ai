@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- TeamListFilterState and EMPTY_TEAM_FILTER shared with TeamListView */
+/* eslint-disable react-refresh/only-export-components -- filter state and pure helpers are shared with TeamListView/tests */
 import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
@@ -6,6 +6,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { Filter } from 'lucide-react';
 
@@ -21,6 +22,25 @@ export const EMPTY_TEAM_FILTER: TeamListFilterState = {
 
 function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
+}
+
+export function getTeamListFilterActiveCount(
+  filter: TeamListFilterState,
+  selectedProjectPath: string | null
+): number {
+  let count = 0;
+  if (filter.selectedStatuses.size > 0) count += 1;
+  if (selectedProjectPath?.trim()) count += 1;
+  return count;
+}
+
+export function isTeamProjectPathSelected(
+  selectedProjectPath: string | null,
+  projectPath: string
+): boolean {
+  return selectedProjectPath
+    ? normalizePath(selectedProjectPath) === normalizePath(projectPath)
+    : false;
 }
 
 interface TeamListFilterPopoverProps {
@@ -41,11 +61,10 @@ export const TeamListFilterPopover = ({
   onProjectChange,
 }: TeamListFilterPopoverProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const activeCount = useMemo(() => {
-    let count = 0;
-    if (filter.selectedStatuses.size > 0) count += 1;
-    return count;
-  }, [filter.selectedStatuses]);
+  const activeCount = useMemo(
+    () => getTeamListFilterActiveCount(filter, selectedProjectPath),
+    [filter, selectedProjectPath]
+  );
 
   const uniqueProjects = useMemo(() => {
     const paths = new Set<string>();
@@ -69,11 +88,12 @@ export const TeamListFilterPopover = ({
   };
 
   const handleProjectToggle = (project: string): void => {
-    onProjectChange(selectedProjectPath === project ? null : project);
+    onProjectChange(isTeamProjectPathSelected(selectedProjectPath, project) ? null : project);
   };
 
   const handleClearAll = (): void => {
     onFilterChange(EMPTY_TEAM_FILTER);
+    onProjectChange(null);
   };
 
   const aliveSet = useMemo(() => new Set(aliveTeams), [aliveTeams]);
@@ -156,7 +176,7 @@ export const TeamListFilterPopover = ({
                   title={project}
                 >
                   <Checkbox
-                    checked={selectedProjectPath === project}
+                    checked={isTeamProjectPathSelected(selectedProjectPath, project)}
                     onCheckedChange={() => handleProjectToggle(project)}
                   />
                   <span className="truncate">{folderName(project)}</span>

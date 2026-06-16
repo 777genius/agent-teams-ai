@@ -132,6 +132,7 @@ interface ProjectPathSelectorProps {
   projectsLoading: boolean;
   projectsError: string | null;
   fieldError?: string | null;
+  onProjectsDropdownOpen?: () => void;
 }
 
 export const ProjectPathSelector = ({
@@ -145,6 +146,7 @@ export const ProjectPathSelector = ({
   projectsLoading,
   projectsError,
   fieldError,
+  onProjectsDropdownOpen,
 }: ProjectPathSelectorProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const projectOptions = React.useMemo(
@@ -202,6 +204,11 @@ export const ProjectPathSelector = ({
                       searchPlaceholder={t('projectPath.searchPlaceholder')}
                       emptyMessage={t('projectPath.empty')}
                       disabled={projectsLoading || projectOptions.length === 0}
+                      onOpenChange={(isOpen) => {
+                        if (isOpen) {
+                          onProjectsDropdownOpen?.();
+                        }
+                      }}
                       renderTriggerLabel={(option) => (
                         <span className="flex min-w-0 items-center gap-1.5">
                           <ProjectSourceBadge source={getOptionSource(option)} />

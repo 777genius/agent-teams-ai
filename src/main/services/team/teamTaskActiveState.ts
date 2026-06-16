@@ -5,6 +5,7 @@ import type { TeamTaskWithKanban } from '@shared/types';
 export {
   getTeamTaskWorkflowColumn,
   isTeamTaskActivelyWorked,
+  isTeamTaskBlockedByUnfinishedDependency,
   isTeamTaskFinalForCompletionNotification,
   isTeamTaskFinishedForDependency,
   isTeamTaskNeedsFixActionable,

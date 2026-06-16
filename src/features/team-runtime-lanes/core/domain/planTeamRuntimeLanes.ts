@@ -45,6 +45,16 @@ export type TeamRuntimeLanePlan =
       sideLanes: [];
     }
   | {
+      mode: 'pure_opencode_worktree_root_lanes';
+      primaryMembers: PlannedRuntimeMember[];
+      allMembers: PlannedRuntimeMember[];
+      sideLanes: {
+        laneId: string;
+        providerId: 'opencode';
+        member: PlannedRuntimeMember;
+      }[];
+    }
+  | {
       mode: 'mixed_opencode_side_lanes';
       primaryMembers: PlannedRuntimeMember[];
       allMembers: PlannedRuntimeMember[];
@@ -111,9 +121,16 @@ export function buildPlannedMemberLaneIdentity(params: {
   };
 }
 
+export function buildOpenCodeSecondaryLaneId(
+  member: Pick<RuntimeLanePlannerMemberInput, 'name'>
+): string {
+  return `secondary:opencode:${member.name.trim()}`;
+}
+
 export function planTeamRuntimeLanes(params: {
   leadProviderId?: TeamProviderId;
   members: readonly RuntimeLanePlannerMemberInput[];
+  baseCwd?: string;
 }): TeamRuntimeLanePlanResult {
   const leadProviderId = normalizeLeadProviderId(params.leadProviderId);
   const allMembers = normalizePlannedMembers(params.members, leadProviderId);
@@ -127,6 +144,27 @@ export function planTeamRuntimeLanes(params: {
         reason: 'unsupported_opencode_led_mixed_team',
         message:
           'Mixed teams with an OpenCode lead are not supported in this phase. Keep the team lead on Anthropic or Codex when you mix OpenCode with other providers.',
+      };
+    }
+    const normalizedBaseCwd = params.baseCwd?.trim();
+    const worktreeRootMembers = allMembers.filter((member) => {
+      const memberCwd = member.cwd?.trim();
+      return Boolean(memberCwd && (!normalizedBaseCwd || memberCwd !== normalizedBaseCwd));
+    });
+    if (worktreeRootMembers.length > 0 && allMembers.length > 1) {
+      const worktreeRootMemberNames = new Set(worktreeRootMembers.map((member) => member.name));
+      return {
+        ok: true,
+        plan: {
+          mode: 'pure_opencode_worktree_root_lanes',
+          primaryMembers: allMembers.filter((member) => !worktreeRootMemberNames.has(member.name)),
+          allMembers,
+          sideLanes: worktreeRootMembers.map((member) => ({
+            laneId: buildOpenCodeSecondaryLaneId(member),
+            providerId: 'opencode',
+            member,
+          })),
+        },
       };
     }
     return {
@@ -175,18 +213,37 @@ export function isMixedOpenCodeSideLanePlan(
   return plan.mode === 'mixed_opencode_side_lanes';
 }
 
+export function isOpenCodeSideLanePlan(
+  plan: TeamRuntimeLanePlan
+): plan is Extract<
+  TeamRuntimeLanePlan,
+  { mode: 'mixed_opencode_side_lanes' | 'pure_opencode_worktree_root_lanes' }
+> {
+  return (
+    plan.mode === 'mixed_opencode_side_lanes' || plan.mode === 'pure_opencode_worktree_root_lanes'
+  );
+}
+
 export function isPureOpenCodeLanePlan(
   plan: TeamRuntimeLanePlan
 ): plan is Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode' }> {
   return plan.mode === 'pure_opencode';
 }
 
+export function isPureOpenCodeWorktreeRootLanePlan(
+  plan: TeamRuntimeLanePlan
+): plan is Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }> {
+  return plan.mode === 'pure_opencode_worktree_root_lanes';
+}
+
 export function fromProvisioningMembers(
   leadProviderId: TeamProviderId | undefined,
-  members: readonly TeamProvisioningMemberInput[]
+  members: readonly TeamProvisioningMemberInput[],
+  options: { baseCwd?: string } = {}
 ): TeamRuntimeLanePlanResult {
   return planTeamRuntimeLanes({
     leadProviderId,
+    baseCwd: options.baseCwd,
     members: members.map((member) => ({
       name: member.name,
       role: member.role,

@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "ఫీచర్లు",
+    "screenshots": "స్క్రీన్‌షాట్‌లు",
+    "docs": "డాక్యుమెంటేషన్",
+    "comparison": "పోల్చండి",
+    "download": "డౌన్‌లోడ్",
+    "pricing": "ఉచితం",
+    "faq": "FAQ",
+    "viewOnGithub": "GitHub లో చూడండి",
+    "openMenu": "మెనూ తెరవండి",
+    "closeMenu": "మెనూ మూసివేయండి",
+    "short": {
+      "screenshots": "షాట్‌లు",
+      "docs": "డాక్స్",
+      "download": "పొందండి",
+      "comparison": "పోల్చండి",
+      "pricing": "ఉచితం"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "ఇప్పుడే డౌన్‌లోడ్ చేయండి",
+    "ctaPrimary": "{platform} కోసం డౌన్‌లోడ్ చేయండి",
+    "ctaSecondary": "పోల్చండి",
+    "ctaDocs": "డాక్యుమెంటేషన్",
+    "preview": "ఉత్పత్తి ప్రివ్యూ",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban బోర్డు",
+      "openSource": "ఓపెన్ సోర్స్"
+    },
+    "watchDemo": "డెమో చూడండి",
+    "videoUnavailable": "వీడియో అందుబాటులో లేదు",
+    "supportedProviders": "మద్దతు ఉన్న AI ప్రొవైడర్లు",
+    "slogan": "చాలా తక్కువ చేసి చాలా సాధించండి",
+    "platformDefault": "మీ ప్లాట్‌ఫారమ్ కోసం",
+    "guidesSetup": "గైడ్‌లు మరియు సెటప్",
+    "videoFrameLabel": "Agent Teams డెమో చూడండి",
+    "commandFeed": "టీమ్ కమాండ్ ఫీడ్",
+    "liveDemo": "లైవ్ డెమో",
+    "demoVideoTitle": "Agent Teams డెమో వీడియో",
+    "demoTitle": "Agent Teams డెమో",
+    "demo": {
+      "ariaLabel": "ఏజెంట్ టీమ్ డెమో",
+      "live": "లైవ్",
+      "waiting": "టాస్క్‌ల కోసం వేచి ఉంది...",
+      "activity": {
+        "authMiddleware": "auth మిడిల్‌వేర్ అమలు చేస్తోంది...",
+        "unitTests": "API కోసం యూనిట్ టెస్ట్‌లు రాస్తోంది...",
+        "reviewPr": "PR #42 మార్పులను సమీక్షిస్తోంది...",
+        "ciPipeline": "CI/CD పైప్‌లైన్ సెటప్ చేస్తోంది...",
+        "refactorDatabase": "డేటాబేస్ లేయర్‌ను రీఫాక్టర్ చేస్తోంది..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "యూనిట్ టెస్ట్‌లు",
+        "ciSetup": "CI సెటప్"
+      },
+      "columns": {
+        "todo": "చేయవలసినవి",
+        "progress": "ప్రోగ్రెస్‌లో",
+        "review": "సమీక్ష",
+        "done": "పూర్తయింది"
+      }
+    }
+  },
+  "download": {
+    "title": "డౌన్‌లోడ్",
+    "detected": "గుర్తించబడింది",
+    "systemRequirements": "సిస్టమ్ అవసరాలు",
+    "version": "వెర్షన్ {version}",
+    "readyToStart": "ప్రారంభించడానికి సిద్ధం!"
+  },
+  "theme": {
+    "dark": "డార్క్",
+    "light": "లైట్"
+  },
+  "language": {
+    "label": "భాష",
+    "search": "భాషను శోధించండి…"
+  },
+  "features": {
+    "sectionTitle": "AI ఏజెంట్ ఆర్కెస్ట్రేషన్ కోసం మీకు కావలసినదంతా",
+    "sectionSubtitle": "మల్టీ-ఏజెంట్ సహకారాన్ని నిజంగా పనిచేసేలా చేసే శక్తివంతమైన సాధనాలు."
+  },
+  "pricing": {
+    "sectionTitle": "ఇన్‌స్టాల్ చేయడానికి ఉచితం. ఉచిత మోడల్ చేర్చబడింది.",
+    "sectionSubtitle": "auth లేకుండా ఉచిత మోడల్‌తో వెంటనే ప్రారంభించండి - ఖాతా, API కీ లేదా క్రెడిట్ కార్డు అవసరం లేదు. మీకు మరిన్ని మోడల్‌లు కావలసినప్పుడు మాత్రమే Claude, Codex, OpenCode/OpenRouter లేదా ఇతర ప్రొవైడర్ యాక్సెస్‌ను కనెక్ట్ చేయండి.",
+    "getStarted": "ఇప్పుడే డౌన్‌లోడ్ చేయండి",
+    "popular": "ఉచితం",
+    "freeModelCallout": "auth లేని ఉచిత మోడల్ చేర్చబడింది",
+    "note": "Agent Teams కు చెల్లింపు టైర్ లేదు. auth లేని ఉచిత మోడల్ దాన్ని వెంటనే ప్రయత్నించడానికి మిమ్మల్ని అనుమతిస్తుంది; చెల్లింపు ప్రొవైడర్ వినియోగం ఐచ్ఛికం మరియు మీరు ఎంచుకున్న ప్రొవైడర్ ద్వారా నియంత్రించబడుతుంది."
+  },
+  "testimonials": {
+    "sectionTitle": "డెవలపర్లు ఏమంటున్నారు",
+    "sectionSubtitle": "నిజమైన బిల్డర్ల నుండి నిజమైన అభిప్రాయం",
+    "showMore": "మరింత చూపించు",
+    "showLess": "తక్కువ చూపించు",
+    "feedbackCta": "మీ అనుభవాన్ని పంచుకోవాలనుకుంటున్నారా? దీనిపై ఒక issue తెరవండి"
+  },
+  "faq": {
+    "sectionTitle": "ప్రశ్నలు ఉన్నాయా? మా దగ్గర సమాధానాలు ఉన్నాయి",
+    "subtitle": "Agent Teams గురించి మీరు తెలుసుకోవలసినదంతా"
+  },
+  "comparison": {
+    "sectionTitle": "మేము ఎలా పోల్చబడతాము",
+    "sectionSubtitle": "ఇతర AI కోడింగ్ సాధనాలతో ఫీచర్-బై-ఫీచర్ పోలిక.",
+    "feature": "ఫీచర్",
+    "robotBubble": "మీరే నిర్ణయించుకోండి",
+    "features": {
+      "crossTeam": "క్రాస్-టీమ్ కమ్యూనికేషన్",
+      "agentMessaging": "ఏజెంట్-టు-ఏజెంట్ మెసేజింగ్",
+      "linkedTasks": "లింక్ చేయబడిన టాస్క్‌లు",
+      "sessionAnalysis": "సెషన్ విశ్లేషణ",
+      "taskAttachments": "టాస్క్ అటాచ్‌మెంట్‌లు",
+      "hunkReview": "హంక్-స్థాయి సమీక్ష",
+      "codeEditor": "అంతర్నిర్మిత కోడ్ ఎడిటర్",
+      "fullAutonomy": "పూర్తి స్వయంప్రతిపత్తి",
+      "taskDeps": "టాస్క్ డిపెండెన్సీలు",
+      "reviewWorkflow": "సమీక్ష వర్క్‌ఫ్లో",
+      "zeroSetup": "జీరో సెటప్",
+      "kanban": "Kanban బోర్డు",
+      "execLog": "ఎగ్జిక్యూషన్ లాగ్‌లు",
+      "liveProcesses": "లైవ్ ప్రాసెస్‌లు",
+      "runtimeLoad": "ప్రతి టీమ్‌మేట్‌కు CPU/RAM",
+      "perTaskReview": "ప్రతి టాస్క్‌కు కోడ్ సమీక్ష",
+      "flexAutonomy": "సౌకర్యవంతమైన స్వయంప్రతిపత్తి",
+      "worktree": "Git worktree ఐసొలేషన్",
+      "multiAgent": "మిశ్రమ AI టీమ్‌మేట్‌లు",
+      "liveWorkGraph": "లైవ్ టీమ్ మ్యాప్",
+      "liveTeam": "లైవ్ టీమ్‌మేట్‌లు",
+      "teamWorkspace": "టీమ్ వర్క్‌స్పేస్",
+      "launchProof": "టీమ్‌మేట్ లాంచ్ స్థితి",
+      "orgGovernance": "ఆర్గ్ చార్ట్ / గవర్నెన్స్",
+      "budgetControls": "బడ్జెట్ నియంత్రణలు",
+      "price": "ధర"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "దీన్ని చర్యలో చూడండి",
+    "sectionSubtitle": "యాప్ నుండి నిజమైన స్క్రీన్‌షాట్‌లు — kanban బోర్డు, కోడ్ సమీక్ష, ఏజెంట్ టీమ్‌లు మరియు మరిన్ని."
+  },
+  "common": {
+    "learnMore": "మరింత తెలుసుకోండి",
+    "statusLabel": "స్థితి:",
+    "previous": "మునుపటి",
+    "next": "తదుపరి"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "డెవలపర్ల కోసం AI ఏజెంట్ ఆర్కెస్ట్రేషన్",
+    "robotBubble": "నేను వేచి ఉన్నాను",
+    "links": {
+      "github": "GitHub",
+      "author": "రచయిత",
+      "docs": "డాక్యుమెంటేషన్"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - డెవలపర్ల కోసం AI ఏజెంట్ ఆర్కెస్ట్రేషన్",
+    "homeDescription": "AI ఏజెంట్ టీమ్‌ల కోసం ఉచిత, ఓపెన్ సోర్స్ డెస్క్‌టాప్ యాప్. auth లేని ఉచిత మోడల్‌తో ప్రారంభించి, మీకు మరిన్ని మోడల్‌లు కావలసినప్పుడు Claude, Codex లేదా OpenCode ను కనెక్ట్ చేయండి.",
+    "downloadTitle": "macOS, Windows మరియు Linux కోసం Agent Teams డౌన్‌లోడ్ చేయండి",
+    "downloadDescription": "macOS, Windows మరియు Linux కోసం Agent Teams డౌన్‌లోడ్ చేయండి. Claude, Codex మరియు OpenCode ఏజెంట్ టీమ్‌ల కోసం ఉచిత ఓపెన్ సోర్స్ డెస్క్‌టాప్ యాప్."
+  },
+  "error": {
+    "notFoundTitle": "పేజీ కనుగొనబడలేదు",
+    "notFoundDescription": "మీరు వెతుకుతున్న పేజీ ఉనికిలో లేదు లేదా తరలించబడింది.",
+    "genericTitle": "ఏదో తప్పు జరిగింది",
+    "genericDescription": "ఊహించని లోపం సంభవించింది. దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి.",
+    "goHome": "హోమ్‌పేజీకి వెళ్లండి"
+  }
+}

@@ -99,7 +99,7 @@ function repositoryWorktreeToProject(
   };
 }
 
-function syntheticProjectFromPath(projectPath: string): Project {
+export function syntheticProjectFromPath(projectPath: string): Project {
   return {
     id: projectPath.replace(/[/\\]/g, '-'),
     path: projectPath,

@@ -47,7 +47,12 @@ jobs:
         shell: bash
         run: |
           PNPM_STORE="$(pnpm store path)"
-          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -300,8 +305,149 @@ jobs:
           echo "Timed out waiting for runtime assets in release $TAG" >&2
           exit 1
 
+  prepare-terminal-platform-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Skip terminal-platform asset preparation for non-release builds
+        if: ${{ env.IS_RELEASE_BUILD != 'true' }}
+        run: echo "Terminal-platform asset preparation is only needed for release builds."
+
+      - name: Check terminal-platform runtime assets
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        id: terminal-platform-assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_REPO="$(node ./scripts/terminal-platform-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/terminal-platform-lock.mjs release-tag)"
+          existing="$(gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+          missing=0
+          while IFS= read -r release_file; do
+            [ -n "$release_file" ] || continue
+            if ! grep -Fqx "$release_file" <<<"$existing"; then
+              echo "Missing terminal-platform release file: $release_file"
+              missing=1
+            fi
+          done < <(node ./scripts/terminal-platform-lock.mjs release-file-list)
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+
+      - name: Run and wait for terminal-platform runtime build
+        if: steps.terminal-platform-assets.outputs.missing == '1'
+        env:
+          RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          TERMINAL_PLATFORM_BUILD_DISPATCH_TOKEN: ${{ secrets.TERMINAL_PLATFORM_BUILD_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          export GH_TOKEN="${TERMINAL_PLATFORM_BUILD_DISPATCH_TOKEN:-${RUNTIME_BUILD_DISPATCH_TOKEN:-}}"
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "Missing TERMINAL_PLATFORM_BUILD_DISPATCH_TOKEN secret" >&2
+            exit 1
+          fi
+
+          SOURCE_REPO="$(node ./scripts/terminal-platform-lock.mjs source-repository)"
+          SOURCE_REF="$(node ./scripts/terminal-platform-lock.mjs source-ref)"
+          RUNTIME_VERSION="$(node ./scripts/terminal-platform-lock.mjs version)"
+          RELEASE_REPO="$(node ./scripts/terminal-platform-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/terminal-platform-lock.mjs release-tag)"
+          RUN_TITLE="terminal-platform runtime ${RUNTIME_VERSION} -> ${RELEASE_REPO}@${RELEASE_TAG}"
+          STARTED_AT="$(node -e 'console.log(new Date(Date.now() - 120000).toISOString())')"
+
+          gh workflow run release-runtime.yml \
+            --repo "$SOURCE_REPO" \
+            --ref "$SOURCE_REF" \
+            -f "source_ref=$SOURCE_REF" \
+            -f "runtime_version=$RUNTIME_VERSION" \
+            -f "target_release_repo=$RELEASE_REPO" \
+            -f "target_release_tag=$RELEASE_TAG"
+
+          run_id=""
+          for attempt in $(seq 1 60); do
+            run_id="$(
+              gh run list \
+                --repo "$SOURCE_REPO" \
+                --workflow release-runtime.yml \
+                --event workflow_dispatch \
+                --limit 30 \
+                --json databaseId,displayTitle,createdAt \
+                --jq '.[] | select(.displayTitle == "'"$RUN_TITLE"'" and .createdAt >= "'"$STARTED_AT"'") | .databaseId' \
+                | head -n 1
+            )"
+
+            if [ -n "$run_id" ]; then
+              echo "Found terminal-platform runtime workflow run: $run_id"
+              for wait_attempt in $(seq 1 240); do
+                run_state="$(
+                  gh run view "$run_id" \
+                    --repo "$SOURCE_REPO" \
+                    --json status,conclusion,url \
+                    --jq '[.status, (.conclusion // ""), .url] | @tsv'
+                )"
+                IFS=$'\t' read -r status conclusion url <<< "$run_state"
+
+                if [ "$status" = "completed" ]; then
+                  if [ "$conclusion" = "success" ]; then
+                    echo "Terminal-platform runtime workflow succeeded: $url"
+                    exit 0
+                  fi
+
+                  echo "Terminal-platform runtime workflow failed with conclusion '$conclusion': $url" >&2
+                  exit 1
+                fi
+
+                echo "Terminal-platform runtime workflow status: $status - wait $wait_attempt/240"
+                sleep 15
+              done
+
+              echo "Timed out waiting for terminal-platform runtime workflow completion: $run_id" >&2
+              exit 1
+            fi
+
+            echo "Waiting for terminal-platform runtime workflow run - attempt $attempt/60"
+            sleep 5
+          done
+
+          echo "Timed out waiting for terminal-platform runtime workflow run: $RUN_TITLE" >&2
+          exit 1
+
+      - name: Verify terminal-platform runtime assets
+        if: steps.terminal-platform-assets.outputs.missing == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_REPO="$(node ./scripts/terminal-platform-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/terminal-platform-lock.mjs release-tag)"
+          for attempt in $(seq 1 12); do
+            existing="$(gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+            all_found=1
+            while IFS= read -r release_file; do
+              [ -n "$release_file" ] || continue
+              if ! grep -Fqx "$release_file" <<<"$existing"; then
+                all_found=0
+                break
+              fi
+            done < <(node ./scripts/terminal-platform-lock.mjs release-file-list)
+
+            if [ "$all_found" -eq 1 ]; then
+              echo "Terminal-platform runtime assets are ready"
+              exit 0
+            fi
+
+            echo "Waiting for terminal-platform assets after workflow success - attempt $attempt/12"
+            sleep 10
+          done
+
+          echo "Timed out waiting for terminal-platform assets in release $RELEASE_REPO@$RELEASE_TAG" >&2
+          exit 1
+
   release-mac:
-    needs: [build, prepare-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -341,7 +487,12 @@ jobs:
       - name: Restore pnpm node-gyp executable bit
         run: |
           PNPM_STORE="$(pnpm store path)"
-          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -364,6 +515,12 @@ jobs:
           else
             node ./scripts/stage-runtime.mjs --platform "darwin-${{ matrix.arch }}"
           fi
+
+      - name: Stage terminal-platform runtime (macOS ${{ matrix.arch }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --platform "darwin-${{ matrix.arch }}"
 
       - name: Verify Sentry release env (macOS ${{ matrix.arch }})
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -399,6 +556,9 @@ jobs:
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION
+          test -f resources/terminal-platform/VERSION
+          test -f resources/terminal-platform/terminal-daemon
+          test -f resources/terminal-platform/terminal-platform-node/index.mjs
 
       - name: Package (macOS ${{ matrix.arch }})
         env:
@@ -430,7 +590,7 @@ jobs:
           done
 
   release-win:
-    needs: [build, prepare-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
     runs-on: windows-latest
     timeout-minutes: 60
 
@@ -461,7 +621,12 @@ jobs:
         shell: bash
         run: |
           PNPM_STORE="$(pnpm store path)"
-          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -485,6 +650,12 @@ jobs:
           } else {
             node ./scripts/stage-runtime.mjs --platform win32-x64
           }
+
+      - name: Stage terminal-platform runtime (Windows)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
 
       - name: Verify Sentry release env (Windows)
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -521,6 +692,9 @@ jobs:
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION
+          test -f resources/terminal-platform/VERSION
+          test -f resources/terminal-platform/terminal-daemon.exe
+          test -f resources/terminal-platform/terminal-platform-node/index.mjs
 
       - name: Package (Windows)
         env:
@@ -550,7 +724,7 @@ jobs:
           done
 
   release-linux:
-    needs: [build, prepare-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -585,7 +759,12 @@ jobs:
       - name: Restore pnpm node-gyp executable bit
         run: |
           PNPM_STORE="$(pnpm store path)"
-          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -608,6 +787,12 @@ jobs:
           else
             node ./scripts/stage-runtime.mjs --platform linux-x64
           fi
+
+      - name: Stage terminal-platform runtime (Linux)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64
 
       - name: Verify Sentry release env (Linux)
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -643,6 +828,9 @@ jobs:
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION
+          test -f resources/terminal-platform/VERSION
+          test -f resources/terminal-platform/terminal-daemon
+          test -f resources/terminal-platform/terminal-platform-node/index.mjs
 
       - name: Package (Linux)
         env:

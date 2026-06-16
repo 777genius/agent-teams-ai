@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Dodaj własny",
+      "openDashboard": "Otwórz panel",
+      "refreshCatalog": "Odśwież katalog"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Wtyczki: {{status}}",
+      "skills": "Umiejętności: {{status}}"
+    },
+    "desktopOnly": "Dostępne tylko w aplikacji desktopowej.",
+    "provider": {
+      "checkingStatus": "Sprawdzanie statusu dostawcy...",
+      "connected": "Połączono",
+      "loading": "Ładowanie...",
+      "needsSetup": "Wymaga konfiguracji",
+      "readyToConfigure": "Gotowe do konfiguracji",
+      "unsupported": "Nieobsługiwane"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Rozszerzenia potrzebują skonfigurowanego środowiska uruchomieniowego do zarządzania wtyczkami, serwerami MCP, umiejętnościami i połączeniami z dostawcami.",
+      "checkingAvailabilityTitle": "Sprawdzanie dostępności środowiska uruchomieniowego rozszerzeń",
+      "failedToStartDescription": "Rozszerzenia są wyłączone, dopóki środowisko uruchomieniowe nie przejdzie kontroli kondycji przy starcie. Otwórz panel, aby je naprawić lub zainstalować ponownie.",
+      "failedToStartTitle": "Skonfigurowane środowisko uruchomieniowe zostało znalezione, ale nie udało się go uruchomić",
+      "multimodelCapabilitiesDescription": "Obsługa dostawców może różnić się w zależności od sekcji. Wtyczki są pokazywane tylko tam, gdzie środowisko uruchomieniowe wyraźnie deklaruje obsługę.",
+      "multimodelCapabilitiesTitle": "Możliwości środowiska wielomodelowego",
+      "needsSignInDescription": "Znaleziono {{runtime}}{{version}}, ale instalacja wtyczek jest wyłączona, dopóki nie zalogujesz się z panelu.",
+      "needsSignInTitle": "{{runtime}} wymaga zalogowania",
+      "notAvailableDescription": "Rozszerzenia są wyłączone, dopóki środowisko uruchomieniowe nie zostanie zainstalowane. Otwórz panel, aby je zainstalować i ponów próbę.",
+      "notAvailableTitle": "Skonfigurowane środowisko uruchomieniowe jest niedostępne",
+      "readyDescription": "Wtyczki można instalować z tej strony{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} jest gotowe",
+      "requiredForMutations": "Skonfigurowane środowisko uruchomieniowe jest wymagane do instalowania lub odinstalowywania rozszerzeń. Zainstaluj je lub napraw z panelu."
+    },
+    "sessionsRestartWarning": "Działające sesje nie uwzględnią zmian rozszerzeń, dopóki nie zostaną ponownie uruchomione.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Tajne klucze do usług online. Dodaj je tutaj, aby wtyczki, serwery i integracje mogły się połączyć i działać.",
+        "label": "Klucze API"
+      },
+      "mcpServers": {
+        "description": "Połączenia z zewnętrznymi narzędziami i aplikacjami. Pozwalają środowisku uruchomieniowemu odczytywać dane lub wykonywać akcje poza tą aplikacją.",
+        "label": "Serwery MCP"
+      },
+      "plugins": {
+        "description": "Małe dodatki do środowiska uruchomieniowego. W trybie wielomodelowym obecnie obowiązują dla sesji Anthropic, gdy są obsługiwane. Szersze wsparcie dostawców jest w trakcie rozwoju.",
+        "label": "Wtyczki"
+      },
+      "skills": {
+        "description": "Gotowe instrukcje do typowych zadań. Pomagają środowisku uruchomieniowemu obsługiwać powtarzalne zadania bardziej konsekwentnie.",
+        "label": "Umiejętności"
+      }
+    },
+    "title": "Rozszerzenia"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} aktywnych",
+    "browseByFit": "Przeglądaj wg dopasowania",
+    "capabilities": "Możliwości",
+    "categories": "Kategorie",
+    "clearAllFilters": "Wyczyść wszystkie filtry",
+    "clearFilters": "Wyczyść filtry",
+    "counts": {
+      "capabilities": "{{count}} możliwości",
+      "categories": "{{count}} kategorii",
+      "plugins": "{{count}} wtyczek",
+      "capabilities_few": "{{count}} możliwości",
+      "capabilities_many": "{{count}} możliwości",
+      "capabilities_one": "{{count}} możliwość",
+      "capabilities_other": "{{count}} możliwości",
+      "categories_few": "{{count}} kategorie",
+      "categories_many": "{{count}} kategorii",
+      "categories_one": "{{count}} kategoria",
+      "categories_other": "{{count}} kategorii",
+      "plugins_few": "{{count}} wtyczki",
+      "plugins_many": "{{count}} wtyczek",
+      "plugins_one": "{{count}} wtyczka",
+      "plugins_other": "{{count}} wtyczek"
+    },
+    "empty": {
+      "description": "Sprawdź ponownie później, czy są nowe wtyczki",
+      "filteredDescription": "Spróbuj dostosować wyszukiwanie lub kryteria filtrowania",
+      "filteredTitle": "Żadna wtyczka nie pasuje do filtrów",
+      "title": "Brak dostępnych wtyczek"
+    },
+    "filterDescription": "Zawęź katalog według kategorii, możliwości lub stanu instalacji.",
+    "installedOnly": "Tylko zainstalowane",
+    "providerSupportNotice": "Obsługa wtyczek jest obecnie gwarantowana tylko dla sesji Anthropic (Claude). Pracujemy nad obsługą wtyczek dla wszystkich agentów.",
+    "resultsUpdateInstantly": "Wyniki aktualizują się natychmiast podczas dopracowywania filtrów.",
+    "searchPlaceholder": "Szukaj wtyczek...",
+    "selectedCount": "{{count}} zaznaczonych",
+    "showing": "Wyświetlanie {{shown}} z {{total}} wtyczek",
+    "sort": {
+      "category": "Kategoria",
+      "nameAsc": "Nazwa A-Z",
+      "nameDesc": "Nazwa Z-A",
+      "popular": "Popularne"
+    },
+    "activeFilters_few": "{{count}} aktywne",
+    "activeFilters_many": "{{count}} aktywnych",
+    "activeFilters_one": "{{count}} aktywny",
+    "activeFilters_other": "{{count}} aktywnych",
+    "selectedCount_few": "{{count}} zaznaczone",
+    "selectedCount_many": "{{count}} zaznaczonych",
+    "selectedCount_one": "{{count}} zaznaczona",
+    "selectedCount_other": "{{count}} zaznaczonych"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Dodaj",
+      "cancel": "Anuluj",
+      "install": "Zainstaluj",
+      "installing": "Instalowanie..."
+    },
+    "description": "Dodaj serwer ręcznie bez katalogu.",
+    "errors": {
+      "installFailed": "Instalacja nie powiodła się",
+      "invalidServerName": "Nieprawidłowa nazwa serwera. Użyj znaków alfanumerycznych, myślników, podkreśleń, kropek.",
+      "npmPackageRequired": "Nazwa pakietu npm jest wymagana",
+      "serverNameRequired": "Nazwa serwera jest wymagana",
+      "serverUrlRequired": "Adres URL serwera jest wymagany"
+    },
+    "fields": {
+      "environmentVariables": "Zmienne środowiskowe",
+      "headers": "Nagłówki",
+      "npmPackage": "Pakiet npm",
+      "scope": "Zakres",
+      "serverName": "Nazwa serwera",
+      "serverUrl": "Adres URL serwera",
+      "transport": "Transport",
+      "transportType": "Typ transportu",
+      "versionOptional": "Wersja (opcjonalnie)"
+    },
+    "title": "Dodaj własny serwer MCP",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "wartość",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Zdalne serwery MCP mogą nadal wymagać niestandardowych nagłówków lub kluczy API, nawet jeśli rejestr ich nie opisuje. Jeśli połączenie nie powiedzie się po instalacji, sprawdź dokumentację dostawcy.",
+      "required": "Ten serwer wymaga uwierzytelniania"
+    },
+    "diagnostics": {
+      "launchTarget": "Cel uruchomienia"
+    },
+    "form": {
+      "autoFilled": "Wypełnione automatycznie",
+      "environmentVariables": "Zmienne środowiskowe",
+      "headers": "Nagłówki",
+      "scope": "Zakres",
+      "serverName": "Nazwa serwera"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Ten serwer wymaga ręcznej konfiguracji. Sprawdź repozytorium, aby uzyskać instrukcje instalacji.",
+      "manualSetupRequired": "Wymagana ręczna konfiguracja",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Zarządzaj instalacją",
+      "install": "Zainstaluj serwer"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repozytorium",
+      "website": "Strona internetowa"
+    },
+    "metadata": {
+      "author": "Autor",
+      "githubStars": "Gwiazdki GitHub",
+      "hosting": "Hosting",
+      "installType": "Typ instalacji",
+      "license": "Licencja",
+      "published": "Opublikowano",
+      "source": "Źródło",
+      "updated": "Zaktualizowano",
+      "version": "Wersja"
+    },
+    "scope": {
+      "local": "Lokalny",
+      "project": "Projekt"
+    },
+    "tools": {
+      "title": "Narzędzia ({{count}})",
+      "title_few": "Narzędzia ({{count}})",
+      "title_many": "Narzędzia ({{count}})",
+      "title_one": "Narzędzia ({{count}})",
+      "title_other": "Narzędzia ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Anuluj",
+      "createSkill": "Utwórz umiejętność",
+      "preparing": "Przygotowywanie...",
+      "reviewAndCreate": "Przejrzyj i utwórz",
+      "reviewAndSave": "Przejrzyj i zapisz",
+      "saveSkill": "Zapisz umiejętność"
+    },
+    "advanced": {
+      "customDescription": "Ta umiejętność używa niestandardowego formatu markdown, więc edytuj ją bezpośrednio tutaj.",
+      "customTitle": "2. Edytor SKILL.md",
+      "description": "Większość osób może to pominąć. Otwórz to tylko wtedy, gdy chcesz mieć bezpośrednią kontrolę nad surowym plikiem markdown.",
+      "hide": "Ukryj edytor zaawansowany",
+      "resetFromStructuredFields": "Resetuj z pól strukturalnych",
+      "show": "Pokaż edytor zaawansowany",
+      "title": "4. Zaawansowany edytor SKILL.md"
+    },
+    "basics": {
+      "description": "Nadaj tej umiejętności jasną nazwę, wybierz, kto może z niej korzystać, i zdecyduj, gdzie powinna się znajdować.",
+      "title": "1. Podstawy"
+    },
+    "description": {
+      "create": "Opisz proces prostym językiem, przejrzyj pliki, które zostaną utworzone, a następnie zapisz go.",
+      "edit": "Zaktualizuj tę umiejętność, przejrzyj wynikowe zmiany plików, a następnie zapisz ją."
+    },
+    "extraFiles": {
+      "addedFiles": "Dodane pliki:",
+      "assets": "Zasoby",
+      "assetsDescription": "Dodaj zrzuty ekranu lub dołączone media tylko wtedy, gdy pomagają wyjaśnić proces.",
+      "description": "Dodaj pomocnicze dokumenty, skrypty lub zasoby tylko wtedy, gdy ta umiejętność naprawdę ich potrzebuje.",
+      "lockedForEdits": "Katalog główny i folder są zablokowane do edycji",
+      "optionalDescription": "Dodaj pliki startowe, które zostaną uwzględnione w przeglądzie i zapisane razem z `SKILL.md`.",
+      "optionalTitle": "Pliki opcjonalne",
+      "references": "Odniesienia",
+      "referencesDescription": "Dodaj pomocnicze dokumenty, linki lub przykłady, z których środowisko uruchomieniowe może korzystać.",
+      "scripts": "Skrypty",
+      "scriptsDescription": "Dodaj polecenia pomocnicze lub notatki konfiguracyjne. Sprawdź dokładnie przed udostępnieniem tej umiejętności.",
+      "title": "3. Dodatkowe pliki"
+    },
+    "fields": {
+      "compatibility": "Zgodność",
+      "description": "Opis",
+      "folderName": "Nazwa folderu",
+      "folderNameHint": "Sugerujemy to automatycznie na podstawie nazwy umiejętności, aby przegląd działał od razu.",
+      "invocation": "Jak powinna być używana",
+      "license": "Licencja",
+      "name": "Nazwa umiejętności",
+      "notes": "Dodatkowe notatki lub zabezpieczenia",
+      "root": "Gdzie ją przechowywać",
+      "scope": "Kto może z niej korzystać",
+      "steps": "Główne kroki do wykonania",
+      "whenToUse": "Kiedy po nią sięgnąć"
+    },
+    "instructions": {
+      "description": "Te sekcje generują plik umiejętności za Ciebie, więc nie musisz edytować markdown, chyba że chcesz.",
+      "locked": "Pola strukturalne są zablokowane, ponieważ przełączyłeś się na ręczną edycję `SKILL.md` poniżej.",
+      "title": "2. Instrukcje"
+    },
+    "invocation": {
+      "auto": "Może być używana automatycznie",
+      "manualOnly": "Tylko wtedy, gdy o nią poprosisz"
+    },
+    "placeholders": {
+      "description": "W czym ta umiejętność pomaga",
+      "name": "Napisz zwięzłą nazwę umiejętności",
+      "notes": "Przykład: Wskaż brakujące testy, regresje i ryzykowne założenia.",
+      "steps": "1. Sprawdź odpowiednie pliki.\n2. Najpierw wyjaśnij główne ryzyko.\n3. Zaproponuj najbezpieczniejszą poprawkę.",
+      "whenToUse": "Przykład: Użyj tego, gdy zadanie to przegląd kodu lub prośba o segregację błędów.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Tworzenie umiejętności",
+      "hint": "Najpierw przejrzyj zmiany plików, a następnie potwierdź zapis w następnym kroku.",
+      "saving": "Zapisywanie tej umiejętności"
+    },
+    "root": {
+      "codexOnly": " - Tylko Codex",
+      "shared": " - Współdzielone"
+    },
+    "scope": {
+      "project": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt niedostępny",
+      "user": "Użytkownik"
+    },
+    "title": {
+      "create": "Utwórz umiejętność",
+      "edit": "Edytuj umiejętność"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Anuluj",
+      "delete": "Usuń",
+      "deleteSkill": "Usuń umiejętność",
+      "deleting": "Usuwanie...",
+      "editSkill": "Edytuj umiejętność",
+      "openFolder": "Otwórz folder",
+      "openSkillFile": "Otwórz SKILL.md",
+      "retry": "Ponów"
+    },
+    "badges": {
+      "assets": "Zasoby",
+      "autoUse": "Użycie automatyczne",
+      "hasScripts": "Zawiera skrypty",
+      "manualUse": "Użycie ręczne",
+      "references": "Odniesienia",
+      "storedIn": "Przechowywane w {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Usunąć tę umiejętność i przenieść ją do kosza?",
+      "descriptionWithName": "Usunąć \"{{name}}\" i przenieść ją do kosza? W razie potrzeby możesz ją później przywrócić z kosza.",
+      "title": "Usunąć umiejętność?"
+    },
+    "descriptionFallback": "Sprawdź wykryte metadane umiejętności i surowe instrukcje.",
+    "errors": {
+      "deleteFailed": "Nie udało się usunąć umiejętności",
+      "loadFailed": "Nie można załadować tej umiejętności."
+    },
+    "files": {
+      "advancedDetails": "Zaawansowane szczegóły pliku",
+      "assets": "Zasoby",
+      "references": "Odniesienia",
+      "scripts": "Skrypty",
+      "storedAt": "Przechowywane w"
+    },
+    "includes": {
+      "assets": "zasoby",
+      "instructionsOnly": "Tylko instrukcje umiejętności",
+      "references": "odniesienia",
+      "scripts": "skrypty"
+    },
+    "invocation": {
+      "auto": "Uruchamia się automatycznie, gdy pasuje do zadania.",
+      "manualOnly": "Uruchamia się tylko wtedy, gdy o to wyraźnie poprosisz."
+    },
+    "issues": {
+      "bundledScripts": "Ta umiejętność zawiera dołączone skrypty",
+      "reviewCarefully": "Sprawdź dokładnie tę umiejętność przed użyciem"
+    },
+    "loading": "Ładowanie szczegółów umiejętności...",
+    "scope": {
+      "personal": "Twoje osobiste umiejętności",
+      "projectOnly": "Tylko ten projekt"
+    },
+    "summary": {
+      "howUsed": "Jak jest używana",
+      "included": "Co jest dołączone",
+      "whoCanUse": "Kto może z niej korzystać"
+    },
+    "titleFallback": "Szczegóły umiejętności"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Utwórz umiejętność",
+      "import": "Importuj"
+    },
+    "badges": {
+      "assets": "Zasoby",
+      "hasScripts": "Zawiera skrypty",
+      "needsAttention": "Wymaga uwagi",
+      "references": "Odniesienia",
+      "storedIn": "Przechowywane w {{root}}"
+    },
+    "configuredRuntime": "skonfigurowane środowisko uruchomieniowe",
+    "counts": {
+      "codexOnly": "{{count}} tylko Codex",
+      "personal": "{{count}} osobistych",
+      "project": "{{count}} projektowych",
+      "shared": "{{count}} współdzielonych",
+      "total": "{{count}} łącznie",
+      "codexOnly_few": "{{count}} tylko Codex",
+      "codexOnly_many": "{{count}} tylko Codex",
+      "codexOnly_one": "{{count}} tylko Codex",
+      "codexOnly_other": "{{count}} tylko Codex",
+      "personal_few": "{{count}} osobiste",
+      "personal_many": "{{count}} osobistych",
+      "personal_one": "{{count}} osobista",
+      "personal_other": "{{count}} osobistych",
+      "project_few": "{{count}} projektowe",
+      "project_many": "{{count}} projektowych",
+      "project_one": "{{count}} projektowa",
+      "project_other": "{{count}} projektowych",
+      "shared_few": "{{count}} współdzielone",
+      "shared_many": "{{count}} współdzielonych",
+      "shared_one": "{{count}} współdzielona",
+      "shared_other": "{{count}} współdzielonych",
+      "total_few": "{{count}} łącznie",
+      "total_many": "{{count}} łącznie",
+      "total_one": "{{count}} łącznie",
+      "total_other": "{{count}} łącznie"
+    },
+    "empty": {
+      "noMatches": "Żadna umiejętność nie pasuje do wyszukiwania",
+      "noMatchesDescription": "Spróbuj innego terminu wyszukiwania lub zmień filtry.",
+      "noSkills": "Brak umiejętności",
+      "noSkillsDescription": "Utwórz swoją pierwszą umiejętność, aby nauczyć powtarzalnego procesu, lub zaimportuj taką, której już używasz."
+    },
+    "filters": {
+      "all": "Wszystkie umiejętności",
+      "codexOnly": "Tylko Codex",
+      "hasScripts": "Zawiera skrypty",
+      "needsAttention": "Wymaga uwagi",
+      "personal": "Osobiste",
+      "project": "Projektowe",
+      "shared": "Współdzielone"
+    },
+    "hero": {
+      "codexAvailable": "Użyj `.codex`, gdy umiejętność powinna pozostać tylko dla Codex.",
+      "codexUnavailable": "Istniejące umiejętności `.codex` pozostają tutaj edytowalne, ale nowe umiejętności tylko dla Codex wymagają włączonego środowiska Codex.",
+      "description": "Umiejętności to instrukcje wielokrotnego użytku, które pomagają środowisku uruchomieniowemu obsługiwać ten sam rodzaj zadania bardziej konsekwentnie.",
+      "guidance": "Używaj umiejętności osobistych dla nawyków, które chcesz mieć wszędzie. Używaj umiejętności projektowych dla procesów, które mają sens tylko w jednym kodzie źródłowym.",
+      "personalContext": "W tej chwili widzisz tylko swoje osobiste umiejętności.",
+      "projectContext": "Widzisz umiejętności dla {{project}} oraz swoje osobiste umiejętności.",
+      "title": "Naucz powtarzalnej pracy"
+    },
+    "invocation": {
+      "auto": "Uruchamia się automatycznie, gdy pasuje",
+      "manualOnly": "Uruchamia się tylko wtedy, gdy o to wyraźnie poprosisz"
+    },
+    "loading": {
+      "loading": "Ładowanie umiejętności...",
+      "refreshing": "Odświeżanie umiejętności..."
+    },
+    "runtimeAudience": "Współdzielone umiejętności w `.claude`, `.cursor` i `.agents` są dostępne dla {{audience}}. Umiejętności przechowywane w `.codex` pozostają tylko dla Codex, gdy obsługa Codex jest dostępna.",
+    "scope": {
+      "project": "Ten projekt",
+      "user": "Osobiste"
+    },
+    "searchPlaceholder": "Szukaj wg nazwy umiejętności lub tego, w czym pomaga...",
+    "sections": {
+      "personal": {
+        "description": "Nawyki i instrukcje, które chcesz mieć dostępne wszędzie.",
+        "title": "Umiejętności osobiste"
+      },
+      "project": {
+        "description": "Procesy, które mają sens tylko dla tego kodu źródłowego.",
+        "title": "Umiejętności projektowe"
+      }
+    },
+    "sort": {
+      "label": "Sortuj umiejętności",
+      "name": "Nazwa",
+      "recent": "Najnowsze"
+    },
+    "status": {
+      "hasScripts": "Zawiera skrypty, więc sprawdź ją dokładnie",
+      "needsAttention": "Wymaga uwagi, zanim na niej polegniesz",
+      "ready": "Gotowa do użycia"
+    },
+    "success": {
+      "created": "Umiejętność utworzona pomyślnie.",
+      "imported": "Umiejętność zaimportowana pomyślnie.",
+      "saved": "Umiejętność zapisana pomyślnie."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Nieznane",
+    "metadata": {
+      "author": "Autor",
+      "category": "Kategoria",
+      "source": "Źródło",
+      "version": "Wersja",
+      "capabilities": "Możliwości",
+      "installs": "Instalacje"
+    },
+    "scope": {
+      "label": "Zakres:",
+      "options": {
+        "user": "Użytkownik (globalnie)",
+        "project": "Projekt (współdzielony)",
+        "local": "Lokalny (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Strona główna",
+      "contact": "Kontakt"
+    },
+    "readme": {
+      "loading": "Ładowanie README...",
+      "empty": "Brak dostępnego README."
+    }
+  },
+  "skillImport": {
+    "title": "Importuj umiejętność",
+    "description": "Wybierz istniejący folder umiejętności, przejrzyj, co zostanie skopiowane, a następnie zaimportuj go do jednej z obsługiwanych lokalizacji umiejętności.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Wybierz folder umiejętności",
+        "description": "To powinien być folder, który już zawiera plik `SKILL.md`, `Skill.md` lub `skill.md`."
+      },
+      "location": {
+        "title": "2. Zdecyduj, gdzie należy",
+        "description": "Umiejętności osobiste działają wszędzie. Umiejętności projektowe pojawiają się tylko dla jednego kodu źródłowego."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Folder źródłowy",
+      "destinationFolderName": "Nazwa folderu docelowego",
+      "audience": "Kto może z niej korzystać",
+      "storage": "Gdzie ją przechowywać"
+    },
+    "placeholders": {
+      "defaultFolderName": "Domyślnie nazwa folderu źródłowego"
+    },
+    "actions": {
+      "browse": "Przeglądaj",
+      "cancel": "Anuluj",
+      "preparing": "Przygotowywanie...",
+      "reviewAndImport": "Przejrzyj i importuj",
+      "importSkill": "Importuj umiejętność",
+      "backToImport": "Wróć do importu"
+    },
+    "scope": {
+      "user": "Użytkownik",
+      "project": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt niedostępny"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Tylko Codex",
+      "shared": " - Współdzielone"
+    },
+    "reviewHint": "Najpierw przejrzyj skopiowane pliki, a następnie potwierdź import w następnym kroku.",
+    "reviewLabel": "Importowanie tej umiejętności",
+    "errors": {
+      "missingSkillFile": "Ten folder nie wygląda jeszcze jak umiejętność. Potrzebuje pliku SKILL.md, Skill.md lub skill.md.",
+      "symbolicLinks": "Ten folder zawiera dowiązania symboliczne. Zaimportuj prawdziwe pliki zamiast dowiązań.",
+      "tooManyFiles": "Ten folder umiejętności jest zbyt duży, aby zaimportować go naraz. Usuń dodatkowe pliki i spróbuj ponownie.",
+      "tooLarge": "Ten folder umiejętności jest zbyt duży, aby bezpiecznie go zaimportować. Usuń duże zasoby i spróbuj ponownie.",
+      "invalidFolderName": "Wybierz prostszą nazwę folderu docelowego, używając liter, cyfr, kropek, myślników lub podkreśleń.",
+      "mustBeDirectory": "Wybierz folder do importu, a nie pojedynczy plik.",
+      "reviewFailed": "Nie udało się przejrzeć zmian importu",
+      "importFailed": "Nie udało się zaimportować umiejętności"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Nazwa A→Z",
+      "nameDesc": "Nazwa Z→A",
+      "toolsDesc": "Najwięcej narzędzi"
+    },
+    "health": {
+      "title": "Status kondycji MCP",
+      "checkingViaRuntime": "Sprawdzanie zainstalowanych serwerów MCP przez {{runtime}} ...",
+      "lastChecked": "Ostatnio sprawdzono {{time}}",
+      "description": "Uruchom diagnostykę z tej strony, aby zweryfikować łączność zainstalowanych MCP.",
+      "checking": "Sprawdzanie...",
+      "checkStatus": "Sprawdź status"
+    },
+    "diagnostics": {
+      "title": "Diagnostyka MCP środowiska uruchomieniowego",
+      "serversCount": "{{count}} serwerów",
+      "serversCount_one": "{{count}} serwer",
+      "serversCount_other": "{{count}} serwerów",
+      "waiting": "Oczekiwanie na wyniki diagnostyki...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Sprawdzanie statusu środowiska uruchomieniowego...",
+        "checkingRuntimeAvailability": "Sprawdzanie dostępności środowiska uruchomieniowego...",
+        "runtimeFailedToStart": "Skonfigurowane środowisko uruchomieniowe zostało znalezione, ale nie udało się go uruchomić. Otwórz panel, aby je naprawić lub zainstalować ponownie.",
+        "runtimeRequired": "Skonfigurowane środowisko uruchomieniowe jest wymagane. Zainstaluj je lub napraw z panelu."
+      },
+      "serversCount_few": "{{count}} serwery",
+      "serversCount_many": "{{count}} serwerów"
+    },
+    "searchPlaceholder": "Szukaj serwerów MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} niedostępne",
+      "notInstalled": "{{runtime}} nie jest zainstalowane",
+      "requiredDescription": "Kontrole kondycji MCP wymagają {{runtime}}. Przejdź do panelu, aby je zainstalować lub naprawić."
+    },
+    "empty": {
+      "searchTitle": "Nie znaleziono serwerów",
+      "title": "Brak dostępnych serwerów MCP",
+      "searchDescription": "Spróbuj innego terminu wyszukiwania",
+      "description": "Sprawdź ponownie później, czy są nowe serwery"
+    },
+    "loadMore": "Załaduj więcej"
+  },
+  "apiKeys": {
+    "description": "Bezpiecznie przechowuj klucze API do automatycznego wypełniania podczas instalacji serwerów MCP.",
+    "storage": {
+      "osKeychain": "Klucze są szyfrowane przez {{backend}} i przechowywane z ograniczonymi uprawnieniami plików (tylko właściciel).",
+      "localEncryption": "Pęk kluczy systemu operacyjnego niedostępny - klucze są szyfrowane lokalnie za pomocą AES-256. Aby uzyskać silniejszą ochronę, zainstaluj usługę pęku kluczy (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Dodaj klucz API",
+      "addFirst": "Dodaj swój pierwszy klucz",
+      "edit": "Edytuj",
+      "copied": "Skopiowano!",
+      "copyEnvVarName": "Kopiuj nazwę zmiennej środowiskowej",
+      "confirmDelete": "Kliknij ponownie, aby potwierdzić",
+      "delete": "Usuń"
+    },
+    "empty": {
+      "title": "Brak zapisanych kluczy API",
+      "description": "Dodaj klucze, aby automatycznie wypełniać zmienne środowiskowe podczas instalacji serwerów MCP."
+    },
+    "form": {
+      "addTitle": "Dodaj klucz API",
+      "editTitle": "Edytuj klucz API",
+      "addDescription": "Przechowuj klucz API do automatycznego wypełniania w instalacjach serwerów MCP.",
+      "editDescription": "Zaktualizuj szczegóły klucza. Musisz ponownie wprowadzić wartość.",
+      "keychainUnavailable": "Pęk kluczy systemu operacyjnego niedostępny - klucze szyfrowane lokalnie za pomocą AES-256. Zainstaluj gnome-keyring dla ochrony na poziomie systemu operacyjnego.",
+      "name": "Nazwa",
+      "namePlaceholder": "np. OpenAI Production",
+      "environmentVariableName": "Nazwa zmiennej środowiskowej",
+      "envVarPlaceholder": "np. OPENAI_API_KEY",
+      "value": "Wartość",
+      "reenterValue": "Wprowadź ponownie wartość klucza",
+      "valuePlaceholder": "sk-...",
+      "scope": "Zakres",
+      "userScopeLabel": "Użytkownik (globalnie)",
+      "projectScopeLabel": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt niedostępny",
+      "boundTo": "Powiązane z {{path}}",
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie...",
+      "update": "Aktualizuj",
+      "save": "Zapisz",
+      "errors": {
+        "invalidEnvVarFormat": "Użyj liter, cyfr, podkreśleń. Musi zaczynać się od litery lub podkreślenia.",
+        "nameRequired": "Nazwa jest wymagana",
+        "envVarRequired": "Nazwa zmiennej środowiskowej jest wymagana",
+        "invalidEnvVar": "Nieprawidłowa nazwa zmiennej środowiskowej",
+        "valueRequired": "Wartość klucza jest wymagana",
+        "projectScopeRequiresProject": "Klucze API o zakresie projektu wymagają aktywnego projektu",
+        "saveFailed": "Nie udało się zapisać"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Przejrzyj zmiany umiejętności",
+    "description": "{{reviewLabel}} najpierw wyświetla podgląd zmian w systemie plików. Nic nie jest zapisywane, dopóki nie potwierdzisz poniżej.",
+    "noPreview": "Brak dostępnego podglądu.",
+    "confirmPromptPrefix": "Przejrzyj różnice poniżej, a następnie użyj",
+    "confirmPromptSuffix": "aby zastosować te zmiany.",
+    "noChanges": "Nie wykryto jeszcze żadnych zmian plików.",
+    "binaryBadge": "binarny",
+    "binaryPreviewHidden": "Podgląd pliku binarnego nie jest pokazywany. Plik zostanie skopiowany w niezmienionej postaci.",
+    "summary": {
+      "fileChanges": "{{count}} zmian plików",
+      "fileChanges_one": "{{count}} zmiana pliku",
+      "fileChanges_other": "{{count}} zmian plików",
+      "new": "{{count}} nowych",
+      "updated": "{{count}} zaktualizowanych",
+      "removed": "{{count}} usuniętych",
+      "binary": "{{count}} binarnych",
+      "fileChanges_few": "{{count}} zmiany plików",
+      "fileChanges_many": "{{count}} zmian plików"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} narzędzi",
+    "toolsCount_one": "{{count}} narzędzie",
+    "toolsCount_other": "{{count}} narzędzi",
+    "envCount": "{{count}} zmiennych śr.",
+    "envCount_one": "{{count}} zmienna śr.",
+    "envCount_other": "{{count}} zmiennych śr.",
+    "auth": "Uwierzytelnianie",
+    "byAuthor": "autor: {{author}}",
+    "hosting": {
+      "remote": "Zdalny",
+      "local": "Lokalny",
+      "both": "Oba"
+    },
+    "toolsCount_few": "{{count}} narzędzia",
+    "toolsCount_many": "{{count}} narzędzi",
+    "envCount_few": "{{count}} zmienne śr.",
+    "envCount_many": "{{count}} zmiennych śr.",
+    "repository": "Repozytorium",
+    "website": "Strona internetowa"
+  },
+  "installButton": {
+    "installing": "Instalowanie...",
+    "removing": "Usuwanie...",
+    "done": "Gotowe",
+    "retry": "Ponów",
+    "uninstall": "Odinstaluj",
+    "install": "Zainstaluj"
+  },
+  "pluginCard": {
+    "official": "Oficjalna"
+  }
+}

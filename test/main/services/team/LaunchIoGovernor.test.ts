@@ -4,6 +4,7 @@ import {
   cloneLaunchIoGovernorPayload,
   LaunchIoGovernor,
 } from '../../../../src/main/services/team/LaunchIoGovernor';
+
 import type { GlobalTask, TeamProvisioningProgress, TeamSummary } from '../../../../src/shared/types';
 
 function team(teamName: string): TeamSummary {
@@ -139,6 +140,26 @@ describe('LaunchIoGovernor', () => {
       })
     ).resolves.toEqual([team('new')]);
     expect(loadFresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps default launch summary cache through a long active startup', async () => {
+    let now = 0;
+    const governor = new LaunchIoGovernor({ now: () => now });
+    const loadFresh = vi.fn(async () => [task('old-task')]);
+
+    await governor.runSummaryOperation('teams:getAllTasks', loadFresh, {
+      clone: cloneLaunchIoGovernorPayload,
+    });
+    now = 60_000;
+    loadFresh.mockResolvedValue([task('new-task')]);
+    governor.noteLaunchIntent('team-a', 'launch');
+
+    await expect(
+      governor.runSummaryOperation('teams:getAllTasks', loadFresh, {
+        clone: cloneLaunchIoGovernorPayload,
+      })
+    ).resolves.toEqual([task('old-task')]);
+    expect(loadFresh).toHaveBeenCalledTimes(1);
   });
 
   it('does not cache an in-flight result when a dirty generation arrives before it resolves', async () => {

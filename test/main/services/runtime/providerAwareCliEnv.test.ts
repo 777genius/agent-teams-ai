@@ -107,6 +107,25 @@ describe('buildProviderAwareCliEnv', () => {
     });
   });
 
+  it('returns narrow provider status stored credential allowlists', async () => {
+    const {
+      getAggregateProviderStatusStoredCredentialAllowlist,
+      getProviderStatusStoredCredentialAllowlist,
+    } = await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+    expect(getProviderStatusStoredCredentialAllowlist('anthropic')).toEqual([
+      'ANTHROPIC_AUTH_TOKEN',
+    ]);
+    expect(getProviderStatusStoredCredentialAllowlist('codex')).toEqual(['OPENAI_API_KEY']);
+    expect(getProviderStatusStoredCredentialAllowlist('gemini')).toBeUndefined();
+    expect(getProviderStatusStoredCredentialAllowlist('opencode')).toBeUndefined();
+    expect(getProviderStatusStoredCredentialAllowlist(undefined)).toBeUndefined();
+    expect(getAggregateProviderStatusStoredCredentialAllowlist()).toEqual([
+      'ANTHROPIC_AUTH_TOKEN',
+      'OPENAI_API_KEY',
+    ]);
+  });
+
   it('builds provider-pinned CLI env and returns provider-specific issues', async () => {
     getConfiguredConnectionIssuesMock.mockResolvedValue({
       anthropic: 'missing key',
@@ -229,9 +248,25 @@ describe('buildProviderAwareCliEnv', () => {
       {
         allowStoredApiKeyDecryption: false,
         allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+        allowClaudeUserSettingsAuthEnv: false,
       }
     );
     expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('passes a stored API key decrypt allowlist through shared env building', async () => {
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await buildProviderAwareCliEnv({
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+    });
+
+    expect(applyAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(expect.any(Object), {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+    });
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
   it('builds shared env for generic CLI launches when no provider is specified', async () => {
@@ -354,7 +389,10 @@ describe('buildProviderAwareCliEnv', () => {
     expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(
       expect.objectContaining({
         OPENAI_API_KEY: 'shell-key',
-      })
+      }),
+      {
+        allowClaudeUserSettingsAuthEnv: false,
+      }
     );
     expect(result.connectionIssues).toEqual({});
     expect(result.providerArgs).toEqual([]);
@@ -398,7 +436,10 @@ describe('buildProviderAwareCliEnv', () => {
       expect.objectContaining({
         CLAUDE_CODE_GEMINI_BACKEND: 'api',
         CLAUDE_CODE_CODEX_BACKEND: 'codex-native',
-      })
+      }),
+      {
+        allowClaudeUserSettingsAuthEnv: false,
+      }
     );
     expect(result.env.CLAUDE_CODE_GEMINI_BACKEND).toBe('api');
     expect(result.env.CLAUDE_CODE_CODEX_BACKEND).toBe('codex-native');
@@ -452,6 +493,49 @@ describe('buildProviderAwareCliEnv', () => {
       '--settings',
       '{"codex":{"forced_login_method":"chatgpt"}}',
     ]);
+  });
+
+  it('returns Codex custom provider launch args after API-key env application', async () => {
+    applyConfiguredConnectionEnvMock.mockImplementation(async (env: NodeJS.ProcessEnv) => {
+      env.OPENAI_API_KEY = 'stored-key';
+      env.CODEX_API_KEY = 'stored-key';
+      return env;
+    });
+    const customSettings = JSON.stringify({
+      codex: {
+        forced_login_method: 'api',
+        agent_teams_custom_provider: {
+          config_overrides: [
+            'model_provider="agent_teams_custom"',
+            'model_providers.agent_teams_custom.name="Agent Teams Custom"',
+            'model_providers.agent_teams_custom.base_url="https://gateway.example.com/v1"',
+            'model_providers.agent_teams_custom.wire_api="responses"',
+            'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
+          ],
+        },
+      },
+    });
+    getConfiguredConnectionLaunchArgsMock.mockResolvedValue(['--settings', customSettings]);
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      binaryPath: '/mock/claude-multimodel',
+      providerId: 'codex',
+    });
+
+    expect(getConfiguredConnectionLaunchArgsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      }),
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+    expect(result.providerArgs).toEqual(['--settings', customSettings]);
+    expect(result.env.OPENAI_API_KEY).toBe('stored-key');
+    expect(result.env.CODEX_API_KEY).toBe('stored-key');
   });
 
   it('passes Codex env refreshed by strict credential application into launch args and issue checks', async () => {

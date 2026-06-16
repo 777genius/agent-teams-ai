@@ -89,6 +89,8 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphSimulation', () => (
     getExtraWorldBounds: vi.fn(() => []),
     getLaunchAnchorWorldPosition: vi.fn(() => null),
     getActivityWorldRect: vi.fn(() => null),
+    getLogWorldRect: vi.fn(() => null),
+    getOwnerColumnGroupRects: vi.fn(() => []),
     resolveNearestOwnerSlot: hoisted.resolveNearestOwnerSlot,
     resolveNearestOwnerGridTarget: hoisted.resolveNearestOwnerGridTarget,
     clearNodePosition: hoisted.clearNodePosition,
@@ -112,7 +114,10 @@ vi.mock('../../../../packages/agent-graph/src/ui/GraphEdgeOverlay', () => ({
   GraphEdgeOverlay: () => null,
 }));
 
-import { GraphView } from '../../../../packages/agent-graph/src/ui/GraphView';
+import {
+  GraphView,
+  isEditableGraphShortcutTarget,
+} from '../../../../packages/agent-graph/src/ui/GraphView';
 
 describe('GraphView pan interactions', () => {
   let container: HTMLDivElement;
@@ -198,6 +203,123 @@ describe('GraphView pan interactions', () => {
     });
 
     expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(true);
+  });
+
+  it('can opt out of animated space effects through config', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false, showSpaceEffects: false },
+        })
+      );
+    });
+
+    expect(
+      (hoisted.graphControlsProps?.filters as { showSpaceEffects: boolean }).showSpaceEffects
+    ).toBe(false);
+  });
+
+  it('recognizes editable shortcut targets through shadow DOM event paths', () => {
+    const host = document.createElement('div');
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+    const textarea = document.createElement('textarea');
+    shadowRoot.appendChild(textarea);
+    document.body.appendChild(host);
+
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      code: 'Space',
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [textarea, shadowRoot, host, document, window],
+    });
+
+    expect(isEditableGraphShortcutTarget(event)).toBe(true);
+
+    host.remove();
+  });
+
+  it('toggles graph pause on Space when the graph owns keyboard focus', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: true },
+        })
+      );
+    });
+
+    expect((hoisted.graphControlsProps?.filters as { paused: boolean }).paused).toBe(false);
+
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      code: 'Space',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    await act(async () => {
+      window.dispatchEvent(event);
+      await Promise.resolve();
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect((hoisted.graphControlsProps?.filters as { paused: boolean }).paused).toBe(true);
+  });
+
+  it('does not steal Space from terminal command inputs mounted in shadow DOM', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: true },
+        })
+      );
+    });
+
+    const host = document.createElement('tp-terminal-command-dock');
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+    const textarea = document.createElement('textarea');
+    textarea.setAttribute('data-testid', 'tp-command-input');
+    shadowRoot.appendChild(textarea);
+    document.body.appendChild(host);
+
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      code: 'Space',
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+
+    await act(async () => {
+      textarea.dispatchEvent(event);
+      await Promise.resolve();
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect((hoisted.graphControlsProps?.filters as { paused: boolean }).paused).toBe(false);
+
+    host.remove();
   });
 
   it('starts panning when dragging from a hit-tested edge instead of getting stuck on edge selection', async () => {
@@ -588,6 +710,7 @@ describe('GraphView pan interactions', () => {
         showTasks: boolean;
         showProcesses: boolean;
         showEdges: boolean;
+        showSpaceEffects: boolean;
         paused: boolean;
       };
       onFiltersChange: (filters: {
@@ -596,6 +719,7 @@ describe('GraphView pan interactions', () => {
         showTasks: boolean;
         showProcesses: boolean;
         showEdges: boolean;
+        showSpaceEffects: boolean;
         paused: boolean;
       }) => void;
     } | null;

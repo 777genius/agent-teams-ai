@@ -7,7 +7,16 @@
     "download": "Baixar",
     "pricing": "Grátis",
     "faq": "FAQ",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "short": {
+      "screenshots": "Imagens",
+      "docs": "Docs",
+      "download": "Baixar",
+      "comparison": "Comparar",
+      "pricing": "Grátis"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "Open Source"
     },
     "watchDemo": "Ver demo",
-    "videoUnavailable": "Vídeo indisponível"
+    "videoUnavailable": "Vídeo indisponível",
+    "supportedProviders": "Provedores de IA compatíveis",
+    "slogan": "Faça muito fazendo muito pouco",
+    "platformDefault": "Para sua plataforma",
+    "guidesSetup": "Guias e configuração",
+    "videoFrameLabel": "Assistir demo do Agent Teams",
+    "commandFeed": "Feed de comandos da equipe",
+    "liveDemo": "Demo ao vivo",
+    "demoVideoTitle": "Vídeo demo do Agent Teams",
+    "demoTitle": "Demo do Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo da equipe de agentes",
+      "live": "LIVE",
+      "waiting": "Aguardando tarefas...",
+      "activity": {
+        "authMiddleware": "Implementando middleware de autenticação...",
+        "unitTests": "Escrevendo testes unitários para API...",
+        "reviewPr": "Revisando mudanças do PR #42...",
+        "ciPipeline": "Configurando pipeline CI/CD...",
+        "refactorDatabase": "Refatorando camada de banco de dados..."
+      },
+      "tasks": {
+        "authApi": "API auth",
+        "unitTests": "Testes unitários",
+        "ciSetup": "Setup CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "EM PROGRESSO",
+        "review": "REVISÃO",
+        "done": "PRONTO"
+      }
+    }
   },
   "download": {
     "title": "Baixar",
     "detected": "Detectado",
     "systemRequirements": "Requisitos do sistema",
-    "version": "Versão {version}"
+    "version": "Versão {version}",
+    "readyToStart": "Pronto para começar!"
   },
   "theme": {
     "dark": "Escuro",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "Capturas reais do app — quadro kanban, revisão de código, equipes de agentes e mais."
   },
   "common": {
-    "learnMore": "Saiba mais"
+    "learnMore": "Saiba mais",
+    "statusLabel": "Status:",
+    "previous": "Anterior",
+    "next": "Próximo"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "Estou esperando",
     "links": {
       "github": "GitHub",
+      "author": "Autor",
       "docs": "Documentação"
     }
   },

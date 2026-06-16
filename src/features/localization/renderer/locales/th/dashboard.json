@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "เข้าสู่ระบบแล้ว?",
+      "becomeSponsor": "เป็นผู้สนับสนุน",
+      "cancel": "ยกเลิก",
+      "checkNow": "ตรวจสอบเลย",
+      "checkUpdates": "ตรวจสอบการอัปเดต",
+      "checking": "กำลังตรวจสอบ...",
+      "connect": "เชื่อมต่อ",
+      "extensions": "ส่วนขยาย",
+      "login": "เข้าสู่ระบบ",
+      "manage": "จัดการ",
+      "manageProviders": "จัดการผู้ให้บริการ",
+      "plan": "แผน",
+      "recheck": "ตรวจสอบใหม่",
+      "recheckProvider": "ตรวจสอบ {{provider}} ใหม่",
+      "retry": "ลองอีกครั้ง",
+      "updateTo": "อัปเดตเป็น v{{version}}",
+      "useCode": "ใช้โค้ด"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud เป็นแพลตฟอร์มการอนุมาน AI แบบครบทุกโมดัลที่ให้นักพัฒนาใช้ AI API เดียวเพื่อเข้าถึงการสร้างวิดีโอ การสร้างภาพ และ LLM API แทนที่จะต้องจัดการการเชื่อมต่อกับผู้ให้บริการหลายราย คุณเชื่อมต่อเพียงครั้งเดียวและเข้าถึงโมเดลที่คัดสรรกว่า 300 รายการในทุกโมดัลแบบรวมศูนย์ ดูโปรโมชันแผนการเขียนโค้ดใหม่ของ Atlas Cloud เพื่อเข้าถึง API ที่คุ้มงบประมาณยิ่งขึ้น",
+      "openCodeProvider": "ผู้ให้บริการ OpenCode",
+      "plan": "แผนการเขียนโค้ด Atlas Cloud",
+      "sponsor": "ผู้สนับสนุน"
+    },
+    "errors": {
+      "checkStatusFailed": "ตรวจสอบสถานะ CLI ไม่สำเร็จ",
+      "installationFailed": "การติดตั้งล้มเหลว",
+      "refreshFailed": "ตรวจสอบการอัปเดตไม่สำเร็จ โปรดตรวจสอบการเชื่อมต่อเครือข่ายแล้วลองอีกครั้ง",
+      "runtimeUpdatedRefreshFailed": "อัปเดตรันไทม์แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ"
+    },
+    "hints": {
+      "backgroundStatus": "จะตรวจสอบสถานะ {{runtime}} ในเบื้องหลัง",
+      "codexApiKeyFallback": "{{hint}} สามารถใช้ API key สำรองได้หากคุณสลับโหมดการยืนยันตัวตน",
+      "codexAutoApiKey": "{{hint}} โหมดอัตโนมัติจะใช้ API key ต่อไปจนกว่าจะเชื่อมต่อ ChatGPT",
+      "codexFinishLogin": "ดำเนินการเข้าสู่ระบบ ChatGPT ในเบราว์เซอร์ให้เสร็จ ป้อนโค้ดที่แสดงหากระบบร้องขอ",
+      "codexNoActiveLogin": "ขีดจำกัดการใช้งานจะปรากฏหลังจาก Codex CLI เห็นบัญชี ChatGPT ที่ใช้งานอยู่เท่านั้น ขณะนี้รายงานว่าไม่มีการเข้าสู่ระบบ ChatGPT ที่ใช้งานอยู่",
+      "codexNoActiveManagedSession": "ขีดจำกัดการใช้งานจะปรากฏหลังจาก Codex CLI เห็นบัญชี ChatGPT ที่ใช้งานอยู่เท่านั้น มีข้อมูลบัญชี Codex ในเครื่องอยู่ แต่ยังไม่ได้เลือกเซสชันที่จัดการซึ่งใช้งานอยู่ในขณะนี้",
+      "codexReconnectNeeded": "ขีดจำกัดการใช้งานจะปรากฏหลังจาก Codex รีเฟรชเซสชัน ChatGPT ที่เลือกอยู่ในปัจจุบันเท่านั้น ขณะนี้เซสชันในเครื่องต้องเชื่อมต่อใหม่",
+      "firstCheckSlow": "การตรวจสอบครั้งแรกอาจใช้เวลาถึง 30 วินาที",
+      "loginRequiredForTeams": "การเรียกดูเซสชันและโปรเจกต์ใช้งานได้โดยไม่ต้องเข้าสู่ระบบ การเข้าสู่ระบบจำเป็นเฉพาะตอนรันทีมเอเจนต์เท่านั้น",
+      "troubleshootTitle": "หากแน่ใจว่าเข้าสู่ระบบแล้ว ลองทำตามขั้นตอนเหล่านี้:"
+    },
+    "installer": {
+      "checkingLatest": "กำลังตรวจสอบเวอร์ชันล่าสุด...",
+      "downloading": "กำลังดาวน์โหลด {{runtime}}...",
+      "installing": "กำลังติดตั้ง {{runtime}}...",
+      "success": "ติดตั้ง {{runtime}} v{{version}} สำเร็จ",
+      "verifying": "กำลังตรวจสอบ checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "ต้องใช้ API key",
+      "comingSoon": "เร็ว ๆ นี้",
+      "collapseProviderDetails": "ยุบรายละเอียดผู้ให้บริการ",
+      "expandProviderDetails": "ขยายรายละเอียดผู้ให้บริการ",
+      "generateLink": "สร้างลิงก์",
+      "loadingRateLimits": "กำลังโหลดขีดจำกัดอัตรา",
+      "loggedOut": "ผู้ให้บริการออกจากระบบแล้ว",
+      "loginAuthFailed": "การยืนยันตัวตนล้มเหลว",
+      "loginAuthUpdated": "อัปเดตการยืนยันตัวตนแล้ว",
+      "loginComplete": "เข้าสู่ระบบเสร็จสมบูรณ์",
+      "loginFailed": "เข้าสู่ระบบล้มเหลว",
+      "loginTitle": "เข้าสู่ระบบ",
+      "logoutFailed": "ออกจากระบบล้มเหลว",
+      "logoutTitle": "ออกจากระบบ",
+      "notLoggedIn": "ยังไม่ได้เข้าสู่ระบบ",
+      "openLogin": "เปิดหน้าเข้าสู่ระบบ",
+      "providerActionRequired": "ต้องดำเนินการกับผู้ให้บริการ",
+      "resets": "รีเซ็ต {{time}}",
+      "runtimeLoginTitle": "เข้าสู่ระบบ {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "กำลังตรวจสอบผู้ให้บริการ AI...",
+      "claudeCli": "กำลังตรวจสอบ Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "ยืนยันตัวตนแล้ว",
+      "backend": "แบ็กเอนด์: {{backend}}",
+      "checkingAuthentication": "กำลังตรวจสอบการยืนยันตัวตน...",
+      "checkingProviders": "กำลังตรวจสอบผู้ให้บริการ...",
+      "configuredLocalCount": "ตั้งค่าในเครื่องแล้ว {{count}} รายการ",
+      "configuredLocalCount_few": "ตั้งค่าในเครื่องแล้ว {{count}} รายการ",
+      "configuredLocalCount_many": "ตั้งค่าในเครื่องแล้ว {{count}} รายการ",
+      "configuredLocalCount_one": "ตั้งค่าในเครื่องแล้ว {{count}} รายการ",
+      "configuredLocalCount_other": "ตั้งค่าในเครื่องแล้ว {{count}} รายการ",
+      "configuredLocalTitle": "เส้นทาง OpenCode ในเครื่องที่นำเข้าจากการตั้งค่า OpenCode ของคุณ",
+      "connectedCount": "ผู้ให้บริการ: เชื่อมต่อแล้ว {{connected}}/{{denominator}}",
+      "freeModels": "โมเดลฟรี",
+      "freeModelsTitle": "OpenCode มีตัวเลือกโมเดลฟรี เช่น Big Pickle เมื่อมีในการตั้งค่าของคุณ OpenRouter ผ่าน OpenCode ก็สามารถเปิดเผยโมเดลฟรีได้เช่นกัน แต่ไม่ใช่ทุกโมเดล OpenCode/OpenRouter จะฟรี ความพร้อมใช้งานและขีดจำกัดอาจเปลี่ยนแปลงได้",
+      "loadingModels": "กำลังโหลดโมเดล...",
+      "modelsUnavailable": "ไม่มีโมเดลสำหรับรันไทม์บิลด์นี้",
+      "runtime": "รันไทม์: {{runtime}}",
+      "verifiedCount": "ยืนยันแล้ว {{count}} รายการ",
+      "verifiedCount_few": "ยืนยันแล้ว {{count}} รายการ",
+      "verifiedCount_many": "ยืนยันแล้ว {{count}} รายการ",
+      "verifiedCount_one": "ยืนยันแล้ว {{count}} รายการ",
+      "verifiedCount_other": "ยืนยันแล้ว {{count}} รายการ",
+      "verifiedTitle": "เส้นทาง OpenCode ที่มีหลักฐานการทำงานสำเร็จ"
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} ที่ตั้งค่าไว้ไม่ผ่านการตรวจสอบความพร้อมตอนเริ่มต้น",
+      "configuredNotFound": "ไม่พบ {{runtime}} ที่ตั้งค่าไว้",
+      "foundButFailed": "พบ {{runtime}} แต่เริ่มต้นไม่สำเร็จ",
+      "healthCheckFailedDescription": "แอปพบ {{runtime}} ที่ตั้งค่าไว้ แต่การตรวจสอบความพร้อมตอนเริ่มต้นล้มเหลว ซ่อมแซมหรือติดตั้งใหม่แล้วลองอีกครั้ง",
+      "install": "ติดตั้ง {{runtime}}",
+      "installRequiredDescription": "ต้องใช้ {{runtime}} สำหรับการจัดเตรียมทีมและการจัดการเซสชัน ติดตั้งเพื่อเริ่มต้นใช้งาน",
+      "isRequired": "ต้องใช้ {{runtime}}",
+      "reinstall": "ติดตั้ง {{runtime}} ใหม่"
+    },
+    "runtimeInstall": {
+      "checking": "กำลังตรวจสอบ",
+      "codexTitle": "ติดตั้ง Codex CLI ลงในข้อมูลแอป",
+      "downloading": "กำลังดาวน์โหลด",
+      "downloadingPercent": "กำลังดาวน์โหลด {{percent}}%",
+      "install": "ติดตั้ง",
+      "installing": "กำลังติดตั้ง",
+      "openCodeTitle": "ติดตั้งรันไทม์ OpenCode ลงในข้อมูลแอป",
+      "retryInstall": "ลองติดตั้งอีกครั้ง"
+    },
+    "troubleshoot": {
+      "again": "อีกครั้ง",
+      "authStatusCommand": "คำสั่งตรวจสอบสถานะการยืนยันตัวตน CLI ที่คุณตั้งค่าไว้",
+      "checkLoggedIn": "- ตรวจสอบว่าแสดง \"Logged in\" หรือไม่",
+      "click": "คลิก",
+      "loginCommand": "คำสั่งเข้าสู่ระบบของรันไทม์",
+      "logoutCommand": "คำสั่งออกจากระบบของรันไทม์",
+      "openTerminal": "เปิดเทอร์มินัลแล้วรัน:",
+      "reloginPrefix": "หากแสดงว่าเข้าสู่ระบบแล้วแต่แอปมองไม่เห็น ลอง:",
+      "sameRuntime": "ตรวจสอบให้แน่ใจว่า CLI ในเทอร์มินัลของคุณเป็นรันไทม์เดียวกับที่แอปใช้",
+      "statusCacheHint": "- บางครั้งสถานะถูกแคชไว้ไม่กี่วินาที",
+      "then": "จากนั้น"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "มีผู้ให้บริการหนึ่งรายหรือมากกว่าตั้งค่าเป็นโหมด API key แต่ยังไม่ได้ตั้งค่า API key เปิดจัดการผู้ให้บริการเพื่อเพิ่ม key หรือสลับโหมดการเชื่อมต่อ",
+      "multipleApiKeysNeedAttention": "มีผู้ให้บริการหนึ่งรายหรือมากกว่าตั้งค่าเป็นโหมด API key และต้องการการดูแล เปิดจัดการผู้ให้บริการเพื่อตรวจสอบ key ที่บันทึกไว้หรือสลับโหมดการเชื่อมต่อ",
+      "notAuthenticated": "ติดตั้ง {{runtime}} แล้วแต่คุณยังไม่ได้ยืนยันตัวตน ต้องเข้าสู่ระบบเพื่อจัดเตรียมทีมและใช้ฟีเจอร์ AI",
+      "singleApiKeyMissing": "{{provider}} ตั้งค่าเป็นโหมด API key แต่ยังไม่ได้ตั้งค่า API key เปิดจัดการผู้ให้บริการเพื่อเพิ่ม key หรือสลับโหมดการเชื่อมต่อ",
+      "singleApiKeyNeedsAttention": "{{provider}} ตั้งค่าเป็นโหมด API key แต่ยังไม่ได้เชื่อมต่อ เปิดจัดการผู้ให้บริการเพื่อตรวจสอบ key ที่บันทึกไว้หรือสลับโหมดการเชื่อมต่อ"
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "เลือกโฟลเดอร์โปรเจกต์",
+    "selectFolder": "เลือกโฟลเดอร์",
+    "failedToLoad": "โหลดโปรเจกต์ไม่สำเร็จ",
+    "retry": "ลองอีกครั้ง",
+    "noProjects": "ไม่พบโปรเจกต์",
+    "noMatches": "ไม่มีผลลัพธ์สำหรับ \"{{query}}\"",
+    "noRecentProjects": "ไม่พบโปรเจกต์ล่าสุด",
+    "emptyDescription": "กิจกรรมล่าสุดของ Claude และ Codex จะปรากฏที่นี่",
+    "loadMore": "โหลดเพิ่มเติม",
+    "card": {
+      "deleted": "ลบแล้ว",
+      "projectFolderMissing": "โฟลเดอร์โปรเจกต์ไม่มีอยู่อีกต่อไป",
+      "taskCounts": {
+        "active": "ใช้งานอยู่ {{count}} รายการ",
+        "active_one": "ใช้งานอยู่ {{count}} รายการ",
+        "active_other": "ใช้งานอยู่ {{count}} รายการ",
+        "active_few": "ใช้งานอยู่ {{count}} รายการ",
+        "active_many": "ใช้งานอยู่ {{count}} รายการ",
+        "pending": "รอดำเนินการ {{count}} รายการ",
+        "pending_one": "รอดำเนินการ {{count}} รายการ",
+        "pending_other": "รอดำเนินการ {{count}} รายการ",
+        "pending_few": "รอดำเนินการ {{count}} รายการ",
+        "pending_many": "รอดำเนินการ {{count}} รายการ",
+        "done": "เสร็จแล้ว {{count}} รายการ",
+        "done_one": "เสร็จแล้ว {{count}} รายการ",
+        "done_other": "เสร็จแล้ว {{count}} รายการ",
+        "done_few": "เสร็จแล้ว {{count}} รายการ",
+        "done_many": "เสร็จแล้ว {{count}} รายการ"
+      }
+    },
+    "title": "โปรเจกต์ล่าสุด",
+    "searchResults": "ผลการค้นหา",
+    "searchPlaceholder": "ค้นหาโปรเจกต์..."
+  },
+  "actions": {
+    "selectTeam": "เลือกทีม",
+    "or": "หรือ",
+    "clearSearch": "ล้างการค้นหา"
+  },
+  "windowsAdmin": {
+    "title": "แนะนำให้ใช้โหมดผู้ดูแลระบบ Windows",
+    "description": "การตรวจสอบรันไทม์ OpenCode อาจหมดเวลาเมื่อ Agent Teams AI ไม่ได้รันด้วยสิทธิ์ที่ยกระดับ รีสตาร์ทแอปด้วย Run as administrator ก่อนเริ่มทีม OpenCode"
+  },
+  "webPreview": {
+    "title": "เปิดแอปเดสก์ท็อปเพื่อใช้งานเต็มรูปแบบ",
+    "description": "เวอร์ชันเบราว์เซอร์ยังอยู่ระหว่างการพัฒนา การดำเนินการกับโปรเจกต์ การเชื่อมต่อ และการอัปเดตสถานะแบบสดอาจมีข้อจำกัดที่นี่ ใช้แอปเดสก์ท็อปเพื่อเข้าถึงทุกฟีเจอร์ได้อย่างเชื่อถือได้"
+  },
+  "updateBanner": {
+    "newVersionAvailable": "มีเวอร์ชันใหม่",
+    "restartNow": "รีสตาร์ทเลย",
+    "viewDetails": "ดูรายละเอียด"
+  }
+}

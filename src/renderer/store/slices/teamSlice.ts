@@ -18,6 +18,7 @@ import { createLogger } from '@shared/utils/logger';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
+import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
 import {
   clearAllLastResolvedTeamDataRefreshes,
   clearLastResolvedTeamDataRefreshAt,
@@ -43,6 +44,7 @@ import {
   processGlobalTaskNotifications,
   resetGlobalTaskNotificationTrackerForTests,
 } from '../team/teamGlobalTaskNotifications';
+import { projectTeamSnapshotOntoGlobalTasks } from '../team/teamGlobalTaskProjection';
 import {
   areTeamGraphSlotAssignmentsEqual,
   DISABLE_PERSISTED_TEAM_GRAPH_SLOT_ASSIGNMENTS,
@@ -128,7 +130,10 @@ import {
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
 } from '../team/teamScopedStateCleanup';
-import { structurallyShareTeamSnapshot } from '../team/teamSnapshotStructuralSharing';
+import {
+  structurallySharePlainValue,
+  structurallyShareTeamSnapshot,
+} from '../team/teamSnapshotStructuralSharing';
 import { parseToolApprovalSettings } from '../team/teamToolApprovalSettings';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 import {
@@ -168,6 +173,7 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamGetDataOptions,
+  TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
   TeamMemberActivityMeta,
   TeamProvisioningProgress,
@@ -219,6 +225,7 @@ const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const POST_PAINT_TEAM_ENRICHMENT_FALLBACK_MS = 500;
+const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
 const inFlightTeamDataRequests = new Map<string, Promise<TeamViewSnapshot>>();
 const inFlightRefreshTeamDataCalls = new Map<string, Set<symbol>>();
 const pendingFreshTeamDataRefreshes = new Set<string>();
@@ -243,7 +250,11 @@ const pendingFreshTeamMemberActivityMetaRefreshes = new Set<string>();
 const pendingTeamPendingReplyRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let latestTeamsFetchRequestId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
+let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
+
+type GlobalTaskNotificationParams = Parameters<typeof processGlobalTaskNotifications>[0];
+
 interface RefreshTeamDataOptions {
   withDedup?: boolean;
 }
@@ -487,6 +498,45 @@ function isSelectedTeamLoadStillCurrent(
     state.selectedTeamLoadNonce === requestNonce &&
     state.selectedTeamData?.teamName === teamName
   );
+}
+
+function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
+  teamByName: Record<string, TeamSummary>;
+  teamBySessionId: Record<string, TeamSummary>;
+} {
+  const teamByName: Record<string, TeamSummary> = {};
+  const teamBySessionId: Record<string, TeamSummary> = {};
+  for (const team of teams) {
+    teamByName[team.teamName] = team;
+    if (team.leadSessionId) {
+      teamBySessionId[team.leadSessionId] = team;
+    }
+    if (Array.isArray(team.sessionHistory)) {
+      for (const sid of team.sessionHistory) {
+        if (typeof sid === 'string' && sid) {
+          teamBySessionId[sid] = team;
+        }
+      }
+    }
+  }
+  return { teamByName, teamBySessionId };
+}
+
+function removeProvisioningSnapshotsForTeams(
+  snapshots: Record<string, TeamSummary>,
+  teams: readonly TeamSummary[]
+): Record<string, TeamSummary> {
+  let nextSnapshots = snapshots;
+  for (const team of teams) {
+    if (!Object.prototype.hasOwnProperty.call(nextSnapshots, team.teamName)) {
+      continue;
+    }
+    if (nextSnapshots === snapshots) {
+      nextSnapshots = { ...snapshots };
+    }
+    delete nextSnapshots[team.teamName];
+  }
+  return nextSnapshots;
 }
 
 function schedulePostPaintTeamEnrichments(params: {
@@ -829,6 +879,23 @@ function preserveKnownTaskChangePresence(
   return changed ? mergedTasks : nextTasks;
 }
 
+function buildGlobalTaskProjectionNotification(
+  state: Pick<AppState, 'appConfig' | 'globalTasks' | 'globalTasksInitialized' | 'teamByName'>,
+  nextGlobalTasks: GlobalTask[]
+): GlobalTaskNotificationParams | null {
+  if (!state.globalTasksInitialized || nextGlobalTasks === state.globalTasks) {
+    return null;
+  }
+
+  return {
+    oldTasks: state.globalTasks,
+    newTasks: nextGlobalTasks,
+    appConfig: state.appConfig,
+    teamByName: state.teamByName,
+    isInitialFetch: false,
+  };
+}
+
 export interface GlobalTaskDetailState {
   teamName: string;
   taskId: string;
@@ -1001,6 +1068,10 @@ export interface TeamSlice {
     taskId: string,
     presence: TaskChangePresenceState
   ) => void;
+  setSelectedTeamTaskChangePresences: (
+    teamName: string,
+    presencesByTaskId: Record<string, TaskChangePresenceState>
+  ) => void;
   refreshTeamChangePresence: (teamName: string) => Promise<void>;
   selectTeam: (
     teamName: string,
@@ -1027,7 +1098,7 @@ export interface TeamSlice {
     isOnline?: boolean;
   }[];
   crossTeamTargetsLoading: boolean;
-  fetchCrossTeamTargets: () => Promise<void>;
+  fetchCrossTeamTargets: () => Promise<boolean>;
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<void>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
@@ -1150,6 +1221,65 @@ export function getCurrentProvisioningProgressForTeam(
 ): TeamProvisioningProgress | null {
   const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
   return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
+}
+
+function stringArraysEqual(
+  a: readonly string[] | undefined,
+  b: readonly string[] | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function launchDiagnosticsEqual(
+  a: readonly TeamLaunchDiagnosticItem[] | undefined,
+  b: readonly TeamLaunchDiagnosticItem[] | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      !left ||
+      !right ||
+      left.id !== right.id ||
+      left.memberName !== right.memberName ||
+      left.severity !== right.severity ||
+      left.code !== right.code ||
+      left.label !== right.label ||
+      left.detail !== right.detail ||
+      left.observedAt !== right.observedAt
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function provisioningProgressPayloadEqual(
+  a: TeamProvisioningProgress,
+  b: TeamProvisioningProgress
+): boolean {
+  return (
+    a.runId === b.runId &&
+    a.teamName === b.teamName &&
+    a.state === b.state &&
+    a.message === b.message &&
+    a.messageSeverity === b.messageSeverity &&
+    a.startedAt === b.startedAt &&
+    a.pid === b.pid &&
+    a.error === b.error &&
+    a.cliLogsTail === b.cliLogsTail &&
+    a.assistantOutput === b.assistantOutput &&
+    a.configReady === b.configReady &&
+    stringArraysEqual(a.warnings, b.warnings) &&
+    launchDiagnosticsEqual(a.launchDiagnostics, b.launchDiagnostics)
+  );
 }
 
 export function isTeamProvisioningActive(
@@ -1376,13 +1506,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           return {};
         }
         const previousSnapshot = prev.teamAgentRuntimeByTeam[teamName];
-        if (areTeamAgentRuntimeSnapshotsEqual(previousSnapshot, snapshot)) {
+        const stabilizedSnapshot = stabilizeTeamAgentRuntimeSnapshot(previousSnapshot, snapshot);
+        if (areTeamAgentRuntimeSnapshotsEqual(previousSnapshot, stabilizedSnapshot)) {
           return {};
         }
         return {
           teamAgentRuntimeByTeam: {
             ...prev.teamAgentRuntimeByTeam,
-            [teamName]: snapshot,
+            [teamName]: stabilizedSnapshot,
           },
         };
       });
@@ -1482,32 +1613,36 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       ) {
         return;
       }
-      const teamByName: Record<string, TeamSummary> = {};
-      const teamBySessionId: Record<string, TeamSummary> = {};
-      for (const team of teams) {
-        teamByName[team.teamName] = team;
-        if (team.leadSessionId) {
-          teamBySessionId[team.leadSessionId] = team;
-        }
-        if (Array.isArray(team.sessionHistory)) {
-          for (const sid of team.sessionHistory) {
-            if (typeof sid === 'string' && sid) {
-              teamBySessionId[sid] = team;
-            }
-          }
-        }
-      }
       // Atomic update: set teams AND clean up provisioning snapshots in one call
       // to prevent any render cycle with duplicate cards.
       set((state) => {
-        const nextSnapshots = { ...state.provisioningSnapshotByTeam };
-        for (const team of teams) {
-          delete nextSnapshots[team.teamName];
+        const nextTeams = structurallySharePlainValue(state.teams, teams);
+        const indexes = buildTeamSummaryIndexes(nextTeams);
+        const nextTeamByName = structurallySharePlainValue(state.teamByName, indexes.teamByName);
+        const nextTeamBySessionId = structurallySharePlainValue(
+          state.teamBySessionId,
+          indexes.teamBySessionId
+        );
+        const nextSnapshots = removeProvisioningSnapshotsForTeams(
+          state.provisioningSnapshotByTeam,
+          nextTeams
+        );
+
+        if (
+          nextTeams === state.teams &&
+          nextTeamByName === state.teamByName &&
+          nextTeamBySessionId === state.teamBySessionId &&
+          nextSnapshots === state.provisioningSnapshotByTeam &&
+          state.teamsLoading === false &&
+          state.teamsError === null
+        ) {
+          return {};
         }
+
         return {
-          teams,
-          teamByName,
-          teamBySessionId,
+          teams: nextTeams,
+          teamByName: nextTeamByName,
+          teamBySessionId: nextTeamBySessionId,
           teamsLoading: false,
           teamsError: null,
           provisioningSnapshotByTeam: nextSnapshots,
@@ -1536,13 +1671,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   fetchAllTasks: async () => {
     if (inFlightGlobalTasksRefresh) {
-      pendingFreshGlobalTasksRefresh = true;
+      const inFlightScope = inFlightGlobalTasksRefreshScope;
+      if (
+        get().globalTasksInitialized ||
+        (inFlightScope && !isContextRequestScopeCurrent(get, inFlightScope))
+      ) {
+        pendingFreshGlobalTasksRefresh = true;
+      }
       await inFlightGlobalTasksRefresh;
       return;
     }
 
     const runRefresh = async (): Promise<void> => {
       do {
+        const isFollowUpRefresh = pendingFreshGlobalTasksRefresh;
+        if (isFollowUpRefresh) {
+          await sleep(GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS);
+        }
         pendingFreshGlobalTasksRefresh = false;
 
         // Show skeleton only on the very first fetch — not on subsequent refreshes
@@ -1552,6 +1697,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           set({ globalTasksLoading: true, globalTasksError: null });
         }
         const requestScope = captureContextRequestScope(get);
+        inFlightGlobalTasksRefreshScope = requestScope;
         const oldTasks = get().globalTasks;
         try {
           const tasks = await withTimeout(
@@ -1572,12 +1718,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             isInitialFetch: wasFirst,
           });
 
-          set({
-            globalTasks: tasks,
+          set((state) => ({
+            globalTasks: structurallySharePlainValue(state.globalTasks, tasks),
             globalTasksLoading: false,
             globalTasksInitialized: true,
             globalTasksError: null,
-          });
+          }));
         } catch (error) {
           if (!isContextRequestScopeCurrent(get, requestScope)) {
             continue;
@@ -1600,6 +1746,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const request = runRefresh().finally(() => {
       if (inFlightGlobalTasksRefresh === request) {
         inFlightGlobalTasksRefresh = null;
+        inFlightGlobalTasksRefreshScope = null;
       }
     });
     inFlightGlobalTasksRefresh = request;
@@ -2060,14 +2207,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   setSelectedTeamTaskChangePresence: (teamName, taskId, presence) => {
+    get().setSelectedTeamTaskChangePresences(teamName, { [taskId]: presence });
+  },
+
+  setSelectedTeamTaskChangePresences: (teamName, presencesByTaskId) => {
     set((state) => {
+      const updates = Object.entries(presencesByTaskId);
+      if (updates.length === 0) {
+        return {};
+      }
+      const presenceByTaskId = new Map(updates);
       const currentTeamData = selectTeamDataForName(state, teamName);
       let cacheChanged = false;
       const nextTeamData = currentTeamData
         ? {
             ...currentTeamData,
             tasks: currentTeamData.tasks.map((task) => {
-              if (task.id !== taskId || task.changePresence === presence) {
+              const presence = presenceByTaskId.get(task.id);
+              if (!presence || task.changePresence === presence) {
                 return task;
               }
               cacheChanged = true;
@@ -2078,7 +2235,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
       let globalChanged = false;
       const nextGlobalTasks = state.globalTasks.map((task) => {
-        if (task.teamName !== teamName || task.id !== taskId || task.changePresence === presence) {
+        if (task.teamName !== teamName) {
+          return task;
+        }
+        const presence = presenceByTaskId.get(task.id);
+        if (!presence || task.changePresence === presence) {
           return task;
         }
         globalChanged = true;
@@ -2234,6 +2395,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
 
       let committedTeamData: TeamViewSnapshot = data;
+      let projectedGlobalTaskNotifications: GlobalTaskNotificationParams | null = null;
       set((state) => {
         if (
           state.selectedTeamName === teamName &&
@@ -2253,6 +2415,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                   [teamName]: preservedTeamData,
                 }
               : state.teamDataCacheByName;
+          const nextGlobalTasks = preservedTeamData
+            ? projectTeamSnapshotOntoGlobalTasks(state.globalTasks, teamName, preservedTeamData)
+            : state.globalTasks;
+          projectedGlobalTaskNotifications = buildGlobalTaskProjectionNotification(
+            state,
+            nextGlobalTasks
+          );
 
           return {
             selectedTeamName: teamName,
@@ -2260,6 +2429,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             teamDataCacheByName: nextCache,
             selectedTeamLoading: false,
             selectedTeamError: null,
+            ...(nextGlobalTasks !== state.globalTasks ? { globalTasks: nextGlobalTasks } : {}),
           };
         }
 
@@ -2286,6 +2456,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                 ...state.teamDataCacheByName,
                 [teamName]: nextTeamData,
               };
+        const nextGlobalTasks = projectTeamSnapshotOntoGlobalTasks(
+          state.globalTasks,
+          teamName,
+          nextTeamData
+        );
+        projectedGlobalTaskNotifications = buildGlobalTaskProjectionNotification(
+          state,
+          nextGlobalTasks
+        );
 
         return {
           selectedTeamName: teamName,
@@ -2293,8 +2472,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamDataCacheByName: nextCache,
           selectedTeamLoading: false,
           selectedTeamError: null,
+          ...(nextGlobalTasks !== state.globalTasks ? { globalTasks: nextGlobalTasks } : {}),
         };
       });
+      if (projectedGlobalTaskNotifications) {
+        processGlobalTaskNotifications(projectedGlobalTaskNotifications);
+      }
       recordLastResolvedTeamDataRefresh(teamName);
 
       try {
@@ -2489,6 +2672,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         : data;
       const nextTeamData = structurallyShareTeamSnapshot(previousData, projectedTeamData);
+      let projectedGlobalTaskNotifications: GlobalTaskNotificationParams | null = null;
       set((state) => {
         const nextCache =
           state.teamDataCacheByName[teamName] === nextTeamData
@@ -2505,9 +2689,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                 selectedTeamError: null,
               }
             : {};
+        const nextGlobalTasks = projectTeamSnapshotOntoGlobalTasks(
+          state.globalTasks,
+          teamName,
+          nextTeamData
+        );
+        projectedGlobalTaskNotifications = buildGlobalTaskProjectionNotification(
+          state,
+          nextGlobalTasks
+        );
 
         if (
           nextCache === state.teamDataCacheByName &&
+          nextGlobalTasks === state.globalTasks &&
           (state.selectedTeamName !== teamName ||
             (state.selectedTeamData === nextTeamData && state.selectedTeamError == null))
         ) {
@@ -2516,9 +2710,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
         return {
           teamDataCacheByName: nextCache,
+          ...(nextGlobalTasks !== state.globalTasks ? { globalTasks: nextGlobalTasks } : {}),
           ...selectedState,
         };
       });
+      if (projectedGlobalTaskNotifications) {
+        processGlobalTaskNotifications(projectedGlobalTaskNotifications);
+      }
       recordLastResolvedTeamDataRefresh(teamName);
       const invalidationState = previousData
         ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
@@ -3138,15 +3336,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       const targets = await api.crossTeam.listTargets();
       if (!isContextRequestScopeCurrent(get, requestScope)) {
-        return;
+        return false;
       }
       set({ crossTeamTargets: targets, crossTeamTargetsLoading: false });
+      return true;
     } catch (error) {
       if (!isContextRequestScopeCurrent(get, requestScope)) {
-        return;
+        return false;
       }
       logger.error('fetchCrossTeamTargets failed', error);
       set({ crossTeamTargets: [], crossTeamTargetsLoading: false });
+      return false;
     }
   },
 
@@ -3956,11 +4156,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const becameConfigReady =
       progress.configReady === true && existingProgress?.configReady !== true;
     const isDuplicateProgress =
-      existingProgress?.updatedAt === progress.updatedAt &&
-      existingProgress?.state === progress.state &&
-      existingProgress?.message === progress.message &&
-      existingProgress?.error === progress.error &&
-      existingProgress?.pid === progress.pid;
+      existingProgress !== undefined &&
+      provisioningProgressPayloadEqual(existingProgress, progress);
     if (isDuplicateProgress && currentRunId === progress.runId) {
       return;
     }

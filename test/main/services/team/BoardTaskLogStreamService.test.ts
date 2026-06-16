@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardTaskLogStreamService } from '../../../../src/main/services/team/taskLogs/stream/BoardTaskLogStreamService';
 
-import type { ParsedMessage } from '../../../../src/main/types';
 import type { BoardTaskActivityRecord } from '../../../../src/main/services/team/taskLogs/activity/BoardTaskActivityRecord';
 import type { BoardTaskExactLogBundleCandidate } from '../../../../src/main/services/team/taskLogs/exact/BoardTaskExactLogTypes';
+import type { ParsedMessage } from '../../../../src/main/types';
 
 function makeRecord(
   id: string,
@@ -160,10 +160,119 @@ describe('BoardTaskLogStreamService', () => {
     expect(await service.getTaskLogStreamSummary('demo', 'task-a')).toEqual({
       segmentCount: 1,
     });
-    expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledTimes(2);
+    expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledTimes(1);
   });
 
-  it('merges OpenCode runtime stream when board transcript slices mask member execution', async () => {
+  it('dedupes concurrent OpenCode runtime fallback reads for the same task', async () => {
+    let resolveFallback: (response: {
+      participants: {
+        key: string;
+        label: string;
+        role: 'member';
+        isLead: false;
+        isSidechain: true;
+      }[];
+      defaultFilter: string;
+      segments: {
+        id: string;
+        participantKey: string;
+        actor: {
+          memberName: string;
+          role: 'member';
+          sessionId: string;
+          isSidechain: true;
+        };
+        startTimestamp: string;
+        endTimestamp: string;
+        chunks: { id: string }[];
+      }[];
+      source: 'opencode_runtime_fallback';
+    }) => void;
+    const fallbackPromise = new Promise<{
+      participants: {
+        key: string;
+        label: string;
+        role: 'member';
+        isLead: false;
+        isSidechain: true;
+      }[];
+      defaultFilter: string;
+      segments: {
+        id: string;
+        participantKey: string;
+        actor: {
+          memberName: string;
+          role: 'member';
+          sessionId: string;
+          isSidechain: true;
+        };
+        startTimestamp: string;
+        endTimestamp: string;
+        chunks: { id: string }[];
+      }[];
+      source: 'opencode_runtime_fallback';
+    }>((resolve) => {
+      resolveFallback = resolve;
+    });
+    const runtimeFallbackSource = {
+      getTaskLogStream: vi.fn(() => fallbackPromise),
+    };
+
+    const service = new BoardTaskLogStreamService(
+      {
+        getTaskRecords: vi.fn(async () => []),
+      } as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      runtimeFallbackSource as never
+    );
+
+    const streamPromise = service.getTaskLogStream('demo', 'task-a');
+    const summaryPromise = service.getTaskLogStreamSummary('demo', 'task-a');
+    await vi.waitFor(() => {
+      expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledTimes(1);
+    });
+
+    resolveFallback!({
+      participants: [
+        {
+          key: 'member:alice',
+          label: 'alice',
+          role: 'member' as const,
+          isLead: false,
+          isSidechain: true,
+        },
+      ],
+      defaultFilter: 'member:alice',
+      segments: [
+        {
+          id: 'opencode:segment-1',
+          participantKey: 'member:alice',
+          actor: {
+            memberName: 'alice',
+            role: 'member' as const,
+            sessionId: 'session-opencode',
+            isSidechain: true,
+          },
+          startTimestamp: '2026-04-21T10:00:00.000Z',
+          endTimestamp: '2026-04-21T10:01:00.000Z',
+          chunks: [{ id: 'chunk-1' }],
+        },
+      ],
+      source: 'opencode_runtime_fallback' as const,
+    });
+
+    const [stream, summary] = await Promise.all([streamPromise, summaryPromise]);
+    expect(stream.segments).toHaveLength(1);
+    expect(summary).toEqual({ segmentCount: 1 });
+    expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('merges OpenCode runtime stream using config provider when runtime meta has stale model only', async () => {
     const lead = {
       role: 'lead' as const,
       sessionId: 'session-lead',
@@ -235,10 +344,13 @@ describe('BoardTaskLogStreamService', () => {
       getDeletedTasks: vi.fn(async () => []),
     };
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [{ name: 'jack', providerId: 'opencode' }]),
+      getMembers: vi.fn(async () => [{ name: 'jack', role: 'developer', model: 'gpt-5.5' }]),
     };
     const configReader = {
-      getConfig: vi.fn(async () => null),
+      getConfig: vi.fn(async () => ({
+        name: 'demo',
+        members: [{ name: 'jack', providerBackendId: 'opencode-cli', model: 'gpt-5.5' }],
+      })),
     };
     const buildBundleChunks = vi.fn((messages: ParsedMessage[]) => [{ id: messages[0]?.uuid }]);
 

@@ -115,6 +115,7 @@ import type {
 } from '@features/member-work-sync/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type {
   ConversationGroup,
   FileChangeEvent,
@@ -922,6 +923,7 @@ export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElec
   ) => Promise<{ success: boolean; error?: string }>;
   showInFolder: (filePath: string) => Promise<void>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+  getDiscordMemberCount: () => Promise<{ count: number | null; error?: string }>;
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
   windowControls: {
@@ -982,6 +984,9 @@ export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElec
 
   // tmux runtime diagnostics API
   tmux: TmuxAPI;
+
+  // Team-scoped Terminal Platform workspace API
+  terminalWorkspace: TerminalWorkspaceElectronApi;
 
   // Embedded Terminal API (xterm.js + node-pty)
   terminal: TerminalAPI;

@@ -69,19 +69,58 @@ function removeLockPath(lockPath: string): void {
   }
 }
 
+function writeLockFile(lockPath: string): void {
+  const fd = fs.openSync(lockPath, 'wx');
+  let closeError: unknown = null;
+  try {
+    fs.writeSync(fd, `${process.pid}\n${Date.now()}\n`);
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch (err) {
+      closeError = err;
+    }
+  }
+  if (closeError) {
+    throw closeError instanceof Error ? closeError : new Error('Failed to close file lock');
+  }
+}
+
+function isExistingLockError(code: string | undefined): boolean {
+  return code === 'EEXIST' || code === 'EISDIR';
+}
+
 function tryAcquire(lockPath: string, options: Required<FileLockOptions>): boolean {
   try {
-    const dir = path.dirname(lockPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    const fd = fs.openSync(lockPath, 'wx');
-    fs.writeSync(fd, `${process.pid}\n${Date.now()}\n`);
-    fs.closeSync(fd);
+    // Fast path: assume the lock directory already exists (the common case once a
+    // team dir is created). This drops an existsSync(dir) stat from EVERY acquire,
+    // which adds up across the many lock cycles during a team launch.
+    writeLockFile(lockPath);
     return true;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'EEXIST' || code === 'EISDIR') {
+    if (code === 'ENOENT') {
+      // Lock directory missing - create it lazily and acquire in the same call, so
+      // first-acquire latency in a fresh dir is unchanged.
+      try {
+        fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+        writeLockFile(lockPath);
+        return true;
+      } catch (retryError) {
+        const retryCode = (retryError as NodeJS.ErrnoException).code;
+        if (retryCode === 'ENOENT') {
+          return false;
+        }
+        if (isExistingLockError(retryCode)) {
+          if (shouldBreakExistingLock(lockPath, options.staleTimeoutMs)) {
+            removeLockPath(lockPath);
+          }
+          return false;
+        }
+        throw retryError;
+      }
+    }
+    if (isExistingLockError(code)) {
       if (shouldBreakExistingLock(lockPath, options.staleTimeoutMs)) {
         removeLockPath(lockPath);
       }

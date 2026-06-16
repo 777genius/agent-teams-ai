@@ -38,13 +38,17 @@ const logger = createLogger('IPC:cliInstaller');
 let service: CliInstallerService;
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 const providerStatusInFlight = new Map<CliProviderId, Promise<CliProviderStatus | null>>();
-let providerRuntimeRequestTail: Promise<void> = Promise.resolve();
+const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
+const providerRuntimeRequestQueue: Array<() => void> = [];
+let activeProviderRuntimeRequestCount = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
   { value: CliInstallationStatus; at: number }
 >();
 let statusCacheGeneration = 0;
 const STATUS_CACHE_TTL_MS = 5_000;
+const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
+const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 
 function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
@@ -111,12 +115,70 @@ function canUseStatusForCacheKey(
   );
 }
 
-function runProviderRuntimeRequest<T>(operation: () => Promise<T>): Promise<T> {
-  const request = providerRuntimeRequestTail.then(operation, operation);
-  providerRuntimeRequestTail = request.then(
+function resetProviderRuntimeRequestLimiter(): void {
+  if (activeProviderRuntimeRequestCount === 0 && providerRuntimeRequestQueue.length === 0) {
+    providerRuntimeRequestTails.clear();
+  }
+}
+
+function getProviderRuntimeRequestLimit(): number {
+  return process.env[PARALLEL_PROVIDER_STATUS_ENV] === '1'
+    ? MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS
+    : 1;
+}
+
+function acquireProviderRuntimeRequestSlot(): Promise<void> {
+  if (activeProviderRuntimeRequestCount < getProviderRuntimeRequestLimit()) {
+    activeProviderRuntimeRequestCount += 1;
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    providerRuntimeRequestQueue.push(() => {
+      activeProviderRuntimeRequestCount += 1;
+      resolve();
+    });
+  });
+}
+
+function releaseProviderRuntimeRequestSlot(): void {
+  activeProviderRuntimeRequestCount = Math.max(0, activeProviderRuntimeRequestCount - 1);
+  const next = providerRuntimeRequestQueue.shift();
+  if (next) {
+    next();
+  }
+}
+
+async function runWithProviderRuntimeSlot<T>(operation: () => Promise<T>): Promise<T> {
+  await acquireProviderRuntimeRequestSlot();
+  try {
+    return await operation();
+  } finally {
+    releaseProviderRuntimeRequestSlot();
+  }
+}
+
+function runProviderRuntimeRequest<T>(
+  providerId: CliProviderId,
+  operation: () => Promise<T>
+): Promise<T> {
+  const previousProviderRequest = providerRuntimeRequestTails.get(providerId) ?? Promise.resolve();
+  const request = previousProviderRequest.then(
+    () => runWithProviderRuntimeSlot(operation),
+    () => runWithProviderRuntimeSlot(operation)
+  );
+  const tail = request.then(
     () => undefined,
     () => undefined
   );
+
+  providerRuntimeRequestTails.set(providerId, tail);
+  void tail.finally(() => {
+    if (providerRuntimeRequestTails.get(providerId) === tail) {
+      providerRuntimeRequestTails.delete(providerId);
+    }
+  });
+
   return request;
 }
 
@@ -125,7 +187,7 @@ function runProviderRuntimeRequest<T>(operation: () => Promise<T>): Promise<T> {
  */
 export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
   service = installerService;
-  providerRuntimeRequestTail = Promise.resolve();
+  resetProviderRuntimeRequestLimiter();
 }
 
 /**
@@ -266,7 +328,10 @@ async function handleGetProviderStatus(
     }
 
     const generation = statusCacheGeneration;
-    const request = runProviderRuntimeRequest(() => service.getProviderStatus(providerId))
+    const currentService = service;
+    const request = runProviderRuntimeRequest(providerId, () =>
+      currentService.getProviderStatus(providerId)
+    )
       .then((status) => {
         if (generation === statusCacheGeneration) {
           patchCachedProviderStatus(status);
@@ -306,7 +371,10 @@ async function handleVerifyProviderModels(
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
     const generation = statusCacheGeneration;
-    const status = await runProviderRuntimeRequest(() => service.verifyProviderModels(providerId));
+    const currentService = service;
+    const status = await runProviderRuntimeRequest(providerId, () =>
+      currentService.verifyProviderModels(providerId)
+    );
     if (generation === statusCacheGeneration) {
       patchCachedProviderStatus(status);
     }

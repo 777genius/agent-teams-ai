@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -68,8 +69,25 @@ const storeState = {
   openMemberProfile: vi.fn(),
 };
 
+const hoverCardMockState = vi.hoisted(() => ({
+  autoOpen: true,
+  wideSelectorCalls: 0,
+}));
+
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useStore: (selector: (state: typeof storeState) => unknown) => {
+    const selected = selector(storeState);
+    if (
+      selected &&
+      typeof selected === 'object' &&
+      'member' in selected &&
+      'teamMembers' in selected &&
+      'runtimeEntry' in selected
+    ) {
+      hoverCardMockState.wideSelectorCalls += 1;
+    }
+    return selected;
+  },
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
@@ -100,8 +118,22 @@ vi.mock('@renderer/components/ui/badge', () => ({
 }));
 
 vi.mock('@renderer/components/ui/hover-card', () => ({
-  HoverCard: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
+  HoverCard: ({
+    children,
+    open,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => {
+    React.useEffect(() => {
+      if (hoverCardMockState.autoOpen && open !== true) {
+        onOpenChange?.(true);
+      }
+    }, [onOpenChange, open]);
+    return React.createElement('div', { 'data-hover-card-open': open ? 'true' : 'false' }, children);
+  },
   HoverCardTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
   HoverCardContent: ({ children }: { children: React.ReactNode }) =>
@@ -155,6 +187,34 @@ describe('MemberHoverCard spawn-aware presence', () => {
     storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined;
     storeState.teamAgentRuntimeByTeam = {};
     storeState.openMemberProfile.mockReset();
+    hoverCardMockState.autoOpen = true;
+    hoverCardMockState.wideSelectorCalls = 0;
+  });
+
+  it('does not run detailed store selectors while closed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    hoverCardMockState.autoOpen = false;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberHoverCard, {
+          name: 'alice',
+          children: React.createElement('button', { type: 'button' }, 'alice'),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toBe('alice');
+    expect(hoverCardMockState.wideSelectorCalls).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows starting from the team spawn snapshot even when provisioning is no longer active', async () => {

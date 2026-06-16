@@ -26,6 +26,16 @@ interface TeamObservationState {
   lastActivationAtMs: number;
 }
 
+interface TeamTaskStallMonitorOptions {
+  scanTimeoutMs?: number;
+}
+
+interface TeamTaskStallScanRun {
+  cancelled: boolean;
+}
+
+const DEFAULT_TEAM_TASK_STALL_SCAN_TIMEOUT_MS = 2 * 60_000;
+
 function unrefBackgroundTimer(timer: ReturnType<typeof setTimeout>): void {
   const maybeTimer = timer as { unref?: () => void };
   maybeTimer.unref?.();
@@ -37,14 +47,21 @@ export class TeamTaskStallMonitor {
   private scanInFlight = false;
   private started = false;
   private readonly observationByTeam = new Map<string, TeamObservationState>();
+  private readonly scanTimeoutMs: number;
 
   constructor(
     private readonly registry: ActiveTeamRegistry,
     private readonly snapshotSource: TeamTaskStallSnapshotSource,
     private readonly policy: TeamTaskStallPolicy,
     private readonly journal: TeamTaskStallJournal,
-    private readonly notifier: TeamTaskStallNotifier
-  ) {}
+    private readonly notifier: TeamTaskStallNotifier,
+    options: TeamTaskStallMonitorOptions = {}
+  ) {
+    this.scanTimeoutMs = Math.max(
+      1,
+      options.scanTimeoutMs ?? DEFAULT_TEAM_TASK_STALL_SCAN_TIMEOUT_MS
+    );
+  }
 
   start(): void {
     if (!isTeamTaskStallScannerEnabled()) {
@@ -127,35 +144,84 @@ export class TeamTaskStallMonitor {
       return;
     }
     this.scanInFlight = true;
+    const scanRun: TeamTaskStallScanRun = { cancelled: false };
     try {
-      const activeTeams = await this.registry.listActiveTeams();
-      const activeSet = new Set(activeTeams);
-      for (const teamName of [...this.observationByTeam.keys()]) {
-        if (!activeSet.has(teamName)) {
-          this.observationByTeam.delete(teamName);
-        }
-      }
-
-      const now = new Date();
-      for (const teamName of activeTeams) {
-        const observation = this.getOrCreateObservation(teamName, now.getTime());
-        const startupAgeMs = now.getTime() - observation.firstSeenAtMs;
-        if (startupAgeMs < getTeamTaskStallStartupGraceMs()) {
-          continue;
-        }
-
-        const activationAgeMs = now.getTime() - observation.lastActivationAtMs;
-        if (activationAgeMs < getTeamTaskStallActivationGraceMs()) {
-          continue;
-        }
-
-        await this.scanTeam(teamName, now);
-      }
+      await this.runScanWithTimeout(scanRun);
     } catch (error) {
       logger.warn(`Task stall monitor scan failed: ${String(error)}`);
     } finally {
+      scanRun.cancelled = true;
       this.scanInFlight = false;
       this.scheduleNextScan(getTeamTaskStallScanIntervalMs());
+    }
+  }
+
+  private async runScanWithTimeout(scanRun: TeamTaskStallScanRun): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        this.runScanBody(scanRun),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
+            scanRun.cancelled = true;
+            reject(new Error(`task stall monitor scan timed out after ${this.scanTimeoutMs}ms`));
+          }, this.scanTimeoutMs);
+          unrefBackgroundTimer(timeout);
+        }),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private shouldContinueScan(scanRun: TeamTaskStallScanRun): boolean {
+    return this.started && !scanRun.cancelled;
+  }
+
+  private async runScanBody(scanRun: TeamTaskStallScanRun): Promise<void> {
+    const activeTeams = await this.registry.listActiveTeams();
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
+    const activeSet = new Set(activeTeams);
+    for (const teamName of [...this.observationByTeam.keys()]) {
+      if (!activeSet.has(teamName)) {
+        this.observationByTeam.delete(teamName);
+      }
+    }
+
+    const now = new Date();
+    const eligibleTeamNames: string[] = [];
+    for (const teamName of activeTeams) {
+      const observation = this.getOrCreateObservation(teamName, now.getTime());
+      const startupAgeMs = now.getTime() - observation.firstSeenAtMs;
+      if (startupAgeMs < getTeamTaskStallStartupGraceMs()) {
+        continue;
+      }
+
+      const activationAgeMs = now.getTime() - observation.lastActivationAtMs;
+      if (activationAgeMs < getTeamTaskStallActivationGraceMs()) {
+        continue;
+      }
+
+      eligibleTeamNames.push(teamName);
+    }
+
+    if (!this.shouldContinueScan(scanRun) || eligibleTeamNames.length === 0) {
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      eligibleTeamNames.map((teamName) => this.scanTeam(teamName, now, scanRun))
+    );
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected' && this.shouldContinueScan(scanRun)) {
+        logger.warn(
+          `Task stall monitor scan failed for ${eligibleTeamNames[index]}: ${String(result.reason)}`
+        );
+      }
     }
   }
 
@@ -172,8 +238,15 @@ export class TeamTaskStallMonitor {
     return created;
   }
 
-  private async scanTeam(teamName: string, now: Date): Promise<void> {
+  private async scanTeam(
+    teamName: string,
+    now: Date,
+    scanRun: TeamTaskStallScanRun
+  ): Promise<void> {
     const snapshot = await this.snapshotSource.getSnapshot(teamName);
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
     if (!snapshot) {
       return;
     }
@@ -203,6 +276,9 @@ export class TeamTaskStallMonitor {
       ...(scopedTaskIds ? { scopeTaskIds: scopedTaskIds } : {}),
       now: now.toISOString(),
     });
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
 
     const alerts = readyEvaluations
       .map((evaluation) => this.buildAlert(snapshot, evaluation))
@@ -215,6 +291,9 @@ export class TeamTaskStallMonitor {
     const alertedEpochKeys = new Set<string>();
     if (openCodeRemediationEnabled) {
       const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, alerts);
+      if (!this.shouldContinueScan(scanRun)) {
+        return;
+      }
       for (const alert of remediatedAlerts) {
         alertedEpochKeys.add(alert.epochKey);
       }
@@ -223,6 +302,9 @@ export class TeamTaskStallMonitor {
     const leadFallbackAlerts = alerts.filter((alert) => !alertedEpochKeys.has(alert.epochKey));
     if (leadFallbackAlerts.length > 0 && isTeamTaskStallAlertsEnabled()) {
       await this.notifier.notifyLead(teamName, leadFallbackAlerts);
+      if (!this.shouldContinueScan(scanRun)) {
+        return;
+      }
       for (const alert of leadFallbackAlerts) {
         alertedEpochKeys.add(alert.epochKey);
       }
@@ -233,6 +315,9 @@ export class TeamTaskStallMonitor {
       return;
     }
 
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
     await Promise.all(
       alerts
         .filter((alert) => alertedEpochKeys.has(alert.epochKey))

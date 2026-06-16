@@ -1,4 +1,12 @@
-import type { EffortLevel, TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+
+import type {
+  EffortLevel,
+  TeamFastMode,
+  TeamMemberMcpPolicy,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 
 export interface MemberDiffInput {
   name: string;
@@ -6,8 +14,10 @@ export interface MemberDiffInput {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
   removedAt?: number | string | null;
 }
@@ -19,8 +29,10 @@ export interface ReplaceMembersDiff {
     workflow?: string;
     isolation?: 'worktree';
     providerId?: TeamProviderId;
+    providerBackendId?: TeamProviderBackendId;
     model?: string;
     effort?: EffortLevel;
+    fastMode?: TeamFastMode;
     mcpPolicy?: TeamMemberMcpPolicy;
   }[];
   removed: string[];
@@ -77,6 +89,21 @@ function describeProviderChange(
   return 'provider changed - restart required';
 }
 
+function describeProviderBackendChange(
+  previousProviderId: TeamProviderId | undefined,
+  previousProviderBackendId: TeamProviderBackendId | undefined,
+  nextProviderId: TeamProviderId | undefined,
+  nextProviderBackendId: TeamProviderBackendId | undefined
+): string | null {
+  if (
+    migrateProviderBackendId(previousProviderId, previousProviderBackendId) ===
+    migrateProviderBackendId(nextProviderId, nextProviderBackendId)
+  ) {
+    return null;
+  }
+  return 'provider backend changed - restart required';
+}
+
 function describeModelChange(
   previousModel: string | undefined,
   nextModel: string | undefined
@@ -97,6 +124,16 @@ function describeEffortChange(
   return 'reasoning effort changed - restart required';
 }
 
+function describeFastModeChange(
+  previousFastMode: TeamFastMode | undefined,
+  nextFastMode: TeamFastMode | undefined
+): string | null {
+  if (previousFastMode === nextFastMode) {
+    return null;
+  }
+  return 'fast mode changed - restart required';
+}
+
 function describeMcpPolicyChange(
   previousMcpPolicy: TeamMemberMcpPolicy | undefined,
   nextMcpPolicy: TeamMemberMcpPolicy | undefined
@@ -115,8 +152,10 @@ export function buildReplaceMembersDiff(
     workflow?: string;
     isolation?: 'worktree';
     providerId?: TeamProviderId;
+    providerBackendId?: TeamProviderBackendId;
     model?: string;
     effort?: EffortLevel;
+    fastMode?: TeamFastMode;
     mcpPolicy?: TeamMemberMcpPolicy;
   }[]
 ): ReplaceMembersDiff {
@@ -131,8 +170,10 @@ export function buildReplaceMembersDiff(
           workflow: normalizeOptionalText(member.workflow),
           isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
           providerId: member.providerId,
+          providerBackendId: migrateProviderBackendId(member.providerId, member.providerBackendId),
           model: normalizeOptionalText(member.model),
           effort: member.effort,
+          fastMode: member.fastMode,
           mcpPolicy: member.mcpPolicy,
         },
       ])
@@ -148,8 +189,10 @@ export function buildReplaceMembersDiff(
           workflow: normalizeOptionalText(member.workflow),
           isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
           providerId: member.providerId,
+          providerBackendId: migrateProviderBackendId(member.providerId, member.providerBackendId),
           model: normalizeOptionalText(member.model),
           effort: member.effort,
+          fastMode: member.fastMode,
           mcpPolicy: member.mcpPolicy,
         },
       ])
@@ -179,8 +222,15 @@ export function buildReplaceMembersDiff(
             : 'worktree isolation disabled'
           : null,
         describeProviderChange(previousMember.providerId, nextMember.providerId),
+        describeProviderBackendChange(
+          previousMember.providerId,
+          previousMember.providerBackendId,
+          nextMember.providerId,
+          nextMember.providerBackendId
+        ),
         describeModelChange(previousMember.model, nextMember.model),
         describeEffortChange(previousMember.effort, nextMember.effort),
+        describeFastModeChange(previousMember.fastMode, nextMember.fastMode),
         describeMcpPolicyChange(previousMember.mcpPolicy, nextMember.mcpPolicy),
       ].filter((value): value is string => value !== null);
       if (changes.length === 0) {

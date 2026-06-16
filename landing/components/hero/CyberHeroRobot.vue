@@ -7,12 +7,12 @@ const props = defineProps<{
   activeReceiver?: HeroAgentRole | "video" | null;
 }>();
 
-const { locale } = useI18n();
+const { t } = useI18n();
 const isSender = computed(() => props.activeSender === props.agent.id);
 const isReceiver = computed(() => props.activeReceiver === props.agent.id);
 const imageLoading = computed(() => (props.agent.priority ? "eager" : "lazy"));
 const imageFetchPriority = computed(() => (props.agent.priority ? "high" : "auto"));
-const statusLabel = computed(() => locale.value === "ru" ? "Статус:" : "Status:");
+const statusLabel = computed(() => t("common.statusLabel"));
 
 const rootStyle = computed(() => ({
   "--agent-x": String(props.agent.desktop.x),

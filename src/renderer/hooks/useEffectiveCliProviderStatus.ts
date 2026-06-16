@@ -11,8 +11,10 @@ import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@s
 
 export interface EffectiveCliProviderStatusSnapshot {
   cliStatus: CliInstallationStatus | null;
+  sourceCliStatus: CliInstallationStatus | null;
   providerStatus: CliProviderStatus | null;
   loading: boolean;
+  codexSnapshotPending: boolean;
 }
 
 export function useEffectiveCliProviderStatus(
@@ -42,6 +44,10 @@ export function useEffectiveCliProviderStatus(
     () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
     [codexAccount.snapshot, loadingCliStatus]
   );
+  const codexSnapshotPending =
+    codexAccount.loading &&
+    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
+    !codexAccount.snapshot;
   const providerStatus = useMemo(
     () =>
       providerId
@@ -53,7 +59,9 @@ export function useEffectiveCliProviderStatus(
 
   return {
     cliStatus: effectiveCliStatus,
+    sourceCliStatus: loadingCliStatus,
     providerStatus,
     loading: cliStatusLoading && effectiveCliStatus === null,
+    codexSnapshotPending,
   };
 }

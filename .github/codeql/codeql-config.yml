@@ -1,0 +1,15 @@
+name: agent-teams-codeql
+
+paths:
+  - src
+  - packages
+  - agent-teams-controller
+  - mcp-server
+  - scripts
+  - .github/workflows
+
+paths-ignore:
+  - '**/node_modules/**'
+  - 'test/**'
+  - 'landing/**'
+  - 'build/**'

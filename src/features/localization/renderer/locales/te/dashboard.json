@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "ఇప్పటికే లాగిన్ అయ్యారా?",
+      "becomeSponsor": "స్పాన్సర్ అవ్వండి",
+      "cancel": "రద్దు చేయి",
+      "checkNow": "ఇప్పుడు తనిఖీ చేయి",
+      "checkUpdates": "అప్‌డేట్‌ల కోసం తనిఖీ చేయి",
+      "checking": "తనిఖీ చేస్తోంది...",
+      "connect": "కనెక్ట్ చేయి",
+      "extensions": "ఎక్స్‌టెన్షన్‌లు",
+      "login": "లాగిన్",
+      "manage": "నిర్వహించు",
+      "manageProviders": "ప్రొవైడర్లను నిర్వహించు",
+      "plan": "ప్లాన్",
+      "recheck": "మళ్లీ తనిఖీ చేయి",
+      "recheckProvider": "{{provider}} ను మళ్లీ తనిఖీ చేయి",
+      "retry": "మళ్లీ ప్రయత్నించు",
+      "updateTo": "v{{version}} కు అప్‌డేట్ చేయి",
+      "useCode": "కోడ్ ఉపయోగించు"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud అనేది ఫుల్-మోడల్ AI ఇన్ఫరెన్స్ ప్లాట్‌ఫారమ్, ఇది వీడియో జనరేషన్, ఇమేజ్ జనరేషన్ మరియు LLM API లను యాక్సెస్ చేయడానికి డెవలపర్లకు ఒకే AI API ను అందిస్తుంది. బహుళ వెండర్ ఇంటిగ్రేషన్‌లను నిర్వహించడానికి బదులుగా, మీరు ఒకసారి కనెక్ట్ చేసి అన్ని మోడాలిటీల్లో 300+ క్యూరేటెడ్ మోడల్‌లకు ఏకీకృత యాక్సెస్ పొందుతారు. మరింత బడ్జెట్-అనుకూల API యాక్సెస్ కోసం Atlas Cloud యొక్క కొత్త కోడింగ్ ప్లాన్ ప్రమోషన్‌ను చూడండి.",
+      "openCodeProvider": "OpenCode ప్రొవైడర్",
+      "plan": "Atlas Cloud కోడింగ్ ప్లాన్",
+      "sponsor": "స్పాన్సర్"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI స్థితిని తనిఖీ చేయడం విఫలమైంది",
+      "installationFailed": "ఇన్‌స్టాలేషన్ విఫలమైంది",
+      "refreshFailed": "అప్‌డేట్‌ల కోసం తనిఖీ చేయడం విఫలమైంది. మీ నెట్‌వర్క్ కనెక్షన్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.",
+      "runtimeUpdatedRefreshFailed": "రన్‌టైమ్ అప్‌డేట్ అయ్యింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} స్థితి బ్యాక్‌గ్రౌండ్‌లో తనిఖీ చేయబడుతుంది.",
+      "codexApiKeyFallback": "{{hint}} మీరు auth మోడ్‌ను మార్చితే API కీ ఫాల్‌బ్యాక్ అందుబాటులో ఉంటుంది.",
+      "codexAutoApiKey": "{{hint}} ChatGPT కనెక్ట్ అయ్యే వరకు Auto API కీని ఉపయోగిస్తూనే ఉంటుంది.",
+      "codexFinishLogin": "బ్రౌజర్‌లో ChatGPT లాగిన్‌ను పూర్తి చేయండి. ప్రాంప్ట్ చేయబడితే చూపిన కోడ్‌ను నమోదు చేయండి.",
+      "codexNoActiveLogin": "Codex CLI క్రియాశీల ChatGPT ఖాతాను చూసిన తర్వాతే వినియోగ పరిమితులు కనిపిస్తాయి. ప్రస్తుతం క్రియాశీల ChatGPT లాగిన్ లేదని ఇది నివేదిస్తోంది.",
+      "codexNoActiveManagedSession": "Codex CLI క్రియాశీల ChatGPT ఖాతాను చూసిన తర్వాతే వినియోగ పరిమితులు కనిపిస్తాయి. స్థానిక Codex ఖాతా డేటా ఉంది, కానీ ప్రస్తుతం క్రియాశీల మేనేజ్డ్ సెషన్ ఏదీ ఎంపిక చేయబడలేదు.",
+      "codexReconnectNeeded": "ప్రస్తుతం ఎంచుకున్న ChatGPT సెషన్‌ను Codex రిఫ్రెష్ చేసిన తర్వాతే వినియోగ పరిమితులు కనిపిస్తాయి. ప్రస్తుతం స్థానిక సెషన్‌కు మళ్లీ కనెక్ట్ చేయాల్సి ఉంది.",
+      "firstCheckSlow": "మొదటి తనిఖీకి 30 సెకన్ల వరకు పట్టవచ్చు",
+      "loginRequiredForTeams": "సెషన్‌లు మరియు ప్రాజెక్ట్‌లను బ్రౌజ్ చేయడం లాగిన్ లేకుండా పనిచేస్తుంది. ఏజెంట్ టీమ్‌లను అమలు చేయడానికి మాత్రమే లాగిన్ అవసరం.",
+      "troubleshootTitle": "మీరు లాగిన్ అయ్యారని ఖచ్చితంగా ఉంటే, ఈ దశలను ప్రయత్నించండి:"
+    },
+    "installer": {
+      "checkingLatest": "తాజా వెర్షన్‌ను తనిఖీ చేస్తోంది...",
+      "downloading": "{{runtime}} ను డౌన్‌లోడ్ చేస్తోంది...",
+      "installing": "{{runtime}} ను ఇన్‌స్టాల్ చేస్తోంది...",
+      "success": "{{runtime}} v{{version}} విజయవంతంగా ఇన్‌స్టాల్ చేయబడింది",
+      "verifying": "చెక్‌సమ్‌ను ధృవీకరిస్తోంది..."
+    },
+    "labels": {
+      "apiKeyRequired": "API కీ అవసరం",
+      "comingSoon": "త్వరలో వస్తోంది",
+      "collapseProviderDetails": "ప్రొవైడర్ వివరాలను కుదించు",
+      "expandProviderDetails": "ప్రొవైడర్ వివరాలను విస్తరించు",
+      "generateLink": "లింక్ జనరేట్ చేయి",
+      "loadingRateLimits": "రేట్ పరిమితులు లోడ్ అవుతున్నాయి",
+      "loggedOut": "ప్రొవైడర్ లాగ్ అవుట్ అయింది",
+      "loginAuthFailed": "ప్రామాణీకరణ విఫలమైంది",
+      "loginAuthUpdated": "ప్రామాణీకరణ అప్‌డేట్ అయింది",
+      "loginComplete": "లాగిన్ పూర్తయింది",
+      "loginFailed": "లాగిన్ విఫలమైంది",
+      "loginTitle": "లాగిన్",
+      "logoutFailed": "లాగ్ అవుట్ విఫలమైంది",
+      "logoutTitle": "లాగ్ అవుట్",
+      "notLoggedIn": "లాగిన్ కాలేదు",
+      "openLogin": "లాగిన్ తెరువు",
+      "providerActionRequired": "ప్రొవైడర్ చర్య అవసరం",
+      "resets": "{{time}} కు రీసెట్ అవుతుంది",
+      "runtimeLoginTitle": "{{runtime}} లాగిన్"
+    },
+    "loading": {
+      "aiProviders": "AI ప్రొవైడర్లను తనిఖీ చేస్తోంది...",
+      "claudeCli": "Claude CLI ను తనిఖీ చేస్తోంది..."
+    },
+    "provider": {
+      "authenticated": "ప్రామాణీకరించబడింది",
+      "backend": "బ్యాకెండ్: {{backend}}",
+      "checkingAuthentication": "ప్రామాణీకరణను తనిఖీ చేస్తోంది...",
+      "checkingProviders": "ప్రొవైడర్లను తనిఖీ చేస్తోంది...",
+      "configuredLocalCount": "{{count}} స్థానికంగా కాన్ఫిగర్ చేయబడింది",
+      "configuredLocalCount_few": "{{count}} స్థానికంగా కాన్ఫిగర్ చేయబడింది",
+      "configuredLocalCount_many": "{{count}} స్థానికంగా కాన్ఫిగర్ చేయబడింది",
+      "configuredLocalCount_one": "{{count}} స్థానికంగా కాన్ఫిగర్ చేయబడింది",
+      "configuredLocalCount_other": "{{count}} స్థానికంగా కాన్ఫిగర్ చేయబడింది",
+      "configuredLocalTitle": "మీ OpenCode కాన్ఫిగ్ నుండి దిగుమతి చేయబడిన స్థానిక OpenCode మార్గాలు.",
+      "connectedCount": "ప్రొవైడర్లు: {{connected}}/{{denominator}} కనెక్ట్ చేయబడ్డాయి",
+      "freeModels": "ఉచిత మోడల్‌లు",
+      "freeModelsTitle": "మీ సెటప్‌లో అందుబాటులో ఉన్నప్పుడు OpenCode Big Pickle వంటి ఉచిత మోడల్ ఎంపికలను కలిగి ఉంటుంది. OpenCode ద్వారా OpenRouter కూడా ఉచిత మోడల్‌లను బహిర్గతం చేయవచ్చు, కానీ ప్రతి OpenCode/OpenRouter మోడల్ ఉచితం కాదు. లభ్యత మరియు పరిమితులు మారవచ్చు.",
+      "loadingModels": "మోడల్‌లను లోడ్ చేస్తోంది...",
+      "modelsUnavailable": "ఈ రన్‌టైమ్ బిల్డ్ కోసం మోడల్‌లు అందుబాటులో లేవు",
+      "runtime": "రన్‌టైమ్: {{runtime}}",
+      "verifiedCount": "{{count}} ధృవీకరించబడింది",
+      "verifiedCount_few": "{{count}} ధృవీకరించబడింది",
+      "verifiedCount_many": "{{count}} ధృవీకరించబడింది",
+      "verifiedCount_one": "{{count}} ధృవీకరించబడింది",
+      "verifiedCount_other": "{{count}} ధృవీకరించబడింది",
+      "verifiedTitle": "విజయవంతమైన అమలు రుజువుతో కూడిన OpenCode మార్గాలు."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "కాన్ఫిగర్ చేయబడిన {{runtime}} దాని స్టార్టప్ హెల్త్ చెక్‌లో విఫలమైంది.",
+      "configuredNotFound": "కాన్ఫిగర్ చేయబడిన {{runtime}} కనుగొనబడలేదు.",
+      "foundButFailed": "{{runtime}} కనుగొనబడింది కానీ ప్రారంభించడంలో విఫలమైంది",
+      "healthCheckFailedDescription": "యాప్ కాన్ఫిగర్ చేయబడిన {{runtime}} ను కనుగొంది, కానీ దాని స్టార్టప్ హెల్త్ చెక్ విఫలమైంది. దాన్ని రిపేర్ చేయండి లేదా మళ్లీ ఇన్‌స్టాల్ చేయండి, ఆపై మళ్లీ ప్రయత్నించండి.",
+      "install": "{{runtime}} ను ఇన్‌స్టాల్ చేయి",
+      "installRequiredDescription": "టీమ్ ప్రొవిజనింగ్ మరియు సెషన్ నిర్వహణ కోసం {{runtime}} అవసరం. ప్రారంభించడానికి దాన్ని ఇన్‌స్టాల్ చేయండి.",
+      "isRequired": "{{runtime}} అవసరం",
+      "reinstall": "{{runtime}} ను మళ్లీ ఇన్‌స్టాల్ చేయి"
+    },
+    "runtimeInstall": {
+      "checking": "తనిఖీ చేస్తోంది",
+      "codexTitle": "యాప్ డేటాలోకి Codex CLI ను ఇన్‌స్టాల్ చేయి",
+      "downloading": "డౌన్‌లోడ్ చేస్తోంది",
+      "downloadingPercent": "డౌన్‌లోడ్ చేస్తోంది {{percent}}%",
+      "install": "ఇన్‌స్టాల్ చేయి",
+      "installing": "ఇన్‌స్టాల్ చేస్తోంది",
+      "openCodeTitle": "యాప్ డేటాలోకి OpenCode రన్‌టైమ్‌ను ఇన్‌స్టాల్ చేయి",
+      "retryInstall": "ఇన్‌స్టాల్ మళ్లీ ప్రయత్నించు"
+    },
+    "troubleshoot": {
+      "again": "మళ్లీ",
+      "authStatusCommand": "మీరు కాన్ఫిగర్ చేసిన CLI auth status కమాండ్",
+      "checkLoggedIn": "- ఇది \"Logged in\" చూపిస్తుందో లేదో తనిఖీ చేయండి",
+      "click": "క్లిక్ చేయండి",
+      "loginCommand": "రన్‌టైమ్ లాగిన్ కమాండ్",
+      "logoutCommand": "రన్‌టైమ్ లాగ్ అవుట్ కమాండ్",
+      "openTerminal": "మీ టెర్మినల్ తెరిచి అమలు చేయండి:",
+      "reloginPrefix": "ఇది లాగిన్ అయిందని చెప్పినా యాప్ దాన్ని చూడకపోతే, ప్రయత్నించండి:",
+      "sameRuntime": "మీ టెర్మినల్‌లోని CLI యాప్ ఉపయోగించే అదే రన్‌టైమ్ అని నిర్ధారించుకోండి",
+      "statusCacheHint": "- కొన్నిసార్లు స్థితి కొన్ని సెకన్ల పాటు క్యాష్ చేయబడుతుంది",
+      "then": "ఆపై"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "ఒకటి లేదా అంతకంటే ఎక్కువ ప్రొవైడర్లు API కీ మోడ్‌కు సెట్ చేయబడ్డాయి, కానీ ఏ API కీ కాన్ఫిగర్ చేయబడలేదు. కీలను జోడించడానికి లేదా కనెక్షన్ మోడ్‌ను మార్చడానికి Manage Providers తెరవండి.",
+      "multipleApiKeysNeedAttention": "ఒకటి లేదా అంతకంటే ఎక్కువ ప్రొవైడర్లు API కీ మోడ్‌కు సెట్ చేయబడ్డాయి మరియు శ్రద్ధ అవసరం. సేవ్ చేసిన కీలను సమీక్షించడానికి లేదా కనెక్షన్ మోడ్‌ను మార్చడానికి Manage Providers తెరవండి.",
+      "notAuthenticated": "{{runtime}} ఇన్‌స్టాల్ చేయబడింది కానీ మీరు ప్రామాణీకరించబడలేదు. టీమ్ ప్రొవిజనింగ్ మరియు AI ఫీచర్ల కోసం లాగిన్ అవసరం.",
+      "singleApiKeyMissing": "{{provider}} API కీ మోడ్‌కు సెట్ చేయబడింది, కానీ ఏ API కీ కాన్ఫిగర్ చేయబడలేదు. కీని జోడించడానికి లేదా కనెక్షన్ మోడ్‌ను మార్చడానికి Manage Providers తెరవండి.",
+      "singleApiKeyNeedsAttention": "{{provider}} API కీ మోడ్‌కు సెట్ చేయబడింది, కానీ అది కనెక్ట్ కాలేదు. సేవ్ చేసిన కీని సమీక్షించడానికి లేదా కనెక్షన్ మోడ్‌ను మార్చడానికి Manage Providers తెరవండి."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "ప్రాజెక్ట్ ఫోల్డర్‌ను ఎంచుకోండి",
+    "selectFolder": "ఫోల్డర్‌ను ఎంచుకోండి",
+    "failedToLoad": "ప్రాజెక్ట్‌లను లోడ్ చేయడం విఫలమైంది",
+    "retry": "మళ్లీ ప్రయత్నించు",
+    "noProjects": "ప్రాజెక్ట్‌లు కనుగొనబడలేదు",
+    "noMatches": "\"{{query}}\" కోసం సరిపోలికలు లేవు",
+    "noRecentProjects": "ఇటీవలి ప్రాజెక్ట్‌లు కనుగొనబడలేదు",
+    "emptyDescription": "ఇటీవలి Claude మరియు Codex కార్యకలాపం ఇక్కడ కనిపిస్తుంది.",
+    "loadMore": "మరింత లోడ్ చేయి",
+    "card": {
+      "deleted": "తొలగించబడింది",
+      "projectFolderMissing": "ప్రాజెక్ట్ ఫోల్డర్ ఇకపై ఉనికిలో లేదు",
+      "taskCounts": {
+        "active": "{{count}} క్రియాశీలం",
+        "active_one": "{{count}} క్రియాశీలం",
+        "active_other": "{{count}} క్రియాశీలం",
+        "active_few": "{{count}} క్రియాశీలం",
+        "active_many": "{{count}} క్రియాశీలం",
+        "pending": "{{count}} పెండింగ్",
+        "pending_one": "{{count}} పెండింగ్",
+        "pending_other": "{{count}} పెండింగ్",
+        "pending_few": "{{count}} పెండింగ్",
+        "pending_many": "{{count}} పెండింగ్",
+        "done": "{{count}} పూర్తయింది",
+        "done_one": "{{count}} పూర్తయింది",
+        "done_other": "{{count}} పూర్తయింది",
+        "done_few": "{{count}} పూర్తయింది",
+        "done_many": "{{count}} పూర్తయింది"
+      }
+    },
+    "title": "ఇటీవలి ప్రాజెక్ట్‌లు",
+    "searchResults": "శోధన ఫలితాలు",
+    "searchPlaceholder": "ప్రాజెక్ట్‌లను శోధించండి..."
+  },
+  "actions": {
+    "selectTeam": "టీమ్‌ను ఎంచుకోండి",
+    "or": "లేదా",
+    "clearSearch": "శోధనను క్లియర్ చేయి"
+  },
+  "windowsAdmin": {
+    "title": "Windows అడ్మినిస్ట్రేటర్ మోడ్ సిఫార్సు చేయబడింది",
+    "description": "Agent Teams AI ఎలివేట్ చేయబడనప్పుడు OpenCode రన్‌టైమ్ తనిఖీలు టైమ్ అవుట్ కావచ్చు. OpenCode టీమ్‌లను లాంచ్ చేయడానికి ముందు Run as administrator తో యాప్‌ను పునఃప్రారంభించండి."
+  },
+  "webPreview": {
+    "title": "పూర్తి కార్యాచరణ కోసం డెస్క్‌టాప్ యాప్‌ను తెరవండి",
+    "description": "బ్రౌజర్ వెర్షన్ ఇంకా అభివృద్ధిలో ఉంది. ఇక్కడ ప్రాజెక్ట్ చర్యలు, ఇంటిగ్రేషన్‌లు మరియు లైవ్ స్థితి అప్‌డేట్‌లు పరిమితం కావచ్చు. అన్ని ఫీచర్‌లను నమ్మదగినంగా యాక్సెస్ చేయడానికి డెస్క్‌టాప్ యాప్‌ను ఉపయోగించండి."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "కొత్త వెర్షన్ అందుబాటులో ఉంది",
+    "restartNow": "ఇప్పుడే పునఃప్రారంభించు",
+    "viewDetails": "వివరాలను చూడండి"
+  }
+}

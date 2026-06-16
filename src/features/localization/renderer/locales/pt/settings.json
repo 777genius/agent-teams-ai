@@ -46,7 +46,8 @@
       "copiedShort": "Copiado",
       "copy": "Copiar diagnósticos",
       "hints": "Dica",
-      "likelyCause": "Provável causa:"
+      "likelyCause": "Provável causa:",
+      "windowsSymlinkAdminHint": "Windows: execute o Agent Teams AI como administrador"
     },
     "models": {
       "alreadyDefault": "Este já é o padrão OpenCode selecionado.",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "Pesquisar modelos",
       "selectProjectBeforeTesting": "Selecione um contexto de projeto antes de testar modelos.",
       "selectProjectBeforeTestingDefaults": "Selecione um contexto de projeto antes de testar ou salvar padrões do OpenCode.",
-      "useInTeamPicker": "Uso no selecionador de equipe"
+      "useInTeamPicker": "Uso no selecionador de equipe",
+      "testInProgress": "O teste do modelo já está em execução.",
+      "validationContextRequired": "Selecione um contexto de validação acima para habilitar Test e Set default. Salvar para team picker apenas guarda a route para novas equipes.",
+      "actionsUnavailable": "As ações estão temporariamente indisponíveis.",
+      "defaultSaveInProgress": "O OpenCode default está sendo salvo.",
+      "routeUnavailableAuth": "Este provider exige autenticação antes que este modelo possa ser usado.",
+      "routeUnavailableFailed": "Esta model route falhou no último execution test.",
+      "routeUnavailableGeneric": "Esta model route não pode ser usada agora.",
+      "routeUnavailableUnknown": "Este modelo é o OpenCode default atual, mas ainda não está disponível no live catalog."
     },
     "providers": {
       "catalog": "Catálogo de fornecedores OpenCode",
@@ -108,7 +117,8 @@
       "needsTest": "teste das necessidades",
       "failed": "falhou",
       "unknown": "desconhecido",
-      "default": "padrão"
+      "default": "padrão",
+      "knownRoute": "route conhecida"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "Chave API configurada, mas ainda não verificada",
         "apiKeyModeMissingCredential": "Modo chave API selecionado, mas nenhuma chave API está configurada",
         "connectedVia": "Ligado via {{method}}",
-        "unableToVerify": "Não foi possível verificar"
+        "unableToVerify": "Não foi possível verificar",
+        "modelsAvailable": "Modelos disponíveis"
       },
       "mode": {
         "selectedAuth": "Autorização seleccionada: {{authMode}}",

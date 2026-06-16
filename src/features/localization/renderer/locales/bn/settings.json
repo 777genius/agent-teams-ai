@@ -46,7 +46,8 @@
       "copiedShort": "প্রতিলিপি",
       "copy": "ডায়গনিস্টিক কপি করুন",
       "hints": "ইঙ্গিত",
-      "likelyCause": "হতে পারে:"
+      "likelyCause": "হতে পারে:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI অ্যাডমিনিস্ট্রেটর হিসেবে চালান"
     },
     "models": {
       "alreadyDefault": "বর্তমানে নির্বাচিত ডিফল্ট মান ।",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "অনুসন্ধানের মডেল",
       "selectProjectBeforeTesting": "মডেল পরীক্ষার পূর্বে একটি প্রজেক্ট প্রসঙ্গ নির্বাচন করুন।",
       "selectProjectBeforeTestingDefaults": "পরীক্ষা অথবা সংরক্ষণ করার পূর্বে একটি প্রজেক্ট প্রসঙ্গ নির্বাচন করুন ।",
-      "useInTeamPicker": "গ্রুপ বাছাইকারী ব্যবহার করো"
+      "useInTeamPicker": "গ্রুপ বাছাইকারী ব্যবহার করো",
+      "testInProgress": "মডেল পরীক্ষা ইতিমধ্যেই চলছে।",
+      "validationContextRequired": "Test এবং Set default চালু করতে উপরে একটি validation context নির্বাচন করুন। team picker-এ সংরক্ষণ করলে শুধু নতুন দলের জন্য route রাখা হয়।",
+      "actionsUnavailable": "অ্যাকশনগুলো সাময়িকভাবে পাওয়া যাচ্ছে না।",
+      "defaultSaveInProgress": "OpenCode default সংরক্ষণ করা হচ্ছে।",
+      "routeUnavailableAuth": "এই মডেল ব্যবহারের আগে এই provider-এর authentication দরকার।",
+      "routeUnavailableFailed": "এই model route শেষ execution test-এ ব্যর্থ হয়েছে।",
+      "routeUnavailableGeneric": "এই model route এখন ব্যবহার করা যাবে না।",
+      "routeUnavailableUnknown": "এই মডেলটি বর্তমান OpenCode default, কিন্তু এখনও live catalog-এ নেই।"
     },
     "providers": {
       "catalog": "OpenCode উপলব্ধকারী ক্যাটালগ",
@@ -108,7 +117,8 @@
       "needsTest": "একটি পরীক্ষা প্রয়োজন",
       "failed": "বিফল",
       "unknown": "অজানা",
-      "default": "ডিফল্ট"
+      "default": "ডিফল্ট",
+      "knownRoute": "পরিচিত route"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API কি ইম্পোর্ট করা হয়নি কিন্তু যাচাই করা হয়নি",
         "apiKeyModeMissingCredential": "API চাবি নির্বাচন করা হয়েছে, কিন্তু কিছুই নির্বাচিত নয় API কি কনফিগার করা হয়েছে",
         "connectedVia": "পরিচিতির সাথে সংযোগ করা হয়েছে {{method}}",
-        "unableToVerify": "যাচাই করতে ব্যর্থ"
+        "unableToVerify": "যাচাই করতে ব্যর্থ",
+        "modelsAvailable": "মডেল উপলব্ধ"
       },
       "mode": {
         "selectedAuth": "নির্বাচিত অনুমোদন {{authMode}}",

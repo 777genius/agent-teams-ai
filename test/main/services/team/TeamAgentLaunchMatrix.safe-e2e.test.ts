@@ -38,6 +38,7 @@ import {
 } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import type { TeamMemberWorktreeManager } from '../../../../src/main/services/team/TeamMemberWorktreeManager';
 import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
@@ -78,6 +79,32 @@ const WORKSPACE_TRUST_TEST_ENV_NAMES = [
 
 type WorkspaceTrustTestEnvName = (typeof WORKSPACE_TRUST_TEST_ENV_NAMES)[number];
 type RuntimeUsageStatsForTest = { rssBytes: number; cpuPercent?: number };
+type RuntimeUsageProcessRowForTest = RuntimeUsageStatsForTest & {
+  pid: number;
+  ppid: number;
+  command: string;
+  runtimeTelemetrySource?: 'native' | 'wsl' | 'windows-host';
+};
+type RuntimeUsageStatsStubTarget = {
+  aliveRunByTeam?: Map<string, string>;
+  provisioningRunByTeam?: Map<string, string>;
+  runs?: Map<string, { child?: { pid?: number } }>;
+  getLiveTeamAgentRuntimeMetadata?: (
+    teamName: string
+  ) => Promise<Map<string, { pid?: number; metricsPid?: number }>>;
+  readRuntimeProcessRowsForUsageSnapshot: (
+    teamName: string
+  ) => Promise<RuntimeUsageProcessRowForTest[]>;
+  readProcessUsageStatsByPid: (
+    pids: readonly number[]
+  ) => Promise<Map<number, RuntimeUsageStatsForTest>>;
+};
+
+function addRuntimeUsagePidForTest(pids: Set<number>, pid: unknown): void {
+  if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
+    pids.add(pid);
+  }
+}
 
 function createRuntimeUsageStatsMap(
   entries: readonly (readonly [number, number])[]
@@ -85,10 +112,53 @@ function createRuntimeUsageStatsMap(
   return new Map(entries.map(([pid, rssBytes]) => [pid, { rssBytes }]));
 }
 
-function createRuntimeUsageStatsByPid(
-  pids: readonly number[]
-): Map<number, RuntimeUsageStatsForTest> {
-  return createRuntimeUsageStatsMap(pids.map((pid) => [pid, pid * 1_000] as const));
+function stubRuntimeUsageStatsByPid(
+  service: TeamProvisioningService,
+  entries: readonly (readonly [number, number])[] = []
+): void {
+  const configuredStatsByPid = createRuntimeUsageStatsMap(entries);
+  const target = service as unknown as RuntimeUsageStatsStubTarget;
+
+  target.readRuntimeProcessRowsForUsageSnapshot = async (teamName: string) => {
+    const statsByPid = new Map(configuredStatsByPid);
+    const candidatePids = new Set<number>();
+    const runId = target.aliveRunByTeam?.get(teamName) ?? target.provisioningRunByTeam?.get(teamName);
+    const run = runId ? target.runs?.get(runId) : undefined;
+    addRuntimeUsagePidForTest(candidatePids, run?.child?.pid);
+
+    const liveMetadataByMember = await target.getLiveTeamAgentRuntimeMetadata?.(teamName);
+    for (const metadata of liveMetadataByMember?.values() ?? []) {
+      addRuntimeUsagePidForTest(candidatePids, metadata.pid);
+      addRuntimeUsagePidForTest(candidatePids, metadata.metricsPid);
+    }
+
+    for (const pid of candidatePids) {
+      if (!statsByPid.has(pid)) {
+        statsByPid.set(pid, { rssBytes: pid * 1_000 });
+      }
+    }
+
+    return [...statsByPid].map(([pid, stats]) => ({
+      pid,
+      ppid: 0,
+      command: `test-runtime-${pid}`,
+      ...stats,
+      runtimeTelemetrySource: 'native' as const,
+    }));
+  };
+
+  target.readProcessUsageStatsByPid = async (pids: readonly number[]) => {
+    const requestedPids = new Set(pids);
+    return new Map(
+      [...pids]
+        .filter((pid) => Number.isFinite(pid) && pid > 0)
+        .map((pid) => [
+          pid,
+          configuredStatsByPid.get(pid) ?? { rssBytes: pid * 1_000 },
+        ] as const)
+        .filter(([pid]) => requestedPids.has(pid))
+    );
+  };
 }
 
 describe('Team agent launch matrix safe e2e', () => {
@@ -144,6 +214,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.launchInputs).toHaveLength(1);
     expect(adapter.launchInputs[0]?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
       'alice',
       'bob',
     ]);
@@ -153,6 +224,11 @@ describe('Team agent launch matrix safe e2e', () => {
     });
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot('pure-opencode-safe-e2e');
+    expect(runtimeSnapshot.members['team-lead']).toMatchObject({
+      alive: true,
+      providerId: 'opencode',
+      runtimeModel: 'opencode/big-pickle',
+    });
     expect(runtimeSnapshot.members.alice).toMatchObject({
       alive: true,
       providerId: 'opencode',
@@ -164,11 +240,207 @@ describe('Team agent launch matrix safe e2e', () => {
       runtimeModel: 'opencode/big-pickle',
     });
 
-    await expect(
-      fs.readFile(path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'), {
+    const launchState = JSON.parse(
+      await fs.readFile(path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'), {
         encoding: 'utf8',
       })
-    ).resolves.toContain('"teamLaunchState": "clean_success"');
+    ) as { expectedMembers: string[]; members: Record<string, unknown>; teamLaunchState: string };
+    expect(launchState.teamLaunchState).toBe('clean_success');
+    expect(launchState.expectedMembers).toEqual(['team-lead', 'alice', 'bob']);
+    expect(Object.keys(launchState.members)).toEqual(['team-lead', 'alice', 'bob']);
+    await expect(
+      readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: 'pure-opencode-safe-e2e',
+        laneId: 'primary',
+      })
+    ).resolves.toMatchObject({
+      committed: true,
+      sessions: expect.arrayContaining([
+        expect.objectContaining({ memberName: 'team-lead' }),
+        expect.objectContaining({ memberName: 'alice' }),
+        expect.objectContaining({ memberName: 'bob' }),
+      ]),
+    });
+  });
+
+  it('launches pure OpenCode worktree members as aggregate worktree-root lanes', async () => {
+    const teamName = 'pure-opencode-worktree-root-lanes-safe-e2e';
+    const bobWorktree = path.join(projectPath, '.agent-teams', 'bob');
+    const tomWorktree = path.join(projectPath, '.agent-teams', 'tom');
+    const worktreeManager: Pick<TeamMemberWorktreeManager, 'ensureMemberWorktree'> = {
+      ensureMemberWorktree: vi.fn(async (input) => ({
+        baseRepoPath: projectPath,
+        worktreePath: input.memberName === 'bob' ? bobWorktree : tomWorktree,
+        branchName: `agent-teams/${teamName}/${input.memberName}`,
+      })),
+    };
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      worktreeManager as TeamMemberWorktreeManager
+    );
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const progressEvents: TeamProvisioningProgress[] = [];
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            isolation: 'worktree',
+          },
+          {
+            name: 'tom',
+            role: 'Reviewer',
+            providerId: 'opencode',
+            isolation: 'worktree',
+          },
+        ],
+      },
+      (progress) => progressEvents.push(progress)
+    );
+
+    expect(runId).toMatch(/[0-9a-f-]{36}/);
+    expect(worktreeManager.ensureMemberWorktree).toHaveBeenCalledTimes(2);
+    expect(adapter.launchInputs.map((input) => input.laneId).sort()).toEqual([
+      'secondary:opencode:bob',
+      'secondary:opencode:tom',
+    ]);
+    expect(adapter.launchInputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          laneId: 'secondary:opencode:bob',
+          cwd: bobWorktree,
+          runtimeOnly: true,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              isolation: 'worktree',
+              cwd: bobWorktree,
+            }),
+          ],
+        }),
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          cwd: tomWorktree,
+          runtimeOnly: true,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              isolation: 'worktree',
+              cwd: tomWorktree,
+            }),
+          ],
+        }),
+      ])
+    );
+    expect(progressEvents.at(-1)).toMatchObject({
+      state: 'ready',
+      message: 'OpenCode worktree lanes are ready',
+    });
+    expect(svc.getAliveTeams()).toContain(teamName);
+
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
+      {
+        lanes: {
+          'secondary:opencode:bob': { state: 'active' },
+          'secondary:opencode:tom': { state: 'active' },
+        },
+      }
+    );
+    await expect(
+      readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: 'secondary:opencode:bob',
+      })
+    ).resolves.toMatchObject({
+      committed: true,
+      sessions: [expect.objectContaining({ memberName: 'bob' })],
+    });
+    await expect(
+      readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: 'secondary:opencode:tom',
+      })
+    ).resolves.toMatchObject({
+      committed: true,
+      sessions: [expect.objectContaining({ memberName: 'tom' })],
+    });
+
+    const statuses = await svc.getMemberSpawnStatuses(teamName);
+    expect(statuses.statuses.bob).toMatchObject({
+      launchState: 'confirmed_alive',
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      launchState: 'confirmed_alive',
+    });
+
+    const launchCountBeforeRestart = adapter.launchInputs.length;
+    await svc.restartMember(teamName, 'bob');
+    expect(adapter.stopInputs).toEqual([
+      expect.objectContaining({
+        laneId: 'secondary:opencode:bob',
+        teamName,
+      }),
+    ]);
+    expect(adapter.launchInputs).toHaveLength(launchCountBeforeRestart + 1);
+    expect(adapter.launchInputs.at(-1)).toMatchObject({
+      laneId: 'secondary:opencode:bob',
+      cwd: bobWorktree,
+      runtimeOnly: true,
+      expectedMembers: [
+        expect.objectContaining({
+          name: 'bob',
+          providerId: 'opencode',
+          isolation: 'worktree',
+          cwd: bobWorktree,
+        }),
+      ],
+    });
+
+    const stopCountBeforeRelaunch = adapter.stopInputs.length;
+    const launchCountBeforeRelaunch = adapter.launchInputs.length;
+    await svc.launchTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+      },
+      (progress) => progressEvents.push(progress)
+    );
+    expect(
+      adapter.stopInputs
+        .slice(stopCountBeforeRelaunch)
+        .map((input) => input.laneId)
+        .sort()
+    ).toEqual(['secondary:opencode:bob', 'secondary:opencode:tom']);
+    expect(
+      adapter.launchInputs
+        .slice(launchCountBeforeRelaunch)
+        .map((input) => input.laneId)
+        .sort()
+    ).toEqual(['secondary:opencode:bob', 'secondary:opencode:tom']);
   });
 
   it('accepts pure OpenCode runtime bootstrap check-ins during adapter launch', async () => {
@@ -191,7 +463,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.bootstrapCheckins).toEqual([
       {
-        memberName: 'alice',
+        memberName: 'team-lead',
         runId,
         state: 'accepted',
       },
@@ -263,6 +535,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     expect(runId).toBe(adapter.launchInputs[0]?.runId);
     expect(adapter.launchInputs[0]?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
       'alice',
       'bob',
     ]);
@@ -405,7 +678,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     const approval = approvalEvents.find(
       (event): event is ToolApprovalRequest =>
-        !('dismissed' in event) && !('autoResolved' in event)
+        !('dismissed' in event) && !('autoResolved' in event) && event.source === 'alice'
     );
     expect(approval).toMatchObject({
       runId: launch.runId,
@@ -522,9 +795,13 @@ describe('Team agent launch matrix safe e2e', () => {
       }),
     ]);
     expect(planFull).toHaveBeenCalledTimes(1);
+    expect(planFull.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({ providers: ['claude'] })
+    );
     expect(execute).toHaveBeenCalledTimes(1);
     const executePlan = execute.mock.calls[0]?.[0];
     expect(executePlan).toBeDefined();
+    expect(executePlan?.providers).toEqual(['claude']);
     expect(executePlan?.workspaces.map((workspace) => workspace.cwd)).toContain(projectPath);
 
     await expect(fs.readFile(staleLaunchStatePath, 'utf8')).resolves.toBe(
@@ -4121,8 +4398,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, 183.9 * 1024 * 1024]]);
+    stubRuntimeUsageStatsByPid(svc, [[sharedHostPid, 183.9 * 1024 * 1024]]);
 
     await waitForCondition(async () => {
       const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
@@ -4227,8 +4503,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
+    stubRuntimeUsageStatsByPid(svc, [[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4329,8 +4604,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
+    stubRuntimeUsageStatsByPid(svc, [[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4451,8 +4725,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
+    stubRuntimeUsageStatsByPid(svc, [[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4535,8 +4808,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (restartedService as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, 188.4 * 1024 * 1024]]);
+    stubRuntimeUsageStatsByPid(restartedService, [[sharedHostPid, 188.4 * 1024 * 1024]]);
 
     const runtimeSnapshot = await restartedService.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -5294,8 +5566,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async () =>
-      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
+    stubRuntimeUsageStatsByPid(svc, [[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -11082,6 +11353,94 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(adapter.messageInputs[0]?.runId).not.toBe(first.runId);
   });
 
+  it('delivers pure OpenCode lead inbox messages through the primary runtime lane end-to-end', async () => {
+    const teamName = 'pure-opencode-lead-inbox-delivery-safe-e2e';
+    const adapter = new VisibleReplyOpenCodeRuntimeAdapter({
+      replySource: 'runtime_delivery',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const launch = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    const messageId = 'msg-pure-opencode-lead-inbox';
+    const leadInboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', 'team-lead.json');
+    await fs.mkdir(path.dirname(leadInboxPath), { recursive: true });
+    await fs.writeFile(
+      leadInboxPath,
+      `${JSON.stringify(
+        [
+          {
+            from: 'user',
+            to: 'team-lead',
+            text: 'coordinate this pure opencode team',
+            timestamp: '2026-05-08T10:05:00.000Z',
+            read: false,
+            messageId,
+          },
+        ],
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    await expect(
+      svc.relayInboxFileToLiveRecipient(teamName, 'team-lead', {
+        onlyMessageId: messageId,
+        source: 'ui-send',
+        deliveryMetadata: {
+          replyRecipient: 'user',
+          actionMode: 'do',
+        },
+      })
+    ).resolves.toMatchObject({
+      kind: 'opencode_member',
+      relayed: 1,
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: false,
+        responseState: 'responded_visible_message',
+        visibleReplyMessageId: `reply-${messageId}`,
+      },
+    });
+
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: launch.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'team-lead',
+      text: 'coordinate this pure opencode team',
+      messageId,
+      replyRecipient: 'user',
+      actionMode: 'do',
+    });
+
+    const leadInbox = await readInboxRows(teamName, 'team-lead');
+    expect(leadInbox[0]).toMatchObject({
+      messageId,
+      read: true,
+    });
+    const userInbox = await readInboxRows(teamName, 'user');
+    expect(userInbox[0]).toMatchObject({
+      from: 'team-lead',
+      to: 'user',
+      source: 'runtime_delivery',
+      messageId: `reply-${messageId}`,
+      relayOfMessageId: messageId,
+    });
+  });
+
   it('surfaces pure OpenCode delivery permission blocks as the shared tool approval dialog', async () => {
     const teamName = 'pure-opencode-delivery-permission-approval-safe-e2e';
     const adapter = new PermissionBlockedOpenCodeRuntimeAdapter();
@@ -14696,8 +15055,7 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64102, model: 'haiku-stale' }],
         ['bob', { alive: true, pid: 64103, model: 'sonnet-stale' }],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -14745,8 +15103,7 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64502, model: 'haiku-before-stop' }],
         ['bob', { alive: true, pid: 64503, model: 'sonnet-before-stop' }],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(beforeStop).toMatchObject({
@@ -14872,8 +15229,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -14922,8 +15278,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -14963,8 +15318,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.alice).toMatchObject({
@@ -15001,8 +15355,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.alice).toMatchObject({
@@ -15037,8 +15390,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.bob).toMatchObject({
@@ -15073,8 +15425,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.bob).toMatchObject({
@@ -15118,8 +15469,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.reviewer).toMatchObject({
@@ -15163,8 +15513,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.reviewer).toMatchObject({
@@ -15299,8 +15648,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -15349,8 +15697,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -15393,8 +15740,7 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot).toMatchObject({
@@ -15438,8 +15784,7 @@ describe('Team agent launch matrix safe e2e', () => {
         ['bob', { alive: true, pid: 64704, model: 'opencode/minimax-stale' }],
         ['tom', { alive: true, pid: 64705, model: 'opencode/nemotron-stale' }],
       ]);
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -15563,8 +15908,7 @@ describe('Team agent launch matrix safe e2e', () => {
               ['bob', { alive: true, pid: 50203, model: 'sonnet-runtime' }],
             ]
       );
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const firstSnapshot = await svc.getTeamAgentRuntimeSnapshot(firstTeamName);
     const secondSnapshot = await svc.getTeamAgentRuntimeSnapshot(secondTeamName);
@@ -15643,8 +15987,7 @@ describe('Team agent launch matrix safe e2e', () => {
             ]
       );
     };
-    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
-      createRuntimeUsageStatsByPid(pids);
+    stubRuntimeUsageStatsByPid(svc);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(stoppedTeamName);
     expect(beforeStop.members['team-lead']).toMatchObject({
@@ -20416,6 +20759,7 @@ function createBlockedWorkspaceTrustCoordinator(input: {
     })
   );
   const planFull = vi.fn(async (request: Parameters<WorkspaceTrustCoordinator['planFull']>[0]) => ({
+    providers: request.providers,
     workspaces: request.workspaces,
     launchArgPatches: [],
   }));

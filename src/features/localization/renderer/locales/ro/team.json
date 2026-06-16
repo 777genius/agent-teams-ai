@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Creează sarcină din mesaj",
+      "editMessage": "Editează mesajul",
+      "expandMessage": "Extinde mesajul",
+      "replyToMessage": "Răspunde la mesaj",
+      "restartTeam": "Repornește echipa"
+    },
+    "authError": {
+      "description": "Autentificarea a eșuat. Repornirea echipei va reîmprospăta sesiunea și poate rezolva această problemă. Dacă problema persistă, verifică credențialele API sau încearcă din nou mai târziu."
+    },
+    "automation": {
+      "reviewPickup": "I s-a cerut coechipierului să preia revizuirea",
+      "stallNudge": "I s-a cerut coechipierului să continue sarcina blocată",
+      "workSyncBody": "I s-a cerut coechipierului să sincronizeze munca curentă"
+    },
+    "badges": {
+      "automation": "automatizare",
+      "bootstrap": "inițializare",
+      "command": "comandă",
+      "comment": "Comentariu",
+      "live": "live",
+      "note": "notă",
+      "rateLimited": "Limită de utilizare atinsă",
+      "restart": "repornire",
+      "result": "rezultat",
+      "session": "sesiune",
+      "stallNudge": "memento blocaj",
+      "start": "pornire",
+      "workSync": "sincronizare muncă",
+      "agentError": "Eroare agent",
+      "apiError": "Eroare API"
+    },
+    "bootstrap": {
+      "acknowledged": "Inițializare confirmată",
+      "restarting": "Se repornește coechipierul",
+      "starting": "Se pornește coechipierul"
+    },
+    "rawJson": "JSON brut",
+    "unread": "Necitit",
+    "thoughts": {
+      "count": "{{count}} gânduri",
+      "count_one": "{{count}} gând",
+      "expand": "Extinde gândurile",
+      "showMore": "Arată mai mult",
+      "showLess": "Arată mai puțin",
+      "count_few": "{{count}} gânduri",
+      "count_many": "{{count}} gânduri",
+      "count_other": "{{count}} gânduri",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - gânduri"
+    },
+    "timeline": {
+      "loadingMessages": "Se încarcă mesajele...",
+      "noMessages": "Niciun mesaj",
+      "emptyHint": "Trimite un mesaj unui membru pentru a vedea activitatea.",
+      "newSession": "Sesiune nouă",
+      "olderCount": "+{{count}} mai vechi",
+      "showMore": "Arată încă {{count}}",
+      "showAll": "Arată tot",
+      "olderCount_one": "+{{count}} mai vechi",
+      "olderCount_few": "+{{count}} mai vechi",
+      "olderCount_many": "+{{count}} mai vechi",
+      "olderCount_other": "+{{count}} mai vechi"
+    },
+    "pendingReplies": {
+      "title": "În așteptarea răspunsurilor",
+      "openMember": "Deschide membrul",
+      "messageSentAwaitingReply": "Mesaj trimis, se așteaptă răspunsul",
+      "awaitingReply": "se așteaptă răspunsul",
+      "externalTeam": "echipă externă",
+      "crossTeamAwaitingReply": "Mesaj între echipe trimis, se așteaptă răspunsul",
+      "user": "utilizator",
+      "awaitingApproval": "se așteaptă aprobarea"
+    },
+    "reply": {
+      "replyingTo": "Se răspunde la",
+      "action": "Răspunde"
+    },
+    "activeTasks": {
+      "inProgress": "În curs",
+      "expandInProgress": "Extinde cele în curs",
+      "collapseInProgress": "Restrânge cele în curs",
+      "reviewing": "revizuiește",
+      "workingOn": "lucrează la"
+    },
+    "expandDialog": {
+      "description": "Vizualizare extinsă a mesajului"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Creează",
+      "creating": "Se creează...",
+      "openExisting": "Deschide o echipă existentă",
+      "skipPreflightAndCreate": "Omite verificarea preliminară și creează"
+    },
+    "conflict": {
+      "description": "Rularea a două echipe în același director este riscantă - pot intra în conflict editând aceleași fișiere. Ia în considerare folosirea unui director diferit sau a unui git worktree pentru izolare.",
+      "title": "O altă echipă \"{{team}}\" rulează deja pentru acest director de lucru",
+      "workingDirectory": "Director de lucru:"
+    },
+    "description": {
+      "copy": "Creează o echipă nouă pe baza uneia existente.",
+      "create": "Configurează-ți echipa și alege cum pornește."
+    },
+    "errors": {
+      "nameExists": "Numele echipei există deja",
+      "nameLaunching": "O echipă cu acest nume se lansează în prezent",
+      "createConfigFailed": "Crearea configurației echipei a eșuat",
+      "loadProjectsFailed": "Încărcarea proiectelor a eșuat"
+    },
+    "fields": {
+      "color": "Culoare (opțional)",
+      "description": "Descriere (opțional)",
+      "prompt": "Prompt pentru liderul echipei (opțional)",
+      "teamName": "Nume echipă"
+    },
+    "launchAfterCreate": {
+      "description": "Pornește echipa imediat prin Claude CLI local.",
+      "label": "Rulează comanda după creare"
+    },
+    "localOnly": "Disponibil doar în modul local Electron.",
+    "onDisk": "Pe disc:",
+    "placeholders": {
+      "description": "Descriere scurtă a scopului echipei",
+      "prompt": "Instrucțiuni pentru liderul echipei în timpul aprovizionării..."
+    },
+    "saved": "Salvat",
+    "solo": {
+      "description": "Va fi pornit doar liderul echipei (procesul principal) - niciun coechipier nu va fi creat. Funcționează ca o sesiune obișnuită de agent în runtime-ul ales (Claude Code, Codex, OpenCode, Gemini), dar cu acces la panoul de sarcini pentru planificare. Economisește tokenuri evitând costul de coordonare a coechipierilor. Poți adăuga membri mai târziu din setările echipei.",
+      "label": "Echipă solo"
+    },
+    "title": {
+      "copy": "Copiază echipa",
+      "create": "Creează echipă"
+    },
+    "optional": {
+      "launchSettingsTitle": "Setări opționale de lansare",
+      "launchSettingsDescription": "Promptul, siguranța și suprascrierile CLI se află aici când ai nevoie de ele.",
+      "teamDetailsTitle": "Detalii opționale ale echipei",
+      "teamDetailsDescription": "Menține fluxul implicit compact și deschide acest lucru doar când vrei context suplimentar sau o culoare personalizată."
+    },
+    "prepare": {
+      "unsupportedPreload": "Versiunea curentă de preload nu acceptă team:prepareProvisioning. Repornește aplicația de dezvoltare.",
+      "selectWorkingDirectory": "Selectează un director de lucru pentru a valida mediul de lansare.",
+      "someProvidersNeedAttention": "Unii furnizori selectați necesită atenție.",
+      "readyWithNotes": "Toți furnizorii selectați sunt pregătiți, cu observații.",
+      "ready": "Toți furnizorii selectați sunt pregătiți.",
+      "failed": "Pregătirea furnizorilor selectați a eșuat",
+      "checkingProviders": "Se verifică furnizorii selectați...",
+      "preparingEnvironment": "Se pregătește mediul...",
+      "selectedProvidersReadyWithNotes": "Furnizorii selectați sunt pregătiți (cu observații)",
+      "selectedProvidersReady": "Furnizorii selectați sunt pregătiți"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Numele trebuie să conțină cel puțin o literă sau o cifră",
+      "nameTooLong": "Numele este prea lung (max 128 de caractere)",
+      "selectWorkingDirectory": "Selectează directorul de lucru (cwd)",
+      "memberNameRequired": "Numele membrului nu poate fi gol",
+      "memberNameInvalid": "Numele membrului trebuie să înceapă cu un caracter alfanumeric, să folosească doar [a-zA-Z0-9._-], max 128 de caractere",
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice",
+      "openCodeLeadModelRequired": "Liderul OpenCode necesită un model selectat.",
+      "openCodeTeammateRequired": "Liderul OpenCode necesită cel puțin un coechipier OpenCode.",
+      "teamLaunching": "Echipa se lansează în prezent",
+      "teamNameExists": "Numele echipei există deja",
+      "checkFormFields": "Verifică câmpurile formularului"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Anulează",
+      "save": "Salvează"
+    },
+    "addMemberLockReason": "Folosește dialogul dedicat Adaugă membru pentru a adăuga coechipieri noi cât timp echipa este live.",
+    "description": "Schimbă numele, descrierea și culoarea echipei",
+    "errors": {
+      "changesSavedRefreshFailed": "Modificările echipei au fost salvate, dar reîmprospătarea celei mai recente vizualizări a eșuat: {{message}}",
+      "liveRenameBlocked": "Coechipierii existenți nu pot fi redenumiți cât timp echipa este live. redenumiți: {{names}}",
+      "memberNameEmpty": "Numele membrului nu poate fi gol",
+      "memberNameInvalid": "Numele membrului trebuie să înceapă cu un caracter alfanumeric, să folosească doar [a-zA-Z0-9._-], max 128 de caractere",
+      "memberNameNumericSuffix": "Numele membrului \"{{name}}\" nu este permis (rezervat pentru sufixul automat al Claude CLI). Folosește \"{{base}}\" în schimb.",
+      "memberNameReserved": "Numele membrului \"{{name}}\" este rezervat",
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice înainte de salvare",
+      "newLiveTeammates": "Adaugă coechipieri noi din dialogul dedicat Adaugă membru cât timp echipa este live. Editează echipa acceptă doar actualizarea coechipierilor existenți.",
+      "provisioning": "Setările echipei nu pot fi editate cât timp aprovizionarea este încă în curs. Așteaptă finalizarea lansării, apoi încearcă din nou.",
+      "restartFailedMany": "Echipa a fost salvată, dar repornirea acestor coechipieri a eșuat: {{failures}}",
+      "restartFailedOne": "Echipa a fost salvată, dar repornirea acestui coechipier a eșuat: {{failures}}",
+      "saveFailed": "Salvarea a eșuat",
+      "settingsChanged": "Setările echipei s-au schimbat cât timp acest dialog era deschis. Redeschide-l și revizuiește cea mai recentă stare înainte de salvare.",
+      "settingsSavedMembersAndRefreshFailed": "Setările echipei au fost salvate, dar modificările membrilor au eșuat: {{message}}. Reîmprospătarea a eșuat și ea: {{refreshError}}",
+      "settingsSavedMembersFailed": "Setările echipei au fost salvate, dar modificările membrilor au eșuat: {{message}}",
+      "settingsSavedRefreshFailed": "Setările echipei au fost salvate, dar reîmprospătarea celei mai recente vizualizări a eșuat: {{message}}",
+      "teamNameEmpty": "Numele echipei nu poate fi gol",
+      "unsupportedMixedPrimaryMutation": "Editările live ale coechipierilor deținuți de procesul primar în echipele OpenCode mixte nu sunt încă acceptate. Oprește echipa, editează lista, apoi relansează. Afectați: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Culoare (opțional)",
+      "description": "Descriere",
+      "name": "Nume"
+    },
+    "memberRestartWarning": "Salvarea va reporni acest coechipier pentru a aplica modificările de rol, flux de lucru, izolare worktree, furnizor, model, efort sau acces MCP.",
+    "notices": {
+      "liveRenameBlocked": "Salvarea live este blocată deoarece coechipierii existenți au fost redenumiți. Anulează acele modificări de identitate sau oprește mai întâi echipa.",
+      "newLiveTeammates": "Coechipierii noi nu pot fi adăugați din Editează echipa cât timp echipa este live. Folosește în schimb dialogul Adaugă membru.",
+      "provisioning": "Aprovizionarea echipei este încă în curs. Editarea este blocată temporar până la finalizarea lansării.",
+      "restartMany": "Salvarea va reporni sau relansa acești coechipieri pentru a aplica modificările de rol, flux de lucru, izolare worktree, furnizor, model, efort sau acces MCP: {{names}}.",
+      "restartOne": "Salvarea va reporni sau relansa acest coechipier pentru a aplica modificările de rol, flux de lucru, izolare worktree, furnizor, model, efort sau acces MCP: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Editările/eliminările live pentru coechipierii deținuți de procesul primar în echipele OpenCode mixte necesită oprirea și relansarea echipei: {{names}}."
+    },
+    "placeholders": {
+      "description": "Descrierea echipei (opțional)",
+      "teamName": "Nume echipă"
+    },
+    "teamLead": {
+      "changeRuntime": "Schimbă runtime-ul liderului",
+      "changeRuntimeDescription": "Deschide Relansează echipa pentru a schimba furnizorul, modelul sau efortul liderului.",
+      "modelLockReason": "Runtime-ul liderului echipei este gestionat din Relansează echipa.",
+      "readOnlyHint": "Numele și rolul liderului echipei rămân doar pentru citire aici. Deschide panoul runtime din rândul liderului pentru a schimba furnizorul, modelul sau efortul.",
+      "role": "Lider echipă"
+    },
+    "title": "Editează echipa"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Elimină membrul",
+      "removeAria": "Elimină {{name}}",
+      "restore": "Restaurează membrul",
+      "restoreAria": "Restaurează {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "setare implicită a contextului",
+      "description": "Contextul Anthropic este la nivelul întregii echipe pentru această lansare: {{mode}}. Folosește caseta Limitează contextul din panoul runtime al liderului pentru a-l schimba.",
+      "limitEnabled": "Limită de 200K activată"
+    },
+    "mcp": {
+      "buttonInherit": "Moștenire MCP",
+      "buttonScopes": "Domenii MCP",
+      "chooseScopes": "Alege domeniile",
+      "inheritLead": "Moștenește de la lider",
+      "lockedInfo": "Doar Agent Teams MCP este activat pentru toți coechipierii. Acest coechipier se va lansa doar cu serverul Agent Teams.",
+      "mode": "Mod MCP",
+      "scopes": {
+        "local": "local",
+        "project": "proiect",
+        "user": "utilizator"
+      },
+      "serverNames": "Nume servere",
+      "settingInfo": "Agent Teams MCP lansează acest coechipier doar cu serverul Agent Teams. Modurile de domeniu și listă de permisiuni se aplică doar acestei lansări de coechipier.",
+      "strictAllowlist": "Listă de permisiuni strictă",
+      "tooltip": "{{label}}: Controlează politica de moștenire MCP a acestui membru",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "Furnizor {{provider}}, {{model}}",
+      "currentLeadRuntime": "Runtime curent al liderului",
+      "default": "Implicit",
+      "inheritedTooltip": "Furnizorul, modelul și efortul sunt moștenite de la lider cât timp sincronizarea este activată.",
+      "leadSuffix": "{{label}} (lider)",
+      "liveDisabled": "Modificările de furnizor, model și efort sunt dezactivate cât timp echipa este live. Reconectează echipa pentru a le aplica în siguranță.",
+      "lockedActionFallback": "Modificările runtime-ului liderului deschid Relansează echipa, unde furnizorul, modelul și efortul pot fi actualizate.",
+      "restartWholeTeam": "Salvarea acelor modificări de runtime repornește întreaga echipă."
+    },
+    "nameAria": "Nume membru {{index}}",
+    "nameFallback": "membru {{index}}",
+    "noRole": "Niciun rol",
+    "removed": "Eliminat",
+    "workflow": {
+      "addTooltip": "Adaugă flux de lucru coechipier",
+      "editTooltip": "Editează fluxul de lucru al coechipierului",
+      "label": "Flux de lucru (opțional)",
+      "placeholder": "Cum ar trebui să se comporte acest agent, să interacționeze cu ceilalți...",
+      "saved": "Salvat"
+    },
+    "worktree": {
+      "description": "Rulează acest coechipier într-un git worktree separat. Aplicarea/respingerea modificărilor vizează acel worktree, nu spațiul de lucru al liderului.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Adaugă membri",
+      "description": "Adaugă membri noi la {{teamName}}"
+    },
+    "placeholders": {
+      "name": "nume-membru",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Adaugă",
+      "cancel": "Anulează",
+      "delete": "Șterge",
+      "editCode": "Editează codul",
+      "launch": "Lansează",
+      "remove": "Elimină",
+      "stop": "Oprește",
+      "task": "Sarcină",
+      "visualize": "Vizualizează"
+    },
+    "deleteTeam": {
+      "description": "Ștergi echipa \"{{team}}\"? Această acțiune este ireversibilă. Toate datele și sarcinile echipei vor fi șterse.",
+      "title": "Șterge echipa"
+    },
+    "draft": {
+      "descriptionPrefix": "Aceasta este o echipă în lucru -",
+      "descriptionSuffix": "a fost configurată cu {{count}} {{member}}, dar nu a fost încă aprovizionată de CLI. Apasă Lansează pentru a selecta un model și a porni echipa.",
+      "descriptionSuffix_few": "a fost configurată cu {{count}} {{member}}, dar nu a fost încă aprovizionată de CLI. Apasă Lansează pentru a selecta un model și a porni echipa.",
+      "descriptionSuffix_many": "a fost configurată cu {{count}} {{member}}, dar nu a fost încă aprovizionată de CLI. Apasă Lansează pentru a selecta un model și a porni echipa.",
+      "descriptionSuffix_one": "a fost configurată cu {{count}} {{member}}, dar nu a fost încă aprovizionată de CLI. Apasă Lansează pentru a selecta un model și a porni echipa.",
+      "descriptionSuffix_other": "a fost configurată cu {{count}} {{member}}, dar nu a fost încă aprovizionată de CLI. Apasă Lansează pentru a selecta un model și a porni echipa.",
+      "member": "membri",
+      "member_few": "membri",
+      "member_many": "membri",
+      "member_one": "membru",
+      "member_other": "membri",
+      "title": "Echipa nu a fost încă lansată"
+    },
+    "invalidTab": "Filă de echipă invalidă",
+    "kanbanSafeData": "Încărcarea completă a kanban-ului a eșuat. Se afișează date sigure.",
+    "loadFailed": "Încărcarea echipei a eșuat",
+    "loading": "Se încarcă echipa",
+    "loadingSidebar": "Se încarcă bara laterală a echipei",
+    "offline": {
+      "offline": "Echipa este deconectată",
+      "partialFailed": "Ultima lansare a eșuat parțial",
+      "partialMissing": "Ultima lansare a eșuat parțial - {{missing}}/{{expected}} coechipieri nu s-au alăturat",
+      "reconciling": "Ultima lansare încă se reconciliază"
+    },
+    "previous": "Anterior: {{paths}}",
+    "removeMember": {
+      "description": "Elimini \"{{member}}\" din echipă? Sarcinile și mesajele vor fi păstrate, dar acest nume nu poate fi reutilizat.",
+      "title": "Elimină membrul"
+    },
+    "sections": {
+      "team": "Echipă"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Activă",
+      "launching": "Se lansează...",
+      "running": "În execuție"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memorie"
+    },
+    "tooltips": {
+      "deleteTeam": "Șterge echipa",
+      "editTeam": "Editează echipa",
+      "editUnavailableProvisioning": "Editarea echipei este indisponibilă cât timp aprovizionarea este încă în curs",
+      "openBuiltInEditor": "Deschide proiectul în editorul integrat",
+      "openTeamGraph": "Deschide graficul echipei",
+      "stopTeam": "Oprește echipa"
+    },
+    "waitingForProvisioning": "Datele echipei vor apărea după finalizarea aprovizionării",
+    "context": {
+      "title": "Context",
+      "loading": "Se încarcă...",
+      "noSessionLoaded": "Nicio sesiune încărcată",
+      "closePanel": "Închide panoul de context {{team}}",
+      "loadingContext": "Se încarcă contextul...",
+      "openLeadSession": "Deschide sesiunea liderului echipei pentru a vedea contextul."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Acceptă",
+        "discard": "Renunță",
+        "discardTooltip": "Renunță la toate editările pentru acest fișier",
+        "keepMyDraft": "Păstrează ciorna mea",
+        "reject": "Respinge",
+        "reloadFromDisk": "Reîncarcă de pe disc",
+        "restore": "Restaurează",
+        "restoreTooltip": "Creează/restaurează acest fișier pe disc din previzualizare",
+        "saveFile": "Salvează fișierul",
+        "saveFileTooltip": "Salvează fișierul pe disc"
+      },
+      "badges": {
+        "deleted": "ȘTERS",
+        "manualReview": "REVIZUIRE MANUALĂ",
+        "new": "NOU",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Disc curent",
+        "file-history": "Istoric fișier",
+        "git-fallback": "Rezervă Git",
+        "ledger-exact": "Registru sarcină",
+        "ledger-snapshot": "Instantaneu registru",
+        "snippet-reconstruction": "Reconstruit",
+        "unavailable": "Conținut indisponibil"
+      },
+      "contentUnavailable": {
+        "badge": "Conținut indisponibil",
+        "description": "Registrul a înregistrat metadate pentru această modificare, dar conținutul text complet nu este disponibil. Aceasta înseamnă de obicei conținut binar, mare sau doar de tip hash.",
+        "safety": "Acceptarea/respingerea automată este dezactivată pentru acest fișier pentru a evita scrieri pe disc nesigure.",
+        "title": "Conținutul text este indisponibil"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Acceptarea/respingerea este dezactivată deoarece conținutul text complet este indisponibil.",
+        "acceptRejectMissingOnDisk": "Acceptarea/respingerea este dezactivată cât timp fișierul lipsește de pe disc.",
+        "rejectBaselineUnavailable": "Respingerea este dezactivată deoarece linia de bază originală este indisponibilă.",
+        "rejectContentUnavailable": "Respingerea este dezactivată deoarece conținutul text complet este indisponibil.",
+        "rejectManualLedgerReview": "Respingerea este dezactivată deoarece această modificare din registru are conținut binar, mare sau indisponibil."
+      },
+      "externalChange": {
+        "changedOnDisk": "Modificat pe disc",
+        "deletedOnDisk": "Șters de pe disc",
+        "recreatedOnDisk": "Recreat pe disc"
+      },
+      "missingOnDisk": {
+        "badge": "Lipsește de pe disc",
+        "description": "Putem totuși afișa o previzualizare din jurnalele agentului, dar sistemul tău de fișiere este desincronizat.",
+        "restorePrefix": "Folosește",
+        "restoreSuffix": "pentru a scrie conținutul previzualizării înapoi pe disc.",
+        "restoreUnavailable": "Conținutul complet al fișierului nu este disponibil pentru restaurare automată.",
+        "title": "Fișierul lipsește de pe disc"
+      },
+      "pathChange": {
+        "from": "De la {{path}}",
+        "to": "La {{path}}"
+      },
+      "worktree": {
+        "isolated": "Worktree izolat"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} în așteptare",
+        "pending_one": "{{count}} în așteptare",
+        "pending_other": "{{count}} în așteptare",
+        "accepted": "{{count}} acceptate",
+        "accepted_one": "{{count}} acceptată",
+        "accepted_other": "{{count}} acceptate",
+        "rejected": "{{count}} respinse",
+        "rejected_one": "{{count}} respinsă",
+        "rejected_other": "{{count}} respinse",
+        "acrossFiles": "în {{count}} fișiere",
+        "acrossFiles_one": "în {{count}} fișier",
+        "acrossFiles_other": "în {{count}} fișiere",
+        "edited": "{{count}} editate",
+        "edited_one": "{{count}} editată",
+        "edited_other": "{{count}} editate",
+        "pending_few": "{{count}} în așteptare",
+        "pending_many": "{{count}} în așteptare",
+        "accepted_few": "{{count}} acceptate",
+        "accepted_many": "{{count}} acceptate",
+        "rejected_few": "{{count}} respinse",
+        "rejected_many": "{{count}} respinse",
+        "acrossFiles_few": "în {{count}} fișiere",
+        "acrossFiles_many": "în {{count}} fișiere",
+        "edited_few": "{{count}} editate",
+        "edited_many": "{{count}} editate"
+      },
+      "actions": {
+        "auto": "Automat",
+        "undo": "Anulează",
+        "acceptAll": "Acceptă tot",
+        "rejectAll": "Respinge tot",
+        "applying": "Se aplică...",
+        "applyRejections": "Aplică respingerile"
+      },
+      "tooltips": {
+        "autoOn": "Marchează automat fișierele ca vizualizate la derularea până la final (ACTIVAT)",
+        "autoOff": "Marchează automat fișierele ca vizualizate la derularea până la final (DEZACTIVAT)",
+        "undo": "Anulează ultima operație de revizuire (Ctrl+Z)",
+        "acceptAll": "Acceptă toate modificările din toate fișierele",
+        "rejectAll": "Respinge toate modificările care pot fi respinse în siguranță din toate fișierele",
+        "rejectAllDisabled": "Niciun fișier în așteptare nu are o linie de bază originală sigură de respins.",
+        "applyRejections": "Aplică fragmentele respinse pe disc; modificările acceptate sunt păstrate ca atare"
+      }
+    },
+    "diffError": {
+      "title": "Randarea vizualizării diff a eșuat",
+      "unexpected": "A apărut o eroare neașteptată la randarea diff-ului.",
+      "actions": {
+        "retry": "Reîncearcă"
+      },
+      "raw": {
+        "show": "Arată datele brute ale diff-ului",
+        "file": "Fișier: {{file}}",
+        "original": "--- Original",
+        "modified": "+++ Modificat",
+        "charsTotal": "... ({{count}} caractere în total)",
+        "charsTotal_one": "... ({{count}} caracter în total)",
+        "charsTotal_other": "... ({{count}} caractere în total)",
+        "charsTotal_few": "... ({{count}} caractere în total)",
+        "charsTotal_many": "... ({{count}} caractere în total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Vizualizat",
+      "badges": {
+        "new": "nou",
+        "deleted": "șters"
+      },
+      "collapseFolder": "Restrânge {{name}}",
+      "expandFolder": "Extinde {{name}}",
+      "empty": {
+        "noChangedFiles": "Niciun fișier modificat",
+        "noMatchingFiles": "Niciun fișier corespunzător"
+      },
+      "searchPlaceholder": "Caută fișiere…",
+      "filters": {
+        "unresolved": "Nerezolvate",
+        "rejected": "Respinse",
+        "new": "Noi",
+        "clear": "Șterge"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Bloc anterior",
+      "nextChunk": "Bloc următor",
+      "rejectChange": "Respinge modificarea (⌘N)",
+      "acceptChange": "Acceptă modificarea (⌘Y)",
+      "undo": "Anulează",
+      "keep": "Păstrează",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Conflict detectat",
+      "description": "Acest fișier a fost modificat de la modificările agentului",
+      "cancel": "Anulează",
+      "saveResolution": "Salvează rezolvarea",
+      "editManually": "Editează manual",
+      "useOriginal": "Folosește originalul",
+      "keepCurrent": "Păstrează versiunea curentă"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Se pregătește diff-ul complet",
+      "titleMany": "Se pregătesc {{count}} diff-uri complete",
+      "subtitleForFile": "Se finalizează diff-ul exact al editorului pentru {{file}}.",
+      "subtitleCurrentFile": "Se finalizează diff-ul exact al editorului pentru fișierul curent.",
+      "subtitleMany": "Se rezolvă liniile de bază exacte înainte/după pentru fișierele care se încarcă în prezent.",
+      "previewsReady": "{{count}} previzualizări pregătite",
+      "previewsReady_one": "{{count}} previzualizare pregătită",
+      "editorViewLoading": "Se încarcă vizualizarea editorului",
+      "filesInProgress": "{{count}} fișiere în curs",
+      "filesInProgress_one": "{{count}} fișier în curs",
+      "filesReady": "{{ready}}/{{total}} fișiere pregătite",
+      "progressDescription": "{{ready}} pregătite, {{loading}} încă se încarcă. Diff-urile de previzualizare rămân vizibile mai jos cât timp liniile de bază rămase sunt rezolvate.",
+      "singleDescription": "Diff-urile de previzualizare rămân vizibile mai jos cât timp linia de bază exactă este rezolvată.",
+      "previewsReady_few": "{{count}} previzualizări pregătite",
+      "previewsReady_many": "{{count}} previzualizări pregătite",
+      "previewsReady_other": "{{count}} previzualizări pregătite",
+      "filesInProgress_few": "{{count}} fișiere în curs",
+      "filesInProgress_many": "{{count}} fișiere în curs",
+      "filesInProgress_other": "{{count}} fișiere în curs"
+    },
+    "fileMissingPrefix": "Fișierul lipsește de pe disc. Acest diff poate fi doar o previzualizare din jurnalele agentului. Folosește",
+    "restore": "Restaurează",
+    "fileMissingSuffix": "pentru a crea fișierul pe disc.",
+    "filePlaceholder": {
+      "loading": "Se încarcă",
+      "description": "Se pregătește un diff complet al editorului pentru acest fișier."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} obiecte din registru procesate",
+      "ledgerObjectsProcessed_one": "{{count}} obiect din registru procesat",
+      "ledgerObjectsProcessed_other": "{{count}} obiecte din registru procesate",
+      "ledgerObjectsProcessed_few": "{{count}} obiecte din registru procesate",
+      "ledgerObjectsProcessed_many": "{{count}} obiecte din registru procesate",
+      "phases": {
+        "readingLedger": "Se citește registrul sarcinilor...",
+        "resolvingFiles": "Se rezolvă stările fișierelor...",
+        "checkingWorktree": "Se verifică contextul worktree...",
+        "preparingDiffs": "Se pregătesc diff-urile de revizuire..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} vizualizate"
+    },
+    "scope": {
+      "readMore": "Citește mai mult",
+      "tiers": {
+        "exact": {
+          "title": "Domeniul sarcinii determinat precis",
+          "detail": "Atât marcajul de început, cât și cel de finalizare au fost găsite în jurnalul sesiunii. Diff-ul include doar modificările făcute în timpul acestei sarcini specifice - alte sarcini care au modificat aceleași fișiere sunt excluse."
+        },
+        "endEstimated": {
+          "title": "Limita de sfârșit estimată",
+          "detail": "A fost găsit doar marcajul de început - sarcina nu are încă un marcaj de finalizare. Modificările afișate de la începutul sarcinii până la sfârșitul sesiunii. Dacă alte sarcini au rulat după aceasta în aceeași sesiune, modificările lor pot fi de asemenea incluse."
+        },
+        "startEstimated": {
+          "title": "Limita de început estimată",
+          "detail": "A fost găsit doar marcajul de finalizare - începutul muncii nu a fost capturat. Dacă alte sarcini au rulat înaintea acesteia în aceeași sesiune, modificările lor asupra acelorași fișiere pot fi de asemenea incluse."
+        },
+        "allSession": {
+          "title": "Se afișează toate modificările sesiunii",
+          "detail": "Niciun marcaj de sarcină nu a fost găsit în jurnalul sesiunii. Această sarcină nu poate fi izolată - sunt afișate toate modificările de fișiere din întreaga sesiune, inclusiv modificările din alte sarcini. Acest lucru se poate întâmpla cu versiuni mai vechi de CLI sau fluxuri de lucru nestandard."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Modificări capturate de registrul sarcinilor",
+          "detail": "Orchestratorul a capturat aceste modificări de fișiere cât timp agentul lucra la această sarcină.",
+          "badge": "Registru exact"
+        },
+        "limited": {
+          "title": "Modificări capturate cu posibilitate limitată de revizuire",
+          "detail": "Orchestratorul a capturat aceste modificări de fișiere pentru această sarcină, dar cel puțin o modificare a fost capturată dintr-un instantaneu sau o sursă doar cu metadate. Revizuiește diff-urile de text exacte acolo unde sunt disponibile; conținutul binar sau indisponibil poate necesita revizuire manuală.",
+          "mixedBadge": "Posibilitate mixtă de revizuire",
+          "needsReviewBadge": "Necesită revizuire"
+        }
+      },
+      "workInterval": {
+        "title": "Delimitat după intervalul de lucru persistat",
+        "detail": "Marcajul de început al sarcinii nu a fost disponibil în jurnalul sesiunii, așa că diff-ul este delimitat după intervalul de lucru al sarcinii stocat pe panou.",
+        "badge": "Delimitat după interval"
+      },
+      "confidence": {
+        "high": "Încredere ridicată",
+        "medium": "Încredere medie",
+        "low": "Încredere scăzută",
+        "bestEffort": "Cea mai bună estimare"
+      }
+    },
+    "shortcuts": {
+      "title": "Scurtături de tastatură",
+      "actions": {
+        "nextChange": "Modificarea următoare",
+        "previousChange": "Modificarea anterioară",
+        "nextFile": "Fișierul următor",
+        "previousFile": "Fișierul anterior",
+        "acceptChange": "Acceptă modificarea",
+        "rejectChange": "Respinge modificarea",
+        "saveFile": "Salvează fișierul",
+        "undo": "Anulează",
+        "redo": "Refă",
+        "toggleShortcuts": "Comută scurtăturile",
+        "closeDialog": "Închide dialogul"
+      }
+    },
+    "timeline": {
+      "empty": "Niciun eveniment de editare",
+      "titleWithCount": "Cronologie editări ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Nicio modificare de fișier revizuibilă"
+    },
+    "empty": {
+      "noSafeDiff": "Niciun diff sigur disponibil",
+      "noFileChangesRecorded": "Nicio modificare de fișier înregistrată",
+      "noSafeDiffDescription": "Registrul sarcinilor nu a expus un diff sigur de fișier pentru această sarcină.",
+      "noSafeDiffDiagnosticsDescription": "Registrul sarcinilor nu a expus un diff sigur de fișier pentru această sarcină. Diagnosticele de mai jos explică de ce.",
+      "noFileEventsYet": "Registrul sarcinilor nu are încă evenimente de fișier pentru această sarcină.",
+      "noFileEvents": "Registrul sarcinilor nu are evenimente de fișier pentru această sarcină."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Acțiuni panou inferior pentru mesaje",
+      "collapseAll": "Restrânge toate mesajele",
+      "collapseSheet": "Restrânge panoul",
+      "expandAll": "Extinde toate mesajele",
+      "expandSheet": "Extinde panoul",
+      "floatComposer": "Detașează compozitorul",
+      "floatMessagesComposer": "Detașează compozitorul de mesaje",
+      "hideSearch": "Ascunde căutarea",
+      "loadOlder": "Încarcă mesaje mai vechi",
+      "markAllRead": "Marchează toate ca citite",
+      "messageActions": "Acțiuni mesaj",
+      "moveMessagesToBottomSheet": "Mută mesajele în panoul inferior",
+      "moveMessagesToSidebar": "Mută mesajele în bara laterală",
+      "moveToBottomSheet": "Mută în panoul inferior",
+      "moveToInline": "Mută în linie",
+      "moveToSidebar": "Mută în bara laterală",
+      "panelActions": "Acțiuni panou de mesaje",
+      "searchMessages": "Caută mesaje"
+    },
+    "delivery": {
+      "copied": "Copiat",
+      "copyDebugDetails": "Copiază detaliile de depanare",
+      "details": "Detalii",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Mod panou de mesaje",
+    "title": "Mesaje",
+    "unread": {
+      "new": "{{count}} noi",
+      "unread": "{{count}} necitite",
+      "new_few": "{{count}} noi",
+      "new_many": "{{count}} noi",
+      "new_one": "{{count}} nou",
+      "new_other": "{{count}} noi",
+      "unread_few": "{{count}} necitite",
+      "unread_many": "{{count}} necitite",
+      "unread_one": "{{count}} necitit",
+      "unread_other": "{{count}} necitite"
+    },
+    "filter": {
+      "ariaLabel": "Filtrează mesajele",
+      "tooltip": "Filtrează mesajele",
+      "from": "De la",
+      "to": "Către",
+      "noData": "Niciun date",
+      "showStatusUpdates": "Arată actualizările de stare (inactiv/oprire)",
+      "actions": {
+        "reset": "Resetează",
+        "save": "Salvează"
+      }
+    },
+    "status": {
+      "title": "Stare"
+    },
+    "actionMode": {
+      "label": "Mod acțiune"
+    },
+    "search": {
+      "placeholder": "Caută..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Configurat",
+      "connected": "Conectat",
+      "failed": "Eșuat",
+      "free": "Gratuit",
+      "local": "Local",
+      "needsTest": "Necesită test",
+      "verified": "Verificat",
+      "unavailable": "Indisponibil",
+      "issue": "Problemă"
+    },
+    "customModelId": "ID model personalizat",
+    "label": "Model (opțional)",
+    "multimodelRequired": "Codex și Gemini necesită modul Multimodel.",
+    "openCode": {
+      "allSources": "Toate sursele OpenCode",
+      "filterSource": "Filtrează {{source}}",
+      "filterSources": "Filtrează sursele OpenCode",
+      "freeOnly": "Doar gratuite",
+      "freeTooltip": "OpenCode marchează acest model ca gratuit.",
+      "loadingModels": "Se încarcă modelele OpenCode...",
+      "noSourcesFound": "Nicio sursă găsită.",
+      "recommendedOnly": "Doar recomandate",
+      "searchSources": "Caută surse",
+      "sourcesCount": "{{count}} surse OpenCode",
+      "sourcesCount_few": "{{count}} surse OpenCode",
+      "sourcesCount_many": "{{count}} surse OpenCode",
+      "sourcesCount_one": "{{count}} sursă OpenCode",
+      "sourcesCount_other": "{{count}} surse OpenCode"
+    },
+    "reason": "Motiv: {{reason}}",
+    "runtimeModelsSyncing": "Modelele explicite se încarcă din runtime-ul curent. Implicitul rămâne disponibil cât timp lista se sincronizează.",
+    "fastMode": {
+      "codexLabel": "Mod Fast (2x credite)",
+      "optionalLabel": "Mod Fast (opțional)",
+      "defaultOff": "Implicit (Dezactivat)",
+      "fast": "Fast",
+      "off": "Dezactivat",
+      "defaultFast": "Implicit (Fast)",
+      "defaultResolvesTo": "Implicitul se rezolvă în prezent la {{mode}}.",
+      "runtimeBackedHint": "Modul Fast este susținut de runtime și se deblochează doar când modelul de lansare Anthropic rezolvat îl acceptă."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Citește documentația de prețuri Anthropic"
+    },
+    "searchModels": "Caută modele",
+    "defaultModel": "Implicit",
+    "empty": {
+      "noSearchMatches": "Niciun model nu corespunde acestei căutări.",
+      "recommendedFreeOpenCode": "Niciun model OpenCode gratuit recomandat nu este disponibil în lista runtime-ului curent.",
+      "freeOpenCode": "Niciun model OpenCode gratuit nu este disponibil în lista runtime-ului curent.",
+      "recommendedOpenCode": "Niciun model OpenCode recomandat nu este disponibil în lista runtime-ului curent.",
+      "noModels": "Niciun model nu este disponibil în lista runtime-ului curent."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode nu este pregătit pentru lansarea echipei",
+      "freeModelsAvailableTitle": "Modelele gratuite OpenCode sunt disponibile",
+      "providerNotConnectedTitle": "Furnizorul OpenCode nu este conectat",
+      "readyTitle": "OpenCode este pregătit",
+      "readyMessage": "OpenCode a trecut verificarea de pregătire a furnizorului. Selectează-l pentru a folosi modele OpenCode pentru această echipă.",
+      "useOpenCode": "Folosește OpenCode",
+      "badges": {
+        "check": "Verifică",
+        "install": "Instalează",
+        "free": "Gratuit",
+        "setup": "Configurare"
+      },
+      "summary": {
+        "checking": "Stare OpenCode: se verifică runtime-ul",
+        "status": "Stare OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "lansarea echipei blocată",
+        "providerOptional": "conectarea furnizorului opțională",
+        "providerModelsNeedSetup": "modelele susținute de furnizor necesită configurare",
+        "teamLaunchReady": "lansarea echipei pregătită",
+        "runtimeDetected": "runtime detectat",
+        "runtimeMissing": "runtime lipsă",
+        "freeWithoutAuth": "modele gratuite disponibile fără autentificare",
+        "providerConnected": "furnizor conectat",
+        "providerNotConnected": "furnizor neconectat"
+      },
+      "messages": {
+        "checking": "Aplicația încă verifică runtime-ul OpenCode. Așteaptă finalizarea stării furnizorului, apoi încearcă din nou.",
+        "unsupported": "OpenCode nu este instalat, nu a fost găsit sau runtime-ul detectat nu este acceptat. Instalează sau actualizează OpenCode, apoi reîmprospătează starea furnizorului. Poți folosi și butonul Instalează de pe pagina principală.",
+        "freeAvailable": "OpenCode este detectat. Poți folosi modele OpenCode gratuite precum Big Pickle fără a conecta un furnizor. Conectează un furnizor doar când vrei modele susținute de furnizor.",
+        "noFreeListed": "OpenCode este detectat, dar niciun model OpenCode gratuit nu este încă listat. Reîmprospătează starea furnizorului sau conectează un furnizor în OpenCode pentru modele susținute de furnizor.",
+        "launchBlocked": "OpenCode este instalat și autentificat, dar pregătirea pentru lansarea Agent Teams este blocată.",
+        "ready": "OpenCode este pregătit pentru lansarea echipei."
+      },
+      "loadingRuntime": "Starea runtime-ului OpenCode încă se încarcă."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping neconfirmat",
+      "note": "Notă"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Configurație OpenCode",
+      "builtinFree": "Gratuit încorporat",
+      "connectedProviders": "Furnizori conectați",
+      "otherCatalog": "Alt catalog OpenCode"
+    },
+    "pricing": {
+      "free": "Gratuit",
+      "inputShort": "intrare {{rate}}",
+      "outputShort": "ieșire {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Intrare: {{rate}} per 1M tokenuri",
+      "outputTitle": "Ieșire: {{rate}} per 1M tokenuri",
+      "cacheReadTitle": "Citire cache: {{rate}} per 1M tokenuri",
+      "cacheWriteTitle": "Scriere cache: {{rate}} per 1M tokenuri"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Folosește modelul implicit al endpoint-ului compatibil cu Anthropic.\nÎn prezent se rezolvă la {{model}}.",
+      "anthropicCompatible": "Folosește modelul implicit al endpoint-ului compatibil cu Anthropic.",
+      "anthropic": "Folosește modelul implicit al echipei Claude.\nSe rezolvă la {{longContextModel}} cu context de 1M sau {{limitedContextModel}} cu context de 200K când Limitează contextul este activat.",
+      "openCodeWithResolved": "Folosește modelul implicit OpenCode.\nÎn prezent se rezolvă la {{model}}.",
+      "openCode": "Folosește modelul implicit al runtime-ului OpenCode.",
+      "runtime": "Folosește valoarea implicită a runtime-ului pentru furnizorul selectat."
+    },
+    "multimodelOff": "Multimodel dezactivat",
+    "unavailableInRuntime": "Indisponibil în runtime-ul curent"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Anulează",
+      "delete": "Șterge",
+      "markResolved": "Marchează ca rezolvată",
+      "save": "Salvează"
+    },
+    "attachments": {
+      "commentAttachment": "Atașament comentariu",
+      "fromComments": "Din comentarii",
+      "preview": "Previzualizează {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "atenție",
+        "noSafeDiff": "niciun diff sigur"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Nicio modificare de fișier înregistrată",
+        "noFileChangesRecordedYet": "Nicio modificare de fișier înregistrată încă",
+        "noReviewableChangesRecovered": "Nicio modificare de fișier revizuibilă recuperată",
+        "noSafeDiffAvailable": "Niciun diff sigur disponibil"
+      },
+      "loadFailed": "Încărcarea rezumatului modificărilor sarcinii a eșuat",
+      "loading": "Se încarcă modificările...",
+      "fileCount": "{{count}} fișiere",
+      "fileRowsHidden": "{{count}} rânduri de fișiere ascunse",
+      "moreDiagnostics": "încă {{count}} diagnostice",
+      "moreFiles": "încă {{count}} fișiere",
+      "openInEditor": "Deschide în editor",
+      "openTask": "Deschide sarcina {{subject}}",
+      "refresh": "Reîmprospătează modificările",
+      "refreshFailed": "Reîmprospătarea a eșuat: {{error}}",
+      "refreshing": "Se reîmprospătează",
+      "refreshingChanges": "Se reîmprospătează modificările...",
+      "refreshTeamChanges": "Reîmprospătează modificările echipei",
+      "refreshShort": "Reîmprospătează",
+      "reviewDiff": "Revizuiește diff-ul",
+      "reviewTaskDiff": "Revizuiește diff-ul sarcinii",
+      "scannedCandidateTasks": "S-au scanat {{requested}} din {{eligible}} sarcini candidate",
+      "tasksDeferred": "{{count}} sarcini amânate în acest pas",
+      "title": "Modificări",
+      "fileCount_few": "{{count}} fișiere",
+      "fileCount_many": "{{count}} fișiere",
+      "fileCount_one": "{{count}} fișier",
+      "fileCount_other": "{{count}} fișiere",
+      "fileRowsHidden_few": "{{count}} rânduri de fișiere ascunse",
+      "fileRowsHidden_many": "{{count}} rânduri de fișiere ascunse",
+      "fileRowsHidden_one": "{{count}} rând de fișier ascuns",
+      "fileRowsHidden_other": "{{count}} rânduri de fișiere ascunse",
+      "moreDiagnostics_few": "încă {{count}} diagnostice",
+      "moreDiagnostics_many": "încă {{count}} diagnostice",
+      "moreDiagnostics_one": "încă {{count}} diagnostic",
+      "moreDiagnostics_other": "încă {{count}} diagnostice",
+      "moreFiles_few": "încă {{count}} fișiere",
+      "moreFiles_many": "încă {{count}} fișiere",
+      "moreFiles_one": "încă {{count}} fișier",
+      "moreFiles_other": "încă {{count}} fișiere",
+      "tasksDeferred_few": "{{count}} sarcini amânate în acest pas",
+      "tasksDeferred_many": "{{count}} sarcini amânate în acest pas",
+      "tasksDeferred_one": "{{count}} sarcină amânată în acest pas",
+      "tasksDeferred_other": "{{count}} sarcini amânate în acest pas"
+    },
+    "clarification": {
+      "awaitingLead": "Se așteaptă clarificarea de la liderul echipei",
+      "awaitingUser": "Se așteaptă clarificarea de la tine"
+    },
+    "description": {
+      "add": "Apasă pentru a adăuga descriere...",
+      "edit": "Editează descrierea",
+      "placeholder": "Descrierea sarcinii (acceptă markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Se preiau datele echipei",
+      "title": "Se încarcă sarcina..."
+    },
+    "logs": {
+      "newArriving": "Sosesc jurnale noi de sarcină"
+    },
+    "notFound": "Sarcina nu a fost găsită",
+    "related": {
+      "blockedBy": "Blocată de",
+      "blocks": "Blochează",
+      "linkedFrom": "Legată de la",
+      "links": "Legături",
+      "title": "Sarcini conexe"
+    },
+    "review": {
+      "reviewer": "Recenzent: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Atașamente",
+      "changes": "Modificări",
+      "comments": "Comentarii",
+      "description": "Descriere",
+      "taskLogs": "Jurnale sarcină",
+      "workflowHistory": "Istoric flux de lucru"
+    },
+    "unassigned": "Neatribuit",
+    "workflow": {
+      "implementationTimeTitle": "Timp de implementare din intervalele de lucru persistate",
+      "inProgressTime": "Timp în curs {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Se afișează cele mai recente {{formattedCount}} comentarii pentru a menține interfața receptivă.",
+      "badges": {
+        "approved": "Aprobat",
+        "reviewRequested": "Revizuire solicitată"
+      },
+      "unknownTime": "timp necunoscut",
+      "actions": {
+        "reply": "Răspunde",
+        "replyToComment": "Răspunde la comentariu",
+        "showMore": "Arată mai multe comentarii ({{visible}}/{{total}})",
+        "cancelReply": "Anulează răspunsul",
+        "comment": "Comentariu"
+      },
+      "attachments": {
+        "previewAlt": "Previzualizare atașament",
+        "downloadFailed": "Descărcarea a eșuat"
+      },
+      "replyingTo": "Se răspunde la",
+      "input": {
+        "placeholder": "Adaugă un comentariu... (Enter pentru a trimite)",
+        "charsLeft": "{{count}} caractere rămase",
+        "charsLeft_one": "{{count}} caracter rămas",
+        "charsLeft_other": "{{count}} caractere rămase",
+        "charsLeft_few": "{{count}} caractere rămase",
+        "charsLeft_many": "{{count}} caractere rămase"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Niciun istoric al fluxului de lucru înregistrat",
+      "currentImplementationInterval": "Interval de implementare curent",
+      "implementationIntervalEnded": "Intervalul de implementare s-a încheiat la această tranziție",
+      "runningPrefix": "rulează ",
+      "createdAs": "Creată ca",
+      "by": "de",
+      "reassigned": "Reatribuită",
+      "assignedTo": "Atribuită lui",
+      "unassignedFrom": "Neatribuită de la",
+      "ownerChanged": "Proprietar schimbat",
+      "reviewRequested": "Revizuire solicitată",
+      "reviewStarted": "Revizuire începută",
+      "changesRequested": "Modificări solicitate",
+      "approved": "Aprobată",
+      "unknownEvent": "Eveniment necunoscut"
+    },
+    "reviewStates": {
+      "approved": "Aprobată",
+      "needsFix": "Necesită remediere",
+      "inReview": "În revizuire"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Responsabil",
+      "assigneeOptional": "Responsabil (opțional)",
+      "blockedByOptional": "Blocată de sarcini (opțional)",
+      "blockedBySummary": "Sarcina va fi blocată de: {{tasks}}",
+      "cancel": "Anulează",
+      "create": "Creează",
+      "creating": "Se creează...",
+      "description": "Sarcina va fi creată în directorul tasks/ al echipei și va apărea pe tabla Kanban.",
+      "descriptionOptional": "Descriere (opțional)",
+      "detailsPlaceholder": "Detalii sarcină (acceptă markdown)",
+      "hideOptionalFields": "Ascunde câmpurile opționale",
+      "offlineNotice": {
+        "after": "- lansează echipa pentru a începe execuția.",
+        "before": "Echipa este deconectată. Sarcina va fi adăugată în"
+      },
+      "promptOptional": "Prompt pentru responsabil (opțional)",
+      "promptPlaceholder": "Instrucțiuni personalizate pentru membrul echipei...",
+      "relatedOptional": "Sarcini conexe (opțional)",
+      "relatedSummary": "Conexe: {{tasks}}",
+      "saved": "Salvat",
+      "searchTasks": "Caută sarcini...",
+      "selectMember": "Selectează un membru",
+      "selectMemberOptional": "Selectează membrul...",
+      "showOptionalFields": "Arată câmpurile opționale",
+      "startImmediately": "Pornește imediat",
+      "startOfflineHint": "Echipa este deconectată. Lansează mai întâi echipa pentru a porni sarcinile imediat.",
+      "subject": "Subiect",
+      "subjectPlaceholder": "Ce trebuie făcut?",
+      "title": "Creează sarcină",
+      "todo": "DE FĂCUT"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Blocată de",
+        "blocks": "Blochează",
+        "id": "ID",
+        "owner": "Proprietar",
+        "status": "Stare",
+        "subject": "Subiect"
+      },
+      "empty": "Nicio sarcină în această echipă",
+      "filters": {
+        "allOwners": "Toți proprietarii",
+        "allStatuses": "Toate stările",
+        "ownerAria": "Filtrează sarcinile după proprietar",
+        "statusAria": "Filtrează sarcinile după stare"
+      },
+      "showing": "Se afișează {{shown}} din {{total}}"
+    },
+    "status": {
+      "completed": "finalizată",
+      "deleted": "ștearsă",
+      "inProgress": "in_progress",
+      "pending": "în așteptare"
+    },
+    "statusSummary": {
+      "progressAria": "Sarcini {{completed}}/{{total}} finalizate",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} în așteptare",
+      "pending_one": "{{count}} în așteptare",
+      "pending_other": "{{count}} în așteptare",
+      "pending_few": "{{count}} în așteptare",
+      "pending_many": "{{count}} în așteptare",
+      "completed": "{{count}} finalizate",
+      "completed_one": "{{count}} finalizată",
+      "completed_other": "{{count}} finalizate",
+      "completed_few": "{{count}} finalizate",
+      "completed_many": "{{count}} finalizate"
+    },
+    "unassigned": "Neatribuit",
+    "teamPrefix": "Echipă:",
+    "openTask": "Deschide sarcina",
+    "deleteConfirm": {
+      "title": "Șterge sarcina",
+      "message": "Muți sarcina #{{taskId}} la coșul de gunoi?",
+      "confirmLabel": "Șterge",
+      "cancelLabel": "Anulează"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Anulează",
+      "closeEditor": "Închide editorul",
+      "closeTab": "Închide fila",
+      "closeTooltip": "Închide editorul (Esc)",
+      "discard": "Renunță",
+      "discardAndClose": "Renunță și închide",
+      "keep": "Păstrează",
+      "keepMine": "Păstrează versiunea mea",
+      "keyboardShortcuts": "Scurtături de tastatură",
+      "overwrite": "Suprascrie",
+      "refreshAria": "Reîmprospătează (F5)",
+      "refreshTooltip": "Reîmprospătează starea git (F5)",
+      "reload": "Reîncarcă",
+      "retry": "Reîncearcă",
+      "save": "Salvează",
+      "saveAllAndClose": "Salvează tot și închide"
+    },
+    "ariaLabel": "Editor proiect",
+    "dialogs": {
+      "conflictDescription": "Fișierul a fost modificat extern de când l-ai deschis. Suprascrii cu modificările tale?",
+      "conflictTitle": "Conflict de salvare",
+      "unsavedDescription": "Ai modificări nesalvate. Ce ai vrea să faci?",
+      "unsavedFileDescription": "Acest fișier are modificări nesalvate. Ce ai vrea să faci?",
+      "unsavedTitle": "Modificări nesalvate"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Numele nu poate fi gol",
+        "invalidName": "Nume invalid",
+        "invalidCharacters": "Numele conține caractere invalide",
+        "nameTooLong": "Numele este prea lung"
+      },
+      "placeholders": {
+        "fileName": "Nume fișier...",
+        "folderName": "Nume folder..."
+      },
+      "aria": {
+        "newFileName": "Nume fișier nou",
+        "newFolderName": "Nume folder nou"
+      }
+    },
+    "draftRecovered": "S-au recuperat modificări nesalvate dintr-o sesiune anterioară.",
+    "externalChange": {
+      "changed": "Fișierul s-a modificat pe disc.",
+      "deleted": "Fișierul nu mai există pe disc."
+    },
+    "saveFailed": "Salvarea a eșuat: {{error}}",
+    "sidebar": {
+      "explorer": "Explorator",
+      "hide": "Ascunde bara laterală",
+      "hideWithShortcut": "Ascunde bara laterală ({{shortcut}})",
+      "show": "Arată bara laterală",
+      "showWithShortcut": "Arată bara laterală ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Caută în fișiere",
+      "closeSearch": "Închide căutarea",
+      "closeSearchShortcut": "Închide căutarea (Esc)",
+      "searchPlaceholder": "Caută...",
+      "matchCase": "Potrivește majusculele",
+      "matchCaseToggle": "Aa",
+      "noResults": "Niciun rezultat găsit",
+      "resultsSummary": "{{count}} potriviri în {{fileCount}} fișiere",
+      "resultsSummary_one": "{{count}} potrivire în {{fileCount}} fișiere",
+      "truncated": "(trunchiat)",
+      "resultsSummary_few": "{{count}} potriviri în {{fileCount}} fișiere",
+      "resultsSummary_many": "{{count}} potriviri în {{fileCount}} fișiere",
+      "resultsSummary_other": "{{count}} potriviri în {{fileCount}} fișiere"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Încărcarea fișierelor a eșuat: {{error}}",
+      "loading": "Se încarcă fișierele...",
+      "empty": "Niciun fișier găsit",
+      "dropForProjectRoot": "Plasează aici pentru rădăcina proiectului",
+      "moveToTrash": "Mută la coșul de gunoi",
+      "moveToTrashConfirm": "Muți \"{{name}}\" la coșul de gunoi?",
+      "cancel": "Anulează"
+    },
+    "goToLine": {
+      "title": "Mergi la linie",
+      "position": "(curent: {{current}}, total: {{total}})",
+      "placeholder": "Număr de linie, +decalaj, -decalaj sau %",
+      "go": "Mergi"
+    },
+    "searchPanel": {
+      "previousMatch": "Potrivirea anterioară",
+      "nextMatch": "Potrivirea următoare",
+      "close": "Închide",
+      "replacePlaceholder": "Înlocuiește",
+      "replace": "Înlocuiește",
+      "replaceNext": "Înlocuiește următorul",
+      "all": "Tot",
+      "replaceAll": "Înlocuiește tot"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Col {{col}}",
+      "enableWatcher": "Activează monitorul de fișiere",
+      "disableWatcher": "Dezactivează monitorul de fișiere",
+      "watch": "monitorizare",
+      "watching": "se monitorizează",
+      "watchExternalChanges": "Monitorizează modificările externe",
+      "disableExternalWatcher": "Dezactivează monitorul de modificări externe",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Spații: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Se încarcă previzualizarea...",
+      "openFullSize": "Deschide previzualizarea la dimensiune completă",
+      "openSystemViewer": "Deschide în vizualizatorul de sistem"
+    },
+    "quickOpen": {
+      "title": "Deschidere rapidă",
+      "searchPlaceholder": "Caută fișiere după nume...",
+      "loading": "Se încarcă fișierele...",
+      "empty": "Niciun fișier găsit"
+    },
+    "errorBoundary": {
+      "crashed": "Editorul s-a blocat",
+      "unknownError": "Eroare necunoscută"
+    },
+    "binaryPlaceholder": {
+      "file": "Fișier binar ({{size}})"
+    },
+    "unsavedChanges": "Modificări nesalvate",
+    "empty": {
+      "selectFile": "Selectează un fișier din arbore pentru a-l edita"
+    },
+    "search": {
+      "toggleReplace": "Comută înlocuirea",
+      "placeholder": "Caută"
+    },
+    "shortcuts": {
+      "title": "Scurtături de tastatură",
+      "groups": {
+        "fileOperations": "Operații cu fișiere",
+        "search": "Căutare",
+        "navigation": "Navigare",
+        "editing": "Editare",
+        "markdown": "Markdown",
+        "general": "General"
+      },
+      "actions": {
+        "quickOpen": "Deschidere rapidă",
+        "save": "Salvează",
+        "saveAll": "Salvează tot",
+        "closeTab": "Închide fila",
+        "findInFile": "Caută în fișier",
+        "searchInFiles": "Caută în fișiere",
+        "goToLine": "Mergi la linie",
+        "nextTab": "Fila următoare",
+        "previousTab": "Fila anterioară",
+        "cycleTabs": "Comută între file",
+        "toggleSidebar": "Comută bara laterală",
+        "undo": "Anulează",
+        "redo": "Refă",
+        "selectNextMatch": "Selectează potrivirea următoare",
+        "toggleComment": "Comută comentariul",
+        "splitPreview": "Previzualizare împărțită",
+        "fullPreview": "Previzualizare completă",
+        "closeEditor": "Închide editorul"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Activează încadrarea cuvintelor",
+      "disableWordWrap": "Dezactivează încadrarea cuvintelor",
+      "closeSplitPreview": "Închide previzualizarea împărțită",
+      "closePreview": "Închide previzualizarea"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Creează programare",
+      "creating": "Se creează...",
+      "goToDashboard": "Mergi la panou",
+      "launchTeam": "Lansează echipa",
+      "launching": "Se lansează...",
+      "relaunchTeam": "Relansează echipa",
+      "relaunching": "Se relansează...",
+      "saveChanges": "Salvează modificările",
+      "saving": "Se salvează..."
+    },
+    "billing": {
+      "prefix": "Începând cu 15 iunie 2026, Anthropic facturează",
+      "readArticle": "Citește articolul Anthropic",
+      "suffix": "iar utilizarea Agent SDK din creditul lunar Agent SDK, separat de limitele interactive Claude Code. Creditul se resetează la fiecare ciclu de facturare, iar creditul neutilizat nu se reportează."
+    },
+    "conflict": {
+      "description": "Rularea a două echipe în același director este riscantă - pot intra în conflict editând aceleași fișiere. Ia în considerare folosirea unui director diferit sau a unui git worktree pentru izolare.",
+      "title": "O altă echipă \"{{team}}\" rulează deja pentru acest director de lucru",
+      "workingDirectory": "Director de lucru:"
+    },
+    "description": {
+      "createSchedule": "Programează execuția automată a sarcinilor Claude",
+      "createScheduleForTeam": "Programează rulări automate pentru echipa \"{{team}}\"",
+      "editSchedule": "Se editează programarea pentru echipa \"{{team}}\"",
+      "launchPrefix": "Pornește echipa",
+      "launchSuffix": "prin Claude CLI local.",
+      "relaunchPrefix": "Oprește rularea curentă pentru",
+      "relaunchSuffix": "și pornește-o din nou prin Claude CLI local."
+    },
+    "prepare": {
+      "action": {
+        "launch": "lansare",
+        "relaunch": "relansare"
+      },
+      "blocked": "Mediul runtime nu este disponibil - {{action}} este blocată",
+      "checkingProviders": "Se verifică furnizorii selectați...",
+      "failed": "Pregătirea furnizorilor selectați a eșuat",
+      "preflight": "Verificare preliminară pentru a depista erori înainte de {{action}}",
+      "preparingEnvironment": "Se pregătește mediul...",
+      "ready": "Toți furnizorii selectați sunt pregătiți.",
+      "readyWithNotes": "Toți furnizorii selectați sunt pregătiți, cu observații.",
+      "unsupportedPreload": "Versiunea curentă de preload nu acceptă team:prepareProvisioning. Repornește aplicația de dezvoltare.",
+      "selectWorkingDirectory": "Selectează un director de lucru pentru a valida mediul de lansare.",
+      "someProvidersNeedAttention": "Unii furnizori selectați necesită atenție."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "Acest prompt va fi transmis către",
+      "oneShotSuffix": "pentru execuție într-o singură rulare",
+      "saved": "Salvat",
+      "schedulePlaceholder": "Instrucțiuni pe care Claude să le execute conform programării...",
+      "teamLeadOptional": "Prompt pentru liderul echipei (opțional)",
+      "teamLeadPlaceholder": "Instrucțiuni pentru liderul echipei..."
+    },
+    "providerChanged": "Furnizorul s-a schimbat de la {{from}} la {{to}}. Sesiunea anterioară a liderului nu va fi reluată, iar liderul va porni cu context proaspăt pentru ca noul runtime să fie aplicat corect.",
+    "relaunchFreshSession": "Relansarea echipei pornește o sesiune nouă a liderului. Starea durabilă a echipei, tabla de sarcini și configurația membrilor sunt rehidratate în promptul de lansare.",
+    "relaunchWarning": {
+      "description": "Salvarea acestor setări va opri procesul curent al echipei, va persista lista actualizată și va lansa echipa din nou cu noul runtime.",
+      "title": "Relansarea va reporni rularea curentă a echipei"
+    },
+    "schedule": {
+      "labelOptional": "Etichetă (opțional)",
+      "labelPlaceholder": "ex., Revizuire zilnică de cod, Teste nocturne...",
+      "maxBudgetUsd": "Buget maxim (USD)",
+      "maxTurns": "Tururi maxime",
+      "noLimit": "Fără limită",
+      "noMatches": "Nicio echipă nu corespunde căutării tale.",
+      "noTeams": "Nicio echipă disponibilă. Creează mai întâi o echipă.",
+      "searchTeams": "Caută echipe...",
+      "selectTeam": "Selectează o echipă...",
+      "team": "Echipă",
+      "title": "Programare"
+    },
+    "title": {
+      "createSchedule": "Creează programare",
+      "editSchedule": "Editează programarea",
+      "launch": "Lansează echipa",
+      "relaunch": "Relansează echipa"
+    },
+    "errors": {
+      "loadProjectsFailed": "Încărcarea proiectelor a eșuat",
+      "saveScheduleFailed": "Salvarea programării a eșuat",
+      "relaunchFailed": "Relansarea echipei a eșuat",
+      "launchFailed": "Lansarea echipei a eșuat"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "Liderul OpenCode necesită un model selectat.",
+      "openCodeTeammateRequired": "Liderul OpenCode necesită cel puțin un coechipier OpenCode.",
+      "selectWorkingDirectory": "Selectează directorul de lucru (cwd)",
+      "fixMemberNames": "Corectează numele membrilor înainte de lansare",
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice înainte de lansare"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Setări de relansare",
+      "title": "Setări opționale de lansare",
+      "relaunchDescription": "Revizuiește lista și runtime-ul liderului înainte de a reporni echipa.",
+      "description": "Menține fluxul de lansare concentrat pe calea proiectului și extinde acest lucru doar când vrei control suplimentar."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Copiază echipa",
+      "createTeam": "Creează echipă",
+      "deleteForever": "Șterge definitiv",
+      "deletePermanently": "Șterge permanent",
+      "deleteTeam": "Șterge echipa",
+      "launching": "Se lansează...",
+      "launchTeam": "Lansează echipa",
+      "relaunchTeam": "Relansează echipa",
+      "restore": "Restaurează",
+      "restoreTeam": "Restaurează echipa",
+      "retry": "Reîncearcă",
+      "stopTeam": "Oprește echipa",
+      "stopping": "Se oprește..."
+    },
+    "electronOnly": {
+      "description": "În modul browser, accesul la directoarele locale `~/.claude/teams` nu este disponibil.",
+      "title": "Echipele sunt disponibile doar în modul Electron"
+    },
+    "empty": {
+      "description": "Creează o echipă aici pentru a începe. Va apărea automat în listă.",
+      "localOnly": "Crearea echipelor este disponibilă doar în modul local Electron.",
+      "title": "Nicio echipă găsită"
+    },
+    "filter": {
+      "clearAll": "Șterge tot",
+      "label": "Filtrează echipele",
+      "projectPriority": "Prioritate proiect",
+      "status": "Stare"
+    },
+    "loadFailed": "Încărcarea echipelor a eșuat",
+    "loading": "Se încarcă echipele...",
+    "localOnly": "Disponibil doar în modul local Electron.",
+    "membersCount": "Membri: {{count}}",
+    "membersCount_few": "Membri: {{count}}",
+    "membersCount_many": "Membri: {{count}}",
+    "membersCount_one": "Membru: {{count}}",
+    "membersCount_other": "Membri: {{count}}",
+    "noDescription": "Fără descriere",
+    "noMatches": "Nicio echipă care să corespundă filtrelor curente",
+    "partial": {
+      "pending": "Ultima lansare încă se reconciliază.",
+      "skipped": "Ultima lansare a omis coechipieri.",
+      "skippedWithCount": "Ultima lansare a omis {{count}}/{{expected}} coechipier.",
+      "skippedWithCount_few": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "skippedWithCount_many": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "skippedWithCount_one": "Ultima lansare a omis {{count}}/{{expected}} coechipier.",
+      "skippedWithCount_other": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "stopped": "Ultima lansare s-a oprit înainte ca toți coechipierii să se alăture.",
+      "stoppedWithCount": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipier să se alăture.",
+      "stoppedWithCount_few": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture.",
+      "stoppedWithCount_many": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture.",
+      "stoppedWithCount_one": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipier să se alăture.",
+      "stoppedWithCount_other": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture."
+    },
+    "searchPlaceholder": "Caută echipe...",
+    "sections": {
+      "otherTeams": "Alte echipe",
+      "projectTeams": "Echipe pentru {{project}}",
+      "selectedProject": "proiect selectat"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Activă",
+      "deleted": "Ștearsă",
+      "launching": "Se lansează...",
+      "offline": "Deconectată",
+      "partialFailure": "Lansarea a eșuat parțial",
+      "partialPending": "Inițializare în așteptare",
+      "partialSkipped": "Lansarea a omis un membru",
+      "running": "În execuție"
+    },
+    "title": "Selectează echipa",
+    "trash": "Coș de gunoi ({{count}})",
+    "trash_few": "Coș de gunoi ({{count}})",
+    "trash_many": "Coș de gunoi ({{count}})",
+    "trash_one": "Coș de gunoi ({{count}})",
+    "trash_other": "Coș de gunoi ({{count}})",
+    "deleteDraft": {
+      "title": "Șterge ciorna",
+      "message": "Ștergi echipa în lucru \"{{teamName}}\"? Această acțiune nu poate fi anulată.",
+      "confirmLabel": "Șterge",
+      "cancelLabel": "Anulează"
+    },
+    "moveToTrash": {
+      "title": "Mută la coșul de gunoi",
+      "message": "Muți echipa \"{{teamName}}\" la coșul de gunoi? O poți restaura mai târziu.",
+      "confirmLabel": "Mută la coșul de gunoi",
+      "cancelLabel": "Anulează"
+    },
+    "deleteForever": {
+      "title": "Șterge permanent",
+      "message": "Ștergi echipa \"{{teamName}}\" permanent? Toate datele vor fi pierdute.",
+      "confirmLabel": "Șterge definitiv",
+      "cancelLabel": "Anulează"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Sfat: Mesajele între echipe ajung la liderul echipei țintă. Dacă vrei ca răspunsul să revină la liderul echipei tale în loc de tine, spune asta explicit în mesaj."
+    },
+    "attachments": {
+      "attachFiles": "Atașează fișiere (lipește sau trage și plasează)",
+      "unavailable": "Atașamentele sunt indisponibile",
+      "disabledHint": "Atașamentele de fișiere sunt acceptate pentru liderul echipei online și pentru coechipierii OpenCode online. Elimină atașamentele sau schimbă destinatarul.",
+      "restrictions": {
+        "crossTeam": "Atașamentele de fișiere nu sunt acceptate pentru mesajele între echipe",
+        "teamOffline": "Echipa trebuie să fie online pentru a atașa fișiere",
+        "unsupportedRecipient": "Fișierele pot fi trimise liderului echipei sau coechipierilor OpenCode",
+        "openCodeOffline": "Echipa trebuie să fie online pentru a atașa fișiere pentru coechipierii OpenCode",
+        "sending": "Așteaptă finalizarea trimiterii mesajului curent înainte de a adăuga fișiere",
+        "maximumReached": "Numărul maxim de atașamente atins",
+        "leadOnly": "Fișierele pot fi trimise doar liderului echipei"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Comenzile slash necesită un lider de echipă live și nu pot fi trimise cu atașamente",
+        "crossTeam": "Comenzile slash pot fi rulate doar pe liderul echipei curente",
+        "notLead": "Comenzile slash pot fi trimise doar liderului echipei",
+        "leadOffline": "Comenzile slash necesită ca liderul echipei să fie online"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "S-a reutilizat o cerere recentă între echipe",
+      "teamOffline": "Echipă deconectată"
+    },
+    "revision": {
+      "editing": "Se editează mesajul anterior",
+      "cancel": "Anulează",
+      "tooltip": "Cere agentului să ignore mesajul anterior și să-l restaureze în compozitor."
+    },
+    "input": {
+      "charsLeft": "{{count}} caractere rămase",
+      "charsLeft_one": "{{count}} caracter rămas",
+      "charsLeft_other": "{{count}} caractere rămase",
+      "teamLaunchingPlaceholder": "Echipa se lansează... mesajul va fi pus în coadă pentru livrare în căsuță.",
+      "crossTeamPlaceholder": "Mesaj între echipe către {{team}}...",
+      "teamFallback": "echipă",
+      "placeholder": "Scrie un mesaj... (Enter pentru a trimite, Shift+Enter pentru linie nouă)",
+      "slashTip": "Sfat: Poți folosi \"/\" pentru a rula orice comandă Claude.",
+      "charsLeft_few": "{{count}} caractere rămase",
+      "charsLeft_many": "{{count}} caractere rămase"
+    },
+    "teamSelector": {
+      "thisTeam": "Această echipă",
+      "current": "curentă",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "Selectează...",
+      "searchPlaceholder": "Caută...",
+      "noResults": "Niciun rezultat"
+    },
+    "actions": {
+      "voiceToText": "Voce în text",
+      "send": "Trimite",
+      "sendingUnavailableLaunching": "Trimiterea este indisponibilă cât timp echipa se lansează"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Filtrează jurnalele",
+      "tooltip": "Filtrează jurnalele",
+      "sections": {
+        "stream": "Flux",
+        "content": "Conținut"
+      },
+      "kinds": {
+        "output": "Ieșire",
+        "thinking": "Gândire",
+        "tool": "Apeluri unelte"
+      },
+      "actions": {
+        "reset": "Resetează",
+        "save": "Salvează"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} linii brute",
+    "rawLineCount_one": "{{formattedCount}} linie brută",
+    "rawLinesCaptured": "{{count}} capturate",
+    "emptyRawLogs": "{{count}}; niciuna nu este încă ieșire de asistent/unealtă.",
+    "noLogsYet": "Niciun jurnal încă.",
+    "teamNotRunning": "Echipa nu rulează.",
+    "searchPlaceholder": "Caută jurnale...",
+    "clearSearch": "Șterge căutarea",
+    "newCount": "+{{count}} noi",
+    "loading": "Se încarcă...",
+    "showMore": "Arată mai mult",
+    "noLogsCaptured": "Niciun jurnal capturat.",
+    "noMatchingLogs": "Niciun jurnal corespunzător.",
+    "rawLineCount_few": "{{formattedCount}} linii brute",
+    "rawLineCount_many": "{{formattedCount}} linii brute",
+    "rawLineCount_other": "{{formattedCount}} linii brute",
+    "openFullscreen": "Deschide jurnalele pe tot ecranul",
+    "fullscreen": "Tot ecranul",
+    "viewingFullscreen": "Se vizualizează în modul pe tot ecranul",
+    "logsTitle": "Jurnale",
+    "sourceSelect": {
+      "placeholder": "Selectează sursa jurnalelor...",
+      "searchPlaceholder": "Caută surse de jurnale...",
+      "emptyMessage": "Nicio sursă de jurnale găsită.",
+      "ariaLabel": "Sursă jurnale",
+      "leadLabel": "Lider",
+      "selectSourceEmpty": "Selectează o sursă de jurnale.",
+      "leadDescription": "Lider echipă",
+      "removedLabel": "eliminat",
+      "removedDescription": "Eliminat"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Echipă externă",
+      "process": {
+        "startedBy": "Pornit de:",
+        "at": "La:",
+        "openUrl": "Deschide URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Sarcini ascunse",
+        "empty": "Nicio sarcină ascunsă disponibilă."
+      },
+      "member": {
+        "lead": "Lider",
+        "workingOn": "lucrează la",
+        "recentTools": "Unelte recente",
+        "spawn": {
+          "waitingToStart": "așteaptă să pornească",
+          "starting": "pornește",
+          "failed": "eșuat"
+        },
+        "state": {
+          "active": "activ",
+          "idle": "inactiv",
+          "offline": "deconectat",
+          "runningTool": "rulează unealtă"
+        },
+        "activeTool": {
+          "running": "Rulează unealta",
+          "failed": "Unealta a eșuat",
+          "finished": "Unealta a terminat"
+        },
+        "actions": {
+          "message": "Mesaj",
+          "profile": "Profil",
+          "task": "Sarcină"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Jurnale",
+      "loading": "Se încarcă jurnalele",
+      "more": "+{{count}} în plus",
+      "more_one": "+{{count}} în plus",
+      "more_other": "+{{count}} în plus",
+      "more_few": "+{{count}} în plus",
+      "more_many": "+{{count}} în plus",
+      "unsupportedProvider": "Furnizor neacceptat",
+      "openCodeLogsDelayed": "Jurnalele OpenCode întârziate",
+      "logsUnavailable": "Jurnale indisponibile",
+      "noRecentLogs": "Niciun jurnal recent",
+      "toolError": "Eroare unealtă",
+      "toolResult": "Rezultat unealtă",
+      "toolUse": "Utilizare unealtă",
+      "thinking": "Gândire",
+      "error": "Eroare",
+      "logEvent": "Eveniment jurnal",
+      "noErrorOutput": "Nicio ieșire de eroare",
+      "noOutput": "Nicio ieșire",
+      "noInput": "Nicio intrare"
+    },
+    "blockingEdge": {
+      "title": "Dependență blocantă",
+      "blocks": "blochează",
+      "close": "Închide",
+      "blockingHiddenTasks": "Sarcini ascunse blocante",
+      "blockedHiddenTasks": "Sarcini ascunse blocate",
+      "links_one": "{{count}} legătură",
+      "links_other": "{{count}} legături",
+      "hiddenBlockingLinks_one": "{{count}} legătură blocantă ascunsă",
+      "hiddenBlockingLinks_other": "{{count}} legături blocante ascunse",
+      "hiddenTaskStack": "Stivă de sarcini ascunse",
+      "hiddenTasks_one": "{{count}} sarcină ascunsă",
+      "hiddenTasks_other": "{{count}} sarcini ascunse",
+      "task": "Sarcină",
+      "openBlockerStack": "Deschide stiva de blocaje",
+      "openBlockedStack": "Deschide stiva de sarcini blocate",
+      "openBlockerTask": "Deschide sarcina blocantă",
+      "openBlockedTask": "Deschide sarcina blocată"
+    },
+    "activityHud": {
+      "activity": "Activitate",
+      "noRecentActivity": "Nicio activitate recentă",
+      "more": "+{{count}} în plus",
+      "more_one": "+{{count}} în plus",
+      "more_other": "+{{count}} în plus",
+      "more_few": "+{{count}} în plus",
+      "more_many": "+{{count}} în plus"
+    },
+    "provisioning": {
+      "launchDetails": "Detalii lansare",
+      "launchDetailsDescription": "Progres detaliat al lansării echipei, ieșire live și jurnale CLI."
+    }
+  },
+  "projectPath": {
+    "label": "Proiect",
+    "source": {
+      "claude": "Găsit de Claude",
+      "codex": "Găsit de Codex",
+      "mixed": "Găsit de Claude și Codex"
+    },
+    "deleted": {
+      "title": "Folderul proiectului nu mai există",
+      "label": "Șters"
+    },
+    "mode": {
+      "projectList": "Din lista de proiecte",
+      "customPath": "Cale personalizată"
+    },
+    "loadingProjects": "Se încarcă proiectele...",
+    "selectProject": "Selectează un proiect...",
+    "searchPlaceholder": "Caută proiectul după nume sau cale",
+    "empty": "Nimic găsit",
+    "selectFromList": "Selectează un proiect din listă",
+    "noProjects": "Niciun proiect găsit, comută la cale personalizată.",
+    "customWorkingDirectory": "Director de lucru personalizat",
+    "browse": "Răsfoiește",
+    "createAutomatically": "Dacă directorul nu există, va fi creat automat."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Încărcare runtime local",
+      "description": "Doar procesele părinte și copil. Inferența LLM la distanță nu este inclusă.",
+      "cpu": "CPU",
+      "memory": "Memorie",
+      "summedRss": "RSS însumat",
+      "sharedHost": "Metrică partajată a gazdei OpenCode. Nu este exclusivă acestui membru.",
+      "processTreeCapped": "Arborele de procese a fost plafonat pentru acest eșantion.",
+      "rssHint": "RSS poate include pagini partajate, așa că este cel mai bine citit ca semnal de încărcare, nu ca memorie exclusivă."
+    },
+    "editor": {
+      "title": "Membri",
+      "addMember": "Adaugă membru",
+      "editAsJson": "Editează ca JSON",
+      "runInSeparateWorktrees": "Rulează coechipierii în worktree-uri separate",
+      "agentTeamsMcpOnly": "Doar Agent Teams MCP",
+      "removedCount": "Eliminați ({{count}})",
+      "removedModelLockReason": "Membrii eliminați sunt păstrați pentru istoricul de ștergere temporară. Restaurează-i pentru a edita setările.",
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice"
+    },
+    "stats": {
+      "computing": "Se calculează statisticile...",
+      "empty": "Nicio statistică disponibilă",
+      "lines": "Linii",
+      "linesInfo": "Aproximativ. Exact pentru uneltele Edit și Write. Scrierile de fișiere prin Bash sunt estimate din tiparele de comenzi (heredoc, echo, sed) și pot fi subraportate.",
+      "files": "Fișiere",
+      "toolCalls": "Apeluri unelte",
+      "tokens": "Tokenuri",
+      "toolUsage": "Utilizare unelte",
+      "filesTouched": "Fișiere atinse ({{count}})",
+      "viewAllChanges": "Vezi toate modificările",
+      "showLess": "Arată mai puțin",
+      "moreFiles": "+{{count}} în plus",
+      "footer": "{{count}} sesiuni · calculat {{computedAgo}}",
+      "footer_one": "{{count}} sesiune · calculat {{computedAgo}}",
+      "footer_few": "{{count}} sesiuni · calculat {{computedAgo}}",
+      "footer_many": "{{count}} sesiuni · calculat {{computedAgo}}",
+      "footer_other": "{{count}} sesiuni · calculat {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Se caută jurnalele...",
+      "empty": "Niciun jurnal găsit",
+      "waitingForTaskActivity": "Sarcina este în curs - se așteaptă activitatea sesiunii (reîmprospătare automată)...",
+      "noTaskActivity": "Nicio activitate de sesiune pentru această sarcină încă",
+      "noMemberActivity": "Acest membru nu are încă activitate de sesiune înregistrată",
+      "leadSessionTooltip": "Jurnalele complete ale sesiunii liderului echipei - utile pentru contextul de orchestrare globală, nu specifice acestui agent",
+      "memberSessionTooltip": "Jurnalele complete ale sesiunii persistente a coechipierului - utile când munca rulează într-o sesiune de membru rădăcină în loc de un fișier de subagent",
+      "startedAt": "început {{time}}",
+      "active": "activ",
+      "showDetails": "Arată detalii",
+      "hideDetails": "Ascunde detalii",
+      "loadingDetails": "Se încarcă detaliile...",
+      "failedToLoadDetails": "Încărcarea detaliilor a eșuat"
+    },
+    "detail": {
+      "relaunchOpenCode": "Relansează OpenCode",
+      "restart": "Repornește",
+      "legacyLogsFallback": "Rezervă jurnale vechi",
+      "copyDiagnostics": "Copiază diagnosticele",
+      "pid": "PID {{pid}}",
+      "removedAt": "Eliminat {{date}}",
+      "failedToRestartMember": "Repornirea membrului a eșuat",
+      "sendMessage": "Trimite mesaj",
+      "assignTask": "Atribuie sarcină",
+      "remove": "Elimină"
+    },
+    "list": {
+      "loading": "Se încarcă membrii echipei",
+      "unavailable": "Lista membrilor indisponibilă",
+      "unavailableDescription": "{{count}} coechipieri sunt cunoscuți din metadatele echipei, dar detaliile listei lipsesc.",
+      "unavailableDescription_one": "{{count}} coechipier este cunoscut din metadatele echipei, dar detaliile listei lipsesc.",
+      "soloLeadOnly": "Echipă solo - doar lider",
+      "removedCount": "Eliminați ({{count}})",
+      "unavailableDescription_few": "{{count}} coechipieri sunt cunoscuți din metadatele echipei, dar detaliile listei lipsesc.",
+      "unavailableDescription_many": "{{count}} coechipieri sunt cunoscuți din metadatele echipei, dar detaliile listei lipsesc.",
+      "unavailableDescription_other": "{{count}} coechipieri sunt cunoscuți din metadatele echipei, dar detaliile listei lipsesc."
+    },
+    "executionLog": {
+      "empty": "Nimic de afișat",
+      "emptyUserMessage": "{{time}} - (gol)",
+      "agentInstructions": "Instrucțiuni agent",
+      "memberTurn": "Turul lui {{member}}",
+      "agentTurn": "Turul agentului",
+      "turn": "tur"
+    },
+    "recentMessages": {
+      "latest": "Cele mai recente mesaje",
+      "latestForMember": "Cele mai recente mesaje - {{member}}",
+      "loadMore": "Încarcă mai multe",
+      "expand": "Extinde",
+      "collapse": "Restrânge"
+    },
+    "leadModel": {
+      "defaultModel": "Implicit",
+      "providerModelAria": "Furnizor {{provider}}, {{model}}",
+      "leadShort": "lider",
+      "teamLead": "Lider echipă",
+      "syncWithTeammates": "Sincronizează modelul cu coechipierii",
+      "anthropicTeamWide": "Anthropic la nivelul întregii echipe",
+      "runtimeInheritance": "Runtime-ul liderului se aplică coechipierilor dacă nu își setează propriul furnizor sau model.",
+      "anthropicContextLimit": "Limita de context de 200K este la nivelul întregii echipe pentru runtime-urile Anthropic în această lansare, inclusiv coechipierii Anthropic personalizați."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Reîmprospătare automată",
+      "wrapLines": "Încadrează liniile",
+      "loadingTail": "Se încarcă coada jurnalului procesului...",
+      "empty": "Niciun fișier de jurnal de proces capturat pentru acest membru încă.",
+      "copy": "Copiază",
+      "fileEmpty": "Fișierul de jurnal al procesului este gol.",
+      "showingLast": "Se afișează ultimii {{bytes}}.",
+      "showing": "Se afișează {{bytes}}."
+    },
+    "tasks": {
+      "empty": "Nicio sarcină atribuită acestui membru"
+    },
+    "messages": {
+      "loadOlder": "Încarcă mesaje mai vechi",
+      "filters": {
+        "all": "Toate",
+        "messages": "Mesaje",
+        "comments": "Comentarii"
+      },
+      "empty": {
+        "loading": "Se încarcă activitatea...",
+        "noComments": "Niciun comentariu pentru acest membru",
+        "noLoadedMessages": "Niciun mesaj încărcat pentru acest membru încă",
+        "noMessages": "Niciun mesaj cu acest membru",
+        "noLoadedActivity": "Nicio activitate încărcată pentru acest membru încă",
+        "noActivity": "Nicio activitate cu acest membru"
+      }
+    },
+    "actions": {
+      "openProfile": "Deschide profilul",
+      "editRole": "Editează rolul",
+      "sendMessage": "Trimite mesaj",
+      "assignTask": "Atribuie sarcină"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Introdu rol personalizat..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} programări",
+    "count_one": "{{count}} programare",
+    "count_other": "{{count}} programări",
+    "nextRun": "Următoarea: {{next}}",
+    "actions": {
+      "runNow": "Rulează acum",
+      "edit": "Editează",
+      "pause": "Întrerupe",
+      "resume": "Reia",
+      "delete": "Șterge",
+      "addSchedule": "Adaugă programare"
+    },
+    "runHistory": {
+      "loading": "Se încarcă istoricul rulărilor...",
+      "empty": "Nicio rulare încă"
+    },
+    "count_few": "{{count}} programări",
+    "count_many": "{{count}} programări",
+    "runLog": {
+      "title": "Jurnal de rulare",
+      "exitCode": "ieșire {{code}}",
+      "retryCount": "reîncercare {{count}}/{{max}}",
+      "stillRunning": "Sarcina încă rulează...",
+      "loadingLogs": "Se încarcă jurnalele...",
+      "errors": "Erori",
+      "close": "Închide"
+    },
+    "cron": {
+      "expression": "Expresie cron",
+      "highFrequencyWarning": "Programare de frecvență ridicată (interval mai mic de 5 min)",
+      "nextRuns": "Următoarele rulări:",
+      "timezone": "Fus orar",
+      "selectTimezone": "Selectează fusul orar",
+      "warmUpTime": "Timp de încălzire",
+      "warmUpDescription": "Pregătește furnizorii selectați înainte de execuția programată",
+      "errors": {
+        "enterExpression": "Introdu o expresie cron",
+        "invalidExpression": "Expresie cron invalidă"
+      },
+      "presets": {
+        "everyHour": "În fiecare oră",
+        "everySixHours": "La fiecare 6 ore",
+        "dailyAtNine": "Zilnic la 9 dimineața",
+        "weekdaysAtNine": "În zilele lucrătoare la 9 dimineața",
+        "mondayAtNine": "Luni la 9 dimineața",
+        "everyThirtyMinutes": "La fiecare 30 min"
+      },
+      "warmUpOptions": {
+        "none": "Fără încălzire",
+        "fiveMinutes": "5 min",
+        "tenMinutes": "10 min",
+        "fifteenMinutes": "15 min",
+        "thirtyMinutes": "30 min"
+      }
+    },
+    "empty": {
+      "title": "Nicio programare încă",
+      "description": "Creează o programare pentru a rula sarcini Claude automat conform unei programări cron."
+    },
+    "title": "Programări",
+    "status": {
+      "active": "Activă",
+      "paused": "Întreruptă",
+      "disabled": "Dezactivată"
+    },
+    "runStatus": {
+      "pending": "În așteptare",
+      "warmingUp": "Se încălzește",
+      "warm": "Caldă",
+      "running": "În execuție",
+      "completed": "Finalizată",
+      "failed": "Eșuată",
+      "interrupted": "Întreruptă",
+      "cancelled": "Anulată"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Modelele locale OpenCode pot folosi un buget de context OpenCode în loc de limite doar pentru prompt.",
+    "description": "Adaugă limite corespunzătoare la configurația OpenCode pentru furnizorul și modelul folosit de acest coechipier. Acest lucru ajută OpenCode să compacteze și să elimine înainte ca modelele locale să-și depășească fereastra de context.",
+    "replacePrefix": "Înlocuiește",
+    "and": "și",
+    "replaceSuffix": "cu ID-urile furnizorului și modelului din configurația ta OpenCode. Instrucțiunile din prompt precum",
+    "promptInstructionsSuffix": "sunt mai slabe deoarece cererea este asamblată înainte ca modelul să le citească.",
+    "providerLimits": "Limite furnizor",
+    "compactionConfig": "Configurație compactare"
+  },
+  "sessions": {
+    "noProjectPath": "Nicio cale de proiect legată",
+    "provisioningHint": "Sesiunile vor apărea după aprovizionarea echipei",
+    "projectNotFound": "Proiectul nu a fost găsit",
+    "loading": "Se încarcă sesiunile...",
+    "empty": "Nicio sesiune găsită",
+    "showAllSessions": "Arată pentru toate sesiunile",
+    "lead": "lider",
+    "removeFilter": "Elimină filtrul",
+    "filterBySession": "Filtrează după această sesiune",
+    "openSession": "Deschide sesiunea",
+    "title": "Sesiuni"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Anulează",
+    "moreWarningsHidden": "{{count}} avertismente suplimentare ascunse",
+    "diagnostics": "Diagnostice",
+    "liveOutput": "Ieșire live",
+    "diagnosticsCopied": "Diagnostice copiate",
+    "copyDiagnostics": "Copiază diagnosticele",
+    "copied": "Copiat",
+    "noOutput": "Nicio ieșire capturată încă.",
+    "cliLogs": "Jurnale CLI",
+    "steps": {
+      "starting": "Se pornește",
+      "configuring": "Configurarea echipei",
+      "assembling": "Membrii se alătură",
+      "finalizing": "Se finalizează"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "se verifică...",
+        "ready": "OK",
+        "notes": "OK (observații)",
+        "failed": "ERR",
+        "pending": "în așteptare"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Binarul CLI lipsește",
+        "openCodeRuntimeMissing": "Runtime-ul OpenCode lipsește",
+        "openCodeWindowsAccessBlocked": "Accesul OpenCode pe Windows blocat",
+        "openCodeNoOutput": "Verificarea runtime-ului OpenCode nu a returnat nicio ieșire",
+        "openCodeMcpUnreachable": "MCP-ul aplicației OpenCode inaccesibil",
+        "workingDirectoryMissing": "Directorul de lucru lipsește",
+        "cliBinaryCouldNotStart": "Binarul CLI nu a putut fi pornit",
+        "cliPreflightIncomplete": "Verificarea preliminară CLI nu s-a finalizat",
+        "authenticationRequired": "Autentificare necesară",
+        "runtimeProviderNotConfigured": "Furnizorul de runtime nu este configurat",
+        "cliPreflightFailed": "Verificarea preliminară CLI a eșuat",
+        "selectedModelCompatible": "Modelul selectat compatibil",
+        "selectedModelCompatibilityPending": "Compatibilitatea modelului selectat în așteptare",
+        "selectedModelAvailable": "Modelul selectat disponibil",
+        "selectedModelVerified": "Modelul selectat verificat",
+        "selectedModelUnavailable": "Modelul selectat indisponibil",
+        "selectedModelTimedOut": "Verificarea modelului selectat a expirat",
+        "selectedModelCheckFailed": "Verificarea modelului selectat a eșuat",
+        "selectedModelDeferred": "Verificarea modelului selectat amânată",
+        "selectedModelPingNotConfirmed": "Ping-ul modelului selectat neconfirmat",
+        "readyWithNotes": "Pregătit cu observații",
+        "needsAttention": "Necesită atenție"
+      },
+      "modelChecksSummary": "Verificările modelului selectat - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model indisponibil",
+        "unavailable_one": "{{count}} model indisponibil",
+        "unavailable_other": "{{count}} modele indisponibile",
+        "checkFailed": "{{count}} verificare de model a eșuat",
+        "checkFailed_one": "{{count}} verificare de model a eșuat",
+        "checkFailed_other": "{{count}} verificări de modele au eșuat",
+        "timedOut": "{{count}} model a expirat",
+        "timedOut_one": "{{count}} model a expirat",
+        "timedOut_other": "{{count}} modele au expirat",
+        "deferred": "{{count}} verificare amânată",
+        "deferred_one": "{{count}} verificare amânată",
+        "deferred_other": "{{count}} verificări amânate",
+        "pingNotConfirmed": "{{count}} ping neconfirmat",
+        "pingNotConfirmed_one": "{{count}} ping neconfirmat",
+        "pingNotConfirmed_other": "{{count}} ping-uri neconfirmate",
+        "compatibilityPending": "{{count}} compatibil, verificare aprofundată în așteptare",
+        "compatibilityPending_one": "{{count}} compatibil, verificare aprofundată în așteptare",
+        "compatibilityPending_other": "{{count}} compatibile, verificare aprofundată în așteptare",
+        "compatible": "{{count}} compatibil",
+        "compatible_one": "{{count}} compatibil",
+        "compatible_other": "{{count}} compatibile",
+        "checking": "{{count}} se verifică",
+        "checking_one": "{{count}} se verifică",
+        "checking_other": "{{count}} se verifică",
+        "available": "{{count}} disponibil",
+        "available_one": "{{count}} disponibil",
+        "available_other": "{{count}} disponibile",
+        "verified": "{{count}} verificat",
+        "verified_one": "{{count}} verificat",
+        "verified_other": "{{count}} verificate",
+        "unavailable_few": "{{count}} modele indisponibile",
+        "unavailable_many": "{{count}} modele indisponibile",
+        "checkFailed_few": "{{count}} verificări de modele au eșuat",
+        "checkFailed_many": "{{count}} verificări de modele au eșuat",
+        "timedOut_few": "{{count}} modele au expirat",
+        "timedOut_many": "{{count}} modele au expirat",
+        "deferred_few": "{{count}} verificări amânate",
+        "deferred_many": "{{count}} verificări amânate",
+        "pingNotConfirmed_few": "{{count}} ping-uri neconfirmate",
+        "pingNotConfirmed_many": "{{count}} ping-uri neconfirmate",
+        "compatibilityPending_few": "{{count}} compatibile, verificare aprofundată în așteptare",
+        "compatibilityPending_many": "{{count}} compatibile, verificare aprofundată în așteptare",
+        "compatible_few": "{{count}} compatibile",
+        "compatible_many": "{{count}} compatibile",
+        "checking_few": "{{count}} se verifică",
+        "checking_many": "{{count}} se verifică",
+        "available_few": "{{count}} disponibile",
+        "available_many": "{{count}} disponibile",
+        "verified_few": "{{count}} verificate",
+        "verified_many": "{{count}} verificate"
+      },
+      "openProviderSettings": "Deschide setările {{provider}}",
+      "copied": "Copiat",
+      "copyDiagnostics": "Copiază diagnosticele",
+      "deepVerificationPending": "Verificarea aprofundată încă rulează. Modelele gratuite OpenCode pot dura în jur de 20 de secunde.",
+      "progress": {
+        "checkingSelectedProviders": "Se verifică furnizorii selectați în paralel...",
+        "checkingProvider": "Se verifică furnizorul {{provider}}...",
+        "checkingProviders": "Se verifică {{providers}} furnizori..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Corectează permisiunile folderului sau mută proiectul într-un folder cu drept de scriere pentru utilizator. Rularea ca administrator este doar o soluție temporară.",
+        "openCodeBridgeNoOutput": "Repornește aplicația și runtime-ul OpenCode, apoi reîncearcă. Dacă se repetă, copiază diagnosticele.",
+        "workingDirectoryMissing": "Alege un director de lucru existent, apoi redeschide acest dialog.",
+        "authenticationRequired": "Autentifică furnizorul necesar în Claude CLI, apoi redeschide acest dialog.",
+        "runtimeProviderNotConfigured": "Configurează runtime-ul furnizorului selectat, apoi redeschide acest dialog.",
+        "openCodeRuntimeMissing": "Instalează sau reîncearcă runtime-ul OpenCode din cardul de stare al furnizorului, apoi redeschide acest dialog.",
+        "openCodeAppMcpUnreachable": "Reîncearcă lansarea pentru a reîmprospăta puntea MCP a aplicației OpenCode. Dacă se repetă, repornește aplicația și runtime-ul OpenCode.",
+        "cliBinaryMissing": "Asigură-te că binarul Claude CLI local există și poate fi pornit, apoi redeschide acest dialog.",
+        "default": "Rezolvă problema de mai sus, apoi redeschide acest dialog.",
+        "openCodeNodeModulesSymlinkPermission": "Rulează Agent Teams AI ca Administrator, apoi reîncearcă lansarea."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} coechipier așteaptă aprobarea permisiunii",
+      "nameListWithMore": "{{names}}, +{{count}} în plus",
+      "waitingForOpenCode": "Se așteaptă OpenCode: {{names}}",
+      "bootstrapStalled": "Inițializare blocată: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Se așteaptă OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Inițializare blocată",
+        "shellOnly": "Doar shell",
+        "waitingForBootstrap": "Se așteaptă inițializarea",
+        "bootstrapUnconfirmed": "Inițializare neconfirmată",
+        "awaitingPermission": "Se așteaptă permisiunea",
+        "waitingForRuntime": "Se așteaptă runtime-ul",
+        "shellOnlyLower": "doar shell",
+        "waitingForBootstrapLower": "se așteaptă inițializarea",
+        "bootstrapUnconfirmedLower": "inițializare neconfirmată",
+        "awaitingPermissionLower": "se așteaptă permisiunea",
+        "waitingForRuntimeLower": "se așteaptă runtime-ul"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} nu a reușit să pornească",
+        "teammatesFailedToStart": "{{count}} coechipieri nu au reușit să pornească",
+        "teammatesFailedRatio": "{{count}}/{{total}} coechipieri nu au reușit să pornească"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} omis pentru această lansare",
+        "memberSkippedWithReason": "{{name}} omis pentru această lansare - {{reason}}",
+        "memberSkippedCompact": "{{name}} omis",
+        "teammatesSkipped": "{{count}} coechipieri omiși",
+        "teammatesSkippedList": "Coechipieri omiși: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} coechipieri omiși pentru această lansare"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} coechipieri încă se alătură",
+        "teammatesStillJoining_one": "{{count}} coechipier încă se alătură",
+        "teammatesStillJoining_few": "{{count}} coechipieri încă se alătură",
+        "teammatesStillJoining_many": "{{count}} coechipieri încă se alătură",
+        "teammatesStillJoining_other": "{{count}} coechipieri încă se alătură",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} coechipieri confirmați"
+      },
+      "ready": {
+        "leadOnline": "Lider online",
+        "allTeammatesJoined": "Toți cei {{count}} coechipieri s-au alăturat",
+        "teamProvisionedLeadOnline": "Echipă aprovizionată - lider online",
+        "teamProvisionedAllJoined": "Echipă aprovizionată - toți cei {{count}} coechipieri s-au alăturat",
+        "teamProvisionedStillJoining": "Echipă aprovizionată - coechipierii încă se alătură",
+        "launchFinishedWithErrors": "Lansare finalizată cu erori - {{count}}/{{total}} coechipieri nu au reușit să pornească",
+        "launchContinuedSkipped": "Lansare continuată - {{count}}/{{total}} coechipieri omiși",
+        "teamLaunchedLeadOnline": "Echipă lansată - lider online",
+        "teamLaunchedAllJoined": "Echipă lansată - toți cei {{count}} coechipieri s-au alăturat"
+      },
+      "panel": {
+        "launchFailed": "Lansarea a eșuat",
+        "launchDetails": "Detalii lansare",
+        "launchFinishedWithErrors": "Lansare finalizată cu erori",
+        "launchContinuedSkipped": "Lansare continuată cu coechipieri omiși",
+        "coreTeamReady": "Echipa de bază pregătită",
+        "finishingLaunch": "Se finalizează lansarea",
+        "teamLaunched": "Echipă lansată",
+        "launchingTeam": "Se lansează echipa"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Stare runtime live",
+    "description": "Bătaie de inimă și stare de lansare doar pentru afișare. Controalele procesului rămân mai jos.",
+    "source": "sursă: {{source}}",
+    "lane": "lanul {{lane}}",
+    "diagnosticOnly": "Doar diagnostic",
+    "updated": "actualizat {{value}}",
+    "states": {
+      "running": "În execuție",
+      "starting": "Se pornește",
+      "waiting": "Se așteaptă",
+      "degraded": "Necesită atenție",
+      "stopped": "Oprit",
+      "unknown": "Necunoscut"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Jurnale exacte de sarcină",
+      "loading": "Se încarcă jurnalele exacte de sarcină...",
+      "description": "Fragmente exacte de transcript randate cu aceleași componente de jurnal de execuție folosite în Jurnale.",
+      "emptyTitle": "Niciun jurnal exact de sarcină încă",
+      "emptyDescription": "Pachetele exacte de transcript vor apărea aici când sunt disponibile metadate explicite de transcript legate de sarcină.",
+      "summaryOnly": "doar rezumat"
+    },
+    "executionSessions": {
+      "title": "Sesiuni de execuție",
+      "online": "Online",
+      "updating": "Se actualizează...",
+      "description": "Răsfoire și previzualizări de transcript centrate pe sesiune (versiune veche)."
+    },
+    "stream": {
+      "title": "Flux de jurnale de sarcină"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Anulează sarcina {{taskId}}",
+      "cancel": "Anulează",
+      "moveBackToTodoConfirm": "Muți această sarcină înapoi la DE FĂCUT și notifici echipa?",
+      "confirm": "Confirmă",
+      "keep": "Păstrează",
+      "changesNeedAttention": "Modificările necesită atenție",
+      "changes": "Modificări",
+      "deleteTask": "Șterge sarcina",
+      "taskLogsActive": "Jurnale de sarcină active",
+      "newTaskLogsArriving": "Sosesc jurnale noi de sarcină",
+      "awaitingUser": "Se așteaptă utilizatorul",
+      "awaitingLead": "Se așteaptă liderul",
+      "blockedBy": "Blocată de",
+      "blocks": "Blochează",
+      "start": "Pornește",
+      "complete": "Finalizează",
+      "approve": "Aprobă",
+      "requestReview": "Solicită revizuire",
+      "manualReview": "Revizuire manuală",
+      "requestChanges": "Solicită modificări"
+    },
+    "filter": {
+      "title": "Filtrează sarcinile",
+      "session": "Sesiune",
+      "allSessions": "Toate sesiunile",
+      "teammate": "Coechipier",
+      "unassigned": "(neatribuit)",
+      "column": "Coloană",
+      "clearAll": "Șterge tot"
+    },
+    "board": {
+      "addTask": "Adaugă sarcină",
+      "noTasks": "Nicio sarcină",
+      "showMore": "Arată încă {{count}}",
+      "hiddenCount": "{{count}} ascunse",
+      "trash": "Coș de gunoi",
+      "gridView": "Vizualizare grilă",
+      "columnsView": "Vizualizare coloane"
+    },
+    "trash": {
+      "title": "Coș de gunoi",
+      "empty": "Nicio sarcină ștearsă",
+      "subject": "Subiect",
+      "owner": "Proprietar",
+      "deleted": "Ștearsă",
+      "unassigned": "Neatribuit",
+      "restoreTask": "Restaurează sarcina",
+      "restore": "Restaurează",
+      "close": "Închide"
+    },
+    "sort": {
+      "title": "Sortează sarcinile",
+      "sortBy": "Sortează după",
+      "reset": "Resetează",
+      "options": {
+        "updatedAt": {
+          "label": "Ultima actualizare",
+          "description": "Cele actualizate recent primele"
+        },
+        "createdAt": {
+          "label": "Creată",
+          "description": "Cele mai noi primele"
+        },
+        "owner": {
+          "label": "Proprietar",
+          "description": "Alfabetic după responsabil"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Ordine prin trage și plasează"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Șterge căutarea",
+      "tasks": "Sarcini",
+      "createdAgo": "creată {{time}}",
+      "updatedAgo": "actualizată {{time}}",
+      "placeholder": "Caută sarcini... (#id sau text)"
+    },
+    "grid": {
+      "addTask": "Adaugă sarcină",
+      "noTasks": "Nicio sarcină"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "DE FĂCUT",
+      "inProgress": "ÎN CURS",
+      "review": "REVIZUIRE",
+      "done": "FINALIZAT",
+      "approved": "APROBAT"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Se verifică starea depozitului Git pentru worktree-urile coechipierilor...",
+    "ready": "Worktree-urile Git sunt pregătite.",
+    "readyOnBranch": "Worktree-urile Git sunt pregătite pe ramura {{branch}}.",
+    "needsSetup": "Izolarea worktree necesită configurare Git",
+    "initialCommitNotice": "Acțiunea de commit inițial pregătește și comite toate fișierele curente cu mesajul",
+    "initializeRepository": "Inițializează depozitul Git",
+    "createInitialCommit": "Creează commit-ul inițial",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Setări",
+    "autoAllowAllTools": "Permite automat toate uneltele",
+    "autoAllowFileEdits": "Permite automat editările de fișiere (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Permite automat comenzile sigure (git, pnpm, npm, ls...)",
+    "onTimeout": "La expirare:",
+    "after": "după",
+    "secondsShort": "sec",
+    "timeoutActions": {
+      "wait": "Așteaptă la nesfârșit",
+      "allow": "Permite",
+      "deny": "Refuză"
+    },
+    "submit": "Trimite",
+    "allow": "Permite",
+    "deny": "Refuză",
+    "allowAll": "Permite tot",
+    "pendingCount": "{{count}} în așteptare",
+    "autoActionIn": "{{action}} automat în {{time}}",
+    "diff": {
+      "previewChanges": "Previzualizează modificările",
+      "readingFile": "Se citește fișierul...",
+      "binaryFile": "Fișier binar - nu se poate previzualiza",
+      "truncated": "Fișier trunchiat la 2MB - diff-ul poate fi incomplet",
+      "newFile": "Fișier nou"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Sincronizare muncă membru",
+      "actionableItems": "Elemente acționabile",
+      "fingerprint": "Amprentă",
+      "report": "Raport",
+      "none": "niciunul",
+      "shadowWouldNudge": "Shadow ar trimite memento",
+      "yes": "da",
+      "no": "nu",
+      "moreActionableItems": "încă {{count}} element(e) acționabil(e)",
+      "diagnostics": "Diagnostice: {{diagnostics}}"
+    },
+    "title": "Sincronizare muncă membru",
+    "loadingDiagnostics": "Se încarcă diagnosticele de sincronizare a muncii membrului.",
+    "diagnosticsUnavailable": "Diagnosticele de sincronizare a muncii membrului sunt indisponibile."
+  },
+  "advancedCli": {
+    "title": "Avansat",
+    "useWorktree": "Folosește worktree",
+    "recent": "Recente",
+    "commandPreview": "Previzualizare comandă",
+    "customArguments": "Argumente personalizate",
+    "validate": "Validează",
+    "validation": {
+      "allFlagsValid": "Toate flag-urile valide",
+      "unknownFlags": "Necunoscute: {{flags}}",
+      "protectedFlags": "Protejate: {{flags}}",
+      "failed": "Validarea a eșuat"
+    },
+    "placeholders": {
+      "worktreeName": "nume-worktree"
+    }
+  },
+  "processes": {
+    "ago": "acum {{time}}",
+    "stoppedAgo": "oprit acum {{time}}",
+    "running": "În execuție",
+    "stopped": "Oprit",
+    "stopProcess": "Oprește procesul (SIGTERM)",
+    "kill": "Termină forțat",
+    "openInBrowser": "Deschide în browser",
+    "open": "Deschide",
+    "pid": "PID{{pid}}",
+    "title": "Procese CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Se încarcă detaliile activității...",
+    "contextUnavailable": "Contextul detaliat al transcriptului nu mai este disponibil pentru această activitate.",
+    "loading": "Se încarcă activitatea sarcinii...",
+    "lowSignalOnly": "Nicio activitate cheie de sarcină nu a fost găsită încă. Detaliile de execuție de nivel scăzut sunt disponibile mai jos în Flux de jurnale de sarcină.",
+    "empty": "Nicio activitate explicită de sarcină nu a fost găsită încă în transcripturile disponibile. Jurnalele de sesiune mai vechi sau euristice pot fi totuși disponibile mai jos în Sesiuni de execuție.",
+    "title": "Activitate sarcină",
+    "description": "Activitate runtime explicită cheie legată de această sarcină din metadatele transcriptului."
+  },
+  "sendMessage": {
+    "title": "Trimite mesaj",
+    "description": "Trimite un mesaj direct unui membru al echipei.",
+    "recipientLabel": "Destinatar",
+    "selectMemberPlaceholder": "Selectează membrul...",
+    "messageLabel": "Mesaj",
+    "placeholder": "Scrie mesajul tău... (Enter pentru a trimite)",
+    "send": "Trimite",
+    "sending": "Se trimite...",
+    "charsLeft": "{{count}} caractere rămase",
+    "saved": "Salvat",
+    "attachments": {
+      "teamOnlineRequired": "Echipa trebuie să fie online pentru a atașa fișiere",
+      "recipientUnsupported": "Fișierele pot fi trimise liderului echipei sau coechipierilor OpenCode",
+      "openCodeOnlineRequired": "Echipa trebuie să fie online pentru a atașa fișiere pentru coechipierii OpenCode",
+      "disabledHint": "Atașamentele de fișiere sunt acceptate pentru liderul echipei online și pentru coechipierii OpenCode online. Elimină atașamentele sau schimbă destinatarul.",
+      "attachFiles": "Atașează fișiere (lipește sau trage și plasează)",
+      "unavailable": "Atașamentele sunt indisponibile"
+    },
+    "quote": {
+      "remove": "Elimină citatul",
+      "replyingTo": "Se răspunde la"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Anulează răspunsul",
+    "replyingTo": "Se răspunde la",
+    "placeholder": "Adaugă un comentariu... (Enter pentru a trimite)",
+    "attachFile": "Atașează fișier (sau lipește)",
+    "voiceToText": "Voce în text",
+    "comment": "Comentariu",
+    "charsLeft": "{{count}} caractere rămase",
+    "saved": "Salvat",
+    "awaitingReplyFrom": "Se așteaptă răspunsul de la",
+    "or": "sau"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Plasează imaginea aici",
+    "attachImage": "Atașează imagine",
+    "pasteOrDragDrop": "sau lipește / trage și plasează",
+    "fromOriginalMessage": "Din mesajul original",
+    "dropFilesHere": "Plasează fișierele aici",
+    "loading": "Se încarcă atașamentele..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Aprobă automat toate uneltele",
+    "autonomousModeDescription": "Mod autonom: uneltele echipei se execută fără confirmare. Fii precaut cu codul nesigur.",
+    "manualModeDescription": "Mod manual: vei aproba sau refuza fiecare apel de unealtă în timp real."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Execuție",
+      "process": "Proces"
+    },
+    "filters": {
+      "all": "Toate"
+    },
+    "logs": {
+      "title": "Jurnale",
+      "loading": "Se încarcă fluxul de jurnale al membrului...",
+      "emptyTitle": "Nicio intrare în fluxul de jurnale nu a fost găsită pentru acest membru încă.",
+      "emptyDescription": "Jurnalele de transcript sau runtime la nivel de membru vor apărea aici când sunt disponibile."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Descrie ce trebuie schimbat... (Enter pentru a trimite)",
+    "submit": "Trimite",
+    "charsLeft": "{{count}} caractere rămase",
+    "saved": "Salvat",
+    "title": "Solicită modificări"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Deschide panoul",
+      "openTeam": "Deschide echipa",
+      "cancel": "Anulează"
+    },
+    "membersJson": {
+      "hide": "Ascunde JSON"
+    },
+    "optional": {
+      "badge": "Opțional"
+    }
+  },
+  "runningTeams": {
+    "title": "Echipe în execuție",
+    "status": {
+      "active": "Activă",
+      "provisioning": "Se lansează",
+      "idle": "În execuție"
+    },
+    "noProject": "Niciun proiect"
+  },
+  "layout": {
+    "maxPanesReached": "S-a atins maximul de {{count}} panouri"
+  },
+  "codexReconnect": {
+    "description": "Sesiunea ta Codex pare învechită. Reconectează-te pentru a continua.",
+    "useCode": "Folosește codul",
+    "generating": "Se generează...",
+    "openLogin": "Deschide autentificarea",
+    "generateLink": "Generează link"
+  },
+  "effortLevel": {
+    "label": "Nivel de efort (opțional)",
+    "maxDescription": "Max oferă modelului cel mai mult timp de raționament pentru sarcini dificile."
+  },
+  "contextLimit": {
+    "limitTo200k": "Limitează contextul la 200K tokenuri",
+    "always200k": "(întotdeauna 200K pentru acest model)",
+    "tooltipContent": "Menține lansările într-o fereastră de context de 200K tokenuri când este acceptat.",
+    "tooltipTitle": "Limită de context"
+  },
+  "roleSelect": {
+    "noRole": "Niciun rol",
+    "customRole": "Rol personalizat...",
+    "searchPlaceholder": "Caută roluri...",
+    "empty": "Niciun rol găsit.",
+    "reservedRole": "Acest rol este rezervat",
+    "emptyCustomRole": "Rolul nu poate fi gol"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

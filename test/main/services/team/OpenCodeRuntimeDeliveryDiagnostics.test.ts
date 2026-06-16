@@ -163,6 +163,25 @@ describe('OpenCodeRuntimeDeliveryDiagnostics', () => {
     );
   });
 
+  it('treats stale observe scheduled diagnostics after an accepted prompt as session refresh', () => {
+    const record = {
+      diagnostics: [
+        'OpenCode API error',
+        'OpenCode API error. opencode_session_stale_observe_scheduled_after_accepted_prompt',
+      ],
+      lastReason: 'OpenCode API error',
+      responseState: 'not_observed',
+      status: 'retry_scheduled',
+    } as Parameters<typeof selectOpenCodeRuntimeDeliveryReason>[0];
+
+    expect(selectOpenCodeRuntimeDeliveryReason(record)).toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+    expect(
+      isActionRequiredOpenCodeRuntimeDeliveryReason(selectOpenCodeRuntimeDeliveryReason(record))
+    ).toBe(false);
+  });
+
   it('treats colon-terminated generic OpenCode API errors plus clean refresh evidence as session refresh', () => {
     const record = {
       diagnostics: ['OpenCode API error:', 'resolved_behavior_changed:old->new'],

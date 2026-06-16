@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "ரத்துசெய்",
+    "close": "மூடு",
+    "copied": "நகலெடுக்கப்பட்டது",
+    "copyUrl": "URL ஐ நகலெடு",
+    "open": "திற",
+    "reveal": "காட்டு",
+    "retry": "மீண்டும் முயற்சி",
+    "save": "சேமி",
+    "showLess": "குறைவாகக் காட்டு",
+    "showMore": "மேலும் காட்டு",
+    "refresh": "புதுப்பி",
+    "reset": "மீட்டமை",
+    "copyToClipboard": "clipboard க்கு நகலெடு",
+    "moreActions": "மேலும் நடவடிக்கைகள்",
+    "closeDialog": "உரையாடலை மூடு",
+    "goToDashboard": "Dashboard க்குச் செல்",
+    "or": "அல்லது",
+    "hide": "மறை",
+    "resetSelection": "தேர்வை மீட்டமை"
+  },
+  "code": {
+    "line": "வரி {{line}}",
+    "lines": "வரிகள் {{from}}-{{to}}",
+    "moreLines": "({{count}} மேலும் வரிகள்...)",
+    "moreLines_few": "({{count}} மேலும் வரிகள்...)",
+    "moreLines_many": "({{count}} மேலும் வரிகள்...)",
+    "moreLines_one": "({{count}} மேலும் வரி...)",
+    "moreLines_other": "({{count}} மேலும் வரிகள்...)",
+    "code": "Code",
+    "preview": "முன்னோட்டம்",
+    "markdownPreview": "Markdown முன்னோட்டம்",
+    "linesParenthesized": "(வரிகள் {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid தொடரியல் பிழை"
+  },
+  "contextBadge": {
+    "badge": "Context",
+    "breakdown": {
+      "text": "Text",
+      "thinking": "Thinking"
+    },
+    "detailsAria": "Context injection விவரங்கள்",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md கோப்புகள்",
+      "mentionedFiles": "குறிப்பிடப்பட்ட கோப்புகள்",
+      "taskCoordination": "Task ஒருங்கிணைப்பு",
+      "thinkingText": "Thinking + Text",
+      "toolOutputs": "Tool வெளியீடுகள்",
+      "userMessages": "பயனர் செய்திகள்"
+    },
+    "title": "இந்த turn இல் சேர்க்கப்பட்ட புதிய Context",
+    "tokenCount": "~{{tokens}} tokens",
+    "totalNewTokens": "மொத்த புதிய tokens",
+    "turn": "Turn {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} tokens"
+  },
+  "locales": {
+    "emptyMessage": "மொழி எதுவும் கிடைக்கவில்லை.",
+    "names": {
+      "ar": "அரபு",
+      "bn": "வங்காளம்",
+      "de": "ஜெர்மன்",
+      "en": "ஆங்கிலம்",
+      "es": "ஸ்பானிஷ்",
+      "fa": "பாரசீகம்",
+      "fil": "பிலிப்பினோ",
+      "fr": "பிரெஞ்சு",
+      "hi": "இந்தி",
+      "id": "இந்தோனேசியன்",
+      "it": "இத்தாலியன்",
+      "ja": "ஜப்பானிய",
+      "ko": "கொரியன்",
+      "mr": "மராத்தி",
+      "ms": "மலாய்",
+      "nl": "டச்சு",
+      "pl": "போலிஷ்",
+      "pt": "போர்த்துகீசியம்",
+      "ro": "ருமேனியன்",
+      "ru": "ரஷ்யன்",
+      "sw": "சுவாஹிலி",
+      "system": "கணினி",
+      "ta": "தமிழ்",
+      "te": "தெலுங்கு",
+      "th": "தாய்",
+      "tr": "துருக்கி",
+      "uk": "உக்ரேனியன்",
+      "ur": "உருது",
+      "vi": "வியட்நாமீஸ்",
+      "zh": "சீனம்"
+    },
+    "searchPlaceholder": "மொழியைத் தேடு...",
+    "selectPlaceholder": "பயன்பாட்டு மொழியைத் தேர்ந்தெடு...",
+    "systemWithResolved": "கணினி - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "உறுப்பினர்கள் எவரும் கிடைக்கவில்லை.",
+    "searchPlaceholder": "உறுப்பினர்களைத் தேடு...",
+    "unassigned": "ஒதுக்கப்படாதது",
+    "teammateFallback": "teammate"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "சரிபார்க்கிறது",
+        "downloading": "பதிவிறக்குகிறது",
+        "installCli": "Codex CLI ஐ நிறுவு",
+        "installing": "நிறுவுகிறது",
+        "retryInstall": "நிறுவலை மீண்டும் முயற்சி"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "பொருந்தும் பரிந்துரைகள் இல்லை",
+    "searching": "தேடுகிறது...",
+    "searchingFiles": "கோப்புகளைத் தேடுகிறது...",
+    "findInConversation": "உரையாடலில் கண்டறி...",
+    "resultCount": "{{total}} இல் {{current}}",
+    "resultCountCapped": "{{total}}+ இல் {{current}}",
+    "noResults": "முடிவுகள் இல்லை",
+    "previousResultShortcut": "முந்தைய முடிவு (Shift+Enter)",
+    "nextResultShortcut": "அடுத்த முடிவு (Enter)",
+    "closeShortcut": "மூடு (Esc)",
+    "nothingFound": "எதுவும் கிடைக்கவில்லை",
+    "placeholder": "தேடு..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "அட்டவணை சேர்",
+      "clearFilters": "வடிப்பான்களை அழி",
+      "createSchedule": "அட்டவணையை உருவாக்கு",
+      "delete": "நீக்கு",
+      "edit": "திருத்து",
+      "pause": "இடைநிறுத்து",
+      "resume": "தொடர்",
+      "runNow": "இப்போது இயக்கு"
+    },
+    "empty": {
+      "description": "cron expressions உடன் Claude task இயக்கத்தை தானியக்கமாக்க எந்தவொரு team இலும் ஒரு அட்டவணையை உருவாக்கவும். அனைத்து teams இன் அட்டவணைகளும் இங்கே தோன்றும்.",
+      "noMatches": "தற்போதைய வடிப்பான்களுக்குப் பொருந்தும் அட்டவணைகள் இல்லை",
+      "title": "அட்டவணையிடப்பட்ட tasks இல்லை"
+    },
+    "filters": {
+      "allTeams": "அனைத்து teams"
+    },
+    "item": {
+      "loadingRunHistory": "இயக்க வரலாற்றை ஏற்றுகிறது...",
+      "nextRun": "அடுத்தது: {{value}}",
+      "noRunsYet": "இன்னும் இயக்கங்கள் இல்லை"
+    },
+    "loading": "அட்டவணைகளை ஏற்றுகிறது...",
+    "searchPlaceholder": "அட்டவணைகளைத் தேடு...",
+    "status": {
+      "active": "செயலில்",
+      "all": "அனைத்தும்",
+      "disabled": "முடக்கப்பட்டது",
+      "paused": "இடைநிறுத்தப்பட்டது"
+    },
+    "title": "அட்டவணைகள்"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "மறை",
+      "pin": "Pin",
+      "unhide": "மறையாக்கம் நீக்கு"
+    },
+    "empty": {
+      "noMatchingSessions": "பொருந்தும் sessions இல்லை",
+      "noMatchingSessionsDescription": "இந்த project இல் இன்னும் பொருந்தும் sessions இல்லை.",
+      "noMatchingSessionsFiltered": "வேறு வினவலை முயற்சிக்கவும் அல்லது வழங்குநர் வடிப்பானை மீட்டமைக்கவும்.",
+      "noSessions": "sessions எதுவும் கிடைக்கவில்லை",
+      "noSessionsDescription": "இந்த project இல் இன்னும் sessions இல்லை",
+      "selectProject": "sessions ஐக் காண ஒரு project ஐத் தேர்ந்தெடு"
+    },
+    "errors": {
+      "loading": "sessions ஐ ஏற்றுவதில் பிழை"
+    },
+    "loadedMatchingMore": "இதுவரை {{count}} பொருந்தும் sessions ஏற்றப்பட்டன - மேலும் ஏற்ற கீழே உருட்டவும்.",
+    "loadingMore": "மேலும் sessions ஐ ஏற்றுகிறது...",
+    "pinned": "Pinned",
+    "scrollToLoadMore": "மேலும் ஏற்ற உருட்டவும்",
+    "search": {
+      "clear": "session தேடலை அழி",
+      "placeholder": "sessions ஐத் தேடு..."
+    },
+    "selection": {
+      "cancel": "தேர்வை ரத்துசெய்",
+      "exitMode": "தேர்வு பயன்முறையிலிருந்து வெளியேறு",
+      "hideSelected": "தேர்ந்தெடுத்த sessions ஐ மறை",
+      "pinSelected": "தேர்ந்தெடுத்த sessions ஐ pin செய்",
+      "selectSessions": "sessions ஐத் தேர்ந்தெடு",
+      "selected": "{{count}} தேர்ந்தெடுக்கப்பட்டது",
+      "unhideSelected": "தேர்ந்தெடுத்த sessions இன் மறையாக்கம் நீக்கு",
+      "selected_few": "{{count}} தேர்ந்தெடுக்கப்பட்டது",
+      "selected_many": "{{count}} தேர்ந்தெடுக்கப்பட்டது",
+      "selected_one": "{{count}} தேர்ந்தெடுக்கப்பட்டது",
+      "selected_other": "{{count}} தேர்ந்தெடுக்கப்பட்டது"
+    },
+    "sort": {
+      "byContext": "Context வாரியாக",
+      "byContextTooltip": "context நுகர்வு வாரியாக வரிசைப்படுத்து",
+      "byRecentTooltip": "சமீபத்தியது வாரியாக வரிசைப்படுத்து",
+      "contextLoadedOnly": "Context வரிசைப்படுத்தல் ஏற்றப்பட்ட sessions ஐ மட்டுமே தரப்படுத்துகிறது."
+    },
+    "title": "Sessions",
+    "visibility": {
+      "hideHidden": "மறைக்கப்பட்ட sessions ஐ மறை",
+      "showHidden": "மறைக்கப்பட்ட sessions ஐக் காட்டு"
+    },
+    "worktree": {
+      "switch": "Worktree ஐ மாற்று"
+    },
+    "loadedMatchingMore_few": "இதுவரை {{count}} பொருந்தும் sessions ஏற்றப்பட்டன - மேலும் ஏற்ற கீழே உருட்டவும்.",
+    "loadedMatchingMore_many": "இதுவரை {{count}} பொருந்தும் sessions ஏற்றப்பட்டன - மேலும் ஏற்ற கீழே உருட்டவும்.",
+    "loadedMatchingMore_one": "இதுவரை {{count}} பொருந்தும் sessions ஏற்றப்பட்டன - மேலும் ஏற்ற கீழே உருட்டவும்.",
+    "loadedMatchingMore_other": "இதுவரை {{count}} பொருந்தும் sessions ஏற்றப்பட்டன - மேலும் ஏற்ற கீழே உருட்டவும்.",
+    "failedToLoad": "session ஐ ஏற்ற முடியவில்லை",
+    "loading": "session ஐ ஏற்றுகிறது...",
+    "filter": {
+      "title": "sessions ஐ வடிகட்டு"
+    },
+    "count": "{{count}} sessions",
+    "count_one": "{{count}} session",
+    "count_other": "{{count}} sessions",
+    "count_few": "{{count}} sessions",
+    "count_many": "{{count}} sessions",
+    "inProgress": "Session முன்னேற்றத்தில் உள்ளது..."
+  },
+  "states": {
+    "loading": "ஏற்றுகிறது...",
+    "offline": "ஆஃப்லைன்",
+    "online": "ஆன்லைன்",
+    "unknown": "தெரியாதது",
+    "error": "பிழை"
+  },
+  "markdown": {
+    "imageFallback": "[படம்: {{label}}]",
+    "largeContentNotice": "உள்ளடக்கம் மிகப் பெரியது ({{count}} எழுத்துகள்). UI ஐ துரிதமாக வைத்திருக்க raw முன்னோட்டத்தைக் காட்டுகிறது.",
+    "largeContentTitle": "UI முடங்குவதைத் தடுக்க பெரிய உள்ளடக்கம் raw ஆகக் காட்டப்படுகிறது",
+    "raw": "Raw",
+    "rawPreview": "Raw முன்னோட்டம்",
+    "renderMarkdown": "Markdown ஐ வழங்கு",
+    "showAll": "அனைத்தையும் காட்டு",
+    "showMore": "மேலும் காட்டு",
+    "showRaw": "Raw ஆகக் காட்டு",
+    "showingChars": "{{shown}} / {{total}} எழுத்துகள் காட்டப்படுகின்றன",
+    "largeContentNotice_few": "உள்ளடக்கம் மிகப் பெரியது ({{count}} எழுத்துகள்). UI ஐ துரிதமாக வைத்திருக்க raw முன்னோட்டத்தைக் காட்டுகிறது.",
+    "largeContentNotice_many": "உள்ளடக்கம் மிகப் பெரியது ({{count}} எழுத்துகள்). UI ஐ துரிதமாக வைத்திருக்க raw முன்னோட்டத்தைக் காட்டுகிறது.",
+    "largeContentNotice_one": "உள்ளடக்கம் மிகப் பெரியது ({{count}} எழுத்துகள்). UI ஐ துரிதமாக வைத்திருக்க raw முன்னோட்டத்தைக் காட்டுகிறது.",
+    "largeContentNotice_other": "உள்ளடக்கம் மிகப் பெரியது ({{count}} எழுத்துகள்). UI ஐ துரிதமாக வைத்திருக்க raw முன்னோட்டத்தைக் காட்டுகிறது."
+  },
+  "terminal": {
+    "checkOutputForDetails": "விவரங்களுக்கு மேலே உள்ள terminal வெளியீட்டைச் சரிபார்க்கவும்",
+    "closingInSeconds": "{{count}}s இல் மூடப்படுகிறது...",
+    "closingInSeconds_few": "{{count}}s இல் மூடப்படுகிறது...",
+    "closingInSeconds_many": "{{count}}s இல் மூடப்படுகிறது...",
+    "closingInSeconds_one": "{{count}}s இல் மூடப்படுகிறது...",
+    "closingInSeconds_other": "{{count}}s இல் மூடப்படுகிறது...",
+    "completedSuccessfully": "வெற்றிகரமாக முடிந்தது",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "Process தோல்வியடைந்தது",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "முழு session முழுவதும் நகல் இல்லாமல் திரட்டப்பட்டது",
+    "cacheRead": "Cache படிப்பு",
+    "cacheWrite": "Cache எழுதுதல்",
+    "costUsd": "செலவு (USD)",
+    "inputTokens": "Input Tokens",
+    "model": "Model",
+    "outputTokens": "Output Tokens",
+    "phase": "Phase {{phase}}/{{total}}",
+    "promptInputShare": "prompt input இல் {{percent}}%",
+    "taskCoordination": "Task ஒருங்கிணைப்பு",
+    "thinkingText": "Thinking + Text",
+    "toolOutputs": "Tool வெளியீடுகள்",
+    "total": "மொத்தம்",
+    "userMessages": "பயனர் செய்திகள்",
+    "visibleContext": "தெரியும் Context",
+    "includesClaudeMd": "உட்பட CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} tokens",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "team ஐ நகலெடு",
+      "createTeam": "Team ஐ உருவாக்கு",
+      "deleteForever": "நிரந்தரமாக நீக்கு",
+      "deletePermanently": "நிரந்தரமாக நீக்கு",
+      "deleteTeam": "team ஐ நீக்கு",
+      "launching": "தொடங்குகிறது...",
+      "launchTeam": "team ஐ தொடங்கு",
+      "relaunchTeam": "team ஐ மீண்டும் தொடங்கு",
+      "restore": "மீட்டெடு",
+      "restoreTeam": "team ஐ மீட்டெடு",
+      "retry": "மீண்டும் முயற்சி",
+      "stopTeam": "team ஐ நிறுத்து",
+      "stopping": "நிறுத்துகிறது..."
+    },
+    "status": {
+      "active": "செயலில்",
+      "deleted": "நீக்கப்பட்டது",
+      "launching": "தொடங்குகிறது...",
+      "offline": "ஆஃப்லைன்",
+      "partialFailure": "தொடக்கம் பாதியில் தோல்வியடைந்தது",
+      "partialPending": "Bootstrap நிலுவையில்",
+      "partialSkipped": "தொடக்கம் உறுப்பினரைத் தவிர்த்தது",
+      "running": "இயங்குகிறது"
+    },
+    "partial": {
+      "pending": "கடைசி தொடக்கம் இன்னும் சரிசெய்கிறது.",
+      "skipped": "கடைசி தொடக்கம் சில teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount": "கடைசி தொடக்கம் {{count}}/{{expected}} teammate ஐத் தவிர்த்தது.",
+      "skippedWithCount_few": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount_many": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount_one": "கடைசி தொடக்கம் {{count}}/{{expected}} teammate ஐத் தவிர்த்தது.",
+      "skippedWithCount_other": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "stopped": "அனைத்து teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount": "{{count}}/{{expected}} teammate சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_few": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_many": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_one": "{{count}}/{{expected}} teammate சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_other": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது."
+    },
+    "noDescription": "விளக்கம் இல்லை",
+    "solo": "Solo",
+    "membersCount": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_few": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_many": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_one": "உறுப்பினர்: {{count}}",
+    "membersCount_other": "உறுப்பினர்கள்: {{count}}",
+    "all": "அனைத்தும்",
+    "moreCount": "+{{count}} மேலும்",
+    "moreCount_one": "+{{count}} மேலும்",
+    "moreCount_other": "+{{count}} மேலும்",
+    "moreCount_few": "+{{count}} மேலும்",
+    "moreCount_many": "+{{count}} மேலும்"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "தனது சொந்த OpenCode override இல்லாத ஒவ்வொரு project க்கும் இயல்புநிலை.",
+      "scopeDescriptionProject": "தேர்ந்தெடுத்த project ஐ மட்டும் override செய்யவும். இயங்கும் teams மாற்றப்படாது.",
+      "setAllProjectsDefault": "அனைத்து-projects இயல்புநிலையை அமை",
+      "setProjectDefault": "project இயல்புநிலையை அமை",
+      "validationContext": "சரிபார்ப்பு context",
+      "projectOverrideContext": "project override context",
+      "selectProjectHint": "உள்ளூர் மாதிரிகளைச் சோதிப்பதற்கு அல்லது இயல்புநிலைகளைச் சேமிப்பதற்கு முன் ஒரு project ஐத் தேர்ந்தெடுக்கவும்.",
+      "allProjectsHint": "சோதனைகள் {{project}} ஐப் பயன்படுத்துகின்றன. ஒரு project இல் override இல்லாவிட்டால் இயல்புநிலை பொருந்தும்.",
+      "projectHint": "சேமித்தல் {{project}} ஐ மட்டும் override செய்கிறது."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Context",
+      "closePanel": "panel ஐ மூடு",
+      "phase": "Phase:",
+      "current": "தற்போதைய",
+      "view": "காட்சி:",
+      "category": "வகை",
+      "bySize": "அளவு வாரியாக"
+    },
+    "metrics": {
+      "unavailable": "கிடைக்கவில்லை",
+      "contextUsed": "பயன்படுத்தப்பட்ட Context",
+      "promptInput": "Prompt Input",
+      "visibleContext": "தெரியும் Context",
+      "ofContext": "context இல்",
+      "ofPrompt": "prompt இல்",
+      "codexTelemetryUnavailable": "தற்போதைய runtime telemetry இன்னும் Codex prompt-side பயன்பாட்டை வெளிப்படுத்தவில்லை, எனவே Prompt Input மற்றும் Context Used ஒரு போலி பூஜ்ஜியத்தைக் காட்டுவதற்குப் பதிலாக கிடைக்காதவையாக இருக்கின்றன.",
+      "sessionCost": "Session செலவு:",
+      "parentPlus": "parent +",
+      "subagents": "subagents",
+      "details": "விவரங்கள்"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "பயன்படுத்தப்பட்ட Context",
+        "description": "தற்போது model இன் context window ஐ ஆக்கிரமித்துள்ள prompt input மற்றும் output tokens."
+      },
+      "promptInput": {
+        "title": "Prompt Input",
+        "description": "உருவாக்கத்திற்கு முன் model க்கு அனுப்பப்பட்ட tokens. Claude க்கு இதில் `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` அடங்கும்."
+      },
+      "visibleContext": {
+        "title": "தெரியும் Context",
+        "description": "prompt input இன் ஆராயக்கூடிய துணைக்கூறு: கோப்புகள், CLAUDE.md, tool வெளியீடுகள், பயனர் செய்திகள் மற்றும் நீங்கள் நேரடியாக மேம்படுத்தக்கூடிய ஒத்த injections."
+      },
+      "availability": {
+        "title": "கிடைக்கும்தன்மை",
+        "description": "ஒரு வழங்குநர் runtime இன்னும் prompt-side பயன்பாட்டை வெளிப்படுத்தவில்லை எனில், அளவீடுகள் பூஜ்ஜியம் என்று பாசாங்கு செய்வதற்குப் பதிலாக panel அவற்றைக் கிடைக்காதவையாகக் காட்டுகிறது."
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} tokens",
+      "toolsCount": "{{count}} tools",
+      "toolsCount_one": "{{count}} tool",
+      "toolsCount_other": "{{count}} tools",
+      "toolsCount_few": "{{count}} tools",
+      "toolsCount_many": "{{count}} tools",
+      "itemsCount": "{{count}} உருப்படிகள்",
+      "itemsCount_one": "{{count}} உருப்படி",
+      "itemsCount_other": "{{count}} உருப்படிகள்",
+      "itemsCount_few": "{{count}} உருப்படிகள்",
+      "itemsCount_many": "{{count}} உருப்படிகள்",
+      "missing": "காணவில்லை",
+      "thinking": "Thinking",
+      "text": "Text"
+    },
+    "empty": "இந்த session இல் context injections எதுவும் கண்டறியப்படவில்லை",
+    "view": {
+      "grouped": "தொகுக்கப்பட்டது",
+      "flat": "தட்டை"
+    },
+    "claudeMdFiles": "CLAUDE.md கோப்புகள்",
+    "mentionedFiles": "குறிப்பிடப்பட்ட கோப்புகள்"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Shutdown உறுதிப்படுத்தப்பட்டது",
+      "summary": {
+        "tools": "{{count}} tools",
+        "tools_one": "{{count}} tool",
+        "tools_other": "{{count}} tools",
+        "tools_few": "{{count}} tools",
+        "tools_many": "{{count}} tools"
+      },
+      "meta": {
+        "type": "வகை",
+        "duration": "கால அளவு",
+        "model": "Model",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Context Window",
+        "contextUsage": "Context பயன்பாடு",
+        "mainContext": "முதன்மை Context",
+        "totalOutput": "மொத்த வெளியீடு",
+        "turns": "({{count}} turns)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} turns)",
+        "subagentContext": "Subagent Context",
+        "phase": "Phase {{phase}}",
+        "turns_few": "({{count}} turns)",
+        "turns_many": "({{count}} turns)"
+      },
+      "trace": {
+        "title": "Execution Trace"
+      }
+    },
+    "user": {
+      "you": "நீங்கள்",
+      "showMore": "மேலும் காட்டு",
+      "showLess": "குறைவாகக் காட்டு",
+      "backgroundTask": "பின்னணி task",
+      "exitCode": "exit {{code}}",
+      "imagesAttached": "{{count}} படங்கள் இணைக்கப்பட்டன",
+      "imagesAttached_one": "{{count}} படம் இணைக்கப்பட்டது",
+      "imagesAttached_few": "{{count}} படங்கள் இணைக்கப்பட்டன",
+      "imagesAttached_many": "{{count}} படங்கள் இணைக்கப்பட்டன",
+      "imagesAttached_other": "{{count}} படங்கள் இணைக்கப்பட்டன"
+    },
+    "compact": {
+      "toggle": "compacted உள்ளடக்கத்தை மாற்று",
+      "contextCompacted": "Context compacted ஆனது",
+      "freedTokens": "({{tokens}} விடுவிக்கப்பட்டது)",
+      "phase": "Phase {{phase}}",
+      "conversationCompacted": "உரையாடல் Compacted ஆனது",
+      "summary": "context ஐ சேமிக்க முந்தைய செய்திகள் சுருக்கப்பட்டன. முழு உரையாடல் வரலாறு session கோப்பில் பாதுகாக்கப்படுகிறது.",
+      "compacted": "Compacted"
+    },
+    "executionTrace": {
+      "empty": "execution உருப்படிகள் இல்லை",
+      "nested": "Nested: {{name}}",
+      "input": "Input"
+    },
+    "items": {
+      "empty": "காட்ட உருப்படிகள் இல்லை"
+    },
+    "tools": {
+      "teammateSpawned": "Teammate spawn செய்யப்பட்டது",
+      "shutdownRequested": "Shutdown கோரப்பட்டது ->",
+      "noResultReceived": "முடிவு எதுவும் பெறப்படவில்லை",
+      "duration": "கால அளவு: {{duration}}",
+      "result": "முடிவு",
+      "write": {
+        "createdFile": "கோப்பு உருவாக்கப்பட்டது",
+        "wroteToFile": "கோப்பிற்கு எழுதப்பட்டது"
+      },
+      "skill": {
+        "instructions": "Skill வழிமுறைகள்",
+        "unknown": "தெரியாத Skill"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "பயனரால் கோரிக்கை இடைநிறுத்தப்பட்டது",
+      "planReadyForApproval": "திட்டம் ஒப்புதலுக்குத் தயார்"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "உரையாடல் வரலாறு இல்லை",
+      "description": "இந்த session இல் இன்னும் எந்த செய்திகளும் இல்லை."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% மீதம்)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "கீழே உருட்டு",
+    "bottom": "கீழ்",
+    "teammateMessage": {
+      "message": "செய்தி",
+      "resent": "மீண்டும் அனுப்பப்பட்டது",
+      "fallback": "Teammate செய்தி"
+    },
+    "system": {
+      "label": "System"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux நிறுவப்படவில்லை",
+    "detectedOs": "கண்டறியப்பட்ட OS: {{os}}",
+    "runtimePath": "Runtime path: {{path}}",
+    "phase": "Phase: {{phase}}",
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "manualGuide": "கைமுறை வழிகாட்டி",
+      "hideSetupSteps": "அமைப்பு படிகளை மறை",
+      "showSetupSteps": "அமைப்பு படிகளைக் காட்டு ({{count}})",
+      "showSetupSteps_one": "அமைப்பு படியைக் காட்டு ({{count}})",
+      "showSetupSteps_other": "அமைப்பு படிகளைக் காட்டு ({{count}})",
+      "recheck": "மீண்டும் சரிபார்",
+      "showSetupSteps_few": "அமைப்பு படிகளைக் காட்டு ({{count}})",
+      "showSetupSteps_many": "அமைப்பு படிகளைக் காட்டு ({{count}})"
+    },
+    "installerProgress": "நிறுவி முன்னேற்றம்",
+    "input": {
+      "placeholder": "நிறுவிக்கு உள்ளீடு அனுப்பு",
+      "send": "உள்ளீடு அனுப்பு",
+      "passwordNotice": "கடவுச்சொல் உள்ளீடு நேரடியாக நிறுவி terminal க்கு அனுப்பப்படுகிறது மற்றும் log வெளியீட்டில் சேர்க்கப்படவில்லை."
+    },
+    "details": {
+      "show": "விவரங்களைக் காட்டு",
+      "hide": "விவரங்களை மறை"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "சமீபத்திய செயல்பாடு இல்லை",
+    "sessionsCount": "{{count}} sessions",
+    "sessionsCount_one": "{{count}} session",
+    "sessionsCount_other": "{{count}} sessions",
+    "mode": {
+      "searchProjects": "projects ஐத் தேடு",
+      "searchAcrossProjects": "அனைத்து projects இலும் தேடு",
+      "searchInProject": "project இல் தேடு"
+    },
+    "currentProject": "தற்போதைய project",
+    "global": "Global",
+    "placeholders": {
+      "projects": "projects ஐத் தேடு...",
+      "conversations": "உரையாடல்களைத் தேடு..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\" க்கு projects எதுவும் கிடைக்கவில்லை",
+      "noProjects": "projects எதுவும் கிடைக்கவில்லை",
+      "minChars": "தேட குறைந்தது 2 எழுத்துகளைத் தட்டச்சு செய்யவும்",
+      "noFastResults": "சமீபத்திய sessions இல் \"{{query}}\" க்கு வேகமான முடிவுகள் இல்லை",
+      "noResults": "\"{{query}}\" க்கு முடிவுகள் எதுவும் கிடைக்கவில்லை"
+    },
+    "footer": {
+      "projectsCount": "{{count}} projects",
+      "projectsCount_one": "{{count}} project",
+      "projectsCount_other": "{{count}} projects",
+      "results": "{{count}} {{speed}}முடிவுகள்",
+      "results_one": "{{count}} {{speed}}முடிவு",
+      "results_other": "{{count}} {{speed}}முடிவுகள்",
+      "resultsAcrossProjects": "அனைத்து projects இலும் {{count}} {{speed}}முடிவுகள்",
+      "resultsAcrossProjects_one": "அனைத்து projects இலும் {{count}} {{speed}}முடிவு",
+      "resultsAcrossProjects_other": "அனைத்து projects இலும் {{count}} {{speed}}முடிவுகள்",
+      "fastPrefix": "வேகமான ",
+      "typeToSearch": "தேட தட்டச்சு செய்யவும்",
+      "navigate": "வழிசெலுத்து",
+      "select": "தேர்ந்தெடு",
+      "open": "திற",
+      "global": "global",
+      "close": "மூடு",
+      "results_few": "{{count}} {{speed}}முடிவுகள்",
+      "results_many": "{{count}} {{speed}}முடிவுகள்",
+      "resultsAcrossProjects_few": "அனைத்து projects இலும் {{count}} {{speed}}முடிவுகள்",
+      "resultsAcrossProjects_many": "அனைத்து projects இலும் {{count}} {{speed}}முடிவுகள்",
+      "projectsCount_few": "{{count}} projects",
+      "projectsCount_many": "{{count}} projects",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} sessions",
+    "sessionsCount_many": "{{count}} sessions"
+  },
+  "tasksPanel": {
+    "title": "Tasks",
+    "searchPlaceholder": "tasks ஐத் தேடு...",
+    "pinned": "Pinned",
+    "groupByLabel": "வாரியாக தொகு:",
+    "groupByAria": "வாரியாக தொகு",
+    "groupModes": {
+      "none": "எதுவுமில்லை",
+      "project": "Project",
+      "time": "நேரம்"
+    },
+    "showArchived": "காப்பகப்படுத்தியதைக் காட்டு",
+    "hideArchived": "காப்பகப்படுத்தியதை மறை",
+    "empty": {
+      "noMatchingTasks": "பொருந்தும் tasks இல்லை",
+      "noTasks": "tasks எதுவும் கிடைக்கவில்லை"
+    },
+    "teamLabel": "Team: {{team}}",
+    "showMore": "மேலும் காட்டு",
+    "showLess": "குறைவாகக் காட்டு",
+    "deleteConfirm": {
+      "title": "task ஐ நீக்கு",
+      "message": "task #{{taskId}} ஐ குப்பைக்கு நகர்த்தவா?",
+      "confirmLabel": "நீக்கு",
+      "cancelLabel": "ரத்துசெய்"
+    },
+    "deleteFailed": {
+      "title": "task ஐ நீக்க முடியவில்லை",
+      "fallbackMessage": "எதிர்பாராத பிழை ஏற்பட்டது",
+      "confirmLabel": "சரி"
+    },
+    "sort": {
+      "byTime": "நேரம் வாரியாக",
+      "byUnread": "படிக்காதது வாரியாக",
+      "byProject": "project வாரியாக",
+      "byTeam": "team வாரியாக"
+    }
+  },
+  "toolViewer": {
+    "input": "Input",
+    "replaceAll": "(அனைத்தையும் மாற்று)",
+    "noInputRecorded": "இந்த tool அழைப்புக்கு உள்ளீடு எதுவும் பதிவு செய்யப்படவில்லை.",
+    "agent": {
+      "action": "action",
+      "teammate": "teammate",
+      "team": "team",
+      "runtime": "runtime",
+      "type": "type",
+      "startupInstructionsHidden": "தொடக்க வழிமுறைகள் UI இல் மறைக்கப்பட்டுள்ளன."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Unpin",
+    "pin": "Pin",
+    "rename": "மறுபெயரிடு",
+    "markUnread": "படிக்காததாகக் குறி",
+    "unarchive": "காப்பகத்திலிருந்து மீட்டெடு",
+    "archive": "காப்பகப்படுத்து",
+    "deleteTask": "task ஐ நீக்கு"
+  },
+  "updateDialog": {
+    "closeDialog": "உரையாடலை மூடு",
+    "updateAvailable": "புதுப்பிப்பு கிடைக்கிறது",
+    "updateReady": "புதுப்பிப்பு தயார்",
+    "noReleaseNotes": "release notes எதுவும் கிடைக்கவில்லை.",
+    "viewOnGitHub": "GitHub இல் காண்",
+    "later": "பிறகு",
+    "restartNow": "இப்போது மறுதொடக்கம்",
+    "download": "பதிவிறக்கு"
+  },
+  "errorBoundary": {
+    "title": "ஏதோ தவறு நடந்தது",
+    "description": "பயன்பாட்டில் எதிர்பாராத பிழை ஏற்பட்டது. நீங்கள் பக்கத்தை மீண்டும் ஏற்றலாம் அல்லது பிழை நிலையை மீட்டமைக்கலாம்.",
+    "componentStack": "Component Stack",
+    "tryAgain": "மீண்டும் முயற்சி",
+    "copied": "நகலெடுக்கப்பட்டது",
+    "copyErrorDetails": "பிழை விவரங்களை நகலெடு",
+    "reportBugOnGitHub": "GitHub இல் பிழையைப் புகாரளி",
+    "reloadApp": "பயன்பாட்டை மீண்டும் ஏற்று",
+    "diagnosticsNotice": "GitHub பிழை அறிக்கைகள் மற்றும் நகலெடுக்கப்பட்ட diagnostics இல் பிழைச் செய்தி, stack traces, பயன்பாட்டு பதிப்பு, செயலில் உள்ள tab, தேர்ந்தெடுத்த team, task context மற்றும் சூழல் விவரங்கள் அடங்கும்."
+  },
+  "runtimeBackendSelector": {
+    "label": "Runtime backend",
+    "resolved": "Resolved: {{backend}}",
+    "current": "தற்போதைய",
+    "recommended": "பரிந்துரைக்கப்பட்டது",
+    "unavailable": "கிடைக்கவில்லை",
+    "cannotSelectYet": "இந்த backend ஐ இன்னும் தேர்ந்தெடுக்க முடியாது.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (தற்போது: {{backend}})",
+    "audience": {
+      "internal": "உள்ளக"
+    },
+    "states": {
+      "locked": "பூட்டப்பட்டது",
+      "disabled": "முடக்கப்பட்டது",
+      "authRequired": "Auth தேவை",
+      "runtimeMissing": "Runtime காணவில்லை",
+      "degraded": "தரம் குறைந்தது",
+      "unavailable": "கிடைக்கவில்லை"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "சரிபார்க்கிறது",
+    "unavailable": "கிடைக்கவில்லை",
+    "checkFailed": "சரிபார்ப்பு தோல்வியடைந்தது",
+    "free": "இலவசம்",
+    "freeTooltip": "OpenCode metadata மூலம் புகாரளிக்கப்பட்டது. கிடைக்கும்தன்மை மற்றும் வரம்புகள் மாறலாம்."
+  },
+  "taskFilters": {
+    "status": "நிலை",
+    "clearAll": "அனைத்தையும் அழி",
+    "selectAll": "அனைத்தையும் தேர்ந்தெடு",
+    "team": "Team",
+    "allTeams": "அனைத்து teams",
+    "searchTeams": "teams ஐத் தேடு...",
+    "noTeamsFound": "teams எதுவும் கிடைக்கவில்லை",
+    "project": "Project",
+    "allProjects": "அனைத்து Projects",
+    "searchProjects": "projects ஐத் தேடு...",
+    "noProjects": "projects இல்லை",
+    "comments": "கருத்துகள்",
+    "apply": "பயன்படுத்து",
+    "read": {
+      "all": "அனைத்தும்",
+      "unread": "படிக்காதது",
+      "read": "படித்தது"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "மொத்த Context: {{tokens}} tokens",
+    "context": "Context: {{tokens}}",
+    "phase": "Phase {{phase}}:",
+    "compactedTo": "({{tokens}} க்கு compacted ஆனது)"
+  },
+  "notifications": {
+    "row": {
+      "team": "team",
+      "subagent": "subagent",
+      "markAsRead": "படித்ததாகக் குறி",
+      "delete": "நீக்கு",
+      "viewInSession": "session இல் காண்"
+    },
+    "title": "அறிவிப்புகள்",
+    "loading": "அறிவிப்புகளை ஏற்றுகிறது...",
+    "actions": {
+      "markFilteredAsRead": "வடிகட்டியதைப் படித்ததாகக் குறி",
+      "markAllAsRead": "அனைத்தையும் படித்ததாகக் குறி",
+      "markFilteredRead": "வடிகட்டியதைப் படித்ததாகக் குறி",
+      "markAllRead": "அனைத்தையும் படித்ததாகக் குறி",
+      "clearFilteredNotifications": "வடிகட்டிய அறிவிப்புகளை அழி",
+      "clearAllNotifications": "அனைத்து அறிவிப்புகளையும் அழி",
+      "clickToConfirm": "உறுதிப்படுத்த கிளிக் செய்",
+      "clearFiltered": "வடிகட்டியதை அழி",
+      "clearAll": "அனைத்தையும் அழி"
+    },
+    "counts": {
+      "unreadInFilter": "வடிப்பானில் {{count}} படிக்காதவை",
+      "unreadInFilter_one": "வடிப்பானில் {{count}} படிக்காதது",
+      "unreadInFilter_few": "வடிப்பானில் {{count}} படிக்காதவை",
+      "unreadInFilter_many": "வடிப்பானில் {{count}} படிக்காதவை",
+      "unreadInFilter_other": "வடிப்பானில் {{count}} படிக்காதவை",
+      "inFilter": "வடிப்பானில் {{count}}",
+      "inFilter_one": "வடிப்பானில் {{count}}",
+      "inFilter_few": "வடிப்பானில் {{count}}",
+      "inFilter_many": "வடிப்பானில் {{count}}",
+      "inFilter_other": "வடிப்பானில் {{count}}",
+      "unread": "{{count}} படிக்காதவை",
+      "unread_one": "{{count}} படிக்காதது",
+      "unread_few": "{{count}} படிக்காதவை",
+      "unread_many": "{{count}} படிக்காதவை",
+      "unread_other": "{{count}} படிக்காதவை",
+      "total": "மொத்தம் {{count}}",
+      "total_one": "மொத்தம் {{count}}",
+      "total_few": "மொத்தம் {{count}}",
+      "total_many": "மொத்தம் {{count}}",
+      "total_other": "மொத்தம் {{count}}"
+    },
+    "filters": {
+      "other": "மற்றவை"
+    },
+    "empty": {
+      "noMatching": "பொருந்தும் அறிவிப்புகள் இல்லை",
+      "noNotifications": "அறிவிப்புகள் இல்லை",
+      "tryDifferentFilter": "வேறு வடிப்பானை முயற்சிக்கவும்",
+      "allCaughtUp": "நீங்கள் அனைத்தையும் பார்த்துவிட்டீர்கள்!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "புதுப்பிக்க மறுதொடக்கம் செய்",
+    "updateApp": "பயன்பாட்டைப் புதுப்பி",
+    "downloadedRestartTooltip": "புதுப்பிப்பு பதிவிறக்கப்பட்டது, பயன்படுத்த மறுதொடக்கம் செய்",
+    "newVersionAvailable": "புதிய பதிப்பு கிடைக்கிறது",
+    "updatingApp": "பயன்பாட்டைப் புதுப்பிக்கிறது",
+    "updateReady": "புதுப்பிப்பு தயார்",
+    "restartNow": "இப்போது மறுதொடக்கம்"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "sidebar ஐ விரிவாக்கு",
+    "collapseSidebarShortcut": "sidebar ஐ சுருக்கு ({{shortcut}})",
+    "sidebarView": "Sidebar காட்சி",
+    "resizeSidebar": "sidebar அளவை மாற்று",
+    "closeTab": "tab ஐ மூடு",
+    "openedFromSearch": "தேடலிலிருந்து திறக்கப்பட்டது",
+    "pinnedSession": "Pinned session",
+    "jumpToSection": "பிரிவுக்குச் செல்",
+    "newTab": "புதிய tab",
+    "newTabDashboard": "புதிய tab (Dashboard)",
+    "refreshSession": "session ஐ புதுப்பி",
+    "refreshSessionWithShortcut": "Session ஐ புதுப்பி ({{shortcut}})",
+    "loadingTab": "tab ஐ ஏற்றுகிறது",
+    "menu": {
+      "teams": "Teams",
+      "settings": "அமைப்புகள்",
+      "extensions": "நீட்டிப்புகள்",
+      "search": "தேடு",
+      "schedules": "அட்டவணைகள்",
+      "docs": "Docs",
+      "exportMarkdown": "Markdown ஆக ஏற்றுமதி செய்",
+      "exportJson": "JSON ஆக ஏற்றுமதி செய்",
+      "exportPlainText": "வெற்று உரையாக ஏற்றுமதி செய்",
+      "analyzeSession": "Session ஐ பகுப்பாய்வு செய்"
+    },
+    "tabMenu": {
+      "closeTabs": "{{count}} Tabs ஐ மூடு",
+      "closeTabs_one": "{{count}} Tab ஐ மூடு",
+      "closeTabs_few": "{{count}} Tabs ஐ மூடு",
+      "closeTabs_many": "{{count}} Tabs ஐ மூடு",
+      "closeTabs_other": "{{count}} Tabs ஐ மூடு",
+      "closeTab": "Tab ஐ மூடு",
+      "closeOtherTabs": "மற்ற Tabs ஐ மூடு",
+      "splitRight": "வலதுபுறம் பிரி",
+      "splitLeft": "இடதுபுறம் பிரி",
+      "pinToSidebar": "Sidebar க்கு Pin செய்",
+      "unpinFromSidebar": "Sidebar இலிருந்து Unpin செய்",
+      "hideFromSidebar": "Sidebar இலிருந்து மறை",
+      "unhideFromSidebar": "Sidebar இல் மறையாக்கம் நீக்கு",
+      "closeAllTabs": "அனைத்து Tabs ஐ மூடு"
+    },
+    "sections": {
+      "team": "Team",
+      "sessions": "Sessions",
+      "kanban": "Kanban",
+      "claudeLogs": "Logs",
+      "messages": "செய்திகள்"
+    }
+  },
+  "editorFormatting": {
+    "bold": "தடிமன்",
+    "italic": "சாய்வு",
+    "strike": "குறுக்குக்கோடு",
+    "code": "Code"
+  },
+  "diff": {
+    "changed": "மாற்றப்பட்டது",
+    "noChangesDetected": "மாற்றங்கள் எதுவும் கண்டறியப்படவில்லை"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT உள்நுழைவு இணைப்பு மற்றும் குறியீட்டை நகலெடு",
+    "copyLoginLink": "ChatGPT உள்நுழைவு இணைப்பை நகலெடு",
+    "copyFailed": "நகலெடுத்தல் தோல்வியடைந்தது",
+    "copyLinkAndCode": "இணைப்பு + குறியீட்டை நகலெடு",
+    "copyLink": "இணைப்பை நகலெடு",
+    "enterCodeOnLoginPage": "இந்தக் குறியீட்டை ChatGPT உள்நுழைவு பக்கத்தில் உள்ளிடவும்"
+  },
+  "window": {
+    "minimize": "சிறிதாக்கு",
+    "maximize": "பெரிதாக்கு",
+    "restore": "மீட்டெடு"
+  },
+  "context": {
+    "local": "உள்ளூர்",
+    "switchingTo": "{{workspace}} க்கு மாறுகிறது",
+    "loadingWorkspace": "workspace ஐ ஏற்றுகிறது",
+    "switchWorkspace": "Workspace ஐ மாற்று"
+  },
+  "repositories": {
+    "noneAvailable": "repositories எதுவும் கிடைக்கவில்லை",
+    "remove": "repository ஐ அகற்று"
+  },
+  "export": {
+    "session": "session ஐ ஏற்றுமதி செய்",
+    "sessionTitle": "Session ஐ ஏற்றுமதி செய்"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "session தரவு எதுவும் கிடைக்கவில்லை",
+    "title": "Session அறிக்கை"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Project ஐத் தேர்ந்தெடு"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "புதுப்.",
+      "updatedYesterday": "நேற்று புதுப்.",
+      "yesterday": "நேற்று"
+    },
+    "reviewState": {
+      "needsFix": "திருத்தங்கள் தேவை"
+    },
+    "unassigned": "ஒதுக்கப்படாதது"
+  }
+}

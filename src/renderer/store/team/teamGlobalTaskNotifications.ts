@@ -8,7 +8,12 @@ import {
 } from '@shared/utils/teamTaskState';
 
 import type { AppConfig } from '@renderer/types/data';
-import type { GlobalTask, TaskComment, TeamMessageNotificationData, TeamSummary } from '@shared/types';
+import type {
+  GlobalTask,
+  TaskComment,
+  TeamMessageNotificationData,
+  TeamSummary,
+} from '@shared/types';
 
 const notifiedClarificationTaskKeys = new Set<string>();
 const notifiedStatusChangeKeys = new Set<string>();
@@ -18,6 +23,13 @@ const notifiedAllCompletedTeams = new Set<string>();
 const notifiedBlockedTaskKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
+
+interface TaskNotificationIndexes {
+  readonly firstOldTaskByKey: ReadonlyMap<string, GlobalTask>;
+  readonly lastOldTaskByKey: ReadonlyMap<string, GlobalTask>;
+  readonly oldTaskKeys: ReadonlySet<string>;
+  readonly oldTasksByTeam: ReadonlyMap<string, readonly GlobalTask[]>;
+}
 
 export interface ProcessGlobalTaskNotificationsParams {
   oldTasks: GlobalTask[];
@@ -43,9 +55,7 @@ export function consumeFirstGlobalTasksFetchFlag(): boolean {
   return wasFirst;
 }
 
-export function processGlobalTaskNotifications(
-  params: ProcessGlobalTaskNotificationsParams
-): void {
+export function processGlobalTaskNotifications(params: ProcessGlobalTaskNotificationsParams): void {
   const { oldTasks, newTasks, appConfig, teamByName, isInitialFetch } = params;
 
   if (isInitialFetch) {
@@ -54,18 +64,20 @@ export function processGlobalTaskNotifications(
   }
 
   const notifyOnClarifications = appConfig?.notifications?.notifyOnClarifications ?? true;
-  detectClarificationNotifications(oldTasks, newTasks, notifyOnClarifications);
-  detectBlockedTaskNotifications(oldTasks, newTasks, notifyOnClarifications);
-  detectStatusChangeNotifications(oldTasks, newTasks, appConfig, teamByName);
+  const oldTaskIndexes = buildTaskNotificationIndexes(oldTasks);
+
+  detectClarificationNotifications(oldTaskIndexes, newTasks, notifyOnClarifications);
+  detectBlockedTaskNotifications(oldTaskIndexes, newTasks, notifyOnClarifications);
+  detectStatusChangeNotifications(oldTaskIndexes, newTasks, appConfig, teamByName);
 
   const notifyOnTaskComments = appConfig?.notifications?.notifyOnTaskComments ?? true;
-  detectTaskCommentNotifications(oldTasks, newTasks, notifyOnTaskComments);
+  detectTaskCommentNotifications(oldTaskIndexes, newTasks, notifyOnTaskComments);
 
   const notifyOnTaskCreated = appConfig?.notifications?.notifyOnTaskCreated ?? true;
-  detectTaskCreatedNotifications(oldTasks, newTasks, notifyOnTaskCreated);
+  detectTaskCreatedNotifications(oldTaskIndexes, newTasks, notifyOnTaskCreated);
 
   const notifyOnAllCompleted = appConfig?.notifications?.notifyOnAllTasksCompleted ?? true;
-  detectAllTasksCompletedNotification(oldTasks, newTasks, notifyOnAllCompleted);
+  detectAllTasksCompletedNotification(oldTaskIndexes, newTasks, notifyOnAllCompleted);
 }
 
 function seedGlobalTaskNotificationState(tasks: readonly GlobalTask[]): void {
@@ -74,7 +86,9 @@ function seedGlobalTaskNotificationState(tasks: readonly GlobalTask[]): void {
       notifiedClarificationTaskKeys.add(`${task.teamName}:${task.id}`);
     }
     if ((task.blockedBy?.length ?? 0) > 0) {
-      notifiedBlockedTaskKeys.add(`${task.teamName}:${task.id}:${(task.blockedBy ?? []).join(',')}`);
+      notifiedBlockedTaskKeys.add(
+        `${task.teamName}:${task.id}:${(task.blockedBy ?? []).join(',')}`
+      );
     }
     notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:${task.status}`);
     if (isTeamTaskNeedsFixActionable(task)) {
@@ -105,19 +119,53 @@ function seedGlobalTaskNotificationState(tasks: readonly GlobalTask[]): void {
   }
 }
 
+function getTaskNotificationKey(task: Pick<GlobalTask, 'teamName' | 'id'>): string {
+  return `${task.teamName}:${task.id}`;
+}
+
+function buildTaskNotificationIndexes(tasks: readonly GlobalTask[]): TaskNotificationIndexes {
+  const firstOldTaskByKey = new Map<string, GlobalTask>();
+  const lastOldTaskByKey = new Map<string, GlobalTask>();
+  const oldTaskKeys = new Set<string>();
+  const oldTasksByTeam = new Map<string, GlobalTask[]>();
+
+  for (const task of tasks) {
+    const key = getTaskNotificationKey(task);
+    if (!firstOldTaskByKey.has(key)) {
+      firstOldTaskByKey.set(key, task);
+    }
+    lastOldTaskByKey.set(key, task);
+    oldTaskKeys.add(key);
+
+    const teamTasks = oldTasksByTeam.get(task.teamName);
+    if (teamTasks) {
+      teamTasks.push(task);
+    } else {
+      oldTasksByTeam.set(task.teamName, [task]);
+    }
+  }
+
+  return {
+    firstOldTaskByKey,
+    lastOldTaskByKey,
+    oldTaskKeys,
+    oldTasksByTeam,
+  };
+}
+
 function showTeamNotification(data: TeamMessageNotificationData): void {
   void api.teams?.showMessageNotification(data).catch(() => undefined);
 }
 
 function detectClarificationNotifications(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   notifyEnabled: boolean
 ): void {
   for (const task of newTasks) {
-    const key = `${task.teamName}:${task.id}`;
+    const key = getTaskNotificationKey(task);
     if (task.needsClarification === 'user') {
-      const oldTask = oldTasks.find((t) => t.teamName === task.teamName && t.id === task.id);
+      const oldTask = oldTaskIndexes.firstOldTaskByKey.get(key);
       if (oldTask?.needsClarification !== 'user' && !notifiedClarificationTaskKeys.has(key)) {
         notifiedClarificationTaskKeys.add(key);
         showClarificationNotification(task, !notifyEnabled);
@@ -155,7 +203,7 @@ function showClarificationNotification(task: GlobalTask, suppressToast: boolean)
 }
 
 function detectStatusChangeNotifications(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   config: AppConfig | null,
   teamByName: Record<string, TeamSummary>
@@ -168,7 +216,7 @@ function detectStatusChangeNotifications(
   const onlySolo = config?.notifications?.statusChangeOnlySolo ?? true;
 
   for (const task of newTasks) {
-    const oldTask = oldTasks.find((t) => t.teamName === task.teamName && t.id === task.id);
+    const oldTask = oldTaskIndexes.firstOldTaskByKey.get(getTaskNotificationKey(task));
     if (!oldTask) continue;
 
     const taskKanbanColumn = getTeamTaskWorkflowColumn(task);
@@ -254,15 +302,12 @@ function showStatusChangeNotification(
 }
 
 function detectTaskCommentNotifications(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   notifyEnabled: boolean
 ): void {
-  const oldTaskMap = new Map(oldTasks.map((t) => [`${t.teamName}:${t.id}`, t]));
-
   for (const task of newTasks) {
-    const mapKey = `${task.teamName}:${task.id}`;
-    const oldTask = oldTaskMap.get(mapKey);
+    const oldTask = oldTaskIndexes.lastOldTaskByKey.get(getTaskNotificationKey(task));
     const oldCommentCount = oldTask?.comments?.length ?? 0;
     const newCommentCount = task.comments?.length ?? 0;
 
@@ -346,14 +391,12 @@ function showTaskReviewRequestedNotification(
 }
 
 function detectBlockedTaskNotifications(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   notifyEnabled: boolean
 ): void {
-  const oldTaskMap = new Map(oldTasks.map((task) => [`${task.teamName}:${task.id}`, task]));
-
   for (const task of newTasks) {
-    const oldTask = oldTaskMap.get(`${task.teamName}:${task.id}`);
+    const oldTask = oldTaskIndexes.lastOldTaskByKey.get(getTaskNotificationKey(task));
     const oldBlockedBy = new Set(oldTask?.blockedBy?.filter(Boolean) ?? []);
     const newBlockedBy = Array.from(new Set(task.blockedBy?.filter(Boolean) ?? []));
     const taskKeyPrefix = `${task.teamName}:${task.id}:`;
@@ -407,15 +450,13 @@ function showTaskBlockedNotification(
 }
 
 function detectTaskCreatedNotifications(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   notifyEnabled: boolean
 ): void {
-  const oldTaskKeys = new Set(oldTasks.map((t) => `${t.teamName}:${t.id}`));
-
   for (const task of newTasks) {
-    const key = `${task.teamName}:${task.id}`;
-    if (oldTaskKeys.has(key)) continue;
+    const key = getTaskNotificationKey(task);
+    if (oldTaskIndexes.oldTaskKeys.has(key)) continue;
     if (notifiedCreatedTaskKeys.has(key)) continue;
     notifiedCreatedTaskKeys.add(key);
 
@@ -444,7 +485,7 @@ function showTaskCreatedNotification(task: GlobalTask, suppressToast: boolean): 
 }
 
 function detectAllTasksCompletedNotification(
-  oldTasks: GlobalTask[],
+  oldTaskIndexes: TaskNotificationIndexes,
   newTasks: GlobalTask[],
   notifyEnabled: boolean
 ): void {
@@ -464,7 +505,7 @@ function detectAllTasksCompletedNotification(
     }
     if (notifiedAllCompletedTeams.has(teamName)) continue;
 
-    const oldTeamTasks = oldTasks.filter((t) => t.teamName === teamName);
+    const oldTeamTasks = oldTaskIndexes.oldTasksByTeam.get(teamName) ?? [];
     const wasAlreadyAllCompleted =
       oldTeamTasks.length > 0 && oldTeamTasks.every(isTeamTaskFinalForCompletionNotification);
     if (wasAlreadyAllCompleted) {

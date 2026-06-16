@@ -112,6 +112,90 @@ describe('planTeamRuntimeLanes', () => {
     });
   });
 
+  it('creates worktree-root OpenCode lanes for pure OpenCode teams with isolated members', () => {
+    const result = planTeamRuntimeLanes({
+      leadProviderId: 'opencode',
+      baseCwd: '/repo',
+      members: [
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          cwd: '/repo/.worktrees/bob',
+        },
+        {
+          name: 'tom',
+          providerId: 'opencode',
+          model: 'nemotron-3-super-free',
+          cwd: '/repo/.worktrees/tom',
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      plan: {
+        mode: 'pure_opencode_worktree_root_lanes',
+        primaryMembers: [],
+        sideLanes: [
+          {
+            laneId: 'secondary:opencode:bob',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              cwd: '/repo/.worktrees/bob',
+            }),
+          },
+          {
+            laneId: 'secondary:opencode:tom',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              cwd: '/repo/.worktrees/tom',
+            }),
+          },
+        ],
+      },
+    });
+  });
+
+  it('keeps base-cwd OpenCode members on primary and isolated members on worktree lanes', () => {
+    const result = planTeamRuntimeLanes({
+      leadProviderId: 'opencode',
+      baseCwd: '/repo',
+      members: [
+        { name: 'lead-dev', providerId: 'opencode', model: 'big-pickle' },
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          cwd: '/repo/.worktrees/bob',
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      plan: {
+        mode: 'pure_opencode_worktree_root_lanes',
+        primaryMembers: [expect.objectContaining({ name: 'lead-dev', providerId: 'opencode' })],
+        sideLanes: [
+          {
+            laneId: 'secondary:opencode:bob',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              cwd: '/repo/.worktrees/bob',
+            }),
+          },
+        ],
+      },
+    });
+  });
+
   it('creates a secondary OpenCode lane for an Anthropic-led mixed team', () => {
     const result = planTeamRuntimeLanes({
       leadProviderId: 'anthropic',

@@ -1,5 +1,8 @@
 import { buildCodexWorkspaceTrustSettingsArgs } from '@features/workspace-trust/core/domain';
-import { OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
+import {
+  OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+  OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
+} from '@shared/utils/openCodeWindowsAccessDenied';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -1024,6 +1027,42 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.ready).toBe(false);
     expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
     expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+  });
+
+  it('keeps OpenCode managed node_modules symlink EPERM diagnostics specific during prepareForProvisioning', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: [],
+      warnings: [
+        [
+          'Runtime provider management command failed unexpectedly:',
+          "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
+          "-> 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Data\\opencode\\profiles\\abc123\\config\\opencode\\node_modules'",
+        ].join(' '),
+      ],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE]);
   });
 
   it('keeps OpenCode access-denied selected-model failures provider-scoped', async () => {
@@ -2296,7 +2335,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(spawnedArgLists.some((args) => args.includes('-p'))).toBe(false);
   });
 
-  it('passes provider launch args before codex runtime status subcommands', async () => {
+  it('strips Codex config overrides from runtime status control-plane commands', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({
         providers: {
@@ -2320,7 +2359,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       providerId: 'codex',
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="fast"',
+      ],
     });
 
     expect(result.warning).toBeUndefined();
@@ -2434,7 +2478,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
-  it('passes provider launch args before auth status fallback subcommands', async () => {
+  it('strips Codex config overrides from auth status fallback control-plane commands', async () => {
     execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
       if (args.includes('runtime')) {
         throw new Error('runtime status failed');
@@ -2458,7 +2502,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       providerId: 'codex',
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="fast"',
+      ],
     });
 
     expect(result.warning).toContain('runtime status was unavailable');
@@ -2518,7 +2567,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         SHELL: '/bin/zsh',
       },
       'codex',
-      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']
+      ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}', '-c', 'service_tier="fast"']
     );
 
     expect(result.warning).toBeUndefined();
@@ -2528,6 +2577,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       [
         '--settings',
         '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="fast"',
         '-p',
         'Output only the single word PONG.',
         '--output-format',
@@ -2916,7 +2967,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(getCodexModelCatalog).not.toHaveBeenCalled();
   });
 
-  it('passes provider launch args before model-list catalog subcommands', async () => {
+  it('strips Codex config overrides from model-list control-plane commands', async () => {
     execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
       if (args.includes('model')) {
         return {
@@ -2960,10 +3011,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         PATH: '/usr/bin',
         SHELL: '/bin/zsh',
       },
-      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      providerArgs: [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        '-c',
+        'service_tier="fast"',
+      ],
       limitContext: false,
     });
 
+    for (const call of execCliMock.mock.calls) {
+      expect(call[1]).not.toContain('-c');
+    }
     expect(execCliMock).toHaveBeenCalledWith(
       '/fake/claude',
       [
@@ -4528,7 +4587,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
   });
 
-  it('rejects explicit Codex Fast before launch when auth or model eligibility is invalid', () => {
+  it('allows explicit Codex Fast to downgrade before launch when auth or model eligibility is invalid', () => {
     const svc = new TeamProvisioningService();
     const facts = {
       defaultModel: 'gpt-5.4-mini',
@@ -4596,7 +4655,27 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         fastMode: 'on',
         facts,
       })
-    ).toThrow('enables Codex Fast mode');
+    ).not.toThrow();
+
+    expect(
+      (svc as any).buildProviderModelLaunchIdentity({
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+          fastMode: 'on',
+        },
+        facts,
+      })
+    ).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      selectedModel: 'gpt-5.4-mini',
+      resolvedLaunchModel: 'gpt-5.4-mini',
+      selectedFastMode: 'on',
+      resolvedFastMode: false,
+      fastResolutionReason: expect.stringContaining('API key mode uses standard API pricing'),
+    });
   });
 
   it('rejects Anthropic max and fast when the exact resolved launch model does not support them', () => {

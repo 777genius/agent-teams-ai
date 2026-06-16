@@ -6,8 +6,22 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
+import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 
 import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
+
+export interface UpdateInboxMessageTextRequest {
+  member: string;
+  messageId: string;
+  text: string;
+  expectedMessageKind?: InboxMessage['messageKind'];
+  expectedWorkSyncPayloadHash?: string;
+}
+
+export interface UpdateInboxMessageTextResult {
+  found: boolean;
+  updated: boolean;
+}
 
 export interface MergeRuntimeDeliveryTaskRefsRequest {
   inboxName: string;
@@ -135,6 +149,78 @@ export class TeamInboxWriter {
       messageId: resultMessageId,
       ...(resultDeduplicated ? { deduplicated: true } : {}),
     };
+  }
+
+  async updateMessageText(
+    teamName: string,
+    request: UpdateInboxMessageTextRequest
+  ): Promise<UpdateInboxMessageTextResult> {
+    const messageId = request.messageId.trim();
+    if (!messageId) {
+      return { found: false, updated: false };
+    }
+
+    const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${request.member}.json`);
+    let result: UpdateInboxMessageTextResult = { found: false, updated: false };
+
+    await withFileLock(inboxPath, async () => {
+      await withInboxLock(inboxPath, async () => {
+        let raw: string;
+        try {
+          raw = await fs.promises.readFile(inboxPath, 'utf8');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            return;
+          }
+          throw error;
+        }
+
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw) as unknown;
+        } catch {
+          return;
+        }
+        if (!Array.isArray(parsed)) {
+          return;
+        }
+
+        let changed = false;
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object') {
+            continue;
+          }
+          const row = item as Record<string, unknown>;
+          const rowMessageId = getEffectiveInboxMessageId(row);
+          if (rowMessageId !== messageId) {
+            continue;
+          }
+          result = { found: true, updated: changed };
+          if (request.expectedMessageKind && row.messageKind !== request.expectedMessageKind) {
+            continue;
+          }
+          if (
+            request.expectedWorkSyncPayloadHash &&
+            row.workSyncPayloadHash !== request.expectedWorkSyncPayloadHash
+          ) {
+            continue;
+          }
+          if (row.text === request.text) {
+            continue;
+          }
+          row.text = request.text;
+          changed = true;
+          result = { found: true, updated: true };
+        }
+
+        if (!changed) {
+          return;
+        }
+        await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+      });
+    });
+
+    return result;
   }
 
   async mergeRuntimeDeliveryTaskRefs(

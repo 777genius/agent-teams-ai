@@ -968,6 +968,7 @@ async function memberBriefing(context, memberName, options = {}) {
 
     if (cwd) {
         lines.push('', `Working directory: ${cwd}`);
+        lines.push('If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in this working directory as needed. Stay within the task scope, repository rules, and normal permission boundaries.');
     }
 
     lines.push(

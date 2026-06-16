@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "สร้างงานจากข้อความ",
+      "editMessage": "แก้ไขข้อความ",
+      "expandMessage": "ขยายข้อความ",
+      "replyToMessage": "ตอบกลับข้อความ",
+      "restartTeam": "รีสตาร์ททีม"
+    },
+    "authError": {
+      "description": "การยืนยันตัวตนล้มเหลว การรีสตาร์ททีมจะรีเฟรชเซสชันและอาจแก้ไขปัญหานี้ได้ หากปัญหายังคงอยู่ ให้ตรวจสอบข้อมูลรับรอง API ของคุณหรือลองใหม่อีกครั้งในภายหลัง"
+    },
+    "automation": {
+      "reviewPickup": "ขอให้เพื่อนร่วมทีมรับการรีวิว",
+      "stallNudge": "ขอให้เพื่อนร่วมทีมดำเนินงานที่ค้างอยู่ต่อ",
+      "workSyncBody": "ขอให้เพื่อนร่วมทีมซิงค์งานปัจจุบัน"
+    },
+    "badges": {
+      "automation": "ระบบอัตโนมัติ",
+      "bootstrap": "บูตสแตรป",
+      "command": "คำสั่ง",
+      "comment": "ความคิดเห็น",
+      "live": "สด",
+      "note": "บันทึก",
+      "rateLimited": "ถูกจำกัดอัตรา",
+      "restart": "รีสตาร์ท",
+      "result": "ผลลัพธ์",
+      "session": "เซสชัน",
+      "stallNudge": "กระตุ้นงานค้าง",
+      "start": "เริ่ม",
+      "workSync": "ซิงค์งาน",
+      "agentError": "ข้อผิดพลาดเอเจนต์",
+      "apiError": "ข้อผิดพลาด API"
+    },
+    "bootstrap": {
+      "acknowledged": "รับทราบการบูตสแตรปแล้ว",
+      "restarting": "กำลังรีสตาร์ทเพื่อนร่วมทีม",
+      "starting": "กำลังเริ่มเพื่อนร่วมทีม"
+    },
+    "rawJson": "JSON ดิบ",
+    "unread": "ยังไม่อ่าน",
+    "thoughts": {
+      "count": "{{count}} ความคิด",
+      "count_one": "{{count}} ความคิด",
+      "expand": "ขยายความคิด",
+      "showMore": "ดูเพิ่มเติม",
+      "showLess": "ดูน้อยลง",
+      "count_few": "{{count}} ความคิด",
+      "count_many": "{{count}} ความคิด",
+      "count_other": "{{count}} ความคิด",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - ความคิด"
+    },
+    "timeline": {
+      "loadingMessages": "กำลังโหลดข้อความ...",
+      "noMessages": "ไม่มีข้อความ",
+      "emptyHint": "ส่งข้อความถึงสมาชิกเพื่อดูกิจกรรม",
+      "newSession": "เซสชันใหม่",
+      "olderCount": "+{{count}} ที่เก่ากว่า",
+      "showMore": "แสดงอีก {{count}} รายการ",
+      "showAll": "แสดงทั้งหมด",
+      "olderCount_one": "+{{count}} ที่เก่ากว่า",
+      "olderCount_few": "+{{count}} ที่เก่ากว่า",
+      "olderCount_many": "+{{count}} ที่เก่ากว่า",
+      "olderCount_other": "+{{count}} ที่เก่ากว่า"
+    },
+    "pendingReplies": {
+      "title": "รอการตอบกลับ",
+      "openMember": "เปิดสมาชิก",
+      "messageSentAwaitingReply": "ส่งข้อความแล้ว รอการตอบกลับ",
+      "awaitingReply": "รอการตอบกลับ",
+      "externalTeam": "ทีมภายนอก",
+      "crossTeamAwaitingReply": "ส่งข้อความข้ามทีมแล้ว รอการตอบกลับ",
+      "user": "ผู้ใช้",
+      "awaitingApproval": "รอการอนุมัติ"
+    },
+    "reply": {
+      "replyingTo": "กำลังตอบกลับถึง",
+      "action": "ตอบกลับ"
+    },
+    "activeTasks": {
+      "inProgress": "กำลังดำเนินการ",
+      "expandInProgress": "ขยายงานที่กำลังดำเนินการ",
+      "collapseInProgress": "ยุบงานที่กำลังดำเนินการ",
+      "reviewing": "กำลังรีวิว",
+      "workingOn": "กำลังทำ"
+    },
+    "expandDialog": {
+      "description": "มุมมองข้อความแบบขยาย"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "สร้าง",
+      "creating": "กำลังสร้าง...",
+      "openExisting": "เปิดทีมที่มีอยู่",
+      "skipPreflightAndCreate": "ข้ามการตรวจสอบก่อนเริ่มและสร้าง"
+    },
+    "conflict": {
+      "description": "การรันสองทีมในไดเรกทอรีเดียวกันมีความเสี่ยง - อาจขัดแย้งกันในการแก้ไขไฟล์เดียวกัน ลองพิจารณาใช้ไดเรกทอรีอื่นหรือ git worktree เพื่อแยกการทำงาน",
+      "title": "ทีม \"{{team}}\" อีกทีมหนึ่งกำลังทำงานอยู่สำหรับไดเรกทอรีทำงานนี้",
+      "workingDirectory": "ไดเรกทอรีทำงาน:"
+    },
+    "description": {
+      "copy": "สร้างทีมใหม่จากทีมที่มีอยู่",
+      "create": "ตั้งค่าทีมของคุณและเลือกวิธีเริ่มต้น"
+    },
+    "errors": {
+      "nameExists": "มีชื่อทีมนี้อยู่แล้ว",
+      "nameLaunching": "ทีมที่ใช้ชื่อนี้กำลังเริ่มอยู่",
+      "createConfigFailed": "สร้างการตั้งค่าทีมไม่สำเร็จ",
+      "loadProjectsFailed": "โหลดโปรเจกต์ไม่สำเร็จ"
+    },
+    "fields": {
+      "color": "สี (ไม่บังคับ)",
+      "description": "คำอธิบาย (ไม่บังคับ)",
+      "prompt": "พรอมต์สำหรับหัวหน้าทีม (ไม่บังคับ)",
+      "teamName": "ชื่อทีม"
+    },
+    "launchAfterCreate": {
+      "description": "เริ่มทีมทันทีผ่าน Claude CLI ในเครื่อง",
+      "label": "รันคำสั่งหลังจากสร้าง"
+    },
+    "localOnly": "ใช้งานได้เฉพาะในโหมด Electron ในเครื่องเท่านั้น",
+    "onDisk": "บนดิสก์:",
+    "placeholders": {
+      "description": "คำอธิบายสั้น ๆ เกี่ยวกับวัตถุประสงค์ของทีม",
+      "prompt": "คำแนะนำสำหรับหัวหน้าทีมระหว่างการจัดเตรียม..."
+    },
+    "saved": "บันทึกแล้ว",
+    "solo": {
+      "description": "จะเริ่มเฉพาะหัวหน้าทีม (กระบวนการหลัก) เท่านั้น - จะไม่สร้างเพื่อนร่วมทีม ทำงานเหมือนเซสชันเอเจนต์ปกติในรันไทม์ที่คุณเลือก (Claude Code, Codex, OpenCode, Gemini) แต่สามารถเข้าถึงบอร์ดงานสำหรับการวางแผนได้ ช่วยประหยัดโทเค็นโดยหลีกเลี่ยงค่าใช้จ่ายในการประสานงานเพื่อนร่วมทีม คุณสามารถเพิ่มสมาชิกได้ในภายหลังจากการตั้งค่าทีม",
+      "label": "ทีมเดี่ยว"
+    },
+    "title": {
+      "copy": "คัดลอกทีม",
+      "create": "สร้างทีม"
+    },
+    "optional": {
+      "launchSettingsTitle": "การตั้งค่าการเริ่มเพิ่มเติม",
+      "launchSettingsDescription": "พรอมต์ ความปลอดภัย และการแทนที่ CLI อยู่ที่นี่เมื่อคุณต้องการ",
+      "teamDetailsTitle": "รายละเอียดทีมเพิ่มเติม",
+      "teamDetailsDescription": "เก็บโฟลว์เริ่มต้นให้กระชับ และเปิดส่วนนี้เฉพาะเมื่อคุณต้องการบริบทเพิ่มเติมหรือสีกำหนดเอง"
+    },
+    "prepare": {
+      "unsupportedPreload": "เวอร์ชัน preload ปัจจุบันไม่รองรับ team:prepareProvisioning รีสตาร์ทแอป dev",
+      "selectWorkingDirectory": "เลือกไดเรกทอรีทำงานเพื่อตรวจสอบความถูกต้องของสภาพแวดล้อมการเริ่ม",
+      "someProvidersNeedAttention": "ผู้ให้บริการบางรายที่เลือกต้องการความสนใจ",
+      "readyWithNotes": "ผู้ให้บริการที่เลือกทั้งหมดพร้อมแล้ว พร้อมหมายเหตุ",
+      "ready": "ผู้ให้บริการที่เลือกทั้งหมดพร้อมแล้ว",
+      "failed": "เตรียมผู้ให้บริการที่เลือกไม่สำเร็จ",
+      "checkingProviders": "กำลังตรวจสอบผู้ให้บริการที่เลือก...",
+      "preparingEnvironment": "กำลังเตรียมสภาพแวดล้อม...",
+      "selectedProvidersReadyWithNotes": "ผู้ให้บริการที่เลือกพร้อมแล้ว (พร้อมหมายเหตุ)",
+      "selectedProvidersReady": "ผู้ให้บริการที่เลือกพร้อมแล้ว"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "ชื่อต้องมีตัวอักษรหรือตัวเลขอย่างน้อยหนึ่งตัว",
+      "nameTooLong": "ชื่อยาวเกินไป (สูงสุด 128 อักขระ)",
+      "selectWorkingDirectory": "เลือกไดเรกทอรีทำงาน (cwd)",
+      "memberNameRequired": "ชื่อสมาชิกต้องไม่ว่างเปล่า",
+      "memberNameInvalid": "ชื่อสมาชิกต้องขึ้นต้นด้วยตัวอักษรหรือตัวเลข ใช้ได้เฉพาะ [a-zA-Z0-9._-] สูงสุด 128 อักขระ",
+      "memberNamesUnique": "ชื่อสมาชิกต้องไม่ซ้ำกัน",
+      "openCodeLeadModelRequired": "หัวหน้า OpenCode ต้องเลือกโมเดล",
+      "openCodeTeammateRequired": "หัวหน้า OpenCode ต้องมีเพื่อนร่วมทีม OpenCode อย่างน้อยหนึ่งคน",
+      "teamLaunching": "ทีมกำลังเริ่มอยู่",
+      "teamNameExists": "มีชื่อทีมนี้อยู่แล้ว",
+      "checkFormFields": "ตรวจสอบช่องในฟอร์ม"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "save": "บันทึก"
+    },
+    "addMemberLockReason": "ใช้กล่องโต้ตอบเพิ่มสมาชิกเฉพาะเพื่อเพิ่มเพื่อนร่วมทีมใหม่ขณะที่ทีมกำลังทำงานสด",
+    "description": "เปลี่ยนชื่อทีม คำอธิบาย และสี",
+    "errors": {
+      "changesSavedRefreshFailed": "บันทึกการเปลี่ยนแปลงทีมแล้ว แต่รีเฟรชมุมมองล่าสุดไม่สำเร็จ: {{message}}",
+      "liveRenameBlocked": "ไม่สามารถเปลี่ยนชื่อเพื่อนร่วมทีมที่มีอยู่ขณะทีมทำงานสดได้ ที่เปลี่ยนชื่อ: {{names}}",
+      "memberNameEmpty": "ชื่อสมาชิกต้องไม่ว่างเปล่า",
+      "memberNameInvalid": "ชื่อสมาชิกต้องขึ้นต้นด้วยตัวอักษรหรือตัวเลข ใช้ได้เฉพาะ [a-zA-Z0-9._-] สูงสุด 128 อักขระ",
+      "memberNameNumericSuffix": "ไม่อนุญาตให้ใช้ชื่อสมาชิก \"{{name}}\" (สงวนไว้สำหรับคำต่อท้ายอัตโนมัติของ Claude CLI) ใช้ \"{{base}}\" แทน",
+      "memberNameReserved": "ชื่อสมาชิก \"{{name}}\" ถูกสงวนไว้",
+      "memberNamesUnique": "ชื่อสมาชิกต้องไม่ซ้ำกันก่อนบันทึก",
+      "newLiveTeammates": "เพิ่มเพื่อนร่วมทีมใหม่จากกล่องโต้ตอบเพิ่มสมาชิกเฉพาะขณะที่ทีมทำงานสด แก้ไขทีมรองรับเฉพาะการอัปเดตเพื่อนร่วมทีมที่มีอยู่เท่านั้น",
+      "provisioning": "ไม่สามารถแก้ไขการตั้งค่าทีมขณะที่การจัดเตรียมยังดำเนินอยู่ รอให้การเริ่มเสร็จสิ้น แล้วลองอีกครั้ง",
+      "restartFailedMany": "บันทึกทีมแล้ว แต่รีสตาร์ทเพื่อนร่วมทีมเหล่านี้ไม่สำเร็จ: {{failures}}",
+      "restartFailedOne": "บันทึกทีมแล้ว แต่รีสตาร์ทเพื่อนร่วมทีมคนนี้ไม่สำเร็จ: {{failures}}",
+      "saveFailed": "บันทึกไม่สำเร็จ",
+      "settingsChanged": "การตั้งค่าทีมเปลี่ยนแปลงขณะกล่องโต้ตอบนี้เปิดอยู่ เปิดใหม่และตรวจสอบสถานะล่าสุดก่อนบันทึก",
+      "settingsSavedMembersAndRefreshFailed": "บันทึกการตั้งค่าทีมแล้ว แต่การเปลี่ยนแปลงสมาชิกล้มเหลว: {{message}} การรีเฟรชก็ล้มเหลวด้วย: {{refreshError}}",
+      "settingsSavedMembersFailed": "บันทึกการตั้งค่าทีมแล้ว แต่การเปลี่ยนแปลงสมาชิกล้มเหลว: {{message}}",
+      "settingsSavedRefreshFailed": "บันทึกการตั้งค่าทีมแล้ว แต่รีเฟรชมุมมองล่าสุดไม่สำเร็จ: {{message}}",
+      "teamNameEmpty": "ชื่อทีมต้องไม่ว่างเปล่า",
+      "unsupportedMixedPrimaryMutation": "ยังไม่รองรับการแก้ไขสดสำหรับเพื่อนร่วมทีมที่หลักเป็นเจ้าของในทีม OpenCode แบบผสม หยุดทีม แก้ไขรายชื่อ แล้วเริ่มใหม่ ที่ได้รับผลกระทบ: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "สี (ไม่บังคับ)",
+      "description": "คำอธิบาย",
+      "name": "ชื่อ"
+    },
+    "memberRestartWarning": "การบันทึกจะรีสตาร์ทเพื่อนร่วมทีมคนนี้เพื่อใช้การเปลี่ยนแปลงบทบาท เวิร์กโฟลว์ การแยก worktree ผู้ให้บริการ โมเดล ระดับความพยายาม หรือการเข้าถึง MCP",
+    "notices": {
+      "liveRenameBlocked": "การบันทึกแบบสดถูกบล็อกเนื่องจากมีการเปลี่ยนชื่อเพื่อนร่วมทีมที่มีอยู่ ยกเลิกการเปลี่ยนชื่อเหล่านั้นหรือหยุดทีมก่อน",
+      "newLiveTeammates": "ไม่สามารถเพิ่มเพื่อนร่วมทีมใหม่จากแก้ไขทีมขณะทีมทำงานสดได้ ใช้กล่องโต้ตอบเพิ่มสมาชิกแทน",
+      "provisioning": "การจัดเตรียมทีมยังดำเนินอยู่ การแก้ไขถูกล็อกชั่วคราวจนกว่าการเริ่มจะเสร็จสิ้น",
+      "restartMany": "การบันทึกจะรีสตาร์ทหรือเริ่มเพื่อนร่วมทีมเหล่านี้ใหม่เพื่อใช้การเปลี่ยนแปลงบทบาท เวิร์กโฟลว์ การแยก worktree ผู้ให้บริการ โมเดล ระดับความพยายาม หรือการเข้าถึง MCP: {{names}}",
+      "restartOne": "การบันทึกจะรีสตาร์ทหรือเริ่มเพื่อนร่วมทีมคนนี้ใหม่เพื่อใช้การเปลี่ยนแปลงบทบาท เวิร์กโฟลว์ การแยก worktree ผู้ให้บริการ โมเดล ระดับความพยายาม หรือการเข้าถึง MCP: {{names}}",
+      "unsupportedMixedPrimaryMutation": "การแก้ไข/ลบแบบสดสำหรับเพื่อนร่วมทีมที่หลักเป็นเจ้าของในทีม OpenCode แบบผสมต้องหยุดและเริ่มทีมใหม่: {{names}}"
+    },
+    "placeholders": {
+      "description": "คำอธิบายทีม (ไม่บังคับ)",
+      "teamName": "ชื่อทีม"
+    },
+    "teamLead": {
+      "changeRuntime": "เปลี่ยนรันไทม์ของหัวหน้า",
+      "changeRuntimeDescription": "เปิดเริ่มทีมใหม่เพื่อเปลี่ยนผู้ให้บริการ โมเดล หรือระดับความพยายามของหัวหน้า",
+      "modelLockReason": "รันไทม์ของหัวหน้าทีมจัดการจากเริ่มทีมใหม่",
+      "readOnlyHint": "ชื่อและบทบาทของหัวหน้าทีมเป็นแบบอ่านอย่างเดียวที่นี่ เปิดแผงรันไทม์ในแถวของหัวหน้าเพื่อเปลี่ยนผู้ให้บริการ โมเดล หรือระดับความพยายาม",
+      "role": "หัวหน้าทีม"
+    },
+    "title": "แก้ไขทีม"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "ลบสมาชิก",
+      "removeAria": "ลบ {{name}}",
+      "restore": "กู้คืนสมาชิก",
+      "restoreAria": "กู้คืน {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "การตั้งค่าคอนเท็กซ์เริ่มต้น",
+      "description": "คอนเท็กซ์ของ Anthropic ใช้ทั้งทีมสำหรับการเริ่มนี้: {{mode}} ใช้ช่องทำเครื่องหมายจำกัดคอนเท็กซ์ในแผงรันไทม์ของหัวหน้าเพื่อเปลี่ยน",
+      "limitEnabled": "เปิดใช้งานขีดจำกัด 200K"
+    },
+    "mcp": {
+      "buttonInherit": "สืบทอด MCP",
+      "buttonScopes": "ขอบเขต MCP",
+      "chooseScopes": "เลือกขอบเขต",
+      "inheritLead": "สืบทอดจากหัวหน้า",
+      "lockedInfo": "เปิดใช้งาน Agent Teams MCP เท่านั้นสำหรับเพื่อนร่วมทีมทุกคน เพื่อนร่วมทีมคนนี้จะเริ่มด้วยเซิร์ฟเวอร์ Agent Teams เท่านั้น",
+      "mode": "โหมด MCP",
+      "scopes": {
+        "local": "ในเครื่อง",
+        "project": "โปรเจกต์",
+        "user": "ผู้ใช้"
+      },
+      "serverNames": "ชื่อเซิร์ฟเวอร์",
+      "settingInfo": "Agent Teams MCP เริ่มเพื่อนร่วมทีมคนนี้ด้วยเซิร์ฟเวอร์ Agent Teams เท่านั้น โหมดขอบเขตและรายการอนุญาตใช้กับการเริ่มเพื่อนร่วมทีมคนนี้เท่านั้น",
+      "strictAllowlist": "รายการอนุญาตเข้มงวด",
+      "tooltip": "{{label}}: ควบคุมนโยบายการสืบทอด MCP ของสมาชิกคนนี้",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "ผู้ให้บริการ {{provider}}, {{model}}",
+      "currentLeadRuntime": "รันไทม์ปัจจุบันของหัวหน้า",
+      "default": "ค่าเริ่มต้น",
+      "inheritedTooltip": "ผู้ให้บริการ โมเดล และระดับความพยายามสืบทอดจากหัวหน้าขณะที่เปิดใช้งานการซิงค์",
+      "leadSuffix": "{{label}} (หัวหน้า)",
+      "liveDisabled": "การเปลี่ยนผู้ให้บริการ โมเดล และระดับความพยายามถูกปิดใช้งานขณะทีมทำงานสด เชื่อมต่อทีมใหม่เพื่อใช้การเปลี่ยนแปลงอย่างปลอดภัย",
+      "lockedActionFallback": "การเปลี่ยนรันไทม์ของหัวหน้าจะเปิดเริ่มทีมใหม่ ซึ่งสามารถอัปเดตผู้ให้บริการ โมเดล และระดับความพยายามได้",
+      "restartWholeTeam": "การบันทึกการเปลี่ยนรันไทม์เหล่านั้นจะรีสตาร์ททั้งทีม"
+    },
+    "nameAria": "ชื่อสมาชิก {{index}}",
+    "nameFallback": "สมาชิก {{index}}",
+    "noRole": "ไม่มีบทบาท",
+    "removed": "ลบแล้ว",
+    "workflow": {
+      "addTooltip": "เพิ่มเวิร์กโฟลว์เพื่อนร่วมทีม",
+      "editTooltip": "แก้ไขเวิร์กโฟลว์เพื่อนร่วมทีม",
+      "label": "เวิร์กโฟลว์ (ไม่บังคับ)",
+      "placeholder": "เอเจนต์นี้ควรทำงานอย่างไร โต้ตอบกับผู้อื่นอย่างไร...",
+      "saved": "บันทึกแล้ว"
+    },
+    "worktree": {
+      "description": "รันเพื่อนร่วมทีมคนนี้ใน git worktree แยกต่างหาก การยอมรับ/ปฏิเสธการเปลี่ยนแปลงจะกำหนดเป้าหมายไปที่ worktree นั้น ไม่ใช่พื้นที่ทำงานของหัวหน้า",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "เพิ่มสมาชิก",
+      "description": "เพิ่มสมาชิกใหม่ไปยัง {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "เพิ่ม",
+      "cancel": "ยกเลิก",
+      "delete": "ลบ",
+      "editCode": "แก้ไขโค้ด",
+      "launch": "เริ่ม",
+      "remove": "ลบออก",
+      "stop": "หยุด",
+      "task": "งาน",
+      "visualize": "แสดงภาพ"
+    },
+    "deleteTeam": {
+      "description": "ลบทีม \"{{team}}\" หรือไม่ การดำเนินการนี้ไม่สามารถย้อนกลับได้ ข้อมูลและงานทั้งหมดของทีมจะถูกลบ",
+      "title": "ลบทีม"
+    },
+    "draft": {
+      "descriptionPrefix": "นี่คือทีมแบบร่าง -",
+      "descriptionSuffix": "ได้รับการกำหนดค่าด้วย {{count}} {{member}} แต่ยังไม่ได้จัดเตรียมโดย CLI คลิกเริ่มเพื่อเลือกโมเดลและเริ่มทีม",
+      "descriptionSuffix_few": "ได้รับการกำหนดค่าด้วย {{count}} {{member}} แต่ยังไม่ได้จัดเตรียมโดย CLI คลิกเริ่มเพื่อเลือกโมเดลและเริ่มทีม",
+      "descriptionSuffix_many": "ได้รับการกำหนดค่าด้วย {{count}} {{member}} แต่ยังไม่ได้จัดเตรียมโดย CLI คลิกเริ่มเพื่อเลือกโมเดลและเริ่มทีม",
+      "descriptionSuffix_one": "ได้รับการกำหนดค่าด้วย {{count}} {{member}} แต่ยังไม่ได้จัดเตรียมโดย CLI คลิกเริ่มเพื่อเลือกโมเดลและเริ่มทีม",
+      "descriptionSuffix_other": "ได้รับการกำหนดค่าด้วย {{count}} {{member}} แต่ยังไม่ได้จัดเตรียมโดย CLI คลิกเริ่มเพื่อเลือกโมเดลและเริ่มทีม",
+      "member": "สมาชิก",
+      "member_few": "สมาชิก",
+      "member_many": "สมาชิก",
+      "member_one": "สมาชิก",
+      "member_other": "สมาชิก",
+      "title": "ยังไม่ได้เริ่มทีม"
+    },
+    "invalidTab": "แท็บทีมไม่ถูกต้อง",
+    "kanbanSafeData": "โหลด Kanban ได้ไม่ครบถ้วน กำลังแสดงข้อมูลที่ปลอดภัย",
+    "loadFailed": "โหลดทีมไม่สำเร็จ",
+    "loading": "กำลังโหลดทีม",
+    "loadingSidebar": "กำลังโหลดแถบด้านข้างของทีม",
+    "offline": {
+      "offline": "ทีมออฟไลน์",
+      "partialFailed": "การเริ่มครั้งล่าสุดล้มเหลวกลางคัน",
+      "partialMissing": "การเริ่มครั้งล่าสุดล้มเหลวกลางคัน - เพื่อนร่วมทีม {{missing}}/{{expected}} คนไม่ได้เข้าร่วม",
+      "reconciling": "การเริ่มครั้งล่าสุดยังกำลังปรับให้สอดคล้องกัน"
+    },
+    "previous": "ก่อนหน้า: {{paths}}",
+    "removeMember": {
+      "description": "ลบ \"{{member}}\" ออกจากทีมหรือไม่ งานและข้อความจะถูกเก็บไว้ แต่ชื่อนี้ไม่สามารถนำกลับมาใช้ได้",
+      "title": "ลบสมาชิก"
+    },
+    "sections": {
+      "team": "ทีม"
+    },
+    "solo": "เดี่ยว",
+    "status": {
+      "active": "ใช้งานอยู่",
+      "launching": "กำลังเริ่ม...",
+      "running": "กำลังทำงาน"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "หน่วยความจำ"
+    },
+    "tooltips": {
+      "deleteTeam": "ลบทีม",
+      "editTeam": "แก้ไขทีม",
+      "editUnavailableProvisioning": "ไม่สามารถแก้ไขทีมขณะที่การจัดเตรียมยังดำเนินอยู่",
+      "openBuiltInEditor": "เปิดโปรเจกต์ในเครื่องมือแก้ไขในตัว",
+      "openTeamGraph": "เปิดกราฟทีม",
+      "stopTeam": "หยุดทีม"
+    },
+    "waitingForProvisioning": "ข้อมูลทีมจะปรากฏเมื่อการจัดเตรียมเสร็จสมบูรณ์",
+    "context": {
+      "title": "คอนเท็กซ์",
+      "loading": "กำลังโหลด...",
+      "noSessionLoaded": "ยังไม่ได้โหลดเซสชัน",
+      "closePanel": "ปิดแผงคอนเท็กซ์ {{team}}",
+      "loadingContext": "กำลังโหลดคอนเท็กซ์...",
+      "openLeadSession": "เปิดเซสชันหัวหน้าทีมเพื่อดูคอนเท็กซ์"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "ยอมรับ",
+        "discard": "ละทิ้ง",
+        "discardTooltip": "ละทิ้งการแก้ไขทั้งหมดของไฟล์นี้",
+        "keepMyDraft": "เก็บแบบร่างของฉัน",
+        "reject": "ปฏิเสธ",
+        "reloadFromDisk": "โหลดใหม่จากดิสก์",
+        "restore": "กู้คืน",
+        "restoreTooltip": "สร้าง/กู้คืนไฟล์นี้บนดิสก์จากตัวอย่าง",
+        "saveFile": "บันทึกไฟล์",
+        "saveFileTooltip": "บันทึกไฟล์ลงดิสก์"
+      },
+      "badges": {
+        "deleted": "ลบแล้ว",
+        "manualReview": "รีวิวด้วยตนเอง",
+        "new": "ใหม่",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "ดิสก์ปัจจุบัน",
+        "file-history": "ประวัติไฟล์",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "บัญชีงาน",
+        "ledger-snapshot": "สแนปช็อตบัญชี",
+        "snippet-reconstruction": "สร้างใหม่",
+        "unavailable": "เนื้อหาไม่พร้อมใช้งาน"
+      },
+      "contentUnavailable": {
+        "badge": "เนื้อหาไม่พร้อมใช้งาน",
+        "description": "บัญชีบันทึกเมตาดาตาของการเปลี่ยนแปลงนี้ไว้ แต่เนื้อหาข้อความฉบับเต็มไม่พร้อมใช้งาน โดยทั่วไปหมายถึงเนื้อหาแบบไบนารี ขนาดใหญ่ หรือมีเฉพาะแฮช",
+        "safety": "การยอมรับ/ปฏิเสธอัตโนมัติถูกปิดใช้งานสำหรับไฟล์นี้เพื่อหลีกเลี่ยงการเขียนดิสก์ที่ไม่ปลอดภัย",
+        "title": "เนื้อหาข้อความไม่พร้อมใช้งาน"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "การยอมรับ/ปฏิเสธถูกปิดใช้งานเนื่องจากเนื้อหาข้อความฉบับเต็มไม่พร้อมใช้งาน",
+        "acceptRejectMissingOnDisk": "การยอมรับ/ปฏิเสธถูกปิดใช้งานขณะที่ไฟล์หายไปจากดิสก์",
+        "rejectBaselineUnavailable": "การปฏิเสธถูกปิดใช้งานเนื่องจากเส้นฐานเดิมไม่พร้อมใช้งาน",
+        "rejectContentUnavailable": "การปฏิเสธถูกปิดใช้งานเนื่องจากเนื้อหาข้อความฉบับเต็มไม่พร้อมใช้งาน",
+        "rejectManualLedgerReview": "การปฏิเสธถูกปิดใช้งานเนื่องจากการเปลี่ยนแปลงในบัญชีนี้มีเนื้อหาแบบไบนารี ขนาดใหญ่ หรือไม่พร้อมใช้งาน"
+      },
+      "externalChange": {
+        "changedOnDisk": "เปลี่ยนแปลงบนดิสก์",
+        "deletedOnDisk": "ลบบนดิสก์",
+        "recreatedOnDisk": "สร้างใหม่บนดิสก์"
+      },
+      "missingOnDisk": {
+        "badge": "หายไปจากดิสก์",
+        "description": "เรายังสามารถแสดงตัวอย่างจากบันทึกของเอเจนต์ได้ แต่ระบบไฟล์ของคุณไม่ซิงค์กัน",
+        "restorePrefix": "ใช้",
+        "restoreSuffix": "เพื่อเขียนเนื้อหาตัวอย่างกลับลงดิสก์",
+        "restoreUnavailable": "เนื้อหาไฟล์ฉบับเต็มไม่พร้อมใช้งานสำหรับการกู้คืนอัตโนมัติ",
+        "title": "ไฟล์หายไปจากดิสก์"
+      },
+      "pathChange": {
+        "from": "จาก {{path}}",
+        "to": "ไปยัง {{path}}"
+      },
+      "worktree": {
+        "isolated": "Worktree ที่แยกต่างหาก"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} รอดำเนินการ",
+        "pending_one": "{{count}} รอดำเนินการ",
+        "pending_other": "{{count}} รอดำเนินการ",
+        "accepted": "{{count}} ยอมรับแล้ว",
+        "accepted_one": "{{count}} ยอมรับแล้ว",
+        "accepted_other": "{{count}} ยอมรับแล้ว",
+        "rejected": "{{count}} ปฏิเสธแล้ว",
+        "rejected_one": "{{count}} ปฏิเสธแล้ว",
+        "rejected_other": "{{count}} ปฏิเสธแล้ว",
+        "acrossFiles": "ใน {{count}} ไฟล์",
+        "acrossFiles_one": "ใน {{count}} ไฟล์",
+        "acrossFiles_other": "ใน {{count}} ไฟล์",
+        "edited": "{{count}} แก้ไขแล้ว",
+        "edited_one": "{{count}} แก้ไขแล้ว",
+        "edited_other": "{{count}} แก้ไขแล้ว",
+        "pending_few": "{{count}} รอดำเนินการ",
+        "pending_many": "{{count}} รอดำเนินการ",
+        "accepted_few": "{{count}} ยอมรับแล้ว",
+        "accepted_many": "{{count}} ยอมรับแล้ว",
+        "rejected_few": "{{count}} ปฏิเสธแล้ว",
+        "rejected_many": "{{count}} ปฏิเสธแล้ว",
+        "acrossFiles_few": "ใน {{count}} ไฟล์",
+        "acrossFiles_many": "ใน {{count}} ไฟล์",
+        "edited_few": "{{count}} แก้ไขแล้ว",
+        "edited_many": "{{count}} แก้ไขแล้ว"
+      },
+      "actions": {
+        "auto": "อัตโนมัติ",
+        "undo": "เลิกทำ",
+        "acceptAll": "ยอมรับทั้งหมด",
+        "rejectAll": "ปฏิเสธทั้งหมด",
+        "applying": "กำลังใช้งาน...",
+        "applyRejections": "ใช้การปฏิเสธ"
+      },
+      "tooltips": {
+        "autoOn": "ทำเครื่องหมายไฟล์ว่าดูแล้วอัตโนมัติเมื่อเลื่อนถึงท้าย (เปิด)",
+        "autoOff": "ทำเครื่องหมายไฟล์ว่าดูแล้วอัตโนมัติเมื่อเลื่อนถึงท้าย (ปิด)",
+        "undo": "เลิกทำการรีวิวครั้งล่าสุด (Ctrl+Z)",
+        "acceptAll": "ยอมรับการเปลี่ยนแปลงทั้งหมดในทุกไฟล์",
+        "rejectAll": "ปฏิเสธการเปลี่ยนแปลงที่ปฏิเสธได้อย่างปลอดภัยทั้งหมดในทุกไฟล์",
+        "rejectAllDisabled": "ไม่มีไฟล์ที่รอดำเนินการซึ่งมีเส้นฐานเดิมที่ปลอดภัยให้ปฏิเสธ",
+        "applyRejections": "ใช้ส่วนที่ปฏิเสธลงดิสก์ การเปลี่ยนแปลงที่ยอมรับจะคงไว้ตามเดิม"
+      }
+    },
+    "diffError": {
+      "title": "เรนเดอร์มุมมอง diff ไม่สำเร็จ",
+      "unexpected": "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะเรนเดอร์ diff",
+      "actions": {
+        "retry": "ลองอีกครั้ง"
+      },
+      "raw": {
+        "show": "แสดงข้อมูล diff ดิบ",
+        "file": "ไฟล์: {{file}}",
+        "original": "--- ต้นฉบับ",
+        "modified": "+++ แก้ไขแล้ว",
+        "charsTotal": "... (รวม {{count}} อักขระ)",
+        "charsTotal_one": "... (รวม {{count}} อักขระ)",
+        "charsTotal_other": "... (รวม {{count}} อักขระ)",
+        "charsTotal_few": "... (รวม {{count}} อักขระ)",
+        "charsTotal_many": "... (รวม {{count}} อักขระ)"
+      }
+    },
+    "fileTree": {
+      "viewed": "ดูแล้ว",
+      "badges": {
+        "new": "ใหม่",
+        "deleted": "ลบแล้ว"
+      },
+      "collapseFolder": "ยุบ {{name}}",
+      "expandFolder": "ขยาย {{name}}",
+      "empty": {
+        "noChangedFiles": "ไม่มีไฟล์ที่เปลี่ยนแปลง",
+        "noMatchingFiles": "ไม่มีไฟล์ที่ตรงกัน"
+      },
+      "searchPlaceholder": "ค้นหาไฟล์…",
+      "filters": {
+        "unresolved": "ยังไม่ได้แก้ไข",
+        "rejected": "ปฏิเสธแล้ว",
+        "new": "ใหม่",
+        "clear": "ล้าง"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "ส่วนก่อนหน้า",
+      "nextChunk": "ส่วนถัดไป",
+      "rejectChange": "ปฏิเสธการเปลี่ยนแปลง (⌘N)",
+      "acceptChange": "ยอมรับการเปลี่ยนแปลง (⌘Y)",
+      "undo": "เลิกทำ",
+      "keep": "เก็บไว้",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "ตรวจพบความขัดแย้ง",
+      "description": "ไฟล์นี้ถูกแก้ไขหลังจากการเปลี่ยนแปลงของเอเจนต์",
+      "cancel": "ยกเลิก",
+      "saveResolution": "บันทึกการแก้ไข",
+      "editManually": "แก้ไขด้วยตนเอง",
+      "useOriginal": "ใช้ต้นฉบับ",
+      "keepCurrent": "เก็บปัจจุบัน"
+    },
+    "fullDiffLoading": {
+      "titleOne": "กำลังเตรียม Diff ฉบับเต็ม",
+      "titleMany": "กำลังเตรียม Diff ฉบับเต็ม {{count}} รายการ",
+      "subtitleForFile": "กำลังสรุป diff ของเครื่องมือแก้ไขที่แม่นยำสำหรับ {{file}}",
+      "subtitleCurrentFile": "กำลังสรุป diff ของเครื่องมือแก้ไขที่แม่นยำสำหรับไฟล์ปัจจุบัน",
+      "subtitleMany": "กำลังหาเส้นฐานก่อน/หลังที่แม่นยำสำหรับไฟล์ที่กำลังโหลดอยู่",
+      "previewsReady": "ตัวอย่าง {{count}} รายการพร้อมแล้ว",
+      "previewsReady_one": "ตัวอย่าง {{count}} รายการพร้อมแล้ว",
+      "editorViewLoading": "กำลังโหลดมุมมองเครื่องมือแก้ไข",
+      "filesInProgress": "{{count}} ไฟล์กำลังดำเนินการ",
+      "filesInProgress_one": "{{count}} ไฟล์กำลังดำเนินการ",
+      "filesReady": "{{ready}}/{{total}} ไฟล์พร้อมแล้ว",
+      "progressDescription": "{{ready}} พร้อมแล้ว, {{loading}} ยังกำลังโหลด ตัวอย่าง diff จะยังคงแสดงด้านล่างขณะที่กำลังหาเส้นฐานที่เหลือ",
+      "singleDescription": "ตัวอย่าง diff จะยังคงแสดงด้านล่างขณะที่กำลังหาเส้นฐานที่แม่นยำ",
+      "previewsReady_few": "ตัวอย่าง {{count}} รายการพร้อมแล้ว",
+      "previewsReady_many": "ตัวอย่าง {{count}} รายการพร้อมแล้ว",
+      "previewsReady_other": "ตัวอย่าง {{count}} รายการพร้อมแล้ว",
+      "filesInProgress_few": "{{count}} ไฟล์กำลังดำเนินการ",
+      "filesInProgress_many": "{{count}} ไฟล์กำลังดำเนินการ",
+      "filesInProgress_other": "{{count}} ไฟล์กำลังดำเนินการ"
+    },
+    "fileMissingPrefix": "ไฟล์หายไปจากดิสก์ diff นี้อาจเป็นเพียงตัวอย่างจากบันทึกของเอเจนต์ ใช้",
+    "restore": "กู้คืน",
+    "fileMissingSuffix": "เพื่อสร้างไฟล์บนดิสก์",
+    "filePlaceholder": {
+      "loading": "กำลังโหลด",
+      "description": "กำลังเตรียม diff ของเครื่องมือแก้ไขฉบับเต็มสำหรับไฟล์นี้"
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "ประมวลผลออบเจกต์บัญชีแล้ว {{count}} รายการ",
+      "ledgerObjectsProcessed_one": "ประมวลผลออบเจกต์บัญชีแล้ว {{count}} รายการ",
+      "ledgerObjectsProcessed_other": "ประมวลผลออบเจกต์บัญชีแล้ว {{count}} รายการ",
+      "ledgerObjectsProcessed_few": "ประมวลผลออบเจกต์บัญชีแล้ว {{count}} รายการ",
+      "ledgerObjectsProcessed_many": "ประมวลผลออบเจกต์บัญชีแล้ว {{count}} รายการ",
+      "phases": {
+        "readingLedger": "กำลังอ่านบัญชีงาน...",
+        "resolvingFiles": "กำลังหาสถานะไฟล์...",
+        "checkingWorktree": "กำลังตรวจสอบบริบท worktree...",
+        "preparingDiffs": "กำลังเตรียม diff สำหรับรีวิว..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} ดูแล้ว"
+    },
+    "scope": {
+      "readMore": "อ่านเพิ่มเติม",
+      "tiers": {
+        "exact": {
+          "title": "กำหนดขอบเขตงานได้อย่างแม่นยำ",
+          "detail": "พบทั้งเครื่องหมายเริ่มต้นและเสร็จสิ้นในบันทึกเซสชัน diff รวมเฉพาะการเปลี่ยนแปลงที่ทำระหว่างงานนี้โดยเฉพาะ - งานอื่นที่แก้ไขไฟล์เดียวกันจะถูกยกเว้น"
+        },
+        "endEstimated": {
+          "title": "ประมาณการขอบเขตสิ้นสุด",
+          "detail": "พบเฉพาะเครื่องหมายเริ่มต้น - งานยังไม่มีเครื่องหมายเสร็จสิ้น การเปลี่ยนแปลงแสดงตั้งแต่เริ่มงานจนถึงสิ้นสุดเซสชัน หากมีงานอื่นรันหลังจากงานนี้ในเซสชันเดียวกัน การเปลี่ยนแปลงของงานเหล่านั้นอาจถูกรวมไว้ด้วย"
+        },
+        "startEstimated": {
+          "title": "ประมาณการขอบเขตเริ่มต้น",
+          "detail": "พบเฉพาะเครื่องหมายเสร็จสิ้น - การเริ่มงานไม่ถูกบันทึก หากมีงานอื่นรันก่อนหน้างานนี้ในเซสชันเดียวกัน การเปลี่ยนแปลงของงานเหล่านั้นในไฟล์เดียวกันอาจถูกรวมไว้ด้วย"
+        },
+        "allSession": {
+          "title": "กำลังแสดงการเปลี่ยนแปลงทั้งเซสชัน",
+          "detail": "ไม่พบเครื่องหมายงานในบันทึกเซสชัน ไม่สามารถแยกงานนี้ได้ - แสดงการเปลี่ยนแปลงไฟล์ทั้งหมดจากทั้งเซสชัน รวมถึงการเปลี่ยนแปลงจากงานอื่น สิ่งนี้อาจเกิดขึ้นกับ CLI เวอร์ชันเก่าหรือเวิร์กโฟลว์ที่ไม่เป็นมาตรฐาน"
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "บันทึกการเปลี่ยนแปลงโดยบัญชีงาน",
+          "detail": "ตัวจัดการบันทึกการเปลี่ยนแปลงไฟล์เหล่านี้ขณะที่เอเจนต์ทำงานนี้อยู่",
+          "badge": "บัญชีแม่นยำ"
+        },
+        "limited": {
+          "title": "บันทึกการเปลี่ยนแปลงด้วยความสามารถในการรีวิวที่จำกัด",
+          "detail": "ตัวจัดการบันทึกการเปลี่ยนแปลงไฟล์เหล่านี้สำหรับงานนี้ แต่มีอย่างน้อยหนึ่งการเปลี่ยนแปลงที่บันทึกจากสแนปช็อตหรือแหล่งที่มีเฉพาะเมตาดาตา รีวิว diff ข้อความที่แม่นยำตามที่มี เนื้อหาแบบไบนารีหรือที่ไม่พร้อมใช้งานอาจต้องรีวิวด้วยตนเอง",
+          "mixedBadge": "ความสามารถในการรีวิวแบบผสม",
+          "needsReviewBadge": "ต้องรีวิว"
+        }
+      },
+      "workInterval": {
+        "title": "กำหนดขอบเขตตามช่วงเวลาทำงานที่บันทึกไว้",
+        "detail": "เครื่องหมายเริ่มต้นงานไม่มีในบันทึกเซสชัน ดังนั้น diff จึงกำหนดขอบเขตตามช่วงเวลาทำงานของงานที่เก็บไว้บนบอร์ด",
+        "badge": "กำหนดขอบเขตตามช่วงเวลา"
+      },
+      "confidence": {
+        "high": "ความเชื่อมั่นสูง",
+        "medium": "ความเชื่อมั่นปานกลาง",
+        "low": "ความเชื่อมั่นต่ำ",
+        "bestEffort": "ทำเต็มที่"
+      }
+    },
+    "shortcuts": {
+      "title": "แป้นพิมพ์ลัด",
+      "actions": {
+        "nextChange": "การเปลี่ยนแปลงถัดไป",
+        "previousChange": "การเปลี่ยนแปลงก่อนหน้า",
+        "nextFile": "ไฟล์ถัดไป",
+        "previousFile": "ไฟล์ก่อนหน้า",
+        "acceptChange": "ยอมรับการเปลี่ยนแปลง",
+        "rejectChange": "ปฏิเสธการเปลี่ยนแปลง",
+        "saveFile": "บันทึกไฟล์",
+        "undo": "เลิกทำ",
+        "redo": "ทำซ้ำ",
+        "toggleShortcuts": "สลับแป้นพิมพ์ลัด",
+        "closeDialog": "ปิดกล่องโต้ตอบ"
+      }
+    },
+    "timeline": {
+      "empty": "ไม่มีเหตุการณ์การแก้ไข",
+      "titleWithCount": "ไทม์ไลน์การแก้ไข ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "ไม่มีการเปลี่ยนแปลงไฟล์ที่รีวิวได้"
+    },
+    "empty": {
+      "noSafeDiff": "ไม่มี diff ที่ปลอดภัย",
+      "noFileChangesRecorded": "ไม่มีการบันทึกการเปลี่ยนแปลงไฟล์",
+      "noSafeDiffDescription": "บัญชีงานไม่ได้เปิดเผย diff ไฟล์ที่ปลอดภัยสำหรับงานนี้",
+      "noSafeDiffDiagnosticsDescription": "บัญชีงานไม่ได้เปิดเผย diff ไฟล์ที่ปลอดภัยสำหรับงานนี้ การวินิจฉัยด้านล่างอธิบายสาเหตุ",
+      "noFileEventsYet": "บัญชีงานยังไม่มีเหตุการณ์ไฟล์สำหรับงานนี้",
+      "noFileEvents": "บัญชีงานไม่มีเหตุการณ์ไฟล์สำหรับงานนี้"
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "การดำเนินการชีตด้านล่างของข้อความ",
+      "collapseAll": "ยุบข้อความทั้งหมด",
+      "collapseSheet": "ยุบชีต",
+      "expandAll": "ขยายข้อความทั้งหมด",
+      "expandSheet": "ขยายชีต",
+      "floatComposer": "ลอยตัวเขียนข้อความ",
+      "floatMessagesComposer": "ลอยตัวเขียนข้อความ",
+      "hideSearch": "ซ่อนการค้นหา",
+      "loadOlder": "โหลดข้อความที่เก่ากว่า",
+      "markAllRead": "ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว",
+      "messageActions": "การดำเนินการข้อความ",
+      "moveMessagesToBottomSheet": "ย้ายข้อความไปยังชีตด้านล่าง",
+      "moveMessagesToSidebar": "ย้ายข้อความไปยังแถบด้านข้าง",
+      "moveToBottomSheet": "ย้ายไปยังชีตด้านล่าง",
+      "moveToInline": "ย้ายไปแบบอินไลน์",
+      "moveToSidebar": "ย้ายไปยังแถบด้านข้าง",
+      "panelActions": "การดำเนินการแผงข้อความ",
+      "searchMessages": "ค้นหาข้อความ"
+    },
+    "delivery": {
+      "copied": "คัดลอกแล้ว",
+      "copyDebugDetails": "คัดลอกรายละเอียดดีบัก",
+      "details": "รายละเอียด",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "โหมดแผงข้อความ",
+    "title": "ข้อความ",
+    "unread": {
+      "new": "{{count}} ใหม่",
+      "unread": "{{count}} ยังไม่อ่าน",
+      "new_few": "{{count}} ใหม่",
+      "new_many": "{{count}} ใหม่",
+      "new_one": "{{count}} ใหม่",
+      "new_other": "{{count}} ใหม่",
+      "unread_few": "{{count}} ยังไม่อ่าน",
+      "unread_many": "{{count}} ยังไม่อ่าน",
+      "unread_one": "{{count}} ยังไม่อ่าน",
+      "unread_other": "{{count}} ยังไม่อ่าน"
+    },
+    "filter": {
+      "ariaLabel": "กรองข้อความ",
+      "tooltip": "กรองข้อความ",
+      "from": "จาก",
+      "to": "ถึง",
+      "noData": "ไม่มีข้อมูล",
+      "showStatusUpdates": "แสดงการอัปเดตสถานะ (idle/shutdown)",
+      "actions": {
+        "reset": "รีเซ็ต",
+        "save": "บันทึก"
+      }
+    },
+    "status": {
+      "title": "สถานะ"
+    },
+    "actionMode": {
+      "label": "โหมดการดำเนินการ"
+    },
+    "search": {
+      "placeholder": "ค้นหา..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "กำหนดค่าแล้ว",
+      "connected": "เชื่อมต่อแล้ว",
+      "failed": "ล้มเหลว",
+      "free": "ฟรี",
+      "local": "ในเครื่อง",
+      "needsTest": "ต้องทดสอบ",
+      "verified": "ยืนยันแล้ว",
+      "unavailable": "ไม่พร้อมใช้งาน",
+      "issue": "ปัญหา"
+    },
+    "customModelId": "ID โมเดลกำหนดเอง",
+    "label": "โมเดล (ไม่บังคับ)",
+    "multimodelRequired": "Codex และ Gemini ต้องใช้โหมด Multimodel",
+    "openCode": {
+      "allSources": "แหล่งที่มา OpenCode ทั้งหมด",
+      "filterSource": "กรอง {{source}}",
+      "filterSources": "กรองแหล่งที่มา OpenCode",
+      "freeOnly": "เฉพาะฟรี",
+      "freeTooltip": "OpenCode ทำเครื่องหมายโมเดลนี้ว่าฟรี",
+      "loadingModels": "กำลังโหลดโมเดล OpenCode...",
+      "noSourcesFound": "ไม่พบแหล่งที่มา",
+      "recommendedOnly": "เฉพาะที่แนะนำ",
+      "searchSources": "ค้นหาแหล่งที่มา",
+      "sourcesCount": "{{count}} แหล่งที่มา OpenCode",
+      "sourcesCount_few": "{{count}} แหล่งที่มา OpenCode",
+      "sourcesCount_many": "{{count}} แหล่งที่มา OpenCode",
+      "sourcesCount_one": "{{count}} แหล่งที่มา OpenCode",
+      "sourcesCount_other": "{{count}} แหล่งที่มา OpenCode"
+    },
+    "reason": "เหตุผล: {{reason}}",
+    "runtimeModelsSyncing": "โมเดลที่ระบุชัดเจนโหลดจากรันไทม์ปัจจุบัน ค่าเริ่มต้นยังคงใช้ได้ขณะที่รายการกำลังซิงค์",
+    "fastMode": {
+      "codexLabel": "โหมดเร็ว (เครดิต 2 เท่า)",
+      "optionalLabel": "โหมดเร็ว (ไม่บังคับ)",
+      "defaultOff": "ค่าเริ่มต้น (ปิด)",
+      "fast": "เร็ว",
+      "off": "ปิด",
+      "defaultFast": "ค่าเริ่มต้น (เร็ว)",
+      "defaultResolvesTo": "ค่าเริ่มต้นปัจจุบันกำหนดเป็น {{mode}}",
+      "runtimeBackedHint": "โหมดเร็วได้รับการสนับสนุนจากรันไทม์และปลดล็อกเฉพาะเมื่อโมเดลเริ่มต้นของ Anthropic ที่กำหนดรองรับเท่านั้น"
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "อ่านเอกสารราคาของ Anthropic"
+    },
+    "searchModels": "ค้นหาโมเดล",
+    "defaultModel": "ค่าเริ่มต้น",
+    "empty": {
+      "noSearchMatches": "ไม่มีโมเดลที่ตรงกับการค้นหานี้",
+      "recommendedFreeOpenCode": "ไม่มีโมเดล OpenCode ฟรีที่แนะนำในรายการรันไทม์ปัจจุบัน",
+      "freeOpenCode": "ไม่มีโมเดล OpenCode ฟรีในรายการรันไทม์ปัจจุบัน",
+      "recommendedOpenCode": "ไม่มีโมเดล OpenCode ที่แนะนำในรายการรันไทม์ปัจจุบัน",
+      "noModels": "ไม่มีโมเดลในรายการรันไทม์ปัจจุบัน"
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode ยังไม่พร้อมสำหรับการเริ่มทีม",
+      "freeModelsAvailableTitle": "มีโมเดล OpenCode ฟรีให้ใช้งาน",
+      "providerNotConnectedTitle": "ผู้ให้บริการ OpenCode ยังไม่เชื่อมต่อ",
+      "readyTitle": "OpenCode พร้อมแล้ว",
+      "readyMessage": "OpenCode ผ่านการตรวจสอบความพร้อมของผู้ให้บริการ เลือกเพื่อใช้โมเดล OpenCode สำหรับทีมนี้",
+      "useOpenCode": "ใช้ OpenCode",
+      "badges": {
+        "check": "ตรวจสอบ",
+        "install": "ติดตั้ง",
+        "free": "ฟรี",
+        "setup": "ตั้งค่า"
+      },
+      "summary": {
+        "checking": "สถานะ OpenCode: กำลังตรวจสอบรันไทม์",
+        "status": "สถานะ OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "การเริ่มทีมถูกบล็อก",
+        "providerOptional": "การเชื่อมต่อผู้ให้บริการไม่บังคับ",
+        "providerModelsNeedSetup": "โมเดลที่สนับสนุนโดยผู้ให้บริการต้องตั้งค่า",
+        "teamLaunchReady": "การเริ่มทีมพร้อมแล้ว",
+        "runtimeDetected": "ตรวจพบรันไทม์",
+        "runtimeMissing": "ไม่มีรันไทม์",
+        "freeWithoutAuth": "มีโมเดลฟรีให้ใช้โดยไม่ต้องยืนยันตัวตน",
+        "providerConnected": "ผู้ให้บริการเชื่อมต่อแล้ว",
+        "providerNotConnected": "ผู้ให้บริการยังไม่เชื่อมต่อ"
+      },
+      "messages": {
+        "checking": "แอปยังคงตรวจสอบรันไทม์ OpenCode รอให้สถานะผู้ให้บริการเสร็จสิ้น แล้วลองอีกครั้ง",
+        "unsupported": "ไม่ได้ติดตั้ง OpenCode ไม่พบ หรือรันไทม์ที่ตรวจพบไม่รองรับ ติดตั้งหรืออัปเดต OpenCode แล้วรีเฟรชสถานะผู้ให้บริการ คุณยังสามารถใช้ปุ่มติดตั้งบนหน้าแรกได้",
+        "freeAvailable": "ตรวจพบ OpenCode คุณสามารถใช้โมเดล OpenCode ฟรีเช่น Big Pickle ได้โดยไม่ต้องเชื่อมต่อผู้ให้บริการ เชื่อมต่อผู้ให้บริการเฉพาะเมื่อคุณต้องการโมเดลที่สนับสนุนโดยผู้ให้บริการ",
+        "noFreeListed": "ตรวจพบ OpenCode แต่ยังไม่มีรายการโมเดล OpenCode ฟรี รีเฟรชสถานะผู้ให้บริการ หรือเชื่อมต่อผู้ให้บริการใน OpenCode สำหรับโมเดลที่สนับสนุนโดยผู้ให้บริการ",
+        "launchBlocked": "OpenCode ติดตั้งและยืนยันตัวตนแล้ว แต่ความพร้อมในการเริ่ม Agent Teams ถูกบล็อก",
+        "ready": "OpenCode พร้อมสำหรับการเริ่มทีม"
+      },
+      "loadingRuntime": "สถานะรันไทม์ OpenCode ยังกำลังโหลด"
+    },
+    "advisory": {
+      "pingNotConfirmed": "ยังไม่ยืนยัน ping",
+      "note": "หมายเหตุ"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "การตั้งค่า OpenCode",
+      "builtinFree": "ในตัวฟรี",
+      "connectedProviders": "ผู้ให้บริการที่เชื่อมต่อ",
+      "otherCatalog": "แคตตาล็อก OpenCode อื่น"
+    },
+    "pricing": {
+      "free": "ฟรี",
+      "inputShort": "เข้า {{rate}}",
+      "outputShort": "ออก {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "อินพุต: {{rate}} ต่อ 1M โทเค็น",
+      "outputTitle": "เอาต์พุต: {{rate}} ต่อ 1M โทเค็น",
+      "cacheReadTitle": "อ่านแคช: {{rate}} ต่อ 1M โทเค็น",
+      "cacheWriteTitle": "เขียนแคช: {{rate}} ต่อ 1M โทเค็น"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "ใช้โมเดลเริ่มต้นของเอนด์พอยต์ที่เข้ากันได้กับ Anthropic\nปัจจุบันกำหนดเป็น {{model}}",
+      "anthropicCompatible": "ใช้โมเดลเริ่มต้นของเอนด์พอยต์ที่เข้ากันได้กับ Anthropic",
+      "anthropic": "ใช้โมเดลเริ่มต้นของทีม Claude\nกำหนดเป็น {{longContextModel}} ด้วยคอนเท็กซ์ 1M หรือ {{limitedContextModel}} ด้วยคอนเท็กซ์ 200K เมื่อเปิดใช้งานจำกัดคอนเท็กซ์",
+      "openCodeWithResolved": "ใช้โมเดลเริ่มต้นของ OpenCode\nปัจจุบันกำหนดเป็น {{model}}",
+      "openCode": "ใช้โมเดลเริ่มต้นของรันไทม์ OpenCode",
+      "runtime": "ใช้ค่าเริ่มต้นของรันไทม์สำหรับผู้ให้บริการที่เลือก"
+    },
+    "multimodelOff": "ปิด Multimodel",
+    "unavailableInRuntime": "ไม่พร้อมใช้งานในรันไทม์ปัจจุบัน"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "delete": "ลบ",
+      "markResolved": "ทำเครื่องหมายว่าแก้ไขแล้ว",
+      "save": "บันทึก"
+    },
+    "attachments": {
+      "commentAttachment": "ไฟล์แนบความคิดเห็น",
+      "fromComments": "จากความคิดเห็น",
+      "preview": "ดูตัวอย่าง {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "ต้องการความสนใจ",
+        "noSafeDiff": "ไม่มี diff ที่ปลอดภัย"
+      },
+      "empty": {
+        "noFileChangesRecorded": "ไม่มีการบันทึกการเปลี่ยนแปลงไฟล์",
+        "noFileChangesRecordedYet": "ยังไม่มีการบันทึกการเปลี่ยนแปลงไฟล์",
+        "noReviewableChangesRecovered": "ไม่มีการเปลี่ยนแปลงไฟล์ที่รีวิวได้ถูกกู้คืน",
+        "noSafeDiffAvailable": "ไม่มี diff ที่ปลอดภัย"
+      },
+      "loadFailed": "โหลดสรุปการเปลี่ยนแปลงงานไม่สำเร็จ",
+      "loading": "กำลังโหลดการเปลี่ยนแปลง...",
+      "fileCount": "{{count}} ไฟล์",
+      "fileRowsHidden": "ซ่อนแถวไฟล์ {{count}} แถว",
+      "moreDiagnostics": "การวินิจฉัยอีก {{count}} รายการ",
+      "moreFiles": "ไฟล์อีก {{count}} รายการ",
+      "openInEditor": "เปิดในเครื่องมือแก้ไข",
+      "openTask": "เปิดงาน {{subject}}",
+      "refresh": "รีเฟรชการเปลี่ยนแปลง",
+      "refreshFailed": "รีเฟรชไม่สำเร็จ: {{error}}",
+      "refreshing": "กำลังรีเฟรช",
+      "refreshingChanges": "กำลังรีเฟรชการเปลี่ยนแปลง...",
+      "refreshTeamChanges": "รีเฟรชการเปลี่ยนแปลงของทีม",
+      "refreshShort": "รีเฟรช",
+      "reviewDiff": "รีวิว diff",
+      "reviewTaskDiff": "รีวิว diff ของงาน",
+      "scannedCandidateTasks": "สแกนแล้ว {{requested}} จาก {{eligible}} งานที่เป็นไปได้",
+      "tasksDeferred": "เลื่อน {{count}} งานในรอบนี้",
+      "title": "การเปลี่ยนแปลง",
+      "fileCount_few": "{{count}} ไฟล์",
+      "fileCount_many": "{{count}} ไฟล์",
+      "fileCount_one": "{{count}} ไฟล์",
+      "fileCount_other": "{{count}} ไฟล์",
+      "fileRowsHidden_few": "ซ่อนแถวไฟล์ {{count}} แถว",
+      "fileRowsHidden_many": "ซ่อนแถวไฟล์ {{count}} แถว",
+      "fileRowsHidden_one": "ซ่อนแถวไฟล์ {{count}} แถว",
+      "fileRowsHidden_other": "ซ่อนแถวไฟล์ {{count}} แถว",
+      "moreDiagnostics_few": "การวินิจฉัยอีก {{count}} รายการ",
+      "moreDiagnostics_many": "การวินิจฉัยอีก {{count}} รายการ",
+      "moreDiagnostics_one": "การวินิจฉัยอีก {{count}} รายการ",
+      "moreDiagnostics_other": "การวินิจฉัยอีก {{count}} รายการ",
+      "moreFiles_few": "ไฟล์อีก {{count}} รายการ",
+      "moreFiles_many": "ไฟล์อีก {{count}} รายการ",
+      "moreFiles_one": "ไฟล์อีก {{count}} รายการ",
+      "moreFiles_other": "ไฟล์อีก {{count}} รายการ",
+      "tasksDeferred_few": "เลื่อน {{count}} งานในรอบนี้",
+      "tasksDeferred_many": "เลื่อน {{count}} งานในรอบนี้",
+      "tasksDeferred_one": "เลื่อน {{count}} งานในรอบนี้",
+      "tasksDeferred_other": "เลื่อน {{count}} งานในรอบนี้"
+    },
+    "clarification": {
+      "awaitingLead": "รอคำชี้แจงจากหัวหน้าทีม",
+      "awaitingUser": "รอคำชี้แจงจากคุณ"
+    },
+    "description": {
+      "add": "คลิกเพื่อเพิ่มคำอธิบาย...",
+      "edit": "แก้ไขคำอธิบาย",
+      "placeholder": "คำอธิบายงาน (รองรับ markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "กำลังดึงข้อมูลทีม",
+      "title": "กำลังโหลดงาน..."
+    },
+    "logs": {
+      "newArriving": "บันทึกงานใหม่กำลังมาถึง"
+    },
+    "notFound": "ไม่พบงาน",
+    "related": {
+      "blockedBy": "ถูกบล็อกโดย",
+      "blocks": "บล็อก",
+      "linkedFrom": "เชื่อมโยงจาก",
+      "links": "ลิงก์",
+      "title": "งานที่เกี่ยวข้อง"
+    },
+    "review": {
+      "reviewer": "ผู้รีวิว: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "ไฟล์แนบ",
+      "changes": "การเปลี่ยนแปลง",
+      "comments": "ความคิดเห็น",
+      "description": "คำอธิบาย",
+      "taskLogs": "บันทึกงาน",
+      "workflowHistory": "ประวัติเวิร์กโฟลว์"
+    },
+    "unassigned": "ยังไม่ได้มอบหมาย",
+    "workflow": {
+      "implementationTimeTitle": "เวลาในการพัฒนาจากช่วงเวลาทำงานที่บันทึกไว้",
+      "inProgressTime": "เวลาที่กำลังดำเนินการ {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "กำลังแสดงความคิดเห็นล่าสุด {{formattedCount}} รายการเพื่อให้ UI ตอบสนองได้ดี",
+      "badges": {
+        "approved": "อนุมัติแล้ว",
+        "reviewRequested": "ขอรีวิวแล้ว"
+      },
+      "unknownTime": "เวลาที่ไม่ทราบ",
+      "actions": {
+        "reply": "ตอบกลับ",
+        "replyToComment": "ตอบกลับความคิดเห็น",
+        "showMore": "แสดงความคิดเห็นเพิ่มเติม ({{visible}}/{{total}})",
+        "cancelReply": "ยกเลิกการตอบกลับ",
+        "comment": "ความคิดเห็น"
+      },
+      "attachments": {
+        "previewAlt": "ตัวอย่างไฟล์แนบ",
+        "downloadFailed": "ดาวน์โหลดล้มเหลว"
+      },
+      "replyingTo": "กำลังตอบกลับถึง",
+      "input": {
+        "placeholder": "เพิ่มความคิดเห็น... (Enter เพื่อส่ง)",
+        "charsLeft": "เหลือ {{count}} อักขระ",
+        "charsLeft_one": "เหลือ {{count}} อักขระ",
+        "charsLeft_other": "เหลือ {{count}} อักขระ",
+        "charsLeft_few": "เหลือ {{count}} อักขระ",
+        "charsLeft_many": "เหลือ {{count}} อักขระ"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "ไม่มีประวัติเวิร์กโฟลว์ที่บันทึกไว้",
+      "currentImplementationInterval": "ช่วงเวลาการพัฒนาปัจจุบัน",
+      "implementationIntervalEnded": "ช่วงเวลาการพัฒนาสิ้นสุดที่การเปลี่ยนนี้",
+      "runningPrefix": "กำลังทำงาน ",
+      "createdAs": "สร้างเป็น",
+      "by": "โดย",
+      "reassigned": "มอบหมายใหม่",
+      "assignedTo": "มอบหมายให้",
+      "unassignedFrom": "ยกเลิกการมอบหมายจาก",
+      "ownerChanged": "เปลี่ยนเจ้าของ",
+      "reviewRequested": "ขอรีวิวแล้ว",
+      "reviewStarted": "เริ่มรีวิวแล้ว",
+      "changesRequested": "ขอให้แก้ไขแล้ว",
+      "approved": "อนุมัติแล้ว",
+      "unknownEvent": "เหตุการณ์ที่ไม่ทราบ"
+    },
+    "reviewStates": {
+      "approved": "อนุมัติแล้ว",
+      "needsFix": "ต้องแก้ไข",
+      "inReview": "กำลังรีวิว"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "ผู้รับมอบหมาย",
+      "assigneeOptional": "ผู้รับมอบหมาย (ไม่บังคับ)",
+      "blockedByOptional": "งานที่บล็อก (ไม่บังคับ)",
+      "blockedBySummary": "งานจะถูกบล็อกโดย: {{tasks}}",
+      "cancel": "ยกเลิก",
+      "create": "สร้าง",
+      "creating": "กำลังสร้าง...",
+      "description": "งานจะถูกสร้างในไดเรกทอรี tasks/ ของทีมและปรากฏบนบอร์ด Kanban",
+      "descriptionOptional": "คำอธิบาย (ไม่บังคับ)",
+      "detailsPlaceholder": "รายละเอียดงาน (รองรับ markdown)",
+      "hideOptionalFields": "ซ่อนช่องที่ไม่บังคับ",
+      "offlineNotice": {
+        "after": "- เริ่มทีมเพื่อเริ่มการทำงาน",
+        "before": "ทีมออฟไลน์ งานจะถูกเพิ่มไปยัง"
+      },
+      "promptOptional": "พรอมต์สำหรับผู้รับมอบหมาย (ไม่บังคับ)",
+      "promptPlaceholder": "คำแนะนำกำหนดเองสำหรับสมาชิกทีม...",
+      "relatedOptional": "งานที่เกี่ยวข้อง (ไม่บังคับ)",
+      "relatedSummary": "ที่เกี่ยวข้อง: {{tasks}}",
+      "saved": "บันทึกแล้ว",
+      "searchTasks": "ค้นหางาน...",
+      "selectMember": "เลือกสมาชิก",
+      "selectMemberOptional": "เลือกสมาชิก...",
+      "showOptionalFields": "แสดงช่องที่ไม่บังคับ",
+      "startImmediately": "เริ่มทันที",
+      "startOfflineHint": "ทีมออฟไลน์ เริ่มทีมก่อนเพื่อเริ่มงานทันที",
+      "subject": "หัวเรื่อง",
+      "subjectPlaceholder": "ต้องทำอะไรบ้าง?",
+      "title": "สร้างงาน",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "ถูกบล็อกโดย",
+        "blocks": "บล็อก",
+        "id": "ID",
+        "owner": "เจ้าของ",
+        "status": "สถานะ",
+        "subject": "หัวเรื่อง"
+      },
+      "empty": "ไม่มีงานในทีมนี้",
+      "filters": {
+        "allOwners": "เจ้าของทั้งหมด",
+        "allStatuses": "สถานะทั้งหมด",
+        "ownerAria": "กรองงานตามเจ้าของ",
+        "statusAria": "กรองงานตามสถานะ"
+      },
+      "showing": "กำลังแสดง {{shown}} จาก {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "งาน {{completed}}/{{total}} เสร็จสิ้น",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "ยังไม่ได้มอบหมาย",
+    "teamPrefix": "ทีม:",
+    "openTask": "เปิดงาน",
+    "deleteConfirm": {
+      "title": "ลบงาน",
+      "message": "ย้ายงาน #{{taskId}} ไปยังถังขยะหรือไม่?",
+      "confirmLabel": "ลบ",
+      "cancelLabel": "ยกเลิก"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "closeEditor": "ปิดเครื่องมือแก้ไข",
+      "closeTab": "ปิดแท็บ",
+      "closeTooltip": "ปิดเครื่องมือแก้ไข (Esc)",
+      "discard": "ละทิ้ง",
+      "discardAndClose": "ละทิ้งและปิด",
+      "keep": "เก็บไว้",
+      "keepMine": "เก็บของฉัน",
+      "keyboardShortcuts": "แป้นพิมพ์ลัด",
+      "overwrite": "เขียนทับ",
+      "refreshAria": "รีเฟรช (F5)",
+      "refreshTooltip": "รีเฟรชสถานะ git (F5)",
+      "reload": "โหลดใหม่",
+      "retry": "ลองอีกครั้ง",
+      "save": "บันทึก",
+      "saveAllAndClose": "บันทึกทั้งหมดและปิด"
+    },
+    "ariaLabel": "เครื่องมือแก้ไขโปรเจกต์",
+    "dialogs": {
+      "conflictDescription": "ไฟล์ถูกแก้ไขจากภายนอกตั้งแต่คุณเปิด เขียนทับด้วยการเปลี่ยนแปลงของคุณหรือไม่?",
+      "conflictTitle": "ความขัดแย้งในการบันทึก",
+      "unsavedDescription": "คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก คุณต้องการทำอะไร?",
+      "unsavedFileDescription": "ไฟล์นี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก คุณต้องการทำอะไร?",
+      "unsavedTitle": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "ชื่อต้องไม่ว่างเปล่า",
+        "invalidName": "ชื่อไม่ถูกต้อง",
+        "invalidCharacters": "ชื่อมีอักขระที่ไม่ถูกต้อง",
+        "nameTooLong": "ชื่อยาวเกินไป"
+      },
+      "placeholders": {
+        "fileName": "ชื่อไฟล์...",
+        "folderName": "ชื่อโฟลเดอร์..."
+      },
+      "aria": {
+        "newFileName": "ชื่อไฟล์ใหม่",
+        "newFolderName": "ชื่อโฟลเดอร์ใหม่"
+      }
+    },
+    "draftRecovered": "กู้คืนการเปลี่ยนแปลงที่ยังไม่ได้บันทึกจากเซสชันก่อนหน้าแล้ว",
+    "externalChange": {
+      "changed": "ไฟล์เปลี่ยนแปลงบนดิสก์",
+      "deleted": "ไฟล์ไม่มีอยู่บนดิสก์อีกต่อไป"
+    },
+    "saveFailed": "บันทึกไม่สำเร็จ: {{error}}",
+    "sidebar": {
+      "explorer": "ตัวสำรวจ",
+      "hide": "ซ่อนแถบด้านข้าง",
+      "hideWithShortcut": "ซ่อนแถบด้านข้าง ({{shortcut}})",
+      "show": "แสดงแถบด้านข้าง",
+      "showWithShortcut": "แสดงแถบด้านข้าง ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "ค้นหาในไฟล์",
+      "closeSearch": "ปิดการค้นหา",
+      "closeSearchShortcut": "ปิดการค้นหา (Esc)",
+      "searchPlaceholder": "ค้นหา...",
+      "matchCase": "ตรงตามตัวพิมพ์",
+      "matchCaseToggle": "Aa",
+      "noResults": "ไม่พบผลลัพธ์",
+      "resultsSummary": "{{count}} ที่ตรงกันใน {{fileCount}} ไฟล์",
+      "resultsSummary_one": "{{count}} ที่ตรงกันใน {{fileCount}} ไฟล์",
+      "truncated": "(ตัดทอน)",
+      "resultsSummary_few": "{{count}} ที่ตรงกันใน {{fileCount}} ไฟล์",
+      "resultsSummary_many": "{{count}} ที่ตรงกันใน {{fileCount}} ไฟล์",
+      "resultsSummary_other": "{{count}} ที่ตรงกันใน {{fileCount}} ไฟล์"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "โหลดไฟล์ไม่สำเร็จ: {{error}}",
+      "loading": "กำลังโหลดไฟล์...",
+      "empty": "ไม่พบไฟล์",
+      "dropForProjectRoot": "วางที่นี่สำหรับรากโปรเจกต์",
+      "moveToTrash": "ย้ายไปถังขยะ",
+      "moveToTrashConfirm": "ย้าย \"{{name}}\" ไปถังขยะหรือไม่?",
+      "cancel": "ยกเลิก"
+    },
+    "goToLine": {
+      "title": "ไปยังบรรทัด",
+      "position": "(ปัจจุบัน: {{current}}, ทั้งหมด: {{total}})",
+      "placeholder": "หมายเลขบรรทัด, +ออฟเซ็ต, -ออฟเซ็ต หรือ %",
+      "go": "ไป"
+    },
+    "searchPanel": {
+      "previousMatch": "ที่ตรงกันก่อนหน้า",
+      "nextMatch": "ที่ตรงกันถัดไป",
+      "close": "ปิด",
+      "replacePlaceholder": "แทนที่",
+      "replace": "แทนที่",
+      "replaceNext": "แทนที่ถัดไป",
+      "all": "ทั้งหมด",
+      "replaceAll": "แทนที่ทั้งหมด"
+    },
+    "statusBar": {
+      "position": "บรรทัด {{line}}, คอลัมน์ {{col}}",
+      "enableWatcher": "เปิดใช้งานตัวเฝ้าดูไฟล์",
+      "disableWatcher": "ปิดใช้งานตัวเฝ้าดูไฟล์",
+      "watch": "เฝ้าดู",
+      "watching": "กำลังเฝ้าดู",
+      "watchExternalChanges": "เฝ้าดูการเปลี่ยนแปลงจากภายนอก",
+      "disableExternalWatcher": "ปิดใช้งานตัวเฝ้าดูการเปลี่ยนแปลงจากภายนอก",
+      "encodingUtf8": "UTF-8",
+      "spaces": "ช่องว่าง: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "กำลังโหลดตัวอย่าง...",
+      "openFullSize": "เปิดตัวอย่างขนาดเต็ม",
+      "openSystemViewer": "เปิดในโปรแกรมดูของระบบ"
+    },
+    "quickOpen": {
+      "title": "เปิดด่วน",
+      "searchPlaceholder": "ค้นหาไฟล์ตามชื่อ...",
+      "loading": "กำลังโหลดไฟล์...",
+      "empty": "ไม่พบไฟล์"
+    },
+    "errorBoundary": {
+      "crashed": "เครื่องมือแก้ไขขัดข้อง",
+      "unknownError": "ข้อผิดพลาดที่ไม่ทราบ"
+    },
+    "binaryPlaceholder": {
+      "file": "ไฟล์ไบนารี ({{size}})"
+    },
+    "unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
+    "empty": {
+      "selectFile": "เลือกไฟล์จากโครงสร้างเพื่อแก้ไข"
+    },
+    "search": {
+      "toggleReplace": "สลับการแทนที่",
+      "placeholder": "ค้นหา"
+    },
+    "shortcuts": {
+      "title": "แป้นพิมพ์ลัด",
+      "groups": {
+        "fileOperations": "การดำเนินการไฟล์",
+        "search": "ค้นหา",
+        "navigation": "การนำทาง",
+        "editing": "การแก้ไข",
+        "markdown": "Markdown",
+        "general": "ทั่วไป"
+      },
+      "actions": {
+        "quickOpen": "เปิดด่วน",
+        "save": "บันทึก",
+        "saveAll": "บันทึกทั้งหมด",
+        "closeTab": "ปิดแท็บ",
+        "findInFile": "ค้นหาในไฟล์",
+        "searchInFiles": "ค้นหาในไฟล์",
+        "goToLine": "ไปยังบรรทัด",
+        "nextTab": "แท็บถัดไป",
+        "previousTab": "แท็บก่อนหน้า",
+        "cycleTabs": "วนแท็บ",
+        "toggleSidebar": "สลับแถบด้านข้าง",
+        "undo": "เลิกทำ",
+        "redo": "ทำซ้ำ",
+        "selectNextMatch": "เลือกที่ตรงกันถัดไป",
+        "toggleComment": "สลับคอมเมนต์โค้ด",
+        "splitPreview": "แยกตัวอย่าง",
+        "fullPreview": "ตัวอย่างเต็ม",
+        "closeEditor": "ปิดเครื่องมือแก้ไข"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "เปิดใช้งานการตัดคำ",
+      "disableWordWrap": "ปิดใช้งานการตัดคำ",
+      "closeSplitPreview": "ปิดตัวอย่างแบบแยก",
+      "closePreview": "ปิดตัวอย่าง"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "สร้างกำหนดการ",
+      "creating": "กำลังสร้าง...",
+      "goToDashboard": "ไปที่แดชบอร์ด",
+      "launchTeam": "เริ่มทีม",
+      "launching": "กำลังเริ่ม...",
+      "relaunchTeam": "เริ่มทีมใหม่",
+      "relaunching": "กำลังเริ่มใหม่...",
+      "saveChanges": "บันทึกการเปลี่ยนแปลง",
+      "saving": "กำลังบันทึก..."
+    },
+    "billing": {
+      "prefix": "เริ่มตั้งแต่วันที่ 15 มิถุนายน 2026 Anthropic จะเรียกเก็บค่า",
+      "readArticle": "อ่านบทความของ Anthropic",
+      "suffix": "และการใช้งาน Agent SDK จากเครดิต Agent SDK รายเดือน แยกจากขีดจำกัด Claude Code แบบโต้ตอบ เครดิตจะรีเซ็ตทุกรอบบิล และเครดิตที่ไม่ได้ใช้จะไม่ยกยอดไป"
+    },
+    "conflict": {
+      "description": "การรันสองทีมในไดเรกทอรีเดียวกันมีความเสี่ยง - อาจขัดแย้งกันในการแก้ไขไฟล์เดียวกัน ลองพิจารณาใช้ไดเรกทอรีอื่นหรือ git worktree เพื่อแยกการทำงาน",
+      "title": "ทีม \"{{team}}\" อีกทีมหนึ่งกำลังทำงานอยู่สำหรับไดเรกทอรีทำงานนี้",
+      "workingDirectory": "ไดเรกทอรีทำงาน:"
+    },
+    "description": {
+      "createSchedule": "ตั้งกำหนดการรันงาน Claude อัตโนมัติ",
+      "createScheduleForTeam": "ตั้งกำหนดการรันอัตโนมัติสำหรับทีม \"{{team}}\"",
+      "editSchedule": "กำลังแก้ไขกำหนดการสำหรับทีม \"{{team}}\"",
+      "launchPrefix": "เริ่มทีม",
+      "launchSuffix": "ผ่าน Claude CLI ในเครื่อง",
+      "relaunchPrefix": "หยุดการรันปัจจุบันสำหรับ",
+      "relaunchSuffix": "และเริ่มอีกครั้งผ่าน Claude CLI ในเครื่อง"
+    },
+    "prepare": {
+      "action": {
+        "launch": "เริ่ม",
+        "relaunch": "เริ่มใหม่"
+      },
+      "blocked": "สภาพแวดล้อมรันไทม์ไม่พร้อมใช้งาน - {{action}} ถูกบล็อก",
+      "checkingProviders": "กำลังตรวจสอบผู้ให้บริการที่เลือก...",
+      "failed": "เตรียมผู้ให้บริการที่เลือกไม่สำเร็จ",
+      "preflight": "การตรวจสอบก่อนเริ่มเพื่อตรวจจับข้อผิดพลาดก่อน{{action}}",
+      "preparingEnvironment": "กำลังเตรียมสภาพแวดล้อม...",
+      "ready": "ผู้ให้บริการที่เลือกทั้งหมดพร้อมแล้ว",
+      "readyWithNotes": "ผู้ให้บริการที่เลือกทั้งหมดพร้อมแล้ว พร้อมหมายเหตุ",
+      "unsupportedPreload": "เวอร์ชัน preload ปัจจุบันไม่รองรับ team:prepareProvisioning รีสตาร์ทแอป dev",
+      "selectWorkingDirectory": "เลือกไดเรกทอรีทำงานเพื่อตรวจสอบความถูกต้องของสภาพแวดล้อมการเริ่ม",
+      "someProvidersNeedAttention": "ผู้ให้บริการบางรายที่เลือกต้องการความสนใจ"
+    },
+    "prompt": {
+      "label": "พรอมต์",
+      "oneShotPrefix": "พรอมต์นี้จะถูกส่งไปยัง",
+      "oneShotSuffix": "เพื่อการรันแบบครั้งเดียว",
+      "saved": "บันทึกแล้ว",
+      "schedulePlaceholder": "คำแนะนำให้ Claude รันตามกำหนดการ...",
+      "teamLeadOptional": "พรอมต์สำหรับหัวหน้าทีม (ไม่บังคับ)",
+      "teamLeadPlaceholder": "คำแนะนำสำหรับหัวหน้าทีม..."
+    },
+    "providerChanged": "เปลี่ยนผู้ให้บริการจาก {{from}} เป็น {{to}} เซสชันหัวหน้าก่อนหน้าจะไม่ถูกดำเนินการต่อ และหัวหน้าจะเริ่มด้วยคอนเท็กซ์ใหม่เพื่อให้ใช้รันไทม์ใหม่ได้อย่างถูกต้อง",
+    "relaunchFreshSession": "การเริ่มทีมใหม่จะเริ่มเซสชันหัวหน้าใหม่ สถานะทีมที่คงทน บอร์ดงาน และการกำหนดค่าสมาชิกจะถูกนำกลับเข้าสู่พรอมต์การเริ่ม",
+    "relaunchWarning": {
+      "description": "การบันทึกการตั้งค่าเหล่านี้จะหยุดกระบวนการทีมปัจจุบัน คงรายชื่อที่อัปเดตไว้ และเริ่มทีมอีกครั้งด้วยรันไทม์ใหม่",
+      "title": "การเริ่มใหม่จะรีสตาร์ทการรันทีมปัจจุบัน"
+    },
+    "schedule": {
+      "labelOptional": "ป้ายกำกับ (ไม่บังคับ)",
+      "labelPlaceholder": "เช่น รีวิวโค้ดรายวัน, ทดสอบกลางคืน...",
+      "maxBudgetUsd": "งบประมาณสูงสุด (USD)",
+      "maxTurns": "เทิร์นสูงสุด",
+      "noLimit": "ไม่จำกัด",
+      "noMatches": "ไม่มีทีมที่ตรงกับการค้นหาของคุณ",
+      "noTeams": "ไม่มีทีมให้ใช้งาน สร้างทีมก่อน",
+      "searchTeams": "ค้นหาทีม...",
+      "selectTeam": "เลือกทีม...",
+      "team": "ทีม",
+      "title": "กำหนดการ"
+    },
+    "title": {
+      "createSchedule": "สร้างกำหนดการ",
+      "editSchedule": "แก้ไขกำหนดการ",
+      "launch": "เริ่มทีม",
+      "relaunch": "เริ่มทีมใหม่"
+    },
+    "errors": {
+      "loadProjectsFailed": "โหลดโปรเจกต์ไม่สำเร็จ",
+      "saveScheduleFailed": "บันทึกกำหนดการไม่สำเร็จ",
+      "relaunchFailed": "เริ่มทีมใหม่ไม่สำเร็จ",
+      "launchFailed": "เริ่มทีมไม่สำเร็จ"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "หัวหน้า OpenCode ต้องเลือกโมเดล",
+      "openCodeTeammateRequired": "หัวหน้า OpenCode ต้องมีเพื่อนร่วมทีม OpenCode อย่างน้อยหนึ่งคน",
+      "selectWorkingDirectory": "เลือกไดเรกทอรีทำงาน (cwd)",
+      "fixMemberNames": "แก้ไขชื่อสมาชิกก่อนเริ่ม",
+      "memberNamesUnique": "ชื่อสมาชิกต้องไม่ซ้ำกันก่อนเริ่ม"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "การตั้งค่าการเริ่มใหม่",
+      "title": "การตั้งค่าการเริ่มเพิ่มเติม",
+      "relaunchDescription": "ตรวจสอบรายชื่อและรันไทม์ของหัวหน้าก่อนรีสตาร์ททีม",
+      "description": "เก็บโฟลว์การเริ่มให้เน้นที่เส้นทางโปรเจกต์ และขยายส่วนนี้เฉพาะเมื่อคุณต้องการควบคุมเพิ่มเติม"
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "คัดลอกทีม",
+      "createTeam": "สร้างทีม",
+      "deleteForever": "ลบถาวร",
+      "deletePermanently": "ลบอย่างถาวร",
+      "deleteTeam": "ลบทีม",
+      "launching": "กำลังเริ่ม...",
+      "launchTeam": "เริ่มทีม",
+      "relaunchTeam": "เริ่มทีมใหม่",
+      "restore": "กู้คืน",
+      "restoreTeam": "กู้คืนทีม",
+      "retry": "ลองอีกครั้ง",
+      "stopTeam": "หยุดทีม",
+      "stopping": "กำลังหยุด..."
+    },
+    "electronOnly": {
+      "description": "ในโหมดเบราว์เซอร์ ไม่สามารถเข้าถึงไดเรกทอรี `~/.claude/teams` ในเครื่องได้",
+      "title": "ทีมใช้งานได้เฉพาะในโหมด Electron เท่านั้น"
+    },
+    "empty": {
+      "description": "สร้างทีมที่นี่เพื่อเริ่มต้น ทีมจะปรากฏในรายการโดยอัตโนมัติ",
+      "localOnly": "การสร้างทีมใช้งานได้เฉพาะในโหมด Electron ในเครื่องเท่านั้น",
+      "title": "ไม่พบทีม"
+    },
+    "filter": {
+      "clearAll": "ล้างทั้งหมด",
+      "label": "กรองทีม",
+      "projectPriority": "ลำดับความสำคัญของโปรเจกต์",
+      "status": "สถานะ"
+    },
+    "loadFailed": "โหลดทีมไม่สำเร็จ",
+    "loading": "กำลังโหลดทีม...",
+    "localOnly": "ใช้งานได้เฉพาะในโหมด Electron ในเครื่องเท่านั้น",
+    "membersCount": "สมาชิก: {{count}}",
+    "membersCount_few": "สมาชิก: {{count}}",
+    "membersCount_many": "สมาชิก: {{count}}",
+    "membersCount_one": "สมาชิก: {{count}}",
+    "membersCount_other": "สมาชิก: {{count}}",
+    "noDescription": "ไม่มีคำอธิบาย",
+    "noMatches": "ไม่มีทีมที่ตรงกับตัวกรองปัจจุบัน",
+    "partial": {
+      "pending": "การเริ่มครั้งล่าสุดยังกำลังปรับให้สอดคล้องกัน",
+      "skipped": "การเริ่มครั้งล่าสุดมีเพื่อนร่วมทีมที่ถูกข้าม",
+      "skippedWithCount": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_few": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_many": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_one": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_other": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "stopped": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีมทุกคนจะเข้าร่วม",
+      "stoppedWithCount": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_few": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_many": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_one": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_other": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม"
+    },
+    "searchPlaceholder": "ค้นหาทีม...",
+    "sections": {
+      "otherTeams": "ทีมอื่น",
+      "projectTeams": "ทีมสำหรับ {{project}}",
+      "selectedProject": "โปรเจกต์ที่เลือก"
+    },
+    "solo": "เดี่ยว",
+    "status": {
+      "active": "ใช้งานอยู่",
+      "deleted": "ลบแล้ว",
+      "launching": "กำลังเริ่ม...",
+      "offline": "ออฟไลน์",
+      "partialFailure": "การเริ่มล้มเหลวกลางคัน",
+      "partialPending": "รอการบูตสแตรป",
+      "partialSkipped": "การเริ่มข้ามสมาชิก",
+      "running": "กำลังทำงาน"
+    },
+    "title": "เลือกทีม",
+    "trash": "ถังขยะ ({{count}})",
+    "trash_few": "ถังขยะ ({{count}})",
+    "trash_many": "ถังขยะ ({{count}})",
+    "trash_one": "ถังขยะ ({{count}})",
+    "trash_other": "ถังขยะ ({{count}})",
+    "deleteDraft": {
+      "title": "ลบแบบร่าง",
+      "message": "ลบทีมแบบร่าง \"{{teamName}}\" หรือไม่ การดำเนินการนี้ไม่สามารถยกเลิกได้",
+      "confirmLabel": "ลบ",
+      "cancelLabel": "ยกเลิก"
+    },
+    "moveToTrash": {
+      "title": "ย้ายไปถังขยะ",
+      "message": "ย้ายทีม \"{{teamName}}\" ไปถังขยะหรือไม่ คุณสามารถกู้คืนได้ในภายหลัง",
+      "confirmLabel": "ย้ายไปถังขยะ",
+      "cancelLabel": "ยกเลิก"
+    },
+    "deleteForever": {
+      "title": "ลบอย่างถาวร",
+      "message": "ลบทีม \"{{teamName}}\" อย่างถาวรหรือไม่ ข้อมูลทั้งหมดจะสูญหาย",
+      "confirmLabel": "ลบถาวร",
+      "cancelLabel": "ยกเลิก"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "เคล็ดลับ: ข้อความข้ามทีมจะไปยังหัวหน้าทีมเป้าหมาย หากคุณต้องการให้การตอบกลับกลับไปยังหัวหน้าทีมของคุณแทนที่จะเป็นคุณ ให้ระบุอย่างชัดเจนในข้อความ"
+    },
+    "attachments": {
+      "attachFiles": "แนบไฟล์ (วางหรือลากแล้ววาง)",
+      "unavailable": "ไฟล์แนบไม่พร้อมใช้งาน",
+      "disabledHint": "รองรับไฟล์แนบสำหรับหัวหน้าทีมออนไลน์และเพื่อนร่วมทีม OpenCode ออนไลน์ ลบไฟล์แนบหรือเปลี่ยนผู้รับ",
+      "restrictions": {
+        "crossTeam": "ไม่รองรับไฟล์แนบสำหรับข้อความข้ามทีม",
+        "teamOffline": "ทีมต้องออนไลน์เพื่อแนบไฟล์",
+        "unsupportedRecipient": "สามารถส่งไฟล์ไปยังหัวหน้าทีมหรือเพื่อนร่วมทีม OpenCode ได้",
+        "openCodeOffline": "ทีมต้องออนไลน์เพื่อแนบไฟล์สำหรับเพื่อนร่วมทีม OpenCode",
+        "sending": "รอให้ข้อความปัจจุบันส่งเสร็จก่อนเพิ่มไฟล์",
+        "maximumReached": "แนบไฟล์ถึงจำนวนสูงสุดแล้ว",
+        "leadOnly": "สามารถส่งไฟล์ไปยังหัวหน้าทีมเท่านั้น"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "คำสั่งสแลชต้องมีหัวหน้าทีมที่ทำงานสดและไม่สามารถส่งพร้อมไฟล์แนบได้",
+        "crossTeam": "คำสั่งสแลชสามารถรันได้บนหัวหน้าทีมปัจจุบันเท่านั้น",
+        "notLead": "คำสั่งสแลชสามารถส่งไปยังหัวหน้าทีมเท่านั้น",
+        "leadOffline": "คำสั่งสแลชต้องให้หัวหน้าทีมออนไลน์"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "นำคำขอข้ามทีมล่าสุดมาใช้ซ้ำ",
+      "teamOffline": "ทีมออฟไลน์"
+    },
+    "revision": {
+      "editing": "กำลังแก้ไขข้อความก่อนหน้า",
+      "cancel": "ยกเลิก",
+      "tooltip": "ขอให้เอเจนต์ละเว้นข้อความก่อนหน้าและกู้คืนไปยังตัวเขียนข้อความ"
+    },
+    "input": {
+      "charsLeft": "เหลือ {{count}} อักขระ",
+      "charsLeft_one": "เหลือ {{count}} อักขระ",
+      "charsLeft_other": "เหลือ {{count}} อักขระ",
+      "teamLaunchingPlaceholder": "ทีมกำลังเริ่ม... ข้อความจะถูกจัดคิวเพื่อส่งไปยังกล่องขาเข้า",
+      "crossTeamPlaceholder": "ข้อความข้ามทีมถึง {{team}}...",
+      "teamFallback": "ทีม",
+      "placeholder": "เขียนข้อความ... (Enter เพื่อส่ง, Shift+Enter สำหรับขึ้นบรรทัดใหม่)",
+      "slashTip": "เคล็ดลับ: คุณสามารถใช้ \"/\" เพื่อรันคำสั่ง Claude ใดก็ได้",
+      "charsLeft_few": "เหลือ {{count}} อักขระ",
+      "charsLeft_many": "เหลือ {{count}} อักขระ"
+    },
+    "teamSelector": {
+      "thisTeam": "ทีมนี้",
+      "current": "ปัจจุบัน",
+      "online": "ออนไลน์",
+      "offline": "ออฟไลน์",
+      "onlineTitle": "ออนไลน์",
+      "offlineTitle": "ออฟไลน์"
+    },
+    "recipient": {
+      "select": "เลือก...",
+      "searchPlaceholder": "ค้นหา...",
+      "noResults": "ไม่มีผลลัพธ์"
+    },
+    "actions": {
+      "voiceToText": "เสียงเป็นข้อความ",
+      "send": "ส่ง",
+      "sendingUnavailableLaunching": "ไม่สามารถส่งได้ขณะที่ทีมกำลังเริ่ม"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "กรองบันทึก",
+      "tooltip": "กรองบันทึก",
+      "sections": {
+        "stream": "สตรีม",
+        "content": "เนื้อหา"
+      },
+      "kinds": {
+        "output": "เอาต์พุต",
+        "thinking": "การคิด",
+        "tool": "การเรียกเครื่องมือ"
+      },
+      "actions": {
+        "reset": "รีเซ็ต",
+        "save": "บันทึก"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} บรรทัดดิบ",
+    "rawLineCount_one": "{{formattedCount}} บรรทัดดิบ",
+    "rawLinesCaptured": "บันทึกแล้ว {{count}} รายการ",
+    "emptyRawLogs": "{{count}}; ยังไม่มีรายการใดเป็นเอาต์พุตของผู้ช่วย/เครื่องมือ",
+    "noLogsYet": "ยังไม่มีบันทึก",
+    "teamNotRunning": "ทีมไม่ได้ทำงาน",
+    "searchPlaceholder": "ค้นหาบันทึก...",
+    "clearSearch": "ล้างการค้นหา",
+    "newCount": "+{{count}} ใหม่",
+    "loading": "กำลังโหลด...",
+    "showMore": "ดูเพิ่มเติม",
+    "noLogsCaptured": "ไม่มีบันทึกที่ถูกจับ",
+    "noMatchingLogs": "ไม่มีบันทึกที่ตรงกัน",
+    "rawLineCount_few": "{{formattedCount}} บรรทัดดิบ",
+    "rawLineCount_many": "{{formattedCount}} บรรทัดดิบ",
+    "rawLineCount_other": "{{formattedCount}} บรรทัดดิบ",
+    "openFullscreen": "เปิดบันทึกแบบเต็มหน้าจอ",
+    "fullscreen": "เต็มหน้าจอ",
+    "viewingFullscreen": "กำลังดูในโหมดเต็มหน้าจอ",
+    "logsTitle": "บันทึก",
+    "sourceSelect": {
+      "placeholder": "เลือกแหล่งบันทึก...",
+      "searchPlaceholder": "ค้นหาแหล่งบันทึก...",
+      "emptyMessage": "ไม่พบแหล่งบันทึก",
+      "ariaLabel": "แหล่งบันทึก",
+      "leadLabel": "หัวหน้า",
+      "selectSourceEmpty": "เลือกแหล่งบันทึก",
+      "leadDescription": "หัวหน้าทีม",
+      "removedLabel": "ลบแล้ว",
+      "removedDescription": "ลบแล้ว"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "ทีมภายนอก",
+      "process": {
+        "startedBy": "เริ่มโดย:",
+        "at": "ที่:",
+        "openUrl": "เปิด URL"
+      },
+      "overflow": {
+        "hiddenTasks": "งานที่ซ่อน",
+        "empty": "ไม่มีงานที่ซ่อน"
+      },
+      "member": {
+        "lead": "หัวหน้า",
+        "workingOn": "กำลังทำ",
+        "recentTools": "เครื่องมือล่าสุด",
+        "spawn": {
+          "waitingToStart": "รอเริ่ม",
+          "starting": "กำลังเริ่ม",
+          "failed": "ล้มเหลว"
+        },
+        "state": {
+          "active": "ใช้งานอยู่",
+          "idle": "ว่าง",
+          "offline": "ออฟไลน์",
+          "runningTool": "กำลังรันเครื่องมือ"
+        },
+        "activeTool": {
+          "running": "กำลังรันเครื่องมือ",
+          "failed": "เครื่องมือล้มเหลว",
+          "finished": "เครื่องมือเสร็จสิ้น"
+        },
+        "actions": {
+          "message": "ข้อความ",
+          "profile": "โปรไฟล์",
+          "task": "งาน"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "บันทึก",
+      "loading": "กำลังโหลดบันทึก",
+      "more": "+{{count}} เพิ่มเติม",
+      "more_one": "+{{count}} เพิ่มเติม",
+      "more_other": "+{{count}} เพิ่มเติม",
+      "more_few": "+{{count}} เพิ่มเติม",
+      "more_many": "+{{count}} เพิ่มเติม",
+      "unsupportedProvider": "ผู้ให้บริการที่ไม่รองรับ",
+      "openCodeLogsDelayed": "บันทึก OpenCode ล่าช้า",
+      "logsUnavailable": "บันทึกไม่พร้อมใช้งาน",
+      "noRecentLogs": "ไม่มีบันทึกล่าสุด",
+      "toolError": "ข้อผิดพลาดเครื่องมือ",
+      "toolResult": "ผลลัพธ์เครื่องมือ",
+      "toolUse": "การใช้เครื่องมือ",
+      "thinking": "การคิด",
+      "error": "ข้อผิดพลาด",
+      "logEvent": "เหตุการณ์บันทึก",
+      "noErrorOutput": "ไม่มีเอาต์พุตข้อผิดพลาด",
+      "noOutput": "ไม่มีเอาต์พุต",
+      "noInput": "ไม่มีอินพุต"
+    },
+    "blockingEdge": {
+      "title": "การพึ่งพาที่บล็อก",
+      "blocks": "บล็อก",
+      "close": "ปิด",
+      "blockingHiddenTasks": "บล็อกงานที่ซ่อน",
+      "blockedHiddenTasks": "งานที่ซ่อนซึ่งถูกบล็อก",
+      "links_one": "{{count}} ลิงก์",
+      "links_other": "{{count}} ลิงก์",
+      "hiddenBlockingLinks_one": "{{count}} ลิงก์บล็อกที่ซ่อน",
+      "hiddenBlockingLinks_other": "{{count}} ลิงก์บล็อกที่ซ่อน",
+      "hiddenTaskStack": "สแตกงานที่ซ่อน",
+      "hiddenTasks_one": "{{count}} งานที่ซ่อน",
+      "hiddenTasks_other": "{{count}} งานที่ซ่อน",
+      "task": "งาน",
+      "openBlockerStack": "เปิดสแตกตัวบล็อก",
+      "openBlockedStack": "เปิดสแตกที่ถูกบล็อก",
+      "openBlockerTask": "เปิดงานตัวบล็อก",
+      "openBlockedTask": "เปิดงานที่ถูกบล็อก"
+    },
+    "activityHud": {
+      "activity": "กิจกรรม",
+      "noRecentActivity": "ไม่มีกิจกรรมล่าสุด",
+      "more": "+{{count}} เพิ่มเติม",
+      "more_one": "+{{count}} เพิ่มเติม",
+      "more_other": "+{{count}} เพิ่มเติม",
+      "more_few": "+{{count}} เพิ่มเติม",
+      "more_many": "+{{count}} เพิ่มเติม"
+    },
+    "provisioning": {
+      "launchDetails": "รายละเอียดการเริ่ม",
+      "launchDetailsDescription": "ความคืบหน้าการเริ่มทีมโดยละเอียด เอาต์พุตสด และบันทึก CLI"
+    }
+  },
+  "projectPath": {
+    "label": "โปรเจกต์",
+    "source": {
+      "claude": "พบโดย Claude",
+      "codex": "พบโดย Codex",
+      "mixed": "พบโดย Claude และ Codex"
+    },
+    "deleted": {
+      "title": "โฟลเดอร์โปรเจกต์ไม่มีอยู่อีกต่อไป",
+      "label": "ลบแล้ว"
+    },
+    "mode": {
+      "projectList": "จากรายการโปรเจกต์",
+      "customPath": "เส้นทางกำหนดเอง"
+    },
+    "loadingProjects": "กำลังโหลดโปรเจกต์...",
+    "selectProject": "เลือกโปรเจกต์...",
+    "searchPlaceholder": "ค้นหาโปรเจกต์ตามชื่อหรือเส้นทาง",
+    "empty": "ไม่พบสิ่งใด",
+    "selectFromList": "เลือกโปรเจกต์จากรายการ",
+    "noProjects": "ไม่พบโปรเจกต์ สลับไปยังเส้นทางกำหนดเอง",
+    "customWorkingDirectory": "ไดเรกทอรีทำงานกำหนดเอง",
+    "browse": "เรียกดู",
+    "createAutomatically": "หากไดเรกทอรีไม่มีอยู่ จะถูกสร้างขึ้นโดยอัตโนมัติ"
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "โหลดรันไทม์ในเครื่อง",
+      "description": "เฉพาะกระบวนการหลักและกระบวนการลูกเท่านั้น ไม่รวมการอนุมาน LLM ระยะไกล",
+      "cpu": "CPU",
+      "memory": "หน่วยความจำ",
+      "summedRss": "RSS รวม",
+      "sharedHost": "เมตริกโฮสต์ OpenCode ที่ใช้ร่วมกัน ไม่ได้เป็นเฉพาะสมาชิกคนนี้",
+      "processTreeCapped": "โครงสร้างกระบวนการถูกจำกัดสำหรับตัวอย่างนี้",
+      "rssHint": "RSS อาจรวมเพจที่ใช้ร่วมกัน จึงควรอ่านเป็นสัญญาณโหลด ไม่ใช่หน่วยความจำเฉพาะ"
+    },
+    "editor": {
+      "title": "สมาชิก",
+      "addMember": "เพิ่มสมาชิก",
+      "editAsJson": "แก้ไขเป็น JSON",
+      "runInSeparateWorktrees": "รันเพื่อนร่วมทีมใน worktree แยกต่างหาก",
+      "agentTeamsMcpOnly": "Agent Teams MCP เท่านั้น",
+      "removedCount": "ลบแล้ว ({{count}})",
+      "removedModelLockReason": "สมาชิกที่ถูกลบจะถูกเก็บไว้สำหรับประวัติการลบแบบนุ่มนวล กู้คืนเพื่อแก้ไขการตั้งค่า",
+      "memberNamesUnique": "ชื่อสมาชิกต้องไม่ซ้ำกัน"
+    },
+    "stats": {
+      "computing": "กำลังคำนวณสถิติ...",
+      "empty": "ไม่มีสถิติให้ใช้งาน",
+      "lines": "บรรทัด",
+      "linesInfo": "โดยประมาณ แม่นยำสำหรับเครื่องมือ Edit และ Write การเขียนไฟล์ผ่าน Bash จะประมาณการจากรูปแบบคำสั่ง (heredoc, echo, sed) และอาจรายงานต่ำกว่าจริง",
+      "files": "ไฟล์",
+      "toolCalls": "การเรียกเครื่องมือ",
+      "tokens": "โทเค็น",
+      "toolUsage": "การใช้เครื่องมือ",
+      "filesTouched": "ไฟล์ที่แตะต้อง ({{count}})",
+      "viewAllChanges": "ดูการเปลี่ยนแปลงทั้งหมด",
+      "showLess": "ดูน้อยลง",
+      "moreFiles": "+{{count}} เพิ่มเติม",
+      "footer": "{{count}} เซสชัน · คำนวณ {{computedAgo}}",
+      "footer_one": "{{count}} เซสชัน · คำนวณ {{computedAgo}}",
+      "footer_few": "{{count}} เซสชัน · คำนวณ {{computedAgo}}",
+      "footer_many": "{{count}} เซสชัน · คำนวณ {{computedAgo}}",
+      "footer_other": "{{count}} เซสชัน · คำนวณ {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "กำลังค้นหาบันทึก...",
+      "empty": "ไม่พบบันทึก",
+      "waitingForTaskActivity": "งานกำลังดำเนินการ - รอกิจกรรมเซสชัน (รีเฟรชอัตโนมัติ)...",
+      "noTaskActivity": "ยังไม่มีกิจกรรมเซสชันสำหรับงานนี้",
+      "noMemberActivity": "สมาชิกคนนี้ยังไม่มีกิจกรรมเซสชันที่บันทึกไว้",
+      "leadSessionTooltip": "บันทึกเซสชันหัวหน้าทีมฉบับเต็ม - มีประโยชน์สำหรับบริบทการประสานงานโดยรวม ไม่เฉพาะเจาะจงกับเอเจนต์นี้",
+      "memberSessionTooltip": "บันทึกเซสชันเพื่อนร่วมทีมที่คงทนฉบับเต็ม - มีประโยชน์เมื่องานรันในเซสชันสมาชิกหลักแทนที่จะเป็นไฟล์เอเจนต์ย่อย",
+      "startedAt": "เริ่มเมื่อ {{time}}",
+      "active": "ใช้งานอยู่",
+      "showDetails": "แสดงรายละเอียด",
+      "hideDetails": "ซ่อนรายละเอียด",
+      "loadingDetails": "กำลังโหลดรายละเอียด...",
+      "failedToLoadDetails": "โหลดรายละเอียดไม่สำเร็จ"
+    },
+    "detail": {
+      "relaunchOpenCode": "เริ่ม OpenCode ใหม่",
+      "restart": "รีสตาร์ท",
+      "legacyLogsFallback": "บันทึกแบบเดิม (Fallback)",
+      "copyDiagnostics": "คัดลอกการวินิจฉัย",
+      "pid": "PID {{pid}}",
+      "removedAt": "ลบเมื่อ {{date}}",
+      "failedToRestartMember": "รีสตาร์ทสมาชิกไม่สำเร็จ",
+      "sendMessage": "ส่งข้อความ",
+      "assignTask": "มอบหมายงาน",
+      "remove": "ลบ"
+    },
+    "list": {
+      "loading": "กำลังโหลดสมาชิกทีม",
+      "unavailable": "รายชื่อสมาชิกไม่พร้อมใช้งาน",
+      "unavailableDescription": "ทราบเพื่อนร่วมทีม {{count}} คนจากเมตาดาตาของทีม แต่ขาดรายละเอียดรายชื่อ",
+      "unavailableDescription_one": "ทราบเพื่อนร่วมทีม {{count}} คนจากเมตาดาตาของทีม แต่ขาดรายละเอียดรายชื่อ",
+      "soloLeadOnly": "ทีมเดี่ยว - หัวหน้าเท่านั้น",
+      "removedCount": "ลบแล้ว ({{count}})",
+      "unavailableDescription_few": "ทราบเพื่อนร่วมทีม {{count}} คนจากเมตาดาตาของทีม แต่ขาดรายละเอียดรายชื่อ",
+      "unavailableDescription_many": "ทราบเพื่อนร่วมทีม {{count}} คนจากเมตาดาตาของทีม แต่ขาดรายละเอียดรายชื่อ",
+      "unavailableDescription_other": "ทราบเพื่อนร่วมทีม {{count}} คนจากเมตาดาตาของทีม แต่ขาดรายละเอียดรายชื่อ"
+    },
+    "executionLog": {
+      "empty": "ไม่มีอะไรให้แสดง",
+      "emptyUserMessage": "{{time}} - (ว่างเปล่า)",
+      "agentInstructions": "คำแนะนำเอเจนต์",
+      "memberTurn": "เทิร์นของ {{member}}",
+      "agentTurn": "เทิร์นของเอเจนต์",
+      "turn": "เทิร์น"
+    },
+    "recentMessages": {
+      "latest": "ข้อความล่าสุด",
+      "latestForMember": "ข้อความล่าสุด - {{member}}",
+      "loadMore": "โหลดเพิ่มเติม",
+      "expand": "ขยาย",
+      "collapse": "ยุบ"
+    },
+    "leadModel": {
+      "defaultModel": "ค่าเริ่มต้น",
+      "providerModelAria": "ผู้ให้บริการ {{provider}}, {{model}}",
+      "leadShort": "หัวหน้า",
+      "teamLead": "หัวหน้าทีม",
+      "syncWithTeammates": "ซิงค์โมเดลกับเพื่อนร่วมทีม",
+      "anthropicTeamWide": "Anthropic ทั้งทีม",
+      "runtimeInheritance": "รันไทม์ของหัวหน้าใช้กับเพื่อนร่วมทีม เว้นแต่พวกเขาตั้งผู้ให้บริการหรือโมเดลของตัวเอง",
+      "anthropicContextLimit": "ขีดจำกัดคอนเท็กซ์ 200K ใช้ทั้งทีมสำหรับรันไทม์ Anthropic ในการเริ่มนี้ รวมถึงเพื่อนร่วมทีม Anthropic แบบกำหนดเอง"
+    },
+    "runtimeLogs": {
+      "autoRefresh": "รีเฟรชอัตโนมัติ",
+      "wrapLines": "ตัดบรรทัด",
+      "loadingTail": "กำลังโหลดส่วนท้ายของบันทึกกระบวนการ...",
+      "empty": "ยังไม่มีไฟล์บันทึกกระบวนการที่ถูกจับสำหรับสมาชิกคนนี้",
+      "copy": "คัดลอก",
+      "fileEmpty": "ไฟล์บันทึกกระบวนการว่างเปล่า",
+      "showingLast": "กำลังแสดง {{bytes}} ล่าสุด",
+      "showing": "กำลังแสดง {{bytes}}"
+    },
+    "tasks": {
+      "empty": "ไม่มีงานที่มอบหมายให้สมาชิกคนนี้"
+    },
+    "messages": {
+      "loadOlder": "โหลดข้อความที่เก่ากว่า",
+      "filters": {
+        "all": "ทั้งหมด",
+        "messages": "ข้อความ",
+        "comments": "ความคิดเห็น"
+      },
+      "empty": {
+        "loading": "กำลังโหลดกิจกรรม...",
+        "noComments": "ไม่มีความคิดเห็นสำหรับสมาชิกคนนี้",
+        "noLoadedMessages": "ยังไม่มีข้อความที่โหลดสำหรับสมาชิกคนนี้",
+        "noMessages": "ไม่มีข้อความกับสมาชิกคนนี้",
+        "noLoadedActivity": "ยังไม่มีกิจกรรมที่โหลดสำหรับสมาชิกคนนี้",
+        "noActivity": "ไม่มีกิจกรรมกับสมาชิกคนนี้"
+      }
+    },
+    "actions": {
+      "openProfile": "เปิดโปรไฟล์",
+      "editRole": "แก้ไขบทบาท",
+      "sendMessage": "ส่งข้อความ",
+      "assignTask": "มอบหมายงาน"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "ป้อนบทบาทกำหนดเอง..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} กำหนดการ",
+    "count_one": "{{count}} กำหนดการ",
+    "count_other": "{{count}} กำหนดการ",
+    "nextRun": "ถัดไป: {{next}}",
+    "actions": {
+      "runNow": "รันเลย",
+      "edit": "แก้ไข",
+      "pause": "หยุดชั่วคราว",
+      "resume": "ดำเนินการต่อ",
+      "delete": "ลบ",
+      "addSchedule": "เพิ่มกำหนดการ"
+    },
+    "runHistory": {
+      "loading": "กำลังโหลดประวัติการรัน...",
+      "empty": "ยังไม่มีการรัน"
+    },
+    "count_few": "{{count}} กำหนดการ",
+    "count_many": "{{count}} กำหนดการ",
+    "runLog": {
+      "title": "บันทึกการรัน",
+      "exitCode": "ออก {{code}}",
+      "retryCount": "ลองใหม่ {{count}}/{{max}}",
+      "stillRunning": "งานยังกำลังทำงาน...",
+      "loadingLogs": "กำลังโหลดบันทึก...",
+      "errors": "ข้อผิดพลาด",
+      "close": "ปิด"
+    },
+    "cron": {
+      "expression": "นิพจน์ Cron",
+      "highFrequencyWarning": "กำหนดการความถี่สูง (ช่วงน้อยกว่า 5 นาที)",
+      "nextRuns": "การรันถัดไป:",
+      "timezone": "เขตเวลา",
+      "selectTimezone": "เลือกเขตเวลา",
+      "warmUpTime": "เวลาวอร์มอัป",
+      "warmUpDescription": "เตรียมผู้ให้บริการที่เลือกก่อนการรันตามกำหนดการ",
+      "errors": {
+        "enterExpression": "ป้อนนิพจน์ cron",
+        "invalidExpression": "นิพจน์ cron ไม่ถูกต้อง"
+      },
+      "presets": {
+        "everyHour": "ทุกชั่วโมง",
+        "everySixHours": "ทุก 6 ชั่วโมง",
+        "dailyAtNine": "ทุกวันเวลา 9 น.",
+        "weekdaysAtNine": "วันธรรมดาเวลา 9 น.",
+        "mondayAtNine": "วันจันทร์เวลา 9 น.",
+        "everyThirtyMinutes": "ทุก 30 นาที"
+      },
+      "warmUpOptions": {
+        "none": "ไม่วอร์มอัป",
+        "fiveMinutes": "5 นาที",
+        "tenMinutes": "10 นาที",
+        "fifteenMinutes": "15 นาที",
+        "thirtyMinutes": "30 นาที"
+      }
+    },
+    "empty": {
+      "title": "ยังไม่มีกำหนดการ",
+      "description": "สร้างกำหนดการเพื่อรันงาน Claude โดยอัตโนมัติด้วยกำหนดการ cron"
+    },
+    "title": "กำหนดการ",
+    "status": {
+      "active": "ใช้งานอยู่",
+      "paused": "หยุดชั่วคราว",
+      "disabled": "ปิดใช้งาน"
+    },
+    "runStatus": {
+      "pending": "รอดำเนินการ",
+      "warmingUp": "กำลังวอร์มอัป",
+      "warm": "พร้อม",
+      "running": "กำลังทำงาน",
+      "completed": "เสร็จสมบูรณ์",
+      "failed": "ล้มเหลว",
+      "interrupted": "ถูกขัดจังหวะ",
+      "cancelled": "ยกเลิกแล้ว"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "โมเดลในเครื่องของ OpenCode สามารถใช้งบประมาณคอนเท็กซ์ของ OpenCode แทนขีดจำกัดเฉพาะพรอมต์ได้",
+    "description": "เพิ่มขีดจำกัดที่ตรงกันลงในการตั้งค่า OpenCode สำหรับผู้ให้บริการและโมเดลที่เพื่อนร่วมทีมคนนี้ใช้ สิ่งนี้ช่วยให้ OpenCode บีบอัดและตัดทอนก่อนที่โมเดลในเครื่องจะล้นหน้าต่างคอนเท็กซ์",
+    "replacePrefix": "แทนที่",
+    "and": "และ",
+    "replaceSuffix": "ด้วย ID ของผู้ให้บริการและโมเดลจากการตั้งค่า OpenCode ของคุณ คำแนะนำในพรอมต์เช่น",
+    "promptInstructionsSuffix": "อ่อนแอกว่าเพราะคำขอถูกประกอบขึ้นก่อนที่โมเดลจะอ่าน",
+    "providerLimits": "ขีดจำกัดผู้ให้บริการ",
+    "compactionConfig": "การตั้งค่าการบีบอัด"
+  },
+  "sessions": {
+    "noProjectPath": "ไม่มีเส้นทางโปรเจกต์ที่เชื่อมโยง",
+    "provisioningHint": "เซสชันจะปรากฏหลังจากการจัดเตรียมทีม",
+    "projectNotFound": "ไม่พบโปรเจกต์",
+    "loading": "กำลังโหลดเซสชัน...",
+    "empty": "ไม่พบเซสชัน",
+    "showAllSessions": "แสดงสำหรับทุกเซสชัน",
+    "lead": "หัวหน้า",
+    "removeFilter": "ลบตัวกรอง",
+    "filterBySession": "กรองตามเซสชันนี้",
+    "openSession": "เปิดเซสชัน",
+    "title": "เซสชัน"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "ยกเลิก",
+    "moreWarningsHidden": "ซ่อนคำเตือนอีก {{count}} รายการ",
+    "diagnostics": "การวินิจฉัย",
+    "liveOutput": "เอาต์พุตสด",
+    "diagnosticsCopied": "คัดลอกการวินิจฉัยแล้ว",
+    "copyDiagnostics": "คัดลอกการวินิจฉัย",
+    "copied": "คัดลอกแล้ว",
+    "noOutput": "ยังไม่มีเอาต์พุตที่ถูกจับ",
+    "cliLogs": "บันทึก CLI",
+    "steps": {
+      "starting": "กำลังเริ่ม",
+      "configuring": "ตั้งค่าทีม",
+      "assembling": "สมาชิกกำลังเข้าร่วม",
+      "finalizing": "กำลังสรุป"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "กำลังตรวจสอบ...",
+        "ready": "ตกลง",
+        "notes": "ตกลง (หมายเหตุ)",
+        "failed": "ผิดพลาด",
+        "pending": "กำลังรอ"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "ไม่มีไบนารี CLI",
+        "openCodeRuntimeMissing": "ไม่มีรันไทม์ OpenCode",
+        "openCodeWindowsAccessBlocked": "การเข้าถึง OpenCode บน Windows ถูกบล็อก",
+        "openCodeNoOutput": "การตรวจสอบรันไทม์ OpenCode ไม่ได้คืนเอาต์พุต",
+        "openCodeMcpUnreachable": "ไม่สามารถเข้าถึง MCP ของแอป OpenCode",
+        "workingDirectoryMissing": "ไม่มีไดเรกทอรีทำงาน",
+        "cliBinaryCouldNotStart": "ไม่สามารถเริ่มไบนารี CLI ได้",
+        "cliPreflightIncomplete": "การตรวจสอบก่อนเริ่มของ CLI ไม่เสร็จสมบูรณ์",
+        "authenticationRequired": "ต้องยืนยันตัวตน",
+        "runtimeProviderNotConfigured": "ผู้ให้บริการรันไทม์ยังไม่ได้กำหนดค่า",
+        "cliPreflightFailed": "การตรวจสอบก่อนเริ่มของ CLI ล้มเหลว",
+        "selectedModelCompatible": "โมเดลที่เลือกเข้ากันได้",
+        "selectedModelCompatibilityPending": "รอการตรวจสอบความเข้ากันได้ของโมเดลที่เลือก",
+        "selectedModelAvailable": "โมเดลที่เลือกพร้อมใช้งาน",
+        "selectedModelVerified": "ยืนยันโมเดลที่เลือกแล้ว",
+        "selectedModelUnavailable": "โมเดลที่เลือกไม่พร้อมใช้งาน",
+        "selectedModelTimedOut": "การยืนยันโมเดลที่เลือกหมดเวลา",
+        "selectedModelCheckFailed": "การตรวจสอบโมเดลที่เลือกล้มเหลว",
+        "selectedModelDeferred": "เลื่อนการยืนยันโมเดลที่เลือก",
+        "selectedModelPingNotConfirmed": "ยังไม่ยืนยัน ping ของโมเดลที่เลือก",
+        "readyWithNotes": "พร้อม (มีหมายเหตุ)",
+        "needsAttention": "ต้องการความสนใจ"
+      },
+      "modelChecksSummary": "การตรวจสอบโมเดลที่เลือก - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_one": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_other": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "checkFailed": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_one": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_other": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "timedOut": "{{count}} โมเดลหมดเวลา",
+        "timedOut_one": "{{count}} โมเดลหมดเวลา",
+        "timedOut_other": "{{count}} โมเดลหมดเวลา",
+        "deferred": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_one": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_other": "{{count}} การยืนยันถูกเลื่อน",
+        "pingNotConfirmed": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_one": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_other": "{{count}} ยังไม่ยืนยัน ping",
+        "compatibilityPending": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_one": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_other": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatible": "{{count}} เข้ากันได้",
+        "compatible_one": "{{count}} เข้ากันได้",
+        "compatible_other": "{{count}} เข้ากันได้",
+        "checking": "{{count}} กำลังตรวจสอบ",
+        "checking_one": "{{count}} กำลังตรวจสอบ",
+        "checking_other": "{{count}} กำลังตรวจสอบ",
+        "available": "{{count}} พร้อมใช้งาน",
+        "available_one": "{{count}} พร้อมใช้งาน",
+        "available_other": "{{count}} พร้อมใช้งาน",
+        "verified": "{{count}} ยืนยันแล้ว",
+        "verified_one": "{{count}} ยืนยันแล้ว",
+        "verified_other": "{{count}} ยืนยันแล้ว",
+        "unavailable_few": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_many": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "checkFailed_few": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_many": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "timedOut_few": "{{count}} โมเดลหมดเวลา",
+        "timedOut_many": "{{count}} โมเดลหมดเวลา",
+        "deferred_few": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_many": "{{count}} การยืนยันถูกเลื่อน",
+        "pingNotConfirmed_few": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_many": "{{count}} ยังไม่ยืนยัน ping",
+        "compatibilityPending_few": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_many": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatible_few": "{{count}} เข้ากันได้",
+        "compatible_many": "{{count}} เข้ากันได้",
+        "checking_few": "{{count}} กำลังตรวจสอบ",
+        "checking_many": "{{count}} กำลังตรวจสอบ",
+        "available_few": "{{count}} พร้อมใช้งาน",
+        "available_many": "{{count}} พร้อมใช้งาน",
+        "verified_few": "{{count}} ยืนยันแล้ว",
+        "verified_many": "{{count}} ยืนยันแล้ว"
+      },
+      "openProviderSettings": "เปิดการตั้งค่า {{provider}}",
+      "copied": "คัดลอกแล้ว",
+      "copyDiagnostics": "คัดลอกการวินิจฉัย",
+      "deepVerificationPending": "การยืนยันเชิงลึกยังกำลังทำงาน โมเดล OpenCode ฟรีอาจใช้เวลาประมาณ 20 วินาที",
+      "progress": {
+        "checkingSelectedProviders": "กำลังตรวจสอบผู้ให้บริการที่เลือกพร้อมกัน...",
+        "checkingProvider": "กำลังตรวจสอบผู้ให้บริการ {{provider}}...",
+        "checkingProviders": "กำลังตรวจสอบผู้ให้บริการ {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "แก้ไขสิทธิ์โฟลเดอร์หรือย้ายโปรเจกต์ไปยังโฟลเดอร์ที่ผู้ใช้เขียนได้ การรันในฐานะผู้ดูแลระบบเป็นเพียงวิธีแก้ไขชั่วคราวเท่านั้น",
+        "openCodeBridgeNoOutput": "รีสตาร์ทแอปและรันไทม์ OpenCode แล้วลองอีกครั้ง หากเกิดขึ้นซ้ำ ให้คัดลอกการวินิจฉัย",
+        "workingDirectoryMissing": "เลือกไดเรกทอรีทำงานที่มีอยู่ แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "authenticationRequired": "ยืนยันตัวตนผู้ให้บริการที่ต้องการใน Claude CLI แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "runtimeProviderNotConfigured": "กำหนดค่ารันไทม์ของผู้ให้บริการที่เลือก แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeRuntimeMissing": "ติดตั้งหรือลองรันไทม์ OpenCode อีกครั้งจากการ์ดสถานะผู้ให้บริการ แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeAppMcpUnreachable": "ลองเริ่มอีกครั้งเพื่อรีเฟรช MCP บริดจ์ของแอป OpenCode หากเกิดขึ้นซ้ำ ให้รีสตาร์ทแอปและรันไทม์ OpenCode",
+        "cliBinaryMissing": "ตรวจสอบให้แน่ใจว่าไบนารี Claude CLI ในเครื่องมีอยู่และสามารถเริ่มได้ แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "default": "แก้ไขปัญหาด้านบน แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeNodeModulesSymlinkPermission": "รัน Agent Teams AI ในฐานะผู้ดูแลระบบ แล้วลองเริ่มอีกครั้ง"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "เพื่อนร่วมทีม {{count}} คนรอการอนุมัติสิทธิ์",
+      "nameListWithMore": "{{names}}, +{{count}} เพิ่มเติม",
+      "waitingForOpenCode": "กำลังรอ OpenCode: {{names}}",
+      "bootstrapStalled": "การบูตสแตรปค้าง: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; กำลังรอ OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "การบูตสแตรปค้าง",
+        "shellOnly": "เชลล์เท่านั้น",
+        "waitingForBootstrap": "กำลังรอการบูตสแตรป",
+        "bootstrapUnconfirmed": "ยังไม่ยืนยันการบูตสแตรป",
+        "awaitingPermission": "รอการอนุมัติสิทธิ์",
+        "waitingForRuntime": "กำลังรอรันไทม์",
+        "shellOnlyLower": "เชลล์เท่านั้น",
+        "waitingForBootstrapLower": "กำลังรอการบูตสแตรป",
+        "bootstrapUnconfirmedLower": "ยังไม่ยืนยันการบูตสแตรป",
+        "awaitingPermissionLower": "รอการอนุมัติสิทธิ์",
+        "waitingForRuntimeLower": "กำลังรอรันไทม์"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} เริ่มไม่สำเร็จ",
+        "teammatesFailedToStart": "เพื่อนร่วมทีม {{count}} คนเริ่มไม่สำเร็จ",
+        "teammatesFailedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} ถูกข้ามสำหรับการเริ่มนี้",
+        "memberSkippedWithReason": "{{name}} ถูกข้ามสำหรับการเริ่มนี้ - {{reason}}",
+        "memberSkippedCompact": "{{name}} ถูกข้าม",
+        "teammatesSkipped": "เพื่อนร่วมทีม {{count}} คนถูกข้าม",
+        "teammatesSkippedList": "เพื่อนร่วมทีมที่ถูกข้าม: {{list}}",
+        "teammatesSkippedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนถูกข้ามสำหรับการเริ่มนี้"
+      },
+      "joining": {
+        "teammatesStillJoining": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_one": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_few": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_many": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_other": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesConfirmedRatio": "ยืนยันเพื่อนร่วมทีม {{count}}/{{total}} คนแล้ว"
+      },
+      "ready": {
+        "leadOnline": "หัวหน้าออนไลน์",
+        "allTeammatesJoined": "เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว",
+        "teamProvisionedLeadOnline": "จัดเตรียมทีมแล้ว - หัวหน้าออนไลน์",
+        "teamProvisionedAllJoined": "จัดเตรียมทีมแล้ว - เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว",
+        "teamProvisionedStillJoining": "จัดเตรียมทีมแล้ว - เพื่อนร่วมทีมยังกำลังเข้าร่วม",
+        "launchFinishedWithErrors": "การเริ่มเสร็จสิ้นพร้อมข้อผิดพลาด - เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ",
+        "launchContinuedSkipped": "การเริ่มดำเนินต่อ - เพื่อนร่วมทีม {{count}}/{{total}} คนถูกข้าม",
+        "teamLaunchedLeadOnline": "เริ่มทีมแล้ว - หัวหน้าออนไลน์",
+        "teamLaunchedAllJoined": "เริ่มทีมแล้ว - เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว"
+      },
+      "panel": {
+        "launchFailed": "การเริ่มล้มเหลว",
+        "launchDetails": "รายละเอียดการเริ่ม",
+        "launchFinishedWithErrors": "การเริ่มเสร็จสิ้นพร้อมข้อผิดพลาด",
+        "launchContinuedSkipped": "การเริ่มดำเนินต่อพร้อมเพื่อนร่วมทีมที่ถูกข้าม",
+        "coreTeamReady": "ทีมหลักพร้อมแล้ว",
+        "finishingLaunch": "กำลังสรุปการเริ่ม",
+        "teamLaunched": "เริ่มทีมแล้ว",
+        "launchingTeam": "กำลังเริ่มทีม"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "สถานะรันไทม์สด",
+    "description": "การเต้นหัวใจและสถานะการเริ่มแบบแสดงผลเท่านั้น การควบคุมกระบวนการยังคงอยู่ด้านล่าง",
+    "source": "แหล่งที่มา: {{source}}",
+    "lane": "เลน {{lane}}",
+    "diagnosticOnly": "การวินิจฉัยเท่านั้น",
+    "updated": "อัปเดต {{value}}",
+    "states": {
+      "running": "กำลังทำงาน",
+      "starting": "กำลังเริ่ม",
+      "waiting": "กำลังรอ",
+      "degraded": "ต้องการความสนใจ",
+      "stopped": "หยุดแล้ว",
+      "unknown": "ไม่ทราบ"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "บันทึกงานที่แม่นยำ",
+      "loading": "กำลังโหลดบันทึกงานที่แม่นยำ...",
+      "description": "ส่วนทรานสคริปต์ที่แม่นยำซึ่งเรนเดอร์ด้วยส่วนประกอบบันทึกการทำงานเดียวกับที่ใช้ในบันทึก",
+      "emptyTitle": "ยังไม่มีบันทึกงานที่แม่นยำ",
+      "emptyDescription": "ชุดทรานสคริปต์ที่แม่นยำจะปรากฏที่นี่เมื่อมีเมตาดาตาทรานสคริปต์ที่เชื่อมโยงกับงานอย่างชัดเจน",
+      "summaryOnly": "เฉพาะสรุป"
+    },
+    "executionSessions": {
+      "title": "เซสชันการทำงาน",
+      "online": "ออนไลน์",
+      "updating": "กำลังอัปเดต...",
+      "description": "การเรียกดูและตัวอย่างทรานสคริปต์แบบเดิมที่เน้นเซสชัน"
+    },
+    "stream": {
+      "title": "สตรีมบันทึกงาน"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "ยกเลิกงาน {{taskId}}",
+      "cancel": "ยกเลิก",
+      "moveBackToTodoConfirm": "ย้ายงานนี้กลับไปยัง TODO และแจ้งทีมหรือไม่?",
+      "confirm": "ยืนยัน",
+      "keep": "เก็บไว้",
+      "changesNeedAttention": "การเปลี่ยนแปลงต้องการความสนใจ",
+      "changes": "การเปลี่ยนแปลง",
+      "deleteTask": "ลบงาน",
+      "taskLogsActive": "บันทึกงานทำงานอยู่",
+      "newTaskLogsArriving": "บันทึกงานใหม่กำลังมาถึง",
+      "awaitingUser": "รอผู้ใช้",
+      "awaitingLead": "รอหัวหน้า",
+      "blockedBy": "ถูกบล็อกโดย",
+      "blocks": "บล็อก",
+      "start": "เริ่ม",
+      "complete": "เสร็จสิ้น",
+      "approve": "อนุมัติ",
+      "requestReview": "ขอรีวิว",
+      "manualReview": "รีวิวด้วยตนเอง",
+      "requestChanges": "ขอให้แก้ไข"
+    },
+    "filter": {
+      "title": "กรองงาน",
+      "session": "เซสชัน",
+      "allSessions": "ทุกเซสชัน",
+      "teammate": "เพื่อนร่วมทีม",
+      "unassigned": "(ยังไม่ได้มอบหมาย)",
+      "column": "คอลัมน์",
+      "clearAll": "ล้างทั้งหมด"
+    },
+    "board": {
+      "addTask": "เพิ่มงาน",
+      "noTasks": "ไม่มีงาน",
+      "showMore": "แสดงอีก {{count}} รายการ",
+      "hiddenCount": "{{count}} ที่ซ่อน",
+      "trash": "ถังขยะ",
+      "gridView": "มุมมองตาราง",
+      "columnsView": "มุมมองคอลัมน์"
+    },
+    "trash": {
+      "title": "ถังขยะ",
+      "empty": "ไม่มีงานที่ถูกลบ",
+      "subject": "หัวเรื่อง",
+      "owner": "เจ้าของ",
+      "deleted": "ลบแล้ว",
+      "unassigned": "ยังไม่ได้มอบหมาย",
+      "restoreTask": "กู้คืนงาน",
+      "restore": "กู้คืน",
+      "close": "ปิด"
+    },
+    "sort": {
+      "title": "เรียงงาน",
+      "sortBy": "เรียงตาม",
+      "reset": "รีเซ็ต",
+      "options": {
+        "updatedAt": {
+          "label": "อัปเดตล่าสุด",
+          "description": "ที่อัปเดตล่าสุดก่อน"
+        },
+        "createdAt": {
+          "label": "สร้างเมื่อ",
+          "description": "ใหม่สุดก่อน"
+        },
+        "owner": {
+          "label": "เจ้าของ",
+          "description": "เรียงตามตัวอักษรตามผู้รับมอบหมาย"
+        },
+        "manual": {
+          "label": "ด้วยตนเอง",
+          "description": "ลำดับแบบลากแล้ววาง"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "ล้างการค้นหา",
+      "tasks": "งาน",
+      "createdAgo": "สร้างเมื่อ {{time}}",
+      "updatedAgo": "อัปเดตเมื่อ {{time}}",
+      "placeholder": "ค้นหางาน... (#id หรือข้อความ)"
+    },
+    "grid": {
+      "addTask": "เพิ่มงาน",
+      "noTasks": "ไม่มีงาน"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "กำลังตรวจสอบสถานะที่เก็บ Git สำหรับ worktree ของเพื่อนร่วมทีม...",
+    "ready": "Git worktree พร้อมแล้ว",
+    "readyOnBranch": "Git worktree พร้อมแล้วบนสาขา {{branch}}",
+    "needsSetup": "การแยก worktree ต้องตั้งค่า Git",
+    "initialCommitNotice": "การคอมมิตเริ่มต้นจะ stage และคอมมิตไฟล์ปัจจุบันทั้งหมดด้วยข้อความ",
+    "initializeRepository": "เริ่มต้นที่เก็บ Git",
+    "createInitialCommit": "สร้างคอมมิตเริ่มต้น",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "การตั้งค่า",
+    "autoAllowAllTools": "อนุญาตเครื่องมือทั้งหมดอัตโนมัติ",
+    "autoAllowFileEdits": "อนุญาตการแก้ไขไฟล์อัตโนมัติ (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "อนุญาตคำสั่งที่ปลอดภัยอัตโนมัติ (git, pnpm, npm, ls...)",
+    "onTimeout": "เมื่อหมดเวลา:",
+    "after": "หลังจาก",
+    "secondsShort": "วินาที",
+    "timeoutActions": {
+      "wait": "รอตลอดไป",
+      "allow": "อนุญาต",
+      "deny": "ปฏิเสธ"
+    },
+    "submit": "ส่ง",
+    "allow": "อนุญาต",
+    "deny": "ปฏิเสธ",
+    "allowAll": "อนุญาตทั้งหมด",
+    "pendingCount": "{{count}} รอดำเนินการ",
+    "autoActionIn": "อัตโนมัติ-{{action}} ใน {{time}}",
+    "diff": {
+      "previewChanges": "ดูตัวอย่างการเปลี่ยนแปลง",
+      "readingFile": "กำลังอ่านไฟล์...",
+      "binaryFile": "ไฟล์ไบนารี - ไม่สามารถดูตัวอย่างได้",
+      "truncated": "ไฟล์ถูกตัดทอนที่ 2MB - diff อาจไม่สมบูรณ์",
+      "newFile": "ไฟล์ใหม่"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "การซิงค์งานของสมาชิก",
+      "actionableItems": "รายการที่ดำเนินการได้",
+      "fingerprint": "ลายนิ้วมือ",
+      "report": "รายงาน",
+      "none": "ไม่มี",
+      "shadowWouldNudge": "Shadow จะกระตุ้น",
+      "yes": "ใช่",
+      "no": "ไม่",
+      "moreActionableItems": "รายการที่ดำเนินการได้อีก {{count}} รายการ",
+      "diagnostics": "การวินิจฉัย: {{diagnostics}}"
+    },
+    "title": "การซิงค์งานของสมาชิก",
+    "loadingDiagnostics": "กำลังโหลดการวินิจฉัยการซิงค์งานของสมาชิก",
+    "diagnosticsUnavailable": "การวินิจฉัยการซิงค์งานของสมาชิกไม่พร้อมใช้งาน"
+  },
+  "advancedCli": {
+    "title": "ขั้นสูง",
+    "useWorktree": "ใช้ worktree",
+    "recent": "ล่าสุด",
+    "commandPreview": "ตัวอย่างคำสั่ง",
+    "customArguments": "อาร์กิวเมนต์กำหนดเอง",
+    "validate": "ตรวจสอบ",
+    "validation": {
+      "allFlagsValid": "แฟล็กทั้งหมดถูกต้อง",
+      "unknownFlags": "ไม่ทราบ: {{flags}}",
+      "protectedFlags": "ที่ป้องกัน: {{flags}}",
+      "failed": "การตรวจสอบล้มเหลว"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} ที่แล้ว",
+    "stoppedAgo": "หยุดเมื่อ {{time}} ที่แล้ว",
+    "running": "กำลังทำงาน",
+    "stopped": "หยุดแล้ว",
+    "stopProcess": "หยุดกระบวนการ (SIGTERM)",
+    "kill": "Kill",
+    "openInBrowser": "เปิดในเบราว์เซอร์",
+    "open": "เปิด",
+    "pid": "PID{{pid}}",
+    "title": "กระบวนการ CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "กำลังโหลดรายละเอียดกิจกรรม...",
+    "contextUnavailable": "บริบททรานสคริปต์โดยละเอียดไม่พร้อมใช้งานสำหรับกิจกรรมนี้อีกต่อไป",
+    "loading": "กำลังโหลดกิจกรรมงาน...",
+    "lowSignalOnly": "ยังไม่พบกิจกรรมงานสำคัญ รายละเอียดการทำงานระดับล่างมีอยู่ด้านล่างในสตรีมบันทึกงาน",
+    "empty": "ยังไม่พบกิจกรรมงานที่ชัดเจนในทรานสคริปต์ที่มี บันทึกเซสชันที่เก่ากว่าหรือแบบฮิวริสติกอาจยังมีอยู่ด้านล่างในเซสชันการทำงาน",
+    "title": "กิจกรรมงาน",
+    "description": "กิจกรรมรันไทม์ที่ชัดเจนสำคัญซึ่งเชื่อมโยงกับงานนี้จากเมตาดาตาทรานสคริปต์"
+  },
+  "sendMessage": {
+    "title": "ส่งข้อความ",
+    "description": "ส่งข้อความโดยตรงถึงสมาชิกทีม",
+    "recipientLabel": "ผู้รับ",
+    "selectMemberPlaceholder": "เลือกสมาชิก...",
+    "messageLabel": "ข้อความ",
+    "placeholder": "เขียนข้อความของคุณ... (Enter เพื่อส่ง)",
+    "send": "ส่ง",
+    "sending": "กำลังส่ง...",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "attachments": {
+      "teamOnlineRequired": "ทีมต้องออนไลน์เพื่อแนบไฟล์",
+      "recipientUnsupported": "สามารถส่งไฟล์ไปยังหัวหน้าทีมหรือเพื่อนร่วมทีม OpenCode ได้",
+      "openCodeOnlineRequired": "ทีมต้องออนไลน์เพื่อแนบไฟล์สำหรับเพื่อนร่วมทีม OpenCode",
+      "disabledHint": "รองรับไฟล์แนบสำหรับหัวหน้าทีมออนไลน์และเพื่อนร่วมทีม OpenCode ออนไลน์ ลบไฟล์แนบหรือเปลี่ยนผู้รับ",
+      "attachFiles": "แนบไฟล์ (วางหรือลากแล้ววาง)",
+      "unavailable": "ไฟล์แนบไม่พร้อมใช้งาน"
+    },
+    "quote": {
+      "remove": "ลบคำอ้างอิง",
+      "replyingTo": "กำลังตอบกลับถึง"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "ยกเลิกการตอบกลับ",
+    "replyingTo": "กำลังตอบกลับถึง",
+    "placeholder": "เพิ่มความคิดเห็น... (Enter เพื่อส่ง)",
+    "attachFile": "แนบไฟล์ (หรือวาง)",
+    "voiceToText": "เสียงเป็นข้อความ",
+    "comment": "ความคิดเห็น",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "awaitingReplyFrom": "รอการตอบกลับจาก",
+    "or": "หรือ"
+  },
+  "taskAttachments": {
+    "dropImageHere": "วางภาพที่นี่",
+    "attachImage": "แนบภาพ",
+    "pasteOrDragDrop": "หรือวาง / ลากแล้ววาง",
+    "fromOriginalMessage": "จากข้อความต้นฉบับ",
+    "dropFilesHere": "วางไฟล์ที่นี่",
+    "loading": "กำลังโหลดไฟล์แนบ..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "อนุมัติเครื่องมือทั้งหมดอัตโนมัติ",
+    "autonomousModeDescription": "โหมดอัตโนมัติ: เครื่องมือทีมทำงานโดยไม่ต้องยืนยัน ระวังกับโค้ดที่ไม่น่าเชื่อถือ",
+    "manualModeDescription": "โหมดด้วยตนเอง: คุณจะอนุมัติหรือปฏิเสธการเรียกเครื่องมือแต่ละครั้งแบบเรียลไทม์"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "การทำงาน",
+      "process": "กระบวนการ"
+    },
+    "filters": {
+      "all": "ทั้งหมด"
+    },
+    "logs": {
+      "title": "บันทึก",
+      "loading": "กำลังโหลดสตรีมบันทึกของสมาชิก...",
+      "emptyTitle": "ยังไม่พบรายการสตรีมบันทึกสำหรับสมาชิกคนนี้",
+      "emptyDescription": "บันทึกทรานสคริปต์หรือรันไทม์ที่กำหนดขอบเขตต่อสมาชิกจะปรากฏที่นี่เมื่อมี"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "อธิบายสิ่งที่ต้องเปลี่ยน... (Enter เพื่อส่ง)",
+    "submit": "ส่ง",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "title": "ขอให้แก้ไข"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "เปิดแดชบอร์ด",
+      "openTeam": "เปิดทีม",
+      "cancel": "ยกเลิก"
+    },
+    "membersJson": {
+      "hide": "ซ่อน JSON"
+    },
+    "optional": {
+      "badge": "ไม่บังคับ"
+    }
+  },
+  "runningTeams": {
+    "title": "ทีมที่กำลังทำงาน",
+    "status": {
+      "active": "ใช้งานอยู่",
+      "provisioning": "กำลังเริ่ม",
+      "idle": "กำลังทำงาน"
+    },
+    "noProject": "ไม่มีโปรเจกต์"
+  },
+  "layout": {
+    "maxPanesReached": "ถึงจำนวนแผงสูงสุด {{count}} แผงแล้ว"
+  },
+  "codexReconnect": {
+    "description": "เซสชัน Codex ของคุณดูเหมือนจะเก่า เชื่อมต่อใหม่เพื่อดำเนินการต่อ",
+    "useCode": "ใช้โค้ด",
+    "generating": "กำลังสร้าง...",
+    "openLogin": "เปิดการเข้าสู่ระบบ",
+    "generateLink": "สร้างลิงก์"
+  },
+  "effortLevel": {
+    "label": "ระดับความพยายาม (ไม่บังคับ)",
+    "maxDescription": "Max ให้เวลาการให้เหตุผลแก่โมเดลมากที่สุดสำหรับงานที่ยาก"
+  },
+  "contextLimit": {
+    "limitTo200k": "จำกัดคอนเท็กซ์ไว้ที่ 200K โทเค็น",
+    "always200k": "(200K เสมอสำหรับโมเดลนี้)",
+    "tooltipContent": "คงการเริ่มไว้ในหน้าต่างคอนเท็กซ์ 200K โทเค็นเมื่อรองรับ",
+    "tooltipTitle": "ขีดจำกัดคอนเท็กซ์"
+  },
+  "roleSelect": {
+    "noRole": "ไม่มีบทบาท",
+    "customRole": "บทบาทกำหนดเอง...",
+    "searchPlaceholder": "ค้นหาบทบาท...",
+    "empty": "ไม่พบบทบาท",
+    "reservedRole": "บทบาทนี้ถูกสงวนไว้",
+    "emptyCustomRole": "บทบาทต้องไม่ว่างเปล่า"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

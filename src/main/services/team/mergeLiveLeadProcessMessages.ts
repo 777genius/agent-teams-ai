@@ -1,4 +1,4 @@
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, MessagesPage } from '@shared/types';
 
 export function getLiveLeadProcessMessageKey(message: {
   messageId?: string;
@@ -70,4 +70,66 @@ export function mergeLiveLeadProcessMessages(
 
   merged.sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
   return merged;
+}
+
+export function mergeLiveLeadProcessMessagesPage(input: {
+  durableMessages: InboxMessage[];
+  liveMessages: InboxMessage[];
+  limit: number;
+  feedRevision: string;
+  durableHasMoreAfterWindow?: boolean;
+}): MessagesPage {
+  const displayMessages = mergeLiveLeadProcessMessages(
+    input.durableMessages,
+    input.liveMessages
+  ).slice(0, input.limit);
+
+  if (displayMessages.length === 0) {
+    return {
+      messages: displayMessages,
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: input.feedRevision,
+    };
+  }
+
+  const durableMessageIndexByKey = new Map(
+    input.durableMessages.map((message, index) => [getLiveLeadProcessMessageKey(message), index])
+  );
+  let lastDurableDisplayed: InboxMessage | null = null;
+  for (let index = displayMessages.length - 1; index >= 0; index -= 1) {
+    const candidate = displayMessages[index];
+    if (durableMessageIndexByKey.has(getLiveLeadProcessMessageKey(candidate))) {
+      lastDurableDisplayed = candidate;
+      break;
+    }
+  }
+
+  if (!lastDurableDisplayed) {
+    const boundary = displayMessages[displayMessages.length - 1];
+    return {
+      messages: displayMessages,
+      nextCursor:
+        input.durableMessages.length > 0 || input.durableHasMoreAfterWindow
+          ? `${boundary.timestamp}|${boundary.messageId ?? ''}`
+          : null,
+      hasMore: input.durableMessages.length > 0 || Boolean(input.durableHasMoreAfterWindow),
+      feedRevision: input.feedRevision,
+    };
+  }
+
+  const durableIndex =
+    durableMessageIndexByKey.get(getLiveLeadProcessMessageKey(lastDurableDisplayed)) ??
+    Number.POSITIVE_INFINITY;
+  const durableHasMore =
+    durableIndex < input.durableMessages.length - 1 || Boolean(input.durableHasMoreAfterWindow);
+
+  return {
+    messages: displayMessages,
+    nextCursor: durableHasMore
+      ? `${lastDurableDisplayed.timestamp}|${lastDurableDisplayed.messageId ?? ''}`
+      : null,
+    hasMore: durableHasMore,
+    feedRevision: input.feedRevision,
+  };
 }

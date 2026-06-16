@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
@@ -59,9 +59,7 @@ interface MemberHoverCardProps {
 }
 
 /**
- * Wraps children in a HoverCard that shows member info on hover.
- * Reads member data from the team snapshot + resolved member selectors.
- * Falls back to a simple wrapper when member data is unavailable.
+ * Wraps children in a HoverCard that mounts detailed member data only while open.
  */
 export const MemberHoverCard = memo(function MemberHoverCard({
   name,
@@ -70,10 +68,39 @@ export const MemberHoverCard = memo(function MemberHoverCard({
   onOpenTask,
   children,
 }: MemberHoverCardProps): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <HoverCard open={open} onOpenChange={setOpen} openDelay={300} closeDelay={200}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      {open ? (
+        <MemberHoverCardContent
+          name={name}
+          color={color}
+          teamName={teamName}
+          onOpenTask={onOpenTask}
+        />
+      ) : null}
+    </HoverCard>
+  );
+});
+
+interface MemberHoverCardContentProps {
+  name: string;
+  color?: string;
+  teamName?: string;
+  onOpenTask?: (task: TeamTaskWithKanban) => void;
+}
+
+const MemberHoverCardContent = ({
+  name,
+  color,
+  teamName,
+  onOpenTask,
+}: MemberHoverCardContentProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
-  const selectedTeamName = useStore((s) => s.selectedTeamName);
-  const effectiveTeamName = teamName ?? selectedTeamName;
+  const effectiveTeamName = useStore((s) => teamName ?? s.selectedTeamName);
   const {
     member,
     teamMembers,
@@ -120,10 +147,10 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     }))
   );
   const openMemberProfile = useStore((s) => s.openMemberProfile);
-  const avatarMap = buildMemberAvatarMap(teamMembers);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
 
   if (!member) {
-    return <>{children}</>;
+    return null;
   }
 
   const launchJoinMilestones = getLaunchJoinMilestonesFromMembers({
@@ -238,112 +265,109 @@ export const MemberHoverCard = memo(function MemberHoverCard({
       : null;
 
   return (
-    <HoverCard openDelay={300} closeDelay={200}>
-      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-      <HoverCardContent side="top" align="start" sideOffset={8}>
-        <div className="flex flex-col gap-2.5">
-          {/* Header: avatar + name + presence */}
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <img
-                src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 64)}
-                alt={member.name}
-                className="size-10 rounded-full bg-[var(--color-surface-raised)]"
-                loading="lazy"
-              />
-              <MemberPresenceDot className={`size-3 ${dotClass}`} label={badgeLabel} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="truncate text-sm font-semibold"
-                  style={{ color: getThemedText(colors, isLight) }}
-                >
-                  {displayMemberName(member.name)}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 px-1.5 py-0 text-[10px] font-normal leading-tight"
-                  title={runtimeAdvisoryTitle}
-                  style={{
-                    backgroundColor:
-                      runtimeAdvisoryTone === 'error'
-                        ? 'rgba(239, 68, 68, 0.16)'
-                        : getThemedBadge(colors, isLight),
-                    color:
-                      runtimeAdvisoryTone === 'error'
-                        ? 'rgb(252, 165, 165)'
-                        : getThemedText(colors, isLight),
-                    border:
-                      runtimeAdvisoryTone === 'error'
-                        ? '1px solid rgba(248, 113, 113, 0.35)'
-                        : `1px solid ${getThemedBorder(colors, isLight)}40`,
-                  }}
-                >
-                  {badgeLabel}
-                </Badge>
-              </div>
-              {roleLabel && (
-                <span className="text-xs text-[var(--color-text-muted)]">{roleLabel}</span>
-              )}
-            </div>
+    <HoverCardContent side="top" align="start" sideOffset={8}>
+      <div className="flex flex-col gap-2.5">
+        {/* Header: avatar + name + presence */}
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <img
+              src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 64)}
+              alt={member.name}
+              className="size-10 rounded-full bg-[var(--color-surface-raised)]"
+              loading="lazy"
+            />
+            <MemberPresenceDot className={`size-3 ${dotClass}`} label={badgeLabel} />
           </div>
-
-          {/* Current task */}
-          {currentTask && (
-            <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
-              <CurrentTaskIndicator
-                task={currentTask}
-                borderColor={colors.border}
-                maxSubjectLength={28}
-                activityLabel="working on"
-                onOpenTask={onOpenTask ? () => onOpenTask(currentTask) : undefined}
-              />
-            </div>
-          )}
-
-          {/* Review task */}
-          {reviewTask && (
-            <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
-              <CurrentTaskIndicator
-                task={reviewTask}
-                borderColor={colors.border}
-                maxSubjectLength={28}
-                activityLabel="reviewing"
-                onOpenTask={onOpenTask ? () => onOpenTask(reviewTask) : undefined}
-              />
-            </div>
-          )}
-
-          {launchErrorMessage ? (
-            <div className="flex items-center gap-2 rounded border border-red-500/25 bg-red-500/10 px-2 py-1.5 text-xs text-red-300">
-              <span className="min-w-0 flex-1 truncate" title={launchErrorMessage}>
-                {launchErrorMessage}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="truncate text-sm font-semibold"
+                style={{ color: getThemedText(colors, isLight) }}
+              >
+                {displayMemberName(member.name)}
               </span>
-              {showCopyDiagnostics ? (
-                <MemberLaunchDiagnosticsButton
-                  payload={launchDiagnosticsPayload}
-                  className="h-auto shrink-0 rounded px-1.5 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                />
-              ) : null}
+              <Badge
+                variant="secondary"
+                className="shrink-0 px-1.5 py-0 text-[10px] font-normal leading-tight"
+                title={runtimeAdvisoryTitle}
+                style={{
+                  backgroundColor:
+                    runtimeAdvisoryTone === 'error'
+                      ? 'rgba(239, 68, 68, 0.16)'
+                      : getThemedBadge(colors, isLight),
+                  color:
+                    runtimeAdvisoryTone === 'error'
+                      ? 'rgb(252, 165, 165)'
+                      : getThemedText(colors, isLight),
+                  border:
+                    runtimeAdvisoryTone === 'error'
+                      ? '1px solid rgba(248, 113, 113, 0.35)'
+                      : `1px solid ${getThemedBorder(colors, isLight)}40`,
+                }}
+              >
+                {badgeLabel}
+              </Badge>
             </div>
-          ) : null}
-
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                openMemberProfile(member.name);
-              }}
-            >
-              <ExternalLink size={12} />
-              {t('members.actions.openProfile')}
-            </button>
+            {roleLabel && (
+              <span className="text-xs text-[var(--color-text-muted)]">{roleLabel}</span>
+            )}
           </div>
         </div>
-      </HoverCardContent>
-    </HoverCard>
+
+        {/* Current task */}
+        {currentTask && (
+          <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+            <CurrentTaskIndicator
+              task={currentTask}
+              borderColor={colors.border}
+              maxSubjectLength={28}
+              activityLabel="working on"
+              onOpenTask={onOpenTask ? () => onOpenTask(currentTask) : undefined}
+            />
+          </div>
+        )}
+
+        {/* Review task */}
+        {reviewTask && (
+          <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+            <CurrentTaskIndicator
+              task={reviewTask}
+              borderColor={colors.border}
+              maxSubjectLength={28}
+              activityLabel="reviewing"
+              onOpenTask={onOpenTask ? () => onOpenTask(reviewTask) : undefined}
+            />
+          </div>
+        )}
+
+        {launchErrorMessage ? (
+          <div className="flex items-center gap-2 rounded border border-red-500/25 bg-red-500/10 px-2 py-1.5 text-xs text-red-300">
+            <span className="min-w-0 flex-1 truncate" title={launchErrorMessage}>
+              {launchErrorMessage}
+            </span>
+            {showCopyDiagnostics ? (
+              <MemberLaunchDiagnosticsButton
+                payload={launchDiagnosticsPayload}
+                className="h-auto shrink-0 rounded px-1.5 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              openMemberProfile(member.name);
+            }}
+          >
+            <ExternalLink size={12} />
+            {t('members.actions.openProfile')}
+          </button>
+        </div>
+      </div>
+    </HoverCardContent>
   );
-});
+};

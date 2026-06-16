@@ -13,20 +13,15 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { CompactMarkdownPreview } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
   CARD_BORDER_STYLE,
   CARD_ICON_MUTED,
-  CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useTheme } from '@renderer/hooks/useTheme';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import {
   areStringArraysEqual,
@@ -37,12 +32,16 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { isThoughtProtocolNoise } from '@shared/utils/inboxNoise';
-import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { isTeamInternalControlMessageText } from '@shared/utils/teamInternalControlMessages';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
 
 import { buildThoughtDisplayContent } from './activityMarkdown';
+import {
+  encodeCacheParts,
+  extractMarkdownPlainTextCached,
+  getCachedString,
+} from './activityRenderCache';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,
@@ -155,6 +154,7 @@ const LIVE_WINDOW_MS = 5_000;
 const COLLAPSED_THOUGHTS_HEIGHT = 200;
 const AUTO_SCROLL_THRESHOLD = 30;
 const THOUGHT_HEIGHT_ANIMATION_MS = ENTRY_REVEAL_ANIMATION_MS;
+const leadThoughtTimeCache = new Map<string, string>();
 
 interface LeadThoughtsGroupRowProps {
   group: LeadThoughtGroup;
@@ -206,15 +206,19 @@ interface LeadThoughtsGroupRowProps {
 }
 
 function formatTime(timestamp: string): string {
-  const d = new Date(timestamp);
-  if (Number.isNaN(d.getTime())) return timestamp;
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return getCachedString(leadThoughtTimeCache, encodeCacheParts(['minute', timestamp]), () => {
+    const d = new Date(timestamp);
+    if (Number.isNaN(d.getTime())) return timestamp;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  });
 }
 
 export function formatTimeWithSec(timestamp: string): string {
-  const d = new Date(timestamp);
-  if (Number.isNaN(d.getTime())) return timestamp;
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return getCachedString(leadThoughtTimeCache, encodeCacheParts(['second', timestamp]), () => {
+    const d = new Date(timestamp);
+    if (Number.isNaN(d.getTime())) return timestamp;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  });
 }
 
 function isRecentTimestamp(timestamp: string): boolean {
@@ -363,8 +367,16 @@ const LeadThoughtItem = memo(
 
     useLayoutEffect(() => {
       const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+
+      if (!shouldAnimateOnMount) {
+        initialAnimationCompletedRef.current = true;
+        resetWrapperStyles();
+        return;
+      }
+
       const content = contentRef.current;
-      if (!wrapper || !content) return;
+      if (!content) return;
 
       const applyTransition = (targetHeight: number): void => {
         wrapper.style.transition = [
@@ -411,12 +423,6 @@ const LeadThoughtItem = memo(
       const syncHeight = (nextHeight: number, animateFromZero: boolean): void => {
         const previousHeight = previousHeightRef.current;
         previousHeightRef.current = nextHeight;
-
-        if (!shouldAnimateOnMount) {
-          initialAnimationCompletedRef.current = true;
-          resetWrapperStyles();
-          return;
-        }
 
         if (previousHeight === null) {
           if (nextHeight > 0 && animateFromZero) {
@@ -562,6 +568,7 @@ const LeadThoughtsGroupRowComponent = ({
   expandItemKey,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { isLight } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -575,9 +582,6 @@ const LeadThoughtsGroupRowComponent = ({
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
   const leadName = newest.from;
-
-  // Chronological order for rendering (oldest at top, newest at bottom)
-  const chronologicalThoughts = useMemo(() => [...thoughts].reverse(), [thoughts]);
 
   // Aggregate tool usage across all thoughts in this group
   const totalToolSummary = useMemo(() => {
@@ -604,8 +608,22 @@ const LeadThoughtsGroupRowComponent = ({
     return calls.length > 0 ? calls : undefined;
   }, [thoughts]);
 
+  const [expanded, setExpanded] = useState(false);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+  const isManaged = collapseMode === 'managed';
+  const isBodyVisible = isManaged ? !isCollapsed : true;
+  const canToggleBodyVisibility = isManaged && canToggleCollapse;
+  const useCompactCollapsedHeader = compactHeader && !isBodyVisible;
+
+  // Chronological order for rendering (oldest at top, newest at bottom)
+  const chronologicalThoughts = useMemo(
+    () => (isBodyVisible ? [...thoughts].reverse() : []),
+    [isBodyVisible, thoughts]
+  );
+
   // Reuse the same markdown preprocessing as the expanded thought body.
   const compactPreviewMarkdown = useMemo(() => {
+    if (isBodyVisible) return null;
     // Try newest first (most relevant), then scan for any text
     for (const t of thoughts) {
       if (t.text && t.text.trim()) {
@@ -621,9 +639,10 @@ const LeadThoughtsGroupRowComponent = ({
       }
     }
     return totalToolSummary;
-  }, [memberColorMap, teamNames, thoughts, totalToolSummary]);
+  }, [isBodyVisible, memberColorMap, teamNames, thoughts, totalToolSummary]);
   const compactPreviewTooltipText = useMemo(() => {
-    const normalized = extractMarkdownPlainText(compactPreviewMarkdown ?? '')
+    if (!compactPreviewMarkdown) return null;
+    const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown ?? '')
       .replace(/\n+/g, ' ')
       .trim();
     return normalized || compactPreviewMarkdown;
@@ -632,11 +651,6 @@ const LeadThoughtsGroupRowComponent = ({
   // Detect if any thought in this group is an API error
   const hasApiError = useMemo(() => thoughts.some((t) => isApiErrorMessage(t.text)), [thoughts]);
 
-  const [expanded, setExpanded] = useState(false);
-  const [needsTruncation, setNeedsTruncation] = useState(false);
-  const isManaged = collapseMode === 'managed';
-  const isBodyVisible = isManaged ? !isCollapsed : true;
-  const canToggleBodyVisibility = isManaged && canToggleCollapse;
   const handleBodyToggle = useCallback(() => {
     if (canToggleBodyVisibility && collapseToggleKey) {
       onToggleCollapse?.(collapseToggleKey);
@@ -788,16 +802,15 @@ const LeadThoughtsGroupRowComponent = ({
     });
   }, []);
 
-  const timestampLabel =
-    formatTime(oldest.timestamp) === formatTime(newest.timestamp)
-      ? formatTime(oldest.timestamp)
-      : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`;
-  const useCompactCollapsedHeader = compactHeader && !isBodyVisible;
-
+  const timestampLabel = useMemo(() => {
+    const oldestTime = formatTime(oldest.timestamp);
+    const newestTime = formatTime(newest.timestamp);
+    return oldestTime === newestTime ? oldestTime : `${oldestTime}–${newestTime}`;
+  }, [newest.timestamp, oldest.timestamp]);
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref} style={{ overflowAnchor: 'none' }}>
       <article
-        className="group rounded-md [overflow:clip]"
+        className="activity-timeline-card group rounded-md [overflow:clip]"
         style={{
           backgroundColor: zebraShade ? CARD_BG_ZEBRA : CARD_BG,
           border: hasApiError ? '1px solid rgba(248, 113, 113, 0.3)' : CARD_BORDER_STYLE,
@@ -832,7 +845,7 @@ const LeadThoughtsGroupRowComponent = ({
             <div className="min-w-0">
               <div className="flex min-w-0 items-start gap-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                  <MemberBadge name={leadName} color={memberColor} hideAvatar />
+                  <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
                   <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                     {t('activity.thoughts.count', { count: thoughts.length })}
                   </span>
@@ -866,27 +879,14 @@ const LeadThoughtsGroupRowComponent = ({
                 </div>
               </div>
               {compactPreviewMarkdown ? (
-                <TooltipProvider delayDuration={1000}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <CompactMarkdownPreview
-                          content={compactPreviewMarkdown}
-                          className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                          teamColorByName={teamColorByName}
-                          onTeamClick={onTeamClick}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      align="start"
-                      className="max-w-sm whitespace-normal break-words"
-                    >
-                      {compactPreviewTooltipText}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div title={compactPreviewTooltipText ?? undefined}>
+                  <CompactMarkdownPreview
+                    content={compactPreviewMarkdown}
+                    className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                    teamColorByName={teamColorByName}
+                    onTeamClick={onTeamClick}
+                  />
+                </div>
               ) : null}
             </div>
           ) : !isBodyVisible ? (
@@ -918,7 +918,7 @@ const LeadThoughtsGroupRowComponent = ({
                     />
                   </div>
                 ) : null}
-                <MemberBadge name={leadName} color={memberColor} hideAvatar />
+                <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {t('activity.thoughts.count', { count: thoughts.length })}
                 </span>
@@ -951,27 +951,14 @@ const LeadThoughtsGroupRowComponent = ({
                 </div>
               </div>
               {compactPreviewMarkdown ? (
-                <TooltipProvider delayDuration={1000}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <CompactMarkdownPreview
-                          content={compactPreviewMarkdown}
-                          className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                          teamColorByName={teamColorByName}
-                          onTeamClick={onTeamClick}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      align="start"
-                      className="max-w-sm whitespace-normal break-words"
-                    >
-                      {compactPreviewTooltipText}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div title={compactPreviewTooltipText ?? undefined}>
+                  <CompactMarkdownPreview
+                    content={compactPreviewMarkdown}
+                    className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                    teamColorByName={teamColorByName}
+                    onTeamClick={onTeamClick}
+                  />
+                </div>
               ) : null}
             </div>
           ) : (
@@ -1002,7 +989,7 @@ const LeadThoughtsGroupRowComponent = ({
                   />
                 </div>
               ) : null}
-              <MemberBadge name={leadName} color={memberColor} hideAvatar />
+              <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
               <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                 {t('activity.thoughts.count', { count: thoughts.length })}
               </span>

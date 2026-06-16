@@ -26,7 +26,7 @@ import {
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { buildMemberAvatarMap, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isOpenCodeRuntimeDeliveryHardUxFailureFromDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { getSuggestedSlashCommandsForProvider } from '@renderer/utils/providerSlashCommands';
@@ -112,6 +112,8 @@ let pendingSendIdCounter = 0;
 const FLOATING_COMPOSER_MIN_WIDTH = 350;
 const FLOATING_COMPOSER_MAX_WIDTH = 500;
 const FLOATING_COMPOSER_TEXT_BUFFER = 4;
+const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
+const EMPTY_SKILL_CATALOG = [] as const;
 
 function createPendingSendId(): string {
   const randomId = globalThis.crypto?.randomUUID?.();
@@ -189,12 +191,9 @@ export const MessageComposer = ({
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [teamSelectorOpen, setTeamSelectorOpen] = useState(false);
   const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
+  const crossTeamTargetsFetchedRef = useRef(false);
   const allCrossTeamTargets = useStore(useShallow((s) => s.crossTeamTargets));
   const fetchCrossTeamTargets = useStore((s) => s.fetchCrossTeamTargets);
-
-  useEffect(() => {
-    void fetchCrossTeamTargets();
-  }, [fetchCrossTeamTargets]);
 
   const refreshAliveTeams = useCallback(async () => {
     try {
@@ -206,13 +205,23 @@ export const MessageComposer = ({
   }, []);
 
   useEffect(() => {
-    void refreshAliveTeams();
-  }, [refreshAliveTeams]);
-
-  useEffect(() => {
     if (!teamSelectorOpen) return;
+    if (!crossTeamTargetsFetchedRef.current) {
+      // Set the guard synchronously to dedupe concurrent fetches, but clear it if the fetch
+      // fails so a later open retries instead of leaving cross-team targets permanently empty.
+      crossTeamTargetsFetchedRef.current = true;
+      void fetchCrossTeamTargets()
+        .then((ok) => {
+          if (!ok) {
+            crossTeamTargetsFetchedRef.current = false;
+          }
+        })
+        .catch(() => {
+          crossTeamTargetsFetchedRef.current = false;
+        });
+    }
     void refreshAliveTeams();
-  }, [teamSelectorOpen, refreshAliveTeams]);
+  }, [fetchCrossTeamTargets, refreshAliveTeams, teamSelectorOpen]);
 
   // Always filter out current team on the UI side (store is global, shared across tabs)
   const crossTeamTargets = useMemo(
@@ -273,8 +282,18 @@ export const MessageComposer = ({
   const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
   const draft = useComposerDraft(teamName);
   const appliedRevisionRequestIdRef = useRef<string | null>(null);
+  const textHasTeamMentionTrigger = draft.text.includes('@');
+  const textHasTaskMentionTrigger = draft.text.includes('#');
+  const textHasSlashCommandTrigger = stripEncodedTaskReferenceMetadata(draft.text)
+    .trimStart()
+    .startsWith('/');
+  const taskSuggestionDataEnabled =
+    textHasTaskMentionTrigger || draft.chips.length > 0 || revisionRequest != null;
+  const teamSuggestionDataEnabled = textHasTeamMentionTrigger;
+  const slashCommandDataEnabled = textHasSlashCommandTrigger;
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
@@ -293,30 +312,43 @@ export const MessageComposer = ({
     );
   }, [members]);
 
-  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
-  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName, {
+    enabled: teamSuggestionDataEnabled,
+  });
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName, {
+    enabled: taskSuggestionDataEnabled,
+  });
   // Project skills as slash command suggestions
   const projectSkills = useStore(
-    useShallow((s) => (projectPath ? (s.skillsProjectCatalogByProjectPath[projectPath] ?? []) : []))
+    useShallow((s) =>
+      slashCommandDataEnabled && projectPath
+        ? (s.skillsProjectCatalogByProjectPath[projectPath] ?? EMPTY_SKILL_CATALOG)
+        : EMPTY_SKILL_CATALOG
+    )
   );
-  const userSkills = useStore(useShallow((s) => s.skillsUserCatalog));
+  const userSkills = useStore(
+    useShallow((s) => (slashCommandDataEnabled ? s.skillsUserCatalog : EMPTY_SKILL_CATALOG))
+  );
   const fetchSkillsCatalog = useStore((s) => s.fetchSkillsCatalog);
   const isLaunchBlocking = isProvisioning && !isTeamAlive;
 
-  // Fetch skills catalog for the team's project on mount / project change
+  // Fetch the catalog only when slash suggestions are actually needed.
   useEffect(() => {
+    if (!slashCommandDataEnabled) return;
     void fetchSkillsCatalog(projectPath ?? undefined);
-  }, [fetchSkillsCatalog, projectPath]);
+  }, [fetchSkillsCatalog, projectPath, slashCommandDataEnabled]);
 
   const slashCommandSuggestions = useMemo<MentionSuggestion[]>(
     () =>
-      buildSlashCommandSuggestions(
-        getSuggestedSlashCommandsForProvider(leadProviderId),
-        projectSkills,
-        userSkills,
-        leadProviderId
-      ),
-    [leadProviderId, projectSkills, userSkills]
+      slashCommandDataEnabled
+        ? buildSlashCommandSuggestions(
+            getSuggestedSlashCommandsForProvider(leadProviderId),
+            projectSkills,
+            userSkills,
+            leadProviderId
+          )
+        : EMPTY_MENTION_SUGGESTIONS,
+    [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills]
   );
 
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
@@ -863,7 +895,7 @@ export const MessageComposer = ({
           isCompactLayout ? 'space-y-1.5' : 'space-y-2'
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {showAttachmentControl ? (
             <>
               <input
@@ -899,9 +931,12 @@ export const MessageComposer = ({
             </>
           ) : null}
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
             {!isTeamAlive && !isLaunchBlocking && (
-              <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
+              <span
+                className="shrink-0 whitespace-nowrap text-[10px]"
+                style={{ color: 'var(--warning-text)' }}
+              >
                 {t('messageComposer.status.teamOffline')}
               </span>
             )}
@@ -909,7 +944,7 @@ export const MessageComposer = ({
             {/* Combined team + member selector */}
             <div
               className={cn(
-                'mr-[15px] inline-flex items-center border text-xs transition-colors',
+                'mr-[15px] inline-flex min-w-0 max-w-[calc(100%_-_15px)] items-center overflow-hidden border text-xs transition-colors',
                 shouldDockRecipientSelector
                   ? 'relative z-[1] -mb-px overflow-hidden rounded-b-none rounded-t-[1.35rem] border-b-0 bg-[var(--color-surface-raised)]'
                   : 'rounded-full',
@@ -921,7 +956,7 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                      'inline-flex min-w-0 max-w-[160px] items-center gap-1.5 border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
                       shouldDockRecipientSelector
                         ? 'rounded-bl-none rounded-tl-[1.35rem]'
                         : 'rounded-l-full',
@@ -957,7 +992,7 @@ export const MessageComposer = ({
                             style={{ backgroundColor: currentTeamColor }}
                           />
                         ) : null}
-                        <span className="text-[var(--color-text-secondary)]">
+                        <span className="min-w-0 truncate text-[var(--color-text-secondary)]">
                           {t('messageComposer.teamSelector.thisTeam')}
                         </span>
                       </>
@@ -1080,7 +1115,7 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
+                      'inline-flex min-w-0 max-w-[150px] items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
                       shouldDockRecipientSelector
                         ? 'rounded-br-none rounded-tr-[1.35rem]'
                         : 'rounded-r-full',
@@ -1095,6 +1130,7 @@ export const MessageComposer = ({
                         name={recipient}
                         color={selectedResolvedColor}
                         size="sm"
+                        avatarUrl={avatarMap.get(recipient)}
                         hideAvatar={recipient === 'user'}
                         disableHoverCard
                       />
@@ -1173,6 +1209,7 @@ export const MessageComposer = ({
                               name={m.name}
                               color={resolvedColor}
                               size="sm"
+                              avatarUrl={avatarMap.get(m.name)}
                               hideAvatar={m.name === 'user'}
                               disableHoverCard
                             />

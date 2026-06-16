@@ -10,11 +10,17 @@
  */
 
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { isTeamProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { del, get, set } from 'idb-keyval';
 
-import type { TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
+import type {
+  TeamFastMode,
+  TeamMemberMcpPolicy,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 import type { EffortLevel } from '@shared/types';
 
 // ---------------------------------------------------------------------------
@@ -33,8 +39,10 @@ export interface SerializedMemberDraft {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
@@ -77,8 +85,15 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     typeof obj.customRole === 'string' &&
     (obj.isolation === undefined || obj.isolation === 'worktree') &&
     (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
+    (obj.providerBackendId === undefined ||
+      (typeof obj.providerBackendId === 'string' &&
+        isTeamProviderBackendId(obj.providerBackendId))) &&
     (obj.model === undefined || typeof obj.model === 'string') &&
     (obj.effort === undefined || isTeamEffortLevel(obj.effort)) &&
+    (obj.fastMode === undefined ||
+      obj.fastMode === 'inherit' ||
+      obj.fastMode === 'on' ||
+      obj.fastMode === 'off') &&
     (obj.mcpPolicy === undefined ||
       mcpPolicyMode === 'inheritLead' ||
       normalizeTeamMemberMcpPolicy(obj.mcpPolicy) !== undefined)

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -23,6 +24,38 @@ const scriptArgs = process.argv.slice(2);
 const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
 const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
 const runtimeDisplayName = 'teams orchestrator';
+const remoteDebuggingPortArg = '--remoteDebuggingPort';
+const terminalPlatformRootEnv = 'CLAUDE_TERMINAL_PLATFORM_ROOT';
+const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
+const terminalDaemonBinaryEnv = 'CLAUDE_TERMINAL_DAEMON_BINARY';
+
+function prependPathEntries(entries) {
+  const currentPath = process.env.PATH ?? '';
+  const currentEntries = new Set(currentPath.split(path.delimiter).filter(Boolean));
+  const nextEntries = [];
+
+  for (const entry of entries) {
+    if (!entry || currentEntries.has(entry) || !fs.existsSync(entry)) {
+      continue;
+    }
+    nextEntries.push(entry);
+  }
+
+  if (nextEntries.length > 0) {
+    process.env.PATH = [...nextEntries, currentPath].filter(Boolean).join(path.delimiter);
+  }
+}
+
+function augmentRuntimeToolPath() {
+  const bunInstall = process.env.BUN_INSTALL?.trim();
+  const home = os.homedir();
+  prependPathEntries([
+    bunInstall ? path.join(bunInstall, 'bin') : '',
+    home ? path.join(home, '.bun', 'bin') : '',
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+  ]);
+}
 
 function runOrExit(cmd, args, options = {}) {
   const result = spawnSyncWithWindowsShell(cmd, args, {
@@ -59,6 +92,31 @@ function runAndCapture(cmd, args, options = {}) {
   }
 
   return result.stdout?.trim() ?? '';
+}
+
+function hasTerminalPlatformOverride() {
+  return Boolean(
+    process.env[terminalPlatformRootEnv]?.trim() ||
+      process.env[legacyTerminalPlatformRootEnv]?.trim() ||
+      process.env[terminalDaemonBinaryEnv]?.trim()
+  );
+}
+
+function ensureTerminalPlatformRuntime(env) {
+  if (hasTerminalPlatformOverride()) {
+    const overrideName = process.env[terminalDaemonBinaryEnv]?.trim()
+      ? terminalDaemonBinaryEnv
+      : process.env[terminalPlatformRootEnv]?.trim()
+        ? terminalPlatformRootEnv
+        : legacyTerminalPlatformRootEnv;
+    process.stdout.write(`Using terminal-platform runtime from ${overrideName}\n`);
+    return;
+  }
+
+  runOrExit(process.execPath, [path.join(scriptDir, 'ensure-terminal-platform-runtime.mjs')], {
+    cwd: uiRepoRoot,
+    env,
+  });
 }
 
 function readPackageManagerCommand(repoRoot) {
@@ -182,6 +240,83 @@ function formatProgressSummary(writtenBytes, totalBytes, hasTotal) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRemoteDebuggingPortArg(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === remoteDebuggingPortArg) {
+      const rawPort = args[index + 1];
+      const port = Number.parseInt(rawPort ?? '', 10);
+      return Number.isFinite(port) && port > 0
+        ? { index, valueIndex: index + 1, port, style: 'split' }
+        : null;
+    }
+
+    const prefix = `${remoteDebuggingPortArg}=`;
+    if (arg.startsWith(prefix)) {
+      const port = Number.parseInt(arg.slice(prefix.length), 10);
+      return Number.isFinite(port) && port > 0 ? { index, port, style: 'equals' } : null;
+    }
+  }
+
+  return null;
+}
+
+function isTcpPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    let settled = false;
+
+    const finish = (available) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(available);
+    };
+
+    server.unref();
+    server.once('error', () => finish(false));
+    server.listen({ host: '127.0.0.1', port }, () => {
+      server.close(() => finish(true));
+    });
+  });
+}
+
+async function findAvailableTcpPort(preferredPort) {
+  for (let port = preferredPort; port < preferredPort + 100; port += 1) {
+    if (await isTcpPortAvailable(port)) {
+      return port;
+    }
+  }
+
+  throw new Error(`No available remote debugging port near ${preferredPort}`);
+}
+
+async function resolveElectronViteArgs(args) {
+  const remoteDebuggingPort = parseRemoteDebuggingPortArg(args);
+  if (!remoteDebuggingPort) {
+    return args;
+  }
+
+  const availablePort = await findAvailableTcpPort(remoteDebuggingPort.port);
+  if (availablePort === remoteDebuggingPort.port) {
+    return args;
+  }
+
+  process.stdout.write(
+    `Remote debugging port ${remoteDebuggingPort.port} is busy; using ${availablePort}.\n`
+  );
+
+  const nextArgs = [...args];
+  if (remoteDebuggingPort.style === 'split') {
+    nextArgs[remoteDebuggingPort.valueIndex] = String(availablePort);
+  } else {
+    nextArgs[remoteDebuggingPort.index] = `${remoteDebuggingPortArg}=${availablePort}`;
+  }
+
+  return nextArgs;
 }
 
 function readBinaryVersion(binaryPath) {
@@ -506,6 +641,7 @@ async function resolveRuntimeCli() {
 }
 
 async function main() {
+  augmentRuntimeToolPath();
   const resolvedRuntime = await resolveRuntimeCli();
 
   if (shouldPrintRuntimePath) {
@@ -528,8 +664,16 @@ async function main() {
   };
   delete uiEnv.CLAUDE_CLI_PATH;
   const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
+  const resolvedElectronViteArgs = await resolveElectronViteArgs(electronViteArgs);
 
-  runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...electronViteArgs], {
+  runOrExit(process.execPath, [path.join(scriptDir, 'ensure-electron-install.cjs'), '--strict'], {
+    cwd: uiRepoRoot,
+    env: uiEnv,
+  });
+
+  ensureTerminalPlatformRuntime(uiEnv);
+
+  runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...resolvedElectronViteArgs], {
     cwd: uiRepoRoot,
     env: uiEnv,
   });

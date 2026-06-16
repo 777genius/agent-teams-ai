@@ -363,6 +363,11 @@ export interface AppConfig {
     };
     codex: {
       preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+      customProvider: {
+        enabled: boolean;
+        baseUrl: string;
+        model: string;
+      };
     };
   };
   /** Runtime backend preferences for app-launched agent_teams_orchestrator sessions */

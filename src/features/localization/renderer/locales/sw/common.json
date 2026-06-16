@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Ghairi",
+    "close": "Funga",
+    "copied": "Imenakiliwa",
+    "copyUrl": "Nakili URL",
+    "open": "Fungua",
+    "reveal": "Onyesha",
+    "retry": "Jaribu tena",
+    "save": "Hifadhi",
+    "showLess": "Onyesha kidogo",
+    "showMore": "Onyesha zaidi",
+    "refresh": "Onyesha upya",
+    "reset": "Weka upya",
+    "copyToClipboard": "Nakili kwenye ubao wa kunakili",
+    "moreActions": "Vitendo zaidi",
+    "closeDialog": "Funga kidirisha",
+    "goToDashboard": "Nenda kwenye Dashibodi",
+    "or": "au",
+    "hide": "Ficha",
+    "resetSelection": "Weka upya uteuzi"
+  },
+  "code": {
+    "line": "mstari {{line}}",
+    "lines": "mistari {{from}}-{{to}}",
+    "moreLines": "(mistari {{count}} zaidi...)",
+    "moreLines_few": "(mistari {{count}} zaidi...)",
+    "moreLines_many": "(mistari {{count}} zaidi...)",
+    "moreLines_one": "(mstari {{count}} zaidi...)",
+    "moreLines_other": "(mistari {{count}} zaidi...)",
+    "code": "Msimbo",
+    "preview": "Hakikisho",
+    "markdownPreview": "Hakikisho la Markdown",
+    "linesParenthesized": "(mistari {{from}}-{{to}})",
+    "mermaidSyntaxError": "Hitilafu ya sintaksia ya Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Muktadha",
+    "breakdown": {
+      "text": "Maandishi",
+      "thinking": "Kufikiri"
+    },
+    "detailsAria": "Maelezo ya udungaji wa muktadha",
+    "sectionSummary": "{{title}} ({{count}}) ~tokeni {{tokens}}",
+    "sections": {
+      "claudeMdFiles": "Faili za CLAUDE.md",
+      "mentionedFiles": "Faili Zilizotajwa",
+      "taskCoordination": "Uratibu wa Kazi",
+      "thinkingText": "Kufikiri + Maandishi",
+      "toolOutputs": "Matokeo ya Zana",
+      "userMessages": "Ujumbe wa Mtumiaji"
+    },
+    "title": "Muktadha Mpya Uliodungwa Katika Zamu Hii",
+    "tokenCount": "~tokeni {{tokens}}",
+    "totalNewTokens": "Jumla ya tokeni mpya",
+    "turn": "Zamu {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~tokeni {{tokens}}",
+    "sectionSummary_many": "{{title}} ({{count}}) ~tokeni {{tokens}}",
+    "sectionSummary_one": "{{title}} ({{count}}) ~tokeni {{tokens}}",
+    "sectionSummary_other": "{{title}} ({{count}}) ~tokeni {{tokens}}"
+  },
+  "locales": {
+    "emptyMessage": "Hakuna lugha iliyopatikana.",
+    "names": {
+      "ar": "Kiarabu",
+      "bn": "Kibengali",
+      "de": "Kijerumani",
+      "en": "Kiingereza",
+      "es": "Kihispania",
+      "fa": "Kiajemi",
+      "fil": "Kifilipino",
+      "fr": "Kifaransa",
+      "hi": "Kihindi",
+      "id": "Kiindonesia",
+      "it": "Kiitaliano",
+      "ja": "Kijapani",
+      "ko": "Kikorea",
+      "mr": "Kimarathi",
+      "ms": "Kimalei",
+      "nl": "Kiholanzi",
+      "pl": "Kipolandi",
+      "pt": "Kireno",
+      "ro": "Kiromania",
+      "ru": "Kirusi",
+      "sw": "Kiswahili",
+      "system": "Mfumo",
+      "ta": "Kitamil",
+      "te": "Kitelugu",
+      "th": "Kithai",
+      "tr": "Kituruki",
+      "uk": "Kiukreni",
+      "ur": "Kiurdu",
+      "vi": "Kivietinamu",
+      "zh": "Kichina"
+    },
+    "searchPlaceholder": "Tafuta lugha...",
+    "selectPlaceholder": "Chagua lugha ya programu...",
+    "systemWithResolved": "Mfumo - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Hakuna wanachama waliopatikana.",
+    "searchPlaceholder": "Tafuta wanachama...",
+    "unassigned": "Hawajakabidhiwa",
+    "teammateFallback": "mwenzako wa timu"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Inakagua",
+        "downloading": "Inapakua",
+        "installCli": "Sakinisha Codex CLI",
+        "installing": "Inasakinisha",
+        "retryInstall": "Jaribu tena kusakinisha"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Hakuna mapendekezo yanayolingana",
+    "searching": "Inatafuta...",
+    "searchingFiles": "Inatafuta faili...",
+    "findInConversation": "Tafuta katika mazungumzo...",
+    "resultCount": "{{current}} kati ya {{total}}",
+    "resultCountCapped": "{{current}} kati ya {{total}}+",
+    "noResults": "Hakuna matokeo",
+    "previousResultShortcut": "Matokeo yaliyotangulia (Shift+Enter)",
+    "nextResultShortcut": "Matokeo yanayofuata (Enter)",
+    "closeShortcut": "Funga (Esc)",
+    "nothingFound": "Hakuna kilichopatikana",
+    "placeholder": "Tafuta..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Ongeza Ratiba",
+      "clearFilters": "Futa vichujio",
+      "createSchedule": "Unda Ratiba",
+      "delete": "Futa",
+      "edit": "Hariri",
+      "pause": "Sitisha",
+      "resume": "Endelea",
+      "runNow": "Endesha sasa"
+    },
+    "empty": {
+      "description": "Unda ratiba kwenye timu yoyote ili kuotomatisha utekelezaji wa kazi za Claude kwa kutumia maneno ya cron. Ratiba kutoka timu zote zitaonekana hapa.",
+      "noMatches": "Hakuna ratiba zinazolingana na vichujio vya sasa",
+      "title": "Hakuna kazi zilizopangwa"
+    },
+    "filters": {
+      "allTeams": "Timu zote"
+    },
+    "item": {
+      "loadingRunHistory": "Inapakia historia ya mwendo...",
+      "nextRun": "Inayofuata: {{value}}",
+      "noRunsYet": "Bado hakuna mwendo"
+    },
+    "loading": "Inapakia ratiba...",
+    "searchPlaceholder": "Tafuta ratiba...",
+    "status": {
+      "active": "Hai",
+      "all": "Zote",
+      "disabled": "Imezimwa",
+      "paused": "Imesitishwa"
+    },
+    "title": "Ratiba"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Ficha",
+      "pin": "Bandika",
+      "unhide": "Ondoa kuficha"
+    },
+    "empty": {
+      "noMatchingSessions": "Hakuna vipindi vinavyolingana",
+      "noMatchingSessionsDescription": "Mradi huu bado hauna vipindi vinavyolingana.",
+      "noMatchingSessionsFiltered": "Jaribu hoja nyingine au weka upya kichujio cha mtoa huduma.",
+      "noSessions": "Hakuna vipindi vilivyopatikana",
+      "noSessionsDescription": "Mradi huu bado hauna vipindi",
+      "selectProject": "Chagua mradi ili kuona vipindi"
+    },
+    "errors": {
+      "loading": "Hitilafu kupakia vipindi"
+    },
+    "loadedMatchingMore": "Vipindi {{count}} vinavyolingana vimepakiwa hadi sasa - sogeza chini kupakia zaidi.",
+    "loadingMore": "Inapakia vipindi zaidi...",
+    "pinned": "Imebandikwa",
+    "scrollToLoadMore": "Sogeza kupakia zaidi",
+    "search": {
+      "clear": "Futa utafutaji wa kipindi",
+      "placeholder": "Tafuta vipindi..."
+    },
+    "selection": {
+      "cancel": "Ghairi uteuzi",
+      "exitMode": "Toka hali ya uteuzi",
+      "hideSelected": "Ficha vipindi vilivyochaguliwa",
+      "pinSelected": "Bandika vipindi vilivyochaguliwa",
+      "selectSessions": "Chagua vipindi",
+      "selected": "{{count}} vimechaguliwa",
+      "unhideSelected": "Ondoa kuficha vipindi vilivyochaguliwa",
+      "selected_few": "{{count}} vimechaguliwa",
+      "selected_many": "{{count}} vimechaguliwa",
+      "selected_one": "{{count}} kimechaguliwa",
+      "selected_other": "{{count}} vimechaguliwa"
+    },
+    "sort": {
+      "byContext": "Kwa Muktadha",
+      "byContextTooltip": "Panga kwa matumizi ya muktadha",
+      "byRecentTooltip": "Panga kwa hivi karibuni",
+      "contextLoadedOnly": "Upangaji wa muktadha hupanga tu vipindi vilivyopakiwa."
+    },
+    "title": "Vipindi",
+    "visibility": {
+      "hideHidden": "Ficha vipindi vilivyofichwa",
+      "showHidden": "Onyesha vipindi vilivyofichwa"
+    },
+    "worktree": {
+      "switch": "Badilisha Worktree"
+    },
+    "loadedMatchingMore_few": "Vipindi {{count}} vinavyolingana vimepakiwa hadi sasa - sogeza chini kupakia zaidi.",
+    "loadedMatchingMore_many": "Vipindi {{count}} vinavyolingana vimepakiwa hadi sasa - sogeza chini kupakia zaidi.",
+    "loadedMatchingMore_one": "Kipindi {{count}} kinacholingana kimepakiwa hadi sasa - sogeza chini kupakia zaidi.",
+    "loadedMatchingMore_other": "Vipindi {{count}} vinavyolingana vimepakiwa hadi sasa - sogeza chini kupakia zaidi.",
+    "failedToLoad": "Imeshindwa kupakia kipindi",
+    "loading": "Inapakia kipindi...",
+    "filter": {
+      "title": "Chuja vipindi"
+    },
+    "count": "vipindi {{count}}",
+    "count_one": "kipindi {{count}}",
+    "count_other": "vipindi {{count}}",
+    "count_few": "vipindi {{count}}",
+    "count_many": "vipindi {{count}}",
+    "inProgress": "Kipindi kinaendelea..."
+  },
+  "states": {
+    "loading": "Inapakia...",
+    "offline": "Nje ya mtandao",
+    "online": "Mtandaoni",
+    "unknown": "Haijulikani",
+    "error": "Hitilafu"
+  },
+  "markdown": {
+    "imageFallback": "[Picha: {{label}}]",
+    "largeContentNotice": "Maudhui ni makubwa sana (herufi {{count}}). Inaonyesha hakikisho ghafi ili kuweka UI ikiwa nadhifu.",
+    "largeContentTitle": "Maudhui makubwa yanaonyeshwa kama ghafi ili kuzuia UI kuganda",
+    "raw": "Ghafi",
+    "rawPreview": "Hakikisho ghafi",
+    "renderMarkdown": "Onyesha markdown",
+    "showAll": "Onyesha vyote",
+    "showMore": "Onyesha zaidi",
+    "showRaw": "Onyesha ghafi",
+    "showingChars": "Inaonyesha herufi {{shown}} / {{total}}",
+    "largeContentNotice_few": "Maudhui ni makubwa sana (herufi {{count}}). Inaonyesha hakikisho ghafi ili kuweka UI ikiwa nadhifu.",
+    "largeContentNotice_many": "Maudhui ni makubwa sana (herufi {{count}}). Inaonyesha hakikisho ghafi ili kuweka UI ikiwa nadhifu.",
+    "largeContentNotice_one": "Maudhui ni makubwa sana (herufi {{count}}). Inaonyesha hakikisho ghafi ili kuweka UI ikiwa nadhifu.",
+    "largeContentNotice_other": "Maudhui ni makubwa sana (herufi {{count}}). Inaonyesha hakikisho ghafi ili kuweka UI ikiwa nadhifu."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Kagua matokeo ya terminal hapo juu kwa maelezo",
+    "closingInSeconds": "Inafunga baada ya sekunde {{count}}...",
+    "closingInSeconds_few": "Inafunga baada ya sekunde {{count}}...",
+    "closingInSeconds_many": "Inafunga baada ya sekunde {{count}}...",
+    "closingInSeconds_one": "Inafunga baada ya sekunde {{count}}...",
+    "closingInSeconds_other": "Inafunga baada ya sekunde {{count}}...",
+    "completedSuccessfully": "Imekamilika kwa mafanikio",
+    "exitCode": "(msimbo wa kutoka {{code}})",
+    "processFailed": "Mchakato umeshindwa",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Imekusanywa katika kipindi kizima bila kurudufu",
+    "cacheRead": "Usomaji wa Akiba",
+    "cacheWrite": "Uandishi wa Akiba",
+    "costUsd": "Gharama (USD)",
+    "inputTokens": "Tokeni za Ingizo",
+    "model": "Modeli",
+    "outputTokens": "Tokeni za Towe",
+    "phase": "Awamu {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% ya ingizo la kidokezo",
+    "taskCoordination": "Uratibu wa Kazi",
+    "thinkingText": "Kufikiri + Maandishi",
+    "toolOutputs": "Matokeo ya Zana",
+    "total": "Jumla",
+    "userMessages": "Ujumbe wa Mtumiaji",
+    "visibleContext": "Muktadha Unaoonekana",
+    "includesClaudeMd": "ikiwa na CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~tokeni {{tokens}}",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Nakili timu",
+      "createTeam": "Unda Timu",
+      "deleteForever": "Futa kabisa",
+      "deletePermanently": "Futa kwa kudumu",
+      "deleteTeam": "Futa timu",
+      "launching": "Inazindua...",
+      "launchTeam": "Zindua timu",
+      "relaunchTeam": "Zindua tena timu",
+      "restore": "Rejesha",
+      "restoreTeam": "Rejesha timu",
+      "retry": "Jaribu tena",
+      "stopTeam": "Simamisha timu",
+      "stopping": "Inasimamisha..."
+    },
+    "status": {
+      "active": "Hai",
+      "deleted": "Imefutwa",
+      "launching": "Inazindua...",
+      "offline": "Nje ya mtandao",
+      "partialFailure": "Uzinduzi umeshindwa katikati",
+      "partialPending": "Bootstrap inasubiri",
+      "partialSkipped": "Uzinduzi umeruka mwanachama",
+      "running": "Inaendeshwa"
+    },
+    "partial": {
+      "pending": "Uzinduzi wa mwisho bado unapatanishwa.",
+      "skipped": "Uzinduzi wa mwisho umeruka wenzako wa timu.",
+      "skippedWithCount": "Uzinduzi wa mwisho uliruka mwenzako wa timu {{count}}/{{expected}}.",
+      "skippedWithCount_few": "Uzinduzi wa mwisho uliruka wenzako wa timu {{count}}/{{expected}}.",
+      "skippedWithCount_many": "Uzinduzi wa mwisho uliruka wenzako wa timu {{count}}/{{expected}}.",
+      "skippedWithCount_one": "Uzinduzi wa mwisho uliruka mwenzako wa timu {{count}}/{{expected}}.",
+      "skippedWithCount_other": "Uzinduzi wa mwisho uliruka wenzako wa timu {{count}}/{{expected}}.",
+      "stopped": "Uzinduzi wa mwisho ulisimama kabla ya wenzako wote wa timu kujiunga.",
+      "stoppedWithCount": "Uzinduzi wa mwisho ulisimama kabla ya mwenzako wa timu {{count}}/{{expected}} kujiunga.",
+      "stoppedWithCount_few": "Uzinduzi wa mwisho ulisimama kabla ya wenzako wa timu {{count}}/{{expected}} kujiunga.",
+      "stoppedWithCount_many": "Uzinduzi wa mwisho ulisimama kabla ya wenzako wa timu {{count}}/{{expected}} kujiunga.",
+      "stoppedWithCount_one": "Uzinduzi wa mwisho ulisimama kabla ya mwenzako wa timu {{count}}/{{expected}} kujiunga.",
+      "stoppedWithCount_other": "Uzinduzi wa mwisho ulisimama kabla ya wenzako wa timu {{count}}/{{expected}} kujiunga."
+    },
+    "noDescription": "Hakuna maelezo",
+    "solo": "Peke yake",
+    "membersCount": "Wanachama: {{count}}",
+    "membersCount_few": "Wanachama: {{count}}",
+    "membersCount_many": "Wanachama: {{count}}",
+    "membersCount_one": "Mwanachama: {{count}}",
+    "membersCount_other": "Wanachama: {{count}}",
+    "all": "Zote",
+    "moreCount": "+{{count}} zaidi",
+    "moreCount_one": "+{{count}} zaidi",
+    "moreCount_other": "+{{count}} zaidi",
+    "moreCount_few": "+{{count}} zaidi",
+    "moreCount_many": "+{{count}} zaidi"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Chaguo-msingi kwa kila mradi usio na ubatilishaji wake wa OpenCode.",
+      "scopeDescriptionProject": "Batilisha mradi uliochaguliwa pekee. Timu zinazoendeshwa hazibadilishwi.",
+      "setAllProjectsDefault": "Weka chaguo-msingi cha miradi yote",
+      "setProjectDefault": "Weka chaguo-msingi cha mradi",
+      "validationContext": "Muktadha wa uthibitishaji",
+      "projectOverrideContext": "Muktadha wa ubatilishaji wa mradi",
+      "selectProjectHint": "Chagua mradi kabla ya kujaribu modeli za ndani au kuhifadhi chaguo-msingi.",
+      "allProjectsHint": "Majaribio hutumia {{project}}. Chaguo-msingi hutumika isipokuwa mradi una ubatilishaji.",
+      "projectHint": "Kuhifadhi kunabatilisha {{project}} pekee."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Muktadha",
+      "closePanel": "Funga paneli",
+      "phase": "Awamu:",
+      "current": "Sasa",
+      "view": "Mwonekano:",
+      "category": "Kategoria",
+      "bySize": "Kwa Ukubwa"
+    },
+    "metrics": {
+      "unavailable": "Haipatikani",
+      "contextUsed": "Muktadha Uliotumika",
+      "promptInput": "Ingizo la Kidokezo",
+      "visibleContext": "Muktadha Unaoonekana",
+      "ofContext": "ya muktadha",
+      "ofPrompt": "ya kidokezo",
+      "codexTelemetryUnavailable": "Matumizi ya upande wa kidokezo wa Codex bado hayajaonyeshwa na telemetria ya runtime ya sasa, kwa hivyo Ingizo la Kidokezo na Muktadha Uliotumika hubaki kutopatikana badala ya kuonyesha sufuri ya uongo.",
+      "sessionCost": "Gharama ya Kipindi:",
+      "parentPlus": "mzazi +",
+      "subagents": "mawakala wadogo",
+      "details": "maelezo"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Muktadha Uliotumika",
+        "description": "Ingizo la kidokezo pamoja na tokeni za towe zinazochukua dirisha la muktadha la modeli kwa sasa."
+      },
+      "promptInput": {
+        "title": "Ingizo la Kidokezo",
+        "description": "Tokeni zilizotumwa kwa modeli kabla ya uzalishaji. Kwa Claude hii inajumuisha `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Muktadha Unaoonekana",
+        "description": "Sehemu inayoweza kukaguliwa ya ingizo la kidokezo: faili, CLAUDE.md, matokeo ya zana, ujumbe wa mtumiaji, na udungaji kama huo unaoweza kuboresha moja kwa moja."
+      },
+      "availability": {
+        "title": "Upatikanaji",
+        "description": "Iwapo runtime ya mtoa huduma bado haionyeshi matumizi ya upande wa kidokezo, paneli huonyesha vipimo kama visivyopatikana badala ya kujifanya kuwa ni sufuri."
+      }
+    },
+    "items": {
+      "turn": "@Zamu {{turn}}",
+      "tokensApprox": "~tokeni {{tokens}}",
+      "toolsCount": "zana {{count}}",
+      "toolsCount_one": "zana {{count}}",
+      "toolsCount_other": "zana {{count}}",
+      "toolsCount_few": "zana {{count}}",
+      "toolsCount_many": "zana {{count}}",
+      "itemsCount": "vipengee {{count}}",
+      "itemsCount_one": "kipengee {{count}}",
+      "itemsCount_other": "vipengee {{count}}",
+      "itemsCount_few": "vipengee {{count}}",
+      "itemsCount_many": "vipengee {{count}}",
+      "missing": "haipo",
+      "thinking": "Kufikiri",
+      "text": "Maandishi"
+    },
+    "empty": "Hakuna udungaji wa muktadha uliogunduliwa katika kipindi hiki",
+    "view": {
+      "grouped": "Zilizopangwa",
+      "flat": "Tambarare"
+    },
+    "claudeMdFiles": "Faili za CLAUDE.md",
+    "mentionedFiles": "Faili Zilizotajwa"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Wakala mdogo",
+      "shutdownConfirmed": "Kuzima kumethibitishwa",
+      "summary": {
+        "tools": "zana {{count}}",
+        "tools_one": "zana {{count}}",
+        "tools_other": "zana {{count}}",
+        "tools_few": "zana {{count}}",
+        "tools_many": "zana {{count}}"
+      },
+      "meta": {
+        "type": "Aina",
+        "duration": "Muda",
+        "model": "Modeli",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Dirisha la Muktadha",
+        "contextUsage": "Matumizi ya Muktadha",
+        "mainContext": "Muktadha Mkuu",
+        "totalOutput": "Jumla ya Towe",
+        "turns": "(zamu {{count}})",
+        "turns_one": "(zamu {{count}})",
+        "turns_other": "(zamu {{count}})",
+        "subagentContext": "Muktadha wa Wakala Mdogo",
+        "phase": "Awamu {{phase}}",
+        "turns_few": "(zamu {{count}})",
+        "turns_many": "(zamu {{count}})"
+      },
+      "trace": {
+        "title": "Ufuatiliaji wa Utekelezaji"
+      }
+    },
+    "user": {
+      "you": "Wewe",
+      "showMore": "Onyesha zaidi",
+      "showLess": "Onyesha kidogo",
+      "backgroundTask": "Kazi ya usuli",
+      "exitCode": "kutoka {{code}}",
+      "imagesAttached": "picha {{count}} zimeambatishwa",
+      "imagesAttached_one": "picha {{count}} imeambatishwa",
+      "imagesAttached_few": "picha {{count}} zimeambatishwa",
+      "imagesAttached_many": "picha {{count}} zimeambatishwa",
+      "imagesAttached_other": "picha {{count}} zimeambatishwa"
+    },
+    "compact": {
+      "toggle": "Geuza maudhui yaliyobanwa",
+      "contextCompacted": "Muktadha umebanwa",
+      "freedTokens": "({{tokens}} zimeachiliwa)",
+      "phase": "Awamu {{phase}}",
+      "conversationCompacted": "Mazungumzo Yamebanwa",
+      "summary": "Ujumbe wa awali ulifupishwa ili kuhifadhi muktadha. Historia kamili ya mazungumzo imehifadhiwa katika faili ya kipindi.",
+      "compacted": "Imebanwa"
+    },
+    "executionTrace": {
+      "empty": "Hakuna vipengee vya utekelezaji",
+      "nested": "Iliyowekwa ndani: {{name}}",
+      "input": "Ingizo"
+    },
+    "items": {
+      "empty": "Hakuna vipengee vya kuonyesha"
+    },
+    "tools": {
+      "teammateSpawned": "Mwenzako wa timu ameundwa",
+      "shutdownRequested": "Kuzima kumeombwa ->",
+      "noResultReceived": "Hakuna matokeo yaliyopokelewa",
+      "duration": "Muda: {{duration}}",
+      "result": "Matokeo",
+      "write": {
+        "createdFile": "Faili imeundwa",
+        "wroteToFile": "Imeandikwa kwenye faili"
+      },
+      "skill": {
+        "instructions": "Maagizo ya Ujuzi",
+        "unknown": "Ujuzi Usiojulikana"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Ombi limekatizwa na mtumiaji",
+      "planReadyForApproval": "Mpango Uko Tayari kwa Idhini"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Hakuna historia ya mazungumzo",
+      "description": "Kipindi hiki bado hakina ujumbe wowote."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% zimebaki)",
+      "count": "Muktadha ({{count}})",
+      "count_one": "Muktadha ({{count}})",
+      "count_other": "Muktadha ({{count}})",
+      "count_few": "Muktadha ({{count}})",
+      "count_many": "Muktadha ({{count}})"
+    },
+    "scrollToBottom": "Sogeza chini kabisa",
+    "bottom": "Chini",
+    "teammateMessage": {
+      "message": "Ujumbe",
+      "resent": "Umetumwa tena",
+      "fallback": "Ujumbe wa mwenzako wa timu"
+    },
+    "system": {
+      "label": "Mfumo"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux haijasakinishwa",
+    "detectedOs": "OS iliyogunduliwa: {{os}}",
+    "runtimePath": "Njia ya runtime: {{path}}",
+    "phase": "Awamu: {{phase}}",
+    "actions": {
+      "cancel": "Ghairi",
+      "manualGuide": "Mwongozo wa mkono",
+      "hideSetupSteps": "Ficha hatua za usanidi",
+      "showSetupSteps": "Onyesha hatua za usanidi ({{count}})",
+      "showSetupSteps_one": "Onyesha hatua ya usanidi ({{count}})",
+      "showSetupSteps_other": "Onyesha hatua za usanidi ({{count}})",
+      "recheck": "Kagua tena",
+      "showSetupSteps_few": "Onyesha hatua za usanidi ({{count}})",
+      "showSetupSteps_many": "Onyesha hatua za usanidi ({{count}})"
+    },
+    "installerProgress": "Maendeleo ya kisakinishi",
+    "input": {
+      "placeholder": "Tuma ingizo kwa kisakinishi",
+      "send": "Tuma ingizo",
+      "passwordNotice": "Ingizo la nenosiri linatumwa moja kwa moja kwa terminal ya kisakinishi na haliongezwi kwenye matokeo ya kumbukumbu."
+    },
+    "details": {
+      "show": "Onyesha maelezo",
+      "hide": "Ficha maelezo"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Hakuna shughuli za hivi karibuni",
+    "sessionsCount": "vipindi {{count}}",
+    "sessionsCount_one": "kipindi {{count}}",
+    "sessionsCount_other": "vipindi {{count}}",
+    "mode": {
+      "searchProjects": "Tafuta miradi",
+      "searchAcrossProjects": "Tafuta katika miradi yote",
+      "searchInProject": "Tafuta katika mradi"
+    },
+    "currentProject": "Mradi wa sasa",
+    "global": "Kimataifa",
+    "placeholders": {
+      "projects": "Tafuta miradi...",
+      "conversations": "Tafuta mazungumzo..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Hakuna miradi iliyopatikana kwa \"{{query}}\"",
+      "noProjects": "Hakuna miradi iliyopatikana",
+      "minChars": "Andika angalau herufi 2 ili kutafuta",
+      "noFastResults": "Hakuna matokeo ya haraka katika vipindi vya hivi karibuni kwa \"{{query}}\"",
+      "noResults": "Hakuna matokeo yaliyopatikana kwa \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "miradi {{count}}",
+      "projectsCount_one": "mradi {{count}}",
+      "projectsCount_other": "miradi {{count}}",
+      "results": "matokeo {{count}} {{speed}}",
+      "results_one": "matokeo {{count}} {{speed}}",
+      "results_other": "matokeo {{count}} {{speed}}",
+      "resultsAcrossProjects": "matokeo {{count}} {{speed}}katika miradi yote",
+      "resultsAcrossProjects_one": "matokeo {{count}} {{speed}}katika miradi yote",
+      "resultsAcrossProjects_other": "matokeo {{count}} {{speed}}katika miradi yote",
+      "fastPrefix": "haraka ",
+      "typeToSearch": "Andika ili kutafuta",
+      "navigate": "nenda",
+      "select": "chagua",
+      "open": "fungua",
+      "global": "kimataifa",
+      "close": "funga",
+      "results_few": "matokeo {{count}} {{speed}}",
+      "results_many": "matokeo {{count}} {{speed}}",
+      "resultsAcrossProjects_few": "matokeo {{count}} {{speed}}katika miradi yote",
+      "resultsAcrossProjects_many": "matokeo {{count}} {{speed}}katika miradi yote",
+      "projectsCount_few": "miradi {{count}}",
+      "projectsCount_many": "miradi {{count}}",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "vipindi {{count}}",
+    "sessionsCount_many": "vipindi {{count}}"
+  },
+  "tasksPanel": {
+    "title": "Kazi",
+    "searchPlaceholder": "Tafuta kazi...",
+    "pinned": "Imebandikwa",
+    "groupByLabel": "Panga kwa:",
+    "groupByAria": "Panga kwa",
+    "groupModes": {
+      "none": "Hakuna",
+      "project": "Mradi",
+      "time": "Wakati"
+    },
+    "showArchived": "Onyesha zilizohifadhiwa kumbukumbu",
+    "hideArchived": "Ficha zilizohifadhiwa kumbukumbu",
+    "empty": {
+      "noMatchingTasks": "Hakuna kazi zinazolingana",
+      "noTasks": "Hakuna kazi zilizopatikana"
+    },
+    "teamLabel": "Timu: {{team}}",
+    "showMore": "Onyesha zaidi",
+    "showLess": "Onyesha kidogo",
+    "deleteConfirm": {
+      "title": "Futa kazi",
+      "message": "Hamisha kazi #{{taskId}} kwenye tupio?",
+      "confirmLabel": "Futa",
+      "cancelLabel": "Ghairi"
+    },
+    "deleteFailed": {
+      "title": "Imeshindwa kufuta kazi",
+      "fallbackMessage": "Hitilafu isiyotarajiwa imetokea",
+      "confirmLabel": "Sawa"
+    },
+    "sort": {
+      "byTime": "Kwa wakati",
+      "byUnread": "Kwa zisizosomwa",
+      "byProject": "Kwa mradi",
+      "byTeam": "Kwa timu"
+    }
+  },
+  "toolViewer": {
+    "input": "Ingizo",
+    "replaceAll": "(badilisha vyote)",
+    "noInputRecorded": "Hakuna ingizo lililorekodiwa kwa wito huu wa zana.",
+    "agent": {
+      "action": "kitendo",
+      "teammate": "mwenzako wa timu",
+      "team": "timu",
+      "runtime": "runtime",
+      "type": "aina",
+      "startupInstructionsHidden": "Maagizo ya uanzishaji yamefichwa katika UI."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Ondoa kubandika",
+    "pin": "Bandika",
+    "rename": "Badilisha jina",
+    "markUnread": "Weka alama kuwa haijasomwa",
+    "unarchive": "Ondoa kwenye kumbukumbu",
+    "archive": "Hifadhi kumbukumbu",
+    "deleteTask": "Futa kazi"
+  },
+  "updateDialog": {
+    "closeDialog": "Funga kidirisha",
+    "updateAvailable": "Sasisho linapatikana",
+    "updateReady": "Sasisho Liko Tayari",
+    "noReleaseNotes": "Hakuna maelezo ya toleo yanayopatikana.",
+    "viewOnGitHub": "Tazama kwenye GitHub",
+    "later": "Baadaye",
+    "restartNow": "Anzisha upya sasa",
+    "download": "Pakua"
+  },
+  "errorBoundary": {
+    "title": "Hitilafu fulani imetokea",
+    "description": "Hitilafu isiyotarajiwa imetokea katika programu. Unaweza kujaribu kupakia upya ukurasa au kuweka upya hali ya hitilafu.",
+    "componentStack": "Rundo la Kijenzi",
+    "tryAgain": "Jaribu Tena",
+    "copied": "Imenakiliwa",
+    "copyErrorDetails": "Nakili Maelezo ya Hitilafu",
+    "reportBugOnGitHub": "Ripoti Hitilafu kwenye GitHub",
+    "reloadApp": "Pakia Upya Programu",
+    "diagnosticsNotice": "Ripoti za hitilafu za GitHub na utambuzi uliyonakiliwa zinajumuisha ujumbe wa hitilafu, ufuatiliaji wa rundo, toleo la programu, kichupo hai, timu iliyochaguliwa, muktadha wa kazi, na maelezo ya mazingira."
+  },
+  "runtimeBackendSelector": {
+    "label": "Backend ya runtime",
+    "resolved": "Imesuluhishwa: {{backend}}",
+    "current": "Sasa",
+    "recommended": "Inapendekezwa",
+    "unavailable": "Haipatikani",
+    "cannotSelectYet": "Backend hii haiwezi kuchaguliwa bado.",
+    "auto": "Otomatiki",
+    "autoCurrently": "Otomatiki (kwa sasa: {{backend}})",
+    "audience": {
+      "internal": "Ndani"
+    },
+    "states": {
+      "locked": "Imefungwa",
+      "disabled": "Imezimwa",
+      "authRequired": "Uthibitishaji unahitajika",
+      "runtimeMissing": "Runtime haipo",
+      "degraded": "Imedhoofika",
+      "unavailable": "Haipatikani"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Inakagua",
+    "unavailable": "Haipatikani",
+    "checkFailed": "Ukaguzi umeshindwa",
+    "free": "Bure",
+    "freeTooltip": "Imeripotiwa na metadata ya OpenCode. Upatikanaji na vikomo vinaweza kubadilika."
+  },
+  "taskFilters": {
+    "status": "Hali",
+    "clearAll": "Futa vyote",
+    "selectAll": "Chagua vyote",
+    "team": "Timu",
+    "allTeams": "Timu zote",
+    "searchTeams": "Tafuta timu...",
+    "noTeamsFound": "Hakuna timu zilizopatikana",
+    "project": "Mradi",
+    "allProjects": "Miradi Yote",
+    "searchProjects": "Tafuta miradi...",
+    "noProjects": "Hakuna miradi",
+    "comments": "Maoni",
+    "apply": "Tumia",
+    "read": {
+      "all": "Zote",
+      "unread": "Hazijasomwa",
+      "read": "Zilizosomwa"
+    },
+    "statusOptions": {
+      "todo": "YA KUFANYA",
+      "inProgress": "INAENDELEA",
+      "needsFix": "INAHITAJI MAREKEBISHO",
+      "done": "IMEKAMILIKA",
+      "review": "MAPITIO",
+      "approved": "IMEIDHINISHWA"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Jumla ya Muktadha: tokeni {{tokens}}",
+    "context": "Muktadha: {{tokens}}",
+    "phase": "Awamu {{phase}}:",
+    "compactedTo": "(imebanwa hadi {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "timu",
+      "subagent": "wakala mdogo",
+      "markAsRead": "Weka alama kuwa imesomwa",
+      "delete": "Futa",
+      "viewInSession": "Tazama katika kipindi"
+    },
+    "title": "Arifa",
+    "loading": "Inapakia arifa...",
+    "actions": {
+      "markFilteredAsRead": "Weka alama zilizochujwa kuwa zimesomwa",
+      "markAllAsRead": "Weka alama zote kuwa zimesomwa",
+      "markFilteredRead": "Weka zilizochujwa kuwa zimesomwa",
+      "markAllRead": "Weka zote kuwa zimesomwa",
+      "clearFilteredNotifications": "Futa arifa zilizochujwa",
+      "clearAllNotifications": "Futa arifa zote",
+      "clickToConfirm": "Bofya ili kuthibitisha",
+      "clearFiltered": "Futa zilizochujwa",
+      "clearAll": "Futa zote"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} hazijasomwa katika kichujio",
+      "unreadInFilter_one": "{{count}} haijasomwa katika kichujio",
+      "unreadInFilter_few": "{{count}} hazijasomwa katika kichujio",
+      "unreadInFilter_many": "{{count}} hazijasomwa katika kichujio",
+      "unreadInFilter_other": "{{count}} hazijasomwa katika kichujio",
+      "inFilter": "{{count}} katika kichujio",
+      "inFilter_one": "{{count}} katika kichujio",
+      "inFilter_few": "{{count}} katika kichujio",
+      "inFilter_many": "{{count}} katika kichujio",
+      "inFilter_other": "{{count}} katika kichujio",
+      "unread": "{{count}} hazijasomwa",
+      "unread_one": "{{count}} haijasomwa",
+      "unread_few": "{{count}} hazijasomwa",
+      "unread_many": "{{count}} hazijasomwa",
+      "unread_other": "{{count}} hazijasomwa",
+      "total": "{{count}} jumla",
+      "total_one": "{{count}} jumla",
+      "total_few": "{{count}} jumla",
+      "total_many": "{{count}} jumla",
+      "total_other": "{{count}} jumla"
+    },
+    "filters": {
+      "other": "Nyingine"
+    },
+    "empty": {
+      "noMatching": "Hakuna arifa zinazolingana",
+      "noNotifications": "Hakuna arifa",
+      "tryDifferentFilter": "Jaribu kichujio tofauti",
+      "allCaughtUp": "Umemaliza zote!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Anzisha upya ili kusasisha",
+    "updateApp": "Sasisha programu",
+    "downloadedRestartTooltip": "Sasisho limepakuliwa, anzisha upya ili kutumia",
+    "newVersionAvailable": "Toleo jipya linapatikana",
+    "updatingApp": "Inasasisha programu",
+    "updateReady": "Sasisho liko tayari",
+    "restartNow": "Anzisha upya sasa"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Panua utepe wa kando",
+    "collapseSidebarShortcut": "Kunja utepe wa kando ({{shortcut}})",
+    "sidebarView": "Mwonekano wa utepe wa kando",
+    "resizeSidebar": "Badilisha ukubwa wa utepe wa kando",
+    "closeTab": "Funga kichupo",
+    "openedFromSearch": "Imefunguliwa kutoka utafutaji",
+    "pinnedSession": "Kipindi kilichobandikwa",
+    "jumpToSection": "Rukia sehemu",
+    "newTab": "Kichupo kipya",
+    "newTabDashboard": "Kichupo kipya (Dashibodi)",
+    "refreshSession": "Onyesha upya kipindi",
+    "refreshSessionWithShortcut": "Onyesha Upya Kipindi ({{shortcut}})",
+    "loadingTab": "Inapakia kichupo",
+    "menu": {
+      "teams": "Timu",
+      "settings": "Mipangilio",
+      "extensions": "Viendelezi",
+      "search": "Tafuta",
+      "schedules": "Ratiba",
+      "docs": "Hati",
+      "exportMarkdown": "Hamisha kama Markdown",
+      "exportJson": "Hamisha kama JSON",
+      "exportPlainText": "Hamisha kama Maandishi Tupu",
+      "analyzeSession": "Changanua Kipindi"
+    },
+    "tabMenu": {
+      "closeTabs": "Funga Vichupo {{count}}",
+      "closeTabs_one": "Funga Kichupo {{count}}",
+      "closeTabs_few": "Funga Vichupo {{count}}",
+      "closeTabs_many": "Funga Vichupo {{count}}",
+      "closeTabs_other": "Funga Vichupo {{count}}",
+      "closeTab": "Funga Kichupo",
+      "closeOtherTabs": "Funga Vichupo Vingine",
+      "splitRight": "Gawanya Kulia",
+      "splitLeft": "Gawanya Kushoto",
+      "pinToSidebar": "Bandika kwenye Utepe wa Kando",
+      "unpinFromSidebar": "Ondoa Kubandika kutoka Utepe wa Kando",
+      "hideFromSidebar": "Ficha kutoka Utepe wa Kando",
+      "unhideFromSidebar": "Ondoa Kuficha kutoka Utepe wa Kando",
+      "closeAllTabs": "Funga Vichupo Vyote"
+    },
+    "sections": {
+      "team": "Timu",
+      "sessions": "Vipindi",
+      "kanban": "Kanban",
+      "claudeLogs": "Kumbukumbu",
+      "messages": "Ujumbe"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Nene",
+    "italic": "Italiki",
+    "strike": "Mstari kati",
+    "code": "Msimbo"
+  },
+  "diff": {
+    "changed": "Imebadilishwa",
+    "noChangesDetected": "Hakuna mabadiliko yaliyogunduliwa"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Nakili kiungo cha kuingia cha ChatGPT na msimbo",
+    "copyLoginLink": "Nakili kiungo cha kuingia cha ChatGPT",
+    "copyFailed": "Kunakili kumeshindwa",
+    "copyLinkAndCode": "Nakili kiungo + msimbo",
+    "copyLink": "Nakili kiungo",
+    "enterCodeOnLoginPage": "Weka msimbo huu kwenye ukurasa wa kuingia wa ChatGPT"
+  },
+  "window": {
+    "minimize": "Punguza",
+    "maximize": "Kuza",
+    "restore": "Rejesha"
+  },
+  "context": {
+    "local": "Ya ndani",
+    "switchingTo": "Inabadilisha hadi {{workspace}}",
+    "loadingWorkspace": "Inapakia eneo-kazi",
+    "switchWorkspace": "Badilisha Eneo-kazi"
+  },
+  "repositories": {
+    "noneAvailable": "Hakuna hazina zinazopatikana",
+    "remove": "Ondoa hazina"
+  },
+  "export": {
+    "session": "Hamisha kipindi",
+    "sessionTitle": "Hamisha Kipindi"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Hakuna data ya kipindi inayopatikana",
+    "title": "Ripoti ya Kipindi"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Chagua Mradi"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "imesasishwa",
+      "updatedYesterday": "imesasishwa jana",
+      "yesterday": "Jana"
+    },
+    "reviewState": {
+      "needsFix": "Inahitaji Marekebisho"
+    },
+    "unassigned": "hawajakabidhiwa"
+  }
+}

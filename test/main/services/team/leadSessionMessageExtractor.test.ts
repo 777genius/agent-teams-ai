@@ -145,4 +145,38 @@ describe('extractLeadSessionMessagesFromJsonl', () => {
       text: 'Detached output',
     });
   });
+
+  it('extracts command outputs from preloaded raw lines without reading the jsonl file', async () => {
+    const rawLines = [
+      createUserEntry(
+        'user-slash-raw',
+        '2026-03-27T12:00:00.000Z',
+        '<command-name>/cost</command-name><command-message>cost</command-message><command-args></command-args>'
+      ),
+      createUserEntry(
+        'stdout-raw',
+        '2026-03-27T12:00:01.000Z',
+        '<local-command-stdout>Total cost: $1.23</local-command-stdout>'
+      ),
+    ].map((entry) => JSON.stringify(entry));
+
+    const messages = await extractLeadSessionMessagesFromJsonl({
+      jsonlPath: path.join(os.tmpdir(), 'missing-lead-session.jsonl'),
+      leadName: 'team-lead',
+      leadSessionId: 'lead-1',
+      maxMessages: 20,
+      rawLines,
+    });
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      from: 'team-lead',
+      messageKind: 'slash_command_result',
+      commandOutput: {
+        stream: 'stdout',
+        commandLabel: '/cost',
+      },
+      text: 'Total cost: $1.23',
+    });
+  });
 });

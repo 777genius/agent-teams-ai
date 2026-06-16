@@ -21,7 +21,13 @@ import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { Loader2 } from 'lucide-react';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
-import type { EffortLevel, TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
+import type {
+  EffortLevel,
+  TeamFastMode,
+  TeamMemberMcpPolicy,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 
 export interface AddMemberEntry {
   name: string;
@@ -29,8 +35,10 @@ export interface AddMemberEntry {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
@@ -96,12 +104,6 @@ export const AddMemberDialog = ({
   const [error, setError] = useState<string | null>(null);
   const wasOpenRef = useRef(open);
 
-  // Combine existing names + names already in the draft list for duplicate validation
-  const allNames = useMemo(() => {
-    const draftNames = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
-    return [...existingNames.map((n) => n.toLowerCase()), ...draftNames];
-  }, [existingNames, members]);
-
   const validateName = useCallback(
     (name: string): string | null => {
       const trimmed = name.trim().toLowerCase();
@@ -154,8 +156,10 @@ export const AddMemberDialog = ({
         workflow: m.workflow,
         isolation: m.isolation,
         providerId: m.providerId,
+        providerBackendId: m.providerBackendId,
         model: m.model,
         effort: m.effort,
+        fastMode: m.fastMode,
         mcpPolicy: m.mcpPolicy,
       }))
     );

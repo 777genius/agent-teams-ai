@@ -1,7 +1,6 @@
 import {
   getTeamTaskWorkflowColumn,
-  isTeamTaskDeleted,
-  isTeamTaskFinishedForDependency,
+  isTeamTaskBlockedByUnfinishedDependency,
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
 
@@ -43,13 +42,5 @@ export function isTaskBlocked(
   task: TaskBlockInput,
   taskStateById: ReadonlyMap<string, TaskBlockState>
 ): boolean {
-  const blockedBy = task.blockedBy?.filter((taskId) => taskId.length > 0) ?? [];
-  if (blockedBy.length === 0) {
-    return false;
-  }
-
-  return blockedBy.some((taskId) => {
-    const blocker = taskStateById.get(taskId);
-    return !blocker || (!isTeamTaskFinishedForDependency(blocker) && !isTeamTaskDeleted(blocker));
-  });
+  return isTeamTaskBlockedByUnfinishedDependency(task, taskStateById);
 }

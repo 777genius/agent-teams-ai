@@ -9,6 +9,7 @@ import {
   buildWorkspaceTrustPathCandidates,
   readCodexWorkspaceTrustConfigOverridesFromSettings,
   type WorkspaceTrustDiagnosticStrategyResult,
+  type WorkspaceTrustProvider,
   type WorkspaceTrustWorkspace,
 } from '@features/workspace-trust/core/domain';
 import { describe, expect, it } from 'vitest';
@@ -177,6 +178,22 @@ describe('WorkspaceTrustCoordinator', () => {
     ).resolves.toMatchObject({ launchArgPatches: [] });
   });
 
+  it('normalizes provider aliases in full workspace trust plans', async () => {
+    const coordinator = new DefaultWorkspaceTrustCoordinator(new ClaudePtyWorkspaceTrustStrategy());
+    const workspaces = buildWorkspaceTrustPathCandidates({
+      cwd: '/tmp/project',
+      platform: 'posix',
+    });
+
+    const plan = await coordinator.planFull({
+      providers: ['anthropic', 'claude', 'codex', 'codex'],
+      workspaces,
+      featureFlags,
+    });
+
+    expect(plan.providers).toEqual(['claude', 'codex']);
+  });
+
   it('does not plan Codex patches or execute Claude PTY when workspace trust is disabled', async () => {
     const strategy = new RecordingClaudeStrategy();
     const coordinator = new DefaultWorkspaceTrustCoordinator(strategy);
@@ -198,10 +215,11 @@ describe('WorkspaceTrustCoordinator', () => {
         workspaces,
         featureFlags: disabledFlags,
       })
-    ).resolves.toEqual({ workspaces, launchArgPatches: [] });
+    ).resolves.toEqual({ providers: ['claude', 'codex'], workspaces, launchArgPatches: [] });
 
     await expect(
       coordinator.execute({
+        providers: ['claude', 'codex'],
         claudePath: '/usr/local/bin/claude',
         workspaces,
         env: {},
@@ -216,6 +234,7 @@ describe('WorkspaceTrustCoordinator', () => {
     const strategy = new RecordingClaudeStrategy();
     const coordinator = new DefaultWorkspaceTrustCoordinator(strategy);
     const plan = {
+      providers: ['claude' as const],
       claudePath: '/usr/local/bin/claude',
       workspaces: [workspace()],
       env: {},
@@ -233,6 +252,7 @@ describe('WorkspaceTrustCoordinator', () => {
     const coordinator = new DefaultWorkspaceTrustCoordinator(new ThrowingClaudeStrategy());
 
     const result = await coordinator.execute({
+      providers: ['claude'],
       claudePath: '/usr/local/bin/claude',
       workspaces: [workspace()],
       env: {},
@@ -245,6 +265,61 @@ describe('WorkspaceTrustCoordinator', () => {
       errorCode: 'workspace_trust_preflight_error',
       errorMessage: 'pty unavailable',
     });
+  });
+
+  it.each([
+    {
+      label: 'Codex-only',
+      providers: ['codex'] satisfies WorkspaceTrustProvider[],
+    },
+    {
+      label: 'Gemini-only',
+      providers: ['gemini'] satisfies WorkspaceTrustProvider[],
+    },
+    {
+      label: 'OpenCode-only',
+      providers: ['opencode'] satisfies WorkspaceTrustProvider[],
+    },
+    {
+      label: 'Codex and OpenCode',
+      providers: ['codex', 'opencode'] satisfies WorkspaceTrustProvider[],
+    },
+  ])('skips Claude PTY preflight for $label launches', async ({ providers }) => {
+    const strategy = new RecordingClaudeStrategy();
+    const coordinator = new DefaultWorkspaceTrustCoordinator(strategy);
+
+    const result = await coordinator.execute({
+      providers,
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: {},
+      featureFlags,
+      isCancelled: () => false,
+    });
+
+    expect(result).toMatchObject({
+      provider: 'claude',
+      status: 'skipped',
+      evidence: ['Claude workspace trust preflight not required for selected providers'],
+    });
+    expect(strategy.calls).toBe(0);
+  });
+
+  it('executes Claude PTY preflight when providers include the Anthropic alias', async () => {
+    const strategy = new RecordingClaudeStrategy();
+    const coordinator = new DefaultWorkspaceTrustCoordinator(strategy);
+
+    const result = await coordinator.execute({
+      providers: ['anthropic'],
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: {},
+      featureFlags,
+      isCancelled: () => false,
+    });
+
+    expect(result).toMatchObject({ status: 'ok' });
+    expect(strategy.calls).toBe(1);
   });
 
   it('times out lock waits without blocking later waiters', async () => {

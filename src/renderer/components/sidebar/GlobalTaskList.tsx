@@ -6,10 +6,12 @@ import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { projectColor } from '@renderer/utils/projectColor';
 import {
@@ -58,7 +60,7 @@ import {
 } from './taskFiltersState';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask, TeamSummary } from '@shared/types';
+import type { GlobalTask, LeadActivityState, TeamSummary } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -161,6 +163,17 @@ const dateCategoryLabels: Record<string, string> = {
   Older: 'Earlier',
 };
 
+type ProjectTaskGroupData = ReturnType<typeof groupTasksByProject>[number];
+const EMPTY_TASKS: GlobalTask[] = [];
+const EMPTY_PROJECT_GROUPS: ProjectTaskGroupData[] = [];
+const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
+  Today: [],
+  Yesterday: [],
+  'Previous 7 Days': [],
+  Older: [],
+};
+const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
+
 function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
   if (!query.trim()) return tasks;
   const q = query.toLowerCase();
@@ -190,6 +203,749 @@ function buildTaskTeamSummary(task: GlobalTask): TeamSummary {
   };
 }
 
+function buildTaskLocalPresentationKey(task: GlobalTask): string {
+  return `${task.teamName}:${task.id}`;
+}
+
+function buildTaskLocalPresentationState(
+  task: GlobalTask,
+  pinnedIds: ReadonlySet<string>,
+  archivedIds: ReadonlySet<string>,
+  renamedSubjects: ReadonlyMap<string, string>
+): TaskLocalPresentationState {
+  const key = buildTaskLocalPresentationKey(task);
+  return {
+    key,
+    pinned: pinnedIds.has(key),
+    archived: archivedIds.has(key),
+    renamedSubject: renamedSubjects.get(key),
+  };
+}
+
+function buildTaskLocalPresentationByTask(
+  tasks: readonly GlobalTask[],
+  pinnedIds: ReadonlySet<string>,
+  archivedIds: ReadonlySet<string>,
+  renamedSubjects: ReadonlyMap<string, string>
+): WeakMap<GlobalTask, TaskLocalPresentationState> {
+  const presentationByTask = new WeakMap<GlobalTask, TaskLocalPresentationState>();
+  for (const task of tasks) {
+    presentationByTask.set(
+      task,
+      buildTaskLocalPresentationState(task, pinnedIds, archivedIds, renamedSubjects)
+    );
+  }
+  return presentationByTask;
+}
+
+type TaskRowAction = (teamName: string, taskId: string) => void;
+type TaskRowDeleteAction = (teamName: string, taskId: string) => void | Promise<void>;
+type TeamBooleanResolver = (teamName: string) => boolean;
+type TaskOwnerColorResolver = (task: GlobalTask) => string | null | undefined;
+type TeamHeaderFormatter = (teamDisplayName: string) => string;
+type ProjectGroupVisibleCountChange = (projectKey: string, visibleCount: number) => void;
+type TeamMemberColorInput = Parameters<typeof buildMemberColorMap>[0][number];
+
+interface TaskLocalPresentationState {
+  key: string;
+  pinned: boolean;
+  archived: boolean;
+  renamedSubject: string | undefined;
+}
+
+type TaskLocalPresentationResolver = (task: GlobalTask) => TaskLocalPresentationState;
+interface SidebarTeamsDerived {
+  identityKey: string;
+  filterTeams: { teamName: string; displayName: string }[];
+  statusSummaries: TeamSummary[];
+  memberColorByTeam: Map<string, Map<string, string>>;
+}
+
+let cachedSidebarTeamsSignature: string | null = null;
+let cachedSidebarTeamsSource: readonly TeamSummary[] | null = null;
+let cachedSidebarTeamsDerived: SidebarTeamsDerived = {
+  identityKey: '',
+  filterTeams: [],
+  statusSummaries: [],
+  memberColorByTeam: new Map(),
+};
+const cachedSidebarTeamSignatureByTeam = new WeakMap<TeamSummary, string>();
+let cachedLeadOfflineTeamsSource: Partial<Record<string, LeadActivityState>> | null = null;
+let cachedLeadOfflineTeamsSignature = '';
+let cachedLeadOfflineTeamNames: string[] = [];
+
+function encodeSignaturePart(part: unknown): string {
+  const text = part == null ? '' : String(part);
+  return `${text.length}:${text}|`;
+}
+
+function pushSignaturePart(parts: string[], part: unknown): void {
+  parts.push(encodeSignaturePart(part));
+}
+
+function getSidebarTeamSignature(team: TeamSummary): string {
+  const cached = cachedSidebarTeamSignatureByTeam.get(team);
+  if (cached !== undefined) return cached;
+
+  let signature = '';
+  signature += encodeSignaturePart(team.teamName);
+  signature += encodeSignaturePart(team.displayName);
+  signature += encodeSignaturePart(team.projectPath);
+  signature += encodeSignaturePart(team.lastActivity);
+  signature += encodeSignaturePart(team.partialLaunchFailure ? 1 : 0);
+  signature += encodeSignaturePart(team.teamLaunchState);
+  for (const member of team.members ?? []) {
+    const colorMember = member as TeamMemberColorInput;
+    signature += encodeSignaturePart(colorMember.name);
+    signature += encodeSignaturePart(colorMember.color);
+    signature += encodeSignaturePart(colorMember.agentType);
+    signature += encodeSignaturePart(colorMember.removedAt);
+  }
+
+  cachedSidebarTeamSignatureByTeam.set(team, signature);
+  return signature;
+}
+
+function buildSidebarTeamsSignature(teams: readonly TeamSummary[]): string {
+  let signature = '';
+  for (const team of teams) {
+    signature += getSidebarTeamSignature(team);
+  }
+  return signature;
+}
+
+function buildTeamNamesIdentityKey(teams: readonly TeamSummary[]): string {
+  const signatureParts: string[] = [];
+  for (const team of teams) {
+    pushSignaturePart(signatureParts, team.teamName);
+  }
+  return signatureParts.join('');
+}
+
+function selectLeadOfflineTeamNames(
+  leadActivityByTeam: Partial<Record<string, LeadActivityState>>
+): string[] {
+  if (leadActivityByTeam === cachedLeadOfflineTeamsSource) {
+    return cachedLeadOfflineTeamNames;
+  }
+
+  const offlineTeamNames: string[] = [];
+  for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
+    if (activity === 'offline') {
+      offlineTeamNames.push(teamName);
+    }
+  }
+  offlineTeamNames.sort();
+
+  const signatureParts: string[] = [];
+  for (const teamName of offlineTeamNames) {
+    pushSignaturePart(signatureParts, teamName);
+  }
+  const signature = signatureParts.join('');
+
+  if (signature === cachedLeadOfflineTeamsSignature) {
+    cachedLeadOfflineTeamsSource = leadActivityByTeam;
+    return cachedLeadOfflineTeamNames;
+  }
+
+  cachedLeadOfflineTeamsSource = leadActivityByTeam;
+  cachedLeadOfflineTeamsSignature = signature;
+  cachedLeadOfflineTeamNames = offlineTeamNames;
+  return cachedLeadOfflineTeamNames;
+}
+
+function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsDerived {
+  if (teams === cachedSidebarTeamsSource) {
+    return cachedSidebarTeamsDerived;
+  }
+
+  const signature = buildSidebarTeamsSignature(teams);
+  if (signature === cachedSidebarTeamsSignature) {
+    cachedSidebarTeamsSource = teams;
+    return cachedSidebarTeamsDerived;
+  }
+
+  const memberColorByTeam = new Map<string, Map<string, string>>();
+  for (const team of teams) {
+    if (team.members && team.members.length > 0) {
+      memberColorByTeam.set(team.teamName, buildMemberColorMap(team.members));
+    }
+  }
+
+  cachedSidebarTeamsSource = teams;
+  cachedSidebarTeamsSignature = signature;
+  cachedSidebarTeamsDerived = {
+    identityKey: buildTeamNamesIdentityKey(teams),
+    filterTeams: teams.map((team) => ({
+      teamName: team.teamName,
+      displayName: team.displayName,
+    })),
+    statusSummaries: teams.map((team) => ({
+      teamName: team.teamName,
+      displayName: team.displayName,
+      description: '',
+      memberCount: team.memberCount,
+      taskCount: team.taskCount,
+      projectPath: team.projectPath,
+      lastActivity: team.lastActivity,
+      partialLaunchFailure: team.partialLaunchFailure,
+      teamLaunchState: team.teamLaunchState,
+    })),
+    memberColorByTeam,
+  };
+  return cachedSidebarTeamsDerived;
+}
+
+interface GlobalTaskRowProps {
+  task: GlobalTask;
+  taskLocalKey: string;
+  isPinned: boolean;
+  isArchived: boolean;
+  isNew: boolean;
+  teamOffline: boolean;
+  renamingKey: string | null;
+  hideTeamName?: boolean;
+  hideProjectName?: boolean;
+  showTeamName?: boolean;
+  isLight: boolean;
+  onTogglePin: TaskRowAction;
+  onToggleArchive: TaskRowAction;
+  onMarkUnread: TaskRowAction;
+  onRename: TaskRowAction;
+  onDelete: TaskRowDeleteAction;
+  onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
+  onRenameCancel: () => void;
+  displaySubjectOverride?: string;
+  ownerColorName?: string | null;
+}
+
+function taskCommentsDisplayEqual(
+  prev: GlobalTask['comments'],
+  next: GlobalTask['comments']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return (prev?.length ?? 0) === (next?.length ?? 0);
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    if (prev[i].id !== next[i].id || prev[i].createdAt !== next[i].createdAt) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function taskSidebarFieldsEqual(prev: GlobalTask, next: GlobalTask): boolean {
+  return (
+    prev === next ||
+    (prev.id === next.id &&
+      prev.teamName === next.teamName &&
+      prev.teamDisplayName === next.teamDisplayName &&
+      prev.teamDeleted === next.teamDeleted &&
+      prev.subject === next.subject &&
+      prev.owner === next.owner &&
+      prev.status === next.status &&
+      prev.createdAt === next.createdAt &&
+      prev.updatedAt === next.updatedAt &&
+      prev.projectPath === next.projectPath &&
+      prev.reviewState === next.reviewState &&
+      prev.kanbanColumn === next.kanbanColumn &&
+      prev.deletedAt === next.deletedAt &&
+      taskCommentsDisplayEqual(prev.comments, next.comments))
+  );
+}
+
+function effectiveRenamingKey(taskLocalKey: string, renamingKey: string | null): string | null {
+  return renamingKey === taskLocalKey ? renamingKey : null;
+}
+
+const GlobalTaskRow = memo(
+  function GlobalTaskRow({
+    task,
+    taskLocalKey,
+    isPinned,
+    isArchived,
+    isNew,
+    teamOffline,
+    renamingKey,
+    hideTeamName,
+    hideProjectName,
+    showTeamName,
+    isLight,
+    onTogglePin,
+    onToggleArchive,
+    onMarkUnread,
+    onRename,
+    onDelete,
+    onRenameComplete,
+    onRenameCancel,
+    displaySubjectOverride,
+    ownerColorName,
+  }: GlobalTaskRowProps): React.JSX.Element {
+    const rowRenamingKey = effectiveRenamingKey(taskLocalKey, renamingKey);
+
+    const handleTogglePin = useCallback(() => {
+      onTogglePin(task.teamName, task.id);
+    }, [onTogglePin, task.id, task.teamName]);
+
+    const handleToggleArchive = useCallback(() => {
+      onToggleArchive(task.teamName, task.id);
+    }, [onToggleArchive, task.id, task.teamName]);
+
+    const handleMarkUnread = useCallback(() => {
+      onMarkUnread(task.teamName, task.id);
+    }, [onMarkUnread, task.id, task.teamName]);
+
+    const handleRename = useCallback(() => {
+      onRename(task.teamName, task.id);
+    }, [onRename, task.id, task.teamName]);
+
+    const handleDelete = useCallback(() => {
+      void onDelete(task.teamName, task.id);
+    }, [onDelete, task.id, task.teamName]);
+
+    return (
+      <TaskContextMenu
+        task={task}
+        isPinned={isPinned}
+        isArchived={isArchived}
+        onTogglePin={handleTogglePin}
+        onToggleArchive={handleToggleArchive}
+        onMarkUnread={handleMarkUnread}
+        onRename={handleRename}
+        onDelete={handleDelete}
+      >
+        <AnimatedHeightReveal animate={isNew}>
+          <SidebarTaskItem
+            task={task}
+            hideTeamName={hideTeamName}
+            hideProjectName={hideProjectName}
+            showTeamName={showTeamName}
+            isLight={isLight}
+            teamOffline={teamOffline}
+            renamingKey={rowRenamingKey}
+            onRenameComplete={onRenameComplete}
+            onRenameCancel={onRenameCancel}
+            displaySubjectOverride={displaySubjectOverride}
+            ownerColorName={ownerColorName}
+          />
+        </AnimatedHeightReveal>
+      </TaskContextMenu>
+    );
+  },
+  (prev, next) =>
+    taskSidebarFieldsEqual(prev.task, next.task) &&
+    prev.taskLocalKey === next.taskLocalKey &&
+    prev.isPinned === next.isPinned &&
+    prev.isArchived === next.isArchived &&
+    prev.isNew === next.isNew &&
+    prev.teamOffline === next.teamOffline &&
+    effectiveRenamingKey(prev.taskLocalKey, prev.renamingKey) ===
+      effectiveRenamingKey(next.taskLocalKey, next.renamingKey) &&
+    prev.hideTeamName === next.hideTeamName &&
+    prev.hideProjectName === next.hideProjectName &&
+    prev.showTeamName === next.showTeamName &&
+    prev.isLight === next.isLight &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onToggleArchive === next.onToggleArchive &&
+    prev.onMarkUnread === next.onMarkUnread &&
+    prev.onRename === next.onRename &&
+    prev.onDelete === next.onDelete &&
+    prev.onRenameComplete === next.onRenameComplete &&
+    prev.onRenameCancel === next.onRenameCancel &&
+    prev.displaySubjectOverride === next.displaySubjectOverride &&
+    prev.ownerColorName === next.ownerColorName
+);
+
+interface TaskRowsProps {
+  tasks: GlobalTask[];
+  visibleCount?: number;
+  keyPrefix?: string;
+  getTaskLocalPresentation: TaskLocalPresentationResolver;
+  isNewTask: (task: GlobalTask) => boolean;
+  isTeamOffline: TeamBooleanResolver;
+  renamingKey: string | null;
+  hideTeamName?: boolean;
+  hideProjectName?: boolean;
+  showTeamName?: boolean;
+  isLight: boolean;
+  showTeamHeader?: boolean;
+  pinnedOverride?: boolean;
+  archivedOverride?: boolean;
+  formatTeamHeader?: TeamHeaderFormatter;
+  onTogglePin: TaskRowAction;
+  onToggleArchive: TaskRowAction;
+  onMarkUnread: TaskRowAction;
+  onRename: TaskRowAction;
+  onDelete: TaskRowDeleteAction;
+  onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
+  onRenameCancel: () => void;
+  getOwnerColorName: TaskOwnerColorResolver;
+}
+
+type TaskRowsDerivedProps = Pick<
+  TaskRowsProps,
+  | 'tasks'
+  | 'visibleCount'
+  | 'getTaskLocalPresentation'
+  | 'isNewTask'
+  | 'isTeamOffline'
+  | 'pinnedOverride'
+  | 'archivedOverride'
+  | 'getOwnerColorName'
+>;
+
+function getTaskRowsVisibleTasks(
+  props: Pick<TaskRowsProps, 'tasks' | 'visibleCount'>
+): GlobalTask[] {
+  return typeof props.visibleCount === 'number'
+    ? props.tasks.slice(0, props.visibleCount)
+    : props.tasks;
+}
+
+function areTaskRowsDerivedValuesEqual(
+  prev: TaskRowsDerivedProps,
+  next: TaskRowsDerivedProps
+): boolean {
+  const prevVisibleTasks = getTaskRowsVisibleTasks(prev);
+  const nextVisibleTasks = getTaskRowsVisibleTasks(next);
+  if (!areTaskSidebarArraysEqual(prevVisibleTasks, nextVisibleTasks)) {
+    return false;
+  }
+
+  for (let index = 0; index < prevVisibleTasks.length; index += 1) {
+    const prevTask = prevVisibleTasks[index];
+    const nextTask = nextVisibleTasks[index];
+    if (!prevTask || !nextTask) {
+      return false;
+    }
+    const prevLocalPresentation = prev.getTaskLocalPresentation(prevTask);
+    const nextLocalPresentation = next.getTaskLocalPresentation(nextTask);
+    if (
+      (prev.pinnedOverride ?? prevLocalPresentation.pinned) !==
+        (next.pinnedOverride ?? nextLocalPresentation.pinned) ||
+      (prev.archivedOverride ?? prevLocalPresentation.archived) !==
+        (next.archivedOverride ?? nextLocalPresentation.archived) ||
+      prev.isNewTask(prevTask) !== next.isNewTask(nextTask) ||
+      prev.isTeamOffline(prevTask.teamName) !== next.isTeamOffline(nextTask.teamName) ||
+      prevLocalPresentation.renamedSubject !== nextLocalPresentation.renamedSubject ||
+      prev.getOwnerColorName(prevTask) !== next.getOwnerColorName(nextTask)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const TaskRows = memo(function TaskRows({
+  tasks,
+  visibleCount,
+  keyPrefix = '',
+  getTaskLocalPresentation,
+  isNewTask,
+  isTeamOffline,
+  renamingKey,
+  hideTeamName,
+  hideProjectName,
+  showTeamName,
+  isLight,
+  showTeamHeader,
+  pinnedOverride,
+  archivedOverride,
+  formatTeamHeader,
+  onTogglePin,
+  onToggleArchive,
+  onMarkUnread,
+  onRename,
+  onDelete,
+  onRenameComplete,
+  onRenameCancel,
+  getOwnerColorName,
+}: TaskRowsProps): React.JSX.Element {
+  let lastTeam: string | null = null;
+  const visibleTasks = typeof visibleCount === 'number' ? tasks.slice(0, visibleCount) : tasks;
+
+  return (
+    <>
+      {visibleTasks.map((task) => {
+        const taskLocalPresentation = getTaskLocalPresentation(task);
+        const taskKey = `${keyPrefix}${task.teamName}-${task.id}`;
+        const row = (
+          <GlobalTaskRow
+            key={taskKey}
+            task={task}
+            taskLocalKey={taskLocalPresentation.key}
+            isPinned={pinnedOverride ?? taskLocalPresentation.pinned}
+            isArchived={archivedOverride ?? taskLocalPresentation.archived}
+            isNew={isNewTask(task)}
+            hideTeamName={hideTeamName}
+            hideProjectName={hideProjectName}
+            showTeamName={showTeamName}
+            isLight={isLight}
+            teamOffline={isTeamOffline(task.teamName)}
+            ownerColorName={getOwnerColorName(task)}
+            renamingKey={renamingKey}
+            onTogglePin={onTogglePin}
+            onToggleArchive={onToggleArchive}
+            onMarkUnread={onMarkUnread}
+            onRename={onRename}
+            onDelete={onDelete}
+            onRenameComplete={onRenameComplete}
+            onRenameCancel={onRenameCancel}
+            displaySubjectOverride={taskLocalPresentation.renamedSubject}
+          />
+        );
+
+        if (!showTeamHeader || !formatTeamHeader) {
+          return row;
+        }
+
+        const shouldShowTeamHeader = task.teamName !== lastTeam;
+        lastTeam = task.teamName;
+
+        return (
+          <div key={taskKey}>
+            {shouldShowTeamHeader && (
+              <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
+                {formatTeamHeader(task.teamDisplayName)}
+              </div>
+            )}
+            {row}
+          </div>
+        );
+      })}
+    </>
+  );
+}, areTaskRowsPropsEqual);
+
+function areTaskRowsPropsEqual(prev: TaskRowsProps, next: TaskRowsProps): boolean {
+  return (
+    prev.visibleCount === next.visibleCount &&
+    prev.keyPrefix === next.keyPrefix &&
+    prev.hideTeamName === next.hideTeamName &&
+    prev.hideProjectName === next.hideProjectName &&
+    prev.showTeamName === next.showTeamName &&
+    prev.isLight === next.isLight &&
+    prev.showTeamHeader === next.showTeamHeader &&
+    prev.pinnedOverride === next.pinnedOverride &&
+    prev.archivedOverride === next.archivedOverride &&
+    prev.formatTeamHeader === next.formatTeamHeader &&
+    prev.renamingKey === next.renamingKey &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onToggleArchive === next.onToggleArchive &&
+    prev.onMarkUnread === next.onMarkUnread &&
+    prev.onRename === next.onRename &&
+    prev.onDelete === next.onDelete &&
+    prev.onRenameComplete === next.onRenameComplete &&
+    prev.onRenameCancel === next.onRenameCancel &&
+    areTaskRowsDerivedValuesEqual(prev, next)
+  );
+}
+
+function areTaskSidebarArraysEqual(
+  prev: readonly GlobalTask[],
+  next: readonly GlobalTask[]
+): boolean {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    if (!taskSidebarFieldsEqual(prev[i], next[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+interface ProjectTaskGroupProps {
+  group: ProjectTaskGroupData;
+  isCollapsed: boolean;
+  visibleCount: number;
+  noProjectGroupColor: ReturnType<typeof projectColor>;
+  showMoreLabel: string;
+  showLessLabel: string;
+  getTaskLocalPresentation: TaskLocalPresentationResolver;
+  isNewTask: (task: GlobalTask) => boolean;
+  isTeamOffline: TeamBooleanResolver;
+  renamingKey: string | null;
+  isLight: boolean;
+  formatTeamHeader: TeamHeaderFormatter;
+  onToggleGroup: (projectKey: string) => void;
+  onVisibleCountChange: ProjectGroupVisibleCountChange;
+  onTogglePin: TaskRowAction;
+  onToggleArchive: TaskRowAction;
+  onMarkUnread: TaskRowAction;
+  onRename: TaskRowAction;
+  onDelete: TaskRowDeleteAction;
+  onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
+  onRenameCancel: () => void;
+  getOwnerColorName: TaskOwnerColorResolver;
+}
+
+const ProjectTaskGroup = memo(
+  function ProjectTaskGroup({
+    group,
+    isCollapsed,
+    visibleCount,
+    noProjectGroupColor,
+    showMoreLabel,
+    showLessLabel,
+    getTaskLocalPresentation,
+    isNewTask,
+    isTeamOffline,
+    renamingKey,
+    isLight,
+    formatTeamHeader,
+    onToggleGroup,
+    onVisibleCountChange,
+    onTogglePin,
+    onToggleArchive,
+    onMarkUnread,
+    onRename,
+    onDelete,
+    onRenameComplete,
+    onRenameCancel,
+    getOwnerColorName,
+  }: ProjectTaskGroupProps): React.JSX.Element | null {
+    if (group.tasks.length === 0) return null;
+
+    const isNoProjectGroup = group.projectKey === NO_PROJECT_KEY;
+    const groupColor = isNoProjectGroup ? noProjectGroupColor : projectColor(group.projectLabel);
+    const showMoreVisible = canProjectGroupShowMore(visibleCount, group.tasks.length);
+    const showLessVisible = canProjectGroupShowLess(visibleCount, group.tasks.length);
+
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => onToggleGroup(group.projectKey)}
+          className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 p-2 transition-colors"
+          style={{
+            backgroundColor: 'var(--color-surface-sidebar)',
+            backgroundImage: isNoProjectGroup
+              ? undefined
+              : `linear-gradient(90deg, ${groupColor.glow} 0%, transparent 80%)`,
+            boxShadow: `inset 2px 0 0 ${groupColor.border}, inset 0 -1px 0 var(--color-border)`,
+          }}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="size-3 shrink-0 text-text-muted" />
+          ) : (
+            <ChevronDown className="size-3 shrink-0 text-text-muted" />
+          )}
+          <Folder
+            className="size-3.5 shrink-0"
+            style={{ color: groupColor.icon }}
+            aria-hidden="true"
+          />
+          <span
+            className="truncate text-[11px] font-bold leading-none"
+            style={{ color: groupColor.icon }}
+          >
+            {group.projectLabel}
+          </span>
+          <span className="ml-auto shrink-0 text-[10px] font-normal text-text-muted">
+            {group.tasks.length}
+          </span>
+        </button>
+        {!isCollapsed && (
+          <TaskRows
+            tasks={group.tasks}
+            visibleCount={visibleCount}
+            getTaskLocalPresentation={getTaskLocalPresentation}
+            isNewTask={isNewTask}
+            isTeamOffline={isTeamOffline}
+            isLight={isLight}
+            hideTeamName
+            hideProjectName
+            showTeamHeader
+            formatTeamHeader={formatTeamHeader}
+            renamingKey={renamingKey}
+            onTogglePin={onTogglePin}
+            onToggleArchive={onToggleArchive}
+            onMarkUnread={onMarkUnread}
+            onRename={onRename}
+            onDelete={onDelete}
+            onRenameComplete={onRenameComplete}
+            onRenameCancel={onRenameCancel}
+            getOwnerColorName={getOwnerColorName}
+          />
+        )}
+        {!isCollapsed && (showMoreVisible || showLessVisible) && (
+          <div className="flex items-center gap-2 px-3 pb-2 pt-1">
+            {showMoreVisible && (
+              <button
+                type="button"
+                className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
+                onClick={() =>
+                  onVisibleCountChange(
+                    group.projectKey,
+                    getNextProjectGroupVisibleCount(visibleCount, group.tasks.length)
+                  )
+                }
+              >
+                {showMoreLabel}
+              </button>
+            )}
+            {showLessVisible && (
+              <button
+                type="button"
+                className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
+                onClick={() =>
+                  onVisibleCountChange(
+                    group.projectKey,
+                    getPreviousProjectGroupVisibleCount(visibleCount, group.tasks.length)
+                  )
+                }
+              >
+                {showLessLabel}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  },
+  (prev, next) =>
+    prev.group.projectKey === next.group.projectKey &&
+    prev.group.projectLabel === next.group.projectLabel &&
+    prev.group.tasks.length === next.group.tasks.length &&
+    prev.isCollapsed === next.isCollapsed &&
+    prev.visibleCount === next.visibleCount &&
+    prev.noProjectGroupColor === next.noProjectGroupColor &&
+    prev.showMoreLabel === next.showMoreLabel &&
+    prev.showLessLabel === next.showLessLabel &&
+    prev.renamingKey === next.renamingKey &&
+    prev.isLight === next.isLight &&
+    prev.formatTeamHeader === next.formatTeamHeader &&
+    prev.onToggleGroup === next.onToggleGroup &&
+    prev.onVisibleCountChange === next.onVisibleCountChange &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onToggleArchive === next.onToggleArchive &&
+    prev.onMarkUnread === next.onMarkUnread &&
+    prev.onRename === next.onRename &&
+    prev.onDelete === next.onDelete &&
+    prev.onRenameComplete === next.onRenameComplete &&
+    prev.onRenameCancel === next.onRenameCancel &&
+    areTaskRowsDerivedValuesEqual(
+      {
+        tasks: prev.group.tasks,
+        visibleCount: prev.visibleCount,
+        getTaskLocalPresentation: prev.getTaskLocalPresentation,
+        isNewTask: prev.isNewTask,
+        isTeamOffline: prev.isTeamOffline,
+        getOwnerColorName: prev.getOwnerColorName,
+      },
+      {
+        tasks: next.group.tasks,
+        visibleCount: next.visibleCount,
+        getTaskLocalPresentation: next.getTaskLocalPresentation,
+        isNewTask: next.isNewTask,
+        isTeamOffline: next.isTeamOffline,
+        getOwnerColorName: next.getOwnerColorName,
+      }
+    )
+);
+
 export const GlobalTaskList = memo(function GlobalTaskList({
   hideHeader = false,
   filters: externalFilters,
@@ -198,6 +954,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   onFiltersPopoverOpenChange: externalOnFiltersPopoverOpenChange,
 }: GlobalTaskListProps = {}): React.JSX.Element {
   const { t } = useAppTranslation('common');
+  const { isLight } = useTheme();
   const {
     globalTasks,
     globalTasksLoading,
@@ -215,10 +972,9 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     repositoryGroupsLoading,
     repositoryGroupsInitialized,
     repositoryGroupsError,
-    teams,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
-    leadActivityByTeam,
+    leadOfflineTeamNames,
   } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
@@ -237,12 +993,12 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       repositoryGroupsLoading: s.repositoryGroupsLoading,
       repositoryGroupsInitialized: s.repositoryGroupsInitialized,
       repositoryGroupsError: s.repositoryGroupsError,
-      teams: s.teams,
       provisioningRuns: s.provisioningRuns,
       currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
-      leadActivityByTeam: s.leadActivityByTeam,
+      leadOfflineTeamNames: selectLeadOfflineTeamNames(s.leadActivityByTeam),
     }))
   );
+  const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
   const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
   const [internalFiltersPopoverOpen, setInternalFiltersPopoverOpen] = useState(false);
@@ -266,6 +1022,39 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   const readState = useReadStateSnapshot();
   const taskLocalState = useTaskLocalState();
   const electronMode = isElectronMode();
+
+  const taskLocalPresentationByTask = useMemo(
+    () =>
+      buildTaskLocalPresentationByTask(
+        globalTasks,
+        taskLocalState.pinnedIds,
+        taskLocalState.archivedIds,
+        taskLocalState.renamedSubjects
+      ),
+    [
+      globalTasks,
+      taskLocalState.pinnedIds,
+      taskLocalState.archivedIds,
+      taskLocalState.renamedSubjects,
+    ]
+  );
+
+  const getTaskLocalPresentation = useCallback(
+    (task: GlobalTask): TaskLocalPresentationState =>
+      taskLocalPresentationByTask.get(task) ??
+      buildTaskLocalPresentationState(
+        task,
+        taskLocalState.pinnedIds,
+        taskLocalState.archivedIds,
+        taskLocalState.renamedSubjects
+      ),
+    [
+      taskLocalPresentationByTask,
+      taskLocalState.pinnedIds,
+      taskLocalState.archivedIds,
+      taskLocalState.renamedSubjects,
+    ]
+  );
 
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
@@ -295,14 +1084,14 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       isInitialTaskLoadRef.current = false;
       for (const t of globalTasks) {
         // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
-        knownTaskIdsRef.current.add(`${t.teamName}:${t.id}`);
+        knownTaskIdsRef.current.add(buildTaskLocalPresentationKey(t));
       }
       return new Set<string>();
     }
 
     const newIds = new Set<string>();
     for (const t of globalTasks) {
-      const key = `${t.teamName}:${t.id}`;
+      const key = buildTaskLocalPresentationKey(t);
       // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
       if (!knownTaskIdsRef.current.has(key)) {
         newIds.add(key);
@@ -314,7 +1103,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   }, [globalTasks, globalTasksInitialized]);
 
   const isNewTask = useCallback(
-    (task: GlobalTask): boolean => newTaskIds.has(`${task.teamName}:${task.id}`),
+    (task: GlobalTask): boolean => newTaskIds.has(buildTaskLocalPresentationKey(task)),
     [newTaskIds]
   );
 
@@ -329,7 +1118,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     return () => {
       cancelled = true;
     };
-  }, [fetchAliveTeams, teams]);
+  }, [fetchAliveTeams, sidebarTeams.identityKey]);
 
   const readyProgressRefreshKey = useMemo(() => {
     return Object.entries(currentProvisioningRunIdByTeam)
@@ -360,9 +1149,10 @@ export const GlobalTaskList = memo(function GlobalTaskList({
 
   const offlineTeamNames = useMemo(() => {
     const result = new Set<string>();
+    const leadOfflineTeams = new Set(leadOfflineTeamNames);
     if (aliveTeamsInitialized) {
       const teamSummariesByName = new Map<string, TeamSummary>();
-      for (const team of teams) {
+      for (const team of sidebarTeams.statusSummaries) {
         teamSummariesByName.set(team.teamName, team);
       }
       for (const task of globalTasks) {
@@ -372,32 +1162,60 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       }
 
       for (const team of teamSummariesByName.values()) {
+        if (leadOfflineTeams.has(team.teamName)) {
+          result.add(team.teamName);
+          continue;
+        }
         const status = resolveTeamStatus(
           team,
           team.teamName,
           aliveTeams,
           getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-          leadActivityByTeam
+          {}
         );
         if (!isTeamListStatusRunning(status)) {
           result.add(team.teamName);
         }
       }
     }
-    for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
-      if (activity === 'offline') {
-        result.add(teamName);
-      }
+    for (const teamName of leadOfflineTeamNames) {
+      result.add(teamName);
     }
     return result;
   }, [
     aliveTeams,
     aliveTeamsInitialized,
     globalTasks,
-    leadActivityByTeam,
+    leadOfflineTeamNames,
     provisioningState,
-    teams,
+    sidebarTeams.statusSummaries,
   ]);
+
+  const getOwnerColorName = useCallback(
+    (task: GlobalTask): string | null | undefined => {
+      if (!task.owner) return null;
+      const teamColorMap = sidebarTeams.memberColorByTeam.get(task.teamName);
+      return teamColorMap ? (teamColorMap.get(task.owner) ?? null) : undefined;
+    },
+    [sidebarTeams.memberColorByTeam]
+  );
+  const isTeamOffline = useCallback(
+    (teamName: string): boolean => offlineTeamNames.has(teamName),
+    [offlineTeamNames]
+  );
+  const formatTeamHeader = useCallback(
+    (teamDisplayName: string): string => t('tasksPanel.teamLabel', { team: teamDisplayName }),
+    [t]
+  );
+  const handleProjectGroupVisibleCountChange = useCallback(
+    (projectKey: string, visibleCount: number): void => {
+      setProjectRequestedVisibleCountByKey((prev) => ({
+        ...prev,
+        [projectKey]: visibleCount,
+      }));
+    },
+    []
+  );
 
   const setGroupingMode = (mode: TaskGroupingMode): void => {
     setGroupingModeState(mode);
@@ -423,6 +1241,24 @@ export const GlobalTaskList = memo(function GlobalTaskList({
 
   const handleMarkTaskUnread = useCallback((teamName: string, taskId: string): void => {
     markTaskUnread(teamName, taskId);
+  }, []);
+
+  const handleToggleTaskPin = useCallback(
+    (teamName: string, taskId: string): void => {
+      taskLocalState.togglePin(teamName, taskId);
+    },
+    [taskLocalState]
+  );
+
+  const handleToggleTaskArchive = useCallback(
+    (teamName: string, taskId: string): void => {
+      taskLocalState.toggleArchive(teamName, taskId);
+    },
+    [taskLocalState]
+  );
+
+  const handleStartTaskRename = useCallback((teamName: string, taskId: string): void => {
+    setRenamingTaskKey(`${teamName}:${taskId}`);
   }, []);
 
   const handleDeleteTask = useCallback(
@@ -462,6 +1298,9 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   }, [fetchAllTasks, globalTasksLoading]);
 
   useEffect(() => {
+    if (!filtersPopoverOpen) {
+      return;
+    }
     if (
       viewMode === 'grouped' &&
       !repositoryGroupsInitialized &&
@@ -475,6 +1314,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   }, [
     fetchProjects,
     fetchRepositoryGroups,
+    filtersPopoverOpen,
     projectsError,
     projectsInitialized,
     projectsLoading,
@@ -513,8 +1353,8 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   // Resolve project filter from filters state
   const selectedProjectPath = filters.projectPath;
   const hasArchivedTasks = useMemo(
-    () => globalTasks.some((t) => taskLocalState.isArchived(t.teamName, t.id)),
-    [globalTasks, taskLocalState]
+    () => globalTasks.some((t) => getTaskLocalPresentation(t).archived),
+    [globalTasks, getTaskLocalPresentation]
   );
   const effectiveShowArchived = showArchived && hasArchivedTasks;
 
@@ -537,9 +1377,9 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     result = applySearch(result, searchQuery);
     // Archive filtering
     if (effectiveShowArchived) {
-      result = result.filter((t) => taskLocalState.isArchived(t.teamName, t.id));
+      result = result.filter((t) => getTaskLocalPresentation(t).archived);
     } else {
-      result = result.filter((t) => !taskLocalState.isArchived(t.teamName, t.id));
+      result = result.filter((t) => !getTaskLocalPresentation(t).archived);
     }
     return result;
   }, [
@@ -551,26 +1391,36 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     searchQuery,
     readState,
     effectiveShowArchived,
-    taskLocalState,
+    getTaskLocalPresentation,
   ]);
 
   // Split into pinned and normal (non-pinned) tasks
   const pinnedTasks = useMemo(
-    () => filtered.filter((t) => taskLocalState.isPinned(t.teamName, t.id)),
-    [filtered, taskLocalState]
+    () => filtered.filter((t) => getTaskLocalPresentation(t).pinned),
+    [filtered, getTaskLocalPresentation]
   );
   const normalTasks = useMemo(
-    () => filtered.filter((t) => !taskLocalState.isPinned(t.teamName, t.id)),
-    [filtered, taskLocalState]
+    () => filtered.filter((t) => !getTaskLocalPresentation(t).pinned),
+    [filtered, getTaskLocalPresentation]
   );
+  const sortedPinnedTasks = useMemo(() => sortTasksByFreshness(pinnedTasks), [pinnedTasks]);
 
   const sortedFlat = useMemo(
-    () => applySortMode(normalTasks, sortMode, readState),
-    [normalTasks, sortMode, readState]
+    () => (groupingMode === 'none' ? applySortMode(normalTasks, sortMode, readState) : EMPTY_TASKS),
+    [groupingMode, normalTasks, sortMode, readState]
   );
-  const grouped = useMemo(() => groupTasksByDate(normalTasks), [normalTasks]);
-  const categories = useMemo(() => getNonEmptyTaskCategories(grouped), [grouped]);
-  const projectGroups = useMemo(() => groupTasksByProject(normalTasks), [normalTasks]);
+  const grouped = useMemo(
+    () => (groupingMode === 'time' ? groupTasksByDate(normalTasks) : EMPTY_DATE_GROUPS),
+    [groupingMode, normalTasks]
+  );
+  const categories = useMemo(
+    () => (groupingMode === 'time' ? getNonEmptyTaskCategories(grouped) : EMPTY_DATE_CATEGORIES),
+    [grouped, groupingMode]
+  );
+  const projectGroups = useMemo(
+    () => (groupingMode === 'project' ? groupTasksByProject(normalTasks) : EMPTY_PROJECT_GROUPS),
+    [groupingMode, normalTasks]
+  );
 
   // Collapsed group keys for each grouping mode
   const projectGroupKeys = useMemo(
@@ -591,9 +1441,22 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       syncProjectGroupVisibleCountByKey(projectRequestedVisibleCountByKey, projectGroupVisibility),
     [projectRequestedVisibleCountByKey, projectGroupVisibility]
   );
+  const taskFilterTeams = useMemo(() => sidebarTeams.filterTeams, [sidebarTeams.filterTeams]);
 
-  const projectCollapsed = useCollapsedGroups('project', projectGroupKeys);
-  const timeCollapsed = useCollapsedGroups('time', timeGroupKeys);
+  const { isCollapsed: isProjectGroupCollapsed, toggle: toggleProjectGroup } = useCollapsedGroups(
+    'project',
+    projectGroupKeys
+  );
+  const { isCollapsed: isTimeGroupCollapsed, toggle: toggleTimeGroup } = useCollapsedGroups(
+    'time',
+    timeGroupKeys
+  );
+  const handleToggleProjectGroup = useCallback(
+    (projectKey: string): void => {
+      toggleProjectGroup(projectKey);
+    },
+    [toggleProjectGroup]
+  );
 
   const hasContent =
     pinnedTasks.length > 0 ||
@@ -693,7 +1556,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
         <TaskFiltersPopover
           open={filtersPopoverOpen}
           onOpenChange={setFiltersPopoverOpen}
-          teams={teams.map((t) => ({ teamName: t.teamName, displayName: t.displayName }))}
+          teams={taskFilterTeams}
           projectOptions={projectFilterOptions}
           filters={filters}
           onFiltersChange={setFilters}
@@ -708,31 +1571,26 @@ export const GlobalTaskList = memo(function GlobalTaskList({
             <Pin className="size-3 text-text-muted" />
             <span className="text-[11px] text-text-muted">{t('tasksPanel.pinned')}</span>
           </div>
-          {sortTasksByFreshness(pinnedTasks).map((task) => (
-            <TaskContextMenu
-              key={`pinned-${task.teamName}-${task.id}`}
-              task={task}
-              isPinned={true}
-              isArchived={false}
-              onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
-              onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
-              onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
-              onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
-              onDelete={() => handleDeleteTask(task.teamName, task.id)}
-            >
-              <AnimatedHeightReveal animate={isNewTask(task)}>
-                <SidebarTaskItem
-                  task={task}
-                  showTeamName
-                  teamOffline={offlineTeamNames.has(task.teamName)}
-                  renamingKey={renamingTaskKey}
-                  onRenameComplete={handleRenameComplete}
-                  onRenameCancel={handleRenameCancel}
-                  getDisplaySubject={(t) => taskLocalState.getRenamedSubject(t.teamName, t.id)}
-                />
-              </AnimatedHeightReveal>
-            </TaskContextMenu>
-          ))}
+          <TaskRows
+            tasks={sortedPinnedTasks}
+            keyPrefix="pinned-"
+            getTaskLocalPresentation={getTaskLocalPresentation}
+            isNewTask={isNewTask}
+            isTeamOffline={isTeamOffline}
+            isLight={isLight}
+            pinnedOverride={true}
+            archivedOverride={false}
+            showTeamName
+            renamingKey={renamingTaskKey}
+            onTogglePin={handleToggleTaskPin}
+            onToggleArchive={handleToggleTaskArchive}
+            onMarkUnread={handleMarkTaskUnread}
+            onRename={handleStartTaskRename}
+            onDelete={handleDeleteTask}
+            onRenameComplete={handleRenameComplete}
+            onRenameCancel={handleRenameCancel}
+            getOwnerColorName={getOwnerColorName}
+          />
         </div>
       )}
 
@@ -815,177 +1673,71 @@ export const GlobalTaskList = memo(function GlobalTaskList({
           </div>
         )}
 
-        {groupingMode === 'none' &&
-          sortedFlat.map((task) => (
-            <TaskContextMenu
-              key={`${task.teamName}-${task.id}`}
-              task={task}
-              isPinned={taskLocalState.isPinned(task.teamName, task.id)}
-              isArchived={taskLocalState.isArchived(task.teamName, task.id)}
-              onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
-              onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
-              onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
-              onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
-              onDelete={() => handleDeleteTask(task.teamName, task.id)}
-            >
-              <AnimatedHeightReveal animate={isNewTask(task)}>
-                <SidebarTaskItem
-                  task={task}
-                  showTeamName
-                  teamOffline={offlineTeamNames.has(task.teamName)}
-                  renamingKey={renamingTaskKey}
-                  onRenameComplete={handleRenameComplete}
-                  onRenameCancel={handleRenameCancel}
-                  getDisplaySubject={(t) => taskLocalState.getRenamedSubject(t.teamName, t.id)}
-                />
-              </AnimatedHeightReveal>
-            </TaskContextMenu>
-          ))}
+        {groupingMode === 'none' && (
+          <TaskRows
+            tasks={sortedFlat}
+            getTaskLocalPresentation={getTaskLocalPresentation}
+            isNewTask={isNewTask}
+            isTeamOffline={isTeamOffline}
+            isLight={isLight}
+            showTeamName
+            renamingKey={renamingTaskKey}
+            onTogglePin={handleToggleTaskPin}
+            onToggleArchive={handleToggleTaskArchive}
+            onMarkUnread={handleMarkTaskUnread}
+            onRename={handleStartTaskRename}
+            onDelete={handleDeleteTask}
+            onRenameComplete={handleRenameComplete}
+            onRenameCancel={handleRenameCancel}
+            getOwnerColorName={getOwnerColorName}
+          />
+        )}
 
         {groupingMode === 'project' &&
           projectGroups.map((group) => {
-            if (group.tasks.length === 0) return null;
-            const isGroupCollapsed = projectCollapsed.isCollapsed(group.projectKey);
-            const isNoProjectGroup = group.projectKey === NO_PROJECT_KEY;
-            const groupColor = isNoProjectGroup
-              ? noProjectGroupColor
-              : projectColor(group.projectLabel);
             const visibleCount = getProjectGroupVisibleCount(
               projectVisibleCountByKey[group.projectKey],
               group.tasks.length
             );
-            const visibleTasks = group.tasks.slice(0, visibleCount);
-            const showMoreVisible = canProjectGroupShowMore(visibleCount, group.tasks.length);
-            const showLessVisible = canProjectGroupShowLess(visibleCount, group.tasks.length);
-            let lastTeam: string | null = null;
             return (
-              <div key={group.projectKey}>
-                <button
-                  type="button"
-                  onClick={() => projectCollapsed.toggle(group.projectKey)}
-                  className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 p-2 transition-colors"
-                  style={{
-                    backgroundColor: 'var(--color-surface-sidebar)',
-                    backgroundImage: isNoProjectGroup
-                      ? undefined
-                      : `linear-gradient(90deg, ${groupColor.glow} 0%, transparent 80%)`,
-                    boxShadow: `inset 2px 0 0 ${groupColor.border}, inset 0 -1px 0 var(--color-border)`,
-                  }}
-                >
-                  {isGroupCollapsed ? (
-                    <ChevronRight className="size-3 shrink-0 text-text-muted" />
-                  ) : (
-                    <ChevronDown className="size-3 shrink-0 text-text-muted" />
-                  )}
-                  <Folder
-                    className="size-3.5 shrink-0"
-                    style={{ color: groupColor.icon }}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className="truncate text-[11px] font-bold leading-none"
-                    style={{ color: groupColor.icon }}
-                  >
-                    {group.projectLabel}
-                  </span>
-                  <span className="ml-auto shrink-0 text-[10px] font-normal text-text-muted">
-                    {group.tasks.length}
-                  </span>
-                </button>
-                {!isGroupCollapsed &&
-                  visibleTasks.map((task) => {
-                    const showTeamHeader = task.teamName !== lastTeam;
-                    lastTeam = task.teamName;
-                    return (
-                      <div key={`${task.teamName}-${task.id}`}>
-                        {showTeamHeader && (
-                          <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
-                            {t('tasksPanel.teamLabel', { team: task.teamDisplayName })}
-                          </div>
-                        )}
-                        <TaskContextMenu
-                          task={task}
-                          isPinned={taskLocalState.isPinned(task.teamName, task.id)}
-                          isArchived={taskLocalState.isArchived(task.teamName, task.id)}
-                          onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
-                          onToggleArchive={() =>
-                            taskLocalState.toggleArchive(task.teamName, task.id)
-                          }
-                          onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
-                          onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
-                          onDelete={() => handleDeleteTask(task.teamName, task.id)}
-                        >
-                          <AnimatedHeightReveal animate={isNewTask(task)}>
-                            <SidebarTaskItem
-                              task={task}
-                              hideTeamName
-                              hideProjectName
-                              teamOffline={offlineTeamNames.has(task.teamName)}
-                              renamingKey={renamingTaskKey}
-                              onRenameComplete={handleRenameComplete}
-                              onRenameCancel={handleRenameCancel}
-                              getDisplaySubject={(t) =>
-                                taskLocalState.getRenamedSubject(t.teamName, t.id)
-                              }
-                            />
-                          </AnimatedHeightReveal>
-                        </TaskContextMenu>
-                      </div>
-                    );
-                  })}
-                {!isGroupCollapsed && (showMoreVisible || showLessVisible) && (
-                  <div className="flex items-center gap-2 px-3 pb-2 pt-1">
-                    {showMoreVisible && (
-                      <button
-                        type="button"
-                        className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
-                        onClick={() =>
-                          setProjectRequestedVisibleCountByKey((prev) => ({
-                            ...prev,
-                            [group.projectKey]: getNextProjectGroupVisibleCount(
-                              projectVisibleCountByKey[group.projectKey],
-                              group.tasks.length
-                            ),
-                          }))
-                        }
-                      >
-                        {t('tasksPanel.showMore')}
-                      </button>
-                    )}
-                    {showLessVisible && (
-                      <button
-                        type="button"
-                        className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
-                        onClick={() =>
-                          setProjectRequestedVisibleCountByKey((prev) => ({
-                            ...prev,
-                            [group.projectKey]: getPreviousProjectGroupVisibleCount(
-                              projectVisibleCountByKey[group.projectKey],
-                              group.tasks.length
-                            ),
-                          }))
-                        }
-                      >
-                        {t('tasksPanel.showLess')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <ProjectTaskGroup
+                key={group.projectKey}
+                group={group}
+                isCollapsed={isProjectGroupCollapsed(group.projectKey)}
+                visibleCount={visibleCount}
+                noProjectGroupColor={noProjectGroupColor}
+                showMoreLabel={t('tasksPanel.showMore')}
+                showLessLabel={t('tasksPanel.showLess')}
+                getTaskLocalPresentation={getTaskLocalPresentation}
+                isNewTask={isNewTask}
+                isTeamOffline={isTeamOffline}
+                isLight={isLight}
+                renamingKey={renamingTaskKey}
+                formatTeamHeader={formatTeamHeader}
+                onToggleGroup={handleToggleProjectGroup}
+                onVisibleCountChange={handleProjectGroupVisibleCountChange}
+                onTogglePin={handleToggleTaskPin}
+                onToggleArchive={handleToggleTaskArchive}
+                onMarkUnread={handleMarkTaskUnread}
+                onRename={handleStartTaskRename}
+                onDelete={handleDeleteTask}
+                onRenameComplete={handleRenameComplete}
+                onRenameCancel={handleRenameCancel}
+                getOwnerColorName={getOwnerColorName}
+              />
             );
           })}
 
         {groupingMode === 'time' &&
           categories.map((category) => {
             const tasks = grouped[category];
-            const isGroupCollapsed = timeCollapsed.isCollapsed(category);
-            let lastTeam: string | null = null;
+            const isGroupCollapsed = isTimeGroupCollapsed(category);
 
             return (
               <div key={category}>
                 <button
                   type="button"
-                  onClick={() => timeCollapsed.toggle(category)}
+                  onClick={() => toggleTimeGroup(category)}
                   className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-text-secondary transition-colors"
                   style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
                 >
@@ -1000,46 +1752,26 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                   </span>
                 </button>
 
-                {!isGroupCollapsed &&
-                  tasks.map((task) => {
-                    const showTeamHeader = task.teamName !== lastTeam;
-                    lastTeam = task.teamName;
-
-                    return (
-                      <div key={`${task.teamName}-${task.id}`}>
-                        {showTeamHeader && (
-                          <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
-                            {t('tasksPanel.teamLabel', { team: task.teamDisplayName })}
-                          </div>
-                        )}
-                        <TaskContextMenu
-                          task={task}
-                          isPinned={taskLocalState.isPinned(task.teamName, task.id)}
-                          isArchived={taskLocalState.isArchived(task.teamName, task.id)}
-                          onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
-                          onToggleArchive={() =>
-                            taskLocalState.toggleArchive(task.teamName, task.id)
-                          }
-                          onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
-                          onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
-                          onDelete={() => handleDeleteTask(task.teamName, task.id)}
-                        >
-                          <AnimatedHeightReveal animate={isNewTask(task)}>
-                            <SidebarTaskItem
-                              task={task}
-                              teamOffline={offlineTeamNames.has(task.teamName)}
-                              renamingKey={renamingTaskKey}
-                              onRenameComplete={handleRenameComplete}
-                              onRenameCancel={handleRenameCancel}
-                              getDisplaySubject={(t) =>
-                                taskLocalState.getRenamedSubject(t.teamName, t.id)
-                              }
-                            />
-                          </AnimatedHeightReveal>
-                        </TaskContextMenu>
-                      </div>
-                    );
-                  })}
+                {!isGroupCollapsed && (
+                  <TaskRows
+                    tasks={tasks}
+                    getTaskLocalPresentation={getTaskLocalPresentation}
+                    isNewTask={isNewTask}
+                    isTeamOffline={isTeamOffline}
+                    isLight={isLight}
+                    showTeamHeader
+                    formatTeamHeader={formatTeamHeader}
+                    renamingKey={renamingTaskKey}
+                    onTogglePin={handleToggleTaskPin}
+                    onToggleArchive={handleToggleTaskArchive}
+                    onMarkUnread={handleMarkTaskUnread}
+                    onRename={handleStartTaskRename}
+                    onDelete={handleDeleteTask}
+                    onRenameComplete={handleRenameComplete}
+                    onRenameCancel={handleRenameCancel}
+                    getOwnerColorName={getOwnerColorName}
+                  />
+                )}
               </div>
             );
           })}

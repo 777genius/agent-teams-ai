@@ -707,6 +707,7 @@ describe('MemberCard starting-state visuals', () => {
         React.createElement(MemberCard, {
           member,
           memberColor: 'blue',
+          avatarUrl: 'https://example.com/alice.png',
           isTeamAlive: true,
           isTeamProvisioning: false,
         })
@@ -719,6 +720,7 @@ describe('MemberCard starting-state visuals', () => {
     const clickableCard = host.querySelector('[role="button"]') as HTMLElement | null;
 
     expect(avatarRing).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe('https://example.com/alice.png');
     expect(avatarRing?.style.borderColor).toBe('#3b82f6');
     expect(clickableCard?.style.borderLeft).toBe('');
     expect(clickableCard?.style.background).toBe('');
@@ -878,18 +880,13 @@ describe('MemberCard starting-state visuals', () => {
     const runtimeTooltipContent = Array.from(
       host.querySelectorAll('[data-testid="tooltip-content"]')
     ).find((content) => content.className.includes('border-blue-400/20'));
-    expect(runtimeTooltipContent?.getAttribute('data-side')).toBe('left');
     expect(host.querySelector('[data-testid="tooltip-root"]')?.getAttribute('data-open')).toBe(
       'false'
     );
-    expect(host.textContent).toContain('Local runtime load');
-    expect(host.textContent).toContain('Parent and child processes only.');
-    expect(host.textContent).toContain('root PID 222');
-    expect(host.textContent).toContain('3 processes');
-    expect(host.textContent).toContain('CPU');
-    expect(host.textContent).toContain('14%');
-    expect(host.textContent).toContain('Memory');
-    expect(host.textContent).toContain('238 MB');
+    expect(runtimeTooltipContent).toBeUndefined();
+    expect(host.textContent).not.toContain('Local runtime load');
+    expect(host.textContent).not.toContain('Parent and child processes only.');
+    expect(host.textContent).not.toContain('root PID 222');
 
     await act(async () => {
       root.unmount();

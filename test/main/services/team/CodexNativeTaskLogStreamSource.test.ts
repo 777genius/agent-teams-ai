@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CodexNativeTaskLogStreamSource } from '../../../../src/main/services/team/taskLogs/stream/CodexNativeTaskLogStreamSource';
 
-import type { ParsedMessage } from '../../../../src/main/types';
 import type { CodexNativeTraceRun } from '../../../../src/main/services/team/taskLogs/stream/CodexNativeTraceReader';
+import type { ParsedMessage } from '../../../../src/main/types';
 import type { TeamTask } from '../../../../src/shared/types';
 
 function task(overrides: Partial<TeamTask> = {}): TeamTask {
@@ -37,16 +37,27 @@ function message(uuid: string, timestamp: string, toolName: string): ParsedMessa
 }
 
 describe('CodexNativeTaskLogStreamSource', () => {
-  it('resolves short task refs, verifies Codex owner, and reads full/display/short trace candidates', async () => {
+  it('resolves short task refs and keeps config Codex owner when runtime meta has stale model only', async () => {
     const taskReader = {
       getTasks: vi.fn(async () => [task()]),
       getDeletedTasks: vi.fn(async () => []),
     };
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [{ name: 'atlas', providerId: 'codex' }]),
+      getMembers: vi.fn(async () => [
+        { name: 'atlas', role: 'developer', model: 'opencode/openai/gpt-oss' },
+      ]),
     };
     const configReader = {
-      getConfig: vi.fn(async () => null),
+      getConfig: vi.fn(async () => ({
+        name: 'vector-room-131313',
+        members: [
+          {
+            name: 'atlas',
+            providerBackendId: 'codex-native',
+            model: 'opencode/openai/gpt-oss',
+          },
+        ],
+      })),
     };
     const traceRuns: CodexNativeTraceRun[] = [
       {
@@ -122,7 +133,10 @@ describe('CodexNativeTaskLogStreamSource', () => {
         getMembers: vi.fn(async () => [{ name: 'alice', providerId: 'anthropic' }]),
       } as never,
       {
-        getConfig: vi.fn(async () => null),
+        getConfig: vi.fn(async () => ({
+          name: 'vector-room-131313',
+          members: [{ name: 'alice', providerId: 'codex' }],
+        })),
       } as never,
       traceReader as never
     );

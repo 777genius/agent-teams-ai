@@ -9,6 +9,14 @@ import {
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import {
+  buildCodexTrustedProjectConfigOverrides,
+  buildCodexWorkspaceTrustSettingsArgs,
+  type WorkspaceTrustArgsOnlyPlanRequest,
+  type WorkspaceTrustCoordinator,
+  type WorkspaceTrustLaunchArgPatch,
+  type WorkspaceTrustLaunchArgTargetSurface,
+} from '../../../../src/features/workspace-trust/main';
+import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
@@ -49,6 +57,13 @@ const liveDescribe =
 const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'gpt-5.4-mini';
 const DEFAULT_EFFORT = 'low' as const;
+const LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES: WorkspaceTrustLaunchArgTargetSurface[] = [
+  'primary_provider_args',
+  'cross_provider_member_args',
+  'provider_facts_probe',
+  'default_model_probe',
+];
+const VITEST_HOME_PREFIX = 'agent-teams-vitest-home-';
 
 liveDescribe('Member work sync Codex live e2e', () => {
   let tempDir: string;
@@ -594,6 +609,355 @@ liveDescribe('Member work sync Codex live e2e', () => {
   );
 
   it(
+    'wakes a real Codex teammate when runtime member meta omits provider metadata under noisy metrics',
+    async () => {
+      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+      expect(orchestratorCli).toBeTruthy();
+      await assertExecutable(orchestratorCli!);
+
+      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+      const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() ||
+        DEFAULT_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh';
+      const requestedMemberName = 'NickName';
+      const marker = `member-work-sync-codex-runtime-meta-${Date.now()}`;
+      teamName = `member-work-sync-codex-runtime-meta-${Date.now()}`;
+      const projectPath = path.join(tempDir, 'project');
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.writeFile(
+        path.join(projectPath, 'README.md'),
+        '# Member work sync Codex runtime meta live e2e\n\nKeep this project intentionally tiny.\n',
+        'utf8'
+      );
+      await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
+      process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'false';
+      if (ownsCodexHomeDir) {
+        await trustProjectInOwnedCodexHome({ codexHomeDir, projectPath });
+      }
+
+      const [
+        { TeamProvisioningService },
+        { TeamConfigReader },
+        { TeamTaskReader },
+        { TeamTaskWriter },
+        { TeamKanbanManager },
+        { TeamMembersMetaStore },
+        { createCodexAccountFeature },
+        { ProviderConnectionService },
+      ] = await Promise.all([
+        import('../../../../src/main/services/team/TeamProvisioningService'),
+        import('../../../../src/main/services/team/TeamConfigReader'),
+        import('../../../../src/main/services/team/TeamTaskReader'),
+        import('../../../../src/main/services/team/TeamTaskWriter'),
+        import('../../../../src/main/services/team/TeamKanbanManager'),
+        import('../../../../src/main/services/team/TeamMembersMetaStore'),
+        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+        import('../../../../src/main/services/runtime/ProviderConnectionService'),
+      ]);
+
+      codexAccountFeature = createCodexAccountFeature({
+        logger: {
+          info: () => undefined,
+          warn: () => undefined,
+          error: () => undefined,
+        },
+        configManager: {
+          getConfig: () => ({
+            providerConnections: {
+              codex: {
+                preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
+              },
+            },
+          }),
+        },
+      });
+      providerConnectionService = ProviderConnectionService.getInstance();
+      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+      const provisioningService = new TeamProvisioningService();
+      provisioningService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+      svc = provisioningService;
+      const activeService = provisioningService;
+      const taskReader = new TeamTaskReader();
+      const membersMetaStore = new TeamMembersMetaStore();
+      feature = createMemberWorkSyncFeature({
+        teamsBasePath: getTeamsBasePath(),
+        configReader: new TeamConfigReader(),
+        taskReader,
+        kanbanManager: new TeamKanbanManager(),
+        membersMetaStore,
+        isTeamActive: (name) =>
+          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+        listLifecycleActiveTeamNames: async () => [teamName!],
+        queueQuietWindowMs: 1,
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
+      });
+      activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
+        feature!.noteTeamChange(event)
+      );
+      activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+        feature!.buildRuntimeTurnSettledEnvironment(input)
+      );
+      controlServer = await startMemberWorkSyncControlServer(feature);
+      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+      await fs.writeFile(
+        path.join(tempClaudeRoot, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+        'utf8'
+      );
+
+      const progressEvents: TeamProvisioningProgress[] = [];
+      await activeService.createTeam(
+        {
+          teamName,
+          cwd: projectPath,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model,
+          effort,
+          fastMode: 'off',
+          skipPermissions: true,
+          prompt: [
+            'Keep launch work minimal.',
+            'If you receive a member_work_sync_nudge, do not complete the task.',
+            'For a member_work_sync_nudge, call member_work_sync_status first.',
+            'Then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds for the current agenda.',
+            `After member_work_sync_report is accepted, add one task comment containing exactly: ${marker}:still-working.`,
+            'After that stop without a user-visible message.',
+          ].join(' '),
+          members: [
+            {
+              name: requestedMemberName,
+              role: 'developer',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model,
+              effort,
+            },
+          ],
+        },
+        (progress) => {
+          progressEvents.push(progress);
+        }
+      );
+
+      await waitUntil(async () => {
+        const last = progressEvents.at(-1);
+        if (last?.state === 'failed') {
+          throw new Error(formatProgressDump(progressEvents));
+        }
+        return last?.state === 'ready';
+      }, 240_000);
+
+      const config = await new TeamConfigReader().getConfig(teamName);
+      const memberName = config?.members
+        ?.find((member) => sameMemberName(member.name, requestedMemberName))
+        ?.name?.trim();
+      expect(memberName).toBeTruthy();
+      expect(
+        config?.members?.find((member) => sameMemberName(member.name, memberName!))
+      ).toMatchObject({
+        providerId: 'codex',
+      });
+
+      await stripMemberProviderMetadataFromMembersMeta({
+        teamName,
+        memberName: memberName!,
+        fallbackRole: 'developer',
+      });
+      expect(
+        (await membersMetaStore.getMembers(teamName)).find((member) =>
+          sameMemberName(member.name, memberName!)
+        )
+      ).toMatchObject({
+        name: memberName,
+        providerId: undefined,
+        providerBackendId: undefined,
+        model: undefined,
+        effort: undefined,
+      });
+      await waitUntil(async () => {
+        await feature!.drainRuntimeTurnSettledEvents();
+        const diagnostics = feature!.getQueueDiagnostics();
+        return diagnostics.queued === 0 && diagnostics.running === 0;
+      }, 60_000, 1_000, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+        })
+      );
+
+      const createdAt = new Date().toISOString();
+      const taskId = `runtime-meta-${Date.now()}`;
+      const displayId = String(Date.now()).slice(-8);
+      await new TeamTaskWriter().createTask(teamName, {
+        id: taskId,
+        displayId,
+        subject: `Member work sync live runtime meta ${marker}`,
+        description: 'Verify native stale recovery when runtime member meta lacks provider fields.',
+        owner: memberName!,
+        createdBy: 'user',
+        status: 'in_progress',
+        projectPath,
+        createdAt,
+        updatedAt: createdAt,
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId });
+
+      let agendaFingerprint = '';
+      await waitUntil(async () => {
+        const status = await feature!.refreshStatus({ teamName: teamName!, memberName: memberName! });
+        if (!status.agenda.items.some((item) => item.taskId === taskId)) {
+          return false;
+        }
+        expect(status).toMatchObject({
+          state: 'needs_sync',
+          providerId: 'codex',
+          diagnostics: expect.arrayContaining(['no_current_report']),
+        });
+        expect(status.agenda.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              taskId,
+              reason: 'owned_in_progress_task',
+              evidence: expect.objectContaining({ status: 'in_progress' }),
+            }),
+          ])
+        );
+        agendaFingerprint = status.agenda.fingerprint;
+        return true;
+      }, 60_000, 500, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+          taskId,
+        })
+      );
+      await waitUntil(async () => {
+        const diagnostics = feature!.getQueueDiagnostics();
+        return diagnostics.queued === 0 && diagnostics.running === 0;
+      }, 30_000, 500, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+          taskId,
+        })
+      );
+      const stableStatus = await feature.refreshStatus({
+        teamName,
+        memberName: memberName!,
+      });
+      expect(stableStatus.providerId).toBe('codex');
+      expect(stableStatus.agenda.fingerprint).toBe(agendaFingerprint);
+      expect(
+        (await readInboxMessages(teamName, memberName!)).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(0);
+
+      await seedNativeStaleBlockingMetrics({
+        teamName,
+        memberName: memberName!,
+        agendaFingerprint,
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId });
+
+      await waitUntil(async () => {
+        const diagnostics = feature!.getQueueDiagnostics();
+        return diagnostics.queued === 0 && diagnostics.running === 0;
+      }, 30_000, 500, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+          taskId,
+        })
+      );
+      expect((await feature.getStatus({ teamName, memberName: memberName! })).providerId).toBe(
+        'codex'
+      );
+
+      await waitUntil(async () => {
+        const nudges = (await readInboxMessages(teamName!, memberName!)).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        return nudges.length === 1;
+      }, 60_000, 1_000, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+          taskId,
+        })
+      );
+
+      const metrics = await feature.getMetrics({ teamName });
+      expect(metrics.phase2Readiness.reasons).toContain('would_nudge_rate_high');
+      const journalPath = path.join(
+        getTeamsBasePath(),
+        teamName,
+        'members',
+        memberName!,
+        '.member-work-sync',
+        'journal.jsonl'
+      );
+      const journal = await fs.readFile(journalPath, 'utf8');
+      const nudgeOutcomes = journal
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as { event?: string; reason?: string })
+        .filter((event) => event.event === 'nudge_skipped' || event.event === 'nudge_delivered');
+      expect(nudgeOutcomes).toContainEqual(expect.objectContaining({ event: 'nudge_delivered' }));
+      expect(nudgeOutcomes.at(-1)).toMatchObject({ event: 'nudge_delivered' });
+
+      await relayInboxIfNotAlreadyConsumed(activeService, memberName!);
+
+      await waitUntil(async () => {
+        const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
+        if (fatalRuntimeMessage) {
+          throw new FatalWaitError(fatalRuntimeMessage);
+        }
+        await feature!.replayPendingReports([teamName!]);
+        const status = await feature!.getStatus({ teamName: teamName!, memberName: memberName! });
+        return status.report?.accepted === true && status.report.state === 'still_working';
+      }, 240_000, 2_000, async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+          taskId,
+        })
+      );
+
+      const finalStatus = await feature.getStatus({ teamName, memberName: memberName! });
+      expect(finalStatus.state).toBe('still_working');
+      expect(finalStatus.report).toMatchObject({
+        accepted: true,
+        state: 'still_working',
+      });
+      await waitUntil(async () => {
+        await feature!.drainRuntimeTurnSettledEvents();
+        const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+        return metas.some(
+          ({ meta }) =>
+            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
+              'codex' &&
+            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
+              teamName
+        );
+      }, 60_000);
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+        delivered: 0,
+      });
+    },
+    480_000
+  );
+
+  it(
     'lets a real Codex teammate complete the task and report caught-up after the board clears',
     async () => {
       const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
@@ -852,6 +1216,174 @@ function resolveConnectedCodexHome(previousCodexHome: string | undefined): strin
   return path.join(os.userInfo().homedir, '.codex');
 }
 
+async function trustProjectInOwnedCodexHome(input: {
+  codexHomeDir: string;
+  projectPath: string;
+}): Promise<void> {
+  const [override] = buildCodexTrustedProjectConfigOverrides([input.projectPath], {
+    maxOverrides: 1,
+  });
+  if (!override) {
+    return;
+  }
+  await fs.mkdir(input.codexHomeDir, { recursive: true });
+  await fs.appendFile(path.join(input.codexHomeDir, 'config.toml'), `\n${override}\n`, 'utf8');
+}
+
+async function trustProjectInTempClaudeGlobalConfig(input: {
+  claudeRoot: string;
+  projectPath: string;
+}): Promise<void> {
+  const projectRealPath = await fs.realpath(input.projectPath).catch(() => input.projectPath);
+  const projects = Object.fromEntries(
+    [...new Set([input.projectPath, projectRealPath])].map((projectPath) => [
+      projectPath,
+      {
+        allowedTools: [],
+        mcpContextUris: [],
+        mcpServers: {},
+        enabledMcpjsonServers: [],
+        disabledMcpjsonServers: [],
+        projectOnboardingSeenCount: 0,
+        hasClaudeMdExternalIncludesApproved: false,
+        hasClaudeMdExternalIncludesWarningShown: false,
+        hasTrustDialogAccepted: true,
+      },
+    ])
+  );
+  const configPaths = [path.join(input.claudeRoot, '.claude.json')];
+  const homeDir = process.env.HOME?.trim();
+  if (homeDir && path.basename(homeDir).startsWith(VITEST_HOME_PREFIX)) {
+    configPaths.push(path.join(homeDir, '.claude.json'));
+  }
+
+  for (const configPath of configPaths) {
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, `${JSON.stringify({ projects }, null, 2)}\n`, 'utf8');
+  }
+}
+
+function createCodexOnlyWorkspaceTrustCoordinator(): WorkspaceTrustCoordinator {
+  return {
+    async planArgsOnly(request) {
+      return { launchArgPatches: buildLiveCodexWorkspaceTrustPatches(request) };
+    },
+    async planFull(request) {
+      return {
+        providers: request.providers,
+        workspaces: request.workspaces,
+        launchArgPatches: buildLiveCodexWorkspaceTrustPatches(request),
+      };
+    },
+    async execute(plan) {
+      return {
+        id: 'member-work-sync-codex-live-workspace-trust',
+        provider: 'claude',
+        status: 'skipped',
+        workspaceIds: plan.workspaces.map((workspace) => workspace.id),
+        evidence: ['live test injects Codex native trusted-project settings'],
+      };
+    },
+  };
+}
+
+function buildLiveCodexWorkspaceTrustPatches(
+  request: WorkspaceTrustArgsOnlyPlanRequest
+): WorkspaceTrustLaunchArgPatch[] {
+  if (
+    !request.featureFlags.enabled ||
+    !request.featureFlags.codexArgs ||
+    !request.providers.includes('codex')
+  ) {
+    return [];
+  }
+
+  const configKeys = request.workspaces.flatMap((workspace) => [
+    workspace.configKeyCwd,
+    workspace.realCwd,
+    ...(workspace.gitRootConfigKey ? [workspace.gitRootConfigKey] : []),
+  ]);
+  const overrides = buildCodexTrustedProjectConfigOverrides(configKeys);
+  const args = buildCodexWorkspaceTrustSettingsArgs(overrides);
+  if (args.length === 0) {
+    return [];
+  }
+
+  const workspaceIds = request.workspaces.map((workspace) => workspace.id);
+  return (request.targetSurfaces ?? LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES).map((surface) => ({
+    id: `member-work-sync-codex-live-workspace-trust:${surface}`,
+    owner: 'workspace-trust',
+    targetProvider: 'codex',
+    targetSurface: surface,
+    dialect: 'claude-codex-runtime-settings',
+    args,
+    dedupeKey: `member-work-sync-codex-live-workspace-trust:${surface}:${overrides.join('|')}`,
+    sourceWorkspaceIds: workspaceIds,
+    reason: 'Trust the live e2e project for Codex native headless teammate startup.',
+  }));
+}
+
+function sameMemberName(left: string | undefined, right: string | undefined): boolean {
+  return left?.trim().toLowerCase() === right?.trim().toLowerCase();
+}
+
+async function stripMemberProviderMetadataFromMembersMeta(input: {
+  teamName: string;
+  memberName: string;
+  fallbackRole: string;
+}): Promise<void> {
+  const metaPath = path.join(getTeamsBasePath(), input.teamName, 'members.meta.json');
+  const raw = await fs.readFile(metaPath, 'utf8').catch(() => '{"version":1,"members":[]}');
+  const parsed = JSON.parse(raw) as { providerBackendId?: unknown; members?: unknown };
+  const sourceMembers = Array.isArray(parsed.members) ? parsed.members : [];
+  let found = false;
+  const members = sourceMembers.flatMap((member): Record<string, unknown>[] => {
+    if (!member || typeof member !== 'object') {
+      return [];
+    }
+    const source = member as Record<string, unknown>;
+    const name = typeof source.name === 'string' ? source.name.trim() : '';
+    if (!name) {
+      return [];
+    }
+    if (!sameMemberName(name, input.memberName)) {
+      return [source];
+    }
+
+    found = true;
+    const stripped: Record<string, unknown> = { name };
+    for (const key of ['role', 'workflow', 'isolation', 'agentType', 'color', 'agentId', 'cwd']) {
+      if (typeof source[key] === 'string' && source[key].trim()) {
+        stripped[key] = source[key];
+      }
+    }
+    for (const key of ['joinedAt', 'removedAt']) {
+      if (typeof source[key] === 'number') {
+        stripped[key] = source[key];
+      }
+    }
+    return [stripped];
+  });
+
+  if (!found) {
+    members.push({
+      name: input.memberName,
+      role: input.fallbackRole,
+      agentType: 'general-purpose',
+      joinedAt: Date.now(),
+    });
+  }
+
+  const payload = {
+    version: 1,
+    ...(typeof parsed.providerBackendId === 'string'
+      ? { providerBackendId: parsed.providerBackendId }
+      : {}),
+    members,
+  };
+  await fs.writeFile(metaPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+}
+
 async function seedShadowReadyMetrics(input: {
   teamName: string;
   memberName: string;
@@ -891,6 +1423,68 @@ async function seedShadowReadyMetrics(input: {
           actionableCount: 0,
           providerId: 'codex',
         })),
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
+async function seedNativeStaleBlockingMetrics(input: {
+  teamName: string;
+  memberName: string;
+  agendaFingerprint: string;
+}): Promise<void> {
+  const metricsPath = path.join(
+    getTeamsBasePath(),
+    input.teamName,
+    '.member-work-sync',
+    'indexes',
+    'metrics.json'
+  );
+  const nowMs = Date.now();
+  const staleObservedAt = new Date(nowMs - 6 * 60_000 - 1_000).toISOString();
+  await fs.mkdir(path.dirname(metricsPath), { recursive: true });
+  await fs.writeFile(
+    metricsPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        members: {
+          [input.memberName]: {
+            memberName: input.memberName,
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            actionableCount: 1,
+            evaluatedAt: staleObservedAt,
+            providerId: 'codex',
+          },
+        },
+        recentEvents: [
+          {
+            id: 'native-stale-status',
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'status_evaluated',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: staleObservedAt,
+            actionableCount: 1,
+            providerId: 'codex',
+          },
+          ...Array.from({ length: 12 }, (_, index) => ({
+            id: `native-stale-would-nudge-${index}`,
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'would_nudge',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: new Date(nowMs - 5 * 60_000 + index * 5_000).toISOString(),
+            actionableCount: 1,
+            providerId: 'codex',
+          })),
+        ],
       },
       null,
       2

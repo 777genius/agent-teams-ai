@@ -14,6 +14,21 @@ export const APP_LOCALE_PREFERENCES = [
   'ur',
   'id',
   'de',
+  'it',
+  'tr',
+  'vi',
+  'pl',
+  'fa',
+  'th',
+  'uk',
+  'nl',
+  'ta',
+  'te',
+  'mr',
+  'fil',
+  'ms',
+  'sw',
+  'ro',
 ] as const;
 
 export const RESOLVED_APP_LOCALES = [
@@ -31,6 +46,21 @@ export const RESOLVED_APP_LOCALES = [
   'ur',
   'id',
   'de',
+  'it',
+  'tr',
+  'vi',
+  'pl',
+  'fa',
+  'th',
+  'uk',
+  'nl',
+  'ta',
+  'te',
+  'mr',
+  'fil',
+  'ms',
+  'sw',
+  'ro',
 ] as const;
 
 export type AppLocalePreference = (typeof APP_LOCALE_PREFERENCES)[number];

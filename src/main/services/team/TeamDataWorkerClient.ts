@@ -15,6 +15,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import type { TeamDataWorkerRequest, TeamDataWorkerResponse } from './teamDataWorkerTypes';
 import type {
+  InboxMessage,
   MemberLogSummary,
   MessagesPage,
   TeamGetDataOptions,
@@ -81,6 +82,17 @@ function getTeamDataRequestPayload(
   return normalizedOptions ? { teamName, options: normalizedOptions } : { teamName };
 }
 
+function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
+  if (!liveMessages?.length) return undefined;
+  return liveMessages.map((message) => ({
+    messageId: message.messageId,
+    timestamp: message.timestamp,
+    source: message.source,
+    from: message.from,
+    text: message.text,
+  }));
+}
+
 function summarizeWorkerRequest(request: TeamDataWorkerRequest): Record<string, unknown> {
   switch (request.op) {
     case 'warmup':
@@ -98,6 +110,7 @@ function summarizeWorkerRequest(request: TeamDataWorkerRequest): Record<string, 
         teamName,
         cursor: typeof options.cursor === 'string' ? options.cursor.slice(0, 24) : options.cursor,
         limit: options.limit,
+        liveMessages: options.liveMessages?.length,
       };
     }
     case 'getMemberActivityMeta':
@@ -336,13 +349,14 @@ export class TeamDataWorkerClient {
 
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number }
+    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
   ): Promise<MessagesPage> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
     const key = JSON.stringify({
       teamName,
       cursor: options.cursor ?? null,
       limit: options.limit,
+      liveMessages: getLiveMessagesRequestKey(options.liveMessages),
     });
     const existing = this.getMessagesPageInFlight.get(key);
     if (existing) return existing;

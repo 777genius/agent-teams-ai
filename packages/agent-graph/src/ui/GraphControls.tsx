@@ -4,28 +4,31 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   Activity,
   Columns3,
   Expand,
-  FileText,
-  Settings2,
   Eye,
   EyeOff,
+  FileText,
   Maximize2,
-  Pause,
   PanelLeftClose,
   PanelLeftOpen,
+  Pause,
   Pin,
   Play,
   Plus,
   Server,
+  Settings2,
+  Sparkles,
   Users,
   X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+
 import type { GraphLayoutMode } from '../ports/types';
 
 export interface GraphFilterState {
@@ -34,6 +37,7 @@ export interface GraphFilterState {
   showTasks: boolean;
   showProcesses: boolean;
   showEdges: boolean;
+  showSpaceEffects: boolean;
   paused: boolean;
 }
 
@@ -297,6 +301,13 @@ export function GraphControls({
                   onClick={() => toggle('showEdges')}
                   icon={filters.showEdges ? <Eye size={13} /> : <EyeOff size={13} />}
                   label="Edges"
+                  block
+                />
+                <ToolbarToggle
+                  active={filters.showSpaceEffects}
+                  onClick={() => toggle('showSpaceEffects')}
+                  icon={<Sparkles size={13} />}
+                  label="Space FX"
                   block
                 />
               </div>

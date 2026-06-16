@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "ایجاد وظیفه از پیام",
+      "editMessage": "ویرایش پیام",
+      "expandMessage": "گسترش پیام",
+      "replyToMessage": "پاسخ به پیام",
+      "restartTeam": "راه‌اندازی مجدد تیم"
+    },
+    "authError": {
+      "description": "احراز هویت ناموفق بود. راه‌اندازی مجدد تیم نشست را تازه‌سازی می‌کند و ممکن است این مشکل را حل کند. اگر مشکل ادامه داشت، اعتبارنامه‌های API خود را بررسی کنید یا بعداً دوباره تلاش کنید."
+    },
+    "automation": {
+      "reviewPickup": "از هم‌تیمی خواسته شد بازبینی را به عهده بگیرد",
+      "stallNudge": "از هم‌تیمی خواسته شد وظیفه متوقف‌شده را ادامه دهد",
+      "workSyncBody": "از هم‌تیمی خواسته شد کار فعلی را همگام‌سازی کند"
+    },
+    "badges": {
+      "automation": "خودکارسازی",
+      "bootstrap": "راه‌اندازی اولیه",
+      "command": "فرمان",
+      "comment": "نظر",
+      "live": "زنده",
+      "note": "یادداشت",
+      "rateLimited": "محدودیت نرخ",
+      "restart": "راه‌اندازی مجدد",
+      "result": "نتیجه",
+      "session": "نشست",
+      "stallNudge": "تلنگر توقف",
+      "start": "شروع",
+      "workSync": "همگام‌سازی کار",
+      "agentError": "خطای عامل",
+      "apiError": "خطای API"
+    },
+    "bootstrap": {
+      "acknowledged": "راه‌اندازی اولیه تأیید شد",
+      "restarting": "در حال راه‌اندازی مجدد هم‌تیمی",
+      "starting": "در حال شروع هم‌تیمی"
+    },
+    "rawJson": "JSON خام",
+    "unread": "خوانده‌نشده",
+    "thoughts": {
+      "count": "{{count}} فکر",
+      "count_one": "{{count}} فکر",
+      "expand": "گسترش افکار",
+      "showMore": "نمایش بیشتر",
+      "showLess": "نمایش کمتر",
+      "count_few": "{{count}} فکر",
+      "count_many": "{{count}} فکر",
+      "count_other": "{{count}} فکر",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - افکار"
+    },
+    "timeline": {
+      "loadingMessages": "در حال بارگذاری پیام‌ها...",
+      "noMessages": "هیچ پیامی نیست",
+      "emptyHint": "برای دیدن فعالیت، به یک عضو پیام بفرستید.",
+      "newSession": "نشست جدید",
+      "olderCount": "+{{count}} قدیمی‌تر",
+      "showMore": "نمایش {{count}} مورد بیشتر",
+      "showAll": "نمایش همه",
+      "olderCount_one": "+{{count}} قدیمی‌تر",
+      "olderCount_few": "+{{count}} قدیمی‌تر",
+      "olderCount_many": "+{{count}} قدیمی‌تر",
+      "olderCount_other": "+{{count}} قدیمی‌تر"
+    },
+    "pendingReplies": {
+      "title": "در انتظار پاسخ‌ها",
+      "openMember": "باز کردن عضو",
+      "messageSentAwaitingReply": "پیام ارسال شد، در انتظار پاسخ",
+      "awaitingReply": "در انتظار پاسخ",
+      "externalTeam": "تیم خارجی",
+      "crossTeamAwaitingReply": "پیام بین‌تیمی ارسال شد، در انتظار پاسخ",
+      "user": "کاربر",
+      "awaitingApproval": "در انتظار تأیید"
+    },
+    "reply": {
+      "replyingTo": "در حال پاسخ به",
+      "action": "پاسخ"
+    },
+    "activeTasks": {
+      "inProgress": "در حال انجام",
+      "expandInProgress": "گسترش موارد در حال انجام",
+      "collapseInProgress": "جمع کردن موارد در حال انجام",
+      "reviewing": "در حال بازبینی",
+      "workingOn": "در حال کار روی"
+    },
+    "expandDialog": {
+      "description": "نمای گسترش‌یافته پیام"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "ایجاد",
+      "creating": "در حال ایجاد...",
+      "openExisting": "باز کردن تیم موجود",
+      "skipPreflightAndCreate": "رد کردن بررسی اولیه و ایجاد"
+    },
+    "conflict": {
+      "description": "اجرای دو تیم در یک دایرکتوری پرخطر است - ممکن است در ویرایش فایل‌های یکسان تداخل کنند. برای جداسازی، استفاده از دایرکتوری متفاوت یا یک git worktree را در نظر بگیرید.",
+      "title": "تیم دیگری با نام «{{team}}» از قبل برای این دایرکتوری کاری در حال اجرا است",
+      "workingDirectory": "دایرکتوری کاری:"
+    },
+    "description": {
+      "copy": "یک تیم جدید بر اساس تیمی موجود ایجاد کنید.",
+      "create": "تیم خود را راه‌اندازی کرده و انتخاب کنید چگونه شروع شود."
+    },
+    "errors": {
+      "nameExists": "نام تیم از قبل وجود دارد",
+      "nameLaunching": "تیمی با این نام در حال حاضر در حال راه‌اندازی است",
+      "createConfigFailed": "ایجاد پیکربندی تیم ناموفق بود",
+      "loadProjectsFailed": "بارگذاری پروژه‌ها ناموفق بود"
+    },
+    "fields": {
+      "color": "رنگ (اختیاری)",
+      "description": "توضیح (اختیاری)",
+      "prompt": "پرامپت برای سرتیم (اختیاری)",
+      "teamName": "نام تیم"
+    },
+    "launchAfterCreate": {
+      "description": "تیم را بلافاصله از طریق Claude CLI محلی شروع کن.",
+      "label": "اجرای فرمان پس از ایجاد"
+    },
+    "localOnly": "فقط در حالت محلی Electron در دسترس است.",
+    "onDisk": "روی دیسک:",
+    "placeholders": {
+      "description": "توضیح مختصری از هدف تیم",
+      "prompt": "دستورالعمل‌ها برای سرتیم در طول تأمین..."
+    },
+    "saved": "ذخیره شد",
+    "solo": {
+      "description": "فقط سرتیم (فرایند اصلی) شروع خواهد شد - هیچ هم‌تیمی‌ای ایجاد نمی‌شود. مانند یک نشست عامل معمولی در زمان اجرای انتخابی شما (Claude Code، Codex، OpenCode، Gemini) کار می‌کند اما با دسترسی به تخته وظایف برای برنامه‌ریزی. با اجتناب از سربار هماهنگی هم‌تیمی‌ها در توکن‌ها صرفه‌جویی می‌کند. می‌توانید بعداً اعضا را از تنظیمات تیم اضافه کنید.",
+      "label": "تیم تک‌نفره"
+    },
+    "title": {
+      "copy": "کپی تیم",
+      "create": "ایجاد تیم"
+    },
+    "optional": {
+      "launchSettingsTitle": "تنظیمات اختیاری راه‌اندازی",
+      "launchSettingsDescription": "پرامپت، ایمنی و بازنویسی‌های CLI هنگام نیاز اینجا قرار دارند.",
+      "teamDetailsTitle": "جزئیات اختیاری تیم",
+      "teamDetailsDescription": "جریان پیش‌فرض را فشرده نگه دارید و فقط زمانی این را باز کنید که بافت اضافی یا رنگ سفارشی می‌خواهید."
+    },
+    "prepare": {
+      "unsupportedPreload": "نسخه preload فعلی از team:prepareProvisioning پشتیبانی نمی‌کند. برنامه dev را مجدداً راه‌اندازی کنید.",
+      "selectWorkingDirectory": "برای اعتبارسنجی محیط راه‌اندازی، یک دایرکتوری کاری انتخاب کنید.",
+      "someProvidersNeedAttention": "برخی از ارائه‌دهندگان انتخاب‌شده نیازمند توجه هستند.",
+      "readyWithNotes": "همه ارائه‌دهندگان انتخاب‌شده آماده‌اند، همراه با یادداشت‌ها.",
+      "ready": "همه ارائه‌دهندگان انتخاب‌شده آماده‌اند.",
+      "failed": "آماده‌سازی ارائه‌دهندگان انتخاب‌شده ناموفق بود",
+      "checkingProviders": "در حال بررسی ارائه‌دهندگان انتخاب‌شده...",
+      "preparingEnvironment": "در حال آماده‌سازی محیط...",
+      "selectedProvidersReadyWithNotes": "ارائه‌دهندگان انتخاب‌شده آماده‌اند (همراه با یادداشت‌ها)",
+      "selectedProvidersReady": "ارائه‌دهندگان انتخاب‌شده آماده‌اند"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "نام باید حداقل شامل یک حرف یا رقم باشد",
+      "nameTooLong": "نام بیش از حد طولانی است (حداکثر ۱۲۸ نویسه)",
+      "selectWorkingDirectory": "انتخاب دایرکتوری کاری (cwd)",
+      "memberNameRequired": "نام عضو نمی‌تواند خالی باشد",
+      "memberNameInvalid": "نام عضو باید با حرف یا عدد شروع شود، فقط از [a-zA-Z0-9._-] استفاده کند، حداکثر ۱۲۸ نویسه",
+      "memberNamesUnique": "نام اعضا باید یکتا باشند",
+      "openCodeLeadModelRequired": "سرتیم OpenCode به یک مدل انتخاب‌شده نیاز دارد.",
+      "openCodeTeammateRequired": "سرتیم OpenCode به حداقل یک هم‌تیمی OpenCode نیاز دارد.",
+      "teamLaunching": "تیم در حال حاضر در حال راه‌اندازی است",
+      "teamNameExists": "نام تیم از قبل وجود دارد",
+      "checkFormFields": "فیلدهای فرم را بررسی کنید"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "لغو",
+      "save": "ذخیره"
+    },
+    "addMemberLockReason": "برای افزودن هم‌تیمی‌های جدید در حالی که تیم زنده است، از گفت‌وگوی اختصاصی افزودن عضو استفاده کنید.",
+    "description": "تغییر نام، توضیح و رنگ تیم",
+    "errors": {
+      "changesSavedRefreshFailed": "تغییرات تیم ذخیره شد، اما تازه‌سازی آخرین نما ناموفق بود: {{message}}",
+      "liveRenameBlocked": "هم‌تیمی‌های موجود را نمی‌توان در حالی که تیم زنده است تغییر نام داد. تغییر نام داده شده: {{names}}",
+      "memberNameEmpty": "نام عضو نمی‌تواند خالی باشد",
+      "memberNameInvalid": "نام عضو باید با حرف یا عدد شروع شود، فقط از [a-zA-Z0-9._-] استفاده کند، حداکثر ۱۲۸ نویسه",
+      "memberNameNumericSuffix": "نام عضو «{{name}}» مجاز نیست (برای پسوند خودکار Claude CLI رزرو شده است). به‌جای آن از «{{base}}» استفاده کنید.",
+      "memberNameReserved": "نام عضو «{{name}}» رزرو شده است",
+      "memberNamesUnique": "نام اعضا باید پیش از ذخیره یکتا باشند",
+      "newLiveTeammates": "هم‌تیمی‌های جدید را در حالی که تیم زنده است از گفت‌وگوی اختصاصی افزودن عضو اضافه کنید. ویرایش تیم فقط از به‌روزرسانی هم‌تیمی‌های موجود پشتیبانی می‌کند.",
+      "provisioning": "تنظیمات تیم را نمی‌توان در حالی که تأمین هنوز در حال انجام است ویرایش کرد. منتظر بمانید تا راه‌اندازی به پایان برسد، سپس دوباره تلاش کنید.",
+      "restartFailedMany": "تیم ذخیره شد، اما راه‌اندازی مجدد این هم‌تیمی‌ها ناموفق بود: {{failures}}",
+      "restartFailedOne": "تیم ذخیره شد، اما راه‌اندازی مجدد این هم‌تیمی ناموفق بود: {{failures}}",
+      "saveFailed": "ذخیره ناموفق بود",
+      "settingsChanged": "تنظیمات تیم در حالی که این گفت‌وگو باز بود تغییر کرد. آن را دوباره باز کنید و پیش از ذخیره آخرین وضعیت را بازبینی کنید.",
+      "settingsSavedMembersAndRefreshFailed": "تنظیمات تیم ذخیره شد، اما تغییرات عضو ناموفق بود: {{message}}. تازه‌سازی نیز ناموفق بود: {{refreshError}}",
+      "settingsSavedMembersFailed": "تنظیمات تیم ذخیره شد، اما تغییرات عضو ناموفق بود: {{message}}",
+      "settingsSavedRefreshFailed": "تنظیمات تیم ذخیره شد، اما تازه‌سازی آخرین نما ناموفق بود: {{message}}",
+      "teamNameEmpty": "نام تیم نمی‌تواند خالی باشد",
+      "unsupportedMixedPrimaryMutation": "ویرایش‌های زنده هم‌تیمی‌های متعلق به لاین اصلی در تیم‌های ترکیبی OpenCode هنوز پشتیبانی نمی‌شود. تیم را متوقف کنید، فهرست اعضا را ویرایش کنید، سپس دوباره راه‌اندازی کنید. تحت تأثیر: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "رنگ (اختیاری)",
+      "description": "توضیح",
+      "name": "نام"
+    },
+    "memberRestartWarning": "ذخیره این هم‌تیمی را برای اعمال تغییرات نقش، گردش‌کار، جداسازی worktree، ارائه‌دهنده، مدل، تلاش یا دسترسی MCP راه‌اندازی مجدد می‌کند.",
+    "notices": {
+      "liveRenameBlocked": "ذخیره زنده مسدود شده است زیرا هم‌تیمی‌های موجود تغییر نام داده شدند. آن تغییرات هویتی را بازگردانید یا ابتدا تیم را متوقف کنید.",
+      "newLiveTeammates": "هم‌تیمی‌های جدید را نمی‌توان از ویرایش تیم در حالی که تیم زنده است اضافه کرد. به‌جای آن از گفت‌وگوی افزودن عضو استفاده کنید.",
+      "provisioning": "تأمین تیم هنوز در حال انجام است. ویرایش موقتاً تا اتمام راه‌اندازی قفل شده است.",
+      "restartMany": "ذخیره این هم‌تیمی‌ها را برای اعمال تغییرات نقش، گردش‌کار، جداسازی worktree، ارائه‌دهنده، مدل، تلاش یا دسترسی MCP راه‌اندازی مجدد یا دوباره راه‌اندازی می‌کند: {{names}}.",
+      "restartOne": "ذخیره این هم‌تیمی را برای اعمال تغییرات نقش، گردش‌کار، جداسازی worktree، ارائه‌دهنده، مدل، تلاش یا دسترسی MCP راه‌اندازی مجدد یا دوباره راه‌اندازی می‌کند: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "ویرایش‌ها/حذف‌های زنده برای هم‌تیمی‌های متعلق به لاین اصلی در تیم‌های ترکیبی OpenCode نیازمند توقف و راه‌اندازی مجدد تیم است: {{names}}."
+    },
+    "placeholders": {
+      "description": "توضیح تیم (اختیاری)",
+      "teamName": "نام تیم"
+    },
+    "teamLead": {
+      "changeRuntime": "تغییر زمان اجرای سرتیم",
+      "changeRuntimeDescription": "برای تغییر ارائه‌دهنده، مدل یا تلاش سرتیم، راه‌اندازی مجدد تیم را باز کنید.",
+      "modelLockReason": "زمان اجرای سرتیم از راه‌اندازی مجدد تیم مدیریت می‌شود.",
+      "readOnlyHint": "نام و نقش سرتیم اینجا فقط‌خواندنی می‌مانند. برای تغییر ارائه‌دهنده، مدل یا تلاش، پنل زمان اجرا را روی ردیف سرتیم باز کنید.",
+      "role": "سرتیم"
+    },
+    "title": "ویرایش تیم"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "حذف عضو",
+      "removeAria": "حذف {{name}}",
+      "restore": "بازیابی عضو",
+      "restoreAria": "بازیابی {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "تنظیم بافت پیش‌فرض",
+      "description": "بافت Anthropic برای این راه‌اندازی در سراسر تیم است: {{mode}}. برای تغییر آن از چک‌باکس محدود کردن بافت در پنل زمان اجرای سرتیم استفاده کنید.",
+      "limitEnabled": "محدودیت ۲۰۰ هزار فعال است"
+    },
+    "mcp": {
+      "buttonInherit": "ارث‌بری MCP",
+      "buttonScopes": "دامنه‌های MCP",
+      "chooseScopes": "انتخاب دامنه‌ها",
+      "inheritLead": "ارث‌بری از سرتیم",
+      "lockedInfo": "فقط MCP مربوط به Agent Teams برای همه هم‌تیمی‌ها فعال است. این هم‌تیمی فقط با سرور Agent Teams راه‌اندازی می‌شود.",
+      "mode": "حالت MCP",
+      "scopes": {
+        "local": "محلی",
+        "project": "پروژه",
+        "user": "کاربر"
+      },
+      "serverNames": "نام سرورها",
+      "settingInfo": "MCP مربوط به Agent Teams این هم‌تیمی را فقط با سرور Agent Teams راه‌اندازی می‌کند. حالت‌های دامنه و فهرست مجاز فقط برای این راه‌اندازی هم‌تیمی اعمال می‌شوند.",
+      "strictAllowlist": "فهرست مجاز سخت‌گیرانه",
+      "tooltip": "{{label}}: سیاست ارث‌بری MCP این عضو را کنترل کنید",
+      "agentTeamsMcp": "MCP مربوط به Agent Teams"
+    },
+    "model": {
+      "ariaLabel": "ارائه‌دهنده {{provider}}، {{model}}",
+      "currentLeadRuntime": "زمان اجرای فعلی سرتیم",
+      "default": "پیش‌فرض",
+      "inheritedTooltip": "ارائه‌دهنده، مدل و تلاش تا زمانی که همگام‌سازی فعال است از سرتیم به ارث می‌رسند.",
+      "leadSuffix": "{{label}} (سرتیم)",
+      "liveDisabled": "تغییرات ارائه‌دهنده، مدل و تلاش در حالی که تیم زنده است غیرفعال هستند. برای اعمال ایمن آن‌ها، تیم را مجدداً متصل کنید.",
+      "lockedActionFallback": "تغییرات زمان اجرای سرتیم، راه‌اندازی مجدد تیم را باز می‌کنند، جایی که ارائه‌دهنده، مدل و تلاش قابل به‌روزرسانی هستند.",
+      "restartWholeTeam": "ذخیره آن تغییرات زمان اجرا کل تیم را راه‌اندازی مجدد می‌کند."
+    },
+    "nameAria": "نام عضو {{index}}",
+    "nameFallback": "عضو {{index}}",
+    "noRole": "بدون نقش",
+    "removed": "حذف‌شده",
+    "workflow": {
+      "addTooltip": "افزودن گردش‌کار هم‌تیمی",
+      "editTooltip": "ویرایش گردش‌کار هم‌تیمی",
+      "label": "گردش‌کار (اختیاری)",
+      "placeholder": "این عامل چگونه باید رفتار کند، با دیگران تعامل کند...",
+      "saved": "ذخیره شد"
+    },
+    "worktree": {
+      "description": "این هم‌تیمی را در یک git worktree جداگانه اجرا کنید. اعمال/رد تغییرات آن worktree را هدف قرار می‌دهد، نه فضای کاری سرتیم را.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "افزودن اعضا",
+      "description": "افزودن اعضای جدید به {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "افزودن",
+      "cancel": "لغو",
+      "delete": "حذف",
+      "editCode": "ویرایش کد",
+      "launch": "راه‌اندازی",
+      "remove": "حذف",
+      "stop": "توقف",
+      "task": "وظیفه",
+      "visualize": "تجسم"
+    },
+    "deleteTeam": {
+      "description": "تیم «{{team}}» حذف شود؟ این عمل برگشت‌ناپذیر است. تمام داده‌ها و وظایف تیم حذف خواهند شد.",
+      "title": "حذف تیم"
+    },
+    "draft": {
+      "descriptionPrefix": "این یک تیم پیش‌نویس است -",
+      "descriptionSuffix": "با {{count}} {{member}} پیکربندی شده اما هنوز توسط CLI تأمین نشده است. برای انتخاب مدل و شروع تیم روی راه‌اندازی کلیک کنید.",
+      "descriptionSuffix_few": "با {{count}} {{member}} پیکربندی شده اما هنوز توسط CLI تأمین نشده است. برای انتخاب مدل و شروع تیم روی راه‌اندازی کلیک کنید.",
+      "descriptionSuffix_many": "با {{count}} {{member}} پیکربندی شده اما هنوز توسط CLI تأمین نشده است. برای انتخاب مدل و شروع تیم روی راه‌اندازی کلیک کنید.",
+      "descriptionSuffix_one": "با {{count}} {{member}} پیکربندی شده اما هنوز توسط CLI تأمین نشده است. برای انتخاب مدل و شروع تیم روی راه‌اندازی کلیک کنید.",
+      "descriptionSuffix_other": "با {{count}} {{member}} پیکربندی شده اما هنوز توسط CLI تأمین نشده است. برای انتخاب مدل و شروع تیم روی راه‌اندازی کلیک کنید.",
+      "member": "عضو",
+      "member_few": "عضو",
+      "member_many": "عضو",
+      "member_one": "عضو",
+      "member_other": "عضو",
+      "title": "تیم هنوز راه‌اندازی نشده است"
+    },
+    "invalidTab": "زبانه تیم نامعتبر",
+    "kanbanSafeData": "بارگذاری کامل kanban ناموفق بود. در حال نمایش داده‌های ایمن.",
+    "loadFailed": "بارگذاری تیم ناموفق بود",
+    "loading": "در حال بارگذاری تیم",
+    "loadingSidebar": "در حال بارگذاری نوار کناری تیم",
+    "offline": {
+      "offline": "تیم آفلاین است",
+      "partialFailed": "آخرین راه‌اندازی در میانه راه ناموفق شد",
+      "partialMissing": "آخرین راه‌اندازی در میانه راه ناموفق شد - {{missing}}/{{expected}} هم‌تیمی نپیوستند",
+      "reconciling": "آخرین راه‌اندازی هنوز در حال هماهنگ‌سازی است"
+    },
+    "previous": "قبلی: {{paths}}",
+    "removeMember": {
+      "description": "«{{member}}» از تیم حذف شود؟ وظایف و پیام‌ها حفظ می‌شوند، اما این نام قابل استفاده مجدد نیست.",
+      "title": "حذف عضو"
+    },
+    "sections": {
+      "team": "تیم"
+    },
+    "solo": "تک‌نفره",
+    "status": {
+      "active": "فعال",
+      "launching": "در حال راه‌اندازی...",
+      "running": "در حال اجرا"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "حافظه"
+    },
+    "tooltips": {
+      "deleteTeam": "حذف تیم",
+      "editTeam": "ویرایش تیم",
+      "editUnavailableProvisioning": "ویرایش تیم در حالی که تأمین هنوز در حال انجام است در دسترس نیست",
+      "openBuiltInEditor": "باز کردن پروژه در ویرایشگر داخلی",
+      "openTeamGraph": "باز کردن گراف تیم",
+      "stopTeam": "توقف تیم"
+    },
+    "waitingForProvisioning": "داده‌های تیم پس از اتمام تأمین ظاهر می‌شوند",
+    "context": {
+      "title": "بافت",
+      "loading": "در حال بارگذاری...",
+      "noSessionLoaded": "هیچ نشستی بارگذاری نشده است",
+      "closePanel": "بستن پنل بافت {{team}}",
+      "loadingContext": "در حال بارگذاری بافت...",
+      "openLeadSession": "برای مشاهده بافت، نشست سرتیم را باز کنید."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "پذیرفتن",
+        "discard": "دور انداختن",
+        "discardTooltip": "دور انداختن همه ویرایش‌های این فایل",
+        "keepMyDraft": "نگه داشتن پیش‌نویس من",
+        "reject": "رد کردن",
+        "reloadFromDisk": "بارگذاری مجدد از دیسک",
+        "restore": "بازیابی",
+        "restoreTooltip": "ایجاد/بازیابی این فایل روی دیسک از پیش‌نمایش",
+        "saveFile": "ذخیره فایل",
+        "saveFileTooltip": "ذخیره فایل روی دیسک"
+      },
+      "badges": {
+        "deleted": "حذف‌شده",
+        "manualReview": "بازبینی دستی",
+        "new": "جدید",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "دیسک فعلی",
+        "file-history": "تاریخچه فایل",
+        "git-fallback": "جایگزین Git",
+        "ledger-exact": "دفتر وظیفه",
+        "ledger-snapshot": "تصویر لحظه‌ای دفتر",
+        "snippet-reconstruction": "بازسازی‌شده",
+        "unavailable": "محتوا در دسترس نیست"
+      },
+      "contentUnavailable": {
+        "badge": "محتوا در دسترس نیست",
+        "description": "دفتر فراداده این تغییر را ثبت کرد، اما محتوای متنی کامل در دسترس نیست. این معمولاً به معنای محتوای باینری، بزرگ یا فقط-هش است.",
+        "safety": "پذیرفتن/رد کردن خودکار برای این فایل غیرفعال است تا از نوشتن ناایمن روی دیسک جلوگیری شود.",
+        "title": "محتوای متنی در دسترس نیست"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "پذیرفتن/رد کردن غیرفعال است زیرا محتوای متنی کامل در دسترس نیست.",
+        "acceptRejectMissingOnDisk": "پذیرفتن/رد کردن در حالی که فایل روی دیسک مفقود است غیرفعال است.",
+        "rejectBaselineUnavailable": "رد کردن غیرفعال است زیرا مبنای اصلی در دسترس نیست.",
+        "rejectContentUnavailable": "رد کردن غیرفعال است زیرا محتوای متنی کامل در دسترس نیست.",
+        "rejectManualLedgerReview": "رد کردن غیرفعال است زیرا این تغییر دفتر محتوای باینری، بزرگ یا در دسترس نبودنی دارد."
+      },
+      "externalChange": {
+        "changedOnDisk": "روی دیسک تغییر کرد",
+        "deletedOnDisk": "روی دیسک حذف شد",
+        "recreatedOnDisk": "روی دیسک دوباره ایجاد شد"
+      },
+      "missingOnDisk": {
+        "badge": "روی دیسک مفقود است",
+        "description": "ما همچنان می‌توانیم پیش‌نمایشی از گزارش‌های عامل نمایش دهیم، اما سیستم فایل شما همگام نیست.",
+        "restorePrefix": "از",
+        "restoreSuffix": "برای نوشتن محتوای پیش‌نمایش به دیسک استفاده کنید.",
+        "restoreUnavailable": "محتوای کامل فایل برای بازیابی خودکار در دسترس نیست.",
+        "title": "فایل روی دیسک مفقود است"
+      },
+      "pathChange": {
+        "from": "از {{path}}",
+        "to": "به {{path}}"
+      },
+      "worktree": {
+        "isolated": "worktree جداشده"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} در انتظار",
+        "pending_one": "{{count}} در انتظار",
+        "pending_other": "{{count}} در انتظار",
+        "accepted": "{{count}} پذیرفته‌شده",
+        "accepted_one": "{{count}} پذیرفته‌شده",
+        "accepted_other": "{{count}} پذیرفته‌شده",
+        "rejected": "{{count}} ردشده",
+        "rejected_one": "{{count}} ردشده",
+        "rejected_other": "{{count}} ردشده",
+        "acrossFiles": "در {{count}} فایل",
+        "acrossFiles_one": "در {{count}} فایل",
+        "acrossFiles_other": "در {{count}} فایل",
+        "edited": "{{count}} ویرایش‌شده",
+        "edited_one": "{{count}} ویرایش‌شده",
+        "edited_other": "{{count}} ویرایش‌شده",
+        "pending_few": "{{count}} در انتظار",
+        "pending_many": "{{count}} در انتظار",
+        "accepted_few": "{{count}} پذیرفته‌شده",
+        "accepted_many": "{{count}} پذیرفته‌شده",
+        "rejected_few": "{{count}} ردشده",
+        "rejected_many": "{{count}} ردشده",
+        "acrossFiles_few": "در {{count}} فایل",
+        "acrossFiles_many": "در {{count}} فایل",
+        "edited_few": "{{count}} ویرایش‌شده",
+        "edited_many": "{{count}} ویرایش‌شده"
+      },
+      "actions": {
+        "auto": "خودکار",
+        "undo": "واگرد",
+        "acceptAll": "پذیرفتن همه",
+        "rejectAll": "رد کردن همه",
+        "applying": "در حال اعمال...",
+        "applyRejections": "اعمال ردها"
+      },
+      "tooltips": {
+        "autoOn": "علامت‌گذاری خودکار فایل‌ها به‌عنوان مشاهده‌شده هنگام اسکرول تا انتها (روشن)",
+        "autoOff": "علامت‌گذاری خودکار فایل‌ها به‌عنوان مشاهده‌شده هنگام اسکرول تا انتها (خاموش)",
+        "undo": "واگرد آخرین عملیات بازبینی (Ctrl+Z)",
+        "acceptAll": "پذیرفتن همه تغییرات در همه فایل‌ها",
+        "rejectAll": "رد کردن ایمن همه تغییرات قابل رد در همه فایل‌ها",
+        "rejectAllDisabled": "هیچ فایل در انتظاری مبنای اصلی ایمنی برای رد کردن ندارد.",
+        "applyRejections": "اعمال بخش‌های ردشده روی دیسک؛ تغییرات پذیرفته‌شده به همان صورت نگه داشته می‌شوند"
+      }
+    },
+    "diffError": {
+      "title": "رندر نمای تفاوت ناموفق بود",
+      "unexpected": "خطای غیرمنتظره‌ای هنگام رندر تفاوت رخ داد.",
+      "actions": {
+        "retry": "تلاش مجدد"
+      },
+      "raw": {
+        "show": "نمایش داده خام تفاوت",
+        "file": "فایل: {{file}}",
+        "original": "--- اصلی",
+        "modified": "+++ اصلاح‌شده",
+        "charsTotal": "... ({{count}} نویسه در کل)",
+        "charsTotal_one": "... ({{count}} نویسه در کل)",
+        "charsTotal_other": "... ({{count}} نویسه در کل)",
+        "charsTotal_few": "... ({{count}} نویسه در کل)",
+        "charsTotal_many": "... ({{count}} نویسه در کل)"
+      }
+    },
+    "fileTree": {
+      "viewed": "مشاهده‌شده",
+      "badges": {
+        "new": "جدید",
+        "deleted": "حذف‌شده"
+      },
+      "collapseFolder": "جمع کردن {{name}}",
+      "expandFolder": "گسترش {{name}}",
+      "empty": {
+        "noChangedFiles": "هیچ فایل تغییریافته‌ای نیست",
+        "noMatchingFiles": "هیچ فایل منطبقی نیست"
+      },
+      "searchPlaceholder": "جستجوی فایل‌ها…",
+      "filters": {
+        "unresolved": "حل‌نشده",
+        "rejected": "ردشده",
+        "new": "جدید",
+        "clear": "پاک کردن"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "بخش قبلی",
+      "nextChunk": "بخش بعدی",
+      "rejectChange": "رد کردن تغییر (⌘N)",
+      "acceptChange": "پذیرفتن تغییر (⌘Y)",
+      "undo": "واگرد",
+      "keep": "نگه داشتن",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "تداخل شناسایی شد",
+      "description": "این فایل از زمان تغییرات عامل اصلاح شده است",
+      "cancel": "لغو",
+      "saveResolution": "ذخیره راه‌حل",
+      "editManually": "ویرایش دستی",
+      "useOriginal": "استفاده از اصلی",
+      "keepCurrent": "نگه داشتن فعلی"
+    },
+    "fullDiffLoading": {
+      "titleOne": "در حال آماده‌سازی تفاوت کامل",
+      "titleMany": "در حال آماده‌سازی {{count}} تفاوت کامل",
+      "subtitleForFile": "در حال نهایی کردن تفاوت دقیق ویرایشگر برای {{file}}.",
+      "subtitleCurrentFile": "در حال نهایی کردن تفاوت دقیق ویرایشگر برای فایل فعلی.",
+      "subtitleMany": "در حال تعیین مبناهای دقیق قبل/بعد برای فایل‌هایی که در حال بارگذاری هستند.",
+      "previewsReady": "{{count}} پیش‌نمایش آماده",
+      "previewsReady_one": "{{count}} پیش‌نمایش آماده",
+      "editorViewLoading": "در حال بارگذاری نمای ویرایشگر",
+      "filesInProgress": "{{count}} فایل در حال انجام",
+      "filesInProgress_one": "{{count}} فایل در حال انجام",
+      "filesReady": "{{ready}}/{{total}} فایل آماده",
+      "progressDescription": "{{ready}} آماده، {{loading}} هنوز در حال بارگذاری. تفاوت‌های پیش‌نمایش در حالی که مبناهای باقی‌مانده تعیین می‌شوند در پایین قابل‌مشاهده می‌مانند.",
+      "singleDescription": "تفاوت‌های پیش‌نمایش در حالی که مبنای دقیق تعیین می‌شود در پایین قابل‌مشاهده می‌مانند.",
+      "previewsReady_few": "{{count}} پیش‌نمایش آماده",
+      "previewsReady_many": "{{count}} پیش‌نمایش آماده",
+      "previewsReady_other": "{{count}} پیش‌نمایش آماده",
+      "filesInProgress_few": "{{count}} فایل در حال انجام",
+      "filesInProgress_many": "{{count}} فایل در حال انجام",
+      "filesInProgress_other": "{{count}} فایل در حال انجام"
+    },
+    "fileMissingPrefix": "فایل روی دیسک مفقود است. این تفاوت ممکن است فقط پیش‌نمایشی از گزارش‌های عامل باشد. از",
+    "restore": "بازیابی",
+    "fileMissingSuffix": "برای ایجاد فایل روی دیسک استفاده کنید.",
+    "filePlaceholder": {
+      "loading": "در حال بارگذاری",
+      "description": "در حال آماده‌سازی یک تفاوت کامل ویرایشگر برای این فایل."
+    },
+    "loading": {
+      "diff": "تفاوت",
+      "ledgerObjectsProcessed": "{{count}} شیء دفتر پردازش شد",
+      "ledgerObjectsProcessed_one": "{{count}} شیء دفتر پردازش شد",
+      "ledgerObjectsProcessed_other": "{{count}} شیء دفتر پردازش شد",
+      "ledgerObjectsProcessed_few": "{{count}} شیء دفتر پردازش شد",
+      "ledgerObjectsProcessed_many": "{{count}} شیء دفتر پردازش شد",
+      "phases": {
+        "readingLedger": "در حال خواندن دفتر وظیفه...",
+        "resolvingFiles": "در حال تعیین وضعیت فایل‌ها...",
+        "checkingWorktree": "در حال بررسی بافت worktree...",
+        "preparingDiffs": "در حال آماده‌سازی تفاوت‌های بازبینی..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} مشاهده‌شده"
+    },
+    "scope": {
+      "readMore": "بیشتر بخوانید",
+      "tiers": {
+        "exact": {
+          "title": "محدوده وظیفه به‌طور دقیق تعیین شد",
+          "detail": "هر دو نشانگر شروع و تکمیل در گزارش نشست یافت شدند. تفاوت فقط شامل تغییرات اعمال‌شده در طول این وظیفه خاص است - وظایف دیگری که همان فایل‌ها را تغییر داده‌اند مستثنی شده‌اند."
+        },
+        "endEstimated": {
+          "title": "مرز پایان تخمین زده شد",
+          "detail": "فقط نشانگر شروع یافت شد - وظیفه هنوز نشانگر تکمیل ندارد. تغییرات از شروع وظیفه تا پایان نشست نمایش داده می‌شوند. اگر وظایف دیگری پس از این در همان نشست اجرا شده باشند، تغییرات آن‌ها نیز ممکن است گنجانده شود."
+        },
+        "startEstimated": {
+          "title": "مرز شروع تخمین زده شد",
+          "detail": "فقط نشانگر تکمیل یافت شد - شروع کار ثبت نشد. اگر وظایف دیگری پیش از این در همان نشست اجرا شده باشند، تغییرات آن‌ها روی همان فایل‌ها نیز ممکن است گنجانده شود."
+        },
+        "allSession": {
+          "title": "در حال نمایش همه تغییرات نشست",
+          "detail": "هیچ نشانگر وظیفه‌ای در گزارش نشست یافت نشد. نمی‌توان این وظیفه را جدا کرد - همه تغییرات فایل از کل نشست نمایش داده می‌شوند، شامل تغییرات از وظایف دیگر. این می‌تواند با نسخه‌های قدیمی‌تر CLI یا گردش‌کارهای غیراستاندارد رخ دهد."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "تغییرات توسط دفتر وظیفه ثبت شد",
+          "detail": "ارکستراتور این تغییرات فایل را در حالی که عامل روی این وظیفه کار می‌کرد ثبت کرد.",
+          "badge": "دفتر دقیق"
+        },
+        "limited": {
+          "title": "تغییرات با قابلیت بازبینی محدود ثبت شد",
+          "detail": "ارکستراتور این تغییرات فایل را برای این وظیفه ثبت کرد، اما حداقل یک تغییر از یک تصویر لحظه‌ای یا منبع فقط-فراداده ثبت شد. تفاوت‌های متنی دقیق را در جایی که در دسترس است بازبینی کنید؛ محتوای باینری یا در دسترس نبودنی ممکن است نیازمند بازبینی دستی باشد.",
+          "mixedBadge": "قابلیت بازبینی ترکیبی",
+          "needsReviewBadge": "نیازمند بازبینی"
+        }
+      },
+      "workInterval": {
+        "title": "محدودشده با بازه کاری پایدارشده",
+        "detail": "نشانگر شروع وظیفه در گزارش نشست در دسترس نبود، بنابراین تفاوت با بازه کاری وظیفه ذخیره‌شده روی تخته محدود شده است.",
+        "badge": "محدودشده با بازه"
+      },
+      "confidence": {
+        "high": "اطمینان بالا",
+        "medium": "اطمینان متوسط",
+        "low": "اطمینان پایین",
+        "bestEffort": "بهترین تلاش"
+      }
+    },
+    "shortcuts": {
+      "title": "میان‌برهای صفحه‌کلید",
+      "actions": {
+        "nextChange": "تغییر بعدی",
+        "previousChange": "تغییر قبلی",
+        "nextFile": "فایل بعدی",
+        "previousFile": "فایل قبلی",
+        "acceptChange": "پذیرفتن تغییر",
+        "rejectChange": "رد کردن تغییر",
+        "saveFile": "ذخیره فایل",
+        "undo": "واگرد",
+        "redo": "ازنو",
+        "toggleShortcuts": "تغییر وضعیت میان‌برها",
+        "closeDialog": "بستن گفت‌وگو"
+      }
+    },
+    "timeline": {
+      "empty": "هیچ رویداد ویرایشی نیست",
+      "titleWithCount": "خط زمانی ویرایش ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "هیچ تغییر فایل قابل بازبینی‌ای نیست"
+    },
+    "empty": {
+      "noSafeDiff": "هیچ تفاوت ایمنی در دسترس نیست",
+      "noFileChangesRecorded": "هیچ تغییر فایلی ثبت نشد",
+      "noSafeDiffDescription": "دفتر وظیفه تفاوت فایل ایمنی برای این وظیفه افشا نکرد.",
+      "noSafeDiffDiagnosticsDescription": "دفتر وظیفه تفاوت فایل ایمنی برای این وظیفه افشا نکرد. عیب‌یابی‌های زیر علت آن را توضیح می‌دهند.",
+      "noFileEventsYet": "دفتر وظیفه هنوز هیچ رویداد فایلی برای این وظیفه ندارد.",
+      "noFileEvents": "دفتر وظیفه هیچ رویداد فایلی برای این وظیفه ندارد."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "اقدامات برگه پایینی پیام",
+      "collapseAll": "جمع کردن همه پیام‌ها",
+      "collapseSheet": "جمع کردن برگه",
+      "expandAll": "گسترش همه پیام‌ها",
+      "expandSheet": "گسترش برگه",
+      "floatComposer": "شناور کردن نگارنده",
+      "floatMessagesComposer": "شناور کردن نگارنده پیام‌ها",
+      "hideSearch": "پنهان کردن جستجو",
+      "loadOlder": "بارگذاری پیام‌های قدیمی‌تر",
+      "markAllRead": "علامت‌گذاری همه به‌عنوان خوانده‌شده",
+      "messageActions": "اقدامات پیام",
+      "moveMessagesToBottomSheet": "انتقال پیام‌ها به برگه پایینی",
+      "moveMessagesToSidebar": "انتقال پیام‌ها به نوار کناری",
+      "moveToBottomSheet": "انتقال به برگه پایینی",
+      "moveToInline": "انتقال به درون‌خطی",
+      "moveToSidebar": "انتقال به نوار کناری",
+      "panelActions": "اقدامات پنل پیام",
+      "searchMessages": "جستجوی پیام‌ها"
+    },
+    "delivery": {
+      "copied": "کپی شد",
+      "copyDebugDetails": "کپی جزئیات اشکال‌زدایی",
+      "details": "جزئیات",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "حالت پنل پیام",
+    "title": "پیام‌ها",
+    "unread": {
+      "new": "{{count}} جدید",
+      "unread": "{{count}} خوانده‌نشده",
+      "new_few": "{{count}} جدید",
+      "new_many": "{{count}} جدید",
+      "new_one": "{{count}} جدید",
+      "new_other": "{{count}} جدید",
+      "unread_few": "{{count}} خوانده‌نشده",
+      "unread_many": "{{count}} خوانده‌نشده",
+      "unread_one": "{{count}} خوانده‌نشده",
+      "unread_other": "{{count}} خوانده‌نشده"
+    },
+    "filter": {
+      "ariaLabel": "فیلتر پیام‌ها",
+      "tooltip": "فیلتر پیام‌ها",
+      "from": "از",
+      "to": "به",
+      "noData": "هیچ داده‌ای نیست",
+      "showStatusUpdates": "نمایش به‌روزرسانی‌های وضعیت (بی‌کاری/خاموش‌سازی)",
+      "actions": {
+        "reset": "بازنشانی",
+        "save": "ذخیره"
+      }
+    },
+    "status": {
+      "title": "وضعیت"
+    },
+    "actionMode": {
+      "label": "حالت اقدام"
+    },
+    "search": {
+      "placeholder": "جستجو..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "پیکربندی‌شده",
+      "connected": "متصل",
+      "failed": "ناموفق",
+      "free": "رایگان",
+      "local": "محلی",
+      "needsTest": "نیازمند تست",
+      "verified": "تأییدشده",
+      "unavailable": "در دسترس نیست",
+      "issue": "مشکل"
+    },
+    "customModelId": "شناسه مدل سفارشی",
+    "label": "مدل (اختیاری)",
+    "multimodelRequired": "Codex و Gemini به حالت چندمدلی نیاز دارند.",
+    "openCode": {
+      "allSources": "همه منابع OpenCode",
+      "filterSource": "فیلتر {{source}}",
+      "filterSources": "فیلتر منابع OpenCode",
+      "freeOnly": "فقط رایگان",
+      "freeTooltip": "OpenCode این مدل را به‌عنوان رایگان علامت می‌زند.",
+      "loadingModels": "در حال بارگذاری مدل‌های OpenCode...",
+      "noSourcesFound": "هیچ منبعی یافت نشد.",
+      "recommendedOnly": "فقط توصیه‌شده",
+      "searchSources": "جستجوی منابع",
+      "sourcesCount": "{{count}} منبع OpenCode",
+      "sourcesCount_few": "{{count}} منبع OpenCode",
+      "sourcesCount_many": "{{count}} منبع OpenCode",
+      "sourcesCount_one": "{{count}} منبع OpenCode",
+      "sourcesCount_other": "{{count}} منبع OpenCode"
+    },
+    "reason": "دلیل: {{reason}}",
+    "runtimeModelsSyncing": "مدل‌های صریح از زمان اجرای فعلی بارگذاری می‌شوند. پیش‌فرض در حالی که فهرست در حال همگام‌سازی است در دسترس می‌ماند.",
+    "fastMode": {
+      "codexLabel": "حالت Fast (۲ برابر اعتبار)",
+      "optionalLabel": "حالت Fast (اختیاری)",
+      "defaultOff": "پیش‌فرض (خاموش)",
+      "fast": "Fast",
+      "off": "خاموش",
+      "defaultFast": "پیش‌فرض (Fast)",
+      "defaultResolvesTo": "پیش‌فرض در حال حاضر به {{mode}} تعیین می‌شود.",
+      "runtimeBackedHint": "حالت Fast بر پایه زمان اجرا است و تنها زمانی باز می‌شود که مدل راه‌اندازی Anthropic تعیین‌شده از آن پشتیبانی کند."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "مستندات قیمت‌گذاری Anthropic را بخوانید"
+    },
+    "searchModels": "جستجوی مدل‌ها",
+    "defaultModel": "پیش‌فرض",
+    "empty": {
+      "noSearchMatches": "هیچ مدلی با این جستجو منطبق نیست.",
+      "recommendedFreeOpenCode": "هیچ مدل رایگان توصیه‌شده OpenCode در فهرست زمان اجرای فعلی در دسترس نیست.",
+      "freeOpenCode": "هیچ مدل رایگان OpenCode در فهرست زمان اجرای فعلی در دسترس نیست.",
+      "recommendedOpenCode": "هیچ مدل توصیه‌شده OpenCode در فهرست زمان اجرای فعلی در دسترس نیست.",
+      "noModels": "هیچ مدلی در فهرست زمان اجرای فعلی در دسترس نیست."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode برای راه‌اندازی تیم آماده نیست",
+      "freeModelsAvailableTitle": "مدل‌های رایگان OpenCode در دسترس هستند",
+      "providerNotConnectedTitle": "ارائه‌دهنده OpenCode متصل نیست",
+      "readyTitle": "OpenCode آماده است",
+      "readyMessage": "OpenCode آمادگی ارائه‌دهنده را گذراند. برای استفاده از مدل‌های OpenCode برای این تیم آن را انتخاب کنید.",
+      "useOpenCode": "استفاده از OpenCode",
+      "badges": {
+        "check": "بررسی",
+        "install": "نصب",
+        "free": "رایگان",
+        "setup": "راه‌اندازی"
+      },
+      "summary": {
+        "checking": "وضعیت OpenCode: در حال بررسی زمان اجرا",
+        "status": "وضعیت OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "راه‌اندازی تیم مسدود شده است",
+        "providerOptional": "اتصال ارائه‌دهنده اختیاری است",
+        "providerModelsNeedSetup": "مدل‌های پشتیبانی‌شده با ارائه‌دهنده نیازمند راه‌اندازی هستند",
+        "teamLaunchReady": "راه‌اندازی تیم آماده است",
+        "runtimeDetected": "زمان اجرا شناسایی شد",
+        "runtimeMissing": "زمان اجرا مفقود است",
+        "freeWithoutAuth": "مدل‌های رایگان بدون احراز هویت در دسترس هستند",
+        "providerConnected": "ارائه‌دهنده متصل است",
+        "providerNotConnected": "ارائه‌دهنده متصل نیست"
+      },
+      "messages": {
+        "checking": "برنامه هنوز در حال بررسی زمان اجرای OpenCode است. منتظر بمانید تا وضعیت ارائه‌دهنده به پایان برسد، سپس دوباره تلاش کنید.",
+        "unsupported": "OpenCode نصب نشده، یافت نشده، یا زمان اجرای شناسایی‌شده پشتیبانی نمی‌شود. OpenCode را نصب یا به‌روزرسانی کنید، سپس وضعیت ارائه‌دهنده را تازه‌سازی کنید. همچنین می‌توانید از دکمه نصب در صفحه اصلی استفاده کنید.",
+        "freeAvailable": "OpenCode شناسایی شد. می‌توانید از مدل‌های رایگان OpenCode مانند Big Pickle بدون اتصال یک ارائه‌دهنده استفاده کنید. تنها زمانی که مدل‌های پشتیبانی‌شده با ارائه‌دهنده بخواهید، یک ارائه‌دهنده متصل کنید.",
+        "noFreeListed": "OpenCode شناسایی شد، اما هنوز هیچ مدل رایگان OpenCode فهرست نشده است. وضعیت ارائه‌دهنده را تازه‌سازی کنید، یا برای مدل‌های پشتیبانی‌شده با ارائه‌دهنده یک ارائه‌دهنده در OpenCode متصل کنید.",
+        "launchBlocked": "OpenCode نصب و احراز هویت شده است، اما آمادگی راه‌اندازی Agent Teams مسدود شده است.",
+        "ready": "OpenCode برای راه‌اندازی تیم آماده است."
+      },
+      "loadingRuntime": "وضعیت زمان اجرای OpenCode هنوز در حال بارگذاری است."
+    },
+    "advisory": {
+      "pingNotConfirmed": "ping تأیید نشد",
+      "note": "یادداشت"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "پیکربندی OpenCode",
+      "builtinFree": "رایگان داخلی",
+      "connectedProviders": "ارائه‌دهندگان متصل",
+      "otherCatalog": "سایر کاتالوگ OpenCode"
+    },
+    "pricing": {
+      "free": "رایگان",
+      "inputShort": "ورودی {{rate}}",
+      "outputShort": "خروجی {{rate}}",
+      "perMillionSummary": "{{summary}} / ۱ میلیون",
+      "inputTitle": "ورودی: {{rate}} به ازای هر ۱ میلیون توکن",
+      "outputTitle": "خروجی: {{rate}} به ازای هر ۱ میلیون توکن",
+      "cacheReadTitle": "خواندن از حافظه پنهان: {{rate}} به ازای هر ۱ میلیون توکن",
+      "cacheWriteTitle": "نوشتن در حافظه پنهان: {{rate}} به ازای هر ۱ میلیون توکن"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "از مدل پیش‌فرض نقطه پایانی سازگار با Anthropic استفاده می‌کند.\nدر حال حاضر به {{model}} تعیین می‌شود.",
+      "anthropicCompatible": "از مدل پیش‌فرض نقطه پایانی سازگار با Anthropic استفاده می‌کند.",
+      "anthropic": "از مدل پیش‌فرض تیم Claude استفاده می‌کند.\nهنگام فعال بودن محدود کردن بافت، به {{longContextModel}} با بافت ۱ میلیون، یا {{limitedContextModel}} با بافت ۲۰۰ هزار تعیین می‌شود.",
+      "openCodeWithResolved": "از مدل پیش‌فرض OpenCode استفاده می‌کند.\nدر حال حاضر به {{model}} تعیین می‌شود.",
+      "openCode": "از مدل پیش‌فرض زمان اجرای OpenCode استفاده می‌کند.",
+      "runtime": "از پیش‌فرض زمان اجرا برای ارائه‌دهنده انتخاب‌شده استفاده می‌کند."
+    },
+    "multimodelOff": "چندمدلی خاموش",
+    "unavailableInRuntime": "در زمان اجرای فعلی در دسترس نیست"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "لغو",
+      "delete": "حذف",
+      "markResolved": "علامت‌گذاری حل‌شده",
+      "save": "ذخیره"
+    },
+    "attachments": {
+      "commentAttachment": "پیوست نظر",
+      "fromComments": "از نظرات",
+      "preview": "پیش‌نمایش {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "توجه",
+        "noSafeDiff": "بدون تفاوت ایمن"
+      },
+      "empty": {
+        "noFileChangesRecorded": "هیچ تغییر فایلی ثبت نشد",
+        "noFileChangesRecordedYet": "هنوز هیچ تغییر فایلی ثبت نشده است",
+        "noReviewableChangesRecovered": "هیچ تغییر فایل قابل بازبینی‌ای بازیابی نشد",
+        "noSafeDiffAvailable": "هیچ تفاوت ایمنی در دسترس نیست"
+      },
+      "loadFailed": "بارگذاری خلاصه تغییرات وظیفه ناموفق بود",
+      "loading": "در حال بارگذاری تغییرات...",
+      "fileCount": "{{count}} فایل",
+      "fileRowsHidden": "{{count}} ردیف فایل پنهان شد",
+      "moreDiagnostics": "{{count}} عیب‌یابی بیشتر",
+      "moreFiles": "{{count}} فایل بیشتر",
+      "openInEditor": "باز کردن در ویرایشگر",
+      "openTask": "باز کردن وظیفه {{subject}}",
+      "refresh": "تازه‌سازی تغییرات",
+      "refreshFailed": "تازه‌سازی ناموفق بود: {{error}}",
+      "refreshing": "در حال تازه‌سازی",
+      "refreshingChanges": "در حال تازه‌سازی تغییرات...",
+      "refreshTeamChanges": "تازه‌سازی تغییرات تیم",
+      "refreshShort": "تازه‌سازی",
+      "reviewDiff": "بازبینی تفاوت",
+      "reviewTaskDiff": "بازبینی تفاوت وظیفه",
+      "scannedCandidateTasks": "{{requested}} از {{eligible}} وظیفه نامزد اسکن شد",
+      "tasksDeferred": "{{count}} وظیفه در این دور به تعویق افتاد",
+      "title": "تغییرات",
+      "fileCount_few": "{{count}} فایل",
+      "fileCount_many": "{{count}} فایل",
+      "fileCount_one": "{{count}} فایل",
+      "fileCount_other": "{{count}} فایل",
+      "fileRowsHidden_few": "{{count}} ردیف فایل پنهان شد",
+      "fileRowsHidden_many": "{{count}} ردیف فایل پنهان شد",
+      "fileRowsHidden_one": "{{count}} ردیف فایل پنهان شد",
+      "fileRowsHidden_other": "{{count}} ردیف فایل پنهان شد",
+      "moreDiagnostics_few": "{{count}} عیب‌یابی بیشتر",
+      "moreDiagnostics_many": "{{count}} عیب‌یابی بیشتر",
+      "moreDiagnostics_one": "{{count}} عیب‌یابی بیشتر",
+      "moreDiagnostics_other": "{{count}} عیب‌یابی بیشتر",
+      "moreFiles_few": "{{count}} فایل بیشتر",
+      "moreFiles_many": "{{count}} فایل بیشتر",
+      "moreFiles_one": "{{count}} فایل بیشتر",
+      "moreFiles_other": "{{count}} فایل بیشتر",
+      "tasksDeferred_few": "{{count}} وظیفه در این دور به تعویق افتاد",
+      "tasksDeferred_many": "{{count}} وظیفه در این دور به تعویق افتاد",
+      "tasksDeferred_one": "{{count}} وظیفه در این دور به تعویق افتاد",
+      "tasksDeferred_other": "{{count}} وظیفه در این دور به تعویق افتاد"
+    },
+    "clarification": {
+      "awaitingLead": "در انتظار شفاف‌سازی از سرتیم",
+      "awaitingUser": "در انتظار شفاف‌سازی از شما"
+    },
+    "description": {
+      "add": "برای افزودن توضیح کلیک کنید...",
+      "edit": "ویرایش توضیح",
+      "placeholder": "توضیح وظیفه (از markdown پشتیبانی می‌کند)"
+    },
+    "loading": {
+      "fetchingTeamData": "در حال واکشی داده‌های تیم",
+      "title": "در حال بارگذاری وظیفه..."
+    },
+    "logs": {
+      "newArriving": "گزارش‌های جدید وظیفه در حال رسیدن"
+    },
+    "notFound": "وظیفه یافت نشد",
+    "related": {
+      "blockedBy": "مسدودشده توسط",
+      "blocks": "مسدود می‌کند",
+      "linkedFrom": "پیوندخورده از",
+      "links": "پیوندها",
+      "title": "وظایف مرتبط"
+    },
+    "review": {
+      "reviewer": "بازبین: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "پیوست‌ها",
+      "changes": "تغییرات",
+      "comments": "نظرات",
+      "description": "توضیح",
+      "taskLogs": "گزارش‌های وظیفه",
+      "workflowHistory": "تاریخچه گردش‌کار"
+    },
+    "unassigned": "بدون تخصیص",
+    "workflow": {
+      "implementationTimeTitle": "زمان پیاده‌سازی از بازه‌های کاری پایدارشده",
+      "inProgressTime": "زمان در حال انجام {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "در حال نمایش {{formattedCount}} نظر اخیر برای حفظ پاسخگویی رابط کاربری.",
+      "badges": {
+        "approved": "تأییدشده",
+        "reviewRequested": "بازبینی درخواست شد"
+      },
+      "unknownTime": "زمان نامشخص",
+      "actions": {
+        "reply": "پاسخ",
+        "replyToComment": "پاسخ به نظر",
+        "showMore": "نمایش نظرات بیشتر ({{visible}}/{{total}})",
+        "cancelReply": "لغو پاسخ",
+        "comment": "نظر"
+      },
+      "attachments": {
+        "previewAlt": "پیش‌نمایش پیوست",
+        "downloadFailed": "دانلود ناموفق بود"
+      },
+      "replyingTo": "در حال پاسخ به",
+      "input": {
+        "placeholder": "یک نظر اضافه کنید... (Enter برای ارسال)",
+        "charsLeft": "{{count}} نویسه باقی‌مانده",
+        "charsLeft_one": "{{count}} نویسه باقی‌مانده",
+        "charsLeft_other": "{{count}} نویسه باقی‌مانده",
+        "charsLeft_few": "{{count}} نویسه باقی‌مانده",
+        "charsLeft_many": "{{count}} نویسه باقی‌مانده"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "هیچ تاریخچه گردش‌کاری ثبت نشد",
+      "currentImplementationInterval": "بازه پیاده‌سازی فعلی",
+      "implementationIntervalEnded": "بازه پیاده‌سازی در این انتقال پایان یافت",
+      "runningPrefix": "در حال اجرا ",
+      "createdAs": "ایجادشده به‌عنوان",
+      "by": "توسط",
+      "reassigned": "بازتخصیص‌شده",
+      "assignedTo": "تخصیص‌یافته به",
+      "unassignedFrom": "تخصیص‌نیافته از",
+      "ownerChanged": "مالک تغییر کرد",
+      "reviewRequested": "بازبینی درخواست شد",
+      "reviewStarted": "بازبینی شروع شد",
+      "changesRequested": "تغییرات درخواست شد",
+      "approved": "تأییدشده",
+      "unknownEvent": "رویداد نامشخص"
+    },
+    "reviewStates": {
+      "approved": "تأییدشده",
+      "needsFix": "نیازمند رفع",
+      "inReview": "در حال بازبینی"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "تخصیص‌گیرنده",
+      "assigneeOptional": "تخصیص‌گیرنده (اختیاری)",
+      "blockedByOptional": "وظایف مسدودکننده (اختیاری)",
+      "blockedBySummary": "وظیفه مسدود خواهد شد توسط: {{tasks}}",
+      "cancel": "لغو",
+      "create": "ایجاد",
+      "creating": "در حال ایجاد...",
+      "description": "وظیفه در دایرکتوری tasks/ تیم ایجاد شده و روی تخته Kanban ظاهر می‌شود.",
+      "descriptionOptional": "توضیح (اختیاری)",
+      "detailsPlaceholder": "جزئیات وظیفه (از markdown پشتیبانی می‌کند)",
+      "hideOptionalFields": "پنهان کردن فیلدهای اختیاری",
+      "offlineNotice": {
+        "after": "- برای شروع اجرا، تیم را راه‌اندازی کنید.",
+        "before": "تیم آفلاین است. وظیفه افزوده خواهد شد به"
+      },
+      "promptOptional": "پرامپت برای تخصیص‌گیرنده (اختیاری)",
+      "promptPlaceholder": "دستورالعمل‌های سفارشی برای عضو تیم...",
+      "relatedOptional": "وظایف مرتبط (اختیاری)",
+      "relatedSummary": "مرتبط: {{tasks}}",
+      "saved": "ذخیره شد",
+      "searchTasks": "جستجوی وظایف...",
+      "selectMember": "یک عضو انتخاب کنید",
+      "selectMemberOptional": "انتخاب عضو...",
+      "showOptionalFields": "نمایش فیلدهای اختیاری",
+      "startImmediately": "شروع فوری",
+      "startOfflineHint": "تیم آفلاین است. ابتدا تیم را راه‌اندازی کنید تا وظایف بلافاصله شروع شوند.",
+      "subject": "موضوع",
+      "subjectPlaceholder": "چه کاری باید انجام شود؟",
+      "title": "ایجاد وظیفه",
+      "todo": "انجام‌دادنی"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "مسدودشده توسط",
+        "blocks": "مسدود می‌کند",
+        "id": "شناسه",
+        "owner": "مالک",
+        "status": "وضعیت",
+        "subject": "موضوع"
+      },
+      "empty": "هیچ وظیفه‌ای در این تیم نیست",
+      "filters": {
+        "allOwners": "همه مالکان",
+        "allStatuses": "همه وضعیت‌ها",
+        "ownerAria": "فیلتر وظایف بر اساس مالک",
+        "statusAria": "فیلتر وظایف بر اساس وضعیت"
+      },
+      "showing": "در حال نمایش {{shown}} از {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "وظایف {{completed}}/{{total}} تکمیل‌شده",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "بدون تخصیص",
+    "teamPrefix": "تیم:",
+    "openTask": "باز کردن وظیفه",
+    "deleteConfirm": {
+      "title": "حذف وظیفه",
+      "message": "وظیفه #{{taskId}} به سطل زباله منتقل شود؟",
+      "confirmLabel": "حذف",
+      "cancelLabel": "لغو"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "لغو",
+      "closeEditor": "بستن ویرایشگر",
+      "closeTab": "بستن زبانه",
+      "closeTooltip": "بستن ویرایشگر (Esc)",
+      "discard": "دور انداختن",
+      "discardAndClose": "دور انداختن و بستن",
+      "keep": "نگه داشتن",
+      "keepMine": "نگه داشتن مال من",
+      "keyboardShortcuts": "میان‌برهای صفحه‌کلید",
+      "overwrite": "بازنویسی",
+      "refreshAria": "تازه‌سازی (F5)",
+      "refreshTooltip": "تازه‌سازی وضعیت git (F5)",
+      "reload": "بارگذاری مجدد",
+      "retry": "تلاش مجدد",
+      "save": "ذخیره",
+      "saveAllAndClose": "ذخیره همه و بستن"
+    },
+    "ariaLabel": "ویرایشگر پروژه",
+    "dialogs": {
+      "conflictDescription": "فایل از زمانی که آن را باز کردید به‌صورت خارجی اصلاح شده است. با تغییرات شما بازنویسی شود؟",
+      "conflictTitle": "تداخل ذخیره",
+      "unsavedDescription": "تغییرات ذخیره‌نشده دارید. می‌خواهید چه کاری انجام دهید؟",
+      "unsavedFileDescription": "این فایل تغییرات ذخیره‌نشده دارد. می‌خواهید چه کاری انجام دهید؟",
+      "unsavedTitle": "تغییرات ذخیره‌نشده"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "نام نمی‌تواند خالی باشد",
+        "invalidName": "نام نامعتبر",
+        "invalidCharacters": "نام شامل نویسه‌های نامعتبر است",
+        "nameTooLong": "نام بیش از حد طولانی است"
+      },
+      "placeholders": {
+        "fileName": "نام فایل...",
+        "folderName": "نام پوشه..."
+      },
+      "aria": {
+        "newFileName": "نام فایل جدید",
+        "newFolderName": "نام پوشه جدید"
+      }
+    },
+    "draftRecovered": "تغییرات ذخیره‌نشده از یک نشست قبلی بازیابی شد.",
+    "externalChange": {
+      "changed": "فایل روی دیسک تغییر کرد.",
+      "deleted": "فایل دیگر روی دیسک وجود ندارد."
+    },
+    "saveFailed": "ذخیره ناموفق بود: {{error}}",
+    "sidebar": {
+      "explorer": "کاوشگر",
+      "hide": "پنهان کردن نوار کناری",
+      "hideWithShortcut": "پنهان کردن نوار کناری ({{shortcut}})",
+      "show": "نمایش نوار کناری",
+      "showWithShortcut": "نمایش نوار کناری ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "جستجو در فایل‌ها",
+      "closeSearch": "بستن جستجو",
+      "closeSearchShortcut": "بستن جستجو (Esc)",
+      "searchPlaceholder": "جستجو...",
+      "matchCase": "تطبیق حروف بزرگ و کوچک",
+      "matchCaseToggle": "Aa",
+      "noResults": "هیچ نتیجه‌ای یافت نشد",
+      "resultsSummary": "{{count}} تطابق در {{fileCount}} فایل",
+      "resultsSummary_one": "{{count}} تطابق در {{fileCount}} فایل",
+      "truncated": "(کوتاه‌شده)",
+      "resultsSummary_few": "{{count}} تطابق در {{fileCount}} فایل",
+      "resultsSummary_many": "{{count}} تطابق در {{fileCount}} فایل",
+      "resultsSummary_other": "{{count}} تطابق در {{fileCount}} فایل"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "بارگذاری فایل‌ها ناموفق بود: {{error}}",
+      "loading": "در حال بارگذاری فایل‌ها...",
+      "empty": "هیچ فایلی یافت نشد",
+      "dropForProjectRoot": "برای ریشه پروژه اینجا رها کنید",
+      "moveToTrash": "انتقال به سطل زباله",
+      "moveToTrashConfirm": "«{{name}}» به سطل زباله منتقل شود؟",
+      "cancel": "لغو"
+    },
+    "goToLine": {
+      "title": "رفتن به خط",
+      "position": "(فعلی: {{current}}، کل: {{total}})",
+      "placeholder": "شماره خط، +آفست، -آفست، یا %",
+      "go": "برو"
+    },
+    "searchPanel": {
+      "previousMatch": "تطابق قبلی",
+      "nextMatch": "تطابق بعدی",
+      "close": "بستن",
+      "replacePlaceholder": "جایگزینی",
+      "replace": "جایگزینی",
+      "replaceNext": "جایگزینی بعدی",
+      "all": "همه",
+      "replaceAll": "جایگزینی همه"
+    },
+    "statusBar": {
+      "position": "خط {{line}}، ستون {{col}}",
+      "enableWatcher": "فعال‌سازی ناظر فایل",
+      "disableWatcher": "غیرفعال‌سازی ناظر فایل",
+      "watch": "نظارت",
+      "watching": "در حال نظارت",
+      "watchExternalChanges": "نظارت بر تغییرات خارجی",
+      "disableExternalWatcher": "غیرفعال‌سازی ناظر تغییرات خارجی",
+      "encodingUtf8": "UTF-8",
+      "spaces": "فاصله‌ها: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "در حال بارگذاری پیش‌نمایش...",
+      "openFullSize": "باز کردن پیش‌نمایش اندازه کامل",
+      "openSystemViewer": "باز کردن در نمایشگر سیستم"
+    },
+    "quickOpen": {
+      "title": "باز کردن سریع",
+      "searchPlaceholder": "جستجوی فایل‌ها بر اساس نام...",
+      "loading": "در حال بارگذاری فایل‌ها...",
+      "empty": "هیچ فایلی یافت نشد"
+    },
+    "errorBoundary": {
+      "crashed": "ویرایشگر از کار افتاد",
+      "unknownError": "خطای نامشخص"
+    },
+    "binaryPlaceholder": {
+      "file": "فایل باینری ({{size}})"
+    },
+    "unsavedChanges": "تغییرات ذخیره‌نشده",
+    "empty": {
+      "selectFile": "برای ویرایش، فایلی از درخت انتخاب کنید"
+    },
+    "search": {
+      "toggleReplace": "تغییر وضعیت جایگزینی",
+      "placeholder": "جستجو"
+    },
+    "shortcuts": {
+      "title": "میان‌برهای صفحه‌کلید",
+      "groups": {
+        "fileOperations": "عملیات فایل",
+        "search": "جستجو",
+        "navigation": "پیمایش",
+        "editing": "ویرایش",
+        "markdown": "Markdown",
+        "general": "عمومی"
+      },
+      "actions": {
+        "quickOpen": "باز کردن سریع",
+        "save": "ذخیره",
+        "saveAll": "ذخیره همه",
+        "closeTab": "بستن زبانه",
+        "findInFile": "یافتن در فایل",
+        "searchInFiles": "جستجو در فایل‌ها",
+        "goToLine": "رفتن به خط",
+        "nextTab": "زبانه بعدی",
+        "previousTab": "زبانه قبلی",
+        "cycleTabs": "چرخش بین زبانه‌ها",
+        "toggleSidebar": "تغییر وضعیت نوار کناری",
+        "undo": "واگرد",
+        "redo": "ازنو",
+        "selectNextMatch": "انتخاب تطابق بعدی",
+        "toggleComment": "تغییر وضعیت نظر",
+        "splitPreview": "پیش‌نمایش تقسیم‌شده",
+        "fullPreview": "پیش‌نمایش کامل",
+        "closeEditor": "بستن ویرایشگر"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "فعال‌سازی شکست کلمه",
+      "disableWordWrap": "غیرفعال‌سازی شکست کلمه",
+      "closeSplitPreview": "بستن پیش‌نمایش تقسیم‌شده",
+      "closePreview": "بستن پیش‌نمایش"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "ایجاد زمان‌بندی",
+      "creating": "در حال ایجاد...",
+      "goToDashboard": "رفتن به داشبورد",
+      "launchTeam": "راه‌اندازی تیم",
+      "launching": "در حال راه‌اندازی...",
+      "relaunchTeam": "راه‌اندازی مجدد تیم",
+      "relaunching": "در حال راه‌اندازی مجدد...",
+      "saveChanges": "ذخیره تغییرات",
+      "saving": "در حال ذخیره..."
+    },
+    "billing": {
+      "prefix": "از ۱۵ ژوئن ۲۰۲۶، Anthropic مصرف",
+      "readArticle": "مقاله Anthropic را بخوانید",
+      "suffix": "و Agent SDK را از اعتبار ماهانه Agent SDK، جدا از محدودیت‌های تعاملی Claude Code، صورتحساب می‌کند. اعتبار در هر دوره صورتحساب بازنشانی می‌شود و اعتبار استفاده‌نشده منتقل نمی‌شود."
+    },
+    "conflict": {
+      "description": "اجرای دو تیم در یک دایرکتوری پرخطر است - ممکن است در ویرایش فایل‌های یکسان تداخل کنند. برای جداسازی، استفاده از دایرکتوری متفاوت یا یک git worktree را در نظر بگیرید.",
+      "title": "تیم دیگری با نام «{{team}}» از قبل برای این دایرکتوری کاری در حال اجرا است",
+      "workingDirectory": "دایرکتوری کاری:"
+    },
+    "description": {
+      "createSchedule": "زمان‌بندی اجرای خودکار وظایف Claude",
+      "createScheduleForTeam": "زمان‌بندی اجراهای خودکار برای تیم «{{team}}»",
+      "editSchedule": "در حال ویرایش زمان‌بندی برای تیم «{{team}}»",
+      "launchPrefix": "شروع تیم",
+      "launchSuffix": "از طریق Claude CLI محلی.",
+      "relaunchPrefix": "توقف اجرای فعلی برای",
+      "relaunchSuffix": "و شروع مجدد آن از طریق Claude CLI محلی."
+    },
+    "prepare": {
+      "action": {
+        "launch": "راه‌اندازی",
+        "relaunch": "راه‌اندازی مجدد"
+      },
+      "blocked": "محیط زمان اجرا در دسترس نیست - {{action}} مسدود شده است",
+      "checkingProviders": "در حال بررسی ارائه‌دهندگان انتخاب‌شده...",
+      "failed": "آماده‌سازی ارائه‌دهندگان انتخاب‌شده ناموفق بود",
+      "preflight": "بررسی اولیه برای یافتن خطاها پیش از {{action}}",
+      "preparingEnvironment": "در حال آماده‌سازی محیط...",
+      "ready": "همه ارائه‌دهندگان انتخاب‌شده آماده‌اند.",
+      "readyWithNotes": "همه ارائه‌دهندگان انتخاب‌شده آماده‌اند، همراه با یادداشت‌ها.",
+      "unsupportedPreload": "نسخه preload فعلی از team:prepareProvisioning پشتیبانی نمی‌کند. برنامه dev را مجدداً راه‌اندازی کنید.",
+      "selectWorkingDirectory": "برای اعتبارسنجی محیط راه‌اندازی، یک دایرکتوری کاری انتخاب کنید.",
+      "someProvidersNeedAttention": "برخی از ارائه‌دهندگان انتخاب‌شده نیازمند توجه هستند."
+    },
+    "prompt": {
+      "label": "پرامپت",
+      "oneShotPrefix": "این پرامپت به",
+      "oneShotSuffix": "برای اجرای یک‌باره منتقل خواهد شد",
+      "saved": "ذخیره شد",
+      "schedulePlaceholder": "دستورالعمل‌ها برای اجرای Claude طبق زمان‌بندی...",
+      "teamLeadOptional": "پرامپت برای سرتیم (اختیاری)",
+      "teamLeadPlaceholder": "دستورالعمل‌ها برای سرتیم..."
+    },
+    "providerChanged": "ارائه‌دهنده از {{from}} به {{to}} تغییر کرد. نشست سرتیم قبلی ازسرگیری نخواهد شد، و سرتیم با بافت تازه شروع می‌شود تا زمان اجرای جدید به‌درستی اعمال شود.",
+    "relaunchFreshSession": "راه‌اندازی مجدد تیم یک نشست سرتیم تازه شروع می‌کند. وضعیت پایدار تیم، تخته وظایف و پیکربندی اعضا دوباره به پرامپت راه‌اندازی بازگردانی می‌شوند.",
+    "relaunchWarning": {
+      "description": "ذخیره این تنظیمات فرایند تیم فعلی را متوقف می‌کند، فهرست اعضای به‌روزشده را پایدار می‌کند، و تیم را دوباره با زمان اجرای جدید راه‌اندازی می‌کند.",
+      "title": "راه‌اندازی مجدد، اجرای فعلی تیم را راه‌اندازی مجدد خواهد کرد"
+    },
+    "schedule": {
+      "labelOptional": "برچسب (اختیاری)",
+      "labelPlaceholder": "مثلاً بازبینی روزانه کد، تست‌های شبانه...",
+      "maxBudgetUsd": "حداکثر بودجه (USD)",
+      "maxTurns": "حداکثر نوبت‌ها",
+      "noLimit": "بدون محدودیت",
+      "noMatches": "هیچ تیمی با جستجوی شما منطبق نیست.",
+      "noTeams": "هیچ تیمی در دسترس نیست. ابتدا یک تیم ایجاد کنید.",
+      "searchTeams": "جستجوی تیم‌ها...",
+      "selectTeam": "یک تیم انتخاب کنید...",
+      "team": "تیم",
+      "title": "زمان‌بندی"
+    },
+    "title": {
+      "createSchedule": "ایجاد زمان‌بندی",
+      "editSchedule": "ویرایش زمان‌بندی",
+      "launch": "راه‌اندازی تیم",
+      "relaunch": "راه‌اندازی مجدد تیم"
+    },
+    "errors": {
+      "loadProjectsFailed": "بارگذاری پروژه‌ها ناموفق بود",
+      "saveScheduleFailed": "ذخیره زمان‌بندی ناموفق بود",
+      "relaunchFailed": "راه‌اندازی مجدد تیم ناموفق بود",
+      "launchFailed": "راه‌اندازی تیم ناموفق بود"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "سرتیم OpenCode به یک مدل انتخاب‌شده نیاز دارد.",
+      "openCodeTeammateRequired": "سرتیم OpenCode به حداقل یک هم‌تیمی OpenCode نیاز دارد.",
+      "selectWorkingDirectory": "انتخاب دایرکتوری کاری (cwd)",
+      "fixMemberNames": "نام اعضا را پیش از راه‌اندازی اصلاح کنید",
+      "memberNamesUnique": "نام اعضا باید پیش از راه‌اندازی یکتا باشند"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "تنظیمات راه‌اندازی مجدد",
+      "title": "تنظیمات اختیاری راه‌اندازی",
+      "relaunchDescription": "پیش از راه‌اندازی مجدد تیم، فهرست اعضا و زمان اجرای سرتیم را بازبینی کنید.",
+      "description": "جریان راه‌اندازی را روی مسیر پروژه متمرکز نگه دارید و فقط زمانی این را گسترش دهید که کنترل بیشتری بخواهید."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "کپی تیم",
+      "createTeam": "ایجاد تیم",
+      "deleteForever": "حذف برای همیشه",
+      "deletePermanently": "حذف دائمی",
+      "deleteTeam": "حذف تیم",
+      "launching": "در حال راه‌اندازی...",
+      "launchTeam": "راه‌اندازی تیم",
+      "relaunchTeam": "راه‌اندازی مجدد تیم",
+      "restore": "بازیابی",
+      "restoreTeam": "بازیابی تیم",
+      "retry": "تلاش مجدد",
+      "stopTeam": "توقف تیم",
+      "stopping": "در حال توقف..."
+    },
+    "electronOnly": {
+      "description": "در حالت مرورگر، دسترسی به دایرکتوری‌های محلی `~/.claude/teams` در دسترس نیست.",
+      "title": "تیم‌ها فقط در حالت Electron در دسترس است"
+    },
+    "empty": {
+      "description": "برای شروع، اینجا یک تیم ایجاد کنید. به‌طور خودکار در فهرست نمایش داده می‌شود.",
+      "localOnly": "ایجاد تیم فقط در حالت محلی Electron در دسترس است.",
+      "title": "هیچ تیمی یافت نشد"
+    },
+    "filter": {
+      "clearAll": "پاک کردن همه",
+      "label": "فیلتر تیم‌ها",
+      "projectPriority": "اولویت پروژه",
+      "status": "وضعیت"
+    },
+    "loadFailed": "بارگذاری تیم‌ها ناموفق بود",
+    "loading": "در حال بارگذاری تیم‌ها...",
+    "localOnly": "فقط در حالت محلی Electron در دسترس است.",
+    "membersCount": "اعضا: {{count}}",
+    "membersCount_few": "اعضا: {{count}}",
+    "membersCount_many": "اعضا: {{count}}",
+    "membersCount_one": "عضو: {{count}}",
+    "membersCount_other": "اعضا: {{count}}",
+    "noDescription": "بدون توضیح",
+    "noMatches": "هیچ تیمی با فیلترهای فعلی منطبق نیست",
+    "partial": {
+      "pending": "آخرین راه‌اندازی هنوز در حال هماهنگ‌سازی است.",
+      "skipped": "آخرین راه‌اندازی هم‌تیمی‌هایی را رد کرده است.",
+      "skippedWithCount": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_few": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_many": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_one": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_other": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "stopped": "آخرین راه‌اندازی پیش از پیوستن همه هم‌تیمی‌ها متوقف شد.",
+      "stoppedWithCount": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_few": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_many": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_one": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_other": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد."
+    },
+    "searchPlaceholder": "جستجوی تیم‌ها...",
+    "sections": {
+      "otherTeams": "سایر تیم‌ها",
+      "projectTeams": "تیم‌های {{project}}",
+      "selectedProject": "پروژه انتخاب‌شده"
+    },
+    "solo": "تک‌نفره",
+    "status": {
+      "active": "فعال",
+      "deleted": "حذف‌شده",
+      "launching": "در حال راه‌اندازی...",
+      "offline": "آفلاین",
+      "partialFailure": "راه‌اندازی در میانه راه ناموفق شد",
+      "partialPending": "راه‌اندازی اولیه در انتظار",
+      "partialSkipped": "راه‌اندازی عضو را رد کرد",
+      "running": "در حال اجرا"
+    },
+    "title": "انتخاب تیم",
+    "trash": "سطل زباله ({{count}})",
+    "trash_few": "سطل زباله ({{count}})",
+    "trash_many": "سطل زباله ({{count}})",
+    "trash_one": "سطل زباله ({{count}})",
+    "trash_other": "سطل زباله ({{count}})",
+    "deleteDraft": {
+      "title": "حذف پیش‌نویس",
+      "message": "تیم پیش‌نویس «{{teamName}}» حذف شود؟ این عمل قابل بازگشت نیست.",
+      "confirmLabel": "حذف",
+      "cancelLabel": "لغو"
+    },
+    "moveToTrash": {
+      "title": "انتقال به سطل زباله",
+      "message": "تیم «{{teamName}}» به سطل زباله منتقل شود؟ می‌توانید بعداً آن را بازیابی کنید.",
+      "confirmLabel": "انتقال به سطل زباله",
+      "cancelLabel": "لغو"
+    },
+    "deleteForever": {
+      "title": "حذف دائمی",
+      "message": "تیم «{{teamName}}» به‌طور دائمی حذف شود؟ همه داده‌ها از دست خواهند رفت.",
+      "confirmLabel": "حذف برای همیشه",
+      "cancelLabel": "لغو"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "نکته: پیام‌های بین‌تیمی به سرتیم تیم هدف می‌روند. اگر می‌خواهید پاسخ به‌جای شما به سرتیم شما بازگردد، این را صراحتاً در پیام بگویید."
+    },
+    "attachments": {
+      "attachFiles": "پیوست فایل‌ها (چسباندن یا کشیدن و رها کردن)",
+      "unavailable": "پیوست‌ها در دسترس نیستند",
+      "disabledHint": "پیوست فایل برای سرتیم آنلاین و هم‌تیمی‌های آنلاین OpenCode پشتیبانی می‌شود. پیوست‌ها را حذف کنید یا گیرنده را تغییر دهید.",
+      "restrictions": {
+        "crossTeam": "پیوست فایل برای پیام‌های بین‌تیمی پشتیبانی نمی‌شود",
+        "teamOffline": "تیم باید آنلاین باشد تا فایل پیوست شود",
+        "unsupportedRecipient": "فایل‌ها را می‌توان به سرتیم یا هم‌تیمی‌های OpenCode فرستاد",
+        "openCodeOffline": "تیم باید آنلاین باشد تا فایل برای هم‌تیمی‌های OpenCode پیوست شود",
+        "sending": "پیش از افزودن فایل‌ها، منتظر اتمام ارسال پیام فعلی بمانید",
+        "maximumReached": "حداکثر پیوست‌ها رسیده است",
+        "leadOnly": "فایل‌ها را فقط می‌توان به سرتیم فرستاد"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "فرمان‌های اسلش به یک سرتیم زنده نیاز دارند و نمی‌توانند با پیوست‌ها ارسال شوند",
+        "crossTeam": "فرمان‌های اسلش را فقط می‌توان روی سرتیم فعلی اجرا کرد",
+        "notLead": "فرمان‌های اسلش را فقط می‌توان به سرتیم فرستاد",
+        "leadOffline": "فرمان‌های اسلش به آنلاین بودن سرتیم نیاز دارند"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "درخواست بین‌تیمی اخیر استفاده مجدد شد",
+      "teamOffline": "تیم آفلاین"
+    },
+    "revision": {
+      "editing": "در حال ویرایش پیام قبلی",
+      "cancel": "لغو",
+      "tooltip": "از عامل بخواهید پیام قبلی را نادیده بگیرد و آن را به کادر نگارش بازگرداند."
+    },
+    "input": {
+      "charsLeft": "{{count}} نویسه باقی‌مانده",
+      "charsLeft_one": "{{count}} نویسه باقی‌مانده",
+      "charsLeft_other": "{{count}} نویسه باقی‌مانده",
+      "teamLaunchingPlaceholder": "تیم در حال راه‌اندازی است... پیام برای تحویل به صندوق ورودی در صف قرار می‌گیرد.",
+      "crossTeamPlaceholder": "پیام بین‌تیمی به {{team}}...",
+      "teamFallback": "تیم",
+      "placeholder": "یک پیام بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
+      "slashTip": "نکته: می‌توانید از «/» برای اجرای هر فرمان Claude استفاده کنید.",
+      "charsLeft_few": "{{count}} نویسه باقی‌مانده",
+      "charsLeft_many": "{{count}} نویسه باقی‌مانده"
+    },
+    "teamSelector": {
+      "thisTeam": "این تیم",
+      "current": "فعلی",
+      "online": "آنلاین",
+      "offline": "آفلاین",
+      "onlineTitle": "آنلاین",
+      "offlineTitle": "آفلاین"
+    },
+    "recipient": {
+      "select": "انتخاب...",
+      "searchPlaceholder": "جستجو...",
+      "noResults": "نتیجه‌ای نیست"
+    },
+    "actions": {
+      "voiceToText": "صدا به متن",
+      "send": "ارسال",
+      "sendingUnavailableLaunching": "ارسال در حالی که تیم در حال راه‌اندازی است در دسترس نیست"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "فیلتر گزارش‌ها",
+      "tooltip": "فیلتر گزارش‌ها",
+      "sections": {
+        "stream": "جریان",
+        "content": "محتوا"
+      },
+      "kinds": {
+        "output": "خروجی",
+        "thinking": "تفکر",
+        "tool": "فراخوانی‌های ابزار"
+      },
+      "actions": {
+        "reset": "بازنشانی",
+        "save": "ذخیره"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} خط خام",
+    "rawLineCount_one": "{{formattedCount}} خط خام",
+    "rawLinesCaptured": "{{count}} ضبط‌شده",
+    "emptyRawLogs": "{{count}}؛ هنوز هیچ‌کدام خروجی دستیار/ابزار نیستند.",
+    "noLogsYet": "هنوز هیچ گزارشی نیست.",
+    "teamNotRunning": "تیم در حال اجرا نیست.",
+    "searchPlaceholder": "جستجوی گزارش‌ها...",
+    "clearSearch": "پاک کردن جستجو",
+    "newCount": "+{{count}} جدید",
+    "loading": "در حال بارگذاری...",
+    "showMore": "نمایش بیشتر",
+    "noLogsCaptured": "هیچ گزارشی ضبط نشد.",
+    "noMatchingLogs": "هیچ گزارش منطبقی نیست.",
+    "rawLineCount_few": "{{formattedCount}} خط خام",
+    "rawLineCount_many": "{{formattedCount}} خط خام",
+    "rawLineCount_other": "{{formattedCount}} خط خام",
+    "openFullscreen": "باز کردن گزارش‌ها در تمام‌صفحه",
+    "fullscreen": "تمام‌صفحه",
+    "viewingFullscreen": "در حال مشاهده در حالت تمام‌صفحه",
+    "logsTitle": "گزارش‌ها",
+    "sourceSelect": {
+      "placeholder": "انتخاب منبع گزارش...",
+      "searchPlaceholder": "جستجوی منابع گزارش...",
+      "emptyMessage": "هیچ منبع گزارشی یافت نشد.",
+      "ariaLabel": "منبع گزارش",
+      "leadLabel": "سرتیم",
+      "selectSourceEmpty": "یک منبع گزارش انتخاب کنید.",
+      "leadDescription": "سرتیم",
+      "removedLabel": "حذف‌شده",
+      "removedDescription": "حذف‌شده"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "تیم خارجی",
+      "process": {
+        "startedBy": "شروع‌شده توسط:",
+        "at": "در:",
+        "openUrl": "باز کردن URL"
+      },
+      "overflow": {
+        "hiddenTasks": "وظایف پنهان",
+        "empty": "هیچ وظیفه پنهانی در دسترس نیست."
+      },
+      "member": {
+        "lead": "سرتیم",
+        "workingOn": "در حال کار روی",
+        "recentTools": "ابزارهای اخیر",
+        "spawn": {
+          "waitingToStart": "در انتظار شروع",
+          "starting": "در حال شروع",
+          "failed": "ناموفق"
+        },
+        "state": {
+          "active": "فعال",
+          "idle": "بی‌کار",
+          "offline": "آفلاین",
+          "runningTool": "در حال اجرای ابزار"
+        },
+        "activeTool": {
+          "running": "در حال اجرای ابزار",
+          "failed": "ابزار ناموفق بود",
+          "finished": "ابزار به پایان رسید"
+        },
+        "actions": {
+          "message": "پیام",
+          "profile": "نمایه",
+          "task": "وظیفه"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "گزارش‌ها",
+      "loading": "در حال بارگذاری گزارش‌ها",
+      "more": "+{{count}} بیشتر",
+      "more_one": "+{{count}} بیشتر",
+      "more_other": "+{{count}} بیشتر",
+      "more_few": "+{{count}} بیشتر",
+      "more_many": "+{{count}} بیشتر",
+      "unsupportedProvider": "ارائه‌دهنده پشتیبانی‌نشده",
+      "openCodeLogsDelayed": "گزارش‌های OpenCode با تأخیر",
+      "logsUnavailable": "گزارش‌ها در دسترس نیستند",
+      "noRecentLogs": "هیچ گزارش اخیری نیست",
+      "toolError": "خطای ابزار",
+      "toolResult": "نتیجه ابزار",
+      "toolUse": "استفاده از ابزار",
+      "thinking": "تفکر",
+      "error": "خطا",
+      "logEvent": "رویداد گزارش",
+      "noErrorOutput": "هیچ خروجی خطایی نیست",
+      "noOutput": "هیچ خروجی‌ای نیست",
+      "noInput": "هیچ ورودی‌ای نیست"
+    },
+    "blockingEdge": {
+      "title": "وابستگی مسدودکننده",
+      "blocks": "مسدود می‌کند",
+      "close": "بستن",
+      "blockingHiddenTasks": "وظایف پنهان مسدودکننده",
+      "blockedHiddenTasks": "وظایف پنهان مسدودشده",
+      "links_one": "{{count}} پیوند",
+      "links_other": "{{count}} پیوند",
+      "hiddenBlockingLinks_one": "{{count}} پیوند مسدودکننده پنهان",
+      "hiddenBlockingLinks_other": "{{count}} پیوند مسدودکننده پنهان",
+      "hiddenTaskStack": "پشته وظیفه پنهان",
+      "hiddenTasks_one": "{{count}} وظیفه پنهان",
+      "hiddenTasks_other": "{{count}} وظیفه پنهان",
+      "task": "وظیفه",
+      "openBlockerStack": "باز کردن پشته مسدودکننده",
+      "openBlockedStack": "باز کردن پشته مسدودشده",
+      "openBlockerTask": "باز کردن وظیفه مسدودکننده",
+      "openBlockedTask": "باز کردن وظیفه مسدودشده"
+    },
+    "activityHud": {
+      "activity": "فعالیت",
+      "noRecentActivity": "هیچ فعالیت اخیری نیست",
+      "more": "+{{count}} بیشتر",
+      "more_one": "+{{count}} بیشتر",
+      "more_other": "+{{count}} بیشتر",
+      "more_few": "+{{count}} بیشتر",
+      "more_many": "+{{count}} بیشتر"
+    },
+    "provisioning": {
+      "launchDetails": "جزئیات راه‌اندازی",
+      "launchDetailsDescription": "پیشرفت دقیق راه‌اندازی تیم، خروجی زنده و گزارش‌های CLI."
+    }
+  },
+  "projectPath": {
+    "label": "پروژه",
+    "source": {
+      "claude": "یافت‌شده توسط Claude",
+      "codex": "یافت‌شده توسط Codex",
+      "mixed": "یافت‌شده توسط Claude و Codex"
+    },
+    "deleted": {
+      "title": "پوشه پروژه دیگر وجود ندارد",
+      "label": "حذف‌شده"
+    },
+    "mode": {
+      "projectList": "از فهرست پروژه",
+      "customPath": "مسیر سفارشی"
+    },
+    "loadingProjects": "در حال بارگذاری پروژه‌ها...",
+    "selectProject": "انتخاب یک پروژه...",
+    "searchPlaceholder": "جستجوی پروژه بر اساس نام یا مسیر",
+    "empty": "چیزی یافت نشد",
+    "selectFromList": "یک پروژه از فهرست انتخاب کنید",
+    "noProjects": "هیچ پروژه‌ای یافت نشد، به مسیر سفارشی تغییر دهید.",
+    "customWorkingDirectory": "دایرکتوری کاری سفارشی",
+    "browse": "مرور",
+    "createAutomatically": "اگر دایرکتوری وجود نداشته باشد، به‌طور خودکار ایجاد خواهد شد."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "بار زمان اجرای محلی",
+      "description": "فقط فرایندهای والد و فرزند. استنتاج LLM راه دور گنجانده نشده است.",
+      "cpu": "CPU",
+      "memory": "حافظه",
+      "summedRss": "مجموع RSS",
+      "sharedHost": "معیار میزبان مشترک OpenCode. اختصاصی این عضو نیست.",
+      "processTreeCapped": "درخت فرایند برای این نمونه محدود شد.",
+      "rssHint": "RSS می‌تواند شامل صفحات مشترک باشد، بنابراین بهتر است به‌عنوان سیگنال بار خوانده شود، نه حافظه اختصاصی."
+    },
+    "editor": {
+      "title": "اعضا",
+      "addMember": "افزودن عضو",
+      "editAsJson": "ویرایش به‌صورت JSON",
+      "runInSeparateWorktrees": "اجرای هم‌تیمی‌ها در worktreeهای جداگانه",
+      "agentTeamsMcpOnly": "فقط MCP مربوط به Agent Teams",
+      "removedCount": "حذف‌شده ({{count}})",
+      "removedModelLockReason": "اعضای حذف‌شده برای تاریخچه حذف نرم نگه داشته می‌شوند. برای ویرایش تنظیمات آن‌ها را بازیابی کنید.",
+      "memberNamesUnique": "نام اعضا باید یکتا باشند"
+    },
+    "stats": {
+      "computing": "در حال محاسبه آمار...",
+      "empty": "هیچ آماری در دسترس نیست",
+      "lines": "خطوط",
+      "linesInfo": "تقریبی. برای ابزارهای Edit و Write دقیق است. نوشتن فایل با Bash از الگوهای فرمان (heredoc، echo، sed) تخمین زده می‌شود و ممکن است کمتر گزارش شود.",
+      "files": "فایل‌ها",
+      "toolCalls": "فراخوانی‌های ابزار",
+      "tokens": "توکن‌ها",
+      "toolUsage": "مصرف ابزار",
+      "filesTouched": "فایل‌های لمس‌شده ({{count}})",
+      "viewAllChanges": "مشاهده همه تغییرات",
+      "showLess": "نمایش کمتر",
+      "moreFiles": "+{{count}} بیشتر",
+      "footer": "{{count}} نشست · محاسبه‌شده {{computedAgo}}",
+      "footer_one": "{{count}} نشست · محاسبه‌شده {{computedAgo}}",
+      "footer_few": "{{count}} نشست · محاسبه‌شده {{computedAgo}}",
+      "footer_many": "{{count}} نشست · محاسبه‌شده {{computedAgo}}",
+      "footer_other": "{{count}} نشست · محاسبه‌شده {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "در حال جستجوی گزارش‌ها...",
+      "empty": "هیچ گزارشی یافت نشد",
+      "waitingForTaskActivity": "وظیفه در حال انجام است - در انتظار فعالیت نشست (تازه‌سازی خودکار)...",
+      "noTaskActivity": "هنوز هیچ فعالیت نشستی برای این وظیفه نیست",
+      "noMemberActivity": "این عضو هنوز هیچ فعالیت نشست ثبت‌شده‌ای ندارد",
+      "leadSessionTooltip": "گزارش‌های کامل نشست سرتیم - برای بافت ارکستراسیون سراسری مفید است، نه مختص این عامل",
+      "memberSessionTooltip": "گزارش‌های کامل نشست پایدار هم‌تیمی - زمانی مفید است که کار در یک نشست عضو ریشه به‌جای یک فایل زیرعامل اجرا شود",
+      "startedAt": "شروع‌شده {{time}}",
+      "active": "فعال",
+      "showDetails": "نمایش جزئیات",
+      "hideDetails": "پنهان کردن جزئیات",
+      "loadingDetails": "در حال بارگذاری جزئیات...",
+      "failedToLoadDetails": "بارگذاری جزئیات ناموفق بود"
+    },
+    "detail": {
+      "relaunchOpenCode": "راه‌اندازی مجدد OpenCode",
+      "restart": "راه‌اندازی مجدد",
+      "legacyLogsFallback": "جایگزین گزارش‌های قدیمی",
+      "copyDiagnostics": "کپی عیب‌یابی",
+      "pid": "PID {{pid}}",
+      "removedAt": "حذف‌شده {{date}}",
+      "failedToRestartMember": "راه‌اندازی مجدد عضو ناموفق بود",
+      "sendMessage": "ارسال پیام",
+      "assignTask": "تخصیص وظیفه",
+      "remove": "حذف"
+    },
+    "list": {
+      "loading": "در حال بارگذاری اعضای تیم",
+      "unavailable": "فهرست اعضا در دسترس نیست",
+      "unavailableDescription": "{{count}} هم‌تیمی از فراداده تیم شناخته شده‌اند، اما جزئیات فهرست مفقود است.",
+      "unavailableDescription_one": "{{count}} هم‌تیمی از فراداده تیم شناخته شده است، اما جزئیات فهرست مفقود است.",
+      "soloLeadOnly": "تیم تک‌نفره - فقط سرتیم",
+      "removedCount": "حذف‌شده ({{count}})",
+      "unavailableDescription_few": "{{count}} هم‌تیمی از فراداده تیم شناخته شده‌اند، اما جزئیات فهرست مفقود است.",
+      "unavailableDescription_many": "{{count}} هم‌تیمی از فراداده تیم شناخته شده‌اند، اما جزئیات فهرست مفقود است.",
+      "unavailableDescription_other": "{{count}} هم‌تیمی از فراداده تیم شناخته شده‌اند، اما جزئیات فهرست مفقود است."
+    },
+    "executionLog": {
+      "empty": "چیزی برای نمایش نیست",
+      "emptyUserMessage": "{{time}} - (خالی)",
+      "agentInstructions": "دستورالعمل‌های عامل",
+      "memberTurn": "نوبت {{member}}",
+      "agentTurn": "نوبت عامل",
+      "turn": "نوبت"
+    },
+    "recentMessages": {
+      "latest": "آخرین پیام‌ها",
+      "latestForMember": "آخرین پیام‌ها - {{member}}",
+      "loadMore": "بارگذاری بیشتر",
+      "expand": "گسترش",
+      "collapse": "جمع کردن"
+    },
+    "leadModel": {
+      "defaultModel": "پیش‌فرض",
+      "providerModelAria": "ارائه‌دهنده {{provider}}، {{model}}",
+      "leadShort": "سرتیم",
+      "teamLead": "سرتیم",
+      "syncWithTeammates": "همگام‌سازی مدل با هم‌تیمی‌ها",
+      "anthropicTeamWide": "Anthropic در سراسر تیم",
+      "runtimeInheritance": "زمان اجرای سرتیم برای هم‌تیمی‌ها اعمال می‌شود مگر آنکه ارائه‌دهنده یا مدل خود را تنظیم کنند.",
+      "anthropicContextLimit": "محدودیت بافت ۲۰۰ هزار برای زمان اجراهای Anthropic در این راه‌اندازی، از جمله هم‌تیمی‌های سفارشی Anthropic، در سراسر تیم است."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "تازه‌سازی خودکار",
+      "wrapLines": "شکست خطوط",
+      "loadingTail": "در حال بارگذاری انتهای گزارش فرایند...",
+      "empty": "هنوز هیچ فایل گزارش فرایندی برای این عضو ضبط نشده است.",
+      "copy": "کپی",
+      "fileEmpty": "فایل گزارش فرایند خالی است.",
+      "showingLast": "در حال نمایش آخرین {{bytes}}.",
+      "showing": "در حال نمایش {{bytes}}."
+    },
+    "tasks": {
+      "empty": "هیچ وظیفه‌ای به این عضو تخصیص نیافته است"
+    },
+    "messages": {
+      "loadOlder": "بارگذاری پیام‌های قدیمی‌تر",
+      "filters": {
+        "all": "همه",
+        "messages": "پیام‌ها",
+        "comments": "نظرات"
+      },
+      "empty": {
+        "loading": "در حال بارگذاری فعالیت...",
+        "noComments": "هیچ نظری برای این عضو نیست",
+        "noLoadedMessages": "هنوز هیچ پیام بارگذاری‌شده‌ای برای این عضو نیست",
+        "noMessages": "هیچ پیامی با این عضو نیست",
+        "noLoadedActivity": "هنوز هیچ فعالیت بارگذاری‌شده‌ای برای این عضو نیست",
+        "noActivity": "هیچ فعالیتی با این عضو نیست"
+      }
+    },
+    "actions": {
+      "openProfile": "باز کردن نمایه",
+      "editRole": "ویرایش نقش",
+      "sendMessage": "ارسال پیام",
+      "assignTask": "تخصیص وظیفه"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "نقش سفارشی را وارد کنید..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} زمان‌بندی",
+    "count_one": "{{count}} زمان‌بندی",
+    "count_other": "{{count}} زمان‌بندی",
+    "nextRun": "بعدی: {{next}}",
+    "actions": {
+      "runNow": "اجرای فوری",
+      "edit": "ویرایش",
+      "pause": "توقف موقت",
+      "resume": "ازسرگیری",
+      "delete": "حذف",
+      "addSchedule": "افزودن زمان‌بندی"
+    },
+    "runHistory": {
+      "loading": "در حال بارگذاری تاریخچه اجرا...",
+      "empty": "هنوز اجرایی نیست"
+    },
+    "count_few": "{{count}} زمان‌بندی",
+    "count_many": "{{count}} زمان‌بندی",
+    "runLog": {
+      "title": "گزارش اجرا",
+      "exitCode": "خروج {{code}}",
+      "retryCount": "تلاش مجدد {{count}}/{{max}}",
+      "stillRunning": "وظیفه هنوز در حال اجرا است...",
+      "loadingLogs": "در حال بارگذاری گزارش‌ها...",
+      "errors": "خطاها",
+      "close": "بستن"
+    },
+    "cron": {
+      "expression": "عبارت Cron",
+      "highFrequencyWarning": "زمان‌بندی با فرکانس بالا (بازه کمتر از ۵ دقیقه)",
+      "nextRuns": "اجراهای بعدی:",
+      "timezone": "منطقه زمانی",
+      "selectTimezone": "انتخاب منطقه زمانی",
+      "warmUpTime": "زمان گرم کردن",
+      "warmUpDescription": "ارائه‌دهندگان انتخاب‌شده را پیش از اجرای زمان‌بندی‌شده آماده می‌کند",
+      "errors": {
+        "enterExpression": "یک عبارت cron وارد کنید",
+        "invalidExpression": "عبارت cron نامعتبر"
+      },
+      "presets": {
+        "everyHour": "هر ساعت",
+        "everySixHours": "هر ۶ ساعت",
+        "dailyAtNine": "روزانه ساعت ۹ صبح",
+        "weekdaysAtNine": "روزهای هفته ساعت ۹ صبح",
+        "mondayAtNine": "دوشنبه ساعت ۹ صبح",
+        "everyThirtyMinutes": "هر ۳۰ دقیقه"
+      },
+      "warmUpOptions": {
+        "none": "بدون گرم کردن",
+        "fiveMinutes": "۵ دقیقه",
+        "tenMinutes": "۱۰ دقیقه",
+        "fifteenMinutes": "۱۵ دقیقه",
+        "thirtyMinutes": "۳۰ دقیقه"
+      }
+    },
+    "empty": {
+      "title": "هنوز هیچ زمان‌بندی‌ای نیست",
+      "description": "یک زمان‌بندی ایجاد کنید تا وظایف Claude را به‌طور خودکار طبق یک زمان‌بندی cron اجرا کند."
+    },
+    "title": "زمان‌بندی‌ها",
+    "status": {
+      "active": "فعال",
+      "paused": "متوقف‌شده",
+      "disabled": "غیرفعال"
+    },
+    "runStatus": {
+      "pending": "در انتظار",
+      "warmingUp": "در حال گرم شدن",
+      "warm": "گرم",
+      "running": "در حال اجرا",
+      "completed": "تکمیل‌شده",
+      "failed": "ناموفق",
+      "interrupted": "قطع‌شده",
+      "cancelled": "لغوشده"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "مدل‌های محلی OpenCode می‌توانند به‌جای محدودیت‌های فقط-پرامپت از یک بودجه بافت OpenCode استفاده کنند.",
+    "description": "محدودیت‌های متناظر را به پیکربندی OpenCode برای ارائه‌دهنده و مدلی که این هم‌تیمی استفاده می‌کند اضافه کنید. این به OpenCode کمک می‌کند پیش از سرریز پنجره بافت مدل‌های محلی، فشرده‌سازی و هرس کند.",
+    "replacePrefix": "جایگزین کنید",
+    "and": "و",
+    "replaceSuffix": "با شناسه‌های ارائه‌دهنده و مدل از راه‌اندازی OpenCode شما. دستورالعمل‌های پرامپت مانند",
+    "promptInstructionsSuffix": "ضعیف‌تر هستند زیرا درخواست پیش از خواندن آن‌ها توسط مدل سرهم می‌شود.",
+    "providerLimits": "محدودیت‌های ارائه‌دهنده",
+    "compactionConfig": "پیکربندی فشرده‌سازی"
+  },
+  "sessions": {
+    "noProjectPath": "هیچ مسیر پروژه‌ای پیوند داده نشده است",
+    "provisioningHint": "نشست‌ها پس از تأمین تیم ظاهر می‌شوند",
+    "projectNotFound": "پروژه یافت نشد",
+    "loading": "در حال بارگذاری نشست‌ها...",
+    "empty": "هیچ نشستی یافت نشد",
+    "showAllSessions": "نمایش برای همه نشست‌ها",
+    "lead": "سرتیم",
+    "removeFilter": "حذف فیلتر",
+    "filterBySession": "فیلتر بر اساس این نشست",
+    "openSession": "باز کردن نشست",
+    "title": "نشست‌ها"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "لغو",
+    "moreWarningsHidden": "{{count}} هشدار بیشتر پنهان شد",
+    "diagnostics": "عیب‌یابی",
+    "liveOutput": "خروجی زنده",
+    "diagnosticsCopied": "عیب‌یابی کپی شد",
+    "copyDiagnostics": "کپی عیب‌یابی",
+    "copied": "کپی شد",
+    "noOutput": "هنوز هیچ خروجی‌ای ضبط نشده است.",
+    "cliLogs": "گزارش‌های CLI",
+    "steps": {
+      "starting": "در حال شروع",
+      "configuring": "راه‌اندازی تیم",
+      "assembling": "در حال پیوستن اعضا",
+      "finalizing": "در حال نهایی کردن"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "در حال بررسی...",
+        "ready": "موفق",
+        "notes": "موفق (یادداشت‌ها)",
+        "failed": "خطا",
+        "pending": "در انتظار"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "باینری CLI مفقود است",
+        "openCodeRuntimeMissing": "زمان اجرای OpenCode مفقود است",
+        "openCodeWindowsAccessBlocked": "دسترسی OpenCode در Windows مسدود شد",
+        "openCodeNoOutput": "بررسی زمان اجرای OpenCode هیچ خروجی‌ای برنگرداند",
+        "openCodeMcpUnreachable": "MCP برنامه OpenCode غیرقابل دسترس",
+        "workingDirectoryMissing": "دایرکتوری کاری مفقود است",
+        "cliBinaryCouldNotStart": "باینری CLI نتوانست شروع شود",
+        "cliPreflightIncomplete": "بررسی اولیه CLI تکمیل نشد",
+        "authenticationRequired": "احراز هویت لازم است",
+        "runtimeProviderNotConfigured": "ارائه‌دهنده زمان اجرا پیکربندی نشده است",
+        "cliPreflightFailed": "بررسی اولیه CLI ناموفق بود",
+        "selectedModelCompatible": "مدل انتخاب‌شده سازگار است",
+        "selectedModelCompatibilityPending": "سازگاری مدل انتخاب‌شده در انتظار است",
+        "selectedModelAvailable": "مدل انتخاب‌شده در دسترس است",
+        "selectedModelVerified": "مدل انتخاب‌شده تأیید شد",
+        "selectedModelUnavailable": "مدل انتخاب‌شده در دسترس نیست",
+        "selectedModelTimedOut": "تأیید مدل انتخاب‌شده زمان‌بر شد و منقضی شد",
+        "selectedModelCheckFailed": "بررسی مدل انتخاب‌شده ناموفق بود",
+        "selectedModelDeferred": "تأیید مدل انتخاب‌شده به تعویق افتاد",
+        "selectedModelPingNotConfirmed": "ping مدل انتخاب‌شده تأیید نشد",
+        "readyWithNotes": "آماده همراه با یادداشت‌ها",
+        "needsAttention": "نیازمند توجه"
+      },
+      "modelChecksSummary": "بررسی‌های مدل انتخاب‌شده - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} مدل در دسترس نیست",
+        "unavailable_one": "{{count}} مدل در دسترس نیست",
+        "unavailable_other": "{{count}} مدل در دسترس نیستند",
+        "checkFailed": "بررسی {{count}} مدل ناموفق بود",
+        "checkFailed_one": "بررسی {{count}} مدل ناموفق بود",
+        "checkFailed_other": "بررسی {{count}} مدل ناموفق بود",
+        "timedOut": "{{count}} مدل منقضی شد",
+        "timedOut_one": "{{count}} مدل منقضی شد",
+        "timedOut_other": "{{count}} مدل منقضی شدند",
+        "deferred": "{{count}} تأیید به تعویق افتاد",
+        "deferred_one": "{{count}} تأیید به تعویق افتاد",
+        "deferred_other": "{{count}} تأیید به تعویق افتاد",
+        "pingNotConfirmed": "{{count}} ping تأیید نشد",
+        "pingNotConfirmed_one": "{{count}} ping تأیید نشد",
+        "pingNotConfirmed_other": "{{count}} ping تأیید نشد",
+        "compatibilityPending": "{{count}} سازگار، تأیید عمیق در انتظار",
+        "compatibilityPending_one": "{{count}} سازگار، تأیید عمیق در انتظار",
+        "compatibilityPending_other": "{{count}} سازگار، تأیید عمیق در انتظار",
+        "compatible": "{{count}} سازگار",
+        "compatible_one": "{{count}} سازگار",
+        "compatible_other": "{{count}} سازگار",
+        "checking": "{{count}} در حال بررسی",
+        "checking_one": "{{count}} در حال بررسی",
+        "checking_other": "{{count}} در حال بررسی",
+        "available": "{{count}} در دسترس",
+        "available_one": "{{count}} در دسترس",
+        "available_other": "{{count}} در دسترس",
+        "verified": "{{count}} تأییدشده",
+        "verified_one": "{{count}} تأییدشده",
+        "verified_other": "{{count}} تأییدشده",
+        "unavailable_few": "{{count}} مدل در دسترس نیستند",
+        "unavailable_many": "{{count}} مدل در دسترس نیستند",
+        "checkFailed_few": "بررسی {{count}} مدل ناموفق بود",
+        "checkFailed_many": "بررسی {{count}} مدل ناموفق بود",
+        "timedOut_few": "{{count}} مدل منقضی شدند",
+        "timedOut_many": "{{count}} مدل منقضی شدند",
+        "deferred_few": "{{count}} تأیید به تعویق افتاد",
+        "deferred_many": "{{count}} تأیید به تعویق افتاد",
+        "pingNotConfirmed_few": "{{count}} ping تأیید نشد",
+        "pingNotConfirmed_many": "{{count}} ping تأیید نشد",
+        "compatibilityPending_few": "{{count}} سازگار، تأیید عمیق در انتظار",
+        "compatibilityPending_many": "{{count}} سازگار، تأیید عمیق در انتظار",
+        "compatible_few": "{{count}} سازگار",
+        "compatible_many": "{{count}} سازگار",
+        "checking_few": "{{count}} در حال بررسی",
+        "checking_many": "{{count}} در حال بررسی",
+        "available_few": "{{count}} در دسترس",
+        "available_many": "{{count}} در دسترس",
+        "verified_few": "{{count}} تأییدشده",
+        "verified_many": "{{count}} تأییدشده"
+      },
+      "openProviderSettings": "باز کردن تنظیمات {{provider}}",
+      "copied": "کپی شد",
+      "copyDiagnostics": "کپی عیب‌یابی",
+      "deepVerificationPending": "تأیید عمیق هنوز در حال اجرا است. مدل‌های رایگان OpenCode ممکن است حدود ۲۰ ثانیه طول بکشند.",
+      "progress": {
+        "checkingSelectedProviders": "در حال بررسی موازی ارائه‌دهندگان انتخاب‌شده...",
+        "checkingProvider": "در حال بررسی ارائه‌دهنده {{provider}}...",
+        "checkingProviders": "در حال بررسی ارائه‌دهندگان {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "مجوزهای پوشه را اصلاح کنید یا پروژه را به پوشه‌ای قابل نوشتن توسط کاربر منتقل کنید. اجرا به‌عنوان مدیر فقط یک راه‌حل موقت است.",
+        "openCodeBridgeNoOutput": "برنامه و زمان اجرای OpenCode را مجدداً راه‌اندازی کنید، سپس دوباره تلاش کنید. اگر تکرار شد، عیب‌یابی را کپی کنید.",
+        "workingDirectoryMissing": "یک دایرکتوری کاری موجود انتخاب کنید، سپس این گفت‌وگو را دوباره باز کنید.",
+        "authenticationRequired": "ارائه‌دهنده موردنیاز را در Claude CLI احراز هویت کنید، سپس این گفت‌وگو را دوباره باز کنید.",
+        "runtimeProviderNotConfigured": "زمان اجرای ارائه‌دهنده انتخاب‌شده را پیکربندی کنید، سپس این گفت‌وگو را دوباره باز کنید.",
+        "openCodeRuntimeMissing": "زمان اجرای OpenCode را از کارت وضعیت ارائه‌دهنده نصب یا دوباره تلاش کنید، سپس این گفت‌وگو را دوباره باز کنید.",
+        "openCodeAppMcpUnreachable": "برای تازه‌سازی پل MCP برنامه OpenCode، راه‌اندازی را دوباره تلاش کنید. اگر تکرار شد، برنامه و زمان اجرای OpenCode را مجدداً راه‌اندازی کنید.",
+        "cliBinaryMissing": "مطمئن شوید باینری محلی Claude CLI وجود دارد و می‌تواند شروع شود، سپس این گفت‌وگو را دوباره باز کنید.",
+        "default": "مشکل بالا را حل کنید، سپس این گفت‌وگو را دوباره باز کنید.",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI را به‌عنوان مدیر اجرا کنید، سپس راه‌اندازی را دوباره تلاش کنید."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} هم‌تیمی در انتظار تأیید مجوز",
+      "nameListWithMore": "{{names}}، +{{count}} بیشتر",
+      "waitingForOpenCode": "در انتظار OpenCode: {{names}}",
+      "bootstrapStalled": "راه‌اندازی اولیه متوقف شد: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}؛ در انتظار OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "راه‌اندازی اولیه متوقف شد",
+        "shellOnly": "فقط پوسته",
+        "waitingForBootstrap": "در انتظار راه‌اندازی اولیه",
+        "bootstrapUnconfirmed": "راه‌اندازی اولیه تأییدنشده",
+        "awaitingPermission": "در انتظار مجوز",
+        "waitingForRuntime": "در انتظار زمان اجرا",
+        "shellOnlyLower": "فقط پوسته",
+        "waitingForBootstrapLower": "در انتظار راه‌اندازی اولیه",
+        "bootstrapUnconfirmedLower": "راه‌اندازی اولیه تأییدنشده",
+        "awaitingPermissionLower": "در انتظار مجوز",
+        "waitingForRuntimeLower": "در انتظار زمان اجرا"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} در شروع ناموفق بود",
+        "teammatesFailedToStart": "{{count}} هم‌تیمی در شروع ناموفق بودند",
+        "teammatesFailedRatio": "{{count}}/{{total}} هم‌تیمی در شروع ناموفق بودند"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} برای این راه‌اندازی رد شد",
+        "memberSkippedWithReason": "{{name}} برای این راه‌اندازی رد شد - {{reason}}",
+        "memberSkippedCompact": "{{name}} رد شد",
+        "teammatesSkipped": "{{count}} هم‌تیمی رد شدند",
+        "teammatesSkippedList": "هم‌تیمی‌های ردشده: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} هم‌تیمی برای این راه‌اندازی رد شدند"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} هم‌تیمی همچنان در حال پیوستن",
+        "teammatesStillJoining_one": "{{count}} هم‌تیمی همچنان در حال پیوستن",
+        "teammatesStillJoining_few": "{{count}} هم‌تیمی همچنان در حال پیوستن",
+        "teammatesStillJoining_many": "{{count}} هم‌تیمی همچنان در حال پیوستن",
+        "teammatesStillJoining_other": "{{count}} هم‌تیمی همچنان در حال پیوستن",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} هم‌تیمی تأیید شدند"
+      },
+      "ready": {
+        "leadOnline": "سرتیم آنلاین",
+        "allTeammatesJoined": "همه {{count}} هم‌تیمی پیوستند",
+        "teamProvisionedLeadOnline": "تیم تأمین شد - سرتیم آنلاین",
+        "teamProvisionedAllJoined": "تیم تأمین شد - همه {{count}} هم‌تیمی پیوستند",
+        "teamProvisionedStillJoining": "تیم تأمین شد - هم‌تیمی‌ها همچنان در حال پیوستن هستند",
+        "launchFinishedWithErrors": "راه‌اندازی با خطا به پایان رسید - {{count}}/{{total}} هم‌تیمی در شروع ناموفق بودند",
+        "launchContinuedSkipped": "راه‌اندازی ادامه یافت - {{count}}/{{total}} هم‌تیمی رد شدند",
+        "teamLaunchedLeadOnline": "تیم راه‌اندازی شد - سرتیم آنلاین",
+        "teamLaunchedAllJoined": "تیم راه‌اندازی شد - همه {{count}} هم‌تیمی پیوستند"
+      },
+      "panel": {
+        "launchFailed": "راه‌اندازی ناموفق بود",
+        "launchDetails": "جزئیات راه‌اندازی",
+        "launchFinishedWithErrors": "راه‌اندازی با خطا به پایان رسید",
+        "launchContinuedSkipped": "راه‌اندازی با هم‌تیمی‌های ردشده ادامه یافت",
+        "coreTeamReady": "تیم اصلی آماده است",
+        "finishingLaunch": "در حال اتمام راه‌اندازی",
+        "teamLaunched": "تیم راه‌اندازی شد",
+        "launchingTeam": "در حال راه‌اندازی تیم"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "وضعیت زنده زمان اجرا",
+    "description": "ضربان قلب و وضعیت راه‌اندازی فقط برای نمایش. کنترل‌های فرایند در پایین باقی می‌مانند.",
+    "source": "منبع: {{source}}",
+    "lane": "لاین {{lane}}",
+    "diagnosticOnly": "فقط عیب‌یابی",
+    "updated": "به‌روزشده {{value}}",
+    "states": {
+      "running": "در حال اجرا",
+      "starting": "در حال شروع",
+      "waiting": "در انتظار",
+      "degraded": "نیازمند توجه",
+      "stopped": "متوقف‌شده",
+      "unknown": "نامشخص"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "گزارش‌های دقیق وظیفه",
+      "loading": "در حال بارگذاری گزارش‌های دقیق وظیفه...",
+      "description": "برش‌های دقیق رونوشت که با همان مؤلفه‌های گزارش اجرای استفاده‌شده در گزارش‌ها رندر شده‌اند.",
+      "emptyTitle": "هنوز هیچ گزارش دقیق وظیفه‌ای نیست",
+      "emptyDescription": "بسته‌های دقیق رونوشت زمانی اینجا ظاهر می‌شوند که فراداده رونوشت صریح پیوندخورده به وظیفه در دسترس باشد.",
+      "summaryOnly": "فقط خلاصه"
+    },
+    "executionSessions": {
+      "title": "نشست‌های اجرا",
+      "online": "آنلاین",
+      "updating": "در حال به‌روزرسانی...",
+      "description": "مرور و پیش‌نمایش رونوشت نشست‌محور قدیمی."
+    },
+    "stream": {
+      "title": "جریان گزارش وظیفه"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "لغو وظیفه {{taskId}}",
+      "cancel": "لغو",
+      "moveBackToTodoConfirm": "این وظیفه به انجام‌دادنی بازگردانده شده و به تیم اطلاع داده شود؟",
+      "confirm": "تأیید",
+      "keep": "نگه داشتن",
+      "changesNeedAttention": "تغییرات نیازمند توجه هستند",
+      "changes": "تغییرات",
+      "deleteTask": "حذف وظیفه",
+      "taskLogsActive": "گزارش‌های وظیفه فعال",
+      "newTaskLogsArriving": "گزارش‌های جدید وظیفه در حال رسیدن",
+      "awaitingUser": "در انتظار کاربر",
+      "awaitingLead": "در انتظار سرتیم",
+      "blockedBy": "مسدودشده توسط",
+      "blocks": "مسدود می‌کند",
+      "start": "شروع",
+      "complete": "تکمیل",
+      "approve": "تأیید",
+      "requestReview": "درخواست بازبینی",
+      "manualReview": "بازبینی دستی",
+      "requestChanges": "درخواست تغییرات"
+    },
+    "filter": {
+      "title": "فیلتر وظایف",
+      "session": "نشست",
+      "allSessions": "همه نشست‌ها",
+      "teammate": "هم‌تیمی",
+      "unassigned": "(بدون تخصیص)",
+      "column": "ستون",
+      "clearAll": "پاک کردن همه"
+    },
+    "board": {
+      "addTask": "افزودن وظیفه",
+      "noTasks": "هیچ وظیفه‌ای نیست",
+      "showMore": "نمایش {{count}} مورد بیشتر",
+      "hiddenCount": "{{count}} پنهان",
+      "trash": "سطل زباله",
+      "gridView": "نمای شبکه‌ای",
+      "columnsView": "نمای ستونی"
+    },
+    "trash": {
+      "title": "سطل زباله",
+      "empty": "هیچ وظیفه حذف‌شده‌ای نیست",
+      "subject": "موضوع",
+      "owner": "مالک",
+      "deleted": "حذف‌شده",
+      "unassigned": "بدون تخصیص",
+      "restoreTask": "بازیابی وظیفه",
+      "restore": "بازیابی",
+      "close": "بستن"
+    },
+    "sort": {
+      "title": "مرتب‌سازی وظایف",
+      "sortBy": "مرتب‌سازی بر اساس",
+      "reset": "بازنشانی",
+      "options": {
+        "updatedAt": {
+          "label": "آخرین به‌روزرسانی",
+          "description": "اخیراً به‌روزشده‌ها اول"
+        },
+        "createdAt": {
+          "label": "ایجادشده",
+          "description": "جدیدترین اول"
+        },
+        "owner": {
+          "label": "مالک",
+          "description": "بر اساس حروف الفبای تخصیص‌گیرنده"
+        },
+        "manual": {
+          "label": "دستی",
+          "description": "ترتیب کشیدن و رها کردن"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "پاک کردن جستجو",
+      "tasks": "وظایف",
+      "createdAgo": "ایجادشده {{time}}",
+      "updatedAgo": "به‌روزشده {{time}}",
+      "placeholder": "جستجوی وظایف... (#شناسه یا متن)"
+    },
+    "grid": {
+      "addTask": "افزودن وظیفه",
+      "noTasks": "هیچ وظیفه‌ای نیست"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "انجام‌دادنی",
+      "inProgress": "در حال انجام",
+      "review": "بازبینی",
+      "done": "انجام‌شده",
+      "approved": "تأییدشده"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "در حال بررسی وضعیت مخزن Git برای worktreeهای هم‌تیمی...",
+    "ready": "worktreeهای Git آماده‌اند.",
+    "readyOnBranch": "worktreeهای Git روی شاخه {{branch}} آماده‌اند.",
+    "needsSetup": "جداسازی worktree نیازمند راه‌اندازی Git است",
+    "initialCommitNotice": "اقدام کامیت اولیه همه فایل‌های فعلی را با پیام مرحله‌بندی و کامیت می‌کند",
+    "initializeRepository": "مقداردهی اولیه مخزن Git",
+    "createInitialCommit": "ایجاد کامیت اولیه",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "تنظیمات",
+    "autoAllowAllTools": "اجازه خودکار همه ابزارها",
+    "autoAllowFileEdits": "اجازه خودکار ویرایش فایل‌ها (Edit، Write، NotebookEdit)",
+    "autoAllowSafeCommands": "اجازه خودکار فرمان‌های ایمن (git، pnpm، npm، ls...)",
+    "onTimeout": "هنگام انقضای زمان:",
+    "after": "پس از",
+    "secondsShort": "ثانیه",
+    "timeoutActions": {
+      "wait": "همیشه منتظر بمان",
+      "allow": "اجازه",
+      "deny": "رد"
+    },
+    "submit": "ثبت",
+    "allow": "اجازه",
+    "deny": "رد",
+    "allowAll": "اجازه همه",
+    "pendingCount": "{{count}} در انتظار",
+    "autoActionIn": "{{action}} خودکار در {{time}}",
+    "diff": {
+      "previewChanges": "پیش‌نمایش تغییرات",
+      "readingFile": "در حال خواندن فایل...",
+      "binaryFile": "فایل باینری - قابل پیش‌نمایش نیست",
+      "truncated": "فایل در ۲ مگابایت کوتاه شد - تفاوت ممکن است ناقص باشد",
+      "newFile": "فایل جدید"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "همگام‌سازی کار عضو",
+      "actionableItems": "موارد قابل اقدام",
+      "fingerprint": "اثر انگشت",
+      "report": "گزارش",
+      "none": "هیچ‌کدام",
+      "shadowWouldNudge": "سایه تلنگر می‌زد",
+      "yes": "بله",
+      "no": "خیر",
+      "moreActionableItems": "{{count}} مورد قابل اقدام بیشتر",
+      "diagnostics": "عیب‌یابی: {{diagnostics}}"
+    },
+    "title": "همگام‌سازی کار عضو",
+    "loadingDiagnostics": "در حال بارگذاری عیب‌یابی همگام‌سازی کار عضو.",
+    "diagnosticsUnavailable": "عیب‌یابی همگام‌سازی کار عضو در دسترس نیست."
+  },
+  "advancedCli": {
+    "title": "پیشرفته",
+    "useWorktree": "استفاده از worktree",
+    "recent": "اخیر",
+    "commandPreview": "پیش‌نمایش فرمان",
+    "customArguments": "آرگومان‌های سفارشی",
+    "validate": "اعتبارسنجی",
+    "validation": {
+      "allFlagsValid": "همه فلگ‌ها معتبر هستند",
+      "unknownFlags": "ناشناخته: {{flags}}",
+      "protectedFlags": "محافظت‌شده: {{flags}}",
+      "failed": "اعتبارسنجی ناموفق بود"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} پیش",
+    "stoppedAgo": "متوقف‌شده {{time}} پیش",
+    "running": "در حال اجرا",
+    "stopped": "متوقف‌شده",
+    "stopProcess": "توقف فرایند (SIGTERM)",
+    "kill": "از بین بردن",
+    "openInBrowser": "باز کردن در مرورگر",
+    "open": "باز کردن",
+    "pid": "PID{{pid}}",
+    "title": "فرایندهای CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "در حال بارگذاری جزئیات فعالیت...",
+    "contextUnavailable": "بافت رونوشت دقیق دیگر برای این فعالیت در دسترس نیست.",
+    "loading": "در حال بارگذاری فعالیت وظیفه...",
+    "lowSignalOnly": "هنوز هیچ فعالیت کلیدی وظیفه یافت نشد. جزئیات اجرای سطح پایین در پایین در جریان گزارش وظیفه در دسترس است.",
+    "empty": "هنوز هیچ فعالیت صریح وظیفه‌ای در رونوشت‌های در دسترس یافت نشد. گزارش‌های نشست قدیمی‌تر یا اکتشافی ممکن است همچنان در پایین در نشست‌های اجرا در دسترس باشند.",
+    "title": "فعالیت وظیفه",
+    "description": "فعالیت کلیدی صریح زمان اجرا که از فراداده رونوشت به این وظیفه پیوند خورده است."
+  },
+  "sendMessage": {
+    "title": "ارسال پیام",
+    "description": "یک پیام مستقیم به یک عضو تیم بفرستید.",
+    "recipientLabel": "گیرنده",
+    "selectMemberPlaceholder": "انتخاب عضو...",
+    "messageLabel": "پیام",
+    "placeholder": "پیام خود را بنویسید... (Enter برای ارسال)",
+    "send": "ارسال",
+    "sending": "در حال ارسال...",
+    "charsLeft": "{{count}} نویسه باقی‌مانده",
+    "saved": "ذخیره شد",
+    "attachments": {
+      "teamOnlineRequired": "تیم باید آنلاین باشد تا فایل پیوست شود",
+      "recipientUnsupported": "فایل‌ها را می‌توان به سرتیم یا هم‌تیمی‌های OpenCode فرستاد",
+      "openCodeOnlineRequired": "تیم باید آنلاین باشد تا فایل برای هم‌تیمی‌های OpenCode پیوست شود",
+      "disabledHint": "پیوست فایل برای سرتیم آنلاین و هم‌تیمی‌های آنلاین OpenCode پشتیبانی می‌شود. پیوست‌ها را حذف کنید یا گیرنده را تغییر دهید.",
+      "attachFiles": "پیوست فایل‌ها (چسباندن یا کشیدن و رها کردن)",
+      "unavailable": "پیوست‌ها در دسترس نیستند"
+    },
+    "quote": {
+      "remove": "حذف نقل‌قول",
+      "replyingTo": "در حال پاسخ به"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "لغو پاسخ",
+    "replyingTo": "در حال پاسخ به",
+    "placeholder": "یک نظر اضافه کنید... (Enter برای ارسال)",
+    "attachFile": "پیوست فایل (یا چسباندن)",
+    "voiceToText": "صدا به متن",
+    "comment": "نظر",
+    "charsLeft": "{{count}} نویسه باقی‌مانده",
+    "saved": "ذخیره شد",
+    "awaitingReplyFrom": "در انتظار پاسخ از",
+    "or": "یا"
+  },
+  "taskAttachments": {
+    "dropImageHere": "تصویر را اینجا رها کنید",
+    "attachImage": "پیوست تصویر",
+    "pasteOrDragDrop": "یا چسباندن / کشیدن و رها کردن",
+    "fromOriginalMessage": "از پیام اصلی",
+    "dropFilesHere": "فایل‌ها را اینجا رها کنید",
+    "loading": "در حال بارگذاری پیوست‌ها..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "تأیید خودکار همه ابزارها",
+    "autonomousModeDescription": "حالت خودمختار: ابزارهای تیم بدون تأیید اجرا می‌شوند. با کد غیرقابل‌اعتماد محتاط باشید.",
+    "manualModeDescription": "حالت دستی: هر فراخوانی ابزار را به‌صورت بلادرنگ تأیید یا رد خواهید کرد."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "اجرا",
+      "process": "فرایند"
+    },
+    "filters": {
+      "all": "همه"
+    },
+    "logs": {
+      "title": "گزارش‌ها",
+      "loading": "در حال بارگذاری جریان گزارش عضو...",
+      "emptyTitle": "هنوز هیچ ورودی جریان گزارشی برای این عضو یافت نشد.",
+      "emptyDescription": "گزارش‌های رونوشت یا زمان اجرای مختص عضو زمانی که در دسترس باشند اینجا ظاهر می‌شوند."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "توصیف کنید چه چیزی باید تغییر کند... (Enter برای ثبت)",
+    "submit": "ثبت",
+    "charsLeft": "{{count}} نویسه باقی‌مانده",
+    "saved": "ذخیره شد",
+    "title": "درخواست تغییرات"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "باز کردن داشبورد",
+      "openTeam": "باز کردن تیم",
+      "cancel": "لغو"
+    },
+    "membersJson": {
+      "hide": "پنهان کردن JSON"
+    },
+    "optional": {
+      "badge": "اختیاری"
+    }
+  },
+  "runningTeams": {
+    "title": "تیم‌های در حال اجرا",
+    "status": {
+      "active": "فعال",
+      "provisioning": "در حال راه‌اندازی",
+      "idle": "در حال اجرا"
+    },
+    "noProject": "هیچ پروژه‌ای نیست"
+  },
+  "layout": {
+    "maxPanesReached": "حداکثر {{count}} پنل رسیده است"
+  },
+  "codexReconnect": {
+    "description": "به نظر می‌رسد نشست Codex شما کهنه است. برای ادامه مجدداً متصل شوید.",
+    "useCode": "استفاده از کد",
+    "generating": "در حال تولید...",
+    "openLogin": "باز کردن ورود",
+    "generateLink": "تولید پیوند"
+  },
+  "effortLevel": {
+    "label": "سطح تلاش (اختیاری)",
+    "maxDescription": "حداکثر، بیشترین زمان استدلال را برای وظایف دشوار به مدل می‌دهد."
+  },
+  "contextLimit": {
+    "limitTo200k": "محدود کردن بافت به ۲۰۰ هزار توکن",
+    "always200k": "(همیشه ۲۰۰ هزار برای این مدل)",
+    "tooltipContent": "راه‌اندازی‌ها را هنگام پشتیبانی درون یک پنجره بافت ۲۰۰ هزار توکنی نگه می‌دارد.",
+    "tooltipTitle": "محدودیت بافت"
+  },
+  "roleSelect": {
+    "noRole": "بدون نقش",
+    "customRole": "نقش سفارشی...",
+    "searchPlaceholder": "جستجوی نقش‌ها...",
+    "empty": "هیچ نقشی یافت نشد.",
+    "reservedRole": "این نقش رزرو شده است",
+    "emptyCustomRole": "نقش نمی‌تواند خالی باشد"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

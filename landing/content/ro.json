@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Tu esti Boss-ul, agentii sunt echipa ta. Ei gestioneaza taskurile singuri, isi trimit mesaje si isi fac code review. Tu te uiti la kanban board si bei cafea."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Echipe de agenti",
+      "description": "Creeaza echipe cu roluri diferite. Agentii lucreaza autonom in paralel, comunica intre ei si colaboreaza intre echipe."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Statusul taskurilor se schimba in timp real pe masura ce agentii lucreaza. Tragi, atribui si revizuiesti totul pe un board vizual."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Diff view pentru fiecare task cu accept, reject si comentarii. Editor de cod integrat cu suport Git."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Comunicare intre echipe",
+      "description": "Agentii isi trimit mesaje in aceeasi echipa si intre echipe. Mesaje directe, comentarii pe taskuri si actiuni rapide."
+    },
+    {
+      "id": "soloMode",
+      "title": "Mod solo",
+      "description": "Incepe cu un singur agent care isi gestioneaza taskurile. Extinde la o echipa completa cand ai nevoie de mai multa putere."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Procese live",
+      "description": "Vezi agentii care ruleaza, deschizi URL-uri in browser si monitorizezi token usage si session context in timp real."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Ce este Agent Teams?",
+      "answer": "O aplicatie desktop pentru orchestrarea echipelor de agenti AI cu propriul nostru strat local de coordonare. Agentii au roluri, lucreaza autonom, colaboreaza prin kanban si pot rula pe Anthropic sau Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Chiar este gratuit?",
+      "answer": "Da. Aplicatia este gratuita si open source. Poti incepe cu un model gratuit fara auth - fara inregistrare, API key sau card. Pentru mai multe modele, conecteaza Claude, Codex, OpenCode/OpenRouter sau alt provider suportat."
+    },
+    {
+      "id": "platforms",
+      "question": "Ce platforme sunt suportate?",
+      "answer": "macOS (Apple Silicon si Intel), Windows si Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Cum functioneaza?",
+      "answer": "Instalezi aplicatia, creezi o echipa, atribui roluri. Agentii incep sa lucreze in paralel. Urmaresti progresul in kanban, revizuiesti diffs si comunici direct cu agentii."
+    },
+    {
+      "id": "privacy",
+      "question": "Codul meu ramane privat?",
+      "answer": "Totul ruleaza local pe masina ta. Nu se trimit date catre servere externe. Codul, conversatiile si activitatea agentilor raman private."
+    },
+    {
+      "id": "requirements",
+      "question": "De ce am nevoie pentru start?",
+      "answer": "Doar instalezi aplicatia - incepi cu modelul gratuit fara auth, apoi conectezi modele provider-backed din UI cand ai nevoie."
+    }
+  ],
+  "download": {
+    "title": "Descarca",
+    "note": "Alege platforma si incepe sa construiesti cu echipe de agenti AI."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Creeaza echipe cu roluri diferite. Agentii lucreaza autonom in paralel, comunica intre ei si colaboreaza intre echipe."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Incepe cu un singur agent care isi gestioneaza taskurile. Extinde la o echipa completa cand ai nevoie de mai multa putere."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Diff view pentru fiecare task cu accept, reject si comentarii. Editor de cod integrat cu suport Git."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Vezi agentii care ruleaza, deschizi URL-uri in browser si monitorizezi token usage si session context in timp real."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Doar instalezi aplicatia - incepi cu modelul gratuit fara auth, apoi conectezi modele provider-backed din UI cand ai nevoie."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agentii isi trimit mesaje in aceeasi echipa si intre echipe. Mesaje directe, comentarii pe taskuri si actiuni rapide."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Gratuit",
+      "price": "$0",
+      "period": "",
+      "description": "Da. Aplicatia este gratuita si open source. Poti incepe cu un model gratuit fara auth - fara inregistrare, API key sau card. Pentru mai multe modele, conecteaza Claude, Codex, OpenCode/OpenRouter sau alt provider suportat.",
+      "features": [
+        "Echipe de agenti",
+        "Kanban board",
+        "Code review",
+        "Comunicare intre echipe",
+        "Mod solo",
+        "Procese live",
+        "Codul meu ramane privat?",
+        "De ce am nevoie pentru start?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

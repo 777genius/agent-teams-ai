@@ -32,22 +32,69 @@ function isDeletedTask(task: Pick<TeamTask, 'status' | 'deletedAt'>): boolean {
   return task.status === 'deleted' || Boolean(task.deletedAt);
 }
 
-function taskMatchesId(task: TeamTask, taskId: string): boolean {
-  const normalized = taskId.trim().replace(/^#/, '');
+interface TaskReferenceIndex {
+  canonical: Map<string, Set<TeamTask>>;
+  display: Map<string, Set<TeamTask>>;
+}
+
+function addTaskReference(
+  index: Map<string, Set<TeamTask>>,
+  reference: string | undefined,
+  task: TeamTask
+): void {
+  const normalized = reference?.trim().replace(/^#/, '');
+  if (!normalized) return;
+  const matches = index.get(normalized) ?? new Set<TeamTask>();
+  matches.add(task);
+  index.set(normalized, matches);
+}
+
+function buildTaskReferenceIndex(tasks: TeamTask[]): TaskReferenceIndex {
+  const canonical = new Map<string, Set<TeamTask>>();
+  const display = new Map<string, Set<TeamTask>>();
+  for (const task of tasks) {
+    addTaskReference(canonical, task.id, task);
+    addTaskReference(display, task.displayId, task);
+  }
+  return { canonical, display };
+}
+
+function getTaskReferenceMatches(
+  tasksByReference: TaskReferenceIndex,
+  reference: string
+): ReadonlySet<TeamTask> | null {
+  const normalized = reference.trim().replace(/^#/, '');
   return (
-    task.id === taskId ||
-    task.id === normalized ||
-    task.displayId === taskId ||
-    task.displayId === normalized ||
-    task.displayId === `#${normalized}`
+    tasksByReference.canonical.get(normalized) ?? tasksByReference.display.get(normalized) ?? null
   );
 }
 
-function taskReferenceKeys(task: Pick<TeamTask, 'id' | 'displayId'>): string[] {
-  const keys = [task.id, task.displayId]
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value));
-  return [...new Set(keys.flatMap((value) => [value, value.replace(/^#/, '')]))];
+function taskReferenceIncludesTask(
+  tasksByReference: TaskReferenceIndex,
+  reference: string,
+  task: TeamTask
+): boolean {
+  return getTaskReferenceMatches(tasksByReference, reference)?.has(task) === true;
+}
+
+function taskReferenceIsMissingOrDeleted(
+  tasksByReference: TaskReferenceIndex,
+  reference: string
+): boolean {
+  const matches = getTaskReferenceMatches(tasksByReference, reference);
+  if (!matches || matches.size === 0) {
+    return true;
+  }
+  return [...matches].every(isDeletedTask);
+}
+
+function findTasksByReference(tasksByReference: TaskReferenceIndex, reference: string): TeamTask[] {
+  const matches = getTaskReferenceMatches(tasksByReference, reference);
+  return matches ? [...matches] : [];
+}
+
+function normalizedTaskReferences(values: readonly string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))];
 }
 
 function findLeadMemberName(activeMembers: string[]): string | null {
@@ -120,14 +167,23 @@ export class MemberWorkSyncTaskImpactResolver {
       }
     };
 
-    const task = tasks.find((candidate) => taskMatchesId(candidate, taskId));
-    if (!task) {
+    const tasksByReference = buildTaskReferenceIndex(tasks);
+    const matchingTasks = findTasksByReference(tasksByReference, taskId);
+    if (matchingTasks.length === 0) {
       return {
         memberNames: [],
         fallbackTeamWide: true,
         diagnostics: ['task_not_found'],
       };
     }
+    if (matchingTasks.length > 1) {
+      return {
+        memberNames: [],
+        fallbackTeamWide: true,
+        diagnostics: ['task_reference_ambiguous'],
+      };
+    }
+    const task = matchingTasks[0];
 
     addMember(task.owner);
 
@@ -174,14 +230,8 @@ export class MemberWorkSyncTaskImpactResolver {
       addLead();
     }
 
-    const tasksByReference = new Map(
-      tasks.flatMap((candidate) =>
-        taskReferenceKeys(candidate).map((key) => [key, candidate] as const)
-      )
-    );
-    const brokenDependencies = (task.blockedBy ?? []).filter((dependencyId) => {
-      const dependency = tasksByReference.get(dependencyId);
-      return !dependency || isDeletedTask(dependency);
+    const brokenDependencies = normalizedTaskReferences(task.blockedBy).filter((dependencyId) => {
+      return taskReferenceIsMissingOrDeleted(tasksByReference, dependencyId);
     });
     if (brokenDependencies.length > 0) {
       addLead();
@@ -200,8 +250,8 @@ export class MemberWorkSyncTaskImpactResolver {
         continue;
       }
       if (
-        (candidate.blockedBy ?? []).some(
-          (dependencyId) => tasksByReference.get(dependencyId) === task
+        normalizedTaskReferences(candidate.blockedBy).some((dependencyId) =>
+          taskReferenceIncludesTask(tasksByReference, dependencyId, task)
         )
       ) {
         addMember(candidate.owner);

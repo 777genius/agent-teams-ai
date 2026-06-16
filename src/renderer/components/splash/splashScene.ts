@@ -72,6 +72,8 @@ const TEAM_MEMBER_OFFSETS = [0, 4, 7] as const;
 const TEAM_LABELS = ['Marketing', 'Researchers', 'Coding'] as const;
 const MAX_DPR = 2;
 const SPLASH_SCENE_FRAME_INTERVAL_MS = 1000 / 30;
+const SPLASH_FALLBACK_AVATAR_URL = PARTICIPANT_AVATAR_URLS[0];
+const SPLASH_AVATAR_URLS = getSplashAvatarUrls();
 const avatarCache = new Map<string, HTMLImageElement>();
 const avatarLoading = new Map<string, Promise<HTMLImageElement | null>>();
 
@@ -84,7 +86,7 @@ export function startSplashScene(
     return existingScene;
   }
 
-  const ready = preloadAvatarImages();
+  const avatarsReady = preloadAvatarImages();
   const previousCanvas = splash.querySelector<HTMLCanvasElement>('#splash-enhanced-canvas');
   previousCanvas?.remove();
 
@@ -99,7 +101,7 @@ export function startSplashScene(
       stop: () => {
         canvas.remove();
       },
-      ready,
+      ready: avatarsReady,
     };
     return emptyHandle;
   }
@@ -138,6 +140,13 @@ export function startSplashScene(
     state.particles = createDepthParticles(width, height);
   };
 
+  const renderFrame = (now: number): void => {
+    resize();
+    const time = (now - state.startedAt) / 1000;
+    drawScene(ctx, state.width, state.height, time, state.particles, reducedMotion);
+    state.lastRenderedAt = now;
+  };
+
   const render = (now: number): void => {
     if (!state.running) return;
 
@@ -146,10 +155,7 @@ export function startSplashScene(
       state.lastRenderedAt === 0 ||
       now - state.lastRenderedAt >= SPLASH_SCENE_FRAME_INTERVAL_MS
     ) {
-      resize();
-      const time = (now - state.startedAt) / 1000;
-      drawScene(ctx, state.width, state.height, time, state.particles, reducedMotion);
-      state.lastRenderedAt = now;
+      renderFrame(now);
     }
 
     if (!reducedMotion) {
@@ -161,6 +167,13 @@ export function startSplashScene(
   window.addEventListener('resize', onResize);
   resize();
   render(performance.now());
+
+  const ready = avatarsReady.then(() => {
+    if (state.running) {
+      renderFrame(performance.now());
+      canvas.classList.add('splash-canvas-ready');
+    }
+  });
 
   const handle: SplashSceneHandle = {
     stop: () => {
@@ -301,7 +314,7 @@ function buildTeams(
         receivePulse: 0,
         avatarUrl:
           PARTICIPANT_AVATAR_URLS[(TEAM_MEMBER_OFFSETS[teamIndex] ?? 0) + robotIndex] ??
-          PARTICIPANT_AVATAR_URLS[0],
+          SPLASH_FALLBACK_AVATAR_URL,
         x: centerWithDrift.x + Math.cos(orbit) * orbitRadius,
         y: centerWithDrift.y + Math.sin(orbit) * orbitRadius,
       };
@@ -769,8 +782,22 @@ function getAvatarImage(url: string): HTMLImageElement | null {
   return null;
 }
 
+function getSplashAvatarUrls(): readonly string[] {
+  const urls = new Set<string>();
+
+  for (let teamIndex = 0; teamIndex < TEAM_MEMBER_COUNTS.length; teamIndex++) {
+    const memberCount = TEAM_MEMBER_COUNTS[teamIndex] ?? 0;
+    const offset = TEAM_MEMBER_OFFSETS[teamIndex] ?? 0;
+    for (let robotIndex = 0; robotIndex < memberCount; robotIndex++) {
+      urls.add(PARTICIPANT_AVATAR_URLS[offset + robotIndex] ?? SPLASH_FALLBACK_AVATAR_URL);
+    }
+  }
+
+  return Array.from(urls);
+}
+
 function preloadAvatarImages(): Promise<void> {
-  return Promise.allSettled(PARTICIPANT_AVATAR_URLS.map((url) => loadAvatarImage(url))).then(
+  return Promise.allSettled(SPLASH_AVATAR_URLS.map((url) => loadAvatarImage(url))).then(
     () => undefined
   );
 }

@@ -7,7 +7,16 @@
     "download": "ডাউনলোড করা হয়েছে",
     "pricing": "মুক্ত",
     "faq": "FAQ",
-    "viewOnGithub": "প্রদর্শন GitHub"
+    "viewOnGithub": "প্রদর্শন GitHub",
+    "openMenu": "মেনু খুলুন",
+    "closeMenu": "মেনু বন্ধ করুন",
+    "short": {
+      "screenshots": "স্ক্রিন",
+      "docs": "Docs",
+      "download": "ডাউনলোড",
+      "comparison": "তুলনা",
+      "pricing": "ফ্রি"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "উৎস খুলুন"
     },
     "watchDemo": "নমুনা",
-    "videoUnavailable": "ভিডিও উপলব্ধ নয়"
+    "videoUnavailable": "ভিডিও উপলব্ধ নয়",
+    "supportedProviders": "সমর্থিত AI providers",
+    "slogan": "খুব কম কাজ করে অনেক কিছু করুন",
+    "platformDefault": "আপনার platform-এর জন্য",
+    "guidesSetup": "Guides এবং setup",
+    "videoFrameLabel": "Agent Teams demo দেখুন",
+    "commandFeed": "Team command feed",
+    "liveDemo": "Live demo",
+    "demoVideoTitle": "Agent Teams demo video",
+    "demoTitle": "Agent Teams demo",
+    "demo": {
+      "ariaLabel": "Agent team demo",
+      "live": "LIVE",
+      "waiting": "Tasks এর অপেক্ষা...",
+      "activity": {
+        "authMiddleware": "Auth middleware implement হচ্ছে...",
+        "unitTests": "API এর জন্য unit tests লেখা হচ্ছে...",
+        "reviewPr": "PR #42 changes review হচ্ছে...",
+        "ciPipeline": "CI/CD pipeline setup হচ্ছে...",
+        "refactorDatabase": "Database layer refactor হচ্ছে..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit tests",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "IN PROGRESS",
+        "review": "REVIEW",
+        "done": "DONE"
+      }
+    }
   },
   "download": {
     "title": "ডাউনলোড করা হয়েছে",
     "detected": "সনাক্ত",
     "systemRequirements": "সিস্টেম প্রয়োজন",
-    "version": "সংস্করণ {version}"
+    "version": "সংস্করণ {version}",
+    "readyToStart": "শুরু করার জন্য প্রস্তুত!"
   },
   "theme": {
     "dark": "কালো",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "অ্যাপটির বাস্তব স্ক্রিনশট —কানবান বোর্ড, কোড পর্যালোচনা, এজেন্ট দল এবং আরও অনেক কিছু ।"
   },
   "common": {
-    "learnMore": "অারো জানুন"
+    "learnMore": "অারো জানুন",
+    "statusLabel": "স্ট্যাটাস:",
+    "previous": "আগের",
+    "next": "পরের"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "আমি অপেক্ষা করছি",
     "links": {
       "github": "GitHub",
+      "author": "লেখক",
       "docs": "নথিপত্র"
     }
   },

@@ -589,7 +589,11 @@
     "actions": {
       "add": "Ajouter API Clé",
       "addFirst": "Ajouter votre première clé",
-      "edit": "Modifier"
+      "edit": "Modifier",
+      "copied": "Copié!",
+      "copyEnvVarName": "Copier le nom de variable env",
+      "confirmDelete": "Cliquez encore pour confirmer",
+      "delete": "Supprimer"
     },
     "empty": {
       "title": "Numéro API clés enregistrées",

@@ -52,10 +52,7 @@ const result = spawnSyncWithWindowsShell(
     'exec',
     'vitest',
     'run',
-    '--maxWorkers',
-    '1',
-    '--minWorkers',
-    '1',
+    '--maxWorkers=1',
     'test/main/services/team/OpenCodeSemanticModelGauntlet.live.test.ts',
   ],
   {

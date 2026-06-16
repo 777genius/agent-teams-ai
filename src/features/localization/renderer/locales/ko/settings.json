@@ -46,7 +46,8 @@
       "copiedShort": "뚱 베어",
       "copy": "복사 진단",
       "hints": "뚱 베어",
-      "likelyCause": "같은 원인:"
+      "likelyCause": "같은 원인:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI를 관리자 권한으로 실행하세요"
     },
     "models": {
       "alreadyDefault": "이미 선택한 OpenCode 기본값입니다.",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "검색 모델",
       "selectProjectBeforeTesting": "모델을 테스트하기 전에 프로젝트 컨텍스트를 선택하십시오.",
       "selectProjectBeforeTestingDefaults": "OpenCode 기본값을 테스트하거나 저장하기 전에 프로젝트 컨텍스트를 선택하십시오.",
-      "useInTeamPicker": "팀 피커에서 사용"
+      "useInTeamPicker": "팀 피커에서 사용",
+      "testInProgress": "모델 테스트가 이미 실행 중입니다.",
+      "validationContextRequired": "Test와 Set default를 활성화하려면 위에서 validation context를 선택하세요. team picker 저장은 새 팀용 route만 저장합니다.",
+      "actionsUnavailable": "작업을 일시적으로 사용할 수 없습니다.",
+      "defaultSaveInProgress": "OpenCode default를 저장하는 중입니다.",
+      "routeUnavailableAuth": "이 provider는 이 모델을 사용하기 전에 인증이 필요합니다.",
+      "routeUnavailableFailed": "이 model route는 마지막 execution test에 실패했습니다.",
+      "routeUnavailableGeneric": "이 model route는 지금 사용할 수 없습니다.",
+      "routeUnavailableUnknown": "이 모델은 현재 OpenCode default이지만 아직 live catalog에서 사용할 수 없습니다."
     },
     "providers": {
       "catalog": "OpenCode 공급자 카탈로그",
@@ -108,7 +117,8 @@
       "needsTest": "자주 묻는 질문",
       "failed": "실패한",
       "unknown": "이름 *",
-      "default": "기본 정보"
+      "default": "기본 정보",
+      "knownRoute": "알려진 route"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API 키 구성, 하지만 아직 확인 되지",
         "apiKeyModeMissingCredential": "API 키 모드 선택, 하지만 API 키 구성",
         "connectedVia": "{{method}}를 통해 연결",
-        "unableToVerify": "자주 묻는 질문"
+        "unableToVerify": "자주 묻는 질문",
+        "modelsAvailable": "사용 가능한 모델"
       },
       "mode": {
         "selectedAuth": "선택된 오: {{authMode}}",

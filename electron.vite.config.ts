@@ -10,11 +10,16 @@ import type { Plugin } from 'vite'
 // This avoids pnpm symlink issues with electron-builder's asar packaging.
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
 const prodDeps = Object.keys(pkg.dependencies || {})
+const terminalPlatformLocalRoot = resolveTerminalPlatformLocalRoot()
+const terminalPlatformSdkAliases = createTerminalPlatformSdkAliases()
+const rendererDependencyEsbuildTarget = 'esnext'
 
 // Fastify and its plugins rely on runtime module resolution that breaks when bundled.
 const runtimeExternalDeps = new Set([
   'node-pty',
   'agent-teams-controller',
+  'terminal-platform-node',
+  'ws',
   'fastify',
   '@fastify/cors',
   '@fastify/static',
@@ -73,6 +78,31 @@ function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugi
   ]
 }
 
+function resolveTerminalPlatformLocalRoot(): string | null {
+  const value =
+    process.env.CLAUDE_TERMINAL_PLATFORM_ROOT?.trim() || process.env.TERMINAL_PLATFORM_ROOT?.trim()
+  return value ? resolve(__dirname, value) : null
+}
+
+function createTerminalPlatformSdkAliases(): Record<string, string> {
+  if (!terminalPlatformLocalRoot) return {}
+
+  const sdkPackage = (name: string) =>
+    resolve(terminalPlatformLocalRoot, 'sdk', 'packages', name, 'dist', 'index.js')
+
+  return {
+    '@terminal-platform/design-tokens': sdkPackage('design-tokens'),
+    '@terminal-platform/foundation': sdkPackage('foundation'),
+    '@terminal-platform/runtime-types': sdkPackage('runtime-types'),
+    '@terminal-platform/workspace-adapter-websocket': sdkPackage('workspace-adapter-websocket'),
+    '@terminal-platform/workspace-contracts': sdkPackage('workspace-contracts'),
+    '@terminal-platform/workspace-core': sdkPackage('workspace-core'),
+    '@terminal-platform/workspace-elements': sdkPackage('workspace-elements'),
+    '@terminal-platform/workspace-gateway-node': sdkPackage('workspace-gateway-node'),
+    '@terminal-platform/workspace-react': sdkPackage('workspace-react'),
+  }
+}
+
 export default defineConfig({
   main: {
     plugins: [
@@ -90,7 +120,8 @@ export default defineConfig({
         '@features': resolve(__dirname, 'src/features'),
         '@main': resolve(__dirname, 'src/main'),
         '@shared': resolve(__dirname, 'src/shared'),
-        '@preload': resolve(__dirname, 'src/preload')
+        '@preload': resolve(__dirname, 'src/preload'),
+        ...terminalPlatformSdkAliases
       }
     },
     build: {
@@ -148,8 +179,24 @@ export default defineConfig({
   renderer: {
     cacheDir: resolve(__dirname, 'node_modules/.vite/electron-renderer'),
     optimizeDeps: {
+      // Electron owns the renderer runtime, so dependency prebundling can keep modern syntax.
+      // This avoids esbuild trying to downlevel large ESM deps like Radix/CodeMirror/xterm.
+      esbuildOptions: {
+        target: rendererDependencyEsbuildTarget,
+      },
       include: ['@codemirror/language-data'],
-      exclude: ['@claude-teams/agent-graph']
+      exclude: [
+        '@claude-teams/agent-graph',
+        '@terminal-platform/design-tokens',
+        '@terminal-platform/foundation',
+        '@terminal-platform/runtime-types',
+        '@terminal-platform/workspace-adapter-websocket',
+        '@terminal-platform/workspace-contracts',
+        '@terminal-platform/workspace-core',
+        '@terminal-platform/workspace-elements',
+        '@terminal-platform/workspace-gateway-node',
+        '@terminal-platform/workspace-react',
+      ]
     },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
@@ -166,6 +213,7 @@ export default defineConfig({
           __dirname,
           'src/renderer/vendor/radixComposeRefs.ts'
         ),
+        ...terminalPlatformSdkAliases,
         '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },

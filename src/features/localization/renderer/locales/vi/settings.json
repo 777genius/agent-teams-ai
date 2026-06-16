@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Tùy chọn cho người dùng nâng cao: xuất/nhập cấu hình, đặt lại mặc định và chỉnh sửa cấu hình thô.",
+      "label": "Nâng cao"
+    },
+    "general": {
+      "description": "Tùy chọn cốt lõi của ứng dụng như giao diện, ngôn ngữ, mật độ hiển thị và hành vi khi khởi động.",
+      "label": "Chung"
+    },
+    "infoAriaLabel": "{{label}} là gì?",
+    "notifications": {
+      "description": "Kiểm soát khi nào và bằng cách nào bạn được thông báo về hoạt động của agent, việc hoàn thành tác vụ và lỗi.",
+      "label": "Thông báo"
+    }
+  },
+  "view": {
+    "description": "Quản lý các tùy chọn ứng dụng của bạn",
+    "loading": "Đang tải cài đặt...",
+    "title": "Cài đặt"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Hủy",
+      "test": "Kiểm thử"
+    },
+    "defaults": {
+      "allProjects": "Tất cả dự án",
+      "allProjectsHint": "Kiểm thử sử dụng {{project}}. Mặc định áp dụng trừ khi một dự án có ghi đè riêng.",
+      "loadingContexts": "Đang tải ngữ cảnh...",
+      "projectHint": "Việc lưu chỉ ghi đè {{project}}.",
+      "projectOverrideContext": "Ngữ cảnh ghi đè dự án",
+      "scopeDescriptionAllProjects": "Mặc định cho mọi dự án không có ghi đè OpenCode riêng.",
+      "scopeDescriptionProject": "Chỉ ghi đè dự án đã chọn. Các đội ngũ đang chạy không bị thay đổi.",
+      "selectProjectContext": "Chọn ngữ cảnh dự án",
+      "selectProjectHint": "Chọn một dự án trước khi kiểm thử mô hình cục bộ hoặc lưu mặc định.",
+      "selectValidationContext": "Chọn ngữ cảnh xác thực",
+      "setAllProjectsDefault": "Đặt mặc định cho tất cả dự án",
+      "setProjectDefault": "Đặt mặc định cho dự án",
+      "thisProject": "Dự án này",
+      "title": "Mặc định OpenCode",
+      "validationContext": "Ngữ cảnh xác thực"
+    },
+    "diagnostics": {
+      "copied": "Đã sao chép chẩn đoán",
+      "copiedShort": "Đã sao chép",
+      "copy": "Sao chép chẩn đoán",
+      "hints": "Gợi ý",
+      "likelyCause": "Nguyên nhân có thể:",
+      "windowsSymlinkAdminHint": "Windows: chạy Agent Teams AI với quyền Quản trị viên"
+    },
+    "models": {
+      "alreadyDefault": "Đây đã là mặc định OpenCode được chọn.",
+      "empty": "Không tìm thấy mô hình nào.",
+      "emptyFree": "Không tìm thấy mô hình miễn phí nào.",
+      "emptyRecommended": "Không tìm thấy mô hình được khuyến nghị nào.",
+      "emptyRecommendedFree": "Không tìm thấy mô hình miễn phí được khuyến nghị nào.",
+      "freeOnly": "Chỉ miễn phí",
+      "launchableDescription": "Các tuyến đã biết từ cấu hình OpenCode, mô hình miễn phí tích hợp sẵn và mặc định hiện tại. Các tuyến cục bộ cần một lần kiểm thử thành công trước khi sẵn sàng cho việc khởi chạy đội ngũ.",
+      "launchableTitle": "Các tuyến mô hình OpenCode",
+      "loadingRoutes": "Đang tải các tuyến mô hình OpenCode...",
+      "noRoutesMatch": "Không có tuyến mô hình OpenCode nào khớp với \"{{query}}\".",
+      "noneReported": "Chưa có tuyến mô hình OpenCode nào được báo cáo. Hãy cấu hình một tuyến cục bộ trong OpenCode hoặc dùng tab Nhà cung cấp để kiểm tra các nhà cung cấp trong danh mục.",
+      "recommendedOnly": "Chỉ được khuyến nghị",
+      "searchPlaceholder": "Tìm mô hình",
+      "selectProjectBeforeTesting": "Chọn một ngữ cảnh dự án trước khi kiểm thử mô hình.",
+      "selectProjectBeforeTestingDefaults": "Chọn một ngữ cảnh dự án trước khi kiểm thử hoặc lưu mặc định OpenCode.",
+      "testInProgress": "Kiểm thử mô hình đang chạy.",
+      "useInTeamPicker": "Lưu cho bộ chọn đội ngũ",
+      "validationContextRequired": "Chọn một ngữ cảnh xác thực ở trên để bật Kiểm thử và Đặt mặc định. Việc lưu cho bộ chọn đội ngũ chỉ lưu tuyến cho các đội ngũ mới.",
+      "actionsUnavailable": "Các thao tác tạm thời không khả dụng.",
+      "defaultSaveInProgress": "Mặc định OpenCode đang được lưu.",
+      "routeUnavailableAuth": "Nhà cung cấp này yêu cầu xác thực trước khi có thể dùng mô hình này.",
+      "routeUnavailableFailed": "Tuyến mô hình này đã thất bại trong lần kiểm thử thực thi gần nhất.",
+      "routeUnavailableGeneric": "Tuyến mô hình này hiện không thể dùng được.",
+      "routeUnavailableUnknown": "Mô hình này là mặc định OpenCode hiện tại, nhưng nó chưa khả dụng trong danh mục trực tiếp."
+    },
+    "providers": {
+      "catalog": "Danh mục nhà cung cấp OpenCode",
+      "countFallback": "Nhà cung cấp OpenCode",
+      "description": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
+      "loadMore": "Tải thêm nhà cung cấp",
+      "loading": "Đang tải nhà cung cấp OpenCode",
+      "noMatches": "Không có nhà cung cấp nào khớp với tìm kiếm đó.",
+      "noneReported": "Không có nhà cung cấp OpenCode nào được runtime được quản lý báo cáo.",
+      "recommended": "Được khuyến nghị",
+      "refreshCatalog": "Làm mới danh mục",
+      "searchPlaceholder": "Tìm nhà cung cấp",
+      "description_few": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
+      "description_many": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
+      "description_one": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
+      "description_other": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước."
+    },
+    "setup": {
+      "loading": "Đang tải thiết lập nhà cung cấp..."
+    },
+    "summary": {
+      "defaultModel": "Mặc định OpenCode: {{model}}",
+      "loading": "Đang tải runtime OpenCode được quản lý, các nhà cung cấp đã kết nối và mặc định mô hình...",
+      "source": "Nguồn: {{source}}",
+      "title": "Runtime OpenCode"
+    },
+    "tabs": {
+      "models": "Mô hình",
+      "providers": "Nhà cung cấp"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Tìm tuyến mô hình"
+    },
+    "badges": {
+      "usedInTeamPicker": "Đã lưu cho bộ chọn đội ngũ",
+      "free": "miễn phí",
+      "local": "cục bộ",
+      "configured": "đã cấu hình",
+      "knownRoute": "tuyến đã biết",
+      "connected": "đã kết nối",
+      "verified": "đã xác minh",
+      "needsTest": "cần kiểm thử",
+      "failed": "thất bại",
+      "unknown": "không xác định",
+      "default": "mặc định"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Ngôn ngữ cho giao tiếp của agent",
+      "descriptionWithDetected": "Ngôn ngữ cho giao tiếp của agent (đã phát hiện: {{detected}})",
+      "emptyMessage": "Không tìm thấy ngôn ngữ nào.",
+      "label": "Ngôn ngữ",
+      "searchPlaceholder": "Tìm ngôn ngữ...",
+      "selectPlaceholder": "Chọn ngôn ngữ...",
+      "title": "Ngôn ngữ agent"
+    },
+    "appLanguage": {
+      "description": "Ngôn ngữ cho giao diện ứng dụng.",
+      "label": "Ngôn ngữ",
+      "title": "Ngôn ngữ ứng dụng"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Tự động mở rộng từng lượt phản hồi khi mở bản ghi hoặc nhận tin nhắn mới",
+        "label": "Mở rộng phản hồi AI theo mặc định"
+      },
+      "nativeTitleBar": {
+        "description": "Dùng khung cửa sổ hệ thống mặc định thay vì thanh tiêu đề tùy chỉnh",
+        "label": "Dùng thanh tiêu đề gốc",
+        "restartConfirm": {
+          "confirmLabel": "Khởi động lại",
+          "message": "Ứng dụng cần khởi động lại để áp dụng thay đổi thanh tiêu đề. Khởi động lại ngay?",
+          "title": "Cần khởi động lại"
+        }
+      },
+      "theme": {
+        "description": "Chọn giao diện màu ưa thích của bạn",
+        "label": "Giao diện",
+        "options": {
+          "dark": "Tối",
+          "light": "Sáng",
+          "system": "Hệ thống"
+        }
+      },
+      "title": "Giao diện"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Khởi động một máy chủ HTTP để truy cập giao diện từ trình duyệt hoặc nhúng vào iframe",
+        "label": "Bật chế độ máy chủ"
+      },
+      "title": "Truy cập trình duyệt"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Chọn thư mục",
+        "selectFolderManually": "Chọn thư mục thủ công",
+        "useAutoDetect": "Dùng tự động phát hiện",
+        "useFolder": "Dùng thư mục",
+        "usePath": "Dùng đường dẫn",
+        "useThisPath": "Dùng đường dẫn này",
+        "useWsl": "Đang dùng Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Thư mục này không chứa thư mục \"projects\". Vẫn tiếp tục?",
+          "title": "Không tìm thấy thư mục projects"
+        },
+        "notClaudeDir": {
+          "message": "Thư mục này có tên \"{{folderName}}\", không phải \".claude\". Vẫn tiếp tục?",
+          "title": "Thư mục đã chọn không phải là .claude"
+        },
+        "noWslPaths": {
+          "message": "Không thể tự động tìm thấy các bản phân phối WSL có dữ liệu Claude. Chọn thư mục thủ công?",
+          "title": "Không tìm thấy đường dẫn Claude WSL nào"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" không chứa thư mục \"projects\". Vẫn tiếp tục?",
+          "title": "Đường dẫn WSL thiếu thư mục projects"
+        }
+      },
+      "current": {
+        "autoDetected": "Tự động phát hiện: {{path}}",
+        "autoDetectedPath": "Đang dùng đường dẫn tự động phát hiện",
+        "customPath": "Đang dùng đường dẫn tùy chỉnh",
+        "label": "Thư mục gốc cục bộ hiện tại"
+      },
+      "description": "Chọn thư mục cục bộ nào được coi là thư mục gốc dữ liệu Claude của bạn",
+      "errors": {
+        "detectWslFailed": "Không thể phát hiện các đường dẫn gốc Claude WSL",
+        "loadFailed": "Không thể tải cài đặt thư mục gốc Claude cục bộ",
+        "updateFailed": "Không thể cập nhật thư mục gốc Claude"
+      },
+      "title": "Thư mục gốc Claude cục bộ",
+      "wslModal": {
+        "closeAriaLabel": "Đóng hộp thoại đường dẫn WSL",
+        "description": "Các bản phân phối WSL đã phát hiện và các ứng viên thư mục gốc Claude",
+        "noProjectsDir": "Không phát hiện thư mục projects nào",
+        "title": "Chọn thư mục gốc Claude WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Giúp cải thiện ứng dụng bằng cách gửi dữ liệu sự cố và hiệu năng ẩn danh",
+        "label": "Gửi báo cáo sự cố"
+      },
+      "title": "Quyền riêng tư"
+    },
+    "server": {
+      "runningOn": "Đang chạy trên",
+      "standaloneModeDescription": "Đang chạy ở chế độ độc lập. Máy chủ HTTP luôn hoạt động. Thông báo hệ thống không khả dụng - các kích hoạt thông báo chỉ được ghi trong ứng dụng.",
+      "title": "Máy chủ"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Tự động khởi động ứng dụng khi bạn đăng nhập",
+        "label": "Khởi động khi đăng nhập"
+      },
+      "showDockIcon": {
+        "description": "Hiển thị biểu tượng ứng dụng trên dock (macOS)",
+        "label": "Hiện biểu tượng dock"
+      },
+      "title": "Khởi động"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Thông báo có thể không hoạt động ở chế độ phát triển. macOS nhận diện ứng dụng là \"Electron\" (bundle ID",
+      "descriptionSuffix": ") thay vì tên ứng dụng bản chính thức. Kiểm tra System Settings > Notifications > Electron để xác minh quyền.",
+      "title": "Chế độ phát triển"
+    },
+    "ignoredRepositories": {
+      "description": "Thông báo từ các kho lưu trữ này sẽ bị bỏ qua",
+      "empty": "Không có kho lưu trữ nào bị bỏ qua",
+      "selectPlaceholder": "Chọn kho lưu trữ để bỏ qua...",
+      "title": "Kho lưu trữ bị bỏ qua"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Hiển thị thông báo hệ thống cho lỗi và sự kiện",
+        "label": "Bật thông báo hệ thống"
+      },
+      "sound": {
+        "description": "Phát âm thanh khi thông báo xuất hiện",
+        "label": "Phát âm thanh"
+      },
+      "subagentErrors": {
+        "description": "Phát hiện và thông báo về lỗi trong các phiên subagent",
+        "label": "Bao gồm lỗi subagent"
+      },
+      "title": "Cài đặt thông báo"
+    },
+    "snooze": {
+      "clear": "Bỏ tạm dừng",
+      "description": "Tạm dừng thông báo trong thời gian ngắn",
+      "descriptionWithTime": "Tạm dừng đến {{time}}",
+      "label": "Tạm dừng thông báo",
+      "options": {
+        "15": "15 phút",
+        "30": "30 phút",
+        "60": "1 giờ",
+        "120": "2 giờ",
+        "240": "4 giờ",
+        "-1": "Đến ngày mai"
+      },
+      "selectDuration": "Chọn thời lượng..."
+    },
+    "taskCompletion": {
+      "description": "Nhận thông báo gốc của hệ điều hành khi Claude hoàn thành tác vụ - âm thanh, biểu ngữ và huy hiệu trên Dock/thanh tác vụ. Hoạt động trên macOS, Linux và Windows.",
+      "installPlugin": "Cài đặt plugin claude-notifications-go",
+      "title": "Thông báo hoàn thành tác vụ"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Thông báo khi mọi tác vụ trong một đội ngũ đạt trạng thái hoàn thành",
+        "label": "Tất cả tác vụ đã hoàn thành"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Khi Claude báo cáo thời gian đặt lại, lên lịch một lời nhắc tiếp theo cho trưởng nhóm sau khi giới hạn được đặt lại",
+        "label": "Tự động tiếp tục sau khi đạt giới hạn tốc độ"
+      },
+      "clarifications": {
+        "description": "Hiển thị thông báo gốc của hệ điều hành khi một tác vụ cần đầu vào của bạn",
+        "label": "Thông báo làm rõ tác vụ"
+      },
+      "crossTeamMessage": {
+        "description": "Thông báo khi có tin nhắn đến từ một đội ngũ khác",
+        "label": "Thông báo tin nhắn giữa các đội ngũ"
+      },
+      "leadInbox": {
+        "description": "Thông báo khi các thành viên gửi tin nhắn cho trưởng nhóm",
+        "label": "Thông báo hộp thư trưởng nhóm"
+      },
+      "statusChange": {
+        "description": "Hiển thị thông báo gốc của hệ điều hành khi trạng thái của một tác vụ thay đổi",
+        "label": "Thông báo thay đổi trạng thái tác vụ",
+        "onlySolo": {
+          "description": "Chỉ thông báo khi đội ngũ không có thành viên nào",
+          "label": "Chỉ ở chế độ Solo"
+        },
+        "statuses": {
+          "description": "Trạng thái đích nào sẽ kích hoạt thông báo",
+          "label": "Thông báo ở các trạng thái này",
+          "options": {
+            "approved": "Đã duyệt",
+            "completed": "Hoàn thành",
+            "deleted": "Đã xóa",
+            "in_progress": "Đã bắt đầu",
+            "needsFix": "Cần sửa",
+            "pending": "Đang chờ",
+            "review": "Xem xét"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Hiển thị thông báo gốc của hệ điều hành khi các agent bình luận về tác vụ",
+        "label": "Thông báo bình luận tác vụ"
+      },
+      "taskCreated": {
+        "description": "Hiển thị thông báo gốc của hệ điều hành khi một tác vụ mới được tạo",
+        "label": "Thông báo tác vụ được tạo"
+      },
+      "teamLaunched": {
+        "description": "Thông báo khi một đội ngũ khởi chạy xong và sẵn sàng",
+        "label": "Thông báo đội ngũ đã khởi chạy"
+      },
+      "title": "Thông báo đội ngũ",
+      "toolApproval": {
+        "description": "Thông báo khi một công cụ cần bạn phê duyệt (Cho phép/Từ chối) trong khi ứng dụng không được lấy nét",
+        "label": "Thông báo phê duyệt công cụ"
+      },
+      "userInbox": {
+        "description": "Thông báo khi các thành viên gửi tin nhắn cho bạn",
+        "label": "Thông báo hộp thư người dùng"
+      }
+    },
+    "test": {
+      "action": "Gửi thử",
+      "description": "Gửi một thông báo thử để xác minh việc gửi",
+      "failedToSend": "Không thể gửi thông báo thử",
+      "label": "Thông báo thử",
+      "sending": "Đang gửi...",
+      "sent": "Đã gửi!",
+      "unknownError": "Lỗi không xác định"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Biểu tượng ứng dụng",
+      "description": "Tập hợp các đội ngũ agent AI làm việc tự chủ song song, giao tiếp giữa các đội ngũ và quản lý tác vụ trên bảng kanban - với tính năng xem xét mã tích hợp, giám sát tiến trình trực tiếp và khả năng quan sát công cụ đầy đủ.",
+      "standalone": "Độc lập",
+      "title": "Giới thiệu",
+      "version": "Phiên bản {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Chỉnh sửa cấu hình",
+      "exportConfig": "Xuất cấu hình",
+      "importConfig": "Nhập cấu hình",
+      "openInEditor": "Mở trong trình soạn thảo",
+      "resetToDefaults": "Đặt lại về mặc định",
+      "title": "Cấu hình"
+    },
+    "updates": {
+      "available": "Có v{{version}}",
+      "check": "Kiểm tra cập nhật",
+      "checking": "Đang kiểm tra...",
+      "ready": "Bản cập nhật sẵn sàng",
+      "unknownVersion": "không xác định",
+      "upToDate": "Đã cập nhật"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Không thể tải cấu hình",
+      "saveFailed": "Không thể lưu cấu hình"
+    },
+    "footer": {
+      "autoSave": "Thay đổi tự động lưu sau khi chỉnh sửa",
+      "toClose": "để đóng",
+      "escapeKey": "Esc"
+    },
+    "loading": "Đang tải cấu hình...",
+    "status": {
+      "invalidJson": "JSON không hợp lệ",
+      "saveFailed": "Lưu thất bại",
+      "saved": "Đã lưu",
+      "saving": "Đang lưu..."
+    },
+    "title": "Chỉnh sửa cấu hình"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Hủy",
+      "submit": "Thêm kích hoạt",
+      "title": "Thêm kích hoạt tùy chỉnh"
+    },
+    "builtin": {
+      "description": "Các kích hoạt mặc định đi kèm ứng dụng. Bạn có thể bật hoặc tắt chúng và tùy chỉnh các mẫu của chúng.",
+      "title": "Kích hoạt tích hợp sẵn"
+    },
+    "card": {
+      "builtinBadge": "Tích hợp sẵn",
+      "collapseAriaLabel": "Thu gọn",
+      "deleteAriaLabel": "Xóa kích hoạt",
+      "editNameAriaLabel": "Chỉnh sửa tên",
+      "expandAriaLabel": "Mở rộng"
+    },
+    "color": {
+      "customHexTitle": "Màu hex tùy chỉnh",
+      "invalidHex": "Hex không hợp lệ"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Cảnh báo nếu >",
+      "emptyPatternHint": "Để trống để khớp tất cả nội dung. Dùng cú pháp regex JavaScript.",
+      "errorStatusDescription": "Kích hoạt khi một lệnh thực thi công cụ báo lỗi (is_error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "vd: error|failed|exception"
+    },
+    "custom": {
+      "description": "Tạo các kích hoạt của riêng bạn để được thông báo cho các mẫu hoặc kết quả công cụ cụ thể.",
+      "empty": "Chưa cấu hình kích hoạt tùy chỉnh nào.",
+      "title": "Kích hoạt tùy chỉnh"
+    },
+    "errors": {
+      "invalidRegexPattern": "Mẫu regex không hợp lệ"
+    },
+    "fields": {
+      "contentType": "Loại nội dung",
+      "matchField": "Trường khớp",
+      "matchPattern": "Mẫu khớp (Regex)",
+      "scopeToolName": "Phạm vi / Tên công cụ",
+      "scopeToolNameOptional": "Phạm vi / Tên công cụ (tùy chọn)",
+      "threshold": "Ngưỡng",
+      "tokenType": "Loại token",
+      "triggerNamePlaceholder": "vd: Cảnh báo lỗi build",
+      "triggerNameRequired": "Tên kích hoạt *"
+    },
+    "ignorePatterns": {
+      "hint": "Nhấn Enter để thêm. Thông báo bị bỏ qua nếu bất kỳ mẫu nào khớp.",
+      "placeholder": "Thêm regex bỏ qua...",
+      "removeAriaLabel": "Xóa mẫu bỏ qua",
+      "summary": "Nâng cao: Quy tắc loại trừ",
+      "title": "Mẫu bỏ qua (bỏ qua nếu khớp)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Kết quả văn bản",
+        "thinking": "Suy nghĩ",
+        "tool_result": "Kết quả công cụ",
+        "tool_use": "Sử dụng công cụ"
+      },
+      "matchFields": {
+        "args": "Đối số",
+        "command": "Lệnh",
+        "content": "Nội dung",
+        "description": "Mô tả",
+        "file_path": "Đường dẫn tệp",
+        "fullInput": "Đầu vào đầy đủ (JSON)",
+        "glob": "Bộ lọc Glob",
+        "new_string": "Chuỗi mới",
+        "old_string": "Chuỗi cũ",
+        "path": "Đường dẫn",
+        "pattern": "Mẫu",
+        "prompt": "Prompt",
+        "query": "Truy vấn",
+        "skill": "Tên kỹ năng",
+        "subagent_type": "Loại subagent",
+        "text": "Nội dung văn bản",
+        "thinking": "Nội dung suy nghĩ",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Mẫu nội dung",
+        "error_status": "Lỗi thực thi",
+        "token_threshold": "Sử dụng token cao"
+      },
+      "tokenTypes": {
+        "input": "Token đầu vào",
+        "output": "Token đầu ra",
+        "total": "Tổng token"
+      },
+      "toolNames": {
+        "anyTool": "Bất kỳ công cụ nào"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Kích hoạt thử",
+      "detectedSuffix": "lỗi đã có thể được phát hiện",
+      "more": "...và {{count}} nữa",
+      "more_few": "...và {{count}} nữa",
+      "more_many": "...và {{count}} nữa",
+      "more_one": "...và {{count}} nữa",
+      "more_other": "...và {{count}} nữa",
+      "testTrigger": "Kích hoạt thử",
+      "testing": "Đang thử...",
+      "title": "Xem trước",
+      "truncatedWarning": "Tìm kiếm dừng sớm (hết thời gian chờ hoặc giới hạn số lượng). Số lượng khớp thực tế có thể cao hơn.",
+      "viewSession": "Xem phiên"
+    },
+    "repositoryScope": {
+      "empty": "Chưa chọn kho lưu trữ nào - kích hoạt áp dụng cho tất cả kho lưu trữ",
+      "hint": "Khi các kho lưu trữ được chọn, kích hoạt này chỉ kích hoạt cho lỗi trong những kho lưu trữ đó.",
+      "placeholder": "Chọn kho lưu trữ để thêm...",
+      "summary": "Nâng cao: Phạm vi kho lưu trữ",
+      "title": "Giới hạn ở các kho lưu trữ (chỉ áp dụng cho các kho lưu trữ đã chọn)"
+    },
+    "sections": {
+      "configuration": "Cấu hình",
+      "dotColor": "Màu chấm",
+      "generalInfo": "Thông tin chung",
+      "triggerCondition": "Điều kiện kích hoạt"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Thêm hồ sơ",
+      "cancel": "Hủy",
+      "deleteProfile": "Xóa hồ sơ",
+      "editProfile": "Chỉnh sửa hồ sơ",
+      "save": "Lưu"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (từ cấu hình SSH)",
+      "password": "Mật khẩu",
+      "privateKey": "Khóa riêng tư"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Xóa",
+      "message": "Bạn có chắc muốn xóa \"{{name}}\"? Thao tác này không thể hoàn tác.",
+      "title": "Xóa hồ sơ"
+    },
+    "description": "Lưu các hồ sơ kết nối SSH để kết nối lại nhanh chóng",
+    "empty": {
+      "description": "Thêm một hồ sơ SSH để kết nối nhanh",
+      "title": "Không có hồ sơ đã lưu"
+    },
+    "form": {
+      "authentication": "Xác thực",
+      "host": "Host",
+      "name": "Tên",
+      "passwordPrompt": "Bạn sẽ được nhắc nhập mật khẩu khi kết nối.",
+      "port": "Cổng",
+      "privateKeyPath": "Đường dẫn khóa riêng tư",
+      "username": "Tên người dùng",
+      "namePlaceholder": "Máy chủ của tôi",
+      "hostPlaceholder": "tên host hoặc IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "Đang tải hồ sơ...",
+    "title": "Hồ sơ không gian làm việc"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Kết nối",
+      "connecting": "Đang kết nối...",
+      "disconnect": "Ngắt kết nối",
+      "testConnection": "Kiểm tra kết nối",
+      "testing": "Đang kiểm tra..."
+    },
+    "currentMode": {
+      "description": "Nguồn dữ liệu cho các tệp phiên",
+      "label": "Chế độ hiện tại",
+      "local": "Cục bộ ({{path}})"
+    },
+    "description": "Kết nối tới một máy từ xa để xem các phiên Claude Code đang chạy ở đó",
+    "form": {
+      "authentication": "Xác thực",
+      "host": "Host",
+      "password": "Mật khẩu",
+      "port": "Cổng",
+      "privateKeyPath": "Đường dẫn khóa riêng tư",
+      "username": "Tên người dùng",
+      "hostPlaceholder": "tên host hoặc bí danh cấu hình SSH",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "Hồ sơ đã lưu"
+    },
+    "ssh": {
+      "title": "Kết nối SSH"
+    },
+    "status": {
+      "connectedTo": "Đã kết nối tới {{host}}",
+      "remoteSessions": "Đang xem các phiên từ xa qua SSH"
+    },
+    "test": {
+      "failed": "Kết nối thất bại: {{error}}",
+      "success": "Kết nối thành công",
+      "unknownError": "Lỗi không xác định"
+    },
+    "title": "Kết nối từ xa"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Hủy",
+      "cancelLogin": "Hủy đăng nhập",
+      "connectChatGpt": "Kết nối ChatGPT",
+      "delete": "Xóa",
+      "disable": "Tắt",
+      "disconnectAccount": "Ngắt kết nối tài khoản",
+      "generateLink": "Tạo liên kết",
+      "openLogin": "Mở đăng nhập",
+      "reconnectAnthropic": "Kết nối lại Anthropic",
+      "refresh": "Làm mới",
+      "replaceKey": "Thay khóa",
+      "saveEndpoint": "Lưu endpoint",
+      "saveKey": "Lưu khóa",
+      "saving": "Đang lưu...",
+      "setApiKey": "Đặt API key",
+      "updateKey": "Cập nhật khóa",
+      "useCode": "Dùng mã"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Đang tải thông tin xác thực đã lưu...",
+      "projectScope": "Dự án",
+      "scope": "Phạm vi",
+      "storedIn": "Lưu trong {{backend}}",
+      "userScope": "Người dùng",
+      "storedInApp": "Lưu trong ứng dụng",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "Dùng API key Anthropic trực tiếp cho truy cập tính phí qua API. Phiên đăng ký Anthropic của bạn vẫn khả dụng khi bạn chuyển về lại.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "Dùng API key OpenAI làm đường xác thực Codex phụ. Nếu bạn chuyển Codex sang chế độ API key, ứng dụng sẽ phản chiếu OPENAI_API_KEY vào CODEX_API_KEY cho các lần khởi chạy gốc.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "Truy cập API",
+          "description": "Dùng `GEMINI_API_KEY` cho backend API Gemini. CLI SDK và ADC không yêu cầu nó.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Đã kết nối",
+        "description": "Quản lý phiên tài khoản app-server Codex cục bộ cung cấp năng lượng cho các lần khởi chạy gốc dựa trên đăng ký.",
+        "loginInProgress": "Đang đăng nhập",
+        "plan": "Gói: {{plan}}",
+        "reconnectRequired": "Cần kết nối lại",
+        "title": "Tài khoản ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto sẽ tiếp tục dùng API key đã phát hiện cho đến khi ChatGPT được kết nối.",
+          "detectedApiKeyNeedsApiMode": "{{message}} API key đã phát hiện chỉ được dùng sau khi bạn chuyển Codex sang chế độ API key.",
+          "localArtifactsNoSession": "Codex CLI hiện báo không có tài khoản ChatGPT nào đang hoạt động. Có dữ liệu tài khoản Codex cục bộ, nhưng chưa có phiên được quản lý nào đang hoạt động được chọn. Giới hạn sử dụng chỉ xuất hiện ở đây sau khi Codex CLI thấy một tài khoản.",
+          "noActiveAccount": "Codex CLI hiện báo không có tài khoản ChatGPT nào đang hoạt động. Giới hạn sử dụng chỉ xuất hiện ở đây sau khi Codex CLI thấy một tài khoản.",
+          "reconnectBeforeUsage": "Codex có một tài khoản ChatGPT được chọn cục bộ, nhưng phiên hiện tại cần kết nối lại trước khi giới hạn sử dụng có thể tải ở đây.",
+          "usageLimitsAfterReport": "Giới hạn sử dụng xuất hiện ở đây sau khi Codex báo cáo chúng cho tài khoản ChatGPT đã kết nối."
+        }
+      },
+      "install": {
+        "checking": "Đang kiểm tra",
+        "downloading": "Đang tải",
+        "installCli": "Cài đặt Codex CLI",
+        "installing": "Đang cài đặt",
+        "retryInstall": "Thử cài đặt lại",
+        "title": "Cài đặt Codex CLI vào dữ liệu ứng dụng"
+      },
+      "rateLimits": {
+        "credits": "Tín dụng",
+        "creditsDescription": "Tín dụng được hiển thị tách biệt với mức sử dụng đăng ký theo cửa sổ và có thể không khả dụng cho các phiên ChatGPT dựa trên gói.",
+        "noSecondaryWindow": "Codex không trả về cửa sổ phụ cho ảnh chụp tài khoản này.",
+        "notReported": "Chưa báo cáo",
+        "primaryReset": "Đặt lại chính",
+        "primaryUsed": "Đã dùng chính",
+        "primaryWindow": "Cửa sổ chính",
+        "remainingLeft": "Còn lại {{value}}",
+        "remainingUnknown": "Còn lại không xác định",
+        "secondaryReset": "Đặt lại phụ",
+        "secondaryUsed": "Đã dùng phụ",
+        "secondaryWindow": "Cửa sổ phụ",
+        "usedQuotaNote": "Các tỷ lệ phần trăm này hiển thị hạn mức đã dùng, không phải hạn mức còn lại.",
+        "weeklyReset": "Đặt lại hàng tuần",
+        "weeklyUsed": "Đã dùng hàng tuần",
+        "weeklyUsedOneWeek": "Đã dùng hàng tuần (1 tuần)",
+        "weeklyWindow": "Cửa sổ hàng tuần",
+        "secondaryFallback": "phụ",
+        "secondaryWindowNote": " Giới hạn hàng tuần được hiển thị tách biệt trong cửa sổ {{window}}.",
+        "usageExplanationGeneric": "Hiển thị hạn mức đã dùng, không phải hạn mức còn lại.",
+        "usageExplanationWindowOnly": "Hiển thị hạn mức đã dùng trong cửa sổ {{window}} hiện tại, không phải hạn mức còn lại.",
+        "usageExplanationWithRemaining": "Đã dùng {{used}} - còn khoảng {{remaining}} trong cửa sổ {{window}} hiện tại."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Token xác thực",
+      "authTokenMissing": "Token xác thực chưa được cấu hình.",
+      "baseUrl": "URL cơ sở",
+      "description": "Dùng một endpoint runtime cục bộ tương thích Anthropic.",
+      "keepSavedToken": "Để trống để giữ token đã lưu",
+      "title": "Endpoint cục bộ / tương thích",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "URL cơ sở là bắt buộc",
+        "firstPartyAnthropic": "Dùng Auto, Đăng ký, hoặc API key cho Anthropic chính chủ",
+        "httpRequired": "URL cơ sở phải dùng http:// hoặc https://",
+        "invalidUrl": "URL không hợp lệ",
+        "noCredentials": "URL cơ sở không được chứa thông tin xác thực"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint đã bị tắt. Token đã lưu được giữ lại.",
+        "endpointSaved": "Đã lưu endpoint",
+        "endpointSavedTokenMissing": "Đã lưu endpoint. Token xác thực chưa được cấu hình."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Phương thức xác thực",
+      "descriptions": {
+        "anthropic": "Chọn cách các phiên Anthropic do ứng dụng khởi chạy xác thực.",
+        "codex": "Chọn liệu Codex nên ưu tiên đăng ký ChatGPT của bạn hay một API key khi runtime gốc khởi chạy.",
+        "gemini": "Cấu hình truy cập API tùy chọn. CLI SDK và ADC vẫn được phát hiện tự động.",
+        "opencode": "Xác thực OpenCode và danh sách nhà cung cấp được runtime OpenCode quản lý."
+      },
+      "method": "Phương thức kết nối",
+      "mode": "Chế độ: {{mode}}",
+      "selected": "Đã chọn",
+      "switching": "Đang chuyển đổi...",
+      "title": "Kết nối"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Dùng ANTHROPIC_API_KEY và tính phí qua API của Anthropic.",
+        "autoDescription": "Dùng các mặc định của runtime Anthropic và thông tin xác thực cục bộ tốt nhất có sẵn.",
+        "hint": "Auto giữ Anthropic ở cách giải quyết thông tin xác thực cục bộ mặc định của nó.",
+        "subscriptionDescription": "Dùng phiên đăng nhập Anthropic cục bộ và quyền truy cập đăng ký của bạn.",
+        "subscriptionTitle": "Đăng ký Anthropic"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Dùng tính phí OPENAI_API_KEY và CODEX_API_KEY cho các lần khởi chạy Codex gốc.",
+        "autoDescription": "Ưu tiên tài khoản ChatGPT và đăng ký của bạn. Chỉ dùng chế độ API key khi cần.",
+        "chatgptDescription": "Dùng tài khoản ChatGPT đã kết nối và đăng ký Codex của bạn.",
+        "chatgptTitle": "Tài khoản ChatGPT",
+        "hint": "Codex luôn chạy qua runtime gốc. Auto ưu tiên tài khoản ChatGPT của bạn trước khi chuyển sang thông tin xác thực API key."
+      }
+    },
+    "description": "Quản lý cách mỗi nhà cung cấp kết nối và, khi được hỗ trợ, runtime đa mô hình nên dùng backend nào.",
+    "fastMode": {
+      "defaultOff": "Mặc định tắt",
+      "description": "Áp dụng chế độ Claude Code Fast theo mặc định cho các lần khởi chạy đội ngũ Anthropic mới khi mô hình và runtime đã giải quyết cho phép.",
+      "disabledHint": "Các lần khởi chạy Anthropic mới giữ tốc độ bình thường trừ khi một đội ngũ bật rõ ràng chế độ Fast.",
+      "enabledHint": "Các lần khởi chạy Anthropic mới sẽ yêu cầu chế độ Fast theo mặc định khi mô hình đã giải quyết hỗ trợ.",
+      "notExposed": "Runtime Anthropic này không cung cấp chế độ Fast.",
+      "preferFast": "Ưu tiên Fast",
+      "title": "Mặc định chế độ Fast",
+      "unavailableForRuntime": "Chế độ Fast hiện không khả dụng cho runtime Anthropic này."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Đã chọn chế độ API key, nhưng chưa có thông tin xác thực API Anthropic nào khả dụng.",
+      "anthropicStoredKeyAvailable": "Có một API key đã lưu, nhưng các phiên Anthropic do ứng dụng khởi chạy chỉ dùng nó sau khi bạn chuyển sang chế độ API key.",
+      "anthropicSubscriptionMissing": "Đã chọn chế độ đăng ký Anthropic. Hãy đăng nhập với Anthropic để dùng nhà cung cấp này.",
+      "authTokenMissing": "Token xác thực chưa được cấu hình. Nhiều endpoint tương thích Anthropic cục bộ yêu cầu một token không rỗng.",
+      "chatgptLoginPending": "Đang chờ đăng nhập tài khoản ChatGPT hoàn tất...",
+      "chatgptLoginStarting": "Đang bắt đầu đăng nhập ChatGPT...",
+      "codexApiKeyMissing": "Đã chọn chế độ API key, nhưng chưa có thông tin xác thực OPENAI_API_KEY hoặc CODEX_API_KEY nào khả dụng.",
+      "codexLocalArtifactsNoSession": "Codex CLI hiện không có tài khoản ChatGPT nào đang hoạt động. Có dữ liệu tài khoản Codex cục bộ, nhưng chưa có phiên được quản lý nào đang hoạt động được chọn.",
+      "codexNeedsReconnect": "Codex có một tài khoản ChatGPT được chọn cục bộ, nhưng phiên hiện tại cần kết nối lại.",
+      "codexNoChatgptAccount": "Codex CLI hiện không có tài khoản ChatGPT nào đang hoạt động. Kết nối ChatGPT để dùng đăng ký của bạn.",
+      "codexNoCredential": "Chưa có tài khoản ChatGPT hoặc API key nào khả dụng.",
+      "geminiApiUnavailable": "API Gemini hiện không khả dụng. Hãy cấu hình `GEMINI_API_KEY` tại đây hoặc dùng thông tin xác thực Google ADC hợp lệ.",
+      "withApiKeyFallback": "{{message}} Chuyển sang chế độ API key để dùng API key đã phát hiện."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Buộc các phiên Anthropic do ứng dụng khởi chạy dùng thông tin xác thực API key.",
+        "auto": "Dùng hành vi mặc định của runtime. Các API key đã lưu trong ứng dụng này chỉ được dùng sau khi bạn chuyển sang chế độ API key.",
+        "oauth": "Buộc các phiên Anthropic do ứng dụng khởi chạy dùng phiên đăng ký Anthropic cục bộ."
+      },
+      "codex": {
+        "apiKey": "Buộc các lần khởi chạy Codex gốc dùng tính phí OPENAI_API_KEY / CODEX_API_KEY.",
+        "auto": "Ưu tiên tài khoản ChatGPT của bạn khi nó khả dụng. Chỉ chuyển sang chế độ API key khi cần.",
+        "chatgpt": "Buộc các lần khởi chạy Codex gốc dùng tài khoản ChatGPT đã kết nối và đăng ký của bạn."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Đang áp dụng các thay đổi kết nối...",
+      "refreshingProviderStatus": "Đang làm mới trạng thái nhà cung cấp...",
+      "savingCompatibleEndpoint": "Đang lưu endpoint tương thích...",
+      "switchingAnthropicSubscription": "Đang chuyển sang đăng ký Anthropic...",
+      "switchingApiKey": "Đang chuyển sang API key...",
+      "switchingApiKeyMode": "Đang chuyển sang chế độ API key...",
+      "switchingAuto": "Đang chuyển sang Auto...",
+      "switchingChatgpt": "Đang chuyển sang chế độ tài khoản ChatGPT..."
+    },
+    "provider": "Nhà cung cấp",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic hiện không có bộ chọn backend runtime riêng.",
+        "codex": "Codex giờ chỉ chạy qua đường runtime gốc.",
+        "gemini": "Chọn backend runtime Gemini nào mà chế độ đa mô hình nên dùng.",
+        "opencode": "OpenCode dùng host runtime được quản lý riêng của nó. Bản máy tính hiện chỉ cung cấp trạng thái."
+      },
+      "title": "Runtime",
+      "updating": "Đang cập nhật runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "đã cấu hình",
+      "enabled": "Đã bật",
+      "notConfigured": "Chưa cấu hình",
+      "notSet": "chưa đặt",
+      "off": "Tắt",
+      "unknown": "Không xác định"
+    },
+    "title": "Cài đặt nhà cung cấp",
+    "usage": {
+      "apiKey": "Đang dùng API key",
+      "apiKeyRequired": "Cần API key",
+      "compatibleEndpoint": "Đang dùng endpoint tương thích",
+      "notConnected": "Chưa kết nối",
+      "usingMethod": "Đang dùng {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Đã xóa API key, nhưng không thể làm mới trạng thái nhà cung cấp.",
+      "apiKeySavedRefreshFailed": "Đã lưu API key, nhưng không thể làm mới trạng thái nhà cung cấp.",
+      "connectionUpdatedRefreshFailed": "Đã cập nhật kết nối, nhưng không thể làm mới trạng thái nhà cung cấp.",
+      "deleteApiKey": "Không thể xóa API key",
+      "disableEndpoint": "Không thể tắt endpoint",
+      "endpointDisabledRefreshFailed": "Đã tắt endpoint, nhưng không thể làm mới trạng thái nhà cung cấp.",
+      "endpointSavedRefreshFailed": "Đã lưu endpoint, nhưng không thể làm mới trạng thái nhà cung cấp.",
+      "refreshCodexAccount": "Không thể làm mới tài khoản Codex",
+      "saveApiKey": "Không thể lưu API key",
+      "saveEndpoint": "Không thể lưu endpoint",
+      "updateAnthropicFastMode": "Không thể cập nhật chế độ Fast của Anthropic",
+      "updateConnection": "Không thể cập nhật kết nối",
+      "updateRuntimeBackend": "Không thể cập nhật backend runtime",
+      "apiKeyRequired": "API key là bắt buộc"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Đăng ký / OAuth",
+        "chatgpt": "Tài khoản ChatGPT",
+        "apiKey": "API key",
+        "anthropicSubscription": "Đăng ký Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "Trình trợ giúp API key",
+        "oauth": "OAuth",
+        "claudeSubscription": "Đăng ký Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Tài khoản Google",
+        "serviceAccount": "tài khoản dịch vụ"
+      },
+      "runtime": {
+        "codexNative": "Codex gốc",
+        "currentRuntime": "Runtime hiện tại",
+        "selectedRuntime": "Runtime đã chọn",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Đang kiểm tra...",
+        "modelsAvailable": "Có mô hình khả dụng",
+        "checked": "Đã kiểm tra",
+        "providerActivity": "Hoạt động nhà cung cấp",
+        "notConnected": "Chưa kết nối",
+        "startingChatGptLogin": "Đang bắt đầu đăng nhập ChatGPT...",
+        "waitingForChatGptLogin": "Đang chờ đăng nhập tài khoản ChatGPT...",
+        "chatGptVerificationDegraded": "Đã phát hiện tài khoản ChatGPT - việc xác minh tài khoản hiện đang suy giảm.",
+        "chatGptAccountReady": "Tài khoản ChatGPT sẵn sàng",
+        "apiKeyReady": "API key sẵn sàng",
+        "codexLocalAccountNeedsReconnect": "Codex có một tài khoản ChatGPT được chọn cục bộ, nhưng phiên hiện tại cần kết nối lại.",
+        "codexNoActiveManagedSession": "Codex CLI báo không có phiên đăng nhập ChatGPT nào đang hoạt động. Có dữ liệu tài khoản Codex cục bộ, nhưng chưa có phiên được quản lý nào đang hoạt động được chọn.",
+        "codexNoActiveChatGptLogin": "Codex CLI báo không có phiên đăng nhập ChatGPT nào đang hoạt động",
+        "connectChatGptForSubscription": "Kết nối một tài khoản ChatGPT để dùng đăng ký Codex của bạn.",
+        "codexNativeReady": "Codex gốc sẵn sàng",
+        "codexNativeUnavailable": "Codex gốc không khả dụng",
+        "unavailableInCurrentRuntime": "Không khả dụng trong runtime hiện tại",
+        "connectedViaApiKey": "Đã kết nối qua API key",
+        "apiKeyConfiguredNotVerified": "API key đã được cấu hình, nhưng chưa được xác minh",
+        "apiKeyModeMissingCredential": "Đã chọn chế độ API key, nhưng chưa có API key nào được cấu hình",
+        "connectedVia": "Đã kết nối qua {{method}}",
+        "unableToVerify": "Không thể xác minh"
+      },
+      "mode": {
+        "selectedAuth": "Xác thực đã chọn: {{authMode}}",
+        "preferredAuth": "Xác thực ưu tiên: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API key đã được cấu hình",
+        "savedApiKeyAvailable": "API key đã lưu có sẵn trong Quản lý",
+        "apiKeyAlsoConfigured": "API key cũng được cấu hình trong Quản lý",
+        "apiKeyConfiguredInManage": "API key được cấu hình trong Quản lý",
+        "apiKeyFallbackInManage": "API key cũng có sẵn trong Quản lý làm phương án dự phòng",
+        "availableAsFallback": "{{summary}} - có sẵn làm phương án dự phòng",
+        "savedApiKeyAvailableIfSwitch": "API key đã lưu có sẵn trong Quản lý nếu bạn chuyển sang chế độ API key",
+        "availableIfSwitch": "{{summary}} - có sẵn nếu bạn chuyển sang chế độ API key",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto sẽ dùng cái này cho đến khi ChatGPT được kết nối"
+      },
+      "actions": {
+        "connect": "Kết nối",
+        "connectAnthropic": "Kết nối Anthropic",
+        "connectChatGpt": "Kết nối ChatGPT",
+        "disconnect": "Ngắt kết nối",
+        "openLogin": "Mở đăng nhập"
+      },
+      "disconnect": {
+        "anthropicTitle": "Ngắt kết nối đăng ký Anthropic?",
+        "anthropic": "Thao tác này xóa phiên đăng ký Anthropic cục bộ khỏi runtime Claude CLI.",
+        "anthropicWithApiKey": "Thao tác này xóa phiên đăng ký Anthropic cục bộ khỏi runtime Claude CLI. Các API key đã lưu trong Quản lý vẫn khả dụng.",
+        "geminiTitle": "Ngắt kết nối Gemini CLI?",
+        "gemini": "Thao tác này xóa metadata phiên Gemini CLI cục bộ. Thông tin xác thực ADC bên ngoài và các API key đã lưu không bị xóa."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Kiểm tra cập nhật",
+      "checking": "Đang kiểm tra...",
+      "extensions": "Tiện ích mở rộng",
+      "installRuntime": "Cài đặt {{runtime}}",
+      "manage": "Quản lý",
+      "recheck": "Kiểm tra lại",
+      "reinstallRuntime": "Cài đặt lại {{runtime}}",
+      "retry": "Thử lại",
+      "update": "Cập nhật"
+    },
+    "installer": {
+      "checkingLatest": "Đang kiểm tra phiên bản mới nhất...",
+      "downloading": "Đang tải...",
+      "failed": "Cài đặt thất bại",
+      "installed": "Đã cài đặt v{{version}}",
+      "installing": "Đang cài đặt...",
+      "latest": "latest",
+      "verifying": "Đang xác minh checksum..."
+    },
+    "labels": {
+      "multimodel": "Đa mô hình"
+    },
+    "loading": {
+      "aiProviders": "Đang kiểm tra nhà cung cấp AI...",
+      "claudeCli": "Đang kiểm tra Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Đang tải mô hình...",
+      "modelsUnavailable": "Mô hình không khả dụng cho bản dựng runtime này",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Xác thực thất bại",
+      "authUpdated": "Đã cập nhật xác thực",
+      "loggedOut": "Nhà cung cấp đã đăng xuất",
+      "login": "Đăng nhập",
+      "logout": "Đăng xuất",
+      "logoutFailed": "Đăng xuất thất bại"
+    },
+    "status": {
+      "configuredNotFound": "Không tìm thấy {{runtime}} đã cấu hình.",
+      "foundButFailed": "Đã tìm thấy {{runtime}} nhưng không khởi động được",
+      "healthCheckFailed": "{{runtime}} đã cấu hình không vượt qua kiểm tra tình trạng khi khởi động.",
+      "notInstalled": "{{runtime}} chưa được cài đặt"
+    },
+    "title": "Runtime CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

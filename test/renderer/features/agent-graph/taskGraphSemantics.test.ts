@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   isTaskBlocked,
   resolveTaskGraphColumn,
 } from '@features/agent-graph/core/domain/taskGraphSemantics';
+import { describe, expect, it } from 'vitest';
 
 import type { TeamTaskWithKanban } from '@shared/types';
 
@@ -50,6 +49,7 @@ describe('taskGraphSemantics', () => {
     ]);
 
     expect(isTaskBlocked({ blockedBy: ['completed'] }, taskStateById)).toBe(false);
+    expect(isTaskBlocked({ blockedBy: [' completed '] }, taskStateById)).toBe(false);
     expect(isTaskBlocked({ blockedBy: ['soft-deleted'] }, taskStateById)).toBe(false);
     expect(isTaskBlocked({ blockedBy: ['review-approved'] }, taskStateById)).toBe(false);
     expect(isTaskBlocked({ blockedBy: ['kanban-approved'] }, taskStateById)).toBe(false);

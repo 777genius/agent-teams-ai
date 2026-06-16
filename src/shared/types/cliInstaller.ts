@@ -36,6 +36,7 @@ export type CliFlavor = 'claude' | 'agent_teams_orchestrator';
 export type CliProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
 export type CliProviderAuthMode = 'auto' | 'oauth' | 'chatgpt' | 'api_key';
 export const CLI_PROVIDER_STATUS_DEFERRED_MESSAGE = 'Provider status will refresh when needed.';
+export const CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE = 'Provider status unavailable';
 
 export interface CliProviderConnectionInfo {
   supportsOAuth: boolean;
@@ -66,6 +67,13 @@ export interface CliProviderConnectionInfo {
     launchAllowed: boolean;
     launchIssueMessage: string | null;
     launchReadinessState: CodexLaunchReadinessState;
+    customProvider?: {
+      enabled: boolean;
+      active: boolean;
+      baseUrl: string;
+      model: string;
+      issueMessage: string | null;
+    };
   } | null;
 }
 

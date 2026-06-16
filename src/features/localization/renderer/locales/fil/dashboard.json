@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Naka-login na?",
+      "becomeSponsor": "Maging sponsor",
+      "cancel": "Kanselahin",
+      "checkNow": "Tingnan ngayon",
+      "checkUpdates": "Maghanap ng Update",
+      "checking": "Sinusuri...",
+      "connect": "Kumonekta",
+      "extensions": "Extensions",
+      "login": "Mag-login",
+      "manage": "Pamahalaan",
+      "manageProviders": "Pamahalaan ang mga Provider",
+      "plan": "Plano",
+      "recheck": "Suriing muli",
+      "recheckProvider": "Suriing muli ang {{provider}}",
+      "retry": "Subukang muli",
+      "updateTo": "I-update sa v{{version}}",
+      "useCode": "Gamitin ang code"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Ang Atlas Cloud ay isang full-modal na platform para sa AI inference na nagbibigay sa mga developer ng iisang AI API para ma-access ang video generation, image generation, at mga LLM API. Sa halip na mamahala ng maraming vendor integration, kumonekta ka nang isang beses at makakakuha ng pinag-isang access sa 300+ na curated na model sa lahat ng modality. Tingnan ang bagong coding plan promotion ng Atlas Cloud para sa mas abot-kayang access sa API.",
+      "openCodeProvider": "OpenCode provider",
+      "plan": "Atlas Cloud coding plan",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Hindi nasuri ang status ng CLI",
+      "installationFailed": "Nabigo ang pag-install",
+      "refreshFailed": "Hindi nasuri ang mga update. Tingnan ang iyong koneksyon sa network at subukang muli.",
+      "runtimeUpdatedRefreshFailed": "Na-update ang runtime, ngunit hindi na-refresh ang status ng provider."
+    },
+    "hints": {
+      "backgroundStatus": "Susuriin ang status ng {{runtime}} sa background.",
+      "codexApiKeyFallback": "{{hint}} May available na API key fallback kung lilipat ka ng auth mode.",
+      "codexAutoApiKey": "{{hint}} Patuloy na gagamitin ng Auto ang API key hanggang sa makonekta ang ChatGPT.",
+      "codexFinishLogin": "Tapusin ang pag-login sa ChatGPT sa browser. Ilagay ang ipinapakitang code kung hihilingin.",
+      "codexNoActiveLogin": "Lumalabas lang ang mga usage limit pagkatapos makita ng Codex CLI ang isang aktibong ChatGPT account. Sa ngayon, wala itong nakikitang aktibong ChatGPT login.",
+      "codexNoActiveManagedSession": "Lumalabas lang ang mga usage limit pagkatapos makita ng Codex CLI ang isang aktibong ChatGPT account. May lokal na data ng Codex account, ngunit walang aktibong managed session na napili sa ngayon.",
+      "codexReconnectNeeded": "Lumalabas lang ang mga usage limit pagkatapos i-refresh ng Codex ang kasalukuyang napiling ChatGPT session. Sa ngayon, kailangang ikonekta muli ang lokal na session.",
+      "firstCheckSlow": "Maaaring tumagal nang hanggang 30 segundo ang unang pagsuri",
+      "loginRequiredForTeams": "Gumagana ang pag-browse ng mga session at proyekto kahit walang login. Kailangan lang ng login para magpatakbo ng agent teams.",
+      "troubleshootTitle": "Kung sigurado kang naka-login ka, subukan ang mga hakbang na ito:"
+    },
+    "installer": {
+      "checkingLatest": "Sinusuri ang pinakabagong bersyon...",
+      "downloading": "Dina-download ang {{runtime}}...",
+      "installing": "Ini-install ang {{runtime}}...",
+      "success": "Matagumpay na na-install ang {{runtime}} v{{version}}",
+      "verifying": "Bineberipika ang checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "Kailangan ng API key",
+      "comingSoon": "Malapit nang dumating",
+      "collapseProviderDetails": "I-collapse ang mga detalye ng provider",
+      "expandProviderDetails": "I-expand ang mga detalye ng provider",
+      "generateLink": "Bumuo ng link",
+      "loadingRateLimits": "Niloload ang mga rate limit",
+      "loggedOut": "Naka-logout ang provider",
+      "loginAuthFailed": "Nabigo ang authentication",
+      "loginAuthUpdated": "Na-update ang authentication",
+      "loginComplete": "Tapos na ang login",
+      "loginFailed": "Nabigo ang login",
+      "loginTitle": "Login",
+      "logoutFailed": "Nabigo ang logout",
+      "logoutTitle": "Logout",
+      "notLoggedIn": "Hindi naka-login",
+      "openLogin": "Buksan ang login",
+      "providerActionRequired": "Kailangan ng aksyon mula sa provider",
+      "resets": "magre-reset {{time}}",
+      "runtimeLoginTitle": "{{runtime}} Login"
+    },
+    "loading": {
+      "aiProviders": "Sinusuri ang mga AI Provider...",
+      "claudeCli": "Sinusuri ang Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Authenticated",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Sinusuri ang authentication...",
+      "checkingProviders": "Sinusuri ang mga provider...",
+      "configuredLocalCount": "{{count}} na-configure na lokal",
+      "configuredLocalCount_few": "{{count}} na-configure na lokal",
+      "configuredLocalCount_many": "{{count}} na-configure na lokal",
+      "configuredLocalCount_one": "{{count}} na-configure na lokal",
+      "configuredLocalCount_other": "{{count}} na-configure na lokal",
+      "configuredLocalTitle": "Mga lokal na OpenCode route na na-import mula sa iyong OpenCode config.",
+      "connectedCount": "Mga provider: {{connected}}/{{denominator}} konektado",
+      "freeModels": "Mga libreng model",
+      "freeModelsTitle": "Kasama sa OpenCode ang mga libreng model na opsyon tulad ng Big Pickle kapag available sa iyong setup. Maaari ding maglabas ang OpenRouter sa pamamagitan ng OpenCode ng mga libreng model, ngunit hindi lahat ng OpenCode/OpenRouter model ay libre. Maaaring magbago ang availability at mga limitasyon.",
+      "loadingModels": "Niloload ang mga model...",
+      "modelsUnavailable": "Hindi available ang mga model para sa runtime build na ito",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} na-verify",
+      "verifiedCount_few": "{{count}} na-verify",
+      "verifiedCount_many": "{{count}} na-verify",
+      "verifiedCount_one": "{{count}} na-verify",
+      "verifiedCount_other": "{{count}} na-verify",
+      "verifiedTitle": "Mga OpenCode route na may matagumpay na execution proof."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "Nabigo sa startup health check ang na-configure na {{runtime}}.",
+      "configuredNotFound": "Hindi nakita ang na-configure na {{runtime}}.",
+      "foundButFailed": "Nakita ang {{runtime}} ngunit nabigong magsimula",
+      "healthCheckFailedDescription": "Nakita ng app ang na-configure na {{runtime}}, ngunit nabigo ang startup health check nito. Ayusin o i-reinstall ito, pagkatapos ay subukang muli.",
+      "install": "I-install ang {{runtime}}",
+      "installRequiredDescription": "Kailangan ang {{runtime}} para sa team provisioning at session management. I-install ito para makapagsimula.",
+      "isRequired": "Kailangan ang {{runtime}}",
+      "reinstall": "I-reinstall ang {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Sinusuri",
+      "codexTitle": "I-install ang Codex CLI sa app data",
+      "downloading": "Dina-download",
+      "downloadingPercent": "Dina-download {{percent}}%",
+      "install": "I-install",
+      "installing": "Ini-install",
+      "openCodeTitle": "I-install ang OpenCode runtime sa app data",
+      "retryInstall": "Subukang muli ang pag-install"
+    },
+    "troubleshoot": {
+      "again": "muli",
+      "authStatusCommand": "ang iyong na-configure na CLI auth status command",
+      "checkLoggedIn": "- tingnan kung ipinapakita nito ang \"Logged in\"",
+      "click": "I-click",
+      "loginCommand": "ang runtime login command",
+      "logoutCommand": "ang runtime logout command",
+      "openTerminal": "Buksan ang iyong terminal at patakbuhin:",
+      "reloginPrefix": "Kung sinasabi nitong naka-login ka ngunit hindi ito nakikita ng app, subukan:",
+      "sameRuntime": "Tiyaking ang CLI sa iyong terminal ay pareho ng runtime na ginagamit ng app",
+      "statusCacheHint": "- minsan naka-cache ang status nang ilang segundo",
+      "then": "pagkatapos"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Isa o higit pang provider ang naka-set sa API key mode, ngunit walang naka-configure na API key. Buksan ang Manage Providers para magdagdag ng key o palitan ang connection mode.",
+      "multipleApiKeysNeedAttention": "Isa o higit pang provider ang naka-set sa API key mode at nangangailangan ng atensyon. Buksan ang Manage Providers para suriin ang mga naka-save na key o palitan ang connection mode.",
+      "notAuthenticated": "Naka-install ang {{runtime}} ngunit hindi ka authenticated. Kailangan ng login para sa team provisioning at mga AI feature.",
+      "singleApiKeyMissing": "Ang {{provider}} ay naka-set sa API key mode, ngunit walang naka-configure na API key. Buksan ang Manage Providers para magdagdag ng key o palitan ang connection mode.",
+      "singleApiKeyNeedsAttention": "Ang {{provider}} ay naka-set sa API key mode, ngunit hindi ito konektado. Buksan ang Manage Providers para suriin ang naka-save na key o palitan ang connection mode."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Pumili ng folder ng proyekto",
+    "selectFolder": "Pumili ng Folder",
+    "failedToLoad": "Nabigong i-load ang mga proyekto",
+    "retry": "Subukang muli",
+    "noProjects": "Walang nahanap na proyekto",
+    "noMatches": "Walang tugma para sa \"{{query}}\"",
+    "noRecentProjects": "Walang nahanap na kamakailang proyekto",
+    "emptyDescription": "Lalabas dito ang kamakailang aktibidad ng Claude at Codex.",
+    "loadMore": "Mag-load pa",
+    "card": {
+      "deleted": "Tinanggal",
+      "projectFolderMissing": "Wala na ang folder ng proyekto",
+      "taskCounts": {
+        "active": "{{count}} aktibo",
+        "active_one": "{{count}} aktibo",
+        "active_other": "{{count}} aktibo",
+        "active_few": "{{count}} aktibo",
+        "active_many": "{{count}} aktibo",
+        "pending": "{{count}} nakabinbin",
+        "pending_one": "{{count}} nakabinbin",
+        "pending_other": "{{count}} nakabinbin",
+        "pending_few": "{{count}} nakabinbin",
+        "pending_many": "{{count}} nakabinbin",
+        "done": "{{count}} tapos",
+        "done_one": "{{count}} tapos",
+        "done_other": "{{count}} tapos",
+        "done_few": "{{count}} tapos",
+        "done_many": "{{count}} tapos"
+      }
+    },
+    "title": "Kamakailang Proyekto",
+    "searchResults": "Mga Resulta ng Paghahanap",
+    "searchPlaceholder": "Maghanap ng proyekto..."
+  },
+  "actions": {
+    "selectTeam": "Pumili ng Team",
+    "or": "o",
+    "clearSearch": "I-clear ang paghahanap"
+  },
+  "windowsAdmin": {
+    "title": "Inirerekomenda ang Windows Administrator mode",
+    "description": "Maaaring mag-time out ang mga pagsuri ng OpenCode runtime kapag hindi naka-elevate ang Agent Teams AI. I-restart ang app gamit ang Run as administrator bago maglunsad ng mga OpenCode team."
+  },
+  "webPreview": {
+    "title": "Buksan ang desktop app para sa buong functionality",
+    "description": "Nasa development pa rin ang bersyon sa browser. Maaaring limitado dito ang mga aksyon sa proyekto, integration, at live na update ng status. Gamitin ang desktop app para ma-access nang maaasahan ang lahat ng feature."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "May bagong bersyon na available",
+    "restartNow": "I-restart ngayon",
+    "viewDetails": "Tingnan ang mga detalye"
+  }
+}

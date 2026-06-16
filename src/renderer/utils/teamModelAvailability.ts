@@ -71,21 +71,6 @@ export interface TeamProviderModelVerificationCounts {
   verifying: boolean;
 }
 
-function mergeModelLists(primary: readonly string[], supplemental: readonly string[]): string[] {
-  const merged = new Map<string, string>();
-  for (const model of [...primary, ...supplemental]) {
-    const trimmed = model.trim();
-    if (!trimmed) {
-      continue;
-    }
-    const key = trimmed.toLowerCase();
-    if (!merged.has(key)) {
-      merged.set(key, trimmed);
-    }
-  }
-  return Array.from(merged.values());
-}
-
 export function getOpenCodeOpenAiRouteAuthUnavailableReason(
   providerId: SupportedProviderId | undefined,
   model: string | undefined,
@@ -166,18 +151,20 @@ export function isTeamProviderModelVerificationPending(
     return true;
   }
 
+  const verificationState = providerStatus.verificationState;
+  if (verificationState === 'error' || providerStatus.modelCatalogRefreshState === 'error') {
+    return false;
+  }
+
   const statusMessage = providerStatus.statusMessage?.trim().toLowerCase() ?? '';
   const statusMessagePending =
     statusMessage === 'checking...' ||
     statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE.toLowerCase();
-  if (providerStatus.verificationState !== 'error' && statusMessagePending) {
+  if (statusMessagePending) {
     return true;
   }
 
-  if (
-    providerStatus.verificationState !== 'error' &&
-    providerStatus.modelCatalogRefreshState === 'loading'
-  ) {
+  if (providerStatus.modelCatalogRefreshState === 'loading') {
     return true;
   }
 
@@ -273,6 +260,16 @@ function hasAnthropicCompatibleRuntimeCatalog(
   );
 }
 
+function hasAnthropicFirstPartyRuntimeCatalog(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  return (
+    providerStatus?.modelCatalog?.providerId === 'anthropic' &&
+    providerStatus.modelCatalog.source === 'anthropic-models-api' &&
+    providerStatus.modelCatalog.status !== 'unavailable'
+  );
+}
+
 export function isAnthropicCompatibleRuntime(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): boolean {
@@ -316,6 +313,72 @@ export function canUseCustomAnthropicCompatibleModel(
   return catalog.status !== 'ready' || !hasVisibleAnthropicCompatibleCatalogModels(providerStatus);
 }
 
+function getVisibleRuntimeCatalogModels(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): string[] | null {
+  if (!providerStatus?.modelCatalog) {
+    return null;
+  }
+
+  const models = providerStatus.modelCatalog.models
+    .filter((model) => !model.hidden)
+    .map((model) => model.launchModel.trim() || model.id.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : null;
+}
+
+function getAnthropicFirstPartyRuntimeModels(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): string[] | null {
+  if (!hasAnthropicFirstPartyRuntimeCatalog(providerStatus)) {
+    return null;
+  }
+
+  return getVisibleRuntimeCatalogModels(providerStatus);
+}
+
+function getAnthropicFirstPartySelectorModels(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): string[] | null {
+  const catalogModels = getAnthropicFirstPartyRuntimeModels(providerStatus);
+  if (!catalogModels) {
+    return null;
+  }
+
+  const seenModels = new Set<string>();
+  const seenLabels = new Set<string>();
+  const merged: string[] = [];
+
+  const appendModel = (model: string, skipDuplicateLabel: boolean): void => {
+    const trimmed = model.trim();
+    if (!trimmed || seenModels.has(trimmed)) {
+      return;
+    }
+
+    const label =
+      getRuntimeAwareProviderScopedTeamModelLabel('anthropic', trimmed, providerStatus) ?? trimmed;
+    const labelKey = label.trim().toLowerCase();
+    if (skipDuplicateLabel && labelKey && seenLabels.has(labelKey)) {
+      return;
+    }
+
+    seenModels.add(trimmed);
+    if (labelKey) {
+      seenLabels.add(labelKey);
+    }
+    merged.push(trimmed);
+  };
+
+  for (const option of getTeamProviderModelOptions('anthropic')) {
+    appendModel(option.value, false);
+  }
+  for (const model of catalogModels) {
+    appendModel(model, true);
+  }
+
+  return merged;
+}
+
 function getAnthropicCatalogModel(
   model: string,
   providerStatus?: TeamModelRuntimeProviderStatus | null
@@ -343,15 +406,7 @@ function getRuntimeCatalogModels(
     return null;
   }
 
-  if (!providerStatus?.modelCatalog) {
-    return null;
-  }
-
-  const models = providerStatus.modelCatalog.models
-    .filter((model) => !model.hidden)
-    .map((model) => model.launchModel.trim() || model.id.trim())
-    .filter(Boolean);
-  return models.length > 0 ? models : null;
+  return getVisibleRuntimeCatalogModels(providerStatus);
 }
 
 function getRuntimeCatalogModelOption(
@@ -361,7 +416,7 @@ function getRuntimeCatalogModelOption(
 ): TeamRuntimeModelOption | null {
   const canUseCatalog =
     (providerId === 'codex' && providerStatus?.modelCatalog?.providerId === 'codex') ||
-    (providerId === 'anthropic' && hasAnthropicCompatibleRuntimeCatalog(providerStatus));
+    (providerId === 'anthropic' && hasAnthropicRuntimeCatalog(providerStatus));
   if (!canUseCatalog || !providerStatus?.modelCatalog) {
     return null;
   }
@@ -377,10 +432,11 @@ function getRuntimeCatalogModelOption(
   return {
     value: launchModel,
     label:
+      getRuntimeAwareProviderScopedTeamModelLabel(providerId, launchModel, providerStatus) ??
       getProviderScopedTeamModelLabel(providerId, catalogModel.displayName) ??
       catalogModel.displayName,
     badgeLabel:
-      catalogModel.badgeLabel ??
+      getRuntimeAwareTeamModelBadgeLabel(providerId, launchModel, providerStatus) ??
       (getTeamProviderModelOptions(providerId).some((option) => option.value === model)
         ? undefined
         : 'New'),
@@ -405,9 +461,13 @@ function getRuntimeSelectorModels(
 
     const sourceModels =
       providerId === 'opencode'
-        ? mergeModelLists(catalogModels, providerStatus.models)
+        ? providerStatus.models.length > 0
+          ? providerStatus.models
+          : catalogModels
         : catalogModels;
-    return getVisibleTeamProviderModels(providerId, sourceModels, providerStatus);
+    return getVisibleTeamProviderModels(providerId, sourceModels, providerStatus, {
+      expandOpenCodeSummaryCatalog: false,
+    });
   }
 
   if (providerId === 'anthropic' && isAnthropicCompatibleRuntime(providerStatus)) {
@@ -498,7 +558,9 @@ function getRuntimeModelAvailability(
       return isSupportedAnthropicTeamModel(model) ? 'available' : null;
     }
 
-    return getAnthropicCatalogModel(model, providerStatus) ? 'available' : null;
+    return getAnthropicCatalogModel(model, providerStatus) || isSupportedAnthropicTeamModel(model)
+      ? 'available'
+      : null;
   }
 
   if (!providerStatus) {
@@ -530,7 +592,8 @@ export function getTeamProviderModelVerificationCounts(
   if (providerId === 'anthropic') {
     const visibleAnthropicModels = isAnthropicCompatibleRuntime(providerStatus)
       ? getRuntimeSelectorModels(providerId, providerStatus)
-      : getFallbackTeamProviderModels(providerId);
+      : (getAnthropicFirstPartySelectorModels(providerStatus) ??
+        getFallbackTeamProviderModels(providerId));
     return {
       checkedCount: visibleAnthropicModels.length,
       totalCount: visibleAnthropicModels.length,
@@ -558,8 +621,16 @@ export function getAvailableTeamProviderModels(
       );
     }
 
-    return getFallbackTeamProviderModels(providerId).filter(
-      (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
+    const visibleAnthropicModels =
+      getAnthropicFirstPartySelectorModels(providerStatus) ??
+      getFallbackTeamProviderModels(providerId);
+
+    return sortTeamProviderModels(
+      providerId,
+      visibleAnthropicModels.filter(
+        (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
+      ),
+      providerStatus
     );
   }
 
@@ -593,6 +664,34 @@ export function getAvailableTeamProviderModelOptions(
             value: model,
             label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
             badgeLabel: getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus),
+            availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
+            availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
+          };
+        }),
+      ];
+    }
+
+    const firstPartyModels = getAnthropicFirstPartySelectorModels(providerStatus);
+    if (firstPartyModels) {
+      const fallbackOptions = getFallbackTeamProviderModelOptions(providerId, providerStatus);
+      const fallbackOptionByValue = new Map(
+        fallbackOptions.map((option) => [option.value, option])
+      );
+
+      return [
+        fallbackOptionByValue.get('') ?? { value: '', label: 'Default', badgeLabel: 'Default' },
+        ...firstPartyModels.map((model) => {
+          const catalogOption = getRuntimeCatalogModelOption(providerId, model, providerStatus);
+          const fallbackOption = fallbackOptionByValue.get(model);
+          const option = catalogOption ??
+            fallbackOption ?? {
+              value: model,
+              label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
+              badgeLabel: getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus),
+            };
+
+          return {
+            ...option,
             availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
             availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
           };
@@ -684,7 +783,10 @@ export function isTeamModelAvailableForUi(
       );
     }
 
-    if (!isSupportedAnthropicTeamModel(trimmed)) {
+    if (
+      !isSupportedAnthropicTeamModel(trimmed) &&
+      !getAnthropicCatalogModel(trimmed, providerStatus)
+    ) {
       return false;
     }
 

@@ -232,12 +232,7 @@ function mergeProviderStatusCatalogCache(
 ): CliProviderStatus {
   const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
   const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
-  const shouldPreserveCurrentModels =
-    incomingProvider.models.length === 0 ||
-    (incomingProvider.providerId === 'opencode' &&
-      incomingProvider.modelCatalog == null &&
-      incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-      currentProvider.models.length > incomingProvider.models.length);
+  const shouldPreserveCurrentModels = incomingProvider.models.length === 0;
 
   return {
     ...incomingProvider,

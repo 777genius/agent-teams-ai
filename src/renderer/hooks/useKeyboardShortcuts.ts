@@ -32,6 +32,15 @@ export function isEditableShortcutTarget(target: EventTarget | null): boolean {
   return contentEditable?.toLowerCase() !== 'false';
 }
 
+export function isEditableShortcutEventTarget(event: KeyboardEvent): boolean {
+  const targets =
+    typeof event.composedPath === 'function'
+      ? event.composedPath()
+      : [event.target].filter(Boolean);
+
+  return targets.some((target) => isEditableShortcutTarget(target));
+}
+
 export function useKeyboardShortcuts(): void {
   const {
     openTabs,
@@ -93,7 +102,7 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      if (isEditableShortcutTarget(event.target)) {
+      if (isEditableShortcutEventTarget(event)) {
         return;
       }
 

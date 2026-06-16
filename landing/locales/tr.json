@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Özellikler",
+    "screenshots": "Ekran görüntüleri",
+    "docs": "Dokümantasyon",
+    "comparison": "Karşılaştır",
+    "download": "İndir",
+    "pricing": "Ücretsiz",
+    "faq": "SSS",
+    "viewOnGithub": "GitHub'da görüntüle",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "short": {
+      "screenshots": "Görseller",
+      "docs": "Dokümanlar",
+      "download": "Al",
+      "comparison": "Karşılaştır",
+      "pricing": "Ücretsiz"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Şimdi İndir",
+    "ctaPrimary": "{platform} için indir",
+    "ctaSecondary": "Karşılaştır",
+    "ctaDocs": "Dokümantasyon",
+    "preview": "Ürün önizlemesi",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban Panosu",
+      "openSource": "Açık Kaynak"
+    },
+    "watchDemo": "Demoyu İzle",
+    "videoUnavailable": "Video kullanılamıyor",
+    "supportedProviders": "Desteklenen yapay zeka sağlayıcıları",
+    "slogan": "Çok az çaba ile çok iş başarın",
+    "platformDefault": "Platformunuz için",
+    "guidesSetup": "Kılavuzlar ve kurulum",
+    "videoFrameLabel": "Agent Teams demosunu izle",
+    "commandFeed": "Ekip komut akışı",
+    "liveDemo": "Canlı demo",
+    "demoVideoTitle": "Agent Teams demo videosu",
+    "demoTitle": "Agent Teams demosu",
+    "demo": {
+      "ariaLabel": "Agent ekibi demosu",
+      "live": "CANLI",
+      "waiting": "Görevler bekleniyor...",
+      "activity": {
+        "authMiddleware": "Kimlik doğrulama ara katmanı uygulanıyor...",
+        "unitTests": "API için birim testleri yazılıyor...",
+        "reviewPr": "PR #42 değişiklikleri inceleniyor...",
+        "ciPipeline": "CI/CD hattı kuruluyor...",
+        "refactorDatabase": "Veritabanı katmanı yeniden düzenleniyor..."
+      },
+      "tasks": {
+        "authApi": "Kimlik doğrulama API'si",
+        "unitTests": "Birim testleri",
+        "ciSetup": "CI kurulumu"
+      },
+      "columns": {
+        "todo": "YAPILACAK",
+        "progress": "DEVAM EDİYOR",
+        "review": "İNCELEME",
+        "done": "BİTTİ"
+      }
+    }
+  },
+  "download": {
+    "title": "İndir",
+    "detected": "Algılandı",
+    "systemRequirements": "Sistem gereksinimleri",
+    "version": "Sürüm {version}",
+    "readyToStart": "Başlamaya hazır!"
+  },
+  "theme": {
+    "dark": "Koyu",
+    "light": "Açık"
+  },
+  "language": {
+    "label": "Dil",
+    "search": "Dil ara…"
+  },
+  "features": {
+    "sectionTitle": "Yapay zeka agent orkestrasyonu için ihtiyacınız olan her şey",
+    "sectionSubtitle": "Çoklu agent iş birliğini gerçekten işler hale getiren güçlü araçlar."
+  },
+  "pricing": {
+    "sectionTitle": "Kurulumu ücretsiz. Ücretsiz model dahil.",
+    "sectionSubtitle": "Kimlik doğrulaması olmayan ücretsiz bir modelle hemen başlayın - hesap, API anahtarı veya kredi kartı gerekmez. Daha fazla model istediğinizde Claude, Codex, OpenCode/OpenRouter veya diğer sağlayıcı erişimini bağlayın.",
+    "getStarted": "Şimdi İndir",
+    "popular": "Ücretsiz",
+    "freeModelCallout": "Kimlik doğrulaması olmayan ücretsiz model dahil",
+    "note": "Agent Teams'in ücretli bir katmanı yoktur. Kimlik doğrulaması olmayan ücretsiz model hemen denemenizi sağlar; ücretli sağlayıcı kullanımı isteğe bağlıdır ve seçtiğiniz sağlayıcı tarafından kontrol edilir."
+  },
+  "testimonials": {
+    "sectionTitle": "Geliştiriciler ne diyor",
+    "sectionSubtitle": "Gerçek geliştiricilerden gerçek geri bildirimler",
+    "showMore": "Daha fazla göster",
+    "showLess": "Daha az göster",
+    "feedbackCta": "Deneyiminizi paylaşmak ister misiniz? Şurada bir konu açın:"
+  },
+  "faq": {
+    "sectionTitle": "Sorularınız mı var? Yanıtlarımız hazır",
+    "subtitle": "Agent Teams hakkında bilmeniz gereken her şey"
+  },
+  "comparison": {
+    "sectionTitle": "Nasıl karşılaştırılıyoruz",
+    "sectionSubtitle": "Diğer yapay zeka kodlama araçlarıyla özellik bazında karşılaştırma.",
+    "feature": "Özellik",
+    "robotBubble": "Kendiniz karar verin",
+    "features": {
+      "crossTeam": "Ekipler arası iletişim",
+      "agentMessaging": "Agent'tan agent'a mesajlaşma",
+      "linkedTasks": "Bağlı görevler",
+      "sessionAnalysis": "Oturum analizi",
+      "taskAttachments": "Görev ekleri",
+      "hunkReview": "Hunk düzeyinde inceleme",
+      "codeEditor": "Yerleşik kod düzenleyici",
+      "fullAutonomy": "Tam özerklik",
+      "taskDeps": "Görev bağımlılıkları",
+      "reviewWorkflow": "İnceleme iş akışı",
+      "zeroSetup": "Sıfır kurulum",
+      "kanban": "Kanban panosu",
+      "execLog": "Yürütme günlükleri",
+      "liveProcesses": "Canlı süreçler",
+      "runtimeLoad": "Takım arkadaşı başına CPU/RAM",
+      "perTaskReview": "Görev başına kod incelemesi",
+      "flexAutonomy": "Esnek özerklik",
+      "worktree": "Git worktree yalıtımı",
+      "multiAgent": "Karışık yapay zeka takım arkadaşları",
+      "liveWorkGraph": "Canlı ekip haritası",
+      "liveTeam": "Canlı takım arkadaşları",
+      "teamWorkspace": "Ekip çalışma alanı",
+      "launchProof": "Takım arkadaşı başlatma durumu",
+      "orgGovernance": "Organizasyon şeması / yönetişim",
+      "budgetControls": "Bütçe kontrolleri",
+      "price": "Fiyat"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "İş başında görün",
+    "sectionSubtitle": "Uygulamadan gerçek ekran görüntüleri — kanban panosu, kod incelemesi, agent ekipleri ve daha fazlası."
+  },
+  "common": {
+    "learnMore": "Daha fazla bilgi",
+    "statusLabel": "Durum:",
+    "previous": "Önceki",
+    "next": "Sonraki"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Geliştiriciler için yapay zeka agent orkestrasyonu",
+    "robotBubble": "Bekliyorum",
+    "links": {
+      "github": "GitHub",
+      "author": "Yazar",
+      "docs": "Dokümantasyon"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Geliştiriciler için Yapay Zeka Agent Orkestrasyonu",
+    "homeDescription": "Yapay zeka agent ekipleri için ücretsiz, açık kaynaklı masaüstü uygulaması. Kimlik doğrulaması olmayan ücretsiz bir modelle başlayın, ardından daha fazla modele ihtiyaç duyduğunuzda Claude, Codex veya OpenCode'u bağlayın.",
+    "downloadTitle": "macOS, Windows ve Linux için Agent Teams'i indirin",
+    "downloadDescription": "macOS, Windows ve Linux için Agent Teams'i indirin. Claude, Codex ve OpenCode agent ekipleri için ücretsiz açık kaynaklı masaüstü uygulaması."
+  },
+  "error": {
+    "notFoundTitle": "Sayfa bulunamadı",
+    "notFoundDescription": "Aradığınız sayfa mevcut değil veya taşınmış.",
+    "genericTitle": "Bir şeyler ters gitti",
+    "genericDescription": "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+    "goHome": "Ana sayfaya git"
+  }
+}

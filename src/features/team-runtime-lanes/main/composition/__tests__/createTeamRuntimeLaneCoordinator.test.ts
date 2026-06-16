@@ -45,7 +45,7 @@ describe('createTeamRuntimeLaneCoordinator', () => {
           { name: 'tom', providerId: 'opencode', model: 'minimax-m2.5-free' },
         ],
       })
-    ).toThrow('Mixed teams with OpenCode side lanes require the OpenCode runtime adapter');
+    ).toThrow('OpenCode side lanes require the OpenCode runtime adapter');
   });
 
   it('drops stale hard-failure reasons when secondary OpenCode evidence later confirms alive', () => {

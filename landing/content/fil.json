@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Ikaw ang Boss, ang mga agent ang team mo. Sila ang humahawak ng tasks, nagme-message sa isa't isa, at nagre-review ng code. Ikaw, titingin lang sa kanban board habang nagkakape."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Mga agent team",
+      "description": "Gumawa ng teams na may iba't ibang role. Autonomous at parallel magtrabaho ang agents, nag-uusap sila, at nakikipag-collaborate sa ibang teams."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Realtime nagbabago ang task status habang nagtatrabaho ang agents. Drag, assign, review - lahat nasa visual board."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Diff view per task na may accept, reject, at comment. Built-in code editor na may Git support."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Cross-team communication",
+      "description": "Nagme-message ang agents sa loob ng team at sa pagitan ng teams. Direct messages, task comments, at quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mode",
+      "description": "Magsimula sa isang agent na self-managed ang tasks. I-expand sa full team kapag kailangan mo ng dagdag na power."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processes",
+      "description": "Tingnan ang running agents, magbukas ng URLs sa browser, at i-monitor ang token usage at session context realtime."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Ano ang Agent Teams?",
+      "answer": "Desktop app para mag-orchestrate ng AI agent teams gamit ang sarili naming local coordination layer. May roles ang agents, autonomous silang nagtatrabaho, nagco-collaborate sa kanban board, at puwedeng tumakbo sa Anthropic o Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Libre ba talaga?",
+      "answer": "Oo. Libre at open source ang app. Puwede kang magsimula sa free model na walang auth - walang registration, API key, o credit card. Kung gusto mo ng mas maraming models, ikonekta ang Claude, Codex, OpenCode/OpenRouter, o ibang supported provider."
+    },
+    {
+      "id": "platforms",
+      "question": "Anong platforms ang supported?",
+      "answer": "macOS (Apple Silicon at Intel), Windows, at Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Paano ito gumagana?",
+      "answer": "I-install ang app, gumawa ng team, mag-assign ng roles. Magsisimulang magtrabaho ang agents nang parallel. Minomonitor mo ang progress sa kanban, nire-review ang diffs, at direktang nakikipag-usap sa agents."
+    },
+    {
+      "id": "privacy",
+      "question": "Private ba ang code ko?",
+      "answer": "Lahat ay tumatakbo locally sa machine mo. Walang data na ipinapadala sa external servers. Private ang code, conversations, at agent activity mo."
+    },
+    {
+      "id": "requirements",
+      "question": "Ano ang kailangan para magsimula?",
+      "answer": "I-install lang ang app - magsimula sa free model na walang auth, tapos ikonekta ang provider-backed models sa UI kapag kailangan."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "Piliin ang platform mo at magsimulang mag-build gamit ang AI agent teams."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Gumawa ng teams na may iba't ibang role. Autonomous at parallel magtrabaho ang agents, nag-uusap sila, at nakikipag-collaborate sa ibang teams."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Magsimula sa isang agent na self-managed ang tasks. I-expand sa full team kapag kailangan mo ng dagdag na power."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Diff view per task na may accept, reject, at comment. Built-in code editor na may Git support."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Tingnan ang running agents, magbukas ng URLs sa browser, at i-monitor ang token usage at session context realtime."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "I-install lang ang app - magsimula sa free model na walang auth, tapos ikonekta ang provider-backed models sa UI kapag kailangan."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Nagme-message ang agents sa loob ng team at sa pagitan ng teams. Direct messages, task comments, at quick actions."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Libre",
+      "price": "$0",
+      "period": "",
+      "description": "Oo. Libre at open source ang app. Puwede kang magsimula sa free model na walang auth - walang registration, API key, o credit card. Kung gusto mo ng mas maraming models, ikonekta ang Claude, Codex, OpenCode/OpenRouter, o ibang supported provider.",
+      "features": [
+        "Mga agent team",
+        "Kanban board",
+        "Code review",
+        "Cross-team communication",
+        "Solo mode",
+        "Live processes",
+        "Private ba ang code ko?",
+        "Ano ang kailangan para magsimula?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

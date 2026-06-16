@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Opzioni per utenti esperti: esporta/importa configurazione, ripristina impostazioni predefinite e modifica la configurazione grezza.",
+      "label": "Avanzate"
+    },
+    "general": {
+      "description": "Preferenze principali dell'app come tema, lingua, densità di visualizzazione e comportamento all'avvio.",
+      "label": "Generali"
+    },
+    "infoAriaLabel": "Cos'è {{label}}?",
+    "notifications": {
+      "description": "Controlla quando e come ricevi notifiche su attività degli agenti, completamenti dei task ed errori.",
+      "label": "Notifiche"
+    }
+  },
+  "view": {
+    "description": "Gestisci le preferenze dell'app",
+    "loading": "Caricamento delle impostazioni...",
+    "title": "Impostazioni"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Annulla",
+      "test": "Testa"
+    },
+    "defaults": {
+      "allProjects": "Tutti i progetti",
+      "allProjectsHint": "I test usano {{project}}. L'impostazione predefinita si applica a meno che un progetto non abbia un override.",
+      "loadingContexts": "Caricamento dei contesti...",
+      "projectHint": "Il salvataggio sovrascrive solo {{project}}.",
+      "projectOverrideContext": "Contesto di override del progetto",
+      "scopeDescriptionAllProjects": "Impostazione predefinita per ogni progetto che non ha un proprio override OpenCode.",
+      "scopeDescriptionProject": "Sovrascrivi solo il progetto selezionato. I team in esecuzione non vengono modificati.",
+      "selectProjectContext": "Seleziona contesto del progetto",
+      "selectProjectHint": "Seleziona un progetto prima di testare i modelli locali o salvare le impostazioni predefinite.",
+      "selectValidationContext": "Seleziona contesto di convalida",
+      "setAllProjectsDefault": "Imposta predefinito per tutti i progetti",
+      "setProjectDefault": "Imposta predefinito di progetto",
+      "thisProject": "Questo progetto",
+      "title": "Impostazioni predefinite OpenCode",
+      "validationContext": "Contesto di convalida"
+    },
+    "diagnostics": {
+      "copied": "Diagnostica copiata",
+      "copiedShort": "Copiata",
+      "copy": "Copia diagnostica",
+      "hints": "Suggerimenti",
+      "likelyCause": "Causa probabile:",
+      "windowsSymlinkAdminHint": "Windows: esegui Agent Teams AI come amministratore"
+    },
+    "models": {
+      "alreadyDefault": "Questo è già il valore predefinito OpenCode selezionato.",
+      "empty": "Nessun modello trovato.",
+      "emptyFree": "Nessun modello gratuito trovato.",
+      "emptyRecommended": "Nessun modello consigliato trovato.",
+      "emptyRecommendedFree": "Nessun modello gratuito consigliato trovato.",
+      "freeOnly": "Solo gratuiti",
+      "launchableDescription": "Route note dalla configurazione OpenCode, modelli gratuiti integrati e l'impostazione predefinita attuale. Le route locali necessitano di un test riuscito prima di essere pronte per l'avvio dei team.",
+      "launchableTitle": "Route dei modelli OpenCode",
+      "loadingRoutes": "Caricamento delle route dei modelli OpenCode...",
+      "noRoutesMatch": "Nessuna route di modello OpenCode corrisponde a \"{{query}}\".",
+      "noneReported": "Nessuna route di modello OpenCode segnalata finora. Configura una route locale in OpenCode o usa la scheda Provider per ispezionare i provider del catalogo.",
+      "recommendedOnly": "Solo consigliati",
+      "searchPlaceholder": "Cerca modelli",
+      "selectProjectBeforeTesting": "Seleziona un contesto di progetto prima di testare i modelli.",
+      "selectProjectBeforeTestingDefaults": "Seleziona un contesto di progetto prima di testare o salvare le impostazioni predefinite OpenCode.",
+      "testInProgress": "Il test del modello è già in esecuzione.",
+      "useInTeamPicker": "Salva per il selettore di team",
+      "validationContextRequired": "Seleziona un contesto di convalida qui sopra per abilitare Testa e Imposta predefinito. Il salvataggio per il selettore di team memorizza solo la route per i nuovi team.",
+      "actionsUnavailable": "Le azioni sono temporaneamente non disponibili.",
+      "defaultSaveInProgress": "L'impostazione predefinita OpenCode è in fase di salvataggio.",
+      "routeUnavailableAuth": "Questo provider richiede l'autenticazione prima che questo modello possa essere usato.",
+      "routeUnavailableFailed": "Questa route di modello non ha superato l'ultimo test di esecuzione.",
+      "routeUnavailableGeneric": "Questa route di modello non può essere usata al momento.",
+      "routeUnavailableUnknown": "Questo modello è l'impostazione predefinita OpenCode attuale, ma non è ancora disponibile nel catalogo live."
+    },
+    "providers": {
+      "catalog": "Catalogo dei provider OpenCode",
+      "countFallback": "Provider OpenCode",
+      "description": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
+      "loadMore": "Carica altri provider",
+      "loading": "Caricamento dei provider OpenCode",
+      "noMatches": "Nessun provider corrisponde a quella ricerca.",
+      "noneReported": "Nessun provider OpenCode segnalato dal runtime gestito.",
+      "recommended": "Consigliati",
+      "refreshCatalog": "Aggiorna catalogo",
+      "searchPlaceholder": "Cerca provider",
+      "description_few": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
+      "description_many": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
+      "description_one": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
+      "description_other": "{{count}}. I provider connessi e consigliati vengono mostrati per primi."
+    },
+    "setup": {
+      "loading": "Caricamento della configurazione del provider..."
+    },
+    "summary": {
+      "defaultModel": "Predefinito OpenCode: {{model}}",
+      "loading": "Caricamento del runtime OpenCode gestito, dei provider connessi e dei modelli predefiniti...",
+      "source": "Origine: {{source}}",
+      "title": "Runtime OpenCode"
+    },
+    "tabs": {
+      "models": "Modelli",
+      "providers": "Provider"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Cerca route dei modelli"
+    },
+    "badges": {
+      "usedInTeamPicker": "Salvato per il selettore di team",
+      "free": "gratuito",
+      "local": "locale",
+      "configured": "configurato",
+      "knownRoute": "route nota",
+      "connected": "connesso",
+      "verified": "verificato",
+      "needsTest": "richiede test",
+      "failed": "non riuscito",
+      "unknown": "sconosciuto",
+      "default": "predefinito"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Lingua per la comunicazione degli agenti",
+      "descriptionWithDetected": "Lingua per la comunicazione degli agenti (rilevata: {{detected}})",
+      "emptyMessage": "Nessuna lingua trovata.",
+      "label": "Lingua",
+      "searchPlaceholder": "Cerca lingua...",
+      "selectPlaceholder": "Seleziona lingua...",
+      "title": "Lingua degli agenti"
+    },
+    "appLanguage": {
+      "description": "Lingua per l'interfaccia dell'applicazione.",
+      "label": "Lingua",
+      "title": "Lingua dell'app"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Espandi automaticamente ogni turno di risposta quando apri un transcript o ricevi un nuovo messaggio",
+        "label": "Espandi le risposte AI per impostazione predefinita"
+      },
+      "nativeTitleBar": {
+        "description": "Usa il frame della finestra di sistema predefinito invece della barra del titolo personalizzata",
+        "label": "Usa la barra del titolo nativa",
+        "restartConfirm": {
+          "confirmLabel": "Riavvia",
+          "message": "L'app deve essere riavviata per applicare la modifica alla barra del titolo. Riavviare ora?",
+          "title": "Riavvio richiesto"
+        }
+      },
+      "theme": {
+        "description": "Scegli il tema di colori che preferisci",
+        "label": "Tema",
+        "options": {
+          "dark": "Scuro",
+          "light": "Chiaro",
+          "system": "Sistema"
+        }
+      },
+      "title": "Aspetto"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Avvia un server HTTP per accedere all'interfaccia da un browser o incorporarla in iframe",
+        "label": "Abilita modalità server"
+      },
+      "title": "Accesso dal browser"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Seleziona cartella",
+        "selectFolderManually": "Seleziona cartella manualmente",
+        "useAutoDetect": "Usa rilevamento automatico",
+        "useFolder": "Usa cartella",
+        "usePath": "Usa percorso",
+        "useThisPath": "Usa questo percorso",
+        "useWsl": "Usi Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Questa cartella non contiene una directory \"projects\". Continuare comunque?",
+          "title": "Nessuna directory projects trovata"
+        },
+        "notClaudeDir": {
+          "message": "Questa cartella si chiama \"{{folderName}}\", non \".claude\". Continuare comunque?",
+          "title": "La cartella selezionata non è .claude"
+        },
+        "noWslPaths": {
+          "message": "Impossibile trovare automaticamente distribuzioni WSL con dati Claude. Selezionare la cartella manualmente?",
+          "title": "Nessun percorso Claude WSL trovato"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" non contiene una directory \"projects\". Continuare comunque?",
+          "title": "Al percorso WSL manca la directory projects"
+        }
+      },
+      "current": {
+        "autoDetected": "Rilevato automaticamente: {{path}}",
+        "autoDetectedPath": "Uso del percorso rilevato automaticamente",
+        "customPath": "Uso del percorso personalizzato",
+        "label": "Radice locale attuale"
+      },
+      "description": "Scegli quale cartella locale viene trattata come radice dei dati Claude",
+      "errors": {
+        "detectWslFailed": "Impossibile rilevare i percorsi della radice Claude WSL",
+        "loadFailed": "Impossibile caricare le impostazioni della radice Claude locale",
+        "updateFailed": "Impossibile aggiornare la radice Claude"
+      },
+      "title": "Radice Claude locale",
+      "wslModal": {
+        "closeAriaLabel": "Chiudi finestra dei percorsi WSL",
+        "description": "Distribuzioni WSL rilevate e candidati per la radice Claude",
+        "noProjectsDir": "Nessuna directory projects rilevata",
+        "title": "Seleziona radice Claude WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Aiuta a migliorare l'app inviando dati anonimi su crash e prestazioni",
+        "label": "Invia segnalazioni di crash"
+      },
+      "title": "Privacy"
+    },
+    "server": {
+      "runningOn": "In esecuzione su",
+      "standaloneModeDescription": "In esecuzione in modalità standalone. Il server HTTP è sempre attivo. Le notifiche di sistema non sono disponibili - i trigger delle notifiche vengono registrati solo nell'app.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Avvia automaticamente l'app quando accedi",
+        "label": "Avvia all'accesso"
+      },
+      "showDockIcon": {
+        "description": "Mostra l'icona dell'app nel dock (macOS)",
+        "label": "Mostra icona nel dock"
+      },
+      "title": "Avvio"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Le notifiche potrebbero non funzionare in modalità di sviluppo. macOS identifica l'app come \"Electron\" (bundle ID",
+      "descriptionSuffix": ") invece del nome dell'app di produzione. Controlla Impostazioni di sistema > Notifiche > Electron per verificare i permessi.",
+      "title": "Modalità sviluppo"
+    },
+    "ignoredRepositories": {
+      "description": "Le notifiche da questi repository verranno ignorate",
+      "empty": "Nessun repository ignorato",
+      "selectPlaceholder": "Seleziona repository da ignorare...",
+      "title": "Repository ignorati"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Mostra notifiche di sistema per errori ed eventi",
+        "label": "Abilita notifiche di sistema"
+      },
+      "sound": {
+        "description": "Riproduci un suono quando appaiono le notifiche",
+        "label": "Riproduci suono"
+      },
+      "subagentErrors": {
+        "description": "Rileva e notifica gli errori nelle sessioni dei sottoagenti",
+        "label": "Includi errori dei sottoagenti"
+      },
+      "title": "Impostazioni delle notifiche"
+    },
+    "snooze": {
+      "clear": "Annulla posticipo",
+      "description": "Sospendi temporaneamente le notifiche",
+      "descriptionWithTime": "Posticipate fino a {{time}}",
+      "label": "Posticipa notifiche",
+      "options": {
+        "15": "15 minuti",
+        "30": "30 minuti",
+        "60": "1 ora",
+        "120": "2 ore",
+        "240": "4 ore",
+        "-1": "Fino a domani"
+      },
+      "selectDuration": "Seleziona durata..."
+    },
+    "taskCompletion": {
+      "description": "Ricevi notifiche native del sistema operativo quando Claude termina i task - suoni, banner e badge su Dock/barra delle applicazioni. Funziona su macOS, Linux e Windows.",
+      "installPlugin": "Installa il plugin claude-notifications-go",
+      "title": "Notifiche di completamento dei task"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Notifica quando ogni task di un team raggiunge lo stato completato",
+        "label": "Tutti i task completati"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Quando Claude segnala un orario di reimpostazione, pianifica un sollecito di follow-up per il lead del team dopo la reimpostazione del limite",
+        "label": "Riprendi automaticamente dopo il limite di frequenza"
+      },
+      "clarifications": {
+        "description": "Mostra notifiche native del sistema operativo quando un task richiede il tuo input",
+        "label": "Notifiche di chiarimento dei task"
+      },
+      "crossTeamMessage": {
+        "description": "Notifica quando arriva un messaggio da un altro team",
+        "label": "Notifiche di messaggi tra team"
+      },
+      "leadInbox": {
+        "description": "Notifica quando i membri del team inviano messaggi al lead del team",
+        "label": "Notifiche della posta in arrivo del lead"
+      },
+      "statusChange": {
+        "description": "Mostra notifiche native del sistema operativo quando lo stato di un task cambia",
+        "label": "Notifiche di cambio stato dei task",
+        "onlySolo": {
+          "description": "Notifica solo quando il team non ha membri",
+          "label": "Solo in modalità Solo"
+        },
+        "statuses": {
+          "description": "Quali stati di destinazione attivano una notifica",
+          "label": "Notifica su questi stati",
+          "options": {
+            "approved": "Approvato",
+            "completed": "Completato",
+            "deleted": "Eliminato",
+            "in_progress": "Avviato",
+            "needsFix": "Da correggere",
+            "pending": "In attesa",
+            "review": "Revisione"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Mostra notifiche native del sistema operativo quando gli agenti commentano i task",
+        "label": "Notifiche di commenti ai task"
+      },
+      "taskCreated": {
+        "description": "Mostra notifiche native del sistema operativo quando viene creato un nuovo task",
+        "label": "Notifiche di task creati"
+      },
+      "teamLaunched": {
+        "description": "Notifica quando un team termina l'avvio ed è pronto",
+        "label": "Notifiche di team avviato"
+      },
+      "title": "Notifiche del team",
+      "toolApproval": {
+        "description": "Notifica quando uno strumento richiede la tua approvazione (Consenti/Nega) mentre l'app non è in primo piano",
+        "label": "Notifiche di approvazione degli strumenti"
+      },
+      "userInbox": {
+        "description": "Notifica quando i membri del team ti inviano messaggi",
+        "label": "Notifiche della posta in arrivo utente"
+      }
+    },
+    "test": {
+      "action": "Invia test",
+      "description": "Invia una notifica di test per verificare la consegna",
+      "failedToSend": "Impossibile inviare la notifica di test",
+      "label": "Notifica di test",
+      "sending": "Invio in corso...",
+      "sent": "Inviata!",
+      "unknownError": "Errore sconosciuto"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Icona dell'app",
+      "description": "Assembla team di agenti AI che lavorano autonomamente in parallelo, comunicano tra team e gestiscono i task su una bacheca Kanban - con revisione del codice integrata, monitoraggio dei processi in tempo reale e piena visibilità sugli strumenti.",
+      "standalone": "Standalone",
+      "title": "Informazioni",
+      "version": "Versione {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Modifica configurazione",
+      "exportConfig": "Esporta configurazione",
+      "importConfig": "Importa configurazione",
+      "openInEditor": "Apri nell'editor",
+      "resetToDefaults": "Ripristina impostazioni predefinite",
+      "title": "Configurazione"
+    },
+    "updates": {
+      "available": "v{{version}} disponibile",
+      "check": "Controlla aggiornamenti",
+      "checking": "Controllo in corso...",
+      "ready": "Aggiornamento pronto",
+      "unknownVersion": "sconosciuta",
+      "upToDate": "Aggiornato"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Impossibile caricare la configurazione",
+      "saveFailed": "Impossibile salvare la configurazione"
+    },
+    "footer": {
+      "autoSave": "Le modifiche vengono salvate automaticamente dopo la modifica",
+      "toClose": "per chiudere",
+      "escapeKey": "Esc"
+    },
+    "loading": "Caricamento della configurazione...",
+    "status": {
+      "invalidJson": "JSON non valido",
+      "saveFailed": "Salvataggio non riuscito",
+      "saved": "Salvato",
+      "saving": "Salvataggio in corso..."
+    },
+    "title": "Modifica configurazione"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Annulla",
+      "submit": "Aggiungi trigger",
+      "title": "Aggiungi trigger personalizzato"
+    },
+    "builtin": {
+      "description": "Trigger predefiniti forniti con l'applicazione. Puoi abilitarli o disabilitarli e personalizzarne i pattern.",
+      "title": "Trigger integrati"
+    },
+    "card": {
+      "builtinBadge": "Integrato",
+      "collapseAriaLabel": "Comprimi",
+      "deleteAriaLabel": "Elimina trigger",
+      "editNameAriaLabel": "Modifica nome",
+      "expandAriaLabel": "Espandi"
+    },
+    "color": {
+      "customHexTitle": "Colore esadecimale personalizzato",
+      "invalidHex": "Esadecimale non valido"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Avvisa se >",
+      "emptyPatternHint": "Lascia vuoto per corrispondere a tutto il contenuto. Usa la sintassi regex di JavaScript.",
+      "errorStatusDescription": "Si attiva quando l'esecuzione di uno strumento segnala un errore (is_error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "es. error|failed|exception"
+    },
+    "custom": {
+      "description": "Crea i tuoi trigger per ricevere notifiche su pattern specifici o output degli strumenti.",
+      "empty": "Nessun trigger personalizzato configurato finora.",
+      "title": "Trigger personalizzati"
+    },
+    "errors": {
+      "invalidRegexPattern": "Pattern regex non valido"
+    },
+    "fields": {
+      "contentType": "Tipo di contenuto",
+      "matchField": "Campo di corrispondenza",
+      "matchPattern": "Pattern di corrispondenza (Regex)",
+      "scopeToolName": "Ambito / Nome strumento",
+      "scopeToolNameOptional": "Ambito / Nome strumento (facoltativo)",
+      "threshold": "Soglia",
+      "tokenType": "Tipo di token",
+      "triggerNamePlaceholder": "es. Avviso di build non riuscita",
+      "triggerNameRequired": "Nome del trigger *"
+    },
+    "ignorePatterns": {
+      "hint": "Premi Invio per aggiungere. La notifica viene saltata se un pattern corrisponde.",
+      "placeholder": "Aggiungi regex da ignorare...",
+      "removeAriaLabel": "Rimuovi pattern da ignorare",
+      "summary": "Avanzate: Regole di esclusione",
+      "title": "Pattern da ignorare (salta se corrisponde)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Output di testo",
+        "thinking": "Ragionamento",
+        "tool_result": "Risultato dello strumento",
+        "tool_use": "Uso dello strumento"
+      },
+      "matchFields": {
+        "args": "Argomenti",
+        "command": "Comando",
+        "content": "Contenuto",
+        "description": "Descrizione",
+        "file_path": "Percorso file",
+        "fullInput": "Input completo (JSON)",
+        "glob": "Filtro glob",
+        "new_string": "Nuova stringa",
+        "old_string": "Vecchia stringa",
+        "path": "Percorso",
+        "pattern": "Pattern",
+        "prompt": "Prompt",
+        "query": "Query",
+        "skill": "Nome skill",
+        "subagent_type": "Tipo di sottoagente",
+        "text": "Contenuto di testo",
+        "thinking": "Contenuto di ragionamento",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Pattern di contenuto",
+        "error_status": "Errore di esecuzione",
+        "token_threshold": "Utilizzo elevato di token"
+      },
+      "tokenTypes": {
+        "input": "Token di input",
+        "output": "Token di output",
+        "total": "Token totali"
+      },
+      "toolNames": {
+        "anyTool": "Qualsiasi strumento"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Trigger di test",
+      "detectedSuffix": "errori sarebbero stati rilevati",
+      "more": "...e altri {{count}}",
+      "more_few": "...e altri {{count}}",
+      "more_many": "...e altri {{count}}",
+      "more_one": "...e altro {{count}}",
+      "more_other": "...e altri {{count}}",
+      "testTrigger": "Trigger di test",
+      "testing": "Test in corso...",
+      "title": "Anteprima",
+      "truncatedWarning": "La ricerca si è interrotta in anticipo (timeout o limite di conteggio). Le corrispondenze effettive potrebbero essere superiori.",
+      "viewSession": "Visualizza sessione"
+    },
+    "repositoryScope": {
+      "empty": "Nessun repository selezionato - il trigger si applica a tutti i repository",
+      "hint": "Quando vengono selezionati dei repository, questo trigger si attiva solo per gli errori in quei repository.",
+      "placeholder": "Seleziona repository da aggiungere...",
+      "summary": "Avanzate: Ambito dei repository",
+      "title": "Limita ai repository (si applica solo ai repository selezionati)"
+    },
+    "sections": {
+      "configuration": "Configurazione",
+      "dotColor": "Colore del punto",
+      "generalInfo": "Informazioni generali",
+      "triggerCondition": "Condizione del trigger"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Aggiungi profilo",
+      "cancel": "Annulla",
+      "deleteProfile": "Elimina profilo",
+      "editProfile": "Modifica profilo",
+      "save": "Salva"
+    },
+    "authMethods": {
+      "agent": "Agente SSH",
+      "auto": "Auto (da configurazione SSH)",
+      "password": "Password",
+      "privateKey": "Chiave privata"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Elimina",
+      "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa operazione non può essere annullata.",
+      "title": "Elimina profilo"
+    },
+    "description": "Salva i profili di connessione SSH per una riconnessione rapida",
+    "empty": {
+      "description": "Aggiungi un profilo SSH per connetterti rapidamente",
+      "title": "Nessun profilo salvato"
+    },
+    "form": {
+      "authentication": "Autenticazione",
+      "host": "Host",
+      "name": "Nome",
+      "passwordPrompt": "Ti verrà richiesta la password al momento della connessione.",
+      "port": "Porta",
+      "privateKeyPath": "Percorso della chiave privata",
+      "username": "Nome utente",
+      "namePlaceholder": "Il mio server",
+      "hostPlaceholder": "hostname o IP",
+      "usernamePlaceholder": "utente"
+    },
+    "loading": "Caricamento dei profili...",
+    "title": "Profili dello spazio di lavoro"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Connetti",
+      "connecting": "Connessione in corso...",
+      "disconnect": "Disconnetti",
+      "testConnection": "Testa connessione",
+      "testing": "Test in corso..."
+    },
+    "currentMode": {
+      "description": "Origine dati per i file di sessione",
+      "label": "Modalità attuale",
+      "local": "Locale ({{path}})"
+    },
+    "description": "Connettiti a una macchina remota per visualizzare le sessioni di Claude Code in esecuzione lì",
+    "form": {
+      "authentication": "Autenticazione",
+      "host": "Host",
+      "password": "Password",
+      "port": "Porta",
+      "privateKeyPath": "Percorso della chiave privata",
+      "username": "Nome utente",
+      "hostPlaceholder": "hostname o alias della configurazione SSH",
+      "usernamePlaceholder": "utente"
+    },
+    "savedProfiles": {
+      "title": "Profili salvati"
+    },
+    "ssh": {
+      "title": "Connessione SSH"
+    },
+    "status": {
+      "connectedTo": "Connesso a {{host}}",
+      "remoteSessions": "Visualizzazione di sessioni remote tramite SSH"
+    },
+    "test": {
+      "failed": "Connessione non riuscita: {{error}}",
+      "success": "Connessione riuscita",
+      "unknownError": "Errore sconosciuto"
+    },
+    "title": "Connessione remota"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Annulla",
+      "cancelLogin": "Annulla accesso",
+      "connectChatGpt": "Connetti ChatGPT",
+      "delete": "Elimina",
+      "disable": "Disabilita",
+      "disconnectAccount": "Disconnetti account",
+      "generateLink": "Genera link",
+      "openLogin": "Apri accesso",
+      "reconnectAnthropic": "Riconnetti Anthropic",
+      "refresh": "Aggiorna",
+      "replaceKey": "Sostituisci chiave",
+      "saveEndpoint": "Salva endpoint",
+      "saveKey": "Salva chiave",
+      "saving": "Salvataggio in corso...",
+      "setApiKey": "Imposta chiave API",
+      "updateKey": "Aggiorna chiave",
+      "useCode": "Usa il codice"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Caricamento delle credenziali archiviate...",
+      "projectScope": "Progetto",
+      "scope": "Ambito",
+      "storedIn": "Archiviata in {{backend}}",
+      "userScope": "Utente",
+      "storedInApp": "Archiviata nell'app",
+      "providers": {
+        "anthropic": {
+          "name": "Chiave API Anthropic",
+          "title": "Chiave API",
+          "description": "Usa una chiave API Anthropic diretta per l'accesso fatturato tramite API. La tua sessione dell'abbonamento Anthropic resta disponibile quando torni indietro.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Chiave API Codex",
+          "title": "Chiave API",
+          "description": "Usa una chiave API OpenAI come percorso di autenticazione Codex secondario. Se passi Codex alla modalità chiave API, l'app rifletterà OPENAI_API_KEY in CODEX_API_KEY per gli avvii nativi.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Chiave API Gemini",
+          "title": "Accesso API",
+          "description": "Usa `GEMINI_API_KEY` per il backend dell'API Gemini. La CLI SDK e l'ADC non la richiedono.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Connesso",
+        "description": "Gestisci la sessione locale dell'account app-server di Codex che alimenta gli avvii nativi supportati dall'abbonamento.",
+        "loginInProgress": "Accesso in corso",
+        "plan": "Piano: {{plan}}",
+        "reconnectRequired": "Riconnessione richiesta",
+        "title": "Account ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} La modalità Auto continuerà a usare la chiave API rilevata finché ChatGPT non viene connesso.",
+          "detectedApiKeyNeedsApiMode": "{{message}} La chiave API rilevata viene usata solo dopo aver passato Codex alla modalità chiave API.",
+          "localArtifactsNoSession": "Codex CLI al momento non segnala alcun account ChatGPT attivo. Esistono dati locali dell'account Codex, ma non è selezionata alcuna sessione gestita attiva. I limiti di utilizzo compaiono qui solo dopo che Codex CLI ne rileva uno.",
+          "noActiveAccount": "Codex CLI al momento non segnala alcun account ChatGPT attivo. I limiti di utilizzo compaiono qui solo dopo che Codex CLI ne rileva uno.",
+          "reconnectBeforeUsage": "Codex ha un account ChatGPT selezionato localmente, ma la sessione attuale deve essere riconnessa prima che i limiti di utilizzo possano essere caricati qui.",
+          "usageLimitsAfterReport": "I limiti di utilizzo compaiono qui dopo che Codex li segnala per l'account ChatGPT connesso."
+        }
+      },
+      "install": {
+        "checking": "Controllo",
+        "downloading": "Download",
+        "installCli": "Installa Codex CLI",
+        "installing": "Installazione",
+        "retryInstall": "Riprova installazione",
+        "title": "Installa Codex CLI nei dati dell'app"
+      },
+      "rateLimits": {
+        "credits": "Crediti",
+        "creditsDescription": "I crediti vengono mostrati separatamente dall'utilizzo dell'abbonamento basato su finestre temporali e potrebbero non essere disponibili per le sessioni ChatGPT supportate da un piano.",
+        "noSecondaryWindow": "Codex non ha restituito una finestra secondaria per questo snapshot dell'account.",
+        "notReported": "Non segnalato",
+        "primaryReset": "Reimpostazione primaria",
+        "primaryUsed": "Primaria usata",
+        "primaryWindow": "Finestra primaria",
+        "remainingLeft": "{{value}} rimanenti",
+        "remainingUnknown": "Rimanenti sconosciuti",
+        "secondaryReset": "Reimpostazione secondaria",
+        "secondaryUsed": "Secondaria usata",
+        "secondaryWindow": "Finestra secondaria",
+        "usedQuotaNote": "Queste percentuali mostrano la quota usata, non la quota rimanente.",
+        "weeklyReset": "Reimpostazione settimanale",
+        "weeklyUsed": "Settimanale usata",
+        "weeklyUsedOneWeek": "Settimanale usata (1 sett.)",
+        "weeklyWindow": "Finestra settimanale",
+        "secondaryFallback": "secondaria",
+        "secondaryWindowNote": " I limiti settimanali vengono mostrati separatamente nella finestra {{window}}.",
+        "usageExplanationGeneric": "Mostra la quota usata, non la quota rimanente.",
+        "usageExplanationWindowOnly": "Mostra la quota usata nella finestra {{window}} attuale, non la quota rimanente.",
+        "usageExplanationWithRemaining": "{{used}} usata - circa {{remaining}} rimanenti nella finestra {{window}} attuale."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Token di autenticazione",
+      "authTokenMissing": "Il token di autenticazione non è configurato.",
+      "baseUrl": "URL di base",
+      "description": "Usa un endpoint del runtime locale compatibile con Anthropic.",
+      "keepSavedToken": "Lascia vuoto per mantenere il token salvato",
+      "title": "Endpoint locale / compatibile",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "L'URL di base è obbligatorio",
+        "firstPartyAnthropic": "Usa Auto, Abbonamento o chiave API per Anthropic di prima parte",
+        "httpRequired": "L'URL di base deve usare http:// o https://",
+        "invalidUrl": "URL non valido",
+        "noCredentials": "L'URL di base non deve includere credenziali"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint disabilitato. Il token salvato è stato mantenuto.",
+        "endpointSaved": "Endpoint salvato",
+        "endpointSavedTokenMissing": "Endpoint salvato. Il token di autenticazione non è configurato."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Metodo di autenticazione",
+      "descriptions": {
+        "anthropic": "Scegli come si autenticano le sessioni Anthropic avviate dall'app.",
+        "codex": "Scegli se Codex deve preferire il tuo abbonamento ChatGPT o una chiave API all'avvio del runtime nativo.",
+        "gemini": "Configura l'accesso API facoltativo. La CLI SDK e l'ADC vengono comunque rilevati automaticamente.",
+        "opencode": "L'autenticazione OpenCode e l'inventario dei provider sono gestiti dal runtime OpenCode."
+      },
+      "method": "Metodo di connessione",
+      "mode": "Modalità: {{mode}}",
+      "selected": "Selezionato",
+      "switching": "Cambio in corso...",
+      "title": "Connessione"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "Chiave API"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Usa ANTHROPIC_API_KEY e la fatturazione dell'API Anthropic.",
+        "autoDescription": "Usa le impostazioni predefinite del runtime Anthropic e la migliore credenziale locale disponibile.",
+        "hint": "Auto mantiene Anthropic sulla sua risoluzione predefinita delle credenziali locali.",
+        "subscriptionDescription": "Usa la tua sessione di accesso Anthropic locale e l'accesso tramite abbonamento.",
+        "subscriptionTitle": "Abbonamento Anthropic"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Usa la fatturazione OPENAI_API_KEY e CODEX_API_KEY per gli avvii nativi di Codex.",
+        "autoDescription": "Preferisci il tuo account ChatGPT e l'abbonamento. Usa la modalità chiave API solo se necessario.",
+        "chatgptDescription": "Usa il tuo account ChatGPT connesso e l'abbonamento Codex.",
+        "chatgptTitle": "Account ChatGPT",
+        "hint": "Codex viene sempre eseguito tramite il runtime nativo. Auto preferisce il tuo account ChatGPT prima di ricorrere alle credenziali con chiave API."
+      }
+    },
+    "description": "Gestisci come ogni provider si connette e, quando supportato, quale backend deve usare il runtime multimodello.",
+    "fastMode": {
+      "defaultOff": "Disattivo per impostazione predefinita",
+      "description": "Applica la modalità Fast di Claude Code per impostazione predefinita ai nuovi avvii di team Anthropic quando il modello risolto e il runtime lo consentono.",
+      "disabledHint": "I nuovi avvii Anthropic restano alla velocità normale a meno che un team non abiliti esplicitamente la modalità Fast.",
+      "enabledHint": "I nuovi avvii Anthropic richiederanno la modalità Fast per impostazione predefinita quando il modello risolto la supporta.",
+      "notExposed": "Questo runtime Anthropic non espone la modalità Fast.",
+      "preferFast": "Preferisci Fast",
+      "title": "Modalità Fast predefinita",
+      "unavailableForRuntime": "La modalità Fast non è attualmente disponibile per questo runtime Anthropic."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "È selezionata la modalità chiave API, ma non è ancora disponibile alcuna credenziale API Anthropic.",
+      "anthropicStoredKeyAvailable": "È disponibile una chiave API salvata, ma le sessioni Anthropic avviate dall'app la usano solo dopo essere passate alla modalità chiave API.",
+      "anthropicSubscriptionMissing": "È selezionata la modalità abbonamento Anthropic. Accedi con Anthropic per usare questo provider.",
+      "authTokenMissing": "Il token di autenticazione non è configurato. Molti endpoint locali compatibili con Anthropic richiedono un token non vuoto.",
+      "chatgptLoginPending": "In attesa del completamento dell'accesso all'account ChatGPT...",
+      "chatgptLoginStarting": "Avvio dell'accesso ChatGPT...",
+      "codexApiKeyMissing": "È selezionata la modalità chiave API, ma non è ancora disponibile alcuna credenziale OPENAI_API_KEY o CODEX_API_KEY.",
+      "codexLocalArtifactsNoSession": "Codex CLI al momento non ha alcun account ChatGPT attivo. Esistono dati locali dell'account Codex, ma non è selezionata alcuna sessione gestita attiva.",
+      "codexNeedsReconnect": "Codex ha un account ChatGPT selezionato localmente, ma la sessione attuale deve essere riconnessa.",
+      "codexNoChatgptAccount": "Codex CLI al momento non ha alcun account ChatGPT attivo. Connetti ChatGPT per usare il tuo abbonamento.",
+      "codexNoCredential": "Non è ancora disponibile alcun account ChatGPT o chiave API.",
+      "geminiApiUnavailable": "L'API Gemini è attualmente non disponibile. Configura qui `GEMINI_API_KEY` o usa credenziali Google ADC valide.",
+      "withApiKeyFallback": "{{message}} Passa alla modalità chiave API per usare la chiave API rilevata."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Forza le sessioni Anthropic avviate dall'app a usare una credenziale con chiave API.",
+        "auto": "Usa il comportamento predefinito del runtime. Le chiavi API salvate in questa app vengono usate solo dopo essere passati alla modalità chiave API.",
+        "oauth": "Forza le sessioni Anthropic avviate dall'app a usare la sessione locale dell'abbonamento Anthropic."
+      },
+      "codex": {
+        "apiKey": "Forza gli avvii nativi di Codex a usare la fatturazione OPENAI_API_KEY / CODEX_API_KEY.",
+        "auto": "Preferisci il tuo account ChatGPT quando è disponibile. Ricorri alla modalità chiave API solo quando necessario.",
+        "chatgpt": "Forza gli avvii nativi di Codex a usare il tuo account ChatGPT connesso e l'abbonamento."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Applicazione delle modifiche di connessione...",
+      "refreshingProviderStatus": "Aggiornamento dello stato del provider...",
+      "savingCompatibleEndpoint": "Salvataggio dell'endpoint compatibile...",
+      "switchingAnthropicSubscription": "Passaggio all'abbonamento Anthropic...",
+      "switchingApiKey": "Passaggio alla chiave API...",
+      "switchingApiKeyMode": "Passaggio alla modalità chiave API...",
+      "switchingAuto": "Passaggio ad Auto...",
+      "switchingChatgpt": "Passaggio alla modalità account ChatGPT..."
+    },
+    "provider": "Provider",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic al momento non ha un selettore di backend del runtime separato.",
+        "codex": "Codex ora viene eseguito solo tramite il percorso del runtime nativo.",
+        "gemini": "Scegli quale backend del runtime Gemini deve usare il multimodello.",
+        "opencode": "OpenCode usa il proprio host del runtime gestito. Il desktop al momento espone solo lo stato."
+      },
+      "title": "Runtime",
+      "updating": "Aggiornamento del runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "configurato",
+      "enabled": "Abilitato",
+      "notConfigured": "Non configurato",
+      "notSet": "non impostato",
+      "off": "Disattivo",
+      "unknown": "Sconosciuto"
+    },
+    "title": "Impostazioni del provider",
+    "usage": {
+      "apiKey": "Uso della chiave API",
+      "apiKeyRequired": "Chiave API richiesta",
+      "compatibleEndpoint": "Uso di un endpoint compatibile",
+      "notConnected": "Non connesso",
+      "usingMethod": "Uso di {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Chiave API eliminata, ma impossibile aggiornare lo stato del provider.",
+      "apiKeySavedRefreshFailed": "Chiave API salvata, ma impossibile aggiornare lo stato del provider.",
+      "connectionUpdatedRefreshFailed": "Connessione aggiornata, ma impossibile aggiornare lo stato del provider.",
+      "deleteApiKey": "Impossibile eliminare la chiave API",
+      "disableEndpoint": "Impossibile disabilitare l'endpoint",
+      "endpointDisabledRefreshFailed": "Endpoint disabilitato, ma impossibile aggiornare lo stato del provider.",
+      "endpointSavedRefreshFailed": "Endpoint salvato, ma impossibile aggiornare lo stato del provider.",
+      "refreshCodexAccount": "Impossibile aggiornare l'account Codex",
+      "saveApiKey": "Impossibile salvare la chiave API",
+      "saveEndpoint": "Impossibile salvare l'endpoint",
+      "updateAnthropicFastMode": "Impossibile aggiornare la modalità Fast di Anthropic",
+      "updateConnection": "Impossibile aggiornare la connessione",
+      "updateRuntimeBackend": "Impossibile aggiornare il backend del runtime",
+      "apiKeyRequired": "La chiave API è obbligatoria"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Abbonamento / OAuth",
+        "chatgpt": "Account ChatGPT",
+        "apiKey": "Chiave API",
+        "anthropicSubscription": "Abbonamento Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "Chiave API",
+        "apiKeyHelper": "Helper per chiave API",
+        "oauth": "OAuth",
+        "claudeSubscription": "Abbonamento Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Account Google",
+        "serviceAccount": "account di servizio"
+      },
+      "runtime": {
+        "codexNative": "Codex nativo",
+        "currentRuntime": "Runtime attuale",
+        "selectedRuntime": "Runtime selezionato",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Controllo...",
+        "modelsAvailable": "Modelli disponibili",
+        "checked": "Controllato",
+        "providerActivity": "Attività del provider",
+        "notConnected": "Non connesso",
+        "startingChatGptLogin": "Avvio dell'accesso ChatGPT...",
+        "waitingForChatGptLogin": "In attesa dell'accesso all'account ChatGPT...",
+        "chatGptVerificationDegraded": "Account ChatGPT rilevato - la verifica dell'account è attualmente degradata.",
+        "chatGptAccountReady": "Account ChatGPT pronto",
+        "apiKeyReady": "Chiave API pronta",
+        "codexLocalAccountNeedsReconnect": "Codex ha un account ChatGPT selezionato localmente, ma la sessione attuale deve essere riconnessa.",
+        "codexNoActiveManagedSession": "Codex CLI non segnala alcun accesso ChatGPT attivo. Esistono dati locali dell'account Codex, ma non è selezionata alcuna sessione gestita attiva.",
+        "codexNoActiveChatGptLogin": "Codex CLI non segnala alcun accesso ChatGPT attivo",
+        "connectChatGptForSubscription": "Connetti un account ChatGPT per usare il tuo abbonamento Codex.",
+        "codexNativeReady": "Codex nativo pronto",
+        "codexNativeUnavailable": "Codex nativo non disponibile",
+        "unavailableInCurrentRuntime": "Non disponibile nel runtime attuale",
+        "connectedViaApiKey": "Connesso tramite chiave API",
+        "apiKeyConfiguredNotVerified": "Chiave API configurata, ma non ancora verificata",
+        "apiKeyModeMissingCredential": "Modalità chiave API selezionata, ma non è configurata alcuna chiave API",
+        "connectedVia": "Connesso tramite {{method}}",
+        "unableToVerify": "Impossibile verificare"
+      },
+      "mode": {
+        "selectedAuth": "Autenticazione selezionata: {{authMode}}",
+        "preferredAuth": "Autenticazione preferita: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "La chiave API è configurata",
+        "savedApiKeyAvailable": "Chiave API salvata disponibile in Gestisci",
+        "apiKeyAlsoConfigured": "Chiave API configurata anche in Gestisci",
+        "apiKeyConfiguredInManage": "La chiave API è configurata in Gestisci",
+        "apiKeyFallbackInManage": "Chiave API disponibile anche in Gestisci come fallback",
+        "availableAsFallback": "{{summary}} - disponibile come fallback",
+        "savedApiKeyAvailableIfSwitch": "Chiave API salvata disponibile in Gestisci se passi alla modalità chiave API",
+        "availableIfSwitch": "{{summary}} - disponibile se passi alla modalità chiave API",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto la userà finché ChatGPT non viene connesso"
+      },
+      "actions": {
+        "connect": "Connetti",
+        "connectAnthropic": "Connetti Anthropic",
+        "connectChatGpt": "Connetti ChatGPT",
+        "disconnect": "Disconnetti",
+        "openLogin": "Apri accesso"
+      },
+      "disconnect": {
+        "anthropicTitle": "Disconnettere l'abbonamento Anthropic?",
+        "anthropic": "Questo rimuove la sessione locale dell'abbonamento Anthropic dal runtime della Claude CLI.",
+        "anthropicWithApiKey": "Questo rimuove la sessione locale dell'abbonamento Anthropic dal runtime della Claude CLI. Le chiavi API salvate in Gestisci restano disponibili.",
+        "geminiTitle": "Disconnettere Gemini CLI?",
+        "gemini": "Questo cancella i metadati della sessione locale di Gemini CLI. Le credenziali ADC esterne e le chiavi API salvate non vengono rimosse."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Controlla aggiornamenti",
+      "checking": "Controllo in corso...",
+      "extensions": "Estensioni",
+      "installRuntime": "Installa {{runtime}}",
+      "manage": "Gestisci",
+      "recheck": "Ricontrolla",
+      "reinstallRuntime": "Reinstalla {{runtime}}",
+      "retry": "Riprova",
+      "update": "Aggiorna"
+    },
+    "installer": {
+      "checkingLatest": "Verifica dell'ultima versione...",
+      "downloading": "Download in corso...",
+      "failed": "Installazione non riuscita",
+      "installed": "Installato v{{version}}",
+      "installing": "Installazione in corso...",
+      "latest": "ultima",
+      "verifying": "Verifica del checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodello"
+    },
+    "loading": {
+      "aiProviders": "Controllo dei provider AI...",
+      "claudeCli": "Controllo della Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Caricamento dei modelli...",
+      "modelsUnavailable": "Modelli non disponibili per questa build del runtime",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Autenticazione non riuscita",
+      "authUpdated": "Autenticazione aggiornata",
+      "loggedOut": "Provider disconnesso",
+      "login": "Accedi",
+      "logout": "Disconnetti",
+      "logoutFailed": "Disconnessione non riuscita"
+    },
+    "status": {
+      "configuredNotFound": "Il {{runtime}} configurato non è stato trovato.",
+      "foundButFailed": "{{runtime}} è stato trovato ma non si è avviato",
+      "healthCheckFailed": "Il {{runtime}} configurato non ha superato il controllo di integrità all'avvio.",
+      "notInstalled": "{{runtime}} non installato"
+    },
+    "title": "Runtime CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

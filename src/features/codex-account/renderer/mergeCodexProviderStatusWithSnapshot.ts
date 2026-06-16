@@ -168,6 +168,11 @@ export function mergeCodexProviderStatusWithSnapshot(
   }
 
   const availableBackends = mergeCodexNativeBackendOption(provider, snapshot);
+  const customProvider = provider.connection?.codex?.customProvider ?? null;
+  const endpointLabel =
+    customProvider?.active === true && customProvider.baseUrl.trim()
+      ? customProvider.baseUrl.trim()
+      : 'codex exec --json';
   const baseConnection = provider.connection ?? {
     supportsOAuth: false,
     supportsApiKey: true,
@@ -203,7 +208,7 @@ export function mergeCodexProviderStatusWithSnapshot(
     backend: {
       kind: CODEX_NATIVE_BACKEND_ID,
       label: CODEX_NATIVE_LABEL,
-      endpointLabel: 'codex exec --json',
+      endpointLabel,
       projectId: provider.backend?.projectId ?? null,
       authMethodDetail: snapshot.effectiveAuthMode ?? null,
     },
@@ -227,6 +232,13 @@ export function mergeCodexProviderStatusWithSnapshot(
         localActiveChatgptAccountPresent: snapshot.localActiveChatgptAccountPresent,
         login: snapshot.login,
         rateLimits: snapshot.rateLimits,
+        customProvider: customProvider ?? {
+          enabled: false,
+          active: false,
+          baseUrl: '',
+          model: '',
+          issueMessage: null,
+        },
       },
     },
   };

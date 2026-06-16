@@ -1,0 +1,20 @@
+{
+  "sourceRepository": "https://github.com/777genius/terminal-platform",
+  "sourceRef": "ccf000bb9cb6147e72cc38dc6028e8c584258193",
+  "packages": [
+    "@terminal-platform/design-tokens",
+    "@terminal-platform/foundation",
+    "@terminal-platform/runtime-types",
+    "@terminal-platform/workspace-adapter-websocket",
+    "@terminal-platform/workspace-contracts",
+    "@terminal-platform/workspace-core",
+    "@terminal-platform/workspace-elements",
+    "@terminal-platform/workspace-gateway-node",
+    "@terminal-platform/workspace-react"
+  ],
+  "nativePackage": {
+    "name": "terminal-platform-node",
+    "kind": "install-time stub",
+    "note": "Set CLAUDE_TERMINAL_PLATFORM_ROOT to a built terminal-platform checkout to use the native runtime locally."
+  }
+}

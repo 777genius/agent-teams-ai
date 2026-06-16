@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Anulează",
+    "close": "Închide",
+    "copied": "Copiat",
+    "copyUrl": "Copiază URL-ul",
+    "open": "Deschide",
+    "reveal": "Afișează",
+    "retry": "Reîncearcă",
+    "save": "Salvează",
+    "showLess": "Arată mai puțin",
+    "showMore": "Arată mai mult",
+    "refresh": "Reîmprospătează",
+    "reset": "Resetează",
+    "copyToClipboard": "Copiază în clipboard",
+    "moreActions": "Mai multe acțiuni",
+    "closeDialog": "Închide dialogul",
+    "goToDashboard": "Mergi la panou",
+    "or": "sau",
+    "hide": "Ascunde",
+    "resetSelection": "Resetează selecția"
+  },
+  "code": {
+    "line": "linia {{line}}",
+    "lines": "liniile {{from}}-{{to}}",
+    "moreLines": "(încă {{count}} linii...)",
+    "moreLines_few": "(încă {{count}} linii...)",
+    "moreLines_many": "(încă {{count}} linii...)",
+    "moreLines_one": "(încă {{count}} linie...)",
+    "moreLines_other": "(încă {{count}} linii...)",
+    "code": "Cod",
+    "preview": "Previzualizare",
+    "markdownPreview": "Previzualizare Markdown",
+    "linesParenthesized": "(liniile {{from}}-{{to}})",
+    "mermaidSyntaxError": "Eroare de sintaxă Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Context",
+    "breakdown": {
+      "text": "Text",
+      "thinking": "Gândire"
+    },
+    "detailsAria": "Detalii injectare context",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} tokenuri",
+    "sections": {
+      "claudeMdFiles": "Fișiere CLAUDE.md",
+      "mentionedFiles": "Fișiere menționate",
+      "taskCoordination": "Coordonare sarcini",
+      "thinkingText": "Gândire + Text",
+      "toolOutputs": "Rezultate unelte",
+      "userMessages": "Mesaje utilizator"
+    },
+    "title": "Context nou injectat în acest tur",
+    "tokenCount": "~{{tokens}} tokenuri",
+    "totalNewTokens": "Total tokenuri noi",
+    "turn": "Tur {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} tokenuri",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} tokenuri",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} tokenuri",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} tokenuri"
+  },
+  "locales": {
+    "emptyMessage": "Nicio limbă găsită.",
+    "names": {
+      "ar": "Arabă",
+      "bn": "Bengaleză",
+      "de": "Germană",
+      "en": "Engleză",
+      "es": "Spaniolă",
+      "fa": "Persană",
+      "fil": "Filipineză",
+      "fr": "Franceză",
+      "hi": "Hindi",
+      "id": "Indoneziană",
+      "it": "Italiană",
+      "ja": "Japoneză",
+      "ko": "Coreeană",
+      "mr": "Marathi",
+      "ms": "Malaeză",
+      "nl": "Olandeză",
+      "pl": "Poloneză",
+      "pt": "Portugheză",
+      "ro": "Română",
+      "ru": "Rusă",
+      "sw": "Swahili",
+      "system": "Sistem",
+      "ta": "Tamilă",
+      "te": "Telugu",
+      "th": "Thailandeză",
+      "tr": "Turcă",
+      "uk": "Ucraineană",
+      "ur": "Urdu",
+      "vi": "Vietnameză",
+      "zh": "Chineză"
+    },
+    "searchPlaceholder": "Caută limba...",
+    "selectPlaceholder": "Selectează limba aplicației...",
+    "systemWithResolved": "Sistem - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Niciun membru găsit.",
+    "searchPlaceholder": "Caută membri...",
+    "unassigned": "Neatribuit",
+    "teammateFallback": "coechipier"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Se verifică",
+        "downloading": "Se descarcă",
+        "installCli": "Instalează Codex CLI",
+        "installing": "Se instalează",
+        "retryInstall": "Reîncearcă instalarea"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Nicio sugestie corespunzătoare",
+    "searching": "Se caută...",
+    "searchingFiles": "Se caută fișiere...",
+    "findInConversation": "Caută în conversație...",
+    "resultCount": "{{current}} din {{total}}",
+    "resultCountCapped": "{{current}} din {{total}}+",
+    "noResults": "Niciun rezultat",
+    "previousResultShortcut": "Rezultatul anterior (Shift+Enter)",
+    "nextResultShortcut": "Rezultatul următor (Enter)",
+    "closeShortcut": "Închide (Esc)",
+    "nothingFound": "Nimic găsit",
+    "placeholder": "Caută..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Adaugă programare",
+      "clearFilters": "Șterge filtrele",
+      "createSchedule": "Creează programare",
+      "delete": "Șterge",
+      "edit": "Editează",
+      "pause": "Întrerupe",
+      "resume": "Reia",
+      "runNow": "Rulează acum"
+    },
+    "empty": {
+      "description": "Creează o programare pe orice echipă pentru a automatiza execuția sarcinilor Claude cu expresii cron. Programările din toate echipele vor apărea aici.",
+      "noMatches": "Nicio programare nu corespunde filtrelor curente",
+      "title": "Nicio sarcină programată"
+    },
+    "filters": {
+      "allTeams": "Toate echipele"
+    },
+    "item": {
+      "loadingRunHistory": "Se încarcă istoricul rulărilor...",
+      "nextRun": "Următoarea: {{value}}",
+      "noRunsYet": "Nicio rulare încă"
+    },
+    "loading": "Se încarcă programările...",
+    "searchPlaceholder": "Caută programări...",
+    "status": {
+      "active": "Activă",
+      "all": "Toate",
+      "disabled": "Dezactivată",
+      "paused": "Întreruptă"
+    },
+    "title": "Programări"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Ascunde",
+      "pin": "Fixează",
+      "unhide": "Afișează"
+    },
+    "empty": {
+      "noMatchingSessions": "Nicio sesiune corespunzătoare",
+      "noMatchingSessionsDescription": "Acest proiect nu are încă sesiuni corespunzătoare.",
+      "noMatchingSessionsFiltered": "Încearcă o altă interogare sau resetează filtrul de furnizor.",
+      "noSessions": "Nicio sesiune găsită",
+      "noSessionsDescription": "Acest proiect nu are încă sesiuni",
+      "selectProject": "Selectează un proiect pentru a vedea sesiunile"
+    },
+    "errors": {
+      "loading": "Eroare la încărcarea sesiunilor"
+    },
+    "loadedMatchingMore": "{{count}} sesiuni corespunzătoare încărcate până acum - derulează în jos pentru a încărca mai multe.",
+    "loadingMore": "Se încarcă mai multe sesiuni...",
+    "pinned": "Fixate",
+    "scrollToLoadMore": "Derulează pentru a încărca mai multe",
+    "search": {
+      "clear": "Șterge căutarea sesiunilor",
+      "placeholder": "Caută sesiuni..."
+    },
+    "selection": {
+      "cancel": "Anulează selecția",
+      "exitMode": "Ieși din modul de selecție",
+      "hideSelected": "Ascunde sesiunile selectate",
+      "pinSelected": "Fixează sesiunile selectate",
+      "selectSessions": "Selectează sesiuni",
+      "selected": "{{count}} selectate",
+      "unhideSelected": "Afișează sesiunile selectate",
+      "selected_few": "{{count}} selectate",
+      "selected_many": "{{count}} selectate",
+      "selected_one": "{{count}} selectată",
+      "selected_other": "{{count}} selectate"
+    },
+    "sort": {
+      "byContext": "După context",
+      "byContextTooltip": "Sortează după consumul de context",
+      "byRecentTooltip": "Sortează după recent",
+      "contextLoadedOnly": "Sortarea după context clasifică doar sesiunile încărcate."
+    },
+    "title": "Sesiuni",
+    "visibility": {
+      "hideHidden": "Ascunde sesiunile ascunse",
+      "showHidden": "Arată sesiunile ascunse"
+    },
+    "worktree": {
+      "switch": "Comută worktree-ul"
+    },
+    "loadedMatchingMore_few": "{{count}} sesiuni corespunzătoare încărcate până acum - derulează în jos pentru a încărca mai multe.",
+    "loadedMatchingMore_many": "{{count}} sesiuni corespunzătoare încărcate până acum - derulează în jos pentru a încărca mai multe.",
+    "loadedMatchingMore_one": "{{count}} sesiune corespunzătoare încărcată până acum - derulează în jos pentru a încărca mai multe.",
+    "loadedMatchingMore_other": "{{count}} sesiuni corespunzătoare încărcate până acum - derulează în jos pentru a încărca mai multe.",
+    "failedToLoad": "Încărcarea sesiunii a eșuat",
+    "loading": "Se încarcă sesiunea...",
+    "filter": {
+      "title": "Filtrează sesiunile"
+    },
+    "count": "{{count}} sesiuni",
+    "count_one": "{{count}} sesiune",
+    "count_other": "{{count}} sesiuni",
+    "count_few": "{{count}} sesiuni",
+    "count_many": "{{count}} sesiuni",
+    "inProgress": "Sesiunea este în curs..."
+  },
+  "states": {
+    "loading": "Se încarcă...",
+    "offline": "Deconectat",
+    "online": "Conectat",
+    "unknown": "Necunoscut",
+    "error": "Eroare"
+  },
+  "markdown": {
+    "imageFallback": "[Imagine: {{label}}]",
+    "largeContentNotice": "Conținutul este foarte mare ({{count}} caractere). Se afișează previzualizarea brută pentru a menține interfața receptivă.",
+    "largeContentTitle": "Conținutul mare este afișat brut pentru a preveni blocarea interfeței",
+    "raw": "Brut",
+    "rawPreview": "Previzualizare brută",
+    "renderMarkdown": "Randează markdown",
+    "showAll": "Arată tot",
+    "showMore": "Arată mai mult",
+    "showRaw": "Arată brut",
+    "showingChars": "Se afișează {{shown}} / {{total}} caractere",
+    "largeContentNotice_few": "Conținutul este foarte mare ({{count}} caractere). Se afișează previzualizarea brută pentru a menține interfața receptivă.",
+    "largeContentNotice_many": "Conținutul este foarte mare ({{count}} caractere). Se afișează previzualizarea brută pentru a menține interfața receptivă.",
+    "largeContentNotice_one": "Conținutul este foarte mare ({{count}} caracter). Se afișează previzualizarea brută pentru a menține interfața receptivă.",
+    "largeContentNotice_other": "Conținutul este foarte mare ({{count}} caractere). Se afișează previzualizarea brută pentru a menține interfața receptivă."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Verifică ieșirea terminalului de mai sus pentru detalii",
+    "closingInSeconds": "Se închide în {{count}}s...",
+    "closingInSeconds_few": "Se închide în {{count}}s...",
+    "closingInSeconds_many": "Se închide în {{count}}s...",
+    "closingInSeconds_one": "Se închide în {{count}}s...",
+    "closingInSeconds_other": "Se închide în {{count}}s...",
+    "completedSuccessfully": "Finalizat cu succes",
+    "exitCode": "(cod de ieșire {{code}})",
+    "processFailed": "Procesul a eșuat",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Acumulat pe întreaga sesiune fără duplicare",
+    "cacheRead": "Citire cache",
+    "cacheWrite": "Scriere cache",
+    "costUsd": "Cost (USD)",
+    "inputTokens": "Tokenuri de intrare",
+    "model": "Model",
+    "outputTokens": "Tokenuri de ieșire",
+    "phase": "Faza {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% din intrarea promptului",
+    "taskCoordination": "Coordonare sarcini",
+    "thinkingText": "Gândire + Text",
+    "toolOutputs": "Rezultate unelte",
+    "total": "Total",
+    "userMessages": "Mesaje utilizator",
+    "visibleContext": "Context vizibil",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@fișiere",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} tokenuri",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Copiază echipa",
+      "createTeam": "Creează echipă",
+      "deleteForever": "Șterge definitiv",
+      "deletePermanently": "Șterge permanent",
+      "deleteTeam": "Șterge echipa",
+      "launching": "Se lansează...",
+      "launchTeam": "Lansează echipa",
+      "relaunchTeam": "Relansează echipa",
+      "restore": "Restaurează",
+      "restoreTeam": "Restaurează echipa",
+      "retry": "Reîncearcă",
+      "stopTeam": "Oprește echipa",
+      "stopping": "Se oprește..."
+    },
+    "status": {
+      "active": "Activă",
+      "deleted": "Ștearsă",
+      "launching": "Se lansează...",
+      "offline": "Deconectată",
+      "partialFailure": "Lansarea a eșuat parțial",
+      "partialPending": "Inițializare în așteptare",
+      "partialSkipped": "Lansarea a omis un membru",
+      "running": "În execuție"
+    },
+    "partial": {
+      "pending": "Ultima lansare încă se reconciliază.",
+      "skipped": "Ultima lansare a omis coechipieri.",
+      "skippedWithCount": "Ultima lansare a omis {{count}}/{{expected}} coechipier.",
+      "skippedWithCount_few": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "skippedWithCount_many": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "skippedWithCount_one": "Ultima lansare a omis {{count}}/{{expected}} coechipier.",
+      "skippedWithCount_other": "Ultima lansare a omis {{count}}/{{expected}} coechipieri.",
+      "stopped": "Ultima lansare s-a oprit înainte ca toți coechipierii să se alăture.",
+      "stoppedWithCount": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipier să se alăture.",
+      "stoppedWithCount_few": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture.",
+      "stoppedWithCount_many": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture.",
+      "stoppedWithCount_one": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipier să se alăture.",
+      "stoppedWithCount_other": "Ultima lansare s-a oprit înainte ca {{count}}/{{expected}} coechipieri să se alăture."
+    },
+    "noDescription": "Fără descriere",
+    "solo": "Solo",
+    "membersCount": "Membri: {{count}}",
+    "membersCount_few": "Membri: {{count}}",
+    "membersCount_many": "Membri: {{count}}",
+    "membersCount_one": "Membru: {{count}}",
+    "membersCount_other": "Membri: {{count}}",
+    "all": "Toate",
+    "moreCount": "+{{count}} în plus",
+    "moreCount_one": "+{{count}} în plus",
+    "moreCount_other": "+{{count}} în plus",
+    "moreCount_few": "+{{count}} în plus",
+    "moreCount_many": "+{{count}} în plus"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Implicit pentru fiecare proiect care nu are propria suprascriere OpenCode.",
+      "scopeDescriptionProject": "Suprascrie doar proiectul selectat. Echipele în execuție nu sunt modificate.",
+      "setAllProjectsDefault": "Setează implicit pentru toate proiectele",
+      "setProjectDefault": "Setează implicit pentru proiect",
+      "validationContext": "Context de validare",
+      "projectOverrideContext": "Context de suprascriere a proiectului",
+      "selectProjectHint": "Selectează un proiect înainte de a testa modele locale sau de a salva valori implicite.",
+      "allProjectsHint": "Testele folosesc {{project}}. Valoarea implicită se aplică dacă un proiect nu are o suprascriere.",
+      "projectHint": "Salvarea suprascrie doar {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Context",
+      "closePanel": "Închide panoul",
+      "phase": "Faza:",
+      "current": "Curent",
+      "view": "Vizualizare:",
+      "category": "Categorie",
+      "bySize": "După dimensiune"
+    },
+    "metrics": {
+      "unavailable": "Indisponibil",
+      "contextUsed": "Context utilizat",
+      "promptInput": "Intrare prompt",
+      "visibleContext": "Context vizibil",
+      "ofContext": "din context",
+      "ofPrompt": "din prompt",
+      "codexTelemetryUnavailable": "Utilizarea pe partea de prompt a Codex nu este încă expusă de telemetria runtime-ului curent, așa că Intrare prompt și Context utilizat rămân indisponibile în loc să afișeze un zero fals.",
+      "sessionCost": "Cost sesiune:",
+      "parentPlus": "părinte +",
+      "subagents": "subagenți",
+      "details": "detalii"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Context utilizat",
+        "description": "Intrarea promptului plus tokenurile de ieșire care ocupă în prezent fereastra de context a modelului."
+      },
+      "promptInput": {
+        "title": "Intrare prompt",
+        "description": "Tokenuri trimise modelului înainte de generare. Pentru Claude aceasta include `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Context vizibil",
+        "description": "Subsetul inspectabil al intrării promptului: fișiere, CLAUDE.md, rezultate ale uneltelor, mesaje utilizator și injectări similare pe care le poți optimiza direct."
+      },
+      "availability": {
+        "title": "Disponibilitate",
+        "description": "Dacă un runtime de furnizor nu expune încă utilizarea pe partea de prompt, panoul afișează metricele ca indisponibile în loc să pretindă că sunt zero."
+      }
+    },
+    "items": {
+      "turn": "@Tur {{turn}}",
+      "tokensApprox": "~{{tokens}} tokenuri",
+      "toolsCount": "{{count}} unelte",
+      "toolsCount_one": "{{count}} unealtă",
+      "toolsCount_other": "{{count}} unelte",
+      "toolsCount_few": "{{count}} unelte",
+      "toolsCount_many": "{{count}} unelte",
+      "itemsCount": "{{count}} elemente",
+      "itemsCount_one": "{{count}} element",
+      "itemsCount_other": "{{count}} elemente",
+      "itemsCount_few": "{{count}} elemente",
+      "itemsCount_many": "{{count}} elemente",
+      "missing": "lipsește",
+      "thinking": "Gândire",
+      "text": "Text"
+    },
+    "empty": "Nicio injectare de context detectată în această sesiune",
+    "view": {
+      "grouped": "Grupat",
+      "flat": "Plat"
+    },
+    "claudeMdFiles": "Fișiere CLAUDE.md",
+    "mentionedFiles": "Fișiere menționate"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Oprire confirmată",
+      "summary": {
+        "tools": "{{count}} unelte",
+        "tools_one": "{{count}} unealtă",
+        "tools_other": "{{count}} unelte",
+        "tools_few": "{{count}} unelte",
+        "tools_many": "{{count}} unelte"
+      },
+      "meta": {
+        "type": "Tip",
+        "duration": "Durată",
+        "model": "Model",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Fereastră de context",
+        "contextUsage": "Utilizare context",
+        "mainContext": "Context principal",
+        "totalOutput": "Ieșire totală",
+        "turns": "({{count}} tururi)",
+        "turns_one": "({{count}} tur)",
+        "turns_other": "({{count}} tururi)",
+        "subagentContext": "Context subagent",
+        "phase": "Faza {{phase}}",
+        "turns_few": "({{count}} tururi)",
+        "turns_many": "({{count}} tururi)"
+      },
+      "trace": {
+        "title": "Urmă de execuție"
+      }
+    },
+    "user": {
+      "you": "Tu",
+      "showMore": "Arată mai mult",
+      "showLess": "Arată mai puțin",
+      "backgroundTask": "Sarcină în fundal",
+      "exitCode": "ieșire {{code}}",
+      "imagesAttached": "{{count}} imagini atașate",
+      "imagesAttached_one": "{{count}} imagine atașată",
+      "imagesAttached_few": "{{count}} imagini atașate",
+      "imagesAttached_many": "{{count}} imagini atașate",
+      "imagesAttached_other": "{{count}} imagini atașate"
+    },
+    "compact": {
+      "toggle": "Comută conținutul compactat",
+      "contextCompacted": "Context compactat",
+      "freedTokens": "({{tokens}} eliberate)",
+      "phase": "Faza {{phase}}",
+      "conversationCompacted": "Conversație compactată",
+      "summary": "Mesajele anterioare au fost rezumate pentru a economisi context. Istoricul complet al conversației este păstrat în fișierul sesiunii.",
+      "compacted": "Compactat"
+    },
+    "executionTrace": {
+      "empty": "Niciun element de execuție",
+      "nested": "Imbricat: {{name}}",
+      "input": "Intrare"
+    },
+    "items": {
+      "empty": "Niciun element de afișat"
+    },
+    "tools": {
+      "teammateSpawned": "Coechipier creat",
+      "shutdownRequested": "Oprire solicitată ->",
+      "noResultReceived": "Niciun rezultat primit",
+      "duration": "Durată: {{duration}}",
+      "result": "Rezultat",
+      "write": {
+        "createdFile": "Fișier creat",
+        "wroteToFile": "Scris în fișier"
+      },
+      "skill": {
+        "instructions": "Instrucțiuni abilitate",
+        "unknown": "Abilitate necunoscută"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Cerere întreruptă de utilizator",
+      "planReadyForApproval": "Plan gata pentru aprobare"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Niciun istoric al conversației",
+      "description": "Această sesiune nu conține încă niciun mesaj."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% rămas)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "Derulează la final",
+    "bottom": "Final",
+    "teammateMessage": {
+      "message": "Mesaj",
+      "resent": "Retrimis",
+      "fallback": "Mesaj de la coechipier"
+    },
+    "system": {
+      "label": "Sistem"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux nu este instalat",
+    "detectedOs": "SO detectat: {{os}}",
+    "runtimePath": "Cale runtime: {{path}}",
+    "phase": "Faza: {{phase}}",
+    "actions": {
+      "cancel": "Anulează",
+      "manualGuide": "Ghid manual",
+      "hideSetupSteps": "Ascunde pașii de configurare",
+      "showSetupSteps": "Arată pașii de configurare ({{count}})",
+      "showSetupSteps_one": "Arată pasul de configurare ({{count}})",
+      "showSetupSteps_other": "Arată pașii de configurare ({{count}})",
+      "recheck": "Reverifică",
+      "showSetupSteps_few": "Arată pașii de configurare ({{count}})",
+      "showSetupSteps_many": "Arată pașii de configurare ({{count}})"
+    },
+    "installerProgress": "Progresul instalatorului",
+    "input": {
+      "placeholder": "Trimite o intrare către instalator",
+      "send": "Trimite intrarea",
+      "passwordNotice": "Intrarea parolei este trimisă direct către terminalul instalatorului și nu este adăugată la ieșirea jurnalului."
+    },
+    "details": {
+      "show": "Arată detalii",
+      "hide": "Ascunde detalii"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Nicio activitate recentă",
+    "sessionsCount": "{{count}} sesiuni",
+    "sessionsCount_one": "{{count}} sesiune",
+    "sessionsCount_other": "{{count}} sesiuni",
+    "mode": {
+      "searchProjects": "Caută proiecte",
+      "searchAcrossProjects": "Caută în toate proiectele",
+      "searchInProject": "Caută în proiect"
+    },
+    "currentProject": "Proiect curent",
+    "global": "Global",
+    "placeholders": {
+      "projects": "Caută proiecte...",
+      "conversations": "Caută conversații..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Niciun proiect găsit pentru \"{{query}}\"",
+      "noProjects": "Niciun proiect găsit",
+      "minChars": "Tastează cel puțin 2 caractere pentru a căuta",
+      "noFastResults": "Niciun rezultat rapid în sesiunile recente pentru \"{{query}}\"",
+      "noResults": "Niciun rezultat găsit pentru \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} proiecte",
+      "projectsCount_one": "{{count}} proiect",
+      "projectsCount_other": "{{count}} proiecte",
+      "results": "{{count}} {{speed}}rezultate",
+      "results_one": "{{count}} {{speed}}rezultat",
+      "results_other": "{{count}} {{speed}}rezultate",
+      "resultsAcrossProjects": "{{count}} {{speed}}rezultate în toate proiectele",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}rezultat în toate proiectele",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}rezultate în toate proiectele",
+      "fastPrefix": "rapide ",
+      "typeToSearch": "Tastează pentru a căuta",
+      "navigate": "navighează",
+      "select": "selectează",
+      "open": "deschide",
+      "global": "global",
+      "close": "închide",
+      "results_few": "{{count}} {{speed}}rezultate",
+      "results_many": "{{count}} {{speed}}rezultate",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}rezultate în toate proiectele",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}rezultate în toate proiectele",
+      "projectsCount_few": "{{count}} proiecte",
+      "projectsCount_many": "{{count}} proiecte",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} sesiuni",
+    "sessionsCount_many": "{{count}} sesiuni"
+  },
+  "tasksPanel": {
+    "title": "Sarcini",
+    "searchPlaceholder": "Caută sarcini...",
+    "pinned": "Fixate",
+    "groupByLabel": "Grupează după:",
+    "groupByAria": "Grupează după",
+    "groupModes": {
+      "none": "Niciunul",
+      "project": "Proiect",
+      "time": "Timp"
+    },
+    "showArchived": "Arată arhivate",
+    "hideArchived": "Ascunde arhivate",
+    "empty": {
+      "noMatchingTasks": "Nicio sarcină corespunzătoare",
+      "noTasks": "Nicio sarcină găsită"
+    },
+    "teamLabel": "Echipă: {{team}}",
+    "showMore": "Arată mai mult",
+    "showLess": "Arată mai puțin",
+    "deleteConfirm": {
+      "title": "Șterge sarcina",
+      "message": "Muți sarcina #{{taskId}} la coșul de gunoi?",
+      "confirmLabel": "Șterge",
+      "cancelLabel": "Anulează"
+    },
+    "deleteFailed": {
+      "title": "Ștergerea sarcinii a eșuat",
+      "fallbackMessage": "A apărut o eroare neașteptată",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "După timp",
+      "byUnread": "După necitite",
+      "byProject": "După proiect",
+      "byTeam": "După echipă"
+    }
+  },
+  "toolViewer": {
+    "input": "Intrare",
+    "replaceAll": "(înlocuiește tot)",
+    "noInputRecorded": "Nicio intrare înregistrată pentru acest apel de unealtă.",
+    "agent": {
+      "action": "acțiune",
+      "teammate": "coechipier",
+      "team": "echipă",
+      "runtime": "runtime",
+      "type": "tip",
+      "startupInstructionsHidden": "Instrucțiunile de pornire sunt ascunse în interfață."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Anulează fixarea",
+    "pin": "Fixează",
+    "rename": "Redenumește",
+    "markUnread": "Marchează ca necitit",
+    "unarchive": "Dezarhivează",
+    "archive": "Arhivează",
+    "deleteTask": "Șterge sarcina"
+  },
+  "updateDialog": {
+    "closeDialog": "Închide dialogul",
+    "updateAvailable": "Actualizare disponibilă",
+    "updateReady": "Actualizare pregătită",
+    "noReleaseNotes": "Nu sunt disponibile note de lansare.",
+    "viewOnGitHub": "Vezi pe GitHub",
+    "later": "Mai târziu",
+    "restartNow": "Repornește acum",
+    "download": "Descarcă"
+  },
+  "errorBoundary": {
+    "title": "A apărut o eroare",
+    "description": "A apărut o eroare neașteptată în aplicație. Poți încerca să reîncarci pagina sau să resetezi starea de eroare.",
+    "componentStack": "Stivă de componente",
+    "tryAgain": "Încearcă din nou",
+    "copied": "Copiat",
+    "copyErrorDetails": "Copiază detaliile erorii",
+    "reportBugOnGitHub": "Raportează eroarea pe GitHub",
+    "reloadApp": "Reîncarcă aplicația",
+    "diagnosticsNotice": "Rapoartele de erori GitHub și diagnosticele copiate includ mesajul de eroare, urmele de stivă, versiunea aplicației, fila activă, echipa selectată, contextul sarcinii și detaliile de mediu."
+  },
+  "runtimeBackendSelector": {
+    "label": "Backend runtime",
+    "resolved": "Rezolvat: {{backend}}",
+    "current": "Curent",
+    "recommended": "Recomandat",
+    "unavailable": "Indisponibil",
+    "cannotSelectYet": "Acest backend nu poate fi selectat încă.",
+    "auto": "Automat",
+    "autoCurrently": "Automat (în prezent: {{backend}})",
+    "audience": {
+      "internal": "Intern"
+    },
+    "states": {
+      "locked": "Blocat",
+      "disabled": "Dezactivat",
+      "authRequired": "Autentificare necesară",
+      "runtimeMissing": "Runtime lipsă",
+      "degraded": "Degradat",
+      "unavailable": "Indisponibil"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Se verifică",
+    "unavailable": "Indisponibil",
+    "checkFailed": "Verificarea a eșuat",
+    "free": "Gratuit",
+    "freeTooltip": "Raportat de metadatele OpenCode. Disponibilitatea și limitele se pot schimba."
+  },
+  "taskFilters": {
+    "status": "Stare",
+    "clearAll": "Șterge tot",
+    "selectAll": "Selectează tot",
+    "team": "Echipă",
+    "allTeams": "Toate echipele",
+    "searchTeams": "Caută echipe...",
+    "noTeamsFound": "Nicio echipă găsită",
+    "project": "Proiect",
+    "allProjects": "Toate proiectele",
+    "searchProjects": "Caută proiecte...",
+    "noProjects": "Niciun proiect",
+    "comments": "Comentarii",
+    "apply": "Aplică",
+    "read": {
+      "all": "Toate",
+      "unread": "Necitite",
+      "read": "Citite"
+    },
+    "statusOptions": {
+      "todo": "DE FĂCUT",
+      "inProgress": "ÎN CURS",
+      "needsFix": "NECESITĂ REMEDIERI",
+      "done": "FINALIZAT",
+      "review": "REVIZUIRE",
+      "approved": "APROBAT"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Context total: {{tokens}} tokenuri",
+    "context": "Context: {{tokens}}",
+    "phase": "Faza {{phase}}:",
+    "compactedTo": "(compactat la {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "echipă",
+      "subagent": "subagent",
+      "markAsRead": "Marchează ca citit",
+      "delete": "Șterge",
+      "viewInSession": "Vezi în sesiune"
+    },
+    "title": "Notificări",
+    "loading": "Se încarcă notificările...",
+    "actions": {
+      "markFilteredAsRead": "Marchează cele filtrate ca citite",
+      "markAllAsRead": "Marchează toate ca citite",
+      "markFilteredRead": "Marchează filtrate citite",
+      "markAllRead": "Marchează toate citite",
+      "clearFilteredNotifications": "Șterge notificările filtrate",
+      "clearAllNotifications": "Șterge toate notificările",
+      "clickToConfirm": "Apasă pentru a confirma",
+      "clearFiltered": "Șterge filtrate",
+      "clearAll": "Șterge tot"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} necitite în filtru",
+      "unreadInFilter_one": "{{count}} necitită în filtru",
+      "unreadInFilter_few": "{{count}} necitite în filtru",
+      "unreadInFilter_many": "{{count}} necitite în filtru",
+      "unreadInFilter_other": "{{count}} necitite în filtru",
+      "inFilter": "{{count}} în filtru",
+      "inFilter_one": "{{count}} în filtru",
+      "inFilter_few": "{{count}} în filtru",
+      "inFilter_many": "{{count}} în filtru",
+      "inFilter_other": "{{count}} în filtru",
+      "unread": "{{count}} necitite",
+      "unread_one": "{{count}} necitită",
+      "unread_few": "{{count}} necitite",
+      "unread_many": "{{count}} necitite",
+      "unread_other": "{{count}} necitite",
+      "total": "{{count}} în total",
+      "total_one": "{{count}} în total",
+      "total_few": "{{count}} în total",
+      "total_many": "{{count}} în total",
+      "total_other": "{{count}} în total"
+    },
+    "filters": {
+      "other": "Altele"
+    },
+    "empty": {
+      "noMatching": "Nicio notificare corespunzătoare",
+      "noNotifications": "Nicio notificare",
+      "tryDifferentFilter": "Încearcă un alt filtru",
+      "allCaughtUp": "Ești la zi!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Repornește pentru a actualiza",
+    "updateApp": "Actualizează aplicația",
+    "downloadedRestartTooltip": "Actualizare descărcată, repornește pentru a aplica",
+    "newVersionAvailable": "Versiune nouă disponibilă",
+    "updatingApp": "Se actualizează aplicația",
+    "updateReady": "Actualizare pregătită",
+    "restartNow": "Repornește acum"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Extinde bara laterală",
+    "collapseSidebarShortcut": "Restrânge bara laterală ({{shortcut}})",
+    "sidebarView": "Vizualizare bară laterală",
+    "resizeSidebar": "Redimensionează bara laterală",
+    "closeTab": "Închide fila",
+    "openedFromSearch": "Deschis din căutare",
+    "pinnedSession": "Sesiune fixată",
+    "jumpToSection": "Sari la secțiune",
+    "newTab": "Filă nouă",
+    "newTabDashboard": "Filă nouă (Panou)",
+    "refreshSession": "Reîmprospătează sesiunea",
+    "refreshSessionWithShortcut": "Reîmprospătează sesiunea ({{shortcut}})",
+    "loadingTab": "Se încarcă fila",
+    "menu": {
+      "teams": "Echipe",
+      "settings": "Setări",
+      "extensions": "Extensii",
+      "search": "Căutare",
+      "schedules": "Programări",
+      "docs": "Documentație",
+      "exportMarkdown": "Exportă ca Markdown",
+      "exportJson": "Exportă ca JSON",
+      "exportPlainText": "Exportă ca text simplu",
+      "analyzeSession": "Analizează sesiunea"
+    },
+    "tabMenu": {
+      "closeTabs": "Închide {{count}} file",
+      "closeTabs_one": "Închide {{count}} filă",
+      "closeTabs_few": "Închide {{count}} file",
+      "closeTabs_many": "Închide {{count}} file",
+      "closeTabs_other": "Închide {{count}} file",
+      "closeTab": "Închide fila",
+      "closeOtherTabs": "Închide celelalte file",
+      "splitRight": "Împarte la dreapta",
+      "splitLeft": "Împarte la stânga",
+      "pinToSidebar": "Fixează în bara laterală",
+      "unpinFromSidebar": "Anulează fixarea din bara laterală",
+      "hideFromSidebar": "Ascunde din bara laterală",
+      "unhideFromSidebar": "Afișează în bara laterală",
+      "closeAllTabs": "Închide toate filele"
+    },
+    "sections": {
+      "team": "Echipă",
+      "sessions": "Sesiuni",
+      "kanban": "Kanban",
+      "claudeLogs": "Jurnale",
+      "messages": "Mesaje"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Aldin",
+    "italic": "Cursiv",
+    "strike": "Tăiat",
+    "code": "Cod"
+  },
+  "diff": {
+    "changed": "Modificat",
+    "noChangesDetected": "Nicio modificare detectată"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Copiază linkul și codul de autentificare ChatGPT",
+    "copyLoginLink": "Copiază linkul de autentificare ChatGPT",
+    "copyFailed": "Copierea a eșuat",
+    "copyLinkAndCode": "Copiază linkul + codul",
+    "copyLink": "Copiază linkul",
+    "enterCodeOnLoginPage": "Introdu acest cod pe pagina de autentificare ChatGPT"
+  },
+  "window": {
+    "minimize": "Minimizează",
+    "maximize": "Maximizează",
+    "restore": "Restaurează"
+  },
+  "context": {
+    "local": "Local",
+    "switchingTo": "Se comută la {{workspace}}",
+    "loadingWorkspace": "Se încarcă spațiul de lucru",
+    "switchWorkspace": "Comută spațiul de lucru"
+  },
+  "repositories": {
+    "noneAvailable": "Niciun depozit disponibil",
+    "remove": "Elimină depozitul"
+  },
+  "export": {
+    "session": "Exportă sesiunea",
+    "sessionTitle": "Exportă sesiunea"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Niciun date de sesiune disponibile",
+    "title": "Raport sesiune"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Selectează proiectul"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "act",
+      "updatedYesterday": "act ieri",
+      "yesterday": "Ieri"
+    },
+    "reviewState": {
+      "needsFix": "Necesită remedieri"
+    },
+    "unassigned": "neatribuit"
+  }
+}

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
+import { RESOLVED_APP_LOCALES } from '../../../src/features/localization/contracts';
 import { validateConfigUpdatePayload } from '../../../src/main/ipc/configValidation';
 
 describe('configValidation', () => {
@@ -42,16 +43,13 @@ describe('configValidation', () => {
     }
   });
 
-  it.each(['ru', 'zh', 'ja', 'ko', 'es', 'hi', 'pt', 'fr', 'ar', 'bn', 'ur', 'id', 'de'] as const)(
-    'accepts supported general.appLocale update %s',
-    (appLocale) => {
-      const result = validateConfigUpdatePayload('general', { appLocale });
-      expect(result.valid).toBe(true);
-      if (result.valid) {
-        expect(result.data).toEqual({ appLocale });
-      }
+  it.each(RESOLVED_APP_LOCALES)('accepts supported general.appLocale update %s', (appLocale) => {
+    const result = validateConfigUpdatePayload('general', { appLocale });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({ appLocale });
     }
-  );
+  });
 
   it('accepts system general.appLocale updates', () => {
     const result = validateConfigUpdatePayload('general', { appLocale: 'system' });
@@ -62,7 +60,7 @@ describe('configValidation', () => {
   });
 
   it('rejects unsupported general.appLocale updates', () => {
-    const result = validateConfigUpdatePayload('general', { appLocale: 'uk' });
+    const result = validateConfigUpdatePayload('general', { appLocale: 'xx' });
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.error).toContain('supported app locale');
@@ -263,6 +261,136 @@ describe('configValidation', () => {
       expect(result.data).toEqual({
         codex: {},
       });
+    }
+  });
+
+  it('accepts Codex custom provider profile updates', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        preferredAuthMode: 'api_key',
+        customProvider: {
+          enabled: true,
+          baseUrl: ' http://127.0.0.1:8080/v1 ',
+          model: ' gateway-codex-model ',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({
+        codex: {
+          preferredAuthMode: 'api_key',
+          customProvider: {
+            enabled: true,
+            baseUrl: 'http://127.0.0.1:8080/v1',
+            model: 'gateway-codex-model',
+          },
+        },
+      });
+    }
+  });
+
+  it('allows disabling Codex custom provider while keeping empty fields', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: false,
+          baseUrl: '',
+          model: '',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({
+        codex: {
+          customProvider: {
+            enabled: false,
+            baseUrl: '',
+            model: '',
+          },
+        },
+      });
+    }
+  });
+
+  it.each([
+    ['ftp://gateway.example.com/v1', 'http:// or https://'],
+    ['https://user:token@gateway.example.com/v1', 'credentials'],
+    ['https://gateway.example.com/v1?token=secret', 'query or fragment'],
+    ['https://gateway.example.com/v1#token', 'query or fragment'],
+    ['not a url', 'valid URL'],
+  ])('rejects invalid Codex custom provider base URL %s', (baseUrl, expectedError) => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: true,
+          baseUrl,
+          model: 'gateway-codex-model',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain(expectedError);
+    }
+  });
+
+  it('requires Codex custom provider model when enabled', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: true,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: ' ',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('model is required');
+    }
+  });
+
+  it.each([
+    [`gateway\nmodel`, 'control characters'],
+    ['m'.repeat(201), '200 characters or fewer'],
+  ])('rejects invalid Codex custom provider model %s', (model, expectedError) => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: true,
+          baseUrl: 'https://gateway.example.com/v1',
+          model,
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain(expectedError);
+    }
+  });
+
+  it('rejects UI-derived Codex custom provider status fields', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: true,
+          active: true,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: 'gateway-codex-model',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('active is not a valid setting');
     }
   });
 

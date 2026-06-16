@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Annuleren",
+    "close": "Sluiten",
+    "copied": "Gekopieerd",
+    "copyUrl": "URL kopiëren",
+    "open": "Openen",
+    "reveal": "Tonen",
+    "retry": "Opnieuw proberen",
+    "save": "Opslaan",
+    "showLess": "Minder tonen",
+    "showMore": "Meer tonen",
+    "refresh": "Vernieuwen",
+    "reset": "Resetten",
+    "copyToClipboard": "Kopiëren naar klembord",
+    "moreActions": "Meer acties",
+    "closeDialog": "Dialoogvenster sluiten",
+    "goToDashboard": "Naar Dashboard",
+    "or": "of",
+    "hide": "Verbergen",
+    "resetSelection": "Selectie resetten"
+  },
+  "code": {
+    "line": "regel {{line}}",
+    "lines": "regels {{from}}-{{to}}",
+    "moreLines": "(nog {{count}} regels...)",
+    "moreLines_few": "(nog {{count}} regels...)",
+    "moreLines_many": "(nog {{count}} regels...)",
+    "moreLines_one": "(nog {{count}} regel...)",
+    "moreLines_other": "(nog {{count}} regels...)",
+    "code": "Code",
+    "preview": "Voorbeeld",
+    "markdownPreview": "Markdown-voorbeeld",
+    "linesParenthesized": "(regels {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid-syntaxisfout"
+  },
+  "contextBadge": {
+    "badge": "Context",
+    "breakdown": {
+      "text": "Tekst",
+      "thinking": "Denken"
+    },
+    "detailsAria": "Details contextinjectie",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md-bestanden",
+      "mentionedFiles": "Genoemde bestanden",
+      "taskCoordination": "Taakcoördinatie",
+      "thinkingText": "Denken + tekst",
+      "toolOutputs": "Tooluitvoer",
+      "userMessages": "Gebruikersberichten"
+    },
+    "title": "Nieuwe context geïnjecteerd in deze beurt",
+    "tokenCount": "~{{tokens}} tokens",
+    "totalNewTokens": "Totaal nieuwe tokens",
+    "turn": "Beurt {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} tokens"
+  },
+  "locales": {
+    "emptyMessage": "Geen taal gevonden.",
+    "names": {
+      "ar": "Arabisch",
+      "bn": "Bengaals",
+      "de": "Duits",
+      "en": "Engels",
+      "es": "Spaans",
+      "fa": "Perzisch",
+      "fil": "Filipijns",
+      "fr": "Frans",
+      "hi": "Hindi",
+      "id": "Indonesisch",
+      "it": "Italiaans",
+      "ja": "Japans",
+      "ko": "Koreaans",
+      "mr": "Marathi",
+      "ms": "Maleis",
+      "nl": "Nederlands",
+      "pl": "Pools",
+      "pt": "Portugees",
+      "ro": "Roemeens",
+      "ru": "Russisch",
+      "sw": "Swahili",
+      "system": "Systeem",
+      "ta": "Tamil",
+      "te": "Telugu",
+      "th": "Thai",
+      "tr": "Turks",
+      "uk": "Oekraïens",
+      "ur": "Urdu",
+      "vi": "Vietnamees",
+      "zh": "Chinees"
+    },
+    "searchPlaceholder": "Taal zoeken...",
+    "selectPlaceholder": "App-taal selecteren...",
+    "systemWithResolved": "Systeem - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Geen leden gevonden.",
+    "searchPlaceholder": "Leden zoeken...",
+    "unassigned": "Niet toegewezen",
+    "teammateFallback": "teamlid"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Controleren",
+        "downloading": "Downloaden",
+        "installCli": "Codex CLI installeren",
+        "installing": "Installeren",
+        "retryInstall": "Installatie opnieuw proberen"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Geen overeenkomende suggesties",
+    "searching": "Zoeken...",
+    "searchingFiles": "Bestanden zoeken...",
+    "findInConversation": "Zoeken in gesprek...",
+    "resultCount": "{{current}} van {{total}}",
+    "resultCountCapped": "{{current}} van {{total}}+",
+    "noResults": "Geen resultaten",
+    "previousResultShortcut": "Vorig resultaat (Shift+Enter)",
+    "nextResultShortcut": "Volgend resultaat (Enter)",
+    "closeShortcut": "Sluiten (Esc)",
+    "nothingFound": "Niets gevonden",
+    "placeholder": "Zoeken..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Planning toevoegen",
+      "clearFilters": "Filters wissen",
+      "createSchedule": "Planning aanmaken",
+      "delete": "Verwijderen",
+      "edit": "Bewerken",
+      "pause": "Pauzeren",
+      "resume": "Hervatten",
+      "runNow": "Nu uitvoeren"
+    },
+    "empty": {
+      "description": "Maak op elk team een planning aan om de uitvoering van Claude-taken te automatiseren met cron-expressies. Planningen van alle teams verschijnen hier.",
+      "noMatches": "Geen planningen komen overeen met de huidige filters",
+      "title": "Geen geplande taken"
+    },
+    "filters": {
+      "allTeams": "Alle teams"
+    },
+    "item": {
+      "loadingRunHistory": "Uitvoeringsgeschiedenis laden...",
+      "nextRun": "Volgende: {{value}}",
+      "noRunsYet": "Nog geen uitvoeringen"
+    },
+    "loading": "Planningen laden...",
+    "searchPlaceholder": "Planningen zoeken...",
+    "status": {
+      "active": "Actief",
+      "all": "Alle",
+      "disabled": "Uitgeschakeld",
+      "paused": "Gepauzeerd"
+    },
+    "title": "Planningen"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Verbergen",
+      "pin": "Vastmaken",
+      "unhide": "Weergeven"
+    },
+    "empty": {
+      "noMatchingSessions": "Geen overeenkomende sessies",
+      "noMatchingSessionsDescription": "Dit project heeft nog geen overeenkomende sessies.",
+      "noMatchingSessionsFiltered": "Probeer een andere zoekopdracht of reset het providerfilter.",
+      "noSessions": "Geen sessies gevonden",
+      "noSessionsDescription": "Dit project heeft nog geen sessies",
+      "selectProject": "Selecteer een project om sessies te bekijken"
+    },
+    "errors": {
+      "loading": "Fout bij het laden van sessies"
+    },
+    "loadedMatchingMore": "{{count}} overeenkomende sessies tot nu toe geladen - scroll naar beneden om meer te laden.",
+    "loadingMore": "Meer sessies laden...",
+    "pinned": "Vastgemaakt",
+    "scrollToLoadMore": "Scroll om meer te laden",
+    "search": {
+      "clear": "Sessiezoekopdracht wissen",
+      "placeholder": "Sessies zoeken..."
+    },
+    "selection": {
+      "cancel": "Selectie annuleren",
+      "exitMode": "Selectiemodus afsluiten",
+      "hideSelected": "Geselecteerde sessies verbergen",
+      "pinSelected": "Geselecteerde sessies vastmaken",
+      "selectSessions": "Sessies selecteren",
+      "selected": "{{count}} geselecteerd",
+      "unhideSelected": "Geselecteerde sessies weergeven",
+      "selected_few": "{{count}} geselecteerd",
+      "selected_many": "{{count}} geselecteerd",
+      "selected_one": "{{count}} geselecteerd",
+      "selected_other": "{{count}} geselecteerd"
+    },
+    "sort": {
+      "byContext": "Op context",
+      "byContextTooltip": "Sorteren op contextverbruik",
+      "byRecentTooltip": "Sorteren op recent",
+      "contextLoadedOnly": "Contextsortering rangschikt alleen geladen sessies."
+    },
+    "title": "Sessies",
+    "visibility": {
+      "hideHidden": "Verborgen sessies verbergen",
+      "showHidden": "Verborgen sessies tonen"
+    },
+    "worktree": {
+      "switch": "Worktree wisselen"
+    },
+    "loadedMatchingMore_few": "{{count}} overeenkomende sessies tot nu toe geladen - scroll naar beneden om meer te laden.",
+    "loadedMatchingMore_many": "{{count}} overeenkomende sessies tot nu toe geladen - scroll naar beneden om meer te laden.",
+    "loadedMatchingMore_one": "{{count}} overeenkomende sessies tot nu toe geladen - scroll naar beneden om meer te laden.",
+    "loadedMatchingMore_other": "{{count}} overeenkomende sessies tot nu toe geladen - scroll naar beneden om meer te laden.",
+    "failedToLoad": "Kon sessie niet laden",
+    "loading": "Sessie laden...",
+    "filter": {
+      "title": "Sessies filteren"
+    },
+    "count": "{{count}} sessies",
+    "count_one": "{{count}} sessie",
+    "count_other": "{{count}} sessies",
+    "count_few": "{{count}} sessies",
+    "count_many": "{{count}} sessies",
+    "inProgress": "Sessie is bezig..."
+  },
+  "states": {
+    "loading": "Laden...",
+    "offline": "Offline",
+    "online": "Online",
+    "unknown": "Onbekend",
+    "error": "Fout"
+  },
+  "markdown": {
+    "imageFallback": "[Afbeelding: {{label}}]",
+    "largeContentNotice": "Inhoud is erg groot ({{count}} tekens). Ruw voorbeeld wordt getoond om de UI responsief te houden.",
+    "largeContentTitle": "Grote inhoud wordt ruw getoond om vastlopen van de UI te voorkomen",
+    "raw": "Ruw",
+    "rawPreview": "Ruw voorbeeld",
+    "renderMarkdown": "Markdown weergeven",
+    "showAll": "Alles tonen",
+    "showMore": "Meer tonen",
+    "showRaw": "Ruw tonen",
+    "showingChars": "{{shown}} / {{total}} tekens getoond",
+    "largeContentNotice_few": "Inhoud is erg groot ({{count}} tekens). Ruw voorbeeld wordt getoond om de UI responsief te houden.",
+    "largeContentNotice_many": "Inhoud is erg groot ({{count}} tekens). Ruw voorbeeld wordt getoond om de UI responsief te houden.",
+    "largeContentNotice_one": "Inhoud is erg groot ({{count}} tekens). Ruw voorbeeld wordt getoond om de UI responsief te houden.",
+    "largeContentNotice_other": "Inhoud is erg groot ({{count}} tekens). Ruw voorbeeld wordt getoond om de UI responsief te houden."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Bekijk de terminaluitvoer hierboven voor details",
+    "closingInSeconds": "Sluiten over {{count}}s...",
+    "closingInSeconds_few": "Sluiten over {{count}}s...",
+    "closingInSeconds_many": "Sluiten over {{count}}s...",
+    "closingInSeconds_one": "Sluiten over {{count}}s...",
+    "closingInSeconds_other": "Sluiten over {{count}}s...",
+    "completedSuccessfully": "Succesvol voltooid",
+    "exitCode": "(afsluitcode {{code}})",
+    "processFailed": "Proces mislukt",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Verzameld over de hele sessie zonder duplicatie",
+    "cacheRead": "Cache lezen",
+    "cacheWrite": "Cache schrijven",
+    "costUsd": "Kosten (USD)",
+    "inputTokens": "Invoertokens",
+    "model": "Model",
+    "outputTokens": "Uitvoertokens",
+    "phase": "Fase {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% van prompt-invoer",
+    "taskCoordination": "Taakcoördinatie",
+    "thinkingText": "Denken + tekst",
+    "toolOutputs": "Tooluitvoer",
+    "total": "Totaal",
+    "userMessages": "Gebruikersberichten",
+    "visibleContext": "Zichtbare context",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@bestanden",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} tokens",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Team kopiëren",
+      "createTeam": "Team aanmaken",
+      "deleteForever": "Definitief verwijderen",
+      "deletePermanently": "Permanent verwijderen",
+      "deleteTeam": "Team verwijderen",
+      "launching": "Starten...",
+      "launchTeam": "Team starten",
+      "relaunchTeam": "Team opnieuw starten",
+      "restore": "Herstellen",
+      "restoreTeam": "Team herstellen",
+      "retry": "Opnieuw proberen",
+      "stopTeam": "Team stoppen",
+      "stopping": "Stoppen..."
+    },
+    "status": {
+      "active": "Actief",
+      "deleted": "Verwijderd",
+      "launching": "Starten...",
+      "offline": "Offline",
+      "partialFailure": "Starten halverwege mislukt",
+      "partialPending": "Bootstrap in behandeling",
+      "partialSkipped": "Start sloeg lid over",
+      "running": "Actief"
+    },
+    "partial": {
+      "pending": "Laatste start wordt nog afgestemd.",
+      "skipped": "Bij de laatste start zijn teamleden overgeslagen.",
+      "skippedWithCount": "Laatste start sloeg {{count}}/{{expected}} teamlid over.",
+      "skippedWithCount_few": "Laatste start sloeg {{count}}/{{expected}} teamleden over.",
+      "skippedWithCount_many": "Laatste start sloeg {{count}}/{{expected}} teamleden over.",
+      "skippedWithCount_one": "Laatste start sloeg {{count}}/{{expected}} teamlid over.",
+      "skippedWithCount_other": "Laatste start sloeg {{count}}/{{expected}} teamleden over.",
+      "stopped": "Laatste start is gestopt voordat alle teamleden zich aansloten.",
+      "stoppedWithCount": "Laatste start is gestopt voordat {{count}}/{{expected}} teamlid zich aansloot.",
+      "stoppedWithCount_few": "Laatste start is gestopt voordat {{count}}/{{expected}} teamleden zich aansloten.",
+      "stoppedWithCount_many": "Laatste start is gestopt voordat {{count}}/{{expected}} teamleden zich aansloten.",
+      "stoppedWithCount_one": "Laatste start is gestopt voordat {{count}}/{{expected}} teamlid zich aansloot.",
+      "stoppedWithCount_other": "Laatste start is gestopt voordat {{count}}/{{expected}} teamleden zich aansloten."
+    },
+    "noDescription": "Geen beschrijving",
+    "solo": "Solo",
+    "membersCount": "Leden: {{count}}",
+    "membersCount_few": "Leden: {{count}}",
+    "membersCount_many": "Leden: {{count}}",
+    "membersCount_one": "Lid: {{count}}",
+    "membersCount_other": "Leden: {{count}}",
+    "all": "Alle",
+    "moreCount": "+{{count}} meer",
+    "moreCount_one": "+{{count}} meer",
+    "moreCount_other": "+{{count}} meer",
+    "moreCount_few": "+{{count}} meer",
+    "moreCount_many": "+{{count}} meer"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Standaard voor elk project dat geen eigen OpenCode-override heeft.",
+      "scopeDescriptionProject": "Overschrijf alleen het geselecteerde project. Actieve teams worden niet gewijzigd.",
+      "setAllProjectsDefault": "Standaard voor alle projecten instellen",
+      "setProjectDefault": "Projectstandaard instellen",
+      "validationContext": "Validatiecontext",
+      "projectOverrideContext": "Projectoverridecontext",
+      "selectProjectHint": "Selecteer een project voordat je lokale modellen test of standaardwaarden opslaat.",
+      "allProjectsHint": "Tests gebruiken {{project}}. De standaard geldt tenzij een project een override heeft.",
+      "projectHint": "Opslaan overschrijft alleen {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Context",
+      "closePanel": "Paneel sluiten",
+      "phase": "Fase:",
+      "current": "Huidig",
+      "view": "Weergave:",
+      "category": "Categorie",
+      "bySize": "Op grootte"
+    },
+    "metrics": {
+      "unavailable": "Niet beschikbaar",
+      "contextUsed": "Gebruikte context",
+      "promptInput": "Prompt-invoer",
+      "visibleContext": "Zichtbare context",
+      "ofContext": "van context",
+      "ofPrompt": "van prompt",
+      "codexTelemetryUnavailable": "Het prompt-zijdige gebruik van Codex wordt nog niet weergegeven door de huidige runtimetelemetrie, dus Prompt-invoer en Gebruikte context blijven op niet beschikbaar staan in plaats van een onjuiste nul te tonen.",
+      "sessionCost": "Sessiekosten:",
+      "parentPlus": "bovenliggend +",
+      "subagents": "subagents",
+      "details": "details"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Gebruikte context",
+        "description": "Prompt-invoer plus uitvoertokens die momenteel het contextvenster van het model innemen."
+      },
+      "promptInput": {
+        "title": "Prompt-invoer",
+        "description": "Tokens die naar het model worden gestuurd vóór generatie. Voor Claude omvat dit `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Zichtbare context",
+        "description": "De inspecteerbare subset van prompt-invoer: bestanden, CLAUDE.md, tooluitvoer, gebruikersberichten en soortgelijke injecties die je rechtstreeks kunt optimaliseren."
+      },
+      "availability": {
+        "title": "Beschikbaarheid",
+        "description": "Als een provider-runtime het prompt-zijdige gebruik nog niet weergeeft, toont het paneel de waarden als niet beschikbaar in plaats van te doen alsof ze nul zijn."
+      }
+    },
+    "items": {
+      "turn": "@Beurt {{turn}}",
+      "tokensApprox": "~{{tokens}} tokens",
+      "toolsCount": "{{count}} tools",
+      "toolsCount_one": "{{count}} tool",
+      "toolsCount_other": "{{count}} tools",
+      "toolsCount_few": "{{count}} tools",
+      "toolsCount_many": "{{count}} tools",
+      "itemsCount": "{{count}} items",
+      "itemsCount_one": "{{count}} item",
+      "itemsCount_other": "{{count}} items",
+      "itemsCount_few": "{{count}} items",
+      "itemsCount_many": "{{count}} items",
+      "missing": "ontbreekt",
+      "thinking": "Denken",
+      "text": "Tekst"
+    },
+    "empty": "Geen contextinjecties gedetecteerd in deze sessie",
+    "view": {
+      "grouped": "Gegroepeerd",
+      "flat": "Plat"
+    },
+    "claudeMdFiles": "CLAUDE.md-bestanden",
+    "mentionedFiles": "Genoemde bestanden"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Afsluiten bevestigd",
+      "summary": {
+        "tools": "{{count}} tools",
+        "tools_one": "{{count}} tool",
+        "tools_other": "{{count}} tools",
+        "tools_few": "{{count}} tools",
+        "tools_many": "{{count}} tools"
+      },
+      "meta": {
+        "type": "Type",
+        "duration": "Duur",
+        "model": "Model",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Contextvenster",
+        "contextUsage": "Contextgebruik",
+        "mainContext": "Hoofdcontext",
+        "totalOutput": "Totale uitvoer",
+        "turns": "({{count}} beurten)",
+        "turns_one": "({{count}} beurt)",
+        "turns_other": "({{count}} beurten)",
+        "subagentContext": "Subagent-context",
+        "phase": "Fase {{phase}}",
+        "turns_few": "({{count}} beurten)",
+        "turns_many": "({{count}} beurten)"
+      },
+      "trace": {
+        "title": "Uitvoeringstracering"
+      }
+    },
+    "user": {
+      "you": "Jij",
+      "showMore": "Meer tonen",
+      "showLess": "Minder tonen",
+      "backgroundTask": "Achtergrondtaak",
+      "exitCode": "afsluiten {{code}}",
+      "imagesAttached": "{{count}} afbeeldingen bijgevoegd",
+      "imagesAttached_one": "{{count}} afbeelding bijgevoegd",
+      "imagesAttached_few": "{{count}} afbeeldingen bijgevoegd",
+      "imagesAttached_many": "{{count}} afbeeldingen bijgevoegd",
+      "imagesAttached_other": "{{count}} afbeeldingen bijgevoegd"
+    },
+    "compact": {
+      "toggle": "Gecompacte inhoud in-/uitklappen",
+      "contextCompacted": "Context gecompact",
+      "freedTokens": "({{tokens}} vrijgemaakt)",
+      "phase": "Fase {{phase}}",
+      "conversationCompacted": "Gesprek gecompact",
+      "summary": "Eerdere berichten zijn samengevat om context te besparen. De volledige gespreksgeschiedenis blijft bewaard in het sessiebestand.",
+      "compacted": "Gecompact"
+    },
+    "executionTrace": {
+      "empty": "Geen uitvoeringsitems",
+      "nested": "Genest: {{name}}",
+      "input": "Invoer"
+    },
+    "items": {
+      "empty": "Geen items om weer te geven"
+    },
+    "tools": {
+      "teammateSpawned": "Teamlid aangemaakt",
+      "shutdownRequested": "Afsluiten aangevraagd ->",
+      "noResultReceived": "Geen resultaat ontvangen",
+      "duration": "Duur: {{duration}}",
+      "result": "Resultaat",
+      "write": {
+        "createdFile": "Bestand aangemaakt",
+        "wroteToFile": "Naar bestand geschreven"
+      },
+      "skill": {
+        "instructions": "Skill-instructies",
+        "unknown": "Onbekende skill"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Verzoek onderbroken door gebruiker",
+      "planReadyForApproval": "Plan klaar voor goedkeuring"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Geen gespreksgeschiedenis",
+      "description": "Deze sessie bevat nog geen berichten."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% over)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "Scroll naar beneden",
+    "bottom": "Onderaan",
+    "teammateMessage": {
+      "message": "Bericht",
+      "resent": "Opnieuw verzonden",
+      "fallback": "Bericht van teamlid"
+    },
+    "system": {
+      "label": "Systeem"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux is niet geïnstalleerd",
+    "detectedOs": "Gedetecteerd OS: {{os}}",
+    "runtimePath": "Runtime-pad: {{path}}",
+    "phase": "Fase: {{phase}}",
+    "actions": {
+      "cancel": "Annuleren",
+      "manualGuide": "Handmatige gids",
+      "hideSetupSteps": "Installatiestappen verbergen",
+      "showSetupSteps": "Installatiestappen tonen ({{count}})",
+      "showSetupSteps_one": "Installatiestap tonen ({{count}})",
+      "showSetupSteps_other": "Installatiestappen tonen ({{count}})",
+      "recheck": "Opnieuw controleren",
+      "showSetupSteps_few": "Installatiestappen tonen ({{count}})",
+      "showSetupSteps_many": "Installatiestappen tonen ({{count}})"
+    },
+    "installerProgress": "Voortgang installatieprogramma",
+    "input": {
+      "placeholder": "Invoer naar het installatieprogramma sturen",
+      "send": "Invoer versturen",
+      "passwordNotice": "Wachtwoordinvoer wordt rechtstreeks naar de installatieprogramma-terminal gestuurd en wordt niet aan de loguitvoer toegevoegd."
+    },
+    "details": {
+      "show": "Details tonen",
+      "hide": "Details verbergen"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Geen recente activiteit",
+    "sessionsCount": "{{count}} sessies",
+    "sessionsCount_one": "{{count}} sessie",
+    "sessionsCount_other": "{{count}} sessies",
+    "mode": {
+      "searchProjects": "Projecten zoeken",
+      "searchAcrossProjects": "Zoeken in alle projecten",
+      "searchInProject": "Zoeken in project"
+    },
+    "currentProject": "Huidig project",
+    "global": "Globaal",
+    "placeholders": {
+      "projects": "Projecten zoeken...",
+      "conversations": "Gesprekken zoeken..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Geen projecten gevonden voor \"{{query}}\"",
+      "noProjects": "Geen projecten gevonden",
+      "minChars": "Typ minstens 2 tekens om te zoeken",
+      "noFastResults": "Geen snelle resultaten in recente sessies voor \"{{query}}\"",
+      "noResults": "Geen resultaten gevonden voor \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} projecten",
+      "projectsCount_one": "{{count}} project",
+      "projectsCount_other": "{{count}} projecten",
+      "results": "{{count}} {{speed}}resultaten",
+      "results_one": "{{count}} {{speed}}resultaat",
+      "results_other": "{{count}} {{speed}}resultaten",
+      "resultsAcrossProjects": "{{count}} {{speed}}resultaten in alle projecten",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}resultaat in alle projecten",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}resultaten in alle projecten",
+      "fastPrefix": "snelle ",
+      "typeToSearch": "Typ om te zoeken",
+      "navigate": "navigeren",
+      "select": "selecteren",
+      "open": "openen",
+      "global": "globaal",
+      "close": "sluiten",
+      "results_few": "{{count}} {{speed}}resultaten",
+      "results_many": "{{count}} {{speed}}resultaten",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}resultaten in alle projecten",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}resultaten in alle projecten",
+      "projectsCount_few": "{{count}} projecten",
+      "projectsCount_many": "{{count}} projecten",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} sessies",
+    "sessionsCount_many": "{{count}} sessies"
+  },
+  "tasksPanel": {
+    "title": "Taken",
+    "searchPlaceholder": "Taken zoeken...",
+    "pinned": "Vastgemaakt",
+    "groupByLabel": "Groeperen op:",
+    "groupByAria": "Groeperen op",
+    "groupModes": {
+      "none": "Geen",
+      "project": "Project",
+      "time": "Tijd"
+    },
+    "showArchived": "Gearchiveerde tonen",
+    "hideArchived": "Gearchiveerde verbergen",
+    "empty": {
+      "noMatchingTasks": "Geen overeenkomende taken",
+      "noTasks": "Geen taken gevonden"
+    },
+    "teamLabel": "Team: {{team}}",
+    "showMore": "Meer tonen",
+    "showLess": "Minder tonen",
+    "deleteConfirm": {
+      "title": "Taak verwijderen",
+      "message": "Taak #{{taskId}} naar de prullenbak verplaatsen?",
+      "confirmLabel": "Verwijderen",
+      "cancelLabel": "Annuleren"
+    },
+    "deleteFailed": {
+      "title": "Kon taak niet verwijderen",
+      "fallbackMessage": "Er is een onverwachte fout opgetreden",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "Op tijd",
+      "byUnread": "Op ongelezen",
+      "byProject": "Op project",
+      "byTeam": "Op team"
+    }
+  },
+  "toolViewer": {
+    "input": "Invoer",
+    "replaceAll": "(alles vervangen)",
+    "noInputRecorded": "Geen invoer geregistreerd voor deze toolaanroep.",
+    "agent": {
+      "action": "actie",
+      "teammate": "teamlid",
+      "team": "team",
+      "runtime": "runtime",
+      "type": "type",
+      "startupInstructionsHidden": "Opstartinstructies zijn verborgen in de UI."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Losmaken",
+    "pin": "Vastmaken",
+    "rename": "Hernoemen",
+    "markUnread": "Markeren als ongelezen",
+    "unarchive": "Dearchiveren",
+    "archive": "Archiveren",
+    "deleteTask": "Taak verwijderen"
+  },
+  "updateDialog": {
+    "closeDialog": "Dialoogvenster sluiten",
+    "updateAvailable": "Update beschikbaar",
+    "updateReady": "Update klaar",
+    "noReleaseNotes": "Geen release-opmerkingen beschikbaar.",
+    "viewOnGitHub": "Bekijken op GitHub",
+    "later": "Later",
+    "restartNow": "Nu opnieuw starten",
+    "download": "Downloaden"
+  },
+  "errorBoundary": {
+    "title": "Er is iets misgegaan",
+    "description": "Er is een onverwachte fout opgetreden in de applicatie. Je kunt proberen de pagina opnieuw te laden of de foutstatus te resetten.",
+    "componentStack": "Componentstack",
+    "tryAgain": "Opnieuw proberen",
+    "copied": "Gekopieerd",
+    "copyErrorDetails": "Foutdetails kopiëren",
+    "reportBugOnGitHub": "Bug melden op GitHub",
+    "reloadApp": "App opnieuw laden",
+    "diagnosticsNotice": "GitHub-bugmeldingen en gekopieerde diagnostiek bevatten de foutmelding, stacktraces, app-versie, actief tabblad, geselecteerd team, taakcontext en omgevingsdetails."
+  },
+  "runtimeBackendSelector": {
+    "label": "Runtime-backend",
+    "resolved": "Opgelost: {{backend}}",
+    "current": "Huidig",
+    "recommended": "Aanbevolen",
+    "unavailable": "Niet beschikbaar",
+    "cannotSelectYet": "Deze backend kan nog niet worden geselecteerd.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (momenteel: {{backend}})",
+    "audience": {
+      "internal": "Intern"
+    },
+    "states": {
+      "locked": "Vergrendeld",
+      "disabled": "Uitgeschakeld",
+      "authRequired": "Authenticatie vereist",
+      "runtimeMissing": "Runtime ontbreekt",
+      "degraded": "Verminderd",
+      "unavailable": "Niet beschikbaar"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Controleren",
+    "unavailable": "Niet beschikbaar",
+    "checkFailed": "Controle mislukt",
+    "free": "Gratis",
+    "freeTooltip": "Gerapporteerd door OpenCode-metadata. Beschikbaarheid en limieten kunnen veranderen."
+  },
+  "taskFilters": {
+    "status": "Status",
+    "clearAll": "Alles wissen",
+    "selectAll": "Alles selecteren",
+    "team": "Team",
+    "allTeams": "Alle teams",
+    "searchTeams": "Teams zoeken...",
+    "noTeamsFound": "Geen teams gevonden",
+    "project": "Project",
+    "allProjects": "Alle projecten",
+    "searchProjects": "Projecten zoeken...",
+    "noProjects": "Geen projecten",
+    "comments": "Opmerkingen",
+    "apply": "Toepassen",
+    "read": {
+      "all": "Alle",
+      "unread": "Ongelezen",
+      "read": "Gelezen"
+    },
+    "statusOptions": {
+      "todo": "TE DOEN",
+      "inProgress": "BEZIG",
+      "needsFix": "TE HERSTELLEN",
+      "done": "KLAAR",
+      "review": "REVIEW",
+      "approved": "GOEDGEKEURD"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Totale context: {{tokens}} tokens",
+    "context": "Context: {{tokens}}",
+    "phase": "Fase {{phase}}:",
+    "compactedTo": "(gecompact tot {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "team",
+      "subagent": "subagent",
+      "markAsRead": "Markeren als gelezen",
+      "delete": "Verwijderen",
+      "viewInSession": "Bekijken in sessie"
+    },
+    "title": "Meldingen",
+    "loading": "Meldingen laden...",
+    "actions": {
+      "markFilteredAsRead": "Gefilterde markeren als gelezen",
+      "markAllAsRead": "Alles markeren als gelezen",
+      "markFilteredRead": "Gefilterde als gelezen markeren",
+      "markAllRead": "Alles als gelezen markeren",
+      "clearFilteredNotifications": "Gefilterde meldingen wissen",
+      "clearAllNotifications": "Alle meldingen wissen",
+      "clickToConfirm": "Klik om te bevestigen",
+      "clearFiltered": "Gefilterde wissen",
+      "clearAll": "Alles wissen"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} ongelezen in filter",
+      "unreadInFilter_one": "{{count}} ongelezen in filter",
+      "unreadInFilter_few": "{{count}} ongelezen in filter",
+      "unreadInFilter_many": "{{count}} ongelezen in filter",
+      "unreadInFilter_other": "{{count}} ongelezen in filter",
+      "inFilter": "{{count}} in filter",
+      "inFilter_one": "{{count}} in filter",
+      "inFilter_few": "{{count}} in filter",
+      "inFilter_many": "{{count}} in filter",
+      "inFilter_other": "{{count}} in filter",
+      "unread": "{{count}} ongelezen",
+      "unread_one": "{{count}} ongelezen",
+      "unread_few": "{{count}} ongelezen",
+      "unread_many": "{{count}} ongelezen",
+      "unread_other": "{{count}} ongelezen",
+      "total": "{{count}} totaal",
+      "total_one": "{{count}} totaal",
+      "total_few": "{{count}} totaal",
+      "total_many": "{{count}} totaal",
+      "total_other": "{{count}} totaal"
+    },
+    "filters": {
+      "other": "Overig"
+    },
+    "empty": {
+      "noMatching": "Geen overeenkomende meldingen",
+      "noNotifications": "Geen meldingen",
+      "tryDifferentFilter": "Probeer een ander filter",
+      "allCaughtUp": "Je bent helemaal bij!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Opnieuw starten om bij te werken",
+    "updateApp": "App bijwerken",
+    "downloadedRestartTooltip": "Update gedownload, start opnieuw om toe te passen",
+    "newVersionAvailable": "Nieuwe versie beschikbaar",
+    "updatingApp": "App bijwerken",
+    "updateReady": "Update klaar",
+    "restartNow": "Nu opnieuw starten"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Zijbalk uitklappen",
+    "collapseSidebarShortcut": "Zijbalk inklappen ({{shortcut}})",
+    "sidebarView": "Zijbalkweergave",
+    "resizeSidebar": "Zijbalkgrootte aanpassen",
+    "closeTab": "Tabblad sluiten",
+    "openedFromSearch": "Geopend vanuit zoeken",
+    "pinnedSession": "Vastgemaakte sessie",
+    "jumpToSection": "Naar sectie springen",
+    "newTab": "Nieuw tabblad",
+    "newTabDashboard": "Nieuw tabblad (Dashboard)",
+    "refreshSession": "Sessie vernieuwen",
+    "refreshSessionWithShortcut": "Sessie vernieuwen ({{shortcut}})",
+    "loadingTab": "Tabblad laden",
+    "menu": {
+      "teams": "Teams",
+      "settings": "Instellingen",
+      "extensions": "Extensies",
+      "search": "Zoeken",
+      "schedules": "Planningen",
+      "docs": "Docs",
+      "exportMarkdown": "Exporteren als Markdown",
+      "exportJson": "Exporteren als JSON",
+      "exportPlainText": "Exporteren als platte tekst",
+      "analyzeSession": "Sessie analyseren"
+    },
+    "tabMenu": {
+      "closeTabs": "{{count}} tabbladen sluiten",
+      "closeTabs_one": "{{count}} tabblad sluiten",
+      "closeTabs_few": "{{count}} tabbladen sluiten",
+      "closeTabs_many": "{{count}} tabbladen sluiten",
+      "closeTabs_other": "{{count}} tabbladen sluiten",
+      "closeTab": "Tabblad sluiten",
+      "closeOtherTabs": "Andere tabbladen sluiten",
+      "splitRight": "Naar rechts splitsen",
+      "splitLeft": "Naar links splitsen",
+      "pinToSidebar": "Vastmaken aan zijbalk",
+      "unpinFromSidebar": "Losmaken van zijbalk",
+      "hideFromSidebar": "Verbergen uit zijbalk",
+      "unhideFromSidebar": "Weergeven in zijbalk",
+      "closeAllTabs": "Alle tabbladen sluiten"
+    },
+    "sections": {
+      "team": "Team",
+      "sessions": "Sessies",
+      "kanban": "Kanban",
+      "claudeLogs": "Logs",
+      "messages": "Berichten"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Vet",
+    "italic": "Cursief",
+    "strike": "Doorhalen",
+    "code": "Code"
+  },
+  "diff": {
+    "changed": "Gewijzigd",
+    "noChangesDetected": "Geen wijzigingen gedetecteerd"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT-loginlink en code kopiëren",
+    "copyLoginLink": "ChatGPT-loginlink kopiëren",
+    "copyFailed": "Kopiëren mislukt",
+    "copyLinkAndCode": "Link + code kopiëren",
+    "copyLink": "Link kopiëren",
+    "enterCodeOnLoginPage": "Voer deze code in op de ChatGPT-loginpagina"
+  },
+  "window": {
+    "minimize": "Minimaliseren",
+    "maximize": "Maximaliseren",
+    "restore": "Herstellen"
+  },
+  "context": {
+    "local": "Lokaal",
+    "switchingTo": "Overschakelen naar {{workspace}}",
+    "loadingWorkspace": "Werkruimte laden",
+    "switchWorkspace": "Werkruimte wisselen"
+  },
+  "repositories": {
+    "noneAvailable": "Geen repositories beschikbaar",
+    "remove": "Repository verwijderen"
+  },
+  "export": {
+    "session": "Sessie exporteren",
+    "sessionTitle": "Sessie exporteren"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Geen sessiegegevens beschikbaar",
+    "title": "Sessierapport"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Project selecteren"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "bijgew.",
+      "updatedYesterday": "bijgew. gisteren",
+      "yesterday": "Gisteren"
+    },
+    "reviewState": {
+      "needsFix": "Te herstellen"
+    },
+    "unassigned": "niet toegewezen"
+  }
+}

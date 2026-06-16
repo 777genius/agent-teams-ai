@@ -1,4 +1,8 @@
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
+import {
+  inferTeamProviderIdFromModel,
+  normalizeOptionalTeamProviderId,
+} from '@shared/utils/teamProvider';
 
 import { TeamConfigReader } from '../../TeamConfigReader';
 import { TeamMembersMetaStore } from '../../TeamMembersMetaStore';
@@ -14,6 +18,7 @@ import type {
   BoardTaskLogParticipant,
   BoardTaskLogSegment,
   BoardTaskLogStreamResponse,
+  TeamProviderId,
   TeamTask,
 } from '@shared/types';
 
@@ -42,6 +47,31 @@ function buildActor(memberName: string, sessionId: string): BoardTaskLogActor {
     sessionId,
     isSidechain: false,
   };
+}
+
+function resolveExplicitProviderId(member: {
+  providerId?: unknown;
+  provider?: unknown;
+}): ReturnType<typeof normalizeOptionalTeamProviderId> {
+  return (
+    normalizeOptionalTeamProviderId(member.providerId) ??
+    normalizeOptionalTeamProviderId(member.provider)
+  );
+}
+
+function inferProviderIdFromMemberModel(member: { model?: string } | undefined) {
+  return inferTeamProviderIdFromModel(member?.model);
+}
+
+function inferProviderIdFromBackend(providerBackendId: unknown): TeamProviderId | undefined {
+  const normalized = typeof providerBackendId === 'string' ? providerBackendId.trim() : '';
+  if (normalized === 'codex-native') {
+    return 'codex';
+  }
+  if (normalized === 'opencode-cli') {
+    return 'opencode';
+  }
+  return undefined;
 }
 
 export class CodexNativeTaskLogStreamSource {
@@ -171,9 +201,19 @@ export class CodexNativeTaskLogStreamSource {
       this.membersMetaStore.getMembers(teamName).catch(() => []),
       this.readConfigForObservation(teamName).catch(() => null),
     ]);
-    const member = [...metaMembers, ...(config?.members ?? [])].find(
+    const configMember = (config?.members ?? []).find(
       (candidate) => normalizeMemberName(candidate.name) === normalizedOwner
-    ) as { providerId?: string } | undefined;
-    return member?.providerId === 'codex';
+    );
+    const metaMember = metaMembers.find(
+      (candidate) => normalizeMemberName(candidate.name) === normalizedOwner
+    );
+    const providerId =
+      resolveExplicitProviderId(metaMember ?? {}) ??
+      resolveExplicitProviderId(configMember ?? {}) ??
+      inferProviderIdFromBackend(configMember?.providerBackendId) ??
+      inferProviderIdFromMemberModel(configMember) ??
+      inferProviderIdFromBackend(metaMember?.providerBackendId) ??
+      inferProviderIdFromMemberModel(metaMember);
+    return providerId === 'codex';
   }
 }

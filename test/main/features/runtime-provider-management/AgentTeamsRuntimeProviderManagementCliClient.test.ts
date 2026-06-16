@@ -907,7 +907,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.stderrPreview).toBe(runtimeMessage);
     expect(response.error?.diagnostics?.hints).toEqual(
       expect.arrayContaining([
-        'The next runtime update will include automatic junction fallback for Windows.',
+        'The app attempts automatic junction fallback for this Windows link failure before showing this error.',
         'As a temporary workaround, enable Windows Developer Mode or run Agent Teams AI as Administrator.',
       ])
     );

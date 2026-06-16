@@ -202,6 +202,75 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
+  it('builds a lead-specific OpenCode bootstrap prompt for team-lead sessions', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => ({
+      runId: 'run-1',
+      teamLaunchState: 'ready',
+      members: {
+        'team-lead': {
+          sessionId: 'oc-lead-session',
+          launchState: 'confirmed_alive',
+          runtimePid: 123,
+          model: 'openai/gpt-5.4-mini',
+          evidence: [
+            { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+          ],
+        },
+        alice: {
+          sessionId: 'oc-alice-session',
+          launchState: 'confirmed_alive',
+          runtimePid: 124,
+          model: 'openai/gpt-5.4-mini',
+          evidence: [
+            { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+            { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+          ],
+        },
+      },
+      warnings: [],
+      diagnostics: [],
+    }));
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-lead')),
+      launchOpenCodeTeam,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.launch(
+      launchInput({
+        expectedMembers: [
+          {
+            name: 'team-lead',
+            role: 'Team Lead',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            cwd: '/repo',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            cwd: '/repo',
+          },
+        ],
+      })
+    );
+
+    const command = launchOpenCodeTeam.mock.calls[0]?.[0];
+    const leadPrompt = command?.members.find((member) => member.name === 'team-lead')?.prompt;
+    expect(leadPrompt).toContain('You are team-lead, the team lead');
+    expect(leadPrompt).toContain('message the human user or a teammate');
+    expect(leadPrompt).toContain('Always set from="team-lead"');
+    expect(leadPrompt).not.toContain('human user, team lead, or another teammate');
+  });
+
   it('retries transient MCP readiness transport failures before prepare succeeds', async () => {
     const firstReadiness = readiness({
       state: 'mcp_unavailable',
@@ -704,6 +773,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     const launchArg = launchOpenCodeTeam.mock.calls[0]?.[0];
     expect(launchArg?.members[0]?.prompt).toContain('Do NOT create local team files');
+    expect(launchArg?.members[0]?.prompt).toContain(
+      'That bootstrap restriction is only about team registry/startup files'
+    );
+    expect(launchArg?.members[0]?.prompt).toContain(
+      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+    );
     expect(launchArg?.members[0]?.prompt).toContain('Launch bootstrap is a silent attach');
     expect(launchArg?.members[0]?.prompt).toContain('stay idle silently');
     expect(launchArg?.members[0]?.prompt).not.toContain('agent-teams_member_briefing');
@@ -1094,6 +1169,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('Include source="runtime_delivery"');
     expect(sentText).toContain('Include relayOfMessageId="msg-1"');
     expect(sentText).toContain('Action mode for this message: delegate.');
+    expect(sentText).toContain('Action mode DELEGATE is orchestration-only');
+    expect(sentText).not.toContain('If this delivered message assigns implementation');
     expect(sentText).toContain('You must not end this turn empty.');
     expect(sentText).toContain('<opencode_delivery_context>');
     expect(sentText).toContain('"kind":"opencode-delivery-context"');
@@ -1248,6 +1325,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('agent-teams_member_work_sync_status');
     expect(sentText).toContain('agent-teams_member_work_sync_report');
     expect(sentText).toContain('mcp__agent-teams__member_work_sync_report');
+    expect(sentText).toContain('For agenda sync, only agent-teams_member_work_sync_report');
+    expect(sentText).not.toContain('Concrete task progress');
+    expect(sentText).toContain('If this delivered message assigns implementation');
+    expect(sentText).toContain(
+      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+    );
     expect(sentText).toContain('A status-only tool call is incomplete');
     expect(sentText).toContain('teamName="team-a"');
     expect(sentText).toContain('memberName="bob"');
@@ -1296,6 +1379,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('"workSyncReviewRequestEventIds":["evt-review-request"]');
     expect(sentText).toContain('targeted member-work-sync review pickup nudge');
     expect(sentText).toContain('review workflow tools');
+    expect(sentText).toContain('Review workflow tool usage');
+    expect(sentText).not.toContain('Concrete review progress');
     expect(sentText).toContain('Do not mark the review complete from this prompt alone.');
     expect(sentText).toContain('agent-teams_member_work_sync_report');
     expect(sentText).toContain('A status-only tool call is incomplete');

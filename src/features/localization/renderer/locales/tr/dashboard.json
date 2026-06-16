@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Zaten giriş yaptınız mı?",
+      "becomeSponsor": "Sponsor olun",
+      "cancel": "İptal",
+      "checkNow": "Şimdi kontrol et",
+      "checkUpdates": "Güncellemeleri Kontrol Et",
+      "checking": "Kontrol ediliyor...",
+      "connect": "Bağlan",
+      "extensions": "Eklentiler",
+      "login": "Giriş yap",
+      "manage": "Yönet",
+      "manageProviders": "Sağlayıcıları Yönet",
+      "plan": "Plan",
+      "recheck": "Yeniden kontrol et",
+      "recheckProvider": "{{provider}} sağlayıcısını yeniden kontrol et",
+      "retry": "Yeniden dene",
+      "updateTo": "v{{version}} sürümüne güncelle",
+      "useCode": "Kodu kullan"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud, geliştiricilere video üretimi, görsel üretimi ve LLM API'lerine erişim sağlayan tek bir yapay zeka API'si sunan tam modlu bir yapay zeka çıkarım platformudur. Birden fazla satıcı entegrasyonunu yönetmek yerine, bir kez bağlanırsınız ve tüm modaliteler genelinde 300+ özenle seçilmiş modele birleşik erişim elde edersiniz. Daha bütçe dostu API erişimi için Atlas Cloud'un yeni kodlama planı kampanyasına göz atın.",
+      "openCodeProvider": "OpenCode sağlayıcısı",
+      "plan": "Atlas Cloud kodlama planı",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI durumu kontrol edilemedi",
+      "installationFailed": "Kurulum başarısız oldu",
+      "refreshFailed": "Güncellemeler kontrol edilemedi. Ağ bağlantınızı kontrol edip tekrar deneyin.",
+      "runtimeUpdatedRefreshFailed": "Çalışma zamanı güncellendi, ancak sağlayıcı durumu yenilenemedi."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} durumu arka planda kontrol edilecek.",
+      "codexApiKeyFallback": "{{hint}} Kimlik doğrulama modunu değiştirirseniz API anahtarı yedeği kullanılabilir.",
+      "codexAutoApiKey": "{{hint}} Otomatik mod, ChatGPT bağlanana kadar API anahtarını kullanmaya devam eder.",
+      "codexFinishLogin": "Tarayıcıda ChatGPT girişini tamamlayın. İstenirse gösterilen kodu girin.",
+      "codexNoActiveLogin": "Kullanım limitleri yalnızca Codex CLI etkin bir ChatGPT hesabı gördükten sonra görünür. Şu anda etkin bir ChatGPT girişi olmadığını bildiriyor.",
+      "codexNoActiveManagedSession": "Kullanım limitleri yalnızca Codex CLI etkin bir ChatGPT hesabı gördükten sonra görünür. Yerel Codex hesap verisi mevcut, ancak şu anda etkin bir yönetilen oturum seçili değil.",
+      "codexReconnectNeeded": "Kullanım limitleri yalnızca Codex şu anda seçili olan ChatGPT oturumunu yeniledikten sonra görünür. Şu anda yerel oturumun yeniden bağlanması gerekiyor.",
+      "firstCheckSlow": "İlk kontrol 30 saniyeye kadar sürebilir",
+      "loginRequiredForTeams": "Oturumlara ve projelere göz atmak için giriş yapmanız gerekmez. Giriş yalnızca Agent Teams ekiplerini çalıştırmak için gereklidir.",
+      "troubleshootTitle": "Giriş yaptığınızdan eminseniz şu adımları deneyin:"
+    },
+    "installer": {
+      "checkingLatest": "En son sürüm kontrol ediliyor...",
+      "downloading": "{{runtime}} indiriliyor...",
+      "installing": "{{runtime}} kuruluyor...",
+      "success": "{{runtime}} v{{version}} başarıyla kuruldu",
+      "verifying": "Sağlama toplamı doğrulanıyor..."
+    },
+    "labels": {
+      "apiKeyRequired": "API anahtarı gerekli",
+      "comingSoon": "Yakında",
+      "collapseProviderDetails": "Sağlayıcı ayrıntılarını daralt",
+      "expandProviderDetails": "Sağlayıcı ayrıntılarını genişlet",
+      "generateLink": "Bağlantı oluştur",
+      "loadingRateLimits": "Hız limitleri yükleniyor",
+      "loggedOut": "Sağlayıcı oturumu kapatıldı",
+      "loginAuthFailed": "Kimlik doğrulama başarısız oldu",
+      "loginAuthUpdated": "Kimlik doğrulama güncellendi",
+      "loginComplete": "Giriş tamamlandı",
+      "loginFailed": "Giriş başarısız oldu",
+      "loginTitle": "Giriş yap",
+      "logoutFailed": "Oturum kapatma başarısız oldu",
+      "logoutTitle": "Oturumu kapat",
+      "notLoggedIn": "Giriş yapılmadı",
+      "openLogin": "Girişi aç",
+      "providerActionRequired": "Sağlayıcı eylemi gerekli",
+      "resets": "{{time}} sıfırlanır",
+      "runtimeLoginTitle": "{{runtime}} Girişi"
+    },
+    "loading": {
+      "aiProviders": "Yapay Zeka Sağlayıcıları kontrol ediliyor...",
+      "claudeCli": "Claude CLI kontrol ediliyor..."
+    },
+    "provider": {
+      "authenticated": "Kimlik doğrulandı",
+      "backend": "Arka uç: {{backend}}",
+      "checkingAuthentication": "Kimlik doğrulama kontrol ediliyor...",
+      "checkingProviders": "Sağlayıcılar kontrol ediliyor...",
+      "configuredLocalCount": "{{count}} yapılandırılmış yerel",
+      "configuredLocalCount_few": "{{count}} yapılandırılmış yerel",
+      "configuredLocalCount_many": "{{count}} yapılandırılmış yerel",
+      "configuredLocalCount_one": "{{count}} yapılandırılmış yerel",
+      "configuredLocalCount_other": "{{count}} yapılandırılmış yerel",
+      "configuredLocalTitle": "OpenCode yapılandırmanızdan içe aktarılan yerel OpenCode rotaları.",
+      "connectedCount": "Sağlayıcılar: {{connected}}/{{denominator}} bağlı",
+      "freeModels": "Ücretsiz modeller",
+      "freeModelsTitle": "OpenCode, kurulumunuzda mevcut olduğunda Big Pickle gibi ücretsiz model seçenekleri içerir. OpenCode üzerinden OpenRouter da ücretsiz modeller sunabilir, ancak her OpenCode/OpenRouter modeli ücretsiz değildir. Kullanılabilirlik ve limitler değişebilir.",
+      "loadingModels": "Modeller yükleniyor...",
+      "modelsUnavailable": "Bu çalışma zamanı yapısı için modeller kullanılamıyor",
+      "runtime": "Çalışma zamanı: {{runtime}}",
+      "verifiedCount": "{{count}} doğrulanmış",
+      "verifiedCount_few": "{{count}} doğrulanmış",
+      "verifiedCount_many": "{{count}} doğrulanmış",
+      "verifiedCount_one": "{{count}} doğrulanmış",
+      "verifiedCount_other": "{{count}} doğrulanmış",
+      "verifiedTitle": "Başarılı yürütme kanıtı olan OpenCode rotaları."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "Yapılandırılmış {{runtime}}, başlangıç sağlık kontrolünde başarısız oldu.",
+      "configuredNotFound": "Yapılandırılmış {{runtime}} bulunamadı.",
+      "foundButFailed": "{{runtime}} bulundu ancak başlatılamadı",
+      "healthCheckFailedDescription": "Uygulama yapılandırılmış {{runtime}} öğesini buldu, ancak başlangıç sağlık kontrolü başarısız oldu. Onarın veya yeniden kurun, ardından tekrar deneyin.",
+      "install": "{{runtime}} kur",
+      "installRequiredDescription": "{{runtime}}, ekip sağlama ve oturum yönetimi için gereklidir. Başlamak için kurun.",
+      "isRequired": "{{runtime}} gereklidir",
+      "reinstall": "{{runtime}} yeniden kur"
+    },
+    "runtimeInstall": {
+      "checking": "Kontrol ediliyor",
+      "codexTitle": "Codex CLI'yi uygulama verilerine kur",
+      "downloading": "İndiriliyor",
+      "downloadingPercent": "%{{percent}} indiriliyor",
+      "install": "Kur",
+      "installing": "Kuruluyor",
+      "openCodeTitle": "OpenCode çalışma zamanını uygulama verilerine kur",
+      "retryInstall": "Kurulumu yeniden dene"
+    },
+    "troubleshoot": {
+      "again": "tekrar",
+      "authStatusCommand": "yapılandırdığınız CLI kimlik doğrulama durumu komutu",
+      "checkLoggedIn": "- \"Giriş yapıldı\" gösterip göstermediğini kontrol edin",
+      "click": "Tıklayın",
+      "loginCommand": "çalışma zamanı giriş komutu",
+      "logoutCommand": "çalışma zamanı oturum kapatma komutu",
+      "openTerminal": "Terminalinizi açıp şunu çalıştırın:",
+      "reloginPrefix": "Giriş yapıldığını söylüyor ancak uygulama görmüyorsa şunu deneyin:",
+      "sameRuntime": "Terminalinizdeki CLI'nin, uygulamanın kullandığı çalışma zamanıyla aynı olduğundan emin olun",
+      "statusCacheHint": "- bazen durum birkaç saniye boyunca önbelleğe alınır",
+      "then": "ardından"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Bir veya daha fazla sağlayıcı API anahtarı moduna ayarlı, ancak yapılandırılmış bir API anahtarı yok. Anahtar eklemek veya bağlantı modunu değiştirmek için Sağlayıcıları Yönet'i açın.",
+      "multipleApiKeysNeedAttention": "Bir veya daha fazla sağlayıcı API anahtarı moduna ayarlı ve ilgilenilmesi gerekiyor. Kaydedilmiş anahtarları gözden geçirmek veya bağlantı modunu değiştirmek için Sağlayıcıları Yönet'i açın.",
+      "notAuthenticated": "{{runtime}} kuruldu ancak kimlik doğrulaması yapmadınız. Ekip sağlama ve yapay zeka özellikleri için giriş gereklidir.",
+      "singleApiKeyMissing": "{{provider}} API anahtarı moduna ayarlı, ancak yapılandırılmış bir API anahtarı yok. Anahtar eklemek veya bağlantı modunu değiştirmek için Sağlayıcıları Yönet'i açın.",
+      "singleApiKeyNeedsAttention": "{{provider}} API anahtarı moduna ayarlı, ancak bağlı değil. Kaydedilmiş anahtarı gözden geçirmek veya bağlantı modunu değiştirmek için Sağlayıcıları Yönet'i açın."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Bir proje klasörü seçin",
+    "selectFolder": "Klasör Seç",
+    "failedToLoad": "Projeler yüklenemedi",
+    "retry": "Yeniden dene",
+    "noProjects": "Proje bulunamadı",
+    "noMatches": "\"{{query}}\" için eşleşme yok",
+    "noRecentProjects": "Son proje bulunamadı",
+    "emptyDescription": "Son Claude ve Codex etkinlikleri burada görünecek.",
+    "loadMore": "Daha fazla yükle",
+    "card": {
+      "deleted": "Silindi",
+      "projectFolderMissing": "Proje klasörü artık mevcut değil",
+      "taskCounts": {
+        "active": "{{count}} etkin",
+        "active_one": "{{count}} etkin",
+        "active_other": "{{count}} etkin",
+        "active_few": "{{count}} etkin",
+        "active_many": "{{count}} etkin",
+        "pending": "{{count}} beklemede",
+        "pending_one": "{{count}} beklemede",
+        "pending_other": "{{count}} beklemede",
+        "pending_few": "{{count}} beklemede",
+        "pending_many": "{{count}} beklemede",
+        "done": "{{count}} tamamlandı",
+        "done_one": "{{count}} tamamlandı",
+        "done_other": "{{count}} tamamlandı",
+        "done_few": "{{count}} tamamlandı",
+        "done_many": "{{count}} tamamlandı"
+      }
+    },
+    "title": "Son Projeler",
+    "searchResults": "Arama Sonuçları",
+    "searchPlaceholder": "Projelerde ara..."
+  },
+  "actions": {
+    "selectTeam": "Ekip Seç",
+    "or": "veya",
+    "clearSearch": "Aramayı temizle"
+  },
+  "windowsAdmin": {
+    "title": "Windows Yönetici modu önerilir",
+    "description": "Agent Teams AI yükseltilmediğinde OpenCode çalışma zamanı kontrolleri zaman aşımına uğrayabilir. OpenCode ekiplerini başlatmadan önce uygulamayı Yönetici olarak çalıştır ile yeniden başlatın."
+  },
+  "webPreview": {
+    "title": "Tüm işlevsellik için masaüstü uygulamasını açın",
+    "description": "Tarayıcı sürümü hâlâ geliştirme aşamasında. Proje eylemleri, entegrasyonlar ve canlı durum güncellemeleri burada sınırlı olabilir. Tüm özelliklere güvenilir şekilde erişmek için masaüstü uygulamasını kullanın."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Yeni sürüm mevcut",
+    "restartNow": "Şimdi yeniden başlat",
+    "viewDetails": "Ayrıntıları görüntüle"
+  }
+}

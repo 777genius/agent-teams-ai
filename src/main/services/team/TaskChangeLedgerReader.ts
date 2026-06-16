@@ -139,6 +139,9 @@ interface LedgerEvent {
   sourceImportKey?: string;
   evidenceProof?: string;
   supersedesEventId?: string;
+  suppressed?: true;
+  suppressionReason?: string;
+  suppressedAt?: string;
   snapshotId?: string;
   snapshotSource?: string;
 }
@@ -1209,10 +1212,12 @@ export class TaskChangeLedgerReader {
     events.forEach((event, index) => {
       const sourceImportKey = this.sourceImportKeyForEvent(event);
       if (!sourceImportKey) {
-        passthrough.push({ event, index });
+        if (event.suppressed !== true) {
+          passthrough.push({ event, index });
+        }
         return;
       }
-      const rank = this.evidenceRankForEvent(event);
+      const rank = this.projectionRankForEvent(event);
       const existing = selectedBySourceImportKey.get(sourceImportKey);
       if (!existing || rank >= existing.rank) {
         selectedBySourceImportKey.set(sourceImportKey, { event, index, rank });
@@ -1221,7 +1226,9 @@ export class TaskChangeLedgerReader {
 
     return [
       ...passthrough,
-      ...[...selectedBySourceImportKey.values()].map(({ event, index }) => ({ event, index })),
+      ...[...selectedBySourceImportKey.values()]
+        .filter(({ event }) => event.suppressed !== true)
+        .map(({ event, index }) => ({ event, index })),
     ]
       .sort((left, right) => left.index - right.index)
       .map(({ event }) => event);
@@ -1239,6 +1246,10 @@ export class TaskChangeLedgerReader {
       return event.sourceImportKey;
     }
     return null;
+  }
+
+  private projectionRankForEvent(event: LedgerEvent): number {
+    return event.suppressed === true ? Number.MAX_SAFE_INTEGER : this.evidenceRankForEvent(event);
   }
 
   private evidenceRankForEvent(event: LedgerEvent): number {

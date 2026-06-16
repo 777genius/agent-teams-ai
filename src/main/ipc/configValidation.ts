@@ -52,6 +52,7 @@ const VALID_SECTIONS = new Set<ConfigSection>([
   'ssh',
 ]);
 const MAX_SNOOZE_MINUTES = 24 * 60;
+const CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH = 200;
 const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -64,6 +65,16 @@ function isStringArray(value: unknown): value is string[] {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 31 || code === 127) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function validateAnthropicCompatibleBaseUrl(value: string): string | null {
@@ -85,6 +96,47 @@ function validateAnthropicCompatibleBaseUrl(value: string): string | null {
     }
   } catch {
     return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must be a valid URL';
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'providerConnections.codex.customProvider.baseUrl must use http:// or https://';
+    }
+    if (url.username || url.password) {
+      return 'providerConnections.codex.customProvider.baseUrl must not include credentials';
+    }
+    if (url.search || url.hash) {
+      return 'providerConnections.codex.customProvider.baseUrl must not include query or fragment';
+    }
+  } catch {
+    return 'providerConnections.codex.customProvider.baseUrl must be a valid URL';
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderModel(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length > CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH) {
+    return `providerConnections.codex.customProvider.model must be ${CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH} characters or fewer`;
+  }
+
+  if (hasControlCharacter(trimmed)) {
+    return 'providerConnections.codex.customProvider.model must not include control characters';
   }
 
   return null;
@@ -649,6 +701,83 @@ function validateProviderConnectionsSection(
         }
 
         codexUpdate.preferredAuthMode = connectionValue;
+        continue;
+      }
+
+      if (connectionKey === 'customProvider') {
+        if (!isPlainObject(connectionValue)) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider must be an object',
+          };
+        }
+
+        const customProvider: Partial<ProviderConnectionsConfig['codex']['customProvider']> = {};
+        for (const [customKey, customValue] of Object.entries(connectionValue)) {
+          if (customKey !== 'enabled' && customKey !== 'baseUrl' && customKey !== 'model') {
+            return {
+              valid: false,
+              error: `providerConnections.codex.customProvider.${customKey} is not a valid setting`,
+            };
+          }
+
+          if (customKey === 'enabled') {
+            if (typeof customValue !== 'boolean') {
+              return {
+                valid: false,
+                error: 'providerConnections.codex.customProvider.enabled must be a boolean',
+              };
+            }
+            customProvider.enabled = customValue;
+            continue;
+          }
+
+          if (customKey === 'baseUrl') {
+            if (typeof customValue !== 'string') {
+              return {
+                valid: false,
+                error: 'providerConnections.codex.customProvider.baseUrl must be a string',
+              };
+            }
+
+            const error = validateCodexCustomProviderBaseUrl(customValue);
+            if (error) {
+              return { valid: false, error };
+            }
+            customProvider.baseUrl = customValue.trim();
+            continue;
+          }
+
+          if (typeof customValue !== 'string') {
+            return {
+              valid: false,
+              error: 'providerConnections.codex.customProvider.model must be a string',
+            };
+          }
+
+          const error = validateCodexCustomProviderModel(customValue);
+          if (error) {
+            return { valid: false, error };
+          }
+          customProvider.model = customValue.trim();
+        }
+
+        if (customProvider.enabled === true && !customProvider.baseUrl?.trim()) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider.baseUrl is required when enabled',
+          };
+        }
+
+        if (customProvider.enabled === true && !customProvider.model?.trim()) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider.model is required when enabled',
+          };
+        }
+
+        codexUpdate.customProvider =
+          customProvider as ProviderConnectionsConfig['codex']['customProvider'];
         continue;
       }
 

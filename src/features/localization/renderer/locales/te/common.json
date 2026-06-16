@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "రద్దు చేయి",
+    "close": "మూసివేయి",
+    "copied": "కాపీ చేయబడింది",
+    "copyUrl": "URL కాపీ చేయి",
+    "open": "తెరువు",
+    "reveal": "చూపించు",
+    "retry": "మళ్లీ ప్రయత్నించు",
+    "save": "సేవ్ చేయి",
+    "showLess": "తక్కువ చూపించు",
+    "showMore": "మరింత చూపించు",
+    "refresh": "రిఫ్రెష్ చేయి",
+    "reset": "రీసెట్ చేయి",
+    "copyToClipboard": "క్లిప్‌బోర్డ్‌కు కాపీ చేయి",
+    "moreActions": "మరిన్ని చర్యలు",
+    "closeDialog": "డైలాగ్ మూసివేయి",
+    "goToDashboard": "డాష్‌బోర్డ్‌కు వెళ్లండి",
+    "or": "లేదా",
+    "hide": "దాచు",
+    "resetSelection": "ఎంపికను రీసెట్ చేయి"
+  },
+  "code": {
+    "line": "లైన్ {{line}}",
+    "lines": "లైన్లు {{from}}-{{to}}",
+    "moreLines": "({{count}} మరిన్ని లైన్లు...)",
+    "moreLines_few": "({{count}} మరిన్ని లైన్లు...)",
+    "moreLines_many": "({{count}} మరిన్ని లైన్లు...)",
+    "moreLines_one": "({{count}} మరో లైన్...)",
+    "moreLines_other": "({{count}} మరిన్ని లైన్లు...)",
+    "code": "కోడ్",
+    "preview": "ప్రివ్యూ",
+    "markdownPreview": "Markdown ప్రివ్యూ",
+    "linesParenthesized": "(లైన్లు {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid సింటాక్స్ లోపం"
+  },
+  "contextBadge": {
+    "badge": "కాంటెక్స్ట్",
+    "breakdown": {
+      "text": "టెక్స్ట్",
+      "thinking": "ఆలోచన"
+    },
+    "detailsAria": "కాంటెక్స్ట్ ఇంజెక్షన్ వివరాలు",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} టోకెన్లు",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md ఫైల్‌లు",
+      "mentionedFiles": "ప్రస్తావించిన ఫైల్‌లు",
+      "taskCoordination": "టాస్క్ సమన్వయం",
+      "thinkingText": "ఆలోచన + టెక్స్ట్",
+      "toolOutputs": "టూల్ అవుట్‌పుట్‌లు",
+      "userMessages": "యూజర్ సందేశాలు"
+    },
+    "title": "ఈ టర్న్‌లో కొత్తగా చేర్చిన కాంటెక్స్ట్",
+    "tokenCount": "~{{tokens}} టోకెన్లు",
+    "totalNewTokens": "మొత్తం కొత్త టోకెన్లు",
+    "turn": "టర్న్ {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} టోకెన్లు",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} టోకెన్లు",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} టోకెన్లు",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} టోకెన్లు"
+  },
+  "locales": {
+    "emptyMessage": "భాష ఏదీ కనుగొనబడలేదు.",
+    "names": {
+      "ar": "అరబిక్",
+      "bn": "బెంగాలీ",
+      "de": "జర్మన్",
+      "en": "ఇంగ్లీష్",
+      "es": "స్పానిష్",
+      "fa": "పర్షియన్",
+      "fil": "ఫిలిపినో",
+      "fr": "ఫ్రెంచ్",
+      "hi": "హిందీ",
+      "id": "ఇండోనేషియన్",
+      "it": "ఇటాలియన్",
+      "ja": "జపనీస్",
+      "ko": "కొరియన్",
+      "mr": "మరాఠీ",
+      "ms": "మలయ్",
+      "nl": "డచ్",
+      "pl": "పోలిష్",
+      "pt": "పోర్చుగీస్",
+      "ro": "రొమేనియన్",
+      "ru": "రష్యన్",
+      "sw": "స్వాహిలీ",
+      "system": "సిస్టమ్",
+      "ta": "తమిళం",
+      "te": "తెలుగు",
+      "th": "థాయ్",
+      "tr": "టర్కిష్",
+      "uk": "ఉక్రేనియన్",
+      "ur": "ఉర్దూ",
+      "vi": "వియత్నామీస్",
+      "zh": "చైనీస్"
+    },
+    "searchPlaceholder": "భాషను శోధించండి...",
+    "selectPlaceholder": "యాప్ భాషను ఎంచుకోండి...",
+    "systemWithResolved": "సిస్టమ్ - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "సభ్యులు ఎవరూ కనుగొనబడలేదు.",
+    "searchPlaceholder": "సభ్యులను శోధించండి...",
+    "unassigned": "కేటాయించబడలేదు",
+    "teammateFallback": "టీమ్‌మేట్"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "తనిఖీ చేస్తోంది",
+        "downloading": "డౌన్‌లోడ్ చేస్తోంది",
+        "installCli": "Codex CLI ను ఇన్‌స్టాల్ చేయి",
+        "installing": "ఇన్‌స్టాల్ చేస్తోంది",
+        "retryInstall": "ఇన్‌స్టాల్ మళ్లీ ప్రయత్నించు"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "సరిపోలే సూచనలు లేవు",
+    "searching": "శోధిస్తోంది...",
+    "searchingFiles": "ఫైల్‌లను శోధిస్తోంది...",
+    "findInConversation": "సంభాషణలో కనుగొనండి...",
+    "resultCount": "{{total}}లో {{current}}",
+    "resultCountCapped": "{{total}}+లో {{current}}",
+    "noResults": "ఫలితాలు లేవు",
+    "previousResultShortcut": "మునుపటి ఫలితం (Shift+Enter)",
+    "nextResultShortcut": "తదుపరి ఫలితం (Enter)",
+    "closeShortcut": "మూసివేయి (Esc)",
+    "nothingFound": "ఏమీ కనుగొనబడలేదు",
+    "placeholder": "శోధించండి..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "షెడ్యూల్ జోడించు",
+      "clearFilters": "ఫిల్టర్‌లను క్లియర్ చేయి",
+      "createSchedule": "షెడ్యూల్ సృష్టించు",
+      "delete": "తొలగించు",
+      "edit": "సవరించు",
+      "pause": "పాజ్ చేయి",
+      "resume": "కొనసాగించు",
+      "runNow": "ఇప్పుడే అమలు చేయి"
+    },
+    "empty": {
+      "description": "cron ఎక్స్‌ప్రెషన్‌లతో Claude టాస్క్ అమలును ఆటోమేట్ చేయడానికి ఏ టీమ్‌పైనైనా షెడ్యూల్‌ను సృష్టించండి. అన్ని టీమ్‌ల షెడ్యూల్‌లు ఇక్కడ కనిపిస్తాయి.",
+      "noMatches": "ప్రస్తుత ఫిల్టర్‌లకు ఏ షెడ్యూల్‌లు సరిపోలడం లేదు",
+      "title": "షెడ్యూల్ చేసిన టాస్క్‌లు లేవు"
+    },
+    "filters": {
+      "allTeams": "అన్ని టీమ్‌లు"
+    },
+    "item": {
+      "loadingRunHistory": "రన్ చరిత్రను లోడ్ చేస్తోంది...",
+      "nextRun": "తదుపరి: {{value}}",
+      "noRunsYet": "ఇంకా రన్‌లు లేవు"
+    },
+    "loading": "షెడ్యూల్‌లను లోడ్ చేస్తోంది...",
+    "searchPlaceholder": "షెడ్యూల్‌లను శోధించండి...",
+    "status": {
+      "active": "క్రియాశీలం",
+      "all": "అన్నీ",
+      "disabled": "నిలిపివేయబడింది",
+      "paused": "పాజ్ చేయబడింది"
+    },
+    "title": "షెడ్యూల్‌లు"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "దాచు",
+      "pin": "పిన్ చేయి",
+      "unhide": "దాచకుండా చూపించు"
+    },
+    "empty": {
+      "noMatchingSessions": "సరిపోలే సెషన్‌లు లేవు",
+      "noMatchingSessionsDescription": "ఈ ప్రాజెక్ట్‌కు ఇంకా సరిపోలే సెషన్‌లు లేవు.",
+      "noMatchingSessionsFiltered": "మరో క్వెరీని ప్రయత్నించండి లేదా ప్రొవైడర్ ఫిల్టర్‌ను రీసెట్ చేయండి.",
+      "noSessions": "సెషన్‌లు కనుగొనబడలేదు",
+      "noSessionsDescription": "ఈ ప్రాజెక్ట్‌కు ఇంకా సెషన్‌లు లేవు",
+      "selectProject": "సెషన్‌లను చూడటానికి ప్రాజెక్ట్‌ను ఎంచుకోండి"
+    },
+    "errors": {
+      "loading": "సెషన్‌లను లోడ్ చేయడంలో లోపం"
+    },
+    "loadedMatchingMore": "ఇప్పటివరకు {{count}} సరిపోలే సెషన్‌లు లోడ్ అయ్యాయి - మరిన్ని లోడ్ చేయడానికి కిందికి స్క్రోల్ చేయండి.",
+    "loadingMore": "మరిన్ని సెషన్‌లను లోడ్ చేస్తోంది...",
+    "pinned": "పిన్ చేయబడింది",
+    "scrollToLoadMore": "మరింత లోడ్ చేయడానికి స్క్రోల్ చేయండి",
+    "search": {
+      "clear": "సెషన్ శోధనను క్లియర్ చేయి",
+      "placeholder": "సెషన్‌లను శోధించండి..."
+    },
+    "selection": {
+      "cancel": "ఎంపికను రద్దు చేయి",
+      "exitMode": "ఎంపిక మోడ్ నుండి నిష్క్రమించు",
+      "hideSelected": "ఎంచుకున్న సెషన్‌లను దాచు",
+      "pinSelected": "ఎంచుకున్న సెషన్‌లను పిన్ చేయి",
+      "selectSessions": "సెషన్‌లను ఎంచుకోండి",
+      "selected": "{{count}} ఎంచుకోబడ్డాయి",
+      "unhideSelected": "ఎంచుకున్న సెషన్‌లను దాచకుండా చూపించు",
+      "selected_few": "{{count}} ఎంచుకోబడ్డాయి",
+      "selected_many": "{{count}} ఎంచుకోబడ్డాయి",
+      "selected_one": "{{count}} ఎంచుకోబడింది",
+      "selected_other": "{{count}} ఎంచుకోబడ్డాయి"
+    },
+    "sort": {
+      "byContext": "కాంటెక్స్ట్ ప్రకారం",
+      "byContextTooltip": "కాంటెక్స్ట్ వినియోగం ప్రకారం క్రమబద్ధీకరించు",
+      "byRecentTooltip": "ఇటీవలి ప్రకారం క్రమబద్ధీకరించు",
+      "contextLoadedOnly": "కాంటెక్స్ట్ క్రమబద్ధీకరణ లోడ్ చేసిన సెషన్‌లను మాత్రమే ర్యాంక్ చేస్తుంది."
+    },
+    "title": "సెషన్‌లు",
+    "visibility": {
+      "hideHidden": "దాచిన సెషన్‌లను దాచు",
+      "showHidden": "దాచిన సెషన్‌లను చూపించు"
+    },
+    "worktree": {
+      "switch": "Worktree మార్చు"
+    },
+    "loadedMatchingMore_few": "ఇప్పటివరకు {{count}} సరిపోలే సెషన్‌లు లోడ్ అయ్యాయి - మరిన్ని లోడ్ చేయడానికి కిందికి స్క్రోల్ చేయండి.",
+    "loadedMatchingMore_many": "ఇప్పటివరకు {{count}} సరిపోలే సెషన్‌లు లోడ్ అయ్యాయి - మరిన్ని లోడ్ చేయడానికి కిందికి స్క్రోల్ చేయండి.",
+    "loadedMatchingMore_one": "ఇప్పటివరకు {{count}} సరిపోలే సెషన్ లోడ్ అయింది - మరిన్ని లోడ్ చేయడానికి కిందికి స్క్రోల్ చేయండి.",
+    "loadedMatchingMore_other": "ఇప్పటివరకు {{count}} సరిపోలే సెషన్‌లు లోడ్ అయ్యాయి - మరిన్ని లోడ్ చేయడానికి కిందికి స్క్రోల్ చేయండి.",
+    "failedToLoad": "సెషన్‌ను లోడ్ చేయడం విఫలమైంది",
+    "loading": "సెషన్‌ను లోడ్ చేస్తోంది...",
+    "filter": {
+      "title": "సెషన్‌లను ఫిల్టర్ చేయి"
+    },
+    "count": "{{count}} సెషన్‌లు",
+    "count_one": "{{count}} సెషన్",
+    "count_other": "{{count}} సెషన్‌లు",
+    "count_few": "{{count}} సెషన్‌లు",
+    "count_many": "{{count}} సెషన్‌లు",
+    "inProgress": "సెషన్ ప్రోగ్రెస్‌లో ఉంది..."
+  },
+  "states": {
+    "loading": "లోడ్ అవుతోంది...",
+    "offline": "ఆఫ్‌లైన్",
+    "online": "ఆన్‌లైన్",
+    "unknown": "తెలియదు",
+    "error": "లోపం"
+  },
+  "markdown": {
+    "imageFallback": "[ఇమేజ్: {{label}}]",
+    "largeContentNotice": "కంటెంట్ చాలా పెద్దది ({{count}} అక్షరాలు). UI ప్రతిస్పందనగా ఉంచడానికి రా ప్రివ్యూ చూపిస్తోంది.",
+    "largeContentTitle": "UI స్తంభించకుండా ఉండటానికి పెద్ద కంటెంట్ రా రూపంలో చూపబడుతుంది",
+    "raw": "రా",
+    "rawPreview": "రా ప్రివ్యూ",
+    "renderMarkdown": "markdown రెండర్ చేయి",
+    "showAll": "అన్నీ చూపించు",
+    "showMore": "మరింత చూపించు",
+    "showRaw": "రా చూపించు",
+    "showingChars": "{{shown}} / {{total}} అక్షరాలు చూపిస్తోంది",
+    "largeContentNotice_few": "కంటెంట్ చాలా పెద్దది ({{count}} అక్షరాలు). UI ప్రతిస్పందనగా ఉంచడానికి రా ప్రివ్యూ చూపిస్తోంది.",
+    "largeContentNotice_many": "కంటెంట్ చాలా పెద్దది ({{count}} అక్షరాలు). UI ప్రతిస్పందనగా ఉంచడానికి రా ప్రివ్యూ చూపిస్తోంది.",
+    "largeContentNotice_one": "కంటెంట్ చాలా పెద్దది ({{count}} అక్షరం). UI ప్రతిస్పందనగా ఉంచడానికి రా ప్రివ్యూ చూపిస్తోంది.",
+    "largeContentNotice_other": "కంటెంట్ చాలా పెద్దది ({{count}} అక్షరాలు). UI ప్రతిస్పందనగా ఉంచడానికి రా ప్రివ్యూ చూపిస్తోంది."
+  },
+  "terminal": {
+    "checkOutputForDetails": "వివరాల కోసం పైన టెర్మినల్ అవుట్‌పుట్‌ను తనిఖీ చేయండి",
+    "closingInSeconds": "{{count}}s లో మూసివేస్తోంది...",
+    "closingInSeconds_few": "{{count}}s లో మూసివేస్తోంది...",
+    "closingInSeconds_many": "{{count}}s లో మూసివేస్తోంది...",
+    "closingInSeconds_one": "{{count}}s లో మూసివేస్తోంది...",
+    "closingInSeconds_other": "{{count}}s లో మూసివేస్తోంది...",
+    "completedSuccessfully": "విజయవంతంగా పూర్తయింది",
+    "exitCode": "(నిష్క్రమణ కోడ్ {{code}})",
+    "processFailed": "ప్రాసెస్ విఫలమైంది",
+    "title": "టెర్మినల్"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "నకిలీ లేకుండా మొత్తం సెషన్ అంతటా సేకరించబడింది",
+    "cacheRead": "క్యాష్ రీడ్",
+    "cacheWrite": "క్యాష్ రైట్",
+    "costUsd": "ఖర్చు (USD)",
+    "inputTokens": "ఇన్‌పుట్ టోకెన్లు",
+    "model": "మోడల్",
+    "outputTokens": "అవుట్‌పుట్ టోకెన్లు",
+    "phase": "దశ {{phase}}/{{total}}",
+    "promptInputShare": "ప్రాంప్ట్ ఇన్‌పుట్‌లో {{percent}}%",
+    "taskCoordination": "టాస్క్ సమన్వయం",
+    "thinkingText": "ఆలోచన + టెక్స్ట్",
+    "toolOutputs": "టూల్ అవుట్‌పుట్‌లు",
+    "total": "మొత్తం",
+    "userMessages": "యూజర్ సందేశాలు",
+    "visibleContext": "కనిపించే కాంటెక్స్ట్",
+    "includesClaudeMd": "CLAUDE.md ×{{count}} తో సహా",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} టోకెన్లు",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "టీమ్‌ను కాపీ చేయి",
+      "createTeam": "టీమ్‌ను సృష్టించు",
+      "deleteForever": "శాశ్వతంగా తొలగించు",
+      "deletePermanently": "శాశ్వతంగా తొలగించు",
+      "deleteTeam": "టీమ్‌ను తొలగించు",
+      "launching": "లాంచ్ చేస్తోంది...",
+      "launchTeam": "టీమ్‌ను లాంచ్ చేయి",
+      "relaunchTeam": "టీమ్‌ను మళ్లీ లాంచ్ చేయి",
+      "restore": "పునరుద్ధరించు",
+      "restoreTeam": "టీమ్‌ను పునరుద్ధరించు",
+      "retry": "మళ్లీ ప్రయత్నించు",
+      "stopTeam": "టీమ్‌ను ఆపు",
+      "stopping": "ఆపుతోంది..."
+    },
+    "status": {
+      "active": "క్రియాశీలం",
+      "deleted": "తొలగించబడింది",
+      "launching": "లాంచ్ చేస్తోంది...",
+      "offline": "ఆఫ్‌లైన్",
+      "partialFailure": "లాంచ్ మధ్యలో విఫలమైంది",
+      "partialPending": "బూట్‌స్ట్రాప్ పెండింగ్",
+      "partialSkipped": "లాంచ్ సభ్యుడిని దాటవేసింది",
+      "running": "రన్ అవుతోంది"
+    },
+    "partial": {
+      "pending": "చివరి లాంచ్ ఇంకా రీకన్‌సైల్ అవుతోంది.",
+      "skipped": "చివరి లాంచ్ కొంత టీమ్‌మేట్‌లను దాటవేసింది.",
+      "skippedWithCount": "చివరి లాంచ్ {{count}}/{{expected}} టీమ్‌మేట్‌ను దాటవేసింది.",
+      "skippedWithCount_few": "చివరి లాంచ్ {{count}}/{{expected}} టీమ్‌మేట్‌లను దాటవేసింది.",
+      "skippedWithCount_many": "చివరి లాంచ్ {{count}}/{{expected}} టీమ్‌మేట్‌లను దాటవేసింది.",
+      "skippedWithCount_one": "చివరి లాంచ్ {{count}}/{{expected}} టీమ్‌మేట్‌ను దాటవేసింది.",
+      "skippedWithCount_other": "చివరి లాంచ్ {{count}}/{{expected}} టీమ్‌మేట్‌లను దాటవేసింది.",
+      "stopped": "అన్ని టీమ్‌మేట్‌లు చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది.",
+      "stoppedWithCount": "{{count}}/{{expected}} టీమ్‌మేట్ చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది.",
+      "stoppedWithCount_few": "{{count}}/{{expected}} టీమ్‌మేట్‌లు చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది.",
+      "stoppedWithCount_many": "{{count}}/{{expected}} టీమ్‌మేట్‌లు చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది.",
+      "stoppedWithCount_one": "{{count}}/{{expected}} టీమ్‌మేట్ చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది.",
+      "stoppedWithCount_other": "{{count}}/{{expected}} టీమ్‌మేట్‌లు చేరడానికి ముందే చివరి లాంచ్ ఆగిపోయింది."
+    },
+    "noDescription": "వివరణ లేదు",
+    "solo": "సోలో",
+    "membersCount": "సభ్యులు: {{count}}",
+    "membersCount_few": "సభ్యులు: {{count}}",
+    "membersCount_many": "సభ్యులు: {{count}}",
+    "membersCount_one": "సభ్యుడు: {{count}}",
+    "membersCount_other": "సభ్యులు: {{count}}",
+    "all": "అన్నీ",
+    "moreCount": "+{{count}} మరిన్ని",
+    "moreCount_one": "+{{count}} మరింత",
+    "moreCount_other": "+{{count}} మరిన్ని",
+    "moreCount_few": "+{{count}} మరిన్ని",
+    "moreCount_many": "+{{count}} మరిన్ని"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "దాని స్వంత OpenCode ఓవర్‌రైడ్ లేని ప్రతి ప్రాజెక్ట్‌కు డిఫాల్ట్.",
+      "scopeDescriptionProject": "ఎంచుకున్న ప్రాజెక్ట్‌ను మాత్రమే ఓవర్‌రైడ్ చేస్తుంది. రన్ అవుతున్న టీమ్‌లు మారవు.",
+      "setAllProjectsDefault": "అన్ని-ప్రాజెక్ట్‌ల డిఫాల్ట్‌ను సెట్ చేయి",
+      "setProjectDefault": "ప్రాజెక్ట్ డిఫాల్ట్‌ను సెట్ చేయి",
+      "validationContext": "ధృవీకరణ కాంటెక్స్ట్",
+      "projectOverrideContext": "ప్రాజెక్ట్ ఓవర్‌రైడ్ కాంటెక్స్ట్",
+      "selectProjectHint": "స్థానిక మోడల్‌లను పరీక్షించడానికి లేదా డిఫాల్ట్‌లను సేవ్ చేయడానికి ముందు ప్రాజెక్ట్‌ను ఎంచుకోండి.",
+      "allProjectsHint": "పరీక్షలు {{project}} ను ఉపయోగిస్తాయి. ప్రాజెక్ట్‌కు ఓవర్‌రైడ్ లేకపోతే డిఫాల్ట్ వర్తిస్తుంది.",
+      "projectHint": "సేవ్ చేయడం {{project}} ను మాత్రమే ఓవర్‌రైడ్ చేస్తుంది."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "కాంటెక్స్ట్",
+      "closePanel": "ప్యానెల్ మూసివేయి",
+      "phase": "దశ:",
+      "current": "ప్రస్తుత",
+      "view": "వీక్షణ:",
+      "category": "వర్గం",
+      "bySize": "పరిమాణం ప్రకారం"
+    },
+    "metrics": {
+      "unavailable": "అందుబాటులో లేదు",
+      "contextUsed": "ఉపయోగించిన కాంటెక్స్ట్",
+      "promptInput": "ప్రాంప్ట్ ఇన్‌పుట్",
+      "visibleContext": "కనిపించే కాంటెక్స్ట్",
+      "ofContext": "కాంటెక్స్ట్‌లో",
+      "ofPrompt": "ప్రాంప్ట్‌లో",
+      "codexTelemetryUnavailable": "Codex ప్రాంప్ట్-సైడ్ వినియోగం ప్రస్తుత రన్‌టైమ్ టెలిమెట్రీ ద్వారా ఇంకా బహిర్గతం కాలేదు, కాబట్టి నకిలీ సున్నాను చూపించే బదులు Prompt Input మరియు Context Used అందుబాటులో లేకుండా ఉంటాయి.",
+      "sessionCost": "సెషన్ ఖర్చు:",
+      "parentPlus": "పేరెంట్ +",
+      "subagents": "సబ్‌ఏజెంట్లు",
+      "details": "వివరాలు"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "ఉపయోగించిన కాంటెక్స్ట్",
+        "description": "ప్రస్తుతం మోడల్ యొక్క కాంటెక్స్ట్ విండోను ఆక్రమిస్తున్న ప్రాంప్ట్ ఇన్‌పుట్ మరియు అవుట్‌పుట్ టోకెన్లు."
+      },
+      "promptInput": {
+        "title": "ప్రాంప్ట్ ఇన్‌పుట్",
+        "description": "జనరేషన్‌కు ముందు మోడల్‌కు పంపిన టోకెన్లు. Claude కోసం ఇందులో `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` ఉంటాయి."
+      },
+      "visibleContext": {
+        "title": "కనిపించే కాంటెక్స్ట్",
+        "description": "ప్రాంప్ట్ ఇన్‌పుట్ యొక్క తనిఖీ చేయదగిన ఉపసమితి: ఫైల్‌లు, CLAUDE.md, టూల్ అవుట్‌పుట్‌లు, యూజర్ సందేశాలు మరియు మీరు నేరుగా ఆప్టిమైజ్ చేయగల ఇలాంటి ఇంజెక్షన్‌లు."
+      },
+      "availability": {
+        "title": "లభ్యత",
+        "description": "ప్రొవైడర్ రన్‌టైమ్ ప్రాంప్ట్-సైడ్ వినియోగాన్ని ఇంకా బహిర్గతం చేయకపోతే, ప్యానెల్ మెట్రిక్‌లను సున్నాగా చూపించే బదులు అందుబాటులో లేనట్లుగా చూపిస్తుంది."
+      }
+    },
+    "items": {
+      "turn": "@టర్న్ {{turn}}",
+      "tokensApprox": "~{{tokens}} టోకెన్లు",
+      "toolsCount": "{{count}} టూల్స్",
+      "toolsCount_one": "{{count}} టూల్",
+      "toolsCount_other": "{{count}} టూల్స్",
+      "toolsCount_few": "{{count}} టూల్స్",
+      "toolsCount_many": "{{count}} టూల్స్",
+      "itemsCount": "{{count}} అంశాలు",
+      "itemsCount_one": "{{count}} అంశం",
+      "itemsCount_other": "{{count}} అంశాలు",
+      "itemsCount_few": "{{count}} అంశాలు",
+      "itemsCount_many": "{{count}} అంశాలు",
+      "missing": "లేదు",
+      "thinking": "ఆలోచన",
+      "text": "టెక్స్ట్"
+    },
+    "empty": "ఈ సెషన్‌లో కాంటెక్స్ట్ ఇంజెక్షన్‌లు ఏవీ గుర్తించబడలేదు",
+    "view": {
+      "grouped": "సమూహ పరచబడింది",
+      "flat": "ఫ్లాట్"
+    },
+    "claudeMdFiles": "CLAUDE.md ఫైల్‌లు",
+    "mentionedFiles": "ప్రస్తావించిన ఫైల్‌లు"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "సబ్‌ఏజెంట్",
+      "shutdownConfirmed": "షట్‌డౌన్ నిర్ధారించబడింది",
+      "summary": {
+        "tools": "{{count}} టూల్స్",
+        "tools_one": "{{count}} టూల్",
+        "tools_other": "{{count}} టూల్స్",
+        "tools_few": "{{count}} టూల్స్",
+        "tools_many": "{{count}} టూల్స్"
+      },
+      "meta": {
+        "type": "రకం",
+        "duration": "వ్యవధి",
+        "model": "మోడల్",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "కాంటెక్స్ట్ విండో",
+        "contextUsage": "కాంటెక్స్ట్ వినియోగం",
+        "mainContext": "ప్రధాన కాంటెక్స్ట్",
+        "totalOutput": "మొత్తం అవుట్‌పుట్",
+        "turns": "({{count}} టర్న్‌లు)",
+        "turns_one": "({{count}} టర్న్)",
+        "turns_other": "({{count}} టర్న్‌లు)",
+        "subagentContext": "సబ్‌ఏజెంట్ కాంటెక్స్ట్",
+        "phase": "దశ {{phase}}",
+        "turns_few": "({{count}} టర్న్‌లు)",
+        "turns_many": "({{count}} టర్న్‌లు)"
+      },
+      "trace": {
+        "title": "అమలు ట్రేస్"
+      }
+    },
+    "user": {
+      "you": "మీరు",
+      "showMore": "మరింత చూపించు",
+      "showLess": "తక్కువ చూపించు",
+      "backgroundTask": "బ్యాక్‌గ్రౌండ్ టాస్క్",
+      "exitCode": "నిష్క్రమణ {{code}}",
+      "imagesAttached": "{{count}} ఇమేజ్‌లు జతచేయబడ్డాయి",
+      "imagesAttached_one": "{{count}} ఇమేజ్ జతచేయబడింది",
+      "imagesAttached_few": "{{count}} ఇమేజ్‌లు జతచేయబడ్డాయి",
+      "imagesAttached_many": "{{count}} ఇమేజ్‌లు జతచేయబడ్డాయి",
+      "imagesAttached_other": "{{count}} ఇమేజ్‌లు జతచేయబడ్డాయి"
+    },
+    "compact": {
+      "toggle": "కంపాక్ట్ చేసిన కంటెంట్‌ను టోగుల్ చేయి",
+      "contextCompacted": "కాంటెక్స్ట్ కంపాక్ట్ చేయబడింది",
+      "freedTokens": "({{tokens}} విడుదల చేయబడింది)",
+      "phase": "దశ {{phase}}",
+      "conversationCompacted": "సంభాషణ కంపాక్ట్ చేయబడింది",
+      "summary": "కాంటెక్స్ట్‌ను ఆదా చేయడానికి మునుపటి సందేశాలు సారాంశీకరించబడ్డాయి. పూర్తి సంభాషణ చరిత్ర సెషన్ ఫైల్‌లో భద్రపరచబడింది.",
+      "compacted": "కంపాక్ట్ చేయబడింది"
+    },
+    "executionTrace": {
+      "empty": "అమలు అంశాలు లేవు",
+      "nested": "నెస్టెడ్: {{name}}",
+      "input": "ఇన్‌పుట్"
+    },
+    "items": {
+      "empty": "చూపించడానికి అంశాలు లేవు"
+    },
+    "tools": {
+      "teammateSpawned": "టీమ్‌మేట్ స్పాన్ చేయబడింది",
+      "shutdownRequested": "షట్‌డౌన్ అభ్యర్థించబడింది ->",
+      "noResultReceived": "ఫలితం ఏదీ అందలేదు",
+      "duration": "వ్యవధి: {{duration}}",
+      "result": "ఫలితం",
+      "write": {
+        "createdFile": "ఫైల్ సృష్టించబడింది",
+        "wroteToFile": "ఫైల్‌కు రాయబడింది"
+      },
+      "skill": {
+        "instructions": "నైపుణ్య సూచనలు",
+        "unknown": "తెలియని నైపుణ్యం"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "యూజర్ ద్వారా అభ్యర్థన అంతరాయం కలిగింది",
+      "planReadyForApproval": "ప్రణాళిక ఆమోదానికి సిద్ధం"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "సంభాషణ చరిత్ర లేదు",
+      "description": "ఈ సెషన్ ఇంకా ఏ సందేశాలను కలిగి లేదు."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% మిగిలి ఉంది)",
+      "count": "కాంటెక్స్ట్ ({{count}})",
+      "count_one": "కాంటెక్స్ట్ ({{count}})",
+      "count_other": "కాంటెక్స్ట్ ({{count}})",
+      "count_few": "కాంటెక్స్ట్ ({{count}})",
+      "count_many": "కాంటెక్స్ట్ ({{count}})"
+    },
+    "scrollToBottom": "కిందికి స్క్రోల్ చేయి",
+    "bottom": "కింద",
+    "teammateMessage": {
+      "message": "సందేశం",
+      "resent": "మళ్లీ పంపబడింది",
+      "fallback": "టీమ్‌మేట్ సందేశం"
+    },
+    "system": {
+      "label": "సిస్టమ్"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux ఇన్‌స్టాల్ చేయబడలేదు",
+    "detectedOs": "గుర్తించిన OS: {{os}}",
+    "runtimePath": "రన్‌టైమ్ మార్గం: {{path}}",
+    "phase": "దశ: {{phase}}",
+    "actions": {
+      "cancel": "రద్దు చేయి",
+      "manualGuide": "మాన్యువల్ గైడ్",
+      "hideSetupSteps": "సెటప్ దశలను దాచు",
+      "showSetupSteps": "సెటప్ దశలను చూపించు ({{count}})",
+      "showSetupSteps_one": "సెటప్ దశను చూపించు ({{count}})",
+      "showSetupSteps_other": "సెటప్ దశలను చూపించు ({{count}})",
+      "recheck": "మళ్లీ తనిఖీ చేయి",
+      "showSetupSteps_few": "సెటప్ దశలను చూపించు ({{count}})",
+      "showSetupSteps_many": "సెటప్ దశలను చూపించు ({{count}})"
+    },
+    "installerProgress": "ఇన్‌స్టాలర్ ప్రోగ్రెస్",
+    "input": {
+      "placeholder": "ఇన్‌స్టాలర్‌కు ఇన్‌పుట్ పంపండి",
+      "send": "ఇన్‌పుట్ పంపు",
+      "passwordNotice": "పాస్‌వర్డ్ ఇన్‌పుట్ నేరుగా ఇన్‌స్టాలర్ టెర్మినల్‌కు పంపబడుతుంది మరియు లాగ్ అవుట్‌పుట్‌కు జోడించబడదు."
+    },
+    "details": {
+      "show": "వివరాలను చూపించు",
+      "hide": "వివరాలను దాచు"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "ఇటీవలి కార్యకలాపం లేదు",
+    "sessionsCount": "{{count}} సెషన్‌లు",
+    "sessionsCount_one": "{{count}} సెషన్",
+    "sessionsCount_other": "{{count}} సెషన్‌లు",
+    "mode": {
+      "searchProjects": "ప్రాజెక్ట్‌లను శోధించు",
+      "searchAcrossProjects": "అన్ని ప్రాజెక్ట్‌లలో శోధించు",
+      "searchInProject": "ప్రాజెక్ట్‌లో శోధించు"
+    },
+    "currentProject": "ప్రస్తుత ప్రాజెక్ట్",
+    "global": "గ్లోబల్",
+    "placeholders": {
+      "projects": "ప్రాజెక్ట్‌లను శోధించండి...",
+      "conversations": "సంభాషణలను శోధించండి..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\" కోసం ప్రాజెక్ట్‌లు కనుగొనబడలేదు",
+      "noProjects": "ప్రాజెక్ట్‌లు కనుగొనబడలేదు",
+      "minChars": "శోధించడానికి కనీసం 2 అక్షరాలు టైప్ చేయండి",
+      "noFastResults": "\"{{query}}\" కోసం ఇటీవలి సెషన్‌లలో వేగవంతమైన ఫలితాలు లేవు",
+      "noResults": "\"{{query}}\" కోసం ఫలితాలు కనుగొనబడలేదు"
+    },
+    "footer": {
+      "projectsCount": "{{count}} ప్రాజెక్ట్‌లు",
+      "projectsCount_one": "{{count}} ప్రాజెక్ట్",
+      "projectsCount_other": "{{count}} ప్రాజెక్ట్‌లు",
+      "results": "{{count}} {{speed}}ఫలితాలు",
+      "results_one": "{{count}} {{speed}}ఫలితం",
+      "results_other": "{{count}} {{speed}}ఫలితాలు",
+      "resultsAcrossProjects": "అన్ని ప్రాజెక్ట్‌లలో {{count}} {{speed}}ఫలితాలు",
+      "resultsAcrossProjects_one": "అన్ని ప్రాజెక్ట్‌లలో {{count}} {{speed}}ఫలితం",
+      "resultsAcrossProjects_other": "అన్ని ప్రాజెక్ట్‌లలో {{count}} {{speed}}ఫలితాలు",
+      "fastPrefix": "వేగవంతమైన ",
+      "typeToSearch": "శోధించడానికి టైప్ చేయండి",
+      "navigate": "నావిగేట్ చేయి",
+      "select": "ఎంచుకో",
+      "open": "తెరువు",
+      "global": "గ్లోబల్",
+      "close": "మూసివేయి",
+      "results_few": "{{count}} {{speed}}ఫలితాలు",
+      "results_many": "{{count}} {{speed}}ఫలితాలు",
+      "resultsAcrossProjects_few": "అన్ని ప్రాజెక్ట్‌లలో {{count}} {{speed}}ఫలితాలు",
+      "resultsAcrossProjects_many": "అన్ని ప్రాజెక్ట్‌లలో {{count}} {{speed}}ఫలితాలు",
+      "projectsCount_few": "{{count}} ప్రాజెక్ట్‌లు",
+      "projectsCount_many": "{{count}} ప్రాజెక్ట్‌లు",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} సెషన్‌లు",
+    "sessionsCount_many": "{{count}} సెషన్‌లు"
+  },
+  "tasksPanel": {
+    "title": "టాస్క్‌లు",
+    "searchPlaceholder": "టాస్క్‌లను శోధించండి...",
+    "pinned": "పిన్ చేయబడింది",
+    "groupByLabel": "దీని ప్రకారం సమూహపరచు:",
+    "groupByAria": "దీని ప్రకారం సమూహపరచు",
+    "groupModes": {
+      "none": "ఏదీ లేదు",
+      "project": "ప్రాజెక్ట్",
+      "time": "సమయం"
+    },
+    "showArchived": "ఆర్కైవ్ చేసినవి చూపించు",
+    "hideArchived": "ఆర్కైవ్ చేసినవి దాచు",
+    "empty": {
+      "noMatchingTasks": "సరిపోలే టాస్క్‌లు లేవు",
+      "noTasks": "టాస్క్‌లు కనుగొనబడలేదు"
+    },
+    "teamLabel": "టీమ్: {{team}}",
+    "showMore": "మరింత చూపించు",
+    "showLess": "తక్కువ చూపించు",
+    "deleteConfirm": {
+      "title": "టాస్క్‌ను తొలగించు",
+      "message": "టాస్క్ #{{taskId}} ను ట్రాష్‌కు తరలించాలా?",
+      "confirmLabel": "తొలగించు",
+      "cancelLabel": "రద్దు చేయి"
+    },
+    "deleteFailed": {
+      "title": "టాస్క్‌ను తొలగించడం విఫలమైంది",
+      "fallbackMessage": "ఊహించని లోపం సంభవించింది",
+      "confirmLabel": "సరే"
+    },
+    "sort": {
+      "byTime": "సమయం ప్రకారం",
+      "byUnread": "చదవనివి ప్రకారం",
+      "byProject": "ప్రాజెక్ట్ ప్రకారం",
+      "byTeam": "టీమ్ ప్రకారం"
+    }
+  },
+  "toolViewer": {
+    "input": "ఇన్‌పుట్",
+    "replaceAll": "(అన్నీ భర్తీ చేయి)",
+    "noInputRecorded": "ఈ టూల్ కాల్ కోసం ఏ ఇన్‌పుట్ రికార్డ్ చేయబడలేదు.",
+    "agent": {
+      "action": "చర్య",
+      "teammate": "టీమ్‌మేట్",
+      "team": "టీమ్",
+      "runtime": "రన్‌టైమ్",
+      "type": "రకం",
+      "startupInstructionsHidden": "స్టార్టప్ సూచనలు UIలో దాచబడ్డాయి."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "అన్‌పిన్ చేయి",
+    "pin": "పిన్ చేయి",
+    "rename": "పేరు మార్చు",
+    "markUnread": "చదవనట్లుగా గుర్తించు",
+    "unarchive": "ఆర్కైవ్ నుండి తీసివేయి",
+    "archive": "ఆర్కైవ్ చేయి",
+    "deleteTask": "టాస్క్‌ను తొలగించు"
+  },
+  "updateDialog": {
+    "closeDialog": "డైలాగ్ మూసివేయి",
+    "updateAvailable": "అప్‌డేట్ అందుబాటులో ఉంది",
+    "updateReady": "అప్‌డేట్ సిద్ధం",
+    "noReleaseNotes": "రిలీజ్ నోట్‌లు అందుబాటులో లేవు.",
+    "viewOnGitHub": "GitHub లో చూడండి",
+    "later": "తర్వాత",
+    "restartNow": "ఇప్పుడే పునఃప్రారంభించు",
+    "download": "డౌన్‌లోడ్"
+  },
+  "errorBoundary": {
+    "title": "ఏదో తప్పు జరిగింది",
+    "description": "అప్లికేషన్‌లో ఊహించని లోపం సంభవించింది. మీరు పేజీని మళ్లీ లోడ్ చేయడానికి లేదా లోప స్థితిని రీసెట్ చేయడానికి ప్రయత్నించవచ్చు.",
+    "componentStack": "కాంపోనెంట్ స్టాక్",
+    "tryAgain": "మళ్లీ ప్రయత్నించు",
+    "copied": "కాపీ చేయబడింది",
+    "copyErrorDetails": "లోప వివరాలను కాపీ చేయి",
+    "reportBugOnGitHub": "GitHub లో బగ్ నివేదించు",
+    "reloadApp": "యాప్‌ను మళ్లీ లోడ్ చేయి",
+    "diagnosticsNotice": "GitHub బగ్ నివేదికలు మరియు కాపీ చేసిన డయాగ్నొస్టిక్‌లలో లోప సందేశం, స్టాక్ ట్రేస్‌లు, యాప్ వెర్షన్, క్రియాశీల ట్యాబ్, ఎంచుకున్న టీమ్, టాస్క్ కాంటెక్స్ట్ మరియు ఎన్విరాన్‌మెంట్ వివరాలు ఉంటాయి."
+  },
+  "runtimeBackendSelector": {
+    "label": "రన్‌టైమ్ బ్యాకెండ్",
+    "resolved": "పరిష్కరించబడింది: {{backend}}",
+    "current": "ప్రస్తుత",
+    "recommended": "సిఫార్సు చేయబడింది",
+    "unavailable": "అందుబాటులో లేదు",
+    "cannotSelectYet": "ఈ బ్యాకెండ్‌ను ఇంకా ఎంచుకోలేరు.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (ప్రస్తుతం: {{backend}})",
+    "audience": {
+      "internal": "అంతర్గత"
+    },
+    "states": {
+      "locked": "లాక్ చేయబడింది",
+      "disabled": "నిలిపివేయబడింది",
+      "authRequired": "auth అవసరం",
+      "runtimeMissing": "రన్‌టైమ్ లేదు",
+      "degraded": "క్షీణించింది",
+      "unavailable": "అందుబాటులో లేదు"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "తనిఖీ చేస్తోంది",
+    "unavailable": "అందుబాటులో లేదు",
+    "checkFailed": "తనిఖీ విఫలమైంది",
+    "free": "ఉచితం",
+    "freeTooltip": "OpenCode మెటాడేటా ద్వారా నివేదించబడింది. లభ్యత మరియు పరిమితులు మారవచ్చు."
+  },
+  "taskFilters": {
+    "status": "స్థితి",
+    "clearAll": "అన్నీ క్లియర్ చేయి",
+    "selectAll": "అన్నీ ఎంచుకో",
+    "team": "టీమ్",
+    "allTeams": "అన్ని టీమ్‌లు",
+    "searchTeams": "టీమ్‌లను శోధించండి...",
+    "noTeamsFound": "టీమ్‌లు కనుగొనబడలేదు",
+    "project": "ప్రాజెక్ట్",
+    "allProjects": "అన్ని ప్రాజెక్ట్‌లు",
+    "searchProjects": "ప్రాజెక్ట్‌లను శోధించండి...",
+    "noProjects": "ప్రాజెక్ట్‌లు లేవు",
+    "comments": "వ్యాఖ్యలు",
+    "apply": "వర్తింపజేయి",
+    "read": {
+      "all": "అన్నీ",
+      "unread": "చదవనివి",
+      "read": "చదివినవి"
+    },
+    "statusOptions": {
+      "todo": "చేయవలసినవి",
+      "inProgress": "ప్రోగ్రెస్‌లో",
+      "needsFix": "సరిదిద్దాలి",
+      "done": "పూర్తయింది",
+      "review": "సమీక్ష",
+      "approved": "ఆమోదించబడింది"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "మొత్తం కాంటెక్స్ట్: {{tokens}} టోకెన్లు",
+    "context": "కాంటెక్స్ట్: {{tokens}}",
+    "phase": "దశ {{phase}}:",
+    "compactedTo": "({{tokens}} కు కంపాక్ట్ చేయబడింది)"
+  },
+  "notifications": {
+    "row": {
+      "team": "టీమ్",
+      "subagent": "సబ్‌ఏజెంట్",
+      "markAsRead": "చదివినట్లుగా గుర్తించు",
+      "delete": "తొలగించు",
+      "viewInSession": "సెషన్‌లో చూడండి"
+    },
+    "title": "నోటిఫికేషన్‌లు",
+    "loading": "నోటిఫికేషన్‌లను లోడ్ చేస్తోంది...",
+    "actions": {
+      "markFilteredAsRead": "ఫిల్టర్ చేసినవి చదివినట్లుగా గుర్తించు",
+      "markAllAsRead": "అన్నీ చదివినట్లుగా గుర్తించు",
+      "markFilteredRead": "ఫిల్టర్ చేసినవి చదివినట్లు గుర్తించు",
+      "markAllRead": "అన్నీ చదివినట్లు గుర్తించు",
+      "clearFilteredNotifications": "ఫిల్టర్ చేసిన నోటిఫికేషన్‌లను క్లియర్ చేయి",
+      "clearAllNotifications": "అన్ని నోటిఫికేషన్‌లను క్లియర్ చేయి",
+      "clickToConfirm": "నిర్ధారించడానికి క్లిక్ చేయండి",
+      "clearFiltered": "ఫిల్టర్ చేసినవి క్లియర్ చేయి",
+      "clearAll": "అన్నీ క్లియర్ చేయి"
+    },
+    "counts": {
+      "unreadInFilter": "ఫిల్టర్‌లో {{count}} చదవనివి",
+      "unreadInFilter_one": "ఫిల్టర్‌లో {{count}} చదవనిది",
+      "unreadInFilter_few": "ఫిల్టర్‌లో {{count}} చదవనివి",
+      "unreadInFilter_many": "ఫిల్టర్‌లో {{count}} చదవనివి",
+      "unreadInFilter_other": "ఫిల్టర్‌లో {{count}} చదవనివి",
+      "inFilter": "ఫిల్టర్‌లో {{count}}",
+      "inFilter_one": "ఫిల్టర్‌లో {{count}}",
+      "inFilter_few": "ఫిల్టర్‌లో {{count}}",
+      "inFilter_many": "ఫిల్టర్‌లో {{count}}",
+      "inFilter_other": "ఫిల్టర్‌లో {{count}}",
+      "unread": "{{count}} చదవనివి",
+      "unread_one": "{{count}} చదవనిది",
+      "unread_few": "{{count}} చదవనివి",
+      "unread_many": "{{count}} చదవనివి",
+      "unread_other": "{{count}} చదవనివి",
+      "total": "మొత్తం {{count}}",
+      "total_one": "మొత్తం {{count}}",
+      "total_few": "మొత్తం {{count}}",
+      "total_many": "మొత్తం {{count}}",
+      "total_other": "మొత్తం {{count}}"
+    },
+    "filters": {
+      "other": "ఇతర"
+    },
+    "empty": {
+      "noMatching": "సరిపోలే నోటిఫికేషన్‌లు లేవు",
+      "noNotifications": "నోటిఫికేషన్‌లు లేవు",
+      "tryDifferentFilter": "వేరే ఫిల్టర్‌ను ప్రయత్నించండి",
+      "allCaughtUp": "మీరు అన్నీ చూసేసారు!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "అప్‌డేట్ చేయడానికి పునఃప్రారంభించు",
+    "updateApp": "యాప్‌ను అప్‌డేట్ చేయి",
+    "downloadedRestartTooltip": "అప్‌డేట్ డౌన్‌లోడ్ అయింది, వర్తింపజేయడానికి పునఃప్రారంభించండి",
+    "newVersionAvailable": "కొత్త వెర్షన్ అందుబాటులో ఉంది",
+    "updatingApp": "యాప్‌ను అప్‌డేట్ చేస్తోంది",
+    "updateReady": "అప్‌డేట్ సిద్ధం",
+    "restartNow": "ఇప్పుడే పునఃప్రారంభించు"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "సైడ్‌బార్‌ను విస్తరించు",
+    "collapseSidebarShortcut": "సైడ్‌బార్‌ను కుదించు ({{shortcut}})",
+    "sidebarView": "సైడ్‌బార్ వీక్షణ",
+    "resizeSidebar": "సైడ్‌బార్ పరిమాణాన్ని మార్చు",
+    "closeTab": "ట్యాబ్ మూసివేయి",
+    "openedFromSearch": "శోధన నుండి తెరవబడింది",
+    "pinnedSession": "పిన్ చేసిన సెషన్",
+    "jumpToSection": "విభాగానికి వెళ్లండి",
+    "newTab": "కొత్త ట్యాబ్",
+    "newTabDashboard": "కొత్త ట్యాబ్ (డాష్‌బోర్డ్)",
+    "refreshSession": "సెషన్‌ను రిఫ్రెష్ చేయి",
+    "refreshSessionWithShortcut": "సెషన్‌ను రిఫ్రెష్ చేయి ({{shortcut}})",
+    "loadingTab": "ట్యాబ్‌ను లోడ్ చేస్తోంది",
+    "menu": {
+      "teams": "టీమ్‌లు",
+      "settings": "సెట్టింగ్‌లు",
+      "extensions": "ఎక్స్‌టెన్షన్‌లు",
+      "search": "శోధన",
+      "schedules": "షెడ్యూల్‌లు",
+      "docs": "డాక్స్",
+      "exportMarkdown": "Markdown గా ఎగుమతి చేయి",
+      "exportJson": "JSON గా ఎగుమతి చేయి",
+      "exportPlainText": "సాదా టెక్స్ట్‌గా ఎగుమతి చేయి",
+      "analyzeSession": "సెషన్‌ను విశ్లేషించు"
+    },
+    "tabMenu": {
+      "closeTabs": "{{count}} ట్యాబ్‌లను మూసివేయి",
+      "closeTabs_one": "{{count}} ట్యాబ్‌ను మూసివేయి",
+      "closeTabs_few": "{{count}} ట్యాబ్‌లను మూసివేయి",
+      "closeTabs_many": "{{count}} ట్యాబ్‌లను మూసివేయి",
+      "closeTabs_other": "{{count}} ట్యాబ్‌లను మూసివేయి",
+      "closeTab": "ట్యాబ్ మూసివేయి",
+      "closeOtherTabs": "ఇతర ట్యాబ్‌లను మూసివేయి",
+      "splitRight": "కుడివైపు విభజించు",
+      "splitLeft": "ఎడమవైపు విభజించు",
+      "pinToSidebar": "సైడ్‌బార్‌కు పిన్ చేయి",
+      "unpinFromSidebar": "సైడ్‌బార్ నుండి అన్‌పిన్ చేయి",
+      "hideFromSidebar": "సైడ్‌బార్ నుండి దాచు",
+      "unhideFromSidebar": "సైడ్‌బార్‌లో మళ్లీ చూపించు",
+      "closeAllTabs": "అన్ని ట్యాబ్‌లను మూసివేయి"
+    },
+    "sections": {
+      "team": "టీమ్",
+      "sessions": "సెషన్‌లు",
+      "kanban": "Kanban",
+      "claudeLogs": "లాగ్‌లు",
+      "messages": "సందేశాలు"
+    }
+  },
+  "editorFormatting": {
+    "bold": "బోల్డ్",
+    "italic": "ఇటాలిక్",
+    "strike": "స్ట్రైక్",
+    "code": "కోడ్"
+  },
+  "diff": {
+    "changed": "మార్చబడింది",
+    "noChangesDetected": "మార్పులు ఏవీ గుర్తించబడలేదు"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT లాగిన్ లింక్ మరియు కోడ్‌ను కాపీ చేయి",
+    "copyLoginLink": "ChatGPT లాగిన్ లింక్‌ను కాపీ చేయి",
+    "copyFailed": "కాపీ విఫలమైంది",
+    "copyLinkAndCode": "లింక్ + కోడ్ కాపీ చేయి",
+    "copyLink": "లింక్ కాపీ చేయి",
+    "enterCodeOnLoginPage": "ఈ కోడ్‌ను ChatGPT లాగిన్ పేజీలో నమోదు చేయండి"
+  },
+  "window": {
+    "minimize": "కనిష్టీకరించు",
+    "maximize": "గరిష్టీకరించు",
+    "restore": "పునరుద్ధరించు"
+  },
+  "context": {
+    "local": "స్థానిక",
+    "switchingTo": "{{workspace}} కు మారుతోంది",
+    "loadingWorkspace": "వర్క్‌స్పేస్‌ను లోడ్ చేస్తోంది",
+    "switchWorkspace": "వర్క్‌స్పేస్ మార్చు"
+  },
+  "repositories": {
+    "noneAvailable": "రిపోజిటరీలు అందుబాటులో లేవు",
+    "remove": "రిపోజిటరీని తీసివేయి"
+  },
+  "export": {
+    "session": "సెషన్‌ను ఎగుమతి చేయి",
+    "sessionTitle": "సెషన్‌ను ఎగుమతి చేయి"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "సెషన్ డేటా అందుబాటులో లేదు",
+    "title": "సెషన్ నివేదిక"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "ప్రాజెక్ట్‌ను ఎంచుకోండి"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "నవీ",
+      "updatedYesterday": "నిన్న నవీకరించబడింది",
+      "yesterday": "నిన్న"
+    },
+    "reviewState": {
+      "needsFix": "సరిదిద్దాలి"
+    },
+    "unassigned": "కేటాయించబడలేదు"
+  }
+}

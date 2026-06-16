@@ -214,7 +214,8 @@ function isRecoverableOpenCodeSessionRefreshText(value: string | undefined): boo
     refreshMarkerText === 'opencode session changed; refreshing the session before retry' ||
     refreshMarkerText === 'opencode session refresh scheduled after resolved behavior changed' ||
     refreshMarkerText === 'opencode_prompt_delivery_session_refresh_scheduled' ||
-    refreshMarkerText === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed'
+    refreshMarkerText === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed' ||
+    refreshMarkerText === 'opencode_session_stale_observe_scheduled_after_accepted_prompt'
   ) {
     return true;
   }

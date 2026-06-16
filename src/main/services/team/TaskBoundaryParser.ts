@@ -1,7 +1,6 @@
+import { readJsonlLines } from '@main/utils/jsonlLineReader';
 import { createLogger } from '@shared/utils/logger';
-import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
-import * as readline from 'readline';
 
 import {
   canonicalizeAgentTeamsToolName,
@@ -102,10 +101,7 @@ export class TaskBoundaryParser {
     let detectedMechanism: DetectedMechanism = 'none';
 
     try {
-      const stream = createReadStream(filePath, { encoding: 'utf8' });
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-      for await (const line of rl) {
+      for await (const line of readJsonlLines(filePath)) {
         lineNumber++;
         const trimmed = line.trim();
         if (!trimmed) continue;
@@ -149,9 +145,6 @@ export class TaskBoundaryParser {
           // Пропускаем невалидные строки
         }
       }
-
-      rl.close();
-      stream.destroy();
     } catch (err) {
       logger.debug(`Error reading file ${filePath}: ${String(err)}`);
     }

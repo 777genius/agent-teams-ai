@@ -7,7 +7,16 @@
     "download": "下载",
     "pricing": "免费",
     "faq": "常见问题",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "打开菜单",
+    "closeMenu": "关闭菜单",
+    "short": {
+      "screenshots": "截图",
+      "docs": "文档",
+      "download": "下载",
+      "comparison": "比较",
+      "pricing": "免费"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "开源"
     },
     "watchDemo": "观看演示",
-    "videoUnavailable": "视频不可用"
+    "videoUnavailable": "视频不可用",
+    "supportedProviders": "支持的 AI 提供商",
+    "slogan": "用很少操作完成大量工作",
+    "platformDefault": "适用于你的平台",
+    "guidesSetup": "指南和设置",
+    "videoFrameLabel": "观看 Agent Teams 演示",
+    "commandFeed": "团队命令流",
+    "liveDemo": "实时演示",
+    "demoVideoTitle": "Agent Teams 演示视频",
+    "demoTitle": "Agent Teams 演示",
+    "demo": {
+      "ariaLabel": "代理团队演示",
+      "live": "LIVE",
+      "waiting": "等待任务...",
+      "activity": {
+        "authMiddleware": "正在实现身份验证中间件...",
+        "unitTests": "正在为 API 编写单元测试...",
+        "reviewPr": "正在审查 PR #42 更改...",
+        "ciPipeline": "正在设置 CI/CD 流水线...",
+        "refactorDatabase": "正在重构数据库层..."
+      },
+      "tasks": {
+        "authApi": "认证 API",
+        "unitTests": "单元测试",
+        "ciSetup": "CI 设置"
+      },
+      "columns": {
+        "todo": "待办",
+        "progress": "进行中",
+        "review": "审查",
+        "done": "完成"
+      }
+    }
   },
   "download": {
     "title": "下载",
     "detected": "已检测",
     "systemRequirements": "系统要求",
-    "version": "版本 {version}"
+    "version": "版本 {version}",
+    "readyToStart": "准备开始!"
   },
   "theme": {
     "dark": "深色",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "应用的真实截图——看板、代码审查、智能体团队等等。"
   },
   "common": {
-    "learnMore": "了解更多"
+    "learnMore": "了解更多",
+    "statusLabel": "状态:",
+    "previous": "上一个",
+    "next": "下一个"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "我在等你",
     "links": {
       "github": "GitHub",
+      "author": "作者",
       "docs": "文档"
     }
   },

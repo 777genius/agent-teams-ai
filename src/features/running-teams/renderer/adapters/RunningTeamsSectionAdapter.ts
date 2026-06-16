@@ -17,36 +17,54 @@ export interface RunningTeamRowModel {
   taskCounts?: TaskStatusCounts;
 }
 
-function getStatusLabel(status: RunningTeamDashboardEntry['status']): string {
+export interface RunningTeamsSectionText {
+  status: Record<RunningTeamDashboardEntry['status'], string>;
+  noProject: string;
+}
+
+const DEFAULT_TEXT: RunningTeamsSectionText = {
+  status: {
+    active: 'Active',
+    provisioning: 'Launching',
+    idle: 'Running',
+  },
+  noProject: 'No project',
+};
+
+function getStatusLabel(
+  status: RunningTeamDashboardEntry['status'],
+  text: RunningTeamsSectionText
+): string {
   switch (status) {
     case 'active':
-      return 'Active';
+      return text.status.active;
     case 'provisioning':
-      return 'Launching';
+      return text.status.provisioning;
     case 'idle':
-      return 'Running';
+      return text.status.idle;
   }
 }
 
-function getProjectLabel(projectPath?: string): string {
+function getProjectLabel(projectPath: string | undefined, text: RunningTeamsSectionText): string {
   if (!projectPath) {
-    return 'No project';
+    return text.noProject;
   }
 
   return getBaseName(projectPath) || projectPath;
 }
 
 export function adaptRunningTeamsSection(
-  teams: RunningTeamDashboardEntry[]
+  teams: RunningTeamDashboardEntry[],
+  text: RunningTeamsSectionText = DEFAULT_TEXT
 ): RunningTeamRowModel[] {
   return teams.map((team) => ({
     id: team.teamName,
     teamName: team.teamName,
     displayName: team.displayName,
     projectPath: team.projectPath,
-    projectLabel: getProjectLabel(team.projectPath),
+    projectLabel: getProjectLabel(team.projectPath, text),
     status: team.status,
-    statusLabel: getStatusLabel(team.status),
+    statusLabel: getStatusLabel(team.status, text),
     iconColor: team.color
       ? getTeamColorSet(team.color).border
       : nameColorSet(team.displayName).border,

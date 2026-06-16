@@ -589,7 +589,11 @@
     "actions": {
       "add": "যোগ করুন API কি",
       "addFirst": "প্রথমে কি যোগ করুন",
-      "edit": "সম্পাদনা"
+      "edit": "সম্পাদনা",
+      "copied": "কপি হয়েছে!",
+      "copyEnvVarName": "Env var name copy করুন",
+      "confirmDelete": "Confirm করতে আবার ক্লিক করুন",
+      "delete": "Delete"
     },
     "empty": {
       "title": "না API সংরক্ষিত কি",

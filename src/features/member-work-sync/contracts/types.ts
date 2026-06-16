@@ -334,4 +334,5 @@ export interface MemberWorkSyncOutboxCountRecentDeliveredInput {
   teamName: string;
   memberName: string;
   sinceIso: string;
+  workSyncIntentKeyPrefix?: string;
 }

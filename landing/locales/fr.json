@@ -7,7 +7,16 @@
     "download": "Télécharger",
     "pricing": "Gratuit",
     "faq": "FAQ",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "short": {
+      "screenshots": "Captures",
+      "docs": "Docs",
+      "download": "Télécharger",
+      "comparison": "Comparer",
+      "pricing": "Gratuit"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "Open Source"
     },
     "watchDemo": "Voir la démo",
-    "videoUnavailable": "Vidéo indisponible"
+    "videoUnavailable": "Vidéo indisponible",
+    "supportedProviders": "Fournisseurs IA compatibles",
+    "slogan": "Faites beaucoup en faisant très peu",
+    "platformDefault": "Pour votre plateforme",
+    "guidesSetup": "Guides et configuration",
+    "videoFrameLabel": "Regarder la démo Agent Teams",
+    "commandFeed": "Flux de commandes d'équipe",
+    "liveDemo": "Démo en direct",
+    "demoVideoTitle": "Vidéo démo Agent Teams",
+    "demoTitle": "Démo Agent Teams",
+    "demo": {
+      "ariaLabel": "Démo d'équipe d'agents",
+      "live": "LIVE",
+      "waiting": "En attente de tâches...",
+      "activity": {
+        "authMiddleware": "Implémentation du middleware d'auth...",
+        "unitTests": "Écriture de tests unitaires pour l'API...",
+        "reviewPr": "Revue des changements PR #42...",
+        "ciPipeline": "Configuration du pipeline CI/CD...",
+        "refactorDatabase": "Refactorisation de la couche base de données..."
+      },
+      "tasks": {
+        "authApi": "API auth",
+        "unitTests": "Tests unitaires",
+        "ciSetup": "Config CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "EN COURS",
+        "review": "REVUE",
+        "done": "TERMINÉ"
+      }
+    }
   },
   "download": {
     "title": "Télécharger",
     "detected": "Détecté",
     "systemRequirements": "Configuration requise",
-    "version": "Version {version}"
+    "version": "Version {version}",
+    "readyToStart": "Prêt à commencer!"
   },
   "theme": {
     "dark": "Sombre",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "Captures d'écran réelles — tableau kanban, revue de code, équipes d'agents et plus."
   },
   "common": {
-    "learnMore": "En savoir plus"
+    "learnMore": "En savoir plus",
+    "statusLabel": "Statut:",
+    "previous": "Précédent",
+    "next": "Suivant"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "J'attends",
     "links": {
       "github": "GitHub",
+      "author": "Auteur",
       "docs": "Documentation"
     }
   },

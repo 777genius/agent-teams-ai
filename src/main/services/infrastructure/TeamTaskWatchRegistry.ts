@@ -14,9 +14,29 @@ export interface TeamTaskWatchRegistryOptions {
   rootPath: string;
   onChange: (eventType: TeamTaskWatchEventType, relativePath: string) => void;
   onError: (error: unknown) => void;
+  /**
+   * Optional provider for the set of team names whose team-root and task
+   * artifacts should be watched. The root directory is always watched (to detect
+   * new/removed teams), and for the 'teams' kind every team's `inboxes/` is
+   * always watched (cross-team message delivery and notifications must stay
+   * immediate). Return `null` (or omit the provider) to watch every team - the
+   * original behavior and the safe fallback.
+   *
+   * Scoping exists because team-root (config/kanban/processes/meta) and task
+   * artifacts only change for teams that are running or currently engaged in the
+   * UI; idle teams are static, so watching all of them is pure overhead that
+   * scales with the number of teams on disk.
+   */
+  getScopedTeamNames?: () => ReadonlySet<string> | null;
 }
 
 const RECONCILE_INTERVAL_MS = 30_000;
+
+// Coalesce bursts of directory add/remove events (e.g. a team launch creating
+// many dirs/files) into a single target reconcile + watcher rebuild. collectTargets
+// re-reads the current directory state, so a trailing reconcile still sees every
+// change; this only avoids rebuilding the whole watcher once per event in a burst.
+const RECONCILE_DEBOUNCE_MS = 250;
 
 // Keep this list aligned with FileWatcher.processTeamsChange().
 // If a new team artifact should produce TeamChangeEvent, add it here too.
@@ -51,11 +71,11 @@ export class TeamTaskWatchRegistry {
   private reconcileTimer: NodeJS.Timeout | null = null;
   private targets = new Set<string>();
   private targetKey = '';
-  private initialTargetsCaptured = false;
   private closed = false;
   private generation = 0;
   private reconcileInProgress = false;
   private reconcileAgain = false;
+  private reconcileDebounceTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly options: TeamTaskWatchRegistryOptions) {}
 
@@ -76,6 +96,37 @@ export class TeamTaskWatchRegistry {
     this.reconcileTimer.unref();
   }
 
+  /**
+   * Force an immediate target reconciliation. Call this when the scoped team set
+   * changes (a team launches, stops, or becomes engaged in the UI) so the watch
+   * set updates without waiting for the periodic reconcile. Safe to call often:
+   * it no-ops when the resulting target set is unchanged and coalesces with any
+   * in-flight reconcile.
+   */
+  async requestReconcile(): Promise<void> {
+    await this.reconcileTargets();
+  }
+
+  /**
+   * Debounced target reconcile for high-frequency directory events. Bursts of
+   * add/remove dir events (notably while a team launch creates many dirs/files)
+   * collapse into a single rebuild after a short window instead of tearing down
+   * and recreating the whole watcher once per event. Correctness is preserved:
+   * collectTargets re-reads the current directory state, so the trailing reconcile
+   * still sees every change, and emitExistingFilesForNewTargets backfills files
+   * created before the rebuild.
+   */
+  private scheduleReconcile(): void {
+    if (this.closed || this.reconcileDebounceTimer) {
+      return;
+    }
+    this.reconcileDebounceTimer = setTimeout(() => {
+      this.reconcileDebounceTimer = null;
+      void this.reconcileTargets();
+    }, RECONCILE_DEBOUNCE_MS);
+    this.reconcileDebounceTimer.unref?.();
+  }
+
   async close(): Promise<void> {
     this.closed = true;
     this.generation += 1;
@@ -83,6 +134,10 @@ export class TeamTaskWatchRegistry {
     if (this.reconcileTimer) {
       clearInterval(this.reconcileTimer);
       this.reconcileTimer = null;
+    }
+    if (this.reconcileDebounceTimer) {
+      clearTimeout(this.reconcileDebounceTimer);
+      this.reconcileDebounceTimer = null;
     }
 
     const watcher = this.watcher;
@@ -108,8 +163,7 @@ export class TeamTaskWatchRegistry {
       const targets = await this.collectTargets();
       const nextKey = targets.join('\n');
       if (nextKey !== this.targetKey) {
-        const addedTargets = targets.filter((target) => !this.targets.has(target));
-        await this.rebuildWatcher(targets, nextKey, addedTargets);
+        await this.applyTargetSet(targets, nextKey);
       }
     } catch (error) {
       if (options.rethrowErrors) {
@@ -128,38 +182,57 @@ export class TeamTaskWatchRegistry {
     }
   }
 
-  private async rebuildWatcher(
-    targets: string[],
-    nextKey: string,
-    addedTargets: string[]
-  ): Promise<void> {
-    const generation = this.generation + 1;
-    this.generation = generation;
-
-    const previousWatcher = this.watcher;
-    this.watcher = null;
-    if (previousWatcher) {
-      await this.closeWatcher(previousWatcher);
+  private async applyTargetSet(targets: string[], nextKey: string): Promise<void> {
+    if (this.closed) {
+      return;
     }
-
-    if (this.closed || generation !== this.generation) {
+    // First time: create the watcher with the full target set. ignoreInitial keeps
+    // the app-startup baseline silent so old files are not replayed.
+    if (!this.watcher) {
+      this.createWatcher(targets, nextKey);
       return;
     }
 
-    const nextWatcher = watch(targets, {
+    // Incrementally update the existing watcher rather than tearing it down and
+    // recreating it. A full rebuild re-opens an fd for EVERY watched file (kqueue
+    // on macOS opens one fd per file), so during a launch that adds dirs in bursts
+    // it re-opened the entire (large) watched set repeatedly. add()/unwatch() touch
+    // only the delta. emitExistingFilesForNewTargets still backfills files that
+    // already exist in newly added dirs, preserving the previous event surface
+    // (chokidar's own add() scan only re-confirms those same files, idempotently).
+    const nextSet = new Set(targets);
+    const addedTargets = targets.filter((target) => !this.targets.has(target));
+    const removedTargets = [...this.targets].filter((target) => !nextSet.has(target));
+    const generation = this.generation;
+
+    if (removedTargets.length > 0) {
+      this.watcher.unwatch(removedTargets);
+    }
+    if (addedTargets.length > 0) {
+      this.watcher.add(addedTargets);
+    }
+    this.targets = nextSet;
+    this.targetKey = nextKey;
+
+    if (addedTargets.length > 0) {
+      await this.emitExistingFilesForNewTargets(addedTargets, generation);
+    }
+  }
+
+  private createWatcher(targets: string[], nextKey: string): void {
+    const generation = this.generation + 1;
+    this.generation = generation;
+
+    const watcher = watch(targets, {
       ignoreInitial: true,
       ignorePermissionErrors: true,
       followSymlinks: false,
       depth: 0,
     });
 
-    this.watcher = nextWatcher;
+    this.watcher = watcher;
     this.targets = new Set(targets);
     this.targetKey = nextKey;
-    // First registry build is app startup baseline and must not emit old files.
-    // Later rebuilds can emit existing files only for newly added targets.
-    const shouldEmitExistingFiles = this.initialTargetsCaptured;
-    this.initialTargetsCaptured = true;
 
     const handleEvent = (eventType: TeamTaskWatchEventType, changedPath?: string): void => {
       if (this.closed || generation !== this.generation || !changedPath) {
@@ -172,9 +245,10 @@ export class TeamTaskWatchRegistry {
       }
 
       // addDir/unlinkDir can make the watch target set stale immediately.
-      // Periodic reconciliation is the backup path if the directory event is missed.
+      // Debounced so a burst of dir events (e.g. a team launch) coalesces into one
+      // reconcile; periodic reconciliation is the backup path if an event is missed.
       if (this.shouldReconcile(eventType, relativePath)) {
-        void this.reconcileTargets();
+        this.scheduleReconcile();
       }
 
       if (!this.shouldEmit(eventType, relativePath)) {
@@ -184,20 +258,16 @@ export class TeamTaskWatchRegistry {
       this.options.onChange(eventType, relativePath);
     };
 
-    nextWatcher.on('add', (changedPath) => handleEvent('add', changedPath));
-    nextWatcher.on('change', (changedPath) => handleEvent('change', changedPath));
-    nextWatcher.on('unlink', (changedPath) => handleEvent('unlink', changedPath));
-    nextWatcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
-    nextWatcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
-    nextWatcher.on('error', (error) => {
+    watcher.on('add', (changedPath) => handleEvent('add', changedPath));
+    watcher.on('change', (changedPath) => handleEvent('change', changedPath));
+    watcher.on('unlink', (changedPath) => handleEvent('unlink', changedPath));
+    watcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
+    watcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
+    watcher.on('error', (error) => {
       if (!this.closed && generation === this.generation) {
         this.options.onError(error);
       }
     });
-
-    if (shouldEmitExistingFiles) {
-      await this.emitExistingFilesForNewTargets(addedTargets, generation);
-    }
   }
 
   private async emitExistingFilesForNewTargets(
@@ -237,6 +307,8 @@ export class TeamTaskWatchRegistry {
     // emitting user-visible events for those artifacts.
     const targets = new Set<string>([path.normalize(this.options.rootPath)]);
     const rootEntries = await this.readDirectory(this.options.rootPath);
+    // null => no scoping: watch every team (original behavior / safe fallback).
+    const scopedTeams = this.options.getScopedTeamNames?.() ?? null;
 
     for (const entry of rootEntries) {
       if (!entry.isDirectory()) {
@@ -244,7 +316,14 @@ export class TeamTaskWatchRegistry {
       }
 
       const teamPath = path.join(this.options.rootPath, entry.name);
-      targets.add(path.normalize(teamPath));
+      const inScope = scopedTeams === null || scopedTeams.has(entry.name);
+
+      // Team-root and task artifacts only change for running/engaged teams, so
+      // scope those. Inboxes are always watched so cross-team delivery and
+      // notifications to non-visible teams stay immediate.
+      if (inScope) {
+        targets.add(path.normalize(teamPath));
+      }
 
       if (this.options.kind === 'teams') {
         const inboxPath = path.join(teamPath, 'inboxes');

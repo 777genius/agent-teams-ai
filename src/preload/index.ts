@@ -4,6 +4,7 @@ import { createMemberLogStreamBridge } from '@features/member-log-stream/preload
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
+import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
@@ -501,6 +502,7 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   telemetry: {
     getSentryContext: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_CONTEXT),
   },
@@ -759,6 +761,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('shell:openPath', targetPath, projectRoot, userSelectedFromDialog),
   showInFolder: (filePath: string) => ipcRenderer.invoke('shell:showInFolder', filePath),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  getDiscordMemberCount: () => ipcRenderer.invoke('discord:getMemberCount'),
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
   windowControls: {

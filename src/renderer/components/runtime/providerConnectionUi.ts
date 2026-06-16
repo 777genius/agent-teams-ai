@@ -240,6 +240,60 @@ export function isOpenCodeCatalogHydrating(
   );
 }
 
+export function shouldMaskCodexNegativeBootstrapState(
+  sourceProvider:
+    | Pick<
+        CliProviderStatus,
+        | 'providerId'
+        | 'authenticated'
+        | 'supported'
+        | 'verificationState'
+        | 'statusMessage'
+        | 'models'
+        | 'backend'
+        | 'modelCatalogRefreshState'
+      >
+    | null
+    | undefined,
+  mergedProvider: Pick<CliProviderStatus, 'providerId' | 'connection' | 'modelCatalogRefreshState'>,
+  options: { providerLoading?: boolean } = {}
+): boolean {
+  if (
+    mergedProvider.providerId !== 'codex' ||
+    mergedProvider.connection?.codex?.launchReadinessState !== 'missing_auth' ||
+    mergedProvider.connection.codex.login.status !== 'idle'
+  ) {
+    return false;
+  }
+
+  if (options.providerLoading || mergedProvider.modelCatalogRefreshState === 'loading') {
+    return true;
+  }
+
+  if (sourceProvider?.providerId !== 'codex') {
+    return false;
+  }
+
+  if (sourceProvider.modelCatalogRefreshState === 'loading') {
+    return true;
+  }
+
+  if (
+    sourceProvider.statusMessage === 'Checking...' ||
+    sourceProvider.statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE
+  ) {
+    return true;
+  }
+
+  return (
+    sourceProvider.supported === false &&
+    sourceProvider.authenticated === false &&
+    sourceProvider.verificationState === 'unknown' &&
+    sourceProvider.models.length === 0 &&
+    sourceProvider.backend == null
+  );
+}
+
 function hasKnownProviderStatus(
   provider: Pick<
     CliProviderStatus,

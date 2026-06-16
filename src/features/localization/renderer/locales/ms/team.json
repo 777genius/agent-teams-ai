@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Cipta tugasan daripada mesej",
+      "editMessage": "Sunting mesej",
+      "expandMessage": "Kembangkan mesej",
+      "replyToMessage": "Balas mesej",
+      "restartTeam": "Mulakan semula pasukan"
+    },
+    "authError": {
+      "description": "Pengesahan gagal. Memulakan semula pasukan akan menyegarkan sesi dan mungkin menyelesaikan isu ini. Jika masalah berterusan, semak kelayakan API anda atau cuba lagi kemudian."
+    },
+    "automation": {
+      "reviewPickup": "Meminta rakan pasukan mengambil semakan",
+      "stallNudge": "Meminta rakan pasukan meneruskan tugasan yang tergendala",
+      "workSyncBody": "Meminta rakan pasukan menyelaraskan kerja semasa"
+    },
+    "badges": {
+      "automation": "automasi",
+      "bootstrap": "bootstrap",
+      "command": "arahan",
+      "comment": "Komen",
+      "live": "langsung",
+      "note": "nota",
+      "rateLimited": "Had Kadar Dicapai",
+      "restart": "mula semula",
+      "result": "hasil",
+      "session": "sesi",
+      "stallNudge": "dorongan tergendala",
+      "start": "mula",
+      "workSync": "penyelarasan kerja",
+      "agentError": "Ralat Agen",
+      "apiError": "Ralat API"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap diakui",
+      "restarting": "Memulakan semula rakan pasukan",
+      "starting": "Memulakan rakan pasukan"
+    },
+    "rawJson": "JSON Mentah",
+    "unread": "Belum dibaca",
+    "thoughts": {
+      "count": "{{count}} pemikiran",
+      "count_one": "{{count}} pemikiran",
+      "expand": "Kembangkan pemikiran",
+      "showMore": "Tunjuk lebih banyak",
+      "showLess": "Tunjuk kurang",
+      "count_few": "{{count}} pemikiran",
+      "count_many": "{{count}} pemikiran",
+      "count_other": "{{count}} pemikiran",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - pemikiran"
+    },
+    "timeline": {
+      "loadingMessages": "Memuatkan mesej...",
+      "noMessages": "Tiada mesej",
+      "emptyHint": "Hantar mesej kepada ahli untuk melihat aktiviti.",
+      "newSession": "Sesi baharu",
+      "olderCount": "+{{count}} lebih lama",
+      "showMore": "Tunjuk {{count}} lagi",
+      "showAll": "Tunjuk semua",
+      "olderCount_one": "+{{count}} lebih lama",
+      "olderCount_few": "+{{count}} lebih lama",
+      "olderCount_many": "+{{count}} lebih lama",
+      "olderCount_other": "+{{count}} lebih lama"
+    },
+    "pendingReplies": {
+      "title": "Menunggu balasan",
+      "openMember": "Buka ahli",
+      "messageSentAwaitingReply": "Mesej dihantar, menunggu balasan",
+      "awaitingReply": "menunggu balasan",
+      "externalTeam": "pasukan luaran",
+      "crossTeamAwaitingReply": "Mesej merentas pasukan dihantar, menunggu balasan",
+      "user": "pengguna",
+      "awaitingApproval": "menunggu kelulusan"
+    },
+    "reply": {
+      "replyingTo": "Membalas kepada",
+      "action": "Balas"
+    },
+    "activeTasks": {
+      "inProgress": "Sedang dijalankan",
+      "expandInProgress": "Kembangkan sedang dijalankan",
+      "collapseInProgress": "Runtuhkan sedang dijalankan",
+      "reviewing": "menyemak",
+      "workingOn": "sedang mengerjakan"
+    },
+    "expandDialog": {
+      "description": "Paparan mesej dikembangkan"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Cipta",
+      "creating": "Mencipta...",
+      "openExisting": "Buka Pasukan Sedia Ada",
+      "skipPreflightAndCreate": "Langkau pra-terbang dan cipta"
+    },
+    "conflict": {
+      "description": "Menjalankan dua pasukan dalam direktori yang sama adalah berisiko - ia mungkin bercanggah menyunting fail yang sama. Pertimbangkan untuk menggunakan direktori berbeza atau worktree git untuk pengasingan.",
+      "title": "Pasukan lain \"{{team}}\" sudah berjalan untuk direktori kerja ini",
+      "workingDirectory": "Direktori kerja:"
+    },
+    "description": {
+      "copy": "Cipta pasukan baharu berdasarkan yang sedia ada.",
+      "create": "Sediakan pasukan anda dan pilih cara ia bermula."
+    },
+    "errors": {
+      "nameExists": "Nama pasukan sudah wujud",
+      "nameLaunching": "Pasukan dengan nama ini sedang dilancarkan",
+      "createConfigFailed": "Gagal mencipta konfigurasi pasukan",
+      "loadProjectsFailed": "Gagal memuatkan projek"
+    },
+    "fields": {
+      "color": "Warna (pilihan)",
+      "description": "Penerangan (pilihan)",
+      "prompt": "Prompt untuk ketua pasukan (pilihan)",
+      "teamName": "Nama pasukan"
+    },
+    "launchAfterCreate": {
+      "description": "Mulakan pasukan serta-merta melalui Claude CLI tempatan.",
+      "label": "Jalankan arahan selepas mencipta"
+    },
+    "localOnly": "Tersedia hanya dalam mod Electron tempatan.",
+    "onDisk": "Pada cakera:",
+    "placeholders": {
+      "description": "Penerangan ringkas tujuan pasukan",
+      "prompt": "Arahan untuk ketua pasukan semasa peruntukan..."
+    },
+    "saved": "Disimpan",
+    "solo": {
+      "description": "Hanya ketua pasukan (proses utama) akan dimulakan - tiada rakan pasukan akan dijana. Berfungsi seperti sesi agen biasa dalam runtime pilihan anda (Claude Code, Codex, OpenCode, Gemini) tetapi dengan akses ke papan tugasan untuk perancangan. Menjimatkan token dengan mengelakkan overhed penyelarasan rakan pasukan. Anda boleh menambah ahli kemudian daripada tetapan pasukan.",
+      "label": "Pasukan solo"
+    },
+    "title": {
+      "copy": "Salin Pasukan",
+      "create": "Cipta Pasukan"
+    },
+    "optional": {
+      "launchSettingsTitle": "Tetapan pelancaran pilihan",
+      "launchSettingsDescription": "Prompt, keselamatan, dan penggantian CLI berada di sini apabila anda memerlukannya.",
+      "teamDetailsTitle": "Butiran pasukan pilihan",
+      "teamDetailsDescription": "Kekalkan aliran lalai padat dan buka ini hanya apabila anda mahukan konteks tambahan atau warna tersuai."
+    },
+    "prepare": {
+      "unsupportedPreload": "Versi preload semasa tidak menyokong team:prepareProvisioning. Mulakan semula aplikasi dev.",
+      "selectWorkingDirectory": "Pilih direktori kerja untuk mengesahkan persekitaran pelancaran.",
+      "someProvidersNeedAttention": "Sesetengah pembekal yang dipilih memerlukan perhatian.",
+      "readyWithNotes": "Semua pembekal yang dipilih sedia, dengan nota.",
+      "ready": "Semua pembekal yang dipilih sedia.",
+      "failed": "Gagal menyediakan pembekal yang dipilih",
+      "checkingProviders": "Menyemak pembekal yang dipilih...",
+      "preparingEnvironment": "Menyediakan persekitaran...",
+      "selectedProvidersReadyWithNotes": "Pembekal yang dipilih sedia (dengan nota)",
+      "selectedProvidersReady": "Pembekal yang dipilih sedia"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Nama mesti mengandungi sekurang-kurangnya satu huruf atau digit",
+      "nameTooLong": "Nama terlalu panjang (maksimum 128 aksara)",
+      "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
+      "memberNameRequired": "Nama ahli tidak boleh kosong",
+      "memberNameInvalid": "Nama ahli mesti bermula dengan alfanumerik, gunakan hanya [a-zA-Z0-9._-], maksimum 128 aksara",
+      "memberNamesUnique": "Nama ahli mesti unik",
+      "openCodeLeadModelRequired": "Ketua OpenCode memerlukan model yang dipilih.",
+      "openCodeTeammateRequired": "Ketua OpenCode memerlukan sekurang-kurangnya satu rakan pasukan OpenCode.",
+      "teamLaunching": "Pasukan sedang dilancarkan",
+      "teamNameExists": "Nama pasukan sudah wujud",
+      "checkFormFields": "Semak medan borang"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Batal",
+      "save": "Simpan"
+    },
+    "addMemberLockReason": "Gunakan dialog Tambah ahli khusus untuk menambah rakan pasukan baharu semasa pasukan langsung.",
+    "description": "Tukar nama, penerangan dan warna pasukan",
+    "errors": {
+      "changesSavedRefreshFailed": "Perubahan pasukan disimpan, tetapi gagal menyegarkan paparan terkini: {{message}}",
+      "liveRenameBlocked": "Rakan pasukan sedia ada tidak boleh dinamakan semula semasa pasukan langsung. dinamakan semula: {{names}}",
+      "memberNameEmpty": "Nama ahli tidak boleh kosong",
+      "memberNameInvalid": "Nama ahli mesti bermula dengan alfanumerik, gunakan hanya [a-zA-Z0-9._-], maksimum 128 aksara",
+      "memberNameNumericSuffix": "Nama ahli \"{{name}}\" tidak dibenarkan (dikhaskan untuk akhiran auto Claude CLI). Gunakan \"{{base}}\" sebaliknya.",
+      "memberNameReserved": "Nama ahli \"{{name}}\" dikhaskan",
+      "memberNamesUnique": "Nama ahli mesti unik sebelum menyimpan",
+      "newLiveTeammates": "Tambah rakan pasukan baharu daripada dialog Tambah ahli khusus semasa pasukan langsung. Sunting Pasukan hanya menyokong mengemas kini rakan pasukan sedia ada.",
+      "provisioning": "Tetapan pasukan tidak boleh disunting semasa peruntukan masih dijalankan. Tunggu pelancaran selesai, kemudian cuba lagi.",
+      "restartFailedMany": "Pasukan disimpan, tetapi gagal memulakan semula rakan pasukan ini: {{failures}}",
+      "restartFailedOne": "Pasukan disimpan, tetapi gagal memulakan semula rakan pasukan ini: {{failures}}",
+      "saveFailed": "Gagal menyimpan",
+      "settingsChanged": "Tetapan pasukan berubah semasa dialog ini terbuka. Buka semula dan semak keadaan terkini sebelum menyimpan.",
+      "settingsSavedMembersAndRefreshFailed": "Tetapan pasukan disimpan, tetapi perubahan ahli gagal: {{message}}. Penyegaran juga gagal: {{refreshError}}",
+      "settingsSavedMembersFailed": "Tetapan pasukan disimpan, tetapi perubahan ahli gagal: {{message}}",
+      "settingsSavedRefreshFailed": "Tetapan pasukan disimpan, tetapi gagal menyegarkan paparan terkini: {{message}}",
+      "teamNameEmpty": "Nama pasukan tidak boleh kosong",
+      "unsupportedMixedPrimaryMutation": "Suntingan langsung kepada rakan pasukan milik primari dalam pasukan OpenCode campuran belum disokong. Hentikan pasukan, sunting senarai, kemudian lancarkan semula. Terjejas: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Warna (pilihan)",
+      "description": "Penerangan",
+      "name": "Nama"
+    },
+    "memberRestartWarning": "Menyimpan akan memulakan semula rakan pasukan ini untuk menerapkan perubahan peranan, aliran kerja, pengasingan worktree, pembekal, model, usaha, atau akses MCP.",
+    "notices": {
+      "liveRenameBlocked": "Simpan langsung disekat kerana rakan pasukan sedia ada dinamakan semula. Patah balik perubahan identiti tersebut atau hentikan pasukan dahulu.",
+      "newLiveTeammates": "Rakan pasukan baharu tidak boleh ditambah daripada Sunting Pasukan semasa pasukan langsung. Gunakan dialog Tambah ahli sebaliknya.",
+      "provisioning": "Peruntukan pasukan masih dijalankan. Penyuntingan dikunci buat sementara sehingga pelancaran selesai.",
+      "restartMany": "Menyimpan akan memulakan semula atau melancarkan semula rakan pasukan ini untuk menerapkan perubahan peranan, aliran kerja, pengasingan worktree, pembekal, model, usaha, atau akses MCP: {{names}}.",
+      "restartOne": "Menyimpan akan memulakan semula atau melancarkan semula rakan pasukan ini untuk menerapkan perubahan peranan, aliran kerja, pengasingan worktree, pembekal, model, usaha, atau akses MCP: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Suntingan/pembuangan langsung untuk rakan pasukan milik primari dalam pasukan OpenCode campuran memerlukan menghentikan dan melancarkan semula pasukan: {{names}}."
+    },
+    "placeholders": {
+      "description": "Penerangan pasukan (pilihan)",
+      "teamName": "Nama pasukan"
+    },
+    "teamLead": {
+      "changeRuntime": "Tukar runtime ketua",
+      "changeRuntimeDescription": "Buka Lancar Semula Pasukan untuk menukar pembekal, model, atau usaha ketua.",
+      "modelLockReason": "Runtime ketua pasukan diuruskan daripada Lancar Semula Pasukan.",
+      "readOnlyHint": "Nama dan peranan ketua pasukan kekal baca-sahaja di sini. Buka panel runtime pada baris ketua untuk menukar pembekal, model, atau usaha.",
+      "role": "Ketua Pasukan"
+    },
+    "title": "Sunting Pasukan"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Buang ahli",
+      "removeAria": "Buang {{name}}",
+      "restore": "Pulihkan ahli",
+      "restoreAria": "Pulihkan {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "tetapan konteks lalai",
+      "description": "Konteks Anthropic adalah seluruh pasukan untuk pelancaran ini: {{mode}}. Gunakan kotak semak Hadkan konteks pada panel runtime ketua untuk menukarnya.",
+      "limitEnabled": "Had 200K didayakan"
+    },
+    "mcp": {
+      "buttonInherit": "Warisi MCP",
+      "buttonScopes": "Skop MCP",
+      "chooseScopes": "Pilih skop",
+      "inheritLead": "Warisi ketua",
+      "lockedInfo": "Agent Teams MCP sahaja didayakan untuk semua rakan pasukan. Rakan pasukan ini akan dilancarkan dengan pelayan Agent Teams sahaja.",
+      "mode": "Mod MCP",
+      "scopes": {
+        "local": "tempatan",
+        "project": "projek",
+        "user": "pengguna"
+      },
+      "serverNames": "Nama pelayan",
+      "settingInfo": "Agent Teams MCP melancarkan rakan pasukan ini dengan pelayan Agent Teams sahaja. Mod skop dan senarai benar terpakai hanya kepada pelancaran rakan pasukan ini.",
+      "strictAllowlist": "Senarai benar ketat",
+      "tooltip": "{{label}}: Kawal dasar pewarisan MCP ahli ini",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "Pembekal {{provider}}, {{model}}",
+      "currentLeadRuntime": "Runtime ketua semasa",
+      "default": "Lalai",
+      "inheritedTooltip": "Pembekal, model, dan usaha diwarisi daripada ketua semasa penyegerakan didayakan.",
+      "leadSuffix": "{{label}} (ketua)",
+      "liveDisabled": "Perubahan pembekal, model, dan usaha dilumpuhkan semasa pasukan langsung. Sambung semula pasukan untuk menerapkannya dengan selamat.",
+      "lockedActionFallback": "Perubahan runtime ketua membuka Lancar Semula Pasukan, di mana pembekal, model, dan usaha boleh dikemas kini.",
+      "restartWholeTeam": "Menyimpan perubahan runtime tersebut memulakan semula seluruh pasukan."
+    },
+    "nameAria": "Nama ahli {{index}}",
+    "nameFallback": "ahli {{index}}",
+    "noRole": "Tiada peranan",
+    "removed": "Dibuang",
+    "workflow": {
+      "addTooltip": "Tambah aliran kerja rakan pasukan",
+      "editTooltip": "Sunting aliran kerja rakan pasukan",
+      "label": "Aliran kerja (pilihan)",
+      "placeholder": "Bagaimana agen ini patut berkelakuan, berinteraksi dengan yang lain...",
+      "saved": "Disimpan"
+    },
+    "worktree": {
+      "description": "Jalankan rakan pasukan ini dalam worktree git berasingan. Terima/tolak perubahan menyasarkan worktree tersebut, bukan ruang kerja ketua.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Tambah Ahli",
+      "description": "Tambah ahli baharu ke {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Tambah",
+      "cancel": "Batal",
+      "delete": "Padam",
+      "editCode": "Sunting kod",
+      "launch": "Lancar",
+      "remove": "Buang",
+      "stop": "Hentikan",
+      "task": "Tugasan",
+      "visualize": "Visualisasikan"
+    },
+    "deleteTeam": {
+      "description": "Padam pasukan \"{{team}}\"? Tindakan ini tidak boleh diterbalikkan. Semua data dan tugasan pasukan akan dipadam.",
+      "title": "Padam pasukan"
+    },
+    "draft": {
+      "descriptionPrefix": "Ini ialah pasukan draf -",
+      "descriptionSuffix": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum diperuntukkan oleh CLI lagi. Klik Lancar untuk memilih model dan memulakan pasukan.",
+      "descriptionSuffix_few": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum diperuntukkan oleh CLI lagi. Klik Lancar untuk memilih model dan memulakan pasukan.",
+      "descriptionSuffix_many": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum diperuntukkan oleh CLI lagi. Klik Lancar untuk memilih model dan memulakan pasukan.",
+      "descriptionSuffix_one": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum diperuntukkan oleh CLI lagi. Klik Lancar untuk memilih model dan memulakan pasukan.",
+      "descriptionSuffix_other": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum diperuntukkan oleh CLI lagi. Klik Lancar untuk memilih model dan memulakan pasukan.",
+      "member": "ahli",
+      "member_few": "ahli",
+      "member_many": "ahli",
+      "member_one": "ahli",
+      "member_other": "ahli",
+      "title": "Pasukan belum dilancarkan"
+    },
+    "invalidTab": "Tab pasukan tidak sah",
+    "kanbanSafeData": "Gagal memuatkan kanban sepenuhnya. Memaparkan data selamat.",
+    "loadFailed": "Gagal memuatkan pasukan",
+    "loading": "Memuatkan pasukan",
+    "loadingSidebar": "Memuatkan bar sisi pasukan",
+    "offline": {
+      "offline": "Pasukan luar talian",
+      "partialFailed": "Pelancaran terakhir gagal di pertengahan",
+      "partialMissing": "Pelancaran terakhir gagal di pertengahan - {{missing}}/{{expected}} rakan pasukan tidak menyertai",
+      "reconciling": "Pelancaran terakhir masih diselaraskan"
+    },
+    "previous": "Sebelumnya: {{paths}}",
+    "removeMember": {
+      "description": "Buang \"{{member}}\" daripada pasukan? Tugasan dan mesej akan dikekalkan, tetapi nama ini tidak boleh diguna semula.",
+      "title": "Buang ahli"
+    },
+    "sections": {
+      "team": "Pasukan"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktif",
+      "launching": "Melancarkan...",
+      "running": "Berjalan"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memori"
+    },
+    "tooltips": {
+      "deleteTeam": "Padam pasukan",
+      "editTeam": "Sunting pasukan",
+      "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
+      "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
+      "openTeamGraph": "Buka graf pasukan",
+      "stopTeam": "Hentikan pasukan"
+    },
+    "waitingForProvisioning": "Data pasukan akan muncul setelah peruntukan selesai",
+    "context": {
+      "title": "Konteks",
+      "loading": "Memuatkan...",
+      "noSessionLoaded": "Tiada sesi dimuatkan",
+      "closePanel": "Tutup panel konteks {{team}}",
+      "loadingContext": "Memuatkan konteks...",
+      "openLeadSession": "Buka sesi ketua pasukan untuk melihat konteks."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Terima",
+        "discard": "Buang",
+        "discardTooltip": "Buang semua suntingan untuk fail ini",
+        "keepMyDraft": "Kekalkan draf saya",
+        "reject": "Tolak",
+        "reloadFromDisk": "Muat semula daripada cakera",
+        "restore": "Pulihkan",
+        "restoreTooltip": "Cipta/pulihkan fail ini pada cakera daripada pratonton",
+        "saveFile": "Simpan Fail",
+        "saveFileTooltip": "Simpan fail ke cakera"
+      },
+      "badges": {
+        "deleted": "DIPADAM",
+        "manualReview": "SEMAKAN MANUAL",
+        "new": "BAHARU",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Cakera Semasa",
+        "file-history": "Sejarah Fail",
+        "git-fallback": "Sandaran Git",
+        "ledger-exact": "Lejar Tugasan",
+        "ledger-snapshot": "Syot Kilat Lejar",
+        "snippet-reconstruction": "Dibina Semula",
+        "unavailable": "Kandungan tidak tersedia"
+      },
+      "contentUnavailable": {
+        "badge": "Kandungan tidak tersedia",
+        "description": "Lejar merekodkan metadata untuk perubahan ini, tetapi kandungan teks penuh tidak tersedia. Ini biasanya bermaksud kandungan binari, besar, atau hash sahaja.",
+        "safety": "Terima/tolak automatik dilumpuhkan untuk fail ini untuk mengelakkan penulisan cakera yang tidak selamat.",
+        "title": "Kandungan teks tidak tersedia"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Terima/Tolak dilumpuhkan kerana kandungan teks penuh tidak tersedia.",
+        "acceptRejectMissingOnDisk": "Terima/Tolak dilumpuhkan semasa fail hilang pada cakera.",
+        "rejectBaselineUnavailable": "Tolak dilumpuhkan kerana garis dasar asal tidak tersedia.",
+        "rejectContentUnavailable": "Tolak dilumpuhkan kerana kandungan teks penuh tidak tersedia.",
+        "rejectManualLedgerReview": "Tolak dilumpuhkan kerana perubahan lejar ini mempunyai kandungan binari, besar, atau tidak tersedia."
+      },
+      "externalChange": {
+        "changedOnDisk": "Ditukar pada cakera",
+        "deletedOnDisk": "Dipadam pada cakera",
+        "recreatedOnDisk": "Dicipta semula pada cakera"
+      },
+      "missingOnDisk": {
+        "badge": "Hilang pada cakera",
+        "description": "Kami masih boleh menunjukkan pratonton daripada log agen, tetapi sistem fail anda tidak segerak.",
+        "restorePrefix": "Gunakan",
+        "restoreSuffix": "untuk menulis kandungan pratonton kembali ke cakera.",
+        "restoreUnavailable": "Kandungan fail penuh tidak tersedia untuk dipulihkan secara automatik.",
+        "title": "Fail hilang pada cakera"
+      },
+      "pathChange": {
+        "from": "Daripada {{path}}",
+        "to": "Kepada {{path}}"
+      },
+      "worktree": {
+        "isolated": "Worktree terasing"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} tertangguh",
+        "pending_one": "{{count}} tertangguh",
+        "pending_other": "{{count}} tertangguh",
+        "accepted": "{{count}} diterima",
+        "accepted_one": "{{count}} diterima",
+        "accepted_other": "{{count}} diterima",
+        "rejected": "{{count}} ditolak",
+        "rejected_one": "{{count}} ditolak",
+        "rejected_other": "{{count}} ditolak",
+        "acrossFiles": "merentas {{count}} fail",
+        "acrossFiles_one": "merentas {{count}} fail",
+        "acrossFiles_other": "merentas {{count}} fail",
+        "edited": "{{count}} disunting",
+        "edited_one": "{{count}} disunting",
+        "edited_other": "{{count}} disunting",
+        "pending_few": "{{count}} tertangguh",
+        "pending_many": "{{count}} tertangguh",
+        "accepted_few": "{{count}} diterima",
+        "accepted_many": "{{count}} diterima",
+        "rejected_few": "{{count}} ditolak",
+        "rejected_many": "{{count}} ditolak",
+        "acrossFiles_few": "merentas {{count}} fail",
+        "acrossFiles_many": "merentas {{count}} fail",
+        "edited_few": "{{count}} disunting",
+        "edited_many": "{{count}} disunting"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "Buat asal",
+        "acceptAll": "Terima Semua",
+        "rejectAll": "Tolak Semua",
+        "applying": "Menerapkan...",
+        "applyRejections": "Terapkan Penolakan"
+      },
+      "tooltips": {
+        "autoOn": "Tandakan fail sebagai dilihat secara auto apabila ditatal ke hujung (HIDUP)",
+        "autoOff": "Tandakan fail sebagai dilihat secara auto apabila ditatal ke hujung (MATI)",
+        "undo": "Buat asal operasi semakan terakhir (Ctrl+Z)",
+        "acceptAll": "Terima semua perubahan merentas semua fail",
+        "rejectAll": "Tolak semua perubahan yang selamat ditolak merentas semua fail",
+        "rejectAllDisabled": "Tiada fail tertangguh mempunyai garis dasar asal yang selamat untuk ditolak.",
+        "applyRejections": "Terapkan hunk yang ditolak ke cakera; perubahan yang diterima dikekalkan seadanya"
+      }
+    },
+    "diffError": {
+      "title": "Gagal merender paparan perbezaan",
+      "unexpected": "Ralat tidak dijangka berlaku semasa merender perbezaan.",
+      "actions": {
+        "retry": "Cuba lagi"
+      },
+      "raw": {
+        "show": "Tunjuk data perbezaan mentah",
+        "file": "Fail: {{file}}",
+        "original": "--- Asal",
+        "modified": "+++ Diubah suai",
+        "charsTotal": "... ({{count}} aksara jumlah)",
+        "charsTotal_one": "... ({{count}} aksara jumlah)",
+        "charsTotal_other": "... ({{count}} aksara jumlah)",
+        "charsTotal_few": "... ({{count}} aksara jumlah)",
+        "charsTotal_many": "... ({{count}} aksara jumlah)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Dilihat",
+      "badges": {
+        "new": "baharu",
+        "deleted": "dipadam"
+      },
+      "collapseFolder": "Runtuhkan {{name}}",
+      "expandFolder": "Kembangkan {{name}}",
+      "empty": {
+        "noChangedFiles": "Tiada fail ditukar",
+        "noMatchingFiles": "Tiada fail yang sepadan"
+      },
+      "searchPlaceholder": "Cari fail…",
+      "filters": {
+        "unresolved": "Belum diselesaikan",
+        "rejected": "Ditolak",
+        "new": "Baharu",
+        "clear": "Kosongkan"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Ketulan sebelumnya",
+      "nextChunk": "Ketulan seterusnya",
+      "rejectChange": "Tolak perubahan (⌘N)",
+      "acceptChange": "Terima perubahan (⌘Y)",
+      "undo": "Buat asal",
+      "keep": "Kekalkan",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Konflik Dikesan",
+      "description": "Fail ini telah diubah suai sejak perubahan agen",
+      "cancel": "Batal",
+      "saveResolution": "Simpan Penyelesaian",
+      "editManually": "Sunting Secara Manual",
+      "useOriginal": "Guna Asal",
+      "keepCurrent": "Kekalkan Semasa"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Menyediakan Perbezaan Penuh",
+      "titleMany": "Menyediakan {{count}} Perbezaan Penuh",
+      "subtitleForFile": "Memuktamadkan perbezaan editor yang tepat untuk {{file}}.",
+      "subtitleCurrentFile": "Memuktamadkan perbezaan editor yang tepat untuk fail semasa.",
+      "subtitleMany": "Menyelesaikan garis dasar sebelum/selepas yang tepat untuk fail yang sedang dimuatkan.",
+      "previewsReady": "{{count}} pratonton sedia",
+      "previewsReady_one": "{{count}} pratonton sedia",
+      "editorViewLoading": "Paparan editor dimuatkan",
+      "filesInProgress": "{{count}} fail sedang diproses",
+      "filesInProgress_one": "{{count}} fail sedang diproses",
+      "filesReady": "{{ready}}/{{total}} fail sedia",
+      "progressDescription": "{{ready}} sedia, {{loading}} masih dimuatkan. Perbezaan pratonton kekal kelihatan di bawah semasa garis dasar yang tinggal diselesaikan.",
+      "singleDescription": "Perbezaan pratonton kekal kelihatan di bawah semasa garis dasar yang tepat diselesaikan.",
+      "previewsReady_few": "{{count}} pratonton sedia",
+      "previewsReady_many": "{{count}} pratonton sedia",
+      "previewsReady_other": "{{count}} pratonton sedia",
+      "filesInProgress_few": "{{count}} fail sedang diproses",
+      "filesInProgress_many": "{{count}} fail sedang diproses",
+      "filesInProgress_other": "{{count}} fail sedang diproses"
+    },
+    "fileMissingPrefix": "Fail hilang pada cakera. Perbezaan ini mungkin hanya pratonton daripada log agen. Gunakan",
+    "restore": "Pulihkan",
+    "fileMissingSuffix": "untuk mencipta fail pada cakera.",
+    "filePlaceholder": {
+      "loading": "Memuatkan",
+      "description": "Menyediakan perbezaan editor penuh untuk fail ini."
+    },
+    "loading": {
+      "diff": "PERBEZAAN",
+      "ledgerObjectsProcessed": "{{count}} objek lejar diproses",
+      "ledgerObjectsProcessed_one": "{{count}} objek lejar diproses",
+      "ledgerObjectsProcessed_other": "{{count}} objek lejar diproses",
+      "ledgerObjectsProcessed_few": "{{count}} objek lejar diproses",
+      "ledgerObjectsProcessed_many": "{{count}} objek lejar diproses",
+      "phases": {
+        "readingLedger": "Membaca lejar tugasan...",
+        "resolvingFiles": "Menyelesaikan keadaan fail...",
+        "checkingWorktree": "Menyemak konteks worktree...",
+        "preparingDiffs": "Menyediakan perbezaan semakan..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} dilihat"
+    },
+    "scope": {
+      "readMore": "Baca lebih lanjut",
+      "tiers": {
+        "exact": {
+          "title": "Skop tugasan ditentukan dengan tepat",
+          "detail": "Kedua-dua penanda mula dan selesai ditemui dalam log sesi. Perbezaan ini merangkumi hanya perubahan yang dibuat semasa tugasan khusus ini - tugasan lain yang mengubah suai fail yang sama dikecualikan."
+        },
+        "endEstimated": {
+          "title": "Sempadan akhir dianggarkan",
+          "detail": "Hanya penanda mula ditemui - tugasan belum mempunyai penanda selesai. Perubahan ditunjukkan daripada permulaan tugasan ke hujung sesi. Jika tugasan lain berjalan selepas ini dalam sesi yang sama, perubahan mereka juga mungkin disertakan."
+        },
+        "startEstimated": {
+          "title": "Sempadan mula dianggarkan",
+          "detail": "Hanya penanda selesai ditemui - permulaan kerja tidak ditangkap. Jika tugasan lain berjalan sebelum ini dalam sesi yang sama, perubahan mereka kepada fail yang sama juga mungkin disertakan."
+        },
+        "allSession": {
+          "title": "Memaparkan semua perubahan sesi",
+          "detail": "Tiada penanda tugasan ditemui dalam log sesi. Tidak dapat mengasingkan tugasan ini - semua perubahan fail daripada keseluruhan sesi ditunjukkan, termasuk perubahan daripada tugasan lain. Ini boleh berlaku dengan versi CLI yang lebih lama atau aliran kerja bukan standard."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Perubahan ditangkap oleh lejar tugasan",
+          "detail": "Orkestrator menangkap perubahan fail ini semasa agen mengerjakan tugasan ini.",
+          "badge": "Lejar tepat"
+        },
+        "limited": {
+          "title": "Perubahan ditangkap dengan kebolehsemakan terhad",
+          "detail": "Orkestrator menangkap perubahan fail ini untuk tugasan ini, tetapi sekurang-kurangnya satu perubahan ditangkap daripada syot kilat atau sumber metadata sahaja. Semak perbezaan teks yang tepat di mana tersedia; kandungan binari atau tidak tersedia mungkin memerlukan semakan manual.",
+          "mixedBadge": "Kebolehsemakan campuran",
+          "needsReviewBadge": "Perlu semakan"
+        }
+      },
+      "workInterval": {
+        "title": "Diskop mengikut selang kerja berterusan",
+        "detail": "Penanda mula tugasan tidak tersedia dalam log sesi, jadi perbezaan diskop mengikut selang kerja tugasan yang disimpan pada papan.",
+        "badge": "Diskop mengikut selang"
+      },
+      "confidence": {
+        "high": "Keyakinan tinggi",
+        "medium": "Keyakinan sederhana",
+        "low": "Keyakinan rendah",
+        "bestEffort": "Usaha terbaik"
+      }
+    },
+    "shortcuts": {
+      "title": "Pintasan Papan Kekunci",
+      "actions": {
+        "nextChange": "Perubahan seterusnya",
+        "previousChange": "Perubahan sebelumnya",
+        "nextFile": "Fail seterusnya",
+        "previousFile": "Fail sebelumnya",
+        "acceptChange": "Terima perubahan",
+        "rejectChange": "Tolak perubahan",
+        "saveFile": "Simpan fail",
+        "undo": "Buat asal",
+        "redo": "Buat semula",
+        "toggleShortcuts": "Togol pintasan",
+        "closeDialog": "Tutup dialog"
+      }
+    },
+    "timeline": {
+      "empty": "Tiada peristiwa suntingan",
+      "titleWithCount": "Garis Masa Suntingan ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Tiada perubahan fail yang boleh disemak"
+    },
+    "empty": {
+      "noSafeDiff": "Tiada perbezaan selamat tersedia",
+      "noFileChangesRecorded": "Tiada perubahan fail direkodkan",
+      "noSafeDiffDescription": "Lejar tugasan tidak mendedahkan perbezaan fail yang selamat untuk tugasan ini.",
+      "noSafeDiffDiagnosticsDescription": "Lejar tugasan tidak mendedahkan perbezaan fail yang selamat untuk tugasan ini. Diagnostik di bawah menjelaskan sebabnya.",
+      "noFileEventsYet": "Lejar tugasan belum mempunyai peristiwa fail untuk tugasan ini.",
+      "noFileEvents": "Lejar tugasan tiada peristiwa fail untuk tugasan ini."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Tindakan helaian bawah mesej",
+      "collapseAll": "Runtuhkan semua mesej",
+      "collapseSheet": "Runtuhkan helaian",
+      "expandAll": "Kembangkan semua mesej",
+      "expandSheet": "Kembangkan helaian",
+      "floatComposer": "Apungkan penggubah",
+      "floatMessagesComposer": "Apungkan penggubah mesej",
+      "hideSearch": "Sembunyi carian",
+      "loadOlder": "Muat mesej lebih lama",
+      "markAllRead": "Tandakan semua sebagai dibaca",
+      "messageActions": "Tindakan mesej",
+      "moveMessagesToBottomSheet": "Alih mesej ke helaian bawah",
+      "moveMessagesToSidebar": "Alih mesej ke bar sisi",
+      "moveToBottomSheet": "Alih ke helaian bawah",
+      "moveToInline": "Alih ke sebaris",
+      "moveToSidebar": "Alih ke bar sisi",
+      "panelActions": "Tindakan panel mesej",
+      "searchMessages": "Cari mesej"
+    },
+    "delivery": {
+      "copied": "Disalin",
+      "copyDebugDetails": "Salin butiran nyahpepijat",
+      "details": "Butiran",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Mod panel mesej",
+    "title": "Mesej",
+    "unread": {
+      "new": "{{count}} baharu",
+      "unread": "{{count}} belum dibaca",
+      "new_few": "{{count}} baharu",
+      "new_many": "{{count}} baharu",
+      "new_one": "{{count}} baharu",
+      "new_other": "{{count}} baharu",
+      "unread_few": "{{count}} belum dibaca",
+      "unread_many": "{{count}} belum dibaca",
+      "unread_one": "{{count}} belum dibaca",
+      "unread_other": "{{count}} belum dibaca"
+    },
+    "filter": {
+      "ariaLabel": "Tapis mesej",
+      "tooltip": "Tapis mesej",
+      "from": "Daripada",
+      "to": "Kepada",
+      "noData": "Tiada data",
+      "showStatusUpdates": "Tunjuk kemas kini status (melahu/penutupan)",
+      "actions": {
+        "reset": "Tetap semula",
+        "save": "Simpan"
+      }
+    },
+    "status": {
+      "title": "Status"
+    },
+    "actionMode": {
+      "label": "Mod tindakan"
+    },
+    "search": {
+      "placeholder": "Cari..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Dikonfigurasi",
+      "connected": "Disambung",
+      "failed": "Gagal",
+      "free": "Percuma",
+      "local": "Tempatan",
+      "needsTest": "Perlu diuji",
+      "verified": "Disahkan",
+      "unavailable": "Tidak tersedia",
+      "issue": "Isu"
+    },
+    "customModelId": "ID model tersuai",
+    "label": "Model (pilihan)",
+    "multimodelRequired": "Codex dan Gemini memerlukan mod Multimodel.",
+    "openCode": {
+      "allSources": "Semua sumber OpenCode",
+      "filterSource": "Tapis {{source}}",
+      "filterSources": "Tapis sumber OpenCode",
+      "freeOnly": "Percuma sahaja",
+      "freeTooltip": "OpenCode menandakan model ini sebagai percuma.",
+      "loadingModels": "Memuatkan model OpenCode...",
+      "noSourcesFound": "Tiada sumber ditemui.",
+      "recommendedOnly": "Disyorkan sahaja",
+      "searchSources": "Cari sumber",
+      "sourcesCount": "{{count}} sumber OpenCode",
+      "sourcesCount_few": "{{count}} sumber OpenCode",
+      "sourcesCount_many": "{{count}} sumber OpenCode",
+      "sourcesCount_one": "{{count}} sumber OpenCode",
+      "sourcesCount_other": "{{count}} sumber OpenCode"
+    },
+    "reason": "Sebab: {{reason}}",
+    "runtimeModelsSyncing": "Model eksplisit dimuatkan daripada runtime semasa. Lalai kekal tersedia semasa senarai disegerakkan.",
+    "fastMode": {
+      "codexLabel": "Mod Fast (2x kredit)",
+      "optionalLabel": "Mod Fast (pilihan)",
+      "defaultOff": "Lalai (Mati)",
+      "fast": "Fast",
+      "off": "Mati",
+      "defaultFast": "Lalai (Fast)",
+      "defaultResolvesTo": "Lalai kini diselesaikan kepada {{mode}}.",
+      "runtimeBackedHint": "Mod Fast disokong runtime dan hanya dibuka apabila model pelancaran Anthropic yang diselesaikan menyokongnya."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Baca dokumentasi harga Anthropic"
+    },
+    "searchModels": "Cari model",
+    "defaultModel": "Lalai",
+    "empty": {
+      "noSearchMatches": "Tiada model sepadan dengan carian ini.",
+      "recommendedFreeOpenCode": "Tiada model OpenCode percuma yang disyorkan tersedia dalam senarai runtime semasa.",
+      "freeOpenCode": "Tiada model OpenCode percuma tersedia dalam senarai runtime semasa.",
+      "recommendedOpenCode": "Tiada model OpenCode yang disyorkan tersedia dalam senarai runtime semasa.",
+      "noModels": "Tiada model tersedia dalam senarai runtime semasa."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode belum sedia untuk pelancaran pasukan",
+      "freeModelsAvailableTitle": "Model OpenCode percuma tersedia",
+      "providerNotConnectedTitle": "Pembekal OpenCode tidak disambung",
+      "readyTitle": "OpenCode sedia",
+      "readyMessage": "OpenCode lulus kesediaan pembekal. Pilihnya untuk menggunakan model OpenCode untuk pasukan ini.",
+      "useOpenCode": "Guna OpenCode",
+      "badges": {
+        "check": "Semak",
+        "install": "Pasang",
+        "free": "Percuma",
+        "setup": "Persediaan"
+      },
+      "summary": {
+        "checking": "Status OpenCode: menyemak runtime",
+        "status": "Status OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "pelancaran pasukan disekat",
+        "providerOptional": "sambungan pembekal pilihan",
+        "providerModelsNeedSetup": "model disokong pembekal perlu persediaan",
+        "teamLaunchReady": "pelancaran pasukan sedia",
+        "runtimeDetected": "runtime dikesan",
+        "runtimeMissing": "runtime hilang",
+        "freeWithoutAuth": "model percuma tersedia tanpa pengesahan",
+        "providerConnected": "pembekal disambung",
+        "providerNotConnected": "pembekal tidak disambung"
+      },
+      "messages": {
+        "checking": "Aplikasi masih menyemak runtime OpenCode. Tunggu status pembekal selesai, kemudian cuba lagi.",
+        "unsupported": "OpenCode tidak dipasang, tidak ditemui, atau runtime yang dikesan tidak disokong. Pasang atau kemas kini OpenCode, kemudian segarkan status pembekal. Anda juga boleh menggunakan butang Pasang di halaman utama.",
+        "freeAvailable": "OpenCode dikesan. Anda boleh menggunakan model OpenCode percuma seperti Big Pickle tanpa menyambung pembekal. Sambung pembekal hanya apabila anda mahukan model disokong pembekal.",
+        "noFreeListed": "OpenCode dikesan, tetapi belum ada model OpenCode percuma disenaraikan. Segarkan status pembekal, atau sambung pembekal dalam OpenCode untuk model disokong pembekal.",
+        "launchBlocked": "OpenCode dipasang dan disahkan, tetapi kesediaan pelancaran Agent Teams disekat.",
+        "ready": "OpenCode sedia untuk pelancaran pasukan."
+      },
+      "loadingRuntime": "Status runtime OpenCode masih dimuatkan."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping tidak disahkan",
+      "note": "Nota"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Konfigurasi OpenCode",
+      "builtinFree": "Percuma terbina dalam",
+      "connectedProviders": "Pembekal disambung",
+      "otherCatalog": "Katalog OpenCode lain"
+    },
+    "pricing": {
+      "free": "Percuma",
+      "inputShort": "masuk {{rate}}",
+      "outputShort": "keluar {{rate}}",
+      "perMillionSummary": "{{summary}} / 1J",
+      "inputTitle": "Input: {{rate}} setiap 1J token",
+      "outputTitle": "Output: {{rate}} setiap 1J token",
+      "cacheReadTitle": "Bacaan cache: {{rate}} setiap 1J token",
+      "cacheWriteTitle": "Tulisan cache: {{rate}} setiap 1J token"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Menggunakan model lalai endpoint serasi Anthropic.\nKini diselesaikan kepada {{model}}.",
+      "anthropicCompatible": "Menggunakan model lalai endpoint serasi Anthropic.",
+      "anthropic": "Menggunakan model lalai pasukan Claude.\nDiselesaikan kepada {{longContextModel}} dengan konteks 1J, atau {{limitedContextModel}} dengan konteks 200K apabila Hadkan konteks didayakan.",
+      "openCodeWithResolved": "Menggunakan model lalai OpenCode.\nKini diselesaikan kepada {{model}}.",
+      "openCode": "Menggunakan model lalai runtime OpenCode.",
+      "runtime": "Menggunakan lalai runtime untuk pembekal yang dipilih."
+    },
+    "multimodelOff": "Multimodel mati",
+    "unavailableInRuntime": "Tidak tersedia dalam runtime semasa"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Batal",
+      "delete": "Padam",
+      "markResolved": "Tandakan diselesaikan",
+      "save": "Simpan"
+    },
+    "attachments": {
+      "commentAttachment": "Lampiran komen",
+      "fromComments": "Daripada komen",
+      "preview": "Pratonton {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "perhatian",
+        "noSafeDiff": "tiada perbezaan selamat"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Tiada perubahan fail direkodkan",
+        "noFileChangesRecordedYet": "Belum ada perubahan fail direkodkan",
+        "noReviewableChangesRecovered": "Tiada perubahan fail yang boleh disemak dipulihkan",
+        "noSafeDiffAvailable": "Tiada perbezaan selamat tersedia"
+      },
+      "loadFailed": "Gagal memuatkan ringkasan perubahan tugasan",
+      "loading": "Memuatkan perubahan...",
+      "fileCount": "{{count}} fail",
+      "fileRowsHidden": "{{count}} baris fail disembunyikan",
+      "moreDiagnostics": "{{count}} diagnostik lagi",
+      "moreFiles": "{{count}} fail lagi",
+      "openInEditor": "Buka dalam editor",
+      "openTask": "Buka tugasan {{subject}}",
+      "refresh": "Segar semula perubahan",
+      "refreshFailed": "Penyegaran gagal: {{error}}",
+      "refreshing": "Menyegarkan",
+      "refreshingChanges": "Menyegarkan perubahan...",
+      "refreshTeamChanges": "Segar semula perubahan pasukan",
+      "refreshShort": "Segar semula",
+      "reviewDiff": "Semak perbezaan",
+      "reviewTaskDiff": "Semak perbezaan tugasan",
+      "scannedCandidateTasks": "Mengimbas {{requested}} daripada {{eligible}} tugasan calon",
+      "tasksDeferred": "{{count}} tugasan ditangguhkan pusingan ini",
+      "title": "Perubahan",
+      "fileCount_few": "{{count}} fail",
+      "fileCount_many": "{{count}} fail",
+      "fileCount_one": "{{count}} fail",
+      "fileCount_other": "{{count}} fail",
+      "fileRowsHidden_few": "{{count}} baris fail disembunyikan",
+      "fileRowsHidden_many": "{{count}} baris fail disembunyikan",
+      "fileRowsHidden_one": "{{count}} baris fail disembunyikan",
+      "fileRowsHidden_other": "{{count}} baris fail disembunyikan",
+      "moreDiagnostics_few": "{{count}} diagnostik lagi",
+      "moreDiagnostics_many": "{{count}} diagnostik lagi",
+      "moreDiagnostics_one": "{{count}} diagnostik lagi",
+      "moreDiagnostics_other": "{{count}} diagnostik lagi",
+      "moreFiles_few": "{{count}} fail lagi",
+      "moreFiles_many": "{{count}} fail lagi",
+      "moreFiles_one": "{{count}} fail lagi",
+      "moreFiles_other": "{{count}} fail lagi",
+      "tasksDeferred_few": "{{count}} tugasan ditangguhkan pusingan ini",
+      "tasksDeferred_many": "{{count}} tugasan ditangguhkan pusingan ini",
+      "tasksDeferred_one": "{{count}} tugasan ditangguhkan pusingan ini",
+      "tasksDeferred_other": "{{count}} tugasan ditangguhkan pusingan ini"
+    },
+    "clarification": {
+      "awaitingLead": "Menunggu penjelasan daripada ketua pasukan",
+      "awaitingUser": "Menunggu penjelasan daripada anda"
+    },
+    "description": {
+      "add": "Klik untuk menambah penerangan...",
+      "edit": "Sunting penerangan",
+      "placeholder": "Penerangan tugasan (menyokong markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Mendapatkan data pasukan",
+      "title": "Memuatkan tugasan..."
+    },
+    "logs": {
+      "newArriving": "Log tugasan baharu tiba"
+    },
+    "notFound": "Tugasan tidak ditemui",
+    "related": {
+      "blockedBy": "Disekat oleh",
+      "blocks": "Menyekat",
+      "linkedFrom": "Dipaut daripada",
+      "links": "Pautan",
+      "title": "Tugasan berkaitan"
+    },
+    "review": {
+      "reviewer": "Penyemak: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Lampiran",
+      "changes": "Perubahan",
+      "comments": "Komen",
+      "description": "Penerangan",
+      "taskLogs": "Log Tugasan",
+      "workflowHistory": "Sejarah Aliran Kerja"
+    },
+    "unassigned": "Tidak ditugaskan",
+    "workflow": {
+      "implementationTimeTitle": "Masa pelaksanaan daripada selang kerja berterusan",
+      "inProgressTime": "Masa sedang dijalankan {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Memaparkan {{formattedCount}} komen terkini untuk memastikan UI responsif.",
+      "badges": {
+        "approved": "Diluluskan",
+        "reviewRequested": "Semakan diminta"
+      },
+      "unknownTime": "masa tidak diketahui",
+      "actions": {
+        "reply": "Balas",
+        "replyToComment": "Balas komen",
+        "showMore": "Tunjuk lebih banyak komen ({{visible}}/{{total}})",
+        "cancelReply": "Batal balasan",
+        "comment": "Komen"
+      },
+      "attachments": {
+        "previewAlt": "Pratonton lampiran",
+        "downloadFailed": "Muat turun gagal"
+      },
+      "replyingTo": "Membalas kepada",
+      "input": {
+        "placeholder": "Tambah komen... (Enter untuk hantar)",
+        "charsLeft": "{{count}} aksara berbaki",
+        "charsLeft_one": "{{count}} aksara berbaki",
+        "charsLeft_other": "{{count}} aksara berbaki",
+        "charsLeft_few": "{{count}} aksara berbaki",
+        "charsLeft_many": "{{count}} aksara berbaki"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Tiada sejarah aliran kerja direkodkan",
+      "currentImplementationInterval": "Selang pelaksanaan semasa",
+      "implementationIntervalEnded": "Selang pelaksanaan berakhir pada peralihan ini",
+      "runningPrefix": "berjalan ",
+      "createdAs": "Dicipta sebagai",
+      "by": "oleh",
+      "reassigned": "Ditugaskan semula",
+      "assignedTo": "Ditugaskan kepada",
+      "unassignedFrom": "Dinyahtugaskan daripada",
+      "ownerChanged": "Pemilik ditukar",
+      "reviewRequested": "Semakan diminta",
+      "reviewStarted": "Semakan dimulakan",
+      "changesRequested": "Perubahan diminta",
+      "approved": "Diluluskan",
+      "unknownEvent": "Peristiwa tidak diketahui"
+    },
+    "reviewStates": {
+      "approved": "Diluluskan",
+      "needsFix": "Perlu pembetulan",
+      "inReview": "Dalam semakan"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Penerima tugas",
+      "assigneeOptional": "Penerima tugas (pilihan)",
+      "blockedByOptional": "Tugasan yang menyekat (pilihan)",
+      "blockedBySummary": "Tugasan akan disekat oleh: {{tasks}}",
+      "cancel": "Batal",
+      "create": "Cipta",
+      "creating": "Mencipta...",
+      "description": "Tugasan akan dicipta dalam direktori tasks/ pasukan dan muncul pada papan Kanban.",
+      "descriptionOptional": "Penerangan (pilihan)",
+      "detailsPlaceholder": "Butiran tugasan (menyokong markdown)",
+      "hideOptionalFields": "Sembunyi medan pilihan",
+      "offlineNotice": {
+        "after": "- lancarkan pasukan untuk memulakan pelaksanaan.",
+        "before": "Pasukan luar talian. Tugasan akan ditambah ke"
+      },
+      "promptOptional": "Prompt untuk penerima tugas (pilihan)",
+      "promptPlaceholder": "Arahan tersuai untuk ahli pasukan...",
+      "relatedOptional": "Tugasan berkaitan (pilihan)",
+      "relatedSummary": "Berkaitan: {{tasks}}",
+      "saved": "Disimpan",
+      "searchTasks": "Cari tugasan...",
+      "selectMember": "Pilih ahli",
+      "selectMemberOptional": "Pilih ahli...",
+      "showOptionalFields": "Tunjuk medan pilihan",
+      "startImmediately": "Mula serta-merta",
+      "startOfflineHint": "Pasukan luar talian. Lancarkan pasukan dahulu untuk memulakan tugasan serta-merta.",
+      "subject": "Subjek",
+      "subjectPlaceholder": "Apa yang perlu dilakukan?",
+      "title": "Cipta Tugasan",
+      "todo": "PERLU DIBUAT"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Disekat Oleh",
+        "blocks": "Menyekat",
+        "id": "ID",
+        "owner": "Pemilik",
+        "status": "Status",
+        "subject": "Subjek"
+      },
+      "empty": "Tiada tugasan dalam pasukan ini",
+      "filters": {
+        "allOwners": "Semua pemilik",
+        "allStatuses": "Semua status",
+        "ownerAria": "Tapis tugasan mengikut pemilik",
+        "statusAria": "Tapis tugasan mengikut status"
+      },
+      "showing": "Memaparkan {{shown}} daripada {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "Tugasan {{completed}}/{{total}} selesai",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "Tidak ditugaskan",
+    "teamPrefix": "Pasukan:",
+    "openTask": "Buka tugasan",
+    "deleteConfirm": {
+      "title": "Padam tugasan",
+      "message": "Alihkan tugasan #{{taskId}} ke tong sampah?",
+      "confirmLabel": "Padam",
+      "cancelLabel": "Batal"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Batal",
+      "closeEditor": "Tutup editor",
+      "closeTab": "Tutup tab",
+      "closeTooltip": "Tutup editor (Esc)",
+      "discard": "Buang",
+      "discardAndClose": "Buang & Tutup",
+      "keep": "Kekalkan",
+      "keepMine": "Kekalkan milik saya",
+      "keyboardShortcuts": "Pintasan papan kekunci",
+      "overwrite": "Tulis ganti",
+      "refreshAria": "Segar semula (F5)",
+      "refreshTooltip": "Segar semula status git (F5)",
+      "reload": "Muat semula",
+      "retry": "Cuba lagi",
+      "save": "Simpan",
+      "saveAllAndClose": "Simpan Semua & Tutup"
+    },
+    "ariaLabel": "Editor Projek",
+    "dialogs": {
+      "conflictDescription": "Fail telah diubah suai secara luaran sejak anda membukanya. Tulis ganti dengan perubahan anda?",
+      "conflictTitle": "Konflik Simpan",
+      "unsavedDescription": "Anda mempunyai perubahan yang belum disimpan. Apa yang anda ingin lakukan?",
+      "unsavedFileDescription": "Fail ini mempunyai perubahan yang belum disimpan. Apa yang anda ingin lakukan?",
+      "unsavedTitle": "Perubahan Belum Disimpan"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Nama tidak boleh kosong",
+        "invalidName": "Nama tidak sah",
+        "invalidCharacters": "Nama mengandungi aksara tidak sah",
+        "nameTooLong": "Nama terlalu panjang"
+      },
+      "placeholders": {
+        "fileName": "Nama fail...",
+        "folderName": "Nama folder..."
+      },
+      "aria": {
+        "newFileName": "Nama fail baharu",
+        "newFolderName": "Nama folder baharu"
+      }
+    },
+    "draftRecovered": "Memulihkan perubahan yang belum disimpan daripada sesi sebelumnya.",
+    "externalChange": {
+      "changed": "Fail ditukar pada cakera.",
+      "deleted": "Fail tidak lagi wujud pada cakera."
+    },
+    "saveFailed": "Penyimpanan gagal: {{error}}",
+    "sidebar": {
+      "explorer": "Penjelajah",
+      "hide": "Sembunyi bar sisi",
+      "hideWithShortcut": "Sembunyi bar sisi ({{shortcut}})",
+      "show": "Tunjuk bar sisi",
+      "showWithShortcut": "Tunjuk bar sisi ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Cari dalam Fail",
+      "closeSearch": "Tutup carian",
+      "closeSearchShortcut": "Tutup carian (Esc)",
+      "searchPlaceholder": "Cari...",
+      "matchCase": "Padan Huruf Besar/Kecil",
+      "matchCaseToggle": "Aa",
+      "noResults": "Tiada hasil ditemui",
+      "resultsSummary": "{{count}} padanan dalam {{fileCount}} fail",
+      "resultsSummary_one": "{{count}} padanan dalam {{fileCount}} fail",
+      "truncated": "(dipangkas)",
+      "resultsSummary_few": "{{count}} padanan dalam {{fileCount}} fail",
+      "resultsSummary_many": "{{count}} padanan dalam {{fileCount}} fail",
+      "resultsSummary_other": "{{count}} padanan dalam {{fileCount}} fail"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Gagal memuatkan fail: {{error}}",
+      "loading": "Memuatkan fail...",
+      "empty": "Tiada fail ditemui",
+      "dropForProjectRoot": "Lepaskan di sini untuk akar projek",
+      "moveToTrash": "Alih ke Tong Sampah",
+      "moveToTrashConfirm": "Alih \"{{name}}\" ke Tong Sampah?",
+      "cancel": "Batal"
+    },
+    "goToLine": {
+      "title": "Pergi ke Baris",
+      "position": "(semasa: {{current}}, jumlah: {{total}})",
+      "placeholder": "Nombor baris, +ofset, -ofset, atau %",
+      "go": "Pergi"
+    },
+    "searchPanel": {
+      "previousMatch": "Padanan Sebelumnya",
+      "nextMatch": "Padanan Seterusnya",
+      "close": "Tutup",
+      "replacePlaceholder": "Ganti",
+      "replace": "Ganti",
+      "replaceNext": "Ganti Seterusnya",
+      "all": "Semua",
+      "replaceAll": "Ganti Semua"
+    },
+    "statusBar": {
+      "position": "Brs {{line}}, Kol {{col}}",
+      "enableWatcher": "Dayakan pemantau fail",
+      "disableWatcher": "Lumpuhkan pemantau fail",
+      "watch": "pantau",
+      "watching": "memantau",
+      "watchExternalChanges": "Pantau perubahan luaran",
+      "disableExternalWatcher": "Lumpuhkan pemantau perubahan luaran",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Ruang: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Memuatkan pratonton...",
+      "openFullSize": "Buka pratonton saiz penuh",
+      "openSystemViewer": "Buka dalam Pemapar Sistem"
+    },
+    "quickOpen": {
+      "title": "Buka Pantas",
+      "searchPlaceholder": "Cari fail mengikut nama...",
+      "loading": "Memuatkan fail...",
+      "empty": "Tiada fail ditemui"
+    },
+    "errorBoundary": {
+      "crashed": "Editor terhempas",
+      "unknownError": "Ralat tidak diketahui"
+    },
+    "binaryPlaceholder": {
+      "file": "Fail binari ({{size}})"
+    },
+    "unsavedChanges": "Perubahan belum disimpan",
+    "empty": {
+      "selectFile": "Pilih fail daripada pohon untuk disunting"
+    },
+    "search": {
+      "toggleReplace": "Togol Ganti",
+      "placeholder": "Cari"
+    },
+    "shortcuts": {
+      "title": "Pintasan Papan Kekunci",
+      "groups": {
+        "fileOperations": "Operasi Fail",
+        "search": "Carian",
+        "navigation": "Navigasi",
+        "editing": "Penyuntingan",
+        "markdown": "Markdown",
+        "general": "Umum"
+      },
+      "actions": {
+        "quickOpen": "Buka Pantas",
+        "save": "Simpan",
+        "saveAll": "Simpan Semua",
+        "closeTab": "Tutup Tab",
+        "findInFile": "Cari dalam Fail",
+        "searchInFiles": "Cari dalam Fail",
+        "goToLine": "Pergi ke Baris",
+        "nextTab": "Tab Seterusnya",
+        "previousTab": "Tab Sebelumnya",
+        "cycleTabs": "Kitar Tab",
+        "toggleSidebar": "Togol Bar Sisi",
+        "undo": "Buat asal",
+        "redo": "Buat semula",
+        "selectNextMatch": "Pilih Padanan Seterusnya",
+        "toggleComment": "Togol Komen",
+        "splitPreview": "Pisah Pratonton",
+        "fullPreview": "Pratonton Penuh",
+        "closeEditor": "Tutup Editor"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Dayakan balut perkataan",
+      "disableWordWrap": "Lumpuhkan balut perkataan",
+      "closeSplitPreview": "Tutup pratonton pisah",
+      "closePreview": "Tutup pratonton"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Cipta Jadual",
+      "creating": "Mencipta...",
+      "goToDashboard": "Pergi ke Papan Pemuka",
+      "launchTeam": "Lancarkan pasukan",
+      "launching": "Melancarkan...",
+      "relaunchTeam": "Lancarkan semula pasukan",
+      "relaunching": "Melancarkan semula...",
+      "saveChanges": "Simpan Perubahan",
+      "saving": "Menyimpan..."
+    },
+    "billing": {
+      "prefix": "Bermula 15 Jun 2026, Anthropic mengenakan bil",
+      "readArticle": "Baca artikel Anthropic",
+      "suffix": "dan penggunaan Agent SDK daripada kredit Agent SDK bulanan, berasingan daripada had interaktif Claude Code. Kredit ditetapkan semula setiap kitaran pengebilan dan kredit yang tidak digunakan tidak dibawa ke hadapan."
+    },
+    "conflict": {
+      "description": "Menjalankan dua pasukan dalam direktori yang sama adalah berisiko - ia mungkin bercanggah menyunting fail yang sama. Pertimbangkan untuk menggunakan direktori berbeza atau worktree git untuk pengasingan.",
+      "title": "Pasukan lain \"{{team}}\" sudah berjalan untuk direktori kerja ini",
+      "workingDirectory": "Direktori kerja:"
+    },
+    "description": {
+      "createSchedule": "Jadualkan pelaksanaan tugasan Claude automatik",
+      "createScheduleForTeam": "Jadualkan larian automatik untuk pasukan \"{{team}}\"",
+      "editSchedule": "Menyunting jadual untuk pasukan \"{{team}}\"",
+      "launchPrefix": "Mulakan pasukan",
+      "launchSuffix": "melalui Claude CLI tempatan.",
+      "relaunchPrefix": "Hentikan larian semasa untuk",
+      "relaunchSuffix": "dan mulakannya semula melalui Claude CLI tempatan."
+    },
+    "prepare": {
+      "action": {
+        "launch": "lancar",
+        "relaunch": "lancar semula"
+      },
+      "blocked": "Persekitaran runtime tidak tersedia - {{action}} disekat",
+      "checkingProviders": "Menyemak pembekal yang dipilih...",
+      "failed": "Gagal menyediakan pembekal yang dipilih",
+      "preflight": "Semakan pra-terbang untuk menangkap ralat sebelum {{action}}",
+      "preparingEnvironment": "Menyediakan persekitaran...",
+      "ready": "Semua pembekal yang dipilih sedia.",
+      "readyWithNotes": "Semua pembekal yang dipilih sedia, dengan nota.",
+      "unsupportedPreload": "Versi preload semasa tidak menyokong team:prepareProvisioning. Mulakan semula aplikasi dev.",
+      "selectWorkingDirectory": "Pilih direktori kerja untuk mengesahkan persekitaran pelancaran.",
+      "someProvidersNeedAttention": "Sesetengah pembekal yang dipilih memerlukan perhatian."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "Prompt ini akan dihantar kepada",
+      "oneShotSuffix": "untuk pelaksanaan sekali sahaja",
+      "saved": "Disimpan",
+      "schedulePlaceholder": "Arahan untuk Claude laksanakan mengikut jadual...",
+      "teamLeadOptional": "Prompt untuk ketua pasukan (pilihan)",
+      "teamLeadPlaceholder": "Arahan untuk ketua pasukan..."
+    },
+    "providerChanged": "Pembekal ditukar daripada {{from}} kepada {{to}}. Sesi ketua sebelumnya tidak akan disambung semula, dan ketua akan bermula dengan konteks baharu supaya runtime baharu diterapkan dengan betul.",
+    "relaunchFreshSession": "Pelancaran semula pasukan memulakan sesi ketua yang baharu. Keadaan pasukan kekal, papan tugasan, dan konfigurasi ahli dihidrat semula ke dalam prompt pelancaran.",
+    "relaunchWarning": {
+      "description": "Menyimpan tetapan ini akan menghentikan proses pasukan semasa, mengekalkan senarai yang dikemas kini, dan melancarkan pasukan semula dengan runtime baharu.",
+      "title": "Pelancaran semula akan memulakan semula larian pasukan semasa"
+    },
+    "schedule": {
+      "labelOptional": "Label (pilihan)",
+      "labelPlaceholder": "cth., Semakan kod harian, Ujian malam...",
+      "maxBudgetUsd": "Belanjawan maksimum (USD)",
+      "maxTurns": "Giliran maksimum",
+      "noLimit": "Tiada had",
+      "noMatches": "Tiada pasukan sepadan dengan carian anda.",
+      "noTeams": "Tiada pasukan tersedia. Cipta pasukan dahulu.",
+      "searchTeams": "Cari pasukan...",
+      "selectTeam": "Pilih pasukan...",
+      "team": "Pasukan",
+      "title": "Jadual"
+    },
+    "title": {
+      "createSchedule": "Cipta Jadual",
+      "editSchedule": "Sunting Jadual",
+      "launch": "Lancarkan Pasukan",
+      "relaunch": "Lancarkan Semula Pasukan"
+    },
+    "errors": {
+      "loadProjectsFailed": "Gagal memuatkan projek",
+      "saveScheduleFailed": "Gagal menyimpan jadual",
+      "relaunchFailed": "Gagal melancarkan semula pasukan",
+      "launchFailed": "Gagal melancarkan pasukan"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "Ketua OpenCode memerlukan model yang dipilih.",
+      "openCodeTeammateRequired": "Ketua OpenCode memerlukan sekurang-kurangnya satu rakan pasukan OpenCode.",
+      "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
+      "fixMemberNames": "Betulkan nama ahli sebelum pelancaran",
+      "memberNamesUnique": "Nama ahli mesti unik sebelum pelancaran"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Tetapan pelancaran semula",
+      "title": "Tetapan pelancaran pilihan",
+      "relaunchDescription": "Semak senarai dan runtime ketua sebelum memulakan semula pasukan.",
+      "description": "Kekalkan aliran pelancaran fokus pada laluan projek dan kembangkan ini hanya apabila anda mahukan kawalan tambahan."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Salin pasukan",
+      "createTeam": "Cipta Pasukan",
+      "deleteForever": "Padam selama-lamanya",
+      "deletePermanently": "Padam secara kekal",
+      "deleteTeam": "Padam pasukan",
+      "launching": "Melancarkan...",
+      "launchTeam": "Lancarkan pasukan",
+      "relaunchTeam": "Lancarkan semula pasukan",
+      "restore": "Pulihkan",
+      "restoreTeam": "Pulihkan pasukan",
+      "retry": "Cuba lagi",
+      "stopTeam": "Hentikan pasukan",
+      "stopping": "Menghentikan..."
+    },
+    "electronOnly": {
+      "description": "Dalam mod pelayar, akses ke direktori `~/.claude/teams` tempatan tidak tersedia.",
+      "title": "Pasukan hanya tersedia dalam mod Electron"
+    },
+    "empty": {
+      "description": "Cipta pasukan di sini untuk bermula. Ia akan muncul dalam senarai secara automatik.",
+      "localOnly": "Penciptaan pasukan hanya tersedia dalam mod Electron tempatan.",
+      "title": "Tiada pasukan ditemui"
+    },
+    "filter": {
+      "clearAll": "Kosongkan semua",
+      "label": "Tapis pasukan",
+      "projectPriority": "Keutamaan projek",
+      "status": "Status"
+    },
+    "loadFailed": "Gagal memuatkan pasukan",
+    "loading": "Memuatkan pasukan...",
+    "localOnly": "Hanya tersedia dalam mod Electron tempatan.",
+    "membersCount": "Ahli: {{count}}",
+    "membersCount_few": "Ahli: {{count}}",
+    "membersCount_many": "Ahli: {{count}}",
+    "membersCount_one": "Ahli: {{count}}",
+    "membersCount_other": "Ahli: {{count}}",
+    "noDescription": "Tiada penerangan",
+    "noMatches": "Tiada pasukan sepadan dengan penapis semasa",
+    "partial": {
+      "pending": "Pelancaran terakhir masih diselaraskan.",
+      "skipped": "Pelancaran terakhir mempunyai rakan pasukan yang dilangkau.",
+      "skippedWithCount": "Pelancaran terakhir melangkau {{count}}/{{expected}} rakan pasukan.",
+      "skippedWithCount_few": "Pelancaran terakhir melangkau {{count}}/{{expected}} rakan pasukan.",
+      "skippedWithCount_many": "Pelancaran terakhir melangkau {{count}}/{{expected}} rakan pasukan.",
+      "skippedWithCount_one": "Pelancaran terakhir melangkau {{count}}/{{expected}} rakan pasukan.",
+      "skippedWithCount_other": "Pelancaran terakhir melangkau {{count}}/{{expected}} rakan pasukan.",
+      "stopped": "Pelancaran terakhir dihentikan sebelum semua rakan pasukan menyertai.",
+      "stoppedWithCount": "Pelancaran terakhir dihentikan sebelum {{count}}/{{expected}} rakan pasukan menyertai.",
+      "stoppedWithCount_few": "Pelancaran terakhir dihentikan sebelum {{count}}/{{expected}} rakan pasukan menyertai.",
+      "stoppedWithCount_many": "Pelancaran terakhir dihentikan sebelum {{count}}/{{expected}} rakan pasukan menyertai.",
+      "stoppedWithCount_one": "Pelancaran terakhir dihentikan sebelum {{count}}/{{expected}} rakan pasukan menyertai.",
+      "stoppedWithCount_other": "Pelancaran terakhir dihentikan sebelum {{count}}/{{expected}} rakan pasukan menyertai."
+    },
+    "searchPlaceholder": "Cari pasukan...",
+    "sections": {
+      "otherTeams": "Pasukan lain",
+      "projectTeams": "Pasukan untuk {{project}}",
+      "selectedProject": "projek yang dipilih"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktif",
+      "deleted": "Dipadam",
+      "launching": "Melancarkan...",
+      "offline": "Luar talian",
+      "partialFailure": "Pelancaran gagal di pertengahan",
+      "partialPending": "Bootstrap tertangguh",
+      "partialSkipped": "Pelancaran melangkau ahli",
+      "running": "Berjalan"
+    },
+    "title": "Pilih Pasukan",
+    "trash": "Tong Sampah ({{count}})",
+    "trash_few": "Tong Sampah ({{count}})",
+    "trash_many": "Tong Sampah ({{count}})",
+    "trash_one": "Tong Sampah ({{count}})",
+    "trash_other": "Tong Sampah ({{count}})",
+    "deleteDraft": {
+      "title": "Padam draf",
+      "message": "Padam pasukan draf \"{{teamName}}\"? Ini tidak boleh dibuat asal.",
+      "confirmLabel": "Padam",
+      "cancelLabel": "Batal"
+    },
+    "moveToTrash": {
+      "title": "Alih ke tong sampah",
+      "message": "Alih pasukan \"{{teamName}}\" ke tong sampah? Anda boleh memulihkannya kemudian.",
+      "confirmLabel": "Alih ke tong sampah",
+      "cancelLabel": "Batal"
+    },
+    "deleteForever": {
+      "title": "Padam secara kekal",
+      "message": "Padam pasukan \"{{teamName}}\" secara kekal? Semua data akan hilang.",
+      "confirmLabel": "Padam selama-lamanya",
+      "cancelLabel": "Batal"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Petua: Mesej merentas pasukan pergi ke ketua pasukan sasaran. Jika anda mahu balasan kembali kepada ketua pasukan anda dan bukannya anda, nyatakannya secara eksplisit dalam mesej."
+    },
+    "attachments": {
+      "attachFiles": "Lampirkan fail (tampal atau seret & lepas)",
+      "unavailable": "Lampiran tidak tersedia",
+      "disabledHint": "Lampiran fail disokong untuk ketua pasukan dalam talian dan rakan pasukan OpenCode dalam talian. Buang lampiran atau tukar penerima.",
+      "restrictions": {
+        "crossTeam": "Lampiran fail tidak disokong untuk mesej merentas pasukan",
+        "teamOffline": "Pasukan mesti dalam talian untuk melampirkan fail",
+        "unsupportedRecipient": "Fail boleh dihantar kepada ketua pasukan atau rakan pasukan OpenCode",
+        "openCodeOffline": "Pasukan mesti dalam talian untuk melampirkan fail bagi rakan pasukan OpenCode",
+        "sending": "Tunggu mesej semasa selesai dihantar sebelum menambah fail",
+        "maximumReached": "Lampiran maksimum dicapai",
+        "leadOnly": "Fail hanya boleh dihantar kepada ketua pasukan"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Arahan slash memerlukan ketua pasukan langsung dan tidak boleh dihantar dengan lampiran",
+        "crossTeam": "Arahan slash hanya boleh dijalankan pada ketua pasukan semasa",
+        "notLead": "Arahan slash hanya boleh dihantar kepada ketua pasukan",
+        "leadOffline": "Arahan slash memerlukan ketua pasukan dalam talian"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Menggunakan semula permintaan merentas pasukan terkini",
+      "teamOffline": "Pasukan luar talian"
+    },
+    "revision": {
+      "editing": "Menyunting mesej sebelumnya",
+      "cancel": "Batal",
+      "tooltip": "Minta agen mengabaikan mesej sebelumnya dan memulihkannya ke penggubah."
+    },
+    "input": {
+      "charsLeft": "{{count}} aksara berbaki",
+      "charsLeft_one": "{{count}} aksara berbaki",
+      "charsLeft_other": "{{count}} aksara berbaki",
+      "teamLaunchingPlaceholder": "Pasukan sedang dilancarkan... mesej akan dibaris gilir untuk penghantaran peti masuk.",
+      "crossTeamPlaceholder": "Mesej merentas pasukan ke {{team}}...",
+      "teamFallback": "pasukan",
+      "placeholder": "Tulis mesej... (Enter untuk hantar, Shift+Enter untuk baris baharu)",
+      "slashTip": "Petua: Anda boleh gunakan \"/\" untuk menjalankan sebarang arahan Claude.",
+      "charsLeft_few": "{{count}} aksara berbaki",
+      "charsLeft_many": "{{count}} aksara berbaki"
+    },
+    "teamSelector": {
+      "thisTeam": "Pasukan ini",
+      "current": "semasa",
+      "online": "dalam talian",
+      "offline": "luar talian",
+      "onlineTitle": "Dalam talian",
+      "offlineTitle": "Luar talian"
+    },
+    "recipient": {
+      "select": "Pilih...",
+      "searchPlaceholder": "Cari...",
+      "noResults": "Tiada hasil"
+    },
+    "actions": {
+      "voiceToText": "Suara ke teks",
+      "send": "Hantar",
+      "sendingUnavailableLaunching": "Penghantaran tidak tersedia semasa pasukan sedang dilancarkan"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Tapis log",
+      "tooltip": "Tapis log",
+      "sections": {
+        "stream": "Strim",
+        "content": "Kandungan"
+      },
+      "kinds": {
+        "output": "Output",
+        "thinking": "Pemikiran",
+        "tool": "Panggilan alat"
+      },
+      "actions": {
+        "reset": "Tetap semula",
+        "save": "Simpan"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} baris mentah",
+    "rawLineCount_one": "{{formattedCount}} baris mentah",
+    "rawLinesCaptured": "{{count}} ditangkap",
+    "emptyRawLogs": "{{count}}; tiada yang merupakan output pembantu/alat lagi.",
+    "noLogsYet": "Belum ada log.",
+    "teamNotRunning": "Pasukan tidak berjalan.",
+    "searchPlaceholder": "Cari log...",
+    "clearSearch": "Kosongkan carian",
+    "newCount": "+{{count}} baharu",
+    "loading": "Memuatkan...",
+    "showMore": "Tunjuk lebih banyak",
+    "noLogsCaptured": "Tiada log ditangkap.",
+    "noMatchingLogs": "Tiada log yang sepadan.",
+    "rawLineCount_few": "{{formattedCount}} baris mentah",
+    "rawLineCount_many": "{{formattedCount}} baris mentah",
+    "rawLineCount_other": "{{formattedCount}} baris mentah",
+    "openFullscreen": "Buka log skrin penuh",
+    "fullscreen": "Skrin penuh",
+    "viewingFullscreen": "Melihat dalam mod skrin penuh",
+    "logsTitle": "Log",
+    "sourceSelect": {
+      "placeholder": "Pilih sumber log...",
+      "searchPlaceholder": "Cari sumber log...",
+      "emptyMessage": "Tiada sumber log ditemui.",
+      "ariaLabel": "Sumber log",
+      "leadLabel": "Ketua",
+      "selectSourceEmpty": "Pilih sumber log.",
+      "leadDescription": "Ketua Pasukan",
+      "removedLabel": "dibuang",
+      "removedDescription": "Dibuang"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Pasukan luaran",
+      "process": {
+        "startedBy": "Dimulakan oleh:",
+        "at": "Pada:",
+        "openUrl": "Buka URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Tugasan tersembunyi",
+        "empty": "Tiada tugasan tersembunyi tersedia."
+      },
+      "member": {
+        "lead": "Ketua",
+        "workingOn": "sedang mengerjakan",
+        "recentTools": "Alat terkini",
+        "spawn": {
+          "waitingToStart": "menunggu untuk bermula",
+          "starting": "memulakan",
+          "failed": "gagal"
+        },
+        "state": {
+          "active": "aktif",
+          "idle": "melahu",
+          "offline": "luar talian",
+          "runningTool": "menjalankan alat"
+        },
+        "activeTool": {
+          "running": "Menjalankan alat",
+          "failed": "Alat gagal",
+          "finished": "Alat selesai"
+        },
+        "actions": {
+          "message": "Mesej",
+          "profile": "Profil",
+          "task": "Tugasan"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Log",
+      "loading": "Memuatkan log",
+      "more": "+{{count}} lagi",
+      "more_one": "+{{count}} lagi",
+      "more_other": "+{{count}} lagi",
+      "more_few": "+{{count}} lagi",
+      "more_many": "+{{count}} lagi",
+      "unsupportedProvider": "Pembekal tidak disokong",
+      "openCodeLogsDelayed": "Log OpenCode ditangguhkan",
+      "logsUnavailable": "Log tidak tersedia",
+      "noRecentLogs": "Tiada log terkini",
+      "toolError": "Ralat alat",
+      "toolResult": "Hasil alat",
+      "toolUse": "Penggunaan alat",
+      "thinking": "Pemikiran",
+      "error": "Ralat",
+      "logEvent": "Peristiwa log",
+      "noErrorOutput": "Tiada output ralat",
+      "noOutput": "Tiada output",
+      "noInput": "Tiada input"
+    },
+    "blockingEdge": {
+      "title": "Kebergantungan Menyekat",
+      "blocks": "menyekat",
+      "close": "Tutup",
+      "blockingHiddenTasks": "Tugasan tersembunyi yang menyekat",
+      "blockedHiddenTasks": "Tugasan tersembunyi yang disekat",
+      "links_one": "{{count}} pautan",
+      "links_other": "{{count}} pautan",
+      "hiddenBlockingLinks_one": "{{count}} pautan menyekat tersembunyi",
+      "hiddenBlockingLinks_other": "{{count}} pautan menyekat tersembunyi",
+      "hiddenTaskStack": "Tindanan tugasan tersembunyi",
+      "hiddenTasks_one": "{{count}} tugasan tersembunyi",
+      "hiddenTasks_other": "{{count}} tugasan tersembunyi",
+      "task": "Tugasan",
+      "openBlockerStack": "Buka tindanan penyekat",
+      "openBlockedStack": "Buka tindanan disekat",
+      "openBlockerTask": "Buka tugasan penyekat",
+      "openBlockedTask": "Buka tugasan disekat"
+    },
+    "activityHud": {
+      "activity": "Aktiviti",
+      "noRecentActivity": "Tiada aktiviti terkini",
+      "more": "+{{count}} lagi",
+      "more_one": "+{{count}} lagi",
+      "more_other": "+{{count}} lagi",
+      "more_few": "+{{count}} lagi",
+      "more_many": "+{{count}} lagi"
+    },
+    "provisioning": {
+      "launchDetails": "Butiran pelancaran",
+      "launchDetailsDescription": "Kemajuan pelancaran pasukan terperinci, output langsung dan log CLI."
+    }
+  },
+  "projectPath": {
+    "label": "Projek",
+    "source": {
+      "claude": "Ditemui oleh Claude",
+      "codex": "Ditemui oleh Codex",
+      "mixed": "Ditemui oleh Claude dan Codex"
+    },
+    "deleted": {
+      "title": "Folder projek tidak lagi wujud",
+      "label": "Dipadam"
+    },
+    "mode": {
+      "projectList": "Daripada senarai projek",
+      "customPath": "Laluan tersuai"
+    },
+    "loadingProjects": "Memuatkan projek...",
+    "selectProject": "Pilih projek...",
+    "searchPlaceholder": "Cari projek mengikut nama atau laluan",
+    "empty": "Tiada apa-apa ditemui",
+    "selectFromList": "Pilih projek daripada senarai",
+    "noProjects": "Tiada projek ditemui, beralih ke laluan tersuai.",
+    "customWorkingDirectory": "Direktori kerja tersuai",
+    "browse": "Layari",
+    "createAutomatically": "Jika direktori tidak wujud, ia akan dicipta secara automatik."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Beban runtime tempatan",
+      "description": "Proses induk dan anak sahaja. Inferens LLM jauh tidak disertakan.",
+      "cpu": "CPU",
+      "memory": "Memori",
+      "summedRss": "RSS terjumlah",
+      "sharedHost": "Metrik hos OpenCode dikongsi. Ia tidak eksklusif kepada ahli ini.",
+      "processTreeCapped": "Pohon proses dihadkan untuk sampel ini.",
+      "rssHint": "RSS boleh termasuk halaman yang dikongsi, jadi ia paling baik dibaca sebagai isyarat beban, bukan memori eksklusif."
+    },
+    "editor": {
+      "title": "Ahli",
+      "addMember": "Tambah ahli",
+      "editAsJson": "Sunting sebagai JSON",
+      "runInSeparateWorktrees": "Jalankan rakan pasukan dalam worktree berasingan",
+      "agentTeamsMcpOnly": "Agent Teams MCP sahaja",
+      "removedCount": "Dibuang ({{count}})",
+      "removedModelLockReason": "Ahli yang dibuang dikekalkan untuk sejarah padam lembut. Pulihkan mereka untuk menyunting tetapan.",
+      "memberNamesUnique": "Nama ahli mesti unik"
+    },
+    "stats": {
+      "computing": "Mengira statistik...",
+      "empty": "Tiada statistik tersedia",
+      "lines": "Baris",
+      "linesInfo": "Anggaran. Tepat untuk alat Edit dan Write. Penulisan fail Bash dianggarkan daripada corak arahan (heredoc, echo, sed) dan mungkin kurang dilaporkan.",
+      "files": "Fail",
+      "toolCalls": "Panggilan Alat",
+      "tokens": "Token",
+      "toolUsage": "Penggunaan Alat",
+      "filesTouched": "Fail Disentuh ({{count}})",
+      "viewAllChanges": "Lihat Semua Perubahan",
+      "showLess": "Tunjuk kurang",
+      "moreFiles": "+{{count}} lagi",
+      "footer": "{{count}} sesi · dikira {{computedAgo}}",
+      "footer_one": "{{count}} sesi · dikira {{computedAgo}}",
+      "footer_few": "{{count}} sesi · dikira {{computedAgo}}",
+      "footer_many": "{{count}} sesi · dikira {{computedAgo}}",
+      "footer_other": "{{count}} sesi · dikira {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Mencari log...",
+      "empty": "Tiada log ditemui",
+      "waitingForTaskActivity": "Tugasan sedang dijalankan - menunggu aktiviti sesi (menyegar auto)...",
+      "noTaskActivity": "Belum ada aktiviti sesi untuk tugasan ini",
+      "noMemberActivity": "Ahli ini belum mempunyai aktiviti sesi yang direkodkan",
+      "leadSessionTooltip": "Log sesi ketua pasukan penuh - berguna untuk konteks orkestrasi global, tidak khusus untuk agen ini",
+      "memberSessionTooltip": "Log sesi rakan pasukan kekal penuh - berguna apabila kerja berjalan dalam sesi ahli akar dan bukannya fail subagen",
+      "startedAt": "dimulakan {{time}}",
+      "active": "aktif",
+      "showDetails": "Tunjuk butiran",
+      "hideDetails": "Sembunyi butiran",
+      "loadingDetails": "Memuatkan butiran...",
+      "failedToLoadDetails": "Gagal memuatkan butiran"
+    },
+    "detail": {
+      "relaunchOpenCode": "Lancarkan semula OpenCode",
+      "restart": "Mulakan semula",
+      "legacyLogsFallback": "Sandaran Log Legasi",
+      "copyDiagnostics": "Salin diagnostik",
+      "pid": "PID {{pid}}",
+      "removedAt": "Dibuang {{date}}",
+      "failedToRestartMember": "Gagal memulakan semula ahli",
+      "sendMessage": "Hantar Mesej",
+      "assignTask": "Tugaskan Tugasan",
+      "remove": "Buang"
+    },
+    "list": {
+      "loading": "Memuatkan ahli pasukan",
+      "unavailable": "Senarai ahli tidak tersedia",
+      "unavailableDescription": "{{count}} rakan pasukan diketahui daripada metadata pasukan, tetapi butiran senarai hilang.",
+      "unavailableDescription_one": "{{count}} rakan pasukan diketahui daripada metadata pasukan, tetapi butiran senarai hilang.",
+      "soloLeadOnly": "Pasukan solo - ketua sahaja",
+      "removedCount": "Dibuang ({{count}})",
+      "unavailableDescription_few": "{{count}} rakan pasukan diketahui daripada metadata pasukan, tetapi butiran senarai hilang.",
+      "unavailableDescription_many": "{{count}} rakan pasukan diketahui daripada metadata pasukan, tetapi butiran senarai hilang.",
+      "unavailableDescription_other": "{{count}} rakan pasukan diketahui daripada metadata pasukan, tetapi butiran senarai hilang."
+    },
+    "executionLog": {
+      "empty": "Tiada apa-apa untuk dipaparkan",
+      "emptyUserMessage": "{{time}} - (kosong)",
+      "agentInstructions": "Arahan agen",
+      "memberTurn": "Giliran {{member}}",
+      "agentTurn": "Giliran agen",
+      "turn": "giliran"
+    },
+    "recentMessages": {
+      "latest": "Mesej terkini",
+      "latestForMember": "Mesej terkini - {{member}}",
+      "loadMore": "Muat lagi",
+      "expand": "Kembangkan",
+      "collapse": "Runtuhkan"
+    },
+    "leadModel": {
+      "defaultModel": "Lalai",
+      "providerModelAria": "Pembekal {{provider}}, {{model}}",
+      "leadShort": "ketua",
+      "teamLead": "Ketua Pasukan",
+      "syncWithTeammates": "Segerakkan model dengan rakan pasukan",
+      "anthropicTeamWide": "Anthropic seluruh pasukan",
+      "runtimeInheritance": "Runtime ketua terpakai kepada rakan pasukan melainkan mereka menetapkan pembekal atau model sendiri.",
+      "anthropicContextLimit": "Had konteks 200K adalah seluruh pasukan untuk runtime Anthropic dalam pelancaran ini, termasuk rakan pasukan Anthropic tersuai."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Segar auto",
+      "wrapLines": "Balut baris",
+      "loadingTail": "Memuatkan ekor log proses...",
+      "empty": "Belum ada fail log proses ditangkap untuk ahli ini.",
+      "copy": "Salin",
+      "fileEmpty": "Fail log proses kosong.",
+      "showingLast": "Memaparkan {{bytes}} terakhir.",
+      "showing": "Memaparkan {{bytes}}."
+    },
+    "tasks": {
+      "empty": "Tiada tugasan ditugaskan kepada ahli ini"
+    },
+    "messages": {
+      "loadOlder": "Muat mesej lebih lama",
+      "filters": {
+        "all": "Semua",
+        "messages": "Mesej",
+        "comments": "Komen"
+      },
+      "empty": {
+        "loading": "Memuatkan aktiviti...",
+        "noComments": "Tiada komen untuk ahli ini",
+        "noLoadedMessages": "Belum ada mesej dimuatkan untuk ahli ini",
+        "noMessages": "Tiada mesej dengan ahli ini",
+        "noLoadedActivity": "Belum ada aktiviti dimuatkan untuk ahli ini",
+        "noActivity": "Tiada aktiviti dengan ahli ini"
+      }
+    },
+    "actions": {
+      "openProfile": "Buka profil",
+      "editRole": "Sunting peranan",
+      "sendMessage": "Hantar mesej",
+      "assignTask": "Tugaskan tugasan"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Masukkan peranan tersuai..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} jadual",
+    "count_one": "{{count}} jadual",
+    "count_other": "{{count}} jadual",
+    "nextRun": "Seterusnya: {{next}}",
+    "actions": {
+      "runNow": "Jalankan sekarang",
+      "edit": "Sunting",
+      "pause": "Jeda",
+      "resume": "Sambung semula",
+      "delete": "Padam",
+      "addSchedule": "Tambah Jadual"
+    },
+    "runHistory": {
+      "loading": "Memuatkan sejarah larian...",
+      "empty": "Belum ada larian"
+    },
+    "count_few": "{{count}} jadual",
+    "count_many": "{{count}} jadual",
+    "runLog": {
+      "title": "Log Larian",
+      "exitCode": "keluar {{code}}",
+      "retryCount": "cuba semula {{count}}/{{max}}",
+      "stillRunning": "Tugasan masih berjalan...",
+      "loadingLogs": "Memuatkan log...",
+      "errors": "Ralat",
+      "close": "Tutup"
+    },
+    "cron": {
+      "expression": "Ungkapan cron",
+      "highFrequencyWarning": "Jadual frekuensi tinggi (selang kurang daripada 5 minit)",
+      "nextRuns": "Larian seterusnya:",
+      "timezone": "Zon waktu",
+      "selectTimezone": "Pilih zon waktu",
+      "warmUpTime": "Masa pemanasan",
+      "warmUpDescription": "Menyediakan pembekal yang dipilih sebelum pelaksanaan berjadual",
+      "errors": {
+        "enterExpression": "Masukkan ungkapan cron",
+        "invalidExpression": "Ungkapan cron tidak sah"
+      },
+      "presets": {
+        "everyHour": "Setiap jam",
+        "everySixHours": "Setiap 6 jam",
+        "dailyAtNine": "Setiap hari pada 9 pagi",
+        "weekdaysAtNine": "Hari bekerja pada 9 pagi",
+        "mondayAtNine": "Isnin pada 9 pagi",
+        "everyThirtyMinutes": "Setiap 30 minit"
+      },
+      "warmUpOptions": {
+        "none": "Tiada pemanasan",
+        "fiveMinutes": "5 minit",
+        "tenMinutes": "10 minit",
+        "fifteenMinutes": "15 minit",
+        "thirtyMinutes": "30 minit"
+      }
+    },
+    "empty": {
+      "title": "Belum ada jadual",
+      "description": "Cipta jadual untuk menjalankan tugasan Claude secara automatik mengikut jadual cron."
+    },
+    "title": "Jadual",
+    "status": {
+      "active": "Aktif",
+      "paused": "Dijeda",
+      "disabled": "Dilumpuhkan"
+    },
+    "runStatus": {
+      "pending": "Tertangguh",
+      "warmingUp": "Memanaskan",
+      "warm": "Panas",
+      "running": "Berjalan",
+      "completed": "Selesai",
+      "failed": "Gagal",
+      "interrupted": "Terganggu",
+      "cancelled": "Dibatalkan"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Model OpenCode tempatan boleh menggunakan belanjawan konteks OpenCode dan bukannya had prompt sahaja.",
+    "description": "Tambah had yang sepadan kepada konfigurasi OpenCode untuk pembekal dan model yang digunakan oleh rakan pasukan ini. Ini membantu OpenCode memampatkan dan mencantas sebelum model tempatan melimpahi tetingkap konteks mereka.",
+    "replacePrefix": "Gantikan",
+    "and": "dan",
+    "replaceSuffix": "dengan ID pembekal dan model daripada persediaan OpenCode anda. Arahan prompt seperti",
+    "promptInstructionsSuffix": "adalah lebih lemah kerana permintaan dihimpunkan sebelum model membacanya.",
+    "providerLimits": "Had pembekal",
+    "compactionConfig": "Konfigurasi pemampatan"
+  },
+  "sessions": {
+    "noProjectPath": "Tiada laluan projek dipaut",
+    "provisioningHint": "Sesi akan muncul selepas peruntukan pasukan",
+    "projectNotFound": "Projek tidak ditemui",
+    "loading": "Memuatkan sesi...",
+    "empty": "Tiada sesi ditemui",
+    "showAllSessions": "Tunjuk untuk semua sesi",
+    "lead": "ketua",
+    "removeFilter": "Buang penapis",
+    "filterBySession": "Tapis mengikut sesi ini",
+    "openSession": "Buka sesi",
+    "title": "Sesi"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Batal",
+    "moreWarningsHidden": "{{count}} amaran lagi disembunyikan",
+    "diagnostics": "Diagnostik",
+    "liveOutput": "Output langsung",
+    "diagnosticsCopied": "Diagnostik disalin",
+    "copyDiagnostics": "Salin diagnostik",
+    "copied": "Disalin",
+    "noOutput": "Belum ada output ditangkap.",
+    "cliLogs": "Log CLI",
+    "steps": {
+      "starting": "Memulakan",
+      "configuring": "Persediaan pasukan",
+      "assembling": "Ahli menyertai",
+      "finalizing": "Memuktamadkan"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "menyemak...",
+        "ready": "OK",
+        "notes": "OK (nota)",
+        "failed": "ERR",
+        "pending": "menunggu"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Binari CLI hilang",
+        "openCodeRuntimeMissing": "Runtime OpenCode hilang",
+        "openCodeWindowsAccessBlocked": "Akses Windows OpenCode disekat",
+        "openCodeNoOutput": "Semakan runtime OpenCode tidak mengembalikan output",
+        "openCodeMcpUnreachable": "MCP aplikasi OpenCode tidak dapat dicapai",
+        "workingDirectoryMissing": "Direktori kerja hilang",
+        "cliBinaryCouldNotStart": "Binari CLI tidak dapat dimulakan",
+        "cliPreflightIncomplete": "Pra-terbang CLI tidak selesai",
+        "authenticationRequired": "Pengesahan diperlukan",
+        "runtimeProviderNotConfigured": "Pembekal runtime tidak dikonfigurasi",
+        "cliPreflightFailed": "Pra-terbang CLI gagal",
+        "selectedModelCompatible": "Model yang dipilih serasi",
+        "selectedModelCompatibilityPending": "Keserasian model yang dipilih tertangguh",
+        "selectedModelAvailable": "Model yang dipilih tersedia",
+        "selectedModelVerified": "Model yang dipilih disahkan",
+        "selectedModelUnavailable": "Model yang dipilih tidak tersedia",
+        "selectedModelTimedOut": "Pengesahan model yang dipilih tamat masa",
+        "selectedModelCheckFailed": "Semakan model yang dipilih gagal",
+        "selectedModelDeferred": "Pengesahan model yang dipilih ditangguhkan",
+        "selectedModelPingNotConfirmed": "Ping model yang dipilih tidak disahkan",
+        "readyWithNotes": "Sedia dengan nota",
+        "needsAttention": "Perlu perhatian"
+      },
+      "modelChecksSummary": "Semakan model yang dipilih - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model tidak tersedia",
+        "unavailable_one": "{{count}} model tidak tersedia",
+        "unavailable_other": "{{count}} model tidak tersedia",
+        "checkFailed": "{{count}} semakan model gagal",
+        "checkFailed_one": "{{count}} semakan model gagal",
+        "checkFailed_other": "{{count}} semakan model gagal",
+        "timedOut": "{{count}} model tamat masa",
+        "timedOut_one": "{{count}} model tamat masa",
+        "timedOut_other": "{{count}} model tamat masa",
+        "deferred": "{{count}} pengesahan ditangguhkan",
+        "deferred_one": "{{count}} pengesahan ditangguhkan",
+        "deferred_other": "{{count}} pengesahan ditangguhkan",
+        "pingNotConfirmed": "{{count}} ping tidak disahkan",
+        "pingNotConfirmed_one": "{{count}} ping tidak disahkan",
+        "pingNotConfirmed_other": "{{count}} ping tidak disahkan",
+        "compatibilityPending": "{{count}} serasi, pengesahan mendalam tertangguh",
+        "compatibilityPending_one": "{{count}} serasi, pengesahan mendalam tertangguh",
+        "compatibilityPending_other": "{{count}} serasi, pengesahan mendalam tertangguh",
+        "compatible": "{{count}} serasi",
+        "compatible_one": "{{count}} serasi",
+        "compatible_other": "{{count}} serasi",
+        "checking": "{{count}} menyemak",
+        "checking_one": "{{count}} menyemak",
+        "checking_other": "{{count}} menyemak",
+        "available": "{{count}} tersedia",
+        "available_one": "{{count}} tersedia",
+        "available_other": "{{count}} tersedia",
+        "verified": "{{count}} disahkan",
+        "verified_one": "{{count}} disahkan",
+        "verified_other": "{{count}} disahkan",
+        "unavailable_few": "{{count}} model tidak tersedia",
+        "unavailable_many": "{{count}} model tidak tersedia",
+        "checkFailed_few": "{{count}} semakan model gagal",
+        "checkFailed_many": "{{count}} semakan model gagal",
+        "timedOut_few": "{{count}} model tamat masa",
+        "timedOut_many": "{{count}} model tamat masa",
+        "deferred_few": "{{count}} pengesahan ditangguhkan",
+        "deferred_many": "{{count}} pengesahan ditangguhkan",
+        "pingNotConfirmed_few": "{{count}} ping tidak disahkan",
+        "pingNotConfirmed_many": "{{count}} ping tidak disahkan",
+        "compatibilityPending_few": "{{count}} serasi, pengesahan mendalam tertangguh",
+        "compatibilityPending_many": "{{count}} serasi, pengesahan mendalam tertangguh",
+        "compatible_few": "{{count}} serasi",
+        "compatible_many": "{{count}} serasi",
+        "checking_few": "{{count}} menyemak",
+        "checking_many": "{{count}} menyemak",
+        "available_few": "{{count}} tersedia",
+        "available_many": "{{count}} tersedia",
+        "verified_few": "{{count}} disahkan",
+        "verified_many": "{{count}} disahkan"
+      },
+      "openProviderSettings": "Buka tetapan {{provider}}",
+      "copied": "Disalin",
+      "copyDiagnostics": "Salin diagnostik",
+      "deepVerificationPending": "Pengesahan mendalam masih berjalan. Model OpenCode percuma mungkin mengambil masa sekitar 20 saat.",
+      "progress": {
+        "checkingSelectedProviders": "Menyemak pembekal yang dipilih secara selari...",
+        "checkingProvider": "Menyemak pembekal {{provider}}...",
+        "checkingProviders": "Menyemak pembekal {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Betulkan kebenaran folder atau alihkan projek ke folder yang boleh ditulis pengguna. Berjalan sebagai pentadbir hanyalah penyelesaian sementara.",
+        "openCodeBridgeNoOutput": "Mulakan semula aplikasi dan runtime OpenCode, kemudian cuba lagi. Jika berulang, salin diagnostik.",
+        "workingDirectoryMissing": "Pilih direktori kerja yang wujud, kemudian buka semula dialog ini.",
+        "authenticationRequired": "Sahkan pembekal yang diperlukan dalam Claude CLI, kemudian buka semula dialog ini.",
+        "runtimeProviderNotConfigured": "Konfigurasikan runtime pembekal yang dipilih, kemudian buka semula dialog ini.",
+        "openCodeRuntimeMissing": "Pasang atau cuba semula runtime OpenCode daripada kad status pembekal, kemudian buka semula dialog ini.",
+        "openCodeAppMcpUnreachable": "Cuba lancarkan semula untuk menyegarkan jambatan MCP aplikasi OpenCode. Jika berulang, mulakan semula aplikasi dan runtime OpenCode.",
+        "cliBinaryMissing": "Pastikan binari Claude CLI tempatan wujud dan boleh dimulakan, kemudian buka semula dialog ini.",
+        "default": "Selesaikan isu di atas, kemudian buka semula dialog ini.",
+        "openCodeNodeModulesSymlinkPermission": "Jalankan Agent Teams AI sebagai Pentadbir, kemudian cuba lancarkan semula."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} rakan pasukan menunggu kelulusan kebenaran",
+      "nameListWithMore": "{{names}}, +{{count}} lagi",
+      "waitingForOpenCode": "Menunggu OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap tergendala: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Menunggu OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap tergendala",
+        "shellOnly": "Shell sahaja",
+        "waitingForBootstrap": "Menunggu bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap tidak disahkan",
+        "awaitingPermission": "Menunggu kebenaran",
+        "waitingForRuntime": "Menunggu runtime",
+        "shellOnlyLower": "shell sahaja",
+        "waitingForBootstrapLower": "menunggu bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap tidak disahkan",
+        "awaitingPermissionLower": "menunggu kebenaran",
+        "waitingForRuntimeLower": "menunggu runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} gagal dimulakan",
+        "teammatesFailedToStart": "{{count}} rakan pasukan gagal dimulakan",
+        "teammatesFailedRatio": "{{count}}/{{total}} rakan pasukan gagal dimulakan"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} dilangkau untuk pelancaran ini",
+        "memberSkippedWithReason": "{{name}} dilangkau untuk pelancaran ini - {{reason}}",
+        "memberSkippedCompact": "{{name}} dilangkau",
+        "teammatesSkipped": "{{count}} rakan pasukan dilangkau",
+        "teammatesSkippedList": "Rakan pasukan dilangkau: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} rakan pasukan dilangkau untuk pelancaran ini"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} rakan pasukan masih menyertai",
+        "teammatesStillJoining_one": "{{count}} rakan pasukan masih menyertai",
+        "teammatesStillJoining_few": "{{count}} rakan pasukan masih menyertai",
+        "teammatesStillJoining_many": "{{count}} rakan pasukan masih menyertai",
+        "teammatesStillJoining_other": "{{count}} rakan pasukan masih menyertai",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} rakan pasukan disahkan"
+      },
+      "ready": {
+        "leadOnline": "Ketua dalam talian",
+        "allTeammatesJoined": "Semua {{count}} rakan pasukan menyertai",
+        "teamProvisionedLeadOnline": "Pasukan diperuntukkan - ketua dalam talian",
+        "teamProvisionedAllJoined": "Pasukan diperuntukkan - semua {{count}} rakan pasukan menyertai",
+        "teamProvisionedStillJoining": "Pasukan diperuntukkan - rakan pasukan masih menyertai",
+        "launchFinishedWithErrors": "Pelancaran selesai dengan ralat - {{count}}/{{total}} rakan pasukan gagal dimulakan",
+        "launchContinuedSkipped": "Pelancaran diteruskan - {{count}}/{{total}} rakan pasukan dilangkau",
+        "teamLaunchedLeadOnline": "Pasukan dilancarkan - ketua dalam talian",
+        "teamLaunchedAllJoined": "Pasukan dilancarkan - semua {{count}} rakan pasukan menyertai"
+      },
+      "panel": {
+        "launchFailed": "Pelancaran gagal",
+        "launchDetails": "Butiran pelancaran",
+        "launchFinishedWithErrors": "Pelancaran selesai dengan ralat",
+        "launchContinuedSkipped": "Pelancaran diteruskan dengan rakan pasukan dilangkau",
+        "coreTeamReady": "Pasukan teras sedia",
+        "finishingLaunch": "Menyelesaikan pelancaran",
+        "teamLaunched": "Pasukan dilancarkan",
+        "launchingTeam": "Melancarkan pasukan"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Status runtime langsung",
+    "description": "Degupan jantung dan keadaan pelancaran paparan sahaja. Kawalan proses kekal di bawah.",
+    "source": "sumber: {{source}}",
+    "lane": "lorong {{lane}}",
+    "diagnosticOnly": "Diagnostik sahaja",
+    "updated": "dikemas kini {{value}}",
+    "states": {
+      "running": "Berjalan",
+      "starting": "Memulakan",
+      "waiting": "Menunggu",
+      "degraded": "Perlu perhatian",
+      "stopped": "Dihentikan",
+      "unknown": "Tidak diketahui"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Log Tugasan Tepat",
+      "loading": "Memuatkan log tugasan tepat...",
+      "description": "Hirisan transkrip tepat dirender dengan komponen log pelaksanaan yang sama digunakan dalam Log.",
+      "emptyTitle": "Belum ada log tugasan tepat",
+      "emptyDescription": "Himpunan transkrip tepat akan muncul di sini apabila metadata transkrip terpaut tugasan eksplisit tersedia.",
+      "summaryOnly": "ringkasan sahaja"
+    },
+    "executionSessions": {
+      "title": "Sesi Pelaksanaan",
+      "online": "Dalam talian",
+      "updating": "Mengemas kini...",
+      "description": "Pelayaran dan pratonton transkrip berpusatkan sesi legasi."
+    },
+    "stream": {
+      "title": "Strim Log Tugasan"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Batalkan tugasan {{taskId}}",
+      "cancel": "Batal",
+      "moveBackToTodoConfirm": "Alih tugasan ini kembali ke PERLU DIBUAT dan beritahu pasukan?",
+      "confirm": "Sahkan",
+      "keep": "Kekalkan",
+      "changesNeedAttention": "Perubahan perlu perhatian",
+      "changes": "Perubahan",
+      "deleteTask": "Padam tugasan",
+      "taskLogsActive": "Log tugasan aktif",
+      "newTaskLogsArriving": "Log tugasan baharu tiba",
+      "awaitingUser": "Menunggu pengguna",
+      "awaitingLead": "Menunggu ketua",
+      "blockedBy": "Disekat oleh",
+      "blocks": "Menyekat",
+      "start": "Mula",
+      "complete": "Selesaikan",
+      "approve": "Luluskan",
+      "requestReview": "Minta semakan",
+      "manualReview": "Semakan manual",
+      "requestChanges": "Minta perubahan"
+    },
+    "filter": {
+      "title": "Tapis tugasan",
+      "session": "Sesi",
+      "allSessions": "Semua sesi",
+      "teammate": "Rakan pasukan",
+      "unassigned": "(tidak ditugaskan)",
+      "column": "Lajur",
+      "clearAll": "Kosongkan semua"
+    },
+    "board": {
+      "addTask": "Tambah tugasan",
+      "noTasks": "Tiada tugasan",
+      "showMore": "Tunjuk {{count}} lagi",
+      "hiddenCount": "{{count}} tersembunyi",
+      "trash": "Tong Sampah",
+      "gridView": "Paparan grid",
+      "columnsView": "Paparan lajur"
+    },
+    "trash": {
+      "title": "Tong Sampah",
+      "empty": "Tiada tugasan dipadam",
+      "subject": "Subjek",
+      "owner": "Pemilik",
+      "deleted": "Dipadam",
+      "unassigned": "Tidak ditugaskan",
+      "restoreTask": "Pulihkan tugasan",
+      "restore": "Pulihkan",
+      "close": "Tutup"
+    },
+    "sort": {
+      "title": "Isih tugasan",
+      "sortBy": "Isih mengikut",
+      "reset": "Tetap semula",
+      "options": {
+        "updatedAt": {
+          "label": "Kemas kini terakhir",
+          "description": "Baru dikemas kini dahulu"
+        },
+        "createdAt": {
+          "label": "Dicipta",
+          "description": "Terbaharu dahulu"
+        },
+        "owner": {
+          "label": "Pemilik",
+          "description": "Mengikut abjad penerima tugas"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Susunan seret-dan-lepas"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Kosongkan carian",
+      "tasks": "Tugasan",
+      "createdAgo": "dicipta {{time}}",
+      "updatedAgo": "dikemas kini {{time}}",
+      "placeholder": "Cari tugasan... (#id atau teks)"
+    },
+    "grid": {
+      "addTask": "Tambah tugasan",
+      "noTasks": "Tiada tugasan"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "PERLU DIBUAT",
+      "inProgress": "SEDANG DIBUAT",
+      "review": "SEMAKAN",
+      "done": "SELESAI",
+      "approved": "DILULUSKAN"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Menyemak status repositori Git untuk worktree rakan pasukan...",
+    "ready": "Worktree Git sedia.",
+    "readyOnBranch": "Worktree Git sedia pada cawangan {{branch}}.",
+    "needsSetup": "Pengasingan worktree memerlukan persediaan Git",
+    "initialCommitNotice": "Tindakan commit awal memperingkat dan meng-commit semua fail semasa dengan mesej",
+    "initializeRepository": "Mulakan repositori Git",
+    "createInitialCommit": "Cipta commit awal",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Tetapan",
+    "autoAllowAllTools": "Benarkan semua alat secara auto",
+    "autoAllowFileEdits": "Benarkan suntingan fail secara auto (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Benarkan arahan selamat secara auto (git, pnpm, npm, ls...)",
+    "onTimeout": "Apabila tamat masa:",
+    "after": "selepas",
+    "secondsShort": "saat",
+    "timeoutActions": {
+      "wait": "Tunggu selama-lamanya",
+      "allow": "Benarkan",
+      "deny": "Tolak"
+    },
+    "submit": "Hantar",
+    "allow": "Benarkan",
+    "deny": "Tolak",
+    "allowAll": "Benarkan semua",
+    "pendingCount": "{{count}} tertangguh",
+    "autoActionIn": "Auto-{{action}} dalam {{time}}",
+    "diff": {
+      "previewChanges": "Pratonton perubahan",
+      "readingFile": "Membaca fail...",
+      "binaryFile": "Fail binari - tidak boleh dipratonton",
+      "truncated": "Fail dipangkas pada 2MB - perbezaan mungkin tidak lengkap",
+      "newFile": "Fail baharu"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Penyelarasan kerja ahli",
+      "actionableItems": "Item boleh diambil tindakan",
+      "fingerprint": "Cap jari",
+      "report": "Laporan",
+      "none": "tiada",
+      "shadowWouldNudge": "Bayang akan menolak",
+      "yes": "ya",
+      "no": "tidak",
+      "moreActionableItems": "{{count}} item boleh diambil tindakan lagi",
+      "diagnostics": "Diagnostik: {{diagnostics}}"
+    },
+    "title": "Penyelarasan kerja ahli",
+    "loadingDiagnostics": "Memuatkan diagnostik penyelarasan kerja ahli.",
+    "diagnosticsUnavailable": "Diagnostik penyelarasan kerja ahli tidak tersedia."
+  },
+  "advancedCli": {
+    "title": "Lanjutan",
+    "useWorktree": "Guna worktree",
+    "recent": "Terkini",
+    "commandPreview": "Pratonton arahan",
+    "customArguments": "Argumen tersuai",
+    "validate": "Sahkan",
+    "validation": {
+      "allFlagsValid": "Semua bendera sah",
+      "unknownFlags": "Tidak diketahui: {{flags}}",
+      "protectedFlags": "Dilindungi: {{flags}}",
+      "failed": "Pengesahan gagal"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} yang lalu",
+    "stoppedAgo": "dihentikan {{time}} yang lalu",
+    "running": "Berjalan",
+    "stopped": "Dihentikan",
+    "stopProcess": "Hentikan proses (SIGTERM)",
+    "kill": "Bunuh",
+    "openInBrowser": "Buka dalam pelayar",
+    "open": "Buka",
+    "pid": "PID{{pid}}",
+    "title": "Proses CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Memuatkan butiran aktiviti...",
+    "contextUnavailable": "Konteks transkrip terperinci tidak lagi tersedia untuk aktiviti ini.",
+    "loading": "Memuatkan aktiviti tugasan...",
+    "lowSignalOnly": "Belum ada aktiviti tugasan utama ditemui. Butiran pelaksanaan peringkat rendah tersedia di bawah dalam Strim Log Tugasan.",
+    "empty": "Belum ada aktiviti tugasan eksplisit ditemui dalam transkrip yang tersedia. Log sesi yang lebih lama atau heuristik mungkin masih tersedia di bawah dalam Sesi Pelaksanaan.",
+    "title": "Aktiviti Tugasan",
+    "description": "Aktiviti runtime eksplisit utama yang dipaut kepada tugasan ini daripada metadata transkrip."
+  },
+  "sendMessage": {
+    "title": "Hantar Mesej",
+    "description": "Hantar mesej terus kepada ahli pasukan.",
+    "recipientLabel": "Penerima",
+    "selectMemberPlaceholder": "Pilih ahli...",
+    "messageLabel": "Mesej",
+    "placeholder": "Tulis mesej anda... (Enter untuk hantar)",
+    "send": "Hantar",
+    "sending": "Menghantar...",
+    "charsLeft": "{{count}} aksara berbaki",
+    "saved": "Disimpan",
+    "attachments": {
+      "teamOnlineRequired": "Pasukan mesti dalam talian untuk melampirkan fail",
+      "recipientUnsupported": "Fail boleh dihantar kepada ketua pasukan atau rakan pasukan OpenCode",
+      "openCodeOnlineRequired": "Pasukan mesti dalam talian untuk melampirkan fail bagi rakan pasukan OpenCode",
+      "disabledHint": "Lampiran fail disokong untuk ketua pasukan dalam talian dan rakan pasukan OpenCode dalam talian. Buang lampiran atau tukar penerima.",
+      "attachFiles": "Lampirkan fail (tampal atau seret & lepas)",
+      "unavailable": "Lampiran tidak tersedia"
+    },
+    "quote": {
+      "remove": "Buang petikan",
+      "replyingTo": "Membalas kepada"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Batal balasan",
+    "replyingTo": "Membalas kepada",
+    "placeholder": "Tambah komen... (Enter untuk hantar)",
+    "attachFile": "Lampirkan fail (atau tampal)",
+    "voiceToText": "Suara ke teks",
+    "comment": "Komen",
+    "charsLeft": "{{count}} aksara berbaki",
+    "saved": "Disimpan",
+    "awaitingReplyFrom": "Menunggu balasan daripada",
+    "or": "atau"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Lepaskan imej di sini",
+    "attachImage": "Lampirkan imej",
+    "pasteOrDragDrop": "atau tampal / seret-lepas",
+    "fromOriginalMessage": "Daripada mesej asal",
+    "dropFilesHere": "Lepaskan fail di sini",
+    "loading": "Memuatkan lampiran..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Luluskan semua alat secara auto",
+    "autonomousModeDescription": "Mod autonomi: alat pasukan dilaksanakan tanpa pengesahan. Berhati-hati dengan kod yang tidak dipercayai.",
+    "manualModeDescription": "Mod manual: anda akan meluluskan atau menolak setiap panggilan alat secara masa nyata."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Pelaksanaan",
+      "process": "Proses"
+    },
+    "filters": {
+      "all": "Semua"
+    },
+    "logs": {
+      "title": "Log",
+      "loading": "Memuatkan strim log ahli...",
+      "emptyTitle": "Belum ada entri strim log ditemui untuk ahli ini.",
+      "emptyDescription": "Log transkrip atau runtime berskop ahli akan muncul di sini apabila tersedia."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Terangkan apa yang perlu diubah... (Enter untuk hantar)",
+    "submit": "Hantar",
+    "charsLeft": "{{count}} aksara berbaki",
+    "saved": "Disimpan",
+    "title": "Minta Perubahan"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Buka Papan Pemuka",
+      "openTeam": "Buka pasukan",
+      "cancel": "Batal"
+    },
+    "membersJson": {
+      "hide": "Sembunyi JSON"
+    },
+    "optional": {
+      "badge": "Pilihan"
+    }
+  },
+  "runningTeams": {
+    "title": "Pasukan Berjalan",
+    "status": {
+      "active": "Aktif",
+      "provisioning": "Melancarkan",
+      "idle": "Berjalan"
+    },
+    "noProject": "Tiada projek"
+  },
+  "layout": {
+    "maxPanesReached": "Maksimum {{count}} anak tetingkap dicapai"
+  },
+  "codexReconnect": {
+    "description": "Sesi Codex anda kelihatan lapuk. Sambung semula untuk meneruskan.",
+    "useCode": "Guna kod",
+    "generating": "Menjana...",
+    "openLogin": "Buka log masuk",
+    "generateLink": "Jana pautan"
+  },
+  "effortLevel": {
+    "label": "Tahap usaha (pilihan)",
+    "maxDescription": "Maks memberikan model masa penaakulan paling banyak untuk tugasan yang sukar."
+  },
+  "contextLimit": {
+    "limitTo200k": "Hadkan konteks kepada 200K token",
+    "always200k": "(sentiasa 200K untuk model ini)",
+    "tooltipContent": "Mengekalkan pelancaran dalam tetingkap konteks 200K token apabila disokong.",
+    "tooltipTitle": "Had konteks"
+  },
+  "roleSelect": {
+    "noRole": "Tiada peranan",
+    "customRole": "Peranan tersuai...",
+    "searchPlaceholder": "Cari peranan...",
+    "empty": "Tiada peranan ditemui.",
+    "reservedRole": "Peranan ini dikhaskan",
+    "emptyCustomRole": "Peranan tidak boleh kosong"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

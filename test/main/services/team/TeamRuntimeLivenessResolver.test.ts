@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import {
+  commandArgEquals,
+  extractCliArgValues,
   resolveTeamMemberRuntimeLiveness,
   sanitizeProcessCommandForDiagnostics,
 } from '@main/services/team/TeamRuntimeLivenessResolver';
+import { describe, expect, it } from 'vitest';
 
 const NOW = '2026-04-24T12:00:00.000Z';
 
@@ -38,6 +39,39 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
           pid: 222,
           ppid: 1,
           command: 'node runtime --team-name demo --agent-id agent-alice',
+        },
+      ],
+      processTableAvailable: true,
+      nowIso: NOW,
+    });
+
+    expect(result.alive).toBe(true);
+    expect(result.livenessKind).toBe('runtime_process');
+    expect(result.pidSource).toBe('agent_process_table');
+    expect(result.pid).toBe(222);
+  });
+
+  it('uses the newest verified team and agent process without requiring sorted rows', () => {
+    const result = resolveTeamMemberRuntimeLiveness({
+      teamName: 'demo',
+      memberName: 'alice',
+      agentId: 'agent-alice',
+      backendType: 'tmux',
+      processRows: [
+        {
+          pid: 222,
+          ppid: 1,
+          command: 'node runtime --team-name demo --agent-id agent-alice',
+        },
+        {
+          pid: 111,
+          ppid: 1,
+          command: 'node runtime --team-name demo --agent-id agent-alice',
+        },
+        {
+          pid: 333,
+          ppid: 1,
+          command: 'node runtime --team-name other --agent-id agent-alice',
         },
       ],
       processTableAvailable: true,
@@ -237,5 +271,28 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
     expect(
       sanitizeProcessCommandForDiagnostics('node runtime --api-key sk-123 --token=abc --safe ok')
     ).toBe('node runtime --api-key [redacted] --token=[redacted] --safe ok');
+  });
+
+  it('keeps cached CLI arg extraction immutable for callers', () => {
+    const command =
+      'node runtime --team-name demo --agent-id "agent alice" --agent-id agent-bob';
+    const first = extractCliArgValues(command, '--agent-id');
+    first.push('mutated');
+
+    expect(extractCliArgValues(command, '--agent-id')).toEqual(['agent alice', 'agent-bob']);
+    expect(extractCliArgValues(command, '--team-name')).toEqual(['demo']);
+  });
+
+  it('returns no CLI arg values when the flag is absent', () => {
+    expect(extractCliArgValues('node runtime --other value', '--agent-id')).toEqual([]);
+  });
+
+  it('matches CLI arg values repeatedly without changing extraction results', () => {
+    const command = 'node runtime --team-name demo --agent-id "agent alice"';
+
+    expect(commandArgEquals(command, '--agent-id', 'agent alice')).toBe(true);
+    expect(commandArgEquals(command, '--agent-id', 'agent-bob')).toBe(false);
+    expect(commandArgEquals(command, '--agent-id', 'agent alice')).toBe(true);
+    expect(extractCliArgValues(command, '--agent-id')).toEqual(['agent alice']);
   });
 });

@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "لغو",
+    "close": "بستن",
+    "copied": "کپی شد",
+    "copyUrl": "کپی URL",
+    "open": "باز کردن",
+    "reveal": "نمایش",
+    "retry": "تلاش مجدد",
+    "save": "ذخیره",
+    "showLess": "نمایش کمتر",
+    "showMore": "نمایش بیشتر",
+    "refresh": "تازه‌سازی",
+    "reset": "بازنشانی",
+    "copyToClipboard": "کپی در کلیپ‌بورد",
+    "moreActions": "اقدامات بیشتر",
+    "closeDialog": "بستن گفت‌وگو",
+    "goToDashboard": "رفتن به داشبورد",
+    "or": "یا",
+    "hide": "پنهان کردن",
+    "resetSelection": "بازنشانی انتخاب"
+  },
+  "code": {
+    "line": "خط {{line}}",
+    "lines": "خطوط {{from}}-{{to}}",
+    "moreLines": "({{count}} خط بیشتر...)",
+    "moreLines_few": "({{count}} خط بیشتر...)",
+    "moreLines_many": "({{count}} خط بیشتر...)",
+    "moreLines_one": "({{count}} خط بیشتر...)",
+    "moreLines_other": "({{count}} خط بیشتر...)",
+    "code": "کد",
+    "preview": "پیش‌نمایش",
+    "markdownPreview": "پیش‌نمایش Markdown",
+    "linesParenthesized": "(خطوط {{from}}-{{to}})",
+    "mermaidSyntaxError": "خطای نحوی Mermaid"
+  },
+  "contextBadge": {
+    "badge": "بافت",
+    "breakdown": {
+      "text": "متن",
+      "thinking": "تفکر"
+    },
+    "detailsAria": "جزئیات تزریق بافت",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} توکن",
+    "sections": {
+      "claudeMdFiles": "فایل‌های CLAUDE.md",
+      "mentionedFiles": "فایل‌های ذکرشده",
+      "taskCoordination": "هماهنگی وظیفه",
+      "thinkingText": "تفکر + متن",
+      "toolOutputs": "خروجی‌های ابزار",
+      "userMessages": "پیام‌های کاربر"
+    },
+    "title": "بافت جدید تزریق‌شده در این نوبت",
+    "tokenCount": "~{{tokens}} توکن",
+    "totalNewTokens": "کل توکن‌های جدید",
+    "turn": "نوبت {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} توکن",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} توکن",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} توکن",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} توکن"
+  },
+  "locales": {
+    "emptyMessage": "هیچ زبانی یافت نشد.",
+    "names": {
+      "ar": "عربی",
+      "bn": "بنگالی",
+      "de": "آلمانی",
+      "en": "انگلیسی",
+      "es": "اسپانیایی",
+      "fa": "فارسی",
+      "fil": "فیلیپینی",
+      "fr": "فرانسوی",
+      "hi": "هندی",
+      "id": "اندونزیایی",
+      "it": "ایتالیایی",
+      "ja": "ژاپنی",
+      "ko": "کره‌ای",
+      "mr": "مراتی",
+      "ms": "مالایی",
+      "nl": "هلندی",
+      "pl": "لهستانی",
+      "pt": "پرتغالی",
+      "ro": "رومانیایی",
+      "ru": "روسی",
+      "sw": "سواحیلی",
+      "system": "سیستم",
+      "ta": "تامیلی",
+      "te": "تلوگو",
+      "th": "تایلندی",
+      "tr": "ترکی",
+      "uk": "اوکراینی",
+      "ur": "اردو",
+      "vi": "ویتنامی",
+      "zh": "چینی"
+    },
+    "searchPlaceholder": "جستجوی زبان...",
+    "selectPlaceholder": "انتخاب زبان برنامه...",
+    "systemWithResolved": "سیستم - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "هیچ عضوی یافت نشد.",
+    "searchPlaceholder": "جستجوی اعضا...",
+    "unassigned": "بدون تخصیص",
+    "teammateFallback": "هم‌تیمی"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "در حال بررسی",
+        "downloading": "در حال دانلود",
+        "installCli": "نصب Codex CLI",
+        "installing": "در حال نصب",
+        "retryInstall": "تلاش مجدد برای نصب"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "هیچ پیشنهاد منطبقی نیست",
+    "searching": "در حال جستجو...",
+    "searchingFiles": "در حال جستجوی فایل‌ها...",
+    "findInConversation": "یافتن در گفت‌وگو...",
+    "resultCount": "{{current}} از {{total}}",
+    "resultCountCapped": "{{current}} از {{total}}+",
+    "noResults": "نتیجه‌ای نیست",
+    "previousResultShortcut": "نتیجه قبلی (Shift+Enter)",
+    "nextResultShortcut": "نتیجه بعدی (Enter)",
+    "closeShortcut": "بستن (Esc)",
+    "nothingFound": "چیزی یافت نشد",
+    "placeholder": "جستجو..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "افزودن زمان‌بندی",
+      "clearFilters": "پاک کردن فیلترها",
+      "createSchedule": "ایجاد زمان‌بندی",
+      "delete": "حذف",
+      "edit": "ویرایش",
+      "pause": "توقف موقت",
+      "resume": "ازسرگیری",
+      "runNow": "اجرای فوری"
+    },
+    "empty": {
+      "description": "روی هر تیمی یک زمان‌بندی ایجاد کنید تا اجرای وظایف Claude را با عبارات cron خودکار کنید. زمان‌بندی‌های همه تیم‌ها اینجا ظاهر می‌شوند.",
+      "noMatches": "هیچ زمان‌بندی‌ای با فیلترهای فعلی منطبق نیست",
+      "title": "هیچ وظیفه زمان‌بندی‌شده‌ای نیست"
+    },
+    "filters": {
+      "allTeams": "همه تیم‌ها"
+    },
+    "item": {
+      "loadingRunHistory": "در حال بارگذاری تاریخچه اجرا...",
+      "nextRun": "بعدی: {{value}}",
+      "noRunsYet": "هنوز اجرایی نیست"
+    },
+    "loading": "در حال بارگذاری زمان‌بندی‌ها...",
+    "searchPlaceholder": "جستجوی زمان‌بندی‌ها...",
+    "status": {
+      "active": "فعال",
+      "all": "همه",
+      "disabled": "غیرفعال",
+      "paused": "متوقف‌شده"
+    },
+    "title": "زمان‌بندی‌ها"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "پنهان کردن",
+      "pin": "سنجاق کردن",
+      "unhide": "نمایش دادن"
+    },
+    "empty": {
+      "noMatchingSessions": "هیچ نشست منطبقی نیست",
+      "noMatchingSessionsDescription": "این پروژه هنوز نشست منطبقی ندارد.",
+      "noMatchingSessionsFiltered": "پرس‌وجوی دیگری امتحان کنید یا فیلتر ارائه‌دهنده را بازنشانی کنید.",
+      "noSessions": "هیچ نشستی یافت نشد",
+      "noSessionsDescription": "این پروژه هنوز نشستی ندارد",
+      "selectProject": "برای مشاهده نشست‌ها یک پروژه انتخاب کنید"
+    },
+    "errors": {
+      "loading": "خطا در بارگذاری نشست‌ها"
+    },
+    "loadedMatchingMore": "تاکنون {{count}} نشست منطبق بارگذاری شده است - برای بارگذاری بیشتر به پایین اسکرول کنید.",
+    "loadingMore": "در حال بارگذاری نشست‌های بیشتر...",
+    "pinned": "سنجاق‌شده",
+    "scrollToLoadMore": "برای بارگذاری بیشتر اسکرول کنید",
+    "search": {
+      "clear": "پاک کردن جستجوی نشست",
+      "placeholder": "جستجوی نشست‌ها..."
+    },
+    "selection": {
+      "cancel": "لغو انتخاب",
+      "exitMode": "خروج از حالت انتخاب",
+      "hideSelected": "پنهان کردن نشست‌های انتخاب‌شده",
+      "pinSelected": "سنجاق کردن نشست‌های انتخاب‌شده",
+      "selectSessions": "انتخاب نشست‌ها",
+      "selected": "{{count}} انتخاب‌شده",
+      "unhideSelected": "نمایش نشست‌های انتخاب‌شده",
+      "selected_few": "{{count}} انتخاب‌شده",
+      "selected_many": "{{count}} انتخاب‌شده",
+      "selected_one": "{{count}} انتخاب‌شده",
+      "selected_other": "{{count}} انتخاب‌شده"
+    },
+    "sort": {
+      "byContext": "بر اساس بافت",
+      "byContextTooltip": "مرتب‌سازی بر اساس مصرف بافت",
+      "byRecentTooltip": "مرتب‌سازی بر اساس جدیدترین",
+      "contextLoadedOnly": "مرتب‌سازی بر اساس بافت فقط نشست‌های بارگذاری‌شده را رتبه‌بندی می‌کند."
+    },
+    "title": "نشست‌ها",
+    "visibility": {
+      "hideHidden": "پنهان کردن نشست‌های پنهان",
+      "showHidden": "نمایش نشست‌های پنهان"
+    },
+    "worktree": {
+      "switch": "تعویض Worktree"
+    },
+    "loadedMatchingMore_few": "تاکنون {{count}} نشست منطبق بارگذاری شده است - برای بارگذاری بیشتر به پایین اسکرول کنید.",
+    "loadedMatchingMore_many": "تاکنون {{count}} نشست منطبق بارگذاری شده است - برای بارگذاری بیشتر به پایین اسکرول کنید.",
+    "loadedMatchingMore_one": "تاکنون {{count}} نشست منطبق بارگذاری شده است - برای بارگذاری بیشتر به پایین اسکرول کنید.",
+    "loadedMatchingMore_other": "تاکنون {{count}} نشست منطبق بارگذاری شده است - برای بارگذاری بیشتر به پایین اسکرول کنید.",
+    "failedToLoad": "بارگذاری نشست ناموفق بود",
+    "loading": "در حال بارگذاری نشست...",
+    "filter": {
+      "title": "فیلتر نشست‌ها"
+    },
+    "count": "{{count}} نشست",
+    "count_one": "{{count}} نشست",
+    "count_other": "{{count}} نشست",
+    "count_few": "{{count}} نشست",
+    "count_many": "{{count}} نشست",
+    "inProgress": "نشست در حال انجام است..."
+  },
+  "states": {
+    "loading": "در حال بارگذاری...",
+    "offline": "آفلاین",
+    "online": "آنلاین",
+    "unknown": "نامشخص",
+    "error": "خطا"
+  },
+  "markdown": {
+    "imageFallback": "[تصویر: {{label}}]",
+    "largeContentNotice": "محتوا بسیار بزرگ است ({{count}} نویسه). برای حفظ پاسخگویی رابط کاربری، پیش‌نمایش خام نمایش داده می‌شود.",
+    "largeContentTitle": "محتوای بزرگ به‌صورت خام نمایش داده می‌شود تا از یخ‌زدگی رابط کاربری جلوگیری شود",
+    "raw": "خام",
+    "rawPreview": "پیش‌نمایش خام",
+    "renderMarkdown": "رندر Markdown",
+    "showAll": "نمایش همه",
+    "showMore": "نمایش بیشتر",
+    "showRaw": "نمایش خام",
+    "showingChars": "نمایش {{shown}} / {{total}} نویسه",
+    "largeContentNotice_few": "محتوا بسیار بزرگ است ({{count}} نویسه). برای حفظ پاسخگویی رابط کاربری، پیش‌نمایش خام نمایش داده می‌شود.",
+    "largeContentNotice_many": "محتوا بسیار بزرگ است ({{count}} نویسه). برای حفظ پاسخگویی رابط کاربری، پیش‌نمایش خام نمایش داده می‌شود.",
+    "largeContentNotice_one": "محتوا بسیار بزرگ است ({{count}} نویسه). برای حفظ پاسخگویی رابط کاربری، پیش‌نمایش خام نمایش داده می‌شود.",
+    "largeContentNotice_other": "محتوا بسیار بزرگ است ({{count}} نویسه). برای حفظ پاسخگویی رابط کاربری، پیش‌نمایش خام نمایش داده می‌شود."
+  },
+  "terminal": {
+    "checkOutputForDetails": "برای جزئیات، خروجی ترمینال بالا را بررسی کنید",
+    "closingInSeconds": "بسته شدن تا {{count}} ثانیه دیگر...",
+    "closingInSeconds_few": "بسته شدن تا {{count}} ثانیه دیگر...",
+    "closingInSeconds_many": "بسته شدن تا {{count}} ثانیه دیگر...",
+    "closingInSeconds_one": "بسته شدن تا {{count}} ثانیه دیگر...",
+    "closingInSeconds_other": "بسته شدن تا {{count}} ثانیه دیگر...",
+    "completedSuccessfully": "با موفقیت تکمیل شد",
+    "exitCode": "(کد خروج {{code}})",
+    "processFailed": "فرایند ناموفق بود",
+    "title": "ترمینال"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "انباشته‌شده در سراسر نشست بدون تکرار",
+    "cacheRead": "خواندن از حافظه پنهان",
+    "cacheWrite": "نوشتن در حافظه پنهان",
+    "costUsd": "هزینه (USD)",
+    "inputTokens": "توکن‌های ورودی",
+    "model": "مدل",
+    "outputTokens": "توکن‌های خروجی",
+    "phase": "مرحله {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}٪ از ورودی پرامپت",
+    "taskCoordination": "هماهنگی وظیفه",
+    "thinkingText": "تفکر + متن",
+    "toolOutputs": "خروجی‌های ابزار",
+    "total": "کل",
+    "userMessages": "پیام‌های کاربر",
+    "visibleContext": "بافت قابل‌مشاهده",
+    "includesClaudeMd": "شامل CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}٪)",
+    "approxTokens": "~{{tokens}} توکن",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "کپی تیم",
+      "createTeam": "ایجاد تیم",
+      "deleteForever": "حذف برای همیشه",
+      "deletePermanently": "حذف دائمی",
+      "deleteTeam": "حذف تیم",
+      "launching": "در حال راه‌اندازی...",
+      "launchTeam": "راه‌اندازی تیم",
+      "relaunchTeam": "راه‌اندازی مجدد تیم",
+      "restore": "بازیابی",
+      "restoreTeam": "بازیابی تیم",
+      "retry": "تلاش مجدد",
+      "stopTeam": "توقف تیم",
+      "stopping": "در حال توقف..."
+    },
+    "status": {
+      "active": "فعال",
+      "deleted": "حذف‌شده",
+      "launching": "در حال راه‌اندازی...",
+      "offline": "آفلاین",
+      "partialFailure": "راه‌اندازی در میانه راه ناموفق شد",
+      "partialPending": "راه‌اندازی اولیه در انتظار",
+      "partialSkipped": "راه‌اندازی عضو را رد کرد",
+      "running": "در حال اجرا"
+    },
+    "partial": {
+      "pending": "آخرین راه‌اندازی هنوز در حال هماهنگ‌سازی است.",
+      "skipped": "آخرین راه‌اندازی هم‌تیمی‌هایی را رد کرده است.",
+      "skippedWithCount": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_few": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_many": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_one": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "skippedWithCount_other": "آخرین راه‌اندازی {{count}}/{{expected}} هم‌تیمی را رد کرد.",
+      "stopped": "آخرین راه‌اندازی پیش از پیوستن همه هم‌تیمی‌ها متوقف شد.",
+      "stoppedWithCount": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_few": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_many": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_one": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد.",
+      "stoppedWithCount_other": "آخرین راه‌اندازی پیش از پیوستن {{count}}/{{expected}} هم‌تیمی متوقف شد."
+    },
+    "noDescription": "بدون توضیح",
+    "solo": "تک‌نفره",
+    "membersCount": "اعضا: {{count}}",
+    "membersCount_few": "اعضا: {{count}}",
+    "membersCount_many": "اعضا: {{count}}",
+    "membersCount_one": "عضو: {{count}}",
+    "membersCount_other": "اعضا: {{count}}",
+    "all": "همه",
+    "moreCount": "+{{count}} بیشتر",
+    "moreCount_one": "+{{count}} بیشتر",
+    "moreCount_other": "+{{count}} بیشتر",
+    "moreCount_few": "+{{count}} بیشتر",
+    "moreCount_many": "+{{count}} بیشتر"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "پیش‌فرض برای هر پروژه‌ای که بازنویسی OpenCode مخصوص خود را ندارد.",
+      "scopeDescriptionProject": "فقط پروژه انتخاب‌شده را بازنویسی می‌کند. تیم‌های در حال اجرا تغییر نمی‌کنند.",
+      "setAllProjectsDefault": "تنظیم پیش‌فرض همه پروژه‌ها",
+      "setProjectDefault": "تنظیم پیش‌فرض پروژه",
+      "validationContext": "بافت اعتبارسنجی",
+      "projectOverrideContext": "بافت بازنویسی پروژه",
+      "selectProjectHint": "پیش از تست مدل‌های محلی یا ذخیره پیش‌فرض‌ها، یک پروژه انتخاب کنید.",
+      "allProjectsHint": "تست‌ها از {{project}} استفاده می‌کنند. پیش‌فرض اعمال می‌شود مگر آنکه پروژه‌ای بازنویسی داشته باشد.",
+      "projectHint": "ذخیره فقط {{project}} را بازنویسی می‌کند."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "بافت",
+      "closePanel": "بستن پنل",
+      "phase": "مرحله:",
+      "current": "فعلی",
+      "view": "نما:",
+      "category": "دسته",
+      "bySize": "بر اساس اندازه"
+    },
+    "metrics": {
+      "unavailable": "در دسترس نیست",
+      "contextUsed": "بافت مصرف‌شده",
+      "promptInput": "ورودی پرامپت",
+      "visibleContext": "بافت قابل‌مشاهده",
+      "ofContext": "از بافت",
+      "ofPrompt": "از پرامپت",
+      "codexTelemetryUnavailable": "مصرف سمت پرامپت Codex هنوز توسط تله‌متری زمان اجرای فعلی افشا نشده است، بنابراین ورودی پرامپت و بافت مصرف‌شده به‌جای نمایش صفر جعلی، در دسترس نخواهند بود.",
+      "sessionCost": "هزینه نشست:",
+      "parentPlus": "والد +",
+      "subagents": "زیرعامل‌ها",
+      "details": "جزئیات"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "بافت مصرف‌شده",
+        "description": "ورودی پرامپت به‌علاوه توکن‌های خروجی که اکنون پنجره بافت مدل را اشغال کرده‌اند."
+      },
+      "promptInput": {
+        "title": "ورودی پرامپت",
+        "description": "توکن‌های ارسال‌شده به مدل پیش از تولید. برای Claude این شامل `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` است."
+      },
+      "visibleContext": {
+        "title": "بافت قابل‌مشاهده",
+        "description": "زیرمجموعه قابل‌بازرسی ورودی پرامپت: فایل‌ها، CLAUDE.md، خروجی‌های ابزار، پیام‌های کاربر و تزریق‌های مشابهی که می‌توانید مستقیماً بهینه کنید."
+      },
+      "availability": {
+        "title": "دسترس‌پذیری",
+        "description": "اگر زمان اجرای ارائه‌دهنده هنوز مصرف سمت پرامپت را افشا نکند، پنل معیارها را به‌جای وانمود به صفر بودن، به‌صورت در دسترس نبودن نمایش می‌دهد."
+      }
+    },
+    "items": {
+      "turn": "@نوبت {{turn}}",
+      "tokensApprox": "~{{tokens}} توکن",
+      "toolsCount": "{{count}} ابزار",
+      "toolsCount_one": "{{count}} ابزار",
+      "toolsCount_other": "{{count}} ابزار",
+      "toolsCount_few": "{{count}} ابزار",
+      "toolsCount_many": "{{count}} ابزار",
+      "itemsCount": "{{count}} مورد",
+      "itemsCount_one": "{{count}} مورد",
+      "itemsCount_other": "{{count}} مورد",
+      "itemsCount_few": "{{count}} مورد",
+      "itemsCount_many": "{{count}} مورد",
+      "missing": "مفقود",
+      "thinking": "تفکر",
+      "text": "متن"
+    },
+    "empty": "هیچ تزریق بافتی در این نشست شناسایی نشد",
+    "view": {
+      "grouped": "گروه‌بندی‌شده",
+      "flat": "تخت"
+    },
+    "claudeMdFiles": "فایل‌های CLAUDE.md",
+    "mentionedFiles": "فایل‌های ذکرشده"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "زیرعامل",
+      "shutdownConfirmed": "خاموش‌سازی تأیید شد",
+      "summary": {
+        "tools": "{{count}} ابزار",
+        "tools_one": "{{count}} ابزار",
+        "tools_other": "{{count}} ابزار",
+        "tools_few": "{{count}} ابزار",
+        "tools_many": "{{count}} ابزار"
+      },
+      "meta": {
+        "type": "نوع",
+        "duration": "مدت",
+        "model": "مدل",
+        "id": "شناسه"
+      },
+      "metrics": {
+        "contextWindow": "پنجره بافت",
+        "contextUsage": "مصرف بافت",
+        "mainContext": "بافت اصلی",
+        "totalOutput": "کل خروجی",
+        "turns": "({{count}} نوبت)",
+        "turns_one": "({{count}} نوبت)",
+        "turns_other": "({{count}} نوبت)",
+        "subagentContext": "بافت زیرعامل",
+        "phase": "مرحله {{phase}}",
+        "turns_few": "({{count}} نوبت)",
+        "turns_many": "({{count}} نوبت)"
+      },
+      "trace": {
+        "title": "ردیابی اجرا"
+      }
+    },
+    "user": {
+      "you": "شما",
+      "showMore": "نمایش بیشتر",
+      "showLess": "نمایش کمتر",
+      "backgroundTask": "وظیفه پس‌زمینه",
+      "exitCode": "خروج {{code}}",
+      "imagesAttached": "{{count}} تصویر پیوست شد",
+      "imagesAttached_one": "{{count}} تصویر پیوست شد",
+      "imagesAttached_few": "{{count}} تصویر پیوست شد",
+      "imagesAttached_many": "{{count}} تصویر پیوست شد",
+      "imagesAttached_other": "{{count}} تصویر پیوست شد"
+    },
+    "compact": {
+      "toggle": "تغییر وضعیت محتوای فشرده‌شده",
+      "contextCompacted": "بافت فشرده شد",
+      "freedTokens": "({{tokens}} آزاد شد)",
+      "phase": "مرحله {{phase}}",
+      "conversationCompacted": "گفت‌وگو فشرده شد",
+      "summary": "پیام‌های قبلی برای صرفه‌جویی در بافت خلاصه شدند. تاریخچه کامل گفت‌وگو در فایل نشست حفظ شده است.",
+      "compacted": "فشرده‌شده"
+    },
+    "executionTrace": {
+      "empty": "هیچ مورد اجرایی نیست",
+      "nested": "تودرتو: {{name}}",
+      "input": "ورودی"
+    },
+    "items": {
+      "empty": "موردی برای نمایش نیست"
+    },
+    "tools": {
+      "teammateSpawned": "هم‌تیمی ایجاد شد",
+      "shutdownRequested": "خاموش‌سازی درخواست شد ->",
+      "noResultReceived": "هیچ نتیجه‌ای دریافت نشد",
+      "duration": "مدت: {{duration}}",
+      "result": "نتیجه",
+      "write": {
+        "createdFile": "فایل ایجاد شد",
+        "wroteToFile": "در فایل نوشته شد"
+      },
+      "skill": {
+        "instructions": "دستورالعمل‌های مهارت",
+        "unknown": "مهارت ناشناخته"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "درخواست توسط کاربر قطع شد",
+      "planReadyForApproval": "طرح آماده تأیید است"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "هیچ تاریخچه گفت‌وگویی نیست",
+      "description": "این نشست هنوز هیچ پیامی ندارد."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}٪ باقی‌مانده)",
+      "count": "بافت ({{count}})",
+      "count_one": "بافت ({{count}})",
+      "count_other": "بافت ({{count}})",
+      "count_few": "بافت ({{count}})",
+      "count_many": "بافت ({{count}})"
+    },
+    "scrollToBottom": "اسکرول به پایین",
+    "bottom": "پایین",
+    "teammateMessage": {
+      "message": "پیام",
+      "resent": "ارسال مجدد شد",
+      "fallback": "پیام هم‌تیمی"
+    },
+    "system": {
+      "label": "سیستم"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux نصب نشده است",
+    "detectedOs": "سیستم‌عامل شناسایی‌شده: {{os}}",
+    "runtimePath": "مسیر زمان اجرا: {{path}}",
+    "phase": "مرحله: {{phase}}",
+    "actions": {
+      "cancel": "لغو",
+      "manualGuide": "راهنمای دستی",
+      "hideSetupSteps": "پنهان کردن مراحل راه‌اندازی",
+      "showSetupSteps": "نمایش مراحل راه‌اندازی ({{count}})",
+      "showSetupSteps_one": "نمایش مرحله راه‌اندازی ({{count}})",
+      "showSetupSteps_other": "نمایش مراحل راه‌اندازی ({{count}})",
+      "recheck": "بررسی مجدد",
+      "showSetupSteps_few": "نمایش مراحل راه‌اندازی ({{count}})",
+      "showSetupSteps_many": "نمایش مراحل راه‌اندازی ({{count}})"
+    },
+    "installerProgress": "پیشرفت نصب‌کننده",
+    "input": {
+      "placeholder": "ارسال ورودی به نصب‌کننده",
+      "send": "ارسال ورودی",
+      "passwordNotice": "ورودی رمز عبور مستقیماً به ترمینال نصب‌کننده ارسال می‌شود و به خروجی گزارش افزوده نمی‌شود."
+    },
+    "details": {
+      "show": "نمایش جزئیات",
+      "hide": "پنهان کردن جزئیات"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "هیچ فعالیت اخیری نیست",
+    "sessionsCount": "{{count}} نشست",
+    "sessionsCount_one": "{{count}} نشست",
+    "sessionsCount_other": "{{count}} نشست",
+    "mode": {
+      "searchProjects": "جستجوی پروژه‌ها",
+      "searchAcrossProjects": "جستجو در همه پروژه‌ها",
+      "searchInProject": "جستجو در پروژه"
+    },
+    "currentProject": "پروژه فعلی",
+    "global": "سراسری",
+    "placeholders": {
+      "projects": "جستجوی پروژه‌ها...",
+      "conversations": "جستجوی گفت‌وگوها..."
+    },
+    "empty": {
+      "noProjectsForQuery": "هیچ پروژه‌ای برای «{{query}}» یافت نشد",
+      "noProjects": "هیچ پروژه‌ای یافت نشد",
+      "minChars": "برای جستجو حداقل ۲ نویسه تایپ کنید",
+      "noFastResults": "هیچ نتیجه سریعی در نشست‌های اخیر برای «{{query}}» نیست",
+      "noResults": "هیچ نتیجه‌ای برای «{{query}}» یافت نشد"
+    },
+    "footer": {
+      "projectsCount": "{{count}} پروژه",
+      "projectsCount_one": "{{count}} پروژه",
+      "projectsCount_other": "{{count}} پروژه",
+      "results": "{{count}} {{speed}}نتیجه",
+      "results_one": "{{count}} {{speed}}نتیجه",
+      "results_other": "{{count}} {{speed}}نتیجه",
+      "resultsAcrossProjects": "{{count}} {{speed}}نتیجه در همه پروژه‌ها",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}نتیجه در همه پروژه‌ها",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}نتیجه در همه پروژه‌ها",
+      "fastPrefix": "سریع ",
+      "typeToSearch": "برای جستجو تایپ کنید",
+      "navigate": "پیمایش",
+      "select": "انتخاب",
+      "open": "باز کردن",
+      "global": "سراسری",
+      "close": "بستن",
+      "results_few": "{{count}} {{speed}}نتیجه",
+      "results_many": "{{count}} {{speed}}نتیجه",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}نتیجه در همه پروژه‌ها",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}نتیجه در همه پروژه‌ها",
+      "projectsCount_few": "{{count}} پروژه",
+      "projectsCount_many": "{{count}} پروژه",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} نشست",
+    "sessionsCount_many": "{{count}} نشست"
+  },
+  "tasksPanel": {
+    "title": "وظایف",
+    "searchPlaceholder": "جستجوی وظایف...",
+    "pinned": "سنجاق‌شده",
+    "groupByLabel": "گروه‌بندی بر اساس:",
+    "groupByAria": "گروه‌بندی بر اساس",
+    "groupModes": {
+      "none": "هیچ‌کدام",
+      "project": "پروژه",
+      "time": "زمان"
+    },
+    "showArchived": "نمایش بایگانی‌شده‌ها",
+    "hideArchived": "پنهان کردن بایگانی‌شده‌ها",
+    "empty": {
+      "noMatchingTasks": "هیچ وظیفه منطبقی نیست",
+      "noTasks": "هیچ وظیفه‌ای یافت نشد"
+    },
+    "teamLabel": "تیم: {{team}}",
+    "showMore": "نمایش بیشتر",
+    "showLess": "نمایش کمتر",
+    "deleteConfirm": {
+      "title": "حذف وظیفه",
+      "message": "وظیفه #{{taskId}} به سطل زباله منتقل شود؟",
+      "confirmLabel": "حذف",
+      "cancelLabel": "لغو"
+    },
+    "deleteFailed": {
+      "title": "حذف وظیفه ناموفق بود",
+      "fallbackMessage": "خطای غیرمنتظره‌ای رخ داد",
+      "confirmLabel": "تأیید"
+    },
+    "sort": {
+      "byTime": "بر اساس زمان",
+      "byUnread": "بر اساس خوانده‌نشده",
+      "byProject": "بر اساس پروژه",
+      "byTeam": "بر اساس تیم"
+    }
+  },
+  "toolViewer": {
+    "input": "ورودی",
+    "replaceAll": "(جایگزینی همه)",
+    "noInputRecorded": "هیچ ورودی‌ای برای این فراخوانی ابزار ثبت نشده است.",
+    "agent": {
+      "action": "اقدام",
+      "teammate": "هم‌تیمی",
+      "team": "تیم",
+      "runtime": "زمان اجرا",
+      "type": "نوع",
+      "startupInstructionsHidden": "دستورالعمل‌های راه‌اندازی در رابط کاربری پنهان هستند."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "برداشتن سنجاق",
+    "pin": "سنجاق کردن",
+    "rename": "تغییر نام",
+    "markUnread": "علامت‌گذاری به‌عنوان خوانده‌نشده",
+    "unarchive": "خروج از بایگانی",
+    "archive": "بایگانی",
+    "deleteTask": "حذف وظیفه"
+  },
+  "updateDialog": {
+    "closeDialog": "بستن گفت‌وگو",
+    "updateAvailable": "به‌روزرسانی در دسترس است",
+    "updateReady": "به‌روزرسانی آماده است",
+    "noReleaseNotes": "هیچ یادداشت انتشاری در دسترس نیست.",
+    "viewOnGitHub": "مشاهده در GitHub",
+    "later": "بعداً",
+    "restartNow": "راه‌اندازی مجدد",
+    "download": "دانلود"
+  },
+  "errorBoundary": {
+    "title": "مشکلی پیش آمد",
+    "description": "خطای غیرمنتظره‌ای در برنامه رخ داد. می‌توانید بارگذاری مجدد صفحه یا بازنشانی وضعیت خطا را امتحان کنید.",
+    "componentStack": "پشته مؤلفه",
+    "tryAgain": "تلاش مجدد",
+    "copied": "کپی شد",
+    "copyErrorDetails": "کپی جزئیات خطا",
+    "reportBugOnGitHub": "گزارش باگ در GitHub",
+    "reloadApp": "بارگذاری مجدد برنامه",
+    "diagnosticsNotice": "گزارش‌های باگ GitHub و تشخیص‌های کپی‌شده شامل پیام خطا، ردیابی پشته، نسخه برنامه، زبانه فعال، تیم انتخاب‌شده، بافت وظیفه و جزئیات محیط هستند."
+  },
+  "runtimeBackendSelector": {
+    "label": "بک‌اند زمان اجرا",
+    "resolved": "تعیین‌شده: {{backend}}",
+    "current": "فعلی",
+    "recommended": "توصیه‌شده",
+    "unavailable": "در دسترس نیست",
+    "cannotSelectYet": "این بک‌اند هنوز قابل انتخاب نیست.",
+    "auto": "خودکار",
+    "autoCurrently": "خودکار (فعلاً: {{backend}})",
+    "audience": {
+      "internal": "داخلی"
+    },
+    "states": {
+      "locked": "قفل‌شده",
+      "disabled": "غیرفعال",
+      "authRequired": "احراز هویت لازم است",
+      "runtimeMissing": "زمان اجرا مفقود است",
+      "degraded": "کاهش‌یافته",
+      "unavailable": "در دسترس نیست"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "در حال بررسی",
+    "unavailable": "در دسترس نیست",
+    "checkFailed": "بررسی ناموفق بود",
+    "free": "رایگان",
+    "freeTooltip": "گزارش‌شده توسط فراداده OpenCode. دسترس‌پذیری و محدودیت‌ها ممکن است تغییر کنند."
+  },
+  "taskFilters": {
+    "status": "وضعیت",
+    "clearAll": "پاک کردن همه",
+    "selectAll": "انتخاب همه",
+    "team": "تیم",
+    "allTeams": "همه تیم‌ها",
+    "searchTeams": "جستجوی تیم‌ها...",
+    "noTeamsFound": "هیچ تیمی یافت نشد",
+    "project": "پروژه",
+    "allProjects": "همه پروژه‌ها",
+    "searchProjects": "جستجوی پروژه‌ها...",
+    "noProjects": "هیچ پروژه‌ای نیست",
+    "comments": "نظرات",
+    "apply": "اعمال",
+    "read": {
+      "all": "همه",
+      "unread": "خوانده‌نشده",
+      "read": "خوانده‌شده"
+    },
+    "statusOptions": {
+      "todo": "انجام‌دادنی",
+      "inProgress": "در حال انجام",
+      "needsFix": "نیازمند رفع",
+      "done": "انجام‌شده",
+      "review": "بازبینی",
+      "approved": "تأییدشده"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "کل بافت: {{tokens}} توکن",
+    "context": "بافت: {{tokens}}",
+    "phase": "مرحله {{phase}}:",
+    "compactedTo": "(فشرده‌شده به {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "تیم",
+      "subagent": "زیرعامل",
+      "markAsRead": "علامت‌گذاری به‌عنوان خوانده‌شده",
+      "delete": "حذف",
+      "viewInSession": "مشاهده در نشست"
+    },
+    "title": "اعلان‌ها",
+    "loading": "در حال بارگذاری اعلان‌ها...",
+    "actions": {
+      "markFilteredAsRead": "علامت‌گذاری فیلترشده‌ها به‌عنوان خوانده‌شده",
+      "markAllAsRead": "علامت‌گذاری همه به‌عنوان خوانده‌شده",
+      "markFilteredRead": "علامت‌گذاری فیلترشده‌ها خوانده‌شده",
+      "markAllRead": "علامت‌گذاری همه خوانده‌شده",
+      "clearFilteredNotifications": "پاک کردن اعلان‌های فیلترشده",
+      "clearAllNotifications": "پاک کردن همه اعلان‌ها",
+      "clickToConfirm": "برای تأیید کلیک کنید",
+      "clearFiltered": "پاک کردن فیلترشده‌ها",
+      "clearAll": "پاک کردن همه"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} خوانده‌نشده در فیلتر",
+      "unreadInFilter_one": "{{count}} خوانده‌نشده در فیلتر",
+      "unreadInFilter_few": "{{count}} خوانده‌نشده در فیلتر",
+      "unreadInFilter_many": "{{count}} خوانده‌نشده در فیلتر",
+      "unreadInFilter_other": "{{count}} خوانده‌نشده در فیلتر",
+      "inFilter": "{{count}} در فیلتر",
+      "inFilter_one": "{{count}} در فیلتر",
+      "inFilter_few": "{{count}} در فیلتر",
+      "inFilter_many": "{{count}} در فیلتر",
+      "inFilter_other": "{{count}} در فیلتر",
+      "unread": "{{count}} خوانده‌نشده",
+      "unread_one": "{{count}} خوانده‌نشده",
+      "unread_few": "{{count}} خوانده‌نشده",
+      "unread_many": "{{count}} خوانده‌نشده",
+      "unread_other": "{{count}} خوانده‌نشده",
+      "total": "{{count}} در کل",
+      "total_one": "{{count}} در کل",
+      "total_few": "{{count}} در کل",
+      "total_many": "{{count}} در کل",
+      "total_other": "{{count}} در کل"
+    },
+    "filters": {
+      "other": "سایر"
+    },
+    "empty": {
+      "noMatching": "هیچ اعلان منطبقی نیست",
+      "noNotifications": "هیچ اعلانی نیست",
+      "tryDifferentFilter": "فیلتر دیگری امتحان کنید",
+      "allCaughtUp": "همه چیز به‌روز است!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "برای به‌روزرسانی راه‌اندازی مجدد کنید",
+    "updateApp": "به‌روزرسانی برنامه",
+    "downloadedRestartTooltip": "به‌روزرسانی دانلود شد، برای اعمال راه‌اندازی مجدد کنید",
+    "newVersionAvailable": "نسخه جدید در دسترس است",
+    "updatingApp": "در حال به‌روزرسانی برنامه",
+    "updateReady": "به‌روزرسانی آماده است",
+    "restartNow": "راه‌اندازی مجدد"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "گسترش نوار کناری",
+    "collapseSidebarShortcut": "جمع کردن نوار کناری ({{shortcut}})",
+    "sidebarView": "نمای نوار کناری",
+    "resizeSidebar": "تغییر اندازه نوار کناری",
+    "closeTab": "بستن زبانه",
+    "openedFromSearch": "باز شده از جستجو",
+    "pinnedSession": "نشست سنجاق‌شده",
+    "jumpToSection": "پرش به بخش",
+    "newTab": "زبانه جدید",
+    "newTabDashboard": "زبانه جدید (داشبورد)",
+    "refreshSession": "تازه‌سازی نشست",
+    "refreshSessionWithShortcut": "تازه‌سازی نشست ({{shortcut}})",
+    "loadingTab": "در حال بارگذاری زبانه",
+    "menu": {
+      "teams": "تیم‌ها",
+      "settings": "تنظیمات",
+      "extensions": "افزونه‌ها",
+      "search": "جستجو",
+      "schedules": "زمان‌بندی‌ها",
+      "docs": "مستندات",
+      "exportMarkdown": "خروجی به‌صورت Markdown",
+      "exportJson": "خروجی به‌صورت JSON",
+      "exportPlainText": "خروجی به‌صورت متن ساده",
+      "analyzeSession": "تحلیل نشست"
+    },
+    "tabMenu": {
+      "closeTabs": "بستن {{count}} زبانه",
+      "closeTabs_one": "بستن {{count}} زبانه",
+      "closeTabs_few": "بستن {{count}} زبانه",
+      "closeTabs_many": "بستن {{count}} زبانه",
+      "closeTabs_other": "بستن {{count}} زبانه",
+      "closeTab": "بستن زبانه",
+      "closeOtherTabs": "بستن زبانه‌های دیگر",
+      "splitRight": "تقسیم به راست",
+      "splitLeft": "تقسیم به چپ",
+      "pinToSidebar": "سنجاق به نوار کناری",
+      "unpinFromSidebar": "برداشتن سنجاق از نوار کناری",
+      "hideFromSidebar": "پنهان کردن از نوار کناری",
+      "unhideFromSidebar": "نمایش در نوار کناری",
+      "closeAllTabs": "بستن همه زبانه‌ها"
+    },
+    "sections": {
+      "team": "تیم",
+      "sessions": "نشست‌ها",
+      "kanban": "Kanban",
+      "claudeLogs": "گزارش‌ها",
+      "messages": "پیام‌ها"
+    }
+  },
+  "editorFormatting": {
+    "bold": "ضخیم",
+    "italic": "مورب",
+    "strike": "خط‌خورده",
+    "code": "کد"
+  },
+  "diff": {
+    "changed": "تغییریافته",
+    "noChangesDetected": "هیچ تغییری شناسایی نشد"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "کپی پیوند ورود ChatGPT و کد",
+    "copyLoginLink": "کپی پیوند ورود ChatGPT",
+    "copyFailed": "کپی ناموفق بود",
+    "copyLinkAndCode": "کپی پیوند + کد",
+    "copyLink": "کپی پیوند",
+    "enterCodeOnLoginPage": "این کد را در صفحه ورود ChatGPT وارد کنید"
+  },
+  "window": {
+    "minimize": "کوچک کردن",
+    "maximize": "بزرگ کردن",
+    "restore": "بازیابی"
+  },
+  "context": {
+    "local": "محلی",
+    "switchingTo": "در حال تعویض به {{workspace}}",
+    "loadingWorkspace": "در حال بارگذاری فضای کاری",
+    "switchWorkspace": "تعویض فضای کاری"
+  },
+  "repositories": {
+    "noneAvailable": "هیچ مخزنی در دسترس نیست",
+    "remove": "حذف مخزن"
+  },
+  "export": {
+    "session": "خروجی نشست",
+    "sessionTitle": "خروجی نشست"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "هیچ داده نشستی در دسترس نیست",
+    "title": "گزارش نشست"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "انتخاب پروژه"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "ویرایش",
+      "updatedYesterday": "ویرایش دیروز",
+      "yesterday": "دیروز"
+    },
+    "reviewState": {
+      "needsFix": "نیازمند رفع"
+    },
+    "unassigned": "بدون تخصیص"
+  }
+}

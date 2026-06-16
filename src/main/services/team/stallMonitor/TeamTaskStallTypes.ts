@@ -46,6 +46,7 @@ export interface ResolvedReviewer {
 export interface TaskStallEvaluation {
   status: TaskStallEvaluationStatus;
   taskId?: string;
+  memberName?: string;
   branch?: TaskStallBranch;
   signal?: TaskStallSignal;
   progressSignal?: TaskProgressSignal;
@@ -135,6 +136,7 @@ export interface TaskStallJournalEntry {
   epochKey: string;
   teamName: string;
   taskId: string;
+  memberName?: string;
   branch: TaskStallBranch;
   signal: TaskStallSignal;
   state: TaskStallJournalState;

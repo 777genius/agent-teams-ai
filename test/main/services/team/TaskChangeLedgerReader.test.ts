@@ -1,11 +1,9 @@
+import { TaskChangeLedgerReader } from '@main/services/team/TaskChangeLedgerReader';
 import { createHash } from 'crypto';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
-
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
-
-import { TaskChangeLedgerReader } from '@main/services/team/TaskChangeLedgerReader';
 
 const TASK_ID = 'task-1';
 
@@ -361,6 +359,130 @@ describe('TaskChangeLedgerReader', () => {
     expect(snippets[0]?.ledger?.eventId).toBe('event-full');
     expect(snippets[0]?.ledger?.originalFullContent).toBe(beforeContent);
     expect(snippets[0]?.ledger?.modifiedFullContent).toBe(afterContent);
+  });
+
+  it('hides suppressed OpenCode journal imports without hiding legitimate same-file imports', async () => {
+    tmpDir = await fsTempDir();
+    const eventsDir = path.join(tmpDir, '.board-task-changes', 'events');
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(eventsDir, { recursive: true });
+    await mkdir(blobsDir, { recursive: true });
+
+    const beforeContent = 'export const value = 1;\n';
+    const staleAfterContent = 'export const value = "ambient";\n';
+    const legitAfterContent = 'export const value = 2;\n';
+    await writeFile(path.join(blobsDir, 'before.txt'), beforeContent, 'utf8');
+    await writeFile(path.join(blobsDir, 'stale-after.txt'), staleAfterContent, 'utf8');
+    await writeFile(path.join(blobsDir, 'legit-after.txt'), legitAfterContent, 'utf8');
+
+    const staleSourceImportKey = 'opencode\0session-1\0part-stale\0src/file.ts';
+    const legitSourceImportKey = 'opencode\0session-1\0part-legit\0src/file.ts';
+    const baseEvent = {
+      schemaVersion: 1,
+      taskId: TASK_ID,
+      taskRef: TASK_ID,
+      taskRefKind: 'canonical',
+      phase: 'work',
+      executionSeq: 1,
+      sessionId: 'opencode-session-1',
+      memberName: 'bob',
+      source: 'opencode_toolpart_edit',
+      operation: 'modify',
+      confidence: 'high',
+      workspaceRoot: '/repo',
+      filePath: '/repo/src/file.ts',
+      relativePath: 'src/file.ts',
+      timestamp: '2026-03-01T10:00:00.000Z',
+      toolStatus: 'succeeded',
+      sourceRuntime: 'opencode',
+      sourceProvider: 'opencode',
+      evidenceProof: 'opencode-snapshot',
+      beforeState: { exists: true, sha256: sha(beforeContent), sizeBytes: beforeContent.length },
+    };
+    await writeFile(
+      path.join(eventsDir, `${encodeURIComponent(TASK_ID)}.jsonl`),
+      [
+        {
+          ...baseEvent,
+          eventId: 'event-stale',
+          toolUseId: 'part-stale',
+          sourceImportKey: staleSourceImportKey,
+          before: { sha256: sha(beforeContent), sizeBytes: beforeContent.length, blobRef: 'before.txt' },
+          after: {
+            sha256: sha(staleAfterContent),
+            sizeBytes: staleAfterContent.length,
+            blobRef: 'stale-after.txt',
+          },
+          afterState: {
+            exists: true,
+            sha256: sha(staleAfterContent),
+            sizeBytes: staleAfterContent.length,
+          },
+          linesAdded: 1,
+          linesRemoved: 1,
+        },
+        {
+          ...baseEvent,
+          eventId: 'event-stale-suppressed',
+          toolUseId: 'opencode-snapshot-only-suppression',
+          sourceImportKey: staleSourceImportKey,
+          before: null,
+          after: null,
+          afterState: {
+            exists: true,
+            sha256: sha(staleAfterContent),
+            sizeBytes: staleAfterContent.length,
+          },
+          linesAdded: 0,
+          linesRemoved: 0,
+          suppressed: true,
+          suppressionReason: 'snapshot-only evidence does not prove file authorship',
+          suppressedAt: '2026-03-01T10:01:00.000Z',
+          supersedesEventId: 'event-stale',
+        },
+        {
+          ...baseEvent,
+          eventId: 'event-legit',
+          toolUseId: 'part-legit',
+          sourceImportKey: legitSourceImportKey,
+          before: { sha256: sha(beforeContent), sizeBytes: beforeContent.length, blobRef: 'before.txt' },
+          after: {
+            sha256: sha(legitAfterContent),
+            sizeBytes: legitAfterContent.length,
+            blobRef: 'legit-after.txt',
+          },
+          afterState: {
+            exists: true,
+            sha256: sha(legitAfterContent),
+            sizeBytes: legitAfterContent.length,
+          },
+          linesAdded: 1,
+          linesRemoved: 1,
+        },
+      ]
+        .map((entry) => JSON.stringify(entry))
+        .join('\n') + '\n',
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files).toHaveLength(1);
+    expect(result?.files[0]?.relativePath).toBe('src/file.ts');
+    expect(result?.files[0]?.linesAdded).toBe(1);
+    expect(result?.files[0]?.linesRemoved).toBe(1);
+    const snippets = result?.files[0]?.snippets ?? [];
+    expect(snippets).toHaveLength(1);
+    expect(snippets[0]?.ledger?.eventId).toBe('event-legit');
+    expect(snippets[0]?.ledger?.originalFullContent).toBe(beforeContent);
+    expect(snippets[0]?.ledger?.modifiedFullContent).toBe(legitAfterContent);
   });
 
   it('groups rename relations in summary-only bundles without losing absolute paths', async () => {
@@ -1110,15 +1232,26 @@ async function makeLedgerBundle(params: {
       taskId: TASK_ID,
       generatedAt: '2026-03-01T10:00:00.000Z',
       eventCount: params.events.length,
-      files: params.events.map((event: any) => ({
-        filePath: event.filePath,
-        relativePath: event.relativePath,
-        eventIds: [event.eventId],
-        linesAdded: event.linesAdded ?? 0,
-        linesRemoved: event.linesRemoved ?? 0,
-        isNewFile: event.operation === 'create',
-        latestAfterHash: event.after?.sha256 ?? null,
-      })),
+      files: params.events.map((event) => {
+        const record = event as {
+          filePath?: string;
+          relativePath?: string;
+          eventId?: string;
+          linesAdded?: number;
+          linesRemoved?: number;
+          operation?: string;
+          after?: { sha256?: string } | null;
+        };
+        return {
+          filePath: record.filePath,
+          relativePath: record.relativePath,
+          eventIds: [record.eventId],
+          linesAdded: record.linesAdded ?? 0,
+          linesRemoved: record.linesRemoved ?? 0,
+          isNewFile: record.operation === 'create',
+          latestAfterHash: record.after?.sha256 ?? null,
+        };
+      }),
       totalLinesAdded: 0,
       totalLinesRemoved: 0,
       totalFiles: params.events.length,

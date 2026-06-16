@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "ฟีเจอร์",
+    "screenshots": "ภาพหน้าจอ",
+    "docs": "เอกสาร",
+    "comparison": "เปรียบเทียบ",
+    "download": "ดาวน์โหลด",
+    "pricing": "ฟรี",
+    "faq": "คำถามที่พบบ่อย",
+    "viewOnGithub": "ดูบน GitHub",
+    "openMenu": "เปิดเมนู",
+    "closeMenu": "ปิดเมนู",
+    "short": {
+      "screenshots": "ภาพ",
+      "docs": "เอกสาร",
+      "download": "รับ",
+      "comparison": "เทียบ",
+      "pricing": "ฟรี"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "ดาวน์โหลดเลย",
+    "ctaPrimary": "ดาวน์โหลดสำหรับ {platform}",
+    "ctaSecondary": "เปรียบเทียบ",
+    "ctaDocs": "เอกสาร",
+    "preview": "ตัวอย่างผลิตภัณฑ์",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "บอร์ด Kanban",
+      "openSource": "โอเพนซอร์ส"
+    },
+    "watchDemo": "ดูเดโม",
+    "videoUnavailable": "ไม่มีวิดีโอ",
+    "supportedProviders": "ผู้ให้บริการ AI ที่รองรับ",
+    "slogan": "ทำสำเร็จได้มากมายด้วยการลงมือเพียงเล็กน้อย",
+    "platformDefault": "สำหรับแพลตฟอร์มของคุณ",
+    "guidesSetup": "คู่มือและการตั้งค่า",
+    "videoFrameLabel": "ดูเดโม Agent Teams",
+    "commandFeed": "ฟีดคำสั่งของทีม",
+    "liveDemo": "เดโมสด",
+    "demoVideoTitle": "วิดีโอเดโม Agent Teams",
+    "demoTitle": "เดโม Agent Teams",
+    "demo": {
+      "ariaLabel": "เดโมทีมเอเจนต์",
+      "live": "สด",
+      "waiting": "กำลังรองาน...",
+      "activity": {
+        "authMiddleware": "กำลังพัฒนา auth middleware...",
+        "unitTests": "กำลังเขียน unit test สำหรับ API...",
+        "reviewPr": "กำลังรีวิวการเปลี่ยนแปลงใน PR #42...",
+        "ciPipeline": "กำลังตั้งค่า CI/CD pipeline...",
+        "refactorDatabase": "กำลังปรับโครงสร้างชั้นฐานข้อมูล..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit test",
+        "ciSetup": "ตั้งค่า CI"
+      },
+      "columns": {
+        "todo": "ต้องทำ",
+        "progress": "กำลังดำเนินการ",
+        "review": "รีวิว",
+        "done": "เสร็จสิ้น"
+      }
+    }
+  },
+  "download": {
+    "title": "ดาวน์โหลด",
+    "detected": "ตรวจพบ",
+    "systemRequirements": "ความต้องการของระบบ",
+    "version": "เวอร์ชัน {version}",
+    "readyToStart": "พร้อมเริ่มแล้ว!"
+  },
+  "theme": {
+    "dark": "มืด",
+    "light": "สว่าง"
+  },
+  "language": {
+    "label": "ภาษา",
+    "search": "ค้นหาภาษา…"
+  },
+  "features": {
+    "sectionTitle": "ทุกสิ่งที่คุณต้องการสำหรับการจัดการทีมเอเจนต์ AI",
+    "sectionSubtitle": "เครื่องมือทรงพลังที่ทำให้การทำงานร่วมกันของหลายเอเจนต์ใช้งานได้จริง"
+  },
+  "pricing": {
+    "sectionTitle": "ติดตั้งฟรี มาพร้อมโมเดลฟรี",
+    "sectionSubtitle": "เริ่มได้ทันทีด้วยโมเดลฟรีที่ไม่ต้องยืนยันตัวตน - ไม่ต้องมีบัญชี, API key หรือบัตรเครดิต เชื่อมต่อ Claude, Codex, OpenCode/OpenRouter หรือผู้ให้บริการอื่นเมื่อคุณต้องการโมเดลเพิ่มเติม",
+    "getStarted": "ดาวน์โหลดเลย",
+    "popular": "ฟรี",
+    "freeModelCallout": "มาพร้อมโมเดลฟรีที่ไม่ต้องยืนยันตัวตน",
+    "note": "Agent Teams ไม่มีระดับการใช้งานแบบเสียเงิน โมเดลฟรีที่ไม่ต้องยืนยันตัวตนให้คุณลองใช้ได้ทันที ส่วนการใช้งานผู้ให้บริการแบบเสียเงินเป็นตัวเลือกและควบคุมโดยผู้ให้บริการที่คุณเลือก"
+  },
+  "testimonials": {
+    "sectionTitle": "นักพัฒนาพูดถึงเราอย่างไร",
+    "sectionSubtitle": "ความคิดเห็นจริงจากผู้สร้างจริง",
+    "showMore": "ดูเพิ่มเติม",
+    "showLess": "ดูน้อยลง",
+    "feedbackCta": "อยากแบ่งปันประสบการณ์ของคุณ? เปิด issue บน"
+  },
+  "faq": {
+    "sectionTitle": "มีคำถามใช่ไหม? เรามีคำตอบ",
+    "subtitle": "ทุกสิ่งที่คุณต้องรู้เกี่ยวกับ Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "เราเปรียบเทียบได้อย่างไร",
+    "sectionSubtitle": "เปรียบเทียบทีละฟีเจอร์กับเครื่องมือเขียนโค้ด AI อื่น ๆ",
+    "feature": "ฟีเจอร์",
+    "robotBubble": "ตัดสินด้วยตัวคุณเอง",
+    "features": {
+      "crossTeam": "การสื่อสารข้ามทีม",
+      "agentMessaging": "การส่งข้อความระหว่างเอเจนต์",
+      "linkedTasks": "งานที่เชื่อมโยงกัน",
+      "sessionAnalysis": "การวิเคราะห์เซสชัน",
+      "taskAttachments": "ไฟล์แนบของงาน",
+      "hunkReview": "การรีวิวระดับ hunk",
+      "codeEditor": "ตัวแก้ไขโค้ดในตัว",
+      "fullAutonomy": "ทำงานอัตโนมัติเต็มรูปแบบ",
+      "taskDeps": "การพึ่งพากันของงาน",
+      "reviewWorkflow": "ขั้นตอนการรีวิว",
+      "zeroSetup": "ไม่ต้องตั้งค่า",
+      "kanban": "บอร์ด Kanban",
+      "execLog": "บันทึกการทำงาน",
+      "liveProcesses": "กระบวนการแบบสด",
+      "runtimeLoad": "CPU/RAM ต่อเพื่อนร่วมทีม",
+      "perTaskReview": "การรีวิวโค้ดต่องาน",
+      "flexAutonomy": "ความเป็นอิสระแบบยืดหยุ่น",
+      "worktree": "การแยก Git worktree",
+      "multiAgent": "เพื่อนร่วมทีม AI ผสมผสาน",
+      "liveWorkGraph": "แผนผังทีมแบบสด",
+      "liveTeam": "เพื่อนร่วมทีมแบบสด",
+      "teamWorkspace": "พื้นที่ทำงานของทีม",
+      "launchProof": "สถานะการเริ่มต้นของเพื่อนร่วมทีม",
+      "orgGovernance": "ผังองค์กร / การกำกับดูแล",
+      "budgetControls": "การควบคุมงบประมาณ",
+      "price": "ราคา"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "ดูการทำงานจริง",
+    "sectionSubtitle": "ภาพหน้าจอจริงจากแอป — บอร์ด Kanban, การรีวิวโค้ด, ทีมเอเจนต์ และอื่น ๆ"
+  },
+  "common": {
+    "learnMore": "เรียนรู้เพิ่มเติม",
+    "statusLabel": "สถานะ:",
+    "previous": "ก่อนหน้า",
+    "next": "ถัดไป"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "การจัดการทีมเอเจนต์ AI สำหรับนักพัฒนา",
+    "robotBubble": "ฉันกำลังรออยู่",
+    "links": {
+      "github": "GitHub",
+      "author": "ผู้สร้าง",
+      "docs": "เอกสาร"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - การจัดการทีมเอเจนต์ AI สำหรับนักพัฒนา",
+    "homeDescription": "แอปเดสก์ท็อปโอเพนซอร์สฟรีสำหรับทีมเอเจนต์ AI เริ่มต้นด้วยโมเดลฟรีที่ไม่ต้องยืนยันตัวตน จากนั้นเชื่อมต่อ Claude, Codex หรือ OpenCode เมื่อคุณต้องการโมเดลเพิ่มเติม",
+    "downloadTitle": "ดาวน์โหลด Agent Teams สำหรับ macOS, Windows และ Linux",
+    "downloadDescription": "ดาวน์โหลด Agent Teams สำหรับ macOS, Windows และ Linux แอปเดสก์ท็อปโอเพนซอร์สฟรีสำหรับทีมเอเจนต์ Claude, Codex และ OpenCode"
+  },
+  "error": {
+    "notFoundTitle": "ไม่พบหน้านี้",
+    "notFoundDescription": "หน้าที่คุณกำลังค้นหาไม่มีอยู่หรือถูกย้ายไปแล้ว",
+    "genericTitle": "เกิดข้อผิดพลาดบางอย่าง",
+    "genericDescription": "เกิดข้อผิดพลาดที่ไม่คาดคิด โปรดลองอีกครั้งในภายหลัง",
+    "goHome": "ไปที่หน้าแรก"
+  }
+}

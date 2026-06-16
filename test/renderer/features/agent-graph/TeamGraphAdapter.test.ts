@@ -2112,6 +2112,91 @@ describe('TeamGraphAdapter particles', () => {
     expect(findNode(completedGraph, 'task:my-team:task-b')?.isBlocked).toBe(false);
   });
 
+  it('resolves blocking edges and labels from display id references', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-a',
+            displayId: '#A1',
+            subject: 'Blocker',
+            owner: 'alice',
+            status: 'in_progress',
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+          {
+            id: 'task-b',
+            displayId: '#B1',
+            subject: 'Blocked task',
+            owner: 'bob',
+            status: 'pending',
+            blockedBy: ['#A1'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'task:my-team:task-b')).toMatchObject({
+      isBlocked: true,
+      blockedByDisplayIds: ['#A1'],
+    });
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        source: 'task:my-team:task-a',
+        target: 'task:my-team:task-b',
+        type: 'blocking',
+      })
+    );
+  });
+
+  it('prefers canonical task ids over colliding display id references', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-a',
+            displayId: '#A1',
+            subject: 'Canonical blocker',
+            owner: 'alice',
+            status: 'completed',
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+          {
+            id: 'task-collision',
+            displayId: '#task-a',
+            subject: 'Display id collision',
+            owner: 'alice',
+            status: 'in_progress',
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+          {
+            id: 'task-b',
+            displayId: '#B1',
+            subject: 'Blocked task',
+            owner: 'bob',
+            status: 'pending',
+            blockedBy: ['task-a'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'task:my-team:task-b')?.isBlocked).toBe(false);
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        source: 'task:my-team:task-a',
+        target: 'task:my-team:task-b',
+        type: 'blocking',
+      })
+    );
+  });
+
   it('aggregates blocking edges through overflow stacks so hidden blockers stay visible', () => {
     const adapter = TeamGraphAdapter.create();
     const graph = adapter.adapt(

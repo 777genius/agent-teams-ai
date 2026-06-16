@@ -712,24 +712,23 @@ export function createPersistedLaunchSnapshot(params: {
   teamName: string;
   expectedMembers: readonly string[];
   bootstrapExpectedMembers?: readonly string[];
+  includeLeadMembers?: boolean;
   leadSessionId?: string;
   launchPhase?: PersistedTeamLaunchPhase;
   members?: Record<string, PersistedTeamLaunchMemberState>;
   updatedAt?: string;
 }): PersistedTeamLaunchSnapshot {
   const updatedAt = params.updatedAt ?? new Date().toISOString();
+  const shouldKeepExpectedMemberName = (name: string): boolean =>
+    name.length > 0 && name !== 'user' && (params.includeLeadMembers || !isLeadMember({ name }));
   const expectedMembers = Array.from(
-    new Set(
-      params.expectedMembers
-        .map(normalizeMemberName)
-        .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
-    )
+    new Set(params.expectedMembers.map(normalizeMemberName).filter(shouldKeepExpectedMemberName))
   );
   const bootstrapExpectedMembers = Array.from(
     new Set(
       (params.bootstrapExpectedMembers ?? expectedMembers)
         .map(normalizeMemberName)
-        .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
+        .filter(shouldKeepExpectedMemberName)
     )
   );
   const members = params.members ?? {};

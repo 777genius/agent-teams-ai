@@ -65,6 +65,7 @@ import {
 } from '@renderer/store/slices/cliInstallerSlice';
 import {
   CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+  CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
   type CliProviderId,
 } from '@shared/types/cliInstaller';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -612,6 +613,76 @@ describe('cliInstallerSlice', () => {
       expect(merged.providers.find((provider) => provider.providerId === 'codex')).toMatchObject({
         statusMessage: CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
       });
+    });
+
+    it('does not let a scoped runtime-status error overwrite a connected provider', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          backend: { kind: 'anthropic', label: 'Anthropic' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+          models: [],
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers[0]).toBe(current.providers[0]);
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('oauth_token');
+    });
+
+    it('allows a real disconnected provider snapshot to replace a connected provider', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          backend: { kind: 'anthropic', label: 'Anthropic' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'verified',
+          statusMessage: null,
+          models: [],
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers[0]).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'verified',
+        statusMessage: null,
+      });
+      expect(merged.authLoggedIn).toBe(false);
+      expect(merged.authMethod).toBeNull();
     });
 
     it('drops hydrated hidden Gemini when a fresh frontend status omits it', () => {
@@ -1470,6 +1541,41 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
     });
 
+    it('keeps an already connected provider visible when a status refresh errors', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected via Anthropic subscription',
+            models: ['claude-sonnet-4-5'],
+            backend: { kind: 'anthropic', label: 'Anthropic' },
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
+        new Error(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE)
+      );
+
+      await useStore.getState().fetchCliProviderStatus('anthropic');
+
+      const provider = useStore
+        .getState()
+        .cliStatus?.providers.find((candidate) => candidate.providerId === 'anthropic');
+      expect(useStore.getState().cliStatusError).toBe(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE);
+      expect(provider).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+        verificationState: 'verified',
+        statusMessage: 'Connected via Anthropic subscription',
+        models: ['claude-sonnet-4-5'],
+      });
+      expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
+      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+    });
+
     it('ignores hidden Gemini provider failures without keeping global auth checking active', async () => {
       useStore.setState({
         cliStatus: createMultimodelStatus([
@@ -1665,6 +1771,104 @@ describe('cliInstallerSlice', () => {
         modelCatalogRefreshState: 'ready',
       });
       expect(provider?.modelCatalog?.defaultModelId).toBe('gpt-5.4');
+    });
+
+    it('retries Codex provider refresh when dynamic catalog hydration remains loading', async () => {
+      vi.useFakeTimers();
+
+      const loadingProvider = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        authenticated: false,
+        authMethod: null,
+        statusMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+        models: [],
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: {
+          modelCatalog: {
+            dynamic: true,
+            source: 'app-server',
+          },
+        },
+        backend: { kind: 'codex-native', label: 'Codex native' },
+      });
+      const readyProvider = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        authenticated: true,
+        authMethod: 'chatgpt',
+        statusMessage: 'ChatGPT account ready',
+        models: ['gpt-5.4'],
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'codex',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-05-17T00:00:00.000Z',
+          staleAt: '2026-05-17T00:10:00.000Z',
+          defaultModelId: 'gpt-5.4',
+          defaultLaunchModel: 'gpt-5.4',
+          models: [
+            {
+              id: 'gpt-5.4',
+              launchModel: 'gpt-5.4',
+              displayName: 'GPT-5.4',
+              hidden: false,
+              supportedReasoningEfforts: ['medium'],
+              defaultReasoningEffort: 'medium',
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
+          diagnostics: {
+            configReadState: 'skipped',
+            appServerState: 'healthy',
+          },
+        },
+        runtimeCapabilities: {
+          modelCatalog: {
+            dynamic: true,
+            source: 'app-server',
+          },
+        },
+        backend: { kind: 'codex-native', label: 'Codex native' },
+      });
+
+      useStore.setState({
+        cliStatus: createMultimodelStatus([loadingProvider]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(loadingProvider)
+        .mockResolvedValueOnce(readyProvider);
+
+      await useStore.getState().fetchCliProviderStatus('codex');
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+          ?.modelCatalogRefreshState
+      ).toBe('loading');
+
+      await vi.runOnlyPendingTimersAsync();
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+      ).toMatchObject({
+        authenticated: true,
+        statusMessage: 'ChatGPT account ready',
+        models: ['gpt-5.4'],
+        modelCatalogRefreshState: 'ready',
+      });
     });
 
     it('keeps cached OpenCode model list when summary refresh only reports big-pickle', async () => {

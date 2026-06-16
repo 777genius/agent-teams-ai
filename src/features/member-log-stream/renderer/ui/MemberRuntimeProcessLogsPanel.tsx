@@ -34,12 +34,20 @@ function formatBytes(bytes: number | undefined): string {
   return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`;
 }
 
-function buildStatusText(log: MemberRuntimeLogTailResponse | null): string | null {
+function buildStatusText(
+  log: MemberRuntimeLogTailResponse | null,
+  labels: {
+    empty: string;
+    fileEmpty: string;
+    showingLast: (bytes: string) => string;
+    showing: (bytes: string) => string;
+  }
+): string | null {
   if (!log) return null;
-  if (log.missing) return 'No process log file captured for this member yet.';
-  if (!log.content) return 'Process log file is empty.';
-  if (log.truncated) return `Showing last ${formatBytes(log.bytesRead)}.`;
-  return `Showing ${formatBytes(log.bytesRead)}.`;
+  if (log.missing) return labels.empty;
+  if (!log.content) return labels.fileEmpty;
+  if (log.truncated) return labels.showingLast(formatBytes(log.bytesRead));
+  return labels.showing(formatBytes(log.bytesRead));
 }
 
 function ProcessLogKindTabs({
@@ -204,7 +212,12 @@ export function MemberRuntimeProcessLogsPanel({
     }
   }, [log?.content]);
 
-  const statusText = buildStatusText(log);
+  const statusText = buildStatusText(log, {
+    empty: t('members.runtimeLogs.empty'),
+    fileEmpty: t('members.runtimeLogs.fileEmpty'),
+    showingLast: (bytes) => t('members.runtimeLogs.showingLast', { bytes }),
+    showing: (bytes) => t('members.runtimeLogs.showing', { bytes }),
+  });
   const hasContent = Boolean(log?.content);
 
   return (
@@ -252,7 +265,7 @@ export function MemberRuntimeProcessLogsPanel({
             disabled={!hasContent}
           >
             {copied ? <Check size={13} /> : <Clipboard size={13} />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? tCommon('actions.copied') : t('members.runtimeLogs.copy')}
           </button>
         </div>
       </div>

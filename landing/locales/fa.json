@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "ویژگی‌ها",
+    "screenshots": "تصاویر",
+    "docs": "مستندات",
+    "comparison": "مقایسه",
+    "download": "دانلود",
+    "pricing": "رایگان",
+    "faq": "پرسش‌های متداول",
+    "viewOnGithub": "مشاهده در GitHub",
+    "openMenu": "باز کردن منو",
+    "closeMenu": "بستن منو",
+    "short": {
+      "screenshots": "تصاویر",
+      "docs": "مستندات",
+      "download": "دریافت",
+      "comparison": "مقایسه",
+      "pricing": "رایگان"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "اکنون دانلود کنید",
+    "ctaPrimary": "دانلود برای {platform}",
+    "ctaSecondary": "مقایسه",
+    "ctaDocs": "مستندات",
+    "preview": "پیش‌نمایش محصول",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "تخته Kanban",
+      "openSource": "متن‌باز"
+    },
+    "watchDemo": "تماشای دمو",
+    "videoUnavailable": "ویدیو در دسترس نیست",
+    "supportedProviders": "ارائه‌دهندگان هوش مصنوعی پشتیبانی‌شده",
+    "slogan": "کارهای زیادی را با تلاش بسیار اندک انجام دهید",
+    "platformDefault": "برای پلتفرم شما",
+    "guidesSetup": "راهنماها و راه‌اندازی",
+    "videoFrameLabel": "تماشای دموی Agent Teams",
+    "commandFeed": "جریان فرمان‌های تیم",
+    "liveDemo": "دموی زنده",
+    "demoVideoTitle": "ویدیوی دموی Agent Teams",
+    "demoTitle": "دموی Agent Teams",
+    "demo": {
+      "ariaLabel": "دموی تیم عامل",
+      "live": "زنده",
+      "waiting": "در انتظار وظایف...",
+      "activity": {
+        "authMiddleware": "در حال پیاده‌سازی میان‌افزار احراز هویت...",
+        "unitTests": "در حال نوشتن تست‌های واحد برای API...",
+        "reviewPr": "در حال بازبینی تغییرات PR #42...",
+        "ciPipeline": "در حال راه‌اندازی خط لوله CI/CD...",
+        "refactorDatabase": "در حال بازآرایی لایه پایگاه داده..."
+      },
+      "tasks": {
+        "authApi": "API احراز هویت",
+        "unitTests": "تست‌های واحد",
+        "ciSetup": "راه‌اندازی CI"
+      },
+      "columns": {
+        "todo": "انجام‌دادنی",
+        "progress": "در حال انجام",
+        "review": "بازبینی",
+        "done": "انجام‌شده"
+      }
+    }
+  },
+  "download": {
+    "title": "دانلود",
+    "detected": "شناسایی‌شده",
+    "systemRequirements": "نیازمندی‌های سیستم",
+    "version": "نسخه {version}",
+    "readyToStart": "آماده شروع!"
+  },
+  "theme": {
+    "dark": "تیره",
+    "light": "روشن"
+  },
+  "language": {
+    "label": "زبان",
+    "search": "جستجوی زبان…"
+  },
+  "features": {
+    "sectionTitle": "هر آنچه برای ارکستراسیون عامل‌های هوش مصنوعی نیاز دارید",
+    "sectionSubtitle": "ابزارهای قدرتمندی که همکاری چندعاملی را واقعاً کارآمد می‌کنند."
+  },
+  "pricing": {
+    "sectionTitle": "نصب رایگان. مدل رایگان همراه آن.",
+    "sectionSubtitle": "بلافاصله با یک مدل رایگان بدون احراز هویت شروع کنید - بدون حساب کاربری، کلید API یا کارت اعتباری. تنها زمانی که مدل‌های بیشتری بخواهید، دسترسی Claude، Codex، OpenCode/OpenRouter یا ارائه‌دهنده دیگری را متصل کنید.",
+    "getStarted": "اکنون دانلود کنید",
+    "popular": "رایگان",
+    "freeModelCallout": "مدل رایگان بدون احراز هویت همراه آن",
+    "note": "Agent Teams هیچ سطح پولی ندارد. مدل رایگان بدون احراز هویت به شما امکان می‌دهد بلافاصله آن را امتحان کنید؛ استفاده پولی از ارائه‌دهنده اختیاری است و توسط ارائه‌دهنده‌ای که انتخاب می‌کنید کنترل می‌شود."
+  },
+  "testimonials": {
+    "sectionTitle": "توسعه‌دهندگان چه می‌گویند",
+    "sectionSubtitle": "بازخورد واقعی از سازندگان واقعی",
+    "showMore": "نمایش بیشتر",
+    "showLess": "نمایش کمتر",
+    "feedbackCta": "می‌خواهید تجربه‌تان را به اشتراک بگذارید؟ یک issue باز کنید در"
+  },
+  "faq": {
+    "sectionTitle": "سؤالی دارید؟ ما پاسخ‌ها را داریم",
+    "subtitle": "هر آنچه درباره Agent Teams باید بدانید"
+  },
+  "comparison": {
+    "sectionTitle": "ما در مقایسه با دیگران",
+    "sectionSubtitle": "مقایسه ویژگی‌به‌ویژگی با سایر ابزارهای کدنویسی هوش مصنوعی.",
+    "feature": "ویژگی",
+    "robotBubble": "خودتان قضاوت کنید",
+    "features": {
+      "crossTeam": "ارتباط بین‌تیمی",
+      "agentMessaging": "پیام‌رسانی عامل‌به‌عامل",
+      "linkedTasks": "وظایف پیوندخورده",
+      "sessionAnalysis": "تحلیل نشست",
+      "taskAttachments": "پیوست‌های وظیفه",
+      "hunkReview": "بازبینی در سطح بخش",
+      "codeEditor": "ویرایشگر کد داخلی",
+      "fullAutonomy": "خودمختاری کامل",
+      "taskDeps": "وابستگی‌های وظیفه",
+      "reviewWorkflow": "گردش‌کار بازبینی",
+      "zeroSetup": "بدون راه‌اندازی",
+      "kanban": "تخته Kanban",
+      "execLog": "گزارش‌های اجرا",
+      "liveProcesses": "فرایندهای زنده",
+      "runtimeLoad": "CPU/RAM به ازای هر هم‌تیمی",
+      "perTaskReview": "بازبینی کد به ازای هر وظیفه",
+      "flexAutonomy": "خودمختاری انعطاف‌پذیر",
+      "worktree": "جداسازی Git worktree",
+      "multiAgent": "هم‌تیمی‌های هوش مصنوعی ترکیبی",
+      "liveWorkGraph": "نقشه زنده تیم",
+      "liveTeam": "هم‌تیمی‌های زنده",
+      "teamWorkspace": "فضای کاری تیم",
+      "launchProof": "وضعیت راه‌اندازی هم‌تیمی",
+      "orgGovernance": "چارت سازمانی / حاکمیت",
+      "budgetControls": "کنترل‌های بودجه",
+      "price": "قیمت"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "آن را در عمل ببینید",
+    "sectionSubtitle": "تصاویر واقعی از برنامه — تخته Kanban، بازبینی کد، تیم‌های عامل و موارد دیگر."
+  },
+  "common": {
+    "learnMore": "بیشتر بدانید",
+    "statusLabel": "وضعیت:",
+    "previous": "قبلی",
+    "next": "بعدی"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "ارکستراسیون عامل‌های هوش مصنوعی برای توسعه‌دهندگان",
+    "robotBubble": "منتظرم",
+    "links": {
+      "github": "GitHub",
+      "author": "سازنده",
+      "docs": "مستندات"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - ارکستراسیون عامل‌های هوش مصنوعی برای توسعه‌دهندگان",
+    "homeDescription": "برنامه دسکتاپ رایگان و متن‌باز برای تیم‌های عامل هوش مصنوعی. با یک مدل رایگان بدون احراز هویت شروع کنید، سپس هنگام نیاز به مدل‌های بیشتر Claude، Codex یا OpenCode را متصل کنید.",
+    "downloadTitle": "دانلود Agent Teams برای macOS، Windows و Linux",
+    "downloadDescription": "Agent Teams را برای macOS، Windows و Linux دانلود کنید. برنامه دسکتاپ رایگان و متن‌باز برای تیم‌های عامل Claude، Codex و OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "صفحه یافت نشد",
+    "notFoundDescription": "صفحه‌ای که دنبال آن هستید وجود ندارد یا منتقل شده است.",
+    "genericTitle": "مشکلی پیش آمد",
+    "genericDescription": "خطای غیرمنتظره‌ای رخ داد. لطفاً بعداً دوباره تلاش کنید.",
+    "goHome": "رفتن به صفحه اصلی"
+  }
+}

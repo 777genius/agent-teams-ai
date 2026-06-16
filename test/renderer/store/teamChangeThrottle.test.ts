@@ -298,8 +298,7 @@ describe('team change throttling', () => {
     await vi.advanceTimersByTimeAsync(500);
     expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledTimes(1);
     expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledWith('my-team');
-    expect(fetchTeamAgentRuntimeSpy).toHaveBeenCalledTimes(1);
-    expect(fetchTeamAgentRuntimeSpy).toHaveBeenCalledWith('my-team');
+    expect(fetchTeamAgentRuntimeSpy).not.toHaveBeenCalled();
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
 
@@ -311,6 +310,10 @@ describe('team change throttling', () => {
     expect(fetchTeamsSpy).toHaveBeenCalledTimes(1);
     expect(refreshTeamDataSpy).toHaveBeenCalledTimes(1);
     expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(fetchTeamAgentRuntimeSpy).toHaveBeenCalledTimes(1);
+    expect(fetchTeamAgentRuntimeSpy).toHaveBeenCalledWith('my-team');
 
     const summary = summarizeTeamRefreshFanout('my-team');
     expect(summary.rows).toEqual(
@@ -436,14 +439,19 @@ describe('team change throttling', () => {
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(799);
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+    expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledWith('my-team');
+    expect(fetchTeamAgentRuntimeSpy).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledWith('my-team');
+    expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledTimes(1);
+    expect(fetchTeamAgentRuntimeSpy).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(4_200);
     expect(fetchTeamAgentRuntimeSpy).toHaveBeenCalledWith('my-team');
     expect(useStore.getState().selectedTeamData).toBeNull();
     expect(useStore.getState().teamDataCacheByName['my-team']).toBeUndefined();
 
-    await vi.advanceTimersByTimeAsync(19_200);
+    await vi.advanceTimersByTimeAsync(15_000);
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
 
@@ -563,7 +571,7 @@ describe('team change throttling', () => {
       { type: 'lead-activity', teamName: 'my-team', detail: 'active', runId: 'run-1' }
     );
 
-    await vi.advanceTimersByTimeAsync(29_999);
+    await vi.advanceTimersByTimeAsync(59_999);
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
@@ -1099,6 +1107,35 @@ describe('team change throttling', () => {
     expect(snapshot?.counts['team-change-listener:event:config:fetchAllTasks:coalesced']).toBe(1);
     expect(snapshot?.counts['team-change-listener:event:task:fetchAllTasks:executed']).toBe(1);
     expect(snapshot?.counts['team-change-listener:event:config:fetchAllTasks:executed']).toBe(1);
+  });
+
+  it('slows global task refreshes during active provisioning', async () => {
+    const fetchAllTasksSpy = vi.fn(async () => undefined);
+    useStore.setState({
+      fetchAllTasks: fetchAllTasksSpy,
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-1' },
+      provisioningRuns: {
+        'run-1': {
+          runId: 'run-1',
+          teamName: 'my-team',
+          state: 'spawning',
+          message: 'Spawning',
+          startedAt: '2026-05-03T00:00:00.000Z',
+          updatedAt: '2026-05-03T00:00:00.000Z',
+        },
+      },
+    } as never);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    fetchAllTasksSpy.mockClear();
+
+    hoisted.onTeamChangeCb?.({}, { type: 'task', teamName: 'my-team' });
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchAllTasksSpy).toHaveBeenCalledTimes(1);
   });
 
   it('lead-message refreshes message head only, not team list, tasks, or structural detail', async () => {

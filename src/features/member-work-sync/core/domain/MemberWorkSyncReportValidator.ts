@@ -153,6 +153,14 @@ export function validateMemberWorkSyncReport(input: {
     };
   }
 
+  if (input.request.state === 'still_working' && input.agenda.items.length === 0) {
+    return {
+      ok: false,
+      code: 'still_working_rejected_agenda_empty',
+      message: 'Cannot report still_working when no actionable work remains.',
+    };
+  }
+
   if (
     input.request.state === 'blocked' &&
     !agendaHasBlockedEvidence(input.agenda, input.request.taskIds)

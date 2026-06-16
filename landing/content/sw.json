@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Wewe ndiye Boss, agents ni timu yako. Zinashughulikia tasks zenyewe, zinatumiana ujumbe na kureview code. Wewe unaangalia kanban board na kunywa kahawa."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Timu za agents",
+      "description": "Unda timu zenye roles tofauti. Agents hufanya kazi kwa kujitegemea na kwa parallel, huwasiliana na kushirikiana kati ya timu."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Status za tasks hubadilika realtime agents zinapofanya kazi. Drag, assign na review vyote kwenye board ya kuona."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Diff view kwa kila task pamoja na accept, reject na comment. Code editor ya ndani yenye Git support."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Mawasiliano kati ya timu",
+      "description": "Agents hutumiana ujumbe ndani ya timu na kati ya timu. Direct messages, task comments na quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mode",
+      "description": "Anza na agent mmoja anayejisimamia tasks. Panua kuwa timu kamili unapohitaji nguvu zaidi."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processes",
+      "description": "Ona agents zinazoendelea, fungua URLs kwenye browser na fuatilia token usage na session context realtime."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams ni nini?",
+      "answer": "Desktop app ya kuendesha timu za AI agents kwa local coordination layer yetu. Agents zina roles, hufanya kazi autonomously, hushirikiana kupitia kanban board na zinaweza kutumia Anthropic au Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Je, ni bure kweli?",
+      "answer": "Ndiyo. App ni bure na open source. Unaweza kuanza na free model bila auth - hakuna registration, API key au credit card. Kwa models zaidi, unganisha Claude, Codex, OpenCode/OpenRouter au provider mwingine unaoungwa mkono."
+    },
+    {
+      "id": "platforms",
+      "question": "Ni platforms zipi zinaungwa mkono?",
+      "answer": "macOS (Apple Silicon na Intel), Windows na Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Inafanyaje kazi?",
+      "answer": "Install app, unda team, gawa roles. Agents zinaanza kufanya kazi parallel. Unaangalia progress kwenye kanban, kureview diffs na kuzungumza moja kwa moja na agents."
+    },
+    {
+      "id": "privacy",
+      "question": "Code yangu ni private?",
+      "answer": "Kila kitu huendeshwa locally kwenye machine yako. Hakuna data hutumwa kwa external servers. Code, conversations na agent activity zinabaki private."
+    },
+    {
+      "id": "requirements",
+      "question": "Ninahitaji nini kuanza?",
+      "answer": "Install app tu - anza na free model bila auth, kisha unganisha provider-backed models kwenye UI unapozihitaji."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "Chagua platform yako na uanze kujenga na timu za AI agents."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Unda timu zenye roles tofauti. Agents hufanya kazi kwa kujitegemea na kwa parallel, huwasiliana na kushirikiana kati ya timu."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Anza na agent mmoja anayejisimamia tasks. Panua kuwa timu kamili unapohitaji nguvu zaidi."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Diff view kwa kila task pamoja na accept, reject na comment. Code editor ya ndani yenye Git support."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Ona agents zinazoendelea, fungua URLs kwenye browser na fuatilia token usage na session context realtime."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Install app tu - anza na free model bila auth, kisha unganisha provider-backed models kwenye UI unapozihitaji."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agents hutumiana ujumbe ndani ya timu na kati ya timu. Direct messages, task comments na quick actions."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Bure",
+      "price": "$0",
+      "period": "",
+      "description": "Ndiyo. App ni bure na open source. Unaweza kuanza na free model bila auth - hakuna registration, API key au credit card. Kwa models zaidi, unganisha Claude, Codex, OpenCode/OpenRouter au provider mwingine unaoungwa mkono.",
+      "features": [
+        "Timu za agents",
+        "Kanban board",
+        "Code review",
+        "Mawasiliano kati ya timu",
+        "Solo mode",
+        "Live processes",
+        "Code yangu ni private?",
+        "Ninahitaji nini kuanza?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

@@ -28,7 +28,9 @@
       "session": "session",
       "stallNudge": "stall nudge",
       "start": "start",
-      "workSync": "work sync"
+      "workSync": "work sync",
+      "agentError": "Ошибка агента",
+      "apiError": "Ошибка API"
     },
     "bootstrap": {
       "acknowledged": "Bootstrap подтверждён",
@@ -77,7 +79,11 @@
       "action": "Ответить"
     },
     "activeTasks": {
-      "inProgress": "В работе"
+      "inProgress": "В работе",
+      "expandInProgress": "Развернуть задачи в работе",
+      "collapseInProgress": "Свернуть задачи в работе",
+      "reviewing": "ревьюит",
+      "workingOn": "работает над"
     },
     "expandDialog": {
       "description": "Развёрнутый просмотр сообщения"
@@ -285,7 +291,7 @@
       "add": "Добавить",
       "cancel": "Отмена",
       "delete": "Удалить",
-      "editCode": "Редактировать код",
+      "editCode": "Код",
       "launch": "Запустить",
       "remove": "Удалить",
       "stop": "Остановить",
@@ -349,7 +355,12 @@
     },
     "waitingForProvisioning": "Данные команды появятся после завершения provisioning",
     "context": {
-      "title": "Контекст"
+      "title": "Контекст",
+      "loading": "Загрузка...",
+      "noSessionLoaded": "Сессия не загружена",
+      "closePanel": "Закрыть панель контекста {{team}}",
+      "loadingContext": "Загрузка контекста...",
+      "openLeadSession": "Откройте сессию лида команды, чтобы посмотреть контекст."
     }
   },
   "review": {
@@ -1485,7 +1496,7 @@
     },
     "status": {
       "reusedCrossTeamRequest": "Повторно использован недавний cross-team request",
-      "teamOffline": "Команда offline"
+      "teamOffline": "оффлайн"
     },
     "revision": {
       "editing": "Редактируется предыдущее сообщение",
@@ -1571,7 +1582,10 @@
       "emptyMessage": "Источники логов не найдены.",
       "ariaLabel": "Источник логов",
       "leadLabel": "Лид",
-      "selectSourceEmpty": "Выберите источник логов."
+      "selectSourceEmpty": "Выберите источник логов.",
+      "leadDescription": "Лид команды",
+      "removedLabel": "удален",
+      "removedDescription": "Удален"
     }
   },
   "agentGraph": {
@@ -1620,14 +1634,39 @@
       "more_one": "+{{count}} ещё",
       "more_few": "+{{count}} ещё",
       "more_many": "+{{count}} ещё",
-      "more_other": "+{{count}} ещё"
+      "more_other": "+{{count}} ещё",
+      "unsupportedProvider": "Провайдер не поддерживается",
+      "openCodeLogsDelayed": "Логи OpenCode задерживаются",
+      "logsUnavailable": "Логи недоступны",
+      "noRecentLogs": "Нет недавних логов",
+      "toolError": "Ошибка инструмента",
+      "toolResult": "Результат инструмента",
+      "toolUse": "Вызов инструмента",
+      "thinking": "Размышление",
+      "error": "Ошибка",
+      "logEvent": "Событие лога",
+      "noErrorOutput": "Нет вывода ошибки",
+      "noOutput": "Нет вывода",
+      "noInput": "Нет входных данных"
     },
     "blockingEdge": {
       "title": "Блокирующая зависимость",
       "blocks": "блокирует",
       "close": "Закрыть",
       "blockingHiddenTasks": "Скрытые блокирующие задачи",
-      "blockedHiddenTasks": "Скрытые заблокированные задачи"
+      "blockedHiddenTasks": "Скрытые заблокированные задачи",
+      "links_one": "{{count}} связь",
+      "links_other": "{{count}} связи",
+      "hiddenBlockingLinks_one": "{{count}} скрытая блокирующая связь",
+      "hiddenBlockingLinks_other": "{{count}} скрытые блокирующие связи",
+      "hiddenTaskStack": "Стек скрытых задач",
+      "hiddenTasks_one": "{{count}} скрытая задача",
+      "hiddenTasks_other": "{{count}} скрытые задачи",
+      "task": "Задача",
+      "openBlockerStack": "Открыть стек блокирующих задач",
+      "openBlockedStack": "Открыть стек заблокированных задач",
+      "openBlockerTask": "Открыть блокирующую задачу",
+      "openBlockedTask": "Открыть заблокированную задачу"
     },
     "activityHud": {
       "activity": "Активность",
@@ -1778,7 +1817,11 @@
       "autoRefresh": "Автообновление",
       "wrapLines": "Перенос строк",
       "loadingTail": "Загрузка хвоста лога процесса...",
-      "empty": "Лог процесса для этого участника пока не сохранен."
+      "empty": "Лог процесса для этого участника пока не сохранен.",
+      "copy": "Копировать",
+      "fileEmpty": "Файл лога процесса пуст.",
+      "showingLast": "Показаны последние {{bytes}}.",
+      "showing": "Показано {{bytes}}."
     },
     "tasks": {
       "empty": "У этого участника нет назначенных задач"
@@ -2029,7 +2072,8 @@
         "openCodeRuntimeMissing": "Установите или повторите запуск runtime OpenCode из карточки статуса провайдера, затем откройте этот диалог заново.",
         "openCodeAppMcpUnreachable": "Повторите launch, чтобы обновить OpenCode app MCP bridge. Если повторится, перезапустите приложение и runtime OpenCode.",
         "cliBinaryMissing": "Убедитесь, что локальный бинарь Claude CLI существует и может запускаться, затем откройте этот диалог заново.",
-        "default": "Исправьте проблему выше, затем откройте этот диалог заново."
+        "default": "Исправьте проблему выше, затем откройте этот диалог заново.",
+        "openCodeNodeModulesSymlinkPermission": "Запустите Agent Teams AI от имени администратора, затем повторите launch."
       }
     },
     "presentation": {
@@ -2404,14 +2448,23 @@
     }
   },
   "runningTeams": {
-    "title": "Активные команды"
+    "title": "Активные команды",
+    "status": {
+      "active": "Активна",
+      "provisioning": "Запускается",
+      "idle": "Работает"
+    },
+    "noProject": "Без проекта"
   },
   "layout": {
     "maxPanesReached": "Достигнут максимум панелей: {{count}}"
   },
   "codexReconnect": {
     "description": "Сессия Codex выглядит устаревшей. Переподключитесь, чтобы продолжить.",
-    "useCode": "Использовать код"
+    "useCode": "Использовать код",
+    "generating": "Генерируется...",
+    "openLogin": "Открыть вход",
+    "generateLink": "Создать ссылку"
   },
   "effortLevel": {
     "label": "Уровень усилий (опционально)",
@@ -2428,6 +2481,119 @@
     "customRole": "Своя роль...",
     "searchPlaceholder": "Поиск ролей...",
     "empty": "Роли не найдены.",
-    "reservedRole": "Эта роль зарезервирована"
+    "reservedRole": "Эта роль зарезервирована",
+    "emptyCustomRole": "Роль не может быть пустой"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Текущая рабочая директория",
+    "gitBranchTitle": "Git ветка: {{branch}}",
+    "openTerminalPlatformRepository": "Открыть terminal-platform на GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Рабочая директория shell по умолчанию",
+    "openTeamTerminal": "Открыть терминал команды {{team}}",
+    "openTerminal": "Открыть терминал",
+    "terminalSheetOpen": "Терминал открыт",
+    "teamTerminalTitle": "Терминал {{team}}",
+    "teamRuntime": "Рантайм команды",
+    "teamRuntimeBadge": "рантайм команды",
+    "localShell": "Локальный shell",
+    "localShellBadge": "локальный shell",
+    "reloadTerminalWorkspace": "Перезагрузить терминал",
+    "stopTerminalRuntime": "Остановить терминальный рантайм",
+    "startingRuntimeTitle": "Запуск терминального рантайма",
+    "startingRuntimeDetail": "Готовим рабочую директорию команды и восстанавливаем состояние терминала.",
+    "runtimeUnavailableTitle": "Терминальный рантайм недоступен",
+    "runtimeDisconnectedTitle": "Терминал не подключен",
+    "runtimeDisconnectedDetail": "Перезагрузите workspace, чтобы подключиться заново.",
+    "restoreHalfHeightSheet": "Вернуть высоту в полэкрана",
+    "expandTerminalSheet": "Развернуть терминал",
+    "openTerminalSettings": "Открыть настройки терминала",
+    "closeTerminalSettings": "Закрыть настройки терминала",
+    "closeTerminalSheet": "Закрыть терминал",
+    "loadingTerminalTab": "Загрузка вкладки терминала",
+    "terminalCommandActions": "Действия команды терминала",
+    "copy": "Копировать",
+    "copyCommand": "Копировать команду",
+    "copyOutput": "Копировать вывод",
+    "terminalTabs": "Вкладки терминала",
+    "noTerminalTabs": "Нет вкладок терминала",
+    "closeTerminalTab": "Закрыть вкладку терминала {{tab}}",
+    "createAnotherTabBeforeClosing": "Создайте еще одну вкладку, прежде чем закрывать эту",
+    "editTerminalTabTitle": "Редактировать название вкладки терминала",
+    "renameTab": "Переименовать вкладку",
+    "tabColor": "Цвет вкладки",
+    "chooseColor": "Выбрать цвет",
+    "settingsTab": "Настройки",
+    "closeTerminalSettingsTab": "Закрыть вкладку настроек терминала",
+    "createTerminalTab": "Создать вкладку терминала",
+    "terminalTabsUnavailable": "Вкладки терминала недоступны",
+    "closeTerminalTabDialogTitle": "Закрыть вкладку терминала?",
+    "closeTerminalTabDialogDescription": "В этой вкладке есть история вывода терминала. Закрытие удалит вкладку и ее видимый вывод из workspace.",
+    "cancel": "Отмена",
+    "closeTab": "Закрыть вкладку",
+    "commandPlaceholder": "Введите команду...",
+    "commandRun": "Run",
+    "commandRunTitle": "Отправить команду в активную панель",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Отправить Ctrl+C в активную панель",
+    "settingsTitle": "Настройки терминала",
+    "settingsDescription": "Внешний вид и управление рантаймом.",
+    "settingsThemeTitle": "Тема",
+    "settingsThemeDescription": "Выберите базовую палитру терминала.",
+    "settingsThemeAria": "Тема терминала",
+    "settingsThemePlaceholder": "Выберите тему",
+    "settingsFontTitle": "Шрифт",
+    "settingsFontDescription": "Настройте размер текста и пресет шрифта SDK.",
+    "settingsFontPreset": "Пресет",
+    "settingsFontPresetAria": "Пресет шрифта терминала",
+    "settingsFontPresetPlaceholder": "Пресет шрифта",
+    "settingsFontSize": "Размер",
+    "settingsBackgroundTitle": "Фон",
+    "settingsBackgroundDescription": "Управляйте прозрачностью, blur, цветом и картинкой.",
+    "settingsOpacity": "Прозрачность",
+    "settingsOpacityAria": "Прозрачность терминала",
+    "settingsBackgroundMode": "Фон",
+    "settingsBackgroundModeAria": "Режим фона терминала",
+    "settingsBackgroundColorAria": "Цвет фона терминала",
+    "settingsBackdropBlur": "Размытие фона",
+    "settingsImageUrl": "URL картинки",
+    "settingsImageFit": "Отображение картинки",
+    "settingsImageFitAria": "Отображение фоновой картинки терминала",
+    "settingsImageBlur": "Размытие картинки",
+    "settingsDimImage": "Затемнить картинку за текстом терминала",
+    "settingsBehaviorTitle": "Поведение",
+    "settingsBehaviorDescription": "Сохраняйте читаемость длинного вывода команд.",
+    "settingsWrapLongOutput": "Переносить длинный вывод команд",
+    "settingsRuntimeTitle": "Рантайм",
+    "settingsRuntimeDescription": "Используйте это только когда транспорт терминала выглядит зависшим.",
+    "settingsReconnect": "Переподключить",
+    "settingsSessions": "Сессии",
+    "settingsReload": "Перезагрузить",
+    "settingsStop": "Остановить",
+    "settingsResetAppearance": "Сбросить внешний вид",
+    "backgroundModeTransparent": "Прозрачный",
+    "backgroundModeSolid": "Сплошной цвет",
+    "backgroundModeImage": "Картинка",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Темная",
+    "themeLight": "Светлая",
+    "fontScaleCompact": "Компактный",
+    "fontScaleDefault": "Обычный",
+    "fontScaleLarge": "Крупный",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
   }
 }

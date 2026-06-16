@@ -13,6 +13,7 @@ import {
   TEAM_CHANGES_MAX_REQUESTS,
 } from './teamChangesRequestPlan';
 
+import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   TaskChangePresenceState,
   TaskChangeSetV2,
@@ -63,6 +64,20 @@ interface UseTeamChangesSummariesInput {
   tasks: TeamTaskWithKanban[];
   sectionOpen: boolean;
 }
+
+type RecordTaskChangePresences = (
+  entries: {
+    teamName: string;
+    taskId: string;
+    options: TaskChangeRequestOptions;
+    presence: TaskChangePresenceState | null;
+  }[]
+) => void;
+
+type SetSelectedTeamTaskChangePresences = (
+  teamName: string,
+  presencesByTaskId: Record<string, TaskChangePresenceState>
+) => void;
 
 interface UseTeamChangesSummariesResult {
   summariesByTaskId: Record<string, TeamChangeSummaryState>;
@@ -122,17 +137,17 @@ function hasSafeFileSummaries(changeSet: TaskChangeSetV2): boolean {
   );
 }
 
-function hasDisplayableFileSummaries(changeSet: TaskChangeSetV2): boolean {
-  return (
-    Array.isArray(changeSet.files) &&
-    changeSet.files.some(
-      (file) =>
-        file &&
-        typeof file === 'object' &&
-        typeof file.filePath === 'string' &&
-        file.filePath.trim().length > 0
-    )
-  );
+function countDisplayableFileSummaries(changeSet: TaskChangeSetV2): number {
+  if (!Array.isArray(changeSet.files)) {
+    return 0;
+  }
+  return changeSet.files.filter(
+    (file) =>
+      file &&
+      typeof file === 'object' &&
+      typeof file.filePath === 'string' &&
+      file.filePath.trim().length > 0
+  ).length;
 }
 
 function isMinimalPresenceChangeSet(changeSet: TaskChangeSetV2): boolean {
@@ -198,25 +213,37 @@ function shouldClearSelectedTaskChangePresence(
   );
 }
 
-function isCountableTeamChangeSummary(item: TeamTaskChangeSummaryItem): boolean {
+function getTeamChangeBadgeContribution(item: TeamTaskChangeSummaryItem): number {
   if (item.error) {
-    return true;
+    return 1;
   }
 
   const changeSet = item.changeSet;
   if (!changeSet) {
-    return false;
+    return 0;
   }
-  if (hasDisplayableFileSummaries(changeSet)) {
-    return true;
+
+  const totalFiles = Number(changeSet.totalFiles);
+  if (Number.isFinite(totalFiles) && totalFiles > 0) {
+    return Math.trunc(totalFiles);
+  }
+
+  const displayableFileCount = countDisplayableFileSummaries(changeSet);
+  if (displayableFileCount > 0) {
+    return displayableFileCount;
   }
 
   const reviewability = classifyTaskChangeReviewability(changeSet).reviewability;
-  return reviewability === 'attention_required' || reviewability === 'diagnostic_only';
+  return reviewability === 'attention_required' || reviewability === 'diagnostic_only' ? 1 : 0;
 }
 
-function countChangedTasks(changeCountByTaskId: Record<string, boolean>): number {
-  return Object.values(changeCountByTaskId).filter(Boolean).length;
+function sumTeamChangeBadgeContributions(changeBadgeCountByTaskId: Record<string, number>): number {
+  return Object.values(changeBadgeCountByTaskId).reduce((sum, value) => {
+    if (!Number.isFinite(value) || value <= 0) {
+      return sum;
+    }
+    return sum + Math.trunc(value);
+  }, 0);
 }
 
 function isDocumentHidden(): boolean {
@@ -262,11 +289,26 @@ export function useTeamChangesSummaries({
   sectionOpen,
 }: UseTeamChangesSummariesInput): UseTeamChangesSummariesResult {
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
+  const recordTaskChangePresences = useStore(
+    (s) =>
+      (s as unknown as { recordTaskChangePresences?: RecordTaskChangePresences })
+        .recordTaskChangePresences
+  );
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
+  const setSelectedTeamTaskChangePresences = useStore(
+    (s) =>
+      (
+        s as unknown as {
+          setSelectedTeamTaskChangePresences?: SetSelectedTeamTaskChangePresences;
+        }
+      ).setSelectedTeamTaskChangePresences
+  );
   const [summariesByTaskId, setSummariesByTaskId] = useState<
     Record<string, TeamChangeSummaryState>
   >({});
-  const [changeCountByTaskId, setChangeCountByTaskId] = useState<Record<string, boolean>>({});
+  const [changeBadgeCountByTaskId, setChangeBadgeCountByTaskId] = useState<Record<string, number>>(
+    {}
+  );
   const [counterLoaded, setCounterLoaded] = useState(false);
   const [stats, setStats] = useState<TeamChangeStats>({
     eligibleCount: 0,
@@ -405,7 +447,7 @@ export function useTeamChangesSummaries({
         if (storeSummaries) {
           setSummariesByTaskId({});
         }
-        setChangeCountByTaskId({});
+        setChangeBadgeCountByTaskId({});
         setCounterLoaded(true);
         autoRefreshBlockedUntilRef.current = 0;
         setLoading(false);
@@ -454,20 +496,35 @@ export function useTeamChangesSummaries({
           }
         }
 
-        setChangeCountByTaskId((previous) => {
-          const next: Record<string, boolean> = {};
-          for (const [taskId, countable] of Object.entries(previous)) {
+        setChangeBadgeCountByTaskId((previous) => {
+          const next: Record<string, number> = {};
+          for (const [taskId, badgeContribution] of Object.entries(previous)) {
             if (currentTaskIds.has(taskId) && plan.eligibleTaskIds.has(taskId)) {
-              next[taskId] = countable;
+              next[taskId] = badgeContribution;
             }
           }
           for (const item of responseItems) {
             if (!plan.requestOptionsByTaskId.has(item.taskId)) continue;
-            next[item.taskId] = isCountableTeamChangeSummary(item);
+            const nextContribution = getTeamChangeBadgeContribution(item);
+            const previousContribution = previous[item.taskId];
+            next[item.taskId] =
+              item.error &&
+              Number.isFinite(previousContribution) &&
+              previousContribution > nextContribution
+                ? previousContribution
+                : nextContribution;
           }
           return next;
         });
         setCounterLoaded(true);
+
+        const cachePresenceUpdates: {
+          teamName: string;
+          taskId: string;
+          options: TaskChangeRequestOptions;
+          presence: TaskChangePresenceState | null;
+        }[] = [];
+        const selectedPresenceUpdates: Record<string, TaskChangePresenceState> = {};
 
         for (const item of responseItems) {
           const changeSet = item.changeSet;
@@ -482,12 +539,41 @@ export function useTeamChangesSummaries({
               task.changePresence !== 'unknown' &&
               shouldClearSelectedTaskChangePresence(task, changeSet)
             ) {
-              setSelectedTeamTaskChangePresence(teamName, item.taskId, 'unknown');
+              selectedPresenceUpdates[item.taskId] = 'unknown';
             }
             continue;
           }
-          recordTaskChangePresence(teamName, item.taskId, options, nextPresence);
-          setSelectedTeamTaskChangePresence(teamName, item.taskId, nextPresence);
+          cachePresenceUpdates.push({
+            teamName,
+            taskId: item.taskId,
+            options,
+            presence: nextPresence,
+          });
+          selectedPresenceUpdates[item.taskId] = nextPresence;
+        }
+
+        if (cachePresenceUpdates.length > 0) {
+          if (recordTaskChangePresences) {
+            recordTaskChangePresences(cachePresenceUpdates);
+          } else {
+            for (const update of cachePresenceUpdates) {
+              recordTaskChangePresence(
+                update.teamName,
+                update.taskId,
+                update.options,
+                update.presence
+              );
+            }
+          }
+        }
+        if (Object.keys(selectedPresenceUpdates).length > 0) {
+          if (setSelectedTeamTaskChangePresences) {
+            setSelectedTeamTaskChangePresences(teamName, selectedPresenceUpdates);
+          } else {
+            for (const [taskId, presence] of Object.entries(selectedPresenceUpdates)) {
+              setSelectedTeamTaskChangePresence(teamName, taskId, presence);
+            }
+          }
         }
 
         if (storeSummaries) {
@@ -573,7 +659,14 @@ export function useTeamChangesSummaries({
         }
       }
     },
-    [recordTaskChangePresence, setSelectedTeamTaskChangePresence, tasks, teamName]
+    [
+      recordTaskChangePresence,
+      recordTaskChangePresences,
+      setSelectedTeamTaskChangePresence,
+      setSelectedTeamTaskChangePresences,
+      tasks,
+      teamName,
+    ]
   );
 
   useEffect(() => {
@@ -587,7 +680,7 @@ export function useTeamChangesSummaries({
     lastRequestedTasksFingerprintRef.current = null;
     lastCounterTasksFingerprintRef.current = null;
     setSummariesByTaskId({});
-    setChangeCountByTaskId({});
+    setChangeBadgeCountByTaskId({});
     setCounterLoaded(false);
     setError(null);
     setStats({ eligibleCount: 0, requestedCount: 0, deferredCount: 0 });
@@ -723,7 +816,7 @@ export function useTeamChangesSummaries({
 
   return {
     summariesByTaskId,
-    badgeCount: counterLoaded ? countChangedTasks(changeCountByTaskId) : null,
+    badgeCount: counterLoaded ? sumTeamChangeBadgeContributions(changeBadgeCountByTaskId) : null,
     stats,
     loading,
     refreshing,

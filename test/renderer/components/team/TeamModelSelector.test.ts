@@ -20,7 +20,13 @@ describe('formatTeamModelSummary', () => {
     );
   });
 
-  it('formats current Anthropic Opus model ids with the latest 4.7 label', () => {
+  it('formats current Anthropic Opus model ids with the latest 4.8 label', () => {
+    expect(formatTeamModelSummary('anthropic', 'claude-opus-4-8', 'high')).toBe(
+      'Anthropic · Opus 4.8 · High'
+    );
+    expect(formatTeamModelSummary('codex', 'claude-opus-4-8', 'medium')).toBe(
+      'Opus 4.8 · via Codex · Medium'
+    );
     expect(formatTeamModelSummary('anthropic', 'claude-opus-4-7', 'high')).toBe(
       'Anthropic · Opus 4.7 · High'
     );
@@ -122,6 +128,7 @@ describe('formatTeamModelSummary', () => {
     expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toBeNull();
     expect(getTeamModelSelectionError('codex', '')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
+    expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-8')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-7')).toBeNull();
   });
 });
@@ -237,6 +244,7 @@ describe('computeEffectiveTeamModel', () => {
     expect(computeEffectiveTeamModel('opus[1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('opus[1m][1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('', true, 'anthropic')).toBe('opus');
+    expect(computeEffectiveTeamModel('claude-opus-4-8[1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('claude-opus-4-7[1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('claude-sonnet-4-6', true, 'anthropic')).toBe('sonnet');
   });

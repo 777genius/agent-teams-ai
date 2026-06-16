@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "మీరు Boss, agents మీ టీమ్. అవి tasks ను తామే తీసుకుంటాయి, ఒకదానికొకటి message చేస్తాయి, code review చేస్తాయి. మీరు kanban board చూస్తూ coffee తాగొచ్చు."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agent టీమ్‌లు",
+      "description": "వేర్వేరు roles తో టీమ్‌లు సృష్టించండి. Agents parallel గా autonomous గా పని చేస్తాయి, మాట్లాడుకుంటాయి, టీమ్‌ల మధ్య collaborate చేస్తాయి."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban board",
+      "description": "Agents పని చేస్తుండగా task status realtime లో మారుతుంది. Drag, assign, review - అన్నీ ఒక visual board లో."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "ప్రతి task కి diff view, accept, reject, comment. Git support తో built-in code editor."
+    },
+    {
+      "id": "crossTeam",
+      "title": "టీమ్‌ల మధ్య కమ్యూనికేషన్",
+      "description": "Agents ఒకే టీమ్‌లోనూ, టీమ్‌ల మధ్యనూ message చేస్తాయి. Direct messages, task comments, quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mode",
+      "description": "తన tasks తానే నిర్వహించే ఒక agent తో ప్రారంభించండి. మరింత power కావాలంటే full team గా విస్తరించండి."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processes",
+      "description": "Running agents చూడండి, URLs ను browser లో open చేయండి, token usage మరియు session context realtime లో monitor చేయండి."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams అంటే ఏమిటి?",
+      "answer": "మా local coordination layer తో AI agent teams ని orchestrate చేసే desktop app. Agents కు roles ఉంటాయి, autonomous గా పని చేస్తాయి, kanban board ద్వారా collaborate చేస్తాయి, Anthropic లేదా Codex మీద run అవుతాయి."
+    },
+    {
+      "id": "isFree",
+      "question": "ఇది నిజంగా free నా?",
+      "answer": "అవును. App free మరియు open source. Auth అవసరం లేని free model తో మొదలుపెట్టవచ్చు - registration, API key, credit card అవసరం లేదు. మరిన్ని models కోసం Claude, Codex, OpenCode/OpenRouter లేదా supported provider connect చేయండి."
+    },
+    {
+      "id": "platforms",
+      "question": "ఏ platforms support?",
+      "answer": "macOS (Apple Silicon మరియు Intel), Windows, Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "ఇది ఎలా పని చేస్తుంది?",
+      "answer": "App install చేయండి, team create చేయండి, roles assign చేయండి. Agents parallel గా పని మొదలుపెడతాయి. మీరు kanban లో progress చూస్తారు, diffs review చేస్తారు, agents తో directly మాట్లాడతారు."
+    },
+    {
+      "id": "privacy",
+      "question": "నా code private గా ఉంటుందా?",
+      "answer": "అన్నీ మీ machine లో locally run అవుతాయి. Data external servers కు పంపబడదు. Code, conversations, agent activity private గానే ఉంటాయి."
+    },
+    {
+      "id": "requirements",
+      "question": "మొదలు పెట్టడానికి ఏమి కావాలి?",
+      "answer": "App install చేస్తే చాలు - auth లేని free model తో మొదలుపెట్టి, అవసరమైతే UI నుండి provider-backed models connect చేయండి."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "మీ platform ఎంచుకుని AI agent teams తో build చేయడం మొదలుపెట్టండి."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "వేర్వేరు roles తో టీమ్‌లు సృష్టించండి. Agents parallel గా autonomous గా పని చేస్తాయి, మాట్లాడుకుంటాయి, టీమ్‌ల మధ్య collaborate చేస్తాయి."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "తన tasks తానే నిర్వహించే ఒక agent తో ప్రారంభించండి. మరింత power కావాలంటే full team గా విస్తరించండి."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "ప్రతి task కి diff view, accept, reject, comment. Git support తో built-in code editor."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Running agents చూడండి, URLs ను browser లో open చేయండి, token usage మరియు session context realtime లో monitor చేయండి."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "App install చేస్తే చాలు - auth లేని free model తో మొదలుపెట్టి, అవసరమైతే UI నుండి provider-backed models connect చేయండి."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agents ఒకే టీమ్‌లోనూ, టీమ్‌ల మధ్యనూ message చేస్తాయి. Direct messages, task comments, quick actions."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Free",
+      "price": "$0",
+      "period": "",
+      "description": "అవును. App free మరియు open source. Auth అవసరం లేని free model తో మొదలుపెట్టవచ్చు - registration, API key, credit card అవసరం లేదు. మరిన్ని models కోసం Claude, Codex, OpenCode/OpenRouter లేదా supported provider connect చేయండి.",
+      "features": [
+        "Agent టీమ్‌లు",
+        "Kanban board",
+        "Code review",
+        "టీమ్‌ల మధ్య కమ్యూనికేషన్",
+        "Solo mode",
+        "Live processes",
+        "నా code private గా ఉంటుందా?",
+        "మొదలు పెట్టడానికి ఏమి కావాలి?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

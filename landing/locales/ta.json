@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "அம்சங்கள்",
+    "screenshots": "ஸ்கிரீன்ஷாட்கள்",
+    "docs": "ஆவணங்கள்",
+    "comparison": "ஒப்பிடு",
+    "download": "பதிவிறக்கு",
+    "pricing": "இலவசம்",
+    "faq": "FAQ",
+    "viewOnGithub": "GitHub இல் காண்",
+    "openMenu": "menu ஐத் திற",
+    "closeMenu": "menu ஐ மூடு",
+    "short": {
+      "screenshots": "படங்கள்",
+      "docs": "Docs",
+      "download": "பெறு",
+      "comparison": "ஒப்பிடு",
+      "pricing": "இலவசம்"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "இப்போது பதிவிறக்கு",
+    "ctaPrimary": "{platform} க்காக பதிவிறக்கு",
+    "ctaSecondary": "ஒப்பிடு",
+    "ctaDocs": "ஆவணங்கள்",
+    "preview": "தயாரிப்பு முன்னோட்டம்",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban Board",
+      "openSource": "திறந்த மூலம்"
+    },
+    "watchDemo": "Demo ஐப் பார்",
+    "videoUnavailable": "வீடியோ கிடைக்கவில்லை",
+    "supportedProviders": "ஆதரிக்கப்படும் AI வழங்குநர்கள்",
+    "slogan": "மிகக் குறைவாகச் செய்து நிறைய சாதிக்கவும்",
+    "platformDefault": "உங்கள் தளத்திற்காக",
+    "guidesSetup": "வழிகாட்டிகள் மற்றும் அமைப்பு",
+    "videoFrameLabel": "Agent Teams demo ஐப் பார்",
+    "commandFeed": "Team command feed",
+    "liveDemo": "நேரடி demo",
+    "demoVideoTitle": "Agent Teams demo வீடியோ",
+    "demoTitle": "Agent Teams demo",
+    "demo": {
+      "ariaLabel": "Agent team demo",
+      "live": "LIVE",
+      "waiting": "tasks க்காகக் காத்திருக்கிறது...",
+      "activity": {
+        "authMiddleware": "auth middleware ஐ செயல்படுத்துகிறது...",
+        "unitTests": "API க்கான unit tests எழுதுகிறது...",
+        "reviewPr": "PR #42 மாற்றங்களை மதிப்பாய்வு செய்கிறது...",
+        "ciPipeline": "CI/CD pipeline ஐ அமைக்கிறது...",
+        "refactorDatabase": "database layer ஐ refactor செய்கிறது..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit tests",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "IN PROGRESS",
+        "review": "REVIEW",
+        "done": "DONE"
+      }
+    }
+  },
+  "download": {
+    "title": "பதிவிறக்கு",
+    "detected": "கண்டறியப்பட்டது",
+    "systemRequirements": "கணினி தேவைகள்",
+    "version": "பதிப்பு {version}",
+    "readyToStart": "தொடங்கத் தயார்!"
+  },
+  "theme": {
+    "dark": "இருண்ட",
+    "light": "வெளிர்"
+  },
+  "language": {
+    "label": "மொழி",
+    "search": "மொழியைத் தேடு…"
+  },
+  "features": {
+    "sectionTitle": "AI agent orchestration க்கு உங்களுக்குத் தேவையான அனைத்தும்",
+    "sectionSubtitle": "multi-agent ஒத்துழைப்பை உண்மையில் வேலை செய்யவைக்கும் சக்திவாய்ந்த tools."
+  },
+  "pricing": {
+    "sectionTitle": "நிறுவ இலவசம். இலவச மாதிரி உள்ளடக்கப்பட்டுள்ளது.",
+    "sectionSubtitle": "auth இல்லாத இலவச மாதிரியுடன் உடனடியாகத் தொடங்குங்கள் - கணக்கு, API key அல்லது credit card இல்லை. அதிக மாதிரிகள் வேண்டும்போது மட்டுமே Claude, Codex, OpenCode/OpenRouter அல்லது பிற வழங்குநர் அணுகலை இணைக்கவும்.",
+    "getStarted": "இப்போது பதிவிறக்கு",
+    "popular": "இலவசம்",
+    "freeModelCallout": "auth இல்லாத இலவச மாதிரி உள்ளடக்கப்பட்டுள்ளது",
+    "note": "Agent Teams க்கு கட்டண அடுக்கு இல்லை. auth இல்லாத இலவச மாதிரி உடனடியாக முயற்சிக்க அனுமதிக்கிறது; கட்டண வழங்குநர் பயன்பாடு விருப்பத்திற்குரியது மற்றும் நீங்கள் தேர்ந்தெடுக்கும் வழங்குநரால் கட்டுப்படுத்தப்படுகிறது."
+  },
+  "testimonials": {
+    "sectionTitle": "டெவலப்பர்கள் என்ன சொல்கிறார்கள்",
+    "sectionSubtitle": "உண்மையான builders இடமிருந்து உண்மையான கருத்து",
+    "showMore": "மேலும் காட்டு",
+    "showLess": "குறைவாகக் காட்டு",
+    "feedbackCta": "உங்கள் அனுபவத்தைப் பகிர விரும்புகிறீர்களா? இங்கே ஒரு issue ஐத் திறக்கவும்"
+  },
+  "faq": {
+    "sectionTitle": "கேள்விகள் உள்ளனவா? எங்களிடம் பதில்கள் உள்ளன",
+    "subtitle": "Agent Teams பற்றி நீங்கள் தெரிந்துகொள்ள வேண்டிய அனைத்தும்"
+  },
+  "comparison": {
+    "sectionTitle": "நாங்கள் எவ்வாறு ஒப்பிடுகிறோம்",
+    "sectionSubtitle": "மற்ற AI coding tools உடன் அம்சம்-வாரியான ஒப்பீடு.",
+    "feature": "அம்சம்",
+    "robotBubble": "நீங்களே தீர்மானியுங்கள்",
+    "features": {
+      "crossTeam": "Cross-team தொடர்பாடல்",
+      "agentMessaging": "Agent-to-agent messaging",
+      "linkedTasks": "இணைக்கப்பட்ட tasks",
+      "sessionAnalysis": "Session பகுப்பாய்வு",
+      "taskAttachments": "Task இணைப்புகள்",
+      "hunkReview": "Hunk-level மதிப்பாய்வு",
+      "codeEditor": "உள்ளமைந்த code editor",
+      "fullAutonomy": "முழு சுயாட்சி",
+      "taskDeps": "Task சார்புகள்",
+      "reviewWorkflow": "மதிப்பாய்வு வேலைப்பாய்",
+      "zeroSetup": "Zero setup",
+      "kanban": "Kanban board",
+      "execLog": "Execution logs",
+      "liveProcesses": "நேரடி processes",
+      "runtimeLoad": "ஒரு teammate க்கு CPU/RAM",
+      "perTaskReview": "ஒவ்வொரு task க்கும் code review",
+      "flexAutonomy": "நெகிழ்வான சுயாட்சி",
+      "worktree": "Git worktree தனிமைப்படுத்தல்",
+      "multiAgent": "கலப்பு AI teammates",
+      "liveWorkGraph": "நேரடி team வரைபடம்",
+      "liveTeam": "நேரடி teammates",
+      "teamWorkspace": "Team workspace",
+      "launchProof": "Teammate launch நிலை",
+      "orgGovernance": "Org chart / governance",
+      "budgetControls": "Budget கட்டுப்பாடுகள்",
+      "price": "விலை"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "செயலில் பார்க்கவும்",
+    "sectionSubtitle": "பயன்பாட்டிலிருந்து உண்மையான ஸ்கிரீன்ஷாட்கள் — kanban board, code review, agent teams மற்றும் பல."
+  },
+  "common": {
+    "learnMore": "மேலும் அறிக",
+    "statusLabel": "நிலை:",
+    "previous": "முந்தையது",
+    "next": "அடுத்தது"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "டெவலப்பர்களுக்கான AI agent orchestration",
+    "robotBubble": "நான் காத்திருக்கிறேன்",
+    "links": {
+      "github": "GitHub",
+      "author": "ஆசிரியர்",
+      "docs": "ஆவணங்கள்"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - டெவலப்பர்களுக்கான AI Agent Orchestration",
+    "homeDescription": "AI agent teams க்கான இலவச, திறந்த மூல desktop பயன்பாடு. auth இல்லாத இலவச மாதிரியுடன் தொடங்கி, அதிக மாதிரிகள் தேவைப்படும்போது Claude, Codex அல்லது OpenCode ஐ இணைக்கவும்.",
+    "downloadTitle": "macOS, Windows மற்றும் Linux க்கான Agent Teams ஐ பதிவிறக்கு",
+    "downloadDescription": "macOS, Windows மற்றும் Linux க்கான Agent Teams ஐ பதிவிறக்கு. Claude, Codex மற்றும் OpenCode agent teams க்கான இலவச திறந்த மூல desktop பயன்பாடு."
+  },
+  "error": {
+    "notFoundTitle": "பக்கம் கிடைக்கவில்லை",
+    "notFoundDescription": "நீங்கள் தேடும் பக்கம் இல்லை அல்லது நகர்த்தப்பட்டுள்ளது.",
+    "genericTitle": "ஏதோ தவறு நடந்தது",
+    "genericDescription": "எதிர்பாராத பிழை ஏற்பட்டது. பிறகு மீண்டும் முயற்சிக்கவும்.",
+    "goHome": "முகப்புப் பக்கத்திற்குச் செல்"
+  }
+}

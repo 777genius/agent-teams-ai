@@ -46,7 +46,8 @@
       "copiedShort": "コピッド",
       "copy": "コピー診断",
       "hints": "ヒント",
-      "likelyCause": "同様に原因:"
+      "likelyCause": "同様に原因:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI を管理者として実行してください"
     },
     "models": {
       "alreadyDefault": "これは既に選択したOpenCodeのデフォルトです。",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "モデルを検索",
       "selectProjectBeforeTesting": "モデルをテストする前にプロジェクトコンテキストを選択します。",
       "selectProjectBeforeTestingDefaults": "OpenCode のデフォルトをテストまたは保存する前に、プロジェクトコンテキストを選択します。",
-      "useInTeamPicker": "チームピッカーでの使用"
+      "useInTeamPicker": "チームピッカーでの使用",
+      "testInProgress": "モデルテストはすでに実行中です。",
+      "validationContextRequired": "Test と Set default を有効にするには、上で validation context を選択してください。team picker への保存は新しいチーム用の route だけを保存します。",
+      "actionsUnavailable": "操作は一時的に利用できません。",
+      "defaultSaveInProgress": "OpenCode default を保存しています。",
+      "routeUnavailableAuth": "この provider は、このモデルを使用する前に認証が必要です。",
+      "routeUnavailableFailed": "この model route は前回の execution test に失敗しました。",
+      "routeUnavailableGeneric": "この model route は現在使用できません。",
+      "routeUnavailableUnknown": "このモデルは現在の OpenCode default ですが、まだ live catalog では利用できません。"
     },
     "providers": {
       "catalog": "OpenCode プロバイダーカタログ",
@@ -108,7 +117,8 @@
       "needsTest": "ニーズテスト",
       "failed": "失敗",
       "unknown": "インフォメーション",
-      "default": "デフォルト"
+      "default": "デフォルト",
+      "knownRoute": "既知の route"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API のキーは構成しましたが、まだ確認されません",
         "apiKeyModeMissingCredential": "API キーモードが選択されますが、API キーは構成されません",
         "connectedVia": "{{method}}で接続",
-        "unableToVerify": "確認できない"
+        "unableToVerify": "確認できない",
+        "modelsAvailable": "利用可能なモデル"
       },
       "mode": {
         "selectedAuth": "選択されたauth: {{authMode}}",

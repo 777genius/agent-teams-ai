@@ -589,7 +589,11 @@
     "actions": {
       "add": "API 키 추가",
       "addFirst": "첫 키 추가",
-      "edit": "제품정보"
+      "edit": "제품정보",
+      "copied": "복사됨!",
+      "copyEnvVarName": "환경 변수 이름 복사",
+      "confirmDelete": "다시 클릭하여 확인",
+      "delete": "삭제"
     },
     "empty": {
       "title": "저장되는 API 열쇠 없음",

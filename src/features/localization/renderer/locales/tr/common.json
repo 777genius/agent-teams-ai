@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "İptal",
+    "close": "Kapat",
+    "copied": "Kopyalandı",
+    "copyUrl": "URL'yi kopyala",
+    "open": "Aç",
+    "reveal": "Göster",
+    "retry": "Yeniden dene",
+    "save": "Kaydet",
+    "showLess": "Daha az göster",
+    "showMore": "Daha fazla göster",
+    "refresh": "Yenile",
+    "reset": "Sıfırla",
+    "copyToClipboard": "Panoya kopyala",
+    "moreActions": "Daha fazla eylem",
+    "closeDialog": "İletişim kutusunu kapat",
+    "goToDashboard": "Panoya git",
+    "or": "veya",
+    "hide": "Gizle",
+    "resetSelection": "Seçimi sıfırla"
+  },
+  "code": {
+    "line": "satır {{line}}",
+    "lines": "satır {{from}}-{{to}}",
+    "moreLines": "({{count}} satır daha...)",
+    "moreLines_few": "({{count}} satır daha...)",
+    "moreLines_many": "({{count}} satır daha...)",
+    "moreLines_one": "({{count}} satır daha...)",
+    "moreLines_other": "({{count}} satır daha...)",
+    "code": "Kod",
+    "preview": "Önizleme",
+    "markdownPreview": "Markdown Önizleme",
+    "linesParenthesized": "(satır {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid sözdizimi hatası"
+  },
+  "contextBadge": {
+    "badge": "Bağlam",
+    "breakdown": {
+      "text": "Metin",
+      "thinking": "Düşünme"
+    },
+    "detailsAria": "Bağlam enjeksiyonu ayrıntıları",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md Dosyaları",
+      "mentionedFiles": "Bahsedilen Dosyalar",
+      "taskCoordination": "Görev Koordinasyonu",
+      "thinkingText": "Düşünme + Metin",
+      "toolOutputs": "Araç Çıktıları",
+      "userMessages": "Kullanıcı Mesajları"
+    },
+    "title": "Bu Turda Enjekte Edilen Yeni Bağlam",
+    "tokenCount": "~{{tokens}} token",
+    "totalNewTokens": "Toplam yeni token",
+    "turn": "Tur {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} token"
+  },
+  "locales": {
+    "emptyMessage": "Dil bulunamadı.",
+    "names": {
+      "ar": "Arapça",
+      "bn": "Bengalce",
+      "de": "Almanca",
+      "en": "İngilizce",
+      "es": "İspanyolca",
+      "fa": "Farsça",
+      "fil": "Filipince",
+      "fr": "Fransızca",
+      "hi": "Hintçe",
+      "id": "Endonezce",
+      "it": "İtalyanca",
+      "ja": "Japonca",
+      "ko": "Korece",
+      "mr": "Marathice",
+      "ms": "Malayca",
+      "nl": "Felemenkçe",
+      "pl": "Lehçe",
+      "pt": "Portekizce",
+      "ro": "Romence",
+      "ru": "Rusça",
+      "sw": "Svahilice",
+      "system": "Sistem",
+      "ta": "Tamilce",
+      "te": "Teluguca",
+      "th": "Tayca",
+      "tr": "Türkçe",
+      "uk": "Ukraynaca",
+      "ur": "Urduca",
+      "vi": "Vietnamca",
+      "zh": "Çince"
+    },
+    "searchPlaceholder": "Dil ara...",
+    "selectPlaceholder": "Uygulama dilini seç...",
+    "systemWithResolved": "Sistem - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Üye bulunamadı.",
+    "searchPlaceholder": "Üye ara...",
+    "unassigned": "Atanmamış",
+    "teammateFallback": "takım arkadaşı"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Kontrol ediliyor",
+        "downloading": "İndiriliyor",
+        "installCli": "Codex CLI kur",
+        "installing": "Kuruluyor",
+        "retryInstall": "Kurulumu yeniden dene"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Eşleşen öneri yok",
+    "searching": "Aranıyor...",
+    "searchingFiles": "Dosyalar aranıyor...",
+    "findInConversation": "Konuşmada bul...",
+    "resultCount": "{{current}} / {{total}}",
+    "resultCountCapped": "{{current}} / {{total}}+",
+    "noResults": "Sonuç yok",
+    "previousResultShortcut": "Önceki sonuç (Shift+Enter)",
+    "nextResultShortcut": "Sonraki sonuç (Enter)",
+    "closeShortcut": "Kapat (Esc)",
+    "nothingFound": "Hiçbir şey bulunamadı",
+    "placeholder": "Ara..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Zamanlama Ekle",
+      "clearFilters": "Filtreleri temizle",
+      "createSchedule": "Zamanlama Oluştur",
+      "delete": "Sil",
+      "edit": "Düzenle",
+      "pause": "Duraklat",
+      "resume": "Devam ettir",
+      "runNow": "Şimdi çalıştır"
+    },
+    "empty": {
+      "description": "Cron ifadeleriyle Claude görev yürütmesini otomatikleştirmek için herhangi bir ekipte bir zamanlama oluşturun. Tüm ekiplerin zamanlamaları burada görünecek.",
+      "noMatches": "Geçerli filtrelerle eşleşen zamanlama yok",
+      "title": "Zamanlanmış görev yok"
+    },
+    "filters": {
+      "allTeams": "Tüm ekipler"
+    },
+    "item": {
+      "loadingRunHistory": "Çalıştırma geçmişi yükleniyor...",
+      "nextRun": "Sonraki: {{value}}",
+      "noRunsYet": "Henüz çalıştırma yok"
+    },
+    "loading": "Zamanlamalar yükleniyor...",
+    "searchPlaceholder": "Zamanlamalarda ara...",
+    "status": {
+      "active": "Etkin",
+      "all": "Tümü",
+      "disabled": "Devre dışı",
+      "paused": "Duraklatıldı"
+    },
+    "title": "Zamanlamalar"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Gizle",
+      "pin": "Sabitle",
+      "unhide": "Göster"
+    },
+    "empty": {
+      "noMatchingSessions": "Eşleşen oturum yok",
+      "noMatchingSessionsDescription": "Bu projenin henüz eşleşen oturumu yok.",
+      "noMatchingSessionsFiltered": "Başka bir sorgu deneyin veya sağlayıcı filtresini sıfırlayın.",
+      "noSessions": "Oturum bulunamadı",
+      "noSessionsDescription": "Bu projenin henüz oturumu yok",
+      "selectProject": "Oturumları görüntülemek için bir proje seçin"
+    },
+    "errors": {
+      "loading": "Oturumlar yüklenirken hata oluştu"
+    },
+    "loadedMatchingMore": "Şu ana kadar {{count}} eşleşen oturum yüklendi - daha fazlasını yüklemek için aşağı kaydırın.",
+    "loadingMore": "Daha fazla oturum yükleniyor...",
+    "pinned": "Sabitlenmiş",
+    "scrollToLoadMore": "Daha fazlasını yüklemek için kaydırın",
+    "search": {
+      "clear": "Oturum aramasını temizle",
+      "placeholder": "Oturumlarda ara..."
+    },
+    "selection": {
+      "cancel": "Seçimi iptal et",
+      "exitMode": "Seçim modundan çık",
+      "hideSelected": "Seçili oturumları gizle",
+      "pinSelected": "Seçili oturumları sabitle",
+      "selectSessions": "Oturum seç",
+      "selected": "{{count}} seçili",
+      "unhideSelected": "Seçili oturumları göster",
+      "selected_few": "{{count}} seçili",
+      "selected_many": "{{count}} seçili",
+      "selected_one": "{{count}} seçili",
+      "selected_other": "{{count}} seçili"
+    },
+    "sort": {
+      "byContext": "Bağlama Göre",
+      "byContextTooltip": "Bağlam tüketimine göre sırala",
+      "byRecentTooltip": "En yeniye göre sırala",
+      "contextLoadedOnly": "Bağlam sıralaması yalnızca yüklenmiş oturumları sıralar."
+    },
+    "title": "Oturumlar",
+    "visibility": {
+      "hideHidden": "Gizli oturumları gizle",
+      "showHidden": "Gizli oturumları göster"
+    },
+    "worktree": {
+      "switch": "Worktree Değiştir"
+    },
+    "loadedMatchingMore_few": "Şu ana kadar {{count}} eşleşen oturum yüklendi - daha fazlasını yüklemek için aşağı kaydırın.",
+    "loadedMatchingMore_many": "Şu ana kadar {{count}} eşleşen oturum yüklendi - daha fazlasını yüklemek için aşağı kaydırın.",
+    "loadedMatchingMore_one": "Şu ana kadar {{count}} eşleşen oturum yüklendi - daha fazlasını yüklemek için aşağı kaydırın.",
+    "loadedMatchingMore_other": "Şu ana kadar {{count}} eşleşen oturum yüklendi - daha fazlasını yüklemek için aşağı kaydırın.",
+    "failedToLoad": "Oturum yüklenemedi",
+    "loading": "Oturum yükleniyor...",
+    "filter": {
+      "title": "Oturumları filtrele"
+    },
+    "count": "{{count}} oturum",
+    "count_one": "{{count}} oturum",
+    "count_other": "{{count}} oturum",
+    "count_few": "{{count}} oturum",
+    "count_many": "{{count}} oturum",
+    "inProgress": "Oturum devam ediyor..."
+  },
+  "states": {
+    "loading": "Yükleniyor...",
+    "offline": "Çevrimdışı",
+    "online": "Çevrimiçi",
+    "unknown": "Bilinmiyor",
+    "error": "Hata"
+  },
+  "markdown": {
+    "imageFallback": "[Görsel: {{label}}]",
+    "largeContentNotice": "İçerik çok büyük ({{count}} karakter). Arayüzü duyarlı tutmak için ham önizleme gösteriliyor.",
+    "largeContentTitle": "Arayüzün donmasını önlemek için büyük içerik ham olarak gösteriliyor",
+    "raw": "Ham",
+    "rawPreview": "Ham önizleme",
+    "renderMarkdown": "Markdown'ı işle",
+    "showAll": "Tümünü göster",
+    "showMore": "Daha fazla göster",
+    "showRaw": "Ham göster",
+    "showingChars": "{{shown}} / {{total}} karakter gösteriliyor",
+    "largeContentNotice_few": "İçerik çok büyük ({{count}} karakter). Arayüzü duyarlı tutmak için ham önizleme gösteriliyor.",
+    "largeContentNotice_many": "İçerik çok büyük ({{count}} karakter). Arayüzü duyarlı tutmak için ham önizleme gösteriliyor.",
+    "largeContentNotice_one": "İçerik çok büyük ({{count}} karakter). Arayüzü duyarlı tutmak için ham önizleme gösteriliyor.",
+    "largeContentNotice_other": "İçerik çok büyük ({{count}} karakter). Arayüzü duyarlı tutmak için ham önizleme gösteriliyor."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Ayrıntılar için yukarıdaki terminal çıktısını kontrol edin",
+    "closingInSeconds": "{{count}}sn içinde kapanıyor...",
+    "closingInSeconds_few": "{{count}}sn içinde kapanıyor...",
+    "closingInSeconds_many": "{{count}}sn içinde kapanıyor...",
+    "closingInSeconds_one": "{{count}}sn içinde kapanıyor...",
+    "closingInSeconds_other": "{{count}}sn içinde kapanıyor...",
+    "completedSuccessfully": "Başarıyla tamamlandı",
+    "exitCode": "(çıkış kodu {{code}})",
+    "processFailed": "İşlem başarısız oldu",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Tüm oturum boyunca yinelenmeden toplandı",
+    "cacheRead": "Önbellek Okuma",
+    "cacheWrite": "Önbellek Yazma",
+    "costUsd": "Maliyet (USD)",
+    "inputTokens": "Girdi Token'ları",
+    "model": "Model",
+    "outputTokens": "Çıktı Token'ları",
+    "phase": "Aşama {{phase}}/{{total}}",
+    "promptInputShare": "komut isteminin %{{percent}}'i",
+    "taskCoordination": "Görev Koordinasyonu",
+    "thinkingText": "Düşünme + Metin",
+    "toolOutputs": "Araç Çıktıları",
+    "total": "Toplam",
+    "userMessages": "Kullanıcı Mesajları",
+    "visibleContext": "Görünür Bağlam",
+    "includesClaudeMd": "CLAUDE.md ×{{count}} dahil",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@dosyalar",
+    "percentValue": "(%{{percent}})",
+    "approxTokens": "~{{tokens}} token",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Ekibi kopyala",
+      "createTeam": "Ekip Oluştur",
+      "deleteForever": "Kalıcı olarak sil",
+      "deletePermanently": "Kalıcı olarak sil",
+      "deleteTeam": "Ekibi sil",
+      "launching": "Başlatılıyor...",
+      "launchTeam": "Ekibi başlat",
+      "relaunchTeam": "Ekibi yeniden başlat",
+      "restore": "Geri yükle",
+      "restoreTeam": "Ekibi geri yükle",
+      "retry": "Yeniden dene",
+      "stopTeam": "Ekibi durdur",
+      "stopping": "Durduruluyor..."
+    },
+    "status": {
+      "active": "Etkin",
+      "deleted": "Silindi",
+      "launching": "Başlatılıyor...",
+      "offline": "Çevrimdışı",
+      "partialFailure": "Başlatma yarıda başarısız oldu",
+      "partialPending": "Bootstrap beklemede",
+      "partialSkipped": "Başlatma üyeyi atladı",
+      "running": "Çalışıyor"
+    },
+    "partial": {
+      "pending": "Son başlatma hâlâ uzlaştırılıyor.",
+      "skipped": "Son başlatma takım arkadaşlarını atladı.",
+      "skippedWithCount": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_few": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_many": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_one": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "skippedWithCount_other": "Son başlatma {{count}}/{{expected}} takım arkadaşını atladı.",
+      "stopped": "Son başlatma tüm takım arkadaşları katılmadan durdu.",
+      "stoppedWithCount": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_few": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_many": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_one": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu.",
+      "stoppedWithCount_other": "Son başlatma {{count}}/{{expected}} takım arkadaşı katılmadan durdu."
+    },
+    "noDescription": "Açıklama yok",
+    "solo": "Tekli",
+    "membersCount": "Üyeler: {{count}}",
+    "membersCount_few": "Üyeler: {{count}}",
+    "membersCount_many": "Üyeler: {{count}}",
+    "membersCount_one": "Üye: {{count}}",
+    "membersCount_other": "Üyeler: {{count}}",
+    "all": "Tümü",
+    "moreCount": "+{{count}} daha",
+    "moreCount_one": "+{{count}} daha",
+    "moreCount_other": "+{{count}} daha",
+    "moreCount_few": "+{{count}} daha",
+    "moreCount_many": "+{{count}} daha"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Kendi OpenCode geçersiz kılması olmayan her proje için varsayılan.",
+      "scopeDescriptionProject": "Yalnızca seçili projeyi geçersiz kıl. Çalışan ekipler değiştirilmez.",
+      "setAllProjectsDefault": "Tüm projeler varsayılanını ayarla",
+      "setProjectDefault": "Proje varsayılanını ayarla",
+      "validationContext": "Doğrulama bağlamı",
+      "projectOverrideContext": "Proje geçersiz kılma bağlamı",
+      "selectProjectHint": "Yerel modelleri test etmeden veya varsayılanları kaydetmeden önce bir proje seçin.",
+      "allProjectsHint": "Testler {{project}} kullanır. Bir projenin geçersiz kılması olmadıkça varsayılan geçerlidir.",
+      "projectHint": "Kaydetme yalnızca {{project}} öğesini geçersiz kılar."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Bağlam",
+      "closePanel": "Paneli kapat",
+      "phase": "Aşama:",
+      "current": "Geçerli",
+      "view": "Görünüm:",
+      "category": "Kategori",
+      "bySize": "Boyuta Göre"
+    },
+    "metrics": {
+      "unavailable": "Kullanılamıyor",
+      "contextUsed": "Kullanılan Bağlam",
+      "promptInput": "Komut İstemi Girdisi",
+      "visibleContext": "Görünür Bağlam",
+      "ofContext": "bağlamın",
+      "ofPrompt": "komut isteminin",
+      "codexTelemetryUnavailable": "Codex komut istemi tarafı kullanımı henüz mevcut çalışma zamanı telemetrisi tarafından sunulmuyor, bu nedenle Komut İstemi Girdisi ve Kullanılan Bağlam sahte bir sıfır göstermek yerine kullanılamaz durumda kalır.",
+      "sessionCost": "Oturum Maliyeti:",
+      "parentPlus": "üst +",
+      "subagents": "alt agent'lar",
+      "details": "ayrıntılar"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Kullanılan Bağlam",
+        "description": "Şu anda modelin bağlam penceresini işgal eden komut istemi girdisi artı çıktı token'ları."
+      },
+      "promptInput": {
+        "title": "Komut İstemi Girdisi",
+        "description": "Üretimden önce modele gönderilen token'lar. Claude için bu, `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` değerlerini içerir."
+      },
+      "visibleContext": {
+        "title": "Görünür Bağlam",
+        "description": "Komut istemi girdisinin incelenebilir alt kümesi: dosyalar, CLAUDE.md, araç çıktıları, kullanıcı mesajları ve doğrudan optimize edebileceğiniz benzer enjeksiyonlar."
+      },
+      "availability": {
+        "title": "Kullanılabilirlik",
+        "description": "Bir sağlayıcı çalışma zamanı henüz komut istemi tarafı kullanımı sunmuyorsa, panel metrikleri sıfırmış gibi göstermek yerine kullanılamaz olarak gösterir."
+      }
+    },
+    "items": {
+      "turn": "@Tur {{turn}}",
+      "tokensApprox": "~{{tokens}} token",
+      "toolsCount": "{{count}} araç",
+      "toolsCount_one": "{{count}} araç",
+      "toolsCount_other": "{{count}} araç",
+      "toolsCount_few": "{{count}} araç",
+      "toolsCount_many": "{{count}} araç",
+      "itemsCount": "{{count}} öğe",
+      "itemsCount_one": "{{count}} öğe",
+      "itemsCount_other": "{{count}} öğe",
+      "itemsCount_few": "{{count}} öğe",
+      "itemsCount_many": "{{count}} öğe",
+      "missing": "eksik",
+      "thinking": "Düşünme",
+      "text": "Metin"
+    },
+    "empty": "Bu oturumda bağlam enjeksiyonu algılanmadı",
+    "view": {
+      "grouped": "Gruplanmış",
+      "flat": "Düz"
+    },
+    "claudeMdFiles": "CLAUDE.md Dosyaları",
+    "mentionedFiles": "Bahsedilen Dosyalar"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Alt agent",
+      "shutdownConfirmed": "Kapatma onaylandı",
+      "summary": {
+        "tools": "{{count}} araç",
+        "tools_one": "{{count}} araç",
+        "tools_other": "{{count}} araç",
+        "tools_few": "{{count}} araç",
+        "tools_many": "{{count}} araç"
+      },
+      "meta": {
+        "type": "Tür",
+        "duration": "Süre",
+        "model": "Model",
+        "id": "Kimlik"
+      },
+      "metrics": {
+        "contextWindow": "Bağlam Penceresi",
+        "contextUsage": "Bağlam Kullanımı",
+        "mainContext": "Ana Bağlam",
+        "totalOutput": "Toplam Çıktı",
+        "turns": "({{count}} tur)",
+        "turns_one": "({{count}} tur)",
+        "turns_other": "({{count}} tur)",
+        "subagentContext": "Alt Agent Bağlamı",
+        "phase": "Aşama {{phase}}",
+        "turns_few": "({{count}} tur)",
+        "turns_many": "({{count}} tur)"
+      },
+      "trace": {
+        "title": "Yürütme İzi"
+      }
+    },
+    "user": {
+      "you": "Siz",
+      "showMore": "Daha fazla göster",
+      "showLess": "Daha az göster",
+      "backgroundTask": "Arka plan görevi",
+      "exitCode": "çıkış {{code}}",
+      "imagesAttached": "{{count}} görsel eklendi",
+      "imagesAttached_one": "{{count}} görsel eklendi",
+      "imagesAttached_few": "{{count}} görsel eklendi",
+      "imagesAttached_many": "{{count}} görsel eklendi",
+      "imagesAttached_other": "{{count}} görsel eklendi"
+    },
+    "compact": {
+      "toggle": "Sıkıştırılmış içeriği aç/kapat",
+      "contextCompacted": "Bağlam sıkıştırıldı",
+      "freedTokens": "({{tokens}} serbest bırakıldı)",
+      "phase": "Aşama {{phase}}",
+      "conversationCompacted": "Konuşma Sıkıştırıldı",
+      "summary": "Önceki mesajlar bağlamı korumak için özetlendi. Tam konuşma geçmişi oturum dosyasında saklanır.",
+      "compacted": "Sıkıştırıldı"
+    },
+    "executionTrace": {
+      "empty": "Yürütme öğesi yok",
+      "nested": "İç içe: {{name}}",
+      "input": "Girdi"
+    },
+    "items": {
+      "empty": "Görüntülenecek öğe yok"
+    },
+    "tools": {
+      "teammateSpawned": "Takım arkadaşı oluşturuldu",
+      "shutdownRequested": "Kapatma istendi ->",
+      "noResultReceived": "Sonuç alınmadı",
+      "duration": "Süre: {{duration}}",
+      "result": "Sonuç",
+      "write": {
+        "createdFile": "Dosya oluşturuldu",
+        "wroteToFile": "Dosyaya yazıldı"
+      },
+      "skill": {
+        "instructions": "Beceri Talimatları",
+        "unknown": "Bilinmeyen Beceri"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "İstek kullanıcı tarafından kesildi",
+      "planReadyForApproval": "Plan Onaya Hazır"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Konuşma geçmişi yok",
+      "description": "Bu oturum henüz herhangi bir mesaj içermiyor."
+    },
+    "context": {
+      "remainingPercent": "(%{{percent}} kaldı)",
+      "count": "Bağlam ({{count}})",
+      "count_one": "Bağlam ({{count}})",
+      "count_other": "Bağlam ({{count}})",
+      "count_few": "Bağlam ({{count}})",
+      "count_many": "Bağlam ({{count}})"
+    },
+    "scrollToBottom": "En alta kaydır",
+    "bottom": "Alt",
+    "teammateMessage": {
+      "message": "Mesaj",
+      "resent": "Yeniden gönderildi",
+      "fallback": "Takım arkadaşı mesajı"
+    },
+    "system": {
+      "label": "Sistem"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux kurulu değil",
+    "detectedOs": "Algılanan İS: {{os}}",
+    "runtimePath": "Çalışma zamanı yolu: {{path}}",
+    "phase": "Aşama: {{phase}}",
+    "actions": {
+      "cancel": "İptal",
+      "manualGuide": "Manuel kılavuz",
+      "hideSetupSteps": "Kurulum adımlarını gizle",
+      "showSetupSteps": "Kurulum adımlarını göster ({{count}})",
+      "showSetupSteps_one": "Kurulum adımını göster ({{count}})",
+      "showSetupSteps_other": "Kurulum adımlarını göster ({{count}})",
+      "recheck": "Yeniden kontrol et",
+      "showSetupSteps_few": "Kurulum adımlarını göster ({{count}})",
+      "showSetupSteps_many": "Kurulum adımlarını göster ({{count}})"
+    },
+    "installerProgress": "Kurulum ilerlemesi",
+    "input": {
+      "placeholder": "Kuruluma girdi gönder",
+      "send": "Girdi gönder",
+      "passwordNotice": "Parola girdisi doğrudan kurulum terminaline gönderilir ve günlük çıktısına eklenmez."
+    },
+    "details": {
+      "show": "Ayrıntıları göster",
+      "hide": "Ayrıntıları gizle"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Son etkinlik yok",
+    "sessionsCount": "{{count}} oturum",
+    "sessionsCount_one": "{{count}} oturum",
+    "sessionsCount_other": "{{count}} oturum",
+    "mode": {
+      "searchProjects": "Projelerde ara",
+      "searchAcrossProjects": "Tüm projelerde ara",
+      "searchInProject": "Projede ara"
+    },
+    "currentProject": "Geçerli proje",
+    "global": "Genel",
+    "placeholders": {
+      "projects": "Projelerde ara...",
+      "conversations": "Konuşmalarda ara..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\" için proje bulunamadı",
+      "noProjects": "Proje bulunamadı",
+      "minChars": "Aramak için en az 2 karakter yazın",
+      "noFastResults": "\"{{query}}\" için son oturumlarda hızlı sonuç yok",
+      "noResults": "\"{{query}}\" için sonuç bulunamadı"
+    },
+    "footer": {
+      "projectsCount": "{{count}} proje",
+      "projectsCount_one": "{{count}} proje",
+      "projectsCount_other": "{{count}} proje",
+      "results": "{{count}} {{speed}}sonuç",
+      "results_one": "{{count}} {{speed}}sonuç",
+      "results_other": "{{count}} {{speed}}sonuç",
+      "resultsAcrossProjects": "tüm projelerde {{count}} {{speed}}sonuç",
+      "resultsAcrossProjects_one": "tüm projelerde {{count}} {{speed}}sonuç",
+      "resultsAcrossProjects_other": "tüm projelerde {{count}} {{speed}}sonuç",
+      "fastPrefix": "hızlı ",
+      "typeToSearch": "Aramak için yazın",
+      "navigate": "gezin",
+      "select": "seç",
+      "open": "aç",
+      "global": "genel",
+      "close": "kapat",
+      "results_few": "{{count}} {{speed}}sonuç",
+      "results_many": "{{count}} {{speed}}sonuç",
+      "resultsAcrossProjects_few": "tüm projelerde {{count}} {{speed}}sonuç",
+      "resultsAcrossProjects_many": "tüm projelerde {{count}} {{speed}}sonuç",
+      "projectsCount_few": "{{count}} proje",
+      "projectsCount_many": "{{count}} proje",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} oturum",
+    "sessionsCount_many": "{{count}} oturum"
+  },
+  "tasksPanel": {
+    "title": "Görevler",
+    "searchPlaceholder": "Görevlerde ara...",
+    "pinned": "Sabitlenmiş",
+    "groupByLabel": "Gruplama ölçütü:",
+    "groupByAria": "Gruplama ölçütü",
+    "groupModes": {
+      "none": "Yok",
+      "project": "Proje",
+      "time": "Zaman"
+    },
+    "showArchived": "Arşivlenenleri göster",
+    "hideArchived": "Arşivlenenleri gizle",
+    "empty": {
+      "noMatchingTasks": "Eşleşen görev yok",
+      "noTasks": "Görev bulunamadı"
+    },
+    "teamLabel": "Ekip: {{team}}",
+    "showMore": "Daha fazla göster",
+    "showLess": "Daha az göster",
+    "deleteConfirm": {
+      "title": "Görevi sil",
+      "message": "#{{taskId}} görevi çöpe taşınsın mı?",
+      "confirmLabel": "Sil",
+      "cancelLabel": "İptal"
+    },
+    "deleteFailed": {
+      "title": "Görev silinemedi",
+      "fallbackMessage": "Beklenmeyen bir hata oluştu",
+      "confirmLabel": "Tamam"
+    },
+    "sort": {
+      "byTime": "Zamana göre",
+      "byUnread": "Okunmamışa göre",
+      "byProject": "Projeye göre",
+      "byTeam": "Ekibe göre"
+    }
+  },
+  "toolViewer": {
+    "input": "Girdi",
+    "replaceAll": "(tümünü değiştir)",
+    "noInputRecorded": "Bu araç çağrısı için girdi kaydedilmedi.",
+    "agent": {
+      "action": "eylem",
+      "teammate": "takım arkadaşı",
+      "team": "ekip",
+      "runtime": "çalışma zamanı",
+      "type": "tür",
+      "startupInstructionsHidden": "Başlangıç talimatları arayüzde gizlidir."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Sabitlemeyi kaldır",
+    "pin": "Sabitle",
+    "rename": "Yeniden adlandır",
+    "markUnread": "Okunmadı olarak işaretle",
+    "unarchive": "Arşivden çıkar",
+    "archive": "Arşivle",
+    "deleteTask": "Görevi sil"
+  },
+  "updateDialog": {
+    "closeDialog": "İletişim kutusunu kapat",
+    "updateAvailable": "Güncelleme mevcut",
+    "updateReady": "Güncelleme Hazır",
+    "noReleaseNotes": "Sürüm notu yok.",
+    "viewOnGitHub": "GitHub'da görüntüle",
+    "later": "Sonra",
+    "restartNow": "Şimdi yeniden başlat",
+    "download": "İndir"
+  },
+  "errorBoundary": {
+    "title": "Bir şeyler ters gitti",
+    "description": "Uygulamada beklenmeyen bir hata oluştu. Sayfayı yeniden yüklemeyi veya hata durumunu sıfırlamayı deneyebilirsiniz.",
+    "componentStack": "Bileşen Yığını",
+    "tryAgain": "Yeniden Dene",
+    "copied": "Kopyalandı",
+    "copyErrorDetails": "Hata Ayrıntılarını Kopyala",
+    "reportBugOnGitHub": "GitHub'da Hata Bildir",
+    "reloadApp": "Uygulamayı Yeniden Yükle",
+    "diagnosticsNotice": "GitHub hata raporları ve kopyalanan tanılamalar; hata mesajını, yığın izlerini, uygulama sürümünü, etkin sekmeyi, seçili ekibi, görev bağlamını ve ortam ayrıntılarını içerir."
+  },
+  "runtimeBackendSelector": {
+    "label": "Çalışma zamanı arka ucu",
+    "resolved": "Çözümlendi: {{backend}}",
+    "current": "Geçerli",
+    "recommended": "Önerilen",
+    "unavailable": "Kullanılamıyor",
+    "cannotSelectYet": "Bu arka uç henüz seçilemez.",
+    "auto": "Otomatik",
+    "autoCurrently": "Otomatik (şu anda: {{backend}})",
+    "audience": {
+      "internal": "Dahili"
+    },
+    "states": {
+      "locked": "Kilitli",
+      "disabled": "Devre dışı",
+      "authRequired": "Kimlik doğrulama gerekli",
+      "runtimeMissing": "Çalışma zamanı eksik",
+      "degraded": "Düşük performanslı",
+      "unavailable": "Kullanılamıyor"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Kontrol ediliyor",
+    "unavailable": "Kullanılamıyor",
+    "checkFailed": "Kontrol başarısız oldu",
+    "free": "Ücretsiz",
+    "freeTooltip": "OpenCode meta verileri tarafından bildirildi. Kullanılabilirlik ve limitler değişebilir."
+  },
+  "taskFilters": {
+    "status": "Durum",
+    "clearAll": "Tümünü temizle",
+    "selectAll": "Tümünü seç",
+    "team": "Ekip",
+    "allTeams": "Tüm ekipler",
+    "searchTeams": "Ekiplerde ara...",
+    "noTeamsFound": "Ekip bulunamadı",
+    "project": "Proje",
+    "allProjects": "Tüm Projeler",
+    "searchProjects": "Projelerde ara...",
+    "noProjects": "Proje yok",
+    "comments": "Yorumlar",
+    "apply": "Uygula",
+    "read": {
+      "all": "Tümü",
+      "unread": "Okunmamış",
+      "read": "Okunmuş"
+    },
+    "statusOptions": {
+      "todo": "YAPILACAK",
+      "inProgress": "DEVAM EDİYOR",
+      "needsFix": "DÜZELTME GEREKİR",
+      "done": "BİTTİ",
+      "review": "İNCELEME",
+      "approved": "ONAYLANDI"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Toplam Bağlam: {{tokens}} token",
+    "context": "Bağlam: {{tokens}}",
+    "phase": "Aşama {{phase}}:",
+    "compactedTo": "({{tokens}} olarak sıkıştırıldı)"
+  },
+  "notifications": {
+    "row": {
+      "team": "ekip",
+      "subagent": "alt agent",
+      "markAsRead": "Okundu olarak işaretle",
+      "delete": "Sil",
+      "viewInSession": "Oturumda görüntüle"
+    },
+    "title": "Bildirimler",
+    "loading": "Bildirimler yükleniyor...",
+    "actions": {
+      "markFilteredAsRead": "Filtrelenmişleri okundu işaretle",
+      "markAllAsRead": "Tümünü okundu işaretle",
+      "markFilteredRead": "Filtrelenmişleri okundu işaretle",
+      "markAllRead": "Tümünü okundu işaretle",
+      "clearFilteredNotifications": "Filtrelenmiş bildirimleri temizle",
+      "clearAllNotifications": "Tüm bildirimleri temizle",
+      "clickToConfirm": "Onaylamak için tıklayın",
+      "clearFiltered": "Filtrelenmişleri temizle",
+      "clearAll": "Tümünü temizle"
+    },
+    "counts": {
+      "unreadInFilter": "filtrede {{count}} okunmamış",
+      "unreadInFilter_one": "filtrede {{count}} okunmamış",
+      "unreadInFilter_few": "filtrede {{count}} okunmamış",
+      "unreadInFilter_many": "filtrede {{count}} okunmamış",
+      "unreadInFilter_other": "filtrede {{count}} okunmamış",
+      "inFilter": "filtrede {{count}}",
+      "inFilter_one": "filtrede {{count}}",
+      "inFilter_few": "filtrede {{count}}",
+      "inFilter_many": "filtrede {{count}}",
+      "inFilter_other": "filtrede {{count}}",
+      "unread": "{{count}} okunmamış",
+      "unread_one": "{{count}} okunmamış",
+      "unread_few": "{{count}} okunmamış",
+      "unread_many": "{{count}} okunmamış",
+      "unread_other": "{{count}} okunmamış",
+      "total": "{{count}} toplam",
+      "total_one": "{{count}} toplam",
+      "total_few": "{{count}} toplam",
+      "total_many": "{{count}} toplam",
+      "total_other": "{{count}} toplam"
+    },
+    "filters": {
+      "other": "Diğer"
+    },
+    "empty": {
+      "noMatching": "Eşleşen bildirim yok",
+      "noNotifications": "Bildirim yok",
+      "tryDifferentFilter": "Farklı bir filtre deneyin",
+      "allCaughtUp": "Her şeyi gördünüz!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Güncellemek için yeniden başlat",
+    "updateApp": "Uygulamayı güncelle",
+    "downloadedRestartTooltip": "Güncelleme indirildi, uygulamak için yeniden başlatın",
+    "newVersionAvailable": "Yeni sürüm mevcut",
+    "updatingApp": "Uygulama güncelleniyor",
+    "updateReady": "Güncelleme hazır",
+    "restartNow": "Şimdi yeniden başlat"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Kenar çubuğunu genişlet",
+    "collapseSidebarShortcut": "Kenar çubuğunu daralt ({{shortcut}})",
+    "sidebarView": "Kenar çubuğu görünümü",
+    "resizeSidebar": "Kenar çubuğunu yeniden boyutlandır",
+    "closeTab": "Sekmeyi kapat",
+    "openedFromSearch": "Aramadan açıldı",
+    "pinnedSession": "Sabitlenmiş oturum",
+    "jumpToSection": "Bölüme atla",
+    "newTab": "Yeni sekme",
+    "newTabDashboard": "Yeni sekme (Pano)",
+    "refreshSession": "Oturumu yenile",
+    "refreshSessionWithShortcut": "Oturumu Yenile ({{shortcut}})",
+    "loadingTab": "Sekme yükleniyor",
+    "menu": {
+      "teams": "Ekipler",
+      "settings": "Ayarlar",
+      "extensions": "Eklentiler",
+      "search": "Ara",
+      "schedules": "Zamanlamalar",
+      "docs": "Dokümanlar",
+      "exportMarkdown": "Markdown olarak dışa aktar",
+      "exportJson": "JSON olarak dışa aktar",
+      "exportPlainText": "Düz Metin olarak dışa aktar",
+      "analyzeSession": "Oturumu Analiz Et"
+    },
+    "tabMenu": {
+      "closeTabs": "{{count}} Sekmeyi Kapat",
+      "closeTabs_one": "{{count}} Sekmeyi Kapat",
+      "closeTabs_few": "{{count}} Sekmeyi Kapat",
+      "closeTabs_many": "{{count}} Sekmeyi Kapat",
+      "closeTabs_other": "{{count}} Sekmeyi Kapat",
+      "closeTab": "Sekmeyi Kapat",
+      "closeOtherTabs": "Diğer Sekmeleri Kapat",
+      "splitRight": "Sağa Böl",
+      "splitLeft": "Sola Böl",
+      "pinToSidebar": "Kenar Çubuğuna Sabitle",
+      "unpinFromSidebar": "Kenar Çubuğundan Sabitlemeyi Kaldır",
+      "hideFromSidebar": "Kenar Çubuğundan Gizle",
+      "unhideFromSidebar": "Kenar Çubuğunda Göster",
+      "closeAllTabs": "Tüm Sekmeleri Kapat"
+    },
+    "sections": {
+      "team": "Ekip",
+      "sessions": "Oturumlar",
+      "kanban": "Kanban",
+      "claudeLogs": "Günlükler",
+      "messages": "Mesajlar"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Kalın",
+    "italic": "İtalik",
+    "strike": "Üstü çizili",
+    "code": "Kod"
+  },
+  "diff": {
+    "changed": "Değiştirildi",
+    "noChangesDetected": "Değişiklik algılanmadı"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT giriş bağlantısını ve kodunu kopyala",
+    "copyLoginLink": "ChatGPT giriş bağlantısını kopyala",
+    "copyFailed": "Kopyalama başarısız oldu",
+    "copyLinkAndCode": "Bağlantı + kod kopyala",
+    "copyLink": "Bağlantıyı kopyala",
+    "enterCodeOnLoginPage": "Bu kodu ChatGPT giriş sayfasına girin"
+  },
+  "window": {
+    "minimize": "Simge durumuna küçült",
+    "maximize": "Büyüt",
+    "restore": "Geri yükle"
+  },
+  "context": {
+    "local": "Yerel",
+    "switchingTo": "{{workspace}} öğesine geçiliyor",
+    "loadingWorkspace": "Çalışma alanı yükleniyor",
+    "switchWorkspace": "Çalışma Alanını Değiştir"
+  },
+  "repositories": {
+    "noneAvailable": "Kullanılabilir depo yok",
+    "remove": "Depoyu kaldır"
+  },
+  "export": {
+    "session": "Oturumu dışa aktar",
+    "sessionTitle": "Oturumu Dışa Aktar"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Oturum verisi yok",
+    "title": "Oturum Raporu"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Proje Seç"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "günc.",
+      "updatedYesterday": "dün güncellendi",
+      "yesterday": "Dün"
+    },
+    "reviewState": {
+      "needsFix": "Düzeltme Gerekir"
+    },
+    "unassigned": "atanmamış"
+  }
+}

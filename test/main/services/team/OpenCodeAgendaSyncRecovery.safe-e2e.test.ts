@@ -13,7 +13,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
+import type { MemberWorkSyncNudgeDeliveryWakePort } from '@features/member-work-sync/core/application/ports';
 import type { InboxMessage, TaskRef } from '@shared/types/team';
 
 const tempRoots: string[] = [];
@@ -291,12 +293,22 @@ function buildProofMissingRecord(input: {
   };
 }
 
+type TestNudgeDeliveryWake = MemberWorkSyncNudgeDeliveryWakePort & {
+  schedule: Mock<MemberWorkSyncNudgeDeliveryWakePort['schedule']>;
+};
+
+function createNudgeDeliveryWake(): TestNudgeDeliveryWake {
+  return {
+    schedule: vi.fn<MemberWorkSyncNudgeDeliveryWakePort['schedule']>(async () => undefined),
+  };
+}
+
 function createFeature(input: {
   teamsBasePath: string;
   teamName: string;
   memberName: string;
   service: TeamProvisioningService;
-  nudgeDeliveryWake: { schedule: ReturnType<typeof vi.fn> };
+  nudgeDeliveryWake: TestNudgeDeliveryWake;
   providerId?: 'opencode' | 'codex';
 }) {
   const providerId = input.providerId ?? 'opencode';
@@ -351,7 +363,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
     const teamName = 'team-codex-agenda-sync-nudge';
     const memberName = 'bob';
     const service = new TeamProvisioningService();
-    const nudgeDeliveryWake = { schedule: vi.fn(async () => undefined) };
+    const nudgeDeliveryWake = createNudgeDeliveryWake();
     const feature = createFeature({
       teamsBasePath,
       teamName,
@@ -415,7 +427,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
     const taskRef: TaskRef = { teamName, taskId: 'task-1', displayId: '11111111' };
     const foregroundMessageId = 'proof-missing-message-1';
     const service = new TeamProvisioningService();
-    const nudgeDeliveryWake = { schedule: vi.fn(async () => undefined) };
+    const nudgeDeliveryWake = createNudgeDeliveryWake();
     const feature = createFeature({
       teamsBasePath,
       teamName,
@@ -499,7 +511,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
     const laneId = 'secondary:opencode:jack';
     const taskRef: TaskRef = { teamName, taskId: 'task-1', displayId: '11111111' };
     const service = new TeamProvisioningService();
-    const nudgeDeliveryWake = { schedule: vi.fn(async () => undefined) };
+    const nudgeDeliveryWake = createNudgeDeliveryWake();
     const feature = createFeature({
       teamsBasePath,
       teamName,

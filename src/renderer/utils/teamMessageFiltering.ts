@@ -19,6 +19,30 @@ export interface TeamMessagesFilter {
   showNoise: boolean;
 }
 
+interface CachedMessageFilterData {
+  readonly messageKind: InboxMessage['messageKind'];
+  readonly source: InboxMessage['source'];
+  readonly from: InboxMessage['from'];
+  readonly to: InboxMessage['to'];
+  readonly messageId: InboxMessage['messageId'];
+  readonly text: InboxMessage['text'];
+  readonly trimmedMessageId: string;
+  readonly trimmedFrom: string;
+  readonly trimmedTo: string;
+  readonly normalizedFrom: string;
+  readonly normalizedTo: string;
+  readonly normalizedText: string;
+  readonly isTaskCommentNotification: boolean;
+  readonly isTaskStallRemediation: boolean;
+  readonly isMemberWorkSyncNudge: boolean;
+  readonly isReviewPickupEscalation: boolean;
+  readonly isInternalControlEnvelope: boolean;
+  readonly isNoiseMessage: boolean;
+  readonly keepIdleWhenNoiseHidden: boolean;
+}
+
+const messageFilterDataCache = new WeakMap<InboxMessage, CachedMessageFilterData>();
+
 function normalizeMessageText(value: string | undefined): string {
   return (value ?? '')
     .trim()
@@ -39,6 +63,47 @@ function normalizeLeadNames(values: Iterable<string> | undefined): Set<string> {
     }
   }
   return normalized;
+}
+
+function getMessageFilterData(message: InboxMessage): CachedMessageFilterData {
+  const cached = messageFilterDataCache.get(message);
+  if (
+    cached &&
+    cached.messageKind === message.messageKind &&
+    cached.source === message.source &&
+    cached.from === message.from &&
+    cached.to === message.to &&
+    cached.messageId === message.messageId &&
+    cached.text === message.text
+  ) {
+    return cached;
+  }
+
+  const text = typeof message.text === 'string' ? message.text : '';
+  const isNoiseMessage = isInboxNoiseMessage(text);
+  const next: CachedMessageFilterData = {
+    messageKind: message.messageKind,
+    source: message.source,
+    from: message.from,
+    to: message.to,
+    messageId: message.messageId,
+    text: message.text,
+    trimmedMessageId: typeof message.messageId === 'string' ? message.messageId.trim() : '',
+    trimmedFrom: typeof message.from === 'string' ? message.from.trim() : '',
+    trimmedTo: typeof message.to === 'string' ? message.to.trim() : '',
+    normalizedFrom: normalizeParticipant(message.from),
+    normalizedTo: normalizeParticipant(message.to),
+    normalizedText: normalizeMessageText(message.text),
+    isTaskCommentNotification: message.messageKind === 'task_comment_notification',
+    isTaskStallRemediation: isTaskStallRemediationMessage(message),
+    isMemberWorkSyncNudge: isMemberWorkSyncNudgeMessage(message),
+    isReviewPickupEscalation: isReviewPickupEscalationMessage(message),
+    isInternalControlEnvelope: isTeamInternalControlMessageEnvelope(message),
+    isNoiseMessage,
+    keepIdleWhenNoiseHidden: isNoiseMessage && shouldKeepIdleMessageInActivityWhenNoiseHidden(text),
+  };
+  messageFilterDataCache.set(message, next);
+  return next;
 }
 
 function isLeadAlias(value: string | undefined): boolean {
@@ -65,25 +130,27 @@ function isRelayDuplicateOfVisibleMessage(
     return false;
   }
 
-  if (isInboxNoiseMessage(message.text)) {
+  const messageData = getMessageFilterData(message);
+  if (messageData.isNoiseMessage) {
     return true;
   }
+  const originalData = getMessageFilterData(original);
 
   const isInternalLeadRelayDelivery =
     (message.source === 'runtime_delivery' || message.source === 'lead_process') &&
     original.source === 'user_sent' &&
-    normalizeParticipant(original.from) === 'user' &&
+    originalData.normalizedFrom === 'user' &&
     isLeadParticipant(original.to, leadNames) &&
     isLeadParticipant(message.from, leadNames) &&
-    normalizeParticipant(message.to) !== 'user';
+    messageData.normalizedTo !== 'user';
 
   if (isInternalLeadRelayDelivery) {
     return true;
   }
 
   const sameDirection =
-    normalizeParticipant(message.from) === normalizeParticipant(original.from) &&
-    normalizeParticipant(message.to) === normalizeParticipant(original.to);
+    messageData.normalizedFrom === originalData.normalizedFrom &&
+    messageData.normalizedTo === originalData.normalizedTo;
 
   if (!sameDirection) {
     return false;
@@ -93,7 +160,7 @@ function isRelayDuplicateOfVisibleMessage(
     return true;
   }
 
-  return normalizeMessageText(message.text) === normalizeMessageText(original.text);
+  return messageData.normalizedText === originalData.normalizedText;
 }
 
 function getRuntimeDeliveryRelayDuplicateKey(
@@ -103,9 +170,10 @@ function getRuntimeDeliveryRelayDuplicateKey(
   if (message.source !== 'runtime_delivery') {
     return null;
   }
-  const from = normalizeParticipant(message.from);
-  const to = normalizeParticipant(message.to);
-  const text = normalizeMessageText(message.text);
+  const data = getMessageFilterData(message);
+  const from = data.normalizedFrom;
+  const to = data.normalizedTo;
+  const text = data.normalizedText;
   if (!from || !to || !text) {
     return null;
   }
@@ -134,78 +202,73 @@ export function filterTeamMessages(
     searchQuery,
   } = options;
   const leadNames = normalizeLeadNames(rawLeadNames);
-
-  let list = messages.filter(
-    (m) =>
-      m.messageKind !== 'task_comment_notification' &&
-      (includeAutomationEvents || !isTaskStallRemediationMessage(m)) &&
-      (includeMemberWorkSyncNudges || !isMemberWorkSyncNudgeMessage(m)) &&
-      !isReviewPickupEscalationMessage(m) &&
-      !isTeamInternalControlMessageEnvelope(m)
-  );
-  if (timeWindow) {
-    list = list.filter((m) => {
-      const ts = new Date(m.timestamp).getTime();
-      return ts >= timeWindow.start && ts < timeWindow.end;
-    });
-  }
-  if (!filter.showNoise) {
-    list = list.filter((m) => {
-      const text = typeof m.text === 'string' ? m.text : '';
-      if (!isInboxNoiseMessage(text)) return true;
-      return (
-        includePassiveIdlePeerSummariesWhenNoiseHidden &&
-        shouldKeepIdleMessageInActivityWhenNoiseHidden(text)
-      );
-    });
-  }
-
   const hasFrom = filter.from.size > 0;
   const hasTo = filter.to.size > 0;
-  if (hasFrom && hasTo) {
-    list = list.filter((m) => {
-      const fromMatch = Boolean(m.from?.trim() && filter.from.has(m.from.trim()));
-      const toMatch = Boolean(m.to?.trim() && filter.to.has(m.to.trim()));
-      return fromMatch && toMatch;
-    });
-  } else if (hasFrom || hasTo) {
-    list = list.filter((m) => {
-      if (hasFrom) return Boolean(m.from?.trim() && filter.from.has(m.from.trim()));
-      if (hasTo) return Boolean(m.to?.trim() && filter.to.has(m.to.trim()));
-      return true;
-    });
-  }
-
   const q = searchQuery.trim().toLowerCase();
-  if (q) {
-    list = list.filter((m) => {
-      const text = getSanitizedInboxMessageText(m).toLowerCase();
-      const summary = getSanitizedInboxMessageSummary(m).toLowerCase();
-      const from = (m.from ?? '').toLowerCase();
-      const to = (m.to ?? '').toLowerCase();
-      return text.includes(q) || summary.includes(q) || from.includes(q) || to.includes(q);
-    });
-  }
+  const visibleMessagesById = new Map<string, InboxMessage>();
+  const filteredMessages: InboxMessage[] = [];
 
-  const visibleMessagesById = new Map(
-    list
-      .map((m) => {
-        const id = typeof m.messageId === 'string' ? m.messageId.trim() : '';
-        return id ? ([id, m] as const) : null;
-      })
-      .filter((entry): entry is readonly [string, InboxMessage] => entry !== null)
-  );
+  for (const message of messages) {
+    const data = getMessageFilterData(message);
+    if (
+      data.isTaskCommentNotification ||
+      (!includeAutomationEvents && data.isTaskStallRemediation) ||
+      (!includeMemberWorkSyncNudges && data.isMemberWorkSyncNudge) ||
+      data.isReviewPickupEscalation ||
+      data.isInternalControlEnvelope
+    ) {
+      continue;
+    }
+
+    if (timeWindow) {
+      const ts = new Date(message.timestamp).getTime();
+      if (ts < timeWindow.start || ts >= timeWindow.end) {
+        continue;
+      }
+    }
+
+    if (
+      !filter.showNoise &&
+      data.isNoiseMessage &&
+      (!includePassiveIdlePeerSummariesWhenNoiseHidden || !data.keepIdleWhenNoiseHidden)
+    ) {
+      continue;
+    }
+
+    if (hasFrom || hasTo) {
+      const fromMatch = Boolean(data.trimmedFrom && filter.from.has(data.trimmedFrom));
+      const toMatch = Boolean(data.trimmedTo && filter.to.has(data.trimmedTo));
+      if ((hasFrom && !fromMatch) || (hasTo && !toMatch)) {
+        continue;
+      }
+    }
+
+    if (q) {
+      const text = getSanitizedInboxMessageText(message).toLowerCase();
+      const summary = getSanitizedInboxMessageSummary(message).toLowerCase();
+      const from = (message.from ?? '').toLowerCase();
+      const to = (message.to ?? '').toLowerCase();
+      if (!text.includes(q) && !summary.includes(q) && !from.includes(q) && !to.includes(q)) {
+        continue;
+      }
+    }
+
+    filteredMessages.push(message);
+    if (data.trimmedMessageId) {
+      visibleMessagesById.set(data.trimmedMessageId, message);
+    }
+  }
 
   const seenRuntimeDeliveryRelayDuplicates = new Set<string>();
 
-  return list.filter((m) => {
+  return filteredMessages.filter((m) => {
     const relayOfMessageId =
       typeof m.relayOfMessageId === 'string' ? m.relayOfMessageId.trim() : '';
     if (!relayOfMessageId) {
       return true;
     }
-    const ownMessageId = typeof m.messageId === 'string' ? m.messageId.trim() : '';
-    if (relayOfMessageId === ownMessageId) {
+    const data = getMessageFilterData(m);
+    if (relayOfMessageId === data.trimmedMessageId) {
       return true;
     }
     const runtimeDuplicateKey = getRuntimeDeliveryRelayDuplicateKey(m, relayOfMessageId);

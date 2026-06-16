@@ -1,4 +1,4 @@
-import { memo, type ReactNode, useState } from 'react';
+import { memo, type ReactNode, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
@@ -46,33 +46,45 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const colorMap = buildMemberColorMap(members);
-  const avatarMap = buildMemberAvatarMap(members);
-  const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
-  const entries: ActivityEntry[] = [];
-
-  // Members working on tasks
-  const workingMemberNames = new Set<string>();
-  for (const m of members) {
-    if (!m.currentTaskId) continue;
-    const task = taskMap.get(m.currentTaskId);
-    // Defense-in-depth: hide stale currentTaskId until backend refresh clears it.
-    if (!isDisplayableCurrentTask(task)) continue;
-    workingMemberNames.add(m.name);
-    entries.push({ member: m, task, taskId: m.currentTaskId, kind: 'working' });
-  }
-
-  // Members reviewing tasks (only if not already shown as working)
-  for (const m of members) {
-    if (workingMemberNames.has(m.name)) continue;
-    const reviewTask = tasks.find(
-      (t) => t.reviewer === m.name && getTeamTaskWorkflowColumn(t) === 'review'
-    );
-    if (reviewTask) {
-      entries.push({ member: m, task: reviewTask, taskId: reviewTask.id, kind: 'reviewing' });
+  const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
+  const entries = useMemo<ActivityEntry[]>(() => {
+    const taskMap = new Map(tasks.map((task) => [task.id, task]));
+    const reviewTaskByReviewer = new Map<string, TeamTaskWithKanban>();
+    for (const task of tasks) {
+      if (!task.reviewer || getTeamTaskWorkflowColumn(task) !== 'review') continue;
+      if (!reviewTaskByReviewer.has(task.reviewer)) {
+        reviewTaskByReviewer.set(task.reviewer, task);
+      }
     }
-  }
+
+    const nextEntries: ActivityEntry[] = [];
+    const workingMemberNames = new Set<string>();
+    for (const member of members) {
+      if (!member.currentTaskId) continue;
+      const task = taskMap.get(member.currentTaskId);
+      // Defense-in-depth: hide stale currentTaskId until backend refresh clears it.
+      if (!isDisplayableCurrentTask(task)) continue;
+      workingMemberNames.add(member.name);
+      nextEntries.push({ member, task, taskId: member.currentTaskId, kind: 'working' });
+    }
+
+    for (const member of members) {
+      if (workingMemberNames.has(member.name)) continue;
+      const reviewTask = reviewTaskByReviewer.get(member.name);
+      if (reviewTask) {
+        nextEntries.push({
+          member,
+          task: reviewTask,
+          taskId: reviewTask.id,
+          kind: 'reviewing',
+        });
+      }
+    }
+
+    return nextEntries;
+  }, [members, tasks]);
 
   if (entries.length === 0) return null;
 
@@ -83,7 +95,11 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
           type="button"
           className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
           onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? 'Expand in progress' : 'Collapse in progress'}
+          aria-label={
+            collapsed
+              ? t('activity.activeTasks.expandInProgress')
+              : t('activity.activeTasks.collapseInProgress')
+          }
         >
           <ChevronRight
             size={10}
@@ -106,7 +122,10 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
           );
           const dotPing = kind === 'reviewing' ? 'bg-amber-400' : 'bg-emerald-400';
           const dotSolid = kind === 'reviewing' ? 'bg-amber-500' : 'bg-emerald-500';
-          const activityLabel = kind === 'reviewing' ? 'reviewing' : 'working on';
+          const activityLabel =
+            kind === 'reviewing'
+              ? t('activity.activeTasks.reviewing')
+              : t('activity.activeTasks.workingOn');
 
           return (
             <article

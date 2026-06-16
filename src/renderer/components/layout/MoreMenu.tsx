@@ -68,12 +68,12 @@ export const MoreMenu = ({
     openTeamsTab,
   } = useStore(
     useShallow((s) => ({
-      openCommandPalette: () => s.openCommandPalette(),
-      openExtensionsTab: () => s.openExtensionsTab(),
-      openSessionReport: (tabId: string) => s.openSessionReport(tabId),
-      openSchedulesTab: () => s.openSchedulesTab(),
-      openSettingsTab: () => s.openSettingsTab(),
-      openTeamsTab: () => s.openTeamsTab(),
+      openCommandPalette: s.openCommandPalette,
+      openExtensionsTab: s.openExtensionsTab,
+      openSessionReport: s.openSessionReport,
+      openSchedulesTab: s.openSchedulesTab,
+      openSettingsTab: s.openSettingsTab,
+      openTeamsTab: s.openTeamsTab,
     }))
   );
 

@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "आधीच लॉग इन आहात?",
+      "becomeSponsor": "प्रायोजक व्हा",
+      "cancel": "रद्द करा",
+      "checkNow": "आता तपासा",
+      "checkUpdates": "अपडेट्स तपासा",
+      "checking": "तपासत आहे...",
+      "connect": "कनेक्ट करा",
+      "extensions": "एक्सटेन्शन्स",
+      "login": "लॉग इन",
+      "manage": "व्यवस्थापित करा",
+      "manageProviders": "प्रोव्हायडर्स व्यवस्थापित करा",
+      "plan": "प्लॅन",
+      "recheck": "पुन्हा तपासा",
+      "recheckProvider": "{{provider}} पुन्हा तपासा",
+      "retry": "पुन्हा प्रयत्न करा",
+      "updateTo": "v{{version}} वर अपडेट करा",
+      "useCode": "कोड वापरा"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud हे एक फुल-मोडल AI इन्फरन्स प्लॅटफॉर्म आहे जे डेव्हलपर्सना व्हिडिओ जनरेशन, इमेज जनरेशन आणि LLM API वापरण्यासाठी एकच AI API देते. अनेक व्हेंडर इंटिग्रेशन्स व्यवस्थापित करण्याऐवजी, तुम्ही एकदाच कनेक्ट करता आणि सर्व मोडॅलिटीजमधील 300+ क्युरेटेड मॉडेल्सवर एकत्रित प्रवेश मिळवता. अधिक बजेट-अनुकूल API प्रवेशासाठी Atlas Cloud च्या नवीन कोडिंग प्लॅन प्रमोशनला भेट द्या.",
+      "openCodeProvider": "OpenCode प्रोव्हायडर",
+      "plan": "Atlas Cloud कोडिंग प्लॅन",
+      "sponsor": "प्रायोजक"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI स्थिती तपासणे अयशस्वी",
+      "installationFailed": "इन्स्टॉलेशन अयशस्वी",
+      "refreshFailed": "अपडेट्स तपासणे अयशस्वी. तुमचे नेटवर्क कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",
+      "runtimeUpdatedRefreshFailed": "रनटाइम अपडेट झाले, पण प्रोव्हायडर स्थिती रिफ्रेश करणे अयशस्वी."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} स्थिती पार्श्वभूमीत तपासली जाईल.",
+      "codexApiKeyFallback": "{{hint}} तुम्ही ऑथ मोड बदलल्यास API की फॉलबॅक उपलब्ध आहे.",
+      "codexAutoApiKey": "{{hint}} ChatGPT कनेक्ट होईपर्यंत ऑटो API की वापरत राहील.",
+      "codexFinishLogin": "ब्राउझरमध्ये ChatGPT लॉगिन पूर्ण करा. विचारल्यास दाखवलेला कोड टाका.",
+      "codexNoActiveLogin": "वापर मर्यादा Codex CLI ला सक्रिय ChatGPT खाते दिसल्यानंतरच दिसतात. आत्ता ते कोणतेही सक्रिय ChatGPT लॉगिन नसल्याचे दाखवत आहे.",
+      "codexNoActiveManagedSession": "वापर मर्यादा Codex CLI ला सक्रिय ChatGPT खाते दिसल्यानंतरच दिसतात. स्थानिक Codex खाते डेटा अस्तित्वात आहे, पण आत्ता कोणतेही सक्रिय व्यवस्थापित सत्र निवडलेले नाही.",
+      "codexReconnectNeeded": "वापर मर्यादा Codex सध्या निवडलेले ChatGPT सत्र रिफ्रेश केल्यानंतरच दिसतात. आत्ता स्थानिक सत्राला पुन्हा कनेक्ट करण्याची गरज आहे.",
+      "firstCheckSlow": "पहिल्या तपासणीला 30 सेकंदांपर्यंत वेळ लागू शकतो",
+      "loginRequiredForTeams": "सत्रे आणि प्रकल्प ब्राउझ करणे लॉगिनशिवाय चालते. लॉगिन फक्त एजंट टीम्स चालवण्यासाठी आवश्यक आहे.",
+      "troubleshootTitle": "तुम्ही लॉग इन आहात याची खात्री असल्यास, हे टप्पे करून पाहा:"
+    },
+    "installer": {
+      "checkingLatest": "नवीनतम आवृत्ती तपासत आहे...",
+      "downloading": "{{runtime}} डाउनलोड करत आहे...",
+      "installing": "{{runtime}} इन्स्टॉल करत आहे...",
+      "success": "{{runtime}} v{{version}} यशस्वीरित्या इन्स्टॉल झाले",
+      "verifying": "चेकसम पडताळत आहे..."
+    },
+    "labels": {
+      "apiKeyRequired": "API की आवश्यक",
+      "comingSoon": "लवकरच येत आहे",
+      "collapseProviderDetails": "प्रोव्हायडर तपशील संकुचित करा",
+      "expandProviderDetails": "प्रोव्हायडर तपशील विस्तृत करा",
+      "generateLink": "लिंक तयार करा",
+      "loadingRateLimits": "दर मर्यादा लोड होत आहेत",
+      "loggedOut": "प्रोव्हायडर लॉग आउट झाला",
+      "loginAuthFailed": "प्रमाणीकरण अयशस्वी",
+      "loginAuthUpdated": "प्रमाणीकरण अपडेट झाले",
+      "loginComplete": "लॉगिन पूर्ण",
+      "loginFailed": "लॉगिन अयशस्वी",
+      "loginTitle": "लॉग इन",
+      "logoutFailed": "लॉग आउट अयशस्वी",
+      "logoutTitle": "लॉग आउट",
+      "notLoggedIn": "लॉग इन नाही",
+      "openLogin": "लॉगिन उघडा",
+      "providerActionRequired": "प्रोव्हायडर कृती आवश्यक",
+      "resets": "{{time}} रीसेट होते",
+      "runtimeLoginTitle": "{{runtime}} लॉगिन"
+    },
+    "loading": {
+      "aiProviders": "AI प्रोव्हायडर्स तपासत आहे...",
+      "claudeCli": "Claude CLI तपासत आहे..."
+    },
+    "provider": {
+      "authenticated": "प्रमाणित",
+      "backend": "बॅकएंड: {{backend}}",
+      "checkingAuthentication": "प्रमाणीकरण तपासत आहे...",
+      "checkingProviders": "प्रोव्हायडर्स तपासत आहे...",
+      "configuredLocalCount": "{{count}} स्थानिक कॉन्फिगर केले",
+      "configuredLocalCount_few": "{{count}} स्थानिक कॉन्फिगर केले",
+      "configuredLocalCount_many": "{{count}} स्थानिक कॉन्फिगर केले",
+      "configuredLocalCount_one": "{{count}} स्थानिक कॉन्फिगर केले",
+      "configuredLocalCount_other": "{{count}} स्थानिक कॉन्फिगर केले",
+      "configuredLocalTitle": "तुमच्या OpenCode कॉन्फिगमधून आयात केलेले स्थानिक OpenCode रूट्स.",
+      "connectedCount": "प्रोव्हायडर्स: {{connected}}/{{denominator}} कनेक्ट केले",
+      "freeModels": "मोफत मॉडेल्स",
+      "freeModelsTitle": "तुमच्या सेटअपमध्ये उपलब्ध असल्यास OpenCode मध्ये Big Pickle सारखे मोफत मॉडेल पर्याय समाविष्ट आहेत. OpenCode द्वारे OpenRouter देखील मोफत मॉडेल्स दाखवू शकते, पण प्रत्येक OpenCode/OpenRouter मॉडेल मोफत नाही. उपलब्धता आणि मर्यादा बदलू शकतात.",
+      "loadingModels": "मॉडेल्स लोड होत आहेत...",
+      "modelsUnavailable": "या रनटाइम बिल्डसाठी मॉडेल्स उपलब्ध नाहीत",
+      "runtime": "रनटाइम: {{runtime}}",
+      "verifiedCount": "{{count}} पडताळले",
+      "verifiedCount_few": "{{count}} पडताळले",
+      "verifiedCount_many": "{{count}} पडताळले",
+      "verifiedCount_one": "{{count}} पडताळले",
+      "verifiedCount_other": "{{count}} पडताळले",
+      "verifiedTitle": "यशस्वी अंमलबजावणी पुराव्यासह OpenCode रूट्स."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "कॉन्फिगर केलेल्या {{runtime}} ची स्टार्टअप हेल्थ चेक अयशस्वी झाली.",
+      "configuredNotFound": "कॉन्फिगर केलेले {{runtime}} सापडले नाही.",
+      "foundButFailed": "{{runtime}} सापडले पण सुरू होण्यात अयशस्वी",
+      "healthCheckFailedDescription": "अॅपला कॉन्फिगर केलेले {{runtime}} सापडले, पण त्याची स्टार्टअप हेल्थ चेक अयशस्वी झाली. ते दुरुस्त करा किंवा पुन्हा इन्स्टॉल करा, मग पुन्हा प्रयत्न करा.",
+      "install": "{{runtime}} इन्स्टॉल करा",
+      "installRequiredDescription": "टीम प्रोव्हिजनिंग आणि सत्र व्यवस्थापनासाठी {{runtime}} आवश्यक आहे. सुरू करण्यासाठी ते इन्स्टॉल करा.",
+      "isRequired": "{{runtime}} आवश्यक आहे",
+      "reinstall": "{{runtime}} पुन्हा इन्स्टॉल करा"
+    },
+    "runtimeInstall": {
+      "checking": "तपासत आहे",
+      "codexTitle": "अॅप डेटामध्ये Codex CLI इन्स्टॉल करा",
+      "downloading": "डाउनलोड करत आहे",
+      "downloadingPercent": "{{percent}}% डाउनलोड करत आहे",
+      "install": "इन्स्टॉल करा",
+      "installing": "इन्स्टॉल करत आहे",
+      "openCodeTitle": "अॅप डेटामध्ये OpenCode रनटाइम इन्स्टॉल करा",
+      "retryInstall": "इन्स्टॉल पुन्हा करा"
+    },
+    "troubleshoot": {
+      "again": "पुन्हा",
+      "authStatusCommand": "तुमची कॉन्फिगर केलेली CLI ऑथ स्थिती कमांड",
+      "checkLoggedIn": "- ते \"Logged in\" दाखवते का ते तपासा",
+      "click": "क्लिक करा",
+      "loginCommand": "रनटाइम लॉगिन कमांड",
+      "logoutCommand": "रनटाइम लॉगआउट कमांड",
+      "openTerminal": "तुमचे टर्मिनल उघडा आणि चालवा:",
+      "reloginPrefix": "ते लॉग इन असल्याचे सांगते पण अॅपला दिसत नसल्यास, हे करून पाहा:",
+      "sameRuntime": "तुमच्या टर्मिनलमधील CLI अॅप वापरत असलेलाच रनटाइम असल्याची खात्री करा",
+      "statusCacheHint": "- कधीकधी स्थिती काही सेकंदांसाठी कॅश केली जाते",
+      "then": "मग"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "एक किंवा अधिक प्रोव्हायडर्स API की मोडवर सेट केले आहेत, पण कोणतीही API की कॉन्फिगर केलेली नाही. की जोडण्यासाठी किंवा कनेक्शन मोड बदलण्यासाठी प्रोव्हायडर्स व्यवस्थापित करा उघडा.",
+      "multipleApiKeysNeedAttention": "एक किंवा अधिक प्रोव्हायडर्स API की मोडवर सेट केले आहेत आणि त्यांना लक्ष देण्याची गरज आहे. जतन केलेल्या की तपासण्यासाठी किंवा कनेक्शन मोड बदलण्यासाठी प्रोव्हायडर्स व्यवस्थापित करा उघडा.",
+      "notAuthenticated": "{{runtime}} इन्स्टॉल केले आहे पण तुम्ही प्रमाणित नाही. टीम प्रोव्हिजनिंग आणि AI वैशिष्ट्यांसाठी लॉगिन आवश्यक आहे.",
+      "singleApiKeyMissing": "{{provider}} API की मोडवर सेट केले आहे, पण कोणतीही API की कॉन्फिगर केलेली नाही. की जोडण्यासाठी किंवा कनेक्शन मोड बदलण्यासाठी प्रोव्हायडर्स व्यवस्थापित करा उघडा.",
+      "singleApiKeyNeedsAttention": "{{provider}} API की मोडवर सेट केले आहे, पण ते कनेक्ट केलेले नाही. जतन केलेली की तपासण्यासाठी किंवा कनेक्शन मोड बदलण्यासाठी प्रोव्हायडर्स व्यवस्थापित करा उघडा."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "प्रकल्प फोल्डर निवडा",
+    "selectFolder": "फोल्डर निवडा",
+    "failedToLoad": "प्रकल्प लोड करणे अयशस्वी",
+    "retry": "पुन्हा प्रयत्न करा",
+    "noProjects": "कोणतेही प्रकल्प सापडले नाहीत",
+    "noMatches": "\"{{query}}\" साठी कोणतीही जुळणी नाही",
+    "noRecentProjects": "अलीकडील कोणतेही प्रकल्प सापडले नाहीत",
+    "emptyDescription": "अलीकडील Claude आणि Codex क्रियाकलाप येथे दिसतील.",
+    "loadMore": "अधिक लोड करा",
+    "card": {
+      "deleted": "हटवले",
+      "projectFolderMissing": "प्रकल्प फोल्डर आता अस्तित्वात नाही",
+      "taskCounts": {
+        "active": "{{count}} सक्रिय",
+        "active_one": "{{count}} सक्रिय",
+        "active_other": "{{count}} सक्रिय",
+        "active_few": "{{count}} सक्रिय",
+        "active_many": "{{count}} सक्रिय",
+        "pending": "{{count}} प्रलंबित",
+        "pending_one": "{{count}} प्रलंबित",
+        "pending_other": "{{count}} प्रलंबित",
+        "pending_few": "{{count}} प्रलंबित",
+        "pending_many": "{{count}} प्रलंबित",
+        "done": "{{count}} पूर्ण",
+        "done_one": "{{count}} पूर्ण",
+        "done_other": "{{count}} पूर्ण",
+        "done_few": "{{count}} पूर्ण",
+        "done_many": "{{count}} पूर्ण"
+      }
+    },
+    "title": "अलीकडील प्रकल्प",
+    "searchResults": "शोध परिणाम",
+    "searchPlaceholder": "प्रकल्प शोधा..."
+  },
+  "actions": {
+    "selectTeam": "टीम निवडा",
+    "or": "किंवा",
+    "clearSearch": "शोध साफ करा"
+  },
+  "windowsAdmin": {
+    "title": "Windows प्रशासक मोड शिफारस केला आहे",
+    "description": "Agent Teams AI ला विशेषाधिकार नसल्यास OpenCode रनटाइम तपासण्या टाइम आउट होऊ शकतात. OpenCode टीम्स सुरू करण्यापूर्वी प्रशासक म्हणून चालवा वापरून अॅप रीस्टार्ट करा."
+  },
+  "webPreview": {
+    "title": "संपूर्ण कार्यक्षमतेसाठी डेस्कटॉप अॅप उघडा",
+    "description": "ब्राउझर आवृत्ती अजूनही विकासात आहे. प्रकल्प कृती, इंटिग्रेशन्स आणि लाइव्ह स्थिती अपडेट्स येथे मर्यादित असू शकतात. सर्व वैशिष्ट्ये विश्वसनीयरित्या वापरण्यासाठी डेस्कटॉप अॅप वापरा."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "नवीन आवृत्ती उपलब्ध",
+    "restartNow": "आता रीस्टार्ट करा",
+    "viewDetails": "तपशील पाहा"
+  }
+}

@@ -26,13 +26,19 @@ export function getMemberNameFromLogSourceKey(sourceKey: TeamLogSourceKey): stri
   return sourceKey.slice('member:'.length);
 }
 
-export function formatMemberLogSourceLabel(member: ResolvedTeamMember): string {
-  return member.removedAt ? `${member.name} (removed)` : member.name;
+export function formatMemberLogSourceLabel(member: ResolvedTeamMember, removedLabel = 'removed'): string {
+  return member.removedAt ? `${member.name} (${removedLabel})` : member.name;
 }
 
-export function formatMemberLogSourceDescription(member: ResolvedTeamMember): string | null {
-  if (isLeadMember(member)) return 'Team Lead';
-  if (member.removedAt) return 'Removed';
+export function formatMemberLogSourceDescription(
+  member: ResolvedTeamMember,
+  labels?: {
+    lead?: string;
+    removed?: string;
+  }
+): string | null {
+  if (isLeadMember(member)) return labels?.lead ?? 'Team Lead';
+  if (member.removedAt) return labels?.removed ?? 'Removed';
   return formatAgentRole(member.role) ?? formatAgentRole(member.agentType) ?? null;
 }
 

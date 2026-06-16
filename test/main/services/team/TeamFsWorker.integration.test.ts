@@ -1,9 +1,8 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { Worker } from 'worker_threads';
-
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { Worker } from 'worker_threads';
 
 import { createPersistedLaunchSummaryProjection } from '../../../../src/main/services/team/TeamLaunchSummaryProjection';
 
@@ -112,13 +111,15 @@ async function callListTeams(
 
 async function callGetAllTasks(
   worker: Worker,
-  tasksBase: string
+  tasksBase: string,
+  projectionCacheBase = path.join(path.dirname(tasksBase), 'projection-cache')
 ): Promise<{
   tasks: unknown[];
   diag?: Record<string, unknown>;
 }> {
   const { result, diag } = await callWorker(worker, 'getAllTasks', {
     tasksBase,
+    projectionCacheBase,
     maxTaskBytes: 256 * 1024,
     maxTaskReadMs: 5_000,
     concurrency: 2,
@@ -574,6 +575,416 @@ describe('team-fs-worker integration', () => {
       expect(changed.diag?.cacheMisses).toBe(1);
     } finally {
       await worker.terminate();
+    }
+  });
+
+  it('reuses persisted task projections after a worker restart', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'persistent-task-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      path.join(tasksDir, '1.json'),
+      JSON.stringify({
+        id: '1',
+        subject: 'Persisted subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+        workIntervals: [{ startedAt: '2026-05-02T12:00:00.000Z' }],
+        reviewIntervals: [{ reviewer: 'alice', startedAt: '2026-05-02T12:30:00.000Z' }],
+        comments: [
+          {
+            id: 'comment-1',
+            author: 'alice',
+            text: 'Looks good',
+            createdAt: '2026-05-02T12:45:00.000Z',
+          },
+        ],
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    let firstTasks: unknown[] = [];
+    let firstTaskKeys: string[] = [];
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      firstTasks = first.tasks;
+      firstTaskKeys = Object.keys(first.tasks[0] as Record<string, unknown>);
+      expect(first.diag?.cacheMisses).toBe(1);
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      expect(Object.keys(second.tasks[0] as Record<string, unknown>)).toEqual(
+        firstTaskKeys
+      );
+      expect(second.tasks).toEqual(firstTasks);
+      expect(second.diag?.cacheHits).toBe(0);
+      expect(second.diag?.cacheMisses).toBe(0);
+      expect(second.diag?.persistentCacheLoads).toBe(1);
+      expect(second.diag?.persistentCacheHits).toBe(1);
+    } finally {
+      await secondWorker.terminate();
+    }
+  });
+
+  it('falls back to task JSON when persisted projections are stale or corrupt', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'stale-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    const taskPath = path.join(tasksDir, '1.json');
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Original subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ subject: 'Original subject' });
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Changed subject with a different size',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const changedWorker = createWorker(workerPath);
+    try {
+      const changed = await callGetAllTasks(changedWorker, tasksBase, projectionCacheBase);
+      expect(changed.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Changed subject with a different size',
+      });
+      expect(changed.diag?.persistentCacheLoads).toBe(1);
+      expect(changed.diag?.persistentCacheHits).toBe(0);
+      expect(changed.diag?.persistentCacheMisses).toBe(1);
+      expect(changed.diag?.cacheMisses).toBe(1);
+    } finally {
+      await changedWorker.terminate();
+    }
+
+    const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+    await fs.writeFile(path.join(projectionCacheBase, 'v1', cacheFiles[0]), '{bad json', 'utf8');
+
+    const corruptWorker = createWorker(workerPath);
+    try {
+      const recovered = await callGetAllTasks(corruptWorker, tasksBase, projectionCacheBase);
+      expect(recovered.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Changed subject with a different size',
+      });
+      expect(recovered.diag?.persistentCacheReadFailures).toBe(1);
+      expect(recovered.diag?.cacheMisses).toBe(1);
+    } finally {
+      await corruptWorker.terminate();
+    }
+  });
+
+  it('replaces oversized persisted task projection caches instead of repeatedly reusing them', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'oversized-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      path.join(tasksDir, '1.json'),
+      JSON.stringify({
+        id: '1',
+        subject: 'Small subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Small subject' });
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+    const cachePath = path.join(projectionCacheBase, 'v1', cacheFiles[0]);
+    const oversizedBytes = 16 * 1024 * 1024 + 1;
+    await fs.writeFile(cachePath, Buffer.alloc(oversizedBytes, 120));
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks[0]).toMatchObject({ teamName, subject: 'Small subject' });
+      expect(second.diag?.persistentCacheReadFailures).toBe(1);
+      expect(second.diag?.cacheMisses).toBe(1);
+      expect(second.diag?.persistentCacheWrites).toBe(1);
+      const repairedStat = await fs.stat(cachePath);
+      expect(repairedStat.size).toBeLessThan(oversizedBytes);
+    } finally {
+      await secondWorker.terminate();
+    }
+  });
+
+  it('removes corrupt persisted task projection caches even when a team has no tasks', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'empty-corrupt-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+
+    const seedWorker = createWorker(workerPath);
+    try {
+      const seed = await callGetAllTasks(seedWorker, tasksBase, projectionCacheBase);
+      expect(seed.tasks).toHaveLength(0);
+    } finally {
+      await seedWorker.terminate();
+    }
+
+    await fs.writeFile(path.join(tasksDir, '1.json'), JSON.stringify({ id: '1' }), 'utf8');
+    const writerWorker = createWorker(workerPath);
+    try {
+      const written = await callGetAllTasks(writerWorker, tasksBase, projectionCacheBase);
+      expect(written.tasks[0]).toMatchObject({ teamName });
+      expect(written.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await writerWorker.terminate();
+    }
+    await fs.rm(path.join(tasksDir, '1.json'));
+
+    const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+    const cachePath = path.join(projectionCacheBase, 'v1', cacheFiles[0]);
+    await fs.writeFile(cachePath, '{bad json', 'utf8');
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks).toHaveLength(0);
+      expect(first.diag?.persistentCacheReadFailures).toBe(1);
+      await expect(fs.stat(cachePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks).toHaveLength(0);
+      expect(second.diag?.persistentCacheReadFailures).toBe(0);
+    } finally {
+      await secondWorker.terminate();
+    }
+  });
+
+  it('removes stale persisted task projection caches when a team has no cacheable task files', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'empty-stale-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    const taskPath = path.join(tasksDir, '1.json');
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Temporary subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    let cachePath = '';
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Temporary subject' });
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+      const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+      cachePath = path.join(projectionCacheBase, 'v1', cacheFiles[0]);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    await fs.rm(taskPath);
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks).toHaveLength(0);
+      expect(second.diag?.persistentCacheLoads).toBe(1);
+      await expect(fs.stat(cachePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await secondWorker.terminate();
+    }
+
+    const thirdWorker = createWorker(workerPath);
+    try {
+      const third = await callGetAllTasks(thirdWorker, tasksBase, projectionCacheBase);
+      expect(third.tasks).toHaveLength(0);
+      expect(third.diag?.persistentCacheLoads).toBe(0);
+      expect(third.diag?.persistentCacheReadFailures).toBe(0);
+    } finally {
+      await thirdWorker.terminate();
+    }
+  });
+
+  it('removes mismatched persisted task projection cache metadata', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'mismatched-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    const taskPath = path.join(tasksDir, '1.json');
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      taskPath,
+      JSON.stringify({
+        id: '1',
+        subject: 'Temporary subject',
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const writerWorker = createWorker(workerPath);
+    let cachePath = '';
+    try {
+      const { result, diag } = await callWorker(writerWorker, 'getAllTasks', {
+        tasksBase,
+        projectionCacheBase,
+        maxTaskBytes: 128 * 1024,
+        maxTaskReadMs: 5_000,
+        concurrency: 2,
+      });
+      expect(Array.isArray(result) ? result[0] : null).toMatchObject({ teamName });
+      expect((diag as Record<string, unknown>)?.persistentCacheWrites).toBe(1);
+      const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+      expect(cacheFiles).toHaveLength(1);
+      cachePath = path.join(projectionCacheBase, 'v1', cacheFiles[0]);
+    } finally {
+      await writerWorker.terminate();
+    }
+    await fs.rm(taskPath);
+
+    const mismatchWorker = createWorker(workerPath);
+    try {
+      const mismatch = await callGetAllTasks(mismatchWorker, tasksBase, projectionCacheBase);
+      expect(mismatch.tasks).toHaveLength(0);
+      expect(mismatch.diag?.persistentCacheMisses).toBe(1);
+      await expect(fs.stat(cachePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await mismatchWorker.terminate();
+    }
+
+    const cleanWorker = createWorker(workerPath);
+    try {
+      const clean = await callGetAllTasks(cleanWorker, tasksBase, projectionCacheBase);
+      expect(clean.tasks).toHaveLength(0);
+      expect(clean.diag?.persistentCacheMisses).toBe(0);
+    } finally {
+      await cleanWorker.terminate();
+    }
+  });
+
+  it('rejects persisted task projections that contain deleted tasks as task records', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const projectionCacheBase = path.join(tempDir, 'projection-cache');
+    const teamName = 'deleted-persistent-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    await fs.writeFile(
+      path.join(tasksDir, '1.json'),
+      JSON.stringify({
+        id: '1',
+        subject: 'Deleted subject',
+        status: 'deleted',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    const firstWorker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
+      expect(first.tasks).toHaveLength(0);
+      expect(first.diag?.skipReasons).toMatchObject({ task_deleted: 1 });
+      expect(first.diag?.persistentCacheWrites).toBe(1);
+    } finally {
+      await firstWorker.terminate();
+    }
+
+    const cacheFiles = await fs.readdir(path.join(projectionCacheBase, 'v1'));
+    const cachePath = path.join(projectionCacheBase, 'v1', cacheFiles[0]);
+    const cache = JSON.parse(await fs.readFile(cachePath, 'utf8')) as {
+      entries: Record<
+        string,
+        {
+          result: unknown;
+        }
+      >;
+    };
+    cache.entries['1.json'].result = {
+      task: {
+        id: '1',
+        displayId: '1',
+        subject: 'Should not return',
+        status: 'deleted',
+        teamName,
+      },
+    };
+    await fs.writeFile(cachePath, JSON.stringify(cache), 'utf8');
+
+    const secondWorker = createWorker(workerPath);
+    try {
+      const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
+      expect(second.tasks).toHaveLength(0);
+      expect(second.diag?.persistentCacheLoads).toBe(1);
+      expect(second.diag?.persistentCacheHits).toBe(0);
+      expect(second.diag?.persistentCacheMisses).toBe(1);
+      expect(second.diag?.cacheMisses).toBe(1);
+      expect(second.diag?.skipReasons).toMatchObject({ task_deleted: 1 });
+    } finally {
+      await secondWorker.terminate();
     }
   });
 });

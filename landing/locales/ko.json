@@ -7,7 +7,16 @@
     "download": "다운로드",
     "pricing": "무료",
     "faq": "FAQ",
-    "viewOnGithub": "GitHub에서 보기"
+    "viewOnGithub": "GitHub에서 보기",
+    "openMenu": "메뉴 열기",
+    "closeMenu": "메뉴 닫기",
+    "short": {
+      "screenshots": "샷",
+      "docs": "문서",
+      "download": "받기",
+      "comparison": "비교",
+      "pricing": "무료"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "오픈 소스"
     },
     "watchDemo": "데모 보기",
-    "videoUnavailable": "동영상을 사용할 수 없습니다"
+    "videoUnavailable": "동영상을 사용할 수 없습니다",
+    "supportedProviders": "지원되는 AI 제공자",
+    "slogan": "아주 적은 조작으로 많은 일을 처리하세요",
+    "platformDefault": "현재 플랫폼용",
+    "guidesSetup": "가이드 및 설정",
+    "videoFrameLabel": "Agent Teams 데모 보기",
+    "commandFeed": "팀 명령 피드",
+    "liveDemo": "라이브 데모",
+    "demoVideoTitle": "Agent Teams 데모 동영상",
+    "demoTitle": "Agent Teams 데모",
+    "demo": {
+      "ariaLabel": "에이전트 팀 데모",
+      "live": "LIVE",
+      "waiting": "작업 대기 중...",
+      "activity": {
+        "authMiddleware": "인증 미들웨어 구현 중...",
+        "unitTests": "API 단위 테스트 작성 중...",
+        "reviewPr": "PR #42 변경 사항 검토 중...",
+        "ciPipeline": "CI/CD 파이프라인 설정 중...",
+        "refactorDatabase": "데이터베이스 계층 리팩터링 중..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "단위 테스트",
+        "ciSetup": "CI 설정"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "진행 중",
+        "review": "리뷰",
+        "done": "완료"
+      }
+    }
   },
   "download": {
     "title": "다운로드",
     "detected": "감지됨",
     "systemRequirements": "시스템 요구 사항",
-    "version": "버전 {version}"
+    "version": "버전 {version}",
+    "readyToStart": "시작할 준비 완료!"
   },
   "theme": {
     "dark": "다크",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "칸반 보드, 코드 리뷰, 에이전트 팀 등 앱의 실제 스크린샷입니다."
   },
   "common": {
-    "learnMore": "자세히 알아보기"
+    "learnMore": "자세히 알아보기",
+    "statusLabel": "상태:",
+    "previous": "이전",
+    "next": "다음"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "기다리고 있어요",
     "links": {
       "github": "GitHub",
+      "author": "작성자",
       "docs": "문서"
     }
   },

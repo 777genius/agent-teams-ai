@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "ยกเลิก",
+    "close": "ปิด",
+    "copied": "คัดลอกแล้ว",
+    "copyUrl": "คัดลอก URL",
+    "open": "เปิด",
+    "reveal": "แสดง",
+    "retry": "ลองอีกครั้ง",
+    "save": "บันทึก",
+    "showLess": "ดูน้อยลง",
+    "showMore": "ดูเพิ่มเติม",
+    "refresh": "รีเฟรช",
+    "reset": "รีเซ็ต",
+    "copyToClipboard": "คัดลอกไปยังคลิปบอร์ด",
+    "moreActions": "การดำเนินการเพิ่มเติม",
+    "closeDialog": "ปิดกล่องโต้ตอบ",
+    "goToDashboard": "ไปที่แดชบอร์ด",
+    "or": "หรือ",
+    "hide": "ซ่อน",
+    "resetSelection": "รีเซ็ตการเลือก"
+  },
+  "code": {
+    "line": "บรรทัด {{line}}",
+    "lines": "บรรทัด {{from}}-{{to}}",
+    "moreLines": "(อีก {{count}} บรรทัด...)",
+    "moreLines_few": "(อีก {{count}} บรรทัด...)",
+    "moreLines_many": "(อีก {{count}} บรรทัด...)",
+    "moreLines_one": "(อีก {{count}} บรรทัด...)",
+    "moreLines_other": "(อีก {{count}} บรรทัด...)",
+    "code": "โค้ด",
+    "preview": "ตัวอย่าง",
+    "markdownPreview": "ตัวอย่าง Markdown",
+    "linesParenthesized": "(บรรทัด {{from}}-{{to}})",
+    "mermaidSyntaxError": "ข้อผิดพลาดไวยากรณ์ Mermaid"
+  },
+  "contextBadge": {
+    "badge": "คอนเท็กซ์",
+    "breakdown": {
+      "text": "ข้อความ",
+      "thinking": "การคิด"
+    },
+    "detailsAria": "รายละเอียดการแทรกคอนเท็กซ์",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} โทเค็น",
+    "sections": {
+      "claudeMdFiles": "ไฟล์ CLAUDE.md",
+      "mentionedFiles": "ไฟล์ที่กล่าวถึง",
+      "taskCoordination": "การประสานงาน",
+      "thinkingText": "การคิด + ข้อความ",
+      "toolOutputs": "ผลลัพธ์เครื่องมือ",
+      "userMessages": "ข้อความผู้ใช้"
+    },
+    "title": "คอนเท็กซ์ใหม่ที่แทรกในเทิร์นนี้",
+    "tokenCount": "~{{tokens}} โทเค็น",
+    "totalNewTokens": "โทเค็นใหม่ทั้งหมด",
+    "turn": "เทิร์น {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} โทเค็น",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} โทเค็น",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} โทเค็น",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} โทเค็น"
+  },
+  "locales": {
+    "emptyMessage": "ไม่พบภาษา",
+    "names": {
+      "ar": "อาหรับ",
+      "bn": "เบงกาลี",
+      "de": "เยอรมัน",
+      "en": "อังกฤษ",
+      "es": "สเปน",
+      "fa": "เปอร์เซีย",
+      "fil": "ฟิลิปปินส์",
+      "fr": "ฝรั่งเศส",
+      "hi": "ฮินดี",
+      "id": "อินโดนีเซีย",
+      "it": "อิตาลี",
+      "ja": "ญี่ปุ่น",
+      "ko": "เกาหลี",
+      "mr": "มราฐี",
+      "ms": "มลายู",
+      "nl": "ดัตช์",
+      "pl": "โปแลนด์",
+      "pt": "โปรตุเกส",
+      "ro": "โรมาเนีย",
+      "ru": "รัสเซีย",
+      "sw": "สวาฮีลี",
+      "system": "ระบบ",
+      "ta": "ทมิฬ",
+      "te": "เตลูกู",
+      "th": "ไทย",
+      "tr": "ตุรกี",
+      "uk": "ยูเครน",
+      "ur": "อูรดู",
+      "vi": "เวียดนาม",
+      "zh": "จีน"
+    },
+    "searchPlaceholder": "ค้นหาภาษา...",
+    "selectPlaceholder": "เลือกภาษาของแอป...",
+    "systemWithResolved": "ระบบ - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "ไม่พบสมาชิก",
+    "searchPlaceholder": "ค้นหาสมาชิก...",
+    "unassigned": "ยังไม่ได้มอบหมาย",
+    "teammateFallback": "เพื่อนร่วมทีม"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "กำลังตรวจสอบ",
+        "downloading": "กำลังดาวน์โหลด",
+        "installCli": "ติดตั้ง Codex CLI",
+        "installing": "กำลังติดตั้ง",
+        "retryInstall": "ลองติดตั้งอีกครั้ง"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "ไม่มีคำแนะนำที่ตรงกัน",
+    "searching": "กำลังค้นหา...",
+    "searchingFiles": "กำลังค้นหาไฟล์...",
+    "findInConversation": "ค้นหาในบทสนทนา...",
+    "resultCount": "{{current}} จาก {{total}}",
+    "resultCountCapped": "{{current}} จาก {{total}}+",
+    "noResults": "ไม่มีผลลัพธ์",
+    "previousResultShortcut": "ผลลัพธ์ก่อนหน้า (Shift+Enter)",
+    "nextResultShortcut": "ผลลัพธ์ถัดไป (Enter)",
+    "closeShortcut": "ปิด (Esc)",
+    "nothingFound": "ไม่พบสิ่งใด",
+    "placeholder": "ค้นหา..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "เพิ่มกำหนดการ",
+      "clearFilters": "ล้างตัวกรอง",
+      "createSchedule": "สร้างกำหนดการ",
+      "delete": "ลบ",
+      "edit": "แก้ไข",
+      "pause": "หยุดชั่วคราว",
+      "resume": "ดำเนินการต่อ",
+      "runNow": "รันเลย"
+    },
+    "empty": {
+      "description": "สร้างกำหนดการในทีมใดก็ได้เพื่อรันงาน Claude แบบอัตโนมัติด้วยนิพจน์ cron กำหนดการจากทุกทีมจะปรากฏที่นี่",
+      "noMatches": "ไม่มีกำหนดการที่ตรงกับตัวกรองปัจจุบัน",
+      "title": "ไม่มีงานที่ตั้งกำหนดการไว้"
+    },
+    "filters": {
+      "allTeams": "ทุกทีม"
+    },
+    "item": {
+      "loadingRunHistory": "กำลังโหลดประวัติการรัน...",
+      "nextRun": "ถัดไป: {{value}}",
+      "noRunsYet": "ยังไม่มีการรัน"
+    },
+    "loading": "กำลังโหลดกำหนดการ...",
+    "searchPlaceholder": "ค้นหากำหนดการ...",
+    "status": {
+      "active": "ใช้งานอยู่",
+      "all": "ทั้งหมด",
+      "disabled": "ปิดใช้งาน",
+      "paused": "หยุดชั่วคราว"
+    },
+    "title": "กำหนดการ"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "ซ่อน",
+      "pin": "ปักหมุด",
+      "unhide": "ยกเลิกการซ่อน"
+    },
+    "empty": {
+      "noMatchingSessions": "ไม่มีเซสชันที่ตรงกัน",
+      "noMatchingSessionsDescription": "โปรเจกต์นี้ยังไม่มีเซสชันที่ตรงกัน",
+      "noMatchingSessionsFiltered": "ลองคำค้นหาอื่นหรือรีเซ็ตตัวกรองผู้ให้บริการ",
+      "noSessions": "ไม่พบเซสชัน",
+      "noSessionsDescription": "โปรเจกต์นี้ยังไม่มีเซสชัน",
+      "selectProject": "เลือกโปรเจกต์เพื่อดูเซสชัน"
+    },
+    "errors": {
+      "loading": "เกิดข้อผิดพลาดในการโหลดเซสชัน"
+    },
+    "loadedMatchingMore": "โหลดเซสชันที่ตรงกันแล้ว {{count}} รายการ - เลื่อนลงเพื่อโหลดเพิ่มเติม",
+    "loadingMore": "กำลังโหลดเซสชันเพิ่มเติม...",
+    "pinned": "ปักหมุดแล้ว",
+    "scrollToLoadMore": "เลื่อนเพื่อโหลดเพิ่มเติม",
+    "search": {
+      "clear": "ล้างการค้นหาเซสชัน",
+      "placeholder": "ค้นหาเซสชัน..."
+    },
+    "selection": {
+      "cancel": "ยกเลิกการเลือก",
+      "exitMode": "ออกจากโหมดเลือก",
+      "hideSelected": "ซ่อนเซสชันที่เลือก",
+      "pinSelected": "ปักหมุดเซสชันที่เลือก",
+      "selectSessions": "เลือกเซสชัน",
+      "selected": "เลือกแล้ว {{count}} รายการ",
+      "unhideSelected": "ยกเลิกการซ่อนเซสชันที่เลือก",
+      "selected_few": "เลือกแล้ว {{count}} รายการ",
+      "selected_many": "เลือกแล้ว {{count}} รายการ",
+      "selected_one": "เลือกแล้ว {{count}} รายการ",
+      "selected_other": "เลือกแล้ว {{count}} รายการ"
+    },
+    "sort": {
+      "byContext": "ตามคอนเท็กซ์",
+      "byContextTooltip": "เรียงตามการใช้คอนเท็กซ์",
+      "byRecentTooltip": "เรียงตามล่าสุด",
+      "contextLoadedOnly": "การเรียงตามคอนเท็กซ์จัดอันดับเฉพาะเซสชันที่โหลดแล้วเท่านั้น"
+    },
+    "title": "เซสชัน",
+    "visibility": {
+      "hideHidden": "ซ่อนเซสชันที่ซ่อนอยู่",
+      "showHidden": "แสดงเซสชันที่ซ่อนอยู่"
+    },
+    "worktree": {
+      "switch": "สลับ Worktree"
+    },
+    "loadedMatchingMore_few": "โหลดเซสชันที่ตรงกันแล้ว {{count}} รายการ - เลื่อนลงเพื่อโหลดเพิ่มเติม",
+    "loadedMatchingMore_many": "โหลดเซสชันที่ตรงกันแล้ว {{count}} รายการ - เลื่อนลงเพื่อโหลดเพิ่มเติม",
+    "loadedMatchingMore_one": "โหลดเซสชันที่ตรงกันแล้ว {{count}} รายการ - เลื่อนลงเพื่อโหลดเพิ่มเติม",
+    "loadedMatchingMore_other": "โหลดเซสชันที่ตรงกันแล้ว {{count}} รายการ - เลื่อนลงเพื่อโหลดเพิ่มเติม",
+    "failedToLoad": "โหลดเซสชันไม่สำเร็จ",
+    "loading": "กำลังโหลดเซสชัน...",
+    "filter": {
+      "title": "กรองเซสชัน"
+    },
+    "count": "{{count}} เซสชัน",
+    "count_one": "{{count}} เซสชัน",
+    "count_other": "{{count}} เซสชัน",
+    "count_few": "{{count}} เซสชัน",
+    "count_many": "{{count}} เซสชัน",
+    "inProgress": "เซสชันกำลังดำเนินการ..."
+  },
+  "states": {
+    "loading": "กำลังโหลด...",
+    "offline": "ออฟไลน์",
+    "online": "ออนไลน์",
+    "unknown": "ไม่ทราบ",
+    "error": "ข้อผิดพลาด"
+  },
+  "markdown": {
+    "imageFallback": "[ภาพ: {{label}}]",
+    "largeContentNotice": "เนื้อหามีขนาดใหญ่มาก ({{count}} อักขระ) กำลังแสดงตัวอย่างดิบเพื่อให้ UI ตอบสนองได้ดี",
+    "largeContentTitle": "แสดงเนื้อหาขนาดใหญ่แบบดิบเพื่อป้องกัน UI ค้าง",
+    "raw": "ดิบ",
+    "rawPreview": "ตัวอย่างดิบ",
+    "renderMarkdown": "เรนเดอร์ markdown",
+    "showAll": "แสดงทั้งหมด",
+    "showMore": "ดูเพิ่มเติม",
+    "showRaw": "แสดงแบบดิบ",
+    "showingChars": "กำลังแสดง {{shown}} / {{total}} อักขระ",
+    "largeContentNotice_few": "เนื้อหามีขนาดใหญ่มาก ({{count}} อักขระ) กำลังแสดงตัวอย่างดิบเพื่อให้ UI ตอบสนองได้ดี",
+    "largeContentNotice_many": "เนื้อหามีขนาดใหญ่มาก ({{count}} อักขระ) กำลังแสดงตัวอย่างดิบเพื่อให้ UI ตอบสนองได้ดี",
+    "largeContentNotice_one": "เนื้อหามีขนาดใหญ่มาก ({{count}} อักขระ) กำลังแสดงตัวอย่างดิบเพื่อให้ UI ตอบสนองได้ดี",
+    "largeContentNotice_other": "เนื้อหามีขนาดใหญ่มาก ({{count}} อักขระ) กำลังแสดงตัวอย่างดิบเพื่อให้ UI ตอบสนองได้ดี"
+  },
+  "terminal": {
+    "checkOutputForDetails": "ตรวจสอบผลลัพธ์เทอร์มินัลด้านบนสำหรับรายละเอียด",
+    "closingInSeconds": "จะปิดใน {{count}} วินาที...",
+    "closingInSeconds_few": "จะปิดใน {{count}} วินาที...",
+    "closingInSeconds_many": "จะปิดใน {{count}} วินาที...",
+    "closingInSeconds_one": "จะปิดใน {{count}} วินาที...",
+    "closingInSeconds_other": "จะปิดใน {{count}} วินาที...",
+    "completedSuccessfully": "เสร็จสมบูรณ์",
+    "exitCode": "(โค้ดออก {{code}})",
+    "processFailed": "กระบวนการล้มเหลว",
+    "title": "เทอร์มินัล"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "สะสมตลอดทั้งเซสชันโดยไม่ซ้ำซ้อน",
+    "cacheRead": "อ่านแคช",
+    "cacheWrite": "เขียนแคช",
+    "costUsd": "ต้นทุน (USD)",
+    "inputTokens": "โทเค็นอินพุต",
+    "model": "โมเดล",
+    "outputTokens": "โทเค็นเอาต์พุต",
+    "phase": "เฟส {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% ของอินพุตพรอมต์",
+    "taskCoordination": "การประสานงาน",
+    "thinkingText": "การคิด + ข้อความ",
+    "toolOutputs": "ผลลัพธ์เครื่องมือ",
+    "total": "รวม",
+    "userMessages": "ข้อความผู้ใช้",
+    "visibleContext": "คอนเท็กซ์ที่มองเห็น",
+    "includesClaudeMd": "รวม CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} โทเค็น",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "คัดลอกทีม",
+      "createTeam": "สร้างทีม",
+      "deleteForever": "ลบถาวร",
+      "deletePermanently": "ลบอย่างถาวร",
+      "deleteTeam": "ลบทีม",
+      "launching": "กำลังเริ่ม...",
+      "launchTeam": "เริ่มทีม",
+      "relaunchTeam": "เริ่มทีมใหม่",
+      "restore": "กู้คืน",
+      "restoreTeam": "กู้คืนทีม",
+      "retry": "ลองอีกครั้ง",
+      "stopTeam": "หยุดทีม",
+      "stopping": "กำลังหยุด..."
+    },
+    "status": {
+      "active": "ใช้งานอยู่",
+      "deleted": "ลบแล้ว",
+      "launching": "กำลังเริ่ม...",
+      "offline": "ออฟไลน์",
+      "partialFailure": "การเริ่มล้มเหลวกลางคัน",
+      "partialPending": "รอการบูตสแตรป",
+      "partialSkipped": "การเริ่มข้ามสมาชิก",
+      "running": "กำลังทำงาน"
+    },
+    "partial": {
+      "pending": "การเริ่มครั้งล่าสุดยังกำลังปรับให้สอดคล้องกัน",
+      "skipped": "การเริ่มครั้งล่าสุดมีเพื่อนร่วมทีมที่ถูกข้าม",
+      "skippedWithCount": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_few": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_many": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_one": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "skippedWithCount_other": "การเริ่มครั้งล่าสุดข้ามเพื่อนร่วมทีม {{count}}/{{expected}} คน",
+      "stopped": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีมทุกคนจะเข้าร่วม",
+      "stoppedWithCount": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_few": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_many": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_one": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม",
+      "stoppedWithCount_other": "การเริ่มครั้งล่าสุดหยุดก่อนที่เพื่อนร่วมทีม {{count}}/{{expected}} คนจะเข้าร่วม"
+    },
+    "noDescription": "ไม่มีคำอธิบาย",
+    "solo": "เดี่ยว",
+    "membersCount": "สมาชิก: {{count}}",
+    "membersCount_few": "สมาชิก: {{count}}",
+    "membersCount_many": "สมาชิก: {{count}}",
+    "membersCount_one": "สมาชิก: {{count}}",
+    "membersCount_other": "สมาชิก: {{count}}",
+    "all": "ทั้งหมด",
+    "moreCount": "+อีก {{count}}",
+    "moreCount_one": "+อีก {{count}}",
+    "moreCount_other": "+อีก {{count}}",
+    "moreCount_few": "+อีก {{count}}",
+    "moreCount_many": "+อีก {{count}}"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "ค่าเริ่มต้นสำหรับทุกโปรเจกต์ที่ไม่มีการแทนที่ OpenCode ของตัวเอง",
+      "scopeDescriptionProject": "แทนที่เฉพาะโปรเจกต์ที่เลือก ทีมที่กำลังทำงานจะไม่ถูกเปลี่ยน",
+      "setAllProjectsDefault": "ตั้งค่าเริ่มต้นทุกโปรเจกต์",
+      "setProjectDefault": "ตั้งค่าเริ่มต้นโปรเจกต์",
+      "validationContext": "บริบทการตรวจสอบ",
+      "projectOverrideContext": "บริบทการแทนที่โปรเจกต์",
+      "selectProjectHint": "เลือกโปรเจกต์ก่อนทดสอบโมเดลในเครื่องหรือบันทึกค่าเริ่มต้น",
+      "allProjectsHint": "การทดสอบใช้ {{project}} ค่าเริ่มต้นจะใช้เว้นแต่โปรเจกต์มีการแทนที่",
+      "projectHint": "การบันทึกจะแทนที่เฉพาะ {{project}} เท่านั้น"
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "คอนเท็กซ์",
+      "closePanel": "ปิดแผง",
+      "phase": "เฟส:",
+      "current": "ปัจจุบัน",
+      "view": "มุมมอง:",
+      "category": "หมวดหมู่",
+      "bySize": "ตามขนาด"
+    },
+    "metrics": {
+      "unavailable": "ไม่พร้อมใช้งาน",
+      "contextUsed": "คอนเท็กซ์ที่ใช้",
+      "promptInput": "อินพุตพรอมต์",
+      "visibleContext": "คอนเท็กซ์ที่มองเห็น",
+      "ofContext": "ของคอนเท็กซ์",
+      "ofPrompt": "ของพรอมต์",
+      "codexTelemetryUnavailable": "เทเลเมทรีของรันไทม์ปัจจุบันยังไม่เปิดเผยการใช้งานฝั่งพรอมต์ของ Codex ดังนั้นอินพุตพรอมต์และคอนเท็กซ์ที่ใช้จึงยังไม่พร้อมใช้งานแทนที่จะแสดงค่าศูนย์ปลอม",
+      "sessionCost": "ต้นทุนเซสชัน:",
+      "parentPlus": "หลัก +",
+      "subagents": "เอเจนต์ย่อย",
+      "details": "รายละเอียด"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "คอนเท็กซ์ที่ใช้",
+        "description": "อินพุตพรอมต์บวกกับโทเค็นเอาต์พุตที่กำลังครอบครองหน้าต่างคอนเท็กซ์ของโมเดลอยู่"
+      },
+      "promptInput": {
+        "title": "อินพุตพรอมต์",
+        "description": "โทเค็นที่ส่งไปยังโมเดลก่อนการสร้าง สำหรับ Claude จะรวม `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`"
+      },
+      "visibleContext": {
+        "title": "คอนเท็กซ์ที่มองเห็น",
+        "description": "ส่วนย่อยที่ตรวจสอบได้ของอินพุตพรอมต์: ไฟล์, CLAUDE.md, ผลลัพธ์เครื่องมือ, ข้อความผู้ใช้ และการแทรกอื่น ๆ ที่คุณปรับให้เหมาะสมได้โดยตรง"
+      },
+      "availability": {
+        "title": "ความพร้อมใช้งาน",
+        "description": "หากรันไทม์ของผู้ให้บริการยังไม่เปิดเผยการใช้งานฝั่งพรอมต์ แผงจะแสดงเมตริกเป็นไม่พร้อมใช้งานแทนที่จะแกล้งทำเป็นว่าเป็นศูนย์"
+      }
+    },
+    "items": {
+      "turn": "@เทิร์น {{turn}}",
+      "tokensApprox": "~{{tokens}} โทเค็น",
+      "toolsCount": "{{count}} เครื่องมือ",
+      "toolsCount_one": "{{count}} เครื่องมือ",
+      "toolsCount_other": "{{count}} เครื่องมือ",
+      "toolsCount_few": "{{count}} เครื่องมือ",
+      "toolsCount_many": "{{count}} เครื่องมือ",
+      "itemsCount": "{{count}} รายการ",
+      "itemsCount_one": "{{count}} รายการ",
+      "itemsCount_other": "{{count}} รายการ",
+      "itemsCount_few": "{{count}} รายการ",
+      "itemsCount_many": "{{count}} รายการ",
+      "missing": "ขาดหาย",
+      "thinking": "การคิด",
+      "text": "ข้อความ"
+    },
+    "empty": "ไม่พบการแทรกคอนเท็กซ์ในเซสชันนี้",
+    "view": {
+      "grouped": "จัดกลุ่ม",
+      "flat": "แบบเรียบ"
+    },
+    "claudeMdFiles": "ไฟล์ CLAUDE.md",
+    "mentionedFiles": "ไฟล์ที่กล่าวถึง"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "เอเจนต์ย่อย",
+      "shutdownConfirmed": "ยืนยันการปิดแล้ว",
+      "summary": {
+        "tools": "{{count}} เครื่องมือ",
+        "tools_one": "{{count}} เครื่องมือ",
+        "tools_other": "{{count}} เครื่องมือ",
+        "tools_few": "{{count}} เครื่องมือ",
+        "tools_many": "{{count}} เครื่องมือ"
+      },
+      "meta": {
+        "type": "ประเภท",
+        "duration": "ระยะเวลา",
+        "model": "โมเดล",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "หน้าต่างคอนเท็กซ์",
+        "contextUsage": "การใช้คอนเท็กซ์",
+        "mainContext": "คอนเท็กซ์หลัก",
+        "totalOutput": "เอาต์พุตทั้งหมด",
+        "turns": "({{count}} เทิร์น)",
+        "turns_one": "({{count}} เทิร์น)",
+        "turns_other": "({{count}} เทิร์น)",
+        "subagentContext": "คอนเท็กซ์เอเจนต์ย่อย",
+        "phase": "เฟส {{phase}}",
+        "turns_few": "({{count}} เทิร์น)",
+        "turns_many": "({{count}} เทิร์น)"
+      },
+      "trace": {
+        "title": "การติดตามการทำงาน"
+      }
+    },
+    "user": {
+      "you": "คุณ",
+      "showMore": "ดูเพิ่มเติม",
+      "showLess": "ดูน้อยลง",
+      "backgroundTask": "งานเบื้องหลัง",
+      "exitCode": "ออก {{code}}",
+      "imagesAttached": "แนบภาพ {{count}} รูป",
+      "imagesAttached_one": "แนบภาพ {{count}} รูป",
+      "imagesAttached_few": "แนบภาพ {{count}} รูป",
+      "imagesAttached_many": "แนบภาพ {{count}} รูป",
+      "imagesAttached_other": "แนบภาพ {{count}} รูป"
+    },
+    "compact": {
+      "toggle": "สลับเนื้อหาที่บีบอัด",
+      "contextCompacted": "บีบอัดคอนเท็กซ์แล้ว",
+      "freedTokens": "(คืน {{tokens}})",
+      "phase": "เฟส {{phase}}",
+      "conversationCompacted": "บีบอัดบทสนทนาแล้ว",
+      "summary": "ข้อความก่อนหน้าถูกสรุปเพื่อประหยัดคอนเท็กซ์ ประวัติบทสนทนาฉบับเต็มยังคงอยู่ในไฟล์เซสชัน",
+      "compacted": "บีบอัดแล้ว"
+    },
+    "executionTrace": {
+      "empty": "ไม่มีรายการการทำงาน",
+      "nested": "ซ้อน: {{name}}",
+      "input": "อินพุต"
+    },
+    "items": {
+      "empty": "ไม่มีรายการให้แสดง"
+    },
+    "tools": {
+      "teammateSpawned": "สร้างเพื่อนร่วมทีมแล้ว",
+      "shutdownRequested": "ร้องขอการปิด ->",
+      "noResultReceived": "ไม่ได้รับผลลัพธ์",
+      "duration": "ระยะเวลา: {{duration}}",
+      "result": "ผลลัพธ์",
+      "write": {
+        "createdFile": "สร้างไฟล์แล้ว",
+        "wroteToFile": "เขียนลงไฟล์แล้ว"
+      },
+      "skill": {
+        "instructions": "คำแนะนำสกิล",
+        "unknown": "สกิลที่ไม่ทราบ"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "คำขอถูกขัดจังหวะโดยผู้ใช้",
+      "planReadyForApproval": "แผนพร้อมสำหรับการอนุมัติ"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "ไม่มีประวัติบทสนทนา",
+      "description": "เซสชันนี้ยังไม่มีข้อความใด ๆ"
+    },
+    "context": {
+      "remainingPercent": "(เหลือ {{percent}}%)",
+      "count": "คอนเท็กซ์ ({{count}})",
+      "count_one": "คอนเท็กซ์ ({{count}})",
+      "count_other": "คอนเท็กซ์ ({{count}})",
+      "count_few": "คอนเท็กซ์ ({{count}})",
+      "count_many": "คอนเท็กซ์ ({{count}})"
+    },
+    "scrollToBottom": "เลื่อนลงล่างสุด",
+    "bottom": "ล่างสุด",
+    "teammateMessage": {
+      "message": "ข้อความ",
+      "resent": "ส่งซ้ำแล้ว",
+      "fallback": "ข้อความเพื่อนร่วมทีม"
+    },
+    "system": {
+      "label": "ระบบ"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "ยังไม่ได้ติดตั้ง tmux",
+    "detectedOs": "ระบบปฏิบัติการที่ตรวจพบ: {{os}}",
+    "runtimePath": "เส้นทางรันไทม์: {{path}}",
+    "phase": "เฟส: {{phase}}",
+    "actions": {
+      "cancel": "ยกเลิก",
+      "manualGuide": "คู่มือด้วยตนเอง",
+      "hideSetupSteps": "ซ่อนขั้นตอนการตั้งค่า",
+      "showSetupSteps": "แสดงขั้นตอนการตั้งค่า ({{count}})",
+      "showSetupSteps_one": "แสดงขั้นตอนการตั้งค่า ({{count}})",
+      "showSetupSteps_other": "แสดงขั้นตอนการตั้งค่า ({{count}})",
+      "recheck": "ตรวจสอบใหม่",
+      "showSetupSteps_few": "แสดงขั้นตอนการตั้งค่า ({{count}})",
+      "showSetupSteps_many": "แสดงขั้นตอนการตั้งค่า ({{count}})"
+    },
+    "installerProgress": "ความคืบหน้าตัวติดตั้ง",
+    "input": {
+      "placeholder": "ส่งอินพุตไปยังตัวติดตั้ง",
+      "send": "ส่งอินพุต",
+      "passwordNotice": "อินพุตรหัสผ่านจะถูกส่งโดยตรงไปยังเทอร์มินัลของตัวติดตั้งและจะไม่ถูกเพิ่มลงในผลลัพธ์บันทึก"
+    },
+    "details": {
+      "show": "แสดงรายละเอียด",
+      "hide": "ซ่อนรายละเอียด"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "ไม่มีกิจกรรมล่าสุด",
+    "sessionsCount": "{{count}} เซสชัน",
+    "sessionsCount_one": "{{count}} เซสชัน",
+    "sessionsCount_other": "{{count}} เซสชัน",
+    "mode": {
+      "searchProjects": "ค้นหาโปรเจกต์",
+      "searchAcrossProjects": "ค้นหาในทุกโปรเจกต์",
+      "searchInProject": "ค้นหาในโปรเจกต์"
+    },
+    "currentProject": "โปรเจกต์ปัจจุบัน",
+    "global": "ทั่วทุกโปรเจกต์",
+    "placeholders": {
+      "projects": "ค้นหาโปรเจกต์...",
+      "conversations": "ค้นหาบทสนทนา..."
+    },
+    "empty": {
+      "noProjectsForQuery": "ไม่พบโปรเจกต์สำหรับ \"{{query}}\"",
+      "noProjects": "ไม่พบโปรเจกต์",
+      "minChars": "พิมพ์อย่างน้อย 2 อักขระเพื่อค้นหา",
+      "noFastResults": "ไม่มีผลลัพธ์ด่วนในเซสชันล่าสุดสำหรับ \"{{query}}\"",
+      "noResults": "ไม่พบผลลัพธ์สำหรับ \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} โปรเจกต์",
+      "projectsCount_one": "{{count}} โปรเจกต์",
+      "projectsCount_other": "{{count}} โปรเจกต์",
+      "results": "{{count}} {{speed}}ผลลัพธ์",
+      "results_one": "{{count}} {{speed}}ผลลัพธ์",
+      "results_other": "{{count}} {{speed}}ผลลัพธ์",
+      "resultsAcrossProjects": "{{count}} {{speed}}ผลลัพธ์ในทุกโปรเจกต์",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}ผลลัพธ์ในทุกโปรเจกต์",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}ผลลัพธ์ในทุกโปรเจกต์",
+      "fastPrefix": "ด่วน ",
+      "typeToSearch": "พิมพ์เพื่อค้นหา",
+      "navigate": "นำทาง",
+      "select": "เลือก",
+      "open": "เปิด",
+      "global": "ทั่วทุกโปรเจกต์",
+      "close": "ปิด",
+      "results_few": "{{count}} {{speed}}ผลลัพธ์",
+      "results_many": "{{count}} {{speed}}ผลลัพธ์",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}ผลลัพธ์ในทุกโปรเจกต์",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}ผลลัพธ์ในทุกโปรเจกต์",
+      "projectsCount_few": "{{count}} โปรเจกต์",
+      "projectsCount_many": "{{count}} โปรเจกต์",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} เซสชัน",
+    "sessionsCount_many": "{{count}} เซสชัน"
+  },
+  "tasksPanel": {
+    "title": "งาน",
+    "searchPlaceholder": "ค้นหางาน...",
+    "pinned": "ปักหมุดแล้ว",
+    "groupByLabel": "จัดกลุ่มตาม:",
+    "groupByAria": "จัดกลุ่มตาม",
+    "groupModes": {
+      "none": "ไม่มี",
+      "project": "โปรเจกต์",
+      "time": "เวลา"
+    },
+    "showArchived": "แสดงรายการที่เก็บถาวร",
+    "hideArchived": "ซ่อนรายการที่เก็บถาวร",
+    "empty": {
+      "noMatchingTasks": "ไม่มีงานที่ตรงกัน",
+      "noTasks": "ไม่พบงาน"
+    },
+    "teamLabel": "ทีม: {{team}}",
+    "showMore": "ดูเพิ่มเติม",
+    "showLess": "ดูน้อยลง",
+    "deleteConfirm": {
+      "title": "ลบงาน",
+      "message": "ย้ายงาน #{{taskId}} ไปยังถังขยะหรือไม่?",
+      "confirmLabel": "ลบ",
+      "cancelLabel": "ยกเลิก"
+    },
+    "deleteFailed": {
+      "title": "ลบงานไม่สำเร็จ",
+      "fallbackMessage": "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+      "confirmLabel": "ตกลง"
+    },
+    "sort": {
+      "byTime": "ตามเวลา",
+      "byUnread": "ตามที่ยังไม่อ่าน",
+      "byProject": "ตามโปรเจกต์",
+      "byTeam": "ตามทีม"
+    }
+  },
+  "toolViewer": {
+    "input": "อินพุต",
+    "replaceAll": "(แทนที่ทั้งหมด)",
+    "noInputRecorded": "ไม่มีการบันทึกอินพุตสำหรับการเรียกเครื่องมือนี้",
+    "agent": {
+      "action": "การดำเนินการ",
+      "teammate": "เพื่อนร่วมทีม",
+      "team": "ทีม",
+      "runtime": "รันไทม์",
+      "type": "ประเภท",
+      "startupInstructionsHidden": "คำแนะนำตอนเริ่มต้นถูกซ่อนใน UI"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "ยกเลิกการปักหมุด",
+    "pin": "ปักหมุด",
+    "rename": "เปลี่ยนชื่อ",
+    "markUnread": "ทำเครื่องหมายว่ายังไม่อ่าน",
+    "unarchive": "ยกเลิกการเก็บถาวร",
+    "archive": "เก็บถาวร",
+    "deleteTask": "ลบงาน"
+  },
+  "updateDialog": {
+    "closeDialog": "ปิดกล่องโต้ตอบ",
+    "updateAvailable": "มีการอัปเดต",
+    "updateReady": "การอัปเดตพร้อมแล้ว",
+    "noReleaseNotes": "ไม่มีบันทึกการเผยแพร่",
+    "viewOnGitHub": "ดูบน GitHub",
+    "later": "ภายหลัง",
+    "restartNow": "รีสตาร์ทเลย",
+    "download": "ดาวน์โหลด"
+  },
+  "errorBoundary": {
+    "title": "เกิดข้อผิดพลาดบางอย่าง",
+    "description": "เกิดข้อผิดพลาดที่ไม่คาดคิดในแอปพลิเคชัน คุณสามารถลองโหลดหน้าใหม่หรือรีเซ็ตสถานะข้อผิดพลาดได้",
+    "componentStack": "Component Stack",
+    "tryAgain": "ลองอีกครั้ง",
+    "copied": "คัดลอกแล้ว",
+    "copyErrorDetails": "คัดลอกรายละเอียดข้อผิดพลาด",
+    "reportBugOnGitHub": "รายงานบั๊กบน GitHub",
+    "reloadApp": "โหลดแอปใหม่",
+    "diagnosticsNotice": "รายงานบั๊กบน GitHub และการวินิจฉัยที่คัดลอกจะรวมข้อความข้อผิดพลาด, สแต็กเทรซ, เวอร์ชันแอป, แท็บที่ใช้งานอยู่, ทีมที่เลือก, บริบทงาน และรายละเอียดสภาพแวดล้อม"
+  },
+  "runtimeBackendSelector": {
+    "label": "แบ็กเอนด์รันไทม์",
+    "resolved": "ที่กำหนด: {{backend}}",
+    "current": "ปัจจุบัน",
+    "recommended": "แนะนำ",
+    "unavailable": "ไม่พร้อมใช้งาน",
+    "cannotSelectYet": "ยังไม่สามารถเลือกแบ็กเอนด์นี้ได้",
+    "auto": "อัตโนมัติ",
+    "autoCurrently": "อัตโนมัติ (ปัจจุบัน: {{backend}})",
+    "audience": {
+      "internal": "ภายใน"
+    },
+    "states": {
+      "locked": "ล็อก",
+      "disabled": "ปิดใช้งาน",
+      "authRequired": "ต้องยืนยันตัวตน",
+      "runtimeMissing": "ไม่มีรันไทม์",
+      "degraded": "ประสิทธิภาพลดลง",
+      "unavailable": "ไม่พร้อมใช้งาน"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "กำลังตรวจสอบ",
+    "unavailable": "ไม่พร้อมใช้งาน",
+    "checkFailed": "ตรวจสอบล้มเหลว",
+    "free": "ฟรี",
+    "freeTooltip": "รายงานโดยเมตาดาตา OpenCode ความพร้อมใช้งานและขีดจำกัดอาจเปลี่ยนแปลงได้"
+  },
+  "taskFilters": {
+    "status": "สถานะ",
+    "clearAll": "ล้างทั้งหมด",
+    "selectAll": "เลือกทั้งหมด",
+    "team": "ทีม",
+    "allTeams": "ทุกทีม",
+    "searchTeams": "ค้นหาทีม...",
+    "noTeamsFound": "ไม่พบทีม",
+    "project": "โปรเจกต์",
+    "allProjects": "ทุกโปรเจกต์",
+    "searchProjects": "ค้นหาโปรเจกต์...",
+    "noProjects": "ไม่มีโปรเจกต์",
+    "comments": "ความคิดเห็น",
+    "apply": "ใช้งาน",
+    "read": {
+      "all": "ทั้งหมด",
+      "unread": "ยังไม่อ่าน",
+      "read": "อ่านแล้ว"
+    },
+    "statusOptions": {
+      "todo": "ต้องทำ",
+      "inProgress": "กำลังดำเนินการ",
+      "needsFix": "ต้องแก้ไข",
+      "done": "เสร็จสิ้น",
+      "review": "รีวิว",
+      "approved": "อนุมัติแล้ว"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "คอนเท็กซ์ทั้งหมด: {{tokens}} โทเค็น",
+    "context": "คอนเท็กซ์: {{tokens}}",
+    "phase": "เฟส {{phase}}:",
+    "compactedTo": "(บีบอัดเหลือ {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "ทีม",
+      "subagent": "เอเจนต์ย่อย",
+      "markAsRead": "ทำเครื่องหมายว่าอ่านแล้ว",
+      "delete": "ลบ",
+      "viewInSession": "ดูในเซสชัน"
+    },
+    "title": "การแจ้งเตือน",
+    "loading": "กำลังโหลดการแจ้งเตือน...",
+    "actions": {
+      "markFilteredAsRead": "ทำเครื่องหมายที่กรองแล้วว่าอ่านแล้ว",
+      "markAllAsRead": "ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว",
+      "markFilteredRead": "ทำเครื่องหมายที่กรองว่าอ่านแล้ว",
+      "markAllRead": "ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว",
+      "clearFilteredNotifications": "ล้างการแจ้งเตือนที่กรองแล้ว",
+      "clearAllNotifications": "ล้างการแจ้งเตือนทั้งหมด",
+      "clickToConfirm": "คลิกเพื่อยืนยัน",
+      "clearFiltered": "ล้างที่กรองแล้ว",
+      "clearAll": "ล้างทั้งหมด"
+    },
+    "counts": {
+      "unreadInFilter": "ยังไม่อ่าน {{count}} รายการในตัวกรอง",
+      "unreadInFilter_one": "ยังไม่อ่าน {{count}} รายการในตัวกรอง",
+      "unreadInFilter_few": "ยังไม่อ่าน {{count}} รายการในตัวกรอง",
+      "unreadInFilter_many": "ยังไม่อ่าน {{count}} รายการในตัวกรอง",
+      "unreadInFilter_other": "ยังไม่อ่าน {{count}} รายการในตัวกรอง",
+      "inFilter": "{{count}} รายการในตัวกรอง",
+      "inFilter_one": "{{count}} รายการในตัวกรอง",
+      "inFilter_few": "{{count}} รายการในตัวกรอง",
+      "inFilter_many": "{{count}} รายการในตัวกรอง",
+      "inFilter_other": "{{count}} รายการในตัวกรอง",
+      "unread": "ยังไม่อ่าน {{count}} รายการ",
+      "unread_one": "ยังไม่อ่าน {{count}} รายการ",
+      "unread_few": "ยังไม่อ่าน {{count}} รายการ",
+      "unread_many": "ยังไม่อ่าน {{count}} รายการ",
+      "unread_other": "ยังไม่อ่าน {{count}} รายการ",
+      "total": "{{count}} รายการทั้งหมด",
+      "total_one": "{{count}} รายการทั้งหมด",
+      "total_few": "{{count}} รายการทั้งหมด",
+      "total_many": "{{count}} รายการทั้งหมด",
+      "total_other": "{{count}} รายการทั้งหมด"
+    },
+    "filters": {
+      "other": "อื่น ๆ"
+    },
+    "empty": {
+      "noMatching": "ไม่มีการแจ้งเตือนที่ตรงกัน",
+      "noNotifications": "ไม่มีการแจ้งเตือน",
+      "tryDifferentFilter": "ลองตัวกรองอื่น",
+      "allCaughtUp": "คุณดูครบทั้งหมดแล้ว!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "รีสตาร์ทเพื่ออัปเดต",
+    "updateApp": "อัปเดตแอป",
+    "downloadedRestartTooltip": "ดาวน์โหลดการอัปเดตแล้ว รีสตาร์ทเพื่อใช้งาน",
+    "newVersionAvailable": "มีเวอร์ชันใหม่",
+    "updatingApp": "กำลังอัปเดตแอป",
+    "updateReady": "การอัปเดตพร้อมแล้ว",
+    "restartNow": "รีสตาร์ทเลย"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "ขยายแถบด้านข้าง",
+    "collapseSidebarShortcut": "ยุบแถบด้านข้าง ({{shortcut}})",
+    "sidebarView": "มุมมองแถบด้านข้าง",
+    "resizeSidebar": "ปรับขนาดแถบด้านข้าง",
+    "closeTab": "ปิดแท็บ",
+    "openedFromSearch": "เปิดจากการค้นหา",
+    "pinnedSession": "เซสชันที่ปักหมุด",
+    "jumpToSection": "ข้ามไปยังส่วน",
+    "newTab": "แท็บใหม่",
+    "newTabDashboard": "แท็บใหม่ (แดชบอร์ด)",
+    "refreshSession": "รีเฟรชเซสชัน",
+    "refreshSessionWithShortcut": "รีเฟรชเซสชัน ({{shortcut}})",
+    "loadingTab": "กำลังโหลดแท็บ",
+    "menu": {
+      "teams": "ทีม",
+      "settings": "การตั้งค่า",
+      "extensions": "ส่วนขยาย",
+      "search": "ค้นหา",
+      "schedules": "กำหนดการ",
+      "docs": "เอกสาร",
+      "exportMarkdown": "ส่งออกเป็น Markdown",
+      "exportJson": "ส่งออกเป็น JSON",
+      "exportPlainText": "ส่งออกเป็นข้อความธรรมดา",
+      "analyzeSession": "วิเคราะห์เซสชัน"
+    },
+    "tabMenu": {
+      "closeTabs": "ปิด {{count}} แท็บ",
+      "closeTabs_one": "ปิด {{count}} แท็บ",
+      "closeTabs_few": "ปิด {{count}} แท็บ",
+      "closeTabs_many": "ปิด {{count}} แท็บ",
+      "closeTabs_other": "ปิด {{count}} แท็บ",
+      "closeTab": "ปิดแท็บ",
+      "closeOtherTabs": "ปิดแท็บอื่น",
+      "splitRight": "แยกไปทางขวา",
+      "splitLeft": "แยกไปทางซ้าย",
+      "pinToSidebar": "ปักหมุดไปยังแถบด้านข้าง",
+      "unpinFromSidebar": "ยกเลิกการปักหมุดจากแถบด้านข้าง",
+      "hideFromSidebar": "ซ่อนจากแถบด้านข้าง",
+      "unhideFromSidebar": "ยกเลิกการซ่อนจากแถบด้านข้าง",
+      "closeAllTabs": "ปิดแท็บทั้งหมด"
+    },
+    "sections": {
+      "team": "ทีม",
+      "sessions": "เซสชัน",
+      "kanban": "Kanban",
+      "claudeLogs": "บันทึก",
+      "messages": "ข้อความ"
+    }
+  },
+  "editorFormatting": {
+    "bold": "ตัวหนา",
+    "italic": "ตัวเอียง",
+    "strike": "ขีดฆ่า",
+    "code": "โค้ด"
+  },
+  "diff": {
+    "changed": "เปลี่ยนแปลง",
+    "noChangesDetected": "ไม่พบการเปลี่ยนแปลง"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "คัดลอกลิงก์และโค้ดเข้าสู่ระบบ ChatGPT",
+    "copyLoginLink": "คัดลอกลิงก์เข้าสู่ระบบ ChatGPT",
+    "copyFailed": "คัดลอกล้มเหลว",
+    "copyLinkAndCode": "คัดลอกลิงก์ + โค้ด",
+    "copyLink": "คัดลอกลิงก์",
+    "enterCodeOnLoginPage": "ป้อนโค้ดนี้บนหน้าเข้าสู่ระบบ ChatGPT"
+  },
+  "window": {
+    "minimize": "ย่อ",
+    "maximize": "ขยายใหญ่สุด",
+    "restore": "คืนค่า"
+  },
+  "context": {
+    "local": "ในเครื่อง",
+    "switchingTo": "กำลังสลับไปยัง {{workspace}}",
+    "loadingWorkspace": "กำลังโหลดพื้นที่ทำงาน",
+    "switchWorkspace": "สลับพื้นที่ทำงาน"
+  },
+  "repositories": {
+    "noneAvailable": "ไม่มีที่เก็บโค้ดให้ใช้งาน",
+    "remove": "ลบที่เก็บโค้ด"
+  },
+  "export": {
+    "session": "ส่งออกเซสชัน",
+    "sessionTitle": "ส่งออกเซสชัน"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "ไม่มีข้อมูลเซสชัน",
+    "title": "รายงานเซสชัน"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "เลือกโปรเจกต์"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "อัปเดต",
+      "updatedYesterday": "อัปเดตเมื่อวานนี้",
+      "yesterday": "เมื่อวานนี้"
+    },
+    "reviewState": {
+      "needsFix": "ต้องแก้ไข"
+    },
+    "unassigned": "ยังไม่ได้มอบหมาย"
+  }
+}

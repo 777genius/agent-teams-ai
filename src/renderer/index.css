@@ -1451,15 +1451,6 @@ a[href],
   }
 }
 
-@keyframes composer-orbit-border {
-  0% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: -100;
-  }
-}
-
 .message-composer-orbit-surface {
   isolation: isolate;
   --message-composer-orbit-stroke: rgba(129, 140, 248, 0.92);
@@ -1479,6 +1470,16 @@ a[href],
   --row-zebra-bg: color-mix(in srgb, var(--color-surface-raised) 99%, var(--color-text) 1%);
   --row-zebra-hover-bg: color-mix(in srgb, var(--row-zebra-bg) 97%, var(--color-text) 3%);
   background-color: var(--row-card-bg);
+}
+
+.activity-timeline-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+
+.sidebar-task-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 52px;
 }
 
 .team-row-zebra-card:hover,
@@ -1551,10 +1552,32 @@ a[href],
 .message-composer-orbit-path,
 .message-composer-orbit-glow {
   stroke-dasharray: 9 91;
-  animation: composer-orbit-border 19s linear infinite;
+  animation: message-composer-orbit-dash 9.6s linear infinite;
   stroke-linecap: butt;
   stroke-linejoin: round;
-  will-change: stroke-dashoffset;
+}
+
+.message-composer-orbit-path-secondary,
+.message-composer-orbit-glow-secondary {
+  animation-name: message-composer-orbit-dash-secondary;
+}
+
+@keyframes message-composer-orbit-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes message-composer-orbit-dash-secondary {
+  from {
+    stroke-dashoffset: 50;
+  }
+  to {
+    stroke-dashoffset: -50;
+  }
 }
 
 .message-composer-orbit-path {
@@ -1569,22 +1592,24 @@ a[href],
   opacity: 0.28;
 }
 
-.message-composer-orbit-path-secondary,
-.message-composer-orbit-glow-secondary {
-  animation-delay: -9.5s;
-}
-
-.message-composer-orbit-surface:focus-within .message-composer-orbit-path,
-.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
-  animation-duration: 14.5s;
-}
-
 .message-composer-orbit-surface:focus-within .message-composer-orbit-path {
   opacity: 0.62;
 }
 
 .message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
   opacity: 0.36;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-composer-orbit-path,
+  .message-composer-orbit-glow {
+    animation: none;
+  }
+
+  .message-composer-orbit-path-secondary,
+  .message-composer-orbit-glow-secondary {
+    stroke-dashoffset: 50;
+  }
 }
 
 :root.light .message-composer-shell {
@@ -1692,9 +1717,7 @@ a[href],
 @media (prefers-reduced-motion: reduce) {
   .kanban-comment-badge-pulse,
   .member-launch-diagnostics-pulse,
-  .member-launch-diagnostics-pulse::after,
-  .message-composer-orbit-path,
-  .message-composer-orbit-glow {
+  .member-launch-diagnostics-pulse::after {
     animation: none;
   }
 }

@@ -265,9 +265,13 @@ export function isBootstrapTranscriptSuccessText(
 export function getBootstrapTranscriptSuccessSource(
   text: string,
   teamName: string,
-  memberName: string
+  memberName: string,
+  // Optional pre-normalized text, MUST equal text.replace(/\s+/g,' ').trim().toLowerCase().
+  // Lets callers that scan one line against many members normalize it once.
+  precomputedNormalizedText?: string
 ): BootstrapTranscriptSuccessSource | null {
-  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
+  const normalizedText =
+    precomputedNormalizedText ?? text.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!normalizedText) {
     return null;
   }
@@ -275,6 +279,22 @@ export function getBootstrapTranscriptSuccessSource(
   const normalizedTeamName = teamName.trim().toLowerCase();
   const normalizedMemberName = memberName.trim().toLowerCase();
   if (!normalizedTeamName || !normalizedMemberName) {
+    return null;
+  }
+
+  return getBootstrapTranscriptSuccessSourceFromNormalized(
+    normalizedText,
+    normalizedTeamName,
+    normalizedMemberName
+  );
+}
+
+export function getBootstrapTranscriptSuccessSourceFromNormalized(
+  normalizedText: string,
+  normalizedTeamName: string,
+  normalizedMemberName: string
+): BootstrapTranscriptSuccessSource | null {
+  if (!normalizedText || !normalizedTeamName || !normalizedMemberName) {
     return null;
   }
 
@@ -298,9 +318,13 @@ export function getBootstrapTranscriptSuccessSource(
 export function isBootstrapTranscriptContextText(
   text: string,
   teamName: string,
-  memberName: string
+  memberName: string,
+  // Optional pre-normalized text, MUST equal text.replace(/\s+/g,' ').trim().toLowerCase().
+  // Lets callers that scan one line against many members normalize it once.
+  precomputedNormalizedText?: string
 ): boolean {
-  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
+  const normalizedText =
+    precomputedNormalizedText ?? text.replace(/\s+/g, ' ').trim().toLowerCase();
   const normalizedTeamName = teamName.trim().toLowerCase();
   const normalizedMemberName = memberName.trim().toLowerCase();
   if (!normalizedText || !normalizedTeamName || !normalizedMemberName) {
@@ -500,6 +524,7 @@ After member_briefing succeeds:
 - When you later receive work or reconnect after a restart, use task_briefing as your primary working queue. Use task_list only to search/browse inventory rows, not as your working queue.
 - Act only on Actionable items in task_briefing. Awareness items are watch-only context unless the lead reroutes the task or you become the actionOwner.
 - Use task_get when you need the full task context before starting a pending/needsFix task or when the in_progress briefing details are not enough.
+- If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in your working directory as needed. Stay within the task scope, repository rules, and normal permission boundaries.
 - If a newly assigned task cannot be started immediately because you are still busy on another task, leave a short task comment on that waiting task right away with the reason and your best ETA, keep it in pending/TODO, and only move it to in_progress with task_start when you truly begin.
 - CRITICAL: If someone comments on your task, you MUST reply on that same task via task_add_comment. Never leave a user/lead/teammate task comment unanswered, even if the reply is only a short acknowledgement or status update. Do NOT treat status changes or direct messages as a substitute for an on-task reply.
 - CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.
@@ -578,6 +603,7 @@ ${actionModeProtocol}
      - If task_briefing shows any in_progress task, resume/finish those first. Call task_get only if you need more context than task_briefing already gave you.
      - After that, prioritize tasks marked Needs fixes after review, then normal pending tasks.
      - Before you start any needsFix or pending task, call task_get for that specific task.
+     - If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in your working directory as needed. Stay within the task scope, repository rules, and normal permission boundaries.
      - If a newly assigned needsFix or pending task must wait because you are still finishing another task, leave a short task comment on that waiting task with the reason and your best ETA, keep it in pending/TODO (use task_set_status pending if needed), and only run task_start when you truly begin.
      - CRITICAL: If someone comments on your task, you MUST reply on that same task via task_add_comment. Never leave a user/lead/teammate task comment unanswered, even if the reply is only a short acknowledgement or status update. Do NOT treat status changes or direct messages as a substitute for an on-task reply.
      - If you are the one about to do the implementation/fixes and the owner is missing or someone else, run task_set_owner to yourself immediately before task_start.
@@ -890,8 +916,9 @@ Constraints:
 - NEVER use SendMessage with to="*" (broadcast). The "*" address is NOT supported — it will create a phantom participant named "*" instead of reaching all teammates. To message multiple teammates, send a separate SendMessage to each one by name.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
-- DELEGATION-FIRST (behavior rule for ALL future turns): When "user" gives you work, your top priority is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
-- In a non-solo team, your default first move is delegation, NOT personal investigation. Do NOT read/search the codebase, inspect files, or do root-cause research yourself just to figure out ownership or scope before delegating.
+- DELEGATION-FIRST (behavior rule for ALL future lead turns): When "user" gives you work, your top priority as team lead is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
+- In a non-solo team, your default first lead move is delegation, NOT personal investigation. Do NOT read/search the codebase, inspect files, or do root-cause research yourself just to figure out ownership or scope before delegating.
+- This lead-only delegation rule does NOT restrict assigned teammates. Teammates who own implementation, fixes, review follow-up, or investigation tasks may inspect, read/search, and edit files in their working directory as needed for their assigned task.
 - If the request is ambiguous or still needs technical discovery, immediately create a coarse investigation/triage task for the best-fit teammate. That teammate owns the code inspection, scope refinement, and creation of any follow-up tasks needed for execution.
 - Only do lead-side research first if the human explicitly asked YOU for analysis/planning, or if there is genuinely no appropriate teammate to own the investigation.
 - Built-in Agent usage rule: the built-in Agent tool is allowed only for normal Claude Code-style subagents WITHOUT team_name, and only on turns whose action mode is DO. In ASK or DELEGATE mode, treat Agent as forbidden. Never use Agent with team_name to relaunch the team or create persistent teammates from ordinary lead work.

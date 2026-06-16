@@ -413,6 +413,7 @@ describe('team model availability Codex catalog integration', () => {
     expect(getAvailableTeamProviderModels('anthropic', providerStatus)).toEqual([
       'haiku',
       'opus',
+      'claude-opus-4-7',
       'claude-opus-4-6',
       'sonnet',
     ]);
@@ -428,6 +429,13 @@ describe('team model availability Codex catalog integration', () => {
         value: 'opus',
         label: 'Opus 4.8',
         badgeLabel: 'Opus 4.8',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'claude-opus-4-7',
+        label: 'Opus 4.7',
+        badgeLabel: 'Opus 4.7',
         availabilityStatus: 'available',
         availabilityReason: null,
       },

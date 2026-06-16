@@ -82,8 +82,10 @@ function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
       workflow,
       isolation,
       providerId,
+      providerBackendId,
       model,
       effort,
+      fastMode,
       mcpPolicy,
     }) => ({
       id,
@@ -93,8 +95,10 @@ function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
       workflow,
       isolation,
       providerId,
+      providerBackendId,
       model,
       effort,
+      fastMode,
       mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
     })
   );
@@ -110,8 +114,10 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
       workflow: m.workflow,
       isolation: m.isolation === 'worktree' ? 'worktree' : undefined,
       providerId: m.providerId,
+      providerBackendId: m.providerBackendId,
       model: m.model,
       effort: m.effort,
+      fastMode: m.fastMode,
       mcpPolicy: normalizeTeamMemberMcpPolicy(m.mcpPolicy),
     })
   );

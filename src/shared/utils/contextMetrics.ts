@@ -111,12 +111,17 @@ function isAnthropicNativeLongContextModel(modelName: string | undefined): boole
     return false;
   }
 
-  return (
-    normalized.startsWith('claude-opus-4-7') ||
-    normalized.startsWith('claude-opus-4-6') ||
-    normalized.startsWith('claude-sonnet-4-6') ||
-    normalized.startsWith('claude-mythos')
-  );
+  if (normalized.startsWith('claude-mythos')) {
+    return true;
+  }
+
+  const claude4MinorMatch = /^claude-(opus|sonnet)-4-(\d{1,2})(?:-|$)/.exec(normalized);
+  if (!claude4MinorMatch) {
+    return false;
+  }
+
+  const minorVersion = Number.parseInt(claude4MinorMatch[2], 10);
+  return Number.isFinite(minorVersion) && minorVersion >= 6;
 }
 
 function hasOpenAiPromptDetails(usage: ContextUsageLike): boolean {

@@ -6,6 +6,7 @@
 import { lazy, Suspense, useCallback, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
+import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
@@ -221,6 +222,11 @@ export const TeamGraphTab = ({
         />
       ) : null}
       {graphMessagesPanel}
+      <TerminalWorkspaceFloatingLauncher
+        teamName={teamName}
+        buttonTestId="open-terminal-floating-button-graph"
+        enabled={isActive && !fullscreen}
+      />
       {interactions.dialogs}
       {fullscreen && (
         <Suspense fallback={null}>

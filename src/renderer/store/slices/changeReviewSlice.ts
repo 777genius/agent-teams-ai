@@ -53,7 +53,6 @@ import type {
   FileChangeWithContent,
   FileReviewDecision,
   HunkDecision,
-  SnippetDiff,
   TaskChangePresenceState,
   TaskChangeSet,
   TaskChangeSetV2,
@@ -148,6 +147,38 @@ function applyTaskChangePresenceCacheUpdate(
   return nextTaskChangePresenceByKey;
 }
 
+interface TaskChangePresenceCacheUpdate {
+  cacheKey: string;
+  presence: TaskChangePresenceState | null;
+}
+
+function applyTaskChangePresenceCacheUpdates(
+  taskChangePresenceByKey: Record<string, Exclude<TaskChangePresenceState, 'unknown'>>,
+  updates: readonly TaskChangePresenceCacheUpdate[]
+): Record<string, Exclude<TaskChangePresenceState, 'unknown'>> {
+  let nextTaskChangePresenceByKey = taskChangePresenceByKey;
+  for (const { cacheKey, presence } of updates) {
+    if (presence && presence !== 'unknown') {
+      if (nextTaskChangePresenceByKey[cacheKey] === presence) {
+        continue;
+      }
+      if (nextTaskChangePresenceByKey === taskChangePresenceByKey) {
+        nextTaskChangePresenceByKey = { ...taskChangePresenceByKey };
+      }
+      nextTaskChangePresenceByKey[cacheKey] = presence;
+      continue;
+    }
+    if (!(cacheKey in nextTaskChangePresenceByKey)) {
+      continue;
+    }
+    if (nextTaskChangePresenceByKey === taskChangePresenceByKey) {
+      nextTaskChangePresenceByKey = { ...taskChangePresenceByKey };
+    }
+    delete nextTaskChangePresenceByKey[cacheKey];
+  }
+  return nextTaskChangePresenceByKey;
+}
+
 function syncTaskChangeNegativeCache(
   cacheKey: string,
   presence: TaskChangePresenceState | null
@@ -206,6 +237,14 @@ export interface ChangeReviewSlice {
     taskId: string,
     options: TaskChangeRequestOptions,
     presence: TaskChangePresenceState | null
+  ) => void;
+  recordTaskChangePresences: (
+    entries: {
+      teamName: string;
+      taskId: string;
+      options: TaskChangeRequestOptions;
+      presence: TaskChangePresenceState | null;
+    }[]
   ) => void;
   selectReviewFile: (filePath: string | null) => void;
   clearChangeReview: () => void;
@@ -570,17 +609,30 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       options: TaskChangeRequestOptions,
       presence: TaskChangePresenceState | null
     ) => {
-      const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
+      get().recordTaskChangePresences([{ teamName, taskId, options, presence }]);
+    },
+
+    recordTaskChangePresences: (entries) => {
+      if (entries.length === 0) {
+        return;
+      }
+      const updates = entries.map(({ teamName, taskId, options, presence }) => ({
+        cacheKey: buildTaskChangePresenceKey(teamName, taskId, options),
+        presence,
+      }));
       set((s) => {
-        return {
-          taskChangePresenceByKey: applyTaskChangePresenceCacheUpdate(
-            s.taskChangePresenceByKey,
-            cacheKey,
-            presence
-          ),
-        };
+        const nextTaskChangePresenceByKey = applyTaskChangePresenceCacheUpdates(
+          s.taskChangePresenceByKey,
+          updates
+        );
+        if (nextTaskChangePresenceByKey === s.taskChangePresenceByKey) {
+          return {};
+        }
+        return { taskChangePresenceByKey: nextTaskChangePresenceByKey };
       });
-      syncTaskChangeNegativeCache(cacheKey, presence);
+      for (const update of updates) {
+        syncTaskChangeNegativeCache(update.cacheKey, update.presence);
+      }
     },
 
     fetchTaskChanges: async (

@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import { formatProviderStatusText } from '@renderer/components/runtime/providerConnectionUi';
+import {
+  formatProviderStatusText,
+  shouldMaskCodexNegativeBootstrapState,
+} from '@renderer/components/runtime/providerConnectionUi';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
@@ -35,19 +38,6 @@ interface ProviderActivityStatusStripProps {
 
 function isProviderCardLoading(provider: CliProviderStatus, providerLoading: boolean): boolean {
   return providerLoading || isTeamProviderModelVerificationPending(provider.providerId, provider);
-}
-
-function shouldMaskCodexNegativeBootstrapState(
-  sourceProvider: CliProviderStatus | null,
-  mergedProvider: CliProviderStatus
-): boolean {
-  return (
-    sourceProvider?.providerId === 'codex' &&
-    sourceProvider.statusMessage === 'Checking...' &&
-    mergedProvider.providerId === 'codex' &&
-    mergedProvider.connection?.codex?.launchReadinessState === 'missing_auth' &&
-    mergedProvider.connection.codex.login.status === 'idle'
-  );
 }
 
 function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
@@ -139,7 +129,9 @@ function useProviderActivityDisplay({
       const loading =
         isProviderCardLoading(provider, cliProviderStatusLoading[provider.providerId] === true) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
-        shouldMaskCodexNegativeBootstrapState(sourceProvider, provider);
+        shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
+          providerLoading: cliProviderStatusLoading[provider.providerId] === true,
+        });
 
       return {
         provider,

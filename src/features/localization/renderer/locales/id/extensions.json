@@ -589,7 +589,11 @@
     "actions": {
       "add": "Tambah API Kunci",
       "addFirst": "Tambah kunci pertama Anda",
-      "edit": "Sunting"
+      "edit": "Sunting",
+      "copied": "Disalin!",
+      "copyEnvVarName": "Salin nama variabel env",
+      "confirmDelete": "Klik lagi untuk mengonfirmasi",
+      "delete": "Hapus"
     },
     "empty": {
       "title": "Tidak API kunci disimpan",

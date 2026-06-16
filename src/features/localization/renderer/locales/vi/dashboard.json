@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Đã đăng nhập rồi?",
+      "becomeSponsor": "Trở thành nhà tài trợ",
+      "cancel": "Hủy",
+      "checkNow": "Kiểm tra ngay",
+      "checkUpdates": "Kiểm tra cập nhật",
+      "checking": "Đang kiểm tra...",
+      "connect": "Kết nối",
+      "extensions": "Tiện ích mở rộng",
+      "login": "Đăng nhập",
+      "manage": "Quản lý",
+      "manageProviders": "Quản lý nhà cung cấp",
+      "plan": "Gói",
+      "recheck": "Kiểm tra lại",
+      "recheckProvider": "Kiểm tra lại {{provider}}",
+      "retry": "Thử lại",
+      "updateTo": "Cập nhật lên v{{version}}",
+      "useCode": "Dùng mã"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud là một nền tảng suy luận AI đa phương thức cung cấp cho lập trình viên một API AI duy nhất để truy cập các API tạo video, tạo hình ảnh và LLM. Thay vì quản lý nhiều tích hợp nhà cung cấp, bạn chỉ kết nối một lần và có quyền truy cập thống nhất tới hơn 300 mô hình được tuyển chọn trên mọi phương thức. Hãy xem chương trình khuyến mãi gói lập trình mới của Atlas Cloud để truy cập API tiết kiệm hơn.",
+      "openCodeProvider": "Nhà cung cấp OpenCode",
+      "plan": "Gói lập trình Atlas Cloud",
+      "sponsor": "Tài trợ"
+    },
+    "errors": {
+      "checkStatusFailed": "Không thể kiểm tra trạng thái CLI",
+      "installationFailed": "Cài đặt thất bại",
+      "refreshFailed": "Không thể kiểm tra cập nhật. Hãy kiểm tra kết nối mạng và thử lại.",
+      "runtimeUpdatedRefreshFailed": "Đã cập nhật runtime, nhưng không thể làm mới trạng thái nhà cung cấp."
+    },
+    "hints": {
+      "backgroundStatus": "Trạng thái {{runtime}} sẽ được kiểm tra trong nền.",
+      "codexApiKeyFallback": "{{hint}} Có thể dùng API key dự phòng nếu bạn đổi chế độ xác thực.",
+      "codexAutoApiKey": "{{hint}} Chế độ Auto sẽ tiếp tục dùng API key cho đến khi ChatGPT được kết nối.",
+      "codexFinishLogin": "Hoàn tất đăng nhập ChatGPT trong trình duyệt. Nhập mã hiển thị nếu được yêu cầu.",
+      "codexNoActiveLogin": "Giới hạn sử dụng chỉ xuất hiện sau khi Codex CLI thấy một tài khoản ChatGPT đang hoạt động. Hiện tại nó báo không có phiên đăng nhập ChatGPT nào đang hoạt động.",
+      "codexNoActiveManagedSession": "Giới hạn sử dụng chỉ xuất hiện sau khi Codex CLI thấy một tài khoản ChatGPT đang hoạt động. Có dữ liệu tài khoản Codex cục bộ, nhưng hiện chưa có phiên được quản lý nào đang hoạt động được chọn.",
+      "codexReconnectNeeded": "Giới hạn sử dụng chỉ xuất hiện sau khi Codex làm mới phiên ChatGPT đang được chọn. Hiện tại phiên cục bộ cần kết nối lại.",
+      "firstCheckSlow": "Lần kiểm tra đầu tiên có thể mất tới 30 giây",
+      "loginRequiredForTeams": "Việc duyệt phiên và dự án vẫn hoạt động mà không cần đăng nhập. Chỉ cần đăng nhập để chạy đội ngũ agent.",
+      "troubleshootTitle": "Nếu bạn chắc chắn đã đăng nhập, hãy thử các bước sau:"
+    },
+    "installer": {
+      "checkingLatest": "Đang kiểm tra phiên bản mới nhất...",
+      "downloading": "Đang tải {{runtime}}...",
+      "installing": "Đang cài đặt {{runtime}}...",
+      "success": "Đã cài đặt thành công {{runtime}} v{{version}}",
+      "verifying": "Đang xác minh checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "Cần API key",
+      "comingSoon": "Sắp ra mắt",
+      "collapseProviderDetails": "Thu gọn chi tiết nhà cung cấp",
+      "expandProviderDetails": "Mở rộng chi tiết nhà cung cấp",
+      "generateLink": "Tạo liên kết",
+      "loadingRateLimits": "Đang tải giới hạn tốc độ",
+      "loggedOut": "Nhà cung cấp đã đăng xuất",
+      "loginAuthFailed": "Xác thực thất bại",
+      "loginAuthUpdated": "Đã cập nhật xác thực",
+      "loginComplete": "Đăng nhập hoàn tất",
+      "loginFailed": "Đăng nhập thất bại",
+      "loginTitle": "Đăng nhập",
+      "logoutFailed": "Đăng xuất thất bại",
+      "logoutTitle": "Đăng xuất",
+      "notLoggedIn": "Chưa đăng nhập",
+      "openLogin": "Mở đăng nhập",
+      "providerActionRequired": "Nhà cung cấp cần thao tác",
+      "resets": "đặt lại {{time}}",
+      "runtimeLoginTitle": "Đăng nhập {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Đang kiểm tra nhà cung cấp AI...",
+      "claudeCli": "Đang kiểm tra Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Đã xác thực",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Đang kiểm tra xác thực...",
+      "checkingProviders": "Đang kiểm tra nhà cung cấp...",
+      "configuredLocalCount": "{{count}} đã cấu hình cục bộ",
+      "configuredLocalCount_few": "{{count}} đã cấu hình cục bộ",
+      "configuredLocalCount_many": "{{count}} đã cấu hình cục bộ",
+      "configuredLocalCount_one": "{{count}} đã cấu hình cục bộ",
+      "configuredLocalCount_other": "{{count}} đã cấu hình cục bộ",
+      "configuredLocalTitle": "Các tuyến OpenCode cục bộ được nhập từ cấu hình OpenCode của bạn.",
+      "connectedCount": "Nhà cung cấp: đã kết nối {{connected}}/{{denominator}}",
+      "freeModels": "Mô hình miễn phí",
+      "freeModelsTitle": "OpenCode bao gồm các tùy chọn mô hình miễn phí như Big Pickle khi có sẵn trong thiết lập của bạn. OpenRouter qua OpenCode cũng có thể cung cấp mô hình miễn phí, nhưng không phải mọi mô hình OpenCode/OpenRouter đều miễn phí. Khả dụng và giới hạn có thể thay đổi.",
+      "loadingModels": "Đang tải mô hình...",
+      "modelsUnavailable": "Mô hình không khả dụng cho bản dựng runtime này",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} đã xác minh",
+      "verifiedCount_few": "{{count}} đã xác minh",
+      "verifiedCount_many": "{{count}} đã xác minh",
+      "verifiedCount_one": "{{count}} đã xác minh",
+      "verifiedCount_other": "{{count}} đã xác minh",
+      "verifiedTitle": "Các tuyến OpenCode có bằng chứng thực thi thành công."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} đã cấu hình không vượt qua kiểm tra tình trạng khi khởi động.",
+      "configuredNotFound": "Không tìm thấy {{runtime}} đã cấu hình.",
+      "foundButFailed": "Đã tìm thấy {{runtime}} nhưng không khởi động được",
+      "healthCheckFailedDescription": "Ứng dụng đã tìm thấy {{runtime}} đã cấu hình, nhưng kiểm tra tình trạng khi khởi động thất bại. Hãy sửa chữa hoặc cài đặt lại, rồi thử lại.",
+      "install": "Cài đặt {{runtime}}",
+      "installRequiredDescription": "{{runtime}} là bắt buộc để tạo đội ngũ và quản lý phiên. Hãy cài đặt để bắt đầu.",
+      "isRequired": "{{runtime}} là bắt buộc",
+      "reinstall": "Cài đặt lại {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Đang kiểm tra",
+      "codexTitle": "Cài đặt Codex CLI vào dữ liệu ứng dụng",
+      "downloading": "Đang tải",
+      "downloadingPercent": "Đang tải {{percent}}%",
+      "install": "Cài đặt",
+      "installing": "Đang cài đặt",
+      "openCodeTitle": "Cài đặt runtime OpenCode vào dữ liệu ứng dụng",
+      "retryInstall": "Thử cài đặt lại"
+    },
+    "troubleshoot": {
+      "again": "lần nữa",
+      "authStatusCommand": "lệnh kiểm tra trạng thái xác thực CLI đã cấu hình của bạn",
+      "checkLoggedIn": "- kiểm tra xem nó có hiển thị \"Logged in\" không",
+      "click": "Nhấp",
+      "loginCommand": "lệnh đăng nhập runtime",
+      "logoutCommand": "lệnh đăng xuất runtime",
+      "openTerminal": "Mở terminal của bạn và chạy:",
+      "reloginPrefix": "Nếu nó báo đã đăng nhập nhưng ứng dụng không nhận ra, hãy thử:",
+      "sameRuntime": "Đảm bảo CLI trong terminal của bạn là cùng runtime mà ứng dụng sử dụng",
+      "statusCacheHint": "- đôi khi trạng thái được lưu vào bộ nhớ đệm trong vài giây",
+      "then": "rồi"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Một hoặc nhiều nhà cung cấp được đặt ở chế độ API key, nhưng chưa có API key nào được cấu hình. Mở Quản lý nhà cung cấp để thêm key hoặc đổi chế độ kết nối.",
+      "multipleApiKeysNeedAttention": "Một hoặc nhiều nhà cung cấp được đặt ở chế độ API key và cần được chú ý. Mở Quản lý nhà cung cấp để xem lại các key đã lưu hoặc đổi chế độ kết nối.",
+      "notAuthenticated": "{{runtime}} đã được cài đặt nhưng bạn chưa xác thực. Cần đăng nhập để tạo đội ngũ và sử dụng các tính năng AI.",
+      "singleApiKeyMissing": "{{provider}} được đặt ở chế độ API key, nhưng chưa có API key nào được cấu hình. Mở Quản lý nhà cung cấp để thêm key hoặc đổi chế độ kết nối.",
+      "singleApiKeyNeedsAttention": "{{provider}} được đặt ở chế độ API key, nhưng chưa được kết nối. Mở Quản lý nhà cung cấp để xem lại key đã lưu hoặc đổi chế độ kết nối."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Chọn một thư mục dự án",
+    "selectFolder": "Chọn thư mục",
+    "failedToLoad": "Không thể tải dự án",
+    "retry": "Thử lại",
+    "noProjects": "Không tìm thấy dự án nào",
+    "noMatches": "Không có kết quả cho \"{{query}}\"",
+    "noRecentProjects": "Không tìm thấy dự án gần đây nào",
+    "emptyDescription": "Hoạt động Claude và Codex gần đây sẽ xuất hiện ở đây.",
+    "loadMore": "Tải thêm",
+    "card": {
+      "deleted": "Đã xóa",
+      "projectFolderMissing": "Thư mục dự án không còn tồn tại",
+      "taskCounts": {
+        "active": "{{count}} đang hoạt động",
+        "active_one": "{{count}} đang hoạt động",
+        "active_other": "{{count}} đang hoạt động",
+        "active_few": "{{count}} đang hoạt động",
+        "active_many": "{{count}} đang hoạt động",
+        "pending": "{{count}} đang chờ",
+        "pending_one": "{{count}} đang chờ",
+        "pending_other": "{{count}} đang chờ",
+        "pending_few": "{{count}} đang chờ",
+        "pending_many": "{{count}} đang chờ",
+        "done": "{{count}} đã xong",
+        "done_one": "{{count}} đã xong",
+        "done_other": "{{count}} đã xong",
+        "done_few": "{{count}} đã xong",
+        "done_many": "{{count}} đã xong"
+      }
+    },
+    "title": "Dự án gần đây",
+    "searchResults": "Kết quả tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm dự án..."
+  },
+  "actions": {
+    "selectTeam": "Chọn đội ngũ",
+    "or": "hoặc",
+    "clearSearch": "Xóa tìm kiếm"
+  },
+  "windowsAdmin": {
+    "title": "Khuyến nghị chế độ Quản trị viên Windows",
+    "description": "Việc kiểm tra runtime OpenCode có thể hết thời gian chờ khi Agent Teams AI không được nâng quyền. Khởi động lại ứng dụng với Run as administrator trước khi khởi chạy các đội ngũ OpenCode."
+  },
+  "webPreview": {
+    "title": "Mở ứng dụng máy tính để có đầy đủ chức năng",
+    "description": "Phiên bản trình duyệt vẫn đang được phát triển. Các thao tác dự án, tích hợp và cập nhật trạng thái trực tiếp có thể bị hạn chế ở đây. Hãy dùng ứng dụng máy tính để truy cập mọi tính năng một cách đáng tin cậy."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Có phiên bản mới",
+    "restartNow": "Khởi động lại ngay",
+    "viewDetails": "Xem chi tiết"
+  }
+}

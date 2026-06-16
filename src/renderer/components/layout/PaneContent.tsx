@@ -6,9 +6,15 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
+import { useTheme } from '@renderer/hooks/useTheme';
+import { useStore } from '@renderer/store';
+import { nameColorSet } from '@renderer/utils/projectColor';
+import { useShallow } from 'zustand/react/shallow';
 
 import { DashboardView } from '../dashboard/DashboardView';
+import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
 import type { Pane } from '@renderer/types/panes';
 import type { Tab } from '@renderer/types/tabs';
@@ -84,8 +90,42 @@ const PaneLazyFallback = (): React.JSX.Element => {
   );
 };
 
+const TeamPaneLazyFallback = ({
+  teamName,
+  isActive,
+  isPaneFocused,
+}: {
+  teamName: string;
+  isActive: boolean;
+  isPaneFocused: boolean;
+}): React.JSX.Element => {
+  const { isLight } = useTheme();
+  const { messagesPanelMode, teamSummaryColor, teamSummaryDisplayName } = useStore(
+    useShallow((s) => ({
+      messagesPanelMode: s.messagesPanelMode,
+      teamSummaryColor: teamName ? s.teamByName[teamName]?.color : undefined,
+      teamSummaryDisplayName: teamName ? s.teamByName[teamName]?.displayName : undefined,
+    }))
+  );
+  const headerColorSet = teamSummaryColor
+    ? getTeamColorSet(teamSummaryColor)
+    : nameColorSet(teamSummaryDisplayName || teamName);
+
+  return (
+    <TeamLoadingSkeleton
+      teamName={teamName}
+      isActive={isActive}
+      isFocused={isPaneFocused}
+      messagesPanelMode={messagesPanelMode}
+      headerColorSet={headerColorSet}
+      isLight={isLight}
+    />
+  );
+};
+
 const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.JSX.Element => {
   const [hasActivated, setHasActivated] = useState(isActive);
+  const shouldRenderContent = hasActivated && (tab.type !== 'teams' || isActive);
 
   useEffect(() => {
     if (isActive) {
@@ -93,10 +133,21 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
     }
   }, [isActive]);
 
+  const fallback =
+    tab.type === 'team' && tab.teamName ? (
+      <TeamPaneLazyFallback
+        teamName={tab.teamName}
+        isActive={isActive}
+        isPaneFocused={isPaneFocused}
+      />
+    ) : (
+      <PaneLazyFallback />
+    );
+
   return (
     <div className="absolute inset-0 flex" style={{ display: isActive ? 'flex' : 'none' }}>
-      {hasActivated && (
-        <Suspense fallback={<PaneLazyFallback />}>
+      {shouldRenderContent && (
+        <Suspense fallback={fallback}>
           {tab.type === 'dashboard' && <DashboardView />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'settings' && <SettingsView />}

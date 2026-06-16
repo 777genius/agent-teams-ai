@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Opțiuni pentru utilizatori avansați: export/import configurație, resetare la valori implicite și editare brută a configurației.",
+      "label": "Avansat"
+    },
+    "general": {
+      "description": "Preferințe de bază ale aplicației precum tema, limba, densitatea afișării și comportamentul la pornire.",
+      "label": "General"
+    },
+    "infoAriaLabel": "Ce este {{label}}?",
+    "notifications": {
+      "description": "Controlează când și cum ești notificat despre activitatea agenților, finalizarea sarcinilor și erori.",
+      "label": "Notificări"
+    }
+  },
+  "view": {
+    "description": "Gestionează preferințele aplicației",
+    "loading": "Se încarcă setările...",
+    "title": "Setări"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Anulează",
+      "test": "Testează"
+    },
+    "defaults": {
+      "allProjects": "Toate proiectele",
+      "allProjectsHint": "Testele folosesc {{project}}. Valoarea implicită se aplică dacă un proiect nu are o suprascriere.",
+      "loadingContexts": "Se încarcă contextele...",
+      "projectHint": "Salvarea suprascrie doar {{project}}.",
+      "projectOverrideContext": "Context de suprascriere a proiectului",
+      "scopeDescriptionAllProjects": "Implicit pentru fiecare proiect care nu are propria suprascriere OpenCode.",
+      "scopeDescriptionProject": "Suprascrie doar proiectul selectat. Echipele în execuție nu sunt modificate.",
+      "selectProjectContext": "Selectează contextul proiectului",
+      "selectProjectHint": "Selectează un proiect înainte de a testa modele locale sau de a salva valori implicite.",
+      "selectValidationContext": "Selectează contextul de validare",
+      "setAllProjectsDefault": "Setează implicit pentru toate proiectele",
+      "setProjectDefault": "Setează implicit pentru proiect",
+      "thisProject": "Acest proiect",
+      "title": "Valori implicite OpenCode",
+      "validationContext": "Context de validare"
+    },
+    "diagnostics": {
+      "copied": "Diagnostice copiate",
+      "copiedShort": "Copiat",
+      "copy": "Copiază diagnosticele",
+      "hints": "Indicii",
+      "likelyCause": "Cauză probabilă:",
+      "windowsSymlinkAdminHint": "Windows: rulează Agent Teams AI ca Administrator"
+    },
+    "models": {
+      "alreadyDefault": "Acesta este deja modelul OpenCode implicit selectat.",
+      "empty": "Niciun model găsit.",
+      "emptyFree": "Niciun model gratuit găsit.",
+      "emptyRecommended": "Niciun model recomandat găsit.",
+      "emptyRecommendedFree": "Niciun model gratuit recomandat găsit.",
+      "freeOnly": "Doar gratuite",
+      "launchableDescription": "Rute cunoscute din configurația OpenCode, modele gratuite încorporate și valoarea implicită curentă. Rutele locale necesită un test reușit înainte de a fi pregătite pentru lansările de echipă.",
+      "launchableTitle": "Rute de model OpenCode",
+      "loadingRoutes": "Se încarcă rutele de model OpenCode...",
+      "noRoutesMatch": "Nicio rută de model OpenCode nu corespunde cu \"{{query}}\".",
+      "noneReported": "Nicio rută de model OpenCode nu a fost raportată încă. Configurează o rută locală în OpenCode sau folosește fila Furnizori pentru a inspecta furnizorii din catalog.",
+      "recommendedOnly": "Doar recomandate",
+      "searchPlaceholder": "Caută modele",
+      "selectProjectBeforeTesting": "Selectează un context de proiect înainte de a testa modele.",
+      "selectProjectBeforeTestingDefaults": "Selectează un context de proiect înainte de a testa sau salva valori implicite OpenCode.",
+      "testInProgress": "Testul modelului este deja în curs.",
+      "useInTeamPicker": "Salvează pentru selectorul de echipă",
+      "validationContextRequired": "Selectează un context de validare mai sus pentru a activa Testează și Setează implicit. Salvarea pentru selectorul de echipă doar stochează ruta pentru echipele noi.",
+      "actionsUnavailable": "Acțiunile sunt temporar indisponibile.",
+      "defaultSaveInProgress": "Valoarea implicită OpenCode se salvează.",
+      "routeUnavailableAuth": "Acest furnizor necesită autentificare înainte ca acest model să poată fi folosit.",
+      "routeUnavailableFailed": "Această rută de model a eșuat la ultimul test de execuție.",
+      "routeUnavailableGeneric": "Această rută de model nu poate fi folosită în acest moment.",
+      "routeUnavailableUnknown": "Acest model este valoarea implicită OpenCode curentă, dar nu este încă disponibil în catalogul live."
+    },
+    "providers": {
+      "catalog": "Catalog de furnizori OpenCode",
+      "countFallback": "Furnizori OpenCode",
+      "description": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
+      "loadMore": "Încarcă mai mulți furnizori",
+      "loading": "Se încarcă furnizorii OpenCode",
+      "noMatches": "Niciun furnizor nu corespunde acelei căutări.",
+      "noneReported": "Niciun furnizor OpenCode raportat de runtime-ul gestionat.",
+      "recommended": "Recomandat",
+      "refreshCatalog": "Reîmprospătează catalogul",
+      "searchPlaceholder": "Caută furnizori",
+      "description_few": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
+      "description_many": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
+      "description_one": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
+      "description_other": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii."
+    },
+    "setup": {
+      "loading": "Se încarcă configurarea furnizorului..."
+    },
+    "summary": {
+      "defaultModel": "Implicit OpenCode: {{model}}",
+      "loading": "Se încarcă runtime-ul OpenCode gestionat, furnizorii conectați și valorile implicite ale modelelor...",
+      "source": "Sursă: {{source}}",
+      "title": "Runtime OpenCode"
+    },
+    "tabs": {
+      "models": "Modele",
+      "providers": "Furnizori"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Caută rute de model"
+    },
+    "badges": {
+      "usedInTeamPicker": "Salvat pentru selectorul de echipă",
+      "free": "gratuit",
+      "local": "local",
+      "configured": "configurat",
+      "knownRoute": "rută cunoscută",
+      "connected": "conectat",
+      "verified": "verificat",
+      "needsTest": "necesită test",
+      "failed": "eșuat",
+      "unknown": "necunoscut",
+      "default": "implicit"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Limba pentru comunicarea agenților",
+      "descriptionWithDetected": "Limba pentru comunicarea agenților (detectată: {{detected}})",
+      "emptyMessage": "Nicio limbă găsită.",
+      "label": "Limbă",
+      "searchPlaceholder": "Caută limba...",
+      "selectPlaceholder": "Selectează limba...",
+      "title": "Limba agenților"
+    },
+    "appLanguage": {
+      "description": "Limba pentru interfața aplicației.",
+      "label": "Limbă",
+      "title": "Limba aplicației"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Extinde automat fiecare tur de răspuns la deschiderea unui transcript sau la primirea unui mesaj nou",
+        "label": "Extinde răspunsurile AI în mod implicit"
+      },
+      "nativeTitleBar": {
+        "description": "Folosește cadrul de fereastră implicit al sistemului în loc de bara de titlu personalizată",
+        "label": "Folosește bara de titlu nativă",
+        "restartConfirm": {
+          "confirmLabel": "Repornește",
+          "message": "Aplicația trebuie repornită pentru a aplica modificarea barei de titlu. Repornești acum?",
+          "title": "Repornire necesară"
+        }
+      },
+      "theme": {
+        "description": "Alege tema de culori preferată",
+        "label": "Temă",
+        "options": {
+          "dark": "Întunecat",
+          "light": "Luminos",
+          "system": "Sistem"
+        }
+      },
+      "title": "Aspect"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Pornește un server HTTP pentru a accesa interfața dintr-un browser sau pentru a o încorpora în iframe-uri",
+        "label": "Activează modul server"
+      },
+      "title": "Acces din browser"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Selectează folder",
+        "selectFolderManually": "Selectează folderul manual",
+        "useAutoDetect": "Folosește detectarea automată",
+        "useFolder": "Folosește folderul",
+        "usePath": "Folosește calea",
+        "useThisPath": "Folosește această cale",
+        "useWsl": "Folosești Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Acest folder nu conține un director \"projects\". Continui oricum?",
+          "title": "Niciun director projects găsit"
+        },
+        "notClaudeDir": {
+          "message": "Acest folder se numește \"{{folderName}}\", nu \".claude\". Continui oricum?",
+          "title": "Folderul selectat nu este .claude"
+        },
+        "noWslPaths": {
+          "message": "Nu s-au putut găsi automat distribuții WSL cu date Claude. Selectezi folderul manual?",
+          "title": "Nicio cale WSL Claude găsită"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" nu conține un director \"projects\". Continui oricum?",
+          "title": "Calea WSL nu are director projects"
+        }
+      },
+      "current": {
+        "autoDetected": "Detectat automat: {{path}}",
+        "autoDetectedPath": "Se folosește calea detectată automat",
+        "customPath": "Se folosește calea personalizată",
+        "label": "Rădăcina locală curentă"
+      },
+      "description": "Alege care folder local este tratat ca rădăcină a datelor tale Claude",
+      "errors": {
+        "detectWslFailed": "Detectarea căilor rădăcină WSL Claude a eșuat",
+        "loadFailed": "Încărcarea setărilor rădăcinii locale Claude a eșuat",
+        "updateFailed": "Actualizarea rădăcinii Claude a eșuat"
+      },
+      "title": "Rădăcina locală Claude",
+      "wslModal": {
+        "closeAriaLabel": "Închide fereastra de cale WSL",
+        "description": "Distribuții WSL detectate și candidați pentru rădăcina Claude",
+        "noProjectsDir": "Niciun director projects detectat",
+        "title": "Selectează rădăcina WSL Claude"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Ajută la îmbunătățirea aplicației trimițând date anonime despre erori și performanță",
+        "label": "Trimite rapoarte de erori"
+      },
+      "title": "Confidențialitate"
+    },
+    "server": {
+      "runningOn": "Rulează pe",
+      "standaloneModeDescription": "Rulează în mod autonom. Serverul HTTP este întotdeauna activ. Notificările de sistem nu sunt disponibile - declanșatoarele de notificare sunt înregistrate doar în aplicație.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Pornește automat aplicația când te autentifici",
+        "label": "Pornește la autentificare"
+      },
+      "showDockIcon": {
+        "description": "Afișează pictograma aplicației în dock (macOS)",
+        "label": "Afișează pictograma în dock"
+      },
+      "title": "Pornire"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Notificările s-ar putea să nu funcționeze în modul de dezvoltare. macOS identifică aplicația ca \"Electron\" (bundle ID",
+      "descriptionSuffix": ") în loc de numele aplicației de producție. Verifică Setări sistem > Notificări > Electron pentru a confirma permisiunile.",
+      "title": "Mod dezvoltare"
+    },
+    "ignoredRepositories": {
+      "description": "Notificările de la aceste depozite vor fi ignorate",
+      "empty": "Niciun depozit ignorat",
+      "selectPlaceholder": "Selectează depozitul de ignorat...",
+      "title": "Depozite ignorate"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Afișează notificări de sistem pentru erori și evenimente",
+        "label": "Activează notificările de sistem"
+      },
+      "sound": {
+        "description": "Redă un sunet când apar notificările",
+        "label": "Redă sunet"
+      },
+      "subagentErrors": {
+        "description": "Detectează și notifică despre erori în sesiunile subagenților",
+        "label": "Include erorile subagenților"
+      },
+      "title": "Setări notificări"
+    },
+    "snooze": {
+      "clear": "Anulează amânarea",
+      "description": "Întrerupe temporar notificările",
+      "descriptionWithTime": "Amânat până la {{time}}",
+      "label": "Amână notificările",
+      "options": {
+        "15": "15 minute",
+        "30": "30 de minute",
+        "60": "1 oră",
+        "120": "2 ore",
+        "240": "4 ore",
+        "-1": "Până mâine"
+      },
+      "selectDuration": "Selectează durata..."
+    },
+    "taskCompletion": {
+      "description": "Primește notificări native ale SO când Claude termină sarcini - sunete, bannere și insigne în Dock/bara de activități. Funcționează pe macOS, Linux și Windows.",
+      "installPlugin": "Instalează pluginul claude-notifications-go",
+      "title": "Notificări de finalizare a sarcinilor"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Notifică atunci când fiecare sarcină dintr-o echipă ajunge la starea finalizată",
+        "label": "Toate sarcinile finalizate"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Când Claude raportează un moment de resetare, programează un memento de urmărire pentru liderul echipei după resetarea limitei",
+        "label": "Reia automat după limita de utilizare"
+      },
+      "clarifications": {
+        "description": "Afișează notificări native ale SO când o sarcină necesită contribuția ta",
+        "label": "Notificări de clarificare a sarcinilor"
+      },
+      "crossTeamMessage": {
+        "description": "Notifică atunci când sosește un mesaj de la o altă echipă",
+        "label": "Notificări de mesaje între echipe"
+      },
+      "leadInbox": {
+        "description": "Notifică atunci când coechipierii trimit mesaje liderului echipei",
+        "label": "Notificări pentru căsuța liderului"
+      },
+      "statusChange": {
+        "description": "Afișează notificări native ale SO când se schimbă starea unei sarcini",
+        "label": "Notificări de schimbare a stării sarcinilor",
+        "onlySolo": {
+          "description": "Notifică doar atunci când echipa nu are coechipieri",
+          "label": "Doar în modul Solo"
+        },
+        "statuses": {
+          "description": "Care stări țintă declanșează o notificare",
+          "label": "Notifică la aceste stări",
+          "options": {
+            "approved": "Aprobată",
+            "completed": "Finalizată",
+            "deleted": "Ștearsă",
+            "in_progress": "Începută",
+            "needsFix": "Necesită remedieri",
+            "pending": "În așteptare",
+            "review": "Revizuire"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Afișează notificări native ale SO când agenții comentează la sarcini",
+        "label": "Notificări de comentarii la sarcini"
+      },
+      "taskCreated": {
+        "description": "Afișează notificări native ale SO când se creează o sarcină nouă",
+        "label": "Notificări de creare a sarcinilor"
+      },
+      "teamLaunched": {
+        "description": "Notifică atunci când o echipă termină de lansat și este pregătită",
+        "label": "Notificări de lansare a echipei"
+      },
+      "title": "Notificări de echipă",
+      "toolApproval": {
+        "description": "Notifică atunci când o unealtă necesită aprobarea ta (Permite/Refuză) când aplicația nu este în prim-plan",
+        "label": "Notificări de aprobare a uneltelor"
+      },
+      "userInbox": {
+        "description": "Notifică atunci când coechipierii îți trimit mesaje",
+        "label": "Notificări pentru căsuța utilizatorului"
+      }
+    },
+    "test": {
+      "action": "Trimite test",
+      "description": "Trimite o notificare de test pentru a verifica livrarea",
+      "failedToSend": "Trimiterea notificării de test a eșuat",
+      "label": "Notificare de test",
+      "sending": "Se trimite...",
+      "sent": "Trimis!",
+      "unknownError": "Eroare necunoscută"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Pictograma aplicației",
+      "description": "Asamblează echipe de agenți AI care lucrează autonom în paralel, comunică între echipe și gestionează sarcini pe o tablă kanban - cu revizuire de cod integrată, monitorizare a proceselor live și vizibilitate completă a uneltelor.",
+      "standalone": "Autonom",
+      "title": "Despre",
+      "version": "Versiunea {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Editează configurația",
+      "exportConfig": "Exportă configurația",
+      "importConfig": "Importă configurația",
+      "openInEditor": "Deschide în editor",
+      "resetToDefaults": "Resetează la valorile implicite",
+      "title": "Configurație"
+    },
+    "updates": {
+      "available": "v{{version}} disponibilă",
+      "check": "Verifică actualizările",
+      "checking": "Se verifică...",
+      "ready": "Actualizare pregătită",
+      "unknownVersion": "necunoscută",
+      "upToDate": "La zi"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Încărcarea configurației a eșuat",
+      "saveFailed": "Salvarea configurației a eșuat"
+    },
+    "footer": {
+      "autoSave": "Modificările se salvează automat după editare",
+      "toClose": "pentru a închide",
+      "escapeKey": "Esc"
+    },
+    "loading": "Se încarcă configurația...",
+    "status": {
+      "invalidJson": "JSON invalid",
+      "saveFailed": "Salvarea a eșuat",
+      "saved": "Salvat",
+      "saving": "Se salvează..."
+    },
+    "title": "Editează configurația"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Anulează",
+      "submit": "Adaugă declanșator",
+      "title": "Adaugă declanșator personalizat"
+    },
+    "builtin": {
+      "description": "Declanșatoare implicite care vin cu aplicația. Le poți activa sau dezactiva și le poți personaliza tiparele.",
+      "title": "Declanșatoare încorporate"
+    },
+    "card": {
+      "builtinBadge": "Încorporat",
+      "collapseAriaLabel": "Restrânge",
+      "deleteAriaLabel": "Șterge declanșatorul",
+      "editNameAriaLabel": "Editează numele",
+      "expandAriaLabel": "Extinde"
+    },
+    "color": {
+      "customHexTitle": "Culoare hex personalizată",
+      "invalidHex": "Hex invalid"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Alertează dacă >",
+      "emptyPatternHint": "Lasă gol pentru a potrivi tot conținutul. Folosește sintaxa regex JavaScript.",
+      "errorStatusDescription": "Se declanșează când execuția unei unelte raportează o eroare (is_error: true).",
+      "tokensUnit": "tokenuri",
+      "matchPatternPlaceholder": "ex., error|failed|exception"
+    },
+    "custom": {
+      "description": "Creează-ți propriile declanșatoare pentru a fi notificat pentru tipare specifice sau rezultate ale uneltelor.",
+      "empty": "Niciun declanșator personalizat configurat încă.",
+      "title": "Declanșatoare personalizate"
+    },
+    "errors": {
+      "invalidRegexPattern": "Tipar regex invalid"
+    },
+    "fields": {
+      "contentType": "Tip de conținut",
+      "matchField": "Câmp de potrivire",
+      "matchPattern": "Tipar de potrivire (Regex)",
+      "scopeToolName": "Domeniu / Nume unealtă",
+      "scopeToolNameOptional": "Domeniu / Nume unealtă (opțional)",
+      "threshold": "Prag",
+      "tokenType": "Tip de token",
+      "triggerNamePlaceholder": "ex., Alertă eșec build",
+      "triggerNameRequired": "Nume declanșator *"
+    },
+    "ignorePatterns": {
+      "hint": "Apasă Enter pentru a adăuga. Notificarea este omisă dacă vreun tipar se potrivește.",
+      "placeholder": "Adaugă regex de ignorare...",
+      "removeAriaLabel": "Elimină tiparul de ignorare",
+      "summary": "Avansat: Reguli de excludere",
+      "title": "Tipare de ignorare (omite dacă se potrivește)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Ieșire text",
+        "thinking": "Gândire",
+        "tool_result": "Rezultat unealtă",
+        "tool_use": "Utilizare unealtă"
+      },
+      "matchFields": {
+        "args": "Argumente",
+        "command": "Comandă",
+        "content": "Conținut",
+        "description": "Descriere",
+        "file_path": "Cale fișier",
+        "fullInput": "Intrare completă (JSON)",
+        "glob": "Filtru glob",
+        "new_string": "Șir nou",
+        "old_string": "Șir vechi",
+        "path": "Cale",
+        "pattern": "Tipar",
+        "prompt": "Prompt",
+        "query": "Interogare",
+        "skill": "Nume abilitate",
+        "subagent_type": "Tip subagent",
+        "text": "Conținut text",
+        "thinking": "Conținut gândire",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Tipar de conținut",
+        "error_status": "Eroare de execuție",
+        "token_threshold": "Utilizare mare de tokenuri"
+      },
+      "tokenTypes": {
+        "input": "Tokenuri de intrare",
+        "output": "Tokenuri de ieșire",
+        "total": "Total tokenuri"
+      },
+      "toolNames": {
+        "anyTool": "Orice unealtă"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Declanșator de test",
+      "detectedSuffix": "erori ar fi fost detectate",
+      "more": "...și încă {{count}}",
+      "more_few": "...și încă {{count}}",
+      "more_many": "...și încă {{count}}",
+      "more_one": "...și încă {{count}}",
+      "more_other": "...și încă {{count}}",
+      "testTrigger": "Testează declanșatorul",
+      "testing": "Se testează...",
+      "title": "Previzualizare",
+      "truncatedWarning": "Căutarea s-a oprit devreme (expirare sau limită de număr). Potrivirile reale pot fi mai multe.",
+      "viewSession": "Vezi sesiunea"
+    },
+    "repositoryScope": {
+      "empty": "Niciun depozit selectat - declanșatorul se aplică tuturor depozitelor",
+      "hint": "Când sunt selectate depozite, acest declanșator se activează doar pentru erori din acele depozite.",
+      "placeholder": "Selectează depozitul de adăugat...",
+      "summary": "Avansat: Domeniu depozite",
+      "title": "Limitează la depozite (se aplică doar depozitelor selectate)"
+    },
+    "sections": {
+      "configuration": "Configurație",
+      "dotColor": "Culoare punct",
+      "generalInfo": "Informații generale",
+      "triggerCondition": "Condiție de declanșare"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Adaugă profil",
+      "cancel": "Anulează",
+      "deleteProfile": "Șterge profilul",
+      "editProfile": "Editează profilul",
+      "save": "Salvează"
+    },
+    "authMethods": {
+      "agent": "Agent SSH",
+      "auto": "Automat (din configurația SSH)",
+      "password": "Parolă",
+      "privateKey": "Cheie privată"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Șterge",
+      "message": "Ești sigur că vrei să ștergi \"{{name}}\"? Această acțiune nu poate fi anulată.",
+      "title": "Șterge profilul"
+    },
+    "description": "Salvează profiluri de conexiune SSH pentru reconectare rapidă",
+    "empty": {
+      "description": "Adaugă un profil SSH pentru a te conecta rapid",
+      "title": "Niciun profil salvat"
+    },
+    "form": {
+      "authentication": "Autentificare",
+      "host": "Gazdă",
+      "name": "Nume",
+      "passwordPrompt": "Ți se va solicita parola la conectare.",
+      "port": "Port",
+      "privateKeyPath": "Calea cheii private",
+      "username": "Nume de utilizator",
+      "namePlaceholder": "Serverul meu",
+      "hostPlaceholder": "nume gazdă sau IP",
+      "usernamePlaceholder": "utilizator"
+    },
+    "loading": "Se încarcă profilurile...",
+    "title": "Profiluri spațiu de lucru"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Conectează",
+      "connecting": "Se conectează...",
+      "disconnect": "Deconectează",
+      "testConnection": "Testează conexiunea",
+      "testing": "Se testează..."
+    },
+    "currentMode": {
+      "description": "Sursa de date pentru fișierele de sesiune",
+      "label": "Mod curent",
+      "local": "Local ({{path}})"
+    },
+    "description": "Conectează-te la o mașină la distanță pentru a vedea sesiunile Claude Code care rulează acolo",
+    "form": {
+      "authentication": "Autentificare",
+      "host": "Gazdă",
+      "password": "Parolă",
+      "port": "Port",
+      "privateKeyPath": "Calea cheii private",
+      "username": "Nume de utilizator",
+      "hostPlaceholder": "nume gazdă sau alias de configurație SSH",
+      "usernamePlaceholder": "utilizator"
+    },
+    "savedProfiles": {
+      "title": "Profiluri salvate"
+    },
+    "ssh": {
+      "title": "Conexiune SSH"
+    },
+    "status": {
+      "connectedTo": "Conectat la {{host}}",
+      "remoteSessions": "Se vizualizează sesiuni la distanță prin SSH"
+    },
+    "test": {
+      "failed": "Conexiunea a eșuat: {{error}}",
+      "success": "Conexiune reușită",
+      "unknownError": "Eroare necunoscută"
+    },
+    "title": "Conexiune la distanță"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Anulează",
+      "cancelLogin": "Anulează autentificarea",
+      "connectChatGpt": "Conectează ChatGPT",
+      "delete": "Șterge",
+      "disable": "Dezactivează",
+      "disconnectAccount": "Deconectează contul",
+      "generateLink": "Generează link",
+      "openLogin": "Deschide autentificarea",
+      "reconnectAnthropic": "Reconectează Anthropic",
+      "refresh": "Reîmprospătează",
+      "replaceKey": "Înlocuiește cheia",
+      "saveEndpoint": "Salvează endpoint-ul",
+      "saveKey": "Salvează cheia",
+      "saving": "Se salvează...",
+      "setApiKey": "Setează cheia API",
+      "updateKey": "Actualizează cheia",
+      "useCode": "Folosește codul"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Se încarcă credențialele stocate...",
+      "projectScope": "Proiect",
+      "scope": "Domeniu",
+      "storedIn": "Stocat în {{backend}}",
+      "userScope": "Utilizator",
+      "storedInApp": "Stocat în aplicație",
+      "providers": {
+        "anthropic": {
+          "name": "Cheie API Anthropic",
+          "title": "Cheie API",
+          "description": "Folosește o cheie API Anthropic directă pentru acces facturat prin API. Sesiunea abonamentului tău Anthropic rămâne disponibilă când revii la ea.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Cheie API Codex",
+          "title": "Cheie API",
+          "description": "Folosește o cheie API OpenAI ca o cale secundară de autentificare Codex. Dacă schimbi Codex în modul cheie API, aplicația va reflecta OPENAI_API_KEY în CODEX_API_KEY pentru lansările native.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Cheie API Gemini",
+          "title": "Acces API",
+          "description": "Folosește `GEMINI_API_KEY` pentru backend-ul API Gemini. CLI SDK și ADC nu o necesită.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "Server aplicație: {{state}}",
+        "connected": "Conectat",
+        "description": "Gestionează sesiunea locală a contului server-aplicație Codex care alimentează lansările native susținute de abonament.",
+        "loginInProgress": "Autentificare în curs",
+        "plan": "Plan: {{plan}}",
+        "reconnectRequired": "Reconectare necesară",
+        "title": "Cont ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Modul automat va continua să folosească cheia API detectată până când ChatGPT este conectat.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Cheia API detectată este folosită doar după ce schimbi Codex în modul cheie API.",
+          "localArtifactsNoSession": "Codex CLI raportează în prezent niciun cont ChatGPT activ. Există date locale despre contul Codex, dar nu este selectată nicio sesiune gestionată activă. Limitele de utilizare apar aici doar după ce Codex CLI vede una.",
+          "noActiveAccount": "Codex CLI raportează în prezent niciun cont ChatGPT activ. Limitele de utilizare apar aici doar după ce Codex CLI vede unul.",
+          "reconnectBeforeUsage": "Codex are un cont ChatGPT selectat local, dar sesiunea curentă trebuie reconectată înainte ca limitele de utilizare să se poată încărca aici.",
+          "usageLimitsAfterReport": "Limitele de utilizare apar aici după ce Codex le raportează pentru contul ChatGPT conectat."
+        }
+      },
+      "install": {
+        "checking": "Se verifică",
+        "downloading": "Se descarcă",
+        "installCli": "Instalează Codex CLI",
+        "installing": "Se instalează",
+        "retryInstall": "Reîncearcă instalarea",
+        "title": "Instalează Codex CLI în datele aplicației"
+      },
+      "rateLimits": {
+        "credits": "Credite",
+        "creditsDescription": "Creditele sunt afișate separat de utilizarea abonamentului pe bază de fereastră și pot fi indisponibile pentru sesiunile ChatGPT susținute de plan.",
+        "noSecondaryWindow": "Codex nu a returnat o fereastră secundară pentru acest instantaneu de cont.",
+        "notReported": "Neraportat",
+        "primaryReset": "Resetare primară",
+        "primaryUsed": "Primar utilizat",
+        "primaryWindow": "Fereastră primară",
+        "remainingLeft": "{{value}} rămas",
+        "remainingUnknown": "Rămas necunoscut",
+        "secondaryReset": "Resetare secundară",
+        "secondaryUsed": "Secundar utilizat",
+        "secondaryWindow": "Fereastră secundară",
+        "usedQuotaNote": "Aceste procente arată cota utilizată, nu cota rămasă.",
+        "weeklyReset": "Resetare săptămânală",
+        "weeklyUsed": "Utilizat săptămânal",
+        "weeklyUsedOneWeek": "Utilizat săptămânal (1săpt)",
+        "weeklyWindow": "Fereastră săptămânală",
+        "secondaryFallback": "secundar",
+        "secondaryWindowNote": " Limitele săptămânale sunt afișate separat în fereastra {{window}}.",
+        "usageExplanationGeneric": "Arată cota utilizată, nu cota rămasă.",
+        "usageExplanationWindowOnly": "Arată cota utilizată în fereastra {{window}} curentă, nu cota rămasă.",
+        "usageExplanationWithRemaining": "{{used}} utilizat - aproximativ {{remaining}} rămas în fereastra {{window}} curentă."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Token de autentificare",
+      "authTokenMissing": "Tokenul de autentificare nu este configurat.",
+      "baseUrl": "URL de bază",
+      "description": "Folosește un endpoint runtime local compatibil cu Anthropic.",
+      "keepSavedToken": "Lasă gol pentru a păstra tokenul salvat",
+      "title": "Endpoint local / compatibil",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "URL-ul de bază este necesar",
+        "firstPartyAnthropic": "Folosește Automat, Abonament sau cheie API pentru Anthropic de la prima parte",
+        "httpRequired": "URL-ul de bază trebuie să folosească http:// sau https://",
+        "invalidUrl": "URL invalid",
+        "noCredentials": "URL-ul de bază nu trebuie să includă credențiale"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint dezactivat. Tokenul salvat a fost păstrat.",
+        "endpointSaved": "Endpoint salvat",
+        "endpointSavedTokenMissing": "Endpoint salvat. Tokenul de autentificare nu este configurat."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Metodă de autentificare",
+      "descriptions": {
+        "anthropic": "Alege cum se autentifică sesiunile Anthropic lansate de aplicație.",
+        "codex": "Alege dacă Codex ar trebui să prefere abonamentul tău ChatGPT sau o cheie API când se lansează runtime-ul nativ.",
+        "gemini": "Configurează accesul API opțional. CLI SDK și ADC sunt în continuare descoperite automat.",
+        "opencode": "Autentificarea OpenCode și inventarul de furnizori sunt gestionate de runtime-ul OpenCode."
+      },
+      "method": "Metodă de conectare",
+      "mode": "Mod: {{mode}}",
+      "selected": "Selectat",
+      "switching": "Se comută...",
+      "title": "Conexiune"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "Cheie API"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Folosește ANTHROPIC_API_KEY și facturarea API Anthropic.",
+        "autoDescription": "Folosește valorile implicite ale runtime-ului Anthropic și cea mai bună credențială locală disponibilă.",
+        "hint": "Modul automat menține Anthropic pe rezolvarea sa implicită a credențialelor locale.",
+        "subscriptionDescription": "Folosește sesiunea ta locală de autentificare Anthropic și accesul prin abonament.",
+        "subscriptionTitle": "Abonament Anthropic"
+      },
+      "auto": {
+        "title": "Automat"
+      },
+      "codex": {
+        "apiKeyDescription": "Folosește facturarea OPENAI_API_KEY și CODEX_API_KEY pentru lansările native Codex.",
+        "autoDescription": "Preferă contul și abonamentul tău ChatGPT. Folosește modul cheie API doar dacă este necesar.",
+        "chatgptDescription": "Folosește contul ChatGPT conectat și abonamentul Codex.",
+        "chatgptTitle": "Cont ChatGPT",
+        "hint": "Codex rulează întotdeauna prin runtime-ul nativ. Modul automat preferă contul tău ChatGPT înainte de a reveni la credențialele cu cheie API."
+      }
+    },
+    "description": "Gestionează cum se conectează fiecare furnizor și, când este compatibil, ce backend ar trebui să folosească runtime-ul multimodel.",
+    "fastMode": {
+      "defaultOff": "Dezactivat implicit",
+      "description": "Aplică modul Claude Code Fast în mod implicit pentru noile lansări de echipă Anthropic când modelul și runtime-ul rezolvate permit acest lucru.",
+      "disabledHint": "Noile lansări Anthropic rămân la viteză normală dacă o echipă nu activează explicit modul Fast.",
+      "enabledHint": "Noile lansări Anthropic vor solicita modul Fast în mod implicit când modelul rezolvat îl acceptă.",
+      "notExposed": "Acest runtime Anthropic nu expune modul Fast.",
+      "preferFast": "Preferă Fast",
+      "title": "Mod Fast implicit",
+      "unavailableForRuntime": "Modul Fast este în prezent indisponibil pentru acest runtime Anthropic."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Modul cheie API este selectat, dar nicio credențială API Anthropic nu este disponibilă încă.",
+      "anthropicStoredKeyAvailable": "O cheie API salvată este disponibilă, dar sesiunile Anthropic lansate de aplicație o folosesc doar după ce comuți în modul cheie API.",
+      "anthropicSubscriptionMissing": "Modul abonament Anthropic este selectat. Autentifică-te cu Anthropic pentru a folosi acest furnizor.",
+      "authTokenMissing": "Tokenul de autentificare nu este configurat. Multe endpoint-uri locale compatibile cu Anthropic necesită un token nevid.",
+      "chatgptLoginPending": "Se așteaptă finalizarea autentificării contului ChatGPT...",
+      "chatgptLoginStarting": "Se pornește autentificarea ChatGPT...",
+      "codexApiKeyMissing": "Modul cheie API este selectat, dar nicio credențială OPENAI_API_KEY sau CODEX_API_KEY nu este disponibilă încă.",
+      "codexLocalArtifactsNoSession": "Codex CLI nu are în prezent niciun cont ChatGPT activ. Există date locale despre contul Codex, dar nu este selectată nicio sesiune gestionată activă.",
+      "codexNeedsReconnect": "Codex are un cont ChatGPT selectat local, dar sesiunea curentă trebuie reconectată.",
+      "codexNoChatgptAccount": "Codex CLI nu are în prezent niciun cont ChatGPT activ. Conectează ChatGPT pentru a-ți folosi abonamentul.",
+      "codexNoCredential": "Niciun cont ChatGPT sau cheie API nu este disponibil încă.",
+      "geminiApiUnavailable": "API-ul Gemini este în prezent indisponibil. Configurează `GEMINI_API_KEY` aici sau folosește credențiale Google ADC valide.",
+      "withApiKeyFallback": "{{message}} Comută în modul cheie API pentru a folosi cheia API detectată."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Forțează sesiunile Anthropic lansate de aplicație să folosească o credențială cu cheie API.",
+        "auto": "Folosește comportamentul implicit al runtime-ului. Cheile API salvate în această aplicație sunt folosite doar după ce comuți în modul cheie API.",
+        "oauth": "Forțează sesiunile Anthropic lansate de aplicație să folosească sesiunea locală de abonament Anthropic."
+      },
+      "codex": {
+        "apiKey": "Forțează lansările native Codex să folosească facturarea OPENAI_API_KEY / CODEX_API_KEY.",
+        "auto": "Preferă contul tău ChatGPT când este disponibil. Revino la modul cheie API doar când este necesar.",
+        "chatgpt": "Forțează lansările native Codex să folosească contul ChatGPT conectat și abonamentul."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Se aplică modificările conexiunii...",
+      "refreshingProviderStatus": "Se reîmprospătează starea furnizorului...",
+      "savingCompatibleEndpoint": "Se salvează endpoint-ul compatibil...",
+      "switchingAnthropicSubscription": "Se comută la abonamentul Anthropic...",
+      "switchingApiKey": "Se comută la cheia API...",
+      "switchingApiKeyMode": "Se comută în modul cheie API...",
+      "switchingAuto": "Se comută la Automat...",
+      "switchingChatgpt": "Se comută în modul cont ChatGPT..."
+    },
+    "provider": "Furnizor",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic nu are în prezent un selector separat de backend runtime.",
+        "codex": "Codex rulează acum doar prin calea runtime nativă.",
+        "gemini": "Alege ce backend runtime Gemini ar trebui să folosească multimodel.",
+        "opencode": "OpenCode folosește propria gazdă runtime gestionată. Desktopul expune în prezent doar starea."
+      },
+      "title": "Runtime",
+      "updating": "Se actualizează runtime-ul..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "configurat",
+      "enabled": "Activat",
+      "notConfigured": "Neconfigurat",
+      "notSet": "nesetat",
+      "off": "Dezactivat",
+      "unknown": "Necunoscut"
+    },
+    "title": "Setări furnizor",
+    "usage": {
+      "apiKey": "Se folosește cheia API",
+      "apiKeyRequired": "Cheie API necesară",
+      "compatibleEndpoint": "Se folosește endpoint-ul compatibil",
+      "notConnected": "Neconectat",
+      "usingMethod": "Se folosește {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Cheie API ștearsă, dar reîmprospătarea stării furnizorului a eșuat.",
+      "apiKeySavedRefreshFailed": "Cheie API salvată, dar reîmprospătarea stării furnizorului a eșuat.",
+      "connectionUpdatedRefreshFailed": "Conexiune actualizată, dar reîmprospătarea stării furnizorului a eșuat.",
+      "deleteApiKey": "Ștergerea cheii API a eșuat",
+      "disableEndpoint": "Dezactivarea endpoint-ului a eșuat",
+      "endpointDisabledRefreshFailed": "Endpoint dezactivat, dar reîmprospătarea stării furnizorului a eșuat.",
+      "endpointSavedRefreshFailed": "Endpoint salvat, dar reîmprospătarea stării furnizorului a eșuat.",
+      "refreshCodexAccount": "Reîmprospătarea contului Codex a eșuat",
+      "saveApiKey": "Salvarea cheii API a eșuat",
+      "saveEndpoint": "Salvarea endpoint-ului a eșuat",
+      "updateAnthropicFastMode": "Actualizarea modului Fast Anthropic a eșuat",
+      "updateConnection": "Actualizarea conexiunii a eșuat",
+      "updateRuntimeBackend": "Actualizarea backend-ului runtime a eșuat",
+      "apiKeyRequired": "Cheia API este necesară"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Automat",
+        "oauth": "Abonament / OAuth",
+        "chatgpt": "Cont ChatGPT",
+        "apiKey": "Cheie API",
+        "anthropicSubscription": "Abonament Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "Cheie API",
+        "apiKeyHelper": "Ajutor cheie API",
+        "oauth": "OAuth",
+        "claudeSubscription": "Abonament Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Cont Google",
+        "serviceAccount": "cont de serviciu"
+      },
+      "runtime": {
+        "codexNative": "Codex nativ",
+        "currentRuntime": "Runtime curent",
+        "selectedRuntime": "Runtime selectat",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Se verifică...",
+        "modelsAvailable": "Modele disponibile",
+        "checked": "Verificat",
+        "providerActivity": "Activitate furnizor",
+        "notConnected": "Neconectat",
+        "startingChatGptLogin": "Se pornește autentificarea ChatGPT...",
+        "waitingForChatGptLogin": "Se așteaptă autentificarea contului ChatGPT...",
+        "chatGptVerificationDegraded": "Cont ChatGPT detectat - verificarea contului este în prezent degradată.",
+        "chatGptAccountReady": "Cont ChatGPT pregătit",
+        "apiKeyReady": "Cheie API pregătită",
+        "codexLocalAccountNeedsReconnect": "Codex are un cont ChatGPT selectat local, dar sesiunea curentă trebuie reconectată.",
+        "codexNoActiveManagedSession": "Codex CLI raportează nicio autentificare ChatGPT activă. Există date locale despre contul Codex, dar nu este selectată nicio sesiune gestionată activă.",
+        "codexNoActiveChatGptLogin": "Codex CLI raportează nicio autentificare ChatGPT activă",
+        "connectChatGptForSubscription": "Conectează un cont ChatGPT pentru a-ți folosi abonamentul Codex.",
+        "codexNativeReady": "Codex nativ pregătit",
+        "codexNativeUnavailable": "Codex nativ indisponibil",
+        "unavailableInCurrentRuntime": "Indisponibil în runtime-ul curent",
+        "connectedViaApiKey": "Conectat prin cheie API",
+        "apiKeyConfiguredNotVerified": "Cheie API configurată, dar neverificată încă",
+        "apiKeyModeMissingCredential": "Mod cheie API selectat, dar nicio cheie API nu este configurată",
+        "connectedVia": "Conectat prin {{method}}",
+        "unableToVerify": "Imposibil de verificat"
+      },
+      "mode": {
+        "selectedAuth": "Autentificare selectată: {{authMode}}",
+        "preferredAuth": "Autentificare preferată: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "Cheia API este configurată",
+        "savedApiKeyAvailable": "Cheie API salvată disponibilă în Gestionează",
+        "apiKeyAlsoConfigured": "Cheie API configurată și în Gestionează",
+        "apiKeyConfiguredInManage": "Cheia API este configurată în Gestionează",
+        "apiKeyFallbackInManage": "Cheie API disponibilă și în Gestionează ca rezervă",
+        "availableAsFallback": "{{summary}} - disponibilă ca rezervă",
+        "savedApiKeyAvailableIfSwitch": "Cheie API salvată disponibilă în Gestionează dacă comuți în modul cheie API",
+        "availableIfSwitch": "{{summary}} - disponibilă dacă comuți în modul cheie API",
+        "autoWillUseUntilChatGpt": "{{summary}} - Modul automat o va folosi până când ChatGPT este conectat"
+      },
+      "actions": {
+        "connect": "Conectează",
+        "connectAnthropic": "Conectează Anthropic",
+        "connectChatGpt": "Conectează ChatGPT",
+        "disconnect": "Deconectează",
+        "openLogin": "Deschide autentificarea"
+      },
+      "disconnect": {
+        "anthropicTitle": "Deconectezi abonamentul Anthropic?",
+        "anthropic": "Aceasta elimină sesiunea locală de abonament Anthropic din runtime-ul Claude CLI.",
+        "anthropicWithApiKey": "Aceasta elimină sesiunea locală de abonament Anthropic din runtime-ul Claude CLI. Cheile API salvate în Gestionează rămân disponibile.",
+        "geminiTitle": "Deconectezi Gemini CLI?",
+        "gemini": "Aceasta șterge metadatele sesiunii locale Gemini CLI. Credențialele ADC externe și cheile API salvate nu sunt eliminate."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Verifică actualizările",
+      "checking": "Se verifică...",
+      "extensions": "Extensii",
+      "installRuntime": "Instalează {{runtime}}",
+      "manage": "Gestionează",
+      "recheck": "Reverifică",
+      "reinstallRuntime": "Reinstalează {{runtime}}",
+      "retry": "Reîncearcă",
+      "update": "Actualizează"
+    },
+    "installer": {
+      "checkingLatest": "Se verifică ultima versiune...",
+      "downloading": "Se descarcă...",
+      "failed": "Instalarea a eșuat",
+      "installed": "Instalat v{{version}}",
+      "installing": "Se instalează...",
+      "latest": "ultima",
+      "verifying": "Se verifică suma de control..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Se verifică furnizorii AI...",
+      "claudeCli": "Se verifică Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Se încarcă modelele...",
+      "modelsUnavailable": "Modele indisponibile pentru această versiune de runtime",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Autentificarea a eșuat",
+      "authUpdated": "Autentificare actualizată",
+      "loggedOut": "Furnizor deconectat",
+      "login": "Autentificare",
+      "logout": "Deconectare",
+      "logoutFailed": "Deconectarea a eșuat"
+    },
+    "status": {
+      "configuredNotFound": "{{runtime}} configurat nu a fost găsit.",
+      "foundButFailed": "{{runtime}} a fost găsit, dar pornirea a eșuat",
+      "healthCheckFailed": "{{runtime}} configurat nu a trecut verificarea de stare la pornire.",
+      "notInstalled": "{{runtime}} nu este instalat"
+    },
+    "title": "Runtime CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

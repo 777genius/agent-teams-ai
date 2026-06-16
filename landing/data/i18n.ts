@@ -12,7 +12,22 @@ export type LocaleCode =
   | 'de'
   | 'bn'
   | 'ur'
-  | 'id';
+  | 'id'
+  | 'it'
+  | 'tr'
+  | 'vi'
+  | 'pl'
+  | 'fa'
+  | 'th'
+  | 'uk'
+  | 'nl'
+  | 'ta'
+  | 'te'
+  | 'mr'
+  | 'fil'
+  | 'ms'
+  | 'sw'
+  | 'ro';
 
 export const supportedLocales = [
   { code: 'en', iso: 'en-US', name: 'English', flag: '\u{1F1FA}\u{1F1F8}', file: 'en.json' },
@@ -43,6 +58,28 @@ export const supportedLocales = [
   { code: 'id', iso: 'id-ID', name: 'Indonesia', flag: '\u{1F1EE}\u{1F1E9}', file: 'id.json' },
   { code: 'de', iso: 'de-DE', name: 'Deutsch', flag: '\u{1F1E9}\u{1F1EA}', file: 'de.json' },
   { code: 'ru', iso: 'ru-RU', name: 'Русский', flag: '\u{1F1F7}\u{1F1FA}', file: 'ru.json' },
+  { code: 'it', iso: 'it-IT', name: 'Italiano', flag: '\u{1F1EE}\u{1F1F9}', file: 'it.json' },
+  { code: 'tr', iso: 'tr-TR', name: 'Türkçe', flag: '\u{1F1F9}\u{1F1F7}', file: 'tr.json' },
+  { code: 'vi', iso: 'vi-VN', name: 'Tiếng Việt', flag: '\u{1F1FB}\u{1F1F3}', file: 'vi.json' },
+  { code: 'pl', iso: 'pl-PL', name: 'Polski', flag: '\u{1F1F5}\u{1F1F1}', file: 'pl.json' },
+  {
+    code: 'fa',
+    iso: 'fa-IR',
+    name: 'فارسی',
+    flag: '\u{1F1EE}\u{1F1F7}',
+    file: 'fa.json',
+    dir: 'rtl',
+  },
+  { code: 'th', iso: 'th-TH', name: 'ไทย', flag: '\u{1F1F9}\u{1F1ED}', file: 'th.json' },
+  { code: 'uk', iso: 'uk-UA', name: 'Українська', flag: '\u{1F1FA}\u{1F1E6}', file: 'uk.json' },
+  { code: 'nl', iso: 'nl-NL', name: 'Nederlands', flag: '\u{1F1F3}\u{1F1F1}', file: 'nl.json' },
+  { code: 'ta', iso: 'ta-IN', name: 'தமிழ்', flag: '\u{1F1EE}\u{1F1F3}', file: 'ta.json' },
+  { code: 'te', iso: 'te-IN', name: 'తెలుగు', flag: '\u{1F1EE}\u{1F1F3}', file: 'te.json' },
+  { code: 'mr', iso: 'mr-IN', name: 'मराठी', flag: '\u{1F1EE}\u{1F1F3}', file: 'mr.json' },
+  { code: 'fil', iso: 'fil-PH', name: 'Filipino', flag: '\u{1F1F5}\u{1F1ED}', file: 'fil.json' },
+  { code: 'ms', iso: 'ms-MY', name: 'Bahasa Melayu', flag: '\u{1F1F2}\u{1F1FE}', file: 'ms.json' },
+  { code: 'sw', iso: 'sw-KE', name: 'Kiswahili', flag: '\u{1F1F0}\u{1F1EA}', file: 'sw.json' },
+  { code: 'ro', iso: 'ro-RO', name: 'Română', flag: '\u{1F1F7}\u{1F1F4}', file: 'ro.json' },
 ] as const;
 
 export const defaultLocale: LocaleCode = 'en';

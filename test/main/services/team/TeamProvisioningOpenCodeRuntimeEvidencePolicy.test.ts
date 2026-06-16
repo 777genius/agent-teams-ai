@@ -395,6 +395,35 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     ).toBe(false);
   });
 
+  it('accepts same-run bootstrap confirmation before delayed app acceptance past skew', () => {
+    const current = {
+      firstSpawnAcceptedAt: '2026-05-24T09:25:52.497Z',
+      lastEvaluatedAt: '2026-05-24T09:31:05.525Z',
+      runtimeRunId: 'run-process-table-unavailable-skew',
+    };
+    const bootstrapMember = {
+      firstSpawnAcceptedAt: '2026-05-24T09:25:33.388Z',
+      lastHeartbeatAt: '2026-05-24T09:25:42.494Z',
+      lastRuntimeAliveAt: '2026-05-24T09:25:42.494Z',
+      lastEvaluatedAt: '2026-05-24T09:25:42.494Z',
+      runtimeRunId: 'run-process-table-unavailable-skew',
+    };
+
+    expect(
+      isBootstrapMemberEvidenceCurrentForMember(current, bootstrapMember, 'confirmation')
+    ).toBe(true);
+    expect(
+      isBootstrapMemberEvidenceCurrentForMember(
+        current,
+        { ...bootstrapMember, runtimeRunId: 'previous-run' },
+        'confirmation'
+      )
+    ).toBe(false);
+    expect(isBootstrapMemberEvidenceCurrentForMember(current, bootstrapMember, 'acceptance')).toBe(
+      false
+    );
+  });
+
   it('classifies recoverable persisted OpenCode runtime candidates', () => {
     expect(
       isRecoverablePersistedOpenCodeRuntimeCandidate(makePersisted({ runtimeSessionId: 'rt-1' }))

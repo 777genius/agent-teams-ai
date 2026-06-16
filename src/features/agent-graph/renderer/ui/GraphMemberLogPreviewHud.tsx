@@ -132,7 +132,14 @@ function hasOpenCodeEmptyStateWarning(preview: MemberLogPreviewMember | undefine
 function resolveEmptyText(
   preview: MemberLogPreviewMember | undefined,
   loading: boolean,
-  error: string | null
+  error: string | null,
+  labels: {
+    unsupportedProvider: string;
+    openCodeLogsDelayed: string;
+    logsUnavailable: string;
+    loadingLogs: string;
+    noRecentLogs: string;
+  }
 ): string {
   const hasCodexUnsupportedWarning = preview?.warnings.some(
     (warning) => warning.code === 'codex_member_wide_not_supported'
@@ -142,34 +149,47 @@ function resolveEmptyText(
     (preview?.coverage.length ?? 0) > 0 &&
     preview?.coverage.every((coverage) => coverage.provider === 'codex_native_trace');
   if (hasOnlyCodexUnsupportedCoverage) {
-    return 'Unsupported provider';
+    return labels.unsupportedProvider;
   }
   if ((preview?.items.length ?? 0) === 0 && hasOpenCodeDeliveryDelayedWarning(preview)) {
-    return 'OpenCode logs delayed';
+    return labels.openCodeLogsDelayed;
   }
   if ((preview?.items.length ?? 0) === 0 && hasOpenCodeRuntimeWarning(preview)) {
-    return 'Logs unavailable';
+    return labels.logsUnavailable;
   }
-  if (loading && !preview) return 'Loading logs';
-  if (error && !preview) return 'Logs unavailable';
-  return 'No recent logs';
+  if (loading && !preview) return labels.loadingLogs;
+  if (error && !preview) return labels.logsUnavailable;
+  return labels.noRecentLogs;
 }
 
-function fallbackDisplayTitle(item: MemberLogPreviewItem): string {
+function fallbackDisplayTitle(
+  item: MemberLogPreviewItem,
+  labels: {
+    toolError: string;
+    toolResult: string;
+    toolUse: string;
+    thinking: string;
+    error: string;
+    logEvent: string;
+  }
+): string {
   if (item.kind === 'tool_result') {
-    return item.tone === 'error' ? 'Tool error' : 'Tool result';
+    return item.tone === 'error' ? labels.toolError : labels.toolResult;
   }
   if (item.kind === 'tool_use') {
-    return item.toolName?.trim() || 'Tool use';
+    return item.toolName?.trim() || labels.toolUse;
   }
   if (item.kind === 'thinking') {
-    return 'Thinking';
+    return labels.thinking;
   }
-  return item.tone === 'error' ? 'Error' : 'Log event';
+  return item.tone === 'error' ? labels.error : labels.logEvent;
 }
 
-function compactDisplayTitle(item: MemberLogPreviewItem): string {
-  const title = item.title.trim() || fallbackDisplayTitle(item);
+function compactDisplayTitle(
+  item: MemberLogPreviewItem,
+  labels: Parameters<typeof fallbackDisplayTitle>[1]
+): string {
+  const title = item.title.trim() || fallbackDisplayTitle(item, labels);
   if (title.toLowerCase() === 'tool result') {
     return title;
   }
@@ -205,7 +225,13 @@ function trimRepeatedTitlePrefix(preview: string, title: string): string {
 function compactPreviewText(
   item: MemberLogPreviewItem,
   displayTitle: string,
-  rawDisplayTitle = displayTitle
+  rawDisplayTitle = displayTitle,
+  labels: {
+    noErrorOutput: string;
+    noOutput: string;
+    noInput: string;
+    logEvent: string;
+  }
 ): string {
   const preview = item.preview?.trim();
   if (preview) {
@@ -217,12 +243,12 @@ function compactPreviewText(
     return compact || preview;
   }
   if (item.kind === 'tool_result') {
-    return item.tone === 'error' ? 'No error output' : 'No output';
+    return item.tone === 'error' ? labels.noErrorOutput : labels.noOutput;
   }
   if (item.kind === 'tool_use') {
-    return 'No input';
+    return labels.noInput;
   }
-  return item.sourceLabel || 'Log event';
+  return item.sourceLabel || labels.logEvent;
 }
 
 function truncateCompactRowPreview(
@@ -281,6 +307,25 @@ export const GraphMemberLogPreviewHud = ({
   onOpenMemberProfile,
 }: GraphMemberLogPreviewHudProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
+  const logPreviewLabels = useMemo(
+    () => ({
+      unsupportedProvider: t('agentGraph.logPreview.unsupportedProvider'),
+      openCodeLogsDelayed: t('agentGraph.logPreview.openCodeLogsDelayed'),
+      logsUnavailable: t('agentGraph.logPreview.logsUnavailable'),
+      loadingLogs: t('agentGraph.logPreview.loading'),
+      noRecentLogs: t('agentGraph.logPreview.noRecentLogs'),
+      toolError: t('agentGraph.logPreview.toolError'),
+      toolResult: t('agentGraph.logPreview.toolResult'),
+      toolUse: t('agentGraph.logPreview.toolUse'),
+      thinking: t('agentGraph.logPreview.thinking'),
+      error: t('agentGraph.logPreview.error'),
+      logEvent: t('agentGraph.logPreview.logEvent'),
+      noErrorOutput: t('agentGraph.logPreview.noErrorOutput'),
+      noOutput: t('agentGraph.logPreview.noOutput'),
+      noInput: t('agentGraph.logPreview.noInput'),
+    }),
+    [t]
+  );
   const worldLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRefs = useRef(new Map<string, HTMLDivElement | null>());
   const visibleKeyRef = useRef('');
@@ -514,9 +559,14 @@ export const GraphMemberLogPreviewHud = ({
   const renderItem = useCallback(
     (memberName: string, item: MemberLogPreviewItem) => {
       const relativeTime = formatRelativeTime(item.timestamp);
-      const rawDisplayTitle = compactDisplayTitle(item);
+      const rawDisplayTitle = compactDisplayTitle(item, logPreviewLabels);
       const displayTitle = truncateCompactTitle(rawDisplayTitle);
-      const fullPreviewText = compactPreviewText(item, displayTitle, rawDisplayTitle);
+      const fullPreviewText = compactPreviewText(
+        item,
+        displayTitle,
+        rawDisplayTitle,
+        logPreviewLabels
+      );
       const previewText = truncateCompactRowPreview(fullPreviewText, displayTitle, relativeTime);
       const titleText = compactRowLabel([rawDisplayTitle, relativeTime, fullPreviewText]);
       const isHighlighted = highlightedItemIds.has(buildRenderedItemKey(memberName, item.id));
@@ -565,7 +615,7 @@ export const GraphMemberLogPreviewHud = ({
         </button>
       );
     },
-    [highlightedItemIds, openLogs]
+    [highlightedItemIds, logPreviewLabels, openLogs]
   );
 
   if (!enabled || ownerNodes.length === 0) {
@@ -631,7 +681,7 @@ export const GraphMemberLogPreviewHud = ({
                     className={`${INTERACTIVE_LOG_CONTROL_CLASS} flex h-[72px] min-h-[72px] items-center rounded-md border border-dashed border-white/10 bg-[rgba(8,14,28,0.28)] px-3 text-left text-[11px] text-slate-400/60`}
                     onClick={() => openLogs(memberName)}
                   >
-                    {resolveEmptyText(preview, loading, error)}
+                    {resolveEmptyText(preview, loading, error, logPreviewLabels)}
                   </button>
                 )}
                 {preview && preview.overflowCount > 0 ? (

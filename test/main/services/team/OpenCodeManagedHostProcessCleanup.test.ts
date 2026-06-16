@@ -1,5 +1,3 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import {
   cleanupManagedOpenCodeServeProcesses,
   getOpenCodeServeLoopbackBaseUrl,
@@ -7,6 +5,7 @@ import {
   isManagedOpenCodeServeProcessDetails,
   isOpenCodeServeCommand,
 } from '@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
+import { describe, expect, it, vi } from 'vitest';
 
 const MANAGED_DETAILS = [
   '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 54171',
@@ -26,6 +25,16 @@ const MANAGED_DETAILS_WITH_WORKSPACE_MCP = [
   'CLAUDE_MULTIMODEL_DATA_HOME=/tmp/agent-teams-runtime',
   'OPENCODE_CONFIG_CONTENT={}',
   'AGENT_TEAMS_MCP_CLAUDE_DIR=/tmp/claude',
+].join(' ');
+const MANAGED_DETAILS_WITH_INLINE_OPENCODE_CONFIG_MCP = [
+  '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 54171',
+  'CLAUDE_MULTIMODEL_DATA_HOME=/tmp/agent-teams-runtime',
+  'OPENCODE_CONFIG_CONTENT={"mcp":{"agent-teams":{"type":"local","command":["node","mcp-server/dist/index.js"],"environment":{"AGENT_TEAMS_MCP_CLAUDE_DIR":"/tmp/claude"},"enabled":true}}}',
+].join(' ');
+const MANAGED_DETAILS_WITH_INLINE_OPENCODE_AGENT_PERMISSIONS = [
+  '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 54171',
+  'CLAUDE_MULTIMODEL_DATA_HOME=/tmp/agent-teams-runtime',
+  'OPENCODE_CONFIG_CONTENT={"agent":{"teammate":{"description":"Managed teammate agent for claude-multimodel runtime orchestration.","permission":{"agent-teams_*":"allow","mcp__agent-teams__*":"allow"}}}}',
 ].join(' ');
 
 function resolved<T>(value: T): Promise<T> {
@@ -63,6 +72,12 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS)).toBe(true);
     expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_REMOTE_MCP)).toBe(true);
     expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_WORKSPACE_MCP)).toBe(true);
+    expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_INLINE_OPENCODE_CONFIG_MCP)).toBe(
+      true
+    );
+    expect(
+      isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_INLINE_OPENCODE_AGENT_PERMISSIONS)
+    ).toBe(true);
     expect(
       isManagedOpenCodeServeProcessDetails(
         'opencode serve CLAUDE_MULTIMODEL_DATA_HOME=/tmp OPENCODE_CONFIG_CONTENT={}'
@@ -76,6 +91,16 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(
       isManagedOpenCodeServeProcessDetails(
         'opencode serve NOT_CLAUDE_MULTIMODEL_DATA_HOME=/tmp OPENCODE_CONFIG_CONTENT={} AGENT_TEAMS_MCP_CLAUDE_DIR=/tmp/claude'
+      )
+    ).toBe(false);
+    expect(
+      isManagedOpenCodeServeProcessDetails(
+        'opencode serve OPENCODE_CONFIG_CONTENT={"mcp":{"agent-teams":{"enabled":true}}}'
+      )
+    ).toBe(false);
+    expect(
+      isManagedOpenCodeServeProcessDetails(
+        'opencode serve OPENCODE_CONFIG_CONTENT={"agent":{"teammate":{"permission":{"agent-teams_*":"allow"}}}}'
       )
     ).toBe(false);
   });

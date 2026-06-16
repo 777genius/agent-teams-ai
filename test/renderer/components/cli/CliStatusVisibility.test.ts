@@ -129,6 +129,7 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeBackendSelector', async () 
     typeof import('@renderer/components/runtime/ProviderRuntimeBackendSelector')
   >('@renderer/components/runtime/ProviderRuntimeBackendSelector');
   return {
+    buildProviderRuntimeBackendSummaryText: actual.buildProviderRuntimeBackendSummaryText,
     getProviderRuntimeBackendSummary: actual.getProviderRuntimeBackendSummary,
   };
 });
@@ -1994,8 +1995,8 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).not.toContain('Authenticated');
     expect(host.textContent).not.toContain('Providers:');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toContain(
-      '245, 158, 11'
+    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
+      /(?:245,\s*158,\s*11|#f59e0b)/i
     );
 
     await act(async () => {
@@ -2072,8 +2073,8 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Providers: 0/2 connected');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toContain(
-      '245, 158, 11'
+    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
+      /(?:245,\s*158,\s*11|#f59e0b)/i
     );
 
     await act(async () => {
@@ -3037,6 +3038,83 @@ describe('CLI status visibility during completed install state', () => {
     );
     expect(host.textContent).not.toContain(
       'Usage limits appear only after Codex refreshes the currently selected ChatGPT session.'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps Codex on checking while its model catalog is loading and the live snapshot is only a negative auth result', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    codexAccountHookState.snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+      launchReadinessState: 'missing_auth',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: null,
+      apiKey: {
+        available: true,
+        source: 'environment',
+        sourceLabel: 'Detected from OPENAI_API_KEY',
+      },
+      requiresOpenaiAuth: true,
+      localAccountArtifactsPresent: true,
+      localActiveChatgptAccountPresent: true,
+      login: {
+        status: 'idle',
+        error: null,
+        startedAt: null,
+      },
+      rateLimits: null,
+      updatedAt: new Date().toISOString(),
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        createCodexNativeRolloutProvider({
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+          models: [],
+          modelCatalog: null,
+          modelCatalogRefreshState: 'loading',
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'app-server',
+            },
+          },
+        }),
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).not.toContain(
+      'Reconnect ChatGPT to refresh the current Codex subscription session.'
+    );
+    expect(host.textContent).not.toContain(
+      'Models unavailable for this runtime build'
     );
 
     await act(async () => {

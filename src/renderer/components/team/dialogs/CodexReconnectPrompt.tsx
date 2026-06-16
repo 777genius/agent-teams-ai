@@ -128,7 +128,11 @@ export const CodexReconnectPrompt = ({
           }}
         >
           <LogIn className="size-3" />
-          {reconnectBusy ? 'Generating...' : authUrl ? 'Open login' : 'Generate link'}
+          {reconnectBusy
+            ? t('codexReconnect.generating')
+            : authUrl
+              ? t('codexReconnect.openLogin')
+              : t('codexReconnect.generateLink')}
         </button>
       </div>
     </div>

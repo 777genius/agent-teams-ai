@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   getTeamModelRecommendation,
   isTeamModelRecommended,
 } from '@renderer/utils/teamModelRecommendations';
+import { describe, expect, it } from 'vitest';
 
 describe('getTeamModelRecommendation', () => {
   it('marks all visible Codex Agent Teams models as recommended', () => {
@@ -32,6 +31,8 @@ describe('getTeamModelRecommendation', () => {
       'claude-haiku-4-5-20251001',
       'claude-sonnet-4-6',
       'claude-sonnet-4-6[1m]',
+      'claude-opus-4-8',
+      'claude-opus-4-8[1m]',
       'claude-opus-4-7',
       'claude-opus-4-7[1m]',
       'claude-opus-4-6',

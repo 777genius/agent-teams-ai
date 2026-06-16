@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Ciri",
+    "screenshots": "Tangkapan Skrin",
+    "docs": "Dokumentasi",
+    "comparison": "Banding",
+    "download": "Muat Turun",
+    "pricing": "Percuma",
+    "faq": "Soalan Lazim",
+    "viewOnGithub": "Lihat di GitHub",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "short": {
+      "screenshots": "Tangkapan",
+      "docs": "Dokumen",
+      "download": "Dapatkan",
+      "comparison": "Banding",
+      "pricing": "Percuma"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Muat Turun Sekarang",
+    "ctaPrimary": "Muat turun untuk {platform}",
+    "ctaSecondary": "Banding",
+    "ctaDocs": "Dokumentasi",
+    "preview": "Pratonton produk",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Papan Kanban",
+      "openSource": "Sumber Terbuka"
+    },
+    "watchDemo": "Tonton Demo",
+    "videoUnavailable": "Video tidak tersedia",
+    "supportedProviders": "Pembekal AI yang disokong",
+    "slogan": "Selesaikan banyak perkara dengan melakukan sedikit sahaja",
+    "platformDefault": "Untuk platform anda",
+    "guidesSetup": "Panduan dan persediaan",
+    "videoFrameLabel": "Tonton demo Agent Teams",
+    "commandFeed": "Suapan arahan pasukan",
+    "liveDemo": "Demo langsung",
+    "demoVideoTitle": "Video demo Agent Teams",
+    "demoTitle": "Demo Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo pasukan agen",
+      "live": "LANGSUNG",
+      "waiting": "Menunggu tugasan...",
+      "activity": {
+        "authMiddleware": "Melaksanakan middleware pengesahan...",
+        "unitTests": "Menulis ujian unit untuk API...",
+        "reviewPr": "Menyemak perubahan PR #42...",
+        "ciPipeline": "Menyediakan saluran CI/CD...",
+        "refactorDatabase": "Menstruktur semula lapisan pangkalan data..."
+      },
+      "tasks": {
+        "authApi": "API Pengesahan",
+        "unitTests": "Ujian unit",
+        "ciSetup": "Persediaan CI"
+      },
+      "columns": {
+        "todo": "PERLU DIBUAT",
+        "progress": "SEDANG DIBUAT",
+        "review": "SEMAKAN",
+        "done": "SELESAI"
+      }
+    }
+  },
+  "download": {
+    "title": "Muat Turun",
+    "detected": "Dikesan",
+    "systemRequirements": "Keperluan sistem",
+    "version": "Versi {version}",
+    "readyToStart": "Sedia untuk bermula!"
+  },
+  "theme": {
+    "dark": "Gelap",
+    "light": "Cerah"
+  },
+  "language": {
+    "label": "Bahasa",
+    "search": "Cari bahasa…"
+  },
+  "features": {
+    "sectionTitle": "Semua yang anda perlukan untuk orkestrasi agen AI",
+    "sectionSubtitle": "Alat berkuasa yang membuatkan kerjasama berbilang agen benar-benar berfungsi."
+  },
+  "pricing": {
+    "sectionTitle": "Percuma untuk dipasang. Model percuma disertakan.",
+    "sectionSubtitle": "Mula serta-merta dengan model percuma tanpa pengesahan - tiada akaun, kunci API, atau kad kredit. Sambungkan Claude, Codex, OpenCode/OpenRouter, atau akses pembekal lain hanya apabila anda mahukan lebih banyak model.",
+    "getStarted": "Muat Turun Sekarang",
+    "popular": "Percuma",
+    "freeModelCallout": "Model percuma tanpa pengesahan disertakan",
+    "note": "Agent Teams tiada tingkatan berbayar. Model percuma tanpa pengesahan membolehkan anda mencubanya serta-merta; penggunaan pembekal berbayar adalah pilihan dan dikawal oleh pembekal yang anda pilih."
+  },
+  "testimonials": {
+    "sectionTitle": "Apa kata pembangun",
+    "sectionSubtitle": "Maklum balas sebenar daripada pembina sebenar",
+    "showMore": "Tunjuk lebih banyak",
+    "showLess": "Tunjuk kurang",
+    "feedbackCta": "Mahu berkongsi pengalaman anda? Buka isu di"
+  },
+  "faq": {
+    "sectionTitle": "Ada soalan? Kami ada jawapannya",
+    "subtitle": "Semua yang anda perlu tahu tentang Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Bagaimana kami berbanding",
+    "sectionSubtitle": "Perbandingan ciri demi ciri dengan alat pengekodan AI yang lain.",
+    "feature": "Ciri",
+    "robotBubble": "Nilai sendiri",
+    "features": {
+      "crossTeam": "Komunikasi merentas pasukan",
+      "agentMessaging": "Pemesejan agen ke agen",
+      "linkedTasks": "Tugasan terpaut",
+      "sessionAnalysis": "Analisis sesi",
+      "taskAttachments": "Lampiran tugasan",
+      "hunkReview": "Semakan peringkat hunk",
+      "codeEditor": "Editor kod terbina dalam",
+      "fullAutonomy": "Autonomi penuh",
+      "taskDeps": "Kebergantungan tugasan",
+      "reviewWorkflow": "Aliran kerja semakan",
+      "zeroSetup": "Tanpa persediaan",
+      "kanban": "Papan Kanban",
+      "execLog": "Log pelaksanaan",
+      "liveProcesses": "Proses langsung",
+      "runtimeLoad": "CPU/RAM setiap rakan pasukan",
+      "perTaskReview": "Semakan kod setiap tugasan",
+      "flexAutonomy": "Autonomi fleksibel",
+      "worktree": "Pengasingan worktree Git",
+      "multiAgent": "Rakan pasukan AI campuran",
+      "liveWorkGraph": "Peta pasukan langsung",
+      "liveTeam": "Rakan pasukan langsung",
+      "teamWorkspace": "Ruang kerja pasukan",
+      "launchProof": "Status pelancaran rakan pasukan",
+      "orgGovernance": "Carta organisasi / tadbir urus",
+      "budgetControls": "Kawalan belanjawan",
+      "price": "Harga"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Lihat ia beraksi",
+    "sectionSubtitle": "Tangkapan skrin sebenar daripada aplikasi — papan kanban, semakan kod, pasukan agen, dan banyak lagi."
+  },
+  "common": {
+    "learnMore": "Ketahui lebih lanjut",
+    "statusLabel": "Status:",
+    "previous": "Sebelumnya",
+    "next": "Seterusnya"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Orkestrasi agen AI untuk pembangun",
+    "robotBubble": "Saya sedang menunggu",
+    "links": {
+      "github": "GitHub",
+      "author": "Pengarang",
+      "docs": "Dokumentasi"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Orkestrasi Agen AI untuk Pembangun",
+    "homeDescription": "Aplikasi desktop sumber terbuka percuma untuk pasukan agen AI. Mulakan dengan model percuma tanpa pengesahan, kemudian sambungkan Claude, Codex, atau OpenCode apabila anda perlukan lebih banyak model.",
+    "downloadTitle": "Muat turun Agent Teams untuk macOS, Windows, dan Linux",
+    "downloadDescription": "Muat turun Agent Teams untuk macOS, Windows, dan Linux. Aplikasi desktop sumber terbuka percuma untuk pasukan agen Claude, Codex, dan OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Halaman tidak ditemui",
+    "notFoundDescription": "Halaman yang anda cari tidak wujud atau telah dialihkan.",
+    "genericTitle": "Sesuatu telah berlaku",
+    "genericDescription": "Ralat tidak dijangka berlaku. Sila cuba lagi kemudian.",
+    "goHome": "Ke halaman utama"
+  }
+}

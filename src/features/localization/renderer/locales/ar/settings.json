@@ -46,7 +46,8 @@
       "copiedShort": "Copied",
       "copy": "تشخيص النسخ",
       "hints": "Hints",
-      "likelyCause": "السبب الغالب:"
+      "likelyCause": "السبب الغالب:",
+      "windowsSymlinkAdminHint": "Windows: شغّل Agent Teams AI كمسؤول"
     },
     "models": {
       "alreadyDefault": "هذا هو التخلف المختار من قبل",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "نماذج البحث",
       "selectProjectBeforeTesting": "اختيار سياق المشروع قبل نماذج الاختبار.",
       "selectProjectBeforeTestingDefaults": "Select a project context before testing orving OpenCode defaults.",
-      "useInTeamPicker": "الاستخدام في مشغل الفريق"
+      "useInTeamPicker": "الاستخدام في مشغل الفريق",
+      "testInProgress": "اختبار النموذج قيد التشغيل بالفعل.",
+      "validationContextRequired": "حدد سياق تحقق أعلاه لتفعيل Test و Set default. الحفظ في team picker يخزن route للفرق الجديدة فقط.",
+      "actionsUnavailable": "الإجراءات غير متاحة مؤقتًا.",
+      "defaultSaveInProgress": "يتم حفظ OpenCode default.",
+      "routeUnavailableAuth": "يتطلب هذا provider مصادقة قبل استخدام هذا النموذج.",
+      "routeUnavailableFailed": "فشل هذا model route في آخر execution test.",
+      "routeUnavailableGeneric": "لا يمكن استخدام هذا model route الآن.",
+      "routeUnavailableUnknown": "هذا النموذج هو OpenCode default الحالي، لكنه غير متاح بعد في live catalog."
     },
     "providers": {
       "catalog": "مُقدِّم الخدمات المفتوحة",
@@ -108,7 +117,8 @@
       "needsTest": "اختبار الاحتياجات",
       "failed": "فشل",
       "unknown": "مجهول",
-      "default": "العجز"
+      "default": "العجز",
+      "knownRoute": "route معروف"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API تم تشكيل المفتاح ولكن لم يتم التحقق منه بعد",
         "apiKeyModeMissingCredential": "API الطريقة الرئيسية المختارة، ولكن لا API مفتاح تم تشكيله",
         "connectedVia": "Connected via {{method}}",
-        "unableToVerify": "غير قادر على التحقق"
+        "unableToVerify": "غير قادر على التحقق",
+        "modelsAvailable": "النماذج متاحة"
       },
       "mode": {
         "selectedAuth": "Selected auth: {{authMode}}",

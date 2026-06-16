@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { buildActionableWorkAgenda } from '@features/member-work-sync/core/domain';
+import { describe, expect, it } from 'vitest';
 
 const hash = (value: string) => `h${value.length}`;
 
@@ -151,7 +150,7 @@ describe('buildActionableWorkAgenda', () => {
           subject: 'Depends on approved task',
           status: 'in_progress',
           owner: 'jack',
-          blockedBy: ['task-approved'],
+          blockedBy: [' task-approved '],
         },
       ],
       hash,
@@ -708,6 +707,78 @@ describe('buildActionableWorkAgenda', () => {
     });
 
     expect(agenda.items).toEqual([]);
+  });
+
+  it('does not unblock owner work when a display-id dependency is ambiguous', () => {
+    const agenda = buildActionableWorkAgenda({
+      teamName: 'team-a',
+      memberName: 'bob',
+      generatedAt: '2026-04-29T00:00:00.000Z',
+      members: [{ name: 'bob' }],
+      tasks: [
+        {
+          id: 'task-active-dep',
+          displayId: '#33333333',
+          subject: 'Active dependency',
+          status: 'in_progress',
+          owner: 'alice',
+        },
+        {
+          id: 'task-completed-dep',
+          displayId: '#33333333',
+          subject: 'Duplicate completed dependency',
+          status: 'completed',
+          owner: 'alice',
+        },
+        {
+          id: 'task-dependent',
+          subject: 'Ambiguous dependency',
+          status: 'in_progress',
+          owner: 'bob',
+          blockedBy: ['33333333'],
+        },
+      ],
+      hash,
+    });
+
+    expect(agenda.items).toEqual([]);
+  });
+
+  it('prefers canonical task ids over colliding display ids for dependencies', () => {
+    const agenda = buildActionableWorkAgenda({
+      teamName: 'team-a',
+      memberName: 'bob',
+      generatedAt: '2026-04-29T00:00:00.000Z',
+      members: [{ name: 'bob' }],
+      tasks: [
+        {
+          id: 'task-dep',
+          displayId: '#33333333',
+          subject: 'Completed dependency',
+          status: 'completed',
+          owner: 'alice',
+        },
+        {
+          id: 'task-collision',
+          displayId: '#task-dep',
+          subject: 'Display collision',
+          status: 'in_progress',
+          owner: 'alice',
+        },
+        {
+          id: 'task-dependent',
+          subject: 'Canonical dependency',
+          status: 'in_progress',
+          owner: 'bob',
+          blockedBy: ['task-dep'],
+        },
+      ],
+      hash,
+    });
+
+    expect(agenda.items.map((item) => [item.taskId, item.reason])).toEqual([
+      ['task-dependent', 'owned_in_progress_task'],
+    ]);
   });
 
   it('projects lead-owned oversight for lead clarification and broken dependencies', () => {

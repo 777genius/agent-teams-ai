@@ -7,6 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pane } from '@renderer/types/panes';
 import type { Tab } from '@renderer/types/tabs';
 
+const teamDetailViewMock = vi.hoisted(() => {
+  let resolve: (module: unknown) => void = () => undefined;
+  const promise = new Promise((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+});
+
 vi.mock('../dashboard/DashboardView', () => ({
   DashboardView: () => React.createElement('div', { 'data-view': 'dashboard' }, 'Dashboard view'),
 }));
@@ -15,6 +23,8 @@ vi.mock('../extensions/ExtensionStoreView', () => ({
   ExtensionStoreView: () =>
     React.createElement('div', { 'data-view': 'extensions' }, 'Extension store view'),
 }));
+
+vi.mock('../team/TeamDetailView', () => teamDetailViewMock.promise);
 
 /* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
 
@@ -42,6 +52,14 @@ const extensionTab: Tab = {
   type: 'extensions',
   label: 'Extensions',
   createdAt: 2,
+};
+
+const teamTab: Tab = {
+  id: 'tab-team-alpha',
+  type: 'team',
+  label: 'Alpha',
+  teamName: 'team-alpha',
+  createdAt: 3,
 };
 
 const createPane = (tabs: Tab[], activeTabId: string | null): Pane => ({
@@ -132,5 +150,17 @@ describe('PaneContent', () => {
 
     expect(host.querySelector('[data-view="extensions"]')).toBe(extensionView);
     expect(extensionView?.closest<HTMLElement>('.absolute')?.style.display).toBe('none');
+  });
+
+  it('uses the team loading skeleton while the team tab chunk is loading', async () => {
+    const { host, root } = createHarness();
+
+    await renderPane(root, createPane([teamTab], teamTab.id));
+
+    const skeleton = host.querySelector<HTMLElement>(
+      '[role="status"][data-team-name="team-alpha"]'
+    );
+    expect(skeleton).not.toBeNull();
+    expect(host.querySelector('.size-5.animate-spin')).toBeNull();
   });
 });

@@ -382,6 +382,48 @@ describe('teamSlice actions', () => {
     expect(window.localStorage.getItem('team:messagesPanelMode')).toBe('inline');
   });
 
+  it('updates selected team task change presence in one batch', () => {
+    const store = createSliceStore();
+    const existingData = createTeamSnapshot({
+      teamName: 'my-team',
+      tasks: [
+        { id: 'task-1', subject: 'One', changePresence: 'unknown' },
+        { id: 'task-2', subject: 'Two', changePresence: 'unknown' },
+      ],
+    });
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: existingData,
+      teamDataCacheByName: { 'my-team': existingData },
+      globalTasks: [
+        { teamName: 'my-team', id: 'task-1', changePresence: 'unknown' },
+        { teamName: 'my-team', id: 'task-2', changePresence: 'unknown' },
+        { teamName: 'other-team', id: 'task-1', changePresence: 'unknown' },
+      ],
+    });
+
+    store.getState().setSelectedTeamTaskChangePresences('my-team', {
+      'task-1': 'no_changes',
+      'task-2': 'has_changes',
+    });
+
+    expect(
+      store
+        .getState()
+        .selectedTeamData.tasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes']);
+    expect(
+      store
+        .getState()
+        .teamDataCacheByName[
+          'my-team'
+        ].tasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes']);
+    expect(
+      store.getState().globalTasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes', 'unknown']);
+  });
+
   it('records terminal provisioning fanout diagnostics without changing visible graph hydrate behavior', () => {
     const store = createSliceStore();
     const fetchTeams = vi.fn(async () => undefined);
@@ -5600,6 +5642,53 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-current');
       expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
       expect(store.getState().provisioningRuns['run-stale']).toBeUndefined();
+    });
+
+    it('ignores provisioning heartbeat updates when only updatedAt changes', () => {
+      const store = createSliceStore();
+      const baseProgress = {
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'spawning' as const,
+        message: 'Waiting for model response',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:00.000Z',
+        pid: 1234,
+        assistantOutput: 'partial output',
+        warnings: ['slow response'],
+        launchDiagnostics: [
+          {
+            id: 'diag-1',
+            severity: 'warning' as const,
+            code: 'runtime_process_candidate' as const,
+            label: 'Runtime candidate',
+            observedAt: '2026-03-12T10:00:00.000Z',
+          },
+        ],
+      };
+
+      store.getState().onProvisioningProgress(baseProgress);
+      const firstRuns = store.getState().provisioningRuns;
+      const firstProgress = firstRuns['run-current'];
+
+      store.getState().onProvisioningProgress({
+        ...baseProgress,
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      });
+
+      expect(store.getState().provisioningRuns).toBe(firstRuns);
+      expect(store.getState().provisioningRuns['run-current']).toBe(firstProgress);
+
+      store.getState().onProvisioningProgress({
+        ...baseProgress,
+        updatedAt: '2026-03-12T10:00:02.000Z',
+        assistantOutput: 'partial output\\nnext chunk',
+      });
+
+      expect(store.getState().provisioningRuns).not.toBe(firstRuns);
+      expect(store.getState().provisioningRuns['run-current']?.assistantOutput).toContain(
+        'next chunk'
+      );
     });
 
     it('promotes a pending run to a real run without throwing', () => {

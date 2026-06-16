@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Ești deja autentificat?",
+      "becomeSponsor": "Devino sponsor",
+      "cancel": "Anulează",
+      "checkNow": "Verifică acum",
+      "checkUpdates": "Verifică actualizările",
+      "checking": "Se verifică...",
+      "connect": "Conectează",
+      "extensions": "Extensii",
+      "login": "Autentificare",
+      "manage": "Gestionează",
+      "manageProviders": "Gestionează furnizorii",
+      "plan": "Plan",
+      "recheck": "Reverifică",
+      "recheckProvider": "Reverifică {{provider}}",
+      "retry": "Reîncearcă",
+      "updateTo": "Actualizează la v{{version}}",
+      "useCode": "Folosește codul"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud este o platformă de inferență AI full-modal care oferă dezvoltatorilor un singur API AI pentru a accesa generare de video, generare de imagini și API-uri LLM. În loc să gestionezi mai multe integrări de furnizori, te conectezi o singură dată și obții acces unificat la peste 300 de modele selectate din toate modalitățile. Vezi noua promoție pentru planul de codare Atlas Cloud pentru acces API mai accesibil.",
+      "openCodeProvider": "Furnizor OpenCode",
+      "plan": "Plan de codare Atlas Cloud",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Verificarea stării CLI a eșuat",
+      "installationFailed": "Instalarea a eșuat",
+      "refreshFailed": "Verificarea actualizărilor a eșuat. Verifică conexiunea la rețea și încearcă din nou.",
+      "runtimeUpdatedRefreshFailed": "Runtime-ul a fost actualizat, dar reîmprospătarea stării furnizorului a eșuat."
+    },
+    "hints": {
+      "backgroundStatus": "Starea {{runtime}} va fi verificată în fundal.",
+      "codexApiKeyFallback": "{{hint}} Rezerva cu cheie API este disponibilă dacă schimbi modul de autentificare.",
+      "codexAutoApiKey": "{{hint}} Modul automat va continua să folosească cheia API până când ChatGPT este conectat.",
+      "codexFinishLogin": "Finalizează autentificarea ChatGPT în browser. Introdu codul afișat dacă ți se solicită.",
+      "codexNoActiveLogin": "Limitele de utilizare apar doar după ce Codex CLI vede un cont ChatGPT activ. În prezent raportează că nu există o autentificare ChatGPT activă.",
+      "codexNoActiveManagedSession": "Limitele de utilizare apar doar după ce Codex CLI vede un cont ChatGPT activ. Există date locale despre contul Codex, dar nu este selectată nicio sesiune gestionată activă în prezent.",
+      "codexReconnectNeeded": "Limitele de utilizare apar doar după ce Codex reîmprospătează sesiunea ChatGPT selectată în prezent. În acest moment sesiunea locală trebuie reconectată.",
+      "firstCheckSlow": "Prima verificare poate dura până la 30 de secunde",
+      "loginRequiredForTeams": "Navigarea sesiunilor și proiectelor funcționează fără autentificare. Autentificarea este necesară doar pentru a rula echipe de agenți.",
+      "troubleshootTitle": "Dacă ești sigur că ești autentificat, încearcă acești pași:"
+    },
+    "installer": {
+      "checkingLatest": "Se verifică ultima versiune...",
+      "downloading": "Se descarcă {{runtime}}...",
+      "installing": "Se instalează {{runtime}}...",
+      "success": "{{runtime}} v{{version}} a fost instalat cu succes",
+      "verifying": "Se verifică suma de control..."
+    },
+    "labels": {
+      "apiKeyRequired": "Cheie API necesară",
+      "comingSoon": "În curând",
+      "collapseProviderDetails": "Restrânge detaliile furnizorului",
+      "expandProviderDetails": "Extinde detaliile furnizorului",
+      "generateLink": "Generează link",
+      "loadingRateLimits": "Se încarcă limitele de utilizare",
+      "loggedOut": "Furnizor deconectat",
+      "loginAuthFailed": "Autentificarea a eșuat",
+      "loginAuthUpdated": "Autentificare actualizată",
+      "loginComplete": "Autentificare finalizată",
+      "loginFailed": "Autentificarea a eșuat",
+      "loginTitle": "Autentificare",
+      "logoutFailed": "Deconectarea a eșuat",
+      "logoutTitle": "Deconectare",
+      "notLoggedIn": "Neautentificat",
+      "openLogin": "Deschide autentificarea",
+      "providerActionRequired": "Acțiune necesară din partea furnizorului",
+      "resets": "se resetează {{time}}",
+      "runtimeLoginTitle": "Autentificare {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Se verifică furnizorii AI...",
+      "claudeCli": "Se verifică Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Autentificat",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Se verifică autentificarea...",
+      "checkingProviders": "Se verifică furnizorii...",
+      "configuredLocalCount": "{{count}} configurate local",
+      "configuredLocalCount_few": "{{count}} configurate local",
+      "configuredLocalCount_many": "{{count}} configurate local",
+      "configuredLocalCount_one": "{{count}} configurat local",
+      "configuredLocalCount_other": "{{count}} configurate local",
+      "configuredLocalTitle": "Rute OpenCode locale importate din configurația ta OpenCode.",
+      "connectedCount": "Furnizori: {{connected}}/{{denominator}} conectați",
+      "freeModels": "Modele gratuite",
+      "freeModelsTitle": "OpenCode include opțiuni de modele gratuite precum Big Pickle când sunt disponibile în configurația ta. OpenRouter prin OpenCode poate de asemenea expune modele gratuite, dar nu fiecare model OpenCode/OpenRouter este gratuit. Disponibilitatea și limitele se pot schimba.",
+      "loadingModels": "Se încarcă modelele...",
+      "modelsUnavailable": "Modele indisponibile pentru această versiune de runtime",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} verificate",
+      "verifiedCount_few": "{{count}} verificate",
+      "verifiedCount_many": "{{count}} verificate",
+      "verifiedCount_one": "{{count}} verificat",
+      "verifiedCount_other": "{{count}} verificate",
+      "verifiedTitle": "Rute OpenCode cu o dovadă de execuție reușită."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} configurat nu a trecut verificarea de stare la pornire.",
+      "configuredNotFound": "{{runtime}} configurat nu a fost găsit.",
+      "foundButFailed": "{{runtime}} a fost găsit, dar pornirea a eșuat",
+      "healthCheckFailedDescription": "Aplicația a găsit {{runtime}} configurat, dar verificarea de stare la pornire a eșuat. Repară-l sau reinstalează-l, apoi reîncearcă.",
+      "install": "Instalează {{runtime}}",
+      "installRequiredDescription": "{{runtime}} este necesar pentru aprovizionarea echipelor și gestionarea sesiunilor. Instalează-l pentru a începe.",
+      "isRequired": "{{runtime}} este necesar",
+      "reinstall": "Reinstalează {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Se verifică",
+      "codexTitle": "Instalează Codex CLI în datele aplicației",
+      "downloading": "Se descarcă",
+      "downloadingPercent": "Se descarcă {{percent}}%",
+      "install": "Instalează",
+      "installing": "Se instalează",
+      "openCodeTitle": "Instalează runtime-ul OpenCode în datele aplicației",
+      "retryInstall": "Reîncearcă instalarea"
+    },
+    "troubleshoot": {
+      "again": "din nou",
+      "authStatusCommand": "comanda configurată de verificare a stării de autentificare CLI",
+      "checkLoggedIn": "- verifică dacă afișează \"Autentificat\"",
+      "click": "Apasă",
+      "loginCommand": "comanda de autentificare a runtime-ului",
+      "logoutCommand": "comanda de deconectare a runtime-ului",
+      "openTerminal": "Deschide terminalul și rulează:",
+      "reloginPrefix": "Dacă spune că ești autentificat, dar aplicația nu detectează asta, încearcă:",
+      "sameRuntime": "Asigură-te că CLI-ul din terminal este același runtime pe care îl folosește aplicația",
+      "statusCacheHint": "- uneori starea este stocată în cache pentru câteva secunde",
+      "then": "apoi"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Unul sau mai mulți furnizori sunt setați pe modul cheie API, dar nu este configurată nicio cheie API. Deschide Gestionează furnizorii pentru a adăuga chei sau a schimba modul de conectare.",
+      "multipleApiKeysNeedAttention": "Unul sau mai mulți furnizori sunt setați pe modul cheie API și necesită atenție. Deschide Gestionează furnizorii pentru a revizui cheile salvate sau a schimba modul de conectare.",
+      "notAuthenticated": "{{runtime}} este instalat, dar nu ești autentificat. Autentificarea este necesară pentru aprovizionarea echipelor și funcțiile AI.",
+      "singleApiKeyMissing": "{{provider}} este setat pe modul cheie API, dar nu este configurată nicio cheie API. Deschide Gestionează furnizorii pentru a adăuga o cheie sau a schimba modul de conectare.",
+      "singleApiKeyNeedsAttention": "{{provider}} este setat pe modul cheie API, dar nu este conectat. Deschide Gestionează furnizorii pentru a revizui cheia salvată sau a schimba modul de conectare."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Selectează un folder de proiect",
+    "selectFolder": "Selectează folder",
+    "failedToLoad": "Încărcarea proiectelor a eșuat",
+    "retry": "Reîncearcă",
+    "noProjects": "Niciun proiect găsit",
+    "noMatches": "Nicio potrivire pentru \"{{query}}\"",
+    "noRecentProjects": "Niciun proiect recent găsit",
+    "emptyDescription": "Activitatea recentă Claude și Codex va apărea aici.",
+    "loadMore": "Încarcă mai multe",
+    "card": {
+      "deleted": "Șters",
+      "projectFolderMissing": "Folderul proiectului nu mai există",
+      "taskCounts": {
+        "active": "{{count}} active",
+        "active_one": "{{count}} activă",
+        "active_other": "{{count}} active",
+        "active_few": "{{count}} active",
+        "active_many": "{{count}} active",
+        "pending": "{{count}} în așteptare",
+        "pending_one": "{{count}} în așteptare",
+        "pending_other": "{{count}} în așteptare",
+        "pending_few": "{{count}} în așteptare",
+        "pending_many": "{{count}} în așteptare",
+        "done": "{{count}} finalizate",
+        "done_one": "{{count}} finalizată",
+        "done_other": "{{count}} finalizate",
+        "done_few": "{{count}} finalizate",
+        "done_many": "{{count}} finalizate"
+      }
+    },
+    "title": "Proiecte recente",
+    "searchResults": "Rezultate căutare",
+    "searchPlaceholder": "Caută proiecte..."
+  },
+  "actions": {
+    "selectTeam": "Selectează echipa",
+    "or": "sau",
+    "clearSearch": "Șterge căutarea"
+  },
+  "windowsAdmin": {
+    "title": "Se recomandă modul Administrator Windows",
+    "description": "Verificările runtime-ului OpenCode pot expira când Agent Teams AI nu rulează cu privilegii ridicate. Repornește aplicația cu Rulează ca administrator înainte de a lansa echipe OpenCode."
+  },
+  "webPreview": {
+    "title": "Deschide aplicația desktop pentru funcționalitate completă",
+    "description": "Versiunea de browser este încă în dezvoltare. Acțiunile de proiect, integrările și actualizările de stare în timp real pot fi limitate aici. Folosește aplicația desktop pentru a accesa toate funcțiile în mod fiabil."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Versiune nouă disponibilă",
+    "restartNow": "Repornește acum",
+    "viewDetails": "Vezi detalii"
+  }
+}

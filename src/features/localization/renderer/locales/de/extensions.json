@@ -589,7 +589,11 @@
     "actions": {
       "add": "Hinzufügen API Schlüssel",
       "addFirst": "Fügen Sie Ihren ersten Schlüssel hinzu",
-      "edit": "Bearbeiten"
+      "edit": "Bearbeiten",
+      "copied": "Kopiert!",
+      "copyEnvVarName": "Env-Variablennamen kopieren",
+      "confirmDelete": "Zum Bestätigen erneut klicken",
+      "delete": "Löschen"
     },
     "empty": {
       "title": "Nein API Schlüssel gespeichert",

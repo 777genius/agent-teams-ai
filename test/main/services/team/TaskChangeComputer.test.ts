@@ -1,10 +1,10 @@
+import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as fs from 'fs/promises';
-
 import { TaskChangeComputer } from '../../../../src/main/services/team/TaskChangeComputer';
+
 import type { TaskChangeTaskMeta } from '../../../../src/main/services/team/taskChangeWorkerTypes';
 
 const NO_TASK_BOUNDARIES_WARNING =
@@ -85,6 +85,18 @@ function metadataOnlyMultiFileEditToolUse(
   filePaths: string[],
   primaryPath = filePaths[0] ?? ''
 ): object {
+  return metadataOnlyMultiFileEditChangesToolUse(
+    toolUseId,
+    filePaths.map((filePath) => ({ filePath, kind: 'add' })),
+    primaryPath
+  );
+}
+
+function metadataOnlyMultiFileEditChangesToolUse(
+  toolUseId: string,
+  changes: Array<{ filePath: string; kind?: string }>,
+  primaryPath = changes[0]?.filePath ?? ''
+): object {
   return {
     timestamp: '2026-03-01T10:00:00.000Z',
     type: 'assistant',
@@ -97,7 +109,10 @@ function metadataOnlyMultiFileEditToolUse(
           name: 'Edit',
           input: {
             file_path: primaryPath,
-            changes: filePaths.map((filePath) => ({ path: filePath, kind: 'add' })),
+            changes: changes.map((change) => ({
+              path: change.filePath,
+              ...(change.kind ? { kind: change.kind } : {}),
+            })),
           },
         },
       ],
@@ -644,6 +659,8 @@ describe('TaskChangeComputer', () => {
 
     expect(result.files.map((file) => file.relativePath)).toEqual(['src/a.ts']);
     expect(result.files[0]?.snippets).toHaveLength(1);
+    expect(result.files[0]?.isNewFile).toBe(false);
+    expect(result.files[0]?.snippets[0]?.type).toBe('edit');
     expect(result.files[0]?.snippets[0]?.oldString).toBe('');
     expect(result.files[0]?.snippets[0]?.newString).toBe('');
     expect(result.totalFiles).toBe(1);
@@ -696,9 +713,54 @@ describe('TaskChangeComputer', () => {
       'dfdf/style.css',
     ]);
     expect(result.files.every((file) => file.snippets[0]?.toolUseId === 'tool-1')).toBe(true);
+    expect(result.files.every((file) => file.isNewFile)).toBe(true);
+    expect(result.files.every((file) => file.snippets[0]?.type === 'write-new')).toBe(true);
     expect(result.files.every((file) => file.linesAdded === 0 && file.linesRemoved === 0)).toBe(
       true
     );
+  });
+
+  it('preserves metadata-only Edit change kinds without upgrading updates to new files', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    await writeJsonl(logPath, [
+      metadataOnlyMultiFileEditChangesToolUse('tool-1', [
+        { filePath: '/repo/src/new.ts', kind: 'add' },
+        { filePath: '/repo/src/existing.ts', kind: 'update' },
+      ]),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'tom' }]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    const filesByPath = new Map(result.files.map((file) => [file.relativePath, file]));
+    const newFile = filesByPath.get('src/new.ts');
+    const existingFile = filesByPath.get('src/existing.ts');
+
+    expect(newFile?.isNewFile).toBe(true);
+    expect(newFile?.snippets[0]?.type).toBe('write-new');
+    expect(existingFile?.isNewFile).toBe(false);
+    expect(existingFile?.snippets[0]?.type).toBe('edit');
   });
 
   it('does not include repeated tool ids from outside the scoped source lines', async () => {

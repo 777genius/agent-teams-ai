@@ -9,9 +9,12 @@ export type {
   TeamRuntimeLanePlanSuccess,
 } from './core/domain/planTeamRuntimeLanes';
 export {
+  buildOpenCodeSecondaryLaneId,
   buildPlannedMemberLaneIdentity,
   fromProvisioningMembers,
   isMixedOpenCodeSideLanePlan,
+  isOpenCodeSideLanePlan,
   isPureOpenCodeLanePlan,
+  isPureOpenCodeWorktreeRootLanePlan,
   planTeamRuntimeLanes,
 } from './core/domain/planTeamRuntimeLanes';

@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Funcționalități",
+    "screenshots": "Capturi de ecran",
+    "docs": "Documentație",
+    "comparison": "Comparație",
+    "download": "Descarcă",
+    "pricing": "Gratuit",
+    "faq": "Întrebări frecvente",
+    "viewOnGithub": "Vezi pe GitHub",
+    "openMenu": "Deschide meniul",
+    "closeMenu": "Închide meniul",
+    "short": {
+      "screenshots": "Capturi",
+      "docs": "Docs",
+      "download": "Obține",
+      "comparison": "Compară",
+      "pricing": "Gratuit"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Descarcă acum",
+    "ctaPrimary": "Descarcă pentru {platform}",
+    "ctaSecondary": "Compară",
+    "ctaDocs": "Documentație",
+    "preview": "Previzualizare produs",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Tablă Kanban",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Vezi demonstrația",
+    "videoUnavailable": "Video indisponibil",
+    "supportedProviders": "Furnizori AI compatibili",
+    "slogan": "Realizează multe făcând foarte puțin",
+    "platformDefault": "Pentru platforma ta",
+    "guidesSetup": "Ghiduri și configurare",
+    "videoFrameLabel": "Vezi demonstrația Agent Teams",
+    "commandFeed": "Flux de comenzi al echipei",
+    "liveDemo": "Demonstrație live",
+    "demoVideoTitle": "Video demonstrativ Agent Teams",
+    "demoTitle": "Demonstrație Agent Teams",
+    "demo": {
+      "ariaLabel": "Demonstrație echipă de agenți",
+      "live": "LIVE",
+      "waiting": "Se așteaptă sarcini...",
+      "activity": {
+        "authMiddleware": "Se implementează middleware-ul de autentificare...",
+        "unitTests": "Se scriu teste unitare pentru API...",
+        "reviewPr": "Se revizuiesc modificările din PR #42...",
+        "ciPipeline": "Se configurează pipeline-ul CI/CD...",
+        "refactorDatabase": "Se refactorizează stratul bazei de date..."
+      },
+      "tasks": {
+        "authApi": "API de autentificare",
+        "unitTests": "Teste unitare",
+        "ciSetup": "Configurare CI"
+      },
+      "columns": {
+        "todo": "DE FĂCUT",
+        "progress": "ÎN CURS",
+        "review": "REVIZUIRE",
+        "done": "FINALIZAT"
+      }
+    }
+  },
+  "download": {
+    "title": "Descarcă",
+    "detected": "Detectat",
+    "systemRequirements": "Cerințe de sistem",
+    "version": "Versiunea {version}",
+    "readyToStart": "Gata de pornire!"
+  },
+  "theme": {
+    "dark": "Întunecat",
+    "light": "Luminos"
+  },
+  "language": {
+    "label": "Limbă",
+    "search": "Caută limba…"
+  },
+  "features": {
+    "sectionTitle": "Tot ce ai nevoie pentru orchestrarea agenților AI",
+    "sectionSubtitle": "Unelte puternice care fac colaborarea multi-agent să funcționeze cu adevărat."
+  },
+  "pricing": {
+    "sectionTitle": "Gratuit de instalat. Model gratuit inclus.",
+    "sectionSubtitle": "Începe imediat cu un model gratuit fără autentificare - fără cont, cheie API sau card de credit. Conectează Claude, Codex, OpenCode/OpenRouter sau alt furnizor doar când vrei mai multe modele.",
+    "getStarted": "Descarcă acum",
+    "popular": "Gratuit",
+    "freeModelCallout": "Model gratuit fără autentificare inclus",
+    "note": "Agent Teams nu are niciun nivel cu plată. Modelul gratuit fără autentificare îți permite să îl încerci imediat; utilizarea unui furnizor cu plată este opțională și controlată de furnizorul pe care îl alegi."
+  },
+  "testimonials": {
+    "sectionTitle": "Ce spun dezvoltatorii",
+    "sectionSubtitle": "Feedback real de la creatori reali",
+    "showMore": "Arată mai mult",
+    "showLess": "Arată mai puțin",
+    "feedbackCta": "Vrei să îți împărtășești experiența? Deschide un issue pe"
+  },
+  "faq": {
+    "sectionTitle": "Ai întrebări? Avem răspunsuri",
+    "subtitle": "Tot ce trebuie să știi despre Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Cum ne comparăm",
+    "sectionSubtitle": "Comparație funcție cu funcție cu alte unelte AI de codare.",
+    "feature": "Funcție",
+    "robotBubble": "Judecă singur",
+    "features": {
+      "crossTeam": "Comunicare între echipe",
+      "agentMessaging": "Mesagerie agent la agent",
+      "linkedTasks": "Sarcini conectate",
+      "sessionAnalysis": "Analiză sesiune",
+      "taskAttachments": "Atașamente la sarcini",
+      "hunkReview": "Revizuire la nivel de fragment",
+      "codeEditor": "Editor de cod integrat",
+      "fullAutonomy": "Autonomie completă",
+      "taskDeps": "Dependențe între sarcini",
+      "reviewWorkflow": "Flux de revizuire",
+      "zeroSetup": "Configurare zero",
+      "kanban": "Tablă Kanban",
+      "execLog": "Jurnale de execuție",
+      "liveProcesses": "Procese live",
+      "runtimeLoad": "CPU/RAM per coechipier",
+      "perTaskReview": "Revizuire cod per sarcină",
+      "flexAutonomy": "Autonomie flexibilă",
+      "worktree": "Izolare prin Git worktree",
+      "multiAgent": "Coechipieri AI micști",
+      "liveWorkGraph": "Hartă live a echipei",
+      "liveTeam": "Coechipieri live",
+      "teamWorkspace": "Spațiu de lucru al echipei",
+      "launchProof": "Starea de lansare a coechipierilor",
+      "orgGovernance": "Organigramă / guvernanță",
+      "budgetControls": "Controale de buget",
+      "price": "Preț"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Vezi-l în acțiune",
+    "sectionSubtitle": "Capturi de ecran reale din aplicație — tablă Kanban, revizuire cod, echipe de agenți și multe altele."
+  },
+  "common": {
+    "learnMore": "Află mai multe",
+    "statusLabel": "Stare:",
+    "previous": "Anterior",
+    "next": "Următor"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Orchestrare de agenți AI pentru dezvoltatori",
+    "robotBubble": "Aștept",
+    "links": {
+      "github": "GitHub",
+      "author": "Autor",
+      "docs": "Documentație"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Orchestrare de agenți AI pentru dezvoltatori",
+    "homeDescription": "Aplicație desktop gratuită și open-source pentru echipe de agenți AI. Începe cu un model gratuit fără autentificare, apoi conectează Claude, Codex sau OpenCode când ai nevoie de mai multe modele.",
+    "downloadTitle": "Descarcă Agent Teams pentru macOS, Windows și Linux",
+    "downloadDescription": "Descarcă Agent Teams pentru macOS, Windows și Linux. Aplicație desktop gratuită și open-source pentru echipe de agenți Claude, Codex și OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Pagina nu a fost găsită",
+    "notFoundDescription": "Pagina pe care o cauți nu există sau a fost mutată.",
+    "genericTitle": "A apărut o eroare",
+    "genericDescription": "A apărut o eroare neașteptată. Te rugăm să încerci din nou mai târziu.",
+    "goHome": "Mergi la pagina principală"
+  }
+}

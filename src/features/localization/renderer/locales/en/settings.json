@@ -46,7 +46,8 @@
       "copiedShort": "Copied",
       "copy": "Copy diagnostics",
       "hints": "Hints",
-      "likelyCause": "Likely cause:"
+      "likelyCause": "Likely cause:",
+      "windowsSymlinkAdminHint": "Windows: run Agent Teams AI as Administrator"
     },
     "models": {
       "alreadyDefault": "This is already the selected OpenCode default.",

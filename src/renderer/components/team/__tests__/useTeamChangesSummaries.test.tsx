@@ -1053,6 +1053,149 @@ describe('useTeamChangesSummaries', () => {
     expect(container.textContent).not.toContain('src/app.ts');
   });
 
+  it('counts files instead of changed tasks in the closed-section counter', async () => {
+    hoisted.getTeamTaskChangeSummaries.mockImplementation(
+      async (_teamName: string, requests: TeamTaskChangeSummaryRequest[]) => ({
+        teamName: 'team-a',
+        computedAt: '2026-05-10T10:00:01.000Z',
+        items: requests.map((request, index) => {
+          const totalFiles = index === 0 ? 3 : 4;
+          return {
+            taskId: request.taskId,
+            changeSet: {
+              ...changeSet(request.taskId),
+              files: [
+                fileChange({
+                  filePath: `/repo/src/${request.taskId}.ts`,
+                  relativePath: `src/${request.taskId}.ts`,
+                }),
+              ],
+              totalFiles,
+              totalLinesAdded: totalFiles,
+            },
+          };
+        }),
+      })
+    );
+
+    const snapshots: HookSnapshot[] = [];
+    const onSnapshot = (snapshot: HookSnapshot): void => {
+      snapshots.push(snapshot);
+    };
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        React.createElement(HookHarness, {
+          tasks: changedTasks(2),
+          sectionOpen: false,
+          onSnapshot,
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+    expect(snapshots.at(-1)?.badgeCount).toBe(7);
+  });
+
+  it('keeps the previous file counter for tasks whose summary refresh errors', async () => {
+    const getTotalFilesForTaskId = (taskId: string): number => (taskId === 'changed-0' ? 3 : 4);
+
+    hoisted.getTeamTaskChangeSummaries
+      .mockImplementationOnce(
+        async (_teamName: string, requests: TeamTaskChangeSummaryRequest[]) => ({
+          teamName: 'team-a',
+          computedAt: '2026-05-10T10:00:01.000Z',
+          items: requests.map((request) => {
+            const totalFiles = getTotalFilesForTaskId(request.taskId);
+            return {
+              taskId: request.taskId,
+              changeSet: {
+                ...changeSet(request.taskId),
+                files: [
+                  fileChange({
+                    filePath: `/repo/src/${request.taskId}.ts`,
+                    relativePath: `src/${request.taskId}.ts`,
+                  }),
+                ],
+                totalFiles,
+                totalLinesAdded: totalFiles,
+              },
+            };
+          }),
+        })
+      )
+      .mockImplementationOnce(
+        async (_teamName: string, requests: TeamTaskChangeSummaryRequest[]) => ({
+          teamName: 'team-a',
+          computedAt: '2026-05-10T10:00:02.000Z',
+          items: requests.map((request) =>
+            request.taskId === 'changed-0'
+              ? { taskId: request.taskId, changeSet: null, error: 'summary timed out' }
+              : {
+                  taskId: request.taskId,
+                  changeSet: {
+                    ...changeSet(request.taskId),
+                    files: [
+                      fileChange({
+                        filePath: `/repo/src/${request.taskId}.ts`,
+                        relativePath: `src/${request.taskId}.ts`,
+                      }),
+                    ],
+                    totalFiles: 4,
+                    totalLinesAdded: 4,
+                  },
+                }
+          ),
+        })
+      );
+
+    const snapshots: HookSnapshot[] = [];
+    const onSnapshot = (snapshot: HookSnapshot): void => {
+      snapshots.push(snapshot);
+    };
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    const initialTasks = changedTasks(2);
+    await act(async () => {
+      root?.render(
+        React.createElement(HookHarness, {
+          tasks: initialTasks,
+          sectionOpen: false,
+          onSnapshot,
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(snapshots.at(-1)?.badgeCount).toBe(7);
+
+    await act(async () => {
+      root?.render(
+        React.createElement(HookHarness, {
+          tasks: initialTasks.map((item) => ({
+            ...item,
+            updatedAt: '2026-05-10T10:05:00.000Z',
+          })),
+          sectionOpen: false,
+          onSnapshot,
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+    expect(snapshots.at(-1)?.badgeCount).toBe(7);
+  });
+
   it('loads staged open batches without repeating successful tasks', async () => {
     const first = createDeferred<TeamTaskChangeSummariesResponse>();
     const second = createDeferred<TeamTaskChangeSummariesResponse>();

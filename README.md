@@ -11,30 +11,30 @@
   <a href="docs/screenshots/6.png"><img src="docs/screenshots/6.png" width="65" alt="Settings" /></a>
 </p>
 
-<h1 align="center"><a href="https://777genius.github.io/agent-teams-ai/">Agent Teams</a></h1>
+<h1 align="center"><a href="https://agentteams.live/">Agent Teams</a></h1>
 
 <p align="center">
-  <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other. You just look at the kanban board and drink coffee.</code></strong>
+  <strong><code>You're the boss, agents are your team. They handle tasks themselves, message each other, review each other. You just look at the kanban board and drink coffee.</code></strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/release/777genius/agent-teams-ai?label=version&style=flat-square" alt="Latest Release" /></a>&nbsp;
   <a href="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml"><img src="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>&nbsp;
-  <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/Discord-Join%20us-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
+  <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FqtqSZSyuEc%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=Discord&logo=discord&logoColor=white&color=5865F2&style=flat-square&suffix=%20members" alt="Discord" /></a>
 </p>
 
 <p align="center">
   <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude/Codex/OpenCode provider access for more models. Not just coding agents.</sub>
 </p>
 
-<img width="1304" height="820" alt="image" src="https://i.imgur.com/AugQy1B.jpeg" />
+<img width="2546" height="1590" alt="image" src="https://github.com/user-attachments/assets/a07d39b2-8529-42c8-8133-4685628b5a92" />
 
 <!--
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
 <img width="2560" height="1604" alt="telegram-cloud-photo-size-2-5213160716557294036-w" src="https://github.com/user-attachments/assets/cbe0e1e7-f73c-4dd7-94e0-c694fcaf491e" />
 -->
 
-<a href="https://777genius.github.io/agent-teams-ai/">Watch demo on the site or here:</a>
+<a href="https://agentteams.live/">Watch demo on the site or here:</a>
 
 [demo_new_15s.webm](https://github.com/user-attachments/assets/d78cf5a4-80fe-4a8b-a1db-fb272e18029c)
 
@@ -107,6 +107,7 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
 - [FAQ](#faq)
 - [Development](#development)
   - [Developer architecture docs](#developer-architecture-docs)
+  - [Terminal Platform integration](#terminal-platform-integration)
 - [Tech stack](#tech-stack)
   - [Debug teammate runtimes](#debug-teammate-runtimes)
   - [Build for distribution](#build-for-distribution)
@@ -228,6 +229,12 @@ No. You can start with the free model with no auth right away. If you want Claud
 </details>
 
 <details>
+<summary><strong>What if the Linux app freezes or shows a blank window over RDP?</strong></summary>
+<br />
+Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can break Electron rendering. Launch with `AGENT_TEAMS_DISABLE_GPU=1` to disable Electron hardware acceleration for that run, for example `AGENT_TEAMS_DISABLE_GPU=1 pnpm dev` from source or `AGENT_TEAMS_DISABLE_GPU=1 ./Agent.Teams.AI.AppImage` for AppImage builds.
+</details>
+
+<details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
 The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. In `multimodel` mode, startup may also perform runtime access and capability checks before launch.
@@ -302,6 +309,27 @@ Use `pnpm dev:mcp` when you want an MCP browser/debugging tool to attach to the 
 Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`.
 
 The desktop app auto-discovers Claude Code projects from `~/.claude/`.
+
+### Terminal Platform integration
+
+Fresh clones install Terminal Platform SDK packages from `vendor/terminal-platform`, so
+`pnpm install --frozen-lockfile` does not require a sibling `../terminal-platform` checkout.
+Those artifacts are pinned in `vendor/terminal-platform/manifest.json` and can be refreshed from a
+local Terminal Platform checkout with:
+
+```bash
+CLAUDE_TERMINAL_PLATFORM_ROOT=/path/to/terminal-platform pnpm terminal-platform:pack
+```
+
+For local Terminal Platform development, build Terminal Platform first, then run this app with the
+same environment variable:
+
+```bash
+CLAUDE_TERMINAL_PLATFORM_ROOT=/path/to/terminal-platform pnpm dev:mcp
+```
+
+When the variable is set, the Electron build aliases Terminal Platform SDK imports to that local
+checkout and the terminal runtime loads `terminal-platform-node` from the local native artifact.
 
 ### Debug teammate runtimes
 

@@ -110,6 +110,7 @@ interface OutboxIndexFile {
 
 type OutboxIndexRoute = OutboxIndexFile['items'][string];
 type OutboxDueRoute = [string, OutboxIndexRoute];
+const MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS = 5 * 60 * 1000;
 
 export interface JsonMemberWorkSyncStoreDeps {
   auditJournal?: MemberWorkSyncAuditJournalPort;
@@ -117,8 +118,12 @@ export interface JsonMemberWorkSyncStoreDeps {
   now?: () => Date;
 }
 
-function normalizeMemberKey(memberName: string): string {
-  return memberName.trim().toLowerCase();
+function normalizeMemberKey(memberName: unknown): string {
+  return typeof memberName === 'string' ? memberName.trim().toLowerCase() : '';
+}
+
+function normalizeTeamKey(teamName: unknown): string {
+  return typeof teamName === 'string' ? teamName.trim().toLowerCase() : '';
 }
 
 function emptyMetricsIndex(): MetricsIndexFile {
@@ -242,38 +247,87 @@ function canReviveOutboxItem(status: MemberWorkSyncOutboxItem['status']): boolea
   return status === 'superseded' || (!isOutboxTerminal(status) && status !== 'pending');
 }
 
+function isReportIntentOwnedBy(
+  teamName: string,
+  memberName: string,
+  intent: MemberWorkSyncReportIntent
+): boolean {
+  return (
+    normalizeTeamKey(intent.teamName) === normalizeTeamKey(teamName) &&
+    normalizeMemberKey(intent.memberName) === normalizeMemberKey(memberName)
+  );
+}
+
+function isOutboxItemOwnedBy(
+  teamName: string,
+  memberName: string,
+  item: MemberWorkSyncOutboxItem
+): boolean {
+  return (
+    normalizeTeamKey(item.teamName) === normalizeTeamKey(teamName) &&
+    normalizeMemberKey(item.memberName) === normalizeMemberKey(memberName)
+  );
+}
+
+function parseIsoMs(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function isStaleClaim(claimedAt: string | undefined, nowIso: string): boolean {
+  const claimedAtMs = parseIsoMs(claimedAt);
+  const nowMs = parseIsoMs(nowIso);
+  return (
+    claimedAtMs != null &&
+    nowMs != null &&
+    (claimedAtMs > nowMs || nowMs - claimedAtMs >= MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS)
+  );
+}
+
+function applyOptionalNextAttemptAt(
+  item: MemberWorkSyncOutboxItem,
+  nextAttemptAt: string | undefined
+): void {
+  if (nextAttemptAt) {
+    item.nextAttemptAt = nextAttemptAt;
+    return;
+  }
+  delete item.nextAttemptAt;
+}
+
+function isNextAttemptDue(nextAttemptAt: string | undefined, nowIso: string): boolean {
+  if (!nextAttemptAt) {
+    return true;
+  }
+  const nextAttemptAtMs = parseIsoMs(nextAttemptAt);
+  if (nextAttemptAtMs == null) {
+    return true;
+  }
+  const nowMs = parseIsoMs(nowIso);
+  return nowMs != null && nextAttemptAtMs <= nowMs;
+}
+
 function canClaimOutboxItem(item: MemberWorkSyncOutboxItem, nowIso: string): boolean {
+  if (item.status === 'claimed') {
+    return isStaleClaim(item.claimedAt ?? item.updatedAt, nowIso);
+  }
   if (item.status !== 'pending' && item.status !== 'failed_retryable') {
     return false;
   }
-  if (!item.nextAttemptAt) {
-    return true;
-  }
-  return item.nextAttemptAt <= nowIso;
+  return isNextAttemptDue(item.nextAttemptAt, nowIso);
 }
 
-function getReviewPickupIntentKey(item: Pick<MemberWorkSyncOutboxItem, 'payload'>): string | null {
-  if (item.payload.workSyncIntent !== 'review_pickup') {
-    return null;
+function canClaimOutboxRoute(route: OutboxIndexRoute, nowIso: string): boolean {
+  if (route.status === 'claimed') {
+    return isStaleClaim(route.updatedAt, nowIso);
   }
-  const explicit = item.payload.workSyncIntentKey?.trim();
-  if (explicit) {
-    return explicit;
-  }
-  const requestEventIds = [...new Set(item.payload.workSyncReviewRequestEventIds ?? [])]
-    .map((id) => id.trim())
-    .filter(Boolean)
-    .sort();
-  return requestEventIds.length > 0 ? `review-pickup:${requestEventIds.join('+')}` : null;
-}
-
-function isSameReviewPickupIntent(
-  current: MemberWorkSyncOutboxItem,
-  input: MemberWorkSyncOutboxEnsureInput
-): boolean {
-  const currentIntentKey = getReviewPickupIntentKey(current);
-  const inputIntentKey = getReviewPickupIntentKey({ payload: input.payload });
-  return Boolean(currentIntentKey && inputIntentKey && currentIntentKey === inputIntentKey);
+  return (
+    (route.status === 'pending' || route.status === 'failed_retryable') &&
+    isNextAttemptDue(route.nextAttemptAt, nowIso)
+  );
 }
 
 function getDueOutboxRoutes(
@@ -282,8 +336,7 @@ function getDueOutboxRoutes(
   limit: number
 ): OutboxDueRoute[] {
   return Object.entries(index.items)
-    .filter(([, route]) => route.status === 'pending' || route.status === 'failed_retryable')
-    .filter(([, route]) => !route.nextAttemptAt || route.nextAttemptAt <= nowIso)
+    .filter(([, route]) => canClaimOutboxRoute(route, nowIso))
     .sort((left, right) => {
       const leftTime = left[1].nextAttemptAt ?? left[1].updatedAt;
       const rightTime = right[1].nextAttemptAt ?? right[1].updatedAt;
@@ -636,10 +689,10 @@ export class JsonMemberWorkSyncStore
         staleIndex = true;
       }
     }
-    const missingIndexedPending = staleIndex
+    const unindexedOrStaleIndexedPending = staleIndex
       ? false
-      : await this.hasMissingIndexedPendingReport(teamName, index);
-    if (staleIndex || missingIndexedPending) {
+      : await this.hasUnindexedOrStaleIndexedPendingReport(teamName, index);
+    if (staleIndex || unindexedOrStaleIndexedPending) {
       await this.enqueue(teamName, async () => {
         await withFileLock(this.paths.getPendingReportsIndexPath(teamName), async () => {
           index = await this.repairPendingReportsIndex(teamName);
@@ -679,29 +732,58 @@ export class JsonMemberWorkSyncStore
         if (!route) {
           return;
         }
-        await withFileLock(
-          this.paths.getMemberReportsPath(teamName, route.memberName),
-          async () => {
-            const reports = await this.readMemberReportsFile(teamName, route.memberName);
-            const current = reports.intents[id];
-            if (current?.status !== 'pending') {
-              return;
+        const updateRoute = async (
+          targetRoute: PendingReportsIndexFile['items'][string]
+        ): Promise<boolean> => {
+          let staleRoute = false;
+          await withFileLock(
+            this.paths.getMemberReportsPath(teamName, targetRoute.memberName),
+            async () => {
+              const reports = await this.readMemberReportsFile(teamName, targetRoute.memberName);
+              const current = reports.intents[id];
+              if (!current) {
+                delete index.items[id];
+                staleRoute = true;
+                return;
+              }
+              if (!isReportIntentOwnedBy(teamName, targetRoute.memberName, current)) {
+                delete index.items[id];
+                staleRoute = true;
+                return;
+              }
+              if (current.status !== 'pending') {
+                return;
+              }
+              const next: MemberWorkSyncReportIntent = {
+                ...current,
+                status: result.status,
+                resultCode: result.resultCode,
+                processedAt: result.processedAt,
+              };
+              reports.intents[id] = next;
+              await this.writeMemberReportsFile(teamName, targetRoute.memberName, reports);
+              index.items[id] = toPendingReportIndexItem(
+                next,
+                this.paths.getMemberKey(next.memberName)
+              );
+              await this.writePendingReportsIndexFile(teamName, index);
             }
-            reports.intents[id] = {
-              ...current,
-              status: result.status,
-              resultCode: result.resultCode,
-              processedAt: result.processedAt,
-            };
-            await this.writeMemberReportsFile(teamName, route.memberName, reports);
-            index.items[id] = {
-              ...route,
-              status: result.status,
-              processedAt: result.processedAt,
-            };
-            await this.writePendingReportsIndexFile(teamName, index);
+          );
+          return staleRoute;
+        };
+
+        let staleRoute = await updateRoute(route);
+        if (staleRoute) {
+          index = await this.repairPendingReportsIndex(teamName);
+          const repairedRoute = index.items[id];
+          if (!repairedRoute) {
+            return;
           }
-        );
+          staleRoute = await updateRoute(repairedRoute);
+          if (staleRoute) {
+            await this.repairPendingReportsIndex(teamName);
+          }
+        }
       });
     });
   }
@@ -721,21 +803,20 @@ export class JsonMemberWorkSyncStore
             const current = outbox.items[input.id];
             if (current) {
               if (current.payloadHash !== input.payloadHash) {
-                if (isSameReviewPickupIntent(current, input) && !isOutboxTerminal(current.status)) {
+                if (current.status !== 'delivered' && current.status !== 'failed_terminal') {
                   const next: MemberWorkSyncOutboxItem = {
                     ...current,
                     agendaFingerprint: input.agendaFingerprint,
                     payloadHash: input.payloadHash,
                     payload: input.payload,
                     status: 'pending',
+                    attemptGeneration:
+                      current.status === 'claimed'
+                        ? current.attemptGeneration + 1
+                        : current.attemptGeneration,
                     updatedAt: input.nowIso,
                   };
-                  const nextAttemptAt = input.nextAttemptAt ?? current.nextAttemptAt;
-                  if (nextAttemptAt) {
-                    next.nextAttemptAt = nextAttemptAt;
-                  } else {
-                    delete next.nextAttemptAt;
-                  }
+                  applyOptionalNextAttemptAt(next, input.nextAttemptAt);
                   delete next.claimedBy;
                   delete next.claimedAt;
                   delete next.lastError;
@@ -761,12 +842,7 @@ export class JsonMemberWorkSyncStore
                   status: 'pending',
                   updatedAt: input.nowIso,
                 };
-                const nextAttemptAt = input.nextAttemptAt ?? current.nextAttemptAt;
-                if (nextAttemptAt) {
-                  next.nextAttemptAt = nextAttemptAt;
-                } else {
-                  delete next.nextAttemptAt;
-                }
+                applyOptionalNextAttemptAt(next, input.nextAttemptAt);
                 delete next.claimedBy;
                 delete next.claimedAt;
                 delete next.lastError;
@@ -820,45 +896,67 @@ export class JsonMemberWorkSyncStore
         }
         let dueRoutes = getDueOutboxRoutes(index, input.nowIso, input.limit);
         if (
-          dueRoutes.length > 0 &&
           dueRoutes.length < Math.max(0, input.limit) &&
-          (await this.hasMissingIndexedDueOutboxItem(input.teamName, index, input.nowIso))
+          (await this.hasUnindexedOrStaleIndexedDueOutboxItem(input.teamName, index, input.nowIso))
         ) {
           index = await this.repairOutboxIndex(input.teamName);
           dueRoutes = getDueOutboxRoutes(index, input.nowIso, input.limit);
         }
 
-        let staleIndex = false;
-        for (const [id, route] of dueRoutes) {
-          await withFileLock(
-            this.paths.getMemberOutboxPath(input.teamName, route.memberName),
-            async () => {
-              const outbox = await this.readMemberOutboxFile(input.teamName, route.memberName);
-              const item = outbox.items[id];
-              if (!item || !canClaimOutboxItem(item, input.nowIso)) {
-                delete index.items[id];
-                staleIndex = true;
-                return;
-              }
-              const next: MemberWorkSyncOutboxItem = {
-                ...item,
-                status: 'claimed',
-                attemptGeneration: item.attemptGeneration + 1,
-                claimedBy: input.claimedBy,
-                claimedAt: input.nowIso,
-                updatedAt: input.nowIso,
-              };
-              delete next.lastError;
-              outbox.items[id] = next;
-              await this.writeMemberOutboxFile(input.teamName, route.memberName, outbox);
-              index.items[id] = toOutboxIndexItem(next, route.memberKey);
-              claimed.push(next);
+        const claimRoutes = async (routes: OutboxDueRoute[]): Promise<boolean> => {
+          let staleIndex = false;
+          for (const [id, route] of routes) {
+            if (claimed.length >= Math.max(0, input.limit)) {
+              break;
             }
-          );
-        }
+            await withFileLock(
+              this.paths.getMemberOutboxPath(input.teamName, route.memberName),
+              async () => {
+                const outbox = await this.readMemberOutboxFile(input.teamName, route.memberName);
+                const item = outbox.items[id];
+                if (!item || !canClaimOutboxItem(item, input.nowIso)) {
+                  delete index.items[id];
+                  staleIndex = true;
+                  return;
+                }
+                const memberKey = this.paths.getMemberKey(item.memberName);
+                if (!isOutboxItemOwnedBy(input.teamName, route.memberName, item)) {
+                  delete index.items[id];
+                  staleIndex = true;
+                  return;
+                }
+                const next: MemberWorkSyncOutboxItem = {
+                  ...item,
+                  status: 'claimed',
+                  attemptGeneration: item.attemptGeneration + 1,
+                  claimedBy: input.claimedBy,
+                  claimedAt: input.nowIso,
+                  updatedAt: input.nowIso,
+                };
+                delete next.nextAttemptAt;
+                delete next.lastError;
+                outbox.items[id] = next;
+                await this.writeMemberOutboxFile(input.teamName, route.memberName, outbox);
+                index.items[id] = toOutboxIndexItem(next, memberKey);
+                claimed.push(next);
+              }
+            );
+          }
+          return staleIndex;
+        };
 
+        let staleIndex = await claimRoutes(dueRoutes);
         if (staleIndex) {
           index = await this.repairOutboxIndex(input.teamName);
+          const remainingLimit = Math.max(0, input.limit) - claimed.length;
+          dueRoutes =
+            remainingLimit > 0 ? getDueOutboxRoutes(index, input.nowIso, remainingLimit) : [];
+          staleIndex = dueRoutes.length > 0 ? await claimRoutes(dueRoutes) : false;
+          if (staleIndex) {
+            await this.repairOutboxIndex(input.teamName);
+          } else if (dueRoutes.length > 0) {
+            await this.writeOutboxIndexFile(input.teamName, index);
+          }
         } else if (dueRoutes.length > 0) {
           await this.writeOutboxIndexFile(input.teamName, index);
         }
@@ -869,7 +967,7 @@ export class JsonMemberWorkSyncStore
 
   async markDelivered(input: MemberWorkSyncOutboxMarkDeliveredInput): Promise<void> {
     await this.updateOutboxItem(input.teamName, input.id, (current) => {
-      if (current?.attemptGeneration !== input.attemptGeneration) {
+      if (current?.attemptGeneration !== input.attemptGeneration || current.status !== 'claimed') {
         return current;
       }
       const next: MemberWorkSyncOutboxItem = {
@@ -883,6 +981,7 @@ export class JsonMemberWorkSyncStore
         updatedAt: input.nowIso,
       };
       delete next.lastError;
+      delete next.nextAttemptAt;
       return next;
     });
   }
@@ -903,7 +1002,10 @@ export class JsonMemberWorkSyncStore
 
   async markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void> {
     await this.updateOutboxItem(input.teamName, input.id, (current) => {
-      if (current?.attemptGeneration !== input.attemptGeneration) {
+      if (
+        current?.attemptGeneration !== input.attemptGeneration ||
+        isOutboxTerminal(current.status)
+      ) {
         return current;
       }
       const next: MemberWorkSyncOutboxItem = {
@@ -923,6 +1025,17 @@ export class JsonMemberWorkSyncStore
   async countRecentDelivered(
     input: MemberWorkSyncOutboxCountRecentDeliveredInput
   ): Promise<number> {
+    const workSyncIntentKeyPrefix = input.workSyncIntentKeyPrefix?.trim();
+    if (workSyncIntentKeyPrefix) {
+      const memberOutbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
+      return Object.values(memberOutbox.items).filter(
+        (item) =>
+          item.status === 'delivered' &&
+          item.updatedAt >= input.sinceIso &&
+          item.payload.workSyncIntentKey?.startsWith(workSyncIntentKeyPrefix) === true
+      ).length;
+    }
+
     let index = await this.readOutboxIndexFile(input.teamName);
     if (Object.keys(index.items).length === 0) {
       await this.enqueue(input.teamName, async () => {
@@ -1003,7 +1116,8 @@ export class JsonMemberWorkSyncStore
         (item) =>
           item.payload.workSyncIntentKey === intentKey &&
           item.updatedAt >= input.sinceIso &&
-          item.status !== 'failed_terminal'
+          item.status !== 'failed_terminal' &&
+          item.status !== 'superseded'
       )
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const latest = matches[0];
@@ -1178,17 +1292,48 @@ export class JsonMemberWorkSyncStore
         if (!route) {
           return;
         }
-        await withFileLock(this.paths.getMemberOutboxPath(teamName, route.memberName), async () => {
-          const outbox = await this.readMemberOutboxFile(teamName, route.memberName);
-          const next = updater(outbox.items[id]);
-          if (!next) {
+        const updateRoute = async (targetRoute: OutboxIndexRoute): Promise<boolean> => {
+          let staleRoute = false;
+          await withFileLock(
+            this.paths.getMemberOutboxPath(teamName, targetRoute.memberName),
+            async () => {
+              const outbox = await this.readMemberOutboxFile(teamName, targetRoute.memberName);
+              const current = outbox.items[id];
+              if (!current) {
+                delete index.items[id];
+                staleRoute = true;
+                return;
+              }
+              if (!isOutboxItemOwnedBy(teamName, targetRoute.memberName, current)) {
+                delete index.items[id];
+                staleRoute = true;
+                return;
+              }
+              const next = updater(current);
+              if (!next) {
+                return;
+              }
+              outbox.items[id] = next;
+              await this.writeMemberOutboxFile(teamName, targetRoute.memberName, outbox);
+              index.items[id] = toOutboxIndexItem(next, this.paths.getMemberKey(next.memberName));
+              await this.writeOutboxIndexFile(teamName, index);
+            }
+          );
+          return staleRoute;
+        };
+
+        let staleRoute = await updateRoute(route);
+        if (staleRoute) {
+          index = await this.repairOutboxIndex(teamName);
+          const repairedRoute = index.items[id];
+          if (!repairedRoute) {
             return;
           }
-          outbox.items[id] = next;
-          await this.writeMemberOutboxFile(teamName, route.memberName, outbox);
-          index.items[id] = toOutboxIndexItem(next, route.memberKey);
-          await this.writeOutboxIndexFile(teamName, index);
-        });
+          staleRoute = await updateRoute(repairedRoute);
+          if (staleRoute) {
+            await this.repairOutboxIndex(teamName);
+          }
+        }
       });
     });
   }
@@ -1258,11 +1403,17 @@ export class JsonMemberWorkSyncStore
     for (const { memberName, reports } of await this.scanMemberReports(teamName)) {
       const memberKey = this.paths.getMemberKey(memberName);
       for (const intent of Object.values(reports.intents)) {
+        if (!isReportIntentOwnedBy(teamName, memberName, intent)) {
+          continue;
+        }
         index.items[intent.id] = toPendingReportIndexItem(intent, memberKey);
         repairedMembers.add(intent.memberName);
       }
     }
     for (const intent of Object.values((await this.readLegacyPendingFile(teamName)).intents)) {
+      if (!isReportIntentOwnedBy(teamName, intent.memberName, intent)) {
+        continue;
+      }
       const memberKey = this.paths.getMemberKey(intent.memberName);
       if (!index.items[intent.id]) {
         await withFileLock(
@@ -1307,11 +1458,17 @@ export class JsonMemberWorkSyncStore
     for (const { memberName, outbox } of await this.scanMemberOutboxes(teamName)) {
       const memberKey = this.paths.getMemberKey(memberName);
       for (const item of Object.values(outbox.items)) {
+        if (!isOutboxItemOwnedBy(teamName, memberName, item)) {
+          continue;
+        }
         index.items[item.id] = toOutboxIndexItem(item, memberKey);
         repairedMembers.add(item.memberName);
       }
     }
     for (const item of Object.values((await this.readLegacyOutboxFile(teamName)).items)) {
+      if (!isOutboxItemOwnedBy(teamName, item.memberName, item)) {
+        continue;
+      }
       const memberKey = this.paths.getMemberKey(item.memberName);
       if (!index.items[item.id]) {
         await withFileLock(this.paths.getMemberOutboxPath(teamName, item.memberName), async () => {
@@ -1389,24 +1546,52 @@ export class JsonMemberWorkSyncStore
     return reports;
   }
 
-  private async hasMissingIndexedPendingReport(
+  private async hasUnindexedOrStaleIndexedPendingReport(
     teamName: string,
     index: PendingReportsIndexFile
   ): Promise<boolean> {
-    const indexedIds = new Set(Object.keys(index.items));
-    for (const { reports } of await this.scanMemberReports(teamName)) {
+    const routes = index.items;
+    for (const { memberName, reports } of await this.scanMemberReports(teamName)) {
       for (const intent of Object.values(reports.intents)) {
-        if (intent.status === 'pending' && !indexedIds.has(intent.id)) {
+        if (!isReportIntentOwnedBy(teamName, memberName, intent)) {
+          continue;
+        }
+        const route = routes[intent.id];
+        if (
+          intent.status === 'pending' &&
+          !this.isCurrentPendingReportRoute(teamName, route, intent)
+        ) {
           return true;
         }
       }
     }
     for (const intent of Object.values((await this.readLegacyPendingFile(teamName)).intents)) {
-      if (intent.status === 'pending' && !indexedIds.has(intent.id)) {
+      if (!isReportIntentOwnedBy(teamName, intent.memberName, intent)) {
+        continue;
+      }
+      const route = routes[intent.id];
+      if (
+        intent.status === 'pending' &&
+        !this.isCurrentPendingReportRoute(teamName, route, intent)
+      ) {
         return true;
       }
     }
     return false;
+  }
+
+  private isCurrentPendingReportRoute(
+    teamName: string,
+    route: PendingReportsIndexFile['items'][string] | undefined,
+    intent: MemberWorkSyncReportIntent
+  ): boolean {
+    return (
+      !!route &&
+      normalizeTeamKey(intent.teamName) === normalizeTeamKey(teamName) &&
+      route.status === 'pending' &&
+      normalizeMemberKey(route.memberName) === normalizeMemberKey(intent.memberName) &&
+      route.memberKey === this.paths.getMemberKey(intent.memberName)
+    );
   }
 
   private async scanMemberOutboxes(
@@ -1419,25 +1604,54 @@ export class JsonMemberWorkSyncStore
     return outboxes;
   }
 
-  private async hasMissingIndexedDueOutboxItem(
+  private async hasUnindexedOrStaleIndexedDueOutboxItem(
     teamName: string,
     index: OutboxIndexFile,
     nowIso: string
   ): Promise<boolean> {
-    const indexedIds = new Set(Object.keys(index.items));
-    for (const { outbox } of await this.scanMemberOutboxes(teamName)) {
+    const routes = index.items;
+    for (const { memberName, outbox } of await this.scanMemberOutboxes(teamName)) {
       for (const item of Object.values(outbox.items)) {
-        if (canClaimOutboxItem(item, nowIso) && !indexedIds.has(item.id)) {
+        if (!isOutboxItemOwnedBy(teamName, memberName, item)) {
+          continue;
+        }
+        const route = routes[item.id];
+        if (
+          canClaimOutboxItem(item, nowIso) &&
+          !this.isCurrentDueOutboxRoute(teamName, route, item, nowIso)
+        ) {
           return true;
         }
       }
     }
     for (const item of Object.values((await this.readLegacyOutboxFile(teamName)).items)) {
-      if (canClaimOutboxItem(item, nowIso) && !indexedIds.has(item.id)) {
+      if (!isOutboxItemOwnedBy(teamName, item.memberName, item)) {
+        continue;
+      }
+      const route = routes[item.id];
+      if (
+        canClaimOutboxItem(item, nowIso) &&
+        !this.isCurrentDueOutboxRoute(teamName, route, item, nowIso)
+      ) {
         return true;
       }
     }
     return false;
+  }
+
+  private isCurrentDueOutboxRoute(
+    teamName: string,
+    route: OutboxIndexRoute | undefined,
+    item: MemberWorkSyncOutboxItem,
+    nowIso: string
+  ): boolean {
+    return (
+      !!route &&
+      normalizeTeamKey(item.teamName) === normalizeTeamKey(teamName) &&
+      normalizeMemberKey(route.memberName) === normalizeMemberKey(item.memberName) &&
+      route.memberKey === this.paths.getMemberKey(item.memberName) &&
+      canClaimOutboxRoute(route, nowIso)
+    );
   }
 
   private async appendAudit(input: {

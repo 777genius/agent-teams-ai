@@ -414,7 +414,8 @@ function isRecoverableOpenCodeSessionRefreshMessage(message: string | undefined)
     refreshMarkerText === 'opencode session changed; refreshing the session before retry' ||
     refreshMarkerText === 'opencode session refresh scheduled after resolved behavior changed' ||
     refreshMarkerText === 'opencode_prompt_delivery_session_refresh_scheduled' ||
-    refreshMarkerText === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed'
+    refreshMarkerText === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed' ||
+    refreshMarkerText === 'opencode_session_stale_observe_scheduled_after_accepted_prompt'
   ) {
     return true;
   }
@@ -949,6 +950,16 @@ function getCurrentRuntimeOfflineVisualState(
   spawnBootstrapConfirmed: boolean | undefined,
   isTeamProvisioning: boolean | undefined
 ): MemberLaunchVisualState {
+  // The team lead's runtime is tracked via config.leadSessionId, not as a
+  // spawned runtime process.  In the OpenCode adapter path,
+  // buildTeamAgentRuntimeSnapshot creates a synthetic runtime entry for the
+  // lead with alive:false (no CLI child pid) and no livenessKind — which the
+  // checks below would classify as stale_runtime.  Skip lead entries that
+  // carry the lead backend marker so every team doesn't show the lead as
+  // "stale-runtime" permanently.
+  if (isLeadMember(member) && runtimeEntry?.backendType === 'lead') {
+    return null;
+  }
   if (runtimeEntry?.livenessKind === 'registered_only') {
     return 'registered_only';
   }

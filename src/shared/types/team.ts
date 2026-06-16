@@ -1689,8 +1689,10 @@ export interface AddMemberRequest {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 

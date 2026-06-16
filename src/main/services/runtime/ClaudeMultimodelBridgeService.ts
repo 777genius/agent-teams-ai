@@ -1,5 +1,6 @@
 import { execCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE } from '@shared/types/cliInstaller';
 import { createLogger } from '@shared/utils/logger';
 import {
   createDefaultCliExtensionCapabilities,
@@ -10,7 +11,11 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
-import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
+import {
+  buildProviderAwareCliEnv,
+  getAggregateProviderStatusStoredCredentialAllowlist,
+  getProviderStatusStoredCredentialAllowlist,
+} from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
 import type {
@@ -413,7 +418,7 @@ function createRuntimeStatusErrorProviderStatus(
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',
-    statusMessage: 'Provider status unavailable',
+    statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage,
   };
 }
@@ -838,12 +843,15 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private async buildCliEnv(
-    binaryPath: string
+    binaryPath: string,
+    options: { allowedStoredApiKeyEnvVarNames?: readonly string[] } = {}
   ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
     return buildProviderAwareCliEnv({
       binaryPath,
       allowStoredApiKeyDecryption: false,
-      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      allowedStoredApiKeyEnvVarNames: options.allowedStoredApiKeyEnvVarNames ?? [
+        'ANTHROPIC_AUTH_TOKEN',
+      ],
     });
   }
 
@@ -855,8 +863,7 @@ export class ClaudeMultimodelBridgeService {
       binaryPath,
       providerId,
       allowStoredApiKeyDecryption: false,
-      allowedStoredApiKeyEnvVarNames:
-        providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
+      allowedStoredApiKeyEnvVarNames: getProviderStatusStoredCredentialAllowlist(providerId),
     });
   }
 
@@ -1528,22 +1535,24 @@ export class ClaudeMultimodelBridgeService {
         }
       }
 
-      logger.warn(
-        `Provider-scoped summary runtime status unavailable for ${providerId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+      const summaryStatusError = error instanceof Error ? error.message : String(error);
       if (
         this.isRuntimeStatusTimeoutError(error) &&
         this.shouldUseLegacyProviderTimeoutFallback(providerId)
       ) {
+        logger.debug(
+          `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
+        );
         logger.warn(
           `Provider-scoped summary runtime status timed out for ${providerId}, falling back to scoped legacy probes: ${
-            error instanceof Error ? error.message : String(error)
+            summaryStatusError
           }`
         );
         return this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error);
       }
+      logger.warn(
+        `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
+      );
       return createRuntimeStatusErrorProviderStatus(providerId, error);
     }
   }
@@ -1744,7 +1753,9 @@ export class ClaudeMultimodelBridgeService {
       );
     }
 
-    const { env, connectionIssues } = await this.buildCliEnv(binaryPath);
+    const { env, connectionIssues } = await this.buildCliEnv(binaryPath, {
+      allowedStoredApiKeyEnvVarNames: getAggregateProviderStatusStoredCredentialAllowlist(),
+    });
 
     try {
       const { stdout } = await execCli(binaryPath, ['runtime', 'status', '--json'], {

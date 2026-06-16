@@ -95,7 +95,9 @@ export const ApiKeyCard = ({ apiKey, onEdit }: ApiKeyCardProps): React.JSX.Eleme
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{copied ? 'Copied!' : 'Copy env var name'}</TooltipContent>
+	            <TooltipContent>
+	              {copied ? t('apiKeys.actions.copied') : t('apiKeys.actions.copyEnvVarName')}
+	            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -135,7 +137,9 @@ export const ApiKeyCard = ({ apiKey, onEdit }: ApiKeyCardProps): React.JSX.Eleme
                   <Trash2 className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{confirmDelete ? 'Click again to confirm' : 'Delete'}</TooltipContent>
+	              <TooltipContent>
+	                {confirmDelete ? t('apiKeys.actions.confirmDelete') : t('apiKeys.actions.delete')}
+	              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

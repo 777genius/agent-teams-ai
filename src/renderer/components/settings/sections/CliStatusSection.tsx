@@ -25,11 +25,15 @@ import {
   getProviderDisconnectAction,
   isConnectionManagedRuntimeProvider,
   isOpenCodeCatalogHydrating,
+  shouldMaskCodexNegativeBootstrapState,
   shouldShowProviderConnectAction,
   shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
-import { getProviderRuntimeBackendSummary } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
+import {
+  buildProviderRuntimeBackendSummaryText,
+  getProviderRuntimeBackendSummary,
+} from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
 import {
   getProviderTerminalCommand,
@@ -93,19 +97,6 @@ function isCodexSnapshotPending(
   return provider.providerId === 'codex' && codexSnapshotPending;
 }
 
-function shouldMaskCodexNegativeBootstrapState(
-  sourceProvider: CliProviderStatus | null,
-  mergedProvider: CliProviderStatus
-): boolean {
-  return (
-    sourceProvider?.providerId === 'codex' &&
-    sourceProvider.statusMessage === 'Checking...' &&
-    mergedProvider.providerId === 'codex' &&
-    mergedProvider.connection?.codex?.launchReadinessState === 'missing_auth' &&
-    mergedProvider.connection.codex.login.status === 'idle'
-  );
-}
-
 function getProviderStatusColor(statusText: string, authenticated: boolean): string {
   if (statusText === 'Checking...') {
     return 'var(--color-text-secondary)';
@@ -129,6 +120,11 @@ function getProviderLabel(providerId: CliProviderId): string {
 
 export const CliStatusSection = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
+  const runtimeBackendSummaryText = useMemo(
+    () => buildProviderRuntimeBackendSummaryText(commonT),
+    [commonT]
+  );
   const isElectron = useMemo(() => isElectronMode(), []);
   const appConfig = useStore((s) => s.appConfig);
   const selectedProjectId = useStore((s) => s.selectedProjectId);
@@ -493,12 +489,13 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                             isCodexSnapshotPending(provider, codexSnapshotPending);
                           const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
                             ? getProviderCurrentRuntimeSummary(provider, t)
-                            : getProviderRuntimeBackendSummary(provider);
+                            : getProviderRuntimeBackendSummary(provider, runtimeBackendSummaryText);
                           const sourceProvider =
                             loadingCliProviderMap.get(provider.providerId) ?? null;
                           const maskNegativeBootstrapState = shouldMaskCodexNegativeBootstrapState(
                             sourceProvider,
-                            provider
+                            provider,
+                            { providerLoading }
                           );
                           const effectiveShowSkeleton = showSkeleton || maskNegativeBootstrapState;
                           const statusText = effectiveShowSkeleton

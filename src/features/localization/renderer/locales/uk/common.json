@@ -1,0 +1,927 @@
+{
+  "actions": {
+    "cancel": "Скасувати",
+    "close": "Закрити",
+    "copied": "Скопійовано",
+    "copyUrl": "Копіювати URL",
+    "open": "Відкрити",
+    "reveal": "Показати",
+    "retry": "Повторити",
+    "save": "Зберегти",
+    "showLess": "Згорнути",
+    "showMore": "Показати більше",
+    "refresh": "Оновити",
+    "reset": "Скинути",
+    "copyToClipboard": "Копіювати в буфер обміну",
+    "moreActions": "Більше дій",
+    "closeDialog": "Закрити діалог",
+    "goToDashboard": "Перейти на панель",
+    "or": "або",
+    "hide": "Сховати",
+    "resetSelection": "Скинути вибір"
+  },
+  "code": {
+    "line": "рядок {{line}}",
+    "lines": "рядки {{from}}-{{to}}",
+    "moreLines": "(ще {{count}} рядків...)",
+    "moreLines_few": "(ще {{count}} рядки...)",
+    "moreLines_many": "(ще {{count}} рядків...)",
+    "moreLines_one": "(ще {{count}} рядок...)",
+    "moreLines_other": "(ще {{count}} рядків...)",
+    "code": "Код",
+    "preview": "Перегляд",
+    "markdownPreview": "Перегляд Markdown",
+    "linesParenthesized": "(рядки {{from}}-{{to}})",
+    "mermaidSyntaxError": "Синтаксична помилка Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Контекст",
+    "breakdown": {
+      "text": "Текст",
+      "thinking": "Міркування"
+    },
+    "detailsAria": "Деталі ін'єкції контексту",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} токенів",
+    "sections": {
+      "claudeMdFiles": "Файли CLAUDE.md",
+      "mentionedFiles": "Згадані файли",
+      "taskCoordination": "Координація завдань",
+      "thinkingText": "Міркування + Текст",
+      "toolOutputs": "Вивід інструментів",
+      "userMessages": "Повідомлення користувача"
+    },
+    "title": "Новий контекст, доданий у цьому ході",
+    "tokenCount": "~{{tokens}} токенів",
+    "totalNewTokens": "Усього нових токенів",
+    "turn": "Хід {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} токени",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} токенів",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} токен",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} токенів"
+  },
+  "locales": {
+    "emptyMessage": "Мову не знайдено.",
+    "names": {
+      "ar": "Арабська",
+      "bn": "Бенгальська",
+      "de": "Німецька",
+      "en": "Англійська",
+      "es": "Іспанська",
+      "fa": "Перська",
+      "fil": "Філіппінська",
+      "fr": "Французька",
+      "hi": "Гінді",
+      "id": "Індонезійська",
+      "it": "Італійська",
+      "ja": "Японська",
+      "ko": "Корейська",
+      "mr": "Маратхі",
+      "ms": "Малайська",
+      "nl": "Нідерландська",
+      "pl": "Польська",
+      "pt": "Португальська",
+      "ro": "Румунська",
+      "ru": "Російська",
+      "sw": "Суахілі",
+      "system": "Системна",
+      "ta": "Тамільська",
+      "te": "Телугу",
+      "th": "Тайська",
+      "tr": "Турецька",
+      "uk": "Українська",
+      "ur": "Урду",
+      "vi": "В'єтнамська",
+      "zh": "Китайська"
+    },
+    "searchPlaceholder": "Пошук мови...",
+    "selectPlaceholder": "Виберіть мову застосунку...",
+    "systemWithResolved": "Системна - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Учасників не знайдено.",
+    "searchPlaceholder": "Пошук учасників...",
+    "unassigned": "Не призначено",
+    "teammateFallback": "учасник"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Перевірка",
+        "downloading": "Завантаження",
+        "installCli": "Встановити Codex CLI",
+        "installing": "Встановлення",
+        "retryInstall": "Повторити встановлення"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Немає відповідних пропозицій",
+    "searching": "Пошук...",
+    "searchingFiles": "Пошук файлів...",
+    "findInConversation": "Знайти в розмові...",
+    "resultCount": "{{current}} з {{total}}",
+    "resultCountCapped": "{{current}} з {{total}}+",
+    "noResults": "Немає результатів",
+    "previousResultShortcut": "Попередній результат (Shift+Enter)",
+    "nextResultShortcut": "Наступний результат (Enter)",
+    "closeShortcut": "Закрити (Esc)",
+    "nothingFound": "Нічого не знайдено",
+    "placeholder": "Пошук..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Додати розклад",
+      "clearFilters": "Очистити фільтри",
+      "createSchedule": "Створити розклад",
+      "delete": "Видалити",
+      "edit": "Редагувати",
+      "pause": "Призупинити",
+      "resume": "Відновити",
+      "runNow": "Запустити зараз"
+    },
+    "empty": {
+      "description": "Створіть розклад для будь-якої команди, щоб автоматизувати виконання завдань Claude за допомогою cron-виразів. Розклади з усіх команд з'являтимуться тут.",
+      "noMatches": "Жоден розклад не відповідає поточним фільтрам",
+      "title": "Немає запланованих завдань"
+    },
+    "filters": {
+      "allTeams": "Усі команди"
+    },
+    "item": {
+      "loadingRunHistory": "Завантаження історії запусків...",
+      "nextRun": "Далі: {{value}}",
+      "noRunsYet": "Ще немає запусків"
+    },
+    "loading": "Завантаження розкладів...",
+    "searchPlaceholder": "Пошук розкладів...",
+    "status": {
+      "active": "Активний",
+      "all": "Усі",
+      "disabled": "Вимкнено",
+      "paused": "Призупинено"
+    },
+    "title": "Розклади"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Сховати",
+      "pin": "Закріпити",
+      "unhide": "Показати"
+    },
+    "empty": {
+      "noMatchingSessions": "Немає відповідних сесій",
+      "noMatchingSessionsDescription": "У цьому проєкті поки немає відповідних сесій.",
+      "noMatchingSessionsFiltered": "Спробуйте інший запит або скиньте фільтр провайдера.",
+      "noSessions": "Сесій не знайдено",
+      "noSessionsDescription": "У цьому проєкті поки немає сесій",
+      "selectProject": "Виберіть проєкт, щоб переглянути сесії"
+    },
+    "errors": {
+      "loading": "Помилка завантаження сесій"
+    },
+    "loadedMatchingMore": "Поки що завантажено {{count}} відповідних сесій - прокрутіть униз, щоб завантажити більше.",
+    "loadingMore": "Завантаження додаткових сесій...",
+    "pinned": "Закріплено",
+    "scrollToLoadMore": "Прокрутіть, щоб завантажити більше",
+    "search": {
+      "clear": "Очистити пошук сесій",
+      "placeholder": "Пошук сесій..."
+    },
+    "selection": {
+      "cancel": "Скасувати вибір",
+      "exitMode": "Вийти з режиму вибору",
+      "hideSelected": "Сховати вибрані сесії",
+      "pinSelected": "Закріпити вибрані сесії",
+      "selectSessions": "Вибрати сесії",
+      "selected": "{{count}} вибрано",
+      "unhideSelected": "Показати вибрані сесії",
+      "selected_few": "{{count}} вибрано",
+      "selected_many": "{{count}} вибрано",
+      "selected_one": "{{count}} вибрано",
+      "selected_other": "{{count}} вибрано"
+    },
+    "sort": {
+      "byContext": "За контекстом",
+      "byContextTooltip": "Сортувати за споживанням контексту",
+      "byRecentTooltip": "Сортувати за нещодавніми",
+      "contextLoadedOnly": "Сортування за контекстом ранжує лише завантажені сесії."
+    },
+    "title": "Сесії",
+    "visibility": {
+      "hideHidden": "Сховати приховані сесії",
+      "showHidden": "Показати приховані сесії"
+    },
+    "worktree": {
+      "switch": "Перемкнути Worktree"
+    },
+    "loadedMatchingMore_few": "Поки що завантажено {{count}} відповідні сесії - прокрутіть униз, щоб завантажити більше.",
+    "loadedMatchingMore_many": "Поки що завантажено {{count}} відповідних сесій - прокрутіть униз, щоб завантажити більше.",
+    "loadedMatchingMore_one": "Поки що завантажено {{count}} відповідну сесію - прокрутіть униз, щоб завантажити більше.",
+    "loadedMatchingMore_other": "Поки що завантажено {{count}} відповідних сесій - прокрутіть униз, щоб завантажити більше.",
+    "failedToLoad": "Не вдалося завантажити сесію",
+    "loading": "Завантаження сесії...",
+    "filter": {
+      "title": "Фільтрувати сесії"
+    },
+    "count": "{{count}} сесій",
+    "count_one": "{{count}} сесія",
+    "count_other": "{{count}} сесій",
+    "count_few": "{{count}} сесії",
+    "count_many": "{{count}} сесій",
+    "inProgress": "Сесія триває..."
+  },
+  "states": {
+    "loading": "Завантаження...",
+    "offline": "Офлайн",
+    "online": "Онлайн",
+    "unknown": "Невідомо",
+    "error": "Помилка"
+  },
+  "markdown": {
+    "imageFallback": "[Зображення: {{label}}]",
+    "largeContentNotice": "Вміст дуже великий ({{count}} симв.). Показано без обробки, щоб інтерфейс залишався швидким.",
+    "largeContentTitle": "Великий вміст показано без обробки, щоб запобігти зависанню інтерфейсу",
+    "raw": "Без обробки",
+    "rawPreview": "Перегляд без обробки",
+    "renderMarkdown": "Відрендерити markdown",
+    "showAll": "Показати все",
+    "showMore": "Показати більше",
+    "showRaw": "Показати без обробки",
+    "showingChars": "Показано {{shown}} / {{total}} симв.",
+    "largeContentNotice_few": "Вміст дуже великий ({{count}} симв.). Показано без обробки, щоб інтерфейс залишався швидким.",
+    "largeContentNotice_many": "Вміст дуже великий ({{count}} симв.). Показано без обробки, щоб інтерфейс залишався швидким.",
+    "largeContentNotice_one": "Вміст дуже великий ({{count}} симв.). Показано без обробки, щоб інтерфейс залишався швидким.",
+    "largeContentNotice_other": "Вміст дуже великий ({{count}} симв.). Показано без обробки, щоб інтерфейс залишався швидким."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Перевірте вивід терміналу вище щодо деталей",
+    "closingInSeconds": "Закриття через {{count}} с...",
+    "closingInSeconds_few": "Закриття через {{count}} с...",
+    "closingInSeconds_many": "Закриття через {{count}} с...",
+    "closingInSeconds_one": "Закриття через {{count}} с...",
+    "closingInSeconds_other": "Закриття через {{count}} с...",
+    "completedSuccessfully": "Успішно завершено",
+    "exitCode": "(код виходу {{code}})",
+    "processFailed": "Процес завершився з помилкою",
+    "title": "Термінал"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Накопичено за всю сесію без дублювання",
+    "cacheRead": "Читання з кешу",
+    "cacheWrite": "Запис у кеш",
+    "costUsd": "Вартість (USD)",
+    "inputTokens": "Вхідні токени",
+    "model": "Модель",
+    "outputTokens": "Вихідні токени",
+    "phase": "Фаза {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% вхідного промпту",
+    "taskCoordination": "Координація завдань",
+    "thinkingText": "Міркування + Текст",
+    "toolOutputs": "Вивід інструментів",
+    "total": "Усього",
+    "userMessages": "Повідомлення користувача",
+    "visibleContext": "Видимий контекст",
+    "includesClaudeMd": "вкл. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@файли",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} токенів",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Копіювати команду",
+      "createTeam": "Створити команду",
+      "deleteForever": "Видалити назавжди",
+      "deletePermanently": "Видалити остаточно",
+      "deleteTeam": "Видалити команду",
+      "launching": "Запуск...",
+      "launchTeam": "Запустити команду",
+      "relaunchTeam": "Перезапустити команду",
+      "restore": "Відновити",
+      "restoreTeam": "Відновити команду",
+      "retry": "Повторити",
+      "stopTeam": "Зупинити команду",
+      "stopping": "Зупинення..."
+    },
+    "status": {
+      "active": "Активна",
+      "deleted": "Видалено",
+      "launching": "Запуск...",
+      "offline": "Офлайн",
+      "partialFailure": "Запуск не вдався на півдорозі",
+      "partialPending": "Bootstrap в очікуванні",
+      "partialSkipped": "Запуск пропустив учасника",
+      "running": "Запущено"
+    },
+    "partial": {
+      "pending": "Останній запуск ще узгоджується.",
+      "skipped": "Останній запуск пропустив учасників.",
+      "skippedWithCount": "Останній запуск пропустив {{count}}/{{expected}} учасника.",
+      "skippedWithCount_few": "Останній запуск пропустив {{count}}/{{expected}} учасників.",
+      "skippedWithCount_many": "Останній запуск пропустив {{count}}/{{expected}} учасників.",
+      "skippedWithCount_one": "Останній запуск пропустив {{count}}/{{expected}} учасника.",
+      "skippedWithCount_other": "Останній запуск пропустив {{count}}/{{expected}} учасників.",
+      "stopped": "Останній запуск зупинився до того, як приєдналися всі учасники.",
+      "stoppedWithCount": "Останній запуск зупинився до того, як приєднався {{count}}/{{expected}} учасник.",
+      "stoppedWithCount_few": "Останній запуск зупинився до того, як приєдналися {{count}}/{{expected}} учасники.",
+      "stoppedWithCount_many": "Останній запуск зупинився до того, як приєдналися {{count}}/{{expected}} учасників.",
+      "stoppedWithCount_one": "Останній запуск зупинився до того, як приєднався {{count}}/{{expected}} учасник.",
+      "stoppedWithCount_other": "Останній запуск зупинився до того, як приєдналися {{count}}/{{expected}} учасників."
+    },
+    "noDescription": "Немає опису",
+    "solo": "Соло",
+    "membersCount": "Учасників: {{count}}",
+    "membersCount_few": "Учасників: {{count}}",
+    "membersCount_many": "Учасників: {{count}}",
+    "membersCount_one": "Учасник: {{count}}",
+    "membersCount_other": "Учасників: {{count}}",
+    "all": "Усі",
+    "moreCount": "+{{count}} ще",
+    "moreCount_one": "+{{count}} ще",
+    "moreCount_other": "+{{count}} ще",
+    "moreCount_few": "+{{count}} ще",
+    "moreCount_many": "+{{count}} ще"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "За замовчуванням для кожного проєкту, який не має власного перевизначення OpenCode.",
+      "scopeDescriptionProject": "Перевизначити лише вибраний проєкт. Запущені команди не змінюються.",
+      "setAllProjectsDefault": "Встановити за замовчуванням для всіх проєктів",
+      "setProjectDefault": "Встановити за замовчуванням для проєкту",
+      "validationContext": "Контекст перевірки",
+      "projectOverrideContext": "Контекст перевизначення проєкту",
+      "selectProjectHint": "Виберіть проєкт перед тестуванням локальних моделей чи збереженням значень за замовчуванням.",
+      "allProjectsHint": "Тести використовують {{project}}. За замовчуванням застосовується, якщо проєкт не має перевизначення.",
+      "projectHint": "Збереження перевизначає лише {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Контекст",
+      "closePanel": "Закрити панель",
+      "phase": "Фаза:",
+      "current": "Поточна",
+      "view": "Перегляд:",
+      "category": "Категорія",
+      "bySize": "За розміром"
+    },
+    "metrics": {
+      "unavailable": "Недоступно",
+      "contextUsed": "Використано контексту",
+      "promptInput": "Вхід промпту",
+      "visibleContext": "Видимий контекст",
+      "ofContext": "контексту",
+      "ofPrompt": "промпту",
+      "codexTelemetryUnavailable": "Використання Codex на стороні промпту поки не надається поточною телеметрією середовища, тому «Вхід промпту» та «Використано контексту» залишаються недоступними замість показу фіктивного нуля.",
+      "sessionCost": "Вартість сесії:",
+      "parentPlus": "батьківський +",
+      "subagents": "субагенти",
+      "details": "деталі"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Використано контексту",
+        "description": "Вхід промпту плюс вихідні токени, які наразі займають контекстне вікно моделі."
+      },
+      "promptInput": {
+        "title": "Вхід промпту",
+        "description": "Токени, надіслані моделі перед генерацією. Для Claude це включає `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Видимий контекст",
+        "description": "Підмножина входу промпту, доступна для перевірки: файли, CLAUDE.md, вивід інструментів, повідомлення користувача та подібні ін'єкції, які ви можете оптимізувати безпосередньо."
+      },
+      "availability": {
+        "title": "Доступність",
+        "description": "Якщо середовище провайдера поки не надає використання на стороні промпту, панель показує метрики як недоступні замість того, щоб вдавати, що вони нульові."
+      }
+    },
+    "items": {
+      "turn": "@Хід {{turn}}",
+      "tokensApprox": "~{{tokens}} токенів",
+      "toolsCount": "{{count}} інструментів",
+      "toolsCount_one": "{{count}} інструмент",
+      "toolsCount_other": "{{count}} інструментів",
+      "toolsCount_few": "{{count}} інструменти",
+      "toolsCount_many": "{{count}} інструментів",
+      "itemsCount": "{{count}} елементів",
+      "itemsCount_one": "{{count}} елемент",
+      "itemsCount_other": "{{count}} елементів",
+      "itemsCount_few": "{{count}} елементи",
+      "itemsCount_many": "{{count}} елементів",
+      "missing": "відсутній",
+      "thinking": "Міркування",
+      "text": "Текст"
+    },
+    "empty": "У цій сесії не виявлено ін'єкцій контексту",
+    "view": {
+      "grouped": "Згруповано",
+      "flat": "Списком"
+    },
+    "claudeMdFiles": "Файли CLAUDE.md",
+    "mentionedFiles": "Згадані файли"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Субагент",
+      "shutdownConfirmed": "Завершення підтверджено",
+      "summary": {
+        "tools": "{{count}} інструментів",
+        "tools_one": "{{count}} інструмент",
+        "tools_other": "{{count}} інструментів",
+        "tools_few": "{{count}} інструменти",
+        "tools_many": "{{count}} інструментів"
+      },
+      "meta": {
+        "type": "Тип",
+        "duration": "Тривалість",
+        "model": "Модель",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Контекстне вікно",
+        "contextUsage": "Використання контексту",
+        "mainContext": "Основний контекст",
+        "totalOutput": "Загальний вихід",
+        "turns": "({{count}} ходів)",
+        "turns_one": "({{count}} хід)",
+        "turns_other": "({{count}} ходів)",
+        "subagentContext": "Контекст субагента",
+        "phase": "Фаза {{phase}}",
+        "turns_few": "({{count}} ходи)",
+        "turns_many": "({{count}} ходів)"
+      },
+      "trace": {
+        "title": "Трасування виконання"
+      }
+    },
+    "user": {
+      "you": "Ви",
+      "showMore": "Показати більше",
+      "showLess": "Згорнути",
+      "backgroundTask": "Фонове завдання",
+      "exitCode": "вихід {{code}}",
+      "imagesAttached": "{{count}} зображень додано",
+      "imagesAttached_one": "{{count}} зображення додано",
+      "imagesAttached_few": "{{count}} зображення додано",
+      "imagesAttached_many": "{{count}} зображень додано",
+      "imagesAttached_other": "{{count}} зображень додано"
+    },
+    "compact": {
+      "toggle": "Перемкнути стиснутий вміст",
+      "contextCompacted": "Контекст стиснуто",
+      "freedTokens": "({{tokens}} звільнено)",
+      "phase": "Фаза {{phase}}",
+      "conversationCompacted": "Розмову стиснуто",
+      "summary": "Попередні повідомлення було підсумовано для економії контексту. Повна історія розмови збережена у файлі сесії.",
+      "compacted": "Стиснуто"
+    },
+    "executionTrace": {
+      "empty": "Немає елементів виконання",
+      "nested": "Вкладено: {{name}}",
+      "input": "Вхід"
+    },
+    "items": {
+      "empty": "Немає елементів для показу"
+    },
+    "tools": {
+      "teammateSpawned": "Учасника створено",
+      "shutdownRequested": "Запит на завершення ->",
+      "noResultReceived": "Результат не отримано",
+      "duration": "Тривалість: {{duration}}",
+      "result": "Результат",
+      "write": {
+        "createdFile": "Створено файл",
+        "wroteToFile": "Записано у файл"
+      },
+      "skill": {
+        "instructions": "Інструкції навички",
+        "unknown": "Невідома навичка"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Запит перервано користувачем",
+      "planReadyForApproval": "План готовий до затвердження"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Немає історії розмови",
+      "description": "Ця сесія поки не містить жодних повідомлень."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% залишилось)",
+      "count": "Контекст ({{count}})",
+      "count_one": "Контекст ({{count}})",
+      "count_other": "Контекст ({{count}})",
+      "count_few": "Контекст ({{count}})",
+      "count_many": "Контекст ({{count}})"
+    },
+    "scrollToBottom": "Прокрутити вниз",
+    "bottom": "Низ",
+    "teammateMessage": {
+      "message": "Повідомлення",
+      "resent": "Надіслано повторно",
+      "fallback": "Повідомлення учасника"
+    },
+    "system": {
+      "label": "Система"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux не встановлено",
+    "detectedOs": "Виявлена ОС: {{os}}",
+    "runtimePath": "Шлях середовища: {{path}}",
+    "phase": "Фаза: {{phase}}",
+    "actions": {
+      "cancel": "Скасувати",
+      "manualGuide": "Ручний посібник",
+      "hideSetupSteps": "Сховати кроки налаштування",
+      "showSetupSteps": "Показати кроки налаштування ({{count}})",
+      "showSetupSteps_one": "Показати крок налаштування ({{count}})",
+      "showSetupSteps_other": "Показати кроки налаштування ({{count}})",
+      "recheck": "Перевірити ще раз",
+      "showSetupSteps_few": "Показати кроки налаштування ({{count}})",
+      "showSetupSteps_many": "Показати кроки налаштування ({{count}})"
+    },
+    "installerProgress": "Прогрес встановлення",
+    "input": {
+      "placeholder": "Надіслати ввід інсталятору",
+      "send": "Надіслати ввід",
+      "passwordNotice": "Введення пароля надсилається безпосередньо в термінал інсталятора й не додається до виводу журналу."
+    },
+    "details": {
+      "show": "Показати деталі",
+      "hide": "Сховати деталі"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Немає недавньої активності",
+    "sessionsCount": "{{count}} сесій",
+    "sessionsCount_one": "{{count}} сесія",
+    "sessionsCount_other": "{{count}} сесій",
+    "mode": {
+      "searchProjects": "Пошук проєктів",
+      "searchAcrossProjects": "Пошук по всіх проєктах",
+      "searchInProject": "Пошук у проєкті"
+    },
+    "currentProject": "Поточний проєкт",
+    "global": "Глобально",
+    "placeholders": {
+      "projects": "Пошук проєктів...",
+      "conversations": "Пошук розмов..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Проєктів не знайдено для \"{{query}}\"",
+      "noProjects": "Проєктів не знайдено",
+      "minChars": "Введіть щонайменше 2 символи для пошуку",
+      "noFastResults": "Немає швидких результатів у недавніх сесіях для \"{{query}}\"",
+      "noResults": "Результатів не знайдено для \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} проєктів",
+      "projectsCount_one": "{{count}} проєкт",
+      "projectsCount_other": "{{count}} проєктів",
+      "results": "{{count}} {{speed}}результатів",
+      "results_one": "{{count}} {{speed}}результат",
+      "results_other": "{{count}} {{speed}}результатів",
+      "resultsAcrossProjects": "{{count}} {{speed}}результатів по всіх проєктах",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}результат по всіх проєктах",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}результатів по всіх проєктах",
+      "fastPrefix": "швидких ",
+      "typeToSearch": "Введіть для пошуку",
+      "navigate": "навігація",
+      "select": "вибрати",
+      "open": "відкрити",
+      "global": "глобально",
+      "close": "закрити",
+      "results_few": "{{count}} {{speed}}результати",
+      "results_many": "{{count}} {{speed}}результатів",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}результати по всіх проєктах",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}результатів по всіх проєктах",
+      "projectsCount_few": "{{count}} проєкти",
+      "projectsCount_many": "{{count}} проєктів",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} сесії",
+    "sessionsCount_many": "{{count}} сесій"
+  },
+  "tasksPanel": {
+    "title": "Завдання",
+    "searchPlaceholder": "Пошук завдань...",
+    "pinned": "Закріплено",
+    "groupByLabel": "Групувати за:",
+    "groupByAria": "Групувати за",
+    "groupModes": {
+      "none": "Немає",
+      "project": "Проєкт",
+      "time": "Час"
+    },
+    "showArchived": "Показати архівовані",
+    "hideArchived": "Сховати архівовані",
+    "empty": {
+      "noMatchingTasks": "Немає відповідних завдань",
+      "noTasks": "Завдань не знайдено"
+    },
+    "teamLabel": "Команда: {{team}}",
+    "showMore": "Показати більше",
+    "showLess": "Згорнути",
+    "deleteConfirm": {
+      "title": "Видалити завдання",
+      "message": "Перемістити завдання #{{taskId}} до кошика?",
+      "confirmLabel": "Видалити",
+      "cancelLabel": "Скасувати"
+    },
+    "deleteFailed": {
+      "title": "Не вдалося видалити завдання",
+      "fallbackMessage": "Сталася неочікувана помилка",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "За часом",
+      "byUnread": "За непрочитаними",
+      "byProject": "За проєктом",
+      "byTeam": "За командою"
+    }
+  },
+  "toolViewer": {
+    "input": "Вхід",
+    "replaceAll": "(замінити все)",
+    "noInputRecorded": "Для цього виклику інструмента не записано вводу.",
+    "agent": {
+      "action": "дія",
+      "teammate": "учасник",
+      "team": "команда",
+      "runtime": "середовище",
+      "type": "тип",
+      "startupInstructionsHidden": "Інструкції запуску приховано в інтерфейсі."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Відкріпити",
+    "pin": "Закріпити",
+    "rename": "Перейменувати",
+    "markUnread": "Позначити як непрочитане",
+    "unarchive": "Розархівувати",
+    "archive": "Архівувати",
+    "deleteTask": "Видалити завдання"
+  },
+  "updateDialog": {
+    "closeDialog": "Закрити діалог",
+    "updateAvailable": "Доступне оновлення",
+    "updateReady": "Оновлення готове",
+    "noReleaseNotes": "Немає доступних приміток до випуску.",
+    "viewOnGitHub": "Переглянути на GitHub",
+    "later": "Пізніше",
+    "restartNow": "Перезапустити зараз",
+    "download": "Завантажити"
+  },
+  "errorBoundary": {
+    "title": "Щось пішло не так",
+    "description": "У застосунку сталася неочікувана помилка. Ви можете спробувати перезавантажити сторінку чи скинути стан помилки.",
+    "componentStack": "Стек компонентів",
+    "tryAgain": "Спробувати знову",
+    "copied": "Скопійовано",
+    "copyErrorDetails": "Копіювати деталі помилки",
+    "reportBugOnGitHub": "Повідомити про баг на GitHub",
+    "reloadApp": "Перезавантажити застосунок",
+    "diagnosticsNotice": "Звіти про баги на GitHub і скопійована діагностика включають повідомлення про помилку, трасування стека, версію застосунку, активну вкладку, вибрану команду, контекст завдання та деталі середовища."
+  },
+  "runtimeBackendSelector": {
+    "label": "Бекенд середовища",
+    "resolved": "Визначено: {{backend}}",
+    "current": "Поточний",
+    "recommended": "Рекомендовано",
+    "unavailable": "Недоступно",
+    "cannotSelectYet": "Цей бекенд поки не можна вибрати.",
+    "auto": "Авто",
+    "autoCurrently": "Авто (наразі: {{backend}})",
+    "audience": {
+      "internal": "Внутрішній"
+    },
+    "states": {
+      "locked": "Заблоковано",
+      "disabled": "Вимкнено",
+      "authRequired": "Потрібна автентифікація",
+      "runtimeMissing": "Середовище відсутнє",
+      "degraded": "Погіршено",
+      "unavailable": "Недоступно"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Перевірка",
+    "unavailable": "Недоступно",
+    "checkFailed": "Перевірка не вдалася",
+    "free": "Безплатно",
+    "freeTooltip": "Повідомлено метаданими OpenCode. Доступність і ліміти можуть змінюватися."
+  },
+  "taskFilters": {
+    "status": "Статус",
+    "clearAll": "Очистити все",
+    "selectAll": "Вибрати все",
+    "team": "Команда",
+    "allTeams": "Усі команди",
+    "searchTeams": "Пошук команд...",
+    "noTeamsFound": "Команд не знайдено",
+    "project": "Проєкт",
+    "allProjects": "Усі проєкти",
+    "searchProjects": "Пошук проєктів...",
+    "noProjects": "Немає проєктів",
+    "comments": "Коментарі",
+    "apply": "Застосувати",
+    "read": {
+      "all": "Усі",
+      "unread": "Непрочитані",
+      "read": "Прочитані"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "У ПРОЦЕСІ",
+      "needsFix": "ПОТРЕБУЄ ВИПРАВЛЕНЬ",
+      "done": "ГОТОВО",
+      "review": "ПЕРЕГЛЯД",
+      "approved": "ЗАТВЕРДЖЕНО"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Загальний контекст: {{tokens}} токенів",
+    "context": "Контекст: {{tokens}}",
+    "phase": "Фаза {{phase}}:",
+    "compactedTo": "(стиснуто до {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "команда",
+      "subagent": "субагент",
+      "markAsRead": "Позначити як прочитане",
+      "delete": "Видалити",
+      "viewInSession": "Переглянути в сесії"
+    },
+    "title": "Сповіщення",
+    "loading": "Завантаження сповіщень...",
+    "actions": {
+      "markFilteredAsRead": "Позначити відфільтровані як прочитані",
+      "markAllAsRead": "Позначити всі як прочитані",
+      "markFilteredRead": "Позначити відфільтровані прочитаними",
+      "markAllRead": "Позначити всі прочитаними",
+      "clearFilteredNotifications": "Очистити відфільтровані сповіщення",
+      "clearAllNotifications": "Очистити всі сповіщення",
+      "clickToConfirm": "Натисніть для підтвердження",
+      "clearFiltered": "Очистити відфільтровані",
+      "clearAll": "Очистити все"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} непрочитаних у фільтрі",
+      "unreadInFilter_one": "{{count}} непрочитане у фільтрі",
+      "unreadInFilter_few": "{{count}} непрочитані у фільтрі",
+      "unreadInFilter_many": "{{count}} непрочитаних у фільтрі",
+      "unreadInFilter_other": "{{count}} непрочитаних у фільтрі",
+      "inFilter": "{{count}} у фільтрі",
+      "inFilter_one": "{{count}} у фільтрі",
+      "inFilter_few": "{{count}} у фільтрі",
+      "inFilter_many": "{{count}} у фільтрі",
+      "inFilter_other": "{{count}} у фільтрі",
+      "unread": "{{count}} непрочитаних",
+      "unread_one": "{{count}} непрочитане",
+      "unread_few": "{{count}} непрочитані",
+      "unread_many": "{{count}} непрочитаних",
+      "unread_other": "{{count}} непрочитаних",
+      "total": "{{count}} загалом",
+      "total_one": "{{count}} загалом",
+      "total_few": "{{count}} загалом",
+      "total_many": "{{count}} загалом",
+      "total_other": "{{count}} загалом"
+    },
+    "filters": {
+      "other": "Інше"
+    },
+    "empty": {
+      "noMatching": "Немає відповідних сповіщень",
+      "noNotifications": "Немає сповіщень",
+      "tryDifferentFilter": "Спробуйте інший фільтр",
+      "allCaughtUp": "Ви все переглянули!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Перезапустити для оновлення",
+    "updateApp": "Оновити застосунок",
+    "downloadedRestartTooltip": "Оновлення завантажено, перезапустіть для застосування",
+    "newVersionAvailable": "Доступна нова версія",
+    "updatingApp": "Оновлення застосунку",
+    "updateReady": "Оновлення готове",
+    "restartNow": "Перезапустити зараз"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Розгорнути бічну панель",
+    "collapseSidebarShortcut": "Згорнути бічну панель ({{shortcut}})",
+    "sidebarView": "Перегляд бічної панелі",
+    "resizeSidebar": "Змінити розмір бічної панелі",
+    "closeTab": "Закрити вкладку",
+    "openedFromSearch": "Відкрито з пошуку",
+    "pinnedSession": "Закріплена сесія",
+    "jumpToSection": "Перейти до розділу",
+    "newTab": "Нова вкладка",
+    "newTabDashboard": "Нова вкладка (Панель)",
+    "refreshSession": "Оновити сесію",
+    "refreshSessionWithShortcut": "Оновити сесію ({{shortcut}})",
+    "loadingTab": "Завантаження вкладки",
+    "menu": {
+      "teams": "Команди",
+      "settings": "Налаштування",
+      "extensions": "Розширення",
+      "search": "Пошук",
+      "schedules": "Розклади",
+      "docs": "Документація",
+      "exportMarkdown": "Експортувати як Markdown",
+      "exportJson": "Експортувати як JSON",
+      "exportPlainText": "Експортувати як простий текст",
+      "analyzeSession": "Проаналізувати сесію"
+    },
+    "tabMenu": {
+      "closeTabs": "Закрити {{count}} вкладок",
+      "closeTabs_one": "Закрити {{count}} вкладку",
+      "closeTabs_few": "Закрити {{count}} вкладки",
+      "closeTabs_many": "Закрити {{count}} вкладок",
+      "closeTabs_other": "Закрити {{count}} вкладок",
+      "closeTab": "Закрити вкладку",
+      "closeOtherTabs": "Закрити інші вкладки",
+      "splitRight": "Розділити праворуч",
+      "splitLeft": "Розділити ліворуч",
+      "pinToSidebar": "Закріпити на бічній панелі",
+      "unpinFromSidebar": "Відкріпити з бічної панелі",
+      "hideFromSidebar": "Сховати з бічної панелі",
+      "unhideFromSidebar": "Показати на бічній панелі",
+      "closeAllTabs": "Закрити всі вкладки"
+    },
+    "sections": {
+      "team": "Команда",
+      "sessions": "Сесії",
+      "kanban": "Kanban",
+      "claudeLogs": "Журнали",
+      "messages": "Повідомлення"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Жирний",
+    "italic": "Курсив",
+    "strike": "Закреслений",
+    "code": "Код"
+  },
+  "diff": {
+    "changed": "Змінено",
+    "noChangesDetected": "Змін не виявлено"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Копіювати посилання для входу ChatGPT і код",
+    "copyLoginLink": "Копіювати посилання для входу ChatGPT",
+    "copyFailed": "Не вдалося скопіювати",
+    "copyLinkAndCode": "Копіювати посилання + код",
+    "copyLink": "Копіювати посилання",
+    "enterCodeOnLoginPage": "Введіть цей код на сторінці входу ChatGPT"
+  },
+  "window": {
+    "minimize": "Згорнути",
+    "maximize": "Розгорнути",
+    "restore": "Відновити"
+  },
+  "context": {
+    "local": "Локальний",
+    "switchingTo": "Перемикання на {{workspace}}",
+    "loadingWorkspace": "Завантаження робочого простору",
+    "switchWorkspace": "Перемкнути робочий простір"
+  },
+  "repositories": {
+    "noneAvailable": "Немає доступних репозиторіїв",
+    "remove": "Видалити репозиторій"
+  },
+  "export": {
+    "session": "Експортувати сесію",
+    "sessionTitle": "Експорт сесії"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Немає доступних даних сесії",
+    "title": "Звіт сесії"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Вибрати проєкт"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "онов.",
+      "updatedYesterday": "онов. вчора",
+      "yesterday": "Учора"
+    },
+    "reviewState": {
+      "needsFix": "Потребує виправлень"
+    },
+    "unassigned": "не призначено"
+  }
+}

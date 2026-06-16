@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Boss sensin, ajanlar ekibin. Gorevleri kendileri yurutur, birbirleriyle mesajlasir, kodlarini inceler. Sen kanban panosuna bakar ve kahveni icersin."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Ajan ekipleri",
+      "description": "Farkli rollere sahip ekipler kur. Ajanlar paralel ve otonom calisir, birbirleriyle iletisim kurar ve ekipler arasi is birligi yapar."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban panosu",
+      "description": "Ajanlar calistikca gorev durumlari gercek zamanli degisir. Surukle, ata ve incele - hepsi gorsel panoda."
+    },
+    {
+      "id": "codeReview",
+      "title": "Kod inceleme",
+      "description": "Her gorev icin diff gorunumu, kabul, reddetme ve yorum. Git destekli yerlesik kod editoru."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Ekipler arasi iletisim",
+      "description": "Ajanlar ayni ekip icinde ve ekipler arasinda mesajlasir. Direkt mesajlar, gorev yorumlari ve hizli aksiyonlar."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo mod",
+      "description": "Gorevlerini kendi yoneten tek bir ajanla basla. Daha fazla guc gerektiginde tam ekibe genislet."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Canli surecler",
+      "description": "Calisan ajanlari gor, URLleri tarayicida ac, token kullanimini ve oturum baglamini gercek zamanli izle."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Agent Teams nedir?",
+      "answer": "Yerel koordinasyon katmanimizla AI ajan ekiplerini yoneten bir masaustu uygulamasi. Ajanlar rollere sahiptir, otonom calisir, kanban panosu uzerinden is birligi yapar ve Anthropic ya da Codex ile calisabilir."
+    },
+    {
+      "id": "isFree",
+      "question": "Gercekten ucretsiz mi?",
+      "answer": "Evet. Uygulama ucretsiz ve acik kaynaklidir. Kimlik dogrulama gerektirmeyen ucretsiz modelle baslayabilirsin - kayit, API anahtari veya kredi karti yok. Daha fazla model icin Claude, Codex, OpenCode/OpenRouter veya baska bir desteklenen provider bagla."
+    },
+    {
+      "id": "platforms",
+      "question": "Hangi platformlar destekleniyor?",
+      "answer": "macOS (Apple Silicon ve Intel), Windows ve Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Nasil calisir?",
+      "answer": "Uygulamayi kur, ekip olustur, rolleri ata. Ajanlar paralel calismaya baslar. Ilerlemeyi kanban panosunda izler, kod diflerini inceler ve ajanlarla direkt konusursun."
+    },
+    {
+      "id": "privacy",
+      "question": "Kodum gizli kalir mi?",
+      "answer": "Her sey bilgisayarinda yerel calisir. Harici sunuculara veri gonderilmez. Kodun, konusmalarin ve ajan aktivitelerin gizli kalir."
+    },
+    {
+      "id": "requirements",
+      "question": "Baslamak icin ne gerekir?",
+      "answer": "Sadece uygulamayi kur - once kimlik dogrulamasiz ucretsiz modelle basla, sonra ihtiyac duydugunda UI uzerinden provider destekli modelleri bagla."
+    }
+  ],
+  "download": {
+    "title": "Indir",
+    "note": "Platformunu sec ve AI ajan ekipleriyle gelistirmeye basla."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "AI ajanlarini engineering ekibi gibi yonetmemi saglayan ilk arac. Kanban panosu paralel isleri takip etmeyi cok kolaylastiriyor."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Solo mod hizli isler icin mukemmel. Daha fazla guc gerekince saniyeler icinde tam ekip kuruyorum."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Kod inceleme akisi harika: gorev bazli diff, kabul/reddetme, yorumlar. Talimatlari gercekten takip eden bir ekip gibi."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Canli surec izleme ve baglam takibi cok kullanisli. Her ajanin ne yaptigini net gorebiliyorum."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Sifir kurulum gercekten var: uygulamayi kurdum, bir kez giris yaptim ve 5 dakikada ajanlar kodumda calisiyordu."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Prototipleme bicimimi degistirdi. Stackin farkli bolumleri icin ekip kurup paralel calistiriyorum."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Ucretsiz",
+      "price": "$0",
+      "period": "",
+      "description": "Kimlik dogrulama gerektirmeyen dahil ucretsiz modelle basla. Kayit, API anahtari veya kredi karti yok.",
+      "features": [
+        "Ilk calistirmalar icin kimlik dogrulamasiz ucretsiz model",
+        "Denemek icin hesap veya provider girisi gerekmez",
+        "Claude, Codex ve OpenCode erisimi opsiyonel",
+        "Sinirsiz ajan ekibi",
+        "Gercek zamanli kanban panosu",
+        "Diff gorunumlu kod inceleme",
+        "Ekipler arasi iletisim",
+        "Solo ve ekip modlari"
+      ],
+      "highlighted": true
+    }
+  ]
+}

@@ -27,8 +27,8 @@ const screenshots = computed(() => screenshotData.map((s) => ({
   width: s.width,
   height: s.height,
 })));
-const prevLabel = computed(() => locale.value === 'ru' ? 'Предыдущий' : 'Previous');
-const nextLabel = computed(() => locale.value === 'ru' ? 'Следующий' : 'Next');
+const prevLabel = computed(() => t('common.previous'));
+const nextLabel = computed(() => t('common.next'));
 
 const swiperRef = ref<SwiperContainerElement | null>(null);
 const swiperReady = ref(false);

@@ -16,6 +16,52 @@ interface Props {
   onSelect: (providerId: CliProviderStatus['providerId'], backendId: string) => void;
 }
 
+export interface ProviderRuntimeBackendSummaryText {
+  auto: string;
+  autoCurrently: (backend: string) => string;
+  audienceInternal: string;
+  states: {
+    locked: string;
+    disabled: string;
+    authRequired: string;
+    runtimeMissing: string;
+    degraded: string;
+    unavailable: string;
+  };
+}
+
+export function buildProviderRuntimeBackendSummaryText(
+  t: ReturnType<typeof useAppTranslation>['t']
+): ProviderRuntimeBackendSummaryText {
+  return {
+    auto: t('runtimeBackendSelector.auto'),
+    autoCurrently: (backend) => t('runtimeBackendSelector.autoCurrently', { backend }),
+    audienceInternal: t('runtimeBackendSelector.audience.internal'),
+    states: {
+      locked: t('runtimeBackendSelector.states.locked'),
+      disabled: t('runtimeBackendSelector.states.disabled'),
+      authRequired: t('runtimeBackendSelector.states.authRequired'),
+      runtimeMissing: t('runtimeBackendSelector.states.runtimeMissing'),
+      degraded: t('runtimeBackendSelector.states.degraded'),
+      unavailable: t('runtimeBackendSelector.states.unavailable'),
+    },
+  };
+}
+
+const DEFAULT_SUMMARY_TEXT: ProviderRuntimeBackendSummaryText = {
+  auto: 'Auto',
+  autoCurrently: (backend) => `Auto (currently: ${backend})`,
+  audienceInternal: 'Internal',
+  states: {
+    locked: 'Locked',
+    disabled: 'Disabled',
+    authRequired: 'Auth required',
+    runtimeMissing: 'Runtime missing',
+    degraded: 'Degraded',
+    unavailable: 'Unavailable',
+  },
+};
+
 export function getProviderRuntimeBackendStateLabel(
   option: NonNullable<CliProviderStatus['availableBackends']>[number]
 ): string | null {
@@ -78,7 +124,47 @@ export function getOptionDisplayLabel(
   return 'Auto';
 }
 
-export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): string | null {
+function getOptionSummaryDisplayLabel(
+  provider: CliProviderStatus,
+  option: NonNullable<CliProviderStatus['availableBackends']>[number],
+  resolvedOption: NonNullable<CliProviderStatus['availableBackends']>[number] | null,
+  text: ProviderRuntimeBackendSummaryText
+): string {
+  if (option.id !== 'auto') {
+    return getOptionDisplayLabel(provider, option, resolvedOption);
+  }
+  if (resolvedOption?.label) {
+    return text.autoCurrently(resolvedOption.label);
+  }
+  return text.auto;
+}
+
+function getProviderRuntimeBackendStateSummaryLabel(
+  option: NonNullable<CliProviderStatus['availableBackends']>[number],
+  text: ProviderRuntimeBackendSummaryText
+): string | null {
+  switch (getProviderRuntimeBackendStateLabel(option)) {
+    case 'Locked':
+      return text.states.locked;
+    case 'Disabled':
+      return text.states.disabled;
+    case 'Auth required':
+      return text.states.authRequired;
+    case 'Runtime missing':
+      return text.states.runtimeMissing;
+    case 'Degraded':
+      return text.states.degraded;
+    case 'Unavailable':
+      return text.states.unavailable;
+    default:
+      return null;
+  }
+}
+
+export function getProviderRuntimeBackendSummary(
+  provider: CliProviderStatus,
+  text: ProviderRuntimeBackendSummaryText = DEFAULT_SUMMARY_TEXT
+): string | null {
   const options = provider.availableBackends ?? [];
   if (options.length === 0) {
     return null;
@@ -87,9 +173,11 @@ export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): s
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
-  const parts = [getOptionDisplayLabel(provider, selectedOption, resolvedOption)];
-  const audienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
-  const stateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
+  const parts = [getOptionSummaryDisplayLabel(provider, selectedOption, resolvedOption, text)];
+  const audienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption)
+    ? text.audienceInternal
+    : null;
+  const stateLabel = getProviderRuntimeBackendStateSummaryLabel(selectedOption, text);
 
   if (audienceLabel) {
     parts.push(audienceLabel.toLowerCase());
@@ -107,6 +195,7 @@ export const ProviderRuntimeBackendSelector = ({
   onSelect,
 }: Props): React.JSX.Element | null => {
   const { t } = useAppTranslation('common');
+  const summaryText = buildProviderRuntimeBackendSummaryText(t);
   const options = getVisibleProviderRuntimeBackendOptions(provider);
   if (options.length === 0) {
     return null;
@@ -150,9 +239,9 @@ export const ProviderRuntimeBackendSelector = ({
   ): string => {
     if (option.id === 'auto') {
       if (resolvedOption?.label) {
-        return t('runtimeBackendSelector.autoCurrently', { backend: resolvedOption.label });
+        return summaryText.autoCurrently(resolvedOption.label);
       }
-      return t('runtimeBackendSelector.auto');
+      return summaryText.auto;
     }
     return getOptionDisplayLabel(provider, option, resolvedOption);
   };

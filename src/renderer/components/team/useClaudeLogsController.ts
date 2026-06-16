@@ -247,6 +247,34 @@ function appendOlderLines(
   return existingLinesNewestFirst.concat(olderLinesNewestFirst.slice(overlapSize));
 }
 
+function areClaudeLogLinesEqual(left: readonly string[], right: readonly string[]): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
+}
+
+function areClaudeLogsResponsesEqual(
+  left: TeamClaudeLogsResponse,
+  right: TeamClaudeLogsResponse
+): boolean {
+  return (
+    left.total === right.total &&
+    left.hasMore === right.hasMore &&
+    left.updatedAt === right.updatedAt &&
+    areClaudeLogLinesEqual(left.lines, right.lines)
+  );
+}
+
+function preserveStableClaudeLogsResponse(
+  current: TeamClaudeLogsResponse,
+  next: TeamClaudeLogsResponse
+): TeamClaudeLogsResponse {
+  return areClaudeLogsResponsesEqual(current, next) ? current : next;
+}
+
 type AssistantContentBlock =
   | { type: 'text'; text?: string }
   | { type: 'thinking'; thinking?: string }
@@ -484,12 +512,14 @@ export function useClaudeLogsController(
       }
       inFlightRef.current = true;
       try {
-        setLoading(true);
+        if (committedRef.current.lines.length === 0 && latestRef.current == null) {
+          setLoading(true);
+        }
         const next = await api.teams.getClaudeLogs(teamName, { offset: 0, limit: loadedCount });
         if (cancelled) return;
         latestRef.current = next;
         if (atTopRef.current) {
-          setData(next);
+          setData((prev) => preserveStableClaudeLogsResponse(prev, next));
           setPending(null);
           setPendingNewCount(0);
         } else {
@@ -590,7 +620,7 @@ export function useClaudeLogsController(
         latestRef.current = latest;
       }
 
-      setData(latest);
+      setData((prev) => preserveStableClaudeLogsResponse(prev, latest));
       setPending(null);
       setPendingNewCount(0);
       setError(null);

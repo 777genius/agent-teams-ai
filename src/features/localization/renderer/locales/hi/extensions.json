@@ -589,7 +589,11 @@
     "actions": {
       "add": "API कुंजी जोड़ें",
       "addFirst": "अपनी पहली कुंजी जोड़ें",
-      "edit": "संपादित करें"
+      "edit": "संपादित करें",
+      "copied": "कॉपी हो गया!",
+      "copyEnvVarName": "Env var name copy करें",
+      "confirmDelete": "Confirm करने के लिए फिर क्लिक करें",
+      "delete": "Delete"
     },
     "empty": {
       "title": "No API कुंजी बचाया",

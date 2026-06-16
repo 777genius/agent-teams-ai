@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@radix-ui/react-tooltip', () => ({
@@ -41,6 +42,7 @@ describe('GraphControls', () => {
             showTasks: true,
             showProcesses: true,
             showEdges: true,
+            showSpaceEffects: true,
             paused: false,
           },
           onFiltersChange: vi.fn(),
@@ -95,6 +97,7 @@ describe('GraphControls', () => {
             showTasks: true,
             showProcesses: true,
             showEdges: true,
+            showSpaceEffects: true,
             paused: false,
           },
           onFiltersChange: vi.fn(),
@@ -132,6 +135,7 @@ describe('GraphControls', () => {
             showTasks: true,
             showProcesses: true,
             showEdges: true,
+            showSpaceEffects: true,
             paused: false,
           },
           onFiltersChange,
@@ -168,6 +172,7 @@ describe('GraphControls', () => {
       showTasks: true,
       showProcesses: true,
       showEdges: true,
+      showSpaceEffects: true,
       paused: false,
     });
 
@@ -192,6 +197,7 @@ describe('GraphControls', () => {
             showTasks: true,
             showProcesses: true,
             showEdges: true,
+            showSpaceEffects: true,
             paused: false,
           },
           onFiltersChange,
@@ -228,6 +234,7 @@ describe('GraphControls', () => {
       showTasks: true,
       showProcesses: true,
       showEdges: true,
+      showSpaceEffects: true,
       paused: false,
     });
 
@@ -252,6 +259,7 @@ describe('GraphControls', () => {
             showTasks: true,
             showProcesses: true,
             showEdges: true,
+            showSpaceEffects: true,
             paused: false,
           },
           onFiltersChange: vi.fn(),
@@ -275,6 +283,68 @@ describe('GraphControls', () => {
     });
 
     expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('toggles stable space effects from graph settings', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onFiltersChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphControls, {
+          filters: {
+            showActivity: true,
+            showLogs: true,
+            showTasks: true,
+            showProcesses: true,
+            showEdges: true,
+            showSpaceEffects: true,
+            paused: false,
+          },
+          onFiltersChange,
+          onZoomIn: vi.fn(),
+          onZoomOut: vi.fn(),
+          onZoomToFit: vi.fn(),
+          teamName: 'demo-team',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const settingsButton = host.querySelector('button[aria-label="Graph settings"]');
+    expect(settingsButton).not.toBeNull();
+
+    await act(async () => {
+      settingsButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const spaceButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Space FX')
+    );
+    expect(spaceButton).not.toBeUndefined();
+
+    await act(async () => {
+      spaceButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onFiltersChange).toHaveBeenCalledWith({
+      showActivity: true,
+      showLogs: true,
+      showTasks: true,
+      showProcesses: true,
+      showEdges: true,
+      showSpaceEffects: false,
+      paused: false,
+    });
 
     await act(async () => {
       root.unmount();

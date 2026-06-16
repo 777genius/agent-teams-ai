@@ -1,5 +1,84 @@
 # Release Guide
 
+## Draft: v2.4.0 (2026-06-09)
+
+Target commit: `ad5a2dc5808eeddde30ab17eecf3afbb32b24214` (`origin/dev`).
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.4.0 -->
+Minor release focused on more capable team runtime workflows, better Agent Graph controls, faster team screens, and stronger recovery for OpenCode, Codex, and member work sync. It also refreshes onboarding docs, screenshots, and Simplified Chinese localization.
+
+### What's New
+
+- feat: Copy a reusable team configuration from an existing team setup.
+- feat: Add Agent Graph space effects controls and owner column backdrops for clearer team visualization.
+- feat: Add Codex custom provider profiles and keep live OpenCode model choices authoritative.
+- feat: Add Opus 4.8 to the model catalog and runtime profile.
+- feat: Support OpenCode worktree root lanes and runtime-backed OpenCode lead sessions.
+
+### Improvements
+
+- improve: Show a team loading skeleton while team details are still loading.
+- improve: Reduce team page telemetry, message rendering, transcript scanning, task presence, and runtime watcher overhead.
+- improve: Surface runtime launch stages and overlay runtime liveness in team status responses.
+- improve: Clean stale direct-process runtime metadata and add targeted runtime PID liveness checks.
+- improve: Refresh landing page screenshots, beginner workflow guides, mobile landing layout, and Simplified Chinese localization.
+
+### Bug Fixes
+
+- fix: Preserve team project filter selection and scope workspace trust preflight checks by provider.
+- fix: Harden member work-sync nudges, stale report token recovery, provider metadata merging, and recovery delivery.
+- fix: Improve OpenCode runtime recovery, message delivery, managed profile diagnostics, and Windows junction fallback handling.
+- fix: Repair runtime snapshot caching, RSS sampling, bootstrap timestamp handling, and Codex bootstrap reconciliation.
+- fix: Allow quoted Windows shell metacharacters and harden command/path handling.
+- fix: Deduplicate runtime watcher/model badges and guard Radix ref cleanup loops.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/Agent.Teams.AI-2.4.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/Agent.Teams.AI-2.4.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/Agent.Teams.AI.Setup.2.4.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/Agent.Teams.AI-2.4.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/agent-teams-ai_2.4.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/agent-teams-ai-2.4.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.4.0/agent-teams-ai-2.4.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.4.0 -->
+
+## Published: v2.3.1 (2026-06-01)
+
+Patch release focused on more reliable team recovery, cleaner provider/model loading, and task dependency handling. GitHub release: [v2.3.1](https://github.com/777genius/agent-teams-ai/releases/tag/v2.3.1).
+
 ## Published: v2.1.2 (2026-05-23)
 
 Performance and reliability release: faster startup, deferred provider/runtime hydration, resilient file watching under watcher limits, safer context switching, better team launch diagnostics, and packaged app entry/runtime fixes. GitHub release: [v2.1.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.1.2).
@@ -54,7 +133,7 @@ First stable build: CLI/auth reliability in packaged apps, IPC hardening, and pl
     <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   </a>
   <br />
-  <sub>May trigger SmartScreen — click "More info" → "Run anyway"</sub>
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v1.0.0/Agent.Teams.AI-1.0.0.AppImage">
@@ -83,9 +162,9 @@ Format: `MAJOR.MINOR.PATCH`
 
 | Bump  | When                                                                  | Example       |
 | ----- | --------------------------------------------------------------------- | ------------- |
-| MAJOR | Breaking changes, major UI overhaul, incompatible data format changes | 1.0.0 → 2.0.0 |
-| MINOR | New features, new panels/views, new integrations                      | 1.0.0 → 1.1.0 |
-| PATCH | Bug fixes, performance improvements, small UI tweaks                  | 1.0.0 → 1.0.1 |
+| MAJOR | Breaking changes, major UI overhaul, incompatible data format changes | 1.0.0 -> 2.0.0 |
+| MINOR | New features, new panels/views, new integrations                      | 1.0.0 -> 1.1.0 |
+| PATCH | Bug fixes, performance improvements, small UI tweaks                  | 1.0.0 -> 1.0.1 |
 
 ## Release Process
 
@@ -109,7 +188,101 @@ git status
 git push origin <branch>
 ```
 
-### 2. Create tag and push
+### 2. Runtime release gate
+
+Every app release must prove whether the packaged `claude-multimodel` runtime is
+current. The app release workflow stages runtime assets from `runtime.lock.json`,
+so an app draft can be built from fresh UI code while still bundling an old
+runtime if this gate is skipped.
+
+Check the runtime delta from this repo:
+
+```bash
+APP_VERSION=2.4.0
+RUNTIME_REPO=/Users/belief/dev/projects/claude/agent_teams_orchestrator
+CURRENT_RUNTIME_REF="$(node scripts/runtime-lock.mjs source-ref)"
+
+git -C "$RUNTIME_REPO" fetch origin --tags
+git -C "$RUNTIME_REPO" status --short
+git -C "$RUNTIME_REPO" log --oneline "$CURRENT_RUNTIME_REF"..origin/main
+```
+
+If `git status --short` in the runtime repo is non-empty, stop and resolve that
+repo first. Do not tag a runtime from a dirty worktree.
+
+If the log is empty, keep the existing `runtime.lock.json` and continue to the
+app tag step.
+
+If the log is not empty and any commit affects packaged runtime behavior, ship a
+new runtime before building the app release:
+
+```bash
+RUNTIME_VERSION=0.0.52
+APP_VERSION=2.4.0
+RUNTIME_REPO=/Users/belief/dev/projects/claude/agent_teams_orchestrator
+
+cd "$RUNTIME_REPO"
+git checkout main
+git pull --ff-only origin main
+
+# Bump the runtime package version to RUNTIME_VERSION.
+RUNTIME_VERSION="$RUNTIME_VERSION" node -e "const fs=require('fs'); const p='package.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=process.env.RUNTIME_VERSION; fs.writeFileSync(p, JSON.stringify(j, null, 2)+'\n');"
+
+bun test src/utils/renderOptions.test.ts src/utils/headlessInputPrompt.test.ts
+git add package.json
+git commit -m "chore(release): bump runtime to $RUNTIME_VERSION"
+git tag "v$RUNTIME_VERSION"
+git push origin main "v$RUNTIME_VERSION"
+
+gh workflow run release-runtime.yml \
+  --repo 777genius/agent_teams_orchestrator \
+  --ref "v$RUNTIME_VERSION" \
+  -f source_ref="v$RUNTIME_VERSION" \
+  -f runtime_version="$RUNTIME_VERSION" \
+  -f target_release_repo=777genius/agent-teams-ai \
+  -f target_release_tag="v$APP_VERSION"
+
+gh run list \
+  --repo 777genius/agent_teams_orchestrator \
+  --workflow release-runtime.yml \
+  --limit 1
+```
+
+Watch the returned run until it succeeds:
+
+```bash
+gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
+```
+
+After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
+
+- `version`: the new runtime version, for example `0.0.52`
+- `sourceRef`: the matching runtime tag, for example `v0.0.52`
+- `releaseTag`: the app release tag that now contains the runtime assets, for
+  example `v2.4.0`
+- each `assets.*.file`: replace the old runtime version suffix with the new one
+
+Then verify the lock points at real uploaded assets:
+
+```bash
+APP_VERSION=2.4.0
+
+gh release view "v$APP_VERSION" \
+  --repo 777genius/agent-teams-ai \
+  --json assets \
+  -q '.assets[].name' > /tmp/agent-teams-release-assets.txt
+
+node scripts/runtime-lock.mjs asset-list | while read -r asset; do
+  rg -qx "$asset" /tmp/agent-teams-release-assets.txt
+done
+
+node scripts/stage-runtime.mjs
+```
+
+Do not create or hand off the app release while `runtime.lock.json` points at an
+older runtime tag than the orchestrator commits you intend to ship.
+
+### 3. Create tag and push
 
 ```bash
 git tag v<VERSION>
@@ -124,7 +297,7 @@ This triggers the `release.yml` GitHub Actions workflow which:
 - Packages Linux (AppImage, deb, rpm, pacman)
 - Creates a GitHub Release with all artifacts
 
-### 3. Update release notes
+### 4. Update release notes
 
 After the workflow completes, edit the release notes:
 
@@ -154,10 +327,13 @@ Draft releases must be treated as review artifacts:
 - If a draft already exists when starting or retrying a release, do not delete it automatically. Ask for explicit permission to delete, replace, or reuse it.
 - Never delete a draft release just because the user said to "make a release" or "redo the release". Deleting a draft requires a separate explicit command such as "delete the draft release".
 
-### 4. Required release closeout gate
+### 5. Required release closeout gate
 
 Do not publish or call a release finished until this is true:
 
+- `runtime.lock.json` points at the runtime tag intended for this app release.
+- `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json assets -q '.assets[].name'` includes every file from `node scripts/runtime-lock.mjs asset-list`.
+- `git -C /Users/belief/dev/projects/claude/agent_teams_orchestrator log --oneline "$(node scripts/runtime-lock.mjs source-ref)"..origin/main` has been reviewed. If it is non-empty, the skipped runtime commits are explicitly known to be irrelevant to the packaged app.
 - The GitHub release body is not just auto-generated `Full Changelog`.
 - The release body starts with short user-facing notes: what changed, why users care, and the most important fixes.
 - The `Downloads` table from the template is present and every link points to the current `v<VERSION>` assets.

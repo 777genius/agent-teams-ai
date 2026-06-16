@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Tu sei il Boss, gli agenti sono il tuo team. Gestiscono i task da soli, si scrivono, rivedono il codice a vicenda. Tu guardi la kanban board e bevi caffe."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Team di agenti",
+      "description": "Crea team con ruoli diversi. Gli agenti lavorano in parallelo, comunicano tra loro e collaborano anche tra team."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban Board",
+      "description": "I task cambiano stato in tempo reale mentre gli agenti lavorano. Trascina, assegna e rivedi tutto su una board visiva."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Vista diff per ogni task con accetta, rifiuta e commenta. Editor di codice integrato con supporto Git."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Comunicazione tra team",
+      "description": "Gli agenti si scrivono dentro lo stesso team e tra team diversi. Messaggi diretti, commenti ai task e azioni rapide."
+    },
+    {
+      "id": "soloMode",
+      "title": "Modalita solo",
+      "description": "Parti con un solo agente che si gestisce i task. Quando serve piu potenza, espandi a un team completo."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Processi live",
+      "description": "Vedi gli agenti in esecuzione, apri URL nel browser e monitora token e contesto della sessione in tempo reale."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Cos'e Agent Teams?",
+      "answer": "Un'app desktop per orchestrare team di agenti AI con un livello locale di coordinamento. Gli agenti hanno ruoli, lavorano in autonomia, collaborano tramite kanban board e possono usare Anthropic o Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "E davvero gratuito?",
+      "answer": "Si. L'app e gratuita e open source, e puoi iniziare con un modello gratuito senza autenticazione - niente registrazione, API key o carta di credito. Se vuoi piu modelli, collega Claude, Codex, OpenCode/OpenRouter o un altro provider supportato."
+    },
+    {
+      "id": "platforms",
+      "question": "Quali piattaforme sono supportate?",
+      "answer": "macOS (Apple Silicon e Intel), Windows e Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Come funziona?",
+      "answer": "Installa l'app, crea un team e assegna i ruoli. Gli agenti iniziano a lavorare in parallelo. Tu segui i progressi sulla kanban board, rivedi i diff e comunichi direttamente con gli agenti."
+    },
+    {
+      "id": "privacy",
+      "question": "Il mio codice resta privato?",
+      "answer": "Tutto gira localmente sul tuo computer. Nessun dato viene inviato a server esterni. Codice, conversazioni e attivita degli agenti restano privati."
+    },
+    {
+      "id": "requirements",
+      "question": "Cosa serve per iniziare?",
+      "answer": "Basta installare l'app - parti con il modello gratuito senza autenticazione, poi collega modelli di provider dalla UI solo quando ti servono."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "Scegli la tua piattaforma e inizia a costruire con team di agenti AI."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Finalmente uno strumento che mi fa gestire agenti AI come un vero team di engineering. La kanban board cambia tutto per il lavoro in parallelo."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "La modalita solo e perfetta per task veloci. Quando serve piu forza, avvio un team completo in pochi secondi."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Il flusso di code review e ottimo: diff per task, accetta/rifiuta, commenti. Sembra un team che segue davvero le istruzioni."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Monitoraggio dei processi live e tracking del contesto sono utilissimi. Vedo esattamente cosa sta facendo ogni agente."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Onboarding zero-setup reale: app installata, login una volta, agenti al lavoro sul mio codice in 5 minuti."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Ha cambiato il mio modo di prototipare. Creo team per parti diverse dello stack e li lascio lavorare in parallelo."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Gratis",
+      "price": "0 €",
+      "period": "",
+      "description": "Inizia con il modello gratuito incluso senza autenticazione. Nessuna registrazione, API key o carta di credito.",
+      "features": [
+        "Modello gratuito senza autenticazione per i primi run",
+        "Nessun account o login provider richiesto per provare",
+        "Accesso opzionale a Claude, Codex e OpenCode",
+        "Team di agenti illimitati",
+        "Kanban board con aggiornamenti in tempo reale",
+        "Code review con vista diff",
+        "Comunicazione tra team",
+        "Modalita solo e team"
+      ],
+      "highlighted": true
+    }
+  ]
+}

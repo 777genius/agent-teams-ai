@@ -3,8 +3,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-function getPlatformPath() {
-  const platform = process.env.npm_config_platform || os.platform();
+function getPlatformPath(input = {}) {
+  const env = input.env ?? process.env;
+  const platform = env.npm_config_platform || input.platform || os.platform();
 
   switch (platform) {
     case 'mas':
@@ -21,47 +22,114 @@ function getPlatformPath() {
   }
 }
 
-function getElectronPaths(electronDir, platformPath) {
+function getElectronPaths(electronDir, platformPath, env = process.env) {
   const pathFile = path.join(electronDir, 'path.txt');
-  const distPath = process.env.ELECTRON_OVERRIDE_DIST_PATH || path.join(electronDir, 'dist');
+  const distPath = env.ELECTRON_OVERRIDE_DIST_PATH || path.join(electronDir, 'dist');
   const executablePath = path.join(distPath, platformPath);
 
   return { executablePath, pathFile };
 }
 
-function ensurePathFile(electronDir, platformPath) {
-  const { pathFile } = getElectronPaths(electronDir, platformPath);
+function ensurePathFile(electronDir, platformPath, input = {}) {
+  const fsAdapter = input.fs ?? fs;
+  const env = input.env ?? process.env;
+  const { pathFile } = getElectronPaths(electronDir, platformPath, env);
 
-  const currentPath = fs.existsSync(pathFile) ? fs.readFileSync(pathFile, 'utf8') : '';
+  const currentPath = fsAdapter.existsSync(pathFile) ? fsAdapter.readFileSync(pathFile, 'utf8') : '';
   if (currentPath !== platformPath) {
-    fs.writeFileSync(pathFile, platformPath);
+    fsAdapter.writeFileSync(pathFile, platformPath);
   }
 }
 
-function runElectronInstaller(installPath) {
-  const result = childProcess.spawnSync(process.execPath, [installPath], {
+function runElectronInstaller(installPath, input = {}) {
+  const spawnSync = input.spawnSync ?? childProcess.spawnSync;
+  const execPath = input.execPath ?? process.execPath;
+  const env = input.env ?? process.env;
+  const result = spawnSync(execPath, [installPath], {
     stdio: 'inherit',
-    env: process.env,
+    env,
   });
+
+  if (result.error) {
+    throw result.error;
+  }
 
   if (result.status !== 0) {
     throw new Error(`Electron installer failed with exit code ${result.status ?? 'unknown'}`);
   }
 }
 
-const electronPackagePath = require.resolve('electron/package.json');
-const electronDir = path.dirname(electronPackagePath);
-const installPath = path.join(electronDir, 'install.js');
-const platformPath = getPlatformPath();
-const { executablePath, pathFile } = getElectronPaths(electronDir, platformPath);
+function resolveElectronPackagePath(input = {}) {
+  if (input.electronPackagePath) {
+    return input.electronPackagePath;
+  }
 
-if (!fs.existsSync(executablePath)) {
-  runElectronInstaller(installPath);
+  return require.resolve('electron/package.json');
 }
 
-ensurePathFile(electronDir, platformPath);
+function ensureElectronInstall(input = {}) {
+  const fsAdapter = input.fs ?? fs;
+  const logger = input.logger ?? console;
+  const env = input.env ?? process.env;
+  const strict = Boolean(input.strict);
+  const electronPackagePath = resolveElectronPackagePath(input);
+  const electronDir = path.dirname(electronPackagePath);
+  const installPath = path.join(electronDir, 'install.js');
+  const platformPath = getPlatformPath({ env, platform: input.platform });
+  const { executablePath, pathFile } = getElectronPaths(electronDir, platformPath, env);
 
-if (!fs.existsSync(executablePath)) {
-  console.warn(`Electron binary is missing after install: ${executablePath}`);
-  console.warn(`Wrote Electron import marker: ${pathFile}`);
+  if (!fsAdapter.existsSync(executablePath)) {
+    if (!input.quiet) {
+      logger.warn(`Electron binary is missing, running installer: ${executablePath}`);
+    }
+    const runInstaller = input.runInstaller ?? runElectronInstaller;
+    runInstaller(installPath, {
+      env,
+      execPath: input.execPath,
+      spawnSync: input.spawnSync,
+    });
+  }
+
+  ensurePathFile(electronDir, platformPath, { env, fs: fsAdapter });
+
+  const installed = fsAdapter.existsSync(executablePath);
+  if (!installed) {
+    const message = `Electron binary is missing after install: ${executablePath}`;
+    if (strict) {
+      throw new Error(`${message}\nWrote Electron import marker: ${pathFile}`);
+    }
+    logger.warn(message);
+    logger.warn(`Wrote Electron import marker: ${pathFile}`);
+  }
+
+  return {
+    electronDir,
+    executablePath,
+    installed,
+    pathFile,
+    platformPath,
+  };
 }
+
+function main() {
+  const strict = process.argv.includes('--strict');
+
+  try {
+    ensureElectronInstall({ strict });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  ensureElectronInstall,
+  ensurePathFile,
+  getElectronPaths,
+  getPlatformPath,
+  runElectronInstaller,
+};

@@ -1,4 +1,8 @@
-import { buildGeminiPostLaunchHydrationPrompt } from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
+import {
+  buildGeminiPostLaunchHydrationPrompt,
+  buildMemberSpawnPrompt,
+  buildPersistentLeadContext,
+} from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
 import { describe, expect, it } from 'vitest';
 
 import type { MemberSpawnStatusEntry, TeamCreateRequest } from '@shared/types';
@@ -17,6 +21,36 @@ function buildPromptWithStatus(status: MemberSpawnStatusEntry): string {
 }
 
 describe('TeamProvisioningPromptBuilders', () => {
+  it('clarifies that assigned teammates may inspect and edit files for implementation work', () => {
+    const prompt = buildMemberSpawnPrompt(
+      { name: 'tom', role: 'developer' },
+      'signal-ops',
+      'signal-ops',
+      'lead'
+    );
+
+    expect(prompt).toContain(
+      'If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in your working directory as needed.'
+    );
+  });
+
+  it('keeps non-solo lead delegation first while excluding assigned teammates from that restriction', () => {
+    const prompt = buildPersistentLeadContext({
+      teamName: 'signal-ops',
+      leadName: 'lead',
+      isSolo: false,
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'tom', role: 'developer' },
+      ] as TeamCreateRequest['members'],
+    });
+
+    expect(prompt).toContain('your top priority as team lead');
+    expect(prompt).toContain(
+      'This lead-only delegation rule does NOT restrict assigned teammates.'
+    );
+  });
+
   it('keeps errored provisioned-but-not-alive members failed in Gemini hydration prompts', () => {
     const prompt = buildPromptWithStatus({
       status: 'error',

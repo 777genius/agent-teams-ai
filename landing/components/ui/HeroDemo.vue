@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { mdiRobotOutline, mdiCheckCircleOutline, mdiCodeBraces, mdiMessageTextOutline } from '@mdi/js';
+
+const { t } = useI18n();
 
 // ─── State machine for demo cycle ───
 type DemoState = 'idle' | 'working' | 'reviewing' | 'done';
@@ -9,13 +11,13 @@ const state = ref<DemoState>('idle');
 // ─── Animated task text ───
 const currentTask = ref('');
 const taskFading = ref(false);
-const TASKS = [
-  'Implementing auth middleware...',
-  'Writing unit tests for API...',
-  'Reviewing PR #42 changes...',
-  'Setting up CI/CD pipeline...',
-  'Refactoring database layer...',
-];
+const taskMessages = computed(() => [
+  t('hero.demo.activity.authMiddleware'),
+  t('hero.demo.activity.unitTests'),
+  t('hero.demo.activity.reviewPr'),
+  t('hero.demo.activity.ciPipeline'),
+  t('hero.demo.activity.refactorDatabase'),
+]);
 let taskIndex = 0;
 let charTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -28,9 +30,9 @@ const agents = ref([
 
 // ─── Kanban mini-board ───
 const kanbanTasks = ref([
-  { id: 1, text: 'Auth API', col: 'todo' as string },
-  { id: 2, text: 'Unit tests', col: 'todo' as string },
-  { id: 3, text: 'CI setup', col: 'todo' as string },
+  { id: 1, text: t('hero.demo.tasks.authApi'), col: 'todo' as string },
+  { id: 2, text: t('hero.demo.tasks.unitTests'), col: 'todo' as string },
+  { id: 3, text: t('hero.demo.tasks.ciSetup'), col: 'todo' as string },
 ]);
 
 function typeNextChar(text: string, index: number) {
@@ -76,9 +78,9 @@ function runCycle() {
   currentTask.value = '';
   taskFading.value = false;
   kanbanTasks.value = [
-    { id: 1, text: 'Auth API', col: 'todo' },
-    { id: 2, text: 'Unit tests', col: 'todo' },
-    { id: 3, text: 'CI setup', col: 'todo' },
+    { id: 1, text: t('hero.demo.tasks.authApi'), col: 'todo' },
+    { id: 2, text: t('hero.demo.tasks.unitTests'), col: 'todo' },
+    { id: 3, text: t('hero.demo.tasks.ciSetup'), col: 'todo' },
   ];
   agents.value.forEach(a => a.status = 'idle');
 
@@ -91,7 +93,8 @@ function runCycle() {
     agents.value[1].status = 'active';
     kanbanTasks.value[0].col = 'progress';
 
-    const task = TASKS[taskIndex % TASKS.length];
+    const messages = taskMessages.value;
+    const task = messages[taskIndex % messages.length];
     taskIndex++;
     typeNextChar(task, 0);
 
@@ -179,6 +182,16 @@ function colColor(col: string) {
   }
 }
 
+function colLabel(col: string) {
+  switch (col) {
+    case 'todo': return t('hero.demo.columns.todo');
+    case 'progress': return t('hero.demo.columns.progress');
+    case 'review': return t('hero.demo.columns.review');
+    case 'done': return t('hero.demo.columns.done');
+    default: return col.toUpperCase();
+  }
+}
+
 function statusDotColor(status: string) {
   switch (status) {
     case 'active': return '#00f0ff';
@@ -190,7 +203,7 @@ function statusDotColor(status: string) {
 </script>
 
 <template>
-  <div ref="containerRef" class="hero-demo" role="img" aria-label="Agent team demo">
+  <div ref="containerRef" class="hero-demo" role="img" :aria-label="t('hero.demo.ariaLabel')">
     <div class="hero-demo__content">
       <!-- Header -->
       <div class="hero-demo__header">
@@ -198,7 +211,7 @@ function statusDotColor(status: string) {
           <span class="hero-demo__title">Agent Teams</span>
           <span class="hero-demo__badge-live">
             <span class="hero-demo__live-dot" />
-            LIVE
+            {{ t('hero.demo.live') }}
           </span>
         </div>
       </div>
@@ -225,7 +238,7 @@ function statusDotColor(status: string) {
       <div class="hero-demo__kanban">
         <div v-for="col in ['todo', 'progress', 'review', 'done']" :key="col" class="hero-demo__kanban-col">
           <div class="hero-demo__kanban-label" :style="{ color: colColor(col) }">
-            {{ col === 'progress' ? 'IN PROGRESS' : col.toUpperCase() }}
+            {{ colLabel(col) }}
           </div>
           <div class="hero-demo__kanban-cards">
             <TransitionGroup name="kanban-card">
@@ -249,7 +262,7 @@ function statusDotColor(status: string) {
           <span
             class="hero-demo__log-text"
             :class="{ 'hero-demo__log-text--fading': taskFading }"
-          >{{ currentTask || 'Waiting for tasks...' }}</span>
+          >{{ currentTask || t('hero.demo.waiting') }}</span>
         </div>
       </div>
     </div>

@@ -1015,7 +1015,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(
       'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
     );
-    expect(prompt).toContain('DELEGATION-FIRST (behavior rule for ALL future turns):');
+    expect(prompt).toContain('DELEGATION-FIRST (behavior rule for ALL future lead turns):');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).toContain(

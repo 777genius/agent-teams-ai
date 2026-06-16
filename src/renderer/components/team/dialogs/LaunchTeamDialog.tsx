@@ -107,7 +107,7 @@ import {
   isDeletedProjectPathSelection,
   isSelectableProjectPathProject,
 } from './projectPathOptions';
-import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
+import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
@@ -157,6 +157,7 @@ import {
 } from './WorktreeGitReadinessBanner';
 
 import type { ActiveTeamRef } from './CreateTeamDialog';
+import type { ProjectPathProject } from './projectPathProjects';
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
@@ -433,6 +434,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectsLoadRequested, setProjectsLoadRequested] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1847,9 +1849,28 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const repositoryGroups = useStore(useShallow((s) => s.repositoryGroups));
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
+  const shouldDeferProjectListLoad =
+    isLaunchMode &&
+    !projectsLoadRequested &&
+    typeof defaultProjectPath === 'string' &&
+    defaultProjectPath.length > 0 &&
+    !isEphemeralProjectPath(defaultProjectPath);
+  const requestProjectListLoad = useCallback(() => {
+    setProjectsLoadRequested(true);
+  }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setProjectsLoadRequested(false);
+      return;
+    }
+
+    if (shouldDeferProjectListLoad && defaultProjectPath) {
+      setProjects([syntheticProjectFromPath(defaultProjectPath)]);
+      setProjectsLoading(false);
+      setProjectsError(null);
+      return;
+    }
 
     setProjectsLoading(true);
     setProjectsError(null);
@@ -1878,7 +1899,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, repositoryGroups, defaultProjectPath, t]);
+  }, [open, repositoryGroups, defaultProjectPath, shouldDeferProjectListLoad, t]);
 
   // Pre-select defaultProjectPath (launch mode) or first project
 
@@ -2699,6 +2720,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             projects={projects}
             projectsLoading={projectsLoading}
             projectsError={projectsError}
+            onProjectsDropdownOpen={requestProjectListLoad}
           />
 
           {/* ═══════════════════════════════════════════════════════════════════

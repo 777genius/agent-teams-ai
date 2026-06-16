@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Chaguo za watumiaji wabobezi: hamisha/leta usanidi, weka upya chaguo-msingi, na uhariri usanidi ghafi.",
+      "label": "Kina"
+    },
+    "general": {
+      "description": "Mapendeleo ya msingi ya programu kama mandhari, lugha, msongamano wa onyesho, na tabia ya uanzishaji.",
+      "label": "Jumla"
+    },
+    "infoAriaLabel": "{{label}} ni nini?",
+    "notifications": {
+      "description": "Dhibiti wakati na jinsi unavyoarifiwa kuhusu shughuli za wakala, ukamilishaji wa kazi, na hitilafu.",
+      "label": "Arifa"
+    }
+  },
+  "view": {
+    "description": "Dhibiti mapendeleo yako ya programu",
+    "loading": "Inapakia mipangilio...",
+    "title": "Mipangilio"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Ghairi",
+      "test": "Jaribu"
+    },
+    "defaults": {
+      "allProjects": "Miradi yote",
+      "allProjectsHint": "Majaribio hutumia {{project}}. Chaguo-msingi hutumika isipokuwa mradi una ubatilishaji.",
+      "loadingContexts": "Inapakia miktadha...",
+      "projectHint": "Kuhifadhi kunabatilisha {{project}} pekee.",
+      "projectOverrideContext": "Muktadha wa ubatilishaji wa mradi",
+      "scopeDescriptionAllProjects": "Chaguo-msingi kwa kila mradi usio na ubatilishaji wake wa OpenCode.",
+      "scopeDescriptionProject": "Batilisha mradi uliochaguliwa pekee. Timu zinazoendeshwa hazibadilishwi.",
+      "selectProjectContext": "Chagua muktadha wa mradi",
+      "selectProjectHint": "Chagua mradi kabla ya kujaribu modeli za ndani au kuhifadhi chaguo-msingi.",
+      "selectValidationContext": "Chagua muktadha wa uthibitishaji",
+      "setAllProjectsDefault": "Weka chaguo-msingi cha miradi yote",
+      "setProjectDefault": "Weka chaguo-msingi cha mradi",
+      "thisProject": "Mradi huu",
+      "title": "Chaguo-msingi za OpenCode",
+      "validationContext": "Muktadha wa uthibitishaji"
+    },
+    "diagnostics": {
+      "copied": "Utambuzi umenakiliwa",
+      "copiedShort": "Imenakiliwa",
+      "copy": "Nakili utambuzi",
+      "hints": "Vidokezo",
+      "likelyCause": "Sababu inayowezekana:",
+      "windowsSymlinkAdminHint": "Windows: endesha Agent Teams AI kama Msimamizi"
+    },
+    "models": {
+      "alreadyDefault": "Hii tayari ni chaguo-msingi la OpenCode lililochaguliwa.",
+      "empty": "Hakuna modeli zilizopatikana.",
+      "emptyFree": "Hakuna modeli za bure zilizopatikana.",
+      "emptyRecommended": "Hakuna modeli zilizopendekezwa zilizopatikana.",
+      "emptyRecommendedFree": "Hakuna modeli za bure zilizopendekezwa zilizopatikana.",
+      "freeOnly": "Bure pekee",
+      "launchableDescription": "Njia zinazojulikana kutoka usanidi wa OpenCode, modeli za bure zilizojengwa ndani, na chaguo-msingi la sasa. Njia za ndani zinahitaji jaribio lililofaulu kabla ya kuwa tayari kwa uzinduzi wa timu.",
+      "launchableTitle": "Njia za modeli za OpenCode",
+      "loadingRoutes": "Inapakia njia za modeli za OpenCode...",
+      "noRoutesMatch": "Hakuna njia za modeli za OpenCode zinazolingana na \"{{query}}\".",
+      "noneReported": "Bado hakuna njia za modeli za OpenCode zilizoripotiwa. Sanidi njia ya ndani katika OpenCode au tumia kichupo cha Watoa Huduma kukagua watoa huduma wa katalogi.",
+      "recommendedOnly": "Zilizopendekezwa pekee",
+      "searchPlaceholder": "Tafuta modeli",
+      "selectProjectBeforeTesting": "Chagua muktadha wa mradi kabla ya kujaribu modeli.",
+      "selectProjectBeforeTestingDefaults": "Chagua muktadha wa mradi kabla ya kujaribu au kuhifadhi chaguo-msingi za OpenCode.",
+      "testInProgress": "Jaribio la modeli tayari linaendeshwa.",
+      "useInTeamPicker": "Hifadhi kwa kichaguzi cha timu",
+      "validationContextRequired": "Chagua muktadha wa uthibitishaji hapo juu ili kuwezesha Jaribu na Weka chaguo-msingi. Kuhifadhi kwa kichaguzi cha timu huhifadhi njia kwa timu mpya pekee.",
+      "actionsUnavailable": "Vitendo havipatikani kwa muda.",
+      "defaultSaveInProgress": "Chaguo-msingi la OpenCode linahifadhiwa.",
+      "routeUnavailableAuth": "Mtoa huduma huyu anahitaji uthibitishaji kabla ya modeli hii kutumika.",
+      "routeUnavailableFailed": "Njia hii ya modeli imeshindwa jaribio lake la mwisho la utekelezaji.",
+      "routeUnavailableGeneric": "Njia hii ya modeli haiwezi kutumika sasa hivi.",
+      "routeUnavailableUnknown": "Modeli hii ni chaguo-msingi la sasa la OpenCode, lakini bado haipatikani katika katalogi hai."
+    },
+    "providers": {
+      "catalog": "Katalogi ya watoa huduma wa OpenCode",
+      "countFallback": "Watoa huduma wa OpenCode",
+      "description": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
+      "loadMore": "Pakia watoa huduma zaidi",
+      "loading": "Inapakia watoa huduma wa OpenCode",
+      "noMatches": "Hakuna watoa huduma wanaolingana na utafutaji huo.",
+      "noneReported": "Hakuna watoa huduma wa OpenCode walioripotiwa na runtime iliyodhibitiwa.",
+      "recommended": "Inapendekezwa",
+      "refreshCatalog": "Onyesha upya katalogi",
+      "searchPlaceholder": "Tafuta watoa huduma",
+      "description_few": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
+      "description_many": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
+      "description_one": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
+      "description_other": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza."
+    },
+    "setup": {
+      "loading": "Inapakia usanidi wa mtoa huduma..."
+    },
+    "summary": {
+      "defaultModel": "Chaguo-msingi la OpenCode: {{model}}",
+      "loading": "Inapakia runtime ya OpenCode iliyodhibitiwa, watoa huduma walioungana, na chaguo-msingi za modeli...",
+      "source": "Chanzo: {{source}}",
+      "title": "Runtime ya OpenCode"
+    },
+    "tabs": {
+      "models": "Modeli",
+      "providers": "Watoa Huduma"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Tafuta njia za modeli"
+    },
+    "badges": {
+      "usedInTeamPicker": "Imehifadhiwa kwa kichaguzi cha timu",
+      "free": "bure",
+      "local": "ya ndani",
+      "configured": "imesanidiwa",
+      "knownRoute": "njia inayojulikana",
+      "connected": "imeungana",
+      "verified": "imethibitishwa",
+      "needsTest": "inahitaji jaribio",
+      "failed": "imeshindwa",
+      "unknown": "haijulikani",
+      "default": "chaguo-msingi"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Lugha ya mawasiliano ya wakala",
+      "descriptionWithDetected": "Lugha ya mawasiliano ya wakala (imegunduliwa: {{detected}})",
+      "emptyMessage": "Hakuna lugha iliyopatikana.",
+      "label": "Lugha",
+      "searchPlaceholder": "Tafuta lugha...",
+      "selectPlaceholder": "Chagua lugha...",
+      "title": "Lugha ya Wakala"
+    },
+    "appLanguage": {
+      "description": "Lugha ya kiolesura cha programu.",
+      "label": "Lugha",
+      "title": "Lugha ya Programu"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Panua kiotomatiki kila zamu ya majibu unapofungua nakala au kupokea ujumbe mpya",
+        "label": "Panua majibu ya AI kwa chaguo-msingi"
+      },
+      "nativeTitleBar": {
+        "description": "Tumia fremu ya dirisha ya mfumo ya chaguo-msingi badala ya upau wa kichwa maalum",
+        "label": "Tumia upau wa kichwa asili",
+        "restartConfirm": {
+          "confirmLabel": "Anzisha upya",
+          "message": "Programu inahitaji kuanzishwa upya ili kutumia mabadiliko ya upau wa kichwa. Anzisha upya sasa?",
+          "title": "Kuanzisha upya kunahitajika"
+        }
+      },
+      "theme": {
+        "description": "Chagua mandhari ya rangi unayopendelea",
+        "label": "Mandhari",
+        "options": {
+          "dark": "Giza",
+          "light": "Mwanga",
+          "system": "Mfumo"
+        }
+      },
+      "title": "Muonekano"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Anzisha seva ya HTTP ili kufikia UI kutoka kivinjari au kupachika katika iframe",
+        "label": "Wezesha hali ya seva"
+      },
+      "title": "Ufikiaji wa Kivinjari"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Chagua Folda",
+        "selectFolderManually": "Chagua Folda kwa Mkono",
+        "useAutoDetect": "Tumia Ugunduzi Otomatiki",
+        "useFolder": "Tumia Folda",
+        "usePath": "Tumia Njia",
+        "useThisPath": "Tumia Njia Hii",
+        "useWsl": "Unatumia Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Folda hii haina saraka ya \"projects\". Endelea hata hivyo?",
+          "title": "Hakuna saraka ya projects iliyopatikana"
+        },
+        "notClaudeDir": {
+          "message": "Folda hii imeitwa \"{{folderName}}\", si \".claude\". Endelea hata hivyo?",
+          "title": "Folda iliyochaguliwa si .claude"
+        },
+        "noWslPaths": {
+          "message": "Haikuweza kupata distros za WSL zenye data ya Claude kiotomatiki. Chagua folda kwa mkono?",
+          "title": "Hakuna njia za WSL za Claude zilizopatikana"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" haina saraka ya \"projects\". Endelea hata hivyo?",
+          "title": "Njia ya WSL haina saraka ya projects"
+        }
+      },
+      "current": {
+        "autoDetected": "Imegunduliwa kiotomatiki: {{path}}",
+        "autoDetectedPath": "Inatumia njia iliyogunduliwa kiotomatiki",
+        "customPath": "Inatumia njia maalum",
+        "label": "Mzizi wa Sasa wa Ndani"
+      },
+      "description": "Chagua ni folda gani ya ndani inayochukuliwa kama mzizi wa data yako ya Claude",
+      "errors": {
+        "detectWslFailed": "Imeshindwa kugundua njia za mzizi wa WSL za Claude",
+        "loadFailed": "Imeshindwa kupakia mipangilio ya mzizi wa Claude wa ndani",
+        "updateFailed": "Imeshindwa kusasisha mzizi wa Claude"
+      },
+      "title": "Mzizi wa Claude wa Ndani",
+      "wslModal": {
+        "closeAriaLabel": "Funga kidirisha cha njia ya WSL",
+        "description": "Usambazaji wa WSL uliogunduliwa na watahiniwa wa mzizi wa Claude",
+        "noProjectsDir": "Hakuna saraka ya projects iliyogunduliwa",
+        "title": "Chagua Mzizi wa Claude wa WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Saidia kuboresha programu kwa kutuma data isiyojulikana ya hitilafu na utendaji",
+        "label": "Tuma ripoti za hitilafu"
+      },
+      "title": "Faragha"
+    },
+    "server": {
+      "runningOn": "Inaendeshwa kwenye",
+      "standaloneModeDescription": "Inaendeshwa katika hali ya kujitegemea. Seva ya HTTP huwa hai kila wakati. Arifa za mfumo hazipatikani - vichochezi vya arifa vinarekodiwa ndani ya programu pekee.",
+      "title": "Seva"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Anzisha programu kiotomatiki unapoingia",
+        "label": "Zindua wakati wa kuingia"
+      },
+      "showDockIcon": {
+        "description": "Onyesha aikoni ya programu kwenye dock (macOS)",
+        "label": "Onyesha aikoni ya dock"
+      },
+      "title": "Uanzishaji"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Arifa zinaweza zisifanye kazi katika hali ya maendeleo. macOS inatambua programu kama \"Electron\" (kitambulisho cha bundle",
+      "descriptionSuffix": ") badala ya jina la programu ya uzalishaji. Kagua Mipangilio ya Mfumo > Arifa > Electron ili kuthibitisha ruhusa.",
+      "title": "Hali ya Maendeleo"
+    },
+    "ignoredRepositories": {
+      "description": "Arifa kutoka kwa hazina hizi zitapuuzwa",
+      "empty": "Hakuna hazina zilizopuuzwa",
+      "selectPlaceholder": "Chagua hazina ya kupuuza...",
+      "title": "Hazina Zilizopuuzwa"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Onyesha arifa za mfumo kwa hitilafu na matukio",
+        "label": "Wezesha Arifa za Mfumo"
+      },
+      "sound": {
+        "description": "Cheza sauti arifa zinapotokea",
+        "label": "Cheza sauti"
+      },
+      "subagentErrors": {
+        "description": "Gundua na arifu kuhusu hitilafu katika vipindi vya wakala mdogo",
+        "label": "Jumuisha hitilafu za wakala mdogo"
+      },
+      "title": "Mipangilio ya Arifa"
+    },
+    "snooze": {
+      "clear": "Futa Usitishaji",
+      "description": "Sitisha arifa kwa muda",
+      "descriptionWithTime": "Imesitishwa hadi {{time}}",
+      "label": "Sitisha arifa",
+      "options": {
+        "15": "dakika 15",
+        "30": "dakika 30",
+        "60": "saa 1",
+        "120": "saa 2",
+        "240": "saa 4",
+        "-1": "Hadi kesho"
+      },
+      "selectDuration": "Chagua muda..."
+    },
+    "taskCompletion": {
+      "description": "Pata arifa asili za OS Claude inapomaliza kazi - sauti, mabango, na beji za Dock/upau wa kazi. Hufanya kazi kwenye macOS, Linux, na Windows.",
+      "installPlugin": "Sakinisha programu-jalizi ya claude-notifications-go",
+      "title": "Arifa za Ukamilishaji wa Kazi"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Arifu wakati kila kazi katika timu inafikia hali ya imekamilika",
+        "label": "Kazi zote zimekamilika"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claude inaporipoti muda wa kuweka upya, ratibu kidokezo cha ufuatiliaji kwa kiongozi wa timu baada ya kikomo kuweka upya",
+        "label": "Endelea kiotomatiki baada ya kikomo cha kiwango"
+      },
+      "clarifications": {
+        "description": "Onyesha arifa asili za OS wakati kazi inahitaji ingizo lako",
+        "label": "Arifa za ufafanuzi wa kazi"
+      },
+      "crossTeamMessage": {
+        "description": "Arifu wakati ujumbe unafika kutoka timu nyingine",
+        "label": "Arifa za ujumbe wa timu mtambuka"
+      },
+      "leadInbox": {
+        "description": "Arifu wakati wenzako wa timu wanatuma ujumbe kwa kiongozi wa timu",
+        "label": "Arifa za kikasha cha kiongozi"
+      },
+      "statusChange": {
+        "description": "Onyesha arifa asili za OS wakati hali ya kazi inabadilika",
+        "label": "Arifa za mabadiliko ya hali ya kazi",
+        "onlySolo": {
+          "description": "Arifu tu wakati timu haina wenzako wa timu",
+          "label": "Katika hali ya Peke yake pekee"
+        },
+        "statuses": {
+          "description": "Ni hali zipi lengwa zinazochochea arifa",
+          "label": "Arifu kwenye hali hizi",
+          "options": {
+            "approved": "Imeidhinishwa",
+            "completed": "Imekamilika",
+            "deleted": "Imefutwa",
+            "in_progress": "Imeanza",
+            "needsFix": "Inahitaji Marekebisho",
+            "pending": "Inasubiri",
+            "review": "Mapitio"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Onyesha arifa asili za OS wakati mawakala wanatoa maoni kwenye kazi",
+        "label": "Arifa za maoni ya kazi"
+      },
+      "taskCreated": {
+        "description": "Onyesha arifa asili za OS wakati kazi mpya inaundwa",
+        "label": "Arifa za kazi iliyoundwa"
+      },
+      "teamLaunched": {
+        "description": "Arifu wakati timu inamaliza kuzinduliwa na iko tayari",
+        "label": "Arifa za timu iliyozinduliwa"
+      },
+      "title": "Arifa za Timu",
+      "toolApproval": {
+        "description": "Arifu wakati zana inahitaji idhini yako (Ruhusu/Kataa) wakati programu haijalengwa",
+        "label": "Arifa za idhini ya zana"
+      },
+      "userInbox": {
+        "description": "Arifu wakati wenzako wa timu wanakutumia ujumbe",
+        "label": "Arifa za kikasha cha mtumiaji"
+      }
+    },
+    "test": {
+      "action": "Tuma Jaribio",
+      "description": "Tuma arifa ya jaribio ili kuthibitisha uwasilishaji",
+      "failedToSend": "Imeshindwa kutuma arifa ya jaribio",
+      "label": "Arifa ya jaribio",
+      "sending": "Inatuma...",
+      "sent": "Imetumwa!",
+      "unknownError": "Hitilafu isiyojulikana"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Aikoni ya programu",
+      "description": "Kusanya timu za wakala wa AI zinazofanya kazi kwa kujitegemea sambamba, kuwasiliana kati ya timu, na kudhibiti kazi kwenye ubao wa kanban - zikiwa na mapitio ya msimbo yaliyojengwa ndani, ufuatiliaji wa michakato wa moja kwa moja, na uonekano kamili wa zana.",
+      "standalone": "Kujitegemea",
+      "title": "Kuhusu",
+      "version": "Toleo {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Hariri Usanidi",
+      "exportConfig": "Hamisha Usanidi",
+      "importConfig": "Leta Usanidi",
+      "openInEditor": "Fungua katika Kihariri",
+      "resetToDefaults": "Weka upya kuwa Chaguo-msingi",
+      "title": "Usanidi"
+    },
+    "updates": {
+      "available": "v{{version}} linapatikana",
+      "check": "Kagua Masasisho",
+      "checking": "Inakagua...",
+      "ready": "Sasisho liko tayari",
+      "unknownVersion": "haijulikani",
+      "upToDate": "Limesasishwa"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Imeshindwa kupakia usanidi",
+      "saveFailed": "Imeshindwa kuhifadhi usanidi"
+    },
+    "footer": {
+      "autoSave": "Mabadiliko yanahifadhiwa kiotomatiki baada ya kuhariri",
+      "toClose": "kufunga",
+      "escapeKey": "Esc"
+    },
+    "loading": "Inapakia usanidi...",
+    "status": {
+      "invalidJson": "JSON batili",
+      "saveFailed": "Kuhifadhi kumeshindwa",
+      "saved": "Imehifadhiwa",
+      "saving": "Inahifadhi..."
+    },
+    "title": "Hariri Usanidi"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Ghairi",
+      "submit": "Ongeza Kichochezi",
+      "title": "Ongeza Kichochezi Maalum"
+    },
+    "builtin": {
+      "description": "Vichochezi vya chaguo-msingi vinavyokuja na programu. Unaweza kuviwezesha au kuvizima na kubinafsisha mifumo yake.",
+      "title": "Vichochezi Vilivyojengwa Ndani"
+    },
+    "card": {
+      "builtinBadge": "Imejengwa Ndani",
+      "collapseAriaLabel": "Kunja",
+      "deleteAriaLabel": "Futa kichochezi",
+      "editNameAriaLabel": "Hariri jina",
+      "expandAriaLabel": "Panua"
+    },
+    "color": {
+      "customHexTitle": "Rangi maalum ya hex",
+      "invalidHex": "Hex batili"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Tahadharisha ikiwa >",
+      "emptyPatternHint": "Acha tupu ili kulingana na maudhui yote. Hutumia sintaksia ya regex ya JavaScript.",
+      "errorStatusDescription": "Huchochewa wakati utekelezaji wa zana unaporipoti hitilafu (is_error: true).",
+      "tokensUnit": "tokeni",
+      "matchPatternPlaceholder": "k.m., error|failed|exception"
+    },
+    "custom": {
+      "description": "Unda vichochezi vyako ili kuarifiwa kuhusu mifumo maalum au matokeo ya zana.",
+      "empty": "Bado hakuna vichochezi maalum vilivyosanidiwa.",
+      "title": "Vichochezi Maalum"
+    },
+    "errors": {
+      "invalidRegexPattern": "Mfumo wa regex batili"
+    },
+    "fields": {
+      "contentType": "Aina ya Maudhui",
+      "matchField": "Sehemu ya Kulinganisha",
+      "matchPattern": "Mfumo wa Kulinganisha (Regex)",
+      "scopeToolName": "Wigo / Jina la Zana",
+      "scopeToolNameOptional": "Wigo / Jina la Zana (hiari)",
+      "threshold": "Kizingiti",
+      "tokenType": "Aina ya Tokeni",
+      "triggerNamePlaceholder": "k.m., Tahadhari ya Kushindwa kwa Build",
+      "triggerNameRequired": "Jina la Kichochezi *"
+    },
+    "ignorePatterns": {
+      "hint": "Bonyeza Enter ili kuongeza. Arifa hurukwa ikiwa mfumo wowote unalingana.",
+      "placeholder": "Ongeza regex ya kupuuza...",
+      "removeAriaLabel": "Ondoa mfumo wa kupuuza",
+      "summary": "Kina: Sheria za Kutenga",
+      "title": "Mifumo ya Kupuuza (ruka ikiwa inalingana)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Towe la Maandishi",
+        "thinking": "Kufikiri",
+        "tool_result": "Matokeo ya Zana",
+        "tool_use": "Matumizi ya Zana"
+      },
+      "matchFields": {
+        "args": "Hoja",
+        "command": "Amri",
+        "content": "Maudhui",
+        "description": "Maelezo",
+        "file_path": "Njia ya Faili",
+        "fullInput": "Ingizo Kamili (JSON)",
+        "glob": "Kichujio cha Glob",
+        "new_string": "Mfuatano Mpya",
+        "old_string": "Mfuatano wa Zamani",
+        "path": "Njia",
+        "pattern": "Mfumo",
+        "prompt": "Kidokezo",
+        "query": "Hoja",
+        "skill": "Jina la Ujuzi",
+        "subagent_type": "Aina ya Wakala Mdogo",
+        "text": "Maudhui ya Maandishi",
+        "thinking": "Maudhui ya Kufikiri",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Mfumo wa Maudhui",
+        "error_status": "Hitilafu ya Utekelezaji",
+        "token_threshold": "Matumizi Makubwa ya Tokeni"
+      },
+      "tokenTypes": {
+        "input": "Tokeni za Ingizo",
+        "output": "Tokeni za Towe",
+        "total": "Jumla ya Tokeni"
+      },
+      "toolNames": {
+        "anyTool": "Zana Yoyote"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Kichochezi cha Jaribio",
+      "detectedSuffix": "hitilafu zingegunduliwa",
+      "more": "...na {{count}} zaidi",
+      "more_few": "...na {{count}} zaidi",
+      "more_many": "...na {{count}} zaidi",
+      "more_one": "...na {{count}} zaidi",
+      "more_other": "...na {{count}} zaidi",
+      "testTrigger": "Jaribu Kichochezi",
+      "testing": "Inajaribu...",
+      "title": "Hakikisho",
+      "truncatedWarning": "Utafutaji ulisimama mapema (muda umeisha au kikomo cha idadi). Vilingani halisi vinaweza kuwa vingi zaidi.",
+      "viewSession": "Tazama Kipindi"
+    },
+    "repositoryScope": {
+      "empty": "Hakuna hazina zilizochaguliwa - kichochezi kinatumika kwa hazina zote",
+      "hint": "Hazina zinapochaguliwa, kichochezi hiki huchochewa tu kwa hitilafu katika hazina hizo.",
+      "placeholder": "Chagua hazina ya kuongeza...",
+      "summary": "Kina: Wigo wa Hazina",
+      "title": "Punguza kwa Hazina (inatumika kwa hazina zilizochaguliwa pekee)"
+    },
+    "sections": {
+      "configuration": "Usanidi",
+      "dotColor": "Rangi ya Nukta",
+      "generalInfo": "Taarifa za Jumla",
+      "triggerCondition": "Sharti la Kichochezi"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Ongeza Wasifu",
+      "cancel": "Ghairi",
+      "deleteProfile": "Futa wasifu",
+      "editProfile": "Hariri wasifu",
+      "save": "Hifadhi"
+    },
+    "authMethods": {
+      "agent": "Wakala wa SSH",
+      "auto": "Otomatiki (kutoka Usanidi wa SSH)",
+      "password": "Nenosiri",
+      "privateKey": "Ufunguo wa Faragha"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Futa",
+      "message": "Una uhakika unataka kufuta \"{{name}}\"? Hii haiwezi kutenduliwa.",
+      "title": "Futa Wasifu"
+    },
+    "description": "Hifadhi wasifu wa muunganisho wa SSH kwa kuunganisha upya haraka",
+    "empty": {
+      "description": "Ongeza wasifu wa SSH ili kuunganisha haraka",
+      "title": "Hakuna wasifu uliohifadhiwa"
+    },
+    "form": {
+      "authentication": "Uthibitishaji",
+      "host": "Seva pangishi",
+      "name": "Jina",
+      "passwordPrompt": "Utaulizwa nenosiri unapounganisha.",
+      "port": "Mlango",
+      "privateKeyPath": "Njia ya Ufunguo wa Faragha",
+      "username": "Jina la mtumiaji",
+      "namePlaceholder": "Seva Yangu",
+      "hostPlaceholder": "jina la seva pangishi au IP",
+      "usernamePlaceholder": "mtumiaji"
+    },
+    "loading": "Inapakia wasifu...",
+    "title": "Wasifu wa Eneo-kazi"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Unganisha",
+      "connecting": "Inaunganisha...",
+      "disconnect": "Tenganisha",
+      "testConnection": "Jaribu Muunganisho",
+      "testing": "Inajaribu..."
+    },
+    "currentMode": {
+      "description": "Chanzo cha data kwa faili za kipindi",
+      "label": "Hali ya Sasa",
+      "local": "Ya ndani ({{path}})"
+    },
+    "description": "Unganisha kwa mashine ya mbali ili kuona vipindi vya Claude Code vinavyoendeshwa hapo",
+    "form": {
+      "authentication": "Uthibitishaji",
+      "host": "Seva pangishi",
+      "password": "Nenosiri",
+      "port": "Mlango",
+      "privateKeyPath": "Njia ya Ufunguo wa Faragha",
+      "username": "Jina la mtumiaji",
+      "hostPlaceholder": "jina la seva pangishi au lakabu ya usanidi wa SSH",
+      "usernamePlaceholder": "mtumiaji"
+    },
+    "savedProfiles": {
+      "title": "Wasifu Uliohifadhiwa"
+    },
+    "ssh": {
+      "title": "Muunganisho wa SSH"
+    },
+    "status": {
+      "connectedTo": "Imeunganishwa kwa {{host}}",
+      "remoteSessions": "Inatazama vipindi vya mbali kupitia SSH"
+    },
+    "test": {
+      "failed": "Muunganisho umeshindwa: {{error}}",
+      "success": "Muunganisho umefaulu",
+      "unknownError": "Hitilafu isiyojulikana"
+    },
+    "title": "Muunganisho wa Mbali"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Ghairi",
+      "cancelLogin": "Ghairi kuingia",
+      "connectChatGpt": "Unganisha ChatGPT",
+      "delete": "Futa",
+      "disable": "Zima",
+      "disconnectAccount": "Tenganisha akaunti",
+      "generateLink": "Tengeneza kiungo",
+      "openLogin": "Fungua kuingia",
+      "reconnectAnthropic": "Unganisha tena Anthropic",
+      "refresh": "Onyesha upya",
+      "replaceKey": "Badilisha ufunguo",
+      "saveEndpoint": "Hifadhi endpoint",
+      "saveKey": "Hifadhi ufunguo",
+      "saving": "Inahifadhi...",
+      "setApiKey": "Weka ufunguo wa API",
+      "updateKey": "Sasisha ufunguo",
+      "useCode": "Tumia msimbo"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Inapakia hati za utambulisho zilizohifadhiwa...",
+      "projectScope": "Mradi",
+      "scope": "Wigo",
+      "storedIn": "Imehifadhiwa katika {{backend}}",
+      "userScope": "Mtumiaji",
+      "storedInApp": "Imehifadhiwa katika programu",
+      "providers": {
+        "anthropic": {
+          "name": "Ufunguo wa API wa Anthropic",
+          "title": "Ufunguo wa API",
+          "description": "Tumia ufunguo wa API wa moja kwa moja wa Anthropic kwa ufikiaji unaolipiwa kwa API. Kipindi cha usajili wako wa Anthropic kinabaki kupatikana unaporudi.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Ufunguo wa API wa Codex",
+          "title": "Ufunguo wa API",
+          "description": "Tumia ufunguo wa API wa OpenAI kama njia ya pili ya uthibitishaji wa Codex. Ukibadilisha Codex hadi hali ya ufunguo wa API, programu itaakisi OPENAI_API_KEY kwenye CODEX_API_KEY kwa uzinduzi asili.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Ufunguo wa API wa Gemini",
+          "title": "Ufikiaji wa API",
+          "description": "Tumia `GEMINI_API_KEY` kwa backend ya API ya Gemini. CLI SDK na ADC haziuhitaji.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "Seva ya programu: {{state}}",
+        "connected": "Imeunganishwa",
+        "description": "Dhibiti kipindi cha akaunti ya seva ya programu ya Codex ya ndani kinachowezesha uzinduzi asili unaoungwa mkono na usajili.",
+        "loginInProgress": "Kuingia kunaendelea",
+        "plan": "Mpango: {{plan}}",
+        "reconnectRequired": "Kuunganisha tena kunahitajika",
+        "title": "Akaunti ya ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Otomatiki itaendelea kutumia ufunguo wa API uliogunduliwa hadi ChatGPT iunganishwe.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Ufunguo wa API uliogunduliwa hutumika tu baada ya kubadilisha Codex hadi hali ya ufunguo wa API.",
+          "localArtifactsNoSession": "Codex CLI kwa sasa inaripoti hakuna akaunti hai ya ChatGPT. Data ya akaunti ya Codex ya ndani ipo, lakini hakuna kipindi hai kilichodhibitiwa kilichochaguliwa. Vikomo vya matumizi vinaonekana hapa tu baada ya Codex CLI kuona kimoja.",
+          "noActiveAccount": "Codex CLI kwa sasa inaripoti hakuna akaunti hai ya ChatGPT. Vikomo vya matumizi vinaonekana hapa tu baada ya Codex CLI kuona kimoja.",
+          "reconnectBeforeUsage": "Codex ina akaunti ya ChatGPT iliyochaguliwa ndani, lakini kipindi cha sasa kinahitaji kuunganishwa tena kabla vikomo vya matumizi vinaweza kupakia hapa.",
+          "usageLimitsAfterReport": "Vikomo vya matumizi vinaonekana hapa baada ya Codex kuviripoti kwa akaunti ya ChatGPT iliyounganishwa."
+        }
+      },
+      "install": {
+        "checking": "Inakagua",
+        "downloading": "Inapakua",
+        "installCli": "Sakinisha Codex CLI",
+        "installing": "Inasakinisha",
+        "retryInstall": "Jaribu tena kusakinisha",
+        "title": "Sakinisha Codex CLI ndani ya data ya programu"
+      },
+      "rateLimits": {
+        "credits": "Krediti",
+        "creditsDescription": "Krediti zinaonyeshwa kando na matumizi ya usajili yanayotegemea dirisha na zinaweza zisipatikane kwa vipindi vya ChatGPT vinavyoungwa mkono na mpango.",
+        "noSecondaryWindow": "Codex haikurudisha dirisha la pili kwa picha hii ya akaunti.",
+        "notReported": "Haijaripotiwa",
+        "primaryReset": "Kuweka upya kwa msingi",
+        "primaryUsed": "Iliyotumika ya msingi",
+        "primaryWindow": "Dirisha la msingi",
+        "remainingLeft": "{{value}} zimebaki",
+        "remainingUnknown": "Zilizobaki hazijulikani",
+        "secondaryReset": "Kuweka upya kwa pili",
+        "secondaryUsed": "Iliyotumika ya pili",
+        "secondaryWindow": "Dirisha la pili",
+        "usedQuotaNote": "Asilimia hizi zinaonyesha mgao uliotumika, si mgao uliobaki.",
+        "weeklyReset": "Kuweka upya kwa wiki",
+        "weeklyUsed": "Iliyotumika ya wiki",
+        "weeklyUsedOneWeek": "Iliyotumika ya wiki (w1)",
+        "weeklyWindow": "Dirisha la wiki",
+        "secondaryFallback": "ya pili",
+        "secondaryWindowNote": " Vikomo vya wiki vinaonyeshwa kando katika dirisha la {{window}}.",
+        "usageExplanationGeneric": "Inaonyesha mgao uliotumika, si mgao uliobaki.",
+        "usageExplanationWindowOnly": "Inaonyesha mgao uliotumika katika dirisha la sasa la {{window}}, si mgao uliobaki.",
+        "usageExplanationWithRemaining": "{{used}} zimetumika - takriban {{remaining}} zimebaki katika dirisha la sasa la {{window}}."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Tokeni ya uthibitishaji",
+      "authTokenMissing": "Tokeni ya uthibitishaji haijasanidiwa.",
+      "baseUrl": "URL ya msingi",
+      "description": "Tumia endpoint ya runtime ya ndani inayooana na Anthropic.",
+      "keepSavedToken": "Acha tupu ili kuhifadhi tokeni iliyohifadhiwa",
+      "title": "Endpoint ya ndani / inayooana",
+      "tokenStatus": "Tokeni {{status}}",
+      "validation": {
+        "baseUrlRequired": "URL ya msingi inahitajika",
+        "firstPartyAnthropic": "Tumia Otomatiki, Usajili, au ufunguo wa API kwa Anthropic ya moja kwa moja",
+        "httpRequired": "URL ya msingi lazima itumie http:// au https://",
+        "invalidUrl": "URL batili",
+        "noCredentials": "URL ya msingi haipaswi kujumuisha hati za utambulisho"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint imezimwa. Tokeni iliyohifadhiwa imewekwa.",
+        "endpointSaved": "Endpoint imehifadhiwa",
+        "endpointSavedTokenMissing": "Endpoint imehifadhiwa. Tokeni ya uthibitishaji haijasanidiwa."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Mbinu ya uthibitishaji",
+      "descriptions": {
+        "anthropic": "Chagua jinsi vipindi vya Anthropic vilivyozinduliwa na programu vinavyothibitishwa.",
+        "codex": "Chagua kama Codex inapaswa kupendelea usajili wako wa ChatGPT au ufunguo wa API wakati runtime asili inazinduliwa.",
+        "gemini": "Sanidi ufikiaji wa hiari wa API. CLI SDK na ADC bado hugunduliwa kiotomatiki.",
+        "opencode": "Uthibitishaji wa OpenCode na orodha ya watoa huduma vinadhibitiwa na runtime ya OpenCode."
+      },
+      "method": "Mbinu ya muunganisho",
+      "mode": "Hali: {{mode}}",
+      "selected": "Imechaguliwa",
+      "switching": "Inabadilisha...",
+      "title": "Muunganisho"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "Ufunguo wa API"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Tumia ANTHROPIC_API_KEY na malipo ya API ya Anthropic.",
+        "autoDescription": "Tumia chaguo-msingi za runtime za Anthropic na hati bora ya utambulisho ya ndani inayopatikana.",
+        "hint": "Otomatiki huweka Anthropic kwenye usuluhishi wake wa chaguo-msingi wa hati ya utambulisho ya ndani.",
+        "subscriptionDescription": "Tumia kipindi chako cha kuingia cha Anthropic cha ndani na ufikiaji wa usajili.",
+        "subscriptionTitle": "Usajili wa Anthropic"
+      },
+      "auto": {
+        "title": "Otomatiki"
+      },
+      "codex": {
+        "apiKeyDescription": "Tumia malipo ya OPENAI_API_KEY na CODEX_API_KEY kwa uzinduzi asili wa Codex.",
+        "autoDescription": "Pendelea akaunti yako ya ChatGPT na usajili. Tumia hali ya ufunguo wa API tu ikihitajika.",
+        "chatgptDescription": "Tumia akaunti yako iliyounganishwa ya ChatGPT na usajili wa Codex.",
+        "chatgptTitle": "Akaunti ya ChatGPT",
+        "hint": "Codex huwa inaendeshwa kupitia runtime asili. Otomatiki hupendelea akaunti yako ya ChatGPT kabla ya kurudi kwa hati za utambulisho za ufunguo wa API."
+      }
+    },
+    "description": "Dhibiti jinsi kila mtoa huduma anavyounganisha na, inapoungwa mkono, ni backend gani ambayo runtime ya modeli nyingi inapaswa kutumia.",
+    "fastMode": {
+      "defaultOff": "Chaguo-msingi Imezimwa",
+      "description": "Tumia hali ya Claude Code Fast kwa chaguo-msingi kwa uzinduzi mpya wa timu za Anthropic wakati modeli na runtime iliyosuluhishwa zinaruhusu.",
+      "disabledHint": "Uzinduzi mpya wa Anthropic unabaki kwenye kasi ya kawaida isipokuwa timu inawezesha hali ya Fast kwa uwazi.",
+      "enabledHint": "Uzinduzi mpya wa Anthropic utaomba hali ya Fast kwa chaguo-msingi wakati modeli iliyosuluhishwa inaiunga mkono.",
+      "notExposed": "Runtime hii ya Anthropic haionyeshi hali ya Fast.",
+      "preferFast": "Pendelea Fast",
+      "title": "Chaguo-msingi la hali ya Fast",
+      "unavailableForRuntime": "Hali ya Fast kwa sasa haipatikani kwa runtime hii ya Anthropic."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Hali ya ufunguo wa API imechaguliwa, lakini bado hakuna hati ya utambulisho ya API ya Anthropic inayopatikana.",
+      "anthropicStoredKeyAvailable": "Ufunguo wa API uliohifadhiwa unapatikana, lakini vipindi vya Anthropic vilivyozinduliwa na programu huutumia tu baada ya kubadilisha hadi hali ya ufunguo wa API.",
+      "anthropicSubscriptionMissing": "Hali ya usajili wa Anthropic imechaguliwa. Ingia na Anthropic ili kutumia mtoa huduma huyu.",
+      "authTokenMissing": "Tokeni ya uthibitishaji haijasanidiwa. Endpoint nyingi za ndani zinazooana na Anthropic zinahitaji tokeni isiyo tupu.",
+      "chatgptLoginPending": "Inasubiri kuingia kwa akaunti ya ChatGPT kumalize...",
+      "chatgptLoginStarting": "Inaanzisha kuingia kwa ChatGPT...",
+      "codexApiKeyMissing": "Hali ya ufunguo wa API imechaguliwa, lakini bado hakuna hati ya utambulisho ya OPENAI_API_KEY au CODEX_API_KEY inayopatikana.",
+      "codexLocalArtifactsNoSession": "Codex CLI kwa sasa haina akaunti hai ya ChatGPT. Data ya akaunti ya Codex ya ndani ipo, lakini hakuna kipindi hai kilichodhibitiwa kilichochaguliwa.",
+      "codexNeedsReconnect": "Codex ina akaunti ya ChatGPT iliyochaguliwa ndani, lakini kipindi cha sasa kinahitaji kuunganishwa tena.",
+      "codexNoChatgptAccount": "Codex CLI kwa sasa haina akaunti hai ya ChatGPT. Unganisha ChatGPT ili kutumia usajili wako.",
+      "codexNoCredential": "Bado hakuna akaunti ya ChatGPT au ufunguo wa API unaopatikana.",
+      "geminiApiUnavailable": "API ya Gemini kwa sasa haipatikani. Sanidi `GEMINI_API_KEY` hapa au tumia hati halali za Google ADC.",
+      "withApiKeyFallback": "{{message}} Badilisha hadi hali ya ufunguo wa API ili kutumia ufunguo wa API uliogunduliwa."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Lazimisha vipindi vya Anthropic vilivyozinduliwa na programu kutumia hati ya utambulisho ya ufunguo wa API.",
+        "auto": "Tumia tabia ya chaguo-msingi ya runtime. Funguo za API zilizohifadhiwa katika programu hii hutumika tu baada ya kubadilisha hadi hali ya ufunguo wa API.",
+        "oauth": "Lazimisha vipindi vya Anthropic vilivyozinduliwa na programu kutumia kipindi cha usajili wa Anthropic cha ndani."
+      },
+      "codex": {
+        "apiKey": "Lazimisha uzinduzi asili wa Codex kutumia malipo ya OPENAI_API_KEY / CODEX_API_KEY.",
+        "auto": "Pendelea akaunti yako ya ChatGPT inapopatikana. Rudi kwa hali ya ufunguo wa API tu inapohitajika.",
+        "chatgpt": "Lazimisha uzinduzi asili wa Codex kutumia akaunti yako iliyounganishwa ya ChatGPT na usajili."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Inatumia mabadiliko ya muunganisho...",
+      "refreshingProviderStatus": "Inaonyesha upya hali ya mtoa huduma...",
+      "savingCompatibleEndpoint": "Inahifadhi endpoint inayooana...",
+      "switchingAnthropicSubscription": "Inabadilisha hadi usajili wa Anthropic...",
+      "switchingApiKey": "Inabadilisha hadi ufunguo wa API...",
+      "switchingApiKeyMode": "Inabadilisha hadi hali ya ufunguo wa API...",
+      "switchingAuto": "Inabadilisha hadi Otomatiki...",
+      "switchingChatgpt": "Inabadilisha hadi hali ya akaunti ya ChatGPT..."
+    },
+    "provider": "Mtoa Huduma",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic kwa sasa haina kichaguzi tofauti cha backend ya runtime.",
+        "codex": "Codex sasa inaendeshwa tu kupitia njia ya runtime asili.",
+        "gemini": "Chagua ni backend gani ya runtime ya Gemini ambayo modeli nyingi inapaswa kutumia.",
+        "opencode": "OpenCode hutumia seva pangishi yake ya runtime iliyodhibitiwa. Eneo-kazi kwa sasa linaonyesha hali pekee."
+      },
+      "title": "Runtime",
+      "updating": "Inasasisha runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "imesanidiwa",
+      "enabled": "Imewezeshwa",
+      "notConfigured": "Haijasanidiwa",
+      "notSet": "haijawekwa",
+      "off": "Imezimwa",
+      "unknown": "Haijulikani"
+    },
+    "title": "Mipangilio ya Mtoa Huduma",
+    "usage": {
+      "apiKey": "Inatumia ufunguo wa API",
+      "apiKeyRequired": "Ufunguo wa API unahitajika",
+      "compatibleEndpoint": "Inatumia endpoint inayooana",
+      "notConnected": "Haijaunganishwa",
+      "usingMethod": "Inatumia {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Ufunguo wa API umefutwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
+      "apiKeySavedRefreshFailed": "Ufunguo wa API umehifadhiwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
+      "connectionUpdatedRefreshFailed": "Muunganisho umesasishwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
+      "deleteApiKey": "Imeshindwa kufuta ufunguo wa API",
+      "disableEndpoint": "Imeshindwa kuzima endpoint",
+      "endpointDisabledRefreshFailed": "Endpoint imezimwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
+      "endpointSavedRefreshFailed": "Endpoint imehifadhiwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
+      "refreshCodexAccount": "Imeshindwa kuonyesha upya akaunti ya Codex",
+      "saveApiKey": "Imeshindwa kuhifadhi ufunguo wa API",
+      "saveEndpoint": "Imeshindwa kuhifadhi endpoint",
+      "updateAnthropicFastMode": "Imeshindwa kusasisha hali ya Fast ya Anthropic",
+      "updateConnection": "Imeshindwa kusasisha muunganisho",
+      "updateRuntimeBackend": "Imeshindwa kusasisha backend ya runtime",
+      "apiKeyRequired": "Ufunguo wa API unahitajika"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Otomatiki",
+        "oauth": "Usajili / OAuth",
+        "chatgpt": "Akaunti ya ChatGPT",
+        "apiKey": "Ufunguo wa API",
+        "anthropicSubscription": "Usajili wa Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "Ufunguo wa API",
+        "apiKeyHelper": "Msaidizi wa ufunguo wa API",
+        "oauth": "OAuth",
+        "claudeSubscription": "Usajili wa Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Akaunti ya Google",
+        "serviceAccount": "akaunti ya huduma"
+      },
+      "runtime": {
+        "codexNative": "Codex asili",
+        "currentRuntime": "Runtime ya sasa",
+        "selectedRuntime": "Runtime iliyochaguliwa",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Inakagua...",
+        "modelsAvailable": "Modeli zinapatikana",
+        "checked": "Imekaguliwa",
+        "providerActivity": "Shughuli za Mtoa Huduma",
+        "notConnected": "Haijaunganishwa",
+        "startingChatGptLogin": "Inaanzisha kuingia kwa ChatGPT...",
+        "waitingForChatGptLogin": "Inasubiri kuingia kwa akaunti ya ChatGPT...",
+        "chatGptVerificationDegraded": "Akaunti ya ChatGPT imegunduliwa - uthibitishaji wa akaunti kwa sasa umedhoofika.",
+        "chatGptAccountReady": "Akaunti ya ChatGPT iko tayari",
+        "apiKeyReady": "Ufunguo wa API uko tayari",
+        "codexLocalAccountNeedsReconnect": "Codex ina akaunti ya ChatGPT iliyochaguliwa ndani, lakini kipindi cha sasa kinahitaji kuunganishwa tena.",
+        "codexNoActiveManagedSession": "Codex CLI inaripoti hakuna kuingia hai kwa ChatGPT. Data ya akaunti ya Codex ya ndani ipo, lakini hakuna kipindi hai kilichodhibitiwa kilichochaguliwa.",
+        "codexNoActiveChatGptLogin": "Codex CLI inaripoti hakuna kuingia hai kwa ChatGPT",
+        "connectChatGptForSubscription": "Unganisha akaunti ya ChatGPT ili kutumia usajili wako wa Codex.",
+        "codexNativeReady": "Codex asili iko tayari",
+        "codexNativeUnavailable": "Codex asili haipatikani",
+        "unavailableInCurrentRuntime": "Haipatikani katika runtime ya sasa",
+        "connectedViaApiKey": "Imeunganishwa kupitia ufunguo wa API",
+        "apiKeyConfiguredNotVerified": "Ufunguo wa API umesanidiwa, lakini bado haujathibitishwa",
+        "apiKeyModeMissingCredential": "Hali ya ufunguo wa API imechaguliwa, lakini hakuna ufunguo wa API uliosanidiwa",
+        "connectedVia": "Imeunganishwa kupitia {{method}}",
+        "unableToVerify": "Haiwezi kuthibitisha"
+      },
+      "mode": {
+        "selectedAuth": "Uthibitishaji uliochaguliwa: {{authMode}}",
+        "preferredAuth": "Uthibitishaji unaopendelewa: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "Ufunguo wa API umesanidiwa",
+        "savedApiKeyAvailable": "Ufunguo wa API uliohifadhiwa unapatikana katika Dhibiti",
+        "apiKeyAlsoConfigured": "Ufunguo wa API pia umesanidiwa katika Dhibiti",
+        "apiKeyConfiguredInManage": "Ufunguo wa API umesanidiwa katika Dhibiti",
+        "apiKeyFallbackInManage": "Ufunguo wa API pia unapatikana katika Dhibiti kama mbadala",
+        "availableAsFallback": "{{summary}} - unapatikana kama mbadala",
+        "savedApiKeyAvailableIfSwitch": "Ufunguo wa API uliohifadhiwa unapatikana katika Dhibiti ukibadilisha hadi hali ya ufunguo wa API",
+        "availableIfSwitch": "{{summary}} - unapatikana ukibadilisha hadi hali ya ufunguo wa API",
+        "autoWillUseUntilChatGpt": "{{summary}} - Otomatiki itatumia huu hadi ChatGPT iunganishwe"
+      },
+      "actions": {
+        "connect": "Unganisha",
+        "connectAnthropic": "Unganisha Anthropic",
+        "connectChatGpt": "Unganisha ChatGPT",
+        "disconnect": "Tenganisha",
+        "openLogin": "Fungua Kuingia"
+      },
+      "disconnect": {
+        "anthropicTitle": "Tenganisha usajili wa Anthropic?",
+        "anthropic": "Hii inaondoa kipindi cha usajili wa Anthropic cha ndani kutoka runtime ya Claude CLI.",
+        "anthropicWithApiKey": "Hii inaondoa kipindi cha usajili wa Anthropic cha ndani kutoka runtime ya Claude CLI. Funguo za API zilizohifadhiwa katika Dhibiti zinabaki kupatikana.",
+        "geminiTitle": "Tenganisha Gemini CLI?",
+        "gemini": "Hii inafuta metadata ya kipindi cha Gemini CLI cha ndani. Hati za nje za ADC na funguo za API zilizohifadhiwa hazitaondolewa."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Kagua Masasisho",
+      "checking": "Inakagua...",
+      "extensions": "Viendelezi",
+      "installRuntime": "Sakinisha {{runtime}}",
+      "manage": "Dhibiti",
+      "recheck": "Kagua tena",
+      "reinstallRuntime": "Sakinisha tena {{runtime}}",
+      "retry": "Jaribu tena",
+      "update": "Sasisha"
+    },
+    "installer": {
+      "checkingLatest": "Inakagua toleo jipya zaidi...",
+      "downloading": "Inapakua...",
+      "failed": "Usakinishaji umeshindwa",
+      "installed": "Imesakinisha v{{version}}",
+      "installing": "Inasakinisha...",
+      "latest": "jipya zaidi",
+      "verifying": "Inathibitisha checksum..."
+    },
+    "labels": {
+      "multimodel": "Modeli nyingi"
+    },
+    "loading": {
+      "aiProviders": "Inakagua Watoa Huduma wa AI...",
+      "claudeCli": "Inakagua Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Inapakia modeli...",
+      "modelsUnavailable": "Modeli hazipatikani kwa toleo hili la runtime",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Uthibitishaji umeshindwa",
+      "authUpdated": "Uthibitishaji umesasishwa",
+      "loggedOut": "Mtoa huduma ametoka",
+      "login": "Ingia",
+      "logout": "Toka",
+      "logoutFailed": "Kutoka kumeshindwa"
+    },
+    "status": {
+      "configuredNotFound": "{{runtime}} iliyosanidiwa haikupatikana.",
+      "foundButFailed": "{{runtime}} ilipatikana lakini imeshindwa kuanza",
+      "healthCheckFailed": "{{runtime}} iliyosanidiwa imeshindwa ukaguzi wake wa afya wa uanzishaji.",
+      "notInstalled": "{{runtime}} haijasakinishwa"
+    },
+    "title": "Runtime ya CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

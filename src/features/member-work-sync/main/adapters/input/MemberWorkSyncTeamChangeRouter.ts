@@ -77,6 +77,7 @@ export class MemberWorkSyncTeamChangeRouter {
   noteTeamChange(event: TeamChangeEvent): void {
     if (event.type === 'lead-activity' && event.detail === 'offline') {
       this.queue.dropTeam(event.teamName);
+      void this.enqueueTeam(event.teamName, 'runtime_activity', 0).catch(() => undefined);
       return;
     }
 

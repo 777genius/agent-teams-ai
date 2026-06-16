@@ -14,9 +14,14 @@ const hoisted = vi.hoisted(() => {
       error.code = 'ENOENT';
       throw error;
     }
+    const signatureValue = Array.from(data).reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return {
       isFile: () => true,
       size: Buffer.byteLength(data, 'utf8'),
+      mtimeMs: signatureValue,
+      ctimeMs: signatureValue,
+      dev: 1,
+      ino: signatureValue,
     };
   });
 
@@ -69,6 +74,7 @@ describe('TeamInboxReader', () => {
   beforeEach(() => {
     hoisted.files.clear();
     hoisted.dirs.clear();
+    hoisted.stat.mockClear();
     hoisted.readdir.mockClear();
     hoisted.readFile.mockClear();
   });
@@ -117,6 +123,91 @@ describe('TeamInboxReader', () => {
     expect(merged).toHaveLength(2);
     expect(merged[0].text).toBe('newer');
     expect(merged[1].text).toBe('older');
+  });
+
+  it('caches getMessagesFor results while the inbox file signature is unchanged', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'cached',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+          messageId: 'm-1',
+        },
+      ])
+    );
+
+    const first = await reader.getMessagesFor('my-team', 'alice');
+    first[0]!.to = 'mutated';
+    const second = await reader.getMessagesFor('my-team', 'alice');
+
+    expect(hoisted.stat).toHaveBeenCalledTimes(2);
+    expect(hoisted.readFile).toHaveBeenCalledTimes(1);
+    expect(second).toEqual([
+      expect.objectContaining({
+        messageId: 'm-1',
+        text: 'cached',
+        to: undefined,
+      }),
+    ]);
+  });
+
+  it('re-reads getMessagesFor results when the inbox file signature changes', async () => {
+    const inboxPath = '/mock/teams/my-team/inboxes/alice.json';
+    hoisted.files.set(
+      inboxPath,
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'first',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+          messageId: 'm-1',
+        },
+      ])
+    );
+    expect((await reader.getMessagesFor('my-team', 'alice'))[0]?.text).toBe('first');
+
+    hoisted.files.set(
+      inboxPath,
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'second',
+          timestamp: '2026-01-01T00:00:01.000Z',
+          read: false,
+          messageId: 'm-2',
+        },
+      ])
+    );
+
+    expect((await reader.getMessagesFor('my-team', 'alice'))[0]?.text).toBe('second');
+    expect(hoisted.readFile).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let getMessages recipient backfill mutate cached member inbox rows', async () => {
+    hoisted.dirs.set(inboxDir, ['alice.json']);
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'legacy recipient',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+          messageId: 'm-1',
+        },
+      ])
+    );
+
+    const merged = await reader.getMessages('my-team');
+    const direct = await reader.getMessagesFor('my-team', 'alice');
+
+    expect(merged[0]?.to).toBe('alice');
+    expect(direct[0]?.to).toBeUndefined();
+    expect(hoisted.readFile).toHaveBeenCalledTimes(1);
   });
 
   it('generates deterministic messageId for legacy inbox rows without messageId', async () => {

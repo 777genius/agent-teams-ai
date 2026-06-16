@@ -154,7 +154,6 @@ import type {
   TeamCreateRequest,
   TeamFastMode,
   TeamProviderId,
-  TeamProvisioningMemberInput,
   TeamProvisioningModelCheckRequest,
 } from '@shared/types';
 
@@ -193,11 +192,21 @@ function alignProvisioningChecks(
   );
 }
 
-export interface TeamCopyData {
+export interface TeamCopyData extends Pick<
+  TeamCreateRequest,
+  | 'description'
+  | 'color'
+  | 'prompt'
+  | 'providerId'
+  | 'model'
+  | 'effort'
+  | 'fastMode'
+  | 'limitContext'
+  | 'skipPermissions'
+  | 'members'
+> {
   teamName: string;
-  description?: string;
-  color?: string;
-  members: TeamProvisioningMemberInput[];
+  cwd?: string;
 }
 
 export interface ActiveTeamRef {
@@ -1332,11 +1341,39 @@ export const CreateTeamDialog = ({
 
     if (initialData) {
       const nextSyncModelsWithLead = !initialData.members.some(
-        (member) => member.providerId || member.model || member.effort
+        (member) =>
+          member.providerId ||
+          member.providerBackendId ||
+          member.model ||
+          member.effort ||
+          member.fastMode
       );
+      const copiedProviderId =
+        initialData.providerId == null
+          ? selectedProviderId
+          : normalizeLeadProviderForMode(initialData.providerId, multimodelEnabled);
       setTeamName(initialData.teamName);
       descriptionDraft.setValue(initialData.description ?? '');
+      promptDraft.setValue(initialData.prompt ?? '');
       setTeamColor(initialData.color ?? '');
+      if (Object.hasOwn(initialData, 'providerId')) {
+        setSelectedProviderIdRaw(copiedProviderId);
+      }
+      if (Object.hasOwn(initialData, 'model')) {
+        setSelectedModelRaw(normalizeExplicitTeamModelForUi(copiedProviderId, initialData.model));
+      }
+      if (Object.hasOwn(initialData, 'effort')) {
+        setSelectedEffortRaw(initialData.effort ?? '');
+      }
+      if (Object.hasOwn(initialData, 'fastMode')) {
+        setSelectedFastModeRaw(initialData.fastMode ?? 'inherit');
+      }
+      if (Object.hasOwn(initialData, 'limitContext')) {
+        setLimitContextRaw(initialData.limitContext === true);
+      }
+      if (Object.hasOwn(initialData, 'skipPermissions')) {
+        setSkipPermissionsRaw(initialData.skipPermissions !== false);
+      }
       setMembers(
         initialData.members.map((m) => {
           const presetRoles: readonly string[] = PRESET_ROLES;
@@ -1350,8 +1387,10 @@ export const CreateTeamDialog = ({
               workflow: m.workflow,
               isolation: m.isolation === 'worktree' ? 'worktree' : undefined,
               providerId: normalizeOptionalTeamProviderId(m.providerId),
+              providerBackendId: m.providerBackendId,
               model: m.model ?? '',
               effort: m.effort,
+              fastMode: m.fastMode,
               mcpPolicy: m.mcpPolicy,
             }),
             multimodelEnabled

@@ -35,7 +35,11 @@ interface StoreState {
 
 const storeState = {} as StoreState;
 const toggleCollapsedGroup = vi.fn();
+const sidebarTaskItemRenderSpy = vi.hoisted(() => vi.fn());
 const taskLocalState = {
+  pinnedIds: new Set<string>(),
+  archivedIds: new Set<string>(),
+  renamedSubjects: new Map<string, string>(),
   isPinned: vi.fn(() => false),
   isArchived: vi.fn(() => false),
   getRenamedSubject: vi.fn(() => undefined),
@@ -99,20 +103,24 @@ vi.mock('../../../../src/renderer/components/sidebar/SidebarTaskItem', () => ({
     task,
     hideProjectName,
     teamOffline,
+    displaySubjectOverride,
   }: {
     task: GlobalTask;
     hideProjectName?: boolean;
     teamOffline?: boolean;
-  }) =>
-    React.createElement(
+    displaySubjectOverride?: string;
+  }) => {
+    sidebarTaskItemRenderSpy(task.id);
+    return React.createElement(
       'div',
       {
         'data-testid': 'sidebar-task-item',
         'data-hide-project-name': hideProjectName ? 'true' : 'false',
         'data-team-offline': teamOffline ? 'true' : 'false',
       },
-      task.subject
-    ),
+      displaySubjectOverride ?? task.subject
+    );
+  },
 }));
 
 vi.mock('../../../../src/renderer/components/sidebar/TaskFiltersPopover', () => ({
@@ -230,12 +238,16 @@ describe('GlobalTaskList project grouping', () => {
     storeState.currentProvisioningRunIdByTeam = {};
     storeState.leadActivityByTeam = {};
     toggleCollapsedGroup.mockReset();
+    taskLocalState.pinnedIds.clear();
+    taskLocalState.archivedIds.clear();
+    taskLocalState.renamedSubjects.clear();
     taskLocalState.isPinned.mockClear();
     taskLocalState.isArchived.mockClear();
     taskLocalState.getRenamedSubject.mockClear();
     taskLocalState.togglePin.mockClear();
     taskLocalState.toggleArchive.mockClear();
     taskLocalState.renameTask.mockClear();
+    sidebarTaskItemRenderSpy.mockClear();
     setElectronApiForTest(undefined);
     localStorage.clear();
     localStorage.setItem('sidebarTasksGrouping', 'project');
@@ -248,7 +260,7 @@ describe('GlobalTaskList project grouping', () => {
     storeListeners.clear();
   });
 
-  it('fetches repository groups when grouped project filter data is missing', async () => {
+  it('fetches repository groups when grouped project filter data is needed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.viewMode = 'grouped';
 
@@ -261,6 +273,19 @@ describe('GlobalTaskList project grouping', () => {
       await flushMicrotasks();
     });
 
+    expect(storeState.fetchRepositoryGroups).not.toHaveBeenCalled();
+    expect(storeState.fetchProjects).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GlobalTaskList, {
+          filtersPopoverOpen: true,
+          onFiltersPopoverOpenChange: vi.fn(),
+        })
+      );
+      await flushMicrotasks();
+    });
+
     expect(storeState.fetchRepositoryGroups).toHaveBeenCalledTimes(1);
     expect(storeState.fetchProjects).not.toHaveBeenCalled();
 
@@ -270,7 +295,7 @@ describe('GlobalTaskList project grouping', () => {
     });
   });
 
-  it('fetches flat projects when flat project filter data is missing', async () => {
+  it('fetches flat projects when flat project filter data is needed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
     const host = document.createElement('div');
@@ -279,6 +304,19 @@ describe('GlobalTaskList project grouping', () => {
 
     await act(async () => {
       root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchProjects).not.toHaveBeenCalled();
+    expect(storeState.fetchRepositoryGroups).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GlobalTaskList, {
+          filtersPopoverOpen: true,
+          onFiltersPopoverOpenChange: vi.fn(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -301,7 +339,12 @@ describe('GlobalTaskList project grouping', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(GlobalTaskList));
+      root.render(
+        React.createElement(GlobalTaskList, {
+          filtersPopoverOpen: true,
+          onFiltersPopoverOpenChange: vi.fn(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -323,7 +366,12 @@ describe('GlobalTaskList project grouping', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(GlobalTaskList));
+      root.render(
+        React.createElement(GlobalTaskList, {
+          filtersPopoverOpen: true,
+          onFiltersPopoverOpenChange: vi.fn(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -562,6 +610,59 @@ describe('GlobalTaskList project grouping', () => {
     expect(visibleSubjects(host)).not.toContain('Task 10');
     expect(findButton(host, 'Show more')).not.toBeNull();
     expect(findButton(host, 'Show less')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not rerender unchanged task rows when refreshed task objects keep the same visible fields', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1), makeTask(2)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(sidebarTaskItemRenderSpy).toHaveBeenCalledTimes(2);
+    sidebarTaskItemRenderSpy.mockClear();
+
+    storeState.globalTasks = [makeTask(1), makeTask(2, { subject: 'Task 2 updated' })];
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    expect(visibleSubjects(host)).toEqual(['Task 1', 'Task 2 updated']);
+    expect(sidebarTaskItemRenderSpy.mock.calls.map(([taskId]) => taskId)).toEqual(['task-2']);
+
+    sidebarTaskItemRenderSpy.mockClear();
+    storeState.globalTasks = [
+      makeTask(1, {
+        comments: [
+          {
+            id: 'comment-1',
+            author: 'alice',
+            text: 'note',
+            createdAt: '2026-04-18T11:00:00.000Z',
+            type: 'regular',
+          },
+        ],
+      }),
+      makeTask(2, { subject: 'Task 2 updated' }),
+    ];
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    expect(sidebarTaskItemRenderSpy.mock.calls.map(([taskId]) => taskId)).toEqual(['task-1']);
 
     await act(async () => {
       root.unmount();

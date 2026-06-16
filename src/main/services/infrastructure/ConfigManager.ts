@@ -282,6 +282,12 @@ export interface AnthropicCompatibleEndpointConfig {
   baseUrl: string;
 }
 
+export interface CodexCustomProviderConfig {
+  enabled: boolean;
+  baseUrl: string;
+  model: string;
+}
+
 export interface ProviderConnectionsConfig {
   anthropic: {
     authMode: ProviderConnectionAuthMode;
@@ -290,6 +296,7 @@ export interface ProviderConnectionsConfig {
   };
   codex: {
     preferredAuthMode: CodexAccountAuthMode;
+    customProvider: CodexCustomProviderConfig;
   };
 }
 
@@ -392,6 +399,11 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     codex: {
       preferredAuthMode: 'auto',
+      customProvider: {
+        enabled: false,
+        baseUrl: '',
+        model: '',
+      },
     },
   },
   runtime: {
@@ -455,7 +467,8 @@ function normalizeConfiguredClaudeRootPath(value: unknown): string | null {
 
 function normalizeCodexPreferredAuthMode(
   currentValue: unknown,
-  legacyValue?: unknown
+  legacyValue?: unknown,
+  fallback: CodexAccountAuthMode = DEFAULT_CONFIG.providerConnections.codex.preferredAuthMode
 ): CodexAccountAuthMode {
   const candidate = currentValue ?? legacyValue;
 
@@ -467,7 +480,7 @@ function normalizeCodexPreferredAuthMode(
     return 'chatgpt';
   }
 
-  return DEFAULT_CONFIG.providerConnections.codex.preferredAuthMode;
+  return fallback;
 }
 
 function normalizeAnthropicCompatibleEndpointConfig(
@@ -483,6 +496,22 @@ function normalizeAnthropicCompatibleEndpointConfig(
   return {
     enabled: typeof raw.enabled === 'boolean' ? raw.enabled : fallback.enabled,
     baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl.trim() : fallback.baseUrl,
+  };
+}
+
+function normalizeCodexCustomProviderConfig(
+  value: unknown,
+  fallback: CodexCustomProviderConfig = DEFAULT_CONFIG.providerConnections.codex.customProvider
+): CodexCustomProviderConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...fallback };
+  }
+
+  const raw = value as Partial<CodexCustomProviderConfig>;
+  return {
+    enabled: typeof raw.enabled === 'boolean' ? raw.enabled : fallback.enabled,
+    baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl.trim() : fallback.baseUrl,
+    model: typeof raw.model === 'string' ? raw.model.trim() : fallback.model,
   };
 }
 
@@ -673,6 +702,9 @@ export class ConfigManager {
             loaded.providerConnections?.codex?.preferredAuthMode,
             (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
           ),
+          customProvider: normalizeCodexCustomProviderConfig(
+            loaded.providerConnections?.codex?.customProvider
+          ),
         },
       },
       runtime: {
@@ -789,11 +821,14 @@ export class ConfigManager {
           ),
         },
         codex: {
-          ...this.config.providerConnections.codex,
-          ...(connectionUpdate.codex ?? {}),
           preferredAuthMode: normalizeCodexPreferredAuthMode(
             connectionUpdate.codex?.preferredAuthMode,
-            (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode
+            (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode,
+            this.config.providerConnections.codex.preferredAuthMode
+          ),
+          customProvider: normalizeCodexCustomProviderConfig(
+            connectionUpdate.codex?.customProvider,
+            this.config.providerConnections.codex.customProvider
           ),
         },
       } as unknown as Partial<AppConfig[K]>;

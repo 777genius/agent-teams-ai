@@ -10,6 +10,34 @@ function isTeamAgentRuntimeResourceSampleLike(
   return Boolean(value) && typeof value === 'object';
 }
 
+function getArrayLength(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function areDiagnosticsEqual(left: unknown, right: unknown): boolean {
+  const leftLength = getArrayLength(left);
+  const rightLength = getArrayLength(right);
+  if (leftLength !== rightLength) return false;
+  if (leftLength === 0) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  for (let index = 0; index < leftLength; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
+}
+
+function areResourceHistoryEntriesEqual(left: unknown, right: unknown): boolean {
+  const leftLength = getArrayLength(left);
+  const rightLength = getArrayLength(right);
+  if (leftLength !== rightLength) return false;
+  if (leftLength === 0) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  for (let index = 0; index < leftLength; index += 1) {
+    if (!areTeamAgentRuntimeResourceSamplesEqual(left[index], right[index])) return false;
+  }
+  return true;
+}
+
 export function areTeamAgentRuntimeResourceSamplesEqual(left: unknown, right: unknown): boolean {
   if (left === right) return true;
   if (!isTeamAgentRuntimeResourceSampleLike(left) || !isTeamAgentRuntimeResourceSampleLike(right)) {
@@ -38,10 +66,6 @@ export function areTeamAgentRuntimeEntriesEqual(
 ): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
-  const leftDiagnostics = Array.isArray(left.diagnostics) ? left.diagnostics : [];
-  const rightDiagnostics = Array.isArray(right.diagnostics) ? right.diagnostics : [];
-  const leftResourceHistory = Array.isArray(left.resourceHistory) ? left.resourceHistory : [];
-  const rightResourceHistory = Array.isArray(right.resourceHistory) ? right.resourceHistory : [];
   return (
     left.memberName === right.memberName &&
     left.alive === right.alive &&
@@ -74,12 +98,8 @@ export function areTeamAgentRuntimeEntriesEqual(
     left.runtimeDiagnosticSeverity === right.runtimeDiagnosticSeverity &&
     left.runtimeLastSeenAt === right.runtimeLastSeenAt &&
     left.historicalBootstrapConfirmed === right.historicalBootstrapConfirmed &&
-    leftDiagnostics.length === rightDiagnostics.length &&
-    leftDiagnostics.every((value, index) => value === rightDiagnostics[index]) &&
-    leftResourceHistory.length === rightResourceHistory.length &&
-    leftResourceHistory.every((value, index) =>
-      areTeamAgentRuntimeResourceSamplesEqual(value, rightResourceHistory[index])
-    )
+    areDiagnosticsEqual(left.diagnostics, right.diagnostics) &&
+    areResourceHistoryEntriesEqual(left.resourceHistory, right.resourceHistory)
   );
 }
 

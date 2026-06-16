@@ -6,27 +6,29 @@
  * React only manages: mount/unmount, resize, mouse events.
  */
 
-import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
-import type { GraphNode, GraphEdge, GraphParticle } from '../ports/types';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+
 import {
-  drawBackground,
   createDepthParticles,
   createShootingStarField,
+  type DepthParticle,
+  drawBackground,
+  type ShootingStarField,
   updateDepthParticles,
   updateShootingStarField,
-  type DepthParticle,
-  type ShootingStarField,
 } from '../canvas/background-layer';
-import { drawEdges } from '../canvas/draw-edges';
-import { drawHandoffCards } from '../canvas/draw-handoff-cards';
-import { drawParticles } from '../canvas/draw-particles';
-import { drawAgents, drawCrossTeamNodes } from '../canvas/draw-agents';
-import { drawTasks, drawColumnHeaders } from '../canvas/draw-tasks';
-import { drawProcesses } from '../canvas/draw-processes';
-import { drawEffects, type VisualEffect } from '../canvas/draw-effects';
-import { drawHexagon } from '../canvas/draw-misc';
 import { BloomRenderer } from '../canvas/bloom-renderer';
+import { drawAgents, drawCrossTeamNodes } from '../canvas/draw-agents';
+import { drawEdges } from '../canvas/draw-edges';
+import { drawEffects, type VisualEffect } from '../canvas/draw-effects';
+import { drawHandoffCards } from '../canvas/draw-handoff-cards';
+import { drawHexagon } from '../canvas/draw-misc';
+import { drawParticles } from '../canvas/draw-particles';
+import { drawProcesses } from '../canvas/draw-processes';
+import { drawColumnHeaders, drawTasks } from '../canvas/draw-tasks';
+import { NODE } from '../constants/canvas-constants';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
+
 import {
   computeAdaptiveParticleBudget,
   selectRenderableParticles,
@@ -37,8 +39,10 @@ import {
   type TransientHandoffCard,
   updateTransientHandoffState,
 } from './transientHandoffs';
+
 import type { CameraTransform } from '../hooks/useGraphCamera';
-import { NODE } from '../constants/canvas-constants';
+import type { OwnerColumnGroupRect } from '../hooks/useGraphSimulation';
+import type { GraphEdge, GraphNode, GraphParticle } from '../ports/types';
 
 // ─── Draw State (passed by ref, not by props — no React re-renders) ─────────
 
@@ -56,14 +60,13 @@ export interface GraphDrawState {
   hoveredEdgeId: string | null;
   focusNodeIds: ReadonlySet<string> | null;
   focusEdgeIds: ReadonlySet<string> | null;
-  dragPreview:
-    | {
-        nodeId: string;
-        x: number;
-        y: number;
-        color?: string | null;
-      }
-    | null;
+  ownerColumnGroupRects: readonly OwnerColumnGroupRect[];
+  dragPreview: {
+    nodeId: string;
+    x: number;
+    y: number;
+    color?: string | null;
+  } | null;
 }
 
 export interface GraphCanvasHandle {
@@ -243,18 +246,21 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           ctx.clearRect(0, 0, w, h);
 
           // 1. Background (screen space)
-          const backgroundDt = Math.min(
-            Math.max(
-              lastBackgroundTimeRef.current == null
-                ? 0
-                : state.time - lastBackgroundTimeRef.current,
-              0
-            ),
-            0.1
-          );
+          const shouldAnimateSpaceEffects = showHexGrid || showStarField;
+          if (shouldAnimateSpaceEffects) {
+            const backgroundDt = Math.min(
+              Math.max(
+                lastBackgroundTimeRef.current == null
+                  ? 0
+                  : state.time - lastBackgroundTimeRef.current,
+                0
+              ),
+              0.1
+            );
+            updateDepthParticles(starsRef.current, w, h, backgroundDt);
+            updateShootingStarField(shootingStarsRef.current, w, h, backgroundDt);
+          }
           lastBackgroundTimeRef.current = state.time;
-          updateDepthParticles(starsRef.current, w, h, backgroundDt);
-          updateShootingStarField(shootingStarsRef.current, w, h, backgroundDt);
           drawBackground(ctx, w, h, starsRef.current, shootingStarsRef.current, cam, state.time, {
             showHexGrid,
             showStarField,
@@ -264,6 +270,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           ctx.save();
           ctx.translate(cam.x, cam.y);
           ctx.scale(zoom, zoom);
+
+          drawOwnerColumnGroups(ctx, {
+            groups: state.ownerColumnGroupRects,
+            zoom,
+            focusNodeIds: state.focusNodeIds,
+          });
 
           // 2a. Edges (only those connecting visible nodes) — reuse collections
           const visibleNodeIds = visibleNodeIdsCache.current;
@@ -463,6 +475,43 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     </div>
   );
 });
+
+function drawOwnerColumnGroups(
+  ctx: CanvasRenderingContext2D,
+  args: {
+    groups: readonly OwnerColumnGroupRect[];
+    zoom: number;
+    focusNodeIds: ReadonlySet<string> | null;
+  }
+): void {
+  if (args.groups.length === 0 || args.zoom < 0.1) {
+    return;
+  }
+
+  const padding = 8;
+  const radius = 8;
+
+  for (const group of args.groups) {
+    const rect = group.rect;
+    if (rect.width <= 0 || rect.height <= 0) {
+      continue;
+    }
+
+    const isFocusDimmed = args.focusNodeIds != null && !args.focusNodeIds.has(group.ownerId);
+    const left = rect.left - padding;
+    const top = rect.top - padding;
+    const width = rect.width + padding * 2;
+    const height = rect.height + padding * 2;
+
+    ctx.save();
+    ctx.globalAlpha = isFocusDimmed ? 0.42 : 1;
+    ctx.beginPath();
+    ctx.roundRect(left, top, width, height, radius);
+    ctx.fillStyle = 'rgba(10, 16, 34, 0.3777)';
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
 function drawOwnerSlotPreview(
   ctx: CanvasRenderingContext2D,

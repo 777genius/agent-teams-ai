@@ -267,6 +267,7 @@ function buildCompactNativeMemberBriefing(params: {
     '- Do not send messages to the user, lead, or teammates during bootstrap.',
     '- Before real task work, use task_briefing as your working queue.',
     '- Start real work only from an assigned task or a direct app-delivered instruction.',
+    '- If assigned real work requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in your working directory as needed.',
     '- Post durable task results as task comments before completing tasks.',
     '- Ask the lead when blocked instead of guessing.',
     ...buildCodexNativeStartupToolRules(params.providerId),

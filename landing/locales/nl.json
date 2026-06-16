@@ -1,0 +1,173 @@
+{
+  "nav": {
+    "features": "Functies",
+    "screenshots": "Schermafbeeldingen",
+    "docs": "Documentatie",
+    "comparison": "Vergelijken",
+    "download": "Downloaden",
+    "pricing": "Gratis",
+    "faq": "Veelgestelde vragen",
+    "viewOnGithub": "Bekijken op GitHub",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten",
+    "short": {
+      "screenshots": "Beelden",
+      "docs": "Docs",
+      "download": "Halen",
+      "comparison": "Vergelijk",
+      "pricing": "Gratis"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Nu downloaden",
+    "ctaPrimary": "Downloaden voor {platform}",
+    "ctaSecondary": "Vergelijken",
+    "ctaDocs": "Documentatie",
+    "preview": "Productvoorbeeld",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban-bord",
+      "openSource": "Open source"
+    },
+    "watchDemo": "Demo bekijken",
+    "videoUnavailable": "Video niet beschikbaar",
+    "supportedProviders": "Ondersteunde AI-providers",
+    "slogan": "Bereik veel door heel weinig te doen",
+    "platformDefault": "Voor jouw platform",
+    "guidesSetup": "Gidsen en installatie",
+    "videoFrameLabel": "Bekijk de Agent Teams-demo",
+    "commandFeed": "Teamcommandofeed",
+    "liveDemo": "Live demo",
+    "demoVideoTitle": "Agent Teams-demovideo",
+    "demoTitle": "Agent Teams-demo",
+    "demo": {
+      "ariaLabel": "Agentteam-demo",
+      "live": "LIVE",
+      "waiting": "Wachten op taken...",
+      "activity": {
+        "authMiddleware": "Auth-middleware implementeren...",
+        "unitTests": "Unittests schrijven voor API...",
+        "reviewPr": "Wijzigingen van PR #42 controleren...",
+        "ciPipeline": "CI/CD-pijplijn opzetten...",
+        "refactorDatabase": "Databaselaag refactoren..."
+      },
+      "tasks": {
+        "authApi": "Auth-API",
+        "unitTests": "Unittests",
+        "ciSetup": "CI-installatie"
+      },
+      "columns": {
+        "todo": "TE DOEN",
+        "progress": "BEZIG",
+        "review": "REVIEW",
+        "done": "KLAAR"
+      }
+    }
+  },
+  "download": {
+    "title": "Downloaden",
+    "detected": "Gedetecteerd",
+    "systemRequirements": "Systeemvereisten",
+    "version": "Versie {version}",
+    "readyToStart": "Klaar om te beginnen!"
+  },
+  "theme": {
+    "dark": "Donker",
+    "light": "Licht"
+  },
+  "language": {
+    "label": "Taal",
+    "search": "Taal zoeken…"
+  },
+  "features": {
+    "sectionTitle": "Alles wat je nodig hebt voor AI-agentorkestratie",
+    "sectionSubtitle": "Krachtige tools die samenwerking tussen meerdere agents echt laten werken."
+  },
+  "pricing": {
+    "sectionTitle": "Gratis te installeren. Gratis model inbegrepen.",
+    "sectionSubtitle": "Begin direct met een gratis model zonder authenticatie - geen account, API-sleutel of creditcard. Verbind Claude, Codex, OpenCode/OpenRouter of andere providertoegang alleen wanneer je meer modellen wilt.",
+    "getStarted": "Nu downloaden",
+    "popular": "Gratis",
+    "freeModelCallout": "Gratis model zonder authenticatie inbegrepen",
+    "note": "Agent Teams heeft geen betaald niveau. Met het gratis model zonder authenticatie kun je het meteen uitproberen; betaald providergebruik is optioneel en wordt beheerd door de provider die je kiest."
+  },
+  "testimonials": {
+    "sectionTitle": "Wat ontwikkelaars zeggen",
+    "sectionSubtitle": "Echte feedback van echte makers",
+    "showMore": "Meer tonen",
+    "showLess": "Minder tonen",
+    "feedbackCta": "Wil je je ervaring delen? Open een issue op"
+  },
+  "faq": {
+    "sectionTitle": "Vragen? Wij hebben antwoorden",
+    "subtitle": "Alles wat je moet weten over Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Hoe wij ons verhouden",
+    "sectionSubtitle": "Functie-voor-functievergelijking met andere AI-codeertools.",
+    "feature": "Functie",
+    "robotBubble": "Oordeel zelf",
+    "features": {
+      "crossTeam": "Communicatie tussen teams",
+      "agentMessaging": "Berichten tussen agents",
+      "linkedTasks": "Gekoppelde taken",
+      "sessionAnalysis": "Sessieanalyse",
+      "taskAttachments": "Taakbijlagen",
+      "hunkReview": "Review op hunk-niveau",
+      "codeEditor": "Ingebouwde code-editor",
+      "fullAutonomy": "Volledige autonomie",
+      "taskDeps": "Taakafhankelijkheden",
+      "reviewWorkflow": "Reviewworkflow",
+      "zeroSetup": "Geen installatie nodig",
+      "kanban": "Kanban-bord",
+      "execLog": "Uitvoeringslogboeken",
+      "liveProcesses": "Live processen",
+      "runtimeLoad": "CPU/RAM per teamlid",
+      "perTaskReview": "Codereview per taak",
+      "flexAutonomy": "Flexibele autonomie",
+      "worktree": "Git-worktree-isolatie",
+      "multiAgent": "Gemengde AI-teamleden",
+      "liveWorkGraph": "Live teamkaart",
+      "liveTeam": "Live teamleden",
+      "teamWorkspace": "Teamwerkruimte",
+      "launchProof": "Startstatus teamlid",
+      "orgGovernance": "Organigram / governance",
+      "budgetControls": "Budgetbeheer",
+      "price": "Prijs"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Zie het in actie",
+    "sectionSubtitle": "Echte schermafbeeldingen uit de app — Kanban-bord, codereview, agentteams en meer."
+  },
+  "common": {
+    "learnMore": "Meer informatie",
+    "statusLabel": "Status:",
+    "previous": "Vorige",
+    "next": "Volgende"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI-agentorkestratie voor ontwikkelaars",
+    "robotBubble": "Ik wacht",
+    "links": {
+      "github": "GitHub",
+      "author": "Auteur",
+      "docs": "Documentatie"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI-agentorkestratie voor ontwikkelaars",
+    "homeDescription": "Gratis, open-source desktop-app voor AI-agentteams. Begin met een gratis model zonder authenticatie en verbind daarna Claude, Codex of OpenCode wanneer je meer modellen nodig hebt.",
+    "downloadTitle": "Download Agent Teams voor macOS, Windows en Linux",
+    "downloadDescription": "Download Agent Teams voor macOS, Windows en Linux. Gratis open-source desktop-app voor agentteams van Claude, Codex en OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Pagina niet gevonden",
+    "notFoundDescription": "De pagina die je zoekt bestaat niet of is verplaatst.",
+    "genericTitle": "Er is iets misgegaan",
+    "genericDescription": "Er is een onverwachte fout opgetreden. Probeer het later opnieuw.",
+    "goHome": "Naar de startpagina"
+  }
+}

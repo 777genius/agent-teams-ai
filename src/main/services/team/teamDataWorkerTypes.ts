@@ -3,6 +3,7 @@
  */
 
 import type {
+  InboxMessage,
   MemberLogSummary,
   MessagesPage,
   TeamGetDataOptions,
@@ -22,6 +23,7 @@ export interface GetMessagesPagePayload {
   options: {
     cursor?: string | null;
     limit: number;
+    liveMessages?: InboxMessage[];
   };
 }
 

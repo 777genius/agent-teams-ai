@@ -1,7 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
@@ -70,6 +69,8 @@ interface SidebarTaskItemProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  /** Optional theme value from list parents to avoid one theme subscription per row. */
+  isLight?: boolean;
   /** Pauses the in-progress spinner when the parent team is offline. */
   teamOffline?: boolean;
   /** The composite key "teamName:taskId" of the task being renamed, or null */
@@ -80,28 +81,38 @@ interface SidebarTaskItemProps {
   onRenameCancel?: () => void;
   /** Returns a custom display subject if the task was renamed locally */
   getDisplaySubject?: (task: GlobalTask) => string | undefined;
+  /** Precomputed custom display subject from list parents. */
+  displaySubjectOverride?: string;
+  ownerColorName?: string | null;
 }
 
-export const SidebarTaskItem = memo(function SidebarTaskItem({
+const SidebarTaskItemContent = ({
   task,
   hideTeamName,
   hideProjectName,
   showTeamName,
+  isLight,
   teamOffline = false,
   renamingKey,
   onRenameComplete,
   onRenameCancel,
   getDisplaySubject,
-}: SidebarTaskItemProps): React.JSX.Element {
+  displaySubjectOverride,
+  ownerColorName,
+}: SidebarTaskItemProps & { isLight: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
-  const teamMembers = useStore(useShallow((s) => s.teamByName[task.teamName]?.members));
+  const shouldResolveOwnerColorFromStore = ownerColorName === undefined;
+  const teamMembers = useStore(
+    useShallow((s) =>
+      shouldResolveOwnerColorFromStore ? s.teamByName[task.teamName]?.members : undefined
+    )
+  );
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
-  const { isLight } = useTheme();
 
   const isRenaming = renamingKey === `${task.teamName}:${task.id}`;
-  const displaySubject = getDisplaySubject?.(task) ?? task.subject;
+  const displaySubject = displaySubjectOverride ?? getDisplaySubject?.(task) ?? task.subject;
   const [editValue, setEditValue] = useState(displaySubject);
   const inputRef = useRef<HTMLInputElement>(null);
   // Focus input when rename starts
@@ -143,12 +154,17 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   );
   const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, tCommon('tasks.date.yesterday'));
 
+  const resolvedOwnerColorName = useMemo(() => {
+    if (!task.owner) return null;
+    if (!shouldResolveOwnerColorFromStore) return ownerColorName;
+    if (!teamMembers) return null;
+    return buildMemberColorMap(teamMembers).get(task.owner) ?? null;
+  }, [ownerColorName, shouldResolveOwnerColorFromStore, task.owner, teamMembers]);
+
   const ownerColorSet = useMemo(() => {
-    if (!teamMembers || !task.owner) return null;
-    const colorMap = buildMemberColorMap(teamMembers);
-    const colorName = colorMap.get(task.owner);
+    const colorName = resolvedOwnerColorName;
     return colorName ? getTeamColorSet(colorName) : null;
-  }, [teamMembers, task.owner]);
+  }, [resolvedOwnerColorName]);
 
   const ownerTextColor = useMemo(() => {
     if (!ownerColorSet) return undefined;
@@ -178,7 +194,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   return (
     <button
       type="button"
-      className={`flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
+      className={`sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onClick={() => {
         if (!isRenaming) {
@@ -225,37 +241,29 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
             />
           </div>
         ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <span
+            className="line-clamp-2 text-[13px] font-medium leading-tight"
+            style={{ color: 'var(--color-text-muted)' }}
+            title={displaySubject}
+          >
+            <StatusIcon className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)} />
+            {unreadCount > 0 &&
+              (unreadCount === 1 ? (
+                <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
+              ) : (
+                <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              ))}
+            {displaySubject}
+            {isTeamTaskNeedsFixActionable(task) && (
               <span
-                className="line-clamp-2 text-[13px] font-medium leading-tight"
-                style={{ color: 'var(--color-text-muted)' }}
+                className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
               >
-                <StatusIcon
-                  className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)}
-                />
-                {unreadCount > 0 &&
-                  (unreadCount === 1 ? (
-                    <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
-                  ) : (
-                    <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  ))}
-                {displaySubject}
-                {isTeamTaskNeedsFixActionable(task) && (
-                  <span
-                    className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-                  >
-                    {tCommon('tasks.reviewState.needsFix')}
-                  </span>
-                )}
+                {tCommon('tasks.reviewState.needsFix')}
               </span>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={6}>
-              {displaySubject}
-            </TooltipContent>
-          </Tooltip>
+            )}
+          </span>
         )}
       </div>
 
@@ -314,4 +322,18 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
       )}
     </button>
   );
+};
+
+const ThemedSidebarTaskItem = (props: SidebarTaskItemProps): React.JSX.Element => {
+  const { isLight } = useTheme();
+  return <SidebarTaskItemContent {...props} isLight={isLight} />;
+};
+
+export const SidebarTaskItem = memo(function SidebarTaskItem(
+  props: SidebarTaskItemProps
+): React.JSX.Element {
+  if (typeof props.isLight === 'boolean') {
+    return <SidebarTaskItemContent {...props} isLight={props.isLight} />;
+  }
+  return <ThemedSidebarTaskItem {...props} />;
 });

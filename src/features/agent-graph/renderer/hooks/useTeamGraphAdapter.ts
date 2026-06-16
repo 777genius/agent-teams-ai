@@ -5,6 +5,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useTeamAgentRuntimeWatcher } from '@renderer/components/team/useTeamAgentRuntimeWatcher';
 import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -65,9 +66,17 @@ export function useTeamGraphAdapter(
   options?: UseTeamGraphAdapterOptions
 ): GraphDataPort {
   const isActive = options?.active ?? true;
+  const { t } = useAppTranslation('team');
   const adapterRef = useRef<TeamGraphAdapter>(TeamGraphAdapter.create());
   const inactiveGraphData = useMemo(() => emptyGraphData(teamName), [teamName]);
   const lastActiveGraphDataRef = useRef<GraphDataPort>(inactiveGraphData);
+  const adapterText = useMemo(
+    () => ({
+      hiddenBlockingLinks: (count: number) =>
+        t('agentGraph.blockingEdge.hiddenBlockingLinks', { count }),
+    }),
+    [t]
+  );
 
   const {
     teamSnapshot,
@@ -216,7 +225,8 @@ export function useTeamGraphAdapter(
       effectiveSlotAssignments,
       graphLayoutMode ?? DEFAULT_TEAM_GRAPH_LAYOUT_MODE,
       gridOwnerOrder,
-      activeTaskLogActivity
+      activeTaskLogActivity,
+      adapterText
     );
   }, [
     isActive,
@@ -236,6 +246,7 @@ export function useTeamGraphAdapter(
     graphLayoutMode,
     gridOwnerOrder,
     activeTaskLogActivity,
+    adapterText,
   ]);
 
   useLayoutEffect(() => {

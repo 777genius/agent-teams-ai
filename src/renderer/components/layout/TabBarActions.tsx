@@ -4,7 +4,7 @@
  * Reads focused pane data from root store selectors (auto-synced via syncRootState).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
@@ -14,6 +14,12 @@ import { Bell, PanelRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
+
+function formatDiscordMemberCount(count: number): string {
+  if (count >= 10_000) return `${Math.floor(count / 1000)}k`;
+  if (count >= 1000) return `${Math.floor(count / 100) / 10}k`;
+  return String(count);
+}
 
 export const TabBarActions = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
@@ -47,6 +53,7 @@ export const TabBarActions = (): React.JSX.Element => {
   const [discordHover, setDiscordHover] = useState(false);
   const [expandHover, setExpandHover] = useState(false);
   const [updateHover, setUpdateHover] = useState(false);
+  const [discordMemberCount, setDiscordMemberCount] = useState<number | null>(null);
 
   // Derive active tab and session detail for MoreMenu
   const activeTab = useMemo(
@@ -56,6 +63,31 @@ export const TabBarActions = (): React.JSX.Element => {
   const activeTabSessionDetail = activeTabId
     ? (tabSessionData[activeTabId]?.sessionDetail ?? null)
     : null;
+  const discordTooltip =
+    discordMemberCount !== null
+      ? `${t('layout.discord')} - ${discordMemberCount} members`
+      : t('layout.discord');
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.getDiscordMemberCount) return;
+
+    let cancelled = false;
+    void api
+      .getDiscordMemberCount()
+      .then(({ count }) => {
+        if (!cancelled && typeof count === 'number' && Number.isFinite(count)) {
+          setDiscordMemberCount(count);
+        }
+      })
+      .catch(() => {
+        // The Discord button stays usable if the public invite count is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div
@@ -163,19 +195,24 @@ export const TabBarActions = (): React.JSX.Element => {
             }}
             onMouseEnter={() => setDiscordHover(true)}
             onMouseLeave={() => setDiscordHover(false)}
-            className="rounded-md p-2 transition-colors"
+            className="relative rounded-md p-2 transition-colors"
             style={{
               color: discordHover ? 'var(--color-text)' : 'var(--color-text-muted)',
               backgroundColor: discordHover ? 'var(--color-surface-raised)' : 'transparent',
             }}
-            aria-label={t('layout.discord')}
+            aria-label={discordTooltip}
           >
             <svg className="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M20.317 4.3698A19.791 19.791 0 0 0 15.4319 3.0a13.873 13.873 0 0 0-.6242 1.2757 18.27 18.27 0 0 0-5.6154 0A13.872 13.872 0 0 0 8.5681 3 19.736 19.736 0 0 0 3.683 4.3698C.5334 9.1048-.319 13.7216.099 18.272a19.9 19.9 0 0 0 6.0892 3.1157 14.96 14.96 0 0 0 1.303-2.1356 12.46 12.46 0 0 1-1.9352-.9351c.1624-.1218.3217-.2462.4763-.3736 3.7294 1.7014 7.772 1.7014 11.4572 0 .1546.1274.3139.2518.4763.3736-.6163.3622-1.2638.6754-1.9352.9351.3654.7439.8041 1.4554 1.303 2.1356A19.9 19.9 0 0 0 23.901 18.272c.5003-5.2737-.8381-9.8482-3.584-13.9022ZM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3334.9555-2.4191 2.1569-2.4191 1.2103 0 2.1757 1.0946 2.1568 2.419 0 1.3334-.9465 2.4191-2.1568 2.4191Zm7.96 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3334.9555-2.4191 2.1569-2.4191 1.2103 0 2.1757 1.0946 2.1568 2.419 0 1.3334-.9465 2.4191-2.1568 2.4191Z" />
             </svg>
+            {discordMemberCount !== null && (
+              <span className="pointer-events-none absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5865F2] px-1 text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-[var(--color-surface-sidebar)]">
+                {formatDiscordMemberCount(discordMemberCount)}
+              </span>
+            )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{t('layout.discord')}</TooltipContent>
+        <TooltipContent side="bottom">{discordTooltip}</TooltipContent>
       </Tooltip>
 
       {/* More menu (Teams, Settings, Extensions, Search, Schedules, Docs, Export, Analyze) */}

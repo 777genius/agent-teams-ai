@@ -22,14 +22,6 @@ export class CompositeMemberWorkSyncBusySignal implements MemberWorkSyncBusySign
           memberName: input.memberName,
           error: String(error),
         });
-        const nowMs = Date.parse(input.nowIso);
-        return {
-          busy: true,
-          reason: 'busy_signal_error',
-          retryAfterIso: new Date(
-            (Number.isFinite(nowMs) ? nowMs : Date.now()) + 60_000
-          ).toISOString(),
-        };
       }
     }
 

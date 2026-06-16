@@ -1,9 +1,7 @@
 import {
   type ChildProcess,
-  exec,
   execFile,
   type ExecFileOptions,
-  type ExecOptions,
   spawn,
   type SpawnOptions,
   spawnSync,
@@ -80,65 +78,14 @@ function execFileAsync(
 }
 
 /**
- * Promise wrapper for exec.  Used exclusively as a Windows shell fallback
- * when execFile fails with EINVAL on non-ASCII binary paths.  The command
- * string is built from a known binary path + args, NOT from user input.
+ * cmd.exe fallback implemented through execFile so Node does not invoke an
+ * additional shell around the guarded command string.
  */
 function execShellAsync(
   cmd: string,
-  options: ExecOptions = {}
+  options: ExecFileOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const { timeout, killSignal, ...execOptions } = options;
-    const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
-    const timeoutSignal = normalizeKillSignal(killSignal);
-    let child: ChildProcess | null = null;
-    let settled = false;
-    let stdoutText = '';
-    let stderrText = '';
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-    // eslint-disable-next-line sonarjs/os-command, security/detect-child-process -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-    child = exec(cmd, execOptions, (err, stdout, stderr) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
-      if (err)
-        reject(
-          err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error')
-        );
-      else resolve({ stdout: String(stdout), stderr: String(stderr) });
-    });
-    if (!settled) {
-      trackCliProcess(child);
-      if (timeoutMs > 0) {
-        child.stdout?.on('data', (chunk: Buffer | string) => {
-          stdoutText += chunk.toString();
-        });
-        child.stderr?.on('data', (chunk: Buffer | string) => {
-          stderrText += chunk.toString();
-        });
-        timeoutHandle = setTimeout(() => {
-          if (settled) {
-            return;
-          }
-          settled = true;
-          timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
-          killProcessTree(child, timeoutSignal);
-          const error = new Error(`Command timed out after ${timeoutMs}ms: ${cmd}`);
-          Object.assign(error, {
-            killed: true,
-            signal: timeoutSignal,
-            stdout: stdoutText,
-            stderr: stderrText,
-          });
-          reject(error);
-        }, timeoutMs);
-        timeoutHandle.unref?.();
-      }
-    }
-  });
+  return execFileAsync(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], options);
 }
 
 function cleanupTimedCliProcess(
@@ -300,6 +247,43 @@ function quoteArg(arg: string): string {
   return quoteWindowsCmdArg(arg);
 }
 
+function containsWindowsShellUnsafeControlChar(part: string): boolean {
+  for (let index = 0; index < part.length; index += 1) {
+    const code = part.charCodeAt(index);
+    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function assertSafeWindowsShellFallbackPart(part: string): void {
+  if (containsWindowsShellUnsafeControlChar(part)) {
+    throw new Error('Unsafe Windows shell fallback argument: control characters are not allowed');
+  }
+}
+
+function buildWindowsShellFallbackCommand(parts: string[]): string {
+  for (const part of parts) {
+    assertSafeWindowsShellFallbackPart(part);
+  }
+  return parts.map(quoteArg).join(' ');
+}
+
+function getWindowsCmdPath(): string {
+  return path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe');
+}
+
+function spawnWindowsShellFallback(
+  cmd: string,
+  options: ReturnType<typeof withCliProcessDefaults<SpawnOptions>>
+): ReturnType<typeof spawn> {
+  return spawn(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], {
+    ...options,
+    shell: false,
+  });
+}
+
 /** Env vars injected into every spawned Claude CLI process. */
 const CLI_ENV_DEFAULTS: Record<string, string> = {
   CLAUDE_HOOK_JUDGE_MODE: 'true',
@@ -408,8 +392,8 @@ export async function execCli(
   }
 
   // shell fallback (Windows only; others shouldn't reach here)
-  const cmd = [target, ...args].map(quoteArg).join(' ');
-  const shellResult = await execShellAsync(cmd, opts as unknown as ExecOptions);
+  const cmd = buildWindowsShellFallbackCommand([target, ...args]);
+  const shellResult = await execShellAsync(cmd, opts);
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
@@ -435,9 +419,8 @@ export function spawnCli(
   }
 
   if (process.platform === 'win32' && needsShell(binaryPath)) {
-    const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
-    // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-    return trackCliProcess(spawn(cmd, { ...opts, shell: true }));
+    const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
+    return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
   }
 
   try {
@@ -446,9 +429,8 @@ export function spawnCli(
     const code =
       err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
     if (process.platform === 'win32' && code === 'EINVAL') {
-      const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
-      // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-      return trackCliProcess(spawn(cmd, { ...opts, shell: true }));
+      const cmd = buildWindowsShellFallbackCommand([binaryPath, ...args]);
+      return trackCliProcess(spawnWindowsShellFallback(cmd, opts));
     }
     throw err;
   }

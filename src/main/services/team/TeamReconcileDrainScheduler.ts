@@ -11,15 +11,61 @@ interface TeamReconcileDrainState {
   lastTrigger: TeamReconcileTrigger | null;
 }
 
+const DEFAULT_TEAM_RECONCILE_DRAIN_RUN_TIMEOUT_MS = 2 * 60_000;
+
 export interface TeamReconcileDrainScheduler {
   schedule(teamName: string, trigger: TeamReconcileTrigger): void;
   dispose(): void;
 }
 
+class TeamReconcileDrainTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TeamReconcileDrainTimeoutError';
+  }
+}
+
+function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+  timer.unref?.();
+}
+
+async function runWithTimeout(options: {
+  run: () => Promise<void>;
+  timeoutMs: number;
+  teamName: string;
+  trigger: TeamReconcileTrigger;
+}): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    await Promise.race([
+      options.run(),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new TeamReconcileDrainTimeoutError(
+              `team reconcile drain timed out for ${options.teamName} source=${options.trigger.source} detail=${options.trigger.detail} after ${options.timeoutMs}ms`
+            )
+          );
+        }, options.timeoutMs);
+        unrefTimer(timeout);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 export function createTeamReconcileDrainScheduler(options: {
   run: (teamName: string, trigger: TeamReconcileTrigger) => Promise<void>;
+  runTimeoutMs?: number;
 }): TeamReconcileDrainScheduler {
   const states = new Map<string, TeamReconcileDrainState>();
+  const runTimeoutMs = Math.max(
+    1,
+    options.runTimeoutMs ?? DEFAULT_TEAM_RECONCILE_DRAIN_RUN_TIMEOUT_MS
+  );
   let disposed = false;
 
   const drainTeam = async (teamName: string): Promise<void> => {
@@ -40,9 +86,18 @@ export function createTeamReconcileDrainScheduler(options: {
         }
 
         try {
-          await options.run(teamName, trigger);
+          await runWithTimeout({
+            run: () => options.run(teamName, trigger),
+            timeoutMs: runTimeoutMs,
+            teamName,
+            trigger,
+          });
         } catch (error) {
           failed = true;
+          if (error instanceof TeamReconcileDrainTimeoutError && !state.pending) {
+            state.pending = true;
+            state.lastTrigger = trigger;
+          }
           throw error;
         } finally {
           if (!disposed) {
@@ -54,10 +109,7 @@ export function createTeamReconcileDrainScheduler(options: {
       state.running = false;
       if (disposed || !state.pending) {
         states.delete(teamName);
-        return;
-      }
-
-      if (failed) {
+      } else if (failed) {
         void drainTeam(teamName).catch(() => undefined);
       }
     }

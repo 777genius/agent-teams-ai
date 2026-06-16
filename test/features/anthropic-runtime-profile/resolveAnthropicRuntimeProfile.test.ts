@@ -183,7 +183,7 @@ describe('resolveAnthropicRuntimeProfile', () => {
       effortResetReason: null,
       nextFastMode: 'inherit',
       fastModeResetReason:
-        'Fast mode is available only for Opus 4.6. Selected model resolves to Opus 4.7 (1M).',
+        'Fast mode is available only for Opus 4.8. Selected model resolves to Opus 4.7 (1M).',
     });
   });
 

@@ -8,6 +8,18 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/01.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/02.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/03.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/04.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/05.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/06.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/07.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/08.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/09.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/10.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/11.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/12.png" />
     <title>Agent Teams AI</title>
     <style>
       /* Splash: animated gradient background */
@@ -69,6 +81,8 @@
         pointer-events: none;
         z-index: 1;
         opacity: 0;
+      }
+      #splash-enhanced-canvas.splash-canvas-ready {
         animation: splash-canvas-in 0.62s ease-out 0.08s forwards;
       }
       @keyframes splash-canvas-in {
@@ -393,7 +407,7 @@
         .splash-node {
           animation: none !important;
         }
-        #splash-enhanced-canvas {
+        #splash-enhanced-canvas.splash-canvas-ready {
           opacity: 1;
         }
         #splash-tagline > span {
@@ -578,6 +592,7 @@
           './assets/participant-avatars/13.png',
         ];
         var AVATAR_URLS = resolveAvatarUrls();
+        var SPLASH_AVATAR_URLS = getSplashAvatarUrls();
         var avatarCache = new Map();
         var avatarLoading = new Map();
 
@@ -597,14 +612,30 @@
             urlsByIndex[Number(match[1]) - 1] = href;
           }
 
-          var resolved = [];
+          var resolved = FALLBACK_AVATAR_URLS.slice();
           for (var avatarIndex = 0; avatarIndex < FALLBACK_AVATAR_URLS.length; avatarIndex++) {
             var url = urlsByIndex[avatarIndex];
-            if (!url) return FALLBACK_AVATAR_URLS;
-            resolved.push(url);
+            if (url) resolved[avatarIndex] = url;
           }
 
           return resolved;
+        }
+
+        function getSplashAvatarUrls() {
+          var urls = [];
+          var seen = new Set();
+          for (var teamIndex = 0; teamIndex < TEAM_MEMBER_COUNTS.length; teamIndex++) {
+            var memberCount = TEAM_MEMBER_COUNTS[teamIndex] || 0;
+            var offset = TEAM_MEMBER_OFFSETS[teamIndex] || 0;
+            for (var robotIndex = 0; robotIndex < memberCount; robotIndex++) {
+              var url = AVATAR_URLS[offset + robotIndex] || AVATAR_URLS[0];
+              if (!seen.has(url)) {
+                seen.add(url);
+                urls.push(url);
+              }
+            }
+          }
+          return urls;
         }
 
         function startFileSplashScene(splash) {
@@ -612,7 +643,7 @@
             return window.__claudeTeamsSplashScene;
           }
 
-          var ready = preloadAvatarImages();
+          var avatarsReady = preloadAvatarImages();
           var previousCanvas = splash.querySelector('#splash-enhanced-canvas');
           if (previousCanvas) previousCanvas.remove();
 
@@ -627,7 +658,7 @@
               stop: function () {
                 canvas.remove();
               },
-              ready: ready,
+              ready: avatarsReady,
             };
 
           var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -661,6 +692,18 @@
             state.particles = createParticles(width, height);
           }
 
+          function renderFrame(now) {
+            resize();
+            drawScene(
+              ctx,
+              state.width,
+              state.height,
+              reducedMotion ? 1.2 : (now - state.startedAt) / 1000,
+              state.particles
+            );
+            state.lastRenderedAt = now;
+          }
+
           function render(now) {
             if (!state.running) return;
             if (
@@ -668,15 +711,7 @@
               state.lastRenderedAt === 0 ||
               now - state.lastRenderedAt >= SPLASH_SCENE_FRAME_INTERVAL_MS
             ) {
-              resize();
-              drawScene(
-                ctx,
-                state.width,
-                state.height,
-                reducedMotion ? 1.2 : (now - state.startedAt) / 1000,
-                state.particles
-              );
-              state.lastRenderedAt = now;
+              renderFrame(now);
             }
             if (!reducedMotion) state.frameId = window.requestAnimationFrame(render);
           }
@@ -688,6 +723,13 @@
           window.addEventListener('resize', onResize);
           resize();
           render(performance.now());
+
+          var ready = avatarsReady.then(function () {
+            if (state.running) {
+              renderFrame(performance.now());
+              canvas.classList.add('splash-canvas-ready');
+            }
+          });
 
           var handle = {
             stop: function () {
@@ -1181,7 +1223,7 @@
 
         function preloadAvatarImages() {
           return Promise.allSettled(
-            AVATAR_URLS.map(function (url) {
+            SPLASH_AVATAR_URLS.map(function (url) {
               return loadAvatarImage(url);
             })
           ).then(function () {});

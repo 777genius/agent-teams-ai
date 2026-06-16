@@ -1,7 +1,7 @@
 import { buildMixedPersistedLaunchSnapshot } from '@features/team-runtime-lanes/core/domain/buildMixedPersistedLaunchSnapshot';
 import {
   fromProvisioningMembers,
-  isMixedOpenCodeSideLanePlan,
+  isOpenCodeSideLanePlan,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 
@@ -11,6 +11,7 @@ export interface TeamRuntimeLaneCoordinator {
   planProvisioningMembers(params: {
     leadProviderId?: TeamProviderId;
     members: TeamCreateRequest['members'];
+    baseCwd?: string;
     hasOpenCodeRuntimeAdapter: boolean;
   }): TeamRuntimeLanePlan;
   buildAggregateLaunchSnapshot(
@@ -22,13 +23,15 @@ export interface TeamRuntimeLaneCoordinator {
 export function createTeamRuntimeLaneCoordinator(): TeamRuntimeLaneCoordinator {
   return {
     planProvisioningMembers(params) {
-      const lanePlan = fromProvisioningMembers(params.leadProviderId, params.members);
+      const lanePlan = fromProvisioningMembers(params.leadProviderId, params.members, {
+        baseCwd: params.baseCwd,
+      });
       if (!lanePlan.ok) {
         throw new Error(lanePlan.message);
       }
-      if (isMixedOpenCodeSideLanePlan(lanePlan.plan) && !params.hasOpenCodeRuntimeAdapter) {
+      if (isOpenCodeSideLanePlan(lanePlan.plan) && !params.hasOpenCodeRuntimeAdapter) {
         throw new Error(
-          'Mixed teams with OpenCode side lanes require the OpenCode runtime adapter to be registered.'
+          'OpenCode side lanes require the OpenCode runtime adapter to be registered.'
         );
       }
       return lanePlan.plan;
@@ -37,7 +40,7 @@ export function createTeamRuntimeLaneCoordinator(): TeamRuntimeLaneCoordinator {
       return buildMixedPersistedLaunchSnapshot(params);
     },
     isMixedSideLanePlan(plan) {
-      return isMixedOpenCodeSideLanePlan(plan);
+      return isOpenCodeSideLanePlan(plan);
     },
   };
 }

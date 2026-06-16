@@ -643,7 +643,9 @@ export class CodexSessionFileRecentProjectsSourceAdapter implements RecentProjec
       .sort((left, right) => right.lastActivityAt - left.lastActivityAt)
       .slice(0, CODEX_PROJECT_CANDIDATE_LIMIT);
     const durationMs = Date.now() - startedAt;
-    if (degraded) {
+    // Large Codex histories often hit scan budgets while still producing useful candidates.
+    // Keep the detailed partial warning for user-visible empty results only.
+    if (degraded && snapshots.length === 0) {
       this.deps.logger.warn('codex session-file recent-projects source partial', {
         files: candidateFiles.length,
         visitedFiles,

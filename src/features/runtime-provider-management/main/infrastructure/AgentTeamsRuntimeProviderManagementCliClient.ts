@@ -242,7 +242,7 @@ function buildOpenCodeProfileNodeModulesLinkDiagnostics(
 
   const summary = 'OpenCode managed profile node_modules link was blocked.';
   const likelyCause =
-    'Windows denied creating the managed OpenCode profile node_modules link. The runtime does not yet fall back to a junction or local profile directory on Windows — this is a known limitation.';
+    'Windows denied creating the managed OpenCode profile node_modules link. The app attempted automatic junction recovery when possible, but the link is still unavailable.';
   return {
     summary,
     likelyCause,
@@ -253,7 +253,7 @@ function buildOpenCodeProfileNodeModulesLinkDiagnostics(
     stderrPreview: message,
     stdoutPreview: null,
     hints: [
-      'The next runtime update will include automatic junction fallback for Windows.',
+      'The app attempts automatic junction fallback for this Windows link failure before showing this error.',
       'As a temporary workaround, enable Windows Developer Mode or run Agent Teams AI as Administrator.',
       'After enabling Developer Mode, refresh the OpenCode provider catalog.',
     ],
@@ -1096,7 +1096,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       if (process.platform === 'win32' && isOpenCodeNodeModulesSymlinkError(failure.message)) {
         const profileId = extractProfileIdFromSymlinkError(failure.message);
         if (profileId) {
-          const junctionReady = ensureOpenCodeProfileNodeModulesJunction(profileId, failure.message);
+          const junctionReady = ensureOpenCodeProfileNodeModulesJunction(
+            profileId,
+            failure.message
+          );
           if (junctionReady) {
             try {
               const retryResult = await execCli(
@@ -1116,7 +1119,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         }
       }
 
-      const retryResponse = extractJsonObjectFromError<RuntimeProviderManagementViewResponse>(error);
+      const retryResponse =
+        extractJsonObjectFromError<RuntimeProviderManagementViewResponse>(error);
       if (retryResponse) {
         return retryResponse;
       }
@@ -1176,7 +1180,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       if (process.platform === 'win32' && isOpenCodeNodeModulesSymlinkError(failure.message)) {
         const profileId = extractProfileIdFromSymlinkError(failure.message);
         if (profileId) {
-          const junctionReady = ensureOpenCodeProfileNodeModulesJunction(profileId, failure.message);
+          const junctionReady = ensureOpenCodeProfileNodeModulesJunction(
+            profileId,
+            failure.message
+          );
           if (junctionReady) {
             try {
               const retryResult = await execCli(

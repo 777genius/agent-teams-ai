@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "ตัวเลือกสำหรับผู้ใช้ขั้นสูง: ส่งออก/นำเข้าการตั้งค่า, รีเซ็ตค่าเริ่มต้น และแก้ไขการกำหนดค่าดิบ",
+      "label": "ขั้นสูง"
+    },
+    "general": {
+      "description": "การตั้งค่าหลักของแอป เช่น ธีม, ภาษา, ความหนาแน่นในการแสดงผล และพฤติกรรมตอนเริ่มต้น",
+      "label": "ทั่วไป"
+    },
+    "infoAriaLabel": "{{label}} คืออะไร?",
+    "notifications": {
+      "description": "ควบคุมว่าจะได้รับการแจ้งเตือนเกี่ยวกับกิจกรรมของเอเจนต์ การทำงานเสร็จ และข้อผิดพลาดเมื่อใดและอย่างไร",
+      "label": "การแจ้งเตือน"
+    }
+  },
+  "view": {
+    "description": "จัดการการตั้งค่าแอปของคุณ",
+    "loading": "กำลังโหลดการตั้งค่า...",
+    "title": "การตั้งค่า"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "test": "ทดสอบ"
+    },
+    "defaults": {
+      "allProjects": "ทุกโปรเจกต์",
+      "allProjectsHint": "การทดสอบใช้ {{project}} ค่าเริ่มต้นจะใช้เว้นแต่โปรเจกต์มีการแทนที่",
+      "loadingContexts": "กำลังโหลดบริบท...",
+      "projectHint": "การบันทึกจะแทนที่เฉพาะ {{project}} เท่านั้น",
+      "projectOverrideContext": "บริบทการแทนที่โปรเจกต์",
+      "scopeDescriptionAllProjects": "ค่าเริ่มต้นสำหรับทุกโปรเจกต์ที่ไม่มีการแทนที่ OpenCode ของตัวเอง",
+      "scopeDescriptionProject": "แทนที่เฉพาะโปรเจกต์ที่เลือก ทีมที่กำลังทำงานจะไม่ถูกเปลี่ยน",
+      "selectProjectContext": "เลือกบริบทโปรเจกต์",
+      "selectProjectHint": "เลือกโปรเจกต์ก่อนทดสอบโมเดลในเครื่องหรือบันทึกค่าเริ่มต้น",
+      "selectValidationContext": "เลือกบริบทการตรวจสอบ",
+      "setAllProjectsDefault": "ตั้งค่าเริ่มต้นทุกโปรเจกต์",
+      "setProjectDefault": "ตั้งค่าเริ่มต้นโปรเจกต์",
+      "thisProject": "โปรเจกต์นี้",
+      "title": "ค่าเริ่มต้น OpenCode",
+      "validationContext": "บริบทการตรวจสอบ"
+    },
+    "diagnostics": {
+      "copied": "คัดลอกการวินิจฉัยแล้ว",
+      "copiedShort": "คัดลอกแล้ว",
+      "copy": "คัดลอกการวินิจฉัย",
+      "hints": "คำใบ้",
+      "likelyCause": "สาเหตุที่เป็นไปได้:",
+      "windowsSymlinkAdminHint": "Windows: รัน Agent Teams AI ในฐานะผู้ดูแลระบบ"
+    },
+    "models": {
+      "alreadyDefault": "นี่เป็นค่าเริ่มต้น OpenCode ที่เลือกอยู่แล้ว",
+      "empty": "ไม่พบโมเดล",
+      "emptyFree": "ไม่พบโมเดลฟรี",
+      "emptyRecommended": "ไม่พบโมเดลที่แนะนำ",
+      "emptyRecommendedFree": "ไม่พบโมเดลฟรีที่แนะนำ",
+      "freeOnly": "ฟรีเท่านั้น",
+      "launchableDescription": "เส้นทางที่รู้จักจากการตั้งค่า OpenCode, โมเดลฟรีในตัว และค่าเริ่มต้นปัจจุบัน เส้นทางในเครื่องต้องผ่านการทดสอบสำเร็จก่อนจึงจะพร้อมสำหรับการเริ่มทีม",
+      "launchableTitle": "เส้นทางโมเดล OpenCode",
+      "loadingRoutes": "กำลังโหลดเส้นทางโมเดล OpenCode...",
+      "noRoutesMatch": "ไม่มีเส้นทางโมเดล OpenCode ที่ตรงกับ \"{{query}}\"",
+      "noneReported": "ยังไม่มีการรายงานเส้นทางโมเดล OpenCode ตั้งค่าเส้นทางในเครื่องใน OpenCode หรือใช้แท็บผู้ให้บริการเพื่อตรวจสอบผู้ให้บริการในแคตตาล็อก",
+      "recommendedOnly": "ที่แนะนำเท่านั้น",
+      "searchPlaceholder": "ค้นหาโมเดล",
+      "selectProjectBeforeTesting": "เลือกบริบทโปรเจกต์ก่อนทดสอบโมเดล",
+      "selectProjectBeforeTestingDefaults": "เลือกบริบทโปรเจกต์ก่อนทดสอบหรือบันทึกค่าเริ่มต้น OpenCode",
+      "testInProgress": "การทดสอบโมเดลกำลังทำงานอยู่แล้ว",
+      "useInTeamPicker": "บันทึกสำหรับตัวเลือกทีม",
+      "validationContextRequired": "เลือกบริบทการตรวจสอบด้านบนเพื่อเปิดใช้งานการทดสอบและตั้งเป็นค่าเริ่มต้น การบันทึกสำหรับตัวเลือกทีมจะจัดเก็บเส้นทางสำหรับทีมใหม่เท่านั้น",
+      "actionsUnavailable": "การดำเนินการไม่พร้อมใช้งานชั่วคราว",
+      "defaultSaveInProgress": "กำลังบันทึกค่าเริ่มต้น OpenCode",
+      "routeUnavailableAuth": "ผู้ให้บริการนี้ต้องมีการยืนยันตัวตนก่อนจึงจะใช้โมเดลนี้ได้",
+      "routeUnavailableFailed": "เส้นทางโมเดลนี้ไม่ผ่านการทดสอบการทำงานครั้งล่าสุด",
+      "routeUnavailableGeneric": "เส้นทางโมเดลนี้ไม่สามารถใช้ได้ในขณะนี้",
+      "routeUnavailableUnknown": "โมเดลนี้เป็นค่าเริ่มต้น OpenCode ปัจจุบัน แต่ยังไม่พร้อมใช้งานในแคตตาล็อกสด"
+    },
+    "providers": {
+      "catalog": "แคตตาล็อกผู้ให้บริการ OpenCode",
+      "countFallback": "ผู้ให้บริการ OpenCode",
+      "description": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน",
+      "loadMore": "โหลดผู้ให้บริการเพิ่มเติม",
+      "loading": "กำลังโหลดผู้ให้บริการ OpenCode",
+      "noMatches": "ไม่มีผู้ให้บริการที่ตรงกับการค้นหานั้น",
+      "noneReported": "ไม่มีการรายงานผู้ให้บริการ OpenCode จากรันไทม์ที่จัดการ",
+      "recommended": "แนะนำ",
+      "refreshCatalog": "รีเฟรชแคตตาล็อก",
+      "searchPlaceholder": "ค้นหาผู้ให้บริการ",
+      "description_few": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน",
+      "description_many": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน",
+      "description_one": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน",
+      "description_other": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน"
+    },
+    "setup": {
+      "loading": "กำลังโหลดการตั้งค่าผู้ให้บริการ..."
+    },
+    "summary": {
+      "defaultModel": "ค่าเริ่มต้น OpenCode: {{model}}",
+      "loading": "กำลังโหลดรันไทม์ OpenCode ที่จัดการ, ผู้ให้บริการที่เชื่อมต่อ และค่าเริ่มต้นของโมเดล...",
+      "source": "แหล่งที่มา: {{source}}",
+      "title": "รันไทม์ OpenCode"
+    },
+    "tabs": {
+      "models": "โมเดล",
+      "providers": "ผู้ให้บริการ"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "ค้นหาเส้นทางโมเดล"
+    },
+    "badges": {
+      "usedInTeamPicker": "บันทึกสำหรับตัวเลือกทีมแล้ว",
+      "free": "ฟรี",
+      "local": "ในเครื่อง",
+      "configured": "ตั้งค่าแล้ว",
+      "knownRoute": "เส้นทางที่รู้จัก",
+      "connected": "เชื่อมต่อแล้ว",
+      "verified": "ยืนยันแล้ว",
+      "needsTest": "ต้องทดสอบ",
+      "failed": "ล้มเหลว",
+      "unknown": "ไม่ทราบ",
+      "default": "ค่าเริ่มต้น"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "ภาษาสำหรับการสื่อสารของเอเจนต์",
+      "descriptionWithDetected": "ภาษาสำหรับการสื่อสารของเอเจนต์ (ตรวจพบ: {{detected}})",
+      "emptyMessage": "ไม่พบภาษา",
+      "label": "ภาษา",
+      "searchPlaceholder": "ค้นหาภาษา...",
+      "selectPlaceholder": "เลือกภาษา...",
+      "title": "ภาษาเอเจนต์"
+    },
+    "appLanguage": {
+      "description": "ภาษาสำหรับอินเทอร์เฟซแอปพลิเคชัน",
+      "label": "ภาษา",
+      "title": "ภาษาแอป"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "ขยายแต่ละเทิร์นของการตอบกลับโดยอัตโนมัติเมื่อเปิดทรานสคริปต์หรือได้รับข้อความใหม่",
+        "label": "ขยายการตอบกลับของ AI โดยค่าเริ่มต้น"
+      },
+      "nativeTitleBar": {
+        "description": "ใช้กรอบหน้าต่างระบบเริ่มต้นแทนแถบชื่อแบบกำหนดเอง",
+        "label": "ใช้แถบชื่อดั้งเดิม",
+        "restartConfirm": {
+          "confirmLabel": "รีสตาร์ท",
+          "message": "แอปต้องรีสตาร์ทเพื่อใช้การเปลี่ยนแปลงแถบชื่อ รีสตาร์ทเลยหรือไม่?",
+          "title": "ต้องรีสตาร์ท"
+        }
+      },
+      "theme": {
+        "description": "เลือกธีมสีที่คุณต้องการ",
+        "label": "ธีม",
+        "options": {
+          "dark": "มืด",
+          "light": "สว่าง",
+          "system": "ระบบ"
+        }
+      },
+      "title": "รูปลักษณ์"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "เริ่มเซิร์ฟเวอร์ HTTP เพื่อเข้าถึง UI จากเบราว์เซอร์หรือฝังใน iframe",
+        "label": "เปิดใช้งานโหมดเซิร์ฟเวอร์"
+      },
+      "title": "การเข้าถึงผ่านเบราว์เซอร์"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "เลือกโฟลเดอร์",
+        "selectFolderManually": "เลือกโฟลเดอร์ด้วยตนเอง",
+        "useAutoDetect": "ใช้การตรวจหาอัตโนมัติ",
+        "useFolder": "ใช้โฟลเดอร์",
+        "usePath": "ใช้เส้นทาง",
+        "useThisPath": "ใช้เส้นทางนี้",
+        "useWsl": "ใช้ Linux/WSL อยู่?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "โฟลเดอร์นี้ไม่มีไดเรกทอรี \"projects\" ดำเนินการต่อหรือไม่?",
+          "title": "ไม่พบไดเรกทอรี projects"
+        },
+        "notClaudeDir": {
+          "message": "โฟลเดอร์นี้ชื่อ \"{{folderName}}\" ไม่ใช่ \".claude\" ดำเนินการต่อหรือไม่?",
+          "title": "โฟลเดอร์ที่เลือกไม่ใช่ .claude"
+        },
+        "noWslPaths": {
+          "message": "ไม่พบ WSL distro ที่มีข้อมูล Claude โดยอัตโนมัติ เลือกโฟลเดอร์ด้วยตนเองหรือไม่?",
+          "title": "ไม่พบเส้นทาง Claude ใน WSL"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" ไม่มีไดเรกทอรี \"projects\" ดำเนินการต่อหรือไม่?",
+          "title": "เส้นทาง WSL ไม่มีไดเรกทอรี projects"
+        }
+      },
+      "current": {
+        "autoDetected": "ตรวจพบอัตโนมัติ: {{path}}",
+        "autoDetectedPath": "กำลังใช้เส้นทางที่ตรวจพบอัตโนมัติ",
+        "customPath": "กำลังใช้เส้นทางแบบกำหนดเอง",
+        "label": "รากในเครื่องปัจจุบัน"
+      },
+      "description": "เลือกว่าโฟลเดอร์ในเครื่องใดจะถูกใช้เป็นรากข้อมูล Claude ของคุณ",
+      "errors": {
+        "detectWslFailed": "ตรวจหาเส้นทางราก Claude ใน WSL ไม่สำเร็จ",
+        "loadFailed": "โหลดการตั้งค่าราก Claude ในเครื่องไม่สำเร็จ",
+        "updateFailed": "อัปเดตราก Claude ไม่สำเร็จ"
+      },
+      "title": "ราก Claude ในเครื่อง",
+      "wslModal": {
+        "closeAriaLabel": "ปิดหน้าต่างเส้นทาง WSL",
+        "description": "WSL distribution ที่ตรวจพบและตัวเลือกราก Claude",
+        "noProjectsDir": "ไม่พบไดเรกทอรี projects",
+        "title": "เลือกราก Claude ใน WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "ช่วยปรับปรุงแอปโดยส่งข้อมูลการขัดข้องและประสิทธิภาพแบบไม่ระบุตัวตน",
+        "label": "ส่งรายงานการขัดข้อง"
+      },
+      "title": "ความเป็นส่วนตัว"
+    },
+    "server": {
+      "runningOn": "กำลังทำงานบน",
+      "standaloneModeDescription": "กำลังทำงานในโหมดสแตนด์อโลน เซิร์ฟเวอร์ HTTP ทำงานอยู่เสมอ การแจ้งเตือนของระบบไม่พร้อมใช้งาน - ทริกเกอร์การแจ้งเตือนจะถูกบันทึกในแอปเท่านั้น",
+      "title": "เซิร์ฟเวอร์"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "เริ่มแอปโดยอัตโนมัติเมื่อคุณเข้าสู่ระบบ",
+        "label": "เริ่มเมื่อเข้าสู่ระบบ"
+      },
+      "showDockIcon": {
+        "description": "แสดงไอคอนแอปใน dock (macOS)",
+        "label": "แสดงไอคอนใน dock"
+      },
+      "title": "การเริ่มต้น"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "การแจ้งเตือนอาจไม่ทำงานในโหมดพัฒนา macOS ระบุแอปเป็น \"Electron\" (bundle ID",
+      "descriptionSuffix": ") แทนชื่อแอปสำหรับใช้งานจริง ตรวจสอบ System Settings > Notifications > Electron เพื่อยืนยันสิทธิ์",
+      "title": "โหมดพัฒนา"
+    },
+    "ignoredRepositories": {
+      "description": "การแจ้งเตือนจากที่เก็บโค้ดเหล่านี้จะถูกละเว้น",
+      "empty": "ไม่มีที่เก็บโค้ดที่ละเว้น",
+      "selectPlaceholder": "เลือกที่เก็บโค้ดที่จะละเว้น...",
+      "title": "ที่เก็บโค้ดที่ละเว้น"
+    },
+    "settings": {
+      "enabled": {
+        "description": "แสดงการแจ้งเตือนของระบบสำหรับข้อผิดพลาดและเหตุการณ์",
+        "label": "เปิดใช้งานการแจ้งเตือนของระบบ"
+      },
+      "sound": {
+        "description": "เล่นเสียงเมื่อมีการแจ้งเตือนปรากฏ",
+        "label": "เล่นเสียง"
+      },
+      "subagentErrors": {
+        "description": "ตรวจหาและแจ้งเตือนเกี่ยวกับข้อผิดพลาดในเซสชันเอเจนต์ย่อย",
+        "label": "รวมข้อผิดพลาดของเอเจนต์ย่อย"
+      },
+      "title": "การตั้งค่าการแจ้งเตือน"
+    },
+    "snooze": {
+      "clear": "ล้างการเลื่อน",
+      "description": "หยุดการแจ้งเตือนชั่วคราว",
+      "descriptionWithTime": "เลื่อนจนถึง {{time}}",
+      "label": "เลื่อนการแจ้งเตือน",
+      "options": {
+        "15": "15 นาที",
+        "30": "30 นาที",
+        "60": "1 ชั่วโมง",
+        "120": "2 ชั่วโมง",
+        "240": "4 ชั่วโมง",
+        "-1": "จนถึงพรุ่งนี้"
+      },
+      "selectDuration": "เลือกระยะเวลา..."
+    },
+    "taskCompletion": {
+      "description": "รับการแจ้งเตือนระบบปฏิบัติการเมื่อ Claude ทำงานเสร็จ - เสียง, แบนเนอร์ และป้ายบน Dock/แถบงาน ใช้งานได้บน macOS, Linux และ Windows",
+      "installPlugin": "ติดตั้งปลั๊กอิน claude-notifications-go",
+      "title": "การแจ้งเตือนเมื่องานเสร็จ"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "แจ้งเตือนเมื่อทุกงานในทีมถึงสถานะเสร็จสิ้น",
+        "label": "งานทั้งหมดเสร็จสิ้น"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "เมื่อ Claude รายงานเวลารีเซ็ต ให้กำหนดการกระตุ้นติดตามผลสำหรับหัวหน้าทีมหลังจากขีดจำกัดรีเซ็ต",
+        "label": "ดำเนินการต่ออัตโนมัติหลังถึงขีดจำกัดอัตรา"
+      },
+      "clarifications": {
+        "description": "แสดงการแจ้งเตือนระบบปฏิบัติการเมื่องานต้องการข้อมูลจากคุณ",
+        "label": "การแจ้งเตือนการชี้แจงงาน"
+      },
+      "crossTeamMessage": {
+        "description": "แจ้งเตือนเมื่อมีข้อความมาจากอีกทีมหนึ่ง",
+        "label": "การแจ้งเตือนข้อความข้ามทีม"
+      },
+      "leadInbox": {
+        "description": "แจ้งเตือนเมื่อเพื่อนร่วมทีมส่งข้อความถึงหัวหน้าทีม",
+        "label": "การแจ้งเตือนกล่องข้อความหัวหน้าทีม"
+      },
+      "statusChange": {
+        "description": "แสดงการแจ้งเตือนระบบปฏิบัติการเมื่อสถานะของงานเปลี่ยนแปลง",
+        "label": "การแจ้งเตือนการเปลี่ยนสถานะงาน",
+        "onlySolo": {
+          "description": "แจ้งเตือนเฉพาะเมื่อทีมไม่มีเพื่อนร่วมทีม",
+          "label": "เฉพาะในโหมดเดี่ยว"
+        },
+        "statuses": {
+          "description": "สถานะเป้าหมายใดที่จะกระตุ้นการแจ้งเตือน",
+          "label": "แจ้งเตือนในสถานะเหล่านี้",
+          "options": {
+            "approved": "อนุมัติแล้ว",
+            "completed": "เสร็จสิ้น",
+            "deleted": "ลบแล้ว",
+            "in_progress": "เริ่มแล้ว",
+            "needsFix": "ต้องแก้ไข",
+            "pending": "รอดำเนินการ",
+            "review": "รีวิว"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "แสดงการแจ้งเตือนระบบปฏิบัติการเมื่อเอเจนต์แสดงความคิดเห็นในงาน",
+        "label": "การแจ้งเตือนความคิดเห็นในงาน"
+      },
+      "taskCreated": {
+        "description": "แสดงการแจ้งเตือนระบบปฏิบัติการเมื่อมีการสร้างงานใหม่",
+        "label": "การแจ้งเตือนการสร้างงาน"
+      },
+      "teamLaunched": {
+        "description": "แจ้งเตือนเมื่อทีมเริ่มเสร็จและพร้อมใช้งาน",
+        "label": "การแจ้งเตือนการเริ่มทีม"
+      },
+      "title": "การแจ้งเตือนของทีม",
+      "toolApproval": {
+        "description": "แจ้งเตือนเมื่อเครื่องมือต้องการการอนุมัติจากคุณ (อนุญาต/ปฏิเสธ) ขณะที่แอปไม่ได้โฟกัส",
+        "label": "การแจ้งเตือนการอนุมัติเครื่องมือ"
+      },
+      "userInbox": {
+        "description": "แจ้งเตือนเมื่อเพื่อนร่วมทีมส่งข้อความถึงคุณ",
+        "label": "การแจ้งเตือนกล่องข้อความผู้ใช้"
+      }
+    },
+    "test": {
+      "action": "ส่งทดสอบ",
+      "description": "ส่งการแจ้งเตือนทดสอบเพื่อยืนยันการส่ง",
+      "failedToSend": "ส่งการแจ้งเตือนทดสอบไม่สำเร็จ",
+      "label": "การแจ้งเตือนทดสอบ",
+      "sending": "กำลังส่ง...",
+      "sent": "ส่งแล้ว!",
+      "unknownError": "ข้อผิดพลาดที่ไม่ทราบ"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "ไอคอนแอป",
+      "description": "ประกอบทีมเอเจนต์ AI ที่ทำงานอัตโนมัติแบบขนาน สื่อสารข้ามทีม และจัดการงานบนบอร์ด Kanban - พร้อมการรีวิวโค้ดในตัว การตรวจสอบกระบวนการแบบสด และการมองเห็นเครื่องมืออย่างเต็มที่",
+      "standalone": "สแตนด์อโลน",
+      "title": "เกี่ยวกับ",
+      "version": "เวอร์ชัน {{version}}"
+    },
+    "configuration": {
+      "editConfig": "แก้ไขการตั้งค่า",
+      "exportConfig": "ส่งออกการตั้งค่า",
+      "importConfig": "นำเข้าการตั้งค่า",
+      "openInEditor": "เปิดในตัวแก้ไข",
+      "resetToDefaults": "รีเซ็ตเป็นค่าเริ่มต้น",
+      "title": "การกำหนดค่า"
+    },
+    "updates": {
+      "available": "มี v{{version}}",
+      "check": "ตรวจสอบการอัปเดต",
+      "checking": "กำลังตรวจสอบ...",
+      "ready": "การอัปเดตพร้อมแล้ว",
+      "unknownVersion": "ไม่ทราบ",
+      "upToDate": "เป็นเวอร์ชันล่าสุด"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "โหลดการตั้งค่าไม่สำเร็จ",
+      "saveFailed": "บันทึกการตั้งค่าไม่สำเร็จ"
+    },
+    "footer": {
+      "autoSave": "การเปลี่ยนแปลงจะบันทึกอัตโนมัติหลังการแก้ไข",
+      "toClose": "เพื่อปิด",
+      "escapeKey": "Esc"
+    },
+    "loading": "กำลังโหลดการตั้งค่า...",
+    "status": {
+      "invalidJson": "JSON ไม่ถูกต้อง",
+      "saveFailed": "บันทึกล้มเหลว",
+      "saved": "บันทึกแล้ว",
+      "saving": "กำลังบันทึก..."
+    },
+    "title": "แก้ไขการกำหนดค่า"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "ยกเลิก",
+      "submit": "เพิ่มทริกเกอร์",
+      "title": "เพิ่มทริกเกอร์แบบกำหนดเอง"
+    },
+    "builtin": {
+      "description": "ทริกเกอร์เริ่มต้นที่มาพร้อมกับแอปพลิเคชัน คุณสามารถเปิดหรือปิดใช้งานและปรับแต่งรูปแบบได้",
+      "title": "ทริกเกอร์ในตัว"
+    },
+    "card": {
+      "builtinBadge": "ในตัว",
+      "collapseAriaLabel": "ยุบ",
+      "deleteAriaLabel": "ลบทริกเกอร์",
+      "editNameAriaLabel": "แก้ไขชื่อ",
+      "expandAriaLabel": "ขยาย"
+    },
+    "color": {
+      "customHexTitle": "สี hex แบบกำหนดเอง",
+      "invalidHex": "hex ไม่ถูกต้อง"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "แจ้งเตือนถ้า >",
+      "emptyPatternHint": "เว้นว่างไว้เพื่อจับคู่เนื้อหาทั้งหมด ใช้ไวยากรณ์ regex ของ JavaScript",
+      "errorStatusDescription": "ทริกเกอร์เมื่อการทำงานของเครื่องมือรายงานข้อผิดพลาด (is_error: true)",
+      "tokensUnit": "โทเค็น",
+      "matchPatternPlaceholder": "เช่น error|failed|exception"
+    },
+    "custom": {
+      "description": "สร้างทริกเกอร์ของคุณเองเพื่อรับการแจ้งเตือนสำหรับรูปแบบหรือผลลัพธ์เครื่องมือที่เจาะจง",
+      "empty": "ยังไม่ได้ตั้งค่าทริกเกอร์แบบกำหนดเอง",
+      "title": "ทริกเกอร์แบบกำหนดเอง"
+    },
+    "errors": {
+      "invalidRegexPattern": "รูปแบบ regex ไม่ถูกต้อง"
+    },
+    "fields": {
+      "contentType": "ประเภทเนื้อหา",
+      "matchField": "ฟิลด์ที่จับคู่",
+      "matchPattern": "รูปแบบที่จับคู่ (Regex)",
+      "scopeToolName": "ขอบเขต / ชื่อเครื่องมือ",
+      "scopeToolNameOptional": "ขอบเขต / ชื่อเครื่องมือ (ไม่บังคับ)",
+      "threshold": "เกณฑ์",
+      "tokenType": "ประเภทโทเค็น",
+      "triggerNamePlaceholder": "เช่น แจ้งเตือนเมื่อ Build ล้มเหลว",
+      "triggerNameRequired": "ชื่อทริกเกอร์ *"
+    },
+    "ignorePatterns": {
+      "hint": "กด Enter เพื่อเพิ่ม การแจ้งเตือนจะถูกข้ามหากมีรูปแบบใดตรงกัน",
+      "placeholder": "เพิ่ม regex ที่จะละเว้น...",
+      "removeAriaLabel": "ลบรูปแบบที่ละเว้น",
+      "summary": "ขั้นสูง: กฎการยกเว้น",
+      "title": "รูปแบบที่ละเว้น (ข้ามหากตรงกัน)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "ผลลัพธ์ข้อความ",
+        "thinking": "การคิด",
+        "tool_result": "ผลลัพธ์เครื่องมือ",
+        "tool_use": "การใช้เครื่องมือ"
+      },
+      "matchFields": {
+        "args": "อาร์กิวเมนต์",
+        "command": "คำสั่ง",
+        "content": "เนื้อหา",
+        "description": "คำอธิบาย",
+        "file_path": "เส้นทางไฟล์",
+        "fullInput": "อินพุตเต็ม (JSON)",
+        "glob": "ตัวกรอง Glob",
+        "new_string": "สตริงใหม่",
+        "old_string": "สตริงเก่า",
+        "path": "เส้นทาง",
+        "pattern": "รูปแบบ",
+        "prompt": "พรอมต์",
+        "query": "คำค้นหา",
+        "skill": "ชื่อสกิล",
+        "subagent_type": "ประเภทเอเจนต์ย่อย",
+        "text": "เนื้อหาข้อความ",
+        "thinking": "เนื้อหาการคิด",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "รูปแบบเนื้อหา",
+        "error_status": "ข้อผิดพลาดการทำงาน",
+        "token_threshold": "การใช้โทเค็นสูง"
+      },
+      "tokenTypes": {
+        "input": "โทเค็นอินพุต",
+        "output": "โทเค็นเอาต์พุต",
+        "total": "โทเค็นทั้งหมด"
+      },
+      "toolNames": {
+        "anyTool": "เครื่องมือใดก็ได้"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "ทริกเกอร์ทดสอบ",
+      "detectedSuffix": "ข้อผิดพลาดจะถูกตรวจพบ",
+      "more": "...และอีก {{count}}",
+      "more_few": "...และอีก {{count}}",
+      "more_many": "...และอีก {{count}}",
+      "more_one": "...และอีก {{count}}",
+      "more_other": "...และอีก {{count}}",
+      "testTrigger": "ทดสอบทริกเกอร์",
+      "testing": "กำลังทดสอบ...",
+      "title": "ตัวอย่าง",
+      "truncatedWarning": "การค้นหาหยุดก่อนกำหนด (หมดเวลาหรือถึงขีดจำกัดจำนวน) ผลลัพธ์ที่ตรงกันจริงอาจมีมากกว่า",
+      "viewSession": "ดูเซสชัน"
+    },
+    "repositoryScope": {
+      "empty": "ไม่ได้เลือกที่เก็บโค้ด - ทริกเกอร์ใช้กับทุกที่เก็บโค้ด",
+      "hint": "เมื่อเลือกที่เก็บโค้ด ทริกเกอร์นี้จะทำงานเฉพาะกับข้อผิดพลาดในที่เก็บโค้ดเหล่านั้นเท่านั้น",
+      "placeholder": "เลือกที่เก็บโค้ดที่จะเพิ่ม...",
+      "summary": "ขั้นสูง: ขอบเขตที่เก็บโค้ด",
+      "title": "จำกัดเฉพาะที่เก็บโค้ด (ใช้กับที่เก็บโค้ดที่เลือกเท่านั้น)"
+    },
+    "sections": {
+      "configuration": "การกำหนดค่า",
+      "dotColor": "สีจุด",
+      "generalInfo": "ข้อมูลทั่วไป",
+      "triggerCondition": "เงื่อนไขทริกเกอร์"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "เพิ่มโปรไฟล์",
+      "cancel": "ยกเลิก",
+      "deleteProfile": "ลบโปรไฟล์",
+      "editProfile": "แก้ไขโปรไฟล์",
+      "save": "บันทึก"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "อัตโนมัติ (จาก SSH Config)",
+      "password": "รหัสผ่าน",
+      "privateKey": "Private Key"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "ลบ",
+      "message": "คุณแน่ใจหรือไม่ว่าต้องการลบ \"{{name}}\"? การดำเนินการนี้ไม่สามารถยกเลิกได้",
+      "title": "ลบโปรไฟล์"
+    },
+    "description": "บันทึกโปรไฟล์การเชื่อมต่อ SSH เพื่อการเชื่อมต่อใหม่อย่างรวดเร็ว",
+    "empty": {
+      "description": "เพิ่มโปรไฟล์ SSH เพื่อเชื่อมต่ออย่างรวดเร็ว",
+      "title": "ไม่มีโปรไฟล์ที่บันทึกไว้"
+    },
+    "form": {
+      "authentication": "การยืนยันตัวตน",
+      "host": "โฮสต์",
+      "name": "ชื่อ",
+      "passwordPrompt": "คุณจะถูกถามรหัสผ่านเมื่อเชื่อมต่อ",
+      "port": "พอร์ต",
+      "privateKeyPath": "เส้นทาง Private Key",
+      "username": "ชื่อผู้ใช้",
+      "namePlaceholder": "เซิร์ฟเวอร์ของฉัน",
+      "hostPlaceholder": "ชื่อโฮสต์หรือ IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "กำลังโหลดโปรไฟล์...",
+    "title": "โปรไฟล์พื้นที่ทำงาน"
+  },
+  "connection": {
+    "actions": {
+      "connect": "เชื่อมต่อ",
+      "connecting": "กำลังเชื่อมต่อ...",
+      "disconnect": "ตัดการเชื่อมต่อ",
+      "testConnection": "ทดสอบการเชื่อมต่อ",
+      "testing": "กำลังทดสอบ..."
+    },
+    "currentMode": {
+      "description": "แหล่งข้อมูลสำหรับไฟล์เซสชัน",
+      "label": "โหมดปัจจุบัน",
+      "local": "ในเครื่อง ({{path}})"
+    },
+    "description": "เชื่อมต่อกับเครื่องระยะไกลเพื่อดูเซสชัน Claude Code ที่ทำงานอยู่ที่นั่น",
+    "form": {
+      "authentication": "การยืนยันตัวตน",
+      "host": "โฮสต์",
+      "password": "รหัสผ่าน",
+      "port": "พอร์ต",
+      "privateKeyPath": "เส้นทาง Private Key",
+      "username": "ชื่อผู้ใช้",
+      "hostPlaceholder": "ชื่อโฮสต์หรือชื่อแทนใน SSH config",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "โปรไฟล์ที่บันทึกไว้"
+    },
+    "ssh": {
+      "title": "การเชื่อมต่อ SSH"
+    },
+    "status": {
+      "connectedTo": "เชื่อมต่อกับ {{host}}",
+      "remoteSessions": "กำลังดูเซสชันระยะไกลผ่าน SSH"
+    },
+    "test": {
+      "failed": "การเชื่อมต่อล้มเหลว: {{error}}",
+      "success": "เชื่อมต่อสำเร็จ",
+      "unknownError": "ข้อผิดพลาดที่ไม่ทราบ"
+    },
+    "title": "การเชื่อมต่อระยะไกล"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "cancelLogin": "ยกเลิกการเข้าสู่ระบบ",
+      "connectChatGpt": "เชื่อมต่อ ChatGPT",
+      "delete": "ลบ",
+      "disable": "ปิดใช้งาน",
+      "disconnectAccount": "ตัดการเชื่อมต่อบัญชี",
+      "generateLink": "สร้างลิงก์",
+      "openLogin": "เปิดหน้าเข้าสู่ระบบ",
+      "reconnectAnthropic": "เชื่อมต่อ Anthropic ใหม่",
+      "refresh": "รีเฟรช",
+      "replaceKey": "แทนที่คีย์",
+      "saveEndpoint": "บันทึก endpoint",
+      "saveKey": "บันทึกคีย์",
+      "saving": "กำลังบันทึก...",
+      "setApiKey": "ตั้งค่า API key",
+      "updateKey": "อัปเดตคีย์",
+      "useCode": "ใช้โค้ด"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "กำลังโหลดข้อมูลรับรองที่จัดเก็บ...",
+      "projectScope": "โปรเจกต์",
+      "scope": "ขอบเขต",
+      "storedIn": "จัดเก็บใน {{backend}}",
+      "userScope": "ผู้ใช้",
+      "storedInApp": "จัดเก็บในแอป",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "ใช้ Anthropic API key โดยตรงสำหรับการเข้าถึงที่เรียกเก็บผ่าน API เซสชันการสมัครสมาชิก Anthropic ของคุณยังคงใช้งานได้เมื่อคุณสลับกลับ",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "ใช้ OpenAI API key เป็นเส้นทางยืนยันตัวตนรองของ Codex หากคุณสลับ Codex เป็นโหมด API key แอปจะมิเรอร์ OPENAI_API_KEY ไปยัง CODEX_API_KEY สำหรับการเริ่มแบบ native",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "การเข้าถึง API",
+          "description": "ใช้ `GEMINI_API_KEY` สำหรับแบ็กเอนด์ Gemini API CLI SDK และ ADC ไม่จำเป็นต้องใช้",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "เชื่อมต่อแล้ว",
+        "description": "จัดการเซสชันบัญชี Codex app-server ในเครื่องที่ขับเคลื่อนการเริ่มแบบ native ที่รองรับการสมัครสมาชิก",
+        "loginInProgress": "กำลังเข้าสู่ระบบ",
+        "plan": "แผน: {{plan}}",
+        "reconnectRequired": "ต้องเชื่อมต่อใหม่",
+        "title": "บัญชี ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} โหมดอัตโนมัติจะใช้ API key ที่ตรวจพบต่อไปจนกว่าจะเชื่อมต่อ ChatGPT",
+          "detectedApiKeyNeedsApiMode": "{{message}} API key ที่ตรวจพบจะถูกใช้เฉพาะหลังจากคุณสลับ Codex เป็นโหมด API key",
+          "localArtifactsNoSession": "ขณะนี้ Codex CLI รายงานว่าไม่มีบัญชี ChatGPT ที่ใช้งานอยู่ มีข้อมูลบัญชี Codex ในเครื่องอยู่ แต่ยังไม่ได้เลือกเซสชันที่จัดการซึ่งใช้งานอยู่ ขีดจำกัดการใช้งานจะปรากฏที่นี่เฉพาะหลังจาก Codex CLI เห็นบัญชีนั้น",
+          "noActiveAccount": "ขณะนี้ Codex CLI รายงานว่าไม่มีบัญชี ChatGPT ที่ใช้งานอยู่ ขีดจำกัดการใช้งานจะปรากฏที่นี่เฉพาะหลังจาก Codex CLI เห็นบัญชี",
+          "reconnectBeforeUsage": "Codex มีบัญชี ChatGPT ที่เลือกไว้ในเครื่อง แต่เซสชันปัจจุบันต้องเชื่อมต่อใหม่ก่อนที่ขีดจำกัดการใช้งานจะโหลดที่นี่ได้",
+          "usageLimitsAfterReport": "ขีดจำกัดการใช้งานจะปรากฏที่นี่หลังจาก Codex รายงานสำหรับบัญชี ChatGPT ที่เชื่อมต่ออยู่"
+        }
+      },
+      "install": {
+        "checking": "กำลังตรวจสอบ",
+        "downloading": "กำลังดาวน์โหลด",
+        "installCli": "ติดตั้ง Codex CLI",
+        "installing": "กำลังติดตั้ง",
+        "retryInstall": "ลองติดตั้งอีกครั้ง",
+        "title": "ติดตั้ง Codex CLI ลงในข้อมูลแอป"
+      },
+      "rateLimits": {
+        "credits": "เครดิต",
+        "creditsDescription": "เครดิตจะแสดงแยกจากการใช้งานการสมัครสมาชิกตามหน้าต่างเวลา และอาจไม่พร้อมใช้งานสำหรับเซสชัน ChatGPT ที่รองรับด้วยแผน",
+        "noSecondaryWindow": "Codex ไม่ได้คืนค่าหน้าต่างรองสำหรับสแนปช็อตบัญชีนี้",
+        "notReported": "ไม่ได้รายงาน",
+        "primaryReset": "รีเซ็ตหลัก",
+        "primaryUsed": "ใช้ไปหลัก",
+        "primaryWindow": "หน้าต่างหลัก",
+        "remainingLeft": "เหลือ {{value}}",
+        "remainingUnknown": "ไม่ทราบจำนวนที่เหลือ",
+        "secondaryReset": "รีเซ็ตรอง",
+        "secondaryUsed": "ใช้ไปรอง",
+        "secondaryWindow": "หน้าต่างรอง",
+        "usedQuotaNote": "เปอร์เซ็นต์เหล่านี้แสดงโควตาที่ใช้ไป ไม่ใช่โควตาที่เหลือ",
+        "weeklyReset": "รีเซ็ตรายสัปดาห์",
+        "weeklyUsed": "ใช้ไปรายสัปดาห์",
+        "weeklyUsedOneWeek": "ใช้ไปรายสัปดาห์ (1 สัปดาห์)",
+        "weeklyWindow": "หน้าต่างรายสัปดาห์",
+        "secondaryFallback": "รอง",
+        "secondaryWindowNote": " ขีดจำกัดรายสัปดาห์จะแสดงแยกในหน้าต่าง {{window}}",
+        "usageExplanationGeneric": "แสดงโควตาที่ใช้ไป ไม่ใช่โควตาที่เหลือ",
+        "usageExplanationWindowOnly": "แสดงโควตาที่ใช้ไปในหน้าต่าง {{window}} ปัจจุบัน ไม่ใช่โควตาที่เหลือ",
+        "usageExplanationWithRemaining": "ใช้ไป {{used}} - เหลือประมาณ {{remaining}} ในหน้าต่าง {{window}} ปัจจุบัน"
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "ยังไม่ได้ตั้งค่า auth token",
+      "baseUrl": "Base URL",
+      "description": "ใช้ endpoint รันไทม์ในเครื่องที่เข้ากันได้กับ Anthropic",
+      "keepSavedToken": "เว้นว่างไว้เพื่อเก็บ token ที่บันทึกไว้",
+      "title": "Endpoint ในเครื่อง / ที่เข้ากันได้",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "ต้องระบุ Base URL",
+        "firstPartyAnthropic": "ใช้อัตโนมัติ, การสมัครสมาชิก หรือ API key สำหรับ Anthropic แบบ first-party",
+        "httpRequired": "Base URL ต้องใช้ http:// หรือ https://",
+        "invalidUrl": "URL ไม่ถูกต้อง",
+        "noCredentials": "Base URL ต้องไม่มีข้อมูลรับรอง"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "ปิดใช้งาน endpoint แล้ว เก็บ token ที่บันทึกไว้",
+        "endpointSaved": "บันทึก endpoint แล้ว",
+        "endpointSavedTokenMissing": "บันทึก endpoint แล้ว ยังไม่ได้ตั้งค่า auth token"
+      }
+    },
+    "connection": {
+      "authenticationMethod": "วิธีการยืนยันตัวตน",
+      "descriptions": {
+        "anthropic": "เลือกว่าเซสชัน Anthropic ที่เปิดจากแอปจะยืนยันตัวตนอย่างไร",
+        "codex": "เลือกว่า Codex ควรเลือกใช้การสมัครสมาชิก ChatGPT ของคุณหรือ API key เมื่อรันไทม์ native เริ่มทำงาน",
+        "gemini": "ตั้งค่าการเข้าถึง API แบบไม่บังคับ CLI SDK และ ADC ยังคงถูกค้นพบโดยอัตโนมัติ",
+        "opencode": "การยืนยันตัวตนและรายการผู้ให้บริการของ OpenCode จัดการโดยรันไทม์ OpenCode"
+      },
+      "method": "วิธีการเชื่อมต่อ",
+      "mode": "โหมด: {{mode}}",
+      "selected": "เลือกแล้ว",
+      "switching": "กำลังสลับ...",
+      "title": "การเชื่อมต่อ"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ใช้ ANTHROPIC_API_KEY และการเรียกเก็บผ่าน Anthropic API",
+        "autoDescription": "ใช้ค่าเริ่มต้นของรันไทม์ Anthropic และข้อมูลรับรองในเครื่องที่ดีที่สุดที่มี",
+        "hint": "อัตโนมัติจะให้ Anthropic ใช้การแก้ปัญหาข้อมูลรับรองในเครื่องตามค่าเริ่มต้น",
+        "subscriptionDescription": "ใช้เซสชันการเข้าสู่ระบบ Anthropic ในเครื่องและการเข้าถึงการสมัครสมาชิกของคุณ",
+        "subscriptionTitle": "การสมัครสมาชิก Anthropic"
+      },
+      "auto": {
+        "title": "อัตโนมัติ"
+      },
+      "codex": {
+        "apiKeyDescription": "ใช้การเรียกเก็บผ่าน OPENAI_API_KEY และ CODEX_API_KEY สำหรับการเริ่ม Codex แบบ native",
+        "autoDescription": "เลือกใช้บัญชี ChatGPT และการสมัครสมาชิกของคุณ ใช้โหมด API key เฉพาะเมื่อจำเป็น",
+        "chatgptDescription": "ใช้บัญชี ChatGPT ที่เชื่อมต่อและการสมัครสมาชิก Codex ของคุณ",
+        "chatgptTitle": "บัญชี ChatGPT",
+        "hint": "Codex ทำงานผ่านรันไทม์ native เสมอ อัตโนมัติจะเลือกใช้บัญชี ChatGPT ของคุณก่อนที่จะกลับไปใช้ข้อมูลรับรอง API key"
+      }
+    },
+    "description": "จัดการว่าผู้ให้บริการแต่ละรายเชื่อมต่ออย่างไร และเมื่อรองรับ ว่ารันไทม์หลายโมเดลควรใช้แบ็กเอนด์ใด",
+    "fastMode": {
+      "defaultOff": "ปิดโดยค่าเริ่มต้น",
+      "description": "ใช้โหมด Claude Code Fast โดยค่าเริ่มต้นสำหรับการเริ่มทีม Anthropic ใหม่เมื่อโมเดลและรันไทม์ที่กำหนดอนุญาต",
+      "disabledHint": "การเริ่ม Anthropic ใหม่จะใช้ความเร็วปกติเว้นแต่ทีมเปิดใช้งานโหมด Fast อย่างชัดเจน",
+      "enabledHint": "การเริ่ม Anthropic ใหม่จะร้องขอโหมด Fast โดยค่าเริ่มต้นเมื่อโมเดลที่กำหนดรองรับ",
+      "notExposed": "รันไทม์ Anthropic นี้ไม่เปิดเผยโหมด Fast",
+      "preferFast": "เลือกใช้ Fast",
+      "title": "ค่าเริ่มต้นโหมด Fast",
+      "unavailableForRuntime": "โหมด Fast ไม่พร้อมใช้งานสำหรับรันไทม์ Anthropic นี้ในขณะนี้"
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "เลือกโหมด API key แล้ว แต่ยังไม่มีข้อมูลรับรอง Anthropic API",
+      "anthropicStoredKeyAvailable": "มี API key ที่บันทึกไว้ แต่เซสชัน Anthropic ที่เปิดจากแอปจะใช้เฉพาะหลังจากคุณสลับเป็นโหมด API key",
+      "anthropicSubscriptionMissing": "เลือกโหมดการสมัครสมาชิก Anthropic แล้ว เข้าสู่ระบบด้วย Anthropic เพื่อใช้ผู้ให้บริการนี้",
+      "authTokenMissing": "ยังไม่ได้ตั้งค่า auth token endpoint ที่เข้ากันได้กับ Anthropic ในเครื่องหลายแห่งต้องการ token ที่ไม่ว่างเปล่า",
+      "chatgptLoginPending": "กำลังรอการเข้าสู่ระบบบัญชี ChatGPT ให้เสร็จ...",
+      "chatgptLoginStarting": "กำลังเริ่มการเข้าสู่ระบบ ChatGPT...",
+      "codexApiKeyMissing": "เลือกโหมด API key แล้ว แต่ยังไม่มีข้อมูลรับรอง OPENAI_API_KEY หรือ CODEX_API_KEY",
+      "codexLocalArtifactsNoSession": "ขณะนี้ Codex CLI ไม่มีบัญชี ChatGPT ที่ใช้งานอยู่ มีข้อมูลบัญชี Codex ในเครื่องอยู่ แต่ยังไม่ได้เลือกเซสชันที่จัดการซึ่งใช้งานอยู่",
+      "codexNeedsReconnect": "Codex มีบัญชี ChatGPT ที่เลือกไว้ในเครื่อง แต่เซสชันปัจจุบันต้องเชื่อมต่อใหม่",
+      "codexNoChatgptAccount": "ขณะนี้ Codex CLI ไม่มีบัญชี ChatGPT ที่ใช้งานอยู่ เชื่อมต่อ ChatGPT เพื่อใช้การสมัครสมาชิกของคุณ",
+      "codexNoCredential": "ยังไม่มีบัญชี ChatGPT หรือ API key",
+      "geminiApiUnavailable": "Gemini API ไม่พร้อมใช้งานในขณะนี้ ตั้งค่า `GEMINI_API_KEY` ที่นี่หรือใช้ข้อมูลรับรอง Google ADC ที่ถูกต้อง",
+      "withApiKeyFallback": "{{message}} สลับเป็นโหมด API key เพื่อใช้ API key ที่ตรวจพบ"
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "บังคับให้เซสชัน Anthropic ที่เปิดจากแอปใช้ข้อมูลรับรอง API key",
+        "auto": "ใช้พฤติกรรมเริ่มต้นของรันไทม์ API key ที่บันทึกไว้ในแอปนี้จะถูกใช้เฉพาะหลังจากคุณสลับเป็นโหมด API key",
+        "oauth": "บังคับให้เซสชัน Anthropic ที่เปิดจากแอปใช้เซสชันการสมัครสมาชิก Anthropic ในเครื่อง"
+      },
+      "codex": {
+        "apiKey": "บังคับให้การเริ่ม Codex แบบ native ใช้การเรียกเก็บผ่าน OPENAI_API_KEY / CODEX_API_KEY",
+        "auto": "เลือกใช้บัญชี ChatGPT ของคุณเมื่อพร้อมใช้งาน กลับไปใช้โหมด API key เฉพาะเมื่อจำเป็น",
+        "chatgpt": "บังคับให้การเริ่ม Codex แบบ native ใช้บัญชี ChatGPT ที่เชื่อมต่อและการสมัครสมาชิกของคุณ"
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "กำลังใช้การเปลี่ยนแปลงการเชื่อมต่อ...",
+      "refreshingProviderStatus": "กำลังรีเฟรชสถานะผู้ให้บริการ...",
+      "savingCompatibleEndpoint": "กำลังบันทึก endpoint ที่เข้ากันได้...",
+      "switchingAnthropicSubscription": "กำลังสลับไปยังการสมัครสมาชิก Anthropic...",
+      "switchingApiKey": "กำลังสลับไปยัง API key...",
+      "switchingApiKeyMode": "กำลังสลับไปยังโหมด API key...",
+      "switchingAuto": "กำลังสลับไปยังอัตโนมัติ...",
+      "switchingChatgpt": "กำลังสลับไปยังโหมดบัญชี ChatGPT..."
+    },
+    "provider": "ผู้ให้บริการ",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "ปัจจุบัน Anthropic ไม่มีตัวเลือกแบ็กเอนด์รันไทม์แยกต่างหาก",
+        "codex": "ขณะนี้ Codex ทำงานผ่านเส้นทางรันไทม์ native เท่านั้น",
+        "gemini": "เลือกว่าแบ็กเอนด์รันไทม์ Gemini ใดที่หลายโมเดลควรใช้",
+        "opencode": "OpenCode ใช้โฮสต์รันไทม์ที่จัดการของตัวเอง ขณะนี้เดสก์ท็อปเปิดเผยเฉพาะสถานะเท่านั้น"
+      },
+      "title": "รันไทม์",
+      "updating": "กำลังอัปเดตรันไทม์..."
+    },
+    "runtimeSummary": "รันไทม์: {{runtime}}",
+    "status": {
+      "configured": "ตั้งค่าแล้ว",
+      "enabled": "เปิดใช้งาน",
+      "notConfigured": "ยังไม่ได้ตั้งค่า",
+      "notSet": "ยังไม่ได้ตั้งค่า",
+      "off": "ปิด",
+      "unknown": "ไม่ทราบ"
+    },
+    "title": "การตั้งค่าผู้ให้บริการ",
+    "usage": {
+      "apiKey": "กำลังใช้ API key",
+      "apiKeyRequired": "ต้องใช้ API key",
+      "compatibleEndpoint": "กำลังใช้ endpoint ที่เข้ากันได้",
+      "notConnected": "ยังไม่ได้เชื่อมต่อ",
+      "usingMethod": "กำลังใช้ {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "ลบ API key แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
+      "apiKeySavedRefreshFailed": "บันทึก API key แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
+      "connectionUpdatedRefreshFailed": "อัปเดตการเชื่อมต่อแล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
+      "deleteApiKey": "ลบ API key ไม่สำเร็จ",
+      "disableEndpoint": "ปิดใช้งาน endpoint ไม่สำเร็จ",
+      "endpointDisabledRefreshFailed": "ปิดใช้งาน endpoint แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
+      "endpointSavedRefreshFailed": "บันทึก endpoint แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
+      "refreshCodexAccount": "รีเฟรชบัญชี Codex ไม่สำเร็จ",
+      "saveApiKey": "บันทึก API key ไม่สำเร็จ",
+      "saveEndpoint": "บันทึก endpoint ไม่สำเร็จ",
+      "updateAnthropicFastMode": "อัปเดตโหมด Fast ของ Anthropic ไม่สำเร็จ",
+      "updateConnection": "อัปเดตการเชื่อมต่อไม่สำเร็จ",
+      "updateRuntimeBackend": "อัปเดตแบ็กเอนด์รันไทม์ไม่สำเร็จ",
+      "apiKeyRequired": "ต้องระบุ API key"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "อัตโนมัติ",
+        "oauth": "การสมัครสมาชิก / OAuth",
+        "chatgpt": "บัญชี ChatGPT",
+        "apiKey": "API key",
+        "anthropicSubscription": "การสมัครสมาชิก Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "ตัวช่วย API key",
+        "oauth": "OAuth",
+        "claudeSubscription": "การสมัครสมาชิก Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "บัญชี Google",
+        "serviceAccount": "บัญชีบริการ"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "รันไทม์ปัจจุบัน",
+        "selectedRuntime": "รันไทม์ที่เลือก",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "กำลังตรวจสอบ...",
+        "modelsAvailable": "มีโมเดลให้ใช้งาน",
+        "checked": "ตรวจสอบแล้ว",
+        "providerActivity": "กิจกรรมผู้ให้บริการ",
+        "notConnected": "ยังไม่ได้เชื่อมต่อ",
+        "startingChatGptLogin": "กำลังเริ่มการเข้าสู่ระบบ ChatGPT...",
+        "waitingForChatGptLogin": "กำลังรอการเข้าสู่ระบบบัญชี ChatGPT...",
+        "chatGptVerificationDegraded": "ตรวจพบบัญชี ChatGPT - การยืนยันบัญชีลดประสิทธิภาพลงในขณะนี้",
+        "chatGptAccountReady": "บัญชี ChatGPT พร้อมแล้ว",
+        "apiKeyReady": "API key พร้อมแล้ว",
+        "codexLocalAccountNeedsReconnect": "Codex มีบัญชี ChatGPT ที่เลือกไว้ในเครื่อง แต่เซสชันปัจจุบันต้องเชื่อมต่อใหม่",
+        "codexNoActiveManagedSession": "Codex CLI รายงานว่าไม่มีการเข้าสู่ระบบ ChatGPT ที่ใช้งานอยู่ มีข้อมูลบัญชี Codex ในเครื่องอยู่ แต่ยังไม่ได้เลือกเซสชันที่จัดการซึ่งใช้งานอยู่",
+        "codexNoActiveChatGptLogin": "Codex CLI รายงานว่าไม่มีการเข้าสู่ระบบ ChatGPT ที่ใช้งานอยู่",
+        "connectChatGptForSubscription": "เชื่อมต่อบัญชี ChatGPT เพื่อใช้การสมัครสมาชิก Codex ของคุณ",
+        "codexNativeReady": "Codex native พร้อมแล้ว",
+        "codexNativeUnavailable": "Codex native ไม่พร้อมใช้งาน",
+        "unavailableInCurrentRuntime": "ไม่พร้อมใช้งานในรันไทม์ปัจจุบัน",
+        "connectedViaApiKey": "เชื่อมต่อผ่าน API key",
+        "apiKeyConfiguredNotVerified": "ตั้งค่า API key แล้ว แต่ยังไม่ได้ยืนยัน",
+        "apiKeyModeMissingCredential": "เลือกโหมด API key แล้ว แต่ยังไม่ได้ตั้งค่า API key",
+        "connectedVia": "เชื่อมต่อผ่าน {{method}}",
+        "unableToVerify": "ไม่สามารถยืนยันได้"
+      },
+      "mode": {
+        "selectedAuth": "การยืนยันตัวตนที่เลือก: {{authMode}}",
+        "preferredAuth": "การยืนยันตัวตนที่ต้องการ: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "ตั้งค่า API key แล้ว",
+        "savedApiKeyAvailable": "มี API key ที่บันทึกไว้ในส่วนจัดการ",
+        "apiKeyAlsoConfigured": "ตั้งค่า API key ในส่วนจัดการด้วย",
+        "apiKeyConfiguredInManage": "ตั้งค่า API key ในส่วนจัดการแล้ว",
+        "apiKeyFallbackInManage": "มี API key ในส่วนจัดการเป็นตัวสำรองด้วย",
+        "availableAsFallback": "{{summary}} - ใช้เป็นตัวสำรองได้",
+        "savedApiKeyAvailableIfSwitch": "มี API key ที่บันทึกไว้ในส่วนจัดการ หากคุณสลับเป็นโหมด API key",
+        "availableIfSwitch": "{{summary}} - ใช้ได้หากคุณสลับเป็นโหมด API key",
+        "autoWillUseUntilChatGpt": "{{summary}} - อัตโนมัติจะใช้สิ่งนี้จนกว่าจะเชื่อมต่อ ChatGPT"
+      },
+      "actions": {
+        "connect": "เชื่อมต่อ",
+        "connectAnthropic": "เชื่อมต่อ Anthropic",
+        "connectChatGpt": "เชื่อมต่อ ChatGPT",
+        "disconnect": "ตัดการเชื่อมต่อ",
+        "openLogin": "เปิดหน้าเข้าสู่ระบบ"
+      },
+      "disconnect": {
+        "anthropicTitle": "ตัดการเชื่อมต่อการสมัครสมาชิก Anthropic หรือไม่?",
+        "anthropic": "การดำเนินการนี้จะลบเซสชันการสมัครสมาชิก Anthropic ในเครื่องออกจากรันไทม์ Claude CLI",
+        "anthropicWithApiKey": "การดำเนินการนี้จะลบเซสชันการสมัครสมาชิก Anthropic ในเครื่องออกจากรันไทม์ Claude CLI โดย API key ที่บันทึกไว้ในส่วนจัดการยังคงใช้งานได้",
+        "geminiTitle": "ตัดการเชื่อมต่อ Gemini CLI หรือไม่?",
+        "gemini": "การดำเนินการนี้จะล้างเมตาดาตาเซสชัน Gemini CLI ในเครื่อง ข้อมูลรับรอง ADC ภายนอกและ API key ที่บันทึกไว้จะไม่ถูกลบ"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "ตรวจสอบการอัปเดต",
+      "checking": "กำลังตรวจสอบ...",
+      "extensions": "ส่วนขยาย",
+      "installRuntime": "ติดตั้ง {{runtime}}",
+      "manage": "จัดการ",
+      "recheck": "ตรวจสอบใหม่",
+      "reinstallRuntime": "ติดตั้ง {{runtime}} ใหม่",
+      "retry": "ลองอีกครั้ง",
+      "update": "อัปเดต"
+    },
+    "installer": {
+      "checkingLatest": "กำลังตรวจสอบเวอร์ชันล่าสุด...",
+      "downloading": "กำลังดาวน์โหลด...",
+      "failed": "การติดตั้งล้มเหลว",
+      "installed": "ติดตั้ง v{{version}} แล้ว",
+      "installing": "กำลังติดตั้ง...",
+      "latest": "ล่าสุด",
+      "verifying": "กำลังตรวจสอบ checksum..."
+    },
+    "labels": {
+      "multimodel": "หลายโมเดล"
+    },
+    "loading": {
+      "aiProviders": "กำลังตรวจสอบผู้ให้บริการ AI...",
+      "claudeCli": "กำลังตรวจสอบ Claude CLI..."
+    },
+    "provider": {
+      "backend": "แบ็กเอนด์: {{backend}}",
+      "loadingModels": "กำลังโหลดโมเดล...",
+      "modelsUnavailable": "ไม่มีโมเดลสำหรับรันไทม์บิลด์นี้",
+      "runtime": "รันไทม์: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "การยืนยันตัวตนล้มเหลว",
+      "authUpdated": "อัปเดตการยืนยันตัวตนแล้ว",
+      "loggedOut": "ผู้ให้บริการออกจากระบบแล้ว",
+      "login": "เข้าสู่ระบบ",
+      "logout": "ออกจากระบบ",
+      "logoutFailed": "ออกจากระบบล้มเหลว"
+    },
+    "status": {
+      "configuredNotFound": "ไม่พบ {{runtime}} ที่ตั้งค่าไว้",
+      "foundButFailed": "พบ {{runtime}} แต่เริ่มต้นไม่สำเร็จ",
+      "healthCheckFailed": "{{runtime}} ที่ตั้งค่าไว้ไม่ผ่านการตรวจสอบความพร้อมตอนเริ่มต้น",
+      "notInstalled": "{{runtime}} ยังไม่ได้ติดตั้ง"
+    },
+    "title": "รันไทม์ CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

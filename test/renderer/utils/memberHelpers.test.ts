@@ -1,12 +1,12 @@
 import {
   buildMemberLaunchPresentation,
   getLaunchAwarePresenceLabel,
-  getSpawnAwareDotClass,
-  getSpawnAwarePresenceLabel,
-  getSpawnCardClass,
   getMemberRuntimeAdvisoryLabel,
   getMemberRuntimeAdvisoryTitle,
   getMemberRuntimeAdvisoryTone,
+  getSpawnAwareDotClass,
+  getSpawnAwarePresenceLabel,
+  getSpawnCardClass,
   isOpenCodeRelaunchActionable,
   shouldDisplayMemberCurrentTask,
 } from '@renderer/utils/memberHelpers';
@@ -1333,6 +1333,7 @@ describe('memberHelpers spawn-aware presence', () => {
     'OpenCode API error. opencode_prompt_delivery_session_refresh_scheduled.',
     'OpenCode session refresh scheduled after resolved behavior changed',
     'opencode_session_refresh_scheduled_after_resolved_behavior_changed',
+    'OpenCode API error. opencode_session_stale_observe_scheduled_after_accepted_prompt',
   ])('renders recoverable OpenCode session refresh advisory %s as a warning', (message) => {
     const advisory = {
       kind: 'api_error' as const,

@@ -46,6 +46,7 @@ interface LogFileRef {
 
 interface MetadataChangePath {
   filePath: string;
+  kind?: string;
 }
 
 interface ParsedJsonlEntry {
@@ -617,11 +618,13 @@ export class TaskChangeComputer {
 
           for (const target of targetPaths) {
             seenFiles.add(this.normalizeFilePathKey(target.filePath));
+            const snippetType: SnippetDiff['type'] =
+              !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit';
             addSnippet({
               toolUseId,
               filePath: target.filePath,
               toolName: 'Edit',
-              type: 'edit',
+              type: snippetType,
               oldString,
               newString,
               replaceAll,
@@ -718,10 +721,11 @@ export class TaskChangeComputer {
       const changeObj = change as Record<string, unknown>;
       const filePath = typeof changeObj.path === 'string' ? changeObj.path : '';
       if (!filePath) continue;
+      const kind = typeof changeObj.kind === 'string' ? changeObj.kind : undefined;
       const normalized = this.normalizeFilePathKey(filePath);
       if (seen.has(normalized)) continue;
       seen.add(normalized);
-      paths.push({ filePath });
+      paths.push({ filePath, ...(kind ? { kind } : {}) });
     }
 
     return paths;

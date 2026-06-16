@@ -7,6 +7,7 @@ import {
 
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
+import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from './ports';
@@ -14,12 +15,26 @@ import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from
 export interface MemberWorkSyncReconcileContext {
   reconciledBy?: 'request' | 'queue';
   triggerReasons?: string[];
+  isCancelled?: () => boolean;
   recovery?: {
     kind: 'proof_missing';
     intentKey: string;
     originalMessageId: string;
     taskIds?: string[];
   };
+}
+
+export class MemberWorkSyncReconcileCancelledError extends Error {
+  constructor() {
+    super('member work sync reconcile cancelled');
+    this.name = 'MemberWorkSyncReconcileCancelledError';
+  }
+}
+
+function assertReconcileNotCancelled(context: MemberWorkSyncReconcileContext): void {
+  if (context.isCancelled?.()) {
+    throw new MemberWorkSyncReconcileCancelledError();
+  }
 }
 
 export function finalizeMemberWorkSyncAgenda(
@@ -61,6 +76,7 @@ export class MemberWorkSyncReconciler {
       ...(context.triggerReasons?.length ? { triggerReasons: context.triggerReasons } : {}),
     });
     const source = await this.deps.agendaSource.loadAgenda(request);
+    assertReconcileNotCancelled(context);
     const agenda = finalizeMemberWorkSyncAgenda(this.deps, source);
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: agenda.teamName,
@@ -72,21 +88,24 @@ export class MemberWorkSyncReconciler {
       ...(source.providerId ? { providerId: source.providerId } : {}),
       diagnostics: agenda.diagnostics,
     });
+    assertReconcileNotCancelled(context);
     const previous = await this.deps.statusStore.read(request);
     const nowIso = this.deps.clock.now().toISOString();
-    const teamActive = this.deps.lifecycle
-      ? await this.deps.lifecycle.isTeamActive(agenda.teamName)
-      : true;
+    const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+    });
+    assertReconcileNotCancelled(context);
     const decision = decideMemberWorkSyncStatus({
       agenda,
       latestAcceptedReport: previous?.report?.accepted ? previous.report : null,
       nowIso,
-      inactive: source.inactive || !teamActive,
+      inactive: source.inactive || runtimeActivity.inactive,
     });
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: agenda.teamName,
       memberName: agenda.memberName,
-      event: source.inactive || !teamActive ? 'team_inactive' : 'decision_made',
+      event: source.inactive || runtimeActivity.inactive ? 'team_inactive' : 'decision_made',
       source: 'reconciler',
       agendaFingerprint: agenda.fingerprint,
       state: decision.state,
@@ -95,6 +114,7 @@ export class MemberWorkSyncReconciler {
       diagnostics: decision.diagnostics,
     });
 
+    assertReconcileNotCancelled(context);
     const status = await attachMemberWorkSyncReportToken(this.deps, {
       teamName: agenda.teamName,
       memberName: agenda.memberName,
@@ -125,15 +145,13 @@ export class MemberWorkSyncReconciler {
           : {}),
       },
       evaluatedAt: nowIso,
-      diagnostics: [
-        ...agenda.diagnostics,
-        ...(!teamActive ? ['team_runtime_inactive'] : []),
-        ...decision.diagnostics,
-      ],
+      diagnostics: [...agenda.diagnostics, ...runtimeActivity.diagnostics, ...decision.diagnostics],
       ...(source.providerId ? { providerId: source.providerId } : {}),
     });
 
+    assertReconcileNotCancelled(context);
     await this.deps.statusStore.write(status);
+    assertReconcileNotCancelled(context);
     await this.planNudgeOutbox(status);
     return status;
   }

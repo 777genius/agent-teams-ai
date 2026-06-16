@@ -10,12 +10,7 @@ import { AttachmentDisplay } from '@renderer/components/team/attachments/Attachm
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
@@ -57,7 +52,6 @@ import {
   parseCrossTeamPrefix,
   stripCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
-import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import {
   buildStandaloneSlashCommandMeta,
@@ -85,12 +79,44 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import {
+  encodeCacheParts,
+  extractMarkdownPlainTextCached,
+  getCachedString,
+  stringArrayCacheSignature,
+  stringMapCacheSignature,
+  taskRefsCacheSignature,
+} from './activityRenderCache';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
 
 type StructuredMessage = Record<string, unknown>;
+
+interface PermissionStatusIconProps {
+  requestId: string;
+}
+
+const PermissionStatusIcon = memo(function PermissionStatusIcon({
+  requestId,
+}: PermissionStatusIconProps): React.JSX.Element {
+  const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
+  const resolvedApprovals = useStore(useShallow((s) => s.resolvedApprovals));
+
+  const resolved = resolvedApprovals.get(requestId);
+  if (resolved === true) {
+    return <Check size={12} className="text-emerald-400" />;
+  }
+  if (resolved === false) {
+    return <X size={12} className="text-red-400" />;
+  }
+  const isPending = pendingApprovals.some((a) => a.requestId === requestId);
+  if (isPending) {
+    return <Clock size={12} className="animate-pulse text-amber-400" />;
+  }
+  return <Check size={12} className="text-emerald-400/50" />;
+});
 
 function parseQualifiedRecipient(
   value: string | undefined
@@ -254,14 +280,87 @@ function getStringField(obj: StructuredMessage, key: string): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
+const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
+const MAX_ACTIVITY_ITEM_CACHE_ENTRIES = 500;
+const activityTimestampCache = new Map<string, string>();
+const activityDisplayTextCache = new Map<string, string>();
+const activityStructuredMessageCache = new Map<string, StructuredMessage | null>();
+const activityIdleSemanticCache = new Map<string, ReturnType<typeof classifyIdleNotification>>();
+const activityNoiseMessageCache = new Map<string, boolean>();
+const activityStrippedTextCache = new Map<string, string | null>();
+
+function getCachedActivityValue<T>(cache: Map<string, T>, key: string, buildValue: () => T): T {
+  if (cache.has(key)) return cache.get(key) as T;
+
+  const value = buildValue();
+  if (cache.size >= MAX_ACTIVITY_ITEM_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+  cache.set(key, value);
+  return value;
+}
+
+function parseStructuredAgentMessageCached(text: string): StructuredMessage | null {
+  return getCachedActivityValue(activityStructuredMessageCache, text, () =>
+    parseStructuredAgentMessage(text)
+  );
+}
+
+function classifyIdleNotificationCached(
+  message: InboxMessage
+): ReturnType<typeof classifyIdleNotification> {
+  return getCachedActivityValue(activityIdleSemanticCache, message.text, () =>
+    classifyIdleNotification(message)
+  );
+}
+
+function getStrippedActivityTextCached({
+  message,
+  structured,
+  hasBootstrapDisplay,
+  isCrossTeamAny,
+}: {
+  message: InboxMessage;
+  structured: StructuredMessage | null;
+  hasBootstrapDisplay: boolean;
+  isCrossTeamAny: boolean;
+}): string | null {
+  if (structured) return null;
+
+  const cacheKey = encodeCacheParts([
+    message.text ?? '',
+    message.from ?? '',
+    message.to ?? '',
+    message.source ?? '',
+    hasBootstrapDisplay ? '1' : '0',
+    isCrossTeamAny ? '1' : '0',
+  ]);
+
+  return getCachedActivityValue(activityStrippedTextCache, cacheKey, () => {
+    let stripped = getSanitizedInboxMessageText(message).trim();
+    if (!hasBootstrapDisplay) {
+      stripped = stripAgentBlocks(stripped).trim();
+    }
+    if (!stripped) return null;
+    if (isCrossTeamAny) {
+      stripped = stripCrossTeamPrefix(stripped);
+    }
+    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  });
+}
+
 /** Check if a message renders as a compact noise row (idle, shutdown, etc.). */
 export function isNoiseMessage(text: string): boolean {
-  return (
-    getIdleNoiseLabel(text) !== null ||
-    ((): boolean => {
-      const parsed = parseStructuredAgentMessage(text);
-      return parsed !== null && getNoiseLabel(parsed) !== null;
-    })()
+  return getCachedActivityValue(
+    activityNoiseMessageCache,
+    text,
+    () =>
+      getIdleNoiseLabel(text) !== null ||
+      (() => {
+        const parsed = parseStructuredAgentMessageCached(text);
+        return parsed !== null && getNoiseLabel(parsed) !== null;
+      })()
   );
 }
 
@@ -338,6 +437,7 @@ const PassiveIdlePeerSummaryRow = ({
   teamName,
   senderName,
   senderColor,
+  isLight,
   summary,
   timestamp,
   onMemberNameClick,
@@ -345,6 +445,7 @@ const PassiveIdlePeerSummaryRow = ({
   teamName: string;
   senderName: string;
   senderColor?: string;
+  isLight: boolean;
   summary: string;
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
@@ -361,6 +462,7 @@ const PassiveIdlePeerSummaryRow = ({
         name={senderName}
         color={senderColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar={false}
         onClick={onMemberNameClick}
       />
@@ -392,6 +494,7 @@ const TaskStallRemediationRow = ({
   teamName,
   recipientName,
   recipientColor,
+  isLight,
   taskRef,
   timestamp,
   onMemberNameClick,
@@ -400,6 +503,7 @@ const TaskStallRemediationRow = ({
   teamName: string;
   recipientName: string;
   recipientColor?: string;
+  isLight: boolean;
   taskRef?: NonNullable<InboxMessage['taskRefs']>[number];
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
@@ -426,6 +530,7 @@ const TaskStallRemediationRow = ({
         name={recipientName}
         color={recipientColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -458,6 +563,7 @@ const MemberWorkSyncNudgeRow = ({
   teamName,
   recipientName,
   recipientColor,
+  isLight,
   taskRefs,
   intent,
   timestamp,
@@ -467,6 +573,7 @@ const MemberWorkSyncNudgeRow = ({
   teamName: string;
   recipientName: string;
   recipientColor?: string;
+  isLight: boolean;
   taskRefs?: InboxMessage['taskRefs'];
   intent?: InboxMessage['workSyncIntent'];
   timestamp: string;
@@ -500,6 +607,7 @@ const MemberWorkSyncNudgeRow = ({
         name={recipientName}
         color={recipientColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -537,6 +645,7 @@ const BootstrapSystemRow = ({
   runtime,
   senderColor,
   recipientColor,
+  isLight,
   timestamp,
   onMemberNameClick,
 }: {
@@ -547,6 +656,7 @@ const BootstrapSystemRow = ({
   runtime?: string;
   senderColor?: string;
   recipientColor?: string;
+  isLight: boolean;
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
 }): React.JSX.Element => {
@@ -565,6 +675,7 @@ const BootstrapSystemRow = ({
         name={senderName}
         color={senderColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -573,6 +684,7 @@ const BootstrapSystemRow = ({
         name={recipientName}
         color={recipientColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -593,6 +705,7 @@ const BootstrapAcknowledgementRow = ({
   recipientName,
   senderColor,
   recipientColor,
+  isLight,
   timestamp,
   onMemberNameClick,
 }: {
@@ -601,6 +714,7 @@ const BootstrapAcknowledgementRow = ({
   recipientName: string;
   senderColor?: string;
   recipientColor?: string;
+  isLight: boolean;
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
 }): React.JSX.Element => {
@@ -614,6 +728,7 @@ const BootstrapAcknowledgementRow = ({
         name={senderName}
         color={senderColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -622,6 +737,7 @@ const BootstrapAcknowledgementRow = ({
         name={recipientName}
         color={recipientColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -690,6 +806,61 @@ const AUTH_ERROR_PATTERNS = [
   /invalid.*api.key/i,
   /unauthorized/i,
 ];
+
+function getLocalDayCacheKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function formatActivityTimestamp(timestamp: string): string {
+  const now = new Date();
+  return getCachedString(
+    activityTimestampCache,
+    encodeCacheParts([timestamp, getLocalDayCacheKey(now)]),
+    () => {
+      const parsed = Date.parse(timestamp);
+      if (Number.isNaN(parsed)) return timestamp;
+
+      const date = new Date(parsed);
+      const isToday =
+        date.getFullYear() === now.getFullYear() &&
+        date.getMonth() === now.getMonth() &&
+        date.getDate() === now.getDate();
+
+      return isToday
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleString();
+    }
+  );
+}
+
+function buildActivityDisplayText(
+  strippedText: string,
+  isSystem: boolean,
+  taskRefs: InboxMessage['taskRefs'],
+  memberColorMap: Map<string, string> | undefined,
+  teamNames: readonly string[]
+): string {
+  const cacheKey = encodeCacheParts([
+    strippedText,
+    isSystem ? '1' : '0',
+    taskRefsCacheSignature(taskRefs),
+    stringMapCacheSignature(memberColorMap),
+    stringArrayCacheSignature(teamNames),
+  ]);
+
+  return getCachedString(activityDisplayTextCache, cacheKey, () => {
+    let result = highlightSystemLabels(strippedText, isSystem);
+    result = linkifyTaskIdsInMarkdown(result, taskRefs);
+    if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
+      result = linkifyAllMentionsInMarkdown(
+        result,
+        memberColorMap ?? EMPTY_MEMBER_COLOR_MAP,
+        teamNames
+      );
+    }
+    return result;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Full message card — left colored border, name badge, collapsible content
@@ -829,20 +1000,12 @@ export const ActivityItem = memo(
     const formattedRole =
       memberRole && memberRole !== message.from ? formatAgentRole(memberRole) : null;
 
-    const timestamp = useMemo(() => {
-      if (Number.isNaN(Date.parse(message.timestamp))) return message.timestamp;
-      const date = new Date(message.timestamp);
-      const now = new Date();
-      const isToday =
-        date.getFullYear() === now.getFullYear() &&
-        date.getMonth() === now.getMonth() &&
-        date.getDate() === now.getDate();
-      return isToday
-        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : date.toLocaleString();
-    }, [message.timestamp]);
+    const timestamp = useMemo(
+      () => formatActivityTimestamp(message.timestamp),
+      [message.timestamp]
+    );
 
-    const structured = parseStructuredAgentMessage(message.text);
+    const structured = parseStructuredAgentMessageCached(message.text);
     const bootstrapDisplay = getBootstrapPromptDisplay(message);
     const bootstrapAcknowledgement = getBootstrapAcknowledgementDisplay(message);
     // Only flag agent messages as rate-limited, not user's own quotes
@@ -853,7 +1016,7 @@ export const ActivityItem = memo(
     const isAuthError = isApiError && AUTH_ERROR_PATTERNS.some((p) => p.test(message.text));
     // Never collapse rate limit messages as noise — they must be visible
     const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
-    const idleSemantic = classifyIdleNotification(message);
+    const idleSemantic = classifyIdleNotificationCached(message);
 
     const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
     const isManaged = collapseMode === 'managed';
@@ -896,21 +1059,16 @@ export const ActivityItem = memo(
     const isSystemMessage = message.from === 'system';
 
     // Strip agent-only blocks + normalize escape sequences (before linkification)
-    const strippedText = useMemo(() => {
-      if (structured) return null;
-      let stripped = getSanitizedInboxMessageText(message).trim();
-      if (!bootstrapDisplay) {
-        stripped = stripAgentBlocks(stripped).trim();
-      }
-      if (!stripped) return null; // All content was agent-only blocks → show summary instead
-      // Strip cross-team metadata tag (e.g. `<cross-team from="team.lead" depth="0" />\n`)
-      // — kept in stored text for CLI agents / durable artifacts.
-      if (isCrossTeamAny) {
-        stripped = stripCrossTeamPrefix(stripped);
-      }
-      // Normalize literal \n from historical CLI-produced text to real newlines
-      return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-    }, [structured, message, bootstrapDisplay, isCrossTeamAny]);
+    const strippedText = useMemo(
+      () =>
+        getStrippedActivityTextCached({
+          message,
+          structured,
+          hasBootstrapDisplay: bootstrapDisplay !== null,
+          isCrossTeamAny,
+        }),
+      [structured, message, bootstrapDisplay, isCrossTeamAny]
+    );
     const standaloneSlashCommand = useMemo(
       () => (strippedText ? parseStandaloneSlashCommand(strippedText) : null),
       [strippedText]
@@ -944,12 +1102,14 @@ export const ActivityItem = memo(
     // Linkify task IDs (always, for TaskTooltip) + @mentions for display
     const displayText = useMemo(() => {
       if (!strippedText) return null;
-      let result = highlightSystemLabels(strippedText, !!systemLabel);
-      result = linkifyTaskIdsInMarkdown(result, message.taskRefs);
-      if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0)
-        result = linkifyAllMentionsInMarkdown(result, memberColorMap ?? new Map(), teamNames);
-      return result;
-    }, [strippedText, memberColorMap, teamNames, systemLabel]);
+      return buildActivityDisplayText(
+        strippedText,
+        !!systemLabel,
+        message.taskRefs,
+        memberColorMap,
+        teamNames
+      );
+    }, [strippedText, message.taskRefs, memberColorMap, teamNames, systemLabel]);
 
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
@@ -992,7 +1152,7 @@ export const ActivityItem = memo(
       slashCommandMeta,
       structured,
     ]);
-    const summaryText = extractMarkdownPlainText(rawSummary);
+    const summaryText = extractMarkdownPlainTextCached(rawSummary);
     const compactPreviewMarkdown = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
         return idleSemantic.peerSummary;
@@ -1028,7 +1188,7 @@ export const ActivityItem = memo(
       summaryText,
     ]);
     const compactPreviewTooltipText = useMemo(() => {
-      const normalized = extractMarkdownPlainText(compactPreviewMarkdown)
+      const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown)
         .replace(/\n+/g, ' ')
         .trim();
       return normalized || compactPreviewMarkdown;
@@ -1039,30 +1199,16 @@ export const ActivityItem = memo(
       commentTaskRef?.displayId ??
       (commentTaskRef?.taskId ? `#${commentTaskRef.taskId.slice(0, 6)}` : null);
 
-    // Permission request status icon (check/x/clock)
-    const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
-    const resolvedApprovals = useStore(useShallow((s) => s.resolvedApprovals));
-    const permissionIcon = useMemo(() => {
+    const permissionRequestId = useMemo(() => {
       if (!structured) return null;
       const type = typeof structured.type === 'string' ? structured.type : null;
       if (type !== 'permission_request') return null;
       const requestId = typeof structured.request_id === 'string' ? structured.request_id : null;
-      if (!requestId) return null;
-
-      const resolved = resolvedApprovals.get(requestId);
-      if (resolved === true) {
-        return <Check size={12} className="text-emerald-400" />;
-      }
-      if (resolved === false) {
-        return <X size={12} className="text-red-400" />;
-      }
-      const isPending = pendingApprovals.some((a) => a.requestId === requestId);
-      if (isPending) {
-        return <Clock size={12} className="animate-pulse text-amber-400" />;
-      }
-      // Not in pending and not resolved — already handled before we started tracking
-      return <Check size={12} className="text-emerald-400/50" />;
-    }, [structured, pendingApprovals, resolvedApprovals]);
+      return requestId || null;
+    }, [structured]);
+    const permissionIcon = permissionRequestId ? (
+      <PermissionStatusIcon requestId={permissionRequestId} />
+    ) : null;
 
     // Noise messages: minimal inline row
     if (noiseLabel) {
@@ -1077,6 +1223,7 @@ export const ActivityItem = memo(
           teamName={teamName}
           senderName={senderName}
           senderColor={senderColor}
+          isLight={isLight}
           summary={idleSemantic.peerSummary}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
@@ -1090,6 +1237,7 @@ export const ActivityItem = memo(
           teamName={teamName}
           recipientName={message.to ?? 'teammate'}
           recipientColor={recipientColor}
+          isLight={isLight}
           taskRef={message.taskRefs?.[0]}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
@@ -1104,6 +1252,7 @@ export const ActivityItem = memo(
           teamName={teamName}
           recipientName={message.to ?? 'teammate'}
           recipientColor={recipientColor}
+          isLight={isLight}
           taskRefs={message.taskRefs}
           intent={message.workSyncIntent}
           timestamp={timestamp}
@@ -1123,6 +1272,7 @@ export const ActivityItem = memo(
           runtime={bootstrapDisplay.runtime}
           senderColor={senderColor}
           recipientColor={recipientColor}
+          isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
         />
@@ -1137,6 +1287,7 @@ export const ActivityItem = memo(
           recipientName={message.to ?? 'lead'}
           senderColor={senderColor}
           recipientColor={recipientColor}
+          isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
         />
@@ -1176,6 +1327,7 @@ export const ActivityItem = memo(
         name={senderName}
         color={senderColor}
         teamName={teamName}
+        isLight={isLight}
         hideAvatar={senderHideAvatar || compactHeader}
         onClick={onMemberNameClick}
         disableHoverCard={crossTeamOrigin != null}
@@ -1225,12 +1377,14 @@ export const ActivityItem = memo(
         <AlertTriangle size={10} />
         {t('activity.badges.rateLimited')}
       </span>
-    ) : isApiError ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-        <AlertTriangle size={10} />
-        {message.messageKind === 'agent_error' ? 'Agent Error' : 'API Error'}
-      </span>
-    ) : null;
+	    ) : isApiError ? (
+	      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+	        <AlertTriangle size={10} />
+	        {message.messageKind === 'agent_error'
+	          ? t('activity.badges.agentError')
+	          : t('activity.badges.apiError')}
+	      </span>
+	    ) : null;
 
     const recipientBadge =
       commentTaskRef && commentTaskDisplayId ? (
@@ -1254,6 +1408,7 @@ export const ActivityItem = memo(
               name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
               color={crossTeamTarget ? undefined : recipientColor}
               teamName={crossTeamTarget ? undefined : teamName}
+              isLight={isLight}
               hideAvatar={
                 compactHeader ||
                 (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
@@ -1310,7 +1465,7 @@ export const ActivityItem = memo(
 
     return (
       <article
-        className="group overflow-hidden rounded-md"
+        className="activity-timeline-card group overflow-hidden rounded-md"
         style={{
           marginLeft: isSlashCommandResult ? 26 : isUserSent ? 15 : undefined,
           backgroundColor:
@@ -1424,27 +1579,14 @@ export const ActivityItem = memo(
                   )}
                 </div>
               </div>
-              <TooltipProvider delayDuration={1000}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <CompactMarkdownPreview
-                        content={compactPreviewMarkdown}
-                        className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                        teamColorByName={teamColorByName}
-                        onTeamClick={onTeamClick}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    align="start"
-                    className="max-w-sm whitespace-normal break-words"
-                  >
-                    {compactPreviewTooltipText}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div title={compactPreviewTooltipText}>
+                <CompactMarkdownPreview
+                  content={compactPreviewMarkdown}
+                  className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                  teamColorByName={teamColorByName}
+                  onTeamClick={onTeamClick}
+                />
+              </div>
             </div>
           ) : !isExpanded ? (
             <div className="min-w-0 flex-1">
@@ -1506,27 +1648,14 @@ export const ActivityItem = memo(
                   )}
                 </div>
               </div>
-              <TooltipProvider delayDuration={1000}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <CompactMarkdownPreview
-                        content={compactPreviewMarkdown}
-                        className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
-                        teamColorByName={teamColorByName}
-                        onTeamClick={onTeamClick}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    align="start"
-                    className="max-w-sm whitespace-normal break-words"
-                  >
-                    {compactPreviewTooltipText}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div title={compactPreviewTooltipText}>
+                <CompactMarkdownPreview
+                  content={compactPreviewMarkdown}
+                  className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
+                  teamColorByName={teamColorByName}
+                  onTeamClick={onTeamClick}
+                />
+              </div>
             </div>
           ) : (
             <>

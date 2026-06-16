@@ -15,14 +15,33 @@ export interface ProjectTaskGroup {
   tasks: GlobalTask[];
 }
 
+interface EffectiveTimestampCacheEntry {
+  updatedAt: GlobalTask['updatedAt'];
+  createdAt: GlobalTask['createdAt'];
+  timestamp: number;
+}
+
+const effectiveTimestampCache = new WeakMap<GlobalTask, EffectiveTimestampCacheEntry>();
+
 /** Returns updatedAt if available, otherwise createdAt. */
 function getEffectiveDate(task: GlobalTask): string | undefined {
   return task.updatedAt ?? task.createdAt;
 }
 
 function getEffectiveTs(task: GlobalTask): number {
+  const cached = effectiveTimestampCache.get(task);
+  if (cached && cached.updatedAt === task.updatedAt && cached.createdAt === task.createdAt) {
+    return cached.timestamp;
+  }
+
   const d = getEffectiveDate(task);
-  return d ? new Date(d).getTime() : 0;
+  const timestamp = d ? new Date(d).getTime() : 0;
+  effectiveTimestampCache.set(task, {
+    updatedAt: task.updatedAt,
+    createdAt: task.createdAt,
+    timestamp,
+  });
+  return timestamp;
 }
 
 /**

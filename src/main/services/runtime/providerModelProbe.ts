@@ -88,6 +88,19 @@ export function buildProviderModelProbeArgs(modelId: string): string[] {
   ];
 }
 
+export function buildCodexExecModelProbeArgs(modelId: string): string[] {
+  return [
+    'exec',
+    '--ignore-user-config',
+    '--json',
+    '--skip-git-repo-check',
+    '--ephemeral',
+    '--model',
+    modelId,
+    getProviderModelProbePrompt(),
+  ];
+}
+
 export function getProviderModelProbeTimeoutMs(
   providerId: SupportedProviderId | undefined
 ): number {
@@ -102,7 +115,15 @@ export function getProviderModelProbeTimeoutMs(
   }
 }
 
-export function getProviderPreflightModel(providerId: TeamProviderId | undefined): string {
+export function getProviderPreflightModel(
+  providerId: TeamProviderId | undefined,
+  options: { modelOverride?: string | null } = {}
+): string {
+  const modelOverride = options.modelOverride?.trim();
+  if (modelOverride) {
+    return modelOverride;
+  }
+
   switch (resolveProbeProviderId(providerId)) {
     case 'codex':
       return 'gpt-5.4-mini';
@@ -114,6 +135,9 @@ export function getProviderPreflightModel(providerId: TeamProviderId | undefined
   }
 }
 
-export function buildProviderPreflightPingArgs(providerId: TeamProviderId | undefined): string[] {
-  return buildProviderModelProbeArgs(getProviderPreflightModel(providerId));
+export function buildProviderPreflightPingArgs(
+  providerId: TeamProviderId | undefined,
+  options: { modelOverride?: string | null } = {}
+): string[] {
+  return buildProviderModelProbeArgs(getProviderPreflightModel(providerId, options));
 }

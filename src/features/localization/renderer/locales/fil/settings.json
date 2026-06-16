@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Mga opsyon para sa power-user: i-export/i-import ang config, i-reset ang mga default, at raw na pag-edit ng configuration.",
+      "label": "Advanced"
+    },
+    "general": {
+      "description": "Mga pangunahing kagustuhan sa app tulad ng theme, wika, display density, at startup behavior.",
+      "label": "General"
+    },
+    "infoAriaLabel": "Ano ang {{label}}?",
+    "notifications": {
+      "description": "Kontrolin kung kailan at paano ka aabisuhan tungkol sa aktibidad ng agent, mga natapos na task, at mga error.",
+      "label": "Mga Notification"
+    }
+  },
+  "view": {
+    "description": "Pamahalaan ang iyong mga kagustuhan sa app",
+    "loading": "Niloload ang mga setting...",
+    "title": "Mga Setting"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "test": "Subukan"
+    },
+    "defaults": {
+      "allProjects": "Lahat ng proyekto",
+      "allProjectsHint": "Gumagamit ang mga test ng {{project}}. Nalalapat ang default maliban kung may override ang isang proyekto.",
+      "loadingContexts": "Niloload ang mga context...",
+      "projectHint": "Ino-override lang ng pag-save ang {{project}}.",
+      "projectOverrideContext": "Project override context",
+      "scopeDescriptionAllProjects": "Default para sa bawat proyekto na walang sariling OpenCode override.",
+      "scopeDescriptionProject": "I-override lang ang napiling proyekto. Hindi babaguhin ang mga tumatakbong team.",
+      "selectProjectContext": "Piliin ang project context",
+      "selectProjectHint": "Pumili ng proyekto bago subukan ang mga lokal na model o mag-save ng mga default.",
+      "selectValidationContext": "Piliin ang validation context",
+      "setAllProjectsDefault": "Itakda ang default para sa lahat ng proyekto",
+      "setProjectDefault": "Itakda ang default ng proyekto",
+      "thisProject": "Proyektong ito",
+      "title": "Mga OpenCode default",
+      "validationContext": "Validation context"
+    },
+    "diagnostics": {
+      "copied": "Nakopya ang diagnostics",
+      "copiedShort": "Nakopya",
+      "copy": "Kopyahin ang diagnostics",
+      "hints": "Mga Hint",
+      "likelyCause": "Malamang na sanhi:",
+      "windowsSymlinkAdminHint": "Windows: patakbuhin ang Agent Teams AI bilang Administrator"
+    },
+    "models": {
+      "alreadyDefault": "Ito na ang napiling OpenCode default.",
+      "empty": "Walang nahanap na model.",
+      "emptyFree": "Walang nahanap na libreng model.",
+      "emptyRecommended": "Walang nahanap na inirerekomendang model.",
+      "emptyRecommendedFree": "Walang nahanap na inirerekomendang libreng model.",
+      "freeOnly": "Libre lang",
+      "launchableDescription": "Mga kilalang route mula sa OpenCode config, mga libreng built-in na model, at ang kasalukuyang default. Kailangan ng matagumpay na test ng mga lokal na route bago sila maging handa para sa paglunsad ng team.",
+      "launchableTitle": "Mga OpenCode model route",
+      "loadingRoutes": "Niloload ang mga OpenCode model route...",
+      "noRoutesMatch": "Walang OpenCode model route na tumutugma sa \"{{query}}\".",
+      "noneReported": "Wala pang OpenCode model route na naiulat. I-configure ang isang lokal na route sa OpenCode o gamitin ang Providers tab para suriin ang mga catalog provider.",
+      "recommendedOnly": "Inirerekomenda lang",
+      "searchPlaceholder": "Maghanap ng mga model",
+      "selectProjectBeforeTesting": "Pumili ng project context bago subukan ang mga model.",
+      "selectProjectBeforeTestingDefaults": "Pumili ng project context bago subukan o i-save ang mga OpenCode default.",
+      "testInProgress": "Tumatakbo na ang model test.",
+      "useInTeamPicker": "I-save para sa team picker",
+      "validationContextRequired": "Pumili ng validation context sa itaas para paganahin ang Test at Set default. Ang pag-save para sa team picker ay nag-iimbak lang ng route para sa mga bagong team.",
+      "actionsUnavailable": "Pansamantalang hindi available ang mga aksyon.",
+      "defaultSaveInProgress": "Sine-save ang OpenCode default.",
+      "routeUnavailableAuth": "Kailangan ng authentication ng provider na ito bago magamit ang model na ito.",
+      "routeUnavailableFailed": "Nabigo sa huling execution test ang model route na ito.",
+      "routeUnavailableGeneric": "Hindi magagamit ang model route na ito sa ngayon.",
+      "routeUnavailableUnknown": "Ang model na ito ang kasalukuyang OpenCode default, ngunit hindi pa ito available sa live catalog."
+    },
+    "providers": {
+      "catalog": "OpenCode provider catalog",
+      "countFallback": "Mga OpenCode provider",
+      "description": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
+      "loadMore": "Mag-load pa ng mga provider",
+      "loading": "Niloload ang mga OpenCode provider",
+      "noMatches": "Walang provider na tumutugma sa paghahanap na iyon.",
+      "noneReported": "Walang OpenCode provider na naiulat ng managed runtime.",
+      "recommended": "Inirerekomenda",
+      "refreshCatalog": "I-refresh ang catalog",
+      "searchPlaceholder": "Maghanap ng mga provider",
+      "description_few": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
+      "description_many": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
+      "description_one": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
+      "description_other": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider."
+    },
+    "setup": {
+      "loading": "Niloload ang provider setup..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode default: {{model}}",
+      "loading": "Niloload ang managed OpenCode runtime, mga konektadong provider, at mga default ng model...",
+      "source": "Pinagmulan: {{source}}",
+      "title": "OpenCode runtime"
+    },
+    "tabs": {
+      "models": "Mga Model",
+      "providers": "Mga Provider"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Maghanap ng mga model route"
+    },
+    "badges": {
+      "usedInTeamPicker": "Naka-save para sa team picker",
+      "free": "libre",
+      "local": "lokal",
+      "configured": "naka-configure",
+      "knownRoute": "kilalang route",
+      "connected": "konektado",
+      "verified": "na-verify",
+      "needsTest": "kailangan ng test",
+      "failed": "nabigo",
+      "unknown": "hindi alam",
+      "default": "default"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Wika para sa komunikasyon ng agent",
+      "descriptionWithDetected": "Wika para sa komunikasyon ng agent (natukoy: {{detected}})",
+      "emptyMessage": "Walang nahanap na wika.",
+      "label": "Wika",
+      "searchPlaceholder": "Maghanap ng wika...",
+      "selectPlaceholder": "Pumili ng wika...",
+      "title": "Wika ng Agent"
+    },
+    "appLanguage": {
+      "description": "Wika para sa interface ng application.",
+      "label": "Wika",
+      "title": "Wika ng App"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Awtomatikong i-expand ang bawat response turn kapag nagbukas ng transcript o nakatanggap ng bagong mensahe",
+        "label": "I-expand ang mga sagot ng AI bilang default"
+      },
+      "nativeTitleBar": {
+        "description": "Gamitin ang default na window frame ng sistema sa halip na ang custom title bar",
+        "label": "Gamitin ang native title bar",
+        "restartConfirm": {
+          "confirmLabel": "I-restart",
+          "message": "Kailangang mag-restart ang app para ilapat ang pagbabago sa title bar. I-restart ngayon?",
+          "title": "Kailangang mag-restart"
+        }
+      },
+      "theme": {
+        "description": "Piliin ang iyong gustong color theme",
+        "label": "Theme",
+        "options": {
+          "dark": "Madilim",
+          "light": "Maliwanag",
+          "system": "System"
+        }
+      },
+      "title": "Hitsura"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Magsimula ng HTTP server para ma-access ang UI mula sa browser o i-embed sa mga iframe",
+        "label": "Paganahin ang server mode"
+      },
+      "title": "Browser Access"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Pumili ng Folder",
+        "selectFolderManually": "Piliin ang Folder nang Manu-mano",
+        "useAutoDetect": "Gamitin ang Auto-Detect",
+        "useFolder": "Gamitin ang Folder",
+        "usePath": "Gamitin ang Path",
+        "useThisPath": "Gamitin ang Path na Ito",
+        "useWsl": "Gumagamit ng Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Walang \"projects\" directory ang folder na ito. Magpatuloy pa rin?",
+          "title": "Walang nahanap na projects directory"
+        },
+        "notClaudeDir": {
+          "message": "Ang folder na ito ay pinangalanang \"{{folderName}}\", hindi \".claude\". Magpatuloy pa rin?",
+          "title": "Ang napiling folder ay hindi .claude"
+        },
+        "noWslPaths": {
+          "message": "Hindi awtomatikong nahanap ang mga WSL distro na may Claude data. Piliin ang folder nang manu-mano?",
+          "title": "Walang nahanap na WSL Claude path"
+        },
+        "wslNoProjectsDir": {
+          "message": "Walang \"projects\" directory ang \"{{path}}\". Magpatuloy pa rin?",
+          "title": "Nawawala ang projects directory sa WSL path"
+        }
+      },
+      "current": {
+        "autoDetected": "Awtomatikong natukoy: {{path}}",
+        "autoDetectedPath": "Gumagamit ng awtomatikong natukoy na path",
+        "customPath": "Gumagamit ng custom na path",
+        "label": "Kasalukuyang Local Root"
+      },
+      "description": "Piliin kung aling lokal na folder ang ituturing na iyong Claude data root",
+      "errors": {
+        "detectWslFailed": "Nabigong matukoy ang mga WSL Claude root path",
+        "loadFailed": "Nabigong i-load ang mga setting ng lokal na Claude root",
+        "updateFailed": "Nabigong i-update ang Claude root"
+      },
+      "title": "Lokal na Claude Root",
+      "wslModal": {
+        "closeAriaLabel": "Isara ang WSL path modal",
+        "description": "Mga natukoy na WSL distribution at mga kandidatong Claude root",
+        "noProjectsDir": "Walang natukoy na projects directory",
+        "title": "Piliin ang WSL Claude Root"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Tumulong na pahusayin ang app sa pamamagitan ng pagpapadala ng hindi nakikilalang crash at performance data",
+        "label": "Magpadala ng mga crash report"
+      },
+      "title": "Privacy"
+    },
+    "server": {
+      "runningOn": "Tumatakbo sa",
+      "standaloneModeDescription": "Tumatakbo sa standalone mode. Palaging aktibo ang HTTP server. Hindi available ang mga system notification - naka-log lang sa loob ng app ang mga notification trigger.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Awtomatikong simulan ang app kapag nag-log in ka",
+        "label": "Ilunsad sa pag-login"
+      },
+      "showDockIcon": {
+        "description": "Ipakita ang app icon sa dock (macOS)",
+        "label": "Ipakita ang dock icon"
+      },
+      "title": "Startup"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Maaaring hindi gumana ang mga notification sa development mode. Kinikilala ng macOS ang app bilang \"Electron\" (bundle ID",
+      "descriptionSuffix": ") sa halip na ang production app name. Tingnan ang System Settings > Notifications > Electron para i-verify ang mga permiso.",
+      "title": "Dev Mode"
+    },
+    "ignoredRepositories": {
+      "description": "Hindi papansinin ang mga notification mula sa mga repository na ito",
+      "empty": "Walang ipinagwalang-bahala na repository",
+      "selectPlaceholder": "Piliin ang repository na ipagwawalang-bahala...",
+      "title": "Mga Ipinagwawalang-bahalang Repository"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Magpakita ng mga system notification para sa mga error at event",
+        "label": "Paganahin ang Mga System Notification"
+      },
+      "sound": {
+        "description": "Magpatugtog ng tunog kapag lumitaw ang mga notification",
+        "label": "Magpatugtog ng tunog"
+      },
+      "subagentErrors": {
+        "description": "Tukuyin at abisuhan ang mga error sa mga subagent session",
+        "label": "Isama ang mga error ng subagent"
+      },
+      "title": "Mga Setting ng Notification"
+    },
+    "snooze": {
+      "clear": "I-clear ang Snooze",
+      "description": "Pansamantalang i-pause ang mga notification",
+      "descriptionWithTime": "Naka-snooze hanggang {{time}}",
+      "label": "I-snooze ang mga notification",
+      "options": {
+        "15": "15 minuto",
+        "30": "30 minuto",
+        "60": "1 oras",
+        "120": "2 oras",
+        "240": "4 oras",
+        "-1": "Hanggang bukas"
+      },
+      "selectDuration": "Piliin ang tagal..."
+    },
+    "taskCompletion": {
+      "description": "Makakuha ng mga native OS notification kapag natapos ng Claude ang mga task - mga tunog, banner, at Dock/taskbar badge. Gumagana sa macOS, Linux, at Windows.",
+      "installPlugin": "I-install ang claude-notifications-go plugin",
+      "title": "Mga Notification sa Pagkatapos ng Task"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Abisuhan kapag naabot ng bawat task sa isang team ang status na completed",
+        "label": "Lahat ng task tapos na"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Kapag nag-ulat ang Claude ng reset time, mag-schedule ng follow-up na pang-udyok para sa team lead pagkatapos mag-reset ang limit",
+        "label": "Auto-resume pagkatapos ng rate limit"
+      },
+      "clarifications": {
+        "description": "Magpakita ng mga native OS notification kapag nangangailangan ng iyong input ang isang task",
+        "label": "Mga notification sa paglilinaw ng task"
+      },
+      "crossTeamMessage": {
+        "description": "Abisuhan kapag may dumating na mensahe mula sa ibang team",
+        "label": "Mga cross-team message notification"
+      },
+      "leadInbox": {
+        "description": "Abisuhan kapag nagpadala ang mga teammate ng mensahe sa team lead",
+        "label": "Mga lead inbox notification"
+      },
+      "statusChange": {
+        "description": "Magpakita ng mga native OS notification kapag nagbago ang status ng isang task",
+        "label": "Mga notification sa pagbabago ng status ng task",
+        "onlySolo": {
+          "description": "Abisuhan lang kapag walang teammate ang team",
+          "label": "Sa Solo mode lang"
+        },
+        "statuses": {
+          "description": "Aling mga target status ang nag-trigger ng notification",
+          "label": "Abisuhan sa mga status na ito",
+          "options": {
+            "approved": "Inaprubahan",
+            "completed": "Tapos na",
+            "deleted": "Tinanggal",
+            "in_progress": "Sinimulan",
+            "needsFix": "Kailangang Ayusin",
+            "pending": "Nakabinbin",
+            "review": "Review"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Magpakita ng mga native OS notification kapag nagkomento ang mga agent sa mga task",
+        "label": "Mga task comment notification"
+      },
+      "taskCreated": {
+        "description": "Magpakita ng mga native OS notification kapag may nilikhang bagong task",
+        "label": "Mga task created notification"
+      },
+      "teamLaunched": {
+        "description": "Abisuhan kapag natapos maglunsad ang isang team at handa na",
+        "label": "Mga team launched notification"
+      },
+      "title": "Mga Notification ng Team",
+      "toolApproval": {
+        "description": "Abisuhan kapag nangangailangan ng iyong pag-apruba ang isang tool (Allow/Deny) habang hindi naka-focus ang app",
+        "label": "Mga tool approval notification"
+      },
+      "userInbox": {
+        "description": "Abisuhan kapag nagpadala sa iyo ng mensahe ang mga teammate",
+        "label": "Mga user inbox notification"
+      }
+    },
+    "test": {
+      "action": "Magpadala ng Test",
+      "description": "Magpadala ng test notification para i-verify ang paghahatid",
+      "failedToSend": "Nabigong magpadala ng test notification",
+      "label": "Test notification",
+      "sending": "Nagpapadala...",
+      "sent": "Naipadala!",
+      "unknownError": "Hindi kilalang error"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "App icon",
+      "description": "Bumuo ng mga AI agent team na gumagana nang autonomous at parallel, nag-uusap sa iba't ibang team, at namamahala ng mga task sa kanban board - na may built-in na code review, live na pagmonitor ng proseso, at buong visibility ng tool.",
+      "standalone": "Standalone",
+      "title": "Tungkol sa",
+      "version": "Bersyon {{version}}"
+    },
+    "configuration": {
+      "editConfig": "I-edit ang Config",
+      "exportConfig": "I-export ang Config",
+      "importConfig": "I-import ang Config",
+      "openInEditor": "Buksan sa Editor",
+      "resetToDefaults": "I-reset sa mga Default",
+      "title": "Configuration"
+    },
+    "updates": {
+      "available": "available ang v{{version}}",
+      "check": "Maghanap ng Update",
+      "checking": "Sinusuri...",
+      "ready": "Handa na ang update",
+      "unknownVersion": "hindi alam",
+      "upToDate": "Napapanahon"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Nabigong i-load ang config",
+      "saveFailed": "Nabigong i-save ang config"
+    },
+    "footer": {
+      "autoSave": "Awtomatikong na-save ang mga pagbabago pagkatapos i-edit",
+      "toClose": "para isara",
+      "escapeKey": "Esc"
+    },
+    "loading": "Niloload ang config...",
+    "status": {
+      "invalidJson": "Invalid na JSON",
+      "saveFailed": "Nabigo ang pag-save",
+      "saved": "Na-save",
+      "saving": "Sine-save..."
+    },
+    "title": "I-edit ang Configuration"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Kanselahin",
+      "submit": "Magdagdag ng Trigger",
+      "title": "Magdagdag ng Custom Trigger"
+    },
+    "builtin": {
+      "description": "Mga default na trigger na kasama ng application. Maaari mong paganahin o i-disable ang mga ito at i-customize ang kanilang mga pattern.",
+      "title": "Mga Built-in na Trigger"
+    },
+    "card": {
+      "builtinBadge": "Builtin",
+      "collapseAriaLabel": "I-collapse",
+      "deleteAriaLabel": "Tanggalin ang trigger",
+      "editNameAriaLabel": "I-edit ang pangalan",
+      "expandAriaLabel": "I-expand"
+    },
+    "color": {
+      "customHexTitle": "Custom hex color",
+      "invalidHex": "Invalid na hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Alertuhin kung >",
+      "emptyPatternHint": "Iwanang blangko para itugma ang lahat ng content. Gumagamit ng JavaScript regex syntax.",
+      "errorStatusDescription": "Nag-trigger kapag nag-ulat ng error ang isang tool execution (is_error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "hal., error|failed|exception"
+    },
+    "custom": {
+      "description": "Lumikha ng sarili mong mga trigger para maabisuhan para sa mga partikular na pattern o tool output.",
+      "empty": "Wala pang naka-configure na custom trigger.",
+      "title": "Mga Custom Trigger"
+    },
+    "errors": {
+      "invalidRegexPattern": "Invalid na regex pattern"
+    },
+    "fields": {
+      "contentType": "Content Type",
+      "matchField": "Match Field",
+      "matchPattern": "Match Pattern (Regex)",
+      "scopeToolName": "Scope / Tool Name",
+      "scopeToolNameOptional": "Scope / Tool Name (opsyonal)",
+      "threshold": "Threshold",
+      "tokenType": "Token Type",
+      "triggerNamePlaceholder": "hal., Build Failure Alert",
+      "triggerNameRequired": "Trigger Name *"
+    },
+    "ignorePatterns": {
+      "hint": "Pindutin ang Enter para idagdag. Nilalaktawan ang notification kung may pattern na tumugma.",
+      "placeholder": "Magdagdag ng ignore regex...",
+      "removeAriaLabel": "Tanggalin ang ignore pattern",
+      "summary": "Advanced: Mga Exclusion Rule",
+      "title": "Mga Ignore Pattern (laktawan kung tumugma)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Text Output",
+        "thinking": "Thinking",
+        "tool_result": "Tool Result",
+        "tool_use": "Tool Use"
+      },
+      "matchFields": {
+        "args": "Mga Argument",
+        "command": "Command",
+        "content": "Content",
+        "description": "Paglalarawan",
+        "file_path": "File Path",
+        "fullInput": "Full Input (JSON)",
+        "glob": "Glob Filter",
+        "new_string": "New String",
+        "old_string": "Old String",
+        "path": "Path",
+        "pattern": "Pattern",
+        "prompt": "Prompt",
+        "query": "Query",
+        "skill": "Skill Name",
+        "subagent_type": "Subagent Type",
+        "text": "Text Content",
+        "thinking": "Thinking Content",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Content Pattern",
+        "error_status": "Execution Error",
+        "token_threshold": "Mataas na Paggamit ng Token"
+      },
+      "tokenTypes": {
+        "input": "Input Token",
+        "output": "Output Token",
+        "total": "Kabuuang Token"
+      },
+      "toolNames": {
+        "anyTool": "Anumang Tool"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Test Trigger",
+      "detectedSuffix": "na error ang matutukoy sana",
+      "more": "...at {{count}} pa",
+      "more_few": "...at {{count}} pa",
+      "more_many": "...at {{count}} pa",
+      "more_one": "...at {{count}} pa",
+      "more_other": "...at {{count}} pa",
+      "testTrigger": "Test Trigger",
+      "testing": "Sinusubok...",
+      "title": "Preview",
+      "truncatedWarning": "Maagang huminto ang paghahanap (timeout o count limit). Maaaring mas mataas ang aktwal na mga tumugma.",
+      "viewSession": "Tingnan ang Session"
+    },
+    "repositoryScope": {
+      "empty": "Walang napiling repository - nalalapat ang trigger sa lahat ng repository",
+      "hint": "Kapag may mga napiling repository, nag-trigger lang ito para sa mga error sa mga repository na iyon.",
+      "placeholder": "Piliin ang repository na idadagdag...",
+      "summary": "Advanced: Repository Scope",
+      "title": "Limitahan sa mga Repository (nalalapat lang sa mga napiling repository)"
+    },
+    "sections": {
+      "configuration": "Configuration",
+      "dotColor": "Dot Color",
+      "generalInfo": "Pangkalahatang Impormasyon",
+      "triggerCondition": "Trigger Condition"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Magdagdag ng Profile",
+      "cancel": "Kanselahin",
+      "deleteProfile": "Tanggalin ang profile",
+      "editProfile": "I-edit ang profile",
+      "save": "I-save"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (mula sa SSH Config)",
+      "password": "Password",
+      "privateKey": "Private Key"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Tanggalin",
+      "message": "Sigurado ka bang gusto mong tanggalin ang \"{{name}}\"? Hindi na ito maibabalik.",
+      "title": "Tanggalin ang Profile"
+    },
+    "description": "I-save ang mga SSH connection profile para sa mabilis na muling pagkonekta",
+    "empty": {
+      "description": "Magdagdag ng SSH profile para mabilis na makakonekta",
+      "title": "Walang naka-save na profile"
+    },
+    "form": {
+      "authentication": "Authentication",
+      "host": "Host",
+      "name": "Pangalan",
+      "passwordPrompt": "Hihilingin sa iyo ang password kapag kumonekta.",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "Username",
+      "namePlaceholder": "Aking Server",
+      "hostPlaceholder": "hostname o IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "Niloload ang mga profile...",
+    "title": "Mga Workspace Profile"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Kumonekta",
+      "connecting": "Kumokonekta...",
+      "disconnect": "Idiskonekta",
+      "testConnection": "Subukan ang Koneksyon",
+      "testing": "Sinusubok..."
+    },
+    "currentMode": {
+      "description": "Pinagmulan ng data para sa mga session file",
+      "label": "Kasalukuyang Mode",
+      "local": "Lokal ({{path}})"
+    },
+    "description": "Kumonekta sa isang remote machine para tingnan ang mga Claude Code session na tumatakbo doon",
+    "form": {
+      "authentication": "Authentication",
+      "host": "Host",
+      "password": "Password",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "Username",
+      "hostPlaceholder": "hostname o SSH config alias",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "Mga Naka-save na Profile"
+    },
+    "ssh": {
+      "title": "SSH Connection"
+    },
+    "status": {
+      "connectedTo": "Nakakonekta sa {{host}}",
+      "remoteSessions": "Tinitingnan ang mga remote session sa pamamagitan ng SSH"
+    },
+    "test": {
+      "failed": "Nabigo ang koneksyon: {{error}}",
+      "success": "Matagumpay ang koneksyon",
+      "unknownError": "Hindi kilalang error"
+    },
+    "title": "Remote Connection"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "cancelLogin": "Kanselahin ang login",
+      "connectChatGpt": "Ikonekta ang ChatGPT",
+      "delete": "Tanggalin",
+      "disable": "I-disable",
+      "disconnectAccount": "Idiskonekta ang account",
+      "generateLink": "Bumuo ng link",
+      "openLogin": "Buksan ang login",
+      "reconnectAnthropic": "Ikonekta muli ang Anthropic",
+      "refresh": "I-refresh",
+      "replaceKey": "Palitan ang key",
+      "saveEndpoint": "I-save ang endpoint",
+      "saveKey": "I-save ang key",
+      "saving": "Sine-save...",
+      "setApiKey": "Itakda ang API key",
+      "updateKey": "I-update ang key",
+      "useCode": "Gamitin ang code"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Niloload ang mga naka-store na credential...",
+      "projectScope": "Proyekto",
+      "scope": "Scope",
+      "storedIn": "Naka-store sa {{backend}}",
+      "userScope": "User",
+      "storedInApp": "Naka-store sa app",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "Gumamit ng direktang Anthropic API key para sa API-billed na access. Mananatiling available ang iyong Anthropic subscription session kapag bumalik ka.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "Gumamit ng OpenAI API key bilang pangalawang Codex auth path. Kung lilipat ka ng Codex sa API key mode, isasalamin ng app ang OPENAI_API_KEY sa CODEX_API_KEY para sa mga native launch.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "API access",
+          "description": "Gumamit ng `GEMINI_API_KEY` para sa Gemini API backend. Hindi ito kailangan ng CLI SDK at ADC.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Konektado",
+        "description": "Pamahalaan ang lokal na Codex app-server account session na nagpapagana sa mga subscription-backed na native launch.",
+        "loginInProgress": "Isinasagawa ang login",
+        "plan": "Plano: {{plan}}",
+        "reconnectRequired": "Kailangang ikonekta muli",
+        "title": "ChatGPT account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Patuloy na gagamitin ng Auto ang natukoy na API key hanggang sa makonekta ang ChatGPT.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Ginagamit lang ang natukoy na API key pagkatapos mong ilipat ang Codex sa API key mode.",
+          "localArtifactsNoSession": "Kasalukuyang nag-uulat ang Codex CLI ng walang aktibong ChatGPT account. May lokal na data ng Codex account, ngunit walang aktibong managed session na napili. Lumalabas dito ang mga usage limit pagkatapos lang makita ng Codex CLI ang isa.",
+          "noActiveAccount": "Kasalukuyang nag-uulat ang Codex CLI ng walang aktibong ChatGPT account. Lumalabas dito ang mga usage limit pagkatapos lang makita ng Codex CLI ang isa.",
+          "reconnectBeforeUsage": "May lokal na napiling ChatGPT account ang Codex, ngunit kailangang ikonekta muli ang kasalukuyang session bago ma-load dito ang mga usage limit.",
+          "usageLimitsAfterReport": "Lumalabas dito ang mga usage limit pagkatapos iulat ng Codex ang mga ito para sa konektadong ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "Sinusuri",
+        "downloading": "Dina-download",
+        "installCli": "I-install ang Codex CLI",
+        "installing": "Ini-install",
+        "retryInstall": "Subukang muli ang pag-install",
+        "title": "I-install ang Codex CLI sa app data"
+      },
+      "rateLimits": {
+        "credits": "Mga Credit",
+        "creditsDescription": "Ipinapakita ang mga credit nang hiwalay sa window-based na subscription usage at maaaring hindi available para sa mga plan-backed na ChatGPT session.",
+        "noSecondaryWindow": "Hindi nagbalik ang Codex ng secondary window para sa account snapshot na ito.",
+        "notReported": "Hindi naiulat",
+        "primaryReset": "Primary reset",
+        "primaryUsed": "Primary na ginamit",
+        "primaryWindow": "Primary window",
+        "remainingLeft": "{{value}} natitira",
+        "remainingUnknown": "Hindi alam ang natitira",
+        "secondaryReset": "Secondary reset",
+        "secondaryUsed": "Secondary na ginamit",
+        "secondaryWindow": "Secondary window",
+        "usedQuotaNote": "Ipinapakita ng mga porsyentong ito ang ginamit na quota, hindi ang natitirang quota.",
+        "weeklyReset": "Weekly reset",
+        "weeklyUsed": "Lingguhang ginamit",
+        "weeklyUsedOneWeek": "Lingguhang ginamit (1w)",
+        "weeklyWindow": "Weekly window",
+        "secondaryFallback": "secondary",
+        "secondaryWindowNote": " Ipinapakita nang hiwalay ang mga lingguhang limit sa {{window}} window.",
+        "usageExplanationGeneric": "Ipinapakita ang ginamit na quota, hindi ang natitirang quota.",
+        "usageExplanationWindowOnly": "Ipinapakita ang ginamit na quota sa kasalukuyang {{window}} window, hindi ang natitirang quota.",
+        "usageExplanationWithRemaining": "{{used}} ginamit - mga {{remaining}} ang natitira sa kasalukuyang {{window}} window."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "Hindi naka-configure ang auth token.",
+      "baseUrl": "Base URL",
+      "description": "Gumamit ng Anthropic-compatible na lokal na runtime endpoint.",
+      "keepSavedToken": "Iwanang blangko para panatilihin ang naka-save na token",
+      "title": "Lokal / compatible na endpoint",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Kailangan ang Base URL",
+        "firstPartyAnthropic": "Gamitin ang Auto, Subscription, o API key para sa first-party na Anthropic",
+        "httpRequired": "Dapat gumamit ang Base URL ng http:// o https://",
+        "invalidUrl": "Invalid na URL",
+        "noCredentials": "Hindi dapat maglaman ng credential ang Base URL"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Naka-disable ang endpoint. Napanatili ang naka-save na token.",
+        "endpointSaved": "Na-save ang endpoint",
+        "endpointSavedTokenMissing": "Na-save ang endpoint. Hindi naka-configure ang auth token."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Paraan ng authentication",
+      "descriptions": {
+        "anthropic": "Piliin kung paano mag-authenticate ang mga Anthropic session na inilunsad ng app.",
+        "codex": "Piliin kung dapat bang gustuhin ng Codex ang iyong ChatGPT subscription o isang API key kapag inilunsad ang native runtime.",
+        "gemini": "I-configure ang opsyonal na API access. Awtomatiko pa ring natutuklasan ang CLI SDK at ADC.",
+        "opencode": "Pinamamahalaan ng OpenCode runtime ang OpenCode authentication at provider inventory."
+      },
+      "method": "Paraan ng koneksyon",
+      "mode": "Mode: {{mode}}",
+      "selected": "Napili",
+      "switching": "Lumilipat...",
+      "title": "Connection"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Gamitin ang ANTHROPIC_API_KEY at Anthropic API billing.",
+        "autoDescription": "Gamitin ang mga Anthropic runtime default at ang pinakamahusay na available na lokal na credential.",
+        "hint": "Pinapanatili ng Auto ang Anthropic sa default nitong lokal na credential resolution.",
+        "subscriptionDescription": "Gamitin ang iyong lokal na Anthropic sign-in session at subscription access.",
+        "subscriptionTitle": "Anthropic subscription"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Gamitin ang OPENAI_API_KEY at CODEX_API_KEY billing para sa mga native Codex launch.",
+        "autoDescription": "Gustuhin ang iyong ChatGPT account at subscription. Gamitin lang ang API key mode kung kailangan.",
+        "chatgptDescription": "Gamitin ang iyong konektadong ChatGPT account at Codex subscription.",
+        "chatgptTitle": "ChatGPT account",
+        "hint": "Palaging tumatakbo ang Codex sa native runtime. Mas gustuhin ng Auto ang iyong ChatGPT account bago bumalik sa mga API-key na credential."
+      }
+    },
+    "description": "Pamahalaan kung paano kumonekta ang bawat provider at, kung sinusuportahan, kung aling backend ang dapat gamitin ng multimodel runtime.",
+    "fastMode": {
+      "defaultOff": "Default na Naka-off",
+      "description": "Ilapat ang Claude Code Fast mode bilang default para sa mga bagong Anthropic team launch kapag pinapayagan ito ng na-resolve na model at runtime.",
+      "disabledHint": "Mananatili sa normal na bilis ang mga bagong Anthropic launch maliban kung tahasang paganahin ng isang team ang Fast mode.",
+      "enabledHint": "Hihilingin ng mga bagong Anthropic launch ang Fast mode bilang default kapag sinusuportahan ito ng na-resolve na model.",
+      "notExposed": "Hindi inilalantad ng Anthropic runtime na ito ang Fast mode.",
+      "preferFast": "Gustuhin ang Fast",
+      "title": "Default ng Fast mode",
+      "unavailableForRuntime": "Kasalukuyang hindi available ang Fast mode para sa Anthropic runtime na ito."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Napili ang API key mode, ngunit wala pang available na Anthropic API credential.",
+      "anthropicStoredKeyAvailable": "May available na naka-save na API key, ngunit ginagamit lang ito ng mga Anthropic session na inilunsad ng app pagkatapos kang lumipat sa API key mode.",
+      "anthropicSubscriptionMissing": "Napili ang Anthropic subscription mode. Mag-sign in sa Anthropic para gamitin ang provider na ito.",
+      "authTokenMissing": "Hindi naka-configure ang auth token. Maraming lokal na Anthropic-compatible na endpoint ang nangangailangan ng hindi blangkong token.",
+      "chatgptLoginPending": "Naghihintay na matapos ang login ng ChatGPT account...",
+      "chatgptLoginStarting": "Sinisimulan ang ChatGPT login...",
+      "codexApiKeyMissing": "Napili ang API key mode, ngunit wala pang available na OPENAI_API_KEY o CODEX_API_KEY credential.",
+      "codexLocalArtifactsNoSession": "Kasalukuyang walang aktibong ChatGPT account ang Codex CLI. May lokal na data ng Codex account, ngunit walang aktibong managed session na napili.",
+      "codexNeedsReconnect": "May lokal na napiling ChatGPT account ang Codex, ngunit kailangang ikonekta muli ang kasalukuyang session.",
+      "codexNoChatgptAccount": "Kasalukuyang walang aktibong ChatGPT account ang Codex CLI. Ikonekta ang ChatGPT para gamitin ang iyong subscription.",
+      "codexNoCredential": "Wala pang available na ChatGPT account o API key.",
+      "geminiApiUnavailable": "Kasalukuyang hindi available ang Gemini API. I-configure ang `GEMINI_API_KEY` dito o gumamit ng mga valid na Google ADC credential.",
+      "withApiKeyFallback": "{{message}} Lumipat sa API key mode para gamitin ang natukoy na API key."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Pilitin ang mga Anthropic session na inilunsad ng app na gumamit ng API key credential.",
+        "auto": "Gamitin ang default na runtime behavior. Ginagamit lang ang mga naka-save na API key sa app na ito pagkatapos kang lumipat sa API key mode.",
+        "oauth": "Pilitin ang mga Anthropic session na inilunsad ng app na gumamit ng lokal na Anthropic subscription session."
+      },
+      "codex": {
+        "apiKey": "Pilitin ang mga native Codex launch na gumamit ng OPENAI_API_KEY / CODEX_API_KEY billing.",
+        "auto": "Gustuhin ang iyong ChatGPT account kapag available ito. Bumalik sa API key mode kapag kailangan lang.",
+        "chatgpt": "Pilitin ang mga native Codex launch na gumamit ng iyong konektadong ChatGPT account at subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Inilalapat ang mga pagbabago sa koneksyon...",
+      "refreshingProviderStatus": "Nire-refresh ang status ng provider...",
+      "savingCompatibleEndpoint": "Sine-save ang compatible endpoint...",
+      "switchingAnthropicSubscription": "Lumilipat sa Anthropic subscription...",
+      "switchingApiKey": "Lumilipat sa API key...",
+      "switchingApiKeyMode": "Lumilipat sa API key mode...",
+      "switchingAuto": "Lumilipat sa Auto...",
+      "switchingChatgpt": "Lumilipat sa ChatGPT account mode..."
+    },
+    "provider": "Provider",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Kasalukuyang walang hiwalay na runtime backend selector ang Anthropic.",
+        "codex": "Tumatakbo na ngayon ang Codex sa native runtime path lang.",
+        "gemini": "Piliin kung aling Gemini runtime backend ang dapat gamitin ng multimodel.",
+        "opencode": "Gumagamit ang OpenCode ng sarili nitong managed runtime host. Kasalukuyang inilalantad lang ng Desktop ang status."
+      },
+      "title": "Runtime",
+      "updating": "Ina-update ang runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "naka-configure",
+      "enabled": "Pinagana",
+      "notConfigured": "Hindi naka-configure",
+      "notSet": "hindi nakatakda",
+      "off": "Off",
+      "unknown": "Hindi alam"
+    },
+    "title": "Mga Setting ng Provider",
+    "usage": {
+      "apiKey": "Gumagamit ng API key",
+      "apiKeyRequired": "Kailangan ng API key",
+      "compatibleEndpoint": "Gumagamit ng compatible endpoint",
+      "notConnected": "Hindi konektado",
+      "usingMethod": "Gumagamit ng {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Natanggal ang API key, ngunit nabigong i-refresh ang status ng provider.",
+      "apiKeySavedRefreshFailed": "Na-save ang API key, ngunit nabigong i-refresh ang status ng provider.",
+      "connectionUpdatedRefreshFailed": "Na-update ang koneksyon, ngunit nabigong i-refresh ang status ng provider.",
+      "deleteApiKey": "Nabigong tanggalin ang API key",
+      "disableEndpoint": "Nabigong i-disable ang endpoint",
+      "endpointDisabledRefreshFailed": "Naka-disable ang endpoint, ngunit nabigong i-refresh ang status ng provider.",
+      "endpointSavedRefreshFailed": "Na-save ang endpoint, ngunit nabigong i-refresh ang status ng provider.",
+      "refreshCodexAccount": "Nabigong i-refresh ang Codex account",
+      "saveApiKey": "Nabigong i-save ang API key",
+      "saveEndpoint": "Nabigong i-save ang endpoint",
+      "updateAnthropicFastMode": "Nabigong i-update ang Anthropic Fast mode",
+      "updateConnection": "Nabigong i-update ang koneksyon",
+      "updateRuntimeBackend": "Nabigong i-update ang runtime backend",
+      "apiKeyRequired": "Kailangan ang API key"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Subscription / OAuth",
+        "chatgpt": "ChatGPT account",
+        "apiKey": "API key",
+        "anthropicSubscription": "Anthropic subscription"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "API key helper",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude subscription",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google account",
+        "serviceAccount": "service account"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "Kasalukuyang runtime",
+        "selectedRuntime": "Napiling runtime",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Sinusuri...",
+        "modelsAvailable": "May available na model",
+        "checked": "Nasuri",
+        "providerActivity": "Aktibidad ng Provider",
+        "notConnected": "Hindi konektado",
+        "startingChatGptLogin": "Sinisimulan ang ChatGPT login...",
+        "waitingForChatGptLogin": "Naghihintay sa login ng ChatGPT account...",
+        "chatGptVerificationDegraded": "Natukoy ang ChatGPT account - kasalukuyang degraded ang account verification.",
+        "chatGptAccountReady": "Handa na ang ChatGPT account",
+        "apiKeyReady": "Handa na ang API key",
+        "codexLocalAccountNeedsReconnect": "May lokal na napiling ChatGPT account ang Codex, ngunit kailangang ikonekta muli ang kasalukuyang session.",
+        "codexNoActiveManagedSession": "Nag-uulat ang Codex CLI ng walang aktibong ChatGPT login. May lokal na data ng Codex account, ngunit walang aktibong managed session na napili.",
+        "codexNoActiveChatGptLogin": "Nag-uulat ang Codex CLI ng walang aktibong ChatGPT login",
+        "connectChatGptForSubscription": "Ikonekta ang isang ChatGPT account para gamitin ang iyong Codex subscription.",
+        "codexNativeReady": "Handa na ang Codex native",
+        "codexNativeUnavailable": "Hindi available ang Codex native",
+        "unavailableInCurrentRuntime": "Hindi available sa kasalukuyang runtime",
+        "connectedViaApiKey": "Konektado sa pamamagitan ng API key",
+        "apiKeyConfiguredNotVerified": "Naka-configure ang API key, ngunit hindi pa na-verify",
+        "apiKeyModeMissingCredential": "Napili ang API key mode, ngunit walang naka-configure na API key",
+        "connectedVia": "Konektado sa pamamagitan ng {{method}}",
+        "unableToVerify": "Hindi ma-verify"
+      },
+      "mode": {
+        "selectedAuth": "Napiling auth: {{authMode}}",
+        "preferredAuth": "Gustong auth: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "Naka-configure ang API key",
+        "savedApiKeyAvailable": "May available na naka-save na API key sa Manage",
+        "apiKeyAlsoConfigured": "Naka-configure din ang API key sa Manage",
+        "apiKeyConfiguredInManage": "Naka-configure ang API key sa Manage",
+        "apiKeyFallbackInManage": "May available ding API key sa Manage bilang fallback",
+        "availableAsFallback": "{{summary}} - available bilang fallback",
+        "savedApiKeyAvailableIfSwitch": "May available na naka-save na API key sa Manage kung lilipat ka sa API key mode",
+        "availableIfSwitch": "{{summary}} - available kung lilipat ka sa API key mode",
+        "autoWillUseUntilChatGpt": "{{summary}} - Gagamitin ito ng Auto hanggang sa makonekta ang ChatGPT"
+      },
+      "actions": {
+        "connect": "Kumonekta",
+        "connectAnthropic": "Ikonekta ang Anthropic",
+        "connectChatGpt": "Ikonekta ang ChatGPT",
+        "disconnect": "Idiskonekta",
+        "openLogin": "Buksan ang Login"
+      },
+      "disconnect": {
+        "anthropicTitle": "Idiskonekta ang Anthropic subscription?",
+        "anthropic": "Inaalis nito ang lokal na Anthropic subscription session mula sa Claude CLI runtime.",
+        "anthropicWithApiKey": "Inaalis nito ang lokal na Anthropic subscription session mula sa Claude CLI runtime. Mananatiling available ang mga naka-save na API key sa Manage.",
+        "geminiTitle": "Idiskonekta ang Gemini CLI?",
+        "gemini": "Nili-clear nito ang lokal na metadata ng Gemini CLI session. Hindi inaalis ang mga external na ADC credential at naka-save na API key."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Maghanap ng Update",
+      "checking": "Sinusuri...",
+      "extensions": "Extensions",
+      "installRuntime": "I-install ang {{runtime}}",
+      "manage": "Pamahalaan",
+      "recheck": "Suriing muli",
+      "reinstallRuntime": "I-reinstall ang {{runtime}}",
+      "retry": "Subukang muli",
+      "update": "I-update"
+    },
+    "installer": {
+      "checkingLatest": "Sinusuri ang pinakabagong bersyon...",
+      "downloading": "Dina-download...",
+      "failed": "Nabigo ang pag-install",
+      "installed": "Na-install ang v{{version}}",
+      "installing": "Ini-install...",
+      "latest": "pinakabago",
+      "verifying": "Bineberipika ang checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Sinusuri ang mga AI Provider...",
+      "claudeCli": "Sinusuri ang Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Niloload ang mga model...",
+      "modelsUnavailable": "Hindi available ang mga model para sa runtime build na ito",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Nabigo ang authentication",
+      "authUpdated": "Na-update ang authentication",
+      "loggedOut": "Naka-logout ang provider",
+      "login": "Login",
+      "logout": "Logout",
+      "logoutFailed": "Nabigo ang logout"
+    },
+    "status": {
+      "configuredNotFound": "Hindi nakita ang na-configure na {{runtime}}.",
+      "foundButFailed": "Nakita ang {{runtime}} ngunit nabigong magsimula",
+      "healthCheckFailed": "Nabigo sa startup health check ang na-configure na {{runtime}}.",
+      "notInstalled": "Hindi naka-install ang {{runtime}}"
+    },
+    "title": "CLI Runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

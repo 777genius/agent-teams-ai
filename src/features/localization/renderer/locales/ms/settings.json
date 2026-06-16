@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Pilihan pengguna mahir: eksport/import konfigurasi, tetap semula lalai, dan penyuntingan konfigurasi mentah.",
+      "label": "Lanjutan"
+    },
+    "general": {
+      "description": "Keutamaan teras aplikasi seperti tema, bahasa, ketumpatan paparan, dan tingkah laku permulaan.",
+      "label": "Umum"
+    },
+    "infoAriaLabel": "Apakah {{label}}?",
+    "notifications": {
+      "description": "Kawal bila dan bagaimana anda diberitahu tentang aktiviti agen, penyelesaian tugasan, dan ralat.",
+      "label": "Pemberitahuan"
+    }
+  },
+  "view": {
+    "description": "Urus keutamaan aplikasi anda",
+    "loading": "Memuatkan tetapan...",
+    "title": "Tetapan"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Batal",
+      "test": "Uji"
+    },
+    "defaults": {
+      "allProjects": "Semua projek",
+      "allProjectsHint": "Ujian menggunakan {{project}}. Lalai terpakai melainkan projek mempunyai penggantian.",
+      "loadingContexts": "Memuatkan konteks...",
+      "projectHint": "Menyimpan hanya menggantikan {{project}}.",
+      "projectOverrideContext": "Konteks penggantian projek",
+      "scopeDescriptionAllProjects": "Lalai untuk setiap projek yang tidak mempunyai penggantian OpenCode sendiri.",
+      "scopeDescriptionProject": "Gantikan hanya projek yang dipilih. Pasukan yang sedang berjalan tidak berubah.",
+      "selectProjectContext": "Pilih konteks projek",
+      "selectProjectHint": "Pilih projek sebelum menguji model tempatan atau menyimpan lalai.",
+      "selectValidationContext": "Pilih konteks pengesahan",
+      "setAllProjectsDefault": "Tetapkan lalai semua projek",
+      "setProjectDefault": "Tetapkan lalai projek",
+      "thisProject": "Projek ini",
+      "title": "Lalai OpenCode",
+      "validationContext": "Konteks pengesahan"
+    },
+    "diagnostics": {
+      "copied": "Diagnostik disalin",
+      "copiedShort": "Disalin",
+      "copy": "Salin diagnostik",
+      "hints": "Petua",
+      "likelyCause": "Kemungkinan punca:",
+      "windowsSymlinkAdminHint": "Windows: jalankan Agent Teams AI sebagai Pentadbir"
+    },
+    "models": {
+      "alreadyDefault": "Ini sudah menjadi lalai OpenCode yang dipilih.",
+      "empty": "Tiada model ditemui.",
+      "emptyFree": "Tiada model percuma ditemui.",
+      "emptyRecommended": "Tiada model disyorkan ditemui.",
+      "emptyRecommendedFree": "Tiada model percuma yang disyorkan ditemui.",
+      "freeOnly": "Percuma sahaja",
+      "launchableDescription": "Laluan yang diketahui daripada konfigurasi OpenCode, model terbina dalam percuma, dan lalai semasa. Laluan tempatan memerlukan ujian yang berjaya sebelum ia sedia untuk pelancaran pasukan.",
+      "launchableTitle": "Laluan model OpenCode",
+      "loadingRoutes": "Memuatkan laluan model OpenCode...",
+      "noRoutesMatch": "Tiada laluan model OpenCode yang sepadan dengan \"{{query}}\".",
+      "noneReported": "Belum ada laluan model OpenCode dilaporkan. Konfigurasikan laluan tempatan dalam OpenCode atau gunakan tab Pembekal untuk memeriksa pembekal katalog.",
+      "recommendedOnly": "Disyorkan sahaja",
+      "searchPlaceholder": "Cari model",
+      "selectProjectBeforeTesting": "Pilih konteks projek sebelum menguji model.",
+      "selectProjectBeforeTestingDefaults": "Pilih konteks projek sebelum menguji atau menyimpan lalai OpenCode.",
+      "testInProgress": "Ujian model sedang berjalan.",
+      "useInTeamPicker": "Simpan untuk pemilih pasukan",
+      "validationContextRequired": "Pilih konteks pengesahan di atas untuk membolehkan Uji dan Tetapkan lalai. Menyimpan untuk pemilih pasukan hanya menyimpan laluan untuk pasukan baharu.",
+      "actionsUnavailable": "Tindakan tidak tersedia buat sementara waktu.",
+      "defaultSaveInProgress": "Lalai OpenCode sedang disimpan.",
+      "routeUnavailableAuth": "Pembekal ini memerlukan pengesahan sebelum model ini boleh digunakan.",
+      "routeUnavailableFailed": "Laluan model ini gagal ujian pelaksanaan terakhirnya.",
+      "routeUnavailableGeneric": "Laluan model ini tidak boleh digunakan buat masa ini.",
+      "routeUnavailableUnknown": "Model ini ialah lalai OpenCode semasa, tetapi ia belum tersedia dalam katalog langsung."
+    },
+    "providers": {
+      "catalog": "Katalog pembekal OpenCode",
+      "countFallback": "Pembekal OpenCode",
+      "description": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
+      "loadMore": "Muat lebih banyak pembekal",
+      "loading": "Memuatkan pembekal OpenCode",
+      "noMatches": "Tiada pembekal yang sepadan dengan carian itu.",
+      "noneReported": "Tiada pembekal OpenCode dilaporkan oleh runtime terurus.",
+      "recommended": "Disyorkan",
+      "refreshCatalog": "Segar semula katalog",
+      "searchPlaceholder": "Cari pembekal",
+      "description_few": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
+      "description_many": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
+      "description_one": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
+      "description_other": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu."
+    },
+    "setup": {
+      "loading": "Memuatkan persediaan pembekal..."
+    },
+    "summary": {
+      "defaultModel": "Lalai OpenCode: {{model}}",
+      "loading": "Memuatkan runtime OpenCode terurus, pembekal yang disambung, dan lalai model...",
+      "source": "Sumber: {{source}}",
+      "title": "Runtime OpenCode"
+    },
+    "tabs": {
+      "models": "Model",
+      "providers": "Pembekal"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Cari laluan model"
+    },
+    "badges": {
+      "usedInTeamPicker": "Disimpan untuk pemilih pasukan",
+      "free": "percuma",
+      "local": "tempatan",
+      "configured": "dikonfigurasi",
+      "knownRoute": "laluan diketahui",
+      "connected": "disambung",
+      "verified": "disahkan",
+      "needsTest": "perlu diuji",
+      "failed": "gagal",
+      "unknown": "tidak diketahui",
+      "default": "lalai"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Bahasa untuk komunikasi agen",
+      "descriptionWithDetected": "Bahasa untuk komunikasi agen (dikesan: {{detected}})",
+      "emptyMessage": "Tiada bahasa ditemui.",
+      "label": "Bahasa",
+      "searchPlaceholder": "Cari bahasa...",
+      "selectPlaceholder": "Pilih bahasa...",
+      "title": "Bahasa Agen"
+    },
+    "appLanguage": {
+      "description": "Bahasa untuk antara muka aplikasi.",
+      "label": "Bahasa",
+      "title": "Bahasa Aplikasi"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Kembangkan secara automatik setiap giliran respons apabila membuka transkrip atau menerima mesej baharu",
+        "label": "Kembangkan respons AI secara lalai"
+      },
+      "nativeTitleBar": {
+        "description": "Gunakan bingkai tetingkap sistem lalai dan bukannya bar tajuk tersuai",
+        "label": "Gunakan bar tajuk natif",
+        "restartConfirm": {
+          "confirmLabel": "Mulakan semula",
+          "message": "Aplikasi perlu dimulakan semula untuk menerapkan perubahan bar tajuk. Mulakan semula sekarang?",
+          "title": "Mula semula diperlukan"
+        }
+      },
+      "theme": {
+        "description": "Pilih tema warna pilihan anda",
+        "label": "Tema",
+        "options": {
+          "dark": "Gelap",
+          "light": "Cerah",
+          "system": "Sistem"
+        }
+      },
+      "title": "Penampilan"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Mulakan pelayan HTTP untuk mengakses UI daripada pelayar atau membenamkan dalam iframe",
+        "label": "Dayakan mod pelayan"
+      },
+      "title": "Akses Pelayar"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Pilih Folder",
+        "selectFolderManually": "Pilih Folder Secara Manual",
+        "useAutoDetect": "Gunakan Kesan Auto",
+        "useFolder": "Gunakan Folder",
+        "usePath": "Gunakan Laluan",
+        "useThisPath": "Gunakan Laluan Ini",
+        "useWsl": "Menggunakan Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Folder ini tidak mengandungi direktori \"projects\". Teruskan juga?",
+          "title": "Tiada direktori projek ditemui"
+        },
+        "notClaudeDir": {
+          "message": "Folder ini dinamakan \"{{folderName}}\", bukan \".claude\". Teruskan juga?",
+          "title": "Folder yang dipilih bukan .claude"
+        },
+        "noWslPaths": {
+          "message": "Tidak dapat mencari distro WSL dengan data Claude secara automatik. Pilih folder secara manual?",
+          "title": "Tiada laluan WSL Claude ditemui"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" tidak mengandungi direktori \"projects\". Teruskan juga?",
+          "title": "Laluan WSL kehilangan direktori projek"
+        }
+      },
+      "current": {
+        "autoDetected": "Dikesan auto: {{path}}",
+        "autoDetectedPath": "Menggunakan laluan yang dikesan auto",
+        "customPath": "Menggunakan laluan tersuai",
+        "label": "Akar Tempatan Semasa"
+      },
+      "description": "Pilih folder tempatan mana yang dianggap sebagai akar data Claude anda",
+      "errors": {
+        "detectWslFailed": "Gagal mengesan laluan akar WSL Claude",
+        "loadFailed": "Gagal memuatkan tetapan akar Claude tempatan",
+        "updateFailed": "Gagal mengemas kini akar Claude"
+      },
+      "title": "Akar Claude Tempatan",
+      "wslModal": {
+        "closeAriaLabel": "Tutup modal laluan WSL",
+        "description": "Pengedaran WSL yang dikesan dan calon akar Claude",
+        "noProjectsDir": "Tiada direktori projek dikesan",
+        "title": "Pilih Akar WSL Claude"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Bantu meningkatkan aplikasi dengan menghantar data ranap dan prestasi tanpa nama",
+        "label": "Hantar laporan ranap"
+      },
+      "title": "Privasi"
+    },
+    "server": {
+      "runningOn": "Berjalan pada",
+      "standaloneModeDescription": "Berjalan dalam mod kendiri. Pelayan HTTP sentiasa aktif. Pemberitahuan sistem tidak tersedia - pencetus pemberitahuan dilog dalam aplikasi sahaja.",
+      "title": "Pelayan"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Mulakan aplikasi secara automatik apabila anda log masuk",
+        "label": "Lancarkan ketika log masuk"
+      },
+      "showDockIcon": {
+        "description": "Paparkan ikon aplikasi dalam dock (macOS)",
+        "label": "Tunjuk ikon dock"
+      },
+      "title": "Permulaan"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Pemberitahuan mungkin tidak berfungsi dalam mod pembangunan. macOS mengenal pasti aplikasi sebagai \"Electron\" (ID himpunan",
+      "descriptionSuffix": ") dan bukannya nama aplikasi pengeluaran. Semak Tetapan Sistem > Pemberitahuan > Electron untuk mengesahkan kebenaran.",
+      "title": "Mod Pembangun"
+    },
+    "ignoredRepositories": {
+      "description": "Pemberitahuan daripada repositori ini akan diabaikan",
+      "empty": "Tiada repositori diabaikan",
+      "selectPlaceholder": "Pilih repositori untuk diabaikan...",
+      "title": "Repositori Diabaikan"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Tunjuk pemberitahuan sistem untuk ralat dan peristiwa",
+        "label": "Dayakan Pemberitahuan Sistem"
+      },
+      "sound": {
+        "description": "Mainkan bunyi apabila pemberitahuan muncul",
+        "label": "Mainkan bunyi"
+      },
+      "subagentErrors": {
+        "description": "Kesan dan beritahu tentang ralat dalam sesi subagen",
+        "label": "Sertakan ralat subagen"
+      },
+      "title": "Tetapan Pemberitahuan"
+    },
+    "snooze": {
+      "clear": "Kosongkan Tunda",
+      "description": "Jeda pemberitahuan buat sementara waktu",
+      "descriptionWithTime": "Ditunda sehingga {{time}}",
+      "label": "Tunda pemberitahuan",
+      "options": {
+        "15": "15 minit",
+        "30": "30 minit",
+        "60": "1 jam",
+        "120": "2 jam",
+        "240": "4 jam",
+        "-1": "Sehingga esok"
+      },
+      "selectDuration": "Pilih tempoh..."
+    },
+    "taskCompletion": {
+      "description": "Dapatkan pemberitahuan OS natif apabila Claude menyelesaikan tugasan - bunyi, sepanduk, dan lencana Dock/bar tugas. Berfungsi pada macOS, Linux, dan Windows.",
+      "installPlugin": "Pasang plugin claude-notifications-go",
+      "title": "Pemberitahuan Penyelesaian Tugasan"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Beritahu apabila setiap tugasan dalam pasukan mencapai status selesai",
+        "label": "Semua tugasan selesai"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Apabila Claude melaporkan masa tetapan semula, jadualkan dorongan susulan untuk ketua pasukan selepas had ditetapkan semula",
+        "label": "Sambung semula auto selepas had kadar"
+      },
+      "clarifications": {
+        "description": "Tunjuk pemberitahuan OS natif apabila tugasan memerlukan input anda",
+        "label": "Pemberitahuan penjelasan tugasan"
+      },
+      "crossTeamMessage": {
+        "description": "Beritahu apabila mesej tiba daripada pasukan lain",
+        "label": "Pemberitahuan mesej merentas pasukan"
+      },
+      "leadInbox": {
+        "description": "Beritahu apabila rakan pasukan menghantar mesej kepada ketua pasukan",
+        "label": "Pemberitahuan peti masuk ketua"
+      },
+      "statusChange": {
+        "description": "Tunjuk pemberitahuan OS natif apabila status tugasan berubah",
+        "label": "Pemberitahuan perubahan status tugasan",
+        "onlySolo": {
+          "description": "Beritahu hanya apabila pasukan tiada rakan pasukan",
+          "label": "Hanya dalam mod Solo"
+        },
+        "statuses": {
+          "description": "Status sasaran mana yang mencetuskan pemberitahuan",
+          "label": "Beritahu pada status ini",
+          "options": {
+            "approved": "Diluluskan",
+            "completed": "Selesai",
+            "deleted": "Dipadam",
+            "in_progress": "Bermula",
+            "needsFix": "Perlu Pembetulan",
+            "pending": "Tertangguh",
+            "review": "Semakan"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Tunjuk pemberitahuan OS natif apabila agen mengulas pada tugasan",
+        "label": "Pemberitahuan komen tugasan"
+      },
+      "taskCreated": {
+        "description": "Tunjuk pemberitahuan OS natif apabila tugasan baharu dicipta",
+        "label": "Pemberitahuan tugasan dicipta"
+      },
+      "teamLaunched": {
+        "description": "Beritahu apabila pasukan selesai dilancarkan dan sedia",
+        "label": "Pemberitahuan pasukan dilancarkan"
+      },
+      "title": "Pemberitahuan Pasukan",
+      "toolApproval": {
+        "description": "Beritahu apabila alat memerlukan kelulusan anda (Benarkan/Tolak) semasa aplikasi tidak difokus",
+        "label": "Pemberitahuan kelulusan alat"
+      },
+      "userInbox": {
+        "description": "Beritahu apabila rakan pasukan menghantar mesej kepada anda",
+        "label": "Pemberitahuan peti masuk pengguna"
+      }
+    },
+    "test": {
+      "action": "Hantar Ujian",
+      "description": "Hantar pemberitahuan ujian untuk mengesahkan penghantaran",
+      "failedToSend": "Gagal menghantar pemberitahuan ujian",
+      "label": "Pemberitahuan ujian",
+      "sending": "Menghantar...",
+      "sent": "Dihantar!",
+      "unknownError": "Ralat tidak diketahui"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Ikon aplikasi",
+      "description": "Himpunkan pasukan agen AI yang bekerja secara autonomi selari, berkomunikasi merentas pasukan, dan menguruskan tugasan pada papan kanban - dengan semakan kod terbina dalam, pemantauan proses langsung, dan ketelusan alat penuh.",
+      "standalone": "Kendiri",
+      "title": "Perihal",
+      "version": "Versi {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Sunting Konfigurasi",
+      "exportConfig": "Eksport Konfigurasi",
+      "importConfig": "Import Konfigurasi",
+      "openInEditor": "Buka dalam Editor",
+      "resetToDefaults": "Tetap Semula ke Lalai",
+      "title": "Konfigurasi"
+    },
+    "updates": {
+      "available": "v{{version}} tersedia",
+      "check": "Semak Kemas Kini",
+      "checking": "Menyemak...",
+      "ready": "Kemas kini sedia",
+      "unknownVersion": "tidak diketahui",
+      "upToDate": "Terkini"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Gagal memuatkan konfigurasi",
+      "saveFailed": "Gagal menyimpan konfigurasi"
+    },
+    "footer": {
+      "autoSave": "Perubahan disimpan auto selepas penyuntingan",
+      "toClose": "untuk menutup",
+      "escapeKey": "Esc"
+    },
+    "loading": "Memuatkan konfigurasi...",
+    "status": {
+      "invalidJson": "JSON tidak sah",
+      "saveFailed": "Penyimpanan gagal",
+      "saved": "Disimpan",
+      "saving": "Menyimpan..."
+    },
+    "title": "Sunting Konfigurasi"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Batal",
+      "submit": "Tambah Pencetus",
+      "title": "Tambah Pencetus Tersuai"
+    },
+    "builtin": {
+      "description": "Pencetus lalai yang disertakan dengan aplikasi. Anda boleh mendayakan atau melumpuhkannya dan menyesuaikan coraknya.",
+      "title": "Pencetus Terbina Dalam"
+    },
+    "card": {
+      "builtinBadge": "Terbina dalam",
+      "collapseAriaLabel": "Runtuhkan",
+      "deleteAriaLabel": "Padam pencetus",
+      "editNameAriaLabel": "Sunting nama",
+      "expandAriaLabel": "Kembangkan"
+    },
+    "color": {
+      "customHexTitle": "Warna hex tersuai",
+      "invalidHex": "Hex tidak sah"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Beri amaran jika >",
+      "emptyPatternHint": "Biarkan kosong untuk memadankan semua kandungan. Menggunakan sintaks regex JavaScript.",
+      "errorStatusDescription": "Mencetus apabila pelaksanaan alat melaporkan ralat (is_error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "cth., error|failed|exception"
+    },
+    "custom": {
+      "description": "Cipta pencetus anda sendiri untuk diberitahu bagi corak atau output alat tertentu.",
+      "empty": "Belum ada pencetus tersuai dikonfigurasi.",
+      "title": "Pencetus Tersuai"
+    },
+    "errors": {
+      "invalidRegexPattern": "Corak regex tidak sah"
+    },
+    "fields": {
+      "contentType": "Jenis Kandungan",
+      "matchField": "Medan Padanan",
+      "matchPattern": "Corak Padanan (Regex)",
+      "scopeToolName": "Skop / Nama Alat",
+      "scopeToolNameOptional": "Skop / Nama Alat (pilihan)",
+      "threshold": "Ambang",
+      "tokenType": "Jenis Token",
+      "triggerNamePlaceholder": "cth., Amaran Kegagalan Binaan",
+      "triggerNameRequired": "Nama Pencetus *"
+    },
+    "ignorePatterns": {
+      "hint": "Tekan Enter untuk menambah. Pemberitahuan dilangkau jika mana-mana corak sepadan.",
+      "placeholder": "Tambah regex abai...",
+      "removeAriaLabel": "Buang corak abai",
+      "summary": "Lanjutan: Peraturan Pengecualian",
+      "title": "Corak Abai (langkau jika sepadan)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Output Teks",
+        "thinking": "Pemikiran",
+        "tool_result": "Hasil Alat",
+        "tool_use": "Penggunaan Alat"
+      },
+      "matchFields": {
+        "args": "Argumen",
+        "command": "Arahan",
+        "content": "Kandungan",
+        "description": "Penerangan",
+        "file_path": "Laluan Fail",
+        "fullInput": "Input Penuh (JSON)",
+        "glob": "Penapis Glob",
+        "new_string": "Rentetan Baharu",
+        "old_string": "Rentetan Lama",
+        "path": "Laluan",
+        "pattern": "Corak",
+        "prompt": "Prompt",
+        "query": "Pertanyaan",
+        "skill": "Nama Kemahiran",
+        "subagent_type": "Jenis Subagen",
+        "text": "Kandungan Teks",
+        "thinking": "Kandungan Pemikiran",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Corak Kandungan",
+        "error_status": "Ralat Pelaksanaan",
+        "token_threshold": "Penggunaan Token Tinggi"
+      },
+      "tokenTypes": {
+        "input": "Token Input",
+        "output": "Token Output",
+        "total": "Jumlah Token"
+      },
+      "toolNames": {
+        "anyTool": "Mana-mana Alat"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Pencetus Ujian",
+      "detectedSuffix": "ralat akan dikesan",
+      "more": "...dan {{count}} lagi",
+      "more_few": "...dan {{count}} lagi",
+      "more_many": "...dan {{count}} lagi",
+      "more_one": "...dan {{count}} lagi",
+      "more_other": "...dan {{count}} lagi",
+      "testTrigger": "Pencetus Ujian",
+      "testing": "Menguji...",
+      "title": "Pratonton",
+      "truncatedWarning": "Carian berhenti awal (tamat masa atau had kiraan). Padanan sebenar mungkin lebih tinggi.",
+      "viewSession": "Lihat Sesi"
+    },
+    "repositoryScope": {
+      "empty": "Tiada repositori dipilih - pencetus terpakai kepada semua repositori",
+      "hint": "Apabila repositori dipilih, pencetus ini hanya menyala untuk ralat dalam repositori tersebut.",
+      "placeholder": "Pilih repositori untuk ditambah...",
+      "summary": "Lanjutan: Skop Repositori",
+      "title": "Hadkan kepada Repositori (terpakai hanya kepada repositori yang dipilih)"
+    },
+    "sections": {
+      "configuration": "Konfigurasi",
+      "dotColor": "Warna Titik",
+      "generalInfo": "Maklumat Umum",
+      "triggerCondition": "Syarat Pencetus"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Tambah Profil",
+      "cancel": "Batal",
+      "deleteProfile": "Padam profil",
+      "editProfile": "Sunting profil",
+      "save": "Simpan"
+    },
+    "authMethods": {
+      "agent": "Ejen SSH",
+      "auto": "Auto (daripada Konfigurasi SSH)",
+      "password": "Kata Laluan",
+      "privateKey": "Kunci Peribadi"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Padam",
+      "message": "Adakah anda pasti mahu memadam \"{{name}}\"? Ini tidak boleh dibuat asal.",
+      "title": "Padam Profil"
+    },
+    "description": "Simpan profil sambungan SSH untuk penyambungan semula pantas",
+    "empty": {
+      "description": "Tambah profil SSH untuk menyambung dengan pantas",
+      "title": "Tiada profil disimpan"
+    },
+    "form": {
+      "authentication": "Pengesahan",
+      "host": "Hos",
+      "name": "Nama",
+      "passwordPrompt": "Anda akan diminta kata laluan apabila menyambung.",
+      "port": "Port",
+      "privateKeyPath": "Laluan Kunci Peribadi",
+      "username": "Nama pengguna",
+      "namePlaceholder": "Pelayan Saya",
+      "hostPlaceholder": "nama hos atau IP",
+      "usernamePlaceholder": "pengguna"
+    },
+    "loading": "Memuatkan profil...",
+    "title": "Profil Ruang Kerja"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Sambung",
+      "connecting": "Menyambung...",
+      "disconnect": "Putuskan sambungan",
+      "testConnection": "Uji Sambungan",
+      "testing": "Menguji..."
+    },
+    "currentMode": {
+      "description": "Sumber data untuk fail sesi",
+      "label": "Mod Semasa",
+      "local": "Tempatan ({{path}})"
+    },
+    "description": "Sambung ke mesin jauh untuk melihat sesi Claude Code yang berjalan di sana",
+    "form": {
+      "authentication": "Pengesahan",
+      "host": "Hos",
+      "password": "Kata Laluan",
+      "port": "Port",
+      "privateKeyPath": "Laluan Kunci Peribadi",
+      "username": "Nama pengguna",
+      "hostPlaceholder": "nama hos atau alias konfigurasi SSH",
+      "usernamePlaceholder": "pengguna"
+    },
+    "savedProfiles": {
+      "title": "Profil Disimpan"
+    },
+    "ssh": {
+      "title": "Sambungan SSH"
+    },
+    "status": {
+      "connectedTo": "Disambung ke {{host}}",
+      "remoteSessions": "Melihat sesi jauh melalui SSH"
+    },
+    "test": {
+      "failed": "Sambungan gagal: {{error}}",
+      "success": "Sambungan berjaya",
+      "unknownError": "Ralat tidak diketahui"
+    },
+    "title": "Sambungan Jauh"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Batal",
+      "cancelLogin": "Batal log masuk",
+      "connectChatGpt": "Sambung ChatGPT",
+      "delete": "Padam",
+      "disable": "Lumpuhkan",
+      "disconnectAccount": "Putuskan sambungan akaun",
+      "generateLink": "Jana pautan",
+      "openLogin": "Buka log masuk",
+      "reconnectAnthropic": "Sambung semula Anthropic",
+      "refresh": "Segar semula",
+      "replaceKey": "Gantikan kunci",
+      "saveEndpoint": "Simpan endpoint",
+      "saveKey": "Simpan kunci",
+      "saving": "Menyimpan...",
+      "setApiKey": "Tetapkan kunci API",
+      "updateKey": "Kemas kini kunci",
+      "useCode": "Guna kod"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Memuatkan kelayakan tersimpan...",
+      "projectScope": "Projek",
+      "scope": "Skop",
+      "storedIn": "Disimpan dalam {{backend}}",
+      "userScope": "Pengguna",
+      "storedInApp": "Disimpan dalam aplikasi",
+      "providers": {
+        "anthropic": {
+          "name": "Kunci API Anthropic",
+          "title": "Kunci API",
+          "description": "Gunakan kunci API Anthropic langsung untuk akses bil-API. Sesi langganan Anthropic anda kekal tersedia apabila anda beralih kembali.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Kunci API Codex",
+          "title": "Kunci API",
+          "description": "Gunakan kunci API OpenAI sebagai laluan pengesahan Codex kedua. Jika anda beralih Codex ke mod kunci API, aplikasi akan mencerminkan OPENAI_API_KEY ke dalam CODEX_API_KEY untuk pelancaran natif.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Kunci API Gemini",
+          "title": "Akses API",
+          "description": "Gunakan `GEMINI_API_KEY` untuk backend API Gemini. CLI SDK dan ADC tidak memerlukannya.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Disambung",
+        "description": "Urus sesi akaun app-server Codex tempatan yang menggerakkan pelancaran natif berasaskan langganan.",
+        "loginInProgress": "Log masuk sedang berlangsung",
+        "plan": "Pelan: {{plan}}",
+        "reconnectRequired": "Sambung semula diperlukan",
+        "title": "Akaun ChatGPT",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto akan terus menggunakan kunci API yang dikesan sehingga ChatGPT disambungkan.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Kunci API yang dikesan hanya digunakan selepas anda beralih Codex ke mod kunci API.",
+          "localArtifactsNoSession": "Codex CLI kini melaporkan tiada akaun ChatGPT aktif. Data akaun Codex tempatan wujud, tetapi tiada sesi terurus aktif yang dipilih. Had penggunaan muncul di sini hanya selepas Codex CLI melihatnya.",
+          "noActiveAccount": "Codex CLI kini melaporkan tiada akaun ChatGPT aktif. Had penggunaan muncul di sini hanya selepas Codex CLI melihatnya.",
+          "reconnectBeforeUsage": "Codex mempunyai akaun ChatGPT yang dipilih secara tempatan, tetapi sesi semasa perlu disambung semula sebelum had penggunaan boleh dimuatkan di sini.",
+          "usageLimitsAfterReport": "Had penggunaan muncul di sini selepas Codex melaporkannya untuk akaun ChatGPT yang disambung."
+        }
+      },
+      "install": {
+        "checking": "Menyemak",
+        "downloading": "Memuat turun",
+        "installCli": "Pasang Codex CLI",
+        "installing": "Memasang",
+        "retryInstall": "Cuba pasang lagi",
+        "title": "Pasang Codex CLI ke dalam data aplikasi"
+      },
+      "rateLimits": {
+        "credits": "Kredit",
+        "creditsDescription": "Kredit dipaparkan secara berasingan daripada penggunaan langganan berasaskan tetingkap dan mungkin tidak tersedia untuk sesi ChatGPT berasaskan pelan.",
+        "noSecondaryWindow": "Codex tidak mengembalikan tetingkap kedua untuk syot kilat akaun ini.",
+        "notReported": "Tidak dilaporkan",
+        "primaryReset": "Tetapan semula utama",
+        "primaryUsed": "Utama digunakan",
+        "primaryWindow": "Tetingkap utama",
+        "remainingLeft": "{{value}} berbaki",
+        "remainingUnknown": "Baki tidak diketahui",
+        "secondaryReset": "Tetapan semula kedua",
+        "secondaryUsed": "Kedua digunakan",
+        "secondaryWindow": "Tetingkap kedua",
+        "usedQuotaNote": "Peratusan ini menunjukkan kuota yang digunakan, bukan kuota berbaki.",
+        "weeklyReset": "Tetapan semula mingguan",
+        "weeklyUsed": "Mingguan digunakan",
+        "weeklyUsedOneWeek": "Mingguan digunakan (1m)",
+        "weeklyWindow": "Tetingkap mingguan",
+        "secondaryFallback": "kedua",
+        "secondaryWindowNote": " Had mingguan dipaparkan secara berasingan dalam tetingkap {{window}}.",
+        "usageExplanationGeneric": "Menunjukkan kuota yang digunakan, bukan kuota berbaki.",
+        "usageExplanationWindowOnly": "Menunjukkan kuota yang digunakan dalam tetingkap {{window}} semasa, bukan kuota berbaki.",
+        "usageExplanationWithRemaining": "{{used}} digunakan - lebih kurang {{remaining}} berbaki dalam tetingkap {{window}} semasa."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Token pengesahan",
+      "authTokenMissing": "Token pengesahan tidak dikonfigurasi.",
+      "baseUrl": "URL Asas",
+      "description": "Gunakan endpoint runtime tempatan yang serasi Anthropic.",
+      "keepSavedToken": "Biarkan kosong untuk mengekalkan token yang disimpan",
+      "title": "Endpoint tempatan / serasi",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "URL Asas diperlukan",
+        "firstPartyAnthropic": "Gunakan Auto, Langganan, atau kunci API untuk Anthropic pihak pertama",
+        "httpRequired": "URL Asas mesti menggunakan http:// atau https://",
+        "invalidUrl": "URL tidak sah",
+        "noCredentials": "URL Asas tidak boleh menyertakan kelayakan"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint dilumpuhkan. Token yang disimpan dikekalkan.",
+        "endpointSaved": "Endpoint disimpan",
+        "endpointSavedTokenMissing": "Endpoint disimpan. Token pengesahan tidak dikonfigurasi."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Kaedah pengesahan",
+      "descriptions": {
+        "anthropic": "Pilih bagaimana sesi Anthropic yang dilancarkan aplikasi disahkan.",
+        "codex": "Pilih sama ada Codex patut mengutamakan langganan ChatGPT anda atau kunci API apabila runtime natif dilancarkan.",
+        "gemini": "Konfigurasikan akses API pilihan. CLI SDK dan ADC masih ditemui secara automatik.",
+        "opencode": "Pengesahan OpenCode dan inventori pembekal diuruskan oleh runtime OpenCode."
+      },
+      "method": "Kaedah sambungan",
+      "mode": "Mod: {{mode}}",
+      "selected": "Dipilih",
+      "switching": "Beralih...",
+      "title": "Sambungan"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "Kunci API"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Gunakan ANTHROPIC_API_KEY dan pengebilan API Anthropic.",
+        "autoDescription": "Gunakan lalai runtime Anthropic dan kelayakan tempatan terbaik yang tersedia.",
+        "hint": "Auto mengekalkan Anthropic pada penyelesaian kelayakan tempatan lalainya.",
+        "subscriptionDescription": "Gunakan sesi log masuk Anthropic tempatan dan akses langganan anda.",
+        "subscriptionTitle": "Langganan Anthropic"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Gunakan pengebilan OPENAI_API_KEY dan CODEX_API_KEY untuk pelancaran Codex natif.",
+        "autoDescription": "Utamakan akaun ChatGPT dan langganan anda. Gunakan mod kunci API hanya jika perlu.",
+        "chatgptDescription": "Gunakan akaun ChatGPT yang disambung dan langganan Codex anda.",
+        "chatgptTitle": "Akaun ChatGPT",
+        "hint": "Codex sentiasa berjalan melalui runtime natif. Auto mengutamakan akaun ChatGPT anda sebelum kembali kepada kelayakan kunci API."
+      }
+    },
+    "description": "Urus bagaimana setiap pembekal bersambung dan, apabila disokong, backend mana yang patut digunakan oleh runtime multimodel.",
+    "fastMode": {
+      "defaultOff": "Lalai Mati",
+      "description": "Terapkan mod Claude Code Fast secara lalai untuk pelancaran pasukan Anthropic baharu apabila model dan runtime yang diselesaikan membenarkannya.",
+      "disabledHint": "Pelancaran Anthropic baharu kekal pada kelajuan biasa melainkan pasukan secara eksplisit mendayakan mod Fast.",
+      "enabledHint": "Pelancaran Anthropic baharu akan meminta mod Fast secara lalai apabila model yang diselesaikan menyokongnya.",
+      "notExposed": "Runtime Anthropic ini tidak mendedahkan mod Fast.",
+      "preferFast": "Utamakan Fast",
+      "title": "Lalai mod Fast",
+      "unavailableForRuntime": "Mod Fast kini tidak tersedia untuk runtime Anthropic ini."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Mod kunci API dipilih, tetapi tiada kelayakan API Anthropic tersedia lagi.",
+      "anthropicStoredKeyAvailable": "Kunci API yang disimpan tersedia, tetapi sesi Anthropic yang dilancarkan aplikasi hanya menggunakannya selepas anda beralih ke mod kunci API.",
+      "anthropicSubscriptionMissing": "Mod langganan Anthropic dipilih. Log masuk dengan Anthropic untuk menggunakan pembekal ini.",
+      "authTokenMissing": "Token pengesahan tidak dikonfigurasi. Banyak endpoint tempatan serasi Anthropic memerlukan token yang tidak kosong.",
+      "chatgptLoginPending": "Menunggu log masuk akaun ChatGPT selesai...",
+      "chatgptLoginStarting": "Memulakan log masuk ChatGPT...",
+      "codexApiKeyMissing": "Mod kunci API dipilih, tetapi tiada kelayakan OPENAI_API_KEY atau CODEX_API_KEY tersedia lagi.",
+      "codexLocalArtifactsNoSession": "Codex CLI kini tiada akaun ChatGPT aktif. Data akaun Codex tempatan wujud, tetapi tiada sesi terurus aktif yang dipilih.",
+      "codexNeedsReconnect": "Codex mempunyai akaun ChatGPT yang dipilih secara tempatan, tetapi sesi semasa perlu disambung semula.",
+      "codexNoChatgptAccount": "Codex CLI kini tiada akaun ChatGPT aktif. Sambung ChatGPT untuk menggunakan langganan anda.",
+      "codexNoCredential": "Tiada akaun ChatGPT atau kunci API tersedia lagi.",
+      "geminiApiUnavailable": "API Gemini kini tidak tersedia. Konfigurasikan `GEMINI_API_KEY` di sini atau gunakan kelayakan Google ADC yang sah.",
+      "withApiKeyFallback": "{{message}} Beralih ke mod kunci API untuk menggunakan kunci API yang dikesan."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Paksa sesi Anthropic yang dilancarkan aplikasi menggunakan kelayakan kunci API.",
+        "auto": "Gunakan tingkah laku lalai runtime. Kunci API yang disimpan dalam aplikasi ini hanya digunakan selepas anda beralih ke mod kunci API.",
+        "oauth": "Paksa sesi Anthropic yang dilancarkan aplikasi menggunakan sesi langganan Anthropic tempatan."
+      },
+      "codex": {
+        "apiKey": "Paksa pelancaran Codex natif menggunakan pengebilan OPENAI_API_KEY / CODEX_API_KEY.",
+        "auto": "Utamakan akaun ChatGPT anda apabila ia tersedia. Kembali kepada mod kunci API hanya apabila perlu.",
+        "chatgpt": "Paksa pelancaran Codex natif menggunakan akaun ChatGPT yang disambung dan langganan anda."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Menerapkan perubahan sambungan...",
+      "refreshingProviderStatus": "Menyegarkan status pembekal...",
+      "savingCompatibleEndpoint": "Menyimpan endpoint serasi...",
+      "switchingAnthropicSubscription": "Beralih ke langganan Anthropic...",
+      "switchingApiKey": "Beralih ke kunci API...",
+      "switchingApiKeyMode": "Beralih ke mod kunci API...",
+      "switchingAuto": "Beralih ke Auto...",
+      "switchingChatgpt": "Beralih ke mod akaun ChatGPT..."
+    },
+    "provider": "Pembekal",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic kini tiada pemilih backend runtime berasingan.",
+        "codex": "Codex kini hanya berjalan melalui laluan runtime natif.",
+        "gemini": "Pilih backend runtime Gemini mana yang patut digunakan multimodel.",
+        "opencode": "OpenCode menggunakan hos runtime terurusnya sendiri. Desktop kini mendedahkan status sahaja."
+      },
+      "title": "Runtime",
+      "updating": "Mengemas kini runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "dikonfigurasi",
+      "enabled": "Didayakan",
+      "notConfigured": "Tidak dikonfigurasi",
+      "notSet": "tidak ditetapkan",
+      "off": "Mati",
+      "unknown": "Tidak diketahui"
+    },
+    "title": "Tetapan Pembekal",
+    "usage": {
+      "apiKey": "Menggunakan kunci API",
+      "apiKeyRequired": "Kunci API diperlukan",
+      "compatibleEndpoint": "Menggunakan endpoint serasi",
+      "notConnected": "Tidak disambung",
+      "usingMethod": "Menggunakan {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "Kunci API dipadam, tetapi gagal menyegarkan status pembekal.",
+      "apiKeySavedRefreshFailed": "Kunci API disimpan, tetapi gagal menyegarkan status pembekal.",
+      "connectionUpdatedRefreshFailed": "Sambungan dikemas kini, tetapi gagal menyegarkan status pembekal.",
+      "deleteApiKey": "Gagal memadam kunci API",
+      "disableEndpoint": "Gagal melumpuhkan endpoint",
+      "endpointDisabledRefreshFailed": "Endpoint dilumpuhkan, tetapi gagal menyegarkan status pembekal.",
+      "endpointSavedRefreshFailed": "Endpoint disimpan, tetapi gagal menyegarkan status pembekal.",
+      "refreshCodexAccount": "Gagal menyegarkan akaun Codex",
+      "saveApiKey": "Gagal menyimpan kunci API",
+      "saveEndpoint": "Gagal menyimpan endpoint",
+      "updateAnthropicFastMode": "Gagal mengemas kini mod Anthropic Fast",
+      "updateConnection": "Gagal mengemas kini sambungan",
+      "updateRuntimeBackend": "Gagal mengemas kini backend runtime",
+      "apiKeyRequired": "Kunci API diperlukan"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Langganan / OAuth",
+        "chatgpt": "Akaun ChatGPT",
+        "apiKey": "Kunci API",
+        "anthropicSubscription": "Langganan Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "Kunci API",
+        "apiKeyHelper": "Pembantu kunci API",
+        "oauth": "OAuth",
+        "claudeSubscription": "Langganan Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Akaun Google",
+        "serviceAccount": "akaun perkhidmatan"
+      },
+      "runtime": {
+        "codexNative": "Codex natif",
+        "currentRuntime": "Runtime semasa",
+        "selectedRuntime": "Runtime dipilih",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Menyemak...",
+        "modelsAvailable": "Model tersedia",
+        "checked": "Disemak",
+        "providerActivity": "Aktiviti Pembekal",
+        "notConnected": "Tidak disambung",
+        "startingChatGptLogin": "Memulakan log masuk ChatGPT...",
+        "waitingForChatGptLogin": "Menunggu log masuk akaun ChatGPT...",
+        "chatGptVerificationDegraded": "Akaun ChatGPT dikesan - pengesahan akaun kini merosot.",
+        "chatGptAccountReady": "Akaun ChatGPT sedia",
+        "apiKeyReady": "Kunci API sedia",
+        "codexLocalAccountNeedsReconnect": "Codex mempunyai akaun ChatGPT yang dipilih secara tempatan, tetapi sesi semasa perlu disambung semula.",
+        "codexNoActiveManagedSession": "Codex CLI melaporkan tiada log masuk ChatGPT aktif. Data akaun Codex tempatan wujud, tetapi tiada sesi terurus aktif yang dipilih.",
+        "codexNoActiveChatGptLogin": "Codex CLI melaporkan tiada log masuk ChatGPT aktif",
+        "connectChatGptForSubscription": "Sambung akaun ChatGPT untuk menggunakan langganan Codex anda.",
+        "codexNativeReady": "Codex natif sedia",
+        "codexNativeUnavailable": "Codex natif tidak tersedia",
+        "unavailableInCurrentRuntime": "Tidak tersedia dalam runtime semasa",
+        "connectedViaApiKey": "Disambung melalui kunci API",
+        "apiKeyConfiguredNotVerified": "Kunci API dikonfigurasi, tetapi belum disahkan",
+        "apiKeyModeMissingCredential": "Mod kunci API dipilih, tetapi tiada kunci API dikonfigurasi",
+        "connectedVia": "Disambung melalui {{method}}",
+        "unableToVerify": "Tidak dapat mengesahkan"
+      },
+      "mode": {
+        "selectedAuth": "Pengesahan dipilih: {{authMode}}",
+        "preferredAuth": "Pengesahan diutamakan: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "Kunci API dikonfigurasi",
+        "savedApiKeyAvailable": "Kunci API yang disimpan tersedia dalam Urus",
+        "apiKeyAlsoConfigured": "Kunci API juga dikonfigurasi dalam Urus",
+        "apiKeyConfiguredInManage": "Kunci API dikonfigurasi dalam Urus",
+        "apiKeyFallbackInManage": "Kunci API juga tersedia dalam Urus sebagai sandaran",
+        "availableAsFallback": "{{summary}} - tersedia sebagai sandaran",
+        "savedApiKeyAvailableIfSwitch": "Kunci API yang disimpan tersedia dalam Urus jika anda beralih ke mod kunci API",
+        "availableIfSwitch": "{{summary}} - tersedia jika anda beralih ke mod kunci API",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto akan menggunakan ini sehingga ChatGPT disambungkan"
+      },
+      "actions": {
+        "connect": "Sambung",
+        "connectAnthropic": "Sambung Anthropic",
+        "connectChatGpt": "Sambung ChatGPT",
+        "disconnect": "Putuskan sambungan",
+        "openLogin": "Buka Log Masuk"
+      },
+      "disconnect": {
+        "anthropicTitle": "Putuskan sambungan langganan Anthropic?",
+        "anthropic": "Ini membuang sesi langganan Anthropic tempatan daripada runtime Claude CLI.",
+        "anthropicWithApiKey": "Ini membuang sesi langganan Anthropic tempatan daripada runtime Claude CLI. Kunci API yang disimpan dalam Urus kekal tersedia.",
+        "geminiTitle": "Putuskan sambungan Gemini CLI?",
+        "gemini": "Ini mengosongkan metadata sesi Gemini CLI tempatan. Kelayakan ADC luaran dan kunci API yang disimpan tidak dibuang."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Semak Kemas Kini",
+      "checking": "Menyemak...",
+      "extensions": "Sambungan",
+      "installRuntime": "Pasang {{runtime}}",
+      "manage": "Urus",
+      "recheck": "Semak semula",
+      "reinstallRuntime": "Pasang semula {{runtime}}",
+      "retry": "Cuba lagi",
+      "update": "Kemas kini"
+    },
+    "installer": {
+      "checkingLatest": "Menyemak versi terkini...",
+      "downloading": "Memuat turun...",
+      "failed": "Pemasangan gagal",
+      "installed": "Dipasang v{{version}}",
+      "installing": "Memasang...",
+      "latest": "terkini",
+      "verifying": "Mengesahkan checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Menyemak Pembekal AI...",
+      "claudeCli": "Menyemak Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Memuatkan model...",
+      "modelsUnavailable": "Model tidak tersedia untuk binaan runtime ini",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Pengesahan gagal",
+      "authUpdated": "Pengesahan dikemas kini",
+      "loggedOut": "Pembekal telah log keluar",
+      "login": "Log masuk",
+      "logout": "Log keluar",
+      "logoutFailed": "Log keluar gagal"
+    },
+    "status": {
+      "configuredNotFound": "{{runtime}} yang dikonfigurasi tidak ditemui.",
+      "foundButFailed": "{{runtime}} ditemui tetapi gagal dimulakan",
+      "healthCheckFailed": "{{runtime}} yang dikonfigurasi gagal semakan kesihatan permulaannya.",
+      "notInstalled": "{{runtime}} belum dipasang"
+    },
+    "title": "Runtime CLI"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

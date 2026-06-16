@@ -1,0 +1,2599 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "செய்தியிலிருந்து task ஐ உருவாக்கு",
+      "editMessage": "செய்தியைத் திருத்து",
+      "expandMessage": "செய்தியை விரிவாக்கு",
+      "replyToMessage": "செய்திக்குப் பதிலளி",
+      "restartTeam": "team ஐ மறுதொடக்கம் செய்"
+    },
+    "authError": {
+      "description": "அங்கீகாரம் தோல்வியடைந்தது. team ஐ மறுதொடக்கம் செய்வது session ஐ புதுப்பிக்கும் மற்றும் இந்த சிக்கலைத் தீர்க்கலாம். சிக்கல் தொடர்ந்தால், உங்கள் API credentials ஐச் சரிபார்க்கவும் அல்லது பிறகு மீண்டும் முயற்சிக்கவும்."
+    },
+    "automation": {
+      "reviewPickup": "மதிப்பாய்வை எடுத்துக்கொள்ள teammate ஐக் கேட்டது",
+      "stallNudge": "தேங்கிய task ஐத் தொடர teammate ஐக் கேட்டது",
+      "workSyncBody": "தற்போதைய வேலையை ஒத்திசைக்க teammate ஐக் கேட்டது"
+    },
+    "badges": {
+      "automation": "automation",
+      "bootstrap": "bootstrap",
+      "command": "command",
+      "comment": "கருத்து",
+      "live": "live",
+      "note": "note",
+      "rateLimited": "Rate Limited",
+      "restart": "restart",
+      "result": "result",
+      "session": "session",
+      "stallNudge": "stall nudge",
+      "start": "start",
+      "workSync": "work sync",
+      "agentError": "Agent பிழை",
+      "apiError": "API பிழை"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap ஒப்புக்கொள்ளப்பட்டது",
+      "restarting": "teammate ஐ மறுதொடக்கம் செய்கிறது",
+      "starting": "teammate ஐத் தொடங்குகிறது"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "படிக்காதது",
+    "thoughts": {
+      "count": "{{count}} எண்ணங்கள்",
+      "count_one": "{{count}} எண்ணம்",
+      "expand": "எண்ணங்களை விரிவாக்கு",
+      "showMore": "மேலும் காட்டு",
+      "showLess": "குறைவாகக் காட்டு",
+      "count_few": "{{count}} எண்ணங்கள்",
+      "count_many": "{{count}} எண்ணங்கள்",
+      "count_other": "{{count}} எண்ணங்கள்",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - எண்ணங்கள்"
+    },
+    "timeline": {
+      "loadingMessages": "செய்திகளை ஏற்றுகிறது...",
+      "noMessages": "செய்திகள் இல்லை",
+      "emptyHint": "செயல்பாட்டைக் காண ஒரு உறுப்பினருக்கு செய்தி அனுப்பவும்.",
+      "newSession": "புதிய session",
+      "olderCount": "+{{count}} பழையவை",
+      "showMore": "{{count}} மேலும் காட்டு",
+      "showAll": "அனைத்தையும் காட்டு",
+      "olderCount_one": "+{{count}} பழையது",
+      "olderCount_few": "+{{count}} பழையவை",
+      "olderCount_many": "+{{count}} பழையவை",
+      "olderCount_other": "+{{count}} பழையவை"
+    },
+    "pendingReplies": {
+      "title": "பதில்களுக்காகக் காத்திருக்கிறது",
+      "openMember": "உறுப்பினரைத் திற",
+      "messageSentAwaitingReply": "செய்தி அனுப்பப்பட்டது, பதிலுக்காகக் காத்திருக்கிறது",
+      "awaitingReply": "பதிலுக்காகக் காத்திருக்கிறது",
+      "externalTeam": "வெளி team",
+      "crossTeamAwaitingReply": "Cross-team செய்தி அனுப்பப்பட்டது, பதிலுக்காகக் காத்திருக்கிறது",
+      "user": "பயனர்",
+      "awaitingApproval": "ஒப்புதலுக்காகக் காத்திருக்கிறது"
+    },
+    "reply": {
+      "replyingTo": "பதிலளிக்கிறது",
+      "action": "பதிலளி"
+    },
+    "activeTasks": {
+      "inProgress": "முன்னேற்றத்தில்",
+      "expandInProgress": "முன்னேற்றத்தில் உள்ளவற்றை விரிவாக்கு",
+      "collapseInProgress": "முன்னேற்றத்தில் உள்ளவற்றை சுருக்கு",
+      "reviewing": "மதிப்பாய்வு செய்கிறது",
+      "workingOn": "வேலை செய்கிறது"
+    },
+    "expandDialog": {
+      "description": "விரிவாக்கப்பட்ட செய்தி காட்சி"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "உருவாக்கு",
+      "creating": "உருவாக்குகிறது...",
+      "openExisting": "தற்போதுள்ள Team ஐத் திற",
+      "skipPreflightAndCreate": "preflight ஐத் தவிர்த்து உருவாக்கு"
+    },
+    "conflict": {
+      "description": "ஒரே directory இல் இரண்டு teams ஐ இயக்குவது ஆபத்தானது - அவை ஒரே கோப்புகளைத் திருத்துவதில் முரண்படலாம். தனிமைப்படுத்தலுக்கு வேறு directory அல்லது git worktree ஐப் பயன்படுத்த பரிசீலிக்கவும்.",
+      "title": "இந்த working directory க்கு மற்றொரு team \"{{team}}\" ஏற்கனவே இயங்குகிறது",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "copy": "தற்போதுள்ள ஒன்றின் அடிப்படையில் ஒரு புதிய team ஐ உருவாக்கு.",
+      "create": "உங்கள் team ஐ அமைத்து அது எப்படித் தொடங்குகிறது என்பதைத் தேர்ந்தெடுக்கவும்."
+    },
+    "errors": {
+      "nameExists": "Team பெயர் ஏற்கனவே உள்ளது",
+      "nameLaunching": "இந்தப் பெயருடன் ஒரு team தற்போது தொடங்குகிறது",
+      "createConfigFailed": "team config ஐ உருவாக்க முடியவில்லை",
+      "loadProjectsFailed": "projects ஐ ஏற்ற முடியவில்லை"
+    },
+    "fields": {
+      "color": "நிறம் (விருப்பத்திற்குரியது)",
+      "description": "விளக்கம் (விருப்பத்திற்குரியது)",
+      "prompt": "team lead க்கான prompt (விருப்பத்திற்குரியது)",
+      "teamName": "Team பெயர்"
+    },
+    "launchAfterCreate": {
+      "description": "உள்ளூர் Claude CLI வழியாக team ஐ உடனடியாகத் தொடங்கு.",
+      "label": "உருவாக்கிய பிறகு கட்டளையை இயக்கு"
+    },
+    "localOnly": "உள்ளூர் Electron பயன்முறையில் மட்டுமே கிடைக்கிறது.",
+    "onDisk": "Disk இல்:",
+    "placeholders": {
+      "description": "team நோக்கத்தின் சுருக்கமான விளக்கம்",
+      "prompt": "provisioning போது team lead க்கான வழிமுறைகள்..."
+    },
+    "saved": "சேமிக்கப்பட்டது",
+    "solo": {
+      "description": "team lead (main process) மட்டுமே தொடங்கப்படும் - teammates எவரும் spawn செய்யப்படமாட்டார்கள். உங்கள் தேர்ந்தெடுத்த runtime இல் (Claude Code, Codex, OpenCode, Gemini) ஒரு வழக்கமான agent session போல வேலை செய்கிறது, ஆனால் திட்டமிடலுக்கான task board அணுகலுடன். teammate ஒருங்கிணைப்பு மேல்செலவைத் தவிர்ப்பதன் மூலம் tokens ஐ சேமிக்கிறது. team அமைப்புகளிலிருந்து பின்னர் உறுப்பினர்களைச் சேர்க்கலாம்.",
+      "label": "Solo team"
+    },
+    "title": {
+      "copy": "Team ஐ நகலெடு",
+      "create": "Team ஐ உருவாக்கு"
+    },
+    "optional": {
+      "launchSettingsTitle": "விருப்ப launch அமைப்புகள்",
+      "launchSettingsDescription": "Prompt, பாதுகாப்பு மற்றும் CLI overrides உங்களுக்குத் தேவைப்படும்போது இங்கே உள்ளன.",
+      "teamDetailsTitle": "விருப்ப team விவரங்கள்",
+      "teamDetailsDescription": "இயல்புநிலை flow ஐ சிறியதாக வைத்திருங்கள், கூடுதல் context அல்லது தனிப்பயன் நிறம் வேண்டும்போது மட்டுமே இதைத் திறக்கவும்."
+    },
+    "prepare": {
+      "unsupportedPreload": "தற்போதைய preload பதிப்பு team:prepareProvisioning ஐ ஆதரிக்கவில்லை. dev app ஐ மறுதொடக்கம் செய்யவும்.",
+      "selectWorkingDirectory": "launch சூழலை சரிபார்க்க ஒரு working directory ஐத் தேர்ந்தெடுக்கவும்.",
+      "someProvidersNeedAttention": "சில தேர்ந்தெடுத்த வழங்குநர்களுக்கு கவனம் தேவை.",
+      "readyWithNotes": "அனைத்து தேர்ந்தெடுத்த வழங்குநர்களும் தயார், குறிப்புகளுடன்.",
+      "ready": "அனைத்து தேர்ந்தெடுத்த வழங்குநர்களும் தயார்.",
+      "failed": "தேர்ந்தெடுத்த வழங்குநர்களைத் தயார் செய்ய முடியவில்லை",
+      "checkingProviders": "தேர்ந்தெடுத்த வழங்குநர்களைச் சரிபார்க்கிறது...",
+      "preparingEnvironment": "சூழலைத் தயார் செய்கிறது...",
+      "selectedProvidersReadyWithNotes": "தேர்ந்தெடுத்த வழங்குநர்கள் தயார் (குறிப்புகளுடன்)",
+      "selectedProvidersReady": "தேர்ந்தெடுத்த வழங்குநர்கள் தயார்"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "பெயரில் குறைந்தது ஒரு எழுத்து அல்லது இலக்கம் இருக்க வேண்டும்",
+      "nameTooLong": "பெயர் மிக நீளமானது (அதிகபட்சம் 128 எழுத்துகள்)",
+      "selectWorkingDirectory": "working directory ஐத் தேர்ந்தெடு (cwd)",
+      "memberNameRequired": "உறுப்பினர் பெயர் காலியாக இருக்க முடியாது",
+      "memberNameInvalid": "உறுப்பினர் பெயர் alphanumeric உடன் தொடங்க வேண்டும், [a-zA-Z0-9._-] மட்டுமே பயன்படுத்தவும், அதிகபட்சம் 128 எழுத்துகள்",
+      "memberNamesUnique": "உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்",
+      "openCodeLeadModelRequired": "OpenCode lead க்கு ஒரு தேர்ந்தெடுத்த மாதிரி தேவை.",
+      "openCodeTeammateRequired": "OpenCode lead க்கு குறைந்தது ஒரு OpenCode teammate தேவை.",
+      "teamLaunching": "Team தற்போது தொடங்குகிறது",
+      "teamNameExists": "Team பெயர் ஏற்கனவே உள்ளது",
+      "checkFormFields": "form fields ஐச் சரிபார்க்கவும்"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "save": "சேமி"
+    },
+    "addMemberLockReason": "team live ஆக இருக்கும்போது புதிய teammates ஐச் சேர்க்க அர்ப்பணிக்கப்பட்ட Add member dialog ஐப் பயன்படுத்தவும்.",
+    "description": "Team பெயர், விளக்கம் மற்றும் நிறத்தை மாற்று",
+    "errors": {
+      "changesSavedRefreshFailed": "Team மாற்றங்கள் சேமிக்கப்பட்டன, ஆனால் சமீபத்திய காட்சியைப் புதுப்பிக்க முடியவில்லை: {{message}}",
+      "liveRenameBlocked": "team live ஆக இருக்கும்போது தற்போதுள்ள teammates ஐ மறுபெயரிட முடியாது. மறுபெயரிடப்பட்டது: {{names}}",
+      "memberNameEmpty": "உறுப்பினர் பெயர் காலியாக இருக்க முடியாது",
+      "memberNameInvalid": "உறுப்பினர் பெயர் alphanumeric உடன் தொடங்க வேண்டும், [a-zA-Z0-9._-] மட்டுமே பயன்படுத்தவும், அதிகபட்சம் 128 எழுத்துகள்",
+      "memberNameNumericSuffix": "உறுப்பினர் பெயர் \"{{name}}\" அனுமதிக்கப்படவில்லை (Claude CLI auto-suffix க்கு ஒதுக்கப்பட்டது). அதற்கு பதிலாக \"{{base}}\" ஐப் பயன்படுத்தவும்.",
+      "memberNameReserved": "உறுப்பினர் பெயர் \"{{name}}\" ஒதுக்கப்பட்டுள்ளது",
+      "memberNamesUnique": "சேமிப்பதற்கு முன் உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்",
+      "newLiveTeammates": "team live ஆக இருக்கும்போது அர்ப்பணிக்கப்பட்ட Add member dialog இலிருந்து புதிய teammates ஐச் சேர்க்கவும். Edit Team தற்போதுள்ள teammates ஐப் புதுப்பிப்பதை மட்டுமே ஆதரிக்கிறது.",
+      "provisioning": "provisioning இன்னும் முன்னேற்றத்தில் இருக்கும்போது team அமைப்புகளைத் திருத்த முடியாது. launch முடிவதற்காகக் காத்திருந்து, பிறகு மீண்டும் முயற்சிக்கவும்.",
+      "restartFailedMany": "Team சேமிக்கப்பட்டது, ஆனால் இந்த teammates ஐ மறுதொடக்கம் செய்ய முடியவில்லை: {{failures}}",
+      "restartFailedOne": "Team சேமிக்கப்பட்டது, ஆனால் இந்த teammate ஐ மறுதொடக்கம் செய்ய முடியவில்லை: {{failures}}",
+      "saveFailed": "சேமிக்க முடியவில்லை",
+      "settingsChanged": "இந்த dialog திறந்திருந்தபோது team அமைப்புகள் மாறின. அதை மீண்டும் திறந்து, சேமிப்பதற்கு முன் சமீபத்திய நிலையை மதிப்பாய்வு செய்யவும்.",
+      "settingsSavedMembersAndRefreshFailed": "Team அமைப்புகள் சேமிக்கப்பட்டன, ஆனால் உறுப்பினர் மாற்றங்கள் தோல்வியடைந்தன: {{message}}. புதுப்பிப்பும் தோல்வியடைந்தது: {{refreshError}}",
+      "settingsSavedMembersFailed": "Team அமைப்புகள் சேமிக்கப்பட்டன, ஆனால் உறுப்பினர் மாற்றங்கள் தோல்வியடைந்தன: {{message}}",
+      "settingsSavedRefreshFailed": "Team அமைப்புகள் சேமிக்கப்பட்டன, ஆனால் சமீபத்திய காட்சியைப் புதுப்பிக்க முடியவில்லை: {{message}}",
+      "teamNameEmpty": "Team பெயர் காலியாக இருக்க முடியாது",
+      "unsupportedMixedPrimaryMutation": "கலப்பு OpenCode teams இல் primary-owned teammates க்கான live edits இன்னும் ஆதரிக்கப்படவில்லை. team ஐ நிறுத்தி, roster ஐத் திருத்தி, பிறகு மீண்டும் தொடங்கவும். பாதிக்கப்பட்டது: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "நிறம் (விருப்பத்திற்குரியது)",
+      "description": "விளக்கம்",
+      "name": "பெயர்"
+    },
+    "memberRestartWarning": "சேமித்தல் role, workflow, worktree தனிமைப்படுத்தல், provider, model, effort அல்லது MCP அணுகல் மாற்றங்களைப் பயன்படுத்த இந்த teammate ஐ மறுதொடக்கம் செய்யும்.",
+    "notices": {
+      "liveRenameBlocked": "தற்போதுள்ள teammates மறுபெயரிடப்பட்டதால் live save தடுக்கப்பட்டுள்ளது. அந்த identity மாற்றங்களை மாற்றியமைக்கவும் அல்லது முதலில் team ஐ நிறுத்தவும்.",
+      "newLiveTeammates": "team live ஆக இருக்கும்போது Edit Team இலிருந்து புதிய teammates ஐச் சேர்க்க முடியாது. அதற்கு பதிலாக Add member dialog ஐப் பயன்படுத்தவும்.",
+      "provisioning": "Team provisioning இன்னும் முன்னேற்றத்தில் உள்ளது. launch முடியும் வரை திருத்துதல் தற்காலிகமாக பூட்டப்பட்டுள்ளது.",
+      "restartMany": "சேமித்தல் role, workflow, worktree தனிமைப்படுத்தல், provider, model, effort அல்லது MCP அணுகல் மாற்றங்களைப் பயன்படுத்த இந்த teammates ஐ மறுதொடக்கம் அல்லது மீண்டும் தொடங்கும்: {{names}}.",
+      "restartOne": "சேமித்தல் role, workflow, worktree தனிமைப்படுத்தல், provider, model, effort அல்லது MCP அணுகல் மாற்றங்களைப் பயன்படுத்த இந்த teammate ஐ மறுதொடக்கம் அல்லது மீண்டும் தொடங்கும்: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "கலப்பு OpenCode teams இல் primary-owned teammates க்கான live edits/removals க்கு team ஐ நிறுத்தி மீண்டும் தொடங்க வேண்டும்: {{names}}."
+    },
+    "placeholders": {
+      "description": "Team விளக்கம் (விருப்பத்திற்குரியது)",
+      "teamName": "Team பெயர்"
+    },
+    "teamLead": {
+      "changeRuntime": "lead runtime ஐ மாற்று",
+      "changeRuntimeDescription": "lead provider, model அல்லது effort ஐ மாற்ற Relaunch Team ஐத் திறக்கவும்.",
+      "modelLockReason": "Team lead runtime ஆனது Relaunch Team இலிருந்து நிர்வகிக்கப்படுகிறது.",
+      "readOnlyHint": "Team lead பெயர் மற்றும் role இங்கே read-only ஆக இருக்கும். provider, model அல்லது effort ஐ மாற்ற lead row இல் உள்ள runtime panel ஐத் திறக்கவும்.",
+      "role": "Team Lead"
+    },
+    "title": "Team ஐ திருத்து"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "உறுப்பினரை அகற்று",
+      "removeAria": "{{name}} ஐ அகற்று",
+      "restore": "உறுப்பினரை மீட்டெடு",
+      "restoreAria": "{{name}} ஐ மீட்டெடு"
+    },
+    "anthropicContext": {
+      "defaultSetting": "இயல்புநிலை context அமைப்பு",
+      "description": "Anthropic context இந்த launch க்கு team-wide ஆகும்: {{mode}}. அதை மாற்ற lead runtime panel இன் Limit context checkbox ஐப் பயன்படுத்தவும்.",
+      "limitEnabled": "200K limit இயக்கப்பட்டது"
+    },
+    "mcp": {
+      "buttonInherit": "MCP inherit",
+      "buttonScopes": "MCP scopes",
+      "chooseScopes": "scopes ஐத் தேர்ந்தெடு",
+      "inheritLead": "lead ஐப் பெறு",
+      "lockedInfo": "Agent Teams MCP only அனைத்து teammates க்கும் இயக்கப்பட்டுள்ளது. இந்த teammate Agent Teams server உடன் மட்டுமே தொடங்கும்.",
+      "mode": "MCP பயன்முறை",
+      "scopes": {
+        "local": "local",
+        "project": "project",
+        "user": "user"
+      },
+      "serverNames": "Server பெயர்கள்",
+      "settingInfo": "Agent Teams MCP இந்த teammate ஐ Agent Teams server உடன் மட்டுமே தொடங்குகிறது. Scope மற்றும் allowlist பயன்முறைகள் இந்த teammate launch க்கு மட்டுமே பொருந்தும்.",
+      "strictAllowlist": "Strict allowlist",
+      "tooltip": "{{label}}: இந்த உறுப்பினரின் MCP inheritance policy ஐக் கட்டுப்படுத்து",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} provider, {{model}}",
+      "currentLeadRuntime": "தற்போதைய lead runtime",
+      "default": "இயல்புநிலை",
+      "inheritedTooltip": "sync இயக்கப்பட்டிருக்கும்போது provider, model மற்றும் effort ஆனது lead இலிருந்து பெறப்படுகின்றன.",
+      "leadSuffix": "{{label}} (lead)",
+      "liveDisabled": "team live ஆக இருக்கும்போது provider, model மற்றும் effort மாற்றங்கள் முடக்கப்பட்டுள்ளன. அவற்றைப் பாதுகாப்பாகப் பயன்படுத்த team ஐ மீண்டும் இணைக்கவும்.",
+      "lockedActionFallback": "Lead runtime மாற்றங்கள் Relaunch Team ஐத் திறக்கின்றன, அங்கு provider, model மற்றும் effort ஐப் புதுப்பிக்கலாம்.",
+      "restartWholeTeam": "அந்த runtime மாற்றங்களைச் சேமிப்பது முழு team ஐயும் மறுதொடக்கம் செய்கிறது."
+    },
+    "nameAria": "உறுப்பினர் {{index}} பெயர்",
+    "nameFallback": "உறுப்பினர் {{index}}",
+    "noRole": "role இல்லை",
+    "removed": "அகற்றப்பட்டது",
+    "workflow": {
+      "addTooltip": "teammate workflow ஐ சேர்",
+      "editTooltip": "teammate workflow ஐ திருத்து",
+      "label": "Workflow (விருப்பத்திற்குரியது)",
+      "placeholder": "இந்த agent எப்படி நடந்துகொள்ள வேண்டும், மற்றவர்களுடன் தொடர்பு கொள்ள வேண்டும்...",
+      "saved": "சேமிக்கப்பட்டது"
+    },
+    "worktree": {
+      "description": "இந்த teammate ஐ தனி git worktree இல் இயக்கு. மாற்றங்களைப் பயன்படுத்துதல்/நிராகரித்தல் lead workspace ஐ அல்ல, அந்த worktree ஐ இலக்காகக் கொள்கிறது.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "உறுப்பினர்களைச் சேர்",
+      "description": "{{teamName}} க்கு புதிய உறுப்பினர்களைச் சேர்"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "சேர்",
+      "cancel": "ரத்துசெய்",
+      "delete": "நீக்கு",
+      "editCode": "code ஐ திருத்து",
+      "launch": "தொடங்கு",
+      "remove": "அகற்று",
+      "stop": "நிறுத்து",
+      "task": "Task",
+      "visualize": "காட்சிப்படுத்து"
+    },
+    "deleteTeam": {
+      "description": "team \"{{team}}\" ஐ நீக்கவா? இந்த நடவடிக்கையை மீட்டெடுக்க முடியாது. அனைத்து team தரவும் tasks உம் நீக்கப்படும்.",
+      "title": "team ஐ நீக்கு"
+    },
+    "draft": {
+      "descriptionPrefix": "இது ஒரு draft team -",
+      "descriptionSuffix": "{{count}} {{member}} உடன் கட்டமைக்கப்பட்டது ஆனால் இன்னும் CLI ஆல் provision செய்யப்படவில்லை. ஒரு மாதிரியைத் தேர்ந்தெடுத்து team ஐத் தொடங்க Launch ஐ கிளிக் செய்யவும்.",
+      "descriptionSuffix_few": "{{count}} {{member}} உடன் கட்டமைக்கப்பட்டது ஆனால் இன்னும் CLI ஆல் provision செய்யப்படவில்லை. ஒரு மாதிரியைத் தேர்ந்தெடுத்து team ஐத் தொடங்க Launch ஐ கிளிக் செய்யவும்.",
+      "descriptionSuffix_many": "{{count}} {{member}} உடன் கட்டமைக்கப்பட்டது ஆனால் இன்னும் CLI ஆல் provision செய்யப்படவில்லை. ஒரு மாதிரியைத் தேர்ந்தெடுத்து team ஐத் தொடங்க Launch ஐ கிளிக் செய்யவும்.",
+      "descriptionSuffix_one": "{{count}} {{member}} உடன் கட்டமைக்கப்பட்டது ஆனால் இன்னும் CLI ஆல் provision செய்யப்படவில்லை. ஒரு மாதிரியைத் தேர்ந்தெடுத்து team ஐத் தொடங்க Launch ஐ கிளிக் செய்யவும்.",
+      "descriptionSuffix_other": "{{count}} {{member}} உடன் கட்டமைக்கப்பட்டது ஆனால் இன்னும் CLI ஆல் provision செய்யப்படவில்லை. ஒரு மாதிரியைத் தேர்ந்தெடுத்து team ஐத் தொடங்க Launch ஐ கிளிக் செய்யவும்.",
+      "member": "உறுப்பினர்கள்",
+      "member_few": "உறுப்பினர்கள்",
+      "member_many": "உறுப்பினர்கள்",
+      "member_one": "உறுப்பினர்",
+      "member_other": "உறுப்பினர்கள்",
+      "title": "Team இன்னும் தொடங்கப்படவில்லை"
+    },
+    "invalidTab": "தவறான team tab",
+    "kanbanSafeData": "kanban ஐ முழுமையாக ஏற்ற முடியவில்லை. பாதுகாப்பான தரவைக் காட்டுகிறது.",
+    "loadFailed": "team ஐ ஏற்ற முடியவில்லை",
+    "loading": "team ஐ ஏற்றுகிறது",
+    "loadingSidebar": "team sidebar ஐ ஏற்றுகிறது",
+    "offline": {
+      "offline": "Team ஆஃப்லைனில் உள்ளது",
+      "partialFailed": "கடைசி launch பாதியில் தோல்வியடைந்தது",
+      "partialMissing": "கடைசி launch பாதியில் தோல்வியடைந்தது - {{missing}}/{{expected}} teammates சேரவில்லை",
+      "reconciling": "கடைசி launch இன்னும் சரிசெய்கிறது"
+    },
+    "previous": "முந்தையது: {{paths}}",
+    "removeMember": {
+      "description": "team இலிருந்து \"{{member}}\" ஐ அகற்றவா? Tasks மற்றும் செய்திகள் பாதுகாக்கப்படும், ஆனால் இந்தப் பெயரை மீண்டும் பயன்படுத்த முடியாது.",
+      "title": "உறுப்பினரை அகற்று"
+    },
+    "sections": {
+      "team": "Team"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "செயலில்",
+      "launching": "தொடங்குகிறது...",
+      "running": "இயங்குகிறது"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "நினைவகம்"
+    },
+    "tooltips": {
+      "deleteTeam": "team ஐ நீக்கு",
+      "editTeam": "team ஐ திருத்து",
+      "editUnavailableProvisioning": "provisioning இன்னும் முன்னேற்றத்தில் இருக்கும்போது team ஐ திருத்துவது கிடைக்காது",
+      "openBuiltInEditor": "project ஐ உள்ளமைந்த editor இல் திற",
+      "openTeamGraph": "team graph ஐத் திற",
+      "stopTeam": "team ஐ நிறுத்து"
+    },
+    "waitingForProvisioning": "provisioning முடிந்ததும் team தரவு தோன்றும்",
+    "context": {
+      "title": "Context",
+      "loading": "ஏற்றுகிறது...",
+      "noSessionLoaded": "session எதுவும் ஏற்றப்படவில்லை",
+      "closePanel": "{{team}} context panel ஐ மூடு",
+      "loadingContext": "context ஐ ஏற்றுகிறது...",
+      "openLeadSession": "context ஐக் காண team lead session ஐத் திறக்கவும்."
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "ஏற்று",
+        "discard": "நிராகரி",
+        "discardTooltip": "இந்தக் கோப்பின் அனைத்து edits ஐயும் நிராகரி",
+        "keepMyDraft": "என் draft ஐ வைத்திரு",
+        "reject": "நிராகரி",
+        "reloadFromDisk": "disk இலிருந்து மீண்டும் ஏற்று",
+        "restore": "மீட்டெடு",
+        "restoreTooltip": "முன்னோட்டத்திலிருந்து இந்தக் கோப்பை disk இல் உருவாக்கு/மீட்டெடு",
+        "saveFile": "கோப்பைச் சேமி",
+        "saveFileTooltip": "கோப்பை disk இல் சேமி"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "தற்போதைய Disk",
+        "file-history": "கோப்பு வரலாறு",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "Task Ledger",
+        "ledger-snapshot": "Ledger Snapshot",
+        "snippet-reconstruction": "மீளமைக்கப்பட்டது",
+        "unavailable": "உள்ளடக்கம் கிடைக்கவில்லை"
+      },
+      "contentUnavailable": {
+        "badge": "உள்ளடக்கம் கிடைக்கவில்லை",
+        "description": "ledger இந்த மாற்றத்திற்கான metadata ஐ பதிவு செய்தது, ஆனால் முழு உரை உள்ளடக்கம் கிடைக்கவில்லை. இது பொதுவாக binary, பெரிய அல்லது hash-only உள்ளடக்கம் என்று பொருள்.",
+        "safety": "பாதுகாப்பற்ற disk எழுத்துகளைத் தவிர்க்க இந்தக் கோப்புக்கு தானியங்கி ஏற்பு/நிராகரிப்பு முடக்கப்பட்டுள்ளது.",
+        "title": "உரை உள்ளடக்கம் கிடைக்கவில்லை"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "முழு உரை உள்ளடக்கம் கிடைக்காததால் ஏற்பு/நிராகரிப்பு முடக்கப்பட்டுள்ளது.",
+        "acceptRejectMissingOnDisk": "disk இல் கோப்பு காணாமல் இருக்கும்போது ஏற்பு/நிராகரிப்பு முடக்கப்பட்டுள்ளது.",
+        "rejectBaselineUnavailable": "அசல் baseline கிடைக்காததால் நிராகரிப்பு முடக்கப்பட்டுள்ளது.",
+        "rejectContentUnavailable": "முழு உரை உள்ளடக்கம் கிடைக்காததால் நிராகரிப்பு முடக்கப்பட்டுள்ளது.",
+        "rejectManualLedgerReview": "இந்த ledger மாற்றத்தில் binary, பெரிய அல்லது கிடைக்காத உள்ளடக்கம் இருப்பதால் நிராகரிப்பு முடக்கப்பட்டுள்ளது."
+      },
+      "externalChange": {
+        "changedOnDisk": "disk இல் மாற்றப்பட்டது",
+        "deletedOnDisk": "disk இல் நீக்கப்பட்டது",
+        "recreatedOnDisk": "disk இல் மீண்டும் உருவாக்கப்பட்டது"
+      },
+      "missingOnDisk": {
+        "badge": "disk இல் காணவில்லை",
+        "description": "agent logs இலிருந்து ஒரு முன்னோட்டத்தை இன்னும் காட்ட முடியும், ஆனால் உங்கள் filesystem ஒத்திசைவில் இல்லை.",
+        "restorePrefix": "பயன்படுத்து",
+        "restoreSuffix": "முன்னோட்ட உள்ளடக்கத்தை disk இல் மீண்டும் எழுத.",
+        "restoreUnavailable": "தானாக மீட்டெடுக்க முழு கோப்பு உள்ளடக்கம் கிடைக்கவில்லை.",
+        "title": "disk இல் கோப்பு காணவில்லை"
+      },
+      "pathChange": {
+        "from": "{{path}} இலிருந்து",
+        "to": "{{path}} க்கு"
+      },
+      "worktree": {
+        "isolated": "தனிமைப்படுத்தப்பட்ட worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} நிலுவையில்",
+        "pending_one": "{{count}} நிலுவையில்",
+        "pending_other": "{{count}} நிலுவையில்",
+        "accepted": "{{count}} ஏற்கப்பட்டது",
+        "accepted_one": "{{count}} ஏற்கப்பட்டது",
+        "accepted_other": "{{count}} ஏற்கப்பட்டது",
+        "rejected": "{{count}} நிராகரிக்கப்பட்டது",
+        "rejected_one": "{{count}} நிராகரிக்கப்பட்டது",
+        "rejected_other": "{{count}} நிராகரிக்கப்பட்டது",
+        "acrossFiles": "{{count}} கோப்புகள் முழுவதும்",
+        "acrossFiles_one": "{{count}} கோப்பு முழுவதும்",
+        "acrossFiles_other": "{{count}} கோப்புகள் முழுவதும்",
+        "edited": "{{count}} திருத்தப்பட்டது",
+        "edited_one": "{{count}} திருத்தப்பட்டது",
+        "edited_other": "{{count}} திருத்தப்பட்டது",
+        "pending_few": "{{count}} நிலுவையில்",
+        "pending_many": "{{count}} நிலுவையில்",
+        "accepted_few": "{{count}} ஏற்கப்பட்டது",
+        "accepted_many": "{{count}} ஏற்கப்பட்டது",
+        "rejected_few": "{{count}} நிராகரிக்கப்பட்டது",
+        "rejected_many": "{{count}} நிராகரிக்கப்பட்டது",
+        "acrossFiles_few": "{{count}} கோப்புகள் முழுவதும்",
+        "acrossFiles_many": "{{count}} கோப்புகள் முழுவதும்",
+        "edited_few": "{{count}} திருத்தப்பட்டது",
+        "edited_many": "{{count}} திருத்தப்பட்டது"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "செயல்தவிர்",
+        "acceptAll": "அனைத்தையும் ஏற்று",
+        "rejectAll": "அனைத்தையும் நிராகரி",
+        "applying": "பயன்படுத்துகிறது...",
+        "applyRejections": "நிராகரிப்புகளைப் பயன்படுத்து"
+      },
+      "tooltips": {
+        "autoOn": "முடிவுக்கு உருட்டும்போது கோப்புகளை பார்த்ததாக தானாகக் குறி (ON)",
+        "autoOff": "முடிவுக்கு உருட்டும்போது கோப்புகளை பார்த்ததாக தானாகக் குறி (OFF)",
+        "undo": "கடைசி மதிப்பாய்வு செயல்பாட்டை செயல்தவிர் (Ctrl+Z)",
+        "acceptAll": "அனைத்து கோப்புகளிலும் உள்ள அனைத்து மாற்றங்களையும் ஏற்று",
+        "rejectAll": "அனைத்து கோப்புகளிலும் உள்ள பாதுகாப்பாக நிராகரிக்கக்கூடிய அனைத்து மாற்றங்களையும் நிராகரி",
+        "rejectAllDisabled": "நிராகரிக்க பாதுகாப்பான அசல் baseline கொண்ட நிலுவை கோப்புகள் இல்லை.",
+        "applyRejections": "நிராகரிக்கப்பட்ட hunks ஐ disk இல் பயன்படுத்து; ஏற்கப்பட்ட மாற்றங்கள் உள்ளபடியே வைக்கப்படும்"
+      }
+    },
+    "diffError": {
+      "title": "diff view ஐ வழங்க முடியவில்லை",
+      "unexpected": "diff ஐ வழங்கும்போது எதிர்பாராத பிழை ஏற்பட்டது.",
+      "actions": {
+        "retry": "மீண்டும் முயற்சி"
+      },
+      "raw": {
+        "show": "raw diff தரவைக் காட்டு",
+        "file": "கோப்பு: {{file}}",
+        "original": "--- அசல்",
+        "modified": "+++ மாற்றப்பட்டது",
+        "charsTotal": "... (மொத்தம் {{count}} எழுத்துகள்)",
+        "charsTotal_one": "... (மொத்தம் {{count}} எழுத்து)",
+        "charsTotal_other": "... (மொத்தம் {{count}} எழுத்துகள்)",
+        "charsTotal_few": "... (மொத்தம் {{count}} எழுத்துகள்)",
+        "charsTotal_many": "... (மொத்தம் {{count}} எழுத்துகள்)"
+      }
+    },
+    "fileTree": {
+      "viewed": "பார்த்தது",
+      "badges": {
+        "new": "புதியது",
+        "deleted": "நீக்கப்பட்டது"
+      },
+      "collapseFolder": "{{name}} ஐ சுருக்கு",
+      "expandFolder": "{{name}} ஐ விரிவாக்கு",
+      "empty": {
+        "noChangedFiles": "மாற்றப்பட்ட கோப்புகள் இல்லை",
+        "noMatchingFiles": "பொருந்தும் கோப்புகள் இல்லை"
+      },
+      "searchPlaceholder": "கோப்புகளைத் தேடு…",
+      "filters": {
+        "unresolved": "தீர்க்கப்படாதது",
+        "rejected": "நிராகரிக்கப்பட்டது",
+        "new": "புதியது",
+        "clear": "அழி"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "முந்தைய chunk",
+      "nextChunk": "அடுத்த chunk",
+      "rejectChange": "மாற்றத்தை நிராகரி (⌘N)",
+      "acceptChange": "மாற்றத்தை ஏற்று (⌘Y)",
+      "undo": "செயல்தவிர்",
+      "keep": "வைத்திரு",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "முரண்பாடு கண்டறியப்பட்டது",
+      "description": "agent இன் மாற்றங்களுக்குப் பிறகு இந்தக் கோப்பு மாற்றப்பட்டுள்ளது",
+      "cancel": "ரத்துசெய்",
+      "saveResolution": "தீர்வைச் சேமி",
+      "editManually": "கைமுறையாகத் திருத்து",
+      "useOriginal": "அசலைப் பயன்படுத்து",
+      "keepCurrent": "தற்போதையதை வைத்திரு"
+    },
+    "fullDiffLoading": {
+      "titleOne": "முழு Diff ஐ தயார் செய்கிறது",
+      "titleMany": "{{count}} முழு Diffs ஐ தயார் செய்கிறது",
+      "subtitleForFile": "{{file}} க்கான சரியான editor diff ஐ இறுதிப்படுத்துகிறது.",
+      "subtitleCurrentFile": "தற்போதைய கோப்புக்கான சரியான editor diff ஐ இறுதிப்படுத்துகிறது.",
+      "subtitleMany": "தற்போது ஏற்றப்படும் கோப்புகளுக்கான சரியான before/after baselines ஐ தீர்க்கிறது.",
+      "previewsReady": "{{count}} முன்னோட்டங்கள் தயார்",
+      "previewsReady_one": "{{count}} முன்னோட்டம் தயார்",
+      "editorViewLoading": "Editor view ஏற்றுகிறது",
+      "filesInProgress": "{{count}} கோப்புகள் முன்னேற்றத்தில்",
+      "filesInProgress_one": "{{count}} கோப்பு முன்னேற்றத்தில்",
+      "filesReady": "{{ready}}/{{total}} கோப்புகள் தயார்",
+      "progressDescription": "{{ready}} தயார், {{loading}} இன்னும் ஏற்றுகிறது. மீதமுள்ள baselines தீர்க்கப்படும்போது முன்னோட்ட diffs கீழே தெரியும்.",
+      "singleDescription": "சரியான baseline தீர்க்கப்படும்போது முன்னோட்ட diffs கீழே தெரியும்.",
+      "previewsReady_few": "{{count}} முன்னோட்டங்கள் தயார்",
+      "previewsReady_many": "{{count}} முன்னோட்டங்கள் தயார்",
+      "previewsReady_other": "{{count}} முன்னோட்டங்கள் தயார்",
+      "filesInProgress_few": "{{count}} கோப்புகள் முன்னேற்றத்தில்",
+      "filesInProgress_many": "{{count}} கோப்புகள் முன்னேற்றத்தில்",
+      "filesInProgress_other": "{{count}} கோப்புகள் முன்னேற்றத்தில்"
+    },
+    "fileMissingPrefix": "disk இல் கோப்பு காணவில்லை. இந்த diff agent logs இலிருந்து வந்த ஒரு முன்னோட்டமாக மட்டுமே இருக்கலாம். பயன்படுத்து",
+    "restore": "மீட்டெடு",
+    "fileMissingSuffix": "disk இல் கோப்பை உருவாக்க.",
+    "filePlaceholder": {
+      "loading": "ஏற்றுகிறது",
+      "description": "இந்தக் கோப்புக்கான முழு editor diff ஐ தயார் செய்கிறது."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} ledger objects செயலாக்கப்பட்டன",
+      "ledgerObjectsProcessed_one": "{{count}} ledger object செயலாக்கப்பட்டது",
+      "ledgerObjectsProcessed_other": "{{count}} ledger objects செயலாக்கப்பட்டன",
+      "ledgerObjectsProcessed_few": "{{count}} ledger objects செயலாக்கப்பட்டன",
+      "ledgerObjectsProcessed_many": "{{count}} ledger objects செயலாக்கப்பட்டன",
+      "phases": {
+        "readingLedger": "task ledger ஐ படிக்கிறது...",
+        "resolvingFiles": "கோப்பு நிலைகளைத் தீர்க்கிறது...",
+        "checkingWorktree": "worktree context ஐச் சரிபார்க்கிறது...",
+        "preparingDiffs": "மதிப்பாய்வு diffs ஐ தயார் செய்கிறது..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} பார்த்தது"
+    },
+    "scope": {
+      "readMore": "மேலும் படி",
+      "tiers": {
+        "exact": {
+          "title": "Task scope துல்லியமாக தீர்மானிக்கப்பட்டது",
+          "detail": "session log இல் தொடக்கம் மற்றும் நிறைவு markers இரண்டும் கண்டறியப்பட்டன. diff இல் இந்த குறிப்பிட்ட task போது செய்யப்பட்ட மாற்றங்கள் மட்டுமே அடங்கும் - ஒரே கோப்புகளை மாற்றிய மற்ற tasks விலக்கப்படுகின்றன."
+        },
+        "endEstimated": {
+          "title": "முடிவு எல்லை மதிப்பிடப்பட்டது",
+          "detail": "தொடக்க marker மட்டுமே கண்டறியப்பட்டது - task க்கு இன்னும் நிறைவு marker இல்லை. task தொடக்கத்திலிருந்து session முடிவு வரையிலான மாற்றங்கள் காட்டப்படுகின்றன. இதே session இல் இதற்குப் பிறகு மற்ற tasks இயங்கினால், அவற்றின் மாற்றங்களும் சேர்க்கப்படலாம்."
+        },
+        "startEstimated": {
+          "title": "தொடக்க எல்லை மதிப்பிடப்பட்டது",
+          "detail": "நிறைவு marker மட்டுமே கண்டறியப்பட்டது - வேலையின் தொடக்கம் பிடிக்கப்படவில்லை. இதே session இல் இதற்கு முன் மற்ற tasks இயங்கினால், அவை ஒரே கோப்புகளில் செய்த மாற்றங்களும் சேர்க்கப்படலாம்."
+        },
+        "allSession": {
+          "title": "அனைத்து session மாற்றங்களையும் காட்டுகிறது",
+          "detail": "session log இல் task markers எதுவும் கண்டறியப்படவில்லை. இந்த task ஐ தனிமைப்படுத்த முடியாது - மற்ற tasks இன் மாற்றங்கள் உட்பட முழு session இன் அனைத்து கோப்பு மாற்றங்களும் காட்டப்படுகின்றன. இது பழைய CLI பதிப்புகள் அல்லது தரமற்ற workflows உடன் நிகழலாம்."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "task ledger ஆல் பிடிக்கப்பட்ட மாற்றங்கள்",
+          "detail": "agent இந்த task இல் வேலை செய்துகொண்டிருந்தபோது orchestrator இந்த கோப்பு மாற்றங்களைப் பிடித்தது.",
+          "badge": "Ledger exact"
+        },
+        "limited": {
+          "title": "வரம்புக்குட்பட்ட மதிப்பாய்வுத்தன்மையுடன் பிடிக்கப்பட்ட மாற்றங்கள்",
+          "detail": "இந்த task க்கான இந்த கோப்பு மாற்றங்களை orchestrator பிடித்தது, ஆனால் குறைந்தது ஒரு மாற்றம் snapshot அல்லது metadata-only மூலத்திலிருந்து பிடிக்கப்பட்டது. கிடைக்கும் இடங்களில் சரியான உரை diffs ஐ மதிப்பாய்வு செய்யவும்; binary அல்லது கிடைக்காத உள்ளடக்கத்திற்கு கைமுறை மதிப்பாய்வு தேவைப்படலாம்.",
+          "mixedBadge": "கலப்பு மதிப்பாய்வுத்தன்மை",
+          "needsReviewBadge": "மதிப்பாய்வு தேவை"
+        }
+      },
+      "workInterval": {
+        "title": "நிலைத்த work interval ஆல் scope செய்யப்பட்டது",
+        "detail": "session log இல் task தொடக்க marker கிடைக்கவில்லை, எனவே diff ஆனது board இல் சேமிக்கப்பட்ட task work interval ஆல் scope செய்யப்படுகிறது.",
+        "badge": "Interval scoped"
+      },
+      "confidence": {
+        "high": "உயர் நம்பிக்கை",
+        "medium": "நடுத்தர நம்பிக்கை",
+        "low": "குறைந்த நம்பிக்கை",
+        "bestEffort": "சிறந்த முயற்சி"
+      }
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "actions": {
+        "nextChange": "அடுத்த மாற்றம்",
+        "previousChange": "முந்தைய மாற்றம்",
+        "nextFile": "அடுத்த கோப்பு",
+        "previousFile": "முந்தைய கோப்பு",
+        "acceptChange": "மாற்றத்தை ஏற்று",
+        "rejectChange": "மாற்றத்தை நிராகரி",
+        "saveFile": "கோப்பைச் சேமி",
+        "undo": "செயல்தவிர்",
+        "redo": "மீண்டும் செய்",
+        "toggleShortcuts": "shortcuts ஐ மாற்று",
+        "closeDialog": "உரையாடலை மூடு"
+      }
+    },
+    "timeline": {
+      "empty": "edit நிகழ்வுகள் இல்லை",
+      "titleWithCount": "Edit காலவரிசை ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "மதிப்பாய்வு செய்யக்கூடிய கோப்பு மாற்றங்கள் இல்லை"
+    },
+    "empty": {
+      "noSafeDiff": "பாதுகாப்பான diff கிடைக்கவில்லை",
+      "noFileChangesRecorded": "கோப்பு மாற்றங்கள் எதுவும் பதிவு செய்யப்படவில்லை",
+      "noSafeDiffDescription": "இந்த task க்கான பாதுகாப்பான கோப்பு diff ஐ task ledger வெளிப்படுத்தவில்லை.",
+      "noSafeDiffDiagnosticsDescription": "இந்த task க்கான பாதுகாப்பான கோப்பு diff ஐ task ledger வெளிப்படுத்தவில்லை. கீழே உள்ள diagnostics ஏன் என்பதை விளக்குகிறது.",
+      "noFileEventsYet": "task ledger இல் இந்த task க்கு இன்னும் கோப்பு நிகழ்வுகள் இல்லை.",
+      "noFileEvents": "task ledger இல் இந்த task க்கு கோப்பு நிகழ்வுகள் இல்லை."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "செய்தி bottom sheet நடவடிக்கைகள்",
+      "collapseAll": "அனைத்து செய்திகளையும் சுருக்கு",
+      "collapseSheet": "sheet ஐ சுருக்கு",
+      "expandAll": "அனைத்து செய்திகளையும் விரிவாக்கு",
+      "expandSheet": "sheet ஐ விரிவாக்கு",
+      "floatComposer": "composer ஐ மிதக்கவை",
+      "floatMessagesComposer": "messages composer ஐ மிதக்கவை",
+      "hideSearch": "தேடலை மறை",
+      "loadOlder": "பழைய செய்திகளை ஏற்று",
+      "markAllRead": "அனைத்தையும் படித்ததாகக் குறி",
+      "messageActions": "செய்தி நடவடிக்கைகள்",
+      "moveMessagesToBottomSheet": "செய்திகளை bottom sheet க்கு நகர்த்து",
+      "moveMessagesToSidebar": "செய்திகளை sidebar க்கு நகர்த்து",
+      "moveToBottomSheet": "bottom sheet க்கு நகர்த்து",
+      "moveToInline": "inline க்கு நகர்த்து",
+      "moveToSidebar": "sidebar க்கு நகர்த்து",
+      "panelActions": "செய்தி panel நடவடிக்கைகள்",
+      "searchMessages": "செய்திகளைத் தேடு"
+    },
+    "delivery": {
+      "copied": "நகலெடுக்கப்பட்டது",
+      "copyDebugDetails": "debug விவரங்களை நகலெடு",
+      "details": "விவரங்கள்",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "செய்தி panel பயன்முறை",
+    "title": "செய்திகள்",
+    "unread": {
+      "new": "{{count}} புதியது",
+      "unread": "{{count}} படிக்காதது",
+      "new_few": "{{count}} புதியவை",
+      "new_many": "{{count}} புதியவை",
+      "new_one": "{{count}} புதியது",
+      "new_other": "{{count}} புதியவை",
+      "unread_few": "{{count}} படிக்காதவை",
+      "unread_many": "{{count}} படிக்காதவை",
+      "unread_one": "{{count}} படிக்காதது",
+      "unread_other": "{{count}} படிக்காதவை"
+    },
+    "filter": {
+      "ariaLabel": "செய்திகளை வடிகட்டு",
+      "tooltip": "செய்திகளை வடிகட்டு",
+      "from": "இருந்து",
+      "to": "க்கு",
+      "noData": "தரவு இல்லை",
+      "showStatusUpdates": "நிலை புதுப்பிப்புகளைக் காட்டு (idle/shutdown)",
+      "actions": {
+        "reset": "மீட்டமை",
+        "save": "சேமி"
+      }
+    },
+    "status": {
+      "title": "நிலை"
+    },
+    "actionMode": {
+      "label": "Action பயன்முறை"
+    },
+    "search": {
+      "placeholder": "தேடு..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "கட்டமைக்கப்பட்டது",
+      "connected": "இணைக்கப்பட்டது",
+      "failed": "தோல்வி",
+      "free": "இலவசம்",
+      "local": "உள்ளூர்",
+      "needsTest": "சோதனை தேவை",
+      "verified": "சரிபார்க்கப்பட்டது",
+      "unavailable": "கிடைக்கவில்லை",
+      "issue": "சிக்கல்"
+    },
+    "customModelId": "தனிப்பயன் model id",
+    "label": "Model (விருப்பத்திற்குரியது)",
+    "multimodelRequired": "Codex மற்றும் Gemini க்கு Multimodel பயன்முறை தேவை.",
+    "openCode": {
+      "allSources": "அனைத்து OpenCode மூலங்கள்",
+      "filterSource": "{{source}} ஐ வடிகட்டு",
+      "filterSources": "OpenCode மூலங்களை வடிகட்டு",
+      "freeOnly": "இலவசம் மட்டும்",
+      "freeTooltip": "OpenCode இந்த மாதிரியை இலவசம் எனக் குறிக்கிறது.",
+      "loadingModels": "OpenCode மாதிரிகளை ஏற்றுகிறது...",
+      "noSourcesFound": "மூலங்கள் எதுவும் கிடைக்கவில்லை.",
+      "recommendedOnly": "பரிந்துரைக்கப்பட்டது மட்டும்",
+      "searchSources": "மூலங்களைத் தேடு",
+      "sourcesCount": "{{count}} OpenCode மூலங்கள்",
+      "sourcesCount_few": "{{count}} OpenCode மூலங்கள்",
+      "sourcesCount_many": "{{count}} OpenCode மூலங்கள்",
+      "sourcesCount_one": "{{count}} OpenCode மூலம்",
+      "sourcesCount_other": "{{count}} OpenCode மூலங்கள்"
+    },
+    "reason": "காரணம்: {{reason}}",
+    "runtimeModelsSyncing": "வெளிப்படையான மாதிரிகள் தற்போதைய runtime இலிருந்து ஏற்றப்படுகின்றன. list ஒத்திசைக்கும்போது இயல்புநிலை கிடைக்கும்.",
+    "fastMode": {
+      "codexLabel": "Fast பயன்முறை (2x credits)",
+      "optionalLabel": "Fast பயன்முறை (விருப்பத்திற்குரியது)",
+      "defaultOff": "இயல்புநிலை (Off)",
+      "fast": "Fast",
+      "off": "Off",
+      "defaultFast": "இயல்புநிலை (Fast)",
+      "defaultResolvesTo": "இயல்புநிலை தற்போது {{mode}} க்கு resolve ஆகிறது.",
+      "runtimeBackedHint": "Fast பயன்முறை runtime-backed மற்றும் resolved Anthropic launch model அதை ஆதரிக்கும்போது மட்டுமே திறக்கப்படும்."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Anthropic pricing docs ஐப் படி"
+    },
+    "searchModels": "மாதிரிகளைத் தேடு",
+    "defaultModel": "இயல்புநிலை",
+    "empty": {
+      "noSearchMatches": "இந்தத் தேடலுக்குப் பொருந்தும் மாதிரிகள் இல்லை.",
+      "recommendedFreeOpenCode": "தற்போதைய runtime list இல் பரிந்துரைக்கப்பட்ட இலவச OpenCode மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "freeOpenCode": "தற்போதைய runtime list இல் இலவச OpenCode மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "recommendedOpenCode": "தற்போதைய runtime list இல் பரிந்துரைக்கப்பட்ட OpenCode மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "noModels": "தற்போதைய runtime list இல் மாதிரிகள் எதுவும் கிடைக்கவில்லை."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "team launch க்கு OpenCode தயாராக இல்லை",
+      "freeModelsAvailableTitle": "OpenCode இலவச மாதிரிகள் கிடைக்கின்றன",
+      "providerNotConnectedTitle": "OpenCode வழங்குநர் இணைக்கப்படவில்லை",
+      "readyTitle": "OpenCode தயார்",
+      "readyMessage": "OpenCode வழங்குநர் readiness ஐ கடந்தது. இந்த team க்கு OpenCode மாதிரிகளைப் பயன்படுத்த அதைத் தேர்ந்தெடுக்கவும்.",
+      "useOpenCode": "OpenCode ஐப் பயன்படுத்து",
+      "badges": {
+        "check": "சரிபார்",
+        "install": "நிறுவு",
+        "free": "இலவசம்",
+        "setup": "அமைப்பு"
+      },
+      "summary": {
+        "checking": "OpenCode நிலை: runtime ஐச் சரிபார்க்கிறது",
+        "status": "OpenCode நிலை: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "team launch தடுக்கப்பட்டது",
+        "providerOptional": "வழங்குநர் இணைப்பு விருப்பத்திற்குரியது",
+        "providerModelsNeedSetup": "வழங்குநர்-backed மாதிரிகளுக்கு அமைப்பு தேவை",
+        "teamLaunchReady": "team launch தயார்",
+        "runtimeDetected": "runtime கண்டறியப்பட்டது",
+        "runtimeMissing": "runtime காணவில்லை",
+        "freeWithoutAuth": "auth இல்லாமல் இலவச மாதிரிகள் கிடைக்கின்றன",
+        "providerConnected": "வழங்குநர் இணைக்கப்பட்டது",
+        "providerNotConnected": "வழங்குநர் இணைக்கப்படவில்லை"
+      },
+      "messages": {
+        "checking": "பயன்பாடு இன்னும் OpenCode runtime ஐச் சரிபார்க்கிறது. வழங்குநர் நிலை முடியும் வரை காத்திருந்து, பிறகு மீண்டும் முயற்சிக்கவும்.",
+        "unsupported": "OpenCode நிறுவப்படவில்லை, கண்டறியப்படவில்லை, அல்லது கண்டறியப்பட்ட runtime ஆதரிக்கப்படவில்லை. OpenCode ஐ நிறுவவும் அல்லது புதுப்பிக்கவும், பிறகு வழங்குநர் நிலையைப் புதுப்பிக்கவும். முகப்புப் பக்கத்தில் உள்ள Install button ஐயும் பயன்படுத்தலாம்.",
+        "freeAvailable": "OpenCode கண்டறியப்பட்டது. ஒரு வழங்குநரை இணைக்காமல் Big Pickle போன்ற இலவச OpenCode மாதிரிகளைப் பயன்படுத்தலாம். வழங்குநர்-backed மாதிரிகள் வேண்டும்போது மட்டுமே ஒரு வழங்குநரை இணைக்கவும்.",
+        "noFreeListed": "OpenCode கண்டறியப்பட்டது, ஆனால் இன்னும் இலவச OpenCode மாதிரி எதுவும் பட்டியலிடப்படவில்லை. வழங்குநர் நிலையைப் புதுப்பிக்கவும், அல்லது வழங்குநர்-backed மாதிரிகளுக்கு OpenCode இல் ஒரு வழங்குநரை இணைக்கவும்.",
+        "launchBlocked": "OpenCode நிறுவப்பட்டு அங்கீகரிக்கப்பட்டுள்ளது, ஆனால் Agent Teams launch readiness தடுக்கப்பட்டுள்ளது.",
+        "ready": "team launch க்கு OpenCode தயார்."
+      },
+      "loadingRuntime": "OpenCode runtime நிலை இன்னும் ஏற்றுகிறது."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping உறுதிப்படுத்தப்படவில்லை",
+      "note": "குறிப்பு"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode config",
+      "builtinFree": "இலவச உள்ளமைந்தது",
+      "connectedProviders": "இணைக்கப்பட்ட வழங்குநர்கள்",
+      "otherCatalog": "மற்ற OpenCode catalog"
+    },
+    "pricing": {
+      "free": "இலவசம்",
+      "inputShort": "in {{rate}}",
+      "outputShort": "out {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Input: 1M tokens க்கு {{rate}}",
+      "outputTitle": "Output: 1M tokens க்கு {{rate}}",
+      "cacheReadTitle": "Cache read: 1M tokens க்கு {{rate}}",
+      "cacheWriteTitle": "Cache write: 1M tokens க்கு {{rate}}"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Anthropic-compatible endpoint இயல்புநிலை மாதிரியைப் பயன்படுத்துகிறது.\nதற்போது {{model}} க்கு resolve ஆகிறது.",
+      "anthropicCompatible": "Anthropic-compatible endpoint இயல்புநிலை மாதிரியைப் பயன்படுத்துகிறது.",
+      "anthropic": "Claude team இயல்புநிலை மாதிரியைப் பயன்படுத்துகிறது.\n1M context உடன் {{longContextModel}} க்கு, அல்லது Limit context இயக்கப்பட்டிருக்கும்போது 200K context உடன் {{limitedContextModel}} க்கு resolve ஆகிறது.",
+      "openCodeWithResolved": "OpenCode இயல்புநிலை மாதிரியைப் பயன்படுத்துகிறது.\nதற்போது {{model}} க்கு resolve ஆகிறது.",
+      "openCode": "OpenCode runtime இயல்புநிலை மாதிரியைப் பயன்படுத்துகிறது.",
+      "runtime": "தேர்ந்தெடுத்த வழங்குநருக்கான runtime இயல்புநிலையைப் பயன்படுத்துகிறது."
+    },
+    "multimodelOff": "Multimodel off",
+    "unavailableInRuntime": "தற்போதைய runtime இல் கிடைக்கவில்லை"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "delete": "நீக்கு",
+      "markResolved": "தீர்க்கப்பட்டதாகக் குறி",
+      "save": "சேமி"
+    },
+    "attachments": {
+      "commentAttachment": "கருத்து இணைப்பு",
+      "fromComments": "கருத்துகளிலிருந்து",
+      "preview": "{{filename}} ஐ முன்னோட்டமிடு"
+    },
+    "changes": {
+      "badges": {
+        "attention": "கவனம்",
+        "noSafeDiff": "பாதுகாப்பான diff இல்லை"
+      },
+      "empty": {
+        "noFileChangesRecorded": "கோப்பு மாற்றங்கள் எதுவும் பதிவு செய்யப்படவில்லை",
+        "noFileChangesRecordedYet": "இன்னும் கோப்பு மாற்றங்கள் எதுவும் பதிவு செய்யப்படவில்லை",
+        "noReviewableChangesRecovered": "மதிப்பாய்வு செய்யக்கூடிய கோப்பு மாற்றங்கள் எதுவும் மீட்கப்படவில்லை",
+        "noSafeDiffAvailable": "பாதுகாப்பான diff கிடைக்கவில்லை"
+      },
+      "loadFailed": "task மாற்றங்கள் சுருக்கத்தை ஏற்ற முடியவில்லை",
+      "loading": "மாற்றங்களை ஏற்றுகிறது...",
+      "fileCount": "{{count}} கோப்புகள்",
+      "fileRowsHidden": "{{count}} கோப்பு rows மறைக்கப்பட்டன",
+      "moreDiagnostics": "{{count}} மேலும் diagnostics",
+      "moreFiles": "{{count}} மேலும் கோப்புகள்",
+      "openInEditor": "editor இல் திற",
+      "openTask": "task {{subject}} ஐத் திற",
+      "refresh": "மாற்றங்களைப் புதுப்பி",
+      "refreshFailed": "புதுப்பிப்பு தோல்வியடைந்தது: {{error}}",
+      "refreshing": "புதுப்பிக்கிறது",
+      "refreshingChanges": "மாற்றங்களைப் புதுப்பிக்கிறது...",
+      "refreshTeamChanges": "team மாற்றங்களைப் புதுப்பி",
+      "refreshShort": "புதுப்பி",
+      "reviewDiff": "diff ஐ மதிப்பாய்வு செய்",
+      "reviewTaskDiff": "task diff ஐ மதிப்பாய்வு செய்",
+      "scannedCandidateTasks": "{{eligible}} candidate tasks இல் {{requested}} ஐ scan செய்தது",
+      "tasksDeferred": "இந்த pass இல் {{count}} tasks ஒத்திவைக்கப்பட்டன",
+      "title": "மாற்றங்கள்",
+      "fileCount_few": "{{count}} கோப்புகள்",
+      "fileCount_many": "{{count}} கோப்புகள்",
+      "fileCount_one": "{{count}} கோப்பு",
+      "fileCount_other": "{{count}} கோப்புகள்",
+      "fileRowsHidden_few": "{{count}} கோப்பு rows மறைக்கப்பட்டன",
+      "fileRowsHidden_many": "{{count}} கோப்பு rows மறைக்கப்பட்டன",
+      "fileRowsHidden_one": "{{count}} கோப்பு row மறைக்கப்பட்டது",
+      "fileRowsHidden_other": "{{count}} கோப்பு rows மறைக்கப்பட்டன",
+      "moreDiagnostics_few": "{{count}} மேலும் diagnostics",
+      "moreDiagnostics_many": "{{count}} மேலும் diagnostics",
+      "moreDiagnostics_one": "{{count}} மேலும் diagnostics",
+      "moreDiagnostics_other": "{{count}} மேலும் diagnostics",
+      "moreFiles_few": "{{count}} மேலும் கோப்புகள்",
+      "moreFiles_many": "{{count}} மேலும் கோப்புகள்",
+      "moreFiles_one": "{{count}} மேலும் கோப்பு",
+      "moreFiles_other": "{{count}} மேலும் கோப்புகள்",
+      "tasksDeferred_few": "இந்த pass இல் {{count}} tasks ஒத்திவைக்கப்பட்டன",
+      "tasksDeferred_many": "இந்த pass இல் {{count}} tasks ஒத்திவைக்கப்பட்டன",
+      "tasksDeferred_one": "இந்த pass இல் {{count}} task ஒத்திவைக்கப்பட்டது",
+      "tasksDeferred_other": "இந்த pass இல் {{count}} tasks ஒத்திவைக்கப்பட்டன"
+    },
+    "clarification": {
+      "awaitingLead": "team lead இடமிருந்து தெளிவுபடுத்தலுக்காகக் காத்திருக்கிறது",
+      "awaitingUser": "உங்களிடமிருந்து தெளிவுபடுத்தலுக்காகக் காத்திருக்கிறது"
+    },
+    "description": {
+      "add": "விளக்கம் சேர்க்க கிளிக் செய்...",
+      "edit": "விளக்கத்தைத் திருத்து",
+      "placeholder": "Task விளக்கம் (markdown ஆதரிக்கிறது)"
+    },
+    "loading": {
+      "fetchingTeamData": "team தரவைப் பெறுகிறது",
+      "title": "task ஐ ஏற்றுகிறது..."
+    },
+    "logs": {
+      "newArriving": "புதிய task logs வருகின்றன"
+    },
+    "notFound": "Task கிடைக்கவில்லை",
+    "related": {
+      "blockedBy": "தடுக்கப்பட்டது",
+      "blocks": "தடுக்கிறது",
+      "linkedFrom": "இருந்து இணைக்கப்பட்டது",
+      "links": "Links",
+      "title": "தொடர்புடைய tasks"
+    },
+    "review": {
+      "reviewer": "மதிப்பாய்வாளர்: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "இணைப்புகள்",
+      "changes": "மாற்றங்கள்",
+      "comments": "கருத்துகள்",
+      "description": "விளக்கம்",
+      "taskLogs": "Task Logs",
+      "workflowHistory": "Workflow வரலாறு"
+    },
+    "unassigned": "ஒதுக்கப்படாதது",
+    "workflow": {
+      "implementationTimeTitle": "நிலைத்த work intervals இலிருந்து செயல்படுத்தல் நேரம்",
+      "inProgressTime": "முன்னேற்றத்தில் இருந்த நேரம் {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "UI ஐ துரிதமாக வைத்திருக்க மிக சமீபத்திய {{formattedCount}} கருத்துகளைக் காட்டுகிறது.",
+      "badges": {
+        "approved": "ஒப்புதல் அளிக்கப்பட்டது",
+        "reviewRequested": "மதிப்பாய்வு கோரப்பட்டது"
+      },
+      "unknownTime": "தெரியாத நேரம்",
+      "actions": {
+        "reply": "பதிலளி",
+        "replyToComment": "கருத்துக்குப் பதிலளி",
+        "showMore": "மேலும் கருத்துகளைக் காட்டு ({{visible}}/{{total}})",
+        "cancelReply": "பதிலை ரத்துசெய்",
+        "comment": "கருத்து"
+      },
+      "attachments": {
+        "previewAlt": "இணைப்பு முன்னோட்டம்",
+        "downloadFailed": "பதிவிறக்கம் தோல்வியடைந்தது"
+      },
+      "replyingTo": "பதிலளிக்கிறது",
+      "input": {
+        "placeholder": "ஒரு கருத்தைச் சேர்... (அனுப்ப Enter)",
+        "charsLeft": "{{count}} எழுத்துகள் மீதம்",
+        "charsLeft_one": "{{count}} எழுத்து மீதம்",
+        "charsLeft_other": "{{count}} எழுத்துகள் மீதம்",
+        "charsLeft_few": "{{count}} எழுத்துகள் மீதம்",
+        "charsLeft_many": "{{count}} எழுத்துகள் மீதம்"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Workflow வரலாறு எதுவும் பதிவு செய்யப்படவில்லை",
+      "currentImplementationInterval": "தற்போதைய செயல்படுத்தல் interval",
+      "implementationIntervalEnded": "இந்த transition இல் செயல்படுத்தல் interval முடிந்தது",
+      "runningPrefix": "இயங்குகிறது ",
+      "createdAs": "உருவாக்கப்பட்டது",
+      "by": "மூலம்",
+      "reassigned": "மீண்டும் ஒதுக்கப்பட்டது",
+      "assignedTo": "ஒதுக்கப்பட்டது",
+      "unassignedFrom": "இருந்து ஒதுக்கல் நீக்கப்பட்டது",
+      "ownerChanged": "உரிமையாளர் மாற்றப்பட்டார்",
+      "reviewRequested": "மதிப்பாய்வு கோரப்பட்டது",
+      "reviewStarted": "மதிப்பாய்வு தொடங்கப்பட்டது",
+      "changesRequested": "மாற்றங்கள் கோரப்பட்டன",
+      "approved": "ஒப்புதல் அளிக்கப்பட்டது",
+      "unknownEvent": "தெரியாத நிகழ்வு"
+    },
+    "reviewStates": {
+      "approved": "ஒப்புதல் அளிக்கப்பட்டது",
+      "needsFix": "திருத்தம் தேவை",
+      "inReview": "மதிப்பாய்வில்"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "ஒதுக்கப்பட்டவர்",
+      "assigneeOptional": "ஒதுக்கப்பட்டவர் (விருப்பத்திற்குரியது)",
+      "blockedByOptional": "தடுக்கும் tasks (விருப்பத்திற்குரியது)",
+      "blockedBySummary": "Task இவற்றால் தடுக்கப்படும்: {{tasks}}",
+      "cancel": "ரத்துசெய்",
+      "create": "உருவாக்கு",
+      "creating": "உருவாக்குகிறது...",
+      "description": "Task ஆனது team இன் tasks/ directory இல் உருவாக்கப்பட்டு Kanban board இல் தோன்றும்.",
+      "descriptionOptional": "விளக்கம் (விருப்பத்திற்குரியது)",
+      "detailsPlaceholder": "Task விவரங்கள் (markdown ஆதரிக்கிறது)",
+      "hideOptionalFields": "விருப்ப fields ஐ மறை",
+      "offlineNotice": {
+        "after": "- execution ஐத் தொடங்க team ஐத் தொடங்கவும்.",
+        "before": "Team ஆஃப்லைனில் உள்ளது. Task இதில் சேர்க்கப்படும்"
+      },
+      "promptOptional": "ஒதுக்கப்பட்டவருக்கான prompt (விருப்பத்திற்குரியது)",
+      "promptPlaceholder": "team உறுப்பினருக்கான தனிப்பயன் வழிமுறைகள்...",
+      "relatedOptional": "தொடர்புடைய tasks (விருப்பத்திற்குரியது)",
+      "relatedSummary": "தொடர்புடையது: {{tasks}}",
+      "saved": "சேமிக்கப்பட்டது",
+      "searchTasks": "tasks ஐத் தேடு...",
+      "selectMember": "ஒரு உறுப்பினரைத் தேர்ந்தெடு",
+      "selectMemberOptional": "உறுப்பினரைத் தேர்ந்தெடு...",
+      "showOptionalFields": "விருப்ப fields ஐக் காட்டு",
+      "startImmediately": "உடனடியாகத் தொடங்கு",
+      "startOfflineHint": "Team ஆஃப்லைனில் உள்ளது. tasks ஐ உடனடியாகத் தொடங்க முதலில் team ஐத் தொடங்கவும்.",
+      "subject": "தலைப்பு",
+      "subjectPlaceholder": "என்ன செய்ய வேண்டும்?",
+      "title": "Task ஐ உருவாக்கு",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "தடுக்கப்பட்டது",
+        "blocks": "தடுக்கிறது",
+        "id": "ID",
+        "owner": "உரிமையாளர்",
+        "status": "நிலை",
+        "subject": "தலைப்பு"
+      },
+      "empty": "இந்த team இல் tasks இல்லை",
+      "filters": {
+        "allOwners": "அனைத்து உரிமையாளர்கள்",
+        "allStatuses": "அனைத்து நிலைகள்",
+        "ownerAria": "உரிமையாளர் வாரியாக tasks ஐ வடிகட்டு",
+        "statusAria": "நிலை வாரியாக tasks ஐ வடிகட்டு"
+      },
+      "showing": "{{total}} இல் {{shown}} காட்டப்படுகிறது"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "Tasks {{completed}}/{{total}} முடிந்தது",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "ஒதுக்கப்படாதது",
+    "teamPrefix": "Team:",
+    "openTask": "task ஐத் திற",
+    "deleteConfirm": {
+      "title": "task ஐ நீக்கு",
+      "message": "task #{{taskId}} ஐ குப்பைக்கு நகர்த்தவா?",
+      "confirmLabel": "நீக்கு",
+      "cancelLabel": "ரத்துசெய்"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "closeEditor": "editor ஐ மூடு",
+      "closeTab": "tab ஐ மூடு",
+      "closeTooltip": "editor ஐ மூடு (Esc)",
+      "discard": "நிராகரி",
+      "discardAndClose": "நிராகரித்து மூடு",
+      "keep": "வைத்திரு",
+      "keepMine": "எனதை வைத்திரு",
+      "keyboardShortcuts": "Keyboard shortcuts",
+      "overwrite": "மேலெழுது",
+      "refreshAria": "புதுப்பி (F5)",
+      "refreshTooltip": "git நிலையைப் புதுப்பி (F5)",
+      "reload": "மீண்டும் ஏற்று",
+      "retry": "மீண்டும் முயற்சி",
+      "save": "சேமி",
+      "saveAllAndClose": "அனைத்தையும் சேமித்து மூடு"
+    },
+    "ariaLabel": "Project Editor",
+    "dialogs": {
+      "conflictDescription": "நீங்கள் திறந்ததிலிருந்து கோப்பு வெளிப்புறமாக மாற்றப்பட்டுள்ளது. உங்கள் மாற்றங்களுடன் மேலெழுதவா?",
+      "conflictTitle": "Save Conflict",
+      "unsavedDescription": "உங்களிடம் சேமிக்கப்படாத மாற்றங்கள் உள்ளன. என்ன செய்ய விரும்புகிறீர்கள்?",
+      "unsavedFileDescription": "இந்தக் கோப்பில் சேமிக்கப்படாத மாற்றங்கள் உள்ளன. என்ன செய்ய விரும்புகிறீர்கள்?",
+      "unsavedTitle": "சேமிக்கப்படாத மாற்றங்கள்"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "பெயர் காலியாக இருக்க முடியாது",
+        "invalidName": "தவறான பெயர்",
+        "invalidCharacters": "பெயரில் தவறான எழுத்துகள் உள்ளன",
+        "nameTooLong": "பெயர் மிக நீளமானது"
+      },
+      "placeholders": {
+        "fileName": "கோப்பு பெயர்...",
+        "folderName": "Folder பெயர்..."
+      },
+      "aria": {
+        "newFileName": "புதிய கோப்பு பெயர்",
+        "newFolderName": "புதிய folder பெயர்"
+      }
+    },
+    "draftRecovered": "முந்தைய session இலிருந்து சேமிக்கப்படாத மாற்றங்கள் மீட்கப்பட்டன.",
+    "externalChange": {
+      "changed": "disk இல் கோப்பு மாற்றப்பட்டது.",
+      "deleted": "disk இல் கோப்பு இனி இல்லை."
+    },
+    "saveFailed": "சேமிப்பு தோல்வியடைந்தது: {{error}}",
+    "sidebar": {
+      "explorer": "Explorer",
+      "hide": "sidebar ஐ மறை",
+      "hideWithShortcut": "sidebar ஐ மறை ({{shortcut}})",
+      "show": "sidebar ஐக் காட்டு",
+      "showWithShortcut": "sidebar ஐக் காட்டு ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "கோப்புகளில் தேடு",
+      "closeSearch": "தேடலை மூடு",
+      "closeSearchShortcut": "தேடலை மூடு (Esc)",
+      "searchPlaceholder": "தேடு...",
+      "matchCase": "எழுத்து வடிவம் பொருந்து",
+      "matchCaseToggle": "Aa",
+      "noResults": "முடிவுகள் எதுவும் கிடைக்கவில்லை",
+      "resultsSummary": "{{fileCount}} கோப்புகளில் {{count}} பொருத்தங்கள்",
+      "resultsSummary_one": "{{fileCount}} கோப்புகளில் {{count}} பொருத்தம்",
+      "truncated": "(truncated)",
+      "resultsSummary_few": "{{fileCount}} கோப்புகளில் {{count}} பொருத்தங்கள்",
+      "resultsSummary_many": "{{fileCount}} கோப்புகளில் {{count}} பொருத்தங்கள்",
+      "resultsSummary_other": "{{fileCount}} கோப்புகளில் {{count}} பொருத்தங்கள்"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "கோப்புகளை ஏற்ற முடியவில்லை: {{error}}",
+      "loading": "கோப்புகளை ஏற்றுகிறது...",
+      "empty": "கோப்புகள் எதுவும் கிடைக்கவில்லை",
+      "dropForProjectRoot": "project root க்கு இங்கே விடவும்",
+      "moveToTrash": "Trash க்கு நகர்த்து",
+      "moveToTrashConfirm": "\"{{name}}\" ஐ Trash க்கு நகர்த்தவா?",
+      "cancel": "ரத்துசெய்"
+    },
+    "goToLine": {
+      "title": "வரிக்குச் செல்",
+      "position": "(தற்போதைய: {{current}}, மொத்தம்: {{total}})",
+      "placeholder": "வரி எண், +offset, -offset, அல்லது %",
+      "go": "செல்"
+    },
+    "searchPanel": {
+      "previousMatch": "முந்தைய பொருத்தம்",
+      "nextMatch": "அடுத்த பொருத்தம்",
+      "close": "மூடு",
+      "replacePlaceholder": "மாற்று",
+      "replace": "மாற்று",
+      "replaceNext": "அடுத்ததை மாற்று",
+      "all": "அனைத்தும்",
+      "replaceAll": "அனைத்தையும் மாற்று"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Col {{col}}",
+      "enableWatcher": "file watcher ஐ இயக்கு",
+      "disableWatcher": "file watcher ஐ முடக்கு",
+      "watch": "watch",
+      "watching": "watching",
+      "watchExternalChanges": "வெளிப்புற மாற்றங்களை watch செய்",
+      "disableExternalWatcher": "வெளிப்புற மாற்ற watcher ஐ முடக்கு",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Spaces: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "முன்னோட்டத்தை ஏற்றுகிறது...",
+      "openFullSize": "முழு அளவு முன்னோட்டத்தைத் திற",
+      "openSystemViewer": "System Viewer இல் திற"
+    },
+    "quickOpen": {
+      "title": "Quick Open",
+      "searchPlaceholder": "பெயர் மூலம் கோப்புகளைத் தேடு...",
+      "loading": "கோப்புகளை ஏற்றுகிறது...",
+      "empty": "கோப்புகள் எதுவும் கிடைக்கவில்லை"
+    },
+    "errorBoundary": {
+      "crashed": "Editor crash ஆனது",
+      "unknownError": "தெரியாத பிழை"
+    },
+    "binaryPlaceholder": {
+      "file": "Binary கோப்பு ({{size}})"
+    },
+    "unsavedChanges": "சேமிக்கப்படாத மாற்றங்கள்",
+    "empty": {
+      "selectFile": "திருத்த மரத்திலிருந்து ஒரு கோப்பைத் தேர்ந்தெடு"
+    },
+    "search": {
+      "toggleReplace": "மாற்றுதலை மாற்று",
+      "placeholder": "தேடு"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "groups": {
+        "fileOperations": "கோப்பு செயல்பாடுகள்",
+        "search": "தேடு",
+        "navigation": "வழிசெலுத்தல்",
+        "editing": "திருத்துதல்",
+        "markdown": "Markdown",
+        "general": "பொது"
+      },
+      "actions": {
+        "quickOpen": "Quick Open",
+        "save": "சேமி",
+        "saveAll": "அனைத்தையும் சேமி",
+        "closeTab": "Tab ஐ மூடு",
+        "findInFile": "கோப்பில் கண்டறி",
+        "searchInFiles": "கோப்புகளில் தேடு",
+        "goToLine": "வரிக்குச் செல்",
+        "nextTab": "அடுத்த Tab",
+        "previousTab": "முந்தைய Tab",
+        "cycleTabs": "Tabs ஐ சுழற்று",
+        "toggleSidebar": "Sidebar ஐ மாற்று",
+        "undo": "செயல்தவிர்",
+        "redo": "மீண்டும் செய்",
+        "selectNextMatch": "அடுத்த பொருத்தத்தைத் தேர்ந்தெடு",
+        "toggleComment": "கருத்தை மாற்று",
+        "splitPreview": "முன்னோட்டத்தைப் பிரி",
+        "fullPreview": "முழு முன்னோட்டம்",
+        "closeEditor": "Editor ஐ மூடு"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "word wrap ஐ இயக்கு",
+      "disableWordWrap": "word wrap ஐ முடக்கு",
+      "closeSplitPreview": "split preview ஐ மூடு",
+      "closePreview": "முன்னோட்டத்தை மூடு"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "அட்டவணையை உருவாக்கு",
+      "creating": "உருவாக்குகிறது...",
+      "goToDashboard": "Dashboard க்குச் செல்",
+      "launchTeam": "team ஐ தொடங்கு",
+      "launching": "தொடங்குகிறது...",
+      "relaunchTeam": "team ஐ மீண்டும் தொடங்கு",
+      "relaunching": "மீண்டும் தொடங்குகிறது...",
+      "saveChanges": "மாற்றங்களைச் சேமி",
+      "saving": "சேமிக்கிறது..."
+    },
+    "billing": {
+      "prefix": "ஜூன் 15, 2026 முதல், Anthropic கட்டணம் விதிக்கிறது",
+      "readArticle": "Anthropic கட்டுரையைப் படி",
+      "suffix": "மற்றும் Agent SDK பயன்பாடு மாதாந்திர Agent SDK credit இலிருந்து, interactive Claude Code வரம்புகளிலிருந்து தனியாக. credit ஒவ்வொரு billing cycle இலும் மீட்டமைக்கப்படும் மற்றும் பயன்படுத்தப்படாத credit roll over ஆகாது."
+    },
+    "conflict": {
+      "description": "ஒரே directory இல் இரண்டு teams ஐ இயக்குவது ஆபத்தானது - அவை ஒரே கோப்புகளைத் திருத்துவதில் முரண்படலாம். தனிமைப்படுத்தலுக்கு வேறு directory அல்லது git worktree ஐப் பயன்படுத்த பரிசீலிக்கவும்.",
+      "title": "இந்த working directory க்கு மற்றொரு team \"{{team}}\" ஏற்கனவே இயங்குகிறது",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "createSchedule": "தானியங்கி Claude task execution ஐ அட்டவணைப்படுத்து",
+      "createScheduleForTeam": "team \"{{team}}\" க்கு தானியங்கி இயக்கங்களை அட்டவணைப்படுத்து",
+      "editSchedule": "team \"{{team}}\" க்கான அட்டவணையைத் திருத்துகிறது",
+      "launchPrefix": "team ஐத் தொடங்கு",
+      "launchSuffix": "உள்ளூர் Claude CLI வழியாக.",
+      "relaunchPrefix": "இதற்கான தற்போதைய இயக்கத்தை நிறுத்து",
+      "relaunchSuffix": "மற்றும் உள்ளூர் Claude CLI வழியாக அதை மீண்டும் தொடங்கு."
+    },
+    "prepare": {
+      "action": {
+        "launch": "தொடங்கு",
+        "relaunch": "மீண்டும் தொடங்கு"
+      },
+      "blocked": "Runtime சூழல் கிடைக்கவில்லை - {{action}} தடுக்கப்பட்டுள்ளது",
+      "checkingProviders": "தேர்ந்தெடுத்த வழங்குநர்களைச் சரிபார்க்கிறது...",
+      "failed": "தேர்ந்தெடுத்த வழங்குநர்களைத் தயார் செய்ய முடியவில்லை",
+      "preflight": "{{action}} க்கு முன் பிழைகளைப் பிடிக்க pre-flight சரிபார்ப்பு",
+      "preparingEnvironment": "சூழலைத் தயார் செய்கிறது...",
+      "ready": "அனைத்து தேர்ந்தெடுத்த வழங்குநர்களும் தயார்.",
+      "readyWithNotes": "அனைத்து தேர்ந்தெடுத்த வழங்குநர்களும் தயார், குறிப்புகளுடன்.",
+      "unsupportedPreload": "தற்போதைய preload பதிப்பு team:prepareProvisioning ஐ ஆதரிக்கவில்லை. dev app ஐ மறுதொடக்கம் செய்யவும்.",
+      "selectWorkingDirectory": "launch சூழலை சரிபார்க்க ஒரு working directory ஐத் தேர்ந்தெடுக்கவும்.",
+      "someProvidersNeedAttention": "சில தேர்ந்தெடுத்த வழங்குநர்களுக்கு கவனம் தேவை."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "இந்த prompt இதற்கு அனுப்பப்படும்",
+      "oneShotSuffix": "one-shot execution க்காக",
+      "saved": "சேமிக்கப்பட்டது",
+      "schedulePlaceholder": "அட்டவணையில் Claude செயல்படுத்த வேண்டிய வழிமுறைகள்...",
+      "teamLeadOptional": "team lead க்கான prompt (விருப்பத்திற்குரியது)",
+      "teamLeadPlaceholder": "team lead க்கான வழிமுறைகள்..."
+    },
+    "providerChanged": "வழங்குநர் {{from}} இலிருந்து {{to}} க்கு மாற்றப்பட்டது. முந்தைய lead session மீண்டும் தொடரப்படாது, மேலும் புதிய runtime சரியாகப் பயன்படுத்தப்படும்படி lead புதிய context உடன் தொடங்கும்.",
+    "relaunchFreshSession": "Team மீண்டும் தொடங்குதல் புதிய lead session ஐத் தொடங்குகிறது. நிலையான team நிலை, task board மற்றும் உறுப்பினர் கட்டமைப்பு launch prompt இல் மீண்டும் நிரப்பப்படுகின்றன.",
+    "relaunchWarning": {
+      "description": "இந்த அமைப்புகளைச் சேமிப்பது தற்போதைய team process ஐ நிறுத்தி, புதுப்பிக்கப்பட்ட roster ஐ நிலைநிறுத்தி, புதிய runtime உடன் team ஐ மீண்டும் தொடங்கும்.",
+      "title": "மீண்டும் தொடங்குதல் தற்போதைய team இயக்கத்தை மறுதொடக்கம் செய்யும்"
+    },
+    "schedule": {
+      "labelOptional": "Label (விருப்பத்திற்குரியது)",
+      "labelPlaceholder": "எ.கா., தினசரி code review, இரவு tests...",
+      "maxBudgetUsd": "அதிகபட்ச budget (USD)",
+      "maxTurns": "அதிகபட்ச turns",
+      "noLimit": "வரம்பு இல்லை",
+      "noMatches": "உங்கள் தேடலுக்குப் பொருந்தும் teams இல்லை.",
+      "noTeams": "teams எதுவும் கிடைக்கவில்லை. முதலில் ஒரு team ஐ உருவாக்கவும்.",
+      "searchTeams": "teams ஐத் தேடு...",
+      "selectTeam": "ஒரு team ஐத் தேர்ந்தெடு...",
+      "team": "Team",
+      "title": "அட்டவணை"
+    },
+    "title": {
+      "createSchedule": "அட்டவணையை உருவாக்கு",
+      "editSchedule": "அட்டவணையைத் திருத்து",
+      "launch": "Team ஐ தொடங்கு",
+      "relaunch": "Team ஐ மீண்டும் தொடங்கு"
+    },
+    "errors": {
+      "loadProjectsFailed": "projects ஐ ஏற்ற முடியவில்லை",
+      "saveScheduleFailed": "அட்டவணையைச் சேமிக்க முடியவில்லை",
+      "relaunchFailed": "team ஐ மீண்டும் தொடங்க முடியவில்லை",
+      "launchFailed": "team ஐ தொடங்க முடியவில்லை"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode lead க்கு ஒரு தேர்ந்தெடுத்த மாதிரி தேவை.",
+      "openCodeTeammateRequired": "OpenCode lead க்கு குறைந்தது ஒரு OpenCode teammate தேவை.",
+      "selectWorkingDirectory": "working directory ஐத் தேர்ந்தெடு (cwd)",
+      "fixMemberNames": "தொடங்குவதற்கு முன் உறுப்பினர் பெயர்களைச் சரிசெய்யவும்",
+      "memberNamesUnique": "தொடங்குவதற்கு முன் உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "மீண்டும் தொடங்கும் அமைப்புகள்",
+      "title": "விருப்ப launch அமைப்புகள்",
+      "relaunchDescription": "team ஐ மறுதொடக்கம் செய்வதற்கு முன் roster மற்றும் lead runtime ஐ மதிப்பாய்வு செய்யவும்.",
+      "description": "launch flow ஐ project path இல் கவனம் செலுத்தி வைத்திருங்கள், கூடுதல் கட்டுப்பாடு வேண்டும்போது மட்டுமே இதை விரிவாக்கவும்."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "team ஐ நகலெடு",
+      "createTeam": "Team ஐ உருவாக்கு",
+      "deleteForever": "நிரந்தரமாக நீக்கு",
+      "deletePermanently": "நிரந்தரமாக நீக்கு",
+      "deleteTeam": "team ஐ நீக்கு",
+      "launching": "தொடங்குகிறது...",
+      "launchTeam": "team ஐ தொடங்கு",
+      "relaunchTeam": "team ஐ மீண்டும் தொடங்கு",
+      "restore": "மீட்டெடு",
+      "restoreTeam": "team ஐ மீட்டெடு",
+      "retry": "மீண்டும் முயற்சி",
+      "stopTeam": "team ஐ நிறுத்து",
+      "stopping": "நிறுத்துகிறது..."
+    },
+    "electronOnly": {
+      "description": "உலாவி பயன்முறையில், உள்ளூர் `~/.claude/teams` directories க்கான அணுகல் கிடைக்காது.",
+      "title": "Teams ஆனது Electron பயன்முறையில் மட்டுமே கிடைக்கிறது"
+    },
+    "empty": {
+      "description": "தொடங்க இங்கே ஒரு team ஐ உருவாக்கவும். அது தானாகவே பட்டியலில் தோன்றும்.",
+      "localOnly": "Team உருவாக்கம் உள்ளூர் Electron பயன்முறையில் மட்டுமே கிடைக்கிறது.",
+      "title": "teams எதுவும் கிடைக்கவில்லை"
+    },
+    "filter": {
+      "clearAll": "அனைத்தையும் அழி",
+      "label": "teams ஐ வடிகட்டு",
+      "projectPriority": "Project முன்னுரிமை",
+      "status": "நிலை"
+    },
+    "loadFailed": "teams ஐ ஏற்ற முடியவில்லை",
+    "loading": "teams ஐ ஏற்றுகிறது...",
+    "localOnly": "உள்ளூர் Electron பயன்முறையில் மட்டுமே கிடைக்கிறது.",
+    "membersCount": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_few": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_many": "உறுப்பினர்கள்: {{count}}",
+    "membersCount_one": "உறுப்பினர்: {{count}}",
+    "membersCount_other": "உறுப்பினர்கள்: {{count}}",
+    "noDescription": "விளக்கம் இல்லை",
+    "noMatches": "தற்போதைய வடிப்பான்களுக்குப் பொருந்தும் teams இல்லை",
+    "partial": {
+      "pending": "கடைசி தொடக்கம் இன்னும் சரிசெய்கிறது.",
+      "skipped": "கடைசி தொடக்கம் சில teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount": "கடைசி தொடக்கம் {{count}}/{{expected}} teammate ஐத் தவிர்த்தது.",
+      "skippedWithCount_few": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount_many": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "skippedWithCount_one": "கடைசி தொடக்கம் {{count}}/{{expected}} teammate ஐத் தவிர்த்தது.",
+      "skippedWithCount_other": "கடைசி தொடக்கம் {{count}}/{{expected}} teammates ஐத் தவிர்த்தது.",
+      "stopped": "அனைத்து teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount": "{{count}}/{{expected}} teammate சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_few": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_many": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_one": "{{count}}/{{expected}} teammate சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது.",
+      "stoppedWithCount_other": "{{count}}/{{expected}} teammates சேருவதற்கு முன் கடைசி தொடக்கம் நிறுத்தப்பட்டது."
+    },
+    "searchPlaceholder": "teams ஐத் தேடு...",
+    "sections": {
+      "otherTeams": "மற்ற teams",
+      "projectTeams": "{{project}} க்கான Teams",
+      "selectedProject": "தேர்ந்தெடுத்த project"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "செயலில்",
+      "deleted": "நீக்கப்பட்டது",
+      "launching": "தொடங்குகிறது...",
+      "offline": "ஆஃப்லைன்",
+      "partialFailure": "தொடக்கம் பாதியில் தோல்வியடைந்தது",
+      "partialPending": "Bootstrap நிலுவையில்",
+      "partialSkipped": "தொடக்கம் உறுப்பினரைத் தவிர்த்தது",
+      "running": "இயங்குகிறது"
+    },
+    "title": "Team ஐத் தேர்ந்தெடு",
+    "trash": "Trash ({{count}})",
+    "trash_few": "Trash ({{count}})",
+    "trash_many": "Trash ({{count}})",
+    "trash_one": "Trash ({{count}})",
+    "trash_other": "Trash ({{count}})",
+    "deleteDraft": {
+      "title": "draft ஐ நீக்கு",
+      "message": "draft team \"{{teamName}}\" ஐ நீக்கவா? இதை மீட்டெடுக்க முடியாது.",
+      "confirmLabel": "நீக்கு",
+      "cancelLabel": "ரத்துசெய்"
+    },
+    "moveToTrash": {
+      "title": "trash க்கு நகர்த்து",
+      "message": "team \"{{teamName}}\" ஐ trash க்கு நகர்த்தவா? அதை பிறகு மீட்டெடுக்கலாம்.",
+      "confirmLabel": "trash க்கு நகர்த்து",
+      "cancelLabel": "ரத்துசெய்"
+    },
+    "deleteForever": {
+      "title": "நிரந்தரமாக நீக்கு",
+      "message": "team \"{{teamName}}\" ஐ நிரந்தரமாக நீக்கவா? அனைத்து தரவும் இழக்கப்படும்.",
+      "confirmLabel": "நிரந்தரமாக நீக்கு",
+      "cancelLabel": "ரத்துசெய்"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "குறிப்பு: Cross-team செய்திகள் இலக்கு team lead க்குச் செல்கின்றன. பதில் உங்களுக்குப் பதிலாக உங்கள் team lead க்குத் திரும்ப வர விரும்பினால், செய்தியில் அதை வெளிப்படையாகச் சொல்லவும்."
+    },
+    "attachments": {
+      "attachFiles": "கோப்புகளை இணை (paste அல்லது drag & drop)",
+      "unavailable": "இணைப்புகள் கிடைக்கவில்லை",
+      "disabledHint": "online team lead மற்றும் online OpenCode teammates க்கு கோப்பு இணைப்புகள் ஆதரிக்கப்படுகின்றன. இணைப்புகளை அகற்றவும் அல்லது பெறுநரை மாற்றவும்.",
+      "restrictions": {
+        "crossTeam": "cross-team செய்திகளுக்கு கோப்பு இணைப்புகள் ஆதரிக்கப்படவில்லை",
+        "teamOffline": "கோப்புகளை இணைக்க team online ஆக இருக்க வேண்டும்",
+        "unsupportedRecipient": "கோப்புகளை team lead அல்லது OpenCode teammates க்கு அனுப்பலாம்",
+        "openCodeOffline": "OpenCode teammates க்கு கோப்புகளை இணைக்க team online ஆக இருக்க வேண்டும்",
+        "sending": "கோப்புகளைச் சேர்ப்பதற்கு முன் தற்போதைய செய்தி அனுப்பப்படுவதற்காகக் காத்திருக்கவும்",
+        "maximumReached": "அதிகபட்ச இணைப்புகள் எட்டப்பட்டன",
+        "leadOnly": "கோப்புகளை team lead க்கு மட்டுமே அனுப்ப முடியும்"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Slash கட்டளைகளுக்கு live team lead தேவை மற்றும் இணைப்புகளுடன் அனுப்ப முடியாது",
+        "crossTeam": "Slash கட்டளைகளை தற்போதைய team lead இல் மட்டுமே இயக்க முடியும்",
+        "notLead": "Slash கட்டளைகளை team lead க்கு மட்டுமே அனுப்ப முடியும்",
+        "leadOffline": "Slash கட்டளைகளுக்கு team lead online ஆக இருக்க வேண்டும்"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "சமீபத்திய cross-team கோரிக்கை மீண்டும் பயன்படுத்தப்பட்டது",
+      "teamOffline": "Team ஆஃப்லைன்"
+    },
+    "revision": {
+      "editing": "முந்தைய செய்தியைத் திருத்துகிறது",
+      "cancel": "ரத்துசெய்",
+      "tooltip": "முந்தைய செய்தியை புறக்கணித்து அதை composer க்கு மீட்டெடுக்க agent ஐக் கேள்."
+    },
+    "input": {
+      "charsLeft": "{{count}} எழுத்துகள் மீதம்",
+      "charsLeft_one": "{{count}} எழுத்து மீதம்",
+      "charsLeft_other": "{{count}} எழுத்துகள் மீதம்",
+      "teamLaunchingPlaceholder": "Team தொடங்குகிறது... செய்தி inbox வழங்கலுக்காக queue செய்யப்படும்.",
+      "crossTeamPlaceholder": "{{team}} க்கு cross-team செய்தி...",
+      "teamFallback": "team",
+      "placeholder": "ஒரு செய்தியை எழுது... (அனுப்ப Enter, புதிய வரிக்கு Shift+Enter)",
+      "slashTip": "குறிப்பு: எந்த Claude கட்டளைகளையும் இயக்க \"/\" ஐப் பயன்படுத்தலாம்.",
+      "charsLeft_few": "{{count}} எழுத்துகள் மீதம்",
+      "charsLeft_many": "{{count}} எழுத்துகள் மீதம்"
+    },
+    "teamSelector": {
+      "thisTeam": "இந்த team",
+      "current": "தற்போதைய",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "தேர்ந்தெடு...",
+      "searchPlaceholder": "தேடு...",
+      "noResults": "முடிவுகள் இல்லை"
+    },
+    "actions": {
+      "voiceToText": "குரல் to உரை",
+      "send": "அனுப்பு",
+      "sendingUnavailableLaunching": "team தொடங்கும்போது அனுப்புதல் கிடைக்காது"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "logs ஐ வடிகட்டு",
+      "tooltip": "logs ஐ வடிகட்டு",
+      "sections": {
+        "stream": "Stream",
+        "content": "உள்ளடக்கம்"
+      },
+      "kinds": {
+        "output": "Output",
+        "thinking": "Thinking",
+        "tool": "Tool calls"
+      },
+      "actions": {
+        "reset": "மீட்டமை",
+        "save": "சேமி"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} raw வரிகள்",
+    "rawLineCount_one": "{{formattedCount}} raw வரி",
+    "rawLinesCaptured": "{{count}} பிடிக்கப்பட்டது",
+    "emptyRawLogs": "{{count}}; இன்னும் எதுவும் assistant/tool output அல்ல.",
+    "noLogsYet": "இன்னும் logs இல்லை.",
+    "teamNotRunning": "Team இயங்கவில்லை.",
+    "searchPlaceholder": "logs ஐத் தேடு...",
+    "clearSearch": "தேடலை அழி",
+    "newCount": "+{{count}} புதியது",
+    "loading": "ஏற்றுகிறது...",
+    "showMore": "மேலும் காட்டு",
+    "noLogsCaptured": "logs எதுவும் பிடிக்கப்படவில்லை.",
+    "noMatchingLogs": "பொருந்தும் logs இல்லை.",
+    "rawLineCount_few": "{{formattedCount}} raw வரிகள்",
+    "rawLineCount_many": "{{formattedCount}} raw வரிகள்",
+    "rawLineCount_other": "{{formattedCount}} raw வரிகள்",
+    "openFullscreen": "fullscreen logs ஐத் திற",
+    "fullscreen": "Fullscreen",
+    "viewingFullscreen": "fullscreen பயன்முறையில் காண்கிறது",
+    "logsTitle": "Logs",
+    "sourceSelect": {
+      "placeholder": "log மூலத்தைத் தேர்ந்தெடு...",
+      "searchPlaceholder": "log மூலங்களைத் தேடு...",
+      "emptyMessage": "log மூலங்கள் எதுவும் கிடைக்கவில்லை.",
+      "ariaLabel": "Log மூலம்",
+      "leadLabel": "Lead",
+      "selectSourceEmpty": "ஒரு log மூலத்தைத் தேர்ந்தெடு.",
+      "leadDescription": "Team Lead",
+      "removedLabel": "அகற்றப்பட்டது",
+      "removedDescription": "அகற்றப்பட்டது"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "வெளி team",
+      "process": {
+        "startedBy": "தொடங்கியவர்:",
+        "at": "இல்:",
+        "openUrl": "URL ஐத் திற"
+      },
+      "overflow": {
+        "hiddenTasks": "மறைக்கப்பட்ட tasks",
+        "empty": "மறைக்கப்பட்ட tasks எதுவும் கிடைக்கவில்லை."
+      },
+      "member": {
+        "lead": "Lead",
+        "workingOn": "வேலை செய்கிறது",
+        "recentTools": "சமீபத்திய tools",
+        "spawn": {
+          "waitingToStart": "தொடங்க காத்திருக்கிறது",
+          "starting": "தொடங்குகிறது",
+          "failed": "தோல்வி"
+        },
+        "state": {
+          "active": "செயலில்",
+          "idle": "idle",
+          "offline": "offline",
+          "runningTool": "tool ஐ இயக்குகிறது"
+        },
+        "activeTool": {
+          "running": "tool ஐ இயக்குகிறது",
+          "failed": "Tool தோல்வியடைந்தது",
+          "finished": "Tool முடிந்தது"
+        },
+        "actions": {
+          "message": "செய்தி",
+          "profile": "Profile",
+          "task": "Task"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Logs",
+      "loading": "logs ஐ ஏற்றுகிறது",
+      "more": "+{{count}} மேலும்",
+      "more_one": "+{{count}} மேலும்",
+      "more_other": "+{{count}} மேலும்",
+      "more_few": "+{{count}} மேலும்",
+      "more_many": "+{{count}} மேலும்",
+      "unsupportedProvider": "ஆதரிக்கப்படாத வழங்குநர்",
+      "openCodeLogsDelayed": "OpenCode logs தாமதமானது",
+      "logsUnavailable": "Logs கிடைக்கவில்லை",
+      "noRecentLogs": "சமீபத்திய logs இல்லை",
+      "toolError": "Tool பிழை",
+      "toolResult": "Tool முடிவு",
+      "toolUse": "Tool பயன்பாடு",
+      "thinking": "Thinking",
+      "error": "பிழை",
+      "logEvent": "Log நிகழ்வு",
+      "noErrorOutput": "பிழை output இல்லை",
+      "noOutput": "output இல்லை",
+      "noInput": "input இல்லை"
+    },
+    "blockingEdge": {
+      "title": "Blocking Dependency",
+      "blocks": "தடுக்கிறது",
+      "close": "மூடு",
+      "blockingHiddenTasks": "மறைக்கப்பட்ட tasks ஐ தடுக்கிறது",
+      "blockedHiddenTasks": "தடுக்கப்பட்ட மறைக்கப்பட்ட tasks",
+      "links_one": "{{count}} link",
+      "links_other": "{{count}} links",
+      "hiddenBlockingLinks_one": "{{count}} மறைக்கப்பட்ட blocking link",
+      "hiddenBlockingLinks_other": "{{count}} மறைக்கப்பட்ட blocking links",
+      "hiddenTaskStack": "மறைக்கப்பட்ட task stack",
+      "hiddenTasks_one": "{{count}} மறைக்கப்பட்ட task",
+      "hiddenTasks_other": "{{count}} மறைக்கப்பட்ட tasks",
+      "task": "Task",
+      "openBlockerStack": "blocker stack ஐத் திற",
+      "openBlockedStack": "blocked stack ஐத் திற",
+      "openBlockerTask": "blocker task ஐத் திற",
+      "openBlockedTask": "blocked task ஐத் திற"
+    },
+    "activityHud": {
+      "activity": "செயல்பாடு",
+      "noRecentActivity": "சமீபத்திய செயல்பாடு இல்லை",
+      "more": "+{{count}} மேலும்",
+      "more_one": "+{{count}} மேலும்",
+      "more_other": "+{{count}} மேலும்",
+      "more_few": "+{{count}} மேலும்",
+      "more_many": "+{{count}} மேலும்"
+    },
+    "provisioning": {
+      "launchDetails": "Launch விவரங்கள்",
+      "launchDetailsDescription": "விரிவான team launch முன்னேற்றம், live output மற்றும் CLI logs."
+    }
+  },
+  "projectPath": {
+    "label": "Project",
+    "source": {
+      "claude": "Claude ஆல் கண்டறியப்பட்டது",
+      "codex": "Codex ஆல் கண்டறியப்பட்டது",
+      "mixed": "Claude மற்றும் Codex ஆல் கண்டறியப்பட்டது"
+    },
+    "deleted": {
+      "title": "project folder இனி இல்லை",
+      "label": "நீக்கப்பட்டது"
+    },
+    "mode": {
+      "projectList": "project பட்டியலிலிருந்து",
+      "customPath": "தனிப்பயன் path"
+    },
+    "loadingProjects": "projects ஐ ஏற்றுகிறது...",
+    "selectProject": "ஒரு project ஐத் தேர்ந்தெடு...",
+    "searchPlaceholder": "பெயர் அல்லது path மூலம் project ஐத் தேடு",
+    "empty": "எதுவும் கிடைக்கவில்லை",
+    "selectFromList": "பட்டியலிலிருந்து ஒரு project ஐத் தேர்ந்தெடு",
+    "noProjects": "projects எதுவும் கிடைக்கவில்லை, தனிப்பயன் path க்கு மாறவும்.",
+    "customWorkingDirectory": "தனிப்பயன் working directory",
+    "browse": "உலாவு",
+    "createAutomatically": "directory இல்லாவிட்டால், அது தானாக உருவாக்கப்படும்."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "உள்ளூர் runtime load",
+      "description": "Parent மற்றும் child processes மட்டுமே. தொலைநிலை LLM inference சேர்க்கப்படவில்லை.",
+      "cpu": "CPU",
+      "memory": "நினைவகம்",
+      "summedRss": "summed RSS",
+      "sharedHost": "பகிரப்பட்ட OpenCode host metric. இது இந்த உறுப்பினருக்கு பிரத்தியேகமானது அல்ல.",
+      "processTreeCapped": "இந்த sample க்கு process tree capped ஆனது.",
+      "rssHint": "RSS பகிரப்பட்ட pages ஐ உள்ளடக்கலாம், எனவே இது பிரத்தியேக நினைவகமாக அல்ல, ஒரு load சமிக்ஞையாகப் படிப்பது சிறந்தது."
+    },
+    "editor": {
+      "title": "உறுப்பினர்கள்",
+      "addMember": "உறுப்பினரைச் சேர்",
+      "editAsJson": "JSON ஆகத் திருத்து",
+      "runInSeparateWorktrees": "teammates ஐ தனி worktrees இல் இயக்கு",
+      "agentTeamsMcpOnly": "Agent Teams MCP only",
+      "removedCount": "அகற்றப்பட்டது ({{count}})",
+      "removedModelLockReason": "அகற்றப்பட்ட உறுப்பினர்கள் soft delete வரலாற்றுக்காக வைக்கப்படுகிறார்கள். அமைப்புகளைத் திருத்த அவர்களை மீட்டெடுக்கவும்.",
+      "memberNamesUnique": "உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்"
+    },
+    "stats": {
+      "computing": "stats ஐ கணக்கிடுகிறது...",
+      "empty": "stats எதுவும் கிடைக்கவில்லை",
+      "lines": "வரிகள்",
+      "linesInfo": "தோராயமானது. Edit மற்றும் Write tools க்கு துல்லியமானது. Bash கோப்பு எழுத்துகள் command patterns (heredoc, echo, sed) இலிருந்து மதிப்பிடப்படுகின்றன மற்றும் குறைவாகப் புகாரளிக்கப்படலாம்.",
+      "files": "கோப்புகள்",
+      "toolCalls": "Tool அழைப்புகள்",
+      "tokens": "Tokens",
+      "toolUsage": "Tool பயன்பாடு",
+      "filesTouched": "தொடப்பட்ட கோப்புகள் ({{count}})",
+      "viewAllChanges": "அனைத்து மாற்றங்களையும் காண்",
+      "showLess": "குறைவாகக் காட்டு",
+      "moreFiles": "+{{count}} மேலும்",
+      "footer": "{{count}} sessions · {{computedAgo}} கணக்கிடப்பட்டது",
+      "footer_one": "{{count}} session · {{computedAgo}} கணக்கிடப்பட்டது",
+      "footer_few": "{{count}} sessions · {{computedAgo}} கணக்கிடப்பட்டது",
+      "footer_many": "{{count}} sessions · {{computedAgo}} கணக்கிடப்பட்டது",
+      "footer_other": "{{count}} sessions · {{computedAgo}} கணக்கிடப்பட்டது"
+    },
+    "logs": {
+      "searching": "logs ஐத் தேடுகிறது...",
+      "empty": "logs எதுவும் கிடைக்கவில்லை",
+      "waitingForTaskActivity": "Task முன்னேற்றத்தில் உள்ளது - session செயல்பாட்டுக்காகக் காத்திருக்கிறது (auto-refreshing)...",
+      "noTaskActivity": "இந்த task க்கு இன்னும் session செயல்பாடு இல்லை",
+      "noMemberActivity": "இந்த உறுப்பினருக்கு இன்னும் பதிவு செய்யப்பட்ட session செயல்பாடு இல்லை",
+      "leadSessionTooltip": "முழு team lead session logs - global orchestration context க்கு பயனுள்ளது, இந்த agent க்கு குறிப்பிட்டது அல்ல",
+      "memberSessionTooltip": "முழு நிலையான teammate session logs - subagent கோப்புக்கு பதிலாக ஒரு root member session இல் வேலை இயங்கும்போது பயனுள்ளது",
+      "startedAt": "தொடங்கியது {{time}}",
+      "active": "செயலில்",
+      "showDetails": "விவரங்களைக் காட்டு",
+      "hideDetails": "விவரங்களை மறை",
+      "loadingDetails": "விவரங்களை ஏற்றுகிறது...",
+      "failedToLoadDetails": "விவரங்களை ஏற்ற முடியவில்லை"
+    },
+    "detail": {
+      "relaunchOpenCode": "OpenCode ஐ மீண்டும் தொடங்கு",
+      "restart": "மறுதொடக்கம்",
+      "legacyLogsFallback": "Legacy Logs Fallback",
+      "copyDiagnostics": "diagnostics ஐ நகலெடு",
+      "pid": "PID {{pid}}",
+      "removedAt": "அகற்றப்பட்டது {{date}}",
+      "failedToRestartMember": "உறுப்பினரை மறுதொடக்கம் செய்ய முடியவில்லை",
+      "sendMessage": "செய்தி அனுப்பு",
+      "assignTask": "Task ஐ ஒதுக்கு",
+      "remove": "அகற்று"
+    },
+    "list": {
+      "loading": "team உறுப்பினர்களை ஏற்றுகிறது",
+      "unavailable": "உறுப்பினர் roster கிடைக்கவில்லை",
+      "unavailableDescription": "{{count}} teammates team metadata இலிருந்து அறியப்படுகிறார்கள், ஆனால் roster விவரங்கள் காணவில்லை.",
+      "unavailableDescription_one": "{{count}} teammate team metadata இலிருந்து அறியப்படுகிறார், ஆனால் roster விவரங்கள் காணவில்லை.",
+      "soloLeadOnly": "Solo team - lead மட்டும்",
+      "removedCount": "அகற்றப்பட்டது ({{count}})",
+      "unavailableDescription_few": "{{count}} teammates team metadata இலிருந்து அறியப்படுகிறார்கள், ஆனால் roster விவரங்கள் காணவில்லை.",
+      "unavailableDescription_many": "{{count}} teammates team metadata இலிருந்து அறியப்படுகிறார்கள், ஆனால் roster விவரங்கள் காணவில்லை.",
+      "unavailableDescription_other": "{{count}} teammates team metadata இலிருந்து அறியப்படுகிறார்கள், ஆனால் roster விவரங்கள் காணவில்லை."
+    },
+    "executionLog": {
+      "empty": "காட்ட எதுவும் இல்லை",
+      "emptyUserMessage": "{{time}} - (காலி)",
+      "agentInstructions": "Agent வழிமுறைகள்",
+      "memberTurn": "{{member}} turn",
+      "agentTurn": "Agent turn",
+      "turn": "turn"
+    },
+    "recentMessages": {
+      "latest": "சமீபத்திய செய்திகள்",
+      "latestForMember": "சமீபத்திய செய்திகள் - {{member}}",
+      "loadMore": "மேலும் ஏற்று",
+      "expand": "விரிவாக்கு",
+      "collapse": "சுருக்கு"
+    },
+    "leadModel": {
+      "defaultModel": "இயல்புநிலை",
+      "providerModelAria": "{{provider}} provider, {{model}}",
+      "leadShort": "lead",
+      "teamLead": "Team Lead",
+      "syncWithTeammates": "teammates உடன் model ஐ ஒத்திசை",
+      "anthropicTeamWide": "Anthropic team-wide",
+      "runtimeInheritance": "teammates தங்கள் சொந்த provider அல்லது model ஐ அமைக்காவிட்டால் lead runtime அவர்களுக்குப் பொருந்தும்.",
+      "anthropicContextLimit": "இந்த launch இல் Anthropic runtimes க்கு 200K context limit team-wide ஆகும், தனிப்பயன் Anthropic teammates உட்பட."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Auto-refresh",
+      "wrapLines": "வரிகளை wrap செய்",
+      "loadingTail": "process log tail ஐ ஏற்றுகிறது...",
+      "empty": "இந்த உறுப்பினருக்கு இன்னும் process log கோப்பு பிடிக்கப்படவில்லை.",
+      "copy": "நகலெடு",
+      "fileEmpty": "Process log கோப்பு காலியாக உள்ளது.",
+      "showingLast": "கடைசி {{bytes}} ஐக் காட்டுகிறது.",
+      "showing": "{{bytes}} ஐக் காட்டுகிறது."
+    },
+    "tasks": {
+      "empty": "இந்த உறுப்பினருக்கு tasks எதுவும் ஒதுக்கப்படவில்லை"
+    },
+    "messages": {
+      "loadOlder": "பழைய செய்திகளை ஏற்று",
+      "filters": {
+        "all": "அனைத்தும்",
+        "messages": "செய்திகள்",
+        "comments": "கருத்துகள்"
+      },
+      "empty": {
+        "loading": "செயல்பாட்டை ஏற்றுகிறது...",
+        "noComments": "இந்த உறுப்பினருக்கு கருத்துகள் இல்லை",
+        "noLoadedMessages": "இந்த உறுப்பினருக்கு இன்னும் ஏற்றப்பட்ட செய்திகள் இல்லை",
+        "noMessages": "இந்த உறுப்பினருடன் செய்திகள் இல்லை",
+        "noLoadedActivity": "இந்த உறுப்பினருக்கு இன்னும் ஏற்றப்பட்ட செயல்பாடு இல்லை",
+        "noActivity": "இந்த உறுப்பினருடன் செயல்பாடு இல்லை"
+      }
+    },
+    "actions": {
+      "openProfile": "profile ஐத் திற",
+      "editRole": "role ஐ திருத்து",
+      "sendMessage": "செய்தி அனுப்பு",
+      "assignTask": "task ஐ ஒதுக்கு"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "தனிப்பயன் role ஐ உள்ளிடு..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} அட்டவணைகள்",
+    "count_one": "{{count}} அட்டவணை",
+    "count_other": "{{count}} அட்டவணைகள்",
+    "nextRun": "அடுத்தது: {{next}}",
+    "actions": {
+      "runNow": "இப்போது இயக்கு",
+      "edit": "திருத்து",
+      "pause": "இடைநிறுத்து",
+      "resume": "தொடர்",
+      "delete": "நீக்கு",
+      "addSchedule": "அட்டவணை சேர்"
+    },
+    "runHistory": {
+      "loading": "இயக்க வரலாற்றை ஏற்றுகிறது...",
+      "empty": "இன்னும் இயக்கங்கள் இல்லை"
+    },
+    "count_few": "{{count}} அட்டவணைகள்",
+    "count_many": "{{count}} அட்டவணைகள்",
+    "runLog": {
+      "title": "Run Log",
+      "exitCode": "exit {{code}}",
+      "retryCount": "retry {{count}}/{{max}}",
+      "stillRunning": "Task இன்னும் இயங்குகிறது...",
+      "loadingLogs": "logs ஐ ஏற்றுகிறது...",
+      "errors": "பிழைகள்",
+      "close": "மூடு"
+    },
+    "cron": {
+      "expression": "Cron expression",
+      "highFrequencyWarning": "உயர் அதிர்வெண் அட்டவணை (5 நிமிட இடைவெளிக்கும் குறைவு)",
+      "nextRuns": "அடுத்த இயக்கங்கள்:",
+      "timezone": "Timezone",
+      "selectTimezone": "timezone ஐத் தேர்ந்தெடு",
+      "warmUpTime": "Warm-up நேரம்",
+      "warmUpDescription": "அட்டவணையிடப்பட்ட execution க்கு முன் தேர்ந்தெடுத்த வழங்குநர்களைத் தயார் செய்கிறது",
+      "errors": {
+        "enterExpression": "ஒரு cron expression ஐ உள்ளிடு",
+        "invalidExpression": "தவறான cron expression"
+      },
+      "presets": {
+        "everyHour": "ஒவ்வொரு மணி நேரமும்",
+        "everySixHours": "ஒவ்வொரு 6 மணி நேரமும்",
+        "dailyAtNine": "தினசரி காலை 9 மணிக்கு",
+        "weekdaysAtNine": "வார நாட்கள் காலை 9 மணிக்கு",
+        "mondayAtNine": "திங்கள் காலை 9 மணிக்கு",
+        "everyThirtyMinutes": "ஒவ்வொரு 30 நிமிடமும்"
+      },
+      "warmUpOptions": {
+        "none": "Warm-up இல்லை",
+        "fiveMinutes": "5 நிமிடம்",
+        "tenMinutes": "10 நிமிடம்",
+        "fifteenMinutes": "15 நிமிடம்",
+        "thirtyMinutes": "30 நிமிடம்"
+      }
+    },
+    "empty": {
+      "title": "இன்னும் அட்டவணைகள் இல்லை",
+      "description": "cron அட்டவணையில் Claude tasks ஐ தானாக இயக்க ஒரு அட்டவணையை உருவாக்கவும்."
+    },
+    "title": "அட்டவணைகள்",
+    "status": {
+      "active": "செயலில்",
+      "paused": "இடைநிறுத்தப்பட்டது",
+      "disabled": "முடக்கப்பட்டது"
+    },
+    "runStatus": {
+      "pending": "நிலுவையில்",
+      "warmingUp": "Warm up ஆகிறது",
+      "warm": "Warm",
+      "running": "இயங்குகிறது",
+      "completed": "முடிந்தது",
+      "failed": "தோல்வி",
+      "interrupted": "இடைநிறுத்தப்பட்டது",
+      "cancelled": "ரத்துசெய்யப்பட்டது"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode உள்ளூர் மாதிரிகள் prompt-only வரம்புகளுக்குப் பதிலாக OpenCode context budget ஐப் பயன்படுத்தலாம்.",
+    "description": "இந்த teammate பயன்படுத்தும் provider மற்றும் model க்கு OpenCode config இல் பொருந்தும் வரம்புகளைச் சேர்க்கவும். உள்ளூர் மாதிரிகள் தங்கள் context window ஐ நிரப்புவதற்கு முன் compact செய்து prune செய்ய இது OpenCode க்கு உதவுகிறது.",
+    "replacePrefix": "மாற்று",
+    "and": "மற்றும்",
+    "replaceSuffix": "உங்கள் OpenCode setup இலிருந்து provider மற்றும் model IDs உடன். போன்ற prompt வழிமுறைகள்",
+    "promptInstructionsSuffix": "மாதிரி அவற்றைப் படிப்பதற்கு முன் கோரிக்கை அசெம்பிள் செய்யப்படுவதால் பலவீனமாக உள்ளன.",
+    "providerLimits": "Provider வரம்புகள்",
+    "compactionConfig": "Compaction config"
+  },
+  "sessions": {
+    "noProjectPath": "project path இணைக்கப்படவில்லை",
+    "provisioningHint": "team provisioning க்குப் பிறகு sessions தோன்றும்",
+    "projectNotFound": "Project கிடைக்கவில்லை",
+    "loading": "sessions ஐ ஏற்றுகிறது...",
+    "empty": "sessions எதுவும் கிடைக்கவில்லை",
+    "showAllSessions": "அனைத்து sessions க்கும் காட்டு",
+    "lead": "lead",
+    "removeFilter": "வடிப்பானை அகற்று",
+    "filterBySession": "இந்த session வாரியாக வடிகட்டு",
+    "openSession": "session ஐத் திற",
+    "title": "Sessions"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "ரத்துசெய்",
+    "moreWarningsHidden": "{{count}} மேலும் எச்சரிக்கைகள் மறைக்கப்பட்டன",
+    "diagnostics": "Diagnostics",
+    "liveOutput": "Live output",
+    "diagnosticsCopied": "Diagnostics நகலெடுக்கப்பட்டது",
+    "copyDiagnostics": "diagnostics ஐ நகலெடு",
+    "copied": "நகலெடுக்கப்பட்டது",
+    "noOutput": "இன்னும் output எதுவும் பிடிக்கப்படவில்லை.",
+    "cliLogs": "CLI logs",
+    "steps": {
+      "starting": "தொடங்குகிறது",
+      "configuring": "Team setup",
+      "assembling": "உறுப்பினர்கள் சேர்கிறார்கள்",
+      "finalizing": "இறுதிப்படுத்துகிறது"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "சரிபார்க்கிறது...",
+        "ready": "OK",
+        "notes": "OK (notes)",
+        "failed": "ERR",
+        "pending": "காத்திருக்கிறது"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI binary காணவில்லை",
+        "openCodeRuntimeMissing": "OpenCode runtime காணவில்லை",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows அணுகல் தடுக்கப்பட்டது",
+        "openCodeNoOutput": "OpenCode runtime சரிபார்ப்பு output எதுவும் தரவில்லை",
+        "openCodeMcpUnreachable": "OpenCode app MCP அணுக முடியவில்லை",
+        "workingDirectoryMissing": "Working directory காணவில்லை",
+        "cliBinaryCouldNotStart": "CLI binary ஐத் தொடங்க முடியவில்லை",
+        "cliPreflightIncomplete": "CLI preflight முடியவில்லை",
+        "authenticationRequired": "அங்கீகாரம் தேவை",
+        "runtimeProviderNotConfigured": "Runtime வழங்குநர் கட்டமைக்கப்படவில்லை",
+        "cliPreflightFailed": "CLI preflight தோல்வியடைந்தது",
+        "selectedModelCompatible": "தேர்ந்தெடுத்த மாதிரி இணக்கமானது",
+        "selectedModelCompatibilityPending": "தேர்ந்தெடுத்த மாதிரி இணக்கத்தன்மை நிலுவையில்",
+        "selectedModelAvailable": "தேர்ந்தெடுத்த மாதிரி கிடைக்கிறது",
+        "selectedModelVerified": "தேர்ந்தெடுத்த மாதிரி சரிபார்க்கப்பட்டது",
+        "selectedModelUnavailable": "தேர்ந்தெடுத்த மாதிரி கிடைக்கவில்லை",
+        "selectedModelTimedOut": "தேர்ந்தெடுத்த மாதிரி சரிபார்ப்பு காலாவதியானது",
+        "selectedModelCheckFailed": "தேர்ந்தெடுத்த மாதிரி சரிபார்ப்பு தோல்வியடைந்தது",
+        "selectedModelDeferred": "தேர்ந்தெடுத்த மாதிரி சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "selectedModelPingNotConfirmed": "தேர்ந்தெடுத்த மாதிரி ping உறுதிப்படுத்தப்படவில்லை",
+        "readyWithNotes": "குறிப்புகளுடன் தயார்",
+        "needsAttention": "கவனம் தேவை"
+      },
+      "modelChecksSummary": "தேர்ந்தெடுத்த மாதிரி சரிபார்ப்புகள் - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} மாதிரி கிடைக்கவில்லை",
+        "unavailable_one": "{{count}} மாதிரி கிடைக்கவில்லை",
+        "unavailable_other": "{{count}} மாதிரிகள் கிடைக்கவில்லை",
+        "checkFailed": "{{count}} மாதிரி சரிபார்ப்பு தோல்வியடைந்தது",
+        "checkFailed_one": "{{count}} மாதிரி சரிபார்ப்பு தோல்வியடைந்தது",
+        "checkFailed_other": "{{count}} மாதிரிகள் சரிபார்ப்பு தோல்வியடைந்தது",
+        "timedOut": "{{count}} மாதிரி காலாவதியானது",
+        "timedOut_one": "{{count}} மாதிரி காலாவதியானது",
+        "timedOut_other": "{{count}} மாதிரிகள் காலாவதியாயின",
+        "deferred": "{{count}} சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "deferred_one": "{{count}} சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "deferred_other": "{{count}} சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "pingNotConfirmed": "{{count}} ping உறுதிப்படுத்தப்படவில்லை",
+        "pingNotConfirmed_one": "{{count}} ping உறுதிப்படுத்தப்படவில்லை",
+        "pingNotConfirmed_other": "{{count}} ping உறுதிப்படுத்தப்படவில்லை",
+        "compatibilityPending": "{{count}} இணக்கமானது, ஆழமான சரிபார்ப்பு நிலுவையில்",
+        "compatibilityPending_one": "{{count}} இணக்கமானது, ஆழமான சரிபார்ப்பு நிலுவையில்",
+        "compatibilityPending_other": "{{count}} இணக்கமானவை, ஆழமான சரிபார்ப்பு நிலுவையில்",
+        "compatible": "{{count}} இணக்கமானது",
+        "compatible_one": "{{count}} இணக்கமானது",
+        "compatible_other": "{{count}} இணக்கமானவை",
+        "checking": "{{count}} சரிபார்க்கிறது",
+        "checking_one": "{{count}} சரிபார்க்கிறது",
+        "checking_other": "{{count}} சரிபார்க்கிறது",
+        "available": "{{count}} கிடைக்கிறது",
+        "available_one": "{{count}} கிடைக்கிறது",
+        "available_other": "{{count}} கிடைக்கின்றன",
+        "verified": "{{count}} சரிபார்க்கப்பட்டது",
+        "verified_one": "{{count}} சரிபார்க்கப்பட்டது",
+        "verified_other": "{{count}} சரிபார்க்கப்பட்டன",
+        "unavailable_few": "{{count}} மாதிரிகள் கிடைக்கவில்லை",
+        "unavailable_many": "{{count}} மாதிரிகள் கிடைக்கவில்லை",
+        "checkFailed_few": "{{count}} மாதிரிகள் சரிபார்ப்பு தோல்வியடைந்தது",
+        "checkFailed_many": "{{count}} மாதிரிகள் சரிபார்ப்பு தோல்வியடைந்தது",
+        "timedOut_few": "{{count}} மாதிரிகள் காலாவதியாயின",
+        "timedOut_many": "{{count}} மாதிரிகள் காலாவதியாயின",
+        "deferred_few": "{{count}} சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "deferred_many": "{{count}} சரிபார்ப்பு ஒத்திவைக்கப்பட்டது",
+        "pingNotConfirmed_few": "{{count}} ping உறுதிப்படுத்தப்படவில்லை",
+        "pingNotConfirmed_many": "{{count}} ping உறுதிப்படுத்தப்படவில்லை",
+        "compatibilityPending_few": "{{count}} இணக்கமானவை, ஆழமான சரிபார்ப்பு நிலுவையில்",
+        "compatibilityPending_many": "{{count}} இணக்கமானவை, ஆழமான சரிபார்ப்பு நிலுவையில்",
+        "compatible_few": "{{count}} இணக்கமானவை",
+        "compatible_many": "{{count}} இணக்கமானவை",
+        "checking_few": "{{count}} சரிபார்க்கிறது",
+        "checking_many": "{{count}} சரிபார்க்கிறது",
+        "available_few": "{{count}} கிடைக்கின்றன",
+        "available_many": "{{count}} கிடைக்கின்றன",
+        "verified_few": "{{count}} சரிபார்க்கப்பட்டன",
+        "verified_many": "{{count}} சரிபார்க்கப்பட்டன"
+      },
+      "openProviderSettings": "{{provider}} அமைப்புகளைத் திற",
+      "copied": "நகலெடுக்கப்பட்டது",
+      "copyDiagnostics": "diagnostics ஐ நகலெடு",
+      "deepVerificationPending": "ஆழமான சரிபார்ப்பு இன்னும் இயங்குகிறது. OpenCode இலவச மாதிரிகள் சுமார் 20 வினாடிகள் எடுக்கலாம்.",
+      "progress": {
+        "checkingSelectedProviders": "தேர்ந்தெடுத்த வழங்குநர்களை இணையாகச் சரிபார்க்கிறது...",
+        "checkingProvider": "{{provider}} வழங்குநரைச் சரிபார்க்கிறது...",
+        "checkingProviders": "{{providers}} வழங்குநர்களைச் சரிபார்க்கிறது..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "folder அனுமதிகளைச் சரிசெய்யவும் அல்லது project ஐ user-writable folder க்கு நகர்த்தவும். Administrator ஆக இயக்குவது தற்காலிக தீர்வு மட்டுமே.",
+        "openCodeBridgeNoOutput": "app மற்றும் OpenCode runtime ஐ மறுதொடக்கம் செய்து, பிறகு மீண்டும் முயற்சிக்கவும். மீண்டும் நிகழ்ந்தால், diagnostics ஐ நகலெடுக்கவும்.",
+        "workingDirectoryMissing": "தற்போதுள்ள ஒரு working directory ஐத் தேர்ந்தெடுத்து, பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "authenticationRequired": "Claude CLI இல் தேவையான வழங்குநரை அங்கீகரிக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "runtimeProviderNotConfigured": "தேர்ந்தெடுத்த வழங்குநர் runtime ஐ கட்டமைக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "openCodeRuntimeMissing": "வழங்குநர் நிலை card இலிருந்து OpenCode runtime ஐ நிறுவவும் அல்லது மீண்டும் முயற்சிக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "openCodeAppMcpUnreachable": "OpenCode app MCP bridge ஐ புதுப்பிக்க launch ஐ மீண்டும் முயற்சிக்கவும். மீண்டும் நிகழ்ந்தால், app மற்றும் OpenCode runtime ஐ மறுதொடக்கம் செய்யவும்.",
+        "cliBinaryMissing": "உள்ளூர் Claude CLI binary உள்ளது மற்றும் தொடங்க முடியும் என்பதை உறுதிப்படுத்தவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "default": "மேலே உள்ள சிக்கலைத் தீர்க்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI ஐ Administrator ஆக இயக்கவும், பிறகு launch ஐ மீண்டும் முயற்சிக்கவும்."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} teammate அனுமதி ஒப்புதலுக்காகக் காத்திருக்கிறார்",
+      "nameListWithMore": "{{names}}, +{{count}} மேலும்",
+      "waitingForOpenCode": "OpenCode க்காகக் காத்திருக்கிறது: {{names}}",
+      "bootstrapStalled": "Bootstrap தேங்கியது: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode க்காகக் காத்திருக்கிறது: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap தேங்கியது",
+        "shellOnly": "Shell-only",
+        "waitingForBootstrap": "Bootstrap க்காகக் காத்திருக்கிறது",
+        "bootstrapUnconfirmed": "Bootstrap உறுதிப்படுத்தப்படவில்லை",
+        "awaitingPermission": "அனுமதிக்காகக் காத்திருக்கிறது",
+        "waitingForRuntime": "runtime க்காகக் காத்திருக்கிறது",
+        "shellOnlyLower": "shell-only",
+        "waitingForBootstrapLower": "bootstrap க்காகக் காத்திருக்கிறது",
+        "bootstrapUnconfirmedLower": "bootstrap உறுதிப்படுத்தப்படவில்லை",
+        "awaitingPermissionLower": "அனுமதிக்காகக் காத்திருக்கிறது",
+        "waitingForRuntimeLower": "runtime க்காகக் காத்திருக்கிறது"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} தொடங்கத் தோல்வியடைந்தது",
+        "teammatesFailedToStart": "{{count}} teammates தொடங்கத் தோல்வியடைந்தனர்",
+        "teammatesFailedRatio": "{{count}}/{{total}} teammates தொடங்கத் தோல்வியடைந்தனர்"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} இந்த launch க்கு தவிர்க்கப்பட்டது",
+        "memberSkippedWithReason": "{{name}} இந்த launch க்கு தவிர்க்கப்பட்டது - {{reason}}",
+        "memberSkippedCompact": "{{name}} தவிர்க்கப்பட்டது",
+        "teammatesSkipped": "{{count}} teammates தவிர்க்கப்பட்டனர்",
+        "teammatesSkippedList": "தவிர்க்கப்பட்ட teammates: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} teammates இந்த launch க்கு தவிர்க்கப்பட்டனர்"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} teammates இன்னும் சேர்கிறார்கள்",
+        "teammatesStillJoining_one": "{{count}} teammate இன்னும் சேர்கிறார்",
+        "teammatesStillJoining_few": "{{count}} teammates இன்னும் சேர்கிறார்கள்",
+        "teammatesStillJoining_many": "{{count}} teammates இன்னும் சேர்கிறார்கள்",
+        "teammatesStillJoining_other": "{{count}} teammates இன்னும் சேர்கிறார்கள்",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} teammates உறுதிப்படுத்தப்பட்டனர்"
+      },
+      "ready": {
+        "leadOnline": "Lead online",
+        "allTeammatesJoined": "அனைத்து {{count}} teammates சேர்ந்தனர்",
+        "teamProvisionedLeadOnline": "Team provision செய்யப்பட்டது - lead online",
+        "teamProvisionedAllJoined": "Team provision செய்யப்பட்டது - அனைத்து {{count}} teammates சேர்ந்தனர்",
+        "teamProvisionedStillJoining": "Team provision செய்யப்பட்டது - teammates இன்னும் சேர்கிறார்கள்",
+        "launchFinishedWithErrors": "Launch பிழைகளுடன் முடிந்தது - {{count}}/{{total}} teammates தொடங்கத் தோல்வியடைந்தனர்",
+        "launchContinuedSkipped": "Launch தொடர்ந்தது - {{count}}/{{total}} teammates தவிர்க்கப்பட்டனர்",
+        "teamLaunchedLeadOnline": "Team தொடங்கப்பட்டது - lead online",
+        "teamLaunchedAllJoined": "Team தொடங்கப்பட்டது - அனைத்து {{count}} teammates சேர்ந்தனர்"
+      },
+      "panel": {
+        "launchFailed": "Launch தோல்வியடைந்தது",
+        "launchDetails": "Launch விவரங்கள்",
+        "launchFinishedWithErrors": "Launch பிழைகளுடன் முடிந்தது",
+        "launchContinuedSkipped": "Launch தவிர்க்கப்பட்ட teammates உடன் தொடர்ந்தது",
+        "coreTeamReady": "Core team தயார்",
+        "finishingLaunch": "Launch ஐ முடிக்கிறது",
+        "teamLaunched": "Team தொடங்கப்பட்டது",
+        "launchingTeam": "team ஐ தொடங்குகிறது"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Live runtime நிலை",
+    "description": "காட்சி-மட்டும் heartbeat மற்றும் launch நிலை. Process கட்டுப்பாடுகள் கீழே உள்ளன.",
+    "source": "source: {{source}}",
+    "lane": "{{lane}} lane",
+    "diagnosticOnly": "Diagnostic மட்டும்",
+    "updated": "புதுப்பிக்கப்பட்டது {{value}}",
+    "states": {
+      "running": "இயங்குகிறது",
+      "starting": "தொடங்குகிறது",
+      "waiting": "காத்திருக்கிறது",
+      "degraded": "கவனம் தேவை",
+      "stopped": "நிறுத்தப்பட்டது",
+      "unknown": "தெரியாதது"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "சரியான Task Logs",
+      "loading": "சரியான task logs ஐ ஏற்றுகிறது...",
+      "description": "Logs இல் பயன்படுத்தப்படும் அதே execution-log components உடன் வழங்கப்பட்ட சரியான transcript slices.",
+      "emptyTitle": "இன்னும் சரியான task logs இல்லை",
+      "emptyDescription": "வெளிப்படையான task-linked transcript metadata கிடைக்கும்போது சரியான transcript bundles இங்கே தோன்றும்.",
+      "summaryOnly": "சுருக்கம் மட்டும்"
+    },
+    "executionSessions": {
+      "title": "Execution Sessions",
+      "online": "Online",
+      "updating": "புதுப்பிக்கிறது...",
+      "description": "Legacy session-centric transcript உலாவல் மற்றும் முன்னோட்டங்கள்."
+    },
+    "stream": {
+      "title": "Task Log Stream"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "task {{taskId}} ஐ ரத்துசெய்",
+      "cancel": "ரத்துசெய்",
+      "moveBackToTodoConfirm": "இந்த task ஐ மீண்டும் TODO க்கு நகர்த்தி team க்கு அறிவிக்கவா?",
+      "confirm": "உறுதிப்படுத்து",
+      "keep": "வைத்திரு",
+      "changesNeedAttention": "மாற்றங்களுக்கு கவனம் தேவை",
+      "changes": "மாற்றங்கள்",
+      "deleteTask": "task ஐ நீக்கு",
+      "taskLogsActive": "Task logs செயலில்",
+      "newTaskLogsArriving": "புதிய task logs வருகின்றன",
+      "awaitingUser": "பயனருக்காகக் காத்திருக்கிறது",
+      "awaitingLead": "lead க்காகக் காத்திருக்கிறது",
+      "blockedBy": "தடுக்கப்பட்டது",
+      "blocks": "தடுக்கிறது",
+      "start": "தொடங்கு",
+      "complete": "முடி",
+      "approve": "ஒப்புதல் அளி",
+      "requestReview": "மதிப்பாய்வைக் கோரு",
+      "manualReview": "கைமுறை மதிப்பாய்வு",
+      "requestChanges": "மாற்றங்களைக் கோரு"
+    },
+    "filter": {
+      "title": "tasks ஐ வடிகட்டு",
+      "session": "Session",
+      "allSessions": "அனைத்து sessions",
+      "teammate": "Teammate",
+      "unassigned": "(ஒதுக்கப்படாதது)",
+      "column": "Column",
+      "clearAll": "அனைத்தையும் அழி"
+    },
+    "board": {
+      "addTask": "task ஐ சேர்",
+      "noTasks": "tasks இல்லை",
+      "showMore": "{{count}} மேலும் காட்டு",
+      "hiddenCount": "{{count}} மறைக்கப்பட்டது",
+      "trash": "Trash",
+      "gridView": "Grid view",
+      "columnsView": "Columns view"
+    },
+    "trash": {
+      "title": "Trash",
+      "empty": "நீக்கப்பட்ட tasks இல்லை",
+      "subject": "தலைப்பு",
+      "owner": "உரிமையாளர்",
+      "deleted": "நீக்கப்பட்டது",
+      "unassigned": "ஒதுக்கப்படாதது",
+      "restoreTask": "task ஐ மீட்டெடு",
+      "restore": "மீட்டெடு",
+      "close": "மூடு"
+    },
+    "sort": {
+      "title": "tasks ஐ வரிசைப்படுத்து",
+      "sortBy": "வாரியாக வரிசைப்படுத்து",
+      "reset": "மீட்டமை",
+      "options": {
+        "updatedAt": {
+          "label": "கடைசியாக புதுப்பிக்கப்பட்டது",
+          "description": "சமீபத்தில் புதுப்பிக்கப்பட்டது முதலில்"
+        },
+        "createdAt": {
+          "label": "உருவாக்கப்பட்டது",
+          "description": "புதியது முதலில்"
+        },
+        "owner": {
+          "label": "உரிமையாளர்",
+          "description": "ஒதுக்கப்பட்டவர் வாரியாக அகரவரிசையில்"
+        },
+        "manual": {
+          "label": "கைமுறை",
+          "description": "Drag-and-drop வரிசை"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "தேடலை அழி",
+      "tasks": "Tasks",
+      "createdAgo": "உருவாக்கப்பட்டது {{time}}",
+      "updatedAgo": "புதுப்பிக்கப்பட்டது {{time}}",
+      "placeholder": "tasks ஐத் தேடு... (#id அல்லது உரை)"
+    },
+    "grid": {
+      "addTask": "task ஐ சேர்",
+      "noTasks": "tasks இல்லை"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "teammate worktrees க்கான Git repository நிலையைச் சரிபார்க்கிறது...",
+    "ready": "Git worktrees தயார்.",
+    "readyOnBranch": "branch {{branch}} இல் Git worktrees தயார்.",
+    "needsSetup": "Worktree தனிமைப்படுத்தலுக்கு Git அமைப்பு தேவை",
+    "initialCommitNotice": "initial commit நடவடிக்கை அனைத்து தற்போதைய கோப்புகளையும் இந்த செய்தியுடன் stage செய்து commit செய்கிறது",
+    "initializeRepository": "Git repository ஐ துவக்கு",
+    "createInitialCommit": "initial commit ஐ உருவாக்கு",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "அமைப்புகள்",
+    "autoAllowAllTools": "அனைத்து tools ஐயும் auto-allow செய்",
+    "autoAllowFileEdits": "கோப்பு edits ஐ auto-allow செய் (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "பாதுகாப்பான கட்டளைகளை auto-allow செய் (git, pnpm, npm, ls...)",
+    "onTimeout": "timeout இல்:",
+    "after": "பிறகு",
+    "secondsShort": "வி",
+    "timeoutActions": {
+      "wait": "எப்போதும் காத்திரு",
+      "allow": "அனுமதி",
+      "deny": "மறு"
+    },
+    "submit": "சமர்ப்பி",
+    "allow": "அனுமதி",
+    "deny": "மறு",
+    "allowAll": "அனைத்தையும் அனுமதி",
+    "pendingCount": "{{count}} நிலுவையில்",
+    "autoActionIn": "{{time}} இல் Auto-{{action}}",
+    "diff": {
+      "previewChanges": "மாற்றங்களை முன்னோட்டமிடு",
+      "readingFile": "கோப்பைப் படிக்கிறது...",
+      "binaryFile": "Binary கோப்பு - முன்னோட்டமிட முடியாது",
+      "truncated": "கோப்பு 2MB இல் truncate செய்யப்பட்டது - diff முழுமையடையாமல் இருக்கலாம்",
+      "newFile": "புதிய கோப்பு"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "உறுப்பினர் work sync",
+      "actionableItems": "செயல்படக்கூடிய உருப்படிகள்",
+      "fingerprint": "Fingerprint",
+      "report": "அறிக்கை",
+      "none": "எதுவுமில்லை",
+      "shadowWouldNudge": "Shadow nudge செய்திருக்கும்",
+      "yes": "ஆம்",
+      "no": "இல்லை",
+      "moreActionableItems": "{{count}} மேலும் செயல்படக்கூடிய உருப்படி(கள்)",
+      "diagnostics": "Diagnostics: {{diagnostics}}"
+    },
+    "title": "உறுப்பினர் work sync",
+    "loadingDiagnostics": "உறுப்பினர் work sync diagnostics ஐ ஏற்றுகிறது.",
+    "diagnosticsUnavailable": "உறுப்பினர் work sync diagnostics கிடைக்கவில்லை."
+  },
+  "advancedCli": {
+    "title": "மேம்பட்டது",
+    "useWorktree": "worktree ஐப் பயன்படுத்து",
+    "recent": "சமீபத்தியது",
+    "commandPreview": "கட்டளை முன்னோட்டம்",
+    "customArguments": "தனிப்பயன் வாதங்கள்",
+    "validate": "சரிபார்",
+    "validation": {
+      "allFlagsValid": "அனைத்து flags உம் செல்லுபடியாகும்",
+      "unknownFlags": "தெரியாதது: {{flags}}",
+      "protectedFlags": "பாதுகாக்கப்பட்டது: {{flags}}",
+      "failed": "சரிபார்ப்பு தோல்வியடைந்தது"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} முன்பு",
+    "stoppedAgo": "{{time}} முன்பு நிறுத்தப்பட்டது",
+    "running": "இயங்குகிறது",
+    "stopped": "நிறுத்தப்பட்டது",
+    "stopProcess": "process ஐ நிறுத்து (SIGTERM)",
+    "kill": "Kill",
+    "openInBrowser": "உலாவியில் திற",
+    "open": "திற",
+    "pid": "PID{{pid}}",
+    "title": "CLI Processes"
+  },
+  "taskActivity": {
+    "loadingDetails": "செயல்பாட்டு விவரங்களை ஏற்றுகிறது...",
+    "contextUnavailable": "இந்த செயல்பாட்டிற்கான விரிவான transcript context இனி கிடைக்கவில்லை.",
+    "loading": "task செயல்பாட்டை ஏற்றுகிறது...",
+    "lowSignalOnly": "இன்னும் முக்கிய task செயல்பாடு எதுவும் கண்டறியப்படவில்லை. குறைந்த-நிலை execution விவரங்கள் கீழே Task Log Stream இல் கிடைக்கின்றன.",
+    "empty": "கிடைக்கும் transcripts இல் இன்னும் வெளிப்படையான task செயல்பாடு எதுவும் கண்டறியப்படவில்லை. பழைய அல்லது heuristic session logs கீழே Execution Sessions இல் இன்னும் கிடைக்கலாம்.",
+    "title": "Task செயல்பாடு",
+    "description": "transcript metadata இலிருந்து இந்த task உடன் இணைக்கப்பட்ட முக்கிய வெளிப்படையான runtime செயல்பாடு."
+  },
+  "sendMessage": {
+    "title": "செய்தி அனுப்பு",
+    "description": "ஒரு team உறுப்பினருக்கு நேரடி செய்தியை அனுப்பு.",
+    "recipientLabel": "பெறுநர்",
+    "selectMemberPlaceholder": "உறுப்பினரைத் தேர்ந்தெடு...",
+    "messageLabel": "செய்தி",
+    "placeholder": "உங்கள் செய்தியை எழுது... (அனுப்ப Enter)",
+    "send": "அனுப்பு",
+    "sending": "அனுப்புகிறது...",
+    "charsLeft": "{{count}} எழுத்துகள் மீதம்",
+    "saved": "சேமிக்கப்பட்டது",
+    "attachments": {
+      "teamOnlineRequired": "கோப்புகளை இணைக்க team online ஆக இருக்க வேண்டும்",
+      "recipientUnsupported": "கோப்புகளை team lead அல்லது OpenCode teammates க்கு அனுப்பலாம்",
+      "openCodeOnlineRequired": "OpenCode teammates க்கு கோப்புகளை இணைக்க team online ஆக இருக்க வேண்டும்",
+      "disabledHint": "online team lead மற்றும் online OpenCode teammates க்கு கோப்பு இணைப்புகள் ஆதரிக்கப்படுகின்றன. இணைப்புகளை அகற்றவும் அல்லது பெறுநரை மாற்றவும்.",
+      "attachFiles": "கோப்புகளை இணை (paste அல்லது drag & drop)",
+      "unavailable": "இணைப்புகள் கிடைக்கவில்லை"
+    },
+    "quote": {
+      "remove": "மேற்கோளை அகற்று",
+      "replyingTo": "பதிலளிக்கிறது"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "பதிலை ரத்துசெய்",
+    "replyingTo": "பதிலளிக்கிறது",
+    "placeholder": "ஒரு கருத்தைச் சேர்... (அனுப்ப Enter)",
+    "attachFile": "கோப்பை இணை (அல்லது paste)",
+    "voiceToText": "குரல் to உரை",
+    "comment": "கருத்து",
+    "charsLeft": "{{count}} எழுத்துகள் மீதம்",
+    "saved": "சேமிக்கப்பட்டது",
+    "awaitingReplyFrom": "இவரிடமிருந்து பதிலுக்காகக் காத்திருக்கிறது",
+    "or": "அல்லது"
+  },
+  "taskAttachments": {
+    "dropImageHere": "படத்தை இங்கே விடவும்",
+    "attachImage": "படத்தை இணை",
+    "pasteOrDragDrop": "அல்லது paste / drag-drop",
+    "fromOriginalMessage": "அசல் செய்தியிலிருந்து",
+    "dropFilesHere": "கோப்புகளை இங்கே விடவும்",
+    "loading": "இணைப்புகளை ஏற்றுகிறது..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "அனைத்து tools ஐயும் auto-approve செய்",
+    "autonomousModeDescription": "Autonomous பயன்முறை: team tools உறுதிப்படுத்தல் இல்லாமல் இயங்குகின்றன. நம்பப்படாத code உடன் கவனமாக இருங்கள்.",
+    "manualModeDescription": "Manual பயன்முறை: ஒவ்வொரு tool அழைப்பையும் நேரடியாக நீங்கள் அனுமதிப்பீர்கள் அல்லது மறுப்பீர்கள்."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Execution",
+      "process": "Process"
+    },
+    "filters": {
+      "all": "அனைத்தும்"
+    },
+    "logs": {
+      "title": "Logs",
+      "loading": "உறுப்பினர் log stream ஐ ஏற்றுகிறது...",
+      "emptyTitle": "இந்த உறுப்பினருக்கு இன்னும் log stream entries எதுவும் கிடைக்கவில்லை.",
+      "emptyDescription": "உறுப்பினர்-scoped transcript அல்லது runtime logs கிடைக்கும்போது இங்கே தோன்றும்."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "என்ன மாற வேண்டும் என்பதை விவரி... (சமர்ப்பிக்க Enter)",
+    "submit": "சமர்ப்பி",
+    "charsLeft": "{{count}} எழுத்துகள் மீதம்",
+    "saved": "சேமிக்கப்பட்டது",
+    "title": "மாற்றங்களைக் கோரு"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Dashboard ஐத் திற",
+      "openTeam": "team ஐத் திற",
+      "cancel": "ரத்துசெய்"
+    },
+    "membersJson": {
+      "hide": "JSON ஐ மறை"
+    },
+    "optional": {
+      "badge": "விருப்பத்திற்குரியது"
+    }
+  },
+  "runningTeams": {
+    "title": "இயங்கும் Teams",
+    "status": {
+      "active": "செயலில்",
+      "provisioning": "தொடங்குகிறது",
+      "idle": "இயங்குகிறது"
+    },
+    "noProject": "Project இல்லை"
+  },
+  "layout": {
+    "maxPanesReached": "அதிகபட்சம் {{count}} panes எட்டப்பட்டன"
+  },
+  "codexReconnect": {
+    "description": "உங்கள் Codex session பழையதாகத் தெரிகிறது. தொடர மீண்டும் இணைக்கவும்.",
+    "useCode": "குறியீட்டைப் பயன்படுத்து",
+    "generating": "உருவாக்குகிறது...",
+    "openLogin": "உள்நுழைவைத் திற",
+    "generateLink": "இணைப்பை உருவாக்கு"
+  },
+  "effortLevel": {
+    "label": "Effort level (விருப்பத்திற்குரியது)",
+    "maxDescription": "Max கடினமான tasks க்கு மாதிரிக்கு அதிகபட்ச reasoning நேரத்தை வழங்குகிறது."
+  },
+  "contextLimit": {
+    "limitTo200k": "context ஐ 200K tokens க்கு வரம்பிடு",
+    "always200k": "(இந்த மாதிரிக்கு எப்போதும் 200K)",
+    "tooltipContent": "ஆதரிக்கப்படும்போது launches ஐ 200K-token context window க்குள் வைத்திருக்கிறது.",
+    "tooltipTitle": "Context வரம்பு"
+  },
+  "roleSelect": {
+    "noRole": "role இல்லை",
+    "customRole": "தனிப்பயன் role...",
+    "searchPlaceholder": "roles ஐத் தேடு...",
+    "empty": "roles எதுவும் கிடைக்கவில்லை.",
+    "reservedRole": "இந்த role ஒதுக்கப்பட்டுள்ளது",
+    "emptyCustomRole": "role காலியாக இருக்க முடியாது"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  }
+}

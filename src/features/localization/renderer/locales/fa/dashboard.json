@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "قبلاً وارد شده‌اید؟",
+      "becomeSponsor": "حامی شوید",
+      "cancel": "لغو",
+      "checkNow": "بررسی فوری",
+      "checkUpdates": "بررسی به‌روزرسانی‌ها",
+      "checking": "در حال بررسی...",
+      "connect": "اتصال",
+      "extensions": "افزونه‌ها",
+      "login": "ورود",
+      "manage": "مدیریت",
+      "manageProviders": "مدیریت ارائه‌دهندگان",
+      "plan": "پلن",
+      "recheck": "بررسی مجدد",
+      "recheckProvider": "بررسی مجدد {{provider}}",
+      "retry": "تلاش مجدد",
+      "updateTo": "به‌روزرسانی به نسخه {{version}}",
+      "useCode": "استفاده از کد"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud یک پلتفرم استنتاج هوش مصنوعی چندوجهی است که به توسعه‌دهندگان یک API هوش مصنوعی واحد برای دسترسی به تولید ویدیو، تولید تصویر و APIهای LLM می‌دهد. به‌جای مدیریت یکپارچه‌سازی‌های چندگانه با فروشندگان، یک‌بار متصل می‌شوید و دسترسی یکپارچه به بیش از ۳۰۰ مدل گزینش‌شده در تمام وجه‌ها به دست می‌آورید. برای دسترسی مقرون‌به‌صرفه‌تر به API، پروموشن جدید پلن کدنویسی Atlas Cloud را بررسی کنید.",
+      "openCodeProvider": "ارائه‌دهنده OpenCode",
+      "plan": "پلن کدنویسی Atlas Cloud",
+      "sponsor": "حامی"
+    },
+    "errors": {
+      "checkStatusFailed": "بررسی وضعیت CLI ناموفق بود",
+      "installationFailed": "نصب ناموفق بود",
+      "refreshFailed": "بررسی به‌روزرسانی‌ها ناموفق بود. اتصال شبکه خود را بررسی کنید و دوباره تلاش کنید.",
+      "runtimeUpdatedRefreshFailed": "زمان اجرا به‌روزرسانی شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود."
+    },
+    "hints": {
+      "backgroundStatus": "وضعیت {{runtime}} در پس‌زمینه بررسی خواهد شد.",
+      "codexApiKeyFallback": "{{hint}} در صورت تغییر حالت احراز هویت، جایگزینی کلید API در دسترس است.",
+      "codexAutoApiKey": "{{hint}} حالت خودکار تا زمان اتصال ChatGPT از کلید API استفاده خواهد کرد.",
+      "codexFinishLogin": "ورود به ChatGPT را در مرورگر تکمیل کنید. در صورت درخواست، کد نمایش‌داده‌شده را وارد کنید.",
+      "codexNoActiveLogin": "محدودیت‌های استفاده تنها پس از آنکه Codex CLI یک حساب فعال ChatGPT را ببیند ظاهر می‌شوند. در حال حاضر هیچ ورود فعال ChatGPT گزارش نشده است.",
+      "codexNoActiveManagedSession": "محدودیت‌های استفاده تنها پس از آنکه Codex CLI یک حساب فعال ChatGPT را ببیند ظاهر می‌شوند. داده‌های محلی حساب Codex وجود دارد، اما در حال حاضر هیچ نشست مدیریت‌شده فعالی انتخاب نشده است.",
+      "codexReconnectNeeded": "محدودیت‌های استفاده تنها پس از آنکه Codex نشست ChatGPT انتخاب‌شده فعلی را تازه‌سازی کند ظاهر می‌شوند. در حال حاضر نشست محلی نیازمند اتصال مجدد است.",
+      "firstCheckSlow": "اولین بررسی ممکن است تا ۳۰ ثانیه طول بکشد",
+      "loginRequiredForTeams": "مرور نشست‌ها و پروژه‌ها بدون ورود کار می‌کند. ورود تنها برای اجرای تیم‌های عامل لازم است.",
+      "troubleshootTitle": "اگر مطمئنید که وارد شده‌اید، این مراحل را امتحان کنید:"
+    },
+    "installer": {
+      "checkingLatest": "در حال بررسی آخرین نسخه...",
+      "downloading": "در حال دانلود {{runtime}}...",
+      "installing": "در حال نصب {{runtime}}...",
+      "success": "{{runtime}} نسخه {{version}} با موفقیت نصب شد",
+      "verifying": "در حال تأیید checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "کلید API لازم است",
+      "comingSoon": "به‌زودی",
+      "collapseProviderDetails": "جمع کردن جزئیات ارائه‌دهنده",
+      "expandProviderDetails": "گسترش جزئیات ارائه‌دهنده",
+      "generateLink": "تولید پیوند",
+      "loadingRateLimits": "در حال بارگذاری محدودیت‌های نرخ",
+      "loggedOut": "ارائه‌دهنده خارج شده است",
+      "loginAuthFailed": "احراز هویت ناموفق بود",
+      "loginAuthUpdated": "احراز هویت به‌روزرسانی شد",
+      "loginComplete": "ورود تکمیل شد",
+      "loginFailed": "ورود ناموفق بود",
+      "loginTitle": "ورود",
+      "logoutFailed": "خروج ناموفق بود",
+      "logoutTitle": "خروج",
+      "notLoggedIn": "وارد نشده‌اید",
+      "openLogin": "باز کردن ورود",
+      "providerActionRequired": "اقدام ارائه‌دهنده لازم است",
+      "resets": "بازنشانی {{time}}",
+      "runtimeLoginTitle": "ورود {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "در حال بررسی ارائه‌دهندگان هوش مصنوعی...",
+      "claudeCli": "در حال بررسی Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "احراز هویت‌شده",
+      "backend": "بک‌اند: {{backend}}",
+      "checkingAuthentication": "در حال بررسی احراز هویت...",
+      "checkingProviders": "در حال بررسی ارائه‌دهندگان...",
+      "configuredLocalCount": "{{count}} پیکربندی‌شده محلی",
+      "configuredLocalCount_few": "{{count}} پیکربندی‌شده محلی",
+      "configuredLocalCount_many": "{{count}} پیکربندی‌شده محلی",
+      "configuredLocalCount_one": "{{count}} پیکربندی‌شده محلی",
+      "configuredLocalCount_other": "{{count}} پیکربندی‌شده محلی",
+      "configuredLocalTitle": "مسیرهای محلی OpenCode واردشده از پیکربندی OpenCode شما.",
+      "connectedCount": "ارائه‌دهندگان: {{connected}}/{{denominator}} متصل",
+      "freeModels": "مدل‌های رایگان",
+      "freeModelsTitle": "OpenCode گزینه‌های مدل رایگان مانند Big Pickle را در صورت موجود بودن در راه‌اندازی شما شامل می‌شود. OpenRouter از طریق OpenCode نیز می‌تواند مدل‌های رایگان ارائه دهد، اما هر مدل OpenCode/OpenRouter رایگان نیست. دسترس‌پذیری و محدودیت‌ها ممکن است تغییر کنند.",
+      "loadingModels": "در حال بارگذاری مدل‌ها...",
+      "modelsUnavailable": "مدل‌ها برای این نسخه زمان اجرا در دسترس نیستند",
+      "runtime": "زمان اجرا: {{runtime}}",
+      "verifiedCount": "{{count}} تأییدشده",
+      "verifiedCount_few": "{{count}} تأییدشده",
+      "verifiedCount_many": "{{count}} تأییدشده",
+      "verifiedCount_one": "{{count}} تأییدشده",
+      "verifiedCount_other": "{{count}} تأییدشده",
+      "verifiedTitle": "مسیرهای OpenCode با اثبات اجرای موفق."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "{{runtime}} پیکربندی‌شده در بررسی سلامت راه‌اندازی خود ناموفق بود.",
+      "configuredNotFound": "{{runtime}} پیکربندی‌شده یافت نشد.",
+      "foundButFailed": "{{runtime}} یافت شد اما در راه‌اندازی ناموفق بود",
+      "healthCheckFailedDescription": "برنامه {{runtime}} پیکربندی‌شده را یافت، اما بررسی سلامت راه‌اندازی آن ناموفق بود. آن را تعمیر یا دوباره نصب کنید، سپس دوباره تلاش کنید.",
+      "install": "نصب {{runtime}}",
+      "installRequiredDescription": "{{runtime}} برای راه‌اندازی تیم و مدیریت نشست لازم است. برای شروع آن را نصب کنید.",
+      "isRequired": "{{runtime}} لازم است",
+      "reinstall": "نصب مجدد {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "در حال بررسی",
+      "codexTitle": "نصب Codex CLI در داده‌های برنامه",
+      "downloading": "در حال دانلود",
+      "downloadingPercent": "در حال دانلود {{percent}}%",
+      "install": "نصب",
+      "installing": "در حال نصب",
+      "openCodeTitle": "نصب زمان اجرای OpenCode در داده‌های برنامه",
+      "retryInstall": "تلاش مجدد برای نصب"
+    },
+    "troubleshoot": {
+      "again": "دوباره",
+      "authStatusCommand": "فرمان وضعیت احراز هویت CLI پیکربندی‌شده شما",
+      "checkLoggedIn": "- بررسی کنید که آیا «Logged in» نشان می‌دهد",
+      "click": "کلیک کنید",
+      "loginCommand": "فرمان ورود زمان اجرا",
+      "logoutCommand": "فرمان خروج زمان اجرا",
+      "openTerminal": "ترمینال خود را باز کنید و اجرا کنید:",
+      "reloginPrefix": "اگر می‌گوید وارد شده‌اید اما برنامه آن را نمی‌بیند، این را امتحان کنید:",
+      "sameRuntime": "مطمئن شوید CLI در ترمینال شما همان زمان اجرایی است که برنامه استفاده می‌کند",
+      "statusCacheHint": "- گاهی وضعیت برای چند ثانیه در حافظه پنهان نگه داشته می‌شود",
+      "then": "سپس"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "یک یا چند ارائه‌دهنده روی حالت کلید API تنظیم شده‌اند، اما هیچ کلید API پیکربندی نشده است. برای افزودن کلید یا تغییر حالت اتصال، مدیریت ارائه‌دهندگان را باز کنید.",
+      "multipleApiKeysNeedAttention": "یک یا چند ارائه‌دهنده روی حالت کلید API تنظیم شده‌اند و نیاز به توجه دارند. برای بازبینی کلیدهای ذخیره‌شده یا تغییر حالت اتصال، مدیریت ارائه‌دهندگان را باز کنید.",
+      "notAuthenticated": "{{runtime}} نصب شده است اما شما احراز هویت نشده‌اید. ورود برای راه‌اندازی تیم و ویژگی‌های هوش مصنوعی لازم است.",
+      "singleApiKeyMissing": "{{provider}} روی حالت کلید API تنظیم شده است، اما هیچ کلید API پیکربندی نشده است. برای افزودن کلید یا تغییر حالت اتصال، مدیریت ارائه‌دهندگان را باز کنید.",
+      "singleApiKeyNeedsAttention": "{{provider}} روی حالت کلید API تنظیم شده است، اما متصل نیست. برای بازبینی کلید ذخیره‌شده یا تغییر حالت اتصال، مدیریت ارائه‌دهندگان را باز کنید."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "یک پوشه پروژه انتخاب کنید",
+    "selectFolder": "انتخاب پوشه",
+    "failedToLoad": "بارگذاری پروژه‌ها ناموفق بود",
+    "retry": "تلاش مجدد",
+    "noProjects": "هیچ پروژه‌ای یافت نشد",
+    "noMatches": "هیچ نتیجه‌ای برای «{{query}}» نیست",
+    "noRecentProjects": "هیچ پروژه اخیری یافت نشد",
+    "emptyDescription": "فعالیت‌های اخیر Claude و Codex اینجا ظاهر می‌شوند.",
+    "loadMore": "بارگذاری بیشتر",
+    "card": {
+      "deleted": "حذف‌شده",
+      "projectFolderMissing": "پوشه پروژه دیگر وجود ندارد",
+      "taskCounts": {
+        "active": "{{count}} فعال",
+        "active_one": "{{count}} فعال",
+        "active_other": "{{count}} فعال",
+        "active_few": "{{count}} فعال",
+        "active_many": "{{count}} فعال",
+        "pending": "{{count}} در انتظار",
+        "pending_one": "{{count}} در انتظار",
+        "pending_other": "{{count}} در انتظار",
+        "pending_few": "{{count}} در انتظار",
+        "pending_many": "{{count}} در انتظار",
+        "done": "{{count}} انجام‌شده",
+        "done_one": "{{count}} انجام‌شده",
+        "done_other": "{{count}} انجام‌شده",
+        "done_few": "{{count}} انجام‌شده",
+        "done_many": "{{count}} انجام‌شده"
+      }
+    },
+    "title": "پروژه‌های اخیر",
+    "searchResults": "نتایج جستجو",
+    "searchPlaceholder": "جستجوی پروژه‌ها..."
+  },
+  "actions": {
+    "selectTeam": "انتخاب تیم",
+    "or": "یا",
+    "clearSearch": "پاک کردن جستجو"
+  },
+  "windowsAdmin": {
+    "title": "حالت مدیر Windows توصیه می‌شود",
+    "description": "وقتی Agent Teams AI با دسترسی بالا اجرا نشود، بررسی‌های زمان اجرای OpenCode ممکن است زمان‌بر شده و منقضی شوند. پیش از راه‌اندازی تیم‌های OpenCode، برنامه را با «Run as administrator» مجدداً اجرا کنید."
+  },
+  "webPreview": {
+    "title": "برای عملکرد کامل، برنامه دسکتاپ را باز کنید",
+    "description": "نسخه مرورگر هنوز در حال توسعه است. اقدامات پروژه، یکپارچه‌سازی‌ها و به‌روزرسانی‌های وضعیت زنده ممکن است اینجا محدود باشند. برای دسترسی مطمئن به همه ویژگی‌ها از برنامه دسکتاپ استفاده کنید."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "نسخه جدید در دسترس است",
+    "restartNow": "راه‌اندازی مجدد",
+    "viewDetails": "مشاهده جزئیات"
+  }
+}

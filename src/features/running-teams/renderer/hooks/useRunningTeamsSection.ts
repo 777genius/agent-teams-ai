@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import {
@@ -58,6 +59,7 @@ function toCandidate(input: {
 }
 
 export function useRunningTeamsSection(searchQuery: string): RunningTeamsSectionState {
+  const { t } = useAppTranslation('team');
   const {
     teams,
     globalTasks,
@@ -172,7 +174,14 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       ),
     });
 
-    return adaptRunningTeamsSection(runningTeams);
+    return adaptRunningTeamsSection(runningTeams, {
+      status: {
+        active: t('runningTeams.status.active'),
+        provisioning: t('runningTeams.status.provisioning'),
+        idle: t('runningTeams.status.idle'),
+      },
+      noProject: t('runningTeams.noProject'),
+    });
   }, [
     aliveTeams,
     globalTasks,
@@ -182,6 +191,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     provisioningTeamNames,
     searchActive,
     teams,
+    t,
   ]);
 
   const openRunningTeam = useCallback(

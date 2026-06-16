@@ -35,6 +35,8 @@ interface TeamSummaryLike {
   teamName: string;
   displayName: string;
   projectPath: string;
+  leadSessionId?: string;
+  sessionHistory?: string[];
 }
 
 interface GlobalTaskLike {
@@ -251,6 +253,31 @@ describe('team slice context races', () => {
     expect(store.getState().teamsLoading).toBe(false);
   });
 
+  it('preserves team list references when a refresh returns unchanged teams', async () => {
+    const store = createSliceStore();
+    const team = {
+      teamName: 'atlas-hq-15',
+      displayName: 'Atlas HQ',
+      projectPath: '/repo',
+      leadSessionId: 'lead-session',
+      sessionHistory: ['previous-session'],
+    };
+    apiMock.teams.list.mockResolvedValueOnce([team]).mockResolvedValueOnce([{ ...team }]);
+
+    await store.getState().fetchTeams();
+    const firstTeams = store.getState().teams;
+    const firstTeamByName = store.getState().teamByName;
+    const firstTeamBySessionId = store.getState().teamBySessionId;
+
+    await store.getState().fetchTeams();
+
+    expect(store.getState().teams).toBe(firstTeams);
+    expect(store.getState().teamByName).toBe(firstTeamByName);
+    expect(store.getState().teamBySessionId).toBe(firstTeamBySessionId);
+    expect(store.getState().teamBySessionId['lead-session']).toBe(firstTeams[0]);
+    expect(store.getState().teamBySessionId['previous-session']).toBe(firstTeams[0]);
+  });
+
   it('reruns a pending global task refresh for the current context instead of applying stale tasks', async () => {
     const store = createSliceStore();
     const localTasks = deferred<GlobalTaskLike[]>();
@@ -294,6 +321,36 @@ describe('team slice context races', () => {
     expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(2);
     expect(store.getState().globalTasks).toEqual([
       expect.objectContaining({ id: 'ssh-task', teamName: 'ssh-team' }),
+    ]);
+    expect(store.getState().globalTasksInitialized).toBe(true);
+    expect(store.getState().globalTasksLoading).toBe(false);
+  });
+
+  it('coalesces concurrent initial global task refreshes for the same context', async () => {
+    const store = createSliceStore();
+    const initialTasks = deferred<GlobalTaskLike[]>();
+    apiMock.teams.getAllTasks.mockReturnValueOnce(initialTasks.promise);
+
+    const firstFetch = store.getState().fetchAllTasks();
+    const secondFetch = store.getState().fetchAllTasks();
+
+    initialTasks.resolve([
+      {
+        id: 'initial-task',
+        subject: 'Initial task',
+        status: 'todo',
+        teamName: 'initial-team',
+        teamDisplayName: 'Initial Team',
+        projectPath: '/initial/project',
+        comments: [],
+      },
+    ]);
+
+    await Promise.all([firstFetch, secondFetch]);
+
+    expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
+    expect(store.getState().globalTasks).toEqual([
+      expect.objectContaining({ id: 'initial-task', teamName: 'initial-team' }),
     ]);
     expect(store.getState().globalTasksInitialized).toBe(true);
     expect(store.getState().globalTasksLoading).toBe(false);
@@ -379,6 +436,29 @@ describe('team slice context races', () => {
     ]);
     await fetchPromise;
 
+    expect(store.getState().crossTeamTargets).toEqual([]);
+    expect(store.getState().crossTeamTargetsLoading).toBe(false);
+  });
+
+  it('resolves true after a successful cross-team targets fetch', async () => {
+    const store = createSliceStore();
+    apiMock.crossTeam.listTargets.mockResolvedValueOnce([
+      { teamName: 'peer', displayName: 'Peer' },
+    ]);
+
+    const ok = await store.getState().fetchCrossTeamTargets();
+
+    expect(ok).toBe(true);
+    expect(store.getState().crossTeamTargets).toEqual([{ teamName: 'peer', displayName: 'Peer' }]);
+  });
+
+  it('resolves false when the cross-team targets fetch fails so the composer can retry', async () => {
+    const store = createSliceStore();
+    apiMock.crossTeam.listTargets.mockRejectedValueOnce(new Error('boom'));
+
+    const ok = await store.getState().fetchCrossTeamTargets();
+
+    expect(ok).toBe(false);
     expect(store.getState().crossTeamTargets).toEqual([]);
     expect(store.getState().crossTeamTargetsLoading).toBe(false);
   });

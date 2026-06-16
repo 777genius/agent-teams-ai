@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "పవర్-యూజర్ ఎంపికలు: కాన్ఫిగ్ ఎగుమతి/దిగుమతి, డిఫాల్ట్‌లను రీసెట్ చేయడం మరియు రా కాన్ఫిగరేషన్ సవరణ.",
+      "label": "ఆధునిక"
+    },
+    "general": {
+      "description": "థీమ్, భాష, డిస్‌ప్లే డెన్సిటీ మరియు స్టార్టప్ ప్రవర్తన వంటి ప్రధాన యాప్ ప్రాధాన్యతలు.",
+      "label": "సాధారణ"
+    },
+    "infoAriaLabel": "{{label}} అంటే ఏమిటి?",
+    "notifications": {
+      "description": "ఏజెంట్ కార్యకలాపం, టాస్క్ పూర్తయినప్పుడు మరియు లోపాల గురించి మీకు ఎప్పుడు, ఎలా తెలియజేయాలో నియంత్రించండి.",
+      "label": "నోటిఫికేషన్‌లు"
+    }
+  },
+  "view": {
+    "description": "మీ యాప్ ప్రాధాన్యతలను నిర్వహించండి",
+    "loading": "సెట్టింగ్‌లను లోడ్ చేస్తోంది...",
+    "title": "సెట్టింగ్‌లు"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "రద్దు చేయి",
+      "test": "పరీక్షించు"
+    },
+    "defaults": {
+      "allProjects": "అన్ని ప్రాజెక్ట్‌లు",
+      "allProjectsHint": "పరీక్షలు {{project}} ను ఉపయోగిస్తాయి. ప్రాజెక్ట్‌కు ఓవర్‌రైడ్ లేకపోతే డిఫాల్ట్ వర్తిస్తుంది.",
+      "loadingContexts": "కాంటెక్స్ట్‌లను లోడ్ చేస్తోంది...",
+      "projectHint": "సేవ్ చేయడం {{project}} ను మాత్రమే ఓవర్‌రైడ్ చేస్తుంది.",
+      "projectOverrideContext": "ప్రాజెక్ట్ ఓవర్‌రైడ్ కాంటెక్స్ట్",
+      "scopeDescriptionAllProjects": "దాని స్వంత OpenCode ఓవర్‌రైడ్ లేని ప్రతి ప్రాజెక్ట్‌కు డిఫాల్ట్.",
+      "scopeDescriptionProject": "ఎంచుకున్న ప్రాజెక్ట్‌ను మాత్రమే ఓవర్‌రైడ్ చేస్తుంది. రన్ అవుతున్న టీమ్‌లు మారవు.",
+      "selectProjectContext": "ప్రాజెక్ట్ కాంటెక్స్ట్‌ను ఎంచుకోండి",
+      "selectProjectHint": "స్థానిక మోడల్‌లను పరీక్షించడానికి లేదా డిఫాల్ట్‌లను సేవ్ చేయడానికి ముందు ప్రాజెక్ట్‌ను ఎంచుకోండి.",
+      "selectValidationContext": "ధృవీకరణ కాంటెక్స్ట్‌ను ఎంచుకోండి",
+      "setAllProjectsDefault": "అన్ని-ప్రాజెక్ట్‌ల డిఫాల్ట్‌ను సెట్ చేయి",
+      "setProjectDefault": "ప్రాజెక్ట్ డిఫాల్ట్‌ను సెట్ చేయి",
+      "thisProject": "ఈ ప్రాజెక్ట్",
+      "title": "OpenCode డిఫాల్ట్‌లు",
+      "validationContext": "ధృవీకరణ కాంటెక్స్ట్"
+    },
+    "diagnostics": {
+      "copied": "డయాగ్నొస్టిక్‌లు కాపీ చేయబడ్డాయి",
+      "copiedShort": "కాపీ చేయబడింది",
+      "copy": "డయాగ్నొస్టిక్‌లను కాపీ చేయి",
+      "hints": "సూచనలు",
+      "likelyCause": "సంభావ్య కారణం:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI ను Administrator గా అమలు చేయండి"
+    },
+    "models": {
+      "alreadyDefault": "ఇది ఇప్పటికే ఎంచుకున్న OpenCode డిఫాల్ట్.",
+      "empty": "మోడల్‌లు ఏవీ కనుగొనబడలేదు.",
+      "emptyFree": "ఉచిత మోడల్‌లు ఏవీ కనుగొనబడలేదు.",
+      "emptyRecommended": "సిఫార్సు చేసిన మోడల్‌లు ఏవీ కనుగొనబడలేదు.",
+      "emptyRecommendedFree": "సిఫార్సు చేసిన ఉచిత మోడల్‌లు ఏవీ కనుగొనబడలేదు.",
+      "freeOnly": "ఉచితం మాత్రమే",
+      "launchableDescription": "OpenCode కాన్ఫిగ్ నుండి తెలిసిన మార్గాలు, ఉచిత అంతర్నిర్మిత మోడల్‌లు మరియు ప్రస్తుత డిఫాల్ట్. స్థానిక మార్గాలు టీమ్ లాంచ్‌లకు సిద్ధం కావడానికి విజయవంతమైన పరీక్ష అవసరం.",
+      "launchableTitle": "OpenCode మోడల్ మార్గాలు",
+      "loadingRoutes": "OpenCode మోడల్ మార్గాలను లోడ్ చేస్తోంది...",
+      "noRoutesMatch": "\"{{query}}\" కు ఏ OpenCode మోడల్ మార్గాలు సరిపోలడం లేదు.",
+      "noneReported": "ఇంకా ఏ OpenCode మోడల్ మార్గాలు నివేదించబడలేదు. OpenCode లో స్థానిక మార్గాన్ని కాన్ఫిగర్ చేయండి లేదా క్యాటలాగ్ ప్రొవైడర్లను తనిఖీ చేయడానికి Providers ట్యాబ్‌ను ఉపయోగించండి.",
+      "recommendedOnly": "సిఫార్సు చేసినవి మాత్రమే",
+      "searchPlaceholder": "మోడల్‌లను శోధించండి",
+      "selectProjectBeforeTesting": "మోడల్‌లను పరీక్షించడానికి ముందు ప్రాజెక్ట్ కాంటెక్స్ట్‌ను ఎంచుకోండి.",
+      "selectProjectBeforeTestingDefaults": "OpenCode డిఫాల్ట్‌లను పరీక్షించడానికి లేదా సేవ్ చేయడానికి ముందు ప్రాజెక్ట్ కాంటెక్స్ట్‌ను ఎంచుకోండి.",
+      "testInProgress": "మోడల్ పరీక్ష ఇప్పటికే అమలవుతోంది.",
+      "useInTeamPicker": "టీమ్ పికర్ కోసం సేవ్ చేయి",
+      "validationContextRequired": "Test మరియు Set default ను ప్రారంభించడానికి పైన ధృవీకరణ కాంటెక్స్ట్‌ను ఎంచుకోండి. టీమ్ పికర్ కోసం సేవ్ చేయడం కొత్త టీమ్‌ల కోసం మార్గాన్ని మాత్రమే నిల్వ చేస్తుంది.",
+      "actionsUnavailable": "చర్యలు తాత్కాలికంగా అందుబాటులో లేవు.",
+      "defaultSaveInProgress": "OpenCode డిఫాల్ట్ సేవ్ చేయబడుతోంది.",
+      "routeUnavailableAuth": "ఈ మోడల్‌ను ఉపయోగించడానికి ముందు ఈ ప్రొవైడర్‌కు ప్రామాణీకరణ అవసరం.",
+      "routeUnavailableFailed": "ఈ మోడల్ మార్గం దాని చివరి అమలు పరీక్షలో విఫలమైంది.",
+      "routeUnavailableGeneric": "ఈ మోడల్ మార్గాన్ని ప్రస్తుతం ఉపయోగించలేరు.",
+      "routeUnavailableUnknown": "ఈ మోడల్ ప్రస్తుత OpenCode డిఫాల్ట్, కానీ ఇది ఇంకా లైవ్ క్యాటలాగ్‌లో అందుబాటులో లేదు."
+    },
+    "providers": {
+      "catalog": "OpenCode ప్రొవైడర్ క్యాటలాగ్",
+      "countFallback": "OpenCode ప్రొవైడర్లు",
+      "description": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి.",
+      "loadMore": "మరిన్ని ప్రొవైడర్లను లోడ్ చేయి",
+      "loading": "OpenCode ప్రొవైడర్లను లోడ్ చేస్తోంది",
+      "noMatches": "ఆ శోధనకు ఏ ప్రొవైడర్లు సరిపోలడం లేదు.",
+      "noneReported": "మేనేజ్డ్ రన్‌టైమ్ ద్వారా ఏ OpenCode ప్రొవైడర్లు నివేదించబడలేదు.",
+      "recommended": "సిఫార్సు చేయబడింది",
+      "refreshCatalog": "క్యాటలాగ్‌ను రిఫ్రెష్ చేయి",
+      "searchPlaceholder": "ప్రొవైడర్లను శోధించండి",
+      "description_few": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి.",
+      "description_many": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి.",
+      "description_one": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి.",
+      "description_other": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి."
+    },
+    "setup": {
+      "loading": "ప్రొవైడర్ సెటప్‌ను లోడ్ చేస్తోంది..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode డిఫాల్ట్: {{model}}",
+      "loading": "మేనేజ్డ్ OpenCode రన్‌టైమ్, కనెక్ట్ చేయబడిన ప్రొవైడర్లు మరియు మోడల్ డిఫాల్ట్‌లను లోడ్ చేస్తోంది...",
+      "source": "మూలం: {{source}}",
+      "title": "OpenCode రన్‌టైమ్"
+    },
+    "tabs": {
+      "models": "మోడల్‌లు",
+      "providers": "ప్రొవైడర్లు"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "మోడల్ మార్గాలను శోధించండి"
+    },
+    "badges": {
+      "usedInTeamPicker": "టీమ్ పికర్ కోసం సేవ్ చేయబడింది",
+      "free": "ఉచితం",
+      "local": "స్థానిక",
+      "configured": "కాన్ఫిగర్ చేయబడింది",
+      "knownRoute": "తెలిసిన మార్గం",
+      "connected": "కనెక్ట్ చేయబడింది",
+      "verified": "ధృవీకరించబడింది",
+      "needsTest": "పరీక్ష అవసరం",
+      "failed": "విఫలమైంది",
+      "unknown": "తెలియదు",
+      "default": "డిఫాల్ట్"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "ఏజెంట్ కమ్యూనికేషన్ కోసం భాష",
+      "descriptionWithDetected": "ఏజెంట్ కమ్యూనికేషన్ కోసం భాష (గుర్తించబడింది: {{detected}})",
+      "emptyMessage": "భాష ఏదీ కనుగొనబడలేదు.",
+      "label": "భాష",
+      "searchPlaceholder": "భాషను శోధించండి...",
+      "selectPlaceholder": "భాషను ఎంచుకోండి...",
+      "title": "ఏజెంట్ భాష"
+    },
+    "appLanguage": {
+      "description": "అప్లికేషన్ ఇంటర్‌ఫేస్ కోసం భాష.",
+      "label": "భాష",
+      "title": "యాప్ భాష"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "ట్రాన్స్‌క్రిప్ట్ తెరిచినప్పుడు లేదా కొత్త సందేశం వచ్చినప్పుడు ప్రతి ప్రతిస్పందన టర్న్‌ను స్వయంచాలకంగా విస్తరించు",
+        "label": "డిఫాల్ట్‌గా AI ప్రతిస్పందనలను విస్తరించు"
+      },
+      "nativeTitleBar": {
+        "description": "కస్టమ్ టైటిల్ బార్‌కు బదులుగా డిఫాల్ట్ సిస్టమ్ విండో ఫ్రేమ్‌ను ఉపయోగించు",
+        "label": "నేటివ్ టైటిల్ బార్‌ను ఉపయోగించు",
+        "restartConfirm": {
+          "confirmLabel": "పునఃప్రారంభించు",
+          "message": "టైటిల్ బార్ మార్పును వర్తింపజేయడానికి యాప్‌ను పునఃప్రారంభించాలి. ఇప్పుడే పునఃప్రారంభించాలా?",
+          "title": "పునఃప్రారంభం అవసరం"
+        }
+      },
+      "theme": {
+        "description": "మీకు ఇష్టమైన రంగు థీమ్‌ను ఎంచుకోండి",
+        "label": "థీమ్",
+        "options": {
+          "dark": "డార్క్",
+          "light": "లైట్",
+          "system": "సిస్టమ్"
+        }
+      },
+      "title": "రూపం"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "బ్రౌజర్ నుండి UIని యాక్సెస్ చేయడానికి లేదా iframe లలో ఎంబెడ్ చేయడానికి HTTP సర్వర్‌ను ప్రారంభించు",
+        "label": "సర్వర్ మోడ్‌ను ప్రారంభించు"
+      },
+      "title": "బ్రౌజర్ యాక్సెస్"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "ఫోల్డర్‌ను ఎంచుకోండి",
+        "selectFolderManually": "ఫోల్డర్‌ను మాన్యువల్‌గా ఎంచుకోండి",
+        "useAutoDetect": "Auto-Detect ఉపయోగించు",
+        "useFolder": "ఫోల్డర్‌ను ఉపయోగించు",
+        "usePath": "మార్గాన్ని ఉపయోగించు",
+        "useThisPath": "ఈ మార్గాన్ని ఉపయోగించు",
+        "useWsl": "Linux/WSL ఉపయోగిస్తున్నారా?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "ఈ ఫోల్డర్‌లో \"projects\" డైరెక్టరీ లేదు. అయినా కొనసాగించాలా?",
+          "title": "projects డైరెక్టరీ కనుగొనబడలేదు"
+        },
+        "notClaudeDir": {
+          "message": "ఈ ఫోల్డర్ పేరు \"{{folderName}}\", \".claude\" కాదు. అయినా కొనసాగించాలా?",
+          "title": "ఎంచుకున్న ఫోల్డర్ .claude కాదు"
+        },
+        "noWslPaths": {
+          "message": "Claude డేటాతో WSL distros స్వయంచాలకంగా కనుగొనబడలేదు. ఫోల్డర్‌ను మాన్యువల్‌గా ఎంచుకోవాలా?",
+          "title": "WSL Claude మార్గాలు కనుగొనబడలేదు"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" లో \"projects\" డైరెక్టరీ లేదు. అయినా కొనసాగించాలా?",
+          "title": "WSL మార్గంలో projects డైరెక్టరీ లేదు"
+        }
+      },
+      "current": {
+        "autoDetected": "స్వయంచాలకంగా గుర్తించబడింది: {{path}}",
+        "autoDetectedPath": "స్వయంచాలకంగా గుర్తించిన మార్గాన్ని ఉపయోగిస్తోంది",
+        "customPath": "కస్టమ్ మార్గాన్ని ఉపయోగిస్తోంది",
+        "label": "ప్రస్తుత స్థానిక రూట్"
+      },
+      "description": "ఏ స్థానిక ఫోల్డర్‌ను మీ Claude డేటా రూట్‌గా పరిగణించాలో ఎంచుకోండి",
+      "errors": {
+        "detectWslFailed": "WSL Claude రూట్ మార్గాలను గుర్తించడం విఫలమైంది",
+        "loadFailed": "స్థానిక Claude రూట్ సెట్టింగ్‌లను లోడ్ చేయడం విఫలమైంది",
+        "updateFailed": "Claude రూట్‌ను అప్‌డేట్ చేయడం విఫలమైంది"
+      },
+      "title": "స్థానిక Claude రూట్",
+      "wslModal": {
+        "closeAriaLabel": "WSL మార్గ మోడల్‌ను మూసివేయి",
+        "description": "గుర్తించిన WSL పంపిణీలు మరియు Claude రూట్ అభ్యర్థులు",
+        "noProjectsDir": "projects డైరెక్టరీ గుర్తించబడలేదు",
+        "title": "WSL Claude రూట్‌ను ఎంచుకోండి"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "అనామక క్రాష్ మరియు పనితీరు డేటాను పంపడం ద్వారా యాప్‌ను మెరుగుపరచడంలో సహాయం చేయండి",
+        "label": "క్రాష్ నివేదికలను పంపు"
+      },
+      "title": "గోప్యత"
+    },
+    "server": {
+      "runningOn": "దీనిపై రన్ అవుతోంది",
+      "standaloneModeDescription": "స్టాండ్‌అలోన్ మోడ్‌లో రన్ అవుతోంది. HTTP సర్వర్ ఎల్లప్పుడూ క్రియాశీలంగా ఉంటుంది. సిస్టమ్ నోటిఫికేషన్‌లు అందుబాటులో లేవు - నోటిఫికేషన్ ట్రిగ్గర్‌లు యాప్‌లో మాత్రమే లాగ్ చేయబడతాయి.",
+      "title": "సర్వర్"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "మీరు లాగిన్ అయినప్పుడు యాప్‌ను స్వయంచాలకంగా ప్రారంభించు",
+        "label": "లాగిన్‌లో లాంచ్ చేయి"
+      },
+      "showDockIcon": {
+        "description": "డాక్‌లో యాప్ ఐకాన్‌ను చూపించు (macOS)",
+        "label": "డాక్ ఐకాన్‌ను చూపించు"
+      },
+      "title": "స్టార్టప్"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "డెవలప్‌మెంట్ మోడ్‌లో నోటిఫికేషన్‌లు పనిచేయకపోవచ్చు. macOS యాప్‌ను \"Electron\" గా గుర్తిస్తుంది (bundle ID",
+      "descriptionSuffix": ") ప్రొడక్షన్ యాప్ పేరుకు బదులుగా. అనుమతులను ధృవీకరించడానికి System Settings > Notifications > Electron ను తనిఖీ చేయండి.",
+      "title": "డెవ్ మోడ్"
+    },
+    "ignoredRepositories": {
+      "description": "ఈ రిపోజిటరీల నుండి నోటిఫికేషన్‌లు విస్మరించబడతాయి",
+      "empty": "ఏ రిపోజిటరీలు విస్మరించబడలేదు",
+      "selectPlaceholder": "విస్మరించడానికి రిపోజిటరీని ఎంచుకోండి...",
+      "title": "విస్మరించిన రిపోజిటరీలు"
+    },
+    "settings": {
+      "enabled": {
+        "description": "లోపాలు మరియు ఈవెంట్‌ల కోసం సిస్టమ్ నోటిఫికేషన్‌లను చూపించు",
+        "label": "సిస్టమ్ నోటిఫికేషన్‌లను ప్రారంభించు"
+      },
+      "sound": {
+        "description": "నోటిఫికేషన్‌లు కనిపించినప్పుడు ధ్వనిని ప్లే చేయి",
+        "label": "ధ్వనిని ప్లే చేయి"
+      },
+      "subagentErrors": {
+        "description": "సబ్‌ఏజెంట్ సెషన్‌లలో లోపాలను గుర్తించి తెలియజేయి",
+        "label": "సబ్‌ఏజెంట్ లోపాలను చేర్చు"
+      },
+      "title": "నోటిఫికేషన్ సెట్టింగ్‌లు"
+    },
+    "snooze": {
+      "clear": "స్నూజ్‌ను క్లియర్ చేయి",
+      "description": "నోటిఫికేషన్‌లను తాత్కాలికంగా పాజ్ చేయి",
+      "descriptionWithTime": "{{time}} వరకు స్నూజ్ చేయబడింది",
+      "label": "నోటిఫికేషన్‌లను స్నూజ్ చేయి",
+      "options": {
+        "15": "15 నిమిషాలు",
+        "30": "30 నిమిషాలు",
+        "60": "1 గంట",
+        "120": "2 గంటలు",
+        "240": "4 గంటలు",
+        "-1": "రేపటి వరకు"
+      },
+      "selectDuration": "వ్యవధిని ఎంచుకోండి..."
+    },
+    "taskCompletion": {
+      "description": "Claude టాస్క్‌లను పూర్తి చేసినప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను పొందండి - ధ్వనులు, బ్యానర్లు మరియు Dock/taskbar బ్యాడ్జ్‌లు. macOS, Linux మరియు Windows లో పనిచేస్తుంది.",
+      "installPlugin": "claude-notifications-go ప్లగిన్‌ను ఇన్‌స్టాల్ చేయి",
+      "title": "టాస్క్ పూర్తి నోటిఫికేషన్‌లు"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "ఒక టీమ్‌లోని ప్రతి టాస్క్ పూర్తయిన స్థితికి చేరినప్పుడు తెలియజేయి",
+        "label": "అన్ని టాస్క్‌లు పూర్తయ్యాయి"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claude రీసెట్ సమయాన్ని నివేదించినప్పుడు, పరిమితి రీసెట్ అయిన తర్వాత టీమ్ లీడ్‌కు ఫాలో-అప్ నడ్జ్‌ను షెడ్యూల్ చేయి",
+        "label": "రేట్ పరిమితి తర్వాత ఆటో-రెజ్యూమ్"
+      },
+      "clarifications": {
+        "description": "ఒక టాస్క్‌కు మీ ఇన్‌పుట్ అవసరమైనప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను చూపించు",
+        "label": "టాస్క్ స్పష్టీకరణ నోటిఫికేషన్‌లు"
+      },
+      "crossTeamMessage": {
+        "description": "మరో టీమ్ నుండి సందేశం వచ్చినప్పుడు తెలియజేయి",
+        "label": "క్రాస్-టీమ్ సందేశ నోటిఫికేషన్‌లు"
+      },
+      "leadInbox": {
+        "description": "టీమ్‌మేట్‌లు టీమ్ లీడ్‌కు సందేశాలు పంపినప్పుడు తెలియజేయి",
+        "label": "లీడ్ ఇన్‌బాక్స్ నోటిఫికేషన్‌లు"
+      },
+      "statusChange": {
+        "description": "ఒక టాస్క్ స్థితి మారినప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను చూపించు",
+        "label": "టాస్క్ స్థితి మార్పు నోటిఫికేషన్‌లు",
+        "onlySolo": {
+          "description": "టీమ్‌లో టీమ్‌మేట్‌లు లేనప్పుడు మాత్రమే తెలియజేయి",
+          "label": "సోలో మోడ్‌లో మాత్రమే"
+        },
+        "statuses": {
+          "description": "ఏ లక్ష్య స్థితులు నోటిఫికేషన్‌ను ట్రిగ్గర్ చేస్తాయి",
+          "label": "ఈ స్థితులపై తెలియజేయి",
+          "options": {
+            "approved": "ఆమోదించబడింది",
+            "completed": "పూర్తయింది",
+            "deleted": "తొలగించబడింది",
+            "in_progress": "ప్రారంభమైంది",
+            "needsFix": "సరిదిద్దాలి",
+            "pending": "పెండింగ్",
+            "review": "సమీక్ష"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "ఏజెంట్లు టాస్క్‌లపై వ్యాఖ్యానించినప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను చూపించు",
+        "label": "టాస్క్ వ్యాఖ్య నోటిఫికేషన్‌లు"
+      },
+      "taskCreated": {
+        "description": "కొత్త టాస్క్ సృష్టించబడినప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను చూపించు",
+        "label": "టాస్క్ సృష్టి నోటిఫికేషన్‌లు"
+      },
+      "teamLaunched": {
+        "description": "ఒక టీమ్ లాంచ్ పూర్తి చేసి సిద్ధంగా ఉన్నప్పుడు తెలియజేయి",
+        "label": "టీమ్ లాంచ్ నోటిఫికేషన్‌లు"
+      },
+      "title": "టీమ్ నోటిఫికేషన్‌లు",
+      "toolApproval": {
+        "description": "యాప్ ఫోకస్‌లో లేనప్పుడు ఒక టూల్‌కు మీ ఆమోదం (Allow/Deny) అవసరమైనప్పుడు తెలియజేయి",
+        "label": "టూల్ ఆమోద నోటిఫికేషన్‌లు"
+      },
+      "userInbox": {
+        "description": "టీమ్‌మేట్‌లు మీకు సందేశాలు పంపినప్పుడు తెలియజేయి",
+        "label": "యూజర్ ఇన్‌బాక్స్ నోటిఫికేషన్‌లు"
+      }
+    },
+    "test": {
+      "action": "పరీక్ష పంపు",
+      "description": "డెలివరీని ధృవీకరించడానికి పరీక్ష నోటిఫికేషన్‌ను పంపు",
+      "failedToSend": "పరీక్ష నోటిఫికేషన్‌ను పంపడం విఫలమైంది",
+      "label": "పరీక్ష నోటిఫికేషన్",
+      "sending": "పంపుతోంది...",
+      "sent": "పంపబడింది!",
+      "unknownError": "తెలియని లోపం"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "యాప్ ఐకాన్",
+      "description": "సమాంతరంగా స్వయంప్రతిపత్తితో పనిచేసే, టీమ్‌ల మధ్య కమ్యూనికేట్ చేసే మరియు kanban బోర్డుపై టాస్క్‌లను నిర్వహించే AI ఏజెంట్ టీమ్‌లను అసెంబుల్ చేయండి - అంతర్నిర్మిత కోడ్ సమీక్ష, లైవ్ ప్రాసెస్ పర్యవేక్షణ మరియు పూర్తి టూల్ దృశ్యమానతతో.",
+      "standalone": "స్టాండ్‌అలోన్",
+      "title": "గురించి",
+      "version": "వెర్షన్ {{version}}"
+    },
+    "configuration": {
+      "editConfig": "కాన్ఫిగ్ సవరించు",
+      "exportConfig": "కాన్ఫిగ్ ఎగుమతి చేయి",
+      "importConfig": "కాన్ఫిగ్ దిగుమతి చేయి",
+      "openInEditor": "ఎడిటర్‌లో తెరువు",
+      "resetToDefaults": "డిఫాల్ట్‌లకు రీసెట్ చేయి",
+      "title": "కాన్ఫిగరేషన్"
+    },
+    "updates": {
+      "available": "v{{version}} అందుబాటులో ఉంది",
+      "check": "అప్‌డేట్‌ల కోసం తనిఖీ చేయి",
+      "checking": "తనిఖీ చేస్తోంది...",
+      "ready": "అప్‌డేట్ సిద్ధం",
+      "unknownVersion": "తెలియదు",
+      "upToDate": "తాజాగా ఉంది"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "కాన్ఫిగ్‌ను లోడ్ చేయడం విఫలమైంది",
+      "saveFailed": "కాన్ఫిగ్‌ను సేవ్ చేయడం విఫలమైంది"
+    },
+    "footer": {
+      "autoSave": "సవరించిన తర్వాత మార్పులు స్వయంచాలకంగా సేవ్ అవుతాయి",
+      "toClose": "మూసివేయడానికి",
+      "escapeKey": "Esc"
+    },
+    "loading": "కాన్ఫిగ్‌ను లోడ్ చేస్తోంది...",
+    "status": {
+      "invalidJson": "చెల్లని JSON",
+      "saveFailed": "సేవ్ విఫలమైంది",
+      "saved": "సేవ్ చేయబడింది",
+      "saving": "సేవ్ చేస్తోంది..."
+    },
+    "title": "కాన్ఫిగరేషన్ సవరించు"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "రద్దు చేయి",
+      "submit": "ట్రిగ్గర్ జోడించు",
+      "title": "కస్టమ్ ట్రిగ్గర్ జోడించు"
+    },
+    "builtin": {
+      "description": "అప్లికేషన్‌తో వచ్చే డిఫాల్ట్ ట్రిగ్గర్‌లు. మీరు వాటిని ప్రారంభించవచ్చు లేదా నిలిపివేయవచ్చు మరియు వాటి నమూనాలను అనుకూలీకరించవచ్చు.",
+      "title": "అంతర్నిర్మిత ట్రిగ్గర్‌లు"
+    },
+    "card": {
+      "builtinBadge": "అంతర్నిర్మిత",
+      "collapseAriaLabel": "కుదించు",
+      "deleteAriaLabel": "ట్రిగ్గర్‌ను తొలగించు",
+      "editNameAriaLabel": "పేరును సవరించు",
+      "expandAriaLabel": "విస్తరించు"
+    },
+    "color": {
+      "customHexTitle": "కస్టమ్ hex రంగు",
+      "invalidHex": "చెల్లని hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "దీని కంటే ఎక్కువైతే అలర్ట్ చేయి >",
+      "emptyPatternHint": "అన్ని కంటెంట్‌తో సరిపోల్చడానికి ఖాళీగా ఉంచండి. JavaScript regex సింటాక్స్‌ను ఉపయోగిస్తుంది.",
+      "errorStatusDescription": "ఒక టూల్ అమలు లోపాన్ని నివేదించినప్పుడు ట్రిగ్గర్ అవుతుంది (is_error: true).",
+      "tokensUnit": "టోకెన్లు",
+      "matchPatternPlaceholder": "ఉదా., error|failed|exception"
+    },
+    "custom": {
+      "description": "నిర్దిష్ట నమూనాలు లేదా టూల్ అవుట్‌పుట్‌ల కోసం తెలియజేయడానికి మీ స్వంత ట్రిగ్గర్‌లను సృష్టించండి.",
+      "empty": "ఇంకా ఏ కస్టమ్ ట్రిగ్గర్‌లు కాన్ఫిగర్ చేయబడలేదు.",
+      "title": "కస్టమ్ ట్రిగ్గర్‌లు"
+    },
+    "errors": {
+      "invalidRegexPattern": "చెల్లని regex నమూనా"
+    },
+    "fields": {
+      "contentType": "కంటెంట్ రకం",
+      "matchField": "మ్యాచ్ ఫీల్డ్",
+      "matchPattern": "మ్యాచ్ నమూనా (Regex)",
+      "scopeToolName": "స్కోప్ / టూల్ పేరు",
+      "scopeToolNameOptional": "స్కోప్ / టూల్ పేరు (ఐచ్ఛికం)",
+      "threshold": "థ్రెషోల్డ్",
+      "tokenType": "టోకెన్ రకం",
+      "triggerNamePlaceholder": "ఉదా., బిల్డ్ ఫెయిల్యూర్ అలర్ట్",
+      "triggerNameRequired": "ట్రిగ్గర్ పేరు *"
+    },
+    "ignorePatterns": {
+      "hint": "జోడించడానికి Enter నొక్కండి. ఏదైనా నమూనా సరిపోలితే నోటిఫికేషన్ దాటవేయబడుతుంది.",
+      "placeholder": "ఇగ్నోర్ regex జోడించండి...",
+      "removeAriaLabel": "ఇగ్నోర్ నమూనాను తీసివేయి",
+      "summary": "ఆధునిక: మినహాయింపు నియమాలు",
+      "title": "ఇగ్నోర్ నమూనాలు (సరిపోలితే దాటవేయి)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "టెక్స్ట్ అవుట్‌పుట్",
+        "thinking": "ఆలోచన",
+        "tool_result": "టూల్ ఫలితం",
+        "tool_use": "టూల్ వినియోగం"
+      },
+      "matchFields": {
+        "args": "ఆర్గ్యుమెంట్‌లు",
+        "command": "కమాండ్",
+        "content": "కంటెంట్",
+        "description": "వివరణ",
+        "file_path": "ఫైల్ మార్గం",
+        "fullInput": "పూర్తి ఇన్‌పుట్ (JSON)",
+        "glob": "Glob ఫిల్టర్",
+        "new_string": "కొత్త స్ట్రింగ్",
+        "old_string": "పాత స్ట్రింగ్",
+        "path": "మార్గం",
+        "pattern": "నమూనా",
+        "prompt": "ప్రాంప్ట్",
+        "query": "క్వెరీ",
+        "skill": "నైపుణ్యం పేరు",
+        "subagent_type": "సబ్‌ఏజెంట్ రకం",
+        "text": "టెక్స్ట్ కంటెంట్",
+        "thinking": "ఆలోచన కంటెంట్",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "కంటెంట్ నమూనా",
+        "error_status": "అమలు లోపం",
+        "token_threshold": "అధిక టోకెన్ వినియోగం"
+      },
+      "tokenTypes": {
+        "input": "ఇన్‌పుట్ టోకెన్లు",
+        "output": "అవుట్‌పుట్ టోకెన్లు",
+        "total": "మొత్తం టోకెన్లు"
+      },
+      "toolNames": {
+        "anyTool": "ఏదైనా టూల్"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "పరీక్ష ట్రిగ్గర్",
+      "detectedSuffix": "లోపాలు గుర్తించబడేవి",
+      "more": "...మరియు {{count}} మరిన్ని",
+      "more_few": "...మరియు {{count}} మరిన్ని",
+      "more_many": "...మరియు {{count}} మరిన్ని",
+      "more_one": "...మరియు {{count}} మరింత",
+      "more_other": "...మరియు {{count}} మరిన్ని",
+      "testTrigger": "పరీక్ష ట్రిగ్గర్",
+      "testing": "పరీక్షిస్తోంది...",
+      "title": "ప్రివ్యూ",
+      "truncatedWarning": "శోధన ముందుగానే ఆగిపోయింది (టైమ్‌అవుట్ లేదా కౌంట్ పరిమితి). వాస్తవ సరిపోలికలు ఎక్కువగా ఉండవచ్చు.",
+      "viewSession": "సెషన్‌ను చూడండి"
+    },
+    "repositoryScope": {
+      "empty": "ఏ రిపోజిటరీలు ఎంచుకోబడలేదు - ట్రిగ్గర్ అన్ని రిపోజిటరీలకు వర్తిస్తుంది",
+      "hint": "రిపోజిటరీలు ఎంచుకోబడినప్పుడు, ఈ ట్రిగ్గర్ ఆ రిపోజిటరీలలోని లోపాలకు మాత్రమే ఫైర్ అవుతుంది.",
+      "placeholder": "జోడించడానికి రిపోజిటరీని ఎంచుకోండి...",
+      "summary": "ఆధునిక: రిపోజిటరీ స్కోప్",
+      "title": "రిపోజిటరీలకు పరిమితం చేయి (ఎంచుకున్న రిపోజిటరీలకు మాత్రమే వర్తిస్తుంది)"
+    },
+    "sections": {
+      "configuration": "కాన్ఫిగరేషన్",
+      "dotColor": "డాట్ రంగు",
+      "generalInfo": "సాధారణ సమాచారం",
+      "triggerCondition": "ట్రిగ్గర్ షరతు"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "ప్రొఫైల్ జోడించు",
+      "cancel": "రద్దు చేయి",
+      "deleteProfile": "ప్రొఫైల్‌ను తొలగించు",
+      "editProfile": "ప్రొఫైల్‌ను సవరించు",
+      "save": "సేవ్ చేయి"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (SSH Config నుండి)",
+      "password": "పాస్‌వర్డ్",
+      "privateKey": "ప్రైవేట్ కీ"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "తొలగించు",
+      "message": "మీరు \"{{name}}\" ను తొలగించాలనుకుంటున్నారని ఖచ్చితంగా ఉన్నారా? దీన్ని రద్దు చేయలేరు.",
+      "title": "ప్రొఫైల్‌ను తొలగించు"
+    },
+    "description": "త్వరిత పునఃకనెక్షన్ కోసం SSH కనెక్షన్ ప్రొఫైల్‌లను సేవ్ చేయండి",
+    "empty": {
+      "description": "త్వరగా కనెక్ట్ చేయడానికి SSH ప్రొఫైల్‌ను జోడించండి",
+      "title": "సేవ్ చేసిన ప్రొఫైల్‌లు లేవు"
+    },
+    "form": {
+      "authentication": "ప్రామాణీకరణ",
+      "host": "హోస్ట్",
+      "name": "పేరు",
+      "passwordPrompt": "కనెక్ట్ చేసేటప్పుడు మీకు పాస్‌వర్డ్ కోసం ప్రాంప్ట్ చేయబడుతుంది.",
+      "port": "పోర్ట్",
+      "privateKeyPath": "ప్రైవేట్ కీ మార్గం",
+      "username": "యూజర్‌నేమ్",
+      "namePlaceholder": "నా సర్వర్",
+      "hostPlaceholder": "హోస్ట్‌నేమ్ లేదా IP",
+      "usernamePlaceholder": "యూజర్"
+    },
+    "loading": "ప్రొఫైల్‌లను లోడ్ చేస్తోంది...",
+    "title": "వర్క్‌స్పేస్ ప్రొఫైల్‌లు"
+  },
+  "connection": {
+    "actions": {
+      "connect": "కనెక్ట్ చేయి",
+      "connecting": "కనెక్ట్ అవుతోంది...",
+      "disconnect": "డిస్‌కనెక్ట్ చేయి",
+      "testConnection": "కనెక్షన్‌ను పరీక్షించు",
+      "testing": "పరీక్షిస్తోంది..."
+    },
+    "currentMode": {
+      "description": "సెషన్ ఫైల్‌ల కోసం డేటా మూలం",
+      "label": "ప్రస్తుత మోడ్",
+      "local": "స్థానిక ({{path}})"
+    },
+    "description": "అక్కడ రన్ అవుతున్న Claude Code సెషన్‌లను చూడటానికి రిమోట్ మెషీన్‌కు కనెక్ట్ చేయండి",
+    "form": {
+      "authentication": "ప్రామాణీకరణ",
+      "host": "హోస్ట్",
+      "password": "పాస్‌వర్డ్",
+      "port": "పోర్ట్",
+      "privateKeyPath": "ప్రైవేట్ కీ మార్గం",
+      "username": "యూజర్‌నేమ్",
+      "hostPlaceholder": "హోస్ట్‌నేమ్ లేదా SSH config అలియాస్",
+      "usernamePlaceholder": "యూజర్"
+    },
+    "savedProfiles": {
+      "title": "సేవ్ చేసిన ప్రొఫైల్‌లు"
+    },
+    "ssh": {
+      "title": "SSH కనెక్షన్"
+    },
+    "status": {
+      "connectedTo": "{{host}} కు కనెక్ట్ చేయబడింది",
+      "remoteSessions": "SSH ద్వారా రిమోట్ సెషన్‌లను చూస్తోంది"
+    },
+    "test": {
+      "failed": "కనెక్షన్ విఫలమైంది: {{error}}",
+      "success": "కనెక్షన్ విజయవంతమైంది",
+      "unknownError": "తెలియని లోపం"
+    },
+    "title": "రిమోట్ కనెక్షన్"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "రద్దు చేయి",
+      "cancelLogin": "లాగిన్‌ను రద్దు చేయి",
+      "connectChatGpt": "ChatGPT ను కనెక్ట్ చేయి",
+      "delete": "తొలగించు",
+      "disable": "నిలిపివేయి",
+      "disconnectAccount": "ఖాతాను డిస్‌కనెక్ట్ చేయి",
+      "generateLink": "లింక్ జనరేట్ చేయి",
+      "openLogin": "లాగిన్ తెరువు",
+      "reconnectAnthropic": "Anthropic ను మళ్లీ కనెక్ట్ చేయి",
+      "refresh": "రిఫ్రెష్ చేయి",
+      "replaceKey": "కీని భర్తీ చేయి",
+      "saveEndpoint": "ఎండ్‌పాయింట్‌ను సేవ్ చేయి",
+      "saveKey": "కీని సేవ్ చేయి",
+      "saving": "సేవ్ చేస్తోంది...",
+      "setApiKey": "API కీని సెట్ చేయి",
+      "updateKey": "కీని అప్‌డేట్ చేయి",
+      "useCode": "కోడ్ ఉపయోగించు"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "నిల్వ చేసిన ఆధారాలను లోడ్ చేస్తోంది...",
+      "projectScope": "ప్రాజెక్ట్",
+      "scope": "స్కోప్",
+      "storedIn": "{{backend}} లో నిల్వ చేయబడింది",
+      "userScope": "యూజర్",
+      "storedInApp": "యాప్‌లో నిల్వ చేయబడింది",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API కీ",
+          "title": "API కీ",
+          "description": "API-బిల్డ్ యాక్సెస్ కోసం నేరుగా Anthropic API కీని ఉపయోగించండి. మీరు తిరిగి మారినప్పుడు మీ Anthropic సబ్‌స్క్రిప్షన్ సెషన్ అందుబాటులో ఉంటుంది.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API కీ",
+          "title": "API కీ",
+          "description": "OpenAI API కీని ద్వితీయ Codex auth మార్గంగా ఉపయోగించండి. మీరు Codex ను API కీ మోడ్‌కు మారిస్తే, నేటివ్ లాంచ్‌ల కోసం యాప్ OPENAI_API_KEY ను CODEX_API_KEY లోకి మిర్రర్ చేస్తుంది.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API కీ",
+          "title": "API యాక్సెస్",
+          "description": "Gemini API బ్యాకెండ్ కోసం `GEMINI_API_KEY` ను ఉపయోగించండి. CLI SDK మరియు ADC కు ఇది అవసరం లేదు.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "కనెక్ట్ చేయబడింది",
+        "description": "సబ్‌స్క్రిప్షన్-ఆధారిత నేటివ్ లాంచ్‌లకు శక్తినిచ్చే స్థానిక Codex app-server ఖాతా సెషన్‌ను నిర్వహించండి.",
+        "loginInProgress": "లాగిన్ ప్రోగ్రెస్‌లో",
+        "plan": "ప్లాన్: {{plan}}",
+        "reconnectRequired": "మళ్లీ కనెక్ట్ చేయడం అవసరం",
+        "title": "ChatGPT ఖాతా",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} ChatGPT కనెక్ట్ అయ్యే వరకు Auto గుర్తించిన API కీని ఉపయోగిస్తూనే ఉంటుంది.",
+          "detectedApiKeyNeedsApiMode": "{{message}} మీరు Codex ను API కీ మోడ్‌కు మార్చిన తర్వాతే గుర్తించిన API కీ ఉపయోగించబడుతుంది.",
+          "localArtifactsNoSession": "Codex CLI ప్రస్తుతం క్రియాశీల ChatGPT ఖాతా లేదని నివేదిస్తోంది. స్థానిక Codex ఖాతా డేటా ఉంది, కానీ క్రియాశీల మేనేజ్డ్ సెషన్ ఏదీ ఎంపిక చేయబడలేదు. Codex CLI దాన్ని చూసిన తర్వాతే వినియోగ పరిమితులు ఇక్కడ కనిపిస్తాయి.",
+          "noActiveAccount": "Codex CLI ప్రస్తుతం క్రియాశీల ChatGPT ఖాతా లేదని నివేదిస్తోంది. Codex CLI ఒకదాన్ని చూసిన తర్వాతే వినియోగ పరిమితులు ఇక్కడ కనిపిస్తాయి.",
+          "reconnectBeforeUsage": "Codex కు స్థానికంగా ఎంచుకున్న ChatGPT ఖాతా ఉంది, కానీ ఇక్కడ వినియోగ పరిమితులు లోడ్ కావడానికి ముందు ప్రస్తుత సెషన్‌కు మళ్లీ కనెక్ట్ చేయాలి.",
+          "usageLimitsAfterReport": "కనెక్ట్ చేయబడిన ChatGPT ఖాతా కోసం Codex నివేదించిన తర్వాత వినియోగ పరిమితులు ఇక్కడ కనిపిస్తాయి."
+        }
+      },
+      "install": {
+        "checking": "తనిఖీ చేస్తోంది",
+        "downloading": "డౌన్‌లోడ్ చేస్తోంది",
+        "installCli": "Codex CLI ను ఇన్‌స్టాల్ చేయి",
+        "installing": "ఇన్‌స్టాల్ చేస్తోంది",
+        "retryInstall": "ఇన్‌స్టాల్ మళ్లీ ప్రయత్నించు",
+        "title": "యాప్ డేటాలోకి Codex CLI ను ఇన్‌స్టాల్ చేయి"
+      },
+      "rateLimits": {
+        "credits": "క్రెడిట్‌లు",
+        "creditsDescription": "క్రెడిట్‌లు విండో-ఆధారిత సబ్‌స్క్రిప్షన్ వినియోగం నుండి వేరుగా చూపబడతాయి మరియు ప్లాన్-ఆధారిత ChatGPT సెషన్‌ల కోసం అందుబాటులో ఉండకపోవచ్చు.",
+        "noSecondaryWindow": "ఈ ఖాతా స్నాప్‌షాట్ కోసం Codex ద్వితీయ విండోను తిరిగి ఇవ్వలేదు.",
+        "notReported": "నివేదించబడలేదు",
+        "primaryReset": "ప్రాథమిక రీసెట్",
+        "primaryUsed": "ప్రాథమికం ఉపయోగించబడింది",
+        "primaryWindow": "ప్రాథమిక విండో",
+        "remainingLeft": "{{value}} మిగిలి ఉంది",
+        "remainingUnknown": "మిగిలినవి తెలియదు",
+        "secondaryReset": "ద్వితీయ రీసెట్",
+        "secondaryUsed": "ద్వితీయం ఉపయోగించబడింది",
+        "secondaryWindow": "ద్వితీయ విండో",
+        "usedQuotaNote": "ఈ శాతాలు ఉపయోగించిన కోటాను చూపిస్తాయి, మిగిలిన కోటాను కాదు.",
+        "weeklyReset": "వారపు రీసెట్",
+        "weeklyUsed": "వారానికి ఉపయోగించబడింది",
+        "weeklyUsedOneWeek": "వారానికి ఉపయోగించబడింది (1w)",
+        "weeklyWindow": "వారపు విండో",
+        "secondaryFallback": "ద్వితీయ",
+        "secondaryWindowNote": " వారపు పరిమితులు {{window}} విండోలో వేరుగా చూపబడతాయి.",
+        "usageExplanationGeneric": "ఉపయోగించిన కోటాను చూపిస్తుంది, మిగిలిన కోటాను కాదు.",
+        "usageExplanationWindowOnly": "ప్రస్తుత {{window}} విండోలో ఉపయోగించిన కోటాను చూపిస్తుంది, మిగిలిన కోటాను కాదు.",
+        "usageExplanationWithRemaining": "{{used}} ఉపయోగించబడింది - ప్రస్తుత {{window}} విండోలో సుమారు {{remaining}} మిగిలి ఉంది."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth టోకెన్",
+      "authTokenMissing": "Auth టోకెన్ కాన్ఫిగర్ చేయబడలేదు.",
+      "baseUrl": "బేస్ URL",
+      "description": "Anthropic-అనుకూల స్థానిక రన్‌టైమ్ ఎండ్‌పాయింట్‌ను ఉపయోగించండి.",
+      "keepSavedToken": "సేవ్ చేసిన టోకెన్‌ను ఉంచడానికి ఖాళీగా ఉంచండి",
+      "title": "స్థానిక / అనుకూల ఎండ్‌పాయింట్",
+      "tokenStatus": "టోకెన్ {{status}}",
+      "validation": {
+        "baseUrlRequired": "బేస్ URL అవసరం",
+        "firstPartyAnthropic": "ఫస్ట్-పార్టీ Anthropic కోసం Auto, Subscription లేదా API కీని ఉపయోగించండి",
+        "httpRequired": "బేస్ URL తప్పనిసరిగా http:// లేదా https:// ను ఉపయోగించాలి",
+        "invalidUrl": "చెల్లని URL",
+        "noCredentials": "బేస్ URL ఆధారాలను కలిగి ఉండకూడదు"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "ఎండ్‌పాయింట్ నిలిపివేయబడింది. సేవ్ చేసిన టోకెన్ ఉంచబడింది.",
+        "endpointSaved": "ఎండ్‌పాయింట్ సేవ్ చేయబడింది",
+        "endpointSavedTokenMissing": "ఎండ్‌పాయింట్ సేవ్ చేయబడింది. Auth టోకెన్ కాన్ఫిగర్ చేయబడలేదు."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "ప్రామాణీకరణ పద్ధతి",
+      "descriptions": {
+        "anthropic": "యాప్-లాంచ్ చేసిన Anthropic సెషన్‌లు ఎలా ప్రామాణీకరించాలో ఎంచుకోండి.",
+        "codex": "నేటివ్ రన్‌టైమ్ లాంచ్ అయినప్పుడు Codex మీ ChatGPT సబ్‌స్క్రిప్షన్‌ను లేదా API కీని ఇష్టపడాలో ఎంచుకోండి.",
+        "gemini": "ఐచ్ఛిక API యాక్సెస్‌ను కాన్ఫిగర్ చేయండి. CLI SDK మరియు ADC ఇంకా స్వయంచాలకంగా కనుగొనబడతాయి.",
+        "opencode": "OpenCode ప్రామాణీకరణ మరియు ప్రొవైడర్ ఇన్వెంటరీ OpenCode రన్‌టైమ్ ద్వారా నిర్వహించబడతాయి."
+      },
+      "method": "కనెక్షన్ పద్ధతి",
+      "mode": "మోడ్: {{mode}}",
+      "selected": "ఎంచుకోబడింది",
+      "switching": "మారుతోంది...",
+      "title": "కనెక్షన్"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API కీ"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY మరియు Anthropic API బిల్లింగ్‌ను ఉపయోగించండి.",
+        "autoDescription": "Anthropic రన్‌టైమ్ డిఫాల్ట్‌లు మరియు అందుబాటులో ఉన్న ఉత్తమ స్థానిక ఆధారాన్ని ఉపయోగించండి.",
+        "hint": "Auto Anthropic ను దాని డిఫాల్ట్ స్థానిక ఆధార పరిష్కారంపై ఉంచుతుంది.",
+        "subscriptionDescription": "మీ స్థానిక Anthropic సైన్-ఇన్ సెషన్ మరియు సబ్‌స్క్రిప్షన్ యాక్సెస్‌ను ఉపయోగించండి.",
+        "subscriptionTitle": "Anthropic సబ్‌స్క్రిప్షన్"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "నేటివ్ Codex లాంచ్‌ల కోసం OPENAI_API_KEY మరియు CODEX_API_KEY బిల్లింగ్‌ను ఉపయోగించండి.",
+        "autoDescription": "మీ ChatGPT ఖాతా మరియు సబ్‌స్క్రిప్షన్‌ను ఇష్టపడండి. అవసరమైతే మాత్రమే API కీ మోడ్‌ను ఉపయోగించండి.",
+        "chatgptDescription": "మీ కనెక్ట్ చేసిన ChatGPT ఖాతా మరియు Codex సబ్‌స్క్రిప్షన్‌ను ఉపయోగించండి.",
+        "chatgptTitle": "ChatGPT ఖాతా",
+        "hint": "Codex ఎల్లప్పుడూ నేటివ్ రన్‌టైమ్ ద్వారా రన్ అవుతుంది. API-కీ ఆధారాలకు ఫాల్‌బ్యాక్ కావడానికి ముందు Auto మీ ChatGPT ఖాతాను ఇష్టపడుతుంది."
+      }
+    },
+    "description": "ప్రతి ప్రొవైడర్ ఎలా కనెక్ట్ అవుతుందో మరియు మద్దతు ఉన్నప్పుడు, మల్టీమోడల్ రన్‌టైమ్ ఏ బ్యాకెండ్‌ను ఉపయోగించాలో నిర్వహించండి.",
+    "fastMode": {
+      "defaultOff": "డిఫాల్ట్‌గా ఆఫ్",
+      "description": "పరిష్కరించబడిన మోడల్ మరియు రన్‌టైమ్ అనుమతించినప్పుడు కొత్త Anthropic టీమ్ లాంచ్‌లకు డిఫాల్ట్‌గా Claude Code Fast మోడ్‌ను వర్తింపజేయండి.",
+      "disabledHint": "ఒక టీమ్ స్పష్టంగా Fast మోడ్‌ను ప్రారంభించకపోతే కొత్త Anthropic లాంచ్‌లు సాధారణ వేగంలోనే ఉంటాయి.",
+      "enabledHint": "పరిష్కరించబడిన మోడల్ మద్దతిస్తే కొత్త Anthropic లాంచ్‌లు డిఫాల్ట్‌గా Fast మోడ్‌ను అభ్యర్థిస్తాయి.",
+      "notExposed": "ఈ Anthropic రన్‌టైమ్ Fast మోడ్‌ను బహిర్గతం చేయదు.",
+      "preferFast": "Fast ను ఇష్టపడు",
+      "title": "Fast మోడ్ డిఫాల్ట్",
+      "unavailableForRuntime": "ఈ Anthropic రన్‌టైమ్ కోసం Fast మోడ్ ప్రస్తుతం అందుబాటులో లేదు."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API కీ మోడ్ ఎంచుకోబడింది, కానీ ఇంకా ఏ Anthropic API ఆధారం అందుబాటులో లేదు.",
+      "anthropicStoredKeyAvailable": "సేవ్ చేసిన API కీ అందుబాటులో ఉంది, కానీ మీరు API కీ మోడ్‌కు మారిన తర్వాతే యాప్-లాంచ్ చేసిన Anthropic సెషన్‌లు దాన్ని ఉపయోగిస్తాయి.",
+      "anthropicSubscriptionMissing": "Anthropic సబ్‌స్క్రిప్షన్ మోడ్ ఎంచుకోబడింది. ఈ ప్రొవైడర్‌ను ఉపయోగించడానికి Anthropic తో సైన్ ఇన్ చేయండి.",
+      "authTokenMissing": "Auth టోకెన్ కాన్ఫిగర్ చేయబడలేదు. చాలా స్థానిక Anthropic-అనుకూల ఎండ్‌పాయింట్‌లకు ఖాళీ కాని టోకెన్ అవసరం.",
+      "chatgptLoginPending": "ChatGPT ఖాతా లాగిన్ పూర్తయ్యే వరకు వేచి ఉంది...",
+      "chatgptLoginStarting": "ChatGPT లాగిన్‌ను ప్రారంభిస్తోంది...",
+      "codexApiKeyMissing": "API కీ మోడ్ ఎంచుకోబడింది, కానీ ఇంకా ఏ OPENAI_API_KEY లేదా CODEX_API_KEY ఆధారం అందుబాటులో లేదు.",
+      "codexLocalArtifactsNoSession": "Codex CLI కి ప్రస్తుతం క్రియాశీల ChatGPT ఖాతా లేదు. స్థానిక Codex ఖాతా డేటా ఉంది, కానీ క్రియాశీల మేనేజ్డ్ సెషన్ ఏదీ ఎంపిక చేయబడలేదు.",
+      "codexNeedsReconnect": "Codex కు స్థానికంగా ఎంచుకున్న ChatGPT ఖాతా ఉంది, కానీ ప్రస్తుత సెషన్‌కు మళ్లీ కనెక్ట్ చేయాలి.",
+      "codexNoChatgptAccount": "Codex CLI కి ప్రస్తుతం క్రియాశీల ChatGPT ఖాతా లేదు. మీ సబ్‌స్క్రిప్షన్‌ను ఉపయోగించడానికి ChatGPT ను కనెక్ట్ చేయండి.",
+      "codexNoCredential": "ఇంకా ఏ ChatGPT ఖాతా లేదా API కీ అందుబాటులో లేదు.",
+      "geminiApiUnavailable": "Gemini API ప్రస్తుతం అందుబాటులో లేదు. ఇక్కడ `GEMINI_API_KEY` ను కాన్ఫిగర్ చేయండి లేదా చెల్లుబాటు అయ్యే Google ADC ఆధారాలను ఉపయోగించండి.",
+      "withApiKeyFallback": "{{message}} గుర్తించిన API కీని ఉపయోగించడానికి API కీ మోడ్‌కు మారండి."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "యాప్-లాంచ్ చేసిన Anthropic సెషన్‌లను API కీ ఆధారాన్ని ఉపయోగించమని బలవంతం చేయండి.",
+        "auto": "రన్‌టైమ్ డిఫాల్ట్ ప్రవర్తనను ఉపయోగించండి. మీరు API కీ మోడ్‌కు మారిన తర్వాతే ఈ యాప్‌లో సేవ్ చేసిన API కీలు ఉపయోగించబడతాయి.",
+        "oauth": "యాప్-లాంచ్ చేసిన Anthropic సెషన్‌లను స్థానిక Anthropic సబ్‌స్క్రిప్షన్ సెషన్‌ను ఉపయోగించమని బలవంతం చేయండి."
+      },
+      "codex": {
+        "apiKey": "నేటివ్ Codex లాంచ్‌లను OPENAI_API_KEY / CODEX_API_KEY బిల్లింగ్‌ను ఉపయోగించమని బలవంతం చేయండి.",
+        "auto": "మీ ChatGPT ఖాతా అందుబాటులో ఉన్నప్పుడు దాన్ని ఇష్టపడండి. అవసరమైనప్పుడు మాత్రమే API కీ మోడ్‌కు ఫాల్‌బ్యాక్ చేయండి.",
+        "chatgpt": "నేటివ్ Codex లాంచ్‌లను మీ కనెక్ట్ చేసిన ChatGPT ఖాతా మరియు సబ్‌స్క్రిప్షన్‌ను ఉపయోగించమని బలవంతం చేయండి."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "కనెక్షన్ మార్పులను వర్తింపజేస్తోంది...",
+      "refreshingProviderStatus": "ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేస్తోంది...",
+      "savingCompatibleEndpoint": "అనుకూల ఎండ్‌పాయింట్‌ను సేవ్ చేస్తోంది...",
+      "switchingAnthropicSubscription": "Anthropic సబ్‌స్క్రిప్షన్‌కు మారుతోంది...",
+      "switchingApiKey": "API కీకి మారుతోంది...",
+      "switchingApiKeyMode": "API కీ మోడ్‌కు మారుతోంది...",
+      "switchingAuto": "Auto కు మారుతోంది...",
+      "switchingChatgpt": "ChatGPT ఖాతా మోడ్‌కు మారుతోంది..."
+    },
+    "provider": "ప్రొవైడర్",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic కు ప్రస్తుతం ప్రత్యేక రన్‌టైమ్ బ్యాకెండ్ సెలెక్టర్ లేదు.",
+        "codex": "Codex ఇప్పుడు నేటివ్ రన్‌టైమ్ మార్గం ద్వారా మాత్రమే రన్ అవుతుంది.",
+        "gemini": "మల్టీమోడల్ ఏ Gemini రన్‌టైమ్ బ్యాకెండ్‌ను ఉపయోగించాలో ఎంచుకోండి.",
+        "opencode": "OpenCode దాని స్వంత మేనేజ్డ్ రన్‌టైమ్ హోస్ట్‌ను ఉపయోగిస్తుంది. డెస్క్‌టాప్ ప్రస్తుతం స్థితిని మాత్రమే బహిర్గతం చేస్తుంది."
+      },
+      "title": "రన్‌టైమ్",
+      "updating": "రన్‌టైమ్‌ను అప్‌డేట్ చేస్తోంది..."
+    },
+    "runtimeSummary": "రన్‌టైమ్: {{runtime}}",
+    "status": {
+      "configured": "కాన్ఫిగర్ చేయబడింది",
+      "enabled": "ప్రారంభించబడింది",
+      "notConfigured": "కాన్ఫిగర్ చేయబడలేదు",
+      "notSet": "సెట్ చేయబడలేదు",
+      "off": "ఆఫ్",
+      "unknown": "తెలియదు"
+    },
+    "title": "ప్రొవైడర్ సెట్టింగ్‌లు",
+    "usage": {
+      "apiKey": "API కీని ఉపయోగిస్తోంది",
+      "apiKeyRequired": "API కీ అవసరం",
+      "compatibleEndpoint": "అనుకూల ఎండ్‌పాయింట్‌ను ఉపయోగిస్తోంది",
+      "notConnected": "కనెక్ట్ కాలేదు",
+      "usingMethod": "{{method}} ను ఉపయోగిస్తోంది"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API కీ తొలగించబడింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది.",
+      "apiKeySavedRefreshFailed": "API కీ సేవ్ చేయబడింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది.",
+      "connectionUpdatedRefreshFailed": "కనెక్షన్ అప్‌డేట్ అయింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది.",
+      "deleteApiKey": "API కీని తొలగించడం విఫలమైంది",
+      "disableEndpoint": "ఎండ్‌పాయింట్‌ను నిలిపివేయడం విఫలమైంది",
+      "endpointDisabledRefreshFailed": "ఎండ్‌పాయింట్ నిలిపివేయబడింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది.",
+      "endpointSavedRefreshFailed": "ఎండ్‌పాయింట్ సేవ్ చేయబడింది, కానీ ప్రొవైడర్ స్థితిని రిఫ్రెష్ చేయడం విఫలమైంది.",
+      "refreshCodexAccount": "Codex ఖాతాను రిఫ్రెష్ చేయడం విఫలమైంది",
+      "saveApiKey": "API కీని సేవ్ చేయడం విఫలమైంది",
+      "saveEndpoint": "ఎండ్‌పాయింట్‌ను సేవ్ చేయడం విఫలమైంది",
+      "updateAnthropicFastMode": "Anthropic Fast మోడ్‌ను అప్‌డేట్ చేయడం విఫలమైంది",
+      "updateConnection": "కనెక్షన్‌ను అప్‌డేట్ చేయడం విఫలమైంది",
+      "updateRuntimeBackend": "రన్‌టైమ్ బ్యాకెండ్‌ను అప్‌డేట్ చేయడం విఫలమైంది",
+      "apiKeyRequired": "API కీ అవసరం"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "సబ్‌స్క్రిప్షన్ / OAuth",
+        "chatgpt": "ChatGPT ఖాతా",
+        "apiKey": "API కీ",
+        "anthropicSubscription": "Anthropic సబ్‌స్క్రిప్షన్"
+      },
+      "authMethod": {
+        "apiKey": "API కీ",
+        "apiKeyHelper": "API కీ హెల్పర్",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude సబ్‌స్క్రిప్షన్",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google ఖాతా",
+        "serviceAccount": "సర్వీస్ ఖాతా"
+      },
+      "runtime": {
+        "codexNative": "Codex నేటివ్",
+        "currentRuntime": "ప్రస్తుత రన్‌టైమ్",
+        "selectedRuntime": "ఎంచుకున్న రన్‌టైమ్",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "తనిఖీ చేస్తోంది...",
+        "modelsAvailable": "మోడల్‌లు అందుబాటులో ఉన్నాయి",
+        "checked": "తనిఖీ చేయబడింది",
+        "providerActivity": "ప్రొవైడర్ కార్యకలాపం",
+        "notConnected": "కనెక్ట్ కాలేదు",
+        "startingChatGptLogin": "ChatGPT లాగిన్‌ను ప్రారంభిస్తోంది...",
+        "waitingForChatGptLogin": "ChatGPT ఖాతా లాగిన్ కోసం వేచి ఉంది...",
+        "chatGptVerificationDegraded": "ChatGPT ఖాతా గుర్తించబడింది - ఖాతా ధృవీకరణ ప్రస్తుతం క్షీణించింది.",
+        "chatGptAccountReady": "ChatGPT ఖాతా సిద్ధం",
+        "apiKeyReady": "API కీ సిద్ధం",
+        "codexLocalAccountNeedsReconnect": "Codex కు స్థానికంగా ఎంచుకున్న ChatGPT ఖాతా ఉంది, కానీ ప్రస్తుత సెషన్‌కు మళ్లీ కనెక్ట్ చేయాలి.",
+        "codexNoActiveManagedSession": "Codex CLI క్రియాశీల ChatGPT లాగిన్ లేదని నివేదిస్తోంది. స్థానిక Codex ఖాతా డేటా ఉంది, కానీ క్రియాశీల మేనేజ్డ్ సెషన్ ఏదీ ఎంపిక చేయబడలేదు.",
+        "codexNoActiveChatGptLogin": "Codex CLI క్రియాశీల ChatGPT లాగిన్ లేదని నివేదిస్తోంది",
+        "connectChatGptForSubscription": "మీ Codex సబ్‌స్క్రిప్షన్‌ను ఉపయోగించడానికి ChatGPT ఖాతాను కనెక్ట్ చేయండి.",
+        "codexNativeReady": "Codex నేటివ్ సిద్ధం",
+        "codexNativeUnavailable": "Codex నేటివ్ అందుబాటులో లేదు",
+        "unavailableInCurrentRuntime": "ప్రస్తుత రన్‌టైమ్‌లో అందుబాటులో లేదు",
+        "connectedViaApiKey": "API కీ ద్వారా కనెక్ట్ చేయబడింది",
+        "apiKeyConfiguredNotVerified": "API కీ కాన్ఫిగర్ చేయబడింది, కానీ ఇంకా ధృవీకరించబడలేదు",
+        "apiKeyModeMissingCredential": "API కీ మోడ్ ఎంచుకోబడింది, కానీ ఏ API కీ కాన్ఫిగర్ చేయబడలేదు",
+        "connectedVia": "{{method}} ద్వారా కనెక్ట్ చేయబడింది",
+        "unableToVerify": "ధృవీకరించడం సాధ్యం కాలేదు"
+      },
+      "mode": {
+        "selectedAuth": "ఎంచుకున్న auth: {{authMode}}",
+        "preferredAuth": "ఇష్టమైన auth: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API కీ కాన్ఫిగర్ చేయబడింది",
+        "savedApiKeyAvailable": "సేవ్ చేసిన API కీ Manage లో అందుబాటులో ఉంది",
+        "apiKeyAlsoConfigured": "API కీ కూడా Manage లో కాన్ఫిగర్ చేయబడింది",
+        "apiKeyConfiguredInManage": "API కీ Manage లో కాన్ఫిగర్ చేయబడింది",
+        "apiKeyFallbackInManage": "API కీ ఫాల్‌బ్యాక్‌గా Manage లో కూడా అందుబాటులో ఉంది",
+        "availableAsFallback": "{{summary}} - ఫాల్‌బ్యాక్‌గా అందుబాటులో ఉంది",
+        "savedApiKeyAvailableIfSwitch": "మీరు API కీ మోడ్‌కు మారితే సేవ్ చేసిన API కీ Manage లో అందుబాటులో ఉంది",
+        "availableIfSwitch": "{{summary}} - మీరు API కీ మోడ్‌కు మారితే అందుబాటులో ఉంది",
+        "autoWillUseUntilChatGpt": "{{summary}} - ChatGPT కనెక్ట్ అయ్యే వరకు Auto దీన్ని ఉపయోగిస్తుంది"
+      },
+      "actions": {
+        "connect": "కనెక్ట్ చేయి",
+        "connectAnthropic": "Anthropic ను కనెక్ట్ చేయి",
+        "connectChatGpt": "ChatGPT ను కనెక్ట్ చేయి",
+        "disconnect": "డిస్‌కనెక్ట్ చేయి",
+        "openLogin": "లాగిన్ తెరువు"
+      },
+      "disconnect": {
+        "anthropicTitle": "Anthropic సబ్‌స్క్రిప్షన్‌ను డిస్‌కనెక్ట్ చేయాలా?",
+        "anthropic": "ఇది Claude CLI రన్‌టైమ్ నుండి స్థానిక Anthropic సబ్‌స్క్రిప్షన్ సెషన్‌ను తీసివేస్తుంది.",
+        "anthropicWithApiKey": "ఇది Claude CLI రన్‌టైమ్ నుండి స్థానిక Anthropic సబ్‌స్క్రిప్షన్ సెషన్‌ను తీసివేస్తుంది. Manage లో సేవ్ చేసిన API కీలు అందుబాటులో ఉంటాయి.",
+        "geminiTitle": "Gemini CLI ను డిస్‌కనెక్ట్ చేయాలా?",
+        "gemini": "ఇది స్థానిక Gemini CLI సెషన్ మెటాడేటాను క్లియర్ చేస్తుంది. బాహ్య ADC ఆధారాలు మరియు సేవ్ చేసిన API కీలు తీసివేయబడవు."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "అప్‌డేట్‌ల కోసం తనిఖీ చేయి",
+      "checking": "తనిఖీ చేస్తోంది...",
+      "extensions": "ఎక్స్‌టెన్షన్‌లు",
+      "installRuntime": "{{runtime}} ను ఇన్‌స్టాల్ చేయి",
+      "manage": "నిర్వహించు",
+      "recheck": "మళ్లీ తనిఖీ చేయి",
+      "reinstallRuntime": "{{runtime}} ను మళ్లీ ఇన్‌స్టాల్ చేయి",
+      "retry": "మళ్లీ ప్రయత్నించు",
+      "update": "అప్‌డేట్ చేయి"
+    },
+    "installer": {
+      "checkingLatest": "తాజా వెర్షన్‌ను తనిఖీ చేస్తోంది...",
+      "downloading": "డౌన్‌లోడ్ చేస్తోంది...",
+      "failed": "ఇన్‌స్టాలేషన్ విఫలమైంది",
+      "installed": "v{{version}} ఇన్‌స్టాల్ చేయబడింది",
+      "installing": "ఇన్‌స్టాల్ చేస్తోంది...",
+      "latest": "తాజా",
+      "verifying": "చెక్‌సమ్‌ను ధృవీకరిస్తోంది..."
+    },
+    "labels": {
+      "multimodel": "మల్టీమోడల్"
+    },
+    "loading": {
+      "aiProviders": "AI ప్రొవైడర్లను తనిఖీ చేస్తోంది...",
+      "claudeCli": "Claude CLI ను తనిఖీ చేస్తోంది..."
+    },
+    "provider": {
+      "backend": "బ్యాకెండ్: {{backend}}",
+      "loadingModels": "మోడల్‌లను లోడ్ చేస్తోంది...",
+      "modelsUnavailable": "ఈ రన్‌టైమ్ బిల్డ్ కోసం మోడల్‌లు అందుబాటులో లేవు",
+      "runtime": "రన్‌టైమ్: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "ప్రామాణీకరణ విఫలమైంది",
+      "authUpdated": "ప్రామాణీకరణ అప్‌డేట్ అయింది",
+      "loggedOut": "ప్రొవైడర్ లాగ్ అవుట్ అయింది",
+      "login": "లాగిన్",
+      "logout": "లాగ్ అవుట్",
+      "logoutFailed": "లాగ్ అవుట్ విఫలమైంది"
+    },
+    "status": {
+      "configuredNotFound": "కాన్ఫిగర్ చేయబడిన {{runtime}} కనుగొనబడలేదు.",
+      "foundButFailed": "{{runtime}} కనుగొనబడింది కానీ ప్రారంభించడంలో విఫలమైంది",
+      "healthCheckFailed": "కాన్ఫిగర్ చేయబడిన {{runtime}} దాని స్టార్టప్ హెల్త్ చెక్‌లో విఫలమైంది.",
+      "notInstalled": "{{runtime}} ఇన్‌స్టాల్ చేయబడలేదు"
+    },
+    "title": "CLI రన్‌టైమ్"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

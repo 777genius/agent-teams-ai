@@ -1,8 +1,7 @@
-import * as fs from 'fs/promises';
 import * as nodeFs from 'fs';
+import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -325,6 +324,31 @@ describe('TeamConfigReader', () => {
     TeamConfigReader.invalidateTeam(teamName);
     await reader.listTeams();
     expect(readdirSpy.mock.calls.length).toBeGreaterThan(readdirAfterFirstBatch);
+  });
+
+  it('returns a frozen team-summary snapshot shared across cached reads (no per-read clone)', async () => {
+    const teamName = 'frozen-list-team';
+    const teamDir = path.join(tempDir, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Frozen Team',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+
+    const reader = new TeamConfigReader();
+    const first = await reader.listTeams();
+    const second = await reader.listTeams(); // served from cache
+
+    expect(first.length).toBeGreaterThan(0);
+    // Deep-frozen so the shared snapshot cannot be mutated by any reader.
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first[0])).toBe(true);
+    // Same reference across reads -> the per-read structuredClone is gone.
+    expect(second).toBe(first);
   });
 
   it('does not reuse a stale in-flight listTeams scan after invalidation', async () => {

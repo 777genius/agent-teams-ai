@@ -9,7 +9,7 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import { app, type IpcMain, type IpcMainInvokeEvent, shell } from 'electron';
+import { app, type IpcMain, type IpcMainInvokeEvent, net, shell } from 'electron';
 import * as fsp from 'fs/promises';
 
 import {
@@ -18,16 +18,20 @@ import {
   readAllClaudeMdFiles,
   readDirectoryClaudeMd,
 } from '../services';
-
-import type { AgentConfig } from '@shared/types/api';
-
-const logger = createLogger('IPC:utility');
 import {
   validateFilePath,
   validateOpenPath,
   validateOpenPathUserSelected,
 } from '../utils/pathValidation';
 import { countTokens } from '../utils/tokenizer';
+
+import type { AgentConfig } from '@shared/types/api';
+
+const logger = createLogger('IPC:utility');
+const DISCORD_INVITE_COUNT_URL = 'https://discord.com/api/v10/invites/qtqSZSyuEc?with_counts=true';
+const DISCORD_MEMBER_COUNT_CACHE_TTL_MS = 10 * 60 * 1000;
+const DISCORD_MEMBER_COUNT_TIMEOUT_MS = 5000;
+let discordMemberCountCache: { count: number; fetchedAtMs: number } | null = null;
 
 /**
  * Registers all utility-related IPC handlers.
@@ -37,6 +41,7 @@ export function registerUtilityHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('shell:openPath', handleShellOpenPath);
   ipcMain.handle('shell:showInFolder', handleShellShowInFolder);
   ipcMain.handle('shell:openExternal', handleShellOpenExternal);
+  ipcMain.handle('discord:getMemberCount', handleGetDiscordMemberCount);
   ipcMain.handle('read-claude-md-files', handleReadClaudeMdFiles);
   ipcMain.handle('read-directory-claude-md', handleReadDirectoryClaudeMd);
   ipcMain.handle('read-mentioned-file', handleReadMentionedFile);
@@ -53,6 +58,7 @@ export function removeUtilityHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('shell:openPath');
   ipcMain.removeHandler('shell:showInFolder');
   ipcMain.removeHandler('shell:openExternal');
+  ipcMain.removeHandler('discord:getMemberCount');
   ipcMain.removeHandler('read-claude-md-files');
   ipcMain.removeHandler('read-directory-claude-md');
   ipcMain.removeHandler('read-mentioned-file');
@@ -71,6 +77,72 @@ export function removeUtilityHandlers(ipcMain: IpcMain): void {
  */
 function handleGetAppVersion(): string {
   return app.getVersion();
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : null;
+}
+
+function parseDiscordMemberCount(payload: unknown): number | null {
+  const root = asRecord(payload);
+  if (!root) return null;
+
+  const directCount = asCount(root.approximate_member_count);
+  if (directCount !== null) return directCount;
+
+  const profile = asRecord(root.profile);
+  return profile ? asCount(profile.member_count) : null;
+}
+
+/**
+ * Handler for 'discord:getMemberCount' IPC call.
+ * Fetches through Electron main process to avoid renderer CORS restrictions.
+ */
+async function handleGetDiscordMemberCount(): Promise<{ count: number | null; error?: string }> {
+  const now = Date.now();
+  if (
+    discordMemberCountCache &&
+    now - discordMemberCountCache.fetchedAtMs < DISCORD_MEMBER_COUNT_CACHE_TTL_MS
+  ) {
+    return { count: discordMemberCountCache.count };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DISCORD_MEMBER_COUNT_TIMEOUT_MS);
+
+  try {
+    const response = await net.fetch(DISCORD_INVITE_COUNT_URL, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Discord invite count request failed with ${response.status}`);
+    }
+
+    const count = parseDiscordMemberCount(await response.json());
+    if (count === null) {
+      throw new Error('Discord invite count response did not include a member count');
+    }
+
+    discordMemberCountCache = { count, fetchedAtMs: now };
+    return { count };
+  } catch (error) {
+    logger.warn('Error in discord:getMemberCount:', error);
+    return {
+      count: discordMemberCountCache?.count ?? null,
+      error: String(error),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**

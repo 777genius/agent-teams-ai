@@ -20,10 +20,10 @@ const props = defineProps<{
   reducedMotion?: boolean;
 }>();
 
-const { locale } = useI18n();
+const { t, locale } = useI18n();
 const localizedHeroFeatureRail = computed(() => getLocalizedHeroFeatureRail(locale.value));
 const localizedHeroReviewerFeatureCard = computed(() => getLocalizedHeroReviewerFeatureCard(locale.value));
-const statusLabel = computed(() => locale.value === "ru" ? "Статус:" : "Status:");
+const statusLabel = computed(() => t("common.statusLabel"));
 
 const icons = [
   mdiRobotOutline,

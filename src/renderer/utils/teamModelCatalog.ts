@@ -19,6 +19,11 @@ type RuntimeAwareProviderStatus = Pick<
   CliProviderStatus,
   'providerId' | 'authMethod' | 'backend' | 'modelCatalog'
 >;
+type RuntimeModelCatalog = NonNullable<RuntimeAwareProviderStatus['modelCatalog']>;
+type RuntimeCatalogModel = RuntimeModelCatalog['models'][number];
+interface VisibleTeamProviderModelsOptions {
+  expandOpenCodeSummaryCatalog?: boolean;
+}
 
 export interface TeamProviderModelOption {
   value: string;
@@ -45,12 +50,17 @@ const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
 };
 
 const ANTHROPIC_ALIAS_LABELS = {
-  opus: 'Opus 4.7',
+  opus: 'Opus 4.8',
   sonnet: 'Sonnet 4.6',
   haiku: 'Haiku 4.5',
 } as const;
 
-const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = ['claude-opus-4-7', 'claude-opus-4-7[1m]'] as const;
+const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
+  'claude-opus-4-7',
+  'claude-opus-4-7[1m]',
+] as const;
 
 const ANTHROPIC_MODEL_ORDER = [
   'haiku',
@@ -58,6 +68,8 @@ const ANTHROPIC_MODEL_ORDER = [
   'claude-haiku-4-5',
   'opus',
   'opus[1m]',
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
   'claude-opus-4-7',
   'claude-opus-4-7[1m]',
   'claude-opus-4-6',
@@ -71,6 +83,10 @@ const ANTHROPIC_MODEL_ORDER = [
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   default: 'Default',
   ...ANTHROPIC_ALIAS_LABELS,
+  'opus[1m]': 'Opus 4.8 (1M)',
+  'sonnet[1m]': 'Sonnet 4.6 (1M)',
+  'claude-opus-4-8': 'Opus 4.8',
+  'claude-opus-4-8[1m]': 'Opus 4.8 (1M)',
   'claude-opus-4-7': 'Opus 4.7',
   'claude-opus-4-7[1m]': 'Opus 4.7 (1M)',
   'claude-sonnet-4-6': 'Sonnet 4.6',
@@ -97,7 +113,8 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
   {
     anthropic: [
       { value: '', label: 'Default', badgeLabel: 'Default' },
-      { value: 'opus', label: 'Opus 4.7', badgeLabel: 'Opus 4.7' },
+      { value: 'opus', label: 'Opus 4.8', badgeLabel: 'Opus 4.8' },
+      { value: 'claude-opus-4-7', label: 'Opus 4.7', badgeLabel: 'Opus 4.7' },
       { value: 'claude-opus-4-6', label: 'Opus 4.6', badgeLabel: 'Opus 4.6' },
       { value: 'sonnet', label: 'Sonnet 4.6', badgeLabel: 'Sonnet 4.6' },
       { value: 'haiku', label: 'Haiku 4.5', badgeLabel: 'Haiku 4.5' },
@@ -206,6 +223,8 @@ const SUPPORTED_ANTHROPIC_TEAM_MODELS = new Set<string>([
   'sonnet',
   'sonnet[1m]',
   'haiku',
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
   'claude-opus-4-7',
   'claude-opus-4-7[1m]',
   'claude-opus-4-6',
@@ -290,21 +309,118 @@ export function getTeamModelLabel(model: string | undefined): string | undefined
   return formatParsedClaudeModelLabel(labelTarget) ?? labelTarget;
 }
 
+const runtimeCatalogModelIndexCache = new WeakMap<
+  RuntimeModelCatalog,
+  Map<string, RuntimeCatalogModel>
+>();
+
+function getRuntimeCatalogModelIndex(
+  catalog: RuntimeModelCatalog
+): Map<string, RuntimeCatalogModel> {
+  const cached = runtimeCatalogModelIndexCache.get(catalog);
+  if (cached) {
+    return cached;
+  }
+
+  const index = new Map<string, RuntimeCatalogModel>();
+  for (const item of catalog.models) {
+    if (item.launchModel && !index.has(item.launchModel)) {
+      index.set(item.launchModel, item);
+    }
+    if (item.id && !index.has(item.id)) {
+      index.set(item.id, item);
+    }
+  }
+  runtimeCatalogModelIndexCache.set(catalog, index);
+  return index;
+}
+
 function getRuntimeCatalogModel(
   providerId: SupportedProviderId | undefined,
   model: string | undefined,
   providerStatus?: RuntimeAwareProviderStatus | null
-): NonNullable<RuntimeAwareProviderStatus['modelCatalog']>['models'][number] | null {
+): RuntimeCatalogModel | null {
   const trimmed = model?.trim();
   if (!providerId || !trimmed || providerStatus?.modelCatalog?.providerId !== providerId) {
     return null;
   }
 
-  return (
-    providerStatus.modelCatalog.models.find(
-      (item) => item.launchModel === trimmed || item.id === trimmed
-    ) ?? null
-  );
+  return getRuntimeCatalogModelIndex(providerStatus.modelCatalog).get(trimmed) ?? null;
+}
+
+function getAnthropicAliasFamily(model: string | undefined): 'opus' | 'sonnet' | 'haiku' | null {
+  const baseModel =
+    model
+      ?.trim()
+      .toLowerCase()
+      .replace(/\[1m\]$/i, '') ?? '';
+  if (baseModel === 'opus' || baseModel === 'sonnet' || baseModel === 'haiku') {
+    return baseModel;
+  }
+  return null;
+}
+
+function readAnthropicDisplayVersion(
+  label: string | undefined,
+  family: 'opus' | 'sonnet' | 'haiku'
+): { major: number; minor: number | null } | null {
+  const pattern = new RegExp(`\\b${family}\\s+(\\d+)(?:\\.(\\d+))?\\b`, 'i');
+  const match = pattern.exec(label ?? '');
+  if (!match) {
+    return null;
+  }
+
+  const major = Number.parseInt(match[1], 10);
+  const minor = match[2] == null ? null : Number.parseInt(match[2], 10);
+  if (!Number.isFinite(major) || (minor !== null && !Number.isFinite(minor))) {
+    return null;
+  }
+
+  return { major, minor };
+}
+
+function compareAnthropicDisplayVersions(
+  left: { major: number; minor: number | null },
+  right: { major: number; minor: number | null }
+): number {
+  if (left.major !== right.major) {
+    return left.major - right.major;
+  }
+  return (left.minor ?? 0) - (right.minor ?? 0);
+}
+
+function getRuntimeSafeAnthropicAliasLabel(params: {
+  model: string | undefined;
+  runtimeLabel?: string | null;
+  fallbackLabel?: string;
+}): string | null {
+  const family = getAnthropicAliasFamily(params.model);
+  if (!family) {
+    return null;
+  }
+
+  const fallbackLabel =
+    params.fallbackLabel ?? getProviderScopedTeamModelLabel('anthropic', params.model);
+  if (!fallbackLabel) {
+    return null;
+  }
+
+  const runtimeLabel = params.runtimeLabel?.trim();
+  if (!runtimeLabel) {
+    return fallbackLabel;
+  }
+
+  const runtimeVersion = readAnthropicDisplayVersion(runtimeLabel, family);
+  const fallbackVersion = readAnthropicDisplayVersion(fallbackLabel, family);
+  if (
+    runtimeVersion &&
+    fallbackVersion &&
+    compareAnthropicDisplayVersions(runtimeVersion, fallbackVersion) >= 0
+  ) {
+    return getProviderScopedTeamModelLabel('anthropic', runtimeLabel) ?? runtimeLabel;
+  }
+
+  return fallbackLabel;
 }
 
 export function getTeamModelBadgeLabel(
@@ -373,8 +489,17 @@ export function getRuntimeAwareProviderScopedTeamModelLabel(
   model: string | undefined,
   providerStatus?: RuntimeAwareProviderStatus | null
 ): string | undefined {
+  const trimmed = model?.trim();
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
   const runtimeLabel = runtimeModel?.displayName?.trim();
+  const safeAnthropicAliasLabel =
+    providerId === 'anthropic'
+      ? getRuntimeSafeAnthropicAliasLabel({ model: trimmed, runtimeLabel })
+      : null;
+  if (safeAnthropicAliasLabel) {
+    return safeAnthropicAliasLabel;
+  }
+
   if (runtimeLabel) {
     return getProviderScopedTeamModelLabel(providerId, runtimeLabel) ?? runtimeLabel;
   }
@@ -387,7 +512,20 @@ export function getRuntimeAwareTeamModelBadgeLabel(
   model: string | undefined,
   providerStatus?: RuntimeAwareProviderStatus | null
 ): string | undefined {
+  const trimmed = model?.trim();
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
+  const safeAnthropicAliasLabel =
+    providerId === 'anthropic'
+      ? getRuntimeSafeAnthropicAliasLabel({
+          model: trimmed,
+          runtimeLabel: runtimeModel?.badgeLabel?.trim() || runtimeModel?.displayName?.trim(),
+          fallbackLabel: getTeamModelBadgeLabel(providerId, trimmed),
+        })
+      : null;
+  if (safeAnthropicAliasLabel) {
+    return safeAnthropicAliasLabel;
+  }
+
   if (runtimeModel?.badgeLabel?.trim()) {
     return runtimeModel.badgeLabel.trim();
   }
@@ -509,6 +647,32 @@ function getRuntimeCatalogLaunchModels(
   return models.length > 0 ? models : null;
 }
 
+function isOpenCodeSummaryOnlyModelList(
+  models: readonly string[],
+  providerStatus?: RuntimeAwareProviderStatus | null
+): boolean {
+  if (providerStatus?.modelCatalog?.providerId !== 'opencode') {
+    return false;
+  }
+
+  const trimmedModels = models.map((model) => model.trim()).filter(Boolean);
+  if (trimmedModels.length !== 1) {
+    return false;
+  }
+
+  const summaryModel = trimmedModels[0].toLowerCase();
+  const catalogDefaultIds = [
+    providerStatus.modelCatalog.defaultLaunchModel,
+    providerStatus.modelCatalog.defaultModelId,
+    providerStatus.modelCatalog.models.find((model) => model.isDefault)?.launchModel,
+    providerStatus.modelCatalog.models.find((model) => model.isDefault)?.id,
+  ]
+    .map((model) => model?.trim().toLowerCase())
+    .filter((model): model is string => Boolean(model));
+
+  return summaryModel === 'opencode/big-pickle' || catalogDefaultIds.includes(summaryModel);
+}
+
 function mergeModelLists(primary: readonly string[], supplemental: readonly string[]): string[] {
   const merged = new Map<string, string>();
   for (const model of [...primary, ...supplemental]) {
@@ -532,18 +696,36 @@ function getSupplementalVisibleModels(
     return models;
   }
 
-  return [...models, ...ANTHROPIC_VISIBLE_MODEL_FALLBACKS];
+  const existingLabels = new Set(
+    models
+      .map((model) => getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase())
+      .filter((label): label is string => Boolean(label))
+  );
+  const supplementalModels = ANTHROPIC_VISIBLE_MODEL_FALLBACKS.filter((model) => {
+    const label = getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase();
+    return !label || !existingLabels.has(label);
+  });
+
+  return [...models, ...supplementalModels];
 }
 
 export function getVisibleTeamProviderModels(
   providerId: SupportedProviderId,
   models: readonly string[],
-  providerStatus?: RuntimeAwareProviderStatus | null
+  providerStatus?: RuntimeAwareProviderStatus | null,
+  options: VisibleTeamProviderModelsOptions = {}
 ): string[] {
+  const expandOpenCodeSummaryCatalog = options.expandOpenCodeSummaryCatalog ?? true;
+  const hasExplicitModels = models.some((model) => model.trim().length > 0);
   const catalogModels =
     providerId === 'opencode' ? getRuntimeCatalogLaunchModels(providerId, providerStatus) : null;
   const sourceModels =
-    providerId === 'opencode' && catalogModels ? mergeModelLists(catalogModels, models) : models;
+    providerId === 'opencode' &&
+    catalogModels &&
+    (!hasExplicitModels ||
+      (expandOpenCodeSummaryCatalog && isOpenCodeSummaryOnlyModelList(models, providerStatus)))
+      ? mergeModelLists(catalogModels, models)
+      : models;
 
   return sortTeamProviderModels(
     providerId,

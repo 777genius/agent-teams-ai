@@ -3,10 +3,10 @@ name: Dependency Review
 on:
   pull_request:
     paths:
-      - "**/package.json"
-      - "**/package-lock.json"
-      - "**/pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
 
 permissions:
   contents: read
@@ -24,5 +24,7 @@ jobs:
         with:
           fail-on-severity: high
           fail-on-scopes: runtime, development, unknown
+          # Vitest is used via `vitest run`, not Vitest UI/API/browser mode.
+          allow-ghsas: GHSA-5xrq-8626-4rwp
           license-check: false
           show-patched-versions: true

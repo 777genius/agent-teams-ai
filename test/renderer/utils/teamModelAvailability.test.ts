@@ -277,7 +277,7 @@ describe('teamModelAvailability', () => {
     ).toBe('openrouter/moonshotai/kimi-k2');
   });
 
-  it('uses the OpenCode model catalog when runtime models are summary-only', () => {
+  it('keeps the live OpenCode model list authoritative when the catalog is broader', () => {
     const providerStatus = createOpenCodeProviderStatus(['opencode/big-pickle'], {
       modelCatalog: {
         schemaVersion: 1,
@@ -290,9 +290,9 @@ describe('teamModelAvailability', () => {
         defaultLaunchModel: 'opencode/big-pickle',
         models: [
           {
-            id: 'openai/gpt-5.4',
-            launchModel: 'openai/gpt-5.4',
-            displayName: 'openai/gpt-5.4',
+            id: 'opencode/minimax-m3-free',
+            launchModel: 'opencode/minimax-m3-free',
+            displayName: 'opencode/minimax-m3-free',
             hidden: false,
             supportedReasoningEfforts: [],
             defaultReasoningEffort: null,
@@ -301,7 +301,7 @@ describe('teamModelAvailability', () => {
             isDefault: false,
             upgrade: false,
             source: 'app-server',
-            badgeLabel: null,
+            badgeLabel: 'Free',
           },
           {
             id: 'opencode/big-pickle',
@@ -341,7 +341,6 @@ describe('teamModelAvailability', () => {
 
     expect(getAvailableTeamProviderModels('opencode', providerStatus)).toEqual([
       'opencode/big-pickle',
-      'openai/gpt-5.4',
     ]);
     expect(getAvailableTeamProviderModelOptions('opencode', providerStatus)).toEqual([
       { value: '', label: 'Default', badgeLabel: 'Default' },
@@ -352,18 +351,13 @@ describe('teamModelAvailability', () => {
         availabilityStatus: 'available',
         availabilityReason: null,
       },
-      {
-        value: 'openai/gpt-5.4',
-        label: 'GPT-5.4',
-        badgeLabel: 'OpenAI',
-        availabilityStatus: 'available',
-        availabilityReason: null,
-      },
     ]);
-    expect(normalizeTeamModelForUi('opencode', 'openai/gpt-5.4', providerStatus)).toBe(
-      'openai/gpt-5.4'
+    expect(normalizeTeamModelForUi('opencode', 'opencode/minimax-m3-free', providerStatus)).toBe(
+      ''
     );
-    expect(getTeamModelSelectionError('opencode', 'openai/gpt-5.4', providerStatus)).toBeNull();
+    expect(
+      getTeamModelSelectionError('opencode', 'opencode/minimax-m3-free', providerStatus)
+    ).toContain('is not available for the current OpenCode runtime');
   });
 
   it('uses the OpenCode model catalog when runtime models are empty', () => {
@@ -544,7 +538,7 @@ describe('teamModelAvailability', () => {
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
   });
 
-  it('keeps both Anthropic Opus 4.7 and explicit Opus 4.6 in the fallback selector options', () => {
+  it('keeps Anthropic Opus 4.8, explicit 4.7, and explicit 4.6 in the fallback selector options', () => {
     expect(getAvailableTeamProviderModelOptions('anthropic')).toEqual([
       {
         value: '',
@@ -555,6 +549,13 @@ describe('teamModelAvailability', () => {
       },
       {
         value: 'opus',
+        label: 'Opus 4.8',
+        badgeLabel: 'Opus 4.8',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'claude-opus-4-7',
         label: 'Opus 4.7',
         badgeLabel: 'Opus 4.7',
         availabilityStatus: 'available',
@@ -584,12 +585,153 @@ describe('teamModelAvailability', () => {
     ]);
   });
 
+  it('does not let stale first-party Anthropic runtime labels downgrade the Opus alias', () => {
+    const providerStatus: TeamModelRuntimeProviderStatus = {
+      providerId: 'anthropic',
+      models: ['opus', 'claude-opus-4-7'],
+      authMethod: 'oauth',
+      backend: null,
+      authenticated: true,
+      supported: true,
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'anthropic',
+        source: 'anthropic-models-api',
+        status: 'ready',
+        fetchedAt: '2026-05-31T00:00:00.000Z',
+        staleAt: '2026-05-31T00:10:00.000Z',
+        defaultModelId: 'opus',
+        defaultLaunchModel: 'opus',
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+        models: [
+          {
+            id: 'opus',
+            launchModel: 'opus',
+            displayName: 'Opus 4.7',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+        ],
+      },
+    };
+
+    const options = getAvailableTeamProviderModelOptions('anthropic', providerStatus);
+
+    expect(options.find((option) => option.value === 'opus')).toMatchObject({
+      label: 'Opus 4.8',
+      badgeLabel: 'Opus 4.8',
+    });
+    expect(options.find((option) => option.value === 'claude-opus-4-7')).toMatchObject({
+      label: 'Opus 4.7',
+      badgeLabel: 'Opus 4.7',
+    });
+  });
+
+  it('merges first-party Anthropic catalog models with curated safety fallbacks', () => {
+    const providerStatus: TeamModelRuntimeProviderStatus = {
+      providerId: 'anthropic',
+      models: ['opus', 'claude-sonnet-4-7'],
+      authMethod: 'oauth',
+      backend: null,
+      authenticated: true,
+      supported: true,
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'anthropic',
+        source: 'anthropic-models-api',
+        status: 'ready',
+        fetchedAt: '2026-06-20T00:00:00.000Z',
+        staleAt: '2026-06-20T00:10:00.000Z',
+        defaultModelId: 'opus',
+        defaultLaunchModel: 'opus',
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+        models: [
+          {
+            id: 'opus',
+            launchModel: 'opus',
+            displayName: 'Opus 4.9',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'claude-sonnet-4-7',
+            launchModel: 'claude-sonnet-4-7',
+            displayName: 'Sonnet 4.7',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'claude-sonnet-4-7[1m]',
+            launchModel: 'claude-sonnet-4-7[1m]',
+            displayName: 'Sonnet 4.7 (1M)',
+            hidden: true,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+        ],
+      },
+    };
+
+    const options = getAvailableTeamProviderModelOptions('anthropic', providerStatus);
+    const values = options.map((option) => option.value);
+
+    expect(options.find((option) => option.value === 'opus')).toMatchObject({
+      label: 'Opus 4.9',
+      badgeLabel: 'Opus 4.9',
+    });
+    expect(values).toContain('claude-sonnet-4-7');
+    expect(values).toContain('claude-opus-4-7');
+    expect(values).not.toContain('claude-sonnet-4-7[1m]');
+    expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-4-7', providerStatus)).toBe(
+      'claude-sonnet-4-7'
+    );
+    expect(
+      getTeamModelSelectionError('anthropic', 'claude-sonnet-4-7', providerStatus)
+    ).toBeNull();
+  });
+
   it('keeps known Anthropic full model ids selectable without runtime verification', () => {
+    expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-8')).toBe('claude-opus-4-8');
+    expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-8[1m]')).toBe('claude-opus-4-8[1m]');
     expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-7')).toBe('claude-opus-4-7');
     expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-7[1m]')).toBe('claude-opus-4-7[1m]');
     expect(normalizeTeamModelForUi('anthropic', 'claude-haiku-4-5-20251001')).toBe(
       'claude-haiku-4-5-20251001'
     );
+    expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-8')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-7')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-haiku-4-5-20251001')).toBeNull();
   });

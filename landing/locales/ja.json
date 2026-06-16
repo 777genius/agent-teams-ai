@@ -7,7 +7,16 @@
     "download": "ダウンロード",
     "pricing": "無料",
     "faq": "FAQ",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "メニューを開く",
+    "closeMenu": "メニューを閉じる",
+    "short": {
+      "screenshots": "画像",
+      "docs": "Docs",
+      "download": "入手",
+      "comparison": "比較",
+      "pricing": "無料"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "オープンソース"
     },
     "watchDemo": "デモを見る",
-    "videoUnavailable": "動画は利用できません"
+    "videoUnavailable": "動画は利用できません",
+    "supportedProviders": "対応 AI プロバイダー",
+    "slogan": "少ない操作で多くをこなす",
+    "platformDefault": "お使いのプラットフォーム向け",
+    "guidesSetup": "ガイドとセットアップ",
+    "videoFrameLabel": "Agent Teams のデモを見る",
+    "commandFeed": "チームコマンドフィード",
+    "liveDemo": "ライブデモ",
+    "demoVideoTitle": "Agent Teams デモ動画",
+    "demoTitle": "Agent Teams デモ",
+    "demo": {
+      "ariaLabel": "エージェントチームのデモ",
+      "live": "LIVE",
+      "waiting": "タスクを待機中...",
+      "activity": {
+        "authMiddleware": "認証ミドルウェアを実装中...",
+        "unitTests": "API のユニットテストを作成中...",
+        "reviewPr": "PR #42 の変更をレビュー中...",
+        "ciPipeline": "CI/CD パイプラインを設定中...",
+        "refactorDatabase": "データベース層をリファクタリング中..."
+      },
+      "tasks": {
+        "authApi": "認証 API",
+        "unitTests": "ユニットテスト",
+        "ciSetup": "CI 設定"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "進行中",
+        "review": "レビュー",
+        "done": "完了"
+      }
+    }
   },
   "download": {
     "title": "ダウンロード",
     "detected": "検出済み",
     "systemRequirements": "動作環境",
-    "version": "バージョン {version}"
+    "version": "バージョン {version}",
+    "readyToStart": "開始できます!"
   },
   "theme": {
     "dark": "ダーク",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "アプリの実際のスクリーンショット — カンバンボード、コードレビュー、エージェントチームなど。"
   },
   "common": {
-    "learnMore": "詳細"
+    "learnMore": "詳細",
+    "statusLabel": "ステータス:",
+    "previous": "前へ",
+    "next": "次へ"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "待ってるよ",
     "links": {
       "github": "GitHub",
+      "author": "作者",
       "docs": "ドキュメント"
     }
   },

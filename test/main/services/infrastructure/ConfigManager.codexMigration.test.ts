@@ -57,8 +57,102 @@ describe('ConfigManager Codex migration hardening', () => {
 
       expect(persisted.providerConnections.codex).toEqual({
         preferredAuthMode: 'chatgpt',
+        customProvider: {
+          enabled: false,
+          baseUrl: '',
+          model: '',
+        },
       });
       expect(persisted.runtime.providerBackends.codex).toBe('codex-native');
+    });
+  });
+
+  it('deep-merges and persists Codex custom provider updates', async () => {
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'config-codex-custom-provider-'));
+    const configPath = path.join(tempRoot, 'agent-teams-config.json');
+
+    const { ConfigManager } = await import(
+      '../../../../src/main/services/infrastructure/ConfigManager'
+    );
+
+    const manager = new ConfigManager(configPath);
+    const updated = manager.updateConfig('providerConnections', {
+      codex: {
+        preferredAuthMode: 'api_key',
+        customProvider: {
+          enabled: true,
+          baseUrl: ' https://gateway.example.com/v1 ',
+          model: ' gateway-codex-model ',
+        },
+      },
+    } as never);
+
+    expect(updated.providerConnections.codex).toEqual({
+      preferredAuthMode: 'api_key',
+      customProvider: {
+        enabled: true,
+        baseUrl: 'https://gateway.example.com/v1',
+        model: 'gateway-codex-model',
+      },
+    });
+
+    await vi.waitFor(() => {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp fixture path
+      const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+        providerConnections: {
+          codex: {
+            preferredAuthMode: string;
+            customProvider: { enabled: boolean; baseUrl: string; model: string };
+          };
+        };
+      };
+
+      expect(persisted.providerConnections.codex).toEqual({
+        preferredAuthMode: 'api_key',
+        customProvider: {
+          enabled: true,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: 'gateway-codex-model',
+        },
+      });
+    });
+
+    const disabled = manager.updateConfig('providerConnections', {
+      codex: {
+        customProvider: {
+          enabled: false,
+        },
+      },
+    } as never);
+
+    expect(disabled.providerConnections.codex).toEqual({
+      preferredAuthMode: 'api_key',
+      customProvider: {
+        enabled: false,
+        baseUrl: 'https://gateway.example.com/v1',
+        model: 'gateway-codex-model',
+      },
+    });
+
+    await vi.waitFor(() => {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp fixture path
+      const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+        providerConnections: {
+          codex: {
+            preferredAuthMode: string;
+            customProvider: { enabled: boolean; baseUrl: string; model: string };
+          };
+        };
+      };
+
+      expect(persisted.providerConnections.codex).toEqual({
+        preferredAuthMode: 'api_key',
+        customProvider: {
+          enabled: false,
+          baseUrl: 'https://gateway.example.com/v1',
+          model: 'gateway-codex-model',
+        },
+      });
     });
   });
 

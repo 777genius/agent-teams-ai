@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
@@ -22,15 +22,19 @@ interface CurrentTaskIndicatorProps {
   onOpenTask?: () => void;
 }
 
+const ACTIVITY_TIMER_STORAGE_SYNC_INTERVAL_MS = 5_000;
+
 function useActivityTimerLabel(
   activityTimer: MemberActivityTimerAnchor | null | undefined,
   isTimerRunning: boolean
 ): string | null {
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const lastStorageSyncAtRef = useRef(0);
 
   useEffect(() => {
     if (!activityTimer) return;
     const now = Date.now();
+    lastStorageSyncAtRef.current = now;
     syncMemberActivityTimer({
       timerId: activityTimer.timerId,
       startedAtMs: activityTimer.startedAtMs,
@@ -56,14 +60,17 @@ function useActivityTimerLabel(
     if (!activityTimer || !isTimerRunning) return;
     const handle = window.setInterval(() => {
       const now = Date.now();
-      syncMemberActivityTimer({
-        timerId: activityTimer.timerId,
-        startedAtMs: activityTimer.startedAtMs,
-        baseElapsedMs: activityTimer.baseElapsedMs,
-        running: true,
-        runId: activityTimer.runId,
-        nowMs: now,
-      });
+      if (now - lastStorageSyncAtRef.current >= ACTIVITY_TIMER_STORAGE_SYNC_INTERVAL_MS) {
+        lastStorageSyncAtRef.current = now;
+        syncMemberActivityTimer({
+          timerId: activityTimer.timerId,
+          startedAtMs: activityTimer.startedAtMs,
+          baseElapsedMs: activityTimer.baseElapsedMs,
+          running: true,
+          runId: activityTimer.runId,
+          nowMs: now,
+        });
+      }
       setNowMs(now);
     }, 1000);
     return () => window.clearInterval(handle);

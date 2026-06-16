@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Jij bent de Boss, de agents zijn je team. Ze pakken taken zelf op, sturen elkaar berichten en reviewen elkaars code. Jij kijkt naar het kanbanbord en drinkt koffie."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agent-teams",
+      "description": "Maak teams met verschillende rollen. Agents werken autonoom parallel, communiceren met elkaar en werken samen over teams heen."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanbanbord",
+      "description": "Taken veranderen realtime van status terwijl agents werken. Sleep, wijs toe en review alles op een visueel bord."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Diff-weergave per taak met accepteren, afwijzen en comments. Ingebouwde code-editor met Git-ondersteuning."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Communicatie tussen teams",
+      "description": "Agents berichten elkaar binnen en tussen teams. Directe berichten, taakcomments en snelle acties."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo-modus",
+      "description": "Start met een enkele agent die taken zelf beheert. Breid uit naar een volledig team wanneer je meer kracht nodig hebt."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live processen",
+      "description": "Bekijk draaiende agents, open URLs in de browser en monitor tokengebruik en sessiecontext realtime."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Wat is Agent Teams?",
+      "answer": "Een desktop-app voor het orkestreren van AI-agentteams met onze eigen lokale coordinatielaag. Agents hebben rollen, werken autonoom, werken samen via kanban en kunnen draaien op Anthropic of Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Is het echt gratis?",
+      "answer": "Ja. De app is gratis en open source. Je kunt starten met een gratis model zonder auth - geen registratie, API keys of creditcard. Voor meer modellen koppel je Claude, Codex, OpenCode/OpenRouter of een andere ondersteunde provider."
+    },
+    {
+      "id": "platforms",
+      "question": "Welke platforms worden ondersteund?",
+      "answer": "macOS (Apple Silicon en Intel), Windows en Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Hoe werkt het?",
+      "answer": "Installeer de app, maak een team, wijs rollen toe. Agents gaan parallel aan de slag. Jij volgt de voortgang op het kanbanbord, reviewt diffs en praat direct met agents."
+    },
+    {
+      "id": "privacy",
+      "question": "Is mijn code prive?",
+      "answer": "Alles draait lokaal op je machine. Er wordt geen data naar externe servers gestuurd. Je code, gesprekken en agentactiviteit blijven prive."
+    },
+    {
+      "id": "requirements",
+      "question": "Wat heb ik nodig om te starten?",
+      "answer": "Alleen de app installeren - begin met het gratis model zonder auth en koppel provider-backed modellen pas in de UI wanneer je ze nodig hebt."
+    }
+  ],
+  "download": {
+    "title": "Downloaden",
+    "note": "Kies je platform en begin met bouwen met AI-agentteams."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Maak teams met verschillende rollen. Agents werken autonoom parallel, communiceren met elkaar en werken samen over teams heen."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Start met een enkele agent die taken zelf beheert. Breid uit naar een volledig team wanneer je meer kracht nodig hebt."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Diff-weergave per taak met accepteren, afwijzen en comments. Ingebouwde code-editor met Git-ondersteuning."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Bekijk draaiende agents, open URLs in de browser en monitor tokengebruik en sessiecontext realtime."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Alleen de app installeren - begin met het gratis model zonder auth en koppel provider-backed modellen pas in de UI wanneer je ze nodig hebt."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Agents berichten elkaar binnen en tussen teams. Directe berichten, taakcomments en snelle acties."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Gratis",
+      "price": "$0",
+      "period": "",
+      "description": "Ja. De app is gratis en open source. Je kunt starten met een gratis model zonder auth - geen registratie, API keys of creditcard. Voor meer modellen koppel je Claude, Codex, OpenCode/OpenRouter of een andere ondersteunde provider.",
+      "features": [
+        "Agent-teams",
+        "Kanbanbord",
+        "Code review",
+        "Communicatie tussen teams",
+        "Solo-modus",
+        "Live processen",
+        "Is mijn code prive?",
+        "Wat heb ik nodig om te starten?"
+      ],
+      "highlighted": true
+    }
+  ]
+}

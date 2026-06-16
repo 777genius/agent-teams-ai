@@ -25,6 +25,27 @@ import type {
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
 
+type TeamDataServicePrivate = {
+  extractLeadAssistantTextsFromJsonlLines(
+    rawLines: readonly string[],
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]>;
+  getLeadSessionJsonlPaths(projectDir: string): Promise<Map<string, string>>;
+  extractLeadSessionTextsFromJsonl(
+    jsonlPath: string,
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]>;
+  extractLeadSessionTexts(teamName: string, config: TeamConfig): Promise<InboxMessage[]>;
+};
+
+function teamDataServicePrivate(service: TeamDataService): TeamDataServicePrivate {
+  return service as unknown as TeamDataServicePrivate;
+}
+
 function createLeadAssistantEntry(
   uuid: string,
   timestamp: string,
@@ -460,6 +481,46 @@ describe('TeamDataService draft metadata', () => {
           model: 'gpt-5.2',
           effort: 'high',
           fastMode: 'on',
+        },
+      ],
+    });
+  });
+
+  it('omits removed members from saved request members', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-saved-request-removed-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'draft-team',
+      cwd: '/Users/test/project',
+      providerId: 'anthropic',
+      members: [
+        {
+          name: 'active-builder',
+          role: 'Engineer',
+          workflow: 'Keep shipping',
+          model: 'claude-sonnet-4.5',
+        },
+        {
+          name: 'old-builder',
+          role: 'Legacy Engineer',
+          workflow: 'Should not be reused',
+          model: 'claude-haiku-4.5',
+        },
+      ],
+    });
+
+    await service.removeMember('draft-team', 'old-builder');
+
+    await expect(service.getSavedRequest('draft-team')).resolves.toMatchObject({
+      members: [
+        {
+          name: 'active-builder',
+          role: 'Engineer',
+          workflow: 'Keep shipping',
+          model: 'claude-sonnet-4.5',
         },
       ],
     });
@@ -932,6 +993,51 @@ describe('TeamDataService', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
           effort: 'high',
+          fastMode: 'on',
+        }),
+      ])
+    );
+  });
+
+  it('persists member-level provider backend and fast mode during addMember', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() => ({ processes: { listProcesses: vi.fn(async () => []) } }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await service.addMember('runtime-team', {
+      name: 'alice',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      fastMode: 'on',
+    });
+
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
           fastMode: 'on',
         }),
       ])
@@ -1524,7 +1630,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -1612,7 +1718,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -1724,7 +1830,7 @@ describe('TeamDataService', () => {
       {} as never,
       {} as never,
       {} as never,
-      (teamName: string) =>
+      (_teamName: string) =>
         ({
           tasks: {
             createTask: createTaskMock,
@@ -2235,6 +2341,129 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('uses config snapshots instead of full team summaries for global task team info', async () => {
+    const listTeams = vi.fn(async () => [
+      {
+        teamName: 'my-team',
+        displayName: 'My team from list',
+        projectPath: '/repo-from-list',
+      },
+    ]);
+    const getConfigSnapshot = vi.fn(async (teamName: string) =>
+      teamName === 'my-team'
+        ? {
+            name: 'My team from config',
+            members: [{ name: 'lead', role: 'Team Lead', cwd: '/repo-from-lead' }],
+            deletedAt: '2026-03-01T12:00:00.000Z',
+          }
+        : null
+    );
+    const service = new TeamDataService(
+      {
+        listTeams,
+        getConfigSnapshot,
+      } as never,
+      {
+        getAllTasks: vi.fn(async () => [
+          {
+            id: 'task-global-config',
+            teamName: 'my-team',
+            subject: 'Global config task',
+            status: 'pending',
+            owner: 'bob',
+          },
+        ]),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {
+        getState: vi.fn(async () => ({
+          teamName: 'my-team',
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never
+    );
+
+    const tasks = await service.getAllTasks();
+
+    expect(listTeams).not.toHaveBeenCalled();
+    expect(getConfigSnapshot).toHaveBeenCalledWith('my-team');
+    expect(tasks[0]).toMatchObject({
+      id: 'task-global-config',
+      teamDisplayName: 'My team from config',
+      projectPath: '/repo-from-lead',
+      teamDeleted: true,
+    });
+  });
+
+  it('caps global task projections before building lightweight comment payloads', async () => {
+    const rawTasks = Array.from({ length: 501 }, (_, index) => ({
+      id: `task-${index}`,
+      teamName: index === 0 ? 'old-team' : 'my-team',
+      subject: `Task ${index}`,
+      status: 'pending' as const,
+      owner: 'bob',
+      createdAt: `2026-03-01T00:${String(index % 60).padStart(2, '0')}:00.000Z`,
+      updatedAt: `2026-03-01T${String(Math.floor(index / 60)).padStart(2, '0')}:${String(
+        index % 60
+      ).padStart(2, '0')}:00.000Z`,
+      comments: [
+        {
+          id: `comment-${index}`,
+          author: 'bob',
+          text: `Comment ${index}`,
+          createdAt: '2026-03-01T09:00:00.000Z',
+          type: 'comment' as const,
+        },
+      ],
+    }));
+    const getState = vi.fn(async (teamName: string) => ({
+      teamName,
+      reviewers: [],
+      tasks: {},
+    }));
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(async () => [
+          {
+            teamName: 'my-team',
+            displayName: 'My team',
+            projectPath: '/repo',
+          },
+          {
+            teamName: 'old-team',
+            displayName: 'Old team',
+            projectPath: '/old-repo',
+          },
+        ]),
+      } as never,
+      {
+        getAllTasks: vi.fn(async () => rawTasks),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {
+        getState,
+      } as never
+    );
+
+    const tasks = await service.getAllTasks();
+
+    expect(tasks).toHaveLength(500);
+    expect(tasks[0]?.id).toBe('task-500');
+    expect(tasks.some((task) => task.id === 'task-0')).toBe(false);
+    expect(tasks[0]?.comments?.[0]).toMatchObject({
+      id: 'comment-500',
+      text: 'Comment 500',
+    });
+    expect(getState).not.toHaveBeenCalledWith('old-team');
+  });
+
   it('lets kanban approved overlay win over stale review history in global task projections', async () => {
     const service = new TeamDataService(
       {
@@ -2514,6 +2743,95 @@ describe('TeamDataService', () => {
           }),
         ])
       );
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('uses startup team summary lead fields without rereading config for comment notification baselines', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    const inboxWriter = { sendMessage: vi.fn() };
+    const getConfig = vi.fn(async () => {
+      throw new Error('unexpected config read');
+    });
+    const journal = {
+      exists: vi.fn(async () => false),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(
+        async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+          const outcome = await fn(journalEntries);
+          return outcome.result;
+        }
+      ),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(async () => [
+            {
+              teamName: 'my-team',
+              displayName: 'My team',
+              description: '',
+              memberCount: 1,
+              taskCount: 1,
+              lastActivity: null,
+              leadName: 'team-lead',
+              leadSessionId: 'lead-1',
+            },
+          ]),
+          getConfig,
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Found the root cause.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.initializeTaskCommentNotificationState();
+
+      expect(getConfig).not.toHaveBeenCalled();
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journalEntries).toEqual([
+        expect.objectContaining({
+          key: 'task-1:comment-1',
+          state: 'seeded',
+          messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        }),
+      ]);
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
       else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
@@ -4433,7 +4751,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4441,7 +4759,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4468,25 +4786,25 @@ describe('TeamDataService', () => {
 
     const originalExtract = (
       service as unknown as {
-        extractLeadAssistantTextsFromJsonl: (
-          jsonlPath: string,
+        extractLeadAssistantTextsFromJsonlLines: (
+          rawLines: readonly string[],
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
-    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
-        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
-          string,
+        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
+          readonly string[],
           string,
           string,
           number,
         ];
         await new Promise((resolve) => setTimeout(resolve, 25));
-        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
       });
     const extract = (
       service as unknown as {
@@ -4495,7 +4813,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4520,20 +4838,20 @@ describe('TeamDataService', () => {
 
     const originalExtract = (
       service as unknown as {
-        extractLeadAssistantTextsFromJsonl: (
-          jsonlPath: string,
+        extractLeadAssistantTextsFromJsonlLines: (
+          rawLines: readonly string[],
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
-    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let appended = false;
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
-        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
-          string,
+        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
+          readonly string[],
           string,
           string,
           number,
@@ -4541,7 +4859,7 @@ describe('TeamDataService', () => {
         if (!appended) {
           appended = true;
           await fs.appendFile(
-            targetPath,
+            jsonlPath,
             `${JSON.stringify(
               createLeadAssistantEntry(
                 'assistant-2',
@@ -4552,7 +4870,7 @@ describe('TeamDataService', () => {
             'utf8'
           );
         }
-        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
       });
     const extract = (
       service as unknown as {
@@ -4561,7 +4879,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4569,7 +4887,7 @@ describe('TeamDataService', () => {
     const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
 
     expect(assistantSpy).toHaveBeenCalledTimes(2);
-    expect(first).toHaveLength(2);
+    expect(first).toHaveLength(1);
     expect(second).toHaveLength(2);
   });
 
@@ -4585,24 +4903,24 @@ describe('TeamDataService', () => {
 
     const originalExtract = (
       service as unknown as {
-        extractLeadAssistantTextsFromJsonl: (
-          jsonlPath: string,
+        extractLeadAssistantTextsFromJsonlLines: (
+          rawLines: readonly string[],
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
-    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let releaseFirstInvocation = () => {};
     let firstInvocationStartedResolve: (() => void) | null = null;
     const firstInvocationStarted = new Promise<void>((resolve) => {
       firstInvocationStartedResolve = resolve;
     });
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
-        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
-          string,
+        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
+          readonly string[],
           string,
           string,
           number,
@@ -4613,7 +4931,7 @@ describe('TeamDataService', () => {
             releaseFirstInvocation = () => resolve();
           });
         }
-        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
       });
     const extract = (
       service as unknown as {
@@ -4622,7 +4940,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4665,7 +4983,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4699,7 +5017,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4707,7 +5025,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4717,7 +5035,7 @@ describe('TeamDataService', () => {
     await expect(extract(jsonlPath, 'team-lead', 'lead-1', 150)).rejects.toThrow();
 
     expect(first).toHaveLength(1);
-    expect(assistantSpy).toHaveBeenCalledTimes(2);
+    expect(assistantSpy).toHaveBeenCalledTimes(1);
   });
 
   it('tolerates a partial trailing line and does not keep a sticky stale result after the file is fixed', async () => {
@@ -4731,7 +5049,7 @@ describe('TeamDataService', () => {
     ]);
     await fs.appendFile(jsonlPath, '{"type":"assistant"', 'utf8');
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4739,7 +5057,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4779,7 +5097,7 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const assistantSpy = vi.spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines');
     const extract = (
       service as unknown as {
         extractLeadSessionTextsFromJsonl: (
@@ -4787,7 +5105,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4811,20 +5129,20 @@ describe('TeamDataService', () => {
 
     const originalExtract = (
       service as unknown as {
-        extractLeadAssistantTextsFromJsonl: (
-          jsonlPath: string,
+        extractLeadAssistantTextsFromJsonlLines: (
+          rawLines: readonly string[],
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
-    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    ).extractLeadAssistantTextsFromJsonlLines.bind(service);
     let shouldFail = true;
     const assistantSpy = vi
-      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadAssistantTextsFromJsonlLines')
       .mockImplementation(async (...args: unknown[]) => {
-        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
-          string,
+        const [rawLines, leadName, leadSessionId, maxTexts] = args as [
+          readonly string[],
           string,
           string,
           number,
@@ -4832,7 +5150,7 @@ describe('TeamDataService', () => {
         if (shouldFail) {
           throw new Error('transient parse failure');
         }
-        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+        return originalExtract(rawLines, leadName, leadSessionId, maxTexts);
       });
     const extract = (
       service as unknown as {
@@ -4841,7 +5159,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(service);
 
@@ -4867,10 +5185,10 @@ describe('TeamDataService', () => {
       ),
     ]);
 
-    const firstSpy = vi.spyOn(firstService as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const firstSpy = vi.spyOn(teamDataServicePrivate(firstService), 'extractLeadAssistantTextsFromJsonlLines');
     const secondSpy = vi.spyOn(
-      secondService as never,
-      'extractLeadAssistantTextsFromJsonl' as never
+      teamDataServicePrivate(secondService),
+      'extractLeadAssistantTextsFromJsonlLines'
     );
     const firstExtract = (
       firstService as unknown as {
@@ -4879,7 +5197,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(firstService);
     const secondExtract = (
@@ -4889,7 +5207,7 @@ describe('TeamDataService', () => {
           leadName: string,
           leadSessionId: string,
           maxTexts: number
-        ) => Promise<Array<{ text: string }>>;
+        ) => Promise<InboxMessage[]>;
       }
     ).extractLeadSessionTextsFromJsonl.bind(secondService);
 
@@ -4920,10 +5238,10 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockResolvedValue(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockResolvedValue(
       new Map([['lead-1', '/fast-project/lead-1.jsonl']])
     );
-    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue([
       {
         from: 'fast-lead',
         text: 'Fast path recovered lead thought from the known lead session.',
@@ -4971,7 +5289,7 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
       (...args: unknown[]) => {
         const [projectDir] = args as [string];
         if (projectDir === '/actual-project') {
@@ -4980,7 +5298,7 @@ describe('TeamDataService', () => {
         return Promise.resolve(new Map());
       }
     );
-    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl').mockResolvedValue([
       {
         from: 'actual-lead',
         text: 'Fallback path recovered lead thought from the repaired context.',
@@ -5035,7 +5353,7 @@ describe('TeamDataService', () => {
     };
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
-    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths').mockImplementation(
       (...args: unknown[]) => {
         const [projectDir] = args as [string];
         if (projectDir === '/current-project') {
@@ -5047,7 +5365,7 @@ describe('TeamDataService', () => {
       }
     );
     const extractSpy = vi
-      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
       .mockResolvedValue([
         {
           from: 'current-lead',
@@ -5109,11 +5427,11 @@ describe('TeamDataService', () => {
     (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
       projectResolver;
     const getPathsSpy = vi
-      .spyOn(service as never, 'getLeadSessionJsonlPaths' as never)
+      .spyOn(teamDataServicePrivate(service), 'getLeadSessionJsonlPaths')
       .mockResolvedValueOnce(new Map([['lead-history', '/same-project/lead-history.jsonl']]))
       .mockResolvedValueOnce(new Map([['lead-current', '/same-project/lead-current.jsonl']]));
     const extractSpy = vi
-      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .spyOn(teamDataServicePrivate(service), 'extractLeadSessionTextsFromJsonl')
       .mockResolvedValue([
         {
           from: 'current-lead',
@@ -5717,7 +6035,7 @@ describe('TeamDataService', () => {
       ],
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
       {
         from: 'team-lead',
         text: 'Lead summary',
@@ -5771,7 +6089,7 @@ describe('TeamDataService', () => {
       resolveMembers: resolveMembersSpy,
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockResolvedValue([
       {
         from: 'team-lead',
         text: 'Lead summary',
@@ -5853,7 +6171,7 @@ describe('TeamDataService', () => {
       },
     });
 
-    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockImplementation(
+    vi.spyOn(teamDataServicePrivate(harness.service), 'extractLeadSessionTexts').mockImplementation(
       () => {
         order.push('leadTexts:start');
         throw new Error('lead sync fail');

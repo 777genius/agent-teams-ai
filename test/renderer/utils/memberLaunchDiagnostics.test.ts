@@ -851,6 +851,68 @@ describe('member launch diagnostics', () => {
     expect(hasMemberLaunchDiagnosticsError(payload)).toBe(false);
   });
 
+  it('suppresses stale observe scheduled OpenCode API advisories while the runtime is alive', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      teamName: 'atlas-hq-15',
+      runId: 'd78fd1d5-f60b-4704-9df3-867c79e840b3',
+      memberName: 'bob',
+      member: {
+        name: 'bob',
+        providerId: 'opencode',
+        model: 'opencode/deepseek-v4-flash-free',
+        agentType: 'general-purpose',
+        laneId: 'secondary:opencode:bob',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+      spawnEntry: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        agentToolAccepted: true,
+        hardFailure: false,
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        livenessKind: 'runtime_process',
+        livenessSource: 'heartbeat',
+        updatedAt: '2026-05-30T17:17:33.910Z',
+      },
+      runtimeEntry: {
+        memberName: 'bob',
+        providerId: 'opencode',
+        runtimeModel: 'opencode/deepseek-v4-flash-free',
+        backendType: 'process',
+        alive: true,
+        restartable: false,
+        livenessKind: 'runtime_process',
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        diagnostics: [
+          'OpenCode API error',
+          'opencode_session_stale_observe_scheduled_after_accepted_prompt',
+          'matched OpenCode runtime pid and process identity',
+          'bootstrap confirmed',
+        ],
+        updatedAt: '2026-05-30T17:28:39.655Z',
+      },
+      runtimeAdvisoryLabel: 'OpenCode API error',
+      runtimeAdvisoryTitle: 'OpenCode API error',
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-30T17:26:24.466Z',
+        reasonCode: 'backend_error',
+        message: 'OpenCode API error. opencode_session_stale_observe_scheduled_after_accepted_prompt',
+      },
+    });
+
+    expect(payload.memberCardError).toBeUndefined();
+    expect(hasMemberLaunchDiagnosticsError(payload)).toBe(false);
+    expect(payload.diagnostics).toContain(
+      'opencode_session_stale_observe_scheduled_after_accepted_prompt'
+    );
+  });
+
   it('treats member card errors from runtime advisory as diagnostics errors', () => {
     const payload = buildMemberLaunchDiagnosticsPayload({
       memberName: 'tom',

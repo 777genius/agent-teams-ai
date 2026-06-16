@@ -589,7 +589,11 @@
     "actions": {
       "add": "Add API Key",
       "addFirst": "Add your first key",
-      "edit": "Edit"
+      "edit": "Edit",
+      "copied": "Copied!",
+      "copyEnvVarName": "Copy env var name",
+      "confirmDelete": "Click again to confirm",
+      "delete": "Delete"
     },
     "empty": {
       "title": "No API keys saved",

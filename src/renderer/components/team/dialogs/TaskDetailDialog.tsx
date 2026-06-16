@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -137,6 +137,73 @@ interface TaskDetailDialogProps {
   /** Extra content rendered in the dialog header (e.g. "Open team" button). */
   headerExtra?: React.ReactNode;
 }
+
+function useTaskImplementationDurationClock(task: TeamTaskWithKanban): {
+  duration: ReturnType<typeof calculateTaskImplementationDuration>;
+  nowMs: number;
+} {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const duration = useMemo(() => calculateTaskImplementationDuration(task, nowMs), [task, nowMs]);
+
+  useEffect(() => {
+    if (!duration.hasRunningInterval) return;
+
+    setNowMs(Date.now());
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [duration.hasRunningInterval, task.id]);
+
+  return { duration, nowMs };
+}
+
+const TaskImplementationDurationBadge = memo(function TaskImplementationDurationBadge({
+  task,
+}: {
+  task: TeamTaskWithKanban;
+}): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
+  const { duration } = useTaskImplementationDurationClock(task);
+  if (!shouldShowTaskImplementationDuration(duration)) {
+    return null;
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md bg-[var(--color-bg-secondary)] px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+      title={t('taskDetail.workflow.implementationTimeTitle')}
+    >
+      <Clock size={10} />
+      <span>
+        {t('taskDetail.workflow.inProgressTime', {
+          duration: formatTaskImplementationDuration(duration.elapsedMs),
+        })}
+      </span>
+    </span>
+  );
+});
+
+const WorkflowTimelineWithDuration = memo(function WorkflowTimelineWithDuration({
+  task,
+  events,
+  memberColorMap,
+}: {
+  task: TeamTaskWithKanban;
+  events: NonNullable<TeamTaskWithKanban['historyEvents']>;
+  memberColorMap: Map<string, string>;
+}): React.JSX.Element {
+  const { nowMs } = useTaskImplementationDurationClock(task);
+  return (
+    <WorkflowTimeline
+      events={events}
+      memberColorMap={memberColorMap}
+      implementationDurationTask={task}
+      nowMs={nowMs}
+    />
+  );
+});
 
 export const TaskDetailDialog = ({
   open,
@@ -632,29 +699,6 @@ export const TaskDetailDialog = ({
             : undefined
         : undefined
     : undefined;
-
-  const [taskDurationNowMs, setTaskDurationNowMs] = useState(() => Date.now());
-  const taskImplementationDuration = useMemo(
-    () => calculateTaskImplementationDuration(currentTask, taskDurationNowMs),
-    [currentTask, taskDurationNowMs]
-  );
-  const showTaskImplementationDuration = shouldShowTaskImplementationDuration(
-    taskImplementationDuration
-  );
-  const taskImplementationDurationLabel = formatTaskImplementationDuration(
-    taskImplementationDuration.elapsedMs
-  );
-
-  useEffect(() => {
-    if (!open || !taskImplementationDuration.hasRunningInterval) return;
-
-    setTaskDurationNowMs(Date.now());
-    const intervalId = window.setInterval(() => {
-      setTaskDurationNowMs(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [open, taskImplementationDuration.hasRunningInterval, currentTask?.id]);
 
   if (loading) {
     return (
@@ -1493,28 +1537,13 @@ export const TaskDetailDialog = ({
                 contentClassName="pl-2.5"
                 headerClassName="-mx-6 w-[calc(100%+3rem)]"
                 headerContentClassName="pl-6"
-                headerExtra={
-                  showTaskImplementationDuration ? (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-md bg-[var(--color-bg-secondary)] px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
-                      title={t('taskDetail.workflow.implementationTimeTitle')}
-                    >
-                      <Clock size={10} />
-                      <span>
-                        {t('taskDetail.workflow.inProgressTime', {
-                          duration: taskImplementationDurationLabel,
-                        })}
-                      </span>
-                    </span>
-                  ) : undefined
-                }
+                headerExtra={<TaskImplementationDurationBadge task={currentTask} />}
                 defaultOpen={false}
               >
-                <WorkflowTimeline
+                <WorkflowTimelineWithDuration
+                  task={currentTask}
                   events={currentTask.historyEvents}
                   memberColorMap={colorMap}
-                  implementationDurationTask={currentTask}
-                  nowMs={taskDurationNowMs}
                 />
               </CollapsibleTeamSection>
             ) : null}

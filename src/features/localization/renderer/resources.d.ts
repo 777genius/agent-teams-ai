@@ -376,15 +376,30 @@ export default interface Resources {
         de: 'German';
         en: 'English';
         es: 'Spanish';
+        fa: 'Persian';
+        fil: 'Filipino';
         fr: 'French';
         hi: 'Hindi';
         id: 'Indonesian';
+        it: 'Italian';
         ja: 'Japanese';
         ko: 'Korean';
+        mr: 'Marathi';
+        ms: 'Malay';
+        nl: 'Dutch';
+        pl: 'Polish';
         pt: 'Portuguese';
+        ro: 'Romanian';
         ru: 'Russian';
+        sw: 'Swahili';
         system: 'System';
+        ta: 'Tamil';
+        te: 'Telugu';
+        th: 'Thai';
+        tr: 'Turkish';
+        uk: 'Ukrainian';
         ur: 'Urdu';
+        vi: 'Vietnamese';
         zh: 'Chinese';
       };
       searchPlaceholder: 'Search language...';
@@ -1117,6 +1132,10 @@ export default interface Resources {
       actions: {
         add: 'Add API Key';
         addFirst: 'Add your first key';
+        confirmDelete: 'Click again to confirm';
+        copied: 'Copied!';
+        copyEnvVarName: 'Copy env var name';
+        delete: 'Delete';
         edit: 'Edit';
       };
       description: 'Securely store API keys for auto-filling when installing MCP servers.';
@@ -2759,7 +2778,6 @@ export default interface Resources {
           chatGptVerificationDegraded: 'ChatGPT account detected - account verification is currently degraded.';
           checked: 'Checked';
           checking: 'Checking...';
-          modelsAvailable: 'Models available';
           codexLocalAccountNeedsReconnect: 'Codex has a locally selected ChatGPT account, but the current session needs reconnect.';
           codexNativeReady: 'Codex native ready';
           codexNativeUnavailable: 'Codex native unavailable';
@@ -2768,6 +2786,7 @@ export default interface Resources {
           connectChatGptForSubscription: 'Connect a ChatGPT account to use your Codex subscription.';
           connectedVia: 'Connected via {{method}}';
           connectedViaApiKey: 'Connected via API key';
+          modelsAvailable: 'Models available';
           notConnected: 'Not connected';
           providerActivity: 'Provider Activity';
           startingChatGptLogin: 'Starting ChatGPT login...';
@@ -2886,6 +2905,7 @@ export default interface Resources {
         copy: 'Copy diagnostics';
         hints: 'Hints';
         likelyCause: 'Likely cause:';
+        windowsSymlinkAdminHint: 'Windows: run Agent Teams AI as Administrator';
       };
       modelRoutes: {
         searchPlaceholder: 'Search model routes';
@@ -3016,7 +3036,11 @@ export default interface Resources {
         restartTeam: 'Restart team';
       };
       activeTasks: {
+        collapseInProgress: 'Collapse in progress';
+        expandInProgress: 'Expand in progress';
         inProgress: 'In progress';
+        reviewing: 'reviewing';
+        workingOn: 'working on';
       };
       authError: {
         description: 'Authentication failed. Restarting the team will refresh the session and may resolve this issue. If the problem persists, check your API credentials or try again later.';
@@ -3027,6 +3051,8 @@ export default interface Resources {
         workSyncBody: 'Asked teammate to sync current work';
       };
       badges: {
+        agentError: 'Agent Error';
+        apiError: 'API Error';
         automation: 'automation';
         bootstrap: 'bootstrap';
         command: 'command';
@@ -3123,16 +3149,41 @@ export default interface Resources {
         blockingHiddenTasks: 'Blocking hidden tasks';
         blocks: 'blocks';
         close: 'Close';
+        hiddenBlockingLinks_one: '{{count}} hidden blocking link';
+        hiddenBlockingLinks_other: '{{count}} hidden blocking links';
+        hiddenTaskStack: 'Hidden task stack';
+        hiddenTasks_one: '{{count}} hidden task';
+        hiddenTasks_other: '{{count}} hidden tasks';
+        links_one: '{{count}} link';
+        links_other: '{{count}} links';
+        openBlockedStack: 'Open blocked stack';
+        openBlockedTask: 'Open blocked task';
+        openBlockerStack: 'Open blocker stack';
+        openBlockerTask: 'Open blocker task';
+        task: 'Task';
         title: 'Blocking Dependency';
       };
       logPreview: {
+        error: 'Error';
         loading: 'Loading logs';
+        logEvent: 'Log event';
         logs: 'Logs';
+        logsUnavailable: 'Logs unavailable';
         more: '+{{count}} more';
         more_few: '+{{count}} more';
         more_many: '+{{count}} more';
         more_one: '+{{count}} more';
         more_other: '+{{count}} more';
+        noErrorOutput: 'No error output';
+        noInput: 'No input';
+        noOutput: 'No output';
+        noRecentLogs: 'No recent logs';
+        openCodeLogsDelayed: 'OpenCode logs delayed';
+        thinking: 'Thinking';
+        toolError: 'Tool error';
+        toolResult: 'Tool result';
+        toolUse: 'Tool use';
+        unsupportedProvider: 'Unsupported provider';
       };
       popover: {
         externalTeam: 'External team';
@@ -3220,8 +3271,11 @@ export default interface Resources {
       sourceSelect: {
         ariaLabel: 'Log source';
         emptyMessage: 'No log sources found.';
+        leadDescription: 'Team Lead';
         leadLabel: 'Lead';
         placeholder: 'Select log source...';
+        removedDescription: 'Removed';
+        removedLabel: 'removed';
         searchPlaceholder: 'Search log sources...';
         selectSourceEmpty: 'Select a log source.';
       };
@@ -3230,6 +3284,9 @@ export default interface Resources {
     };
     codexReconnect: {
       description: 'Your Codex session appears stale. Reconnect to continue.';
+      generateLink: 'Generate link';
+      generating: 'Generating...';
+      openLogin: 'Open login';
       useCode: 'Use code';
     };
     contextLimit: {
@@ -3330,6 +3387,11 @@ export default interface Resources {
         visualize: 'Visualize';
       };
       context: {
+        closePanel: 'Close {{team}} context panel';
+        loading: 'Loading...';
+        loadingContext: 'Loading context...';
+        noSessionLoaded: 'No session loaded';
+        openLeadSession: 'Open the team lead session to view context.';
         title: 'Context';
       };
       deleteTeam: {
@@ -4144,8 +4206,12 @@ export default interface Resources {
       };
       runtimeLogs: {
         autoRefresh: 'Auto-refresh';
+        copy: 'Copy';
         empty: 'No process log file captured for this member yet.';
+        fileEmpty: 'Process log file is empty.';
         loadingTail: 'Loading process log tail...';
+        showing: 'Showing {{bytes}}.';
+        showingLast: 'Showing last {{bytes}}.';
         wrapLines: 'Wrap lines';
       };
       runtimeTelemetry: {
@@ -4236,7 +4302,7 @@ export default interface Resources {
       };
       status: {
         reusedCrossTeamRequest: 'Reused recent cross-team request';
-        teamOffline: 'Team offline';
+        teamOffline: 'offline';
       };
       teamSelector: {
         current: 'current';
@@ -4617,6 +4683,7 @@ export default interface Resources {
           openCodeAccessDenied: 'Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.';
           openCodeAppMcpUnreachable: 'Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.';
           openCodeBridgeNoOutput: 'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.';
+          openCodeNodeModulesSymlinkPermission: 'Run Agent Teams AI as Administrator, then retry launch.';
           openCodeRuntimeMissing: 'Install or retry OpenCode runtime from the provider status card, then reopen this dialog.';
           runtimeProviderNotConfigured: 'Configure the selected provider runtime, then reopen this dialog.';
           workingDirectoryMissing: 'Choose an existing working directory, then reopen this dialog.';
@@ -4993,11 +5060,18 @@ export default interface Resources {
     roleSelect: {
       customRole: 'Custom role...';
       empty: 'No roles found.';
+      emptyCustomRole: 'Role cannot be empty';
       noRole: 'No role';
       reservedRole: 'This role is reserved';
       searchPlaceholder: 'Search roles...';
     };
     runningTeams: {
+      noProject: 'No project';
+      status: {
+        active: 'Active';
+        idle: 'Running';
+        provisioning: 'Launching';
+      };
       title: 'Running Teams';
     };
     schedule: {
@@ -5400,6 +5474,118 @@ export default interface Resources {
       };
       teamPrefix: 'Team:';
       unassigned: 'Unassigned';
+    };
+    terminalWorkspace: {
+      currentWorkingDirectory: 'Current working directory';
+      gitBranchTitle: 'Git branch: {{branch}}';
+      openTerminalPlatformRepository: 'Open terminal-platform on GitHub';
+      poweredByTerminalPlatform: 'powered by terminal-platform';
+      shellDefaultDirectory: 'Default shell working directory';
+      openTeamTerminal: 'Open {{team}} terminal';
+      openTerminal: 'Open terminal';
+      terminalSheetOpen: 'Terminal sheet is open';
+      teamTerminalTitle: '{{team}} terminal';
+      teamRuntime: 'Team runtime';
+      teamRuntimeBadge: 'team runtime';
+      localShell: 'Local shell';
+      localShellBadge: 'local shell';
+      reloadTerminalWorkspace: 'Reload terminal workspace';
+      stopTerminalRuntime: 'Stop terminal runtime';
+      startingRuntimeTitle: 'Starting terminal runtime';
+      startingRuntimeDetail: 'Preparing the team workspace and restoring persisted terminal state.';
+      runtimeUnavailableTitle: 'Terminal runtime is unavailable';
+      runtimeDisconnectedTitle: 'Terminal runtime is not connected';
+      runtimeDisconnectedDetail: 'Reload the workspace to reconnect.';
+      restoreHalfHeightSheet: 'Restore half-height sheet';
+      expandTerminalSheet: 'Expand terminal sheet';
+      openTerminalSettings: 'Open terminal settings';
+      closeTerminalSettings: 'Close terminal settings';
+      closeTerminalSheet: 'Close terminal sheet';
+      loadingTerminalTab: 'Loading terminal tab';
+      terminalCommandActions: 'Terminal command actions';
+      copy: 'Copy';
+      copyCommand: 'Copy command';
+      copyOutput: 'Copy output';
+      terminalTabs: 'Terminal tabs';
+      noTerminalTabs: 'No terminal tabs';
+      closeTerminalTab: 'Close terminal tab {{tab}}';
+      createAnotherTabBeforeClosing: 'Create another tab before closing this one';
+      editTerminalTabTitle: 'Edit terminal tab title';
+      renameTab: 'Rename tab';
+      tabColor: 'Tab color';
+      chooseColor: 'Choose color';
+      settingsTab: 'Settings';
+      closeTerminalSettingsTab: 'Close terminal settings tab';
+      createTerminalTab: 'Create terminal tab';
+      terminalTabsUnavailable: 'Terminal tabs are unavailable';
+      closeTerminalTabDialogTitle: 'Close terminal tab?';
+      closeTerminalTabDialogDescription: 'This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.';
+      cancel: 'Cancel';
+      closeTab: 'Close tab';
+      commandPlaceholder: 'Type a command...';
+      commandRun: 'Run';
+      commandRunTitle: 'Send command to the focused pane';
+      commandInterrupt: 'Ctrl+C';
+      commandInterruptTitle: 'Send Ctrl+C to the focused pane';
+      settingsTitle: 'Terminal settings';
+      settingsDescription: 'Appearance and runtime controls.';
+      settingsThemeTitle: 'Theme';
+      settingsThemeDescription: 'Choose the base terminal palette.';
+      settingsThemeAria: 'Terminal theme';
+      settingsThemePlaceholder: 'Select theme';
+      settingsFontTitle: 'Font';
+      settingsFontDescription: 'Tune text size and the SDK font preset.';
+      settingsFontPreset: 'Preset';
+      settingsFontPresetAria: 'Terminal font preset';
+      settingsFontPresetPlaceholder: 'Font preset';
+      settingsFontSize: 'Size';
+      settingsBackgroundTitle: 'Background';
+      settingsBackgroundDescription: 'Control transparency, blur, color, and optional image.';
+      settingsOpacity: 'Opacity';
+      settingsOpacityAria: 'Terminal opacity';
+      settingsBackgroundMode: 'Background';
+      settingsBackgroundModeAria: 'Terminal background mode';
+      settingsBackgroundColorAria: 'Terminal background color';
+      settingsBackdropBlur: 'Backdrop blur';
+      settingsImageUrl: 'Image URL';
+      settingsImageFit: 'Image fit';
+      settingsImageFitAria: 'Terminal background image fit';
+      settingsImageBlur: 'Image blur';
+      settingsDimImage: 'Dim image behind terminal text';
+      settingsBehaviorTitle: 'Behavior';
+      settingsBehaviorDescription: 'Keep command output readable for long lines.';
+      settingsWrapLongOutput: 'Wrap long command output';
+      settingsRuntimeTitle: 'Runtime';
+      settingsRuntimeDescription: 'Use these only when the terminal transport looks stale.';
+      settingsReconnect: 'Reconnect';
+      settingsSessions: 'Sessions';
+      settingsReload: 'Reload';
+      settingsStop: 'Stop';
+      settingsResetAppearance: 'Reset appearance';
+      backgroundModeTransparent: 'Transparent';
+      backgroundModeSolid: 'Solid color';
+      backgroundModeImage: 'Image';
+      imageFitCover: 'Cover';
+      imageFitContain: 'Contain';
+      imageFitStretch: 'Stretch';
+      imageFitTile: 'Tile';
+      imageFitCenter: 'Center';
+      themeDark: 'Dark';
+      themeLight: 'Light';
+      fontScaleCompact: 'Compact';
+      fontScaleDefault: 'Default';
+      fontScaleLarge: 'Large';
+      tabColorSlate: 'Slate';
+      tabColorSky: 'Sky';
+      tabColorBlue: 'Blue';
+      tabColorCyan: 'Cyan';
+      tabColorTeal: 'Teal';
+      tabColorEmerald: 'Emerald';
+      tabColorLime: 'Lime';
+      tabColorAmber: 'Amber';
+      tabColorOrange: 'Orange';
+      tabColorRose: 'Rose';
+      tabColorViolet: 'Violet';
     };
     toolApproval: {
       after: 'after';

@@ -18,8 +18,9 @@ interface OptionalSettingsSectionProps {
 const SUMMARY_PREFIXES_TO_STRIP = ['Provider:', 'Model:', 'Effort:', 'Worktree:'];
 
 const MODEL_LABEL_OVERRIDES: Array<[RegExp, string]> = [
-  [/claude[-\s]?opus[-\s]?4[-\s]?6/i, 'Opus 4.6'],
+  [/claude[-\s]?opus[-\s]?4[-\s]?8/i, 'Opus 4.8'],
   [/claude[-\s]?opus[-\s]?4[-\s]?7/i, 'Opus 4.7'],
+  [/claude[-\s]?opus[-\s]?4[-\s]?6/i, 'Opus 4.6'],
   [/claude[-\s]?opus[-\s]?4[-\s]?5/i, 'Opus 4.5'],
   [/claude[-\s]?sonnet[-\s]?4[-\s]?6/i, 'Sonnet 4.6'],
   [/claude[-\s]?sonnet[-\s]?4[-\s]?5/i, 'Sonnet 4.5'],

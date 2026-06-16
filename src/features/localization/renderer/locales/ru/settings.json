@@ -46,7 +46,8 @@
       "copiedShort": "Скопировано",
       "copy": "Скопировать diagnostics",
       "hints": "Подсказки",
-      "likelyCause": "Вероятная причина:"
+      "likelyCause": "Вероятная причина:",
+      "windowsSymlinkAdminHint": "Windows: запустите Agent Teams AI от имени администратора"
     },
     "models": {
       "alreadyDefault": "Это уже выбранный OpenCode default.",

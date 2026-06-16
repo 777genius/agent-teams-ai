@@ -7,6 +7,7 @@ Start here:
 - Repo overview and commands: [README.md](README.md)
 - Working instructions and project conventions: [CLAUDE.md](CLAUDE.md)
 - Hard guardrails: [AGENT_CRITICAL_GUARDRAILS.md](AGENT_CRITICAL_GUARDRAILS.md)
+- Release process and runtime packaging: [docs/RELEASE.md](docs/RELEASE.md)
 - Canonical feature architecture standard: [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
 - Agent team launch/runtime debugging runbook: [docs/team-management/debugging-agent-teams.md](docs/team-management/debugging-agent-teams.md)
 
@@ -21,6 +22,12 @@ Default local run target:
 - Use the desktop Electron app: `pnpm dev`
 - Do not start the browser/web dev mode for normal development or smoke checks. The browser path is limited and lacks the full desktop runtime, IPC, terminal, provider auth, and team lifecycle behavior.
 - When documenting or recommending startup commands, point contributors to the desktop app unless a task explicitly asks for browser-mode internals.
+
+Critical real-project safety:
+
+- Do not test agent teams, launch/provisioning, terminal runtime, task assignment, smoke-flow, or agent actions on real user projects.
+- Use only new sandbox/test projects or explicitly test-only existing projects for verification.
+- Real projects such as `~/dev/projects/ai/claude-runtime` must not be used even for opening a runtime/terminal without fresh direct user permission.
 
 Live team smoke runtime:
 

@@ -90,11 +90,47 @@ function buildBaseItem(
   };
 }
 
-function taskReferenceKeys(task: Pick<MemberWorkSyncTaskLike, 'id' | 'displayId'>): string[] {
-  const keys = [task.id, task.displayId]
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value));
-  return [...new Set(keys.flatMap((value) => [value, value.replace(/^#/, '')]))];
+interface TaskReferenceIndex {
+  canonical: Map<string, Set<MemberWorkSyncTaskLike>>;
+  display: Map<string, Set<MemberWorkSyncTaskLike>>;
+}
+
+function addTaskReference(
+  index: Map<string, Set<MemberWorkSyncTaskLike>>,
+  reference: string | undefined,
+  task: MemberWorkSyncTaskLike
+): void {
+  const normalized = reference?.trim().replace(/^#/, '');
+  if (!normalized) return;
+  const matches = index.get(normalized) ?? new Set<MemberWorkSyncTaskLike>();
+  matches.add(task);
+  index.set(normalized, matches);
+}
+
+function buildTaskReferenceIndex(tasks: MemberWorkSyncTaskLike[]): TaskReferenceIndex {
+  const index = new Map<string, Set<MemberWorkSyncTaskLike>>();
+  const display = new Map<string, Set<MemberWorkSyncTaskLike>>();
+  for (const task of tasks) {
+    addTaskReference(index, task.id, task);
+    addTaskReference(display, task.displayId, task);
+  }
+  return { canonical: index, display };
+}
+
+function findUniqueReferencedTask(
+  tasksByReference: TaskReferenceIndex,
+  reference: string
+): MemberWorkSyncTaskLike | null {
+  const normalized = reference.trim().replace(/^#/, '');
+  const canonicalMatches = tasksByReference.canonical.get(normalized);
+  if (canonicalMatches?.size === 1) {
+    return [...canonicalMatches][0];
+  }
+  if (canonicalMatches && canonicalMatches.size > 1) {
+    return null;
+  }
+  const matches = tasksByReference.display.get(normalized);
+  return matches?.size === 1 ? [...matches][0] : null;
 }
 
 export function buildActionableWorkAgenda(
@@ -104,9 +140,7 @@ export function buildActionableWorkAgenda(
   const diagnostics: string[] = [];
   const activeMemberNames = getActiveMemberNames(input.members);
   const activeLeadName = getActiveLeadName(input.members);
-  const tasksByReference = new Map(
-    input.tasks.flatMap((task) => taskReferenceKeys(task).map((key) => [key, task] as const))
-  );
+  const tasksByReference = buildTaskReferenceIndex(input.tasks);
 
   if (!memberName || isReservedMemberName(memberName)) {
     diagnostics.push('member_invalid_or_reserved');
@@ -126,12 +160,16 @@ export function buildActionableWorkAgenda(
 
       const owner = normalizeMemberName(task.owner);
       const base = buildBaseItem(task, memberName);
-      const blockedBy = [...(task.blockedBy ?? [])].filter(Boolean).sort();
-      const blocks = [...(task.blocks ?? [])].filter(Boolean).sort();
+      const blockedBy = [
+        ...new Set((task.blockedBy ?? []).map((id) => id.trim()).filter(Boolean)),
+      ].sort();
+      const blocks = [
+        ...new Set((task.blocks ?? []).map((id) => id.trim()).filter(Boolean)),
+      ].sort();
       const brokenDependencyIds: string[] = [];
       const waitingDependencyIds: string[] = [];
       for (const dependencyId of blockedBy) {
-        const dependency = tasksByReference.get(dependencyId) ?? null;
+        const dependency = findUniqueReferencedTask(tasksByReference, dependencyId);
         if (!dependency || dependency.status === 'deleted' || dependency.deletedAt) {
           brokenDependencyIds.push(dependencyId);
         } else if (!isTeamTaskFinishedForDependency(dependency)) {

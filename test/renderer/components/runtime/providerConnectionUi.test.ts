@@ -6,6 +6,7 @@ import {
   isConnectionManagedRuntimeProvider,
   isOpenCodeCatalogHydrating,
   isProviderInventoryOnlyFallback,
+  shouldMaskCodexNegativeBootstrapState,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -52,7 +53,8 @@ function createAnthropicProvider(
 }
 
 function createCodexProvider(
-  overrides?: Partial<CliProviderStatus['connection']> & {
+  overrides?: Partial<CliProviderStatus> &
+    Partial<CliProviderStatus['connection']> & {
     authenticated?: boolean;
     authMethod?: string | null;
     selectedBackendId?: string | null;
@@ -71,7 +73,10 @@ function createCodexProvider(
     authMethod: overrides?.authMethod ?? 'api_key',
     verificationState: 'verified',
     statusMessage: overrides?.statusMessage ?? 'Codex native ready',
-    models: ['gpt-5-codex'],
+    models: overrides?.models ?? ['gpt-5-codex'],
+    modelCatalog: overrides?.modelCatalog,
+    modelCatalogRefreshState: overrides?.modelCatalogRefreshState,
+    runtimeCapabilities: overrides?.runtimeCapabilities,
     canLoginFromUi: overrides?.canLoginFromUi ?? false,
     capabilities: {
       teamLaunch: true,
@@ -602,6 +607,42 @@ describe('providerConnectionUi', () => {
     expect(formatProviderStatusText(provider)).toBe(
       'Codex has a locally selected ChatGPT account, but the current session needs reconnect.'
     );
+  });
+
+  it('masks stale Codex reconnect state while provider catalog hydration is still loading', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      models: [],
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: {
+        modelCatalog: {
+          dynamic: true,
+          source: 'app-server',
+        },
+      },
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        localActiveChatgptAccountPresent: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+        launchReadinessState: 'missing_auth',
+      },
+    });
+
+    expect(shouldMaskCodexNegativeBootstrapState(provider, provider)).toBe(true);
   });
 
   it('surfaces native auth-required state from the selected backend option', () => {

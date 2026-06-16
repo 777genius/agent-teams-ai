@@ -46,7 +46,8 @@
       "copiedShort": "Copié",
       "copy": "Copier les diagnostics",
       "hints": "Conseils",
-      "likelyCause": "Cause probable:"
+      "likelyCause": "Cause probable:",
+      "windowsSymlinkAdminHint": "Windows: lancez Agent Teams AI en tant qu'administrateur"
     },
     "models": {
       "alreadyDefault": "C'est déjà la valeur par défaut d'OpenCode sélectionnée.",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "Modèles de recherche",
       "selectProjectBeforeTesting": "Sélectionnez un contexte de projet avant de tester des modèles.",
       "selectProjectBeforeTestingDefaults": "Sélectionnez un contexte de projet avant de tester ou d'enregistrer les valeurs par défaut OpenCode.",
-      "useInTeamPicker": "Utilisation dans le sélectionneur d'équipe"
+      "useInTeamPicker": "Utilisation dans le sélectionneur d'équipe",
+      "testInProgress": "Le test du modèle est déjà en cours.",
+      "validationContextRequired": "Sélectionnez un contexte de validation ci-dessus pour activer Test et Set default. L'enregistrement pour team picker ne conserve que la route pour les nouvelles équipes.",
+      "actionsUnavailable": "Les actions sont temporairement indisponibles.",
+      "defaultSaveInProgress": "L'OpenCode default est en cours d'enregistrement.",
+      "routeUnavailableAuth": "Ce provider nécessite une authentification avant d'utiliser ce modèle.",
+      "routeUnavailableFailed": "Cette model route a échoué au dernier execution test.",
+      "routeUnavailableGeneric": "Cette model route ne peut pas être utilisée maintenant.",
+      "routeUnavailableUnknown": "Ce modèle est l'OpenCode default actuel, mais il n'est pas encore disponible dans le live catalog."
     },
     "providers": {
       "catalog": "Catalogue des fournisseurs OpenCode",
@@ -108,7 +117,8 @@
       "needsTest": "test des besoins",
       "failed": "échoué",
       "unknown": "inconnu",
-      "default": "par défaut"
+      "default": "par défaut",
+      "knownRoute": "route connue"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API clé configurée, mais non encore vérifiée",
         "apiKeyModeMissingCredential": "API mode clé sélectionné, mais non API la clé est configurée",
         "connectedVia": "Connecté via {{method}}",
-        "unableToVerify": "Impossible de vérifier"
+        "unableToVerify": "Impossible de vérifier",
+        "modelsAvailable": "Modèles disponibles"
       },
       "mode": {
         "selectedAuth": "Auth sélectionnée: {{authMode}}",

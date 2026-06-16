@@ -71,6 +71,24 @@ const provisioningHarness = vi.hoisted(() => {
   };
 });
 
+interface SuggestionHookOptions {
+  enabled?: boolean;
+}
+
+const suggestionHarness = vi.hoisted(() => {
+  const state = {
+    taskOptions: [] as SuggestionHookOptions[],
+    teamOptions: [] as SuggestionHookOptions[],
+  };
+  return {
+    reset: () => {
+      state.taskOptions = [];
+      state.teamOptions = [];
+    },
+    state,
+  };
+});
+
 const storeHarness = vi.hoisted(() => {
   const state = {
     crossTeamTargets: [] as {
@@ -83,9 +101,18 @@ const storeHarness = vi.hoisted(() => {
       isOnline?: boolean;
     }[],
   };
+  const methods = {
+    // Returns a resolved Promise<boolean> to match the store contract: the composer
+    // chains `.then()` on this to clear its dedup ref and retry on failure.
+    fetchCrossTeamTargets: vi.fn().mockResolvedValue(true),
+    fetchSkillsCatalog: vi.fn(),
+  };
   return {
+    methods,
     reset: () => {
       state.crossTeamTargets = [];
+      methods.fetchCrossTeamTargets.mockClear();
+      methods.fetchSkillsCatalog.mockClear();
     },
     state,
   };
@@ -129,14 +156,18 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
       cornerAction?: React.ReactNode;
       cornerActionLeft?: React.ReactNode;
       footerRight?: React.ReactNode;
+      onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
+      onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
     }
-  >(({ value, disabled, cornerAction, cornerActionLeft, footerRight }, ref) =>
+  >(({ value, disabled, cornerAction, cornerActionLeft, footerRight, onBlur, onFocus }, ref) =>
     React.createElement(
       'div',
       null,
       React.createElement('textarea', {
         'aria-label': 'Message',
         disabled,
+        onBlur,
+        onFocus,
         readOnly: true,
         ref,
         value,
@@ -198,19 +229,25 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
 }));
 
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
-  useTaskSuggestions: () => ({ suggestions: [] }),
+  useTaskSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
+    suggestionHarness.state.taskOptions.push(options);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
-  useTeamSuggestions: () => ({ suggestions: [] }),
+  useTeamSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
+    suggestionHarness.state.teamOptions.push(options);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       crossTeamTargets: storeHarness.state.crossTeamTargets,
-      fetchCrossTeamTargets: vi.fn(),
-      fetchSkillsCatalog: vi.fn(),
+      fetchCrossTeamTargets: storeHarness.methods.fetchCrossTeamTargets,
+      fetchSkillsCatalog: storeHarness.methods.fetchSkillsCatalog,
       selectedTeamData: null,
       selectedTeamName: null,
       skillsProjectCatalogByProjectPath: {},
@@ -312,6 +349,7 @@ describe('MessageComposer pending send lifecycle', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     draftHarness.reset();
     provisioningHarness.reset();
+    suggestionHarness.reset();
     storeHarness.reset();
   });
 
@@ -644,6 +682,49 @@ describe('MessageComposer pending send lifecycle', () => {
     });
 
     expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('defers expensive mention data until the matching trigger is typed', () => {
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+
+    act(() => {
+      getTextarea(host).focus();
+    });
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '#';
+    render();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(true);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '@';
+    render();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(true);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '/';
+    render();
+
+    expect(storeHarness.methods.fetchSkillsCatalog).toHaveBeenCalledTimes(1);
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
 
     act(() => {
       root.unmount();

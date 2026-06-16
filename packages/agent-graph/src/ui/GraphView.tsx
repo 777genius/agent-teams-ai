@@ -114,6 +114,29 @@ export function filterVisibleGraphEdges(
   });
 }
 
+export function isEditableGraphShortcutTarget(event: KeyboardEvent): boolean {
+  const targets =
+    typeof event.composedPath === 'function'
+      ? event.composedPath()
+      : [event.target].filter(Boolean);
+
+  return targets.some((target) => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    const editableElement = target.closest(
+      'input, textarea, select, [role="textbox"], [contenteditable]'
+    );
+    if (!editableElement) {
+      return false;
+    }
+
+    const contentEditable = editableElement.getAttribute('contenteditable');
+    return contentEditable?.toLowerCase() !== 'false';
+  });
+}
+
 export function GraphView({
   data,
   events,
@@ -146,6 +169,9 @@ export function GraphView({
     showTasks: config?.showTasks ?? true,
     showProcesses: config?.showProcesses ?? true,
     showEdges: config?.showEdges ?? false,
+    showSpaceEffects:
+      config?.showSpaceEffects ??
+      ((config?.showHexGrid ?? true) || (config?.showStarField ?? true)),
     paused: !(config?.animationEnabled ?? true),
   });
   const effectivePaused = filters.paused || suspendAnimation;
@@ -411,6 +437,7 @@ export function GraphView({
       hoveredEdgeId: hoveredEdgeIdRef.current,
       focusNodeIds: focusState.focusNodeIds,
       focusEdgeIds: focusState.focusEdgeIds,
+      ownerColumnGroupRects: simulationRef.current.getOwnerColumnGroupRects(),
       dragPreview: dragPreviewRef.current,
     });
 
@@ -941,10 +968,7 @@ export function GraphView({
   // ─── Keyboard ───────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Don't capture from inputs
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-        return;
+      if (isEditableGraphShortcutTarget(e)) return;
 
       if (e.key === 'Escape') {
         if (selectedNodeId || selectedEdgeId) {
@@ -1063,8 +1087,8 @@ export function GraphView({
     >
       <GraphCanvas
         ref={canvasHandle}
-        showHexGrid={config?.showHexGrid ?? true}
-        showStarField={config?.showStarField ?? true}
+        showHexGrid={filters.showSpaceEffects && (config?.showHexGrid ?? true)}
+        showStarField={filters.showSpaceEffects && (config?.showStarField ?? true)}
         bloomIntensity={config?.bloomIntensity ?? 0.6}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}

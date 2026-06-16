@@ -57,6 +57,16 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
     buildProviderAwareCliEnvMock(...args),
+  getAggregateProviderStatusStoredCredentialAllowlist: () => [
+    'ANTHROPIC_AUTH_TOKEN',
+    'OPENAI_API_KEY',
+  ],
+  getProviderStatusStoredCredentialAllowlist: (providerId?: string) =>
+    providerId === 'anthropic'
+      ? ['ANTHROPIC_AUTH_TOKEN']
+      : providerId === 'codex'
+        ? ['OPENAI_API_KEY']
+        : undefined,
 }));
 
 describe('ClaudeMultimodelBridgeService', () => {
@@ -249,6 +259,14 @@ describe('ClaudeMultimodelBridgeService', () => {
         projectId: 'demo-project',
       },
     });
+
+    const aggregateEnvBuild = buildProviderAwareCliEnvMock.mock.calls.find(
+      ([options]) => options.providerId === undefined
+    );
+    expect(aggregateEnvBuild?.[0]).toMatchObject({
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
+    });
   });
 
   it('falls back to provider-scoped full runtime status without probing Gemini', async () => {
@@ -413,9 +431,15 @@ describe('ClaudeMultimodelBridgeService', () => {
       'model list --json --provider codex',
     ]);
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5000);
-    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual(
+    const warnMessages = vi.mocked(console.warn).mock.calls.map((call) => call.join(' '));
+    expect(warnMessages).toEqual(
       expect.arrayContaining([
         expect.stringContaining('Provider-scoped summary runtime status timed out for codex'),
+      ])
+    );
+    expect(warnMessages).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Provider-scoped summary runtime status unavailable for codex:'),
       ])
     );
     vi.mocked(console.warn).mockClear();
@@ -950,6 +974,18 @@ describe('ClaudeMultimodelBridgeService', () => {
       modelCatalogRefreshState: 'ready',
     });
     expect(hydratedCodex?.modelCatalog?.models.map((model) => model.id)).toEqual(['gpt-5.4']);
+
+    const codexEnvBuilds = buildProviderAwareCliEnvMock.mock.calls.filter(
+      ([options]) => options.providerId === 'codex'
+    );
+    expect(codexEnvBuilds.length).toBeGreaterThanOrEqual(2);
+    for (const [options] of codexEnvBuilds) {
+      expect(options).toMatchObject({
+        providerId: 'codex',
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
+      });
+    }
   });
 
   it('promotes OpenCode auth when full catalog hydration proves built-in free access', async () => {
@@ -1835,6 +1871,44 @@ describe('ClaudeMultimodelBridgeService', () => {
         providerId: 'anthropic',
         allowStoredApiKeyDecryption: false,
         allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      })
+    );
+  });
+
+  it('allows the stored Codex API key for Codex status checks', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        providers: {
+          codex: {
+            supported: true,
+            authenticated: true,
+            authMethod: 'api_key',
+            verificationState: 'verified',
+            canLoginFromUi: true,
+            capabilities: { teamLaunch: true, oneShot: true },
+          },
+        },
+      }),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
+
+    expect(provider).toMatchObject({
+      providerId: 'codex',
+      authenticated: true,
+      authMethod: 'api_key',
+    });
+    expect(buildProviderAwareCliEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'codex',
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
       })
     );
   });

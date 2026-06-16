@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
@@ -24,6 +25,7 @@ export const MemberLaunchDiagnosticsButton = ({
   size = label ? 'sm' : 'icon',
   attention = false,
 }: MemberLaunchDiagnosticsButtonProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [copied, setCopied] = useState(false);
 
   const copyDiagnostics = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
@@ -39,7 +41,7 @@ export const MemberLaunchDiagnosticsButton = ({
   };
 
   const icon = copied ? <Check size={13} /> : <ClipboardList size={13} />;
-  const tooltip = copied ? 'Diagnostics copied' : 'Copy diagnostics';
+  const tooltip = copied ? t('provisioning.diagnosticsCopied') : t('provisioning.copyDiagnostics');
 
   return (
     <Tooltip>

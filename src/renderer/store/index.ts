@@ -94,7 +94,7 @@ const TEAM_CHANGE_EVENT_BURST_WINDOW_MS = 4_000;
 const TEAM_CHANGE_EVENT_BURST_WARN_COUNT = 8;
 const TEAM_CHANGE_EVENT_WARN_THROTTLE_MS = 2_000;
 const TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS = 10_000;
-const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 30_000;
+const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 60_000;
 const TEAM_MESSAGE_FALLBACK_POLL_MS = 10_000;
 const TASK_LOG_ACTIVITY_PULSE_MS = 3_500;
 const STARTUP_RUNTIME_STATUS_IDLE_DELAY_MS = 30_000;
@@ -198,6 +198,16 @@ export const useStore = create<AppState>()((...args) => ({
   ...createScheduleSlice(...args),
   ...createExtensionsSlice(...args),
 }));
+
+declare global {
+  interface Window {
+    __agentTeamsDevStore?: typeof useStore;
+  }
+}
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  window.__agentTeamsDevStore = useStore;
+}
 
 // =============================================================================
 // Re-exports
@@ -361,8 +371,11 @@ export function initializeNotificationListeners(): () => void {
   const TEAM_REFRESH_THROTTLE_MS = 800;
   const TEAM_PRESENCE_REFRESH_THROTTLE_MS = 400;
   const TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS = 500;
+  const TEAM_AGENT_RUNTIME_REFRESH_THROTTLE_MS = 500;
+  const TEAM_AGENT_RUNTIME_PROCESS_LITE_REFRESH_THROTTLE_MS = 5_000;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
+  const GLOBAL_TASKS_REFRESH_DURING_LAUNCH_THROTTLE_MS = 5000;
   const PROCESS_LITE_STRUCTURAL_RECONCILE_IDLE_MS = 2_500;
   const PROCESS_LITE_STRUCTURAL_RECONCILE_MAX_WAIT_MS = 15_000;
   const buildTeamChangeFanoutReason = (eventType: string): string => `event:${eventType}`;
@@ -511,6 +524,10 @@ export function initializeNotificationListeners(): () => void {
     if (teamAgentRuntimeRefreshTimers.has(timerKey)) {
       return;
     }
+    const throttleMs =
+      reason === 'event:process-lite'
+        ? TEAM_AGENT_RUNTIME_PROCESS_LITE_REFRESH_THROTTLE_MS
+        : TEAM_AGENT_RUNTIME_REFRESH_THROTTLE_MS;
     const timer = setTimeout(() => {
       teamAgentRuntimeRefreshTimers.delete(timerKey);
       if (options.skipIfHiddenAtExecution === true && !isTeamVisibleInAnyPane(teamName)) {
@@ -532,7 +549,7 @@ export function initializeNotificationListeners(): () => void {
         operation: 'fetchTeamAgentRuntime',
       });
       void useStore.getState().fetchTeamAgentRuntime(teamName);
-    }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
+    }, throttleMs);
     teamAgentRuntimeRefreshTimers.set(timerKey, timer);
   };
   const scheduleProcessLiteRuntimeRefresh = (teamName: string): void => {
@@ -2054,6 +2071,11 @@ export function initializeNotificationListeners(): () => void {
 
       // Throttled refresh of global tasks list for sidebar.
       if (shouldRefreshGlobalTasks) {
+        const globalTasksRefreshDelayMs = shouldDeferAutomaticTeamDataRefreshDuringLaunch(
+          event.teamName
+        )
+          ? GLOBAL_TASKS_REFRESH_DURING_LAUNCH_THROTTLE_MS
+          : GLOBAL_TASKS_REFRESH_THROTTLE_MS;
         noteGlobalRefreshScheduled(
           pendingGlobalTasksRefreshDiagnostics,
           event.teamName,
@@ -2069,7 +2091,7 @@ export function initializeNotificationListeners(): () => void {
               'fetchAllTasks'
             );
             void useStore.getState().fetchAllTasks();
-          }, GLOBAL_TASKS_REFRESH_THROTTLE_MS);
+          }, globalTasksRefreshDelayMs);
         }
       }
 

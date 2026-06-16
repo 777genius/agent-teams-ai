@@ -18,11 +18,36 @@ interface ActivityIntervalResult {
   failed?: boolean;
 }
 
+interface TaskDirectorySignature {
+  key: string;
+}
+
+interface TaskFileSignature {
+  size: number;
+  mtimeMs: number;
+  ctimeMs: number;
+  dev: number;
+  ino: number;
+}
+
+interface CachedActivityTaskFile {
+  signature: TaskFileSignature;
+  task: MutableTeamTask | null;
+}
+
+interface ResumeMembersCacheEntry {
+  memberKey: string;
+  signatureKey: string;
+}
+
+type MemberActivityNoopOperation = 'pause-member' | 'resume-member';
+
 type MutableTeamTask = TeamTask & {
   reviewIntervals?: TaskReviewInterval[];
 };
 
 const CRASH_REPAIR_GRACE_MS = 5_000;
+const TASK_FILE_CACHE_MAX_ENTRIES = 8_192;
 const logger = createLogger('Service:TeamTaskActivityIntervalService');
 
 function normalizeMemberName(value: string | null | undefined): string {
@@ -306,29 +331,145 @@ function materializePausedReviewInterval(
   return true;
 }
 
-function readTaskFile(filePath: string): MutableTeamTask | null {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return parsed && typeof parsed === 'object' ? (parsed as MutableTeamTask) : null;
-  } catch {
-    return null;
-  }
-}
-
 function writeTaskFile(filePath: string, task: MutableTeamTask): void {
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tempPath, JSON.stringify(task, null, 2));
   fs.renameSync(tempPath, filePath);
 }
 
+function buildTaskFileSignature(stat: fs.Stats): TaskFileSignature {
+  return {
+    size: stat.size,
+    mtimeMs: stat.mtimeMs,
+    ctimeMs: stat.ctimeMs,
+    dev: stat.dev,
+    ino: stat.ino,
+  };
+}
+
+function taskFileSignaturesEqual(a: TaskFileSignature, b: TaskFileSignature): boolean {
+  return (
+    a.size === b.size &&
+    a.mtimeMs === b.mtimeMs &&
+    a.ctimeMs === b.ctimeMs &&
+    a.dev === b.dev &&
+    a.ino === b.ino
+  );
+}
+
 export class TeamTaskActivityIntervalService {
-  private mutateTeamTasks(
+  private readonly resumeMembersCache = new Map<string, ResumeMembersCacheEntry>();
+  private readonly memberActivityNoopCache = new Map<string, string>();
+  private readonly taskFileCache = new Map<string, CachedActivityTaskFile>();
+
+  private getBoardStateLockPath(teamName: string): string {
+    return `${path.join(getTeamsBasePath(), teamName, 'board-state')}.lock`;
+  }
+
+  private getMemberActivityNoopCacheKey(
     teamName: string,
-    mutate: (task: MutableTeamTask) => boolean
+    operation: MemberActivityNoopOperation,
+    memberKey: string
+  ): string {
+    return `${teamName}\u0000${operation}\u0000${memberKey}`;
+  }
+
+  private clearMemberActivityNoopCacheForTeam(teamName: string): void {
+    const prefix = `${teamName}\u0000`;
+    for (const key of this.memberActivityNoopCache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.memberActivityNoopCache.delete(key);
+      }
+    }
+  }
+
+  private clearActivityNoopCachesForTeam(teamName: string): void {
+    this.clearMemberActivityNoopCacheForTeam(teamName);
+    this.resumeMembersCache.delete(teamName);
+  }
+
+  private getCachedTaskFile(
+    filePath: string,
+    signature: TaskFileSignature
+  ): MutableTeamTask | null | undefined {
+    const cached = this.taskFileCache.get(filePath);
+    if (!cached) return undefined;
+    if (!taskFileSignaturesEqual(cached.signature, signature)) {
+      this.taskFileCache.delete(filePath);
+      return undefined;
+    }
+    return cached.task ? structuredClone(cached.task) : null;
+  }
+
+  private setCachedTaskFile(
+    filePath: string,
+    signature: TaskFileSignature,
+    task: MutableTeamTask | null
+  ): void {
+    if (
+      !this.taskFileCache.has(filePath) &&
+      this.taskFileCache.size >= TASK_FILE_CACHE_MAX_ENTRIES
+    ) {
+      const oldestKey = this.taskFileCache.keys().next().value;
+      if (oldestKey) {
+        this.taskFileCache.delete(oldestKey);
+      }
+    }
+    this.taskFileCache.set(filePath, {
+      signature,
+      task: task ? structuredClone(task) : null,
+    });
+  }
+
+  private readTaskFile(filePath: string): MutableTeamTask | null {
+    let signature: TaskFileSignature;
+    try {
+      const stat = fs.statSync(filePath);
+      if (!stat.isFile()) {
+        this.taskFileCache.delete(filePath);
+        return null;
+      }
+      signature = buildTaskFileSignature(stat);
+      const cached = this.getCachedTaskFile(filePath, signature);
+      if (cached !== undefined) {
+        return cached;
+      }
+    } catch {
+      this.taskFileCache.delete(filePath);
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+      const task = parsed && typeof parsed === 'object' ? (parsed as MutableTeamTask) : null;
+      this.setCachedTaskFile(filePath, signature, task);
+      return task;
+    } catch {
+      this.setCachedTaskFile(filePath, signature, null);
+      return null;
+    }
+  }
+
+  private cacheWrittenTaskFile(filePath: string, task: MutableTeamTask): void {
+    try {
+      const stat = fs.statSync(filePath);
+      if (!stat.isFile()) {
+        this.taskFileCache.delete(filePath);
+        return;
+      }
+      this.setCachedTaskFile(filePath, buildTaskFileSignature(stat), task);
+    } catch {
+      this.taskFileCache.delete(filePath);
+    }
+  }
+
+  private mutateTeamTasksWithLock(
+    teamName: string,
+    run: () => ActivityIntervalResult
   ): ActivityIntervalResult {
     const lockScope = path.join(getTeamsBasePath(), teamName, 'board-state');
     try {
-      return withFileLockSync(lockScope, () => this.mutateTeamTasksUnlocked(teamName, mutate));
+      return withFileLockSync(lockScope, run);
     } catch (error) {
       logger.warn(
         `[${teamName}] Failed to update task activity intervals: ${
@@ -337,6 +478,65 @@ export class TeamTaskActivityIntervalService {
       );
       return { changedTasks: 0, failed: true };
     }
+  }
+
+  private mutateTeamTasks(
+    teamName: string,
+    mutate: (task: MutableTeamTask) => boolean
+  ): ActivityIntervalResult {
+    const result = this.mutateTeamTasksWithLock(teamName, () =>
+      this.mutateTeamTasksUnlocked(teamName, mutate)
+    );
+    if (result.changedTasks > 0 || result.failed) {
+      this.clearActivityNoopCachesForTeam(teamName);
+    }
+    return result;
+  }
+
+  private mutateMemberTasksWithNoopCache(
+    teamName: string,
+    operation: MemberActivityNoopOperation,
+    memberKey: string,
+    mutate: (task: MutableTeamTask) => boolean
+  ): ActivityIntervalResult {
+    const cacheKey = this.getMemberActivityNoopCacheKey(teamName, operation, memberKey);
+    const cachedSignatureKey = this.memberActivityNoopCache.get(cacheKey);
+    if (cachedSignatureKey) {
+      const beforeLockSignature = this.readTaskDirectorySignature(teamName);
+      if (
+        beforeLockSignature &&
+        beforeLockSignature.key === cachedSignatureKey &&
+        !fs.existsSync(this.getBoardStateLockPath(teamName))
+      ) {
+        return { changedTasks: 0 };
+      }
+    }
+
+    const result = this.mutateTeamTasksWithLock(teamName, () => {
+      const beforeSignature = this.readTaskDirectorySignature(teamName);
+      if (beforeSignature && this.memberActivityNoopCache.get(cacheKey) === beforeSignature.key) {
+        return { changedTasks: 0 };
+      }
+
+      const mutationResult = this.mutateTeamTasksUnlocked(teamName, mutate);
+      if (mutationResult.changedTasks > 0) {
+        this.clearActivityNoopCachesForTeam(teamName);
+        return mutationResult;
+      }
+
+      const nextSignature = beforeSignature ?? this.readTaskDirectorySignature(teamName);
+      if (nextSignature) {
+        this.memberActivityNoopCache.set(cacheKey, nextSignature.key);
+      } else {
+        this.memberActivityNoopCache.delete(cacheKey);
+      }
+      return mutationResult;
+    });
+
+    if (result.changedTasks > 0 || result.failed) {
+      this.clearActivityNoopCachesForTeam(teamName);
+    }
+    return result;
   }
 
   private mutateTeamTasksUnlocked(
@@ -358,10 +558,11 @@ export class TeamTaskActivityIntervalService {
     for (const fileName of entries) {
       if (!fileName.endsWith('.json') || fileName.startsWith('.')) continue;
       const filePath = path.join(tasksDir, fileName);
-      const task = readTaskFile(filePath);
+      const task = this.readTaskFile(filePath);
       if (!task) continue;
       if (!mutate(task)) continue;
       writeTaskFile(filePath, task);
+      this.cacheWrittenTaskFile(filePath, task);
       changedTasks += 1;
     }
 
@@ -369,6 +570,38 @@ export class TeamTaskActivityIntervalService {
       TeamTaskReader.invalidateAllTasksCache();
     }
     return { changedTasks };
+  }
+
+  private readTaskDirectorySignature(teamName: string): TaskDirectorySignature | null {
+    const tasksDir = path.join(getTasksBasePath(), teamName);
+    let entries: string[];
+    try {
+      entries = fs
+        .readdirSync(tasksDir)
+        .filter((fileName) => fileName.endsWith('.json') && !fileName.startsWith('.'))
+        .sort();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return { key: 'missing' };
+      }
+      return null;
+    }
+
+    const parts: string[] = [];
+    for (const fileName of entries) {
+      try {
+        const stat = fs.statSync(path.join(tasksDir, fileName));
+        if (!stat.isFile()) continue;
+        parts.push([fileName, stat.size, stat.mtimeMs, stat.ctimeMs].join('\0'));
+      } catch {
+        return null;
+      }
+    }
+    return { key: parts.join('\0\0') };
+  }
+
+  private makeMemberSetKey(memberKeys: ReadonlySet<string>): string {
+    return [...memberKeys].sort().join('\0');
   }
 
   pauseActiveIntervalsForTeam(
@@ -389,13 +622,19 @@ export class TeamTaskActivityIntervalService {
     memberName: string,
     at = new Date().toISOString()
   ): ActivityIntervalResult {
-    return this.mutateTeamTasks(teamName, (task) => {
+    const memberKey = normalizeMemberName(memberName);
+    const mutate = (task: MutableTeamTask): boolean => {
       const changedWork = closeOpenWorkIntervals(task, at, memberName);
       const changedReview = closeOpenReviewIntervals(task, at, memberName);
       const materializedWork = materializePausedWorkInterval(task, at, memberName);
       const materializedReview = materializePausedReviewInterval(task, at, memberName);
       return changedWork || changedReview || materializedWork || materializedReview;
-    });
+    };
+
+    if (!memberKey) {
+      return this.mutateTeamTasks(teamName, mutate);
+    }
+    return this.mutateMemberTasksWithNoopCache(teamName, 'pause-member', memberKey, mutate);
   }
 
   resumeActiveIntervalsForMember(
@@ -406,7 +645,7 @@ export class TeamTaskActivityIntervalService {
     const memberKey = normalizeMemberName(memberName);
     if (!memberKey) return { changedTasks: 0 };
 
-    return this.mutateTeamTasks(teamName, (task) => {
+    return this.mutateMemberTasksWithNoopCache(teamName, 'resume-member', memberKey, (task) => {
       let changed = false;
 
       if (
@@ -441,6 +680,109 @@ export class TeamTaskActivityIntervalService {
 
       return changed;
     });
+  }
+
+  /**
+   * Batched equivalent of resumeActiveIntervalsForMember for several members in a
+   * single task-file pass. During launch the live-status loop resumes every alive
+   * member every audit cycle; doing that per member meant one synchronous
+   * file-lock + read of every task file PER member PER cycle. This applies the
+   * identical per-member resume logic against a member set in one locked pass, so
+   * the mutations are exactly the same but the lock + reads happen once per cycle
+   * instead of once per member. After a no-op pass, a task-file signature skips
+   * unchanged repeat cycles without parsing every task JSON again.
+   */
+  resumeActiveIntervalsForMembers(
+    teamName: string,
+    memberNames: readonly string[],
+    at = new Date().toISOString()
+  ): ActivityIntervalResult {
+    const memberKeys = new Set(
+      memberNames.map((name) => normalizeMemberName(name)).filter((key): key is string => !!key)
+    );
+    if (memberKeys.size === 0) return { changedTasks: 0 };
+    const memberKey = this.makeMemberSetKey(memberKeys);
+
+    const cachedBeforeLock = this.resumeMembersCache.get(teamName);
+    if (cachedBeforeLock?.memberKey === memberKey) {
+      const beforeLockSignature = this.readTaskDirectorySignature(teamName);
+      if (
+        beforeLockSignature &&
+        cachedBeforeLock.signatureKey === beforeLockSignature.key &&
+        !fs.existsSync(this.getBoardStateLockPath(teamName))
+      ) {
+        return { changedTasks: 0 };
+      }
+    }
+
+    const result = this.mutateTeamTasksWithLock(teamName, () => {
+      const beforeSignature = this.readTaskDirectorySignature(teamName);
+      const cached = this.resumeMembersCache.get(teamName);
+      if (
+        beforeSignature &&
+        cached?.memberKey === memberKey &&
+        cached.signatureKey === beforeSignature.key
+      ) {
+        return { changedTasks: 0 };
+      }
+
+      const mutationResult = this.mutateTeamTasksUnlocked(teamName, (task) => {
+        let changed = false;
+
+        if (
+          task.status === 'in_progress' &&
+          memberKeys.has(normalizeMemberName(task.owner)) &&
+          !hasOpenWorkInterval(task)
+        ) {
+          const activeStartedAt = getActiveWorkStartedAt(task);
+          task.workIntervals = [
+            ...(Array.isArray(task.workIntervals) ? task.workIntervals : []),
+            { startedAt: resumeStartIso(activeStartedAt, at) },
+          ];
+          changed = true;
+        }
+
+        const activeReview = getActiveReviewStart(task);
+        if (
+          task.status === 'completed' &&
+          activeReview &&
+          memberKeys.has(normalizeMemberName(activeReview.reviewer)) &&
+          !hasOpenReviewInterval(task, activeReview.reviewer)
+        ) {
+          task.reviewIntervals = [
+            ...(Array.isArray(task.reviewIntervals) ? task.reviewIntervals : []),
+            {
+              reviewer: activeReview.reviewer,
+              startedAt: resumeStartIso(activeReview.startedAt, at),
+            },
+          ];
+          changed = true;
+        }
+
+        return changed;
+      });
+
+      const nextSignature =
+        mutationResult.changedTasks > 0
+          ? this.readTaskDirectorySignature(teamName)
+          : beforeSignature;
+      if (nextSignature) {
+        this.resumeMembersCache.set(teamName, {
+          memberKey,
+          signatureKey: nextSignature.key,
+        });
+      } else {
+        this.resumeMembersCache.delete(teamName);
+      }
+      return mutationResult;
+    });
+
+    if (result.failed) {
+      this.clearActivityNoopCachesForTeam(teamName);
+    } else if (result.changedTasks > 0) {
+      this.clearMemberActivityNoopCacheForTeam(teamName);
+    }
+    return result;
   }
 
   repairStaleIntervalsAfterCrash(

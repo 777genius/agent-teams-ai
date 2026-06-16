@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('localePolicy', () => {
   it('normalizes unsupported preferences to system', () => {
-    expect(normalizeAppLocalePreference('uk')).toBe('system');
+    expect(normalizeAppLocalePreference('sv')).toBe('system');
     expect(normalizeAppLocalePreference(null)).toBe('system');
     expect(normalizeAppLocalePreference('en')).toBe('en');
     expect(normalizeAppLocalePreference('ru')).toBe('ru');
@@ -23,6 +23,21 @@ describe('localePolicy', () => {
     expect(normalizeAppLocalePreference('ur')).toBe('ur');
     expect(normalizeAppLocalePreference('id')).toBe('id');
     expect(normalizeAppLocalePreference('de')).toBe('de');
+    expect(normalizeAppLocalePreference('it')).toBe('it');
+    expect(normalizeAppLocalePreference('tr')).toBe('tr');
+    expect(normalizeAppLocalePreference('vi')).toBe('vi');
+    expect(normalizeAppLocalePreference('pl')).toBe('pl');
+    expect(normalizeAppLocalePreference('fa')).toBe('fa');
+    expect(normalizeAppLocalePreference('th')).toBe('th');
+    expect(normalizeAppLocalePreference('uk')).toBe('uk');
+    expect(normalizeAppLocalePreference('nl')).toBe('nl');
+    expect(normalizeAppLocalePreference('ta')).toBe('ta');
+    expect(normalizeAppLocalePreference('te')).toBe('te');
+    expect(normalizeAppLocalePreference('mr')).toBe('mr');
+    expect(normalizeAppLocalePreference('fil')).toBe('fil');
+    expect(normalizeAppLocalePreference('ms')).toBe('ms');
+    expect(normalizeAppLocalePreference('sw')).toBe('sw');
+    expect(normalizeAppLocalePreference('ro')).toBe('ro');
   });
 
   it('extracts the primary locale subtag', () => {
@@ -46,9 +61,24 @@ describe('localePolicy', () => {
     expect(resolveAppLocale({ preference: 'system', systemLocale: 'ur-PK' })).toBe('ur');
     expect(resolveAppLocale({ preference: 'system', systemLocale: 'id-ID' })).toBe('id');
     expect(resolveAppLocale({ preference: 'system', systemLocale: 'de-DE' })).toBe('de');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'it-IT' })).toBe('it');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'tr-TR' })).toBe('tr');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'vi-VN' })).toBe('vi');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'pl-PL' })).toBe('pl');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'fa-IR' })).toBe('fa');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'th-TH' })).toBe('th');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'uk-UA' })).toBe('uk');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'nl-NL' })).toBe('nl');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'ta-IN' })).toBe('ta');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'te-IN' })).toBe('te');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'mr-IN' })).toBe('mr');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'fil-PH' })).toBe('fil');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'ms-MY' })).toBe('ms');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'sw-KE' })).toBe('sw');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'ro-RO' })).toBe('ro');
   });
 
   it('falls back when the system locale is not supported yet', () => {
-    expect(resolveAppLocale({ preference: 'system', systemLocale: 'uk-UA' })).toBe('en');
+    expect(resolveAppLocale({ preference: 'system', systemLocale: 'sv-SE' })).toBe('en');
   });
 });

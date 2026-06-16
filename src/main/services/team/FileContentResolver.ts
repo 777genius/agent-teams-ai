@@ -1,12 +1,11 @@
+import { readJsonlLines } from '@main/utils/jsonlLineReader';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { createHash } from 'crypto';
 import { diffLines } from 'diff';
-import { createReadStream } from 'fs';
 import { access, readFile } from 'fs/promises';
 import * as path from 'path';
-import * as readline from 'readline';
 
 import type { GitDiffFallback } from './GitDiffFallback';
 import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
@@ -407,10 +406,7 @@ export class FileContentResolver {
     targetFilePath: string
   ): Promise<string | null> {
     try {
-      const stream = createReadStream(logPath, { encoding: 'utf8' });
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-      for await (const line of rl) {
+      for await (const line of readJsonlLines(logPath)) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
@@ -431,17 +427,12 @@ export class FileContentResolver {
 
           const backupFileName = trackedFileBackups[targetFilePath];
           if (backupFileName) {
-            rl.close();
-            stream.destroy();
             return backupFileName;
           }
         } catch {
           // Skip malformed JSON
         }
       }
-
-      rl.close();
-      stream.destroy();
     } catch {
       logger.debug(`Не удалось прочитать JSONL для file-history: ${logPath}`);
     }

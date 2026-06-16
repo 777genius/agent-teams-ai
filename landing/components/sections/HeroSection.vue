@@ -55,14 +55,10 @@ const supportedProviders = [
   },
 ] as const;
 const supportedProvidersLabel = computed(() => (
-  locale.value === "ru"
-    ? "Поддерживаем AI-провайдеры"
-    : "Supported AI providers"
+  t("hero.supportedProviders")
 ));
 const heroSlogan = computed(() => (
-  locale.value === "ru"
-    ? "Делайте много, почти ничего не делая"
-    : "Get a lot done by doing very little"
+  t("hero.slogan")
 ));
 
 const heroDownloadUrl = computed(() => {
@@ -79,17 +75,13 @@ const docsHref = computed(() => buildDocsHref({
 }));
 const downloadActionSubtitle = computed(() => {
   if (!selectedDownloadAsset.value) {
-    return locale.value === "ru"
-      ? "Для вашей платформы"
-      : "For your platform";
+    return t("hero.platformDefault");
   }
 
   return selectedDownloadAsset.value.actionSubtitle;
 });
 const docsActionSubtitle = computed(() => (
-  locale.value === "ru"
-    ? "Гайды и настройка"
-    : "Guides and setup"
+  t("hero.guidesSetup")
 ));
 
 function clearHeroMessageTimers() {

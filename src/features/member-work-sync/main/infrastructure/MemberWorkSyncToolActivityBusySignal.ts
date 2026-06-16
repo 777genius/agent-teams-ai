@@ -2,9 +2,10 @@ import type { MemberWorkSyncBusySignalPort } from '../../core/application';
 import type { TeamChangeEvent, ToolActivityEventPayload } from '@shared/types';
 
 const DEFAULT_TOOL_ACTIVITY_BUSY_GRACE_MS = 90_000;
+const DEFAULT_ACTIVE_TOOL_STALE_MS = 10 * 60_000;
 
 interface MemberActivityState {
-  activeToolIds: Set<string>;
+  activeToolStartedAtByToolId: Map<string, string>;
   recentBusyUntilByToolId: Map<string, string>;
 }
 
@@ -29,6 +30,10 @@ function parseIsoMs(value: string | undefined, fallbackMs: number): number {
   return Number.isFinite(parsed) ? parsed : fallbackMs;
 }
 
+function parseEventIsoMs(value: string | undefined, nowMs: number): number {
+  return Math.min(parseIsoMs(value, nowMs), nowMs);
+}
+
 function addMsIso(baseIso: string, ms: number): string {
   return new Date(Date.parse(baseIso) + ms).toISOString();
 }
@@ -46,9 +51,14 @@ function maxIso(values: Iterable<string>): string | null {
 export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusySignalPort {
   private readonly activityByMember = new Map<string, MemberActivityState>();
   private readonly busyGraceMs: number;
+  private readonly activeToolStaleMs: number;
 
-  constructor(options: { busyGraceMs?: number } = {}) {
+  constructor(options: { busyGraceMs?: number; activeToolStaleMs?: number } = {}) {
     this.busyGraceMs = Math.max(0, options.busyGraceMs ?? DEFAULT_TOOL_ACTIVITY_BUSY_GRACE_MS);
+    this.activeToolStaleMs = Math.max(
+      this.busyGraceMs,
+      options.activeToolStaleMs ?? DEFAULT_ACTIVE_TOOL_STALE_MS
+    );
   }
 
   noteTeamChange(event: TeamChangeEvent): void {
@@ -67,7 +77,12 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     }
 
     if (payload.action === 'start' && payload.activity) {
-      this.noteStart(event.teamName, payload.activity.memberName, payload.activity.toolUseId);
+      this.noteStart(
+        event.teamName,
+        payload.activity.memberName,
+        payload.activity.toolUseId,
+        payload.activity.startedAt
+      );
       return;
     }
 
@@ -94,7 +109,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
 
     this.pruneState(key, state, input.nowIso);
 
-    if (state.activeToolIds.size > 0) {
+    if (state.activeToolStartedAtByToolId.size > 0) {
       return {
         busy: true,
         reason: 'active_tool_activity',
@@ -114,13 +129,19 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     return { busy: false };
   }
 
-  private noteStart(teamName: string, memberName: string, toolUseId: string): void {
+  private noteStart(
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    startedAt: string | undefined
+  ): void {
     const normalizedToolUseId = toolUseId.trim();
     if (!memberName.trim() || !normalizedToolUseId) {
       return;
     }
     const state = this.getOrCreateState(teamName, memberName);
-    state.activeToolIds.add(normalizedToolUseId);
+    const startedAtMs = parseEventIsoMs(startedAt, Date.now());
+    state.activeToolStartedAtByToolId.set(normalizedToolUseId, new Date(startedAtMs).toISOString());
     state.recentBusyUntilByToolId.delete(normalizedToolUseId);
   }
 
@@ -134,10 +155,10 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     if (!memberName.trim() || !normalizedToolUseId) {
       return;
     }
-    const finishedAtMs = parseIsoMs(finishedAt, Date.now());
+    const finishedAtMs = parseEventIsoMs(finishedAt, Date.now());
     const busyUntilIso = new Date(finishedAtMs + this.busyGraceMs).toISOString();
     const state = this.getOrCreateState(teamName, memberName);
-    state.activeToolIds.delete(normalizedToolUseId);
+    state.activeToolStartedAtByToolId.delete(normalizedToolUseId);
     state.recentBusyUntilByToolId.set(normalizedToolUseId, busyUntilIso);
   }
 
@@ -163,10 +184,10 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     }
 
     for (const toolUseId of normalizedToolUseIds) {
-      state.activeToolIds.delete(toolUseId);
+      state.activeToolStartedAtByToolId.delete(toolUseId);
       state.recentBusyUntilByToolId.delete(toolUseId);
     }
-    if (state.activeToolIds.size === 0 && state.recentBusyUntilByToolId.size === 0) {
+    if (state.activeToolStartedAtByToolId.size === 0 && state.recentBusyUntilByToolId.size === 0) {
       this.activityByMember.delete(key);
     }
   }
@@ -178,7 +199,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
       return existing;
     }
     const created: MemberActivityState = {
-      activeToolIds: new Set(),
+      activeToolStartedAtByToolId: new Map(),
       recentBusyUntilByToolId: new Map(),
     };
     this.activityByMember.set(key, created);
@@ -187,12 +208,20 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
 
   private pruneState(key: string, state: MemberActivityState, nowIso: string): void {
     const nowMs = Date.parse(nowIso);
+    if (Number.isFinite(nowMs)) {
+      for (const [toolUseId, startedAtIso] of state.activeToolStartedAtByToolId) {
+        const startedAtMs = Date.parse(startedAtIso);
+        if (!Number.isFinite(startedAtMs) || nowMs - startedAtMs >= this.activeToolStaleMs) {
+          state.activeToolStartedAtByToolId.delete(toolUseId);
+        }
+      }
+    }
     for (const [toolUseId, busyUntilIso] of state.recentBusyUntilByToolId) {
       if (Date.parse(busyUntilIso) <= nowMs) {
         state.recentBusyUntilByToolId.delete(toolUseId);
       }
     }
-    if (state.activeToolIds.size === 0 && state.recentBusyUntilByToolId.size === 0) {
+    if (state.activeToolStartedAtByToolId.size === 0 && state.recentBusyUntilByToolId.size === 0) {
       this.activityByMember.delete(key);
     }
   }

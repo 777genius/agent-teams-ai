@@ -232,6 +232,45 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(details?.className).toContain('font-mono');
   });
 
+  it('shows the Windows administrator hint only for OpenCode node_modules symlink EPERM errors', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const symlinkError = [
+      'Runtime provider management command failed unexpectedly:',
+      "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
+      "-> 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Data\\opencode\\profiles\\abc123\\config\\opencode\\node_modules'",
+    ].join(' ');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ error: symlinkError }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Windows: run Agent Teams AI as Administrator');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project',
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Windows: run Agent Teams AI as Administrator');
+  });
+
   it('copies fallback error text when structured diagnostics are unavailable', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

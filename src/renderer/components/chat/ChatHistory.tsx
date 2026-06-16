@@ -1,13 +1,14 @@
 import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { isNearBottom, useAutoScrollBottom } from '@renderer/hooks/useAutoScrollBottom';
 import { useTabNavigationController } from '@renderer/hooks/useTabNavigationController';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useVisibleAIGroup } from '@renderer/hooks/useVisibleAIGroup';
 import { useStore } from '@renderer/store';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronRight, ChevronsDown, Users } from 'lucide-react';
+import { ChevronRight, ChevronsDown, Layers, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SessionContextPanel } from './SessionContextPanel/index';
@@ -115,9 +116,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     const total = processes.reduce((sum, p) => sum + (p.metrics.costUsd ?? 0), 0);
     return total > 0 ? total : undefined;
   }, [sessionDetail?.processes]);
-
-  // State for Context button hover (local state OK - doesn't need per-tab isolation)
-  const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
 
   // Determine if this tab instance is currently active
   // Use tabId prop if provided, otherwise fall back to activeTabId (for backwards compatibility)
@@ -232,6 +230,19 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       ),
     [contextMetrics.contextUsedTokens, contextMetrics.contextWindowTokens]
   );
+  const contextButtonTooltip = useMemo(() => {
+    const countLabel = t('chat.context.count', { count: allContextInjections.length });
+    if (!contextUsedPercentLabel) {
+      return countLabel;
+    }
+
+    const remainingLabel = remainingContext
+      ? ` ${t('chat.context.remainingPercent', {
+          percent: remainingContext.remainingPct.toFixed(0),
+        })}`
+      : '';
+    return `${countLabel} - ${contextUsedPercentLabel}${remainingLabel}`;
+  }, [allContextInjections.length, contextUsedPercentLabel, remainingContext, t]);
 
   // State for navigation highlight (blue, used for Turn navigation from CLAUDE.md panel)
   const [isNavigationHighlight, setIsNavigationHighlight] = useState(false);
@@ -889,43 +900,24 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
         >
           {/* Sticky Context button */}
           {allContextInjections.length > 0 && (
-            <div className="pointer-events-none sticky top-0 z-10 flex justify-start px-4 pb-0 pt-3">
-              <button
-                onClick={() => setContextPanelVisible(!isContextPanelVisible)}
-                onMouseEnter={() => setIsContextButtonHovered(true)}
-                onMouseLeave={() => setIsContextButtonHovered(false)}
-                className="pointer-events-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs shadow-lg transition-colors"
-                style={{
-                  backgroundColor: isContextPanelVisible
-                    ? 'var(--context-btn-active-bg)'
-                    : isContextButtonHovered
-                      ? 'var(--context-btn-bg-hover)'
-                      : 'var(--context-btn-bg)',
-                  color: isContextPanelVisible
-                    ? 'var(--context-btn-active-text)'
-                    : 'var(--color-text-secondary)',
-                }}
-              >
-                {contextUsedPercentLabel ? (
-                  <>
-                    {contextUsedPercentLabel}
-                    {remainingContext && remainingContext.urgency !== 'normal' && (
-                      <span
-                        style={{
-                          color: remainingContext.urgency === 'critical' ? '#ef4444' : '#f59e0b',
-                        }}
-                      >
-                        {' '}
-                        {t('chat.context.remainingPercent', {
-                          percent: remainingContext.remainingPct.toFixed(0),
-                        })}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  t('chat.context.count', { count: allContextInjections.length })
-                )}
-              </button>
+            <div className="pointer-events-none sticky top-0 z-10 flex justify-start pb-0 pl-[4.75rem] pr-4 pt-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setContextPanelVisible(!isContextPanelVisible)}
+                    className={[
+                      'pointer-events-auto flex size-11 items-center justify-center rounded-full border border-sky-300/30 bg-[#08111a]/70 text-sky-100 opacity-75 shadow-[0_16px_42px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-colors hover:border-sky-300/50 hover:bg-[#0d1a26]/75 hover:text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-300/60',
+                      isContextPanelVisible ? 'bg-sky-400/18 border-sky-300/60 text-white' : '',
+                    ].join(' ')}
+                    aria-label={contextButtonTooltip}
+                    aria-pressed={isContextPanelVisible}
+                  >
+                    <Layers size={19} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">{contextButtonTooltip}</TooltipContent>
+              </Tooltip>
             </div>
           )}
           {sessionTeam && (

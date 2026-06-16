@@ -6,6 +6,7 @@
 import { useCallback, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
+import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
@@ -229,6 +230,10 @@ export const TeamGraphOverlay = ({
         />
       ) : null}
       {graphMessagesPanel}
+      <TerminalWorkspaceFloatingLauncher
+        teamName={teamName}
+        buttonTestId="open-terminal-floating-button-graph-overlay"
+      />
       {interactions.dialogs}
     </div>
   );

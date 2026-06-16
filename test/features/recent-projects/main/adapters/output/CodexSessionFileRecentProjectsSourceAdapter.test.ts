@@ -4,19 +4,22 @@ import path from 'node:path';
 
 import { CodexSessionFileRecentProjectsSourceAdapter } from '@features/recent-projects/main/adapters/output/sources/CodexSessionFileRecentProjectsSourceAdapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
 import type { RecentProjectIdentityResolver } from '@features/recent-projects/main/infrastructure/identity/RecentProjectIdentityResolver';
 
-function createLogger(): LoggerPort & {
-  info: ReturnType<typeof vi.fn>;
-  warn: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
+type LoggerMock = LoggerPort & {
+  info: Mock<LoggerPort['info']>;
+  warn: Mock<LoggerPort['warn']>;
+  error: Mock<LoggerPort['error']>;
+};
+
+function createLogger(): LoggerMock {
   return {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    info: vi.fn<LoggerPort['info']>(),
+    warn: vi.fn<LoggerPort['warn']>(),
+    error: vi.fn<LoggerPort['error']>(),
   };
 }
 
@@ -550,10 +553,65 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
     expect(result.candidates.map((candidate) => candidate.primaryPath)).toEqual([
       '/Users/test/projects/fast',
     ]);
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex session-file recent-projects source loaded',
+      expect.objectContaining({
+        degraded: true,
+        files: 2,
+        timedOutReads: 1,
+      })
+    );
+  });
+
+  it('keeps a partial warning when no recent project candidates are available', async () => {
+    const codexHome = path.join(tempDir, '.codex');
+    const appDataPath = path.join(tempDir, 'app-data');
+    const logger = createLogger();
+    const identityResolver = {
+      resolve: vi.fn().mockResolvedValue(null),
+    } as unknown as RecentProjectIdentityResolver;
+    const slowSessionPath = path.join(
+      codexHome,
+      'sessions',
+      '2026',
+      '04',
+      '14',
+      'rollout-slow.jsonl'
+    );
+    await writeRollout(
+      slowSessionPath,
+      {
+        cwd: '/Users/test/projects/slow',
+      },
+      new Date('2026-04-14T12:00:00.000Z')
+    );
+    const originalOpen = fs.open.bind(fs);
+    vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+      if (String(args[0]) === slowSessionPath) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+      return originalOpen(...args);
+    });
+
+    const adapter = new CodexSessionFileRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      identityResolver,
+      logger,
+      codexHome,
+      appDataPath,
+    });
+    const result = await adapter.list();
+
+    expect(result).toEqual({
+      candidates: [],
+      degraded: true,
+    });
     expect(logger.warn).toHaveBeenCalledWith(
       'codex session-file recent-projects source partial',
       expect.objectContaining({
-        files: 2,
+        candidates: 0,
+        files: 1,
         timedOutReads: 1,
       })
     );
@@ -695,9 +753,10 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
     expect(firstResult.candidates.map((candidate) => candidate.primaryPath)).toEqual([
       '/Users/test/projects/alpha',
     ]);
-    expect(logger.warn).toHaveBeenCalledWith(
-      'codex session-file recent-projects source partial',
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex session-file recent-projects source loaded',
       expect.objectContaining({
+        degraded: true,
         files: 171,
         uncachedReads: 160,
         skippedUncached: 11,
@@ -758,9 +817,10 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
     expect(result.candidates.map((candidate) => candidate.primaryPath)).toEqual([
       '/Users/test/projects/alpha',
     ]);
-    expect(logger.warn).toHaveBeenCalledWith(
-      'codex session-file recent-projects source partial',
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex session-file recent-projects source loaded',
       expect.objectContaining({
+        degraded: true,
         files: 500,
         visitedFiles: 505,
         droppedOlderFiles: 5,

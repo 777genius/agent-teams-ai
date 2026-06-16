@@ -1,3 +1,8 @@
+import {
+  killTmuxPaneForCurrentPlatformSync,
+  listTmuxPaneRuntimeInfoForCurrentPlatform,
+  sendKeysToTmuxPaneForCurrentPlatform,
+} from '@features/tmux-installer/main';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { spawnCli } from '@main/utils/childProcess';
@@ -69,6 +74,15 @@ vi.mock('@main/utils/childProcess', () => ({
   }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
+}));
+
+vi.mock('@features/tmux-installer/main', () => ({
+  killTmuxPaneForCurrentPlatformSync: vi.fn(),
+  listRuntimeProcessTableForCurrentPlatform: vi.fn(async () => []),
+  listTmuxPanePidsForCurrentPlatform: vi.fn(async () => new Map()),
+  listTmuxPaneRuntimeInfoForCurrentPlatform: vi.fn(async () => new Map()),
+  sendKeysToTmuxPaneForCurrentPlatform: vi.fn(async () => undefined),
+  isTmuxRuntimeReadyForCurrentPlatform: vi.fn(async () => true),
 }));
 
 vi.mock('@main/utils/shellEnv', async (importOriginal) => {
@@ -189,6 +203,147 @@ function configureLaunchStubs(svc: TeamProvisioningService): void {
   overrides.startFilesystemMonitor = vi.fn();
 }
 
+function configureCodexProviderLaunchArgs(svc: TeamProvisioningService): void {
+  (
+    svc as unknown as {
+      buildProvisioningEnv: ProvisioningServiceOverrides['buildProvisioningEnv'];
+    }
+  ).buildProvisioningEnv = vi.fn(async () => ({
+    env: { PATH: '/usr/bin', CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43123' },
+    authSource: 'codex_runtime',
+    geminiRuntimeAuth: null,
+    providerArgs: [
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+        },
+      }),
+    ],
+  }));
+}
+
+function buildCodexLaunchConfigSettingsArgs(overrides: string[]): string[] {
+  return [
+    '--settings',
+    JSON.stringify({
+      codex: {
+        agent_teams_launch_config: {
+          config_overrides: overrides,
+        },
+      },
+    }),
+  ];
+}
+
+function createCodexFastLaunchIdentity() {
+  return {
+    providerId: 'codex',
+    providerBackendId: 'codex-native',
+    selectedModel: 'gpt-5.4',
+    selectedModelKind: 'explicit',
+    resolvedLaunchModel: 'gpt-5.4',
+    catalogId: 'gpt-5.4',
+    catalogSource: 'app-server',
+    catalogFetchedAt: '2026-04-21T00:00:00.000Z',
+    selectedEffort: 'xhigh',
+    resolvedEffort: 'xhigh',
+    selectedFastMode: 'on',
+    resolvedFastMode: true,
+    fastResolutionReason: null,
+  } as const;
+}
+
+function configureCodexFastLaunchIdentity(svc: TeamProvisioningService): void {
+  const fastLaunchIdentity = createCodexFastLaunchIdentity();
+  (
+    svc as unknown as {
+      resolveAndValidateLaunchIdentity: () => Promise<typeof fastLaunchIdentity>;
+    }
+  ).resolveAndValidateLaunchIdentity = vi.fn(async () => fastLaunchIdentity);
+}
+
+function expectExplicitFastModeWithoutFlex(args: string[] | undefined): void {
+  const overrides = readCodexLaunchConfigOverrides(args);
+  expect(overrides).toEqual(
+    expect.arrayContaining(['service_tier="fast"', 'features.fast_mode=true'])
+  );
+  expect(overrides).not.toContain('service_tier="flex"');
+  expect(args).not.toContain('-c');
+}
+
+function readCodexLaunchConfigOverrides(args: string[] | undefined): string[] {
+  if (!args) {
+    return [];
+  }
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--settings') {
+      continue;
+    }
+    const value = args[index + 1];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(value) as {
+        codex?: { agent_teams_launch_config?: { config_overrides?: unknown } };
+      };
+      const overrides = parsed.codex?.agent_teams_launch_config?.config_overrides;
+      if (Array.isArray(overrides)) {
+        return overrides.filter((override): override is string => typeof override === 'string');
+      }
+    } catch {
+      // Ignore non-JSON settings values.
+    }
+  }
+  return [];
+}
+
+function expectExplicitFastModeWithoutFlexCommand(command: string | undefined): void {
+  expect(command).toContain('features.fast_mode=true');
+  expect(command).not.toContain("'-c'");
+  const escapedFastIndex = command?.indexOf('service_tier=\\"fast\\"') ?? -1;
+  const plainFastIndex = command?.indexOf('service_tier="fast"') ?? -1;
+  const fastIndex = escapedFastIndex >= 0 ? escapedFastIndex : plainFastIndex;
+  expect(fastIndex).toBeGreaterThanOrEqual(0);
+  expect(command).not.toContain('service_tier=\\"flex\\"');
+  expect(command).not.toContain('service_tier="flex"');
+}
+
+function configureExplicitFastRuntimeArgsPlan(svc: TeamProvisioningService): void {
+  (
+    svc as unknown as {
+      buildTeamRuntimeLaunchArgsPlan: () => Promise<{
+        fastModeArgs: string[];
+        runtimeTurnSettledHookArgs: string[];
+        providerArgs: string[];
+        settingsArgs: string[];
+        extraArgs: string[];
+        inheritedProviderArgs: string[];
+        appManagedSettingsPath: string | null;
+      }>;
+    }
+  ).buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => ({
+    fastModeArgs: buildCodexLaunchConfigSettingsArgs([
+      'service_tier="fast"',
+      'features.fast_mode=true',
+    ]),
+    runtimeTurnSettledHookArgs: [],
+    providerArgs: [
+      '--settings',
+      JSON.stringify({
+        codex: {
+          forced_login_method: 'chatgpt',
+        },
+      }),
+    ],
+    settingsArgs: [],
+    extraArgs: [],
+    inheritedProviderArgs: [],
+    appManagedSettingsPath: null,
+  }));
+}
+
 function writeProjectMcpConfig(projectDir: string): void {
   fs.writeFileSync(
     path.join(projectDir, '.mcp.json'),
@@ -272,6 +427,11 @@ function writeCodexTeamWithAppOnlyMeta(teamName: string): void {
 describe('TeamProvisioningService member MCP config safe e2e', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(killTmuxPaneForCurrentPlatformSync).mockReset();
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockReset();
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(new Map());
+    vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockReset();
+    vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockResolvedValue(undefined);
     tempClaudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude team member mcp-'));
     tempTeamsBase = path.join(tempClaudeRoot, 'teams');
     tempTasksBase = path.join(tempClaudeRoot, 'tasks');
@@ -339,6 +499,93 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       await svc.cancelProvisioning(runId);
       runId = undefined;
       await expectPathRemovedEventually(memberMcpConfigPath);
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('createTeam sends explicit Codex fast mode args without obsolete flex tier', async () => {
+    const teamName = 'codex-fast-tier-order-create';
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex fast tier project-'));
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+
+    const svc = new TeamProvisioningService();
+    configureLaunchStubs(svc);
+    configureCodexProviderLaunchArgs(svc);
+    configureCodexFastLaunchIdentity(svc);
+    svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
+
+    let runId: string | undefined;
+    try {
+      const created = await svc.createTeam(
+        {
+          teamName,
+          cwd: projectDir,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'xhigh',
+          fastMode: 'on',
+          members: [{ name: 'alice', role: 'developer', providerId: 'codex', model: 'gpt-5.4' }],
+        },
+        () => {}
+      );
+      runId = created.runId;
+
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
+      expectExplicitFastModeWithoutFlex(launchArgs);
+
+      await svc.cancelProvisioning(runId);
+      runId = undefined;
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('launchTeam sends explicit Codex fast mode args without obsolete flex tier', async () => {
+    const teamName = 'codex-fast-tier-order-launch';
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex fast tier launch project-'));
+    writeCodexTeamWithAppOnlyMeta(teamName);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+
+    const svc = new TeamProvisioningService();
+    configureLaunchStubs(svc);
+    configureCodexProviderLaunchArgs(svc);
+    configureCodexFastLaunchIdentity(svc);
+    svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
+
+    let runId: string | undefined;
+    try {
+      const launched = await svc.launchTeam(
+        {
+          teamName,
+          cwd: projectDir,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'xhigh',
+          fastMode: 'on',
+          clearContext: true,
+        },
+        () => {}
+      );
+      runId = launched.runId;
+
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
+      expectExplicitFastModeWithoutFlex(launchArgs);
+
+      await svc.cancelProvisioning(runId);
+      runId = undefined;
     } finally {
       if (runId) {
         await svc.cancelProvisioning(runId);
@@ -463,7 +710,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     }
   });
 
-  it('restartMember direct process preserves Agent Teams MCP only in the real restart args', async () => {
+  it('restartMember direct process preserves Agent Teams MCP only and orders Codex provider args in the real restart args', async () => {
     const teamName = 'codex-app-only-process-restart';
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex restart project-'));
     writeProjectMcpConfig(projectDir);
@@ -522,27 +769,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       (
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
-      (
-        svc as unknown as {
-          buildTeamRuntimeLaunchArgsPlan: () => Promise<{
-            fastModeArgs: string[];
-            runtimeTurnSettledHookArgs: string[];
-            providerArgs: string[];
-            settingsArgs: string[];
-            extraArgs: string[];
-            inheritedProviderArgs: string[];
-            appManagedSettingsPath: string | null;
-          }>;
-        }
-      ).buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => ({
-        fastModeArgs: [],
-        runtimeTurnSettledHookArgs: [],
-        providerArgs: [],
-        settingsArgs: [],
-        extraArgs: [],
-        inheritedProviderArgs: [],
-        appManagedSettingsPath: null,
-      }));
+      configureExplicitFastRuntimeArgsPlan(svc);
       (
         svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
       ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
@@ -562,12 +789,121 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           '--strict-mcp-config',
         ])
       );
+      expectExplicitFastModeWithoutFlex(restartArgs);
       restartMcpConfigPath = extractMcpConfigPathFromArgs(restartArgs ?? []);
       expectAppOnlyMcpConfigPath(restartMcpConfigPath);
 
       await svc.cancelProvisioning(runId);
       runId = undefined;
       await expectPathRemovedEventually(restartMcpConfigPath);
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('restartMember direct tmux sends explicit Codex fast mode args without obsolete flex tier', async () => {
+    const teamName = 'codex-fast-tier-tmux-restart';
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex tmux restart project-'));
+    writeProjectMcpConfig(projectDir);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+      new Map([
+        [
+          '%7',
+          {
+            paneId: '%7',
+            panePid: 777,
+            currentCommand: 'zsh',
+            currentPath: projectDir,
+          },
+        ],
+      ])
+    );
+
+    const svc = new TeamProvisioningService();
+    configureLaunchStubs(svc);
+
+    let runId: string | undefined;
+    try {
+      const created = await svc.createTeam(
+        {
+          teamName,
+          cwd: projectDir,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          members: [
+            {
+              name: 'alice',
+              role: 'developer',
+              providerId: 'codex',
+              model: 'gpt-5.4',
+              mcpPolicy: { mode: 'appOnly' },
+            },
+          ],
+        },
+        () => {}
+      );
+      runId = created.runId;
+      (svc as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
+        teamName,
+        runId
+      );
+
+      (svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }).readConfigForStrictDecision =
+        vi.fn(async () => ({
+          name: teamName,
+          projectPath: projectDir,
+          members: [
+            { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
+            {
+              name: 'alice',
+              role: 'developer',
+              providerId: 'codex',
+              model: 'gpt-5.4',
+              mcpPolicy: { mode: 'appOnly' },
+            },
+          ],
+        }));
+      (svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }).readPersistedRuntimeMembers =
+        vi.fn(() => [
+          {
+            name: 'alice',
+            agentId: 'alice@codex-fast-tier-tmux-restart',
+            backendType: 'tmux',
+            tmuxPaneId: '%7',
+            cwd: projectDir,
+          },
+        ]);
+      (
+        svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
+      ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      configureExplicitFastRuntimeArgsPlan(svc);
+      (
+        svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
+      ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
+      (svc as unknown as { enqueueDirectRestartPrompt: () => void }).enqueueDirectRestartPrompt =
+        vi.fn();
+
+      vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockClear();
+      await svc.restartMember(teamName, 'alice');
+
+      expect(killTmuxPaneForCurrentPlatformSync).not.toHaveBeenCalled();
+      expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+      const [paneId, command] =
+        vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
+      expect(paneId).toBe('%7');
+      expect(command).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
+      expect(command).toContain("'--mcp-config'");
+      expectExplicitFastModeWithoutFlexCommand(command);
+
+      await svc.cancelProvisioning(runId);
+      runId = undefined;
     } finally {
       if (runId) {
         await svc.cancelProvisioning(runId);

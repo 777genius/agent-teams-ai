@@ -157,6 +157,9 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain('Workflow:');
     expect(briefing).toContain('Implement carefully');
     expect(briefing).toContain('Working directory: /tmp/project-x');
+    expect(briefing).toContain(
+      'If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in this working directory as needed.'
+    );
     expect(briefing).toContain('Task briefing for bob:');
     expect(briefing).toContain(
       'Use task_briefing as your primary working queue whenever you need to see assigned work.'

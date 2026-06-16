@@ -141,9 +141,14 @@ const TeamLogsSourceSelector = ({
         getMemberLabel={(member) =>
           isLeadMember(member)
             ? t('claudeLogs.sourceSelect.leadLabel')
-            : formatMemberLogSourceLabel(member)
+            : formatMemberLogSourceLabel(member, t('claudeLogs.sourceSelect.removedLabel'))
         }
-        getMemberDescription={formatMemberLogSourceDescription}
+        getMemberDescription={(member) =>
+          formatMemberLogSourceDescription(member, {
+            lead: t('claudeLogs.sourceSelect.leadDescription'),
+            removed: t('claudeLogs.sourceSelect.removedDescription'),
+          })
+        }
       />
     </div>
   );

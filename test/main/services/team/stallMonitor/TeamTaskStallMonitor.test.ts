@@ -2,6 +2,32 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamTaskStallMonitor } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallMonitor';
 
+function neverResolves(): Promise<never> {
+  return new Promise(() => undefined);
+}
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushAsyncWork(): Promise<void> {
+  for (let i = 0; i < 8; i += 1) {
+    await Promise.resolve();
+  }
+}
+
 describe('TeamTaskStallMonitor', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -111,6 +137,200 @@ describe('TeamTaskStallMonitor', () => {
       'task-a:epoch',
       expect.any(String)
     );
+  });
+
+  it('times out a hung scan so later stall scans continue', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+    const snapshotSource = {
+      getSnapshot: vi.fn().mockImplementationOnce(neverResolves).mockResolvedValueOnce(null),
+    };
+    const monitor = new TeamTaskStallMonitor(
+      {
+        start: vi.fn(),
+        stop: vi.fn(async () => undefined),
+        noteTeamChange: vi.fn(),
+        listActiveTeams: vi.fn(async () => ['demo']),
+      } as never,
+      snapshotSource as never,
+      { evaluateWork: vi.fn(), evaluateReview: vi.fn() } as never,
+      { reconcileScan: vi.fn(), markAlerted: vi.fn() } as never,
+      { notifyLead: vi.fn(), notifyOpenCodeOwners: vi.fn() } as never,
+      { scanTimeoutMs: 10 }
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(3_010);
+    expect(snapshotSource.getSnapshot).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'task stall monitor scan timed out after 10ms'
+    );
+    vi.mocked(console.warn).mockClear();
+
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(snapshotSource.getSnapshot).toHaveBeenCalledTimes(2);
+
+    await monitor.stop();
+  });
+
+  it('does not let one stuck team block stall scans for other active teams', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+    const task = {
+      id: 'task-healthy',
+      displayId: 'beef1234',
+      subject: 'Healthy team task',
+    };
+    const readyEvaluation = {
+      status: 'alert',
+      taskId: 'task-healthy',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-healthy:epoch',
+      reason: 'Potential work stall.',
+    };
+    const snapshotSource = {
+      getSnapshot: vi.fn(async (teamName: string) => {
+        if (teamName === 'stuck') {
+          return neverResolves();
+        }
+        return {
+          teamName: 'healthy',
+          inProgressTasks: [task],
+          reviewOpenTasks: [],
+          allTasksById: new Map([['task-healthy', task]]),
+        };
+      }),
+    };
+    const journal = {
+      reconcileScan: vi.fn(async () => [readyEvaluation]),
+      markAlerted: vi.fn(async () => undefined),
+    };
+    const notifier = {
+      notifyLead: vi.fn(async () => undefined),
+      notifyOpenCodeOwners: vi.fn(async () => []),
+    };
+    const monitor = new TeamTaskStallMonitor(
+      {
+        start: vi.fn(),
+        stop: vi.fn(async () => undefined),
+        noteTeamChange: vi.fn(),
+        listActiveTeams: vi.fn(async () => ['stuck', 'healthy']),
+      } as never,
+      snapshotSource as never,
+      {
+        evaluateWork: vi.fn(() => readyEvaluation),
+        evaluateReview: vi.fn(),
+      } as never,
+      journal as never,
+      notifier as never,
+      { scanTimeoutMs: 100 }
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(3_100);
+    await flushAsyncWork();
+
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'task stall monitor scan timed out after 100ms'
+    );
+    vi.mocked(console.warn).mockClear();
+    expect(snapshotSource.getSnapshot).toHaveBeenCalledWith('stuck');
+    expect(snapshotSource.getSnapshot).toHaveBeenCalledWith('healthy');
+    expect(notifier.notifyLead).toHaveBeenCalledWith(
+      'healthy',
+      expect.arrayContaining([
+        expect.objectContaining({
+          taskId: 'task-healthy',
+        }),
+      ])
+    );
+    expect(journal.markAlerted).toHaveBeenCalledWith(
+      'healthy',
+      'task-healthy:epoch',
+      expect.any(String)
+    );
+
+    await monitor.stop();
+  });
+
+  it('ignores late side effects from a scan that already timed out', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+    const staleJournalScan = createDeferred<unknown[]>();
+    const readyEvaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch',
+      reason: 'Potential work stall.',
+    };
+    const task = { id: 'task-a', displayId: 'abcd1234', subject: 'Task A' };
+    const notifier = {
+      notifyLead: vi.fn(async () => undefined),
+      notifyOpenCodeOwners: vi.fn(async () => []),
+    };
+    const journal = {
+      reconcileScan: vi
+        .fn()
+        .mockImplementationOnce(() => staleJournalScan.promise)
+        .mockResolvedValueOnce([]),
+      markAlerted: vi.fn(async () => undefined),
+    };
+    const monitor = new TeamTaskStallMonitor(
+      {
+        start: vi.fn(),
+        stop: vi.fn(async () => undefined),
+        noteTeamChange: vi.fn(),
+        listActiveTeams: vi.fn(async () => ['demo']),
+      } as never,
+      {
+        getSnapshot: vi.fn(async () => ({
+          teamName: 'demo',
+          inProgressTasks: [task],
+          reviewOpenTasks: [],
+          allTasksById: new Map([['task-a', task]]),
+        })),
+      } as never,
+      {
+        evaluateWork: vi.fn(() => readyEvaluation),
+        evaluateReview: vi.fn(),
+      } as never,
+      journal as never,
+      notifier as never,
+      { scanTimeoutMs: 10 }
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(3_010);
+    expect(journal.reconcileScan).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'task stall monitor scan timed out after 10ms'
+    );
+    vi.mocked(console.warn).mockClear();
+
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(journal.reconcileScan).toHaveBeenCalledTimes(2);
+
+    staleJournalScan.resolve([readyEvaluation]);
+    await flushAsyncWork();
+
+    expect(notifier.notifyLead).not.toHaveBeenCalled();
+    expect(journal.markAlerted).not.toHaveBeenCalled();
+
+    await monitor.stop();
   });
 
   it('defaults to OpenCode owner remediation without duplicate lead alerts when remediation is accepted', async () => {

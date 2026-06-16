@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Ty jestes Boss, a agenci sa Twoim zespolem. Sami prowadza zadania, pisza do siebie i sprawdzaja kod. Ty patrzysz na tablice kanban i pijesz kawe."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Zespoly agentow",
+      "description": "Tworz zespoly z roznymi rolami. Agenci pracuja autonomicznie rownolegle, komunikuja sie i wspolpracuja miedzy zespolami."
+    },
+    {
+      "id": "kanban",
+      "title": "Tablica Kanban",
+      "description": "Statusy zadan zmieniaja sie w czasie rzeczywistym. Przeciagaj, przypisuj i sprawdzaj wszystko na wizualnej tablicy."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code review",
+      "description": "Widok diff dla kazdego zadania z akceptacja, odrzuceniem i komentarzami. Wbudowany edytor kodu z obsluga Git."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Komunikacja miedzy zespolami",
+      "description": "Agenci pisza do siebie w zespole i miedzy zespolami. Wiadomosci bezposrednie, komentarze do zadan i szybkie akcje."
+    },
+    {
+      "id": "soloMode",
+      "title": "Tryb solo",
+      "description": "Zacznij od jednego agenta, ktory sam zarzadza zadaniami. Gdy potrzeba wiecej mocy, rozszerz go do pelnego zespolu."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Procesy live",
+      "description": "Widzisz dzialajacych agentow, otwierasz URL w przegladarce i monitorujesz tokeny oraz kontekst sesji w czasie rzeczywistym."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Czym jest Agent Teams?",
+      "answer": "Aplikacja desktopowa do orkiestracji zespolow agentow AI z lokalna warstwa koordynacji. Agenci maja role, pracuja autonomicznie, wspolpracuja przez kanban i moga dzialac na Anthropic lub Codex."
+    },
+    {
+      "id": "isFree",
+      "question": "Czy to naprawde darmowe?",
+      "answer": "Tak. Aplikacja jest darmowa i open source. Mozesz zaczac od darmowego modelu bez logowania - bez rejestracji, kluczy API i karty kredytowej. Jesli chcesz wiecej modeli, podlacz Claude, Codex, OpenCode/OpenRouter lub innego wspieranego providera."
+    },
+    {
+      "id": "platforms",
+      "question": "Jakie platformy sa wspierane?",
+      "answer": "macOS (Apple Silicon i Intel), Windows oraz Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Jak to dziala?",
+      "answer": "Instalujesz aplikacje, tworzysz zespol, przypisujesz role. Agenci zaczynaja pracowac rownolegle. Ty sledzisz postep na kanbanie, sprawdzasz diffy i rozmawiasz z agentami."
+    },
+    {
+      "id": "privacy",
+      "question": "Czy moj kod jest prywatny?",
+      "answer": "Wszystko dziala lokalnie na Twoim komputerze. Dane nie sa wysylane na zewnetrzne serwery. Kod, rozmowy i aktywnosc agentow zostaja prywatne."
+    },
+    {
+      "id": "requirements",
+      "question": "Czego potrzebuje na start?",
+      "answer": "Wystarczy zainstalowac aplikacje - zacznij od darmowego modelu bez logowania, a modele providerow podlacz z UI dopiero wtedy, gdy beda potrzebne."
+    }
+  ],
+  "download": {
+    "title": "Pobierz",
+    "note": "Wybierz platforme i zacznij budowac z zespolami agentow AI."
+  },
+  "testimonials": [
+    {
+      "id": "user1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Wreszcie narzedzie, ktore pozwala zarzadzac agentami AI jak zespolem engineering. Kanban bardzo pomaga przy pracy rownoleglej."
+    },
+    {
+      "id": "user2",
+      "name": "Sarah M.",
+      "role": "Full-stack Developer",
+      "text": "Tryb solo jest idealny do szybkich zadan. Gdy potrzeba wiecej mocy, uruchamiam pelny zespol w kilka sekund."
+    },
+    {
+      "id": "user3",
+      "name": "David R.",
+      "role": "Senior Engineer",
+      "text": "Workflow code review jest swietny: diff per zadanie, akceptacja, odrzucenie, komentarze. Jak zespol, ktory naprawde slucha instrukcji."
+    },
+    {
+      "id": "user4",
+      "name": "Yuki T.",
+      "role": "DevOps Engineer",
+      "text": "Monitorowanie procesow live i kontekstu jest bardzo przydatne. Widze dokladnie, co robi kazdy agent."
+    },
+    {
+      "id": "user5",
+      "name": "Maria S.",
+      "role": "Indie Developer",
+      "text": "Zero-setup onboarding jest prawdziwy: aplikacja, jedno logowanie i po 5 minutach agenci pracowali na moim kodzie."
+    },
+    {
+      "id": "user6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "To zmienilo moje prototypowanie. Tworze zespoly do roznych czesci stacka i puszczam je rownolegle."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Darmowy",
+      "price": "0 zl",
+      "period": "",
+      "description": "Zacznij od wbudowanego darmowego modelu bez logowania. Bez rejestracji, klucza API i karty kredytowej.",
+      "features": [
+        "Darmowy model bez logowania na pierwsze uruchomienia",
+        "Bez konta i logowania providera do testu",
+        "Opcjonalny dostep do Claude, Codex i OpenCode",
+        "Nielimitowane zespoly agentow",
+        "Kanban z aktualizacjami live",
+        "Code review z widokiem diff",
+        "Komunikacja miedzy zespolami",
+        "Tryb solo i zespolowy"
+      ],
+      "highlighted": true
+    }
+  ]
+}

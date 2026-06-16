@@ -64,6 +64,27 @@ function mergeHookEntryArrays(target: JsonArray, source: JsonArray): JsonArray {
   return merged;
 }
 
+function mergeConfigOverrideArrays(target: JsonArray, source: JsonArray): JsonArray {
+  const getDedupeKey = (value: unknown): string => {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return `${typeof value}:${String(value)}`;
+    }
+  };
+  const merged = [...target];
+  const seen = new Set(target.map((value) => getDedupeKey(value)));
+  for (const value of source) {
+    const key = getDedupeKey(value);
+    if (seen.has(key)) {
+      continue;
+    }
+    merged.push(value);
+    seen.add(key);
+  }
+  return merged;
+}
+
 function mergeHooksObject(target: JsonObject, source: JsonObject): JsonObject {
   const merged: JsonObject = { ...target };
   for (const [hookName, sourceValue] of Object.entries(source)) {
@@ -85,6 +106,10 @@ export function mergeJsonSettingsObjects(target: JsonObject, source: JsonObject)
   const merged: JsonObject = { ...target };
   for (const [key, value] of Object.entries(source)) {
     const current = merged[key];
+    if (key === 'config_overrides' && Array.isArray(current) && Array.isArray(value)) {
+      merged[key] = mergeConfigOverrideArrays(current, value);
+      continue;
+    }
     if (key === 'hooks' && isJsonObject(current) && isJsonObject(value)) {
       merged[key] = mergeHooksObject(current, value);
       continue;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 
@@ -12,6 +12,10 @@ const LEGACY_THEME_CACHE_KEY = 'claude-devtools-theme-cache';
 
 function parseCachedTheme(value: string | null): ResolvedTheme | null {
   return value === 'light' || value === 'dark' ? value : null;
+}
+
+function readSystemResolvedTheme(): ResolvedTheme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function readCachedResolvedTheme(storage: Storage = localStorage): ResolvedTheme | null {
@@ -36,12 +40,54 @@ export function writeCachedResolvedTheme(
   }
 }
 
+let systemThemeSnapshot: ResolvedTheme | null = null;
+let systemThemeQuery: MediaQueryList | null = null;
+const systemThemeListeners = new Set<() => void>();
+
+function selectConfiguredTheme(state: {
+  appConfig: { general?: { theme?: Theme } } | null;
+}): Theme {
+  return state.appConfig?.general?.theme ?? 'system';
+}
+
+function getSystemThemeSnapshot(): ResolvedTheme {
+  systemThemeSnapshot ??= readCachedResolvedTheme() ?? readSystemResolvedTheme();
+  return systemThemeSnapshot;
+}
+
+function updateSystemThemeSnapshot(): void {
+  const next = readSystemResolvedTheme();
+  if (systemThemeSnapshot === next) {
+    return;
+  }
+  systemThemeSnapshot = next;
+  for (const listener of systemThemeListeners) {
+    listener();
+  }
+}
+
+function subscribeSystemTheme(listener: () => void): () => void {
+  systemThemeListeners.add(listener);
+  if (!systemThemeQuery) {
+    systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    systemThemeQuery.addEventListener('change', updateSystemThemeSnapshot);
+    window.queueMicrotask(updateSystemThemeSnapshot);
+  }
+  return () => {
+    systemThemeListeners.delete(listener);
+    if (systemThemeListeners.size === 0 && systemThemeQuery) {
+      systemThemeQuery.removeEventListener('change', updateSystemThemeSnapshot);
+      systemThemeQuery = null;
+    }
+  };
+}
+
+function useSystemTheme(): ResolvedTheme {
+  return useSyncExternalStore(subscribeSystemTheme, getSystemThemeSnapshot, getSystemThemeSnapshot);
+}
+
 /**
- * Hook to manage theme state and application.
- * - Fetches theme preference from config on mount
- * - Listens to system theme changes when set to 'system'
- * - Applies theme class to document root
- * - Caches theme in localStorage for flash prevention
+ * Hook to read theme state. App-level side effects live in useThemeController.
  */
 export function useTheme(): {
   theme: Theme;
@@ -49,64 +95,41 @@ export function useTheme(): {
   isDark: boolean;
   isLight: boolean;
 } {
-  const { appConfig, fetchConfig } = useStore(
+  const configuredTheme = useStore(selectConfiguredTheme);
+  const systemTheme = useSystemTheme();
+  const resolvedTheme = configuredTheme === 'system' ? systemTheme : configuredTheme;
+
+  return {
+    theme: configuredTheme,
+    resolvedTheme,
+    isDark: resolvedTheme === 'dark',
+    isLight: resolvedTheme === 'light',
+  };
+}
+
+/**
+ * App-level theme side effects. Keep this mounted once at the root.
+ */
+export function useThemeController(): ReturnType<typeof useTheme> {
+  const themeState = useTheme();
+  const { appConfig, configLoading, fetchConfig } = useStore(
     useShallow((s) => ({
       appConfig: s.appConfig,
+      configLoading: s.configLoading,
       fetchConfig: s.fetchConfig,
     }))
   );
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
-    // Initialize from cache to prevent flash
-    const cached = readCachedResolvedTheme();
-    if (cached) return cached;
-
-    // No cache — detect system preference for flash-free first launch
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  const { resolvedTheme } = themeState;
 
   // Fetch config on mount if not loaded.
-  // The centralized init chain also calls fetchConfig — configLoading guard
+  // The centralized init chain also calls fetchConfig - configLoading guard
   // in the store action prevents duplicate IPC calls.
-  const configLoading = useStore((s) => s.configLoading);
   useEffect(() => {
     if (!appConfig && !configLoading) {
       void fetchConfig();
     }
   }, [appConfig, configLoading, fetchConfig]);
 
-  // Get configured theme
-  const configuredTheme: Theme = appConfig?.general?.theme ?? 'system';
-
-  // Get system theme preference
-  const getSystemTheme = useCallback((): ResolvedTheme => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }, []);
-
-  // Resolve 'system' theme and listen for changes
-  useEffect(() => {
-    const updateTheme = (): void => {
-      const resolved = configuredTheme === 'system' ? getSystemTheme() : configuredTheme;
-      setResolvedTheme(resolved);
-
-      // Cache for flash prevention
-      writeCachedResolvedTheme(resolved);
-    };
-
-    updateTheme();
-
-    // Listen to system theme changes when in 'system' mode
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (): void => {
-      if (configuredTheme === 'system') {
-        updateTheme();
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [configuredTheme, getSystemTheme]);
-
-  // Apply theme class to document root
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
@@ -129,10 +152,9 @@ export function useTheme(): {
     };
   }, [resolvedTheme]);
 
-  return {
-    theme: configuredTheme,
-    resolvedTheme,
-    isDark: resolvedTheme === 'dark',
-    isLight: resolvedTheme === 'light',
-  };
+  useEffect(() => {
+    writeCachedResolvedTheme(resolvedTheme);
+  }, [resolvedTheme]);
+
+  return themeState;
 }

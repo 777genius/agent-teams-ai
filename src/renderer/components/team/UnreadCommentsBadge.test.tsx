@@ -117,4 +117,24 @@ describe('UnreadCommentsBadge', () => {
       await flushReact();
     });
   });
+
+  it('does not mount tooltip content while closed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(UnreadCommentsBadge, { unreadCount: 2, totalCount: 3 }));
+      await flushReact();
+    });
+
+    expect(host.textContent).not.toContain('unread comments');
+    expect(host.textContent).not.toContain('total');
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
 });

@@ -2,6 +2,10 @@ import { extractToolCalls, extractToolResults } from '@main/utils/toolExtraction
 import { isLeadMember as isLeadMemberCheck } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
+import {
+  inferTeamProviderIdFromModel,
+  normalizeOptionalTeamProviderId,
+} from '@shared/utils/teamProvider';
 
 import { TeamConfigReader } from '../../TeamConfigReader';
 import { TeamMembersMetaStore } from '../../TeamMembersMetaStore';
@@ -36,6 +40,8 @@ import type {
   BoardTaskLogSegment,
   BoardTaskLogStreamResponse,
   BoardTaskLogStreamSummary,
+  TeamMember,
+  TeamProviderId,
   TeamTask,
 } from '@shared/types';
 
@@ -78,6 +84,9 @@ const INFERRED_RECORD_RANGE_AFTER_MS = 60_000;
 const STREAM_LAYOUT_CACHE_TTL_MS = 1_000;
 const STREAM_LAYOUT_BUILD_WARN_MS = 3_000;
 const RUNTIME_FALLBACK_WARN_MS = 3_000;
+const OPENCODE_RUNTIME_FALLBACK_HIT_CACHE_TTL_MS = 1_000;
+const OPENCODE_RUNTIME_FALLBACK_MISS_CACHE_TTL_MS = 3_000;
+const OPENCODE_RUNTIME_FALLBACK_CACHE_MAX_ENTRIES = 256;
 const INFERRED_CANDIDATE_SELECTION_WARN_COUNT = 100;
 const HISTORICAL_RAW_PROBE_WARN_MS = 3_000;
 const HISTORICAL_RAW_PROBE_WARN_FILE_COUNT = 500;
@@ -99,6 +108,58 @@ function emptySummary(): BoardTaskLogStreamSummary {
 
 function normalizeMemberName(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function resolveExplicitMemberProviderId(
+  member: TeamMember | undefined
+): TeamProviderId | undefined {
+  if (!member) {
+    return undefined;
+  }
+  const legacyProvider = (member as { provider?: unknown }).provider;
+  return (
+    normalizeOptionalTeamProviderId(member.providerId) ??
+    normalizeOptionalTeamProviderId(legacyProvider)
+  );
+}
+
+function inferProviderIdFromMemberModel(
+  member: TeamMember | undefined
+): TeamProviderId | undefined {
+  return inferTeamProviderIdFromModel(member?.model);
+}
+
+function inferProviderIdFromBackend(providerBackendId: unknown): TeamProviderId | undefined {
+  const normalized = typeof providerBackendId === 'string' ? providerBackendId.trim() : '';
+  if (normalized === 'codex-native') {
+    return 'codex';
+  }
+  if (normalized === 'opencode-cli') {
+    return 'opencode';
+  }
+  return undefined;
+}
+
+function resolveProviderFromMemberSources(input: {
+  configMembers: readonly TeamMember[];
+  metaMembers: readonly TeamMember[];
+  memberName: string;
+}): TeamProviderId | undefined {
+  const normalizedMemberName = normalizeMemberName(input.memberName);
+  const configMember = input.configMembers.find(
+    (candidate) => normalizeMemberName(candidate.name) === normalizedMemberName
+  );
+  const metaMember = input.metaMembers.find(
+    (candidate) => normalizeMemberName(candidate.name) === normalizedMemberName
+  );
+  return (
+    resolveExplicitMemberProviderId(metaMember) ??
+    resolveExplicitMemberProviderId(configMember) ??
+    inferProviderIdFromBackend(configMember?.providerBackendId) ??
+    inferProviderIdFromMemberModel(configMember) ??
+    inferProviderIdFromBackend(metaMember?.providerBackendId) ??
+    inferProviderIdFromMemberModel(metaMember)
+  );
 }
 
 const isBoardMcpToolName = isBoardTaskLogMcpToolName;
@@ -1658,6 +1719,19 @@ export class BoardTaskLogStreamService {
     }
   >();
 
+  private readonly openCodeRuntimeFallbackCache = new Map<
+    string,
+    {
+      expiresAt: number;
+      response: BoardTaskLogStreamResponse | null;
+    }
+  >();
+
+  private readonly openCodeRuntimeFallbackInFlight = new Map<
+    string,
+    Promise<BoardTaskLogStreamResponse | null>
+  >();
+
   constructor(
     private readonly recordSource: BoardTaskActivityRecordSource = new BoardTaskActivityRecordSource(),
     private readonly summarySelector: BoardTaskExactLogSummarySelector = new BoardTaskExactLogSummarySelector(),
@@ -1682,6 +1756,26 @@ export class BoardTaskLogStreamService {
 
   private buildLayoutCacheKey(teamName: string, taskId: string): string {
     return `${teamName}::${taskId}`;
+  }
+
+  private buildOpenCodeRuntimeFallbackCacheKey(teamName: string, taskId: string): string {
+    return `${teamName}::${taskId}`;
+  }
+
+  private pruneOpenCodeRuntimeFallbackCache(nowMs: number): void {
+    for (const [cacheKey, cached] of this.openCodeRuntimeFallbackCache) {
+      if (cached.expiresAt <= nowMs) {
+        this.openCodeRuntimeFallbackCache.delete(cacheKey);
+      }
+    }
+
+    while (this.openCodeRuntimeFallbackCache.size > OPENCODE_RUNTIME_FALLBACK_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.openCodeRuntimeFallbackCache.keys().next().value;
+      if (oldestKey == null) {
+        break;
+      }
+      this.openCodeRuntimeFallbackCache.delete(oldestKey);
+    }
   }
 
   private getTranscriptDiscoveryGeneration(teamName: string): number {
@@ -2224,10 +2318,13 @@ export class BoardTaskLogStreamService {
         return false;
       }
 
-      const member = [...metaMembers, ...(config?.members ?? [])].find(
-        (candidate) => normalizeMemberName(candidate.name) === normalizedOwner
+      return (
+        resolveProviderFromMemberSources({
+          configMembers: config?.members ?? [],
+          metaMembers,
+          memberName: normalizedOwner,
+        }) === 'opencode'
       );
-      return member?.providerId === 'opencode';
     } catch {
       return false;
     }
@@ -2237,17 +2334,49 @@ export class BoardTaskLogStreamService {
     teamName: string,
     taskId: string
   ): Promise<BoardTaskLogStreamResponse | null> {
-    const startedAt = Date.now();
-    const fallback = await this.openCodeRuntimeFallbackSource.getTaskLogStream(teamName, taskId);
-    const elapsedMs = Date.now() - startedAt;
-    if (elapsedMs >= RUNTIME_FALLBACK_WARN_MS) {
-      logger.warn(
-        `Slow task-log runtime fallback: team=${teamName} task=${taskId} hit=${Boolean(
-          fallback
-        )} elapsedMs=${elapsedMs}`
-      );
+    const cacheKey = this.buildOpenCodeRuntimeFallbackCacheKey(teamName, taskId);
+    const nowMs = Date.now();
+    const cached = this.openCodeRuntimeFallbackCache.get(cacheKey);
+    if (cached && cached.expiresAt > nowMs) {
+      return cached.response;
     }
-    return fallback;
+
+    const existingInFlight = this.openCodeRuntimeFallbackInFlight.get(cacheKey);
+    if (existingInFlight) {
+      return existingInFlight;
+    }
+
+    const startedAt = Date.now();
+    const request = this.openCodeRuntimeFallbackSource
+      .getTaskLogStream(teamName, taskId)
+      .then((fallback) => {
+        const elapsedMs = Date.now() - startedAt;
+        if (elapsedMs >= RUNTIME_FALLBACK_WARN_MS) {
+          logger.warn(
+            `Slow task-log runtime fallback: team=${teamName} task=${taskId} hit=${Boolean(
+              fallback
+            )} elapsedMs=${elapsedMs}`
+          );
+        }
+
+        const cacheTtlMs = fallback
+          ? OPENCODE_RUNTIME_FALLBACK_HIT_CACHE_TTL_MS
+          : OPENCODE_RUNTIME_FALLBACK_MISS_CACHE_TTL_MS;
+        this.openCodeRuntimeFallbackCache.set(cacheKey, {
+          expiresAt: Date.now() + cacheTtlMs,
+          response: fallback,
+        });
+        this.pruneOpenCodeRuntimeFallbackCache(Date.now());
+        return fallback;
+      })
+      .finally(() => {
+        if (this.openCodeRuntimeFallbackInFlight.get(cacheKey) === request) {
+          this.openCodeRuntimeFallbackInFlight.delete(cacheKey);
+        }
+      });
+
+    this.openCodeRuntimeFallbackInFlight.set(cacheKey, request);
+    return request;
   }
 
   private async loadCodexNativeTraceFallback(

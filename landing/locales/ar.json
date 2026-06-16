@@ -7,7 +7,16 @@
     "download": "تحميل",
     "pricing": "مجاني",
     "faq": "الأسئلة الشائعة",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "short": {
+      "screenshots": "صور",
+      "docs": "Docs",
+      "download": "تحميل",
+      "comparison": "مقارنة",
+      "pricing": "مجاني"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "مفتوح المصدر"
     },
     "watchDemo": "شاهد العرض",
-    "videoUnavailable": "الفيديو غير متوفر"
+    "videoUnavailable": "الفيديو غير متوفر",
+    "supportedProviders": "مزودو AI المدعومون",
+    "slogan": "أنجز الكثير بجهد قليل جدًا",
+    "platformDefault": "لمنصتك",
+    "guidesSetup": "الأدلة والإعداد",
+    "videoFrameLabel": "شاهد عرض Agent Teams",
+    "commandFeed": "تدفق أوامر الفريق",
+    "liveDemo": "عرض مباشر",
+    "demoVideoTitle": "فيديو عرض Agent Teams",
+    "demoTitle": "عرض Agent Teams",
+    "demo": {
+      "ariaLabel": "عرض فريق الوكلاء",
+      "live": "LIVE",
+      "waiting": "بانتظار المهام...",
+      "activity": {
+        "authMiddleware": "تنفيذ middleware للمصادقة...",
+        "unitTests": "كتابة اختبارات وحدة للـ API...",
+        "reviewPr": "مراجعة تغييرات PR #42...",
+        "ciPipeline": "إعداد pipeline CI/CD...",
+        "refactorDatabase": "إعادة هيكلة طبقة قاعدة البيانات..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "اختبارات وحدة",
+        "ciSetup": "إعداد CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "قيد التنفيذ",
+        "review": "مراجعة",
+        "done": "تم"
+      }
+    }
   },
   "download": {
     "title": "تحميل",
     "detected": "تم الكشف",
     "systemRequirements": "متطلبات النظام",
-    "version": "الإصدار {version}"
+    "version": "الإصدار {version}",
+    "readyToStart": "جاهز للبدء!"
   },
   "theme": {
     "dark": "داكن",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "لقطات شاشة حقيقية من التطبيق — لوحة كانبان، مراجعة الكود، فرق الوكلاء، والمزيد."
   },
   "common": {
-    "learnMore": "اعرف المزيد"
+    "learnMore": "اعرف المزيد",
+    "statusLabel": "الحالة:",
+    "previous": "السابق",
+    "next": "التالي"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "أنا أنتظر",
     "links": {
       "github": "GitHub",
+      "author": "المؤلف",
       "docs": "التوثيق"
     }
   },

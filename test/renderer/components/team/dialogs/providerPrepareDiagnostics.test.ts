@@ -3,6 +3,7 @@ import {
   mergeReusableProviderPrepareModelResults,
   runProviderPrepareDiagnostics,
 } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
+import { OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -485,6 +486,43 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.status).toBe('failed');
     expect(result.details).toEqual([OPENCODE_NORMALIZED_MCP_UNREACHABLE]);
     expect(result.warnings).toEqual([OPENCODE_NORMALIZED_MCP_UNREACHABLE]);
+    expect(result.modelResultsById).toEqual({});
+  });
+
+  it('keeps the OpenCode node_modules symlink EPERM failure on the administrator hint path', async () => {
+    const symlinkError = [
+      'Runtime provider management command failed unexpectedly:',
+      "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
+      "-> 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Data\\opencode\\profiles\\abc123\\config\\opencode\\node_modules'",
+    ].join(' ');
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => Promise<TeamProvisioningPrepareResult>
+    >(() =>
+      Promise.resolve({
+        ready: false,
+        message: symlinkError,
+        details: [symlinkError],
+        warnings: [symlinkError],
+      })
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual([OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE]);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE]);
     expect(result.modelResultsById).toEqual({});
   });
 

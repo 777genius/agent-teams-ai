@@ -7,7 +7,16 @@
     "download": "Unduh",
     "pricing": "Bebas",
     "faq": "FAQ",
-    "viewOnGithub": "Tilik pada GitHub"
+    "viewOnGithub": "Tilik pada GitHub",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "short": {
+      "screenshots": "Gambar",
+      "docs": "Docs",
+      "download": "Unduh",
+      "comparison": "Banding",
+      "pricing": "Gratis"
+    }
   },
   "hero": {
     "badge": "Agent Teams",
@@ -22,13 +31,46 @@
       "openSource": "Buka Sumber"
     },
     "watchDemo": "Watch Demo",
-    "videoUnavailable": "Video tidak tersedia"
+    "videoUnavailable": "Video tidak tersedia",
+    "supportedProviders": "Penyedia AI yang didukung",
+    "slogan": "Selesaikan banyak hal dengan sangat sedikit aksi",
+    "platformDefault": "Untuk platform Anda",
+    "guidesSetup": "Panduan dan penyiapan",
+    "videoFrameLabel": "Tonton demo Agent Teams",
+    "commandFeed": "Feed perintah tim",
+    "liveDemo": "Demo langsung",
+    "demoVideoTitle": "Video demo Agent Teams",
+    "demoTitle": "Demo Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo tim agen",
+      "live": "LIVE",
+      "waiting": "Menunggu tugas...",
+      "activity": {
+        "authMiddleware": "Menerapkan middleware auth...",
+        "unitTests": "Menulis unit test untuk API...",
+        "reviewPr": "Meninjau perubahan PR #42...",
+        "ciPipeline": "Menyiapkan pipeline CI/CD...",
+        "refactorDatabase": "Merefactor layer database..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit test",
+        "ciSetup": "Setup CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "BERJALAN",
+        "review": "REVIEW",
+        "done": "SELESAI"
+      }
+    }
   },
   "download": {
     "title": "Unduh",
     "detected": "Terdeteksi",
     "systemRequirements": "Kebutuhan sistem",
-    "version": "Versi {version}"
+    "version": "Versi {version}",
+    "readyToStart": "Siap mulai!"
   },
   "theme": {
     "dark": "Gelap",
@@ -100,7 +142,10 @@
     "sectionSubtitle": "Gambar layar nyata dari aplikasi - papan kanban, ulasan kode, tim agen, dan banyak lagi."
   },
   "common": {
-    "learnMore": "Pelajari lagi"
+    "learnMore": "Pelajari lagi",
+    "statusLabel": "Status:",
+    "previous": "Sebelumnya",
+    "next": "Berikutnya"
   },
   "footer": {
     "copyright": "© {year} Agent Teams",
@@ -108,6 +153,7 @@
     "robotBubble": "Aku menunggu",
     "links": {
       "github": "GitHub",
+      "author": "Penulis",
       "docs": "Dokumentasi"
     }
   },

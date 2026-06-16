@@ -46,7 +46,8 @@
       "copiedShort": "Disalin",
       "copy": "Salin diagnosa",
       "hints": "Petunjuk",
-      "likelyCause": "Kemungkinan menyebabkan:"
+      "likelyCause": "Kemungkinan menyebabkan:",
+      "windowsSymlinkAdminHint": "Windows: jalankan Agent Teams AI sebagai Administrator"
     },
     "models": {
       "alreadyDefault": "Ini sudah menjadi standar OpenCode yang dipilih.",
@@ -64,7 +65,15 @@
       "searchPlaceholder": "Cari model",
       "selectProjectBeforeTesting": "Pilih konteks projek sebelum pengujian model.",
       "selectProjectBeforeTestingDefaults": "Pilih konteks projek sebelum pengujian atau menyimpan baku OpenCode.",
-      "useInTeamPicker": "Gunakan dalam tim picker"
+      "useInTeamPicker": "Gunakan dalam tim picker",
+      "testInProgress": "Pengujian model sudah berjalan.",
+      "validationContextRequired": "Pilih validation context di atas untuk mengaktifkan Test dan Set default. Menyimpan untuk team picker hanya menyimpan route untuk tim baru.",
+      "actionsUnavailable": "Aksi sementara tidak tersedia.",
+      "defaultSaveInProgress": "OpenCode default sedang disimpan.",
+      "routeUnavailableAuth": "Provider ini memerlukan autentikasi sebelum model ini dapat digunakan.",
+      "routeUnavailableFailed": "Model route ini gagal pada execution test terakhir.",
+      "routeUnavailableGeneric": "Model route ini tidak dapat digunakan sekarang.",
+      "routeUnavailableUnknown": "Model ini adalah OpenCode default saat ini, tetapi belum tersedia di live catalog."
     },
     "providers": {
       "catalog": "Katalog penyedia OpenCode",
@@ -108,7 +117,8 @@
       "needsTest": "membutuhkan tes",
       "failed": "gagal",
       "unknown": "tidak diketahui",
-      "default": "baku"
+      "default": "baku",
+      "knownRoute": "route dikenal"
     },
     "compatibleEndpoint": {
       "baseUrlPlaceholder": "http://localhost:1234"
@@ -894,7 +904,8 @@
         "apiKeyConfiguredNotVerified": "API kunci dikonfigurasi, tapi belum diverifikasi",
         "apiKeyModeMissingCredential": "API mode kunci dipilih, tapi tidak ada API kunci dikonfigurasi",
         "connectedVia": "Terhubung via {{method}}",
-        "unableToVerify": "Tidak dapat memverifikasi"
+        "unableToVerify": "Tidak dapat memverifikasi",
+        "modelsAvailable": "Model tersedia"
       },
       "mode": {
         "selectedAuth": "Auth yang dipilih: {{authMode}}",

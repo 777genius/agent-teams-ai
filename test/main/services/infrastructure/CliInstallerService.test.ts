@@ -80,6 +80,7 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
   })),
+  getProviderStatusStoredCredentialAllowlist: vi.fn(() => undefined),
 }));
 
 vi.mock('@main/utils/cliAuthDiagLog', () => ({
@@ -542,7 +543,12 @@ describe('CliInstallerService', () => {
     it('falls back to the installed launcher path when --version reports unknown', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/Users/tester/.local/bin/claude');
-      vi.spyOn(service as never, 'inferInstalledCliVersionFromPath').mockResolvedValue('2.1.101');
+      vi.spyOn(
+        service as unknown as {
+          inferInstalledCliVersionFromPath: (binaryPath: string) => Promise<string | null>;
+        },
+        'inferInstalledCliVersionFromPath'
+      ).mockResolvedValue('2.1.101');
       vi.mocked(execCli)
         .mockResolvedValueOnce({ stdout: 'unknown', stderr: '' })
         .mockResolvedValueOnce({
@@ -899,7 +905,7 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
 
-    it('does not shrink cached OpenCode models when a provider refresh returns summary-only models', async () => {
+    it('keeps non-empty OpenCode refresh models authoritative while preserving catalog metadata', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       vi.mocked(getCliFlavorUiOptions).mockReturnValue({
@@ -1026,11 +1032,7 @@ describe('CliInstallerService', () => {
       const opencode = latestSnapshot?.providers.find(
         (provider) => provider.providerId === 'opencode'
       );
-      expect(opencode?.models).toEqual([
-        'opencode/big-pickle',
-        'openai/gpt-5.4',
-        'openrouter/openai/gpt-oss-20b:free',
-      ]);
+      expect(opencode?.models).toEqual(['opencode/big-pickle']);
       expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
         'opencode/big-pickle',
         'openai/gpt-5.4',

@@ -61,6 +61,7 @@ interface QueueItem {
   maxRunAt: number;
   triggerReasons: Set<MemberWorkSyncTriggerReason>;
   triggerReasonCounts: Map<MemberWorkSyncTriggerReason, number>;
+  retryCount: number;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
 }
 
@@ -84,9 +85,13 @@ export interface MemberWorkSyncEventQueueDeps {
     context: MemberWorkSyncReconcileContext
   ): Promise<void>;
   isTeamActive(teamName: string): Promise<boolean> | boolean;
+  reconcileInactiveTeams?: boolean;
   quietWindowMs?: number;
   triggerTiming?: Partial<Record<MemberWorkSyncTriggerReason, Partial<TriggerTimingPolicy>>>;
   concurrency?: number;
+  retryDelayMs?: number;
+  reconcileTimeoutMs?: number;
+  maxRetryAttempts?: number;
   now?: () => number;
   nowIso?: () => string;
   auditJournal?: MemberWorkSyncAuditJournalPort;
@@ -101,12 +106,17 @@ function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
   timer.unref?.();
 }
 
+const DEFAULT_RECONCILE_TIMEOUT_MS = 2 * 60_000;
+
 export class MemberWorkSyncEventQueue {
   private readonly items = new Map<string, QueueItem>();
   private readonly running = new Map<string, RunningItem>();
   private readonly inFlight = new Set<Promise<void>>();
   private readonly quietWindowMs: number;
   private readonly concurrency: number;
+  private readonly retryDelayMs: number;
+  private readonly reconcileTimeoutMs: number;
+  private readonly maxRetryAttempts: number;
   private readonly now: () => number;
   private readonly nowIso: () => string;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -122,6 +132,9 @@ export class MemberWorkSyncEventQueue {
   constructor(private readonly deps: MemberWorkSyncEventQueueDeps) {
     this.quietWindowMs = deps.quietWindowMs ?? 90_000;
     this.concurrency = Math.max(1, deps.concurrency ?? 2);
+    this.retryDelayMs = Math.max(0, deps.retryDelayMs ?? 30_000);
+    this.reconcileTimeoutMs = Math.max(1, deps.reconcileTimeoutMs ?? DEFAULT_RECONCILE_TIMEOUT_MS);
+    this.maxRetryAttempts = Math.max(0, deps.maxRetryAttempts ?? 3);
     this.now = deps.now ?? Date.now;
     this.nowIso = deps.nowIso ?? (() => new Date().toISOString());
   }
@@ -209,6 +222,7 @@ export class MemberWorkSyncEventQueue {
         ? Math.min(existing.runAt, runAt)
         : Math.min(Math.max(existing.runAt, runAt), existing.maxRunAt);
       incrementReasonCount(existing.triggerReasonCounts, input.triggerReason);
+      existing.retryCount = 0;
       this.counters.coalesced += 1;
       this.appendAudit({
         teamName,
@@ -230,6 +244,7 @@ export class MemberWorkSyncEventQueue {
       maxRunAt: now + timing.maxCoalesceWaitMs,
       triggerReasons: new Set([input.triggerReason]),
       triggerReasonCounts: new Map([[input.triggerReason, 1]]),
+      retryCount: 0,
       ...(input.recovery ? { recovery: input.recovery } : {}),
     });
     this.counters.enqueued += 1;
@@ -366,8 +381,10 @@ export class MemberWorkSyncEventQueue {
     };
     this.running.set(key, running);
 
+    let failed = false;
     const promise = this.executeItem(key, item, running)
       .catch((error: unknown) => {
+        failed = true;
         this.counters.failed += 1;
         this.deps.logger?.warn('member work sync queue reconcile failed', {
           teamName: item.teamName,
@@ -380,11 +397,60 @@ export class MemberWorkSyncEventQueue {
         this.inFlight.delete(promise);
         if (running.rerunRequested && !this.stopped) {
           this.enqueueFollowUp(item, running);
+        } else if (failed && !this.stopped) {
+          this.enqueueRetryAfterFailure(key, item, running);
         }
         this.pump();
       });
 
     this.inFlight.add(promise);
+  }
+
+  private enqueueRetryAfterFailure(key: string, item: QueueItem, running: RunningItem): void {
+    if (item.retryCount >= this.maxRetryAttempts) {
+      this.counters.dropped += 1;
+      this.appendAudit({
+        teamName: item.teamName,
+        memberName: item.memberName,
+        event: 'queue_dropped',
+        source: 'event_queue',
+        reason: 'reconcile_failed_max_retries',
+        triggerReasons: [...running.triggerReasons].sort(),
+        metadata: {
+          retryCount: item.retryCount,
+          maxRetryAttempts: this.maxRetryAttempts,
+        },
+      });
+      return;
+    }
+
+    const now = this.now();
+    const retryCount = item.retryCount + 1;
+    const recovery = running.recovery ?? item.recovery;
+    this.items.set(key, {
+      ...item,
+      lastQueuedAt: now,
+      runAt: now + this.retryDelayMs,
+      maxRunAt: now + this.retryDelayMs,
+      triggerReasons: new Set(running.triggerReasons),
+      triggerReasonCounts: new Map(item.triggerReasonCounts),
+      retryCount,
+      ...(recovery ? { recovery } : {}),
+    });
+    this.appendAudit({
+      teamName: item.teamName,
+      memberName: item.memberName,
+      event: 'queue_retry_scheduled',
+      source: 'event_queue',
+      reason: 'reconcile_failed',
+      triggerReasons: [...running.triggerReasons].sort(),
+      metadata: {
+        retryCount,
+        retryDelayMs: this.retryDelayMs,
+        maxRetryAttempts: this.maxRetryAttempts,
+      },
+    });
+    this.schedule();
   }
 
   private enqueueFollowUp(item: QueueItem, running: RunningItem): void {
@@ -415,7 +481,7 @@ export class MemberWorkSyncEventQueue {
   }
 
   private async executeItem(_key: string, item: QueueItem, running: RunningItem): Promise<void> {
-    if (!(await this.deps.isTeamActive(item.teamName))) {
+    if (!this.deps.reconcileInactiveTeams && !(await this.deps.isTeamActive(item.teamName))) {
       this.counters.dropped += 1;
       this.appendAudit({
         teamName: item.teamName,
@@ -428,7 +494,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     const recovery = running.recovery ?? item.recovery;
-    await this.deps.reconcile(
+    await this.runReconcileWithTimeout(
       { teamName: item.teamName, memberName: item.memberName },
       {
         reconciledBy: 'queue',
@@ -444,6 +510,39 @@ export class MemberWorkSyncEventQueue {
       source: 'event_queue',
       triggerReasons: [...running.triggerReasons].sort(),
     });
+  }
+
+  private async runReconcileWithTimeout(
+    input: { teamName: string; memberName: string },
+    context: MemberWorkSyncReconcileContext
+  ): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let timedOut = false;
+    const reconcilePromise = this.deps.reconcile(input, {
+      ...context,
+      isCancelled: () => timedOut || context.isCancelled?.() === true,
+    });
+    void reconcilePromise.catch(() => undefined);
+    try {
+      await Promise.race([
+        reconcilePromise,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
+            timedOut = true;
+            reject(
+              new Error(
+                `member work sync queue reconcile timed out after ${this.reconcileTimeoutMs}ms`
+              )
+            );
+          }, this.reconcileTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
   }
 
   private appendAudit(input: Omit<MemberWorkSyncAuditEvent, 'timestamp'>): void {

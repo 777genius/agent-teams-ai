@@ -9,6 +9,10 @@ export {
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
 export {
+  hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
+  hasWorkSyncReachableRuntime,
   isRuntimeEntryActiveForWorkSync,
+  isRuntimeMemberActiveForWorkSync,
+  isRuntimeMemberActivityUncertainForWorkSync,
 } from './composition/memberWorkSyncTeamActivity';

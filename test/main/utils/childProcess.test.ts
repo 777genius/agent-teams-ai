@@ -199,13 +199,18 @@ describe('cli child process helpers', () => {
         env: { FOO: 'bar' },
       });
       expect(spawnMock).toHaveBeenCalledTimes(2);
-      const secondArg0 = spawnMock.mock.calls[1][0] as string;
-      expect(secondArg0).toMatch(/claude\.exe/);
-      expect(spawnMock.mock.calls[1][1]).toMatchObject({ shell: true, env: { FOO: 'bar' } });
+      expect(spawnMock.mock.calls[1][0]).toMatch(/cmd\.exe$/i);
+      expect(spawnMock.mock.calls[1][1]).toEqual([
+        '/d',
+        '/s',
+        '/c',
+        expect.stringMatching(/claude\.exe/),
+      ]);
+      expect(spawnMock.mock.calls[1][2]).toMatchObject({ shell: false, env: { FOO: 'bar' } });
       expect(result).toBe(fake);
     });
 
-    it('uses shell directly for Windows cmd launchers', () => {
+    it('uses cmd.exe directly for Windows cmd launcher shell fallback', () => {
       setPlatform('win32');
       const fake = createMockProcess<SpawnCliChild>();
       const spawnMock = child.spawn as unknown as Mock;
@@ -213,8 +218,14 @@ describe('cli child process helpers', () => {
 
       const result = spawnCli('C:\\runtime\\cli-dev.cmd', ['--version']);
       expect(spawnMock).toHaveBeenCalledTimes(1);
-      expect(spawnMock.mock.calls[0][0]).toContain('cli-dev.cmd');
-      expect(spawnMock.mock.calls[0][1]).toMatchObject({ shell: true });
+      expect(spawnMock.mock.calls[0][0]).toMatch(/cmd\.exe$/i);
+      expect(spawnMock.mock.calls[0][1]).toEqual([
+        '/d',
+        '/s',
+        '/c',
+        expect.stringContaining('cli-dev.cmd'),
+      ]);
+      expect(spawnMock.mock.calls[0][2]).toMatchObject({ shell: false });
       expect(result).toBe(fake);
     });
 
@@ -282,12 +293,64 @@ describe('cli child process helpers', () => {
       const result = spawnCli('C:\\Users\\Алексей\\AppData\\Roaming\\npm\\claude.cmd', ['a', 'b'], {
         env: { FOO: 'bar' },
       });
-      // Non-ASCII detected upfront — single spawn call with shell: true
+      // Non-ASCII detected upfront, so launch through cmd.exe fallback once.
       expect(spawnMock).toHaveBeenCalledTimes(1);
-      const shellCmd = spawnMock.mock.calls[0][0] as string;
+      expect(spawnMock.mock.calls[0][0]).toMatch(/cmd\.exe$/i);
+      const shellCmd = spawnMock.mock.calls[0][1][3] as string;
       expect(shellCmd).toMatch(/claude\.cmd/);
-      expect(spawnMock.mock.calls[0][1]).toMatchObject({ shell: true, env: { FOO: 'bar' } });
+      expect(spawnMock.mock.calls[0][2]).toMatchObject({ shell: false, env: { FOO: 'bar' } });
       expect(result).toBe(fake);
+    });
+
+    it('rejects control characters only when Windows shell fallback is needed', () => {
+      setPlatform('win32');
+      const spawnMock = child.spawn as unknown as Mock;
+      spawnMock.mockReturnValue(createMockProcess<SpawnCliChild>());
+
+      for (const unsafeArg of [
+        'safe\0bad',
+        'safe\rbad',
+        'safe\nbad',
+        'safe\u001fbad',
+        'safe\u0085bad',
+      ]) {
+        expect(() => spawnCli('C:\\Users\\Алексей\\bin\\claude.cmd', [unsafeArg])).toThrow(
+          'control characters are not allowed'
+        );
+      }
+      expect(spawnMock).not.toHaveBeenCalled();
+
+      spawnCli('C:\\bin\\claude.exe', ['safe\nargv']);
+      expect(spawnMock.mock.calls[0][0]).toBe('C:\\bin\\claude.exe');
+      expect(spawnMock.mock.calls[0][1]).toEqual(['safe\nargv']);
+      expect(spawnMock.mock.calls[0][2]).not.toHaveProperty('shell');
+    });
+
+    it('quotes shell metacharacters when Windows shell fallback is needed', () => {
+      setPlatform('win32');
+      const spawnMock = child.spawn as unknown as Mock;
+      spawnMock.mockReturnValue(createMockProcess<SpawnCliChild>());
+
+      expect(() =>
+        spawnCli('C:\\Users\\R&D\\bin\\claude.cmd', [
+          'safe&bad',
+          'safe|bad',
+          'safe<bad',
+          'safe>bad',
+          'safe^bad',
+        ])
+      ).not.toThrow();
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+      const shellCmd = spawnMock.mock.calls[0][1][3] as string;
+      expect(shellCmd).toContain('"C:\\Users\\R&D\\bin\\claude.cmd"');
+      for (const shellArg of ['safe&bad', 'safe|bad', 'safe<bad', 'safe>bad', 'safe^bad']) {
+        expect(shellCmd).toContain(`"${shellArg}"`);
+      }
+
+      spawnCli('C:\\bin\\claude.exe', ['safe&argv']);
+      expect(spawnMock.mock.calls[1][0]).toBe('C:\\bin\\claude.exe');
+      expect(spawnMock.mock.calls[1][1]).toEqual(['safe&argv']);
+      expect(spawnMock.mock.calls[1][2]).not.toHaveProperty('shell');
     });
 
     it('does not use shell when not on windows', () => {
@@ -387,18 +450,25 @@ describe('cli child process helpers', () => {
       expect(execFileMock.mock.calls[1][2]).toMatchObject({ windowsHide: false });
     });
 
-    it('skips straight to shell for Windows cmd launchers', async () => {
+    it('skips straight to cmd.exe fallback for Windows cmd launchers', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
       const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
         cb(null, '0.0.8', '');
         return createMockProcess<ExecChild>();
-      });
+        }
+      );
 
       const result = await execCli('C:\\runtime\\cli-dev.cmd', ['--version']);
-      expect(execFileMock).not.toHaveBeenCalled();
-      expect(execMock).toHaveBeenCalled();
+      expect(execFileMock).toHaveBeenCalledWith(
+        expect.stringMatching(/cmd\.exe$/i),
+        ['/d', '/s', '/c', expect.stringContaining('cli-dev.cmd')],
+        expect.any(Object),
+        expect.any(Function)
+      );
+      expect(execMock).not.toHaveBeenCalled();
       expect(result.stdout).toBe('0.0.8');
     });
 
@@ -429,19 +499,22 @@ describe('cli child process helpers', () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
       const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
         cb(null, 'ok', '');
         return createMockProcess<ExecChild>();
-      });
+        }
+      );
       const { dir, launcher } = createGeneratedBunLauncher();
       try {
         const result = await execCli(launcher, ['runtime', 'opencode-command'], {
           preferShellForWindowsBatch: true,
         });
-        expect(execFileMock).not.toHaveBeenCalled();
-        expect(execMock).toHaveBeenCalledTimes(1);
-        expect(execMock.mock.calls[0][0]).toContain('runtime');
-        expect(execMock.mock.calls[0][0]).toContain('opencode-command');
+        expect(execFileMock).toHaveBeenCalledTimes(1);
+        expect(execFileMock.mock.calls[0][0]).toMatch(/cmd\.exe$/i);
+        expect(execFileMock.mock.calls[0][1][3]).toContain('runtime');
+        expect(execFileMock.mock.calls[0][1][3]).toContain('opencode-command');
+        expect(execMock).not.toHaveBeenCalled();
         expect(result.stdout).toBe('ok');
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -499,30 +572,38 @@ describe('cli child process helpers', () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
       const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
         cb(null, '1.2.3', '');
         return createMockProcess<ExecChild>();
-      });
+        }
+      );
 
       const result = await execCli('C:\\Users\\Алексей\\AppData\\Roaming\\npm\\claude.cmd', [
         '--version',
       ]);
-      // non-ASCII path detected upfront — execFile should NOT be called
-      expect(execFileMock).not.toHaveBeenCalled();
-      expect(execMock).toHaveBeenCalled();
+      expect(execFileMock).toHaveBeenCalledWith(
+        expect.stringMatching(/cmd\.exe$/i),
+        ['/d', '/s', '/c', expect.stringContaining('claude.cmd')],
+        expect.any(Object),
+        expect.any(Function)
+      );
+      expect(execMock).not.toHaveBeenCalled();
       expect(result.stdout).toBe('1.2.3');
     });
 
     it('escapes percent signs and quotes for cmd.exe in shell fallback', async () => {
       setPlatform('win32');
-      const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
         cb(null, 'ok', '');
         return createMockProcess<ExecChild>();
-      });
+        }
+      );
 
       await execCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--model', 'test%PATH%"arg']);
-      const shellCmd = execMock.mock.calls[0][0] as string;
+      const shellCmd = execFileMock.mock.calls[0][1][3] as string;
       // Keep % outside quoted chunks so cmd.exe does not expand it as an env var.
       expect(shellCmd).toContain('^%"PATH"^%');
       expect(shellCmd).not.toContain('%PATH%');
@@ -534,11 +615,13 @@ describe('cli child process helpers', () => {
 
     it('keeps inline settings JSON as one argv-safe argument for Windows cmd launchers', async () => {
       setPlatform('win32');
-      const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
         cb(null, 'ok', '');
         return createMockProcess<ExecChild>();
-      });
+        }
+      );
 
       await execCli('C:\\runtime\\cli-dev.cmd', [
         '--settings',
@@ -549,25 +632,25 @@ describe('cli child process helpers', () => {
         '--provider',
         'codex',
       ]);
-      const shellCmd = execMock.mock.calls[0][0] as string;
+      const shellCmd = execFileMock.mock.calls[0][1][3] as string;
       expect(shellCmd).toContain('"{\\"codex\\":{\\"forced_login_method\\":\\"chatgpt\\"}}"');
       expect(shellCmd).not.toContain('{""codex"":');
     });
 
-    it('shell: true cannot be overridden by caller options', () => {
+    it('does not pass caller shell options into cmd.exe fallback', () => {
       setPlatform('win32');
       const spawnMock = child.spawn as unknown as Mock;
       spawnMock.mockReturnValue(createMockProcess<SpawnCliChild>());
 
-      spawnCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--version'], { shell: false });
-      // shell: true must win over caller's shell: false
-      expect(spawnMock.mock.calls[0][1]).toMatchObject({ shell: true });
+      spawnCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--version'], { shell: true });
+      expect(spawnMock.mock.calls[0][0]).toMatch(/cmd\.exe$/i);
+      expect(spawnMock.mock.calls[0][2]).toMatchObject({ shell: false });
     });
 
     it('falls back to shell when execFile throws EINVAL on windows', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
-      execFileMock.mockImplementation(
+      execFileMock.mockImplementationOnce(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
           const err = new Error('spawn EINVAL') as Error & { code?: string };
           err.code = 'EINVAL';
@@ -575,17 +658,65 @@ describe('cli child process helpers', () => {
           return createMockProcess<ExecChild>();
         }
       );
-      const execMock = child.exec as unknown as Mock;
-      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
-        cb(null, '2.3.4', '');
-        return createMockProcess<ExecChild>();
-      });
+      execFileMock.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          cb(null, '2.3.4', '');
+          return createMockProcess<ExecChild>();
+        }
+      );
 
       // ASCII path — goes through execFile first, gets EINVAL, falls back to shell
       const result = await execCli('C:\\bin\\claude.exe', ['--version']);
-      expect(execFileMock).toHaveBeenCalled();
-      expect(execMock).toHaveBeenCalled();
+      expect(execFileMock).toHaveBeenCalledTimes(2);
+      expect(execFileMock.mock.calls[1][0]).toMatch(/cmd\.exe$/i);
       expect(result.stdout).toBe('2.3.4');
+    });
+
+    it('rejects control characters when execCli needs Windows shell fallback', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          const err = new Error('spawn EINVAL') as Error & { code?: string };
+          err.code = 'EINVAL';
+          cb(err, '', '');
+          return createMockProcess<ExecChild>();
+        }
+      );
+
+      await expect(execCli('C:\\bin\\claude.exe', ['safe\rbad'])).rejects.toThrow(
+        'control characters are not allowed'
+      );
+      expect(execFileMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('quotes shell metacharacters when execCli needs Windows shell fallback', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          cb(null, 'ok', '');
+          return createMockProcess<ExecChild>();
+        }
+      );
+
+      await expect(
+        execCli('C:\\Users\\R&D\\bin\\claude.cmd', ['safe&bad', 'safe^bad'])
+      ).resolves.toMatchObject({ stdout: 'ok' });
+      expect(execFileMock).toHaveBeenCalledWith(
+        expect.stringMatching(/cmd\.exe$/i),
+        [
+          '/d',
+          '/s',
+          '/c',
+          expect.stringContaining('"C:\\Users\\R&D\\bin\\claude.cmd"'),
+        ],
+        expect.any(Object),
+        expect.any(Function)
+      );
+      const shellCmd = execFileMock.mock.calls[0][1][3] as string;
+      expect(shellCmd).toContain('"safe&bad"');
+      expect(shellCmd).toContain('"safe^bad"');
     });
 
     it('preserves stdout and stderr on execFile failures', async () => {

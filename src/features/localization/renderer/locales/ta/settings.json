@@ -1,0 +1,994 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Power-user விருப்பங்கள்: config ஐ ஏற்றுமதி/இறக்குமதி செய், இயல்புநிலைகளை மீட்டமை மற்றும் raw கட்டமைப்பு திருத்தம்.",
+      "label": "மேம்பட்டது"
+    },
+    "general": {
+      "description": "theme, மொழி, காட்சி அடர்த்தி மற்றும் தொடக்க நடத்தை போன்ற முக்கிய பயன்பாட்டு விருப்பங்கள்.",
+      "label": "பொது"
+    },
+    "infoAriaLabel": "{{label}} என்றால் என்ன?",
+    "notifications": {
+      "description": "agent செயல்பாடு, task நிறைவுகள் மற்றும் பிழைகள் பற்றி எப்போது, எவ்வாறு அறிவிக்கப்படுகிறீர்கள் என்பதைக் கட்டுப்படுத்தவும்.",
+      "label": "அறிவிப்புகள்"
+    }
+  },
+  "view": {
+    "description": "உங்கள் பயன்பாட்டு விருப்பங்களை நிர்வகிக்கவும்",
+    "loading": "அமைப்புகளை ஏற்றுகிறது...",
+    "title": "அமைப்புகள்"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "test": "சோதி"
+    },
+    "defaults": {
+      "allProjects": "அனைத்து projects",
+      "allProjectsHint": "சோதனைகள் {{project}} ஐப் பயன்படுத்துகின்றன. ஒரு project இல் override இல்லாவிட்டால் இயல்புநிலை பொருந்தும்.",
+      "loadingContexts": "contexts ஐ ஏற்றுகிறது...",
+      "projectHint": "சேமித்தல் {{project}} ஐ மட்டும் override செய்கிறது.",
+      "projectOverrideContext": "project override context",
+      "scopeDescriptionAllProjects": "தனது சொந்த OpenCode override இல்லாத ஒவ்வொரு project க்கும் இயல்புநிலை.",
+      "scopeDescriptionProject": "தேர்ந்தெடுத்த project ஐ மட்டும் override செய்யவும். இயங்கும் teams மாற்றப்படாது.",
+      "selectProjectContext": "project context ஐத் தேர்ந்தெடு",
+      "selectProjectHint": "உள்ளூர் மாதிரிகளைச் சோதிப்பதற்கு அல்லது இயல்புநிலைகளைச் சேமிப்பதற்கு முன் ஒரு project ஐத் தேர்ந்தெடுக்கவும்.",
+      "selectValidationContext": "சரிபார்ப்பு context ஐத் தேர்ந்தெடு",
+      "setAllProjectsDefault": "அனைத்து-projects இயல்புநிலையை அமை",
+      "setProjectDefault": "project இயல்புநிலையை அமை",
+      "thisProject": "இந்த project",
+      "title": "OpenCode இயல்புநிலைகள்",
+      "validationContext": "சரிபார்ப்பு context"
+    },
+    "diagnostics": {
+      "copied": "Diagnostics நகலெடுக்கப்பட்டது",
+      "copiedShort": "நகலெடுக்கப்பட்டது",
+      "copy": "Diagnostics ஐ நகலெடு",
+      "hints": "குறிப்புகள்",
+      "likelyCause": "சாத்தியமான காரணம்:",
+      "windowsSymlinkAdminHint": "Windows: Agent Teams AI ஐ Administrator ஆக இயக்கவும்"
+    },
+    "models": {
+      "alreadyDefault": "இது ஏற்கனவே தேர்ந்தெடுக்கப்பட்ட OpenCode இயல்புநிலை.",
+      "empty": "மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "emptyFree": "இலவச மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "emptyRecommended": "பரிந்துரைக்கப்பட்ட மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "emptyRecommendedFree": "பரிந்துரைக்கப்பட்ட இலவச மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
+      "freeOnly": "இலவசம் மட்டும்",
+      "launchableDescription": "OpenCode config இலிருந்து அறியப்பட்ட routes, இலவச உள்ளமைந்த மாதிரிகள் மற்றும் தற்போதைய இயல்புநிலை. team launches க்குத் தயாராவதற்கு முன் உள்ளூர் routes க்கு வெற்றிகரமான சோதனை தேவை.",
+      "launchableTitle": "OpenCode மாதிரி routes",
+      "loadingRoutes": "OpenCode மாதிரி routes ஐ ஏற்றுகிறது...",
+      "noRoutesMatch": "\"{{query}}\" க்கு OpenCode மாதிரி routes எதுவும் பொருந்தவில்லை.",
+      "noneReported": "OpenCode மாதிரி routes இன்னும் புகாரளிக்கப்படவில்லை. OpenCode இல் ஒரு உள்ளூர் route ஐ கட்டமைக்கவும் அல்லது catalog providers ஐ ஆராய Providers tab ஐப் பயன்படுத்தவும்.",
+      "recommendedOnly": "பரிந்துரைக்கப்பட்டது மட்டும்",
+      "searchPlaceholder": "மாதிரிகளைத் தேடு",
+      "selectProjectBeforeTesting": "மாதிரிகளைச் சோதிப்பதற்கு முன் ஒரு project context ஐத் தேர்ந்தெடுக்கவும்.",
+      "selectProjectBeforeTestingDefaults": "OpenCode இயல்புநிலைகளைச் சோதிப்பதற்கு அல்லது சேமிப்பதற்கு முன் ஒரு project context ஐத் தேர்ந்தெடுக்கவும்.",
+      "testInProgress": "மாதிரி சோதனை ஏற்கனவே இயங்குகிறது.",
+      "useInTeamPicker": "team picker க்கு சேமி",
+      "validationContextRequired": "Test மற்றும் Set default ஐ இயக்க மேலே ஒரு சரிபார்ப்பு context ஐத் தேர்ந்தெடுக்கவும். team picker க்கு சேமித்தல் புதிய teams க்கான route ஐ மட்டுமே சேமிக்கிறது.",
+      "actionsUnavailable": "நடவடிக்கைகள் தற்காலிகமாகக் கிடைக்கவில்லை.",
+      "defaultSaveInProgress": "OpenCode இயல்புநிலை சேமிக்கப்படுகிறது.",
+      "routeUnavailableAuth": "இந்த மாதிரியைப் பயன்படுத்துவதற்கு முன் இந்த வழங்குநருக்கு அங்கீகாரம் தேவை.",
+      "routeUnavailableFailed": "இந்த மாதிரி route அதன் கடைசி execution சோதனையில் தோல்வியடைந்தது.",
+      "routeUnavailableGeneric": "இந்த மாதிரி route ஐ இப்போது பயன்படுத்த முடியாது.",
+      "routeUnavailableUnknown": "இந்த மாதிரி தற்போதைய OpenCode இயல்புநிலை, ஆனால் அது இன்னும் live catalog இல் கிடைக்கவில்லை."
+    },
+    "providers": {
+      "catalog": "OpenCode வழங்குநர் catalog",
+      "countFallback": "OpenCode வழங்குநர்கள்",
+      "description": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன.",
+      "loadMore": "மேலும் வழங்குநர்களை ஏற்று",
+      "loading": "OpenCode வழங்குநர்களை ஏற்றுகிறது",
+      "noMatches": "அந்தத் தேடலுக்குப் பொருந்தும் வழங்குநர்கள் இல்லை.",
+      "noneReported": "managed runtime ஆல் OpenCode வழங்குநர்கள் எதுவும் புகாரளிக்கப்படவில்லை.",
+      "recommended": "பரிந்துரைக்கப்பட்டது",
+      "refreshCatalog": "catalog ஐ புதுப்பி",
+      "searchPlaceholder": "வழங்குநர்களைத் தேடு",
+      "description_few": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன.",
+      "description_many": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன.",
+      "description_one": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன.",
+      "description_other": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன."
+    },
+    "setup": {
+      "loading": "வழங்குநர் அமைப்பை ஏற்றுகிறது..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode இயல்புநிலை: {{model}}",
+      "loading": "managed OpenCode runtime, இணைக்கப்பட்ட வழங்குநர்கள் மற்றும் மாதிரி இயல்புநிலைகளை ஏற்றுகிறது...",
+      "source": "மூலம்: {{source}}",
+      "title": "OpenCode runtime"
+    },
+    "tabs": {
+      "models": "மாதிரிகள்",
+      "providers": "வழங்குநர்கள்"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "மாதிரி routes ஐத் தேடு"
+    },
+    "badges": {
+      "usedInTeamPicker": "team picker க்கு சேமிக்கப்பட்டது",
+      "free": "இலவசம்",
+      "local": "உள்ளூர்",
+      "configured": "கட்டமைக்கப்பட்டது",
+      "knownRoute": "அறியப்பட்ட route",
+      "connected": "இணைக்கப்பட்டது",
+      "verified": "சரிபார்க்கப்பட்டது",
+      "needsTest": "சோதனை தேவை",
+      "failed": "தோல்வி",
+      "unknown": "தெரியாதது",
+      "default": "இயல்புநிலை"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "agent தொடர்பாடலுக்கான மொழி",
+      "descriptionWithDetected": "agent தொடர்பாடலுக்கான மொழி (கண்டறியப்பட்டது: {{detected}})",
+      "emptyMessage": "மொழி எதுவும் கிடைக்கவில்லை.",
+      "label": "மொழி",
+      "searchPlaceholder": "மொழியைத் தேடு...",
+      "selectPlaceholder": "மொழியைத் தேர்ந்தெடு...",
+      "title": "Agent மொழி"
+    },
+    "appLanguage": {
+      "description": "பயன்பாட்டு இடைமுகத்திற்கான மொழி.",
+      "label": "மொழி",
+      "title": "பயன்பாட்டு மொழி"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "ஒரு transcript ஐத் திறக்கும்போது அல்லது புதிய செய்தியைப் பெறும்போது ஒவ்வொரு பதில் turn ஐயும் தானாக விரிவாக்கு",
+        "label": "இயல்பாக AI பதில்களை விரிவாக்கு"
+      },
+      "nativeTitleBar": {
+        "description": "தனிப்பயன் title bar க்குப் பதிலாக இயல்புநிலை கணினி window frame ஐப் பயன்படுத்து",
+        "label": "native title bar ஐப் பயன்படுத்து",
+        "restartConfirm": {
+          "confirmLabel": "மறுதொடக்கம்",
+          "message": "title bar மாற்றத்தைப் பயன்படுத்த பயன்பாடு மறுதொடக்கம் செய்ய வேண்டும். இப்போது மறுதொடக்கம் செய்யவா?",
+          "title": "மறுதொடக்கம் தேவை"
+        }
+      },
+      "theme": {
+        "description": "உங்கள் விருப்பமான வண்ண theme ஐத் தேர்ந்தெடுக்கவும்",
+        "label": "Theme",
+        "options": {
+          "dark": "இருண்ட",
+          "light": "வெளிர்",
+          "system": "கணினி"
+        }
+      },
+      "title": "தோற்றம்"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "உலாவியிலிருந்து UI ஐ அணுக அல்லது iframes இல் உட்பொதிக்க ஒரு HTTP server ஐத் தொடங்கு",
+        "label": "server பயன்முறையை இயக்கு"
+      },
+      "title": "உலாவி அணுகல்"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Folder ஐத் தேர்ந்தெடு",
+        "selectFolderManually": "Folder ஐ கைமுறையாகத் தேர்ந்தெடு",
+        "useAutoDetect": "Auto-Detect ஐப் பயன்படுத்து",
+        "useFolder": "Folder ஐப் பயன்படுத்து",
+        "usePath": "Path ஐப் பயன்படுத்து",
+        "useThisPath": "இந்த Path ஐப் பயன்படுத்து",
+        "useWsl": "Linux/WSL ஐப் பயன்படுத்துகிறீர்களா?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "இந்த folder இல் \"projects\" directory இல்லை. எப்படியும் தொடரவா?",
+          "title": "projects directory கிடைக்கவில்லை"
+        },
+        "notClaudeDir": {
+          "message": "இந்த folder இன் பெயர் \"{{folderName}}\", \".claude\" அல்ல. எப்படியும் தொடரவா?",
+          "title": "தேர்ந்தெடுத்த folder .claude அல்ல"
+        },
+        "noWslPaths": {
+          "message": "Claude தரவு கொண்ட WSL distros ஐ தானாகக் கண்டறிய முடியவில்லை. folder ஐ கைமுறையாகத் தேர்ந்தெடுக்கவா?",
+          "title": "WSL Claude paths எதுவும் கிடைக்கவில்லை"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" இல் \"projects\" directory இல்லை. எப்படியும் தொடரவா?",
+          "title": "WSL path இல் projects directory காணவில்லை"
+        }
+      },
+      "current": {
+        "autoDetected": "தானாகக் கண்டறியப்பட்டது: {{path}}",
+        "autoDetectedPath": "தானாகக் கண்டறியப்பட்ட path ஐப் பயன்படுத்துகிறது",
+        "customPath": "தனிப்பயன் path ஐப் பயன்படுத்துகிறது",
+        "label": "தற்போதைய உள்ளூர் Root"
+      },
+      "description": "உங்கள் Claude தரவு root ஆக எந்த உள்ளூர் folder கருதப்படுகிறது என்பதைத் தேர்ந்தெடுக்கவும்",
+      "errors": {
+        "detectWslFailed": "WSL Claude root paths ஐ கண்டறிய முடியவில்லை",
+        "loadFailed": "உள்ளூர் Claude root அமைப்புகளை ஏற்ற முடியவில்லை",
+        "updateFailed": "Claude root ஐ புதுப்பிக்க முடியவில்லை"
+      },
+      "title": "உள்ளூர் Claude Root",
+      "wslModal": {
+        "closeAriaLabel": "WSL path modal ஐ மூடு",
+        "description": "கண்டறியப்பட்ட WSL distributions மற்றும் Claude root வேட்பாளர்கள்",
+        "noProjectsDir": "projects directory எதுவும் கண்டறியப்படவில்லை",
+        "title": "WSL Claude Root ஐத் தேர்ந்தெடு"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "அநாமதேய crash மற்றும் செயல்திறன் தரவை அனுப்புவதன் மூலம் பயன்பாட்டை மேம்படுத்த உதவவும்",
+        "label": "crash அறிக்கைகளை அனுப்பு"
+      },
+      "title": "தனியுரிமை"
+    },
+    "server": {
+      "runningOn": "இயங்குகிறது",
+      "standaloneModeDescription": "standalone பயன்முறையில் இயங்குகிறது. HTTP server எப்போதும் செயலில் உள்ளது. கணினி அறிவிப்புகள் கிடைக்கவில்லை - அறிவிப்பு triggers பயன்பாட்டில் மட்டுமே பதிவாகின்றன.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "நீங்கள் உள்நுழையும்போது பயன்பாட்டை தானாகத் தொடங்கு",
+        "label": "உள்நுழைவில் தொடங்கு"
+      },
+      "showDockIcon": {
+        "description": "dock இல் பயன்பாட்டு ஐகானைக் காட்டு (macOS)",
+        "label": "dock ஐகானைக் காட்டு"
+      },
+      "title": "தொடக்கம்"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "development பயன்முறையில் அறிவிப்புகள் வேலை செய்யாமல் போகலாம். macOS பயன்பாட்டை \"Electron\" எனக் கண்டறிகிறது (bundle ID",
+      "descriptionSuffix": ") production பயன்பாட்டுப் பெயருக்குப் பதிலாக. அனுமதிகளைச் சரிபார்க்க System Settings > Notifications > Electron ஐச் சரிபார்க்கவும்.",
+      "title": "Dev பயன்முறை"
+    },
+    "ignoredRepositories": {
+      "description": "இந்த repositories இலிருந்து வரும் அறிவிப்புகள் புறக்கணிக்கப்படும்",
+      "empty": "புறக்கணிக்கப்பட்ட repositories இல்லை",
+      "selectPlaceholder": "புறக்கணிக்க repository ஐத் தேர்ந்தெடு...",
+      "title": "புறக்கணிக்கப்பட்ட Repositories"
+    },
+    "settings": {
+      "enabled": {
+        "description": "பிழைகள் மற்றும் நிகழ்வுகளுக்கு கணினி அறிவிப்புகளைக் காட்டு",
+        "label": "கணினி அறிவிப்புகளை இயக்கு"
+      },
+      "sound": {
+        "description": "அறிவிப்புகள் தோன்றும்போது ஒரு ஒலியை இயக்கு",
+        "label": "ஒலியை இயக்கு"
+      },
+      "subagentErrors": {
+        "description": "subagent sessions இல் உள்ள பிழைகளைக் கண்டறிந்து அறிவி",
+        "label": "subagent பிழைகளை சேர்"
+      },
+      "title": "அறிவிப்பு அமைப்புகள்"
+    },
+    "snooze": {
+      "clear": "Snooze ஐ அழி",
+      "description": "அறிவிப்புகளை தற்காலிகமாக இடைநிறுத்து",
+      "descriptionWithTime": "{{time}} வரை snooze செய்யப்பட்டது",
+      "label": "அறிவிப்புகளை snooze செய்",
+      "options": {
+        "15": "15 நிமிடங்கள்",
+        "30": "30 நிமிடங்கள்",
+        "60": "1 மணி நேரம்",
+        "120": "2 மணி நேரம்",
+        "240": "4 மணி நேரம்",
+        "-1": "நாளை வரை"
+      },
+      "selectDuration": "கால அளவைத் தேர்ந்தெடு..."
+    },
+    "taskCompletion": {
+      "description": "Claude tasks ஐ முடிக்கும்போது native OS அறிவிப்புகளைப் பெறுங்கள் - ஒலிகள், banners மற்றும் Dock/taskbar badges. macOS, Linux மற்றும் Windows இல் வேலை செய்கிறது.",
+      "installPlugin": "claude-notifications-go plugin ஐ நிறுவு",
+      "title": "Task நிறைவு அறிவிப்புகள்"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "ஒரு team இல் உள்ள ஒவ்வொரு task உம் completed நிலையை அடையும்போது அறிவி",
+        "label": "அனைத்து tasks முடிந்தன"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claude ஒரு மீட்டமைப்பு நேரத்தை புகாரளிக்கும்போது, வரம்பு மீட்டமைக்கப்பட்ட பிறகு team lead க்கு ஒரு பின்தொடர் nudge ஐ அட்டவணைப்படுத்து",
+        "label": "rate limit க்குப் பிறகு auto-resume"
+      },
+      "clarifications": {
+        "description": "ஒரு task க்கு உங்கள் உள்ளீடு தேவைப்படும்போது native OS அறிவிப்புகளைக் காட்டு",
+        "label": "Task தெளிவுபடுத்தல் அறிவிப்புகள்"
+      },
+      "crossTeamMessage": {
+        "description": "மற்றொரு team இலிருந்து ஒரு செய்தி வரும்போது அறிவி",
+        "label": "Cross-team செய்தி அறிவிப்புகள்"
+      },
+      "leadInbox": {
+        "description": "teammates team lead க்கு செய்திகளை அனுப்பும்போது அறிவி",
+        "label": "Lead inbox அறிவிப்புகள்"
+      },
+      "statusChange": {
+        "description": "ஒரு task இன் நிலை மாறும்போது native OS அறிவிப்புகளைக் காட்டு",
+        "label": "Task நிலை மாற்ற அறிவிப்புகள்",
+        "onlySolo": {
+          "description": "team இல் teammates இல்லாதபோது மட்டும் அறிவி",
+          "label": "Solo பயன்முறையில் மட்டும்"
+        },
+        "statuses": {
+          "description": "எந்த இலக்கு நிலைகள் ஒரு அறிவிப்பைத் தூண்டுகின்றன",
+          "label": "இந்த நிலைகளில் அறிவி",
+          "options": {
+            "approved": "ஒப்புதல் அளிக்கப்பட்டது",
+            "completed": "முடிந்தது",
+            "deleted": "நீக்கப்பட்டது",
+            "in_progress": "தொடங்கப்பட்டது",
+            "needsFix": "திருத்தங்கள் தேவை",
+            "pending": "நிலுவையில்",
+            "review": "மதிப்பாய்வு"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "agents tasks இல் கருத்து தெரிவிக்கும்போது native OS அறிவிப்புகளைக் காட்டு",
+        "label": "Task கருத்து அறிவிப்புகள்"
+      },
+      "taskCreated": {
+        "description": "ஒரு புதிய task உருவாக்கப்படும்போது native OS அறிவிப்புகளைக் காட்டு",
+        "label": "Task உருவாக்க அறிவிப்புகள்"
+      },
+      "teamLaunched": {
+        "description": "ஒரு team தொடங்குதலை முடித்து தயாராகும்போது அறிவி",
+        "label": "Team தொடக்க அறிவிப்புகள்"
+      },
+      "title": "Team அறிவிப்புகள்",
+      "toolApproval": {
+        "description": "பயன்பாடு focus இல் இல்லாதபோது ஒரு tool க்கு உங்கள் ஒப்புதல் (Allow/Deny) தேவைப்படும்போது அறிவி",
+        "label": "Tool ஒப்புதல் அறிவிப்புகள்"
+      },
+      "userInbox": {
+        "description": "teammates உங்களுக்கு செய்திகளை அனுப்பும்போது அறிவி",
+        "label": "பயனர் inbox அறிவிப்புகள்"
+      }
+    },
+    "test": {
+      "action": "சோதனையை அனுப்பு",
+      "description": "வழங்கலைச் சரிபார்க்க ஒரு சோதனை அறிவிப்பை அனுப்பு",
+      "failedToSend": "சோதனை அறிவிப்பை அனுப்ப முடியவில்லை",
+      "label": "சோதனை அறிவிப்பு",
+      "sending": "அனுப்புகிறது...",
+      "sent": "அனுப்பப்பட்டது!",
+      "unknownError": "தெரியாத பிழை"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "பயன்பாட்டு ஐகான்",
+      "description": "இணையாக சுயமாக வேலை செய்யும், teams முழுவதும் தொடர்பு கொள்ளும், மற்றும் kanban board இல் tasks ஐ நிர்வகிக்கும் AI agent teams ஐ உருவாக்கவும் - உள்ளமைந்த code review, நேரடி process கண்காணிப்பு மற்றும் முழு tool தெரிவுத்தன்மையுடன்.",
+      "standalone": "Standalone",
+      "title": "பற்றி",
+      "version": "பதிப்பு {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Config ஐ திருத்து",
+      "exportConfig": "Config ஐ ஏற்றுமதி செய்",
+      "importConfig": "Config ஐ இறக்குமதி செய்",
+      "openInEditor": "Editor இல் திற",
+      "resetToDefaults": "இயல்புநிலைகளுக்கு மீட்டமை",
+      "title": "கட்டமைப்பு"
+    },
+    "updates": {
+      "available": "v{{version}} கிடைக்கிறது",
+      "check": "புதுப்பிப்புகளைச் சரிபார்",
+      "checking": "சரிபார்க்கிறது...",
+      "ready": "புதுப்பிப்பு தயார்",
+      "unknownVersion": "தெரியாதது",
+      "upToDate": "புதுப்பித்த நிலையில் உள்ளது"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "config ஐ ஏற்ற முடியவில்லை",
+      "saveFailed": "config ஐ சேமிக்க முடியவில்லை"
+    },
+    "footer": {
+      "autoSave": "திருத்திய பிறகு மாற்றங்கள் தானாகச் சேமிக்கப்படும்",
+      "toClose": "மூட",
+      "escapeKey": "Esc"
+    },
+    "loading": "config ஐ ஏற்றுகிறது...",
+    "status": {
+      "invalidJson": "தவறான JSON",
+      "saveFailed": "சேமிப்பு தோல்வியடைந்தது",
+      "saved": "சேமிக்கப்பட்டது",
+      "saving": "சேமிக்கிறது..."
+    },
+    "title": "கட்டமைப்பைத் திருத்து"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "ரத்துசெய்",
+      "submit": "Trigger ஐ சேர்",
+      "title": "தனிப்பயன் Trigger ஐ சேர்"
+    },
+    "builtin": {
+      "description": "பயன்பாட்டுடன் வரும் இயல்புநிலை triggers. நீங்கள் அவற்றை இயக்கலாம் அல்லது முடக்கலாம் மற்றும் அவற்றின் patterns ஐ தனிப்பயனாக்கலாம்.",
+      "title": "உள்ளமைந்த Triggers"
+    },
+    "card": {
+      "builtinBadge": "உள்ளமைந்தது",
+      "collapseAriaLabel": "சுருக்கு",
+      "deleteAriaLabel": "trigger ஐ நீக்கு",
+      "editNameAriaLabel": "பெயரைத் திருத்து",
+      "expandAriaLabel": "விரிவாக்கு"
+    },
+    "color": {
+      "customHexTitle": "தனிப்பயன் hex நிறம்",
+      "invalidHex": "தவறான hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "எச்சரி >",
+      "emptyPatternHint": "அனைத்து உள்ளடக்கத்துடனும் பொருந்த காலியாக விடவும். JavaScript regex தொடரியலைப் பயன்படுத்துகிறது.",
+      "errorStatusDescription": "ஒரு tool execution ஒரு பிழையைப் புகாரளிக்கும்போது (is_error: true) தூண்டுகிறது.",
+      "tokensUnit": "tokens",
+      "matchPatternPlaceholder": "எ.கா., error|failed|exception"
+    },
+    "custom": {
+      "description": "குறிப்பிட்ட patterns அல்லது tool வெளியீடுகளுக்கு அறிவிப்பு பெற உங்கள் சொந்த triggers ஐ உருவாக்கவும்.",
+      "empty": "இன்னும் தனிப்பயன் triggers எதுவும் கட்டமைக்கப்படவில்லை.",
+      "title": "தனிப்பயன் Triggers"
+    },
+    "errors": {
+      "invalidRegexPattern": "தவறான regex pattern"
+    },
+    "fields": {
+      "contentType": "உள்ளடக்க வகை",
+      "matchField": "பொருத்தும் Field",
+      "matchPattern": "பொருத்தும் Pattern (Regex)",
+      "scopeToolName": "Scope / Tool பெயர்",
+      "scopeToolNameOptional": "Scope / Tool பெயர் (விருப்பத்திற்குரியது)",
+      "threshold": "வரம்பு",
+      "tokenType": "Token வகை",
+      "triggerNamePlaceholder": "எ.கா., Build Failure Alert",
+      "triggerNameRequired": "Trigger பெயர் *"
+    },
+    "ignorePatterns": {
+      "hint": "சேர்க்க Enter ஐ அழுத்தவும். ஏதேனும் pattern பொருந்தினால் அறிவிப்பு தவிர்க்கப்படும்.",
+      "placeholder": "புறக்கணிக்கும் regex ஐ சேர்...",
+      "removeAriaLabel": "புறக்கணிக்கும் pattern ஐ அகற்று",
+      "summary": "மேம்பட்டது: விலக்கு விதிகள்",
+      "title": "புறக்கணிக்கும் Patterns (பொருந்தினால் தவிர்)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Text வெளியீடு",
+        "thinking": "Thinking",
+        "tool_result": "Tool முடிவு",
+        "tool_use": "Tool பயன்பாடு"
+      },
+      "matchFields": {
+        "args": "வாதங்கள்",
+        "command": "கட்டளை",
+        "content": "உள்ளடக்கம்",
+        "description": "விளக்கம்",
+        "file_path": "கோப்பு Path",
+        "fullInput": "முழு Input (JSON)",
+        "glob": "Glob வடிப்பான்",
+        "new_string": "புதிய String",
+        "old_string": "பழைய String",
+        "path": "Path",
+        "pattern": "Pattern",
+        "prompt": "Prompt",
+        "query": "வினவல்",
+        "skill": "Skill பெயர்",
+        "subagent_type": "Subagent வகை",
+        "text": "Text உள்ளடக்கம்",
+        "thinking": "Thinking உள்ளடக்கம்",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "உள்ளடக்க Pattern",
+        "error_status": "Execution பிழை",
+        "token_threshold": "அதிக Token பயன்பாடு"
+      },
+      "tokenTypes": {
+        "input": "Input Tokens",
+        "output": "Output Tokens",
+        "total": "மொத்த Tokens"
+      },
+      "toolNames": {
+        "anyTool": "எந்த Tool"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Test Trigger",
+      "detectedSuffix": "பிழைகள் கண்டறியப்பட்டிருக்கும்",
+      "more": "...மற்றும் {{count}} மேலும்",
+      "more_few": "...மற்றும் {{count}} மேலும்",
+      "more_many": "...மற்றும் {{count}} மேலும்",
+      "more_one": "...மற்றும் {{count}} மேலும்",
+      "more_other": "...மற்றும் {{count}} மேலும்",
+      "testTrigger": "Test Trigger",
+      "testing": "சோதிக்கிறது...",
+      "title": "முன்னோட்டம்",
+      "truncatedWarning": "தேடல் முன்கூட்டியே நிறுத்தப்பட்டது (timeout அல்லது count வரம்பு). உண்மையான பொருத்தங்கள் அதிகமாக இருக்கலாம்.",
+      "viewSession": "Session ஐக் காண்"
+    },
+    "repositoryScope": {
+      "empty": "repositories எதுவும் தேர்ந்தெடுக்கப்படவில்லை - trigger அனைத்து repositories க்கும் பொருந்தும்",
+      "hint": "repositories தேர்ந்தெடுக்கப்படும்போது, இந்த trigger அந்த repositories இல் உள்ள பிழைகளுக்கு மட்டுமே தூண்டுகிறது.",
+      "placeholder": "சேர்க்க repository ஐத் தேர்ந்தெடு...",
+      "summary": "மேம்பட்டது: Repository Scope",
+      "title": "Repositories க்கு வரம்பிடு (தேர்ந்தெடுத்த repositories க்கு மட்டுமே பொருந்தும்)"
+    },
+    "sections": {
+      "configuration": "கட்டமைப்பு",
+      "dotColor": "புள்ளி நிறம்",
+      "generalInfo": "பொது தகவல்",
+      "triggerCondition": "Trigger நிபந்தனை"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Profile ஐ சேர்",
+      "cancel": "ரத்துசெய்",
+      "deleteProfile": "profile ஐ நீக்கு",
+      "editProfile": "profile ஐ திருத்து",
+      "save": "சேமி"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (SSH Config இலிருந்து)",
+      "password": "கடவுச்சொல்",
+      "privateKey": "Private Key"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "நீக்கு",
+      "message": "\"{{name}}\" ஐ நிச்சயமாக நீக்க விரும்புகிறீர்களா? இதை மீட்டெடுக்க முடியாது.",
+      "title": "Profile ஐ நீக்கு"
+    },
+    "description": "விரைவான மறுஇணைப்புக்கு SSH இணைப்பு profiles ஐ சேமி",
+    "empty": {
+      "description": "விரைவாக இணைக்க ஒரு SSH profile ஐ சேர்",
+      "title": "சேமிக்கப்பட்ட profiles இல்லை"
+    },
+    "form": {
+      "authentication": "அங்கீகாரம்",
+      "host": "Host",
+      "name": "பெயர்",
+      "passwordPrompt": "இணைக்கும்போது கடவுச்சொல் கேட்கப்படும்.",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "பயனர்பெயர்",
+      "namePlaceholder": "என் Server",
+      "hostPlaceholder": "hostname அல்லது IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "profiles ஐ ஏற்றுகிறது...",
+    "title": "Workspace Profiles"
+  },
+  "connection": {
+    "actions": {
+      "connect": "இணை",
+      "connecting": "இணைக்கிறது...",
+      "disconnect": "துண்டி",
+      "testConnection": "இணைப்பைச் சோதி",
+      "testing": "சோதிக்கிறது..."
+    },
+    "currentMode": {
+      "description": "session கோப்புகளுக்கான தரவு மூலம்",
+      "label": "தற்போதைய பயன்முறை",
+      "local": "உள்ளூர் ({{path}})"
+    },
+    "description": "அங்கு இயங்கும் Claude Code sessions ஐக் காண ஒரு தொலைநிலை இயந்திரத்துடன் இணைக்கவும்",
+    "form": {
+      "authentication": "அங்கீகாரம்",
+      "host": "Host",
+      "password": "கடவுச்சொல்",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "பயனர்பெயர்",
+      "hostPlaceholder": "hostname அல்லது SSH config alias",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "சேமிக்கப்பட்ட Profiles"
+    },
+    "ssh": {
+      "title": "SSH இணைப்பு"
+    },
+    "status": {
+      "connectedTo": "{{host}} உடன் இணைக்கப்பட்டது",
+      "remoteSessions": "SSH வழியாக தொலைநிலை sessions ஐக் காண்கிறது"
+    },
+    "test": {
+      "failed": "இணைப்பு தோல்வியடைந்தது: {{error}}",
+      "success": "இணைப்பு வெற்றிகரமானது",
+      "unknownError": "தெரியாத பிழை"
+    },
+    "title": "தொலைநிலை இணைப்பு"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "ரத்துசெய்",
+      "cancelLogin": "உள்நுழைவை ரத்துசெய்",
+      "connectChatGpt": "ChatGPT ஐ இணை",
+      "delete": "நீக்கு",
+      "disable": "முடக்கு",
+      "disconnectAccount": "கணக்கைத் துண்டி",
+      "generateLink": "இணைப்பை உருவாக்கு",
+      "openLogin": "உள்நுழைவைத் திற",
+      "reconnectAnthropic": "Anthropic ஐ மீண்டும் இணை",
+      "refresh": "புதுப்பி",
+      "replaceKey": "key ஐ மாற்று",
+      "saveEndpoint": "endpoint ஐ சேமி",
+      "saveKey": "key ஐ சேமி",
+      "saving": "சேமிக்கிறது...",
+      "setApiKey": "API key ஐ அமை",
+      "updateKey": "key ஐ புதுப்பி",
+      "useCode": "குறியீட்டைப் பயன்படுத்து"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "சேமிக்கப்பட்ட credentials ஐ ஏற்றுகிறது...",
+      "projectScope": "Project",
+      "scope": "Scope",
+      "storedIn": "{{backend}} இல் சேமிக்கப்பட்டது",
+      "userScope": "பயனர்",
+      "storedInApp": "பயன்பாட்டில் சேமிக்கப்பட்டது",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "API-billed அணுகலுக்கு நேரடி Anthropic API key ஐப் பயன்படுத்தவும். நீங்கள் மீண்டும் மாறும்போது உங்கள் Anthropic subscription session கிடைக்கும்.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "இரண்டாம் நிலை Codex auth path ஆக OpenAI API key ஐப் பயன்படுத்தவும். நீங்கள் Codex ஐ API key பயன்முறைக்கு மாற்றினால், native launches க்காக பயன்பாடு OPENAI_API_KEY ஐ CODEX_API_KEY இல் பிரதிபலிக்கும்.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "API அணுகல்",
+          "description": "Gemini API backend க்கு `GEMINI_API_KEY` ஐப் பயன்படுத்தவும். CLI SDK மற்றும் ADC க்கு இது தேவையில்லை.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "இணைக்கப்பட்டது",
+        "description": "subscription-backed native launches ஐ இயக்கும் உள்ளூர் Codex app-server கணக்கு session ஐ நிர்வகிக்கவும்.",
+        "loginInProgress": "உள்நுழைவு முன்னேற்றத்தில்",
+        "plan": "திட்டம்: {{plan}}",
+        "reconnectRequired": "மீண்டும் இணைப்பு தேவை",
+        "title": "ChatGPT கணக்கு",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} ChatGPT இணைக்கப்படும் வரை Auto கண்டறியப்பட்ட API key ஐத் தொடர்ந்து பயன்படுத்தும்.",
+          "detectedApiKeyNeedsApiMode": "{{message}} கண்டறியப்பட்ட API key ஆனது நீங்கள் Codex ஐ API key பயன்முறைக்கு மாற்றிய பிறகே பயன்படுத்தப்படுகிறது.",
+          "localArtifactsNoSession": "Codex CLI தற்போது செயலில் உள்ள ChatGPT கணக்கு இல்லை எனப் புகாரளிக்கிறது. உள்ளூர் Codex கணக்கு தரவு உள்ளது, ஆனால் செயலில் உள்ள managed session எதுவும் தேர்ந்தெடுக்கப்படவில்லை. Codex CLI ஒன்றைப் பார்த்த பிறகே பயன்பாட்டு வரம்புகள் இங்கே தோன்றும்.",
+          "noActiveAccount": "Codex CLI தற்போது செயலில் உள்ள ChatGPT கணக்கு இல்லை எனப் புகாரளிக்கிறது. Codex CLI ஒன்றைப் பார்த்த பிறகே பயன்பாட்டு வரம்புகள் இங்கே தோன்றும்.",
+          "reconnectBeforeUsage": "Codex இல் உள்ளூரில் தேர்ந்தெடுக்கப்பட்ட ChatGPT கணக்கு உள்ளது, ஆனால் இங்கே பயன்பாட்டு வரம்புகள் ஏற்றப்படுவதற்கு முன் தற்போதைய session ஐ மீண்டும் இணைக்க வேண்டும்.",
+          "usageLimitsAfterReport": "இணைக்கப்பட்ட ChatGPT கணக்கிற்கு Codex அவற்றைப் புகாரளித்த பிறகு பயன்பாட்டு வரம்புகள் இங்கே தோன்றும்."
+        }
+      },
+      "install": {
+        "checking": "சரிபார்க்கிறது",
+        "downloading": "பதிவிறக்குகிறது",
+        "installCli": "Codex CLI ஐ நிறுவு",
+        "installing": "நிறுவுகிறது",
+        "retryInstall": "நிறுவலை மீண்டும் முயற்சி",
+        "title": "Codex CLI ஐ app data இல் நிறுவு"
+      },
+      "rateLimits": {
+        "credits": "Credits",
+        "creditsDescription": "Credits ஆனது window-based subscription பயன்பாட்டிலிருந்து தனியாகக் காட்டப்படுகின்றன மற்றும் plan-backed ChatGPT sessions க்கு கிடைக்காமல் போகலாம்.",
+        "noSecondaryWindow": "இந்தக் கணக்கு snapshot க்கு Codex இரண்டாம் நிலை window ஐ வழங்கவில்லை.",
+        "notReported": "புகாரளிக்கப்படவில்லை",
+        "primaryReset": "முதன்மை மீட்டமைப்பு",
+        "primaryUsed": "முதன்மை பயன்படுத்தப்பட்டது",
+        "primaryWindow": "முதன்மை window",
+        "remainingLeft": "{{value}} மீதம்",
+        "remainingUnknown": "மீதம் தெரியாது",
+        "secondaryReset": "இரண்டாம் நிலை மீட்டமைப்பு",
+        "secondaryUsed": "இரண்டாம் நிலை பயன்படுத்தப்பட்டது",
+        "secondaryWindow": "இரண்டாம் நிலை window",
+        "usedQuotaNote": "இந்த சதவீதங்கள் மீதமுள்ள quota ஐ அல்ல, பயன்படுத்தப்பட்ட quota ஐக் காட்டுகின்றன.",
+        "weeklyReset": "வாராந்திர மீட்டமைப்பு",
+        "weeklyUsed": "வாராந்திரம் பயன்படுத்தப்பட்டது",
+        "weeklyUsedOneWeek": "வாராந்திரம் பயன்படுத்தப்பட்டது (1w)",
+        "weeklyWindow": "வாராந்திர window",
+        "secondaryFallback": "இரண்டாம் நிலை",
+        "secondaryWindowNote": " வாராந்திர வரம்புகள் {{window}} window இல் தனியாகக் காட்டப்படுகின்றன.",
+        "usageExplanationGeneric": "மீதமுள்ள quota ஐ அல்ல, பயன்படுத்தப்பட்ட quota ஐக் காட்டுகிறது.",
+        "usageExplanationWindowOnly": "மீதமுள்ள quota ஐ அல்ல, தற்போதைய {{window}} window இல் பயன்படுத்தப்பட்ட quota ஐக் காட்டுகிறது.",
+        "usageExplanationWithRemaining": "{{used}} பயன்படுத்தப்பட்டது - தற்போதைய {{window}} window இல் சுமார் {{remaining}} மீதம்."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "Auth token கட்டமைக்கப்படவில்லை.",
+      "baseUrl": "Base URL",
+      "description": "Anthropic-compatible உள்ளூர் runtime endpoint ஐப் பயன்படுத்தவும்.",
+      "keepSavedToken": "சேமிக்கப்பட்ட token ஐ வைத்திருக்க காலியாக விடவும்",
+      "title": "உள்ளூர் / compatible endpoint",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Base URL தேவை",
+        "firstPartyAnthropic": "first-party Anthropic க்கு Auto, Subscription அல்லது API key ஐப் பயன்படுத்தவும்",
+        "httpRequired": "Base URL http:// அல்லது https:// ஐப் பயன்படுத்த வேண்டும்",
+        "invalidUrl": "தவறான URL",
+        "noCredentials": "Base URL இல் credentials இருக்கக் கூடாது"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint முடக்கப்பட்டது. சேமிக்கப்பட்ட token வைக்கப்பட்டது.",
+        "endpointSaved": "Endpoint சேமிக்கப்பட்டது",
+        "endpointSavedTokenMissing": "Endpoint சேமிக்கப்பட்டது. Auth token கட்டமைக்கப்படவில்லை."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "அங்கீகார முறை",
+      "descriptions": {
+        "anthropic": "app-launched Anthropic sessions எவ்வாறு அங்கீகரிக்கின்றன என்பதைத் தேர்ந்தெடுக்கவும்.",
+        "codex": "native runtime தொடங்கும்போது Codex உங்கள் ChatGPT subscription ஐ அல்லது API key ஐ விரும்ப வேண்டுமா என்பதைத் தேர்ந்தெடுக்கவும்.",
+        "gemini": "விருப்ப API அணுகலை கட்டமைக்கவும். CLI SDK மற்றும் ADC இன்னும் தானாகக் கண்டறியப்படுகின்றன.",
+        "opencode": "OpenCode அங்கீகாரம் மற்றும் வழங்குநர் inventory ஆனது OpenCode runtime ஆல் நிர்வகிக்கப்படுகிறது."
+      },
+      "method": "இணைப்பு முறை",
+      "mode": "பயன்முறை: {{mode}}",
+      "selected": "தேர்ந்தெடுக்கப்பட்டது",
+      "switching": "மாறுகிறது...",
+      "title": "இணைப்பு"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY மற்றும் Anthropic API billing ஐப் பயன்படுத்து.",
+        "autoDescription": "Anthropic runtime இயல்புநிலைகள் மற்றும் கிடைக்கும் சிறந்த உள்ளூர் credential ஐப் பயன்படுத்து.",
+        "hint": "Auto ஆனது Anthropic ஐ அதன் இயல்புநிலை உள்ளூர் credential resolution இல் வைத்திருக்கிறது.",
+        "subscriptionDescription": "உங்கள் உள்ளூர் Anthropic sign-in session மற்றும் subscription அணுகலைப் பயன்படுத்து.",
+        "subscriptionTitle": "Anthropic subscription"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "native Codex launches க்காக OPENAI_API_KEY மற்றும் CODEX_API_KEY billing ஐப் பயன்படுத்து.",
+        "autoDescription": "உங்கள் ChatGPT கணக்கு மற்றும் subscription ஐ விரும்பு. தேவைப்பட்டால் மட்டும் API key பயன்முறையைப் பயன்படுத்து.",
+        "chatgptDescription": "உங்கள் இணைக்கப்பட்ட ChatGPT கணக்கு மற்றும் Codex subscription ஐப் பயன்படுத்து.",
+        "chatgptTitle": "ChatGPT கணக்கு",
+        "hint": "Codex எப்போதும் native runtime வழியாக இயங்குகிறது. Auto ஆனது API-key credentials க்கு மாறுவதற்கு முன் உங்கள் ChatGPT கணக்கை விரும்புகிறது."
+      }
+    },
+    "description": "ஒவ்வொரு வழங்குநரும் எவ்வாறு இணைக்கிறது மற்றும், ஆதரிக்கப்படும்போது, multimodel runtime எந்த backend ஐப் பயன்படுத்த வேண்டும் என்பதை நிர்வகிக்கவும்.",
+    "fastMode": {
+      "defaultOff": "இயல்பாக ஆஃப்",
+      "description": "resolved மாதிரியும் runtime உம் அனுமதிக்கும்போது புதிய Anthropic team launches க்கு இயல்பாக Claude Code Fast பயன்முறையைப் பயன்படுத்து.",
+      "disabledHint": "ஒரு team வெளிப்படையாக Fast பயன்முறையை இயக்காவிட்டால் புதிய Anthropic launches சாதாரண வேகத்தில் இருக்கும்.",
+      "enabledHint": "resolved மாதிரி ஆதரிக்கும்போது புதிய Anthropic launches இயல்பாக Fast பயன்முறையைக் கோரும்.",
+      "notExposed": "இந்த Anthropic runtime Fast பயன்முறையை வெளிப்படுத்தவில்லை.",
+      "preferFast": "Fast ஐ விரும்பு",
+      "title": "Fast பயன்முறை இயல்புநிலை",
+      "unavailableForRuntime": "இந்த Anthropic runtime க்கு Fast பயன்முறை தற்போது கிடைக்கவில்லை."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API key பயன்முறை தேர்ந்தெடுக்கப்பட்டுள்ளது, ஆனால் இன்னும் Anthropic API credential எதுவும் கிடைக்கவில்லை.",
+      "anthropicStoredKeyAvailable": "சேமிக்கப்பட்ட API key கிடைக்கிறது, ஆனால் app-launched Anthropic sessions ஆனது நீங்கள் API key பயன்முறைக்கு மாறிய பிறகே அதைப் பயன்படுத்துகின்றன.",
+      "anthropicSubscriptionMissing": "Anthropic subscription பயன்முறை தேர்ந்தெடுக்கப்பட்டுள்ளது. இந்த வழங்குநரைப் பயன்படுத்த Anthropic உடன் sign in செய்யவும்.",
+      "authTokenMissing": "Auth token கட்டமைக்கப்படவில்லை. பல உள்ளூர் Anthropic-compatible endpoints க்கு காலியாக இல்லாத token தேவை.",
+      "chatgptLoginPending": "ChatGPT கணக்கு உள்நுழைவு முடிவதற்காகக் காத்திருக்கிறது...",
+      "chatgptLoginStarting": "ChatGPT உள்நுழைவைத் தொடங்குகிறது...",
+      "codexApiKeyMissing": "API key பயன்முறை தேர்ந்தெடுக்கப்பட்டுள்ளது, ஆனால் இன்னும் OPENAI_API_KEY அல்லது CODEX_API_KEY credential எதுவும் கிடைக்கவில்லை.",
+      "codexLocalArtifactsNoSession": "Codex CLI இல் தற்போது செயலில் உள்ள ChatGPT கணக்கு இல்லை. உள்ளூர் Codex கணக்கு தரவு உள்ளது, ஆனால் செயலில் உள்ள managed session எதுவும் தேர்ந்தெடுக்கப்படவில்லை.",
+      "codexNeedsReconnect": "Codex இல் உள்ளூரில் தேர்ந்தெடுக்கப்பட்ட ChatGPT கணக்கு உள்ளது, ஆனால் தற்போதைய session ஐ மீண்டும் இணைக்க வேண்டும்.",
+      "codexNoChatgptAccount": "Codex CLI இல் தற்போது செயலில் உள்ள ChatGPT கணக்கு இல்லை. உங்கள் subscription ஐப் பயன்படுத்த ChatGPT ஐ இணைக்கவும்.",
+      "codexNoCredential": "இன்னும் ChatGPT கணக்கு அல்லது API key எதுவும் கிடைக்கவில்லை.",
+      "geminiApiUnavailable": "Gemini API தற்போது கிடைக்கவில்லை. இங்கே `GEMINI_API_KEY` ஐ கட்டமைக்கவும் அல்லது செல்லுபடியாகும் Google ADC credentials ஐப் பயன்படுத்தவும்.",
+      "withApiKeyFallback": "{{message}} கண்டறியப்பட்ட API key ஐப் பயன்படுத்த API key பயன்முறைக்கு மாறவும்."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "app-launched Anthropic sessions ஐ ஒரு API key credential ஐப் பயன்படுத்த கட்டாயப்படுத்து.",
+        "auto": "runtime இயல்புநிலை நடத்தையைப் பயன்படுத்து. இந்த பயன்பாட்டில் சேமிக்கப்பட்ட API keys ஆனது நீங்கள் API key பயன்முறைக்கு மாறிய பிறகே பயன்படுத்தப்படுகின்றன.",
+        "oauth": "app-launched Anthropic sessions ஐ உள்ளூர் Anthropic subscription session ஐப் பயன்படுத்த கட்டாயப்படுத்து."
+      },
+      "codex": {
+        "apiKey": "native Codex launches ஐ OPENAI_API_KEY / CODEX_API_KEY billing ஐப் பயன்படுத்த கட்டாயப்படுத்து.",
+        "auto": "உங்கள் ChatGPT கணக்கு கிடைக்கும்போது அதை விரும்பு. தேவைப்படும்போது மட்டும் API key பயன்முறைக்கு மாறு.",
+        "chatgpt": "native Codex launches ஐ உங்கள் இணைக்கப்பட்ட ChatGPT கணக்கு மற்றும் subscription ஐப் பயன்படுத்த கட்டாயப்படுத்து."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "இணைப்பு மாற்றங்களைப் பயன்படுத்துகிறது...",
+      "refreshingProviderStatus": "வழங்குநர் நிலையைப் புதுப்பிக்கிறது...",
+      "savingCompatibleEndpoint": "compatible endpoint ஐ சேமிக்கிறது...",
+      "switchingAnthropicSubscription": "Anthropic subscription க்கு மாறுகிறது...",
+      "switchingApiKey": "API key க்கு மாறுகிறது...",
+      "switchingApiKeyMode": "API key பயன்முறைக்கு மாறுகிறது...",
+      "switchingAuto": "Auto க்கு மாறுகிறது...",
+      "switchingChatgpt": "ChatGPT கணக்கு பயன்முறைக்கு மாறுகிறது..."
+    },
+    "provider": "வழங்குநர்",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic க்கு தற்போது தனி runtime backend selector இல்லை.",
+        "codex": "Codex இப்போது native runtime path வழியாக மட்டுமே இயங்குகிறது.",
+        "gemini": "multimodel எந்த Gemini runtime backend ஐப் பயன்படுத்த வேண்டும் என்பதைத் தேர்ந்தெடுக்கவும்.",
+        "opencode": "OpenCode அதன் சொந்த managed runtime host ஐப் பயன்படுத்துகிறது. Desktop தற்போது நிலையை மட்டுமே வெளிப்படுத்துகிறது."
+      },
+      "title": "Runtime",
+      "updating": "runtime ஐ புதுப்பிக்கிறது..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "கட்டமைக்கப்பட்டது",
+      "enabled": "இயக்கப்பட்டது",
+      "notConfigured": "கட்டமைக்கப்படவில்லை",
+      "notSet": "அமைக்கப்படவில்லை",
+      "off": "ஆஃப்",
+      "unknown": "தெரியாதது"
+    },
+    "title": "வழங்குநர் அமைப்புகள்",
+    "usage": {
+      "apiKey": "API key ஐப் பயன்படுத்துகிறது",
+      "apiKeyRequired": "API key தேவை",
+      "compatibleEndpoint": "compatible endpoint ஐப் பயன்படுத்துகிறது",
+      "notConnected": "இணைக்கப்படவில்லை",
+      "usingMethod": "{{method}} ஐப் பயன்படுத்துகிறது"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API key நீக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
+      "apiKeySavedRefreshFailed": "API key சேமிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
+      "connectionUpdatedRefreshFailed": "இணைப்பு புதுப்பிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
+      "deleteApiKey": "API key ஐ நீக்க முடியவில்லை",
+      "disableEndpoint": "endpoint ஐ முடக்க முடியவில்லை",
+      "endpointDisabledRefreshFailed": "Endpoint முடக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
+      "endpointSavedRefreshFailed": "Endpoint சேமிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
+      "refreshCodexAccount": "Codex கணக்கைப் புதுப்பிக்க முடியவில்லை",
+      "saveApiKey": "API key ஐ சேமிக்க முடியவில்லை",
+      "saveEndpoint": "endpoint ஐ சேமிக்க முடியவில்லை",
+      "updateAnthropicFastMode": "Anthropic Fast பயன்முறையைப் புதுப்பிக்க முடியவில்லை",
+      "updateConnection": "இணைப்பைப் புதுப்பிக்க முடியவில்லை",
+      "updateRuntimeBackend": "runtime backend ஐ புதுப்பிக்க முடியவில்லை",
+      "apiKeyRequired": "API key தேவை"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Subscription / OAuth",
+        "chatgpt": "ChatGPT கணக்கு",
+        "apiKey": "API key",
+        "anthropicSubscription": "Anthropic subscription"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "API key helper",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude subscription",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google கணக்கு",
+        "serviceAccount": "service account"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "தற்போதைய runtime",
+        "selectedRuntime": "தேர்ந்தெடுத்த runtime",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "சரிபார்க்கிறது...",
+        "modelsAvailable": "மாதிரிகள் கிடைக்கின்றன",
+        "checked": "சரிபார்க்கப்பட்டது",
+        "providerActivity": "வழங்குநர் செயல்பாடு",
+        "notConnected": "இணைக்கப்படவில்லை",
+        "startingChatGptLogin": "ChatGPT உள்நுழைவைத் தொடங்குகிறது...",
+        "waitingForChatGptLogin": "ChatGPT கணக்கு உள்நுழைவுக்காகக் காத்திருக்கிறது...",
+        "chatGptVerificationDegraded": "ChatGPT கணக்கு கண்டறியப்பட்டது - கணக்கு சரிபார்ப்பு தற்போது தரம் குறைந்துள்ளது.",
+        "chatGptAccountReady": "ChatGPT கணக்கு தயார்",
+        "apiKeyReady": "API key தயார்",
+        "codexLocalAccountNeedsReconnect": "Codex இல் உள்ளூரில் தேர்ந்தெடுக்கப்பட்ட ChatGPT கணக்கு உள்ளது, ஆனால் தற்போதைய session ஐ மீண்டும் இணைக்க வேண்டும்.",
+        "codexNoActiveManagedSession": "Codex CLI செயலில் உள்ள ChatGPT உள்நுழைவு இல்லை எனப் புகாரளிக்கிறது. உள்ளூர் Codex கணக்கு தரவு உள்ளது, ஆனால் செயலில் உள்ள managed session எதுவும் தேர்ந்தெடுக்கப்படவில்லை.",
+        "codexNoActiveChatGptLogin": "Codex CLI செயலில் உள்ள ChatGPT உள்நுழைவு இல்லை எனப் புகாரளிக்கிறது",
+        "connectChatGptForSubscription": "உங்கள் Codex subscription ஐப் பயன்படுத்த ஒரு ChatGPT கணக்கை இணைக்கவும்.",
+        "codexNativeReady": "Codex native தயார்",
+        "codexNativeUnavailable": "Codex native கிடைக்கவில்லை",
+        "unavailableInCurrentRuntime": "தற்போதைய runtime இல் கிடைக்கவில்லை",
+        "connectedViaApiKey": "API key வழியாக இணைக்கப்பட்டது",
+        "apiKeyConfiguredNotVerified": "API key கட்டமைக்கப்பட்டது, ஆனால் இன்னும் சரிபார்க்கப்படவில்லை",
+        "apiKeyModeMissingCredential": "API key பயன்முறை தேர்ந்தெடுக்கப்பட்டது, ஆனால் API key எதுவும் கட்டமைக்கப்படவில்லை",
+        "connectedVia": "{{method}} வழியாக இணைக்கப்பட்டது",
+        "unableToVerify": "சரிபார்க்க முடியவில்லை"
+      },
+      "mode": {
+        "selectedAuth": "தேர்ந்தெடுத்த auth: {{authMode}}",
+        "preferredAuth": "விருப்பமான auth: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API key கட்டமைக்கப்பட்டது",
+        "savedApiKeyAvailable": "சேமிக்கப்பட்ட API key Manage இல் கிடைக்கிறது",
+        "apiKeyAlsoConfigured": "API key உம் Manage இல் கட்டமைக்கப்பட்டது",
+        "apiKeyConfiguredInManage": "API key Manage இல் கட்டமைக்கப்பட்டது",
+        "apiKeyFallbackInManage": "API key உம் fallback ஆக Manage இல் கிடைக்கிறது",
+        "availableAsFallback": "{{summary}} - fallback ஆகக் கிடைக்கிறது",
+        "savedApiKeyAvailableIfSwitch": "நீங்கள் API key பயன்முறைக்கு மாறினால் சேமிக்கப்பட்ட API key Manage இல் கிடைக்கிறது",
+        "availableIfSwitch": "{{summary}} - நீங்கள் API key பயன்முறைக்கு மாறினால் கிடைக்கிறது",
+        "autoWillUseUntilChatGpt": "{{summary}} - ChatGPT இணைக்கப்படும் வரை Auto இதைப் பயன்படுத்தும்"
+      },
+      "actions": {
+        "connect": "இணை",
+        "connectAnthropic": "Anthropic ஐ இணை",
+        "connectChatGpt": "ChatGPT ஐ இணை",
+        "disconnect": "துண்டி",
+        "openLogin": "உள்நுழைவைத் திற"
+      },
+      "disconnect": {
+        "anthropicTitle": "Anthropic subscription ஐ துண்டிக்கவா?",
+        "anthropic": "இது Claude CLI runtime இலிருந்து உள்ளூர் Anthropic subscription session ஐ அகற்றுகிறது.",
+        "anthropicWithApiKey": "இது Claude CLI runtime இலிருந்து உள்ளூர் Anthropic subscription session ஐ அகற்றுகிறது. Manage இல் சேமிக்கப்பட்ட API keys கிடைக்கும்.",
+        "geminiTitle": "Gemini CLI ஐ துண்டிக்கவா?",
+        "gemini": "இது உள்ளூர் Gemini CLI session metadata ஐ அழிக்கிறது. வெளிப்புற ADC credentials மற்றும் சேமிக்கப்பட்ட API keys அகற்றப்படவில்லை."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "புதுப்பிப்புகளைச் சரிபார்",
+      "checking": "சரிபார்க்கிறது...",
+      "extensions": "நீட்டிப்புகள்",
+      "installRuntime": "{{runtime}} ஐ நிறுவு",
+      "manage": "நிர்வகி",
+      "recheck": "மீண்டும் சரிபார்",
+      "reinstallRuntime": "{{runtime}} ஐ மீண்டும் நிறுவு",
+      "retry": "மீண்டும் முயற்சி",
+      "update": "புதுப்பி"
+    },
+    "installer": {
+      "checkingLatest": "சமீபத்திய பதிப்பைச் சரிபார்க்கிறது...",
+      "downloading": "பதிவிறக்குகிறது...",
+      "failed": "நிறுவல் தோல்வியடைந்தது",
+      "installed": "v{{version}} நிறுவப்பட்டது",
+      "installing": "நிறுவுகிறது...",
+      "latest": "சமீபத்தியது",
+      "verifying": "checksum சரிபார்க்கிறது..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "AI வழங்குநர்களைச் சரிபார்க்கிறது...",
+      "claudeCli": "Claude CLI ஐச் சரிபார்க்கிறது..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "மாதிரிகளை ஏற்றுகிறது...",
+      "modelsUnavailable": "இந்த runtime build க்கு மாதிரிகள் கிடைக்கவில்லை",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "அங்கீகாரம் தோல்வியடைந்தது",
+      "authUpdated": "அங்கீகாரம் புதுப்பிக்கப்பட்டது",
+      "loggedOut": "வழங்குநர் வெளியேறியது",
+      "login": "உள்நுழைவு",
+      "logout": "வெளியேறு",
+      "logoutFailed": "வெளியேறுதல் தோல்வியடைந்தது"
+    },
+    "status": {
+      "configuredNotFound": "கட்டமைக்கப்பட்ட {{runtime}} கண்டறியப்படவில்லை.",
+      "foundButFailed": "{{runtime}} கண்டறியப்பட்டது ஆனால் தொடங்க முடியவில்லை",
+      "healthCheckFailed": "கட்டமைக்கப்பட்ட {{runtime}} அதன் startup health check இல் தோல்வியடைந்தது.",
+      "notInstalled": "{{runtime}} நிறுவப்படவில்லை"
+    },
+    "title": "CLI Runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

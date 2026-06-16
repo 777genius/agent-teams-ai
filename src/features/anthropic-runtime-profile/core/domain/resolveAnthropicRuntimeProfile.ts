@@ -95,6 +95,8 @@ function isKnownAnthropicReasoningModel(model: string | null | undefined): boole
   return (
     normalized === 'opus' ||
     normalized === 'sonnet' ||
+    normalized === 'claude-opus-4-8' ||
+    normalized.startsWith('claude-opus-4-8-') ||
     normalized === 'claude-opus-4-7' ||
     normalized.startsWith('claude-opus-4-7-') ||
     normalized === 'claude-opus-4-6' ||
@@ -221,8 +223,8 @@ export function resolveAnthropicFastMode(params: {
       'Fast mode is not supported by this Anthropic runtime.';
   } else if (!params.selection.supportsFastMode) {
     disabledReason = params.selection.displayName
-      ? `Fast mode is available only for Opus 4.6. Selected model resolves to ${params.selection.displayName}.`
-      : 'Fast mode is available only for Opus 4.6.';
+      ? `Fast mode is available only for Opus 4.8. Selected model resolves to ${params.selection.displayName}.`
+      : 'Fast mode is available only for Opus 4.8.';
   } else if (!params.selection.providerFastModeAvailable) {
     disabledReason =
       params.selection.providerFastModeReason ?? 'Fast mode is currently unavailable.';

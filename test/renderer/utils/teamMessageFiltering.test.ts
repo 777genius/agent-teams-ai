@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
+import { describe, expect, it } from 'vitest';
 
 import type { InboxMessage } from '@shared/types';
 
@@ -498,6 +497,26 @@ Messages:
 
     expect(result).toHaveLength(1);
     expect(result[0].messageId).toBe('msg-2');
+  });
+
+  it('recomputes cached message classification when mutable message fields change', () => {
+    const message = makeMessage({
+      messageId: 'mutable-message',
+      text: '{"type":"idle_notification","idleReason":"available"}',
+    });
+    const options = {
+      timeWindow: null,
+      filter: { from: new Set<string>(), to: new Set<string>(), showNoise: false },
+      searchQuery: '',
+    };
+
+    expect(filterTeamMessages([message], options)).toEqual([]);
+
+    message.text = 'Real visible message';
+
+    expect(filterTeamMessages([message], options).map((item) => item.messageId)).toEqual([
+      'mutable-message',
+    ]);
   });
 
   it('can preserve passive peer-summary idle rows in the activity sink while keeping pure heartbeat hidden even after read', () => {
