@@ -1,6 +1,7 @@
 const DEFAULT_MIN_OLD_SPACE_MB = 2048;
 const OLD_SPACE_EQUALS_RE = /^--max-old-space-size=(\d+)$/;
 const OLD_SPACE_FLAG = '--max-old-space-size';
+const OLD_SPACE_VALUE_RE = /^\d+$/;
 
 function splitNodeOptions(value: string): string[] {
   return value
@@ -13,6 +14,13 @@ function joinNodeOptions(parts: readonly string[]): string | undefined {
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
+function parseOldSpaceMb(value: string | undefined): number {
+  if (!value || !OLD_SPACE_VALUE_RE.test(value)) {
+    return NaN;
+  }
+  return Number.parseInt(value, 10);
+}
+
 export function ensureMinimumNodeOldSpaceOptions(
   value: string | undefined,
   minMb = DEFAULT_MIN_OLD_SPACE_MB
@@ -22,12 +30,16 @@ export function ensureMinimumNodeOldSpaceOptions(
   }
 
   const parts = splitNodeOptions(value);
+  const consumedIndexes = new Set<number>();
   let changed = false;
-  for (let index = 0; index < parts.length; index += 1) {
-    const current = parts[index];
+  for (const [index, current] of parts.entries()) {
+    if (consumedIndexes.has(index)) {
+      continue;
+    }
+
     const equalsMatch = OLD_SPACE_EQUALS_RE.exec(current);
     if (equalsMatch) {
-      const mb = Number.parseInt(equalsMatch[1], 10);
+      const mb = parseOldSpaceMb(equalsMatch[1]);
       if (Number.isFinite(mb) && mb > 0 && mb < minMb) {
         parts[index] = `${OLD_SPACE_FLAG}=${minMb}`;
         changed = true;
@@ -37,12 +49,14 @@ export function ensureMinimumNodeOldSpaceOptions(
 
     if (current === OLD_SPACE_FLAG) {
       const next = parts[index + 1];
-      const mb = next ? Number.parseInt(next, 10) : NaN;
+      const mb = parseOldSpaceMb(next);
       if (Number.isFinite(mb) && mb > 0 && mb < minMb) {
         parts[index + 1] = String(minMb);
         changed = true;
       }
-      index += 1;
+      if (Number.isFinite(mb) && mb > 0) {
+        consumedIndexes.add(index + 1);
+      }
     }
   }
 

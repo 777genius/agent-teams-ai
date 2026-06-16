@@ -17,6 +17,12 @@ describe('nodeOptions', () => {
     );
   });
 
+  it('does not skip a later valid old-space flag after a malformed split flag', () => {
+    expect(
+      ensureMinimumNodeOldSpaceOptions('--max-old-space-size --max-old-space-size=128')
+    ).toBe('--max-old-space-size --max-old-space-size=2048');
+  });
+
   it('preserves an already sufficient max-old-space-size', () => {
     expect(ensureMinimumNodeOldSpaceOptions('--max-old-space-size=4096')).toBe(
       '--max-old-space-size=4096'
