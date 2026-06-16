@@ -25,6 +25,7 @@ import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   agentAvatarUrl,
   buildMemberColorMap,
@@ -601,7 +602,7 @@ export const EditTeamDialog = ({
                 setName(e.target.value);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !saving && name.trim()) handleSave();
+                if (!isImeComposing(e) && e.key === 'Enter' && !saving && name.trim()) handleSave();
               }}
               className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
               placeholder={t('editTeam.placeholders.teamName')}

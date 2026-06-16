@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { FilePlus, FolderPlus } from 'lucide-react';
 
 // =============================================================================
@@ -92,7 +93,7 @@ export const NewFileDialog = ({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         handleSubmit();
       } else if (e.key === 'Escape') {

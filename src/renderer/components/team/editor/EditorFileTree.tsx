@@ -28,6 +28,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
 import { sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   getBasename,
   isPathPrefix,
@@ -858,7 +859,7 @@ const InlineRenameInput = ({
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        if (!isImeComposing(e) && e.key === 'Enter') {
           e.preventDefault();
           doSubmit();
         } else if (e.key === 'Escape') {

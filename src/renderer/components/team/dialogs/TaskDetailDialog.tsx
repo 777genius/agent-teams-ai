@@ -37,6 +37,7 @@ import { useViewportCommentRead } from '@renderer/hooks/useViewportCommentRead';
 import { getLegacyCutoff, getReadCommentIds } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   agentAvatarUrl,
   buildMemberAvatarMap,
@@ -875,7 +876,7 @@ export const TaskDetailDialog = ({
                   value={subjectDraft}
                   onChange={(e) => setSubjectDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (!isImeComposing(e) && e.key === 'Enter') {
                       e.stopPropagation();
                       void saveSubject();
                     }

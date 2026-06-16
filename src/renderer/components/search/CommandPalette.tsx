@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { formatModifierShortcut } from '@renderer/utils/keyboardUtils';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
@@ -357,6 +358,11 @@ export const CommandPalette = (): React.JSX.Element | null => {
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // While composing with an IME, let the input handle keys natively — Enter
+      // confirms a candidate and the arrows navigate the candidate list.
+      if (isImeComposing(e)) {
+        return;
+      }
       if (e.code === 'KeyG' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setGlobalSearchEnabled((prev) => !prev);

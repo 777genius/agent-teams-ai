@@ -11,6 +11,6 @@ minimumReleaseAgeExclude:
 strictPeerDependencies: true
 peerDependencyRules:
   allowedVersions:
-    "@nuxt/schema": "3.21.6"
+    "@nuxt/schema": "3.21.8"
 ignoredBuiltDependencies:
   - esbuild

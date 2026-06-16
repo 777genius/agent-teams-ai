@@ -7,6 +7,7 @@ import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { cn } from '@renderer/lib/utils';
 import { clearTaskManualUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { projectColor } from '@renderer/utils/projectColor';
@@ -214,7 +215,7 @@ const SidebarTaskItemContent = ({
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (!isImeComposing(e) && e.key === 'Enter') {
                   e.preventDefault();
                   const trimmed = editValue.trim();
                   if (trimmed && trimmed !== task.subject) {

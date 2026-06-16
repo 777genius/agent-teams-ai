@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { TASK_STATUS_LABELS } from '@renderer/utils/memberHelpers';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -107,6 +108,8 @@ export const KanbanSearchInput = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!showDropdown || suggestions.length === 0) return;
+      // During IME composition the arrows/Enter belong to the candidate list.
+      if (isImeComposing(e)) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActiveIndex((i) => (i + 1) % suggestions.length);

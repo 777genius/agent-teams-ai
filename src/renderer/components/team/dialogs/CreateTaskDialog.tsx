@@ -24,6 +24,7 @@ import { useStore } from '@renderer/store';
 import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   extractTaskRefsFromText,
@@ -256,7 +257,7 @@ export const CreateTaskDialog = ({
               autoFocus
               onChange={(e) => setSubject(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && canSubmit) handleSubmit();
+                if (!isImeComposing(e) && e.key === 'Enter' && canSubmit) handleSubmit();
               }}
             />
           </div>

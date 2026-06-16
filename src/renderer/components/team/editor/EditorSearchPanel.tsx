@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   ArrowDown,
   ArrowUp,
@@ -220,7 +221,7 @@ const EditorSearchPanelContent = ({
       if (e.key === 'Escape') {
         e.preventDefault();
         handleClose();
-      } else if (e.key === 'Enter') {
+      } else if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         if (e.shiftKey) {
           findPrevious(view);
@@ -237,7 +238,7 @@ const EditorSearchPanelContent = ({
       if (e.key === 'Escape') {
         e.preventDefault();
         handleClose();
-      } else if (e.key === 'Enter') {
+      } else if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         handleReplaceNext();
       }

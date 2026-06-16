@@ -1,5 +1,6 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef, useState } from 'react';
 
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   getSuggestionInsertionText,
   getSuggestionTriggerChar,
@@ -330,6 +331,9 @@ export function useMentionDetection({
       onSelectSuggestion: (index: number) => void
     ) => {
       if (!isOpen || suggestionCount === 0) return;
+      // Don't navigate/select while an IME composition is active — Enter/Arrow
+      // keys belong to the input method's candidate selection at that point.
+      if (isImeComposing(e)) return;
 
       switch (e.key) {
         case 'ArrowDown':
