@@ -108,13 +108,15 @@ export const KanbanSearchInput = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!showDropdown || suggestions.length === 0) return;
+      // During IME composition the arrows/Enter belong to the candidate list.
+      if (isImeComposing(e)) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActiveIndex((i) => (i + 1) % suggestions.length);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
-      } else if (!isImeComposing(e) && e.key === 'Enter') {
+      } else if (e.key === 'Enter') {
         e.preventDefault();
         selectTask(suggestions[activeIndex]);
       } else if (e.key === 'Escape') {

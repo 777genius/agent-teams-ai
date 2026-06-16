@@ -358,6 +358,11 @@ export const CommandPalette = (): React.JSX.Element | null => {
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // While composing with an IME, let the input handle keys natively — Enter
+      // confirms a candidate and the arrows navigate the candidate list.
+      if (isImeComposing(e)) {
+        return;
+      }
       if (e.code === 'KeyG' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setGlobalSearchEnabled((prev) => !prev);
@@ -382,7 +387,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
         return;
       }
 
-      if (!isImeComposing(e) && e.key === 'Enter' && resultsCount > 0) {
+      if (e.key === 'Enter' && resultsCount > 0) {
         e.preventDefault();
         if (searchMode === 'projects') {
           const selected = filteredProjects[selectedIndex];
