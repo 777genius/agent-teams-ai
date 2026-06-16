@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { TASK_STATUS_LABELS } from '@renderer/utils/memberHelpers';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -113,7 +114,7 @@ export const KanbanSearchInput = ({
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
-      } else if (e.key === 'Enter') {
+      } else if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         selectTask(suggestions[activeIndex]);
       } else if (e.key === 'Escape') {

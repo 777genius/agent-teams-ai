@@ -3,6 +3,7 @@
  */
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { X } from 'lucide-react';
 
 interface IgnorePatternsSectionProps {
@@ -52,7 +53,7 @@ export const IgnorePatternsSection = ({
             disabled={disabled}
             className={`flex-1 rounded border border-border bg-transparent px-2 py-1 font-mono text-xs text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${disabled ? 'cursor-not-allowed opacity-50' : ''} `}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+              if (!isImeComposing(e) && e.key === 'Enter' && e.currentTarget.value.trim()) {
                 e.preventDefault();
                 try {
                   const input = e.currentTarget;

@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { formatModifierShortcut } from '@renderer/utils/keyboardUtils';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
@@ -381,7 +382,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
         return;
       }
 
-      if (e.key === 'Enter' && resultsCount > 0) {
+      if (!isImeComposing(e) && e.key === 'Enter' && resultsCount > 0) {
         e.preventDefault();
         if (searchMode === 'projects') {
           const selected = filteredProjects[selectedIndex];

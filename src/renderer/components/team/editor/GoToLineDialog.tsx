@@ -12,6 +12,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { editorBridge } from '@renderer/utils/editorBridge';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 
 // =============================================================================
 // Types
@@ -118,7 +119,7 @@ export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactEle
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         handleGo();
       }

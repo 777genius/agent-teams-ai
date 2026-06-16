@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -98,7 +99,7 @@ export const SearchBar = ({ tabId }: SearchBarProps): React.JSX.Element | null =
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Escape') {
       hideSearch();
-    } else if (e.key === 'Enter') {
+    } else if (!isImeComposing(e) && e.key === 'Enter') {
       // Flush any pending debounce immediately on Enter
       clearTimeout(debounceRef.current);
       if (localQuery !== searchQuery) {

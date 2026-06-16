@@ -13,6 +13,7 @@ import {
   reconcileChips,
   removeChipTokenFromText,
 } from '@renderer/utils/chipUtils';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   doesSuggestionMatchQuery,
   getSuggestionInsertionText,
@@ -922,6 +923,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     // Composed key handler: suggestion logic first (when open) → Mod+Enter submit → chip logic
     const composedHandleKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // While an IME composition is active (e.g. CJK candidate selection or
+        // punctuation entry), let the textarea handle keys natively. Pressing
+        // Enter/Arrow here confirms/navigates the IME candidate and must NOT
+        // submit, select a mention, or otherwise be intercepted.
+        if (isImeComposing(e)) {
+          return;
+        }
         // When the suggestion dropdown is open, let it consume Enter/Arrow keys first
         if (isOpen && effectiveSuggestions.length > 0) {
           mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {

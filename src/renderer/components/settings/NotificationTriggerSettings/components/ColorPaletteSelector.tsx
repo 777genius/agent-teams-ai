@@ -9,6 +9,7 @@
 import { useCallback, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   isPresetColorKey,
   resolveColorHex,
@@ -49,7 +50,7 @@ export const ColorPaletteSelector = ({
 
   const handleHexKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (!isImeComposing(e) && e.key === 'Enter') {
         e.preventDefault();
         commitHex();
       }
