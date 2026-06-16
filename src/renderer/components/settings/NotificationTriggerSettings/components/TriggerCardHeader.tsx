@@ -4,6 +4,7 @@
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { SettingsToggle } from '@renderer/components/settings/components';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { getTriggerColorDef } from '@shared/constants/triggerColors';
 import { ChevronDown, ChevronUp, Pencil, Shield, X } from 'lucide-react';
 
@@ -55,7 +56,7 @@ export const TriggerCardHeader = ({
               onChange={(e) => onSetLocalName(e.target.value)}
               onBlur={onNameSave}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') onNameSave();
+                if (!isImeComposing(e) && e.key === 'Enter') onNameSave();
                 if (e.key === 'Escape') {
                   onSetLocalName(trigger.name);
                   onSetEditingName(false);

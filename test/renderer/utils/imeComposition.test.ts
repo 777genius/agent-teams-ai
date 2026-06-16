@@ -1,7 +1,7 @@
-import type React from 'react';
+import { isImeComposing } from '@renderer/utils/imeComposition';
 import { describe, expect, it } from 'vitest';
 
-import { isImeComposing } from '@renderer/utils/imeComposition';
+import type React from 'react';
 
 function makeKeyEvent(opts: { isComposing?: boolean; keyCode?: number }): React.KeyboardEvent {
   return {
