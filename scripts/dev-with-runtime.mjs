@@ -9,6 +9,7 @@ import { once } from 'node:events';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
+import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -662,6 +663,7 @@ async function main() {
     UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE?.trim() || '16',
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath,
   };
+  ensureMinimumNodeOldSpaceEnv(uiEnv);
   delete uiEnv.CLAUDE_CLI_PATH;
   const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
   const resolvedElectronViteArgs = await resolveElectronViteArgs(electronViteArgs);
