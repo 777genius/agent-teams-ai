@@ -3521,12 +3521,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       },
     });
 
-    expect(getConfiguredAnthropicApiKeyForTeamRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ANTHROPIC_BASE_URL: 'http://localhost:1234',
-        ANTHROPIC_API_KEY: '',
-      })
-    );
+    if (process.platform === 'win32') {
+      expect(getConfiguredAnthropicApiKeyForTeamRuntime).not.toHaveBeenCalled();
+    } else {
+      expect(getConfiguredAnthropicApiKeyForTeamRuntime).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ANTHROPIC_BASE_URL: 'http://localhost:1234',
+          ANTHROPIC_API_KEY: '',
+        })
+      );
+    }
     expect(result.authSource).toBe('none');
     expect(result.providerArgs).toEqual([]);
   });
