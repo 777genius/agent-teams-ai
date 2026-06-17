@@ -864,6 +864,49 @@ describe('TeamMcpConfigBuilder', () => {
     expect(parsed.mcpServers.sentry).toBeUndefined();
   });
 
+  it('raises low NODE_OPTIONS heap in allowlisted MCP server env', async () => {
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
+    createdDirs.push(homeDir, projectDir);
+    mockHomeDir = homeDir;
+
+    fs.writeFileSync(
+      path.join(projectDir, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            memoryHeavy: {
+              command: 'node',
+              args: ['memory-heavy-mcp.js'],
+              env: {
+                NODE_OPTIONS: '--max_old_space_size=64 --trace-warnings',
+                MCP_TOKEN: 'secret',
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(projectDir, {
+      mode: 'strictAllowlist',
+      serverNames: ['memoryHeavy'],
+    });
+    createdPaths.push(configPath);
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<string, { env?: Record<string, string> }>;
+    };
+
+    expect(parsed.mcpServers.memoryHeavy?.env).toEqual({
+      NODE_OPTIONS: '--max_old_space_size=2048 --trace-warnings',
+      MCP_TOKEN: 'secret',
+    });
+  });
+
   it('generated agent-teams server ignores same-named user MCP entry', async () => {
     const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));

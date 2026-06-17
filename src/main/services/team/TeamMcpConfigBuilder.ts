@@ -1,5 +1,6 @@
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
 import {
   getClaudeBasePath,
   getMcpConfigsBasePath,
@@ -78,6 +79,31 @@ function isPackagedApp(): boolean {
   } catch {
     return false;
   }
+}
+
+function normalizeMcpServerNodeOptions(config: McpServerConfig): McpServerConfig {
+  const env = config.env;
+  if (!env || typeof env !== 'object' || Array.isArray(env)) {
+    return config;
+  }
+
+  const nodeOptions = (env as Record<string, unknown>).NODE_OPTIONS;
+  if (typeof nodeOptions !== 'string') {
+    return config;
+  }
+
+  const normalizedNodeOptions = ensureMinimumNodeOldSpaceOptions(nodeOptions);
+  if (!normalizedNodeOptions || normalizedNodeOptions === nodeOptions) {
+    return config;
+  }
+
+  return {
+    ...config,
+    env: {
+      ...(env as Record<string, unknown>),
+      NODE_OPTIONS: normalizedNodeOptions,
+    },
+  };
 }
 
 function getAppVersion(): string {
@@ -659,7 +685,7 @@ export class TeamMcpConfigBuilder {
     // into the generated --mcp-config. User/project/local MCP remain loaded
     // through Claude's native settings sources.
     const generatedServers: Record<string, McpServerConfig> = Object.create(null);
-    generatedServers[MCP_SERVER_NAME] = {
+    generatedServers[MCP_SERVER_NAME] = normalizeMcpServerNodeOptions({
       command: launchSpec.command,
       args: launchSpec.args,
       enabled: true,
@@ -668,7 +694,7 @@ export class TeamMcpConfigBuilder {
         [MCP_CLAUDE_DIR_ENV]: getClaudeBasePath(),
         ...(controlApiBaseUrl ? { [MCP_CONTROL_URL_ENV]: controlApiBaseUrl } : {}),
       },
-    };
+    });
     if (mcpPolicy?.mode === 'strictAllowlist') {
       for (const [name, config] of Object.entries(
         await this.readAllowlistedServers(projectPath, mcpPolicy)
@@ -726,7 +752,7 @@ export class TeamMcpConfigBuilder {
           continue;
         }
         if (allowlist.has(entry.name.toLowerCase())) {
-          selected[entry.name] = entry.config;
+          selected[entry.name] = normalizeMcpServerNodeOptions(entry.config);
         }
       }
     }

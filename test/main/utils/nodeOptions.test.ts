@@ -17,6 +17,18 @@ describe('nodeOptions', () => {
     );
   });
 
+  it('raises a low equals-form underscore max old space alias', () => {
+    expect(ensureMinimumNodeOldSpaceOptions('--max_old_space_size=64 --trace-warnings')).toBe(
+      '--max_old_space_size=2048 --trace-warnings'
+    );
+  });
+
+  it('raises a low split-form underscore max old space alias', () => {
+    expect(ensureMinimumNodeOldSpaceOptions('--trace-warnings --max_old_space_size 128')).toBe(
+      '--trace-warnings --max_old_space_size 2048'
+    );
+  });
+
   it('does not skip a later valid old-space flag after a malformed split flag', () => {
     expect(
       ensureMinimumNodeOldSpaceOptions('--max-old-space-size --max-old-space-size=128')
