@@ -8,6 +8,7 @@ dist-standalone/
 out/
 release/
 coverage/
+test-results/
 electron.vite.config.*.mjs
 
 # Runtime release artifacts are downloaded during dev/release builds.
