@@ -37,6 +37,7 @@ import type { ChildProcessWithoutNullStreams } from 'child_process';
 const PROBE_COMMAND_TIMEOUT_MS = 90_000;
 const COMMAND_TIMEOUT_MS = PROBE_COMMAND_TIMEOUT_MS;
 const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command output]';
 const COMMAND_ERROR_DETAIL_LIMIT = 1_600;
 const COMMAND_OUTPUT_PREVIEW_LIMIT = 1_200;
 const ESCAPE_CHARACTER = String.fromCharCode(27);
@@ -922,6 +923,49 @@ function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
   return projectPath ? { ...commandOptions, cwd: projectPath } : commandOptions;
 }
 
+interface BoundedSpawnOutputBuffer {
+  chunks: Buffer[];
+  bytes: number;
+  truncated: boolean;
+}
+
+function createBoundedSpawnOutputBuffer(): BoundedSpawnOutputBuffer {
+  return {
+    chunks: [],
+    bytes: 0,
+    truncated: false,
+  };
+}
+
+function appendBoundedSpawnOutput(buffer: BoundedSpawnOutputBuffer, chunk: Buffer): void {
+  if (buffer.bytes >= COMMAND_MAX_BUFFER_BYTES) {
+    buffer.truncated = true;
+    return;
+  }
+
+  const remaining = COMMAND_MAX_BUFFER_BYTES - buffer.bytes;
+  if (chunk.length > remaining) {
+    buffer.chunks.push(chunk.subarray(0, remaining));
+    buffer.bytes += remaining;
+    buffer.truncated = true;
+    return;
+  }
+
+  buffer.chunks.push(chunk);
+  buffer.bytes += chunk.length;
+}
+
+function readBoundedSpawnOutput(
+  buffer: BoundedSpawnOutputBuffer,
+  options?: { includeTruncationMarker?: boolean }
+): string {
+  const output = Buffer.concat(buffer.chunks, buffer.bytes).toString('utf8');
+  if (!options?.includeTruncationMarker || !buffer.truncated) {
+    return output;
+  }
+  return `${SPAWN_OUTPUT_TRUNCATED_MARKER}\n${output}`;
+}
+
 async function resolveCliEnv(): Promise<{
   binaryPath: string | null;
   env: NodeJS.ProcessEnv;
@@ -968,8 +1012,8 @@ function collectSpawnOutput(
   stdinValue: string
 ): Promise<{ stdout: string; stderr: string; code: number | null; stdinError: string | null }> {
   return new Promise((resolve, reject) => {
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
+    const stdout = createBoundedSpawnOutputBuffer();
+    const stderr = createBoundedSpawnOutputBuffer();
     let stdinError: string | null = null;
     let settled = false;
 
@@ -984,8 +1028,8 @@ function collectSpawnOutput(
       reject(error);
     }, COMMAND_TIMEOUT_MS);
 
-    child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
-    child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
+    child.stdout.on('data', (chunk: Buffer) => appendBoundedSpawnOutput(stdout, chunk));
+    child.stderr.on('data', (chunk: Buffer) => appendBoundedSpawnOutput(stderr, chunk));
     child.stdin.once('error', (error: Error) => {
       stdinError = error.message;
     });
@@ -1005,8 +1049,8 @@ function collectSpawnOutput(
       settled = true;
       clearTimeout(timeout);
       resolve({
-        stdout: Buffer.concat(stdout).toString('utf8'),
-        stderr: Buffer.concat(stderr).toString('utf8'),
+        stdout: readBoundedSpawnOutput(stdout),
+        stderr: readBoundedSpawnOutput(stderr),
         code,
         stdinError,
       });
@@ -1045,12 +1089,12 @@ function mergeSpawnStderrWithStdinError(result: {
 }
 
 function readSpawnOutputSnapshot(
-  stdout: readonly Buffer[],
-  stderr: readonly Buffer[]
+  stdout: BoundedSpawnOutputBuffer,
+  stderr: BoundedSpawnOutputBuffer
 ): { stdout: string; stderr: string } {
   return {
-    stdout: Buffer.concat(stdout).toString('utf8'),
-    stderr: Buffer.concat(stderr).toString('utf8'),
+    stdout: readBoundedSpawnOutput(stdout, { includeTruncationMarker: true }),
+    stderr: readBoundedSpawnOutput(stderr, { includeTruncationMarker: true }),
   };
 }
 

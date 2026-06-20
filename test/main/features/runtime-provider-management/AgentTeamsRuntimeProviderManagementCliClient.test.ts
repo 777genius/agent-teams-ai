@@ -1570,6 +1570,58 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
   });
 
+  it('bounds huge spawn stdout and stderr snapshots when a provider command times out', async () => {
+    vi.useFakeTimers();
+    const processEvents = new EventEmitter();
+    const stdinEvents = new EventEmitter();
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const stdinWrite = vi.fn();
+    const stdinEnd = vi.fn(() => {
+      stdout.emit('data', Buffer.from(`stdout-start:${'x'.repeat(9 * 1024 * 1024)}`));
+      stderr.emit('data', Buffer.from(`stderr-start:${'y'.repeat(9 * 1024 * 1024)}`));
+    });
+    spawnCliMock.mockReturnValue({
+      stdout,
+      stderr,
+      stdin: {
+        write: stdinWrite,
+        end: stdinEnd,
+        once: stdinEvents.once.bind(stdinEvents),
+      },
+      once: processEvents.once.bind(processEvents),
+    });
+
+    try {
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const responsePromise = client.connectWithApiKey({
+        runtimeId: 'opencode',
+        providerId: 'openrouter',
+        apiKey: 'sk-input-secret-value-123456',
+      });
+
+      await vi.advanceTimersByTimeAsync(90_000);
+      const response = await responsePromise;
+
+      expect(response.error?.message).toContain(
+        '...[truncated runtime provider command output]'
+      );
+      expect(response.error?.diagnostics?.stdoutPreview).toContain(
+        '...[truncated runtime provider command output]'
+      );
+      expect(response.error?.diagnostics?.stdoutPreview).toContain('stdout-start:');
+      expect(response.error?.diagnostics?.stdoutPreview?.length).toBeLessThanOrEqual(1_603);
+      expect(response.error?.diagnostics?.stderrPreview).toContain(
+        '...[truncated runtime provider command output]'
+      );
+      expect(response.error?.diagnostics?.stderrPreview).toContain('stderr-start:');
+      expect(response.error?.diagnostics?.stderrPreview?.length).toBeLessThanOrEqual(1_603);
+      expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('passes project path as cwd and CLI flag for project-aware provider management', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({
