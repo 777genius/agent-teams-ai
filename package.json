@@ -181,7 +181,7 @@
     "cronstrue": "^3.13.0",
     "date-fns": "^3.6.0",
     "diff": "^8.0.3",
-    "dompurify": "^3.4.2",
+    "dompurify": "^3.4.11",
     "electron-updater": "^6.7.3",
     "fast-json-stringify": "^6.4.0",
     "fastify": "^5.8.5",
