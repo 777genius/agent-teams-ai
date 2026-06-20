@@ -9,6 +9,22 @@ import {
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
+const EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT = 128 * 1024;
+
+function boundExecCliTimeoutOutput(text: string): string {
+  if (text.length <= EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT) {
+    return text;
+  }
+  const marker = '...[truncated execCli timeout output]';
+  if (EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT <= marker.length) {
+    return text.slice(-EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT);
+  }
+  const retainedChars = EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT - marker.length;
+  const headChars = Math.floor(retainedChars / 2);
+  const tailChars = retainedChars - headChars;
+  return `${text.slice(0, headChars)}${marker}${text.slice(-tailChars)}`;
+}
+
 /**
  * Promise wrapper for execFile that always returns { stdout, stderr }.
  * Unlike promisify(execFile), this works correctly with mocked execFile
@@ -48,10 +64,10 @@ function execFileAsync(
       trackCliProcess(child);
       if (timeoutMs > 0) {
         child.stdout?.on('data', (chunk: Buffer | string) => {
-          stdoutText += chunk.toString();
+          stdoutText = boundExecCliTimeoutOutput(stdoutText + chunk.toString());
         });
         child.stderr?.on('data', (chunk: Buffer | string) => {
-          stderrText += chunk.toString();
+          stderrText = boundExecCliTimeoutOutput(stderrText + chunk.toString());
         });
         timeoutHandle = setTimeout(() => {
           if (settled) {

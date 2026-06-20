@@ -779,6 +779,68 @@ describe('cli child process helpers', () => {
       }
     });
 
+    it('bounds stdout and stderr snapshots on manual execFile timeout', async () => {
+      setPlatform('darwin');
+      vi.useFakeTimers();
+      const execFileMock = child.execFile as unknown as Mock;
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childProcess = new EventEmitter() as EventEmitter & {
+        pid: number;
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+      };
+      childProcess.pid = 150;
+      childProcess.stdout = new EventEmitter();
+      childProcess.stderr = new EventEmitter();
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: '150 1',
+      });
+      execFileMock.mockImplementation(() => childProcess);
+
+      try {
+        const result = execCli('/tmp/cli-dev', ['runtime', 'status'], { timeout: 100 });
+        const caughtPromise = result.then(
+          () => null,
+          (error) =>
+            error as Error & {
+              killed?: boolean;
+              signal?: string;
+              stdout?: string;
+              stderr?: string;
+            }
+        );
+        childProcess.stdout.emit(
+          'data',
+          Buffer.from(`stdout-start:${'x'.repeat(200_000)}:stdout-end`)
+        );
+        childProcess.stderr.emit(
+          'data',
+          Buffer.from(`stderr-start:${'y'.repeat(200_000)}:stderr-end`)
+        );
+        await vi.advanceTimersByTimeAsync(100);
+
+        const caught = await caughtPromise;
+
+        expect(caught).toMatchObject({
+          killed: true,
+          signal: 'SIGTERM',
+        });
+        expect(caught?.stdout).toMatch(/^stdout-start:/);
+        expect(caught?.stdout).toContain('...[truncated execCli timeout output]');
+        expect(caught?.stdout).toMatch(/:stdout-end$/);
+        expect(caught?.stdout?.length).toBeLessThan(150_000);
+        expect(caught?.stderr).toMatch(/^stderr-start:/);
+        expect(caught?.stderr).toContain('...[truncated execCli timeout output]');
+        expect(caught?.stderr).toMatch(/:stderr-end$/);
+        expect(caught?.stderr?.length).toBeLessThan(150_000);
+      } finally {
+        killSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
     it('kills a POSIX launcher, Bun child, and nested shell on execFile timeout', async () => {
       setPlatform('darwin');
       vi.useFakeTimers();
