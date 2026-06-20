@@ -6,6 +6,8 @@ interface MemberActivityMetaCacheEntry {
   meta: TeamMemberActivityMeta;
 }
 
+const MEMBER_ACTIVITY_META_WINDOW_LIMIT = 200;
+
 function messageSignalsTermination(message: InboxMessage | null | undefined): boolean {
   if (!message) return false;
   try {
@@ -76,16 +78,18 @@ export class MemberActivityMetaService {
   }
 
   async getMeta(teamName: string): Promise<TeamMemberActivityMeta> {
-    const feed = await this.feedService.getFeed(teamName);
+    const page = await this.feedService.getPage(teamName, {
+      limit: MEMBER_ACTIVITY_META_WINDOW_LIMIT,
+    });
     const cached = this.cacheByTeam.get(teamName);
-    if (cached?.feedRevision === feed.feedRevision) {
+    if (cached?.feedRevision === page.feedRevision) {
       return cached.meta;
     }
 
     const latestByMember = new Map<string, InboxMessage>();
     const countsByMember = new Map<string, number>();
 
-    for (const message of feed.messages) {
+    for (const message of page.messages) {
       const memberName = typeof message.from === 'string' ? message.from.trim() : '';
       if (!memberName || memberName === 'user' || memberName === 'system') {
         continue;
@@ -119,10 +123,10 @@ export class MemberActivityMetaService {
       teamName,
       computedAt: new Date().toISOString(),
       members,
-      feedRevision: feed.feedRevision,
+      feedRevision: page.feedRevision,
     };
 
-    this.cacheByTeam.set(teamName, { feedRevision: feed.feedRevision, meta });
+    this.cacheByTeam.set(teamName, { feedRevision: page.feedRevision, meta });
     return meta;
   }
 }

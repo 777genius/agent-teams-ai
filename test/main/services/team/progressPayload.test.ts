@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   boundLaunchDiagnostics,
+  boundProgressAssistantParts,
+  boundProgressLogLines,
   buildProgressAssistantOutput,
   buildProgressLiveOutput,
   buildProgressLogsTail,
@@ -11,6 +13,10 @@ import {
   PROGRESS_OUTPUT_TAIL_PARTS,
   PROGRESS_TRACE_TAIL_LINES,
 } from '../../../../src/main/services/team/progressPayload';
+
+function totalChars(values: readonly string[]): number {
+  return values.reduce((sum, value) => sum + value.length, 0);
+}
 
 describe('buildProgressLogsTail', () => {
   it('returns undefined for an empty buffer', () => {
@@ -78,6 +84,64 @@ describe('buildProgressAssistantOutput', () => {
     const result = buildProgressAssistantOutput(parts);
     expect(result).toBeDefined();
     expect(result!.split('\n\n')).toHaveLength(PROGRESS_OUTPUT_TAIL_PARTS);
+  });
+});
+
+describe('boundProgressLogLines', () => {
+  it('keeps the newest lines under item and byte limits', () => {
+    const lines = Array.from({ length: 20 }, (_, i) => `line-${i}-${'x'.repeat(20)}`);
+
+    const result = boundProgressLogLines(lines, {
+      maxLines: 10,
+      maxTotalChars: 120,
+      maxLineChars: 40,
+    });
+
+    expect(result.length).toBeLessThanOrEqual(10);
+    expect(totalChars(result)).toBeLessThanOrEqual(120);
+    expect(result.at(-1)).toBe(`line-19-${'x'.repeat(20)}`);
+    expect(result.join('\n')).not.toContain('line-0-');
+  });
+
+  it('truncates a pathological single log line', () => {
+    const result = boundProgressLogLines([`huge-${'x'.repeat(500)}`], {
+      maxLines: 10,
+      maxTotalChars: 120,
+      maxLineChars: 80,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.length).toBeLessThanOrEqual(80);
+    expect(result[0]).toContain('[truncated]');
+  });
+});
+
+describe('boundProgressAssistantParts', () => {
+  it('keeps the newest assistant parts under item and byte limits', () => {
+    const parts = Array.from({ length: 12 }, (_, i) => `part-${i}-${'y'.repeat(25)}`);
+
+    const result = boundProgressAssistantParts(parts, {
+      maxParts: 5,
+      maxTotalChars: 100,
+      maxPartChars: 50,
+    });
+
+    expect(result.length).toBeLessThanOrEqual(5);
+    expect(totalChars(result)).toBeLessThanOrEqual(100);
+    expect(result.at(-1)).toBe(`part-11-${'y'.repeat(25)}`);
+    expect(result.join('\n')).not.toContain('part-0-');
+  });
+
+  it('truncates a pathological single assistant part', () => {
+    const result = boundProgressAssistantParts([`huge-${'z'.repeat(500)}`], {
+      maxParts: 10,
+      maxTotalChars: 120,
+      maxPartChars: 80,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.length).toBeLessThanOrEqual(80);
+    expect(result[0]).toContain('[truncated]');
   });
 });
 

@@ -6336,6 +6336,7 @@ describe('TeamDataService', () => {
         cursor: page1.nextCursor!,
         limit: 10,
       });
+      expect(page2.feedRevision).toBe(page1.feedRevision);
       // Should get the remaining 2 messages, not lose the one with same timestamp
       expect(page2.messages.length).toBeGreaterThanOrEqual(1);
       const allIds = [...page1.messages, ...page2.messages].map((m) => m.messageId);
@@ -6485,6 +6486,7 @@ describe('TeamDataService', () => {
         cursor: page1.nextCursor!,
       });
 
+      expect(page2.feedRevision).toBe(page1.feedRevision);
       expect(page2.messages.map((message) => message.messageId)).toEqual([
         'durable-2',
         'durable-1',

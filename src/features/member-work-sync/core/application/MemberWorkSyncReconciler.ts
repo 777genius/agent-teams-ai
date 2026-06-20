@@ -7,6 +7,7 @@ import {
 
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
+import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
@@ -115,7 +116,7 @@ export class MemberWorkSyncReconciler {
     });
 
     assertReconcileNotCancelled(context);
-    const status = await attachMemberWorkSyncReportToken(this.deps, {
+    const statusWithToken = await attachMemberWorkSyncReportToken(this.deps, {
       teamName: agenda.teamName,
       memberName: agenda.memberName,
       state: decision.state,
@@ -147,6 +148,12 @@ export class MemberWorkSyncReconciler {
       evaluatedAt: nowIso,
       diagnostics: [...agenda.diagnostics, ...runtimeActivity.diagnostics, ...decision.diagnostics],
       ...(source.providerId ? { providerId: source.providerId } : {}),
+    });
+    const status = await applyMemberWorkSyncNudgeSuppression(this.deps, {
+      status: statusWithToken,
+      previousStatus: previous,
+      forceNudge: request.forceNudge === true,
+      source: 'reconciler',
     });
 
     assertReconcileNotCancelled(context);

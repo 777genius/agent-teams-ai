@@ -49,6 +49,22 @@ describe('memberWorkSyncStatusViewModel', () => {
     expect(viewModel.tooltip).toContain('Shadow status only');
   });
 
+  it('surfaces suppressed work-sync nudges in the needs-sync tooltip', () => {
+    const viewModel = toMemberWorkSyncStatusViewModel(
+      makeStatus({
+        diagnostics: ['work_sync_suppressed_no_accepted_report'],
+        shadow: { reconciledBy: 'queue', wouldNudge: false, fingerprintChanged: false },
+      })
+    );
+
+    expect(viewModel).toMatchObject({
+      label: 'Needs sync',
+      tone: 'attention',
+      wouldNudge: false,
+    });
+    expect(viewModel.tooltip).toContain('Automatic work-sync nudges are paused');
+  });
+
   it('maps valid leases and caught-up states without exposing raw diagnostics', () => {
     expect(
       toMemberWorkSyncStatusViewModel(

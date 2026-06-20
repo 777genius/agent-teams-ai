@@ -265,7 +265,7 @@ async function memberWorkSyncStatus(context, flags = {}) {
     )}/refresh`,
     {
       method: 'POST',
-      body: {},
+      body: flags.forceNudge === true || flags['force-nudge'] === true ? { forceNudge: true } : {},
       timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms']),
     }
   );

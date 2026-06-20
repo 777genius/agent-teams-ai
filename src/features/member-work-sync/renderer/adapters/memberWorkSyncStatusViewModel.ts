@@ -2,6 +2,8 @@ import type { MemberWorkSyncStatus } from '../../contracts';
 
 export type MemberWorkSyncViewTone = 'neutral' | 'success' | 'working' | 'attention' | 'blocked';
 
+const MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC = 'work_sync_suppressed_no_accepted_report';
+
 export interface MemberWorkSyncStatusViewModel {
   label: 'Synced' | 'Working' | 'Needs sync' | 'Blocked' | 'Unknown';
   tone: MemberWorkSyncViewTone;
@@ -72,13 +74,18 @@ export function toMemberWorkSyncStatusViewModel(
   }
 
   if (status.state === 'needs_sync') {
+    const nudgesSuppressed = status.diagnostics.includes(MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC);
     return {
       ...base,
       label: 'Needs sync',
       tone: 'attention',
-      tooltip: `Shadow status only: current agenda has no valid member report. ${describeAgenda(
-        actionableCount
-      )}`,
+      tooltip: nudgesSuppressed
+        ? `Automatic work-sync nudges are paused after repeated deliveries without a valid report. ${describeAgenda(
+            actionableCount
+          )}`
+        : `Shadow status only: current agenda has no valid member report. ${describeAgenda(
+            actionableCount
+          )}`,
     };
   }
 

@@ -465,9 +465,13 @@ import {
 } from './ProcessBootstrapTransportEvidence';
 import {
   boundLaunchDiagnostics,
+  boundProgressAssistantParts,
+  boundProgressLogLines,
   buildProgressLiveOutput,
   buildProgressLogsTail,
   buildProgressTraceLine,
+  PROGRESS_RETAINED_LOG_CHARS,
+  PROGRESS_RETAINED_LOG_LINE_CHARS,
 } from './progressPayload';
 import {
   applyDesktopTeammateModeDecisionToEnv,
@@ -1225,14 +1229,18 @@ const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
 const MCP_PREFLIGHT_SHUTDOWN_POLL_MS = 50;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
+const CLI_LOG_LINE_CARRY_LIMIT = PROGRESS_RETAINED_LOG_LINE_CHARS;
+const STDOUT_PARSER_CARRY_LIMIT = PROGRESS_RETAINED_LOG_CHARS;
+const LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT = 256 * 1024;
 // Progress emissions fan out the latest CLI tail + assistant output to the
 // renderer over IPC. Under load the previous 300ms cadence combined with an
 // unbounded payload (see `emitLogsProgress`) caused renderer OOM crashes
-// (≈3 full-history serializations per second, each holding thousands of
+// (about 3 full-history serializations per second, each holding thousands of
 // lines). The tail cap in `emitLogsProgress` bounds each payload; we also
 // slow the cadence to ~1s so Zustand can keep up on large teams.
 const LOG_PROGRESS_THROTTLE_MS = 1000;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
+const PROBE_OUTPUT_BUFFER_LIMIT = UI_LOGS_TAIL_LIMIT;
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
@@ -2798,7 +2806,119 @@ function appendProvisioningTrace(
 }
 
 function buildProvisioningLiveOutput(run: ProvisioningRun): string | undefined {
+  boundRunProvisioningOutputParts(run);
   return buildProgressLiveOutput(run.provisioningTraceLines, run.provisioningOutputParts);
+}
+
+function boundRunClaudeLogLines(run: ProvisioningRun): void {
+  const bounded = boundProgressLogLines(run.claudeLogLines);
+  if (
+    bounded.length === run.claudeLogLines.length &&
+    bounded.every((line, index) => line === run.claudeLogLines[index])
+  ) {
+    return;
+  }
+  run.claudeLogLines.splice(0, run.claudeLogLines.length, ...bounded);
+}
+
+function boundSingleRetainedLogLine(line: string): string {
+  return boundProgressLogLines([line], { maxLines: 1 })[0] ?? '';
+}
+
+function boundPendingLogLineCarry(carry: string): string {
+  if (carry.length <= CLI_LOG_LINE_CARRY_LIMIT) {
+    return carry;
+  }
+  const marker = '...[truncated pending line]\n';
+  if (CLI_LOG_LINE_CARRY_LIMIT <= marker.length) {
+    return carry.slice(-CLI_LOG_LINE_CARRY_LIMIT);
+  }
+  return `${marker}${carry.slice(-(CLI_LOG_LINE_CARRY_LIMIT - marker.length))}`;
+}
+
+function boundStdoutParserCarry(carry: string): string {
+  if (carry.length <= STDOUT_PARSER_CARRY_LIMIT) {
+    return carry;
+  }
+  return carry.slice(-STDOUT_PARSER_CARRY_LIMIT);
+}
+
+function boundProbeOutputBuffer(text: string): string {
+  if (text.length <= PROBE_OUTPUT_BUFFER_LIMIT) {
+    return text;
+  }
+  const marker = '...[truncated probe output]';
+  if (PROBE_OUTPUT_BUFFER_LIMIT <= marker.length) {
+    return text.slice(-PROBE_OUTPUT_BUFFER_LIMIT);
+  }
+  const retainedChars = PROBE_OUTPUT_BUFFER_LIMIT - marker.length;
+  const headChars = Math.floor(retainedChars / 2);
+  const tailChars = retainedChars - headChars;
+  return `${text.slice(0, headChars)}${marker}${text.slice(-tailChars)}`;
+}
+
+function boundLiveLeadProcessText(text: string): string {
+  if (text.length <= LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT) {
+    return text;
+  }
+  const marker = '\n...[truncated live message]\n';
+  if (LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT <= marker.length) {
+    return text.slice(0, LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT);
+  }
+  const retainedChars = LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT - marker.length;
+  const headChars = Math.floor(retainedChars / 2);
+  const tailChars = retainedChars - headChars;
+  return `${text.slice(0, headChars)}${marker}${text.slice(-tailChars)}`;
+}
+
+function boundLiveLeadProcessMessage(message: InboxMessage): InboxMessage {
+  const text = boundLiveLeadProcessText(message.text);
+  if (text === message.text) {
+    return message;
+  }
+  return {
+    ...message,
+    text,
+    summary: text.length > 60 ? `${text.slice(0, 57)}...` : text,
+  };
+}
+
+function boundRunProvisioningOutputParts(run: ProvisioningRun): void {
+  const originalLength = run.provisioningOutputParts.length;
+  const bounded = boundProgressAssistantParts(run.provisioningOutputParts);
+  if (
+    bounded.length === originalLength &&
+    bounded.every((part, index) => part === run.provisioningOutputParts[index])
+  ) {
+    return;
+  }
+
+  const removedFromStart = Math.max(0, originalLength - bounded.length);
+  run.provisioningOutputParts.splice(0, originalLength, ...bounded);
+  if (removedFromStart <= 0) {
+    return;
+  }
+
+  for (const [messageId, index] of Array.from(run.provisioningOutputIndexByMessageId.entries())) {
+    if (index < removedFromStart) {
+      run.provisioningOutputIndexByMessageId.delete(messageId);
+    } else {
+      run.provisioningOutputIndexByMessageId.set(messageId, index - removedFromStart);
+    }
+  }
+
+  run.stallWarningIndex =
+    run.stallWarningIndex == null
+      ? null
+      : run.stallWarningIndex < removedFromStart
+        ? null
+        : run.stallWarningIndex - removedFromStart;
+  run.apiRetryWarningIndex =
+    run.apiRetryWarningIndex == null
+      ? null
+      : run.apiRetryWarningIndex < removedFromStart
+        ? null
+        : run.apiRetryWarningIndex - removedFromStart;
 }
 
 function initializeProvisioningTrace(run: ProvisioningRun): void {
@@ -2946,19 +3066,18 @@ function extractLogsTail(
  * Builds provisioning CLI logs from the line-buffered claudeLogLines array
  * instead of the byte-capped stdoutBuffer/stderrBuffer ring buffers.
  *
- * claudeLogLines already contains [stdout]/[stderr] markers and individual lines
- * in chronological order (up to CLAUDE_LOG_LINES_LIMIT = 50 000 lines), so it
- * does not suffer from the 64 KB ring-buffer truncation that causes the raw
- * stdoutBuffer to lose older assistant messages.
+ * claudeLogLines already contains [stdout]/[stderr] markers and individual
+ * lines in chronological order. The retained in-memory history is byte-bounded
+ * so failed launches cannot pin gigabytes in the main-process heap.
  *
- * Returns the full launch log history preserved in claudeLogLines. Falls back
- * to the legacy tail extraction only when claudeLogLines is empty (e.g. early
- * in provisioning before any output has been line-split).
+ * Returns the bounded launch log history preserved in claudeLogLines. Falls
+ * back to the legacy tail extraction only when claudeLogLines is empty (e.g.
+ * early in provisioning before any output has been line-split).
  */
 function extractCliLogsFromRun(run: ProvisioningRun): string | undefined {
   const claudeLogLines = Array.isArray(run.claudeLogLines) ? run.claudeLogLines : [];
   if (claudeLogLines.length > 0) {
-    const joined = claudeLogLines.join('\n').trim();
+    const joined = boundProgressLogLines(claudeLogLines).join('\n').trim();
     if (joined.length === 0) {
       return undefined;
     }
@@ -2983,7 +3102,7 @@ function buildRetainedClaudeLogsSnapshot(run: ProvisioningRun): RetainedClaudeLo
   const claudeLogLines = Array.isArray(run.claudeLogLines) ? run.claudeLogLines : [];
   if (claudeLogLines.length > 0) {
     return {
-      lines: [...claudeLogLines],
+      lines: boundProgressLogLines(claudeLogLines),
       updatedAt: run.claudeLogsUpdatedAt,
     };
   }
@@ -3003,7 +3122,7 @@ function buildRetainedClaudeLogsSnapshot(run: ProvisioningRun): RetainedClaudeLo
   }
 
   return {
-    lines,
+    lines: boundProgressLogLines(lines),
     updatedAt: run.claudeLogsUpdatedAt ?? run.progress.updatedAt,
   };
 }
@@ -3053,9 +3172,8 @@ function sliceClaudeLogs(
  * Emit a throttled progress update for the renderer. Payloads are capped to a
  * tail window so that the hot emission path (called every LOG_PROGRESS_THROTTLE_MS
  * under streaming output) cannot accumulate into multi-megabyte IPC messages
- * that would OOM the renderer's Zustand state. The full history stays in
- * `run.claudeLogLines` / `run.provisioningOutputParts` for diagnostics and
- * one-shot completion emissions that intentionally use `extractCliLogsFromRun`.
+ * that would OOM the renderer's Zustand state. The retained in-process
+ * diagnostics are separately byte-bounded on append.
  */
 function emitLogsProgress(run: ProvisioningRun): void {
   // Prefer the line-buffered history (already chronological with [stdout]/[stderr]
@@ -3249,7 +3367,6 @@ export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
 
-  private static readonly CLAUDE_LOG_LINES_LIMIT = 50_000;
   private static readonly BOOTSTRAP_FAILURE_TAIL_BYTES = 128 * 1024;
   // A transcript whose mtime predates the lookup window (minus slack for clock skew
   // between the line timestamp source and the filesystem) cannot hold a line at/after
@@ -10732,8 +10849,12 @@ export class TeamProvisioningService {
           continue;
         }
         lines.push(line);
-        if (lines.length > TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT) {
-          lines.splice(0, lines.length - TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT);
+        const bounded = boundProgressLogLines(lines);
+        if (
+          bounded.length !== lines.length ||
+          bounded.some((boundedLine, index) => boundedLine !== lines[index])
+        ) {
+          lines.splice(0, lines.length, ...bounded);
         }
       }
     } finally {
@@ -10843,26 +10964,21 @@ export class TeamProvisioningService {
     if (stream === 'stdout') {
       run.stdoutLogLineBuf += text;
       const parts = run.stdoutLogLineBuf.split('\n');
-      run.stdoutLogLineBuf = parts.pop() ?? '';
+      run.stdoutLogLineBuf = boundPendingLogLineCarry(parts.pop() ?? '');
       for (const part of parts) {
         const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(normalized);
+        run.claudeLogLines.push(boundSingleRetainedLogLine(normalized));
       }
     } else {
       run.stderrLogLineBuf += text;
       const parts = run.stderrLogLineBuf.split('\n');
-      run.stderrLogLineBuf = parts.pop() ?? '';
+      run.stderrLogLineBuf = boundPendingLogLineCarry(parts.pop() ?? '');
       for (const part of parts) {
         const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(normalized);
+        run.claudeLogLines.push(boundSingleRetainedLogLine(normalized));
       }
     }
-    if (run.claudeLogLines.length > TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT) {
-      run.claudeLogLines.splice(
-        0,
-        run.claudeLogLines.length - TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT
-      );
-    }
+    boundRunClaudeLogLines(run);
   }
 
   /**
@@ -13919,6 +14035,7 @@ export class TeamProvisioningService {
     const lastIndex = run.provisioningOutputParts.length - 1;
     if (lastIndex < 0 || run.provisioningOutputParts[lastIndex]?.trim() !== message) {
       run.provisioningOutputParts.push(message);
+      boundRunProvisioningOutputParts(run);
     }
 
     if (
@@ -13941,6 +14058,7 @@ export class TeamProvisioningService {
       return;
     }
     run.provisioningOutputParts.push(line);
+    boundRunProvisioningOutputParts(run);
     logger.info(`[${run.teamName}] [bootstrap] ${line}`);
   }
 
@@ -20183,6 +20301,7 @@ export class TeamProvisioningService {
     } else {
       run.provisioningOutputParts.push(`**${hint} failed: ${statusLabel} detected**`);
     }
+    boundRunProvisioningOutputParts(run);
 
     const progress = updateProgress(run, 'failed', `${hint} failed — ${statusLabel}`, {
       error: `Claude CLI reported ${statusLabel} during startup. The team was not started.`,
@@ -20219,6 +20338,7 @@ export class TeamProvisioningService {
       : `**${label} — SDK is retrying**\n\nWaiting for retry...`;
 
     run.provisioningOutputParts.push(warningText);
+    boundRunProvisioningOutputParts(run);
     run.progress.message = `${label} — SDK retrying...`;
     emitLogsProgress(run);
     // Prevent double-emit: the calling stderr/stdout handler will also try throttled emitLogsProgress
@@ -20269,6 +20389,7 @@ export class TeamProvisioningService {
           }
           run.stallWarningIndex = run.provisioningOutputParts.length;
           run.provisioningOutputParts.push(warningText);
+          boundRunProvisioningOutputParts(run);
         }
 
         const mins = Math.floor(silenceSec / 60);
@@ -20686,7 +20807,7 @@ export class TeamProvisioningService {
       // Parse stream-json lines (newline-delimited JSON)
       stdoutLineBuf += text;
       const lines = stdoutLineBuf.split('\n');
-      stdoutLineBuf = lines.pop() ?? '';
+      stdoutLineBuf = boundStdoutParserCarry(lines.pop() ?? '');
       this.updateStdoutParserCarry(run, stdoutLineBuf);
       for (const line of lines) {
         const trimmed = line.trim();
@@ -20702,8 +20823,9 @@ export class TeamProvisioningService {
   }
 
   private updateStdoutParserCarry(run: ProvisioningRun, carry: string): void {
-    run.stdoutParserCarry = carry;
-    const trimmedCarry = carry.trim();
+    const boundedCarry = boundStdoutParserCarry(carry);
+    run.stdoutParserCarry = boundedCarry;
+    const trimmedCarry = boundedCarry.trim();
     if (!trimmedCarry) {
       run.stdoutParserCarryIsCompleteJson = false;
       run.stdoutParserCarryLooksLikeClaudeJson = false;
@@ -32404,28 +32526,30 @@ export class TeamProvisioningService {
   }
 
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
+    let cacheMessage = message;
     // Enrich with leadSessionId if missing — needed for session boundary separators
-    if (!message.leadSessionId) {
+    if (!cacheMessage.leadSessionId) {
       const runId = this.getTrackedRunId(teamName);
       if (runId) {
         const run = this.runs.get(runId);
         if (run?.detectedSessionId) {
-          message.leadSessionId = run.detectedSessionId;
+          cacheMessage = { ...cacheMessage, leadSessionId: run.detectedSessionId };
         }
       }
     }
+    cacheMessage = boundLiveLeadProcessMessage(cacheMessage);
     const MAX = 100;
     const list = this.liveLeadProcessMessages.get(teamName) ?? [];
-    const id = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+    const id = typeof cacheMessage.messageId === 'string' ? cacheMessage.messageId.trim() : '';
     if (id) {
       const existingIdx = list.findIndex((m) => (m.messageId ?? '').trim() === id);
       if (existingIdx >= 0) {
-        list[existingIdx] = message;
+        list[existingIdx] = cacheMessage;
       } else {
-        list.push(message);
+        list.push(cacheMessage);
       }
     } else {
-      list.push(message);
+      list.push(cacheMessage);
     }
     if (list.length > MAX) {
       list.splice(0, list.length - MAX);
@@ -32502,6 +32626,7 @@ export class TeamProvisioningService {
       const existingIndex = run.provisioningOutputIndexByMessageId.get(stableMessageId);
       if (existingIndex != null) {
         run.provisioningOutputParts[existingIndex] = text;
+        boundRunProvisioningOutputParts(run);
         return;
       }
     }
@@ -32515,6 +32640,7 @@ export class TeamProvisioningService {
     if (stableMessageId) {
       run.provisioningOutputIndexByMessageId.set(stableMessageId, newIndex);
     }
+    boundRunProvisioningOutputParts(run);
   }
 
   private shiftProvisioningOutputIndexesAfterRemoval(
@@ -32556,14 +32682,16 @@ export class TeamProvisioningService {
         toolSummary = toolCalls ? formatToolSummaryFromCalls(toolCalls) : undefined;
         run.liveLeadTextBuffer = {
           messageId: `lead-turn-${run.runId}-${run.leadMsgSeq}`,
-          text: cleanText,
+          text: boundLiveLeadProcessText(cleanText),
           timestamp,
           toolCalls,
           toolSummary,
         };
         run.pendingToolCalls = [];
       } else {
-        run.liveLeadTextBuffer.text += cleanText;
+        run.liveLeadTextBuffer.text = boundLiveLeadProcessText(
+          run.liveLeadTextBuffer.text + cleanText
+        );
       }
 
       messageId = run.liveLeadTextBuffer.messageId;
@@ -33499,6 +33627,7 @@ export class TeamProvisioningService {
             capture.textJoinMode = 'block';
           }
           capture.textParts.push(text);
+          capture.textParts = boundProgressAssistantParts(capture.textParts);
           if (capture.idleHandle) {
             clearTimeout(capture.idleHandle);
           }
@@ -33909,6 +34038,7 @@ export class TeamProvisioningService {
             run.apiRetryWarningIndex = run.provisioningOutputParts.length;
             run.provisioningOutputParts.push(warningText);
           }
+          boundRunProvisioningOutputParts(run);
           run.lastRetryAt = Date.now();
           appendProvisioningTrace(
             run,
@@ -39152,11 +39282,12 @@ export class TeamProvisioningService {
           }
           parseStdoutLine(line);
         }
+        stdoutBuffer = boundProbeOutputBuffer(stdoutBuffer);
       });
 
       child.stderr?.setEncoding('utf8');
       child.stderr?.on('data', (chunk: string | Buffer) => {
-        stderrBuffer += chunk.toString();
+        stderrBuffer = boundProbeOutputBuffer(stderrBuffer + chunk.toString());
       });
 
       child.once('error', (error) => {
@@ -39419,11 +39550,11 @@ export class TeamProvisioningService {
       };
 
       child.stdout?.on('data', (chunk: Buffer) => {
-        stdoutText += chunk.toString('utf8');
+        stdoutText = boundProbeOutputBuffer(stdoutText + chunk.toString('utf8'));
         maybeResolveEarly();
       });
       child.stderr?.on('data', (chunk: Buffer) => {
-        stderrText += chunk.toString('utf8');
+        stderrText = boundProbeOutputBuffer(stderrText + chunk.toString('utf8'));
         maybeResolveEarly();
       });
       child.once('error', (error) => {

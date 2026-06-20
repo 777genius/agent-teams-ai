@@ -197,14 +197,6 @@ function isSupportedRunningMixedRosterMutation(params: {
   return true;
 }
 
-function requireCanonicalMessageId(message: InboxMessage): string {
-  const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-  if (messageId.length > 0) {
-    return messageId;
-  }
-  throw new Error('Canonical team message is missing effective messageId');
-}
-
 interface EligibleTaskCommentNotification {
   key: string;
   messageId: string;
@@ -1611,39 +1603,22 @@ export class TeamDataService {
     teamName: string,
     options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
   ): Promise<MessagesPage> {
-    const feed = await this.messageFeedService.getFeed(teamName);
-    const newestDurableMessages = feed.messages;
-    let messages = newestDurableMessages;
-
-    if (options.cursor) {
-      const [cursorTs, cursorId] = options.cursor.split('|');
-      const cursorMs = Date.parse(cursorTs);
-      messages = messages.filter((m) => {
-        const ms = Date.parse(m.timestamp);
-        if (ms < cursorMs) return true;
-        if (ms > cursorMs) return false;
-        if (!cursorId) return false;
-        return requireCanonicalMessageId(m).localeCompare(cursorId) > 0;
-      });
-    }
-
-    const hasMore = messages.length > options.limit;
-    const page = messages.slice(0, options.limit);
-    const lastMsg = page[page.length - 1];
-    const nextCursor =
-      hasMore && lastMsg ? `${lastMsg.timestamp}|${requireCanonicalMessageId(lastMsg)}` : null;
-
+    const page = await this.messageFeedService.getPage(teamName, options);
     if (options.cursor || !options.liveMessages?.length) {
-      return { messages: page, nextCursor, hasMore, feedRevision: feed.feedRevision };
+      return {
+        messages: page.messages,
+        nextCursor: page.nextCursor,
+        hasMore: page.hasMore,
+        feedRevision: page.feedRevision,
+      };
     }
 
-    // Merge live lead thoughts against the full durable newest-page history so we do not
-    // re-introduce persisted thoughts that have simply paged off the first durable page.
     return mergeLiveLeadProcessMessagesPage({
-      durableMessages: newestDurableMessages,
+      durableMessages: page.durableWindowMessages,
       liveMessages: options.liveMessages,
       limit: options.limit,
-      feedRevision: feed.feedRevision,
+      feedRevision: page.feedRevision,
+      durableHasMoreAfterWindow: page.durableHasMoreAfterWindow,
     });
   }
 

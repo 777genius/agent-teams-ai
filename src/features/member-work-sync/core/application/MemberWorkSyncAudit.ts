@@ -49,6 +49,9 @@ export function reasonToAuditEvent(reason: string): MemberWorkSyncAuditEventName
   if (reason === 'watchdog_cooldown_active') {
     return 'watchdog_cooldown_active';
   }
+  if (reason === 'work_sync_suppressed_no_accepted_report') {
+    return 'nudge_suppressed';
+  }
   if (reason === 'team_inactive') {
     return 'team_inactive';
   }

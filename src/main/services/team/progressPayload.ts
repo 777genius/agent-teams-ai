@@ -4,12 +4,12 @@
  *
  * Rationale: the renderer only renders a small "tail" preview of CLI logs
  * and assistant output in ProvisioningProgressBlock / CliLogsRichView. Sending
- * the full accumulated history on every throttled progress tick (≈ every
+ * the full accumulated history on every throttled progress tick (about every
  * second under load) serialized a multi-megabyte string over IPC and forced
- * Zustand to produce a new immutable state object — which triggered renderer
+ * Zustand to produce a new immutable state object, which triggered renderer
  * V8 OOM crashes for users with long-running teams. These helpers keep the
- * hot emission path bounded while leaving the full history in-process for
- * diagnostics and completion-time reports.
+ * hot emission path bounded. The retained in-process diagnostics are bounded
+ * separately so failed launch attempts cannot pin unbounded logs in memory.
  */
 
 import type { TeamLaunchDiagnosticItem } from '@shared/types';
@@ -18,6 +18,12 @@ export const PROGRESS_LOG_TAIL_LINES = 200;
 export const PROGRESS_OUTPUT_TAIL_PARTS = 20;
 export const PROGRESS_TRACE_TAIL_LINES = 120;
 export const PROGRESS_LAUNCH_DIAGNOSTICS_LIMIT = 20;
+export const PROGRESS_RETAINED_LOG_LINES = 2_000;
+export const PROGRESS_RETAINED_LOG_CHARS = 1_000_000;
+export const PROGRESS_RETAINED_LOG_LINE_CHARS = 16_384;
+export const PROGRESS_RETAINED_OUTPUT_PARTS = 200;
+export const PROGRESS_RETAINED_OUTPUT_CHARS = 512_000;
+export const PROGRESS_RETAINED_OUTPUT_PART_CHARS = 16_384;
 const PROGRESS_LAUNCH_DIAGNOSTIC_TEXT_LIMIT = 500;
 const PROGRESS_TRACE_TEXT_LIMIT = 800;
 const PROVIDER_API_KEY_FLAG_PATTERN =
@@ -27,6 +33,84 @@ const SECRET_FLAG_PATTERN =
 const SECRET_ENV_ASSIGNMENT_PATTERN =
   /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD|AUTHORIZATION)[A-Z0-9_]*\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi;
 const AUTH_HEADER_PATTERN = /\b(Authorization\s*:\s*)(Bearer\s+)?("[^"]*"|'[^']*'|\S+)/gi;
+
+function truncateRetainedText(value: string, maxChars: number): string {
+  if (value.length <= maxChars) {
+    return value;
+  }
+  const marker = '\n...[truncated]';
+  if (maxChars <= marker.length) {
+    return value.slice(0, maxChars);
+  }
+  return `${value.slice(0, maxChars - marker.length)}${marker}`;
+}
+
+function boundRetainedStrings(
+  values: readonly string[],
+  options: {
+    maxItems: number;
+    maxTotalChars: number;
+    maxItemChars: number;
+  }
+): string[] {
+  if (values.length === 0) {
+    return [];
+  }
+
+  const maxItems = Math.max(1, Math.floor(options.maxItems));
+  const maxTotalChars = Math.max(1, Math.floor(options.maxTotalChars));
+  const maxItemChars = Math.max(1, Math.floor(options.maxItemChars));
+  const itemTail = values.length > maxItems ? values.slice(-maxItems) : [...values];
+  const truncatedTail = itemTail.map((value) => truncateRetainedText(value, maxItemChars));
+
+  const retained: string[] = [];
+  let totalChars = 0;
+  for (let index = truncatedTail.length - 1; index >= 0; index -= 1) {
+    const value = truncatedTail[index] ?? '';
+    const nextTotal = totalChars + value.length;
+    if (retained.length > 0 && nextTotal > maxTotalChars) {
+      break;
+    }
+    if (nextTotal > maxTotalChars) {
+      retained.push(truncateRetainedText(value, maxTotalChars));
+      break;
+    }
+    retained.push(value);
+    totalChars = nextTotal;
+  }
+
+  return retained.reverse();
+}
+
+export function boundProgressLogLines(
+  lines: readonly string[],
+  options?: {
+    maxLines?: number;
+    maxTotalChars?: number;
+    maxLineChars?: number;
+  }
+): string[] {
+  return boundRetainedStrings(lines, {
+    maxItems: options?.maxLines ?? PROGRESS_RETAINED_LOG_LINES,
+    maxTotalChars: options?.maxTotalChars ?? PROGRESS_RETAINED_LOG_CHARS,
+    maxItemChars: options?.maxLineChars ?? PROGRESS_RETAINED_LOG_LINE_CHARS,
+  });
+}
+
+export function boundProgressAssistantParts(
+  parts: readonly string[],
+  options?: {
+    maxParts?: number;
+    maxTotalChars?: number;
+    maxPartChars?: number;
+  }
+): string[] {
+  return boundRetainedStrings(parts, {
+    maxItems: options?.maxParts ?? PROGRESS_RETAINED_OUTPUT_PARTS,
+    maxTotalChars: options?.maxTotalChars ?? PROGRESS_RETAINED_OUTPUT_CHARS,
+    maxItemChars: options?.maxPartChars ?? PROGRESS_RETAINED_OUTPUT_PART_CHARS,
+  });
+}
 
 /**
  * Return the trailing `maxLines` of a line-buffered CLI log, joined with "\n"

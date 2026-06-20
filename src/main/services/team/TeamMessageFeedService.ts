@@ -6,7 +6,7 @@ import { createHash } from 'crypto';
 
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 
-import type { InboxMessage, TeamConfig } from '@shared/types';
+import type { InboxMessage, MessagesPage, TeamConfig } from '@shared/types';
 
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MESSAGE_FEED_CACHE_MAX_AGE_MS = 5_000;
@@ -36,6 +36,16 @@ export interface TeamNormalizedMessageFeed {
   teamName: string;
   feedRevision: string;
   messages: InboxMessage[];
+}
+
+export interface TeamMessagePageResult extends MessagesPage {
+  durableWindowMessages: InboxMessage[];
+  durableHasMoreAfterWindow: boolean;
+}
+
+interface MessageCursor {
+  timestampMs: number;
+  messageId: string;
 }
 
 function requireCanonicalMessageId(message: InboxMessage): string {
@@ -435,6 +445,97 @@ function toFeedRevision(messages: readonly InboxMessage[]): string {
   return createHash('sha256').update(JSON.stringify(stableMessages)).digest('hex').slice(0, 24);
 }
 
+function addSourceRevisionMessage(
+  hash: ReturnType<typeof createHash>,
+  message: InboxMessage
+): void {
+  const messageId =
+    typeof message.messageId === 'string' && message.messageId.trim().length > 0
+      ? message.messageId.trim()
+      : (getEffectiveInboxMessageId(message) ?? '');
+  hash.update(messageId);
+  hash.update('\0');
+  hash.update(message.timestamp ?? '');
+  hash.update('\0');
+  hash.update(message.from ?? '');
+  hash.update('\0');
+  hash.update(message.to ?? '');
+  hash.update('\0');
+  hash.update(message.source ?? '');
+  hash.update('\0');
+  hash.update(message.text ?? '');
+  hash.update('\n');
+}
+
+function toSourceRevision(sources: Record<string, readonly InboxMessage[]>): string {
+  const hash = createHash('sha256');
+  const sourceNames = Object.keys(sources).sort();
+  for (const sourceName of sourceNames) {
+    const messages = sources[sourceName] ?? [];
+    hash.update(`${sourceName}:${messages.length}\n`);
+    for (const message of messages) {
+      if (!isVisibleTeamMessage(message)) {
+        continue;
+      }
+      addSourceRevisionMessage(hash, message);
+    }
+  }
+  return hash.digest('hex').slice(0, 24);
+}
+
+function parseMessageCursor(cursor: string | null | undefined): MessageCursor | null {
+  if (!cursor) {
+    return null;
+  }
+
+  const [timestamp, ...messageIdParts] = cursor.split('|');
+  const timestampMs = Date.parse(timestamp ?? '');
+  if (!Number.isFinite(timestampMs)) {
+    return null;
+  }
+  return {
+    timestampMs,
+    messageId: messageIdParts.join('|'),
+  };
+}
+
+function isMessageAfterCursor(message: InboxMessage, cursor: MessageCursor | null): boolean {
+  if (!cursor) {
+    return true;
+  }
+
+  const messageMs = Date.parse(message.timestamp);
+  if (messageMs < cursor.timestampMs) return true;
+  if (messageMs > cursor.timestampMs) return false;
+  if (!cursor.messageId) return false;
+  return requireCanonicalMessageId(message).localeCompare(cursor.messageId) > 0;
+}
+
+function sortNewestFirst(messages: InboxMessage[]): InboxMessage[] {
+  messages.sort((left, right) => {
+    const diff = Date.parse(right.timestamp) - Date.parse(left.timestamp);
+    if (diff !== 0) return diff;
+    return requireCanonicalMessageId(left).localeCompare(requireCanonicalMessageId(right));
+  });
+  return messages;
+}
+
+function selectSourceWindow(input: {
+  messages: InboxMessage[];
+  cursor: MessageCursor | null;
+  limit: number;
+}): { messages: InboxMessage[]; truncated: boolean } {
+  const visible = ensureEffectiveMessageIds(input.messages.filter(isVisibleTeamMessage));
+  const filtered = input.cursor
+    ? visible.filter((message) => isMessageAfterCursor(message, input.cursor))
+    : visible;
+  sortNewestFirst(filtered);
+  return {
+    messages: filtered.slice(0, input.limit),
+    truncated: filtered.length > input.limit,
+  };
+}
+
 export class TeamMessageFeedService {
   private readonly cacheByTeam = new Map<string, TeamMessageFeedCacheEntry>();
   private readonly dirtyTeams = new Set<string>();
@@ -493,6 +594,117 @@ export class TeamMessageFeedService {
       generationAtStart,
     });
     return request;
+  }
+
+  async getPage(
+    teamName: string,
+    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
+  ): Promise<TeamMessagePageResult> {
+    const startedAt = Date.now();
+    const requestedLimit = Number.isFinite(options.limit) ? Math.floor(options.limit) : 50;
+    const limit = Math.max(1, requestedLimit);
+    const liveReserve = options.liveMessages?.length
+      ? Math.max(options.liveMessages.length, 100)
+      : 0;
+    const durableWindowLimit = limit + liveReserve + 1;
+    const sourceWindowLimit = Math.max(durableWindowLimit * 2, 200);
+    const cursor = parseMessageCursor(options.cursor);
+    const config = await this.deps.getConfig(teamName);
+    if (!config) {
+      return {
+        messages: [],
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: toSourceRevision({}),
+        durableWindowMessages: [],
+        durableHasMoreAfterWindow: false,
+      };
+    }
+
+    const sourceStartedAt = Date.now();
+    const [inboxSource, leadSource, sentSource] = await Promise.all([
+      this.deps.getInboxMessages(teamName).catch(() => [] as InboxMessage[]),
+      this.deps.getLeadSessionMessages(teamName, config).catch(() => [] as InboxMessage[]),
+      this.deps.getSentMessages(teamName).catch(() => [] as InboxMessage[]),
+    ]);
+    const sourceMs = Date.now() - sourceStartedAt;
+
+    const inboxWindow = selectSourceWindow({
+      messages: inboxSource,
+      cursor,
+      limit: sourceWindowLimit,
+    });
+    const leadWindow = selectSourceWindow({
+      messages: leadSource,
+      cursor,
+      limit: sourceWindowLimit,
+    });
+    const sentWindow = selectSourceWindow({
+      messages: sentSource,
+      cursor,
+      limit: sourceWindowLimit,
+    });
+    const syntheticSource = buildSyntheticBootstrapMessages(config, (messageId) =>
+      this.getSyntheticBootstrapFallbackTimestamp(messageId)
+    );
+    const syntheticWindow = selectSourceWindow({
+      messages: syntheticSource,
+      cursor,
+      limit: sourceWindowLimit,
+    });
+    const feedRevision = toSourceRevision({
+      inbox: inboxSource,
+      lead: leadSource,
+      sent: sentSource,
+      synthetic: syntheticSource,
+    });
+
+    const normalizeStartedAt = Date.now();
+    let messages = [
+      ...inboxWindow.messages,
+      ...leadWindow.messages,
+      ...sentWindow.messages,
+      ...syntheticWindow.messages,
+    ];
+    messages = dedupeLeadProcessCopies(messages, leadWindow.messages);
+    messages = ensureEffectiveMessageIds(messages);
+    messages = dedupeByMessageId(messages);
+    messages = linkPassiveUserReplySummaries(messages);
+    attachLeadSessionIds(config, messages);
+    annotateSlashCommandResponses(messages);
+    messages = messages.filter((message) => isMessageAfterCursor(message, cursor));
+    sortNewestFirst(messages);
+
+    const sourceTruncated =
+      inboxWindow.truncated ||
+      leadWindow.truncated ||
+      sentWindow.truncated ||
+      syntheticWindow.truncated;
+    const durableWindowMessages = messages.slice(0, durableWindowLimit);
+    const page = durableWindowMessages.slice(0, limit);
+    const durableHasMoreAfterWindow =
+      messages.length > durableWindowLimit || (sourceTruncated && page.length === limit);
+    const hasMore = messages.length > limit || durableHasMoreAfterWindow;
+    const lastMsg = page[page.length - 1];
+    const nextCursor =
+      hasMore && lastMsg ? `${lastMsg.timestamp}|${requireCanonicalMessageId(lastMsg)}` : null;
+
+    const normalizeMs = Date.now() - normalizeStartedAt;
+    const totalMs = Date.now() - startedAt;
+    if (totalMs >= 750) {
+      logger.warn(
+        `[${teamName}] message page build slow totalMs=${totalMs} sourceMs=${sourceMs} normalizeMs=${normalizeMs} inbox=${inboxSource.length} lead=${leadSource.length} sent=${sentSource.length} sourceWindowLimit=${sourceWindowLimit}`
+      );
+    }
+
+    return {
+      messages: page,
+      nextCursor,
+      hasMore,
+      feedRevision,
+      durableWindowMessages,
+      durableHasMoreAfterWindow,
+    };
   }
 
   private getGeneration(teamName: string): number {

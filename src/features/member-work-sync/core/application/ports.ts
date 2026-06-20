@@ -1,6 +1,7 @@
 import type {
   MemberWorkSyncAgenda,
   MemberWorkSyncOutboxClaimInput,
+  MemberWorkSyncOutboxCountDeliveredForAgendaInput,
   MemberWorkSyncOutboxCountRecentDeliveredInput,
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxEnsureResult,
@@ -87,6 +88,7 @@ export type MemberWorkSyncAuditEventName =
   | 'nudge_wake_failed'
   | 'nudge_skipped'
   | 'nudge_retryable'
+  | 'nudge_suppressed'
   | 'nudge_superseded'
   | 'review_pickup_delivery_unavailable'
   | 'review_pickup_member_nudge_delivered'
@@ -162,6 +164,9 @@ export interface MemberWorkSyncOutboxStorePort {
   markSuperseded(input: MemberWorkSyncOutboxMarkSupersededInput): Promise<void>;
   markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void>;
   countRecentDelivered(input: MemberWorkSyncOutboxCountRecentDeliveredInput): Promise<number>;
+  countDeliveredForAgenda?(
+    input: MemberWorkSyncOutboxCountDeliveredForAgendaInput
+  ): Promise<number>;
   findDeliveredReviewPickupRequestEventIds?(input: {
     teamName: string;
     memberName: string;

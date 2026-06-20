@@ -233,10 +233,13 @@ function writeMockMcpServer(
     | 'missing-lead-briefing'
     | 'member-briefing-error'
     | 'lead-briefing-error'
+    | 'huge-stderr-missing-member-briefing'
 ): string {
   const scriptPath = path.join(targetDir, `mock-mcp-${variant}.js`);
+  const omitsMemberBriefing =
+    variant === 'missing-member-briefing' || variant === 'huge-stderr-missing-member-briefing';
   const tools = REQUIRED_MOCK_AGENT_TEAMS_TOOLS.filter(
-    (name) => variant !== 'missing-member-briefing' || name !== 'member_briefing'
+    (name) => !omitsMemberBriefing || name !== 'member_briefing'
   )
     .filter((name) => variant !== 'missing-lead-briefing' || name !== 'lead_briefing')
     .map((name) => ({ name }));
@@ -245,6 +248,9 @@ function writeMockMcpServer(
     scriptPath,
     `'use strict';
 let buffer = '';
+if (${JSON.stringify(variant)} === 'huge-stderr-missing-member-briefing') {
+  process.stderr.write('huge-stderr-start:' + 'x'.repeat(200000) + ':huge-stderr-end');
+}
 function send(message) {
   process.stdout.write(JSON.stringify(message) + '\\n');
 }
@@ -335,6 +341,26 @@ function quoteWindowsCmdArg(value: string) {
     return value;
   }
   return `"${value.replace(/%/g, '%%').replace(/(["^&|<>])/g, '^$1')}"`;
+}
+
+type TeamProvisioningServicePrivate = {
+  validateAgentTeamsMcpRuntime(
+    claudePath: string,
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    mcpConfigPath: string
+  ): Promise<void>;
+  spawnProbe(
+    claudePath: string,
+    args: string[],
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    timeoutMs: number
+  ): Promise<{ exitCode: number | null; stdout: string; stderr: string }>;
+};
+
+function asPrivateService(svc: TeamProvisioningService): TeamProvisioningServicePrivate {
+  return svc as unknown as TeamProvisioningServicePrivate;
 }
 
 async function removeTempRoot(dirPath: string): Promise<void> {
@@ -4926,6 +4952,35 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     ).rejects.toThrow('required tool(s): member_briefing');
   });
 
+  it('bounds agent-teams MCP validation stderr output', async () => {
+    const svc = new TeamProvisioningService();
+    const mockServerPath = writeMockMcpServer(tempRoot, 'huge-stderr-missing-member-briefing');
+    const configPath = writeMcpConfig(tempRoot, {
+      'agent-teams': {
+        command: process.execPath,
+        args: [mockServerPath],
+      },
+    });
+    vi.mocked(spawnCli).mockImplementation(spawnRealCli);
+
+    let caught: Error | null = null;
+    try {
+      await asPrivateService(svc).validateAgentTeamsMcpRuntime(
+        '/fake/claude',
+        tempRoot,
+        process.env,
+        configPath
+      );
+    } catch (error) {
+      caught = error as Error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught?.message).toContain('required tool(s): member_briefing');
+    expect(caught?.message).toContain('...[truncated probe output]');
+    expect(caught?.message.length).toBeLessThan(150_000);
+  });
+
   it('fails validation when tools/list does not include lead_briefing', async () => {
     const svc = new TeamProvisioningService();
     const mockServerPath = writeMockMcpServer(tempRoot, 'missing-lead-briefing');
@@ -4970,5 +5025,36 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     await expect(
       (svc as any).validateAgentTeamsMcpRuntime('/fake/claude', tempRoot, process.env, configPath)
     ).rejects.toThrow('mock lead_briefing failure');
+  });
+
+  it('bounds spawnProbe stdout and stderr output buffers', async () => {
+    const svc = new TeamProvisioningService();
+    const scriptPath = path.join(tempRoot, 'huge-probe-output.js');
+    fs.writeFileSync(
+      scriptPath,
+      `'use strict';
+process.stdout.write('stdout-start:' + 'a'.repeat(200000) + ':stdout-end');
+process.stderr.write('stderr-start:' + 'b'.repeat(200000) + ':stderr-end');
+`,
+      'utf8'
+    );
+    vi.mocked(spawnCli).mockImplementation(spawnRealCli);
+
+    const result = await asPrivateService(svc).spawnProbe(
+      process.execPath,
+      [scriptPath],
+      tempRoot,
+      process.env,
+      10_000
+    );
+
+    expect(result.stdout).toContain('stdout-start:');
+    expect(result.stdout).toContain('...[truncated probe output]');
+    expect(result.stdout).toContain(':stdout-end');
+    expect(result.stdout.length).toBeLessThan(150_000);
+    expect(result.stderr).toContain('stderr-start:');
+    expect(result.stderr).toContain('...[truncated probe output]');
+    expect(result.stderr).toContain(':stderr-end');
+    expect(result.stderr.length).toBeLessThan(150_000);
   });
 });

@@ -5,6 +5,7 @@ export * from './MemberWorkSyncNudgeActivationPolicy';
 export * from './MemberWorkSyncNudgeAgendaPredicates';
 export * from './MemberWorkSyncNudgeDispatcher';
 export * from './MemberWorkSyncNudgeOutboxPlanner';
+export * from './MemberWorkSyncNudgeSuppressionPolicy';
 export * from './MemberWorkSyncPendingReportIntentReplayer';
 export * from './MemberWorkSyncReconciler';
 export * from './MemberWorkSyncReporter';

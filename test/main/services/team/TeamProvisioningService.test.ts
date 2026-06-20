@@ -176,6 +176,14 @@ import {
   RuntimeStoreBatchWriter,
 } from '@main/services/team/opencode/store/RuntimeStoreManifest';
 import {
+  PROGRESS_RETAINED_LOG_CHARS,
+  PROGRESS_RETAINED_LOG_LINE_CHARS,
+  PROGRESS_RETAINED_LOG_LINES,
+  PROGRESS_RETAINED_OUTPUT_CHARS,
+  PROGRESS_RETAINED_OUTPUT_PART_CHARS,
+  PROGRESS_RETAINED_OUTPUT_PARTS,
+} from '@main/services/team/progressPayload';
+import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeMessageResult,
 } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
@@ -934,6 +942,10 @@ function createClaudeLogsRun(overrides: Record<string, unknown> = {}) {
     },
     ...overrides,
   } as any;
+}
+
+function totalStringChars(values: readonly string[]): number {
+  return values.reduce((sum, value) => sum + value.length, 0);
 }
 
 async function waitForFile(filePath: string, timeoutMs = 2_000): Promise<void> {
@@ -2440,6 +2452,169 @@ describe('TeamProvisioningService', () => {
         hasMore: false,
         updatedAt: '2026-04-19T10:00:01.000Z',
       });
+    });
+
+    it('bounds retained CLI log lines as stdout is appended', () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun({
+        provisioningComplete: false,
+        claudeLogLines: [],
+        lastClaudeLogStream: null,
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+      });
+      const lines = Array.from(
+        { length: PROGRESS_RETAINED_LOG_LINES + 600 },
+        (_, i) => `line-${i}-${'x'.repeat(700)}`
+      );
+      const hugeLine = `huge-${'h'.repeat(PROGRESS_RETAINED_LOG_LINE_CHARS + 1_000)}`;
+      const latestLine = 'latest-marker';
+      const text = [...lines, hugeLine, latestLine].join('\n') + '\n';
+
+      (svc as any).appendCliLogs(run, 'stdout', text);
+
+      expect(run.claudeLogLines.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINES);
+      expect(totalStringChars(run.claudeLogLines)).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_CHARS);
+      expect(run.claudeLogLines.at(-1)).toBe(latestLine);
+      expect(run.claudeLogLines.some((line: string) => line.includes('[truncated]'))).toBe(true);
+      expect(run.claudeLogLines.join('\n')).not.toContain('line-0-');
+    });
+
+    it('bounds pending CLI line carry buffers before newline arrives', () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun({
+        provisioningComplete: false,
+        claudeLogLines: [],
+        lastClaudeLogStream: null,
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+      });
+      const hugePendingLine = 'x'.repeat(PROGRESS_RETAINED_LOG_LINE_CHARS + 5_000);
+
+      (svc as any).appendCliLogs(run, 'stdout', hugePendingLine);
+      (svc as any).appendCliLogs(run, 'stderr', hugePendingLine);
+
+      expect(run.stdoutLogLineBuf.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINE_CHARS);
+      expect(run.stderrLogLineBuf.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINE_CHARS);
+      expect(run.stdoutLogLineBuf).toContain('[truncated pending line]');
+      expect(run.stderrLogLineBuf).toContain('[truncated pending line]');
+    });
+
+    it('bounds incomplete stdout parser carry before process-close diagnostics retain it', () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun({
+        provisioningComplete: false,
+        stdoutParserCarry: '',
+        stdoutParserCarryIsCompleteJson: false,
+        stdoutParserCarryLooksLikeClaudeJson: false,
+      });
+      const hugeIncompleteJson = `{"type":"assistant","content":"${'x'.repeat(
+        PROGRESS_RETAINED_LOG_CHARS + 5_000
+      )}`;
+
+      (svc as any).updateStdoutParserCarry(run, hugeIncompleteJson);
+
+      expect(run.stdoutParserCarry.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_CHARS);
+      expect(run.stdoutParserCarry).not.toBe(hugeIncompleteJson);
+    });
+
+    it('bounds live lead cache text without mutating the original message', () => {
+      const svc = new TeamProvisioningService();
+      const hugeText = `start-${'x'.repeat(300_000)}-end`;
+      const message = {
+        from: 'team-lead',
+        text: hugeText,
+        timestamp: '2026-04-19T10:00:01.000Z',
+        read: true,
+        messageId: 'huge-live-message',
+        source: 'lead_process',
+      } as const;
+
+      svc.pushLiveLeadProcessMessage('live-cache-team', message);
+
+      const [cached] = svc.getLiveLeadProcessMessages('live-cache-team');
+      expect(cached?.text.length).toBeLessThan(hugeText.length);
+      expect(cached?.text.length).toBeLessThanOrEqual(256 * 1024);
+      expect(cached?.text).toContain('[truncated live message]');
+      expect(message.text).toBe(hugeText);
+    });
+
+    it('bounds coalesced synthetic live lead text buffers', () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun({
+        teamName: 'live-buffer-team',
+        provisioningComplete: true,
+        liveLeadTextBuffer: null,
+        pendingToolCalls: [],
+        leadMsgSeq: 0,
+        lastLeadTextEmitMs: 0,
+        request: {
+          members: [{ name: 'team-lead', role: 'Team Lead' }],
+        },
+      });
+      const hugeChunk = 's'.repeat(180_000);
+
+      (svc as any).pushLiveLeadTextMessage(run, hugeChunk, undefined, undefined, {
+        coalesceStreamChunk: true,
+      });
+      (svc as any).pushLiveLeadTextMessage(run, hugeChunk, undefined, undefined, {
+        coalesceStreamChunk: true,
+      });
+
+      expect(run.liveLeadTextBuffer?.text.length).toBeLessThan(hugeChunk.length * 2);
+      expect(run.liveLeadTextBuffer?.text.length).toBeLessThanOrEqual(256 * 1024);
+      expect(run.liveLeadTextBuffer?.text).toContain('[truncated live message]');
+      const [cached] = svc.getLiveLeadProcessMessages('live-buffer-team');
+      expect(cached?.text.length).toBeLessThanOrEqual(256 * 1024);
+    });
+
+    it('bounds retained provisioning output parts and keeps message indexes valid', () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun({
+        provisioningComplete: false,
+        provisioningOutputParts: [],
+        provisioningOutputIndexByMessageId: new Map<string, number>(),
+        stallWarningIndex: null,
+        apiRetryWarningIndex: null,
+      });
+      const partCount = PROGRESS_RETAINED_OUTPUT_PARTS + 80;
+
+      for (let index = 0; index < partCount; index += 1) {
+        const text =
+          index === partCount - 2
+            ? `huge-${'z'.repeat(PROGRESS_RETAINED_OUTPUT_PART_CHARS + 1_000)}`
+            : `part-${index}-${'y'.repeat(4_000)}`;
+        (svc as any).appendProvisioningAssistantText(run, { uuid: `msg-${index}` }, text);
+      }
+
+      expect(run.provisioningOutputParts.length).toBeLessThanOrEqual(
+        PROGRESS_RETAINED_OUTPUT_PARTS
+      );
+      expect(totalStringChars(run.provisioningOutputParts)).toBeLessThanOrEqual(
+        PROGRESS_RETAINED_OUTPUT_CHARS
+      );
+      expect(run.provisioningOutputParts.at(-1)).toContain(`part-${partCount - 1}-`);
+      expect(run.provisioningOutputParts.some((part: string) => part.includes('[truncated]'))).toBe(
+        true
+      );
+      expect(run.provisioningOutputParts.join('\n')).not.toContain('part-0-');
+
+      for (const index of run.provisioningOutputIndexByMessageId.values()) {
+        expect(index).toBeGreaterThanOrEqual(0);
+        expect(index).toBeLessThan(run.provisioningOutputParts.length);
+      }
+
+      const latestMessageId = `msg-${partCount - 1}`;
+      (svc as any).appendProvisioningAssistantText(
+        run,
+        { uuid: latestMessageId },
+        `updated-${'u'.repeat(PROGRESS_RETAINED_OUTPUT_PART_CHARS + 1_000)}`
+      );
+
+      expect(run.provisioningOutputParts.at(-1)).toContain('updated-');
+      expect(totalStringChars(run.provisioningOutputParts)).toBeLessThanOrEqual(
+        PROGRESS_RETAINED_OUTPUT_CHARS
+      );
     });
 
     it('writes a launch failure artifact pack when cleanup finalizes failed launch state', async () => {

@@ -1489,6 +1489,65 @@ describe('JsonMemberWorkSyncStore', () => {
     ).resolves.toBe(1);
   });
 
+  it('counts delivered nudges for one agenda fingerprint from member-scoped outbox files', async () => {
+    const baseInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const recoveryInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:status-only:agenda:v1:abc',
+      payloadHash: 'hash-status-only',
+      payload: makeNudgePayload({ workSyncIntentKey: 'status-only:agenda:v1:abc' }),
+    };
+    const otherAgendaInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:def',
+      agendaFingerprint: 'agenda:v1:def',
+      payloadHash: 'hash-other',
+    };
+    await store.ensurePending(baseInput);
+    await store.ensurePending(recoveryInput);
+    await store.ensurePending(otherAgendaInput);
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 3,
+    });
+    for (const item of claimed) {
+      await store.markDelivered({
+        teamName: 'team-a',
+        id: item.id,
+        attemptGeneration: item.attemptGeneration,
+        deliveredMessageId: `message:${item.id}`,
+        nowIso: '2026-04-29T00:02:00.000Z',
+      });
+    }
+
+    await expect(
+      store.countDeliveredForAgenda({
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:abc',
+      })
+    ).resolves.toBe(2);
+    await expect(
+      store.countDeliveredForAgenda({
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:abc',
+        sinceIso: '2026-04-29T00:02:00.000Z',
+      })
+    ).resolves.toBe(0);
+  });
+
   it('finds delivered review pickup request event ids from member-scoped outbox files', async () => {
     const input = {
       id: 'member-work-sync:team-a:bob:review-pickup:evt-a+evt-b',

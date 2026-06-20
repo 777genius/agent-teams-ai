@@ -104,6 +104,14 @@ export interface MemberWorkSyncShadowDiagnostics {
   fingerprintChanged: boolean;
   previousFingerprint?: string;
   triggerReasons?: string[];
+  nudgeSuppressionResetAt?: string;
+  nudgeSuppression?: {
+    reason: 'no_accepted_report';
+    agendaFingerprint: string;
+    deliveredCount: number;
+    suppressedAt: string;
+    resetAt?: string;
+  };
   recovery?: {
     kind: 'proof_missing';
     intentKey: string;
@@ -224,6 +232,7 @@ export interface MemberWorkSyncReportResult {
 export interface MemberWorkSyncStatusRequest {
   teamName: string;
   memberName: string;
+  forceNudge?: boolean;
 }
 
 export interface MemberWorkSyncMetricsRequest {
@@ -335,4 +344,11 @@ export interface MemberWorkSyncOutboxCountRecentDeliveredInput {
   memberName: string;
   sinceIso: string;
   workSyncIntentKeyPrefix?: string;
+}
+
+export interface MemberWorkSyncOutboxCountDeliveredForAgendaInput {
+  teamName: string;
+  memberName: string;
+  agendaFingerprint: string;
+  sinceIso?: string;
 }

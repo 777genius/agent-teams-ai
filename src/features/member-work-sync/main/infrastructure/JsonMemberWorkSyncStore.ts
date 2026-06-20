@@ -9,6 +9,7 @@ import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
 import type {
   MemberWorkSyncMetricEvent,
   MemberWorkSyncOutboxClaimInput,
+  MemberWorkSyncOutboxCountDeliveredForAgendaInput,
   MemberWorkSyncOutboxCountRecentDeliveredInput,
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxEnsureResult,
@@ -1065,6 +1066,26 @@ export class JsonMemberWorkSyncStore
       });
     }
     return Math.max(indexedCount, memberFileCount);
+  }
+
+  async countDeliveredForAgenda(
+    input: MemberWorkSyncOutboxCountDeliveredForAgendaInput
+  ): Promise<number> {
+    const agendaFingerprint = input.agendaFingerprint.trim();
+    if (!agendaFingerprint) {
+      return 0;
+    }
+
+    const sinceIso = input.sinceIso?.trim();
+    const memberKey = normalizeMemberKey(input.memberName);
+    const memberOutbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
+    return Object.values(memberOutbox.items).filter(
+      (item) =>
+        normalizeMemberKey(item.memberName) === memberKey &&
+        item.status === 'delivered' &&
+        item.agendaFingerprint === agendaFingerprint &&
+        (!sinceIso || item.updatedAt > sinceIso)
+    ).length;
   }
 
   async findDeliveredReviewPickupRequestEventIds(input: {

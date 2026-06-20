@@ -88,14 +88,24 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
       ...controlContextSchema,
       memberName: z.string().min(1).optional(),
       from: z.string().min(1).optional(),
+      forceNudge: z.boolean().optional(),
     }),
-    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, memberName, from }) => {
+    execute: async ({
+      teamName,
+      claudeDir,
+      controlUrl,
+      waitTimeoutMs,
+      memberName,
+      from,
+      forceNudge,
+    }) => {
       assertConfiguredTeam(teamName, claudeDir);
       const status = await getController(teamName, claudeDir).workSync.memberWorkSyncStatus({
         ...(memberName ? { memberName } : {}),
         ...(from ? { from } : {}),
         ...(controlUrl ? { controlUrl } : {}),
         ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
+        ...(forceNudge ? { forceNudge } : {}),
       });
       return jsonTextContent(
         buildRequiredReportFollowUp({

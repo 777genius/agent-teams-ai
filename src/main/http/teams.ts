@@ -895,7 +895,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   );
 
-  app.post<{ Params: { teamName: string; memberName: string } }>(
+  app.post<{ Params: { teamName: string; memberName: string }; Body: { forceNudge?: unknown } }>(
     '/api/teams/:teamName/member-work-sync/:memberName/refresh',
     async (request, reply) => {
       try {
@@ -911,6 +911,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           await getMemberWorkSyncFeature(services).refreshStatus({
             teamName: validatedTeamName.value!,
             memberName,
+            ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
           })
         );
       } catch (error) {

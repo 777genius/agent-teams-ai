@@ -2,6 +2,10 @@ import { decideMemberWorkSyncStatus } from '../domain';
 
 import { appendMemberWorkSyncAudit, reasonToAuditEvent } from './MemberWorkSyncAudit';
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
+import {
+  applyMemberWorkSyncNudgeSuppression,
+  MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC,
+} from './MemberWorkSyncNudgeSuppressionPolicy';
 import { finalizeMemberWorkSyncAgenda } from './MemberWorkSyncReconciler';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
@@ -811,13 +815,29 @@ export class MemberWorkSyncNudgeDispatcher {
     if (decision.state !== 'needs_sync' || agenda.items.length === 0 || !agendaStillMatches) {
       return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
     }
+    const suppressionStatus = await applyMemberWorkSyncNudgeSuppression(this.deps, {
+      status: revalidatedStatus,
+      previousStatus: previous,
+      source: 'nudge_dispatcher',
+    });
+    if (
+      suppressionStatus.shadow?.wouldNudge !== true &&
+      suppressionStatus.diagnostics.includes(MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC)
+    ) {
+      await this.deps.statusStore.write(suppressionStatus);
+      return {
+        ok: false,
+        reason: MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC,
+        retryable: false,
+      };
+    }
 
     if (!this.deps.statusStore.readTeamMetrics) {
       return { ok: false, reason: 'metrics_unavailable', retryable: true };
     }
     const metrics = await this.deps.statusStore.readTeamMetrics(item.teamName);
     const activation = decideMemberWorkSyncNudgeActivation({
-      status: revalidatedStatus,
+      status: suppressionStatus,
       metrics,
     });
     if (!activation.active) {
