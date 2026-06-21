@@ -1,6 +1,8 @@
 # Release Guide
 
-## Draft: v2.5.1 (2026-06-21)
+## Published: v2.5.1 (2026-06-21)
+
+GitHub release: [v2.5.1](https://github.com/777genius/agent-teams-ai/releases/tag/v2.5.1).
 
 Target branch: `dev`.
 
@@ -13,28 +15,28 @@ Runtime gate:
 - Agent Teams runtime: `v0.0.54`; `777genius/agent_teams_orchestrator@main` currently matches `v0.0.54`.
 - Terminal Platform runtime: `v0.2.0`; this is the latest published `777genius/terminal-platform` release. The newer `terminal-platform@main` commit is unreleased and is not bundled in this patch release.
 
-Draft body source for GitHub release:
+Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
-Agent Teams AI 2.5.1 is a stability update for long-running team sessions. It focuses on memory growth and crash reports from large projects, including Unreal Engine workspaces, by reducing what the app keeps in memory and preventing duplicate runtime checks from piling up under load.
+Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
 <!-- Built from dev commit 9cddb727de5470074ffe07dd3f528f31c4b8edf2. -->
 
 ### Improvements
 
-- Lower memory usage in large sessions by keeping transcript/project matching metadata compact after scans finish.
-- Make busy teams more stable by keeping runtime health checks single-flight during rapid refreshes and timeouts.
-- Bound retained runtime, provisioning, provider, MCP probe, and timeout output so diagnostic text cannot keep growing without limit.
-- Improve launch reliability on low-memory machines by raising Node heap settings where Agent Teams controls the launched process.
-- Reduce background churn from repeated work-sync nudges that do not add new useful information.
+- Keep transcript/project matching metadata compact after large scans finish.
+- Keep runtime health checks single-flight during rapid refreshes and timeouts.
+- Cap retained runtime, provisioning, provider, MCP probe, and timeout output.
+- Improve launch reliability on low-memory machines.
+- Reduce repeated work-sync nudges that do not add new information.
 
 ### Bug Fixes
 
-- Fix an OOM risk where transcript affinity metadata could retain full normalized message text from large JSONL sessions.
+- Fix OOM risk from transcript affinity metadata retaining full normalized JSONL message text.
 - Fix duplicate runtime snapshot probes during cache invalidation and timeout storms.
 - Fix low-heap team launch crashes and unbounded stdout/stderr carry buffers.
-- Fix IME composition so pressing Enter while composing text does not submit too early.
-- Fix draft launch roster updates so team setup edits are preserved correctly before launch.
+- Fix Enter submitting text during IME composition.
+- Fix draft launch roster updates before launch.
 - Update vulnerable dependencies from the post-v2.5.0 security audit.
 
 ### Downloads
@@ -461,6 +463,7 @@ Public release notes must follow this standard every time:
 
 - Start with a short user-facing summary. Explain what changed and why users should care.
 - Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body; the GitHub release title already shows the version.
+- Do not start with a template sentence like `Agent Teams AI <VERSION> is...`; start with the concrete user impact.
 - Use the sections `What's New`, `Improvements`, and `Bug Fixes`; omit a section only if it would be empty.
 - Keep internal-only CI, lint, dependency, and refactor work out of public notes unless it directly explains a user-visible fix.
 - Put `Downloads` as the final section, after all text notes.
