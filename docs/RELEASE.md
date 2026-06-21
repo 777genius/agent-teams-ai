@@ -4,7 +4,9 @@
 
 Target branch: `dev`.
 
-Target code range: `v2.5.0..origin/dev` through `9e1edc66944ef69d148ec9b3f55b377deac2e68a`.
+Draft build commit: `9cddb727de5470074ffe07dd3f528f31c4b8edf2`.
+
+User-facing code range: `v2.5.0..9e1edc66944ef69d148ec9b3f55b377deac2e68a`, plus release metadata in `9cddb727de5470074ffe07dd3f528f31c4b8edf2`.
 
 Runtime gate:
 
@@ -14,23 +16,25 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
-Patch release focused on memory stability and safer long-running team sessions, especially large Unreal Engine workspaces and active multi-agent teams. It reduces retained transcript text, bounds runtime and provisioning buffers, and prevents duplicate runtime health probes from piling up during heavy work-sync activity.
+Agent Teams AI 2.5.1 is a stability update for long-running team sessions. It focuses on memory growth and crash reports from large projects, including Unreal Engine workspaces, by reducing what the app keeps in memory and preventing duplicate runtime checks from piling up under load.
+
+<!-- Built from dev commit 9cddb727de5470074ffe07dd3f528f31c4b8edf2. -->
 
 ### Improvements
 
-- Reduce memory pressure from long team transcripts, runtime telemetry, provisioning logs, provider output, MCP probe output, and timeout snapshots.
-- Keep runtime status checks single-flight during rapid invalidation storms so slow probes do not stack up.
-- Compact team/project affinity matching so large normalized message text is not retained after transcript scans.
-- Improve launch resilience on low-heap systems by raising runtime Node heap settings where the app controls MCP and launch processes.
+- Lower memory usage in large sessions by keeping transcript/project matching metadata compact after scans finish.
+- Make busy teams more stable by keeping runtime health checks single-flight during rapid refreshes and timeouts.
+- Bound retained runtime, provisioning, provider, MCP probe, and timeout output so diagnostic text cannot keep growing without limit.
+- Improve launch reliability on low-memory machines by raising Node heap settings where Agent Teams controls the launched process.
+- Reduce background churn from repeated work-sync nudges that do not add new useful information.
 
 ### Bug Fixes
 
-- Fix a heap retention path where transcript affinity metadata could keep full normalized message text alive after scanning large JSONL sessions.
+- Fix an OOM risk where transcript affinity metadata could retain full normalized message text from large JSONL sessions.
 - Fix duplicate runtime snapshot probes during cache invalidation and timeout storms.
-- Fix runaway work-sync nudge loops that could keep generating repeated low-value activity.
-- Fix team launch crashes on low-memory setups and improve handling of bounded stdout/stderr carry buffers.
+- Fix low-heap team launch crashes and unbounded stdout/stderr carry buffers.
 - Fix IME composition so pressing Enter while composing text does not submit too early.
-- Fix draft launch roster updates so team setup edits are preserved correctly.
+- Fix draft launch roster updates so team setup edits are preserved correctly before launch.
 - Update vulnerable dependencies from the post-v2.5.0 security audit.
 
 ### Downloads
