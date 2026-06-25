@@ -491,6 +491,19 @@ describe("Codex provider adapter", () => {
     ]);
   });
 
+  it("builds packaged JSON exec args with explicit workspace-write sandbox", () => {
+    expect(
+      buildCodexJsonExecArgs({
+        jsonFlag: "--json",
+        model: "gpt-test",
+        reasoningEffort: "low",
+        sandboxMode: "workspace-write",
+      }),
+    ).toEqual(
+      expect.arrayContaining(["--sandbox", "workspace-write"]),
+    );
+  });
+
   it("runs a Codex JSON task through the packaged execution engine", async () => {
     const runner = new StaticRunner(
       `${JSON.stringify({ type: "agent_message", message: "json review output" })}\n`,
@@ -660,6 +673,7 @@ describe("Codex provider adapter", () => {
           controls: {
             model: "task-model",
             outputSchemaName: "review-verdict",
+            permissionMode: "allow-edits",
           },
         },
         workspace: { path: workspace },
@@ -673,6 +687,9 @@ describe("Codex provider adapter", () => {
         structuredOutput: { verdict: "APPROVE" },
       });
       expect(runner.lastArgs).toContain("task-model");
+      expect(runner.lastArgs).toEqual(
+        expect.arrayContaining(["--sandbox", "workspace-write"]),
+      );
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
@@ -960,10 +977,56 @@ describe("Codex provider adapter", () => {
         (request) => request.method === "thread/start",
       );
       expect(threadStart?.params).toMatchObject({
+        sandbox: "read-only",
+        config: {
+          sandbox_mode: "read-only",
+        },
         baseInstructions: null,
         developerInstructions: expect.stringContaining(
           "non-interactive subscription runtime worker",
         ),
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("uses workspace-write app-server sandbox only for allow-edits Codex tasks", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-write-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "edit files",
+          controls: { permissionMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const threadStart = fakeFactory.requests.find(
+        (request) => request.method === "thread/start",
+      );
+      expect(threadStart?.params).toMatchObject({
+        sandbox: "workspace-write",
+        config: {
+          sandbox_mode: "workspace-write",
+        },
       });
     } finally {
       await driver.dispose();

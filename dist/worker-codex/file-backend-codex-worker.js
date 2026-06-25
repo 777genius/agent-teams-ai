@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, assertProviderTaskSystemPrompt, } from "@vioxen/subscription-runtime/core";
-import { CodexAppServerExecutionEngine, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, sessionArtifactFromCodexAuthJson, } from "@vioxen/subscription-runtime/provider-codex";
+import { CodexAppServerExecutionEngine, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, sessionArtifactFromCodexAuthJson, codexAuthJsonFromArtifact, validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provider-codex";
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 import { SubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner.js";
@@ -23,6 +23,11 @@ export class FileBackendCodexWorker {
     runtime;
     ownedWorkspace;
     prewarmWorkspace;
+    capacityState = { availability: "available" };
+    windowStartedAtMs;
+    runsInWindow = 0;
+    quotaGroup = null;
+    capacityAccountId = null;
     constructor(options) {
         this.options = options;
         this.workerId =
@@ -44,6 +49,8 @@ export class FileBackendCodexWorker {
         this.prewarmWorkspace = options.workspace ?? this.ownedWorkspace;
         this.observability = options.observability ?? new NullWorkerObservability();
         this.clock = options.clock ?? systemClock;
+        this.windowStartedAtMs = this.clock.now().getTime();
+        this.capacityAccountId = normalizeCapacityAccountId(options.capacityAccountId);
         const { sessionStore, leaseStore } = createLocalFileBackendRuntimeAdapters({
             providerId: "codex",
             rootDir: join(options.stateRootDir, "sessions"),
@@ -138,8 +145,10 @@ export class FileBackendCodexWorker {
             expectedProviderId: "codex",
             purpose: "health-check",
         });
-        if (existing)
+        if (existing) {
+            this.rememberQuotaGroup(existing.artifact);
             return;
+        }
         const artifact = sessionArtifactFromCodexAuthJson(authJson);
         await this.sessionStore.write({
             providerInstanceId: this.options.providerInstanceId,
@@ -148,6 +157,7 @@ export class FileBackendCodexWorker {
             idempotencyKey: `seed:${hashText(authJson)}`,
             leaseId: "seed-local-file-backend",
         });
+        this.rememberQuotaGroup(artifact);
     }
     async prewarm() {
         this.assertStarted();
@@ -161,6 +171,7 @@ export class FileBackendCodexWorker {
             this.workerState = "failed";
             throw new SubscriptionWorkerError("subscription_worker_prewarm_failed", "Codex session is missing.");
         }
+        this.rememberQuotaGroup(session.artifact);
         const workspace = await this.prewarmWorkspace.create({
             purpose: "run-task",
             isolation: "temp-dir",
@@ -201,6 +212,7 @@ export class FileBackendCodexWorker {
     async run(job) {
         this.assertStarted();
         assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
+        await this.rememberStoredQuotaGroup();
         const runId = job.runId ?? `local-${randomUUID()}`;
         const abortSignal = job.abortSignal ?? new AbortController().signal;
         const startedAt = this.clock.monotonicMs();
@@ -226,7 +238,7 @@ export class FileBackendCodexWorker {
                 },
             });
             if (result.status === "completed") {
-                return taskResultToOutput(result.task);
+                return this.taskResultToOutput(result.task);
             }
             if (shouldRetryRefreshConflict(result) &&
                 !abortSignal.aborted &&
@@ -235,20 +247,44 @@ export class FileBackendCodexWorker {
                 attempt += 1;
                 continue;
             }
+            this.recordBlocked(result.reason);
             throw new SubscriptionWorkerError("subscription_worker_run_failed", result.safeMessage, { details: { reason: result.reason } });
         }
     }
     async health() {
         try {
+            await this.rememberStoredQuotaGroup();
             const health = await this.runtime.healthCheck({
                 providerInstanceId: this.options.providerInstanceId,
             });
+            const capacity = this.capacity();
+            const details = {
+                ...(capacity.details ?? {}),
+                availability: capacity.availability,
+                recentRuns: String(capacity.recentRuns ?? 0),
+            };
+            if (health.status === "healthy" && isSevereCapacity(capacity)) {
+                return {
+                    status: "degraded",
+                    state: this.workerState,
+                    checkedAt: this.clock.now(),
+                    failures: [
+                        {
+                            code: capacity.reason ?? capacity.availability,
+                            safeMessage: `Codex worker capacity is ${capacity.availability}.`,
+                        },
+                    ],
+                    warnings: health.warnings,
+                    details,
+                };
+            }
             if (health.status === "healthy") {
                 return {
                     status: "healthy",
                     state: this.workerState,
                     checkedAt: this.clock.now(),
                     warnings: health.warnings,
+                    details,
                 };
             }
             return {
@@ -260,6 +296,7 @@ export class FileBackendCodexWorker {
                     safeMessage: failure.safeMessage,
                 })),
                 warnings: health.warnings,
+                details,
             };
         }
         catch (error) {
@@ -289,6 +326,156 @@ export class FileBackendCodexWorker {
             this.workerState = "disposed";
         }
     }
+    capacity() {
+        if (this.workerState === "created" || this.workerState === "starting") {
+            return this.withCapacityDetails({
+                availability: "disabled",
+                reason: "not_started",
+            });
+        }
+        if (this.workerState === "prewarming") {
+            return this.withCapacityDetails({ availability: "warming" });
+        }
+        if (this.workerState === "disposed") {
+            return this.withCapacityDetails({
+                availability: "disabled",
+                reason: "disposed",
+            });
+        }
+        if (this.workerState === "failed") {
+            return this.withCapacityDetails({
+                availability: "degraded",
+                reason: "worker_failed",
+            });
+        }
+        this.rollCapacityWindow();
+        this.capacityState = normalizeResettableCapacity(this.capacityState, this.clock.now());
+        return this.withCapacityDetails({
+            ...this.capacityState,
+            recentRuns: this.runsInWindow,
+            ...(this.options.capacityPolicy?.softMaxRunsPerWindow === undefined
+                ? {}
+                : {
+                    softLimitRemainingRuns: Math.max(0, this.options.capacityPolicy.softMaxRunsPerWindow -
+                        this.runsInWindow),
+                }),
+        });
+    }
+    taskResultToOutput(result) {
+        if (result.status === "failed") {
+            this.recordFailure(result.failure);
+            throw new SubscriptionWorkerError("subscription_worker_run_failed", result.failure.safeMessage, { details: { code: result.failure.code } });
+        }
+        this.recordSuccessfulRun();
+        return {
+            outputText: result.outputText,
+            structuredOutput: result.structuredOutput,
+            warnings: result.warnings,
+        };
+    }
+    recordSuccessfulRun() {
+        this.rollCapacityWindow();
+        this.runsInWindow += 1;
+        const maxRuns = this.options.capacityPolicy?.softMaxRunsPerWindow;
+        if (maxRuns === undefined || this.runsInWindow < maxRuns)
+            return;
+        const cooldownUntil = new Date(this.windowStartedAtMs + capacityWindowMs(this.options.capacityPolicy));
+        this.capacityState = {
+            availability: "cooldown",
+            reason: "soft_run_limit",
+            cooldownUntil,
+        };
+    }
+    recordFailure(failure) {
+        if (failure.code === "quota_limited") {
+            this.capacityState = {
+                availability: "cooldown",
+                reason: "quota_limited",
+                cooldownUntil: new Date(this.clock.now().getTime() +
+                    (this.options.capacityPolicy?.quotaCooldownMs ?? 15 * 60 * 1000)),
+            };
+            return;
+        }
+        if (failure.reconnectRequired) {
+            this.capacityState = {
+                availability: "disabled",
+                reason: failure.code,
+            };
+            return;
+        }
+        if (!failure.retryable) {
+            this.capacityState = {
+                availability: "degraded",
+                reason: failure.code,
+            };
+        }
+    }
+    recordBlocked(reason) {
+        if (reason === "quota_limited") {
+            this.capacityState = {
+                availability: "cooldown",
+                reason,
+                cooldownUntil: new Date(this.clock.now().getTime() +
+                    (this.options.capacityPolicy?.quotaCooldownMs ?? 15 * 60 * 1000)),
+            };
+            return;
+        }
+        if (reason === "provider_reconnect_required") {
+            this.capacityState = {
+                availability: "disabled",
+                reason,
+            };
+        }
+    }
+    rollCapacityWindow() {
+        const nowMs = this.clock.now().getTime();
+        const windowMs = capacityWindowMs(this.options.capacityPolicy);
+        if (nowMs - this.windowStartedAtMs < windowMs)
+            return;
+        this.windowStartedAtMs = nowMs;
+        this.runsInWindow = 0;
+        if (this.capacityState.availability === "cooldown") {
+            this.capacityState = { availability: "available" };
+        }
+    }
+    async rememberStoredQuotaGroup() {
+        if (this.quotaGroup || this.capacityAccountId)
+            return;
+        const session = await this.sessionStore.read({
+            providerInstanceId: this.options.providerInstanceId,
+            expectedProviderId: "codex",
+            purpose: "health-check",
+        });
+        if (session)
+            this.rememberQuotaGroup(session.artifact);
+    }
+    rememberQuotaGroup(session) {
+        try {
+            const authJsonBytes = codexAuthJsonFromArtifact(session);
+            const validation = validateCodexAuthJsonBytes({ authJsonBytes });
+            this.quotaGroup = `codex-chatgpt:${hashText(validation.parsed.tokens.refresh_token).slice(0, 16)}`;
+            this.capacityAccountId =
+                normalizeCapacityAccountId(this.options.capacityAccountId) ??
+                    this.quotaGroup;
+        }
+        catch {
+            this.quotaGroup = null;
+            this.capacityAccountId = normalizeCapacityAccountId(this.options.capacityAccountId);
+        }
+    }
+    withCapacityDetails(capacity) {
+        return {
+            ...capacity,
+            details: {
+                ...(capacity.details ?? {}),
+                providerInstanceId: this.options.providerInstanceId,
+                ...(this.capacityAccountId
+                    ? { accountId: this.capacityAccountId }
+                    : {}),
+                ...(this.quotaGroup ? { quotaGroup: this.quotaGroup } : {}),
+            },
+        };
+    }
     assertStarted() {
         if (this.workerState === "disposed") {
             throw new SubscriptionWorkerError("subscription_worker_disposed", "Codex worker has been disposed.");
@@ -297,16 +484,6 @@ export class FileBackendCodexWorker {
             throw new SubscriptionWorkerError("subscription_worker_not_started", "Codex worker has not been started.");
         }
     }
-}
-function taskResultToOutput(result) {
-    if (result.status === "failed") {
-        throw new SubscriptionWorkerError("subscription_worker_run_failed", result.failure.safeMessage, { details: { code: result.failure.code } });
-    }
-    return {
-        outputText: result.outputText,
-        structuredOutput: result.structuredOutput,
-        warnings: result.warnings,
-    };
 }
 function shouldRetryRefreshConflict(result) {
     if (result.status !== "blocked")
@@ -344,9 +521,52 @@ function assertWorkerOptions(options) {
     if (options.workspace && options.workspacePath) {
         throw new Error("file_backend_codex_workspace_conflict");
     }
+    const softMaxRuns = options.capacityPolicy?.softMaxRunsPerWindow;
+    if (softMaxRuns !== undefined &&
+        (!Number.isInteger(softMaxRuns) || softMaxRuns <= 0)) {
+        throw new Error("file_backend_codex_soft_max_runs_invalid");
+    }
+    const windowMs = options.capacityPolicy?.windowMs;
+    if (windowMs !== undefined &&
+        (!Number.isFinite(windowMs) || windowMs <= 0)) {
+        throw new Error("file_backend_codex_capacity_window_invalid");
+    }
+    const quotaCooldownMs = options.capacityPolicy?.quotaCooldownMs;
+    if (quotaCooldownMs !== undefined &&
+        (!Number.isFinite(quotaCooldownMs) || quotaCooldownMs < 0)) {
+        throw new Error("file_backend_codex_quota_cooldown_invalid");
+    }
+}
+function capacityWindowMs(policy) {
+    return policy?.windowMs ?? 5 * 60 * 60 * 1000;
+}
+function normalizeResettableCapacity(capacity, now) {
+    if (!isResettableCapacity(capacity) ||
+        !capacity.cooldownUntil ||
+        capacity.cooldownUntil.getTime() > now.getTime()) {
+        return capacity;
+    }
+    const { cooldownUntil: _cooldownUntil, lastLimitSignalAt: _lastLimitSignalAt, reason: _reason, ...rest } = capacity;
+    return {
+        ...rest,
+        availability: "available",
+    };
+}
+function isResettableCapacity(capacity) {
+    return (capacity.availability === "cooldown" ||
+        capacity.availability === "quota_exhausted");
+}
+function isSevereCapacity(capacity) {
+    return (capacity.availability === "quota_exhausted" ||
+        capacity.availability === "degraded" ||
+        capacity.availability === "disabled");
 }
 function hashText(value) {
     return createHash("sha256").update(value).digest("hex");
+}
+function normalizeCapacityAccountId(value) {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
 }
 const systemClock = {
     now: () => new Date(),

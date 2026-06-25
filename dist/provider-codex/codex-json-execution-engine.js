@@ -23,6 +23,9 @@ export class PackagedCodexJsonExecutionEngine {
             jsonFlag: this.options.jsonFlag ?? "--json",
             model: input.model,
             reasoningEffort: input.reasoningEffort,
+            ...(input.sandboxMode === undefined
+                ? {}
+                : { sandboxMode: input.sandboxMode }),
         });
         const result = await input.runner.run({
             command: this.options.codexBinaryPath,
@@ -83,7 +86,7 @@ export function buildCodexJsonExecArgs(input) {
         "--model",
         input.model,
         "--sandbox",
-        "read-only",
+        input.sandboxMode ?? "read-only",
         "--config",
         'approval_policy="never"',
         "--config",
@@ -112,6 +115,11 @@ export function buildCodexJsonExecArgs(input) {
         "--skip-git-repo-check",
         "-",
     ];
+}
+export function codexSandboxModeForPermissionMode(mode) {
+    if (mode === "allow-edits")
+        return "workspace-write";
+    return "read-only";
 }
 export function codexExecutionFailure(error) {
     return {

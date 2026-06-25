@@ -19,6 +19,7 @@ import {
   type CodexExecutionEngine,
   type CodexReasoningEffort,
   PackagedCodexJsonExecutionEngine,
+  codexSandboxModeForPermissionMode,
   codexExecutionFailure,
 } from "./codex-json-execution-engine";
 import {
@@ -121,6 +122,9 @@ export class CodexJsonAgentDriver implements AgentDriver {
         redactor: input.redactor,
         model: input.task.controls?.model ?? this.model,
         reasoningEffort: this.reasoningEffort,
+        sandboxMode: codexSandboxModeForPermissionMode(
+          input.task.controls?.permissionMode,
+        ),
         abortSignal: input.abortSignal,
       });
 

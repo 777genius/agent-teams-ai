@@ -1,6 +1,6 @@
 import type { RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
 import type { CodexExecutionProfile } from "./codex-execution-profile.js";
-import type { CodexExecutionEngine, CodexExecutionPrewarmResult, CodexExecutionResult, CodexMaterializedSession, CodexReasoningEffort } from "./codex-json-execution-engine.js";
+import type { CodexExecutionEngine, CodexExecutionPrewarmResult, CodexExecutionResult, CodexMaterializedSession, CodexReasoningEffort, CodexSandboxMode } from "./codex-json-execution-engine.js";
 export type CodexAppServerExecutionEngineOptions = {
     readonly codexBinaryPath: string;
     readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
@@ -56,6 +56,7 @@ export declare class CodexAppServerExecutionEngine implements CodexExecutionEngi
         readonly redactor: RedactorPort;
         readonly model: string;
         readonly reasoningEffort: CodexReasoningEffort;
+        readonly sandboxMode?: CodexSandboxMode;
         readonly outputSchema?: unknown;
         readonly abortSignal: AbortSignal;
     }): Promise<CodexExecutionResult>;

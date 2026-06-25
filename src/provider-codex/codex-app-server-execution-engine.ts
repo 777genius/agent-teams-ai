@@ -17,6 +17,7 @@ import type {
   CodexExecutionResult,
   CodexMaterializedSession,
   CodexReasoningEffort,
+  CodexSandboxMode,
 } from "./codex-json-execution-engine";
 
 export type CodexAppServerExecutionEngineOptions = {
@@ -75,6 +76,7 @@ type PreparedThread = {
   readonly workspacePath: string;
   readonly model: string;
   readonly reasoningEffort: CodexReasoningEffort;
+  readonly sandboxMode: CodexSandboxMode;
   readonly systemPrompt: string | null;
 };
 
@@ -127,6 +129,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     readonly redactor: RedactorPort;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly outputSchema?: unknown;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult> {
@@ -179,6 +182,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
           workspacePath: input.workspacePath,
           model: input.model,
           reasoningEffort: input.reasoningEffort,
+          sandboxMode: "read-only",
           timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
           abortSignal: input.abortSignal,
           prepareNext: false,
@@ -221,6 +225,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     readonly redactor: RedactorPort;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly outputSchema?: unknown;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult> {
@@ -233,6 +238,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
       workspacePath: input.workspacePath,
       model: input.model,
       reasoningEffort: input.reasoningEffort,
+      sandboxMode: input.sandboxMode ?? "read-only",
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
       abortSignal: input.abortSignal,
     });
@@ -401,6 +407,7 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode: CodexSandboxMode;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly prepareNext?: boolean;
@@ -484,6 +491,7 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly systemPrompt?: string;
   }): PreparedThread | null {
     const prepared = this.preparedThread;
@@ -493,6 +501,7 @@ class CodexAppServerClient {
       prepared.workspacePath !== input.workspacePath ||
       prepared.model !== input.model ||
       prepared.reasoningEffort !== input.reasoningEffort ||
+      prepared.sandboxMode !== (input.sandboxMode ?? "read-only") ||
       prepared.systemPrompt !== normalizeSystemPrompt(input.systemPrompt)
     ) {
       this.backgroundWarnings.push({
@@ -509,6 +518,7 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly systemPrompt?: string;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
@@ -523,6 +533,7 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly systemPrompt?: string;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
@@ -538,6 +549,7 @@ class CodexAppServerClient {
           workspacePath: input.workspacePath,
           model: input.model,
           reasoningEffort: input.reasoningEffort,
+          sandboxMode: input.sandboxMode ?? "read-only",
           systemPrompt: normalizeSystemPrompt(input.systemPrompt),
         };
       })
@@ -551,12 +563,14 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly systemPrompt?: string;
   }): boolean {
     return (
       this.preparedThread?.workspacePath === input.workspacePath &&
       this.preparedThread.model === input.model &&
       this.preparedThread.reasoningEffort === input.reasoningEffort &&
+      this.preparedThread.sandboxMode === (input.sandboxMode ?? "read-only") &&
       this.preparedThread.systemPrompt === normalizeSystemPrompt(input.systemPrompt)
     );
   }
@@ -569,6 +583,7 @@ class CodexAppServerClient {
     readonly workspacePath: string;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly systemPrompt?: string;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
@@ -583,13 +598,13 @@ class CodexAppServerClient {
         runtimeWorkspaceRoots: [input.workspacePath],
         approvalPolicy: "never",
         approvalsReviewer: null,
-        sandbox: "read-only",
+        sandbox: input.sandboxMode ?? "read-only",
         permissions: null,
         config: {
           model_reasoning_effort: input.reasoningEffort,
           model_verbosity: "low",
           approval_policy: "never",
-          sandbox_mode: "read-only",
+          sandbox_mode: input.sandboxMode ?? "read-only",
           web_search: "disabled",
           features: {
             apps: false,

@@ -1,5 +1,6 @@
-import type { ProviderTaskResult, RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
+import type { ProviderTaskControls, ProviderTaskResult, RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
 export type CodexReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+export type CodexSandboxMode = "read-only" | "workspace-write";
 export type CodexMaterializedSession = {
     readonly home: string;
     readonly codexHome: string;
@@ -41,6 +42,7 @@ export type CodexExecutionEngine = {
         readonly redactor: RedactorPort;
         readonly model: string;
         readonly reasoningEffort: CodexReasoningEffort;
+        readonly sandboxMode?: CodexSandboxMode;
         readonly outputSchema?: unknown;
         readonly abortSignal: AbortSignal;
     }): Promise<CodexExecutionResult>;
@@ -82,6 +84,7 @@ export declare class PackagedCodexJsonExecutionEngine implements CodexExecutionE
         readonly redactor: RedactorPort;
         readonly model: string;
         readonly reasoningEffort: CodexReasoningEffort;
+        readonly sandboxMode?: CodexSandboxMode;
         readonly outputSchema?: unknown;
         readonly abortSignal: AbortSignal;
     }): Promise<CodexExecutionResult>;
@@ -91,7 +94,9 @@ export declare function buildCodexJsonExecArgs(input: {
     readonly jsonFlag: "--json" | "--experimental-json";
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
 }): readonly string[];
+export declare function codexSandboxModeForPermissionMode(mode: ProviderTaskControls["permissionMode"] | undefined): CodexSandboxMode;
 export declare function codexExecutionFailure(error: unknown): Extract<ProviderTaskResult, {
     readonly status: "failed";
 }>;

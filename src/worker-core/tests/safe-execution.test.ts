@@ -1,0 +1,579 @@
+import { execFile } from "node:child_process";
+import {
+  chmod,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import {
+  BoundedSubscriptionWorkerPool,
+  DefaultWorkspaceSnapshotter,
+  InMemoryAttemptJournal,
+  InMemoryWorkspaceLockStore,
+  LocalFileAttemptJournal,
+  SafeExecutionRunner,
+  SubscriptionWorkerError,
+  type CapacityAwareSubscriptionWorker,
+  type SubscriptionWorkerHealth,
+  type SubscriptionWorkerPrewarmResult,
+  type SubscriptionWorkerState,
+  type WorkerCapacitySnapshot,
+} from "../index";
+
+const execFileAsync = promisify(execFile);
+
+type PromptJob = {
+  readonly prompt: string;
+  readonly workspacePath: string;
+};
+
+type PromptResult = {
+  readonly output: string;
+};
+
+describe("SafeExecutionRunner", () => {
+  const cleanupPaths: string[] = [];
+
+  afterEach(async () => {
+    while (cleanupPaths.length > 0) {
+      const path = cleanupPaths.pop();
+      if (path) await rm(path, { recursive: true, force: true });
+    }
+  });
+
+  it("continues dirty quota-limited work on another account in the same locked workspace", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-quota-");
+    const workers: FakePromptWorker[] = [];
+    const slotRuns: string[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<PromptJob, PromptResult>({
+      poolId: "safe-execution-pool",
+      slots: 2,
+      workerFactory: ({ slotIndex, workerId }) => {
+        const worker = new FakePromptWorker(workerId, async (job, self) => {
+          slotRuns.push(self.workerId);
+          if (slotIndex === 0) {
+            await writeFile(join(job.workspacePath, "feature.txt"), "partial\n");
+            self.capacitySnapshot = {
+              availability: "cooldown",
+              reason: "quota_limited",
+              cooldownUntil: new Date(Date.now() + 60_000),
+              details: { accountId: "account-a" },
+            };
+            throw new SubscriptionWorkerError(
+              "subscription_worker_run_failed",
+              "Quota limited.",
+              { details: { reason: "quota_limited", accountId: "account-a" } },
+            );
+          }
+          expect(job.prompt).toContain("Continue the same task");
+          expect(job.prompt).toContain("Do not restart from scratch");
+          expect(await readFile(join(job.workspacePath, "feature.txt"), "utf8"))
+            .toBe("partial\n");
+          await writeFile(join(job.workspacePath, "feature.txt"), "done\n");
+          return { output: "completed on account-b" };
+        });
+        worker.capacitySnapshot = {
+          availability: "available",
+          details: { accountId: slotIndex === 0 ? "account-a" : "account-b" },
+        };
+        workers.push(worker);
+        return worker;
+      },
+    });
+    await pool.start();
+
+    const journal = new InMemoryAttemptJournal();
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+
+    const result = await runner.run({
+      taskId: "task-quota",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "Implement feature.", workspacePath },
+      originalPrompt: "Implement feature.",
+      policy: { maxAttempts: 2 },
+      summarizeResult: (value) => value.output,
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.replayed).toBe(false);
+    expect(slotRuns).toEqual([
+      "safe-execution-pool:slot-1",
+      "safe-execution-pool:slot-2",
+    ]);
+    expect(await readFile(join(workspacePath, "feature.txt"), "utf8")).toBe(
+      "done\n",
+    );
+    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts[0]?.failureReason).toBe("quota_limited");
+    expect(result.attempts[0]?.workerId).toBe("safe-execution-pool:slot-1");
+    expect(result.attempts[0]?.accountId).toBe("account-a");
+    expect(result.attempts[1]?.status).toBe("completed");
+    expect(workers[0]?.capacity().availability).toBe("cooldown");
+
+    await pool.dispose();
+  });
+
+  it("rejects concurrent tasks for the same existing workspace lock", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-lock-");
+    const gate = deferred<void>();
+    const entered = deferred<void>();
+    const pool = {
+      async run(): Promise<PromptResult> {
+        entered.resolve();
+        await gate.promise;
+        return { output: "done" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+
+    const first = runner.run({
+      taskId: "task-lock-1",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "first", workspacePath },
+      originalPrompt: "first",
+      policy: { maxAttempts: 1 },
+    });
+    await entered.promise;
+
+    await expect(
+      runner.run({
+        taskId: "task-lock-2",
+        workspace: { mode: "existing_locked", path: workspacePath },
+        effectMode: "workspace_patch",
+        provider: "codex",
+        pool,
+        job: { prompt: "second", workspacePath },
+        originalPrompt: "second",
+        policy: { maxAttempts: 1 },
+      }),
+    ).rejects.toMatchObject({
+      code: "safe_execution_workspace_locked",
+    });
+
+    gate.resolve();
+    await expect(first).resolves.toMatchObject({ status: "completed" });
+  });
+
+  it("replays a completed task by taskId without running the worker again", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-replay-");
+    let runs = 0;
+    const pool = {
+      async run(): Promise<PromptResult> {
+        runs += 1;
+        return { output: "already done" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+    const input = {
+      taskId: "task-replay",
+      workspace: { mode: "existing_locked", path: workspacePath } as const,
+      effectMode: "workspace_patch" as const,
+      provider: "codex",
+      pool,
+      job: { prompt: "do once", workspacePath },
+      originalPrompt: "do once",
+      policy: { maxAttempts: 1 },
+    };
+
+    const first = await runner.run(input);
+    const second = await runner.run(input);
+
+    if (first.status !== "completed") throw new Error("expected completed");
+    if (second.status !== "completed") throw new Error("expected replayed completed");
+    expect(second.replayed).toBe(true);
+    expect(second.result).toEqual({ output: "already done" });
+    expect(runs).toBe(1);
+  });
+
+  it("stops on permission_required without switching accounts", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-permission-");
+    let runs = 0;
+    const pool = {
+      async run(): Promise<PromptResult> {
+        runs += 1;
+        throw new SubscriptionWorkerError(
+          "subscription_worker_run_failed",
+          "Permission required.",
+          { details: { reason: "permission_required" } },
+        );
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+
+    const result = await runner.run({
+      taskId: "task-permission",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "needs approval", workspacePath },
+      originalPrompt: "needs approval",
+      policy: { maxAttempts: 3 },
+      continuationJobFactory: ({ continuationPacket }) => ({
+        prompt: continuationPacket.message,
+        workspacePath,
+      }),
+    });
+
+    if (result.status !== "failed") throw new Error("expected failed");
+    expect(result.reason).toBe("permission_required");
+    expect(result.attempts).toHaveLength(1);
+    expect(runs).toBe(1);
+  });
+
+  it("stops after an unknown error when the workspace became dirty", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-unknown-");
+    let runs = 0;
+    const pool = {
+      async run(job: PromptJob): Promise<PromptResult> {
+        runs += 1;
+        await writeFile(join(job.workspacePath, "unknown.txt"), "dirty\n");
+        throw new Error("unexpected failure");
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+
+    const result = await runner.run({
+      taskId: "task-unknown",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "make change", workspacePath },
+      originalPrompt: "make change",
+      policy: { maxAttempts: 2 },
+      continuationJobFactory: ({ continuationPacket }) => ({
+        prompt: continuationPacket.message,
+        workspacePath,
+      }),
+    });
+
+    if (result.status !== "failed") throw new Error("expected failed");
+    expect(result.reason).toBe("unknown_error");
+    expect(result.safeMessage).toContain("unknown error changed the workspace");
+    expect(result.attempts).toHaveLength(1);
+    expect(runs).toBe(1);
+  });
+
+  it("marks retryable partial work when no continuation job can be built", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-no-continuation-");
+    const journal = new InMemoryAttemptJournal();
+    let runs = 0;
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+
+    const result = await runner.run({
+      taskId: "task-no-continuation",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(job: { readonly workspacePath: string }): Promise<PromptResult> {
+          runs += 1;
+          await writeFile(join(job.workspacePath, "partial.txt"), "partial\n");
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Quota limited.",
+            { details: { reason: "quota_limited" } },
+          );
+        },
+      },
+      job: { workspacePath },
+      originalPrompt: "finish no-continuation task",
+      policy: { maxAttempts: 2 },
+    });
+
+    if (result.status !== "partial") throw new Error("expected partial");
+    expect(result.reason).toBe("quota_limited");
+    expect(result.safeMessage).toContain("continuationJobFactory");
+    expect(result.task.status).toBe("partial");
+    expect((await journal.readTask({ taskId: "task-no-continuation" }))?.status)
+      .toBe("partial");
+    expect(result.attempts).toHaveLength(1);
+    expect(runs).toBe(1);
+  });
+
+  it("keeps a resumed partial task partial when no continuation job can be built", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-resume-no-continuation-");
+    const journal = new InMemoryAttemptJournal();
+    const firstRunner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+    await firstRunner.run({
+      taskId: "task-resume-no-continuation",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(job: PromptJob): Promise<PromptResult> {
+          await writeFile(join(job.workspacePath, "partial.txt"), "partial\n");
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Quota limited.",
+            { details: { reason: "quota_limited" } },
+          );
+        },
+      },
+      job: { prompt: "make partial", workspacePath },
+      originalPrompt: "make partial",
+      policy: { maxAttempts: 1 },
+    });
+
+    let resumedRuns = 0;
+    const secondRunner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+    const result = await secondRunner.run({
+      taskId: "task-resume-no-continuation",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          resumedRuns += 1;
+          return { output: "should not run" };
+        },
+      },
+      job: { workspacePath },
+      originalPrompt: "make partial",
+      policy: { maxAttempts: 2 },
+    });
+
+    if (result.status !== "partial") throw new Error("expected partial");
+    expect(result.reason).toBe("quota_limited");
+    expect(result.safeMessage).toContain("continuationJobFactory");
+    expect(result.task.status).toBe("partial");
+    expect(result.attempts).toHaveLength(1);
+    expect(resumedRuns).toBe(0);
+  });
+
+  it("resumes a partial task from the local file journal with a continuation packet", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-journal-");
+    const stateRoot = await tempPath("safe-execution-state-");
+    const journal = new LocalFileAttemptJournal(stateRoot);
+    const firstRunner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+    await firstRunner.run({
+      taskId: "task-journal",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(job: PromptJob): Promise<PromptResult> {
+          await writeFile(join(job.workspacePath, "journal.txt"), "partial\n");
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Quota limited.",
+            { details: { reason: "quota_limited" } },
+          );
+        },
+      },
+      job: { prompt: "finish journal task", workspacePath },
+      originalPrompt: "finish journal task",
+      policy: { maxAttempts: 1 },
+    });
+
+    let resumedPrompt = "";
+    const secondRunner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+    const result = await secondRunner.run({
+      taskId: "task-journal",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(job: PromptJob): Promise<PromptResult> {
+          resumedPrompt = job.prompt;
+          await writeFile(join(job.workspacePath, "journal.txt"), "done\n");
+          return { output: "resumed" };
+        },
+      },
+      job: { prompt: "finish journal task", workspacePath },
+      originalPrompt: "finish journal task",
+      policy: { maxAttempts: 2 },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.attempts).toHaveLength(2);
+    expect(resumedPrompt).toContain("Continue the same task");
+    expect(resumedPrompt).toContain("Previous attempt stopped because: quota_limited");
+    expect(await readFile(join(workspacePath, "journal.txt"), "utf8")).toBe(
+      "done\n",
+    );
+  });
+
+  it("uses only safe read-only git snapshot commands", async () => {
+    const workspacePath = await tempPath("safe-execution-git-commands-");
+    const logPath = join(workspacePath, "git.log");
+    const fakeGitPath = join(workspacePath, "fake-git.cjs");
+    await writeFile(
+      fakeGitPath,
+      [
+        "#!/usr/bin/env node",
+        "const fs = require('node:fs');",
+        "const args = process.argv.slice(2);",
+        "fs.appendFileSync(process.env.GIT_COMMAND_LOG, args.join(' ') + '\\n');",
+        "if (args[0] === 'rev-parse') { console.log('true'); process.exit(0); }",
+        "if (args[0] === 'status') { console.log(' M tracked.txt'); process.exit(0); }",
+        "if (args[0] === 'diff' && args.includes('--name-only')) { console.log('tracked.txt'); process.exit(0); }",
+        "if (args[0] === 'diff' && args.includes('--stat')) { console.log(' tracked.txt | 1 +'); process.exit(0); }",
+        "if (args[0] === 'diff') { console.log('diff --git a/tracked.txt b/tracked.txt'); process.exit(0); }",
+        "process.exit(1);",
+        "",
+      ].join("\n"),
+      { encoding: "utf8", mode: 0o700 },
+    );
+    await chmod(fakeGitPath, 0o700);
+    const original = process.env.GIT_COMMAND_LOG;
+    process.env.GIT_COMMAND_LOG = logPath;
+    try {
+      const snapshotter = new DefaultWorkspaceSnapshotter({
+        gitBinaryPath: fakeGitPath,
+      });
+      const snapshot = await snapshotter.capture({
+        workspacePath,
+        includeDiff: true,
+      });
+      expect(snapshot.changedFiles).toEqual(["tracked.txt"]);
+    } finally {
+      if (original === undefined) {
+        delete process.env.GIT_COMMAND_LOG;
+      } else {
+        process.env.GIT_COMMAND_LOG = original;
+      }
+    }
+
+    const commands = (await readFile(logPath, "utf8")).trim().split("\n");
+    expect(commands).toEqual([
+      "rev-parse --is-inside-work-tree",
+      "status --porcelain",
+      "diff --name-only --no-ext-diff --",
+      "diff --stat --no-ext-diff",
+      "diff --no-ext-diff --",
+    ]);
+    expect(commands.join("\n")).not.toMatch(/\b(reset|clean|checkout|apply)\b/);
+  });
+
+  async function tempPath(prefix: string): Promise<string> {
+    const path = await mkdtemp(join(tmpdir(), prefix));
+    cleanupPaths.push(path);
+    return path;
+  }
+
+  async function gitWorkspace(prefix: string): Promise<string> {
+    const workspacePath = await tempPath(prefix);
+    await execFileAsync("git", ["init"], { cwd: workspacePath });
+    await writeFile(join(workspacePath, "README.md"), "base\n", "utf8");
+    await execFileAsync("git", ["add", "README.md"], { cwd: workspacePath });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=Subscription Runtime Tests",
+        "-c",
+        "user.email=tests@example.com",
+        "commit",
+        "-m",
+        "Initial commit",
+      ],
+      { cwd: workspacePath },
+    );
+    return workspacePath;
+  }
+});
+
+class FakePromptWorker
+  implements CapacityAwareSubscriptionWorker<PromptJob, PromptResult>
+{
+  state: SubscriptionWorkerState = "created";
+  capacitySnapshot: WorkerCapacitySnapshot = { availability: "available" };
+
+  constructor(
+    readonly workerId: string,
+    private readonly handler: (
+      job: PromptJob,
+      self: FakePromptWorker,
+    ) => Promise<PromptResult>,
+  ) {}
+
+  async start(): Promise<void> {
+    this.state = "started";
+  }
+
+  async prewarm(): Promise<SubscriptionWorkerPrewarmResult> {
+    this.state = "ready";
+    return {
+      status: "ready",
+      warmedAt: new Date(),
+      warnings: [],
+    };
+  }
+
+  run(job: PromptJob): Promise<PromptResult> {
+    return this.handler(job, this);
+  }
+
+  async health(): Promise<SubscriptionWorkerHealth> {
+    return {
+      status: "healthy",
+      state: this.state,
+      checkedAt: new Date(),
+      warnings: [],
+    };
+  }
+
+  capacity(): WorkerCapacitySnapshot {
+    return this.capacitySnapshot;
+  }
+
+  async dispose(): Promise<void> {
+    this.state = "disposed";
+  }
+}
+
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T | PromiseLike<T>) => void;
+  readonly reject: (reason?: unknown) => void;
+} {
+  let resolve: (value: T | PromiseLike<T>) => void = () => {};
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}

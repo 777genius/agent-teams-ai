@@ -1,4 +1,5 @@
 import type {
+  ProviderTaskControls,
   ProviderTaskResult,
   RedactorPort,
   RunnerPort,
@@ -13,6 +14,8 @@ export type CodexReasoningEffort =
   | "medium"
   | "high"
   | "xhigh";
+
+export type CodexSandboxMode = "read-only" | "workspace-write";
 
 export type CodexMaterializedSession = {
   readonly home: string;
@@ -58,6 +61,7 @@ export type CodexExecutionEngine = {
     readonly redactor: RedactorPort;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly outputSchema?: unknown;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult>;
@@ -111,6 +115,7 @@ export class PackagedCodexJsonExecutionEngine implements CodexExecutionEngine {
     readonly redactor: RedactorPort;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
+    readonly sandboxMode?: CodexSandboxMode;
     readonly outputSchema?: unknown;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult> {
@@ -118,6 +123,9 @@ export class PackagedCodexJsonExecutionEngine implements CodexExecutionEngine {
       jsonFlag: this.options.jsonFlag ?? "--json",
       model: input.model,
       reasoningEffort: input.reasoningEffort,
+      ...(input.sandboxMode === undefined
+        ? {}
+        : { sandboxMode: input.sandboxMode }),
     });
 
     const result = await input.runner.run({
@@ -187,6 +195,7 @@ export function buildCodexJsonExecArgs(input: {
   readonly jsonFlag: "--json" | "--experimental-json";
   readonly model: string;
   readonly reasoningEffort: CodexReasoningEffort;
+  readonly sandboxMode?: CodexSandboxMode;
 }): readonly string[] {
   return [
     "exec",
@@ -194,7 +203,7 @@ export function buildCodexJsonExecArgs(input: {
     "--model",
     input.model,
     "--sandbox",
-    "read-only",
+    input.sandboxMode ?? "read-only",
     "--config",
     'approval_policy="never"',
     "--config",
@@ -223,6 +232,13 @@ export function buildCodexJsonExecArgs(input: {
     "--skip-git-repo-check",
     "-",
   ];
+}
+
+export function codexSandboxModeForPermissionMode(
+  mode: ProviderTaskControls["permissionMode"] | undefined,
+): CodexSandboxMode {
+  if (mode === "allow-edits") return "workspace-write";
+  return "read-only";
 }
 
 export function codexExecutionFailure(

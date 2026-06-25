@@ -1,6 +1,6 @@
 import { type ClockPort, type ObservabilityPort, type ProviderTask, type RuntimeDeps } from "@vioxen/subscription-runtime/core";
 import { type CodexExecutionProfile, type CodexAppServerProcessFactory, type CodexReasoningEffort } from "@vioxen/subscription-runtime/provider-codex";
-import { type SubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState } from "@vioxen/subscription-runtime/worker-core";
+import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
 export type FileBackendCodexWorkerOptions = {
     readonly workerId?: string;
     readonly providerInstanceId: string;
@@ -29,6 +29,13 @@ export type FileBackendCodexWorkerOptions = {
     readonly workspace?: RuntimeDeps["workspace"];
     readonly workspacePath?: string;
     readonly clock?: ClockPort;
+    readonly capacityAccountId?: string;
+    readonly capacityPolicy?: CodexWorkerCapacityPolicy;
+};
+export type CodexWorkerCapacityPolicy = {
+    readonly softMaxRunsPerWindow?: number;
+    readonly windowMs?: number;
+    readonly quotaCooldownMs?: number;
 };
 export type FileBackendCodexWorkerJob = {
     readonly runId?: string;
@@ -48,7 +55,7 @@ export type FileBackendCodexWorkerResult = {
         readonly safeMessage: string;
     }[];
 };
-export declare class FileBackendCodexWorker implements SubscriptionWorker<FileBackendCodexWorkerJob, FileBackendCodexWorkerResult> {
+export declare class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<FileBackendCodexWorkerJob, FileBackendCodexWorkerResult> {
     private readonly options;
     readonly workerId: string;
     private workerState;
@@ -63,6 +70,11 @@ export declare class FileBackendCodexWorker implements SubscriptionWorker<FileBa
     private readonly runtime;
     private readonly ownedWorkspace;
     private readonly prewarmWorkspace;
+    private capacityState;
+    private windowStartedAtMs;
+    private runsInWindow;
+    private quotaGroup;
+    private capacityAccountId;
     constructor(options: FileBackendCodexWorkerOptions);
     get state(): SubscriptionWorkerState;
     start(): Promise<void>;
@@ -72,6 +84,15 @@ export declare class FileBackendCodexWorker implements SubscriptionWorker<FileBa
     run(job: FileBackendCodexWorkerJob): Promise<FileBackendCodexWorkerResult>;
     health(): Promise<SubscriptionWorkerHealth>;
     dispose(): Promise<void>;
+    capacity(): WorkerCapacitySnapshot;
+    private taskResultToOutput;
+    private recordSuccessfulRun;
+    private recordFailure;
+    private recordBlocked;
+    private rollCapacityWindow;
+    private rememberStoredQuotaGroup;
+    private rememberQuotaGroup;
+    private withCapacityDetails;
     private assertStarted;
 }
 //# sourceMappingURL=file-backend-codex-worker.d.ts.map

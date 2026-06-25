@@ -6,6 +6,7 @@ import { codexAuthJsonFromArtifact } from "./codex-auth-json-codec.js";
 import { pruneCodexChildEnv } from "./codex-cli-domain.js";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup.js";
 import { composeCodexPrompt } from "./codex-prompt-composer.js";
+import { codexSandboxModeForPermissionMode } from "./codex-json-execution-engine.js";
 import { codexAgentCapabilities, codexAgentId, codexProviderId, defaultCodexModel, } from "./capabilities.js";
 import { classifyCodexFailure } from "./failure-classifier.js";
 export class CodexCliAgentDriver {
@@ -38,12 +39,19 @@ export class CodexCliAgentDriver {
         await mkdir(tempHome, { recursive: true, mode: 0o700 });
         await mkdir(tempCodexHome, { recursive: true, mode: 0o700 });
         try {
-            await writeCodexHomeSnapshot({ codexHome: tempCodexHome, authJson });
+            const sandboxMode = codexSandboxModeForPermissionMode(input.task.controls?.permissionMode);
+            await writeCodexHomeSnapshot({
+                codexHome: tempCodexHome,
+                authJson,
+                sandboxMode,
+            });
             const result = await input.runner.run({
                 command: this.options.codexBinaryPath ?? "codex",
                 args: [
                     "exec",
                     "--skip-git-repo-check",
+                    "--sandbox",
+                    sandboxMode,
                     "--model",
                     this.options.model ?? defaultCodexModel,
                     // Verified with codex-cli 0.139.0: `codex exec -- -` reads the prompt from stdin.
@@ -92,7 +100,7 @@ export class CodexCliAgentDriver {
 async function writeCodexHomeSnapshot(input) {
     const config = [
         'approval_policy = "never"',
-        'sandbox_mode = "read-only"',
+        `sandbox_mode = ${JSON.stringify(input.sandboxMode)}`,
         "",
         "[history]",
         'persistence = "none"',

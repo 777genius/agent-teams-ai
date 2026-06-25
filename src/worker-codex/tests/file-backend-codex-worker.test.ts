@@ -7,19 +7,16 @@ import type {
   RunnerPort,
   WorkspacePort,
 } from "@vioxen/subscription-runtime/core";
+import {
+  BoundedSubscriptionWorkerPool,
+  InMemoryWorkerAccountCapacityStore,
+  accountCapacityAwareWorkerFactory,
+} from "@vioxen/subscription-runtime/worker-core";
 import { describe, expect, it } from "vitest";
 import { FileBackendCodexWorker } from "../index";
 import { NodeProcessRunner } from "../node-process-runner";
 
-const validAuthJson = JSON.stringify({
-  auth_mode: "chatgpt",
-  tokens: {
-    refresh_token: "refresh-token",
-    access_token: "access-token",
-    expiry: "2026-05-31T23:00:00.000Z",
-  },
-  last_refresh: "2026-05-31T00:00:00.000Z",
-});
+const validAuthJson = codexAuthJson("refresh-token");
 
 describe("FileBackendCodexWorker", () => {
   it("exposes lifecycle, seed, prewarm, health, and dispose", async () => {
@@ -273,13 +270,101 @@ describe("FileBackendCodexWorker", () => {
       await rm(rootDir, { recursive: true, force: true });
     }
   });
+
+  it("retries quota-limited Codex work on a different account", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-"));
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const accountCapacityStore = new InMemoryWorkerAccountCapacityStore();
+    const appServers = [
+      new FakeAppServerFactory({
+        emitTopLevelErrorOnTurn: "You've hit your usage limit.",
+      }),
+      new FakeAppServerFactory(),
+      new FakeAppServerFactory(),
+    ];
+    const workers: FileBackendCodexWorker[] = [];
+    const pool = new BoundedSubscriptionWorkerPool<
+      Parameters<FileBackendCodexWorker["run"]>[0],
+      Awaited<ReturnType<FileBackendCodexWorker["run"]>>
+    >({
+      poolId: "codex-quota-account-aware-pool",
+      slots: 3,
+      clock,
+      retryPolicy: {
+        maxAttempts: 3,
+        retryOnSlotCapacityUnavailable: true,
+      },
+      workerFactory: accountCapacityAwareWorkerFactory({
+        accountCapacityStore,
+        clock,
+        workerFactory: ({ slotIndex, workerId }) => {
+          const worker = new FileBackendCodexWorker({
+            workerId,
+            providerInstanceId: `codex-quota-account-${slotIndex + 1}`,
+            stateRootDir: rootDir,
+            codexBinaryPath: "codex",
+            encryptionKey: new Uint8Array(32).fill(slotIndex + 10),
+            appServerProcessFactory: appServers[slotIndex]!.create,
+            runner: new StaticRunner({
+              exitCode: slotIndex === 0 ? 1 : 0,
+              stdout: slotIndex === 0 ? "" : "OK",
+              stderr:
+                slotIndex === 0 ? "You've hit your usage limit." : "",
+            }),
+            capacityPolicy: {
+              quotaCooldownMs: 60_000,
+            },
+            clock,
+          });
+          workers.push(worker);
+          return worker;
+        },
+      }),
+    });
+
+    try {
+      await pool.start();
+      await workers[0]!.seedCodexAuthJson(codexAuthJson("account-a-token"));
+      await workers[1]!.seedCodexAuthJson(codexAuthJson("account-a-token"));
+      await workers[2]!.seedCodexAuthJson(codexAuthJson("account-b-token"));
+
+      await expect(pool.run({ prompt: "review" })).resolves.toEqual({
+        outputText: "OK",
+        warnings: [],
+      });
+
+      const accountId = workers[0]!.capacity().details?.quotaGroup;
+      expect(accountId).toBeTruthy();
+      expect(
+        accountCapacityStore.read({ accountId: accountId!, now: clock.now() }),
+      ).toMatchObject({
+        availability: "cooldown",
+        reason: "quota_limited",
+      });
+      expect(appServers[0]!.prompts).toEqual(["review"]);
+      expect(appServers[1]!.prompts).toEqual([]);
+      expect(appServers[2]!.prompts).toEqual(["review"]);
+    } finally {
+      await pool.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
 });
+
+type FakeAppServerFactoryOptions = {
+  readonly emitTopLevelErrorOnTurn?: string;
+};
 
 class FakeAppServerFactory {
   spawnCount = 0;
   readonly prompts: string[] = [];
   readonly threadCwds: string[] = [];
   readonly envs: Readonly<Record<string, string>>[] = [];
+
+  constructor(private readonly options: FakeAppServerFactoryOptions = {}) {}
 
   readonly create = (input: {
     readonly env: Readonly<Record<string, string>>;
@@ -289,6 +374,7 @@ class FakeAppServerFactory {
     return new FakeAppServerProcess(
       (prompt) => this.prompts.push(prompt),
       (cwd) => this.threadCwds.push(cwd),
+      this.options,
     );
   };
 }
@@ -310,6 +396,7 @@ class FakeAppServerProcess extends EventEmitter {
   constructor(
     private readonly onPrompt: (prompt: string) => void,
     private readonly onThreadCwd: (cwd: string) => void,
+    private readonly options: FakeAppServerFactoryOptions,
   ) {
     super();
   }
@@ -348,6 +435,16 @@ class FakeAppServerProcess extends EventEmitter {
         this.onPrompt(prompt);
         this.respond(request.id, { turn: { id: turnId } });
         setTimeout(() => {
+          if (this.options.emitTopLevelErrorOnTurn) {
+            this.stdout.emit(
+              "data",
+              `${JSON.stringify({
+                method: "error",
+                message: this.options.emitTopLevelErrorOnTurn,
+              })}\n`,
+            );
+            return;
+          }
           this.notify("item/agentMessage/delta", {
             turnId,
             delta: "OK",
@@ -374,6 +471,36 @@ class FakeAppServerProcess extends EventEmitter {
 class FakeReadable extends EventEmitter {
   setEncoding(): this {
     return this;
+  }
+}
+
+class StaticRunner implements RunnerPort {
+  readonly runnerId = "node-process";
+  readonly capabilities = {
+    runnerId: this.runnerId,
+    supportsEnvAllowlist: true,
+    supportsWorkingDirectory: true,
+    supportsTimeout: true,
+    supportsAbortSignal: true,
+    supportsOutputRedaction: true,
+    supportsReadOnlySandbox: true,
+    readOnlyFilesystem: true,
+    platform: "node-process" as const,
+  };
+
+  constructor(
+    private readonly result: {
+      readonly exitCode: number;
+      readonly stdout: string;
+      readonly stderr: string;
+    },
+  ) {}
+
+  async run() {
+    return {
+      ...this.result,
+      durationMs: 1,
+    };
   }
 }
 
@@ -410,6 +537,18 @@ class RefreshingFakeRunner implements RunnerPort {
     await writeFile(authPath, JSON.stringify(auth), "utf8");
     return { exitCode: 0, stdout: "OK", stderr: "", durationMs: 50 };
   }
+}
+
+function codexAuthJson(refreshToken: string): string {
+  return JSON.stringify({
+    auth_mode: "chatgpt",
+    tokens: {
+      refresh_token: refreshToken,
+      access_token: "access-token",
+      expiry: "2026-05-31T23:00:00.000Z",
+    },
+    last_refresh: "2026-05-31T00:00:00.000Z",
+  });
 }
 
 function extractFakePrompt(

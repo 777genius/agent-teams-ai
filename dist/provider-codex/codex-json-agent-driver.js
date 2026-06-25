@@ -1,7 +1,7 @@
 import { assertProviderTaskSystemPrompt, } from "@vioxen/subscription-runtime/core";
 import { codexJsonAgentCapabilities, codexJsonAgentId, codexProviderId, defaultCodexModel, } from "./capabilities.js";
 import { classifyCodexFailure } from "./failure-classifier.js";
-import { PackagedCodexJsonExecutionEngine, codexExecutionFailure, } from "./codex-json-execution-engine.js";
+import { PackagedCodexJsonExecutionEngine, codexSandboxModeForPermissionMode, codexExecutionFailure, } from "./codex-json-execution-engine.js";
 import { CodexEphemeralSessionMaterializer, sessionArtifactHash, } from "./codex-session-materializer.js";
 export class CodexJsonAgentDriver {
     options;
@@ -65,6 +65,7 @@ export class CodexJsonAgentDriver {
                 redactor: input.redactor,
                 model: input.task.controls?.model ?? this.model,
                 reasoningEffort: this.reasoningEffort,
+                sandboxMode: codexSandboxModeForPermissionMode(input.task.controls?.permissionMode),
                 abortSignal: input.abortSignal,
             });
             return {
