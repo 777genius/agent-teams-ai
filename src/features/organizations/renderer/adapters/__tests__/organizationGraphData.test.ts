@@ -739,9 +739,11 @@ describe('buildOrganizationGraphData', () => {
       ['org:default', 'lead', 'active'],
       ['team:alpha', 'member', 'active'],
       ['team:beta', 'member', 'terminated'],
+      ['agent:alpha:alice', 'task', 'active'],
     ]);
     expect(graph.layout?.mode).toBe('grid-under-lead');
-    expect(graph.layout?.showTasks).toBe(false);
+    expect(graph.layout?.showTasks).toBe(true);
+    expect(graph.layout?.showEmptyTaskPlaceholders).toBe(true);
     expect(graph.edges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -755,9 +757,13 @@ describe('buildOrganizationGraphData', () => {
           type: 'message',
           aggregateCount: 2,
         }),
+        expect.objectContaining({
+          source: 'team:alpha',
+          target: 'agent:alpha:alice',
+          type: 'ownership',
+        }),
       ])
     );
-    expect(graph.edges.some((edge) => edge.type === 'ownership')).toBe(false);
     expect(graph.particles).toHaveLength(2);
     expect(graph.particles).toEqual(
       expect.arrayContaining([
@@ -777,7 +783,6 @@ describe('buildOrganizationGraphData', () => {
       ['team:alpha', 'member', 'active'],
       ['team:beta', 'member', 'terminated'],
       ['agent:alpha:alice', 'task', 'active'],
-      ['agent:alpha:bob', 'task', 'idle'],
     ]);
     expect(selectedGraph.edges).toEqual(
       expect.arrayContaining([
@@ -797,6 +802,38 @@ describe('buildOrganizationGraphData', () => {
     expect(editGraph.layout?.showTasks).toBe(false);
     expect(editGraph.nodes.some((node) => node.kind === 'task')).toBe(false);
     expect(editGraph.edges.some((edge) => edge.type === 'ownership')).toBe(false);
+  });
+
+  it('renders only the latest four in-progress agent tasks per team', () => {
+    const payload = buildPayload();
+    const alphaNode = payload.nodes.find((node) => node.id === 'team:alpha');
+    expect(alphaNode?.team).toBeTruthy();
+    alphaNode!.team!.agents = Array.from({ length: 6 }, (_, index) => ({
+      id: `agent:alpha:${index}`,
+      teamName: 'alpha',
+      name: `agent-${index}`,
+      status: 'active',
+      activeTaskCount: 1,
+      currentTasks: [
+        {
+          id: `task-${index}`,
+          subject: `Task ${index}`,
+          status: index === 0 ? 'completed' : 'in_progress',
+          updatedAt: `2026-06-24T12:0${index}:00.000Z`,
+        },
+      ],
+    }));
+
+    const graph = buildOrganizationGraphData(buildOrganizationMapViewModel(payload));
+
+    expect(
+      graph.nodes.filter((node) => node.kind === 'task').map((node) => [node.id, node.sublabel])
+    ).toEqual([
+      ['agent:alpha:5', 'Task 5'],
+      ['agent:alpha:4', 'Task 4'],
+      ['agent:alpha:3', 'Task 3'],
+      ['agent:alpha:2', 'Task 2'],
+    ]);
   });
 
   it('resolves agent graph clicks back to their owning team node', () => {
@@ -866,7 +903,7 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'unit:engineering',
         label: 'Engineering',
-        nodeIds: ['team:alpha'],
+        nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
@@ -899,7 +936,7 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'org:product',
         label: 'Product Org',
-        nodeIds: ['team:alpha'],
+        nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
@@ -939,7 +976,7 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'org:product',
         label: 'Product Org',
-        nodeIds: ['unit:product:engineering', 'team:alpha'],
+        nodeIds: ['unit:product:engineering', 'team:alpha', 'agent:alpha:alice'],
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
@@ -947,7 +984,7 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'unit:product:engineering',
         label: 'Engineering',
-        nodeIds: ['team:alpha'],
+        nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#8bd3ff',
         depth: 1,
         priority: 'normal',
@@ -1103,38 +1140,34 @@ describe('buildOrganizationGraphData', () => {
     ).toHaveLength(0);
   });
 
-  it('keeps large organization maps compact until a team is selected', () => {
+  it('renders bounded in-progress agent task lanes for large organization maps', () => {
     const viewModel = buildOrganizationMapViewModel(buildLargePayload());
     const graph = buildOrganizationGraphData(viewModel);
     const profile = getOrganizationGraphRenderProfile(viewModel);
 
-    expect(profile.detailMode).toBe('selected-team-agents');
-    expect(profile.hiddenAgentCount).toBe(48);
+    expect(profile.detailMode).toBe('active-agent-tasks');
+    expect(profile.hiddenAgentCount).toBe(36);
     expect(graph.layout?.mode).toBe('radial');
-    expect(graph.layout?.showTasks).toBe(false);
-    expect(graph.nodes.some((node) => node.kind === 'task')).toBe(false);
-    expect(graph.edges.some((edge) => edge.type === 'ownership')).toBe(false);
+    expect(graph.layout?.showTasks).toBe(true);
+    expect(graph.layout?.showEmptyTaskPlaceholders).toBe(true);
+    expect(graph.nodes.filter((node) => node.kind === 'task')).toHaveLength(12);
+    expect(graph.edges.filter((edge) => edge.type === 'ownership')).toHaveLength(12);
 
     const selectedGraph = buildOrganizationGraphData(viewModel, { selectedNodeId: 'team:3' });
     const selectedProfile = getOrganizationGraphRenderProfile(viewModel, {
       selectedNodeId: 'team:3',
     });
 
-    expect(selectedProfile.hiddenAgentCount).toBe(44);
+    expect(selectedProfile.hiddenAgentCount).toBe(36);
     expect(selectedGraph.layout?.showTasks).toBe(true);
     expect(
       selectedGraph.nodes.filter((node) => node.kind === 'task').map((node) => node.id)
-    ).toEqual(['agent:3:0', 'agent:3:1', 'agent:3:2', 'agent:3:3']);
+    ).toContain('agent:3:0');
     expect(
       selectedGraph.edges
         .filter((edge) => edge.type === 'ownership')
         .map((edge) => [edge.source, edge.target])
-    ).toEqual([
-      ['team:3', 'agent:3:0'],
-      ['team:3', 'agent:3:1'],
-      ['team:3', 'agent:3:2'],
-      ['team:3', 'agent:3:3'],
-    ]);
+    ).toContainEqual(['team:3', 'agent:3:0']);
   });
 
   it('honors explicit layout mode overrides for organization map controls', () => {

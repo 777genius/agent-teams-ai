@@ -495,5 +495,36 @@ export function drawColumnHeaders(
         KANBAN_HEADER_LETTER_SPACING
       );
     }
+
+    if (zone.emptyPlaceholder && zoom >= 0.35) {
+      drawEmptyTaskPlaceholder(ctx, zone.emptyPlaceholder);
+    }
   }
+}
+
+function drawEmptyTaskPlaceholder(
+  ctx: CanvasRenderingContext2D,
+  placeholder: NonNullable<KanbanZoneInfo['emptyPlaceholder']>
+): void {
+  const w = TASK_PILL.width;
+  const h = 42;
+
+  ctx.save();
+  ctx.translate(placeholder.x, placeholder.y);
+  drawPillShell(ctx, {
+    width: w,
+    height: h,
+    radius: TASK_PILL.borderRadius,
+    fillStyle: 'rgba(22, 30, 52, 0.46)',
+    borderColor: hexWithAlpha(placeholder.color, 0.36),
+    borderWidth: 1,
+    shadowColor: 'rgba(15, 23, 42, 0.22)',
+    shadowBlur: 10,
+  });
+  ctx.font = '600 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = hexWithAlpha(placeholder.color, 0.88);
+  ctx.fillText(placeholder.label, 0, 0);
+  ctx.restore();
 }

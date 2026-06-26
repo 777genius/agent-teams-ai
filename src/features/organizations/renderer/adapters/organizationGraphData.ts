@@ -15,7 +15,7 @@ import type {
 const MAX_PARTICLES_PER_RELATION = 3;
 const MAX_PARTICLES_DETAILED_MAP = 96;
 const MAX_PARTICLES_COMPACT_MAP = 48;
-const MAX_AGENTS_PER_RENDERED_TEAM = 8;
+const MAX_ACTIVE_AGENT_TASKS_PER_TEAM = 4;
 const COMPACT_LAYOUT_MAX_OWNER_COUNT = 10;
 const ORGANIZATION_GRID_MAX_COLUMN_COUNT = 12;
 const ORGANIZATION_GRID_TOP_ROW_OFFSET = 2;
@@ -30,7 +30,7 @@ const SELECTIVE_AGENT_DETAILS_MESSAGE_THRESHOLD = 80;
 const ALL_ORGANIZATIONS_ROOT_NODE_ID = 'org:__all-organizations__';
 
 type OrganizationAgentDto = NonNullable<OrganizationNodeDto['team']>['agents'][number];
-type OrganizationGraphDetailMode = 'all-agents' | 'selected-team-agents';
+type OrganizationGraphDetailMode = 'active-agent-tasks' | 'hidden-agent-tasks';
 
 export interface OrganizationGraphText {
   organizationMap: string;
@@ -126,20 +126,6 @@ function toTeamState(node: OrganizationNodeDto): GraphNodeState {
   if (!team) return 'idle';
   if (team.taskCounts.inProgress > 0) return 'active';
   return team.isOnline ? 'idle' : 'terminated';
-}
-
-function toAgentTaskStatus(
-  agent: OrganizationAgentDto
-): 'pending' | 'in_progress' | 'completed' | 'deleted' {
-  if (agent.status === 'active') return 'in_progress';
-  if (agent.status === 'offline') return 'deleted';
-  return 'pending';
-}
-
-function toAgentState(agent: OrganizationAgentDto): GraphNodeState {
-  if (agent.status === 'active') return 'active';
-  if (agent.status === 'offline') return 'terminated';
-  return 'idle';
 }
 
 function getTeamSummaryLine(
@@ -240,31 +226,50 @@ function buildOrgGraphNode(
   return null;
 }
 
-function getRenderableAgents(node: OrganizationNodeDto): OrganizationAgentDto[] {
-  return (node.team?.agents ?? []).slice(0, MAX_AGENTS_PER_RENDERED_TEAM);
+interface RenderableAgentTask {
+  agent: OrganizationAgentDto;
+  task: OrganizationAgentDto['currentTasks'][number];
+  index: number;
 }
 
-function buildAgentNodes(node: OrganizationNodeDto, text: OrganizationGraphText): GraphNode[] {
+function getRenderableAgentTasks(node: OrganizationNodeDto): RenderableAgentTask[] {
+  return (node.team?.agents ?? [])
+    .map((agent, index) => {
+      const task = agent.currentTasks
+        .filter((candidate) => candidate.status === 'in_progress')
+        .sort((left, right) => getTimestampMs(right.updatedAt) - getTimestampMs(left.updatedAt))
+        .at(0);
+      return task ? { agent, task, index } : null;
+    })
+    .filter((item): item is RenderableAgentTask => item !== null)
+    .sort((left, right) => {
+      const timestampDelta =
+        getTimestampMs(right.task.updatedAt) - getTimestampMs(left.task.updatedAt);
+      return timestampDelta !== 0 ? timestampDelta : right.index - left.index;
+    })
+    .slice(0, MAX_ACTIVE_AGENT_TASKS_PER_TEAM);
+}
+
+function buildAgentTaskNodes(node: OrganizationNodeDto, text: OrganizationGraphText): GraphNode[] {
   const team = node.team;
   if (!team) return [];
 
-  return getRenderableAgents(node).map((agent) => {
-    const currentTask = agent.currentTasks[0];
+  return getRenderableAgentTasks(node).map(({ agent, task }) => {
     return {
       id: agent.id,
       kind: 'task',
       label: agent.name,
-      state: toAgentState(agent),
+      state: 'active',
       color: agent.color,
       ownerId: node.id,
-      displayId: text.agentStatus(agent.status),
-      sublabel: currentTask?.subject ?? agent.role ?? text.agentStatus(agent.status),
-      taskStatus: toAgentTaskStatus(agent),
+      displayId: `${agent.name} - ${text.agentStatus(agent.status)}`,
+      sublabel: task.subject,
+      taskStatus: 'in_progress',
       reviewState: 'none',
       domainRef: {
         kind: 'task',
         teamName: team.teamName,
-        taskId: agent.id,
+        taskId: task.id,
       },
     };
   });
@@ -282,12 +287,12 @@ function buildContainmentEdges(viewModel: OrganizationMapViewModel): GraphEdge[]
 
 function buildAgentOwnershipEdges(teamNodes: readonly OrganizationNodeDto[]): GraphEdge[] {
   return teamNodes.flatMap((node) =>
-    getRenderableAgents(node).map((agent) => ({
+    getRenderableAgentTasks(node).map(({ agent }) => ({
       id: `org-agent:${node.id}:${agent.id}`,
       source: node.id,
       target: agent.id,
       type: 'ownership' as const,
-      color: agent.status === 'active' ? '#34d399' : '#475569',
+      color: '#34d399',
     }))
   );
 }
@@ -709,28 +714,22 @@ function buildOrganizationGraphContext(
     visibleOrganizationNodeIds,
     options.selectedNodeId
   );
-  const showSelectedTeamDetails = options.showSelectedTeamDetails ?? true;
+  const showActiveTeamTasks = options.showSelectedTeamDetails ?? true;
   const useSelectiveAgentDetails = shouldUseSelectiveAgentDetails(
     viewModel,
     visibleTeamNodes.length
   );
   const renderedAgentTeamIds = new Set(
-    useSelectiveAgentDetails
-      ? selectedTeamNodeId && showSelectedTeamDetails
-        ? [selectedTeamNodeId]
-        : []
-      : showSelectedTeamDetails
-        ? visibleTeamNodes.map((node) => node.id)
-        : []
+    showActiveTeamTasks ? visibleTeamNodes.map((node) => node.id) : []
   );
   const renderedAgentCount = visibleTeamNodes.reduce(
     (count, node) =>
-      renderedAgentTeamIds.has(node.id) ? count + getRenderableAgents(node).length : count,
+      renderedAgentTeamIds.has(node.id) ? count + getRenderableAgentTasks(node).length : count,
     0
   );
-  const detailMode: OrganizationGraphDetailMode = useSelectiveAgentDetails
-    ? 'selected-team-agents'
-    : 'all-agents';
+  const detailMode: OrganizationGraphDetailMode = showActiveTeamTasks
+    ? 'active-agent-tasks'
+    : 'hidden-agent-tasks';
 
   return {
     detailMode,
@@ -1015,7 +1014,9 @@ function buildOrganizationGroupFrames(
           return [];
         }
         const descendantNode = viewModel.nodeById.get(descendantNodeId);
-        return descendantNode ? getRenderableAgents(descendantNode).map((agent) => agent.id) : [];
+        return descendantNode
+          ? getRenderableAgentTasks(descendantNode).map(({ agent }) => agent.id)
+          : [];
       });
       return {
         id: node.id,
@@ -1056,7 +1057,7 @@ export function buildOrganizationGraphData(
   const renderedAgentTeamNodes = visibleTeamNodes.filter((node) =>
     renderedAgentTeamIds.has(node.id)
   );
-  const agentNodes = renderedAgentTeamNodes.flatMap((node) => buildAgentNodes(node, text));
+  const agentNodes = renderedAgentTeamNodes.flatMap((node) => buildAgentTaskNodes(node, text));
   const nodes = [...orgNodes, ...agentNodes];
   const graphNodeIds = new Set(nodes.map((node) => node.id));
   const renderedManualRelations = visibleManualRelations.filter(
@@ -1093,6 +1094,8 @@ export function buildOrganizationGraphData(
             showActivity: false,
             showLogs: false,
             showTasks: context.renderedAgentTeamIds.size > 0,
+            showEmptyTaskPlaceholders:
+              context.renderedAgentTeamIds.size > 0 && context.visibleTeamCount > 0,
             alignGridColumns: true,
             ownerOrder,
             slotAssignments: buildLayoutSlotAssignments(viewModel, ownerOrder, context.layoutMode),

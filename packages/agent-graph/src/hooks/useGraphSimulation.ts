@@ -119,6 +119,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           layoutSnapshotRef,
           lastValidSnapshotByTeamRef,
           dragOwnerPositionsRef,
+          layout: layoutRef.current,
           launchAnchorPositionsRef,
           activityRectByNodeIdRef,
           logRectByNodeIdRef,
@@ -141,6 +142,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           layoutSnapshotRef,
           lastValidSnapshotByTeamRef,
           dragOwnerPositionsRef,
+          layout: layoutRef.current,
           launchAnchorPositionsRef,
           activityRectByNodeIdRef,
           logRectByNodeIdRef,
@@ -319,7 +321,8 @@ export function useGraphSimulation(): UseGraphSimulationResult {
 function applySnapshotToNodes(
   nodes: GraphNode[],
   snapshot: StableSlotLayoutSnapshot,
-  dragOwnerPositions: ReadonlyMap<string, { x: number; y: number }>
+  dragOwnerPositions: ReadonlyMap<string, { x: number; y: number }>,
+  layout?: GraphLayoutPort
 ): void {
   const translatedFrames = getTranslatedMemberFrames(snapshot, dragOwnerPositions);
   const translatedFrameByOwnerId = new Map(
@@ -358,6 +361,7 @@ function applySnapshotToNodes(
     memberSlotFrames: translatedFrames,
     leadSlotFrame: snapshot.leadSlotFrame,
     unassignedTaskRect: snapshot.unassignedTaskRect,
+    showEmptyTaskPlaceholders: layout?.showEmptyTaskPlaceholders === true,
   });
   positionCrossTeamNodes(nodes, snapshot.fitBounds);
 }
@@ -369,6 +373,7 @@ function commitSnapshotGeometry(args: {
   layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
   lastValidSnapshotByTeamRef: { current: Map<string, StableSlotLayoutSnapshot> };
   dragOwnerPositionsRef: { current: ReadonlyMap<string, { x: number; y: number }> };
+  layout?: GraphLayoutPort;
   launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
   activityRectByNodeIdRef: { current: Map<string, StableRect> };
   logRectByNodeIdRef: { current: Map<string, StableRect> };
@@ -383,6 +388,7 @@ function commitSnapshotGeometry(args: {
     layoutSnapshotRef,
     lastValidSnapshotByTeamRef,
     dragOwnerPositionsRef,
+    layout,
     launchAnchorPositionsRef,
     activityRectByNodeIdRef,
     logRectByNodeIdRef,
@@ -393,7 +399,7 @@ function commitSnapshotGeometry(args: {
 
   layoutSnapshotRef.current = snapshot;
   lastValidSnapshotByTeamRef.current.set(teamName, snapshot);
-  applySnapshotToNodes(nodes, snapshot, dragOwnerPositionsRef.current);
+  applySnapshotToNodes(nodes, snapshot, dragOwnerPositionsRef.current, layout);
   if (fillMissingFallbackPositions) {
     fallbackPositionNodes(nodes);
   }

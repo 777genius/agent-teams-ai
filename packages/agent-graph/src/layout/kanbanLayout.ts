@@ -27,6 +27,12 @@ export interface KanbanZoneInfo {
   ownerX: number;
   ownerY: number;
   headers: KanbanColumnHeader[];
+  emptyPlaceholder?: {
+    label: string;
+    x: number;
+    y: number;
+    color: string;
+  };
 }
 
 // Column display config — colors from single source of truth (COLORS)
@@ -89,6 +95,7 @@ export class KanbanLayoutEngine {
       memberSlotFrames?: readonly SlotFrame[];
       leadSlotFrame?: SlotFrame | null;
       unassignedTaskRect?: StableRect | null;
+      showEmptyTaskPlaceholders?: boolean;
     }
   ): void {
     const nodeMap = this.#nodeMap;
@@ -148,6 +155,16 @@ export class KanbanLayoutEngine {
         ownerSlotFrameByOwnerId.get(ownerId) ?? null
       );
       if (zoneInfo) this.zones.push(zoneInfo);
+    }
+
+    if (options?.showEmptyTaskPlaceholders) {
+      KanbanLayoutEngine.#layoutEmptyTaskPlaceholders(
+        [
+          ...(options.memberSlotFrames ?? []),
+          ...(options.leadSlotFrame ? [options.leadSlotFrame] : []),
+        ],
+        tasksByOwner
+      );
     }
 
     KanbanLayoutEngine.#layoutUnassigned(unassigned, nodes, options?.unassignedTaskRect ?? null);
@@ -245,6 +262,39 @@ export class KanbanLayoutEngine {
     return { ownerId, ownerX, ownerY, headers };
   }
 
+  static #layoutEmptyTaskPlaceholders(
+    slotFrames: readonly SlotFrame[],
+    tasksByOwner: ReadonlyMap<string, readonly GraphNode[]>
+  ): void {
+    for (const slotFrame of slotFrames) {
+      if (tasksByOwner.has(slotFrame.ownerId) || slotFrame.kanbanBandRect.width <= 0) {
+        continue;
+      }
+
+      const x = slotFrame.kanbanBandRect.left + TASK_PILL.width / 2;
+      const headerY = slotFrame.kanbanBandRect.top;
+      this.zones.push({
+        ownerId: slotFrame.ownerId,
+        ownerX: slotFrame.ownerX,
+        ownerY: slotFrame.ownerY,
+        headers: [
+          {
+            label: COLUMN_LABELS.wip.label,
+            x,
+            y: headerY,
+            color: COLUMN_LABELS.wip.color,
+          },
+        ],
+        emptyPlaceholder: {
+          label: 'No active tasks',
+          x,
+          y: headerY + KANBAN_ZONE.headerHeight,
+          color: COLORS.textDim,
+        },
+      });
+    }
+  }
+
   static #resolveColumn(task: GraphNode): string {
     if (task.reviewState === 'approved') return 'approved';
     if (task.reviewState === 'review' || task.reviewState === 'needsFix') return 'review';
@@ -291,7 +341,9 @@ export class KanbanLayoutEngine {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
         const targetX = baseX + col * columnWidth;
-        const targetY = task.isOverflowStack ? getOverflowFooterCenterY(headerY) : baseY + row * rowHeight;
+        const targetY = task.isOverflowStack
+          ? getOverflowFooterCenterY(headerY)
+          : baseY + row * rowHeight;
         task.x = targetX;
         task.y = targetY;
         task.fx = targetX;
@@ -346,7 +398,9 @@ export class KanbanLayoutEngine {
       const col = idx % cols;
       const row = Math.floor(idx / cols);
       const targetX = baseX + col * columnWidth;
-      const targetY = task.isOverflowStack ? getOverflowFooterCenterY(headerY) : baseY + row * rowHeight;
+      const targetY = task.isOverflowStack
+        ? getOverflowFooterCenterY(headerY)
+        : baseY + row * rowHeight;
       task.x = task.x != null ? task.x + (targetX - task.x) * 0.15 : targetX;
       task.y = task.y != null ? task.y + (targetY - task.y) * 0.15 : targetY;
       task.fx = task.x;

@@ -70,6 +70,7 @@ export interface GraphLayoutPort {
   showActivity?: boolean;
   showLogs?: boolean;
   showTasks?: boolean;
+  showEmptyTaskPlaceholders?: boolean;
   alignGridColumns?: boolean;
   ownerOrder: string[];
   slotAssignments: Record<string, GraphOwnerSlotAssignment>;
