@@ -29,6 +29,9 @@ describe('ConfigManager CLAUDE_ROOT support', () => {
     const overrideRoot = path.join(os.tmpdir(), 'electron-dev-claude-root-test');
     process.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT = overrideRoot;
 
+    const overrides = await import('../../../../src/main/utils/electronDevPathOverrides');
+    overrides.applyElectronDevPathOverrides({});
+
     const { ConfigManager } = await import(
       '../../../../src/main/services/infrastructure/ConfigManager'
     );

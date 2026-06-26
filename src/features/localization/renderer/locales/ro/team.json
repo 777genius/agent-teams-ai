@@ -142,16 +142,16 @@
       "teamDetailsTitle": "Detalii opționale ale echipei",
       "teamDetailsDescription": "Menține fluxul implicit compact și deschide acest lucru doar când vrei context suplimentar sau o culoare personalizată.",
       "summary": {
-        "leadPrompt": "Lead prompt",
-        "autoApproveTools": "Auto-approve tools",
-        "fastMode": "Fast mode",
-        "fastDisabled": "Fast disabled",
-        "fastDefault": "Fast default",
-        "anthropicLimitedContext": "Anthropic limited to 200K context",
-        "worktree": "Worktree: {{name}}",
-        "customCliArgs": "Custom CLI args",
-        "description": "Description",
-        "color": "Color: {{color}}"
+        "leadPrompt": "Prompt lead",
+        "autoApproveTools": "Aprobare automata unelte",
+        "fastMode": "Mod rapid",
+        "fastDisabled": "Rapid dezactivat",
+        "fastDefault": "Rapid implicit",
+        "anthropicLimitedContext": "Anthropic limitat la context 200K",
+        "worktree": "Arbore lucru: {{name}}",
+        "customCliArgs": "Argumente CLI personalizate",
+        "description": "Descriere",
+        "color": "Culoare: {{color}}"
       }
     },
     "prepare": {
@@ -165,9 +165,9 @@
       "preparingEnvironment": "Se pregătește mediul...",
       "selectedProvidersReadyWithNotes": "Furnizorii selectați sunt pregătiți (cu observații)",
       "selectedProvidersReady": "Furnizorii selectați sunt pregătiți",
-      "providerStatusLoading": "{{provider}} provider status is still loading. Model checks will start automatically.",
-      "selectedProvidersLabel": "Selected providers",
-      "readyStatus": "Ready"
+      "providerStatusLoading": "Furnizorul {{provider}} inca se incarca. Verificarile modelelor vor porni automat.",
+      "selectedProvidersLabel": "Furnizori selectati",
+      "readyStatus": "Gata"
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Numele trebuie să conțină cel puțin o literă sau o cifră",
@@ -183,28 +183,28 @@
       "checkFormFields": "Verifică câmpurile formularului"
     },
     "organizationPlacement": {
-      "title": "Organization placement",
-      "description": "Choose the organization, then choose the root or group where the team belongs.",
-      "addToOrganization": "Add to organization",
-      "organizationLabel": "Organization",
-      "organizationHelp": "Choose the organization that owns this team.",
-      "organizationPlaceholder": "Organization",
-      "groupOrRootLabel": "Group or root",
-      "groupOrRootHelp": "Choose a group, or keep the organization root.",
-      "groupOrRootPlaceholder": "Root or group",
+      "title": "Plasare in organizatie",
+      "description": "Alege organizatia, apoi radacina sau grupul unde apartine echipa.",
+      "addToOrganization": "Adauga in organizatie",
+      "organizationLabel": "Organizatie",
+      "organizationHelp": "Alege organizatia care detine aceasta echipa.",
+      "organizationPlaceholder": "Organizatie",
+      "groupOrRootLabel": "Grup sau radacina",
+      "groupOrRootHelp": "Alege un grup sau pastreaza radacina organizatiei.",
+      "groupOrRootPlaceholder": "Radacina sau grup",
       "kind": {
-        "root": "Root",
-        "group": "Group"
+        "root": "Radacina",
+        "group": "Grup"
       }
     },
     "defaultDescription": {
-      "fallback": "Team for provisioning flow",
-      "named": "{{teamName}} team for provisioning flow"
+      "fallback": "Echipa pentru fluxul de provisionare",
+      "named": "Echipa {{teamName}} pentru fluxul de provisionare"
     },
     "defaultWorkflows": {
-      "reviewer": "Review every completed task in the project. Read the code changes, check for correctness, style, and potential issues. Approve the task or request changes with clear feedback."
+      "reviewer": "Revizuieste fiecare sarcina finalizata din proiect. Citeste modificarile de cod, verifica corectitudinea, stilul si posibilele probleme. Aproba sarcina sau cere schimbari cu feedback clar."
     },
-    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+    "memberModelLockReason": "Acest coechipier este sincronizat cu modelul leadului. Dezactiveaza sincronizarea pentru a seta un furnizor, model sau effort personalizat."
   },
   "editTeam": {
     "actions": {
@@ -1412,7 +1412,7 @@
     "actions": {
       "copyTeam": "Copiază echipa",
       "createTeam": "Creează echipă",
-      "organizationMap": "Org Map",
+      "organizationMap": "Harta org.",
       "deleteForever": "Șterge definitiv",
       "deletePermanently": "Șterge permanent",
       "deleteTeam": "Șterge echipa",
@@ -2637,211 +2637,211 @@
   },
   "organizations": {
     "map": {
-      "allOrganizationsTitle": "All Organizations",
-      "defaultTitle": "Organization Map",
-      "organizationPlaceholder": "Organization",
-      "loading": "Loading organization map...",
-      "noOrganizationData": "No organization data",
+      "allOrganizationsTitle": "Toate organizatiile",
+      "defaultTitle": "Harta organizatiei",
+      "organizationPlaceholder": "Organizatie",
+      "loading": "Se incarca harta organizatiei...",
+      "noOrganizationData": "Nu exista date despre organizatie",
       "scope": {
-        "currentOrg": "Current org",
-        "allOrgs": "All orgs"
+        "currentOrg": "Org curenta",
+        "allOrgs": "Toate org."
       },
       "actions": {
-        "edit": "Edit",
-        "editing": "Editing",
-        "refresh": "Refresh"
+        "edit": "Editeaza",
+        "editing": "Se editeaza",
+        "refresh": "Reimprospateaza"
       },
       "stats": {
-        "orgs": "{{count}} orgs",
-        "orgs_one": "{{count}} org",
-        "orgs_other": "{{count}} orgs",
-        "teams": "{{count}} teams",
-        "teams_one": "{{count}} team",
-        "teams_other": "{{count}} teams",
-        "relations": "{{count}} relations",
-        "relations_one": "{{count}} relation",
-        "relations_other": "{{count}} relations",
-        "messages": "{{count}} messages",
-        "messages_one": "{{count}} message",
-        "messages_other": "{{count}} messages",
-        "orgs_few": "{{count}} orgs",
-        "orgs_many": "{{count}} orgs",
-        "teams_few": "{{count}} teams",
-        "teams_many": "{{count}} teams",
-        "relations_few": "{{count}} relations",
-        "relations_many": "{{count}} relations",
-        "messages_few": "{{count}} messages",
-        "messages_many": "{{count}} messages"
+        "orgs": "{{count}} org.",
+        "orgs_one": "{{count}} organizatie",
+        "orgs_other": "{{count}} org.",
+        "teams": "{{count}} echipe",
+        "teams_one": "{{count}} echipa",
+        "teams_other": "{{count}} echipe",
+        "relations": "{{count}} relatii",
+        "relations_one": "{{count}} relatie",
+        "relations_other": "{{count}} relatii",
+        "messages": "{{count}} mesaje",
+        "messages_one": "{{count}} mesaj",
+        "messages_other": "{{count}} mesaje",
+        "orgs_few": "{{count}} org.",
+        "orgs_many": "{{count}} org.",
+        "teams_few": "{{count}} echipe",
+        "teams_many": "{{count}} echipe",
+        "relations_few": "{{count}} relatii",
+        "relations_many": "{{count}} relatii",
+        "messages_few": "{{count}} mesaje",
+        "messages_many": "{{count}} mesaje"
       }
     },
     "editor": {
-      "title": "Organization setup",
-      "loadingOrganization": "Loading organization",
-      "fallbackOrganization": "organization",
-      "saving": "Saving...",
+      "title": "Configurare organizatie",
+      "loadingOrganization": "Se incarca organizatia",
+      "fallbackOrganization": "organizatie",
+      "saving": "Se salveaza...",
       "source": {
-        "loading": "loading",
-        "configured": "configured",
-        "generated": "generated"
+        "loading": "incarcare",
+        "configured": "configurata",
+        "generated": "generata"
       },
       "badges": {
-        "groups": "{{count}} groups",
-        "groups_one": "{{count}} group",
-        "groups_other": "{{count}} groups",
-        "placed": "{{count}} placed",
-        "placed_one": "{{count}} placed",
-        "placed_other": "{{count}} placed",
-        "unplaced": "{{count}} unplaced",
-        "unplaced_one": "{{count}} unplaced",
-        "unplaced_other": "{{count}} unplaced",
-        "groups_few": "{{count}} groups",
-        "groups_many": "{{count}} groups",
-        "placed_few": "{{count}} placed",
-        "placed_many": "{{count}} placed",
-        "unplaced_few": "{{count}} unplaced",
-        "unplaced_many": "{{count}} unplaced"
+        "groups": "{{count}} grupuri",
+        "groups_one": "{{count}} grup",
+        "groups_other": "{{count}} grupuri",
+        "placed": "{{count}} plasate",
+        "placed_one": "{{count}} plasate",
+        "placed_other": "{{count}} plasate",
+        "unplaced": "{{count}} neplasate",
+        "unplaced_one": "{{count}} neplasate",
+        "unplaced_other": "{{count}} neplasate",
+        "groups_few": "{{count}} grupuri",
+        "groups_many": "{{count}} grupuri",
+        "placed_few": "{{count}} plasate",
+        "placed_many": "{{count}} plasate",
+        "unplaced_few": "{{count}} neplasate",
+        "unplaced_many": "{{count}} neplasate"
       },
       "tabs": {
-        "structure": "Structure",
-        "teams": "Teams",
-        "links": "Links",
-        "organizations": "Orgs"
+        "structure": "Structura",
+        "teams": "{{count}} echipe",
+        "links": "Legaturi",
+        "organizations": "Toate org."
       },
-      "newOrganization": "New organization",
-      "parentOrganization": "Parent organization",
-      "topLevel": "Top level",
-      "underLabel": "under {{label}}",
-      "selectedLocation": "Selected location",
-      "organizationTree": "Organization tree",
-      "noOrganizationUnits": "No organization units yet",
-      "dropHere": "Drop here",
-      "createGroup": "Create group",
-      "groupPlaceholder": "Department, Squad, Product Area",
-      "createUnderPlaceholder": "Create under",
-      "placeExistingTeam": "Place existing team",
-      "teamPlaceholder": "Team",
-      "placeUnderPlaceholder": "Place under",
-      "selectedItem": "Selected item",
-      "rootSelected": "Organization root selected",
-      "moveUnderPlaceholder": "Move under",
-      "manualRelation": "Manual relation",
-      "sourcePlaceholder": "Source",
-      "targetPlaceholder": "Target",
-      "kindPlaceholder": "Kind",
+      "newOrganization": "Organizatie noua",
+      "parentOrganization": "Organizatie parinte",
+      "topLevel": "Nivel superior",
+      "underLabel": "sub {{label}}",
+      "selectedLocation": "Locatie selectata",
+      "organizationTree": "Arbore organizatie",
+      "noOrganizationUnits": "Nu exista unitati de organizatie",
+      "dropHere": "Plaseaza aici",
+      "createGroup": "Creeaza grup",
+      "groupPlaceholder": "Departament, squad, zona produs",
+      "createUnderPlaceholder": "Creeaza sub",
+      "placeExistingTeam": "Plaseaza echipa existenta",
+      "teamPlaceholder": "Echipa",
+      "placeUnderPlaceholder": "Plaseaza sub",
+      "selectedItem": "Element selectat",
+      "rootSelected": "Radacina organizatiei selectata",
+      "moveUnderPlaceholder": "Muta sub",
+      "manualRelation": "Relatie manuala",
+      "sourcePlaceholder": "Sursa",
+      "targetPlaceholder": "Tinta",
+      "kindPlaceholder": "Tip",
       "kind": {
-        "org": "org",
-        "group": "group",
-        "team": "team"
+        "org": "organizatie",
+        "group": "grup",
+        "team": "echipa"
       },
       "relationKind": {
-        "dependsOn": "Depends on",
-        "delegates": "Delegates",
-        "observes": "Observes"
+        "dependsOn": "Depinde de",
+        "delegates": "Deleaga",
+        "observes": "Observa"
       },
       "actions": {
-        "create": "Create",
-        "teamHere": "Team here",
-        "addGroup": "Add group",
-        "assignTeam": "Assign team",
-        "move": "Move",
-        "remove": "Remove",
-        "addRelation": "Add relation"
+        "create": "Creeaza",
+        "teamHere": "Echipa aici",
+        "addGroup": "Adauga grup",
+        "assignTeam": "Atribuie echipa",
+        "move": "Muta",
+        "remove": "Elimina",
+        "addRelation": "Adauga relatie"
       }
     },
     "inspector": {
-      "closeSelection": "Close selection",
+      "closeSelection": "Inchide selectia",
       "kind": {
-        "group": "group",
-        "organization": "organization"
+        "group": "grup",
+        "organization": "organizatie"
       },
-      "childNodes": "{{count}} child nodes",
-      "childNodes_one": "{{count}} child node",
-      "childNodes_other": "{{count}} child nodes",
-      "agents": "{{count}} agents",
-      "agents_one": "{{count}} agent",
-      "agents_other": "{{count}} agents",
+      "childNodes": "{{count}} noduri copil",
+      "childNodes_one": "{{count}} nod copil",
+      "childNodes_other": "{{count}} noduri copil",
+      "agents": "{{count}} agenti",
+      "agents_one": "Agent: {{count}}",
+      "agents_other": "{{count}} agenti",
       "status": {
-        "online": "online",
-        "offline": "offline"
+        "online": "conectat",
+        "offline": "deconectat"
       },
       "taskCounts": {
-        "active": "active",
-        "pending": "pending",
-        "done": "done"
+        "active": "activ",
+        "pending": "in asteptare",
+        "done": "gata"
       },
       "actions": {
-        "expand": "Expand",
-        "collapse": "Collapse",
-        "open": "Open",
-        "graph": "Graph",
-        "expandSubtree": "Expand subtree",
-        "collapseSubtree": "Collapse subtree"
+        "expand": "Extinde",
+        "collapse": "Restrange",
+        "open": "Deschide",
+        "graph": "Grafic",
+        "expandSubtree": "Extinde subarborele",
+        "collapseSubtree": "Restrange subarborele"
       },
-      "inProgress": "In progress",
-      "noActiveAgentTasks": "No active agent tasks",
-      "childNodes_few": "{{count}} child nodes",
-      "childNodes_many": "{{count}} child nodes",
-      "agents_few": "{{count}} agents",
-      "agents_many": "{{count}} agents",
+      "inProgress": "In progres",
+      "noActiveAgentTasks": "Nu exista sarcini active pentru agenti",
+      "childNodes_few": "{{count}} noduri copil",
+      "childNodes_many": "{{count}} noduri copil",
+      "agents_few": "{{count}} agenti",
+      "agents_many": "{{count}} agenti",
       "tags": {
-        "system": "system",
-        "unassigned": "unassigned"
+        "system": "sistem",
+        "unassigned": "neatribuit"
       },
       "descriptions": {
-        "allOrganizations": "All configured organizations.",
-        "unassignedTeams": "Teams that are not placed in an organization yet."
+        "allOrganizations": "Toate organizatiile configurate.",
+        "unassignedTeams": "Echipe care nu sunt inca plasate intr-o organizatie."
       }
     },
     "graph": {
       "actions": {
-        "createTeamIn": "Create team in {{label}}"
+        "createTeamIn": "Creeaza echipa in {{label}}"
       },
       "canvas": {
-        "organizationMap": "Organization Map",
-        "allOrganizations": "All Organizations",
-        "unassignedTeams": "Unassigned Teams",
-        "agents": "{{count}} agents",
-        "agents_one": "{{count}} agent",
-        "agents_few": "{{count}} agents",
-        "agents_many": "{{count}} agents",
-        "agents_other": "{{count}} agents",
-        "activeAgents": "{{count}} active agents",
-        "activeAgents_one": "{{count}} active agent",
-        "activeAgents_few": "{{count}} active agents",
-        "activeAgents_many": "{{count}} active agents",
-        "activeAgents_other": "{{count}} active agents",
-        "teams": "{{count}} teams",
-        "teams_one": "{{count}} team",
-        "teams_few": "{{count}} teams",
-        "teams_many": "{{count}} teams",
-        "teams_other": "{{count}} teams",
-        "orgsAndTeams": "{{orgCount}} orgs - {{teamCount}} teams",
-        "teamRole": "{{memberCount}} agents - {{activeCount}} active",
-        "teamReference": "team reference",
-        "notFound": "not found",
-        "online": "online",
-        "offline": "offline",
+        "organizationMap": "Harta organizatiei",
+        "allOrganizations": "Toate organizatiile",
+        "unassignedTeams": "Echipe neatribuite",
+        "agents": "{{count}} agenti",
+        "agents_one": "Agent: {{count}}",
+        "agents_few": "{{count}} agenti",
+        "agents_many": "{{count}} agenti",
+        "agents_other": "{{count}} agenti",
+        "activeAgents": "{{count}} agenti activi",
+        "activeAgents_one": "{{count}} agent activ",
+        "activeAgents_few": "{{count}} agenti activi",
+        "activeAgents_many": "{{count}} agenti activi",
+        "activeAgents_other": "{{count}} agenti activi",
+        "teams": "{{count}} echipe",
+        "teams_one": "{{count}} echipa",
+        "teams_few": "{{count}} echipe",
+        "teams_many": "{{count}} echipe",
+        "teams_other": "{{count}} echipe",
+        "orgsAndTeams": "{{orgCount}} org. - {{teamCount}} echipe",
+        "teamRole": "{{memberCount}} agenti - {{activeCount}} activi",
+        "teamReference": "referinta echipa",
+        "notFound": "negasit",
+        "online": "conectat",
+        "offline": "deconectat",
         "agentStatus": {
-          "active": "active",
-          "idle": "idle",
-          "offline": "offline",
-          "unknown": "unknown"
+          "active": "activ",
+          "idle": "inactiv",
+          "offline": "deconectat",
+          "unknown": "necunoscut"
         }
       },
       "edgeOverlay": {
-        "runtimeMessages": "Runtime cross-team messages",
-        "manualRelation": "Manual organization relation",
-        "close": "Close relation details",
-        "messages": "{{count}} messages",
-        "messages_one": "{{count}} message",
-        "messages_other": "{{count}} messages",
-        "weight": "weight {{count}}",
-        "weight_one": "weight {{count}}",
-        "weight_other": "weight {{count}}",
-        "messages_few": "{{count}} messages",
-        "messages_many": "{{count}} messages",
-        "weight_few": "weight {{count}}",
-        "weight_many": "weight {{count}}"
+        "runtimeMessages": "Mesaje runtime intre echipe",
+        "manualRelation": "Relatie manuala de organizatie",
+        "close": "Inchide detaliile relatiei",
+        "messages": "{{count}} mesaje",
+        "messages_one": "{{count}} mesaj",
+        "messages_other": "{{count}} mesaje",
+        "weight": "greutate {{count}}",
+        "weight_one": "greutate {{count}}",
+        "weight_other": "greutate {{count}}",
+        "messages_few": "{{count}} mesaje",
+        "messages_many": "{{count}} mesaje",
+        "weight_few": "greutate {{count}}",
+        "weight_many": "greutate {{count}}"
       }
     }
   }

@@ -236,12 +236,19 @@ export default defineConfig([
           patterns: [
             {
               group: [
+                '@features/organizations/core/application',
                 '@features/organizations/core/application/**',
+                '@features/organizations/main',
                 '@features/organizations/main/**',
+                '@features/organizations/preload',
                 '@features/organizations/preload/**',
+                '@features/organizations/renderer',
                 '@features/organizations/renderer/**',
+                '@main',
                 '@main/**',
+                '@renderer',
                 '@renderer/**',
+                '@preload',
                 '@preload/**',
                 'electron',
                 'fastify',
@@ -266,9 +273,13 @@ export default defineConfig([
           patterns: [
             {
               group: [
+                '@features/organizations/main',
                 '@features/organizations/main/**',
+                '@features/organizations/preload',
                 '@features/organizations/preload/**',
+                '@features/organizations/renderer',
                 '@features/organizations/renderer/**',
+                '@renderer',
                 '@renderer/**',
                 'electron',
                 'fastify',
@@ -292,7 +303,14 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@features/organizations/main/**', '@main/**', '@renderer/**'],
+              group: [
+                '@features/organizations/main',
+                '@features/organizations/main/**',
+                '@main',
+                '@main/**',
+                '@renderer',
+                '@renderer/**',
+              ],
               message:
                 'organizations preload may depend only on contracts and preload-local bridge helpers.',
             },
@@ -310,7 +328,15 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@renderer/api', '@renderer/api/**', '@renderer/store', '@renderer/store/**', '@main/**', 'electron'],
+              group: [
+                '@renderer/api',
+                '@renderer/api/**',
+                '@renderer/store',
+                '@renderer/store/**',
+                '@main',
+                '@main/**',
+                'electron',
+              ],
               message:
                 'organizations renderer/ui must stay presentational. Move transport, store access, and navigation logic into hooks or adapters.',
             },
@@ -330,10 +356,15 @@ export default defineConfig([
           patterns: [
             {
               group: [
+                '@features/organizations/contracts',
                 '@features/organizations/contracts/**',
+                '@features/organizations/core',
                 '@features/organizations/core/**',
+                '@features/organizations/main',
                 '@features/organizations/main/**',
+                '@features/organizations/preload',
                 '@features/organizations/preload/**',
+                '@features/organizations/renderer',
                 '@features/organizations/renderer/**',
               ],
               message:

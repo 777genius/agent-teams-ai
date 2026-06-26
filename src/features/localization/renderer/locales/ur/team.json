@@ -142,16 +142,16 @@
       "teamDetailsTitle": "ٹیم کی تفصیلات",
       "teamDetailsDescription": "اگر آپ مزید سیاق‌وسباق یا رسمی رنگ حاصل کرنا چاہتے ہیں تو ڈی‌وی‌وی‌این‌اے رکھیں ۔",
       "summary": {
-        "leadPrompt": "Lead prompt",
-        "autoApproveTools": "Auto-approve tools",
-        "fastMode": "Fast mode",
-        "fastDisabled": "Fast disabled",
-        "fastDefault": "Fast default",
-        "anthropicLimitedContext": "Anthropic limited to 200K context",
-        "worktree": "Worktree: {{name}}",
-        "customCliArgs": "Custom CLI args",
-        "description": "Description",
-        "color": "Color: {{color}}"
+        "leadPrompt": "Lead promptu",
+        "autoApproveTools": "Araclari otomatik onayla",
+        "fastMode": "Hizli mod",
+        "fastDisabled": "Hizli kapali",
+        "fastDefault": "Hizli varsayilan",
+        "anthropicLimitedContext": "Anthropic 200K baglamla sinirli",
+        "worktree": "ورک ٹری: {{name}}",
+        "customCliArgs": "Ozel CLI argumanlari",
+        "description": "Aciklama",
+        "color": "Renk: {{color}}"
       }
     },
     "prepare": {
@@ -165,9 +165,9 @@
       "preparingEnvironment": "ماحول تیار کرنا...",
       "selectedProvidersReadyWithNotes": "منتخب فراہم کردہ فراہم کار تیار ( نوٹ کے ساتھ)",
       "selectedProvidersReady": "منتخب کردہ فراہم کار تیار",
-      "providerStatusLoading": "{{provider}} provider status is still loading. Model checks will start automatically.",
-      "selectedProvidersLabel": "Selected providers",
-      "readyStatus": "Ready"
+      "providerStatusLoading": "{{provider}} فراہم کنندہ کی حالت ابھی لوڈ ہو رہی ہے۔ ماڈل چیکس خودکار طور پر شروع ہوں گے۔",
+      "selectedProvidersLabel": "منتخب فراہم کنندگان",
+      "readyStatus": "تیار"
     },
     "validation": {
       "nameMustContainLetterOrDigit": "نام کم از کم ایک خط یا Detailit پر مشتمل ہوتا ہے۔",
@@ -183,28 +183,28 @@
       "checkFormFields": "طےشدہ"
     },
     "organizationPlacement": {
-      "title": "Organization placement",
-      "description": "Choose the organization, then choose the root or group where the team belongs.",
-      "addToOrganization": "Add to organization",
-      "organizationLabel": "Organization",
-      "organizationHelp": "Choose the organization that owns this team.",
-      "organizationPlaceholder": "Organization",
-      "groupOrRootLabel": "Group or root",
-      "groupOrRootHelp": "Choose a group, or keep the organization root.",
-      "groupOrRootPlaceholder": "Root or group",
+      "title": "تنظیم میں جگہ",
+      "description": "تنظیم منتخب کریں، پھر وہ جڑ یا گروپ منتخب کریں جہاں ٹیم ہوگی۔",
+      "addToOrganization": "تنظیم میں شامل کریں",
+      "organizationLabel": "تنظیم",
+      "organizationHelp": "وہ تنظیم منتخب کریں جو اس ٹیم کی مالک ہے۔",
+      "organizationPlaceholder": "تنظیم",
+      "groupOrRootLabel": "گروپ یا جڑ",
+      "groupOrRootHelp": "تنظیم منتخب کریں، پھر وہ جڑ یا گروپ منتخب کریں جہاں ٹیم ہوگی۔",
+      "groupOrRootPlaceholder": "جڑ یا گروپ",
       "kind": {
-        "root": "Root",
-        "group": "Group"
+        "root": "جڑ",
+        "group": "گروپ"
       }
     },
     "defaultDescription": {
-      "fallback": "Team for provisioning flow",
-      "named": "{{teamName}} team for provisioning flow"
+      "fallback": "Provisioning akisi icin ekip",
+      "named": "Provisioning akisi icin {{teamName}} ekibi"
     },
     "defaultWorkflows": {
-      "reviewer": "Review every completed task in the project. Read the code changes, check for correctness, style, and potential issues. Approve the task or request changes with clear feedback."
+      "reviewer": "Projede tamamlanan her gorevi incele. Kod degisikliklerini oku, dogruluk, stil ve olasi sorunlari kontrol et. Gorevi onayla veya net geri bildirimle degisiklik iste."
     },
-    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+    "memberModelLockReason": "Bu ekip uyesi lead modeliyle senkronize. Ozel saglayici, model veya effort ayarlamak icin senkronizasyonu kapat."
   },
   "editTeam": {
     "actions": {
@@ -1412,7 +1412,7 @@
     "actions": {
       "copyTeam": "ٹیم کاپی",
       "createTeam": "ٹیم بنائیں",
-      "organizationMap": "Org Map",
+      "organizationMap": "تنظیم کا نقشہ",
       "deleteForever": "ہمیشہ کے لیے حذف کرو",
       "deletePermanently": "مستقل حذف",
       "deleteTeam": "ٹیم حذف کریں",
@@ -2637,211 +2637,211 @@
   },
   "organizations": {
     "map": {
-      "allOrganizationsTitle": "All Organizations",
-      "defaultTitle": "Organization Map",
-      "organizationPlaceholder": "Organization",
-      "loading": "Loading organization map...",
-      "noOrganizationData": "No organization data",
+      "allOrganizationsTitle": "تمام تنظیمیں",
+      "defaultTitle": "تنظیم کا نقشہ",
+      "organizationPlaceholder": "تنظیم",
+      "loading": "تنظیم کا نقشہ لوڈ ہو رہا ہے...",
+      "noOrganizationData": "تنظیم کا ڈیٹا نہیں",
       "scope": {
-        "currentOrg": "Current org",
-        "allOrgs": "All orgs"
+        "currentOrg": "موجودہ تنظیم",
+        "allOrgs": "تمام تنظیمیں"
       },
       "actions": {
-        "edit": "Edit",
-        "editing": "Editing",
-        "refresh": "Refresh"
+        "edit": "ترمیم",
+        "editing": "ترمیم",
+        "refresh": "تازہ کریں"
       },
       "stats": {
-        "orgs": "{{count}} orgs",
-        "orgs_one": "{{count}} org",
-        "orgs_other": "{{count}} orgs",
-        "teams": "{{count}} teams",
-        "teams_one": "{{count}} team",
-        "teams_other": "{{count}} teams",
-        "relations": "{{count}} relations",
-        "relations_one": "{{count}} relation",
-        "relations_other": "{{count}} relations",
-        "messages": "{{count}} messages",
-        "messages_one": "{{count}} message",
-        "messages_other": "{{count}} messages",
-        "orgs_few": "{{count}} orgs",
-        "orgs_many": "{{count}} orgs",
-        "teams_few": "{{count}} teams",
-        "teams_many": "{{count}} teams",
-        "relations_few": "{{count}} relations",
-        "relations_many": "{{count}} relations",
-        "messages_few": "{{count}} messages",
-        "messages_many": "{{count}} messages"
+        "orgs": "{{count}} org",
+        "orgs_one": "{{count}} تنظیم",
+        "orgs_other": "{{count}} org",
+        "teams": "{{count}} ekip",
+        "teams_one": "{{count}} ekip",
+        "teams_other": "{{count}} ekip",
+        "relations": "{{count}} iliski",
+        "relations_one": "{{count}} iliski",
+        "relations_other": "{{count}} iliski",
+        "messages": "{{count}} mesaj",
+        "messages_one": "{{count}} mesaj",
+        "messages_other": "{{count}} mesaj",
+        "orgs_few": "{{count}} org",
+        "orgs_many": "{{count}} org",
+        "teams_few": "{{count}} ekip",
+        "teams_many": "{{count}} ekip",
+        "relations_few": "{{count}} iliski",
+        "relations_many": "{{count}} iliski",
+        "messages_few": "{{count}} mesaj",
+        "messages_many": "{{count}} mesaj"
       }
     },
     "editor": {
-      "title": "Organization setup",
-      "loadingOrganization": "Loading organization",
-      "fallbackOrganization": "organization",
-      "saving": "Saving...",
+      "title": "تنظیم کی ترتیب",
+      "loadingOrganization": "Organizasyon yukleniyor",
+      "fallbackOrganization": "organizasyon",
+      "saving": "Kaydediliyor...",
       "source": {
-        "loading": "loading",
-        "configured": "configured",
-        "generated": "generated"
+        "loading": "yukleniyor",
+        "configured": "yapilandirildi",
+        "generated": "uretildi"
       },
       "badges": {
-        "groups": "{{count}} groups",
-        "groups_one": "{{count}} group",
-        "groups_other": "{{count}} groups",
-        "placed": "{{count}} placed",
-        "placed_one": "{{count}} placed",
-        "placed_other": "{{count}} placed",
-        "unplaced": "{{count}} unplaced",
-        "unplaced_one": "{{count}} unplaced",
-        "unplaced_other": "{{count}} unplaced",
-        "groups_few": "{{count}} groups",
-        "groups_many": "{{count}} groups",
-        "placed_few": "{{count}} placed",
-        "placed_many": "{{count}} placed",
-        "unplaced_few": "{{count}} unplaced",
-        "unplaced_many": "{{count}} unplaced"
+        "groups": "{{count}} grup",
+        "groups_one": "{{count}} grup",
+        "groups_other": "{{count}} grup",
+        "placed": "{{count}} yerlesti",
+        "placed_one": "{{count}} yerlesti",
+        "placed_other": "{{count}} yerlesti",
+        "unplaced": "{{count}} yerlesmedi",
+        "unplaced_one": "{{count}} yerlesmedi",
+        "unplaced_other": "{{count}} yerlesmedi",
+        "groups_few": "{{count}} grup",
+        "groups_many": "{{count}} grup",
+        "placed_few": "{{count}} yerlesti",
+        "placed_many": "{{count}} yerlesti",
+        "unplaced_few": "{{count}} yerlesmedi",
+        "unplaced_many": "{{count}} yerlesmedi"
       },
       "tabs": {
-        "structure": "Structure",
-        "teams": "Teams",
-        "links": "Links",
-        "organizations": "Orgs"
+        "structure": "ساخت",
+        "teams": "{{count}} ekip",
+        "links": "روابط",
+        "organizations": "تمام تنظیمیں"
       },
-      "newOrganization": "New organization",
-      "parentOrganization": "Parent organization",
-      "topLevel": "Top level",
-      "underLabel": "under {{label}}",
-      "selectedLocation": "Selected location",
-      "organizationTree": "Organization tree",
-      "noOrganizationUnits": "No organization units yet",
-      "dropHere": "Drop here",
-      "createGroup": "Create group",
-      "groupPlaceholder": "Department, Squad, Product Area",
-      "createUnderPlaceholder": "Create under",
-      "placeExistingTeam": "Place existing team",
-      "teamPlaceholder": "Team",
-      "placeUnderPlaceholder": "Place under",
-      "selectedItem": "Selected item",
-      "rootSelected": "Organization root selected",
-      "moveUnderPlaceholder": "Move under",
-      "manualRelation": "Manual relation",
-      "sourcePlaceholder": "Source",
-      "targetPlaceholder": "Target",
-      "kindPlaceholder": "Kind",
+      "newOrganization": "Yeni organizasyon",
+      "parentOrganization": "Ust organizasyon",
+      "topLevel": "Ust seviye",
+      "underLabel": "{{label}} altinda",
+      "selectedLocation": "Secili konum",
+      "organizationTree": "تنظیم کا درخت",
+      "noOrganizationUnits": "Henuz organizasyon birimi yok",
+      "dropHere": "Buraya birak",
+      "createGroup": "Grup olustur",
+      "groupPlaceholder": "Departman, Squad, Urun Alani",
+      "createUnderPlaceholder": "Altinda olustur",
+      "placeExistingTeam": "Mevcut ekibi yerlestir",
+      "teamPlaceholder": "Ekip",
+      "placeUnderPlaceholder": "Altina yerlestir",
+      "selectedItem": "Secili oge",
+      "rootSelected": "Organizasyon koku secildi",
+      "moveUnderPlaceholder": "Altina tasi",
+      "manualRelation": "Manuel iliski",
+      "sourcePlaceholder": "Kaynak",
+      "targetPlaceholder": "Hedef",
+      "kindPlaceholder": "Tur",
       "kind": {
-        "org": "org",
-        "group": "group",
-        "team": "team"
+        "org": "تنظیم",
+        "group": "grup",
+        "team": "ekip"
       },
       "relationKind": {
-        "dependsOn": "Depends on",
-        "delegates": "Delegates",
-        "observes": "Observes"
+        "dependsOn": "Bagimli",
+        "delegates": "Devreder",
+        "observes": "Izler"
       },
       "actions": {
-        "create": "Create",
-        "teamHere": "Team here",
-        "addGroup": "Add group",
-        "assignTeam": "Assign team",
-        "move": "Move",
-        "remove": "Remove",
-        "addRelation": "Add relation"
+        "create": "Olustur",
+        "teamHere": "Ekip burada",
+        "addGroup": "Grup ekle",
+        "assignTeam": "Ekibi ata",
+        "move": "Tasi",
+        "remove": "Kaldir",
+        "addRelation": "Iliski ekle"
       }
     },
     "inspector": {
-      "closeSelection": "Close selection",
+      "closeSelection": "Secimi kapat",
       "kind": {
-        "group": "group",
-        "organization": "organization"
+        "group": "grup",
+        "organization": "organizasyon"
       },
-      "childNodes": "{{count}} child nodes",
-      "childNodes_one": "{{count}} child node",
-      "childNodes_other": "{{count}} child nodes",
-      "agents": "{{count}} agents",
-      "agents_one": "{{count}} agent",
-      "agents_other": "{{count}} agents",
+      "childNodes": "{{count}} alt dugum",
+      "childNodes_one": "{{count}} alt dugum",
+      "childNodes_other": "{{count}} alt dugum",
+      "agents": "{{count}} ajan",
+      "agents_one": "{{count}} ajan",
+      "agents_other": "{{count}} ajan",
       "status": {
-        "online": "online",
-        "offline": "offline"
+        "online": "cevrimici",
+        "offline": "cevrimdisi"
       },
       "taskCounts": {
-        "active": "active",
-        "pending": "pending",
-        "done": "done"
+        "active": "aktif",
+        "pending": "bekliyor",
+        "done": "bitti"
       },
       "actions": {
-        "expand": "Expand",
-        "collapse": "Collapse",
-        "open": "Open",
-        "graph": "Graph",
-        "expandSubtree": "Expand subtree",
-        "collapseSubtree": "Collapse subtree"
+        "expand": "Genislet",
+        "collapse": "Daralt",
+        "open": "Ac",
+        "graph": "Graf",
+        "expandSubtree": "Alt agaci genislet",
+        "collapseSubtree": "Alt agaci daralt"
       },
-      "inProgress": "In progress",
-      "noActiveAgentTasks": "No active agent tasks",
-      "childNodes_few": "{{count}} child nodes",
-      "childNodes_many": "{{count}} child nodes",
-      "agents_few": "{{count}} agents",
-      "agents_many": "{{count}} agents",
+      "inProgress": "جاری",
+      "noActiveAgentTasks": "کوئی فعال agent tasks نہیں",
+      "childNodes_few": "{{count}} alt dugum",
+      "childNodes_many": "{{count}} alt dugum",
+      "agents_few": "{{count}} ajan",
+      "agents_many": "{{count}} ajan",
       "tags": {
-        "system": "system",
-        "unassigned": "unassigned"
+        "system": "sistem",
+        "unassigned": "atanmamis"
       },
       "descriptions": {
-        "allOrganizations": "All configured organizations.",
-        "unassignedTeams": "Teams that are not placed in an organization yet."
+        "allOrganizations": "تمام تنظیمیں",
+        "unassignedTeams": "Henuz bir organizasyona yerlestirilmemis ekipler."
       }
     },
     "graph": {
       "actions": {
-        "createTeamIn": "Create team in {{label}}"
+        "createTeamIn": "تنظیم {{label}}"
       },
       "canvas": {
-        "organizationMap": "Organization Map",
-        "allOrganizations": "All Organizations",
-        "unassignedTeams": "Unassigned Teams",
-        "agents": "{{count}} agents",
-        "agents_one": "{{count}} agent",
-        "agents_few": "{{count}} agents",
-        "agents_many": "{{count}} agents",
-        "agents_other": "{{count}} agents",
-        "activeAgents": "{{count}} active agents",
-        "activeAgents_one": "{{count}} active agent",
-        "activeAgents_few": "{{count}} active agents",
-        "activeAgents_many": "{{count}} active agents",
-        "activeAgents_other": "{{count}} active agents",
-        "teams": "{{count}} teams",
-        "teams_one": "{{count}} team",
-        "teams_few": "{{count}} teams",
-        "teams_many": "{{count}} teams",
-        "teams_other": "{{count}} teams",
-        "orgsAndTeams": "{{orgCount}} orgs - {{teamCount}} teams",
-        "teamRole": "{{memberCount}} agents - {{activeCount}} active",
-        "teamReference": "team reference",
-        "notFound": "not found",
-        "online": "online",
-        "offline": "offline",
+        "organizationMap": "تنظیم کا نقشہ",
+        "allOrganizations": "تمام تنظیمیں",
+        "unassignedTeams": "Atanmamis Ekipler",
+        "agents": "{{count}} ajan",
+        "agents_one": "{{count}} ajan",
+        "agents_few": "{{count}} ajan",
+        "agents_many": "{{count}} ajan",
+        "agents_other": "{{count}} ajan",
+        "activeAgents": "{{count}} aktif ajan",
+        "activeAgents_one": "{{count}} aktif ajan",
+        "activeAgents_few": "{{count}} aktif ajan",
+        "activeAgents_many": "{{count}} aktif ajan",
+        "activeAgents_other": "{{count}} aktif ajan",
+        "teams": "{{count}} ekip",
+        "teams_one": "{{count}} ekip",
+        "teams_few": "{{count}} ekip",
+        "teams_many": "{{count}} ekip",
+        "teams_other": "{{count}} ekip",
+        "orgsAndTeams": "{{orgCount}} org - {{teamCount}} ekip",
+        "teamRole": "{{memberCount}} ajan - {{activeCount}} aktif",
+        "teamReference": "ekip referansi",
+        "notFound": "bulunamadi",
+        "online": "cevrimici",
+        "offline": "cevrimdisi",
         "agentStatus": {
-          "active": "active",
-          "idle": "idle",
-          "offline": "offline",
-          "unknown": "unknown"
+          "active": "aktif",
+          "idle": "bosta",
+          "offline": "cevrimdisi",
+          "unknown": "bilinmiyor"
         }
       },
       "edgeOverlay": {
-        "runtimeMessages": "Runtime cross-team messages",
-        "manualRelation": "Manual organization relation",
-        "close": "Close relation details",
-        "messages": "{{count}} messages",
-        "messages_one": "{{count}} message",
-        "messages_other": "{{count}} messages",
-        "weight": "weight {{count}}",
-        "weight_one": "weight {{count}}",
-        "weight_other": "weight {{count}}",
-        "messages_few": "{{count}} messages",
-        "messages_many": "{{count}} messages",
-        "weight_few": "weight {{count}}",
-        "weight_many": "weight {{count}}"
+        "runtimeMessages": "روابط",
+        "manualRelation": "روابط",
+        "close": "Iliski detaylarini kapat",
+        "messages": "{{count}} mesaj",
+        "messages_one": "{{count}} mesaj",
+        "messages_other": "{{count}} mesaj",
+        "weight": "agirlik {{count}}",
+        "weight_one": "agirlik {{count}}",
+        "weight_other": "agirlik {{count}}",
+        "messages_few": "{{count}} mesaj",
+        "messages_many": "{{count}} mesaj",
+        "weight_few": "agirlik {{count}}",
+        "weight_many": "agirlik {{count}}"
       }
     }
   }

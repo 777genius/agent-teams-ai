@@ -1,3 +1,3 @@
 export * from './GetOrganizationMapUseCase';
 export * from './ManageOrganizationStructureUseCase';
-export * from './ports';
+export type * from './ports';

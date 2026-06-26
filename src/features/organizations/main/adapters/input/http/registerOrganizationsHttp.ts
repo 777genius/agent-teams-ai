@@ -38,7 +38,13 @@ export function registerOrganizationsHttp(
       const payload =
         normalizeOrganizationMapPayload(
           await feature.getOrganizationMap(normalizeOrganizationMapRequest(request.query))
-        ) ?? (await feature.getOrganizationMap(normalizeOrganizationMapRequest(undefined)));
+        ) ??
+        normalizeOrganizationMapPayload(
+          await feature.getOrganizationMap(normalizeOrganizationMapRequest(undefined))
+        );
+      if (!payload) {
+        throw new Error('Organization map HTTP returned an invalid map payload.');
+      }
       logger.info('organization map HTTP loaded', {
         nodes: payload.nodes.length,
         relations: payload.relations.length,

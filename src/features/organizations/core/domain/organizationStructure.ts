@@ -389,7 +389,6 @@ export function upsertOrganizationUnit(
 ): OrgStructureModel {
   const next = cloneStructure(structure);
   const organization = requireOrganization(next, input.organizationId);
-  const parentId = requireParentUnit(next, input.parentId ?? organization.rootNodeId, organization);
   const id =
     input.id ??
     getAvailableUnitId(
@@ -400,6 +399,12 @@ export function upsertOrganizationUnit(
     );
   const existingIndex = next.units.findIndex(
     (unit) => unit.id === id && unit.organizationId === organization.id
+  );
+  const existingUnit = existingIndex >= 0 ? next.units[existingIndex] : undefined;
+  const parentId = requireParentUnit(
+    next,
+    input.parentId ?? existingUnit?.parentId ?? organization.rootNodeId,
+    organization
   );
   const unit: OrgUnitModel = {
     id,

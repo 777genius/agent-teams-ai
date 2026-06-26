@@ -10,7 +10,7 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { resolveElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
+import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
@@ -42,7 +42,7 @@ function getDefaultConfigPath(): string {
 }
 
 function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
-  setClaudeBasePathOverride(resolveElectronDevClaudeRootOverride() ?? claudeRootPath);
+  setClaudeBasePathOverride(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
 }
 
 function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {

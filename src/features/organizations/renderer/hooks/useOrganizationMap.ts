@@ -113,8 +113,9 @@ export function useOrganizationMap(input: UseOrganizationMapInput): UseOrganizat
     : REFRESH_INTERVAL_MS;
 
   useEffect(() => {
+    if (!input.isActive) return;
     void refresh();
-  }, [refresh]);
+  }, [input.isActive, refresh]);
 
   useEffect(() => {
     if (!input.isActive) return undefined;

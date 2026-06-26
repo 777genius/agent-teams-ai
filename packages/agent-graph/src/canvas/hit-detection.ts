@@ -91,6 +91,9 @@ function getBaseEdgeHitRadius(edgeType: GraphEdge['type']): number {
     case 'message':
       return Math.max(BEAM.message.startW, BEAM.message.endW) * 0.5 + HIT_DETECTION.edgePadding;
   }
+
+  const exhaustive: never = edgeType;
+  return exhaustive;
 }
 
 function getEdgeHitRadius(edgeType: GraphEdge['type'], zoom = 1): number {

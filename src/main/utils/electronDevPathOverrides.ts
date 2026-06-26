@@ -16,6 +16,8 @@ export interface ElectronDevPathOverrideResult {
   warnings: string[];
 }
 
+let appliedElectronDevClaudeRootOverride: string | null = null;
+
 function normalizeAbsolutePath(value: string | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -43,6 +45,10 @@ export function resolveElectronDevClaudeRootOverride(
   env: NodeJS.ProcessEnv = process.env
 ): string | null {
   return normalizeAbsolutePath(env[AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV]);
+}
+
+export function getAppliedElectronDevClaudeRootOverride(): string | null {
+  return appliedElectronDevClaudeRootOverride;
 }
 
 export function applyElectronDevPathOverrides(
@@ -78,6 +84,7 @@ export function applyElectronDevPathOverrides(
   if (appliedClaudeRoot) {
     setClaudeBasePathOverride(appliedClaudeRoot);
   }
+  appliedElectronDevClaudeRootOverride = appliedClaudeRoot;
 
   return {
     userDataDir: appliedUserDataDir,

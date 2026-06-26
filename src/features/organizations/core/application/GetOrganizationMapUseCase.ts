@@ -133,7 +133,9 @@ export class GetOrganizationMapUseCase {
     } catch (error) {
       degraded = true;
       warnings.push('Failed to load teams.');
-      this.deps.logger.error('organizations team directory failed', error);
+      this.deps.logger.error('organizations team directory failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     try {

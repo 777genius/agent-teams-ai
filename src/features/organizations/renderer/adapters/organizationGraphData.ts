@@ -456,14 +456,16 @@ function packOrganizationGridRows(
   blocks: readonly OrganizationGridBlock[]
 ): OrganizationGridBlock[][] {
   const rows: OrganizationGridBlock[][] = [];
+  let cursor = 0;
 
-  for (let index = 0; index < blocks.length; index += 1) {
-    const block = blocks[index];
+  while (cursor < blocks.length) {
+    const block = blocks[cursor];
     if (!block) {
+      cursor += 1;
       continue;
     }
 
-    const nextBlock = blocks[index + 1];
+    const nextBlock = blocks[cursor + 1];
     if (
       canPackOrganizationGridBlockSideBySide(block) &&
       nextBlock &&
@@ -472,11 +474,12 @@ function packOrganizationGridRows(
         ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH
     ) {
       rows.push([block, nextBlock]);
-      index += 1;
+      cursor += 2;
       continue;
     }
 
     rows.push([block]);
+    cursor += 1;
   }
 
   return rows;

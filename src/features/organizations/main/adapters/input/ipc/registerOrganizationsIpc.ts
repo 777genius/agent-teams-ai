@@ -37,10 +37,12 @@ export function registerOrganizationsIpc(
   ipcMain.handle(ORGANIZATIONS_GET_MAP, async (_event, rawRequest: unknown) => {
     const startedAt = Date.now();
     try {
-      const payload =
-        normalizeOrganizationMapPayload(
-          await feature.getOrganizationMap(normalizeOrganizationMapRequest(rawRequest))
-        ) ?? (await feature.getOrganizationMap(normalizeOrganizationMapRequest(undefined)));
+      const payload = normalizeOrganizationMapPayload(
+        await feature.getOrganizationMap(normalizeOrganizationMapRequest(rawRequest))
+      );
+      if (!payload) {
+        throw new Error('Organization map IPC returned an invalid map payload.');
+      }
       logger.info('organization map IPC loaded', {
         nodes: payload.nodes.length,
         relations: payload.relations.length,

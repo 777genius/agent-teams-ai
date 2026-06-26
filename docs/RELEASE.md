@@ -20,6 +20,10 @@ Release body source for GitHub release:
 <!-- RELEASE_BODY_START v2.5.1 -->
 Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
+### What's New
+
+- Lower memory overhead for long-running teams and large project scans.
+
 ### Improvements
 
 - Keep transcript/project matching metadata compact after large scans finish.
@@ -35,7 +39,6 @@ Reduces memory growth in long-running teams and large projects. Fixes OOM risks 
 - Fix low-heap team launch crashes and unbounded stdout/stderr carry buffers.
 - Fix Enter submitting text during IME composition.
 - Fix draft launch roster updates before launch.
-- Update vulnerable dependencies from the post-v2.5.0 security audit.
 
 ### Downloads
 

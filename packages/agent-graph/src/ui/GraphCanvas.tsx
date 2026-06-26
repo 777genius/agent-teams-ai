@@ -523,6 +523,57 @@ function drawGroupFrames(
   }
 }
 
+interface GroupFrameDrawStyle {
+  alpha: number;
+  strokeWidth: number;
+  dash: number[];
+  fillAlpha: number;
+  strokeAlpha: number;
+}
+
+function getPreparedGroupFrameDrawStyle(params: {
+  prepared: PreparedGroupFrame;
+  zoom: number;
+  selected: boolean;
+  hovered: boolean;
+  focused: boolean;
+}): GroupFrameDrawStyle {
+  const { prepared, zoom, selected, hovered, focused } = params;
+  const isPrimary = prepared.frame.priority === 'primary';
+  let strokeWidth = 1.15 / zoom;
+  let fillAlpha = 0.035;
+  let strokeAlpha = 0.34;
+  let alpha = 0.5;
+
+  if (isPrimary) {
+    strokeWidth = 1.45 / zoom;
+    fillAlpha = 0.055;
+    strokeAlpha = 0.55;
+    alpha = 0.68;
+  }
+  if (hovered) {
+    strokeWidth = 1.8 / zoom;
+    fillAlpha = 0.065;
+    strokeAlpha = 0.58;
+  }
+  if (selected) {
+    strokeWidth = 2.1 / zoom;
+    fillAlpha = 0.08;
+    strokeAlpha = 0.74;
+  }
+  if (focused) {
+    alpha = 1;
+  }
+
+  return {
+    alpha,
+    strokeWidth,
+    dash: isPrimary ? [14 / zoom, 10 / zoom] : [10 / zoom, 10 / zoom],
+    fillAlpha,
+    strokeAlpha,
+  };
+}
+
 function drawPreparedGroupFrame(
   ctx: CanvasRenderingContext2D,
   prepared: PreparedGroupFrame,
@@ -536,23 +587,24 @@ function drawPreparedGroupFrame(
 ): void {
   const color = prepared.frame.color ?? '#8bd3ff';
   const zoom = Math.max(args.zoom, 0.1);
-  const isPrimary = prepared.frame.priority === 'primary';
   const selected = args.selectedNodeId === prepared.frame.id;
   const hovered = args.hoveredGroupFrameId === prepared.frame.id;
   const focused =
     args.focusNodeIds == null ||
     args.focusNodeIds.has(prepared.frame.id) ||
     prepared.frame.nodeIds.some((nodeId) => args.focusNodeIds?.has(nodeId));
-  const alpha = focused ? 1 : isPrimary ? 0.68 : 0.5;
-  const strokeWidth = (selected ? 2.1 : hovered ? 1.8 : isPrimary ? 1.45 : 1.15) / zoom;
-  const dash = isPrimary ? [14 / zoom, 10 / zoom] : [10 / zoom, 10 / zoom];
+  const style = getPreparedGroupFrameDrawStyle({
+    prepared,
+    zoom,
+    selected,
+    hovered,
+    focused,
+  });
   const radius = 9 / zoom;
   const bounds = getPaddedGroupFrameBounds(prepared.bounds, zoom, prepared.frame);
-  const fillAlpha = selected ? 0.08 : hovered ? 0.065 : isPrimary ? 0.055 : 0.035;
-  const strokeAlpha = selected ? 0.74 : hovered ? 0.58 : isPrimary ? 0.55 : 0.34;
 
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = style.alpha;
   ctx.beginPath();
   ctx.roundRect(
     bounds.left,
@@ -561,12 +613,12 @@ function drawPreparedGroupFrame(
     bounds.bottom - bounds.top,
     radius
   );
-  ctx.fillStyle = hexWithAlpha(color, fillAlpha);
+  ctx.fillStyle = hexWithAlpha(color, style.fillAlpha);
   ctx.fill();
-  ctx.setLineDash(dash);
+  ctx.setLineDash(style.dash);
   ctx.lineDashOffset = selected ? -args.time * 16 : 0;
-  ctx.lineWidth = strokeWidth;
-  ctx.strokeStyle = hexWithAlpha(color, strokeAlpha);
+  ctx.lineWidth = style.strokeWidth;
+  ctx.strokeStyle = hexWithAlpha(color, style.strokeAlpha);
   ctx.stroke();
   ctx.setLineDash([]);
   drawGroupFrameLabel(ctx, prepared, bounds, color, zoom, selected);

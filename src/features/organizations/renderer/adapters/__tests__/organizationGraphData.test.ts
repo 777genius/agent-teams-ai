@@ -10,7 +10,11 @@ import {
   getOrganizationIdForNodeId,
 } from '../organizationMapViewModel';
 
-import type { OrganizationMapPayload, OrganizationNodeDto } from '../../../contracts';
+import type {
+  OrganizationMapPayload,
+  OrganizationNodeDto,
+  OrganizationRelationDto,
+} from '../../../contracts';
 import type { GraphDomainRef } from '@claude-teams/agent-graph';
 
 function buildPayload(): OrganizationMapPayload {
@@ -147,6 +151,25 @@ function getFixtureTeamNode(payload: OrganizationMapPayload, nodeId: string): Or
     throw new Error(`Expected team fixture ${nodeId}`);
   }
   return node;
+}
+
+function getFixtureNode(payload: OrganizationMapPayload, nodeId: string): OrganizationNodeDto {
+  const node = payload.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) {
+    throw new Error(`Expected node fixture ${nodeId}`);
+  }
+  return node;
+}
+
+function getFixtureRelation(
+  payload: OrganizationMapPayload,
+  relationId: string
+): OrganizationRelationDto {
+  const relation = payload.relations.find((candidate) => candidate.id === relationId);
+  if (!relation) {
+    throw new Error(`Expected relation fixture ${relationId}`);
+  }
+  return relation;
 }
 
 function cloneFixtureTeamNode(
@@ -379,7 +402,7 @@ function buildAllOrganizationsPayload(): OrganizationMapPayload {
         sourceKind: 'manual',
         weight: 1,
       },
-      base.relations[2]!,
+      getFixtureRelation(base, 'communicates:team:alpha:team:beta'),
     ],
   };
 }
@@ -519,7 +542,7 @@ function buildSiblingGroupsPayload(): OrganizationMapPayload {
   return {
     ...base,
     nodes: [
-      base.nodes[0]!,
+      getFixtureNode(base, 'org:default'),
       {
         id: 'unit:growth',
         kind: 'container',
@@ -616,7 +639,7 @@ function buildTallSiblingGroupsPayload(): OrganizationMapPayload {
   return {
     ...base,
     nodes: [
-      base.nodes[0]!,
+      getFixtureNode(base, 'org:default'),
       {
         id: 'unit:bulk',
         kind: 'container',

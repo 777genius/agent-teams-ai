@@ -140,7 +140,7 @@
       "launchSettingsTitle": "ঐচ্ছিক বৈশিষ্ট্য",
       "launchSettingsDescription": "নিরাপত্তা, এবং নিরাপত্তা CLI যখন আপনি তাদের প্রয়োজন এখানে লাইভ রাখা।",
       "teamDetailsTitle": "ঐচ্ছিক দল সংক্রান্ত বিবরণ",
-      "teamDetailsDescription": "এই অপশনটি সক্রিয় করো:",
+      "teamDetailsDescription": "ডিফল্ট প্রবাহ সংক্ষিপ্ত রাখুন এবং অতিরিক্ত প্রসঙ্গ বা কাস্টম রঙ চাইলে শুধু এটি খুলুন।",
       "summary": {
         "leadPrompt": "Lead prompt",
         "autoApproveTools": "Auto-approve tools",

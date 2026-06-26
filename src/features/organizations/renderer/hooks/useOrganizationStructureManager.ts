@@ -116,10 +116,6 @@ export function useOrganizationStructureManager(
   );
 
   useEffect(() => {
-    void refreshStructure();
-  }, [refreshStructure]);
-
-  useEffect(() => {
     if (!isActive) return undefined;
     void refreshStructure();
     return undefined;

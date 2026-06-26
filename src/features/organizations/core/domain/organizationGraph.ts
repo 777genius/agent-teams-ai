@@ -318,6 +318,9 @@ export function buildAllOrganizationsGraph(
 
       const shouldProjectTeam =
         Boolean(team) && renderedTeamNames.length < input.maxTeams && unit.kind === 'team';
+      if (teamName && team && !shouldProjectTeam) {
+        continue;
+      }
       if (teamName && team) {
         renderedTeamNameSet.add(teamName);
         if (shouldProjectTeam) {
@@ -500,6 +503,9 @@ function buildConfiguredOrganizationGraph(
 
     const shouldProjectTeam =
       Boolean(team) && renderedTeamNames.length < input.maxTeams && unit.kind === 'team';
+    if (teamName && team && !shouldProjectTeam) {
+      continue;
+    }
     if (teamName && team) {
       renderedTeamNameSet.add(teamName);
       if (shouldProjectTeam) {

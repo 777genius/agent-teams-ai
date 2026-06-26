@@ -164,7 +164,7 @@
       "checkingProviders": "선택된 공급자...",
       "preparingEnvironment": "환경 준비...",
       "selectedProvidersReadyWithNotes": "선택한 공급자 준비 (매트 포함)",
-      "selectedProvidersReady": "협력업체",
+      "selectedProvidersReady": "선택한 공급자 준비 완료",
       "providerStatusLoading": "{{provider}} provider status is still loading. Model checks will start automatically.",
       "selectedProvidersLabel": "Selected providers",
       "readyStatus": "Ready"

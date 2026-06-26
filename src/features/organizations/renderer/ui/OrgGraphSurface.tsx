@@ -113,6 +113,7 @@ function areCreateButtonsEqual(
 
 const OrgGroupFrameCreateHud = ({
   viewModel,
+  isActive,
   targetFrameId,
   getGroupFrameScreenPlacements,
   getViewportSize,
@@ -120,6 +121,7 @@ const OrgGroupFrameCreateHud = ({
   getCreateTeamLabel,
 }: {
   viewModel: OrganizationMapViewModel;
+  isActive: boolean;
   targetFrameId: string | null;
   getGroupFrameScreenPlacements: () => GraphGroupFrameScreenPlacement[];
   getViewportSize: () => { width: number; height: number };
@@ -129,6 +131,11 @@ const OrgGroupFrameCreateHud = ({
   const [buttons, setButtons] = useState<GroupCreateButton[]>([]);
 
   useEffect(() => {
+    if (!isActive || !targetFrameId) {
+      setButtons([]);
+      return undefined;
+    }
+
     let frameId = 0;
     const update = (): void => {
       const viewport = getViewportSize();
@@ -174,7 +181,7 @@ const OrgGroupFrameCreateHud = ({
 
     update();
     return () => window.cancelAnimationFrame(frameId);
-  }, [getGroupFrameScreenPlacements, getViewportSize, targetFrameId, viewModel]);
+  }, [getGroupFrameScreenPlacements, getViewportSize, isActive, targetFrameId, viewModel]);
 
   return (
     <>
@@ -389,6 +396,7 @@ export const OrgGraphSurface = ({
           ? ({ getGroupFrameScreenPlacements, getViewportSize }) => (
               <OrgGroupFrameCreateHud
                 viewModel={viewModel}
+                isActive={isActive}
                 targetFrameId={createTeamFrameId}
                 getGroupFrameScreenPlacements={getGroupFrameScreenPlacements}
                 getViewportSize={getViewportSize}

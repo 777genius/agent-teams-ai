@@ -1,5 +1,5 @@
 export * from './crossTeamRelations';
-export * from './models';
+export type * from './models';
 export * from './organizationGraph';
 export * from './organizationIds';
 export * from './organizationStructure';

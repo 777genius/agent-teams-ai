@@ -1,4 +1,4 @@
-export * from './api';
+export type * from './api';
 export * from './channels';
-export * from './dto';
+export type * from './dto';
 export * from './normalize';

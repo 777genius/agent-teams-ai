@@ -69,9 +69,9 @@ describe('ProvisioningProviderStatusList', () => {
     expect(host.textContent).toContain(
       'Codex (Codex native): Selected model checks - 1 model unavailable, 1 available'
     );
-    expect(host.textContent).toContain('5.4 Mini - available for launch');
+    expect(host.textContent).toContain('5.4 Mini - Selected model available');
     expect(host.textContent).toContain(
-      '5.1 Codex Max - unavailable - Not available on this Codex native runtime'
+      '5.1 Codex Max - Selected model unavailable: Not available on this Codex native runtime'
     );
 
     const detailLines = Array.from(host.querySelectorAll('p'));
@@ -346,7 +346,9 @@ describe('ProvisioningProviderStatusList', () => {
     expect(host.textContent).toContain(
       'Codex (Codex native): Selected model checks - 1 model timed out'
     );
-    expect(host.textContent).toContain('5.3 Codex - check failed - Model verification timed out');
+    expect(host.textContent).toContain(
+      '5.3 Codex - Selected model check failed: Model verification timed out'
+    );
 
     await act(async () => {
       root.unmount();
@@ -468,12 +470,12 @@ describe('ProvisioningProviderStatusList', () => {
     expect(host.textContent).toContain(
       'OpenCode (OpenCode CLI): Selected model checks - 1 verified'
     );
-    expect(host.textContent).toContain('big-pickle - verified');
+    expect(host.textContent).toContain('big-pickle - Selected model verified');
     expect(host.textContent).not.toContain('opencode_app_mcp_tool_proof_persisted_cache_hit');
 
     const detailLines = Array.from(host.querySelectorAll('p'));
     expect(detailLines).toHaveLength(1);
-    expect(detailLines[0]?.textContent).toBe('big-pickle - verified');
+    expect(detailLines[0]?.textContent).toBe('big-pickle - Selected model verified');
 
     await act(async () => {
       root.unmount();
@@ -585,7 +587,7 @@ describe('ProvisioningProviderStatusList', () => {
     expect(host.textContent).toContain(
       'minimax-m2.5-free - compatible, deep verification pending...'
     );
-    expect(host.textContent).toContain('nemotron-3-super-free - verified');
+    expect(host.textContent).toContain('nemotron-3-super-free - Selected model verified');
 
     await act(async () => {
       root.unmount();
