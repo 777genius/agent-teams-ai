@@ -506,7 +506,7 @@ describe("FileBackendCodexWorker", () => {
     }
   });
 
-  it("continues dirty unknown safe Codex work by default", async () => {
+  it("stops dirty unknown safe Codex work by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-unknown-"));
     const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-unknown-workspace-"));
     const clock = {
@@ -550,6 +550,76 @@ describe("FileBackendCodexWorker", () => {
         taskId: "codex-safe-unknown-task",
         prompt: "Implement the unknown-retry task.",
         controls: { permissionMode: "allow-edits" },
+      });
+
+      expect(result.status).toBe("failed");
+      if (result.status !== "failed") {
+        throw new Error(`expected failed: ${result.status}`);
+      }
+      expect(result.reason).toBe("unknown_error");
+      expect(result.safeMessage).toContain("unknown error changed the workspace");
+      expect(result.attempts).toHaveLength(1);
+      expect(result.attempts[0]?.failureReason).toBe("unknown_error");
+      expect(result.attempts[0]?.failureMessage).toBe("Codex runtime failed.");
+      expect(appServers[0]!.prompts).toEqual([
+        "Implement the unknown-retry task.",
+      ]);
+      expect(appServers[1]!.prompts).toEqual([]);
+      expect(appServers[1]!.threadCwds).toEqual([]);
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("continues dirty unknown safe Codex work when explicitly allowed", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-unknown-opt-in-"));
+    const workspacePath = await mkdtemp(
+      join(tmpdir(), "codex-safe-unknown-opt-in-workspace-"),
+    );
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const appServers = [
+      new FakeAppServerFactory({
+        emitTopLevelErrorOnTurn: "transient runtime failure",
+        writeFileOnTurn: {
+          relativePath: "partial.txt",
+          content: "partial\n",
+        },
+      }),
+      new FakeAppServerFactory(),
+    ];
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      accounts: appServers.map((appServer, index) => ({
+        codexAuthJson: codexAuthJson(`unknown-opt-in-account-${index + 1}`),
+        worker: {
+          providerInstanceId: `codex-unknown-opt-in-account-${index + 1}`,
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(index + 62),
+          appServerProcessFactory: appServer.create,
+          runner: new StaticRunner({
+            exitCode: index === 0 ? 1 : 0,
+            stdout: "",
+            stderr: index === 0 ? "transient runtime failure" : "",
+          }),
+          clock,
+        },
+      })),
+      clock,
+    });
+
+    try {
+      const result = await executor.run({
+        taskId: "codex-safe-unknown-opt-in-task",
+        prompt: "Implement the unknown-retry task.",
+        controls: { permissionMode: "allow-edits" },
+        safeExecutionPolicy: { retryUnknownChangedWorkspace: true },
       });
 
       if (result.status !== "completed") {

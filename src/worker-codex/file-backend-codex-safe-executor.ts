@@ -319,7 +319,7 @@ function mergedSafeExecutionPolicy(input: {
     retryOnAccountUnavailable: true,
     retryOnReconnectRequired: true,
     retryUnknownCleanWorkspace: true,
-    retryUnknownChangedWorkspace: true,
+    retryUnknownChangedWorkspace: false,
     continuationMode: "packet_first",
     ...(input.base ?? {}),
     ...(input.override ?? {}),
