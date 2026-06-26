@@ -303,7 +303,7 @@ function localizeFormattedModelStatus(rawStatus: string, t: TeamTranslator): str
     return t('provisioning.providerStatus.detailSummary.selectedModelPingNotConfirmed');
   }
 
-  const detailWithReason = normalized.match(/^(unavailable|check failed)\s+-\s+(.+)$/i);
+  const detailWithReason = /^(unavailable|check failed)\s+-\s+(.+)$/i.exec(normalized);
   if (detailWithReason) {
     const [, status, reason] = detailWithReason;
     const label =
@@ -324,7 +324,7 @@ function localizeFormattedModelStatus(rawStatus: string, t: TeamTranslator): str
 }
 
 function localizeFormattedModelDetail(detail: string, t: TeamTranslator): string | null {
-  const match = detail.trim().match(/^(.+?)\s+-\s+(.+)$/);
+  const match = /^(.+?)\s+-\s+(.+)$/.exec(detail.trim());
   if (!match) {
     return null;
   }

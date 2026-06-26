@@ -170,12 +170,15 @@ function extractTextContent(entry: Record<string, unknown>): string | null {
   return null;
 }
 
-function addTextMentionTeamName(teamNames: Set<string>, value: string): boolean {
+function addTextMentionTeamName(teamNames: Set<string>, value: string): void {
   const normalized = value.trim().toLowerCase();
   if (!normalized || normalized.length > TEAM_AFFINITY_TEXT_MENTION_MAX_VALUE_LENGTH) {
-    return teamNames.size >= TEAM_AFFINITY_TEXT_MENTION_MAX_PER_LINE;
+    return;
   }
   teamNames.add(normalized);
+}
+
+function hasReachedTextMentionTeamNameLimit(teamNames: Set<string>): boolean {
   return teamNames.size >= TEAM_AFFINITY_TEXT_MENTION_MAX_PER_LINE;
 }
 
@@ -189,21 +192,24 @@ function collectTextMentionTeamNames(textContent: string | null): Set<string> {
   const quotedPattern = /\b(?:team name|on team|team)\s+["']([^"'\r\n]{1,160})["']/g;
   let match: RegExpExecArray | null;
   while ((match = quotedPattern.exec(normalizedText))) {
-    if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+    addTextMentionTeamName(teamNames, match[1] ?? '');
+    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
       return teamNames;
     }
   }
 
   const colonPattern = /\bteam name:\s*["']?([^"'\r\n,.;|)\]}]{1,160})/g;
   while ((match = colonPattern.exec(normalizedText))) {
-    if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+    addTextMentionTeamName(teamNames, match[1] ?? '');
+    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
       return teamNames;
     }
   }
 
   const parentheticalPattern = /\(([^()\r\n]{1,160})\)/g;
   while ((match = parentheticalPattern.exec(normalizedText))) {
-    if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+    addTextMentionTeamName(teamNames, match[1] ?? '');
+    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
       return teamNames;
     }
   }
