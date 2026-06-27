@@ -14665,10 +14665,7 @@ export class TeamProvisioningService {
 
     const generationAtStart = this.getRuntimeSnapshotCacheGeneration(teamName);
     const existingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
-    if (
-      existingRequest?.runIdAtStart === runId &&
-      existingRequest.generationAtStart === generationAtStart
-    ) {
+    if (existingRequest?.runIdAtStart === runId) {
       return existingRequest.promise;
     }
 
@@ -26909,10 +26906,7 @@ export class TeamProvisioningService {
 
     const generationAtStart = this.getRuntimeSnapshotCacheGeneration(teamName);
     const existingRequest = this.liveTeamAgentRuntimeMetadataInFlightByTeam.get(teamName);
-    if (
-      existingRequest?.runIdAtStart === runId &&
-      existingRequest.generationAtStart === generationAtStart
-    ) {
+    if (existingRequest?.runIdAtStart === runId) {
       return this.cloneLiveTeamAgentRuntimeMetadata(await existingRequest.promise);
     }
 

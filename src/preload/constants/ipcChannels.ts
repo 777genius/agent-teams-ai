@@ -226,6 +226,9 @@ export const TEAM_LIST = 'team:list';
 /** Get detailed team data */
 export const TEAM_GET_DATA = 'team:getData';
 
+/** Get one full task by id */
+export const TEAM_GET_TASK = 'team:getTask';
+
 /** Get lightweight task change presence map for the currently viewed team */
 export const TEAM_GET_TASK_CHANGE_PRESENCE = 'team:getTaskChangePresence';
 

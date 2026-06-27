@@ -5,7 +5,10 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
-import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
+import {
+  getTeamDataWorkerClient,
+  isTeamDataWorkerFatalError,
+} from '@main/services/team/TeamDataWorkerClient';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
@@ -37,6 +40,7 @@ import {
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
   TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
@@ -230,6 +234,7 @@ import type {
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
+  TeamTaskWithKanban,
   TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
@@ -490,6 +495,25 @@ function noteHeavyTeamDataWorkerFallback(operation: string): void {
   );
 }
 
+function getWorkerErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getFatalTeamDataWorkerFailureMessage(error: unknown): string | null {
+  if (!isTeamDataWorkerFatalError(error)) {
+    return null;
+  }
+  const message = getWorkerErrorMessage(error);
+  return `TEAM_DATA_WORKER_FAILED: ${message}`;
+}
+
+function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): void {
+  const message = getFatalTeamDataWorkerFailureMessage(error);
+  if (message) {
+    throw new Error(message);
+  }
+}
+
 async function getNewestMessagesPageWithLiveOverlay(input: {
   teamName: string;
   limit: number;
@@ -505,10 +529,11 @@ async function getNewestMessagesPageWithLiveOverlay(input: {
     try {
       return await worker.getMessagesPage(teamName, options);
     } catch (workerErr) {
+      throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage.liveOverlay', workerErr);
       logger.warn(
-        `[teams:getMessagesPage] worker failed for live overlay, falling back: ${
-          workerErr instanceof Error ? workerErr.message : workerErr
-        }`
+        `[teams:getMessagesPage] worker failed for live overlay, falling back: ${getWorkerErrorMessage(
+          workerErr
+        )}`
       );
     }
   }
@@ -723,6 +748,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_MESSAGES_PAGE, handleGetMessagesPage);
   ipcMain.handle(TEAM_GET_MEMBER_ACTIVITY_META, handleGetMemberActivityMeta);
   ipcMain.handle(TEAM_CREATE_TASK, handleCreateTask);
+  ipcMain.handle(TEAM_GET_TASK, handleGetTask);
   ipcMain.handle(TEAM_REQUEST_REVIEW, handleRequestReview);
   ipcMain.handle(TEAM_UPDATE_KANBAN, handleUpdateKanban);
   ipcMain.handle(TEAM_UPDATE_KANBAN_COLUMN_ORDER, handleUpdateKanbanColumnOrder);
@@ -811,6 +837,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_MESSAGES_PAGE);
   ipcMain.removeHandler(TEAM_GET_MEMBER_ACTIVITY_META);
   ipcMain.removeHandler(TEAM_CREATE_TASK);
+  ipcMain.removeHandler(TEAM_GET_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
@@ -1091,8 +1118,9 @@ async function handleGetData(
             : await worker.getTeamData(tn, getDataOptions);
         dataSource = 'worker';
       } catch (workerErr) {
+        throwIfFatalTeamDataWorkerFailure('teams:getData', workerErr);
         logger.warn(
-          `[teams:getData] worker failed, falling back: ${workerErr instanceof Error ? workerErr.message : workerErr}`
+          `[teams:getData] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
         );
         noteHeavyTeamDataWorkerFallback('teams:getData');
         data = await readFromMain();
@@ -2892,10 +2920,9 @@ async function handleGetMessagesPage(
         scanNotifications(page);
         return page;
       } catch (workerErr) {
+        throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage', workerErr);
         logger.warn(
-          `[teams:getMessagesPage] worker failed, falling back: ${
-            workerErr instanceof Error ? workerErr.message : workerErr
-          }`
+          `[teams:getMessagesPage] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
         );
       }
     }
@@ -2921,10 +2948,11 @@ async function handleGetMemberActivityMeta(
       try {
         return await worker.getMemberActivityMeta(vTeam.value!);
       } catch (workerErr) {
+        throwIfFatalTeamDataWorkerFailure('teams:getMemberActivityMeta', workerErr);
         logger.warn(
-          `[teams:getMemberActivityMeta] worker failed, falling back: ${
-            workerErr instanceof Error ? workerErr.message : workerErr
-          }`
+          `[teams:getMemberActivityMeta] worker failed, falling back: ${getWorkerErrorMessage(
+            workerErr
+          )}`
         );
       }
     }
@@ -3455,6 +3483,26 @@ async function handleRequestReview(
   );
 }
 
+async function handleGetTask(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<TeamTaskWithKanban | null>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+
+  const validatedTaskId = validateTaskId(taskId);
+  if (!validatedTaskId.valid) {
+    return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+  }
+
+  return wrapTeamHandler('getTask', () =>
+    getTeamDataService().getTask(validatedTeamName.value!, validatedTaskId.value!)
+  );
+}
+
 async function handleUpdateKanban(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -3982,8 +4030,12 @@ async function handleGetLogsForTask(
       const result = await worker.findLogsForTask(vTeam.value!, vTask.value!, opts);
       return { success: true, data: result };
     } catch (workerErr) {
+      const fatalError = getFatalTeamDataWorkerFailureMessage(workerErr);
+      if (fatalError) {
+        return { success: false, error: fatalError };
+      }
       logger.warn(
-        `[teams:getLogsForTask] worker failed, falling back: ${workerErr instanceof Error ? workerErr.message : workerErr}`
+        `[teams:getLogsForTask] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
       );
     }
   }

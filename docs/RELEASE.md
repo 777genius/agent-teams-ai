@@ -39,6 +39,7 @@ Reduces memory growth in long-running teams and large projects. Fixes OOM risks 
 - Fix low-heap team launch crashes and unbounded stdout/stderr carry buffers.
 - Fix Enter submitting text during IME composition.
 - Fix draft launch roster updates before launch.
+- Update vulnerable dependencies from the post-v2.5.0 security audit.
 
 ### Downloads
 

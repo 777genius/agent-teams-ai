@@ -6,6 +6,7 @@ import { createHash } from 'crypto';
 
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 
+import type { InboxMessageCursor, InboxMessagesWindow } from './TeamInboxReader';
 import type { InboxMessage, MessagesPage, TeamConfig } from '@shared/types';
 
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
@@ -17,6 +18,10 @@ type TeamConfigMember = NonNullable<TeamConfig['members']>[number];
 interface TeamMessageFeedDeps {
   getConfig: (teamName: string) => Promise<TeamConfig | null>;
   getInboxMessages: (teamName: string) => Promise<InboxMessage[]>;
+  getInboxMessagesWindow?: (
+    teamName: string,
+    options: { cursor?: InboxMessageCursor | null; limit: number }
+  ) => Promise<InboxMessagesWindow>;
   getLeadSessionMessages: (teamName: string, config: TeamConfig) => Promise<InboxMessage[]>;
   getSentMessages: (teamName: string) => Promise<InboxMessage[]>;
 }
@@ -467,18 +472,46 @@ function addSourceRevisionMessage(
   hash.update('\n');
 }
 
-function toSourceRevision(sources: Record<string, readonly InboxMessage[]>): string {
-  const hash = createHash('sha256');
-  const sourceNames = Object.keys(sources).sort();
-  for (const sourceName of sourceNames) {
-    const messages = sources[sourceName] ?? [];
-    hash.update(`${sourceName}:${messages.length}\n`);
-    for (const message of messages) {
-      if (!isVisibleTeamMessage(message)) {
-        continue;
-      }
-      addSourceRevisionMessage(hash, message);
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function toErrorSourceRevision(sourceName: string, error: unknown): string {
+  return createHash('sha256')
+    .update(`${sourceName}:error:${getErrorMessage(error)}`)
+    .digest('hex')
+    .slice(0, 24);
+}
+
+function addSourceMessagesRevision(
+  hash: ReturnType<typeof createHash>,
+  sourceName: string,
+  messages: readonly InboxMessage[]
+): void {
+  hash.update(`${sourceName}:${messages.length}\n`);
+  for (const message of messages) {
+    if (!isVisibleTeamMessage(message)) {
+      continue;
     }
+    addSourceRevisionMessage(hash, message);
+  }
+}
+
+function toSourceRevision(
+  sources: Record<string, readonly InboxMessage[]>,
+  precomputedSources: Record<string, string> = {}
+): string {
+  const hash = createHash('sha256');
+  const sourceNames = Array.from(
+    new Set([...Object.keys(sources), ...Object.keys(precomputedSources)])
+  ).sort();
+  for (const sourceName of sourceNames) {
+    const precomputed = precomputedSources[sourceName];
+    if (precomputed) {
+      hash.update(`${sourceName}:precomputed:${precomputed}\n`);
+      continue;
+    }
+    addSourceMessagesRevision(hash, sourceName, sources[sourceName] ?? []);
   }
   return hash.digest('hex').slice(0, 24);
 }
@@ -622,18 +655,51 @@ export class TeamMessageFeedService {
     }
 
     const sourceStartedAt = Date.now();
-    const [inboxSource, leadSource, sentSource] = await Promise.all([
-      this.deps.getInboxMessages(teamName).catch(() => [] as InboxMessage[]),
+    const inboxSourcePromise = this.deps.getInboxMessagesWindow
+      ? this.deps
+          .getInboxMessagesWindow(teamName, {
+            cursor,
+            limit: sourceWindowLimit,
+          })
+          .then((window) => ({ kind: 'window' as const, window }))
+          .catch((error) => {
+            logger.warn(
+              `[${teamName}] message page inbox window failed; omitting inbox source instead of falling back to full read: ${getErrorMessage(
+                error
+              )}`
+            );
+            return {
+              kind: 'window' as const,
+              window: {
+                messages: [],
+                truncated: false,
+                sourceRevision: toErrorSourceRevision('inbox', error),
+                sourceMessageCount: 0,
+              },
+            };
+          })
+      : this.deps
+          .getInboxMessages(teamName)
+          .then((messages) => ({ kind: 'full' as const, messages }))
+          .catch(() => ({ kind: 'full' as const, messages: [] as InboxMessage[] }));
+    const [inboxPayload, leadSource, sentSource] = await Promise.all([
+      inboxSourcePromise,
       this.deps.getLeadSessionMessages(teamName, config).catch(() => [] as InboxMessage[]),
       this.deps.getSentMessages(teamName).catch(() => [] as InboxMessage[]),
     ]);
     const sourceMs = Date.now() - sourceStartedAt;
 
-    const inboxWindow = selectSourceWindow({
-      messages: inboxSource,
-      cursor,
-      limit: sourceWindowLimit,
-    });
+    const inboxWindow =
+      inboxPayload.kind === 'window'
+        ? {
+            messages: inboxPayload.window.messages,
+            truncated: inboxPayload.window.truncated,
+          }
+        : selectSourceWindow({
+            messages: inboxPayload.messages,
+            cursor,
+            limit: sourceWindowLimit,
+          });
     const leadWindow = selectSourceWindow({
       messages: leadSource,
       cursor,
@@ -652,12 +718,22 @@ export class TeamMessageFeedService {
       cursor,
       limit: sourceWindowLimit,
     });
-    const feedRevision = toSourceRevision({
-      inbox: inboxSource,
-      lead: leadSource,
-      sent: sentSource,
-      synthetic: syntheticSource,
-    });
+    const feedRevision =
+      inboxPayload.kind === 'window'
+        ? toSourceRevision(
+            {
+              lead: leadSource,
+              sent: sentSource,
+              synthetic: syntheticSource,
+            },
+            { inbox: inboxPayload.window.sourceRevision }
+          )
+        : toSourceRevision({
+            inbox: inboxPayload.messages,
+            lead: leadSource,
+            sent: sentSource,
+            synthetic: syntheticSource,
+          });
 
     const normalizeStartedAt = Date.now();
     let messages = [
@@ -692,8 +768,12 @@ export class TeamMessageFeedService {
     const normalizeMs = Date.now() - normalizeStartedAt;
     const totalMs = Date.now() - startedAt;
     if (totalMs >= 750) {
+      const inboxCount =
+        inboxPayload.kind === 'window'
+          ? inboxPayload.window.sourceMessageCount
+          : inboxPayload.messages.length;
       logger.warn(
-        `[${teamName}] message page build slow totalMs=${totalMs} sourceMs=${sourceMs} normalizeMs=${normalizeMs} inbox=${inboxSource.length} lead=${leadSource.length} sent=${sentSource.length} sourceWindowLimit=${sourceWindowLimit}`
+        `[${teamName}] message page build slow totalMs=${totalMs} sourceMs=${sourceMs} normalizeMs=${normalizeMs} inbox=${inboxCount} inboxWindowed=${inboxPayload.kind === 'window'} lead=${leadSource.length} sent=${sentSource.length} sourceWindowLimit=${sourceWindowLimit}`
       );
     }
 

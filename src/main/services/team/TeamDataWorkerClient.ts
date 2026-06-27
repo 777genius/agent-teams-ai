@@ -3,9 +3,12 @@
  *
  * Proxies getTeamData and findLogsForTask calls to a worker thread
  * so they don't block the Electron main event loop.
- * Falls back to main-thread execution if the worker is unavailable.
+ * Main-thread fallback is only safe when the worker is unavailable. If an
+ * existing worker OOMs or times out, repeating the same read on Electron main
+ * can crash the app.
  */
 
+import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,8 +28,18 @@ import type {
 
 const logger = createLogger('Service:TeamDataWorkerClient');
 const WORKER_CALL_TIMEOUT_MS = 30_000;
+const WORKER_FATAL_RESTART_COOLDOWN_MS = 30_000;
 const SAFE_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SAFE_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
+const FATAL_WORKER_ERROR_PATTERNS = [
+  'ERR_WORKER_OUT_OF_MEMORY',
+  'Team data worker recovering after fatal failure',
+  'Worker terminated due to reaching memory limit',
+  'JS heap out of memory',
+  'JavaScript heap out of memory',
+  'Worker exited with code',
+  'Worker call timeout after',
+] as const;
 
 function makeId(): string {
   return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
@@ -63,6 +76,9 @@ function resolveWorkerPath(): string | null {
 interface PendingEntry {
   resolve: (v: unknown, diag?: Extract<TeamDataWorkerResponse, { ok: true }>['diag']) => void;
   reject: (e: Error) => void;
+  op: TeamDataWorkerRequest['op'];
+  summary: Record<string, unknown>;
+  startedAt: number;
 }
 
 function normalizeTeamGetDataOptions(options?: TeamGetDataOptions): TeamGetDataOptions | undefined {
@@ -82,6 +98,13 @@ function getTeamDataRequestPayload(
   return normalizedOptions ? { teamName, options: normalizedOptions } : { teamName };
 }
 
+function shortHash(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+  if (serialized === undefined) return undefined;
+  return createHash('sha256').update(serialized).digest('hex').slice(0, 16);
+}
+
 function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
   if (!liveMessages?.length) return undefined;
   return liveMessages.map((message) => ({
@@ -89,7 +112,28 @@ function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
     timestamp: message.timestamp,
     source: message.source,
     from: message.from,
-    text: message.text,
+    to: message.to,
+    read: message.read,
+    actionMode: message.actionMode,
+    commentId: message.commentId,
+    color: message.color,
+    relayOfMessageId: message.relayOfMessageId,
+    leadSessionId: message.leadSessionId,
+    conversationId: message.conversationId,
+    replyToConversationId: message.replyToConversationId,
+    messageKind: message.messageKind,
+    workSyncIntent: message.workSyncIntent,
+    workSyncIntentKey: message.workSyncIntentKey,
+    workSyncPayloadHash: message.workSyncPayloadHash,
+    textHash: shortHash(message.text ?? ''),
+    summaryHash: shortHash(message.summary),
+    taskRefsHash: shortHash(message.taskRefs),
+    attachmentsHash: shortHash(message.attachments),
+    toolSummaryHash: shortHash(message.toolSummary),
+    toolCallsHash: shortHash(message.toolCalls),
+    workSyncReviewRequestEventIdsHash: shortHash(message.workSyncReviewRequestEventIds),
+    slashCommandHash: shortHash(message.slashCommand),
+    commandOutputHash: shortHash(message.commandOutput),
   }));
 }
 
@@ -146,11 +190,30 @@ export class TeamDataWorkerClient {
   private pending = new Map<string, PendingEntry>();
   private getTeamDataInFlight = new Map<string, Promise<TeamViewSnapshot>>();
   private getMessagesPageInFlight = new Map<string, Promise<MessagesPage>>();
+  private getMemberActivityMetaInFlight = new Map<string, Promise<TeamMemberActivityMeta>>();
+  private fatalRestartCooldownUntilMs = 0;
+  private lastFatalWorkerError: string | null = null;
 
   private failWorker(worker: Worker, error: Error): void {
     if (this.worker !== worker) return;
 
     this.worker = null;
+    if (isTeamDataWorkerFatalError(error)) {
+      this.lastFatalWorkerError = error.message;
+      this.fatalRestartCooldownUntilMs = Date.now() + WORKER_FATAL_RESTART_COOLDOWN_MS;
+      const pendingSummary = Array.from(this.pending.values())
+        .slice(0, 10)
+        .map((entry) => ({
+          op: entry.op,
+          ms: Date.now() - entry.startedAt,
+          payload: entry.summary,
+        }));
+      logger.error(
+        `worker fatal failure pending=${this.pending.size} pendingSample=${JSON.stringify(
+          pendingSummary
+        )} error=${error.message}`
+      );
+    }
     const pendingEntries = Array.from(this.pending.values());
     this.pending.clear();
 
@@ -172,6 +235,11 @@ export class TeamDataWorkerClient {
   private ensureWorker(): Worker {
     if (!this.workerPath) throw new Error('Worker not available');
     if (this.worker) return this.worker;
+    if (Date.now() < this.fatalRestartCooldownUntilMs) {
+      throw new Error(
+        `Team data worker recovering after fatal failure: ${this.lastFatalWorkerError ?? 'unknown'}`
+      );
+    }
 
     const w = new Worker(this.workerPath);
     this.worker = w;
@@ -210,6 +278,7 @@ export class TeamDataWorkerClient {
     const worker = this.ensureWorker();
     const id = makeId();
     const request = { id, op, payload } as TeamDataWorkerRequest;
+    const summary = summarizeWorkerRequest(request);
     const startedAt = Date.now();
     const pendingAtStart = this.pending.size;
 
@@ -218,7 +287,7 @@ export class TeamDataWorkerClient {
         const timeoutError = new Error(`Worker call timeout after ${WORKER_CALL_TIMEOUT_MS}ms`);
         logger.warn(
           `worker call timeout op=${op} ms=${Date.now() - startedAt} pendingAtStart=${pendingAtStart} pendingNow=${this.pending.size} payload=${JSON.stringify(
-            summarizeWorkerRequest(request)
+            summary
           )}`
         );
         this.failWorker(worker, timeoutError);
@@ -233,7 +302,7 @@ export class TeamDataWorkerClient {
           if (ms >= 1500) {
             logger.warn(
               `worker call slow op=${op} ms=${ms} workerTotalMs=${String(diag?.totalMs ?? 'unknown')} pendingAtStart=${pendingAtStart} pendingNow=${this.pending.size} payload=${JSON.stringify(
-                summarizeWorkerRequest(request)
+                summary
               )}`
             );
           }
@@ -245,12 +314,15 @@ export class TeamDataWorkerClient {
           if (ms >= 1500) {
             logger.warn(
               `worker call failed slow op=${op} ms=${ms} pendingAtStart=${pendingAtStart} pendingNow=${this.pending.size} payload=${JSON.stringify(
-                summarizeWorkerRequest(request)
+                summary
               )} error=${error.message}`
             );
           }
           reject(error);
         },
+        op,
+        summary,
+        startedAt,
       });
 
       worker.postMessage(request);
@@ -308,43 +380,21 @@ export class TeamDataWorkerClient {
 
   invalidateTeamConfig(teamName: string): void {
     if (!SAFE_NAME_RE.test(teamName)) return;
-    this.clearTeamDataInFlightForTeam(teamName);
-    this.clearMessagesPageInFlightForTeam(teamName);
     this.postBestEffort('invalidateTeamConfig', { teamName });
   }
 
   invalidateTeamMessageFeed(teamName: string): void {
     if (!SAFE_NAME_RE.test(teamName)) return;
-    this.clearMessagesPageInFlightForTeam(teamName);
     this.postBestEffort('invalidateTeamMessageFeed', { teamName });
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName?: string): void {
     if (!SAFE_NAME_RE.test(teamName)) return;
     if (memberName !== undefined && !SAFE_NAME_RE.test(memberName)) return;
-    this.clearTeamDataInFlightForTeam(teamName);
     this.postBestEffort('invalidateMemberRuntimeAdvisory', {
       teamName,
       ...(memberName ? { memberName } : {}),
     });
-  }
-
-  private clearMessagesPageInFlightForTeam(teamName: string): void {
-    const prefix = `{"teamName":"${teamName}",`;
-    for (const key of this.getMessagesPageInFlight.keys()) {
-      if (key.startsWith(prefix)) {
-        this.getMessagesPageInFlight.delete(key);
-      }
-    }
-  }
-
-  private clearTeamDataInFlightForTeam(teamName: string): void {
-    const prefix = `${teamName}\u0000`;
-    for (const key of this.getTeamDataInFlight.keys()) {
-      if (key.startsWith(prefix)) {
-        this.getTeamDataInFlight.delete(key);
-      }
-    }
   }
 
   async getMessagesPage(
@@ -377,7 +427,18 @@ export class TeamDataWorkerClient {
 
   async getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
-    return this.call('getMemberActivityMeta', { teamName }) as Promise<TeamMemberActivityMeta>;
+    const existing = this.getMemberActivityMetaInFlight.get(teamName);
+    if (existing) return existing;
+
+    const promise = (
+      this.call('getMemberActivityMeta', { teamName }) as Promise<TeamMemberActivityMeta>
+    ).finally(() => {
+      if (this.getMemberActivityMetaInFlight.get(teamName) === promise) {
+        this.getMemberActivityMetaInFlight.delete(teamName);
+      }
+    });
+    this.getMemberActivityMetaInFlight.set(teamName, promise);
+    return promise;
   }
 
   async findLogsForTask(
@@ -402,6 +463,7 @@ export class TeamDataWorkerClient {
     this.worker = null;
     this.getTeamDataInFlight.clear();
     this.getMessagesPageInFlight.clear();
+    this.getMemberActivityMetaInFlight.clear();
     for (const [, entry] of this.pending) {
       entry.reject(new Error('Client disposed'));
     }
@@ -414,4 +476,12 @@ let singleton: TeamDataWorkerClient | null = null;
 export function getTeamDataWorkerClient(): TeamDataWorkerClient {
   if (!singleton) singleton = new TeamDataWorkerClient();
   return singleton;
+}
+
+export function isTeamDataWorkerFatalError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message} ${(error as { code?: unknown }).code ?? ''}`
+      : String(error);
+  return FATAL_WORKER_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
 }

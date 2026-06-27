@@ -170,47 +170,48 @@ function extractTextContent(entry: Record<string, unknown>): string | null {
   return null;
 }
 
-function addTextMentionTeamName(teamNames: Set<string>, value: string): void {
+function addTextMentionTeamName(teamNames: Set<string>, value: string): boolean {
   const normalized = value.trim().toLowerCase();
   if (!normalized || normalized.length > TEAM_AFFINITY_TEXT_MENTION_MAX_VALUE_LENGTH) {
-    return;
+    return teamNames.size >= TEAM_AFFINITY_TEXT_MENTION_MAX_PER_LINE;
   }
   teamNames.add(normalized);
-}
-
-function hasReachedTextMentionTeamNameLimit(teamNames: Set<string>): boolean {
   return teamNames.size >= TEAM_AFFINITY_TEXT_MENTION_MAX_PER_LINE;
 }
 
 function collectTextMentionTeamNames(textContent: string | null): Set<string> {
-  const teamNames = new Set<string>();
   const normalizedText = textContent?.trim().toLowerCase();
   if (!normalizedText) {
-    return teamNames;
+    return new Set<string>();
   }
 
+  const teamNames = new Set<string>();
   const quotedPattern = /\b(?:team name|on team|team)\s+["']([^"'\r\n]{1,160})["']/g;
   let match: RegExpExecArray | null;
+  let reachedLimit = false;
   while ((match = quotedPattern.exec(normalizedText))) {
-    addTextMentionTeamName(teamNames, match[1] ?? '');
-    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
-      return teamNames;
+    if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+      reachedLimit = true;
+      break;
     }
   }
 
-  const colonPattern = /\bteam name:\s*["']?([^"'\r\n,.;|)\]}]{1,160})/g;
-  while ((match = colonPattern.exec(normalizedText))) {
-    addTextMentionTeamName(teamNames, match[1] ?? '');
-    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
-      return teamNames;
+  if (!reachedLimit) {
+    const colonPattern = /\bteam name:\s*["']?([^"'\r\n,.;|)\]}]{1,160})/g;
+    while ((match = colonPattern.exec(normalizedText))) {
+      if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+        reachedLimit = true;
+        break;
+      }
     }
   }
 
-  const parentheticalPattern = /\b(?:team name|on team|team)\s*\(([^()\r\n]{1,160})\)/g;
-  while ((match = parentheticalPattern.exec(normalizedText))) {
-    addTextMentionTeamName(teamNames, match[1] ?? '');
-    if (hasReachedTextMentionTeamNameLimit(teamNames)) {
-      return teamNames;
+  if (!reachedLimit) {
+    const parentheticalPattern = /\(([^()\r\n]{1,160})\)/g;
+    while ((match = parentheticalPattern.exec(normalizedText))) {
+      if (addTextMentionTeamName(teamNames, match[1] ?? '')) {
+        break;
+      }
     }
   }
 

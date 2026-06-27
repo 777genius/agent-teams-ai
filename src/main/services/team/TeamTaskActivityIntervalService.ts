@@ -3,6 +3,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { estimateCachedValueBytes } from './cacheMemoryEstimate';
 import { withFileLockSync } from './fileLock';
 import { TeamTaskReader } from './TeamTaskReader';
 
@@ -33,6 +34,7 @@ interface TaskFileSignature {
 interface CachedActivityTaskFile {
   signature: TaskFileSignature;
   task: MutableTeamTask | null;
+  estimatedBytes: number;
 }
 
 interface ResumeMembersCacheEntry {
@@ -47,7 +49,10 @@ type MutableTeamTask = TeamTask & {
 };
 
 const CRASH_REPAIR_GRACE_MS = 5_000;
-const TASK_FILE_CACHE_MAX_ENTRIES = 8_192;
+const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
+const TASK_FILE_CACHE_MAX_ENTRIES = 256;
+const TASK_FILE_CACHE_MAX_BYTES = 4 * 1024 * 1024;
+const TASK_FILE_CACHE_MAX_ENTRY_BYTES = 512 * 1024;
 const logger = createLogger('Service:TeamTaskActivityIntervalService');
 
 function normalizeMemberName(value: string | null | undefined): string {
@@ -361,6 +366,7 @@ export class TeamTaskActivityIntervalService {
   private readonly resumeMembersCache = new Map<string, ResumeMembersCacheEntry>();
   private readonly memberActivityNoopCache = new Map<string, string>();
   private readonly taskFileCache = new Map<string, CachedActivityTaskFile>();
+  private taskFileCacheBytes = 0;
 
   private getBoardStateLockPath(teamName: string): string {
     return `${path.join(getTeamsBasePath(), teamName, 'board-state')}.lock`;
@@ -395,10 +401,41 @@ export class TeamTaskActivityIntervalService {
     const cached = this.taskFileCache.get(filePath);
     if (!cached) return undefined;
     if (!taskFileSignaturesEqual(cached.signature, signature)) {
-      this.taskFileCache.delete(filePath);
+      this.deleteCachedTaskFile(filePath);
       return undefined;
     }
+    this.taskFileCache.delete(filePath);
+    this.taskFileCache.set(filePath, cached);
     return cached.task ? structuredClone(cached.task) : null;
+  }
+
+  private deleteCachedTaskFile(filePath: string): void {
+    const cached = this.taskFileCache.get(filePath);
+    if (!cached) {
+      return;
+    }
+    this.taskFileCacheBytes = Math.max(0, this.taskFileCacheBytes - cached.estimatedBytes);
+    this.taskFileCache.delete(filePath);
+  }
+
+  private evictOldestTaskFileCacheEntry(): boolean {
+    const oldestKey = this.taskFileCache.keys().next().value;
+    if (oldestKey === undefined) {
+      return false;
+    }
+    this.deleteCachedTaskFile(oldestKey);
+    return true;
+  }
+
+  private trimTaskFileCache(): void {
+    while (
+      this.taskFileCache.size > TASK_FILE_CACHE_MAX_ENTRIES ||
+      this.taskFileCacheBytes > TASK_FILE_CACHE_MAX_BYTES
+    ) {
+      if (!this.evictOldestTaskFileCacheEntry()) {
+        return;
+      }
+    }
   }
 
   private setCachedTaskFile(
@@ -406,27 +443,26 @@ export class TeamTaskActivityIntervalService {
     signature: TaskFileSignature,
     task: MutableTeamTask | null
   ): void {
-    if (
-      !this.taskFileCache.has(filePath) &&
-      this.taskFileCache.size >= TASK_FILE_CACHE_MAX_ENTRIES
-    ) {
-      const oldestKey = this.taskFileCache.keys().next().value;
-      if (oldestKey) {
-        this.taskFileCache.delete(oldestKey);
-      }
+    const estimatedBytes = task ? estimateCachedValueBytes(task) : 0;
+    this.deleteCachedTaskFile(filePath);
+    if (estimatedBytes > TASK_FILE_CACHE_MAX_ENTRY_BYTES) {
+      return;
     }
     this.taskFileCache.set(filePath, {
       signature,
       task: task ? structuredClone(task) : null,
+      estimatedBytes,
     });
+    this.taskFileCacheBytes += estimatedBytes;
+    this.trimTaskFileCache();
   }
 
   private readTaskFile(filePath: string): MutableTeamTask | null {
     let signature: TaskFileSignature;
     try {
       const stat = fs.statSync(filePath);
-      if (!stat.isFile()) {
-        this.taskFileCache.delete(filePath);
+      if (!stat.isFile() || stat.size > MAX_TASK_FILE_BYTES) {
+        this.deleteCachedTaskFile(filePath);
         return null;
       }
       signature = buildTaskFileSignature(stat);
@@ -435,7 +471,7 @@ export class TeamTaskActivityIntervalService {
         return cached;
       }
     } catch {
-      this.taskFileCache.delete(filePath);
+      this.deleteCachedTaskFile(filePath);
       return null;
     }
 
@@ -453,13 +489,13 @@ export class TeamTaskActivityIntervalService {
   private cacheWrittenTaskFile(filePath: string, task: MutableTeamTask): void {
     try {
       const stat = fs.statSync(filePath);
-      if (!stat.isFile()) {
-        this.taskFileCache.delete(filePath);
+      if (!stat.isFile() || stat.size > MAX_TASK_FILE_BYTES) {
+        this.deleteCachedTaskFile(filePath);
         return;
       }
       this.setCachedTaskFile(filePath, buildTaskFileSignature(stat), task);
     } catch {
-      this.taskFileCache.delete(filePath);
+      this.deleteCachedTaskFile(filePath);
     }
   }
 

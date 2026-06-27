@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
 
+import { estimateCachedValueBytes } from '@main/services/team/cacheMemoryEstimate';
 import { readBootstrapLaunchSnapshot } from '@main/services/team/TeamBootstrapStateReader';
 import { normalizePersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
@@ -11,8 +12,11 @@ import {
   shouldSuppressLegacyLaunchArtifactHeuristic,
   TEAM_LAUNCH_SUMMARY_FILE,
 } from '@main/services/team/TeamLaunchSummaryProjection';
+import { compactTeamTaskForSnapshot } from '@main/services/team/teamTaskSnapshotCompaction';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
+
+import type { TeamTask } from '@shared/types';
 
 interface ListTeamsPayload {
   teamsDir: string;
@@ -58,6 +62,10 @@ function deriveTaskDisplayId(taskId: string): string {
  */
 function unescapeLiteralNewlines(text: string): string {
   return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+}
+
+function compactWorkerTaskProjection<T extends Record<string, unknown>>(task: T): T {
+  return compactTeamTaskForSnapshot(task as unknown as TeamTask) as unknown as T;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +139,9 @@ const REVIEW_LIFECYCLE_EVENTS = new Set([
 ]);
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
 const TEAM_SUMMARY_CACHE_MAX_ENTRIES = 1000;
-const TASK_FILE_CACHE_MAX_ENTRIES = 10000;
+const TASK_FILE_CACHE_MAX_ENTRIES = 512;
+const TASK_FILE_CACHE_MAX_BYTES = 32 * 1024 * 1024;
+const TASK_FILE_CACHE_MAX_ENTRY_BYTES = 3 * 1024 * 1024;
 const PERSISTENT_TASK_PROJECTION_CACHE_VERSION = 1;
 const PERSISTENT_TASK_PROJECTION_CACHE_DIR = 'v1';
 const MAX_PERSISTENT_TASK_PROJECTION_CACHE_BYTES = 16 * 1024 * 1024;
@@ -174,6 +184,7 @@ interface TaskFileCacheEntry {
   result: CachedTaskReadResult;
   tasksBase: string;
   lastUsedAt: number;
+  estimatedBytes: number;
 }
 
 interface PersistentTaskProjectionCacheEntry {
@@ -183,6 +194,7 @@ interface PersistentTaskProjectionCacheEntry {
 
 const teamSummaryCache = new Map<string, TeamSummaryCacheEntry>();
 const taskFileCache = new Map<string, TaskFileCacheEntry>();
+let taskFileCacheBytes = 0;
 
 interface TeamSummaryDependencyFingerprint {
   value: string;
@@ -632,6 +644,62 @@ function makeTaskCacheKey(
   return `${tasksBase}\0${teamName}\0${fileName}\0${optionKey}`;
 }
 
+function deleteTaskFileCacheEntry(
+  cacheKey: string,
+  diag?: Pick<GetAllTasksDiag, 'cacheEvictions'>
+): void {
+  const cached = taskFileCache.get(cacheKey);
+  if (!cached) {
+    return;
+  }
+  taskFileCacheBytes = Math.max(0, taskFileCacheBytes - cached.estimatedBytes);
+  taskFileCache.delete(cacheKey);
+  if (diag) {
+    diag.cacheEvictions++;
+  }
+}
+
+function evictOldestTaskFileCacheEntry(diag?: Pick<GetAllTasksDiag, 'cacheEvictions'>): boolean {
+  const oldest = taskFileCache.keys().next().value;
+  if (typeof oldest !== 'string') {
+    return false;
+  }
+  deleteTaskFileCacheEntry(oldest, diag);
+  return true;
+}
+
+function trimTaskFileCache(diag?: Pick<GetAllTasksDiag, 'cacheEvictions'>): void {
+  while (
+    taskFileCache.size > TASK_FILE_CACHE_MAX_ENTRIES ||
+    taskFileCacheBytes > TASK_FILE_CACHE_MAX_BYTES
+  ) {
+    if (!evictOldestTaskFileCacheEntry(diag)) {
+      return;
+    }
+  }
+}
+
+function setTaskFileCacheEntry(
+  cacheKey: string,
+  entry: Omit<TaskFileCacheEntry, 'estimatedBytes'>,
+  taskDiag: Pick<TaskReadDiag, 'cacheWriteSkips'>,
+  diag?: Pick<GetAllTasksDiag, 'cacheEvictions'>
+): boolean {
+  const estimatedBytes = estimateCachedValueBytes(entry.result);
+  deleteTaskFileCacheEntry(cacheKey);
+  if (estimatedBytes > TASK_FILE_CACHE_MAX_ENTRY_BYTES) {
+    taskDiag.cacheWriteSkips++;
+    return false;
+  }
+  taskFileCache.set(cacheKey, {
+    ...entry,
+    estimatedBytes,
+  });
+  taskFileCacheBytes += estimatedBytes;
+  trimTaskFileCache(diag);
+  return true;
+}
+
 async function cacheTaskReadResultIfStable(
   cacheKey: string,
   taskPath: string,
@@ -650,13 +718,16 @@ async function cacheTaskReadResultIfStable(
     taskDiag.cacheWriteSkips++;
     return false;
   }
-  taskFileCache.set(cacheKey, {
-    fingerprint: fingerprintBefore,
-    result: cloneCached(result),
-    tasksBase,
-    lastUsedAt: nowMs(),
-  });
-  return true;
+  return setTaskFileCacheEntry(
+    cacheKey,
+    {
+      fingerprint: fingerprintBefore,
+      result: cloneCached(result),
+      tasksBase,
+      lastUsedAt: nowMs(),
+    },
+    taskDiag
+  );
 }
 
 function applyCachedTaskReadResult(
@@ -679,16 +750,10 @@ function pruneTaskFileCache(
 ): void {
   for (const [key, entry] of taskFileCache) {
     if (entry.tasksBase === tasksBase && !liveCacheKeys.has(key)) {
-      taskFileCache.delete(key);
-      diag.cacheEvictions++;
+      deleteTaskFileCacheEntry(key, diag);
     }
   }
-  while (taskFileCache.size > TASK_FILE_CACHE_MAX_ENTRIES) {
-    const oldest = taskFileCache.keys().next().value;
-    if (typeof oldest !== 'string') break;
-    taskFileCache.delete(oldest);
-    diag.cacheEvictions++;
-  }
+  trimTaskFileCache(diag);
 }
 
 function getPersistentTaskProjectionCachePath(
@@ -758,7 +823,7 @@ function restorePersistentTaskProjectionShape(
   const subject = typeof task.subject === 'string' ? task.subject : '';
   const displayId = task.displayId;
   const reviewState = normalizeFallbackReviewState(task.reviewState, status);
-  return {
+  return compactWorkerTaskProjection({
     id,
     displayId:
       typeof displayId === 'string' && displayId.trim().length > 0
@@ -806,7 +871,7 @@ function restorePersistentTaskProjectionShape(
         ? task.sourceMessage
         : undefined,
     teamName,
-  };
+  });
 }
 
 function normalizePersistentTaskProjectionEntry(
@@ -1735,6 +1800,8 @@ async function readTasksDirForTeam(
       const cached = taskFileCache.get(cacheKey);
       if (fingerprintCacheSafe && cached?.fingerprint === fingerprint) {
         cached.lastUsedAt = nowMs();
+        taskFileCache.delete(cacheKey);
+        taskFileCache.set(cacheKey, cached);
         taskDiag.cacheHits++;
         applyCachedTaskReadResult(cached.result, tasks, taskDiag);
         nextPersistentEntries.set(file, {
@@ -1747,12 +1814,16 @@ async function readTasksDirForTeam(
       const persistentEntry = persistentCache?.get(file);
       if (fingerprintCacheSafe && persistentEntry?.fingerprint === fingerprint) {
         const result = cloneCached(persistentEntry.result);
-        taskFileCache.set(cacheKey, {
-          fingerprint,
-          result: cloneCached(result),
-          tasksBase: payload.tasksBase,
-          lastUsedAt: nowMs(),
-        });
+        setTaskFileCacheEntry(
+          cacheKey,
+          {
+            fingerprint,
+            result: cloneCached(result),
+            tasksBase: payload.tasksBase,
+            lastUsedAt: nowMs(),
+          },
+          taskDiag
+        );
         taskDiag.persistentCacheHits++;
         applyCachedTaskReadResult(result, tasks, taskDiag);
         nextPersistentEntries.set(file, {
@@ -1851,7 +1922,7 @@ async function readTasksDirForTeam(
           ? normalizeFallbackReviewState(derivedReviewState, status)
           : normalizeFallbackReviewState(parsed.reviewState, status);
 
-      const task = {
+      const task = compactWorkerTaskProjection({
         id: typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
         displayId:
           typeof parsed.displayId === 'string' && parsed.displayId.trim().length > 0
@@ -1908,7 +1979,7 @@ async function readTasksDirForTeam(
             ? (parsed.sourceMessage as Record<string, unknown>)
             : undefined,
         teamName,
-      };
+      });
       tasks.push(task);
       const result: CachedTaskReadResult = { task };
       const cachedStable = await cacheTaskReadResultIfStable(

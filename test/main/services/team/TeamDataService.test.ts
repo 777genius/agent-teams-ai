@@ -626,6 +626,7 @@ function createGetTeamDataHarness(
   options: {
     config?: TeamConfig | null;
     getTasks?: () => Promise<TeamTask[]>;
+    getTask?: (taskId: string) => TeamTask | null;
     listInboxNames?: () => Promise<string[]>;
     getMessages?: () => Promise<InboxMessage[]>;
     getMembers?: () => Promise<TeamConfig['members']>;
@@ -736,6 +737,9 @@ function createGetTeamDataHarness(
     sentMessagesStore as never,
     (() =>
       ({
+        tasks: {
+          getTask: options.getTask ?? (() => null),
+        },
         processes: {
           listProcesses: listProcessesSpy,
         },
@@ -5585,6 +5589,109 @@ describe('TeamDataService', () => {
 
     expect(harness.getConfigSnapshot).toHaveBeenCalledWith('my-team');
     expect(harness.getConfig).not.toHaveBeenCalled();
+  });
+
+  it('compacts heavy task text in UI team data snapshots', async () => {
+    const longDescription = 'description '.repeat(500);
+    const longPrompt = 'prompt '.repeat(500);
+    const longComment = 'comment '.repeat(500);
+    const longNote = 'note '.repeat(500);
+    const longSourceMessage = 'source '.repeat(500);
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Heavy task',
+      status: 'pending',
+      description: longDescription,
+      prompt: longPrompt,
+      comments: [
+        {
+          id: 'comment-1',
+          author: 'alice',
+          text: longComment,
+          createdAt: '2026-04-09T10:00:00.000Z',
+          type: 'regular',
+        },
+      ],
+      historyEvents: [
+        {
+          id: 'event-1',
+          timestamp: '2026-04-09T10:01:00.000Z',
+          type: 'review_requested',
+          from: 'none',
+          to: 'review',
+          note: longNote,
+        },
+      ],
+      sourceMessage: {
+        text: longSourceMessage,
+        from: 'user',
+        timestamp: '2026-04-09T09:59:00.000Z',
+      },
+    };
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => [task],
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+    const snapshotTask = data.tasks[0]!;
+
+    expect(snapshotTask.description).toHaveLength(2_000);
+    expect(snapshotTask.prompt).toHaveLength(2_000);
+    expect(snapshotTask.comments?.[0]?.text).toHaveLength(120);
+    expect(snapshotTask.historyEvents?.[0]).toMatchObject({
+      type: 'review_requested',
+      note: expect.stringMatching(/^note /),
+    });
+    expect((snapshotTask.historyEvents?.[0] as { note?: string } | undefined)?.note).toHaveLength(
+      500
+    );
+    expect(snapshotTask.sourceMessage?.text).toHaveLength(1_000);
+    expect(task.comments?.[0]?.text).toBe(longComment);
+  });
+
+  it('returns full task text from the task detail endpoint', async () => {
+    const longDescription = 'description '.repeat(500);
+    const longComment = 'comment '.repeat(500);
+    const fullTask: TeamTask = {
+      id: 'task-1',
+      subject: 'Heavy task',
+      status: 'completed',
+      description: longDescription,
+      comments: [
+        {
+          id: 'comment-1',
+          author: 'alice',
+          text: longComment,
+          createdAt: '2026-04-09T10:00:00.000Z',
+          type: 'regular',
+        },
+      ],
+    };
+    const harness = createGetTeamDataHarness({
+      getTask: (taskId) => (taskId === 'task-1' ? fullTask : null),
+      getState: async () => ({
+        teamName: 'my-team',
+        reviewers: ['alice'],
+        tasks: {
+          'task-1': {
+            column: 'review',
+            reviewer: 'alice',
+            movedAt: '2026-04-09T10:02:00.000Z',
+          },
+        },
+      }),
+    });
+
+    const task = await harness.service.getTask('my-team', 'task-1');
+
+    expect(task?.description).toBe(longDescription);
+    expect(task?.comments?.[0]?.text).toBe(longComment);
+    expect(task).toMatchObject({
+      id: 'task-1',
+      kanbanColumn: 'review',
+      reviewer: 'alice',
+    });
+    await expect(harness.service.getTask('my-team', 'missing-task')).resolves.toBeNull();
   });
 
   it('skips member branch enrichment for thin UI team data snapshots', async () => {

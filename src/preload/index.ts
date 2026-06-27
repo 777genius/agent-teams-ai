@@ -151,6 +151,7 @@ import {
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
   TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
@@ -345,6 +346,7 @@ import type {
   TeamTaskChangeSummariesResponse,
   TeamTaskChangeSummaryRequest,
   TeamTaskStatus,
+  TeamTaskWithKanban,
   TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
@@ -1008,6 +1010,9 @@ const electronAPI: ElectronAPI = {
     },
     createTask: async (teamName: string, request: CreateTaskRequest) => {
       return invokeIpcWithResult<TeamTask>(TEAM_CREATE_TASK, teamName, request);
+    },
+    getTask: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<TeamTaskWithKanban | null>(TEAM_GET_TASK, teamName, taskId);
     },
     requestReview: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId);

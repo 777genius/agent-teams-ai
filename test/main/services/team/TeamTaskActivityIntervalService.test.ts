@@ -212,6 +212,72 @@ describe('TeamTaskActivityIntervalService', () => {
     ]);
   });
 
+  it('does not cache heavy task files in the activity interval cache', async () => {
+    const taskCount = 10;
+    for (let index = 0; index < taskCount; index++) {
+      await writeTask('alpha', {
+        id: `heavy-${index + 1}`,
+        subject: `Heavy ${index + 1}`,
+        owner: 'bob',
+        status: 'pending',
+        historyEvents: [],
+        comments: [
+          {
+            id: `comment-${index + 1}`,
+            type: 'comment',
+            author: 'alice',
+            text: 'x'.repeat(950_000),
+            createdAt: '2026-05-08T10:00:00.000Z',
+          },
+        ],
+      });
+    }
+
+    const service = new TeamTaskActivityIntervalService();
+
+    service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:10:00.000Z');
+    const cache = (service as unknown as { taskFileCache: Map<string, unknown> }).taskFileCache;
+    expect(cache.size).toBe(0);
+  });
+
+  it('preserves heavy task text fields when activity interval mutation writes the task back', async () => {
+    const longDescription = 'description '.repeat(80_000);
+    const longComment = 'comment '.repeat(80_000);
+    await writeTask('alpha', {
+      id: 'heavy-work-task',
+      subject: 'Heavy active work',
+      description: longDescription,
+      owner: 'bob',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-05-08T10:00:00.000Z' }],
+      historyEvents: [],
+      comments: [
+        {
+          id: 'comment-1',
+          type: 'regular',
+          author: 'alice',
+          text: longComment,
+          createdAt: '2026-05-08T10:00:00.000Z',
+        },
+      ],
+    });
+
+    const service = new TeamTaskActivityIntervalService();
+    const result = service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:10:00.000Z');
+    const task = await readTask('alpha', 'heavy-work-task');
+    const cache = (service as unknown as { taskFileCache: Map<string, unknown> }).taskFileCache;
+
+    expect(result.changedTasks).toBe(1);
+    expect(task.description).toBe(longDescription);
+    expect(((task.comments as { text?: string }[] | undefined)?.[0]?.text ?? '')).toBe(
+      longComment
+    );
+    expect(task.workIntervals).toEqual([
+      { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:10:00.000Z' },
+    ]);
+    expect(cache.size).toBe(0);
+  });
+
   it('backfills the active legacy cycle when only older persisted intervals exist', async () => {
     await writeTask('alpha', {
       id: 'work-task',

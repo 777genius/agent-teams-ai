@@ -111,6 +111,7 @@ import type {
   TeamTaskChangeSummariesResponse,
   TeamTaskChangeSummaryRequest,
   TeamTaskStatus,
+  TeamTaskWithKanban,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
   TmuxAPI,
@@ -955,6 +956,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
     createTask: async (_teamName: string, _request: CreateTaskRequest): Promise<TeamTask> => {
       throw new Error('Team task creation is not available in browser mode');
+    },
+    getTask: async (_teamName: string, _taskId: string): Promise<TeamTaskWithKanban | null> => {
+      throw new Error('Team task detail is not available in browser mode');
     },
     requestReview: async (_teamName: string, _taskId: string): Promise<void> => {
       throw new Error('Team review is not available in browser mode');

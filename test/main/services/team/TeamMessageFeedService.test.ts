@@ -319,6 +319,116 @@ Messages:
     expect(getInboxMessages).toHaveBeenCalledTimes(2);
   });
 
+  it('uses a bounded inbox source window for message pages when available', async () => {
+    const getInboxMessages = vi.fn(async () => [
+      makeMessage({
+        messageId: 'full-inbox-only',
+        text: 'should not read full inbox for page',
+      }),
+    ]);
+    const getInboxMessagesWindow = vi.fn(async () => ({
+      messages: [
+        makeMessage({
+          messageId: 'window-message',
+          text: 'window',
+          timestamp: '2026-04-19T18:46:45.000Z',
+        }),
+      ],
+      truncated: true,
+      sourceRevision: 'inbox-window-rev',
+      sourceMessageCount: 5000,
+    }));
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => config),
+      getInboxMessages,
+      getInboxMessagesWindow,
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const page = await service.getPage('signal-ops-4', { limit: 1 });
+
+    expect(getInboxMessagesWindow).toHaveBeenCalledWith('signal-ops-4', {
+      cursor: null,
+      limit: 200,
+    });
+    expect(getInboxMessages).not.toHaveBeenCalled();
+    expect(page.messages.map((message) => message.messageId)).toEqual(['window-message']);
+    expect(page.hasMore).toBe(true);
+  });
+
+  it('does not fall back to a full inbox read when the bounded page source fails', async () => {
+    const getInboxMessages = vi.fn(async () => [
+      makeMessage({
+        messageId: 'full-inbox-only',
+        text: 'full read should stay cold',
+      }),
+    ]);
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => config),
+      getInboxMessages,
+      getInboxMessagesWindow: vi.fn(async () => {
+        throw new Error('window read failed');
+      }),
+      getLeadSessionMessages: vi.fn(async () => [
+        makeMessage({
+          messageId: 'lead-message',
+          source: 'lead_session',
+          text: 'lead survives',
+        }),
+      ]),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const page = await service.getPage('signal-ops-4', { limit: 10 });
+
+    expect(getInboxMessages).not.toHaveBeenCalled();
+    expect(page.messages.map((message) => message.messageId)).toContain('lead-message');
+    expect(page.messages.map((message) => message.messageId)).not.toContain('full-inbox-only');
+  });
+
+  it('keeps page feedRevision stable across cursor changes when bounded sources are unchanged', async () => {
+    const getInboxMessagesWindow = vi.fn(
+      async (_teamName: string, options: { cursor?: { messageId: string } | null }) => ({
+        messages: options.cursor
+          ? [
+              makeMessage({
+                messageId: 'older-message',
+                text: 'older',
+                timestamp: '2026-04-19T18:46:40.000Z',
+              }),
+            ]
+          : [
+              makeMessage({
+                messageId: 'head-message',
+                text: 'head',
+                timestamp: '2026-04-19T18:46:45.000Z',
+              }),
+            ],
+        truncated: !options.cursor,
+        sourceRevision: 'stable-inbox-rev',
+        sourceMessageCount: 2,
+      })
+    );
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => config),
+      getInboxMessages: vi.fn(async () => []),
+      getInboxMessagesWindow,
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const head = await service.getPage('signal-ops-4', { limit: 1 });
+    const older = await service.getPage('signal-ops-4', {
+      cursor: head.nextCursor,
+      limit: 1,
+    });
+
+    expect(head.messages.map((message) => message.messageId)).toEqual(['head-message']);
+    expect(older.messages.map((message) => message.messageId)).toEqual(['older-message']);
+    expect(older.feedRevision).toBe(head.feedRevision);
+  });
+
   it('adds UI-only bootstrap start rows for side-lane teammates', async () => {
     const opencodeConfig: TeamConfig = {
       name: 'relay-works-14',

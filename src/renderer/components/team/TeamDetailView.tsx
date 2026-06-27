@@ -219,18 +219,62 @@ const TaskDetailDialogHost = memo(
     ref
   ) {
     const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
+    const [loadedTask, setLoadedTask] = useState<TeamTaskWithKanban | null>(null);
+    const selectedTaskId = selectedTask?.id ?? null;
+    const selectedTaskSnapshot =
+      selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
+    const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
+    const currentTask =
+      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
+    const dialogTaskMap = useMemo(() => {
+      if (!currentTask) {
+        return taskMap;
+      }
+      const next = new Map(taskMap);
+      next.set(currentTask.id, currentTask);
+      return next;
+    }, [currentTask, taskMap]);
 
     useImperativeHandle(
       ref,
       () => ({
-        openTask: setSelectedTask,
-        close: () => setSelectedTask(null),
+        openTask: (task) => {
+          setLoadedTask(null);
+          setSelectedTask(task);
+        },
+        close: () => {
+          setLoadedTask(null);
+          setSelectedTask(null);
+        },
       }),
       []
     );
 
+    useEffect(() => {
+      if (!selectedTaskId) {
+        setLoadedTask(null);
+        return undefined;
+      }
+
+      let cancelled = false;
+      setLoadedTask(null);
+      void api.teams
+        .getTask(teamName, selectedTaskId)
+        .then((task) => {
+          if (!cancelled && task?.id === selectedTaskId) {
+            setLoadedTask(task);
+          }
+        })
+        .catch(() => undefined);
+
+      return () => {
+        cancelled = true;
+      };
+    }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
+
     const handleScrollToTask = useCallback((taskId: string) => {
       setSelectedTask(null);
+      setLoadedTask(null);
       const el = document.querySelector(`[data-task-id="${taskId}"]`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -243,7 +287,7 @@ const TaskDetailDialogHost = memo(
       }
     }, []);
 
-    if (selectedTask === null) {
+    if (currentTask === null) {
       return null;
     }
 
@@ -251,12 +295,15 @@ const TaskDetailDialogHost = memo(
     const dialog = (
       <DialogComponent
         open
-        task={selectedTask}
+        task={currentTask}
         teamName={teamName}
-        kanbanTaskState={kanbanTaskStateByTaskId[selectedTask.id]}
-        taskMap={taskMap}
+        kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
+        taskMap={dialogTaskMap}
         members={members}
-        onClose={() => setSelectedTask(null)}
+        onClose={() => {
+          setLoadedTask(null);
+          setSelectedTask(null);
+        }}
         onScrollToTask={handleScrollToTask}
         onOwnerChange={onOwnerChange}
         onViewChanges={onViewChanges}

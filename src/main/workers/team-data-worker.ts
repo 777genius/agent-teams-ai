@@ -30,9 +30,19 @@ const logsInFlight = new Map<string, Promise<unknown>>();
 // Result cache with TTL to avoid re-scanning files
 const logsResultCache = new Map<string, { result: MemberLogSummary[]; cachedAt: number }>();
 const LOGS_CACHE_TTL_MS = 10_000;
+let heavyReadQueue: Promise<void> = Promise.resolve();
 
 function respond(msg: TeamDataWorkerResponse): void {
   parentPort?.postMessage(msg);
+}
+
+function runHeavyRead<T>(load: () => Promise<T>): Promise<T> {
+  const result = heavyReadQueue.catch(() => undefined).then(load);
+  heavyReadQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
 }
 
 parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
@@ -50,20 +60,23 @@ parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
         break;
       }
       case 'getTeamData': {
-        const result = await teamDataService.getTeamData(msg.payload.teamName, msg.payload.options);
+        const result = await runHeavyRead(() =>
+          teamDataService.getTeamData(msg.payload.teamName, msg.payload.options)
+        );
         respond({ id: msg.id, ok: true, result, diag: buildDiag() });
         break;
       }
       case 'getMessagesPage': {
-        const result = await teamDataService.getMessagesPage(
-          msg.payload.teamName,
-          msg.payload.options
+        const result = await runHeavyRead(() =>
+          teamDataService.getMessagesPage(msg.payload.teamName, msg.payload.options)
         );
         respond({ id: msg.id, ok: true, result, diag: buildDiag() });
         break;
       }
       case 'getMemberActivityMeta': {
-        const result = await teamDataService.getMemberActivityMeta(msg.payload.teamName);
+        const result = await runHeavyRead(() =>
+          teamDataService.getMemberActivityMeta(msg.payload.teamName)
+        );
         respond({ id: msg.id, ok: true, result, diag: buildDiag() });
         break;
       }
@@ -92,39 +105,40 @@ parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
         break;
       }
       case 'findLogsForTask': {
-        const { teamName, taskId, options } = msg.payload;
-        const intervalsKey = options?.intervals
-          ? options.intervals.map((i) => `${i.startedAt}~${i.completedAt ?? ''}`).join(',')
-          : '';
-        const cacheKey = `${teamName}:${taskId}:${options?.owner ?? ''}:${options?.status ?? ''}:${options?.since ?? ''}:${intervalsKey}`;
+        const result = await runHeavyRead(async () => {
+          const { teamName, taskId, options } = msg.payload;
+          const intervalsKey = options?.intervals
+            ? options.intervals.map((i) => `${i.startedAt}~${i.completedAt ?? ''}`).join(',')
+            : '';
+          const cacheKey = `${teamName}:${taskId}:${options?.owner ?? ''}:${options?.status ?? ''}:${options?.since ?? ''}:${intervalsKey}`;
 
-        // Check result cache
-        const cached = logsResultCache.get(cacheKey);
-        if (cached && Date.now() - cached.cachedAt < LOGS_CACHE_TTL_MS) {
-          respond({ id: msg.id, ok: true, result: cached.result });
-          break;
-        }
+          // Check result cache
+          const cached = logsResultCache.get(cacheKey);
+          if (cached && Date.now() - cached.cachedAt < LOGS_CACHE_TTL_MS) {
+            return cached.result;
+          }
 
-        // Dedup concurrent calls
-        let promise = logsInFlight.get(cacheKey) as Promise<MemberLogSummary[]> | undefined;
-        if (!promise) {
-          promise = logsFinder
-            .findLogsForTask(teamName, taskId, options)
-            .then((result) => {
-              logsResultCache.set(cacheKey, { result, cachedAt: Date.now() });
-              // Cap cache
-              if (logsResultCache.size > 100) {
-                const firstKey = logsResultCache.keys().next().value;
-                if (firstKey !== undefined) logsResultCache.delete(firstKey);
-              }
-              return result;
-            })
-            .finally(() => {
-              logsInFlight.delete(cacheKey);
-            });
-          logsInFlight.set(cacheKey, promise);
-        }
-        const result = await promise;
+          // Dedup concurrent calls
+          let promise = logsInFlight.get(cacheKey) as Promise<MemberLogSummary[]> | undefined;
+          if (!promise) {
+            promise = logsFinder
+              .findLogsForTask(teamName, taskId, options)
+              .then((result) => {
+                logsResultCache.set(cacheKey, { result, cachedAt: Date.now() });
+                // Cap cache
+                if (logsResultCache.size > 100) {
+                  const firstKey = logsResultCache.keys().next().value;
+                  if (firstKey !== undefined) logsResultCache.delete(firstKey);
+                }
+                return result;
+              })
+              .finally(() => {
+                logsInFlight.delete(cacheKey);
+              });
+            logsInFlight.set(cacheKey, promise);
+          }
+          return promise;
+        });
         respond({ id: msg.id, ok: true, result, diag: buildDiag() });
         break;
       }

@@ -3811,7 +3811,7 @@ describe('TeamProvisioningService', () => {
       expect(secondSnapshot.members.alice?.pid).toBe(222);
     });
 
-    it('starts a fresh runtime snapshot probe after cache invalidation for the same run', async () => {
+    it('keeps runtime snapshot probes single-flight across cache invalidation for the same run', async () => {
       const svc = new TeamProvisioningService();
       const firstProbe = createDeferred<unknown>();
       const secondProbe = createDeferred<unknown>();
@@ -3834,11 +3834,15 @@ describe('TeamProvisioningService', () => {
       (svc as any).invalidateRuntimeSnapshotCaches('runtime-team');
       const second = svc.getTeamAgentRuntimeSnapshot('runtime-team');
 
-      expect(buildSnapshot).toHaveBeenCalledTimes(2);
+      expect(buildSnapshot).toHaveBeenCalledTimes(1);
       firstProbe.resolve(firstSnapshot);
-      secondProbe.resolve(secondSnapshot);
       await expect(first).resolves.toBe(firstSnapshot);
-      await expect(second).resolves.toBe(secondSnapshot);
+      await expect(second).resolves.toBe(firstSnapshot);
+
+      const fresh = svc.getTeamAgentRuntimeSnapshot('runtime-team');
+      expect(buildSnapshot).toHaveBeenCalledTimes(2);
+      secondProbe.resolve(secondSnapshot);
+      await expect(fresh).resolves.toBe(secondSnapshot);
     });
 
     it('does not cache live runtime metadata when invalidated while the probe is in flight', async () => {

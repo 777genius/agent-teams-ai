@@ -110,7 +110,7 @@ describe('TeamTaskReader', () => {
     expect(readAllTasksUncached).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses parsed task files until their file signature changes', async () => {
+  it('does not retain full parsed task payloads in the projection cache', async () => {
     await setupTasksRoot();
     await writeTaskFile('atlas-hq', {
       id: '1',
@@ -128,7 +128,7 @@ describe('TeamTaskReader', () => {
     await expect(reader.getTasks('atlas-hq')).resolves.toMatchObject([
       { id: '1', subject: 'Cached task' },
     ]);
-    expect(readFileSpy).toHaveBeenCalledTimes(1);
+    expect(readFileSpy).toHaveBeenCalledTimes(2);
 
     await writeTaskFile('atlas-hq', {
       id: '1',
@@ -140,7 +140,7 @@ describe('TeamTaskReader', () => {
     await expect(reader.getTasks('atlas-hq')).resolves.toMatchObject([
       { id: '1', subject: 'Changed cached task' },
     ]);
-    expect(readFileSpy).toHaveBeenCalledTimes(2);
+    expect(readFileSpy).toHaveBeenCalledTimes(3);
   });
 
   it('reuses read-only team task projection snapshots until a file signature changes', async () => {
@@ -183,5 +183,92 @@ describe('TeamTaskReader', () => {
     expect(thirdRead).not.toBe(firstRead);
     expect(thirdRead).toMatchObject([{ id: '1', subject: 'Projection changed task' }]);
     expect(readFileSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('compacts heavy task fields before caching projection snapshots', async () => {
+    await setupTasksRoot();
+    for (let index = 0; index < 5; index++) {
+      await writeTaskFile('atlas-hq', {
+        id: String(index + 1),
+        subject: `Large task ${index + 1}`,
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+        description: 'description '.repeat(500),
+        prompt: 'prompt '.repeat(500),
+        comments: [
+          {
+            id: `comment-${index + 1}`,
+            type: 'regular',
+            author: 'alice',
+            text: 'x'.repeat(10_000),
+            createdAt: '2026-05-02T12:00:00.000Z',
+          },
+        ],
+        historyEvents: [
+          {
+            id: `event-${index + 1}`,
+            type: 'review_requested',
+            from: 'none',
+            to: 'review',
+            timestamp: '2026-05-02T12:00:00.000Z',
+            note: 'note '.repeat(500),
+          },
+        ],
+        sourceMessage: {
+          text: 'source '.repeat(500),
+          from: 'user',
+          timestamp: '2026-05-02T11:59:00.000Z',
+        },
+      });
+    }
+
+    const readFileSpy = vi.spyOn(fs.promises, 'readFile');
+    const reader = new TeamTaskReader();
+
+    const firstRead = await reader.getTasksProjectionSnapshot('atlas-hq');
+    const secondRead = await reader.getTasksProjectionSnapshot('atlas-hq');
+
+    expect(secondRead).toBe(firstRead);
+    expect(firstRead).toHaveLength(5);
+    expect(firstRead[0]?.description).toHaveLength(2_000);
+    expect(firstRead[0]?.prompt).toHaveLength(2_000);
+    expect(firstRead[0]?.comments?.[0]?.text).toHaveLength(120);
+    expect((firstRead[0]?.historyEvents?.[0] as { note?: string } | undefined)?.note).toHaveLength(
+      500
+    );
+    expect(firstRead[0]?.sourceMessage?.text).toHaveLength(1_000);
+    expect(readFileSpy).toHaveBeenCalledTimes(5);
+  });
+
+  it('keeps full getTasks reads independent from compact projection cache', async () => {
+    await setupTasksRoot();
+    const fullComment = 'full comment '.repeat(500);
+    await writeTaskFile('atlas-hq', {
+      id: '1',
+      subject: 'Full task',
+      status: 'pending',
+      createdAt: '2026-05-02T12:00:00.000Z',
+      comments: [
+        {
+          id: 'comment-1',
+          type: 'regular',
+          author: 'alice',
+          text: fullComment,
+          createdAt: '2026-05-02T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const readFileSpy = vi.spyOn(fs.promises, 'readFile');
+    const reader = new TeamTaskReader();
+
+    const fullBeforeProjection = await reader.getTasks('atlas-hq');
+    const projection = await reader.getTasksProjectionSnapshot('atlas-hq');
+    const fullAfterProjection = await reader.getTasks('atlas-hq');
+
+    expect(fullBeforeProjection[0]?.comments?.[0]?.text).toBe(fullComment);
+    expect(projection[0]?.comments?.[0]?.text).toHaveLength(120);
+    expect(fullAfterProjection[0]?.comments?.[0]?.text).toBe(fullComment);
+    expect(readFileSpy).toHaveBeenCalledTimes(3);
   });
 });

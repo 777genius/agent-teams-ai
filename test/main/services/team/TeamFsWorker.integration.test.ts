@@ -578,6 +578,65 @@ describe('team-fs-worker integration', () => {
     }
   });
 
+  it('compacts heavy task text before storing in-memory task projections', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const teamName = 'heavy-memory-cache-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    const taskCount = 17;
+    await fs.mkdir(tasksDir, { recursive: true });
+    for (let index = 0; index < taskCount; index++) {
+      await fs.writeFile(
+        path.join(tasksDir, `${index + 1}.json`),
+        JSON.stringify({
+          id: String(index + 1),
+          subject: `Heavy task ${index + 1}`,
+          status: 'pending',
+          createdAt: '2026-05-02T12:00:00.000Z',
+          comments: [
+            {
+              id: `comment-${index + 1}`,
+              author: 'alice',
+              text: 'x'.repeat(1_000_000),
+              createdAt: '2026-05-02T12:00:00.000Z',
+            },
+          ],
+        }),
+        'utf8'
+      );
+    }
+
+    const worker = createWorker(workerPath);
+    try {
+      const payload = {
+        tasksBase,
+        maxTaskBytes: 2 * 1024 * 1024,
+        maxTaskReadMs: 5_000,
+        concurrency: 2,
+      };
+      const first = await callWorker(worker, 'getAllTasks', payload);
+      const firstTasks = Array.isArray(first.result) ? first.result : [];
+      expect(firstTasks.length).toBe(taskCount);
+      expect(
+        ((firstTasks[0] as { comments?: { text?: string }[] } | undefined)?.comments?.[0]?.text ??
+          '').length
+      ).toBe(120);
+      expect((first.diag as Record<string, unknown> | undefined)?.cacheMisses).toBe(taskCount);
+
+      const second = await callWorker(worker, 'getAllTasks', payload);
+      expect(Array.isArray(second.result) ? second.result.length : 0).toBe(taskCount);
+      expect(Number((second.diag as Record<string, unknown> | undefined)?.cacheMisses ?? 0)).toBe(
+        0
+      );
+      expect(Number((second.diag as Record<string, unknown> | undefined)?.cacheHits ?? 0)).toBe(
+        taskCount
+      );
+    } finally {
+      await worker.terminate();
+    }
+  });
+
   it('reuses persisted task projections after a worker restart', async () => {
     const workerPath = await getWorkerPath();
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
