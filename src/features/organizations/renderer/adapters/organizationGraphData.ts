@@ -164,10 +164,8 @@ function buildRootNode(
     label: getOrganizationContainerLabel(root, text),
     state: viewModel.stats.activeAgentCount > 0 ? 'active' : 'idle',
     color: root.color ?? '#4f8cff',
-    role: isAllOrganizationsScope
-      ? text.orgsAndTeams(viewModel.payload.organizations.length, viewModel.stats.teamCount)
-      : text.teams(viewModel.stats.teamCount),
-    runtimeLabel: text.activeAgents(viewModel.stats.activeAgentCount),
+    role: isAllOrganizationsScope ? undefined : text.teams(viewModel.stats.teamCount),
+    runtimeLabel: undefined,
     domainRef: {
       kind: 'lead',
       teamName: viewModel.payload.activeOrganizationId,
@@ -588,7 +586,10 @@ function buildNestedOrganizationGridBlock(
 
   flushDirectTeams();
   const packsTopLevelOrganizations = parentNodeId === ALL_ORGANIZATIONS_ROOT_NODE_ID;
-  return stackOrganizationGridBlocks(blocks, {
+  const stackBlocks = packsTopLevelOrganizations
+    ? blocks.slice().sort((left, right) => right.height - left.height || right.width - left.width)
+    : blocks;
+  return stackOrganizationGridBlocks(stackBlocks, {
     packSiblings: true,
     maxBlockWidth: packsTopLevelOrganizations
       ? ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_BLOCK_WIDTH

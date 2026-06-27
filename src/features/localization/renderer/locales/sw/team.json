@@ -2671,7 +2671,17 @@
         "relations_few": "mahusiano {{count}}",
         "relations_many": "mahusiano {{count}}",
         "messages_few": "ujumbe {{count}}",
-        "messages_many": "ujumbe {{count}}"
+        "messages_many": "ujumbe {{count}}",
+        "agents": "mawakala {{count}}",
+        "agents_one": "wakala {{count}}",
+        "agents_few": "mawakala {{count}}",
+        "agents_many": "mawakala {{count}}",
+        "agents_other": "mawakala {{count}}",
+        "runtimeLinks": "runtime links {{count}}",
+        "runtimeLinks_one": "runtime link {{count}}",
+        "runtimeLinks_few": "runtime links {{count}}",
+        "runtimeLinks_many": "runtime links {{count}}",
+        "runtimeLinks_other": "runtime links {{count}}"
       }
     },
     "editor": {
@@ -2703,7 +2713,7 @@
       },
       "tabs": {
         "structure": "Muundo",
-        "teams": "timu {{count}}",
+        "teams": "Timu",
         "links": "Viungo",
         "organizations": "Mashirika yote"
       },

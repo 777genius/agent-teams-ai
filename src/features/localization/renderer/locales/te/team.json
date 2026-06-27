@@ -2671,7 +2671,17 @@
         "relations_few": "{{count}} iliski",
         "relations_many": "{{count}} iliski",
         "messages_few": "{{count}} mesaj",
-        "messages_many": "{{count}} mesaj"
+        "messages_many": "{{count}} mesaj",
+        "agents": "{{count}} ajan",
+        "agents_one": "{{count}} ajan",
+        "agents_few": "{{count}} ajan",
+        "agents_many": "{{count}} ajan",
+        "agents_other": "{{count}} ajan",
+        "runtimeLinks": "{{count}} runtime links",
+        "runtimeLinks_one": "{{count}} runtime link",
+        "runtimeLinks_few": "{{count}} runtime links",
+        "runtimeLinks_many": "{{count}} runtime links",
+        "runtimeLinks_other": "{{count}} runtime links"
       }
     },
     "editor": {
@@ -2703,7 +2713,7 @@
       },
       "tabs": {
         "structure": "నిర్మాణం",
-        "teams": "{{count}} ekip",
+        "teams": "జట్లు",
         "links": "లింకులు",
         "organizations": "అన్ని orgs"
       },

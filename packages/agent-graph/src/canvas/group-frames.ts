@@ -32,8 +32,9 @@ export interface GroupFrameLabelBounds extends GroupFrameBounds {
 type MeasureTextWidth = (label: string, fontSize: number) => number;
 
 const GROUP_FRAME_PADDING_MIN_ZOOM = 0.42;
-const GROUP_FRAME_PRIMARY_LABEL_MIN_ZOOM = 0.12;
-const GROUP_FRAME_NESTED_PRIMARY_LABEL_MIN_ZOOM = 0.22;
+export const GROUP_FRAME_RENDER_MIN_ZOOM = 0.015;
+const GROUP_FRAME_PRIMARY_LABEL_MIN_ZOOM = 0.015;
+const GROUP_FRAME_NESTED_PRIMARY_LABEL_MIN_ZOOM = 0.015;
 const GROUP_FRAME_NORMAL_LABEL_MIN_ZOOM = 0.32;
 const GROUP_FRAME_NORMAL_LABEL_DEPTH_STEP = 0.1;
 const GROUP_FRAME_NORMAL_LABEL_MAX_ZOOM = 0.62;
@@ -193,7 +194,7 @@ export function findGroupFrameHitAt(
   zoom: number,
   extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): GroupFrameHit | null {
-  if (frames.length === 0 || zoom < 0.08) {
+  if (frames.length === 0 || zoom < GROUP_FRAME_RENDER_MIN_ZOOM) {
     return null;
   }
 

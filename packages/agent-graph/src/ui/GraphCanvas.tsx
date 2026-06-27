@@ -31,6 +31,7 @@ import {
   getGroupFrameLabelHorizontalOffsetPx,
   getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
+  GROUP_FRAME_RENDER_MIN_ZOOM,
   type GroupFrameBounds,
   type GroupFrameExtraBoundsByNodeId,
   type PreparedGroupFrame,
@@ -513,7 +514,7 @@ function drawGroupFrames(
     time: number;
   }
 ): void {
-  if (args.frames.length === 0 || args.zoom < 0.08) {
+  if (args.frames.length === 0 || args.zoom < GROUP_FRAME_RENDER_MIN_ZOOM) {
     return;
   }
 

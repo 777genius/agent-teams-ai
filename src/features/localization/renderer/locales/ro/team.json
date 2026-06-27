@@ -2671,7 +2671,17 @@
         "relations_few": "{{count}} relatii",
         "relations_many": "{{count}} relatii",
         "messages_few": "{{count}} mesaje",
-        "messages_many": "{{count}} mesaje"
+        "messages_many": "{{count}} mesaje",
+        "agents": "{{count}} agenti",
+        "agents_one": "Agent: {{count}}",
+        "agents_few": "{{count}} agenti",
+        "agents_many": "{{count}} agenti",
+        "agents_other": "{{count}} agenti",
+        "runtimeLinks": "{{count}} linkuri runtime",
+        "runtimeLinks_one": "{{count}} link runtime",
+        "runtimeLinks_few": "{{count}} linkuri runtime",
+        "runtimeLinks_other": "{{count}} linkuri runtime",
+        "runtimeLinks_many": "{{count}} linkuri runtime"
       }
     },
     "editor": {
@@ -2703,7 +2713,7 @@
       },
       "tabs": {
         "structure": "Structura",
-        "teams": "{{count}} echipe",
+        "teams": "Echipe",
         "links": "Legaturi",
         "organizations": "Toate org."
       },

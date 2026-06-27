@@ -4757,6 +4757,11 @@ export default interface Resources {
           "currentOrg": "Current org"
         },
         "stats": {
+          "agents": "{{count}} agents",
+          "agents_few": "{{count}} agents",
+          "agents_many": "{{count}} agents",
+          "agents_one": "{{count}} agent",
+          "agents_other": "{{count}} agents",
           "messages": "{{count}} messages",
           "messages_few": "{{count}} messages",
           "messages_many": "{{count}} messages",
@@ -4772,6 +4777,11 @@ export default interface Resources {
           "relations_many": "{{count}} relations",
           "relations_one": "{{count}} relation",
           "relations_other": "{{count}} relations",
+          "runtimeLinks": "{{count}} runtime links",
+          "runtimeLinks_few": "{{count}} runtime links",
+          "runtimeLinks_many": "{{count}} runtime links",
+          "runtimeLinks_one": "{{count}} runtime link",
+          "runtimeLinks_other": "{{count}} runtime links",
           "teams": "{{count}} teams",
           "teams_few": "{{count}} teams",
           "teams_many": "{{count}} teams",

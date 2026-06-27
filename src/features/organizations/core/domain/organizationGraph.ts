@@ -354,7 +354,9 @@ export function buildAllOrganizationsGraph(
         parentNodeId,
         title: unit.title,
         tags: unit.tags,
-        team: shouldProjectTeam ? projectOrgTeam(team!, input) : undefined,
+        team: shouldProjectTeam
+          ? projectOrgTeam(team!, { ...input, displayNameOverride: unit.label })
+          : undefined,
       });
 
       relations.push({
@@ -527,7 +529,9 @@ function buildConfiguredOrganizationGraph(
       parentNodeId: resolveParentNodeId(unit, rootNodeId, unitNodeIdById),
       title: unit.title,
       tags: unit.tags,
-      team: shouldProjectTeam ? projectOrgTeam(team!, input) : undefined,
+      team: shouldProjectTeam
+        ? projectOrgTeam(team!, { ...input, displayNameOverride: unit.label })
+        : undefined,
     });
   }
 

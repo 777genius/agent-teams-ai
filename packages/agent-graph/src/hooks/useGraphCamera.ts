@@ -4,10 +4,12 @@
  * All state in refs — no React re-renders.
  */
 
-import { useRef, useCallback, useMemo } from 'react';
-import type { GraphNode } from '../ports/types';
-import { CAMERA, ANIM, NODE, TASK_PILL } from '../constants/canvas-constants';
+import { useCallback, useMemo, useRef } from 'react';
+
+import { ANIM, CAMERA, NODE, TASK_PILL } from '../constants/canvas-constants';
+
 import type { WorldBounds } from '../layout/launchAnchor';
+import type { GraphNode } from '../ports/types';
 
 export interface CameraTransform {
   x: number;
@@ -23,14 +25,23 @@ export interface UseGraphCameraResult {
   handlePanStart: (sx: number, sy: number) => void;
   handlePanMove: (sx: number, sy: number) => void;
   handlePanEnd: () => void;
-  zoomToFit: (nodes: GraphNode[], canvasW: number, canvasH: number, extraBounds?: WorldBounds[]) => void;
+  zoomToFit: (
+    nodes: GraphNode[],
+    canvasW: number,
+    canvasH: number,
+    extraBounds?: WorldBounds[]
+  ) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   updateInertia: () => void;
 }
 
 export function useGraphCamera(): UseGraphCameraResult {
-  const transformRef = useRef<CameraTransform>({ x: 0, y: 0, zoom: 1 }) as React.MutableRefObject<CameraTransform>;
+  const transformRef = useRef<CameraTransform>({
+    x: 0,
+    y: 0,
+    zoom: 1,
+  }) as React.MutableRefObject<CameraTransform>;
   const panStartRef = useRef<{ x: number; y: number; camX: number; camY: number } | null>(null);
   const velocityRef = useRef({ vx: 0, vy: 0 });
 
@@ -97,7 +108,10 @@ export function useGraphCamera(): UseGraphCameraResult {
     const frameDx = sx - lastPanPos.current.x;
     const frameDy = sy - lastPanPos.current.y;
     lastPanPos.current = { x: sx, y: sy };
-    velocityRef.current = { vx: frameDx * CAMERA.velocityScale, vy: frameDy * CAMERA.velocityScale };
+    velocityRef.current = {
+      vx: frameDx * CAMERA.velocityScale,
+      vy: frameDy * CAMERA.velocityScale,
+    };
   }, []);
 
   const handlePanEnd = useCallback(() => {
@@ -118,47 +132,55 @@ export function useGraphCamera(): UseGraphCameraResult {
     v.vy *= ANIM.inertiaDecay;
   }, []);
 
-  const zoomToFit = useCallback((nodes: GraphNode[], canvasW: number, canvasH: number, extraBounds: WorldBounds[] = []) => {
-    if (nodes.length === 0 && extraBounds.length === 0) return;
+  const zoomToFit = useCallback(
+    (nodes: GraphNode[], canvasW: number, canvasH: number, extraBounds: WorldBounds[] = []) => {
+      if (nodes.length === 0 && extraBounds.length === 0) return;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const n of nodes) {
-      const x = n.x ?? 0;
-      const y = n.y ?? 0;
-      const pad = n.kind === 'task'
-        ? TASK_PILL.width / 2
-        : n.kind === 'lead'
-          ? NODE.radiusLead
-          : NODE.radiusMember;
-      minX = Math.min(minX, x - pad);
-      minY = Math.min(minY, y - pad);
-      maxX = Math.max(maxX, x + pad);
-      maxY = Math.max(maxY, y + pad);
-    }
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      for (const n of nodes) {
+        const x = n.x ?? 0;
+        const y = n.y ?? 0;
+        const pad =
+          n.kind === 'task'
+            ? TASK_PILL.width / 2
+            : n.kind === 'lead'
+              ? NODE.radiusLead
+              : NODE.radiusMember;
+        minX = Math.min(minX, x - pad);
+        minY = Math.min(minY, y - pad);
+        maxX = Math.max(maxX, x + pad);
+        maxY = Math.max(maxY, y + pad);
+      }
 
-    for (const bounds of extraBounds) {
-      minX = Math.min(minX, bounds.left);
-      minY = Math.min(minY, bounds.top);
-      maxX = Math.max(maxX, bounds.right);
-      maxY = Math.max(maxY, bounds.bottom);
-    }
+      for (const bounds of extraBounds) {
+        minX = Math.min(minX, bounds.left);
+        minY = Math.min(minY, bounds.top);
+        maxX = Math.max(maxX, bounds.right);
+        maxY = Math.max(maxY, bounds.bottom);
+      }
 
-    const padding = ANIM.viewportPadding;
-    const contentW = maxX - minX + padding * 2;
-    const contentH = maxY - minY + padding * 2;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+      const contentW = Math.max(1, maxX - minX);
+      const contentH = Math.max(1, maxY - minY);
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const availableW = Math.max(1, canvasW - ANIM.viewportPadding * 2);
+      const availableH = Math.max(1, canvasH - ANIM.viewportPadding * 2);
 
-    const zoom = Math.max(
-      CAMERA.minZoom,
-      Math.min(CAMERA.maxZoom, Math.min(canvasW / contentW, canvasH / contentH)),
-    );
+      const zoom = Math.max(
+        CAMERA.minZoom,
+        Math.min(CAMERA.maxZoom, Math.min(availableW / contentW, availableH / contentH))
+      );
 
-    const t = transformRef.current;
-    t.zoom = zoom;
-    t.x = canvasW / 2 - centerX * zoom;
-    t.y = canvasH / 2 - centerY * zoom;
-  }, []);
+      const t = transformRef.current;
+      t.zoom = zoom;
+      t.x = canvasW / 2 - centerX * zoom;
+      t.y = canvasH / 2 - centerY * zoom;
+    },
+    []
+  );
 
   const zoomIn = useCallback(() => {
     const t = transformRef.current;

@@ -2671,7 +2671,17 @@
         "relations_few": "{{count}} iliski",
         "relations_many": "{{count}} iliski",
         "messages_few": "{{count}} mesaj",
-        "messages_many": "{{count}} mesaj"
+        "messages_many": "{{count}} mesaj",
+        "agents": "{{count}} ajan",
+        "agents_one": "{{count}} ajan",
+        "agents_few": "{{count}} ajan",
+        "agents_many": "{{count}} ajan",
+        "agents_other": "{{count}} ajan",
+        "runtimeLinks": "{{count}} runtime bağlantısı",
+        "runtimeLinks_one": "{{count}} runtime bağlantısı",
+        "runtimeLinks_other": "{{count}} runtime bağlantısı",
+        "runtimeLinks_few": "{{count}} runtime bağlantısı",
+        "runtimeLinks_many": "{{count}} runtime bağlantısı"
       }
     },
     "editor": {
@@ -2703,7 +2713,7 @@
       },
       "tabs": {
         "structure": "Yapi",
-        "teams": "{{count}} ekip",
+        "teams": "Ekipler",
         "links": "Baglantilar",
         "organizations": "Tum orglar"
       },

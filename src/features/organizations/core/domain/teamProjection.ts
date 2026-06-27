@@ -12,6 +12,7 @@ import type {
 export interface ProjectOrgTeamOptions {
   maxAgentsPerTeam: number;
   maxTasksPerAgent: number;
+  displayNameOverride?: string;
 }
 
 function getTaskUpdatedAtMs(task: Pick<OrgTaskCandidate, 'updatedAt'>): number {
@@ -106,7 +107,7 @@ export function projectOrgTeam(
 
   return {
     teamName: team.teamName,
-    displayName: team.displayName,
+    displayName: options.displayNameOverride?.trim() || team.displayName,
     description: team.description,
     color: team.color,
     projectPath: team.projectPath,

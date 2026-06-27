@@ -31,7 +31,7 @@ export const ANIM_SPEED = {
 export const CAMERA = {
   zoomStepDown: 0.92,
   zoomStepUp: 1.08,
-  minZoom: 0.15,
+  minZoom: 0.02,
   maxZoom: 5,
   velocityScale: 0.016,
 } as const;

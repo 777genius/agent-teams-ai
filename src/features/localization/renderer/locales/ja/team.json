@@ -2671,7 +2671,17 @@
         "relations_few": "{{count}} relations",
         "relations_many": "{{count}} relations",
         "messages_few": "{{count}} messages",
-        "messages_many": "{{count}} messages"
+        "messages_many": "{{count}} messages",
+        "agents": "{{count}} agents",
+        "agents_one": "{{count}} agent",
+        "agents_few": "{{count}} agents",
+        "agents_many": "{{count}} agents",
+        "agents_other": "{{count}} agents",
+        "runtimeLinks": "{{count}} runtimeリンク",
+        "runtimeLinks_one": "{{count}} runtimeリンク",
+        "runtimeLinks_other": "{{count}} runtimeリンク",
+        "runtimeLinks_few": "{{count}} runtimeリンク",
+        "runtimeLinks_many": "{{count}} runtimeリンク"
       }
     },
     "editor": {

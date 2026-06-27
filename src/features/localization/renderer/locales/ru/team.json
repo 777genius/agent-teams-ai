@@ -2671,7 +2671,17 @@
         "messages_one": "{{count}} сообщение",
         "messages_few": "{{count}} сообщения",
         "messages_many": "{{count}} сообщений",
-        "messages_other": "{{count}} сообщений"
+        "messages_other": "{{count}} сообщений",
+        "agents": "{{count}} агентов",
+        "agents_one": "{{count}} агент",
+        "agents_few": "{{count}} агента",
+        "agents_many": "{{count}} агентов",
+        "agents_other": "{{count}} агентов",
+        "runtimeLinks": "{{count}} runtime-связей",
+        "runtimeLinks_one": "{{count}} runtime-связь",
+        "runtimeLinks_few": "{{count}} runtime-связи",
+        "runtimeLinks_many": "{{count}} runtime-связей",
+        "runtimeLinks_other": "{{count}} runtime-связей"
       }
     },
     "editor": {

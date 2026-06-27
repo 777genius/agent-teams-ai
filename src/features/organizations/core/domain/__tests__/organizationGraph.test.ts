@@ -135,6 +135,10 @@ describe('organizations domain', () => {
         }),
       ])
     );
+    const platformNode = graph.nodes.find((node) => node.id === 'team:platform');
+    expect(platformNode?.label).toBe('Platform Team');
+    expect(platformNode?.team?.teamName).toBe('platform');
+    expect(platformNode?.team?.displayName).toBe('Platform Team');
     expect(graph.renderedTeamNames).toEqual(['platform', 'growth']);
   });
 

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Building2, Link2, Network, Pencil, RadioTower, RefreshCw, Users } from 'lucide-react';
+import { Bot, Building2, Link2, Network, Pencil, RadioTower, RefreshCw, Users } from 'lucide-react';
 
 import { getOrganizationIdForNodeId } from '../adapters/organizationMapViewModel';
 import { useOrganizationCreateTeamDialog } from '../hooks/useOrganizationCreateTeamDialog';
@@ -186,6 +186,10 @@ export const OrganizationMapTab = ({
                 {t('organizations.map.stats.teams', { count: viewModel?.stats.teamCount ?? 0 })}
               </span>
               <span className="inline-flex items-center gap-1">
+                <Bot size={11} />
+                {t('organizations.map.stats.agents', { count: viewModel?.stats.agentCount ?? 0 })}
+              </span>
+              <span className="inline-flex items-center gap-1">
                 <Link2 size={11} />
                 {t('organizations.map.stats.relations', {
                   count: viewModel?.stats.manualRelationCount ?? 0,
@@ -193,7 +197,7 @@ export const OrganizationMapTab = ({
               </span>
               <span className="inline-flex items-center gap-1">
                 <RadioTower size={11} />
-                {t('organizations.map.stats.messages', {
+                {t('organizations.map.stats.runtimeLinks', {
                   count: viewModel?.stats.communicationEdgeCount ?? 0,
                 })}
               </span>
