@@ -98,6 +98,8 @@ export interface GraphNode {
   color?: string;
   /** Optional host-provided visual treatment. Keeps graph kinds generic while allowing hierarchy UIs. */
   visualVariant?: GraphNodeVisualVariant;
+  /** Participates in layout/simulation but is not drawn, hit-tested, selected, or used for camera fit. */
+  layoutOnly?: boolean;
 
   // ─── Member/Lead-specific ──────────────────────────────────────────────
   /** Agent role description */

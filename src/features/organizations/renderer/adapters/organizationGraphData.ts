@@ -25,8 +25,9 @@ const ORGANIZATION_GRID_BLOCK_COLUMN_GAP = 1;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH = 7;
-const ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_BLOCK_WIDTH = 7;
-const ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_ROW_WIDTH = 15;
+const ORGANIZATION_GRID_ALL_SCOPE_ORG_SECTION_MAX_BLOCKS_PER_ROW = 3;
+const ORGANIZATION_GRID_ALL_SCOPE_ORG_SECTION_MAX_ROW_WIDTH = 30;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_ROW_WIDTH = 40;
 const SELECTIVE_AGENT_DETAILS_TEAM_THRESHOLD = 1;
 const SELECTIVE_AGENT_DETAILS_AGENT_THRESHOLD = 60;
 const SELECTIVE_AGENT_DETAILS_MESSAGE_THRESHOLD = 80;
@@ -149,6 +150,29 @@ function getTeamSummaryLine(
   return text.agents(team.memberCount);
 }
 
+function buildRootLayoutAnchor(
+  viewModel: OrganizationMapViewModel,
+  text: OrganizationGraphText
+): GraphNode | null {
+  const root = viewModel.rootNode;
+  if (!root) return null;
+
+  return {
+    id: root.id,
+    kind: 'lead',
+    visualVariant: 'organization',
+    layoutOnly: true,
+    label: getOrganizationContainerLabel(root, text),
+    state: viewModel.stats.activeAgentCount > 0 ? 'active' : 'idle',
+    color: root.color ?? '#4f8cff',
+    domainRef: {
+      kind: 'lead',
+      teamName: viewModel.payload.activeOrganizationId,
+      memberName: root.id,
+    },
+  };
+}
+
 function buildTeamNode(node: OrganizationNodeDto, text: OrganizationGraphText): GraphNode | null {
   const team = node.team;
   if (!team) {
@@ -194,7 +218,7 @@ function buildOrgGraphNode(
   text: OrganizationGraphText
 ): GraphNode | null {
   if (node.id === viewModel.rootNode?.id) {
-    return null;
+    return buildRootLayoutAnchor(viewModel, text);
   }
   if (node.kind === 'team') {
     return buildTeamNode(node, text);
@@ -421,6 +445,7 @@ function buildTeamGridBlock(teamNodeIds: readonly string[]): OrganizationGridBlo
 interface OrganizationGridPackingOptions {
   maxBlockWidth?: number;
   maxBlockHeight?: number;
+  maxBlocksPerRow?: number;
   maxRowWidth?: number;
 }
 
@@ -453,9 +478,33 @@ function packOrganizationGridRows(
       cursor += 1;
       continue;
     }
+    const maxRowWidth = options.maxRowWidth ?? ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH;
+
+    if (options.maxBlocksPerRow && canPackOrganizationGridBlockSideBySide(block, options)) {
+      const row = [block];
+      let rowWidth = block.width;
+      cursor += 1;
+
+      while (row.length < options.maxBlocksPerRow) {
+        const nextBlock = blocks[cursor];
+        if (!nextBlock || !canPackOrganizationGridBlockSideBySide(nextBlock, options)) {
+          break;
+        }
+        const nextRowWidth =
+          rowWidth + ORGANIZATION_GRID_BLOCK_COLUMN_GAP + nextBlock.width;
+        if (nextRowWidth > maxRowWidth) {
+          break;
+        }
+        row.push(nextBlock);
+        rowWidth = nextRowWidth;
+        cursor += 1;
+      }
+
+      rows.push(row);
+      continue;
+    }
 
     const nextBlock = blocks[cursor + 1];
-    const maxRowWidth = options.maxRowWidth ?? ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH;
     if (
       canPackOrganizationGridBlockSideBySide(block, options) &&
       nextBlock &&
@@ -561,18 +610,34 @@ function buildNestedOrganizationGridBlock(
 
   flushDirectTeams();
   const packsTopLevelOrganizations = parentNodeId === ALL_ORGANIZATIONS_ROOT_NODE_ID;
+  const parentNode = viewModel.nodeById.get(parentNodeId);
+  const packsAllScopeOrganizationSections =
+    viewModel.payload.scope === 'all' &&
+    parentNode?.kind === 'organization' &&
+    !packsTopLevelOrganizations;
   const stackBlocks = packsTopLevelOrganizations
     ? blocks.slice().sort((left, right) => right.height - left.height || right.width - left.width)
     : blocks;
   return stackOrganizationGridBlocks(stackBlocks, {
     packSiblings: true,
-    maxBlockWidth: packsTopLevelOrganizations
-      ? ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_BLOCK_WIDTH
-      : undefined,
-    maxBlockHeight: packsTopLevelOrganizations ? Number.POSITIVE_INFINITY : undefined,
+    maxBlockWidth:
+      packsTopLevelOrganizations || packsAllScopeOrganizationSections
+        ? Number.POSITIVE_INFINITY
+        : undefined,
+    maxBlockHeight:
+      packsTopLevelOrganizations || packsAllScopeOrganizationSections
+        ? Number.POSITIVE_INFINITY
+        : undefined,
+    maxBlocksPerRow: packsTopLevelOrganizations
+      ? 2
+      : packsAllScopeOrganizationSections
+        ? ORGANIZATION_GRID_ALL_SCOPE_ORG_SECTION_MAX_BLOCKS_PER_ROW
+        : undefined,
     maxRowWidth: packsTopLevelOrganizations
       ? ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_ROW_WIDTH
-      : undefined,
+      : packsAllScopeOrganizationSections
+        ? ORGANIZATION_GRID_ALL_SCOPE_ORG_SECTION_MAX_ROW_WIDTH
+        : undefined,
   });
 }
 

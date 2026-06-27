@@ -735,12 +735,19 @@ describe('buildOrganizationGraphData', () => {
     const viewModel = buildOrganizationMapViewModel(buildPayload());
     const graph = buildOrganizationGraphData(viewModel);
 
-    expect(graph.nodes.map((node) => [node.id, node.kind, node.state])).toEqual([
+    expect(
+      graph.nodes
+        .filter((node) => !node.layoutOnly)
+        .map((node) => [node.id, node.kind, node.state])
+    ).toEqual([
       ['team:alpha', 'member', 'active'],
       ['team:beta', 'member', 'terminated'],
       ['agent:alpha:alice', 'task', 'active'],
     ]);
-    expect(graph.nodes.map((node) => node.id)).not.toContain('org:default');
+    expect(graph.nodes.find((node) => node.id === 'org:default')).toMatchObject({
+      kind: 'lead',
+      layoutOnly: true,
+    });
     expect(graph.layout?.mode).toBe('grid-under-lead');
     expect(graph.layout?.showTasks).toBe(true);
     expect(graph.layout?.showEmptyTaskPlaceholders).toBeUndefined();
@@ -773,7 +780,11 @@ describe('buildOrganizationGraphData', () => {
     const selectedGraph = buildOrganizationGraphData(viewModel, { selectedNodeId: 'team:alpha' });
 
     expect(selectedGraph.layout?.showTasks).toBe(true);
-    expect(selectedGraph.nodes.map((node) => [node.id, node.kind, node.state])).toEqual([
+    expect(
+      selectedGraph.nodes
+        .filter((node) => !node.layoutOnly)
+        .map((node) => [node.id, node.kind, node.state])
+    ).toEqual([
       ['team:alpha', 'member', 'active'],
       ['team:beta', 'member', 'terminated'],
       ['agent:alpha:alice', 'task', 'active'],
@@ -891,7 +902,10 @@ describe('buildOrganizationGraphData', () => {
         ['team:beta', 'member', 'team'],
       ])
     );
-    expect(graph.nodes.map((node) => node.id)).not.toContain('org:default');
+    expect(graph.nodes.find((node) => node.id === 'org:default')).toMatchObject({
+      kind: 'lead',
+      layoutOnly: true,
+    });
     expect(graph.nodes.map((node) => node.id)).not.toContain('unit:engineering');
     expect(graph.groupFrames).toEqual([
       {
@@ -923,7 +937,11 @@ describe('buildOrganizationGraphData', () => {
       ])
     );
     const graphNodeIds = graph.nodes.map((node) => node.id);
-    expect(graphNodeIds).not.toContain('org:__all-organizations__');
+    expect(graph.nodes.find((node) => node.id === 'org:__all-organizations__')).toMatchObject({
+      kind: 'lead',
+      visualVariant: 'organization',
+      layoutOnly: true,
+    });
     expect(graphNodeIds).not.toContain('org:product');
     expect(graphNodeIds).not.toContain('org:quality');
     expect(graph.groupFrames).toEqual([

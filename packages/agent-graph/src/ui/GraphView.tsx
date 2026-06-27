@@ -289,6 +289,7 @@ export function GraphView({
   const getVisibleNodes = useCallback(
     (nodes: GraphNode[]): GraphNode[] =>
       nodes.filter((node) => {
+        if (node.layoutOnly) return false;
         if (node.kind === 'task' && !filters.showTasks) return false;
         if (node.kind === 'process' && !filters.showProcesses) return false;
         return true;
@@ -304,6 +305,14 @@ export function GraphView({
     ): GraphEdge[] =>
       filterVisibleGraphEdges(edges, visibleNodeIds, filters.showEdges, activeParticleEdgeIds),
     [filters.showEdges]
+  );
+
+  const getFitNodes = useCallback(
+    (nodes: GraphNode[]): GraphNode[] => {
+      const visibleNodes = getVisibleNodes(nodes);
+      return visibleNodes.length > 0 ? visibleNodes : nodes;
+    },
+    [getVisibleNodes]
   );
 
   // ─── Sync data from adapter → simulation ────────────────────────────────
@@ -577,12 +586,12 @@ export function GraphView({
     const el = containerRef.current;
     if (!el || data.nodes.length === 0) return;
     camera.zoomToFit(
-      simulation.stateRef.current.nodes,
+      getFitNodes(simulation.stateRef.current.nodes),
       el.clientWidth,
       el.clientHeight,
       simulation.getExtraWorldBounds()
     );
-  }, [camera, data.nodes.length, simulation]);
+  }, [camera, data.nodes.length, getFitNodes, simulation]);
 
   // ─── Auto-fit: until first user interaction, also react to container resizes ─────
   useEffect(() => {
@@ -1234,7 +1243,7 @@ export function GraphView({
         const el = containerRef.current;
         if (el)
           camera.zoomToFit(
-            simulation.stateRef.current.nodes,
+            getFitNodes(simulation.stateRef.current.nodes),
             el.clientWidth,
             el.clientHeight,
             simulation.getExtraWorldBounds()
@@ -1247,7 +1256,7 @@ export function GraphView({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, simulation.stateRef]);
+  }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, getFitNodes, simulation]);
 
   // ─── Selected node for overlay ──────────────────────────────────────────
   const selectedNode: GraphNode | null = selectedNodeId
@@ -1365,7 +1374,7 @@ export function GraphView({
           const el = containerRef.current;
           if (el)
             camera.zoomToFit(
-              simulation.stateRef.current.nodes,
+              getFitNodes(simulation.stateRef.current.nodes),
               el.clientWidth,
               el.clientHeight,
               simulation.getExtraWorldBounds()
