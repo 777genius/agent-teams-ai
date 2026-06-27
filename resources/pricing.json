@@ -2058,6 +2058,8 @@
   },
   "claude-sonnet-4-5": {
     "cache_creation_input_token_cost": 0.00000375,
+    "cache_creation_input_token_cost_above_1hr": 0.000006,
+    "cache_creation_input_token_cost_above_1hr_above_200k_tokens": 0.000012,
     "cache_read_input_token_cost": 3e-7,
     "input_cost_per_token": 0.000003,
     "input_cost_per_token_above_200k_tokens": 0.000006,
@@ -2087,6 +2089,8 @@
   },
   "claude-sonnet-4-5-20250929": {
     "cache_creation_input_token_cost": 0.00000375,
+    "cache_creation_input_token_cost_above_1hr": 0.000006,
+    "cache_creation_input_token_cost_above_1hr_above_200k_tokens": 0.000012,
     "cache_read_input_token_cost": 3e-7,
     "input_cost_per_token": 0.000003,
     "input_cost_per_token_above_200k_tokens": 0.000006,
@@ -2117,6 +2121,7 @@
   },
   "claude-sonnet-4-6": {
     "cache_creation_input_token_cost": 0.00000375,
+    "cache_creation_input_token_cost_above_1hr": 0.000006,
     "cache_read_input_token_cost": 3e-7,
     "input_cost_per_token": 0.000003,
     "litellm_provider": "anthropic",
@@ -2145,6 +2150,8 @@
   },
   "claude-sonnet-4-5-20250929-v1:0": {
     "cache_creation_input_token_cost": 0.00000375,
+    "cache_creation_input_token_cost_above_1hr": 0.000006,
+    "cache_creation_input_token_cost_above_1hr_above_200k_tokens": 0.000012,
     "cache_read_input_token_cost": 3e-7,
     "input_cost_per_token": 0.000003,
     "input_cost_per_token_above_200k_tokens": 0.000006,
@@ -2332,7 +2339,8 @@
       "fast": 6
     },
     "supports_output_config": true,
-    "supports_max_reasoning_effort": true
+    "supports_max_reasoning_effort": true,
+    "supports_speed": true
   },
   "claude-opus-4-6-20260205": {
     "cache_creation_input_token_cost": 0.00000625,
@@ -2365,7 +2373,8 @@
       "fast": 6
     },
     "supports_max_reasoning_effort": true,
-    "supports_output_config": true
+    "supports_output_config": true,
+    "supports_speed": true
   },
   "claude-opus-4-7": {
     "cache_creation_input_token_cost": 0.00000625,
@@ -2400,7 +2409,8 @@
       "us": 1.1,
       "fast": 6
     },
-    "supports_output_config": true
+    "supports_output_config": true,
+    "supports_speed": true
   },
   "claude-opus-4-7-20260416": {
     "cache_creation_input_token_cost": 0.00000625,
@@ -2435,7 +2445,8 @@
       "us": 1.1,
       "fast": 6
     },
-    "supports_output_config": true
+    "supports_output_config": true,
+    "supports_speed": true
   },
   "claude-fable-5": {
     "cache_creation_input_token_cost": 0.0000125,
@@ -2504,7 +2515,8 @@
       "us": 1.1,
       "fast": 2
     },
-    "supports_output_config": true
+    "supports_output_config": true,
+    "supports_speed": true
   },
   "claude-sonnet-4-20250514": {
     "deprecation_date": "2026-05-14",
@@ -3323,6 +3335,8 @@
     "output_cost_per_token_flex": 0.0000075,
     "output_cost_per_token_batches": 0.0000075,
     "output_cost_per_token_priority": 0.00003,
+    "regional_processing_uplift_multiplier_eu": 1.1,
+    "regional_processing_uplift_multiplier_us": 1.1,
     "supported_endpoints": [
       "/v1/chat/completions",
       "/v1/batch",
@@ -3360,7 +3374,7 @@
     "input_cost_per_token_batches": 3.75e-7,
     "input_cost_per_token_priority": 0.0000015,
     "litellm_provider": "openai",
-    "max_input_tokens": 272000,
+    "max_input_tokens": 1050000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,
     "mode": "chat",
@@ -3368,6 +3382,8 @@
     "output_cost_per_token_flex": 0.00000225,
     "output_cost_per_token_batches": 0.00000225,
     "output_cost_per_token_priority": 0.000009,
+    "regional_processing_uplift_multiplier_eu": 1.1,
+    "regional_processing_uplift_multiplier_us": 1.1,
     "supported_endpoints": [
       "/v1/chat/completions",
       "/v1/batch",
