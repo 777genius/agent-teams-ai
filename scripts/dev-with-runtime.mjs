@@ -29,6 +29,7 @@ const remoteDebuggingPortArg = '--remoteDebuggingPort';
 const terminalPlatformRootEnv = 'CLAUDE_TERMINAL_PLATFORM_ROOT';
 const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
 const terminalDaemonBinaryEnv = 'CLAUDE_TERMINAL_DAEMON_BINARY';
+const organizationDemoEnv = 'AGENT_TEAMS_ORG_DEMO';
 
 function prependPathEntries(entries) {
   const currentPath = process.env.PATH ?? '';
@@ -74,6 +75,45 @@ function runOrExit(cmd, args, options = {}) {
   }
 }
 
+function resolveOrganizationDemoMode() {
+  const rawValue = process.env[organizationDemoEnv]?.trim().toLowerCase() ?? '';
+
+  if (!rawValue || ['0', 'false', 'no', 'off'].includes(rawValue)) {
+    return 'off';
+  }
+
+  if (['1', 'true', 'yes', 'on', 'seed', 'demo'].includes(rawValue)) {
+    return 'seed';
+  }
+
+  if (['restore', 'reset'].includes(rawValue)) {
+    return 'restore';
+  }
+
+  console.error(`${organizationDemoEnv} must be one of: 1, true, seed, restore, 0, false, off.`);
+  process.exit(1);
+}
+
+function applyOrganizationDemoMode() {
+  const demoMode = resolveOrganizationDemoMode();
+
+  if (demoMode === 'off') {
+    return false;
+  }
+
+  const seedArgs = [path.join(scriptDir, 'seed-organization-map-demo.mjs')];
+  if (demoMode === 'restore') {
+    seedArgs.push('--restore');
+  }
+
+  runOrExit(process.execPath, seedArgs, {
+    cwd: uiRepoRoot,
+    env: process.env,
+  });
+
+  return demoMode === 'restore';
+}
+
 function runAndCapture(cmd, args, options = {}) {
   const result = spawnSyncWithWindowsShell(cmd, args, {
     encoding: 'utf8',
@@ -98,8 +138,8 @@ function runAndCapture(cmd, args, options = {}) {
 function hasTerminalPlatformOverride() {
   return Boolean(
     process.env[terminalPlatformRootEnv]?.trim() ||
-      process.env[legacyTerminalPlatformRootEnv]?.trim() ||
-      process.env[terminalDaemonBinaryEnv]?.trim()
+    process.env[legacyTerminalPlatformRootEnv]?.trim() ||
+    process.env[terminalDaemonBinaryEnv]?.trim()
   );
 }
 
@@ -643,6 +683,11 @@ async function resolveRuntimeCli() {
 
 async function main() {
   augmentRuntimeToolPath();
+
+  if (!shouldPrintRuntimePath && applyOrganizationDemoMode()) {
+    return;
+  }
+
   const resolvedRuntime = await resolveRuntimeCli();
 
   if (shouldPrintRuntimePath) {
