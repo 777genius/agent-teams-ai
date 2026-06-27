@@ -13,6 +13,8 @@ export interface PreparedGroupFrame {
   area: number;
 }
 
+export type GroupFrameExtraBoundsByNodeId = ReadonlyMap<string, GroupFrameBounds>;
+
 export type GroupFrameHitTarget = 'label' | 'border' | 'fill';
 
 export interface GroupFrameHit {
@@ -53,7 +55,8 @@ export function getGroupFrameLabelHorizontalOffsetPx(_frame: GraphGroupFrame): n
 
 export function prepareGroupFrame(
   frame: GraphGroupFrame,
-  nodeMap: ReadonlyMap<string, GraphNode>
+  nodeMap: ReadonlyMap<string, GraphNode>,
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): PreparedGroupFrame | null {
   let left = Infinity;
   let top = Infinity;
@@ -62,14 +65,23 @@ export function prepareGroupFrame(
 
   for (const nodeId of frame.nodeIds) {
     const node = nodeMap.get(nodeId);
-    if (!node) continue;
-    const x = node.x ?? 0;
-    const y = node.y ?? 0;
-    const box = getNodeGroupBox(node);
-    left = Math.min(left, x - box.halfWidth);
-    top = Math.min(top, y - box.halfHeight);
-    right = Math.max(right, x + box.halfWidth);
-    bottom = Math.max(bottom, y + box.halfHeight);
+    if (node) {
+      const x = node.x ?? 0;
+      const y = node.y ?? 0;
+      const box = getNodeGroupBox(node);
+      left = Math.min(left, x - box.halfWidth);
+      top = Math.min(top, y - box.halfHeight);
+      right = Math.max(right, x + box.halfWidth);
+      bottom = Math.max(bottom, y + box.halfHeight);
+    }
+
+    const extraBounds = extraBoundsByNodeId?.get(nodeId);
+    if (extraBounds) {
+      left = Math.min(left, extraBounds.left);
+      top = Math.min(top, extraBounds.top);
+      right = Math.max(right, extraBounds.right);
+      bottom = Math.max(bottom, extraBounds.bottom);
+    }
   }
 
   if (!Number.isFinite(left) || !Number.isFinite(top)) {
@@ -167,9 +179,10 @@ export function findGroupFrameAt(
   y: number,
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
-  zoom: number
+  zoom: number,
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): GraphGroupFrame | null {
-  return findGroupFrameHitAt(x, y, frames, nodeMap, zoom)?.frame ?? null;
+  return findGroupFrameHitAt(x, y, frames, nodeMap, zoom, extraBoundsByNodeId)?.frame ?? null;
 }
 
 export function findGroupFrameHitAt(
@@ -177,14 +190,15 @@ export function findGroupFrameHitAt(
   y: number,
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
-  zoom: number
+  zoom: number,
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): GroupFrameHit | null {
   if (frames.length === 0 || zoom < 0.08) {
     return null;
   }
 
   const preparedFrames = frames
-    .map((frame) => prepareGroupFrame(frame, nodeMap))
+    .map((frame) => prepareGroupFrame(frame, nodeMap, extraBoundsByNodeId))
     .filter((frame): frame is PreparedGroupFrame => frame !== null)
     .sort((left, right) => left.area - right.area);
 

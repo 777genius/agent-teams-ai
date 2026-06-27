@@ -17,13 +17,16 @@ const MAX_PARTICLES_DETAILED_MAP = 96;
 const MAX_PARTICLES_COMPACT_MAP = 48;
 const MAX_ACTIVE_AGENT_TASKS_PER_TEAM = 4;
 const COMPACT_LAYOUT_MAX_OWNER_COUNT = 10;
+const ORGANIZATION_GRID_COMPACT_MAX_COLUMN_COUNT = 3;
 const ORGANIZATION_GRID_MAX_COLUMN_COUNT = 12;
 const ORGANIZATION_GRID_TOP_ROW_OFFSET = 2;
 const ORGANIZATION_GRID_BLOCK_ROW_GAP = 6;
 const ORGANIZATION_GRID_BLOCK_COLUMN_GAP = 1;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH = 3;
-const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT = 4;
+const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH = 7;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_BLOCK_WIDTH = 7;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_ROW_WIDTH = 15;
 const SELECTIVE_AGENT_DETAILS_TEAM_THRESHOLD = 1;
 const SELECTIVE_AGENT_DETAILS_AGENT_THRESHOLD = 60;
 const SELECTIVE_AGENT_DETAILS_MESSAGE_THRESHOLD = 80;
@@ -400,13 +403,13 @@ function shouldUseSelectiveAgentDetails(
   );
 }
 
-function getLayoutMode(ownerCount: number): GraphLayoutMode {
-  return ownerCount <= COMPACT_LAYOUT_MAX_OWNER_COUNT ? 'grid-under-lead' : 'radial';
+function getLayoutMode(_ownerCount: number): GraphLayoutMode {
+  return 'grid-under-lead';
 }
 
 function getOrganizationGridColumnCount(ownerCount: number): number {
   if (ownerCount <= COMPACT_LAYOUT_MAX_OWNER_COUNT) {
-    return Math.max(1, Math.min(ownerCount, 2));
+    return Math.max(1, Math.min(ownerCount, ORGANIZATION_GRID_COMPACT_MAX_COLUMN_COUNT));
   }
   return Math.max(
     3,
@@ -442,12 +445,19 @@ function buildTeamGridBlock(teamNodeIds: readonly string[]): OrganizationGridBlo
   };
 }
 
-function canPackOrganizationGridBlockSideBySide(block: OrganizationGridBlock): boolean {
-  return (
-    block.packable === true &&
-    block.width <= ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH &&
-    block.height <= ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT
-  );
+interface OrganizationGridPackingOptions {
+  maxBlockWidth?: number;
+  maxBlockHeight?: number;
+  maxRowWidth?: number;
+}
+
+function canPackOrganizationGridBlockSideBySide(
+  block: OrganizationGridBlock,
+  options: OrganizationGridPackingOptions = {}
+): boolean {
+  const maxBlockWidth = options.maxBlockWidth ?? ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH;
+  const maxBlockHeight = options.maxBlockHeight ?? ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT;
+  return block.packable === true && block.width <= maxBlockWidth && block.height <= maxBlockHeight;
 }
 
 function getPackedOrganizationGridRowWidth(blocks: readonly OrganizationGridBlock[]): number {
@@ -458,7 +468,8 @@ function getPackedOrganizationGridRowWidth(blocks: readonly OrganizationGridBloc
 }
 
 function packOrganizationGridRows(
-  blocks: readonly OrganizationGridBlock[]
+  blocks: readonly OrganizationGridBlock[],
+  options: OrganizationGridPackingOptions = {}
 ): OrganizationGridBlock[][] {
   const rows: OrganizationGridBlock[][] = [];
   let cursor = 0;
@@ -471,12 +482,12 @@ function packOrganizationGridRows(
     }
 
     const nextBlock = blocks[cursor + 1];
+    const maxRowWidth = options.maxRowWidth ?? ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH;
     if (
-      canPackOrganizationGridBlockSideBySide(block) &&
+      canPackOrganizationGridBlockSideBySide(block, options) &&
       nextBlock &&
-      canPackOrganizationGridBlockSideBySide(nextBlock) &&
-      getPackedOrganizationGridRowWidth([block, nextBlock]) <=
-        ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH
+      canPackOrganizationGridBlockSideBySide(nextBlock, options) &&
+      getPackedOrganizationGridRowWidth([block, nextBlock]) <= maxRowWidth
     ) {
       rows.push([block, nextBlock]);
       cursor += 2;
@@ -492,7 +503,7 @@ function packOrganizationGridRows(
 
 function stackOrganizationGridBlocks(
   blocks: readonly OrganizationGridBlock[],
-  options: { packSiblings?: boolean } = {}
+  options: { packSiblings?: boolean } & OrganizationGridPackingOptions = {}
 ): OrganizationGridBlock | null {
   const visibleBlocks = blocks.filter((block) => block.assignments.length > 0);
   if (visibleBlocks.length === 0) {
@@ -500,7 +511,7 @@ function stackOrganizationGridBlocks(
   }
 
   const rows = options.packSiblings
-    ? packOrganizationGridRows(visibleBlocks)
+    ? packOrganizationGridRows(visibleBlocks, options)
     : visibleBlocks.map((block) => [block]);
   const width = Math.max(...rows.map(getPackedOrganizationGridRowWidth));
   let rowOffset = 0;
@@ -576,7 +587,17 @@ function buildNestedOrganizationGridBlock(
   }
 
   flushDirectTeams();
-  return stackOrganizationGridBlocks(blocks, { packSiblings: true });
+  const packsTopLevelOrganizations = parentNodeId === ALL_ORGANIZATIONS_ROOT_NODE_ID;
+  return stackOrganizationGridBlocks(blocks, {
+    packSiblings: true,
+    maxBlockWidth: packsTopLevelOrganizations
+      ? ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_BLOCK_WIDTH
+      : undefined,
+    maxBlockHeight: packsTopLevelOrganizations ? Number.POSITIVE_INFINITY : undefined,
+    maxRowWidth: packsTopLevelOrganizations
+      ? ORGANIZATION_GRID_TOP_LEVEL_ORG_MAX_ROW_WIDTH
+      : undefined,
+  });
 }
 
 function buildGridSlotAssignments(
@@ -1094,8 +1115,6 @@ export function buildOrganizationGraphData(
             showActivity: false,
             showLogs: false,
             showTasks: context.renderedAgentTeamIds.size > 0,
-            showEmptyTaskPlaceholders:
-              context.renderedAgentTeamIds.size > 0 && context.visibleTeamCount > 0,
             alignGridColumns: true,
             ownerOrder,
             slotAssignments: buildLayoutSlotAssignments(viewModel, ownerOrder, context.layoutMode),

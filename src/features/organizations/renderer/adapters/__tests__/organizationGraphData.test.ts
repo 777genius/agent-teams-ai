@@ -743,7 +743,7 @@ describe('buildOrganizationGraphData', () => {
     ]);
     expect(graph.layout?.mode).toBe('grid-under-lead');
     expect(graph.layout?.showTasks).toBe(true);
-    expect(graph.layout?.showEmptyTaskPlaceholders).toBe(true);
+    expect(graph.layout?.showEmptyTaskPlaceholders).toBeUndefined();
     expect(graph.edges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1010,9 +1010,9 @@ describe('buildOrganizationGraphData', () => {
     expect(getOrganizationIdForNodeId(viewModel, 'team:gamma')).toBeNull();
   });
 
-  it('assigns rows layout slots by nested organization blocks', () => {
+  it('uses rows layout slots by default for nested organization blocks', () => {
     const viewModel = buildOrganizationMapViewModel(buildAllOrganizationsNestedPayload());
-    const graph = buildOrganizationGraphData(viewModel, { layoutMode: 'grid-under-lead' });
+    const graph = buildOrganizationGraphData(viewModel);
     const slots = graph.layout?.slotAssignments ?? {};
 
     expect(graph.layout?.mode).toBe('grid-under-lead');
@@ -1033,6 +1033,39 @@ describe('buildOrganizationGraphData', () => {
     expect(slots['team:beta']?.ringIndex).toBe(slots['team:delta']?.ringIndex);
     expect(slots['team:alpha']?.sectorIndex).toBeLessThan(slots['team:gamma']?.sectorIndex ?? -1);
     expect(slots['team:beta']?.sectorIndex).toBeLessThan(slots['team:delta']?.sectorIndex ?? -1);
+  });
+
+  it('places up to three teams from one group in the same row', () => {
+    const payload = buildSiblingGroupsPayload();
+    const epsilon = cloneFixtureTeamNode(getFixtureTeamNode(payload, 'team:alpha'), {
+      id: 'team:epsilon',
+      label: 'Epsilon Team',
+      parentNodeId: 'unit:growth',
+      teamName: 'epsilon',
+    });
+    payload.nodes.push(epsilon);
+    payload.relations.push({
+      id: 'contains:unit:growth:team:epsilon',
+      sourceNodeId: 'unit:growth',
+      targetNodeId: 'team:epsilon',
+      kind: 'contains',
+      sourceKind: 'manual',
+      weight: 1,
+    });
+    payload.diagnostics = {
+      ...payload.diagnostics,
+      totalTeams: 5,
+      renderedTeams: 5,
+    };
+    const viewModel = buildOrganizationMapViewModel(payload);
+    const graph = buildOrganizationGraphData(viewModel, { layoutMode: 'grid-under-lead' });
+    const slots = graph.layout?.slotAssignments ?? {};
+
+    expect(slots['team:alpha']?.ringIndex).toBe(slots['team:beta']?.ringIndex);
+    expect(slots['team:beta']?.ringIndex).toBe(slots['team:epsilon']?.ringIndex);
+    expect(slots['team:alpha']?.sectorIndex).toBe(0);
+    expect(slots['team:beta']?.sectorIndex).toBe(1);
+    expect(slots['team:epsilon']?.sectorIndex).toBe(2);
   });
 
   it('keeps tall sibling groups on their own row', () => {
@@ -1147,9 +1180,9 @@ describe('buildOrganizationGraphData', () => {
 
     expect(profile.detailMode).toBe('active-agent-tasks');
     expect(profile.hiddenAgentCount).toBe(36);
-    expect(graph.layout?.mode).toBe('radial');
+    expect(graph.layout?.mode).toBe('grid-under-lead');
     expect(graph.layout?.showTasks).toBe(true);
-    expect(graph.layout?.showEmptyTaskPlaceholders).toBe(true);
+    expect(graph.layout?.showEmptyTaskPlaceholders).toBeUndefined();
     expect(graph.nodes.filter((node) => node.kind === 'task')).toHaveLength(12);
     expect(graph.edges.filter((edge) => edge.type === 'ownership')).toHaveLength(12);
 

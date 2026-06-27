@@ -31,6 +31,8 @@ import {
   getGroupFrameLabelHorizontalOffsetPx,
   getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
+  type GroupFrameBounds,
+  type GroupFrameExtraBoundsByNodeId,
   type PreparedGroupFrame,
   prepareGroupFrame,
   shouldRenderGroupFrameLabel,
@@ -291,6 +293,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           drawGroupFrames(ctx, {
             frames: state.groupFrames,
             nodeMap,
+            extraBoundsByNodeId: getOwnerColumnFrameBoundsByNodeId(state.ownerColumnGroupRects),
             zoom,
             selectedNodeId: state.selectedNodeId,
             hoveredGroupFrameId: state.hoveredGroupFrameId,
@@ -502,6 +505,7 @@ function drawGroupFrames(
   args: {
     frames: readonly GraphGroupFrame[];
     nodeMap: ReadonlyMap<string, GraphNode>;
+    extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId;
     zoom: number;
     selectedNodeId: string | null;
     hoveredGroupFrameId: string | null;
@@ -514,13 +518,27 @@ function drawGroupFrames(
   }
 
   const preparedFrames = args.frames
-    .map((frame) => prepareGroupFrame(frame, args.nodeMap))
+    .map((frame) => prepareGroupFrame(frame, args.nodeMap, args.extraBoundsByNodeId))
     .filter((frame): frame is PreparedGroupFrame => frame !== null)
     .sort((left, right) => right.area - left.area);
 
   for (const prepared of preparedFrames) {
     drawPreparedGroupFrame(ctx, prepared, args);
   }
+}
+
+function getOwnerColumnFrameBoundsByNodeId(
+  groups: readonly OwnerColumnGroupRect[]
+): GroupFrameExtraBoundsByNodeId | undefined {
+  if (groups.length === 0) {
+    return undefined;
+  }
+
+  const boundsByNodeId = new Map<string, GroupFrameBounds>();
+  for (const group of groups) {
+    boundsByNodeId.set(group.ownerId, group.rect);
+  }
+  return boundsByNodeId;
 }
 
 interface GroupFrameDrawStyle {

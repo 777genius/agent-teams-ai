@@ -18,6 +18,7 @@ import {
   findGroupFrameAt,
   findGroupFrameHitAt,
   getPaddedGroupFrameBounds,
+  type GroupFrameExtraBoundsByNodeId,
   prepareGroupFrame,
 } from '../canvas/group-frames';
 import {
@@ -389,6 +390,20 @@ export function GraphView({
     }
     return { x: node.x, y: node.y };
   }, []);
+  const getOwnerColumnFrameBoundsByNodeId = useCallback(():
+    | GroupFrameExtraBoundsByNodeId
+    | undefined => {
+    const groups = simulationRef.current.getOwnerColumnGroupRects();
+    if (groups.length === 0) {
+      return undefined;
+    }
+
+    const boundsByNodeId = new Map<string, StableRect>();
+    for (const group of groups) {
+      boundsByNodeId.set(group.ownerId, group.rect);
+    }
+    return boundsByNodeId;
+  }, []);
   const getGroupFrameScreenPlacements = useCallback((): GraphGroupFrameScreenPlacement[] => {
     const groupFrames = data.groupFrames ?? [];
     if (groupFrames.length === 0) {
@@ -398,9 +413,10 @@ export function GraphView({
     const visibleNodes = getVisibleNodes(simulationRef.current.stateRef.current.nodes);
     const nodeMap = getNodeMap(visibleNodes);
     const zoom = cameraRef.current.transformRef.current.zoom;
+    const extraBoundsByNodeId = getOwnerColumnFrameBoundsByNodeId();
 
     return groupFrames.flatMap((frame) => {
-      const prepared = prepareGroupFrame(frame, nodeMap);
+      const prepared = prepareGroupFrame(frame, nodeMap, extraBoundsByNodeId);
       if (!prepared) {
         return [];
       }
@@ -427,7 +443,7 @@ export function GraphView({
         },
       ];
     });
-  }, [data.groupFrames, getNodeMap, getVisibleNodes]);
+  }, [data.groupFrames, getNodeMap, getOwnerColumnFrameBoundsByNodeId, getVisibleNodes]);
 
   const setInteractionSelectionDisabled = useCallback((disabled: boolean) => {
     if (typeof document === 'undefined') {
@@ -667,7 +683,8 @@ export function GraphView({
           world.y,
           data.groupFrames ?? [],
           nodeMap,
-          camera.transformRef.current.zoom
+          camera.transformRef.current.zoom,
+          getOwnerColumnFrameBoundsByNodeId()
         );
         const hitEdge =
           !hitGroupFrame || hitGroupFrame.target === 'fill'
@@ -724,6 +741,7 @@ export function GraphView({
       data.groupFrames,
       getInteractiveEdges,
       getNodeMap,
+      getOwnerColumnFrameBoundsByNodeId,
       getVisibleEdges,
       getVisibleNodes,
       interaction,
@@ -926,11 +944,7 @@ export function GraphView({
             clickedGroupFrameId = groupFrameMouseDownRef.current.id;
           }
         }
-        if (
-          !clickedGroupFrameId &&
-          edgeMouseDownRef.current &&
-          !interaction.isDragging.current
-        ) {
+        if (!clickedGroupFrameId && edgeMouseDownRef.current && !interaction.isDragging.current) {
           const dx = clientX - edgeMouseDownRef.current.clientX;
           const dy = clientY - edgeMouseDownRef.current.clientY;
           if (dx * dx + dy * dy <= ANIM.dragThresholdPx * ANIM.dragThresholdPx) {
@@ -1014,7 +1028,8 @@ export function GraphView({
         world.y,
         data.groupFrames ?? [],
         nodeMap,
-        camera.transformRef.current.zoom
+        camera.transformRef.current.zoom,
+        getOwnerColumnFrameBoundsByNodeId()
       );
       const interactiveEdges = getInteractiveEdges(canvas, nodes, edges);
       const hoveredEdgeId =
@@ -1043,6 +1058,7 @@ export function GraphView({
       data.groupFrames,
       getInteractiveEdges,
       getNodeMap,
+      getOwnerColumnFrameBoundsByNodeId,
       getVisibleEdges,
       getVisibleNodes,
       interaction,
@@ -1156,7 +1172,8 @@ export function GraphView({
         world.y,
         data.groupFrames ?? [],
         nodeMap,
-        camera.transformRef.current.zoom
+        camera.transformRef.current.zoom,
+        getOwnerColumnFrameBoundsByNodeId()
       );
       if (groupFrame) {
         setSelectedNodeId(groupFrame.id);
@@ -1169,6 +1186,7 @@ export function GraphView({
       data.groupFrames,
       events,
       getNodeMap,
+      getOwnerColumnFrameBoundsByNodeId,
       getVisibleNodes,
       interaction,
       simulation.stateRef,
