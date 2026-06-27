@@ -209,9 +209,9 @@ describe('GetOrganizationMapUseCase', () => {
       'default',
       'client',
     ]);
-    expect(payload.organizations.find((organization) => organization.id === 'client')?.rootNodeId).toBe(
-      'org:client-root'
-    );
+    expect(
+      payload.organizations.find((organization) => organization.id === 'client')?.rootNodeId
+    ).toBe('org:client-root');
     expect(payload.nodes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'org:client-root', kind: 'organization' }),
@@ -307,7 +307,9 @@ describe('GetOrganizationMapUseCase', () => {
 
     expect(payload.scope).toBe('all');
     expect(payload.rootNodeId).toBe('org:__all-organizations__');
-    expect(payload.organizations.map((organization) => [organization.id, organization.rootNodeId])).toEqual([
+    expect(
+      payload.organizations.map((organization) => [organization.id, organization.rootNodeId])
+    ).toEqual([
       ['product', 'org:product'],
       ['quality', 'org:quality'],
     ]);
@@ -316,8 +318,8 @@ describe('GetOrganizationMapUseCase', () => {
         expect.objectContaining({ id: 'org:__all-organizations__', kind: 'organization' }),
         expect.objectContaining({ id: 'org:product', parentNodeId: 'org:__all-organizations__' }),
         expect.objectContaining({ id: 'org:quality', parentNodeId: 'org:__all-organizations__' }),
-        expect.objectContaining({ id: 'team:platform', parentNodeId: 'org:product' }),
-        expect.objectContaining({ id: 'team:qa', parentNodeId: 'org:quality' }),
+        expect.objectContaining({ id: 'unit:product:platform-slot', parentNodeId: 'org:product' }),
+        expect.objectContaining({ id: 'unit:quality:qa-slot', parentNodeId: 'org:quality' }),
       ])
     );
     expect(payload.relations).toEqual(
