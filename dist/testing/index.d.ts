@@ -1,2 +1,2 @@
-export * from "../core/testing/index.js";
+export * from "../core/testing/fakes.js";
 //# sourceMappingURL=index.d.ts.map

@@ -49,7 +49,11 @@
       "@vioxen/subscription-runtime/runner-github-action": [
         "src/runner-github-action/index.ts"
       ],
-      "@vioxen/subscription-runtime/testing": ["src/testing/index.ts"]
+      "@vioxen/subscription-runtime/testing": ["src/testing/index.ts"],
+      "@vioxen/subscription-runtime/testing/contracts": [
+        "src/testing/contracts.ts"
+      ],
+      "@vioxen/subscription-runtime/testing/fakes": ["src/testing/fakes.ts"]
     },
     "types": ["node", "vitest/globals"]
   },

@@ -10,7 +10,7 @@ import {
 import {
   agentDriverContract,
   providerSessionDriverContract,
-} from "@vioxen/subscription-runtime/testing";
+} from "../../core/testing/contracts";
 import type {
   ProcessResult,
   RunnerPort,

@@ -1,6 +1,6 @@
 {
   "name": "@vioxen/subscription-runtime",
-  "version": "0.1.0-main.0",
+  "version": "0.1.0-main.1",
   "description": "Provider-neutral subscription runtime for backend workers, Codex subscription execution, and pluggable session custody.",
   "license": "UNLICENSED",
   "type": "module",
@@ -81,6 +81,16 @@
       "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing/index.js",
       "default": "./dist/testing/index.js"
+    },
+    "./testing/contracts": {
+      "types": "./dist/testing/contracts.d.ts",
+      "import": "./dist/testing/contracts.js",
+      "default": "./dist/testing/contracts.js"
+    },
+    "./testing/fakes": {
+      "types": "./dist/testing/fakes.d.ts",
+      "import": "./dist/testing/fakes.js",
+      "default": "./dist/testing/fakes.js"
     },
     "./package.json": "./package.json"
   },
