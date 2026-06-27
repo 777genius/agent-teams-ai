@@ -16,6 +16,7 @@ export interface PreparedGroupFrame {
 export type GroupFrameExtraBoundsByNodeId = ReadonlyMap<string, GroupFrameBounds>;
 
 export type GroupFrameHitTarget = 'label' | 'border' | 'fill';
+export type GroupFrameLabelPlacement = 'outside-top' | 'inside-top' | 'inside-bottom';
 
 export interface GroupFrameHit {
   frame: GraphGroupFrame;
@@ -48,11 +49,21 @@ function getDepthLevel(frame: GraphGroupFrame, fallbackDepth: number): number {
 }
 
 export function getGroupFrameLabelVerticalOffsetPx(frame: GraphGroupFrame): number {
-  return frame.priority === 'primary' ? 12 : 16;
+  if (frame.priority === 'primary') {
+    return 6;
+  }
+  return getDepthLevel(frame, 0) > 0 ? 12 : 8;
 }
 
 export function getGroupFrameLabelHorizontalOffsetPx(_frame: GraphGroupFrame): number {
   return 0;
+}
+
+export function getGroupFrameLabelPlacement(frame: GraphGroupFrame): GroupFrameLabelPlacement {
+  if (frame.priority === 'primary') {
+    return 'outside-top';
+  }
+  return getDepthLevel(frame, 0) > 0 ? 'inside-bottom' : 'inside-top';
 }
 
 export function getGroupFrameLabelScaleZoom(zoom: number): number {
@@ -157,22 +168,34 @@ export function getGroupFrameLabelBounds(
   frameBounds: GroupFrameBounds,
   zoom: number,
   measureTextWidth: MeasureTextWidth = estimateLabelWidth,
-  options: { horizontalOffsetPx?: number; verticalOffsetPx?: number } = {}
+  options: {
+    horizontalOffsetPx?: number;
+    verticalOffsetPx?: number;
+    placement?: GroupFrameLabelPlacement;
+  } = {}
 ): GroupFrameLabelBounds {
   const safeZoom = getGroupFrameLabelScaleZoom(zoom);
   const fontSize = 11 / safeZoom;
   const horizontalPadding = 7 / safeZoom;
   const verticalPadding = 4 / safeZoom;
   const textX = frameBounds.left + (14 + (options.horizontalOffsetPx ?? 0)) / safeZoom;
-  const textY = frameBounds.top + (options.verticalOffsetPx ?? 0) / safeZoom;
   const width = measureTextWidth(label, fontSize) + horizontalPadding * 2;
   const height = fontSize + verticalPadding * 2;
+  const verticalOffset = (options.verticalOffsetPx ?? 0) / safeZoom;
+  let top = frameBounds.top + verticalOffset;
+
+  if (options.placement === 'outside-top') {
+    top = frameBounds.top - verticalOffset - height;
+  } else if (options.placement === 'inside-bottom') {
+    top = frameBounds.bottom - verticalOffset - height;
+  }
+  const textY = top + height / 2;
 
   return {
     left: textX - horizontalPadding,
-    top: textY - height / 2,
+    top,
     right: textX - horizontalPadding + width,
-    bottom: textY - height / 2 + height,
+    bottom: top + height,
     textX,
     textY,
     width,
@@ -216,6 +239,7 @@ export function findGroupFrameHitAt(
           y,
           getGroupFrameLabelBounds(prepared.frame.label, bounds, zoom, undefined, {
             horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(prepared.frame),
+            placement: getGroupFrameLabelPlacement(prepared.frame),
             verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
           })
         )

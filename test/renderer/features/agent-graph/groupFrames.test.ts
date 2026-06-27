@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getGroupFrameLabelBounds,
+  getGroupFrameLabelPlacement,
   getGroupFrameLabelScaleZoom,
   getGroupFrameLabelVerticalOffsetPx,
   shouldRenderGroupFrameLabel,
@@ -32,11 +33,35 @@ describe('group frame labels', () => {
 
   it('places group labels inside the frame instead of on the border', () => {
     const frame = groupFrame();
-    const frameBounds = { left: 0, top: 100, right: 400, bottom: 300 };
+    const frameBounds = { left: 0, top: 100, right: 4000, bottom: 3000 };
     const labelBounds = getGroupFrameLabelBounds(frame.label, frameBounds, 0.02, undefined, {
+      placement: getGroupFrameLabelPlacement(frame),
       verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
     });
 
+    expect(labelBounds.top).toBeGreaterThan(frameBounds.top);
+  });
+
+  it('keeps organization labels outside the frame', () => {
+    const frame = groupFrame({ priority: 'primary' });
+    const frameBounds = { left: 0, top: 100, right: 4000, bottom: 3000 };
+    const labelBounds = getGroupFrameLabelBounds(frame.label, frameBounds, 0.02, undefined, {
+      placement: getGroupFrameLabelPlacement(frame),
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
+    });
+
+    expect(labelBounds.bottom).toBeLessThan(frameBounds.top);
+  });
+
+  it('places labels for nested groups near the bottom edge', () => {
+    const frame = groupFrame({ depth: 1 });
+    const frameBounds = { left: 0, top: 100, right: 4000, bottom: 3000 };
+    const labelBounds = getGroupFrameLabelBounds(frame.label, frameBounds, 0.02, undefined, {
+      placement: getGroupFrameLabelPlacement(frame),
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
+    });
+
+    expect(labelBounds.bottom).toBeLessThan(frameBounds.bottom);
     expect(labelBounds.top).toBeGreaterThan(frameBounds.top);
   });
 });

@@ -29,6 +29,7 @@ import { drawColumnHeaders, drawTasks } from '../canvas/draw-tasks';
 import {
   getGroupFrameLabelBounds,
   getGroupFrameLabelHorizontalOffsetPx,
+  getGroupFrameLabelPlacement,
   getGroupFrameLabelScaleZoom,
   getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
@@ -681,6 +682,7 @@ function drawGroupFrameLabel(
     (value) => ctx.measureText(value).width,
     {
       horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(prepared.frame),
+      placement: getGroupFrameLabelPlacement(prepared.frame),
       verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
     }
   );

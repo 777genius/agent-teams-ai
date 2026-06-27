@@ -4,6 +4,7 @@ import {
   findGroupFrameAt,
   findGroupFrameHitAt,
   getGroupFrameLabelBounds,
+  getGroupFrameLabelPlacement,
   getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
   prepareGroupFrame,
@@ -40,7 +41,7 @@ describe('group frame hit detection', () => {
       },
     ];
 
-    const labelHit = findGroupFrameHitAt(-142, -122, frames, nodeMap, 1);
+    const labelHit = findGroupFrameHitAt(-142, -105, frames, nodeMap, 1);
     const borderHit = findGroupFrameHitAt(-160, 0, frames, nodeMap, 1);
     const fillHit = findGroupFrameHitAt(0, 0, frames, nodeMap, 1);
 
@@ -146,7 +147,7 @@ describe('group frame hit detection', () => {
     expect(prepared!.bounds.top - zoomedOutBounds.top).toBeLessThan(240);
   });
 
-  it('places depth-aware labels on the top frame border', () => {
+  it('places depth-aware nested labels near the bottom frame edge', () => {
     const nodeMap = new Map<string, GraphNode>([['team:alpha', buildTeamNode('team:alpha', 0, 0)]]);
     const frame: GraphGroupFrame = {
       id: 'unit:child',
@@ -161,10 +162,12 @@ describe('group frame hit detection', () => {
 
     const frameBounds = getPaddedGroupFrameBounds(prepared!.bounds, 1, frame);
     const labelBounds = getGroupFrameLabelBounds(frame.label, frameBounds, 1, undefined, {
+      placement: getGroupFrameLabelPlacement(frame),
       verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
     });
 
-    expect(labelBounds.textY).toBe(frameBounds.top);
+    expect(labelBounds.bottom).toBeLessThan(frameBounds.bottom);
+    expect(labelBounds.textY).toBeGreaterThan(frameBounds.top);
   });
 
   it('reveals group frame labels progressively by zoom and depth', () => {
@@ -184,7 +187,7 @@ describe('group frame hit detection', () => {
     };
 
     expect(shouldRenderGroupFrameLabel(primaryFrame, 0.14)).toBe(true);
-    expect(shouldRenderGroupFrameLabel(normalFrame, 0.2)).toBe(false);
+    expect(shouldRenderGroupFrameLabel(normalFrame, 0.02)).toBe(true);
     expect(shouldRenderGroupFrameLabel(normalFrame, 0.45)).toBe(true);
   });
 });
