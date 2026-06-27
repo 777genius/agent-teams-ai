@@ -958,7 +958,16 @@ describe('buildOrganizationGraphData', () => {
         }),
       ])
     );
-    expect(collapsedGraph.groupFrames).toEqual([]);
+    expect(collapsedGraph.groupFrames).toEqual([
+      {
+        id: 'unit:engineering',
+        label: 'Engineering',
+        nodeIds: ['unit:engineering'],
+        color: '#8bd3ff',
+        depth: 0,
+        priority: 'normal',
+      },
+    ]);
   });
 
   it('renders organizations as frames in all-organizations scope', () => {
@@ -1081,6 +1090,29 @@ describe('buildOrganizationGraphData', () => {
     expect(slots['team:beta']?.ringIndex).toBe(slots['team:delta']?.ringIndex);
     expect(slots['team:alpha']?.sectorIndex).toBeLessThan(slots['team:gamma']?.sectorIndex ?? -1);
     expect(slots['team:beta']?.sectorIndex).toBeLessThan(slots['team:delta']?.sectorIndex ?? -1);
+  });
+
+  it('keeps sibling group slots stable when a neighboring group is collapsed', () => {
+    const viewModel = buildOrganizationMapViewModel(buildSiblingGroupsPayload());
+    const expandedGraph = buildOrganizationGraphData(viewModel, { layoutMode: 'grid-under-lead' });
+    const collapsedGraph = buildOrganizationGraphData(viewModel, {
+      collapsedNodeIds: new Set(['unit:growth']),
+      layoutMode: 'grid-under-lead',
+    });
+    const expandedSlots = expandedGraph.layout?.slotAssignments ?? {};
+    const collapsedSlots = collapsedGraph.layout?.slotAssignments ?? {};
+
+    expect(collapsedSlots['team:gamma']).toEqual(expandedSlots['team:gamma']);
+    expect(collapsedSlots['team:delta']).toEqual(expandedSlots['team:delta']);
+    expect(collapsedSlots['unit:growth']?.ringIndex).toBe(expandedSlots['team:alpha']?.ringIndex);
+    expect(collapsedGraph.groupFrames).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'unit:growth',
+          nodeIds: ['unit:growth'],
+        }),
+      ])
+    );
   });
 
   it('places up to three teams from one group in the same row', () => {

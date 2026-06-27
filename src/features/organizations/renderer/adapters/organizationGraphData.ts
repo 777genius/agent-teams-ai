@@ -509,6 +509,56 @@ function buildTeamGridBlock(teamNodeIds: readonly string[]): OrganizationGridBlo
   };
 }
 
+function collectDescendantTeamNodeIdsForLayout(
+  viewModel: OrganizationMapViewModel,
+  nodeId: string,
+  seen = new Set<string>()
+): string[] {
+  if (seen.has(nodeId)) {
+    return [];
+  }
+  seen.add(nodeId);
+
+  const node = viewModel.nodeById.get(nodeId);
+  if (node?.kind === 'team') {
+    return [node.id];
+  }
+
+  return (viewModel.childNodeIdsByParentId.get(nodeId) ?? []).flatMap((childNodeId) =>
+    collectDescendantTeamNodeIdsForLayout(viewModel, childNodeId, seen)
+  );
+}
+
+function buildCollapsedContainerGridBlock(
+  viewModel: OrganizationMapViewModel,
+  nodeId: string
+): OrganizationGridBlock {
+  const expandedOwnerOrder = collectDescendantTeamNodeIdsForLayout(viewModel, nodeId);
+  const expandedBlock =
+    expandedOwnerOrder.length > 0
+      ? buildNestedOrganizationGridBlock(
+          viewModel,
+          nodeId,
+          new Set(expandedOwnerOrder),
+          new Set<string>()
+        )
+      : null;
+  const width = Math.max(1, expandedBlock?.width ?? 1);
+  const height = Math.max(1, expandedBlock?.height ?? 1);
+
+  return {
+    width,
+    height,
+    assignments: [
+      {
+        nodeId,
+        rowIndex: Math.floor((height - 1) / 2),
+        columnIndex: Math.floor((width - 1) / 2),
+      },
+    ],
+  };
+}
+
 interface OrganizationGridPackingOptions {
   maxBlockWidth?: number;
   maxBlockHeight?: number;
@@ -658,7 +708,15 @@ function buildNestedOrganizationGridBlock(
     if (ownerOrderSet.has(childNode.id)) {
       if (!seen.has(childNode.id)) {
         seen.add(childNode.id);
-        directTeamNodeIds.push(childNode.id);
+        if (childNode.kind === 'team') {
+          directTeamNodeIds.push(childNode.id);
+        } else {
+          flushDirectTeams();
+          blocks.push({
+            ...buildCollapsedContainerGridBlock(viewModel, childNode.id),
+            packable: true,
+          });
+        }
       }
       continue;
     }
@@ -1185,6 +1243,16 @@ function buildOrganizationGroupFrames(
         node.id,
         context.visibleOrganizationNodeIds
       );
+      if (context.collapsedVisibleContainerNodeIds.has(node.id)) {
+        return {
+          id: node.id,
+          label: getOrganizationContainerLabel(node, text),
+          nodeIds: [node.id],
+          color: node.color ?? (node.kind === 'organization' ? '#4f8cff' : '#8bd3ff'),
+          depth: getGroupFrameDepth(viewModel, node.id),
+          priority: node.kind === 'organization' ? ('primary' as const) : ('normal' as const),
+        };
+      }
       const renderedAgentNodeIds = descendantNodeIds.flatMap((descendantNodeId) => {
         if (!context.renderedAgentTeamIds.has(descendantNodeId)) {
           return [];
