@@ -109,7 +109,19 @@ describe('ManageOrganizationStructureUseCase', () => {
   });
 
   it('returns a newly created organization as the active editable organization', async () => {
-    const { useCase } = createUseCase();
+    const { useCase } = createUseCase({
+      organizations: [{ id: 'default', name: 'Default Org', rootNodeId: 'default:root' }],
+      units: [
+        {
+          id: 'default:root',
+          organizationId: 'default',
+          parentId: null,
+          kind: 'organization',
+          label: 'Default Org',
+        },
+      ],
+      relations: [],
+    });
 
     const payload = await useCase.createOrganization({
       name: 'Client Org',
@@ -135,6 +147,22 @@ describe('ManageOrganizationStructureUseCase', () => {
         }),
       ])
     );
+  });
+
+  it('does not persist the generated All Teams fallback when creating the first root organization', async () => {
+    const { useCase, getStored } = createUseCase();
+
+    const payload = await useCase.createOrganization({
+      id: 'client',
+      name: 'Client Org',
+    });
+
+    expect(payload.activeOrganizationId).toBe('client');
+    expect(payload.organizations.map((organization) => organization.id)).toEqual(['client']);
+    expect(payload.units.map((unit) => [unit.id, unit.kind, unit.teamName])).toEqual([
+      ['client:root', 'organization', undefined],
+    ]);
+    expect(getStored()?.organizations.map((organization) => organization.id)).toEqual(['client']);
   });
 
   it('prevents moving a unit under its own descendant', async () => {

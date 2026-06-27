@@ -64,9 +64,7 @@ function toUnitDto(unit: OrgUnitModel): OrganizationStructureUnitDto {
   };
 }
 
-function toRelationDto(
-  relation: OrgRelationDefinitionModel
-): OrganizationStructureRelationDto {
+function toRelationDto(relation: OrgRelationDefinitionModel): OrganizationStructureRelationDto {
   return {
     id: relation.id,
     organizationId: relation.organizationId,
@@ -117,9 +115,13 @@ export class ManageOrganizationStructureUseCase {
       request.id ?? request.name,
       'organization'
     );
-    const { structure, teams } = await this.loadEditableStructure({});
+    const { structure, source, teams } = await this.loadEditableStructure({});
     const updatedAt = new Date(this.deps.clock.now()).toISOString();
-    const nextStructure = createOrganization(structure, {
+    const editableStructure =
+      source === 'generated' && !request.parentOrganizationId
+        ? { organizations: [], units: [], relations: [], updatedAt }
+        : structure;
+    const nextStructure = createOrganization(editableStructure, {
       ...request,
       updatedAt,
     });
@@ -127,9 +129,7 @@ export class ManageOrganizationStructureUseCase {
     return this.toPayload(saved, 'configured', teams, createdOrganizationId);
   }
 
-  async upsertUnit(
-    request: UpsertOrganizationUnitRequest
-  ): Promise<OrganizationStructurePayload> {
+  async upsertUnit(request: UpsertOrganizationUnitRequest): Promise<OrganizationStructurePayload> {
     return this.mutate({ organizationId: request.organizationId }, (structure, updatedAt) =>
       upsertOrganizationUnit(structure, {
         ...request,
@@ -147,9 +147,7 @@ export class ManageOrganizationStructureUseCase {
     );
   }
 
-  async removeUnit(
-    request: RemoveOrganizationUnitRequest
-  ): Promise<OrganizationStructurePayload> {
+  async removeUnit(request: RemoveOrganizationUnitRequest): Promise<OrganizationStructurePayload> {
     return this.mutate({ organizationId: request.organizationId }, (structure, updatedAt) =>
       removeOrganizationUnit(structure, {
         ...request,
@@ -158,9 +156,7 @@ export class ManageOrganizationStructureUseCase {
     );
   }
 
-  async assignTeam(
-    request: AssignOrganizationTeamRequest
-  ): Promise<OrganizationStructurePayload> {
+  async assignTeam(request: AssignOrganizationTeamRequest): Promise<OrganizationStructurePayload> {
     return this.mutate({ organizationId: request.organizationId }, (structure, updatedAt) =>
       assignTeamToUnit(structure, {
         ...request,
@@ -169,9 +165,7 @@ export class ManageOrganizationStructureUseCase {
     );
   }
 
-  async removeTeam(
-    request: RemoveOrganizationTeamRequest
-  ): Promise<OrganizationStructurePayload> {
+  async removeTeam(request: RemoveOrganizationTeamRequest): Promise<OrganizationStructurePayload> {
     return this.mutate({ organizationId: request.organizationId }, (structure, updatedAt) =>
       removeTeamFromOrganization(structure, {
         ...request,
