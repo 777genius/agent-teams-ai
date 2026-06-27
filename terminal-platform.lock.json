@@ -1,33 +1,33 @@
 {
-  "version": "0.2.0",
-  "sourceRef": "v0.2.0",
+  "version": "0.3.0",
+  "sourceRef": "v0.3.0",
   "sourceRepository": "777genius/terminal-platform",
   "releaseRepository": "777genius/terminal-platform",
-  "releaseTag": "v0.2.0",
+  "releaseTag": "v0.3.0",
   "assets": {
     "darwin-arm64": {
-      "file": "terminal-platform-runtime-darwin-arm64-v0.2.0.tar.gz",
+      "file": "terminal-platform-runtime-darwin-arm64-v0.3.0.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform"
     },
     "darwin-x64": {
-      "file": "terminal-platform-runtime-darwin-x64-v0.2.0.tar.gz",
+      "file": "terminal-platform-runtime-darwin-x64-v0.3.0.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform"
     },
     "linux-x64": {
-      "file": "terminal-platform-runtime-linux-x64-v0.2.0.tar.gz",
+      "file": "terminal-platform-runtime-linux-x64-v0.3.0.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "terminal-daemon",
       "packageDirName": "terminal-platform-node",
       "payloadDirName": "terminal-platform"
     },
     "win32-x64": {
-      "file": "terminal-platform-runtime-win32-x64-v0.2.0.zip",
+      "file": "terminal-platform-runtime-win32-x64-v0.3.0.zip",
       "archiveKind": "zip",
       "binaryName": "terminal-daemon.exe",
       "packageDirName": "terminal-platform-node",
