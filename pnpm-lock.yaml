@@ -3991,31 +3991,31 @@ packages:
     version: 0.1.0
 
   '@terminal-platform/runtime-types@file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz':
-    resolution: {integrity: sha512-QlZf6nWOuubBI25DFaH95yyibmRRNrivbhBuOrFIJExAd4G484eBoeH2rGh8QZNXPdq2mkYa86tEzZJgIitvdg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz}
+    resolution: {integrity: sha512-l4JUyJ2WHox+NxEayWkegWVSHn+qnTpCaTXfLVRy8EobV3/UwjJ21xoi6Acm0WdCDUqsUyPIOAiJjD9M2GaV/Q==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-adapter-websocket@file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz':
-    resolution: {integrity: sha512-c4VQ304vS36fttidLVam6kEuQSANdbIYhaGctLGv9v1TkTVzUpKqIPvEFFVc/obAK4cRFP4l1vcXuYcpaaYVNw==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz}
+    resolution: {integrity: sha512-SUJMKH5+dfYdHHu2Rm3gn7H2TORQVONEpxAtrmQDUui3QKyhMb4tB3MyKYLrnllZeBEUHLsLBFO62EXMAjUltA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-contracts@file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz':
-    resolution: {integrity: sha512-SAnRPEO0wS3dSo8o9xDMnIljSueF/4/8DQa0vAKmiUmbiiJaeb+QwcQNUxrHhWyJTMdlL/kDb1mzTwrNKPTYAA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz}
+    resolution: {integrity: sha512-w6ojDcjApCSoAfiNEYGjCZ9QmBZRejDncagEkNoxFh8/eUCaxIbpchALFpKLcTQ0fxnDi3LxFOkQ/E1lZc9kVQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-core@file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz':
-    resolution: {integrity: sha512-um0aD5dd1boSvKPqNgf8Brv4hL4qJSiZEl4Cx1ULHVKr+uqwcR2jtB0m9RqRjUOMa5w15PDv6cCwmiGXQnY4yA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz}
+    resolution: {integrity: sha512-3MkYLnMxfJFiscX2QnDByBKs5wWnfJI/Txs6DrRaZwjyMFUt5Es/Hvn62TtafYnxdoDpscletAkAT9bYlfeNmQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
-    resolution: {integrity: sha512-wWuNE6tL9dmbrw2wuTlswdlMCItpl9bTq8pvr7QlwtO5y9tUmjLl2ppgwZyj/fLf1a0ZmxJJpxXvlVlCG7y63g==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
+    resolution: {integrity: sha512-ksGejh9J/THvoZVdXkjDcYGmAlni+cK5agWMJdYylQPlJLMkcvpQL/YbMQZmn7Bu4Iu3KzHijj5W5jEscVREoA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-gateway-node@file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz':
-    resolution: {integrity: sha512-xaWGQXhzlkV3K/UYka/zpS/fQaOq8KLmT3yyMY+UCuZ8cY9nVqIORC9duVtlAsKr5qrWV5b2YtsoSSuqQcJOsA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz}
+    resolution: {integrity: sha512-MPtM4ZijqsIMhdFtdDRLUZ/Curc8vENbcUAITCRnm4Zdu82RfHjkknZYJmftL8gZ/XaAuXzjwUA8y7ZfFn89DQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-react@file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz':
-    resolution: {integrity: sha512-6i8EsiEpKURwJMyzfGb3WGM5+MdWbBd8PLKYwgculsRpATUTVitl0OOtQhCvO42LH4ZFHkh4BkiEwK5aChh6Hg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz}
+    resolution: {integrity: sha512-DtcWxD1L3cdD0wIQlMvjyzw3gGI6E4z/iMbm3i/qtfz5oGxd2Kc8vVmPNZ8lnX5lYtNY2XylbpGOXavn2HuQQg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz}
     version: 0.1.0
     peerDependencies:
       react: '>=19.0.0 <20'
