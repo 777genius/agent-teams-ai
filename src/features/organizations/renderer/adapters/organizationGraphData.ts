@@ -297,9 +297,17 @@ function buildAgentOwnershipEdges(teamNodes: readonly OrganizationNodeDto[]): Gr
   );
 }
 
+function getManualRelationEdgeId(relation: OrganizationRelationDto): string {
+  return `org-manual:${relation.kind}:${relation.id}:${relation.sourceNodeId}->${relation.targetNodeId}`;
+}
+
+function getCommunicationRelationEdgeId(relation: OrganizationRelationDto): string {
+  return `org-message:${relation.id}:${relation.sourceNodeId}->${relation.targetNodeId}`;
+}
+
 function buildCommunicationEdges(relations: readonly OrganizationRelationDto[]): GraphEdge[] {
   return relations.map((relation) => ({
-    id: relation.id,
+    id: getCommunicationRelationEdgeId(relation),
     source: relation.sourceNodeId,
     target: relation.targetNodeId,
     type: 'message',
@@ -329,7 +337,7 @@ function formatManualRelationLabel(relation: OrganizationRelationDto): string {
 
 function buildManualRelationEdges(relations: readonly OrganizationRelationDto[]): GraphEdge[] {
   return relations.map((relation) => ({
-    id: relation.id,
+    id: getManualRelationEdgeId(relation),
     source: relation.sourceNodeId,
     target: relation.targetNodeId,
     type: relation.kind === 'depends_on' ? ('blocking' as const) : ('related' as const),
@@ -349,6 +357,7 @@ function buildCommunicationParticles(
     if (particles.length >= maxParticleCount) {
       break;
     }
+    const edgeId = getCommunicationRelationEdgeId(relation);
     const remaining = maxParticleCount - particles.length;
     const count = Math.max(
       1,
@@ -358,8 +367,8 @@ function buildCommunicationParticles(
       ...Array.from({ length: count }, (_, index) => {
         const seed = hashString(`${relation.id}:${relation.lastActivityAt ?? ''}:${index}`);
         return {
-          id: `org-msg:${relation.id}:${relation.lastActivityAt ?? 'unknown'}:${index}`,
-          edgeId: relation.id,
+          id: `org-msg:${edgeId}:${relation.lastActivityAt ?? 'unknown'}:${index}`,
+          edgeId,
           progress: (seed % 70) / 100,
           kind: 'inbox_message' as const,
           color: index === 0 ? '#8fd3ff' : '#a78bfa',

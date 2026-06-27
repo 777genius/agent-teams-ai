@@ -770,7 +770,8 @@ describe('buildOrganizationGraphData', () => {
     expect(graph.particles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          edgeId: 'communicates:team:alpha:team:beta',
+          edgeId:
+            'org-message:communicates:team:alpha:team:beta:team:alpha->team:beta',
           kind: 'inbox_message',
           preview: 'Need QA help',
         }),
@@ -1113,6 +1114,35 @@ describe('buildOrganizationGraphData', () => {
         }),
       ])
     );
+  });
+
+  it('keeps visual relation edge ids unique when source relations reuse ids', () => {
+    const payload = buildPayload();
+    payload.relations.push(
+      {
+        id: 'shared-relation-id',
+        sourceNodeId: 'team:alpha',
+        targetNodeId: 'team:beta',
+        kind: 'depends_on',
+        sourceKind: 'manual',
+        weight: 1,
+      },
+      {
+        id: 'shared-relation-id',
+        sourceNodeId: 'team:alpha',
+        targetNodeId: 'team:beta',
+        kind: 'communicates',
+        sourceKind: 'runtime',
+        weight: 1,
+        messageCount: 1,
+      }
+    );
+    const graph = buildOrganizationGraphData(buildOrganizationMapViewModel(payload));
+    const relationEdges = graph.edges.filter(
+      (edge) => edge.type === 'blocking' || edge.type === 'related' || edge.type === 'message'
+    );
+
+    expect(new Set(relationEdges.map((edge) => edge.id)).size).toBe(relationEdges.length);
   });
 
   it('drops manual relation edges when a collapsed endpoint has no visible graph node', () => {

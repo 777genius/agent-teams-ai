@@ -44,104 +44,17 @@ interface GroupCreateButton {
   placement: OrganizationPlacementSelection;
 }
 
-interface RelationOverlayLink {
-  id: string;
-  path: string;
-  label: string | null;
-  labelWidth: number;
-  labelX: number;
-  labelY: number;
-  stroke: string;
-  strokeWidth: number;
-  dashArray?: string;
-  arrow: boolean;
-}
-
 const MIN_CREATE_BUTTON_FRAME_WIDTH = 112;
 const MIN_CREATE_BUTTON_FRAME_HEIGHT = 60;
 const RELATION_EDGE_TYPES = new Set<GraphEdge['type']>(['blocking', 'related', 'message']);
 const ALL_ORGANIZATIONS_ROOT_NODE_ID = 'org:__all-organizations__';
-const RELATION_OVERLAY_ENDPOINT_MARGIN = 36;
 
 function isRelationEdge(edge: GraphEdge): boolean {
   return RELATION_EDGE_TYPES.has(edge.type);
 }
 
-function getRelationFocusParticleColor(edge: GraphEdge): string {
-  if (edge.type === 'blocking') {
-    return edge.color ?? '#f59e0b';
-  }
-  if (edge.type === 'message') {
-    return edge.color ?? '#8fd3ff';
-  }
-  return edge.color ?? '#38bdf8';
-}
-
-function getRelationOverlayStroke(edge: GraphEdge): string {
-  return edge.color ?? getRelationFocusParticleColor(edge);
-}
-
-function getRelationOverlayWidth(edge: GraphEdge): number {
-  if (edge.type === 'blocking') return 2.2;
-  if (edge.type === 'message') return 1.8;
-  return 1.6;
-}
-
-function getRelationOverlayLabel(edge: GraphEdge): string | null {
-  if (edge.type === 'blocking') return 'depends';
-  if (edge.type === 'message') {
-    return edge.aggregateCount && edge.aggregateCount > 1 ? `messages ${edge.aggregateCount}` : null;
-  }
-  return null;
-}
-
-function getRelationOverlayLabelWidth(label: string | null): number {
-  if (!label) {
-    return 0;
-  }
-  return Math.max(54, Math.min(116, label.length * 7 + 20));
-}
-
 function isRelationExplorerAvailable(selectedNodeId: string | null): selectedNodeId is string {
   return selectedNodeId !== null && selectedNodeId !== ALL_ORGANIZATIONS_ROOT_NODE_ID;
-}
-
-function isPointNearViewport(
-  point: { x: number; y: number },
-  viewport: { width: number; height: number }
-): boolean {
-  return (
-    point.x >= -RELATION_OVERLAY_ENDPOINT_MARGIN &&
-    point.y >= -RELATION_OVERLAY_ENDPOINT_MARGIN &&
-    point.x <= viewport.width + RELATION_OVERLAY_ENDPOINT_MARGIN &&
-    point.y <= viewport.height + RELATION_OVERLAY_ENDPOINT_MARGIN
-  );
-}
-
-function areRelationOverlayLinksEqual(
-  leftLinks: readonly RelationOverlayLink[],
-  rightLinks: readonly RelationOverlayLink[]
-): boolean {
-  if (leftLinks.length !== rightLinks.length) {
-    return false;
-  }
-
-  return leftLinks.every((left, index) => {
-    const right = rightLinks[index];
-    return (
-      right !== undefined &&
-      left.id === right.id &&
-      left.path === right.path &&
-      left.label === right.label &&
-      left.labelWidth === right.labelWidth &&
-      left.labelX === right.labelX &&
-      left.labelY === right.labelY &&
-      left.stroke === right.stroke &&
-      left.strokeWidth === right.strokeWidth &&
-      left.dashArray === right.dashArray &&
-      left.arrow === right.arrow
-    );
-  });
 }
 
 function collectDescendantTeamNodeIds(
@@ -334,170 +247,6 @@ function areCreateButtonsEqual(
     );
   });
 }
-
-const OrgRelationLinksHud = ({
-  isActive,
-  mode,
-  edges,
-  getNodeWorldPosition,
-  worldToScreen,
-  getViewportSize,
-}: {
-  isActive: boolean;
-  mode: OrganizationRelationViewMode;
-  edges: readonly GraphEdge[];
-  getNodeWorldPosition: (nodeId: string) => { x: number; y: number } | null;
-  worldToScreen: (x: number, y: number) => { x: number; y: number };
-  getViewportSize: () => { width: number; height: number };
-}): React.JSX.Element | null => {
-  const [links, setLinks] = useState<RelationOverlayLink[]>([]);
-
-  useEffect(() => {
-    if (!isActive || mode === 'structure' || edges.length === 0) {
-      setLinks([]);
-      return undefined;
-    }
-
-    let frameId = 0;
-    const update = (): void => {
-      const viewport = getViewportSize();
-      const nextLinks = edges.flatMap((edge): RelationOverlayLink[] => {
-        const source = getNodeWorldPosition(edge.source);
-        const target = getNodeWorldPosition(edge.target);
-        if (!source || !target) {
-          return [];
-        }
-
-        const start = worldToScreen(source.x, source.y);
-        const end = worldToScreen(target.x, target.y);
-        if (!isPointNearViewport(start, viewport) || !isPointNearViewport(end, viewport)) {
-          return [];
-        }
-
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const distance = Math.max(Math.hypot(dx, dy), 1);
-        const curve = Math.min(Math.max(distance * 0.08, 16), 54);
-        const normalX = -dy / distance;
-        const normalY = dx / distance;
-        const cp1 = {
-          x: start.x + dx * 0.34 + normalX * curve,
-          y: start.y + dy * 0.34 + normalY * curve,
-        };
-        const cp2 = {
-          x: start.x + dx * 0.66 + normalX * curve,
-          y: start.y + dy * 0.66 + normalY * curve,
-        };
-        const label = getRelationOverlayLabel(edge);
-        const labelX = Math.round((start.x + 3 * cp1.x + 3 * cp2.x + end.x) / 8);
-        const labelY = Math.round((start.y + 3 * cp1.y + 3 * cp2.y + end.y) / 8);
-
-        return [
-          {
-            id: edge.id,
-            path: [
-              `M ${Math.round(start.x)} ${Math.round(start.y)}`,
-              `C ${Math.round(cp1.x)} ${Math.round(cp1.y)}`,
-              `${Math.round(cp2.x)} ${Math.round(cp2.y)}`,
-              `${Math.round(end.x)} ${Math.round(end.y)}`,
-            ].join(' '),
-            label,
-            labelWidth: getRelationOverlayLabelWidth(label),
-            labelX,
-            labelY,
-            stroke: getRelationOverlayStroke(edge),
-            strokeWidth: getRelationOverlayWidth(edge),
-            dashArray: edge.type === 'related' ? '7 6' : undefined,
-            arrow: edge.type === 'blocking',
-          },
-        ];
-      });
-
-      setLinks((current) =>
-        areRelationOverlayLinksEqual(current, nextLinks) ? current : nextLinks
-      );
-      frameId = window.requestAnimationFrame(update);
-    };
-
-    update();
-    return () => window.cancelAnimationFrame(frameId);
-  }, [edges, getNodeWorldPosition, getViewportSize, isActive, mode, worldToScreen]);
-
-  if (mode === 'structure' || links.length === 0) {
-    return null;
-  }
-
-  return (
-    <svg
-      className="absolute inset-0 size-full"
-      aria-hidden="true"
-      focusable="false"
-      role="presentation"
-    >
-      <defs>
-        <marker
-          id="org-relation-dependency-arrow"
-          markerWidth="7"
-          markerHeight="7"
-          refX="5.8"
-          refY="3.5"
-          orient="auto"
-          markerUnits="strokeWidth"
-        >
-          <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#f59e0b" fillOpacity="0.88" />
-        </marker>
-      </defs>
-      {links.map((link) => (
-        <g key={link.id}>
-          <path
-            d={link.path}
-            fill="none"
-            stroke={link.stroke}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeOpacity="0.18"
-            strokeWidth={link.strokeWidth + 3}
-          />
-          <path
-            d={link.path}
-            fill="none"
-            stroke={link.stroke}
-            strokeDasharray={link.dashArray}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeOpacity="0.74"
-            strokeWidth={link.strokeWidth}
-            markerEnd={link.arrow ? 'url(#org-relation-dependency-arrow)' : undefined}
-          />
-          {link.label ? (
-            <g transform={`translate(${link.labelX} ${link.labelY})`}>
-              <rect
-                x={-link.labelWidth / 2}
-                y="-11"
-                width={link.labelWidth}
-                height="22"
-                rx="5"
-                fill="rgba(7, 11, 22, 0.84)"
-                stroke={link.stroke}
-                strokeOpacity="0.5"
-              />
-              <text
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="#e5f6ff"
-                fontFamily="monospace"
-                fontSize="10"
-                fontWeight="700"
-              >
-                {link.label}
-              </text>
-            </g>
-          ) : null}
-        </g>
-      ))}
-    </svg>
-  );
-};
 
 const OrgRelationLegendHud = ({
   mode,
@@ -873,19 +622,9 @@ export const OrgGraphSurface = ({
       renderEdgeOverlay={(overlayProps) => renderEdgeOverlay(overlayProps, edgeOverlayText)}
       renderHud={({
         getGroupFrameScreenPlacements,
-        getNodeWorldPosition,
         getViewportSize,
-        worldToScreen,
       }) => (
         <>
-          <OrgRelationLinksHud
-            isActive={isActive}
-            mode={relationViewMode}
-            edges={displayedGraphData.edges}
-            getNodeWorldPosition={getNodeWorldPosition}
-            worldToScreen={worldToScreen}
-            getViewportSize={getViewportSize}
-          />
           <OrgRelationLegendHud mode={relationViewMode} />
           {onCreateTeamHere ? (
             <OrgGroupFrameCreateHud
