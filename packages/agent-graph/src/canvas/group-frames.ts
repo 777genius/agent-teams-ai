@@ -47,8 +47,8 @@ function getDepthLevel(frame: GraphGroupFrame, fallbackDepth: number): number {
   return Math.max(0, Math.floor(frame.depth));
 }
 
-export function getGroupFrameLabelVerticalOffsetPx(_frame: GraphGroupFrame): number {
-  return 0;
+export function getGroupFrameLabelVerticalOffsetPx(frame: GraphGroupFrame): number {
+  return frame.priority === 'primary' ? 12 : 16;
 }
 
 export function getGroupFrameLabelHorizontalOffsetPx(_frame: GraphGroupFrame): number {

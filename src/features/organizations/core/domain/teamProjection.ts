@@ -23,6 +23,21 @@ function getTaskUpdatedAtMs(task: Pick<OrgTaskCandidate, 'updatedAt'>): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getMemberTaskKey(member: OrgTeamCandidate['members'][number]): string {
+  return member.name.trim().toLowerCase();
+}
+
+function getActiveTasksForMember(
+  member: OrgTeamCandidate['members'][number],
+  tasksByOwner: ReadonlyMap<string, readonly OrgTaskCandidate[]>
+): OrgTaskCandidate[] {
+  const ownerTasks = tasksByOwner.get(getMemberTaskKey(member)) ?? [];
+  return ownerTasks
+    .filter((task) => task.status === 'in_progress')
+    .slice()
+    .sort((left, right) => getTaskUpdatedAtMs(right) - getTaskUpdatedAtMs(left));
+}
+
 function toTaskModel(task: OrgTaskCandidate): OrgTaskModel {
   return {
     id: task.id,
@@ -65,11 +80,7 @@ function buildAgent(
   tasksByOwner: ReadonlyMap<string, readonly OrgTaskCandidate[]>,
   options: ProjectOrgTeamOptions
 ): OrgAgentModel {
-  const ownerTasks = tasksByOwner.get(member.name.toLowerCase()) ?? [];
-  const activeTasks = ownerTasks
-    .filter((task) => task.status === 'in_progress')
-    .slice()
-    .sort((left, right) => getTaskUpdatedAtMs(right) - getTaskUpdatedAtMs(left));
+  const activeTasks = getActiveTasksForMember(member, tasksByOwner);
   const visibleTasks = activeTasks.slice(0, options.maxTasksPerAgent).map(toTaskModel);
 
   return {
@@ -87,6 +98,32 @@ function buildAgent(
   };
 }
 
+function prioritizeVisibleMembers(
+  members: readonly OrgTeamCandidate['members'][number][],
+  tasksByOwner: ReadonlyMap<string, readonly OrgTaskCandidate[]>
+): OrgTeamCandidate['members'][number][] {
+  return members
+    .map((member, index) => {
+      const activeTasks = getActiveTasksForMember(member, tasksByOwner);
+      return {
+        member,
+        index,
+        activeTaskCount: activeTasks.length,
+        latestActiveTaskAt: getTaskUpdatedAtMs(activeTasks[0] ?? { updatedAt: undefined }),
+      };
+    })
+    .sort((left, right) => {
+      if (right.activeTaskCount !== left.activeTaskCount) {
+        return right.activeTaskCount - left.activeTaskCount;
+      }
+      if (right.latestActiveTaskAt !== left.latestActiveTaskAt) {
+        return right.latestActiveTaskAt - left.latestActiveTaskAt;
+      }
+      return left.index - right.index;
+    })
+    .map((item) => item.member);
+}
+
 export function projectOrgTeam(
   team: OrgTeamCandidate,
   options: ProjectOrgTeamOptions
@@ -101,7 +138,7 @@ export function projectOrgTeam(
   }
 
   const members = team.members.length > 0 ? team.members : [{ name: 'team-lead', role: 'Lead' }];
-  const agents = members
+  const agents = prioritizeVisibleMembers(members, tasksByOwner)
     .slice(0, options.maxAgentsPerTeam)
     .map((member) => buildAgent(team, member, tasksByOwner, options));
 

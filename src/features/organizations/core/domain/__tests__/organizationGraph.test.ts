@@ -5,6 +5,7 @@ import {
   hasContainmentCycle,
   projectCrossTeamRelations,
   projectOrgTeam,
+  upsertOrganizationUnit,
 } from '..';
 
 import type { OrgRelationModel, OrgTeamCandidate } from '../models';
@@ -52,6 +53,66 @@ describe('organizations domain', () => {
     expect(builder?.activeTaskCount).toBe(2);
     expect(builder?.currentTasks).toHaveLength(1);
     expect(builder?.currentTasks[0]?.subject).toBe('newest active task');
+  });
+
+  it('prioritizes active members before applying the agent cap', () => {
+    const projected = projectOrgTeam(
+      buildTeam({
+        members: [
+          { name: 'lead', role: 'Lead' },
+          { name: 'planner', role: 'Planner' },
+          { name: 'builder', role: 'Engineer' },
+        ],
+        tasks: [
+          {
+            id: 'active-builder',
+            owner: 'builder',
+            subject: 'finish active implementation',
+            status: 'in_progress',
+            updatedAt: '2026-06-24T10:00:00.000Z',
+          },
+        ],
+      }),
+      { maxAgentsPerTeam: 2, maxTasksPerAgent: 1 }
+    );
+
+    expect(projected.agents.map((agent) => agent.name)).toContain('builder');
+    expect(projected.agents.find((agent) => agent.name === 'builder')?.currentTasks[0]?.id).toBe(
+      'active-builder'
+    );
+    expect(projected.truncatedAgents).toBe(1);
+  });
+
+  it('rejects upserting organization root units', () => {
+    expect(() =>
+      upsertOrganizationUnit(
+        {
+          organizations: [
+            {
+              id: 'default',
+              name: 'Default Org',
+              rootNodeId: 'root',
+            },
+          ],
+          units: [
+            {
+              id: 'root',
+              organizationId: 'default',
+              parentId: null,
+              kind: 'organization',
+              label: 'Default Org',
+            },
+          ],
+        },
+        {
+          organizationId: 'default',
+          id: 'root',
+          kind: 'container',
+          label: 'Corrupted Root',
+          updatedAt: '2026-06-24T10:00:00.000Z',
+        }
+      )
+    ).toThrow('Organization root units cannot be upserted.');
   });
 
   it('builds a default organization graph and truncates teams', () => {

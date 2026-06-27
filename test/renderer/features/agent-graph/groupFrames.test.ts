@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getGroupFrameLabelBounds,
   getGroupFrameLabelScaleZoom,
+  getGroupFrameLabelVerticalOffsetPx,
   shouldRenderGroupFrameLabel,
 } from '../../../../packages/agent-graph/src/canvas/group-frames';
 
@@ -26,5 +28,15 @@ describe('group frame labels', () => {
 
   it('keeps labels readable at far zoom', () => {
     expect(getGroupFrameLabelScaleZoom(0.01)).toBe(0.015);
+  });
+
+  it('places group labels inside the frame instead of on the border', () => {
+    const frame = groupFrame();
+    const frameBounds = { left: 0, top: 100, right: 400, bottom: 300 };
+    const labelBounds = getGroupFrameLabelBounds(frame.label, frameBounds, 0.02, undefined, {
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
+    });
+
+    expect(labelBounds.top).toBeGreaterThan(frameBounds.top);
   });
 });

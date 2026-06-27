@@ -401,6 +401,9 @@ export function upsertOrganizationUnit(
     (unit) => unit.id === id && unit.organizationId === organization.id
   );
   const existingUnit = existingIndex >= 0 ? next.units[existingIndex] : undefined;
+  if (id === organization.rootNodeId || existingUnit?.kind === 'organization') {
+    throw new Error('Organization root units cannot be upserted.');
+  }
   const parentId = requireParentUnit(
     next,
     input.parentId ?? existingUnit?.parentId ?? organization.rootNodeId,
