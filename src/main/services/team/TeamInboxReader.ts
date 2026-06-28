@@ -254,20 +254,23 @@ function visitInboxJsonArrayItems(raw: string, onItem: (item: unknown) => void):
     }
     index += 1;
     let escaped = false;
-    for (; index < raw.length; index += 1) {
+    while (index < raw.length) {
       const char = raw[index];
       if (escaped) {
         escaped = false;
+        index += 1;
         continue;
       }
       if (char === '\\') {
         escaped = true;
+        index += 1;
         continue;
       }
       if (char === '"') {
         index += 1;
         return true;
       }
+      index += 1;
     }
     return false;
   };
@@ -277,7 +280,7 @@ function visitInboxJsonArrayItems(raw: string, onItem: (item: unknown) => void):
     let inString = false;
     let escaped = false;
 
-    for (; index < raw.length; index += 1) {
+    while (index < raw.length) {
       const char = raw[index];
       if (inString) {
         if (escaped) {
@@ -287,14 +290,17 @@ function visitInboxJsonArrayItems(raw: string, onItem: (item: unknown) => void):
         } else if (char === '"') {
           inString = false;
         }
+        index += 1;
         continue;
       }
       if (char === '"') {
         inString = true;
+        index += 1;
         continue;
       }
       if (char === '{' || char === '[') {
         depth += 1;
+        index += 1;
         continue;
       }
       if (char === '}' || char === ']') {
@@ -307,6 +313,7 @@ function visitInboxJsonArrayItems(raw: string, onItem: (item: unknown) => void):
           return false;
         }
       }
+      index += 1;
     }
 
     return false;
