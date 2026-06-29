@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { McpServer, ResourceTemplate, } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { codexGoalJobToArgs, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { codexGoalAccountSlots } from "./codex-goal-runner.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, shellQuote, startCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
@@ -461,12 +462,14 @@ export function createCodexGoalMcpServer() {
         });
         const duplicates = duplicateAccountGroups(slots);
         const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
+        const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
         return mcpJson({
-            ok: slots.every((slot) => slot.status === "ready"),
+            ok: availableDedupedSlots.length > 0,
             authRootDir,
             slots,
             duplicates,
             dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
+            availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
             dedupeRecommendation: duplicates.length
                 ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
                 : "No duplicate identity groups detected.",
@@ -860,12 +863,18 @@ async function listAccountPools(poolRootDir) {
         .map(async (entry) => {
         const authRootDir = join(poolRootDir, entry.name);
         const slots = await listCodexGoalAccountStatuses({ authRootDir });
+        const visibleSlots = visibleCodexGoalAccountPoolSlots(entry.name, slots);
+        const dedupedSlots = dedupeCodexGoalAccountSlots(visibleSlots);
+        const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
         return {
             pool: entry.name,
             authRootDir,
-            accountCount: slots.length,
-            readyCount: slots.filter((slot) => slot.status === "ready").length,
-            hasDuplicates: duplicateAccountGroups(slots).length > 0,
+            accountCount: visibleSlots.length,
+            readyCount: visibleSlots.filter((slot) => slot.status === "ready").length,
+            availableCount: availableDedupedSlots.length,
+            dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
+            availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
+            hasDuplicates: duplicateAccountGroups(visibleSlots).length > 0,
         };
     }));
     return pools.filter((pool) => pool.accountCount > 0);
@@ -923,6 +932,14 @@ export function dedupeCodexGoalAccountSlots(slots) {
             .map(([, slot]) => slot),
     ];
 }
+export function availableCodexGoalAccountSlots(slots) {
+    return slots.filter(isAccountSlotAvailable);
+}
+export function visibleCodexGoalAccountPoolSlots(poolName, slots) {
+    const likelyAuthPool = isLikelyAuthPoolName(poolName);
+    return slots.filter((slot) => slot.status !== "auth_missing" ||
+        likelyAuthPool);
+}
 function preferredAccountSlot(slots) {
     return [...slots].sort((left, right) => {
         const leftReady = left.status === "ready" ? 1 : 0;
@@ -932,6 +949,13 @@ function preferredAccountSlot(slots) {
         return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
             Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
     })[0];
+}
+function isAccountSlotAvailable(slot) {
+    return slot.status === "ready" && (!slot.capacityAvailability || slot.capacityAvailability === "available");
+}
+function isLikelyAuthPoolName(name) {
+    return /codex/i.test(name) &&
+        /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
 }
 function tagValues(value) {
     if (Array.isArray(value))
@@ -964,9 +988,7 @@ function commandFromLogLine(line) {
     return redactCommand(command).slice(0, 500);
 }
 function redactCommand(command) {
-    return command
-        .replace(/\b(access_token|refresh_token|id_token|api_key|token)=\S+/gi, "$1=[redacted]")
-        .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted]");
+    return new DefaultRedactor().redact(command);
 }
 function redactLogTail(logTail) {
     return logTail

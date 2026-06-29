@@ -10,6 +10,7 @@ import {
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import {
   codexGoalJobToArgs,
   createCodexGoalJob,
@@ -705,12 +706,14 @@ export function createCodexGoalMcpServer(): McpServer {
       });
       const duplicates = duplicateAccountGroups(slots);
       const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
+      const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
       return mcpJson({
-        ok: slots.every((slot) => slot.status === "ready"),
+        ok: availableDedupedSlots.length > 0,
         authRootDir,
         slots,
         duplicates,
         dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
+        availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
         dedupeRecommendation: duplicates.length
           ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
           : "No duplicate identity groups detected.",
@@ -1173,12 +1176,18 @@ async function listAccountPools(poolRootDir: string): Promise<readonly JsonObjec
       .map(async (entry) => {
         const authRootDir = join(poolRootDir, entry.name);
         const slots = await listCodexGoalAccountStatuses({ authRootDir });
+        const visibleSlots = visibleCodexGoalAccountPoolSlots(entry.name, slots);
+        const dedupedSlots = dedupeCodexGoalAccountSlots(visibleSlots);
+        const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
         return {
           pool: entry.name,
           authRootDir,
-          accountCount: slots.length,
-          readyCount: slots.filter((slot) => slot.status === "ready").length,
-          hasDuplicates: duplicateAccountGroups(slots).length > 0,
+          accountCount: visibleSlots.length,
+          readyCount: visibleSlots.filter((slot) => slot.status === "ready").length,
+          availableCount: availableDedupedSlots.length,
+          dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
+          availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
+          hasDuplicates: duplicateAccountGroups(visibleSlots).length > 0,
         };
       }),
   );
@@ -1244,6 +1253,23 @@ export function dedupeCodexGoalAccountSlots(
   ];
 }
 
+export function availableCodexGoalAccountSlots(
+  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
+) {
+  return slots.filter(isAccountSlotAvailable);
+}
+
+export function visibleCodexGoalAccountPoolSlots(
+  poolName: string,
+  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
+) {
+  const likelyAuthPool = isLikelyAuthPoolName(poolName);
+  return slots.filter((slot) =>
+    slot.status !== "auth_missing" ||
+    likelyAuthPool,
+  );
+}
+
 function preferredAccountSlot(
   slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
 ) {
@@ -1254,6 +1280,19 @@ function preferredAccountSlot(
     return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
       Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
   })[0];
+}
+
+function isAccountSlotAvailable(
+  slot: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number],
+): boolean {
+  return slot.status === "ready" && (
+    !slot.capacityAvailability || slot.capacityAvailability === "available"
+  );
+}
+
+function isLikelyAuthPoolName(name: string): boolean {
+  return /codex/i.test(name) &&
+    /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
 }
 
 function tagValues(value: unknown): readonly string[] {
@@ -1286,9 +1325,7 @@ function commandFromLogLine(line: string): string | null {
 }
 
 function redactCommand(command: string): string {
-  return command
-    .replace(/\b(access_token|refresh_token|id_token|api_key|token)=\S+/gi, "$1=[redacted]")
-    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted]");
+  return new DefaultRedactor().redact(command);
 }
 
 function redactLogTail(logTail: string): string {

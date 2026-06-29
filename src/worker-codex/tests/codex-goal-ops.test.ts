@@ -15,8 +15,10 @@ import {
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
 import {
+  availableCodexGoalAccountSlots,
   buildCodexGoalBrief,
   dedupeCodexGoalAccountSlots,
+  visibleCodexGoalAccountPoolSlots,
 } from "../codex-goal-mcp";
 
 const execFileAsync = promisify(execFile);
@@ -163,7 +165,9 @@ describe("codex goal ops", () => {
         'codex_goal_continue({ jobId: "job-from-registry", confirmContinue: true })',
     });
     expect(brief.recentCommands).toContain("npm test");
-    expect(brief.recentCommands).toContain("python scripts/check.py token=[redacted]");
+    expect(brief.recentCommands).toContain(
+      "python scripts/check.py token=[redacted:token-field]",
+    );
     expect(JSON.stringify(brief)).not.toContain("raw-secret");
     expect(JSON.stringify(brief)).not.toContain("rawBearerSecret");
   });
@@ -193,6 +197,39 @@ describe("codex goal ops", () => {
       "account-d-unique",
       "account-b-new",
     ]);
+  });
+
+  it("excludes capacity-blocked slots from the available account list", () => {
+    const slots = [
+      accountStatus("account-a-cooldown", {
+        capacityAvailability: "cooldown",
+        capacityReason: "quota_limited",
+      }),
+      accountStatus("account-b-ready", {}),
+      accountStatus("account-c-invalid", {
+        status: "auth_invalid",
+      }),
+    ];
+
+    expect(availableCodexGoalAccountSlots(slots).map((slot) => slot.name)).toEqual([
+      "account-b-ready",
+    ]);
+  });
+
+  it("keeps reloginable account slots visible while hiding non-account cache dirs", () => {
+    const slots = [
+      accountStatus("state", { status: "auth_missing" }),
+      accountStatus("jobs", { status: "auth_missing" }),
+      accountStatus("account-a", { status: "auth_missing" }),
+      accountStatus("account-b", {}),
+    ];
+
+    expect(
+      visibleCodexGoalAccountPoolSlots("memo-stack-goal-cache", slots).map((slot) => slot.name),
+    ).toEqual(["account-b"]);
+    expect(
+      visibleCodexGoalAccountPoolSlots("live-codex-auth", slots).map((slot) => slot.name),
+    ).toEqual(["state", "jobs", "account-a", "account-b"]);
   });
 });
 

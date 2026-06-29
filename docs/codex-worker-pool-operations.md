@@ -258,10 +258,12 @@ returns:
 - `needsHumanRelogin`
 - `nextBestCommand`
 
-`codex_accounts_status` returns `dedupedAccountNames` for worker pool inputs.
-If the same sanitized identity appears in multiple slots, this list keeps the
-newest ready slot for that identity and leaves the older duplicate visible for
-manual cleanup.
+`codex_accounts_status` returns `dedupedAccountNames` and
+`availableDedupedAccountNames` for worker pool inputs. If the same sanitized
+identity appears in multiple slots, the deduped list keeps the newest ready
+slot for that identity and leaves the older duplicate visible for manual
+cleanup. Agents should use `availableDedupedAccountNames` for new worker runs
+because it also excludes cooldown, quota exhausted and auth-broken slots.
 
 Prompt templates:
 

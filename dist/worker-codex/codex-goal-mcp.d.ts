@@ -32,4 +32,6 @@ export declare function buildCodexGoalBrief(input: {
     recentLogTail: string;
 }>;
 export declare function dedupeCodexGoalAccountSlots(slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>): import("./codex-goal-ops.js").CodexGoalAccountSlotStatus[];
+export declare function availableCodexGoalAccountSlots(slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>): import("./codex-goal-ops.js").CodexGoalAccountSlotStatus[];
+export declare function visibleCodexGoalAccountPoolSlots(poolName: string, slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>): import("./codex-goal-ops.js").CodexGoalAccountSlotStatus[];
 //# sourceMappingURL=codex-goal-mcp.d.ts.map
