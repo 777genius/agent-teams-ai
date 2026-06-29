@@ -15,7 +15,30 @@
   <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude/Codex/OpenCode provider access for more models. Not just coding agents.</sub>
 </p>
 
-<img width="2546" height="1590" alt="image" src="https://github.com/user-attachments/assets/a07d39b2-8529-42c8-8133-4685628b5a92" />
+<table>
+<tr>
+<td width="33.33%">
+  <img src="docs/screenshots/8.png" alt="Task details and comments" width="100%" />
+</td>
+<td width="33.33%">
+  <img src="docs/screenshots/9.png" alt="Built-in code editor" width="100%" />
+</td>
+<td width="33.33%">
+  <img src="docs/screenshots/7.png" alt="Cross-team messaging" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="33.33%">
+  <img src="docs/screenshots/4.png" alt="Team management dashboard" width="100%" />
+</td>
+<td width="33.33%">
+  <img src="docs/screenshots/1.jpg" alt="Kanban board with agent tasks" width="100%" />
+</td>
+<td width="33.33%">
+  <img src="https://github.com/user-attachments/assets/a07d39b2-8529-42c8-8133-4685628b5a92" alt="Agent Teams AI product screenshot" width="100%" />
+</td>
+</tr>
+</table>
 
 <!--
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
