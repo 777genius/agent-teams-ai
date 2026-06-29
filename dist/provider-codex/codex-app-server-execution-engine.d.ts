@@ -1,4 +1,4 @@
-import type { RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
+import type { ManagedRunResumeHandle, ManagedRunStorePort, RedactorPort, RunnerPort } from "@vioxen/subscription-runtime/core";
 import type { CodexExecutionProfile } from "./codex-execution-profile.js";
 import type { CodexExecutionEngine, CodexExecutionPrewarmResult, CodexExecutionResult, CodexMaterializedSession, CodexReasoningEffort, CodexSandboxMode, CodexServiceTier } from "./codex-json-execution-engine.js";
 export type CodexAppServerExecutionEngineOptions = {
@@ -13,6 +13,7 @@ export type CodexAppServerExecutionEngineOptions = {
     readonly goalMode?: boolean;
     readonly maxGoalTurns?: number;
     readonly goalContinuePrompt?: string;
+    readonly runStore?: ManagedRunStorePort;
 };
 export type CodexAppServerProcessFactory = (input: {
     readonly command: string;
@@ -25,6 +26,7 @@ export type CodexAppServerChildProcess = {
     readonly stdin: {
         write(chunk: string | Uint8Array): boolean;
         end(): void;
+        on?(event: "error", listener: (error: Error) => void): unknown;
     };
     readonly stdout: {
         on(event: "data", listener: (chunk: unknown) => void): unknown;
@@ -48,9 +50,11 @@ export declare class CodexAppServerExecutionEngine implements CodexExecutionEngi
         readonly requiresSchemaFile: false;
     };
     private readonly executionProfile;
+    private readonly runStore;
     private readonly slots;
     constructor(options: CodexAppServerExecutionEngineOptions);
     run(input: {
+        readonly runId?: string;
         readonly prompt: string;
         readonly goalObjective?: string;
         readonly systemPrompt?: string;
@@ -65,6 +69,23 @@ export declare class CodexAppServerExecutionEngine implements CodexExecutionEngi
         readonly outputSchema?: unknown;
         readonly abortSignal: AbortSignal;
     }): Promise<CodexExecutionResult>;
+    resume(input: {
+        readonly runId: string;
+        readonly requestId: string;
+        readonly answer: string;
+        readonly resumeHandle: ManagedRunResumeHandle;
+        readonly session: CodexMaterializedSession;
+        readonly workspacePath: string;
+        readonly runner: RunnerPort;
+        readonly redactor: RedactorPort;
+        readonly model: string;
+        readonly reasoningEffort: CodexReasoningEffort;
+        readonly serviceTier?: CodexServiceTier;
+        readonly sandboxMode?: CodexSandboxMode;
+        readonly outputSchema?: unknown;
+        readonly abortSignal: AbortSignal;
+    }): Promise<CodexExecutionResult>;
+    private failManagedRunForProviderOutput;
     dispose(): Promise<void>;
     prewarm(input: {
         readonly session: CodexMaterializedSession;
@@ -78,6 +99,8 @@ export declare class CodexAppServerExecutionEngine implements CodexExecutionEngi
         readonly abortSignal: AbortSignal;
     }): Promise<CodexExecutionPrewarmResult>;
     private runViaAppServer;
+    private resumeViaAppServer;
+    private assertManagedRunCanResume;
     private ensureSlot;
     private disposeSessionSlot;
 }

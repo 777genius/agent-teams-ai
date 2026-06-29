@@ -1,6 +1,7 @@
 import { classifyCodexFailure } from "./failure-classifier.js";
 import { pruneCodexChildEnv } from "./codex-cli-domain.js";
 import { composeCodexPrompt } from "./codex-prompt-composer.js";
+import { parseCodexStructuredOutput } from "./structured-output.js";
 const defaultTimeoutMs = 10 * 60 * 1000;
 const defaultMaxOutputBytes = 512 * 1024;
 export class PackagedCodexJsonExecutionEngine {
@@ -173,12 +174,33 @@ function extractTextFromEvent(event) {
     if (!event || typeof event !== "object")
         return null;
     const record = event;
+    const type = typeof record.type === "string" ? record.type : null;
+    if (!hasAssistantRole(record))
+        return null;
+    if (type === "response.completed") {
+        const response = record.response;
+        return response && typeof response === "object"
+            ? extractTextFromRecord(response)
+            : null;
+    }
+    if (type && !isAssistantTextEventType(type))
+        return null;
+    return extractTextFromRecord(record);
+}
+function isAssistantTextEventType(type) {
+    return (type === "agent_message" ||
+        type === "assistant_message" ||
+        type === "message" ||
+        type === "result");
+}
+function extractTextFromRecord(record) {
     for (const key of [
         "message",
         "text",
         "output_text",
         "last_message",
         "content",
+        "output",
     ]) {
         const value = record[key];
         const text = stringifyContent(value);
@@ -197,27 +219,46 @@ function stringifyContent(value) {
         return value;
     if (Array.isArray(value)) {
         const parts = value
-            .map((entry) => {
-            if (typeof entry === "string")
-                return entry;
-            if (entry && typeof entry === "object") {
-                const record = entry;
-                return stringifyContent(record.text ?? record.content);
-            }
-            return null;
-        })
+            .map((entry) => stringifyContentEntry(entry))
             .filter((entry) => typeof entry === "string");
         return parts.length > 0 ? parts.join("") : null;
     }
+    if (value && typeof value === "object") {
+        const record = value;
+        if (!isAssistantContentRecord(record))
+            return null;
+        return stringifyContent(record.text ?? record.output_text ?? record.content ?? record.output);
+    }
     return null;
 }
+function stringifyContentEntry(entry) {
+    if (typeof entry === "string")
+        return entry;
+    if (!entry || typeof entry !== "object")
+        return null;
+    const record = entry;
+    if (!isAssistantContentRecord(record))
+        return null;
+    return stringifyContent(record.text ?? record.output_text ?? record.content ?? record.output);
+}
+function isAssistantContentRecord(record) {
+    const type = typeof record.type === "string" ? record.type : null;
+    if (!hasAssistantRole(record))
+        return false;
+    return (!type ||
+        type === "agentMessage" ||
+        type === "agent_message" ||
+        type === "assistant_message" ||
+        type === "message" ||
+        type === "output_text" ||
+        type === "text");
+}
+function hasAssistantRole(record) {
+    const role = record.role;
+    return typeof role !== "string" || role === "assistant";
+}
 function parseStructuredOutput(outputText) {
-    try {
-        return JSON.parse(outputText);
-    }
-    catch (error) {
-        throw new Error("codex_structured_output_invalid", { cause: error });
-    }
+    return parseCodexStructuredOutput(outputText, "codex_structured_output_invalid");
 }
 function assertOutputWithinBounds(output, maxOutputBytes = defaultMaxOutputBytes) {
     if (Buffer.byteLength(output, "utf8") > maxOutputBytes) {

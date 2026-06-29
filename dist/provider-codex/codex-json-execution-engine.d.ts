@@ -1,4 +1,4 @@
-import type { ProviderTaskControls, ProviderTaskResult, RedactorPort, RunnerPort, SessionArtifact } from "@vioxen/subscription-runtime/core";
+import type { ProviderTaskControls, ProviderTaskResult, ManagedRunInputRequest, ManagedRunResumeHandle, RedactorPort, RunnerPort, SessionArtifact } from "@vioxen/subscription-runtime/core";
 export type CodexReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 export type CodexServiceTier = string;
 export type CodexSandboxMode = "read-only" | "workspace-write";
@@ -10,14 +10,26 @@ export type CodexMaterializedSession = {
     snapshotSession?(): Promise<SessionArtifact | null>;
     release(): Promise<void>;
 };
-export type CodexExecutionResult = {
+export type CodexExecutionWarning = {
+    readonly code: string;
+    readonly safeMessage: string;
+};
+export type CodexExecutionCompletedResult = {
+    readonly status?: "completed";
     readonly outputText: string;
     readonly structuredOutput?: unknown;
-    readonly warnings: readonly {
-        readonly code: string;
-        readonly safeMessage: string;
-    }[];
+    readonly warnings: readonly CodexExecutionWarning[];
 };
+export type CodexExecutionWaitingForInputResult = {
+    readonly status: "waiting_for_input";
+    readonly runId: string;
+    readonly outputText: string;
+    readonly structuredOutput?: unknown;
+    readonly request: ManagedRunInputRequest;
+    readonly resumeHandle: ManagedRunResumeHandle;
+    readonly warnings: readonly CodexExecutionWarning[];
+};
+export type CodexExecutionResult = CodexExecutionCompletedResult | CodexExecutionWaitingForInputResult;
 export type CodexExecutionPrewarmResult = {
     readonly kind: string;
     readonly reusable: boolean;
@@ -36,9 +48,26 @@ export type CodexExecutionEngine = {
         readonly requiresSchemaFile: boolean;
     };
     run(input: {
+        readonly runId?: string;
         readonly prompt: string;
         readonly goalObjective?: string;
         readonly systemPrompt?: string;
+        readonly session: CodexMaterializedSession;
+        readonly workspacePath: string;
+        readonly runner: RunnerPort;
+        readonly redactor: RedactorPort;
+        readonly model: string;
+        readonly reasoningEffort: CodexReasoningEffort;
+        readonly serviceTier?: CodexServiceTier;
+        readonly sandboxMode?: CodexSandboxMode;
+        readonly outputSchema?: unknown;
+        readonly abortSignal: AbortSignal;
+    }): Promise<CodexExecutionResult>;
+    resume?(input: {
+        readonly runId: string;
+        readonly requestId: string;
+        readonly answer: string;
+        readonly resumeHandle: ManagedRunResumeHandle;
         readonly session: CodexMaterializedSession;
         readonly workspacePath: string;
         readonly runner: RunnerPort;
@@ -81,6 +110,7 @@ export declare class PackagedCodexJsonExecutionEngine implements CodexExecutionE
     };
     constructor(options: PackagedCodexJsonExecutionEngineOptions);
     run(input: {
+        readonly runId?: string;
         readonly prompt: string;
         readonly goalObjective?: string;
         readonly systemPrompt?: string;

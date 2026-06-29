@@ -1,6 +1,8 @@
 import type {
   ProviderTaskControls,
   ProviderTaskResult,
+  ManagedRunInputRequest,
+  ManagedRunResumeHandle,
   RedactorPort,
   RunnerPort,
   SessionArtifact,
@@ -8,6 +10,7 @@ import type {
 import { classifyCodexFailure } from "./failure-classifier";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import { composeCodexPrompt } from "./codex-prompt-composer";
+import { parseCodexStructuredOutput } from "./structured-output";
 
 export type CodexReasoningEffort =
   | "minimal"
@@ -29,14 +32,31 @@ export type CodexMaterializedSession = {
   release(): Promise<void>;
 };
 
-export type CodexExecutionResult = {
+export type CodexExecutionWarning = {
+  readonly code: string;
+  readonly safeMessage: string;
+};
+
+export type CodexExecutionCompletedResult = {
+  readonly status?: "completed";
   readonly outputText: string;
   readonly structuredOutput?: unknown;
-  readonly warnings: readonly {
-    readonly code: string;
-    readonly safeMessage: string;
-  }[];
+  readonly warnings: readonly CodexExecutionWarning[];
 };
+
+export type CodexExecutionWaitingForInputResult = {
+  readonly status: "waiting_for_input";
+  readonly runId: string;
+  readonly outputText: string;
+  readonly structuredOutput?: unknown;
+  readonly request: ManagedRunInputRequest;
+  readonly resumeHandle: ManagedRunResumeHandle;
+  readonly warnings: readonly CodexExecutionWarning[];
+};
+
+export type CodexExecutionResult =
+  | CodexExecutionCompletedResult
+  | CodexExecutionWaitingForInputResult;
 
 export type CodexExecutionPrewarmResult = {
   readonly kind: string;
@@ -57,9 +77,26 @@ export type CodexExecutionEngine = {
     readonly requiresSchemaFile: boolean;
   };
   run(input: {
+    readonly runId?: string;
     readonly prompt: string;
     readonly goalObjective?: string;
     readonly systemPrompt?: string;
+    readonly session: CodexMaterializedSession;
+    readonly workspacePath: string;
+    readonly runner: RunnerPort;
+    readonly redactor: RedactorPort;
+    readonly model: string;
+    readonly reasoningEffort: CodexReasoningEffort;
+    readonly serviceTier?: CodexServiceTier;
+    readonly sandboxMode?: CodexSandboxMode;
+    readonly outputSchema?: unknown;
+    readonly abortSignal: AbortSignal;
+  }): Promise<CodexExecutionResult>;
+  resume?(input: {
+    readonly runId: string;
+    readonly requestId: string;
+    readonly answer: string;
+    readonly resumeHandle: ManagedRunResumeHandle;
     readonly session: CodexMaterializedSession;
     readonly workspacePath: string;
     readonly runner: RunnerPort;
@@ -114,6 +151,7 @@ export class PackagedCodexJsonExecutionEngine implements CodexExecutionEngine {
   }
 
   async run(input: {
+    readonly runId?: string;
     readonly prompt: string;
     readonly goalObjective?: string;
     readonly systemPrompt?: string;
@@ -308,12 +346,35 @@ function looksLikeJsonLine(value: string): boolean {
 function extractTextFromEvent(event: unknown): string | null {
   if (!event || typeof event !== "object") return null;
   const record = event as Record<string, unknown>;
+  const type = typeof record.type === "string" ? record.type : null;
+  if (!hasAssistantRole(record)) return null;
+  if (type === "response.completed") {
+    const response = record.response;
+    return response && typeof response === "object"
+      ? extractTextFromRecord(response as Record<string, unknown>)
+      : null;
+  }
+  if (type && !isAssistantTextEventType(type)) return null;
+  return extractTextFromRecord(record);
+}
+
+function isAssistantTextEventType(type: string): boolean {
+  return (
+    type === "agent_message" ||
+    type === "assistant_message" ||
+    type === "message" ||
+    type === "result"
+  );
+}
+
+function extractTextFromRecord(record: Record<string, unknown>): string | null {
   for (const key of [
     "message",
     "text",
     "output_text",
     "last_message",
     "content",
+    "output",
   ]) {
     const value = record[key];
     const text = stringifyContent(value);
@@ -331,26 +392,54 @@ function stringifyContent(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value;
   if (Array.isArray(value)) {
     const parts = value
-      .map((entry) => {
-        if (typeof entry === "string") return entry;
-        if (entry && typeof entry === "object") {
-          const record = entry as Record<string, unknown>;
-          return stringifyContent(record.text ?? record.content);
-        }
-        return null;
-      })
+      .map((entry) => stringifyContentEntry(entry))
       .filter((entry): entry is string => typeof entry === "string");
     return parts.length > 0 ? parts.join("") : null;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (!isAssistantContentRecord(record)) return null;
+    return stringifyContent(
+      record.text ?? record.output_text ?? record.content ?? record.output,
+    );
   }
   return null;
 }
 
+function stringifyContentEntry(entry: unknown): string | null {
+  if (typeof entry === "string") return entry;
+  if (!entry || typeof entry !== "object") return null;
+  const record = entry as Record<string, unknown>;
+  if (!isAssistantContentRecord(record)) return null;
+  return stringifyContent(
+    record.text ?? record.output_text ?? record.content ?? record.output,
+  );
+}
+
+function isAssistantContentRecord(record: Record<string, unknown>): boolean {
+  const type = typeof record.type === "string" ? record.type : null;
+  if (!hasAssistantRole(record)) return false;
+  return (
+    !type ||
+    type === "agentMessage" ||
+    type === "agent_message" ||
+    type === "assistant_message" ||
+    type === "message" ||
+    type === "output_text" ||
+    type === "text"
+  );
+}
+
+function hasAssistantRole(record: Record<string, unknown>): boolean {
+  const role = record.role;
+  return typeof role !== "string" || role === "assistant";
+}
+
 function parseStructuredOutput(outputText: string): unknown {
-  try {
-    return JSON.parse(outputText);
-  } catch (error) {
-    throw new Error("codex_structured_output_invalid", { cause: error });
-  }
+  return parseCodexStructuredOutput(
+    outputText,
+    "codex_structured_output_invalid",
+  );
 }
 
 function assertOutputWithinBounds(

@@ -12,7 +12,12 @@ import {
   providerSessionDriverContract,
 } from "../../core/testing/contracts";
 import type {
+  ManagedRunInputRequest,
+  ManagedRunRecord,
+  ManagedRunResumeHandle,
+  ManagedRunStorePort,
   ProcessResult,
+  ProviderFailure,
   RunnerPort,
   RunnerCapabilities,
 } from "@vioxen/subscription-runtime/core";
@@ -719,6 +724,263 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("accepts fenced structured output from Codex JSON execution", async () => {
+    const runner = new StaticRunner(
+      `${JSON.stringify({
+        type: "agent_message",
+        message: [
+          "Review result:",
+          "```json",
+          JSON.stringify({ verdict: "APPROVE" }),
+          "```",
+        ].join("\n"),
+      })}\n`,
+    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-controls-test-"));
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "default-model",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "inspect diff",
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reads nested content parts from Codex JSON execution events", async () => {
+    const runner = new StaticRunner(
+      `${JSON.stringify({
+        type: "agent_message",
+        message: {
+          content: [
+            {
+              type: "output_text",
+              text: "nested packaged json output",
+            },
+          ],
+        },
+      })}\n`,
+    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-json-content-test-"));
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "inspect nested content" },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "nested packaged json output",
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reads response output parts from Codex JSON execution events", async () => {
+    const runner = new StaticRunner(
+      `${JSON.stringify({
+        type: "response.completed",
+        response: {
+          type: "response",
+          output: [
+            {
+              type: "message",
+              content: [
+                {
+                  type: "output_text",
+                  text: JSON.stringify({ verdict: "APPROVE" }),
+                },
+              ],
+            },
+            {
+              type: "tool_output",
+              content: JSON.stringify({ verdict: "REJECT" }),
+            },
+            {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "output_text",
+                  text: JSON.stringify({ verdict: "REJECT" }),
+                },
+              ],
+            },
+          ],
+        },
+      })}\n`,
+    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-json-response-test-"));
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "inspect response output",
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let later non-assistant Codex JSON events override final output", async () => {
+    const runner = new StaticRunner(
+      [
+        JSON.stringify({
+          type: "agent_message",
+          message: JSON.stringify({ verdict: "APPROVE" }),
+        }),
+        JSON.stringify({
+          type: "tool_output",
+          content: JSON.stringify({ verdict: "REJECT" }),
+        }),
+        "",
+      ].join("\n"),
+    );
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-json-tool-output-test-"),
+    );
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "inspect tool output ordering",
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let later non-assistant message roles override final output", async () => {
+    const runner = new StaticRunner(
+      [
+        JSON.stringify({
+          type: "agent_message",
+          message: JSON.stringify({ verdict: "APPROVE" }),
+        }),
+        JSON.stringify({
+          type: "message",
+          role: "user",
+          content: JSON.stringify({ verdict: "REJECT" }),
+        }),
+        "",
+      ].join("\n"),
+    );
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-json-user-message-test-"),
+    );
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "inspect role ordering",
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("ignores non-JSON stdout lines before Codex JSON events", async () => {
     const runner = new StaticRunner(
       [
@@ -880,6 +1142,295 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("disposes app-server clients when stdin close emits exit first", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-stdin-exit-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      exitOnStdinEnd: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "exit on stdin end" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:exit on stdin end",
+      });
+      await driver.dispose();
+      expect(fakeFactory.spawnCount).toBe(1);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reads app-server agent messages from completed content parts", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-content-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      completedAgentMessageContentOnly: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "content parts" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:content parts",
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("parses app-server structured output from completed content parts", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-content-structured-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      completedAgentMessageContentOnly: true,
+      appendCompletedAgentMessageToolContent: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: JSON.stringify({ verdict: "APPROVE" }),
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("handles app-server turn events emitted before the turn waiter is registered", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-early-turn-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      emitTurnEventsWithStartResponse: true,
+      mismatchTurnStartResponseId: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        timeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "early turn events" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:early turn events",
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("does not keep stale aliases when early app-server turn ids are reused", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-reused-turn-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitTurnEventsWithStartResponse: true,
+      mismatchTurnStartResponseId: true,
+      reuseActualTurnId: "turn-reused",
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        timeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const run = (prompt: string) =>
+        driver.runTask({
+          session: sessionArtifactFromCodexAuthJson(validAuthJson),
+          task: { kind: "review", prompt },
+          workspace: { path: workspace },
+          runner: new StaticRunner(""),
+          redactor: new DefaultRedactor(),
+          abortSignal: new AbortController().signal,
+        });
+
+      await expect(run("first reused turn")).resolves.toMatchObject({
+        status: "completed",
+        outputText: "app-server output:first reused turn",
+      });
+      await expect(run("second reused turn")).resolves.toMatchObject({
+        status: "completed",
+        outputText: "app-server output:second reused turn",
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("handles app-server turn completion emitted before turn started", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-complete-before-started-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitTurnCompletionBeforeStarted: true,
+      mismatchTurnStartResponseId: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        timeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "complete before started" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:complete before started",
+      });
+      const nextResult = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "next turn after late started" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(nextResult).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:next turn after late started",
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts prefixed structured output from Codex app-server execution", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-structured-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: JSON.stringify({ verdict: "APPROVE" }),
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("runs first-class Codex goal mode through the app-server protocol", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-test-"));
     const fakeFactory = new FakeAppServerFactory();
@@ -1006,6 +1557,174 @@ describe("Codex provider adapter", () => {
           (request) => request.method === "thread/goal/get",
         ),
       ).toHaveLength(2);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("returns waiting_for_input for a blocked app-server goal and resumes it", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-waiting-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      goalStatusesAfterTurns: ["blocked", "complete"],
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+        maxGoalTurns: 2,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const waiting = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "finish after missing context",
+          controls: { permissionMode: "allow-edits" },
+          metadata: { codexManagedRunId: "managed-goal-1" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(waiting).toMatchObject({
+        status: "waiting_for_input",
+        runId: "managed-goal-1",
+        request: {
+          kind: "missing_context",
+          audience: "orchestrator",
+        },
+        resumeHandle: {
+          threadId: "thread-1",
+          workspacePath: workspace,
+        },
+      });
+      if (waiting.status !== "waiting_for_input") {
+        throw new Error("expected waiting result");
+      }
+
+      const resumed = await driver.resumeManagedRun({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        runId: waiting.runId,
+        requestId: waiting.request.id,
+        answer: "Use project alpha.",
+        resumeHandle: waiting.resumeHandle,
+        task: { controls: { permissionMode: "allow-edits" } },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(resumed).toMatchObject({
+        status: "completed",
+        outputText: expect.stringContaining("Use project alpha."),
+      });
+      expect(fakeFactory.prompts).toEqual([
+        "finish after missing context",
+        expect.stringContaining("Use project alpha."),
+      ]);
+      expect(fakeFactory.requests.filter((request) => request.method === "thread/start"))
+        .toHaveLength(1);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("marks a managed run failed when resume continuation fails", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-resume-failed-test-"),
+    );
+    const runStore = new RecordingManagedRunStore();
+    const fakeFactory = new FakeAppServerFactory({
+      goalStatusesAfterTurns: ["blocked"],
+      emitTopLevelErrorsOnTurns: [null, "resume exploded"],
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+        maxGoalTurns: 2,
+        runStore,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const waiting = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "finish after resume failure",
+          controls: { permissionMode: "allow-edits" },
+          metadata: { codexManagedRunId: "managed-goal-failed-1" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+      if (waiting.status !== "waiting_for_input") {
+        throw new Error("expected waiting result");
+      }
+
+      const failed = await driver.resumeManagedRun({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        runId: waiting.runId,
+        requestId: waiting.request.id,
+        answer: "Use project beta.",
+        resumeHandle: waiting.resumeHandle,
+        task: { controls: { permissionMode: "allow-edits" } },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(failed).toMatchObject({
+        status: "failed",
+        failure: { code: "unknown_runtime_failure" },
+      });
+      await expect(runStore.get({ runId: waiting.runId })).resolves.toMatchObject({
+        status: "failed",
+        failure: { code: "unknown_runtime_failure" },
+      });
+
+      const retry = await driver.resumeManagedRun({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        runId: waiting.runId,
+        requestId: waiting.request.id,
+        answer: "Use project beta.",
+        resumeHandle: waiting.resumeHandle,
+        task: { controls: { permissionMode: "allow-edits" } },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(retry).toMatchObject({
+        status: "failed",
+        failure: { code: "unknown_runtime_failure" },
+      });
+      expect(fakeFactory.prompts).toEqual([
+        "finish after resume failure",
+        expect.stringContaining("Use project beta."),
+      ]);
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -1483,6 +2202,175 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("falls back when app-server errors after turn start responds", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-turn-error-fallback-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      emitProcessErrorAfterTurnStartResponse: true,
+    });
+    const fallback = new RecordingJsonEngine("fallback output");
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        fallback,
+        timeoutMs: 1_000,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "fallback after turn start" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "fallback output",
+      });
+      expect(result.warnings.map((warning) => warning.code)).toContain(
+        "codex_app_server_fallback",
+      );
+      expect(fallback.prompts).toEqual(["fallback after turn start"]);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back when writing an app-server request fails", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-write-failure-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      throwOnRequestMethod: "turn/start",
+    });
+    const fallback = new RecordingJsonEngine("fallback output");
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        fallback,
+        timeoutMs: 1_000,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "fallback after write failure" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "fallback output",
+      });
+      expect(result.warnings.map((warning) => warning.code)).toContain(
+        "codex_app_server_fallback",
+      );
+      expect(fallback.prompts).toEqual(["fallback after write failure"]);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back when responding to an unsupported app-server request fails", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-server-response-failure-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitUnsupportedServerRequestOnTurn: true,
+      throwOnUnsupportedServerResponse: true,
+    });
+    const fallback = new RecordingJsonEngine("fallback output");
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        fallback,
+        timeoutMs: 1_000,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "fallback after response failure" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "fallback output",
+      });
+      expect(result.warnings.map((warning) => warning.code)).toContain(
+        "codex_app_server_fallback",
+      );
+      expect(fallback.prompts).toEqual(["fallback after response failure"]);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back when the app-server stdin stream errors", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-stdin-stream-error-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitStdinErrorAfterTurnStartResponse: true,
+    });
+    const fallback = new RecordingJsonEngine("fallback output");
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        fallback,
+        timeoutMs: 1_000,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "fallback after stdin error" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "fallback output",
+      });
+      expect(result.warnings.map((warning) => warning.code)).toContain(
+        "codex_app_server_fallback",
+      );
+      expect(fallback.prompts).toEqual(["fallback after stdin error"]);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("does not fall back to packaged Codex exec after abort", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-abort-test-"));
     const fakeFactory = new FakeAppServerFactory();
@@ -1519,6 +2407,53 @@ describe("Codex provider adapter", () => {
         },
       });
       expect(fallback.prompts).toEqual([]);
+      expect(fakeFactory.spawnCount).toBe(0);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("cancels a pending app-server initialize and stops the child", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-init-abort-test-"));
+    const controller = new AbortController();
+    const fakeFactory = new FakeAppServerFactory({
+      suppressInitializeResponse: true,
+      onRequest: (request) => {
+        if (request.method === "initialize") controller.abort();
+      },
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        timeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "cancel initialize" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: controller.signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "task_cancelled",
+        },
+        telemetry: {
+          finishReason: "cancelled",
+        },
+      });
+      expect(fakeFactory.spawnCount).toBe(1);
+      expect(fakeFactory.processes[0]?.isExited()).toBe(true);
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -1554,6 +2489,86 @@ describe("Codex provider adapter", () => {
         failure: {
           code: "quota_limited",
           safeMessage: "Codex quota or billing limit was reached.",
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("fails active app-server turns immediately when the child process errors", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-process-error-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      emitProcessErrorOnTurn: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        timeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "process fails mid-turn" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "unknown_runtime_failure",
+        },
+        telemetry: {
+          finishReason: "provider_error",
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("fails app-server turns when the process errors after turn start responds", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-early-process-error-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      emitProcessErrorAfterTurnStartResponse: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        timeoutMs: 1_000,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "process fails before turn event" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "unknown_runtime_failure",
+        },
+        telemetry: {
+          finishReason: "provider_error",
         },
       });
     } finally {
@@ -1881,15 +2896,105 @@ class SlowRecordingJsonEngine extends RecordingJsonEngine {
   }
 }
 
+class RecordingManagedRunStore implements ManagedRunStorePort {
+  private readonly records = new Map<string, ManagedRunRecord>();
+
+  async get(input: { readonly runId: string }): Promise<ManagedRunRecord | null> {
+    return this.records.get(input.runId) ?? null;
+  }
+
+  async saveWaitingInput(input: {
+    readonly runId: string;
+    readonly request: ManagedRunInputRequest;
+    readonly resumeHandle: ManagedRunResumeHandle;
+    readonly outputText?: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord> {
+    const record: ManagedRunRecord = {
+      runId: input.runId,
+      status: "waiting_for_input",
+      request: input.request,
+      resumeHandle: input.resumeHandle,
+      ...(input.outputText === undefined ? {} : { outputText: input.outputText }),
+      updatedAt: input.now,
+    };
+    this.records.set(input.runId, record);
+    return record;
+  }
+
+  async resume(input: {
+    readonly runId: string;
+    readonly requestId: string;
+    readonly answer: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord> {
+    const current = this.records.get(input.runId);
+    if (!current || current.request?.id !== input.requestId) {
+      throw new Error("managed_run_request_mismatch");
+    }
+    const record: ManagedRunRecord = {
+      runId: input.runId,
+      status: "active",
+      updatedAt: input.now,
+    };
+    this.records.set(input.runId, record);
+    return record;
+  }
+
+  async complete(input: {
+    readonly runId: string;
+    readonly outputText: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord> {
+    const record: ManagedRunRecord = {
+      runId: input.runId,
+      status: "completed",
+      outputText: input.outputText,
+      updatedAt: input.now,
+    };
+    this.records.set(input.runId, record);
+    return record;
+  }
+
+  async fail(input: {
+    readonly runId: string;
+    readonly failure: ProviderFailure;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord> {
+    const record: ManagedRunRecord = {
+      runId: input.runId,
+      status: "failed",
+      failure: input.failure,
+      updatedAt: input.now,
+    };
+    this.records.set(input.runId, record);
+    return record;
+  }
+}
+
 type FakeAppServerFactoryOptions = {
   readonly failThreadStart?: boolean;
   readonly failThreadStartNumbers?: readonly number[];
+  readonly suppressInitializeResponse?: boolean;
+  readonly emitUnsupportedServerRequestOnTurn?: boolean;
+  readonly throwOnUnsupportedServerResponse?: boolean;
   readonly emitTopLevelErrorOnTurn?: string;
+  readonly emitTopLevelErrorsOnTurns?: readonly (string | null)[];
+  readonly emitStdinErrorAfterTurnStartResponse?: boolean;
+  readonly emitProcessErrorOnTurn?: boolean;
+  readonly emitProcessErrorAfterTurnStartResponse?: boolean;
+  readonly emitTurnEventsWithStartResponse?: boolean;
+  readonly emitTurnCompletionBeforeStarted?: boolean;
+  readonly completedAgentMessageContentOnly?: boolean;
+  readonly appendCompletedAgentMessageToolContent?: boolean;
+  readonly throwOnRequestMethod?: string;
+  readonly exitOnStdinEnd?: boolean;
   readonly abortTurnNumbers?: readonly number[];
   readonly abortTurnReason?: string;
   readonly suppressOutputTurnNumbers?: readonly number[];
   readonly goalStatusesAfterTurns?: readonly string[];
   readonly mismatchTurnStartResponseId?: boolean;
+  readonly reuseActualTurnId?: string;
   readonly onPrompt?: (prompt: string) => void;
   readonly onRequest?: (request: FakeAppServerRequest) => void;
 };
@@ -1906,6 +3011,7 @@ class FakeAppServerFactory {
   readonly cwds: string[] = [];
   readonly prompts: string[] = [];
   readonly requests: FakeAppServerRequest[] = [];
+  readonly processes: FakeAppServerProcess[] = [];
 
   constructor(private readonly options: FakeAppServerFactoryOptions = {}) {}
 
@@ -1916,11 +3022,16 @@ class FakeAppServerFactory {
     this.spawnCount += 1;
     this.codexHomes.push(input.env.CODEX_HOME ?? "");
     this.cwds.push(input.cwd);
-    return new FakeAppServerProcess({
+    const process = new FakeAppServerProcess({
       ...this.options,
       onPrompt: (prompt) => this.prompts.push(prompt),
-      onRequest: (request) => this.requests.push(request),
+      onRequest: (request) => {
+        this.requests.push(request);
+        this.options.onRequest?.(request);
+      },
     });
+    this.processes.push(process);
+    return process;
   };
 }
 
@@ -1928,17 +3039,26 @@ class FakeAppServerProcess extends EventEmitter {
   readonly pid = undefined;
   readonly stdout = new FakeReadable();
   readonly stderr = new FakeReadable();
+  private readonly stdinEmitter = new EventEmitter();
   readonly stdin = {
     write: (chunk: string | Uint8Array) => {
       this.handleRequest(String(chunk));
       return true;
     },
-    end: () => undefined,
+    end: () => {
+      if (this.options.exitOnStdinEnd) {
+        this.emitExit("SIGTERM");
+      }
+    },
+    on: (event: "error", listener: (error: Error) => void) =>
+      this.stdinEmitter.on(event, listener),
   };
   private nextThreadId = 1;
   private nextTurnId = 1;
   private threadStartCount = 0;
+  private emittedTurnErrors = 0;
   private completedTurnCount = 0;
+  private exited = false;
   private readonly goals = new Map<
     string,
     { objective: string; status: string }
@@ -1949,16 +3069,36 @@ class FakeAppServerProcess extends EventEmitter {
   }
 
   kill(): boolean {
-    queueMicrotask(() => this.emit("exit", null, "SIGTERM"));
+    queueMicrotask(() => this.emitExit("SIGTERM"));
     return true;
   }
 
+  isExited(): boolean {
+    return this.exited;
+  }
+
+  private emitExit(signal: string): void {
+    if (this.exited) return;
+    this.exited = true;
+    this.emit("exit", null, signal);
+  }
+
   private handleRequest(chunk: string): void {
+    if (
+      this.options.throwOnUnsupportedServerResponse &&
+      chunk.includes("unsupported_server_request")
+    ) {
+      throw new Error("fake app-server unsupported response write failed");
+    }
     for (const line of chunk.split(/\n/)) {
       if (!line.trim()) continue;
       const request = JSON.parse(line) as FakeAppServerRequest;
+      if (request.method === this.options.throwOnRequestMethod) {
+        throw new Error("fake app-server stdin write failed");
+      }
       this.options.onRequest?.(request);
       if (request.method === "initialize") {
+        if (this.options.suppressInitializeResponse) continue;
         this.respond(request.id, {
           userAgent: "fake-codex",
           codexHome: "/tmp/fake-codex-home",
@@ -2021,30 +3161,105 @@ class FakeAppServerProcess extends EventEmitter {
       }
       if (request.method === "turn/start") {
         const turnNumber = this.nextTurnId;
-        const turnId = `turn-${turnNumber}`;
+        const generatedTurnId = `turn-${turnNumber}`;
+        const turnId = this.options.reuseActualTurnId ?? generatedTurnId;
         this.nextTurnId += 1;
         const prompt = extractFakePrompt(request.params);
         this.options.onPrompt?.(prompt);
+        const responseTurnId = this.options.mismatchTurnStartResponseId
+          ? `response-${generatedTurnId}`
+          : turnId;
+        if (this.options.emitTurnEventsWithStartResponse) {
+          this.stdout.emit(
+            "data",
+            [
+              JSON.stringify({
+                id: request.id,
+                result: { turn: { id: responseTurnId } },
+              }),
+              JSON.stringify({
+                method: "turn/started",
+                params: {
+                  threadId: String(request.params?.threadId ?? ""),
+                  turn: { id: turnId, status: "inProgress" },
+                },
+              }),
+              JSON.stringify({
+                method: "item/agentMessage/delta",
+                params: {
+                  turnId,
+                  delta: `app-server output:${prompt}`,
+                },
+              }),
+              JSON.stringify({
+                method: "turn/completed",
+                params: {
+                  turn: { id: turnId, status: { type: "completed" } },
+                },
+              }),
+            ].join("\n") + "\n",
+          );
+          continue;
+        }
         this.respond(request.id, {
           turn: {
-            id: this.options.mismatchTurnStartResponseId
-              ? `response-${turnId}`
-              : turnId,
+            id: responseTurnId,
           },
         });
+        if (this.options.emitStdinErrorAfterTurnStartResponse) {
+          this.stdinEmitter.emit(
+            "error",
+            new Error("fake app-server stdin stream failed"),
+          );
+          continue;
+        }
+        if (this.options.emitUnsupportedServerRequestOnTurn) {
+          this.stdout.emit(
+            "data",
+            `${JSON.stringify({
+              id: 9_001,
+              method: "client/unsupported",
+              params: { turnId },
+            })}\n`,
+          );
+          continue;
+        }
+        if (this.options.emitProcessErrorAfterTurnStartResponse) {
+          this.emit("error", new Error("fake app-server process failed"));
+          continue;
+        }
         setTimeout(() => {
+          if (this.options.emitTurnCompletionBeforeStarted) {
+            this.notify("item/agentMessage/delta", {
+              turnId,
+              delta: `app-server output:${prompt}`,
+            });
+            this.notify("turn/completed", {
+              turn: { id: turnId, status: { type: "completed" } },
+            });
+            this.notify("turn/started", {
+              threadId: String(request.params?.threadId ?? ""),
+              turn: { id: turnId, status: "inProgress" },
+            });
+            return;
+          }
           this.notify("turn/started", {
             threadId: String(request.params?.threadId ?? ""),
             turn: { id: turnId, status: "inProgress" },
           });
-          if (this.options.emitTopLevelErrorOnTurn) {
+          const topLevelError = this.configuredTurnError();
+          if (topLevelError) {
             this.stdout.emit(
               "data",
               `${JSON.stringify({
                 method: "error",
-                message: this.options.emitTopLevelErrorOnTurn,
+                message: topLevelError,
               })}\n`,
             );
+            return;
+          }
+          if (this.options.emitProcessErrorOnTurn) {
+            this.emit("error", new Error("fake app-server process failed"));
             return;
           }
           if (this.options.abortTurnNumbers?.includes(turnNumber)) {
@@ -2056,10 +3271,38 @@ class FakeAppServerProcess extends EventEmitter {
           }
           this.markGoalAfterCompletedTurn(String(request.params?.threadId ?? ""));
           if (!this.options.suppressOutputTurnNumbers?.includes(turnNumber)) {
-            this.notify("item/agentMessage/delta", {
-              turnId,
-              delta: `app-server output:${prompt}`,
-            });
+            if (this.options.completedAgentMessageContentOnly) {
+              this.notify("item/completed", {
+                turnId,
+                item: {
+                  type: "agentMessage",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: `app-server output:${prompt}`,
+                    },
+                    ...(this.options.appendCompletedAgentMessageToolContent
+                      ? [
+                          {
+                            type: "tool_output",
+                            content: "wrong app-server output",
+                          },
+                          {
+                            type: "message",
+                            role: "user",
+                            content: JSON.stringify({ verdict: "REJECT" }),
+                          },
+                        ]
+                      : []),
+                  ],
+                },
+              });
+            } else {
+              this.notify("item/agentMessage/delta", {
+                turnId,
+                delta: `app-server output:${prompt}`,
+              });
+            }
           }
           this.notify("turn/completed", {
             turn: { id: turnId, status: { type: "completed" } },
@@ -2069,6 +3312,16 @@ class FakeAppServerProcess extends EventEmitter {
       }
       this.respondError(request.id, `unsupported:${request.method}`);
     }
+  }
+
+  private configuredTurnError(): string | null {
+    const sequence = this.options.emitTopLevelErrorsOnTurns;
+    if (sequence) {
+      const value = sequence[this.emittedTurnErrors];
+      this.emittedTurnErrors += 1;
+      return value ?? null;
+    }
+    return this.options.emitTopLevelErrorOnTurn ?? null;
   }
 
   private markGoalAfterCompletedTurn(threadId: string): void {

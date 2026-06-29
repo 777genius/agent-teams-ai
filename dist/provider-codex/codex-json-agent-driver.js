@@ -13,6 +13,7 @@ export class CodexJsonAgentDriver {
     reasoningEffort;
     serviceTier;
     sessionMaterializer;
+    managedRunSessions = new Map();
     constructor(options) {
         this.options = options;
         this.engine =
@@ -56,7 +57,9 @@ export class CodexJsonAgentDriver {
             });
             const outputSchemaName = input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
             const goalObjective = readTaskGoalObjective(input.task);
+            const runId = readTaskManagedRunId(input.task);
             const result = await this.engine.run({
+                ...(runId ? { runId } : {}),
                 prompt: input.task.prompt,
                 ...(goalObjective ? { goalObjective } : {}),
                 ...(input.task.systemPrompt !== undefined
@@ -75,6 +78,25 @@ export class CodexJsonAgentDriver {
                 sandboxMode: codexSandboxModeForPermissionMode(input.task.controls?.permissionMode),
                 abortSignal: input.abortSignal,
             });
+            if (result.status === "waiting_for_input") {
+                this.managedRunSessions.set(result.runId, materialized);
+                materialized = null;
+                return {
+                    status: "waiting_for_input",
+                    runId: result.runId,
+                    outputText: result.outputText,
+                    ...(result.structuredOutput === undefined
+                        ? {}
+                        : { structuredOutput: result.structuredOutput }),
+                    request: result.request,
+                    resumeHandle: result.resumeHandle,
+                    telemetry: {
+                        durationMs: Date.now() - startedAt,
+                        finishReason: "waiting_for_input",
+                    },
+                    warnings: result.warnings,
+                };
+            }
             const snapshot = await snapshotSessionUpdate({
                 materialized,
                 previousSession: input.session,
@@ -107,6 +129,113 @@ export class CodexJsonAgentDriver {
         finally {
             await materialized?.release();
         }
+    }
+    async resumeManagedRun(input) {
+        if (!this.engine.resume) {
+            return {
+                status: "failed",
+                failure: {
+                    code: "task_mode_unsupported",
+                    retryable: false,
+                    reconnectRequired: false,
+                    safeMessage: "Codex execution engine does not support managed run resume.",
+                },
+                warnings: [],
+            };
+        }
+        const startedAt = Date.now();
+        let materialized = this.managedRunSessions.get(input.runId) ?? null;
+        let ownsMaterialized = false;
+        if (!materialized) {
+            materialized = await this.sessionMaterializer.materialize({
+                session: input.session,
+                redactor: input.redactor,
+            });
+            ownsMaterialized = true;
+        }
+        try {
+            const outputSchemaName = input.task?.controls?.outputSchemaName ?? input.task?.outputSchemaName;
+            const result = await this.engine.resume({
+                runId: input.runId,
+                requestId: input.requestId,
+                answer: input.answer,
+                resumeHandle: input.resumeHandle,
+                session: materialized,
+                workspacePath: input.workspace.path,
+                runner: input.runner,
+                redactor: input.redactor,
+                model: input.task?.controls?.model ?? this.model,
+                reasoningEffort: this.reasoningEffort,
+                ...(this.serviceTier === undefined
+                    ? {}
+                    : { serviceTier: this.serviceTier }),
+                sandboxMode: codexSandboxModeForPermissionMode(input.task?.controls?.permissionMode),
+                outputSchema: outputSchemaName ? { name: outputSchemaName } : undefined,
+                abortSignal: input.abortSignal,
+            });
+            if (result.status === "waiting_for_input") {
+                if (result.runId !== input.runId) {
+                    this.managedRunSessions.delete(input.runId);
+                }
+                this.managedRunSessions.set(result.runId, materialized);
+                ownsMaterialized = false;
+                return {
+                    status: "waiting_for_input",
+                    runId: result.runId,
+                    outputText: result.outputText,
+                    ...(result.structuredOutput === undefined
+                        ? {}
+                        : { structuredOutput: result.structuredOutput }),
+                    request: result.request,
+                    resumeHandle: result.resumeHandle,
+                    telemetry: {
+                        durationMs: Date.now() - startedAt,
+                        finishReason: "waiting_for_input",
+                    },
+                    warnings: result.warnings,
+                };
+            }
+            this.managedRunSessions.delete(input.runId);
+            ownsMaterialized = true;
+            const snapshot = await snapshotSessionUpdate({
+                materialized,
+                previousSession: input.session,
+                redactor: input.redactor,
+            });
+            return {
+                status: "completed",
+                outputText: result.outputText,
+                structuredOutput: result.structuredOutput,
+                ...(snapshot.sessionUpdate
+                    ? { sessionUpdate: snapshot.sessionUpdate }
+                    : {}),
+                telemetry: {
+                    durationMs: Date.now() - startedAt,
+                    finishReason: "completed",
+                },
+                warnings: [...result.warnings, ...snapshot.warnings],
+            };
+        }
+        catch (error) {
+            this.managedRunSessions.delete(input.runId);
+            ownsMaterialized = true;
+            const failure = codexExecutionFailure(error);
+            return {
+                ...failure,
+                telemetry: {
+                    durationMs: Date.now() - startedAt,
+                    finishReason: finishReasonForFailure(failure.failure.code),
+                },
+            };
+        }
+        finally {
+            if (ownsMaterialized) {
+                await materialized.release();
+            }
+        }
+    }
+    hasManagedRunSession(runId) {
+        return this.managedRunSessions.has(runId);
     }
     classifyRunFailure(error) {
         return classifyCodexFailure(error);
@@ -169,7 +298,10 @@ export class CodexJsonAgentDriver {
         }
     }
     async dispose() {
+        const managedSessions = [...this.managedRunSessions.values()];
+        this.managedRunSessions.clear();
         const results = await Promise.allSettled([
+            ...managedSessions.map((session) => Promise.resolve().then(() => session.release())),
             Promise.resolve().then(() => this.engine.dispose?.()),
             Promise.resolve().then(() => this.sessionMaterializer.dispose?.()),
         ]);
@@ -211,6 +343,13 @@ async function snapshotSessionUpdate(input) {
 }
 function readTaskGoalObjective(task) {
     const value = task.metadata?.codexGoalObjective;
+    if (typeof value !== "string")
+        return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+}
+function readTaskManagedRunId(task) {
+    const value = task.metadata?.codexManagedRunId ?? task.metadata?.runId;
     if (typeof value !== "string")
         return null;
     const trimmed = value.trim();

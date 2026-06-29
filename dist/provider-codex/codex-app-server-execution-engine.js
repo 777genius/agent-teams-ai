@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once as onceEvent } from "node:events";
 import { pruneCodexChildEnv } from "./codex-cli-domain.js";
 import { resolveCodexExecutionProfile } from "./codex-execution-profile.js";
+import { parseCodexStructuredOutput } from "./structured-output.js";
 const defaultTimeoutMs = 10 * 60 * 1000;
 const defaultControlRequestTimeoutMs = 30 * 1000;
 const defaultMaxOutputBytes = 512 * 1024;
@@ -29,6 +31,7 @@ export class CodexAppServerExecutionEngine {
         requiresSchemaFile: false,
     };
     executionProfile;
+    runStore;
     slots = new Map();
     constructor(options) {
         this.options = options;
@@ -37,15 +40,24 @@ export class CodexAppServerExecutionEngine {
         }
         this.kind = options.goalMode ? "app-server-goal" : "app-server-pool";
         this.executionProfile = resolveCodexExecutionProfile(options.executionProfile);
+        this.runStore = options.runStore ?? new InMemoryManagedRunStore();
     }
     async run(input) {
         try {
             const result = await this.runViaAppServer(input);
+            if (result.status === "waiting_for_input")
+                return result;
             if (input.outputSchema) {
-                return {
-                    ...result,
-                    structuredOutput: parseStructuredOutput(result.outputText),
-                };
+                try {
+                    return {
+                        ...result,
+                        structuredOutput: parseStructuredOutput(result.outputText),
+                    };
+                }
+                catch (error) {
+                    await this.failManagedRunForProviderOutput(input.runId);
+                    throw error;
+                }
             }
             return result;
         }
@@ -61,6 +73,46 @@ export class CodexAppServerExecutionEngine {
                 warnings: [appServerFallbackWarning(error), ...fallbackResult.warnings],
             };
         }
+    }
+    async resume(input) {
+        try {
+            const result = await this.resumeViaAppServer(input);
+            if (result.status === "waiting_for_input")
+                return result;
+            if (input.outputSchema) {
+                try {
+                    return {
+                        ...result,
+                        structuredOutput: parseStructuredOutput(result.outputText),
+                    };
+                }
+                catch (error) {
+                    await this.failManagedRunForProviderOutput(input.runId);
+                    throw error;
+                }
+            }
+            return result;
+        }
+        catch (error) {
+            if (!isManagedRunResumeValidationError(error)) {
+                await this.disposeSessionSlot(input.session);
+            }
+            throw error;
+        }
+    }
+    async failManagedRunForProviderOutput(runId) {
+        if (!this.options.goalMode || !runId)
+            return;
+        await this.runStore.fail({
+            runId,
+            failure: {
+                code: "provider_output_invalid",
+                retryable: true,
+                reconnectRequired: false,
+                safeMessage: "Codex provider output was invalid.",
+            },
+            now: new Date(),
+        }).catch(() => undefined);
     }
     async dispose() {
         const slots = [...this.slots.values()];
@@ -117,6 +169,7 @@ export class CodexAppServerExecutionEngine {
     async runViaAppServer(input) {
         const slot = await this.ensureSlot(input);
         const common = {
+            ...(input.runId !== undefined ? { runId: input.runId } : {}),
             prompt: input.prompt,
             ...(input.goalObjective !== undefined
                 ? { goalObjective: input.goalObjective }
@@ -144,10 +197,85 @@ export class CodexAppServerExecutionEngine {
         const outputText = input.redactor.redact(result.outputText);
         input.redactor.assertNoKnownSecret(outputText, "codex-app-server-output");
         assertOutputWithinBounds(outputText, this.options.maxOutputBytes);
+        if (isAppServerWaitingForInputResult(result)) {
+            return redactWaitingForInputResult({
+                result,
+                outputText,
+                redactor: input.redactor,
+            });
+        }
         return {
             outputText,
             warnings: result.warnings,
         };
+    }
+    async resumeViaAppServer(input) {
+        if (!this.options.goalMode) {
+            throw new Error("codex_app_server_resume_requires_goal_mode");
+        }
+        await this.assertManagedRunCanResume(input);
+        const slot = await this.ensureSlot(input);
+        const result = await slot.client.resumeGoal({
+            runId: input.runId,
+            requestId: input.requestId,
+            answer: input.answer,
+            resumeHandle: input.resumeHandle,
+            workspacePath: input.workspacePath,
+            model: input.model,
+            reasoningEffort: input.reasoningEffort,
+            ...(input.serviceTier === undefined
+                ? {}
+                : { serviceTier: input.serviceTier }),
+            sandboxMode: input.sandboxMode ?? "read-only",
+            timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
+            abortSignal: input.abortSignal,
+            maxGoalTurns: this.options.maxGoalTurns ?? defaultMaxGoalTurns,
+            goalContinuePrompt: this.options.goalContinuePrompt ?? defaultGoalContinuePrompt,
+        });
+        const outputText = input.redactor.redact(result.outputText);
+        input.redactor.assertNoKnownSecret(outputText, "codex-app-server-output");
+        assertOutputWithinBounds(outputText, this.options.maxOutputBytes);
+        if (isAppServerWaitingForInputResult(result)) {
+            return redactWaitingForInputResult({
+                result,
+                outputText,
+                redactor: input.redactor,
+            });
+        }
+        return {
+            outputText,
+            warnings: result.warnings,
+        };
+    }
+    async assertManagedRunCanResume(input) {
+        const threadId = input.resumeHandle.threadId;
+        if (!threadId)
+            throw new Error("codex_managed_run_thread_missing");
+        if (input.resumeHandle.providerId !== "codex") {
+            throw new Error("codex_managed_run_provider_mismatch");
+        }
+        if (input.resumeHandle.agentId !== undefined &&
+            input.resumeHandle.agentId !== "codex-json") {
+            throw new Error("codex_managed_run_agent_mismatch");
+        }
+        if (input.resumeHandle.runId !== input.runId) {
+            throw new Error("codex_managed_run_resume_handle_mismatch");
+        }
+        if (input.resumeHandle.workspacePath !== input.workspacePath) {
+            throw new Error("codex_managed_run_workspace_mismatch");
+        }
+        const current = await this.runStore.get({ runId: input.runId });
+        if (!current || current.status !== "waiting_for_input") {
+            throw new Error("codex_managed_run_not_waiting_for_input");
+        }
+        if (current.request?.id !== input.requestId) {
+            throw new Error("codex_managed_run_request_mismatch");
+        }
+        if (current.resumeHandle?.runId !== input.runId ||
+            current.resumeHandle.threadId !== threadId ||
+            current.resumeHandle.workspacePath !== input.workspacePath) {
+            throw new Error("codex_managed_run_resume_handle_mismatch");
+        }
     }
     async ensureSlot(input) {
         const key = input.session.codexHome;
@@ -160,10 +288,12 @@ export class CodexAppServerExecutionEngine {
             await existing.client.stop();
             this.slots.delete(key);
         }
+        throwIfAborted(input.abortSignal);
         const client = new CodexAppServerClient({
             codexBinaryPath: this.options.codexBinaryPath,
             sourceEnv: this.options.sourceEnv ?? process.env,
             processFactory: this.options.processFactory ?? spawnCodexAppServerProcess,
+            runStore: this.runStore,
             session: input.session,
             workspacePath: input.workspacePath,
             executionProfile: this.executionProfile,
@@ -171,7 +301,13 @@ export class CodexAppServerExecutionEngine {
             timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
             abortSignal: input.abortSignal,
         });
-        await client.start();
+        try {
+            await client.start();
+        }
+        catch (error) {
+            await client.stop().catch(() => undefined);
+            throw error;
+        }
         const slot = { key, client, sessionHash };
         this.slots.set(key, slot);
         return slot;
@@ -192,17 +328,21 @@ class CodexAppServerClient {
     pending = new Map();
     turns = new Map();
     pendingTurnIdsByThread = new Map();
+    earlyTurnIdsByThread = new Map();
     turnIdAliases = new Map();
     serverRequests = [];
     backgroundWarnings = [];
     preparedThread = null;
     prepareThreadInFlight = null;
     exited = false;
+    terminalError = null;
     constructor(options) {
         this.options = options;
     }
     async start() {
+        throwIfAborted(this.options.abortSignal);
         this.exited = false;
+        this.terminalError = null;
         const env = {
             ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
             ...this.options.session.env,
@@ -222,23 +362,13 @@ class CodexAppServerClient {
         });
         this.child.on("exit", (code, signal) => {
             this.exited = true;
-            const error = new Error(`codex_app_server_exited:${code ?? signal}`);
-            for (const pending of this.pending.values()) {
-                clearTimeout(pending.timer);
-                pending.reject(error);
-            }
-            this.pending.clear();
-            for (const turn of this.turns.values()) {
-                turn.error = error;
-                this.resolveTurn(turn);
-            }
+            this.recordTerminalError(new Error(`codex_app_server_exited:${code ?? signal}`));
         });
         this.child.on("error", (error) => {
-            for (const pending of this.pending.values()) {
-                clearTimeout(pending.timer);
-                pending.reject(error);
-            }
-            this.pending.clear();
+            this.recordTerminalError(error);
+        });
+        this.child.stdin.on?.("error", (error) => {
+            this.recordTerminalError(error);
         });
         const response = await this.send("initialize", {
             clientInfo: {
@@ -250,6 +380,9 @@ class CodexAppServerClient {
                 experimentalApi: true,
                 requestAttestation: false,
             },
+        }, {
+            timeoutMs: this.options.timeoutMs,
+            abortSignal: this.options.abortSignal,
         });
         if (response.error) {
             throw new Error(`codex_app_server_initialize_failed:${response.error.message ?? "unknown"}`);
@@ -285,6 +418,7 @@ class CodexAppServerClient {
     }
     async runGoal(input) {
         const warnings = this.drainWarnings();
+        const runId = normalizeRunId(input.runId);
         const threadId = await this.startThread({
             ...input,
             goalMode: true,
@@ -296,19 +430,79 @@ class CodexAppServerClient {
             timeoutMs: input.timeoutMs,
             abortSignal: input.abortSignal,
         });
+        return this.continueGoal({
+            ...input,
+            runId,
+            threadId,
+            firstPrompt: input.prompt,
+            warnings,
+        });
+    }
+    async resumeGoal(input) {
+        const threadId = input.resumeHandle.threadId;
+        if (!threadId)
+            throw new Error("codex_managed_run_thread_missing");
+        if (input.resumeHandle.providerId !== "codex") {
+            throw new Error("codex_managed_run_provider_mismatch");
+        }
+        if (input.resumeHandle.agentId !== undefined &&
+            input.resumeHandle.agentId !== "codex-json") {
+            throw new Error("codex_managed_run_agent_mismatch");
+        }
+        if (input.resumeHandle.runId !== input.runId) {
+            throw new Error("codex_managed_run_resume_handle_mismatch");
+        }
+        if (input.resumeHandle.workspacePath !== input.workspacePath) {
+            throw new Error("codex_managed_run_workspace_mismatch");
+        }
+        const current = await this.options.runStore.get({ runId: input.runId });
+        if (!current || current.status !== "waiting_for_input") {
+            throw new Error("codex_managed_run_not_waiting_for_input");
+        }
+        if (current.request?.id !== input.requestId) {
+            throw new Error("codex_managed_run_request_mismatch");
+        }
+        if (current.resumeHandle?.runId !== input.runId ||
+            current.resumeHandle.threadId !== threadId ||
+            current.resumeHandle.workspacePath !== input.workspacePath) {
+            throw new Error("codex_managed_run_resume_handle_mismatch");
+        }
+        await this.options.runStore.resume({
+            runId: input.runId,
+            requestId: input.requestId,
+            answer: input.answer,
+            now: new Date(),
+        });
+        try {
+            return await this.continueGoal({
+                ...input,
+                threadId,
+                firstPrompt: buildGoalResumePrompt(input),
+                warnings: this.drainWarnings(),
+            });
+        }
+        catch (error) {
+            await this.options.runStore.fail({
+                runId: input.runId,
+                failure: managedRunFailureFromError(error),
+                now: new Date(),
+            });
+            throw error;
+        }
+    }
+    async continueGoal(input) {
         let outputText = "";
         for (let turnNumber = 1; turnNumber <= input.maxGoalTurns; turnNumber += 1) {
             const turn = await this.startTurn({
                 ...input,
-                threadId,
                 goalMode: true,
-                prompt: turnNumber === 1 ? input.prompt : input.goalContinuePrompt,
+                prompt: turnNumber === 1 ? input.firstPrompt : input.goalContinuePrompt,
             });
             if (turn.error)
                 throw turn.error;
             outputText = turn.outputText;
             const goal = await this.getGoal({
-                threadId,
+                threadId: input.threadId,
                 timeoutMs: controlRequestTimeoutMs(input.timeoutMs),
                 abortSignal: input.abortSignal,
             });
@@ -316,11 +510,27 @@ class CodexAppServerClient {
                 throw new Error("codex_app_server_goal_missing");
             }
             if (goal.status === "complete") {
-                warnings.push(...this.drainWarnings());
-                return {
+                input.warnings.push(...this.drainWarnings());
+                await this.options.runStore.complete({
+                    runId: input.runId,
                     outputText,
-                    warnings,
+                    now: new Date(),
+                });
+                return {
+                    status: "completed",
+                    outputText,
+                    warnings: input.warnings,
                 };
+            }
+            if (goal.status === "blocked" || goal.status === "paused") {
+                return this.waitForGoalInput({
+                    runId: input.runId,
+                    threadId: input.threadId,
+                    goal,
+                    outputText,
+                    workspacePath: input.workspacePath,
+                    warnings: input.warnings,
+                });
             }
             if (goal.status !== "active") {
                 throw new Error(`codex_app_server_goal_${goal.status}`);
@@ -330,6 +540,39 @@ class CodexAppServerClient {
             }
         }
         throw new Error(`codex_app_server_goal_max_turns_exceeded:${input.maxGoalTurns}`);
+    }
+    async waitForGoalInput(input) {
+        const request = goalInputRequest({
+            runId: input.runId,
+            goal: input.goal,
+            outputText: input.outputText,
+        });
+        const resumeHandle = {
+            runId: input.runId,
+            providerId: "codex",
+            agentId: "codex-json",
+            workspacePath: input.workspacePath,
+            threadId: input.threadId,
+            providerState: {
+                goalObjective: input.goal.objective,
+                goalStatus: input.goal.status,
+            },
+        };
+        await this.options.runStore.saveWaitingInput({
+            runId: input.runId,
+            request,
+            resumeHandle,
+            ...(input.outputText.trim() ? { outputText: input.outputText } : {}),
+            now: new Date(),
+        });
+        return {
+            status: "waiting_for_input",
+            runId: input.runId,
+            outputText: input.outputText.trim() ? input.outputText : request.question,
+            request,
+            resumeHandle,
+            warnings: input.warnings,
+        };
     }
     async prewarmCleanThread(input) {
         if (!this.cleanThreadPrewarmEnabled())
@@ -349,12 +592,19 @@ class CodexAppServerClient {
             return;
         if (this.exited)
             return;
+        const exit = onceEvent(child, "exit").catch(() => undefined);
+        try {
+            child.stdin.end();
+        }
+        catch {
+            // The process may have already closed stdin.
+        }
         signalChildGroup(child, "SIGTERM");
         const timeout = setTimeout(() => {
             signalChildGroup(child, "SIGKILL");
         }, 5_000);
         try {
-            await onceEvent(child, "exit");
+            await exit;
         }
         catch {
             // Best-effort shutdown.
@@ -564,13 +814,17 @@ class CodexAppServerClient {
         if (!this.child)
             throw new Error("codex_app_server_not_started");
         throwIfAborted(input.abortSignal);
+        if (this.terminalError)
+            throw this.terminalError;
         const id = this.nextId;
         this.nextId += 1;
         return new Promise((resolve, reject) => {
+            const timeoutMs = input.timeoutMs ?? this.options.timeoutMs;
             const timer = setTimeout(() => {
                 this.pending.delete(id);
+                input.abortSignal?.removeEventListener("abort", abort);
                 reject(new Error(`codex_app_server_request_timeout:${method}`));
-            }, input.timeoutMs ?? this.options.timeoutMs);
+            }, timeoutMs);
             const abort = () => {
                 clearTimeout(timer);
                 this.pending.delete(id);
@@ -589,23 +843,45 @@ class CodexAppServerClient {
                 },
                 timer,
             });
-            this.child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
+            try {
+                this.child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
+            }
+            catch (error) {
+                clearTimeout(timer);
+                input.abortSignal?.removeEventListener("abort", abort);
+                this.pending.delete(id);
+                reject(error instanceof Error
+                    ? error
+                    : new Error("codex_app_server_write_failed"));
+            }
         });
     }
     waitForTurn(turnId, input) {
+        const earlyTurnId = this.earlyTurnIdsByThread.get(input.threadId);
+        if (earlyTurnId) {
+            this.earlyTurnIdsByThread.delete(input.threadId);
+            this.aliasTurnId(earlyTurnId, turnId);
+        }
         const existing = this.turns.get(turnId);
-        if (existing?.completed || existing?.error)
+        if (existing?.completed || existing?.error) {
+            this.clearTurnTracking(turnId, input.threadId);
             return Promise.resolve(existing);
+        }
+        if (this.terminalError) {
+            return Promise.resolve({
+                ...createTurnState(),
+                error: this.terminalError,
+            });
+        }
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
-                this.turns.delete(turnId);
-                this.pendingTurnIdsByThread.delete(input.threadId);
+                this.clearTurnTracking(turnId, input.threadId);
+                input.abortSignal.removeEventListener("abort", abort);
                 reject(new Error(`codex_app_server_turn_timeout:${turnId}`));
             }, input.timeoutMs);
             const abort = () => {
                 clearTimeout(timer);
-                this.turns.delete(turnId);
-                this.pendingTurnIdsByThread.delete(input.threadId);
+                this.clearTurnTracking(turnId, input.threadId);
                 reject(new Error(`codex_app_server_turn_aborted:${turnId}`));
             };
             input.abortSignal.addEventListener("abort", abort, { once: true });
@@ -613,8 +889,7 @@ class CodexAppServerClient {
             turn.waiters.push((state) => {
                 clearTimeout(timer);
                 input.abortSignal.removeEventListener("abort", abort);
-                this.turns.delete(turnId);
-                this.pendingTurnIdsByThread.delete(input.threadId);
+                this.clearTurnTracking(turnId, input.threadId);
                 resolve(state);
             });
             this.turns.set(turnId, turn);
@@ -674,15 +949,24 @@ class CodexAppServerClient {
                 ? this.pendingTurnIdsByThread.get(threadId)
                 : undefined;
             if (actualTurnId && expectedTurnId && actualTurnId !== expectedTurnId) {
-                this.turnIdAliases.set(actualTurnId, expectedTurnId);
+                this.aliasTurnId(actualTurnId, expectedTurnId);
+            }
+            else if (actualTurnId &&
+                threadId &&
+                !expectedTurnId &&
+                !this.turnIdAliases.has(actualTurnId)) {
+                this.earlyTurnIdsByThread.set(threadId, actualTurnId);
             }
             return;
         }
         if (record.method === "item/completed") {
             const turnId = stringField(params, "turnId");
             const item = readRecord(params?.item);
-            if (item?.type === "agentMessage" && typeof item.text === "string") {
-                this.ensureTurn(turnId).outputText = item.text;
+            if (item?.type === "agentMessage") {
+                const text = agentMessageText(item);
+                if (text) {
+                    this.ensureTurn(turnId).outputText = text;
+                }
             }
             return;
         }
@@ -738,13 +1022,18 @@ class CodexAppServerClient {
             code: "codex_app_server_unsupported_request",
             safeMessage: `Codex app-server requested unsupported client method: ${method}`,
         });
-        this.child?.stdin.write(`${JSON.stringify({
-            id,
-            error: {
-                code: -32000,
-                message: `unsupported_server_request:${method}`,
-            },
-        })}\n`);
+        try {
+            this.child?.stdin.write(`${JSON.stringify({
+                id,
+                error: {
+                    code: -32000,
+                    message: `unsupported_server_request:${method}`,
+                },
+            })}\n`);
+        }
+        catch (error) {
+            this.recordTerminalError(new Error(`codex_app_server_unsupported_response_failed:${safeMessage(error)}`));
+        }
     }
     ensureTurn(turnId) {
         if (!turnId)
@@ -761,6 +1050,59 @@ class CodexAppServerClient {
         const waiters = turn.waiters.splice(0);
         for (const waiter of waiters)
             waiter(turn);
+    }
+    failOutstanding(error) {
+        for (const pending of this.pending.values()) {
+            clearTimeout(pending.timer);
+            pending.reject(error);
+        }
+        this.pending.clear();
+        for (const turn of this.turns.values()) {
+            turn.error = error;
+            this.resolveTurn(turn);
+        }
+        this.pendingTurnIdsByThread.clear();
+        this.earlyTurnIdsByThread.clear();
+        this.turnIdAliases.clear();
+    }
+    recordTerminalError(error) {
+        this.terminalError = this.terminalError ?? error;
+        this.failOutstanding(this.terminalError);
+    }
+    clearTurnTracking(turnId, threadId) {
+        this.turns.delete(turnId);
+        this.pendingTurnIdsByThread.delete(threadId);
+        this.earlyTurnIdsByThread.delete(threadId);
+        this.deleteTurnAliases(turnId);
+    }
+    deleteTurnAliases(turnId) {
+        for (const [actualTurnId, expectedTurnId] of this.turnIdAliases) {
+            if (actualTurnId === turnId || expectedTurnId === turnId) {
+                this.turnIdAliases.delete(actualTurnId);
+            }
+        }
+    }
+    aliasTurnId(actualTurnId, expectedTurnId) {
+        if (actualTurnId === expectedTurnId)
+            return;
+        this.turnIdAliases.set(actualTurnId, expectedTurnId);
+        const actual = this.turns.get(actualTurnId);
+        if (!actual)
+            return;
+        const expected = this.turns.get(expectedTurnId);
+        if (expected) {
+            expected.outputText += actual.outputText;
+            expected.completed = expected.completed || actual.completed;
+            expected.error = expected.error ?? actual.error;
+            expected.waiters.push(...actual.waiters);
+            if (expected.completed || expected.error) {
+                this.resolveTurn(expected);
+            }
+        }
+        else {
+            this.turns.set(expectedTurnId, actual);
+        }
+        this.turns.delete(actualTurnId);
     }
 }
 function spawnCodexAppServerProcess(input) {
@@ -791,6 +1133,195 @@ function cleanThreadPrewarmWarning(error) {
         code: "codex_app_server_clean_thread_prewarm_failed",
         safeMessage: `Codex app-server clean thread prewarm failed: ${safeMessage(error)}`,
     };
+}
+class InMemoryManagedRunStore {
+    records = new Map();
+    async get(input) {
+        return this.records.get(input.runId) ?? null;
+    }
+    async saveWaitingInput(input) {
+        const current = this.records.get(input.runId);
+        const record = {
+            runId: input.runId,
+            status: "waiting_for_input",
+            request: input.request,
+            resumeHandle: input.resumeHandle,
+            ...(input.recoveryPacket === undefined
+                ? current?.recoveryPacket === undefined
+                    ? {}
+                    : { recoveryPacket: current.recoveryPacket }
+                : { recoveryPacket: input.recoveryPacket }),
+            ...(input.taskId === undefined
+                ? current?.taskId === undefined
+                    ? {}
+                    : { taskId: current.taskId }
+                : { taskId: input.taskId }),
+            ...(input.assignedWorkerId === undefined
+                ? current?.assignedWorkerId === undefined
+                    ? {}
+                    : { assignedWorkerId: current.assignedWorkerId }
+                : { assignedWorkerId: input.assignedWorkerId }),
+            ...(input.providerInstanceId === undefined
+                ? current?.providerInstanceId === undefined
+                    ? {}
+                    : { providerInstanceId: current.providerInstanceId }
+                : { providerInstanceId: input.providerInstanceId }),
+            ...(input.workspacePath === undefined
+                ? current?.workspacePath === undefined
+                    ? {}
+                    : { workspacePath: current.workspacePath }
+                : { workspacePath: input.workspacePath }),
+            ...(input.outputText === undefined ? {} : { outputText: input.outputText }),
+            updatedAt: input.now,
+        };
+        this.records.set(input.runId, record);
+        return record;
+    }
+    async resume(input) {
+        const current = this.records.get(input.runId);
+        if (!current ||
+            current.status !== "waiting_for_input" ||
+            current.request?.id !== input.requestId) {
+            throw new Error("managed_run_request_mismatch");
+        }
+        const record = {
+            runId: input.runId,
+            status: "active",
+            ...(current.recoveryPacket === undefined
+                ? {}
+                : { recoveryPacket: current.recoveryPacket }),
+            ...(current.taskId === undefined ? {} : { taskId: current.taskId }),
+            ...(current.assignedWorkerId === undefined
+                ? {}
+                : { assignedWorkerId: current.assignedWorkerId }),
+            ...(current.providerInstanceId === undefined
+                ? {}
+                : { providerInstanceId: current.providerInstanceId }),
+            ...(current.workspacePath === undefined
+                ? {}
+                : { workspacePath: current.workspacePath }),
+            ...(current.outputText === undefined
+                ? {}
+                : { outputText: current.outputText }),
+            updatedAt: input.now,
+        };
+        this.records.set(input.runId, record);
+        return record;
+    }
+    async complete(input) {
+        const current = this.records.get(input.runId);
+        const record = {
+            ...(current ?? { runId: input.runId }),
+            runId: input.runId,
+            status: "completed",
+            outputText: input.outputText,
+            updatedAt: input.now,
+        };
+        this.records.set(input.runId, record);
+        return record;
+    }
+    async fail(input) {
+        const current = this.records.get(input.runId);
+        const record = {
+            ...(current ?? { runId: input.runId }),
+            runId: input.runId,
+            status: "failed",
+            failure: input.failure,
+            updatedAt: input.now,
+        };
+        this.records.set(input.runId, record);
+        return record;
+    }
+}
+function isAppServerWaitingForInputResult(result) {
+    return result.status === "waiting_for_input";
+}
+function redactWaitingForInputResult(input) {
+    const contextSummary = input.result.request.contextSummary;
+    const suggestedAnswers = input.result.request.suggestedAnswers?.map((answer) => input.redactor.redact(answer));
+    const providerState = input.result.resumeHandle.providerState;
+    return {
+        status: "waiting_for_input",
+        runId: input.result.runId,
+        outputText: input.outputText,
+        request: {
+            id: input.result.request.id,
+            kind: input.result.request.kind,
+            question: input.redactor.redact(input.result.request.question),
+            ...(contextSummary === undefined
+                ? {}
+                : { contextSummary: input.redactor.redact(contextSummary) }),
+            ...(suggestedAnswers === undefined ? {} : { suggestedAnswers }),
+            audience: input.result.request.audience,
+        },
+        resumeHandle: {
+            ...input.result.resumeHandle,
+            ...(providerState === undefined
+                ? {}
+                : { providerState: redactStringRecord(providerState, input.redactor) }),
+        },
+        warnings: input.result.warnings,
+    };
+}
+function redactStringRecord(record, redactor) {
+    const redacted = {};
+    for (const [key, value] of Object.entries(record)) {
+        redacted[key] = redactor.redact(value);
+    }
+    return redacted;
+}
+function normalizeRunId(value) {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : `codex-managed-run-${randomUUID()}`;
+}
+function buildGoalResumePrompt(input) {
+    const answer = input.answer.trim() || "(empty answer)";
+    return [
+        `Additional information for pending request ${input.requestId}:`,
+        answer,
+        "",
+        input.goalContinuePrompt,
+    ].join("\n");
+}
+function goalInputRequest(input) {
+    const question = input.outputText.trim() ||
+        `Codex goal is ${input.goal.status} and needs input before it can continue.`;
+    return {
+        id: `managed-input-${randomUUID()}`,
+        kind: input.goal.status === "paused" ? "decision_required" : "missing_context",
+        question,
+        contextSummary: `Goal: ${input.goal.objective}\nStatus: ${input.goal.status}`,
+        audience: "orchestrator",
+    };
+}
+function managedRunFailureFromError(error) {
+    if (isAbortLikeError(error)) {
+        return {
+            code: "task_cancelled",
+            retryable: false,
+            reconnectRequired: false,
+            safeMessage: "Codex managed run resume was cancelled.",
+        };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    if (/timeout/i.test(message)) {
+        return {
+            code: "task_timeout",
+            retryable: true,
+            reconnectRequired: false,
+            safeMessage: "Codex managed run resume timed out.",
+        };
+    }
+    return {
+        code: "unknown_runtime_failure",
+        retryable: true,
+        reconnectRequired: false,
+        safeMessage: "Codex managed run resume failed.",
+    };
+}
+function isManagedRunResumeValidationError(error) {
+    return (error instanceof Error &&
+        error.message.startsWith("codex_managed_run_"));
 }
 function signalChildGroup(child, signal) {
     try {
@@ -826,6 +1357,52 @@ function stringField(record, field) {
     const value = record?.[field];
     return typeof value === "string" ? value : null;
 }
+function agentMessageText(item) {
+    return stringifyContent(item.text) ?? stringifyContent(item.content);
+}
+function stringifyContent(value) {
+    if (typeof value === "string" && value.trim())
+        return value;
+    if (Array.isArray(value)) {
+        const parts = value
+            .map((entry) => stringifyContentEntry(entry))
+            .filter((entry) => typeof entry === "string");
+        return parts.length > 0 ? parts.join("") : null;
+    }
+    if (value && typeof value === "object") {
+        const record = value;
+        if (!isAssistantContentRecord(record))
+            return null;
+        return stringifyContent(record.text ?? record.output_text ?? record.content ?? record.output);
+    }
+    return null;
+}
+function stringifyContentEntry(entry) {
+    if (typeof entry === "string")
+        return entry;
+    if (!entry || typeof entry !== "object")
+        return null;
+    const record = entry;
+    if (!isAssistantContentRecord(record))
+        return null;
+    return stringifyContent(record.text ?? record.output_text ?? record.content ?? record.output);
+}
+function isAssistantContentRecord(record) {
+    const type = typeof record.type === "string" ? record.type : null;
+    if (!hasAssistantRole(record))
+        return false;
+    return (!type ||
+        type === "agentMessage" ||
+        type === "agent_message" ||
+        type === "assistant_message" ||
+        type === "message" ||
+        type === "output_text" ||
+        type === "text");
+}
+function hasAssistantRole(record) {
+    const role = record.role;
+    return typeof role !== "string" || role === "assistant";
+}
 function readGoal(value) {
     const goal = readRecord(value);
     if (!goal)
@@ -850,14 +1427,7 @@ function isGoalStatus(value) {
         value === "complete");
 }
 function parseStructuredOutput(outputText) {
-    try {
-        return JSON.parse(outputText);
-    }
-    catch (error) {
-        throw new Error("codex_app_server_structured_output_invalid", {
-            cause: error,
-        });
-    }
+    return parseCodexStructuredOutput(outputText, "codex_app_server_structured_output_invalid");
 }
 function assertOutputWithinBounds(output, maxOutputBytes = defaultMaxOutputBytes) {
     if (Buffer.byteLength(output, "utf8") > maxOutputBytes) {
