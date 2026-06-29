@@ -6,19 +6,21 @@ type DownloadAssetLike = Pick<DownloadAsset, "id" | "os" | "arch" | "archLabel">
 export type PresentedDownloadAsset = DownloadAsset & {
   archLabel: string;
   actionSubtitle: string;
-  resolvedArch: DownloadArch;
+  resolvedArch: DownloadArch | "unknown";
 };
 
 export function useDownloadAssetPresentation() {
   const downloadStore = useDownloadStore();
 
-  const getDownloadArch = (asset: Pick<DownloadAsset, "os" | "arch">): DownloadArch => (
+  const getDownloadArch = (asset: Pick<DownloadAsset, "os" | "arch">): DownloadArch | "unknown" => (
     asset.os === "macos" ? downloadStore.macArch : asset.arch
   );
 
   const getDownloadArchLabel = (asset: DownloadAssetLike) => {
     if (asset.os === "macos" && downloadStore.isMacOs) {
-      return downloadStore.macArch === "arm64" ? "Apple Silicon" : "Intel";
+      if (downloadStore.macArch === "arm64") return "Apple Silicon";
+      if (downloadStore.macArch === "x64") return "Intel";
+      return asset.archLabel;
     }
 
     return asset.archLabel;

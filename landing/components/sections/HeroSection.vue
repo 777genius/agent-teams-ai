@@ -134,7 +134,7 @@ function onHeroVisibilityChange() {
 }
 
 onMounted(() => {
-  downloadStore.init();
+  void downloadStore.init();
 
   heroMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   heroReducedMotion.value = heroMotionQuery.matches;

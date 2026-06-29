@@ -262,9 +262,14 @@ export class MemberWorkSyncTaskImpactResolver {
       }
     }
 
+    const memberNames = [...impacted].sort((left, right) => left.localeCompare(right));
+    if (memberNames.length === 0) {
+      addDiagnostic('task_impact_empty');
+    }
+
     return {
-      memberNames: [...impacted].sort((left, right) => left.localeCompare(right)),
-      fallbackTeamWide: false,
+      memberNames,
+      fallbackTeamWide: memberNames.length === 0,
       diagnostics,
     };
   }

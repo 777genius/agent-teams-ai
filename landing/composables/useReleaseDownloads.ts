@@ -156,8 +156,10 @@ export const useReleaseDownloads = () => {
       const universal = api.variants.macos.universal;
       if (universal.url) return { url: universal.url, version: universal.version || api.version };
 
-      const byArch = arch === "arm64" ? api.variants.macos.arm64 : api.variants.macos.x64;
-      if (byArch.url) return { url: byArch.url, version: byArch.version || api.version };
+      if (arch === "arm64" || arch === "x64") {
+        const byArch = arch === "arm64" ? api.variants.macos.arm64 : api.variants.macos.x64;
+        if (byArch.url) return { url: byArch.url, version: byArch.version || api.version };
+      }
 
       const any = api.variants.macos.arm64.url ? api.variants.macos.arm64 : api.variants.macos.x64;
       return any.url ? { url: any.url, version: any.version || api.version } : null;

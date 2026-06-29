@@ -231,7 +231,14 @@ export class TeamFsWorkerClient {
           reject(error);
         },
       });
-      worker.postMessage({ id, op, payload } as WorkerRequest);
+      try {
+        worker.postMessage({ id, op, payload } as WorkerRequest);
+      } catch (error) {
+        const postError = error instanceof Error ? error : new Error(String(error));
+        const entry = this.pending.get(id);
+        this.pending.delete(id);
+        entry?.reject(postError);
+      }
     });
   }
 

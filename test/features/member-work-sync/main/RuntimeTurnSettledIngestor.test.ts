@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { RuntimeTurnSettledIngestor } from '@features/member-work-sync/core/application';
 import { ClaudeStopHookPayloadNormalizer } from '@features/member-work-sync/main/infrastructure/ClaudeStopHookPayloadNormalizer';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
 import { OpenCodeTurnSettledPayloadNormalizer } from '@features/member-work-sync/main/infrastructure/OpenCodeTurnSettledPayloadNormalizer';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   MemberWorkSyncAuditEvent,
@@ -245,7 +244,7 @@ describe('RuntimeTurnSettledIngestor', () => {
     'prompt_rejected',
     'idle_without_assistant_activity',
     'unknown',
-  ])('ignores non-terminal OpenCode outcome %s without enqueueing premature reconcile', async (outcome) => {
+  ])('enqueues prompt-owned OpenCode outcome %s for recovery reconcile', async (outcome) => {
     const payload = makeOpenCodePayload(
       JSON.stringify({
         schemaVersion: 1,
@@ -255,6 +254,80 @@ describe('RuntimeTurnSettledIngestor', () => {
         hookEventName: 'Stop',
         sessionId: 'ses-opencode-1',
         runtimePromptMessageId: 'msg_123',
+        laneId: 'secondary:opencode:jack',
+        memberName: 'jack',
+        teamName: 'team-a',
+        outcome,
+        recordedAt: '2026-04-29T12:00:00.000Z',
+      })
+    );
+    const processed: RuntimeTurnSettledProcessedResult[] = [];
+    const store: RuntimeTurnSettledEventStorePort = {
+      claimPending: vi.fn(async () => [payload]),
+      markProcessed: vi.fn(async (_payload, result) => {
+        processed.push(result);
+      }),
+      markInvalid: vi.fn(),
+    };
+    const resolver: RuntimeTurnSettledTargetResolverPort = {
+      resolve: vi.fn(async () => ({ ok: true as const, teamName: 'team-a', memberName: 'jack' })),
+    };
+    const enqueueRuntimeTurnSettled = vi.fn();
+
+    const ingestor = new RuntimeTurnSettledIngestor({
+      eventStore: store,
+      normalizer: new OpenCodeTurnSettledPayloadNormalizer(new NodeHashAdapter()),
+      targetResolver: resolver,
+      reconcileQueue: { enqueueRuntimeTurnSettled },
+      clock: { now: () => new Date('2026-04-29T12:01:00.000Z') },
+    });
+
+    await expect(ingestor.drainPending()).resolves.toMatchObject({
+      claimed: 1,
+      enqueued: 1,
+      unresolved: 0,
+      ignored: 0,
+      invalid: 0,
+    });
+    expect(resolver.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'opencode',
+        turnId: 'msg_123',
+        threadId: 'msg_123',
+        outcome,
+      })
+    );
+    expect(enqueueRuntimeTurnSettled).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'jack',
+      event: expect.objectContaining({
+        provider: 'opencode',
+        turnId: 'msg_123',
+        outcome,
+      }),
+    });
+    expect(processed[0]).toMatchObject({
+      outcome: 'enqueued',
+      teamName: 'team-a',
+      memberName: 'jack',
+    });
+  });
+
+  it.each([
+    'timeout',
+    'stream_unavailable',
+    'prompt_rejected',
+    'idle_without_assistant_activity',
+    'unknown',
+  ])('ignores non-terminal OpenCode outcome %s without prompt identity', async (outcome) => {
+    const payload = makeOpenCodePayload(
+      JSON.stringify({
+        schemaVersion: 1,
+        provider: 'opencode',
+        source: 'agent-teams-orchestrator-opencode',
+        eventName: 'runtime_turn_settled',
+        hookEventName: 'Stop',
+        sessionId: 'ses-opencode-1',
         laneId: 'secondary:opencode:jack',
         memberName: 'jack',
         teamName: 'team-a',
@@ -297,4 +370,129 @@ describe('RuntimeTurnSettledIngestor', () => {
       reason: `opencode_non_terminal_outcome:${outcome}`,
     });
   });
+
+  it.each(['timeout', 'idle_without_assistant_activity'])(
+    'ignores non-terminal OpenCode outcome %s with turnId but without runtime prompt identity',
+    async (outcome) => {
+      const payload = makeOpenCodePayload(
+        JSON.stringify({
+          schemaVersion: 1,
+          provider: 'opencode',
+          source: 'agent-teams-orchestrator-opencode',
+          eventName: 'runtime_turn_settled',
+          hookEventName: 'Stop',
+          sessionId: 'ses-opencode-1',
+          turnId: 'msg_launch_or_bootstrap',
+          laneId: 'secondary:opencode:jack',
+          memberName: 'jack',
+          teamName: 'team-a',
+          outcome,
+          recordedAt: '2026-04-29T12:00:00.000Z',
+        })
+      );
+      const processed: RuntimeTurnSettledProcessedResult[] = [];
+      const store: RuntimeTurnSettledEventStorePort = {
+        claimPending: vi.fn(async () => [payload]),
+        markProcessed: vi.fn(async (_payload, result) => {
+          processed.push(result);
+        }),
+        markInvalid: vi.fn(),
+      };
+      const resolver: RuntimeTurnSettledTargetResolverPort = {
+        resolve: vi.fn(),
+      };
+      const enqueueRuntimeTurnSettled = vi.fn();
+
+      const ingestor = new RuntimeTurnSettledIngestor({
+        eventStore: store,
+        normalizer: new OpenCodeTurnSettledPayloadNormalizer(new NodeHashAdapter()),
+        targetResolver: resolver,
+        reconcileQueue: { enqueueRuntimeTurnSettled },
+        clock: { now: () => new Date('2026-04-29T12:01:00.000Z') },
+      });
+
+      await expect(ingestor.drainPending()).resolves.toMatchObject({
+        claimed: 1,
+        enqueued: 0,
+        unresolved: 0,
+        ignored: 1,
+        invalid: 0,
+      });
+      expect(resolver.resolve).not.toHaveBeenCalled();
+      expect(enqueueRuntimeTurnSettled).not.toHaveBeenCalled();
+      expect(processed[0]?.event).toEqual(
+        expect.objectContaining({
+          provider: 'opencode',
+          turnId: 'msg_launch_or_bootstrap',
+          outcome,
+        })
+      );
+      expect(processed[0]?.event).not.toHaveProperty('threadId');
+      expect(processed[0]).toMatchObject({
+        outcome: 'ignored',
+        reason: `opencode_non_terminal_outcome:${outcome}`,
+      });
+    }
+  );
+
+  it.each(['success', 'error'])(
+    'ignores terminal OpenCode outcome %s with turnId but without runtime prompt identity',
+    async (outcome) => {
+      const payload = makeOpenCodePayload(
+        JSON.stringify({
+          schemaVersion: 1,
+          provider: 'opencode',
+          source: 'agent-teams-orchestrator-opencode',
+          eventName: 'runtime_turn_settled',
+          hookEventName: 'Stop',
+          sessionId: 'ses-opencode-1',
+          turnId: 'msg_launch_or_bootstrap',
+          laneId: 'secondary:opencode:jack',
+          memberName: 'jack',
+          teamName: 'team-a',
+          outcome,
+          recordedAt: '2026-04-29T12:00:00.000Z',
+        })
+      );
+      const processed: RuntimeTurnSettledProcessedResult[] = [];
+      const store: RuntimeTurnSettledEventStorePort = {
+        claimPending: vi.fn(async () => [payload]),
+        markProcessed: vi.fn(async (_payload, result) => {
+          processed.push(result);
+        }),
+        markInvalid: vi.fn(),
+      };
+      const resolver: RuntimeTurnSettledTargetResolverPort = {
+        resolve: vi.fn(),
+      };
+      const enqueueRuntimeTurnSettled = vi.fn();
+
+      const ingestor = new RuntimeTurnSettledIngestor({
+        eventStore: store,
+        normalizer: new OpenCodeTurnSettledPayloadNormalizer(new NodeHashAdapter()),
+        targetResolver: resolver,
+        reconcileQueue: { enqueueRuntimeTurnSettled },
+        clock: { now: () => new Date('2026-04-29T12:01:00.000Z') },
+      });
+
+      await expect(ingestor.drainPending()).resolves.toMatchObject({
+        claimed: 1,
+        enqueued: 0,
+        unresolved: 0,
+        ignored: 1,
+        invalid: 0,
+      });
+      expect(resolver.resolve).not.toHaveBeenCalled();
+      expect(enqueueRuntimeTurnSettled).not.toHaveBeenCalled();
+      expect(processed[0]).toMatchObject({
+        event: expect.objectContaining({
+          provider: 'opencode',
+          turnId: 'msg_launch_or_bootstrap',
+          outcome,
+        }),
+        outcome: 'ignored',
+        reason: 'opencode_missing_prompt_identity',
+      });
+    }
+  );
 });

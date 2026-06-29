@@ -181,7 +181,7 @@ export class MemberWorkSyncTeamChangeRouter {
       teamName: event.teamName,
       taskId,
     });
-    if (impact.fallbackTeamWide) {
+    if (impact.fallbackTeamWide || impact.memberNames.length === 0) {
       await this.enqueueTeam(event.teamName, triggerReason);
       return;
     }

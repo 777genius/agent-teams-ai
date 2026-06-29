@@ -1,4 +1,6 @@
 import {
+  MEMBER_WORK_SYNC_RUNTIME_STALL_DIAGNOSTIC,
+  MEMBER_WORK_SYNC_RUNTIME_STALL_TRIGGER_DIAGNOSTIC_PREFIX,
   MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC,
   MEMBER_WORK_SYNC_SUPPRESSION_RESET_DIAGNOSTIC,
   type MemberWorkSyncAgendaSourceResult,
@@ -1499,6 +1501,51 @@ describe('MemberWorkSync use cases', () => {
     expect(busyChecks).toBe(2);
     expect(inbox.inserted).toHaveLength(2);
     expect(inbox.inserted[1]?.messageId).toContain('status-only');
+  });
+
+  it('records runtime-stall diagnostics when a settled turn leaves the same agenda needing sync', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { auditEvents, deps, store } = createDeps({
+      providerId: 'opencode',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+
+    const firstStatus = await reconciler.execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const stalledStatus = await reconciler.execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
+    );
+
+    expect(stalledStatus.agenda.fingerprint).toBe(firstStatus.agenda.fingerprint);
+    expect(stalledStatus.diagnostics).toEqual(
+      expect.arrayContaining([
+        MEMBER_WORK_SYNC_RUNTIME_STALL_DIAGNOSTIC,
+        `${MEMBER_WORK_SYNC_RUNTIME_STALL_TRIGGER_DIAGNOSTIC_PREFIX}turn_settled`,
+      ])
+    );
+    expect(auditEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: 'runtime_stall_observed',
+          teamName: 'team-a',
+          memberName: 'bob',
+          agendaFingerprint: firstStatus.agenda.fingerprint,
+          reason: 'same_agenda_still_needs_sync_after_turn_settled',
+          diagnostics: expect.arrayContaining([MEMBER_WORK_SYNC_RUNTIME_STALL_DIAGNOSTIC]),
+        }),
+      ])
+    );
   });
 
   it('creates a delivered-still-stuck recovery after a delivered status-only nudge gets no report', async () => {

@@ -1,15 +1,14 @@
 import { computed, onMounted, ref } from "vue";
-import { detectMacArch, detectPlatform } from "~/utils/platform";
+import { detectMacArchFromNavigator, detectPlatform } from "~/utils/platform";
 
 export const usePlatform = () => {
   const platform = ref("unknown");
   const arch = ref("unknown");
 
-  onMounted(() => {
-    const ua = navigator.userAgent;
-    platform.value = detectPlatform(ua);
+  onMounted(async () => {
+    platform.value = detectPlatform(navigator);
     if (platform.value === "macos") {
-      arch.value = detectMacArch(ua);
+      arch.value = await detectMacArchFromNavigator(navigator);
     }
   });
 
