@@ -1,4 +1,4 @@
-import type { AgentCapabilities, FinalizedLease, IdempotencyKeyInput, LeaseAcquireResult, LeaseStoreCapabilities, PreparedSessionWrite, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTask, ProviderTaskEvent, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionFreshnessAssessment, SessionArtifact, SessionEnvelope, SessionRefreshPolicy, SessionReadPurpose, SessionStoreCapabilities, SessionValidationResult, SessionWriteResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult, OutputSink } from "../domain/types.js";
+import type { AgentCapabilities, FinalizedLease, IdempotencyKeyInput, LeaseAcquireResult, LeaseStoreCapabilities, ManagedRunInputRequest, ManagedRunRecord, ManagedRunRecoveryPacket, ManagedRunResumeHandle, PreparedSessionWrite, ProcessResult, ProviderCapabilities, ProviderFailure, ProviderTask, ProviderTaskEvent, ProviderTaskResult, RefreshedSession, RuntimeEvent, RuntimeMetric, RunnerCapabilities, SessionFreshnessAssessment, SessionArtifact, SessionEnvelope, SessionRefreshPolicy, SessionReadPurpose, SessionStoreCapabilities, SessionValidationResult, SessionWriteResult, WorkspaceCapabilities, WorkspaceHandle, WritebackCommitResult, OutputSink } from "../domain/types.js";
 export interface ProviderSessionDriver {
     readonly providerId: string;
     readonly supportedArtifactKinds: readonly SessionArtifact["kind"][];
@@ -44,6 +44,39 @@ export interface AgentDriver {
         readonly abortSignal: AbortSignal;
     }): Promise<ProviderTaskResult>;
     classifyRunFailure(error: unknown): ProviderFailure;
+}
+export interface ManagedRunStorePort {
+    get(input: {
+        readonly runId: string;
+    }): Promise<ManagedRunRecord | null>;
+    saveWaitingInput(input: {
+        readonly runId: string;
+        readonly request: ManagedRunInputRequest;
+        readonly resumeHandle: ManagedRunResumeHandle;
+        readonly recoveryPacket?: ManagedRunRecoveryPacket;
+        readonly taskId?: string;
+        readonly assignedWorkerId?: string;
+        readonly providerInstanceId?: string;
+        readonly workspacePath?: string;
+        readonly outputText?: string;
+        readonly now: Date;
+    }): Promise<ManagedRunRecord>;
+    resume(input: {
+        readonly runId: string;
+        readonly requestId: string;
+        readonly answer: string;
+        readonly now: Date;
+    }): Promise<ManagedRunRecord>;
+    complete(input: {
+        readonly runId: string;
+        readonly outputText: string;
+        readonly now: Date;
+    }): Promise<ManagedRunRecord>;
+    fail(input: {
+        readonly runId: string;
+        readonly failure: ProviderFailure;
+        readonly now: Date;
+    }): Promise<ManagedRunRecord>;
 }
 export interface StreamingAgentDriver extends AgentDriver {
     streamTask(input: {

@@ -327,6 +327,7 @@ export type ProviderTaskTelemetry = {
   readonly toolCalls?: readonly AgentToolCall[];
   readonly finishReason?:
     | "completed"
+    | "waiting_for_input"
     | "max_turns"
     | "cancelled"
     | "timeout"
@@ -379,6 +380,65 @@ export type ProviderTask = {
   readonly metadata?: Readonly<Record<string, string>>;
 };
 
+export type ManagedRunStatus =
+  | "active"
+  | "waiting_for_input"
+  | "completed"
+  | "failed"
+  | "aborted";
+
+export type ManagedRunInputRequest = {
+  readonly id: string;
+  readonly kind:
+    | "missing_context"
+    | "decision_required"
+    | "permission_required";
+  readonly question: string;
+  readonly contextSummary?: string;
+  readonly suggestedAnswers?: readonly string[];
+  readonly audience: "orchestrator" | "user";
+};
+
+export type ManagedRunResumeHandle = {
+  readonly runId: string;
+  readonly providerId: string;
+  readonly providerInstanceId?: string;
+  readonly agentId?: string;
+  readonly workerId?: string;
+  readonly workspacePath: string;
+  readonly threadId?: string;
+  readonly providerState?: Readonly<Record<string, string>>;
+};
+
+export type ManagedRunRecoveryPacket = {
+  readonly originalPrompt: string;
+  readonly goalObjective?: string;
+  readonly lastOutput: string;
+  readonly blockerQuestion: string;
+  readonly contextSummary?: string;
+  readonly attemptSummary?: string;
+  readonly kind?: ProviderTaskKind;
+  readonly systemPrompt?: string;
+  readonly outputSchemaName?: string;
+  readonly controls?: ProviderTaskControls;
+  readonly metadata?: Readonly<Record<string, string>>;
+};
+
+export type ManagedRunRecord = {
+  readonly runId: string;
+  readonly status: ManagedRunStatus;
+  readonly request?: ManagedRunInputRequest;
+  readonly resumeHandle?: ManagedRunResumeHandle;
+  readonly recoveryPacket?: ManagedRunRecoveryPacket;
+  readonly taskId?: string;
+  readonly assignedWorkerId?: string;
+  readonly providerInstanceId?: string;
+  readonly workspacePath?: string;
+  readonly outputText?: string;
+  readonly failure?: ProviderFailure;
+  readonly updatedAt: Date;
+};
+
 export type ProviderTaskResult =
   | {
       readonly status: "completed";
@@ -393,6 +453,16 @@ export type ProviderTaskResult =
        * normal refresh.
        */
       readonly sessionUpdate?: SessionArtifact;
+      readonly telemetry?: ProviderTaskTelemetry;
+      readonly warnings: readonly RuntimeWarning[];
+    }
+  | {
+      readonly status: "waiting_for_input";
+      readonly runId: string;
+      readonly outputText: string;
+      readonly structuredOutput?: unknown;
+      readonly request: ManagedRunInputRequest;
+      readonly resumeHandle: ManagedRunResumeHandle;
       readonly telemetry?: ProviderTaskTelemetry;
       readonly warnings: readonly RuntimeWarning[];
     }

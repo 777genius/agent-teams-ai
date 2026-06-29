@@ -1,6 +1,8 @@
 import type {
   AgentToolCall,
   AgentUsage,
+  ManagedRunInputRequest,
+  ManagedRunResumeHandle,
   ProviderFailure,
   ProviderFailureCode,
   ProviderTaskControls,
@@ -73,6 +75,17 @@ export type AgentTaskResult =
       readonly status: "completed";
       readonly outputText: string;
       readonly structuredOutput?: JsonValue;
+      readonly telemetry?: ProviderTaskTelemetry;
+      readonly warnings: readonly RuntimeWarning[];
+    }
+  | {
+      readonly protocolVersion: typeof agentTaskProtocolVersion;
+      readonly status: "waiting_for_input";
+      readonly runId: string;
+      readonly outputText: string;
+      readonly structuredOutput?: JsonValue;
+      readonly request: ManagedRunInputRequest;
+      readonly resumeHandle: ManagedRunResumeHandle;
       readonly telemetry?: ProviderTaskTelemetry;
       readonly warnings: readonly RuntimeWarning[];
     }

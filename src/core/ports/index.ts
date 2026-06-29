@@ -4,6 +4,10 @@ import type {
   IdempotencyKeyInput,
   LeaseAcquireResult,
   LeaseStoreCapabilities,
+  ManagedRunInputRequest,
+  ManagedRunRecord,
+  ManagedRunRecoveryPacket,
+  ManagedRunResumeHandle,
   PreparedSessionWrite,
   ProcessResult,
   ProviderCapabilities,
@@ -81,6 +85,38 @@ export interface AgentDriver {
   }): Promise<ProviderTaskResult>;
 
   classifyRunFailure(error: unknown): ProviderFailure;
+}
+
+export interface ManagedRunStorePort {
+  get(input: { readonly runId: string }): Promise<ManagedRunRecord | null>;
+  saveWaitingInput(input: {
+    readonly runId: string;
+    readonly request: ManagedRunInputRequest;
+    readonly resumeHandle: ManagedRunResumeHandle;
+    readonly recoveryPacket?: ManagedRunRecoveryPacket;
+    readonly taskId?: string;
+    readonly assignedWorkerId?: string;
+    readonly providerInstanceId?: string;
+    readonly workspacePath?: string;
+    readonly outputText?: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord>;
+  resume(input: {
+    readonly runId: string;
+    readonly requestId: string;
+    readonly answer: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord>;
+  complete(input: {
+    readonly runId: string;
+    readonly outputText: string;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord>;
+  fail(input: {
+    readonly runId: string;
+    readonly failure: ProviderFailure;
+    readonly now: Date;
+  }): Promise<ManagedRunRecord>;
 }
 
 export interface StreamingAgentDriver extends AgentDriver {

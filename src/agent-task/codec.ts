@@ -3,6 +3,8 @@ import {
   type AgentCost,
   type AgentToolCall,
   type AgentUsage,
+  type ManagedRunInputRequest,
+  type ManagedRunResumeHandle,
   type ProviderFailure,
   type ProviderFailureCode,
   type ProviderTask,
@@ -53,7 +55,14 @@ const toolCallStatuses = new Set<NonNullable<AgentToolCall["status"]>>([
 ]);
 const finishReasons = new Set<
   NonNullable<ProviderTaskTelemetry["finishReason"]>
->(["completed", "max_turns", "cancelled", "timeout", "provider_error"]);
+>([
+  "completed",
+  "waiting_for_input",
+  "max_turns",
+  "cancelled",
+  "timeout",
+  "provider_error",
+]);
 const failureCodes = new Set<ProviderFailureCode>([
   "needs_reconnect",
   "quota_limited",
@@ -131,6 +140,23 @@ export function providerTaskResultToAgentTaskResult(
       ),
     };
   }
+  if (result.status === "waiting_for_input") {
+    return {
+      protocolVersion: agentTaskProtocolVersion,
+      status: "waiting_for_input",
+      runId: result.runId,
+      outputText: result.outputText,
+      ...(result.structuredOutput === undefined
+        ? {}
+        : { structuredOutput: parseJsonValue(result.structuredOutput) }),
+      request: result.request,
+      resumeHandle: result.resumeHandle,
+      ...(result.telemetry ? { telemetry: parseTelemetry(result.telemetry) } : {}),
+      warnings: result.warnings.map((warning, index) =>
+        parseWarning(warning, `result.warnings[${index}]`),
+      ),
+    };
+  }
   return {
     protocolVersion: agentTaskProtocolVersion,
     status: "failed",
@@ -153,6 +179,20 @@ export function agentTaskResultToProviderTaskResult(
       ...(parsed.structuredOutput === undefined
         ? {}
         : { structuredOutput: parsed.structuredOutput }),
+      ...(parsed.telemetry ? { telemetry: parsed.telemetry } : {}),
+      warnings: parsed.warnings,
+    };
+  }
+  if (parsed.status === "waiting_for_input") {
+    return {
+      status: "waiting_for_input",
+      runId: parsed.runId,
+      outputText: parsed.outputText,
+      ...(parsed.structuredOutput === undefined
+        ? {}
+        : { structuredOutput: parsed.structuredOutput }),
+      request: parsed.request,
+      resumeHandle: parsed.resumeHandle,
       ...(parsed.telemetry ? { telemetry: parsed.telemetry } : {}),
       warnings: parsed.warnings,
     };
@@ -190,9 +230,30 @@ export function parseAgentTaskResult(value: unknown): AgentTaskResult {
       warnings: parseWarnings(input.warnings, "result.warnings"),
     };
   }
+  if (status === "waiting_for_input") {
+    return {
+      protocolVersion: agentTaskProtocolVersion,
+      status,
+      runId: nonEmptyStringAt(input.runId, "result.runId"),
+      outputText: stringAt(input.outputText, "result.outputText"),
+      ...(input.structuredOutput === undefined
+        ? {}
+        : { structuredOutput: parseJsonValue(input.structuredOutput) }),
+      request: parseManagedRunInputRequest(
+        input.request,
+        "result.request",
+      ),
+      resumeHandle: parseManagedRunResumeHandle(
+        input.resumeHandle,
+        "result.resumeHandle",
+      ),
+      ...optionalTelemetryField(input, "telemetry", "result.telemetry"),
+      warnings: parseWarnings(input.warnings, "result.warnings"),
+    };
+  }
   throw protocolError(
     "agent_task_result_invalid",
-    `result.status must be completed or failed at result.status`,
+    `result.status must be completed, waiting_for_input or failed at result.status`,
   );
 }
 
@@ -468,6 +529,68 @@ function parseWarnings(value: unknown, path: string): readonly RuntimeWarning[] 
   );
 }
 
+function parseManagedRunInputRequest(
+  value: unknown,
+  path: string,
+): ManagedRunInputRequest {
+  const input = objectAt(value, path);
+  const kind = stringAt(input.kind, `${path}.kind`);
+  if (
+    kind !== "missing_context" &&
+    kind !== "decision_required" &&
+    kind !== "permission_required"
+  ) {
+    throw protocolError(
+      "agent_task_result_invalid",
+      `${path}.kind is unsupported`,
+    );
+  }
+  const audience = stringAt(input.audience, `${path}.audience`);
+  if (audience !== "orchestrator" && audience !== "user") {
+    throw protocolError(
+      "agent_task_result_invalid",
+      `${path}.audience is unsupported`,
+    );
+  }
+  return {
+    id: nonEmptyStringAt(input.id, `${path}.id`),
+    kind,
+    question: nonEmptyStringAt(input.question, `${path}.question`),
+    ...optionalStringField(input, "contextSummary", `${path}.contextSummary`),
+    ...optionalStringArrayField(
+      input,
+      "suggestedAnswers",
+      `${path}.suggestedAnswers`,
+    ),
+    audience,
+  };
+}
+
+function parseManagedRunResumeHandle(
+  value: unknown,
+  path: string,
+): ManagedRunResumeHandle {
+  const input = objectAt(value, path);
+  return {
+    runId: nonEmptyStringAt(input.runId, `${path}.runId`),
+    providerId: nonEmptyStringAt(input.providerId, `${path}.providerId`),
+    ...optionalStringField(
+      input,
+      "providerInstanceId",
+      `${path}.providerInstanceId`,
+    ),
+    ...optionalStringField(input, "agentId", `${path}.agentId`),
+    ...optionalStringField(input, "workerId", `${path}.workerId`),
+    workspacePath: nonEmptyStringAt(input.workspacePath, `${path}.workspacePath`),
+    ...optionalStringField(input, "threadId", `${path}.threadId`),
+    ...optionalStringRecordField(
+      input,
+      "providerState",
+      `${path}.providerState`,
+    ),
+  };
+}
+
 function parseWarning(value: unknown, path: string): RuntimeWarning {
   const input = objectAt(value, path);
   return {
@@ -692,6 +815,20 @@ function optionalStringArrayField(
   return {
     [key]: input[key].map((item, index) => stringAt(item, `${path}[${index}]`)),
   };
+}
+
+function optionalStringRecordField(
+  input: Record<string, unknown>,
+  key: string,
+  path: string,
+): { readonly [P in string]?: Readonly<Record<string, string>> } {
+  if (input[key] === undefined) return {};
+  const value = objectAt(input[key], path);
+  const parsed: Record<string, string> = {};
+  for (const [recordKey, recordValue] of Object.entries(value)) {
+    parsed[recordKey] = stringAt(recordValue, `${path}.${recordKey}`);
+  }
+  return { [key]: parsed };
 }
 
 function optionalEnumField<T extends string>(
