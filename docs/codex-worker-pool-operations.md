@@ -138,6 +138,68 @@ orchestrators; it only creates the same runtime shape with fewer manual env
 mistakes. The MCP adapter below uses the same application operations so humans
 and agents see the same safety checks and status recommendations.
 
+## Choosing the control surface
+
+Use the highest-level surface that still gives the operator enough control:
+
+| Surface | Best for | Tradeoff |
+| --- | --- | --- |
+| MCP `subscription-runtime-codex-goal-mcp` | Agents that need structured start, monitor, recover and handoff tools | Requires an MCP-capable host |
+| CLI `subscription-runtime-codex-goal` | Humans, shell scripts, tmux and simple cron monitors | Less structured than MCP, but easy to inspect |
+| `runCodexGoal()` TypeScript API | Host apps or orchestrators that want to own scheduling, UI, notifications or persistence | Caller must preserve the safety policy and account status checks |
+| `FileBackendCodexSafeExecutor` | Advanced integrations that need custom workers, custom account definitions or custom execution policy | Most flexible, most responsibility |
+
+The recommended order for agents is MCP first, CLI second, direct API only
+when the agent is editing a host integration. Direct API should not be used as
+a shortcut to bypass `codex_goal_brief.safeToContinue`, single-writer checks,
+capacity-aware account status or dirty-worktree review.
+
+### Flexible and custom integrations
+
+Use `runCodexGoal()` when a host app wants the same Codex goal behavior but
+needs to customize process supervision, notifications, job storage or UI:
+
+```ts
+import { runCodexGoal, codexGoalAccountSlots } from "@vioxen/subscription-runtime/worker-codex";
+
+await runCodexGoal({
+  jobRootDir: "/Users/me/.cache/subscription-runtime/my-job",
+  stateRootDir: "/Users/me/.cache/subscription-runtime/my-job/state",
+  authRootDir: "/Users/me/.cache/subscription-runtime/live-codex-auth",
+  workspacePath: "/path/to/project-worktree",
+  promptPath: "/Users/me/.cache/subscription-runtime/my-job/prompt.md",
+  taskId: "my-task-001",
+  accounts: codexGoalAccountSlots(["account-a", "account-b", "account-c"]),
+  outputPath: "/Users/me/.cache/subscription-runtime/my-job/my-task-001.latest-result.json",
+  model: "gpt-5.5",
+  reasoningEffort: "xhigh",
+  serviceTier: "fast",
+  taskTimeoutMs: 72 * 60 * 60 * 1000,
+  maxAccountCycles: 3,
+});
+```
+
+Use `FileBackendCodexSafeExecutor` directly only when `runCodexGoal()` is too
+high level. Common reasons:
+
+- the host app already owns task queues and wants to construct `run()` input
+  itself;
+- accounts are not simple `authRoot/account-name/auth.json` slots;
+- the host needs a custom `safeExecutionPolicy`;
+- the host needs custom worker metadata, telemetry or account ordering.
+
+Even in direct API mode, keep these invariants:
+
+- one writer per worktree;
+- `executionEngine: "app-server-goal"` for native `/goal` continuation;
+- `retryOnCapacity`, `retryOnAccountUnavailable` and
+  `retryOnReconnectRequired` may be automatic;
+- provider output, unknown runtime, test and benchmark failures require
+  manual inspection before retry;
+- pass the job `stateRootDir` to account status checks so cooldown/quota
+  records are visible;
+- never print raw auth files, tokens or provider payloads.
+
 ## MCP adapter for agents
 
 Agents should prefer the MCP server when it is available:
