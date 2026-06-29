@@ -73,6 +73,69 @@ If you inherit a running Codex worker pool, do this first:
 The safe default is: continue capacity failures automatically, inspect unknown
 failures manually.
 
+## CLI wrapper
+
+Prefer the packaged CLI for new Codex goal runs:
+
+```sh
+subscription-runtime-codex-goal run \
+  --job-root "$HOME/.cache/subscription-runtime/my-job" \
+  --auth-root "$HOME/.cache/subscription-runtime/live-codex-auth" \
+  --workspace /path/to/project-worktree \
+  --prompt "$HOME/.cache/subscription-runtime/my-job/prompt.md" \
+  --task-id my-task-001 \
+  --accounts account-a,account-b,account-c \
+  --tmux-session my-codex-worker
+```
+
+Defaults:
+
+- model: `gpt-5.5`;
+- reasoning effort: `xhigh`;
+- service tier: `fast`;
+- task timeout: `72h`;
+- max account cycles: `3`;
+- execution engine: `app-server-goal`;
+- permission mode: `allow-edits`.
+
+Escape hatches remain available:
+
+- `--dry-run` or `--print-command`: print the exact command without running it;
+- `--no-tmux`: run in the current process;
+- `--no-require-git-workspace`: allow non-git sandbox workspaces;
+- direct TypeScript API: use `runCodexGoal()` from
+  `@vioxen/subscription-runtime/worker-codex`;
+- manual runner: keep using a custom `run-goal.mjs` when a host app needs full
+  control.
+
+Useful operator commands:
+
+```sh
+subscription-runtime-codex-goal doctor \
+  --job-root "$HOME/.cache/subscription-runtime/my-job" \
+  --auth-root "$HOME/.cache/subscription-runtime/live-codex-auth" \
+  --workspace /path/to/project-worktree \
+  --prompt "$HOME/.cache/subscription-runtime/my-job/prompt.md" \
+  --task-id my-task-001 \
+  --accounts account-a,account-b,account-c
+
+subscription-runtime-codex-goal status \
+  --job-root "$HOME/.cache/subscription-runtime/my-job" \
+  --workspace /path/to/project-worktree \
+  --task-id my-task-001 \
+  --tmux-session my-codex-worker
+
+subscription-runtime-codex-goal tail \
+  --job-root "$HOME/.cache/subscription-runtime/my-job" \
+  --task-id my-task-001 \
+  --lines 100
+```
+
+The CLI is intentionally a thin adapter. It does not replace tmux or host
+orchestrators; it only creates the same runtime shape with fewer manual env
+mistakes. A future MCP adapter should call the same `runCodexGoal()` application
+function instead of shelling out to the CLI.
+
 ## Recommended layout
 
 Use a cache directory per logical job:
