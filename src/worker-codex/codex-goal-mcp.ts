@@ -105,6 +105,11 @@ type JobBriefMcpArgs = JobIdMcpArgs & {
   readonly tailLines?: number;
 };
 
+type JobAccountPoolMcpArgs = JobIdMcpArgs & {
+  readonly poolRootDir?: string;
+  readonly account?: string;
+};
+
 type AccountPoolMcpArgs = {
   readonly poolRootDir?: string;
   readonly pool?: string;
@@ -482,6 +487,109 @@ export function createCodexGoalMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "codex_goal_accounts_status",
+    {
+      title: "Codex Goal Account Status",
+      description:
+        "Inspect a stored job's configured account slots by jobId, including job-specific capacity cooldowns.",
+      inputSchema: jobIdInputSchema(),
+    },
+    async (args) => withMcpErrors(async () => {
+      const loaded = await loadJobLaunch(args as JobIdMcpArgs);
+      return mcpJson({
+        registryRootDir: loaded.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        ...(await codexGoalAccountStatusPayload(loaded.launch)),
+      });
+    }),
+  );
+
+  server.registerTool(
+    "codex_goal_accounts_list_pools",
+    {
+      title: "Codex Goal Account Pools",
+      description:
+        "List account pools for a stored job by jobId using the job state root for capacity-aware counts.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        poolRootDir: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () => {
+      const loaded = await loadJobLaunch(args as JobAccountPoolMcpArgs);
+      const poolRootDir = resolvePath(
+        process.cwd(),
+        stringValue((args as JobAccountPoolMcpArgs).poolRootDir) ??
+          dirname(loaded.launch.config.authRootDir),
+      );
+      const stateRootDir = codexGoalStateRootDir(loaded.launch);
+      const pools = await listAccountPools(poolRootDir, stateRootDir);
+      return mcpJson({
+        ok: true,
+        registryRootDir: loaded.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        poolRootDir,
+        selectedAuthRootDir: loaded.launch.config.authRootDir,
+        stateRootDir,
+        capacityAware: true,
+        pools,
+      });
+    }),
+  );
+
+  server.registerTool(
+    "codex_goal_accounts_relogin_instructions",
+    {
+      title: "Codex Goal Account Relogin Instructions",
+      description:
+        "Return safe manual relogin commands for a stored job's account slot by jobId.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        account: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () => {
+      const loaded = await loadJobLaunch(args as JobAccountPoolMcpArgs);
+      const status = await codexGoalAccountStatusPayload(loaded.launch);
+      const requestedAccount = stringValue((args as JobAccountPoolMcpArgs).account);
+      const targetAccounts = requestedAccount
+        ? [requestedAccount]
+        : status.slots
+            .filter((slot) => slot.status !== "ready")
+            .map((slot) => slot.name);
+      const instructionsByAccount = Object.fromEntries(
+        targetAccounts.map((account) => [
+          account,
+          codexAccountReloginInstructions({
+            authRootDir: loaded.launch.config.authRootDir,
+            account,
+            afterLoginInstruction:
+              "After login, run codex_goal_accounts_status for the job before starting workers.",
+          }),
+        ]),
+      );
+      return mcpJson({
+        ok: targetAccounts.length > 0,
+        registryRootDir: loaded.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        authRootDir: loaded.launch.config.authRootDir,
+        stateRootDir: codexGoalStateRootDir(loaded.launch),
+        targetAccounts,
+        reason: targetAccounts.length
+          ? "manual_relogin_commands_ready"
+          : "no_invalid_account_slots_detected",
+        accountStatus: status,
+        instructionsByAccount,
+        instructions: targetAccounts.length
+          ? Object.values(instructionsByAccount).flat()
+          : [
+              "No invalid account slots were detected for this job. Pass account if you want instructions for a specific slot.",
+            ],
+      });
+    }),
+  );
+
+  server.registerTool(
     "codex_goal_dry_run",
     {
       title: "Codex Goal Dry Run",
@@ -707,28 +815,13 @@ export function createCodexGoalMcpServer(): McpServer {
     async (args) => withMcpErrors(async () => {
       const authRootDir = accountAuthRootFromArgs(args as AccountPoolMcpArgs);
       const accounts = accountNames(args.accounts);
-      const slots = await listCodexGoalAccountStatuses({
+      return mcpJson(await codexAccountStatusPayload({
         authRootDir,
         ...(accounts.length ? { accounts } : {}),
         ...(stringValue(args.stateRootDir)
           ? { stateRootDir: resolvePath(process.cwd(), stringValue(args.stateRootDir) as string) }
           : {}),
-      });
-      const duplicates = duplicateAccountGroups(slots);
-      const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
-      const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
-      return mcpJson({
-        ok: availableDedupedSlots.length > 0,
-        authRootDir,
-        capacityAware: Boolean(args.stateRootDir),
-        slots,
-        duplicates,
-        dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
-        availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
-        dedupeRecommendation: duplicates.length
-          ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
-          : "No duplicate identity groups detected.",
-      });
+      }));
     }),
   );
 
@@ -752,13 +845,12 @@ export function createCodexGoalMcpServer(): McpServer {
         ok: true,
         authRootDir,
         account,
-        instructions: [
-          "This is a manual relogin flow. It does not automate browser login.",
-          `mkdir -p ${shellText(join(authRootDir, account))}`,
-          `test ! -f ${shellText(join(authRootDir, account, "auth.json"))} || cp ${shellText(join(authRootDir, account, "auth.json"))} ${shellText(join(authRootDir, account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
-          `CODEX_HOME=${shellText(join(authRootDir, account))} codex login --device-auth`,
-          "After login, run codex_accounts_status for this pool before starting workers.",
-        ],
+        instructions: codexAccountReloginInstructions({
+          authRootDir,
+          account,
+          afterLoginInstruction:
+            "After login, run codex_accounts_status for this pool before starting workers.",
+        }),
       });
     }),
   );
@@ -846,6 +938,60 @@ async function loadJobLaunch(args: JobIdMcpArgs): Promise<{
     manifest,
     launch: await goalLaunchInput(codexGoalJobToArgs(manifest)),
   };
+}
+
+function codexGoalStateRootDir(launch: CodexGoalLaunchInput): string {
+  return launch.config.stateRootDir ?? join(launch.config.jobRootDir, "state");
+}
+
+async function codexGoalAccountStatusPayload(launch: CodexGoalLaunchInput) {
+  return codexAccountStatusPayload({
+    authRootDir: launch.config.authRootDir,
+    stateRootDir: codexGoalStateRootDir(launch),
+    accounts: launch.config.accounts.map((account) => account.name),
+  });
+}
+
+async function codexAccountStatusPayload(input: {
+  readonly authRootDir: string;
+  readonly stateRootDir?: string;
+  readonly accounts?: readonly string[];
+}) {
+  const slots = await listCodexGoalAccountStatuses({
+    authRootDir: input.authRootDir,
+    ...(input.accounts?.length ? { accounts: input.accounts } : {}),
+    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+  });
+  const duplicates = duplicateAccountGroups(slots);
+  const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
+  const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
+  return {
+    ok: availableDedupedSlots.length > 0,
+    authRootDir: input.authRootDir,
+    capacityAware: Boolean(input.stateRootDir),
+    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+    slots,
+    duplicates,
+    dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
+    availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
+    dedupeRecommendation: duplicates.length
+      ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
+      : "No duplicate identity groups detected.",
+  };
+}
+
+function codexAccountReloginInstructions(input: {
+  readonly authRootDir: string;
+  readonly account: string;
+  readonly afterLoginInstruction: string;
+}): readonly string[] {
+  return [
+    "This is a manual relogin flow. It does not automate browser login.",
+    `mkdir -p ${shellText(join(input.authRootDir, input.account))}`,
+    `test ! -f ${shellText(join(input.authRootDir, input.account, "auth.json"))} || cp ${shellText(join(input.authRootDir, input.account, "auth.json"))} ${shellText(join(input.authRootDir, input.account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
+    `CODEX_HOME=${shellText(join(input.authRootDir, input.account))} codex login --device-auth`,
+    input.afterLoginInstruction,
+  ];
 }
 
 async function continueStoredJob(
@@ -1047,7 +1193,7 @@ export async function buildCodexGoalBrief(input: {
   const hasAvailableAccount = availableDedupedAccounts.length > 0;
   const next = safeStatusToContinue && !hasAvailableAccount
     ? {
-        tool: "codex_accounts_status",
+        tool: "codex_goal_accounts_status",
         reason: "no available account slots for this job",
       }
     : nextActionForStatus(input.status.recommendedAction);
@@ -1172,11 +1318,8 @@ function nextBestCommand(input: {
   if (tool === "codex_goal_brief") {
     return `codex_goal_brief({ jobId: ${JSON.stringify(input.jobId)} })`;
   }
-  if (tool === "codex_accounts_status") {
-    const stateRootDir = input.launch.config.stateRootDir ??
-      join(input.launch.config.jobRootDir, "state");
-    const accounts = input.launch.config.accounts.map((account) => account.name);
-    return `codex_accounts_status({ authRootDir: ${JSON.stringify(input.launch.config.authRootDir)}, stateRootDir: ${JSON.stringify(stateRootDir)}, accounts: ${JSON.stringify(accounts)} })`;
+  if (tool === "codex_goal_accounts_status") {
+    return `codex_goal_accounts_status({ jobId: ${JSON.stringify(input.jobId)} })`;
   }
   if (input.status.workspaceDirty) {
     return "manual_review_dirty_worktree";
@@ -1420,7 +1563,7 @@ function codexGoalPromptText(name: string, jobId: string | undefined): string {
     return `${shared} Call codex_goal_brief. If worker is alive, keep monitoring instead of starting another worker. If isStale is true, verify tmux, runner process, app-server process, recent log tail and git status before recovery.`;
   }
   if (name === "recover_codex_goal_worker") {
-    return `${shared} Use codex_goal_recover only for safe capacity, auth, reconnect or timeout states and only when safeToContinue is true. If hasAvailableAccount is false, call codex_accounts_status with the job authRootDir, stateRootDir and configured accounts. Inspect dirty, provider_output_invalid, unknown runtime, test and benchmark failures manually.`;
+    return `${shared} Use codex_goal_recover only for safe capacity, auth, reconnect or timeout states and only when safeToContinue is true. If hasAvailableAccount is false, call codex_goal_accounts_status for the job. Inspect dirty, provider_output_invalid, unknown runtime, test and benchmark failures manually.`;
   }
   if (name === "handoff_codex_goal_job") {
     return `${shared} Provide jobId, registryRootDir if non-default, worktree, branch, tmux session, task id, prompt path, accounts, model, effort, service tier, brief.safeToContinue, brief.hasAvailableAccount, nextBestCommand and any dirty files.`;

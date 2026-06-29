@@ -222,12 +222,11 @@ describe("codex goal ops", () => {
       hasAvailableAccount: false,
       availableDedupedAccounts: [],
       invalidAccounts: ["account-b"],
-      nextBestTool: "codex_accounts_status",
+      nextBestTool: "codex_goal_accounts_status",
       nextBestReason: "no available account slots for this job",
     });
-    expect(brief.nextBestCommand).toContain("codex_accounts_status");
-    expect(brief.nextBestCommand).toContain("account-a");
-    expect(brief.nextBestCommand).toContain("account-b");
+    expect(brief.nextBestCommand).toContain("codex_goal_accounts_status");
+    expect(brief.nextBestCommand).toContain("job-from-registry");
   });
 
   it("dedupes account slots by sanitized identity and prefers newest ready auth", () => {

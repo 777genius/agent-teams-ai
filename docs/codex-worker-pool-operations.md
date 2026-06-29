@@ -7,6 +7,9 @@ same shape to new projects.
 It is written for backend/local operators and for other agents that need to
 continue a task without prior chat context.
 
+For a short copy-paste handoff, give another agent
+`docs/codex-worker-agent-quickstart.md` first, then this runbook for details.
+
 ## When to use this workflow
 
 Use the pool workflow when a task is long-running, writes code, benefits from a
@@ -289,6 +292,12 @@ Job registry tools:
 - `codex_goal_status_by_id`: inspect a job by `jobId`.
 - `codex_goal_brief`: compact operator summary with stale/progress/account
   hints, recent commands and the next safe job-level command.
+- `codex_goal_accounts_status`: inspect the stored job's configured account
+  slots by `jobId`, including job-specific cooldown/quota state.
+- `codex_goal_accounts_list_pools`: list account pools for the stored job by
+  `jobId` using the job state root for capacity-aware counts.
+- `codex_goal_accounts_relogin_instructions`: generate safe relogin commands
+  for a stored job account slot by `jobId`.
 
 Lifecycle tools:
 
@@ -308,6 +317,10 @@ Account pool tools:
 - `codex_accounts_status`: inspect a specific pool or auth root.
 - `codex_accounts_relogin_instructions`: generate safe relogin commands for a
   slot without exposing token material.
+
+Prefer the `codex_goal_accounts_*` tools when a `jobId` exists. Use the raw
+`codex_accounts_*` tools only for pool discovery, manual cleanup or operating
+outside a stored job.
 
 `codex_goal_brief` should be the default monitor response for agents. It
 returns:
@@ -379,8 +392,7 @@ Recommended agent loop:
 2. If `recommendedAction` is `wait_for_worker`, do not start another writer in
    that worktree.
 3. If `brief.hasAvailableAccount` is false, do not continue. Use
-   `codex_accounts_status` with the job `authRootDir`, `stateRootDir` and
-   configured accounts, then ask for relogin or wait for cooldown.
+   `codex_goal_accounts_status`, then ask for relogin or wait for cooldown.
 4. If `recommendedAction` is `start_worker`, use `codex_goal_continue` for
    stored jobs, or `codex_goal_dry_run` then `codex_goal_start` for direct
    launch config.
