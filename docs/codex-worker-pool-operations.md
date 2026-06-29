@@ -133,8 +133,84 @@ subscription-runtime-codex-goal tail \
 
 The CLI is intentionally a thin adapter. It does not replace tmux or host
 orchestrators; it only creates the same runtime shape with fewer manual env
-mistakes. A future MCP adapter should call the same `runCodexGoal()` application
-function instead of shelling out to the CLI.
+mistakes. The MCP adapter below uses the same application operations so humans
+and agents see the same safety checks and status recommendations.
+
+## MCP adapter for agents
+
+Agents should prefer the MCP server when it is available:
+
+```sh
+subscription-runtime-codex-goal-mcp
+```
+
+The MCP adapter is the agent-facing control plane. It shares the same
+application operations as the CLI, so operator behavior stays consistent while
+agents get typed tools and structured results instead of long shell snippets.
+
+Available tools:
+
+- `codex_goal_dry_run`: build the no-tmux and tmux commands without starting
+  anything.
+- `codex_goal_start`: start one detached tmux worker. Requires
+  `confirmStart: true`, checks that the tmux session is not already alive, and
+  runs `doctor` unless `skipDoctor` is explicitly set. Completed, dirty, or
+  unknown states require the explicit `forceStart` override.
+- `codex_goal_status`: inspect tmux, result JSON, log freshness, workspace
+  dirtiness, and `recommendedAction`.
+- `codex_goal_doctor`: validate prompt, job root, auth root, workspace and
+  account auth files.
+- `codex_goal_tail`: read the last log lines.
+- `codex_accounts_status`: inspect slot auth health without printing token
+  material.
+
+Minimal MCP `codex_goal_start` input:
+
+```json
+{
+  "jobRootDir": "/Users/me/.cache/subscription-runtime/my-job",
+  "authRootDir": "/Users/me/.cache/subscription-runtime/live-codex-auth",
+  "workspacePath": "/path/to/project-worktree",
+  "promptPath": "/Users/me/.cache/subscription-runtime/my-job/prompt.md",
+  "taskId": "my-task-001",
+  "accounts": ["account-a", "account-b", "account-c"],
+  "tmuxSession": "my-codex-worker",
+  "model": "gpt-5.5",
+  "reasoningEffort": "xhigh",
+  "serviceTier": "fast",
+  "taskTimeoutMs": 259200000,
+  "maxAccountCycles": 3,
+  "confirmStart": true
+}
+```
+
+The same input can be stored in a JSON file and passed as `configPath`. Tool
+arguments override matching config file fields. This is the recommended handoff
+shape for another agent because the agent only needs the config path plus
+occasional overrides.
+
+Recommended agent loop:
+
+1. Call `codex_goal_status`.
+2. If `recommendedAction` is `wait_for_worker`, do not start another writer in
+   that worktree.
+3. If `recommendedAction` is `start_worker`, run `codex_goal_dry_run`, then
+   `codex_goal_start` with `confirmStart: true`.
+4. If it is `continue_after_capacity` or `continue_after_timeout`, restart the
+   same task with the same prompt, task id, workspace and account pool.
+5. If it is `inspect_dirty_workspace` or `inspect_dirty_failure`, inspect the
+   diff and log before retrying.
+6. Use `codex_accounts_status` before asking a human to relogin slots.
+
+Security rules:
+
+- never print `auth.json`, access tokens, refresh tokens, id tokens or raw
+  provider payloads;
+- do not run two writer workers in one worktree;
+- do not test launch/provisioning/smoke-flow against real user projects unless
+  the user gave fresh explicit permission;
+- use `codex_goal_dry_run` before `codex_goal_start` when inheriting unknown
+  config.
 
 ## Recommended layout
 

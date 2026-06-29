@@ -11,6 +11,13 @@ import {
   runCodexGoal,
   type CodexGoalRunConfig,
 } from "./codex-goal-runner";
+import {
+  buildCodexGoalNoTmuxCommand,
+  buildCodexGoalTmuxCommand,
+  collectCodexGoalStatus,
+  doctorCodexGoal,
+  tailCodexGoalLog,
+} from "./codex-goal-ops";
 
 const execFileAsync = promisify(execFile);
 
@@ -147,61 +154,22 @@ export function buildTmuxCommand(command: RunCommand): {
   readonly args: readonly string[];
   readonly preview: string;
 } {
-  if (!command.tmuxSession) {
-    throw new Error("codex_goal_tmux_session_required");
-  }
-  const shellCommand = `${buildNoTmuxShellCommand(command)} 2>&1 | tee -a ${shellQuote(command.logPath)}`;
-  const args = [
-    "new-session",
-    "-d",
-    "-s",
-    command.tmuxSession,
-    "-c",
-    command.cwd,
-    shellCommand,
-  ] as const;
-  return {
-    args,
-    preview: `tmux ${args.map(shellQuote).join(" ")}`,
-  };
+  return buildCodexGoalTmuxCommand(cliLaunchInput(command));
 }
 
 export function buildNoTmuxShellCommand(command: RunCommand): string {
-  const config = command.config;
-  const args = [
-    execPath,
-    currentCliPath(),
-    "run",
-    "--no-tmux",
-    "--job-root",
-    config.jobRootDir,
-    "--auth-root",
-    config.authRootDir,
-    "--workspace",
-    config.workspacePath,
-    "--prompt",
-    config.promptPath,
-    "--task-id",
-    config.taskId,
-    "--accounts",
-    config.accounts.map((account) => account.name).join(","),
-    "--format",
-    command.format,
-  ];
-  pushOptional(args, "--state-root", config.stateRootDir);
-  pushOptional(args, "--output", config.outputPath);
-  pushOptional(args, "--codex-binary", config.codexBinaryPath);
-  pushOptional(args, "--model", config.model);
-  pushOptional(args, "--effort", config.reasoningEffort);
-  pushOptional(args, "--service-tier", config.serviceTier);
-  pushOptionalNumber(args, "--timeout-ms", config.taskTimeoutMs);
-  pushOptionalNumber(args, "--stale-lock-ms", config.staleLockMs);
-  pushOptionalNumber(args, "--max-account-cycles", config.maxAccountCycles);
-  pushOptional(args, "--permission-mode", config.permissionMode);
-  if (config.allowDuplicateAccountIdentities) args.push("--allow-duplicate-accounts");
-  if (config.requireGitWorkspace === false) args.push("--no-require-git-workspace");
-  if (config.prewarmOnStart) args.push("--prewarm");
-  return args.map(shellQuote).join(" ");
+  return buildCodexGoalNoTmuxCommand(cliLaunchInput(command));
+}
+
+function cliLaunchInput(command: RunCommand) {
+  return {
+    config: command.config,
+    ...(command.tmuxSession ? { tmuxSession: command.tmuxSession } : {}),
+    cwd: command.cwd,
+    logPath: command.logPath,
+    format: command.format,
+    cliCommand: [execPath, currentCliPath()],
+  } as const;
 }
 
 function parseRun(
@@ -407,54 +375,14 @@ async function collectStatus(command: StatusCommand): Promise<{
   readonly workspaceDirty?: boolean;
   readonly warnings: readonly string[];
 }> {
-  const warnings: string[] = [];
-  const resultPath = command.jobRootDir && command.taskId
-    ? join(command.jobRootDir, `${command.taskId}.latest-result.json`)
-    : null;
-  const resultExists = resultPath ? await fileExists(resultPath) : undefined;
-  let resultStatus: string | undefined;
-  if (resultPath && resultExists) {
-    resultStatus = await readResultStatus(resultPath);
-  }
-  let tmuxAlive: boolean | undefined;
-  if (command.tmuxSession) {
-    tmuxAlive = await tmuxSessionAlive(command.tmuxSession);
-    if (!tmuxAlive) warnings.push("tmux session is not alive");
-  }
-  let workspaceDirty: boolean | undefined;
-  if (command.workspacePath) {
-    workspaceDirty = await gitWorkspaceDirty(command.workspacePath);
-  }
-  return {
-    ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
-    ...(resultExists === undefined ? {} : { resultExists }),
-    ...(resultStatus === undefined ? {} : { resultStatus }),
-    ...(workspaceDirty === undefined ? {} : { workspaceDirty }),
-    warnings,
-  };
+  return collectCodexGoalStatus(command);
 }
 
 async function doctor(command: DoctorCommand): Promise<{
   readonly ok: boolean;
   readonly checks: readonly { readonly name: string; readonly ok: boolean; readonly message: string }[];
 }> {
-  const checks = await Promise.all([
-    checkFile("prompt", command.config.promptPath),
-    checkDirectory("jobRoot", command.config.jobRootDir),
-    checkDirectory("authRoot", command.config.authRootDir),
-    checkGitWorkspace(command.config.workspacePath),
-    ...command.config.accounts.map((account) =>
-      checkFile(
-        `account:${account.name}`,
-        account.authJsonPath ??
-          join(command.config.authRootDir, account.name, "auth.json"),
-      ),
-    ),
-  ]);
-  return {
-    ok: checks.every((check) => check.ok),
-    checks,
-  };
+  return doctorCodexGoal(command);
 }
 
 async function checkFile(name: string, path: string): Promise<{
@@ -542,8 +470,7 @@ async function readResultStatus(path: string): Promise<string | undefined> {
 }
 
 async function tailFile(path: string, lines: number): Promise<string> {
-  const text = await readFile(path, "utf8");
-  return `${text.split(/\r?\n/).slice(-lines).join("\n")}\n`;
+  return tailCodexGoalLog(path, lines);
 }
 
 type ParsedFlags = {

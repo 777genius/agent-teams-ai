@@ -7,6 +7,7 @@ import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { codexGoalAccountSlots, runCodexGoal, } from "./codex-goal-runner.js";
+import { buildCodexGoalNoTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, tailCodexGoalLog, } from "./codex-goal-ops.js";
 const execFileAsync = promisify(execFile);
 export async function runCodexGoalCli(argv = process.argv.slice(2), io = defaultIo) {
     try {
@@ -77,63 +78,20 @@ export function parseCodexGoalCliArgs(argv, io = defaultIo) {
     throw new Error(`unknown command: ${commandName}`);
 }
 export function buildTmuxCommand(command) {
-    if (!command.tmuxSession) {
-        throw new Error("codex_goal_tmux_session_required");
-    }
-    const shellCommand = `${buildNoTmuxShellCommand(command)} 2>&1 | tee -a ${shellQuote(command.logPath)}`;
-    const args = [
-        "new-session",
-        "-d",
-        "-s",
-        command.tmuxSession,
-        "-c",
-        command.cwd,
-        shellCommand,
-    ];
-    return {
-        args,
-        preview: `tmux ${args.map(shellQuote).join(" ")}`,
-    };
+    return buildCodexGoalTmuxCommand(cliLaunchInput(command));
 }
 export function buildNoTmuxShellCommand(command) {
-    const config = command.config;
-    const args = [
-        execPath,
-        currentCliPath(),
-        "run",
-        "--no-tmux",
-        "--job-root",
-        config.jobRootDir,
-        "--auth-root",
-        config.authRootDir,
-        "--workspace",
-        config.workspacePath,
-        "--prompt",
-        config.promptPath,
-        "--task-id",
-        config.taskId,
-        "--accounts",
-        config.accounts.map((account) => account.name).join(","),
-        "--format",
-        command.format,
-    ];
-    pushOptional(args, "--state-root", config.stateRootDir);
-    pushOptional(args, "--output", config.outputPath);
-    pushOptional(args, "--codex-binary", config.codexBinaryPath);
-    pushOptional(args, "--model", config.model);
-    pushOptional(args, "--effort", config.reasoningEffort);
-    pushOptional(args, "--service-tier", config.serviceTier);
-    pushOptionalNumber(args, "--timeout-ms", config.taskTimeoutMs);
-    pushOptionalNumber(args, "--stale-lock-ms", config.staleLockMs);
-    pushOptionalNumber(args, "--max-account-cycles", config.maxAccountCycles);
-    pushOptional(args, "--permission-mode", config.permissionMode);
-    if (config.allowDuplicateAccountIdentities)
-        args.push("--allow-duplicate-accounts");
-    if (config.requireGitWorkspace === false)
-        args.push("--no-require-git-workspace");
-    if (config.prewarmOnStart)
-        args.push("--prewarm");
-    return args.map(shellQuote).join(" ");
+    return buildCodexGoalNoTmuxCommand(cliLaunchInput(command));
+}
+function cliLaunchInput(command) {
+    return {
+        config: command.config,
+        ...(command.tmuxSession ? { tmuxSession: command.tmuxSession } : {}),
+        cwd: command.cwd,
+        logPath: command.logPath,
+        format: command.format,
+        cliCommand: [execPath, currentCliPath()],
+    };
 }
 function parseRun(argv, io) {
     const env = io.env();
@@ -281,46 +239,10 @@ async function printStatus(command, io) {
     writeJsonOrText(command.format, status, io);
 }
 async function collectStatus(command) {
-    const warnings = [];
-    const resultPath = command.jobRootDir && command.taskId
-        ? join(command.jobRootDir, `${command.taskId}.latest-result.json`)
-        : null;
-    const resultExists = resultPath ? await fileExists(resultPath) : undefined;
-    let resultStatus;
-    if (resultPath && resultExists) {
-        resultStatus = await readResultStatus(resultPath);
-    }
-    let tmuxAlive;
-    if (command.tmuxSession) {
-        tmuxAlive = await tmuxSessionAlive(command.tmuxSession);
-        if (!tmuxAlive)
-            warnings.push("tmux session is not alive");
-    }
-    let workspaceDirty;
-    if (command.workspacePath) {
-        workspaceDirty = await gitWorkspaceDirty(command.workspacePath);
-    }
-    return {
-        ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
-        ...(resultExists === undefined ? {} : { resultExists }),
-        ...(resultStatus === undefined ? {} : { resultStatus }),
-        ...(workspaceDirty === undefined ? {} : { workspaceDirty }),
-        warnings,
-    };
+    return collectCodexGoalStatus(command);
 }
 async function doctor(command) {
-    const checks = await Promise.all([
-        checkFile("prompt", command.config.promptPath),
-        checkDirectory("jobRoot", command.config.jobRootDir),
-        checkDirectory("authRoot", command.config.authRootDir),
-        checkGitWorkspace(command.config.workspacePath),
-        ...command.config.accounts.map((account) => checkFile(`account:${account.name}`, account.authJsonPath ??
-            join(command.config.authRootDir, account.name, "auth.json"))),
-    ]);
-    return {
-        ok: checks.every((check) => check.ok),
-        checks,
-    };
+    return doctorCodexGoal(command);
 }
 async function checkFile(name, path) {
     try {
@@ -396,8 +318,7 @@ async function readResultStatus(path) {
     }
 }
 async function tailFile(path, lines) {
-    const text = await readFile(path, "utf8");
-    return `${text.split(/\r?\n/).slice(-lines).join("\n")}\n`;
+    return tailCodexGoalLog(path, lines);
 }
 function parseFlags(argv) {
     const flags = new Set();

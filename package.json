@@ -98,6 +98,7 @@
   "types": "./dist/index.d.ts",
   "bin": {
     "subscription-runtime-codex-goal": "./dist/worker-codex/codex-goal-cli.js",
+    "subscription-runtime-codex-goal-mcp": "./dist/worker-codex/codex-goal-mcp.js",
     "subscription-runtime-agent-task": "./dist/agent-task/cli.js",
     "subscription-runtime-run-agent-task": "./dist/worker-local/agent-task-runner-cli.js"
   },
@@ -119,7 +120,9 @@
     "check": "npm run typecheck && npm test && npm run build && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer"
   },
   "dependencies": {
-    "libsodium-wrappers": "^0.8.4"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "libsodium-wrappers": "^0.8.4",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "claude-runtime": "0.0.0"
