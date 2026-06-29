@@ -10,6 +10,7 @@ export * from './MemberWorkSyncPendingReportIntentReplayer';
 export * from './MemberWorkSyncReconciler';
 export * from './MemberWorkSyncReporter';
 export * from './MemberWorkSyncRuntimeActivity';
+export * from './MemberWorkSyncRuntimeStallDiagnostics';
 export * from './MemberWorkSyncTargetedRecoveryPolicy';
 export type * from './ports';
 export * from './RuntimeTurnSettledIngestor';

@@ -96,6 +96,7 @@ export type MemberWorkSyncAuditEventName =
   | 'review_pickup_wake_failed_retryable'
   | 'watchdog_cooldown_active'
   | 'member_busy'
+  | 'runtime_stall_observed'
   | 'team_inactive'
   | 'index_repaired'
   | 'legacy_fallback_used'
