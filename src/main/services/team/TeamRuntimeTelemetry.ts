@@ -38,6 +38,43 @@ export interface RuntimeUsageProcessTreeLimits {
   maxPidsPerSnapshot: number;
 }
 
+export class RuntimeTelemetryTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RuntimeTelemetryTimeoutError';
+  }
+}
+
+export async function withRuntimeTelemetryTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          reject(new RuntimeTelemetryTimeoutError(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+        timeout.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+export function isRuntimePidusageTelemetryEnabled(
+  env: Partial<Pick<NodeJS.ProcessEnv, 'CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED'>> = process.env
+): boolean {
+  const value = env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED?.trim().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
 export function normalizeRuntimeTelemetryNumber(value: unknown): number | undefined {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : undefined;

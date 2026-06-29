@@ -1,10 +1,17 @@
 import {
+  readCachedRuntimeProcessRowsForLiveRuntimeMetadata,
+  shouldReadProcessTableForLiveRuntimeMetadata,
+} from '@main/services/team/provisioning/TeamProvisioningRuntimeMetadataPolicy';
+import {
   addRuntimeRootOwnersFromProcessRows,
   buildProcessUsageStatsFromRows,
   buildRuntimeProcessLoadStats,
   buildRuntimeUsageProcessTrees,
+  isRuntimePidusageTelemetryEnabled,
   normalizeRuntimeProcessRowsForTelemetry,
   normalizeRuntimeProcessUsageStats,
+  RuntimeTelemetryTimeoutError,
+  withRuntimeTelemetryTimeout,
 } from '@main/services/team/TeamRuntimeTelemetry';
 import { describe, expect, it } from 'vitest';
 
@@ -144,5 +151,105 @@ describe('TeamRuntimeTelemetry', () => {
     );
 
     expect(stats).toEqual(new Map([[111, { cpuPercent: 2, rssBytes: 100 }]]));
+  });
+
+  it('detects when live runtime metadata needs process rows', () => {
+    expect(
+      shouldReadProcessTableForLiveRuntimeMetadata({
+        metadataByMember: new Map([['alice', { alive: false }]]),
+        launchSnapshot: null,
+        paneInfoById: new Map(),
+      })
+    ).toBe(false);
+    expect(
+      shouldReadProcessTableForLiveRuntimeMetadata({
+        metadataByMember: new Map([['alice', { alive: false, agentId: 'agent-1' }]]),
+        launchSnapshot: null,
+        paneInfoById: new Map(),
+      })
+    ).toBe(true);
+    expect(
+      shouldReadProcessTableForLiveRuntimeMetadata({
+        metadataByMember: new Map([['alice', { alive: false, metricsPid: 222 }]]),
+        launchSnapshot: null,
+        paneInfoById: new Map(),
+      })
+    ).toBe(true);
+  });
+
+  it('reuses cached runtime process rows for liveness without Windows host rows', () => {
+    const cached = {
+      expiresAtMs: 2_000,
+      generation: 1,
+      runId: 'run-1',
+      sampledAtMs: 1_000,
+      includesWindowsHostRows: true,
+      rows: [
+        {
+          pid: 111,
+          ppid: 1,
+          command: 'native runtime',
+          runtimeTelemetrySource: 'native' as const,
+        },
+        {
+          pid: 222,
+          ppid: 1,
+          command: 'host runtime',
+          runtimeTelemetrySource: 'windows-host' as const,
+        },
+      ],
+    };
+
+    expect(
+      readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
+        cached,
+        runId: 'run-1',
+        nowMs: 1_050,
+        processTableCacheTtlMs: 100,
+        processTableFailureCacheTtlMs: 25,
+      })
+    ).toEqual({
+      rows: [{ pid: 111, ppid: 1, command: 'native runtime', runtimeTelemetrySource: 'native' }],
+    });
+
+    expect(
+      readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
+        cached,
+        runId: 'run-2',
+        nowMs: 1_050,
+        processTableCacheTtlMs: 100,
+        processTableFailureCacheTtlMs: 25,
+      })
+    ).toBeNull();
+    expect(
+      readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
+        cached: { ...cached, rows: null },
+        runId: 'run-1',
+        nowMs: 1_010,
+        processTableCacheTtlMs: 100,
+        processTableFailureCacheTtlMs: 25,
+      })
+    ).toEqual({ rows: null });
+  });
+
+  it('normalizes runtime pidusage opt-in values', () => {
+    expect(
+      isRuntimePidusageTelemetryEnabled({ CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED: 'true' })
+    ).toBe(true);
+    expect(
+      isRuntimePidusageTelemetryEnabled({ CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED: ' yes ' })
+    ).toBe(true);
+    expect(
+      isRuntimePidusageTelemetryEnabled({ CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED: '0' })
+    ).toBe(false);
+  });
+
+  it('bounds slow runtime telemetry reads with a timeout', async () => {
+    await expect(withRuntimeTelemetryTimeout(Promise.resolve('ok'), 100, 'fast read')).resolves.toBe(
+      'ok'
+    );
+    await expect(
+      withRuntimeTelemetryTimeout(new Promise(() => undefined), 1, 'slow read')
+    ).rejects.toBeInstanceOf(RuntimeTelemetryTimeoutError);
   });
 });

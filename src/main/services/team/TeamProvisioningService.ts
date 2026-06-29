@@ -28,9 +28,7 @@ import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/m
 import {
   killTmuxPaneForCurrentPlatformSync,
   listRuntimeProcessTableForCurrentPlatform,
-  listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
-  sendKeysToTmuxPaneForCurrentPlatform,
   type TmuxPaneRuntimeInfo,
 } from '@features/tmux-installer/main';
 import {
@@ -197,9 +195,7 @@ import {
   validateBootstrapRuntimeProofEnvelope,
 } from './bootstrap/BootstrapProofValidation';
 import {
-  buildNativeAppManagedBootstrapSpecs,
   buildNativeAppManagedBootstrapSpecsWithDiagnostics,
-  type NativeAppManagedBootstrapSpec,
 } from './bootstrap/NativeAppManagedBootstrapContextBuilder';
 import {
   buildOpenCodePromptDeliveryAttemptId,
@@ -300,9 +296,7 @@ import {
   buildCombinedLogs,
 } from './provisioning/TeamProvisioningCliExitPresentation';
 import {
-  buildDirectTmuxRestartCommand,
   hasAnthropicCompatibleAuthTokenEnv,
-  isInteractiveShellCommand,
 } from './provisioning/TeamProvisioningDirectRestart';
 import {
   compareLeadInboxRelayMessagesByPriority,
@@ -344,6 +338,12 @@ import {
   namesMatchCaseInsensitive,
 } from './provisioning/TeamProvisioningMemberIdentity';
 import {
+  type LiveRosterAttachReason,
+  type MemberLifecycleOperation,
+  TeamProvisioningMemberLifecycleController,
+  type TeamProvisioningMemberLifecycleHost,
+} from './provisioning/TeamProvisioningMemberLifecycle';
+import {
   buildRestartDuplicateUnconfirmedReason,
   buildRestartGraceTimeoutReason,
   buildRestartStillRunningReason,
@@ -364,6 +364,20 @@ import {
   normalizeTeamProviderLike,
   teamRequestIncludesCodexMember,
 } from './provisioning/TeamProvisioningMemberSpecs';
+import {
+  buildLaunchMemberSpawnStatus,
+  filterRemovedMembersFromLaunchSnapshot,
+  findConfiguredMemberModel,
+  findEffectiveRunMember,
+  findEffectiveRunMemberModel,
+  findMetaMemberModel,
+  findTrackedMemberSpawnStatus,
+  isLaunchMemberStatusRelevantToRuntimeRun,
+  isMemberRemovedInMeta,
+  resolveEffectiveConfiguredMember,
+  resolveLeadMemberName,
+  shouldPreferCurrentLaunchMemberStatus,
+} from './provisioning/TeamProvisioningMemberStatusProjection';
 import {
   boundOpenCodeAppManagedBriefingText,
   buildOpenCodeProviderVerificationDeferredLine,
@@ -389,9 +403,6 @@ import {
   createUnexpectedMixedSecondaryLaneFailureResult,
   downgradeUncommittedOpenCodeBootstrapEvidence,
   getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
-  hasOpenCodeRuntimeEntryHandle,
-  hasOpenCodeRuntimeHandle,
-  hasOpenCodeRuntimeLivenessMarker,
   isBootstrapMemberEvidenceCurrentForMember,
   isDefinitiveOpenCodePreLaunchFailure,
   isExplicitLegacyOpenCodeBootstrap,
@@ -414,9 +425,7 @@ import {
   buildDeterministicLaunchHydrationPrompt,
   buildGeminiPostLaunchHydrationPrompt,
   buildLeadRosterContextBlock,
-  buildMemberSpawnPrompt,
   buildPersistentLeadContext,
-  buildRestartMemberSpawnMessage,
   buildTaskBoardSnapshot,
   extractBootstrapFailureReason,
   extractHeartbeatTimestamp,
@@ -436,6 +445,12 @@ import {
   getTeamProviderLabel,
   logRuntimeLaunchSnapshot,
 } from './provisioning/TeamProvisioningRuntimeDiagnostics';
+import {
+  type LiveTeamAgentRuntimeMetadata,
+  readCachedRuntimeProcessRowsForLiveRuntimeMetadata,
+  type RuntimeProcessRowsCacheEntry,
+  shouldReadProcessTableForLiveRuntimeMetadata,
+} from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { getCurrentAgentTeamsMcpHttpTransportEvidence } from './AgentTeamsMcpHttpServer';
 import { isAgentTeamsToolUse } from './agentTeamsToolNames';
@@ -478,7 +493,10 @@ import {
   buildDesktopTeammateModeCliArgs,
   resolveDesktopTeammateModeDecision,
 } from './runtimeTeammateMode';
-import { TeamAgentRuntimeResourceHistory } from './TeamAgentRuntimeResourceHistory';
+import {
+  TeamAgentRuntimeResourceHistory,
+  type TeamAgentRuntimeResourceHistoryRecordInput,
+} from './TeamAgentRuntimeResourceHistory';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   choosePreferredLaunchSnapshot,
@@ -514,16 +532,18 @@ import {
   sanitizeProcessCommandForDiagnostics,
 } from './TeamRuntimeLivenessResolver';
 import {
-  addRuntimeRootOwnersFromProcessRows as addRuntimeRootOwnersFromProcessRowsHelper,
-  buildProcessUsageStatsFromRows as buildProcessUsageStatsFromRowsHelper,
-  buildRuntimeProcessLoadStats as buildRuntimeProcessLoadStatsHelper,
-  buildRuntimeUsageProcessTrees as buildRuntimeUsageProcessTreesHelper,
-  normalizeRuntimeProcessRowsForTelemetry as normalizeRuntimeProcessRowsForTelemetryHelper,
-  normalizeRuntimeProcessUsageStats as normalizeRuntimeProcessUsageStatsHelper,
+  addRuntimeRootOwnersFromProcessRows,
+  buildProcessUsageStatsFromRows,
+  buildRuntimeProcessLoadStats,
+  buildRuntimeUsageProcessTrees,
+  isRuntimePidusageTelemetryEnabled,
+  normalizeRuntimeProcessRowsForTelemetry,
+  normalizeRuntimeProcessUsageStats,
   type RuntimeProcessLoadStats,
   type RuntimeProcessUsageStats,
-  type RuntimeTelemetryProcessSource,
   type RuntimeTelemetryProcessTableRow,
+  RuntimeTelemetryTimeoutError,
+  withRuntimeTelemetryTimeout,
 } from './TeamRuntimeTelemetry';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
@@ -671,11 +691,6 @@ type BootstrapTranscriptSuccessSource = 'member_briefing' | 'assistant_text';
 const BOOTSTRAP_RUNTIME_PROOF_TAIL_BYTES = 256 * 1024;
 const BOOTSTRAP_RUNTIME_EVENT_MAX_LINES = 256;
 const BOOTSTRAP_RUNTIME_EVENT_MAX_LINE_BYTES = 16 * 1024;
-const TEAMMATE_RUNTIME_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME';
-const TEAMMATE_RUNTIME_EVENTS_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH';
-const TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV = 'CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN';
-const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
-  'CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH';
 
 function getTeamRuntimeEventsDir(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, 'runtime');
@@ -934,22 +949,6 @@ import type {
 // its initial two-sample pass. Keep this above slow PowerShell startup time, or
 // the first sample can expire before the recursive second read and loop again.
 const RUNTIME_PIDUSAGE_OPTIONS = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
-
-interface RuntimeProcessRowsCacheEntry {
-  expiresAtMs: number;
-  generation: number;
-  runId: string | null;
-  sampledAtMs: number;
-  rows: RuntimeTelemetryProcessTableRow[] | null;
-  includesWindowsHostRows: boolean;
-}
-
-class RuntimeTelemetryTimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RuntimeTelemetryTimeoutError';
-  }
-}
 
 const logger = createLogger('Service:TeamProvisioning');
 const PREFLIGHT_DEBUG_LOG_PATH = path.join(os.tmpdir(), 'claude-team-preflight-debug.log');
@@ -2177,36 +2176,6 @@ interface MixedSecondaryRuntimeLaneState {
   launchFinishedAtMs?: number;
 }
 
-interface OpenCodeSecondaryRetryCandidate {
-  memberName: string;
-  laneId: string;
-}
-
-interface OpenCodeSecondaryRetryOutcome {
-  launchState: MemberLaunchState;
-  reason?: string;
-}
-
-type MemberLifecycleOperationKind =
-  | 'manual_restart'
-  | 'opencode_retry'
-  | 'opencode_member_added'
-  | 'opencode_member_updated'
-  | 'opencode_member_removed'
-  | 'primary_member_added'
-  | 'primary_member_restored'
-  | 'primary_member_updated'
-  | 'primary_member_removed';
-
-type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
-type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;
-
-interface MemberLifecycleOperation {
-  kind: MemberLifecycleOperationKind;
-  token: symbol;
-  startedAtMs: number;
-}
-
 type LeadActivityState = 'active' | 'idle' | 'offline';
 
 type ProvisioningAuthSource =
@@ -2329,28 +2298,6 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-interface LiveTeamAgentRuntimeMetadata {
-  alive: boolean;
-  backendType?: TeamAgentRuntimeBackendType;
-  providerId?: TeamProviderId;
-  agentId?: string;
-  cwd?: string;
-  pid?: number;
-  metricsPid?: number;
-  model?: string;
-  tmuxPaneId?: string;
-  livenessKind?: TeamAgentRuntimeLivenessKind;
-  pidSource?: TeamAgentRuntimePidSource;
-  processCommand?: string;
-  panePid?: number;
-  paneCurrentCommand?: string;
-  runtimeSessionId?: string;
-  runtimeLastSeenAt?: string;
-  runtimeDiagnostic?: string;
-  runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
-  diagnostics?: string[];
-}
-
 const OPENCODE_BOOTSTRAP_CHECKIN_RETRY_SENT_PREFIX = 'opencode_bootstrap_checkin_retry_prompt_sent';
 
 function getOpenCodeBootstrapCheckinRetryMarker(runId: string, runtimeSessionId: string): string {
@@ -2433,14 +2380,6 @@ function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(input: {
     },
     diagnostics,
   };
-}
-
-function isTmuxNoServerRunningError(error: unknown): boolean {
-  const text = error instanceof Error ? error.message : String(error ?? '');
-  return (
-    /no server running on /i.test(text) ||
-    /error connecting to .*no such file or directory/i.test(text)
-  );
 }
 
 interface PendingMemberRestartContext {
@@ -2612,44 +2551,6 @@ async function waitForPidsToExit(
   }
 
   return remainingPids;
-}
-
-async function waitForTmuxPanesToExit(
-  paneIds: readonly string[],
-  opts: { timeoutMs: number; pollMs: number }
-): Promise<string[]> {
-  const normalizedPaneIds = [...new Set(paneIds.map((paneId) => paneId.trim()).filter(Boolean))];
-  if (normalizedPaneIds.length === 0) {
-    return [];
-  }
-
-  const deadline = Date.now() + opts.timeoutMs;
-  let remainingPaneIds = normalizedPaneIds;
-  let lastError: unknown = null;
-  while (Date.now() < deadline) {
-    let livePanePidById: Map<string, number>;
-    try {
-      livePanePidById = await listTmuxPanePidsForCurrentPlatform(remainingPaneIds);
-      lastError = null;
-    } catch (error) {
-      if (isTmuxNoServerRunningError(error)) {
-        return [];
-      }
-      lastError = error;
-      await sleep(opts.pollMs);
-      continue;
-    }
-    remainingPaneIds = remainingPaneIds.filter((paneId) => livePanePidById.has(paneId));
-    if (remainingPaneIds.length === 0) {
-      return [];
-    }
-    await sleep(opts.pollMs);
-  }
-
-  if (lastError) {
-    throw lastError instanceof Error ? lastError : new Error(getErrorMessage(lastError));
-  }
-  return remainingPaneIds;
 }
 
 async function waitForChildProcessToExit(
@@ -3573,6 +3474,9 @@ export class TeamProvisioningService {
     Promise<RetryFailedOpenCodeSecondaryLanesResult>
   >();
   private readonly memberLifecycleOperations = new Map<string, MemberLifecycleOperation>();
+  private readonly memberLifecycleController = new TeamProvisioningMemberLifecycleController(
+    this as unknown as TeamProvisioningMemberLifecycleHost
+  );
   private memberRuntimeAdvisoryInvalidator:
     | ((teamName: string, memberName: string) => void)
     | null = null;
@@ -14773,24 +14677,30 @@ export class TeamProvisioningService {
               includeWindowsHostRows: process.platform === 'win32',
             })
           : null;
-      this.addRuntimeRootOwnersFromProcessRows(
+      addRuntimeRootOwnersFromProcessRows({
         teamName,
-        runtimeProcessRows,
-        runtimeRootOwnersByPid
-      );
-      runtimeUsageTreesByRootPid = this.buildRuntimeUsageProcessTrees(
-        [...runtimeUsageRootPids],
-        runtimeProcessRows,
-        runtimeRootOwnersByPid
-      );
+        processRows: runtimeProcessRows,
+        rootOwnersByPid: runtimeRootOwnersByPid,
+        platform: process.platform,
+      });
+      runtimeUsageTreesByRootPid = buildRuntimeUsageProcessTrees({
+        rootPids: [...runtimeUsageRootPids],
+        processRows: runtimeProcessRows,
+        rootOwnersByPid: runtimeRootOwnersByPid,
+        limits: {
+          maxPidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
+          maxPidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
+        },
+        platform: process.platform,
+      });
       const runtimeUsagePids = [
         ...new Set([...runtimeUsageTreesByRootPid.values()].flatMap((tree) => tree.pids)),
       ];
-      usageStatsByPid = this.buildProcessUsageStatsFromRows(runtimeProcessRows, runtimeUsagePids);
+      usageStatsByPid = buildProcessUsageStatsFromRows(runtimeProcessRows, runtimeUsagePids);
       const pidsMissingUsageStats = runtimeUsagePids.filter((pid) => !usageStatsByPid.has(pid));
       if (
         pidsMissingUsageStats.length > 0 &&
-        this.shouldSampleMissingRuntimeUsageStatsWithPidusage()
+        isRuntimePidusageTelemetryEnabled()
       ) {
         const sampledUsageStats = await this.readProcessUsageStatsByPid(pidsMissingUsageStats);
         for (const [pid, stats] of sampledUsageStats) {
@@ -15133,7 +15043,7 @@ export class TeamProvisioningService {
         isSharedOpenCodeHost &&
         typeof rssPid === 'number' &&
         rssPid > 0 &&
-        this.isRuntimePidusageTelemetryEnabled()
+        isRuntimePidusageTelemetryEnabled()
       ) {
         try {
           const refreshedUsageStats = (
@@ -15237,7 +15147,7 @@ export class TeamProvisioningService {
       };
     }
     try {
-      this.pruneAgentRuntimeResourceHistory(teamName, activeResourceHistoryKeys);
+      this.agentRuntimeResourceHistory.prune(teamName, activeResourceHistoryKeys);
     } catch (error) {
       logger.debug(
         `[${teamName}] Failed to prune runtime telemetry history; continuing with snapshot: ${
@@ -15280,891 +15190,8 @@ export class TeamProvisioningService {
     return snapshot;
   }
 
-  private getDirectTmuxRestartPaneId(
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[],
-    memberName: string
-  ): string | null {
-    for (const persistedRuntimeMember of persistedRuntimeMembers) {
-      const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-      const paneId =
-        typeof persistedRuntimeMember.tmuxPaneId === 'string'
-          ? persistedRuntimeMember.tmuxPaneId.trim()
-          : '';
-      const runtimeMemberName =
-        typeof persistedRuntimeMember.name === 'string' ? persistedRuntimeMember.name : '';
-      if (
-        backendType === 'tmux' &&
-        paneId &&
-        matchesMemberNameOrBase(runtimeMemberName, memberName)
-      ) {
-        return paneId;
-      }
-    }
-    return null;
-  }
-
-  private resolveDirectRestartRuntimeCwd(params: {
-    configuredMember: NonNullable<
-      ReturnType<TeamProvisioningService['resolveEffectiveConfiguredMember']>
-    >;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    config: TeamConfig;
-    run: ProvisioningRun;
-  }): string {
-    const configuredCwd = params.configuredMember.cwd?.trim();
-    if (configuredCwd) {
-      return path.resolve(configuredCwd);
-    }
-
-    for (const runtimeMember of params.persistedRuntimeMembers) {
-      const cwd = typeof runtimeMember.cwd === 'string' ? runtimeMember.cwd.trim() : '';
-      if (cwd) {
-        return path.resolve(cwd);
-      }
-    }
-
-    const projectPath = params.config.projectPath?.trim();
-    if (projectPath) {
-      return path.resolve(projectPath);
-    }
-
-    const runCwd = this.getRunTrackedCwd(params.run);
-    if (runCwd) {
-      return path.resolve(runCwd);
-    }
-
-    throw new Error('Cannot restart teammate because its runtime cwd is unavailable');
-  }
-
-  private async updateDirectTmuxRestartMemberConfig(input: {
-    teamName: string;
-    memberName: string;
-    member: TeamCreateRequest['members'][number] & { agentType?: string };
-    agentId: string;
-    color: string;
-    prompt: string;
-    paneId: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    joinedAt: number;
-    bootstrapExpectedAfter: string;
-    backendType?: 'tmux' | 'process';
-    runtimePid?: number;
-    bootstrapRuntimeEventsPath?: string;
-    bootstrapProofToken?: string;
-    bootstrapRunId?: string;
-    bootstrapContextHash?: string;
-    bootstrapBriefingHash?: string;
-  }): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), input.teamName, 'config.json');
-    const raw = await tryReadRegularFileUtf8(configPath, {
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-    });
-    if (!raw) {
-      throw new Error(`Team "${input.teamName}" configuration is no longer available`);
-    }
-
-    const parsed = JSON.parse(raw) as TeamConfig & { members?: Record<string, unknown>[] };
-    const members = Array.isArray(parsed.members) ? parsed.members : [];
-    const existingIndex = members.findIndex((member) => {
-      const candidateName = typeof member?.name === 'string' ? member.name.trim() : '';
-      return (
-        candidateName.length > 0 && matchesExactTeamMemberName(candidateName, input.memberName)
-      );
-    });
-    const existing: Record<string, unknown> =
-      existingIndex >= 0 ? (members[existingIndex] ?? {}) : {};
-    const nextMember = {
-      ...existing,
-      agentId: input.agentId,
-      name: input.member.name,
-      ...(input.member.role ? { role: input.member.role } : {}),
-      ...(input.member.workflow ? { workflow: input.member.workflow } : {}),
-      ...(input.member.agentType ? { agentType: input.member.agentType } : {}),
-      provider: input.providerId,
-      providerId: input.providerId,
-      ...(input.member.model ? { model: input.member.model } : {}),
-      ...(input.member.effort ? { effort: input.member.effort } : {}),
-      prompt: input.prompt,
-      color: input.color,
-      joinedAt: input.joinedAt,
-      bootstrapExpectedAfter: input.bootstrapExpectedAfter,
-      ...(input.bootstrapProofToken ? { bootstrapProofToken: input.bootstrapProofToken } : {}),
-      ...(input.bootstrapRunId ? { bootstrapRunId: input.bootstrapRunId } : {}),
-      ...(input.bootstrapRuntimeEventsPath
-        ? { bootstrapRuntimeEventsPath: input.bootstrapRuntimeEventsPath }
-        : {}),
-      ...(input.bootstrapContextHash
-        ? {
-            bootstrapProofMode: 'native_app_managed_context',
-            bootstrapContextHash: input.bootstrapContextHash,
-          }
-        : {}),
-      ...(input.bootstrapBriefingHash
-        ? { bootstrapBriefingHash: input.bootstrapBriefingHash }
-        : {}),
-      tmuxPaneId: input.paneId,
-      ...(typeof input.runtimePid === 'number' ? { runtimePid: input.runtimePid } : {}),
-      cwd: input.cwd,
-      subscriptions: Array.isArray(existing.subscriptions) ? existing.subscriptions : [],
-      backendType: input.backendType ?? 'tmux',
-    };
-
-    if (existingIndex >= 0) {
-      members[existingIndex] = nextMember;
-    } else {
-      members.push(nextMember);
-    }
-    parsed.members = members;
-    await atomicWriteAsync(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
-    TeamConfigReader.invalidateTeam(input.teamName);
-  }
-
-  private enqueueDirectRestartPrompt(input: {
-    teamName: string;
-    memberName: string;
-    leadName: string;
-    leadSessionId: string | null;
-    prompt: string;
-    operation?: DirectProcessMemberLaunchReason;
-  }): void {
-    const timestamp = nowIso();
-    const operation = input.operation ?? 'manual_restart';
-    const isRestart = operation === 'manual_restart';
-    this.persistInboxMessage(input.teamName, input.memberName, {
-      from: input.leadName,
-      to: input.memberName,
-      text: input.prompt,
-      timestamp,
-      read: false,
-      source: 'system_notification',
-      leadSessionId: input.leadSessionId ?? undefined,
-      messageId: `direct-${operation}-${input.memberName}-${randomUUID()}`,
-      summary: isRestart
-        ? `Restart bootstrap instructions for ${input.memberName}`
-        : `Bootstrap instructions for ${input.memberName}`,
-    });
-  }
-
-  private persistOpenCodeMemberRestartSystemMessage(input: {
-    teamName: string;
-    leadName: string;
-    leadSessionId: string | null;
-    displayName: string;
-    member: TeamCreateRequest['members'][number];
-    reason: 'manual_restart' | 'member_updated';
-  }): void {
-    const timestamp = nowIso();
-    const prompt = buildMemberSpawnPrompt(
-      input.member,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      { restart: true }
-    );
-    const reasonSummary =
-      input.reason === 'member_updated' ? 'after member settings update' : 'by user request';
-    this.persistSentMessage(input.teamName, {
-      from: input.leadName,
-      to: input.member.name,
-      text: prompt,
-      timestamp,
-      read: true,
-      source: 'system_notification',
-      leadSessionId: input.leadSessionId ?? undefined,
-      messageId: `member-restart:${input.teamName}:${input.member.name}:${randomUUID()}`,
-      summary: `Restarting ${input.member.name} ${reasonSummary}`,
-    });
-  }
-
-  private async launchDirectTmuxMemberRestart(input: {
-    run: ProvisioningRun;
-    teamName: string;
-    displayName: string;
-    leadName: string;
-    memberName: string;
-    config: TeamConfig;
-    configuredMember: NonNullable<
-      ReturnType<TeamProvisioningService['resolveEffectiveConfiguredMember']>
-    >;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    paneId: string;
-  }): Promise<void> {
-    const paneInfo = (await listTmuxPaneRuntimeInfoForCurrentPlatform([input.paneId])).get(
-      input.paneId
-    );
-    if (!paneInfo) {
-      throw new Error(
-        `Cannot restart teammate "${input.memberName}" because tmux pane ${input.paneId} is not available`
-      );
-    }
-    if (!isInteractiveShellCommand(paneInfo.currentCommand)) {
-      throw new Error(
-        `Cannot restart teammate "${input.memberName}" because tmux pane ${input.paneId} is busy (${paneInfo.currentCommand ?? 'unknown command'})`
-      );
-    }
-
-    const claudePath = await ClaudeBinaryResolver.resolve();
-    if (!claudePath) {
-      throw buildMissingCliError();
-    }
-
-    const cwd = this.resolveDirectRestartRuntimeCwd({
-      configuredMember: input.configuredMember,
-      persistedRuntimeMembers: input.persistedRuntimeMembers,
-      config: input.config,
-      run: input.run,
-    });
-    await ensureCwdExists(cwd);
-
-    const operation: DirectProcessMemberLaunchReason = 'manual_restart';
-    const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
-      configuredMember: input.configuredMember,
-      run: input.run,
-    });
-    const providerId = resolveTeamProviderId(preliminaryMemberSpec.providerId);
-    const providerBackendId = migrateProviderBackendId(
-      providerId,
-      preliminaryMemberSpec.providerBackendId
-    );
-    const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
-      teamRuntimeAuth: {
-        teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-direct-${input.configuredMember.name}-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    if (provisioningEnv.warning) {
-      throw new Error(provisioningEnv.warning);
-    }
-
-    const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-      claudePath,
-      cwd,
-      members: [preliminaryMemberSpec],
-      defaults: {
-        providerId: resolveTeamProviderId(input.run.request.providerId),
-        model: input.run.request.model,
-        effort: input.run.request.effort,
-      },
-      primaryProviderId: providerId,
-      primaryEnv: provisioningEnv,
-      teamRuntimeAuth: {
-        teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-    const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-      claudePath,
-      cwd,
-      providerId,
-      ...(providerBackendId ? { providerBackendId } : {}),
-      provisioningEnv,
-      memberSpec,
-      run: input.run,
-    });
-    const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-    const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-      mcpPolicy: memberMcpPolicy,
-      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-    });
-    const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-    input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-    memberMcpConfigPaths.push(mcpConfigPath);
-    const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-    const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-    const agentId = `${input.configuredMember.name}@${input.teamName}`;
-    const color =
-      input.config.members
-        ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-        ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-    const parentSessionId =
-      input.run.detectedSessionId?.trim() || input.config.leadSessionId?.trim() || input.run.runId;
-    const prompt = buildMemberSpawnPrompt(
-      memberSpec,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      { restart: true }
-    );
-    const bootstrapExpectedAfter = nowIso();
-    const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-      teamName: input.teamName,
-      providerId,
-      launchIdentity,
-      envResolution: provisioningEnv,
-      extraArgs: [],
-      includeAnthropicHelper: providerId === 'anthropic',
-      contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
-    });
-    applyAppManagedRuntimeSettingsPathEnv(
-      provisioningEnv.env,
-      runtimeArgsPlan.appManagedSettingsPath
-    );
-
-    const runtimeArgs = mergeJsonSettingsArgs([
-      '--agent-id',
-      agentId,
-      '--agent-name',
-      input.configuredMember.name,
-      '--team-name',
-      input.teamName,
-      '--agent-color',
-      color,
-      '--parent-session-id',
-      parentSessionId,
-      ...(input.configuredMember.agentType
-        ? ['--agent-type', input.configuredMember.agentType]
-        : []),
-      '--setting-sources',
-      memberMcpSettingSources,
-      '--mcp-config',
-      mcpConfigPath,
-      ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-      '--disallowedTools',
-      APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-      ...(input.run.request.skipPermissions !== false
-        ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-        : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-      ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-      ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-      ...runtimeArgsPlan.providerArgs,
-      ...runtimeArgsPlan.fastModeArgs,
-      ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.settingsArgs,
-    ]);
-    const command = buildDirectTmuxRestartCommand({
-      cwd,
-      env: provisioningEnv.env,
-      providerId,
-      binaryPath: claudePath,
-      args: runtimeArgs,
-    });
-
-    await this.updateDirectTmuxRestartMemberConfig({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      member: memberSpec,
-      agentId,
-      color,
-      prompt,
-      paneId: input.paneId,
-      cwd,
-      providerId,
-      joinedAt: Date.now(),
-      bootstrapExpectedAfter,
-    });
-    this.enqueueDirectRestartPrompt({
-      teamName: input.teamName,
-      memberName: input.configuredMember.name,
-      leadName: input.leadName,
-      leadSessionId: parentSessionId,
-      prompt,
-      operation,
-    });
-    await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, command);
-    this.appendMemberBootstrapDiagnostic(
-      input.run,
-      input.memberName,
-      `restart command delivered to tmux pane ${input.paneId}`
-    );
-    this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-  }
-
-  private async launchDirectProcessMemberRestart(input: {
-    run: ProvisioningRun;
-    teamName: string;
-    displayName: string;
-    leadName: string;
-    memberName: string;
-    config: TeamConfig;
-    configuredMember: NonNullable<
-      ReturnType<TeamProvisioningService['resolveEffectiveConfiguredMember']>
-    >;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    operation?: DirectProcessMemberLaunchReason;
-  }): Promise<void> {
-    const operation = input.operation ?? 'manual_restart';
-    const claudePath = input.run.spawnContext?.claudePath ?? (await ClaudeBinaryResolver.resolve());
-    if (!claudePath) {
-      throw buildMissingCliError();
-    }
-
-    const cwd = this.resolveDirectRestartRuntimeCwd({
-      configuredMember: input.configuredMember,
-      persistedRuntimeMembers: input.persistedRuntimeMembers,
-      config: input.config,
-      run: input.run,
-    });
-    await ensureCwdExists(cwd);
-
-    const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
-      configuredMember: input.configuredMember,
-      run: input.run,
-    });
-    const providerId = resolveTeamProviderId(preliminaryMemberSpec.providerId);
-    const providerBackendId = migrateProviderBackendId(
-      providerId,
-      preliminaryMemberSpec.providerBackendId
-    );
-    const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
-      teamRuntimeAuth: {
-        teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    if (provisioningEnv.warning) {
-      throw new Error(provisioningEnv.warning);
-    }
-
-    const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-      claudePath,
-      cwd,
-      members: [preliminaryMemberSpec],
-      defaults: {
-        providerId: resolveTeamProviderId(input.run.request.providerId),
-        model: input.run.request.model,
-        effort: input.run.request.effort,
-      },
-      primaryProviderId: providerId,
-      primaryEnv: provisioningEnv,
-      teamRuntimeAuth: {
-        teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-    const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-      claudePath,
-      cwd,
-      providerId,
-      ...(providerBackendId ? { providerBackendId } : {}),
-      provisioningEnv,
-      memberSpec,
-      run: input.run,
-    });
-    const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-    const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-      mcpPolicy: memberMcpPolicy,
-      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-    });
-    const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-    input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-    memberMcpConfigPaths.push(mcpConfigPath);
-    const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-    const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-    const agentId = `${input.configuredMember.name}@${input.teamName}`;
-    const color =
-      input.config.members
-        ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-        ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-    const parentSessionId =
-      input.run.detectedSessionId?.trim() || input.config.leadSessionId?.trim() || input.run.runId;
-    const prompt = buildMemberSpawnPrompt(
-      memberSpec,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      operation === 'manual_restart' ? { restart: true } : undefined
-    );
-    const bootstrapExpectedAfter = nowIso();
-    const bootstrapProofToken = randomUUID();
-    const runtimePaths = this.getDirectProcessRestartRuntimePaths(
-      input.teamName,
-      input.configuredMember.name
-    );
-    await fs.promises.mkdir(runtimePaths.dir, { recursive: true });
-    await fs.promises.writeFile(runtimePaths.eventsPath, '', { encoding: 'utf8', mode: 0o600 });
-
-    const nativeBootstrapSpec =
-      (
-        await buildNativeAppManagedBootstrapSpecs({
-          teamName: input.teamName,
-          cwd,
-          members: [memberSpec],
-        })
-      ).get(input.configuredMember.name) ?? null;
-    const nativeBootstrapEnv = await this.materializeDirectProcessNativeBootstrapContext({
-      teamName: input.teamName,
-      memberName: input.configuredMember.name,
-      agentId,
-      providerId,
-      runId: input.run.runId,
-      bootstrapProofToken,
-      spec: nativeBootstrapSpec,
-    });
-
-    const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-      teamName: input.teamName,
-      providerId,
-      launchIdentity,
-      envResolution: provisioningEnv,
-      extraArgs: [],
-      includeAnthropicHelper: providerId === 'anthropic',
-      contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
-    });
-    applyAppManagedRuntimeSettingsPathEnv(
-      provisioningEnv.env,
-      runtimeArgsPlan.appManagedSettingsPath
-    );
-
-    const runtimeArgs = mergeJsonSettingsArgs([
-      '--teammate-runtime',
-      'headless',
-      '--agent-id',
-      agentId,
-      '--agent-name',
-      input.configuredMember.name,
-      '--team-name',
-      input.teamName,
-      '--agent-color',
-      color,
-      '--parent-session-id',
-      parentSessionId,
-      ...(input.configuredMember.agentType
-        ? ['--agent-type', input.configuredMember.agentType]
-        : []),
-      '--setting-sources',
-      memberMcpSettingSources,
-      '--mcp-config',
-      mcpConfigPath,
-      ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-      '--disallowedTools',
-      APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-      ...(input.run.request.skipPermissions !== false
-        ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-        : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-      ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-      ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-      ...runtimeArgsPlan.providerArgs,
-      ...runtimeArgsPlan.fastModeArgs,
-      ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.settingsArgs,
-    ]);
-
-    const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
-    const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
-    const child = spawnCli(claudePath, runtimeArgs, {
-      cwd,
-      detached: true,
-      env: {
-        ...provisioningEnv.env,
-        ...nativeBootstrapEnv,
-        [TEAMMATE_RUNTIME_ENV]: 'headless',
-        [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
-        [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    if (!child.pid) {
-      stdoutLog.destroy();
-      stderrLog.destroy();
-      throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
-    }
-
-    const runtimePid = child.pid;
-    const processPaneId = `process:${runtimePid}`;
-    const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
-    child.stdout?.pipe(stdoutLog);
-    child.stderr?.pipe(stderrLog);
-    child.stdin?.on('error', (error) => {
-      logger.debug(
-        `[${input.teamName}] Direct process ${operation} stdin failed for ${agentId}: ${error.message}`
-      );
-    });
-    child.once('close', (code, signal) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'exited',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail:
-          code !== null
-            ? `process exited with code ${code}`
-            : signal
-              ? `process exited from signal ${signal}`
-              : 'process exited',
-      });
-      stdoutLog.end();
-      stderrLog.end();
-    });
-    child.once('error', (error) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'failed',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: `process error: ${error.message}`,
-      });
-    });
-    (child.stdin as { unref?: () => void } | null)?.unref?.();
-    (child.stdout as { unref?: () => void } | null)?.unref?.();
-    (child.stderr as { unref?: () => void } | null)?.unref?.();
-    child.unref();
-
-    try {
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'process_spawned',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'process spawned',
-      });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'stdout_attached',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'stdout and stderr attached',
-      });
-      await this.updateDirectTmuxRestartMemberConfig({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        member: memberSpec,
-        agentId,
-        color,
-        prompt,
-        paneId: processPaneId,
-        cwd,
-        providerId,
-        joinedAt: Date.now(),
-        bootstrapExpectedAfter,
-        backendType: 'process',
-        runtimePid,
-        bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
-        bootstrapProofToken,
-        bootstrapRunId: input.run.runId,
-        ...(nativeBootstrapSpec
-          ? {
-              bootstrapContextHash: nativeBootstrapSpec.contextHash,
-              bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
-            }
-          : {}),
-      });
-      this.enqueueDirectRestartPrompt({
-        teamName: input.teamName,
-        memberName: input.configuredMember.name,
-        leadName: input.leadName,
-        leadSessionId: parentSessionId,
-        prompt,
-        operation,
-      });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'mailbox_bootstrap_written',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-      });
-      this.upsertRunAllEffectiveMember(input.run, memberSpec);
-      this.appendMemberBootstrapDiagnostic(
-        input.run,
-        input.memberName,
-        operation === 'manual_restart'
-          ? `restart process spawned with pid ${runtimePid}`
-          : `runtime process spawned with pid ${runtimePid}`
-      );
-      this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-    } catch (error) {
-      try {
-        killProcessByPid(runtimePid);
-      } catch (killError) {
-        logger.warn(
-          `[${input.teamName}] Failed to stop orphaned direct process ${agentId} pid=${runtimePid}: ${
-            killError instanceof Error ? killError.message : String(killError)
-          }`
-        );
-      }
-      stdoutLog.end();
-      stderrLog.end();
-      throw error;
-    }
-  }
-
-  private getDirectProcessRestartRuntimePaths(
-    teamName: string,
-    memberName: string
-  ): { dir: string; eventsPath: string; stdoutPath: string; stderrPath: string } {
-    const dir = getTeamRuntimeEventsDir(teamName);
-    const filePrefix = sanitizeProcessRuntimeEventFilePrefix(memberName);
-    return {
-      dir,
-      eventsPath: path.join(dir, `${filePrefix}.runtime.jsonl`),
-      stdoutPath: path.join(dir, `${filePrefix}.stdout.log`),
-      stderrPath: path.join(dir, `${filePrefix}.stderr.log`),
-    };
-  }
-
-  private async materializeDirectProcessNativeBootstrapContext(input: {
-    teamName: string;
-    memberName: string;
-    agentId: string;
-    providerId: TeamProviderId;
-    runId: string;
-    bootstrapProofToken: string;
-    spec: NativeAppManagedBootstrapSpec | null;
-  }): Promise<Record<string, string>> {
-    if (!input.spec || (input.providerId !== 'anthropic' && input.providerId !== 'codex')) {
-      return {};
-    }
-    const context = {
-      ...input.spec,
-      kind: 'native_app_managed_bootstrap',
-      teamName: input.teamName,
-      memberName: input.memberName,
-      agentId: input.agentId,
-      runId: input.runId,
-      provider: input.providerId,
-      bootstrapProofToken: input.bootstrapProofToken,
-    };
-    const dir = path.join(getTeamRuntimeEventsDir(input.teamName), 'native-bootstrap');
-    await fs.promises.mkdir(dir, { recursive: true });
-    const finalPath = path.join(
-      dir,
-      `${sanitizeProcessRuntimeEventFilePrefix(input.memberName)}-${randomUUID()}.native-bootstrap.json`
-    );
-    const tempPath = `${finalPath}.tmp`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(context), {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
-    await fs.promises.rename(tempPath, finalPath);
-    return { [NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV]: finalPath };
-  }
-
-  private async appendDirectProcessRuntimeEvent(input: {
-    type: string;
-    eventsPath: string;
-    pid: number;
-    teamName: string;
-    agentName: string;
-    agentId: string;
-    runId: string;
-    bootstrapRunId: string;
-    source: string;
-    detail?: string;
-  }): Promise<void> {
-    await fs.promises.mkdir(path.dirname(input.eventsPath), { recursive: true });
-    await fs.promises.appendFile(
-      input.eventsPath,
-      `${JSON.stringify({
-        version: 1,
-        type: input.type,
-        timestamp: nowIso(),
-        pid: input.pid,
-        teamName: input.teamName,
-        agentName: input.agentName,
-        agentId: input.agentId,
-        runId: input.runId,
-        bootstrapRunId: input.bootstrapRunId,
-        source: input.source,
-        ...(input.detail ? { detail: input.detail } : {}),
-      })}\n`,
-      { encoding: 'utf8', mode: 0o600 }
-    );
-  }
-
-  private getMemberLifecycleOperationKey(teamName: string, memberName: string): string {
-    return `${teamName.trim().toLowerCase()}\u0000${memberName.trim().toLowerCase()}`;
-  }
-
-  private getActiveMemberLifecycleOperation(
-    teamName: string,
-    memberName: string
-  ): MemberLifecycleOperation | null {
-    return (
-      this.memberLifecycleOperations.get(
-        this.getMemberLifecycleOperationKey(teamName, memberName)
-      ) ?? null
-    );
-  }
-
   private isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
-    return this.getActiveMemberLifecycleOperation(teamName, memberName) !== null;
-  }
-
-  private createMemberLifecycleOperationInProgressError(memberName: string): Error {
-    return new Error(`Lifecycle operation for teammate "${memberName}" is already in progress`);
-  }
-
-  private isMemberLifecycleOperationInProgressError(error: unknown): boolean {
-    return (
-      error instanceof Error &&
-      /^Lifecycle operation for teammate ".+" is already in progress$/.test(error.message)
-    );
-  }
-
-  private async runMemberLifecycleOperation<T>(
-    teamName: string,
-    memberName: string,
-    kind: MemberLifecycleOperationKind,
-    operation: () => Promise<T>
-  ): Promise<T> {
-    const key = this.getMemberLifecycleOperationKey(teamName, memberName);
-    if (this.memberLifecycleOperations.has(key)) {
-      throw this.createMemberLifecycleOperationInProgressError(memberName);
-    }
-
-    const token = Symbol(`${kind}:${teamName}:${memberName}`);
-    this.memberLifecycleOperations.set(key, {
-      kind,
-      token,
-      startedAtMs: Date.now(),
-    });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    try {
-      return await operation();
-    } finally {
-      if (this.memberLifecycleOperations.get(key)?.token === token) {
-        this.memberLifecycleOperations.delete(key);
-      }
-      this.invalidateRuntimeSnapshotCaches(teamName);
-    }
-  }
-
-  private getOpenCodeReattachLifecycleKind(
-    reason?: 'member_added' | 'member_updated' | 'manual_restart'
-  ): MemberLifecycleOperationKind {
-    if (reason === 'member_added') return 'opencode_member_added';
-    if (reason === 'member_updated') return 'opencode_member_updated';
-    return 'manual_restart';
-  }
-
-  private getLiveRosterAttachLifecycleKind(
-    reason?: LiveRosterAttachReason
-  ): MemberLifecycleOperationKind {
-    if (reason === 'member_restored') return 'primary_member_restored';
-    if (reason === 'member_updated') return 'primary_member_updated';
-    return 'primary_member_added';
+    return this.memberLifecycleController.isMemberLifecycleOperationActive(teamName, memberName);
   }
 
   async attachLiveRosterMember(
@@ -16172,1399 +15199,25 @@ export class TeamProvisioningService {
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
-    return this.runMemberLifecycleOperation(
-      teamName,
-      memberName,
-      this.getLiveRosterAttachLifecycleKind(options?.reason),
-      () => this.attachLiveRosterMemberUnlocked(teamName, memberName, options)
-    );
-  }
-
-  private async stopPrimaryOwnedRosterRuntime(input: {
-    teamName: string;
-    memberName: string;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    liveRuntimeByMember: Map<string, LiveTeamAgentRuntimeMetadata>;
-    actionLabel: string;
-  }): Promise<void> {
-    const pidsToStop = new Set<number>();
-    const tmuxPaneIdsToStop = new Set<string>();
-    let hasAliveRuntimeWithoutStopHandle = false;
-
-    for (const runtimeMember of input.persistedRuntimeMembers) {
-      const backendType = runtimeMember.backendType?.trim().toLowerCase();
-      if (backendType === 'in-process') {
-        throw new Error(
-          `Member "${input.memberName}" uses an in-process runtime and cannot be detached here`
-        );
-      }
-      if (
-        backendType === 'process' &&
-        typeof runtimeMember.runtimePid === 'number' &&
-        Number.isFinite(runtimeMember.runtimePid) &&
-        runtimeMember.runtimePid > 0
-      ) {
-        pidsToStop.add(runtimeMember.runtimePid);
-      }
-      const paneId =
-        typeof runtimeMember.tmuxPaneId === 'string' ? runtimeMember.tmuxPaneId.trim() : '';
-      if (backendType === 'tmux' && paneId) {
-        tmuxPaneIdsToStop.add(paneId);
-      }
-    }
-
-    for (const [candidateName, metadata] of input.liveRuntimeByMember.entries()) {
-      if (!matchesObservedMemberNameForExpected(candidateName, input.memberName)) {
-        continue;
-      }
-      if (metadata.backendType === 'in-process') {
-        throw new Error(
-          `Member "${input.memberName}" uses an in-process runtime and cannot be detached here`
-        );
-      }
-
-      let hasStopHandle = false;
-      if (metadata.backendType === 'tmux') {
-        const paneId = metadata.tmuxPaneId?.trim();
-        if (paneId) {
-          tmuxPaneIdsToStop.add(paneId);
-          hasStopHandle = true;
-        }
-      }
-      if (typeof metadata.pid === 'number' && Number.isFinite(metadata.pid) && metadata.pid > 0) {
-        pidsToStop.add(metadata.pid);
-        hasStopHandle = true;
-      }
-      if (
-        typeof metadata.metricsPid === 'number' &&
-        Number.isFinite(metadata.metricsPid) &&
-        metadata.metricsPid > 0
-      ) {
-        pidsToStop.add(metadata.metricsPid);
-        hasStopHandle = true;
-      }
-      if (metadata.alive && !hasStopHandle) {
-        hasAliveRuntimeWithoutStopHandle = true;
-      }
-    }
-
-    if (hasAliveRuntimeWithoutStopHandle) {
-      throw new Error(
-        `${input.actionLabel} cannot stop the existing runtime because it does not expose a pid or tmux pane.`
-      );
-    }
-
-    for (const paneId of tmuxPaneIdsToStop) {
-      try {
-        killTmuxPaneForCurrentPlatformSync(paneId);
-      } catch (error) {
-        logger.debug(
-          `[${input.teamName}] Failed to stop teammate pane ${input.memberName} ${paneId} for live roster lifecycle: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-    for (const pid of pidsToStop) {
-      try {
-        killProcessByPid(pid);
-      } catch (error) {
-        logger.debug(
-          `[${input.teamName}] Failed to stop teammate process ${input.memberName} pid=${pid} for live roster lifecycle: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (pidsToStop.size > 0) {
-      const lingeringPids = await waitForPidsToExit([...pidsToStop], {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPids.length > 0) {
-        throw new Error(
-          `${input.actionLabel} is still waiting for process exit (${lingeringPids.join(', ')}).`
-        );
-      }
-    }
-    if (tmuxPaneIdsToStop.size > 0) {
-      const lingeringPaneIds = await waitForTmuxPanesToExit([...tmuxPaneIdsToStop], {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPaneIds.length > 0) {
-        throw new Error(
-          `${input.actionLabel} is still waiting for tmux pane exit (${lingeringPaneIds.join(', ')}).`
-        );
-      }
-    }
-  }
-
-  private async attachLiveRosterMemberUnlocked(
-    teamName: string,
-    memberName: string,
-    options?: { reason?: LiveRosterAttachReason }
-  ): Promise<void> {
-    const run = this.getMutableAliveRunOrThrow(teamName);
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config.members ?? [],
-      metaMembers,
-      memberName
-    );
-    if (!configuredMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" has been removed`);
-    }
-    if (isLeadMember({ name: configuredMember.name, agentType: configuredMember.agentType })) {
-      throw new Error('Lead attach is not supported from member controls');
-    }
-
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    const desiredProviderId =
-      normalizeOptionalTeamProviderId(configuredMember.providerId) ?? leadProviderId;
-    if (desiredProviderId === 'opencode') {
-      await this.reattachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName, {
-        reason: options?.reason === 'member_updated' ? 'member_updated' : 'member_added',
-      });
-      return;
-    }
-    if (leadProviderId === 'opencode') {
-      throw new Error(
-        'OpenCode-led mixed teams are not supported in this phase. Stop the team and relaunch with a non-OpenCode lead.'
-      );
-    }
-
-    const currentStatus = run.memberSpawnStatuses.get(memberName);
-    const currentUpdatedAtMs = parseOptionalIsoMs(currentStatus?.updatedAt);
-    const currentStatusAgeMs =
-      currentUpdatedAtMs > 0 ? Date.now() - currentUpdatedAtMs : Number.POSITIVE_INFINITY;
-    const currentSpawnLooksFresh =
-      currentStatus?.status === 'spawning' && currentStatusAgeMs < MEMBER_BOOTSTRAP_STALL_MS;
-    if (currentSpawnLooksFresh || currentStatus?.launchState === 'runtime_pending_permission') {
-      throw new Error(`Launch for teammate "${memberName}" is already in progress`);
-    }
-
-    const replaceExistingRuntime = options?.reason === 'member_updated';
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName).catch(
-      () => new Map<string, LiveTeamAgentRuntimeMetadata>()
-    );
-    const liveRuntimeMember =
-      liveRuntimeByMember.get(memberName) ??
-      [...liveRuntimeByMember.entries()].find(([candidateName]) =>
-        matchesObservedMemberNameForExpected(candidateName, memberName)
-      )?.[1];
-    if (
-      !replaceExistingRuntime &&
-      liveRuntimeMember?.alive &&
-      liveRuntimeMember.livenessKind === 'runtime_process'
-    ) {
-      this.upsertRunAllEffectiveMember(
-        run,
-        this.buildPrimaryOwnedMemberSpecForRuntime({
-          configuredMember,
-          run,
-        })
-      );
-      this.setMemberSpawnStatus(run, memberName, 'online', undefined, 'process');
-      return;
-    }
-    if (
-      !replaceExistingRuntime &&
-      liveRuntimeMember?.alive &&
-      (liveRuntimeMember.livenessKind === 'runtime_process_candidate' ||
-        liveRuntimeMember.livenessKind === 'permission_blocked') &&
-      currentStatus?.launchState === 'runtime_pending_bootstrap'
-    ) {
-      throw new Error(`Launch for teammate "${memberName}" is already in progress`);
-    }
-
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
-    });
-    const backendTypes = new Set(
-      persistedRuntimeMembers
-        .map((member) => member.backendType?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value))
-    );
-    if (backendTypes.has('in-process')) {
-      throw new Error(
-        `Member "${memberName}" uses an in-process runtime and cannot be attached here`
-      );
-    }
-    if (replaceExistingRuntime) {
-      await this.stopPrimaryOwnedRosterRuntime({
-        teamName,
-        memberName,
-        persistedRuntimeMembers,
-        liveRuntimeByMember,
-        actionLabel: `Update for teammate "${memberName}"`,
-      });
-      this.setMemberSpawnStatus(run, memberName, 'offline');
-    }
-
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    run.pendingMemberRestarts.delete(memberName);
-    this.setMemberSpawnStatus(run, memberName, 'spawning');
-    if (currentStatus?.launchState === 'runtime_pending_bootstrap') {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        'stale runtime_pending_bootstrap without live runtime process; retrying launch'
-      );
-    }
-    this.appendMemberBootstrapDiagnostic(
-      run,
-      memberName,
-      `live roster ${options?.reason ?? 'member_added'} requested app-managed runtime process`
-    );
-
-    try {
-      await this.launchDirectProcessMemberRestart({
-        run,
-        teamName,
-        displayName: config.name?.trim() || teamName,
-        leadName: this.resolveLeadMemberName(config.members ?? [], metaMembers),
-        memberName,
-        config,
-        configuredMember,
-        persistedRuntimeMembers,
-        operation: options?.reason ?? 'member_added',
-      });
-    } catch (error) {
-      this.setMemberSpawnStatus(
-        run,
-        memberName,
-        'error',
-        error instanceof Error ? error.message : String(error)
-      );
-      if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
-          run,
-          run.provisioningComplete ? 'finished' : 'active'
-        );
-      }
-      throw error;
-    }
+    return this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options);
   }
 
   async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
-    return this.runMemberLifecycleOperation(teamName, memberName, 'primary_member_removed', () =>
-      this.detachLiveRosterMemberUnlocked(teamName, memberName)
-    );
-  }
-
-  private async detachLiveRosterMemberUnlocked(
-    teamName: string,
-    memberName: string
-  ): Promise<void> {
-    const run = this.getMutableAliveRunOrThrow(teamName);
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    const config = await this.readConfigForStrictDecision(teamName);
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config?.members ?? [],
-      metaMembers,
-      memberName
-    );
-    const desiredProviderId =
-      normalizeOptionalTeamProviderId(configuredMember?.providerId) ?? leadProviderId;
-    if (desiredProviderId === 'opencode') {
-      await this.detachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName);
-      return;
-    }
-    if (leadProviderId === 'opencode') {
-      throw new Error(
-        'OpenCode-led mixed teams are not supported in this phase. Stop the team and relaunch with a non-OpenCode lead.'
-      );
-    }
-
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
-    });
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName).catch(
-      () => new Map<string, LiveTeamAgentRuntimeMetadata>()
-    );
-    await this.stopPrimaryOwnedRosterRuntime({
-      teamName,
-      memberName,
-      persistedRuntimeMembers,
-      liveRuntimeByMember,
-      actionLabel: `Detach for teammate "${memberName}"`,
-    });
-
-    this.removeRunAllEffectiveMember(run, memberName);
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    run.pendingMemberRestarts.delete(memberName);
-    this.setMemberSpawnStatus(run, memberName, 'offline');
-    if (run.isLaunch) {
-      await this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
-    }
+    return this.memberLifecycleController.detachLiveRosterMember(teamName, memberName);
   }
 
   async restartMember(teamName: string, memberName: string): Promise<void> {
-    return this.runMemberLifecycleOperation(teamName, memberName, 'manual_restart', () =>
-      this.restartMemberUnlocked(teamName, memberName)
-    );
-  }
-
-  private async restartMemberUnlocked(teamName: string, memberName: string): Promise<void> {
-    const runId = this.getAliveRunId(teamName);
-    if (!runId) {
-      if (await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(teamName, memberName)) {
-        return;
-      }
-      throw new Error(`Team "${teamName}" is not currently running`);
-    }
-    const run = this.runs.get(runId);
-    if (!run || run.processKilled || run.cancelRequested) {
-      if (await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(teamName, memberName)) {
-        return;
-      }
-      throw new Error(`Team "${teamName}" is not currently running`);
-    }
-
-    const readCurrentConfiguredMember = async (): Promise<{
-      config: TeamConfig | null;
-      configuredMembers: TeamConfig['members'];
-      metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>;
-      configuredMember: ReturnType<TeamProvisioningService['resolveEffectiveConfiguredMember']>;
-    }> => {
-      const config = await this.readConfigForStrictDecision(teamName);
-      const configuredMembers = config?.members ?? [];
-      let metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>> = [];
-      try {
-        metaMembers = await this.membersMetaStore.getMembers(teamName);
-      } catch {
-        metaMembers = [];
-      }
-
-      return {
-        config,
-        configuredMembers,
-        metaMembers,
-        configuredMember: this.resolveEffectiveConfiguredMember(
-          configuredMembers,
-          metaMembers,
-          memberName
-        ),
-      };
-    };
-
-    let currentConfiguredMemberState = await readCurrentConfiguredMember();
-    let config = currentConfiguredMemberState.config;
-    let configuredMember = currentConfiguredMemberState.configuredMember;
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-    if (!configuredMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" has been removed`);
-    }
-    if (isLeadMember({ name: memberName, agentType: configuredMember.agentType })) {
-      throw new Error('Lead restart is not supported from member controls');
-    }
-    const desiredProviderId = normalizeOptionalTeamProviderId(configuredMember.providerId);
-    const mixedSecondaryLanes = run.mixedSecondaryLanes ?? [];
-    const liveSecondaryLaneMemberName =
-      mixedSecondaryLanes
-        .find((lane) => lane.member.name.trim() === memberName)
-        ?.member.name?.trim() ?? null;
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    const desiredSecondaryLane = desiredProviderId === 'opencode' && leadProviderId !== 'opencode';
-    if (liveSecondaryLaneMemberName === memberName || desiredSecondaryLane) {
-      await this.reattachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName, {
-        reason: 'manual_restart',
-      });
-      return;
-    }
-    if (run.pendingMemberRestarts.has(memberName)) {
-      throw new Error(`Restart for teammate "${memberName}" is already in progress`);
-    }
-
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
-    });
-    const directTmuxRestartCandidatePaneId = this.getDirectTmuxRestartPaneId(
-      persistedRuntimeMembers,
-      memberName
-    );
-
-    const backendTypes = new Set(
-      persistedRuntimeMembers
-        .map((member) => member.backendType?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value))
-    );
-    if (backendTypes.has('in-process')) {
-      throw new Error(
-        `Member "${memberName}" uses an in-process runtime and cannot be restarted here`
-      );
-    }
-
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    const livePids = new Set<number>();
-    let hasAliveRuntimeWithoutPid = false;
-    for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
-      if (!matchesMemberNameOrBase(candidateName, memberName)) {
-        continue;
-      }
-      if (metadata.pid) {
-        livePids.add(metadata.pid);
-        continue;
-      }
-      if (metadata.alive && metadata.backendType !== 'in-process') {
-        hasAliveRuntimeWithoutPid = true;
-      }
-    }
-
-    if (hasAliveRuntimeWithoutPid) {
-      throw new Error(
-        `Member "${memberName}" is running, but its backend does not expose a restartable pid yet`
-      );
-    }
-
-    let directTmuxRestartPaneId: string | null = null;
-    if (directTmuxRestartCandidatePaneId) {
-      try {
-        const paneInfo = (
-          await listTmuxPaneRuntimeInfoForCurrentPlatform([directTmuxRestartCandidatePaneId])
-        ).get(directTmuxRestartCandidatePaneId);
-        if (paneInfo && isInteractiveShellCommand(paneInfo.currentCommand)) {
-          directTmuxRestartPaneId = directTmuxRestartCandidatePaneId;
-        }
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Direct tmux restart probe failed for ${memberName}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const tmuxPaneIdsToVerify: string[] = [];
-    if (!directTmuxRestartPaneId) {
-      for (const persistedRuntimeMember of persistedRuntimeMembers) {
-        const paneId =
-          typeof persistedRuntimeMember.tmuxPaneId === 'string'
-            ? persistedRuntimeMember.tmuxPaneId.trim()
-            : '';
-        const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-        if (!paneId || backendType !== 'tmux') {
-          continue;
-        }
-        tmuxPaneIdsToVerify.push(paneId);
-        try {
-          killTmuxPaneForCurrentPlatformSync(paneId);
-          logger.info(
-            `[${teamName}] Killed teammate pane ${memberName} (${paneId}) for manual restart`
-          );
-        } catch (error) {
-          logger.debug(
-            `[${teamName}] Failed to kill teammate pane ${memberName} (${paneId}) for manual restart: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      }
-    }
-
-    for (const pid of livePids) {
-      try {
-        killProcessByPid(pid);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to kill teammate process ${memberName} pid=${pid} for manual restart: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (livePids.size > 0) {
-      const lingeringPids = await waitForPidsToExit(Array.from(livePids), {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPids.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous process to exit (${lingeringPids.join(', ')}).`
-        );
-      }
-    }
-
-    if (tmuxPaneIdsToVerify.length > 0) {
-      let lingeringPaneIds: string[];
-      try {
-        lingeringPaneIds = await waitForTmuxPanesToExit(tmuxPaneIdsToVerify, {
-          timeoutMs: 1_500,
-          pollMs: 100,
-        });
-      } catch (error) {
-        throw new Error(
-          `Restart for teammate "${memberName}" could not verify that the previous tmux pane exited: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      if (lingeringPaneIds.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous tmux pane to exit (${lingeringPaneIds.join(', ')}).`
-        );
-      }
-    }
-
-    this.setMemberSpawnStatus(run, memberName, 'offline');
-
-    const latestRunId = this.getAliveRunId(teamName);
-    const currentRun = this.runs.get(runId);
-    if (
-      latestRunId !== runId ||
-      !currentRun ||
-      currentRun !== run ||
-      currentRun.processKilled ||
-      currentRun.cancelRequested
-    ) {
-      throw new Error(`Team "${teamName}" is not currently running`);
-    }
-
-    currentConfiguredMemberState = await readCurrentConfiguredMember();
-    config = currentConfiguredMemberState.config;
-    configuredMember = currentConfiguredMemberState.configuredMember;
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration disappeared while restart was in progress`);
-    }
-    if (!configuredMember) {
-      throw new Error(
-        `Member "${memberName}" is no longer configured in team "${teamName}" after restart preparation`
-      );
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" was removed while restart was in progress`);
-    }
-    if (isLeadMember({ name: memberName, agentType: configuredMember.agentType })) {
-      throw new Error('Lead restart is not supported from member controls');
-    }
-
-    run.pendingMemberRestarts.set(memberName, {
-      requestedAt: nowIso(),
-      desired: {
-        name: configuredMember.name,
-        role: configuredMember.role,
-        workflow: configuredMember.workflow,
-        isolation: configuredMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
-        providerId: configuredMember.providerId,
-        model: configuredMember.model,
-        effort: configuredMember.effort,
-      },
-    });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    this.setMemberSpawnStatus(run, memberName, 'spawning');
-    this.appendMemberBootstrapDiagnostic(run, memberName, 'manual restart requested from UI');
-
-    const leadName = this.resolveLeadMemberName(
-      currentConfiguredMemberState.configuredMembers,
-      currentConfiguredMemberState.metaMembers
-    );
-    if (directTmuxRestartPaneId) {
-      try {
-        await this.launchDirectTmuxMemberRestart({
-          run,
-          teamName,
-          displayName: config?.name?.trim() || teamName,
-          leadName,
-          memberName,
-          config,
-          configuredMember,
-          persistedRuntimeMembers,
-          paneId: directTmuxRestartPaneId,
-        });
-        return;
-      } catch (error) {
-        run.pendingMemberRestarts.delete(memberName);
-        this.setMemberSpawnStatus(
-          run,
-          memberName,
-          'error',
-          error instanceof Error ? error.message : String(error)
-        );
-        if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
-            run,
-            run.provisioningComplete ? 'finished' : 'active'
-          );
-        }
-        throw error;
-      }
-    }
-
-    const shouldDirectProcessRestart = backendTypes.has('process') || livePids.size > 0;
-    if (shouldDirectProcessRestart) {
-      try {
-        await this.launchDirectProcessMemberRestart({
-          run,
-          teamName,
-          displayName: config?.name?.trim() || teamName,
-          leadName,
-          memberName,
-          config,
-          configuredMember,
-          persistedRuntimeMembers,
-        });
-        return;
-      } catch (error) {
-        run.pendingMemberRestarts.delete(memberName);
-        this.setMemberSpawnStatus(
-          run,
-          memberName,
-          'error',
-          error instanceof Error ? error.message : String(error)
-        );
-        if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
-            run,
-            run.provisioningComplete ? 'finished' : 'active'
-          );
-        }
-        throw error;
-      }
-    }
-
-    let restartMcpLaunchConfig: RuntimeBootstrapMemberMcpLaunchConfig | null = null;
-    try {
-      restartMcpLaunchConfig = await this.buildTrackedMemberMcpLaunchConfig({
-        cwd: configuredMember.cwd?.trim() || config.projectPath?.trim() || run.request.cwd,
-        mcpPolicy: configuredMember.mcpPolicy,
-        run,
-      });
-      const restartMessage = buildRestartMemberSpawnMessage(
-        teamName,
-        config?.name?.trim() || teamName,
-        leadName,
-        {
-          name: configuredMember.name,
-          role: configuredMember.role,
-          workflow: configuredMember.workflow,
-          isolation: configuredMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId: configuredMember.providerId,
-          model: configuredMember.model,
-          effort: configuredMember.effort,
-        },
-        restartMcpLaunchConfig
-      );
-      await this.sendMessageToRun(run, restartMessage);
-    } catch (error) {
-      await this.removeTrackedMemberMcpLaunchConfig(run, restartMcpLaunchConfig).catch(() => {});
-      run.pendingMemberRestarts.delete(memberName);
-      this.setMemberSpawnStatus(
-        run,
-        memberName,
-        'error',
-        error instanceof Error ? error.message : String(error)
-      );
-      if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
-          run,
-          run.provisioningComplete ? 'finished' : 'active'
-        );
-      }
-      throw error;
-    }
-  }
-
-  private async restartPureOpenCodePrimaryMemberWithoutTrackedRun(
-    teamName: string,
-    memberName: string
-  ): Promise<boolean> {
-    const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
-    if (runtimeRun?.providerId !== 'opencode') {
-      return false;
-    }
-
-    const adapter = this.getOpenCodeRuntimeAdapter();
-    if (!adapter) {
-      throw new Error('OpenCode runtime adapter is not available for member restart.');
-    }
-
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      return false;
-    }
-
-    const [teamMeta, metaMembers] = await Promise.all([
-      this.teamMetaStore.getMeta(teamName).catch(() => null),
-      this.membersMetaStore.getMembers(teamName).catch(() => []),
-    ]);
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config.members ?? [],
-      metaMembers,
-      memberName
-    );
-    if (!configuredMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" has been removed`);
-    }
-    if (isLeadMember({ name: configuredMember.name, agentType: configuredMember.agentType })) {
-      throw new Error('Lead restart is not supported from member controls');
-    }
-
-    const leadMember = config.members?.find((member) => isLeadMember(member));
-    const leadProviderId =
-      normalizeOptionalTeamProviderId(teamMeta?.providerId) ??
-      normalizeOptionalTeamProviderId(leadMember?.providerId);
-    if (leadProviderId !== 'opencode') {
-      return false;
-    }
-
-    const configuredNames = new Set<string>();
-    for (const member of config.members ?? []) {
-      const name = member.name?.trim();
-      if (name) {
-        configuredNames.add(name);
-      }
-    }
-    for (const member of metaMembers) {
-      const name = member.name?.trim();
-      if (name) {
-        configuredNames.add(name);
-      }
-    }
-
-    const activeMembers = [...configuredNames]
-      .map((name) => this.resolveEffectiveConfiguredMember(config.members ?? [], metaMembers, name))
-      .filter(
-        (
-          member
-        ): member is NonNullable<
-          ReturnType<TeamProvisioningService['resolveEffectiveConfiguredMember']>
-        > => {
-          if (!member || member.removedAt) {
-            return false;
-          }
-          return !isLeadMember({ name: member.name, agentType: member.agentType });
-        }
-      )
-      .sort((left, right) => left.name.localeCompare(right.name));
-
-    const targetMember = activeMembers.find((member) =>
-      matchesExactTeamMemberName(member.name, configuredMember.name)
-    );
-    if (!targetMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-
-    const nonOpenCodeMember = activeMembers.find((member) => {
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? leadProviderId;
-      return providerId !== 'opencode';
-    });
-    if (nonOpenCodeMember) {
-      return false;
-    }
-
-    const projectPath =
-      targetMember.cwd?.trim() ||
-      config.projectPath?.trim() ||
-      teamMeta?.cwd?.trim() ||
-      runtimeRun.cwd?.trim() ||
-      this.readPersistedTeamProjectPath(teamName);
-    if (!projectPath) {
-      throw new Error(`Team "${teamName}" project path is not available for OpenCode restart`);
-    }
-
-    const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName,
-      baseCwd: projectPath,
-      leadProviderId: 'opencode',
-      members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
-    });
-    const targetRuntimeMember = effectiveMembers.find((member) =>
-      matchesExactTeamMemberName(member.name, targetMember.name)
-    );
-    if (!targetRuntimeMember) {
-      throw new Error(`Member "${memberName}" could not be resolved for OpenCode restart`);
-    }
-
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.persistOpenCodeMemberRestartSystemMessage({
-      teamName,
-      leadName: leadMember?.name?.trim() || 'team-lead',
-      leadSessionId: runtimeRun.runId,
-      displayName: config.description?.trim() || config.name,
-      member: targetRuntimeMember,
-      reason: 'manual_restart',
-    });
-
-    await this.runOpenCodeTeamRuntimeAdapterLaunch({
-      request: {
-        teamName,
-        cwd: projectPath,
-        prompt: teamMeta?.prompt?.trim() || '',
-        providerId: 'opencode',
-        providerBackendId: migrateProviderBackendId('opencode', teamMeta?.providerBackendId),
-        model: targetRuntimeMember.model?.trim() || teamMeta?.model,
-        effort:
-          targetRuntimeMember.effort ??
-          (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
-        fastMode: teamMeta?.fastMode,
-        limitContext: teamMeta?.limitContext,
-        skipPermissions: teamMeta?.skipPermissions,
-        worktree: teamMeta?.worktree,
-        extraCliArgs: teamMeta?.extraCliArgs,
-      },
-      members: effectiveMembers,
-      prompt: [
-        `Restarting OpenCode teammate "${targetRuntimeMember.name}" by user request.`,
-        'This is an app-managed OpenCode-only runtime refresh. Re-establish the team sessions and continue from persisted team context.',
-      ].join('\n'),
-      sourceWarning:
-        'OpenCode-only member restart refreshes the primary OpenCode runtime lane because pure OpenCode teams do not keep a native lead run.',
-      onProgress: () => undefined,
-    });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    return true;
+    return this.memberLifecycleController.restartMember(teamName, memberName);
   }
 
   async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    const existing = this.failedOpenCodeSecondaryRetryInFlightByTeam.get(teamName);
-    if (existing) {
-      return existing;
-    }
-
-    const retry = this.retryFailedOpenCodeSecondaryLanesNow(teamName).finally(() => {
-      this.failedOpenCodeSecondaryRetryInFlightByTeam.delete(teamName);
-    });
-    this.failedOpenCodeSecondaryRetryInFlightByTeam.set(teamName, retry);
-    return retry;
-  }
-
-  private async retryFailedOpenCodeSecondaryLanesNow(
-    teamName: string
-  ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    const run = this.getMutableAliveRunOrThrow(teamName);
-    if (this.getProvisioningRunId(teamName)) {
-      throw new Error('Team launch is still in progress');
-    }
-
-    const result: RetryFailedOpenCodeSecondaryLanesResult = {
-      attempted: [],
-      confirmed: [],
-      pending: [],
-      failed: [],
-      skipped: [],
-    };
-    const candidates = await this.collectFailedOpenCodeSecondaryRetryCandidates(run);
-
-    for (const candidate of candidates) {
-      if (!this.isCurrentTrackedRun(run) || run.processKilled || run.cancelRequested) {
-        result.skipped.push({
-          memberName: candidate.memberName,
-          reason: 'Team stopped during retry',
-        });
-        continue;
-      }
-
-      try {
-        await this.runMemberLifecycleOperation(
-          teamName,
-          candidate.memberName,
-          'opencode_retry',
-          () =>
-            this.reattachOpenCodeOwnedMemberLaneUnlocked(teamName, candidate.memberName, {
-              reason: 'manual_restart',
-            })
-        );
-        result.attempted.push(candidate.memberName);
-
-        const outcome = await this.readOpenCodeSecondaryRetryOutcome(
-          run,
-          candidate.memberName,
-          candidate.laneId
-        );
-        if (outcome.launchState === 'confirmed_alive') {
-          result.confirmed.push(candidate.memberName);
-        } else if (outcome.launchState === 'failed_to_start') {
-          result.failed.push({
-            memberName: candidate.memberName,
-            error: outcome.reason ?? 'OpenCode retry failed',
-          });
-        } else if (outcome.launchState === 'skipped_for_launch') {
-          result.skipped.push({
-            memberName: candidate.memberName,
-            reason: outcome.reason ?? 'Teammate is skipped for this launch',
-          });
-        } else {
-          result.pending.push(candidate.memberName);
-        }
-      } catch (error) {
-        if (this.isMemberLifecycleOperationInProgressError(error)) {
-          result.skipped.push({
-            memberName: candidate.memberName,
-            reason: 'Lifecycle operation already in progress',
-          });
-        } else {
-          result.failed.push({
-            memberName: candidate.memberName,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-    }
-
-    await this.notifyLeadAboutConfirmedOpenCodeRetries(run, result);
-    return result;
-  }
-
-  private async collectFailedOpenCodeSecondaryRetryCandidates(
-    run: ProvisioningRun
-  ): Promise<OpenCodeSecondaryRetryCandidate[]> {
-    const teamName = run.teamName;
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    const isOpenCodeAggregateRun =
-      leadProviderId === 'opencode' && (run.mixedSecondaryLanes?.length ?? 0) > 0;
-    if (leadProviderId === 'opencode' && !isOpenCodeAggregateRun) {
-      throw new Error(
-        'Retrying OpenCode secondary lanes requires an active OpenCode worktree lane run.'
-      );
-    }
-    if (!this.getOpenCodeRuntimeAdapter()) {
-      throw new Error('OpenCode runtime adapter is not available for secondary lane retry.');
-    }
-
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    const persistedSnapshot = await this.launchStateStore.read(teamName).catch(() => null);
-
-    const names = new Set<string>();
-    for (const member of config.members ?? []) {
-      const name = member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const member of metaMembers) {
-      const name = member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const lane of run.mixedSecondaryLanes ?? []) {
-      const name = lane.member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const name of persistedSnapshot?.expectedMembers ?? []) {
-      if (name.trim()) {
-        names.add(name.trim());
-      }
-    }
-    for (const name of Object.keys(persistedSnapshot?.members ?? {})) {
-      if (name.trim()) {
-        names.add(name.trim());
-      }
-    }
-
-    const candidates: OpenCodeSecondaryRetryCandidate[] = [];
-    for (const memberName of [...names].sort((left, right) => left.localeCompare(right))) {
-      const configuredMember = this.resolveEffectiveConfiguredMember(
-        config.members ?? [],
-        metaMembers,
-        memberName
-      );
-      if (!configuredMember || configuredMember.removedAt) {
-        continue;
-      }
-      if (isLeadMember({ name: memberName, agentType: configuredMember.agentType })) {
-        continue;
-      }
-      const desiredProviderId =
-        normalizeOptionalTeamProviderId(configuredMember.providerId) ?? leadProviderId;
-      if (desiredProviderId !== 'opencode') {
-        continue;
-      }
-
-      const existingLane = (run.mixedSecondaryLanes ?? []).find((lane) =>
-        matchesTeamMemberIdentity(lane.member.name, memberName)
-      );
-      const liveEntry = run.memberSpawnStatuses.get(memberName);
-      const persistedMemberByName =
-        persistedSnapshot?.members[memberName] ??
-        Object.values(persistedSnapshot?.members ?? {}).find((member) =>
-          matchesTeamMemberIdentity(member.name, memberName)
-        );
-      let laneId: string | null = null;
-      if (leadProviderId === 'opencode') {
-        const persistedLaneId = persistedMemberByName?.laneId?.startsWith('secondary:opencode:')
-          ? persistedMemberByName.laneId
-          : null;
-        laneId = existingLane?.laneId ?? persistedLaneId;
-        if (!laneId) {
-          continue;
-        }
-      } else {
-        const laneIdentity = buildPlannedMemberLaneIdentity({
-          leadProviderId,
-          member: {
-            name: memberName,
-            providerId: 'opencode',
-          },
-        });
-        if (
-          laneIdentity.laneKind !== 'secondary' ||
-          laneIdentity.laneOwnerProviderId !== 'opencode'
-        ) {
-          continue;
-        }
-        laneId = laneIdentity.laneId;
-      }
-      const persistedMember =
-        persistedMemberByName ??
-        Object.values(persistedSnapshot?.members ?? {}).find((member) => member.laneId === laneId);
-
-      if (
-        this.isRetryableFailedOpenCodeSecondaryLane({
-          liveEntry,
-          persistedMember,
-          existingLane,
-        })
-      ) {
-        candidates.push({ memberName, laneId });
-      }
-    }
-    return candidates;
-  }
-
-  private isRetryableFailedOpenCodeSecondaryLane(input: {
-    liveEntry?: MemberSpawnStatusEntry;
-    persistedMember?: PersistedTeamLaunchMemberState;
-    existingLane?: MixedSecondaryRuntimeLaneState;
-  }): boolean {
-    const { liveEntry, persistedMember, existingLane } = input;
-    if (existingLane?.state === 'queued' || existingLane?.state === 'launching') {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'skipped_for_launch' ||
-      liveEntry?.skippedForLaunch === true ||
-      persistedMember?.launchState === 'skipped_for_launch' ||
-      persistedMember?.skippedForLaunch === true
-    ) {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'runtime_pending_permission' ||
-      liveEntry?.launchState === 'runtime_pending_bootstrap' ||
-      persistedMember?.launchState === 'runtime_pending_permission' ||
-      persistedMember?.launchState === 'runtime_pending_bootstrap' ||
-      (liveEntry?.pendingPermissionRequestIds?.length ?? 0) > 0 ||
-      (persistedMember?.pendingPermissionRequestIds?.length ?? 0) > 0
-    ) {
-      return false;
-    }
-    if (liveEntry?.launchState === 'starting' || liveEntry?.status === 'spawning') {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'confirmed_alive' ||
-      liveEntry?.bootstrapConfirmed === true ||
-      persistedMember?.launchState === 'confirmed_alive' ||
-      persistedMember?.bootstrapConfirmed === true
-    ) {
-      return false;
-    }
-
-    return (
-      liveEntry?.launchState === 'failed_to_start' ||
-      liveEntry?.status === 'error' ||
-      persistedMember?.launchState === 'failed_to_start' ||
-      persistedMember?.hardFailure === true
-    );
-  }
-
-  private async readOpenCodeSecondaryRetryOutcome(
-    run: ProvisioningRun,
-    memberName: string,
-    laneId: string
-  ): Promise<OpenCodeSecondaryRetryOutcome> {
-    const lane = (run.mixedSecondaryLanes ?? []).find(
-      (candidate) =>
-        candidate.laneId === laneId || matchesTeamMemberIdentity(candidate.member.name, memberName)
-    );
-    const memberEvidence =
-      lane?.result?.members[memberName] ??
-      Object.values(lane?.result?.members ?? {}).find((member) =>
-        matchesTeamMemberIdentity(member.memberName, memberName)
-      );
-    const persistedSnapshot = await this.launchStateStore.read(run.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find((member) => member.laneId === laneId);
-    const liveEntry = run.memberSpawnStatuses.get(memberName);
-
-    if (
-      memberEvidence?.launchState === 'confirmed_alive' ||
-      memberEvidence?.bootstrapConfirmed === true ||
-      liveEntry?.launchState === 'confirmed_alive' ||
-      liveEntry?.bootstrapConfirmed === true ||
-      persistedMember?.launchState === 'confirmed_alive' ||
-      persistedMember?.bootstrapConfirmed === true
-    ) {
-      return { launchState: 'confirmed_alive' };
-    }
-
-    if (
-      liveEntry?.launchState === 'skipped_for_launch' ||
-      liveEntry?.skippedForLaunch === true ||
-      persistedMember?.launchState === 'skipped_for_launch' ||
-      persistedMember?.skippedForLaunch === true
-    ) {
-      return {
-        launchState: 'skipped_for_launch',
-        reason: liveEntry?.skipReason ?? persistedMember?.skipReason,
-      };
-    }
-
-    if (
-      memberEvidence?.launchState === 'failed_to_start' ||
-      memberEvidence?.hardFailure === true ||
-      liveEntry?.launchState === 'failed_to_start' ||
-      liveEntry?.status === 'error' ||
-      persistedMember?.launchState === 'failed_to_start' ||
-      persistedMember?.hardFailure === true
-    ) {
-      return {
-        launchState: 'failed_to_start',
-        reason: this.selectOpenCodeSecondaryRetryFailureReason({
-          memberEvidence,
-          liveEntry,
-          persistedMember,
-        }),
-      };
-    }
-
-    return {
-      launchState:
-        memberEvidence?.launchState ??
-        liveEntry?.launchState ??
-        persistedMember?.launchState ??
-        'runtime_pending_bootstrap',
-    };
-  }
-
-  private selectOpenCodeSecondaryRetryFailureReason(input: {
-    memberEvidence?: TeamRuntimeMemberLaunchEvidence;
-    liveEntry?: MemberSpawnStatusEntry;
-    persistedMember?: PersistedTeamLaunchMemberState;
-  }): string | undefined {
-    const diagnostics = [
-      input.memberEvidence?.hardFailureReason,
-      input.memberEvidence?.runtimeDiagnostic,
-      ...(input.memberEvidence?.diagnostics ?? []),
-      input.liveEntry?.hardFailureReason,
-      input.liveEntry?.runtimeDiagnostic,
-      input.liveEntry?.error,
-      input.persistedMember?.hardFailureReason,
-      input.persistedMember?.runtimeDiagnostic,
-    ];
-    return diagnostics
-      .find(
-        (diagnostic): diagnostic is string =>
-          typeof diagnostic === 'string' && diagnostic.trim().length > 0
-      )
-      ?.trim();
-  }
-
-  private async notifyLeadAboutConfirmedOpenCodeRetries(
-    run: ProvisioningRun,
-    result: RetryFailedOpenCodeSecondaryLanesResult
-  ): Promise<void> {
-    if (result.confirmed.length === 0) {
-      return;
-    }
-    const confirmedNames = result.confirmed.map((name) => `@${name}`).join(', ');
-    const message = [
-      `Системное замечание: повторный запуск OpenCode-тиммейтов подтверждён: ${confirmedNames}.`,
-      `Их можно снова считать доступными.`,
-    ].join(' ');
-    await this.sendMessageToRun(run, message).catch((error: unknown) =>
-      logger.warn(
-        `[${run.teamName}] failed to send OpenCode retry recovery notice to lead: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      )
-    );
+    return this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName);
   }
 
   async skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {
-    const normalizedMemberName = memberName.trim();
-    if (!normalizedMemberName) {
-      throw new Error('Member name is required');
-    }
-
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-
-    let metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>> = [];
-    try {
-      metaMembers = await this.membersMetaStore.getMembers(teamName);
-    } catch {
-      metaMembers = [];
-    }
-
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config.members ?? [],
-      metaMembers,
-      normalizedMemberName
-    );
-    if (!configuredMember) {
-      throw new Error(`Member "${normalizedMemberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${normalizedMemberName}" has been removed`);
-    }
-    if (isLeadMember({ name: normalizedMemberName, agentType: configuredMember.agentType })) {
-      throw new Error('Lead cannot be skipped for a launch');
-    }
-
-    const runId = this.getTrackedRunId(teamName);
-    const run = runId ? this.runs.get(runId) : undefined;
-    const persistedSnapshot = await this.launchStateStore.read(teamName).catch(() => null);
-    const runEntry = run?.memberSpawnStatuses.get(normalizedMemberName);
-    const persistedMember = persistedSnapshot?.members[normalizedMemberName];
-    const alreadySkipped =
-      runEntry?.launchState === 'skipped_for_launch' ||
-      runEntry?.skippedForLaunch === true ||
-      persistedMember?.launchState === 'skipped_for_launch' ||
-      persistedMember?.skippedForLaunch === true;
-
-    if (alreadySkipped) {
-      return;
-    }
-
-    const failedThisLaunch =
-      runEntry?.launchState === 'failed_to_start' ||
-      runEntry?.status === 'error' ||
-      persistedMember?.launchState === 'failed_to_start' ||
-      persistedMember?.hardFailure === true;
-    if (!failedThisLaunch) {
-      throw new Error(`Member "${normalizedMemberName}" has not failed this launch`);
-    }
-
-    if (run?.pendingMemberRestarts.has(normalizedMemberName)) {
-      throw new Error(`Restart for teammate "${normalizedMemberName}" is already in progress`);
-    }
-
-    const previousFailureReason =
-      runEntry?.hardFailureReason ??
-      runEntry?.error ??
-      persistedMember?.hardFailureReason ??
-      persistedMember?.runtimeDiagnostic;
-    const reason = previousFailureReason?.trim()
-      ? `Skipped by user after launch failure: ${previousFailureReason.trim()}`
-      : 'Skipped by user for this launch';
-
-    if (run && !run.processKilled && !run.cancelRequested) {
-      this.invalidateRuntimeSnapshotCaches(teamName);
-      this.resetRuntimeToolActivity(run, normalizedMemberName);
-      this.clearMemberSpawnToolTracking(run, normalizedMemberName);
-      this.setMemberSpawnStatus(run, normalizedMemberName, 'skipped', reason);
-      if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
-          run,
-          run.provisioningComplete ? 'finished' : 'active'
-        );
-      }
-
-      try {
-        await this.sendMessageToRun(
-          run,
-          `Teammate "${normalizedMemberName}" was skipped for this launch after a startup failure. Continue without waiting for this teammate unless the user retries it.`
-        );
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to notify lead about skipped teammate "${normalizedMemberName}": ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      return;
-    }
-
-    if (!persistedSnapshot || !persistedMember) {
-      throw new Error(`No launch state is available for member "${normalizedMemberName}"`);
-    }
-
-    const updatedAt = nowIso();
-    const nextMembers = {
-      ...persistedSnapshot.members,
-      [normalizedMemberName]: {
-        ...persistedMember,
-        launchState: 'skipped_for_launch' as const,
-        skippedForLaunch: true,
-        skipReason: reason,
-        skippedAt: updatedAt,
-        agentToolAccepted: false,
-        runtimeAlive: false,
-        bootstrapConfirmed: false,
-        hardFailure: false,
-        hardFailureReason: undefined,
-        pendingPermissionRequestIds: undefined,
-        livenessKind: undefined,
-        runtimeDiagnostic: undefined,
-        runtimeDiagnosticSeverity: undefined,
-        lastEvaluatedAt: updatedAt,
-        diagnostics: [`skipped for this launch: ${reason}`],
-      },
-    };
-    const nextSnapshot = createPersistedLaunchSnapshot({
-      teamName: persistedSnapshot.teamName,
-      expectedMembers: persistedSnapshot.expectedMembers,
-      bootstrapExpectedMembers: persistedSnapshot.bootstrapExpectedMembers,
-      leadSessionId: persistedSnapshot.leadSessionId,
-      launchPhase: persistedSnapshot.launchPhase,
-      members: nextMembers,
-      updatedAt,
-    });
-    await this.writeLaunchStateSnapshot(teamName, nextSnapshot);
-  }
-
-  private getMutableAliveRunOrThrow(teamName: string): ProvisioningRun {
-    const runId = this.getAliveRunId(teamName);
-    if (!runId) {
-      throw new Error(`Team "${teamName}" is not currently running`);
-    }
-    const run = this.runs.get(runId);
-    if (!run || run.processKilled || run.cancelRequested) {
-      throw new Error(`Team "${teamName}" is not currently running`);
-    }
-    return run;
+    return this.memberLifecycleController.skipMemberForLaunch(teamName, memberName);
   }
 
   async reattachOpenCodeOwnedMemberLane(
@@ -17572,201 +15225,15 @@ export class TeamProvisioningService {
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.runMemberLifecycleOperation(
+    return this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(
       teamName,
       memberName,
-      this.getOpenCodeReattachLifecycleKind(options?.reason),
-      () => this.reattachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName, options)
+      options
     );
-  }
-
-  private async reattachOpenCodeOwnedMemberLaneUnlocked(
-    teamName: string,
-    memberName: string,
-    options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
-  ): Promise<void> {
-    const run = this.getMutableAliveRunOrThrow(teamName);
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    if (leadProviderId === 'opencode' && (run.mixedSecondaryLanes?.length ?? 0) === 0) {
-      throw new Error(
-        'OpenCode secondary lane reattach requires an active OpenCode worktree lane run.'
-      );
-    }
-    if (!this.getOpenCodeRuntimeAdapter()) {
-      throw new Error('OpenCode runtime adapter is not available for controlled lane reattach.');
-    }
-
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-    let metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>> = [];
-    try {
-      metaMembers = await this.membersMetaStore.getMembers(teamName);
-    } catch {
-      metaMembers = [];
-    }
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config.members ?? [],
-      metaMembers,
-      memberName
-    );
-    if (!configuredMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" has been removed`);
-    }
-    if (isLeadMember({ name: configuredMember.name, agentType: configuredMember.agentType })) {
-      throw new Error('Lead lane reattach is not supported');
-    }
-    const desiredProviderId =
-      normalizeOptionalTeamProviderId(configuredMember.providerId) ?? leadProviderId;
-    if (desiredProviderId !== 'opencode') {
-      throw new Error(
-        `Controlled reattach is only supported for OpenCode-owned members. "${memberName}" remains on the primary runtime owner.`
-      );
-    }
-
-    const [memberSpec] = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName,
-      baseCwd: run.request.cwd,
-      leadProviderId,
-      members: [this.buildConfiguredProvisioningMember(configuredMember)],
-    });
-    if (!memberSpec) {
-      throw new Error(`Member "${memberName}" could not be resolved for OpenCode lane reattach.`);
-    }
-    const nextLane = this.createMixedSecondaryLaneStateForMember(run, memberSpec);
-    const existingLaneIndex = run.mixedSecondaryLanes.findIndex(
-      (lane) => lane.laneId === nextLane.laneId || lane.member.name.trim() === memberName
-    );
-    const existingLane = existingLaneIndex >= 0 ? run.mixedSecondaryLanes[existingLaneIndex] : null;
-
-    if (run.pendingMemberRestarts.has(memberName)) {
-      throw new Error(`Restart for teammate "${memberName}" is already in progress`);
-    }
-    if (existingLane?.state === 'queued' || existingLane?.state === 'launching') {
-      throw new Error(`Restart for teammate "${memberName}" is already in progress`);
-    }
-
-    const hasRuntimeEvidence = await this.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch({
-      teamName,
-      memberName: memberSpec.name,
-      laneId: nextLane.laneId,
-      existingLane,
-    });
-
-    if (existingLane) {
-      await this.stopSingleMixedSecondaryRuntimeLane(run, existingLane, 'relaunch');
-    }
-
-    const laneState = existingLane ?? nextLane;
-    laneState.laneId = nextLane.laneId;
-    laneState.member = memberSpec;
-    laneState.runId = null;
-    laneState.state = 'queued';
-    laneState.result = null;
-    laneState.warnings = [];
-    laneState.diagnostics = [
-      ...(options?.reason ? [`controlled_reattach:${options.reason}`] : []),
-      ...(!hasRuntimeEvidence ? ['fresh_relaunch:no_runtime_evidence'] : []),
-    ];
-
-    if (existingLaneIndex >= 0) {
-      run.mixedSecondaryLanes[existingLaneIndex] = laneState;
-    } else {
-      run.mixedSecondaryLanes.push(laneState);
-    }
-
-    this.upsertRunAllEffectiveMember(run, memberSpec);
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    run.pendingMemberRestarts.delete(memberName);
-
-    if (options?.reason === 'manual_restart' || options?.reason === 'member_updated') {
-      this.persistOpenCodeMemberRestartSystemMessage({
-        teamName,
-        leadName: this.getRunLeadName(run),
-        leadSessionId: run.detectedSessionId?.trim() || config.leadSessionId?.trim() || run.runId,
-        displayName: config.description?.trim() || config.name,
-        member: this.buildConfiguredProvisioningMember(configuredMember),
-        reason: options.reason,
-      });
-    }
-
-    await this.launchSingleMixedSecondaryLane(run, laneState);
-  }
-
-  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(params: {
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    existingLane: MixedSecondaryRuntimeLaneState | null;
-  }): Promise<boolean> {
-    const laneResultMember =
-      params.existingLane?.result?.members[params.memberName] ??
-      Object.values(params.existingLane?.result?.members ?? {}).find(
-        (member) => member.memberName?.trim() === params.memberName
-      );
-    if (hasOpenCodeRuntimeHandle(laneResultMember)) {
-      return true;
-    }
-
-    const persistedSnapshot = await this.launchStateStore.read(params.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[params.memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find(
-        (member) => member.laneId === params.laneId
-      );
-    if (
-      hasOpenCodeRuntimeHandle(persistedMember) ||
-      hasOpenCodeRuntimeLivenessMarker(persistedMember)
-    ) {
-      return true;
-    }
-
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(params.teamName).catch(
-      () => new Map<string, TeamAgentRuntimeEntry>()
-    );
-    const liveRuntimeMember =
-      liveRuntimeByMember.get(params.memberName) ??
-      [...liveRuntimeByMember.entries()].find(([candidateName]) =>
-        matchesObservedMemberNameForExpected(candidateName, params.memberName)
-      )?.[1];
-    return hasOpenCodeRuntimeEntryHandle(liveRuntimeMember);
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
-    return this.runMemberLifecycleOperation(teamName, memberName, 'opencode_member_removed', () =>
-      this.detachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName)
-    );
-  }
-
-  private async detachOpenCodeOwnedMemberLaneUnlocked(
-    teamName: string,
-    memberName: string
-  ): Promise<void> {
-    const run = this.getMutableAliveRunOrThrow(teamName);
-    const laneIndex = run.mixedSecondaryLanes.findIndex((lane) =>
-      matchesTeamMemberIdentity(lane.member.name, memberName)
-    );
-    if (laneIndex < 0) {
-      this.removeRunAllEffectiveMember(run, memberName);
-      this.invalidateRuntimeSnapshotCaches(teamName);
-      await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
-      return;
-    }
-
-    const [lane] = run.mixedSecondaryLanes.splice(laneIndex, 1);
-    await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
-    this.removeRunAllEffectiveMember(run, memberName);
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    run.pendingMemberRestarts.delete(memberName);
-    await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
+    return this.memberLifecycleController.detachOpenCodeOwnedMemberLane(teamName, memberName);
   }
 
   private getMemberLaunchGraceKey(run: ProvisioningRun, memberName: string): string {
@@ -26582,34 +24049,14 @@ export class TeamProvisioningService {
     configuredMembers: TeamConfig['members'] | undefined,
     memberName: string
   ): string | undefined {
-    for (const member of configuredMembers ?? []) {
-      const candidateName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!candidateName || !matchesExactTeamMemberName(candidateName, memberName)) {
-        continue;
-      }
-      const model = member.model?.trim();
-      if (model) {
-        return model;
-      }
-    }
-    return undefined;
+    return findConfiguredMemberModel(configuredMembers, memberName);
   }
 
   private findMetaMemberModel(
     metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>,
     memberName: string
   ): string | undefined {
-    for (const member of metaMembers) {
-      const candidateName = member.name?.trim() ?? '';
-      if (!candidateName || !matchesExactTeamMemberName(candidateName, memberName)) {
-        continue;
-      }
-      const model = member.model?.trim();
-      if (model) {
-        return model;
-      }
-    }
-    return undefined;
+    return findMetaMemberModel(metaMembers, memberName);
   }
 
   private resolveEffectiveConfiguredMember(
@@ -26631,269 +24078,74 @@ export class TeamProvisioningService {
     agentType?: string;
     removedAt?: number | string;
   } | null {
-    const configuredMember = (configuredMembers ?? []).find((member) => {
-      const candidateName = typeof member?.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesExactTeamMemberName(candidateName, memberName);
-    });
-    const metaMember = metaMembers.find((member) => {
-      const candidateName = member.name?.trim() ?? '';
-      return candidateName.length > 0 && matchesExactTeamMemberName(candidateName, memberName);
-    });
-
-    if (!configuredMember && !metaMember) {
-      return null;
-    }
-
-    const name =
-      metaMember?.name?.trim() || configuredMember?.name?.trim() || memberName.trim() || memberName;
-    const role = metaMember?.role?.trim() || configuredMember?.role?.trim() || undefined;
-    const workflow =
-      metaMember?.workflow?.trim() || configuredMember?.workflow?.trim() || undefined;
-    const isolation =
-      metaMember?.isolation === 'worktree' || configuredMember?.isolation === 'worktree'
-        ? 'worktree'
-        : undefined;
-    const providerId =
-      normalizeTeamMemberProviderId(metaMember?.providerId) ??
-      normalizeTeamMemberProviderId(configuredMember?.providerId);
-    const providerBackendId =
-      migrateProviderBackendId(metaMember?.providerId, metaMember?.providerBackendId) ??
-      migrateProviderBackendId(configuredMember?.providerId, configuredMember?.providerBackendId);
-    const model = metaMember?.model?.trim() || configuredMember?.model?.trim() || undefined;
-    const effort = isTeamEffortLevel(metaMember?.effort)
-      ? metaMember.effort
-      : isTeamEffortLevel(configuredMember?.effort)
-        ? configuredMember.effort
-        : undefined;
-    const fastMode =
-      metaMember?.fastMode === 'inherit' ||
-      metaMember?.fastMode === 'on' ||
-      metaMember?.fastMode === 'off'
-        ? metaMember.fastMode
-        : configuredMember?.fastMode === 'inherit' ||
-            configuredMember?.fastMode === 'on' ||
-            configuredMember?.fastMode === 'off'
-          ? configuredMember.fastMode
-          : undefined;
-    const agentType =
-      metaMember?.agentType?.trim() || configuredMember?.agentType?.trim() || undefined;
-    const mcpPolicy =
-      normalizeTeamMemberMcpPolicy(metaMember?.mcpPolicy) ??
-      normalizeTeamMemberMcpPolicy(configuredMember?.mcpPolicy);
-    const cwd = metaMember?.cwd?.trim() || configuredMember?.cwd?.trim() || undefined;
-    const removedAt = metaMember?.removedAt ?? configuredMember?.removedAt;
-
-    return {
-      name,
-      ...(role ? { role } : {}),
-      ...(workflow ? { workflow } : {}),
-      ...(isolation ? { isolation } : {}),
-      ...(providerId ? { providerId } : {}),
-      ...(providerBackendId ? { providerBackendId } : {}),
-      ...(model ? { model } : {}),
-      ...(effort ? { effort } : {}),
-      ...(fastMode ? { fastMode } : {}),
-      ...(mcpPolicy ? { mcpPolicy } : {}),
-      ...(cwd ? { cwd } : {}),
-      ...(agentType ? { agentType } : {}),
-      ...(removedAt != null ? { removedAt } : {}),
-    };
+    return resolveEffectiveConfiguredMember(configuredMembers, metaMembers, memberName);
   }
 
   private resolveLeadMemberName(
     configuredMembers: TeamConfig['members'] | undefined,
     metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>
   ): string {
-    const configuredLead = (configuredMembers ?? []).find((member) => isLeadMember(member));
-    const configuredLeadName = configuredLead?.name?.trim();
-    if (configuredLeadName) {
-      return configuredLeadName;
-    }
-
-    const metaLead = metaMembers.find((member) => isLeadMember(member));
-    const metaLeadName = metaLead?.name?.trim();
-    if (metaLeadName) {
-      return metaLeadName;
-    }
-
-    return 'team-lead';
+    return resolveLeadMemberName(configuredMembers, metaMembers);
   }
 
   private isMemberRemovedInMeta(
     metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>,
     memberName: string
   ): boolean {
-    const normalizedMemberName = memberName.trim().toLowerCase();
-    if (!normalizedMemberName) {
-      return false;
-    }
-    return metaMembers.some((member) => {
-      const candidateName = member.name?.trim().toLowerCase() ?? '';
-      return (
-        candidateName.length > 0 &&
-        candidateName === normalizedMemberName &&
-        Boolean(member.removedAt)
-      );
-    });
+    return isMemberRemovedInMeta(metaMembers, memberName);
   }
 
   private filterRemovedMembersFromLaunchSnapshot(
     snapshot: PersistedTeamLaunchSnapshot,
     metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>
   ): PersistedTeamLaunchSnapshot {
-    const removedNames = new Set(
-      metaMembers
-        .filter((member) => Boolean(member.removedAt))
-        .map((member) => member.name?.trim().toLowerCase() ?? '')
-        .filter((name) => name.length > 0)
+    return filterRemovedMembersFromLaunchSnapshot(
+      snapshot,
+      metaMembers,
+      this.getPersistedLaunchMemberNames(snapshot)
     );
-    if (removedNames.size === 0) {
-      return snapshot;
-    }
-
-    const isRemoved = (name: string | undefined): boolean => {
-      const normalized = name?.trim().toLowerCase() ?? '';
-      return normalized.length > 0 && removedNames.has(normalized);
-    };
-    const expectedMembers = this.getPersistedLaunchMemberNames(snapshot).filter(
-      (name) => !isRemoved(name)
-    );
-    const members: Record<string, PersistedTeamLaunchMemberState> = {};
-    for (const [memberName, member] of Object.entries(snapshot.members)) {
-      if (isRemoved(memberName) || isRemoved(member.name)) {
-        continue;
-      }
-      members[memberName] = { ...member };
-    }
-
-    return createPersistedLaunchSnapshot({
-      teamName: snapshot.teamName,
-      expectedMembers,
-      bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers?.filter(
-        (name) => !isRemoved(name)
-      ),
-      leadSessionId: snapshot.leadSessionId,
-      launchPhase: snapshot.launchPhase,
-      members,
-      updatedAt: snapshot.updatedAt,
-    });
   }
 
   private findEffectiveRunMemberModel(
     run: ProvisioningRun | null,
     memberName: string
   ): string | undefined {
-    const member = this.findEffectiveRunMember(run, memberName);
-    const model = member?.model?.trim();
-    return model || undefined;
+    return findEffectiveRunMemberModel(run, memberName);
   }
 
   private findEffectiveRunMember(
     run: ProvisioningRun | null,
     memberName: string
   ): TeamCreateRequest['members'][number] | undefined {
-    if (!run) {
-      return undefined;
-    }
-    for (const member of [...(run.allEffectiveMembers ?? []), ...(run.effectiveMembers ?? [])]) {
-      const candidateName = member.name?.trim() ?? '';
-      if (!candidateName || !matchesTeamMemberIdentity(candidateName, memberName)) {
-        continue;
-      }
-      return member;
-    }
-    return undefined;
+    return findEffectiveRunMember(run, memberName);
   }
 
   private findTrackedMemberSpawnStatus(
     run: ProvisioningRun | null,
     memberName: string
   ): MemberSpawnStatusEntry | undefined {
-    if (!run) {
-      return undefined;
-    }
-    const statusMap = run.memberSpawnStatuses instanceof Map ? run.memberSpawnStatuses : undefined;
-    if (!statusMap) {
-      return undefined;
-    }
-    const direct = statusMap.get(memberName);
-    if (direct) {
-      return direct;
-    }
-    for (const [candidateName, entry] of statusMap.entries()) {
-      if (matchesTeamMemberIdentity(candidateName, memberName)) {
-        return entry;
-      }
-    }
-    return undefined;
+    return findTrackedMemberSpawnStatus(run, memberName);
   }
 
   private buildLaunchMemberSpawnStatus(
     member: PersistedTeamLaunchMemberState | undefined,
     runtimeModel?: string
   ): MemberSpawnStatusEntry | undefined {
-    if (!member) {
-      return undefined;
-    }
-    return {
-      status: member.hardFailure
-        ? 'error'
-        : member.bootstrapConfirmed || member.launchState === 'confirmed_alive'
-          ? 'online'
-          : member.agentToolAccepted
-            ? 'waiting'
-            : 'spawning',
-      launchState: member.launchState,
-      ...(member.hardFailureReason ? { hardFailureReason: member.hardFailureReason } : {}),
-      ...(member.pendingPermissionRequestIds?.length
-        ? { pendingPermissionRequestIds: member.pendingPermissionRequestIds }
-        : {}),
-      agentToolAccepted: member.agentToolAccepted,
-      runtimeAlive: member.runtimeAlive,
-      bootstrapConfirmed: member.bootstrapConfirmed,
-      hardFailure: member.hardFailure,
-      ...(runtimeModel ? { runtimeModel } : {}),
-      ...(member.livenessKind ? { livenessKind: member.livenessKind } : {}),
-      ...(member.runtimeDiagnostic ? { runtimeDiagnostic: member.runtimeDiagnostic } : {}),
-      ...(member.runtimeDiagnosticSeverity
-        ? { runtimeDiagnosticSeverity: member.runtimeDiagnosticSeverity }
-        : {}),
-      ...(member.bootstrapStalled ? { bootstrapStalled: true } : {}),
-      ...(member.firstSpawnAcceptedAt ? { firstSpawnAcceptedAt: member.firstSpawnAcceptedAt } : {}),
-      ...(member.lastHeartbeatAt ? { lastHeartbeatAt: member.lastHeartbeatAt } : {}),
-      updatedAt: member.lastEvaluatedAt,
-    };
+    return buildLaunchMemberSpawnStatus(member, runtimeModel);
   }
 
   private shouldPreferCurrentLaunchMemberStatus(
     trackedStatus: MemberSpawnStatusEntry | undefined,
     launchStatus: MemberSpawnStatusEntry | undefined
   ): boolean {
-    if (!launchStatus?.bootstrapConfirmed && launchStatus?.launchState !== 'confirmed_alive') {
-      return false;
-    }
-    if (!trackedStatus) {
-      return true;
-    }
-    return (
-      trackedStatus.hardFailure !== true &&
-      trackedStatus.launchState !== 'failed_to_start' &&
-      trackedStatus.launchState !== 'runtime_pending_permission'
-    );
+    return shouldPreferCurrentLaunchMemberStatus(trackedStatus, launchStatus);
   }
 
   private isLaunchMemberStatusRelevantToRuntimeRun(
     member: PersistedTeamLaunchMemberState | undefined,
     activeRuntimeRunId: string
   ): boolean {
-    if (!member || activeRuntimeRunId.length === 0) {
-      return false;
-    }
-    const memberRuntimeRunId = member.runtimeRunId?.trim() ?? '';
-    if (member.providerId === 'opencode') {
-      return memberRuntimeRunId.length > 0 && memberRuntimeRunId === activeRuntimeRunId;
-    }
-    return memberRuntimeRunId.length === 0 || memberRuntimeRunId === activeRuntimeRunId;
+    return isLaunchMemberStatusRelevantToRuntimeRun(member, activeRuntimeRunId);
   }
 
   private async getLiveTeamAgentRuntimeMetadata(
@@ -27178,13 +24430,21 @@ export class TeamProvisioningService {
     let processRows: RuntimeTelemetryProcessTableRow[] = [];
     let processTableAvailable = true;
     let processRowsReadForMetadata = false;
-    const shouldReadProcessTable = this.shouldReadProcessTableForLiveRuntimeMetadata({
+    const shouldReadProcessTable = shouldReadProcessTableForLiveRuntimeMetadata({
       metadataByMember,
       launchSnapshot: persistedLaunchSnapshot,
       paneInfoById,
     });
     if (shouldReadProcessTable) {
-      const cachedRows = this.readCachedRuntimeProcessRowsForLiveRuntimeMetadata(teamName, runId);
+      const cachedRows = readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
+        cached: this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName),
+        runId,
+        nowMs: Date.now(),
+        processTableCacheTtlMs:
+          TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
+        processTableFailureCacheTtlMs:
+          TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
+      });
       if (cachedRows) {
         processTableAvailable = cachedRows.rows !== null;
         processRows = cachedRows.rows ?? [];
@@ -27192,8 +24452,8 @@ export class TeamProvisioningService {
         processRowsReadForMetadata = true;
         try {
           processRows =
-            this.normalizeRuntimeProcessRowsForTelemetry(
-              await this.withRuntimeTelemetryTimeout(
+            normalizeRuntimeProcessRowsForTelemetry(
+              await withRuntimeTelemetryTimeout(
                 listRuntimeProcessTableForCurrentPlatform(),
                 TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
                 'process table runtime snapshot'
@@ -27236,8 +24496,8 @@ export class TeamProvisioningService {
       }
       try {
         windowsHostProcessRows =
-          this.normalizeRuntimeProcessRowsForTelemetry(
-            await this.withRuntimeTelemetryTimeout(
+          normalizeRuntimeProcessRowsForTelemetry(
+            await withRuntimeTelemetryTimeout(
               listWindowsProcessTable(
                 TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS
               ),
@@ -27391,56 +24651,11 @@ export class TeamProvisioningService {
     return metadataByMember;
   }
 
-  private buildAgentRuntimeResourceHistoryKey(params: {
-    memberName: string;
-    pid?: number;
-    runtimePid?: number;
-    pidSource?: TeamAgentRuntimePidSource;
-  }): string | null {
-    return this.agentRuntimeResourceHistory.buildKey(params);
-  }
-
-  private recordAgentRuntimeResourceSample(params: {
-    teamName: string;
-    memberName: string;
-    timestamp: string;
-    cpuPercent?: number;
-    rssBytes?: number;
-    primaryCpuPercent?: number;
-    primaryRssBytes?: number;
-    childCpuPercent?: number;
-    childRssBytes?: number;
-    processCount?: number;
-    runtimeLoadScope?: TeamAgentRuntimeLoadScope;
-    runtimeLoadTruncated?: boolean;
-    pidSource?: TeamAgentRuntimePidSource;
-    pid?: number;
-    runtimePid?: number;
-    activeKeys?: Set<string>;
-  }): TeamAgentRuntimeResourceSample[] | undefined {
-    return this.agentRuntimeResourceHistory.record(params);
-  }
-
-  private recordAgentRuntimeResourceSampleSafely(params: {
-    teamName: string;
-    memberName: string;
-    timestamp: string;
-    cpuPercent?: number;
-    rssBytes?: number;
-    primaryCpuPercent?: number;
-    primaryRssBytes?: number;
-    childCpuPercent?: number;
-    childRssBytes?: number;
-    processCount?: number;
-    runtimeLoadScope?: TeamAgentRuntimeLoadScope;
-    runtimeLoadTruncated?: boolean;
-    pidSource?: TeamAgentRuntimePidSource;
-    pid?: number;
-    runtimePid?: number;
-    activeKeys?: Set<string>;
-  }): TeamAgentRuntimeResourceSample[] | undefined {
+  private recordAgentRuntimeResourceSampleSafely(
+    params: TeamAgentRuntimeResourceHistoryRecordInput
+  ): TeamAgentRuntimeResourceSample[] | undefined {
     try {
-      return this.recordAgentRuntimeResourceSample(params);
+      return this.agentRuntimeResourceHistory.record(params);
     } catch (error) {
       logger.debug(
         `[${params.teamName}] Failed to record runtime telemetry sample for ${
@@ -27449,88 +24664,6 @@ export class TeamProvisioningService {
       );
       return undefined;
     }
-  }
-
-  private pruneAgentRuntimeResourceHistory(
-    teamName: string,
-    activeKeys: ReadonlySet<string>
-  ): void {
-    this.agentRuntimeResourceHistory.prune(teamName, activeKeys);
-  }
-
-  private normalizeRuntimeProcessUsageStats(stat: unknown): RuntimeProcessUsageStats | undefined {
-    return normalizeRuntimeProcessUsageStatsHelper(stat);
-  }
-
-  private normalizeRuntimeProcessRowsForTelemetry(
-    rows: unknown,
-    source?: RuntimeTelemetryProcessSource
-  ): RuntimeTelemetryProcessTableRow[] | null {
-    return normalizeRuntimeProcessRowsForTelemetryHelper(rows, source);
-  }
-
-  private shouldReadProcessTableForLiveRuntimeMetadata(params: {
-    metadataByMember: ReadonlyMap<string, LiveTeamAgentRuntimeMetadata>;
-    launchSnapshot: PersistedTeamLaunchSnapshot | null | undefined;
-    paneInfoById: ReadonlyMap<string, TmuxPaneRuntimeInfo>;
-  }): boolean {
-    for (const [memberName, metadata] of params.metadataByMember.entries()) {
-      if (metadata.agentId?.trim()) {
-        return true;
-      }
-      const paneId = metadata.tmuxPaneId?.trim() ?? '';
-      if (paneId && params.paneInfoById.has(paneId)) {
-        return true;
-      }
-      const launchRuntimePid = params.launchSnapshot?.members[memberName]?.runtimePid;
-      if (
-        (typeof metadata.metricsPid === 'number' &&
-          Number.isFinite(metadata.metricsPid) &&
-          metadata.metricsPid > 0) ||
-        (typeof launchRuntimePid === 'number' &&
-          Number.isFinite(launchRuntimePid) &&
-          launchRuntimePid > 0)
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private readCachedRuntimeProcessRowsForLiveRuntimeMetadata(
-    teamName: string,
-    runId: string | null
-  ): { rows: RuntimeTelemetryProcessTableRow[] | null } | null {
-    const cached = this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName);
-    const nowMs = Date.now();
-    if (!cached || cached.expiresAtMs <= nowMs || cached.runId !== runId) {
-      return null;
-    }
-
-    // Process table rows are sampled global OS state. Do not tie reuse to
-    // runtime snapshot generation: launch progress invalidates runtime metadata
-    // frequently, and the age gate below keeps liveness freshness bounded.
-    const sampledAtMs =
-      typeof cached.sampledAtMs === 'number' && Number.isFinite(cached.sampledAtMs)
-        ? cached.sampledAtMs
-        : 0;
-    const maxAgeMs =
-      cached.rows === null
-        ? TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS
-        : TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS;
-    if (sampledAtMs <= 0 || nowMs - sampledAtMs > maxAgeMs) {
-      return null;
-    }
-
-    if (cached.rows === null) {
-      return { rows: null };
-    }
-
-    const rows =
-      this.normalizeRuntimeProcessRowsForTelemetry(cached.rows)?.filter(
-        (row) => row.runtimeTelemetrySource !== 'windows-host'
-      ) ?? [];
-    return { rows };
   }
 
   private async readRuntimeProcessRowsForUsageSnapshot(
@@ -27551,8 +24684,8 @@ export class TeamProvisioningService {
     try {
       if (!rows) {
         rows =
-          this.normalizeRuntimeProcessRowsForTelemetry(
-            await this.withRuntimeTelemetryTimeout(
+          normalizeRuntimeProcessRowsForTelemetry(
+            await withRuntimeTelemetryTimeout(
               listRuntimeProcessTableForCurrentPlatform(),
               TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
               'process table runtime telemetry'
@@ -27574,14 +24707,14 @@ export class TeamProvisioningService {
     let includesWindowsHostRows = false;
     if (includeWindowsHostRows) {
       try {
-        const windowsHostRows = await this.withRuntimeTelemetryTimeout(
+        const windowsHostRows = await withRuntimeTelemetryTimeout(
           listWindowsProcessTable(TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS),
           TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
           'Windows process table runtime telemetry'
         );
         rows = [
           ...(rows ?? []),
-          ...(this.normalizeRuntimeProcessRowsForTelemetry(windowsHostRows, 'windows-host') ?? []),
+          ...(normalizeRuntimeProcessRowsForTelemetry(windowsHostRows, 'windows-host') ?? []),
         ];
         includesWindowsHostRows = true;
       } catch (error) {
@@ -27610,45 +24743,6 @@ export class TeamProvisioningService {
     return resultRows;
   }
 
-  private addRuntimeRootOwnersFromProcessRows(
-    teamName: string,
-    processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
-    rootOwnersByPid: Map<number, Set<string>>
-  ): void {
-    addRuntimeRootOwnersFromProcessRowsHelper({
-      teamName,
-      processRows,
-      rootOwnersByPid,
-      platform: process.platform,
-    });
-  }
-
-  private buildRuntimeUsageProcessTrees(
-    rootPids: readonly number[],
-    processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
-    rootOwnersByPid?: ReadonlyMap<number, ReadonlySet<string>>
-  ): Map<number, { pids: number[]; truncated: boolean }> {
-    return buildRuntimeUsageProcessTreesHelper({
-      rootPids,
-      processRows,
-      rootOwnersByPid,
-      limits: {
-        maxPidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
-        maxPidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
-      },
-      platform: process.platform,
-    });
-  }
-
-  private buildRuntimeProcessLoadStats(params: {
-    rootPid: number | undefined;
-    usageStatsByPid: ReadonlyMap<number, RuntimeProcessUsageStats>;
-    processTree?: { pids: number[]; truncated: boolean };
-    scope?: TeamAgentRuntimeLoadScope;
-  }): RuntimeProcessLoadStats | undefined {
-    return buildRuntimeProcessLoadStatsHelper(params);
-  }
-
   private buildRuntimeProcessLoadStatsSafely(
     teamName: string,
     memberName: string,
@@ -27660,7 +24754,7 @@ export class TeamProvisioningService {
     }
   ): RuntimeProcessLoadStats | undefined {
     try {
-      return this.buildRuntimeProcessLoadStats(params);
+      return buildRuntimeProcessLoadStats(params);
     } catch (error) {
       logger.debug(
         `[${teamName}] Failed to build runtime telemetry stats for ${memberName}; continuing without metrics: ${
@@ -27669,48 +24763,6 @@ export class TeamProvisioningService {
       );
       return undefined;
     }
-  }
-
-  private async withRuntimeTelemetryTimeout<T>(
-    promise: Promise<T>,
-    timeoutMs: number,
-    label: string
-  ): Promise<T> {
-    let timeout: NodeJS.Timeout | undefined;
-    try {
-      return await Promise.race([
-        promise,
-        new Promise<T>((_resolve, reject) => {
-          timeout = setTimeout(() => {
-            reject(new RuntimeTelemetryTimeoutError(`${label} timed out after ${timeoutMs}ms`));
-          }, timeoutMs);
-          timeout.unref?.();
-        }),
-      ]);
-    } finally {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    }
-  }
-
-  private buildProcessUsageStatsFromRows(
-    processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
-    pids: readonly number[]
-  ): Map<number, RuntimeProcessUsageStats> {
-    return buildProcessUsageStatsFromRowsHelper(processRows, pids);
-  }
-
-  private shouldSampleMissingRuntimeUsageStatsWithPidusage(): boolean {
-    // CPU/RSS telemetry already comes from the enriched process table in the
-    // default path. If this opt-in is enabled, preserve the older fallback for
-    // missing rows across platforms.
-    return this.isRuntimePidusageTelemetryEnabled();
-  }
-
-  private isRuntimePidusageTelemetryEnabled(): boolean {
-    const value = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED?.trim().toLowerCase();
-    return value === '1' || value === 'true' || value === 'yes';
   }
 
   private async readProcessUsageStatsByPid(
@@ -27745,7 +24797,7 @@ export class TeamProvisioningService {
     if (pidsToRead.length === 0) {
       return usageStatsByPid;
     }
-    if (!this.isRuntimePidusageTelemetryEnabled()) {
+    if (!isRuntimePidusageTelemetryEnabled()) {
       return usageStatsByPid;
     }
 
@@ -27782,7 +24834,7 @@ export class TeamProvisioningService {
 
     const options = RUNTIME_PIDUSAGE_OPTIONS;
     try {
-      const statsByPid = await this.withRuntimeTelemetryTimeout(
+      const statsByPid = await withRuntimeTelemetryTimeout(
         pidusage(pidsToRead, options),
         TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
         'pidusage batch runtime telemetry'
@@ -27792,7 +24844,7 @@ export class TeamProvisioningService {
         statsByPid && typeof statsByPid === 'object' ? statsByPid : {}
       )) {
         const pid = Number.parseInt(rawPid, 10);
-        const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
+        const usageStats = normalizeRuntimeProcessUsageStats(stat);
         if (Number.isFinite(pid) && pid > 0) {
           observedPids.add(pid);
           rememberUsageStats(pid, usageStats);
@@ -27828,12 +24880,12 @@ export class TeamProvisioningService {
       await Promise.all(
         chunk.map(async (pid) => {
           try {
-            const stat = await this.withRuntimeTelemetryTimeout(
+            const stat = await withRuntimeTelemetryTimeout(
               pidusage(pid, options),
               TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
               `pidusage runtime telemetry pid=${pid}`
             );
-            const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
+            const usageStats = normalizeRuntimeProcessUsageStats(stat);
             rememberUsageStats(pid, usageStats);
           } catch (error) {
             if (error instanceof RuntimeTelemetryTimeoutError) {
