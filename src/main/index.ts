@@ -1357,9 +1357,13 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     try {
       httpServer?.broadcast('team-change', event);
     } catch (error) {
-      logger.warn('team-change broadcast failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      try {
+        logger.warn('team-change broadcast failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch {
+        // Keep watcher processing best-effort even if failure logging fails.
+      }
     }
 
     // Process inbox and task change events.
