@@ -59,6 +59,10 @@ function writeToolUse(
   };
 }
 
+function lines(prefix: string, count: number): string {
+  return `${Array.from({ length: count }, (_, index) => `${prefix}-${index}`).join('\n')}\n`;
+}
+
 function metadataOnlyEditToolUse(toolUseId: string, filePath: string): object {
   return {
     timestamp: '2026-03-01T10:00:00.000Z',
@@ -229,7 +233,7 @@ describe('TaskChangeComputer', () => {
   it('extracts summary metadata from oversized JSONL tool events without full parsing', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'lead-oversized-summary.jsonl');
-    const oversizedContent = `${Array.from({ length: 250 }, (_, index) => `line-${index}`).join('\n')}\n`;
+    const oversizedContent = lines('line', 250);
     await writeJsonl(logPath, [
       writeToolUse('tool-oversized', '/repo/src/oversized.ts', oversizedContent),
     ]);
@@ -251,6 +255,58 @@ describe('TaskChangeComputer', () => {
     expect(result.files[0]?.linesAdded).toBe(250);
     expect(result.files[0]?.snippets).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('line-249');
+  });
+
+  it('keeps multiple oversized tool events in one assistant line separated in summary mode', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead-multi-oversized-summary.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-a',
+              name: 'MultiEdit',
+              input: {
+                file_path: '/repo/src/a.ts',
+                edits: [{ old_string: lines('old-a', 3), new_string: lines('new-a', 4) }],
+              },
+            },
+            {
+              type: 'tool_use',
+              id: 'tool-b',
+              name: 'MultiEdit',
+              input: {
+                file_path: '/repo/src/b.ts',
+                edits: [{ old_string: lines('old-b', 50), new_string: lines('new-b', 60) }],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const computer = createNoBoundaryTaskChangeComputer(logPath, {
+      maxSummaryJsonlParseBytes: 256,
+    });
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: { status: 'completed', reviewState: 'none' },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    const files = new Map(result.files.map((file) => [file.relativePath, file]));
+    expect(files.get('src/a.ts')).toMatchObject({ linesAdded: 4, linesRemoved: 3 });
+    expect(files.get('src/b.ts')).toMatchObject({ linesAdded: 60, linesRemoved: 50 });
+    expect(result.files.every((file) => file.snippets.length === 0)).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('new-b-59');
   });
 
   it('keeps newly created pending tasks without logs quiet', async () => {

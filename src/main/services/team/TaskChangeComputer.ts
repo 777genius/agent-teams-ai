@@ -625,8 +625,12 @@ export class TaskChangeComputer {
           this.maxSummaryJsonlParseBytes > 0 &&
           Buffer.byteLength(trimmed, 'utf8') > this.maxSummaryJsonlParseBytes
         ) {
-          const oversized = this.extractOversizedSummarySnippet(lineNumber, trimmed, seenFiles);
-          if (oversized) {
+          const oversizedSnippets = this.extractOversizedSummarySnippets(
+            lineNumber,
+            trimmed,
+            seenFiles
+          );
+          for (const oversized of oversizedSnippets) {
             addSnippet(lineNumber, oversized.snippet, oversized.lineCounts);
           }
           continue;
@@ -764,50 +768,104 @@ export class TaskChangeComputer {
     return { snippets, mtime: fileMtime };
   }
 
-  private extractOversizedSummarySnippet(
+  private extractOversizedSummarySnippets(
     lineNumber: number,
     rawLine: string,
     seenFiles: Set<string>
-  ): { snippet: SnippetDiff; lineCounts: { added: number; removed: number } } | null {
+  ): Array<{ snippet: SnippetDiff; lineCounts: { added: number; removed: number } }> {
     if (!this.rawLineLooksLikeAssistantToolUse(rawLine)) {
-      return null;
+      return [];
     }
 
-    const toolUseIndex = rawLine.indexOf('"tool_use"');
-    const rawToolName = this.extractRawJsonStringValue(rawLine, 'name', toolUseIndex)?.value ?? '';
+    const timestamp =
+      this.extractRawJsonStringValue(rawLine, 'timestamp')?.value ?? new Date().toISOString();
+    const snippets: Array<{
+      snippet: SnippetDiff;
+      lineCounts: { added: number; removed: number };
+    }> = [];
+    let searchIndex = 0;
+
+    while (searchIndex < rawLine.length) {
+      const toolUseIndex = rawLine.indexOf('"tool_use"', searchIndex);
+      if (toolUseIndex < 0) break;
+      const nextToolUseIndex = rawLine.indexOf('"tool_use"', toolUseIndex + '"tool_use"'.length);
+      const toolUseEndIndex = nextToolUseIndex >= 0 ? nextToolUseIndex : rawLine.length;
+      const snippet = this.extractOversizedSummarySnippetInRange({
+        lineNumber,
+        rawLine,
+        seenFiles,
+        toolUseIndex,
+        toolUseEndIndex,
+        timestamp,
+        ordinal: snippets.length,
+      });
+      if (snippet) {
+        snippets.push(snippet);
+      }
+      searchIndex = toolUseEndIndex;
+    }
+
+    return snippets;
+  }
+
+  private extractOversizedSummarySnippetInRange(input: {
+    lineNumber: number;
+    rawLine: string;
+    seenFiles: Set<string>;
+    toolUseIndex: number;
+    toolUseEndIndex: number;
+    timestamp: string;
+    ordinal: number;
+  }): { snippet: SnippetDiff; lineCounts: { added: number; removed: number } } | null {
+    const { lineNumber, rawLine, seenFiles, toolUseIndex, toolUseEndIndex, timestamp, ordinal } =
+      input;
+    const rawToolName =
+      this.extractRawJsonStringValue(rawLine, 'name', toolUseIndex, toolUseEndIndex)?.value ?? '';
     const toolName = rawToolName.startsWith('proxy_') ? rawToolName.slice(6) : rawToolName;
     if (toolName !== 'Write' && toolName !== 'Edit' && toolName !== 'MultiEdit') {
       return null;
     }
 
     const filePath =
-      this.extractRawJsonStringValue(rawLine, 'file_path', toolUseIndex)?.value ?? '';
+      this.extractRawJsonStringValue(rawLine, 'file_path', toolUseIndex, toolUseEndIndex)?.value ??
+      '';
     if (!filePath) {
       return null;
     }
 
-    const timestamp =
-      this.extractRawJsonStringValue(rawLine, 'timestamp')?.value ?? new Date().toISOString();
     const toolUseId =
-      this.extractRawJsonStringValue(rawLine, 'id', toolUseIndex)?.value ??
-      `oversized-${lineNumber}`;
+      this.extractRawJsonStringValue(rawLine, 'id', toolUseIndex, toolUseEndIndex)?.value ??
+      `oversized-${lineNumber}-${ordinal}`;
 
     let added = 0;
     let removed = 0;
     let snippetType: SnippetDiff['type'] = 'edit';
     if (toolName === 'Write') {
-      added = this.countRawJsonStringDiffLines(rawLine, 'content', toolUseIndex) ?? 0;
+      added =
+        this.countRawJsonStringDiffLines(rawLine, 'content', toolUseIndex, toolUseEndIndex) ?? 0;
       const normalizedTargetPath = this.normalizeFilePathKey(filePath);
       snippetType = seenFiles.has(normalizedTargetPath) ? 'write-update' : 'write-new';
       seenFiles.add(normalizedTargetPath);
     } else if (toolName === 'MultiEdit') {
-      added = this.countAllRawJsonStringDiffLines(rawLine, 'new_string', toolUseIndex);
-      removed = this.countAllRawJsonStringDiffLines(rawLine, 'old_string', toolUseIndex);
+      added = this.countAllRawJsonStringDiffLines(
+        rawLine,
+        'new_string',
+        toolUseIndex,
+        toolUseEndIndex
+      );
+      removed = this.countAllRawJsonStringDiffLines(
+        rawLine,
+        'old_string',
+        toolUseIndex,
+        toolUseEndIndex
+      );
       snippetType = 'multi-edit';
       seenFiles.add(this.normalizeFilePathKey(filePath));
     } else {
-      added = this.countRawJsonStringDiffLines(rawLine, 'new_string', toolUseIndex) ?? 0;
-      removed = this.countRawJsonStringDiffLines(rawLine, 'old_string', toolUseIndex) ?? 0;
+      added =
+        this.countRawJsonStringDiffLines(rawLine, 'new_string', toolUseIndex, toolUseEndIndex) ?? 0;
+      removed =
+        this.countRawJsonStringDiffLines(rawLine, 'old_string', toolUseIndex, toolUseEndIndex) ?? 0;
       seenFiles.add(this.normalizeFilePathKey(filePath));
     }
 
@@ -828,22 +886,20 @@ export class TaskChangeComputer {
   }
 
   private rawLineLooksLikeAssistantToolUse(rawLine: string): boolean {
-    return (
-      rawLine.includes('"tool_use"') &&
-      (rawLine.includes('"role":"assistant"') || rawLine.includes('"role": "assistant"'))
-    );
+    return rawLine.includes('"tool_use"') && /"role"\s*:\s*"assistant"/.test(rawLine);
   }
 
   private extractRawJsonStringValue(
     rawLine: string,
     key: string,
-    startIndex = 0
+    startIndex = 0,
+    endIndex = rawLine.length
   ): { value: string; nextIndex: number } | null {
-    const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, startIndex);
+    const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, startIndex, endIndex);
     if (quoteIndex == null) {
       return null;
     }
-    const endQuoteIndex = this.findRawJsonStringEnd(rawLine, quoteIndex);
+    const endQuoteIndex = this.findRawJsonStringEnd(rawLine, quoteIndex, endIndex);
     if (endQuoteIndex == null) {
       return null;
     }
@@ -857,23 +913,33 @@ export class TaskChangeComputer {
     }
   }
 
-  private countRawJsonStringDiffLines(rawLine: string, key: string, startIndex = 0): number | null {
-    const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, startIndex);
+  private countRawJsonStringDiffLines(
+    rawLine: string,
+    key: string,
+    startIndex = 0,
+    endIndex = rawLine.length
+  ): number | null {
+    const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, startIndex, endIndex);
     if (quoteIndex == null) {
       return null;
     }
-    return this.countRawJsonStringLines(rawLine, quoteIndex)?.lines ?? null;
+    return this.countRawJsonStringLines(rawLine, quoteIndex, endIndex)?.lines ?? null;
   }
 
-  private countAllRawJsonStringDiffLines(rawLine: string, key: string, startIndex = 0): number {
+  private countAllRawJsonStringDiffLines(
+    rawLine: string,
+    key: string,
+    startIndex = 0,
+    endIndex = rawLine.length
+  ): number {
     let total = 0;
     let index = Math.max(0, startIndex);
-    while (index < rawLine.length) {
-      const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, index);
+    while (index < endIndex) {
+      const quoteIndex = this.findRawJsonStringValueQuote(rawLine, key, index, endIndex);
       if (quoteIndex == null) {
         break;
       }
-      const counted = this.countRawJsonStringLines(rawLine, quoteIndex);
+      const counted = this.countRawJsonStringLines(rawLine, quoteIndex, endIndex);
       if (!counted) {
         break;
       }
@@ -883,24 +949,33 @@ export class TaskChangeComputer {
     return total;
   }
 
-  private findRawJsonStringValueQuote(rawLine: string, key: string, startIndex = 0): number | null {
+  private findRawJsonStringValueQuote(
+    rawLine: string,
+    key: string,
+    startIndex = 0,
+    endIndex = rawLine.length
+  ): number | null {
     const keyIndex = rawLine.indexOf(`"${key}"`, Math.max(0, startIndex));
-    if (keyIndex < 0) {
+    if (keyIndex < 0 || keyIndex >= endIndex) {
       return null;
     }
     let index = keyIndex + key.length + 2;
-    while (index < rawLine.length && /\s/.test(rawLine[index] ?? '')) index += 1;
+    while (index < endIndex && /\s/.test(rawLine[index] ?? '')) index += 1;
     if (rawLine[index] !== ':') {
       return null;
     }
     index += 1;
-    while (index < rawLine.length && /\s/.test(rawLine[index] ?? '')) index += 1;
-    return rawLine[index] === '"' ? index : null;
+    while (index < endIndex && /\s/.test(rawLine[index] ?? '')) index += 1;
+    return index < endIndex && rawLine[index] === '"' ? index : null;
   }
 
-  private findRawJsonStringEnd(rawLine: string, quoteIndex: number): number | null {
+  private findRawJsonStringEnd(
+    rawLine: string,
+    quoteIndex: number,
+    endIndex = rawLine.length
+  ): number | null {
     let index = quoteIndex + 1;
-    while (index < rawLine.length) {
+    while (index < endIndex) {
       const char = rawLine.charCodeAt(index);
       if (char === 34) {
         return index;
@@ -916,14 +991,15 @@ export class TaskChangeComputer {
 
   private countRawJsonStringLines(
     rawLine: string,
-    quoteIndex: number
+    quoteIndex: number,
+    endIndex = rawLine.length
   ): { lines: number; nextIndex: number } | null {
     let index = quoteIndex + 1;
     let hasContent = false;
     let lines = 1;
     let lastDecodedWasNewline = false;
 
-    while (index < rawLine.length) {
+    while (index < endIndex) {
       const char = rawLine.charCodeAt(index);
       if (char === 34) {
         return {

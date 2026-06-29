@@ -404,6 +404,11 @@ export class TeamDataService {
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
   private taskCommentNotificationProcessInFlight = new Map<string, Promise<void>>();
+  private taskCommentNotificationActiveProcess = new Map<string, string | undefined>();
+  private taskCommentNotificationQueuedProcess = new Map<
+    string,
+    { teamWide: boolean; taskIds: Set<string> }
+  >();
   private taskCommentNotificationInFlight = new Set<string>();
   private taskChangePresenceRepository: TaskChangePresenceRepository | null = null;
   private teamLogSourceTracker: TeamLogSourceTracker | null = null;
@@ -2568,8 +2573,36 @@ export class TeamDataService {
     return `${teamName}:${notificationKey}`;
   }
 
-  private buildTaskCommentNotificationProcessKey(teamName: string, taskId?: string): string {
-    return `${teamName}:${taskId?.trim() || '*'}`;
+  private buildTaskCommentNotificationProcessKey(teamName: string): string {
+    return teamName;
+  }
+
+  private queueTaskCommentNotificationProcess(teamName: string, taskId?: string): void {
+    const key = this.buildTaskCommentNotificationProcessKey(teamName);
+    const queued = this.taskCommentNotificationQueuedProcess.get(key) ?? {
+      teamWide: false,
+      taskIds: new Set<string>(),
+    };
+    const normalizedTaskId = taskId?.trim() ?? '';
+    if (!normalizedTaskId) {
+      queued.teamWide = true;
+      queued.taskIds.clear();
+    } else if (!queued.teamWide) {
+      queued.taskIds.add(normalizedTaskId);
+    }
+    this.taskCommentNotificationQueuedProcess.set(key, queued);
+  }
+
+  private consumeTaskCommentNotificationProcessQueue(teamName: string): { taskId?: string } | null {
+    const key = this.buildTaskCommentNotificationProcessKey(teamName);
+    const queued = this.taskCommentNotificationQueuedProcess.get(key);
+    if (!queued) return null;
+    this.taskCommentNotificationQueuedProcess.delete(key);
+    if (queued.teamWide || queued.taskIds.size !== 1) {
+      return {};
+    }
+    const taskId = queued.taskIds.values().next().value;
+    return typeof taskId === 'string' && taskId.length > 0 ? { taskId } : {};
   }
 
   private runTaskCommentNotificationsCoalesced(
@@ -2581,22 +2614,49 @@ export class TeamDataService {
       teamContext?: TaskCommentNotificationTeamContext;
     }
   ): Promise<void> {
-    const key = this.buildTaskCommentNotificationProcessKey(teamName, taskId);
-    const teamWideKey = this.buildTaskCommentNotificationProcessKey(teamName, undefined);
-    const existing =
-      this.taskCommentNotificationProcessInFlight.get(key) ??
-      (taskId ? this.taskCommentNotificationProcessInFlight.get(teamWideKey) : undefined);
+    const key = this.buildTaskCommentNotificationProcessKey(teamName);
+    const existing = this.taskCommentNotificationProcessInFlight.get(key);
     if (existing) {
+      const normalizedTaskId = taskId?.trim() || undefined;
+      const activeTaskId = this.taskCommentNotificationActiveProcess.get(key);
+      const activeCoversRequest =
+        !activeTaskId || (Boolean(normalizedTaskId) && activeTaskId === normalizedTaskId);
+      if (!activeCoversRequest) {
+        this.queueTaskCommentNotificationProcess(teamName, normalizedTaskId);
+      }
       return existing;
     }
 
-    const promise = this.processTaskCommentNotifications(teamName, taskId, options).finally(() => {
+    const promise = this.drainTaskCommentNotifications(teamName, taskId, options).finally(() => {
       if (this.taskCommentNotificationProcessInFlight.get(key) === promise) {
         this.taskCommentNotificationProcessInFlight.delete(key);
       }
+      this.taskCommentNotificationActiveProcess.delete(key);
     });
     this.taskCommentNotificationProcessInFlight.set(key, promise);
     return promise;
+  }
+
+  private async drainTaskCommentNotifications(
+    teamName: string,
+    taskId: string | undefined,
+    options: {
+      seedHistoricalIfJournalMissing?: boolean;
+      recoverPending?: boolean;
+      teamContext?: TaskCommentNotificationTeamContext;
+    }
+  ): Promise<void> {
+    const key = this.buildTaskCommentNotificationProcessKey(teamName);
+    let nextTaskId = taskId?.trim() || undefined;
+    while (true) {
+      this.taskCommentNotificationActiveProcess.set(key, nextTaskId);
+      await this.processTaskCommentNotifications(teamName, nextTaskId, options);
+      const queued = this.consumeTaskCommentNotificationProcessQueue(teamName);
+      if (!queued) {
+        return;
+      }
+      nextTaskId = queued.taskId;
+    }
   }
 
   private buildTaskRef(teamName: string, task: Pick<TeamTask, 'id' | 'displayId'>): TaskRef {
