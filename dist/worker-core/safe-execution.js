@@ -1066,21 +1066,16 @@ function workspaceChanged(before, after) {
     return before.fingerprint !== after.fingerprint || after.dirty;
 }
 function changedFilesBetween(before, after) {
-    if (before.mode === "filesystem" && after.mode === "filesystem") {
-        const beforeFiles = new Set(before.changedFiles);
-        return after.changedFiles
-            .filter((file) => !beforeFiles.has(file))
-            .sort((left, right) => left.localeCompare(right));
+    if (before.mode === after.mode) {
+        return changedFilesDelta(before.changedFiles, after.changedFiles);
     }
-    if (before.mode === "git" && after.mode === "git") {
-        return [...after.changedFiles].sort((left, right) => left.localeCompare(right));
-    }
-    const files = new Set();
-    for (const file of before.changedFiles)
-        files.add(file);
-    for (const file of after.changedFiles)
-        files.add(file);
-    return [...files].sort((left, right) => left.localeCompare(right));
+    return changedFilesDelta(before.changedFiles, after.changedFiles);
+}
+function changedFilesDelta(before, after) {
+    const beforeFiles = new Set(before);
+    return after
+        .filter((file) => !beforeFiles.has(file))
+        .sort((left, right) => left.localeCompare(right));
 }
 function requireTaskRecord(record, taskId) {
     if (record)

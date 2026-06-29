@@ -695,6 +695,112 @@ describe("SafeExecutionRunner", () => {
     expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
   });
 
+  it("does not report pre-existing git changes as worker-changed files", async () => {
+    const workspacePath = await tempPath("safe-execution-git-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts"],
+        fingerprint: "before",
+        summary: "before git status",
+      },
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts", "src/worker-output.ts"],
+        fingerprint: "after",
+        summary: "after git status",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-git-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
+  });
+
+  it("uses delta when snapshot modes change during an attempt", async () => {
+    const workspacePath = await tempPath("safe-execution-mixed-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: false,
+        changedFiles: [".worktrees/old/file.ts", "src/pre-existing.ts"],
+        fingerprint: "before",
+        summary: "before filesystem scan",
+      },
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts", "src/worker-output.ts"],
+        fingerprint: "after",
+        summary: "after git status",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-mixed-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
+  });
+
   async function tempPath(prefix: string): Promise<string> {
     const path = await mkdtemp(join(tmpdir(), prefix));
     cleanupPaths.push(path);
