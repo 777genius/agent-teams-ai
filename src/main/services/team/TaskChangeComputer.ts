@@ -577,12 +577,16 @@ export class TaskChangeComputer {
     const erroredIds = new Set<string>();
     const seenFiles = new Set<string>();
 
+    const markErroredToolUseId = (toolUseId: string): void => {
+      erroredIds.add(toolUseId);
+      for (const record of snippetsByToolUseId.get(toolUseId) ?? []) {
+        record.snippet.isError = true;
+      }
+    };
+
     const markErroredIds = (entry: Record<string, unknown>): void => {
       for (const toolUseId of this.collectErroredToolUseIdsFromEntry(entry)) {
-        erroredIds.add(toolUseId);
-        for (const record of snippetsByToolUseId.get(toolUseId) ?? []) {
-          record.snippet.isError = true;
-        }
+        markErroredToolUseId(toolUseId);
       }
     };
 
@@ -625,10 +629,14 @@ export class TaskChangeComputer {
           this.maxSummaryJsonlParseBytes > 0 &&
           Buffer.byteLength(trimmed, 'utf8') > this.maxSummaryJsonlParseBytes
         ) {
+          for (const toolUseId of this.collectRawErroredToolUseIds(trimmed)) {
+            markErroredToolUseId(toolUseId);
+          }
           const oversizedSnippets = this.extractOversizedSummarySnippets(
             lineNumber,
             trimmed,
-            seenFiles
+            seenFiles,
+            erroredIds
           );
           for (const oversized of oversizedSnippets) {
             addSnippet(lineNumber, oversized.snippet, oversized.lineCounts);
@@ -771,7 +779,8 @@ export class TaskChangeComputer {
   private extractOversizedSummarySnippets(
     lineNumber: number,
     rawLine: string,
-    seenFiles: Set<string>
+    seenFiles: Set<string>,
+    erroredIds: Set<string>
   ): Array<{ snippet: SnippetDiff; lineCounts: { added: number; removed: number } }> {
     if (!this.rawLineLooksLikeAssistantToolUse(rawLine)) {
       return [];
@@ -794,6 +803,7 @@ export class TaskChangeComputer {
         lineNumber,
         rawLine,
         seenFiles,
+        erroredIds,
         toolUseIndex,
         toolUseEndIndex,
         timestamp,
@@ -812,13 +822,22 @@ export class TaskChangeComputer {
     lineNumber: number;
     rawLine: string;
     seenFiles: Set<string>;
+    erroredIds: Set<string>;
     toolUseIndex: number;
     toolUseEndIndex: number;
     timestamp: string;
     ordinal: number;
   }): { snippet: SnippetDiff; lineCounts: { added: number; removed: number } } | null {
-    const { lineNumber, rawLine, seenFiles, toolUseIndex, toolUseEndIndex, timestamp, ordinal } =
-      input;
+    const {
+      lineNumber,
+      rawLine,
+      seenFiles,
+      erroredIds,
+      toolUseIndex,
+      toolUseEndIndex,
+      timestamp,
+      ordinal,
+    } = input;
     const rawToolName =
       this.extractRawJsonStringValue(rawLine, 'name', toolUseIndex, toolUseEndIndex)?.value ?? '';
     const toolName = rawToolName.startsWith('proxy_') ? rawToolName.slice(6) : rawToolName;
@@ -879,10 +898,37 @@ export class TaskChangeComputer {
         newString: '',
         replaceAll: false,
         timestamp,
-        isError: false,
+        isError: erroredIds.has(toolUseId),
       },
       lineCounts: { added, removed },
     };
+  }
+
+  private collectRawErroredToolUseIds(rawLine: string): Set<string> {
+    const ids = new Set<string>();
+    let searchIndex = 0;
+    while (searchIndex < rawLine.length) {
+      const resultIndex = rawLine.indexOf('"tool_result"', searchIndex);
+      if (resultIndex < 0) break;
+      const nextResultIndex = rawLine.indexOf(
+        '"tool_result"',
+        resultIndex + '"tool_result"'.length
+      );
+      const resultEndIndex = nextResultIndex >= 0 ? nextResultIndex : rawLine.length;
+      if (this.rawJsonBooleanValue(rawLine, 'is_error', true, resultIndex, resultEndIndex)) {
+        const toolUseId = this.extractRawJsonStringValue(
+          rawLine,
+          'tool_use_id',
+          resultIndex,
+          resultEndIndex
+        )?.value;
+        if (toolUseId) {
+          ids.add(toolUseId);
+        }
+      }
+      searchIndex = resultEndIndex;
+    }
+    return ids;
   }
 
   private rawLineLooksLikeAssistantToolUse(rawLine: string): boolean {
@@ -967,6 +1013,28 @@ export class TaskChangeComputer {
     index += 1;
     while (index < endIndex && /\s/.test(rawLine[index] ?? '')) index += 1;
     return index < endIndex && rawLine[index] === '"' ? index : null;
+  }
+
+  private rawJsonBooleanValue(
+    rawLine: string,
+    key: string,
+    expected: boolean,
+    startIndex = 0,
+    endIndex = rawLine.length
+  ): boolean {
+    const keyIndex = rawLine.indexOf(`"${key}"`, Math.max(0, startIndex));
+    if (keyIndex < 0 || keyIndex >= endIndex) {
+      return false;
+    }
+    let index = keyIndex + key.length + 2;
+    while (index < endIndex && /\s/.test(rawLine[index] ?? '')) index += 1;
+    if (rawLine[index] !== ':') {
+      return false;
+    }
+    index += 1;
+    while (index < endIndex && /\s/.test(rawLine[index] ?? '')) index += 1;
+    const expectedRaw = expected ? 'true' : 'false';
+    return index + expectedRaw.length <= endIndex && rawLine.startsWith(expectedRaw, index);
   }
 
   private findRawJsonStringEnd(
