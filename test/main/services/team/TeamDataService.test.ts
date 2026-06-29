@@ -3580,10 +3580,130 @@ describe('TeamDataService', () => {
       await second;
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
-      expect(journal.withEntries).toHaveBeenCalledTimes(2);
+      expect(journal.withEntries).toHaveBeenCalledTimes(3);
       expect(journalEntries[0]).toMatchObject({
         state: 'sent',
       });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('queues same-task comment notification refreshes that arrive during an active pass', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    let withEntriesCalls = 0;
+    let releaseFirstJournalWrite: (() => void) | undefined;
+    let resolveFirstJournalWriteStarted: (() => void) | undefined;
+    const firstJournalWriteStarted = new Promise<void>((resolve) => {
+      resolveFirstJournalWriteStarted = resolve;
+    });
+    const firstJournalWriteGate = new Promise<void>((resolve) => {
+      releaseFirstJournalWrite = resolve;
+    });
+    const inboxWriter = {
+      sendMessage: vi.fn(async (_teamName: string, message: { messageId?: string }) => ({
+        deliveredToInbox: true,
+        messageId: message.messageId ?? 'msg-1',
+      })),
+    };
+    const firstTaskSnapshot = {
+      id: 'task-1',
+      displayId: 'abcd1234',
+      subject: 'Investigate',
+      status: 'pending',
+      owner: 'alice',
+      comments: [
+        {
+          id: 'comment-1',
+          author: 'alice',
+          text: 'First task update.',
+          createdAt: '2026-03-14T10:00:00.000Z',
+          type: 'regular',
+        },
+      ],
+    };
+    const secondTaskSnapshot = {
+      ...firstTaskSnapshot,
+      comments: [
+        ...firstTaskSnapshot.comments,
+        {
+          id: 'comment-2',
+          author: 'alice',
+          text: 'Second task update.',
+          createdAt: '2026-03-14T10:01:00.000Z',
+          type: 'regular',
+        },
+      ],
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(
+        async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+          withEntriesCalls += 1;
+          if (withEntriesCalls === 1) {
+            resolveFirstJournalWriteStarted?.();
+            await firstJournalWriteGate;
+          }
+          const outcome = await fn(journalEntries);
+          return outcome.result;
+        }
+      ),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi
+            .fn()
+            .mockResolvedValueOnce([firstTaskSnapshot])
+            .mockResolvedValue([secondTaskSnapshot]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+      await firstJournalWriteStarted;
+      const second = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      if (!releaseFirstJournalWrite) {
+        throw new Error('Expected journal release');
+      }
+      releaseFirstJournalWrite();
+
+      await first;
+      await second;
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+      expect(journalEntries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ key: 'task-1:comment-1', state: 'sent' }),
+          expect.objectContaining({ key: 'task-1:comment-2', state: 'sent' }),
+        ])
+      );
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
       else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;

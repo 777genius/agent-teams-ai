@@ -2618,12 +2618,7 @@ export class TeamDataService {
     const existing = this.taskCommentNotificationProcessInFlight.get(key);
     if (existing) {
       const normalizedTaskId = taskId?.trim() || undefined;
-      const activeTaskId = this.taskCommentNotificationActiveProcess.get(key);
-      const activeCoversRequest =
-        !activeTaskId || (Boolean(normalizedTaskId) && activeTaskId === normalizedTaskId);
-      if (!activeCoversRequest) {
-        this.queueTaskCommentNotificationProcess(teamName, normalizedTaskId);
-      }
+      this.queueTaskCommentNotificationProcess(teamName, normalizedTaskId);
       return existing;
     }
 
