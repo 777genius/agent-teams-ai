@@ -132,6 +132,58 @@ describe('MemberWorkSyncTeamChangeRouter', () => {
     });
   });
 
+  it.each([
+    {
+      name: 'inbox',
+      event: { type: 'inbox' as const, teamName: 'team-a', detail: 'inboxes/bob.json' },
+      memberName: 'bob',
+      triggerReason: 'inbox_changed',
+    },
+    {
+      name: 'tool finish',
+      event: {
+        type: 'tool-activity' as const,
+        teamName: 'team-a',
+        detail: JSON.stringify({
+          action: 'finish',
+          memberName: 'alice',
+          toolUseId: 'tool-1',
+        }),
+      },
+      memberName: 'alice',
+      triggerReason: 'tool_finished',
+    },
+    {
+      name: 'member spawn',
+      event: { type: 'member-spawn' as const, teamName: 'team-a', detail: 'bob' },
+      memberName: 'bob',
+      triggerReason: 'member_spawned',
+      runAfterMs: 30_000,
+    },
+    {
+      name: 'member turn settled',
+      event: {
+        type: 'member-turn-settled' as const,
+        teamName: 'team-a',
+        detail: JSON.stringify({ memberName: 'alice', sourceId: 'source-1', provider: 'opencode' }),
+      },
+      memberName: 'alice',
+      triggerReason: 'turn_settled',
+    },
+  ])('keeps targeted router event $name scoped to one member', (scenario) => {
+    const { queue, router } = createRouter(['alice', 'bob', 'carol']);
+
+    router.noteTeamChange(scenario.event);
+
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: scenario.memberName,
+      triggerReason: scenario.triggerReason,
+      ...(scenario.runAfterMs === undefined ? {} : { runAfterMs: scenario.runAfterMs }),
+    });
+  });
+
   it('ignores malformed member-turn-settled details', () => {
     const { queue, router } = createRouter();
 
