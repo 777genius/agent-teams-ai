@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const skipResponsesForOps = new Set<string>();
+  const throwPostMessageForOps = new Set<string>();
   const workers: Array<{
     messages: unknown[];
     handlers: Map<string, (value: unknown) => void>;
@@ -14,8 +15,11 @@ const hoisted = vi.hoisted(() => {
       messages: [] as unknown[],
       handlers: new Map<string, (value: unknown) => void>(),
       postMessage(message: unknown) {
-        worker.messages.push(message);
         const request = message as { id: string; op: string };
+        if (throwPostMessageForOps.has(request.op)) {
+          throw new Error(`post failed for ${request.op}`);
+        }
+        worker.messages.push(message);
         if (skipResponsesForOps.has(request.op)) return;
         queueMicrotask(() => {
           const handler = worker.handlers.get('message');
@@ -40,6 +44,7 @@ const hoisted = vi.hoisted(() => {
     workers,
     createMockWorker,
     skipResponsesForOps,
+    throwPostMessageForOps,
   };
 });
 
@@ -65,6 +70,7 @@ describe('TeamFsWorkerClient', () => {
     vi.useRealTimers();
     hoisted.workers.length = 0;
     hoisted.skipResponsesForOps.clear();
+    hoisted.throwPostMessageForOps.clear();
   });
 
   it('prewarms the worker without running a scan', async () => {
@@ -148,5 +154,35 @@ describe('TeamFsWorkerClient', () => {
       teams: [{ teamName: 'fresh-team', displayName: 'Fresh Team' }],
       diag: { op: 'listTeams', totalMs: 1 },
     });
+  });
+
+  it('clears pending state when worker postMessage throws synchronously', async () => {
+    vi.useFakeTimers();
+    hoisted.throwPostMessageForOps.add('listTeams');
+    const { TeamFsWorkerClient } = await import(
+      '../../../../src/main/services/team/TeamFsWorkerClient'
+    );
+    const client = new TeamFsWorkerClient();
+    const options = {
+      largeConfigBytes: 8 * 1024,
+      configHeadBytes: 4 * 1024,
+      maxConfigBytes: 256 * 1024,
+      maxMembersMetaBytes: 256 * 1024,
+      maxSessionHistoryInSummary: 10,
+      maxProjectPathHistoryInSummary: 10,
+    };
+
+    await expect(client.listTeams(options)).rejects.toThrow('post failed for listTeams');
+    expect(hoisted.workers).toHaveLength(1);
+
+    hoisted.throwPostMessageForOps.delete('listTeams');
+    await vi.advanceTimersByTimeAsync(20_001);
+    await expect(client.listTeams(options)).resolves.toMatchObject({
+      teams: [],
+      diag: { op: 'listTeams', totalMs: 0 },
+    });
+
+    expect(hoisted.workers).toHaveLength(1);
+    expect(hoisted.workers[0].messages).toHaveLength(1);
   });
 });
