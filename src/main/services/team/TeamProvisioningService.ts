@@ -71,7 +71,6 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
-import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
@@ -187,10 +186,6 @@ import {
   type RuntimeToolApprovalEntry,
 } from './approvals/RuntimeToolApprovalCoordinator';
 import {
-  parseBootstrapRuntimeProofDetail,
-  validateBootstrapRuntimeProofEnvelope,
-} from './bootstrap/BootstrapProofValidation';
-import {
   buildNativeAppManagedBootstrapSpecs,
   buildNativeAppManagedBootstrapSpecsWithDiagnostics,
   type NativeAppManagedBootstrapSpec,
@@ -290,6 +285,34 @@ import {
   writeDeterministicBootstrapUserPromptFile,
 } from './provisioning/TeamProvisioningBootstrapSpec';
 import {
+  applyBootstrapTranscriptEvidenceOverlay as applyBootstrapTranscriptEvidenceOverlayHelper,
+  applyProcessBootstrapTransportOverlay as applyProcessBootstrapTransportOverlayHelper,
+  BOOTSTRAP_FAILURE_TAIL_BYTES,
+  BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS,
+  BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
+  type BootstrapTranscriptOutcome,
+  type BootstrapTranscriptOutcomeCacheEntry,
+  type BootstrapTranscriptOutcomeLookupCacheEntry,
+  cleanConfirmedBootstrapRuntimeDiagnostics as cleanConfirmedBootstrapRuntimeDiagnosticsHelper,
+  findBootstrapRuntimeProofObservedAt as findBootstrapRuntimeProofObservedAtHelper,
+  findBootstrapTranscriptOutcome as findBootstrapTranscriptOutcomeHelper,
+  getParsedBootstrapTranscriptTail as getParsedBootstrapTranscriptTailHelper,
+  hasBootstrapTranscriptLaunchReconcileOutcome as hasBootstrapTranscriptLaunchReconcileOutcomeHelper,
+  isBootstrapProofClearableLaunchFailureReason,
+  isProcessBootstrapTransportDiagnostic,
+  type LeadInboxLaunchReconcileMessage,
+  needsBootstrapAcceptanceReconcile as needsBootstrapAcceptanceReconcileHelper,
+  needsConfirmedBootstrapDiagnosticReconcile as needsConfirmedBootstrapDiagnosticReconcileHelper,
+  type ParsedBootstrapTranscriptTailCacheEntry,
+  type ParsedBootstrapTranscriptTailLine,
+  PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
+  readBootstrapTranscriptOutcomesInProjectRoot as readBootstrapTranscriptOutcomesInProjectRootHelper,
+  readLeadInboxMessagesForLaunchReconcile as readLeadInboxMessagesForLaunchReconcileHelper,
+  readProcessBootstrapTransportSummary as readProcessBootstrapTransportSummaryHelper,
+  readRecentBootstrapTranscriptOutcome as readRecentBootstrapTranscriptOutcomeHelper,
+  shouldClearRuntimeDiagnosticAfterBootstrapConfirmation,
+} from './provisioning/TeamProvisioningBootstrapTranscript';
+import {
   buildCliExitFailurePresentation,
   buildCombinedLogs,
 } from './provisioning/TeamProvisioningCliExitPresentation';
@@ -326,7 +349,6 @@ import {
   isAutoClearableLaunchFailureReason,
   isBootstrapCheckInTimeoutFailureReason,
   isCliProvisionedButNotAliveFailureReason,
-  isNeverSpawnedDuringLaunchReason,
   isProvisionedButNotAliveFailureReason,
 } from './provisioning/TeamProvisioningLaunchFailurePolicy';
 import {
@@ -414,8 +436,6 @@ import {
   buildTaskBoardSnapshot,
   extractBootstrapFailureReason,
   extractHeartbeatTimestamp,
-  extractTranscriptMessageText,
-  getBootstrapTranscriptSuccessSourceFromNormalized,
   getCanonicalSendMessageFieldRule,
   getCanonicalSendMessageToolRule,
   isTaskBoardSnapshotWorkCandidate,
@@ -480,13 +500,8 @@ import {
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import {
-  buildProcessBootstrapPendingDiagnostic,
-  buildProcessBootstrapTimeoutDiagnostic,
-  deriveProcessTransportProjectionPhase,
-  type ProcessBootstrapTransportEvent,
   type ProcessBootstrapTransportSummary,
   sanitizeProcessRuntimeEventFilePrefix,
-  summarizeProcessBootstrapTransportEvents,
 } from './ProcessBootstrapTransportEvidence';
 import {
   boundLaunchDiagnostics,
@@ -691,11 +706,6 @@ interface LaunchStateWriteResult {
   wrote: boolean;
 }
 
-type BootstrapTranscriptSuccessSource = 'member_briefing' | 'assistant_text';
-
-const BOOTSTRAP_RUNTIME_PROOF_TAIL_BYTES = 256 * 1024;
-const BOOTSTRAP_RUNTIME_EVENT_MAX_LINES = 256;
-const BOOTSTRAP_RUNTIME_EVENT_MAX_LINE_BYTES = 16 * 1024;
 const TEAMMATE_RUNTIME_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME';
 const TEAMMATE_RUNTIME_EVENTS_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH';
 const TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV = 'CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN';
@@ -704,192 +714,6 @@ const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
 
 function getTeamRuntimeEventsDir(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, 'runtime');
-}
-
-function isProcessBootstrapTransportDiagnostic(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    (value.startsWith('Bootstrap transport ') ||
-      value.includes('Last transport stage:') ||
-      value.startsWith('bootstrap submit ') ||
-      value.startsWith('runtime failed') ||
-      value.startsWith('runtime exited'))
-  );
-}
-
-function realpathIfExists(inputPath: string): string | null {
-  try {
-    return fs.realpathSync.native(inputPath);
-  } catch {
-    return null;
-  }
-}
-
-function isContainedTeamRuntimeEventsPath(teamName: string, candidatePath: string): boolean {
-  const runtimeDir = getTeamRuntimeEventsDir(teamName);
-  const resolvedRuntimeDir = path.resolve(runtimeDir);
-  const resolvedCandidate = path.resolve(candidatePath);
-  if (!isPathWithinRoot(resolvedCandidate, resolvedRuntimeDir)) {
-    return false;
-  }
-
-  const realRuntimeDir = realpathIfExists(resolvedRuntimeDir);
-  const realCandidate = realpathIfExists(resolvedCandidate);
-  if (realCandidate) {
-    return isPathWithinRoot(realCandidate, realRuntimeDir ?? resolvedRuntimeDir);
-  }
-  return true;
-}
-
-type BootstrapTranscriptOutcome =
-  | {
-      kind: 'success';
-      observedAt: string;
-      source: BootstrapTranscriptSuccessSource;
-    }
-  | {
-      kind: 'failure';
-      observedAt: string;
-      reason: string;
-    };
-
-interface BootstrapTranscriptOutcomeCacheEntry {
-  mtimeMs: number;
-  size: number;
-  outcome: BootstrapTranscriptOutcome | null;
-}
-
-interface BootstrapTranscriptOutcomeLookupCacheEntry {
-  expiresAtMs: number;
-  outcome: BootstrapTranscriptOutcome | null;
-}
-
-interface BootstrapTranscriptOutcomeCandidate {
-  text: string;
-  // text.replace(/\s+/g,' ').trim().toLowerCase(), computed once and reused across
-  // members so success/context detection does not re-normalize the same line.
-  normalizedText: string;
-  observedAt: string;
-  parsedAgentName: string | null;
-  // The shared parsed-tail line this candidate was built from. Used to memoize the
-  // pure extractBootstrapFailureReason() result on the line itself so an N-member
-  // team extracts each line's failure reason at most once instead of once per member.
-  parsedLine: ParsedBootstrapTranscriptTailLine;
-}
-
-interface ParsedBootstrapTranscriptTailLine {
-  rawTimestamp: string | null;
-  timestampMs: number;
-  text: string | null;
-  normalizedText: string | null;
-  parsedAgentName: string | null;
-  // Memoized extractBootstrapFailureReason(text): undefined = not computed yet,
-  // null = computed/no failure reason, string = the failure reason. Lives as long as
-  // this line's parse-cache entry (filePath + mtime + size); a file change re-parses
-  // into fresh line objects, so the memo cannot drift from the line's text.
-  bootstrapFailureReason?: string | null;
-  bootstrapContextCandidateByTeam?: Map<string, boolean>;
-  bootstrapContextMemberMatchByName?: Map<string, boolean>;
-  bootstrapSuccessSourceByTeamMember?: Map<string, BootstrapTranscriptSuccessSource | null>;
-}
-
-interface ParsedBootstrapTranscriptTailCacheEntry {
-  mtimeMs: number;
-  size: number;
-  lines: ParsedBootstrapTranscriptTailLine[];
-}
-
-function isNormalizedBootstrapTranscriptContextCandidateText(
-  normalizedText: string,
-  normalizedTeamName: string
-): boolean {
-  if (!normalizedText || !normalizedTeamName) {
-    return false;
-  }
-  if (!normalizedText.includes(normalizedTeamName)) {
-    return false;
-  }
-  return (
-    normalizedText.includes('bootstrap') ||
-    normalizedText.includes('bootstrapping') ||
-    normalizedText.includes('member briefing') ||
-    normalizedText.includes('task briefing')
-  );
-}
-
-function isNormalizedBootstrapTranscriptContextMemberText(
-  normalizedText: string,
-  normalizedMemberName: string
-): boolean {
-  return !!normalizedMemberName && normalizedText.includes(normalizedMemberName);
-}
-
-function getCachedBootstrapContextCandidateForLine(
-  line: ParsedBootstrapTranscriptTailLine,
-  normalizedText: string,
-  normalizedTeamName: string
-): boolean {
-  let candidateByTeam = line.bootstrapContextCandidateByTeam;
-  if (!candidateByTeam) {
-    candidateByTeam = new Map<string, boolean>();
-    line.bootstrapContextCandidateByTeam = candidateByTeam;
-  }
-  const cached = candidateByTeam.get(normalizedTeamName);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const value = isNormalizedBootstrapTranscriptContextCandidateText(
-    normalizedText,
-    normalizedTeamName
-  );
-  candidateByTeam.set(normalizedTeamName, value);
-  return value;
-}
-
-function getCachedBootstrapContextMemberMatchForLine(
-  line: ParsedBootstrapTranscriptTailLine,
-  normalizedText: string,
-  normalizedMemberName: string
-): boolean {
-  let matchByName = line.bootstrapContextMemberMatchByName;
-  if (!matchByName) {
-    matchByName = new Map<string, boolean>();
-    line.bootstrapContextMemberMatchByName = matchByName;
-  }
-  const cached = matchByName.get(normalizedMemberName);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const value = isNormalizedBootstrapTranscriptContextMemberText(
-    normalizedText,
-    normalizedMemberName
-  );
-  matchByName.set(normalizedMemberName, value);
-  return value;
-}
-
-function getCachedBootstrapSuccessSourceForLine(
-  line: ParsedBootstrapTranscriptTailLine,
-  normalizedText: string,
-  normalizedTeamName: string,
-  normalizedMemberName: string
-): BootstrapTranscriptSuccessSource | null {
-  let sourceByTeamMember = line.bootstrapSuccessSourceByTeamMember;
-  if (!sourceByTeamMember) {
-    sourceByTeamMember = new Map<string, BootstrapTranscriptSuccessSource | null>();
-    line.bootstrapSuccessSourceByTeamMember = sourceByTeamMember;
-  }
-  const cacheKey = `${normalizedTeamName}\0${normalizedMemberName}`;
-  if (sourceByTeamMember.has(cacheKey)) {
-    return sourceByTeamMember.get(cacheKey) ?? null;
-  }
-  const source = getBootstrapTranscriptSuccessSourceFromNormalized(
-    normalizedText,
-    normalizedTeamName,
-    normalizedMemberName
-  );
-  sourceByTeamMember.set(cacheKey, source);
-  return source;
 }
 
 import type {
@@ -1132,26 +956,6 @@ function buildRuntimeDiagnosticForSpawn(
   return baseDiagnostic
     ? `${baseDiagnostic}; process table unavailable`
     : 'process table unavailable';
-}
-
-function isConfirmedBootstrapStaleRuntimeDiagnostic(reason?: string): boolean {
-  const text = reason?.trim();
-  return text === 'persisted runtime pid is not alive';
-}
-
-function isBootstrapProofClearableLaunchFailureReason(reason?: string): boolean {
-  return (
-    isAutoClearableLaunchFailureReason(reason) ||
-    isProvisionedButNotAliveFailureReason(reason) ||
-    isConfirmedBootstrapStaleRuntimeDiagnostic(reason)
-  );
-}
-
-function shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(reason?: string): boolean {
-  return (
-    isBootstrapProofClearableLaunchFailureReason(reason) ||
-    isConfirmedBootstrapStaleRuntimeDiagnostic(reason)
-  );
 }
 
 function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRefs'] | undefined {
@@ -2008,10 +1812,6 @@ interface MemberSpawnInboxCursor {
 }
 
 type LeadInboxMemberSpawnMessage = InboxMessage & { messageId: string };
-type LeadInboxLaunchReconcileMessage = Pick<
-  InboxMessage,
-  'from' | 'text' | 'timestamp' | 'messageId'
->;
 
 function compareMemberSpawnInboxCursor(
   left: MemberSpawnInboxCursor,
@@ -2907,11 +2707,6 @@ export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
 
-  private static readonly BOOTSTRAP_FAILURE_TAIL_BYTES = 128 * 1024;
-  // A transcript whose mtime predates the lookup window (minus slack for clock skew
-  // between the line timestamp source and the filesystem) cannot hold a line at/after
-  // sinceMs, so it is skipped without opening it. The slack keeps detection safe.
-  private static readonly BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS = 5_000;
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
   private static readonly PENDING_INBOX_RELAY_TTL_MS = 2 * 60 * 1000;
   private static readonly SAME_TEAM_NATIVE_DELIVERY_GRACE_MS = 15_000;
@@ -2925,8 +2720,6 @@ export class TeamProvisioningService {
   private static readonly RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS = 10_000;
   private static readonly RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS = 30_000;
   private static readonly AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT = 60;
-  private static readonly BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES = 2_048;
-  private static readonly PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS = 10_000;
   private static readonly MAX_RUNTIME_TREE_PIDS_PER_ROOT = 64;
   private static readonly MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT = 512;
   private static readonly RUNTIME_PROCESS_TABLE_TIMEOUT_MS = 1_500;
@@ -30071,199 +29864,27 @@ export class TeamProvisioningService {
     teamName: string,
     leadName: string
   ): Promise<LeadInboxLaunchReconcileMessage[]> {
-    const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${leadName}.json`);
-    try {
-      const raw = await tryReadRegularFileUtf8(inboxPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_INBOX_MAX_BYTES,
-      });
-      if (!raw) {
-        return [];
-      }
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.flatMap((item): LeadInboxLaunchReconcileMessage[] => {
-        if (!item || typeof item !== 'object') {
-          return [];
-        }
-        const row = item as Partial<InboxMessage>;
-        return typeof row.from === 'string' &&
-          typeof row.text === 'string' &&
-          typeof row.timestamp === 'string'
-          ? [
-              {
-                from: row.from,
-                text: row.text,
-                timestamp: row.timestamp,
-                messageId: row.messageId,
-              },
-            ]
-          : [];
-      });
-    } catch {
-      return [];
-    }
+    return readLeadInboxMessagesForLaunchReconcileHelper({
+      teamName,
+      leadName,
+      teamsBasePath: getTeamsBasePath(),
+      readRegularFileUtf8: tryReadRegularFileUtf8,
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_INBOX_MAX_BYTES,
+    });
   }
 
   private async hasBootstrapTranscriptLaunchReconcileOutcome(
     snapshot: PersistedTeamLaunchSnapshot
   ): Promise<boolean> {
-    const expectedMembers = this.getPersistedLaunchMemberNames(snapshot);
-    for (const expected of expectedMembers) {
-      const current = snapshot.members[expected];
-      if (!current || current.bootstrapConfirmed) {
-        continue;
-      }
-      const acceptedAtMs =
-        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      if (
-        current.launchState !== 'failed_to_start' ||
-        isBootstrapProofClearableLaunchFailureReason(
-          current.hardFailureReason ?? current.runtimeDiagnostic
-        )
-      ) {
-        const runtimeProofObservedAt = await this.findBootstrapRuntimeProofObservedAt(
-          snapshot.teamName,
-          expected,
-          current
-        );
-        if (runtimeProofObservedAt) {
-          return true;
-        }
-      }
-      const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
-        snapshot.teamName,
-        expected,
-        Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-      );
-      if (
-        transcriptOutcome &&
-        (transcriptOutcome.kind !== 'success' || !isPersistedOpenCodeSecondaryLaneMember(current))
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private resolveBootstrapRuntimeMember(
-    teamName: string,
-    memberName: string
-  ): PersistedRuntimeMemberLike | undefined {
-    return this.readPersistedRuntimeMembers(teamName).find((member) => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
+    return hasBootstrapTranscriptLaunchReconcileOutcomeHelper({
+      snapshot,
+      expectedMembers: this.getPersistedLaunchMemberNames(snapshot),
+      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
+        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
+      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
     });
-  }
-
-  private getBootstrapRuntimeEventsPath(
-    teamName: string,
-    memberName: string,
-    runtimeMember: PersistedRuntimeMemberLike | undefined
-  ): string {
-    const configuredPath = runtimeMember?.bootstrapRuntimeEventsPath?.trim();
-    if (configuredPath && isContainedTeamRuntimeEventsPath(teamName, configuredPath)) {
-      return configuredPath;
-    }
-    const filePrefix = sanitizeProcessRuntimeEventFilePrefix(runtimeMember?.name ?? memberName);
-    return path.join(getTeamRuntimeEventsDir(teamName), `${filePrefix}.runtime.jsonl`);
-  }
-
-  private async readRuntimeBootstrapProofEvents(
-    eventsPath: string
-  ): Promise<Record<string, unknown>[]> {
-    let handle: fs.promises.FileHandle | null = null;
-    try {
-      const pathStat = await fs.promises.lstat(eventsPath);
-      if (!pathStat.isFile()) {
-        return [];
-      }
-      handle = await fs.promises.open(eventsPath, 'r');
-      const stat = await handle.stat();
-      if (!stat.isFile() || stat.size <= 0) {
-        return [];
-      }
-      const start = Math.max(0, stat.size - BOOTSTRAP_RUNTIME_PROOF_TAIL_BYTES);
-      const buffer = Buffer.alloc(stat.size - start);
-      if (buffer.length === 0) {
-        return [];
-      }
-      await handle.read(buffer, 0, buffer.length, start);
-      const lines = buffer.toString('utf8').split('\n');
-      if (start > 0) {
-        lines.shift();
-      }
-      if (lines.length > BOOTSTRAP_RUNTIME_EVENT_MAX_LINES) {
-        lines.splice(0, lines.length - BOOTSTRAP_RUNTIME_EVENT_MAX_LINES);
-      }
-      const events: Record<string, unknown>[] = [];
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) continue;
-        if (Buffer.byteLength(line, 'utf8') > BOOTSTRAP_RUNTIME_EVENT_MAX_LINE_BYTES) {
-          continue;
-        }
-        try {
-          const parsed = JSON.parse(line) as unknown;
-          if (
-            parsed &&
-            typeof parsed === 'object' &&
-            (parsed as { version?: unknown }).version === 1 &&
-            typeof (parsed as { type?: unknown }).type === 'string' &&
-            typeof (parsed as { timestamp?: unknown }).timestamp === 'string'
-          ) {
-            events.push(parsed as Record<string, unknown>);
-          }
-        } catch {
-          // Ignore partial lines from concurrently written runtime event files.
-        }
-      }
-      return events;
-    } catch {
-      return [];
-    } finally {
-      await handle?.close().catch(() => undefined);
-    }
-  }
-
-  private isRuntimeBootstrapProofEventValid(input: {
-    event: Record<string, unknown>;
-    detail: Record<string, unknown>;
-    teamName: string;
-    memberName: string;
-    runtimeMember?: PersistedRuntimeMemberLike;
-    boundaryMs: number;
-  }): boolean {
-    const { event, detail, teamName, memberName, runtimeMember, boundaryMs } = input;
-    if (
-      !validateBootstrapRuntimeProofEnvelope({
-        event,
-        detail,
-        expected: {
-          teamName,
-          boundaryMs,
-          proofToken: runtimeMember?.bootstrapProofToken?.trim(),
-          proofMode: runtimeMember?.bootstrapProofMode?.trim(),
-          contextHash: runtimeMember?.bootstrapContextHash?.trim(),
-          briefingHash: runtimeMember?.bootstrapBriefingHash?.trim(),
-          runId: runtimeMember?.bootstrapRunId?.trim(),
-        },
-      })
-    ) {
-      return false;
-    }
-    const eventAgentName = typeof event.agentName === 'string' ? event.agentName.trim() : '';
-    const eventAgentId = typeof event.agentId === 'string' ? event.agentId.trim() : '';
-    const runtimeName = runtimeMember?.name?.trim() ?? '';
-    const runtimeAgentId = runtimeMember?.agentId?.trim() ?? '';
-    return (
-      (eventAgentName.length > 0 &&
-        (matchesMemberNameOrBase(eventAgentName, memberName) ||
-          (runtimeName.length > 0 && matchesTeamMemberIdentity(eventAgentName, runtimeName)))) ||
-      (eventAgentId.length > 0 && runtimeAgentId.length > 0 && eventAgentId === runtimeAgentId)
-    );
   }
 
   private async findBootstrapRuntimeProofObservedAt(
@@ -30274,90 +29895,13 @@ export class TeamProvisioningService {
       'firstSpawnAcceptedAt' | 'launchState' | 'hardFailureReason'
     >
   ): Promise<string | null> {
-    const runtimeMember = this.resolveBootstrapRuntimeMember(teamName, memberName);
-    const boundaryText = member.firstSpawnAcceptedAt ?? runtimeMember?.bootstrapExpectedAfter;
-    const boundaryMs = boundaryText ? Date.parse(boundaryText) : Number.NaN;
-    if (!runtimeMember?.bootstrapProofToken && !Number.isFinite(boundaryMs)) {
-      return null;
-    }
-    const eventsPath = this.getBootstrapRuntimeEventsPath(teamName, memberName, runtimeMember);
-    const events = await this.readRuntimeBootstrapProofEvents(eventsPath);
-    let latest: string | null = null;
-    let latestMs = Number.NEGATIVE_INFINITY;
-    for (const event of events) {
-      const detail = parseBootstrapRuntimeProofDetail(event.detail);
-      if (
-        !this.isRuntimeBootstrapProofEventValid({
-          event,
-          detail,
-          teamName,
-          memberName,
-          runtimeMember,
-          boundaryMs,
-        })
-      ) {
-        continue;
-      }
-      const timestamp = typeof event.timestamp === 'string' ? event.timestamp : '';
-      const timestampMs = Date.parse(timestamp);
-      if (Number.isFinite(timestampMs) && timestampMs >= latestMs) {
-        latest = timestamp;
-        latestMs = timestampMs;
-      }
-    }
-    return latest;
-  }
-
-  private isRuntimeBootstrapTransportEventCurrent(input: {
-    event: Record<string, unknown>;
-    teamName: string;
-    memberName: string;
-    runtimeMember?: PersistedRuntimeMemberLike;
-    expectedPid?: number;
-    expectedBootstrapRunId?: string;
-    boundaryMs: number;
-  }): boolean {
-    const { event, teamName, memberName, runtimeMember, expectedPid, expectedBootstrapRunId } =
-      input;
-    const eventTeamName = typeof event.teamName === 'string' ? event.teamName.trim() : '';
-    if (eventTeamName && eventTeamName !== teamName) {
-      return false;
-    }
-    const eventAgentId = typeof event.agentId === 'string' ? event.agentId.trim() : '';
-    const expectedAgentId = runtimeMember?.agentId?.trim() ?? '';
-    if (eventAgentId && expectedAgentId && eventAgentId !== expectedAgentId) {
-      return false;
-    }
-    const eventAgentName = typeof event.agentName === 'string' ? event.agentName.trim() : '';
-    const runtimeName = runtimeMember?.name?.trim() ?? '';
-    if (
-      eventAgentName &&
-      !matchesMemberNameOrBase(eventAgentName, memberName) &&
-      !(runtimeName && matchesTeamMemberIdentity(eventAgentName, runtimeName))
-    ) {
-      return false;
-    }
-    const eventBootstrapRunId =
-      typeof event.bootstrapRunId === 'string' ? event.bootstrapRunId.trim() : '';
-    if (
-      expectedBootstrapRunId &&
-      eventBootstrapRunId &&
-      eventBootstrapRunId !== expectedBootstrapRunId
-    ) {
-      return false;
-    }
-    const eventPid = typeof event.pid === 'number' && Number.isFinite(event.pid) ? event.pid : NaN;
-    if (typeof expectedPid === 'number' && expectedPid > 0 && eventPid !== expectedPid) {
-      return false;
-    }
-    if (Number.isFinite(input.boundaryMs)) {
-      const timestamp = typeof event.timestamp === 'string' ? event.timestamp : '';
-      const timestampMs = Date.parse(timestamp);
-      if (!Number.isFinite(timestampMs) || timestampMs < input.boundaryMs) {
-        return false;
-      }
-    }
-    return true;
+    return findBootstrapRuntimeProofObservedAtHelper({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      memberName,
+      member,
+      runtimeMembers: this.readPersistedRuntimeMembers(teamName),
+    });
   }
 
   private async readProcessBootstrapTransportSummary(input: {
@@ -30365,56 +29909,11 @@ export class TeamProvisioningService {
     memberName: string;
     member: PersistedTeamLaunchMemberState;
   }): Promise<ProcessBootstrapTransportSummary | null> {
-    const { teamName, memberName, member } = input;
-    const runtimeMember = this.resolveBootstrapRuntimeMember(teamName, memberName);
-    const memberRecord = member as unknown as Record<string, unknown>;
-    const runtimeBackendType =
-      runtimeMember?.backendType?.trim() ||
-      (typeof memberRecord.backendType === 'string' ? memberRecord.backendType.trim() : '');
-    const processPaneId =
-      runtimeMember?.tmuxPaneId?.trim() ||
-      (typeof memberRecord.tmuxPaneId === 'string' ? memberRecord.tmuxPaneId.trim() : '');
-    if (runtimeBackendType !== 'process' && !processPaneId?.startsWith('process:')) {
-      return null;
-    }
-    const boundaryText = member.firstSpawnAcceptedAt ?? runtimeMember?.bootstrapExpectedAfter;
-    const boundaryMs = boundaryText ? Date.parse(boundaryText) : Number.NaN;
-    const expectedPid =
-      typeof member.runtimePid === 'number' && member.runtimePid > 0
-        ? member.runtimePid
-        : typeof runtimeMember?.runtimePid === 'number' && runtimeMember.runtimePid > 0
-          ? runtimeMember.runtimePid
-          : undefined;
-    const expectedBootstrapRunId =
-      runtimeMember?.bootstrapRunId?.trim() ||
-      (typeof member.runtimeRunId === 'string' ? member.runtimeRunId.trim() : '') ||
-      (typeof memberRecord.bootstrapRunId === 'string' ? memberRecord.bootstrapRunId.trim() : '');
-    if (!expectedBootstrapRunId && !Number.isFinite(boundaryMs) && !expectedPid) {
-      return null;
-    }
-
-    const eventsPath = this.getBootstrapRuntimeEventsPath(teamName, memberName, runtimeMember);
-    // Runtime event paths are persisted by process teammates. Keep both path
-    // containment and payload identity checks so stale or foreign JSONL cannot
-    // affect another team/member launch.
-    if (!isContainedTeamRuntimeEventsPath(teamName, eventsPath)) {
-      return null;
-    }
-    const events = await this.readRuntimeBootstrapProofEvents(eventsPath);
-    const currentEvents = events.filter((event) =>
-      this.isRuntimeBootstrapTransportEventCurrent({
-        event,
-        teamName,
-        memberName,
-        runtimeMember,
-        expectedPid,
-        expectedBootstrapRunId,
-        boundaryMs,
-      })
-    );
-    return summarizeProcessBootstrapTransportEvents(
-      currentEvents as ProcessBootstrapTransportEvent[]
-    );
+    return readProcessBootstrapTransportSummaryHelper({
+      ...input,
+      teamsBasePath: getTeamsBasePath(),
+      runtimeMembers: this.readPersistedRuntimeMembers(input.teamName),
+    });
   }
 
   private applyProcessBootstrapTransportOverlay(input: {
@@ -30423,190 +29922,24 @@ export class TeamProvisioningService {
     launchPhase: PersistedTeamLaunchPhase;
     finalTimeoutReached?: boolean;
   }): PersistedTeamLaunchMemberState {
-    const { member, summary } = input;
-    if (
-      !summary ||
-      member.bootstrapConfirmed ||
-      member.launchState === 'confirmed_alive' ||
-      member.launchState === 'skipped_for_launch' ||
-      member.launchState === 'runtime_pending_permission' ||
-      member.skippedForLaunch === true
-    ) {
-      return member;
-    }
-    const existingFailure = member.hardFailureReason ?? member.runtimeDiagnostic;
-    if (
-      member.launchState === 'failed_to_start' &&
-      member.hardFailure === true &&
-      !isAutoClearableLaunchFailureReason(existingFailure)
-    ) {
-      return member;
-    }
-
-    const projectionPhase = deriveProcessTransportProjectionPhase({
-      launchPhase: input.launchPhase,
-      finalTimeoutReached: input.finalTimeoutReached,
+    return applyProcessBootstrapTransportOverlayHelper({
+      ...input,
+      nowIso,
+      mergeRuntimeDiagnostics,
     });
-    const base: PersistedTeamLaunchMemberState = {
-      ...member,
-      agentToolAccepted: true,
-      lastEvaluatedAt: nowIso(),
-    };
-
-    if (summary.terminalFailure) {
-      // Terminal transport events are failures for bootstrap only. They are
-      // surfaced as hard failure text, but still do not create readiness proof.
-      const reason = summary.terminalFailure.reason;
-      return {
-        ...base,
-        launchState: 'failed_to_start',
-        bootstrapConfirmed: false,
-        hardFailure: true,
-        hardFailureReason: reason,
-        runtimeDiagnostic: reason,
-        runtimeDiagnosticSeverity: 'error',
-        diagnostics: mergeRuntimeDiagnostics(base.diagnostics, [reason, summary.lastStage]),
-        sources: {
-          ...(base.sources ?? {}),
-          hardFailureSignal: true,
-        },
-      };
-    }
-
-    if (!summary.hasProgress) {
-      return member;
-    }
-
-    if (projectionPhase === 'final') {
-      const reason = buildProcessBootstrapTimeoutDiagnostic(summary);
-      return {
-        ...base,
-        launchState: 'failed_to_start',
-        bootstrapConfirmed: false,
-        hardFailure: true,
-        hardFailureReason: reason,
-        runtimeDiagnostic: reason,
-        runtimeDiagnosticSeverity: 'error',
-        diagnostics: mergeRuntimeDiagnostics(base.diagnostics, [reason, summary.lastStage]),
-        sources: {
-          ...(base.sources ?? {}),
-          hardFailureSignal: true,
-        },
-      };
-    }
-
-    const runtimeDiagnostic = buildProcessBootstrapPendingDiagnostic(summary);
-    // Active launch progress remains pending. A submitted bootstrap prompt is
-    // not enough for confirmed_alive; durable bootstrap proof is handled by
-    // the runtime/transcript evidence path above.
-    return {
-      ...base,
-      launchState: 'runtime_pending_bootstrap',
-      bootstrapConfirmed: false,
-      hardFailure: false,
-      hardFailureReason: undefined,
-      runtimeDiagnostic,
-      runtimeDiagnosticSeverity: summary.submitted ? 'info' : 'warning',
-      diagnostics: mergeRuntimeDiagnostics(base.diagnostics, [
-        runtimeDiagnostic,
-        summary.lastStage,
-      ]),
-      sources: {
-        ...(base.sources ?? {}),
-        hardFailureSignal: undefined,
-      },
-    };
   }
 
   private async applyBootstrapTranscriptEvidenceOverlay(
     snapshot: PersistedTeamLaunchSnapshot | null
   ): Promise<PersistedTeamLaunchSnapshot | null> {
-    if (!snapshot) {
-      return null;
-    }
-
-    let changed = false;
-    const nextMembers: Record<string, PersistedTeamLaunchMemberState> = { ...snapshot.members };
-    for (const expected of this.getPersistedLaunchMemberNames(snapshot)) {
-      const current = nextMembers[expected];
-      if (
-        !current ||
-        current.bootstrapConfirmed ||
-        isPersistedOpenCodeSecondaryLaneMember(current)
-      ) {
-        continue;
-      }
-      const failureReason = current.hardFailureReason ?? current.runtimeDiagnostic;
-      const provisionedButNotAliveFailure = isProvisionedButNotAliveFailureReason(failureReason);
-      if (
-        provisionedButNotAliveFailure &&
-        hasUnsafeProvisionedButNotAliveRuntimeEvidence(current)
-      ) {
-        continue;
-      }
-      const canClearFailedBootstrap =
-        current.launchState !== 'failed_to_start' ||
-        isBootstrapProofClearableLaunchFailureReason(failureReason);
-      if (!canClearFailedBootstrap) {
-        continue;
-      }
-
-      const acceptedAtMs =
-        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      const runtimeProofObservedAt = await this.findBootstrapRuntimeProofObservedAt(
-        snapshot.teamName,
-        expected,
-        current
-      );
-      const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
-        snapshot.teamName,
-        expected,
-        Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-      );
-      const observedAt =
-        runtimeProofObservedAt ??
-        (transcriptOutcome?.kind === 'success' ? transcriptOutcome.observedAt : null);
-      if (!observedAt) {
-        continue;
-      }
-
-      const nextMember: PersistedTeamLaunchMemberState = {
-        ...current,
-        agentToolAccepted: true,
-        bootstrapConfirmed: true,
-        runtimeAlive: runtimeProofObservedAt
-          ? true
-          : current.runtimeAlive === true || provisionedButNotAliveFailure,
-        hardFailure: false,
-        hardFailureReason: undefined,
-        lastHeartbeatAt: current.lastHeartbeatAt ?? observedAt,
-        lastRuntimeAliveAt: runtimeProofObservedAt
-          ? (current.lastRuntimeAliveAt ?? observedAt)
-          : current.lastRuntimeAliveAt,
-        lastEvaluatedAt: nowIso(),
-        sources: {
-          ...(current.sources ?? {}),
-          hardFailureSignal: undefined,
-        },
-        diagnostics: undefined,
-      };
-      nextMember.launchState = deriveMemberLaunchState(nextMember);
-      nextMembers[expected] = nextMember;
-      changed = true;
-    }
-
-    if (!changed) {
-      return snapshot;
-    }
-
-    return createPersistedLaunchSnapshot({
-      teamName: snapshot.teamName,
-      expectedMembers: snapshot.expectedMembers,
-      bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
-      leadSessionId: snapshot.leadSessionId,
-      launchPhase: snapshot.launchPhase,
-      members: nextMembers,
-      updatedAt: nowIso(),
+    return applyBootstrapTranscriptEvidenceOverlayHelper({
+      snapshot,
+      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
+      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
+        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
+      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+      nowIso,
     });
   }
 
@@ -30614,145 +29947,26 @@ export class TeamProvisioningService {
     snapshot: PersistedTeamLaunchSnapshot | null,
     bootstrapSnapshot: PersistedTeamLaunchSnapshot | null
   ): boolean {
-    if (!snapshot || !bootstrapSnapshot) {
-      return false;
-    }
-    for (const expected of this.getPersistedLaunchMemberNames(snapshot)) {
-      const current = snapshot.members[expected];
-      const bootstrapMember = bootstrapSnapshot.members[expected];
-      if (!current || !bootstrapMember) {
-        continue;
-      }
-      if (
-        bootstrapMember.bootstrapConfirmed === true &&
-        !isPersistedOpenCodeSecondaryLaneMember(current) &&
-        isBootstrapMemberEvidenceCurrentForMember(current, bootstrapMember, 'confirmation')
-      ) {
-        const currentConfirmed =
-          current.bootstrapConfirmed === true || current.launchState === 'confirmed_alive';
-        const failureReason = current.hardFailureReason ?? current.runtimeDiagnostic;
-        const hasAutoClearableFailure =
-          (current.launchState === 'failed_to_start' || current.hardFailure === true) &&
-          isBootstrapProofClearableLaunchFailureReason(failureReason);
-        if (!currentConfirmed || hasAutoClearableFailure) {
-          return true;
-        }
-      }
-      const bootstrapProvesSpawnAcceptance =
-        (bootstrapMember.agentToolAccepted === true ||
-          typeof bootstrapMember.firstSpawnAcceptedAt === 'string') &&
-        isBootstrapMemberEvidenceCurrentForMember(current, bootstrapMember, 'acceptance');
-      if (!bootstrapProvesSpawnAcceptance) {
-        continue;
-      }
-      const currentProvesSpawnAcceptance =
-        current.agentToolAccepted === true || typeof current.firstSpawnAcceptedAt === 'string';
-      if (!currentProvesSpawnAcceptance) {
-        return true;
-      }
-      if (isNeverSpawnedDuringLaunchReason(current.hardFailureReason)) {
-        return true;
-      }
-    }
-    return false;
+    return needsBootstrapAcceptanceReconcileHelper({
+      snapshot,
+      bootstrapSnapshot,
+      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
+    });
   }
 
   private needsConfirmedBootstrapDiagnosticReconcile(
     snapshot: PersistedTeamLaunchSnapshot | null
   ): boolean {
-    if (!snapshot) {
-      return false;
-    }
-    for (const member of Object.values(snapshot.members)) {
-      if (
-        member?.bootstrapConfirmed !== true ||
-        member.hardFailure === true ||
-        isPersistedOpenCodeSecondaryLaneMember(member)
-      ) {
-        continue;
-      }
-      if (
-        member.livenessKind === 'stale_metadata' ||
-        member.livenessKind === 'registered_only' ||
-        member.pidSource === 'persisted_metadata' ||
-        shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(member.runtimeDiagnostic)
-      ) {
-        return true;
-      }
-    }
-    return false;
+    return needsConfirmedBootstrapDiagnosticReconcileHelper(snapshot);
   }
 
   private cleanConfirmedBootstrapRuntimeDiagnostics(
     snapshot: PersistedTeamLaunchSnapshot | null
   ): PersistedTeamLaunchSnapshot | null {
-    if (!snapshot) {
-      return null;
-    }
-
-    let changed = false;
-    const updatedAt = nowIso();
-    const members: Record<string, PersistedTeamLaunchMemberState> = { ...snapshot.members };
-    for (const memberName of this.getPersistedLaunchMemberNames(snapshot)) {
-      const current = members[memberName];
-      if (
-        !current ||
-        current.bootstrapConfirmed !== true ||
-        current.hardFailure === true ||
-        isPersistedOpenCodeSecondaryLaneMember(current)
-      ) {
-        continue;
-      }
-
-      const hasConfirmedBootstrapStaleRuntimeState =
-        current.livenessKind === 'stale_metadata' ||
-        current.livenessKind === 'registered_only' ||
-        current.pidSource === 'persisted_metadata' ||
-        shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(current.runtimeDiagnostic) ||
-        current.bootstrapStalled === true;
-      if (!hasConfirmedBootstrapStaleRuntimeState) {
-        continue;
-      }
-
-      const next: PersistedTeamLaunchMemberState = {
-        ...current,
-        livenessKind:
-          current.livenessKind === 'stale_metadata' ||
-          current.livenessKind === 'registered_only' ||
-          current.livenessKind == null
-            ? 'confirmed_bootstrap'
-            : current.livenessKind,
-        pidSource:
-          current.pidSource === 'persisted_metadata' || current.pidSource == null
-            ? 'runtime_bootstrap'
-            : current.pidSource,
-        bootstrapStalled: undefined,
-        diagnostics: undefined,
-        lastEvaluatedAt: updatedAt,
-      };
-      if (shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(next.runtimeDiagnostic)) {
-        next.runtimeDiagnostic = undefined;
-        next.runtimeDiagnosticSeverity = undefined;
-      } else if (!next.runtimeDiagnostic) {
-        next.runtimeDiagnosticSeverity = undefined;
-      }
-      next.launchState = deriveMemberLaunchState(next);
-      members[memberName] = next;
-      changed = true;
-    }
-
-    if (!changed) {
-      return snapshot;
-    }
-
-    return createPersistedLaunchSnapshot({
-      teamName: snapshot.teamName,
-      expectedMembers: snapshot.expectedMembers,
-      bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
-      leadSessionId: snapshot.leadSessionId,
-      launchPhase: snapshot.launchPhase,
-      members,
-      updatedAt,
+    return cleanConfirmedBootstrapRuntimeDiagnosticsHelper({
+      snapshot,
+      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
+      nowIso,
     });
   }
 
@@ -31314,107 +30528,41 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome | null> {
-    const lookupCacheKey = this.buildBootstrapTranscriptOutcomeLookupCacheKey(
+    return findBootstrapTranscriptOutcomeHelper({
       teamName,
       memberName,
-      sinceMs
-    );
-    const cachedLookup = this.getPersistedBootstrapTranscriptOutcomeLookupCacheEntry(
-      teamName,
-      lookupCacheKey
-    );
-    if (cachedLookup !== undefined) {
-      return this.cloneBootstrapTranscriptOutcome(cachedLookup);
-    }
-
-    let summaries: Awaited<ReturnType<TeamMemberLogsFinder['findMemberLogs']>>;
-    try {
-      summaries = await this.memberLogsFinder.findMemberLogs(teamName, memberName, sinceMs);
-    } catch {
-      summaries = [];
-    }
-
-    const outcomes: BootstrapTranscriptOutcome[] = [];
-    for (const summary of summaries) {
-      if (!summary.filePath) continue;
-      const outcome = await this.readRecentBootstrapTranscriptOutcome(
-        summary.filePath,
-        sinceMs,
-        memberName,
-        teamName,
-        { allowAnonymousFailure: true }
-      );
-      if (outcome) {
-        outcomes.push(outcome);
-      }
-    }
-
-    outcomes.push(
-      ...(await this.readBootstrapTranscriptOutcomesInProjectRoot(teamName, memberName, sinceMs))
-    );
-
-    const outcome = this.selectLatestBootstrapTranscriptOutcome(outcomes);
-    this.setPersistedBootstrapTranscriptOutcomeLookupCacheEntry(teamName, lookupCacheKey, outcome);
-    return outcome;
-  }
-
-  private cloneBootstrapTranscriptOutcome(
-    outcome: BootstrapTranscriptOutcome | null
-  ): BootstrapTranscriptOutcome | null {
-    return outcome ? { ...outcome } : null;
-  }
-
-  private buildBootstrapTranscriptOutcomeLookupCacheKey(
-    teamName: string,
-    memberName: string,
-    sinceMs: number | null
-  ): string {
-    return [teamName.trim().toLowerCase(), memberName.trim().toLowerCase(), sinceMs ?? ''].join(
-      '\0'
-    );
-  }
-
-  private getPersistedBootstrapTranscriptOutcomeLookupCacheEntry(
-    teamName: string,
-    cacheKey: string
-  ): BootstrapTranscriptOutcome | null | undefined {
-    if (this.getTrackedRunId(teamName) || this.runtimeAdapterRunByTeam.has(teamName)) {
-      return undefined;
-    }
-    const cached = this.bootstrapTranscriptOutcomeLookupCache.get(cacheKey);
-    if (!cached) {
-      return undefined;
-    }
-    if (cached.expiresAtMs <= Date.now()) {
-      this.bootstrapTranscriptOutcomeLookupCache.delete(cacheKey);
-      return undefined;
-    }
-    return cached.outcome;
-  }
-
-  private setPersistedBootstrapTranscriptOutcomeLookupCacheEntry(
-    teamName: string,
-    cacheKey: string,
-    outcome: BootstrapTranscriptOutcome | null
-  ): void {
-    if (this.getTrackedRunId(teamName) || this.runtimeAdapterRunByTeam.has(teamName)) {
-      return;
-    }
-    if (
-      !this.bootstrapTranscriptOutcomeLookupCache.has(cacheKey) &&
-      this.bootstrapTranscriptOutcomeLookupCache.size >=
-        TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES
-    ) {
-      const oldestKey = this.bootstrapTranscriptOutcomeLookupCache.keys().next().value;
-      if (oldestKey) {
-        this.bootstrapTranscriptOutcomeLookupCache.delete(oldestKey);
-      }
-    }
-    this.bootstrapTranscriptOutcomeLookupCache.set(cacheKey, {
-      expiresAtMs:
-        Date.now() +
-        TeamProvisioningService.PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
-      outcome: this.cloneBootstrapTranscriptOutcome(outcome),
+      sinceMs,
+      lookupCache: this.bootstrapTranscriptOutcomeLookupCache,
+      lookupCacheEnabled:
+        !this.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
+      findMemberLogs: (lookupTeamName, lookupMemberName, lookupSinceMs) =>
+        this.memberLogsFinder.findMemberLogs(lookupTeamName, lookupMemberName, lookupSinceMs),
+      readRecentBootstrapTranscriptOutcome: (
+        filePath,
+        lookupSinceMs,
+        lookupMemberName,
+        lookupTeamName,
+        options
+      ) =>
+        this.readRecentBootstrapTranscriptOutcome(
+          filePath,
+          lookupSinceMs,
+          lookupMemberName,
+          lookupTeamName,
+          options
+        ),
+      readBootstrapTranscriptOutcomesInProjectRoot: (
+        lookupTeamName,
+        lookupMemberName,
+        lookupSinceMs
+      ) =>
+        this.readBootstrapTranscriptOutcomesInProjectRoot(
+          lookupTeamName,
+          lookupMemberName,
+          lookupSinceMs
+        ),
+      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
+      lookupCacheTtlMs: PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
     });
   }
 
@@ -31428,252 +30576,31 @@ export class TeamProvisioningService {
       contextMemberNames?: readonly string[];
     } = {}
   ): Promise<BootstrapTranscriptOutcome | null> {
-    const normalizedMemberName = memberName.trim().toLowerCase();
-    const normalizedTeamName = teamName.trim().toLowerCase();
-    const contextMemberNames = Array.from(
-      new Set(
-        [memberName, ...(options.contextMemberNames ?? [])]
-          .map((name) => name.trim())
-          .filter(Boolean)
-      )
-    );
-    const normalizedContextMemberNames = contextMemberNames.map((name) =>
-      name.trim().toLowerCase()
-    );
-    const cacheKey = this.buildBootstrapTranscriptOutcomeCacheKey({
+    return readRecentBootstrapTranscriptOutcomeHelper({
       filePath,
       sinceMs,
-      memberName: normalizedMemberName,
+      memberName,
       teamName,
-      allowAnonymousFailure: options.allowAnonymousFailure === true,
-      contextMemberNames,
+      options,
+      outcomeCache: this.bootstrapTranscriptOutcomeCache,
+      getParsedBootstrapTranscriptTail: (transcriptPath, stat) =>
+        this.getParsedBootstrapTranscriptTail(transcriptPath, stat),
+      nowIso,
+      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
     });
-    try {
-      // Stat without opening: on a cache hit we must NOT open the file. During a
-      // tracked launch the per-member lookup cache is bypassed, so this scan runs
-      // for every recent session file x every member x every poll; opening before
-      // the cache check turned every one of those into a wasted open() syscall.
-      const stat = await fs.promises.stat(filePath);
-      if (!stat.isFile() || stat.size <= 0) {
-        return null;
-      }
-      const cached = this.bootstrapTranscriptOutcomeCache.get(cacheKey);
-      if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
-        return cached.outcome;
-      }
-      // Parse the transcript tail once per (filePath, mtime, size) and share it
-      // across members. getParsedBootstrapTranscriptTail opens the file ITSELF only
-      // when its parse cache misses, so a shared-cache hit also avoids the open.
-      const parsedLines = await this.getParsedBootstrapTranscriptTail(filePath, stat);
-      const shouldCollectBootstrapContext = options.allowAnonymousFailure !== true;
-      const bootstrapContextMembers = new Set<string>();
-      const candidates: BootstrapTranscriptOutcomeCandidate[] = [];
-      for (const parsedLine of parsedLines) {
-        const { timestampMs, parsedAgentName, text, rawTimestamp, normalizedText } = parsedLine;
-        if (sinceMs != null && (!Number.isFinite(timestampMs) || timestampMs < sinceMs)) {
-          continue;
-        }
-        if (
-          parsedAgentName &&
-          !matchesObservedMemberNameForExpected(parsedAgentName, normalizedMemberName)
-        ) {
-          continue;
-        }
-        if (!text) {
-          continue;
-        }
-        const lineNormalizedText = normalizedText ?? '';
-        if (shouldCollectBootstrapContext) {
-          const isBootstrapContextLine = getCachedBootstrapContextCandidateForLine(
-            parsedLine,
-            lineNormalizedText,
-            normalizedTeamName
-          );
-          if (isBootstrapContextLine) {
-            for (const contextMemberName of normalizedContextMemberNames) {
-              if (
-                getCachedBootstrapContextMemberMatchForLine(
-                  parsedLine,
-                  lineNormalizedText,
-                  contextMemberName
-                )
-              ) {
-                bootstrapContextMembers.add(contextMemberName);
-              }
-            }
-          }
-        }
-        candidates.push({
-          text,
-          normalizedText: lineNormalizedText,
-          observedAt:
-            rawTimestamp && rawTimestamp.length > 0 ? rawTimestamp : new Date().toISOString(),
-          parsedAgentName,
-          parsedLine,
-        });
-      }
-      const hasUnambiguousMatchingBootstrapContext =
-        shouldCollectBootstrapContext &&
-        bootstrapContextMembers.size === 1 &&
-        bootstrapContextMembers.has(normalizedMemberName);
-      let outcome: BootstrapTranscriptOutcome | null = null;
-      for (let index = candidates.length - 1; index >= 0; index -= 1) {
-        const candidate = candidates[index];
-        if (!candidate) continue;
-        // Lazy + memoized on the shared parsed line: computed at most once per line
-        // across all members and re-scans, and only for lines this newest-first loop
-        // actually reaches (lines past the first match are never extracted).
-        const cachedLine = candidate.parsedLine;
-        if (cachedLine.bootstrapFailureReason === undefined) {
-          cachedLine.bootstrapFailureReason = extractBootstrapFailureReason(candidate.text);
-        }
-        const reason = cachedLine.bootstrapFailureReason;
-        if (reason) {
-          if (
-            !candidate.parsedAgentName &&
-            options.allowAnonymousFailure !== true &&
-            !hasUnambiguousMatchingBootstrapContext
-          ) {
-            continue;
-          }
-          outcome = { kind: 'failure', observedAt: candidate.observedAt, reason };
-          break;
-        }
-        const successSource = getCachedBootstrapSuccessSourceForLine(
-          cachedLine,
-          candidate.normalizedText,
-          normalizedTeamName,
-          normalizedMemberName
-        );
-        if (successSource) {
-          outcome = { kind: 'success', observedAt: candidate.observedAt, source: successSource };
-          break;
-        }
-      }
-      this.setBootstrapTranscriptOutcomeCacheEntry(cacheKey, {
-        mtimeMs: stat.mtimeMs,
-        size: stat.size,
-        outcome,
-      });
-      return outcome;
-    } catch {
-      return null;
-    }
-  }
-
-  private buildBootstrapTranscriptOutcomeCacheKey(input: {
-    filePath: string;
-    sinceMs: number | null;
-    memberName: string;
-    teamName: string;
-    allowAnonymousFailure: boolean;
-    contextMemberNames: readonly string[];
-  }): string {
-    const normalizedContextMembers = Array.from(
-      new Set(input.contextMemberNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
-    )
-      .sort()
-      .join('\0');
-    return [
-      input.filePath,
-      input.sinceMs ?? '',
-      input.memberName,
-      input.teamName.trim().toLowerCase(),
-      input.allowAnonymousFailure ? '1' : '0',
-      normalizedContextMembers,
-    ].join('\0');
   }
 
   private async getParsedBootstrapTranscriptTail(
     filePath: string,
     stat: { mtimeMs: number; size: number }
   ): Promise<ParsedBootstrapTranscriptTailLine[]> {
-    const cached = this.parsedBootstrapTranscriptTailCache.get(filePath);
-    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
-      return cached.lines;
-    }
-    const lines: ParsedBootstrapTranscriptTailLine[] = [];
-    const start = Math.max(0, stat.size - TeamProvisioningService.BOOTSTRAP_FAILURE_TAIL_BYTES);
-    const length = stat.size - start;
-    if (length > 0) {
-      // Open lazily: only a genuine parse-cache miss (file changed since last
-      // parse) reaches here, so we never open a file whose tail is already cached.
-      const handle = await fs.promises.open(filePath, 'r');
-      let rawLines: string[];
-      try {
-        const buffer = Buffer.alloc(length);
-        await handle.read(buffer, 0, length, start);
-        rawLines = buffer.toString('utf8').split('\n');
-      } finally {
-        await handle.close().catch(() => undefined);
-      }
-      if (start > 0) {
-        rawLines.shift();
-      }
-      for (const rawLine of rawLines) {
-        const line = rawLine?.trim();
-        if (!line) continue;
-        let parsed: { timestamp?: unknown; agentName?: unknown } | null = null;
-        try {
-          parsed = JSON.parse(line) as { timestamp?: unknown; agentName?: unknown };
-        } catch {
-          continue;
-        }
-        const rawTimestamp =
-          typeof parsed.timestamp === 'string' && parsed.timestamp.trim().length > 0
-            ? parsed.timestamp.trim()
-            : null;
-        const timestampMs =
-          typeof parsed.timestamp === 'string' ? Date.parse(parsed.timestamp) : Number.NaN;
-        const parsedAgentName =
-          typeof parsed.agentName === 'string'
-            ? parsed.agentName.trim().toLowerCase() || null
-            : null;
-        const text = extractTranscriptMessageText(parsed);
-        const normalizedText = text ? text.replace(/\s+/g, ' ').trim().toLowerCase() : null;
-        lines.push({ rawTimestamp, timestampMs, text, normalizedText, parsedAgentName });
-      }
-    }
-    this.setParsedBootstrapTranscriptTailCacheEntry(filePath, {
-      mtimeMs: stat.mtimeMs,
-      size: stat.size,
-      lines,
+    return getParsedBootstrapTranscriptTailHelper({
+      filePath,
+      stat,
+      cache: this.parsedBootstrapTranscriptTailCache,
+      tailBytes: BOOTSTRAP_FAILURE_TAIL_BYTES,
+      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
     });
-    return lines;
-  }
-
-  private setParsedBootstrapTranscriptTailCacheEntry(
-    filePath: string,
-    entry: ParsedBootstrapTranscriptTailCacheEntry
-  ): void {
-    if (
-      !this.parsedBootstrapTranscriptTailCache.has(filePath) &&
-      this.parsedBootstrapTranscriptTailCache.size >=
-        TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES
-    ) {
-      const oldestKey = this.parsedBootstrapTranscriptTailCache.keys().next().value;
-      if (oldestKey) {
-        this.parsedBootstrapTranscriptTailCache.delete(oldestKey);
-      }
-    }
-    this.parsedBootstrapTranscriptTailCache.set(filePath, entry);
-  }
-
-  private setBootstrapTranscriptOutcomeCacheEntry(
-    cacheKey: string,
-    entry: BootstrapTranscriptOutcomeCacheEntry
-  ): void {
-    if (
-      !this.bootstrapTranscriptOutcomeCache.has(cacheKey) &&
-      this.bootstrapTranscriptOutcomeCache.size >=
-        TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES
-    ) {
-      const oldestKey = this.bootstrapTranscriptOutcomeCache.keys().next().value;
-      if (oldestKey) {
-        this.bootstrapTranscriptOutcomeCache.delete(oldestKey);
-      }
-    }
-    this.bootstrapTranscriptOutcomeCache.set(cacheKey, entry);
   }
 
   private async readBootstrapTranscriptOutcomesInProjectRoot(
@@ -31681,156 +30608,28 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome[]> {
-    let config: TeamConfig | null;
-    try {
-      config = await this.readConfigSnapshot(teamName);
-    } catch {
-      return [];
-    }
-    const outcomes: BootstrapTranscriptOutcome[] = [];
-    const projectDirs = await this.collectBootstrapTranscriptProjectDirs(
+    return readBootstrapTranscriptOutcomesInProjectRootHelper({
       teamName,
       memberName,
-      config
-    );
-    const contextMemberNames = [
-      memberName,
-      ...((config?.members ?? [])
-        .map((member) => member.name?.trim())
-        .filter((name): name is string => Boolean(name)) ?? []),
-    ];
-    for (const projectDir of projectDirs) {
-      let entries: fs.Dirent[];
-      try {
-        entries = await fs.promises.readdir(projectDir, { withFileTypes: true });
-      } catch {
-        continue;
-      }
-
-      const jsonlFiles = entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
-        .sort((left, right) => right.name.localeCompare(left.name));
-      for (const entry of jsonlFiles) {
-        if (config?.leadSessionId && entry.name === `${config.leadSessionId}.jsonl`) {
-          continue;
-        }
-        const candidatePath = path.join(projectDir, entry.name);
-        // Project dirs can hold hundreds of old session transcripts. A file last
-        // modified before the lookup window cannot contain a bootstrap line at/after
-        // sinceMs (append-only: line timestamp <= write time <= mtime), so
-        // readRecentBootstrapTranscriptOutcome would return null. Skip it with a
-        // cheap stat instead of opening + tail-reading every file each poll.
-        if (sinceMs != null) {
-          try {
-            const candidateStat = await fs.promises.stat(candidatePath);
-            if (
-              candidateStat.mtimeMs <
-              sinceMs - TeamProvisioningService.BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS
-            ) {
-              continue;
-            }
-          } catch {
-            continue;
-          }
-        }
-        const outcome = await this.readRecentBootstrapTranscriptOutcome(
-          candidatePath,
-          sinceMs,
-          memberName,
-          teamName,
-          { contextMemberNames }
-        );
-        if (outcome) {
-          outcomes.push(outcome);
-        }
-      }
-    }
-
-    return outcomes;
-  }
-
-  private async collectBootstrapTranscriptProjectDirs(
-    teamName: string,
-    memberName: string,
-    config: TeamConfig | null
-  ): Promise<string[]> {
-    const pathCandidates: string[] = [];
-    const pathSeen = new Set<string>();
-    const pushPath = (value: unknown): void => {
-      if (typeof value !== 'string') {
-        return;
-      }
-      let trimmed = value.trim();
-      while (trimmed.endsWith('/') || trimmed.endsWith('\\')) {
-        trimmed = trimmed.slice(0, -1);
-      }
-      if (!trimmed || pathSeen.has(trimmed)) {
-        return;
-      }
-      pathSeen.add(trimmed);
-      pathCandidates.push(trimmed);
-    };
-
-    pushPath(config?.projectPath);
-    if (Array.isArray(config?.projectPathHistory)) {
-      for (let index = config.projectPathHistory.length - 1; index >= 0; index -= 1) {
-        pushPath(config.projectPathHistory[index]);
-      }
-    }
-
-    const normalizedMemberName = memberName.trim().toLowerCase();
-    const pushMatchingMemberCwd = (member: { name?: unknown; cwd?: unknown }): void => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
-      if (candidateName && matchesTeamMemberIdentity(candidateName, normalizedMemberName)) {
-        pushPath(member.cwd);
-      }
-    };
-    for (const member of config?.members ?? []) {
-      pushMatchingMemberCwd(member);
-    }
-
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    for (const member of metaMembers) {
-      pushMatchingMemberCwd(member);
-    }
-
-    const dirs: string[] = [];
-    const dirSeen = new Set<string>();
-    const pushDir = (dir: string): void => {
-      if (!dir || dirSeen.has(dir)) {
-        return;
-      }
-      dirSeen.add(dir);
-      dirs.push(dir);
-    };
-    for (const projectPath of pathCandidates) {
-      const projectId = extractBaseDir(encodePath(projectPath));
-      pushDir(path.join(getProjectsBasePath(), projectId));
-      if (projectId.includes('_')) {
-        pushDir(path.join(getProjectsBasePath(), projectId.replace(/_/g, '-')));
-      }
-    }
-    return dirs;
-  }
-
-  private selectLatestBootstrapTranscriptOutcome(
-    outcomes: readonly BootstrapTranscriptOutcome[]
-  ): BootstrapTranscriptOutcome | null {
-    return (
-      [...outcomes].sort((left, right) => {
-        const leftMs = Date.parse(left.observedAt);
-        const rightMs = Date.parse(right.observedAt);
-        const leftValid = Number.isFinite(leftMs);
-        const rightValid = Number.isFinite(rightMs);
-        if (leftValid && rightValid && leftMs !== rightMs) {
-          return rightMs - leftMs;
-        }
-        if (leftValid !== rightValid) {
-          return leftValid ? -1 : 1;
-        }
-        return 0;
-      })[0] ?? null
-    );
+      sinceMs,
+      readConfigSnapshot: (lookupTeamName) => this.readConfigSnapshot(lookupTeamName),
+      readMetaMembers: (lookupTeamName) => this.membersMetaStore.getMembers(lookupTeamName),
+      readRecentBootstrapTranscriptOutcome: (
+        filePath,
+        lookupSinceMs,
+        lookupMemberName,
+        lookupTeamName,
+        options
+      ) =>
+        this.readRecentBootstrapTranscriptOutcome(
+          filePath,
+          lookupSinceMs,
+          lookupMemberName,
+          lookupTeamName,
+          options
+        ),
+      mtimeSlackMs: BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS,
+    });
   }
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {

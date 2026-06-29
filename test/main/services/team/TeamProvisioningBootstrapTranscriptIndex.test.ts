@@ -1,44 +1,63 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-vi.mock('@features/tmux-installer/main', () => ({
-  killTmuxPaneForCurrentPlatformSync: vi.fn(),
-  listRuntimeProcessTableForCurrentPlatform: vi.fn(async () => []),
-  listTmuxPanePidsForCurrentPlatform: vi.fn(async () => new Map()),
-  listTmuxPaneRuntimeInfoForCurrentPlatform: vi.fn(async () => new Map()),
-  sendKeysToTmuxPaneForCurrentPlatform: vi.fn(async () => undefined),
-}));
-
-vi.mock('pidusage', () => ({
-  default: vi.fn(),
-}));
-
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import {
+  BOOTSTRAP_FAILURE_TAIL_BYTES,
+  BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
+  type BootstrapTranscriptOutcome,
+  type BootstrapTranscriptOutcomeCacheEntry,
+  getParsedBootstrapTranscriptTail,
+  type ParsedBootstrapTranscriptTailCacheEntry,
+  type ParsedBootstrapTranscriptTailLine,
+  readRecentBootstrapTranscriptOutcome,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningBootstrapTranscript';
 
 interface TranscriptIndexHarness {
-  bootstrapTranscriptOutcomeCache: Map<string, unknown>;
-  bootstrapTranscriptOutcomeInFlight: Map<string, Promise<unknown>>;
-  parsedBootstrapTranscriptTailCache: Map<string, unknown>;
-  getParsedBootstrapTranscriptTail: (...args: unknown[]) => Promise<unknown>;
+  bootstrapTranscriptOutcomeCache: Map<string, BootstrapTranscriptOutcomeCacheEntry>;
+  parsedBootstrapTranscriptTailCache: Map<string, ParsedBootstrapTranscriptTailCacheEntry>;
+  getParsedBootstrapTranscriptTail: (
+    filePath: string,
+    stat: { mtimeMs: number; size: number }
+  ) => Promise<ParsedBootstrapTranscriptTailLine[]>;
   readRecentBootstrapTranscriptOutcome: (
     filePath: string,
     sinceMs: number | null,
     memberName: string,
     teamName: string,
     options?: { allowAnonymousFailure?: boolean; contextMemberNames?: readonly string[] }
-  ) => Promise<unknown>;
+  ) => Promise<BootstrapTranscriptOutcome | null>;
 }
 
 function createTranscriptIndexHarness(): TranscriptIndexHarness {
-  const service = Object.create(
-    TeamProvisioningService.prototype
-  ) as unknown as TranscriptIndexHarness;
-  service.bootstrapTranscriptOutcomeCache = new Map();
-  service.bootstrapTranscriptOutcomeInFlight = new Map();
-  service.parsedBootstrapTranscriptTailCache = new Map();
-  return service;
+  const harness: TranscriptIndexHarness = {
+    bootstrapTranscriptOutcomeCache: new Map(),
+    parsedBootstrapTranscriptTailCache: new Map(),
+    getParsedBootstrapTranscriptTail(filePath, stat) {
+      return getParsedBootstrapTranscriptTail({
+        filePath,
+        stat,
+        cache: harness.parsedBootstrapTranscriptTailCache,
+        tailBytes: BOOTSTRAP_FAILURE_TAIL_BYTES,
+        maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
+      });
+    },
+    readRecentBootstrapTranscriptOutcome(filePath, sinceMs, memberName, teamName, options) {
+      return readRecentBootstrapTranscriptOutcome({
+        filePath,
+        sinceMs,
+        memberName,
+        teamName,
+        options,
+        outcomeCache: harness.bootstrapTranscriptOutcomeCache,
+        getParsedBootstrapTranscriptTail: (transcriptPath, stat) =>
+          harness.getParsedBootstrapTranscriptTail(transcriptPath, stat),
+        maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
+      });
+    },
+  };
+  return harness;
 }
 
 function transcriptLine(input: {
@@ -83,7 +102,9 @@ describe('TeamProvisioningService bootstrap transcript index', () => {
     const service = createTranscriptIndexHarness();
     const originalParseTail = service.getParsedBootstrapTranscriptTail.bind(service);
     let parseTailCalls = 0;
-    service.getParsedBootstrapTranscriptTail = async (...args: unknown[]) => {
+    service.getParsedBootstrapTranscriptTail = async (
+      ...args: Parameters<TranscriptIndexHarness['getParsedBootstrapTranscriptTail']>
+    ) => {
       parseTailCalls += 1;
       return originalParseTail(...args);
     };
