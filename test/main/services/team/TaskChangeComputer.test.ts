@@ -309,6 +309,45 @@ describe('TaskChangeComputer', () => {
     expect(JSON.stringify(result)).not.toContain('new-b-59');
   });
 
+  it('marks oversized failed tool results without full parsing in summary mode', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead-oversized-error-summary.jsonl');
+    await writeJsonl(logPath, [
+      writeToolUse('tool-error', '/repo/src/failed.ts', lines('failed-write', 200)),
+      {
+        timestamp: '2026-03-01T10:00:01.000Z',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-error',
+              is_error: true,
+              content: lines('large-error-output', 200),
+            },
+          ],
+        },
+      },
+    ]);
+
+    const computer = createNoBoundaryTaskChangeComputer(logPath, {
+      maxSummaryJsonlParseBytes: 256,
+    });
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: { status: 'completed', reviewState: 'none' },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain('failed-write-199');
+    expect(JSON.stringify(result)).not.toContain('large-error-output-199');
+  });
+
   it('keeps newly created pending tasks without logs quiet', async () => {
     const computer = createNoLogTaskChangeComputer();
 
