@@ -272,7 +272,8 @@ export function createCodexGoalMcpServer() {
             stateRootDir: loaded.launch.config.stateRootDir ??
                 join(loaded.launch.config.jobRootDir, "state"),
         });
-        const brief = await buildGoalBrief({
+        const brief = await buildCodexGoalBrief({
+            jobId: loaded.manifest.jobId,
             launch: loaded.launch,
             status,
             accounts,
@@ -459,13 +460,15 @@ export function createCodexGoalMcpServer() {
                 : {}),
         });
         const duplicates = duplicateAccountGroups(slots);
+        const dedupedSlots = dedupeAccountSlots(slots);
         return mcpJson({
             ok: slots.every((slot) => slot.status === "ready"),
             authRootDir,
             slots,
             duplicates,
+            dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
             dedupeRecommendation: duplicates.length
-                ? "Prefer the newest ready slot in each duplicate identity group and remove or disable older duplicates."
+                ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
                 : "No duplicate identity groups detected.",
         });
     }));
@@ -712,7 +715,7 @@ function jobManifestPatchFromArgs(args) {
     putIfDefined(patch, "outputFormat", stringValue(args.outputFormat));
     return patch;
 }
-async function buildGoalBrief(input) {
+export async function buildCodexGoalBrief(input) {
     const result = input.status.resultPath
         ? await readRuntimeResultBrief(input.status.resultPath)
         : {};
@@ -723,6 +726,8 @@ async function buildGoalBrief(input) {
         : false;
     const invalidAccounts = input.accounts.filter((slot) => slot.status !== "ready");
     const capacityBlockedAccounts = input.accounts.filter((slot) => slot.capacityAvailability && slot.capacityAvailability !== "available");
+    const next = nextActionForStatus(input.status.recommendedAction);
+    const recentLogTail = redactLogTail(await safeTail(input.launch.logPath, input.tailLines));
     return {
         text: [
             input.status.tmuxAlive ? "worker alive" : "worker not running",
@@ -749,9 +754,15 @@ async function buildGoalBrief(input) {
             reason: slot.capacityReason,
             cooldownUntil: slot.capacityCooldownUntil,
         })),
-        nextBestTool: nextActionForStatus(input.status.recommendedAction).tool,
-        nextBestReason: nextActionForStatus(input.status.recommendedAction).reason,
-        recentLogTail: await safeTail(input.launch.logPath, input.tailLines),
+        recentCommands: extractRecentCommands(recentLogTail),
+        nextBestTool: next.tool,
+        nextBestReason: next.reason,
+        nextBestCommand: nextBestCommand({
+            jobId: input.jobId,
+            action: next,
+            status: input.status,
+        }),
+        recentLogTail,
     };
 }
 async function readRuntimeResultBrief(path) {
@@ -807,6 +818,24 @@ function nextActionForStatus(action) {
         return { tool: "codex_goal_mark_reviewed", reason: "worker completed" };
     }
     return { tool: "manual_review", reason: "status requires inspection before continuing" };
+}
+function nextBestCommand(input) {
+    const tool = typeof input.action.tool === "string"
+        ? input.action.tool
+        : "manual_review";
+    if (tool === "codex_goal_continue") {
+        return `codex_goal_continue({ jobId: ${JSON.stringify(input.jobId)}, confirmContinue: true })`;
+    }
+    if (tool === "codex_goal_mark_reviewed") {
+        return `codex_goal_mark_reviewed({ jobId: ${JSON.stringify(input.jobId)} })`;
+    }
+    if (tool === "codex_goal_brief") {
+        return `codex_goal_brief({ jobId: ${JSON.stringify(input.jobId)} })`;
+    }
+    if (input.status.workspaceDirty) {
+        return "manual_review_dirty_worktree";
+    }
+    return "manual_review_status";
 }
 function accountPoolRootFromArgs(args) {
     return resolvePath(process.cwd(), args.poolRootDir ?? join(homedir(), ".cache", "subscription-runtime"));
@@ -864,6 +893,36 @@ function duplicateAccountGroups(slots) {
         preferredSlot: preferredAccountSlot(group)?.name,
     }));
 }
+function dedupeAccountSlots(slots) {
+    const byIdentity = new Map();
+    const uniqueSlots = [];
+    for (const slot of slots) {
+        const key = slot.identityHashPrefix;
+        if (!key) {
+            uniqueSlots.push(slot);
+            continue;
+        }
+        const existing = byIdentity.get(key);
+        const preferred = existing ? preferredAccountSlot([existing, slot]) : slot;
+        if (preferred)
+            byIdentity.set(key, preferred);
+    }
+    const duplicateIdentities = new Set(duplicateAccountGroups(slots)
+        .map((group) => group.identityHashPrefix)
+        .filter((value) => typeof value === "string"));
+    for (const slot of slots) {
+        if (!slot.identityHashPrefix || duplicateIdentities.has(slot.identityHashPrefix)) {
+            continue;
+        }
+        uniqueSlots.push(slot);
+    }
+    return [
+        ...uniqueSlots,
+        ...[...byIdentity.entries()]
+            .filter(([identity]) => duplicateIdentities.has(identity))
+            .map(([, slot]) => slot),
+    ];
+}
 function preferredAccountSlot(slots) {
     return [...slots].sort((left, right) => {
         const leftReady = left.status === "ready" ? 1 : 0;
@@ -881,6 +940,39 @@ function tagValues(value) {
         return value.split(",").map((item) => item.trim()).filter(Boolean);
     }
     return [];
+}
+function extractRecentCommands(logTail) {
+    const commands = [];
+    for (const line of logTail.split(/\r?\n/)) {
+        const command = commandFromLogLine(line);
+        if (!command)
+            continue;
+        if (commands.at(-1) !== command)
+            commands.push(command);
+    }
+    return commands.slice(-10);
+}
+function commandFromLogLine(line) {
+    const trimmed = line.trim();
+    if (!trimmed)
+        return null;
+    const promptMatch = /^(?:[$>]|\+\s)(.+)$/.exec(trimmed);
+    const command = promptMatch?.[1]?.trim() ?? trimmed;
+    if (!/^(?:git|npm|npx|node|pnpm|yarn|bun|uv|python|python3|pytest|ruff|mypy|tsc|vitest|cargo|go|make|cmake|docker|docker-compose|\.venv\/bin\/python|scripts\/)[\s/]/.test(command)) {
+        return null;
+    }
+    return redactCommand(command).slice(0, 500);
+}
+function redactCommand(command) {
+    return command
+        .replace(/\b(access_token|refresh_token|id_token|api_key|token)=\S+/gi, "$1=[redacted]")
+        .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted]");
+}
+function redactLogTail(logTail) {
+    return logTail
+        .split(/\r?\n/)
+        .map((line) => redactCommand(line))
+        .join("\n");
 }
 function putIfDefined(target, key, value) {
     if (value !== undefined)

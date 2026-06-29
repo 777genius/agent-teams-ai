@@ -14,6 +14,7 @@ import {
   listCodexGoalAccountStatuses,
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
+import { buildCodexGoalBrief } from "../codex-goal-mcp";
 
 const execFileAsync = promisify(execFile);
 
@@ -108,6 +109,60 @@ describe("codex goal ops", () => {
     expect(status.resultExists).toBe(false);
     expect(status.workspaceDirty).toBe(true);
     expect(status.recommendedAction).toBe("inspect_dirty_workspace");
+  });
+
+  it("builds an agent-friendly brief with recent commands and next job action", async () => {
+    const fixture = await createGoalFixture();
+    const launch = launchInput(fixture.config, fixture.root);
+    await writeFile(
+      join(fixture.config.jobRootDir, `${fixture.config.taskId}.latest-result.json`),
+      `${JSON.stringify({
+        status: "partial",
+        reason: "quota_limited",
+        attempts: [{ accountId: "account-a" }],
+        task: { updatedAt: "2026-06-01T00:00:00.000Z" },
+      })}\n`,
+    );
+    await writeFile(
+      launch.logPath,
+      [
+        "$ npm test",
+        "> python scripts/check.py token=raw-secret",
+        "Bearer rawBearerSecret",
+      ].join("\n"),
+    );
+
+    const status = await collectCodexGoalStatus({
+      jobRootDir: fixture.config.jobRootDir,
+      taskId: fixture.config.taskId,
+      workspacePath: fixture.config.workspacePath,
+      logPath: launch.logPath,
+    });
+    const accounts = await listCodexGoalAccountStatuses({
+      authRootDir: fixture.config.authRootDir,
+      accounts: ["account-a"],
+    });
+    const brief = await buildCodexGoalBrief({
+      jobId: "job-from-registry",
+      launch,
+      status,
+      accounts,
+      staleAfterMs: 60_000,
+      tailLines: 20,
+    });
+
+    expect(brief).toMatchObject({
+      currentAccount: "account-a",
+      lastFailureReason: "quota_limited",
+      safeToContinue: true,
+      needsHumanRelogin: false,
+      nextBestCommand:
+        'codex_goal_continue({ jobId: "job-from-registry", confirmContinue: true })',
+    });
+    expect(brief.recentCommands).toContain("npm test");
+    expect(brief.recentCommands).toContain("python scripts/check.py token=[redacted]");
+    expect(JSON.stringify(brief)).not.toContain("raw-secret");
+    expect(JSON.stringify(brief)).not.toContain("rawBearerSecret");
   });
 });
 

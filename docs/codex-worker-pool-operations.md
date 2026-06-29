@@ -224,7 +224,7 @@ Job registry tools:
 - `codex_goal_update_job`: patch a stored job.
 - `codex_goal_status_by_id`: inspect a job by `jobId`.
 - `codex_goal_brief`: compact operator summary with stale/progress/account
-  hints.
+  hints, recent commands and the next safe job-level command.
 
 Lifecycle tools:
 
@@ -244,6 +244,24 @@ Account pool tools:
 - `codex_accounts_status`: inspect a specific pool or auth root.
 - `codex_accounts_relogin_instructions`: generate safe relogin commands for a
   slot without exposing token material.
+
+`codex_goal_brief` should be the default monitor response for agents. It
+returns:
+
+- `lastProgressAt`
+- `isStale`
+- `currentAccount`
+- `lastFailureReason`
+- `recentCommands`
+- `changedFiles`
+- `safeToContinue`
+- `needsHumanRelogin`
+- `nextBestCommand`
+
+`codex_accounts_status` returns `dedupedAccountNames` for worker pool inputs.
+If the same sanitized identity appears in multiple slots, this list keeps the
+newest ready slot for that identity and leaves the older duplicate visible for
+manual cleanup.
 
 Prompt templates:
 
