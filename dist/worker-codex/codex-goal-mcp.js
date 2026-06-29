@@ -460,7 +460,7 @@ export function createCodexGoalMcpServer() {
                 : {}),
         });
         const duplicates = duplicateAccountGroups(slots);
-        const dedupedSlots = dedupeAccountSlots(slots);
+        const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
         return mcpJson({
             ok: slots.every((slot) => slot.status === "ready"),
             authRootDir,
@@ -893,7 +893,7 @@ function duplicateAccountGroups(slots) {
         preferredSlot: preferredAccountSlot(group)?.name,
     }));
 }
-function dedupeAccountSlots(slots) {
+export function dedupeCodexGoalAccountSlots(slots) {
     const byIdentity = new Map();
     const uniqueSlots = [];
     for (const slot of slots) {

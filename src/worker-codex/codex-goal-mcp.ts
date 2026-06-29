@@ -704,7 +704,7 @@ export function createCodexGoalMcpServer(): McpServer {
           : {}),
       });
       const duplicates = duplicateAccountGroups(slots);
-      const dedupedSlots = dedupeAccountSlots(slots);
+      const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
       return mcpJson({
         ok: slots.every((slot) => slot.status === "ready"),
         authRootDir,
@@ -1210,7 +1210,7 @@ function duplicateAccountGroups(
     }));
 }
 
-function dedupeAccountSlots(
+export function dedupeCodexGoalAccountSlots(
   slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
 ) {
   const byIdentity = new Map<string, typeof slots[number]>();

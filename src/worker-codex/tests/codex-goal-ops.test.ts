@@ -14,7 +14,10 @@ import {
   listCodexGoalAccountStatuses,
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
-import { buildCodexGoalBrief } from "../codex-goal-mcp";
+import {
+  buildCodexGoalBrief,
+  dedupeCodexGoalAccountSlots,
+} from "../codex-goal-mcp";
 
 const execFileAsync = promisify(execFile);
 
@@ -164,6 +167,33 @@ describe("codex goal ops", () => {
     expect(JSON.stringify(brief)).not.toContain("raw-secret");
     expect(JSON.stringify(brief)).not.toContain("rawBearerSecret");
   });
+
+  it("dedupes account slots by sanitized identity and prefers newest ready auth", () => {
+    const slots = [
+      accountStatus("account-a-old", {
+        identityHashPrefix: "same-identity",
+        lastRefreshAt: "2026-06-01T00:00:00.000Z",
+      }),
+      accountStatus("account-b-new", {
+        identityHashPrefix: "same-identity",
+        lastRefreshAt: "2026-06-02T00:00:00.000Z",
+      }),
+      accountStatus("account-c-invalid", {
+        identityHashPrefix: "same-identity",
+        status: "auth_invalid",
+        lastRefreshAt: "2026-06-03T00:00:00.000Z",
+      }),
+      accountStatus("account-d-unique", {
+        identityHashPrefix: "unique-identity",
+        lastRefreshAt: "2026-06-01T00:00:00.000Z",
+      }),
+    ];
+
+    expect(dedupeCodexGoalAccountSlots(slots).map((slot) => slot.name)).toEqual([
+      "account-d-unique",
+      "account-b-new",
+    ]);
+  });
 });
 
 async function createGoalFixture(): Promise<{
@@ -233,6 +263,20 @@ function fakeJwt(claims: Readonly<Record<string, unknown>>): string {
 function base64UrlJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf8")
     .toString("base64url");
+}
+
+function accountStatus(
+  name: string,
+  overrides: Partial<Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number]>,
+): Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number] {
+  return {
+    name,
+    authJsonPath: `/tmp/${name}/auth.json`,
+    status: "ready",
+    warnings: [],
+    safeMessage: "auth.json is readable",
+    ...overrides,
+  };
 }
 
 function launchInput(

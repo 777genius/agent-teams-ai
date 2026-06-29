@@ -31,4 +31,5 @@ export declare function buildCodexGoalBrief(input: {
     nextBestCommand: string;
     recentLogTail: string;
 }>;
+export declare function dedupeCodexGoalAccountSlots(slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>): import("./codex-goal-ops.js").CodexGoalAccountSlotStatus[];
 //# sourceMappingURL=codex-goal-mcp.d.ts.map
