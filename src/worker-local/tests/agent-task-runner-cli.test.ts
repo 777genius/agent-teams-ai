@@ -360,10 +360,19 @@ describe("subscription runtime agent-task runner CLI", () => {
 
   it("fails before constructing a durable worker when the encryption key env is missing", async () => {
     let factoryCalled = false;
+    const stdout: string[] = [];
     const stderr: string[] = [];
     const exitCode = await runSubscriptionAgentTaskCli(
-      ["--provider", "claude", "--state-root", "/tmp/runtime-state"],
+      [
+        "--provider",
+        "claude",
+        "--format",
+        "result-json",
+        "--state-root",
+        "/tmp/runtime-state",
+      ],
       fakeIo({
+        stdout,
         stderr,
         stdin: JSON.stringify({
           protocolVersion: 1,
@@ -382,6 +391,14 @@ describe("subscription runtime agent-task runner CLI", () => {
 
     expect(exitCode).toBe(2);
     expect(factoryCalled).toBe(false);
+    expect(JSON.parse(stdout.join(""))).toMatchObject({
+      protocolVersion: 1,
+      status: "failed",
+      failure: {
+        code: "unknown_runtime_failure",
+        safeMessage: "SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required",
+      },
+    });
     expect(stderr.join("")).toContain("SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required");
   });
 

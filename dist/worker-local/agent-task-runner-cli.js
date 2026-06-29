@@ -53,7 +53,15 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
         }
     }
     catch (error) {
-        io.writeStderr(`${error instanceof Error ? error.message : "subscription runtime agent task failed"}\n`);
+        const safeMessage = error instanceof Error ? error.message : "subscription runtime agent task failed";
+        if (requestedOutputFormat(argv) === "result-json") {
+            io.writeStdout(`${JSON.stringify(makeFailedAgentTaskResult({
+                code: "unknown_runtime_failure",
+                safeMessage,
+                retryable: false,
+            }))}\n`);
+        }
+        io.writeStderr(`${safeMessage}\n`);
         return 2;
     }
     finally {
@@ -61,6 +69,15 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
             await rm(tempStateRoot, { recursive: true, force: true }).catch(() => { });
         }
     }
+}
+function requestedOutputFormat(argv) {
+    for (let index = 0; index < argv.length; index += 1) {
+        if (argv[index] !== "--format")
+            continue;
+        const value = argv[index + 1];
+        return value === "result-json" ? "result-json" : "event-ndjson";
+    }
+    return "event-ndjson";
 }
 export async function resolveRequestCwd(workspaceRoot, requestedCwd) {
     const root = await realpath(resolve(workspaceRoot));

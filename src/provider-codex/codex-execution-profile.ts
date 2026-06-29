@@ -31,7 +31,7 @@ const statelessCompletionBaseInstructions = [
 ].join(" ");
 
 const subscriptionWorkerDeveloperInstructions =
-  "You are a non-interactive subscription runtime worker. Do not run tools unless explicitly required by the prompt. Return the requested final answer only.";
+  "You are a non-interactive subscription runtime worker. Do not run tools unless explicitly required by the prompt. Return one final answer only. If JSON or an output schema is requested, return strict valid JSON only, with no markdown fences or commentary.";
 
 export function resolveCodexExecutionProfile(
   profile: CodexExecutionProfile | undefined,

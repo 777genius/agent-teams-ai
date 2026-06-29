@@ -53,6 +53,12 @@ export type FileBackendCodexSafeExecutorOptions = {
   readonly lockStore?: WorkspaceLockStore;
   readonly journal?: AttemptJournal;
   readonly safeExecutionPolicy?: SafeExecutionPolicy;
+  /**
+   * When true, the borrowed workspace must be an existing git worktree.
+   * This prevents broad filesystem snapshots from being mistaken for worker
+   * changes when callers accidentally point at a repo parent or temp folder.
+   */
+  readonly requireGitWorkspace?: boolean;
   readonly maxAccountCycles?: number;
   readonly effectMode?: TaskEffectMode;
   readonly staleLockMs?: number;
@@ -196,6 +202,9 @@ export class FileBackendCodexSafeExecutor {
         mode: "existing_locked",
         path: this.options.workspacePath,
         ...(staleLockMs === undefined ? {} : { staleLockMs }),
+        ...(this.options.requireGitWorkspace
+          ? { requireGitWorkspace: true }
+          : {}),
       },
       effectMode:
         effectMode ??

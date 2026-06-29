@@ -1242,6 +1242,9 @@ describe("Codex provider adapter", () => {
           "non-interactive subscription runtime worker",
         ),
       });
+      expect(threadStart?.params?.developerInstructions).toContain(
+        "strict valid JSON only",
+      );
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });

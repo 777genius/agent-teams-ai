@@ -23,6 +23,7 @@ import {
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
+  type WorkspaceSnapshot,
 } from "../index";
 
 const execFileAsync = promisify(execFile);
@@ -205,6 +206,42 @@ describe("SafeExecutionRunner", () => {
     expect(runs).toBe(1);
   });
 
+  it("fails fast when a git worktree is required but the workspace is not git", async () => {
+    const workspacePath = await mkdtemp(join(tmpdir(), "safe-execution-not-git-"));
+    cleanupPaths.push(workspacePath);
+    let runs = 0;
+    const pool = {
+      async run(): Promise<PromptResult> {
+        runs += 1;
+        return { output: "should not run" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+
+    await expect(
+      runner.run({
+        taskId: "task-require-git",
+        workspace: {
+          mode: "existing_locked",
+          path: workspacePath,
+          requireGitWorkspace: true,
+        },
+        effectMode: "workspace_patch",
+        provider: "codex",
+        pool,
+        job: { prompt: "do work", workspacePath },
+        originalPrompt: "do work",
+        policy: { maxAttempts: 1 },
+      }),
+    ).rejects.toMatchObject({
+      code: "safe_execution_workspace_not_git",
+    });
+    expect(runs).toBe(0);
+  });
+
   it("stops on permission_required without switching accounts", async () => {
     const workspacePath = await gitWorkspace("safe-execution-permission-");
     let runs = 0;
@@ -353,8 +390,22 @@ describe("SafeExecutionRunner", () => {
     );
 
     expect(defaultSafeExecutionErrorClassifier(poolFailure)).toEqual({
-      reason: "unknown_error",
+      reason: "task_timeout",
       safeMessage: "Codex task timed out.",
+      retryable: true,
+    });
+  });
+
+  it("classifies invalid provider output without collapsing to unknown_error", () => {
+    const providerFailure = new SubscriptionWorkerError(
+      "subscription_worker_run_failed",
+      "Codex provider output was invalid.",
+      { details: { code: "provider_output_invalid" } },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toEqual({
+      reason: "provider_output_invalid",
+      safeMessage: "Codex provider output was invalid.",
       retryable: true,
     });
   });
@@ -585,6 +636,63 @@ describe("SafeExecutionRunner", () => {
       "diff --no-ext-diff --",
     ]);
     expect(commands.join("\n")).not.toMatch(/\b(reset|clean|checkout|apply)\b/);
+  });
+
+  it("does not report a full filesystem snapshot as worker-changed files", async () => {
+    const workspacePath = await tempPath("safe-execution-filesystem-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: false,
+        changedFiles: [".claude/settings.json", ".worktrees/old/file.ts"],
+        fingerprint: "before",
+        summary: "before filesystem scan",
+      },
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: [
+          ".claude/settings.json",
+          ".worktrees/old/file.ts",
+          "src/worker-output.ts",
+        ],
+        fingerprint: "after",
+        summary: "after filesystem scan",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-filesystem-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
   });
 
   async function tempPath(prefix: string): Promise<string> {

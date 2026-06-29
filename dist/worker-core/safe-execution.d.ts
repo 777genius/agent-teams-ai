@@ -6,6 +6,7 @@ export type ExistingLockedWorkspaceStrategy = {
     readonly mode: "existing_locked";
     readonly path: string;
     readonly staleLockMs?: number;
+    readonly requireGitWorkspace?: boolean;
 };
 export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
 export type ContinuationMode = "packet_first" | "disabled";
@@ -18,7 +19,7 @@ export type SafeExecutionPolicy = {
     readonly maxAttempts?: number;
     readonly continuationMode?: ContinuationMode;
 };
-export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "user_abort" | "unknown_error";
+export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "task_timeout" | "provider_output_invalid" | "user_abort" | "unknown_error";
 export type AttemptStatus = "running" | "completed" | "blocked" | "failed";
 export type SafeExecutionTaskStatus = "running" | "completed" | "partial" | "failed" | "aborted";
 export type WorkspaceSnapshotMode = "git" | "filesystem" | "unavailable";
@@ -150,7 +151,7 @@ export interface ContinuationPacketBuilder {
         readonly previousOutputSummary?: string;
     }): ContinuationPacket;
 }
-export type SafeExecutionErrorCode = "safe_execution_invalid_task" | "safe_execution_workspace_locked" | "safe_execution_external_retry_disabled" | "safe_execution_continuation_disabled" | "safe_execution_attempts_exhausted";
+export type SafeExecutionErrorCode = "safe_execution_invalid_task" | "safe_execution_workspace_locked" | "safe_execution_workspace_not_git" | "safe_execution_external_retry_disabled" | "safe_execution_continuation_disabled" | "safe_execution_attempts_exhausted";
 export declare class SafeExecutionError extends Error {
     readonly code: SafeExecutionErrorCode;
     constructor(code: SafeExecutionErrorCode, message: string, options?: {

@@ -94,6 +94,9 @@ export class FileBackendCodexSafeExecutor {
                 mode: "existing_locked",
                 path: this.options.workspacePath,
                 ...(staleLockMs === undefined ? {} : { staleLockMs }),
+                ...(this.options.requireGitWorkspace
+                    ? { requireGitWorkspace: true }
+                    : {}),
             },
             effectMode: effectMode ??
                 this.options.effectMode ??

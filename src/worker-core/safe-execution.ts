@@ -30,6 +30,7 @@ export type ExistingLockedWorkspaceStrategy = {
   readonly mode: "existing_locked";
   readonly path: string;
   readonly staleLockMs?: number;
+  readonly requireGitWorkspace?: boolean;
 };
 
 export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
@@ -52,6 +53,8 @@ export type AttemptFailureReason =
   | "account_unavailable"
   | "reconnect_required"
   | "permission_required"
+  | "task_timeout"
+  | "provider_output_invalid"
   | "user_abort"
   | "unknown_error";
 
@@ -205,6 +208,7 @@ export interface ContinuationPacketBuilder {
 export type SafeExecutionErrorCode =
   | "safe_execution_invalid_task"
   | "safe_execution_workspace_locked"
+  | "safe_execution_workspace_not_git"
   | "safe_execution_external_retry_disabled"
   | "safe_execution_continuation_disabled"
   | "safe_execution_attempts_exhausted";
@@ -923,6 +927,9 @@ export class SafeExecutionRunner {
   ): Promise<SafeExecutionRunResult<Result>> {
     validateRunInput(input);
     const workspacePath = await canonicalWorkspacePath(input.workspace.path);
+    if (input.workspace.requireGitWorkspace) {
+      await assertGitWorkspace(workspacePath);
+    }
     const existing = await this.options.journal.readTask({
       taskId: input.taskId,
     });
@@ -1294,7 +1301,7 @@ export function defaultSafeExecutionErrorClassifier(
   );
   if (timeoutMessage) {
     return {
-      reason: "unknown_error",
+      reason: "task_timeout",
       safeMessage: timeoutMessage,
       retryable: true,
     };
@@ -1306,7 +1313,7 @@ export function defaultSafeExecutionErrorClassifier(
   );
   if (invalidOutputMessage) {
     return {
-      reason: "unknown_error",
+      reason: "provider_output_invalid",
       safeMessage: invalidOutputMessage,
       retryable: true,
     };
@@ -1355,7 +1362,17 @@ function classifyWorkerFailureCode(
         retryable: false,
       };
     case "task_timeout":
+      return {
+        reason: "task_timeout",
+        safeMessage,
+        retryable: true,
+      };
     case "provider_output_invalid":
+      return {
+        reason: "provider_output_invalid",
+        safeMessage,
+        retryable: true,
+      };
     case "unknown_runtime_failure":
       return {
         reason: "unknown_error",
@@ -1450,10 +1467,20 @@ function shouldContinueAfterFailure(input: {
     case "reconnect_required":
       return { allowed: input.policy.retryOnReconnectRequired };
     case "unknown_error":
+    case "task_timeout":
+    case "provider_output_invalid":
       if (input.workspaceChanged) {
         return {
-          allowed: input.policy.retryUnknownChangedWorkspace,
-          ...(input.policy.retryUnknownChangedWorkspace
+          allowed:
+            input.classification.reason === "unknown_error"
+              ? input.policy.retryUnknownChangedWorkspace
+              : false,
+          ...(input.classification.reason !== "unknown_error"
+            ? {
+                safeMessage:
+                  `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
+              }
+            : input.policy.retryUnknownChangedWorkspace
             ? {}
             : {
                 safeMessage:
@@ -1462,7 +1489,10 @@ function shouldContinueAfterFailure(input: {
         };
       }
       return {
-        allowed: input.policy.retryUnknownCleanWorkspace,
+        allowed:
+          input.classification.reason === "unknown_error"
+            ? input.policy.retryUnknownCleanWorkspace
+            : true,
       };
     case "permission_required":
     case "user_abort":
@@ -1573,7 +1603,11 @@ function finalStatusForFailure(
   reason: AttemptFailureReason,
 ): Exclude<SafeExecutionTaskStatus, "running" | "completed"> {
   if (reason === "user_abort") return "aborted";
-  if (reason === "unknown_error" || reason === "permission_required") {
+  if (
+    reason === "unknown_error" ||
+    reason === "permission_required" ||
+    reason === "provider_output_invalid"
+  ) {
     return "failed";
   }
   return "partial";
@@ -1590,6 +1624,17 @@ function changedFilesBetween(
   before: WorkspaceSnapshot,
   after: WorkspaceSnapshot,
 ): readonly string[] {
+  if (before.mode === "filesystem" && after.mode === "filesystem") {
+    const beforeFiles = new Set(before.changedFiles);
+    return after.changedFiles
+      .filter((file) => !beforeFiles.has(file))
+      .sort((left, right) => left.localeCompare(right));
+  }
+
+  if (before.mode === "git" && after.mode === "git") {
+    return [...after.changedFiles].sort((left, right) => left.localeCompare(right));
+  }
+
   const files = new Set<string>();
   for (const file of before.changedFiles) files.add(file);
   for (const file of after.changedFiles) files.add(file);
@@ -1667,6 +1712,22 @@ function mergeChangedFiles(
 async function canonicalWorkspacePath(path: string): Promise<string> {
   const resolved = resolve(path);
   return realpath(resolved).catch(() => resolved);
+}
+
+async function assertGitWorkspace(workspacePath: string): Promise<void> {
+  const result = await execFileAsync("git", [
+    "rev-parse",
+    "--is-inside-work-tree",
+  ], {
+    cwd: workspacePath,
+    timeout: 5_000,
+  }).catch(() => null);
+  if (result?.stdout.toString().trim() === "true") return;
+  throw new SafeExecutionError(
+    "safe_execution_workspace_not_git",
+    "Safe execution requires a git worktree workspace.",
+    { details: { workspacePath } },
+  );
 }
 
 function workspaceRunId(workspacePath: string): WorkspaceRunId {
