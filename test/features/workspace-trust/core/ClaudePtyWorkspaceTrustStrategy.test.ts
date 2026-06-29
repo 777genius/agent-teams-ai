@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   ProviderStateProbe,
+  ProviderTrustPersister,
+  ProviderTrustPersistResult,
   ProviderTrustState,
   PtyKeyAction,
   PtyProcessPort,
@@ -61,6 +63,17 @@ class FakeStateProbe implements ProviderStateProbe {
     const state = this.states[Math.min(this.calls, this.states.length - 1)];
     this.calls += 1;
     return state;
+  }
+}
+
+class FakeTrustPersister implements ProviderTrustPersister {
+  readonly workspaces: string[] = [];
+
+  constructor(private readonly result: ProviderTrustPersistResult) {}
+
+  async persistTrustState(): Promise<ProviderTrustPersistResult> {
+    this.workspaces.push('workspace');
+    return this.result;
   }
 }
 
@@ -210,6 +223,85 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
     expect(pty.session?.killed).toBe(true);
     expect(tempStore.cleaned).toBe(true);
     expect(stateProbe.calls).toBe(4);
+  });
+
+  it('persists Claude trust directly and skips PTY when verification succeeds', async () => {
+    const pty = new FakePtyProcess();
+    const trustPersister = new FakeTrustPersister({
+      ok: true,
+      evidence: ['persisted trusted project key: /tmp/project'],
+    });
+    const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: { HOME: '/Users/tester' },
+      ptyProcess: pty,
+      stateProbe: new FakeStateProbe([
+        { status: 'untrusted' },
+        { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
+      ]),
+      trustPersister,
+      tempEmptyMcpConfigStore: new FakeTempStore(),
+      isCancelled: () => false,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.evidence).toEqual([
+      'persisted trusted project key: /tmp/project',
+      'trusted project key: /tmp/project',
+    ]);
+    expect(trustPersister.workspaces).toEqual(['workspace']);
+    expect(pty.spawnInputs).toEqual([]);
+  });
+
+  it('can confirm trust through direct persistence without PTY ports', async () => {
+    const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: { HOME: '/Users/tester' },
+      stateProbe: new FakeStateProbe([
+        { status: 'untrusted' },
+        { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
+      ]),
+      trustPersister: new FakeTrustPersister({
+        ok: true,
+        evidence: ['persisted trusted project key: /tmp/project'],
+      }),
+      isCancelled: () => false,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.evidence).toContain('trusted project key: /tmp/project');
+  });
+
+  it('falls back to PTY when direct trust persistence cannot update Claude state', async () => {
+    const pty = new FakePtyProcess();
+    const stateProbe = new FakeStateProbe([
+      { status: 'untrusted' },
+      { status: 'untrusted' },
+      { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
+    ]);
+    const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: { HOME: '/Users/tester' },
+      ptyProcess: pty,
+      stateProbe,
+      trustPersister: new FakeTrustPersister({
+        ok: false,
+        code: 'claude_state_write_failed',
+        message: 'write failed',
+      }),
+      tempEmptyMcpConfigStore: new FakeTempStore(),
+      isCancelled: () => false,
+      timeoutMs: 100,
+      pollIntervalMs: 1,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.evidence).toContain('write failed');
+    expect(result.evidence).toContain('trusted project key: /tmp/project');
+    expect(pty.spawnInputs).toHaveLength(1);
   });
 
   it('keeps the default Claude preflight alive long enough for slow startup trust prompts', async () => {

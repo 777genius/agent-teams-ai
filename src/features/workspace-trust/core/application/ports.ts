@@ -44,6 +44,14 @@ export interface ProviderStateProbe {
   readTrustState(workspace: WorkspaceTrustWorkspace): Promise<ProviderTrustState>;
 }
 
+export type ProviderTrustPersistResult =
+  | { ok: true; evidence: string[] }
+  | { ok: false; code: string; message: string; evidence?: string[] };
+
+export interface ProviderTrustPersister {
+  persistTrustState(workspace: WorkspaceTrustWorkspace): Promise<ProviderTrustPersistResult>;
+}
+
 export interface TempEmptyMcpConfigHandle {
   path: string;
   cleanup(): Promise<void>;

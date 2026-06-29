@@ -3,6 +3,7 @@ import {
   DefaultWorkspaceTrustCoordinator,
 } from '../../core/application';
 import { FileClaudeStateProbe } from '../adapters/output/ClaudeStateProbe';
+import { FileClaudeTrustPersister } from '../adapters/output/ClaudeTrustPersister';
 import { NodePtyProcessAdapter } from '../adapters/output/NodePtyProcessAdapter';
 import { FileTempEmptyMcpConfigStore } from '../adapters/output/TempEmptyMcpConfigStore';
 
@@ -16,6 +17,13 @@ export function createWorkspaceTrustCoordinator(input: {
     new ClaudePtyWorkspaceTrustStrategy({
       ptyProcess: new NodePtyProcessAdapter(),
       stateProbe: new FileClaudeStateProbe({
+        claudeConfigDir:
+          typeof input.claudeConfigDir === 'function'
+            ? input.claudeConfigDir()
+            : input.claudeConfigDir,
+        globalConfigFilePath: input.globalConfigFilePath,
+      }),
+      trustPersister: new FileClaudeTrustPersister({
         claudeConfigDir:
           typeof input.claudeConfigDir === 'function'
             ? input.claudeConfigDir()

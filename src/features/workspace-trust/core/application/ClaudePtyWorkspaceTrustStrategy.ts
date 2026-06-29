@@ -5,6 +5,7 @@ import { detectClaudeStartupState, normalizeTerminalText } from './StartupDialog
 import type { WorkspaceTrustDiagnosticStrategyResult, WorkspaceTrustWorkspace } from '../domain';
 import type {
   ProviderStateProbe,
+  ProviderTrustPersister,
   PtyProcessPort,
   TempEmptyMcpConfigStore,
   TerminalSnapshot,
@@ -24,6 +25,7 @@ export interface ClaudePtyWorkspaceTrustStrategyInput {
   env: Record<string, string | undefined>;
   ptyProcess?: PtyProcessPort;
   stateProbe?: ProviderStateProbe;
+  trustPersister?: ProviderTrustPersister;
   tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
   isCancelled(): boolean;
   timeoutMs?: number;
@@ -91,6 +93,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
     private readonly defaults: {
       ptyProcess?: PtyProcessPort;
       stateProbe?: ProviderStateProbe;
+      trustPersister?: ProviderTrustPersister;
       tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
     } = {}
   ) {}
@@ -100,9 +103,10 @@ export class ClaudePtyWorkspaceTrustStrategy {
   ): Promise<WorkspaceTrustDiagnosticStrategyResult> {
     const ptyProcess = input.ptyProcess ?? this.defaults.ptyProcess;
     const stateProbe = input.stateProbe ?? this.defaults.stateProbe;
+    const trustPersister = input.trustPersister ?? this.defaults.trustPersister;
     const tempEmptyMcpConfigStore =
       input.tempEmptyMcpConfigStore ?? this.defaults.tempEmptyMcpConfigStore;
-    if (!ptyProcess || !stateProbe || !tempEmptyMcpConfigStore) {
+    if (!stateProbe || (!trustPersister && (!ptyProcess || !tempEmptyMcpConfigStore))) {
       return {
         id: 'claude-pty-workspace-trust',
         provider: 'claude',
@@ -140,6 +144,34 @@ export class ClaudePtyWorkspaceTrustStrategy {
       const before = await stateProbe.readTrustState(workspace);
       if (before.status === 'trusted') {
         evidence.push(...before.evidence);
+        continue;
+      }
+
+      if (trustPersister) {
+        const persisted = await trustPersister.persistTrustState(workspace);
+        if (persisted.ok) {
+          evidence.push(...persisted.evidence);
+          const afterPersist = await stateProbe.readTrustState(workspace);
+          if (afterPersist.status === 'trusted') {
+            evidence.push(...afterPersist.evidence);
+            continue;
+          }
+          evidence.push(
+            afterPersist.status === 'unknown'
+              ? (afterPersist.errorMessage ??
+                  'Claude trust direct persist could not be verified after write.')
+              : 'Claude trust direct persist did not produce a trusted project key.'
+          );
+        } else {
+          evidence.push(persisted.message, ...(persisted.evidence ?? []));
+        }
+      }
+
+      if (!ptyProcess || !tempEmptyMcpConfigStore) {
+        status = worseStatus(status, 'soft_failed');
+        errorCode = 'workspace_trust_strategy_not_configured';
+        errorMessage = 'Claude workspace trust PTY fallback ports are not configured.';
+        evidence.push(errorMessage);
         continue;
       }
 
