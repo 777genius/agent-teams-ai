@@ -82,6 +82,26 @@ describe("decideRunObservation", () => {
     });
   });
 
+  it("requires inspection for heartbeat-only workers without output", () => {
+    expect(decideRunObservation({
+      status: "running",
+      liveness: "alive",
+      progress: {
+        status: "running",
+        heartbeatAgeMs: 1_000,
+        staleAfterMs: 60_000,
+        stale: false,
+        heartbeatOnlyNoOutput: true,
+      },
+      result: { exists: false },
+      logs: { exists: false, byteLength: 0 },
+      workspace: { dirty: false, changedFilesCount: 0 },
+    })).toMatchObject({
+      kind: "stale_needs_inspection",
+      reason: "heartbeat_only_no_output",
+    });
+  });
+
   it("does not prescribe recovery for dirty stopped workspaces", () => {
     expect(decideRunObservation({
       status: "failed",

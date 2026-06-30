@@ -40,6 +40,9 @@ export function decideRunObservation(input) {
     if (input.liveness === "stale" || input.progress?.silentStale) {
         return decision("stale_needs_inspection", "observable_progress_stale", "The worker may be alive, but observable progress is stale. Inspect logs, process tree and workspace before acting.", ["progress.heartbeatAgeMs", "progress.staleAfterMs"]);
     }
+    if (input.progress?.heartbeatOnlyNoOutput) {
+        return decision("stale_needs_inspection", "heartbeat_only_no_output", "The worker heartbeat is fresh, but there is no result, log output or workspace change. Inspect process tree, app-server and workspace before stopping or recovery.", ["progress.heartbeatAgeMs", "logs.byteLength", "result.exists", "workspace.changedFiles"]);
+    }
     if (input.status === "completed") {
         return decision("review_completed", "terminal_result_completed", "The run appears completed. Review outputs, logs and workspace before merging or marking reviewed.", ["result.status", "workspace.changedFiles"]);
     }

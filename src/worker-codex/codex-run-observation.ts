@@ -35,6 +35,7 @@ import { codexGoalProgressPath } from "./codex-goal-runner";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultStaleAfterMs = 10 * 60_000;
 const defaultTailLines = 20;
+const heartbeatOnlyNoOutputAfterMs = 2 * 60_000;
 
 export type CodexRunObservationAdapterOptions = {
   readonly registryRootDir?: string;
@@ -105,12 +106,25 @@ export class CodexRunObservationAdapter implements RunObservationPort {
     });
     const progressStale = status.progressHeartbeatAgeMs !== undefined &&
       status.progressHeartbeatAgeMs > this.staleAfterMs;
+    const heartbeatOnlyNoOutput = isHeartbeatOnlyNoOutput({
+      status,
+      progressStale,
+      logUpdatedAgeMs,
+    });
     const silentStale = Boolean(status.tmuxAlive && (progressStale || logStale));
     if (status.tmuxAlive && logStale) {
       warnings.push({
         code: "log_stale_while_worker_alive",
         message: "worker appears alive but the log has not changed recently",
         severity: "warning",
+      });
+    }
+    if (heartbeatOnlyNoOutput) {
+      warnings.push({
+        code: "heartbeat_only_no_output",
+        message:
+          "worker heartbeat is fresh, but there is no result, log output or workspace change",
+        severity: "blocked",
       });
     }
     if (
@@ -150,6 +164,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
       staleAfterMs: this.staleAfterMs,
       stale: progressStale,
       silentStale,
+      heartbeatOnlyNoOutput,
       ...(status.progressAttemptCount === undefined
         ? {}
         : { attemptCount: status.progressAttemptCount }),
@@ -438,6 +453,27 @@ function codexManualReviewReasons(
     return [status.recommendedAction];
   }
   return [];
+}
+
+function isHeartbeatOnlyNoOutput(input: {
+  readonly status: CodexGoalStatus;
+  readonly progressStale: boolean;
+  readonly logUpdatedAgeMs?: number | undefined;
+}): boolean {
+  const status = input.status;
+  const noOutputAgeMs = input.logUpdatedAgeMs ?? status.progressHeartbeatAgeMs;
+  return Boolean(
+    status.tmuxAlive &&
+      status.progressExists &&
+      status.progressStatus === "running" &&
+      !input.progressStale &&
+      noOutputAgeMs !== undefined &&
+      noOutputAgeMs >= heartbeatOnlyNoOutputAfterMs &&
+      status.resultExists === false &&
+      (status.logExists === false || status.logByteLength === 0) &&
+      status.workspaceDirty === false &&
+      (status.changedFiles ?? []).length === 0,
+  );
 }
 
 async function safeWorkspaceKey(workspacePath: string): Promise<string> {

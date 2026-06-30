@@ -31,6 +31,7 @@ export type RunObservationProgress = {
     readonly staleAfterMs?: number;
     readonly stale?: boolean;
     readonly silentStale?: boolean;
+    readonly heartbeatOnlyNoOutput?: boolean;
     readonly attemptCount?: number;
     readonly currentAccount?: string;
 };

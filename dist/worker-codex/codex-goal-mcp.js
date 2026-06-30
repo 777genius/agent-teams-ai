@@ -1244,10 +1244,10 @@ async function stopStoredJob(args) {
             brief,
         });
     }
-    if (!brief.silentStale && !args.forceStop) {
+    if (!brief.silentStale && !brief.heartbeatOnlyNoOutput && !args.forceStop) {
         return mcpJson({
             ok: false,
-            reason: "worker_not_silent_stale",
+            reason: "worker_not_silent_stale_or_heartbeat_only_no_output",
             jobId: loaded.manifest.jobId,
             tmuxSession: loaded.launch.tmuxSession,
             requiredOverride: "forceStop",
@@ -1307,9 +1307,12 @@ async function writeCodexGoalStopEvent(input) {
         forceStop: input.forceStop,
         reason: input.brief.silentStale
             ? "silent_stale_worker"
-            : "manual_force_stop",
+            : input.brief.heartbeatOnlyNoOutput
+                ? "heartbeat_only_no_output"
+                : "manual_force_stop",
         brief: {
             silentStale: input.brief.silentStale,
+            heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
             lastProgressAt: input.brief.lastProgressAt,
             lastProgressAgeMs: input.brief.lastProgressAgeMs,
             staleAfterMs: input.brief.staleAfterMs,
@@ -1717,6 +1720,7 @@ async function buildCodexGoalOverviewItem(input) {
             lastProgressAgeMs: brief.lastProgressAgeMs,
             isStale: brief.isStale,
             silentStale: brief.silentStale,
+            heartbeatOnlyNoOutput: brief.heartbeatOnlyNoOutput,
             safeToContinue: brief.safeToContinue,
             hasAvailableAccount: brief.hasAvailableAccount,
             needsHumanRelogin: brief.needsHumanRelogin,
@@ -1937,6 +1941,10 @@ export async function buildCodexGoalBrief(input) {
     const silentStale = Boolean(input.status.tmuxAlive &&
         input.status.recommendedAction === "wait_for_worker" &&
         isStale);
+    const heartbeatOnlyNoOutput = isHeartbeatOnlyNoOutputBrief({
+        status: input.status,
+        staleAfterMs: input.staleAfterMs,
+    });
     const invalidAccounts = input.accounts.filter((slot) => slot.status !== "ready");
     const capacityBlockedAccounts = input.accounts.filter((slot) => slot.capacityAvailability && slot.capacityAvailability !== "available");
     const duplicateAccounts = duplicateAccountGroups(input.accounts);
@@ -1954,22 +1962,35 @@ export async function buildCodexGoalBrief(input) {
     const reviewedWithoutResult = Boolean(lifecycleMarkerTypes.includes("review") &&
         !input.status.resultExists &&
         !input.status.tmuxAlive);
+    const stoppedWithoutResult = Boolean(lifecycleMarkerTypes.includes("stop_event") &&
+        !input.status.resultExists &&
+        !input.status.tmuxAlive);
     const next = silentStale
         ? {
             tool: "manual_review",
             reason: "silent_stale_worker",
         }
-        : safeStatusToContinue && !hasAvailableAccount
+        : heartbeatOnlyNoOutput
             ? {
-                tool: "codex_goal_accounts_status",
-                reason: "no available account slots for this job",
+                tool: "manual_review",
+                reason: "heartbeat_only_no_output",
             }
-            : reviewedWithoutResult
+            : stoppedWithoutResult
                 ? {
                     tool: "manual_review",
-                    reason: "reviewed_no_result",
+                    reason: "stopped_worker",
                 }
-                : nextActionForStatus(input.status.recommendedAction);
+                : safeStatusToContinue && !hasAvailableAccount
+                    ? {
+                        tool: "codex_goal_accounts_status",
+                        reason: "no available account slots for this job",
+                    }
+                    : reviewedWithoutResult
+                        ? {
+                            tool: "manual_review",
+                            reason: "reviewed_no_result",
+                        }
+                        : nextActionForStatus(input.status.recommendedAction);
     const recentLogTail = redactLogTail(await safeTail(input.launch.logPath, input.tailLines));
     return {
         text: [
@@ -1989,16 +2010,21 @@ export async function buildCodexGoalBrief(input) {
                 ? `changed files ${input.status.changedFiles.length}`
                 : "changed files 0",
             silentStale ? "silentStale true" : "silentStale false",
+            heartbeatOnlyNoOutput
+                ? "heartbeatOnlyNoOutput true"
+                : "heartbeatOnlyNoOutput false",
             lifecycleMarkerTypes.length
                 ? `lifecycle markers ${lifecycleMarkerTypes.join(",")}`
                 : "lifecycle markers none",
             reviewedWithoutResult ? "reviewedWithoutResult true" : "reviewedWithoutResult false",
+            stoppedWithoutResult ? "stoppedWithoutResult true" : "stoppedWithoutResult false",
         ].join(", "),
         lastProgressAt,
         lastProgressAgeMs,
         staleAfterMs: input.staleAfterMs,
         isStale,
         silentStale,
+        heartbeatOnlyNoOutput,
         logExists: input.status.logExists,
         logByteLength: input.status.logByteLength,
         progressPath: input.status.progressPath,
@@ -2014,7 +2040,10 @@ export async function buildCodexGoalBrief(input) {
         currentAccount: result.currentAccount,
         lastFailureReason: input.status.resultReason ?? result.lastFailureReason,
         changedFiles: input.status.changedFiles ?? [],
-        safeToContinue: safeStatusToContinue && hasAvailableAccount && !reviewedWithoutResult,
+        safeToContinue: safeStatusToContinue &&
+            hasAvailableAccount &&
+            !reviewedWithoutResult &&
+            !stoppedWithoutResult,
         hasAvailableAccount,
         configuredAccounts: input.accounts.map((slot) => slot.name),
         dedupedAccounts: dedupedAccounts.map((slot) => slot.name),
@@ -2041,6 +2070,23 @@ export async function buildCodexGoalBrief(input) {
         }),
         recentLogTail,
     };
+}
+function isHeartbeatOnlyNoOutputBrief(input) {
+    const status = input.status;
+    const heartbeatOnlyNoOutputAfterMs = Math.min(input.staleAfterMs, 2 * 60_000);
+    const logUpdatedAgeMs = isoAgeMs(status.logUpdatedAt);
+    const noOutputAgeMs = logUpdatedAgeMs ?? status.progressHeartbeatAgeMs;
+    return Boolean(status.tmuxAlive &&
+        status.progressExists &&
+        status.progressStatus === "running" &&
+        noOutputAgeMs !== undefined &&
+        noOutputAgeMs >= heartbeatOnlyNoOutputAfterMs &&
+        status.progressHeartbeatAgeMs !== undefined &&
+        status.progressHeartbeatAgeMs <= input.staleAfterMs &&
+        status.resultExists === false &&
+        (status.logExists === false || status.logByteLength === 0) &&
+        status.workspaceDirty === false &&
+        (status.changedFiles ?? []).length === 0);
 }
 function buildCodexGoalDecision(input) {
     const registryArgs = {
@@ -2076,6 +2122,7 @@ function buildCodexGoalDecision(input) {
             progressStatus: input.brief.progressStatus,
             logByteLength: input.brief.logByteLength,
             silentStale: input.brief.silentStale,
+            heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
         },
         {
             code: "account_state",
@@ -2108,6 +2155,22 @@ function buildCodexGoalDecision(input) {
             message: "The worker process appears alive but observable progress is stale. Inspect process, app-server, log and worktree before stopping or recovery.",
         });
     }
+    if (input.brief.heartbeatOnlyNoOutput) {
+        blockers.push({
+            code: "heartbeat_only_no_output",
+            severity: "blocked",
+            message: "The worker heartbeat is fresh, but there is no result, log output or workspace change. Inspect process, app-server, log and worktree before stopping or recovery.",
+        });
+    }
+    if (input.brief.lifecycleMarkerTypes.includes("stop_event") &&
+        !input.status.resultExists &&
+        !input.status.tmuxAlive) {
+        blockers.push({
+            code: "stopped_worker_requires_review",
+            severity: "blocked",
+            message: "The worker was explicitly stopped before producing a result. Review the stop reason and workspace before starting a replacement worker.",
+        });
+    }
     if (input.status.workspaceDirty && !input.status.tmuxAlive) {
         blockers.push({
             code: "dirty_worktree_requires_review",
@@ -2116,7 +2179,9 @@ function buildCodexGoalDecision(input) {
             changedFiles: input.status.changedFiles ?? [],
         });
     }
-    if (!input.brief.hasAvailableAccount && isSafeStartAction(input.status.recommendedAction)) {
+    if (!input.brief.lifecycleMarkerTypes.includes("stop_event") &&
+        !input.brief.hasAvailableAccount &&
+        isSafeStartAction(input.status.recommendedAction)) {
         blockers.push({
             code: "no_available_accounts",
             severity: "blocked",
@@ -2152,6 +2217,7 @@ function buildCodexGoalDecision(input) {
         registryArgs,
         safeToContinue,
         silentStale: input.brief.silentStale,
+        heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
         hasInvalidAccounts: input.brief.invalidAccounts.length > 0,
     });
     return {
@@ -2192,10 +2258,17 @@ function codexGoalDecisionKind(input) {
         return "manual_review_single_writer_conflict";
     if (input.brief.silentStale)
         return "manual_review_silent_stale";
+    if (input.brief.heartbeatOnlyNoOutput)
+        return "manual_review_heartbeat_only_no_output";
     if (input.status.tmuxAlive)
         return "wait_for_worker";
     if (input.status.recommendedAction === "review_completed")
         return "review_completed";
+    if (input.brief.lifecycleMarkerTypes.includes("stop_event") &&
+        !input.status.resultExists &&
+        !input.status.tmuxAlive) {
+        return "manual_review_stopped_worker";
+    }
     if (!input.brief.hasAvailableAccount && isSafeStartAction(input.status.recommendedAction)) {
         return "fix_accounts";
     }
@@ -2235,6 +2308,11 @@ function codexGoalDecisionCommands(input) {
                 stopAfterManualReview: `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
             }
             : {}),
+        ...(input.heartbeatOnlyNoOutput
+            ? {
+                stopAfterManualReview: `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
+            }
+            : {}),
         ...(input.hasInvalidAccounts
             ? {
                 reloginInstructions: `codex_goal_accounts_relogin_instructions(${JSON.stringify(input.registryArgs)})`,
@@ -2268,6 +2346,13 @@ function codexGoalDecisionChecklist(input) {
         return [
             "Inspect process tree, app-server, log tail and git status.",
             `If stale is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
+            "After stop, re-run codex_goal_decision before continuing.",
+        ];
+    }
+    if (input.decision === "manual_review_heartbeat_only_no_output") {
+        return [
+            "Inspect process tree, app-server, log tail and git status.",
+            `If heartbeat-only no-output is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
             "After stop, re-run codex_goal_decision before continuing.",
         ];
     }
@@ -2505,6 +2590,12 @@ function latestIsoDate(values) {
         .filter((value) => value !== undefined && Number.isFinite(value.time))
         .sort((left, right) => right.time - left.time)[0];
     return latest?.value;
+}
+function isoAgeMs(value) {
+    if (!value)
+        return undefined;
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? Date.now() - time : undefined;
 }
 function firstStringKey(record, keys) {
     for (const key of keys) {

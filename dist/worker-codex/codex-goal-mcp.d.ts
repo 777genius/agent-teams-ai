@@ -20,6 +20,7 @@ export declare function buildCodexGoalBrief(input: {
     staleAfterMs: number;
     isStale: boolean;
     silentStale: boolean;
+    heartbeatOnlyNoOutput: boolean;
     logExists: boolean | undefined;
     logByteLength: number | undefined;
     progressPath: string | undefined;
