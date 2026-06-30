@@ -425,6 +425,20 @@ import {
   summarizeRuntimeLaunchResultMembers,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
+  appendProvisioningTrace,
+  boundLiveLeadProcessMessage,
+  boundLiveLeadProcessText,
+  boundPendingLogLineCarry,
+  boundProbeOutputBuffer,
+  boundRunClaudeLogLines,
+  boundRunProvisioningOutputParts,
+  boundSingleRetainedLogLine,
+  boundStdoutParserCarry,
+  buildProvisioningLiveOutput,
+  emitProvisioningCheckpoint,
+  initializeProvisioningTrace,
+} from './provisioning/TeamProvisioningProgressBuffers';
+import {
   buildDeterministicLaunchHydrationPrompt,
   buildGeminiPostLaunchHydrationPrompt,
   buildLeadRosterContextBlock,
@@ -537,8 +551,6 @@ import {
   buildProgressLiveOutput,
   buildProgressLogsTail,
   buildProgressTraceLine,
-  PROGRESS_RETAINED_LOG_CHARS,
-  PROGRESS_RETAINED_LOG_LINE_CHARS,
 } from './progressPayload';
 import {
   applyDesktopTeammateModeDecisionToEnv,
@@ -989,10 +1001,8 @@ const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
 const MCP_PREFLIGHT_SHUTDOWN_POLL_MS = 50;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
-const CLI_LOG_LINE_CARRY_LIMIT = PROGRESS_RETAINED_LOG_LINE_CHARS;
-const STDOUT_PARSER_CARRY_LIMIT = PROGRESS_RETAINED_LOG_CHARS;
-const LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT = 32 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
+const PROVISIONING_TRACE_STORAGE_LIMIT = 500;
 // Progress emissions fan out the latest CLI tail + assistant output to the
 // renderer over IPC. Under load the previous 300ms cadence combined with an
 // unbounded payload (see `emitLogsProgress`) caused renderer OOM crashes
@@ -1001,7 +1011,6 @@ const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
 // slow the cadence to ~1s so Zustand can keep up on large teams.
 const LOG_PROGRESS_THROTTLE_MS = 1000;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
-const PROBE_OUTPUT_BUFFER_LIMIT = UI_LOGS_TAIL_LIMIT;
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
@@ -1370,8 +1379,6 @@ interface ProvisioningRun {
   /** Prevents duplicate Team Launched notifications for the same live run. */
   teamLaunchedNotificationFired?: boolean;
 }
-
-const PROVISIONING_TRACE_STORAGE_LIMIT = 500;
 
 interface MixedSecondaryRuntimeLaneState {
   laneId: string;
@@ -1797,169 +1804,6 @@ function buildProvisioningTraceDetail(
       : undefined,
   ].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? parts.join(' | ') : undefined;
-}
-
-function appendProvisioningTrace(
-  run: ProvisioningRun,
-  state: Exclude<TeamProvisioningState, 'idle'>,
-  message: string,
-  detail?: string
-): void {
-  run.provisioningTraceLines ??= [];
-  run.lastProvisioningTraceKey ??= null;
-  const key = `${state}\u0000${message}\u0000${detail ?? ''}`;
-  if (run.lastProvisioningTraceKey === key) {
-    return;
-  }
-  run.lastProvisioningTraceKey = key;
-  run.provisioningTraceLines.push(
-    buildProgressTraceLine({
-      timestamp: nowIso(),
-      state,
-      message,
-      detail,
-    })
-  );
-  if (run.provisioningTraceLines.length > PROVISIONING_TRACE_STORAGE_LIMIT) {
-    run.provisioningTraceLines.splice(
-      0,
-      run.provisioningTraceLines.length - PROVISIONING_TRACE_STORAGE_LIMIT
-    );
-  }
-}
-
-function buildProvisioningLiveOutput(run: ProvisioningRun): string | undefined {
-  boundRunProvisioningOutputParts(run);
-  return buildProgressLiveOutput(run.provisioningTraceLines, run.provisioningOutputParts);
-}
-
-function boundRunClaudeLogLines(run: ProvisioningRun): void {
-  const bounded = boundProgressLogLines(run.claudeLogLines);
-  if (
-    bounded.length === run.claudeLogLines.length &&
-    bounded.every((line, index) => line === run.claudeLogLines[index])
-  ) {
-    return;
-  }
-  run.claudeLogLines.splice(0, run.claudeLogLines.length, ...bounded);
-}
-
-function boundSingleRetainedLogLine(line: string): string {
-  return boundProgressLogLines([line], { maxLines: 1 })[0] ?? '';
-}
-
-function boundPendingLogLineCarry(carry: string): string {
-  if (carry.length <= CLI_LOG_LINE_CARRY_LIMIT) {
-    return carry;
-  }
-  const marker = '...[truncated pending line]\n';
-  if (CLI_LOG_LINE_CARRY_LIMIT <= marker.length) {
-    return carry.slice(-CLI_LOG_LINE_CARRY_LIMIT);
-  }
-  return `${marker}${carry.slice(-(CLI_LOG_LINE_CARRY_LIMIT - marker.length))}`;
-}
-
-function boundStdoutParserCarry(carry: string): string {
-  if (carry.length <= STDOUT_PARSER_CARRY_LIMIT) {
-    return carry;
-  }
-  return carry.slice(-STDOUT_PARSER_CARRY_LIMIT);
-}
-
-function boundProbeOutputBuffer(text: string): string {
-  if (text.length <= PROBE_OUTPUT_BUFFER_LIMIT) {
-    return text;
-  }
-  const marker = '...[truncated probe output]';
-  if (PROBE_OUTPUT_BUFFER_LIMIT <= marker.length) {
-    return text.slice(-PROBE_OUTPUT_BUFFER_LIMIT);
-  }
-  const retainedChars = PROBE_OUTPUT_BUFFER_LIMIT - marker.length;
-  const headChars = Math.floor(retainedChars / 2);
-  const tailChars = retainedChars - headChars;
-  return `${text.slice(0, headChars)}${marker}${text.slice(-tailChars)}`;
-}
-
-function boundLiveLeadProcessText(text: string): string {
-  if (text.length <= LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT) {
-    return text;
-  }
-  const marker = '\n...[truncated live message]\n';
-  if (LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT <= marker.length) {
-    return text.slice(0, LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT);
-  }
-  const retainedChars = LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT - marker.length;
-  const headChars = Math.floor(retainedChars / 2);
-  const tailChars = retainedChars - headChars;
-  return `${text.slice(0, headChars)}${marker}${text.slice(-tailChars)}`;
-}
-
-function boundLiveLeadProcessMessage(message: InboxMessage): InboxMessage {
-  const text = boundLiveLeadProcessText(message.text);
-  if (text === message.text) {
-    return message;
-  }
-  return {
-    ...message,
-    text,
-    summary: text.length > 60 ? `${text.slice(0, 57)}...` : text,
-  };
-}
-
-function boundRunProvisioningOutputParts(run: ProvisioningRun): void {
-  const originalLength = run.provisioningOutputParts.length;
-  const bounded = boundProgressAssistantParts(run.provisioningOutputParts);
-  if (
-    bounded.length === originalLength &&
-    bounded.every((part, index) => part === run.provisioningOutputParts[index])
-  ) {
-    return;
-  }
-
-  const removedFromStart = Math.max(0, originalLength - bounded.length);
-  run.provisioningOutputParts.splice(0, originalLength, ...bounded);
-  if (removedFromStart <= 0) {
-    return;
-  }
-
-  for (const [messageId, index] of Array.from(run.provisioningOutputIndexByMessageId.entries())) {
-    if (index < removedFromStart) {
-      run.provisioningOutputIndexByMessageId.delete(messageId);
-    } else {
-      run.provisioningOutputIndexByMessageId.set(messageId, index - removedFromStart);
-    }
-  }
-
-  run.stallWarningIndex =
-    run.stallWarningIndex == null
-      ? null
-      : run.stallWarningIndex < removedFromStart
-        ? null
-        : run.stallWarningIndex - removedFromStart;
-  run.apiRetryWarningIndex =
-    run.apiRetryWarningIndex == null
-      ? null
-      : run.apiRetryWarningIndex < removedFromStart
-        ? null
-        : run.apiRetryWarningIndex - removedFromStart;
-}
-
-function initializeProvisioningTrace(run: ProvisioningRun): void {
-  appendProvisioningTrace(run, run.progress.state, run.progress.message);
-  run.progress = {
-    ...run.progress,
-    assistantOutput: buildProvisioningLiveOutput(run) ?? run.progress.assistantOutput,
-  };
-}
-
-function emitProvisioningCheckpoint(run: ProvisioningRun, message: string, detail?: string): void {
-  appendProvisioningTrace(run, run.progress.state, message, detail);
-  run.progress = {
-    ...run.progress,
-    updatedAt: nowIso(),
-    assistantOutput: buildProvisioningLiveOutput(run) ?? run.progress.assistantOutput,
-  };
-  run.onProgress(run.progress);
 }
 
 function updateProgress(
