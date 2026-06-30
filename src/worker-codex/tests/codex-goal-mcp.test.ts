@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -1510,6 +1510,31 @@ describe("codex goal MCP server", () => {
         expect(rawRelogin.instructions).not.toContainEqual(
           expect.stringContaining("codex_goal_accounts_status"),
         );
+
+        const codexFail = join(root, "codex-fail.sh");
+        await writeFile(codexFail, "#!/bin/sh\necho 'secret@example.com' >&2\nexit 1\n");
+        await chmod(codexFail, 0o700);
+        const liveStatus = await callToolJson(client, "codex_accounts_status", {
+          authRootDir,
+          accounts: ["account-a"],
+          liveCheck: true,
+          codexBinaryPath: codexFail,
+          liveCheckTimeoutMs: 1000,
+        });
+        expect(liveStatus).toMatchObject({
+          ok: false,
+          liveCheck: true,
+          availableDedupedAccountNames: [],
+        });
+        expect(liveStatus.slots).toEqual([
+          expect.objectContaining({
+            name: "account-a",
+            status: "auth_invalid",
+            liveCheck: "failed",
+            liveCheckSafeMessage: "codex auth status failed",
+          }),
+        ]);
+        expect(JSON.stringify(liveStatus)).not.toContain("secret@example.com");
       } finally {
         await client.close();
         await server.close();

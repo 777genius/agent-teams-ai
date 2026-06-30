@@ -718,13 +718,26 @@ export function createCodexGoalMcpServer(options = {}) {
     server.registerTool("codex_goal_accounts_status", {
         title: "Codex Goal Account Status",
         description: "Inspect a stored job's configured account slots by jobId, including job-specific capacity cooldowns.",
-        inputSchema: jobIdInputSchema(),
+        inputSchema: {
+            ...jobIdInputSchema(),
+            liveCheck: z.boolean().optional(),
+            codexBinaryPath: z.string().optional(),
+            liveCheckTimeoutMs: z.number().int().positive().optional(),
+        },
     }, async (args) => withMcpErrors(async () => {
         const loaded = await loadJobLaunch(args);
         return mcpJson({
             registryRootDir: loaded.registryRootDir,
             jobId: loaded.manifest.jobId,
-            ...(await codexGoalAccountStatusPayload(loaded.launch)),
+            ...(await codexGoalAccountStatusPayload(loaded.launch, {
+                liveCheck: booleanValue(args.liveCheck) ?? false,
+                ...(stringValue(args.codexBinaryPath)
+                    ? { codexBinaryPath: stringValue(args.codexBinaryPath) }
+                    : {}),
+                ...(numberValue(args.liveCheckTimeoutMs)
+                    ? { liveCheckTimeoutMs: numberValue(args.liveCheckTimeoutMs) }
+                    : {}),
+            })),
         });
     }));
     server.registerTool("codex_goal_accounts_list_pools", {
@@ -979,6 +992,9 @@ export function createCodexGoalMcpServer(options = {}) {
             authRootDir: z.string().optional(),
             stateRootDir: z.string().optional(),
             accounts: z.union([z.string(), z.array(z.string())]).optional(),
+            liveCheck: z.boolean().optional(),
+            codexBinaryPath: z.string().optional(),
+            liveCheckTimeoutMs: z.number().int().positive().optional(),
         },
     }, async (args) => withMcpErrors(async () => {
         const authRootDir = accountAuthRootFromArgs(args);
@@ -988,6 +1004,13 @@ export function createCodexGoalMcpServer(options = {}) {
             ...(accounts.length ? { accounts } : {}),
             ...(stringValue(args.stateRootDir)
                 ? { stateRootDir: resolvePath(process.cwd(), stringValue(args.stateRootDir)) }
+                : {}),
+            liveCheck: booleanValue(args.liveCheck) ?? false,
+            ...(stringValue(args.codexBinaryPath)
+                ? { codexBinaryPath: stringValue(args.codexBinaryPath) }
+                : {}),
+            ...(numberValue(args.liveCheckTimeoutMs)
+                ? { liveCheckTimeoutMs: numberValue(args.liveCheckTimeoutMs) }
                 : {}),
         }));
     }));
@@ -1103,11 +1126,12 @@ function codexGoalWorkerControlTarget(input) {
 function codexGoalStateRootDir(launch) {
     return launch.config.stateRootDir ?? join(launch.config.jobRootDir, "state");
 }
-async function codexGoalAccountStatusPayload(launch) {
+async function codexGoalAccountStatusPayload(launch, options = {}) {
     return codexAccountStatusPayload({
         authRootDir: launch.config.authRootDir,
         stateRootDir: codexGoalStateRootDir(launch),
         accounts: launch.config.accounts.map((account) => account.name),
+        ...options,
     });
 }
 async function codexAccountStatusPayload(input) {
@@ -1115,6 +1139,9 @@ async function codexAccountStatusPayload(input) {
         authRootDir: input.authRootDir,
         ...(input.accounts?.length ? { accounts: input.accounts } : {}),
         ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+        ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
+        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+        ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
     });
     const duplicates = duplicateAccountGroups(slots);
     const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
@@ -1123,6 +1150,7 @@ async function codexAccountStatusPayload(input) {
         ok: availableDedupedSlots.length > 0,
         authRootDir: input.authRootDir,
         capacityAware: Boolean(input.stateRootDir),
+        liveCheck: Boolean(input.liveCheck),
         ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
         slots,
         duplicates,

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access, mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -118,6 +118,45 @@ describe("codex goal ops", () => {
     expect(JSON.stringify(accounts)).not.toContain("access-secret");
     expect(JSON.stringify(accounts)).not.toContain("secret@example.com");
     expect(JSON.stringify(accounts)).not.toContain("chatgpt-account-secret");
+  });
+
+  it("optionally validates account slots with codex auth status without leaking provider output", async () => {
+    const fixture = await createGoalFixture();
+    const codexOk = join(fixture.root, "codex-ok.sh");
+    const codexFail = join(fixture.root, "codex-fail.sh");
+    await writeFile(codexOk, "#!/bin/sh\necho 'Auth email: secret@example.com'\nexit 0\n");
+    await writeFile(codexFail, "#!/bin/sh\necho 'refresh-secret expired' >&2\nexit 1\n");
+    await chmod(codexOk, 0o700);
+    await chmod(codexFail, 0o700);
+
+    const okAccounts = await listCodexGoalAccountStatuses({
+      authRootDir: fixture.config.authRootDir,
+      accounts: ["account-a"],
+      liveCheck: true,
+      codexBinaryPath: codexOk,
+      liveCheckTimeoutMs: 1000,
+    });
+    expect(okAccounts[0]).toMatchObject({
+      status: "ready",
+      liveCheck: "passed",
+      liveCheckSafeMessage: "codex auth status passed",
+    });
+    expect(JSON.stringify(okAccounts)).not.toContain("secret@example.com");
+
+    const failedAccounts = await listCodexGoalAccountStatuses({
+      authRootDir: fixture.config.authRootDir,
+      accounts: ["account-a"],
+      liveCheck: true,
+      codexBinaryPath: codexFail,
+      liveCheckTimeoutMs: 1000,
+    });
+    expect(failedAccounts[0]).toMatchObject({
+      status: "auth_invalid",
+      liveCheck: "failed",
+      liveCheckSafeMessage: "codex auth status failed",
+      safeMessage: "codex auth status failed",
+    });
+    expect(JSON.stringify(failedAccounts)).not.toContain("refresh-secret");
   });
 
   it("recommends inspection instead of account switching for dirty unknown failures", async () => {
