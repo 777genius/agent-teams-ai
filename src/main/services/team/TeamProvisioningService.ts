@@ -317,6 +317,7 @@ import {
 import {
   buildLeadInboxRelayPrompt,
   buildMemberInboxRelayPrompt,
+  collectConfirmedSameTeamPairs as collectConfirmedSameTeamPairsHelper,
   DEFAULT_INBOX_RELAY_BATCH_SIZE,
   getLeadInboxRelayNoiseIds,
   getLeadRelayReadCommitBatch,
@@ -324,11 +325,13 @@ import {
   isCurrentProofMissingRecoveryForegroundMessage,
   isCurrentReviewPickupRequestForegroundMessage,
   isOpenCodeProtocolProofMissingRecord,
+  type NativeSameTeamFingerprint,
   normalizeSameTeamText,
   openCodeTaskRefsOverlap,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
+  shouldDeferSameTeamMessage as shouldDeferSameTeamMessageHelper,
   shouldSuppressUnverifiedLeadRelayStateLine,
   splitMemberInboxRelayUnread,
 } from './provisioning/TeamProvisioningInboxRelayPolicy';
@@ -1749,14 +1752,6 @@ interface PendingInboxRelayCandidate {
   normalizedText: string;
   normalizedSummary: string;
   queuedAtMs: number;
-}
-
-interface NativeSameTeamFingerprint {
-  id: string;
-  from: string;
-  text: string;
-  summary: string;
-  seenAt: number;
 }
 
 class InboxRelayInFlightTimeoutError extends Error {
@@ -15142,9 +15137,16 @@ export class TeamProvisioningService {
       // NOT marked read (crash safety: if native delivery fails, retry will relay).
       const runStartedAtMs = Date.parse(run.startedAt);
       const deferredByAge = remainingUnread.filter(
-        (m) =>
-          !nativeMatchedMessageIds.has(m.messageId) &&
-          this.shouldDeferSameTeamMessage(m, leadName, runStartedAtMs)
+        (message) =>
+          !nativeMatchedMessageIds.has(message.messageId) &&
+          shouldDeferSameTeamMessageHelper({
+            message,
+            leadName,
+            runStartedAtMs,
+            nowMs: Date.now(),
+            runStartSkewMs: TeamProvisioningService.SAME_TEAM_RUN_START_SKEW_MS,
+            nativeDeliveryGraceMs: TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS,
+          })
       );
       const deferredIds = new Set(deferredByAge.map((m) => m.messageId));
 
@@ -21695,85 +21697,6 @@ export class TeamProvisioningService {
   // Same-team native delivery dedup (Layer 2)
   // ---------------------------------------------------------------------------
 
-  private collectConfirmedSameTeamPairs(
-    messages: InboxMessage[],
-    fingerprints: NativeSameTeamFingerprint[],
-    leadName: string
-  ): { confirmedMessageIds: Set<string>; matchedFingerprintIds: Set<string> } {
-    const confirmedMessageIds = new Set<string>();
-    const matchedFingerprintIds = new Set<string>();
-
-    if (fingerprints.length === 0) {
-      return { confirmedMessageIds, matchedFingerprintIds };
-    }
-
-    // Build group key: from + normalizedText (summary checked during pairing, not grouping)
-    const groupKey = (from: string, text: string) => `${from}\0${text}`;
-
-    // Group fingerprints by (from, text), sorted FIFO by seenAt within each group
-    const fpByGroup = new Map<string, NativeSameTeamFingerprint[]>();
-    for (const fp of fingerprints) {
-      const key = groupKey(fp.from, fp.text);
-      let group = fpByGroup.get(key);
-      if (!group) {
-        group = [];
-        fpByGroup.set(key, group);
-      }
-      group.push(fp);
-    }
-    for (const group of fpByGroup.values()) {
-      group.sort((a, b) => a.seenAt - b.seenAt);
-    }
-
-    // Collect eligible inbox messages, grouped by (from, text), sorted FIFO by timestamp
-    type EligibleMsg = InboxMessage & { messageId: string; parsedTs: number };
-    const msgByGroup = new Map<string, EligibleMsg[]>();
-    for (const m of messages) {
-      if (m.read) continue;
-      if (m.source) continue;
-      if (!hasStableInboxMessageId(m)) continue;
-      const fromName = m.from?.trim() ?? '';
-      if (!fromName || fromName === leadName || fromName === 'user') continue;
-      const parsedTs = Date.parse(m.timestamp);
-      if (!Number.isFinite(parsedTs)) continue;
-
-      const key = groupKey(fromName, normalizeSameTeamText(m.text));
-      let group = msgByGroup.get(key);
-      if (!group) {
-        group = [];
-        msgByGroup.set(key, group);
-      }
-      group.push({ ...m, parsedTs } as EligibleMsg);
-    }
-    for (const group of msgByGroup.values()) {
-      group.sort((a, b) => a.parsedTs - b.parsedTs);
-    }
-
-    // FIFO pair within each group: first fingerprint → first message, second → second, etc.
-    // This prevents delayed native delivery from pairing with the wrong inbox row
-    // when identical messages (e.g. "Done") are sent close together.
-    for (const [key, fps] of fpByGroup) {
-      const msgs = msgByGroup.get(key);
-      if (!msgs || msgs.length === 0) continue;
-
-      const limit = Math.min(fps.length, msgs.length);
-      for (let i = 0; i < limit; i++) {
-        const fp = fps[i];
-        const m = msgs[i];
-        // Summary validation: if both sides have summary, they must match
-        if (fp.summary && m.summary?.trim() && fp.summary !== m.summary.trim()) continue;
-        // Time window validation
-        if (Math.abs(m.parsedTs - fp.seenAt) > TeamProvisioningService.SAME_TEAM_MATCH_WINDOW_MS) {
-          continue;
-        }
-        confirmedMessageIds.add(m.messageId);
-        matchedFingerprintIds.add(fp.id);
-      }
-    }
-
-    return { confirmedMessageIds, matchedFingerprintIds };
-  }
-
   private rememberSameTeamNativeFingerprints(
     teamName: string,
     blocks: ParsedTeammateContent[]
@@ -21824,45 +21747,18 @@ export class TeamProvisioningService {
     return fresh;
   }
 
-  private isPotentialSameTeamCliMessage(m: InboxMessage, leadName: string): boolean {
-    if (m.source) return false;
-    const fromName = m.from?.trim() ?? '';
-    if (!fromName || fromName === leadName || fromName === 'user') return false;
-    const toName = m.to?.trim();
-    if (toName && toName !== leadName) return false;
-    return true;
-  }
-
-  private shouldDeferSameTeamMessage(
-    m: InboxMessage,
-    leadName: string,
-    runStartedAtMs: number
-  ): boolean {
-    if (!this.isPotentialSameTeamCliMessage(m, leadName)) return false;
-    const messageTs = Date.parse(m.timestamp);
-    if (!Number.isFinite(messageTs) || messageTs < 0) return false;
-    if (
-      Number.isFinite(runStartedAtMs) &&
-      messageTs < runStartedAtMs - TeamProvisioningService.SAME_TEAM_RUN_START_SKEW_MS
-    ) {
-      return false;
-    }
-    const ageMs = Date.now() - messageTs;
-    if (ageMs < 0) return false;
-    return ageMs < TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS;
-  }
-
   private async confirmSameTeamNativeMatches(
     teamName: string,
     leadName: string,
     messages: InboxMessage[]
   ): Promise<{ nativeMatchedMessageIds: Set<string>; persisted: boolean }> {
     const fingerprints = this.getFreshSameTeamNativeFingerprints(teamName);
-    const { confirmedMessageIds, matchedFingerprintIds } = this.collectConfirmedSameTeamPairs(
+    const { confirmedMessageIds, matchedFingerprintIds } = collectConfirmedSameTeamPairsHelper({
       messages,
       fingerprints,
-      leadName
-    );
+      leadName,
+      matchWindowMs: TeamProvisioningService.SAME_TEAM_MATCH_WINDOW_MS,
+    });
 
     if (confirmedMessageIds.size === 0) {
       return { nativeMatchedMessageIds: confirmedMessageIds, persisted: true };

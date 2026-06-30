@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLeadInboxRelayPrompt,
   buildMemberInboxRelayPrompt,
+  collectConfirmedSameTeamPairs,
   type RelayInboxMessage,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
+  shouldDeferSameTeamMessage,
   splitMemberInboxRelayUnread,
 } from '../TeamProvisioningInboxRelayPolicy';
 
@@ -27,6 +29,89 @@ function ids(messages: readonly RelayInboxMessage[]): string[] {
 }
 
 describe('inbox relay unread policy', () => {
+  it('pairs same-team native fingerprints with inbox rows in FIFO order', () => {
+    const firstSeenAt = Date.parse('2026-01-01T00:00:01.000Z');
+    const secondSeenAt = Date.parse('2026-01-01T00:00:02.000Z');
+    const result = collectConfirmedSameTeamPairs({
+      leadName: 'lead',
+      matchWindowMs: 30_000,
+      fingerprints: [
+        {
+          id: 'fp-2',
+          from: 'worker',
+          text: 'Done',
+          summary: 'second',
+          seenAt: secondSeenAt,
+        },
+        {
+          id: 'fp-1',
+          from: 'worker',
+          text: 'Done',
+          summary: 'first',
+          seenAt: firstSeenAt,
+        },
+      ],
+      messages: [
+        message({
+          messageId: 'msg-2',
+          from: 'worker',
+          to: 'lead',
+          text: 'Done',
+          summary: 'second',
+          timestamp: '2026-01-01T00:00:02.000Z',
+        }),
+        message({
+          messageId: 'msg-1',
+          from: 'worker',
+          to: 'lead',
+          text: 'Done',
+          summary: 'first',
+          timestamp: '2026-01-01T00:00:01.000Z',
+        }),
+      ],
+    });
+
+    expect([...result.confirmedMessageIds]).toEqual(['msg-1', 'msg-2']);
+    expect([...result.matchedFingerprintIds]).toEqual(['fp-1', 'fp-2']);
+  });
+
+  it('defers recent same-team source-less messages inside the native delivery grace window', () => {
+    const nowMs = Date.parse('2026-01-01T00:00:10.000Z');
+
+    expect(
+      shouldDeferSameTeamMessage({
+        message: message({
+          messageId: 'recent',
+          from: 'worker',
+          to: 'lead',
+          timestamp: '2026-01-01T00:00:09.000Z',
+        }),
+        leadName: 'lead',
+        runStartedAtMs: Date.parse('2026-01-01T00:00:00.000Z'),
+        nowMs,
+        runStartSkewMs: 1_000,
+        nativeDeliveryGraceMs: 15_000,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldDeferSameTeamMessage({
+        message: message({
+          messageId: 'cross',
+          from: 'worker',
+          to: 'lead',
+          source: 'cross_team',
+          timestamp: '2026-01-01T00:00:09.000Z',
+        }),
+        leadName: 'lead',
+        runStartedAtMs: Date.parse('2026-01-01T00:00:00.000Z'),
+        nowMs,
+        runStartSkewMs: 1_000,
+        nativeDeliveryGraceMs: 15_000,
+      })
+    ).toBe(false);
+  });
+
   it('splits unread member relay rows into silent, passive, and actionable buckets', () => {
     const split = splitMemberInboxRelayUnread([
       message({

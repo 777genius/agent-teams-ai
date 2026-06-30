@@ -58,10 +58,131 @@ export interface LeadInboxRelayBatchSelection {
   hasPendingFollowUpRelay: boolean;
 }
 
+export interface NativeSameTeamFingerprint {
+  id: string;
+  from: string;
+  text: string;
+  summary: string;
+  seenAt: number;
+}
+
+export interface ConfirmedSameTeamPairs {
+  confirmedMessageIds: Set<string>;
+  matchedFingerprintIds: Set<string>;
+}
+
 export const DEFAULT_INBOX_RELAY_BATCH_SIZE = 10;
 
 export function normalizeSameTeamText(text: string): string {
   return text.trim().replace(/\r\n/g, '\n');
+}
+
+export function collectConfirmedSameTeamPairs(input: {
+  messages: InboxMessage[];
+  fingerprints: NativeSameTeamFingerprint[];
+  leadName: string;
+  matchWindowMs: number;
+}): ConfirmedSameTeamPairs {
+  const confirmedMessageIds = new Set<string>();
+  const matchedFingerprintIds = new Set<string>();
+
+  if (input.fingerprints.length === 0) {
+    return { confirmedMessageIds, matchedFingerprintIds };
+  }
+
+  const groupKey = (from: string, text: string) => `${from}\0${text}`;
+  const fpByGroup = new Map<string, NativeSameTeamFingerprint[]>();
+  for (const fp of input.fingerprints) {
+    const key = groupKey(fp.from, fp.text);
+    let group = fpByGroup.get(key);
+    if (!group) {
+      group = [];
+      fpByGroup.set(key, group);
+    }
+    group.push(fp);
+  }
+  for (const group of fpByGroup.values()) {
+    group.sort((a, b) => a.seenAt - b.seenAt);
+  }
+
+  type EligibleMessage = InboxMessage & { messageId: string; parsedTs: number };
+  const msgByGroup = new Map<string, EligibleMessage[]>();
+  for (const message of input.messages) {
+    if (message.read) continue;
+    if (message.source) continue;
+    if (!hasStableInboxMessageId(message)) continue;
+    const fromName = message.from?.trim() ?? '';
+    if (!fromName || fromName === input.leadName || fromName === 'user') continue;
+    const parsedTs = Date.parse(message.timestamp);
+    if (!Number.isFinite(parsedTs)) continue;
+
+    const key = groupKey(fromName, normalizeSameTeamText(message.text));
+    let group = msgByGroup.get(key);
+    if (!group) {
+      group = [];
+      msgByGroup.set(key, group);
+    }
+    group.push({ ...message, parsedTs } as EligibleMessage);
+  }
+  for (const group of msgByGroup.values()) {
+    group.sort((a, b) => a.parsedTs - b.parsedTs);
+  }
+
+  for (const [key, fingerprints] of fpByGroup) {
+    const messages = msgByGroup.get(key);
+    if (!messages || messages.length === 0) continue;
+
+    const limit = Math.min(fingerprints.length, messages.length);
+    for (let i = 0; i < limit; i++) {
+      const fingerprint = fingerprints[i];
+      const message = messages[i];
+      if (
+        fingerprint.summary &&
+        message.summary?.trim() &&
+        fingerprint.summary !== message.summary.trim()
+      ) {
+        continue;
+      }
+      if (Math.abs(message.parsedTs - fingerprint.seenAt) > input.matchWindowMs) {
+        continue;
+      }
+      confirmedMessageIds.add(message.messageId);
+      matchedFingerprintIds.add(fingerprint.id);
+    }
+  }
+
+  return { confirmedMessageIds, matchedFingerprintIds };
+}
+
+export function isPotentialSameTeamCliMessage(message: InboxMessage, leadName: string): boolean {
+  if (message.source) return false;
+  const fromName = message.from?.trim() ?? '';
+  if (!fromName || fromName === leadName || fromName === 'user') return false;
+  const toName = message.to?.trim();
+  if (toName && toName !== leadName) return false;
+  return true;
+}
+
+export function shouldDeferSameTeamMessage(input: {
+  message: InboxMessage;
+  leadName: string;
+  runStartedAtMs: number;
+  nowMs: number;
+  runStartSkewMs: number;
+  nativeDeliveryGraceMs: number;
+}): boolean {
+  if (!isPotentialSameTeamCliMessage(input.message, input.leadName)) return false;
+  const messageTs = Date.parse(input.message.timestamp);
+  if (!Number.isFinite(messageTs) || messageTs < 0) return false;
+  if (
+    Number.isFinite(input.runStartedAtMs) &&
+    messageTs < input.runStartedAtMs - input.runStartSkewMs
+  ) {
+    return false;
+  }
+  const ageMs = input.nowMs - messageTs;
+  if (ageMs < 0) return false;
+  return ageMs < input.nativeDeliveryGraceMs;
 }
 
 const SUPPRESSED_LEAD_RELAY_STATE_PHRASES = [
@@ -306,12 +427,11 @@ export function selectLeadInboxRelayBatch(input: {
         : prioritizedActionableUnread;
   const batch = batchSource.slice(0, maxRelay);
   const replyVisibility: 'user' | 'internal_activity' =
-    priorityUnread.length === 0 && userOriginatedUnread.length > 0
-      ? 'user'
-      : 'internal_activity';
+    priorityUnread.length === 0 && userOriginatedUnread.length > 0 ? 'user' : 'internal_activity';
   const batchIds = new Set(batch.map((message) => message.messageId));
   const hasPendingFollowUpRelay = input.unread.some(
-    (message) => !batchIds.has(message.messageId) && !input.readOnlyIgnoredIds.has(message.messageId)
+    (message) =>
+      !batchIds.has(message.messageId) && !input.readOnlyIgnoredIds.has(message.messageId)
   );
   return { batch, replyVisibility, hasPendingFollowUpRelay };
 }
