@@ -33,9 +33,21 @@ import {
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 ```
 
+Inspect account availability without running provider tasks:
+
+```bash
+subscription-runtime-account-status --provider all --json
+subscription-runtime-account-status --provider codex --only reconnect_required
+```
+
+See [docs/account-diagnostics.md](docs/account-diagnostics.md) for account
+sources, cached capacity and optional probe behavior.
+
 ## Modules
 
 - `core` - provider-neutral ports, policy, state machines and redaction.
+- `account-diagnostics` - provider-neutral account status, relogin and limit
+  diagnostics for scheduler/account operations.
 - `provider-codex` - Codex session refresh and execution adapters.
 - `provider-claude` - Claude OAuth session validation, injectable task driver
   ports and an optional concrete bridge to `claude-runtime`.
@@ -84,6 +96,7 @@ service class.
 | Module | Main responsibility | Reliability responsibilities | Why it exists |
 | --- | --- | --- | --- |
 | `core` | Provider-neutral contracts, runtime policy, state machines, generation hashes, redaction | Keeps session modes, refresh policy, writeback policy, leases, idempotency and safe errors consistent without importing Codex, GitHub, BullMQ or filesystem code | This is the stable domain layer. New providers should plug into this instead of changing host applications |
+| `account-diagnostics` | Provider-neutral account availability diagnostics | Merges safe identity, cached account capacity, optional health/live probes, relogin recommendations and duplicate account hashes without returning secrets | Lets operators and schedulers see which Codex or Claude accounts are usable, limited or need relogin |
 | `provider-codex` | Codex auth parsing, refresh, process execution, app-server execution, JSON execution, fallback classification | Codex sessions can rotate, the CLI can fail in multiple ways, app-server can request unsupported tools, stdout/stderr must be redacted, startup latency must be reduced without storing plaintext auth in durable state | Encapsulates all Codex-specific behavior so the rest of the runtime remains provider-neutral |
 | `worker-core` | Bounded worker pools and direct in-process execution | Queueing, backpressure, prewarm lifecycle, graceful disposal, cancellation, timeouts and per-slot state | Lets backend services run many jobs without spawning unlimited agent processes |
 | `worker-codex` | Ready-to-use file-backed Codex backend worker | Connects encrypted file custody, leases, Codex materialization, app-server fast path, exec fallback, prewarm and safe process env handling | Provides the practical integration point for Node backends that want Codex subscription execution |

@@ -12,6 +12,17 @@ Recommended first deployment shape:
 - N Codex worker slots with prewarm enabled;
 - async job API plus optional sync wait endpoint.
 
+Run account diagnostics before scheduling large batches:
+
+```bash
+subscription-runtime-account-status --provider all --json
+```
+
+The command reads cached `WorkerAccountCapacityStore` state by default and only
+runs provider probes when `--probe` is passed. Use this for relogin alerts,
+limit reset visibility and duplicate account-slot detection. See
+`docs/account-diagnostics.md`.
+
 Claude Code workers should follow the same backend-worker shape, but require
 capacity-aware slot selection before they are used for production scheduling.
 See `docs/claude-worker-pool-rfc.md` for the proposed Claude worker pool,

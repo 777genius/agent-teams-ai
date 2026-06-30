@@ -1,3 +1,4 @@
+export * from "./account-diagnostics-adapter.js";
 export * from "./file-backend-codex-safe-executor.js";
 export * from "./file-backend-codex-worker.js";
 export * from "./node-process-runner.js";

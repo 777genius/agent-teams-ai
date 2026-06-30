@@ -65,6 +65,22 @@ const cases = [
     expectText: "agent-task must stay provider and adapter neutral",
   },
   {
+    name: "account diagnostics allows worker-core capacity types",
+    files: {
+      "src/account-diagnostics/good.ts": "import type { WorkerAccountCapacityStore } from '@vioxen/subscription-runtime/worker-core';\n",
+    },
+    expectPass: true,
+  },
+  {
+    name: "account diagnostics rejects concrete provider imports",
+    files: {
+      "src/account-diagnostics/bad.ts": "import '@vioxen/subscription-runtime/provider-codex';\n",
+    },
+    expectPass: false,
+    expectText:
+      "account-diagnostics must stay provider-neutral and depend only on neutral ports",
+  },
+  {
     name: "queue-core allows worker-core types",
     files: {
       "src/queue-core/good.ts": "import type { BoundedSubscriptionWorkerPool } from '@vioxen/subscription-runtime/worker-core';\n",

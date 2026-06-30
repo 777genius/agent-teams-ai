@@ -11,6 +11,12 @@ Rules:
 - expose a provider module through a subpath export, for example
   `@vioxen/subscription-runtime/provider-claude`.
 
+Provider account diagnostics are implemented through provider-neutral ports in
+`@vioxen/subscription-runtime/account-diagnostics`. A provider should expose a
+registry, safe identity reader and optional health/live probe adapter without
+returning raw tokens, OAuth payloads or auth files. See
+`docs/account-diagnostics.md`.
+
 Provider task adapters should follow `docs/pluggable-agent-runtime.md`:
 
 - keep task execution as the default public contract;

@@ -1,5 +1,6 @@
 export * as core from "./core/index.js";
 export * as agentTask from "./agent-task/index.js";
+export * as accountDiagnostics from "./account-diagnostics/index.js";
 export * as providerCodex from "./provider-codex/index.js";
 export * as providerClaude from "./provider-claude/index.js";
 export * as workerCore from "./worker-core/index.js";

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import type { ProviderTask, ProviderTaskTelemetry, RuntimeWarning } from "@vioxen/subscription-runtime/core";
+import type { ManagedRunInputRequest, ManagedRunResumeHandle, ProviderTask, ProviderTaskTelemetry, RuntimeWarning } from "@vioxen/subscription-runtime/core";
 type ProviderName = "claude" | "codex";
 export type SubscriptionAgentTaskCliIo = {
     readStdin(): Promise<string>;
@@ -28,7 +28,11 @@ export type RuntimeAgentTaskWorkerJob = {
     readonly metadata?: Readonly<Record<string, string>>;
 };
 export type RuntimeAgentTaskWorkerResult = {
+    readonly status?: "completed" | "waiting_for_input";
+    readonly runId?: string;
     readonly outputText: string;
+    readonly request?: ManagedRunInputRequest;
+    readonly resumeHandle?: ManagedRunResumeHandle;
     readonly structuredOutput?: unknown;
     readonly telemetry?: ProviderTaskTelemetry;
     readonly warnings: readonly RuntimeWarning[];

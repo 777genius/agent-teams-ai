@@ -8,6 +8,7 @@ Allowed dependency direction:
 ```txt
 provider-codex -> core
 provider-claude -> core
+account-diagnostics -> worker-core types only
 worker-core -> core
 worker-local -> core
 worker-codex -> core + provider-codex + worker-core + worker-local + store-local-file
@@ -20,6 +21,11 @@ runner-github-action -> core
 
 `core` must never import Claude, Codex, BullMQ, GitHub or file-system custody
 adapters. Providers are sibling modules, not special cases inside `core`.
+
+`account-diagnostics` is a provider-neutral application module. It owns the
+status model, merge policy and cached capacity bridge, while Codex and Claude
+diagnostic adapters live under their worker modules. See
+`docs/account-diagnostics.md`.
 
 See `docs/pluggable-agent-runtime.md` for the proposed Claude, Codex and
 multi-agent reviewer/tribunal architecture.

@@ -295,6 +295,23 @@ async function emitResult(input) {
     input.io.writeStdout(`${JSON.stringify(completed)}\n`);
 }
 function toProviderTaskResult(result) {
+    if (result.status === "waiting_for_input") {
+        if (!result.runId || !result.request || !result.resumeHandle) {
+            throw new Error("agent_task_waiting_result_invalid");
+        }
+        return {
+            status: "waiting_for_input",
+            runId: result.runId,
+            outputText: result.outputText,
+            ...(result.structuredOutput === undefined
+                ? {}
+                : { structuredOutput: result.structuredOutput }),
+            request: result.request,
+            resumeHandle: result.resumeHandle,
+            ...(result.telemetry ? { telemetry: result.telemetry } : {}),
+            warnings: result.warnings,
+        };
+    }
     return {
         status: "completed",
         outputText: result.outputText,

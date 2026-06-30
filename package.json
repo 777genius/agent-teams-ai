@@ -27,6 +27,11 @@
       "import": "./dist/agent-task/index.js",
       "default": "./dist/agent-task/index.js"
     },
+    "./account-diagnostics": {
+      "types": "./dist/account-diagnostics/index.d.ts",
+      "import": "./dist/account-diagnostics/index.js",
+      "default": "./dist/account-diagnostics/index.js"
+    },
     "./provider-codex": {
       "types": "./dist/provider-codex/index.d.ts",
       "import": "./dist/provider-codex/index.js",
@@ -98,6 +103,7 @@
   "types": "./dist/index.d.ts",
   "bin": {
     "subscription-runtime-agent-task": "./dist/agent-task/cli.js",
+    "subscription-runtime-account-status": "./dist/worker-local/account-diagnostics-cli.js",
     "subscription-runtime-run-agent-task": "./dist/worker-local/agent-task-runner-cli.js"
   },
   "files": [
