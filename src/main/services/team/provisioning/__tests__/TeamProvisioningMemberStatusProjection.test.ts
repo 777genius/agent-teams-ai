@@ -4,6 +4,7 @@ import {
   buildRuntimeSpawnStatusRecord,
   getFailedSpawnMembersFromStatuses,
   projectPendingRestartStatusForSnapshot,
+  shouldPreferCurrentLaunchMemberStatus,
 } from '../TeamProvisioningMemberStatusProjection';
 
 import type { MemberSpawnStatusEntry } from '@shared/types';
@@ -90,5 +91,42 @@ describe('member status projection helpers', () => {
       launchState: 'runtime_pending_bootstrap',
       firstSpawnAcceptedAt: '2026-01-01T00:01:00.000Z',
     });
+  });
+
+  it('prefers current launch member status only when tracked status is non-terminal', () => {
+    const confirmedLaunch = baseStatus({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+    });
+
+    expect(shouldPreferCurrentLaunchMemberStatus(undefined, confirmedLaunch)).toBe(true);
+    expect(shouldPreferCurrentLaunchMemberStatus(baseStatus(), confirmedLaunch)).toBe(true);
+    expect(
+      shouldPreferCurrentLaunchMemberStatus(
+        baseStatus({ launchState: 'failed_to_start' }),
+        confirmedLaunch
+      )
+    ).toBe(false);
+    expect(
+      shouldPreferCurrentLaunchMemberStatus(
+        baseStatus({ launchState: 'runtime_pending_permission' }),
+        confirmedLaunch
+      )
+    ).toBe(false);
+    expect(
+      shouldPreferCurrentLaunchMemberStatus(baseStatus({ hardFailure: true }), confirmedLaunch)
+    ).toBe(false);
+    expect(
+      shouldPreferCurrentLaunchMemberStatus(
+        baseStatus(),
+        baseStatus({ launchState: 'confirmed_alive', bootstrapConfirmed: false })
+      )
+    ).toBe(true);
+    expect(
+      shouldPreferCurrentLaunchMemberStatus(
+        baseStatus(),
+        baseStatus({ launchState: 'starting', bootstrapConfirmed: false })
+      )
+    ).toBe(false);
   });
 });
