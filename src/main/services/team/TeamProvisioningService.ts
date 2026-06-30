@@ -340,6 +340,7 @@ import {
   isCliProvisionedButNotAliveFailureReason,
   isProvisionedButNotAliveFailureReason,
 } from './provisioning/TeamProvisioningLaunchFailurePolicy';
+import { buildTeamLaunchIncompleteNotificationPayload } from './provisioning/TeamProvisioningLaunchIncompleteNotification';
 import {
   areAllExpectedLaunchMembersConfirmed as areAllExpectedLaunchMembersConfirmedHelper,
   areLaunchStateSnapshotsSemanticallyEqual,
@@ -21741,68 +21742,18 @@ export class TeamProvisioningService {
     try {
       const config = ConfigManager.getInstance().getConfig();
       const suppressToast = !config.notifications.notifyOnTeamLaunched;
-      const displayName = run.request.displayName || run.teamName;
-      const expectedMembers = [
-        ...new Set(
-          [
-            ...(snapshot?.expectedMembers ?? []),
-            ...(run.expectedMembers ?? []),
-            ...run.allEffectiveMembers.map((member) => member.name).filter(Boolean),
-          ].filter(Boolean)
-        ),
-      ];
-      const expectedCount = expectedMembers.length;
-      if (expectedCount === 0) return;
-
-      const failedNames = this.getLaunchIncompleteFailedNames(
+      const payload = buildTeamLaunchIncompleteNotificationPayload({
         run,
-        expectedMembers,
         failedMembers,
-        snapshot
-      );
-      if (failedNames.length === 0) {
-        return;
-      }
-      const pendingNames = this.getLaunchIncompletePendingNames(
-        run,
-        expectedMembers,
-        failedNames,
-        snapshot
-      );
-      const joinedCount = this.getLaunchIncompleteJoinedCount(
-        run,
-        expectedMembers,
-        failedNames.length + pendingNames.length,
         launchSummary,
-        snapshot
-      );
-      const missingCount = Math.max(0, launchSummary.pendingCount + launchSummary.failedCount);
-      const bodyParts = [`${joinedCount}/${expectedCount} joined`];
-      if (failedNames.length > 0) {
-        bodyParts.push(`failed: ${this.formatLaunchIncompleteMemberMentions(failedNames)}`);
-      }
-      if (pendingNames.length > 0) {
-        bodyParts.push(`still joining: ${this.formatLaunchIncompleteMemberMentions(pendingNames)}`);
-      }
-      if (bodyParts.length === 1 && missingCount > 0 && joinedCount < expectedCount) {
-        const genericMissingCount = Math.min(missingCount, expectedCount - joinedCount);
-        bodyParts.push(
-          `${genericMissingCount} teammate${genericMissingCount === 1 ? '' : 's'} not joined yet`
-        );
-      }
-
-      await NotificationManager.getInstance().addTeamNotification({
-        teamEventType: 'team_launch_incomplete',
-        teamName: run.teamName,
-        teamDisplayName: displayName,
-        from: 'system',
-        summary: 'Team launch incomplete',
-        body: bodyParts.join(' · '),
-        dedupeKey: `team_launch_incomplete:${run.teamName}:${run.runId}`,
-        target: { kind: 'team', teamName: run.teamName, section: 'members' },
-        projectPath: run.request.cwd,
+        snapshot,
         suppressToast,
       });
+      if (!payload) {
+        return;
+      }
+
+      await NotificationManager.getInstance().addTeamNotification(payload);
     } catch (error) {
       logger.warn(
         `[${run.teamName}] Failed to fire team_launch_incomplete notification: ${
@@ -21810,127 +21761,6 @@ export class TeamProvisioningService {
         }`
       );
     }
-  }
-
-  private getLaunchIncompleteMemberEvidence(
-    run: ProvisioningRun,
-    snapshot: PersistedTeamLaunchSnapshot | null | undefined,
-    memberName: string
-  ): {
-    live?: MemberSpawnStatusEntry;
-    persisted?: PersistedTeamLaunchMemberState;
-  } {
-    return {
-      live: run.memberSpawnStatuses?.get(memberName),
-      persisted: snapshot?.members[memberName],
-    };
-  }
-
-  private formatLaunchIncompleteMemberMentions(names: readonly string[]): string {
-    return names.map((name) => `@${name}`).join(', ');
-  }
-
-  private getLaunchIncompleteFailedNames(
-    run: ProvisioningRun,
-    expectedMembers: readonly string[],
-    failedMembers: readonly { name: string }[],
-    snapshot?: PersistedTeamLaunchSnapshot | null
-  ): string[] {
-    const failedNames = new Set(failedMembers.map((member) => member.name).filter(Boolean));
-    for (const memberName of expectedMembers) {
-      const { live, persisted } = this.getLaunchIncompleteMemberEvidence(run, snapshot, memberName);
-      const liveResolved =
-        live?.launchState === 'confirmed_alive' ||
-        live?.bootstrapConfirmed === true ||
-        live?.launchState === 'skipped_for_launch' ||
-        live?.skippedForLaunch === true;
-      const persistedResolved =
-        persisted?.launchState === 'confirmed_alive' ||
-        persisted?.bootstrapConfirmed === true ||
-        persisted?.launchState === 'skipped_for_launch' ||
-        persisted?.skippedForLaunch === true;
-      if (liveResolved || persistedResolved) {
-        failedNames.delete(memberName);
-        continue;
-      }
-      if (
-        live?.launchState === 'failed_to_start' ||
-        persisted?.launchState === 'failed_to_start' ||
-        live?.hardFailure === true ||
-        persisted?.hardFailure === true
-      ) {
-        failedNames.add(memberName);
-      }
-    }
-    return [...failedNames].sort((left, right) => left.localeCompare(right));
-  }
-
-  private getLaunchIncompletePendingNames(
-    run: ProvisioningRun,
-    expectedMembers: readonly string[],
-    failedNames: readonly string[],
-    snapshot?: PersistedTeamLaunchSnapshot | null
-  ): string[] {
-    const failed = new Set(failedNames);
-    return expectedMembers
-      .filter((memberName) => {
-        if (failed.has(memberName)) {
-          return false;
-        }
-        const { live, persisted } = this.getLaunchIncompleteMemberEvidence(
-          run,
-          snapshot,
-          memberName
-        );
-        const hasEvidence = live !== undefined || persisted !== undefined;
-        if (!hasEvidence) {
-          return false;
-        }
-        const confirmed =
-          live?.launchState === 'confirmed_alive' ||
-          persisted?.launchState === 'confirmed_alive' ||
-          live?.bootstrapConfirmed === true ||
-          persisted?.bootstrapConfirmed === true;
-        if (confirmed) {
-          return false;
-        }
-        const skipped =
-          live?.launchState === 'skipped_for_launch' ||
-          persisted?.launchState === 'skipped_for_launch' ||
-          live?.skippedForLaunch === true ||
-          persisted?.skippedForLaunch === true;
-        return !skipped;
-      })
-      .sort((left, right) => left.localeCompare(right));
-  }
-
-  private getLaunchIncompleteJoinedCount(
-    run: ProvisioningRun,
-    expectedMembers: readonly string[],
-    namedMissingCount: number,
-    launchSummary: {
-      confirmedCount: number;
-    },
-    snapshot?: PersistedTeamLaunchSnapshot | null
-  ): number {
-    const evidenceConfirmedCount = expectedMembers.filter((memberName) => {
-      const { live, persisted } = this.getLaunchIncompleteMemberEvidence(run, snapshot, memberName);
-      return (
-        live?.launchState === 'confirmed_alive' ||
-        persisted?.launchState === 'confirmed_alive' ||
-        live?.bootstrapConfirmed === true ||
-        persisted?.bootstrapConfirmed === true
-      );
-    }).length;
-    const namedMissingUpperBound = expectedMembers.length - namedMissingCount;
-    const rawJoinedCount =
-      namedMissingCount > 0
-        ? Math.min(
-            namedMissingUpperBound,
-            Math.max(evidenceConfirmedCount, launchSummary.confirmedCount)
-          )
-        : Math.max(evidenceConfirmedCount, launchSummary.confirmedCount);
-    return Math.max(0, Math.min(expectedMembers.length, rawJoinedCount));
   }
 
   // ---------------------------------------------------------------------------
