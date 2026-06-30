@@ -464,6 +464,17 @@ import {
   syncOpenCodeRuntimePermissionSpawnStatuses as syncOpenCodeRuntimePermissionSpawnStatusesHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
 import {
+  type AuthWarningSource,
+  buildStallProgressMessage,
+  buildStallWarningText,
+  extractApiErrorSnippet,
+  hasApiError,
+  isAuthFailureWarning,
+  isQuotaRetryMessage,
+  normalizeApiRetryErrorMessage,
+  toMarkdownCodeSafe,
+} from './provisioning/TeamProvisioningOutputErrorPolicy';
+import {
   handleProvisioningProcessExit,
   pathExists as provisioningPathExists,
   tryCompleteAfterTimeout as tryCompleteAfterTimeoutHelper,
@@ -1696,8 +1707,6 @@ interface ProbeResult {
   authSource: ProvisioningAuthSource;
   warning?: string;
 }
-
-type AuthWarningSource = 'probe' | 'stdout' | 'stderr' | 'assistant' | 'pre-complete';
 
 const cachedProbeResults = new Map<string, CachedProbeResult>();
 const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
@@ -9777,7 +9786,7 @@ export class TeamProvisioningService {
             providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
           if (
             shouldRequireRuntimePingForAnthropicDirectCredential &&
-            this.isAuthFailureWarning(diagnostic.warning, 'probe')
+            isAuthFailureWarning(diagnostic.warning, 'probe')
           ) {
             blockingMessages.push(prefixedWarning);
             return;
@@ -9798,7 +9807,7 @@ export class TeamProvisioningService {
       {
         const prefixedWarning =
           providerIds.length > 1 ? `${providerLabel}: ${probeResult.warning}` : probeResult.warning;
-        const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
+        const isAuthFailure = isAuthFailureWarning(probeResult.warning, 'probe');
         const isBlockingPreflightWarning =
           authSource === 'configured_api_key_missing' ||
           (isAnthropicDirectCredentialAuthSource(authSource) && isAuthFailure) ||
@@ -10383,7 +10392,7 @@ export class TeamProvisioningService {
 
       const shouldCache =
         !probe.warning ||
-        (!this.isAuthFailureWarning(probe.warning, 'probe') &&
+        (!isAuthFailureWarning(probe.warning, 'probe') &&
           !isTransientProbeWarning(probe.warning) &&
           !isBinaryProbeWarning(probe.warning));
 
@@ -10405,119 +10414,6 @@ export class TeamProvisioningService {
     }
   }
 
-  private isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
-    const lower = text.toLowerCase();
-    const hasExplicitCliAuthSignal =
-      lower.includes('not authenticated') ||
-      lower.includes('not logged in') ||
-      lower.includes('please run /login') ||
-      lower.includes('missing api key') ||
-      lower.includes('invalid api key') ||
-      lower.includes('authentication failed') ||
-      lower.includes('not configured for runtime use') ||
-      lower.includes('set gemini_api_key') ||
-      lower.includes('google adc credentials') ||
-      lower.includes('google_cloud_project') ||
-      lower.includes('codex provider is not authenticated') ||
-      lower.includes('run `claude auth login`') ||
-      lower.includes('claude auth login') ||
-      lower.includes('claude-multimodel auth login');
-
-    if (hasExplicitCliAuthSignal) {
-      return true;
-    }
-
-    if (source === 'assistant' || source === 'stdout') {
-      return false;
-    }
-
-    const hasAuthStatus401 =
-      /api error:\s*401\b/i.test(text) ||
-      /\b401 unauthorized\b/i.test(lower) ||
-      (/(^|\D)401(\D|$)/.test(lower) &&
-        (lower.includes('auth') || lower.includes('api') || lower.includes('login')));
-
-    return (
-      hasAuthStatus401 ||
-      (lower.includes('unauthorized') &&
-        (lower.includes('api') || lower.includes('auth') || lower.includes('login')))
-    );
-  }
-
-  private hasApiError(text: string): boolean {
-    return /api error:\s*\d{3}\b/i.test(text) || /invalid_request_error/i.test(text);
-  }
-
-  private sanitizeCliSnippet(text: string): string {
-    // Remove control characters that often show up as binary noise in CLI error payloads.
-    // Preserve newlines/tabs for readability.
-    // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- intentionally stripping control chars
-    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  }
-
-  private normalizeApiRetryErrorMessage(text: string): string {
-    const sanitized = this.sanitizeCliSnippet(text).trim();
-    if (!sanitized) {
-      return sanitized;
-    }
-
-    const jsonMatch = /^\d{3}\s+(\{[\s\S]*\})$/.exec(sanitized);
-    const jsonCandidate = jsonMatch?.[1] ?? (sanitized.startsWith('{') ? sanitized : null);
-    if (jsonCandidate) {
-      try {
-        const parsed = JSON.parse(jsonCandidate) as {
-          error?: { message?: unknown };
-          message?: unknown;
-        };
-        const nestedMessage =
-          typeof parsed.error?.message === 'string'
-            ? parsed.error.message
-            : typeof parsed.message === 'string'
-              ? parsed.message
-              : null;
-        if (nestedMessage) {
-          return this.normalizeApiRetryErrorMessage(nestedMessage);
-        }
-      } catch {
-        // Fall through to raw sanitized text.
-      }
-    }
-
-    return sanitized
-      .replace(/^gemini cli backend error:\s*/i, '')
-      .replace(/^gemini api backend error:\s*/i, '')
-      .replace(/^api error:\s*\d+\s*/i, '')
-      .trim();
-  }
-
-  private isQuotaRetryMessage(text: string | undefined): boolean {
-    const lower = (text ?? '').toLowerCase();
-    return (
-      lower.includes('quota will reset after') ||
-      lower.includes('exhausted your capacity on this model') ||
-      lower.includes('resource exhausted') ||
-      lower.includes('model cooldown') ||
-      lower.includes('cooling down') ||
-      lower.includes('rate limit') ||
-      lower.includes('rate_limit')
-    );
-  }
-
-  private toMarkdownCodeSafe(text: string): string {
-    return this.sanitizeCliSnippet(text).replace(/```/g, '``\\`');
-  }
-
-  private extractApiErrorSnippet(text: string): string | null {
-    const match = /api error:\s*\d{3}\b/i.exec(text) ?? /invalid_request_error/i.exec(text);
-    if (match?.index === undefined) return null;
-    const start = Math.max(0, match.index - 200);
-    const end = Math.min(text.length, match.index + 4000);
-    const raw = text.slice(start, end).trim();
-    if (!raw) return null;
-    // Avoid breaking markdown fences if the payload contains ``` accidentally.
-    return this.sanitizeCliSnippet(raw).replace(/```/g, '``\\`');
-  }
-
   private failProvisioningWithApiError(run: ProvisioningRun, source: string): void {
     if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
     if (run.progress.state === 'failed' || run.cancelRequested) return;
@@ -10530,8 +10426,7 @@ export class TeamProvisioningService {
       .join('\n')
       .trim();
 
-    const snippet =
-      this.extractApiErrorSnippet(combined) ?? this.extractApiErrorSnippet(source) ?? null;
+    const snippet = extractApiErrorSnippet(combined) ?? extractApiErrorSnippet(source) ?? null;
     const status =
       /api error:\s*(\d{3})\b/i.exec(combined)?.[1] ?? /api error:\s*(\d{3})\b/i.exec(source)?.[1];
 
@@ -10572,7 +10467,7 @@ export class TeamProvisioningService {
 
     run.apiErrorWarningEmitted = true;
 
-    const snippet = this.extractApiErrorSnippet(text);
+    const snippet = extractApiErrorSnippet(text);
     const status = /api error:\s*(\d{3})\b/i.exec(text)?.[1] ?? null;
     const label = status ? `API Error ${status}` : 'API Error';
 
@@ -10620,7 +10515,7 @@ export class TeamProvisioningService {
         // replace the existing stall warning in-place so the displayed
         // silence duration stays current (20s → 30s → 1m → ...).
         const silenceSec = Math.round(silenceMs / 1000);
-        const warningText = this.buildStallWarningText(silenceSec, run);
+        const warningText = buildStallWarningText(silenceSec, run.request);
 
         if (run.stallWarningIndex != null) {
           run.provisioningOutputParts[run.stallWarningIndex] = warningText;
@@ -10648,7 +10543,7 @@ export class TeamProvisioningService {
           ...run.progress,
           updatedAt: nowIso(),
           ...(!retryActive && {
-            message: this.buildStallProgressMessage(silenceSec, elapsed),
+            message: buildStallProgressMessage(silenceSec, elapsed),
             messageSeverity: 'warning' as const,
           }),
           assistantOutput: buildProvisioningLiveOutput(run) ?? run.progress.assistantOutput,
@@ -10671,57 +10566,6 @@ export class TeamProvisioningService {
     }
   }
 
-  private buildStallWarningText(silenceSec: number, run: ProvisioningRun): string {
-    const mins = Math.floor(silenceSec / 60);
-    const secs = silenceSec % 60;
-    const elapsed = mins > 0 ? (secs > 0 ? `${mins}m ${secs}s` : `${mins}m`) : `${secs}s`;
-
-    if (silenceSec < 60) {
-      return (
-        `---\n\n` +
-        `**Waiting for CLI response** (silent for ${elapsed})\n\n` +
-        `The process is running but not producing output yet. Model responses can delay logs, ` +
-        `and short waits like this are normal. The SDK also retries automatically if the ` +
-        `request briefly hits rate limiting.\n\n` +
-        `Waiting...`
-      );
-    }
-
-    if (silenceSec < 120) {
-      return (
-        `---\n\n` +
-        `**Waiting for CLI response** (silent for ${elapsed})\n\n` +
-        `The process is still waiting for a model response. Logs can sometimes show up after ` +
-        `1-1.5 minutes, and that is still okay. The SDK retries automatically if the ` +
-        `request hits rate limiting (error 429 / model cooldown).\n\n` +
-        `If there is still no output after 2 minutes, that starts to look unusual.\n\n` +
-        `You can cancel and try again later if the wait continues.`
-      );
-    }
-
-    const modelName = run.request.model ?? 'default';
-    const effortLabel = run.request.effort ? ` (effort: ${run.request.effort})` : '';
-
-    return (
-      `---\n\n` +
-      `**Extended CLI wait** (silent for ${elapsed})\n\n` +
-      `Model **${modelName}**${effortLabel} is still waiting to respond. Some delay is normal, ` +
-      `but no logs for ${elapsed} is already unusual.\n\n` +
-      `Possible causes:\n` +
-      `- Rate limiting / model cooldown (429) - SDK retries automatically\n` +
-      `- API server overload for this model\n` +
-      `- A stalled or delayed model response\n\n` +
-      `Consider canceling and trying with a different model.`
-    );
-  }
-
-  private buildStallProgressMessage(silenceSec: number, elapsed: string): string {
-    if (silenceSec < 120) {
-      return `Waiting for model response for ${elapsed} - logs can be delayed, this is still OK`;
-    }
-    return `Still waiting for model response for ${elapsed} - this is unusual`;
-  }
-
   /**
    * Detects auth failure keywords in stderr/stdout during provisioning.
    * On first detection: kills process, waits, and respawns automatically.
@@ -10733,7 +10577,7 @@ export class TeamProvisioningService {
     source: AuthWarningSource
   ): void {
     if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
-    if (!this.isAuthFailureWarning(text, source)) return;
+    if (!isAuthFailureWarning(text, source)) return;
 
     if (!run.authFailureRetried) {
       logger.warn(
@@ -11143,7 +10987,7 @@ export class TeamProvisioningService {
     } catch {
       // Not valid JSON - check for auth failure in raw text output.
       this.handleAuthFailureInOutput(run, trimmed, 'stdout');
-      if (this.hasApiError(trimmed) && !this.isAuthFailureWarning(trimmed, 'stdout')) {
+      if (hasApiError(trimmed) && !isAuthFailureWarning(trimmed, 'stdout')) {
         // Show warning but do not kill - the SDK may be retrying internally (e.g. 429 model_cooldown).
         // If all retries fail, result.subtype="error" will catch it and kill then.
         this.emitApiErrorWarning(run, trimmed);
@@ -11191,7 +11035,7 @@ export class TeamProvisioningService {
 
       // Detect auth failure early instead of waiting for 5-minute timeout
       this.handleAuthFailureInOutput(run, text, 'stderr');
-      if (this.hasApiError(text) && !this.isAuthFailureWarning(text, 'stderr')) {
+      if (hasApiError(text) && !isAuthFailureWarning(text, 'stderr')) {
         // Show warning but do NOT kill — the SDK may be retrying internally (e.g. 429 model_cooldown).
         // If all retries fail, result.subtype="error" will catch it and kill then.
         this.emitApiErrorWarning(run, text);
@@ -20401,8 +20245,8 @@ export class TeamProvisioningService {
       handleNativeTeammateUserMessage: (run, msg) => this.handleNativeTeammateUserMessage(run, msg),
       handleAuthFailureInOutput: (run, text, source) =>
         this.handleAuthFailureInOutput(run, text, source),
-      hasApiError: (text) => this.hasApiError(text),
-      isAuthFailureWarning: (text, source) => this.isAuthFailureWarning(text, source),
+      hasApiError,
+      isAuthFailureWarning,
       failProvisioningWithApiError: (run, text) => this.failProvisioningWithApiError(run, text),
       appendProvisioningAssistantText: (run, msg, text) =>
         this.appendProvisioningAssistantText(run, msg, text),
@@ -20429,9 +20273,9 @@ export class TeamProvisioningService {
       handleProvisioningTurnComplete: (run) => this.handleProvisioningTurnComplete(run),
       cleanupRun: (run) => this.cleanupRun(run),
       killTeamProcess,
-      normalizeApiRetryErrorMessage: (text) => this.normalizeApiRetryErrorMessage(text),
-      isQuotaRetryMessage: (text) => this.isQuotaRetryMessage(text),
-      toMarkdownCodeSafe: (text) => this.toMarkdownCodeSafe(text),
+      normalizeApiRetryErrorMessage,
+      isQuotaRetryMessage,
+      toMarkdownCodeSafe,
       emitApiErrorWarning: (run, text) => this.emitApiErrorWarning(run, text),
       setMemberSpawnStatus: (run, memberName, status, error) =>
         this.setMemberSpawnStatus(run, memberName, status, error),
@@ -21780,8 +21624,8 @@ export class TeamProvisioningService {
       hasPendingDeterministicFirstRealTurn: (run) => this.hasPendingDeterministicFirstRealTurn(run),
       isProvisioningRunStillPromotable: (run) => this.isProvisioningRunStillPromotable(run),
       getPreCompleteCliErrorText: (run) => this.getPreCompleteCliErrorText(run),
-      hasApiError: (text) => this.hasApiError(text),
-      isAuthFailureWarning: (text, source) => this.isAuthFailureWarning(text, source),
+      hasApiError,
+      isAuthFailureWarning,
       failProvisioningWithApiError: (run, text) => this.failProvisioningWithApiError(run, text),
       handleAuthFailureInOutput: (run, text, source) =>
         this.handleAuthFailureInOutput(run, text, source),
@@ -22591,6 +22435,14 @@ export class TeamProvisioningService {
 
   private async pathExists(filePath: string): Promise<boolean> {
     return provisioningPathExists(filePath);
+  }
+
+  private isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
+    return isAuthFailureWarning(text, source);
+  }
+
+  private normalizeApiRetryErrorMessage(text: string): string {
+    return normalizeApiRetryErrorMessage(text);
   }
 
   private getProviderDiagnosticsBasePorts(): TeamProvisioningProviderDiagnosticsPorts {
