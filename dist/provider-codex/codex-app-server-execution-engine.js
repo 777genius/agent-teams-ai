@@ -4,6 +4,7 @@ import { pruneCodexChildEnv } from "./codex-cli-domain.js";
 import { resolveCodexExecutionProfile } from "./codex-execution-profile.js";
 const defaultTimeoutMs = 10 * 60 * 1000;
 const defaultControlRequestTimeoutMs = 30 * 1000;
+const defaultReconnectGraceMs = 10 * 60 * 1000;
 const defaultMaxOutputBytes = 512 * 1024;
 const defaultMaxGoalTurns = 20;
 const defaultGoalContinuePrompt = "Continue working toward the active goal. If the goal is complete, mark it complete and summarize the result.";
@@ -169,6 +170,7 @@ export class CodexAppServerExecutionEngine {
             executionProfile: this.executionProfile,
             cleanThreadPrewarm: this.options.cleanThreadPrewarm ?? true,
             timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
+            reconnectGraceMs: this.options.reconnectGraceMs ?? defaultReconnectGraceMs,
             abortSignal: input.abortSignal,
         });
         await client.start();
@@ -663,6 +665,7 @@ class CodexAppServerClient {
         if (record.method === "item/agentMessage/delta") {
             const turnId = stringField(params, "turnId");
             const turn = this.ensureTurn(turnId);
+            this.clearReconnectGraceTimer(turn);
             turn.outputText += stringField(params, "delta") ?? "";
             return;
         }
@@ -682,7 +685,9 @@ class CodexAppServerClient {
             const turnId = stringField(params, "turnId");
             const item = readRecord(params?.item);
             if (item?.type === "agentMessage" && typeof item.text === "string") {
-                this.ensureTurn(turnId).outputText = item.text;
+                const turn = this.ensureTurn(turnId);
+                this.clearReconnectGraceTimer(turn);
+                turn.outputText = item.text;
             }
             return;
         }
@@ -720,7 +725,12 @@ class CodexAppServerClient {
         }
         if (record.method === "error") {
             const turnId = stringField(params, "turnId");
-            const error = new Error(`codex_app_server_error:${safeMessage(params?.error ?? params ?? record)}`);
+            const message = safeMessage(params?.error ?? params ?? record);
+            if (isCodexAppServerReconnectProgressMessage(message)) {
+                this.deferTurnsForReconnectProgress(turnId, message);
+                return;
+            }
+            const error = new Error(`codex_app_server_error:${message}`);
             if (!turnId) {
                 for (const turn of this.turns.values()) {
                     turn.error = error;
@@ -732,6 +742,28 @@ class CodexAppServerClient {
             turn.error = error;
             this.resolveTurn(turn);
         }
+    }
+    deferTurnsForReconnectProgress(turnId, message) {
+        const turns = turnId === null ? [...this.turns.values()] : [this.ensureTurn(turnId)];
+        if (turns.length === 0) {
+            this.backgroundWarnings.push({
+                code: "codex_app_server_reconnecting",
+                safeMessage: message,
+            });
+            return;
+        }
+        for (const turn of turns) {
+            this.scheduleReconnectGraceTimeout(turn, message);
+        }
+    }
+    scheduleReconnectGraceTimeout(turn, message) {
+        this.clearReconnectGraceTimer(turn);
+        turn.reconnectGraceTimer = setTimeout(() => {
+            if (turn.completed || turn.error)
+                return;
+            turn.error = new Error(`codex_app_server_reconnect_timeout:${safeMessage(message)}`);
+            this.resolveTurn(turn);
+        }, this.options.reconnectGraceMs);
     }
     onServerRequest(id, method) {
         this.serverRequests.push({
@@ -758,9 +790,16 @@ class CodexAppServerClient {
         return turn;
     }
     resolveTurn(turn) {
+        this.clearReconnectGraceTimer(turn);
         const waiters = turn.waiters.splice(0);
         for (const waiter of waiters)
             waiter(turn);
+    }
+    clearReconnectGraceTimer(turn) {
+        if (!turn.reconnectGraceTimer)
+            return;
+        clearTimeout(turn.reconnectGraceTimer);
+        turn.reconnectGraceTimer = null;
     }
 }
 function spawnCodexAppServerProcess(input) {
@@ -778,6 +817,7 @@ function createTurnState() {
         completed: false,
         error: null,
         waiters: [],
+        reconnectGraceTimer: null,
     };
 }
 function appServerFallbackWarning(error) {
@@ -876,6 +916,9 @@ function isAbortLikeError(error) {
         (error.message.includes("codex_app_server_aborted") ||
             error.message.includes("codex_app_server_turn_aborted") ||
             error.message.includes("node_process_runner_aborted")));
+}
+function isCodexAppServerReconnectProgressMessage(message) {
+    return /\breconnecting(?:\.{3}|…)?\s*\d+\s*\/\s*\d+\b/i.test(message);
 }
 function safeMessage(error) {
     if (error instanceof Error)

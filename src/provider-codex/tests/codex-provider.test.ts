@@ -1570,6 +1570,43 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("waits through transient app-server reconnect progress errors", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-reconnect-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitTransientTopLevelErrorOnTurn: "Reconnecting... 2/5",
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        reconnectGraceMs: 50,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "survive reconnect" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:survive reconnect",
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("classifies top-level app-server error messages", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-error-test-"));
     const fakeFactory = new FakeAppServerFactory({
@@ -1929,6 +1966,7 @@ class SlowRecordingJsonEngine extends RecordingJsonEngine {
 type FakeAppServerFactoryOptions = {
   readonly failThreadStart?: boolean;
   readonly failThreadStartNumbers?: readonly number[];
+  readonly emitTransientTopLevelErrorOnTurn?: string;
   readonly emitTopLevelErrorOnTurn?: string;
   readonly abortTurnNumbers?: readonly number[];
   readonly abortTurnReason?: string;
@@ -2082,6 +2120,15 @@ class FakeAppServerProcess extends EventEmitter {
             threadId: String(request.params?.threadId ?? ""),
             turn: { id: turnId, status: "inProgress" },
           });
+          if (this.options.emitTransientTopLevelErrorOnTurn) {
+            this.stdout.emit(
+              "data",
+              `${JSON.stringify({
+                method: "error",
+                message: this.options.emitTransientTopLevelErrorOnTurn,
+              })}\n`,
+            );
+          }
           if (this.options.emitTopLevelErrorOnTurn) {
             this.stdout.emit(
               "data",

@@ -10,6 +10,7 @@ export type CodexAppServerExecutionEngineOptions = {
     readonly processFactory?: CodexAppServerProcessFactory;
     readonly executionProfile?: CodexExecutionProfile;
     readonly cleanThreadPrewarm?: boolean;
+    readonly reconnectGraceMs?: number;
     readonly goalMode?: boolean;
     readonly maxGoalTurns?: number;
     readonly goalContinuePrompt?: string;
