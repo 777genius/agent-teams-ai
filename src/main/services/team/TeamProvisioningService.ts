@@ -115,7 +115,6 @@ import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, execFileSync, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
 
@@ -127,18 +126,8 @@ import {
   cleanupStaleAnthropicTeamApiKeyHelpers,
 } from '../runtime/anthropicTeamApiKeyHelper';
 import { mergeJsonSettingsArgs } from '../runtime/cliSettingsArgs';
-import { resolveGeminiRuntimeAuth } from '../runtime/geminiRuntimeAuth';
-import {
-  buildProviderControlPlaneCliCommandArgs,
-  buildProviderLaunchCliCommandArgs,
-} from '../runtime/providerCliCommandArgs';
+import { buildProviderControlPlaneCliCommandArgs } from '../runtime/providerCliCommandArgs';
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
-import {
-  buildProviderPreflightPingArgs,
-  getProviderModelProbeExpectedOutput,
-  getProviderModelProbeTimeoutMs,
-  normalizeProviderModelProbeFailureReason,
-} from '../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 import {
   materializeTeamRuntimeSettingsBundle,
@@ -486,7 +475,6 @@ import {
   boundLiveLeadProcessMessage,
   boundLiveLeadProcessText,
   boundPendingLogLineCarry,
-  boundProbeOutputBuffer,
   boundRunClaudeLogLines,
   boundRunProvisioningOutputParts,
   boundSingleRetainedLogLine,
@@ -507,14 +495,20 @@ import {
   normalizeMemberDiagnosticText,
 } from './provisioning/TeamProvisioningPromptBuilders';
 import {
+  createDefaultTeamProvisioningProviderDiagnosticsPorts,
+  PREFLIGHT_AUTH_RETRY_DELAY_MS,
+  probeClaudeRuntime,
+  runProviderOneShotDiagnostic,
+  spawnProbe as spawnProbeDiagnostic,
+  type TeamProvisioningProviderDiagnosticsPorts,
+  validateAgentTeamsMcpRuntime,
+} from './provisioning/TeamProvisioningProviderDiagnostics';
+import {
   appendPreflightDebugLog,
-  buildAgentTeamsMcpValidationError as buildAgentTeamsMcpValidationErrorMessage,
   createProbeCacheKey,
   getCliHelpOutputForProvisioning,
-  probeProviderRuntimeControlPlane as probeProviderRuntimeControlPlaneHelper,
   PROVIDER_MODEL_LIST_TIMEOUT_MS,
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
-  truncatePreflightDebugText,
   validatePrepareCwd,
   verifySelectedProviderModelsForProvisioning,
   warmupProviderPreflight,
@@ -540,7 +534,6 @@ import {
   hasPathBasedSettingsArgs,
   isCodexEffortRuntimeSupported,
   isLegacySafeEffort,
-  isProbeTimeoutMessage,
   logsSuggestShutdownOrCleanup,
   normalizeProviderModelListModels,
   normalizeProvisioningModelCheckRequests,
@@ -796,13 +789,11 @@ export { shouldAcceptDeterministicBootstrapEvent };
 
 const logger = createLogger('Service:TeamProvisioning');
 const {
-  AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   createController,
 } = agentTeamsControllerModule;
 const VERIFY_TIMEOUT_MS = 15_000;
-const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
 
 function asRuntimeRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -954,9 +945,6 @@ function mergeRuntimeDiagnostics(
   return merged.length > 0 ? [...new Set(merged)] : undefined;
 }
 const VERIFY_POLL_MS = 500;
-const MCP_PREFLIGHT_SHUTDOWN_GRACE_MS = 250;
-const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
-const MCP_PREFLIGHT_SHUTDOWN_POLL_MS = 50;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
@@ -970,9 +958,6 @@ const PROVISIONING_TRACE_STORAGE_LIMIT = 500;
 const LOG_PROGRESS_THROTTLE_MS = 1000;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
-const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
-const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
-const PREFLIGHT_AUTH_MAX_RETRIES = 2;
 function pushUniqueSupportDiagnostics(
   diagnostics: TeamProvisioningSupportDiagnostic[],
   incoming: readonly TeamProvisioningSupportDiagnostic[] | undefined
@@ -1013,18 +998,6 @@ function assertAppDeterministicBootstrapEnabled(): void {
       'Deterministic team bootstrap is disabled by the runtime kill switch (CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP=1).'
     );
   }
-}
-
-function getPreflightPingArgs(providerId: TeamProviderId | undefined): string[] {
-  const codexCustomModel =
-    resolveTeamProviderId(providerId) === 'codex'
-      ? ProviderConnectionService.getInstance().getConfiguredCodexCustomProviderModel()
-      : null;
-  return buildProviderPreflightPingArgs(providerId, { modelOverride: codexCustomModel });
-}
-
-function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {
-  return getProviderModelProbeTimeoutMs(providerId);
 }
 
 function getProviderRuntimeFailureLabel(providerId: TeamProviderId): string {
@@ -1069,10 +1042,6 @@ function buildMissingCliError(): Error {
     );
   }
   return new Error('Claude CLI not found; install it or provide a valid path');
-}
-
-function buildProviderCliCommandArgs(providerArgs: string[], args: string[]): string[] {
-  return buildProviderLaunchCliCommandArgs(providerArgs, args);
 }
 
 function looksLikeClaudeStdoutJsonFragment(text: string): boolean {
@@ -1459,60 +1428,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForPidsToExit(
-  pids: readonly number[],
-  opts: { timeoutMs: number; pollMs: number }
-): Promise<number[]> {
-  if (pids.length === 0) {
-    return [];
-  }
-
-  const deadline = Date.now() + opts.timeoutMs;
-  let remainingPids = [...new Set(pids)];
-  while (Date.now() < deadline) {
-    remainingPids = remainingPids.filter((pid) => isProcessAlive(pid));
-    if (remainingPids.length === 0) {
-      return [];
-    }
-    await sleep(opts.pollMs);
-  }
-
-  return remainingPids;
-}
-
-async function waitForChildProcessToExit(
-  child: ChildProcess | null | undefined,
-  timeoutMs: number
-): Promise<void> {
-  if (!child?.pid || !isProcessAlive(child.pid)) {
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-    const finish = (): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-      child.off('close', finish);
-      child.off('exit', finish);
-      child.off('error', finish);
-      resolve();
-    };
-
-    timeoutHandle = setTimeout(finish, timeoutMs);
-    child.once('close', finish);
-    child.once('exit', finish);
-    child.once('error', finish);
-  });
-}
-
 async function tryReadRegularFileUtf8(
   filePath: string,
   opts: { timeoutMs: number; maxBytes: number }
@@ -1549,23 +1464,6 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   const stat = await fs.promises.stat(cwd);
   if (!stat.isDirectory()) {
     throw new Error('cwd must be a directory');
-  }
-}
-
-function isMissingCwdSpawnError(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes('spawn ') && lower.includes(' enoent');
-}
-
-async function pathExistsAsDirectory(candidatePath: string): Promise<boolean> {
-  try {
-    const stat = await fs.promises.stat(candidatePath);
-    return stat.isDirectory();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false;
-    }
-    throw error;
   }
 }
 
@@ -1633,72 +1531,6 @@ function updateProgress(
     ),
   };
   return run.progress;
-}
-
-interface AgentTeamsMcpConfigEntry {
-  command?: unknown;
-  args?: unknown;
-  env?: unknown;
-  cwd?: unknown;
-}
-
-interface AgentTeamsMcpConfigFile {
-  mcpServers?: Record<string, AgentTeamsMcpConfigEntry>;
-}
-
-interface AgentTeamsMcpLaunchSpec {
-  command: string;
-  args: string[];
-  cwd?: string;
-  env: Record<string, string>;
-}
-
-interface McpJsonRpcErrorPayload {
-  code?: number;
-  message?: string;
-}
-
-interface McpJsonRpcResponse<TResult> {
-  id?: number;
-  result?: TResult;
-  error?: McpJsonRpcErrorPayload;
-}
-
-interface McpToolsListResult {
-  tools?: {
-    name?: string;
-    _meta?: Record<string, unknown>;
-  }[];
-}
-
-interface McpToolCallResult {
-  content?: {
-    type?: string;
-    text?: string;
-  }[];
-  isError?: boolean;
-}
-
-interface AgentTeamsMcpValidationFixture {
-  claudeDir: string;
-  teamName: string;
-  memberName: string;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
-}
-
-function normalizeRecordStringValues(value: unknown): Record<string, string> {
-  if (!value || typeof value !== 'object') {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).flatMap(([key, entry]) =>
-      typeof entry === 'string' ? [[key, entry]] : []
-    )
-  );
 }
 
 function extractLogsTail(
@@ -9930,13 +9762,14 @@ export class TeamProvisioningService {
           warnings.push(prefixedWarning);
           return;
         }
-        const diagnostic = await this.runProviderOneShotDiagnostic(
-          probeResult.claudePath,
-          targetCwd,
-          resolvedEnv.env,
+        const diagnostic = await runProviderOneShotDiagnostic({
+          claudePath: probeResult.claudePath,
+          cwd: targetCwd,
+          env: resolvedEnv.env,
           providerId,
-          resolvedEnv.providerArgs
-        );
+          providerArgs: resolvedEnv.providerArgs,
+          ports: this.getProviderDiagnosticsPorts(),
+        });
         if (diagnostic.warning) {
           const prefixedWarning =
             providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
@@ -10539,7 +10372,14 @@ export class TeamProvisioningService {
         };
       }
 
-      const probe = await this.probeClaudeRuntime(claudePath, cwd, env, providerId, providerArgs);
+      const probe = await probeClaudeRuntime({
+        claudePath,
+        cwd,
+        env,
+        providerId,
+        providerArgs,
+        ports: this.getProviderDiagnosticsPorts(),
+      });
       const result = {
         claudePath,
         authSource,
@@ -11073,18 +10913,19 @@ export class TeamProvisioningService {
     let child: ReturnType<typeof spawn>;
     try {
       if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
-        await this.validateAgentTeamsMcpRuntime(
-          ctx.claudePath,
-          ctx.cwd,
-          ctx.env,
-          ctx.args[mcpFlagIdx + 1],
-          {
+        await validateAgentTeamsMcpRuntime({
+          claudePath: ctx.claudePath,
+          cwd: ctx.cwd,
+          env: ctx.env,
+          mcpConfigPath: ctx.args[mcpFlagIdx + 1],
+          options: {
             isCancelled: () =>
               run.cancelRequested ||
               run.processKilled ||
               this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-          }
-        );
+          },
+          ports: this.getProviderDiagnosticsPorts(),
+        });
       }
       if (
         run.cancelRequested ||
@@ -11802,11 +11643,18 @@ export class TeamProvisioningService {
         });
         run.mcpConfigPath = mcpConfigPath;
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
-        await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
-          isCancelled: () =>
-            run.cancelRequested ||
-            run.processKilled ||
-            this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
+        await validateAgentTeamsMcpRuntime({
+          claudePath,
+          cwd: request.cwd,
+          env: shellEnv,
+          mcpConfigPath,
+          options: {
+            isCancelled: () =>
+              run.cancelRequested ||
+              run.processKilled ||
+              this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
+          },
+          ports: this.getProviderDiagnosticsPorts(),
         });
       } catch (error) {
         this.runs.delete(runId);
@@ -13581,11 +13429,18 @@ export class TeamProvisioningService {
         });
         run.mcpConfigPath = mcpConfigPath;
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
-        await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
-          isCancelled: () =>
-            run.cancelRequested ||
-            run.processKilled ||
-            this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
+        await validateAgentTeamsMcpRuntime({
+          claudePath,
+          cwd: request.cwd,
+          env: shellEnv,
+          mcpConfigPath,
+          options: {
+            isCancelled: () =>
+              run.cancelRequested ||
+              run.processKilled ||
+              this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
+          },
+          ports: this.getProviderDiagnosticsPorts(),
         });
       } catch (error) {
         this.runs.delete(runId);
@@ -22758,6 +22613,16 @@ export class TeamProvisioningService {
     return provisioningPathExists(filePath);
   }
 
+  private getProviderDiagnosticsPorts(): TeamProvisioningProviderDiagnosticsPorts {
+    return createDefaultTeamProvisioningProviderDiagnosticsPorts({
+      transientProbeProcesses: this.transientProbeProcesses,
+      providerConnectionService: this.providerConnectionService,
+      logger,
+      isAuthFailureWarning: (text, source) => this.isAuthFailureWarning(text, source),
+      normalizeApiRetryErrorMessage: (text) => this.normalizeApiRetryErrorMessage(text),
+    });
+  }
+
   private getProvisioningEnvBuilderPorts(): TeamProvisioningEnvBuilderPorts {
     return {
       providerConnectionService: this.providerConnectionService,
@@ -23649,269 +23514,6 @@ export class TeamProvisioningService {
   }
 
   /**
-   * Two-stage preflight check:
-   * 1. `claude --version` verifies the binary is executable.
-   * 2. Runtime control-plane commands verify provider auth/team-launch readiness.
-   *
-   * Do not use `-p` here: full print mode can initialize MCP/plugin/LSP startup context
-   * before the first response, which makes Create Team preflight slow and flaky.
-   */
-  private async probeClaudeRuntime(
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    providerId: TeamProviderId | undefined = 'anthropic',
-    providerArgs: string[] = []
-  ): Promise<{ warning?: string }> {
-    const resolvedProviderId = resolveTeamProviderId(providerId);
-    const cliCommandLabel = getConfiguredCliCommandLabel();
-    if (!(await pathExistsAsDirectory(cwd))) {
-      return {
-        warning: `Working directory does not exist: ${cwd}`,
-      };
-    }
-
-    try {
-      const versionProbe = await this.spawnProbe(
-        claudePath,
-        ['--version'],
-        cwd,
-        env,
-        PREFLIGHT_BINARY_TIMEOUT_MS
-      );
-      if (versionProbe.exitCode !== 0) {
-        const errorText =
-          buildCombinedLogs(versionProbe.stdout, versionProbe.stderr) ||
-          `${cliCommandLabel} exited with code ${versionProbe.exitCode ?? 'unknown'} during warm-up`;
-        return {
-          warning: `${cliCommandLabel} binary failed to start correctly. Details: ${errorText}`,
-        };
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isMissingCwdSpawnError(message) && !(await pathExistsAsDirectory(cwd))) {
-        return {
-          warning: `Working directory does not exist: ${cwd}`,
-        };
-      }
-      return {
-        warning: `${cliCommandLabel} binary failed to start. Details: ${message}`,
-      };
-    }
-
-    if (resolvedProviderId === 'gemini') {
-      const authState = await resolveGeminiRuntimeAuth(env);
-      if (authState.authenticated) {
-        return {};
-      }
-      return {
-        warning:
-          authState.statusMessage ??
-          'Gemini provider is not configured for runtime use. Set GEMINI_API_KEY or Google ADC credentials (plus GOOGLE_CLOUD_PROJECT when needed) and retry.',
-      };
-    }
-
-    if (resolvedProviderId === 'anthropic' || resolvedProviderId === 'codex') {
-      return await this.probeProviderRuntimeControlPlane({
-        claudePath,
-        cwd,
-        env,
-        providerId: resolvedProviderId,
-        providerArgs,
-      });
-    }
-
-    return {};
-  }
-
-  private async probeProviderRuntimeControlPlane({
-    claudePath,
-    cwd,
-    env,
-    providerId,
-    providerArgs,
-  }: {
-    claudePath: string;
-    cwd: string;
-    env: NodeJS.ProcessEnv;
-    providerId: TeamProviderId;
-    providerArgs: string[];
-  }): Promise<{ warning?: string }> {
-    return probeProviderRuntimeControlPlaneHelper({
-      claudePath,
-      cwd,
-      env,
-      providerId,
-      providerArgs,
-      appendDebugLog: appendPreflightDebugLog,
-    });
-  }
-
-  private async runProviderOneShotDiagnostic(
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    providerId: TeamProviderId | undefined = 'anthropic',
-    providerArgs: string[] = []
-  ): Promise<{ warning?: string }> {
-    const cliCommandLabel = getConfiguredCliCommandLabel();
-    const resolvedProviderId = resolveTeamProviderId(providerId);
-
-    if (!(await pathExistsAsDirectory(cwd))) {
-      appendPreflightDebugLog('provider_one_shot_diagnostic_skipped', {
-        providerId: resolvedProviderId,
-        cwd,
-        reason: 'missing_cwd',
-      });
-      return {};
-    }
-
-    const args = buildProviderCliCommandArgs(providerArgs, getPreflightPingArgs(providerId));
-    const timeoutMs = getPreflightTimeoutMs(providerId);
-    appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
-      providerId: resolvedProviderId,
-      cwd,
-      timeoutMs,
-      args,
-    });
-
-    for (let attempt = 1; attempt <= PREFLIGHT_AUTH_MAX_RETRIES; attempt++) {
-      let pingProbe: { exitCode: number | null; stdout: string; stderr: string } | null = null;
-      try {
-        pingProbe = await this.spawnProbe(claudePath, args, cwd, env, timeoutMs, {
-          resolveOnOutputMatch: ({ stdout, stderr }) => {
-            const combined = `${stdout}\n${stderr}`.trim();
-            return /\bPONG\b/i.test(combined);
-          },
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (!isProbeTimeoutMessage(message) && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
-          appendPreflightDebugLog('provider_one_shot_diagnostic_retry', {
-            providerId: resolvedProviderId,
-            cwd,
-            attempt,
-            reason: truncatePreflightDebugText(message),
-          });
-          logger.warn(
-            `One-shot diagnostic failed (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
-              `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms: ${message}`
-          );
-          await new Promise((resolve) => setTimeout(resolve, PREFLIGHT_AUTH_RETRY_DELAY_MS));
-          continue;
-        }
-        const normalizedMessage = normalizeProviderModelProbeFailureReason(message);
-        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
-          providerId: resolvedProviderId,
-          cwd,
-          attempt,
-          ok: false,
-          reason: isProbeTimeoutMessage(message) ? 'timeout' : 'error',
-          message: truncatePreflightDebugText(normalizedMessage),
-        });
-        return {
-          warning:
-            (isProbeTimeoutMessage(message)
-              ? 'One-shot diagnostic timed out after runtime readiness passed. '
-              : 'One-shot diagnostic did not complete after runtime readiness passed. ') +
-            `This does not mark selected models unavailable. Details: ${normalizedMessage}`,
-        };
-      }
-
-      const combinedOutput = buildCombinedLogs(pingProbe.stdout, pingProbe.stderr);
-      const isAuthFailure = this.isAuthFailureWarning(combinedOutput, 'probe');
-
-      if (isAuthFailure && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
-        appendPreflightDebugLog('provider_one_shot_diagnostic_retry', {
-          providerId: resolvedProviderId,
-          cwd,
-          attempt,
-          exitCode: pingProbe.exitCode,
-          reason: 'auth_failure',
-          output: truncatePreflightDebugText(combinedOutput),
-        });
-        logger.warn(
-          `One-shot diagnostic auth failure detected (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
-            `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms - likely stale locks from interrupted process`
-        );
-        await new Promise((resolve) => setTimeout(resolve, PREFLIGHT_AUTH_RETRY_DELAY_MS));
-        continue;
-      }
-
-      if (isAuthFailure || pingProbe.exitCode !== 0) {
-        const normalizedOutput =
-          this.normalizeApiRetryErrorMessage(combinedOutput) || combinedOutput.trim();
-        const hint = isAuthFailure
-          ? resolvedProviderId === 'codex'
-            ? 'Codex provider is not authenticated for `-p` mode. ' +
-              `Authenticate Codex in ${cliCommandLabel} and retry.` +
-              (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
-            : `${cliCommandLabel} \`-p\` mode is not authenticated. ` +
-              (cliCommandLabel === 'claude'
-                ? 'Run `claude auth login` (or start `claude` and run `/login`) to authenticate. '
-                : `Authenticate Anthropic in ${cliCommandLabel} and retry. `) +
-              'For automation/headless use, set ANTHROPIC_API_KEY.' +
-              (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
-          : normalizedOutput
-            ? `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}). Details: ${normalizedOutput}`
-            : `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
-        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
-          providerId: resolvedProviderId,
-          cwd,
-          attempt,
-          ok: false,
-          exitCode: pingProbe.exitCode,
-          authFailure: isAuthFailure,
-          output: truncatePreflightDebugText(normalizedOutput || combinedOutput),
-        });
-        return {
-          warning:
-            'One-shot diagnostic failed after runtime readiness passed. ' +
-            `This does not mark selected models unavailable. Details: ${hint}`,
-        };
-      }
-
-      const pongCandidate = pingProbe.stdout.trim() || pingProbe.stderr.trim();
-      const isPong = new RegExp(`\\b${getProviderModelProbeExpectedOutput()}\\b`, 'i').test(
-        pongCandidate
-      );
-      if (!isPong) {
-        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
-          providerId: resolvedProviderId,
-          cwd,
-          attempt,
-          ok: false,
-          exitCode: pingProbe.exitCode,
-          reason: 'unexpected_output',
-          output: truncatePreflightDebugText(combinedOutput),
-        });
-        return {
-          warning:
-            'One-shot diagnostic completed but did not return the expected PONG. ' +
-            'This does not mark selected models unavailable. ' +
-            `Output: ${combinedOutput || '(empty)'}`,
-        };
-      }
-
-      if (attempt > 1) {
-        logger.info(
-          `One-shot diagnostic succeeded on attempt ${attempt} (previous attempt had auth failure)`
-        );
-      }
-      appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
-        providerId: resolvedProviderId,
-        cwd,
-        attempt,
-        ok: true,
-        exitCode: pingProbe.exitCode,
-      });
-      return {};
-    }
-
-    return {};
-  }
-
-  /**
    * Run `claude --help` and return the output. Cached for 5 minutes.
    * Used by the validateCliArgs IPC handler to check user-entered flags.
    */
@@ -23928,536 +23530,18 @@ export class TeamProvisioningService {
           this.getCachedOrProbeResult(targetCwd, providerId),
         buildProvisioningEnv: () => this.buildProvisioningEnv(),
         spawnProbe: (claudePath, args, targetCwd, env, timeoutMs) =>
-          this.spawnProbe(claudePath, args, targetCwd, env, timeoutMs),
+          spawnProbeDiagnostic({
+            claudePath,
+            args,
+            cwd: targetCwd,
+            env,
+            timeoutMs,
+            ports: this.getProviderDiagnosticsPorts(),
+          }),
       },
     });
     this.helpOutputCache = cache.output;
     this.helpOutputCacheTime = cache.cachedAtMs;
     return output;
-  }
-
-  private buildAgentTeamsMcpValidationError(output: string): string {
-    return buildAgentTeamsMcpValidationErrorMessage(output, (text) =>
-      this.normalizeApiRetryErrorMessage(text)
-    );
-  }
-
-  private async readAgentTeamsMcpLaunchSpec(
-    mcpConfigPath: string
-  ): Promise<AgentTeamsMcpLaunchSpec> {
-    let parsed: AgentTeamsMcpConfigFile;
-    try {
-      const raw = await fs.promises.readFile(mcpConfigPath, 'utf8');
-      parsed = JSON.parse(raw) as AgentTeamsMcpConfigFile;
-    } catch (error) {
-      throw new Error(
-        this.buildAgentTeamsMcpValidationError(
-          `Failed to read generated MCP config ${mcpConfigPath}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        )
-      );
-    }
-
-    const server = parsed.mcpServers?.['agent-teams'];
-    if (!server) {
-      throw new Error(
-        this.buildAgentTeamsMcpValidationError(
-          `Generated MCP config ${mcpConfigPath} does not contain an "agent-teams" server entry.`
-        )
-      );
-    }
-
-    if (typeof server.command !== 'string' || server.command.trim().length === 0) {
-      throw new Error(
-        this.buildAgentTeamsMcpValidationError(
-          'Generated agent-teams MCP config is missing a valid launch command.'
-        )
-      );
-    }
-
-    if (server.args !== undefined && !isStringArray(server.args)) {
-      throw new Error(
-        this.buildAgentTeamsMcpValidationError(
-          'Generated agent-teams MCP config has invalid args; expected a string array.'
-        )
-      );
-    }
-
-    if (server.cwd !== undefined && typeof server.cwd !== 'string') {
-      throw new Error(
-        this.buildAgentTeamsMcpValidationError(
-          'Generated agent-teams MCP config has invalid cwd; expected a string path.'
-        )
-      );
-    }
-
-    return {
-      command: server.command,
-      args: server.args ?? [],
-      cwd: typeof server.cwd === 'string' ? server.cwd : undefined,
-      env: normalizeRecordStringValues(server.env),
-    };
-  }
-
-  private async createAgentTeamsMcpValidationFixture(
-    projectPath: string
-  ): Promise<AgentTeamsMcpValidationFixture> {
-    const claudeDir = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), 'agent-teams-mcp-validate-')
-    );
-    const teamName = 'mcp-validation-team';
-    const memberName = 'mcp-validation-member';
-    const teamDir = path.join(claudeDir, 'teams', teamName);
-
-    await fs.promises.mkdir(teamDir, { recursive: true });
-    await fs.promises.writeFile(
-      path.join(teamDir, 'config.json'),
-      JSON.stringify(
-        {
-          name: teamName,
-          projectPath,
-          members: [
-            { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
-            { name: memberName, agentType: 'teammate', role: 'developer' },
-          ],
-        },
-        null,
-        2
-      ),
-      'utf8'
-    );
-
-    return {
-      claudeDir,
-      teamName,
-      memberName,
-    };
-  }
-
-  private async validateAgentTeamsMcpRuntime(
-    _claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    mcpConfigPath: string,
-    options: {
-      isCancelled?: () => boolean;
-    } = {}
-  ): Promise<void> {
-    const launchSpec = await this.readAgentTeamsMcpLaunchSpec(mcpConfigPath);
-    const fixture = await this.createAgentTeamsMcpValidationFixture(cwd);
-    let child: ReturnType<typeof spawn> | null = null;
-    let stdoutBuffer = '';
-    let stderrBuffer = '';
-    let nextRequestId = 1;
-    let cancellationTriggered = false;
-    let cancellationTimer: ReturnType<typeof setInterval> | null = null;
-    const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
-    const pending = new Map<
-      number,
-      {
-        resolve: (value: unknown) => void;
-        reject: (error: Error) => void;
-        timeoutHandle: ReturnType<typeof setTimeout>;
-      }
-    >();
-
-    const rejectAll = (error: Error): void => {
-      for (const [id, entry] of pending) {
-        clearTimeout(entry.timeoutHandle);
-        entry.reject(error);
-        pending.delete(id);
-      }
-    };
-
-    const getCancellationError = (): Error => new Error(cancellationMessage);
-    const cancelPreflightIfNeeded = (): boolean => {
-      if (cancellationTriggered) {
-        return true;
-      }
-      if (!options.isCancelled?.()) {
-        return false;
-      }
-      cancellationTriggered = true;
-      const error = getCancellationError();
-      rejectAll(error);
-      if (child?.pid) {
-        killProcessTree(child);
-      }
-      return true;
-    };
-    const throwIfCancelled = (): void => {
-      if (cancelPreflightIfNeeded()) {
-        throw getCancellationError();
-      }
-    };
-
-    try {
-      throwIfCancelled();
-      child = spawnCli(launchSpec.command, launchSpec.args, {
-        cwd: launchSpec.cwd ?? cwd,
-        env: {
-          ...env,
-          ...launchSpec.env,
-          AGENT_TEAMS_MCP_CLAUDE_DIR: fixture.claudeDir,
-        },
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true,
-      });
-      this.transientProbeProcesses.add(child);
-      if (options.isCancelled) {
-        cancellationTimer = setInterval(() => {
-          if (cancelPreflightIfNeeded() && cancellationTimer) {
-            clearInterval(cancellationTimer);
-            cancellationTimer = null;
-          }
-        }, 100);
-        cancellationTimer.unref?.();
-      }
-
-      const parseStdoutLine = (line: string): void => {
-        let message: McpJsonRpcResponse<unknown>;
-        try {
-          message = JSON.parse(line) as McpJsonRpcResponse<unknown>;
-        } catch (error) {
-          logger.warn(
-            `agent-teams MCP preflight emitted non-JSON stdout line: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-          return;
-        }
-
-        if (typeof message.id !== 'number') {
-          return;
-        }
-
-        const entry = pending.get(message.id);
-        if (!entry) {
-          return;
-        }
-
-        clearTimeout(entry.timeoutHandle);
-        pending.delete(message.id);
-
-        if (message.error) {
-          entry.reject(new Error(message.error.message ?? 'Unknown MCP JSON-RPC error'));
-          return;
-        }
-
-        entry.resolve(message.result);
-      };
-
-      child.stdout?.setEncoding('utf8');
-      child.stdout?.on('data', (chunk: string | Buffer) => {
-        stdoutBuffer += chunk.toString();
-
-        while (true) {
-          const newlineIndex = stdoutBuffer.indexOf('\n');
-          if (newlineIndex === -1) {
-            break;
-          }
-
-          const line = stdoutBuffer.slice(0, newlineIndex).trim();
-          stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
-          if (!line) {
-            continue;
-          }
-          parseStdoutLine(line);
-        }
-        stdoutBuffer = boundProbeOutputBuffer(stdoutBuffer);
-      });
-
-      child.stderr?.setEncoding('utf8');
-      child.stderr?.on('data', (chunk: string | Buffer) => {
-        stderrBuffer = boundProbeOutputBuffer(stderrBuffer + chunk.toString());
-      });
-
-      child.once('error', (error) => {
-        rejectAll(error instanceof Error ? error : new Error(String(error)));
-      });
-
-      child.once('close', (code, signal) => {
-        if (pending.size === 0) {
-          return;
-        }
-        rejectAll(
-          new Error(
-            `agent-teams MCP process exited unexpectedly during preflight (code=${
-              code ?? 'null'
-            } signal=${signal ?? 'null'})`
-          )
-        );
-      });
-
-      const request = <TResult>(
-        method: string,
-        params: Record<string, unknown>,
-        timeoutMs: number = VERIFY_TIMEOUT_MS
-      ): Promise<TResult> =>
-        new Promise<TResult>((resolve, reject) => {
-          if (cancelPreflightIfNeeded()) {
-            reject(getCancellationError());
-            return;
-          }
-          if (!child?.stdin) {
-            reject(new Error('agent-teams MCP stdin is not available'));
-            return;
-          }
-
-          const id = nextRequestId++;
-          const timeoutHandle = setTimeout(() => {
-            pending.delete(id);
-            reject(new Error(`agent-teams MCP request timed out: ${method}`));
-          }, timeoutMs);
-
-          pending.set(id, {
-            resolve: resolve as (value: unknown) => void,
-            reject,
-            timeoutHandle,
-          });
-
-          if (cancelPreflightIfNeeded()) {
-            clearTimeout(timeoutHandle);
-            pending.delete(id);
-            reject(getCancellationError());
-            return;
-          }
-
-          child.stdin.write(
-            `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
-            (error) => {
-              if (!error) {
-                return;
-              }
-              clearTimeout(timeoutHandle);
-              pending.delete(id);
-              reject(error instanceof Error ? error : new Error(String(error)));
-            }
-          );
-        });
-
-      const notify = async (method: string, params?: Record<string, unknown>): Promise<void> => {
-        if (!child?.stdin) {
-          throw new Error('agent-teams MCP stdin is not available');
-        }
-        const stdin = child.stdin;
-
-        await new Promise<void>((resolve, reject) => {
-          stdin.write(
-            `${JSON.stringify({ jsonrpc: '2.0', method, ...(params ? { params } : {}) })}\n`,
-            (error) => {
-              if (error) {
-                reject(error instanceof Error ? error : new Error(String(error)));
-                return;
-              }
-              resolve();
-            }
-          );
-        });
-      };
-
-      await request(
-        'initialize',
-        {
-          protocolVersion: '2024-11-05',
-          capabilities: {},
-          clientInfo: { name: 'agent-teams-ai', version: '1.0.0' },
-        },
-        MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS
-      );
-      throwIfCancelled();
-      await notify('notifications/initialized');
-
-      const toolsList = await request<McpToolsListResult>('tools/list', {});
-      throwIfCancelled();
-      const availableTools = new Set((toolsList.tools ?? []).map((tool) => tool.name));
-      const requiredTools = Array.from(
-        new Set([
-          ...AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
-          'lead_briefing',
-          'runtime_bootstrap_checkin',
-          'runtime_deliver_message',
-          'runtime_task_event',
-          'runtime_heartbeat',
-        ])
-      );
-      const missingTools = requiredTools.filter((toolName) => !availableTools.has(toolName));
-      if (missingTools.length > 0) {
-        throw new Error(
-          `agent-teams MCP started but tools/list did not include required tool(s): ${missingTools.join(
-            ', '
-          )}`
-        );
-      }
-
-      const memberBriefing = await request<McpToolCallResult>('tools/call', {
-        name: 'member_briefing',
-        arguments: {
-          claudeDir: fixture.claudeDir,
-          teamName: fixture.teamName,
-          memberName: fixture.memberName,
-          runtimeProvider: 'opencode',
-          includeActiveProcesses: false,
-        },
-      });
-      throwIfCancelled();
-
-      if (memberBriefing.isError) {
-        throw new Error(
-          memberBriefing.content?.[0]?.text ??
-            'agent-teams MCP returned an unspecified error for member_briefing'
-        );
-      }
-
-      const briefingText = memberBriefing.content?.find((item) => item.type === 'text')?.text ?? '';
-      if (briefingText.trim().length === 0) {
-        throw new Error('agent-teams MCP returned empty content for member_briefing');
-      }
-
-      const leadBriefing = await request<McpToolCallResult>('tools/call', {
-        name: 'lead_briefing',
-        arguments: {
-          claudeDir: fixture.claudeDir,
-          teamName: fixture.teamName,
-        },
-      });
-      throwIfCancelled();
-
-      if (leadBriefing.isError) {
-        throw new Error(
-          leadBriefing.content?.[0]?.text ??
-            'agent-teams MCP returned an unspecified error for lead_briefing'
-        );
-      }
-
-      const leadBriefingText =
-        leadBriefing.content?.find((item) => item.type === 'text')?.text ?? '';
-      if (leadBriefingText.trim().length === 0) {
-        throw new Error('agent-teams MCP returned empty content for lead_briefing');
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message === cancellationMessage) {
-        throw error;
-      }
-      const detail = buildCombinedLogs('', stderrBuffer).trim();
-      const errorText =
-        error instanceof Error && detail.length > 0
-          ? `${error.message}\n${detail}`
-          : detail || String(error);
-      throw new Error(this.buildAgentTeamsMcpValidationError(errorText));
-    } finally {
-      if (cancellationTimer) {
-        clearInterval(cancellationTimer);
-        cancellationTimer = null;
-      }
-      rejectAll(new Error('agent-teams MCP preflight session closed'));
-      if (child) {
-        this.transientProbeProcesses.delete(child);
-      }
-      if (child?.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
-        const stdin = child.stdin;
-        await new Promise<void>((resolve) => {
-          try {
-            stdin.end(() => resolve());
-          } catch {
-            resolve();
-          }
-        });
-      }
-      if (child?.pid) {
-        await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS);
-        if (isProcessAlive(child.pid)) {
-          killProcessTree(child);
-          await waitForPidsToExit([child.pid], {
-            timeoutMs: MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS,
-            pollMs: MCP_PREFLIGHT_SHUTDOWN_POLL_MS,
-          });
-          await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS);
-        }
-      }
-      await fs.promises.rm(fixture.claudeDir, { recursive: true, force: true }).catch(() => {});
-    }
-  }
-
-  private async spawnProbe(
-    claudePath: string,
-    args: string[],
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    timeoutMs: number,
-    options?: {
-      /**
-       * Optional early success predicate. If this returns true based on
-       * buffered stdout/stderr, the probe resolves immediately (and the process
-       * is best-effort terminated) instead of waiting for `close`.
-       */
-      resolveOnOutputMatch?: (ctx: { stdout: string; stderr: string }) => boolean;
-    }
-  ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-      const child = spawnCli(claudePath, args, {
-        cwd,
-        env,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      this.transientProbeProcesses.add(child);
-      const cleanupProbe = (): void => {
-        this.transientProbeProcesses.delete(child);
-      };
-      let stdoutText = '';
-      let stderrText = '';
-      let settled = false;
-
-      const timeoutHandle = setTimeout(() => {
-        settled = true;
-        cleanupProbe();
-        killProcessTree(child);
-        reject(new Error(`Timeout running: ${getConfiguredCliCommandLabel()} ${args.join(' ')}`));
-      }, timeoutMs);
-      timeoutHandle.unref?.();
-
-      const maybeResolveEarly = (): void => {
-        if (settled) return;
-        if (!options?.resolveOnOutputMatch) return;
-        const ctx = { stdout: stdoutText.trim(), stderr: stderrText.trim() };
-        if (!options.resolveOnOutputMatch(ctx)) return;
-
-        settled = true;
-        clearTimeout(timeoutHandle);
-        cleanupProbe();
-        // If the process printed the match but hangs during teardown, don't
-        // block the UI; terminate best-effort and resolve.
-        killProcessTree(child);
-        resolve({ exitCode: 0, stdout: ctx.stdout, stderr: ctx.stderr });
-      };
-
-      child.stdout?.on('data', (chunk: Buffer) => {
-        stdoutText = boundProbeOutputBuffer(stdoutText + chunk.toString('utf8'));
-        maybeResolveEarly();
-      });
-      child.stderr?.on('data', (chunk: Buffer) => {
-        stderrText = boundProbeOutputBuffer(stderrText + chunk.toString('utf8'));
-        maybeResolveEarly();
-      });
-      child.once('error', (error) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutHandle);
-        cleanupProbe();
-        reject(error);
-      });
-      child.once('close', (exitCode) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutHandle);
-        cleanupProbe();
-        resolve({
-          exitCode,
-          stdout: stdoutText.trim(),
-          stderr: stderrText.trim(),
-        });
-      });
-    });
   }
 }
