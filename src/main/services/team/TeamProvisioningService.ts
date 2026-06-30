@@ -316,6 +316,7 @@ import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
 } from './provisioning/TeamProvisioningFilesystemMonitor';
+import { markTeamInboxMessagesRead } from './provisioning/TeamProvisioningInboxPersistence';
 import {
   buildLeadInboxRelayPrompt,
   buildMemberInboxRelayPrompt,
@@ -640,9 +641,6 @@ import {
   getConfiguredCliCommandLabel,
   getConfiguredCliFlavor,
 } from './cliFlavor';
-import { withFileLock } from './fileLock';
-import { withInboxLock } from './inboxLock';
-import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import { type ProcessBootstrapTransportSummary } from './ProcessBootstrapTransportEvidence';
 import {
   boundLaunchDiagnostics,
@@ -15512,44 +15510,13 @@ export class TeamProvisioningService {
     member: string,
     messages: { messageId: string }[]
   ): Promise<void> {
-    const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
-
-    await withFileLock(inboxPath, async () => {
-      await withInboxLock(inboxPath, async () => {
-        const raw = await tryReadRegularFileUtf8(inboxPath, {
-          timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-          maxBytes: TEAM_INBOX_MAX_BYTES,
-        });
-        if (!raw) {
-          return;
-        }
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(raw) as unknown;
-        } catch {
-          return;
-        }
-        if (!Array.isArray(parsed)) return;
-
-        const ids = new Set(messages.map((m) => m.messageId).filter((id) => id.trim().length > 0));
-
-        let changed = false;
-        for (const item of parsed) {
-          if (!item || typeof item !== 'object') continue;
-          const row = item as Record<string, unknown>;
-          const msgId = getEffectiveInboxMessageId(row);
-          if (!msgId || !ids.has(msgId)) continue;
-
-          if (row.read !== true) {
-            row.read = true;
-            changed = true;
-          }
-        }
-
-        if (!changed) return;
-        await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
-      });
+    await markTeamInboxMessagesRead({
+      teamName,
+      member,
+      messages,
+      readRegularFileUtf8: tryReadRegularFileUtf8,
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_INBOX_MAX_BYTES,
     });
   }
 
