@@ -114,6 +114,8 @@ export type CodexGoalAccountSlotStatus = {
   readonly capacityReason?: string;
   readonly capacityCooldownUntil?: string;
   readonly capacityLastLimitSignalAt?: string;
+  readonly liveCheck?: "passed" | "failed";
+  readonly liveCheckSafeMessage?: string;
   readonly warnings: readonly string[];
   readonly safeMessage: string;
 };
@@ -122,6 +124,9 @@ export type CodexGoalAccountStatusInput = {
   readonly authRootDir: string;
   readonly accounts?: readonly string[];
   readonly stateRootDir?: string;
+  readonly liveCheck?: boolean;
+  readonly codexBinaryPath?: string;
+  readonly liveCheckTimeoutMs?: number;
 };
 
 export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string {
@@ -370,6 +375,9 @@ export async function listCodexGoalAccountStatuses(
         authRootDir: input.authRootDir,
         name,
         ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+        ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
+        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+        ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
       }),
     ),
   );
@@ -415,6 +423,9 @@ async function inspectCodexGoalAccount(input: {
   readonly authRootDir: string;
   readonly name: string;
   readonly stateRootDir?: string;
+  readonly liveCheck?: boolean;
+  readonly codexBinaryPath?: string;
+  readonly liveCheckTimeoutMs?: number;
 }
 ): Promise<CodexGoalAccountSlotStatus> {
   const authJsonPath = join(input.authRootDir, input.name, "auth.json");
@@ -427,7 +438,45 @@ async function inspectCodexGoalAccount(input: {
       accountName: input.name,
       ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
     });
+    const live = input.liveCheck
+      ? await inspectCodexAccountLiveStatus({
+          codexHome: dirname(authJsonPath),
+          ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+          ...(input.liveCheckTimeoutMs ? { timeoutMs: input.liveCheckTimeoutMs } : {}),
+        })
+      : undefined;
     const warnings = [...validation.warnings, ...freshness.warnings];
+    if (live && !live.ok) {
+      return {
+        name: input.name,
+        authJsonPath,
+        status: "auth_invalid",
+        byteLength: validation.byteLength,
+        authJsonSha256Prefix: validation.exactBytesSha256.slice(0, 12),
+        ...(identity ? { identitySource: identity.source } : {}),
+        ...(identity ? { identityHashPrefix: identity.hashPrefix } : {}),
+        ...(freshness.lastRefreshAt
+          ? { lastRefreshAt: freshness.lastRefreshAt.toISOString() }
+          : {}),
+        ...(freshness.expiresAt
+          ? { expiresAt: freshness.expiresAt.toISOString() }
+          : {}),
+        ...(capacity?.availability
+          ? { capacityAvailability: capacity.availability }
+          : {}),
+        ...(capacity?.reason ? { capacityReason: capacity.reason } : {}),
+        ...(capacity?.cooldownUntil
+          ? { capacityCooldownUntil: capacity.cooldownUntil.toISOString() }
+          : {}),
+        ...(capacity?.lastLimitSignalAt
+          ? { capacityLastLimitSignalAt: capacity.lastLimitSignalAt.toISOString() }
+          : {}),
+        liveCheck: "failed",
+        liveCheckSafeMessage: live.safeMessage,
+        warnings,
+        safeMessage: live.safeMessage,
+      };
+    }
     return {
       name: input.name,
       authJsonPath,
@@ -452,6 +501,8 @@ async function inspectCodexGoalAccount(input: {
       ...(capacity?.lastLimitSignalAt
         ? { capacityLastLimitSignalAt: capacity.lastLimitSignalAt.toISOString() }
         : {}),
+      ...(live ? { liveCheck: "passed" as const } : {}),
+      ...(live ? { liveCheckSafeMessage: live.safeMessage } : {}),
       warnings,
       safeMessage: warnings.length
         ? "auth.json is readable but has warnings"
@@ -469,6 +520,35 @@ async function inspectCodexGoalAccount(input: {
         : safeMessage,
     };
   }
+}
+
+async function inspectCodexAccountLiveStatus(input: {
+  readonly codexHome: string;
+  readonly codexBinaryPath?: string;
+  readonly timeoutMs?: number;
+}): Promise<{ readonly ok: boolean; readonly safeMessage: string }> {
+  const codexBinaryPath = input.codexBinaryPath ?? "codex";
+  try {
+    await execFileAsync(codexBinaryPath, ["auth", "status"], {
+      env: {
+        ...process.env,
+        CODEX_HOME: input.codexHome,
+      },
+      timeout: input.timeoutMs ?? 70_000,
+      maxBuffer: 1024 * 1024,
+    });
+    return { ok: true, safeMessage: "codex auth status passed" };
+  } catch (error) {
+    if (isExecTimeoutError(error)) {
+      return { ok: false, safeMessage: "codex auth status timed out" };
+    }
+    return { ok: false, safeMessage: "codex auth status failed" };
+  }
+}
+
+function isExecTimeoutError(error: unknown): boolean {
+  return isRecord(error) &&
+    (error.signal === "SIGTERM" || error.killed === true || error.code === "ETIMEDOUT");
 }
 
 function sanitizedCodexIdentity(idToken: string | undefined): {

@@ -1106,14 +1106,27 @@ export function createCodexGoalMcpServer(
       title: "Codex Goal Account Status",
       description:
         "Inspect a stored job's configured account slots by jobId, including job-specific capacity cooldowns.",
-      inputSchema: jobIdInputSchema(),
+      inputSchema: {
+        ...jobIdInputSchema(),
+        liveCheck: z.boolean().optional(),
+        codexBinaryPath: z.string().optional(),
+        liveCheckTimeoutMs: z.number().int().positive().optional(),
+      },
     },
     async (args) => withMcpErrors(async () => {
       const loaded = await loadJobLaunch(args as JobIdMcpArgs);
       return mcpJson({
         registryRootDir: loaded.registryRootDir,
         jobId: loaded.manifest.jobId,
-        ...(await codexGoalAccountStatusPayload(loaded.launch)),
+        ...(await codexGoalAccountStatusPayload(loaded.launch, {
+          liveCheck: booleanValue(args.liveCheck) ?? false,
+          ...(stringValue(args.codexBinaryPath)
+            ? { codexBinaryPath: stringValue(args.codexBinaryPath) as string }
+            : {}),
+          ...(numberValue(args.liveCheckTimeoutMs)
+            ? { liveCheckTimeoutMs: numberValue(args.liveCheckTimeoutMs) as number }
+            : {}),
+        })),
       });
     }),
   );
@@ -1439,6 +1452,9 @@ export function createCodexGoalMcpServer(
         authRootDir: z.string().optional(),
         stateRootDir: z.string().optional(),
         accounts: z.union([z.string(), z.array(z.string())]).optional(),
+        liveCheck: z.boolean().optional(),
+        codexBinaryPath: z.string().optional(),
+        liveCheckTimeoutMs: z.number().int().positive().optional(),
       },
     },
     async (args) => withMcpErrors(async () => {
@@ -1449,6 +1465,13 @@ export function createCodexGoalMcpServer(
         ...(accounts.length ? { accounts } : {}),
         ...(stringValue(args.stateRootDir)
           ? { stateRootDir: resolvePath(process.cwd(), stringValue(args.stateRootDir) as string) }
+          : {}),
+        liveCheck: booleanValue(args.liveCheck) ?? false,
+        ...(stringValue(args.codexBinaryPath)
+          ? { codexBinaryPath: stringValue(args.codexBinaryPath) as string }
+          : {}),
+        ...(numberValue(args.liveCheckTimeoutMs)
+          ? { liveCheckTimeoutMs: numberValue(args.liveCheckTimeoutMs) as number }
           : {}),
       }));
     }),
@@ -1604,11 +1627,19 @@ function codexGoalStateRootDir(launch: CodexGoalLaunchInput): string {
   return launch.config.stateRootDir ?? join(launch.config.jobRootDir, "state");
 }
 
-async function codexGoalAccountStatusPayload(launch: CodexGoalLaunchInput) {
+async function codexGoalAccountStatusPayload(
+  launch: CodexGoalLaunchInput,
+  options: {
+    readonly liveCheck?: boolean;
+    readonly codexBinaryPath?: string;
+    readonly liveCheckTimeoutMs?: number;
+  } = {},
+) {
   return codexAccountStatusPayload({
     authRootDir: launch.config.authRootDir,
     stateRootDir: codexGoalStateRootDir(launch),
     accounts: launch.config.accounts.map((account) => account.name),
+    ...options,
   });
 }
 
@@ -1616,11 +1647,17 @@ async function codexAccountStatusPayload(input: {
   readonly authRootDir: string;
   readonly stateRootDir?: string;
   readonly accounts?: readonly string[];
+  readonly liveCheck?: boolean;
+  readonly codexBinaryPath?: string;
+  readonly liveCheckTimeoutMs?: number;
 }) {
   const slots = await listCodexGoalAccountStatuses({
     authRootDir: input.authRootDir,
     ...(input.accounts?.length ? { accounts: input.accounts } : {}),
     ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+    ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
+    ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+    ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
   });
   const duplicates = duplicateAccountGroups(slots);
   const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
@@ -1629,6 +1666,7 @@ async function codexAccountStatusPayload(input: {
     ok: availableDedupedSlots.length > 0,
     authRootDir: input.authRootDir,
     capacityAware: Boolean(input.stateRootDir),
+    liveCheck: Boolean(input.liveCheck),
     ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
     slots,
     duplicates,

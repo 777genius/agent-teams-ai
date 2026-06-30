@@ -221,6 +221,9 @@ export async function listCodexGoalAccountStatuses(input) {
         authRootDir: input.authRootDir,
         name,
         ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+        ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
+        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+        ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
     })));
 }
 export function recommendCodexGoalAction(input) {
@@ -262,7 +265,45 @@ async function inspectCodexGoalAccount(input) {
             accountName: input.name,
             ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
         });
+        const live = input.liveCheck
+            ? await inspectCodexAccountLiveStatus({
+                codexHome: dirname(authJsonPath),
+                ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+                ...(input.liveCheckTimeoutMs ? { timeoutMs: input.liveCheckTimeoutMs } : {}),
+            })
+            : undefined;
         const warnings = [...validation.warnings, ...freshness.warnings];
+        if (live && !live.ok) {
+            return {
+                name: input.name,
+                authJsonPath,
+                status: "auth_invalid",
+                byteLength: validation.byteLength,
+                authJsonSha256Prefix: validation.exactBytesSha256.slice(0, 12),
+                ...(identity ? { identitySource: identity.source } : {}),
+                ...(identity ? { identityHashPrefix: identity.hashPrefix } : {}),
+                ...(freshness.lastRefreshAt
+                    ? { lastRefreshAt: freshness.lastRefreshAt.toISOString() }
+                    : {}),
+                ...(freshness.expiresAt
+                    ? { expiresAt: freshness.expiresAt.toISOString() }
+                    : {}),
+                ...(capacity?.availability
+                    ? { capacityAvailability: capacity.availability }
+                    : {}),
+                ...(capacity?.reason ? { capacityReason: capacity.reason } : {}),
+                ...(capacity?.cooldownUntil
+                    ? { capacityCooldownUntil: capacity.cooldownUntil.toISOString() }
+                    : {}),
+                ...(capacity?.lastLimitSignalAt
+                    ? { capacityLastLimitSignalAt: capacity.lastLimitSignalAt.toISOString() }
+                    : {}),
+                liveCheck: "failed",
+                liveCheckSafeMessage: live.safeMessage,
+                warnings,
+                safeMessage: live.safeMessage,
+            };
+        }
         return {
             name: input.name,
             authJsonPath,
@@ -287,6 +328,8 @@ async function inspectCodexGoalAccount(input) {
             ...(capacity?.lastLimitSignalAt
                 ? { capacityLastLimitSignalAt: capacity.lastLimitSignalAt.toISOString() }
                 : {}),
+            ...(live ? { liveCheck: "passed" } : {}),
+            ...(live ? { liveCheckSafeMessage: live.safeMessage } : {}),
             warnings,
             safeMessage: warnings.length
                 ? "auth.json is readable but has warnings"
@@ -305,6 +348,30 @@ async function inspectCodexGoalAccount(input) {
                 : safeMessage,
         };
     }
+}
+async function inspectCodexAccountLiveStatus(input) {
+    const codexBinaryPath = input.codexBinaryPath ?? "codex";
+    try {
+        await execFileAsync(codexBinaryPath, ["auth", "status"], {
+            env: {
+                ...process.env,
+                CODEX_HOME: input.codexHome,
+            },
+            timeout: input.timeoutMs ?? 70_000,
+            maxBuffer: 1024 * 1024,
+        });
+        return { ok: true, safeMessage: "codex auth status passed" };
+    }
+    catch (error) {
+        if (isExecTimeoutError(error)) {
+            return { ok: false, safeMessage: "codex auth status timed out" };
+        }
+        return { ok: false, safeMessage: "codex auth status failed" };
+    }
+}
+function isExecTimeoutError(error) {
+    return isRecord(error) &&
+        (error.signal === "SIGTERM" || error.killed === true || error.code === "ETIMEDOUT");
 }
 function sanitizedCodexIdentity(idToken) {
     if (!idToken)
