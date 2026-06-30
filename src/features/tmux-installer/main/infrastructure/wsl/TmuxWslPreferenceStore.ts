@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { app } from 'electron';
 
 interface PersistedTmuxWslPreference {
@@ -43,12 +44,7 @@ export class TmuxWslPreferenceStore {
     }
 
     const filePath = this.#getFilePath();
-    await fsp.mkdir(path.dirname(filePath), { recursive: true });
-    await fsp.writeFile(
-      filePath,
-      JSON.stringify({ preferredDistroName: nextValue }, null, 2),
-      'utf8'
-    );
+    await atomicWriteAsync(filePath, JSON.stringify({ preferredDistroName: nextValue }, null, 2));
   }
 
   async clearPreferredDistro(): Promise<void> {

@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { renamePathWithRetrySync } from './atomicWrite';
+
 const LEGACY_USER_DATA_DIR_NAMES = [
   'agent-teams-ai',
   'Agent Teams AI',
@@ -292,7 +294,7 @@ function copyLegacyUserDataDirectory(
       fs.rmdirSync(currentPath);
     }
 
-    fs.renameSync(tempPath, currentPath);
+    renamePathWithRetrySync(tempPath, currentPath);
     return true;
   } catch (error) {
     logger?.warn(`Electron userData migration copy failed: ${stringifyError(error)}`);

@@ -13,6 +13,7 @@ import {
   TEAM_LAUNCH_SUMMARY_FILE,
 } from '@main/services/team/TeamLaunchSummaryProjection';
 import { compactTeamTaskForSnapshot } from '@main/services/team/teamTaskSnapshotCompaction';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
@@ -977,18 +978,11 @@ async function writePersistentTaskProjectionCache(
     await fs.promises.rm(cachePath, { force: true }).catch(() => undefined);
     return;
   }
-  const tmpPath = `${cachePath}.${process.pid}.${Date.now()}.${Math.random()
-    .toString(36)
-    .slice(2)}.tmp`;
-
   try {
-    await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
-    await fs.promises.writeFile(tmpPath, raw, 'utf8');
-    await fs.promises.rename(tmpPath, cachePath);
+    await atomicWriteAsync(cachePath, raw);
     taskDiag.persistentCacheWrites++;
   } catch {
     taskDiag.persistentCacheWriteFailures++;
-    await fs.promises.rm(tmpPath, { force: true }).catch(() => undefined);
   }
 }
 

@@ -9,6 +9,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 
 import type { SessionFileMetadata } from '@main/utils/jsonl';
@@ -487,20 +488,13 @@ export class SessionMetadataIndex {
     }
 
     const indexPath = SessionMetadataIndex.getIndexPath(this.rootDir, projectStorageDir);
-    const tmpPath = `${indexPath}.${process.pid}.${Date.now()}.${crypto.randomUUID()}.tmp`;
     const serialized = `${JSON.stringify(index.file)}\n`;
     index.dirty = false;
 
     try {
       await fs.mkdir(this.rootDir, { recursive: true, mode: 0o700 });
-      await fs.writeFile(tmpPath, serialized, { encoding: 'utf8', mode: 0o600 });
-      await fs.rename(tmpPath, indexPath);
+      await atomicWriteAsync(indexPath, serialized, { mode: 0o600 });
     } catch (error) {
-      try {
-        await fs.unlink(tmpPath);
-      } catch {
-        // ignore
-      }
       logger.debug(
         `Failed to persist session metadata index ${indexPath}: ${
           error instanceof Error ? error.message : String(error)

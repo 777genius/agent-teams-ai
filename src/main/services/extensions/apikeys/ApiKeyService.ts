@@ -14,6 +14,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 import { safeStorage } from 'electron';
 
@@ -449,21 +450,16 @@ export class ApiKeyService {
   }
 
   private async writeStore(keys: StoredApiKey[]): Promise<void> {
-    const dir = path.dirname(this.filePath);
-    await fs.mkdir(dir, { recursive: true });
-    const tmpPath = this.filePath + `.tmp.${crypto.randomUUID()}`;
-    await fs.writeFile(tmpPath, JSON.stringify(keys, null, 2), 'utf-8');
+    await atomicWriteAsync(this.filePath, JSON.stringify(keys, null, 2), { mode: 0o600 });
 
-    // Set restrictive permissions before rename (Unix only)
     if (process.platform !== 'win32') {
       try {
-        await fs.chmod(tmpPath, 0o600);
+        await fs.chmod(this.filePath, 0o600);
       } catch {
         // Best-effort — Windows or restricted FS
       }
     }
 
-    await fs.rename(tmpPath, this.filePath);
     this.cache = keys;
   }
 

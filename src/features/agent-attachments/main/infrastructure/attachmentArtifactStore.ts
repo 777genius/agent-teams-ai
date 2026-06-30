@@ -1,6 +1,6 @@
 import { assertSafeAttachmentStorageId } from '@features/agent-attachments/core/domain';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
-import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export type AgentAttachmentArtifactFileName =
@@ -44,14 +44,5 @@ export function resolveAgentAttachmentArtifactPath(
 }
 
 export async function writeFileAtomic(filePath: string, bytes: Buffer | string): Promise<void> {
-  const dir = path.dirname(filePath);
-  await fs.mkdir(dir, { recursive: true });
-  const tmpPath = path.join(dir, `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
-  try {
-    await fs.writeFile(tmpPath, bytes);
-    await fs.rename(tmpPath, filePath);
-  } catch (error) {
-    await fs.rm(tmpPath, { force: true }).catch(() => undefined);
-    throw error;
-  }
+  await atomicWriteAsync(filePath, bytes);
 }

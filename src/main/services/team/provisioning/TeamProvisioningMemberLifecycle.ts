@@ -1339,8 +1339,7 @@ export class TeamProvisioningMemberLifecycleController {
       input.teamName,
       input.configuredMember.name
     );
-    await fs.promises.mkdir(runtimePaths.dir, { recursive: true });
-    await fs.promises.writeFile(runtimePaths.eventsPath, '', { encoding: 'utf8', mode: 0o600 });
+    await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
 
     const nativeBootstrapSpec =
       (
@@ -1608,17 +1607,11 @@ export class TeamProvisioningMemberLifecycleController {
       bootstrapProofToken: input.bootstrapProofToken,
     };
     const dir = path.join(getTeamRuntimeEventsDir(input.teamName), 'native-bootstrap');
-    await fs.promises.mkdir(dir, { recursive: true });
     const finalPath = path.join(
       dir,
       `${sanitizeProcessRuntimeEventFilePrefix(input.memberName)}-${randomUUID()}.native-bootstrap.json`
     );
-    const tempPath = `${finalPath}.tmp`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(context), {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
-    await fs.promises.rename(tempPath, finalPath);
+    await atomicWriteAsync(finalPath, JSON.stringify(context), { mode: 0o600 });
     return { [NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV]: finalPath };
   }
 

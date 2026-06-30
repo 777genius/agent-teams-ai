@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -1143,7 +1144,7 @@ export class TeamConfigReader {
       config.language = updates.language.trim() || undefined;
     }
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
+    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await TeamConfigReader.primeConfig(teamName, config);
     return config;
   }

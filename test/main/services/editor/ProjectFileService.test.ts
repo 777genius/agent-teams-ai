@@ -23,6 +23,10 @@ vi.mock('fs/promises', () => ({
 
 vi.mock('@main/utils/atomicWrite', () => ({
   atomicWriteAsync: vi.fn(),
+  renamePathWithRetry: vi.fn(async (...args: Parameters<typeof import('fs/promises').rename>) => {
+    const fs = await import('fs/promises');
+    return fs.rename(...args);
+  }),
 }));
 
 vi.mock('isbinaryfile', () => ({
@@ -48,8 +52,8 @@ import { shell } from 'electron';
 import * as fs from 'fs/promises';
 import { isBinaryFile } from 'isbinaryfile';
 
-import { atomicWriteAsync } from '../../../../src/main/utils/atomicWrite';
 import { ProjectFileService } from '../../../../src/main/services/editor/ProjectFileService';
+import { atomicWriteAsync } from '../../../../src/main/utils/atomicWrite';
 
 // =============================================================================
 // Setup

@@ -10,13 +10,13 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
-import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
@@ -612,12 +612,9 @@ export class ConfigManager {
    */
   private persistConfig(config: AppConfig): void {
     const content = JSON.stringify(config, null, 2);
-    fsp
-      .mkdir(path.dirname(this.configPath), { recursive: true })
-      .then(() => fsp.writeFile(this.configPath, content, 'utf8'))
-      .catch((error) => {
-        logger.error('Error persisting config:', error);
-      });
+    void atomicWriteAsync(this.configPath, content).catch((error) => {
+      logger.error('Error persisting config:', error);
+    });
   }
 
   /**

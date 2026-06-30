@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
+
 import type { TempEmptyMcpConfigHandle, TempEmptyMcpConfigStore } from '../../../core/application';
 
 export class FileTempEmptyMcpConfigStore implements TempEmptyMcpConfigStore {
@@ -10,7 +12,7 @@ export class FileTempEmptyMcpConfigStore implements TempEmptyMcpConfigStore {
   async create(): Promise<TempEmptyMcpConfigHandle> {
     const dir = await fs.mkdtemp(path.join(this.rootDir, 'agent-teams-workspace-trust-'));
     const filePath = path.join(dir, 'empty-mcp.json');
-    await fs.writeFile(filePath, `${JSON.stringify({ mcpServers: {} })}\n`, 'utf8');
+    await atomicWriteAsync(filePath, `${JSON.stringify({ mcpServers: {} })}\n`);
     return {
       path: filePath,
       cleanup: async () => {

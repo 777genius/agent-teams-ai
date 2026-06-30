@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
@@ -228,10 +229,7 @@ export async function writeDeterministicBootstrapSpecFile(
 ): Promise<string> {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'agent-teams-bootstrap-'));
   const filePath = path.join(tempDir, `${spec.team.name}-${randomUUID()}.json`);
-  await fs.promises.writeFile(filePath, JSON.stringify(spec), {
-    encoding: 'utf8',
-    mode: 0o600,
-  });
+  await atomicWriteAsync(filePath, JSON.stringify(spec), { mode: 0o600 });
   return filePath;
 }
 
@@ -250,10 +248,7 @@ export async function writeDeterministicBootstrapUserPromptFile(prompt: string):
     path.join(os.tmpdir(), 'agent-teams-bootstrap-prompt-')
   );
   const filePath = path.join(tempDir, `${randomUUID()}.txt`);
-  await fs.promises.writeFile(filePath, prompt, {
-    encoding: 'utf8',
-    mode: 0o600,
-  });
+  await atomicWriteAsync(filePath, prompt, { mode: 0o600 });
   return filePath;
 }
 

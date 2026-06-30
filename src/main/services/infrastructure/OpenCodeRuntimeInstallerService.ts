@@ -1,3 +1,4 @@
+import { renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
@@ -870,7 +871,7 @@ export class OpenCodeRuntimeInstallerService {
 
       await fsp.rm(versionDir, { recursive: true, force: true });
       await fsp.mkdir(path.dirname(versionDir), { recursive: true });
-      await fsp.rename(tempDir, versionDir);
+      await renamePathWithRetry(tempDir, versionDir);
       const manifest: OpenCodeRuntimeManifest = {
         schemaVersion: CURRENT_MANIFEST_SCHEMA_VERSION,
         version: stdout.trim() || platformMetadata.version!,

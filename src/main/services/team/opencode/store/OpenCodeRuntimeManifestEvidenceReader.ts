@@ -1,6 +1,6 @@
-import { mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
@@ -1078,7 +1078,7 @@ export async function migrateLegacyOpenCodeRuntimeState(params: {
 
   await mkdir(laneDir, { recursive: true });
   for (const fileName of legacyFiles) {
-    await rename(path.join(runtimeDir, fileName), path.join(laneDir, fileName));
+    await renamePathWithRetry(path.join(runtimeDir, fileName), path.join(laneDir, fileName));
   }
   await upsertOpenCodeRuntimeLaneIndexEntry({
     teamsBasePath: params.teamsBasePath,

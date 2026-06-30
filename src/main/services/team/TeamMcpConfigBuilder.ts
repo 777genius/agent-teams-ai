@@ -15,7 +15,7 @@ import * as path from 'path';
 
 import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';
 
-import { atomicWriteAsync } from './atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from './atomicWrite';
 
 import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
 
@@ -563,7 +563,7 @@ async function resolvePackagedServerEntry(options?: McpLaunchSpecResolveOptions)
     );
 
     try {
-      await fs.promises.rename(tmpDir, finalDir);
+      await renamePathWithRetry(tmpDir, finalDir);
     } catch {
       // finalDir appeared between our check and rename (another process won the race)
       await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});

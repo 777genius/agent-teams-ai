@@ -19,6 +19,7 @@ import {
   normalizeProviderModelProbeFailureReason,
 } from '../../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+import { atomicWriteAsync } from '../atomicWrite';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
 import { buildCombinedLogs } from './TeamProvisioningCliExitPresentation';
@@ -137,7 +138,7 @@ export function createDefaultTeamProvisioningProviderDiagnosticsPorts(input: {
     mkdirRecursive: async (directoryPath) => {
       await fs.promises.mkdir(directoryPath, { recursive: true });
     },
-    writeFileUtf8: (filePath, contents) => fs.promises.writeFile(filePath, contents, 'utf8'),
+    writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
     removeDirectory: async (directoryPath) => {
       await fs.promises.rm(directoryPath, { recursive: true, force: true });
     },

@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { renamePathWithRetrySync } from './atomicWrite';
+
 /**
  * Utility functions for encoding/decoding Claude Code project directory names.
  *
@@ -502,7 +504,7 @@ function copyLegacyDirectoryPath(currentPath: string, legacyPath: string): strin
       fs.rmdirSync(currentPath);
     }
 
-    fs.renameSync(tempPath, currentPath);
+    renamePathWithRetrySync(tempPath, currentPath);
     return currentPath;
   } catch {
     try {
@@ -603,7 +605,7 @@ function migrateFallbackAppDataBasePath(currentPath: string, legacyPath: string)
       fs.rmdirSync(currentPath);
     }
 
-    fs.renameSync(tempPath, currentPath);
+    renamePathWithRetrySync(tempPath, currentPath);
     return currentPath;
   } catch {
     try {

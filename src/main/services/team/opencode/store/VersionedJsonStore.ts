@@ -257,8 +257,7 @@ export class VersionedJsonStore<TData> {
     const quarantinePath = path.join(dir, `${baseName}.${reason}.${stamp}.quarantine`);
 
     try {
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(quarantinePath, raw, 'utf8');
+      await atomicWriteAsync(quarantinePath, raw);
       return quarantinePath;
     } catch {
       return null;

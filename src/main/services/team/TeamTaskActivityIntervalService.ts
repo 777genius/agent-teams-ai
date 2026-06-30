@@ -1,3 +1,4 @@
+import { atomicWriteSync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -337,9 +338,7 @@ function materializePausedReviewInterval(
 }
 
 function writeTaskFile(filePath: string, task: MutableTeamTask): void {
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(task, null, 2));
-  fs.renameSync(tempPath, filePath);
+  atomicWriteSync(filePath, JSON.stringify(task, null, 2));
 }
 
 function buildTaskFileSignature(stat: fs.Stats): TaskFileSignature {

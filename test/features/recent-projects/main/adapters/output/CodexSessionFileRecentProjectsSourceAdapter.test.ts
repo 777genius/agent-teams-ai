@@ -4,10 +4,10 @@ import path from 'node:path';
 
 import { CodexSessionFileRecentProjectsSourceAdapter } from '@features/recent-projects/main/adapters/output/sources/CodexSessionFileRecentProjectsSourceAdapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
 import type { RecentProjectIdentityResolver } from '@features/recent-projects/main/infrastructure/identity/RecentProjectIdentityResolver';
+import type { Mock } from 'vitest';
 
 type LoggerMock = LoggerPort & {
   info: Mock<LoggerPort['info']>;
@@ -352,7 +352,7 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
       ],
       degraded: false,
     });
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(openSpy.mock.calls.filter(([file]) => String(file).endsWith('.jsonl'))).toEqual([]);
   });
 
   it('coalesces concurrent Codex session-file source reads', async () => {

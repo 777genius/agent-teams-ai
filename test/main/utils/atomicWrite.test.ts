@@ -17,7 +17,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-import { atomicWriteAsync } from '../../../src/main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '../../../src/main/utils/atomicWrite';
 
 // =============================================================================
 // Setup
@@ -84,6 +84,15 @@ describe('atomicWriteAsync', () => {
     expect(mockWriteFile).toHaveBeenCalledWith(expect.any(String), CONTENT, 'utf8');
   });
 
+  it('preserves requested file mode on tmp writes', async () => {
+    await atomicWriteAsync(TARGET_PATH, CONTENT, { mode: 0o600 });
+
+    expect(mockWriteFile).toHaveBeenCalledWith(expect.any(String), CONTENT, {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+  });
+
   it('calls fsync on tmp file before rename', async () => {
     const mockSync = vi.fn().mockResolvedValue(undefined);
     const mockClose = vi.fn().mockResolvedValue(undefined);
@@ -148,6 +157,46 @@ describe('atomicWriteAsync', () => {
     }
   );
 
+  it('continues retrying beyond short antivirus-style locks', async () => {
+    const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
+    mockRename.mockImplementation(async () => {
+      if (mockRename.mock.calls.length < 12) {
+        throw transientError;
+      }
+    });
+
+    await atomicWriteAsync(TARGET_PATH, CONTENT);
+
+    const tmpPath = getTmpPath();
+    expect(mockRename).toHaveBeenCalledTimes(12);
+    expect(mockRename).toHaveBeenLastCalledWith(tmpPath, TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalled();
+  });
+
+  it('retries managed path renames without using atomic-write EXDEV fallback', async () => {
+    const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
+    mockRename.mockRejectedValueOnce(transientError).mockResolvedValue(undefined);
+
+    await renamePathWithRetry('/tmp/source', '/tmp/target');
+
+    expect(mockRename).toHaveBeenCalledTimes(2);
+    expect(mockRename).toHaveBeenLastCalledWith('/tmp/source', '/tmp/target');
+    expect(mockCopyFile).not.toHaveBeenCalled();
+    expect(mockUnlink).not.toHaveBeenCalled();
+  });
+
+  it('does not copy generic managed paths on EXDEV rename failure', async () => {
+    const exdevError = Object.assign(new Error('Cross-device link'), { code: 'EXDEV' });
+    mockRename.mockRejectedValue(exdevError);
+
+    await expect(renamePathWithRetry('/tmp/source-dir', '/tmp/target-dir')).rejects.toThrow(
+      'Cross-device link'
+    );
+
+    expect(mockRename).toHaveBeenCalledTimes(1);
+    expect(mockCopyFile).not.toHaveBeenCalled();
+  });
+
   it('does not retry ENOENT rename failures and cleans tmp', async () => {
     const missingError = Object.assign(new Error('No such file or directory'), { code: 'ENOENT' });
     mockRename.mockRejectedValue(missingError);
@@ -168,7 +217,7 @@ describe('atomicWriteAsync', () => {
     await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow(
       'Transient lock stayed active'
     );
-    expect(mockRename).toHaveBeenCalledTimes(8);
+    expect(mockRename).toHaveBeenCalledTimes(20);
     expect(mockUnlink).toHaveBeenCalled();
   });
 
