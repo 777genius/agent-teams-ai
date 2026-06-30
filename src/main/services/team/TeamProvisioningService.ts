@@ -409,14 +409,17 @@ import {
 } from './provisioning/TeamProvisioningMemberSpecs';
 import {
   buildLaunchMemberSpawnStatus,
+  buildRuntimeSpawnStatusRecord as buildRuntimeSpawnStatusRecordHelper,
   filterRemovedMembersFromLaunchSnapshot,
   findConfiguredMemberModel,
   findEffectiveRunMember,
   findEffectiveRunMemberModel,
   findMetaMemberModel,
   findTrackedMemberSpawnStatus,
+  getFailedSpawnMembersFromStatuses,
   isLaunchMemberStatusRelevantToRuntimeRun,
   isMemberRemovedInMeta,
+  projectPendingRestartStatusForSnapshot as projectPendingRestartStatusForSnapshotHelper,
   resolveEffectiveConfiguredMember,
   resolveLeadMemberName,
   shouldPreferCurrentLaunchMemberStatus,
@@ -16401,15 +16404,7 @@ export class TeamProvisioningService {
   private getFailedSpawnMembers(
     run: ProvisioningRun
   ): { name: string; error?: string; updatedAt: string }[] {
-    const memberSpawnStatuses = run.memberSpawnStatuses ?? new Map();
-    return [...memberSpawnStatuses.entries()]
-      .filter(([, entry]) => entry.launchState === 'failed_to_start')
-      .map(([name, entry]) => ({
-        name,
-        error: entry.hardFailureReason ?? entry.error,
-        updatedAt: entry.updatedAt,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return getFailedSpawnMembersFromStatuses(run.memberSpawnStatuses);
   }
 
   private getMemberLaunchSummary(run: ProvisioningRun): {
@@ -16564,13 +16559,7 @@ export class TeamProvisioningService {
   private buildRuntimeSpawnStatusRecord(
     run: ProvisioningRun
   ): Record<string, MemberSpawnStatusEntry> {
-    const statuses: Record<string, MemberSpawnStatusEntry> = {};
-    for (const expected of run.expectedMembers) {
-      const current =
-        run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
-      statuses[expected] = this.projectPendingRestartStatusForSnapshot(run, expected, current);
-    }
-    return statuses;
+    return buildRuntimeSpawnStatusRecordHelper(run);
   }
 
   private projectPendingRestartStatusForSnapshot(
@@ -16578,48 +16567,11 @@ export class TeamProvisioningService {
     memberName: string,
     current: MemberSpawnStatusEntry
   ): MemberSpawnStatusEntry {
-    const pendingRestart = run.pendingMemberRestarts?.get(memberName);
-    if (!pendingRestart) {
-      return current;
-    }
-    if (
-      current.launchState === 'confirmed_alive' ||
-      current.launchState === 'failed_to_start' ||
-      current.launchState === 'skipped_for_launch' ||
-      current.skippedForLaunch === true
-    ) {
-      return current;
-    }
-
-    // A manual restart can be requested after the original launch has already finished.
-    // Persisting that transient state as `finished + starting` is unsafe because the
-    // launch-state evaluator intentionally converts old `starting` entries into
-    // "never spawned" failures. Project it as pending bootstrap until the lead accepts,
-    // rejects, or the normal restart grace timeout resolves it.
-    const updatedAt = current.updatedAt ?? pendingRestart.requestedAt;
-    const next: MemberSpawnStatusEntry = {
-      ...current,
-      status: 'waiting',
-      updatedAt,
-      skippedForLaunch: false,
-      skipReason: undefined,
-      skippedAt: undefined,
-      agentToolAccepted: true,
-      runtimeAlive: false,
-      bootstrapConfirmed: false,
-      hardFailure: false,
-      hardFailureReason: undefined,
-      error: undefined,
-      livenessSource: undefined,
-      bootstrapStalled: undefined,
-      runtimeDiagnostic:
-        current.runtimeDiagnostic ??
-        'Manual restart is already in progress; waiting for teammate bootstrap.',
-      runtimeDiagnosticSeverity: current.runtimeDiagnosticSeverity ?? 'info',
-      firstSpawnAcceptedAt: current.firstSpawnAcceptedAt ?? pendingRestart.requestedAt,
-    };
-    next.launchState = deriveMemberLaunchState(next);
-    return next;
+    return projectPendingRestartStatusForSnapshotHelper(
+      memberName,
+      current,
+      run.pendingMemberRestarts
+    );
   }
 
   private shouldOverlayPrimaryBootstrapTruth(run: ProvisioningRun): boolean {
