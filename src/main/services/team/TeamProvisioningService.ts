@@ -72,10 +72,9 @@ import {
 } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { isUsableCodexModelCatalog } from '@shared/utils/codexModelCatalog';
-import { deriveContextMetrics, inferContextWindowTokens } from '@shared/utils/contextMetrics';
+import { deriveContextMetrics } from '@shared/utils/contextMetrics';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import {
@@ -370,6 +369,10 @@ import {
   guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper,
   hasCommittedOpenCodeSecondaryEvidenceOverlayDelta,
 } from './provisioning/TeamProvisioningLaunchStateReconciliation';
+import {
+  buildLeadContextUsagePayloadFromState,
+  getInitialLeadContextWindowTokensForRequest,
+} from './provisioning/TeamProvisioningLeadContextUsage';
 import {
   matchesExactTeamMemberName,
   matchesObservedMemberNameForExpected,
@@ -7939,50 +7942,11 @@ export class TeamProvisioningService {
   }
 
   private getInitialLeadContextWindowTokens(run: ProvisioningRun): number | null {
-    const providerId = normalizeOptionalTeamProviderId(run.request.providerId);
-    const modelName =
-      typeof run.request.model === 'string' && run.request.model.trim().length > 0
-        ? run.request.model.trim()
-        : providerId === 'anthropic'
-          ? getAnthropicDefaultTeamModel(run.request.limitContext === true)
-          : undefined;
-
-    return inferContextWindowTokens({
-      providerId,
-      modelName,
-      limitContext: run.request.limitContext === true,
-    });
+    return getInitialLeadContextWindowTokensForRequest(run.request);
   }
 
   private buildLeadContextUsagePayload(run: ProvisioningRun): LeadContextUsage {
-    const usage = run.leadContextUsage;
-    if (!usage) {
-      return {
-        promptInputTokens: null,
-        outputTokens: null,
-        contextUsedTokens: null,
-        contextWindowTokens: null,
-        contextUsedPercent: null,
-        promptInputSource: 'unavailable',
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
-    const { contextUsedTokens, contextWindowTokens } = usage;
-    const percentRaw =
-      contextUsedTokens !== null && contextWindowTokens !== null && contextWindowTokens > 0
-        ? Math.round((contextUsedTokens / contextWindowTokens) * 100)
-        : null;
-
-    return {
-      promptInputTokens: usage.promptInputTokens,
-      outputTokens: usage.outputTokens,
-      contextUsedTokens: usage.contextUsedTokens,
-      contextWindowTokens: usage.contextWindowTokens,
-      contextUsedPercent: percentRaw === null ? null : Math.max(0, Math.min(100, percentRaw)),
-      promptInputSource: usage.promptInputSource,
-      updatedAt: new Date().toISOString(),
-    };
+    return buildLeadContextUsagePayloadFromState(run.leadContextUsage, new Date().toISOString());
   }
 
   private updateLeadContextUsageFromUsage(
