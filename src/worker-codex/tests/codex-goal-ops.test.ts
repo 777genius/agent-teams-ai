@@ -120,7 +120,7 @@ describe("codex goal ops", () => {
     expect(JSON.stringify(accounts)).not.toContain("chatgpt-account-secret");
   });
 
-  it("optionally validates account slots with codex auth status without leaking provider output", async () => {
+  it("optionally validates account slots with codex login status without leaking provider output", async () => {
     const fixture = await createGoalFixture();
     const codexOk = join(fixture.root, "codex-ok.sh");
     const codexFail = join(fixture.root, "codex-fail.sh");
@@ -139,7 +139,7 @@ describe("codex goal ops", () => {
     expect(okAccounts[0]).toMatchObject({
       status: "ready",
       liveCheck: "passed",
-      liveCheckSafeMessage: "codex auth status passed",
+      liveCheckSafeMessage: "codex login status passed",
     });
     expect(JSON.stringify(okAccounts)).not.toContain("secret@example.com");
 
@@ -153,8 +153,8 @@ describe("codex goal ops", () => {
     expect(failedAccounts[0]).toMatchObject({
       status: "auth_invalid",
       liveCheck: "failed",
-      liveCheckSafeMessage: "codex auth status failed",
-      safeMessage: "codex auth status failed",
+      liveCheckSafeMessage: "codex login status failed",
+      safeMessage: "codex login status failed",
     });
     expect(JSON.stringify(failedAccounts)).not.toContain("refresh-secret");
   });

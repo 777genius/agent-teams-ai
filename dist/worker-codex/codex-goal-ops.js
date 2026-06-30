@@ -357,7 +357,7 @@ async function inspectCodexGoalAccount(input) {
 async function inspectCodexAccountLiveStatus(input) {
     const codexBinaryPath = input.codexBinaryPath ?? "codex";
     try {
-        await execFileAsync(codexBinaryPath, ["auth", "status"], {
+        await execFileAsync(codexBinaryPath, ["login", "status"], {
             env: {
                 ...process.env,
                 CODEX_HOME: input.codexHome,
@@ -365,13 +365,13 @@ async function inspectCodexAccountLiveStatus(input) {
             timeout: input.timeoutMs ?? 70_000,
             maxBuffer: 1024 * 1024,
         });
-        return { ok: true, safeMessage: "codex auth status passed" };
+        return { ok: true, safeMessage: "codex login status passed" };
     }
     catch (error) {
         if (isExecTimeoutError(error)) {
-            return { ok: false, safeMessage: "codex auth status timed out" };
+            return { ok: false, safeMessage: "codex login status timed out" };
         }
-        return { ok: false, safeMessage: "codex auth status failed" };
+        return { ok: false, safeMessage: "codex login status failed" };
     }
 }
 function isExecTimeoutError(error) {

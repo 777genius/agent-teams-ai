@@ -1643,7 +1643,7 @@ describe("codex goal MCP server", () => {
             name: "account-a",
             status: "auth_invalid",
             liveCheck: "failed",
-            liveCheckSafeMessage: "codex auth status failed",
+            liveCheckSafeMessage: "codex login status failed",
           }),
         ]);
         expect(JSON.stringify(liveStatus)).not.toContain("secret@example.com");
