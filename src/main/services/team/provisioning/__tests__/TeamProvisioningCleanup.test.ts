@@ -131,7 +131,7 @@ function makeCleanupPorts(
     clearSameTeamRetryTimers: vi.fn(),
     clearLeadInboxFollowUpRelayTimer: vi.fn(),
     getMemberLaunchGraceKey: vi.fn(
-      (cleanup, memberName: string) => `${cleanup.teamName}:${memberName}:grace`
+      (cleanup, memberName: string) => `member-launch-grace:${cleanup.runId}:${memberName}`
     ),
     pendingTimeouts: new Map(),
     memberInboxRelayInFlight: new Map(),
@@ -177,7 +177,9 @@ function seedTeamScopedCleanupState(
   ports.inFlightResponses.set('approval-1', 'response');
   ports.runs.set(run.runId, 'run');
   for (const memberName of run.memberSpawnStatuses.keys()) {
-    ports.pendingTimeouts.set(`${run.teamName}:${memberName}:grace`, makeTimer());
+    const graceKey = `member-launch-grace:${run.runId}:${memberName}`;
+    ports.pendingTimeouts.set(graceKey, makeTimer());
+    ports.pendingTimeouts.set(`${graceKey}:bootstrap-stall`, makeTimer());
   }
 }
 
@@ -295,6 +297,9 @@ describe('team provisioning cleanup policy', () => {
     const cleanup = cleanupRun();
     const ports = makeCleanupPorts('newer-run');
     seedTeamScopedCleanupState(ports, cleanup, 'newer-run');
+    const newerGraceKey = 'member-launch-grace:newer-run:worker-a';
+    ports.pendingTimeouts.set(newerGraceKey, makeTimer());
+    ports.pendingTimeouts.set(`${newerGraceKey}:bootstrap-stall`, makeTimer());
 
     cleanupProvisioningRun(cleanup, ports);
 
@@ -326,7 +331,16 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam).not.toHaveBeenCalled();
     expect(ports.pruneLiveLeadMessagesForCleanedRun).toHaveBeenCalledWith(cleanup);
     expect(ports.retainedClaudeLogsByTeam.has(cleanup.teamName)).toBe(false);
-    expect(ports.pendingTimeouts.size).toBe(2);
+    expect(ports.pendingTimeouts.has('member-launch-grace:run-1:worker-a')).toBe(false);
+    expect(ports.pendingTimeouts.has('member-launch-grace:run-1:worker-a:bootstrap-stall')).toBe(
+      false
+    );
+    expect(ports.pendingTimeouts.has('member-launch-grace:run-1:worker-b')).toBe(false);
+    expect(ports.pendingTimeouts.has('member-launch-grace:run-1:worker-b:bootstrap-stall')).toBe(
+      false
+    );
+    expect(ports.pendingTimeouts.has(newerGraceKey)).toBe(true);
+    expect(ports.pendingTimeouts.has(`${newerGraceKey}:bootstrap-stall`)).toBe(true);
     for (const timer of ports.pendingTimeouts.values()) {
       clearTimeout(timer);
     }

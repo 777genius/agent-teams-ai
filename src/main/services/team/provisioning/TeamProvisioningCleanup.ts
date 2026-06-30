@@ -236,13 +236,13 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
     ports.clearSameTeamRetryTimers(run.teamName);
     ports.clearLeadInboxFollowUpRelayTimer(run.teamName);
   }
-  if (!hasNewerTrackedRun) {
-    for (const memberName of run.memberSpawnStatuses.keys()) {
-      const key = ports.getMemberLaunchGraceKey(run, memberName);
-      const timer = ports.pendingTimeouts.get(key);
+  for (const memberName of run.memberSpawnStatuses.keys()) {
+    const key = ports.getMemberLaunchGraceKey(run, memberName);
+    for (const timerKey of [key, `${key}:bootstrap-stall`]) {
+      const timer = ports.pendingTimeouts.get(timerKey);
       if (timer) {
         clearTimeout(timer);
-        ports.pendingTimeouts.delete(key);
+        ports.pendingTimeouts.delete(timerKey);
       }
     }
   }
