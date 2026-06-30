@@ -157,6 +157,7 @@ vi.mock('agent-teams-controller', () => ({
 }));
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
+import { isOpenCodePromptAcceptedByObservation } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
@@ -2812,12 +2813,8 @@ Messages:
   });
 
   it('does not treat empty OpenCode observations as accepted without delivered prompt proof', () => {
-    const service = new TeamProvisioningService();
-    const isAccepted = (
-      service as unknown as {
-        isOpenCodePromptAcceptedByObservation: (observation?: unknown) => boolean;
-      }
-    ).isOpenCodePromptAcceptedByObservation.bind(service);
+    const isAccepted = (observation?: unknown) =>
+      isOpenCodePromptAcceptedByObservation(observation as any);
 
     expect(
       isAccepted({
@@ -2937,28 +2934,34 @@ Messages:
       ])
     );
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
-    vi.spyOn(
-      service as any,
-      'findDeliverableOpenCodeRuntimeBootstrapSessionEvidence'
-    ).mockResolvedValue({
-      id: 'session-jack',
-      teamName,
-      memberName: 'jack',
-      laneId,
-      runId: 'opencode-run-1',
-      source: 'runtime_bootstrap_checkin',
-    });
-    vi.spyOn(service as any, 'applyOpenCodeVisibleDestinationProof').mockImplementation(
-      async (input: any) => ({
-        ledgerRecord: input.ledgerRecord,
-        visibleReply: null,
-      })
+    const createDeliveryService = (service as any).createOpenCodeMemberMessageDeliveryService.bind(
+      service
     );
-    vi.spyOn(service as any, 'materializeOpenCodePlainTextReplyIfNeeded').mockImplementation(
-      async (input: any) => ({
-        ledgerRecord: input.ledgerRecord,
-        visibleReply: null,
-      })
+    vi.spyOn(service as any, 'createOpenCodeMemberMessageDeliveryService').mockImplementation(
+      () => {
+        const deliveryService = createDeliveryService();
+        const deps = (deliveryService as any).deps;
+        deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = vi.fn(async () => ({
+          id: 'session-jack',
+          teamName,
+          memberName: 'jack',
+          laneId,
+          runId: 'opencode-run-1',
+          source: 'runtime_bootstrap_checkin',
+        }));
+        deps.openCodeVisibleReplyProofService = {
+          ...deps.openCodeVisibleReplyProofService,
+          applyDestinationProof: vi.fn(async (input: any) => ({
+            ledgerRecord: input.ledgerRecord,
+            visibleReply: null,
+          })),
+          materializePlainTextReplyIfNeeded: vi.fn(async (input: any) => ({
+            ledgerRecord: input.ledgerRecord,
+            visibleReply: null,
+          })),
+        };
+        return deliveryService;
+      }
     );
     const watchdogSpy = vi
       .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
@@ -3333,9 +3336,8 @@ Messages:
         taskRefs,
       },
     };
-    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
-      visibleReply
-    );
+    const proofService = (service as any).openCodeVisibleReplyProofService;
+    vi.spyOn(proofService, 'findByRelayOfMessageId').mockResolvedValue(visibleReply);
     const applyDestinationProof = vi.fn(async (input: Record<string, unknown>) => ({
       ...ledgerRecord,
       status: 'responded',
@@ -3354,7 +3356,7 @@ Messages:
     service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
     service.setTeamChangeEmitter(teamChangeEmitter);
 
-    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+    const result = await proofService.applyDestinationProof({
       ledger: { applyDestinationProof },
       ledgerRecord,
       teamName,
@@ -3443,16 +3445,15 @@ Messages:
         messageId: 'visible-reply-proven',
       },
     };
-    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
-      visibleReply
-    );
+    const proofService = (service as any).openCodeVisibleReplyProofService;
+    vi.spyOn(proofService, 'findByRelayOfMessageId').mockResolvedValue(visibleReply);
     const applyDestinationProof = vi.fn(async () => ledgerRecord);
     const advisoryInvalidator = vi.fn();
     const teamChangeEmitter = vi.fn();
     service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
     service.setTeamChangeEmitter(teamChangeEmitter);
 
-    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+    const result = await proofService.applyDestinationProof({
       ledger: { applyDestinationProof },
       ledgerRecord,
       teamName,
