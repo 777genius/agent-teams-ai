@@ -116,6 +116,7 @@ import {
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { inferProviderBillingMode } from '@shared/utils/providerBillingMode';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -4704,11 +4705,24 @@ export class TeamProvisioningService {
         selectedFastMode: params.request.fastMode,
         providerFastModeDefault: getAnthropicFastModeDefault(),
       });
+      const providerBackendId =
+        migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null;
 
       return {
         providerId,
-        providerBackendId:
-          migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null,
+        providerBackendId,
+        billingMode: inferProviderBillingMode({
+          providerId,
+          providerBackendId,
+          authMethod: params.facts.providerStatus?.authMethod,
+          authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
+          backendKind: params.facts.providerStatus?.backend?.kind,
+          selectedBackendId: params.facts.providerStatus?.selectedBackendId,
+          resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
+          authenticated: params.facts.providerStatus?.authenticated,
+          model: selection.resolvedLaunchModel ?? resolvedLaunchModel,
+          catalogModel: selection.catalogModel,
+        }),
         selectedModel: explicitModel ?? null,
         selectedModelKind: explicitModel ? 'explicit' : 'default',
         resolvedLaunchModel: selection.resolvedLaunchModel ?? resolvedLaunchModel,
@@ -4737,12 +4751,25 @@ export class TeamProvisioningService {
         selectedFastMode: params.request.fastMode,
       });
       const resolvedCodexModel = selection.resolvedLaunchModel ?? resolvedLaunchModel;
+      const providerBackendId =
+        migrateProviderBackendId(providerId, params.request.providerBackendId) ??
+        selection.providerBackendId;
 
       return {
         providerId,
-        providerBackendId:
-          migrateProviderBackendId(providerId, params.request.providerBackendId) ??
-          selection.providerBackendId,
+        providerBackendId,
+        billingMode: inferProviderBillingMode({
+          providerId,
+          providerBackendId,
+          authMethod: params.facts.providerStatus?.authMethod,
+          authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
+          backendKind: params.facts.providerStatus?.backend?.kind,
+          selectedBackendId: params.facts.providerStatus?.selectedBackendId,
+          resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
+          authenticated: params.facts.providerStatus?.authenticated,
+          model: resolvedCodexModel,
+          catalogModel: selection.catalogModel,
+        }),
         selectedModel: explicitModel ?? null,
         selectedModelKind: explicitModel ? 'explicit' : 'default',
         resolvedLaunchModel: resolvedCodexModel,
@@ -4759,11 +4786,23 @@ export class TeamProvisioningService {
     }
 
     const resolvedEffort = params.request.effort ?? null;
+    const providerBackendId =
+      migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null;
 
     return {
       providerId,
-      providerBackendId:
-        migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null,
+      providerBackendId,
+      billingMode: inferProviderBillingMode({
+        providerId,
+        providerBackendId,
+        authMethod: params.facts.providerStatus?.authMethod,
+        authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
+        backendKind: params.facts.providerStatus?.backend?.kind,
+        selectedBackendId: params.facts.providerStatus?.selectedBackendId,
+        resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
+        authenticated: params.facts.providerStatus?.authenticated,
+        model: resolvedLaunchModel,
+      }),
       selectedModel: explicitModel ?? null,
       selectedModelKind: explicitModel ? 'explicit' : 'default',
       resolvedLaunchModel,
