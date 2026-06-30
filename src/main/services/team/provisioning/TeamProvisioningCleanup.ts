@@ -64,6 +64,15 @@ export interface TeamProvisioningCleanupRun
   bootstrapUserPromptPath: string | null;
 }
 
+export interface IncompleteLaunchCleanupRun {
+  progress: Pick<TeamProvisioningProgress, 'state' | 'message' | 'error'>;
+  isLaunch: boolean;
+  launchStateClearedForRun: boolean;
+  provisioningComplete: boolean;
+  cancelRequested: boolean;
+  launchCleanupStateFinalized?: boolean;
+}
+
 interface GetDeleteStringMap {
   get(key: string): string | undefined;
   delete(key: string): boolean;
@@ -131,6 +140,27 @@ export interface TeamProvisioningCleanupPorts<TRun extends TeamProvisioningClean
   };
   retainProvisioningProgress(runId: string, progress: TeamProvisioningProgress): void;
   runs: DeleteStringMap;
+}
+
+export function shouldFinalizeIncompleteLaunchState(run: IncompleteLaunchCleanupRun): boolean {
+  return (
+    run.isLaunch &&
+    run.launchStateClearedForRun !== false &&
+    !run.provisioningComplete &&
+    !run.cancelRequested &&
+    run.launchCleanupStateFinalized !== true
+  );
+}
+
+export function buildIncompleteLaunchCleanupReason(
+  run: Pick<IncompleteLaunchCleanupRun, 'progress'>,
+  fallback = 'Launch ended before teammate bootstrap completed.'
+): string {
+  return typeof run.progress.error === 'string' && run.progress.error.trim()
+    ? run.progress.error.trim()
+    : run.progress.state === 'failed' && run.progress.message.trim()
+      ? run.progress.message.trim()
+      : fallback;
 }
 
 export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
