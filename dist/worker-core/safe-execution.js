@@ -141,6 +141,9 @@ export class InMemoryAttemptJournal {
                 ? {
                     lastFailureReason: input.attempt.failureReason,
                     lastFailureMessage: input.attempt.failureMessage,
+                    ...(input.attempt.failureDetails === undefined
+                        ? {}
+                        : { lastFailureDetails: input.attempt.failureDetails }),
                 }
                 : {}),
         };
@@ -170,6 +173,7 @@ export class InMemoryAttemptJournal {
             updatedAt: input.now,
             lastFailureReason: input.reason,
             ...(input.message === undefined ? {} : { lastFailureMessage: input.message }),
+            ...(input.details === undefined ? {} : { lastFailureDetails: input.details }),
         };
         this.records.set(input.taskId, next);
         return next;
@@ -223,6 +227,9 @@ export class LocalFileAttemptJournal {
                 ? {
                     lastFailureReason: input.attempt.failureReason,
                     lastFailureMessage: input.attempt.failureMessage,
+                    ...(input.attempt.failureDetails === undefined
+                        ? {}
+                        : { lastFailureDetails: input.attempt.failureDetails }),
                 }
                 : {}),
         };
@@ -252,6 +259,7 @@ export class LocalFileAttemptJournal {
             updatedAt: input.now,
             lastFailureReason: input.reason,
             ...(input.message === undefined ? {} : { lastFailureMessage: input.message }),
+            ...(input.details === undefined ? {} : { lastFailureDetails: input.details }),
         };
         await this.writeTask(next);
         return next;
@@ -437,6 +445,9 @@ export class DefaultContinuationPacketBuilder {
         const diffStatText = input.snapshot.diffStat
             ? `\nDiff stat:\n${input.snapshot.diffStat}\n`
             : "";
+        const controlText = input.controlBatch?.message
+            ? `\n${input.controlBatch.message}\n`
+            : "";
         const message = [
             "Continue the same task in the current workspace.",
             "",
@@ -453,6 +464,7 @@ export class DefaultContinuationPacketBuilder {
             "Current workspace summary:",
             input.snapshot.summary,
             diffStatText.trimEnd(),
+            controlText.trimEnd(),
             "",
             "Changed files:",
             filesText,
@@ -474,6 +486,9 @@ export class DefaultContinuationPacketBuilder {
             ...(input.previousOutputSummary === undefined
                 ? {}
                 : { previousOutputSummary: input.previousOutputSummary }),
+            ...(input.controlBatch?.signalIds.length
+                ? { workerControlSignalIds: input.controlBatch.signalIds }
+                : {}),
             message,
         };
     }
@@ -537,6 +552,46 @@ export class SafeExecutionRunner {
                     replayed: true,
                 };
             }
+            if (input.workspace.requireGitWorkspace) {
+                try {
+                    await assertGitWorkspace(workspacePath);
+                }
+                catch (error) {
+                    return this.failStartedTask({ input, error });
+                }
+            }
+            if (existing?.status === "running" && existing.attempts.length === 0) {
+                let snapshot;
+                try {
+                    snapshot = await this.snapshotter.capture({
+                        workspacePath,
+                        includeDiff: true,
+                        ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+                    });
+                }
+                catch (error) {
+                    return this.failStartedTask({ input, error });
+                }
+                if (snapshot.dirty) {
+                    const safeMessage = "Safe execution found an interrupted running task with unrecorded workspace changes.";
+                    task = await this.options.journal.markPartial({
+                        taskId: input.taskId,
+                        status: "partial",
+                        reason: "unknown_error",
+                        message: safeMessage,
+                        details: interruptedWorkspaceDetails(snapshot),
+                        now: this.clock.now(),
+                    });
+                    return {
+                        status: "partial",
+                        task,
+                        attempts: task.attempts,
+                        reason: "unknown_error",
+                        safeMessage,
+                        failureDetails: interruptedWorkspaceDetails(snapshot),
+                    };
+                }
+            }
             const policy = normalizePolicy(input);
             let job = input.job;
             let previousOutputSummary = task.outputSummary;
@@ -544,12 +599,18 @@ export class SafeExecutionRunner {
             if (task.attempts.length > 0 &&
                 task.lastFailureReason &&
                 policy.continuationMode !== "disabled") {
-                const snapshot = await this.snapshotter.capture({
-                    workspacePath,
-                    includeDiff: true,
-                    ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-                });
-                const packet = this.continuationPacketBuilder.build({
+                let snapshot;
+                try {
+                    snapshot = await this.snapshotter.capture({
+                        workspacePath,
+                        includeDiff: true,
+                        ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+                    });
+                }
+                catch (error) {
+                    return this.failStartedTask({ input, error });
+                }
+                const packet = await this.buildContinuationPacket({
                     taskId: input.taskId,
                     attemptNumber: firstAttemptNumber,
                     provider: input.provider,
@@ -560,6 +621,9 @@ export class SafeExecutionRunner {
                     ...(previousOutputSummary === undefined
                         ? {}
                         : { previousOutputSummary }),
+                    ...(input.controlTarget === undefined
+                        ? {}
+                        : { controlTarget: input.controlTarget }),
                 });
                 const continuationJob = continuationJobFor({
                     factory: input.continuationJobFactory,
@@ -574,6 +638,9 @@ export class SafeExecutionRunner {
                         status: "partial",
                         reason: task.lastFailureReason,
                         message: safeMessage,
+                        ...(task.lastFailureDetails === undefined
+                            ? {}
+                            : { details: task.lastFailureDetails }),
                         now: this.clock.now(),
                     });
                     return {
@@ -582,6 +649,9 @@ export class SafeExecutionRunner {
                         attempts: partial.attempts,
                         reason: task.lastFailureReason,
                         safeMessage,
+                        ...(task.lastFailureDetails === undefined
+                            ? {}
+                            : { failureDetails: task.lastFailureDetails }),
                     };
                 }
                 job = continuationJob;
@@ -603,15 +673,36 @@ export class SafeExecutionRunner {
                         safeMessage: "Safe execution run was aborted.",
                     };
                 }
-                const before = await this.snapshotter.capture({
-                    workspacePath,
-                    ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-                });
+                let before;
+                try {
+                    before = await this.snapshotter.capture({
+                        workspacePath,
+                        ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+                    });
+                }
+                catch (error) {
+                    return this.failStartedTask({ input, error });
+                }
                 const startedAt = this.clock.now();
+                const attemptAbort = createAttemptAbortController(input.abortSignal);
+                const attemptTarget = attemptControlTarget({
+                    input,
+                    workspacePath,
+                    attemptNumber,
+                });
+                const activeAttempt = this.options.activeAttemptRegistry?.register({
+                    taskId: input.taskId,
+                    attemptNumber,
+                    provider: input.provider,
+                    workspacePath,
+                    target: attemptTarget,
+                    startedAt,
+                    abortController: attemptAbort.controller,
+                });
                 try {
                     const result = await input.pool.run(job, {
                         idempotencyKey: `${input.taskId}:${attemptNumber}`,
-                        ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+                        abortSignal: attemptAbort.controller.signal,
                         retryPolicy: {
                             maxAttempts: 1,
                             retryOnSlotCapacityUnavailable: false,
@@ -620,7 +711,7 @@ export class SafeExecutionRunner {
                     const after = await this.snapshotter.capture({
                         workspacePath,
                         ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-                    });
+                    }).catch((error) => unavailableWorkspaceSnapshot({ workspacePath, error }));
                     previousOutputSummary = input.summarizeResult?.(result);
                     const metadata = input.attemptMetadata?.({ result });
                     const attempt = completeAttemptRecord({
@@ -657,13 +748,21 @@ export class SafeExecutionRunner {
                     };
                 }
                 catch (error) {
+                    let afterCaptureError;
                     const after = await this.snapshotter.capture({
                         workspacePath,
                         includeDiff: true,
                         ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+                    }).catch((error) => {
+                        afterCaptureError = error;
+                        return unavailableWorkspaceSnapshot({ workspacePath, error });
                     });
-                    const classification = input.classifyError?.(error) ??
-                        defaultSafeExecutionErrorClassifier(error);
+                    const runtimeInterrupt = runtimeInterruptClassification(attemptAbort.controller.signal.reason);
+                    const classification = withFailureDetails(runtimeInterrupt ??
+                        input.classifyError?.(error) ??
+                        defaultSafeExecutionErrorClassifier(error), afterCaptureError === undefined
+                        ? undefined
+                        : prefixFailureDetails("workspaceSnapshot", failureDetailsFromUnknown(afterCaptureError)));
                     const failureMessage = input.summarizeError?.(error) ?? classification.safeMessage;
                     const attempt = failedAttemptRecord({
                         input,
@@ -696,6 +795,9 @@ export class SafeExecutionRunner {
                             status,
                             reason: classification.reason,
                             message: canContinue.safeMessage ?? failureMessage,
+                            ...(classification.details === undefined
+                                ? {}
+                                : { details: classification.details }),
                             now: this.clock.now(),
                         });
                         return {
@@ -704,10 +806,13 @@ export class SafeExecutionRunner {
                             attempts: task.attempts,
                             reason: classification.reason,
                             safeMessage: canContinue.safeMessage ?? failureMessage,
+                            ...(classification.details === undefined
+                                ? {}
+                                : { failureDetails: classification.details }),
                             error,
                         };
                     }
-                    const packet = this.continuationPacketBuilder.build({
+                    const packet = await this.buildContinuationPacket({
                         taskId: input.taskId,
                         attemptNumber: attemptNumber + 1,
                         provider: input.provider,
@@ -718,6 +823,9 @@ export class SafeExecutionRunner {
                         ...(previousOutputSummary === undefined
                             ? {}
                             : { previousOutputSummary }),
+                        ...(input.controlTarget === undefined
+                            ? {}
+                            : { controlTarget: input.controlTarget }),
                     });
                     const continuationJob = continuationJobFor({
                         factory: input.continuationJobFactory,
@@ -732,6 +840,9 @@ export class SafeExecutionRunner {
                             status: "partial",
                             reason: classification.reason,
                             message: safeMessage,
+                            ...(classification.details === undefined
+                                ? {}
+                                : { details: classification.details }),
                             now: this.clock.now(),
                         });
                         return {
@@ -740,10 +851,17 @@ export class SafeExecutionRunner {
                             attempts: task.attempts,
                             reason: classification.reason,
                             safeMessage,
+                            ...(classification.details === undefined
+                                ? {}
+                                : { failureDetails: classification.details }),
                             error,
                         };
                     }
                     job = continuationJob;
+                }
+                finally {
+                    activeAttempt?.release();
+                    attemptAbort.dispose();
                 }
             }
             const exhausted = await this.options.journal.markPartial({
@@ -751,6 +869,9 @@ export class SafeExecutionRunner {
                 status: "partial",
                 reason: task.lastFailureReason ?? "unknown_error",
                 message: "Safe execution exhausted all configured attempts.",
+                ...(task.lastFailureDetails === undefined
+                    ? {}
+                    : { details: task.lastFailureDetails }),
                 now: this.clock.now(),
             });
             return {
@@ -759,12 +880,125 @@ export class SafeExecutionRunner {
                 attempts: exhausted.attempts,
                 reason: exhausted.lastFailureReason ?? "unknown_error",
                 safeMessage: "Safe execution exhausted all configured attempts.",
+                ...(exhausted.lastFailureDetails === undefined
+                    ? {}
+                    : { failureDetails: exhausted.lastFailureDetails }),
             };
         }
         finally {
             await lock.release();
         }
     }
+    async failStartedTask(input) {
+        const classification = defaultSafeExecutionErrorClassifier(input.error);
+        const failureMessage = input.input.summarizeError?.(input.error) ?? classification.safeMessage;
+        const status = finalStatusForFailure(classification.reason);
+        const task = await this.options.journal.markPartial({
+            taskId: input.input.taskId,
+            status,
+            reason: classification.reason,
+            message: failureMessage,
+            ...(classification.details === undefined
+                ? {}
+                : { details: classification.details }),
+            now: this.clock.now(),
+        });
+        return {
+            status,
+            task,
+            attempts: task.attempts,
+            reason: classification.reason,
+            safeMessage: failureMessage,
+            ...(classification.details === undefined
+                ? {}
+                : { failureDetails: classification.details }),
+            error: input.error,
+        };
+    }
+    async buildContinuationPacket(input) {
+        const controlBatch = this.options.controlInbox &&
+            shouldDeliverControlForContinuation(input.previousFailureReason)
+            ? await this.options.controlInbox.consumeForContinuation({
+                target: input.controlTarget ?? {
+                    jobId: input.taskId,
+                    workspaceId: input.workspacePath,
+                },
+                deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
+                now: this.clock.now(),
+            })
+            : undefined;
+        return this.continuationPacketBuilder.build({
+            taskId: input.taskId,
+            attemptNumber: input.attemptNumber,
+            provider: input.provider,
+            workspacePath: input.workspacePath,
+            originalPrompt: input.originalPrompt,
+            previousFailureReason: input.previousFailureReason,
+            snapshot: input.snapshot,
+            ...(input.previousOutputSummary === undefined
+                ? {}
+                : { previousOutputSummary: input.previousOutputSummary }),
+            ...(controlBatch === undefined ? {} : { controlBatch }),
+        });
+    }
+}
+function shouldDeliverControlForContinuation(previousFailureReason) {
+    return (previousFailureReason !== "account_unavailable" &&
+        previousFailureReason !== "reconnect_required");
+}
+function attemptControlTarget(input) {
+    const base = input.input.controlTarget ?? {
+        jobId: input.input.taskId,
+        workspaceId: input.workspacePath,
+    };
+    return {
+        ...base,
+        taskId: base.taskId ?? input.input.taskId,
+        workspaceId: base.workspaceId ?? input.workspacePath,
+        attemptId: base.attemptId ?? `${input.input.taskId}:attempt-${input.attemptNumber}`,
+    };
+}
+function createAttemptAbortController(parent) {
+    const controller = new AbortController();
+    if (!parent)
+        return { controller, dispose: () => undefined };
+    const abort = () => {
+        if (!controller.signal.aborted) {
+            controller.abort(parent.reason);
+        }
+    };
+    if (parent.aborted) {
+        abort();
+        return { controller, dispose: () => undefined };
+    }
+    parent.addEventListener("abort", abort, { once: true });
+    return {
+        controller,
+        dispose: () => parent.removeEventListener("abort", abort),
+    };
+}
+function runtimeInterruptClassification(reason) {
+    if (!isRuntimeInterruptReason(reason))
+        return null;
+    return {
+        reason: "runtime_interrupted",
+        safeMessage: reason.safeMessage,
+        retryable: true,
+        details: {
+            runtimeControl: "interrupt_then_continue",
+            ...(reason.signalId === undefined ? {} : { signalId: reason.signalId }),
+            ...(reason.requestedBy === undefined
+                ? {}
+                : { requestedBy: reason.requestedBy }),
+        },
+    };
+}
+function isRuntimeInterruptReason(value) {
+    if (!value || typeof value !== "object")
+        return false;
+    const record = value;
+    return (record.code === "runtime_controlled_interrupt" &&
+        typeof record.safeMessage === "string");
 }
 export function promptContinuationJobFactory(input) {
     return {
@@ -798,7 +1032,7 @@ export function defaultSafeExecutionErrorClassifier(error) {
                 retryable: true,
             };
         }
-        const classified = classifyWorkerFailureCode(item.details.reason ?? item.details.code, item.message);
+        const classified = classifyWorkerFailureCode(item.details.reason ?? item.details.code, item.message, unknownFailureDetails(chain, item.details));
         if (classified)
             return classified;
     }
@@ -830,7 +1064,7 @@ export function defaultSafeExecutionErrorClassifier(error) {
     const timeoutMessage = messages.find((candidate) => /\btimeout\b|\btimed out\b/i.test(candidate));
     if (timeoutMessage) {
         return {
-            reason: "unknown_error",
+            reason: "task_timeout",
             safeMessage: timeoutMessage,
             retryable: true,
         };
@@ -838,7 +1072,7 @@ export function defaultSafeExecutionErrorClassifier(error) {
     const invalidOutputMessage = messages.find((candidate) => /final_message_missing|structured_output_invalid|output_too_large|provider output was invalid/i.test(candidate));
     if (invalidOutputMessage) {
         return {
-            reason: "unknown_error",
+            reason: "provider_output_invalid",
             safeMessage: invalidOutputMessage,
             retryable: true,
         };
@@ -847,9 +1081,10 @@ export function defaultSafeExecutionErrorClassifier(error) {
         reason: "unknown_error",
         safeMessage: message,
         retryable: false,
+        ...optionalFailureDetails(unknownFailureDetails(chain)),
     };
 }
-function classifyWorkerFailureCode(code, safeMessage) {
+function classifyWorkerFailureCode(code, safeMessage, details) {
     switch (code) {
         case "quota_limited":
             return {
@@ -870,6 +1105,13 @@ function classifyWorkerFailureCode(code, safeMessage) {
                 safeMessage,
                 retryable: true,
             };
+        case "backend_unavailable":
+            return {
+                reason: "capacity_unavailable",
+                safeMessage,
+                retryable: true,
+                ...optionalFailureDetails(details),
+            };
         case "permission_required":
             return {
                 reason: "permission_required",
@@ -882,13 +1124,31 @@ function classifyWorkerFailureCode(code, safeMessage) {
                 safeMessage,
                 retryable: false,
             };
+        case "runtime_interrupted":
+            return {
+                reason: "runtime_interrupted",
+                safeMessage,
+                retryable: true,
+                ...optionalFailureDetails(details),
+            };
         case "task_timeout":
+            return {
+                reason: "task_timeout",
+                safeMessage,
+                retryable: true,
+            };
         case "provider_output_invalid":
+            return {
+                reason: "provider_output_invalid",
+                safeMessage,
+                retryable: true,
+            };
         case "unknown_runtime_failure":
             return {
                 reason: "unknown_error",
                 safeMessage,
                 retryable: true,
+                ...optionalFailureDetails(details),
             };
         default:
             return null;
@@ -941,6 +1201,8 @@ function shouldContinueAfterFailure(input) {
         };
     }
     switch (input.classification.reason) {
+        case "runtime_interrupted":
+            return { allowed: true };
         case "quota_limited":
         case "capacity_unavailable":
             return { allowed: input.policy.retryOnCapacity };
@@ -949,18 +1211,28 @@ function shouldContinueAfterFailure(input) {
         case "reconnect_required":
             return { allowed: input.policy.retryOnReconnectRequired };
         case "unknown_error":
+        case "task_timeout":
+        case "provider_output_invalid":
             if (input.workspaceChanged) {
                 return {
-                    allowed: input.policy.retryUnknownChangedWorkspace,
-                    ...(input.policy.retryUnknownChangedWorkspace
-                        ? {}
-                        : {
-                            safeMessage: "Safe execution stopped after an unknown error changed the workspace.",
-                        }),
+                    allowed: input.classification.reason === "unknown_error"
+                        ? input.policy.retryUnknownChangedWorkspace
+                        : false,
+                    ...(input.classification.reason !== "unknown_error"
+                        ? {
+                            safeMessage: `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
+                        }
+                        : input.policy.retryUnknownChangedWorkspace
+                            ? {}
+                            : {
+                                safeMessage: "Safe execution stopped after an unknown error changed the workspace.",
+                            }),
                 };
             }
             return {
-                allowed: input.policy.retryUnknownCleanWorkspace,
+                allowed: input.classification.reason === "unknown_error"
+                    ? input.policy.retryUnknownCleanWorkspace
+                    : true,
             };
         case "permission_required":
         case "user_abort":
@@ -1024,6 +1296,9 @@ function failedAttemptRecord(input) {
         status: input.classification.retryable ? "blocked" : "failed",
         failureReason: input.classification.reason,
         failureMessage: input.failureMessage,
+        ...(input.classification.details === undefined
+            ? {}
+            : { failureDetails: input.classification.details }),
         workspaceDirtyBefore: input.before.dirty,
         workspaceDirtyAfter: input.after.dirty,
         changedFiles: changedFilesBetween(input.before, input.after),
@@ -1032,7 +1307,9 @@ function failedAttemptRecord(input) {
 function finalStatusForFailure(reason) {
     if (reason === "user_abort")
         return "aborted";
-    if (reason === "unknown_error" || reason === "permission_required") {
+    if (reason === "unknown_error" ||
+        reason === "permission_required" ||
+        reason === "provider_output_invalid") {
         return "failed";
     }
     return "partial";
@@ -1041,12 +1318,23 @@ function workspaceChanged(before, after) {
     return before.fingerprint !== after.fingerprint || after.dirty;
 }
 function changedFilesBetween(before, after) {
-    const files = new Set();
-    for (const file of before.changedFiles)
-        files.add(file);
-    for (const file of after.changedFiles)
-        files.add(file);
-    return [...files].sort((left, right) => left.localeCompare(right));
+    if (before.mode === after.mode) {
+        return changedFilesDelta(before.changedFiles, after.changedFiles);
+    }
+    return changedFilesDelta(before.changedFiles, after.changedFiles);
+}
+function changedFilesDelta(before, after) {
+    const beforeFiles = new Set(before);
+    return after
+        .filter((file) => !beforeFiles.has(file))
+        .sort((left, right) => left.localeCompare(right));
+}
+function interruptedWorkspaceDetails(snapshot) {
+    return {
+        workspaceMode: snapshot.mode,
+        changedFileCount: String(snapshot.changedFiles.length),
+        changedFiles: snapshot.changedFiles.slice(0, 20).join(","),
+    };
 }
 function requireTaskRecord(record, taskId) {
     if (record)
@@ -1069,6 +1357,99 @@ function errorChain(error) {
 }
 function errorMessage(error) {
     return error instanceof Error ? error.message : String(error);
+}
+function failureDetailsFromUnknown(error) {
+    return unknownFailureDetails(errorChain(error));
+}
+function unknownFailureDetails(chain, baseDetails) {
+    const details = {};
+    mergeStringDetails(details, baseDetails);
+    const messages = [];
+    for (const item of chain) {
+        const message = errorMessage(item);
+        if (message.trim())
+            messages.push(message);
+        if (isSafeExecutionError(item)) {
+            details.safeExecutionCode = item.code;
+            mergeStringDetails(details, item.details);
+        }
+        if (isSubscriptionWorkerError(item)) {
+            details.subscriptionWorkerCode ??= item.code;
+            mergeStringDetails(details, item.details);
+        }
+        mergeStringDetails(details, processFailureDetails(item, message));
+    }
+    if (details.rawCause === undefined && messages.length > 0) {
+        details.rawCause = safeDetailTail(messages.join(" <- "));
+    }
+    return Object.keys(details).length === 0 ? undefined : details;
+}
+function processFailureDetails(error, message) {
+    const details = {};
+    if (typeof error === "object" && error !== null) {
+        const record = error;
+        if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
+            details.exitCode = String(record.exitCode);
+        }
+        if (typeof record.stderr === "string" && record.stderr.trim()) {
+            details.stderrTail = safeDetailTail(record.stderr);
+        }
+        if (typeof record.stdout === "string" && record.stdout.trim()) {
+            details.stdoutTail = safeDetailTail(record.stdout);
+        }
+    }
+    const match = /\b(?:node_process_runner_failed|codex_json_exec_failed|codex_cli_exec_failed):(\d+):(.*)$/s.exec(message);
+    if (match) {
+        details.exitCode ??= match[1];
+        if (match[2]?.trim())
+            details.stderrTail ??= safeDetailTail(match[2]);
+    }
+    return Object.keys(details).length === 0 ? undefined : details;
+}
+function mergeStringDetails(target, source) {
+    if (!source)
+        return;
+    for (const [key, value] of Object.entries(source)) {
+        target[key] ??= safeDetailTail(value);
+    }
+}
+function withFailureDetails(classification, details) {
+    const merged = mergeFailureDetails(classification.details, details);
+    return merged === undefined ? classification : { ...classification, details: merged };
+}
+function mergeFailureDetails(left, right) {
+    const merged = {};
+    mergeStringDetails(merged, left);
+    mergeStringDetails(merged, right);
+    return Object.keys(merged).length === 0 ? undefined : merged;
+}
+function prefixFailureDetails(prefix, details) {
+    if (!details)
+        return undefined;
+    return Object.fromEntries(Object.entries(details).map(([key, value]) => [`${prefix}.${key}`, value]));
+}
+function optionalFailureDetails(details) {
+    return details === undefined || Object.keys(details).length === 0
+        ? {}
+        : { details };
+}
+function unavailableWorkspaceSnapshot(input) {
+    const capturedAt = new Date();
+    const message = errorMessage(input.error);
+    return {
+        mode: "unavailable",
+        workspacePath: input.workspacePath,
+        capturedAt,
+        dirty: true,
+        changedFiles: [],
+        fingerprint: `unavailable:${hashText(`${input.workspacePath}:${capturedAt.toISOString()}:${message}`)}`,
+        summary: `Workspace snapshot unavailable: ${safeDetailTail(message || "unknown error")}`,
+        warnings: ["workspace_snapshot_unavailable"],
+    };
+}
+function safeDetailTail(value) {
+    const compact = value.replace(/\s+/g, " ").trim();
+    return compact.length > 1000 ? compact.slice(-1000) : compact;
 }
 function attemptMetadataFromError(error) {
     let workerId;
@@ -1104,6 +1485,18 @@ function mergeChangedFiles(left, right) {
 async function canonicalWorkspacePath(path) {
     const resolved = resolve(path);
     return realpath(resolved).catch(() => resolved);
+}
+async function assertGitWorkspace(workspacePath) {
+    const result = await execFileAsync("git", [
+        "rev-parse",
+        "--is-inside-work-tree",
+    ], {
+        cwd: workspacePath,
+        timeout: 5_000,
+    }).catch(() => null);
+    if (result?.stdout.toString().trim() === "true")
+        return;
+    throw new SafeExecutionError("safe_execution_workspace_not_git", "Safe execution requires a git worktree workspace.", { details: { workspacePath } });
 }
 function workspaceRunId(workspacePath) {
     return `workspace:${hashText(workspacePath).slice(0, 24)}`;
@@ -1221,6 +1614,9 @@ function parseTaskRecord(raw) {
         ...(stringValue(value.lastFailureMessage) === undefined
             ? {}
             : { lastFailureMessage: stringValue(value.lastFailureMessage) }),
+        ...(stringRecordValue(value.lastFailureDetails) === undefined
+            ? {}
+            : { lastFailureDetails: stringRecordValue(value.lastFailureDetails) }),
     };
 }
 function parseAttemptRecord(value) {
@@ -1246,6 +1642,9 @@ function parseAttemptRecord(value) {
         ...(stringValue(record.failureMessage) === undefined
             ? {}
             : { failureMessage: stringValue(record.failureMessage) }),
+        ...(stringRecordValue(record.failureDetails) === undefined
+            ? {}
+            : { failureDetails: stringRecordValue(record.failureDetails) }),
         workspaceDirtyBefore: Boolean(record.workspaceDirtyBefore),
         ...(typeof record.workspaceDirtyAfter === "boolean"
             ? { workspaceDirtyAfter: record.workspaceDirtyAfter }
@@ -1302,6 +1701,18 @@ function requireNumber(value, field) {
 function numberValue(value) {
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
+function stringRecordValue(value) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return undefined;
+    }
+    const record = {};
+    for (const [key, nested] of Object.entries(value)) {
+        if (typeof nested !== "string")
+            return undefined;
+        record[key] = nested;
+    }
+    return record;
+}
 function requireDate(value, field) {
     const normalized = dateValue(value);
     if (normalized !== undefined)
@@ -1352,6 +1763,9 @@ function isAttemptFailureReason(value) {
         value === "account_unavailable" ||
         value === "reconnect_required" ||
         value === "permission_required" ||
+        value === "task_timeout" ||
+        value === "provider_output_invalid" ||
+        value === "runtime_interrupted" ||
         value === "user_abort" ||
         value === "unknown_error");
 }

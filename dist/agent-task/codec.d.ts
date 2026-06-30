@@ -14,6 +14,7 @@ export declare function makeFailedAgentTaskResult(input: {
     readonly retryable?: boolean;
     readonly reconnectRequired?: boolean;
     readonly causeCategory?: string;
+    readonly details?: Readonly<Record<string, string>>;
     readonly warnings?: readonly RuntimeWarning[];
     readonly telemetry?: ProviderTaskTelemetry;
 }): AgentTaskResult;

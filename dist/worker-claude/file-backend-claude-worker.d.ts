@@ -1,6 +1,6 @@
 import { type ClockPort, type ObservabilityPort, type ProviderTask, type ProviderTaskTelemetry, type RuntimeDeps } from "@vioxen/subscription-runtime/core";
-import { type ClaudeTaskExecutionEngine } from "@vioxen/subscription-runtime/provider-claude";
-import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
+import { type ClaudeTaskExecutionEngine, type ClaudeRuntimeTaskExecutionEngineOptions } from "@vioxen/subscription-runtime/provider-claude";
+import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerRunOptions, type SubscriptionWorkerState, type WorkerControlContinuationSource, type WorkerControlTarget, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
 import { type ClaudeRateLimitTelemetrySource, type ClaudeRateLimitWindowName } from "./rate-limit-telemetry.js";
 import { type ClaudeLogicalThreadState, type ClaudeLogicalThreadStore, type ClaudeTranscriptBundleStore } from "./thread-handoff.js";
 export type ClaudeWorkerCapacityPolicy = {
@@ -27,6 +27,8 @@ export type FileBackendClaudeWorkerOptions = {
     readonly taskTimeoutMs?: number;
     readonly baseEnv?: Readonly<Record<string, string | undefined>>;
     readonly claudePath?: string;
+    readonly runtimeModuleLoader?: ClaudeRuntimeTaskExecutionEngineOptions["runtimeModuleLoader"];
+    readonly providerModuleLoader?: ClaudeRuntimeTaskExecutionEngineOptions["providerModuleLoader"];
     readonly pollIntervalMs?: number;
     readonly capacityPolicy?: ClaudeWorkerCapacityPolicy;
     readonly rateLimitTelemetry?: ClaudeRateLimitTelemetrySource;
@@ -38,8 +40,12 @@ export type FileBackendClaudeWorkerOptions = {
     readonly workspace?: RuntimeDeps["workspace"];
     readonly workspacePath?: string;
     readonly clock?: ClockPort;
+    readonly controlInbox?: WorkerControlContinuationSource;
+    readonly runArtifactsRootDir?: string;
+    readonly runArtifactHeartbeatMs?: number;
 };
 export type FileBackendClaudeWorkerJob = {
+    readonly jobId?: string;
     readonly runId?: string;
     readonly prompt: string;
     readonly systemPrompt?: string;
@@ -48,11 +54,13 @@ export type FileBackendClaudeWorkerJob = {
     readonly controls?: ProviderTask["controls"];
     readonly abortSignal?: AbortSignal;
     readonly metadata?: Readonly<Record<string, string>>;
+    readonly controlTarget?: WorkerControlTarget;
 };
 export type FileBackendClaudeWorkerResult = {
     readonly outputText: string;
     readonly structuredOutput?: unknown;
     readonly telemetry?: ProviderTaskTelemetry;
+    readonly workerControlSignalIds?: readonly string[];
     readonly warnings: readonly {
         readonly code: string;
         readonly safeMessage: string;
@@ -74,6 +82,7 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
     private readonly workspace;
     private readonly observability;
     private readonly clock;
+    private readonly controlInbox;
     private readonly sessionDriver;
     private readonly agentDriver;
     private readonly sessionStore;
@@ -83,12 +92,15 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
     private readonly rateLimitTelemetry;
     private readonly logicalThreadStore;
     private readonly transcriptBundleStore;
+    private readonly runArtifacts;
+    private readonly runArtifactHeartbeatMs;
     private capacityState;
     private windowStartedAtMs;
     private runsInWindow;
     private quotaGroup;
     private capacityAccountId;
     constructor(options: FileBackendClaudeWorkerOptions);
+    private defaultClaudeTaskEngine;
     get state(): SubscriptionWorkerState;
     start(): Promise<void>;
     seedClaudeOAuth(input: {
@@ -100,10 +112,10 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
         readonly metadata?: Readonly<Record<string, string>>;
     }): Promise<void>;
     prewarm(): Promise<SubscriptionWorkerPrewarmResult>;
-    run(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
-    run(job: FileBackendClaudeWorkerJob): Promise<FileBackendClaudeWorkerResult>;
+    run(job: FileBackendClaudeWorkerThreadJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerThreadResult>;
+    run(job: FileBackendClaudeWorkerJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerResult>;
     private runProviderTask;
-    runThreadJob(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
+    runThreadJob(job: FileBackendClaudeWorkerThreadJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerThreadResult>;
     private removeTranscriptBundle;
     capacity(): WorkerCapacitySnapshot;
     health(): Promise<SubscriptionWorkerHealth>;

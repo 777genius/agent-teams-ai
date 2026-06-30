@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DefaultRedactor,
   providerTaskSystemPromptMaxBytes,
+  type ProviderFailure,
   type ProviderTaskEvent,
   type ProcessResult,
   type RunnerCapabilities,
@@ -13,7 +14,9 @@ import {
 } from "../../core/testing/contracts";
 import {
   ClaudeBgProviderDriver,
+  ClaudeCliTaskExecutionEngine,
   ClaudeRuntimeTaskExecutionEngine,
+  ClaudeProviderFailureError,
   ClaudeSessionDriver,
   ClaudeTaskAgentDriver,
   claudeBgTaskAgentCapabilities,
@@ -342,6 +345,46 @@ describe("Claude provider adapter", () => {
     });
   });
 
+  it("preserves typed Claude runtime failure diagnostics", async () => {
+    const redactor = new DefaultRedactor();
+    redactor.registerSecret("raw-claude-token", "claude-token");
+    const result = await new ClaudeTaskAgentDriver({
+      engine: new RecordingClaudeEngine({
+        throwFailure: {
+          code: "permission_required",
+          retryable: false,
+          reconnectRequired: false,
+          safeMessage: "Claude permission required for raw-claude-token.",
+          causeCategory: "permission_required",
+          details: {
+            runtimeMessage: "approval required for raw-claude-token",
+          },
+        },
+      }),
+    }).runTask({
+      session: validSession,
+      task: { kind: "review", prompt: "inspect diff" },
+      workspace: { path: "/tmp/claude-workspace" },
+      runner: new StaticRunner(),
+      redactor,
+      abortSignal: new AbortController().signal,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      failure: {
+        code: "permission_required",
+        safeMessage: "Claude permission required for [redacted:claude-token].",
+        details: {
+          runtimeMessage: "approval required for [redacted:claude-token]",
+        },
+      },
+      telemetry: {
+        finishReason: "provider_error",
+      },
+    });
+  });
+
   it("exposes a combined provider driver for composition roots", async () => {
     const engine = new RecordingClaudeEngine({ outputText: "combined output" });
     const driver = new ClaudeBgProviderDriver({ engine });
@@ -471,6 +514,89 @@ describe("Claude provider adapter", () => {
       oauthToken: "claude-oauth-secret",
       pollIntervalMs: 10,
     });
+  });
+
+  it("runs Claude CLI fallback with isolated explicit OAuth auth", async () => {
+    const runner = new RecordingRunner({
+      stdout: '{"verdict":"APPROVE"}\n',
+      stderr: "diagnostic\n",
+      durationMs: 42,
+    });
+    const engine = new ClaudeCliTaskExecutionEngine({
+      baseEnv: {
+        PATH: "/usr/bin",
+        HOME: "/Users/real-home",
+        CLAUDE_CODE_OAUTH_TOKEN: "must-not-inherit",
+        GITHUB_TOKEN: "must-not-pass",
+      },
+      claudePath: "/usr/local/bin/claude",
+      timeoutMs: 1234,
+    });
+    const redactor = new DefaultRedactor();
+    redactor.registerSecret("claude-oauth-secret", "claude-token");
+
+    const result = await engine.run({
+      allowedTools: ["Read", "Grep"],
+      appendSystemPrompt: "system",
+      abortSignal: new AbortController().signal,
+      maxTurns: 1,
+      mcpConfig: ['{"mcpServers":{}}'],
+      model: "sonnet",
+      outputSchemaName: "review-verdict",
+      permissionMode: "read-only",
+      prompt: "review",
+      redactor,
+      runner,
+      session: {
+        authMode: "oauth",
+        configDir: "/tmp/claude-config",
+        oauthToken: "claude-oauth-secret",
+      },
+      strictMcpConfig: true,
+      workspacePath: "/tmp/workspace",
+    });
+
+    expect(result).toMatchObject({
+      outputText: '{"verdict":"APPROVE"}',
+      structuredOutput: { verdict: "APPROVE" },
+      telemetry: { durationMs: 42 },
+    });
+    expect(result.warnings.map((warning) => warning.code)).toEqual([
+      "claude_cli_max_turns_unsupported",
+      "claude_cli_stderr",
+    ]);
+    expect(runner.lastRun).toMatchObject({
+      command: "/usr/local/bin/claude",
+      cwd: "/tmp/workspace",
+      timeoutMs: 1234,
+      env: {
+        PATH: "/usr/bin",
+        HOME: "/tmp/claude-config",
+        CLAUDE_CONFIG_DIR: "/tmp/claude-config",
+        CLAUDE_CODE_OAUTH_TOKEN: "claude-oauth-secret",
+        CI: "true",
+      },
+    });
+    expect(runner.lastRun?.env.GITHUB_TOKEN).toBeUndefined();
+    expect(runner.lastRun?.args).toEqual([
+      "--print",
+      "--safe-mode",
+      "--no-session-persistence",
+      "--output-format",
+      "text",
+      "--model",
+      "sonnet",
+      "--permission-mode",
+      "dontAsk",
+      "--append-system-prompt",
+      "system",
+      "--allowedTools",
+      "Read,Grep",
+      "--mcp-config",
+      '{"mcpServers":{}}',
+      "--strict-mcp-config",
+      "review",
+    ]);
   });
 
   it("rejects write-capable allowed tools when Claude permission mode is read-only", async () => {
@@ -660,7 +786,7 @@ describe("Claude provider adapter", () => {
     });
     expect(fakeProvider.constructorOptions.fs).toBeDefined();
     expect(fakeProvider.constructorOptions.runner).toBeDefined();
-    expect(fakeProvider.constructorOptions.redactor).toBeDefined();
+    expect(Object.hasOwn(fakeProvider.constructorOptions, "redactor")).toBe(false);
   });
 
   it("streams claude-runtime BG events as provider-neutral task events", async () => {
@@ -884,6 +1010,25 @@ class StaticRunner implements RunnerPort {
   }
 }
 
+class RecordingRunner implements RunnerPort {
+  readonly runnerId = "recording-runner";
+  readonly capabilities = runnerCapabilities;
+  lastRun: Parameters<RunnerPort["run"]>[0] | null = null;
+
+  constructor(private readonly result: Partial<ProcessResult> = {}) {}
+
+  async run(input: Parameters<RunnerPort["run"]>[0]): Promise<ProcessResult> {
+    this.lastRun = input;
+    return {
+      exitCode: 0,
+      stdout: "",
+      stderr: "",
+      durationMs: 1,
+      ...this.result,
+    };
+  }
+}
+
 class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
   readonly kind = "recording-claude";
   readonly capabilities = {
@@ -900,6 +1045,7 @@ class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
       readonly outputText?: string;
       readonly structuredOutput?: unknown;
       readonly throwMessage?: string;
+      readonly throwFailure?: ProviderFailure;
     } = {},
   ) {}
 
@@ -907,6 +1053,9 @@ class RecordingClaudeEngine implements ClaudeTaskExecutionEngine {
     this.records.push(input);
     if (this.behavior.throwMessage) {
       throw new Error(this.behavior.throwMessage);
+    }
+    if (this.behavior.throwFailure) {
+      throw new ClaudeProviderFailureError(this.behavior.throwFailure);
     }
     return {
       outputText: this.behavior.outputText ?? `claude:${input.prompt}`,
@@ -995,12 +1144,6 @@ function fakeProviderModule(provider: FakeClaudeRuntimeProvider) {
       remove() {
         return provider.remove();
       }
-    },
-    NodeProcessRunner: class {
-      constructor(readonly options?: Record<string, unknown>) {}
-    },
-    SecretRedactor: class {
-      constructor(readonly options?: { readonly secrets?: readonly string[] }) {}
     },
   };
 }

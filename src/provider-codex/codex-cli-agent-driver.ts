@@ -118,7 +118,11 @@ export class CodexCliAgentDriver implements AgentDriver {
       if (result.exitCode !== 0) {
         return {
           status: "failed",
-          failure: this.classifyRunFailure(`${stdout}\n${stderr}`),
+          failure: this.classifyRunFailure({
+            exitCode: result.exitCode,
+            stdout,
+            stderr,
+          }),
           warnings: [],
         };
       }

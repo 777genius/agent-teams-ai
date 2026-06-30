@@ -1,5 +1,7 @@
 node_modules
 coverage
+.DS_Store
+.worktrees/
 .env
 .env.*
 *.log

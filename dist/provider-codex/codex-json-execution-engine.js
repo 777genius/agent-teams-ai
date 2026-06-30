@@ -54,7 +54,11 @@ export class PackagedCodexJsonExecutionEngine {
         assertOutputWithinBounds(stdout, this.options.maxOutputBytes);
         assertOutputWithinBounds(stderr, this.options.maxOutputBytes);
         if (result.exitCode !== 0) {
-            throw new Error(`codex_json_exec_failed:${result.exitCode}:${safeTail(`${stdout}\n${stderr}`)}`);
+            throw Object.assign(new Error(`codex_json_exec_failed:${result.exitCode}:${safeTail(`${stdout}\n${stderr}`)}`), {
+                exitCode: result.exitCode,
+                stdout,
+                stderr,
+            });
         }
         const outputText = extractFinalAssistantText(stdout);
         if (input.outputSchema) {

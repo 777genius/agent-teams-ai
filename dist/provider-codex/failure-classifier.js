@@ -1,7 +1,8 @@
 import { classifyCodexRuntimeFailure } from "./codex-cli-domain.js";
 export function classifyCodexFailure(error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = codexFailureMessage(error);
     const state = classifyCodexRuntimeFailure(message);
+    const details = codexFailureDetails(error, message);
     switch (state) {
         case "task_cancelled":
             return {
@@ -51,6 +52,15 @@ export function classifyCodexFailure(error) {
                 safeMessage: "Codex quota or billing limit was reached.",
                 causeCategory: state,
             };
+        case "backend_unavailable":
+            return {
+                code: "backend_unavailable",
+                retryable: true,
+                reconnectRequired: false,
+                safeMessage: "Codex app-server goal backend is temporarily blocked.",
+                causeCategory: state,
+                ...(details === undefined ? {} : { details }),
+            };
         case "permission_required":
             return {
                 code: "permission_required",
@@ -66,7 +76,69 @@ export function classifyCodexFailure(error) {
                 reconnectRequired: false,
                 safeMessage: "Codex runtime failed.",
                 causeCategory: state,
+                ...(details === undefined ? {} : { details }),
             };
     }
+}
+function codexFailureMessage(error) {
+    const process = processFailureLike(error);
+    if (process)
+        return `${process.stdout ?? ""}\n${process.stderr ?? ""}`;
+    return error instanceof Error ? error.message : String(error);
+}
+function codexFailureDetails(error, message) {
+    const details = {};
+    const process = processFailureLike(error);
+    if (process?.exitCode !== undefined) {
+        details.exitCode = String(process.exitCode);
+    }
+    if (process?.stderr) {
+        details.stderrTail = safeTail(process.stderr);
+    }
+    if (process?.stdout) {
+        details.stdoutTail = safeTail(process.stdout);
+    }
+    const parsed = parseProcessFailureMessage(message);
+    if (details.exitCode === undefined && parsed?.exitCode !== undefined) {
+        details.exitCode = parsed.exitCode;
+    }
+    if (details.stderrTail === undefined && parsed?.stderrTail) {
+        details.stderrTail = parsed.stderrTail;
+    }
+    if (message.trim()) {
+        details.rawCause = safeTail(message);
+    }
+    return Object.keys(details).length === 0 ? undefined : details;
+}
+function processFailureLike(error) {
+    if (typeof error !== "object" || error === null)
+        return null;
+    const record = error;
+    const exitCode = typeof record.exitCode === "number" && Number.isInteger(record.exitCode)
+        ? record.exitCode
+        : undefined;
+    const stdout = typeof record.stdout === "string" ? record.stdout : undefined;
+    const stderr = typeof record.stderr === "string" ? record.stderr : undefined;
+    if (exitCode === undefined && stdout === undefined && stderr === undefined) {
+        return null;
+    }
+    return {
+        ...(exitCode === undefined ? {} : { exitCode }),
+        ...(stdout === undefined ? {} : { stdout }),
+        ...(stderr === undefined ? {} : { stderr }),
+    };
+}
+function parseProcessFailureMessage(message) {
+    const match = /\b(?:node_process_runner_failed|codex_json_exec_failed|codex_cli_exec_failed):(\d+):(.*)$/s.exec(message);
+    if (!match)
+        return null;
+    return {
+        exitCode: match[1],
+        stderrTail: safeTail(match[2] ?? ""),
+    };
+}
+function safeTail(value) {
+    const compact = value.replace(/\s+/g, " ").trim();
+    return compact.length > 1000 ? compact.slice(-1000) : compact;
 }
 //# sourceMappingURL=failure-classifier.js.map

@@ -134,5 +134,6 @@ export declare function makeAgentTaskFailure(code: ProviderFailureCode, safeMess
     readonly retryable?: boolean;
     readonly reconnectRequired?: boolean;
     readonly causeCategory?: string;
+    readonly details?: Readonly<Record<string, string>>;
 }): ProviderFailure;
 //# sourceMappingURL=types.d.ts.map

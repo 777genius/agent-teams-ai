@@ -1,6 +1,7 @@
 export * from "./capabilities";
 export * from "./claude-bg-runtime-context";
 export * from "./claude-bg-provider-driver";
+export * from "./claude-cli-task-execution-engine";
 export * from "./claude-runtime-task-execution-engine";
 export * from "./claude-session-codec";
 export * from "./claude-session-driver";

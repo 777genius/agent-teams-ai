@@ -47,6 +47,7 @@ export type RuntimeAgentTaskWorkerFactoryInput = {
     readonly model?: string;
     readonly timeoutMs?: number;
     readonly claudePath?: string;
+    readonly claudeRuntimeDistDir?: string;
     readonly codexBinaryPath?: string;
 };
 export type RuntimeAgentTaskWorkerFactory = (input: RuntimeAgentTaskWorkerFactoryInput) => RuntimeAgentTaskWorker;

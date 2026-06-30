@@ -5,19 +5,26 @@ import {
   validateCodexAuthJsonBytes,
   type ValidatedCodexAuthJson,
 } from "@vioxen/subscription-runtime/provider-codex";
-import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
+import {
+  LocalFileWorkerAccountCapacityStore,
+  LocalFileWorkerControlInboxStore,
+} from "@vioxen/subscription-runtime/store-local-file";
 import {
   accountCapacityAwareWorkerFactory,
+  type ActiveAttemptRegistry,
   BoundedSubscriptionWorkerPool,
   LocalFileAttemptJournal,
   LocalFileWorkspaceLockStore,
   SafeExecutionRunner,
   SubscriptionWorkerError,
+  WorkerControlService,
   type AttemptJournal,
   type SafeExecutionPolicy,
   type SafeExecutionRunResult,
   type TaskEffectMode,
   type WorkerAccountCapacityStore,
+  type WorkerControlContinuationSource,
+  type WorkerControlTarget,
   type WorkerPoolHealth,
   type WorkerPoolSlotSnapshot,
   type WorkerPoolStats,
@@ -50,9 +57,17 @@ export type FileBackendCodexSafeExecutorOptions = {
    */
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly accountCapacityStore?: WorkerAccountCapacityStore;
+  readonly controlInbox?: WorkerControlContinuationSource;
+  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly lockStore?: WorkspaceLockStore;
   readonly journal?: AttemptJournal;
   readonly safeExecutionPolicy?: SafeExecutionPolicy;
+  /**
+   * Defaults to true: the borrowed workspace must be an existing git worktree.
+   * This prevents broad filesystem snapshots from being mistaken for worker
+   * changes when callers accidentally point at a repo parent or temp folder.
+   */
+  readonly requireGitWorkspace?: boolean;
   readonly maxAccountCycles?: number;
   readonly effectMode?: TaskEffectMode;
   readonly staleLockMs?: number;
@@ -63,6 +78,7 @@ export type FileBackendCodexSafeExecutorOptions = {
 };
 
 export type FileBackendCodexSafeExecutorRunInput = FileBackendCodexWorkerJob & {
+  readonly jobId?: string;
   readonly taskId: string;
   readonly originalPrompt?: string;
   readonly effectMode?: TaskEffectMode;
@@ -83,7 +99,7 @@ type CodexAccountIdentity = {
   readonly source: string;
 };
 
-const defaultMaxAccountCycles = 3;
+const defaultMaxAccountCycles = 5;
 
 export class FileBackendCodexSafeExecutor {
   readonly accountCapacityStore: WorkerAccountCapacityStore;
@@ -148,6 +164,17 @@ export class FileBackendCodexSafeExecutor {
       journal:
         options.journal ??
         new LocalFileAttemptJournal(join(options.stateRootDir, "attempt-journal")),
+      controlInbox:
+        options.controlInbox ??
+        new WorkerControlService({
+          store: new LocalFileWorkerControlInboxStore({
+            rootDir: options.stateRootDir,
+          }),
+          ...(options.clock ? { clock: options.clock } : {}),
+        }),
+      ...(options.activeAttemptRegistry === undefined
+        ? {}
+        : { activeAttemptRegistry: options.activeAttemptRegistry }),
       ...(options.clock ? { clock: options.clock } : {}),
       ownerId: this.executorId,
     });
@@ -179,9 +206,9 @@ export class FileBackendCodexSafeExecutor {
   async run(
     input: FileBackendCodexSafeExecutorRunInput,
   ): Promise<SafeExecutionRunResult<FileBackendCodexWorkerResult>> {
-    await this.start();
     const {
       job,
+      jobId,
       taskId,
       originalPrompt,
       effectMode,
@@ -196,13 +223,21 @@ export class FileBackendCodexSafeExecutor {
         mode: "existing_locked",
         path: this.options.workspacePath,
         ...(staleLockMs === undefined ? {} : { staleLockMs }),
+        ...(this.options.requireGitWorkspace === false
+          ? {}
+          : { requireGitWorkspace: true }),
       },
       effectMode:
         effectMode ??
         this.options.effectMode ??
         codexEffectModeFromJobControls(job),
       provider: "codex",
-      pool: this.pool,
+      pool: {
+        run: async (runJob, runOptions) => {
+          await this.start();
+          return this.pool.run(runJob, runOptions);
+        },
+      },
       job,
       originalPrompt,
       policy: mergedSafeExecutionPolicy({
@@ -222,6 +257,11 @@ export class FileBackendCodexSafeExecutor {
         prompt: continuationPacket.message,
       }),
       summarizeResult: (result) => result.outputText,
+      controlTarget: codexControlTarget({
+        jobId,
+        taskId,
+        workspacePath: this.options.workspacePath,
+      }),
       ...(job.abortSignal ? { abortSignal: job.abortSignal } : {}),
     });
   }
@@ -288,8 +328,8 @@ export class FileBackendCodexSafeExecutor {
     return fallback;
   }
 }
-
 function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
+  readonly jobId?: string;
   readonly taskId: string;
   readonly job: FileBackendCodexWorkerJob;
   readonly originalPrompt: string;
@@ -299,6 +339,7 @@ function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
   readonly policy?: SafeExecutionPolicy;
 } {
   const {
+    jobId,
     taskId,
     originalPrompt,
     effectMode,
@@ -313,6 +354,7 @@ function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
     runId: jobInput.runId ?? taskId,
   };
   return {
+    ...(jobId === undefined ? {} : { jobId }),
     taskId,
     job,
     originalPrompt: originalPrompt ?? job.prompt,
@@ -320,6 +362,18 @@ function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
     ...(staleLockMs === undefined ? {} : { staleLockMs }),
     ...(maxAccountCycles === undefined ? {} : { maxAccountCycles }),
     ...(safeExecutionPolicy === undefined ? {} : { policy: safeExecutionPolicy }),
+  };
+}
+
+function codexControlTarget(input: {
+  readonly jobId: string | undefined;
+  readonly taskId: string;
+  readonly workspacePath: string;
+}): WorkerControlTarget {
+  return {
+    jobId: input.jobId ?? input.taskId,
+    taskId: input.taskId,
+    workspaceId: input.workspacePath,
   };
 }
 
@@ -436,10 +490,14 @@ async function codexAccountIdentityFromSafeExecutorAccount(
 ): Promise<CodexAccountIdentity | null> {
   const authJson = await readSafeExecutorAccountAuthJson(account);
   if (!authJson) return null;
-  return codexAccountIdentityFromAuthJson({
-    authJson,
-    label: safeExecutorAccountLabel(account, index),
-  });
+  try {
+    return codexAccountIdentityFromAuthJson({
+      authJson,
+      label: safeExecutorAccountLabel(account, index),
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function readSafeExecutorAccountAuthJson(

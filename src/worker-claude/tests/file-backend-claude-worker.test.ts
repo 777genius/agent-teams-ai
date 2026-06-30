@@ -32,10 +32,12 @@ import type {
 import {
   BoundedSubscriptionWorkerPool,
   InMemoryWorkerAccountCapacityStore,
+  WorkerControlService,
   accountCapacityAwareWorkerFactory,
   type SubscriptionWorker,
   type WorkerPoolScheduler,
 } from "@vioxen/subscription-runtime/worker-core";
+import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   FileBackendClaudeWorker,
   FileClaudeLogicalThreadStore,
@@ -82,6 +84,135 @@ describe("FileBackendClaudeWorker", () => {
         },
       });
       expect(result).toMatchObject({ outputText: "answer" });
+    } finally {
+      await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("injects worker control inbox guidance into Claude safe-point runs once", async () => {
+    const rootDir = await tempRoot();
+    const engine = new RecordingClaudeEngine({ outputText: "guided-answer" });
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock: { now: () => new Date("2026-06-30T00:00:00.000Z") },
+      idFactory: sequentialIds("control"),
+    });
+    const worker = new FileBackendClaudeWorker({
+      providerInstanceId: "claude-guided",
+      stateRootDir: rootDir,
+      encryptionKey: encryptionKey(),
+      engine,
+      controlInbox,
+    });
+
+    try {
+      await controlInbox.enqueueSignal({
+        target: { jobId: "job-guided" },
+        intent: "guidance",
+        body: "Prefer targeted unit tests before broad verification.",
+        idempotencyKey: "guide-once",
+      });
+      const pauseSignal = await controlInbox.enqueueSignal({
+        target: { jobId: "job-guided" },
+        intent: "pause_requested",
+        deliveryMode: "pause_then_continue",
+        body: "Pause before continuing unless Claude support is explicit.",
+      });
+
+      await worker.start();
+      await worker.seedClaudeOAuth({ oauthToken: "claude-oauth-secret" });
+      const first = await worker.run({
+        jobId: "job-guided",
+        runId: "run-guided-1",
+        prompt: "review diff",
+      });
+      const second = await worker.run({
+        jobId: "job-guided",
+        runId: "run-guided-2",
+        prompt: "continue review",
+      });
+
+      expect(engine.records[0]?.prompt).toContain("review diff");
+      expect(engine.records[0]?.prompt).toContain(
+        "Runtime control inbox instructions",
+      );
+      expect(engine.records[0]?.prompt).toContain("targeted unit tests");
+      expect(
+        engine.records[0]?.prompt.includes(
+          "Pause before continuing unless Claude support is explicit.",
+        ),
+      ).toBe(false);
+      expect(first.workerControlSignalIds).toEqual(["control-1"]);
+      expect(engine.records[1]?.prompt).toBe("continue review");
+      expect(second.workerControlSignalIds).toBeUndefined();
+      const controlViews = await controlInbox.listSignals({
+        target: { jobId: "job-guided" },
+        includeExpired: true,
+      });
+      const pauseView = controlViews.find((view) =>
+        view.signal.signalId === pauseSignal.signalId
+      );
+      expect(pauseView).toMatchObject({
+        state: "pending",
+        blockedReason: "pause_then_continue_not_supported",
+      });
+    } finally {
+      await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("injects worker control inbox guidance into Claude logical thread runs", async () => {
+    const rootDir = await tempRoot();
+    const sharedWorkspacePath = join(rootDir, "shared-workspace");
+    const engine = new RecordingClaudeEngine({
+      outputText: "thread-guided",
+      sessionIds: ["thread-session-1"],
+      writeTranscripts: true,
+    });
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock: { now: () => new Date("2026-06-30T00:00:00.000Z") },
+      idFactory: sequentialIds("thread-control"),
+    });
+    const worker = new FileBackendClaudeWorker({
+      providerInstanceId: "claude-thread-guided",
+      stateRootDir: rootDir,
+      encryptionKey: encryptionKey(),
+      engine,
+      workspace: new FixedWorkspace(sharedWorkspacePath),
+      workspacePath: sharedWorkspacePath,
+      controlInbox,
+    });
+
+    try {
+      await controlInbox.enqueueSignal({
+        target: { jobId: "thread-guided-job" },
+        intent: "guidance",
+        body: "Preserve the existing logical thread context.",
+      });
+      await worker.start();
+      await worker.seedClaudeOAuth({ oauthToken: "claude-oauth-secret" });
+
+      const result = await worker.run({
+        jobId: "thread-guided-job",
+        threadId: "logical-guided-thread",
+        prompt: "continue thread",
+      });
+
+      expect(engine.records[0]?.prompt).toContain("continue thread");
+      expect(engine.records[0]?.prompt).toContain(
+        "Runtime control inbox instructions",
+      );
+      expect(engine.records[0]?.runtimeThread).toEqual({
+        threadId: "logical-guided-thread",
+      });
+      expect(result).toMatchObject({
+        outputText: "thread-guided",
+        workerControlSignalIds: ["thread-control-1"],
+        thread: { latestSessionId: "thread-session-1" },
+      });
     } finally {
       await worker.dispose();
       await rm(rootDir, { recursive: true, force: true });
@@ -2058,6 +2189,11 @@ async function tempRoot(): Promise<string> {
 
 function hashStringForTest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function sequentialIds(prefix: string): () => string {
+  let next = 0;
+  return () => `${prefix}-${++next}`;
 }
 
 async function transcriptBundleIds(rootDir: string): Promise<readonly string[]> {

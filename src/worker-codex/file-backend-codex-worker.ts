@@ -36,6 +36,7 @@ import {
   type CodexAppServerProcessFactory,
   type CodexReasoningEffort,
   type CodexServiceTier,
+  classifyCodexFailure,
   sessionArtifactFromCodexAuthJson,
   codexAuthJsonFromArtifact,
   readCodexAuthJsonFreshness,
@@ -44,9 +45,11 @@ import {
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 import {
   SubscriptionWorkerError,
+  combineAbortSignals,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
+  type SubscriptionWorkerRunOptions,
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -341,12 +344,24 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
 
   async seedCodexAuthJsonFile(authJsonPath: string): Promise<void> {
     this.seededCodexAuthJsonPath = authJsonPath;
-    const authJson = await readFile(authJsonPath, "utf8");
+    let authJson: string;
+    try {
+      authJson = await readFile(authJsonPath, "utf8");
+    } catch {
+      this.recordFailure(codexSeedSessionInvalidFailure());
+      return;
+    }
     await this.seedCodexAuthJson(authJson);
   }
 
   async seedCodexAuthJson(authJson: string): Promise<void> {
-    const artifact = sessionArtifactFromCodexAuthJson(authJson);
+    let artifact: SessionArtifact;
+    try {
+      artifact = sessionArtifactFromCodexAuthJson(authJson);
+    } catch (error) {
+      this.recordFailure(classifyCodexFailure(error));
+      return;
+    }
     const existing = await this.sessionStore.read({
       providerInstanceId: this.options.providerInstanceId,
       expectedProviderId: "codex",
@@ -457,12 +472,14 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
 
   async run(
     job: FileBackendCodexWorkerJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendCodexWorkerResult> {
     this.assertStarted();
     assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
     await this.rememberStoredQuotaGroup();
     const runId = job.runId ?? `local-${randomUUID()}`;
-    const abortSignal = job.abortSignal ?? new AbortController().signal;
+    const abort = combineAbortSignals(job.abortSignal, options.abortSignal);
+    const abortSignal = abort.signal;
     const startedAt = this.clock.monotonicMs();
     const retryMaxMs = this.options.refreshConflictRetryMaxMs ?? 30_000;
     let attempt = 1;
@@ -504,6 +521,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
               cause: error,
               details: {
                 reason: failure.code,
+                ...(failure.details ?? {}),
                 ...(this.capacityAccountId
                   ? { accountId: this.capacityAccountId }
                   : {}),
@@ -539,6 +557,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
         );
       }
     } finally {
+      abort.dispose();
       await this.exportSeededCodexAuthJsonFileQuietly("run");
     }
   }
@@ -789,7 +808,12 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
       throw new SubscriptionWorkerError(
         "subscription_worker_run_failed",
         result.failure.safeMessage,
-        { details: { code: result.failure.code } },
+        {
+          details: {
+            code: result.failure.code,
+            ...(result.failure.details ?? {}),
+          },
+        },
       );
     }
     if (result.status === "waiting_for_input") {
@@ -1011,7 +1035,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
 
   private recordReconnectRequired(reason: string): void {
     const maxRetries =
-      this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 1;
+      this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 4;
     if (this.consecutiveReconnectFailures < maxRetries) {
       this.consecutiveReconnectFailures += 1;
       this.capacityState = {
@@ -1277,6 +1301,16 @@ class LocalFileManagedRunStore implements ManagedRunStorePort {
     });
     await rename(tempPath, path);
   }
+}
+
+function codexSeedSessionInvalidFailure(): ProviderFailure {
+  return {
+    code: "provider_session_invalid",
+    retryable: false,
+    reconnectRequired: true,
+    safeMessage: "Codex session is invalid.",
+    causeCategory: "provider_session_invalid",
+  };
 }
 
 function shouldRetryRefreshConflict(result: RefreshThenRunResult): boolean {

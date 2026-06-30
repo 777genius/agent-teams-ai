@@ -121,14 +121,21 @@ export function classifyCodexRuntimeFailure(message: string): string {
   if (isCodexQuotaOrRateLimitFailure(normalized)) {
     return "quota_limited";
   }
-  if (isCodexInvalidatedAuthFailure(normalized)) {
+  if (normalized.includes("codex_app_server_goal_blocked")) {
+    return "backend_unavailable";
+  }
+  if (
+    isCodexInvalidatedAuthFailure(normalized) ||
+    isCodexInvalidAuthJsonFailure(normalized)
+  ) {
     return "provider_session_invalid";
   }
   if (
     normalized.includes("unauthorized") ||
     normalized.includes("invalid_grant") ||
     normalized.includes("refresh token") ||
-    normalized.includes("login required")
+    normalized.includes("login required") ||
+    isCodexReconnectableAuthShapeFailure(normalized)
   ) {
     return "needs_reconnect";
   }
@@ -140,6 +147,26 @@ export function classifyCodexRuntimeFailure(message: string): string {
     return "permission_required";
   }
   return "unknown_auth_state";
+}
+
+function isCodexReconnectableAuthShapeFailure(normalizedMessage: string): boolean {
+  return (
+    normalizedMessage.includes("missing field") &&
+    (
+      normalizedMessage.includes("id_token") ||
+      normalizedMessage.includes("access_token") ||
+      normalizedMessage.includes("refresh_token") ||
+      normalizedMessage.includes("auth.json")
+    )
+  );
+}
+
+function isCodexInvalidAuthJsonFailure(normalizedMessage: string): boolean {
+  return (
+    normalizedMessage.includes("codex_auth_json_invalid_") ||
+    normalizedMessage.includes("codex_auth_json_empty") ||
+    normalizedMessage.includes("codex_auth_json_too_large")
+  );
 }
 
 function isCodexCancelledFailure(normalizedMessage: string): boolean {

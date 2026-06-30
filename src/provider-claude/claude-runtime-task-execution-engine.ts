@@ -31,6 +31,7 @@ import {
   type ClaudeBgRuntimeContextOptions,
   type ClaudeRuntimeModule,
 } from "./claude-bg-runtime-context";
+import { ClaudeProviderFailureError } from "./failure-classifier";
 
 export type ClaudeRuntimeTaskExecutionEngineOptions = ClaudeBgRuntimeContextOptions & {
   readonly pluginDirs?: readonly string[];
@@ -58,7 +59,7 @@ export class ClaudeRuntimeTaskExecutionEngine
     }
     if (!completed) throw new Error("claude_runtime_result_missing");
     if (completed.result.status === "failed") {
-      throw new Error(completed.result.failure.safeMessage);
+      throw new ClaudeProviderFailureError(completed.result.failure);
     }
     return {
       outputText: completed.result.outputText,

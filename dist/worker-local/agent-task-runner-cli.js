@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { randomBytes, randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { agentTaskProtocolVersion, agentTaskRequestToProviderTask, makeFailedAgentTaskResult, parseAgentTaskRequest, providerTaskResultToAgentTaskResult, } from "@vioxen/subscription-runtime/agent-task";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { agentTaskProtocolVersion, agentTaskRequestToProviderTask, parseAgentTaskRequest, providerTaskResultToAgentTaskResult, } from "@vioxen/subscription-runtime/agent-task";
+import { isSubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
 import { FileBackendClaudeWorker, } from "../worker-claude/file-backend-claude-worker.js";
 import { FileBackendCodexWorker, } from "../worker-codex/file-backend-codex-worker.js";
 export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), io = defaultIo, workerFactory = createDefaultWorker) {
@@ -39,6 +41,9 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
             ...(args.model ? { model: args.model } : {}),
             ...(timeoutMs ? { timeoutMs } : {}),
             ...(args.claudePath ? { claudePath: args.claudePath } : {}),
+            ...(env.CLAUDE_RUNTIME_DIST_DIR
+                ? { claudeRuntimeDistDir: env.CLAUDE_RUNTIME_DIST_DIR }
+                : {}),
             ...(args.codexBinaryPath ? { codexBinaryPath: args.codexBinaryPath } : {}),
         });
         try {
@@ -53,7 +58,16 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
         }
     }
     catch (error) {
-        io.writeStderr(`${error instanceof Error ? error.message : "subscription runtime agent task failed"}\n`);
+        const safeMessage = error instanceof Error ? error.message : "subscription runtime agent task failed";
+        if (requestedOutputFormat(argv) === "result-json") {
+            io.writeStdout(`${JSON.stringify(makeCliFailedAgentTaskResult({
+                code: "unknown_runtime_failure",
+                safeMessage,
+                retryable: false,
+                ...optionalFailureDetails(errorDetails(error)),
+            }))}\n`);
+        }
+        io.writeStderr(`${safeMessage}\n`);
         return 2;
     }
     finally {
@@ -61,6 +75,15 @@ export async function runSubscriptionAgentTaskCli(argv = process.argv.slice(2), 
             await rm(tempStateRoot, { recursive: true, force: true }).catch(() => { });
         }
     }
+}
+function requestedOutputFormat(argv) {
+    for (let index = 0; index < argv.length; index += 1) {
+        if (argv[index] !== "--format")
+            continue;
+        const value = argv[index + 1];
+        return value === "result-json" ? "result-json" : "event-ndjson";
+    }
+    return "event-ndjson";
 }
 export async function resolveRequestCwd(workspaceRoot, requestedCwd) {
     const root = await realpath(resolve(workspaceRoot));
@@ -212,6 +235,7 @@ function parseArgs(argv) {
 }
 function createDefaultWorker(input) {
     if (input.provider === "claude") {
+        const runtimeModules = claudeRuntimeModuleLoaders(input.claudeRuntimeDistDir);
         return new FileBackendClaudeWorker({
             providerInstanceId: input.providerInstanceId,
             stateRootDir: input.stateRootDir,
@@ -221,6 +245,7 @@ function createDefaultWorker(input) {
             ...(input.model ? { model: input.model } : {}),
             ...(input.timeoutMs ? { taskTimeoutMs: input.timeoutMs } : {}),
             ...(input.claudePath ? { claudePath: input.claudePath } : {}),
+            ...runtimeModules,
         });
     }
     return new FileBackendCodexWorker({
@@ -233,6 +258,20 @@ function createDefaultWorker(input) {
         ...(input.model ? { model: input.model } : {}),
         ...(input.timeoutMs ? { taskTimeoutMs: input.timeoutMs } : {}),
     });
+}
+function claudeRuntimeModuleLoaders(distDir) {
+    if (!distDir)
+        return {};
+    const resolvedDistDir = resolve(distDir);
+    const runtimePath = join(resolvedDistDir, "index.js");
+    const providerPath = join(resolvedDistDir, "infrastructure", "claude-bg", "provider", "index.js");
+    if (!existsSync(runtimePath) || !existsSync(providerPath)) {
+        throw new Error("CLAUDE_RUNTIME_DIST_DIR must contain index.js and infrastructure/claude-bg/provider/index.js.");
+    }
+    return {
+        runtimeModuleLoader: async () => import(pathToFileURL(runtimePath).href),
+        providerModuleLoader: async () => import(pathToFileURL(providerPath).href),
+    };
 }
 async function seedWorker(input) {
     if (input.args.provider === "claude") {
@@ -269,9 +308,10 @@ async function runWorkerTask(input) {
         return providerTaskResultToAgentTaskResult(toProviderTaskResult(result));
     }
     catch (error) {
-        return makeFailedAgentTaskResult({
+        return makeCliFailedAgentTaskResult({
             code: "unknown_runtime_failure",
             safeMessage: error instanceof Error ? error.message : "subscription worker task failed",
+            ...optionalFailureDetails(errorDetails(error)),
         });
     }
 }
@@ -321,6 +361,101 @@ function toProviderTaskResult(result) {
         ...(result.telemetry ? { telemetry: result.telemetry } : {}),
         warnings: result.warnings,
     };
+}
+function makeCliFailedAgentTaskResult(input) {
+    return {
+        protocolVersion: agentTaskProtocolVersion,
+        status: "failed",
+        failure: {
+            code: input.code,
+            retryable: input.retryable ?? false,
+            reconnectRequired: input.reconnectRequired ?? false,
+            safeMessage: input.safeMessage,
+            ...(input.causeCategory ? { causeCategory: input.causeCategory } : {}),
+            ...(input.details ? { details: input.details } : {}),
+        },
+        warnings: [],
+    };
+}
+function errorDetails(error) {
+    const details = {};
+    for (const item of errorChain(error)) {
+        mergeStringDetails(details, objectDetails(item));
+        if (isSubscriptionWorkerError(item)) {
+            details.subscriptionWorkerCode ??= item.code;
+            mergeStringDetails(details, item.details);
+        }
+        if (isObject(item) && typeof item["code"] === "string") {
+            details.subscriptionWorkerCode ??= item["code"];
+        }
+        if (isObject(item)) {
+            const exitCode = item["exitCode"];
+            if (typeof exitCode === "number" || typeof exitCode === "string") {
+                details.exitCode ??= String(exitCode);
+            }
+            const stderr = item["stderr"];
+            if (typeof stderr === "string" && stderr.trim()) {
+                details.stderrTail ??= safeDetailTail(stderr);
+            }
+            const stdout = item["stdout"];
+            if (typeof stdout === "string" && stdout.trim()) {
+                details.stdoutTail ??= safeDetailTail(stdout);
+            }
+        }
+        const message = item instanceof Error ? item.message : undefined;
+        const match = message?.match(/(?:codex_json_exec_failed|node_process_runner_failed):(\d+):(.*)$/s);
+        if (match) {
+            details.exitCode ??= match[1];
+            if (match[2]?.trim()) {
+                details.stderrTail ??= safeDetailTail(match[2]);
+            }
+        }
+    }
+    return Object.keys(details).length === 0 ? undefined : details;
+}
+function errorChain(error) {
+    const chain = [];
+    let current = error;
+    const seen = new Set();
+    while (current !== undefined && current !== null && !seen.has(current)) {
+        chain.push(current);
+        seen.add(current);
+        current = isObject(current) ? current["cause"] : undefined;
+    }
+    return chain;
+}
+function objectDetails(value) {
+    if (!isObject(value))
+        return undefined;
+    const details = value["details"];
+    if (!isObject(details))
+        return undefined;
+    const parsed = {};
+    mergeStringDetails(parsed, details);
+    return Object.keys(parsed).length === 0 ? undefined : parsed;
+}
+function mergeStringDetails(target, details) {
+    if (!details)
+        return;
+    for (const [key, value] of Object.entries(details)) {
+        if (typeof value !== "string")
+            continue;
+        if (!value.trim())
+            continue;
+        target[key] ??= safeDetailTail(value);
+    }
+}
+function optionalFailureDetails(details) {
+    return details === undefined || Object.keys(details).length === 0
+        ? {}
+        : { details };
+}
+function safeDetailTail(value) {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    return normalized.length <= 800 ? normalized : normalized.slice(-800);
+}
+function isObject(value) {
+    return typeof value === "object" && value !== null;
 }
 function requiredValue(argv, index, flag) {
     const value = argv[index + 1];

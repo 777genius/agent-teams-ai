@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { diagnosticWarning, isAssistantMessageEvent, isDiagnosticEvent, isResultAvailableEvent, isToolResultEvent, isToolUseEvent, isUsageEvent, parseStructuredJson, resultText, runtimeUsage, toolResultCall, toolUseCall, } from "./claude-runtime-event-mapper.js";
 import { createClaudeBgRuntimeContext, } from "./claude-bg-runtime-context.js";
+import { ClaudeProviderFailureError } from "./failure-classifier.js";
 export class ClaudeRuntimeTaskExecutionEngine {
     options;
     kind = "claude-runtime-bg";
@@ -23,7 +24,7 @@ export class ClaudeRuntimeTaskExecutionEngine {
         if (!completed)
             throw new Error("claude_runtime_result_missing");
         if (completed.result.status === "failed") {
-            throw new Error(completed.result.failure.safeMessage);
+            throw new ClaudeProviderFailureError(completed.result.failure);
         }
         return {
             outputText: completed.result.outputText,

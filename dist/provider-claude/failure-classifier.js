@@ -1,4 +1,15 @@
-export function classifyClaudeFailure(error) {
+export class ClaudeProviderFailureError extends Error {
+    failure;
+    name = "ClaudeProviderFailureError";
+    constructor(failure) {
+        super(failure.safeMessage);
+        this.failure = failure;
+    }
+}
+export function classifyClaudeFailure(error, options = {}) {
+    const existingFailure = providerFailureFromUnknown(error);
+    if (existingFailure)
+        return redactProviderFailure(existingFailure, options.redactor);
     const message = error instanceof Error ? error.message : String(error);
     const state = classifyClaudeRuntimeFailure(message);
     switch (state) {
@@ -57,6 +68,9 @@ export function classifyClaudeFailure(error) {
                 reconnectRequired: false,
                 safeMessage: "Claude runtime failed.",
                 causeCategory: state,
+                ...(options.redactor === undefined
+                    ? {}
+                    : { details: safeFailureDetails(message, options.redactor) }),
             };
     }
 }
@@ -116,5 +130,66 @@ function isPermissionRequired(normalized) {
         normalized.includes("forbidden") ||
         normalized.includes("approval required") ||
         normalized.includes("resource not accessible"));
+}
+function providerFailureFromUnknown(error) {
+    if (error instanceof ClaudeProviderFailureError)
+        return error.failure;
+    if (!isRecord(error))
+        return null;
+    const failure = error.failure;
+    if (!isProviderFailure(failure))
+        return null;
+    return failure;
+}
+function isProviderFailure(value) {
+    return (isRecord(value) &&
+        isProviderFailureCode(value.code) &&
+        typeof value.retryable === "boolean" &&
+        typeof value.reconnectRequired === "boolean" &&
+        typeof value.safeMessage === "string");
+}
+function isProviderFailureCode(value) {
+    return typeof value === "string" && [
+        "needs_reconnect",
+        "quota_limited",
+        "permission_required",
+        "provider_session_invalid",
+        "provider_output_invalid",
+        "task_mode_unsupported",
+        "task_cancelled",
+        "task_timeout",
+        "stale_generation",
+        "backend_unavailable",
+        "unknown_runtime_failure",
+    ].includes(value);
+}
+function redactProviderFailure(failure, redactor) {
+    if (redactor === undefined)
+        return failure;
+    return {
+        ...failure,
+        safeMessage: redactor.redact(failure.safeMessage),
+        ...(failure.details === undefined
+            ? {}
+            : { details: redactDetails(failure.details, redactor) }),
+    };
+}
+function safeFailureDetails(message, redactor) {
+    return {
+        runtimeMessage: truncateDetail(redactor.redact(message)),
+    };
+}
+function redactDetails(details, redactor) {
+    return Object.fromEntries(Object.entries(details).map(([key, value]) => [
+        key,
+        truncateDetail(redactor.redact(value)),
+    ]));
+}
+function truncateDetail(value) {
+    const maxLength = 1000;
+    return value.length <= maxLength ? value : `${value.slice(0, maxLength)}...`;
+}
+function isRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 //# sourceMappingURL=failure-classifier.js.map

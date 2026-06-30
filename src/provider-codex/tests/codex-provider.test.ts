@@ -31,6 +31,7 @@ import {
   CodexJsonAgentDriver,
   PackagedCodexJsonExecutionEngine,
   buildCodexJsonExecArgs,
+  classifyCodexFailure,
   codexAgentCapabilities,
   codexEnvironmentPolicy,
   codexJsonAgentCapabilities,
@@ -117,11 +118,52 @@ describe("Codex provider adapter", () => {
     expect(
       classifyCodexRuntimeFailure("codex_app_server_goal_turn_output_missing"),
     ).toBe("provider_output_invalid");
+    expect(classifyCodexRuntimeFailure("codex_app_server_goal_blocked")).toBe(
+      "backend_unavailable",
+    );
     expect(
       classifyCodexRuntimeFailure(
         "codex_app_server_turn_aborted:replaced:turn-2",
       ),
     ).toBe("unknown_auth_state");
+  });
+
+  it("preserves raw Codex process metadata for unknown failures", () => {
+    expect(
+      classifyCodexFailure({
+        exitCode: 7,
+        stdout: "",
+        stderr: "forced fallback failure",
+      }),
+    ).toMatchObject({
+      code: "unknown_runtime_failure",
+      safeMessage: "Codex runtime failed.",
+      details: {
+        exitCode: "7",
+        stderrTail: "forced fallback failure",
+        rawCause: "forced fallback failure",
+      },
+    });
+  });
+
+  it("classifies Codex app-server goal blocks as retryable backend unavailability", () => {
+    expect(
+      classifyCodexFailure({
+        exitCode: 1,
+        stdout: "",
+        stderr: "codex_app_server_goal_blocked",
+      }),
+    ).toMatchObject({
+      code: "backend_unavailable",
+      retryable: true,
+      reconnectRequired: false,
+      safeMessage: "Codex app-server goal backend is temporarily blocked.",
+      details: {
+        exitCode: "1",
+        stderrTail: "codex_app_server_goal_blocked",
+        rawCause: "codex_app_server_goal_blocked",
+      },
+    });
   });
 
   it("classifies revoked Codex auth separately from transient reconnects", () => {
@@ -138,6 +180,12 @@ describe("Codex provider adapter", () => {
     expect(classifyCodexRuntimeFailure("login required")).toBe(
       "needs_reconnect",
     );
+    expect(classifyCodexRuntimeFailure("missing field `id_token`")).toBe(
+      "needs_reconnect",
+    );
+    expect(
+      classifyCodexRuntimeFailure("codex_auth_json_invalid_auth_mode"),
+    ).toBe("provider_session_invalid");
   });
 
   it("recognizes transient Codex temp cleanup races", () => {
@@ -173,7 +221,7 @@ describe("Codex provider adapter", () => {
       "json",
       "schema-json",
     ]);
-    expect(defaultCodexModel).toBe("gpt-5-codex");
+    expect(defaultCodexModel).toBe("gpt-5.5");
   });
 
   it("supports lazy refresh freshness checks from Codex auth metadata", async () => {
@@ -1961,6 +2009,9 @@ describe("Codex provider adapter", () => {
           "non-interactive subscription runtime worker",
         ),
       });
+      expect(threadStart?.params?.developerInstructions).toContain(
+        "strict valid JSON only",
+      );
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -2454,6 +2505,43 @@ describe("Codex provider adapter", () => {
       });
       expect(fakeFactory.spawnCount).toBe(1);
       expect(fakeFactory.processes[0]?.isExited()).toBe(true);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("waits through transient app-server reconnect progress errors", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-reconnect-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitTransientTopLevelErrorOnTurn: "Reconnecting... 2/5",
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        reconnectGraceMs: 50,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "survive reconnect" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        outputText: "app-server output:survive reconnect",
+      });
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -2978,6 +3066,7 @@ type FakeAppServerFactoryOptions = {
   readonly suppressInitializeResponse?: boolean;
   readonly emitUnsupportedServerRequestOnTurn?: boolean;
   readonly throwOnUnsupportedServerResponse?: boolean;
+  readonly emitTransientTopLevelErrorOnTurn?: string;
   readonly emitTopLevelErrorOnTurn?: string;
   readonly emitTopLevelErrorsOnTurns?: readonly (string | null)[];
   readonly emitStdinErrorAfterTurnStartResponse?: boolean;
@@ -3247,6 +3336,15 @@ class FakeAppServerProcess extends EventEmitter {
             threadId: String(request.params?.threadId ?? ""),
             turn: { id: turnId, status: "inProgress" },
           });
+          if (this.options.emitTransientTopLevelErrorOnTurn) {
+            this.stdout.emit(
+              "data",
+              `${JSON.stringify({
+                method: "error",
+                message: this.options.emitTransientTopLevelErrorOnTurn,
+              })}\n`,
+            );
+          }
           const topLevelError = this.configuredTurnError();
           if (topLevelError) {
             this.stdout.emit(

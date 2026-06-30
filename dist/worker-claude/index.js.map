@@ -1,1 +1,1 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../src/worker-claude/index.ts"],"names":[],"mappings":"AAAA,cAAc,+BAA+B,CAAC;AAC9C,cAAc,8BAA8B,CAAC;AAC7C,cAAc,wBAAwB,CAAC;AACvC,cAAc,kBAAkB,CAAC"}
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../src/worker-claude/index.ts"],"names":[],"mappings":"AAAA,cAAc,+BAA+B,CAAC;AAC9C,cAAc,8BAA8B,CAAC;AAC7C,cAAc,wBAAwB,CAAC;AACvC,cAAc,0BAA0B,CAAC;AACzC,cAAc,wBAAwB,CAAC;AACvC,cAAc,kBAAkB,CAAC"}

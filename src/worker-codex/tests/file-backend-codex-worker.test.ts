@@ -1,22 +1,29 @@
-import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execPath } from "node:process";
+import { promisify } from "node:util";
 import type {
   RunnerPort,
   WorkspacePort,
 } from "@vioxen/subscription-runtime/core";
 import {
   BoundedSubscriptionWorkerPool,
+  InMemoryActiveAttemptRegistry,
   InMemoryWorkerAccountCapacityStore,
+  InterruptAndContinueWorkerUseCase,
+  WorkerControlService,
   accountCapacityAwareWorkerFactory,
 } from "@vioxen/subscription-runtime/worker-core";
+import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
 import { describe, expect, it } from "vitest";
 import { FileBackendCodexSafeExecutor, FileBackendCodexWorker } from "../index";
 import { NodeProcessRunner } from "../node-process-runner";
 
 const validAuthJson = codexAuthJson("refresh-token");
+const execFileAsync = promisify(execFile);
 
 describe("FileBackendCodexWorker", () => {
   it("exposes lifecycle, seed, prewarm, health, and dispose", async () => {
@@ -58,6 +65,35 @@ describe("FileBackendCodexWorker", () => {
       await expect(worker.run({ prompt: "hello" })).rejects.toThrow(
         "Codex worker has been disposed.",
       );
+    } finally {
+      await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("marks invalid seeded Codex auth as disabled capacity without failing executor startup", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-invalid-seed-"));
+    const worker = new FileBackendCodexWorker({
+      providerInstanceId: "codex:invalid-seed",
+      stateRootDir: rootDir,
+      codexBinaryPath: "codex",
+      encryptionKey: new Uint8Array(32).fill(6),
+    });
+
+    try {
+      await worker.start();
+      await worker.seedCodexAuthJson(JSON.stringify({
+        auth_mode: "api-key",
+        tokens: {
+          access_token: "invalid-access-token",
+          refresh_token: "invalid-refresh-token",
+        },
+      }));
+
+      expect(worker.capacity()).toMatchObject({
+        availability: "disabled",
+        reason: "provider_session_invalid",
+      });
     } finally {
       await worker.dispose();
       await rm(rootDir, { recursive: true, force: true });
@@ -724,7 +760,7 @@ describe("FileBackendCodexWorker", () => {
     } finally {
       await first.dispose();
       await second.dispose();
-      await rm(rootDir, { recursive: true, force: true });
+      await rm(rootDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
     }
   });
 
@@ -812,7 +848,7 @@ describe("FileBackendCodexWorker", () => {
 
   it("self-switches safe Codex work to another account with a continuation packet", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-executor-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-workspace-"));
+    const workspacePath = await gitWorkspace("codex-safe-workspace-");
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
@@ -820,12 +856,33 @@ describe("FileBackendCodexWorker", () => {
     const appServers = [
       new FakeAppServerFactory({
         emitTopLevelErrorOnTurn: "You've hit your usage limit.",
+        writeFileOnTurn: {
+          relativePath: "wip.txt",
+          content: "partial implementation\n",
+        },
       }),
       new FakeAppServerFactory(),
     ];
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock,
+      idFactory: sequentialIds("codex-control"),
+    });
+    await controlInbox.enqueueSignal({
+      target: { jobId: "codex-safe-switch-job" },
+      intent: "guidance",
+      body: "Preserve current WIP and continue with targeted tests first.",
+    });
+    const pauseSignal = await controlInbox.enqueueSignal({
+      target: { jobId: "codex-safe-switch-job" },
+      intent: "pause_requested",
+      deliveryMode: "pause_then_continue",
+      body: "Pause before continuation unless the provider explicitly supports it.",
+    });
     const executor = new FileBackendCodexSafeExecutor({
       stateRootDir: rootDir,
       workspacePath,
+      controlInbox,
       accounts: appServers.map((appServer, index) => ({
         codexAuthJson: codexAuthJson(`safe-account-${index + 1}`),
         worker: {
@@ -850,6 +907,7 @@ describe("FileBackendCodexWorker", () => {
 
     try {
       const result = await executor.run({
+        jobId: "codex-safe-switch-job",
         taskId: "codex-safe-switch-task",
         prompt: "Implement the safe task.",
         controls: { permissionMode: "allow-edits" },
@@ -863,12 +921,54 @@ describe("FileBackendCodexWorker", () => {
       expect(result.attempts).toHaveLength(2);
       expect(result.attempts[0]?.failureReason).toBe("quota_limited");
       expect(appServers[0]!.prompts).toEqual(["Implement the safe task."]);
-      expect(appServers[1]!.prompts[0]).toContain("Continue the same task");
-      expect(appServers[1]!.prompts[0]).toContain("Do not restart from scratch");
+      const continuationPrompt = appServers[1]!.prompts[0] ?? "";
+      const canonicalWorkspacePath = await realpath(workspacePath);
+      expect(continuationPrompt).toContain(
+        "Continue the same task in the current workspace.",
+      );
+      expect(continuationPrompt).toContain("Task id: codex-safe-switch-task");
+      expect(continuationPrompt).toContain("Attempt: 2");
+      expect(continuationPrompt).toContain("Provider: codex");
+      expect(continuationPrompt).toContain(`Workspace: ${canonicalWorkspacePath}`);
+      expect(continuationPrompt).toContain(
+        "Previous attempt stopped because: quota_limited",
+      );
+      expect(continuationPrompt).toContain("Original task:\nImplement the safe task.");
+      expect(continuationPrompt).toContain("Current workspace summary:");
+      expect(continuationPrompt).toContain("Git workspace has");
+      expect(continuationPrompt).toContain("Changed files:\n- wip.txt");
+      expect(continuationPrompt).toContain(
+        "Runtime control inbox instructions:",
+      );
+      expect(continuationPrompt).toContain("Signal id: codex-control-1");
+      expect(continuationPrompt).toContain(
+        "Preserve current WIP and continue with targeted tests first.",
+      );
+      expect(
+        continuationPrompt.includes(
+          "Pause before continuation unless the provider explicitly supports it.",
+        ),
+      ).toBe(false);
+      expect(continuationPrompt).toContain("Do not restart from scratch");
+      expect(continuationPrompt.includes("access_token")).toBe(false);
+      expect(continuationPrompt.includes("refresh_token")).toBe(false);
+      expect(continuationPrompt.includes("codexAuthJson")).toBe(false);
       expect(appServers[0]!.threadCwds).toContain(workspacePath);
       expect(appServers[1]!.threadCwds).toContain(workspacePath);
+      const controlViews = await controlInbox.listSignals({
+        target: { jobId: "codex-safe-switch-job" },
+        includeExpired: true,
+      });
+      const pauseView = controlViews.find((view) =>
+        view.signal.signalId === pauseSignal.signalId
+      );
+      expect(pauseView).toMatchObject({
+        state: "pending",
+        blockedReason: "pause_then_continue_not_supported",
+      });
 
       const replayed = await executor.run({
+        jobId: "codex-safe-switch-job",
         taskId: "codex-safe-switch-task",
         prompt: "Implement the safe task.",
         controls: { permissionMode: "allow-edits" },
@@ -877,6 +977,227 @@ describe("FileBackendCodexWorker", () => {
       if (replayed.status !== "completed") throw new Error("expected replay");
       expect(replayed.replayed).toBe(true);
       expect(appServers[1]!.prompts).toHaveLength(1);
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("interrupts an active Codex app-server goal and resumes with guidance through safe continuation", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-interrupt-"));
+    const workspacePath = await gitWorkspace("codex-safe-interrupt-workspace-");
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const appServers = [
+      new FakeAppServerFactory({
+        holdTurnOpen: true,
+        writeFileOnTurn: {
+          relativePath: "wip.txt",
+          content: "partial implementation\n",
+        },
+      }),
+      new FakeAppServerFactory(),
+    ];
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock,
+      idFactory: sequentialIds("codex-interrupt-control"),
+    });
+    const activeAttemptRegistry = new InMemoryActiveAttemptRegistry();
+    const guidance = new InterruptAndContinueWorkerUseCase({
+      control: controlInbox,
+      activeAttemptRegistry,
+    });
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      controlInbox,
+      activeAttemptRegistry,
+      accounts: appServers.map((appServer, index) => ({
+        codexAuthJson: codexAuthJson(`interrupt-account-${index + 1}`),
+        worker: {
+          providerInstanceId: `codex-interrupt-account-${index + 1}`,
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(index + 40),
+          executionEngine: "app-server-goal",
+          appServerProcessFactory: appServer.create,
+          runner: new StaticRunner({
+            exitCode: 0,
+            stdout: "",
+            stderr: "",
+          }),
+          capacityPolicy: {
+            quotaCooldownMs: 60_000,
+          },
+          clock,
+        },
+      })),
+      clock,
+    });
+
+    try {
+      const resultPromise = executor.run({
+        jobId: "codex-safe-interrupt-job",
+        taskId: "codex-safe-interrupt-task",
+        prompt: "Implement the interruptible safe task.",
+        controls: { permissionMode: "allow-edits" },
+        maxAccountCycles: 1,
+      });
+
+      await waitUntil(async () => {
+        if (appServers[0]!.prompts.length === 0) return false;
+        await access(join(workspacePath, "wip.txt"));
+        return true;
+      });
+
+      const interrupt = await guidance.execute({
+        target: {
+          jobId: "codex-safe-interrupt-job",
+          taskId: "codex-safe-interrupt-task",
+          workspaceId: workspacePath,
+        },
+        message: "Stop the broad run and inspect the targeted recall slice.",
+        caller: { kind: "orchestrator", id: "lead-agent" },
+      });
+      expect(interrupt.status).toBe("interrupted");
+
+      const result = await resultPromise;
+      if (result.status !== "completed") {
+        throw new Error(`expected completed: ${result.reason}:${result.safeMessage}`);
+      }
+      expect(result.attempts).toHaveLength(2);
+      expect(result.attempts[0]?.failureReason).toBe("runtime_interrupted");
+      expect(result.attempts[0]?.workspaceDirtyAfter).toBe(true);
+      expect(appServers[0]!.prompts).toEqual([
+        "Implement the interruptible safe task.",
+      ]);
+      const continuationPrompt = appServers[1]!.prompts[0] ?? "";
+      expect(continuationPrompt).toContain("Continue the same task");
+      expect(continuationPrompt).toContain(
+        "Previous attempt stopped because: runtime_interrupted",
+      );
+      expect(continuationPrompt).toContain("Runtime control inbox instructions");
+      expect(continuationPrompt).toContain("targeted recall slice");
+      expect(continuationPrompt).toContain("Changed files:\n- wip.txt");
+      expect(continuationPrompt.includes("access_token")).toBe(false);
+      expect(continuationPrompt.includes("refresh_token")).toBe(false);
+      const controlViews = await controlInbox.listSignals({
+        target: {
+          jobId: "codex-safe-interrupt-job",
+          taskId: "codex-safe-interrupt-task",
+          workspaceId: workspacePath,
+        },
+        includeExpired: true,
+      });
+      expect(controlViews[0]?.state).toBe("delivered");
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("skips invalid seeded Codex accounts and runs safe work on the next slot", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-invalid-seed-"));
+    const workspacePath = await gitWorkspace("codex-safe-invalid-seed-workspace-");
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const appServers = [
+      new FakeAppServerFactory(),
+      new FakeAppServerFactory(),
+    ];
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      accounts: appServers.map((appServer, index) => ({
+        codexAuthJson: index === 0
+          ? JSON.stringify({
+              auth_mode: "api-key",
+              tokens: {
+                access_token: "invalid-access-token",
+                refresh_token: "invalid-refresh-token",
+              },
+            })
+          : codexAuthJson("valid-second-account"),
+        worker: {
+          providerInstanceId: `codex-invalid-seed-account-${index + 1}`,
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(index + 22),
+          appServerProcessFactory: appServer.create,
+          runner: new StaticRunner({ exitCode: 0, stdout: "OK", stderr: "" }),
+          clock,
+        },
+      })),
+      clock,
+    });
+
+    try {
+      const result = await executor.run({
+        taskId: "codex-safe-invalid-seed-task",
+        prompt: "Implement the safe task.",
+        controls: { permissionMode: "allow-edits" },
+      });
+
+      expect(result.status).toBe("completed");
+      expect(appServers[0]!.prompts).toEqual([]);
+      expect(appServers[1]!.prompts).toEqual(["Implement the safe task."]);
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("fails safe Codex work before starting accounts when the workspace is not git", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-not-git-"));
+    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-not-git-workspace-"));
+    await writeFile(join(workspacePath, ".git"), "gitdir: /nonexistent/gitdir\n", "utf8");
+    const appServer = new FakeAppServerFactory();
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      accounts: [
+        {
+          codexAuthJson: codexAuthJson("not-git-account"),
+          worker: {
+            providerInstanceId: "codex-not-git-account",
+            stateRootDir: rootDir,
+            codexBinaryPath: "codex",
+            encryptionKey: new Uint8Array(32).fill(71),
+            appServerProcessFactory: appServer.create,
+            runner: new StaticRunner({ exitCode: 0, stdout: "", stderr: "" }),
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = await executor.run({
+        taskId: "codex-safe-not-git-task",
+        prompt: "This should not start.",
+        controls: { permissionMode: "allow-edits" },
+      });
+
+      expect(result.status).toBe("failed");
+      if (result.status !== "failed") throw new Error("expected failed");
+      expect(result.reason).toBe("unknown_error");
+      expect(result.safeMessage).toBe(
+        "Safe execution requires a git worktree workspace.",
+      );
+      expect(result.attempts).toHaveLength(0);
+      expect(result.failureDetails).toMatchObject({
+        safeExecutionCode: "safe_execution_workspace_not_git",
+        workspacePath: await realpath(workspacePath),
+      });
+      expect(appServer.spawnCount).toBe(0);
+      expect(appServer.prompts).toEqual([]);
     } finally {
       await executor.dispose();
       await rm(rootDir, { recursive: true, force: true });
@@ -962,7 +1283,7 @@ describe("FileBackendCodexWorker", () => {
 
   it("stops dirty unknown safe Codex work by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-unknown-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-unknown-workspace-"));
+    const workspacePath = await gitWorkspace("codex-safe-unknown-workspace-");
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
@@ -1029,8 +1350,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("does not switch accounts for clean unknown Codex output by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-clean-unknown-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-clean-unknown-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-clean-unknown-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1094,8 +1415,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("repairs a reconnect-required Codex session once on the same account", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-reconnect-repair-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-reconnect-repair-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-reconnect-repair-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1124,7 +1445,8 @@ describe("FileBackendCodexWorker", () => {
             stderr: index === 0 ? "login required" : "",
           }),
           capacityPolicy: {
-            reconnectCooldownMs: 60_000,
+            reconnectCooldownMs: 10,
+            maxReconnectRetriesPerAccount: 1,
           },
           clock,
         },
@@ -1162,8 +1484,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("switches accounts after the reconnect repair budget is exhausted", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-reconnect-switch-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-reconnect-switch-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-reconnect-switch-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1197,7 +1519,8 @@ describe("FileBackendCodexWorker", () => {
             stderr: index === 0 ? "login required" : "",
           }),
           capacityPolicy: {
-            reconnectCooldownMs: 60_000,
+            reconnectCooldownMs: 10,
+            maxReconnectRetriesPerAccount: 1,
           },
           clock,
         },
@@ -1230,8 +1553,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("switches accounts for invalid Codex auth without retrying the broken account", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-auth-invalid-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-auth-invalid-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-auth-invalid-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1292,8 +1615,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("continues dirty unknown safe Codex work when explicitly allowed", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-unknown-opt-in-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-unknown-opt-in-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-unknown-opt-in-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1362,7 +1685,7 @@ describe("FileBackendCodexWorker", () => {
 
   it("cycles safe Codex work through accounts for three rounds by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-cycle-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-cycle-workspace-"));
+    const workspacePath = await gitWorkspace("codex-safe-cycle-workspace-");
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
@@ -1409,7 +1732,7 @@ describe("FileBackendCodexWorker", () => {
 
       expect(result.status).toBe("partial");
       if (result.status !== "partial") throw new Error("expected partial");
-      expect(result.attempts).toHaveLength(6);
+      expect(result.attempts).toHaveLength(10);
       expect(result.reason).toBe("quota_limited");
       expect(result.safeMessage).toBe("Safe execution has no attempts remaining.");
       expect(result.attempts.map((attempt) => attempt.failureReason)).toEqual([
@@ -1419,9 +1742,13 @@ describe("FileBackendCodexWorker", () => {
         "quota_limited",
         "quota_limited",
         "quota_limited",
+        "quota_limited",
+        "quota_limited",
+        "quota_limited",
+        "quota_limited",
       ]);
-      expect(appServers[0]!.prompts).toHaveLength(3);
-      expect(appServers[1]!.prompts).toHaveLength(3);
+      expect(appServers[0]!.prompts).toHaveLength(5);
+      expect(appServers[1]!.prompts).toHaveLength(5);
       expect(appServers[0]!.prompts[0]).toBe("Implement the safe cyclic task.");
       expect(appServers[1]!.prompts[0]).toContain("Continue the same task");
     } finally {
@@ -1433,7 +1760,7 @@ describe("FileBackendCodexWorker", () => {
 
   it("allows safe Codex account cycles to be bounded per executor", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-cycle-one-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-cycle-one-workspace-"));
+    const workspacePath = await gitWorkspace("codex-safe-cycle-one-workspace-");
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
@@ -1492,8 +1819,8 @@ describe("FileBackendCodexWorker", () => {
 
   it("continues a native Codex goal on the next account after a usage limit", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-live-goal-"));
-    const workspacePath = await mkdtemp(
-      join(tmpdir(), "codex-safe-live-goal-workspace-"),
+    const workspacePath = await gitWorkspace(
+      "codex-safe-live-goal-workspace-",
     );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
@@ -1570,7 +1897,7 @@ describe("FileBackendCodexWorker", () => {
 
   it("resumes a partial safe Codex goal on another account after executor restart", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-goal-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-goal-workspace-"));
+    const workspacePath = await gitWorkspace("codex-safe-goal-workspace-");
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
@@ -1690,6 +2017,7 @@ type FakeAppServerFactoryOptions = {
   readonly emitTopLevelErrorOnTurn?: string;
   readonly emitTopLevelErrorsOnTurns?: readonly (string | null)[];
   readonly goalStatusesAfterTurns?: readonly string[];
+  readonly holdTurnOpen?: boolean;
   readonly writeFileOnTurn?: {
     readonly relativePath: string;
     readonly content: string;
@@ -1836,6 +2164,13 @@ class FakeAppServerProcess extends EventEmitter {
         this.respond(request.id, { turn: { id: turnId } });
         setTimeout(() => {
           void this.writeConfiguredTurnFile(request.params).then(() => {
+            if (this.options.holdTurnOpen) {
+              this.notify("turn/started", {
+                threadId: String(request.params?.threadId ?? ""),
+                turn: { id: turnId, status: "inProgress" },
+              });
+              return;
+            }
             const errorMessage = this.nextTurnError();
             if (errorMessage) {
               this.stdout.emit(
@@ -2009,6 +2344,27 @@ function fakeJwt(payload: Record<string, unknown>): string {
   return `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.signature`;
 }
 
+async function gitWorkspace(prefix: string): Promise<string> {
+  const workspacePath = await mkdtemp(join(tmpdir(), prefix));
+  await execFileAsync("git", ["init"], { cwd: workspacePath });
+  await writeFile(join(workspacePath, "README.md"), "base\n", "utf8");
+  await execFileAsync("git", ["add", "README.md"], { cwd: workspacePath });
+  await execFileAsync(
+    "git",
+    [
+      "-c",
+      "user.name=Subscription Runtime Tests",
+      "-c",
+      "user.email=tests@example.com",
+      "commit",
+      "-m",
+      "Initial commit",
+    ],
+    { cwd: workspacePath },
+  );
+  return workspacePath;
+}
+
 function extractFakePrompt(
   params: Record<string, unknown> | undefined,
 ): string {
@@ -2016,6 +2372,30 @@ function extractFakePrompt(
   if (!Array.isArray(input)) return "";
   const first = input[0] as { text?: unknown } | undefined;
   return typeof first?.text === "string" ? first.text : "";
+}
+
+function sequentialIds(prefix: string): () => string {
+  let next = 0;
+  return () => `${prefix}-${++next}`;
+}
+
+async function waitUntil(
+  predicate: () => Promise<boolean> | boolean,
+  timeoutMs = 5_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      if (await predicate()) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("wait_until_timeout");
 }
 
 describe("NodeProcessRunner", () => {

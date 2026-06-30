@@ -45,7 +45,7 @@ export class ClaudeTaskAgentDriver {
             }, input.redactor);
         }
         catch (error) {
-            return failedClaudeTask(classifyClaudeFailure(error), startedAt);
+            return failedClaudeTask(classifyClaudeFailure(error, { redactor: input.redactor }), startedAt);
         }
     }
     async *streamTask(input) {
@@ -93,7 +93,7 @@ export class ClaudeTaskAgentDriver {
             }
         }
         catch (error) {
-            const result = redactProviderTaskResult(failedClaudeTask(classifyClaudeFailure(error), startedAt), input.redactor);
+            const result = redactProviderTaskResult(failedClaudeTask(classifyClaudeFailure(error, { redactor: input.redactor }), startedAt), input.redactor);
             yield {
                 type: "completed",
                 occurredAt: new Date(),
@@ -234,6 +234,9 @@ function redactProviderTaskResult(result, redactor) {
             failure: {
                 ...result.failure,
                 safeMessage: redactor.redact(result.failure.safeMessage),
+                ...(result.failure.details === undefined
+                    ? {}
+                    : { details: redactStringRecord(result.failure.details, redactor) }),
             },
             ...(result.telemetry === undefined
                 ? {}
@@ -258,6 +261,12 @@ function redactProviderTaskResult(result, redactor) {
             : { telemetry: redactTelemetry(result.telemetry, redactor) }),
         warnings: result.warnings.map((warning) => redactRuntimeWarning(warning, redactor)),
     };
+}
+function redactStringRecord(record, redactor) {
+    return Object.fromEntries(Object.entries(record).map(([key, value]) => [
+        key,
+        redactor.redact(value),
+    ]));
 }
 function redactTelemetry(telemetry, redactor) {
     return {

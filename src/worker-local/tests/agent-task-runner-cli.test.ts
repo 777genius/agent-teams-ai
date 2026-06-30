@@ -59,6 +59,7 @@ describe("subscription runtime agent-task runner CLI", () => {
         }),
         env: {
           PATH: "/usr/bin",
+          CLAUDE_RUNTIME_DIST_DIR: "/tmp/claude-runtime-dist",
           SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY:
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
           CLAUDE_CODE_OAUTH_TOKEN: "claude-token",
@@ -72,6 +73,7 @@ describe("subscription runtime agent-task runner CLI", () => {
       provider: "claude",
       providerInstanceId: "claude-a",
       model: "sonnet",
+      claudeRuntimeDistDir: "/tmp/claude-runtime-dist",
     });
     expect(calls.factory?.env).toMatchObject({
       PATH: "/usr/bin",
@@ -238,6 +240,10 @@ describe("subscription runtime agent-task runner CLI", () => {
         status: "failed",
         failure: {
           code: "unknown_runtime_failure",
+          details: {
+            exitCode: "7",
+            stderrTail: "forced fallback failure",
+          },
         },
       });
       await expect(access(canaryPath)).resolves.toBeUndefined();
@@ -360,10 +366,19 @@ describe("subscription runtime agent-task runner CLI", () => {
 
   it("fails before constructing a durable worker when the encryption key env is missing", async () => {
     let factoryCalled = false;
+    const stdout: string[] = [];
     const stderr: string[] = [];
     const exitCode = await runSubscriptionAgentTaskCli(
-      ["--provider", "claude", "--state-root", "/tmp/runtime-state"],
+      [
+        "--provider",
+        "claude",
+        "--format",
+        "result-json",
+        "--state-root",
+        "/tmp/runtime-state",
+      ],
       fakeIo({
+        stdout,
         stderr,
         stdin: JSON.stringify({
           protocolVersion: 1,
@@ -382,6 +397,14 @@ describe("subscription runtime agent-task runner CLI", () => {
 
     expect(exitCode).toBe(2);
     expect(factoryCalled).toBe(false);
+    expect(JSON.parse(stdout.join(""))).toMatchObject({
+      protocolVersion: 1,
+      status: "failed",
+      failure: {
+        code: "unknown_runtime_failure",
+        safeMessage: "SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required",
+      },
+    });
     expect(stderr.join("")).toContain("SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY is required");
   });
 

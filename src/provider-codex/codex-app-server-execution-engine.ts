@@ -37,6 +37,7 @@ export type CodexAppServerExecutionEngineOptions = {
   readonly processFactory?: CodexAppServerProcessFactory;
   readonly executionProfile?: CodexExecutionProfile;
   readonly cleanThreadPrewarm?: boolean;
+  readonly reconnectGraceMs?: number;
   readonly goalMode?: boolean;
   readonly maxGoalTurns?: number;
   readonly goalContinuePrompt?: string;
@@ -119,6 +120,7 @@ type CodexThreadGoal = {
 
 const defaultTimeoutMs = 10 * 60 * 1000;
 const defaultControlRequestTimeoutMs = 30 * 1000;
+const defaultReconnectGraceMs = 10 * 60 * 1000;
 const defaultMaxOutputBytes = 512 * 1024;
 const defaultMaxGoalTurns = 20;
 const defaultGoalContinuePrompt =
@@ -515,6 +517,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
       executionProfile: this.executionProfile,
       cleanThreadPrewarm: this.options.cleanThreadPrewarm ?? true,
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
+      reconnectGraceMs: this.options.reconnectGraceMs ?? defaultReconnectGraceMs,
       abortSignal: input.abortSignal,
     });
     try {
@@ -549,6 +552,7 @@ type TurnState = {
   completed: boolean;
   error: Error | null;
   waiters: ((state: TurnState) => void)[];
+  reconnectGraceTimer: NodeJS.Timeout | null;
 };
 
 type PendingRequest = {
@@ -585,6 +589,7 @@ class CodexAppServerClient {
       readonly executionProfile: ResolvedCodexExecutionProfile;
       readonly cleanThreadPrewarm: boolean;
       readonly timeoutMs: number;
+      readonly reconnectGraceMs: number;
       readonly abortSignal: AbortSignal;
     },
   ) {}
@@ -1422,6 +1427,7 @@ class CodexAppServerClient {
     if (record.method === "item/agentMessage/delta") {
       const turnId = stringField(params, "turnId");
       const turn = this.ensureTurn(turnId);
+      this.clearReconnectGraceTimer(turn);
       turn.outputText += stringField(params, "delta") ?? "";
       return;
     }
@@ -1450,7 +1456,9 @@ class CodexAppServerClient {
       if (item?.type === "agentMessage") {
         const text = agentMessageText(item);
         if (text) {
-          this.ensureTurn(turnId).outputText = text;
+          const turn = this.ensureTurn(turnId);
+          this.clearReconnectGraceTimer(turn);
+          turn.outputText = text;
         }
       }
       return;
@@ -1497,9 +1505,12 @@ class CodexAppServerClient {
     }
     if (record.method === "error") {
       const turnId = stringField(params, "turnId");
-      const error = new Error(
-        `codex_app_server_error:${safeMessage(params?.error ?? params ?? record)}`,
-      );
+      const message = safeMessage(params?.error ?? params ?? record);
+      if (isCodexAppServerReconnectProgressMessage(message)) {
+        this.deferTurnsForReconnectProgress(turnId, message);
+        return;
+      }
+      const error = new Error(`codex_app_server_error:${message}`);
       if (!turnId) {
         for (const turn of this.turns.values()) {
           turn.error = error;
@@ -1511,6 +1522,38 @@ class CodexAppServerClient {
       turn.error = error;
       this.resolveTurn(turn);
     }
+  }
+
+  private deferTurnsForReconnectProgress(
+    turnId: string | null,
+    message: string,
+  ): void {
+    const turns =
+      turnId === null ? [...this.turns.values()] : [this.ensureTurn(turnId)];
+    if (turns.length === 0) {
+      this.backgroundWarnings.push({
+        code: "codex_app_server_reconnecting",
+        safeMessage: message,
+      });
+      return;
+    }
+    for (const turn of turns) {
+      this.scheduleReconnectGraceTimeout(turn, message);
+    }
+  }
+
+  private scheduleReconnectGraceTimeout(
+    turn: TurnState,
+    message: string,
+  ): void {
+    this.clearReconnectGraceTimer(turn);
+    turn.reconnectGraceTimer = setTimeout(() => {
+      if (turn.completed || turn.error) return;
+      turn.error = new Error(
+        `codex_app_server_reconnect_timeout:${safeMessage(message)}`,
+      );
+      this.resolveTurn(turn);
+    }, this.options.reconnectGraceMs);
   }
 
   private onServerRequest(id: number, method: string): void {
@@ -1549,6 +1592,7 @@ class CodexAppServerClient {
   }
 
   private resolveTurn(turn: TurnState): void {
+    this.clearReconnectGraceTimer(turn);
     const waiters = turn.waiters.splice(0);
     for (const waiter of waiters) waiter(turn);
   }
@@ -1607,6 +1651,12 @@ class CodexAppServerClient {
     }
     this.turns.delete(actualTurnId);
   }
+
+  private clearReconnectGraceTimer(turn: TurnState): void {
+    if (!turn.reconnectGraceTimer) return;
+    clearTimeout(turn.reconnectGraceTimer);
+    turn.reconnectGraceTimer = null;
+  }
 }
 
 function spawnCodexAppServerProcess(input: {
@@ -1630,6 +1680,7 @@ function createTurnState(): TurnState {
     completed: false,
     error: null,
     waiters: [],
+    reconnectGraceTimer: null,
   };
 }
 
@@ -2048,6 +2099,10 @@ function isAbortLikeError(error: unknown): boolean {
       error.message.includes("codex_app_server_turn_aborted") ||
       error.message.includes("node_process_runner_aborted"))
   );
+}
+
+function isCodexAppServerReconnectProgressMessage(message: string): boolean {
+  return /\breconnecting(?:\.{3}|…)?\s*\d+\s*\/\s*\d+\b/i.test(message);
 }
 
 function safeMessage(error: unknown): string {

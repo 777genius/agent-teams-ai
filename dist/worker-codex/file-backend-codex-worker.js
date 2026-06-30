@@ -2,9 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, assertProviderTaskSystemPrompt, } from "@vioxen/subscription-runtime/core";
-import { CodexAppServerExecutionEngine, CodexCliAgentDriver, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, sessionArtifactFromCodexAuthJson, codexAuthJsonFromArtifact, readCodexAuthJsonFreshness, validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provider-codex";
+import { CodexAppServerExecutionEngine, CodexCliAgentDriver, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, classifyCodexFailure, sessionArtifactFromCodexAuthJson, codexAuthJsonFromArtifact, readCodexAuthJsonFreshness, validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provider-codex";
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
-import { SubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
+import { SubscriptionWorkerError, combineAbortSignals, } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner.js";
 import { NullWorkerObservability } from "../worker-local/observability.js";
 import { BorrowedRunTaskWorkspace, StableWorkerWorkspace, } from "../worker-local/temp-workspace.js";
@@ -161,11 +161,25 @@ export class FileBackendCodexWorker {
     }
     async seedCodexAuthJsonFile(authJsonPath) {
         this.seededCodexAuthJsonPath = authJsonPath;
-        const authJson = await readFile(authJsonPath, "utf8");
+        let authJson;
+        try {
+            authJson = await readFile(authJsonPath, "utf8");
+        }
+        catch {
+            this.recordFailure(codexSeedSessionInvalidFailure());
+            return;
+        }
         await this.seedCodexAuthJson(authJson);
     }
     async seedCodexAuthJson(authJson) {
-        const artifact = sessionArtifactFromCodexAuthJson(authJson);
+        let artifact;
+        try {
+            artifact = sessionArtifactFromCodexAuthJson(authJson);
+        }
+        catch (error) {
+            this.recordFailure(classifyCodexFailure(error));
+            return;
+        }
         const existing = await this.sessionStore.read({
             providerInstanceId: this.options.providerInstanceId,
             expectedProviderId: "codex",
@@ -267,12 +281,13 @@ export class FileBackendCodexWorker {
             await this.exportSeededCodexAuthJsonFileQuietly("prewarm");
         }
     }
-    async run(job) {
+    async run(job, options = {}) {
         this.assertStarted();
         assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
         await this.rememberStoredQuotaGroup();
         const runId = job.runId ?? `local-${randomUUID()}`;
-        const abortSignal = job.abortSignal ?? new AbortController().signal;
+        const abort = combineAbortSignals(job.abortSignal, options.abortSignal);
+        const abortSignal = abort.signal;
         const startedAt = this.clock.monotonicMs();
         const retryMaxMs = this.options.refreshConflictRetryMaxMs ?? 30_000;
         let attempt = 1;
@@ -311,6 +326,7 @@ export class FileBackendCodexWorker {
                         cause: error,
                         details: {
                             reason: failure.code,
+                            ...(failure.details ?? {}),
                             ...(this.capacityAccountId
                                 ? { accountId: this.capacityAccountId }
                                 : {}),
@@ -337,6 +353,7 @@ export class FileBackendCodexWorker {
             }
         }
         finally {
+            abort.dispose();
             await this.exportSeededCodexAuthJsonFileQuietly("run");
         }
     }
@@ -551,7 +568,12 @@ export class FileBackendCodexWorker {
     async taskResultToOutput(result, context) {
         if (result.status === "failed") {
             this.recordFailure(result.failure);
-            throw new SubscriptionWorkerError("subscription_worker_run_failed", result.failure.safeMessage, { details: { code: result.failure.code } });
+            throw new SubscriptionWorkerError("subscription_worker_run_failed", result.failure.safeMessage, {
+                details: {
+                    code: result.failure.code,
+                    ...(result.failure.details ?? {}),
+                },
+            });
         }
         if (result.status === "waiting_for_input") {
             const waiting = this.workerWaitingResult(result);
@@ -725,7 +747,7 @@ export class FileBackendCodexWorker {
         }
     }
     recordReconnectRequired(reason) {
-        const maxRetries = this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 1;
+        const maxRetries = this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 4;
         if (this.consecutiveReconnectFailures < maxRetries) {
             this.consecutiveReconnectFailures += 1;
             this.capacityState = {
@@ -933,6 +955,15 @@ class LocalFileManagedRunStore {
         });
         await rename(tempPath, path);
     }
+}
+function codexSeedSessionInvalidFailure() {
+    return {
+        code: "provider_session_invalid",
+        retryable: false,
+        reconnectRequired: true,
+        safeMessage: "Codex session is invalid.",
+        causeCategory: "provider_session_invalid",
+    };
 }
 function shouldRetryRefreshConflict(result) {
     if (result.status !== "blocked")

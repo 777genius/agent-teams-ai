@@ -1,6 +1,6 @@
 {
   "name": "@vioxen/subscription-runtime",
-  "version": "0.1.0-main.1",
+  "version": "0.1.0-main.2",
   "description": "Provider-neutral subscription runtime for backend workers, Codex subscription execution, and pluggable session custody.",
   "license": "UNLICENSED",
   "type": "module",
@@ -57,6 +57,11 @@
       "import": "./dist/worker-claude/index.js",
       "default": "./dist/worker-claude/index.js"
     },
+    "./worker-local": {
+      "types": "./dist/worker-local/index.d.ts",
+      "import": "./dist/worker-local/index.js",
+      "default": "./dist/worker-local/index.js"
+    },
     "./queue-core": {
       "types": "./dist/queue-core/index.d.ts",
       "import": "./dist/queue-core/index.js",
@@ -102,6 +107,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "subscription-runtime-codex-goal": "./dist/worker-codex/codex-goal-cli.js",
+    "subscription-runtime-codex-goal-mcp": "./dist/worker-codex/codex-goal-mcp.js",
     "subscription-runtime-agent-task": "./dist/agent-task/cli.js",
     "subscription-runtime-account-status": "./dist/worker-local/account-diagnostics-cli.js",
     "subscription-runtime-run-agent-task": "./dist/worker-local/agent-task-runner-cli.js"
@@ -116,6 +123,7 @@
     "build": "tsc -p tsconfig.build.json && node scripts/rewrite-dist-esm-imports.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "e2e:live-workers": "npm run build && node scripts/e2e-live-workers/run.mjs",
     "smoke:worker-claude": "npm run build && node scripts/smoke-claude-worker.mjs",
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs && node scripts/check-boundaries-self-test.mjs",
@@ -124,7 +132,9 @@
     "check": "npm run typecheck && npm test && npm run build && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer"
   },
   "dependencies": {
-    "libsodium-wrappers": "^0.8.4"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "libsodium-wrappers": "^0.8.4",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "claude-runtime": "0.0.0"

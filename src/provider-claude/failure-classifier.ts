@@ -1,6 +1,24 @@
 import type { ProviderFailure } from "@vioxen/subscription-runtime/core";
 
-export function classifyClaudeFailure(error: unknown): ProviderFailure {
+type FailureRedactor = {
+  readonly redact: (input: string) => string;
+};
+
+export class ClaudeProviderFailureError extends Error {
+  readonly name = "ClaudeProviderFailureError";
+
+  constructor(readonly failure: ProviderFailure) {
+    super(failure.safeMessage);
+  }
+}
+
+export function classifyClaudeFailure(
+  error: unknown,
+  options: { readonly redactor?: FailureRedactor } = {},
+): ProviderFailure {
+  const existingFailure = providerFailureFromUnknown(error);
+  if (existingFailure) return redactProviderFailure(existingFailure, options.redactor);
+
   const message = error instanceof Error ? error.message : String(error);
   const state = classifyClaudeRuntimeFailure(message);
 
@@ -60,6 +78,9 @@ export function classifyClaudeFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Claude runtime failed.",
         causeCategory: state,
+        ...(options.redactor === undefined
+          ? {}
+          : { details: safeFailureDetails(message, options.redactor) }),
       };
   }
 }
@@ -136,4 +157,82 @@ function isPermissionRequired(normalized: string): boolean {
     normalized.includes("approval required") ||
     normalized.includes("resource not accessible")
   );
+}
+
+function providerFailureFromUnknown(error: unknown): ProviderFailure | null {
+  if (error instanceof ClaudeProviderFailureError) return error.failure;
+  if (!isRecord(error)) return null;
+  const failure = error.failure;
+  if (!isProviderFailure(failure)) return null;
+  return failure;
+}
+
+function isProviderFailure(value: unknown): value is ProviderFailure {
+  return (
+    isRecord(value) &&
+    isProviderFailureCode(value.code) &&
+    typeof value.retryable === "boolean" &&
+    typeof value.reconnectRequired === "boolean" &&
+    typeof value.safeMessage === "string"
+  );
+}
+
+function isProviderFailureCode(value: unknown): value is ProviderFailure["code"] {
+  return typeof value === "string" && [
+    "needs_reconnect",
+    "quota_limited",
+    "permission_required",
+    "provider_session_invalid",
+    "provider_output_invalid",
+    "task_mode_unsupported",
+    "task_cancelled",
+    "task_timeout",
+    "stale_generation",
+    "backend_unavailable",
+    "unknown_runtime_failure",
+  ].includes(value);
+}
+
+function redactProviderFailure(
+  failure: ProviderFailure,
+  redactor: FailureRedactor | undefined,
+): ProviderFailure {
+  if (redactor === undefined) return failure;
+  return {
+    ...failure,
+    safeMessage: redactor.redact(failure.safeMessage),
+    ...(failure.details === undefined
+      ? {}
+      : { details: redactDetails(failure.details, redactor) }),
+  };
+}
+
+function safeFailureDetails(
+  message: string,
+  redactor: FailureRedactor,
+): Readonly<Record<string, string>> {
+  return {
+    runtimeMessage: truncateDetail(redactor.redact(message)),
+  };
+}
+
+function redactDetails(
+  details: Readonly<Record<string, string>>,
+  redactor: FailureRedactor,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(details).map(([key, value]) => [
+      key,
+      truncateDetail(redactor.redact(value)),
+    ]),
+  );
+}
+
+function truncateDetail(value: string): string {
+  const maxLength = 1000;
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength)}...`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

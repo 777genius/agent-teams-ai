@@ -27,10 +27,6 @@ export interface ClaudeRuntimeModule {
 }
 export interface ClaudeBgProviderRuntimeModule {
     readonly ClaudeBgRuntimeProvider: new (options: Record<string, unknown>) => AgentRuntimeProviderLike;
-    readonly NodeProcessRunner: new (options?: Record<string, unknown>) => unknown;
-    readonly SecretRedactor: new (options?: {
-        readonly secrets?: readonly string[];
-    }) => unknown;
 }
 export interface AgentRuntimeProviderLike {
     readonly id: string;

@@ -193,6 +193,7 @@ export function makeAgentTaskFailure(
     readonly retryable?: boolean;
     readonly reconnectRequired?: boolean;
     readonly causeCategory?: string;
+    readonly details?: Readonly<Record<string, string>>;
   },
 ): ProviderFailure {
   return {
@@ -201,5 +202,6 @@ export function makeAgentTaskFailure(
     reconnectRequired: input?.reconnectRequired ?? false,
     safeMessage,
     ...(input?.causeCategory ? { causeCategory: input.causeCategory } : {}),
+    ...(input?.details ? { details: input.details } : {}),
   };
 }

@@ -13,6 +13,13 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
+import type {
+  ActiveAttemptRegistry,
+  RuntimeInterruptReason,
+  WorkerControlContinuationBatch,
+  WorkerControlContinuationSource,
+  WorkerControlTarget,
+} from "./control";
 import { isSubscriptionWorkerError } from "./errors";
 import type { WorkerPoolRunOptions } from "./types";
 
@@ -30,6 +37,7 @@ export type ExistingLockedWorkspaceStrategy = {
   readonly mode: "existing_locked";
   readonly path: string;
   readonly staleLockMs?: number;
+  readonly requireGitWorkspace?: boolean;
 };
 
 export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
@@ -52,6 +60,9 @@ export type AttemptFailureReason =
   | "account_unavailable"
   | "reconnect_required"
   | "permission_required"
+  | "task_timeout"
+  | "provider_output_invalid"
+  | "runtime_interrupted"
   | "user_abort"
   | "unknown_error";
 
@@ -91,6 +102,7 @@ export type AttemptRecord = {
   readonly status: AttemptStatus;
   readonly failureReason?: AttemptFailureReason;
   readonly failureMessage?: string;
+  readonly failureDetails?: Readonly<Record<string, string>>;
   readonly workspaceDirtyBefore: boolean;
   readonly workspaceDirtyAfter?: boolean;
   readonly changedFiles: readonly string[];
@@ -107,6 +119,7 @@ export type ContinuationPacket = {
   readonly changedFiles: readonly string[];
   readonly workspaceSummary: string;
   readonly previousOutputSummary?: string;
+  readonly workerControlSignalIds?: readonly string[];
   readonly message: string;
 };
 
@@ -125,6 +138,7 @@ export type SafeExecutionTaskRecord = {
   readonly outputSummary?: string;
   readonly lastFailureReason?: AttemptFailureReason;
   readonly lastFailureMessage?: string;
+  readonly lastFailureDetails?: Readonly<Record<string, string>>;
 };
 
 export type WorkspaceLockRecord = {
@@ -177,6 +191,7 @@ export interface AttemptJournal {
     readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
     readonly reason: AttemptFailureReason;
     readonly message?: string;
+    readonly details?: Readonly<Record<string, string>>;
     readonly now: Date;
   }): Promise<SafeExecutionTaskRecord>;
 }
@@ -199,12 +214,14 @@ export interface ContinuationPacketBuilder {
     readonly previousFailureReason: AttemptFailureReason;
     readonly snapshot: WorkspaceSnapshot;
     readonly previousOutputSummary?: string;
+    readonly controlBatch?: WorkerControlContinuationBatch;
   }): ContinuationPacket;
 }
 
 export type SafeExecutionErrorCode =
   | "safe_execution_invalid_task"
   | "safe_execution_workspace_locked"
+  | "safe_execution_workspace_not_git"
   | "safe_execution_external_retry_disabled"
   | "safe_execution_continuation_disabled"
   | "safe_execution_attempts_exhausted";
@@ -239,6 +256,7 @@ export type SafeExecutionFailureClassification = {
   readonly reason: AttemptFailureReason;
   readonly safeMessage: string;
   readonly retryable: boolean;
+  readonly details?: Readonly<Record<string, string>>;
 };
 
 export type SafeExecutionWorkerPool<Job, Result> = {
@@ -272,6 +290,7 @@ export type SafeExecutionRunInput<Job, Result> = {
   ) => SafeExecutionFailureClassification;
   readonly summarizeResult?: (result: Result) => string | undefined;
   readonly summarizeError?: (error: unknown) => string | undefined;
+  readonly controlTarget?: WorkerControlTarget;
   readonly abortSignal?: AbortSignal;
 };
 
@@ -289,6 +308,7 @@ export type SafeExecutionRunResult<Result> =
       readonly attempts: readonly AttemptRecord[];
       readonly reason: AttemptFailureReason;
       readonly safeMessage: string;
+      readonly failureDetails?: Readonly<Record<string, string>>;
       readonly error?: unknown;
     };
 
@@ -297,6 +317,8 @@ export type SafeExecutionRunnerOptions = {
   readonly journal: AttemptJournal;
   readonly snapshotter?: WorkspaceSnapshotter;
   readonly continuationPacketBuilder?: ContinuationPacketBuilder;
+  readonly controlInbox?: WorkerControlContinuationSource;
+  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly ownerId?: string;
   readonly ownerPid?: number;
   readonly clock?: { now(): Date };
@@ -460,6 +482,9 @@ export class InMemoryAttemptJournal implements AttemptJournal {
         ? {
             lastFailureReason: input.attempt.failureReason,
             lastFailureMessage: input.attempt.failureMessage,
+            ...(input.attempt.failureDetails === undefined
+              ? {}
+              : { lastFailureDetails: input.attempt.failureDetails }),
           }
         : {}),
     };
@@ -493,6 +518,7 @@ export class InMemoryAttemptJournal implements AttemptJournal {
     readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
     readonly reason: AttemptFailureReason;
     readonly message?: string;
+    readonly details?: Readonly<Record<string, string>>;
     readonly now: Date;
   }): Promise<SafeExecutionTaskRecord> {
     const record = requireTaskRecord(this.records.get(input.taskId), input.taskId);
@@ -502,6 +528,7 @@ export class InMemoryAttemptJournal implements AttemptJournal {
       updatedAt: input.now,
       lastFailureReason: input.reason,
       ...(input.message === undefined ? {} : { lastFailureMessage: input.message }),
+      ...(input.details === undefined ? {} : { lastFailureDetails: input.details }),
     };
     this.records.set(input.taskId, next);
     return next;
@@ -572,6 +599,9 @@ export class LocalFileAttemptJournal implements AttemptJournal {
         ? {
             lastFailureReason: input.attempt.failureReason,
             lastFailureMessage: input.attempt.failureMessage,
+            ...(input.attempt.failureDetails === undefined
+              ? {}
+              : { lastFailureDetails: input.attempt.failureDetails }),
           }
         : {}),
     };
@@ -608,6 +638,7 @@ export class LocalFileAttemptJournal implements AttemptJournal {
     readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
     readonly reason: AttemptFailureReason;
     readonly message?: string;
+    readonly details?: Readonly<Record<string, string>>;
     readonly now: Date;
   }): Promise<SafeExecutionTaskRecord> {
     const record = requireTaskRecord(
@@ -620,6 +651,7 @@ export class LocalFileAttemptJournal implements AttemptJournal {
       updatedAt: input.now,
       lastFailureReason: input.reason,
       ...(input.message === undefined ? {} : { lastFailureMessage: input.message }),
+      ...(input.details === undefined ? {} : { lastFailureDetails: input.details }),
     };
     await this.writeTask(next);
     return next;
@@ -847,6 +879,7 @@ export class DefaultContinuationPacketBuilder
     readonly previousFailureReason: AttemptFailureReason;
     readonly snapshot: WorkspaceSnapshot;
     readonly previousOutputSummary?: string;
+    readonly controlBatch?: WorkerControlContinuationBatch;
   }): ContinuationPacket {
     const changedFiles = input.snapshot.changedFiles;
     const filesText =
@@ -858,6 +891,9 @@ export class DefaultContinuationPacketBuilder
       : "";
     const diffStatText = input.snapshot.diffStat
       ? `\nDiff stat:\n${input.snapshot.diffStat}\n`
+      : "";
+    const controlText = input.controlBatch?.message
+      ? `\n${input.controlBatch.message}\n`
       : "";
     const message = [
       "Continue the same task in the current workspace.",
@@ -875,6 +911,7 @@ export class DefaultContinuationPacketBuilder
       "Current workspace summary:",
       input.snapshot.summary,
       diffStatText.trimEnd(),
+      controlText.trimEnd(),
       "",
       "Changed files:",
       filesText,
@@ -897,6 +934,9 @@ export class DefaultContinuationPacketBuilder
       ...(input.previousOutputSummary === undefined
         ? {}
         : { previousOutputSummary: input.previousOutputSummary }),
+      ...(input.controlBatch?.signalIds.length
+        ? { workerControlSignalIds: input.controlBatch.signalIds }
+        : {}),
       message,
     };
   }
@@ -965,6 +1005,45 @@ export class SafeExecutionRunner {
           replayed: true,
         };
       }
+      if (input.workspace.requireGitWorkspace) {
+        try {
+          await assertGitWorkspace(workspacePath);
+        } catch (error) {
+          return this.failStartedTask({ input, error });
+        }
+      }
+      if (existing?.status === "running" && existing.attempts.length === 0) {
+        let snapshot: WorkspaceSnapshot;
+        try {
+          snapshot = await this.snapshotter.capture({
+            workspacePath,
+            includeDiff: true,
+            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+          });
+        } catch (error) {
+          return this.failStartedTask({ input, error });
+        }
+        if (snapshot.dirty) {
+          const safeMessage =
+            "Safe execution found an interrupted running task with unrecorded workspace changes.";
+          task = await this.options.journal.markPartial({
+            taskId: input.taskId,
+            status: "partial",
+            reason: "unknown_error",
+            message: safeMessage,
+            details: interruptedWorkspaceDetails(snapshot),
+            now: this.clock.now(),
+          });
+          return {
+            status: "partial",
+            task,
+            attempts: task.attempts,
+            reason: "unknown_error",
+            safeMessage,
+            failureDetails: interruptedWorkspaceDetails(snapshot),
+          };
+        }
+      }
 
       const policy = normalizePolicy(input);
       let job = input.job;
@@ -976,12 +1055,17 @@ export class SafeExecutionRunner {
         task.lastFailureReason &&
         policy.continuationMode !== "disabled"
       ) {
-        const snapshot = await this.snapshotter.capture({
-          workspacePath,
-          includeDiff: true,
-          ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-        });
-        const packet = this.continuationPacketBuilder.build({
+        let snapshot: WorkspaceSnapshot;
+        try {
+          snapshot = await this.snapshotter.capture({
+            workspacePath,
+            includeDiff: true,
+            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+          });
+        } catch (error) {
+          return this.failStartedTask({ input, error });
+        }
+        const packet = await this.buildContinuationPacket({
           taskId: input.taskId,
           attemptNumber: firstAttemptNumber,
           provider: input.provider,
@@ -992,6 +1076,9 @@ export class SafeExecutionRunner {
           ...(previousOutputSummary === undefined
             ? {}
             : { previousOutputSummary }),
+          ...(input.controlTarget === undefined
+            ? {}
+            : { controlTarget: input.controlTarget }),
         });
         const continuationJob = continuationJobFor({
           factory: input.continuationJobFactory,
@@ -1007,6 +1094,9 @@ export class SafeExecutionRunner {
             status: "partial",
             reason: task.lastFailureReason,
             message: safeMessage,
+            ...(task.lastFailureDetails === undefined
+              ? {}
+              : { details: task.lastFailureDetails }),
             now: this.clock.now(),
           });
           return {
@@ -1015,6 +1105,9 @@ export class SafeExecutionRunner {
             attempts: partial.attempts,
             reason: task.lastFailureReason,
             safeMessage,
+            ...(task.lastFailureDetails === undefined
+              ? {}
+              : { failureDetails: task.lastFailureDetails }),
           };
         }
         job = continuationJob;
@@ -1042,16 +1135,36 @@ export class SafeExecutionRunner {
           };
         }
 
-        const before = await this.snapshotter.capture({
-          workspacePath,
-          ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-        });
+        let before: WorkspaceSnapshot;
+        try {
+          before = await this.snapshotter.capture({
+            workspacePath,
+            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+          });
+        } catch (error) {
+          return this.failStartedTask({ input, error });
+        }
         const startedAt = this.clock.now();
+        const attemptAbort = createAttemptAbortController(input.abortSignal);
+        const attemptTarget = attemptControlTarget({
+          input,
+          workspacePath,
+          attemptNumber,
+        });
+        const activeAttempt = this.options.activeAttemptRegistry?.register({
+          taskId: input.taskId,
+          attemptNumber,
+          provider: input.provider,
+          workspacePath,
+          target: attemptTarget,
+          startedAt,
+          abortController: attemptAbort.controller,
+        });
 
         try {
           const result = await input.pool.run(job, {
             idempotencyKey: `${input.taskId}:${attemptNumber}`,
-            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+            abortSignal: attemptAbort.controller.signal,
             retryPolicy: {
               maxAttempts: 1,
               retryOnSlotCapacityUnavailable: false,
@@ -1060,7 +1173,9 @@ export class SafeExecutionRunner {
           const after = await this.snapshotter.capture({
             workspacePath,
             ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-          });
+          }).catch((error) =>
+            unavailableWorkspaceSnapshot({ workspacePath, error }),
+          );
           previousOutputSummary = input.summarizeResult?.(result);
           const metadata = input.attemptMetadata?.({ result });
           const attempt = completeAttemptRecord({
@@ -1096,14 +1211,29 @@ export class SafeExecutionRunner {
             replayed: false,
           };
         } catch (error) {
+          let afterCaptureError: unknown;
           const after = await this.snapshotter.capture({
             workspacePath,
             includeDiff: true,
             ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+          }).catch((error) => {
+            afterCaptureError = error;
+            return unavailableWorkspaceSnapshot({ workspacePath, error });
           });
-          const classification =
-            input.classifyError?.(error) ??
-            defaultSafeExecutionErrorClassifier(error);
+          const runtimeInterrupt = runtimeInterruptClassification(
+            attemptAbort.controller.signal.reason,
+          );
+          const classification = withFailureDetails(
+            runtimeInterrupt ??
+              input.classifyError?.(error) ??
+              defaultSafeExecutionErrorClassifier(error),
+            afterCaptureError === undefined
+              ? undefined
+              : prefixFailureDetails(
+                  "workspaceSnapshot",
+                  failureDetailsFromUnknown(afterCaptureError),
+                ),
+          );
           const failureMessage =
             input.summarizeError?.(error) ?? classification.safeMessage;
           const attempt = failedAttemptRecord({
@@ -1139,6 +1269,9 @@ export class SafeExecutionRunner {
               status,
               reason: classification.reason,
               message: canContinue.safeMessage ?? failureMessage,
+              ...(classification.details === undefined
+                ? {}
+                : { details: classification.details }),
               now: this.clock.now(),
             });
             return {
@@ -1147,11 +1280,14 @@ export class SafeExecutionRunner {
               attempts: task.attempts,
               reason: classification.reason,
               safeMessage: canContinue.safeMessage ?? failureMessage,
+              ...(classification.details === undefined
+                ? {}
+                : { failureDetails: classification.details }),
               error,
             };
           }
 
-          const packet = this.continuationPacketBuilder.build({
+          const packet = await this.buildContinuationPacket({
             taskId: input.taskId,
             attemptNumber: attemptNumber + 1,
             provider: input.provider,
@@ -1162,6 +1298,9 @@ export class SafeExecutionRunner {
             ...(previousOutputSummary === undefined
               ? {}
               : { previousOutputSummary }),
+            ...(input.controlTarget === undefined
+              ? {}
+              : { controlTarget: input.controlTarget }),
           });
           const continuationJob = continuationJobFor({
             factory: input.continuationJobFactory,
@@ -1177,6 +1316,9 @@ export class SafeExecutionRunner {
               status: "partial",
               reason: classification.reason,
               message: safeMessage,
+              ...(classification.details === undefined
+                ? {}
+                : { details: classification.details }),
               now: this.clock.now(),
             });
             return {
@@ -1185,10 +1327,16 @@ export class SafeExecutionRunner {
               attempts: task.attempts,
               reason: classification.reason,
               safeMessage,
+              ...(classification.details === undefined
+                ? {}
+                : { failureDetails: classification.details }),
               error,
             };
           }
           job = continuationJob;
+        } finally {
+          activeAttempt?.release();
+          attemptAbort.dispose();
         }
       }
 
@@ -1197,6 +1345,9 @@ export class SafeExecutionRunner {
         status: "partial",
         reason: task.lastFailureReason ?? "unknown_error",
         message: "Safe execution exhausted all configured attempts.",
+        ...(task.lastFailureDetails === undefined
+          ? {}
+          : { details: task.lastFailureDetails }),
         now: this.clock.now(),
       });
       return {
@@ -1205,11 +1356,161 @@ export class SafeExecutionRunner {
         attempts: exhausted.attempts,
         reason: exhausted.lastFailureReason ?? "unknown_error",
         safeMessage: "Safe execution exhausted all configured attempts.",
+        ...(exhausted.lastFailureDetails === undefined
+          ? {}
+          : { failureDetails: exhausted.lastFailureDetails }),
       };
     } finally {
       await lock.release();
     }
   }
+
+  private async failStartedTask<Job, Result>(input: {
+    readonly input: SafeExecutionRunInput<Job, Result>;
+    readonly error: unknown;
+  }): Promise<SafeExecutionRunResult<Result>> {
+    const classification = defaultSafeExecutionErrorClassifier(input.error);
+    const failureMessage =
+      input.input.summarizeError?.(input.error) ?? classification.safeMessage;
+    const status = finalStatusForFailure(classification.reason);
+    const task = await this.options.journal.markPartial({
+      taskId: input.input.taskId,
+      status,
+      reason: classification.reason,
+      message: failureMessage,
+      ...(classification.details === undefined
+        ? {}
+        : { details: classification.details }),
+      now: this.clock.now(),
+    });
+    return {
+      status,
+      task,
+      attempts: task.attempts,
+      reason: classification.reason,
+      safeMessage: failureMessage,
+      ...(classification.details === undefined
+        ? {}
+        : { failureDetails: classification.details }),
+      error: input.error,
+    };
+  }
+
+  private async buildContinuationPacket(input: {
+    readonly taskId: TaskRunId;
+    readonly attemptNumber: number;
+    readonly provider: string;
+    readonly workspacePath: string;
+    readonly originalPrompt: string;
+    readonly previousFailureReason: AttemptFailureReason;
+    readonly snapshot: WorkspaceSnapshot;
+    readonly previousOutputSummary?: string;
+    readonly controlTarget?: WorkerControlTarget;
+  }): Promise<ContinuationPacket> {
+    const controlBatch = this.options.controlInbox &&
+      shouldDeliverControlForContinuation(input.previousFailureReason)
+      ? await this.options.controlInbox.consumeForContinuation({
+          target: input.controlTarget ?? {
+            jobId: input.taskId,
+            workspaceId: input.workspacePath,
+          },
+          deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
+          now: this.clock.now(),
+        })
+      : undefined;
+    return this.continuationPacketBuilder.build({
+      taskId: input.taskId,
+      attemptNumber: input.attemptNumber,
+      provider: input.provider,
+      workspacePath: input.workspacePath,
+      originalPrompt: input.originalPrompt,
+      previousFailureReason: input.previousFailureReason,
+      snapshot: input.snapshot,
+      ...(input.previousOutputSummary === undefined
+        ? {}
+        : { previousOutputSummary: input.previousOutputSummary }),
+      ...(controlBatch === undefined ? {} : { controlBatch }),
+    });
+  }
+}
+
+function shouldDeliverControlForContinuation(
+  previousFailureReason: AttemptFailureReason,
+): boolean {
+  return (
+    previousFailureReason !== "account_unavailable" &&
+    previousFailureReason !== "reconnect_required"
+  );
+}
+
+function attemptControlTarget<Job, Result>(input: {
+  readonly input: SafeExecutionRunInput<Job, Result>;
+  readonly workspacePath: string;
+  readonly attemptNumber: number;
+}): WorkerControlTarget {
+  const base = input.input.controlTarget ?? {
+    jobId: input.input.taskId,
+    workspaceId: input.workspacePath,
+  };
+  return {
+    ...base,
+    taskId: base.taskId ?? input.input.taskId,
+    workspaceId: base.workspaceId ?? input.workspacePath,
+    attemptId: base.attemptId ?? `${input.input.taskId}:attempt-${input.attemptNumber}`,
+  };
+}
+
+function createAttemptAbortController(
+  parent: AbortSignal | undefined,
+): {
+  readonly controller: AbortController;
+  dispose(): void;
+} {
+  const controller = new AbortController();
+  if (!parent) return { controller, dispose: () => undefined };
+  const abort = () => {
+    if (!controller.signal.aborted) {
+      controller.abort(parent.reason);
+    }
+  };
+  if (parent.aborted) {
+    abort();
+    return { controller, dispose: () => undefined };
+  }
+  parent.addEventListener("abort", abort, { once: true });
+  return {
+    controller,
+    dispose: () => parent.removeEventListener("abort", abort),
+  };
+}
+
+function runtimeInterruptClassification(
+  reason: unknown,
+): SafeExecutionFailureClassification | null {
+  if (!isRuntimeInterruptReason(reason)) return null;
+  return {
+    reason: "runtime_interrupted",
+    safeMessage: reason.safeMessage,
+    retryable: true,
+    details: {
+      runtimeControl: "interrupt_then_continue",
+      ...(reason.signalId === undefined ? {} : { signalId: reason.signalId }),
+      ...(reason.requestedBy === undefined
+        ? {}
+        : { requestedBy: reason.requestedBy }),
+    },
+  };
+}
+
+function isRuntimeInterruptReason(
+  value: unknown,
+): value is RuntimeInterruptReason {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    record.code === "runtime_controlled_interrupt" &&
+    typeof record.safeMessage === "string"
+  );
 }
 
 export function promptContinuationJobFactory<Job extends { readonly prompt: string }>(
@@ -1254,6 +1555,7 @@ export function defaultSafeExecutionErrorClassifier(
     const classified = classifyWorkerFailureCode(
       item.details.reason ?? item.details.code,
       item.message,
+      unknownFailureDetails(chain, item.details),
     );
     if (classified) return classified;
   }
@@ -1294,7 +1596,7 @@ export function defaultSafeExecutionErrorClassifier(
   );
   if (timeoutMessage) {
     return {
-      reason: "unknown_error",
+      reason: "task_timeout",
       safeMessage: timeoutMessage,
       retryable: true,
     };
@@ -1306,7 +1608,7 @@ export function defaultSafeExecutionErrorClassifier(
   );
   if (invalidOutputMessage) {
     return {
-      reason: "unknown_error",
+      reason: "provider_output_invalid",
       safeMessage: invalidOutputMessage,
       retryable: true,
     };
@@ -1315,12 +1617,14 @@ export function defaultSafeExecutionErrorClassifier(
     reason: "unknown_error",
     safeMessage: message,
     retryable: false,
+    ...optionalFailureDetails(unknownFailureDetails(chain)),
   };
 }
 
 function classifyWorkerFailureCode(
   code: string | undefined,
   safeMessage: string,
+  details?: Readonly<Record<string, string>>,
 ): SafeExecutionFailureClassification | null {
   switch (code) {
     case "quota_limited":
@@ -1342,6 +1646,13 @@ function classifyWorkerFailureCode(
         safeMessage,
         retryable: true,
       };
+    case "backend_unavailable":
+      return {
+        reason: "capacity_unavailable",
+        safeMessage,
+        retryable: true,
+        ...optionalFailureDetails(details),
+      };
     case "permission_required":
       return {
         reason: "permission_required",
@@ -1354,13 +1665,31 @@ function classifyWorkerFailureCode(
         safeMessage,
         retryable: false,
       };
+    case "runtime_interrupted":
+      return {
+        reason: "runtime_interrupted",
+        safeMessage,
+        retryable: true,
+        ...optionalFailureDetails(details),
+      };
     case "task_timeout":
+      return {
+        reason: "task_timeout",
+        safeMessage,
+        retryable: true,
+      };
     case "provider_output_invalid":
+      return {
+        reason: "provider_output_invalid",
+        safeMessage,
+        retryable: true,
+      };
     case "unknown_runtime_failure":
       return {
         reason: "unknown_error",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     default:
       return null;
@@ -1442,6 +1771,8 @@ function shouldContinueAfterFailure(input: {
     };
   }
   switch (input.classification.reason) {
+    case "runtime_interrupted":
+      return { allowed: true };
     case "quota_limited":
     case "capacity_unavailable":
       return { allowed: input.policy.retryOnCapacity };
@@ -1450,10 +1781,20 @@ function shouldContinueAfterFailure(input: {
     case "reconnect_required":
       return { allowed: input.policy.retryOnReconnectRequired };
     case "unknown_error":
+    case "task_timeout":
+    case "provider_output_invalid":
       if (input.workspaceChanged) {
         return {
-          allowed: input.policy.retryUnknownChangedWorkspace,
-          ...(input.policy.retryUnknownChangedWorkspace
+          allowed:
+            input.classification.reason === "unknown_error"
+              ? input.policy.retryUnknownChangedWorkspace
+              : false,
+          ...(input.classification.reason !== "unknown_error"
+            ? {
+                safeMessage:
+                  `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
+              }
+            : input.policy.retryUnknownChangedWorkspace
             ? {}
             : {
                 safeMessage:
@@ -1462,7 +1803,10 @@ function shouldContinueAfterFailure(input: {
         };
       }
       return {
-        allowed: input.policy.retryUnknownCleanWorkspace,
+        allowed:
+          input.classification.reason === "unknown_error"
+            ? input.policy.retryUnknownCleanWorkspace
+            : true,
       };
     case "permission_required":
     case "user_abort":
@@ -1563,6 +1907,9 @@ function failedAttemptRecord<Job, Result>(input: {
     status: input.classification.retryable ? "blocked" : "failed",
     failureReason: input.classification.reason,
     failureMessage: input.failureMessage,
+    ...(input.classification.details === undefined
+      ? {}
+      : { failureDetails: input.classification.details }),
     workspaceDirtyBefore: input.before.dirty,
     workspaceDirtyAfter: input.after.dirty,
     changedFiles: changedFilesBetween(input.before, input.after),
@@ -1573,7 +1920,11 @@ function finalStatusForFailure(
   reason: AttemptFailureReason,
 ): Exclude<SafeExecutionTaskStatus, "running" | "completed"> {
   if (reason === "user_abort") return "aborted";
-  if (reason === "unknown_error" || reason === "permission_required") {
+  if (
+    reason === "unknown_error" ||
+    reason === "permission_required" ||
+    reason === "provider_output_invalid"
+  ) {
     return "failed";
   }
   return "partial";
@@ -1590,10 +1941,31 @@ function changedFilesBetween(
   before: WorkspaceSnapshot,
   after: WorkspaceSnapshot,
 ): readonly string[] {
-  const files = new Set<string>();
-  for (const file of before.changedFiles) files.add(file);
-  for (const file of after.changedFiles) files.add(file);
-  return [...files].sort((left, right) => left.localeCompare(right));
+  if (before.mode === after.mode) {
+    return changedFilesDelta(before.changedFiles, after.changedFiles);
+  }
+
+  return changedFilesDelta(before.changedFiles, after.changedFiles);
+}
+
+function changedFilesDelta(
+  before: readonly string[],
+  after: readonly string[],
+): readonly string[] {
+  const beforeFiles = new Set(before);
+  return after
+    .filter((file) => !beforeFiles.has(file))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function interruptedWorkspaceDetails(
+  snapshot: WorkspaceSnapshot,
+): Readonly<Record<string, string>> {
+  return {
+    workspaceMode: snapshot.mode,
+    changedFileCount: String(snapshot.changedFiles.length),
+    changedFiles: snapshot.changedFiles.slice(0, 20).join(","),
+  };
 }
 
 function requireTaskRecord(
@@ -1625,6 +1997,146 @@ function errorChain(error: unknown): readonly unknown[] {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function failureDetailsFromUnknown(
+  error: unknown,
+): Readonly<Record<string, string>> | undefined {
+  return unknownFailureDetails(errorChain(error));
+}
+
+function unknownFailureDetails(
+  chain: readonly unknown[],
+  baseDetails?: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> | undefined {
+  const details: Record<string, string> = {};
+  mergeStringDetails(details, baseDetails);
+
+  const messages: string[] = [];
+  for (const item of chain) {
+    const message = errorMessage(item);
+    if (message.trim()) messages.push(message);
+    if (isSafeExecutionError(item)) {
+      details.safeExecutionCode = item.code;
+      mergeStringDetails(details, item.details);
+    }
+    if (isSubscriptionWorkerError(item)) {
+      details.subscriptionWorkerCode ??= item.code;
+      mergeStringDetails(details, item.details);
+    }
+    mergeStringDetails(details, processFailureDetails(item, message));
+  }
+
+  if (details.rawCause === undefined && messages.length > 0) {
+    details.rawCause = safeDetailTail(messages.join(" <- "));
+  }
+  return Object.keys(details).length === 0 ? undefined : details;
+}
+
+function processFailureDetails(
+  error: unknown,
+  message: string,
+): Readonly<Record<string, string>> | undefined {
+  const details: Record<string, string> = {};
+  if (typeof error === "object" && error !== null) {
+    const record = error as {
+      readonly exitCode?: unknown;
+      readonly stdout?: unknown;
+      readonly stderr?: unknown;
+    };
+    if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
+      details.exitCode = String(record.exitCode);
+    }
+    if (typeof record.stderr === "string" && record.stderr.trim()) {
+      details.stderrTail = safeDetailTail(record.stderr);
+    }
+    if (typeof record.stdout === "string" && record.stdout.trim()) {
+      details.stdoutTail = safeDetailTail(record.stdout);
+    }
+  }
+
+  const match =
+    /\b(?:node_process_runner_failed|codex_json_exec_failed|codex_cli_exec_failed):(\d+):(.*)$/s.exec(
+      message,
+    );
+  if (match) {
+    details.exitCode ??= match[1]!;
+    if (match[2]?.trim()) details.stderrTail ??= safeDetailTail(match[2]);
+  }
+  return Object.keys(details).length === 0 ? undefined : details;
+}
+
+function mergeStringDetails(
+  target: Record<string, string>,
+  source: Readonly<Record<string, string>> | undefined,
+): void {
+  if (!source) return;
+  for (const [key, value] of Object.entries(source)) {
+    target[key] ??= safeDetailTail(value);
+  }
+}
+
+function withFailureDetails(
+  classification: SafeExecutionFailureClassification,
+  details: Readonly<Record<string, string>> | undefined,
+): SafeExecutionFailureClassification {
+  const merged = mergeFailureDetails(classification.details, details);
+  return merged === undefined ? classification : { ...classification, details: merged };
+}
+
+function mergeFailureDetails(
+  left: Readonly<Record<string, string>> | undefined,
+  right: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string>> | undefined {
+  const merged: Record<string, string> = {};
+  mergeStringDetails(merged, left);
+  mergeStringDetails(merged, right);
+  return Object.keys(merged).length === 0 ? undefined : merged;
+}
+
+function prefixFailureDetails(
+  prefix: string,
+  details: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string>> | undefined {
+  if (!details) return undefined;
+  return Object.fromEntries(
+    Object.entries(details).map(([key, value]) => [`${prefix}.${key}`, value]),
+  );
+}
+
+function optionalFailureDetails(
+  details: Readonly<Record<string, string>> | undefined,
+): { readonly details?: Readonly<Record<string, string>> } {
+  return details === undefined || Object.keys(details).length === 0
+    ? {}
+    : { details };
+}
+
+function unavailableWorkspaceSnapshot(input: {
+  readonly workspacePath: string;
+  readonly error: unknown;
+}): WorkspaceSnapshot {
+  const capturedAt = new Date();
+  const message = errorMessage(input.error);
+  return {
+    mode: "unavailable",
+    workspacePath: input.workspacePath,
+    capturedAt,
+    dirty: true,
+    changedFiles: [],
+    fingerprint: `unavailable:${hashText(
+      `${input.workspacePath}:${capturedAt.toISOString()}:${message}`,
+    )}`,
+    summary: `Workspace snapshot unavailable: ${safeDetailTail(
+      message || "unknown error",
+    )}`,
+    warnings: ["workspace_snapshot_unavailable"],
+  };
+}
+
+function safeDetailTail(value: string): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact.length > 1000 ? compact.slice(-1000) : compact;
 }
 
 function attemptMetadataFromError(error: unknown): {
@@ -1667,6 +2179,22 @@ function mergeChangedFiles(
 async function canonicalWorkspacePath(path: string): Promise<string> {
   const resolved = resolve(path);
   return realpath(resolved).catch(() => resolved);
+}
+
+async function assertGitWorkspace(workspacePath: string): Promise<void> {
+  const result = await execFileAsync("git", [
+    "rev-parse",
+    "--is-inside-work-tree",
+  ], {
+    cwd: workspacePath,
+    timeout: 5_000,
+  }).catch(() => null);
+  if (result?.stdout.toString().trim() === "true") return;
+  throw new SafeExecutionError(
+    "safe_execution_workspace_not_git",
+    "Safe execution requires a git worktree workspace.",
+    { details: { workspacePath } },
+  );
 }
 
 function workspaceRunId(workspacePath: string): WorkspaceRunId {
@@ -1807,6 +2335,9 @@ function parseTaskRecord(raw: string): SafeExecutionTaskRecord {
     ...(stringValue(value.lastFailureMessage) === undefined
       ? {}
       : { lastFailureMessage: stringValue(value.lastFailureMessage)! }),
+    ...(stringRecordValue(value.lastFailureDetails) === undefined
+      ? {}
+      : { lastFailureDetails: stringRecordValue(value.lastFailureDetails)! }),
   };
 }
 
@@ -1833,6 +2364,9 @@ function parseAttemptRecord(value: unknown): AttemptRecord {
     ...(stringValue(record.failureMessage) === undefined
       ? {}
       : { failureMessage: stringValue(record.failureMessage)! }),
+    ...(stringRecordValue(record.failureDetails) === undefined
+      ? {}
+      : { failureDetails: stringRecordValue(record.failureDetails)! }),
     workspaceDirtyBefore: Boolean(record.workspaceDirtyBefore),
     ...(typeof record.workspaceDirtyAfter === "boolean"
       ? { workspaceDirtyAfter: record.workspaceDirtyAfter }
@@ -1902,6 +2436,20 @@ function numberValue(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function stringRecordValue(
+  value: unknown,
+): Readonly<Record<string, string>> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record: Record<string, string> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (typeof nested !== "string") return undefined;
+    record[key] = nested;
+  }
+  return record;
+}
+
 function requireDate(value: unknown, field: string): Date {
   const normalized = dateValue(value);
   if (normalized !== undefined) return normalized;
@@ -1962,6 +2510,9 @@ function isAttemptFailureReason(value: unknown): value is AttemptFailureReason {
     value === "account_unavailable" ||
     value === "reconnect_required" ||
     value === "permission_required" ||
+    value === "task_timeout" ||
+    value === "provider_output_invalid" ||
+    value === "runtime_interrupted" ||
     value === "user_abort" ||
     value === "unknown_error"
   );

@@ -280,6 +280,7 @@ export type ProviderFailure = {
   readonly reconnectRequired: boolean;
   readonly safeMessage: string;
   readonly causeCategory?: string;
+  readonly details?: Readonly<Record<string, string>>;
 };
 
 export type SessionValidationResult =

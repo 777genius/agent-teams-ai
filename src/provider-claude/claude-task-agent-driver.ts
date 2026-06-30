@@ -136,7 +136,10 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
         warnings: [...prepared.warnings, ...result.warnings],
       }, input.redactor);
     } catch (error) {
-      return failedClaudeTask(classifyClaudeFailure(error), startedAt);
+      return failedClaudeTask(
+        classifyClaudeFailure(error, { redactor: input.redactor }),
+        startedAt,
+      );
     }
   }
 
@@ -198,7 +201,10 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
       }
     } catch (error) {
       const result = redactProviderTaskResult(
-        failedClaudeTask(classifyClaudeFailure(error), startedAt),
+        failedClaudeTask(
+          classifyClaudeFailure(error, { redactor: input.redactor }),
+          startedAt,
+        ),
         input.redactor,
       );
       yield {
@@ -375,6 +381,9 @@ function redactProviderTaskResult(
       failure: {
         ...result.failure,
         safeMessage: redactor.redact(result.failure.safeMessage),
+        ...(result.failure.details === undefined
+          ? {}
+          : { details: redactStringRecord(result.failure.details, redactor) }),
       },
       ...(result.telemetry === undefined
         ? {}
@@ -408,6 +417,18 @@ function redactProviderTaskResult(
       redactRuntimeWarning(warning, redactor)
     ),
   };
+}
+
+function redactStringRecord(
+  record: Readonly<Record<string, string>>,
+  redactor: RedactorPort,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [
+      key,
+      redactor.redact(value),
+    ]),
+  );
 }
 
 function redactTelemetry(

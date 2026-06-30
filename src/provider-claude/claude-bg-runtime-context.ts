@@ -1,4 +1,6 @@
+import { spawn } from "node:child_process";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { performance } from "node:perf_hooks";
 import { join } from "node:path";
 import type { ClaudeRuntimeEventLike } from "./claude-runtime-event-mapper";
 
@@ -34,9 +36,6 @@ export async function createClaudeBgRuntimeContext(
   const providerRuntime = await (
     options.providerModuleLoader ?? loadClaudeBgProviderRuntime
   )();
-  const redactor = new providerRuntime.SecretRedactor({
-    secrets: [input.oauthToken],
-  });
   const provider = new providerRuntime.ClaudeBgRuntimeProvider({
     ...(options.baseEnv === undefined ? {} : { baseEnv: options.baseEnv }),
     ...(options.claudePath === undefined ? {} : { claudePath: options.claudePath }),
@@ -49,8 +48,7 @@ export async function createClaudeBgRuntimeContext(
     ...(options.pollIntervalMs === undefined
       ? {}
       : { pollIntervalMs: options.pollIntervalMs }),
-    redactor,
-    runner: new providerRuntime.NodeProcessRunner({ redactor }),
+    runner: new NodeProcessRunnerLike(),
     store: new runtime.FileRuntimeStateStore({
       filePath:
         options.stateFilePath ??
@@ -94,6 +92,71 @@ class NodeFileSystem implements FileSystemLike {
   }
 }
 
+class NodeProcessRunnerLike implements ProcessRunnerLike {
+  run(request: ProcessRunRequestLike): Promise<ProcessRunResultLike> {
+    return new Promise<ProcessRunResultLike>((resolve, reject) => {
+      const startedAt = performance.now();
+      const stdoutChunks: Buffer[] = [];
+      const stderrChunks: Buffer[] = [];
+      let settled = false;
+      let timedOut = false;
+      let timeout: NodeJS.Timeout | undefined;
+
+      const child = spawn(request.executable, [...request.args], {
+        cwd: request.cwd,
+        env: toProcessEnv(request.env),
+        shell: false,
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+      });
+
+      const cleanup = () => {
+        if (timeout !== undefined) clearTimeout(timeout);
+      };
+
+      const currentResult = (
+        exitCode: number | null,
+        signal: NodeJS.Signals | null | undefined,
+      ): ProcessRunResultLike => ({
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        exitCode,
+        ...(signal === undefined || signal === null ? {} : { signal }),
+        stderr: Buffer.concat(stderrChunks).toString("utf8"),
+        stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+        timedOut,
+      });
+
+      child.stdout.on("data", (chunk: Buffer | string | Uint8Array) => {
+        stdoutChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      child.stderr.on("data", (chunk: Buffer | string | Uint8Array) => {
+        stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      child.once("error", (error: NodeJS.ErrnoException) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error(`process_spawn_failed:${error.code ?? "unknown"}`));
+      });
+      child.once("close", (exitCode, signal) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(currentResult(exitCode, signal));
+      });
+
+      if (request.timeoutMs !== undefined) {
+        timeout = setTimeout(() => {
+          timedOut = true;
+          child.kill("SIGTERM");
+        }, request.timeoutMs);
+      }
+
+      child.stdin.end(request.stdin);
+    });
+  }
+}
+
 function loadClaudeRuntime(): Promise<ClaudeRuntimeModule> {
   const specifier = "claude-runtime";
   return import(/* @vite-ignore */ specifier) as Promise<ClaudeRuntimeModule>;
@@ -119,10 +182,6 @@ export interface ClaudeBgProviderRuntimeModule {
   readonly ClaudeBgRuntimeProvider: new (
     options: Record<string, unknown>,
   ) => AgentRuntimeProviderLike;
-  readonly NodeProcessRunner: new (options?: Record<string, unknown>) => unknown;
-  readonly SecretRedactor: new (
-    options?: { readonly secrets?: readonly string[] },
-  ) => unknown;
 }
 
 export interface AgentRuntimeProviderLike {
@@ -195,4 +254,37 @@ interface FileSystemLike {
   stat(path: string): Promise<FileStatLike | null>;
   realpath(path: string): Promise<string>;
   mkdir(path: string, options?: { readonly recursive?: boolean }): Promise<void>;
+}
+
+interface ProcessRunRequestLike {
+  readonly executable: string;
+  readonly args: readonly string[];
+  readonly cwd?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly timeoutMs?: number;
+  readonly stdin?: string | Uint8Array;
+}
+
+interface ProcessRunResultLike {
+  readonly exitCode: number | null;
+  readonly signal?: string;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly timedOut: boolean;
+  readonly durationMs: number;
+}
+
+interface ProcessRunnerLike {
+  run(request: ProcessRunRequestLike): Promise<ProcessRunResultLike>;
+}
+
+function toProcessEnv(
+  env: Readonly<Record<string, string | undefined>> | undefined,
+): NodeJS.ProcessEnv | undefined {
+  if (env === undefined) return undefined;
+  const result: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) result[key] = value;
+  }
+  return result;
 }

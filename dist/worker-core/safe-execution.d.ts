@@ -1,3 +1,4 @@
+import type { ActiveAttemptRegistry, WorkerControlContinuationBatch, WorkerControlContinuationSource, WorkerControlTarget } from "./control/index.js";
 import type { WorkerPoolRunOptions } from "./types.js";
 export type TaskRunId = string;
 export type WorkspaceRunId = string;
@@ -6,6 +7,7 @@ export type ExistingLockedWorkspaceStrategy = {
     readonly mode: "existing_locked";
     readonly path: string;
     readonly staleLockMs?: number;
+    readonly requireGitWorkspace?: boolean;
 };
 export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
 export type ContinuationMode = "packet_first" | "disabled";
@@ -18,7 +20,7 @@ export type SafeExecutionPolicy = {
     readonly maxAttempts?: number;
     readonly continuationMode?: ContinuationMode;
 };
-export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "user_abort" | "unknown_error";
+export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "task_timeout" | "provider_output_invalid" | "runtime_interrupted" | "user_abort" | "unknown_error";
 export type AttemptStatus = "running" | "completed" | "blocked" | "failed";
 export type SafeExecutionTaskStatus = "running" | "completed" | "partial" | "failed" | "aborted";
 export type WorkspaceSnapshotMode = "git" | "filesystem" | "unavailable";
@@ -46,6 +48,7 @@ export type AttemptRecord = {
     readonly status: AttemptStatus;
     readonly failureReason?: AttemptFailureReason;
     readonly failureMessage?: string;
+    readonly failureDetails?: Readonly<Record<string, string>>;
     readonly workspaceDirtyBefore: boolean;
     readonly workspaceDirtyAfter?: boolean;
     readonly changedFiles: readonly string[];
@@ -61,6 +64,7 @@ export type ContinuationPacket = {
     readonly changedFiles: readonly string[];
     readonly workspaceSummary: string;
     readonly previousOutputSummary?: string;
+    readonly workerControlSignalIds?: readonly string[];
     readonly message: string;
 };
 export type SafeExecutionTaskRecord = {
@@ -78,6 +82,7 @@ export type SafeExecutionTaskRecord = {
     readonly outputSummary?: string;
     readonly lastFailureReason?: AttemptFailureReason;
     readonly lastFailureMessage?: string;
+    readonly lastFailureDetails?: Readonly<Record<string, string>>;
 };
 export type WorkspaceLockRecord = {
     readonly taskId: TaskRunId;
@@ -128,6 +133,7 @@ export interface AttemptJournal {
         readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
         readonly reason: AttemptFailureReason;
         readonly message?: string;
+        readonly details?: Readonly<Record<string, string>>;
         readonly now: Date;
     }): Promise<SafeExecutionTaskRecord>;
 }
@@ -148,9 +154,10 @@ export interface ContinuationPacketBuilder {
         readonly previousFailureReason: AttemptFailureReason;
         readonly snapshot: WorkspaceSnapshot;
         readonly previousOutputSummary?: string;
+        readonly controlBatch?: WorkerControlContinuationBatch;
     }): ContinuationPacket;
 }
-export type SafeExecutionErrorCode = "safe_execution_invalid_task" | "safe_execution_workspace_locked" | "safe_execution_external_retry_disabled" | "safe_execution_continuation_disabled" | "safe_execution_attempts_exhausted";
+export type SafeExecutionErrorCode = "safe_execution_invalid_task" | "safe_execution_workspace_locked" | "safe_execution_workspace_not_git" | "safe_execution_external_retry_disabled" | "safe_execution_continuation_disabled" | "safe_execution_attempts_exhausted";
 export declare class SafeExecutionError extends Error {
     readonly code: SafeExecutionErrorCode;
     constructor(code: SafeExecutionErrorCode, message: string, options?: {
@@ -164,6 +171,7 @@ export type SafeExecutionFailureClassification = {
     readonly reason: AttemptFailureReason;
     readonly safeMessage: string;
     readonly retryable: boolean;
+    readonly details?: Readonly<Record<string, string>>;
 };
 export type SafeExecutionWorkerPool<Job, Result> = {
     run(job: Job, options?: WorkerPoolRunOptions): Promise<Result>;
@@ -193,6 +201,7 @@ export type SafeExecutionRunInput<Job, Result> = {
     readonly classifyError?: (error: unknown) => SafeExecutionFailureClassification;
     readonly summarizeResult?: (result: Result) => string | undefined;
     readonly summarizeError?: (error: unknown) => string | undefined;
+    readonly controlTarget?: WorkerControlTarget;
     readonly abortSignal?: AbortSignal;
 };
 export type SafeExecutionRunResult<Result> = {
@@ -207,6 +216,7 @@ export type SafeExecutionRunResult<Result> = {
     readonly attempts: readonly AttemptRecord[];
     readonly reason: AttemptFailureReason;
     readonly safeMessage: string;
+    readonly failureDetails?: Readonly<Record<string, string>>;
     readonly error?: unknown;
 };
 export type SafeExecutionRunnerOptions = {
@@ -214,6 +224,8 @@ export type SafeExecutionRunnerOptions = {
     readonly journal: AttemptJournal;
     readonly snapshotter?: WorkspaceSnapshotter;
     readonly continuationPacketBuilder?: ContinuationPacketBuilder;
+    readonly controlInbox?: WorkerControlContinuationSource;
+    readonly activeAttemptRegistry?: ActiveAttemptRegistry;
     readonly ownerId?: string;
     readonly ownerPid?: number;
     readonly clock?: {
@@ -272,6 +284,7 @@ export declare class InMemoryAttemptJournal implements AttemptJournal {
         readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
         readonly reason: AttemptFailureReason;
         readonly message?: string;
+        readonly details?: Readonly<Record<string, string>>;
         readonly now: Date;
     }): Promise<SafeExecutionTaskRecord>;
 }
@@ -305,6 +318,7 @@ export declare class LocalFileAttemptJournal implements AttemptJournal {
         readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
         readonly reason: AttemptFailureReason;
         readonly message?: string;
+        readonly details?: Readonly<Record<string, string>>;
         readonly now: Date;
     }): Promise<SafeExecutionTaskRecord>;
     private taskPath;
@@ -347,6 +361,7 @@ export declare class DefaultContinuationPacketBuilder implements ContinuationPac
         readonly previousFailureReason: AttemptFailureReason;
         readonly snapshot: WorkspaceSnapshot;
         readonly previousOutputSummary?: string;
+        readonly controlBatch?: WorkerControlContinuationBatch;
     }): ContinuationPacket;
 }
 export declare class SafeExecutionRunner {
@@ -358,6 +373,8 @@ export declare class SafeExecutionRunner {
     private readonly clock;
     constructor(options: SafeExecutionRunnerOptions);
     run<Job, Result>(input: SafeExecutionRunInput<Job, Result>): Promise<SafeExecutionRunResult<Result>>;
+    private failStartedTask;
+    private buildContinuationPacket;
 }
 export declare function promptContinuationJobFactory<Job extends {
     readonly prompt: string;

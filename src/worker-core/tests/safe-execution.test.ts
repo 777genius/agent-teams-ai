@@ -12,17 +12,26 @@ import { promisify } from "node:util";
 import {
   BoundedSubscriptionWorkerPool,
   DefaultWorkspaceSnapshotter,
+  InMemoryActiveAttemptRegistry,
   InMemoryAttemptJournal,
   InMemoryWorkspaceLockStore,
+  InterruptAndContinueWorkerUseCase,
   LocalFileAttemptJournal,
   SafeExecutionRunner,
   SubscriptionWorkerError,
+  WorkerControlService,
   defaultSafeExecutionErrorClassifier,
+  workerControlTargetMatches,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
+  type WorkerControlDeliveryReceipt,
+  type WorkerControlInboxStore,
+  type WorkerControlSignal,
+  type WorkerControlTarget,
+  type WorkspaceSnapshot,
 } from "../index";
 
 const execFileAsync = promisify(execFile);
@@ -124,6 +133,194 @@ describe("SafeExecutionRunner", () => {
     await pool.dispose();
   }, 15_000);
 
+  it("injects worker control inbox guidance into continuation prompts", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-control-");
+    let runs = 0;
+    let consumed = 0;
+    const pool = {
+      async run(job: PromptJob): Promise<PromptResult> {
+        runs += 1;
+        if (runs === 1) {
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Quota limited.",
+            { details: { reason: "quota_limited" } },
+          );
+        }
+        expect(job.prompt).toContain("Runtime control inbox instructions");
+        expect(job.prompt).toContain("Focus on temporal normalization first.");
+        return { output: "done with guidance" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      controlInbox: {
+        async consumeForContinuation(input) {
+          consumed += 1;
+          return {
+            target: input.target,
+            deliveryAttemptId: input.deliveryAttemptId,
+            signals: [],
+            signalIds: ["signal-guidance"],
+            message:
+              "Runtime control inbox instructions:\nFocus on temporal normalization first.",
+          };
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-control",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "Improve benchmark.", workspacePath },
+      originalPrompt: "Improve benchmark.",
+      controlTarget: {
+        jobId: "job-control",
+        taskId: "task-control",
+        workspaceId: workspacePath,
+      },
+      policy: { maxAttempts: 2 },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(consumed).toBe(1);
+  });
+
+  it("continues dirty runtime-interrupted work with queued urgent guidance", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-interrupt-");
+    const store = new InMemoryWorkerControlInboxStore();
+    const control = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("runtime-interrupt"),
+    });
+    const activeAttemptRegistry = new InMemoryActiveAttemptRegistry();
+    const useCase = new InterruptAndContinueWorkerUseCase({
+      control,
+      activeAttemptRegistry,
+    });
+    const target = {
+      jobId: "job-runtime-interrupt",
+      taskId: "task-runtime-interrupt",
+      workspaceId: workspacePath,
+    };
+    let runs = 0;
+    const pool = {
+      async run(
+        job: PromptJob,
+        options?: { readonly abortSignal?: AbortSignal },
+      ): Promise<PromptResult> {
+        runs += 1;
+        if (runs === 1) {
+          await writeFile(join(job.workspacePath, "feature.txt"), "partial\n");
+          const interrupt = await useCase.execute({
+            target,
+            message: "Stop the broad run and inspect the targeted recall slice.",
+            caller: { kind: "orchestrator", id: "lead-agent" },
+          });
+          expect(interrupt.status).toBe("interrupted");
+          expect(options?.abortSignal?.aborted).toBe(true);
+          throw new Error("provider observed runtime abort");
+        }
+        expect(job.prompt).toContain("Previous attempt stopped because: runtime_interrupted");
+        expect(job.prompt).toContain("Runtime control inbox instructions");
+        expect(job.prompt).toContain("targeted recall slice");
+        expect(job.prompt).toContain("Changed files:\n- feature.txt");
+        expect(await readFile(join(job.workspacePath, "feature.txt"), "utf8"))
+          .toBe("partial\n");
+        await writeFile(join(job.workspacePath, "feature.txt"), "done\n");
+        return { output: "continued after interrupt" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      controlInbox: control,
+      activeAttemptRegistry,
+    });
+
+    const result = await runner.run({
+      taskId: "task-runtime-interrupt",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "Improve benchmark.", workspacePath },
+      originalPrompt: "Improve benchmark.",
+      controlTarget: target,
+      policy: { maxAttempts: 2 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(runs).toBe(2);
+    expect(result.attempts[0]?.failureReason).toBe("runtime_interrupted");
+    expect(result.attempts[0]?.workspaceDirtyAfter).toBe(true);
+    expect(await readFile(join(workspacePath, "feature.txt"), "utf8")).toBe(
+      "done\n",
+    );
+    const signals = await control.listSignals({ target, includeExpired: true });
+    expect(signals[0]?.state).toBe("delivered");
+  });
+
+  it("does not consume control inbox guidance for reconnect repair continuations", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-control-reconnect-");
+    let runs = 0;
+    let consumed = 0;
+    const pool = {
+      async run(job: PromptJob): Promise<PromptResult> {
+        runs += 1;
+        if (runs === 1) {
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Provider session needs reconnect.",
+            { details: { reason: "needs_reconnect" } },
+          );
+        }
+        expect(job.prompt.includes("Runtime control inbox instructions")).toBe(false);
+        return { output: "done after reconnect repair" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      controlInbox: {
+        async consumeForContinuation(input) {
+          consumed += 1;
+          return {
+            target: input.target,
+            deliveryAttemptId: input.deliveryAttemptId,
+            signals: [],
+            signalIds: ["signal-guidance"],
+            message:
+              "Runtime control inbox instructions:\nThis should not be consumed.",
+          };
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-control-reconnect",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "Repair account.", workspacePath },
+      originalPrompt: "Repair account.",
+      controlTarget: {
+        jobId: "job-control-reconnect",
+        taskId: "task-control-reconnect",
+        workspaceId: workspacePath,
+      },
+      policy: { maxAttempts: 2 },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(consumed).toBe(0);
+  });
+
   it("rejects concurrent tasks for the same existing workspace lock", async () => {
     const workspacePath = await gitWorkspace("safe-execution-lock-");
     const gate = deferred<void>();
@@ -203,6 +400,95 @@ describe("SafeExecutionRunner", () => {
     expect(second.replayed).toBe(true);
     expect(second.result).toEqual({ output: "already done" });
     expect(runs).toBe(1);
+  });
+
+  it("fails fast when a git worktree is required but the workspace is not git", async () => {
+    const workspacePath = await mkdtemp(join(tmpdir(), "safe-execution-not-git-"));
+    cleanupPaths.push(workspacePath);
+    let runs = 0;
+    const pool = {
+      async run(): Promise<PromptResult> {
+        runs += 1;
+        return { output: "should not run" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+    });
+
+    const result = await runner.run({
+      taskId: "task-require-git",
+      workspace: {
+        mode: "existing_locked",
+        path: workspacePath,
+        requireGitWorkspace: true,
+      },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "do work", workspacePath },
+      originalPrompt: "do work",
+      policy: { maxAttempts: 1 },
+    });
+
+    expect(result.status).toBe("failed");
+    if (result.status !== "failed") throw new Error("expected failed result");
+    expect(result.failureDetails).toMatchObject({
+      safeExecutionCode: "safe_execution_workspace_not_git",
+    });
+    expect(runs).toBe(0);
+  });
+
+  it("returns a structured failure when the initial workspace snapshot fails", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-snapshot-fail-");
+    const journal = new InMemoryAttemptJournal();
+    let runs = 0;
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          throw Object.assign(new Error("git status failed"), {
+            exitCode: 128,
+            stderr: "fatal: bad revision\n",
+          });
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-snapshot-fail",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          runs += 1;
+          return { output: "should not run" };
+        },
+      },
+      job: { prompt: "do work", workspacePath },
+      originalPrompt: "do work",
+      policy: { maxAttempts: 1 },
+    });
+
+    expect(result.status).toBe("failed");
+    if (result.status !== "failed") throw new Error("expected failed");
+    expect(result.reason).toBe("unknown_error");
+    expect(result.safeMessage).toBe("git status failed");
+    expect(result.attempts).toHaveLength(0);
+    expect(result.failureDetails).toMatchObject({
+      exitCode: "128",
+      stderrTail: "fatal: bad revision",
+      rawCause: "git status failed",
+    });
+    expect(result.task.status).toBe("failed");
+    expect(
+      (await journal.readTask({ taskId: "task-snapshot-fail" }))
+        ?.lastFailureDetails,
+    ).toMatchObject({ exitCode: "128" });
+    expect(runs).toBe(0);
   });
 
   it("stops on permission_required without switching accounts", async () => {
@@ -353,9 +639,46 @@ describe("SafeExecutionRunner", () => {
     );
 
     expect(defaultSafeExecutionErrorClassifier(poolFailure)).toEqual({
-      reason: "unknown_error",
+      reason: "task_timeout",
       safeMessage: "Codex task timed out.",
       retryable: true,
+    });
+  });
+
+  it("classifies invalid provider output without collapsing to unknown_error", () => {
+    const providerFailure = new SubscriptionWorkerError(
+      "subscription_worker_run_failed",
+      "Codex provider output was invalid.",
+      { details: { code: "provider_output_invalid" } },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toEqual({
+      reason: "provider_output_invalid",
+      safeMessage: "Codex provider output was invalid.",
+      retryable: true,
+    });
+  });
+
+  it("classifies Codex app-server goal blocks as capacity unavailability", () => {
+    const providerFailure = new SubscriptionWorkerError(
+      "subscription_worker_run_failed",
+      "Codex app-server goal backend is temporarily blocked.",
+      {
+        details: {
+          code: "backend_unavailable",
+          rawCause: "codex_app_server_goal_blocked",
+        },
+      },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toMatchObject({
+      reason: "capacity_unavailable",
+      safeMessage: "Codex app-server goal backend is temporarily blocked.",
+      retryable: true,
+      details: {
+        code: "backend_unavailable",
+        rawCause: "codex_app_server_goal_blocked",
+      },
     });
   });
 
@@ -377,6 +700,33 @@ describe("SafeExecutionRunner", () => {
       reason: "account_unavailable",
       safeMessage: "Provider account session is unavailable.",
       retryable: true,
+    });
+  });
+
+  it("preserves unknown runtime failure cause metadata", () => {
+    const providerFailure = new SubscriptionWorkerError(
+      "subscription_worker_run_failed",
+      "Codex runtime failed.",
+      {
+        details: {
+          reason: "unknown_runtime_failure",
+          exitCode: "7",
+          stderrTail: "forced fallback failure",
+          rawCause: "codex_json_exec_failed:7:forced fallback failure",
+        },
+      },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toMatchObject({
+      reason: "unknown_error",
+      safeMessage: "Codex runtime failed.",
+      retryable: true,
+      details: {
+        reason: "unknown_runtime_failure",
+        exitCode: "7",
+        stderrTail: "forced fallback failure",
+        rawCause: "codex_json_exec_failed:7:forced fallback failure",
+      },
     });
   });
 
@@ -474,6 +824,53 @@ describe("SafeExecutionRunner", () => {
     expect(result.task.status).toBe("partial");
     expect(result.attempts).toHaveLength(1);
     expect(resumedRuns).toBe(0);
+  });
+
+  it("does not rerun an interrupted running task with unrecorded workspace changes", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-interrupted-dirty-");
+    const journal = new InMemoryAttemptJournal();
+    await journal.startTask({
+      taskId: "task-interrupted-dirty",
+      workspaceRunId: "workspace:interrupted",
+      workspacePath,
+      effectMode: "workspace_patch",
+      provider: "codex",
+      now: new Date("2026-05-31T00:00:00.000Z"),
+    });
+    await writeFile(join(workspacePath, "worker-output.txt"), "partial\n");
+
+    let runs = 0;
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+    const result = await runner.run({
+      taskId: "task-interrupted-dirty",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          runs += 1;
+          return { output: "should not run" };
+        },
+      },
+      job: { prompt: "finish interrupted task", workspacePath },
+      originalPrompt: "finish interrupted task",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "partial") throw new Error("expected partial");
+    expect(result.reason).toBe("unknown_error");
+    expect(result.safeMessage).toContain("interrupted running task");
+    expect(result.task.status).toBe("partial");
+    expect(result.attempts).toHaveLength(0);
+    expect(result.failureDetails).toMatchObject({
+      workspaceMode: "git",
+      changedFileCount: "1",
+      changedFiles: "worker-output.txt",
+    });
+    expect(runs).toBe(0);
   });
 
   it("resumes a partial task from the local file journal with a continuation packet", async () => {
@@ -587,6 +984,169 @@ describe("SafeExecutionRunner", () => {
     expect(commands.join("\n")).not.toMatch(/\b(reset|clean|checkout|apply)\b/);
   });
 
+  it("does not report a full filesystem snapshot as worker-changed files", async () => {
+    const workspacePath = await tempPath("safe-execution-filesystem-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: false,
+        changedFiles: [".claude/settings.json", ".worktrees/old/file.ts"],
+        fingerprint: "before",
+        summary: "before filesystem scan",
+      },
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: [
+          ".claude/settings.json",
+          ".worktrees/old/file.ts",
+          "src/worker-output.ts",
+        ],
+        fingerprint: "after",
+        summary: "after filesystem scan",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-filesystem-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
+  });
+
+  it("does not report pre-existing git changes as worker-changed files", async () => {
+    const workspacePath = await tempPath("safe-execution-git-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts"],
+        fingerprint: "before",
+        summary: "before git status",
+      },
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts", "src/worker-output.ts"],
+        fingerprint: "after",
+        summary: "after git status",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-git-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
+  });
+
+  it("uses delta when snapshot modes change during an attempt", async () => {
+    const workspacePath = await tempPath("safe-execution-mixed-delta-");
+    const snapshots: WorkspaceSnapshot[] = [
+      {
+        mode: "filesystem",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:00.000Z"),
+        dirty: false,
+        changedFiles: [".worktrees/old/file.ts", "src/pre-existing.ts"],
+        fingerprint: "before",
+        summary: "before filesystem scan",
+      },
+      {
+        mode: "git",
+        workspacePath,
+        capturedAt: new Date("2026-01-01T00:00:01.000Z"),
+        dirty: true,
+        changedFiles: ["src/pre-existing.ts", "src/worker-output.ts"],
+        fingerprint: "after",
+        summary: "after git status",
+      },
+    ];
+    let captureCount = 0;
+
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      snapshotter: {
+        async capture(): Promise<WorkspaceSnapshot> {
+          return snapshots[Math.min(captureCount++, snapshots.length - 1)]!;
+        },
+      },
+    });
+
+    const result = await runner.run({
+      taskId: "task-mixed-delta",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          return { output: "done" };
+        },
+      },
+      job: { prompt: "make scoped change", workspacePath },
+      originalPrompt: "make scoped change",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(result.attempts[0]?.changedFiles).toEqual(["src/worker-output.ts"]);
+  });
+
   async function tempPath(prefix: string): Promise<string> {
     const path = await mkdtemp(join(tmpdir(), prefix));
     cleanupPaths.push(path);
@@ -676,4 +1236,62 @@ function deferred<T>(): {
     reject = promiseReject;
   });
   return { promise, resolve, reject };
+}
+
+class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
+  private readonly signals: WorkerControlSignal[] = [];
+  private readonly receipts: WorkerControlDeliveryReceipt[] = [];
+
+  async appendSignal(signal: WorkerControlSignal): Promise<WorkerControlSignal> {
+    this.signals.push(signal);
+    return signal;
+  }
+
+  async listSignals(input: {
+    readonly target?: WorkerControlTarget;
+    readonly signalIds?: readonly string[];
+  } = {}): Promise<readonly WorkerControlSignal[]> {
+    return this.signals.filter((signal) =>
+      (!input.target || workerControlTargetMatches(input.target, signal.target)) &&
+      (!input.signalIds || input.signalIds.includes(signal.signalId))
+    );
+  }
+
+  async tryClaimDelivery(
+    receipt: WorkerControlDeliveryReceipt,
+  ): Promise<WorkerControlDeliveryReceipt | null> {
+    if (
+      this.receipts.some((existing) =>
+        existing.signalId === receipt.signalId &&
+        existing.state === "accepted" &&
+        existing.deliveryAttemptId === receipt.deliveryAttemptId
+      )
+    ) {
+      return null;
+    }
+    this.receipts.push(receipt);
+    return receipt;
+  }
+
+  async appendReceipt(
+    receipt: WorkerControlDeliveryReceipt,
+  ): Promise<WorkerControlDeliveryReceipt> {
+    this.receipts.push(receipt);
+    return receipt;
+  }
+
+  async listReceipts(input: {
+    readonly target?: WorkerControlTarget;
+    readonly signalIds?: readonly string[];
+  } = {}): Promise<readonly WorkerControlDeliveryReceipt[]> {
+    return this.receipts.filter((receipt) =>
+      (!input.target || workerControlTargetMatches(input.target, receipt.target)) &&
+      (!input.signalIds || input.signalIds.includes(receipt.signalId))
+    );
+  }
+}
+
+function sequentialIds(prefix: string): () => string {
+  let next = 0;
+  return () => `${prefix}-${++next}`;
 }

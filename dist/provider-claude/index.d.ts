@@ -1,6 +1,7 @@
 export * from "./capabilities.js";
 export * from "./claude-bg-runtime-context.js";
 export * from "./claude-bg-provider-driver.js";
+export * from "./claude-cli-task-execution-engine.js";
 export * from "./claude-runtime-task-execution-engine.js";
 export * from "./claude-session-codec.js";
 export * from "./claude-session-driver.js";

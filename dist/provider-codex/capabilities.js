@@ -2,7 +2,7 @@ export const codexProviderId = "codex";
 export const codexAgentId = "codex-cli";
 export const codexJsonAgentId = "codex-json";
 export const codexAuthJsonFormatVersion = "codex-auth-json-v1";
-export const defaultCodexModel = "gpt-5-codex";
+export const defaultCodexModel = "gpt-5.5";
 export const codexEnvironmentPolicy = {
     inheritHostEnvironment: false,
     allowlist: ["PATH", "HOME", "CI", "CODEX_HOME"],

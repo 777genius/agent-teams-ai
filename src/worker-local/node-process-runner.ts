@@ -103,11 +103,15 @@ export class NodeProcessRunner implements RunnerPort {
         durationMs: Date.now() - startedAt,
       };
       if (exit.exitCode !== 0) {
-        throw new Error(
+        throw Object.assign(new Error(
           `node_process_runner_failed:${exit.exitCode}:${safeFailureOutput(
             `${result.stdout}\n${result.stderr}`,
           )}`,
-        );
+        ), {
+          exitCode: exit.exitCode,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        });
       }
       return result;
     } finally {

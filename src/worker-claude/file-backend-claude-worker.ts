@@ -26,14 +26,23 @@ import {
   sessionArtifactFromClaudeOAuth,
   validateClaudeSessionArtifact,
   type ClaudeTaskExecutionEngine,
+  type ClaudeRuntimeTaskExecutionEngineOptions,
 } from "@vioxen/subscription-runtime/provider-claude";
-import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
+import {
+  createLocalFileBackendRuntimeAdapters,
+  LocalFileWorkerControlInboxStore,
+} from "@vioxen/subscription-runtime/store-local-file";
 import {
   SubscriptionWorkerError,
+  WorkerControlService,
+  combineAbortSignals,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
+  type SubscriptionWorkerRunOptions,
   type SubscriptionWorkerState,
+  type WorkerControlContinuationSource,
+  type WorkerControlTarget,
   type WorkerCapacitySnapshot,
 } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner";
@@ -44,6 +53,10 @@ import {
   type ClaudeRateLimitTelemetrySource,
   type ClaudeRateLimitWindowName,
 } from "./rate-limit-telemetry";
+import {
+  FileClaudeRunArtifactStore,
+  type ClaudeRunArtifactStoreOptions,
+} from "./claude-run-artifacts";
 import {
   FileClaudeLogicalThreadStore,
   FileClaudeTranscriptBundleStore,
@@ -79,6 +92,8 @@ export type FileBackendClaudeWorkerOptions = {
   readonly taskTimeoutMs?: number;
   readonly baseEnv?: Readonly<Record<string, string | undefined>>;
   readonly claudePath?: string;
+  readonly runtimeModuleLoader?: ClaudeRuntimeTaskExecutionEngineOptions["runtimeModuleLoader"];
+  readonly providerModuleLoader?: ClaudeRuntimeTaskExecutionEngineOptions["providerModuleLoader"];
   readonly pollIntervalMs?: number;
   readonly capacityPolicy?: ClaudeWorkerCapacityPolicy;
   readonly rateLimitTelemetry?: ClaudeRateLimitTelemetrySource;
@@ -90,9 +105,13 @@ export type FileBackendClaudeWorkerOptions = {
   readonly workspace?: RuntimeDeps["workspace"];
   readonly workspacePath?: string;
   readonly clock?: ClockPort;
+  readonly controlInbox?: WorkerControlContinuationSource;
+  readonly runArtifactsRootDir?: string;
+  readonly runArtifactHeartbeatMs?: number;
 };
 
 export type FileBackendClaudeWorkerJob = {
+  readonly jobId?: string;
   readonly runId?: string;
   readonly prompt: string;
   readonly systemPrompt?: string;
@@ -101,12 +120,14 @@ export type FileBackendClaudeWorkerJob = {
   readonly controls?: ProviderTask["controls"];
   readonly abortSignal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, string>>;
+  readonly controlTarget?: WorkerControlTarget;
 };
 
 export type FileBackendClaudeWorkerResult = {
   readonly outputText: string;
   readonly structuredOutput?: unknown;
   readonly telemetry?: ProviderTaskTelemetry;
+  readonly workerControlSignalIds?: readonly string[];
   readonly warnings: readonly {
     readonly code: string;
     readonly safeMessage: string;
@@ -134,6 +155,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
   private readonly workspace: RuntimeDeps["workspace"];
   private readonly observability: ObservabilityPort;
   private readonly clock: ClockPort;
+  private readonly controlInbox: WorkerControlContinuationSource | null;
   private readonly sessionDriver = new ClaudeSessionDriver();
   private readonly agentDriver: ClaudeTaskAgentDriver;
   private readonly sessionStore: NonNullable<RuntimeDeps["sessionStore"]>;
@@ -143,6 +165,8 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
   private readonly rateLimitTelemetry: ClaudeRateLimitTelemetrySource | null;
   private readonly logicalThreadStore: ClaudeLogicalThreadStore;
   private readonly transcriptBundleStore: ClaudeTranscriptBundleStore;
+  private readonly runArtifacts: FileClaudeRunArtifactStore;
+  private readonly runArtifactHeartbeatMs: number;
   private capacityState: WorkerCapacitySnapshot = { availability: "available" };
   private windowStartedAtMs: number;
   private runsInWindow = 0;
@@ -174,6 +198,14 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       : defaultWorkspacePath;
     this.observability = options.observability ?? new NullWorkerObservability();
     this.clock = options.clock ?? systemClock;
+    this.controlInbox =
+      options.controlInbox ??
+      new WorkerControlService({
+        store: new LocalFileWorkerControlInboxStore({
+          rootDir: options.stateRootDir,
+        }),
+        ...(options.clock ? { clock: options.clock } : {}),
+      });
     this.windowStartedAtMs = this.clock.now().getTime();
     this.rateLimitTelemetry =
       options.rateLimitTelemetry ??
@@ -192,6 +224,13 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       new FileClaudeTranscriptBundleStore(
         join(options.stateRootDir, "claude-transcript-bundles"),
       );
+    this.runArtifacts = new FileClaudeRunArtifactStore({
+      rootDir: options.runArtifactsRootDir ??
+        join(options.stateRootDir, "claude-run-artifacts"),
+      ...(options.clock ? { clock: options.clock } : {}),
+      redactor: this.redactor,
+    } satisfies ClaudeRunArtifactStoreOptions);
+    this.runArtifactHeartbeatMs = options.runArtifactHeartbeatMs ?? 30_000;
 
     const { sessionStore, leaseStore } = createLocalFileBackendRuntimeAdapters({
       providerId: "claude",
@@ -204,20 +243,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     this.agentDriver = new ClaudeTaskAgentDriver({
       engine:
         options.engine ??
-        new ClaudeRuntimeTaskExecutionEngine({
-          ...(options.baseEnv ? { baseEnv: options.baseEnv } : {}),
-          ...(options.claudePath ? { claudePath: options.claudePath } : {}),
-          ...(options.taskTimeoutMs
-            ? { commandTimeoutMs: options.taskTimeoutMs }
-            : {}),
-          ...(options.pollIntervalMs
-            ? { pollIntervalMs: options.pollIntervalMs }
-            : {}),
-          ...(this.rateLimitTelemetry?.settingsPath
-            ? { settingsPath: this.rateLimitTelemetry.settingsPath }
-            : {}),
-          stateFilePath: join(this.configDir, "subscription-runtime-state.json"),
-        }),
+        this.defaultClaudeTaskEngine(options),
       ...(options.appendSystemPrompt
         ? { appendSystemPrompt: options.appendSystemPrompt }
         : {}),
@@ -259,6 +285,32 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       clock: this.clock,
       idGenerator: new DeterministicIdGenerator(),
     });
+  }
+
+  private defaultClaudeTaskEngine(
+    options: FileBackendClaudeWorkerOptions,
+  ): ClaudeTaskExecutionEngine {
+    const primary = new ClaudeRuntimeTaskExecutionEngine({
+      ...(options.baseEnv ? { baseEnv: options.baseEnv } : {}),
+      ...(options.claudePath ? { claudePath: options.claudePath } : {}),
+      ...(options.runtimeModuleLoader
+        ? { runtimeModuleLoader: options.runtimeModuleLoader }
+        : {}),
+      ...(options.providerModuleLoader
+        ? { providerModuleLoader: options.providerModuleLoader }
+        : {}),
+      ...(options.taskTimeoutMs
+        ? { commandTimeoutMs: options.taskTimeoutMs }
+        : {}),
+      ...(options.pollIntervalMs
+        ? { pollIntervalMs: options.pollIntervalMs }
+        : {}),
+      ...(this.rateLimitTelemetry?.settingsPath
+        ? { settingsPath: this.rateLimitTelemetry.settingsPath }
+        : {}),
+      stateFilePath: join(this.configDir, "subscription-runtime-state.json"),
+    });
+    return primary;
   }
 
   get state(): SubscriptionWorkerState {
@@ -386,55 +438,181 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     }
   }
 
-  run(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
-  run(job: FileBackendClaudeWorkerJob): Promise<FileBackendClaudeWorkerResult>;
+  run(
+    job: FileBackendClaudeWorkerThreadJob,
+    options?: SubscriptionWorkerRunOptions,
+  ): Promise<FileBackendClaudeWorkerThreadResult>;
+  run(
+    job: FileBackendClaudeWorkerJob,
+    options?: SubscriptionWorkerRunOptions,
+  ): Promise<FileBackendClaudeWorkerResult>;
   async run(
     job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendClaudeWorkerResult | FileBackendClaudeWorkerThreadResult> {
-    if (isThreadJob(job)) return this.runThreadJob(job);
-    return this.runProviderTask(job);
+    if (isThreadJob(job)) return this.runThreadJob(job, options);
+    return this.runProviderTask(job, {
+      ...(options.abortSignal === undefined
+        ? {}
+        : { abortSignal: options.abortSignal }),
+    });
   }
 
   private async runProviderTask(
-    job: FileBackendClaudeWorkerJob,
+    job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
+    input: {
+      readonly workspaceId?: string;
+      readonly abortSignal?: AbortSignal;
+    } = {},
   ): Promise<FileBackendClaudeWorkerResult> {
     this.assertStarted();
     assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
     const runId = job.runId ?? `local-${randomUUID()}`;
-    const abortSignal = job.abortSignal ?? new AbortController().signal;
-    const result = await this.runtime.refreshThenRunTask({
+    const abort = combineAbortSignals(job.abortSignal, input.abortSignal);
+    const abortSignal = abort.signal;
+    const workspaceId = input.workspaceId ?? this.stableWorkspacePath ?? undefined;
+    const controlBatch = this.controlInbox
+      ? await this.controlInbox.consumeForContinuation({
+          target: job.controlTarget ??
+            claudeControlTarget({
+              job,
+              runId,
+              workerId: this.workerId,
+              ...(workspaceId === undefined ? {} : { workspaceId }),
+            }),
+          deliveryAttemptId: `${runId}:worker-control`,
+          now: this.clock.now(),
+        })
+      : undefined;
+    await this.runArtifacts.startRun({
+      runId,
       providerInstanceId: this.options.providerInstanceId,
-      task: {
-        kind: job.kind ?? "structured-prompt",
-        prompt: job.prompt,
-        ...(job.systemPrompt !== undefined ? { systemPrompt: job.systemPrompt } : {}),
-        ...(job.outputSchemaName
-          ? { outputSchemaName: job.outputSchemaName }
-          : {}),
-        ...(job.controls ? { controls: job.controls } : {}),
-        ...(job.metadata ? { metadata: job.metadata } : {}),
-      },
-      runContext: {
-        runId,
-        attempt: 1,
-        abortSignal,
-      },
+      workerId: this.workerId,
+      configDir: this.configDir,
+      ...(workspaceId === undefined ? {} : { workspacePath: workspaceId }),
+      ...(job.jobId === undefined ? {} : { jobId: job.jobId }),
+      ...(isThreadJob(job) ? { threadId: job.threadId } : {}),
+      ...(this.capacityAccountId ?? this.options.capacityAccountId
+        ? { capacityAccountId: this.capacityAccountId ?? this.options.capacityAccountId }
+        : {}),
+      workerState: this.workerState,
+      capacity: this.capacity(),
+      ...(controlBatch?.signalIds.length
+        ? { controlSignalIds: controlBatch.signalIds }
+        : {}),
     });
+    const heartbeat = this.runArtifacts.startHeartbeat({
+      runId,
+      intervalMs: this.runArtifactHeartbeatMs,
+      snapshot: () => ({
+        workerState: this.workerState,
+        capacity: this.capacity(),
+        ...(controlBatch?.signalIds.length
+          ? { controlSignalIds: controlBatch.signalIds }
+          : {}),
+      }),
+    });
+    let terminalRecorded = false;
+    try {
+      const result = await this.runtime.refreshThenRunTask({
+        providerInstanceId: this.options.providerInstanceId,
+        task: {
+          kind: job.kind ?? "structured-prompt",
+          prompt: appendWorkerControlPrompt(job.prompt, controlBatch?.message),
+          ...(job.systemPrompt !== undefined ? { systemPrompt: job.systemPrompt } : {}),
+          ...(job.outputSchemaName
+            ? { outputSchemaName: job.outputSchemaName }
+            : {}),
+          ...(job.controls ? { controls: job.controls } : {}),
+          ...(job.metadata ? { metadata: job.metadata } : {}),
+        },
+        runContext: {
+          runId,
+          attempt: 1,
+          abortSignal,
+        },
+      });
 
-    if (result.status === "blocked") {
-      this.recordBlocked(result.reason);
-      throw new SubscriptionWorkerError(
-        "subscription_worker_run_failed",
-        result.safeMessage,
-        { details: { reason: result.reason } },
-      );
+      if (result.status === "blocked") {
+        this.recordBlocked(result.reason);
+        terminalRecorded = true;
+        heartbeat.stop();
+        await this.runArtifacts.failRun({
+          runId,
+          status: "blocked",
+          reason: result.reason,
+          safeMessage: result.safeMessage,
+          warnings: result.warnings,
+          workerState: this.workerState,
+          capacity: this.capacity(),
+        });
+        throw new SubscriptionWorkerError(
+          "subscription_worker_run_failed",
+          result.safeMessage,
+          { details: { reason: result.reason } },
+        );
+      }
+
+      if (result.task.status === "failed") {
+        this.recordFailure(result.task.failure);
+        terminalRecorded = true;
+        heartbeat.stop();
+        await this.runArtifacts.failRun({
+          runId,
+          status: "failed",
+          reason: result.task.failure.code,
+          safeMessage: result.task.failure.safeMessage,
+          ...(result.task.failure.details === undefined
+            ? {}
+            : { failureDetails: result.task.failure.details }),
+          ...(result.task.telemetry === undefined
+            ? {}
+            : { telemetry: result.task.telemetry }),
+          warnings: result.task.warnings,
+          workerState: this.workerState,
+          capacity: this.capacity(),
+        });
+        throw new SubscriptionWorkerError(
+          "subscription_worker_run_failed",
+          result.task.failure.safeMessage,
+          { details: { code: result.task.failure.code } },
+        );
+      }
+
+      const output = this.taskResultToOutput(result, controlBatch?.signalIds ?? []);
+      terminalRecorded = true;
+      heartbeat.stop();
+      await this.runArtifacts.completeRun({
+        runId,
+        outputText: output.outputText,
+        ...(output.telemetry === undefined ? {} : { telemetry: output.telemetry }),
+        warnings: output.warnings,
+        workerState: this.workerState,
+        capacity: this.capacity(),
+      });
+      return output;
+    } catch (error) {
+      if (!terminalRecorded) {
+        await this.runArtifacts.failRun({
+          runId,
+          status: "failed",
+          reason: errorCode(error),
+          safeMessage:
+            error instanceof Error ? error.message : "Claude worker task failed.",
+          workerState: this.workerState,
+          capacity: this.capacity(),
+        }).catch(() => undefined);
+      }
+      throw error;
+    } finally {
+      abort.dispose();
+      heartbeat.stop();
     }
-
-    return this.taskResultToOutput(result);
   }
 
   async runThreadJob(
     job: FileBackendClaudeWorkerThreadJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendClaudeWorkerThreadResult> {
     this.assertStarted();
     const workspacePath = this.threadWorkspacePath(job.threadId);
@@ -471,6 +649,11 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
                       current.latestSessionId,
                   }),
             },
+          }, {
+            workspaceId: workspacePath,
+            ...(options.abortSignal === undefined
+              ? {}
+              : { abortSignal: options.abortSignal }),
           });
           const latestSessionId = result.telemetry?.providerSessionId;
           if (!latestSessionId) {
@@ -641,6 +824,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
 
   private taskResultToOutput(
     result: Extract<RefreshThenRunResult, { readonly status: "completed" }>,
+    workerControlSignalIds: readonly string[] = [],
   ): FileBackendClaudeWorkerResult {
     if (result.task.status === "failed") {
       this.recordFailure(result.task.failure);
@@ -658,6 +842,9 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       ...(result.task.telemetry === undefined
         ? {}
         : { telemetry: result.task.telemetry }),
+      ...(workerControlSignalIds.length === 0
+        ? {}
+        : { workerControlSignalIds }),
       warnings: result.task.warnings,
     };
   }
@@ -1060,10 +1247,39 @@ function assertWorkerOptions(options: FileBackendClaudeWorkerOptions): void {
   }
 }
 
+function appendWorkerControlPrompt(
+  prompt: string,
+  controlMessage: string | undefined,
+): string {
+  if (!controlMessage) return prompt;
+  return [prompt.trimEnd(), controlMessage.trim()].join("\n\n");
+}
+
+function claudeControlTarget(input: {
+  readonly job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob;
+  readonly runId: string;
+  readonly workerId: string;
+  readonly workspaceId?: string;
+}): WorkerControlTarget {
+  const threadId = isThreadJob(input.job) ? input.job.threadId : undefined;
+  return {
+    jobId: input.job.jobId ?? threadId ?? input.job.runId ?? input.runId,
+    taskId: input.job.runId ?? threadId ?? input.runId,
+    workerId: input.workerId,
+    ...(input.workspaceId === undefined ? {} : { workspaceId: input.workspaceId }),
+  };
+}
+
 function isThreadJob(
   job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
 ): job is FileBackendClaudeWorkerThreadJob {
   return "threadId" in job && typeof job.threadId === "string";
+}
+
+function errorCode(error: unknown): string {
+  if (error instanceof SubscriptionWorkerError) return error.code;
+  if (error instanceof Error && error.name) return error.name;
+  return "unknown_runtime_failure";
 }
 
 async function canonicalPath(path: string): Promise<string> {

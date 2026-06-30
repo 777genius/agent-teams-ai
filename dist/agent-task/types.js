@@ -14,6 +14,7 @@ export function makeAgentTaskFailure(code, safeMessage, input) {
         reconnectRequired: input?.reconnectRequired ?? false,
         safeMessage,
         ...(input?.causeCategory ? { causeCategory: input.causeCategory } : {}),
+        ...(input?.details ? { details: input.details } : {}),
     };
 }
 //# sourceMappingURL=types.js.map

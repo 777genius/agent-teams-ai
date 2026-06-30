@@ -447,6 +447,7 @@ function parseFailure(value, path) {
         reconnectRequired: booleanAt(input.reconnectRequired, `${path}.reconnectRequired`),
         safeMessage: stringAt(input.safeMessage, `${path}.safeMessage`),
         ...optionalStringField(input, "causeCategory", `${path}.causeCategory`),
+        ...optionalMetadataField(input, "details", `${path}.details`),
     };
 }
 function parseTelemetry(value) {
