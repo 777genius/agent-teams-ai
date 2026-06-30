@@ -1,148 +1,60 @@
+import { reconcileRunPreview, } from "./run-reconcile-preview.js";
+/**
+ * @deprecated This is a compatibility alias for the legacy codex_goal_watch
+ * control preview. Use reconcileRunPreview for new code, or
+ * RunObservationService for true read-only watch.
+ */
 export async function reconcileWatchableJobs(input) {
-    const policy = input.policy ?? {};
-    const now = policy.now ?? new Date();
-    const maxContinues = policy.maxContinuesPerRun ?? 1;
-    const jobIds = input.jobIds ?? await input.backend.listJobIds();
-    const inspected = await Promise.all(jobIds.map(async (jobId) => {
-        try {
-            return { ok: true, status: await input.backend.inspectJob(jobId) };
-        }
-        catch (error) {
-            return {
-                ok: false,
-                jobId,
-                reason: error instanceof Error ? error.message : "inspect_failed",
-            };
-        }
-    }));
-    const conflicts = workspaceConflictJobIds(inspected
-        .filter((item) => item.ok)
-        .map((item) => item.status));
-    const decisions = [];
-    let continued = 0;
-    for (const item of inspected) {
-        if (!item.ok) {
-            decisions.push({
-                jobId: item.jobId,
-                action: "inspect_failed",
-                reason: item.reason,
-            });
-            continue;
-        }
-        const status = item.status;
-        const decision = await decideWatchableJob({
-            backend: input.backend,
-            status,
-            conflicts,
-            now,
-            continueSafeJobs: policy.continueSafeJobs === true,
-            continueBudgetRemaining: Math.max(0, maxContinues - continued),
-        });
-        decisions.push(decision);
-        if (decision.action === "continued")
-            continued += 1;
-    }
+    const backend = {
+        listRunIds: () => input.backend.listJobIds(),
+        inspectRun: async (runId) => {
+            const status = await input.backend.inspectJob(runId);
+            return { ...status, runId: status.jobId };
+        },
+        continueRun: (runId) => input.backend.continueJob(runId),
+    };
+    const result = await reconcileRunPreview({
+        backend,
+        ...(input.jobIds === undefined ? {} : { runIds: input.jobIds }),
+        ...(input.policy === undefined
+            ? {}
+            : {
+                policy: {
+                    ...(input.policy.continueSafeJobs === undefined
+                        ? {}
+                        : { continueSafeRuns: input.policy.continueSafeJobs }),
+                    ...(input.policy.maxContinuesPerRun === undefined
+                        ? {}
+                        : { maxContinuesPerRun: input.policy.maxContinuesPerRun }),
+                    ...(input.policy.now === undefined ? {} : { now: input.policy.now }),
+                },
+            }),
+    });
     return {
-        ok: decisions.every((decision) => decision.action !== "inspect_failed" &&
-            decision.action !== "blocked"),
-        checked: decisions.length,
-        continued,
-        decisions,
+        ok: result.ok,
+        checked: result.checked,
+        continued: result.continued,
+        decisions: result.decisions.map(toLegacyDecision),
     };
 }
-async function decideWatchableJob(input) {
-    const status = input.status;
-    if (status.workerAlive) {
+function toLegacyDecision(decision) {
+    if ("status" in decision) {
+        const { runId, status, ...rest } = decision;
+        const { runId: _runId, ...legacyStatus } = status;
+        void _runId;
         return {
-            jobId: status.jobId,
-            action: "wait",
-            reason: "worker_alive",
-            status,
+            ...rest,
+            jobId: runId,
+            status: {
+                ...legacyStatus,
+                jobId: runId,
+            },
         };
     }
-    if (status.requiresManualReview) {
-        return {
-            jobId: status.jobId,
-            action: "manual_review",
-            reason: status.manualReviewReason ?? "manual_review_required",
-            status,
-        };
-    }
-    if (status.workspaceDirty) {
-        return {
-            jobId: status.jobId,
-            action: "manual_review",
-            reason: "workspace_dirty",
-            status,
-        };
-    }
-    if (input.conflicts.has(status.jobId)) {
-        return {
-            jobId: status.jobId,
-            action: "blocked",
-            reason: "single_writer_workspace_conflict",
-            status,
-        };
-    }
-    if (!status.safeToContinue) {
-        return {
-            jobId: status.jobId,
-            action: "skipped",
-            reason: "not_safe_to_continue",
-            status,
-        };
-    }
-    if (status.continueAfter && status.continueAfter.getTime() > input.now.getTime()) {
-        return {
-            jobId: status.jobId,
-            action: "skipped",
-            reason: "continue_cooldown",
-            status,
-        };
-    }
-    if (!input.continueSafeJobs) {
-        return {
-            jobId: status.jobId,
-            action: "would_continue",
-            reason: "dry_run",
-            status,
-        };
-    }
-    if (input.continueBudgetRemaining <= 0) {
-        return {
-            jobId: status.jobId,
-            action: "skipped",
-            reason: "max_continues_reached",
-            status,
-        };
-    }
+    const { runId, ...rest } = decision;
     return {
-        jobId: status.jobId,
-        action: "continued",
-        reason: "safe_to_continue",
-        status,
-        result: await input.backend.continueJob(status.jobId),
+        ...rest,
+        jobId: runId,
     };
-}
-function workspaceConflictJobIds(statuses) {
-    const groups = new Map();
-    for (const status of statuses) {
-        if (!status.workspaceKey)
-            continue;
-        if (!status.workerAlive && !status.safeToContinue)
-            continue;
-        groups.set(status.workspaceKey, [
-            ...(groups.get(status.workspaceKey) ?? []),
-            status,
-        ]);
-    }
-    const conflicts = new Set();
-    for (const group of groups.values()) {
-        if (group.length <= 1)
-            continue;
-        for (const status of group)
-            conflicts.add(status.jobId);
-    }
-    return conflicts;
 }
 //# sourceMappingURL=job-watch.js.map

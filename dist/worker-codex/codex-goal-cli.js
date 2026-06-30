@@ -341,6 +341,24 @@ function parseMcpShortcut(commandName, argv, io) {
             format: outputFormat(option(values, io.env(), "--format", []) ?? "json"),
         };
     }
+    if (commandName === "reconcile-preview") {
+        const values = parseFlags(argv);
+        return {
+            kind: "mcp-tool",
+            name: "codex_goal_reconcile_preview",
+            argsJson: JSON.stringify({
+                ...registryArg(values),
+                ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
+                ...optionalNumberArg(values, "--tail-lines", "tailLines"),
+                ...optionalNumberArg(values, "--max-continues", "maxContinuesPerRun"),
+                ...(flag(values, "--continue-safe-jobs")
+                    ? { continueSafeJobs: true }
+                    : {}),
+                ...(flag(values, "--skip-doctor") ? { skipDoctor: true } : {}),
+            }),
+            format: outputFormat(option(values, io.env(), "--format", []) ?? "json"),
+        };
+    }
     if (commandName === "brief") {
         return parseJobShortcut({
             kind: "brief",
@@ -711,6 +729,7 @@ function usage() {
   subscription-runtime-codex-goal doctor-control
   subscription-runtime-codex-goal overview [--registry-root <dir>]
   subscription-runtime-codex-goal run-watch [jobId] [--registry-root <dir>] [--include-log-tail] [--include-changed-files]
+  subscription-runtime-codex-goal reconcile-preview [--registry-root <dir>] [--continue-safe-jobs]
   subscription-runtime-codex-goal brief <jobId> [--registry-root <dir>]
   subscription-runtime-codex-goal decision <jobId> [--registry-root <dir>]
   subscription-runtime-codex-goal handoff <jobId> [--registry-root <dir>]
@@ -735,7 +754,7 @@ escape hatches:
 MCP fallback:
   use tool/resources/prompts when native MCP tools are unavailable in a Codex thread.
   These commands call the same in-process MCP server via the SDK, so the API surface matches MCP.
-  Shortcuts like overview, run-watch, brief, decision, handoff, accounts, continue-job, recover-job and stop-job are thin wrappers around MCP tools.
+  Shortcuts like overview, run-watch, reconcile-preview, brief, decision, handoff, accounts, continue-job, recover-job and stop-job are thin wrappers around MCP tools.
 `;
 }
 function isRecord(value) {

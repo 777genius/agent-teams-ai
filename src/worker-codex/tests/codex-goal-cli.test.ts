@@ -145,6 +145,7 @@ describe("codex goal cli", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "agent_run_watch" }),
         expect.objectContaining({ name: "codex_goal_run_watch" }),
+        expect.objectContaining({ name: "codex_goal_reconcile_preview" }),
         expect.objectContaining({ name: "codex_goal_brief" }),
         expect.objectContaining({ name: "codex_goal_watch" }),
         expect.objectContaining({ name: "codex_goal_decision" }),
@@ -221,6 +222,26 @@ describe("codex goal cli", () => {
       includeLogTail: true,
       includeChangedFiles: true,
       tailLines: 25,
+    });
+
+    const reconcilePreview = parseCodexGoalCliArgs([
+      "reconcile-preview",
+      "--registry-root",
+      "/tmp/registry",
+      "--continue-safe-jobs",
+      "--max-continues",
+      "2",
+    ], fakeIo());
+    expect(reconcilePreview).toMatchObject({
+      kind: "mcp-tool",
+      name: "codex_goal_reconcile_preview",
+      format: "json",
+    });
+    if (reconcilePreview.kind !== "mcp-tool") return;
+    expect(JSON.parse(reconcilePreview.argsJson ?? "{}")).toEqual({
+      registryRootDir: "/tmp/registry",
+      continueSafeJobs: true,
+      maxContinuesPerRun: 2,
     });
 
     const brief = parseCodexGoalCliArgs([

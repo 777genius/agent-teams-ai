@@ -8,7 +8,7 @@ import { McpServer, ResourceTemplate, } from "@modelcontextprotocol/sdk/server/m
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
-import { RunObservationService, reconcileWatchableJobs, } from "@vioxen/subscription-runtime/worker-core";
+import { RunObservationService, reconcileRunPreview, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { codexGoalAccountSlots, codexGoalProgressPath, } from "./codex-goal-runner.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, shellQuote, startCodexGoalTmux, stopCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
@@ -95,9 +95,9 @@ export function createCodexGoalMcpServer() {
         const overview = await buildCodexGoalOverview(args);
         return mcpJson(overview);
     }));
-    server.registerTool("codex_goal_watch", {
-        title: "Watch Codex Goal Jobs",
-        description: "Run one safe reconciliation pass over stored jobs. Dry-run by default; continues only when continueSafeJobs is true and each job is safe.",
+    server.registerTool("codex_goal_reconcile_preview", {
+        title: "Codex Goal Reconcile Preview",
+        description: "Run one safe reconciliation-preview pass over stored jobs. Dry-run by default; continues only when continueSafeJobs is true and each job is safe. This is not pure watch.",
         inputSchema: {
             ...jobRegistryInputSchema(),
             staleAfterMs: z.number().int().positive().optional(),
@@ -108,7 +108,23 @@ export function createCodexGoalMcpServer() {
             skipDoctor: z.boolean().optional(),
         },
     }, async (args) => withMcpErrors(async () => {
-        const watch = await watchCodexGoalJobs(args);
+        const watch = await reconcilePreviewCodexGoalJobs(args);
+        return mcpJson(watch);
+    }));
+    server.registerTool("codex_goal_watch", {
+        title: "Watch Codex Goal Jobs",
+        description: "Deprecated compatibility alias for codex_goal_reconcile_preview. Use agent_run_watch or codex_goal_run_watch for pure read-only observation.",
+        inputSchema: {
+            ...jobRegistryInputSchema(),
+            staleAfterMs: z.number().int().positive().optional(),
+            tailLines: z.number().int().positive().optional(),
+            jobIds: z.union([z.string(), z.array(z.string())]).optional(),
+            continueSafeJobs: z.boolean().optional(),
+            maxContinuesPerRun: z.number().int().positive().optional(),
+            skipDoctor: z.boolean().optional(),
+        },
+    }, async (args) => withMcpErrors(async () => {
+        const watch = await reconcilePreviewCodexGoalJobs(args);
         return mcpJson(watch);
     }));
     const agentRunWatchTool = {
@@ -1095,23 +1111,23 @@ async function buildCodexGoalOverview(args) {
         jobs,
     };
 }
-async function watchCodexGoalJobs(args) {
+async function reconcilePreviewCodexGoalJobs(args) {
     const registryRootDir = registryRootFromArgs(args);
     const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
     const tailLines = numberValue(args.tailLines) ?? 5;
     const explicitJobIds = jobIdsFromValue(args.jobIds);
-    const result = await reconcileWatchableJobs({
-        ...(explicitJobIds.length ? { jobIds: explicitJobIds } : {}),
+    const result = await reconcileRunPreview({
+        ...(explicitJobIds.length ? { runIds: explicitJobIds } : {}),
         policy: {
-            continueSafeJobs: booleanValue(args.continueSafeJobs) === true,
+            continueSafeRuns: booleanValue(args.continueSafeJobs) === true,
             maxContinuesPerRun: numberValue(args.maxContinuesPerRun) ?? 1,
         },
         backend: {
-            async listJobIds() {
+            async listRunIds() {
                 return (await listCodexGoalJobs({ registryRootDir }))
                     .map((summary) => summary.jobId);
             },
-            async inspectJob(jobId) {
+            async inspectRun(jobId) {
                 const item = await buildCodexGoalOverviewItem({
                     registryRootDir,
                     jobId,
@@ -1120,7 +1136,7 @@ async function watchCodexGoalJobs(args) {
                 });
                 return codexOverviewItemToWatchStatus(item);
             },
-            async continueJob(jobId) {
+            async continueRun(jobId) {
                 const response = await continueStoredJob({
                     registryRootDir,
                     jobId,
@@ -1148,7 +1164,23 @@ async function watchCodexGoalJobs(args) {
             : "dry_run",
         checked: result.checked,
         continued: result.continued,
-        decisions: result.decisions,
+        decisions: result.decisions.map(reconcilePreviewDecisionJson),
+    };
+}
+function reconcilePreviewDecisionJson(decision) {
+    if ("status" in decision) {
+        return {
+            ...decision,
+            jobId: decision.runId,
+            status: {
+                ...decision.status,
+                jobId: decision.runId,
+            },
+        };
+    }
+    return {
+        ...decision,
+        jobId: decision.runId,
     };
 }
 async function watchAgentRuns(args) {
@@ -1221,7 +1253,7 @@ async function codexOverviewItemToWatchStatus(item) {
         recommendedAction === "inspect_failure" ||
         recommendedAction === "check_log_or_result";
     return {
-        jobId,
+        runId: jobId,
         workerAlive: item.workerAlive === true,
         safeToContinue: item.safeToContinue === true,
         ...(workspacePath ? { workspaceKey: await workspaceConflictKey(workspacePath) } : {}),

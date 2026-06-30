@@ -349,10 +349,13 @@ Job registry tools:
   hints, warnings and `readOnlyDecision`. It never starts, stops, continues,
   recovers, writes inbox signals or delivers work.
 - `codex_goal_run_watch`: Codex-scoped alias for `agent_run_watch`.
-- `codex_goal_watch`: legacy reconciliation-preview tool, not pure watch.
+- `codex_goal_reconcile_preview`: reconciliation-preview tool, not pure watch.
   It is dry-run by default. With `continueSafeJobs: true`, it continues only
   stopped jobs whose adapter reports `safeToContinue`, blocks same-workspace
   writer conflicts, and respects `maxContinuesPerRun`.
+- `codex_goal_watch`: deprecated compatibility alias for
+  `codex_goal_reconcile_preview`; prefer `agent_run_watch` for observation and
+  `codex_goal_reconcile_preview` for explicit control preview.
 - `codex_goal_status_by_id`: inspect a job by `jobId`.
 - `codex_goal_brief`: compact operator summary with stale/progress/account
   hints, recent commands and the next safe job-level command.
@@ -494,9 +497,9 @@ Recommended agent loop:
 1. Call `agent_run_watch` first when you need pure observation of what workers
    are doing. Use `--include-log-tail` and `--include-changed-files` only when
    the extra data is needed. Call `codex_goal_overview` for compact registry
-   triage. Use `codex_goal_watch` only when a registrar wants a one-shot
-   reconciliation preview; keep it dry-run unless the run is explicitly allowed
-   to continue safe jobs. Call
+   triage. Use `codex_goal_reconcile_preview` only when a registrar wants a
+   one-shot reconciliation preview; keep it dry-run unless the run is explicitly
+   allowed to continue safe jobs. Call
    `codex_goal_brief` when a specific `jobId` needs monitoring.
    If `overview.safeToOperate` is false, resolve `overview.workspaceConflicts`
    before starting or continuing any writer.
@@ -508,6 +511,12 @@ Recommended agent loop:
 
    ```bash
    subscription-runtime-codex-goal run-watch [jobId] --include-log-tail --tail-lines 20 --include-changed-files
+   ```
+
+   Reconcile-preview fallback:
+
+   ```bash
+   subscription-runtime-codex-goal reconcile-preview --registry-root <dir>
    ```
 2. If `recommendedAction` is `wait_for_worker`, do not start another writer in
    that worktree while `brief.silentStale` is false.
