@@ -59,6 +59,7 @@ describe("subscription runtime agent-task runner CLI", () => {
         }),
         env: {
           PATH: "/usr/bin",
+          CLAUDE_RUNTIME_DIST_DIR: "/tmp/claude-runtime-dist",
           SUBSCRIPTION_RUNTIME_LOCAL_ENCRYPTION_KEY:
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
           CLAUDE_CODE_OAUTH_TOKEN: "claude-token",
@@ -72,6 +73,7 @@ describe("subscription runtime agent-task runner CLI", () => {
       provider: "claude",
       providerInstanceId: "claude-a",
       model: "sonnet",
+      claudeRuntimeDistDir: "/tmp/claude-runtime-dist",
     });
     expect(calls.factory?.env).toMatchObject({
       PATH: "/usr/bin",

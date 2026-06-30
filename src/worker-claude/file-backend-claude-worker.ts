@@ -18,7 +18,9 @@ import {
   assertProviderTaskSystemPrompt,
 } from "@vioxen/subscription-runtime/core";
 import {
+  ClaudeCliTaskExecutionEngine,
   ClaudeRuntimeTaskExecutionEngine,
+  ClaudeRuntimeWithCliFallbackExecutionEngine,
   ClaudeSessionDriver,
   ClaudeTaskAgentDriver,
   claudeRuntimeResumeSessionIdMetadataKey,
@@ -241,26 +243,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     this.agentDriver = new ClaudeTaskAgentDriver({
       engine:
         options.engine ??
-        new ClaudeRuntimeTaskExecutionEngine({
-          ...(options.baseEnv ? { baseEnv: options.baseEnv } : {}),
-          ...(options.claudePath ? { claudePath: options.claudePath } : {}),
-          ...(options.runtimeModuleLoader
-            ? { runtimeModuleLoader: options.runtimeModuleLoader }
-            : {}),
-          ...(options.providerModuleLoader
-            ? { providerModuleLoader: options.providerModuleLoader }
-            : {}),
-          ...(options.taskTimeoutMs
-            ? { commandTimeoutMs: options.taskTimeoutMs }
-            : {}),
-          ...(options.pollIntervalMs
-            ? { pollIntervalMs: options.pollIntervalMs }
-            : {}),
-          ...(this.rateLimitTelemetry?.settingsPath
-            ? { settingsPath: this.rateLimitTelemetry.settingsPath }
-            : {}),
-          stateFilePath: join(this.configDir, "subscription-runtime-state.json"),
-        }),
+        this.defaultClaudeTaskEngine(options),
       ...(options.appendSystemPrompt
         ? { appendSystemPrompt: options.appendSystemPrompt }
         : {}),
@@ -301,6 +284,39 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       observability: this.observability,
       clock: this.clock,
       idGenerator: new DeterministicIdGenerator(),
+    });
+  }
+
+  private defaultClaudeTaskEngine(
+    options: FileBackendClaudeWorkerOptions,
+  ): ClaudeTaskExecutionEngine {
+    const primary = new ClaudeRuntimeTaskExecutionEngine({
+      ...(options.baseEnv ? { baseEnv: options.baseEnv } : {}),
+      ...(options.claudePath ? { claudePath: options.claudePath } : {}),
+      ...(options.runtimeModuleLoader
+        ? { runtimeModuleLoader: options.runtimeModuleLoader }
+        : {}),
+      ...(options.providerModuleLoader
+        ? { providerModuleLoader: options.providerModuleLoader }
+        : {}),
+      ...(options.taskTimeoutMs
+        ? { commandTimeoutMs: options.taskTimeoutMs }
+        : {}),
+      ...(options.pollIntervalMs
+        ? { pollIntervalMs: options.pollIntervalMs }
+        : {}),
+      ...(this.rateLimitTelemetry?.settingsPath
+        ? { settingsPath: this.rateLimitTelemetry.settingsPath }
+        : {}),
+      stateFilePath: join(this.configDir, "subscription-runtime-state.json"),
+    });
+    return new ClaudeRuntimeWithCliFallbackExecutionEngine({
+      primary,
+      fallback: new ClaudeCliTaskExecutionEngine({
+        ...(options.baseEnv ? { baseEnv: options.baseEnv } : {}),
+        ...(options.claudePath ? { claudePath: options.claudePath } : {}),
+        ...(options.taskTimeoutMs ? { timeoutMs: options.taskTimeoutMs } : {}),
+      }),
     });
   }
 

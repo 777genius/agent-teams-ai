@@ -118,7 +118,7 @@ async function runSingleWorkerSmoke(input) {
     const result = await worker.run({
       runId,
       prompt: "Return exactly OK and nothing else.",
-      controls: { maxTurns: 1, permissionMode: "read-only" },
+      controls: { permissionMode: "read-only" },
     });
     const outputText = result.outputText.trim();
     if (outputText !== "OK") {
@@ -190,6 +190,7 @@ async function runThreadHandoffSmoke(input) {
             input.rootStateDir,
             `thread-runtime-state-${slotIndex + 1}.json`,
           ),
+          requireRuntime: true,
         }),
         model: process.env.CLAUDE_MODEL ?? "sonnet",
         workspace: fixedWorkspace(sharedWorkspacePath),
@@ -289,11 +290,11 @@ async function runMultiWorkerSmoke(input) {
     );
     const first = await pool.run({
       prompt: "Return exactly FIRST and nothing else.",
-      controls: { maxTurns: 1, permissionMode: "read-only" },
+      controls: { permissionMode: "read-only" },
     });
     const second = await pool.run({
       prompt: "Return exactly SECOND and nothing else.",
-      controls: { maxTurns: 1, permissionMode: "read-only" },
+      controls: { permissionMode: "read-only" },
     });
 
     return {
@@ -328,7 +329,7 @@ function fixedWorkspace(path) {
 
 function createEngine(provider, input) {
   const runtimeModules = localRuntimeModules();
-  return new provider.ClaudeRuntimeTaskExecutionEngine({
+  const primary = new provider.ClaudeRuntimeTaskExecutionEngine({
     claudePath: input.claudePath,
     baseEnv: {
       CI: "1",
@@ -344,6 +345,18 @@ function createEngine(provider, input) {
           providerModuleLoader: async () => import(runtimeModules.provider),
         }
       : {}),
+  });
+  if (input.requireRuntime) return primary;
+  return new provider.ClaudeRuntimeWithCliFallbackExecutionEngine({
+    primary,
+    fallback: new provider.ClaudeCliTaskExecutionEngine({
+      claudePath: input.claudePath,
+      baseEnv: {
+        CI: "1",
+        PATH: process.env.PATH,
+      },
+      timeoutMs: Number(process.env.CLAUDE_COMMAND_TIMEOUT_MS ?? 180_000),
+    }),
   });
 }
 

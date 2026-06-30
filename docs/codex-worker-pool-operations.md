@@ -625,9 +625,15 @@ Recommended agent loop:
    CLAUDE_WORKER_SMOKE_MODE=single npm run smoke:worker-claude
    ```
 
+   `single` mode falls back to `claude -p` when the optional
+   `claude-runtime` peer is not installed. Set
+   `CLAUDE_RUNTIME_DIST_DIR=/path/to/test-claude-runtime/dist` only when you
+   specifically need to prove the background runtime or thread handoff path.
+
    The single-worker smoke now verifies both the real Claude worker result and
    the durable watch artifacts: `progress`, `result`, log tail and
-   `readOnlyDecision`.
+   `readOnlyDecision`. When runtime startup fails, watch surfaces the redacted
+   diagnostic in `snapshots[].result.details.runtimeMessage`.
 
    CLI fallback:
 

@@ -100,6 +100,7 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
     private quotaGroup;
     private capacityAccountId;
     constructor(options: FileBackendClaudeWorkerOptions);
+    private defaultClaudeTaskEngine;
     get state(): SubscriptionWorkerState;
     start(): Promise<void>;
     seedClaudeOAuth(input: {
