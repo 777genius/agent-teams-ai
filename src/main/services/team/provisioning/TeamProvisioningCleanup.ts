@@ -178,7 +178,7 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
   if (!hasNewerTrackedRun && ports.shouldFinalizeIncompleteLaunchState(run)) {
     const cleanupReason = ports.buildIncompleteLaunchCleanupReason(run);
     ports.markIncompleteLaunchStateFinalized(run, cleanupReason);
-    void ports.persistLaunchStateSnapshot(run, 'finished');
+    void ports.persistLaunchStateSnapshot(run, 'finished').catch(() => undefined);
   }
   if (
     !hasNewerTrackedRun &&
@@ -195,8 +195,10 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
           : 'launch_cleanup_unconfirmed_bootstrap',
     });
   }
-  ports.resetRuntimeToolActivity(run);
-  ports.setLeadActivity(run, 'offline');
+  if (!hasNewerTrackedRun) {
+    ports.resetRuntimeToolActivity(run);
+    ports.setLeadActivity(run, 'offline');
+  }
   run.pendingDirectCrossTeamSendRefresh = false;
   if (run.timeoutHandle) {
     clearTimeout(run.timeoutHandle);
@@ -234,12 +236,14 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
     ports.clearSameTeamRetryTimers(run.teamName);
     ports.clearLeadInboxFollowUpRelayTimer(run.teamName);
   }
-  for (const memberName of run.memberSpawnStatuses.keys()) {
-    const key = ports.getMemberLaunchGraceKey(run, memberName);
-    const timer = ports.pendingTimeouts.get(key);
-    if (timer) {
-      clearTimeout(timer);
-      ports.pendingTimeouts.delete(key);
+  if (!hasNewerTrackedRun) {
+    for (const memberName of run.memberSpawnStatuses.keys()) {
+      const key = ports.getMemberLaunchGraceKey(run, memberName);
+      const timer = ports.pendingTimeouts.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        ports.pendingTimeouts.delete(key);
+      }
     }
   }
   run.activeCrossTeamReplyHints = [];
@@ -280,16 +284,22 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
     run.pendingApprovals.clear();
   }
   if (run.mcpConfigPath) {
-    void ports.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath);
+    void Promise.resolve(ports.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath)).catch(
+      () => undefined
+    );
     run.mcpConfigPath = null;
   }
   ports.removeRunMemberMcpConfigFilesLater(run);
   if (run.bootstrapSpecPath) {
-    void removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath);
+    void Promise.resolve(removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath)).catch(
+      () => undefined
+    );
     run.bootstrapSpecPath = null;
   }
   if (run.bootstrapUserPromptPath) {
-    void removeDeterministicBootstrapUserPromptFile(run.bootstrapUserPromptPath);
+    void Promise.resolve(
+      removeDeterministicBootstrapUserPromptFile(run.bootstrapUserPromptPath)
+    ).catch(() => undefined);
     run.bootstrapUserPromptPath = null;
   }
   if (!hasNewerTrackedRun) {

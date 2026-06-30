@@ -133,6 +133,7 @@ export function buildOpenCodePromptDeliveryActiveBusyStatus(input: {
   teamName: string;
   memberName: string;
   retryAfterIso: string;
+  nowMs?: number;
   activeRecord: OpenCodePromptDeliveryLedgerRecord;
   scheduleWake: (input: {
     teamName: string;
@@ -150,16 +151,18 @@ export function buildOpenCodePromptDeliveryActiveBusyStatus(input: {
   const nextAttemptMs = input.activeRecord.nextAttemptAt
     ? Date.parse(input.activeRecord.nextAttemptAt)
     : NaN;
+  const nowMs = input.nowMs ?? Date.now();
+  const hasFutureNextAttempt = Number.isFinite(nextAttemptMs) && nextAttemptMs > nowMs;
   input.scheduleWake({
     teamName: input.teamName,
     memberName: input.memberName,
     messageId: input.activeRecord.inboxMessageId,
-    delayMs: Number.isFinite(nextAttemptMs) ? Math.max(500, nextAttemptMs - Date.now()) : 500,
+    delayMs: hasFutureNextAttempt ? Math.max(500, nextAttemptMs - nowMs) : 500,
   });
   return {
     busy: true,
     reason: `opencode_prompt_delivery_active:${input.activeRecord.messageKind ?? 'default'}`,
-    retryAfterIso: input.activeRecord.nextAttemptAt ?? input.retryAfterIso,
+    retryAfterIso: hasFutureNextAttempt ? input.activeRecord.nextAttemptAt! : input.retryAfterIso,
     activeMessageId: input.activeRecord.inboxMessageId,
     activeMessageKind: input.activeRecord.messageKind,
   };

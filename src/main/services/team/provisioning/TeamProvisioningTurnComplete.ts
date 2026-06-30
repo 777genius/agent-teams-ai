@@ -484,7 +484,7 @@ export async function handleTeamProvisioningTurnComplete<
 
     if (!hasSpawnFailures && !hasPendingBootstrap) {
       void ports.fireTeamLaunchedNotification(run);
-    } else if (hasSpawnFailures) {
+    } else {
       void ports.fireTeamLaunchIncompleteNotification(
         run,
         failedSpawnMembers,
@@ -588,7 +588,7 @@ export async function handleTeamProvisioningTurnComplete<
 
   if (!hasSpawnFailures && !hasPendingBootstrap) {
     void ports.fireTeamLaunchedNotification(run);
-  } else if (hasSpawnFailures) {
+  } else {
     void ports.fireTeamLaunchIncompleteNotification(
       run,
       failedSpawnMembers,

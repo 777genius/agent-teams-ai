@@ -274,6 +274,8 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.writeLaunchFailureArtifactPackBestEffort).toHaveBeenCalledWith(cleanup, {
       reason: 'launch_cleanup_unconfirmed_bootstrap',
     });
+    expect(ports.resetRuntimeToolActivity).toHaveBeenCalledWith(cleanup);
+    expect(ports.setLeadActivity).toHaveBeenCalledWith(cleanup, 'offline');
     expect(ports.clearApprovalTimeout).toHaveBeenCalledWith('approval-1');
     expect(ports.dismissApprovalNotification).toHaveBeenCalledWith('approval-1');
     expect(ports.emitToolApprovalEvent).toHaveBeenCalledWith({
@@ -300,6 +302,8 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.markIncompleteLaunchStateFinalized).not.toHaveBeenCalled();
     expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
     expect(ports.writeLaunchFailureArtifactPackBestEffort).not.toHaveBeenCalled();
+    expect(ports.resetRuntimeToolActivity).not.toHaveBeenCalled();
+    expect(ports.setLeadActivity).not.toHaveBeenCalled();
     expect(ports.provisioningRunByTeam.get(cleanup.teamName)).toBe('newer-run');
     expect(ports.deleteAliveRunId).not.toHaveBeenCalled();
     expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
@@ -322,7 +326,10 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam).not.toHaveBeenCalled();
     expect(ports.pruneLiveLeadMessagesForCleanedRun).toHaveBeenCalledWith(cleanup);
     expect(ports.retainedClaudeLogsByTeam.has(cleanup.teamName)).toBe(false);
-    expect(ports.pendingTimeouts.size).toBe(0);
+    expect(ports.pendingTimeouts.size).toBe(2);
+    for (const timer of ports.pendingTimeouts.values()) {
+      clearTimeout(timer);
+    }
     expect(ports.runs.has(cleanup.runId)).toBe(false);
   });
 });

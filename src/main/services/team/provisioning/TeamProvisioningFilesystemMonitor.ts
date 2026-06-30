@@ -89,12 +89,19 @@ export function startProvisioningFilesystemMonitor<
     return null;
   };
 
+  let pollInFlight = false;
+
   const poll = async (): Promise<void> => {
-    if (run.cancelRequested || run.processKilled || run.progress.state === 'ready') {
+    if (pollInFlight) {
       return;
     }
+    pollInFlight = true;
 
     try {
+      if (run.cancelRequested || run.processKilled || run.progress.state === 'ready') {
+        return;
+      }
+
       if (run.fsPhase === 'waiting_config') {
         const teamDir = await resolveTeamDir();
         if (teamDir) {
@@ -169,7 +176,13 @@ export function startProvisioningFilesystemMonitor<
         if (taskFound || taskFallbackExpired) {
           run.fsPhase = 'all_files_found';
           if (!run.deterministicBootstrap && !run.provisioningComplete) {
-            void ports.handleProvisioningTurnComplete(run);
+            void ports.handleProvisioningTurnComplete(run).catch((error: unknown) => {
+              logger.warn(
+                `[${run.teamName}] FS monitor completion failed: ${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              );
+            });
           }
         }
       }
@@ -177,6 +190,8 @@ export function startProvisioningFilesystemMonitor<
       logger.debug(
         `FS monitor poll error: ${error instanceof Error ? error.message : String(error)}`
       );
+    } finally {
+      pollInFlight = false;
     }
   };
 

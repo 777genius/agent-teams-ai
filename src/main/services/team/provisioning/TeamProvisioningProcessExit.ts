@@ -468,8 +468,12 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
     return;
   }
 
-  ports.updateProgress(run, 'verifying', 'Process exited — verifying provisioning results');
-  run.onProgress(run.progress);
+  const verifyingProgress = ports.updateProgress(
+    run,
+    'verifying',
+    'Process exited — verifying provisioning results'
+  );
+  run.onProgress(verifyingProgress);
 
   if (run.cancelRequested) {
     return;

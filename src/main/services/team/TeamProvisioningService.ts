@@ -7765,6 +7765,7 @@ export class TeamProvisioningService {
           teamName: input.teamName,
           memberName: input.memberName,
           retryAfterIso,
+          nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
           activeRecord,
           scheduleWake: (wakeInput) => this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
         });
@@ -7845,6 +7846,7 @@ export class TeamProvisioningService {
         teamName: input.teamName,
         memberName: input.memberName,
         retryAfterIso,
+        nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
         activeRecord,
         scheduleWake: (wakeInput) => this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
       });
