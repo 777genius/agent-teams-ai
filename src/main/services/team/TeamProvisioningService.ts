@@ -284,6 +284,17 @@ import {
   type TeamProvisioningEffectiveLaunchState,
 } from './provisioning/TeamProvisioningConfigMaterialization';
 import {
+  buildCrossTeamConversationKey as buildCrossTeamConversationKeyHelper,
+  extractCrossTeamPseudoTargetTeam as extractCrossTeamPseudoTargetTeamHelper,
+  getCrossTeamSourceTeam as getCrossTeamSourceTeamHelper,
+  isCrossTeamPseudoRecipientName as isCrossTeamPseudoRecipientNameHelper,
+  isCrossTeamToolRecipientName as isCrossTeamToolRecipientNameHelper,
+  looksLikeQualifiedExternalRecipientName as looksLikeQualifiedExternalRecipientNameHelper,
+  parseCrossTeamRecipient as parseCrossTeamRecipientHelper,
+  parseCrossTeamTargetTeam as parseCrossTeamTargetTeamHelper,
+  resolveSingleActiveCrossTeamReplyHint as resolveSingleActiveCrossTeamReplyHintHelper,
+} from './provisioning/TeamProvisioningCrossTeamRouting';
+import {
   buildCrossProviderMemberArgs as buildCrossProviderMemberArgsHelper,
   buildProvisioningEnv as buildProvisioningEnvHelper,
   type CrossProviderMemberArgsResult,
@@ -781,7 +792,6 @@ const {
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   createController,
 } = agentTeamsControllerModule;
-const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const VERIFY_TIMEOUT_MS = 15_000;
 const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
 
@@ -983,11 +993,6 @@ const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
 const MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS = 1_500;
-const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
-  'cross_team_send',
-  'cross_team_list_targets',
-  'cross_team_get_outbox',
-]);
 function assertAppDeterministicBootstrapEnabled(): void {
   if (process.env.CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP === '1') {
     throw new Error(
@@ -6203,78 +6208,33 @@ export class TeamProvisioningService {
     recipient: string,
     localRecipientNames: Set<string>
   ): { teamName: string; memberName: string } | null {
-    const trimmed = recipient.trim();
-    if (localRecipientNames.has(trimmed)) return null;
-    const pseudoTeamName = this.extractCrossTeamPseudoTargetTeam(trimmed);
-    if (pseudoTeamName) {
-      if (pseudoTeamName === currentTeam) {
-        return null;
-      }
-      return { teamName: pseudoTeamName, memberName: 'team-lead' };
-    }
-    const dot = trimmed.indexOf('.');
-    if (dot <= 0 || dot === trimmed.length - 1) return null;
-    const teamName = trimmed.slice(0, dot).trim();
-    const memberName = trimmed.slice(dot + 1).trim();
-    if (!TEAM_NAME_PATTERN.test(teamName) || !memberName || teamName === currentTeam) {
-      return null;
-    }
-    return { teamName, memberName };
+    return parseCrossTeamRecipientHelper(currentTeam, recipient, localRecipientNames);
   }
 
   private extractCrossTeamPseudoTargetTeam(value: string): string | null {
-    const trimmed = value.trim();
-    const prefixes = [
-      'cross_team::',
-      'cross_team--',
-      'cross-team:',
-      'cross-team-',
-      'cross_team:',
-      'cross_team-',
-    ];
-    for (const prefix of prefixes) {
-      if (!trimmed.startsWith(prefix)) continue;
-      const teamName = trimmed.slice(prefix.length).trim();
-      if (TEAM_NAME_PATTERN.test(teamName)) {
-        return teamName;
-      }
-    }
-    return null;
+    return extractCrossTeamPseudoTargetTeamHelper(value);
   }
 
   private isCrossTeamToolRecipientName(name: string): boolean {
-    return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(name.trim());
+    return isCrossTeamToolRecipientNameHelper(name);
   }
 
   private isCrossTeamPseudoRecipientName(name: string): boolean {
-    return this.extractCrossTeamPseudoTargetTeam(name) !== null;
+    return isCrossTeamPseudoRecipientNameHelper(name);
   }
 
   private resolveSingleActiveCrossTeamReplyHint(
     run: ProvisioningRun
   ): { toTeam: string; conversationId: string } | null {
-    const uniqueHints = new Map<string, { toTeam: string; conversationId: string }>();
-    for (const hint of run.activeCrossTeamReplyHints ?? []) {
-      const toTeam = typeof hint?.toTeam === 'string' ? hint.toTeam.trim() : '';
-      const conversationId =
-        typeof hint?.conversationId === 'string' ? hint.conversationId.trim() : '';
-      if (!toTeam || !conversationId) continue;
-      uniqueHints.set(`${toTeam}\0${conversationId}`, { toTeam, conversationId });
-    }
-    return uniqueHints.size === 1 ? (Array.from(uniqueHints.values())[0] ?? null) : null;
+    return resolveSingleActiveCrossTeamReplyHintHelper(run.activeCrossTeamReplyHints);
   }
 
   private looksLikeQualifiedExternalRecipientName(name: string): boolean {
-    const trimmed = name.trim();
-    const dot = trimmed.indexOf('.');
-    if (dot <= 0 || dot === trimmed.length - 1) return false;
-    const teamName = trimmed.slice(0, dot).trim();
-    const memberName = trimmed.slice(dot + 1).trim();
-    return TEAM_NAME_PATTERN.test(teamName) && memberName.length > 0;
+    return looksLikeQualifiedExternalRecipientNameHelper(name);
   }
 
   private buildCrossTeamConversationKey(otherTeam: string, conversationId: string): string {
-    return `${otherTeam.trim()}\0${conversationId.trim()}`;
+    return buildCrossTeamConversationKeyHelper(otherTeam, conversationId);
   }
 
   registerPendingCrossTeamReplyExpectation(
@@ -6369,26 +6329,11 @@ export class TeamProvisioningService {
   }
 
   private parseCrossTeamTargetTeam(value: string | undefined): string | null {
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    if (trimmed.startsWith('cross-team:')) {
-      const teamName = trimmed.slice('cross-team:'.length).trim();
-      return TEAM_NAME_PATTERN.test(teamName) ? teamName : null;
-    }
-    const dot = trimmed.indexOf('.');
-    if (dot <= 0) return null;
-    const teamName = trimmed.slice(0, dot).trim();
-    return TEAM_NAME_PATTERN.test(teamName) ? teamName : null;
+    return parseCrossTeamTargetTeamHelper(value);
   }
 
   private getCrossTeamSourceTeam(value: string | undefined): string | null {
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    const dot = trimmed.indexOf('.');
-    if (dot <= 0) return null;
-    const teamName = trimmed.slice(0, dot).trim();
-    return TEAM_NAME_PATTERN.test(teamName) ? teamName : null;
+    return getCrossTeamSourceTeamHelper(value);
   }
 
   private async matchCrossTeamLeadInboxMessages(
@@ -14457,10 +14402,7 @@ export class TeamProvisioningService {
 
       if (actionableUnread.length === 0) return 0;
 
-      const batch = selectMemberInboxRelayBatch(
-        actionableUnread,
-        DEFAULT_INBOX_RELAY_BATCH_SIZE
-      );
+      const batch = selectMemberInboxRelayBatch(actionableUnread, DEFAULT_INBOX_RELAY_BATCH_SIZE);
 
       this.armSilentTeammateForward(run, memberName, 'member_inbox_relay');
       const rememberedRelayIds = this.rememberPendingInboxRelayCandidates(run, memberName, batch);
@@ -14854,18 +14796,17 @@ export class TeamProvisioningService {
         }
       }
       const unread = selectOpenCodeInboxRelayBatch(
-        inboxMessages
-          .filter((message): message is InboxMessage & { messageId: string } => {
-            if (onlyMessageId && message.messageId !== onlyMessageId) return false;
-            if (
-              message.read &&
-              (!onlyMessageId || message.messageKind !== 'member_work_sync_nudge')
-            ) {
-              return false;
-            }
-            if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
-            return hasStableInboxMessageId(message);
-          }),
+        inboxMessages.filter((message): message is InboxMessage & { messageId: string } => {
+          if (onlyMessageId && message.messageId !== onlyMessageId) return false;
+          if (
+            message.read &&
+            (!onlyMessageId || message.messageKind !== 'member_work_sync_nudge')
+          ) {
+            return false;
+          }
+          if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
+          return hasStableInboxMessageId(message);
+        }),
         DEFAULT_INBOX_RELAY_BATCH_SIZE
       );
 
