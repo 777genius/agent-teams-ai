@@ -43,15 +43,7 @@ export class RuntimeTurnSettledDrainScheduler {
       return null;
     }
 
-    let drain: Promise<RuntimeTurnSettledDrainSummary>;
-    try {
-      drain = this.deps.drain();
-    } catch (error) {
-      this.deps.logger?.warn('runtime turn settled scheduled drain failed', {
-        error: String(error),
-      });
-      return null;
-    }
+    const drain = Promise.resolve().then(() => this.deps.drain());
 
     let timedOut = false;
     this.activeDrain = drain;

@@ -2263,10 +2263,8 @@ export class TeamProvisioningService {
     input: Parameters<
       TeamProvisioningMemberLifecycleController['persistOpenCodeMemberRestartSystemMessageInternal']
     >[0]
-  ): ReturnType<
-    TeamProvisioningMemberLifecycleController['persistOpenCodeMemberRestartSystemMessageInternal']
-  > {
-    return this.memberLifecycleController.persistOpenCodeMemberRestartSystemMessageInternal(input);
+  ): void {
+    this.memberLifecycleController.persistOpenCodeMemberRestartSystemMessageInternal(input);
   }
 
   private runMemberLifecycleOperation<T>(

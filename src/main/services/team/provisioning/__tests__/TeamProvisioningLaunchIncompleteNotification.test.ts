@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -200,3 +202,4 @@ describe('launch incomplete notification helpers', () => {
     ).toBeNull();
   });
 });
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */

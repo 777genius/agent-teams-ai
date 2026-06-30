@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -175,3 +177,4 @@ describe('TeamProvisioningEnvBuilder', () => {
     expect(result.usesAnthropicApiKeyHelper).toBe(false);
   });
 });
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */

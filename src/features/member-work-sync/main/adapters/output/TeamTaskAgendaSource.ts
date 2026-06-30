@@ -34,21 +34,21 @@ export interface TeamTaskAgendaSourceDeps {
   clock: { now(): Date };
 }
 
-type TeamRosterSnapshot = {
+interface TeamRosterSnapshot {
   config: Awaited<ReturnType<TeamTaskAgendaSourceDeps['configReader']['getConfig']>>;
   members: TeamMember[];
   activeMemberNames: string[];
-};
+}
 
-type TeamRosterCacheEntry = {
+interface TeamRosterCacheEntry {
   snapshot: TeamRosterSnapshot;
   cachedAtMs: number;
-};
+}
 
-type TeamWorkSnapshot = {
+interface TeamWorkSnapshot {
   tasks: Awaited<ReturnType<TeamTaskAgendaSourceDeps['taskReader']['getTasks']>>;
   kanban: Awaited<ReturnType<TeamTaskAgendaSourceDeps['kanbanManager']['getState']>>;
-};
+}
 
 function memberKey(member: Pick<TeamMember, 'name'>): string {
   return normalizeMemberName(member.name);

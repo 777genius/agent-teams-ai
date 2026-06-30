@@ -28,11 +28,11 @@ export interface MemberWorkSyncTaskImpactResolverResult {
   diagnostics: string[];
 }
 
-type TaskImpactSourceSnapshot = {
+interface TaskImpactSourceSnapshot {
   activeMembers: string[];
   tasks: Awaited<ReturnType<MemberWorkSyncTaskImpactResolverDeps['taskReader']['getTasks']>>;
   kanban: Awaited<ReturnType<MemberWorkSyncTaskImpactResolverDeps['kanbanManager']['getState']>>;
-};
+}
 
 function isDeletedTask(task: Pick<TeamTask, 'status' | 'deletedAt'>): boolean {
   return task.status === 'deleted' || Boolean(task.deletedAt);

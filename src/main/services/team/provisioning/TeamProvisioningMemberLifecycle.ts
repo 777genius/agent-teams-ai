@@ -233,16 +233,16 @@ export type MemberLifecycleOperationKind =
   | 'primary_member_updated'
   | 'primary_member_removed';
 
-type DirectRestartPromptInput = {
+interface DirectRestartPromptInput {
   teamName: string;
   memberName: string;
   leadName: string;
   leadSessionId: string | null;
   prompt: string;
   operation?: DirectProcessMemberLaunchReason;
-};
+}
 
-type DirectTmuxRestartMemberConfigInput = {
+interface DirectTmuxRestartMemberConfigInput {
   teamName: string;
   memberName: string;
   member: TeamCreateRequest['members'][number] & { agentType?: string };
@@ -261,9 +261,9 @@ type DirectTmuxRestartMemberConfigInput = {
   bootstrapRunId?: string;
   bootstrapContextHash?: string;
   bootstrapBriefingHash?: string;
-};
+}
 
-type DirectProcessRuntimeEventInput = {
+interface DirectProcessRuntimeEventInput {
   type: string;
   eventsPath: string;
   pid: number;
@@ -274,7 +274,7 @@ type DirectProcessRuntimeEventInput = {
   bootstrapRunId: string;
   source: string;
   detail?: string;
-};
+}
 
 export type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
 type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;

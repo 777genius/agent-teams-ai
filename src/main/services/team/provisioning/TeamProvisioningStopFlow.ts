@@ -1,8 +1,8 @@
 import type { TeamProvisioningProgress } from '@shared/types';
 
-type StopLogger = {
+interface StopLogger {
   info(message: string): void;
-};
+}
 
 interface RuntimeAdapterRunEntry {
   runId: string;

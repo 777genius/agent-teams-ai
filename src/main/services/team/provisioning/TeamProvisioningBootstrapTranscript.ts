@@ -143,9 +143,9 @@ function setBoundedMapEntry<Key, Value>(
   maxEntries = BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES
 ): void {
   if (!map.has(key) && map.size >= maxEntries) {
-    const oldestKey = map.keys().next().value as Key | undefined;
-    if (oldestKey !== undefined) {
-      map.delete(oldestKey);
+    const oldest = map.keys().next();
+    if (!oldest.done) {
+      map.delete(oldest.value);
     }
   }
   map.set(key, value);

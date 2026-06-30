@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
+
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -154,6 +156,7 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     });
   });
 });
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */
 
 describe('TeamProvisioningProviderDiagnostics provider probes', () => {
   it('runs the one-shot diagnostic through fake probe ports', async () => {
