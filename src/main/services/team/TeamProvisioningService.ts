@@ -17,12 +17,7 @@ import {
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
-import {
-  killTmuxPaneForCurrentPlatformSync,
-  listRuntimeProcessTableForCurrentPlatform,
-  listTmuxPaneRuntimeInfoForCurrentPlatform,
-  type TmuxPaneRuntimeInfo,
-} from '@features/tmux-installer/main';
+import { killTmuxPaneForCurrentPlatformSync } from '@features/tmux-installer/main';
 import {
   applyWorkspaceTrustLaunchArgPatches,
   budgetWorkspaceTrustDiagnosticsManifest,
@@ -70,10 +65,7 @@ import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
-import {
-  listWindowsProcessTable,
-  listWindowsProcessTableSync,
-} from '@main/utils/windowsProcessTable';
+import { listWindowsProcessTableSync } from '@main/utils/windowsProcessTable';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -138,7 +130,6 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import pidusage from 'pidusage';
 import * as readline from 'readline';
 
 import {
@@ -291,7 +282,6 @@ import {
   getParsedBootstrapTranscriptTail as getParsedBootstrapTranscriptTailHelper,
   hasBootstrapTranscriptLaunchReconcileOutcome as hasBootstrapTranscriptLaunchReconcileOutcomeHelper,
   isBootstrapProofClearableLaunchFailureReason,
-  isProcessBootstrapTransportDiagnostic,
   type LeadInboxLaunchReconcileMessage,
   needsBootstrapAcceptanceReconcile as needsBootstrapAcceptanceReconcileHelper,
   needsConfirmedBootstrapDiagnosticReconcile as needsConfirmedBootstrapDiagnosticReconcileHelper,
@@ -349,7 +339,6 @@ import {
 import {
   isOpenCodeOverlayMemberRemoved,
   matchesExactTeamMemberName,
-  matchesMemberNameOrBase,
   matchesObservedMemberNameForExpected,
   matchesTeamMemberIdentity,
   namesMatchCaseInsensitive,
@@ -493,10 +482,17 @@ import {
 } from './provisioning/TeamProvisioningRuntimeLaunchSelection';
 import {
   type LiveTeamAgentRuntimeMetadata,
-  readCachedRuntimeProcessRowsForLiveRuntimeMetadata,
   type RuntimeProcessRowsCacheEntry,
-  shouldReadProcessTableForLiveRuntimeMetadata,
 } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
+import {
+  attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
+  buildLiveTeamAgentRuntimeMetadata as buildLiveTeamAgentRuntimeMetadataHelper,
+  buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
+  type PersistedRuntimeMemberLike,
+  readProcessUsageStatsByPid as readProcessUsageStatsByPidHelper,
+  readRuntimeProcessRowsForUsageSnapshot as readRuntimeProcessRowsForUsageSnapshotHelper,
+  type RuntimeProcessUsageStatsCacheEntry,
+} from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { getCurrentAgentTeamsMcpHttpTransportEvidence } from './AgentTeamsMcpHttpServer';
 import { isAgentTeamsToolUse } from './agentTeamsToolNames';
@@ -531,10 +527,7 @@ import {
   buildDesktopTeammateModeCliArgs,
   resolveDesktopTeammateModeDecision,
 } from './runtimeTeammateMode';
-import {
-  TeamAgentRuntimeResourceHistory,
-  type TeamAgentRuntimeResourceHistoryRecordInput,
-} from './TeamAgentRuntimeResourceHistory';
+import { TeamAgentRuntimeResourceHistory } from './TeamAgentRuntimeResourceHistory';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   choosePreferredLaunchSnapshot,
@@ -565,23 +558,11 @@ import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import {
   commandArgEquals,
-  isStrongRuntimeEvidence,
-  resolveTeamMemberRuntimeLiveness,
   sanitizeProcessCommandForDiagnostics,
 } from './TeamRuntimeLivenessResolver';
 import {
-  addRuntimeRootOwnersFromProcessRows,
-  buildProcessUsageStatsFromRows,
-  buildRuntimeProcessLoadStats,
-  buildRuntimeUsageProcessTrees,
-  isRuntimePidusageTelemetryEnabled,
-  normalizeRuntimeProcessRowsForTelemetry,
-  normalizeRuntimeProcessUsageStats,
-  type RuntimeProcessLoadStats,
   type RuntimeProcessUsageStats,
   type RuntimeTelemetryProcessTableRow,
-  RuntimeTelemetryTimeoutError,
-  withRuntimeTelemetryTimeout,
 } from './TeamRuntimeTelemetry';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
@@ -657,24 +638,6 @@ function buildRelayInboxView(messages: RelayInboxMessage[]): RelayInboxMessageVi
   });
 }
 
-interface PersistedRuntimeMemberLike {
-  name?: string;
-  agentId?: string;
-  tmuxPaneId?: string;
-  backendType?: string;
-  providerId?: string;
-  cwd?: string;
-  bootstrapExpectedAfter?: string;
-  bootstrapProofToken?: string;
-  bootstrapRunId?: string;
-  bootstrapProofMode?: string;
-  bootstrapContextHash?: string;
-  bootstrapBriefingHash?: string;
-  bootstrapRuntimeEventsPath?: string;
-  runtimePid?: number;
-  runtimeSessionId?: string;
-}
-
 interface PersistedTeamConfigCacheEntry {
   path: string;
   size: number;
@@ -737,13 +700,9 @@ import type {
   ProviderModelLaunchIdentity,
   RetryFailedOpenCodeSecondaryLanesResult,
   TaskRef,
-  TeamAgentRuntimeBackendType,
   TeamAgentRuntimeDiagnosticSeverity,
-  TeamAgentRuntimeEntry,
   TeamAgentRuntimeLivenessKind,
-  TeamAgentRuntimeLoadScope,
   TeamAgentRuntimePidSource,
-  TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamConfig,
@@ -773,11 +732,6 @@ import type {
   ToolApprovalSettings,
   ToolCallMeta,
 } from '@shared/types';
-
-// pidusage's Windows wmic/gwmi fallback needs a non-zero cache window to finish
-// its initial two-sample pass. Keep this above slow PowerShell startup time, or
-// the first sample can expire before the recursive second read and loop again.
-const RUNTIME_PIDUSAGE_OPTIONS = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
 
 const logger = createLogger('Service:TeamProvisioning');
 const PREFLIGHT_DEBUG_LOG_PATH = path.join(os.tmpdir(), 'claude-team-preflight-debug.log');
@@ -917,24 +871,6 @@ function buildRuntimeToolMetadataDiagnostics(metadata: RuntimeToolMetadata | und
     diagnostics.push(`runtime cwd: ${metadata.cwd}`);
   }
   return diagnostics;
-}
-
-function buildRuntimeDiagnosticForSpawn(
-  metadata: LiveTeamAgentRuntimeMetadata
-): string | undefined {
-  const baseDiagnostic = metadata.runtimeDiagnostic;
-  const processTableUnavailable =
-    mentionsProcessTableUnavailable(baseDiagnostic) ||
-    metadata.diagnostics?.some((diagnostic) => mentionsProcessTableUnavailable(diagnostic));
-  if (!processTableUnavailable) {
-    return baseDiagnostic;
-  }
-  if (mentionsProcessTableUnavailable(baseDiagnostic)) {
-    return baseDiagnostic;
-  }
-  return baseDiagnostic
-    ? `${baseDiagnostic}; process table unavailable`
-    : 'process table unavailable';
 }
 
 function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRefs'] | undefined {
@@ -1713,18 +1649,6 @@ interface PendingMemberRestartContext {
   >;
 }
 
-function normalizeTeamAgentRuntimeBackendType(
-  value: string | undefined,
-  isLead: boolean
-): TeamAgentRuntimeBackendType | undefined {
-  if (isLead) return 'lead';
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === 'tmux' || normalized === 'iterm2' || normalized === 'in-process') {
-    return normalized;
-  }
-  return normalized ? 'process' : undefined;
-}
-
 interface MemberSpawnInboxCursor {
   timestamp: string;
   messageId: string;
@@ -1792,32 +1716,6 @@ function isMemberSpawnHeartbeatTimestampNewer(
     return incomingMs > previousMs;
   }
   return normalizedIncoming > normalizedPrevious;
-}
-
-function stripWrappedCliFlagValue(raw: string | undefined): string | undefined {
-  const trimmed = raw?.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    const unwrapped = trimmed.slice(1, -1).trim();
-    return unwrapped.length > 0 ? unwrapped : undefined;
-  }
-  return trimmed;
-}
-
-function extractCliFlagValue(command: string, flagName: string): string | undefined {
-  const escapedFlag = flagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`(?:^|\\s)${escapedFlag}\\s+("([^"]*)"|'([^']*)'|([^\\s]+))`).exec(
-    command
-  );
-  if (!match) {
-    return undefined;
-  }
-  return stripWrappedCliFlagValue(match[2] ?? match[3] ?? match[4] ?? match[1]);
 }
 
 export function shouldAcceptDeterministicBootstrapEvent(params: {
@@ -2698,10 +2596,7 @@ export class TeamProvisioningService {
   >();
   private readonly runtimeProcessUsageStatsCacheByPid = new Map<
     number,
-    {
-      expiresAtMs: number;
-      stats: RuntimeProcessUsageStats | null;
-    }
+    RuntimeProcessUsageStatsCacheEntry
   >();
   private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
   private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
@@ -10844,597 +10739,36 @@ export class TeamProvisioningService {
     runId: string | null,
     generationAtStart: number
   ): Promise<TeamAgentRuntimeSnapshot> {
-    const updatedAt = nowIso();
-    const run = runId ? (this.runs.get(runId) ?? null) : null;
-    const currentRuntimeAdapterRun = this.runtimeAdapterRunByTeam.get(teamName);
-    const persistedTeamMeta = await this.teamMetaStore.getMeta(teamName).catch(() => null);
-
-    let configuredMembers: TeamConfig['members'] = [];
-    try {
-      const config = await this.readConfigSnapshot(teamName);
-      configuredMembers = config?.members ?? [];
-    } catch {
-      configuredMembers = [];
-    }
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    const launchSnapshot = choosePreferredLaunchSnapshot(
-      await readBootstrapLaunchSnapshot(teamName),
-      await this.launchStateStore.read(teamName)
-    );
-
-    const spawnStatusSnapshot = await this.getMemberSpawnStatuses(teamName).catch(() => null);
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    const activeRuntimeRunId =
-      run?.runId?.trim() || currentRuntimeAdapterRun?.runId?.trim() || runId?.trim() || '';
-    const spawnStatusRunId = spawnStatusSnapshot?.runId?.trim() ?? '';
-    const canUseLiveSpawnStatusRuntimeTruth =
-      spawnStatusSnapshot?.source === 'live' &&
-      activeRuntimeRunId.length > 0 &&
-      spawnStatusRunId === activeRuntimeRunId;
-    const runtimeRootOwnersByPid = new Map<number, Set<string>>();
-    const runtimeUsageRootPids = new Set<number>();
-    const addRuntimeRootPid = (
-      pid: unknown,
-      ownerKey: string,
-      options: { sampleUsage?: boolean } = {}
-    ): void => {
-      if (typeof pid !== 'number' || !Number.isFinite(pid) || pid <= 0) {
-        return;
-      }
-      const owners = runtimeRootOwnersByPid.get(pid) ?? new Set<string>();
-      owners.add(ownerKey);
-      runtimeRootOwnersByPid.set(pid, owners);
-      if (options.sampleUsage !== false) {
-        runtimeUsageRootPids.add(pid);
-      }
-    };
-    const canSampleRuntimeMetadataPid = (
-      metadata: LiveTeamAgentRuntimeMetadata,
-      pid: unknown
-    ): boolean => {
-      if (typeof pid !== 'number' || !Number.isFinite(pid) || pid <= 0) {
-        return false;
-      }
-      if (process.platform !== 'win32') {
-        return true;
-      }
-      const paneId = metadata.tmuxPaneId?.trim() ?? '';
-      if (metadata.backendType === 'tmux' || (paneId && !paneId.startsWith('process:'))) {
-        return false;
-      }
-      return (
-        metadata.pidSource !== 'tmux_child' &&
-        metadata.pidSource !== 'tmux_pane' &&
-        metadata.pidSource !== 'persisted_metadata'
-      );
-    };
-    const leadPid = run?.child?.pid;
-    addRuntimeRootPid(leadPid, '__lead__');
-    for (const [memberName, metadata] of liveRuntimeByMember.entries()) {
-      const memberPids = [metadata.pid, metadata.metricsPid];
-      for (const memberPid of memberPids) {
-        addRuntimeRootPid(memberPid, memberName, {
-          sampleUsage: canSampleRuntimeMetadataPid(metadata, memberPid),
-        });
-      }
-    }
-    let runtimeUsageTreesByRootPid = new Map<number, { pids: number[]; truncated: boolean }>();
-    let usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
-    try {
-      const runtimeProcessRows =
-        runtimeRootOwnersByPid.size > 0
-          ? await this.readRuntimeProcessRowsForUsageSnapshot(teamName, {
-              includeWindowsHostRows: process.platform === 'win32',
-            })
-          : null;
-      addRuntimeRootOwnersFromProcessRows({
-        teamName,
-        processRows: runtimeProcessRows,
-        rootOwnersByPid: runtimeRootOwnersByPid,
-        platform: process.platform,
-      });
-      runtimeUsageTreesByRootPid = buildRuntimeUsageProcessTrees({
-        rootPids: [...runtimeUsageRootPids],
-        processRows: runtimeProcessRows,
-        rootOwnersByPid: runtimeRootOwnersByPid,
-        limits: {
-          maxPidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
-          maxPidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
-        },
-        platform: process.platform,
-      });
-      const runtimeUsagePids = [
-        ...new Set([...runtimeUsageTreesByRootPid.values()].flatMap((tree) => tree.pids)),
-      ];
-      usageStatsByPid = buildProcessUsageStatsFromRows(runtimeProcessRows, runtimeUsagePids);
-      const pidsMissingUsageStats = runtimeUsagePids.filter((pid) => !usageStatsByPid.has(pid));
-      if (pidsMissingUsageStats.length > 0 && isRuntimePidusageTelemetryEnabled()) {
-        const sampledUsageStats = await this.readProcessUsageStatsByPid(pidsMissingUsageStats);
-        for (const [pid, stats] of sampledUsageStats) {
-          usageStatsByPid.set(pid, stats);
-        }
-      }
-    } catch (error) {
-      logger.debug(
-        `[${teamName}] Runtime telemetry sampling failed; continuing without resource metrics: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName);
-    const snapshotMembers: Record<string, TeamAgentRuntimeEntry> = {};
-    const activeResourceHistoryKeys = new Set<string>();
-
-    const getPersistedRuntimeMember = (
-      memberName: string
-    ): PersistedRuntimeMemberLike | undefined => {
-      return persistedRuntimeMembers.find((member) => {
-        const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-        return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
-      });
-    };
-
-    const getLiveRuntimeMember = (memberName: string): LiveTeamAgentRuntimeMetadata | undefined => {
-      let fallback: LiveTeamAgentRuntimeMetadata | undefined;
-      for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
-        if (candidateName === memberName) {
-          return metadata;
-        }
-        if (matchesMemberNameOrBase(candidateName, memberName)) {
-          fallback = metadata;
-        }
-      }
-      return fallback;
-    };
-    const getSpawnStatusMember = (memberName: string): MemberSpawnStatusEntry | undefined => {
-      const statuses = spawnStatusSnapshot?.statuses;
-      if (!statuses) {
-        return undefined;
-      }
-      const direct = statuses[memberName];
-      if (direct) {
-        return direct;
-      }
-      let fallback: MemberSpawnStatusEntry | undefined;
-      for (const [candidateName, status] of Object.entries(statuses)) {
-        if (matchesMemberNameOrBase(candidateName, memberName)) {
-          fallback = status;
-        }
-      }
-      return fallback;
-    };
-
-    const activeRunMemberByName = new Map<string, TeamMember>();
-    const runAllEffectiveMembers = run?.allEffectiveMembers ?? [];
-    const activeRunMembers =
-      runAllEffectiveMembers.length > 0 ? runAllEffectiveMembers : (run?.effectiveMembers ?? []);
-    for (const member of activeRunMembers) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!memberName) continue;
-      activeRunMemberByName.set(memberName, member);
-    }
-
-    const candidateMembers = new Map<string, TeamMember>();
-    for (const member of configuredMembers) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) continue;
-      candidateMembers.set(memberName, member);
-    }
-    for (const member of metaMembers) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!memberName || member.removedAt || candidateMembers.has(memberName)) continue;
-      candidateMembers.set(memberName, member);
-    }
-    for (const memberName of launchSnapshot
-      ? this.getPersistedLaunchMemberNames(launchSnapshot)
-      : []) {
-      if (candidateMembers.has(memberName) || this.isMemberRemovedInMeta(metaMembers, memberName)) {
-        continue;
-      }
-      const launchMember = launchSnapshot?.members[memberName];
-      candidateMembers.set(memberName, {
-        name: memberName,
-        agentType: 'general-purpose',
-        providerId: launchMember?.providerId,
-        providerBackendId: launchMember?.providerBackendId,
-        model: launchMember?.model,
-        effort: launchMember?.effort,
-        fastMode: launchMember?.selectedFastMode,
-      });
-    }
-    for (const member of activeRunMemberByName.values()) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) continue;
-      candidateMembers.set(memberName, member);
-    }
-
-    for (const member of candidateMembers.values()) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (!memberName) continue;
-
-      const isLead = isLeadMember({ name: memberName, agentType: member.agentType });
-      const candidateLaunchMember = launchSnapshot?.members[memberName];
-      const candidateRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
-      const leadRuntimeProviderId =
-        normalizeOptionalTeamProviderId(candidateRuntimeAdapterEvidence?.providerId) ??
-        normalizeOptionalTeamProviderId(candidateLaunchMember?.providerId) ??
-        normalizeOptionalTeamProviderId(member.providerId);
-      if (isLead && leadRuntimeProviderId !== 'opencode') {
-        const pid = run?.child?.pid;
-        const usageStats = pid
-          ? this.buildRuntimeProcessLoadStatsSafely(teamName, memberName, {
-              rootPid: pid,
-              usageStatsByPid,
-              processTree: runtimeUsageTreesByRootPid.get(pid),
-            })
-          : undefined;
-        const runtimeModel =
-          run?.request.model?.trim() ||
-          (run?.spawnContext
-            ? extractCliFlagValue(run.spawnContext.args.join(' '), '--model')
-            : undefined) ||
-          member.model?.trim() ||
-          undefined;
-        const resourceHistory = pid
-          ? this.recordAgentRuntimeResourceSampleSafely({
-              teamName,
-              memberName,
-              timestamp: updatedAt,
-              cpuPercent: usageStats?.cpuPercent,
-              rssBytes: usageStats?.rssBytes,
-              primaryCpuPercent: usageStats?.primaryCpuPercent,
-              primaryRssBytes: usageStats?.primaryRssBytes,
-              childCpuPercent: usageStats?.childCpuPercent,
-              childRssBytes: usageStats?.childRssBytes,
-              processCount: usageStats?.processCount,
-              runtimeLoadScope: usageStats?.runtimeLoadScope,
-              runtimeLoadTruncated: usageStats?.runtimeLoadTruncated,
-              pidSource: 'lead_process',
-              pid,
-              activeKeys: activeResourceHistoryKeys,
-            })
-          : undefined;
-        snapshotMembers[memberName] = {
-          memberName,
-          alive: Boolean(pid && !run?.processKilled && !run?.cancelRequested),
-          restartable: false,
-          backendType: 'lead',
-          ...(pid ? { pid } : {}),
-          ...(runtimeModel ? { runtimeModel } : {}),
-          ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
-          ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
-          ...(usageStats?.primaryRssBytes != null
-            ? { primaryRssBytes: usageStats.primaryRssBytes }
-            : {}),
-          ...(usageStats?.primaryCpuPercent != null
-            ? { primaryCpuPercent: usageStats.primaryCpuPercent }
-            : {}),
-          ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
-          ...(usageStats?.childCpuPercent != null
-            ? { childCpuPercent: usageStats.childCpuPercent }
-            : {}),
-          ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
-          ...(usageStats?.runtimeLoadScope
-            ? { runtimeLoadScope: usageStats.runtimeLoadScope }
-            : {}),
-          ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
-          ...(pid ? { pidSource: 'lead_process' as const } : {}),
-          ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
-          updatedAt,
-        };
-        continue;
-      }
-
-      const persistedRuntimeMember = getPersistedRuntimeMember(memberName);
-      const liveRuntimeMember = getLiveRuntimeMember(memberName);
-      const spawnStatusMember = getSpawnStatusMember(memberName);
-      const launchMember = launchSnapshot?.members[memberName];
-      const runtimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
-      const activeRunMember = activeRunMemberByName.get(memberName);
-      const activeRunModel = activeRunMember?.model?.trim();
-      const activeRunProviderId =
-        normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
-        inferTeamProviderIdFromModel(activeRunModel);
-      const liveRuntimeModel = liveRuntimeMember?.model?.trim();
-      const liveRuntimeModelProviderId = inferTeamProviderIdFromModel(liveRuntimeModel);
-      const explicitLiveRuntimeProviderId = normalizeOptionalTeamProviderId(
-        liveRuntimeMember?.providerId
-      );
-      const liveRuntimeProviderConflictsWithActive =
-        activeRunProviderId != null &&
-        ((explicitLiveRuntimeProviderId != null &&
-          explicitLiveRuntimeProviderId !== activeRunProviderId) ||
-          (liveRuntimeModelProviderId != null &&
-            liveRuntimeModelProviderId !== activeRunProviderId));
-      const canUseLiveRuntimeModel = !!liveRuntimeModel && !liveRuntimeProviderConflictsWithActive;
-      const backendType =
-        liveRuntimeMember?.backendType ??
-        normalizeTeamAgentRuntimeBackendType(persistedRuntimeMember?.backendType, false);
-      const runtimeModel =
-        (canUseLiveRuntimeModel ? liveRuntimeModel : undefined) ??
-        activeRunModel ??
-        launchMember?.model?.trim() ??
-        member.model?.trim() ??
-        undefined;
-      const memberProviderId =
-        activeRunProviderId ??
-        normalizeOptionalTeamProviderId(launchMember?.providerId) ??
-        normalizeOptionalTeamProviderId(member.providerId) ??
-        inferTeamProviderIdFromModel(runtimeModel) ??
-        inferTeamProviderIdFromModel(launchMember?.model) ??
-        inferTeamProviderIdFromModel(member.model);
-      const memberProviderBackendId = migrateProviderBackendId(
-        memberProviderId,
-        activeRunMember?.providerBackendId ??
-          launchMember?.providerBackendId ??
-          member.providerBackendId
-      );
-      const isOpenCodeMember = memberProviderId === 'opencode';
-      const runtimeAdapterSessionId =
-        typeof runtimeAdapterEvidence?.sessionId === 'string'
-          ? runtimeAdapterEvidence.sessionId.trim()
-          : '';
-      const runtimeAdapterPid =
-        typeof runtimeAdapterEvidence?.runtimePid === 'number' &&
-        Number.isFinite(runtimeAdapterEvidence.runtimePid) &&
-        runtimeAdapterEvidence.runtimePid > 0
-          ? runtimeAdapterEvidence.runtimePid
-          : undefined;
-      const configuredCwd =
-        typeof activeRunMember?.cwd === 'string'
-          ? activeRunMember.cwd.trim()
-          : typeof member.cwd === 'string'
-            ? member.cwd.trim()
-            : '';
-      const runtimeCwd =
-        liveRuntimeMember?.cwd ??
-        (configuredCwd || (isOpenCodeMember ? currentRuntimeAdapterRun?.cwd : undefined));
-      const metricsPid = liveRuntimeMember?.metricsPid;
-      const isSharedOpenCodeHost =
-        isOpenCodeMember &&
-        typeof metricsPid === 'number' &&
-        metricsPid > 0 &&
-        liveRuntimeMember?.pidSource !== 'agent_process_table';
-      const rssPid = isSharedOpenCodeHost ? metricsPid : (liveRuntimeMember?.pid ?? metricsPid);
-      const displayPid = isSharedOpenCodeHost
-        ? rssPid
-        : (liveRuntimeMember?.pid ?? runtimeAdapterPid);
-      const restartable = isOpenCodeMember
-        ? !isSharedOpenCodeHost && Boolean(liveRuntimeMember?.pid)
-        : isSharedOpenCodeHost
-          ? false
-          : backendType !== 'in-process';
-      const historicalBootstrapConfirmed =
-        launchMember?.bootstrapConfirmed === true ||
-        launchMember?.launchState === 'confirmed_alive' ||
-        runtimeAdapterEvidence?.bootstrapConfirmed === true ||
-        runtimeAdapterEvidence?.launchState === 'confirmed_alive' ||
-        spawnStatusMember?.bootstrapConfirmed === true ||
-        spawnStatusMember?.launchState === 'confirmed_alive';
-      const spawnStatusConfirmsBootstrap =
-        spawnStatusMember?.bootstrapConfirmed === true ||
-        spawnStatusMember?.launchState === 'confirmed_alive';
-      const hasOpenCodeRuntimeHandle =
-        isOpenCodeMember &&
-        (typeof liveRuntimeMember?.pid === 'number' ||
-          typeof liveRuntimeMember?.metricsPid === 'number' ||
-          typeof liveRuntimeMember?.runtimeSessionId === 'string' ||
-          typeof runtimeAdapterPid === 'number' ||
-          runtimeAdapterSessionId.length > 0);
-      const confirmedOpenCodeRuntimeAlive =
-        isOpenCodeMember &&
-        canUseLiveSpawnStatusRuntimeTruth &&
-        historicalBootstrapConfirmed &&
-        hasOpenCodeRuntimeHandle &&
-        spawnStatusMember?.hardFailure !== true &&
-        spawnStatusMember?.launchState !== 'failed_to_start' &&
-        spawnStatusMember?.launchState !== 'runtime_pending_permission';
-      const confirmedOpenCodeRuntimeAdapterAlive =
-        isOpenCodeMember &&
-        runtimeAdapterEvidence?.bootstrapConfirmed === true &&
-        runtimeAdapterEvidence.runtimeAlive === true &&
-        runtimeAdapterEvidence.hardFailure !== true &&
-        hasOpenCodeRuntimeHandle;
-      const confirmedSpawnRuntimeFallback =
-        !isOpenCodeMember &&
-        spawnStatusConfirmsBootstrap &&
-        spawnStatusMember?.hardFailure !== true &&
-        spawnStatusMember?.launchState !== 'failed_to_start' &&
-        !isStrongRuntimeEvidence(liveRuntimeMember);
-      const confirmedSpawnRuntimeDiagnostic =
-        spawnStatusMember?.runtimeDiagnostic ?? liveRuntimeMember?.runtimeDiagnostic;
-      const shouldKeepConfirmedSpawnRuntimeDiagnostic =
-        !!confirmedSpawnRuntimeDiagnostic &&
-        !shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(confirmedSpawnRuntimeDiagnostic);
-      const effectiveAlive =
-        liveRuntimeMember?.alive === true ||
-        confirmedOpenCodeRuntimeAlive ||
-        confirmedOpenCodeRuntimeAdapterAlive ||
-        confirmedSpawnRuntimeFallback;
-      const effectiveLivenessKind =
-        confirmedOpenCodeRuntimeAlive &&
-        liveRuntimeMember?.livenessKind === 'runtime_process_candidate'
-          ? 'confirmed_bootstrap'
-          : confirmedSpawnRuntimeFallback
-            ? 'confirmed_bootstrap'
-            : liveRuntimeMember?.livenessKind;
-      const effectivePidSource =
-        confirmedSpawnRuntimeFallback &&
-        (liveRuntimeMember?.pidSource === 'persisted_metadata' ||
-          liveRuntimeMember?.pidSource == null)
-          ? 'runtime_bootstrap'
-          : liveRuntimeMember?.pidSource;
-      const effectiveRuntimeDiagnostic =
-        confirmedOpenCodeRuntimeAlive &&
-        liveRuntimeMember?.livenessKind === 'runtime_process_candidate'
-          ? 'OpenCode bootstrap confirmed; runtime host/session evidence present.'
-          : confirmedSpawnRuntimeFallback
-            ? shouldKeepConfirmedSpawnRuntimeDiagnostic
-              ? confirmedSpawnRuntimeDiagnostic
-              : 'bootstrap confirmed'
-            : liveRuntimeMember?.runtimeDiagnostic;
-      const effectiveRuntimeDiagnosticSeverity =
-        confirmedOpenCodeRuntimeAlive &&
-        liveRuntimeMember?.livenessKind === 'runtime_process_candidate'
-          ? 'info'
-          : confirmedSpawnRuntimeFallback
-            ? shouldKeepConfirmedSpawnRuntimeDiagnostic
-              ? (spawnStatusMember?.runtimeDiagnosticSeverity ??
-                liveRuntimeMember?.runtimeDiagnosticSeverity ??
-                'info')
-              : 'info'
-            : liveRuntimeMember?.runtimeDiagnosticSeverity;
-      if (
-        rssPid &&
-        !usageStatsByPid.has(rssPid) &&
-        isSharedOpenCodeHost &&
-        typeof rssPid === 'number' &&
-        rssPid > 0 &&
-        isRuntimePidusageTelemetryEnabled()
-      ) {
-        try {
-          const refreshedUsageStats = (
-            await this.readProcessUsageStatsByPid([rssPid], { ignoreCachedMisses: true })
-          ).get(rssPid);
-          if (refreshedUsageStats) {
-            usageStatsByPid.set(rssPid, refreshedUsageStats);
-          }
-        } catch (error) {
-          logger.debug(
-            `[${teamName}] Shared OpenCode host runtime usage refresh failed for pid ${rssPid}; continuing without refreshed metrics: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-          // Shared OpenCode host can exit between discovery and the targeted RSS refresh.
-        }
-      }
-      const usageStats = rssPid
-        ? this.buildRuntimeProcessLoadStatsSafely(teamName, memberName, {
-            rootPid: rssPid,
-            usageStatsByPid,
-            processTree: runtimeUsageTreesByRootPid.get(rssPid),
-            scope: isSharedOpenCodeHost ? 'shared-host' : undefined,
-          })
-        : undefined;
-      const resourceHistory = rssPid
-        ? this.recordAgentRuntimeResourceSampleSafely({
-            teamName,
-            memberName,
-            timestamp: updatedAt,
-            cpuPercent: usageStats?.cpuPercent,
-            rssBytes: usageStats?.rssBytes,
-            primaryCpuPercent: usageStats?.primaryCpuPercent,
-            primaryRssBytes: usageStats?.primaryRssBytes,
-            childCpuPercent: usageStats?.childCpuPercent,
-            childRssBytes: usageStats?.childRssBytes,
-            processCount: usageStats?.processCount,
-            runtimeLoadScope: usageStats?.runtimeLoadScope,
-            runtimeLoadTruncated: usageStats?.runtimeLoadTruncated,
-            pidSource: liveRuntimeMember?.pidSource,
-            pid: rssPid,
-            runtimePid: liveRuntimeMember?.metricsPid,
-            activeKeys: activeResourceHistoryKeys,
-          })
-        : undefined;
-
-      snapshotMembers[memberName] = {
-        memberName,
-        alive: effectiveAlive,
-        restartable,
-        ...(backendType ? { backendType } : {}),
-        ...(memberProviderId ? { providerId: memberProviderId } : {}),
-        ...(memberProviderBackendId ? { providerBackendId: memberProviderBackendId } : {}),
-        ...(launchMember?.laneId ? { laneId: launchMember.laneId } : {}),
-        ...(launchMember?.laneKind ? { laneKind: launchMember.laneKind } : {}),
-        ...(displayPid ? { pid: displayPid } : {}),
-        ...(runtimeModel ? { runtimeModel } : {}),
-        ...(runtimeCwd ? { cwd: runtimeCwd } : {}),
-        ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
-        ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
-        ...(usageStats?.primaryRssBytes != null
-          ? { primaryRssBytes: usageStats.primaryRssBytes }
-          : {}),
-        ...(usageStats?.primaryCpuPercent != null
-          ? { primaryCpuPercent: usageStats.primaryCpuPercent }
-          : {}),
-        ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
-        ...(usageStats?.childCpuPercent != null
-          ? { childCpuPercent: usageStats.childCpuPercent }
-          : {}),
-        ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
-        ...(usageStats?.runtimeLoadScope ? { runtimeLoadScope: usageStats.runtimeLoadScope } : {}),
-        ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
-        ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
-        ...(effectiveLivenessKind ? { livenessKind: effectiveLivenessKind } : {}),
-        ...(effectivePidSource ? { pidSource: effectivePidSource } : {}),
-        ...(liveRuntimeMember?.processCommand
-          ? { processCommand: liveRuntimeMember.processCommand }
-          : {}),
-        ...(liveRuntimeMember?.tmuxPaneId ? { paneId: liveRuntimeMember.tmuxPaneId } : {}),
-        ...(liveRuntimeMember?.panePid ? { panePid: liveRuntimeMember.panePid } : {}),
-        ...(liveRuntimeMember?.paneCurrentCommand
-          ? { paneCurrentCommand: liveRuntimeMember.paneCurrentCommand }
-          : {}),
-        ...(liveRuntimeMember?.metricsPid ? { runtimePid: liveRuntimeMember.metricsPid } : {}),
-        ...(liveRuntimeMember?.runtimeSessionId
-          ? { runtimeSessionId: liveRuntimeMember.runtimeSessionId }
-          : runtimeAdapterSessionId
-            ? { runtimeSessionId: runtimeAdapterSessionId }
-            : {}),
-        ...(liveRuntimeMember?.runtimeLastSeenAt
-          ? { runtimeLastSeenAt: liveRuntimeMember.runtimeLastSeenAt }
-          : {}),
-        ...(historicalBootstrapConfirmed ? { historicalBootstrapConfirmed: true } : {}),
-        ...(effectiveRuntimeDiagnostic ? { runtimeDiagnostic: effectiveRuntimeDiagnostic } : {}),
-        ...(effectiveRuntimeDiagnosticSeverity
-          ? { runtimeDiagnosticSeverity: effectiveRuntimeDiagnosticSeverity }
-          : {}),
-        ...(liveRuntimeMember?.diagnostics ? { diagnostics: liveRuntimeMember.diagnostics } : {}),
-        updatedAt,
-      };
-    }
-    try {
-      this.agentRuntimeResourceHistory.prune(teamName, activeResourceHistoryKeys);
-    } catch (error) {
-      logger.debug(
-        `[${teamName}] Failed to prune runtime telemetry history; continuing with snapshot: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    const persistedLaunchIdentity = persistedTeamMeta?.launchIdentity;
-    const snapshotProviderId =
-      run?.request.providerId ??
-      persistedLaunchIdentity?.providerId ??
-      persistedTeamMeta?.providerId;
-    const snapshotProviderBackendId = run
-      ? run.request.providerBackendId
-      : persistedLaunchIdentity
-        ? (persistedLaunchIdentity.providerBackendId ?? persistedTeamMeta?.providerBackendId)
-        : persistedTeamMeta?.providerBackendId;
-    const snapshot: TeamAgentRuntimeSnapshot = {
+    return buildTeamAgentRuntimeSnapshotHelper({
       teamName,
-      updatedAt,
-      runId: run?.runId ?? runId,
-      providerBackendId: migrateProviderBackendId(snapshotProviderId, snapshotProviderBackendId),
-      fastMode:
-        run?.request.fastMode ??
-        persistedLaunchIdentity?.selectedFastMode ??
-        persistedTeamMeta?.fastMode,
-      members: snapshotMembers,
-    };
-
-    if (
-      this.getRuntimeSnapshotCacheGeneration(teamName) === generationAtStart &&
-      this.getTrackedRunId(teamName) === runId
-    ) {
-      this.agentRuntimeSnapshotCache.set(teamName, {
-        expiresAtMs: Date.now() + this.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId),
-        snapshot,
-      });
-    }
-    return snapshot;
+      runId,
+      generationAtStart,
+      runs: this.runs,
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      teamMetaStore: this.teamMetaStore,
+      membersMetaStore: this.membersMetaStore,
+      launchStateStore: this.launchStateStore,
+      readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
+      readPersistedRuntimeMembers: (targetTeamName) =>
+        this.readPersistedRuntimeMembers(targetTeamName),
+      getMemberSpawnStatuses: (targetTeamName) => this.getMemberSpawnStatuses(targetTeamName),
+      getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
+        this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
+      readRuntimeProcessRowsForUsageSnapshot: (targetTeamName, options) =>
+        this.readRuntimeProcessRowsForUsageSnapshot(targetTeamName, options),
+      readProcessUsageStatsByPid: (pids, cacheOptions) =>
+        this.readProcessUsageStatsByPid(pids, cacheOptions),
+      agentRuntimeResourceHistory: this.agentRuntimeResourceHistory,
+      agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
+      getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
+        this.getRuntimeSnapshotCacheGeneration(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
+      getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
+        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      maxRuntimeTreePidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
+      maxRuntimeUsagePidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
+      logDebug: (message) => logger.debug(message),
+    });
   }
 
   private isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
@@ -19768,289 +19102,13 @@ export class TeamProvisioningService {
     }
   ): Promise<Record<string, MemberSpawnStatusEntry>> {
     const runtimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    const nextStatuses = { ...statuses };
-    for (const [memberName, metadata] of runtimeByMember.entries()) {
-      const resolvedStatusKey =
-        nextStatuses[memberName] != null
-          ? memberName
-          : (() => {
-              const matches = Object.keys(nextStatuses).filter((candidateName) =>
-                matchesObservedMemberNameForExpected(memberName, candidateName)
-              );
-              return matches.length === 1 ? matches[0] : null;
-            })();
-      if (!resolvedStatusKey) {
-        continue;
-      }
-      const current = nextStatuses[resolvedStatusKey];
-      if (!current) {
-        continue;
-      }
-      const openCodeSecondaryBootstrapPending =
-        options?.openCodeSecondaryBootstrapPendingMembers?.has(resolvedStatusKey) === true &&
-        current.launchState === 'runtime_pending_bootstrap' &&
-        current.bootstrapConfirmed !== true &&
-        current.hardFailure !== true;
-      const openCodeBootstrapStalled =
-        openCodeSecondaryBootstrapPending &&
-        (current.bootstrapStalled === true ||
-          this.isOpenCodeBootstrapStallWindowElapsed(current.firstSpawnAcceptedAt));
-      if (current.launchState === 'skipped_for_launch' || current.skippedForLaunch === true) {
-        nextStatuses[resolvedStatusKey] = {
-          ...current,
-          status: 'skipped',
-          launchState: 'skipped_for_launch',
-          skippedForLaunch: true,
-          runtimeAlive: false,
-          bootstrapConfirmed: false,
-          hardFailure: false,
-          hardFailureReason: undefined,
-          error: undefined,
-          livenessSource: undefined,
-          livenessLastCheckedAt: nowIso(),
-        };
-        continue;
-      }
-      const shouldPreserveProcessBootstrapTransportDiagnostic =
-        current.bootstrapConfirmed !== true &&
-        (current.launchState === 'runtime_pending_bootstrap' ||
-          current.launchState === 'failed_to_start') &&
-        isProcessBootstrapTransportDiagnostic(current.runtimeDiagnostic);
-      const hasStrongEvidence = isStrongRuntimeEvidence(metadata);
-      const hasConfirmedBootstrap =
-        current.bootstrapConfirmed === true || current.launchState === 'confirmed_alive';
-      const shouldSuppressWeakRuntimeMetadataForConfirmedBootstrap =
-        hasConfirmedBootstrap && !hasStrongEvidence;
-      const failureReason = current.hardFailureReason ?? current.error ?? current.runtimeDiagnostic;
-      const bootstrapProofClearableFailure =
-        isBootstrapProofClearableLaunchFailureReason(failureReason);
-      const metadataRuntimeDiagnosticForUnsafe = buildRuntimeDiagnosticForSpawn(metadata);
-      const unsafeRuntimeDiagnosticEvidence =
-        metadataRuntimeDiagnosticForUnsafe &&
-        current.runtimeDiagnostic &&
-        metadataRuntimeDiagnosticForUnsafe !== current.runtimeDiagnostic
-          ? `${metadataRuntimeDiagnosticForUnsafe}; ${current.runtimeDiagnostic}`
-          : (metadataRuntimeDiagnosticForUnsafe ?? current.runtimeDiagnostic);
-      const hasUnsafeProvisionedButNotAliveFailure =
-        isProvisionedButNotAliveFailureReason(failureReason) &&
-        hasUnsafeProvisionedButNotAliveRuntimeEvidence({
-          ...current,
-          runtimeDiagnostic: unsafeRuntimeDiagnosticEvidence,
-          runtimeDiagnosticSeverity:
-            metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity,
-          livenessKind: metadata.livenessKind ?? current.livenessKind,
-        });
-      const shouldPreserveConfirmedBootstrapRuntimeError =
-        hasConfirmedBootstrap &&
-        metadata.alive === false &&
-        metadata.runtimeDiagnosticSeverity === 'error';
-      const shouldPreserveUnsafeMetadataLivenessKind =
-        hasUnsafeProvisionedButNotAliveFailure &&
-        (metadata.livenessKind === 'not_found' ||
-          metadata.livenessKind === 'shell_only' ||
-          metadata.livenessKind === 'runtime_process_candidate' ||
-          ((metadata.livenessKind === 'registered_only' ||
-            metadata.livenessKind === 'stale_metadata') &&
-            (metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
-            !mentionsProcessTableUnavailable(unsafeRuntimeDiagnosticEvidence) &&
-            !mentionsProcessTableUnavailable(failureReason)));
-      let runtimeDiagnostic: string | undefined;
-      let runtimeDiagnosticSeverity: TeamAgentRuntimeDiagnosticSeverity | undefined;
-      if (shouldPreserveProcessBootstrapTransportDiagnostic) {
-        runtimeDiagnostic = current.runtimeDiagnostic;
-        runtimeDiagnosticSeverity = current.runtimeDiagnosticSeverity;
-      } else if (shouldSuppressWeakRuntimeMetadataForConfirmedBootstrap) {
-        if (
-          current.runtimeDiagnostic &&
-          !shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(current.runtimeDiagnostic)
-        ) {
-          runtimeDiagnostic = current.runtimeDiagnostic;
-          runtimeDiagnosticSeverity = current.runtimeDiagnosticSeverity;
-        } else {
-          const metadataRuntimeDiagnostic = metadataRuntimeDiagnosticForUnsafe;
-          if (
-            metadataRuntimeDiagnostic &&
-            !shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(metadataRuntimeDiagnostic)
-          ) {
-            runtimeDiagnostic = metadataRuntimeDiagnostic;
-            runtimeDiagnosticSeverity = metadata.runtimeDiagnosticSeverity;
-          }
-        }
-      } else {
-        runtimeDiagnostic = buildRuntimeDiagnosticForSpawn(metadata);
-        runtimeDiagnosticSeverity = metadata.runtimeDiagnosticSeverity;
-      }
-      const metadataLivenessKind = hasConfirmedBootstrap
-        ? metadata.livenessKind === 'runtime_process' ||
-          metadata.livenessKind === 'confirmed_bootstrap' ||
-          shouldPreserveConfirmedBootstrapRuntimeError ||
-          shouldPreserveUnsafeMetadataLivenessKind
-          ? metadata.livenessKind
-          : current.livenessKind === 'stale_metadata' || current.livenessKind === 'registered_only'
-            ? 'confirmed_bootstrap'
-            : (current.livenessKind ?? 'confirmed_bootstrap')
-        : metadata.livenessKind;
-      const nextEntry: MemberSpawnStatusEntry = {
-        ...current,
-        ...(metadata.model ? { runtimeModel: metadata.model } : {}),
-        ...(metadataLivenessKind ? { livenessKind: metadataLivenessKind } : {}),
-        ...(runtimeDiagnostic || shouldSuppressWeakRuntimeMetadataForConfirmedBootstrap
-          ? { runtimeDiagnostic }
-          : {}),
-        ...(shouldPreserveProcessBootstrapTransportDiagnostic
-          ? { runtimeDiagnosticSeverity }
-          : runtimeDiagnosticSeverity || shouldSuppressWeakRuntimeMetadataForConfirmedBootstrap
-            ? { runtimeDiagnosticSeverity }
-            : {}),
-        livenessLastCheckedAt: nowIso(),
-      };
-      const hasWeakEvidence =
-        metadata.livenessKind != null && !hasStrongEvidence && current.bootstrapConfirmed !== true;
-      if (
-        hasStrongEvidence &&
-        !openCodeSecondaryBootstrapPending &&
-        current.bootstrapStalled !== true &&
-        current.hardFailure !== true &&
-        current.launchState !== 'failed_to_start'
-      ) {
-        nextEntry.status = 'online';
-        nextEntry.agentToolAccepted = true;
-        nextEntry.runtimeAlive = true;
-        nextEntry.hardFailure = false;
-        nextEntry.hardFailureReason = undefined;
-        nextEntry.error = undefined;
-        nextEntry.livenessSource = current.bootstrapConfirmed ? current.livenessSource : 'process';
-        nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      }
-      if (
-        (current.bootstrapStalled === true || openCodeSecondaryBootstrapPending) &&
-        hasStrongEvidence &&
-        current.bootstrapConfirmed !== true &&
-        current.launchState !== 'failed_to_start'
-      ) {
-        nextEntry.status = 'waiting';
-        nextEntry.agentToolAccepted = true;
-        nextEntry.runtimeAlive = true;
-        nextEntry.hardFailure = false;
-        nextEntry.hardFailureReason = undefined;
-        nextEntry.error = undefined;
-        nextEntry.livenessSource = undefined;
-        nextEntry.bootstrapStalled = openCodeBootstrapStalled ? true : undefined;
-        if (openCodeBootstrapStalled) {
-          nextEntry.runtimeDiagnostic = isExplicitLegacyOpenCodeBootstrap(current)
-            ? 'Runtime process is alive, but no bootstrap check-in after 5 min.'
-            : OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC;
-          nextEntry.runtimeDiagnosticSeverity = 'warning';
-        }
-        nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      }
-      if (
-        hasStrongEvidence &&
-        current.launchState === 'failed_to_start' &&
-        bootstrapProofClearableFailure &&
-        !hasUnsafeProvisionedButNotAliveFailure
-      ) {
-        nextEntry.status = 'online';
-        nextEntry.agentToolAccepted = true;
-        nextEntry.runtimeAlive = true;
-        nextEntry.hardFailure = false;
-        nextEntry.hardFailureReason = undefined;
-        nextEntry.error = undefined;
-        nextEntry.livenessSource = current.bootstrapConfirmed ? current.livenessSource : 'process';
-        nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      }
-      if (
-        hasConfirmedBootstrap &&
-        current.hardFailure === true &&
-        bootstrapProofClearableFailure &&
-        !hasUnsafeProvisionedButNotAliveFailure
-      ) {
-        nextEntry.status = 'online';
-        nextEntry.agentToolAccepted = true;
-        nextEntry.runtimeAlive = true;
-        nextEntry.bootstrapConfirmed = true;
-        nextEntry.hardFailure = false;
-        nextEntry.hardFailureReason = undefined;
-        nextEntry.error = undefined;
-        nextEntry.bootstrapStalled = undefined;
-        nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      }
-      const healedConfirmedBootstrapFailure =
-        hasConfirmedBootstrap &&
-        current.hardFailure === true &&
-        bootstrapProofClearableFailure &&
-        !hasUnsafeProvisionedButNotAliveFailure;
-      if (shouldPreserveConfirmedBootstrapRuntimeError) {
-        nextEntry.runtimeAlive = false;
-        if (nextEntry.livenessSource === 'process') {
-          nextEntry.livenessSource = undefined;
-        }
-      }
-      if (hasWeakEvidence && !healedConfirmedBootstrapFailure) {
-        nextEntry.runtimeAlive = false;
-        if (nextEntry.livenessSource === 'process') {
-          nextEntry.livenessSource = undefined;
-        }
-        if (
-          current.launchState === 'runtime_pending_bootstrap' ||
-          current.launchState === 'runtime_pending_permission'
-        ) {
-          nextEntry.agentToolAccepted = true;
-        }
-        if (
-          current.status === 'online' &&
-          current.hardFailure !== true &&
-          current.launchState !== 'failed_to_start'
-        ) {
-          nextEntry.status = nextEntry.agentToolAccepted ? 'waiting' : 'spawning';
-        }
-        nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      }
-      nextStatuses[resolvedStatusKey] = nextEntry;
-    }
-    for (const [memberName, current] of Object.entries(nextStatuses)) {
-      const openCodeSecondaryBootstrapPending =
-        options?.openCodeSecondaryBootstrapPendingMembers?.has(memberName) === true &&
-        current.launchState === 'runtime_pending_bootstrap' &&
-        current.bootstrapConfirmed !== true &&
-        current.hardFailure !== true;
-      if (
-        !openCodeSecondaryBootstrapPending ||
-        current.bootstrapStalled === true ||
-        !this.isOpenCodeBootstrapStallWindowElapsed(current.firstSpawnAcceptedAt)
-      ) {
-        continue;
-      }
-      const runtimeProcessAlive =
-        current.runtimeAlive === true && current.livenessKind === 'runtime_process';
-      const runtimeDiagnostic = isExplicitLegacyOpenCodeBootstrap(current)
-        ? runtimeProcessAlive
-          ? 'Runtime process is alive, but no bootstrap check-in after 5 min.'
-          : 'OpenCode bootstrap did not complete runtime_bootstrap_checkin after 5 min.'
-        : OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC;
-      const nextEntry: MemberSpawnStatusEntry = {
-        ...current,
-        status: 'waiting',
-        launchState: 'runtime_pending_bootstrap',
-        agentToolAccepted: true,
-        runtimeAlive: runtimeProcessAlive,
-        bootstrapConfirmed: false,
-        hardFailure: false,
-        hardFailureReason: undefined,
-        error: undefined,
-        livenessSource: undefined,
-        livenessKind:
-          current.livenessKind ?? (runtimeProcessAlive ? 'runtime_process' : 'registered_only'),
-        runtimeDiagnostic,
-        runtimeDiagnosticSeverity: 'warning',
-        bootstrapStalled: true,
-        livenessLastCheckedAt: nowIso(),
-        updatedAt: nowIso(),
-      };
-      nextEntry.launchState = deriveMemberLaunchState(nextEntry);
-      nextStatuses[memberName] = nextEntry;
-    }
-    return nextStatuses;
+    return attachLiveRuntimeMetadataToStatusesHelper({
+      statuses,
+      runtimeByMember,
+      openCodeSecondaryBootstrapPendingMembers: options?.openCodeSecondaryBootstrapPendingMembers,
+      isOpenCodeBootstrapStallWindowElapsed: (firstSpawnAcceptedAt) =>
+        this.isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt),
+    });
   }
 
   private getOpenCodeSecondaryBootstrapPendingMemberNames(
@@ -20298,718 +19356,81 @@ export class TeamProvisioningService {
     runId: string | null,
     generationAtStart: number
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
-    const run = runId ? (this.runs.get(runId) ?? null) : null;
-
-    let configuredMembers: TeamConfig['members'] = [];
-    try {
-      configuredMembers = (await this.readConfigSnapshot(teamName))?.members ?? [];
-    } catch {
-      configuredMembers = [];
-    }
-
-    let metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>> = [];
-    try {
-      metaMembers = await this.membersMetaStore.getMembers(teamName);
-    } catch {
-      metaMembers = [];
-    }
-
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName);
-    const metadataByMember = new Map<string, LiveTeamAgentRuntimeMetadata>();
-    const upsertMetadata = (
-      memberName: string,
-      patch: Partial<LiveTeamAgentRuntimeMetadata>
-    ): void => {
-      const current = metadataByMember.get(memberName) ?? { alive: false };
-      metadataByMember.set(memberName, {
-        ...current,
-        ...patch,
-        alive: patch.alive ?? current.alive,
-      });
-    };
-
-    for (const member of persistedRuntimeMembers) {
-      const memberName = typeof member.name === 'string' ? member.name.trim() : '';
-      if (
-        !memberName ||
-        this.isMemberRemovedInMeta(metaMembers, memberName) ||
-        isLeadMember({ name: memberName })
-      ) {
-        continue;
-      }
-      const runtimeModel =
-        this.findEffectiveRunMemberModel(run, memberName) ??
-        this.findConfiguredMemberModel(configuredMembers, memberName) ??
-        this.findMetaMemberModel(metaMembers, memberName);
-      upsertMetadata(memberName, {
-        backendType: normalizeTeamAgentRuntimeBackendType(member.backendType, false),
-        providerId: normalizeOptionalTeamProviderId(member.providerId),
-        agentId:
-          typeof member.agentId === 'string' ? member.agentId.trim() || undefined : undefined,
-        tmuxPaneId:
-          typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() || undefined : undefined,
-        ...(normalizeRuntimePositiveInteger(member.runtimePid)
-          ? { metricsPid: normalizeRuntimePositiveInteger(member.runtimePid) }
-          : {}),
-        ...(typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.trim()
-          ? { runtimeSessionId: member.runtimeSessionId.trim() }
-          : {}),
-        ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
-        ...(runtimeModel ? { model: runtimeModel } : {}),
-      });
-    }
-
-    for (const member of configuredMembers) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (
-        !memberName ||
-        this.isMemberRemovedInMeta(metaMembers, memberName) ||
-        isLeadMember({ name: memberName, agentType: member.agentType })
-      ) {
-        continue;
-      }
-      const configuredRuntimeMember = member as unknown as Record<string, unknown>;
-      const configuredAgentId =
-        typeof configuredRuntimeMember.agentId === 'string'
-          ? configuredRuntimeMember.agentId.trim()
-          : '';
-      const configuredTmuxPaneId =
-        typeof configuredRuntimeMember.tmuxPaneId === 'string'
-          ? configuredRuntimeMember.tmuxPaneId.trim()
-          : '';
-      const configuredBackendType =
-        typeof configuredRuntimeMember.backendType === 'string'
-          ? configuredRuntimeMember.backendType
-          : undefined;
-      const runtimeModel =
-        this.findEffectiveRunMemberModel(run, memberName) ||
-        member.model?.trim() ||
-        this.findMetaMemberModel(metaMembers, memberName);
-      upsertMetadata(memberName, {
-        ...(runtimeModel ? { model: runtimeModel } : {}),
-        ...(configuredAgentId ? { agentId: configuredAgentId } : {}),
-        ...(configuredTmuxPaneId ? { tmuxPaneId: configuredTmuxPaneId } : {}),
-        ...(normalizeOptionalTeamProviderId(member.providerId)
-          ? { providerId: normalizeOptionalTeamProviderId(member.providerId) }
-          : {}),
-        ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
-        ...(normalizeTeamAgentRuntimeBackendType(configuredBackendType, false)
-          ? {
-              backendType: normalizeTeamAgentRuntimeBackendType(configuredBackendType, false),
-            }
-          : {}),
-      });
-    }
-
-    for (const member of metaMembers) {
-      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
-      if (
-        !memberName ||
-        member.removedAt ||
-        isLeadMember({ name: memberName, agentType: member.agentType })
-      ) {
-        continue;
-      }
-      const runtimeModel =
-        this.findEffectiveRunMemberModel(run, memberName) ||
-        member.model?.trim() ||
-        this.findConfiguredMemberModel(configuredMembers, memberName);
-      upsertMetadata(memberName, {
-        ...(runtimeModel ? { model: runtimeModel } : {}),
-        ...(normalizeOptionalTeamProviderId(member.providerId)
-          ? { providerId: normalizeOptionalTeamProviderId(member.providerId) }
-          : {}),
-        ...(typeof member.agentId === 'string' && member.agentId.trim()
-          ? { agentId: member.agentId.trim() }
-          : {}),
-        ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
-      });
-    }
-
-    for (const member of run?.effectiveMembers ?? []) {
-      const memberName = member.name?.trim() ?? '';
-      if (!memberName || isLeadMember(member) || memberName.toLowerCase() === 'user') {
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(member.providerId);
-      upsertMetadata(memberName, {
-        ...(member.model?.trim() ? { model: member.model.trim() } : {}),
-        ...(providerId ? { providerId } : {}),
-      });
-    }
-
-    for (const lane of run?.mixedSecondaryLanes ?? []) {
-      const memberName = lane.member.name?.trim() ?? '';
-      if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) {
-        continue;
-      }
-      const evidence = lane.result?.members[memberName];
-      const runtimeModel = lane.member.model?.trim() || undefined;
-      const laneMemberCwd =
-        typeof (lane.member as { cwd?: unknown }).cwd === 'string'
-          ? (lane.member as { cwd?: string }).cwd?.trim()
-          : '';
-      const laneCwd = laneMemberCwd || run?.request.cwd;
-      upsertMetadata(memberName, {
-        backendType: 'process',
-        providerId: 'opencode',
-        alive: false,
-        livenessKind: evidence?.livenessKind,
-        pidSource: evidence?.pidSource,
-        runtimeDiagnostic: evidence?.runtimeDiagnostic,
-        ...(laneCwd ? { cwd: laneCwd } : {}),
-        ...(runtimeModel ? { model: runtimeModel } : {}),
-        ...(typeof evidence?.runtimePid === 'number' && evidence.runtimePid > 0
-          ? { metricsPid: evidence.runtimePid }
-          : {}),
-        ...(evidence?.sessionId ? { runtimeSessionId: evidence.sessionId } : {}),
-      });
-    }
-
-    const currentRuntimeAdapterRun = this.runtimeAdapterRunByTeam.get(teamName);
-    const persistedLaunchSnapshot = choosePreferredLaunchSnapshot(
-      await readBootstrapLaunchSnapshot(teamName).catch(() => null),
-      await this.launchStateStore.read(teamName).catch(() => null)
-    );
-    const activeRuntimeRunId =
-      run?.runId?.trim() || currentRuntimeAdapterRun?.runId?.trim() || runId?.trim() || '';
-    for (const persistedMember of Object.values(persistedLaunchSnapshot?.members ?? {})) {
-      const memberName = persistedMember.name?.trim() ?? '';
-      if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) {
-        continue;
-      }
-      const activeRunMember = this.findEffectiveRunMember(run, memberName);
-      const activeRunModel = activeRunMember?.model?.trim();
-      const evidenceModel = currentRuntimeAdapterRun?.members?.[memberName]?.model?.trim();
-      const activeRunProviderId =
-        normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
-        inferTeamProviderIdFromModel(activeRunModel ?? evidenceModel);
-      const effectiveProviderId = activeRunProviderId ?? persistedMember.providerId;
-      const currentRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
-      upsertMetadata(memberName, {
-        backendType:
-          effectiveProviderId === 'opencode'
-            ? 'process'
-            : metadataByMember.get(memberName)?.backendType,
-        providerId: effectiveProviderId,
-        alive: false,
-        livenessKind: currentRuntimeAdapterEvidence?.livenessKind ?? persistedMember.livenessKind,
-        pidSource: currentRuntimeAdapterEvidence?.pidSource ?? persistedMember.pidSource,
-        runtimeDiagnostic:
-          currentRuntimeAdapterEvidence?.runtimeDiagnostic ?? persistedMember.runtimeDiagnostic,
-        runtimeDiagnosticSeverity: persistedMember.runtimeDiagnosticSeverity,
-        runtimeLastSeenAt:
-          persistedMember.runtimeLastSeenAt ??
-          persistedMember.lastHeartbeatAt ??
-          persistedMember.lastRuntimeAliveAt,
-        ...(activeRunModel
-          ? { model: activeRunModel }
-          : evidenceModel
-            ? { model: evidenceModel }
-            : persistedMember.model?.trim()
-              ? { model: persistedMember.model.trim() }
-              : {}),
-        ...(typeof currentRuntimeAdapterEvidence?.runtimePid === 'number' &&
-        currentRuntimeAdapterEvidence.runtimePid > 0
-          ? { metricsPid: currentRuntimeAdapterEvidence.runtimePid }
-          : typeof persistedMember.runtimePid === 'number' && persistedMember.runtimePid > 0
-            ? { metricsPid: persistedMember.runtimePid }
-            : {}),
-        ...(currentRuntimeAdapterEvidence?.sessionId
-          ? { runtimeSessionId: currentRuntimeAdapterEvidence.sessionId }
-          : persistedMember.runtimeSessionId
-            ? { runtimeSessionId: persistedMember.runtimeSessionId }
-            : {}),
-      });
-    }
-
-    const paneIds = [...metadataByMember.values()]
-      .filter((metadata) => metadata.backendType === 'tmux' || metadata.backendType === undefined)
-      .map((metadata) => metadata.tmuxPaneId?.trim() ?? '')
-      .filter((paneId) => paneId.length > 0 && !paneId.startsWith('process:'));
-    let paneInfoById = new Map<string, TmuxPaneRuntimeInfo>();
-    if (paneIds.length > 0) {
-      try {
-        paneInfoById = await listTmuxPaneRuntimeInfoForCurrentPlatform(paneIds);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to read tmux pane info for runtime snapshot: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    let processRows: RuntimeTelemetryProcessTableRow[] = [];
-    let processTableAvailable = true;
-    let processRowsReadForMetadata = false;
-    const shouldReadProcessTable = shouldReadProcessTableForLiveRuntimeMetadata({
-      metadataByMember,
-      launchSnapshot: persistedLaunchSnapshot,
-      paneInfoById,
+    return buildLiveTeamAgentRuntimeMetadataHelper({
+      teamName,
+      runId,
+      generationAtStart,
+      runs: this.runs,
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      teamMetaStore: this.teamMetaStore,
+      membersMetaStore: this.membersMetaStore,
+      launchStateStore: this.launchStateStore,
+      readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
+      readPersistedRuntimeMembers: (targetTeamName) =>
+        this.readPersistedRuntimeMembers(targetTeamName),
+      runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
+      liveTeamAgentRuntimeMetadataCache: this.liveTeamAgentRuntimeMetadataCache,
+      cloneLiveTeamAgentRuntimeMetadata: (metadata) =>
+        this.cloneLiveTeamAgentRuntimeMetadata(metadata),
+      getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
+        this.getRuntimeSnapshotCacheGeneration(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
+      getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
+        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
+      windowsProcessTableTimeoutMs:
+        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
+      livenessProcessTableCacheTtlMs:
+        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
+      livenessProcessTableFailureCacheTtlMs:
+        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
+      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
+      resourceTelemetryFailureCacheTtlMs:
+        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
+      logDebug: (message) => logger.debug(message),
     });
-    if (shouldReadProcessTable) {
-      const cachedRows = readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
-        cached: this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName),
-        runId,
-        nowMs: Date.now(),
-        processTableCacheTtlMs: TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
-        processTableFailureCacheTtlMs:
-          TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
-      });
-      if (cachedRows) {
-        processTableAvailable = cachedRows.rows !== null;
-        processRows = cachedRows.rows ?? [];
-      } else {
-        processRowsReadForMetadata = true;
-        try {
-          processRows =
-            normalizeRuntimeProcessRowsForTelemetry(
-              await withRuntimeTelemetryTimeout(
-                listRuntimeProcessTableForCurrentPlatform(),
-                TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-                'process table runtime snapshot'
-              ),
-              process.platform === 'win32' ? 'wsl' : 'native'
-            ) ?? [];
-        } catch (error) {
-          processTableAvailable = false;
-          logger.debug(
-            `[${teamName}] Failed to read process table for runtime snapshot: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      }
-    }
-    if (
-      processRowsReadForMetadata &&
-      this.getRuntimeSnapshotCacheGeneration(teamName) === generationAtStart
-    ) {
-      const sampledAtMs = Date.now();
-      this.runtimeProcessRowsForUsageSnapshotByTeam.set(teamName, {
-        expiresAtMs:
-          sampledAtMs +
-          (processTableAvailable
-            ? TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS
-            : TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS),
-        generation: generationAtStart,
-        runId,
-        sampledAtMs,
-        rows: processTableAvailable ? processRows : null,
-        includesWindowsHostRows: false,
-      });
-    }
-    let windowsHostProcessRows: RuntimeTelemetryProcessTableRow[] | null = null;
-    let windowsHostProcessTableAvailable = false;
-    const getWindowsHostProcessRows = async (): Promise<RuntimeTelemetryProcessTableRow[]> => {
-      if (windowsHostProcessRows) {
-        return windowsHostProcessRows;
-      }
-      try {
-        windowsHostProcessRows =
-          normalizeRuntimeProcessRowsForTelemetry(
-            await withRuntimeTelemetryTimeout(
-              listWindowsProcessTable(
-                TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS
-              ),
-              TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
-              'Windows process table runtime snapshot'
-            ),
-            'windows-host'
-          ) ?? [];
-        windowsHostProcessTableAvailable = true;
-      } catch (error) {
-        windowsHostProcessRows = [];
-        logger.debug(
-          `[${teamName}] Failed to read Windows host process table for runtime snapshot: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      return windowsHostProcessRows;
-    };
-
-    for (const [memberName, metadata] of metadataByMember.entries()) {
-      const paneId = metadata.tmuxPaneId?.trim() ?? '';
-      const launchMember = persistedLaunchSnapshot?.members[memberName];
-      const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
-      const adapterStatus: MemberSpawnStatusEntry | undefined = adapterEvidence
-        ? {
-            status: adapterEvidence.hardFailure
-              ? 'error'
-              : adapterEvidence.bootstrapConfirmed
-                ? 'online'
-                : adapterEvidence.agentToolAccepted
-                  ? 'waiting'
-                  : 'spawning',
-            launchState: adapterEvidence.launchState,
-            ...(adapterEvidence.hardFailureReason
-              ? { hardFailureReason: adapterEvidence.hardFailureReason }
-              : {}),
-            ...(adapterEvidence.pendingPermissionRequestIds?.length
-              ? { pendingPermissionRequestIds: adapterEvidence.pendingPermissionRequestIds }
-              : {}),
-            agentToolAccepted: adapterEvidence.agentToolAccepted,
-            runtimeAlive: adapterEvidence.runtimeAlive,
-            bootstrapConfirmed: adapterEvidence.bootstrapConfirmed,
-            hardFailure: adapterEvidence.hardFailure,
-            ...(metadata.model ? { runtimeModel: metadata.model } : {}),
-            ...(adapterEvidence.livenessKind ? { livenessKind: adapterEvidence.livenessKind } : {}),
-            ...(adapterEvidence.runtimeDiagnostic
-              ? { runtimeDiagnostic: adapterEvidence.runtimeDiagnostic }
-              : {}),
-            updatedAt: persistedLaunchSnapshot?.updatedAt ?? nowIso(),
-          }
-        : undefined;
-      const shouldUseWindowsHostRows =
-        process.platform === 'win32' &&
-        (metadata.providerId === 'opencode' ||
-          launchMember?.providerId === 'opencode' ||
-          metadata.backendType !== 'tmux') &&
-        currentRuntimeAdapterRun?.members?.[memberName]?.runtimeAlive !== true &&
-        currentRuntimeAdapterRun?.members?.[memberName]?.bootstrapConfirmed !== true;
-      const hostProcessRows = shouldUseWindowsHostRows ? await getWindowsHostProcessRows() : [];
-      const memberProcessRows = shouldUseWindowsHostRows
-        ? [...hostProcessRows, ...processRows]
-        : processRows;
-      const memberProcessTableAvailable = shouldUseWindowsHostRows
-        ? windowsHostProcessTableAvailable || processTableAvailable
-        : processTableAvailable;
-      const trackedStatus = this.findTrackedMemberSpawnStatus(run, memberName);
-      const launchStatus =
-        this.isLaunchMemberStatusRelevantToRuntimeRun(launchMember, activeRuntimeRunId) &&
-        launchMember
-          ? this.buildLaunchMemberSpawnStatus(launchMember, metadata.model)
-          : undefined;
-      const status = this.shouldPreferCurrentLaunchMemberStatus(trackedStatus, launchStatus)
-        ? launchStatus
-        : this.shouldPreferCurrentLaunchMemberStatus(trackedStatus, adapterStatus)
-          ? adapterStatus
-          : (trackedStatus ?? adapterStatus ?? launchStatus);
-      const resolved = resolveTeamMemberRuntimeLiveness({
-        teamName,
-        memberName,
-        agentId: metadata.agentId,
-        backendType: metadata.backendType,
-        providerId: metadata.providerId ?? launchMember?.providerId,
-        tmuxPaneId: metadata.tmuxPaneId,
-        persistedRuntimePid: launchMember?.runtimePid ?? metadata.metricsPid,
-        persistedRuntimeSessionId: launchMember?.runtimeSessionId ?? metadata.runtimeSessionId,
-        trackedSpawnStatus: status,
-        runtimePid: metadata.metricsPid,
-        runtimeSessionId: metadata.runtimeSessionId,
-        pane: paneId ? paneInfoById.get(paneId) : undefined,
-        processRows: memberProcessRows,
-        processTableAvailable: memberProcessTableAvailable,
-        nowIso: nowIso(),
-      });
-      const bootstrapTransportDiagnostic =
-        status?.runtimeDiagnostic ?? launchMember?.runtimeDiagnostic;
-      const bootstrapTransportDiagnosticSeverity =
-        status?.runtimeDiagnosticSeverity ?? launchMember?.runtimeDiagnosticSeverity;
-      const bootstrapTransportLaunchState = status?.launchState ?? launchMember?.launchState;
-      const bootstrapTransportConfirmed =
-        status?.bootstrapConfirmed === true || launchMember?.bootstrapConfirmed === true;
-      const hasProcessBootstrapTransportDiagnostic =
-        (metadata.backendType === 'process' || metadata.tmuxPaneId?.startsWith('process:')) &&
-        !bootstrapTransportConfirmed &&
-        (bootstrapTransportLaunchState === 'runtime_pending_bootstrap' ||
-          bootstrapTransportLaunchState === 'failed_to_start') &&
-        isProcessBootstrapTransportDiagnostic(bootstrapTransportDiagnostic);
-      // Prefer bootstrap transport diagnostics over generic pid/liveness text
-      // while launch is unconfirmed, otherwise the UI hides the exact stage
-      // where process bootstrap got stuck.
-      const runtimeDiagnostic = hasProcessBootstrapTransportDiagnostic
-        ? bootstrapTransportDiagnostic
-        : resolved.runtimeDiagnostic;
-      const runtimeDiagnosticSeverity = hasProcessBootstrapTransportDiagnostic
-        ? (bootstrapTransportDiagnosticSeverity ?? resolved.runtimeDiagnosticSeverity)
-        : resolved.runtimeDiagnosticSeverity;
-      metadataByMember.set(memberName, {
-        ...metadata,
-        alive: resolved.alive,
-        ...(typeof resolved.pid === 'number' && resolved.pid > 0 ? { pid: resolved.pid } : {}),
-        ...(typeof (resolved.metricsPid ?? metadata.metricsPid) === 'number' &&
-        Number.isFinite(resolved.metricsPid ?? metadata.metricsPid) &&
-        (resolved.metricsPid ?? metadata.metricsPid)! > 0
-          ? { metricsPid: resolved.metricsPid ?? metadata.metricsPid }
-          : {}),
-        livenessKind: resolved.livenessKind,
-        ...(resolved.pidSource ? { pidSource: resolved.pidSource } : {}),
-        ...(resolved.processCommand ? { processCommand: resolved.processCommand } : {}),
-        ...(resolved.panePid ? { panePid: resolved.panePid } : {}),
-        ...(resolved.paneCurrentCommand ? { paneCurrentCommand: resolved.paneCurrentCommand } : {}),
-        ...(resolved.runtimeSessionId ? { runtimeSessionId: resolved.runtimeSessionId } : {}),
-        ...(resolved.runtimeLastSeenAt ? { runtimeLastSeenAt: resolved.runtimeLastSeenAt } : {}),
-        runtimeDiagnostic,
-        runtimeDiagnosticSeverity,
-        diagnostics: hasProcessBootstrapTransportDiagnostic
-          ? mergeRuntimeDiagnostics(resolved.diagnostics, [bootstrapTransportDiagnostic])
-          : resolved.diagnostics,
-      });
-    }
-
-    if (
-      this.getRuntimeSnapshotCacheGeneration(teamName) === generationAtStart &&
-      this.getTrackedRunId(teamName) === runId
-    ) {
-      this.liveTeamAgentRuntimeMetadataCache.set(teamName, {
-        expiresAtMs: Date.now() + this.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId),
-        metadata: this.cloneLiveTeamAgentRuntimeMetadata(metadataByMember),
-        runId,
-      });
-    }
-    return metadataByMember;
-  }
-
-  private recordAgentRuntimeResourceSampleSafely(
-    params: TeamAgentRuntimeResourceHistoryRecordInput
-  ): TeamAgentRuntimeResourceSample[] | undefined {
-    try {
-      return this.agentRuntimeResourceHistory.record(params);
-    } catch (error) {
-      logger.debug(
-        `[${params.teamName}] Failed to record runtime telemetry sample for ${
-          params.memberName
-        }; continuing without history: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return undefined;
-    }
   }
 
   private async readRuntimeProcessRowsForUsageSnapshot(
     teamName: string,
     options: { includeWindowsHostRows?: boolean } = {}
   ): Promise<RuntimeTelemetryProcessTableRow[] | null> {
-    const includeWindowsHostRows =
-      process.platform === 'win32' && options.includeWindowsHostRows === true;
-    const cached = this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName);
-    const canUseCached =
-      cached && cached.expiresAtMs > Date.now() && cached.runId === this.getTrackedRunId(teamName);
-    if (canUseCached && (!includeWindowsHostRows || cached.includesWindowsHostRows)) {
-      return cached.rows;
-    }
-
-    let rows = canUseCached && cached.rows ? cached.rows : null;
-    let runtimeProcessTableAvailable = rows != null;
-    try {
-      if (!rows) {
-        rows =
-          normalizeRuntimeProcessRowsForTelemetry(
-            await withRuntimeTelemetryTimeout(
-              listRuntimeProcessTableForCurrentPlatform(),
-              TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-              'process table runtime telemetry'
-            ),
-            process.platform === 'win32' ? 'wsl' : 'native'
-          ) ?? [];
-        runtimeProcessTableAvailable = true;
-      }
-    } catch (error) {
-      logger.debug(
-        `[${teamName}] Failed to read process table for runtime usage snapshot: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      rows = null;
-      runtimeProcessTableAvailable = false;
-    }
-
-    let includesWindowsHostRows = false;
-    if (includeWindowsHostRows) {
-      try {
-        const windowsHostRows = await withRuntimeTelemetryTimeout(
-          listWindowsProcessTable(TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS),
-          TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
-          'Windows process table runtime telemetry'
-        );
-        rows = [
-          ...(rows ?? []),
-          ...(normalizeRuntimeProcessRowsForTelemetry(windowsHostRows, 'windows-host') ?? []),
-        ];
-        includesWindowsHostRows = true;
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to read Windows host process table for runtime usage snapshot: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const resultRows = rows && rows.length > 0 ? rows : runtimeProcessTableAvailable ? [] : null;
-    const sampledAtMs = Date.now();
-    this.runtimeProcessRowsForUsageSnapshotByTeam.set(teamName, {
-      expiresAtMs:
-        sampledAtMs +
-        (resultRows === null
-          ? TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS
-          : TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS),
-      generation: this.getRuntimeSnapshotCacheGeneration(teamName),
-      runId: this.getTrackedRunId(teamName),
-      sampledAtMs,
-      rows: resultRows,
-      includesWindowsHostRows,
+    return readRuntimeProcessRowsForUsageSnapshotHelper({
+      teamName,
+      options,
+      runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
+      cacheAccess: {
+        getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
+          this.getRuntimeSnapshotCacheGeneration(targetTeamName),
+        getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
+        getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
+          this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      },
+      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
+      windowsProcessTableTimeoutMs:
+        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
+      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
+      resourceTelemetryFailureCacheTtlMs:
+        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
+      logDebug: (message) => logger.debug(message),
     });
-    return resultRows;
-  }
-
-  private buildRuntimeProcessLoadStatsSafely(
-    teamName: string,
-    memberName: string,
-    params: {
-      rootPid: number | undefined;
-      usageStatsByPid: ReadonlyMap<number, RuntimeProcessUsageStats>;
-      processTree?: { pids: number[]; truncated: boolean };
-      scope?: TeamAgentRuntimeLoadScope;
-    }
-  ): RuntimeProcessLoadStats | undefined {
-    try {
-      return buildRuntimeProcessLoadStats(params);
-    } catch (error) {
-      logger.debug(
-        `[${teamName}] Failed to build runtime telemetry stats for ${memberName}; continuing without metrics: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      return undefined;
-    }
   }
 
   private async readProcessUsageStatsByPid(
     pids: readonly number[],
     cacheOptions: { ignoreCachedMisses?: boolean } = {}
   ): Promise<Map<number, RuntimeProcessUsageStats>> {
-    const pidCandidates = Array.isArray(pids) ? pids : [];
-    const uniquePids = [...new Set(pidCandidates.filter((pid) => Number.isFinite(pid) && pid > 0))];
-    if (uniquePids.length === 0) {
-      return new Map();
-    }
-
-    const usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
-    const pidsToRead: number[] = [];
-    const now = Date.now();
-    for (const pid of uniquePids) {
-      const cached = this.runtimeProcessUsageStatsCacheByPid.get(pid);
-      if (cached && cached.expiresAtMs > now) {
-        if (cached.stats) {
-          usageStatsByPid.set(pid, { ...cached.stats });
-          continue;
-        }
-        if (!cacheOptions.ignoreCachedMisses) {
-          continue;
-        }
-      }
-      if (cached) {
-        this.runtimeProcessUsageStatsCacheByPid.delete(pid);
-      }
-      pidsToRead.push(pid);
-    }
-    if (pidsToRead.length === 0) {
-      return usageStatsByPid;
-    }
-    if (!isRuntimePidusageTelemetryEnabled()) {
-      return usageStatsByPid;
-    }
-
-    const rememberUsageStats = (
-      pid: number,
-      stats: RuntimeProcessUsageStats | null | undefined
-    ): void => {
-      const normalized = stats ? { ...stats } : null;
-      const nowMs = Date.now();
-      for (const [cachedPid, cached] of this.runtimeProcessUsageStatsCacheByPid) {
-        if (cached.expiresAtMs <= nowMs) {
-          this.runtimeProcessUsageStatsCacheByPid.delete(cachedPid);
-        }
-      }
-      while (
-        !this.runtimeProcessUsageStatsCacheByPid.has(pid) &&
-        this.runtimeProcessUsageStatsCacheByPid.size >=
-          TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES
-      ) {
-        const oldestPid = this.runtimeProcessUsageStatsCacheByPid.keys().next().value;
-        if (oldestPid == null) {
-          break;
-        }
-        this.runtimeProcessUsageStatsCacheByPid.delete(oldestPid);
-      }
-      this.runtimeProcessUsageStatsCacheByPid.set(pid, {
-        expiresAtMs: nowMs + TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
-        stats: normalized,
-      });
-      if (normalized) {
-        usageStatsByPid.set(pid, { ...normalized });
-      }
-    };
-
-    const options = RUNTIME_PIDUSAGE_OPTIONS;
-    try {
-      const statsByPid = await withRuntimeTelemetryTimeout(
-        pidusage(pidsToRead, options),
-        TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
-        'pidusage batch runtime telemetry'
-      );
-      const observedPids = new Set<number>();
-      for (const [rawPid, stat] of Object.entries(
-        statsByPid && typeof statsByPid === 'object' ? statsByPid : {}
-      )) {
-        const pid = Number.parseInt(rawPid, 10);
-        const usageStats = normalizeRuntimeProcessUsageStats(stat);
-        if (Number.isFinite(pid) && pid > 0) {
-          observedPids.add(pid);
-          rememberUsageStats(pid, usageStats);
-        }
-      }
-      for (const pid of pidsToRead) {
-        if (!observedPids.has(pid)) {
-          rememberUsageStats(pid, null);
-        }
-      }
-      return usageStatsByPid;
-    } catch (error) {
-      if (error instanceof RuntimeTelemetryTimeoutError) {
-        logger.debug(`${error.message}; continuing without runtime resource metrics`);
-        return usageStatsByPid;
-      }
-      logger.debug(
-        `pidusage batch runtime snapshot failed; falling back to per-pid reads: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    for (
-      let offset = 0;
-      offset < pidsToRead.length;
-      offset += TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY
-    ) {
-      const chunk = pidsToRead.slice(
-        offset,
-        offset + TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY
-      );
-      await Promise.all(
-        chunk.map(async (pid) => {
-          try {
-            const stat = await withRuntimeTelemetryTimeout(
-              pidusage(pid, options),
-              TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
-              `pidusage runtime telemetry pid=${pid}`
-            );
-            const usageStats = normalizeRuntimeProcessUsageStats(stat);
-            rememberUsageStats(pid, usageStats);
-          } catch (error) {
-            if (error instanceof RuntimeTelemetryTimeoutError) {
-              logger.debug(error.message);
-            }
-            rememberUsageStats(pid, null);
-            // Process likely exited between discovery and sampling.
-          }
-        })
-      );
-    }
-    return usageStatsByPid;
+    return readProcessUsageStatsByPidHelper({
+      pids,
+      cacheOptions,
+      runtimeProcessUsageStatsCacheByPid: this.runtimeProcessUsageStatsCacheByPid,
+      usageCacheTtlMs: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
+      usageCacheMaxEntries: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES,
+      batchTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
+      singleTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
+      fallbackConcurrency: TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY,
+      logDebug: (message) => logger.debug(message),
+    });
   }
 
   private async clearPersistedLaunchState(
