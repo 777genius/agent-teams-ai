@@ -8,9 +8,12 @@ import {
   BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
   type BootstrapTranscriptOutcome,
   type BootstrapTranscriptOutcomeCacheEntry,
+  getBootstrapRuntimeEventsPath,
   getParsedBootstrapTranscriptTail,
+  isContainedTeamRuntimeEventsPath,
   type ParsedBootstrapTranscriptTailCacheEntry,
   type ParsedBootstrapTranscriptTailLine,
+  readLeadInboxMessagesForLaunchReconcile,
   readRecentBootstrapTranscriptOutcome,
 } from '../../../../src/main/services/team/provisioning/TeamProvisioningBootstrapTranscript';
 
@@ -162,5 +165,136 @@ describe('TeamProvisioningService bootstrap transcript index', () => {
       reason: 'Bootstrap failed: member_briefing tool is not available',
     });
     expect(parseTailCalls).toBe(2);
+  });
+
+  it('rejects unsafe launch reconcile and runtime proof paths before filesystem reads', async () => {
+    const readPaths: string[] = [];
+    const readRegularFileUtf8 = async (filePath: string): Promise<string | null> => {
+      readPaths.push(filePath);
+      return '[]';
+    };
+
+    await expect(
+      readLeadInboxMessagesForLaunchReconcile({
+        teamName: '../outside',
+        leadName: 'team-lead',
+        teamsBasePath: '/tmp/teams',
+        readRegularFileUtf8,
+        timeoutMs: 100,
+        maxBytes: 1024,
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      readLeadInboxMessagesForLaunchReconcile({
+        teamName: 'demo-team',
+        leadName: '../../lead',
+        teamsBasePath: '/tmp/teams',
+        readRegularFileUtf8,
+        timeoutMs: 100,
+        maxBytes: 1024,
+      })
+    ).resolves.toEqual([]);
+
+    expect(readPaths).toEqual([]);
+
+    await expect(
+      readLeadInboxMessagesForLaunchReconcile({
+        teamName: 'demo-team',
+        leadName: 'team-lead',
+        teamsBasePath: path.join('/tmp', 'teams'),
+        readRegularFileUtf8,
+        timeoutMs: 100,
+        maxBytes: 1024,
+      })
+    ).resolves.toEqual([]);
+    expect(readPaths).toEqual([
+      path.join('/tmp', 'teams', 'demo-team', 'inboxes', 'team-lead.json'),
+    ]);
+    readPaths.length = 0;
+
+    const safeRuntimePath = path.join(
+      '/tmp',
+      'teams',
+      'demo-team',
+      'runtime',
+      'alice.runtime.jsonl'
+    );
+    expect(
+      getBootstrapRuntimeEventsPath({
+        teamsBasePath: path.join('/tmp', 'teams'),
+        teamName: 'demo-team',
+        memberName: 'alice',
+        runtimeMember: {
+          name: 'alice',
+          bootstrapRuntimeEventsPath: safeRuntimePath,
+        },
+      })
+    ).toBe(safeRuntimePath);
+
+    if (process.platform !== 'win32') {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-transcript-paths-'));
+      const teamsBasePath = path.join(tmpDir, 'teams');
+      const teamDir = path.join(teamsBasePath, 'demo-team');
+      const outsideDir = path.join(tmpDir, 'outside');
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.mkdir(outsideDir, { recursive: true });
+      await fs.symlink(outsideDir, path.join(teamDir, 'inboxes'), 'dir');
+      await fs.symlink(outsideDir, path.join(teamDir, 'runtime'), 'dir');
+
+      await expect(
+        readLeadInboxMessagesForLaunchReconcile({
+          teamName: 'demo-team',
+          leadName: 'team-lead',
+          teamsBasePath,
+          readRegularFileUtf8,
+          timeoutMs: 100,
+          maxBytes: 1024,
+        })
+      ).resolves.toEqual([]);
+      expect(readPaths).toEqual([]);
+
+      expect(
+        isContainedTeamRuntimeEventsPath({
+          teamsBasePath,
+          teamName: 'demo-team',
+          candidatePath: path.join(teamDir, 'runtime', 'alice.runtime.jsonl'),
+        })
+      ).toBe(false);
+      expect(
+        getBootstrapRuntimeEventsPath({
+          teamsBasePath,
+          teamName: 'demo-team',
+          memberName: 'alice',
+          runtimeMember: undefined,
+        })
+      ).toBeNull();
+    }
+
+    expect(
+      isContainedTeamRuntimeEventsPath({
+        teamsBasePath: path.join('/tmp', 'teams'),
+        teamName: '../outside',
+        candidatePath: path.join('/tmp', 'outside', 'runtime', 'alice.runtime.jsonl'),
+      })
+    ).toBe(false);
+    expect(
+      getBootstrapRuntimeEventsPath({
+        teamsBasePath: path.join('/tmp', 'teams'),
+        teamName: '../outside',
+        memberName: 'alice',
+        runtimeMember: undefined,
+      })
+    ).toBeNull();
+    expect(
+      getBootstrapRuntimeEventsPath({
+        teamsBasePath: path.join('/tmp', 'teams'),
+        teamName: '../outside',
+        memberName: 'alice',
+        runtimeMember: {
+          name: 'alice',
+          bootstrapRuntimeEventsPath: path.join('/tmp', 'outside', 'runtime', 'alice.runtime.jsonl'),
+        },
+      })
+    ).toBeNull();
   });
 });

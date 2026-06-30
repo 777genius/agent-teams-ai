@@ -1,5 +1,5 @@
 import { encodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
-import { isPathWithinRoot } from '@main/utils/pathValidation';
+import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -275,6 +275,60 @@ function getCachedBootstrapSuccessSourceForLine(
   return source;
 }
 
+function normalizeSafePathSegment(value: string): string | null {
+  const trimmed = value.trim();
+  return validateFileName(trimmed).valid ? trimmed : null;
+}
+
+function getSafeTeamDirectory(teamsBasePath: string, teamName: string): string | null {
+  const safeTeamName = normalizeSafePathSegment(teamName);
+  if (!safeTeamName) {
+    return null;
+  }
+  const teamDir = path.join(teamsBasePath, safeTeamName);
+  if (!isPathWithinRoot(teamDir, teamsBasePath)) {
+    return null;
+  }
+  const realTeamsBasePath =
+    realpathIfExists(path.resolve(teamsBasePath)) ?? path.resolve(teamsBasePath);
+  const realTeamDir = realpathIfExists(teamDir);
+  if (realTeamDir && !isPathWithinRoot(realTeamDir, realTeamsBasePath)) {
+    return null;
+  }
+  return teamDir;
+}
+
+function getSafeTeamInboxPath(input: {
+  teamsBasePath: string;
+  teamName: string;
+  leadName: string;
+}): string | null {
+  const teamDir = getSafeTeamDirectory(input.teamsBasePath, input.teamName);
+  const safeLeadName = normalizeSafePathSegment(input.leadName);
+  if (!teamDir || !safeLeadName) {
+    return null;
+  }
+  const inboxDir = path.join(teamDir, 'inboxes');
+  const inboxPath = path.join(inboxDir, `${safeLeadName}.json`);
+  if (!isPathWithinRoot(inboxDir, teamDir) || !isPathWithinRoot(inboxPath, inboxDir)) {
+    return null;
+  }
+  const realTeamDir = realpathIfExists(teamDir) ?? path.resolve(teamDir);
+  const realInboxDir = realpathIfExists(inboxDir);
+  if (realInboxDir && !isPathWithinRoot(realInboxDir, realTeamDir)) {
+    return null;
+  }
+  const realInboxPath = realpathIfExists(inboxPath);
+  if (
+    realInboxPath &&
+    (!isPathWithinRoot(realInboxPath, realInboxDir ?? path.resolve(inboxDir)) ||
+      !isPathWithinRoot(realInboxPath, realTeamDir))
+  ) {
+    return null;
+  }
+  return inboxPath;
+}
+
 export async function readLeadInboxMessagesForLaunchReconcile(input: {
   teamName: string;
   leadName: string;
@@ -283,12 +337,10 @@ export async function readLeadInboxMessagesForLaunchReconcile(input: {
   timeoutMs: number;
   maxBytes: number;
 }): Promise<LeadInboxLaunchReconcileMessage[]> {
-  const inboxPath = path.join(
-    input.teamsBasePath,
-    input.teamName,
-    'inboxes',
-    `${input.leadName}.json`
-  );
+  const inboxPath = getSafeTeamInboxPath(input);
+  if (!inboxPath) {
+    return [];
+  }
   try {
     const raw = await input.readRegularFileUtf8(inboxPath, {
       timeoutMs: input.timeoutMs,
@@ -388,8 +440,21 @@ export function resolveBootstrapRuntimeMember(
   });
 }
 
-function getTeamRuntimeEventsDir(teamsBasePath: string, teamName: string): string {
-  return path.join(teamsBasePath, teamName, 'runtime');
+function getSafeTeamRuntimeEventsDir(teamsBasePath: string, teamName: string): string | null {
+  const teamDir = getSafeTeamDirectory(teamsBasePath, teamName);
+  if (!teamDir) {
+    return null;
+  }
+  const runtimeDir = path.join(teamDir, 'runtime');
+  if (!isPathWithinRoot(runtimeDir, teamDir)) {
+    return null;
+  }
+  const realTeamDir = realpathIfExists(teamDir) ?? path.resolve(teamDir);
+  const realRuntimeDir = realpathIfExists(runtimeDir);
+  if (realRuntimeDir && !isPathWithinRoot(realRuntimeDir, realTeamDir)) {
+    return null;
+  }
+  return runtimeDir;
 }
 
 function realpathIfExists(inputPath: string): string | null {
@@ -405,17 +470,31 @@ export function isContainedTeamRuntimeEventsPath(input: {
   teamName: string;
   candidatePath: string;
 }): boolean {
-  const runtimeDir = getTeamRuntimeEventsDir(input.teamsBasePath, input.teamName);
+  if (!input.candidatePath.trim()) {
+    return false;
+  }
+  const runtimeDir = getSafeTeamRuntimeEventsDir(input.teamsBasePath, input.teamName);
+  if (!runtimeDir) {
+    return false;
+  }
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   const resolvedCandidate = path.resolve(input.candidatePath);
   if (!isPathWithinRoot(resolvedCandidate, resolvedRuntimeDir)) {
     return false;
   }
 
+  const teamDir = path.dirname(resolvedRuntimeDir);
+  const realTeamDir = realpathIfExists(teamDir) ?? teamDir;
   const realRuntimeDir = realpathIfExists(resolvedRuntimeDir);
+  if (realRuntimeDir && !isPathWithinRoot(realRuntimeDir, realTeamDir)) {
+    return false;
+  }
   const realCandidate = realpathIfExists(resolvedCandidate);
   if (realCandidate) {
-    return isPathWithinRoot(realCandidate, realRuntimeDir ?? resolvedRuntimeDir);
+    return (
+      isPathWithinRoot(realCandidate, realRuntimeDir ?? resolvedRuntimeDir) &&
+      isPathWithinRoot(realCandidate, realTeamDir)
+    );
   }
   return true;
 }
@@ -425,7 +504,7 @@ export function getBootstrapRuntimeEventsPath(input: {
   teamName: string;
   memberName: string;
   runtimeMember: BootstrapRuntimeMemberLike | undefined;
-}): string {
+}): string | null {
   const configuredPath = input.runtimeMember?.bootstrapRuntimeEventsPath?.trim();
   if (
     configuredPath &&
@@ -440,10 +519,8 @@ export function getBootstrapRuntimeEventsPath(input: {
   const filePrefix = sanitizeProcessRuntimeEventFilePrefix(
     input.runtimeMember?.name ?? input.memberName
   );
-  return path.join(
-    getTeamRuntimeEventsDir(input.teamsBasePath, input.teamName),
-    `${filePrefix}.runtime.jsonl`
-  );
+  const runtimeDir = getSafeTeamRuntimeEventsDir(input.teamsBasePath, input.teamName);
+  return runtimeDir ? path.join(runtimeDir, `${filePrefix}.runtime.jsonl`) : null;
 }
 
 export async function readRuntimeBootstrapProofEvents(
@@ -563,6 +640,9 @@ export async function findBootstrapRuntimeProofObservedAt(input: {
     memberName: input.memberName,
     runtimeMember,
   });
+  if (!eventsPath) {
+    return null;
+  }
   const events = await readRuntimeBootstrapProofEvents(eventsPath);
   let latest: string | null = null;
   let latestMs = Number.NEGATIVE_INFINITY;
@@ -681,13 +761,7 @@ export async function readProcessBootstrapTransportSummary(input: {
     memberName: input.memberName,
     runtimeMember,
   });
-  if (
-    !isContainedTeamRuntimeEventsPath({
-      teamsBasePath: input.teamsBasePath,
-      teamName: input.teamName,
-      candidatePath: eventsPath,
-    })
-  ) {
+  if (!eventsPath) {
     return null;
   }
   const events = await readRuntimeBootstrapProofEvents(eventsPath);
