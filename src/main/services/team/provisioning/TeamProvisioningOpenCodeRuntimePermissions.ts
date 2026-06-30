@@ -482,10 +482,7 @@ export function buildOpenCodePermissionPendingEvidence(input: {
     memberName: input.memberName,
     providerId: 'opencode',
     ...(previous?.model ? { model: previous.model } : {}),
-    launchState:
-      previous?.launchState === 'confirmed_alive' || previous?.bootstrapConfirmed
-        ? 'confirmed_alive'
-        : 'runtime_pending_permission',
+    launchState: 'runtime_pending_permission',
     agentToolAccepted: previous?.agentToolAccepted ?? true,
     runtimeAlive: previous?.runtimeAlive ?? false,
     bootstrapConfirmed: previous?.bootstrapConfirmed ?? false,
@@ -542,10 +539,7 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     const nextMember: PersistedTeamLaunchMemberState = {
       ...previousMember,
       name: memberName,
-      launchState:
-        previousMember.launchState === 'confirmed_alive' || previousMember.bootstrapConfirmed
-          ? 'confirmed_alive'
-          : 'runtime_pending_permission',
+      launchState: 'runtime_pending_permission',
       hardFailure: false,
       hardFailureReason: undefined,
       pendingPermissionRequestIds,
@@ -619,9 +613,15 @@ export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
         laneEvidence.runtimeDiagnostic !== OPENCODE_RUNTIME_PERMISSION_DIAGNOSTIC ||
         laneEvidence.runtimeDiagnosticSeverity !== 'warning')
     );
+    const hasPendingPermissions = pendingPermissionRequestIds.length > 0;
     const next: MemberSpawnStatusEntry = {
       ...prev,
-      status: prev.bootstrapConfirmed || laneEvidence?.bootstrapConfirmed ? 'online' : 'waiting',
+      status:
+        hasPendingPermissions || laneEvidenceNeedsUpdate
+          ? 'waiting'
+          : prev.bootstrapConfirmed || laneEvidence?.bootstrapConfirmed
+            ? 'online'
+            : 'waiting',
       launchState: prev.launchState,
       agentToolAccepted: true,
       runtimeAlive: prev.runtimeAlive === true || laneEvidence?.runtimeAlive === true,
@@ -636,7 +636,9 @@ export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
       runtimeDiagnosticSeverity: 'warning',
       updatedAt: input.updatedAt,
     };
-    next.launchState = deriveMemberLaunchState(next);
+    next.launchState = hasPendingPermissions
+      ? 'runtime_pending_permission'
+      : deriveMemberLaunchState(next);
     if (
       prev.pendingPermissionRequestIds?.join('\0') === joinedPendingPermissionRequestIds &&
       prev.launchState === next.launchState &&
