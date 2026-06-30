@@ -498,8 +498,11 @@ import {
   createDefaultTeamProvisioningProviderDiagnosticsPorts,
   PREFLIGHT_AUTH_RETRY_DELAY_MS,
   probeClaudeRuntime,
+  probeProviderRuntimeControlPlane,
   runProviderOneShotDiagnostic,
   spawnProbe as spawnProbeDiagnostic,
+  type SpawnProbeOptions,
+  type SpawnProbeResult,
   type TeamProvisioningProviderDiagnosticsPorts,
   validateAgentTeamsMcpRuntime,
 } from './provisioning/TeamProvisioningProviderDiagnostics';
@@ -9762,14 +9765,13 @@ export class TeamProvisioningService {
           warnings.push(prefixedWarning);
           return;
         }
-        const diagnostic = await runProviderOneShotDiagnostic({
-          claudePath: probeResult.claudePath,
-          cwd: targetCwd,
-          env: resolvedEnv.env,
+        const diagnostic = await this.runProviderOneShotDiagnostic(
+          probeResult.claudePath,
+          targetCwd,
+          resolvedEnv.env,
           providerId,
-          providerArgs: resolvedEnv.providerArgs,
-          ports: this.getProviderDiagnosticsPorts(),
-        });
+          resolvedEnv.providerArgs
+        );
         if (diagnostic.warning) {
           const prefixedWarning =
             providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
@@ -10372,14 +10374,7 @@ export class TeamProvisioningService {
         };
       }
 
-      const probe = await probeClaudeRuntime({
-        claudePath,
-        cwd,
-        env,
-        providerId,
-        providerArgs,
-        ports: this.getProviderDiagnosticsPorts(),
-      });
+      const probe = await this.probeClaudeRuntime(claudePath, cwd, env, providerId, providerArgs);
       const result = {
         claudePath,
         authSource,
@@ -10913,19 +10908,18 @@ export class TeamProvisioningService {
     let child: ReturnType<typeof spawn>;
     try {
       if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
-        await validateAgentTeamsMcpRuntime({
-          claudePath: ctx.claudePath,
-          cwd: ctx.cwd,
-          env: ctx.env,
-          mcpConfigPath: ctx.args[mcpFlagIdx + 1],
-          options: {
+        await this.validateAgentTeamsMcpRuntime(
+          ctx.claudePath,
+          ctx.cwd,
+          ctx.env,
+          ctx.args[mcpFlagIdx + 1],
+          {
             isCancelled: () =>
               run.cancelRequested ||
               run.processKilled ||
               this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-          },
-          ports: this.getProviderDiagnosticsPorts(),
-        });
+          }
+        );
       }
       if (
         run.cancelRequested ||
@@ -11643,18 +11637,11 @@ export class TeamProvisioningService {
         });
         run.mcpConfigPath = mcpConfigPath;
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
-        await validateAgentTeamsMcpRuntime({
-          claudePath,
-          cwd: request.cwd,
-          env: shellEnv,
-          mcpConfigPath,
-          options: {
-            isCancelled: () =>
-              run.cancelRequested ||
-              run.processKilled ||
-              this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-          },
-          ports: this.getProviderDiagnosticsPorts(),
+        await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
+          isCancelled: () =>
+            run.cancelRequested ||
+            run.processKilled ||
+            this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
         });
       } catch (error) {
         this.runs.delete(runId);
@@ -13429,18 +13416,11 @@ export class TeamProvisioningService {
         });
         run.mcpConfigPath = mcpConfigPath;
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
-        await validateAgentTeamsMcpRuntime({
-          claudePath,
-          cwd: request.cwd,
-          env: shellEnv,
-          mcpConfigPath,
-          options: {
-            isCancelled: () =>
-              run.cancelRequested ||
-              run.processKilled ||
-              this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-          },
-          ports: this.getProviderDiagnosticsPorts(),
+        await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
+          isCancelled: () =>
+            run.cancelRequested ||
+            run.processKilled ||
+            this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
         });
       } catch (error) {
         this.runs.delete(runId);
@@ -22613,13 +22593,105 @@ export class TeamProvisioningService {
     return provisioningPathExists(filePath);
   }
 
-  private getProviderDiagnosticsPorts(): TeamProvisioningProviderDiagnosticsPorts {
+  private getProviderDiagnosticsBasePorts(): TeamProvisioningProviderDiagnosticsPorts {
     return createDefaultTeamProvisioningProviderDiagnosticsPorts({
       transientProbeProcesses: this.transientProbeProcesses,
       providerConnectionService: this.providerConnectionService,
       logger,
       isAuthFailureWarning: (text, source) => this.isAuthFailureWarning(text, source),
       normalizeApiRetryErrorMessage: (text) => this.normalizeApiRetryErrorMessage(text),
+    });
+  }
+
+  private getProviderDiagnosticsPorts(): TeamProvisioningProviderDiagnosticsPorts {
+    const ports = this.getProviderDiagnosticsBasePorts();
+    return {
+      ...ports,
+      spawnProbe: (claudePath, args, cwd, env, timeoutMs, options) =>
+        this.spawnProbe(claudePath, args, cwd, env, timeoutMs, options),
+    };
+  }
+
+  private async probeClaudeRuntime(
+    claudePath: string,
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    providerId: TeamProviderId | undefined = 'anthropic',
+    providerArgs: string[] = []
+  ): Promise<{ warning?: string }> {
+    return probeClaudeRuntime({
+      claudePath,
+      cwd,
+      env,
+      providerId,
+      providerArgs,
+      ports: this.getProviderDiagnosticsPorts(),
+    });
+  }
+
+  private async probeProviderRuntimeControlPlane(input: {
+    claudePath: string;
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    providerId: TeamProviderId;
+    providerArgs: string[];
+  }): Promise<{ warning?: string }> {
+    return probeProviderRuntimeControlPlane({
+      ...input,
+      ports: this.getProviderDiagnosticsPorts(),
+    });
+  }
+
+  private async runProviderOneShotDiagnostic(
+    claudePath: string,
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    providerId: TeamProviderId | undefined = 'anthropic',
+    providerArgs: string[] = []
+  ): Promise<{ warning?: string }> {
+    return runProviderOneShotDiagnostic({
+      claudePath,
+      cwd,
+      env,
+      providerId,
+      providerArgs,
+      ports: this.getProviderDiagnosticsPorts(),
+    });
+  }
+
+  private async validateAgentTeamsMcpRuntime(
+    claudePath: string,
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    mcpConfigPath: string,
+    options: { isCancelled?: () => boolean } = {}
+  ): Promise<void> {
+    await validateAgentTeamsMcpRuntime({
+      claudePath,
+      cwd,
+      env,
+      mcpConfigPath,
+      options,
+      ports: this.getProviderDiagnosticsPorts(),
+    });
+  }
+
+  private async spawnProbe(
+    claudePath: string,
+    args: string[],
+    cwd: string,
+    env: NodeJS.ProcessEnv,
+    timeoutMs: number,
+    options?: SpawnProbeOptions
+  ): Promise<SpawnProbeResult> {
+    return spawnProbeDiagnostic({
+      claudePath,
+      args,
+      cwd,
+      env,
+      timeoutMs,
+      options,
+      ports: this.getProviderDiagnosticsBasePorts(),
     });
   }
 
@@ -23530,14 +23602,7 @@ export class TeamProvisioningService {
           this.getCachedOrProbeResult(targetCwd, providerId),
         buildProvisioningEnv: () => this.buildProvisioningEnv(),
         spawnProbe: (claudePath, args, targetCwd, env, timeoutMs) =>
-          spawnProbeDiagnostic({
-            claudePath,
-            args,
-            cwd: targetCwd,
-            env,
-            timeoutMs,
-            ports: this.getProviderDiagnosticsPorts(),
-          }),
+          this.spawnProbe(claudePath, args, targetCwd, env, timeoutMs),
       },
     });
     this.helpOutputCache = cache.output;
