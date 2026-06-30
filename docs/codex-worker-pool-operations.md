@@ -511,6 +511,50 @@ Recommended agent loop:
    subscription-runtime-codex-goal run-watch <runId> --provider claude --state-root <runtime-state-dir> --include-log-tail --include-changed-files --json
    ```
 
+   Lead-agent watch use-case:
+
+   ```bash
+   watch_json="$(
+     subscription-runtime-codex-goal run-watch "$run_id" \
+       --provider claude \
+       --state-root "$runtime_state_dir" \
+       --include-log-tail \
+       --include-changed-files \
+       --json
+   )"
+
+   decision="$(printf '%s' "$watch_json" | jq -r '.snapshots[0].readOnlyDecision.kind')"
+   ```
+
+   Interpret the read-only decision without taking action inside watch:
+
+   - `keep_watching`: worker is still running or still has fresh progress.
+     Continue polling. Do not start a second writer for the same workspace.
+   - `review_completed`: run is terminal and clean enough to review. Inspect
+     output, changed files and artifacts before merging or reporting success.
+   - `manual_review_required`: the run reached a terminal or ambiguous state
+     that needs human or registrar inspection. Read `manualReviewReasons`,
+     `result.reason`, `warnings` and log tail.
+   - `capacity_blocked`: account/session/capacity is unavailable. Do not
+     auto-retry in a tight loop. Relogin, provide a token, or wait for cooldown.
+   - `stale_needs_inspection`: heartbeat or log freshness is stale. Inspect
+     process/session state before deciding whether another control layer should
+     stop or recover it.
+   - `unsafe_state_mismatch`: observation sources disagree. Treat it as a
+     safety stop for automation and inspect the run directory manually.
+
+   Claude worker success-path smoke requires an explicit OAuth token. The
+   worker does not silently borrow the interactive Claude profile.
+
+   ```bash
+   export CLAUDE_CODE_OAUTH_TOKEN=...
+   CLAUDE_WORKER_SMOKE_MODE=single npm run smoke:worker-claude
+   ```
+
+   The single-worker smoke now verifies both the real Claude worker result and
+   the durable watch artifacts: `progress`, `result`, log tail and
+   `readOnlyDecision`.
+
    CLI fallback:
 
    ```bash

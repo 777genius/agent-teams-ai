@@ -22,12 +22,15 @@ if (!existsSync(join(rootDir, "dist/worker-claude/index.js"))) {
   fail("dist output is missing. Run npm run build before this smoke.");
 }
 
-const [{ FileBackendClaudeWorker }, { BoundedSubscriptionWorkerPool }, provider] =
-  await Promise.all([
-    import(pathToFileURL(join(rootDir, "dist/worker-claude/index.js")).href),
-    import(pathToFileURL(join(rootDir, "dist/worker-core/index.js")).href),
-    import(pathToFileURL(join(rootDir, "dist/provider-claude/index.js")).href),
-  ]);
+const [
+  { ClaudeRunObservationAdapter, FileBackendClaudeWorker },
+  { BoundedSubscriptionWorkerPool, RunObservationService },
+  provider,
+] = await Promise.all([
+  import(pathToFileURL(join(rootDir, "dist/worker-claude/index.js")).href),
+  import(pathToFileURL(join(rootDir, "dist/worker-core/index.js")).href),
+  import(pathToFileURL(join(rootDir, "dist/provider-claude/index.js")).href),
+]);
 
 const rootStateDir = await mkdtemp(
   join(tmpdir(), "subscription-runtime-claude-smoke-"),
@@ -39,7 +42,9 @@ try {
   const report = {};
   if (smokeMode === "all" || smokeMode === "single") {
     report.single = await runSingleWorkerSmoke({
+      ClaudeRunObservationAdapter,
       FileBackendClaudeWorker,
+      RunObservationService,
       provider,
       rootStateDir,
       claudePath,
@@ -109,15 +114,51 @@ async function runSingleWorkerSmoke(input) {
     await worker.start();
     await worker.seedClaudeOAuth({ oauthToken: input.token });
     const prewarm = await worker.prewarm();
+    const runId = "live-smoke-claude-worker-single";
     const result = await worker.run({
+      runId,
       prompt: "Return exactly OK and nothing else.",
       controls: { maxTurns: 1, permissionMode: "read-only" },
     });
+    const outputText = result.outputText.trim();
+    if (outputText !== "OK") {
+      fail(`Single Claude worker smoke expected OK, got ${outputText}`);
+    }
+    const watchSnapshot = await new input.RunObservationService(
+      new input.ClaudeRunObservationAdapter({
+        stateRootDir: join(input.rootStateDir, "single"),
+      }),
+    ).observeRun({
+      runId,
+      includeLogTail: true,
+    });
+    if (
+      watchSnapshot.status !== "completed" ||
+      watchSnapshot.result?.status !== "completed" ||
+      watchSnapshot.progress?.status !== "completed"
+    ) {
+      fail(
+        `Single Claude watch smoke expected completed artifacts, got ${JSON.stringify({
+          status: watchSnapshot.status,
+          result: watchSnapshot.result?.status,
+          progress: watchSnapshot.progress?.status,
+        })}`,
+      );
+    }
     return {
       ok: true,
       durationMs: Date.now() - startedAt,
       prewarm: { status: prewarm.status, mode: prewarm.details?.mode },
-      outputText: result.outputText.trim(),
+      outputText,
+      watch: {
+        status: watchSnapshot.status,
+        liveness: watchSnapshot.liveness,
+        decision: watchSnapshot.readOnlyDecision.kind,
+        result: watchSnapshot.result?.status,
+        progress: watchSnapshot.progress?.status,
+        logTailHasCompletion:
+          watchSnapshot.logs?.tail?.includes("run.completed") === true,
+      },
       warnings: result.warnings.map((warning) => warning.code),
       capacity: worker.capacity(),
     };
