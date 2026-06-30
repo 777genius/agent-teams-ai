@@ -72,6 +72,9 @@ export class FileBackendCodexSafeExecutor {
                     }),
                     ...(options.clock ? { clock: options.clock } : {}),
                 }),
+            ...(options.activeAttemptRegistry === undefined
+                ? {}
+                : { activeAttemptRegistry: options.activeAttemptRegistry }),
             ...(options.clock ? { clock: options.clock } : {}),
             ownerId: this.executorId,
         });

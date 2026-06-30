@@ -18,12 +18,14 @@ import {
 } from "@vioxen/subscription-runtime/worker-local";
 import {
   RunObservationService,
+  InterruptAndContinueWorkerUseCase,
   WorkerControlService,
   decideRunObservation,
   reconcileRunPreview,
   type RunObservationSnapshot,
   type RunReconcilePreviewDecision,
   type RunReconcilePreviewStatus,
+  type ActiveAttemptRegistry,
   type WorkerControlDecision,
   type WorkerControlActor,
   type WorkerControlCaller,
@@ -233,7 +235,13 @@ const lifecycleMarkerSpecs: readonly CodexGoalLifecycleMarkerSpec[] = [
   },
 ];
 
-export function createCodexGoalMcpServer(): McpServer {
+export type CodexGoalMcpServerOptions = {
+  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
+};
+
+export function createCodexGoalMcpServer(
+  options: CodexGoalMcpServerOptions = {},
+): McpServer {
   const server = new McpServer({
     name: "subscription-runtime-codex-goal",
     version: serverVersion,
@@ -640,6 +648,65 @@ export function createCodexGoalMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "codex_goal_send_guidance",
+    {
+      title: "Send Codex Goal Guidance",
+      description:
+        "Durably send guidance to a Codex goal. Requests interrupt-then-continue when the active attempt is locally controllable; otherwise it safely falls back to next safe continuation.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        message: z.string(),
+        callerKind: z.enum(["user", "operator", "orchestrator", "runtime", "agent"]).optional(),
+        callerActor: z.enum(["user", "operator", "orchestrator", "runtime", "agent"]).optional(),
+        callerId: z.string().optional(),
+        priority: z.enum(["low", "normal", "high"]).optional(),
+        idempotencyKey: z.string().optional(),
+        expiresAt: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () => {
+      const controlArgs = args as WorkerControlMcpArgs & {
+        readonly message?: string;
+      };
+      const loaded = await loadJobLaunch(controlArgs);
+      const control = codexGoalWorkerControlService(loaded.launch);
+      const useCase = new InterruptAndContinueWorkerUseCase({
+        control,
+        ...(options.activeAttemptRegistry === undefined
+          ? {}
+          : { activeAttemptRegistry: options.activeAttemptRegistry }),
+      });
+      const result = await useCase.execute({
+        target: codexGoalWorkerControlTarget(loaded),
+        message: requiredRawString(controlArgs.message, "message"),
+        ...workerControlCallerArgs(controlArgs),
+        ...(stringValue(controlArgs.priority)
+          ? { priority: stringValue(controlArgs.priority) as WorkerControlPriority }
+          : {}),
+        ...(stringValue(controlArgs.idempotencyKey)
+          ? { idempotencyKey: stringValue(controlArgs.idempotencyKey) as string }
+          : {}),
+        ...(stringValue(controlArgs.expiresAt)
+          ? { expiresAt: parseIsoDate(stringValue(controlArgs.expiresAt) as string, "expiresAt") }
+          : {}),
+      });
+      const decision = await control.getDecision({
+        target: codexGoalWorkerControlTarget(loaded),
+      });
+      return mcpJson({
+        ok: true,
+        registryRootDir: loaded.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        taskId: loaded.launch.config.taskId,
+        status: result.status,
+        signal: workerControlSignalJson(result.signal, false),
+        decision: workerControlDecisionJson(decision, false),
+        safeMessage: result.safeMessage,
+      });
+    }),
+  );
+
+  server.registerTool(
     "codex_goal_control_enqueue",
     {
       title: "Enqueue Codex Goal Control Signal",
@@ -661,6 +728,7 @@ export function createCodexGoalMcpServer(): McpServer {
           "record_only",
           "next_safe_point",
           "pause_then_continue",
+          "interrupt_then_continue",
           "idle_turn_if_supported",
           "live_if_supported",
         ]).optional(),

@@ -1,6 +1,6 @@
 import { type ClockPort, type ObservabilityPort, type ProviderTask, type ProviderTaskTelemetry, type RuntimeDeps } from "@vioxen/subscription-runtime/core";
 import { type ClaudeTaskExecutionEngine, type ClaudeRuntimeTaskExecutionEngineOptions } from "@vioxen/subscription-runtime/provider-claude";
-import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState, type WorkerControlContinuationSource, type WorkerControlTarget, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
+import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerRunOptions, type SubscriptionWorkerState, type WorkerControlContinuationSource, type WorkerControlTarget, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
 import { type ClaudeRateLimitTelemetrySource, type ClaudeRateLimitWindowName } from "./rate-limit-telemetry.js";
 import { type ClaudeLogicalThreadState, type ClaudeLogicalThreadStore, type ClaudeTranscriptBundleStore } from "./thread-handoff.js";
 export type ClaudeWorkerCapacityPolicy = {
@@ -112,10 +112,10 @@ export declare class FileBackendClaudeWorker implements CapacityAwareSubscriptio
         readonly metadata?: Readonly<Record<string, string>>;
     }): Promise<void>;
     prewarm(): Promise<SubscriptionWorkerPrewarmResult>;
-    run(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
-    run(job: FileBackendClaudeWorkerJob): Promise<FileBackendClaudeWorkerResult>;
+    run(job: FileBackendClaudeWorkerThreadJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerThreadResult>;
+    run(job: FileBackendClaudeWorkerJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerResult>;
     private runProviderTask;
-    runThreadJob(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
+    runThreadJob(job: FileBackendClaudeWorkerThreadJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendClaudeWorkerThreadResult>;
     private removeTranscriptBundle;
     capacity(): WorkerCapacitySnapshot;
     health(): Promise<SubscriptionWorkerHealth>;

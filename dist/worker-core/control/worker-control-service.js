@@ -4,6 +4,7 @@ const defaultCapabilities = {
     supportsRecordOnly: true,
     supportsNextSafePoint: true,
     supportsPauseThenContinue: false,
+    supportsInterruptThenContinue: false,
     supportsIdleTurnInput: false,
     supportsLiveInput: false,
     canDetectActiveTurn: false,
@@ -304,7 +305,7 @@ export class WorkerControlService {
             capabilities: defaultCapabilities,
             now: input.now,
         });
-        if (view.state === "accepted") {
+        if (isInProgressDeliveryState(view.state)) {
             throw new Error("worker_control_signal_delivery_in_progress");
         }
         if (view.state !== "pending" && view.state !== "expired") {
@@ -427,8 +428,10 @@ function signalView(input) {
     };
 }
 function blockedReasonForSignal(input) {
-    if (input.state !== "pending")
+    if (input.state !== "pending" &&
+        !isInterruptedSignalReadyForContinuation(input.signal, input.state)) {
         return "signal_not_pending";
+    }
     if (input.expired)
         return "signal_expired";
     if (input.signal.deliveryMode === "record_only")
@@ -441,6 +444,11 @@ function blockedReasonForSignal(input) {
         !input.capabilities.supportsPauseThenContinue) {
         return "pause_then_continue_not_supported";
     }
+    if (input.signal.deliveryMode === "interrupt_then_continue" &&
+        !input.capabilities.supportsInterruptThenContinue &&
+        !input.capabilities.supportsNextSafePoint) {
+        return "interrupt_then_continue_not_supported";
+    }
     if (input.signal.deliveryMode === "idle_turn_if_supported" &&
         !input.capabilities.supportsIdleTurnInput) {
         return "idle_turn_input_not_supported";
@@ -452,7 +460,18 @@ function blockedReasonForSignal(input) {
     return undefined;
 }
 function isContinuationDeliveryMode(mode) {
-    return mode === "next_safe_point" || mode === "pause_then_continue";
+    return (mode === "next_safe_point" ||
+        mode === "pause_then_continue" ||
+        mode === "interrupt_then_continue");
+}
+function isInterruptedSignalReadyForContinuation(signal, state) {
+    return (signal.deliveryMode === "interrupt_then_continue" &&
+        state === "interrupted");
+}
+function isInProgressDeliveryState(state) {
+    return (state === "accepted" ||
+        state === "interrupt_requested" ||
+        state === "interrupting");
 }
 function defaultDeliveryMode(intent) {
     if (intent === "operator_note")
@@ -549,6 +568,14 @@ function receiptStateRank(state) {
         case "accepted":
             return 5;
         case "failed":
+            return 4;
+        case "continued":
+            return 4;
+        case "interrupted":
+            return 4;
+        case "interrupting":
+            return 4;
+        case "interrupt_requested":
             return 4;
         case "rejected":
             return 3;

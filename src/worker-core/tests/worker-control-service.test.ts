@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  InMemoryActiveAttemptRegistry,
+  InterruptAndContinueWorkerUseCase,
   WorkerControlService,
   workerControlTargetMatches,
   type WorkerControlAuthorizationInput,
@@ -153,6 +155,7 @@ describe("WorkerControlService", () => {
       supportsRecordOnly: true,
       supportsNextSafePoint: true,
       supportsPauseThenContinue: true,
+      supportsInterruptThenContinue: false,
       supportsIdleTurnInput: false,
       supportsLiveInput: false,
       canDetectActiveTurn: true,
@@ -166,6 +169,122 @@ describe("WorkerControlService", () => {
 
     expect(supportedBatch.signalIds).toEqual([signal.signalId]);
     expect(supportedBatch.message).toContain("pause_then_continue");
+  });
+
+  it("delivers interrupt-then-continue guidance at the next safe point when no interrupt is available", async () => {
+    const store = new InMemoryWorkerControlInboxStore();
+    const service = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("interrupt-fallback"),
+    });
+    const target = { jobId: "job-interrupt-fallback" };
+    const signal = await service.enqueueSignal({
+      target,
+      intent: "guidance",
+      deliveryMode: "interrupt_then_continue",
+      body: "Urgent guidance for the next safe continuation.",
+    });
+
+    const decision = await service.getDecision({ target });
+    expect(decision.safeToContinue).toBe(true);
+    expect(decision.deliverableSignals[0]?.signal.signalId).toBe(signal.signalId);
+
+    const batch = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "attempt-interrupt-fallback",
+    });
+    expect(batch.signalIds).toEqual([signal.signalId]);
+    expect(batch.message).toContain("interrupt_then_continue");
+    expect(batch.message).toContain("Urgent guidance");
+  });
+
+  it("interrupts a registered active attempt through the use case", async () => {
+    const store = new InMemoryWorkerControlInboxStore();
+    const service = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("interrupt"),
+    });
+    const registry = new InMemoryActiveAttemptRegistry();
+    const target = {
+      jobId: "job-interrupt",
+      taskId: "task-interrupt",
+      workspaceId: "/tmp/interrupt-workspace",
+    };
+    const abortController = new AbortController();
+    const lease = registry.register({
+      taskId: "task-interrupt",
+      attemptNumber: 1,
+      provider: "codex",
+      workspacePath: "/tmp/interrupt-workspace",
+      target: {
+        ...target,
+        attemptId: "task-interrupt:attempt-1",
+      },
+      startedAt: new Date("2026-06-30T00:00:00.000Z"),
+      abortController,
+    });
+    const useCase = new InterruptAndContinueWorkerUseCase({
+      control: service,
+      activeAttemptRegistry: registry,
+    });
+
+    const result = await useCase.execute({
+      target,
+      message: "Stop the broad run and continue from current WIP.",
+      caller: { kind: "orchestrator", id: "lead-agent" },
+    });
+
+    expect(result.status).toBe("interrupted");
+    expect(abortController.signal.aborted).toBe(true);
+    expect(abortController.signal.reason).toMatchObject({
+      code: "runtime_controlled_interrupt",
+      signalId: result.signal.signalId,
+      requestedBy: "lead-agent",
+    });
+
+    lease.release();
+
+    const batch = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "task-interrupt:attempt-2",
+    });
+    expect(batch.signalIds).toEqual([result.signal.signalId]);
+    expect(batch.message).toContain("Stop the broad run");
+  });
+
+  it("keeps interrupted control signals deliverable for the safe continuation", async () => {
+    const store = new InMemoryWorkerControlInboxStore();
+    const service = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("interrupted"),
+    });
+    const target = { jobId: "job-interrupted" };
+    const signal = await service.enqueueSignal({
+      target,
+      intent: "guidance",
+      deliveryMode: "interrupt_then_continue",
+      body: "Continue after the controlled interrupt.",
+    });
+    await store.appendReceipt({
+      schemaVersion: 1,
+      receiptId: "receipt-interrupted",
+      signalId: signal.signalId,
+      target,
+      state: "interrupted",
+      createdAt: new Date("2026-06-30T00:00:00.000Z"),
+      metadata: {},
+    });
+
+    const decision = await service.getDecision({ target });
+    expect(decision.safeToContinue).toBe(true);
+    expect(decision.deliverableSignals[0]?.signal.signalId).toBe(signal.signalId);
+
+    const batch = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "attempt-after-interrupt",
+    });
+    expect(batch.signalIds).toEqual([signal.signalId]);
+    expect(batch.message).toContain("Continue after the controlled interrupt.");
   });
 
   it("expires stale signals and keeps superseded signals out of continuation", async () => {

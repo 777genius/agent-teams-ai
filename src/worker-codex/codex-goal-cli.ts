@@ -607,6 +607,30 @@ function parseMcpShortcut(
       io,
     });
   }
+  if (commandName === "send-guidance" || commandName === "guidance") {
+    return parseJobShortcut({
+      kind: "send-guidance",
+      tool: "codex_goal_send_guidance",
+      argv,
+      io,
+      extraArgs: (values) => ({
+        message: requiredFlagValue(values, "--message"),
+        ...callerArgs(values),
+        ...(values.values.get("--caller-id")
+          ? { callerId: values.values.get("--caller-id") }
+          : {}),
+        ...(values.values.get("--priority")
+          ? { priority: values.values.get("--priority") }
+          : {}),
+        ...(values.values.get("--idempotency-key")
+          ? { idempotencyKey: values.values.get("--idempotency-key") }
+          : {}),
+        ...(values.values.get("--expires-at")
+          ? { expiresAt: values.values.get("--expires-at") }
+          : {}),
+      }),
+    });
+  }
   if (commandName === "control-enqueue" || commandName === "inbox-enqueue") {
     return parseJobShortcut({
       kind: "control-enqueue",

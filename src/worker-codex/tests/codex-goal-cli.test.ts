@@ -377,6 +377,31 @@ describe("codex goal cli", () => {
       callerId: "lead-agent",
     });
 
+    const guidance = parseCodexGoalCliArgs([
+      "guidance",
+      "job-a",
+      "--message",
+      "Stop broad verification and inspect the targeted recall slice.",
+      "--idempotency-key",
+      "guidance-urgent-1",
+      "--caller-kind",
+      "agent",
+      "--caller-id",
+      "lead-agent",
+    ], fakeIo());
+    expect(guidance).toMatchObject({
+      kind: "mcp-tool",
+      name: "codex_goal_send_guidance",
+    });
+    if (guidance.kind !== "mcp-tool") return;
+    expect(JSON.parse(guidance.argsJson ?? "{}")).toEqual({
+      jobId: "job-a",
+      message: "Stop broad verification and inspect the targeted recall slice.",
+      idempotencyKey: "guidance-urgent-1",
+      callerKind: "agent",
+      callerId: "lead-agent",
+    });
+
     const controlList = parseCodexGoalCliArgs([
       "control-list",
       "job-a",

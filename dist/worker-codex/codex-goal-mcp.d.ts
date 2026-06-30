@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { type ActiveAttemptRegistry } from "@vioxen/subscription-runtime/worker-core";
 import { collectCodexGoalStatus, listCodexGoalAccountStatuses, type CodexGoalLaunchInput } from "./codex-goal-ops.js";
-export declare function createCodexGoalMcpServer(): McpServer;
+export type CodexGoalMcpServerOptions = {
+    readonly activeAttemptRegistry?: ActiveAttemptRegistry;
+};
+export declare function createCodexGoalMcpServer(options?: CodexGoalMcpServerOptions): McpServer;
 export declare function buildCodexGoalBrief(input: {
     readonly jobId: string;
     readonly launch: CodexGoalLaunchInput;

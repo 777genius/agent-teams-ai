@@ -35,9 +35,11 @@ import {
 import {
   SubscriptionWorkerError,
   WorkerControlService,
+  combineAbortSignals,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
+  type SubscriptionWorkerRunOptions,
   type SubscriptionWorkerState,
   type WorkerControlContinuationSource,
   type WorkerControlTarget,
@@ -436,23 +438,38 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     }
   }
 
-  run(job: FileBackendClaudeWorkerThreadJob): Promise<FileBackendClaudeWorkerThreadResult>;
-  run(job: FileBackendClaudeWorkerJob): Promise<FileBackendClaudeWorkerResult>;
+  run(
+    job: FileBackendClaudeWorkerThreadJob,
+    options?: SubscriptionWorkerRunOptions,
+  ): Promise<FileBackendClaudeWorkerThreadResult>;
+  run(
+    job: FileBackendClaudeWorkerJob,
+    options?: SubscriptionWorkerRunOptions,
+  ): Promise<FileBackendClaudeWorkerResult>;
   async run(
     job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendClaudeWorkerResult | FileBackendClaudeWorkerThreadResult> {
-    if (isThreadJob(job)) return this.runThreadJob(job);
-    return this.runProviderTask(job);
+    if (isThreadJob(job)) return this.runThreadJob(job, options);
+    return this.runProviderTask(job, {
+      ...(options.abortSignal === undefined
+        ? {}
+        : { abortSignal: options.abortSignal }),
+    });
   }
 
   private async runProviderTask(
     job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
-    input: { readonly workspaceId?: string } = {},
+    input: {
+      readonly workspaceId?: string;
+      readonly abortSignal?: AbortSignal;
+    } = {},
   ): Promise<FileBackendClaudeWorkerResult> {
     this.assertStarted();
     assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
     const runId = job.runId ?? `local-${randomUUID()}`;
-    const abortSignal = job.abortSignal ?? new AbortController().signal;
+    const abort = combineAbortSignals(job.abortSignal, input.abortSignal);
+    const abortSignal = abort.signal;
     const workspaceId = input.workspaceId ?? this.stableWorkspacePath ?? undefined;
     const controlBatch = this.controlInbox
       ? await this.controlInbox.consumeForContinuation({
@@ -588,12 +605,14 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       }
       throw error;
     } finally {
+      abort.dispose();
       heartbeat.stop();
     }
   }
 
   async runThreadJob(
     job: FileBackendClaudeWorkerThreadJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendClaudeWorkerThreadResult> {
     this.assertStarted();
     const workspacePath = this.threadWorkspacePath(job.threadId);
@@ -630,7 +649,12 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
                       current.latestSessionId,
                   }),
             },
-          }, { workspaceId: workspacePath });
+          }, {
+            workspaceId: workspacePath,
+            ...(options.abortSignal === undefined
+              ? {}
+              : { abortSignal: options.abortSignal }),
+          });
           const latestSessionId = result.telemetry?.providerSessionId;
           if (!latestSessionId) {
             throw new SubscriptionWorkerError(

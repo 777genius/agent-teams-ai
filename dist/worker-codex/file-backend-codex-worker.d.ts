@@ -1,6 +1,6 @@
 import { type ClockPort, type ObservabilityPort, type ProviderTask, type RuntimeDeps } from "@vioxen/subscription-runtime/core";
 import { type CodexExecutionProfile, type CodexAppServerProcessFactory, type CodexReasoningEffort, type CodexServiceTier } from "@vioxen/subscription-runtime/provider-codex";
-import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerState, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
+import { type CapacityAwareSubscriptionWorker, type SubscriptionWorkerHealth, type SubscriptionWorkerPrewarmResult, type SubscriptionWorkerRunOptions, type SubscriptionWorkerState, type WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
 export type FileBackendCodexWorkerOptions = {
     readonly workerId?: string;
     readonly providerInstanceId: string;
@@ -88,7 +88,7 @@ export declare class FileBackendCodexWorker implements CapacityAwareSubscription
     seedCodexAuthJsonFile(authJsonPath: string): Promise<void>;
     seedCodexAuthJson(authJson: string): Promise<void>;
     prewarm(): Promise<SubscriptionWorkerPrewarmResult>;
-    run(job: FileBackendCodexWorkerJob): Promise<FileBackendCodexWorkerResult>;
+    run(job: FileBackendCodexWorkerJob, options?: SubscriptionWorkerRunOptions): Promise<FileBackendCodexWorkerResult>;
     health(): Promise<SubscriptionWorkerHealth>;
     dispose(): Promise<void>;
     capacity(): WorkerCapacitySnapshot;

@@ -158,6 +158,10 @@ active provider turn.
 Safe default:
 
 ```sh
+subscription-runtime-codex-goal guidance my-job \
+  --message "Stop broad verification and continue from current WIP with targeted tests first." \
+  --idempotency-key my-job-guidance-urgent-001
+
 subscription-runtime-codex-goal control-enqueue my-job \
   --body "Continue from current WIP. Prefer targeted tests before full benchmark." \
   --idempotency-key my-job-guidance-001
@@ -171,6 +175,19 @@ The default delivery mode is `next_safe_point`. The next safe continuation will
 include pending guidance in the continuation packet and mark the signal
 `delivered`. `record_only` signals are kept for audit and are not injected into
 worker prompts.
+
+`guidance` is the first-class urgent steering shortcut. It calls the MCP tool
+`codex_goal_send_guidance` and requests `interrupt_then_continue`. If the MCP
+process owns the active attempt registry, the current attempt is interrupted
+with the runtime-owned reason `runtime_interrupted` and the same task resumes
+through a continuation packet. If the MCP process cannot prove that the active
+attempt is locally controllable, it fails closed: the signal remains durable and
+is delivered at the next safe continuation point.
+
+Embedding the MCP server in the same process as an orchestrated worker can pass
+an `activeAttemptRegistry` to `createCodexGoalMcpServer(...)`. Plain stdio MCP
+usually runs out-of-process, so it should be expected to use the durable
+next-safe-point fallback unless the host explicitly wires that registry.
 
 For safety, enqueue responses and normal list responses do not echo signal
 bodies. Use `control-list --include-bodies` only when the operator explicitly
@@ -192,6 +209,7 @@ active turn.
 
 Native MCP equivalents:
 
+- `codex_goal_send_guidance`
 - `codex_goal_control_enqueue`
 - `codex_goal_control_list`
 - `codex_goal_control_decision`
@@ -1018,6 +1036,7 @@ Use this table before restarting a worker:
 | `auth_invalid` or revoked refresh token | Slot credentials are broken | Remove from active pool, relogin later |
 | `reconnect_required` once | Session or app-server needs repair | Try one same-account repair |
 | repeated `reconnect_required` | Slot session is unhealthy | Cooldown slot, switch to next ready slot |
+| `runtime_interrupted` | Runtime intentionally stopped an active attempt for safe guidance | Continue through the generated packet, preserving WIP |
 | `provider_output_invalid` | Runtime got unusable provider output | Do not switch accounts automatically, inspect |
 | test or benchmark failure | Code behavior failed | Do not switch accounts automatically, inspect |
 | dirty worktree and unknown failure | Mid-task state may be partial | Stop and inspect before retry |

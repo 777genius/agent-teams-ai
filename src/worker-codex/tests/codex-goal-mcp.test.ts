@@ -11,7 +11,10 @@ import {
   LocalFileWorkerAccountCapacityStore,
   LocalFileWorkerControlInboxStore,
 } from "@vioxen/subscription-runtime/store-local-file";
-import type { WorkerControlDeliveryReceipt } from "@vioxen/subscription-runtime/worker-core";
+import {
+  InMemoryActiveAttemptRegistry,
+  type WorkerControlDeliveryReceipt,
+} from "@vioxen/subscription-runtime/worker-core";
 import {
   buildCodexGoalBrief,
   createCodexGoalMcpServer,
@@ -541,6 +544,176 @@ describe("codex goal MCP server", () => {
             repairedSignalIds: [signalId],
           },
         });
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("exposes first-class guidance send with safe next-point fallback", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-guidance-mcp-"));
+    const registryRootDir = join(root, "registry");
+    const jobRootDir = join(root, "job");
+    const stateRootDir = join(root, "state");
+    const authRootDir = join(root, "auth");
+    const workspacePath = join(root, "workspace");
+    const promptPath = join(jobRootDir, "prompt.md");
+
+    try {
+      await mkdir(jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+      await writeFakeAuth(authRootDir, "account-a", {
+        lastRefresh: "2026-06-03T00:00:00.000Z",
+      });
+
+      const server = createCodexGoalMcpServer();
+      const client = new Client({ name: "subscription-runtime-test", version: "0.0.0" });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      try {
+        await callToolJson(client, "codex_goal_create_job", {
+          registryRootDir,
+          jobId: "job-guidance",
+          jobRootDir,
+          authRootDir,
+          stateRootDir,
+          workspacePath,
+          promptPath,
+          taskId: "sandbox-guidance-task",
+          accounts: ["account-a"],
+          logPath: join(jobRootDir, "sandbox-guidance-task.log"),
+        });
+
+        const sent = await callToolJson(client, "codex_goal_send_guidance", {
+          registryRootDir,
+          jobId: "job-guidance",
+          message: "Stop broad verification and inspect the targeted recall slice.",
+          callerKind: "agent",
+          callerId: "lead-agent",
+          idempotencyKey: "guidance-urgent-001",
+        });
+
+        expect(sent).toMatchObject({
+          ok: true,
+          jobId: "job-guidance",
+          taskId: "sandbox-guidance-task",
+          status: "accepted_as_next_safe_point",
+          signal: {
+            idempotencyKey: "guidance-urgent-001",
+            intent: "guidance",
+            deliveryMode: "interrupt_then_continue",
+            createdBy: "agent",
+          },
+          decision: {
+            safeToContinue: true,
+            pendingCount: 1,
+            deliverableCount: 1,
+          },
+        });
+        expect(JSON.stringify(sent).includes("targeted recall slice")).toBe(false);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("interrupts a locally registered active attempt through first-class guidance", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-guidance-active-mcp-"));
+    const registryRootDir = join(root, "registry");
+    const jobRootDir = join(root, "job");
+    const stateRootDir = join(root, "state");
+    const authRootDir = join(root, "auth");
+    const workspacePath = join(root, "workspace");
+    const promptPath = join(jobRootDir, "prompt.md");
+    const taskId = "sandbox-guidance-active-task";
+    const activeAttemptRegistry = new InMemoryActiveAttemptRegistry();
+    const abortController = new AbortController();
+
+    try {
+      await mkdir(jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+      await writeFakeAuth(authRootDir, "account-a", {
+        lastRefresh: "2026-06-03T00:00:00.000Z",
+      });
+
+      const server = createCodexGoalMcpServer({ activeAttemptRegistry });
+      const client = new Client({ name: "subscription-runtime-test", version: "0.0.0" });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      try {
+        await callToolJson(client, "codex_goal_create_job", {
+          registryRootDir,
+          jobId: "job-guidance-active",
+          jobRootDir,
+          authRootDir,
+          stateRootDir,
+          workspacePath,
+          promptPath,
+          taskId,
+          accounts: ["account-a"],
+          logPath: join(jobRootDir, `${taskId}.log`),
+        });
+        const lease = activeAttemptRegistry.register({
+          taskId,
+          attemptNumber: 1,
+          provider: "codex",
+          workspacePath,
+          target: {
+            jobId: "job-guidance-active",
+            taskId,
+            workspaceId: workspacePath,
+            attemptId: `${taskId}:attempt-1`,
+          },
+          startedAt: new Date("2026-06-30T00:00:00.000Z"),
+          abortController,
+        });
+
+        const sent = await callToolJson(client, "codex_goal_send_guidance", {
+          registryRootDir,
+          jobId: "job-guidance-active",
+          message: "Stop broad verification and inspect the targeted recall slice.",
+          callerKind: "agent",
+          callerId: "lead-agent",
+          idempotencyKey: "guidance-active-001",
+        });
+
+        expect(sent).toMatchObject({
+          ok: true,
+          jobId: "job-guidance-active",
+          taskId,
+          status: "interrupted",
+          signal: {
+            idempotencyKey: "guidance-active-001",
+            deliveryMode: "interrupt_then_continue",
+          },
+        });
+        const signal = sent.signal as { readonly signalId: string };
+        expect(abortController.signal.aborted).toBe(true);
+        expect(abortController.signal.reason).toMatchObject({
+          code: "runtime_controlled_interrupt",
+          signalId: signal.signalId,
+          requestedBy: "lead-agent",
+        });
+        expect(JSON.stringify(sent).includes("targeted recall slice")).toBe(false);
+        lease.release();
       } finally {
         await client.close();
         await server.close();

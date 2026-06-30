@@ -11,6 +11,7 @@ import {
 } from "@vioxen/subscription-runtime/store-local-file";
 import {
   accountCapacityAwareWorkerFactory,
+  type ActiveAttemptRegistry,
   BoundedSubscriptionWorkerPool,
   LocalFileAttemptJournal,
   LocalFileWorkspaceLockStore,
@@ -57,6 +58,7 @@ export type FileBackendCodexSafeExecutorOptions = {
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly accountCapacityStore?: WorkerAccountCapacityStore;
   readonly controlInbox?: WorkerControlContinuationSource;
+  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly lockStore?: WorkspaceLockStore;
   readonly journal?: AttemptJournal;
   readonly safeExecutionPolicy?: SafeExecutionPolicy;
@@ -170,6 +172,9 @@ export class FileBackendCodexSafeExecutor {
           }),
           ...(options.clock ? { clock: options.clock } : {}),
         }),
+      ...(options.activeAttemptRegistry === undefined
+        ? {}
+        : { activeAttemptRegistry: options.activeAttemptRegistry }),
       ...(options.clock ? { clock: options.clock } : {}),
       ownerId: this.executorId,
     });

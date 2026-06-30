@@ -1,5 +1,5 @@
 export type WorkerControlIntent = "guidance" | "pause_requested" | "stop_requested" | "cancel_requested" | "resume_requested" | "repair_requested" | "policy_update" | "operator_note";
-export type WorkerControlDeliveryMode = "record_only" | "next_safe_point" | "pause_then_continue" | "idle_turn_if_supported" | "live_if_supported";
+export type WorkerControlDeliveryMode = "record_only" | "next_safe_point" | "pause_then_continue" | "interrupt_then_continue" | "idle_turn_if_supported" | "live_if_supported";
 export type WorkerControlActor = "user" | "operator" | "orchestrator" | "runtime" | "agent";
 export type WorkerControlCaller = {
     readonly kind: WorkerControlActor;
@@ -30,6 +30,38 @@ export type WorkerControlTarget = {
     readonly providerSessionId?: string;
     readonly workspaceId?: string;
 };
+export type RuntimeInterruptReason = {
+    readonly code: "runtime_controlled_interrupt";
+    readonly safeMessage: string;
+    readonly signalId?: string;
+    readonly requestedBy?: string;
+};
+export type ActiveAttemptRecord = {
+    readonly taskId: string;
+    readonly attemptNumber: number;
+    readonly provider: string;
+    readonly workspacePath: string;
+    readonly target: WorkerControlTarget;
+    readonly startedAt: Date;
+};
+export type ActiveAttemptInterruptResult = {
+    readonly status: "interrupted";
+    readonly attempt: ActiveAttemptRecord;
+} | {
+    readonly status: "not_found";
+    readonly safeMessage: string;
+};
+export interface ActiveAttemptLease {
+    readonly attempt: ActiveAttemptRecord;
+    release(): void;
+}
+export interface ActiveAttemptRegistry {
+    register(input: ActiveAttemptRecord & {
+        readonly abortController: AbortController;
+    }): ActiveAttemptLease;
+    get(target: WorkerControlTarget): ActiveAttemptRecord | null;
+    interrupt(target: WorkerControlTarget, reason: RuntimeInterruptReason): Promise<ActiveAttemptInterruptResult> | ActiveAttemptInterruptResult;
+}
 export type WorkerControlSignal = {
     readonly schemaVersion: 1;
     readonly signalId: string;
@@ -45,7 +77,7 @@ export type WorkerControlSignal = {
     readonly supersedesSignalIds: readonly string[];
     readonly metadata: Readonly<Record<string, string>>;
 };
-export type WorkerControlDeliveryState = "pending" | "accepted" | "delivered" | "acknowledged" | "superseded" | "expired" | "rejected" | "failed";
+export type WorkerControlDeliveryState = "pending" | "accepted" | "interrupt_requested" | "interrupting" | "interrupted" | "delivered" | "continued" | "acknowledged" | "superseded" | "expired" | "rejected" | "failed";
 export type WorkerControlFailure = {
     readonly code: string;
     readonly message: string;
@@ -76,6 +108,7 @@ export type WorkerControlCapability = {
     readonly supportsRecordOnly: true;
     readonly supportsNextSafePoint: boolean;
     readonly supportsPauseThenContinue: boolean;
+    readonly supportsInterruptThenContinue: boolean;
     readonly supportsIdleTurnInput: boolean;
     readonly supportsLiveInput: boolean;
     readonly canDetectActiveTurn: boolean;

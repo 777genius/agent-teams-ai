@@ -1,4 +1,4 @@
-import type { WorkerControlContinuationBatch, WorkerControlContinuationSource, WorkerControlTarget } from "./control/index.js";
+import type { ActiveAttemptRegistry, WorkerControlContinuationBatch, WorkerControlContinuationSource, WorkerControlTarget } from "./control/index.js";
 import type { WorkerPoolRunOptions } from "./types.js";
 export type TaskRunId = string;
 export type WorkspaceRunId = string;
@@ -20,7 +20,7 @@ export type SafeExecutionPolicy = {
     readonly maxAttempts?: number;
     readonly continuationMode?: ContinuationMode;
 };
-export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "task_timeout" | "provider_output_invalid" | "user_abort" | "unknown_error";
+export type AttemptFailureReason = "quota_limited" | "capacity_unavailable" | "account_unavailable" | "reconnect_required" | "permission_required" | "task_timeout" | "provider_output_invalid" | "runtime_interrupted" | "user_abort" | "unknown_error";
 export type AttemptStatus = "running" | "completed" | "blocked" | "failed";
 export type SafeExecutionTaskStatus = "running" | "completed" | "partial" | "failed" | "aborted";
 export type WorkspaceSnapshotMode = "git" | "filesystem" | "unavailable";
@@ -225,6 +225,7 @@ export type SafeExecutionRunnerOptions = {
     readonly snapshotter?: WorkspaceSnapshotter;
     readonly continuationPacketBuilder?: ContinuationPacketBuilder;
     readonly controlInbox?: WorkerControlContinuationSource;
+    readonly activeAttemptRegistry?: ActiveAttemptRegistry;
     readonly ownerId?: string;
     readonly ownerPid?: number;
     readonly clock?: {
