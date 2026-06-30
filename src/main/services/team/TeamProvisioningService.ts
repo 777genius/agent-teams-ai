@@ -90,7 +90,6 @@ import {
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   isTeamInternalControlMessageText,
@@ -477,6 +476,19 @@ import {
   normalizeMemberDiagnosticText,
 } from './provisioning/TeamProvisioningPromptBuilders';
 import {
+  appendPreflightDebugLog,
+  buildAgentTeamsMcpValidationError as buildAgentTeamsMcpValidationErrorMessage,
+  createProbeCacheKey,
+  getCliHelpOutputForProvisioning,
+  probeProviderRuntimeControlPlane as probeProviderRuntimeControlPlaneHelper,
+  PROVIDER_MODEL_LIST_TIMEOUT_MS,
+  PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
+  truncatePreflightDebugText,
+  validatePrepareCwd,
+  verifySelectedProviderModelsForProvisioning,
+  warmupProviderPreflight,
+} from './provisioning/TeamProvisioningProviderPreflight';
+import {
   buildRuntimeLaunchWarning,
   getAnthropicFastModeDefault,
   getConfiguredRuntimeBackend,
@@ -486,7 +498,6 @@ import {
 } from './provisioning/TeamProvisioningRuntimeDiagnostics';
 import {
   addModelCatalogLaunchModels,
-  type AuthStatusCommandResponse,
   buildAnthropicSettingsObject,
   buildProviderFastModeArgs,
   buildRuntimeSettingsTempDirectory,
@@ -502,11 +513,9 @@ import {
   isProbeTimeoutMessage,
   logsSuggestShutdownOrCleanup,
   normalizeProviderModelListModels,
-  normalizeProviderSelectedModelChecks,
   normalizeProvisioningModelCheckRequests,
   normalizeTeamRuntimeNodeEnv,
   type ProviderModelListCommandResponse,
-  type ProviderSelectedModelCheck,
   resolveAnthropicSelectionFromFacts,
   resolveCodexSelectionFromFacts,
   resolveRequestedLaunchModel,
@@ -720,7 +729,6 @@ import type {
   AgentActionMode,
   CliProviderModelCatalog,
   CliProviderRuntimeCapabilities,
-  CliProviderStatus,
   CrossTeamSendResult,
   EffortLevel,
   InboxMessage,
@@ -777,30 +785,6 @@ import type {
 export { shouldAcceptDeterministicBootstrapEvent };
 
 const logger = createLogger('Service:TeamProvisioning');
-const PREFLIGHT_DEBUG_LOG_PATH = path.join(os.tmpdir(), 'claude-team-preflight-debug.log');
-
-function appendPreflightDebugLog(event: string, data: Record<string, unknown>): void {
-  try {
-    fs.appendFileSync(
-      PREFLIGHT_DEBUG_LOG_PATH,
-      `${JSON.stringify({
-        at: new Date().toISOString(),
-        event,
-        ...data,
-      })}\n`,
-      'utf8'
-    );
-  } catch {
-    // Best-effort debug logging only.
-  }
-}
-
-function truncatePreflightDebugText(value: string, maxLength = 1200): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength)}...`;
-}
 const {
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
@@ -810,8 +794,6 @@ const {
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const VERIFY_TIMEOUT_MS = 15_000;
 const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
-const PROVIDER_MODEL_LIST_TIMEOUT_MS = 30_000;
-const PROVIDER_RUNTIME_STATUS_TIMEOUT_MS = 20_000;
 
 function asRuntimeRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -2018,10 +2000,6 @@ type AuthWarningSource = 'probe' | 'stdout' | 'stderr' | 'assistant' | 'pre-comp
 const cachedProbeResults = new Map<string, CachedProbeResult>();
 const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
 
-function createProbeCacheKey(cwd: string, providerId: TeamProviderId | undefined): string {
-  return `${path.resolve(cwd)}::${getClaudeBasePath()}::${resolveTeamProviderId(providerId)}`;
-}
-
 function isTransientProbeWarning(warning: string): boolean {
   const lower = warning.toLowerCase();
   return (
@@ -2354,7 +2332,6 @@ export class TeamProvisioningService {
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   private helpOutputCache: string | null = null;
   private helpOutputCacheTime = 0;
-  private static readonly HELP_CACHE_TTL_MS = 5 * 60 * 1000;
   private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
   private inFlightResponses = new Set<string>();
@@ -10322,15 +10299,16 @@ export class TeamProvisioningService {
   }
 
   async warmup(): Promise<void> {
-    try {
-      const cwd = process.cwd();
-      if (this.getFreshCachedProbeResult(cwd, 'anthropic')) return;
-      const result = await this.getCachedOrProbeResult(cwd, 'anthropic');
-      if (!result) return;
-      logger.info('CLI warmup completed');
-    } catch (error) {
-      logger.warn(`CLI warmup failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    await warmupProviderPreflight({
+      ports: {
+        getFreshCachedProbeResult: (cwd, providerId) =>
+          this.getFreshCachedProbeResult(cwd, providerId),
+        getCachedOrProbeResult: (cwd, providerId) =>
+          this.getCachedOrProbeResult(cwd, providerId),
+        info: (message) => logger.info(message),
+        warn: (message) => logger.warn(message),
+      },
+    });
   }
 
   async prepareForProvisioning(
@@ -10727,98 +10705,6 @@ export class TeamProvisioningService {
     };
   }
 
-  private resolveProviderCompatibilityModel(params: {
-    providerId: TeamProviderId;
-    requestedModelId: string;
-    runtimeFacts: RuntimeProviderLaunchFacts;
-    limitContext: boolean;
-  }):
-    | { kind: 'available'; resolvedModelId: string | null }
-    | { kind: 'compatible'; reason: string }
-    | { kind: 'unavailable'; reason: string } {
-    const trimmedModelId = params.requestedModelId.trim();
-    if (!trimmedModelId) {
-      return {
-        kind: 'unavailable',
-        reason: 'Selected model id is empty.',
-      };
-    }
-
-    if (isDefaultProviderModelSelection(trimmedModelId)) {
-      return {
-        kind: 'available',
-        resolvedModelId: params.runtimeFacts.defaultModel,
-      };
-    }
-
-    const availableModels = params.runtimeFacts.modelIds;
-    let resolvedModelId: string | null = availableModels.has(trimmedModelId)
-      ? trimmedModelId
-      : null;
-
-    if (!resolvedModelId && params.providerId === 'anthropic') {
-      resolvedModelId =
-        resolveAnthropicLaunchModel({
-          selectedModel: trimmedModelId,
-          limitContext: params.limitContext,
-          availableLaunchModels: availableModels,
-          defaultLaunchModel: params.runtimeFacts.defaultModel,
-        }) ?? null;
-    }
-
-    if (!resolvedModelId && !trimmedModelId.includes('/')) {
-      const scopedMatches = Array.from(availableModels).filter(
-        (candidate) => candidate.split('/').at(-1) === trimmedModelId
-      );
-      if (scopedMatches.length === 1) {
-        resolvedModelId = scopedMatches[0];
-      } else if (scopedMatches.length > 1) {
-        return {
-          kind: 'unavailable',
-          reason:
-            `Selected model ${trimmedModelId} matched multiple live provider models: ` +
-            scopedMatches.join(', '),
-        };
-      }
-    }
-
-    if (resolvedModelId && (availableModels.size === 0 || availableModels.has(resolvedModelId))) {
-      return {
-        kind: 'available',
-        resolvedModelId,
-      };
-    }
-
-    const dynamicCatalog = params.runtimeFacts.runtimeCapabilities?.modelCatalog?.dynamic === true;
-    const hasAuthoritativeCatalog =
-      params.providerId === 'codex'
-        ? hasAuthoritativeCodexLaunchCatalog(params.runtimeFacts)
-        : availableModels.size > 0 ||
-          params.runtimeFacts.modelCatalog != null ||
-          params.runtimeFacts.runtimeCapabilities?.modelCatalog?.dynamic === false;
-
-    if (params.providerId === 'codex' && (dynamicCatalog || !hasAuthoritativeCatalog)) {
-      return {
-        kind: 'available',
-        resolvedModelId: trimmedModelId,
-      };
-    }
-
-    if (dynamicCatalog || !hasAuthoritativeCatalog) {
-      return {
-        kind: 'compatible',
-        reason: dynamicCatalog
-          ? 'Runtime catalog allows dynamic model launch.'
-          : 'Runtime model catalog was unavailable.',
-      };
-    }
-
-    return {
-      kind: 'unavailable',
-      reason: `Selected model ${trimmedModelId} was not found in the live provider catalog.`,
-    };
-  }
-
   private async verifySelectedProviderModels({
     claudePath,
     cwd,
@@ -10831,7 +10717,7 @@ export class TeamProvisioningService {
     cwd: string;
     providerId: TeamProviderId;
     modelIds: string[];
-    modelChecks?: ProviderSelectedModelCheck[];
+    modelChecks?: { modelId: string; effort?: EffortLevel }[];
     limitContext: boolean;
   }): Promise<{
     details: string[];
@@ -10839,151 +10725,21 @@ export class TeamProvisioningService {
     blockingMessages: string[];
     issues?: TeamProvisioningPrepareIssue[];
   }> {
-    const details: string[] = [];
-    const warnings: string[] = [];
-    const blockingMessages: string[] = [];
-    const issues: TeamProvisioningPrepareIssue[] = [];
-    const startedAt = Date.now();
-    const selectedModelChecks = normalizeProviderSelectedModelChecks(modelIds, modelChecks);
-
-    if (selectedModelChecks.length === 0) {
-      return { details, warnings, blockingMessages };
-    }
-
-    const { env, providerArgs = [] } = await this.buildProvisioningEnv(providerId);
-    const runtimeFacts = await this.readRuntimeProviderLaunchFacts({
+    return verifySelectedProviderModelsForProvisioning({
       claudePath,
       cwd,
       providerId,
-      env,
-      providerArgs,
+      modelIds,
+      modelChecks,
       limitContext,
+      ports: {
+        buildProvisioningEnv: (providerIdForEnv) =>
+          this.buildProvisioningEnv(providerIdForEnv),
+        readRuntimeProviderLaunchFacts: (params) =>
+          this.readRuntimeProviderLaunchFacts(params),
+        appendPreflightDebugLog,
+      },
     });
-
-    const recordOutcome = (
-      requestedModelId: string,
-      outcome:
-        | { kind: 'available'; resolvedModelId: string | null }
-        | { kind: 'compatible'; reason: string }
-        | { kind: 'unavailable'; reason: string }
-    ): void => {
-      if (outcome.kind === 'available') {
-        details.push(`Selected model ${requestedModelId} is available for launch.`);
-        return;
-      }
-      if (outcome.kind === 'compatible') {
-        details.push(
-          `Selected model ${requestedModelId} is compatible. Deep verification pending.`
-        );
-        return;
-      }
-      blockingMessages.push(`Selected model ${requestedModelId} is unavailable. ${outcome.reason}`);
-      issues.push({
-        providerId,
-        modelId: requestedModelId,
-        scope: 'model',
-        severity: 'blocking',
-        code: 'model_unavailable',
-        message: outcome.reason,
-      });
-    };
-
-    const recordAnthropicEffortOutcome = (
-      requestedModelId: string,
-      effort: EffortLevel
-    ): boolean => {
-      const selection = resolveAnthropicSelectionFromFacts({
-        selectedModel: requestedModelId,
-        limitContext,
-        facts: runtimeFacts,
-      });
-      const modelLabel = selection.displayName ?? selection.resolvedLaunchModel ?? requestedModelId;
-      const effortSupport = resolveAnthropicEffortSupport({
-        selection,
-        effort,
-        runtimeCapabilities: runtimeFacts.runtimeCapabilities,
-      });
-      if (effortSupport.kind === 'supported') {
-        return true;
-      }
-
-      const reason = formatAnthropicEffortSupportFailure({
-        effort,
-        modelLabel,
-        kind: effortSupport.kind,
-        supportedEfforts:
-          effortSupport.kind === 'unverified-catalog-missing'
-            ? undefined
-            : effortSupport.supportedEfforts,
-      });
-      blockingMessages.push(`Selected model ${requestedModelId} is unavailable. ${reason}`);
-      issues.push({
-        providerId,
-        modelId: requestedModelId,
-        scope: 'model',
-        severity: 'blocking',
-        code:
-          effortSupport.kind === 'unverified-catalog-missing'
-            ? 'effort_unverified'
-            : 'effort_unsupported',
-        message: reason,
-      });
-      return false;
-    };
-
-    appendPreflightDebugLog('provider_model_catalog_check_start', {
-      providerId,
-      cwd,
-      modelIds: selectedModelChecks.map((check) => check.modelId),
-    });
-
-    const checksByModelId = new Map<string, ProviderSelectedModelCheck[]>();
-    for (const check of selectedModelChecks) {
-      const label = check.modelId.trim();
-      if (!label) {
-        continue;
-      }
-      checksByModelId.set(label, [...(checksByModelId.get(label) ?? []), check]);
-    }
-
-    for (const [label, checks] of checksByModelId.entries()) {
-      const outcome = this.resolveProviderCompatibilityModel({
-        providerId,
-        requestedModelId: label,
-        runtimeFacts,
-        limitContext,
-      });
-      let effortSupported = true;
-      if (outcome.kind !== 'unavailable' && providerId === 'anthropic') {
-        for (const check of checks) {
-          if (check.effort && !recordAnthropicEffortOutcome(label, check.effort)) {
-            effortSupported = false;
-          }
-        }
-      }
-      if (!effortSupported) {
-        continue;
-      }
-      recordOutcome(label, outcome);
-    }
-
-    appendPreflightDebugLog('provider_model_catalog_check_complete', {
-      providerId,
-      cwd,
-      modelIds: selectedModelChecks.map((check) => check.modelId),
-      durationMs: Date.now() - startedAt,
-      modelCount: runtimeFacts.modelIds.size,
-      details,
-      warnings,
-      blockingMessages,
-    });
-
-    return {
-      details,
-      warnings,
-      blockingMessages,
-      ...(issues.length > 0 ? { issues } : {}),
-    };
   }
 
   private async resolveProviderDefaultModel(
@@ -11410,23 +11166,7 @@ export class TeamProvisioningService {
   }
 
   private async validatePrepareCwd(cwd: string): Promise<void> {
-    if (!path.isAbsolute(cwd)) {
-      throw new Error('cwd must be an absolute path');
-    }
-
-    try {
-      const stat = await fs.promises.stat(cwd);
-      if (!stat.isDirectory()) {
-        throw new Error('cwd must be a directory');
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        // Allow the runtime probe to degrade a missing cwd into a warning.
-        // This keeps prepareForProvisioning side-effect free for future/missing paths.
-        return;
-      }
-      throw error;
-    }
+    await validatePrepareCwd(cwd);
   }
 
   private async getCachedOrProbeResult(
@@ -25537,64 +25277,6 @@ export class TeamProvisioningService {
     return {};
   }
 
-  private buildRuntimeProviderReadinessWarning(
-    providerId: TeamProviderId,
-    providerStatus: Partial<CliProviderStatus> | null | undefined
-  ): string | null {
-    const providerLabel = getTeamProviderLabel(providerId);
-    const detail = [providerStatus?.statusMessage?.trim(), providerStatus?.detailMessage?.trim()]
-      .filter((entry): entry is string => Boolean(entry))
-      .join(' ');
-
-    if (!providerStatus) {
-      return `${providerLabel} provider is not configured for runtime use. Runtime status did not include this provider.`;
-    }
-    if (providerStatus.supported === false) {
-      return `${providerLabel} provider is not configured for runtime use.${
-        detail ? ` ${detail}` : ''
-      }`;
-    }
-    if (providerStatus.authenticated === false) {
-      return `${providerLabel} provider is not authenticated.${detail ? ` ${detail}` : ''}`;
-    }
-    if (providerStatus.capabilities?.teamLaunch === false) {
-      return `${providerLabel} provider is not configured for runtime use. Team launch is unavailable.${
-        detail ? ` ${detail}` : ''
-      }`;
-    }
-
-    return null;
-  }
-
-  private extractAuthStatusReadiness(
-    providerId: TeamProviderId,
-    parsed: AuthStatusCommandResponse
-  ): {
-    authenticated: boolean | null;
-    providerStatus: Partial<CliProviderStatus> | null;
-  } {
-    const providerStatus =
-      parsed.providers?.[providerId] ??
-      (parsed.provider === providerId || !parsed.provider ? parsed.status : null) ??
-      null;
-    if (typeof providerStatus?.authenticated === 'boolean') {
-      return {
-        authenticated: providerStatus.authenticated,
-        providerStatus,
-      };
-    }
-    if (typeof parsed.loggedIn === 'boolean') {
-      return {
-        authenticated: parsed.loggedIn,
-        providerStatus,
-      };
-    }
-    return {
-      authenticated: null,
-      providerStatus,
-    };
-  }
-
   private async probeProviderRuntimeControlPlane({
     claudePath,
     cwd,
@@ -25608,114 +25290,14 @@ export class TeamProvisioningService {
     providerId: TeamProviderId;
     providerArgs: string[];
   }): Promise<{ warning?: string }> {
-    const cliCommandLabel = getConfiguredCliCommandLabel();
-    const providerLabel = getTeamProviderLabel(providerId);
-
-    try {
-      const runtimeStatus = await execCli(
-        claudePath,
-        buildProviderControlPlaneCliCommandArgs(providerArgs, [
-          'runtime',
-          'status',
-          '--json',
-          '--summary',
-          '--provider',
-          providerId,
-        ]),
-        {
-          cwd,
-          env,
-          timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
-        }
-      );
-      const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(runtimeStatus.stdout);
-      const providerStatus = parsed.providers?.[providerId] ?? null;
-      const warning = this.buildRuntimeProviderReadinessWarning(providerId, providerStatus);
-      appendPreflightDebugLog('provider_runtime_control_plane_status', {
-        providerId,
-        cwd,
-        ready: !warning,
-        authenticated: providerStatus?.authenticated,
-        teamLaunch: providerStatus?.capabilities?.teamLaunch,
-        oneShot: providerStatus?.capabilities?.oneShot,
-        warning,
-      });
-      return warning ? { warning } : {};
-    } catch (runtimeStatusError) {
-      const runtimeStatusMessage =
-        runtimeStatusError instanceof Error
-          ? runtimeStatusError.message
-          : String(runtimeStatusError);
-      try {
-        const authStatus = await execCli(
-          claudePath,
-          buildProviderControlPlaneCliCommandArgs(providerArgs, [
-            'auth',
-            'status',
-            '--json',
-            '--provider',
-            providerId,
-          ]),
-          {
-            cwd,
-            env,
-            timeout: 8_000,
-          }
-        );
-        const parsed = extractJsonObjectFromCli<AuthStatusCommandResponse>(authStatus.stdout);
-        const authReadiness = this.extractAuthStatusReadiness(providerId, parsed);
-        const readinessWarning = authReadiness.providerStatus
-          ? this.buildRuntimeProviderReadinessWarning(providerId, authReadiness.providerStatus)
-          : null;
-        if (authReadiness.authenticated === false || readinessWarning) {
-          const authWarning =
-            readinessWarning ??
-            `${providerLabel} provider is not authenticated. Runtime auth status reported logged out.`;
-          appendPreflightDebugLog('provider_runtime_control_plane_auth_fallback', {
-            providerId,
-            cwd,
-            ready: false,
-            runtimeStatusError: runtimeStatusMessage,
-            warning: authWarning,
-          });
-          return { warning: authWarning };
-        }
-        if (authReadiness.authenticated === true) {
-          const warning =
-            `${cliCommandLabel} runtime status was unavailable, but auth status passed. ` +
-            `Proceeding with catalog checks. Details: ${runtimeStatusMessage}`;
-          appendPreflightDebugLog('provider_runtime_control_plane_auth_fallback', {
-            providerId,
-            cwd,
-            ready: true,
-            runtimeStatusError: runtimeStatusMessage,
-            warning,
-          });
-          return { warning };
-        }
-      } catch (authStatusError) {
-        const authStatusMessage =
-          authStatusError instanceof Error ? authStatusError.message : String(authStatusError);
-        appendPreflightDebugLog('provider_runtime_control_plane_auth_fallback', {
-          providerId,
-          cwd,
-          ready: false,
-          runtimeStatusError: runtimeStatusMessage,
-          authStatusError: authStatusMessage,
-        });
-        return {
-          warning:
-            `${cliCommandLabel} runtime status check did not complete. ` +
-            `Proceeding with catalog checks. Details: ${runtimeStatusMessage}; auth status failed: ${authStatusMessage}`,
-        };
-      }
-
-      return {
-        warning:
-          `${cliCommandLabel} runtime status was unavailable and auth status did not report ${providerLabel} authentication. ` +
-          `Proceeding with catalog checks. Details: ${runtimeStatusMessage}`,
-      };
-    }
+    return probeProviderRuntimeControlPlaneHelper({
+      claudePath,
+      cwd,
+      env,
+      providerId,
+      providerArgs,
+      appendDebugLog: appendPreflightDebugLog,
+    });
   }
 
   private async runProviderOneShotDiagnostic(
@@ -25887,42 +25469,30 @@ export class TeamProvisioningService {
    * Used by the validateCliArgs IPC handler to check user-entered flags.
    */
   async getCliHelpOutput(cwd?: string): Promise<string> {
-    if (
-      this.helpOutputCache &&
-      Date.now() - this.helpOutputCacheTime < TeamProvisioningService.HELP_CACHE_TTL_MS
-    ) {
-      return this.helpOutputCache;
-    }
-    const targetCwd = cwd ?? process.cwd();
-    const probeResult = await this.getCachedOrProbeResult(targetCwd, 'anthropic');
-    if (!probeResult?.claudePath) {
-      throw new Error(`${getConfiguredCliCommandLabel()} not found`);
-    }
-    const { env } = await this.buildProvisioningEnv();
-    const result = await this.spawnProbe(
-      probeResult.claudePath,
-      ['--help'],
-      targetCwd,
-      env,
-      10_000
-    );
-    const output = (result.stdout + '\n' + result.stderr).trim();
-    if (!output) {
-      throw new Error(
-        `${getConfiguredCliCommandLabel()} --help returned empty output (exit code: ${String(result.exitCode)})`
-      );
-    }
-    this.helpOutputCache = output;
-    this.helpOutputCacheTime = Date.now();
+    const cache = {
+      output: this.helpOutputCache,
+      cachedAtMs: this.helpOutputCacheTime,
+    };
+    const output = await getCliHelpOutputForProvisioning({
+      cwd,
+      cache,
+      ports: {
+        getCachedOrProbeResult: (targetCwd, providerId) =>
+          this.getCachedOrProbeResult(targetCwd, providerId),
+        buildProvisioningEnv: () => this.buildProvisioningEnv(),
+        spawnProbe: (claudePath, args, targetCwd, env, timeoutMs) =>
+          this.spawnProbe(claudePath, args, targetCwd, env, timeoutMs),
+      },
+    });
+    this.helpOutputCache = cache.output;
+    this.helpOutputCacheTime = cache.cachedAtMs;
     return output;
   }
 
   private buildAgentTeamsMcpValidationError(output: string): string {
-    const detail = this.normalizeApiRetryErrorMessage(output) || output.trim();
-    if (!detail) {
-      return 'agent-teams MCP preflight failed before team launch.';
-    }
-    return `agent-teams MCP preflight failed before team launch. Details: ${detail}`;
+    return buildAgentTeamsMcpValidationErrorMessage(output, (text) =>
+      this.normalizeApiRetryErrorMessage(text)
+    );
   }
 
   private async readAgentTeamsMcpLaunchSpec(
