@@ -334,7 +334,8 @@
       "remove": "Hapus",
       "stop": "Berhenti",
       "task": "Tugas",
-      "visualize": "Visualize"
+      "visualize": "Visualize",
+      "usage": "Penggunaan"
     },
     "deleteTeam": {
       "description": "Hapus tim \"{{team}}\"? Tindakan ini tidak dapat diubah. Semua data dan tugas tim akan dihapus.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Tim Sunting tidak tersedia ketika pemberian masih dalam proses",
       "openBuiltInEditor": "Buka projek di penyunting bawaan",
       "openTeamGraph": "Buka grafik tim",
-      "stopTeam": "Hentikan tim"
+      "stopTeam": "Hentikan tim",
+      "openTeamUsage": "Buka penggunaan tim"
     },
     "waitingForProvisioning": "Data tim akan muncul setelah pemberian selesai",
     "context": {

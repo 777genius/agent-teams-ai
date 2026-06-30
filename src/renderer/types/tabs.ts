@@ -87,7 +87,9 @@ export interface Tab {
     | 'report'
     | 'extensions'
     | 'schedules'
-    | 'graph';
+    | 'graph'
+    | 'token-usage'
+    | 'usage';
 
   /** Session ID (required when type === 'session') */
   sessionId?: string;

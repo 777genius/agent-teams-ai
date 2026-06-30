@@ -334,7 +334,8 @@
       "remove": "Verwijderen",
       "stop": "Stoppen",
       "task": "Taak",
-      "visualize": "Visualiseren"
+      "visualize": "Visualiseren",
+      "usage": "Gebruik"
     },
     "deleteTeam": {
       "description": "Team \"{{team}}\" verwijderen? Deze actie is onomkeerbaar. Alle teamgegevens en taken worden verwijderd.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Team bewerken is niet beschikbaar zolang de provisioning nog bezig is",
       "openBuiltInEditor": "Project openen in ingebouwde editor",
       "openTeamGraph": "Teamgrafiek openen",
-      "stopTeam": "Team stoppen"
+      "stopTeam": "Team stoppen",
+      "openTeamUsage": "Teamgebruik openen"
     },
     "waitingForProvisioning": "Teamgegevens verschijnen zodra de provisioning is voltooid",
     "context": {

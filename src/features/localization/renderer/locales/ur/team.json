@@ -334,7 +334,8 @@
       "remove": "نکالو",
       "stop": "بند کرو",
       "task": "جگہ",
-      "visualize": "رنگ"
+      "visualize": "رنگ",
+      "usage": "استعمال"
     },
     "deleteTeam": {
       "description": "ٹیم \" حذف کریں{{team}}\"؟ یہ عمل ناگزیر ہے۔ تمام ٹیم کے اعداد و شمار ختم ہو جائیں گے۔",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "ایڈیٹنگ ٹیم غیر منافع بخش ہے جبکہ فراہمی ابھی تک ترقی میں ہے۔",
       "openBuiltInEditor": "تعمیر کردہ-ان ایڈیٹر میں اوپن پروجیکٹ",
       "openTeamGraph": "اوپن ٹیم گراف",
-      "stopTeam": "ٹیم روکیں"
+      "stopTeam": "ٹیم روکیں",
+      "openTeamUsage": "ٹیم کا استعمال کھولیں"
     },
     "waitingForProvisioning": "ٹیم کے اعداد و شمار ایک مرتبہ مکمل ہونے والی فراہمی نظر آئیں گے۔",
     "context": {

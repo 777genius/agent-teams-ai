@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildDetectedErrorFromTeam,
   type TeamEventType,
   type TeamNotificationPayload,
 } from '@main/utils/teamNotificationBuilder';
+import { describe, expect, it } from 'vitest';
 
 function makePayload(overrides: Partial<TeamNotificationPayload> = {}): TeamNotificationPayload {
   return {
@@ -103,6 +102,8 @@ describe('buildDetectedErrorFromTeam', () => {
     schedule_failed: { triggerName: 'Schedule Failed', triggerColor: 'red' },
     team_launched: { triggerName: 'Team Launched', triggerColor: 'green' },
     team_launch_incomplete: { triggerName: 'Launch Incomplete', triggerColor: 'orange' },
+    usage_budget_warning: { triggerName: 'Usage Budget', triggerColor: 'orange' },
+    usage_budget_exceeded: { triggerName: 'Usage Budget', triggerColor: 'red' },
   };
 
   for (const [eventType, expected] of Object.entries(EXPECTED_CONFIG)) {

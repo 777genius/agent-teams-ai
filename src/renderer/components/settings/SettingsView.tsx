@@ -23,6 +23,7 @@ export const SettingsView = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
+  const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const { pendingSettingsSection, clearPendingSettingsSection } = useStore(
     useShallow((s) => ({
       pendingSettingsSection: s.pendingSettingsSection,
@@ -33,11 +34,26 @@ export const SettingsView = (): React.JSX.Element | null => {
   // Consume pending section (avoid setState during render)
   useEffect(() => {
     if (pendingSettingsSection) {
+      const [section, anchor] = pendingSettingsSection.split('#');
+      if (!isSettingsSection(section)) {
+        clearPendingSettingsSection();
+        return;
+      }
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
-      setActiveSection(pendingSettingsSection as SettingsSection);
+      setActiveSection(section);
+      setPendingAnchor(anchor || null);
       clearPendingSettingsSection();
     }
   }, [pendingSettingsSection, clearPendingSettingsSection]);
+
+  useEffect(() => {
+    if (!pendingAnchor) return;
+    const frameId = window.requestAnimationFrame(() => {
+      document.getElementById(pendingAnchor)?.scrollIntoView({ block: 'start' });
+      setPendingAnchor(null);
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [pendingAnchor, activeSection]);
 
   const {
     config,
@@ -174,3 +190,12 @@ export const SettingsView = (): React.JSX.Element | null => {
     </div>
   );
 };
+
+function isSettingsSection(value: string | undefined): value is SettingsSection {
+  return (
+    value === 'general' ||
+    value === 'connection' ||
+    value === 'notifications' ||
+    value === 'advanced'
+  );
+}

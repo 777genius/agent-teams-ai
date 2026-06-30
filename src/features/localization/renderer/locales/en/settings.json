@@ -285,6 +285,27 @@
       },
       "selectDuration": "Select duration..."
     },
+    "usageBudgets": {
+      "critical": {
+        "description": "Create a notification when a configured usage budget reaches 100%.",
+        "label": "Notify at 100%"
+      },
+      "enabled": {
+        "description": "Create notifications when Usage budgets cross configured thresholds.",
+        "label": "Enable budget notifications"
+      },
+      "info": "Usage budget checks run in the main process after snapshot refresh. API-equivalent cost is a shadow estimate, not a subscription bill.",
+      "infoAriaLabel": "Usage budget notification details",
+      "nativeToast": {
+        "description": "Also show a native OS toast. In-app notifications are still created when this is off.",
+        "label": "Native OS toast"
+      },
+      "title": "Usage budgets",
+      "warning": {
+        "description": "Create a notification when a configured usage budget reaches 80%.",
+        "label": "Notify at 80%"
+      }
+    },
     "taskCompletion": {
       "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",
       "installPlugin": "Install claude-notifications-go plugin",

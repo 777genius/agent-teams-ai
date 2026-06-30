@@ -204,6 +204,10 @@ function validateNotificationsSection(
     'notifyOnCrossTeamMessage',
     'notifyOnTeamLaunched',
     'notifyOnToolApproval',
+    'notifyOnUsageBudgetAlerts',
+    'notifyOnUsageBudgetWarning',
+    'notifyOnUsageBudgetCritical',
+    'notifyOnUsageBudgetNativeToast',
     'autoResumeOnRateLimit',
     'statusChangeOnlySolo',
     'statusChangeStatuses',
@@ -298,6 +302,30 @@ function validateNotificationsSection(
           return { valid: false, error: `notifications.${key} must be a boolean` };
         }
         result.notifyOnToolApproval = value;
+        break;
+      case 'notifyOnUsageBudgetAlerts':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetAlerts = value;
+        break;
+      case 'notifyOnUsageBudgetWarning':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetWarning = value;
+        break;
+      case 'notifyOnUsageBudgetCritical':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetCritical = value;
+        break;
+      case 'notifyOnUsageBudgetNativeToast':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetNativeToast = value;
         break;
       case 'autoResumeOnRateLimit':
         if (typeof value !== 'boolean') {

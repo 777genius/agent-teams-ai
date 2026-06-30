@@ -55,6 +55,10 @@ export interface SafeConfig {
     notifyOnCrossTeamMessage: boolean;
     notifyOnTeamLaunched: boolean;
     notifyOnToolApproval: boolean;
+    notifyOnUsageBudgetAlerts: boolean;
+    notifyOnUsageBudgetWarning: boolean;
+    notifyOnUsageBudgetCritical: boolean;
+    notifyOnUsageBudgetNativeToast: boolean;
     autoResumeOnRateLimit: boolean;
     statusChangeOnlySolo: boolean;
     statusChangeStatuses: string[];
@@ -198,6 +202,13 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         notifyOnCrossTeamMessage: displayConfig?.notifications?.notifyOnCrossTeamMessage ?? true,
         notifyOnTeamLaunched: displayConfig?.notifications?.notifyOnTeamLaunched ?? true,
         notifyOnToolApproval: displayConfig?.notifications?.notifyOnToolApproval ?? true,
+        notifyOnUsageBudgetAlerts: displayConfig?.notifications?.notifyOnUsageBudgetAlerts ?? true,
+        notifyOnUsageBudgetWarning:
+          displayConfig?.notifications?.notifyOnUsageBudgetWarning ?? true,
+        notifyOnUsageBudgetCritical:
+          displayConfig?.notifications?.notifyOnUsageBudgetCritical ?? true,
+        notifyOnUsageBudgetNativeToast:
+          displayConfig?.notifications?.notifyOnUsageBudgetNativeToast ?? true,
         autoResumeOnRateLimit: displayConfig?.notifications?.autoResumeOnRateLimit ?? false,
         statusChangeOnlySolo: displayConfig?.notifications?.statusChangeOnlySolo ?? true,
         statusChangeStatuses: displayConfig?.notifications?.statusChangeStatuses ?? [

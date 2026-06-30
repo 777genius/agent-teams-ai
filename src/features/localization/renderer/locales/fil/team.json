@@ -334,7 +334,8 @@
       "remove": "Tanggalin",
       "stop": "Ihinto",
       "task": "Task",
-      "visualize": "I-visualize"
+      "visualize": "I-visualize",
+      "usage": "Paggamit"
     },
     "deleteTeam": {
       "description": "Tanggalin ang team na \"{{team}}\"? Hindi na maibabalik ang aksyon na ito. Tatanggalin ang lahat ng data at task ng team.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Hindi available ang pag-edit ng team habang isinasagawa pa ang provisioning",
       "openBuiltInEditor": "Buksan ang proyekto sa built-in editor",
       "openTeamGraph": "Buksan ang team graph",
-      "stopTeam": "Ihinto ang team"
+      "stopTeam": "Ihinto ang team",
+      "openTeamUsage": "Buksan ang paggamit ng team"
     },
     "waitingForProvisioning": "Lalabas ang data ng team kapag natapos ang provisioning",
     "context": {

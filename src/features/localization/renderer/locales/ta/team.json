@@ -334,7 +334,8 @@
       "remove": "அகற்று",
       "stop": "நிறுத்து",
       "task": "Task",
-      "visualize": "காட்சிப்படுத்து"
+      "visualize": "காட்சிப்படுத்து",
+      "usage": "பயன்பாடு"
     },
     "deleteTeam": {
       "description": "team \"{{team}}\" ஐ நீக்கவா? இந்த நடவடிக்கையை மீட்டெடுக்க முடியாது. அனைத்து team தரவும் tasks உம் நீக்கப்படும்.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "provisioning இன்னும் முன்னேற்றத்தில் இருக்கும்போது team ஐ திருத்துவது கிடைக்காது",
       "openBuiltInEditor": "project ஐ உள்ளமைந்த editor இல் திற",
       "openTeamGraph": "team graph ஐத் திற",
-      "stopTeam": "team ஐ நிறுத்து"
+      "stopTeam": "team ஐ நிறுத்து",
+      "openTeamUsage": "குழு பயன்பாட்டைத் திற"
     },
     "waitingForProvisioning": "provisioning முடிந்ததும் team தரவு தோன்றும்",
     "context": {

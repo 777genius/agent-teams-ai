@@ -56,6 +56,13 @@ export const TabbedLayout = (): React.JSX.Element => {
 
   // --- DnD state (lifted from PaneContainer) ---
   const panes = useStore(useShallow((s) => s.paneLayout.panes));
+  const hideSidebarForActiveTab = useStore(
+    useShallow((s) => {
+      const focusedPane = s.paneLayout.panes.find((pane) => pane.id === s.paneLayout.focusedPaneId);
+      const activeTab = focusedPane?.tabs.find((tab) => tab.id === focusedPane.activeTabId);
+      return activeTab?.type === 'token-usage';
+    })
+  );
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
 
   const sensors = useSensors(
@@ -176,7 +183,7 @@ export const TabbedLayout = (): React.JSX.Element => {
           </div>
 
           {/* Sidebar - Task list / Sessions (right side) */}
-          <Sidebar />
+          {!hideSidebarForActiveTab && <Sidebar />}
         </div>
 
         {/* Drag overlay - semi-transparent ghost of the dragged tab */}

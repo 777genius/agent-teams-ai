@@ -334,7 +334,8 @@
       "remove": "Ondoa",
       "stop": "Simamisha",
       "task": "Kazi",
-      "visualize": "Onyesha kwa picha"
+      "visualize": "Onyesha kwa picha",
+      "usage": "Matumizi"
     },
     "deleteTeam": {
       "description": "Futa timu \"{{team}}\"? Kitendo hiki hakiwezi kutenduliwa. Data zote za timu na kazi zitafutwa.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
-      "stopTeam": "Simamisha timu"
+      "stopTeam": "Simamisha timu",
+      "openTeamUsage": "Fungua matumizi ya timu"
     },
     "waitingForProvisioning": "Data ya timu itaonekana mara ugavi utakapokamilika",
     "context": {

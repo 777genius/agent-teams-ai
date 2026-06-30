@@ -35,7 +35,9 @@ export type TeamEventType =
   | 'schedule_completed'
   | 'schedule_failed'
   | 'team_launched'
-  | 'team_launch_incomplete';
+  | 'team_launch_incomplete'
+  | 'usage_budget_warning'
+  | 'usage_budget_exceeded';
 
 export type NotificationTarget =
   | {
@@ -55,6 +57,10 @@ export type NotificationTarget =
       teamName: string;
       memberName: string;
       focus?: 'profile' | 'messages' | 'logs';
+    }
+  | {
+      kind: 'token_usage';
+      focus?: 'overview' | 'budgets' | 'notifications';
     };
 
 /**
@@ -317,6 +323,14 @@ export interface AppConfig {
     notifyOnTeamLaunched: boolean;
     /** Whether to show native OS notifications when a tool needs user approval (Allow/Deny) */
     notifyOnToolApproval: boolean;
+    /** Whether to create notifications for token usage budget thresholds */
+    notifyOnUsageBudgetAlerts: boolean;
+    /** Whether to notify when a token usage budget reaches 80% */
+    notifyOnUsageBudgetWarning: boolean;
+    /** Whether to notify when a token usage budget reaches 100% */
+    notifyOnUsageBudgetCritical: boolean;
+    /** Whether usage budget notifications should also show native OS toasts */
+    notifyOnUsageBudgetNativeToast: boolean;
     /** Whether to automatically nudge a rate-limited team after the limit resets */
     autoResumeOnRateLimit: boolean;
     /** Only notify on status changes in solo teams (no teammates) */

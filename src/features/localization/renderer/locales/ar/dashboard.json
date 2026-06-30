@@ -193,5 +193,168 @@
     "newVersionAvailable": "نسخة جديدة متاحة",
     "restartNow": "ارجع الآن",
     "viewDetails": "تفاصيل الرؤية"
+  },
+  "tokenUsage": {
+    "title": "الاستخدام",
+    "partialData": "بيانات جزئية",
+    "actions": {
+      "refresh": "تحديث",
+      "openTeam": "فتح {{team}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "استخدام النماذج حسب المقطع"
+    },
+    "controls": {
+      "includeCacheTokens": "تضمين رموز التخزين المؤقت"
+    },
+    "dateRange": {
+      "allCollectedUsage": "كل استخدام التطبيق المجمع",
+      "customRange": "نطاق مخصص",
+      "default": "افتراضي",
+      "selectRange": "اختر تاريخ البدء والانتهاء",
+      "presets": {
+        "all-time": "كل الوقت",
+        "today": "اليوم",
+        "this-week": "هذا الأسبوع",
+        "this-month": "هذا الشهر",
+        "this-quarter": "هذا الربع",
+        "this-year": "هذا العام",
+        "last-week": "الأسبوع الماضي",
+        "last-month": "الشهر الماضي",
+        "last-7-days": "آخر 7 أيام",
+        "last-30-days": "آخر 30 يومًا"
+      }
+    },
+    "empty": {
+      "noActivityData": "لا توجد نشاطات",
+      "noAgents": "لا يوجد وكلاء",
+      "noChartData": "لا توجد بيانات مخطط",
+      "noModelData": "لا توجد بيانات نماذج",
+      "noRows": "لا توجد صفوف",
+      "noRuns": "لا توجد تشغيلات",
+      "noTeams": "لا توجد فرق",
+      "noTrendData": "لا توجد بيانات اتجاه",
+      "noUsageDetail": "0 تشغيلات تطبيق / 0 طلبات",
+      "noUsageYet": "لا يوجد استخدام بعد"
+    },
+    "filters": {
+      "allTeams": "كل الفرق",
+      "filterTeams": "تصفية الفرق",
+      "selectedTeams": "{{count}} فرق"
+    },
+    "labels": {
+      "cost": "التكلفة",
+      "days": "{{count}} يوم",
+      "less": "أقل",
+      "more": "أكثر",
+      "notAvailable": "غير متاح",
+      "now": "الآن",
+      "otherModels": "نماذج أخرى",
+      "reqCount": "{{count}} طلب",
+      "runCount": "{{count}} تشغيل",
+      "share": "النسبة",
+      "sourceCount": "{{count}} مصادر",
+      "tokens": "رموز",
+      "tokensCost": "{{tokens}} رموز / {{cost}}",
+      "total": "الإجمالي",
+      "unassigned": "غير معين",
+      "unknownAgent": "وكيل غير معروف"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Sources",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

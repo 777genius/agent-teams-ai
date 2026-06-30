@@ -334,7 +334,8 @@
       "remove": "기타 제품",
       "stop": "기타",
       "task": "기타",
-      "visualize": "제품 설명"
+      "visualize": "제품 설명",
+      "usage": "사용량"
     },
     "deleteTeam": {
       "description": "팀 삭제 \"{{team}}\"? 이 행동은 불가능합니다. 모든 팀 데이터 및 작업이 삭제됩니다.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "팀 편집은 아직 진행중인 동안 사용할 수 없습니다.",
       "openBuiltInEditor": "내장 편집기에서 프로젝트 열기",
       "openTeamGraph": "열린 팀 그래프",
-      "stopTeam": "정지 팀"
+      "stopTeam": "정지 팀",
+      "openTeamUsage": "팀 사용량 열기"
     },
     "waitingForProvisioning": "팀 데이터는 일단 완료되면 나타납니다",
     "context": {

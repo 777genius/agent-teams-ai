@@ -928,7 +928,8 @@ function isVisibleInActiveTeamSurface(
     }
     const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
     return (
-      (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
+      (activeTab?.type === 'team' || activeTab?.type === 'graph' || activeTab?.type === 'usage') &&
+      activeTab.teamName === teamName
     );
   });
 }
@@ -2501,10 +2502,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         const displayName = committedTeamData.config.name || teamName;
         const allTabs = get().getAllPaneTabs();
         const relatedTabs = allTabs.filter(
-          (tab) => (tab.type === 'team' || tab.type === 'graph') && tab.teamName === teamName
+          (tab) =>
+            (tab.type === 'team' || tab.type === 'graph' || tab.type === 'usage') &&
+            tab.teamName === teamName
         );
         for (const tab of relatedTabs) {
-          const nextLabel = tab.type === 'graph' ? `${displayName} Graph` : displayName;
+          const nextLabel =
+            tab.type === 'graph'
+              ? `${displayName} Graph`
+              : tab.type === 'usage'
+                ? `${displayName} Usage`
+                : displayName;
           if (tab.label !== nextLabel) {
             get().updateTabLabel(tab.id, nextLabel);
           }

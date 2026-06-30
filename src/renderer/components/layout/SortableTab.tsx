@@ -20,9 +20,11 @@ import { useStore } from '@renderer/store';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
+  BarChart3,
   Bell,
   Calendar,
   FileText,
+  Gauge,
   LayoutDashboard,
   Network,
   Pin,
@@ -62,6 +64,8 @@ const TAB_ICONS = {
   extensions: Puzzle,
   schedules: Calendar,
   graph: Network,
+  'token-usage': Gauge,
+  usage: BarChart3,
 } as const;
 
 export const SortableTab = ({
@@ -87,7 +91,9 @@ export const SortableTab = ({
 
   const teamColorSet = useStore(
     useShallow((s) => {
-      if ((tab.type !== 'team' && tab.type !== 'graph') || !tab.teamName) return null;
+      if ((tab.type !== 'team' && tab.type !== 'graph' && tab.type !== 'usage') || !tab.teamName) {
+        return null;
+      }
       const team = s.teamByName[tab.teamName];
       const explicitColor =
         team?.color ??

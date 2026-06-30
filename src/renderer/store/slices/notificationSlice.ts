@@ -28,6 +28,14 @@ function isNotificationTarget(value: unknown): value is NotificationTarget {
   if (!value || typeof value !== 'object') return false;
   const row = value as Record<string, unknown>;
   if (row.kind === 'team') return typeof row.teamName === 'string' && row.teamName.length > 0;
+  if (row.kind === 'token_usage') {
+    return (
+      row.focus === undefined ||
+      row.focus === 'overview' ||
+      row.focus === 'budgets' ||
+      row.focus === 'notifications'
+    );
+  }
   if (row.kind === 'task') {
     return (
       typeof row.teamName === 'string' &&
@@ -85,6 +93,11 @@ function getTeamNotificationTarget(error: DetectedError): NotificationTarget | n
 
 function navigateToTeamNotification(state: AppState, error: DetectedError): void {
   const target = getTeamNotificationTarget(error);
+  if (target?.kind === 'token_usage') {
+    state.openTab({ type: 'token-usage', label: 'Usage' });
+    return;
+  }
+
   const teamName = target?.teamName ?? getTeamNameFromError(error);
   if (!teamName) return;
 

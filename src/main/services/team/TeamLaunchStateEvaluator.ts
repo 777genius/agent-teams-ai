@@ -1,5 +1,6 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type {
@@ -521,6 +522,7 @@ function normalizeLaunchIdentity(
         providerId,
         typeof raw.providerBackendId === 'string' ? raw.providerBackendId : undefined
       ) ?? null,
+    billingMode: normalizeProviderBillingMode(raw.billingMode),
     selectedModel: typeof raw.selectedModel === 'string' ? raw.selectedModel.trim() || null : null,
     selectedModelKind,
     resolvedLaunchModel:
@@ -619,6 +621,7 @@ function normalizePersistedMemberState(
       providerId,
       typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
     ),
+    billingMode: normalizeProviderBillingMode(parsed.billingMode),
     model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
     effort:
       parsed.effort === 'none' ||

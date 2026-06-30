@@ -193,5 +193,168 @@
     "newVersionAvailable": "มีเวอร์ชันใหม่",
     "restartNow": "รีสตาร์ทเลย",
     "viewDetails": "ดูรายละเอียด"
+  },
+  "tokenUsage": {
+    "title": "การใช้งาน",
+    "partialData": "ข้อมูลบางส่วน",
+    "actions": {
+      "refresh": "รีเฟรช",
+      "openTeam": "เปิด {{team}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "การใช้โมเดลตามส่วน"
+    },
+    "controls": {
+      "includeCacheTokens": "รวม cache tokens"
+    },
+    "dateRange": {
+      "allCollectedUsage": "การใช้งาน app ทั้งหมดที่รวบรวม",
+      "customRange": "ช่วงกำหนดเอง",
+      "default": "ค่าเริ่มต้น",
+      "selectRange": "เลือกวันที่เริ่มและสิ้นสุด",
+      "presets": {
+        "all-time": "ทั้งหมด",
+        "today": "วันนี้",
+        "this-week": "สัปดาห์นี้",
+        "this-month": "เดือนนี้",
+        "this-quarter": "ไตรมาสนี้",
+        "this-year": "ปีนี้",
+        "last-week": "สัปดาห์ที่แล้ว",
+        "last-month": "เดือนที่แล้ว",
+        "last-7-days": "7 วันที่ผ่านมา",
+        "last-30-days": "30 วันที่ผ่านมา"
+      }
+    },
+    "empty": {
+      "noActivityData": "ไม่มีกิจกรรม",
+      "noAgents": "ไม่มี agents",
+      "noChartData": "ไม่มีข้อมูลกราฟ",
+      "noModelData": "ไม่มีข้อมูลโมเดล",
+      "noRows": "ไม่มีแถว",
+      "noRuns": "ไม่มี runs",
+      "noTeams": "ไม่มี teams",
+      "noTrendData": "ไม่มีข้อมูลแนวโน้ม",
+      "noUsageDetail": "0 app runs / 0 requests",
+      "noUsageYet": "ยังไม่มีการใช้งาน"
+    },
+    "filters": {
+      "allTeams": "ทุกทีม",
+      "filterTeams": "กรองทีม",
+      "selectedTeams": "{{count}} ทีม"
+    },
+    "labels": {
+      "cost": "ค่าใช้จ่าย",
+      "days": "{{count}} วัน",
+      "less": "น้อย",
+      "more": "มาก",
+      "notAvailable": "n/a",
+      "now": "ตอนนี้",
+      "otherModels": "โมเดลอื่น",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} runs",
+      "share": "สัดส่วน",
+      "sourceCount": "{{count}} sources",
+      "tokens": "tokens",
+      "tokensCost": "{{tokens}} tokens / {{cost}}",
+      "total": "รวม",
+      "unassigned": "ยังไม่กำหนด",
+      "unknownAgent": "agent ไม่ทราบชื่อ"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Sources",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

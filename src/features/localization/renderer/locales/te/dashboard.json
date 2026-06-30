@@ -193,5 +193,168 @@
     "newVersionAvailable": "కొత్త వెర్షన్ అందుబాటులో ఉంది",
     "restartNow": "ఇప్పుడే పునఃప్రారంభించు",
     "viewDetails": "వివరాలను చూడండి"
+  },
+  "tokenUsage": {
+    "title": "వినియోగం",
+    "partialData": "భాగిక డేటా",
+    "actions": {
+      "refresh": "రిఫ్రెష్",
+      "openTeam": "{{team}} తెరువు"
+    },
+    "aria": {
+      "modelUsageBySegment": "సెగ్మెంట్ వారీగా model వినియోగం"
+    },
+    "controls": {
+      "includeCacheTokens": "cache tokens చేర్చండి"
+    },
+    "dateRange": {
+      "allCollectedUsage": "సేకరించిన మొత్తం app వినియోగం",
+      "customRange": "కస్టమ్ రేంజ్",
+      "default": "డిఫాల్ట్",
+      "selectRange": "ప్రారంభ మరియు ముగింపు తేదీ ఎంచుకోండి",
+      "presets": {
+        "all-time": "మొత్తం కాలం",
+        "today": "ఈ రోజు",
+        "this-week": "ఈ వారం",
+        "this-month": "ఈ నెల",
+        "this-quarter": "ఈ త్రైమాసికం",
+        "this-year": "ఈ సంవత్సరం",
+        "last-week": "గత వారం",
+        "last-month": "గత నెల",
+        "last-7-days": "చివరి 7 రోజులు",
+        "last-30-days": "చివరి 30 రోజులు"
+      }
+    },
+    "empty": {
+      "noActivityData": "చర్య లేదు",
+      "noAgents": "agents లేరు",
+      "noChartData": "chart డేటా లేదు",
+      "noModelData": "model డేటా లేదు",
+      "noRows": "వరుసలు లేవు",
+      "noRuns": "runs లేవు",
+      "noTeams": "teams లేవు",
+      "noTrendData": "trend డేటా లేదు",
+      "noUsageDetail": "0 app runs / 0 requests",
+      "noUsageYet": "ఇంకా వినియోగం లేదు"
+    },
+    "filters": {
+      "allTeams": "అన్ని teams",
+      "filterTeams": "teams ఫిల్టర్ చేయండి",
+      "selectedTeams": "{{count}} teams"
+    },
+    "labels": {
+      "cost": "ఖర్చు",
+      "days": "{{count}} రోజులు",
+      "less": "తక్కువ",
+      "more": "ఎక్కువ",
+      "notAvailable": "n/a",
+      "now": "ఇప్పుడు",
+      "otherModels": "ఇతర models",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} runs",
+      "share": "వాటా",
+      "sourceCount": "{{count}} sources",
+      "tokens": "tokens",
+      "tokensCost": "{{tokens}} tokens / {{cost}}",
+      "total": "మొత్తం",
+      "unassigned": "కేటాయించలేదు",
+      "unknownAgent": "తెలియని agent"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Sources",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

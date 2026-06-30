@@ -193,5 +193,168 @@
     "newVersionAvailable": "Nouvelle version disponible",
     "restartNow": "Redémarrer maintenant",
     "viewDetails": "Afficher les détails"
+  },
+  "tokenUsage": {
+    "title": "Utilisation",
+    "partialData": "Données partielles",
+    "actions": {
+      "refresh": "Actualiser",
+      "openTeam": "Ouvrir {{team}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Utilisation des modèles par segment"
+    },
+    "controls": {
+      "includeCacheTokens": "Inclure les tokens de cache"
+    },
+    "dateRange": {
+      "allCollectedUsage": "Toute l utilisation collectée de l app",
+      "customRange": "Plage personnalisée",
+      "default": "Par défaut",
+      "selectRange": "Sélectionnez une date de début et de fin",
+      "presets": {
+        "all-time": "Tout le temps",
+        "today": "Aujourd hui",
+        "this-week": "Cette semaine",
+        "this-month": "Ce mois",
+        "this-quarter": "Ce trimestre",
+        "this-year": "Cette année",
+        "last-week": "Semaine dernière",
+        "last-month": "Mois dernier",
+        "last-7-days": "7 derniers jours",
+        "last-30-days": "30 derniers jours"
+      }
+    },
+    "empty": {
+      "noActivityData": "Aucune activité",
+      "noAgents": "Aucun agent",
+      "noChartData": "Aucune donnée de graphique",
+      "noModelData": "Aucune donnée de modèle",
+      "noRows": "Aucune ligne",
+      "noRuns": "Aucune exécution",
+      "noTeams": "Aucune équipe",
+      "noTrendData": "Aucune donnée de tendance",
+      "noUsageDetail": "0 exécution app / 0 requête",
+      "noUsageYet": "Aucune utilisation pour le moment"
+    },
+    "filters": {
+      "allTeams": "Toutes les équipes",
+      "filterTeams": "Filtrer les équipes",
+      "selectedTeams": "{{count}} équipes"
+    },
+    "labels": {
+      "cost": "Coût",
+      "days": "{{count}} jours",
+      "less": "Moins",
+      "more": "Plus",
+      "notAvailable": "n/d",
+      "now": "maintenant",
+      "otherModels": "Autres modèles",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} exécutions",
+      "share": "Part",
+      "sourceCount": "{{count}} sources",
+      "tokens": "tokens",
+      "tokensCost": "{{tokens}} tokens / {{cost}}",
+      "total": "Total",
+      "unassigned": "Non assigné",
+      "unknownAgent": "Agent inconnu"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Sources",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }
