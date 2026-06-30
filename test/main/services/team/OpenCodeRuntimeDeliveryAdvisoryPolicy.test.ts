@@ -241,6 +241,35 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
     });
   });
 
+  it('does not expose raw attachment preparation diagnostics to users', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        reason: 'opencode_attachment_delivery_prepare_failed',
+        diagnostics: [
+          'opencode_attachment_delivery_prepare_failed: ENOENT /Users/example/private.png',
+        ],
+      })
+    ).toMatchObject({
+      state: 'error',
+      message:
+        'OpenCode could not prepare the attachment for live delivery. Remove the attachment or try again.',
+    });
+  });
+
+  it('maps attachment diagnostic codes without surfacing the diagnostic payload', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        diagnostics: ['opencode_attachment_delivery_prepare_failed: attachment_too_large'],
+      })
+    ).toMatchObject({
+      state: 'error',
+      message:
+        'The attachment is too large for live OpenCode delivery. Reduce the image size or remove the attachment.',
+    });
+  });
+
   it('maps prompt delivery records to runtime delivery status with advisory impact', () => {
     const record = makeRecord({
       status: 'responded',

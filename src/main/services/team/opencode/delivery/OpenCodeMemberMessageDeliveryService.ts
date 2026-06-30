@@ -672,10 +672,9 @@ export class OpenCodeMemberMessageDeliveryService {
     }
 
     const messageId = input.messageId?.trim();
-    const ledger =
-      messageId && input.source
-        ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
-        : null;
+    const ledger = messageId
+      ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
+      : null;
     const now = nowIso();
     let active = ledger
       ? await ledger.getActiveForMember({
@@ -1266,16 +1265,21 @@ export class OpenCodeMemberMessageDeliveryService {
           retry: true,
           reason: diagnostic,
         });
+        const terminalFailure = ledgerRecord.status === 'failed_terminal';
         return {
           delivered: false,
           accepted: false,
-          responsePending: true,
+          responsePending: !terminalFailure,
           responseState: ledgerRecord.responseState,
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
           laneId: laneIdentity.laneId,
-          reason: diagnostic,
-          diagnostics: ledgerRecord.diagnostics.length ? ledgerRecord.diagnostics : [diagnostic],
+          reason: terminalFailure
+            ? (ledgerRecord.lastReason ?? diagnostic)
+            : diagnostic,
+          diagnostics: ledgerRecord.diagnostics.length
+            ? ledgerRecord.diagnostics
+            : [terminalFailure ? (ledgerRecord.lastReason ?? diagnostic) : diagnostic],
         };
       }
       return {

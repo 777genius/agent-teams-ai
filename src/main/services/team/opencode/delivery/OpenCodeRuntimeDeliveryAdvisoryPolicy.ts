@@ -283,47 +283,49 @@ export function selectOpenCodeAttachmentDeliveryUserVisibleMessage(input: {
   diagnostics?: string[];
 }): string | undefined {
   const reason = input.reason?.trim();
+  const diagnosticReasons =
+    input.diagnostics
+      ?.map((diagnostic) => diagnostic.trim())
+      .filter((diagnostic) =>
+        diagnostic.startsWith('opencode_attachment_delivery_prepare_failed:')
+      )
+      .map((diagnostic) =>
+        diagnostic.slice('opencode_attachment_delivery_prepare_failed:'.length).trim()
+      )
+      .filter(Boolean) ?? [];
   const isAttachmentFailure =
     isOpenCodeAttachmentDeliveryFailureReason(reason) ||
-    input.diagnostics?.some((diagnostic) =>
-      diagnostic.trim().startsWith('opencode_attachment_delivery_prepare_failed:')
-    ) === true;
+    diagnosticReasons.length > 0;
   if (!isAttachmentFailure) {
     return undefined;
   }
 
-  const diagnosticMessage = input.diagnostics
-    ?.map((diagnostic) => diagnostic.trim())
-    .find((diagnostic) => diagnostic.startsWith('opencode_attachment_delivery_prepare_failed:'));
-  const strippedDiagnostic = diagnosticMessage
-    ?.slice('opencode_attachment_delivery_prepare_failed:'.length)
-    .trim();
-  if (strippedDiagnostic) {
-    return strippedDiagnostic;
-  }
-
-  if (reason === 'attachment_model_unsupported') {
+  const reasonCandidates = [reason, ...diagnosticReasons];
+  if (reasonCandidates.includes('attachment_model_unsupported')) {
     return 'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.';
   }
-  if (reason === 'attachment_type_unsupported') {
+  if (reasonCandidates.includes('attachment_type_unsupported')) {
     return 'This OpenCode model cannot receive this attachment type. Remove the attachment or choose a supported image model.';
   }
-  if (reason === 'attachment_too_large') {
+  if (reasonCandidates.includes('attachment_too_large')) {
     return 'The attachment is too large for live OpenCode delivery. Reduce the image size or remove the attachment.';
   }
-  if (reason === 'attachment_artifact_missing' || reason === 'attachment_artifact_path_unsafe') {
+  if (
+    reasonCandidates.includes('attachment_artifact_missing') ||
+    reasonCandidates.includes('attachment_artifact_path_unsafe')
+  ) {
     return 'The attachment file is not available for live OpenCode delivery. Reattach the file and try again.';
   }
-  if (reason === 'attachment_optimization_failed') {
+  if (reasonCandidates.includes('attachment_optimization_failed')) {
     return 'The attachment could not be optimized for live OpenCode delivery. Try a smaller image or remove the attachment.';
   }
-  if (reason === 'attachment_provider_rejected') {
+  if (reasonCandidates.includes('attachment_provider_rejected')) {
     return 'The OpenCode provider rejected the attachment. Choose a different model or remove the attachment.';
   }
-  if (reason === 'attachment_runtime_transport_failed') {
+  if (reasonCandidates.includes('attachment_runtime_transport_failed')) {
     return 'OpenCode could not transport the attachment to the runtime. Try again or remove the attachment.';
   }
-  return undefined;
+  return 'OpenCode could not prepare the attachment for live delivery. Remove the attachment or try again.';
 }
 
 export function selectOpenCodeRuntimeDeliveryUserVisibleMessage(input: {
