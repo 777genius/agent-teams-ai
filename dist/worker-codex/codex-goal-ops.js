@@ -570,6 +570,7 @@ function isAttemptFailureReason(value) {
         value === "permission_required" ||
         value === "task_timeout" ||
         value === "provider_output_invalid" ||
+        value === "runtime_interrupted" ||
         value === "user_abort" ||
         value === "unknown_error");
 }

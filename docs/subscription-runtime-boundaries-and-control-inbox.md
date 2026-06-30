@@ -337,6 +337,7 @@ export type WorkerControlDeliveryMode =
   | "record_only"
   | "next_safe_point"
   | "pause_then_continue"
+  | "interrupt_then_continue"
   | "idle_turn_if_supported"
   | "live_if_supported";
 
@@ -372,7 +373,11 @@ The store should record delivery state separately:
 export type WorkerControlDeliveryState =
   | "pending"
   | "accepted"
+  | "interrupt_requested"
+  | "interrupting"
+  | "interrupted"
   | "delivered"
+  | "continued"
   | "acknowledged"
   | "superseded"
   | "expired"
@@ -437,6 +442,38 @@ Use for:
 - changing direction while preserving dirty work;
 - applying a significant new constraint;
 - recovering from silent-stale behavior.
+
+### `interrupt_then_continue`
+
+Request an urgent runtime-managed interrupt of the active attempt, then resume
+the same task through the normal safe continuation path.
+
+This is not live chat injection. The runtime must:
+
+1. store the guidance as a durable control signal;
+2. prove that the target attempt is active and locally controllable;
+3. abort only that active attempt with a runtime-owned interrupt reason;
+4. snapshot the dirty workspace;
+5. build a continuation packet with the original task, failure reason,
+   workspace state, changed files, and delivered signal ids;
+6. continue from the current WIP instead of restarting.
+
+If the runtime cannot prove that an active attempt is interruptible, it must not
+guess. The safe fallback is to keep the signal durable and deliver it at the
+next safe continuation point.
+
+Use for:
+
+- urgent steering while a long `/goal` is still running;
+- stopping broad verification and redirecting to targeted checks;
+- correcting direction after WIP already exists.
+
+Do not use for:
+
+- arbitrary agent-to-agent conversation;
+- concurrent turns in the same provider thread;
+- unknown runtime failures where the workspace is dirty and the interrupt was
+  not runtime-controlled.
 
 ### `idle_turn_if_supported`
 
@@ -556,7 +593,10 @@ silence means failure.
 ### Active turn running
 
 If an active provider turn is running, do not inject a new live message. Use
-`next_safe_point` or `pause_then_continue`.
+`next_safe_point`, `pause_then_continue`, or `interrupt_then_continue`.
+`interrupt_then_continue` is allowed only when the runtime owns the active
+attempt and can abort it with the runtime-controlled `runtime_interrupted`
+reason. Otherwise it remains durable guidance for the next safe point.
 
 ### Dirty workspace
 
@@ -687,6 +727,9 @@ Codex example:
 - `next_safe_point`: safe and recommended;
 - `pause_then_continue`: blocked by default; safe only if the runner explicitly
   advertises that it can stop and continue without discarding work;
+- `interrupt_then_continue`: supported only when the safe executor owns an
+  active attempt registry for the running worker; otherwise it falls back to
+  the next safe continuation point;
 - `idle_turn_if_supported`: possible only when app-server session is healthy and
   no active turn exists;
 - `live_if_supported`: disabled by default;
@@ -699,6 +742,9 @@ Claude example:
   Claude worker task or logical thread run;
 - `pause_then_continue`: blocked by default unless the Claude adapter explicitly
   proves safe pause-and-continue semantics;
+- `interrupt_then_continue`: uses the same runtime active-attempt abstraction
+  when the worker pool owns the attempt; otherwise it remains a durable next
+  safe point signal;
 - live input: adapter-specific and must prove no active turn conflict.
 
 ## Current Package Layout
@@ -794,6 +840,31 @@ Those can exist above the runtime.
 
 This solves the most important problem: agents and humans can safely add context
 that will be included in the next continuation without touching a running turn.
+
+### Implemented - Runtime-controlled interrupt continuation
+
+`interrupt_then_continue` is implemented as a provider-neutral control signal
+and safe-execution failure reason, `runtime_interrupted`.
+
+The core pieces are:
+
+- `ActiveAttemptRegistry` as the provider-neutral active attempt port;
+- `InMemoryActiveAttemptRegistry` for in-process worker pools;
+- `InterruptAndContinueWorkerUseCase` for SDK/API callers;
+- `SafeExecutionRunner` registration of active attempts;
+- continuation after `runtime_interrupted` even when the workspace is dirty;
+- Codex safe executor wiring for active attempt registry;
+- MCP tool `codex_goal_send_guidance`;
+- CLI shortcut `subscription-runtime-codex-goal guidance --message ...`.
+
+An `interrupted` delivery receipt is not terminal for
+`interrupt_then_continue`. It means the active attempt was stopped and the
+signal is still eligible for the next continuation packet. `delivered` remains
+the terminal state for prompt injection.
+
+When MCP is not running in the same process as the worker attempt, the endpoint
+still stores guidance durably and reports `accepted_as_next_safe_point`. It does
+not pretend that a remote process was interrupted.
 
 ### Partially implemented - Pause and stop controls
 

@@ -324,6 +324,7 @@ function isDeliveryMode(value) {
     return (value === "record_only" ||
         value === "next_safe_point" ||
         value === "pause_then_continue" ||
+        value === "interrupt_then_continue" ||
         value === "idle_turn_if_supported" ||
         value === "live_if_supported");
 }
@@ -339,7 +340,11 @@ function isPriority(value) {
 }
 function isReceiptState(value) {
     return (value === "accepted" ||
+        value === "interrupt_requested" ||
+        value === "interrupting" ||
+        value === "interrupted" ||
         value === "delivered" ||
+        value === "continued" ||
         value === "acknowledged" ||
         value === "superseded" ||
         value === "expired" ||

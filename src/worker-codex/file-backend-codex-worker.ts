@@ -38,9 +38,11 @@ import {
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
 import {
   SubscriptionWorkerError,
+  combineAbortSignals,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
+  type SubscriptionWorkerRunOptions,
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -417,12 +419,14 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
 
   async run(
     job: FileBackendCodexWorkerJob,
+    options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendCodexWorkerResult> {
     this.assertStarted();
     assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
     await this.rememberStoredQuotaGroup();
     const runId = job.runId ?? `local-${randomUUID()}`;
-    const abortSignal = job.abortSignal ?? new AbortController().signal;
+    const abort = combineAbortSignals(job.abortSignal, options.abortSignal);
+    const abortSignal = abort.signal;
     const startedAt = this.clock.monotonicMs();
     const retryMaxMs = this.options.refreshConflictRetryMaxMs ?? 30_000;
     let attempt = 1;
@@ -492,6 +496,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
         );
       }
     } finally {
+      abort.dispose();
       await this.exportSeededCodexAuthJsonFileQuietly("run");
     }
   }

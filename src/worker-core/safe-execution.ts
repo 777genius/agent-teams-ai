@@ -14,6 +14,8 @@ import {
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import type {
+  ActiveAttemptRegistry,
+  RuntimeInterruptReason,
   WorkerControlContinuationBatch,
   WorkerControlContinuationSource,
   WorkerControlTarget,
@@ -60,6 +62,7 @@ export type AttemptFailureReason =
   | "permission_required"
   | "task_timeout"
   | "provider_output_invalid"
+  | "runtime_interrupted"
   | "user_abort"
   | "unknown_error";
 
@@ -315,6 +318,7 @@ export type SafeExecutionRunnerOptions = {
   readonly snapshotter?: WorkspaceSnapshotter;
   readonly continuationPacketBuilder?: ContinuationPacketBuilder;
   readonly controlInbox?: WorkerControlContinuationSource;
+  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly ownerId?: string;
   readonly ownerPid?: number;
   readonly clock?: { now(): Date };
@@ -1141,11 +1145,26 @@ export class SafeExecutionRunner {
           return this.failStartedTask({ input, error });
         }
         const startedAt = this.clock.now();
+        const attemptAbort = createAttemptAbortController(input.abortSignal);
+        const attemptTarget = attemptControlTarget({
+          input,
+          workspacePath,
+          attemptNumber,
+        });
+        const activeAttempt = this.options.activeAttemptRegistry?.register({
+          taskId: input.taskId,
+          attemptNumber,
+          provider: input.provider,
+          workspacePath,
+          target: attemptTarget,
+          startedAt,
+          abortController: attemptAbort.controller,
+        });
 
         try {
           const result = await input.pool.run(job, {
             idempotencyKey: `${input.taskId}:${attemptNumber}`,
-            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+            abortSignal: attemptAbort.controller.signal,
             retryPolicy: {
               maxAttempts: 1,
               retryOnSlotCapacityUnavailable: false,
@@ -1201,8 +1220,12 @@ export class SafeExecutionRunner {
             afterCaptureError = error;
             return unavailableWorkspaceSnapshot({ workspacePath, error });
           });
+          const runtimeInterrupt = runtimeInterruptClassification(
+            attemptAbort.controller.signal.reason,
+          );
           const classification = withFailureDetails(
-            input.classifyError?.(error) ??
+            runtimeInterrupt ??
+              input.classifyError?.(error) ??
               defaultSafeExecutionErrorClassifier(error),
             afterCaptureError === undefined
               ? undefined
@@ -1311,6 +1334,9 @@ export class SafeExecutionRunner {
             };
           }
           job = continuationJob;
+        } finally {
+          activeAttempt?.release();
+          attemptAbort.dispose();
         }
       }
 
@@ -1414,6 +1440,76 @@ function shouldDeliverControlForContinuation(
   return (
     previousFailureReason !== "account_unavailable" &&
     previousFailureReason !== "reconnect_required"
+  );
+}
+
+function attemptControlTarget<Job, Result>(input: {
+  readonly input: SafeExecutionRunInput<Job, Result>;
+  readonly workspacePath: string;
+  readonly attemptNumber: number;
+}): WorkerControlTarget {
+  const base = input.input.controlTarget ?? {
+    jobId: input.input.taskId,
+    workspaceId: input.workspacePath,
+  };
+  return {
+    ...base,
+    taskId: base.taskId ?? input.input.taskId,
+    workspaceId: base.workspaceId ?? input.workspacePath,
+    attemptId: base.attemptId ?? `${input.input.taskId}:attempt-${input.attemptNumber}`,
+  };
+}
+
+function createAttemptAbortController(
+  parent: AbortSignal | undefined,
+): {
+  readonly controller: AbortController;
+  dispose(): void;
+} {
+  const controller = new AbortController();
+  if (!parent) return { controller, dispose: () => undefined };
+  const abort = () => {
+    if (!controller.signal.aborted) {
+      controller.abort(parent.reason);
+    }
+  };
+  if (parent.aborted) {
+    abort();
+    return { controller, dispose: () => undefined };
+  }
+  parent.addEventListener("abort", abort, { once: true });
+  return {
+    controller,
+    dispose: () => parent.removeEventListener("abort", abort),
+  };
+}
+
+function runtimeInterruptClassification(
+  reason: unknown,
+): SafeExecutionFailureClassification | null {
+  if (!isRuntimeInterruptReason(reason)) return null;
+  return {
+    reason: "runtime_interrupted",
+    safeMessage: reason.safeMessage,
+    retryable: true,
+    details: {
+      runtimeControl: "interrupt_then_continue",
+      ...(reason.signalId === undefined ? {} : { signalId: reason.signalId }),
+      ...(reason.requestedBy === undefined
+        ? {}
+        : { requestedBy: reason.requestedBy }),
+    },
+  };
+}
+
+function isRuntimeInterruptReason(
+  value: unknown,
+): value is RuntimeInterruptReason {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    record.code === "runtime_controlled_interrupt" &&
+    typeof record.safeMessage === "string"
   );
 }
 
@@ -1569,6 +1665,13 @@ function classifyWorkerFailureCode(
         safeMessage,
         retryable: false,
       };
+    case "runtime_interrupted":
+      return {
+        reason: "runtime_interrupted",
+        safeMessage,
+        retryable: true,
+        ...optionalFailureDetails(details),
+      };
     case "task_timeout":
       return {
         reason: "task_timeout",
@@ -1668,6 +1771,8 @@ function shouldContinueAfterFailure(input: {
     };
   }
   switch (input.classification.reason) {
+    case "runtime_interrupted":
+      return { allowed: true };
     case "quota_limited":
     case "capacity_unavailable":
       return { allowed: input.policy.retryOnCapacity };
@@ -2407,6 +2512,7 @@ function isAttemptFailureReason(value: unknown): value is AttemptFailureReason {
     value === "permission_required" ||
     value === "task_timeout" ||
     value === "provider_output_invalid" ||
+    value === "runtime_interrupted" ||
     value === "user_abort" ||
     value === "unknown_error"
   );

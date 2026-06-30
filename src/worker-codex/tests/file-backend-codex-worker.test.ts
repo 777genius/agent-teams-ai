@@ -11,7 +11,9 @@ import type {
 } from "@vioxen/subscription-runtime/core";
 import {
   BoundedSubscriptionWorkerPool,
+  InMemoryActiveAttemptRegistry,
   InMemoryWorkerAccountCapacityStore,
+  InterruptAndContinueWorkerUseCase,
   WorkerControlService,
   accountCapacityAwareWorkerFactory,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -733,6 +735,123 @@ describe("FileBackendCodexWorker", () => {
       if (replayed.status !== "completed") throw new Error("expected replay");
       expect(replayed.replayed).toBe(true);
       expect(appServers[1]!.prompts).toHaveLength(1);
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("interrupts an active Codex app-server goal and resumes with guidance through safe continuation", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-interrupt-"));
+    const workspacePath = await gitWorkspace("codex-safe-interrupt-workspace-");
+    const clock = {
+      now: () => new Date("2026-05-31T00:05:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const appServers = [
+      new FakeAppServerFactory({
+        holdTurnOpen: true,
+        writeFileOnTurn: {
+          relativePath: "wip.txt",
+          content: "partial implementation\n",
+        },
+      }),
+      new FakeAppServerFactory(),
+    ];
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock,
+      idFactory: sequentialIds("codex-interrupt-control"),
+    });
+    const activeAttemptRegistry = new InMemoryActiveAttemptRegistry();
+    const guidance = new InterruptAndContinueWorkerUseCase({
+      control: controlInbox,
+      activeAttemptRegistry,
+    });
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      controlInbox,
+      activeAttemptRegistry,
+      accounts: appServers.map((appServer, index) => ({
+        codexAuthJson: codexAuthJson(`interrupt-account-${index + 1}`),
+        worker: {
+          providerInstanceId: `codex-interrupt-account-${index + 1}`,
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(index + 40),
+          executionEngine: "app-server-goal",
+          appServerProcessFactory: appServer.create,
+          runner: new StaticRunner({
+            exitCode: 0,
+            stdout: "",
+            stderr: "",
+          }),
+          capacityPolicy: {
+            quotaCooldownMs: 60_000,
+          },
+          clock,
+        },
+      })),
+      clock,
+    });
+
+    try {
+      const resultPromise = executor.run({
+        jobId: "codex-safe-interrupt-job",
+        taskId: "codex-safe-interrupt-task",
+        prompt: "Implement the interruptible safe task.",
+        controls: { permissionMode: "allow-edits" },
+        maxAccountCycles: 1,
+      });
+
+      await waitUntil(async () => {
+        if (appServers[0]!.prompts.length === 0) return false;
+        await access(join(workspacePath, "wip.txt"));
+        return true;
+      });
+
+      const interrupt = await guidance.execute({
+        target: {
+          jobId: "codex-safe-interrupt-job",
+          taskId: "codex-safe-interrupt-task",
+          workspaceId: workspacePath,
+        },
+        message: "Stop the broad run and inspect the targeted recall slice.",
+        caller: { kind: "orchestrator", id: "lead-agent" },
+      });
+      expect(interrupt.status).toBe("interrupted");
+
+      const result = await resultPromise;
+      if (result.status !== "completed") {
+        throw new Error(`expected completed: ${result.reason}:${result.safeMessage}`);
+      }
+      expect(result.attempts).toHaveLength(2);
+      expect(result.attempts[0]?.failureReason).toBe("runtime_interrupted");
+      expect(result.attempts[0]?.workspaceDirtyAfter).toBe(true);
+      expect(appServers[0]!.prompts).toEqual([
+        "Implement the interruptible safe task.",
+      ]);
+      const continuationPrompt = appServers[1]!.prompts[0] ?? "";
+      expect(continuationPrompt).toContain("Continue the same task");
+      expect(continuationPrompt).toContain(
+        "Previous attempt stopped because: runtime_interrupted",
+      );
+      expect(continuationPrompt).toContain("Runtime control inbox instructions");
+      expect(continuationPrompt).toContain("targeted recall slice");
+      expect(continuationPrompt).toContain("Changed files:\n- wip.txt");
+      expect(continuationPrompt.includes("access_token")).toBe(false);
+      expect(continuationPrompt.includes("refresh_token")).toBe(false);
+      const controlViews = await controlInbox.listSignals({
+        target: {
+          jobId: "codex-safe-interrupt-job",
+          taskId: "codex-safe-interrupt-task",
+          workspaceId: workspacePath,
+        },
+        includeExpired: true,
+      });
+      expect(controlViews[0]?.state).toBe("delivered");
     } finally {
       await executor.dispose();
       await rm(rootDir, { recursive: true, force: true });
@@ -1655,6 +1774,7 @@ describe("FileBackendCodexWorker", () => {
 type FakeAppServerFactoryOptions = {
   readonly emitTopLevelErrorOnTurn?: string;
   readonly emitTopLevelErrorsOnTurns?: readonly (string | null)[];
+  readonly holdTurnOpen?: boolean;
   readonly writeFileOnTurn?: {
     readonly relativePath: string;
     readonly content: string;
@@ -1800,6 +1920,13 @@ class FakeAppServerProcess extends EventEmitter {
         this.respond(request.id, { turn: { id: turnId } });
         setTimeout(() => {
           void this.writeConfiguredTurnFile(request.params).then(() => {
+            if (this.options.holdTurnOpen) {
+              this.notify("turn/started", {
+                threadId: String(request.params?.threadId ?? ""),
+                turn: { id: turnId, status: "inProgress" },
+              });
+              return;
+            }
             const errorMessage = this.nextTurnError();
             if (errorMessage) {
               this.stdout.emit(
@@ -2000,6 +2127,25 @@ function extractFakePrompt(
 function sequentialIds(prefix: string): () => string {
   let next = 0;
   return () => `${prefix}-${++next}`;
+}
+
+async function waitUntil(
+  predicate: () => Promise<boolean> | boolean,
+  timeoutMs = 5_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      if (await predicate()) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("wait_until_timeout");
 }
 
 describe("NodeProcessRunner", () => {

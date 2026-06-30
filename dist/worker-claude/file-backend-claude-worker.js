@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, assertProviderTaskSystemPrompt, } from "@vioxen/subscription-runtime/core";
 import { ClaudeCliTaskExecutionEngine, ClaudeRuntimeTaskExecutionEngine, ClaudeRuntimeWithCliFallbackExecutionEngine, ClaudeSessionDriver, ClaudeTaskAgentDriver, claudeRuntimeResumeSessionIdMetadataKey, claudeRuntimeThreadIdMetadataKey, sessionArtifactFromClaudeOAuth, validateClaudeSessionArtifact, } from "@vioxen/subscription-runtime/provider-claude";
 import { createLocalFileBackendRuntimeAdapters, LocalFileWorkerControlInboxStore, } from "@vioxen/subscription-runtime/store-local-file";
-import { SubscriptionWorkerError, WorkerControlService, } from "@vioxen/subscription-runtime/worker-core";
+import { SubscriptionWorkerError, WorkerControlService, combineAbortSignals, } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner.js";
 import { NullWorkerObservability } from "../worker-local/observability.js";
 import { StableWorkerWorkspace } from "../worker-local/temp-workspace.js";
@@ -270,16 +270,21 @@ export class FileBackendClaudeWorker {
             throw error;
         }
     }
-    async run(job) {
+    async run(job, options = {}) {
         if (isThreadJob(job))
-            return this.runThreadJob(job);
-        return this.runProviderTask(job);
+            return this.runThreadJob(job, options);
+        return this.runProviderTask(job, {
+            ...(options.abortSignal === undefined
+                ? {}
+                : { abortSignal: options.abortSignal }),
+        });
     }
     async runProviderTask(job, input = {}) {
         this.assertStarted();
         assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
         const runId = job.runId ?? `local-${randomUUID()}`;
-        const abortSignal = job.abortSignal ?? new AbortController().signal;
+        const abort = combineAbortSignals(job.abortSignal, input.abortSignal);
+        const abortSignal = abort.signal;
         const workspaceId = input.workspaceId ?? this.stableWorkspacePath ?? undefined;
         const controlBatch = this.controlInbox
             ? await this.controlInbox.consumeForContinuation({
@@ -405,10 +410,11 @@ export class FileBackendClaudeWorker {
             throw error;
         }
         finally {
+            abort.dispose();
             heartbeat.stop();
         }
     }
-    async runThreadJob(job) {
+    async runThreadJob(job, options = {}) {
         this.assertStarted();
         const workspacePath = this.threadWorkspacePath(job.threadId);
         let capturedBundleId;
@@ -438,7 +444,12 @@ export class FileBackendClaudeWorker {
                                     [claudeRuntimeResumeSessionIdMetadataKey]: current.latestSessionId,
                                 }),
                         },
-                    }, { workspaceId: workspacePath });
+                    }, {
+                        workspaceId: workspacePath,
+                        ...(options.abortSignal === undefined
+                            ? {}
+                            : { abortSignal: options.abortSignal }),
+                    });
                     const latestSessionId = result.telemetry?.providerSessionId;
                     if (!latestSessionId) {
                         throw new SubscriptionWorkerError("subscription_worker_run_failed", "Claude runtime did not return a provider session id for thread handoff.");

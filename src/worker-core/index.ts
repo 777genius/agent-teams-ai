@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./types";
 export * from "./account-capacity";
+export * from "./abort-signal";
 export * from "./control";
 export * from "./host-command";
 export * from "./job-watch";

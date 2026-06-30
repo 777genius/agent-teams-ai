@@ -12,17 +12,25 @@ import { promisify } from "node:util";
 import {
   BoundedSubscriptionWorkerPool,
   DefaultWorkspaceSnapshotter,
+  InMemoryActiveAttemptRegistry,
   InMemoryAttemptJournal,
   InMemoryWorkspaceLockStore,
+  InterruptAndContinueWorkerUseCase,
   LocalFileAttemptJournal,
   SafeExecutionRunner,
   SubscriptionWorkerError,
+  WorkerControlService,
   defaultSafeExecutionErrorClassifier,
+  workerControlTargetMatches,
   type CapacityAwareSubscriptionWorker,
   type SubscriptionWorkerHealth,
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
+  type WorkerControlDeliveryReceipt,
+  type WorkerControlInboxStore,
+  type WorkerControlSignal,
+  type WorkerControlTarget,
   type WorkspaceSnapshot,
 } from "../index";
 
@@ -180,6 +188,81 @@ describe("SafeExecutionRunner", () => {
 
     expect(result.status).toBe("completed");
     expect(consumed).toBe(1);
+  });
+
+  it("continues dirty runtime-interrupted work with queued urgent guidance", async () => {
+    const workspacePath = await gitWorkspace("safe-execution-interrupt-");
+    const store = new InMemoryWorkerControlInboxStore();
+    const control = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("runtime-interrupt"),
+    });
+    const activeAttemptRegistry = new InMemoryActiveAttemptRegistry();
+    const useCase = new InterruptAndContinueWorkerUseCase({
+      control,
+      activeAttemptRegistry,
+    });
+    const target = {
+      jobId: "job-runtime-interrupt",
+      taskId: "task-runtime-interrupt",
+      workspaceId: workspacePath,
+    };
+    let runs = 0;
+    const pool = {
+      async run(
+        job: PromptJob,
+        options?: { readonly abortSignal?: AbortSignal },
+      ): Promise<PromptResult> {
+        runs += 1;
+        if (runs === 1) {
+          await writeFile(join(job.workspacePath, "feature.txt"), "partial\n");
+          const interrupt = await useCase.execute({
+            target,
+            message: "Stop the broad run and inspect the targeted recall slice.",
+            caller: { kind: "orchestrator", id: "lead-agent" },
+          });
+          expect(interrupt.status).toBe("interrupted");
+          expect(options?.abortSignal?.aborted).toBe(true);
+          throw new Error("provider observed runtime abort");
+        }
+        expect(job.prompt).toContain("Previous attempt stopped because: runtime_interrupted");
+        expect(job.prompt).toContain("Runtime control inbox instructions");
+        expect(job.prompt).toContain("targeted recall slice");
+        expect(job.prompt).toContain("Changed files:\n- feature.txt");
+        expect(await readFile(join(job.workspacePath, "feature.txt"), "utf8"))
+          .toBe("partial\n");
+        await writeFile(join(job.workspacePath, "feature.txt"), "done\n");
+        return { output: "continued after interrupt" };
+      },
+    };
+    const runner = new SafeExecutionRunner({
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal: new InMemoryAttemptJournal(),
+      controlInbox: control,
+      activeAttemptRegistry,
+    });
+
+    const result = await runner.run({
+      taskId: "task-runtime-interrupt",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool,
+      job: { prompt: "Improve benchmark.", workspacePath },
+      originalPrompt: "Improve benchmark.",
+      controlTarget: target,
+      policy: { maxAttempts: 2 },
+    });
+
+    if (result.status !== "completed") throw new Error("expected completed");
+    expect(runs).toBe(2);
+    expect(result.attempts[0]?.failureReason).toBe("runtime_interrupted");
+    expect(result.attempts[0]?.workspaceDirtyAfter).toBe(true);
+    expect(await readFile(join(workspacePath, "feature.txt"), "utf8")).toBe(
+      "done\n",
+    );
+    const signals = await control.listSignals({ target, includeExpired: true });
+    expect(signals[0]?.state).toBe("delivered");
   });
 
   it("does not consume control inbox guidance for reconnect repair continuations", async () => {
@@ -1153,4 +1236,62 @@ function deferred<T>(): {
     reject = promiseReject;
   });
   return { promise, resolve, reject };
+}
+
+class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
+  private readonly signals: WorkerControlSignal[] = [];
+  private readonly receipts: WorkerControlDeliveryReceipt[] = [];
+
+  async appendSignal(signal: WorkerControlSignal): Promise<WorkerControlSignal> {
+    this.signals.push(signal);
+    return signal;
+  }
+
+  async listSignals(input: {
+    readonly target?: WorkerControlTarget;
+    readonly signalIds?: readonly string[];
+  } = {}): Promise<readonly WorkerControlSignal[]> {
+    return this.signals.filter((signal) =>
+      (!input.target || workerControlTargetMatches(input.target, signal.target)) &&
+      (!input.signalIds || input.signalIds.includes(signal.signalId))
+    );
+  }
+
+  async tryClaimDelivery(
+    receipt: WorkerControlDeliveryReceipt,
+  ): Promise<WorkerControlDeliveryReceipt | null> {
+    if (
+      this.receipts.some((existing) =>
+        existing.signalId === receipt.signalId &&
+        existing.state === "accepted" &&
+        existing.deliveryAttemptId === receipt.deliveryAttemptId
+      )
+    ) {
+      return null;
+    }
+    this.receipts.push(receipt);
+    return receipt;
+  }
+
+  async appendReceipt(
+    receipt: WorkerControlDeliveryReceipt,
+  ): Promise<WorkerControlDeliveryReceipt> {
+    this.receipts.push(receipt);
+    return receipt;
+  }
+
+  async listReceipts(input: {
+    readonly target?: WorkerControlTarget;
+    readonly signalIds?: readonly string[];
+  } = {}): Promise<readonly WorkerControlDeliveryReceipt[]> {
+    return this.receipts.filter((receipt) =>
+      (!input.target || workerControlTargetMatches(input.target, receipt.target)) &&
+      (!input.signalIds || input.signalIds.includes(receipt.signalId))
+    );
+  }
+}
+
+function sequentialIds(prefix: string): () => string {
+  let next = 0;
+  return () => `${prefix}-${++next}`;
 }

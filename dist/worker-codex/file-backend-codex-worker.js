@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { createSubscriptionRuntime, DefaultRedactor, DeterministicIdGenerator, assertProviderTaskSystemPrompt, } from "@vioxen/subscription-runtime/core";
 import { CodexAppServerExecutionEngine, CodexCliAgentDriver, CodexCliSessionDriver, CodexJsonAgentDriver, CodexWorkerCacheSessionPoolMaterializer, PackagedCodexJsonExecutionEngine, defaultCodexModel, classifyCodexFailure, sessionArtifactFromCodexAuthJson, codexAuthJsonFromArtifact, readCodexAuthJsonFreshness, validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provider-codex";
 import { createLocalFileBackendRuntimeAdapters } from "@vioxen/subscription-runtime/store-local-file";
-import { SubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
+import { SubscriptionWorkerError, combineAbortSignals, } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner.js";
 import { NullWorkerObservability } from "../worker-local/observability.js";
 import { BorrowedRunTaskWorkspace, StableWorkerWorkspace, } from "../worker-local/temp-workspace.js";
@@ -278,12 +278,13 @@ export class FileBackendCodexWorker {
             await this.exportSeededCodexAuthJsonFileQuietly("prewarm");
         }
     }
-    async run(job) {
+    async run(job, options = {}) {
         this.assertStarted();
         assertProviderTaskSystemPrompt(job.systemPrompt, "job.systemPrompt");
         await this.rememberStoredQuotaGroup();
         const runId = job.runId ?? `local-${randomUUID()}`;
-        const abortSignal = job.abortSignal ?? new AbortController().signal;
+        const abort = combineAbortSignals(job.abortSignal, options.abortSignal);
+        const abortSignal = abort.signal;
         const startedAt = this.clock.monotonicMs();
         const retryMaxMs = this.options.refreshConflictRetryMaxMs ?? 30_000;
         let attempt = 1;
@@ -341,6 +342,7 @@ export class FileBackendCodexWorker {
             }
         }
         finally {
+            abort.dispose();
             await this.exportSeededCodexAuthJsonFileQuietly("run");
         }
     }

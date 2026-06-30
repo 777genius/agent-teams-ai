@@ -1,0 +1,1 @@
+{"version":3,"file":"abort-signal.d.ts","sourceRoot":"","sources":["../../src/worker-core/abort-signal.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,mBAAmB,GAAG;IAChC,QAAQ,CAAC,MAAM,EAAE,WAAW,CAAC;IAC7B,OAAO,IAAI,IAAI,CAAC;CACjB,CAAC;AAEF,wBAAgB,mBAAmB,CACjC,GAAG,OAAO,EAAE,SAAS,CAAC,WAAW,GAAG,SAAS,CAAC,EAAE,GAC/C,mBAAmB,CAwCrB"}
