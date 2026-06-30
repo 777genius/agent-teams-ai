@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, readdir, readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { access, mkdir, readdir, readFile, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { readCodexAuthJsonFreshness, validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provider-codex";
@@ -72,9 +72,22 @@ export function buildCodexGoalTmuxCommand(input) {
     };
 }
 export async function startCodexGoalTmux(input) {
+    await prepareCodexGoalLaunchPaths(input);
     const command = buildCodexGoalTmuxCommand(input);
     await execFileAsync(await resolveTmuxExecutable(), command.args);
     return command;
+}
+async function prepareCodexGoalLaunchPaths(input) {
+    const paths = [
+        input.config.jobRootDir,
+        input.logPath,
+        input.config.outputPath,
+        input.config.progressPath,
+    ];
+    const dirs = new Set(paths
+        .filter((path) => typeof path === "string" && path.length > 0)
+        .map((path) => (path === input.config.jobRootDir ? path : dirname(path))));
+    await Promise.all([...dirs].map((dir) => mkdir(dir, { recursive: true, mode: 0o700 })));
 }
 export function buildCodexGoalStopTmuxCommand(tmuxSession) {
     if (!tmuxSession.trim()) {

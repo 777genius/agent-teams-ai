@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -12,6 +12,7 @@ import {
   collectCodexGoalStatus,
   doctorCodexGoal,
   listCodexGoalAccountStatuses,
+  startCodexGoalTmux,
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
 import {
@@ -37,6 +38,47 @@ describe("codex goal ops", () => {
     expect(noTmux).not.toContain("refresh-secret");
     expect(tmux.preview).toContain("tmux new-session");
     expect(tmux.preview).toContain("tee -a");
+  });
+
+  it("creates job-root and artifact directories before starting tmux", async () => {
+    if (!(await hasTmux())) return;
+
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-start-paths-"));
+    const jobRootDir = join(root, "missing-job-root");
+    const workspacePath = join(root, "workspace");
+    const promptPath = join(root, "prompt.md");
+    const tmuxSession = `subscription-runtime-start-paths-${process.pid}-${Date.now()}`;
+    const launch: CodexGoalLaunchInput = {
+      config: {
+        jobRootDir,
+        authRootDir: join(root, "auth"),
+        workspacePath,
+        promptPath,
+        taskId: "task-1",
+        accounts: codexGoalAccountSlots(["account-a"]),
+        outputPath: join(jobRootDir, "nested", "task-1.latest-result.json"),
+        progressPath: join(jobRootDir, "nested", "task-1.progress.json"),
+      },
+      tmuxSession,
+      cwd: root,
+      logPath: join(jobRootDir, "logs", "task-1.log"),
+      cliCommand: ["/bin/true"],
+      format: "json",
+    };
+
+    await mkdir(workspacePath, { recursive: true });
+    await writeFile(promptPath, "Return ok.\n");
+
+    try {
+      await startCodexGoalTmux(launch);
+
+      await access(jobRootDir);
+      await access(join(jobRootDir, "logs"));
+      await access(join(jobRootDir, "nested"));
+    } finally {
+      await execFileAsync("tmux", ["kill-session", "-t", tmuxSession])
+        .catch(() => undefined);
+    }
   });
 
   it("doctors a sandbox worker layout and reports sanitized account status", async () => {
@@ -412,6 +454,15 @@ describe("codex goal ops", () => {
     ).toEqual(["state", "jobs", "account-a", "account-b"]);
   });
 });
+
+async function hasTmux(): Promise<boolean> {
+  try {
+    await execFileAsync("tmux", ["-V"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function createGoalFixture(): Promise<{
   readonly root: string;
