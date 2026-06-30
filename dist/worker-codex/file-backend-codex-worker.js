@@ -525,7 +525,7 @@ export class FileBackendCodexWorker {
         }
     }
     recordReconnectRequired(reason) {
-        const maxRetries = this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 1;
+        const maxRetries = this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 4;
         if (this.consecutiveReconnectFailures < maxRetries) {
             this.consecutiveReconnectFailures += 1;
             this.capacityState = {

@@ -799,7 +799,7 @@ function runConfigFromFlags(
         "SUBSCRIPTION_RUNTIME_MAX_ACCOUNT_CYCLES",
       ]),
       "--max-account-cycles",
-    ) ?? 3,
+    ) ?? 5,
     ...(staleLockMs === undefined ? {} : { staleLockMs }),
     allowDuplicateAccountIdentities: flag(values, "--allow-duplicate-accounts"),
     requireGitWorkspace: !flag(values, "--no-require-git-workspace"),

@@ -89,7 +89,7 @@ type CodexAccountIdentity = {
   readonly source: string;
 };
 
-const defaultMaxAccountCycles = 3;
+const defaultMaxAccountCycles = 5;
 
 export class FileBackendCodexSafeExecutor {
   readonly accountCapacityStore: WorkerAccountCapacityStore;

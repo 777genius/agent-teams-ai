@@ -176,7 +176,7 @@ export function buildCodexGoalExecutorOptions(input: {
     ...(config.executorId ? { executorId: config.executorId } : {}),
     stateRootDir: input.stateRootDir,
     workspacePath: config.workspacePath,
-    maxAccountCycles: config.maxAccountCycles ?? 3,
+    maxAccountCycles: config.maxAccountCycles ?? 5,
     allowDuplicateAccountIdentities:
       config.allowDuplicateAccountIdentities ?? false,
     requireGitWorkspace: config.requireGitWorkspace ?? true,
@@ -206,7 +206,7 @@ export function buildCodexGoalExecutorOptions(input: {
           quotaCooldownMs: config.quotaCooldownMs ?? 15 * 60 * 1000,
           reconnectCooldownMs: config.reconnectCooldownMs ?? 15 * 60 * 1000,
           maxReconnectRetriesPerAccount:
-            config.maxReconnectRetriesPerAccount ?? 1,
+            config.maxReconnectRetriesPerAccount ?? 4,
         },
       },
     })),

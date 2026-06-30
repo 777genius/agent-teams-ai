@@ -48,7 +48,7 @@ describe("codex goal cli", () => {
       taskTimeoutMs: 72 * 60 * 60 * 1000,
       progressPath: "/tmp/job/task-1.progress.json",
       progressHeartbeatMs: 60_000,
-      maxAccountCycles: 3,
+      maxAccountCycles: 5,
       requireGitWorkspace: true,
     });
     expect(command.config.accounts.map((account) => account.name)).toEqual([

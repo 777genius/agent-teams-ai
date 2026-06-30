@@ -38,8 +38,8 @@ export function providerSessionDriverContract(
         fixture.reconnectError,
       );
 
-      expect(failure.safeMessage).not.toContain("refresh_token");
-      expect(failure.safeMessage).not.toContain("access_token");
+      expect(failure.safeMessage.includes("refresh_token")).toBe(false);
+      expect(failure.safeMessage.includes("access_token")).toBe(false);
     });
 
     it("declares capabilities before runtime starts", () => {

@@ -485,7 +485,7 @@ describe("FileBackendCodexWorker", () => {
     } finally {
       await first.dispose();
       await second.dispose();
-      await rm(rootDir, { recursive: true, force: true });
+      await rm(rootDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
     }
   });
 
@@ -648,6 +648,7 @@ describe("FileBackendCodexWorker", () => {
   it("fails safe Codex work before starting accounts when the workspace is not git", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-not-git-"));
     const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-not-git-workspace-"));
+    await writeFile(join(workspacePath, ".git"), "gitdir: /nonexistent/gitdir\n", "utf8");
     const appServer = new FakeAppServerFactory();
     const executor = new FileBackendCodexSafeExecutor({
       stateRootDir: rootDir,
@@ -935,6 +936,7 @@ describe("FileBackendCodexWorker", () => {
           }),
           capacityPolicy: {
             reconnectCooldownMs: 10,
+            maxReconnectRetriesPerAccount: 1,
           },
           clock,
         },
@@ -1008,6 +1010,7 @@ describe("FileBackendCodexWorker", () => {
           }),
           capacityPolicy: {
             reconnectCooldownMs: 10,
+            maxReconnectRetriesPerAccount: 1,
           },
           clock,
         },
@@ -1219,7 +1222,7 @@ describe("FileBackendCodexWorker", () => {
 
       expect(result.status).toBe("partial");
       if (result.status !== "partial") throw new Error("expected partial");
-      expect(result.attempts).toHaveLength(6);
+      expect(result.attempts).toHaveLength(10);
       expect(result.reason).toBe("quota_limited");
       expect(result.safeMessage).toBe("Safe execution has no attempts remaining.");
       expect(result.attempts.map((attempt) => attempt.failureReason)).toEqual([
@@ -1229,9 +1232,13 @@ describe("FileBackendCodexWorker", () => {
         "quota_limited",
         "quota_limited",
         "quota_limited",
+        "quota_limited",
+        "quota_limited",
+        "quota_limited",
+        "quota_limited",
       ]);
-      expect(appServers[0]!.prompts).toHaveLength(3);
-      expect(appServers[1]!.prompts).toHaveLength(3);
+      expect(appServers[0]!.prompts).toHaveLength(5);
+      expect(appServers[1]!.prompts).toHaveLength(5);
       expect(appServers[0]!.prompts[0]).toBe("Implement the safe cyclic task.");
       expect(appServers[1]!.prompts[0]).toContain("Continue the same task");
     } finally {

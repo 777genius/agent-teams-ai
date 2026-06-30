@@ -21,7 +21,7 @@ describe("codex goal runner", () => {
       taskId: "task-heartbeat",
       accounts: codexGoalAccountSlots(["account-a"]),
       outputPath: join(root, "job", "task-heartbeat.latest-result.json"),
-      progressHeartbeatMs: 5,
+      progressHeartbeatMs: 1000,
     };
     let releaseRun: (() => void) | undefined;
     let startedRun: (() => void) | undefined;

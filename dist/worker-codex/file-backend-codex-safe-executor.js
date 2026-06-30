@@ -5,7 +5,7 @@ import { validateCodexAuthJsonBytes, } from "@vioxen/subscription-runtime/provid
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import { accountCapacityAwareWorkerFactory, BoundedSubscriptionWorkerPool, LocalFileAttemptJournal, LocalFileWorkspaceLockStore, SafeExecutionRunner, SubscriptionWorkerError, } from "@vioxen/subscription-runtime/worker-core";
 import { FileBackendCodexWorker, } from "./file-backend-codex-worker.js";
-const defaultMaxAccountCycles = 3;
+const defaultMaxAccountCycles = 5;
 export class FileBackendCodexSafeExecutor {
     options;
     accountCapacityStore;

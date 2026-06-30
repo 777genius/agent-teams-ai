@@ -704,7 +704,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
 
   private recordReconnectRequired(reason: string): void {
     const maxRetries =
-      this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 1;
+      this.options.capacityPolicy?.maxReconnectRetriesPerAccount ?? 4;
     if (this.consecutiveReconnectFailures < maxRetries) {
       this.consecutiveReconnectFailures += 1;
       this.capacityState = {

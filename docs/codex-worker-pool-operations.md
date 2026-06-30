@@ -99,7 +99,7 @@ Defaults:
 - reasoning effort: `xhigh`;
 - service tier: `fast`;
 - task timeout: `72h`;
-- max account cycles: `3`;
+- max account cycles: `5`;
 - execution engine: `app-server-goal`;
 - permission mode: `allow-edits`.
 
@@ -191,7 +191,7 @@ await runCodexGoal({
   reasoningEffort: "xhigh",
   serviceTier: "fast",
   taskTimeoutMs: 72 * 60 * 60 * 1000,
-  maxAccountCycles: 3,
+  maxAccountCycles: 5,
 });
 ```
 
@@ -292,7 +292,7 @@ Minimal `codex_goal_create_job` input:
   "serviceTier": "fast",
   "executionEngine": "app-server-goal",
   "taskTimeoutMs": 259200000,
-  "maxAccountCycles": 3
+  "maxAccountCycles": 5
 }
 ```
 
@@ -459,7 +459,7 @@ Minimal MCP `codex_goal_start` input:
   "reasoningEffort": "xhigh",
   "serviceTier": "fast",
   "taskTimeoutMs": 259200000,
-  "maxAccountCycles": 3,
+  "maxAccountCycles": 5,
   "confirmStart": true
 }
 ```
@@ -684,7 +684,7 @@ const executor = new FileBackendCodexSafeExecutor({
   executorId: process.env.SUBSCRIPTION_RUNTIME_EXECUTOR_ID ?? taskId,
   stateRootDir,
   workspacePath,
-  maxAccountCycles: Number(process.env.SUBSCRIPTION_RUNTIME_MAX_ACCOUNT_CYCLES ?? 3),
+  maxAccountCycles: Number(process.env.SUBSCRIPTION_RUNTIME_MAX_ACCOUNT_CYCLES ?? 5),
   accounts: accountNames.map((accountName, index) => ({
     codexAuthJsonPath: join(authRoot, accountName, "auth.json"),
     worker: {
@@ -701,7 +701,7 @@ const executor = new FileBackendCodexSafeExecutor({
       capacityPolicy: {
         quotaCooldownMs: 15 * 60 * 1000,
         reconnectCooldownMs: 15 * 60 * 1000,
-        maxReconnectRetriesPerAccount: 1,
+        maxReconnectRetriesPerAccount: 4,
       },
       metadata: { accountOrder: String(index + 1) },
     },

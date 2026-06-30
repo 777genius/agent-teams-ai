@@ -550,7 +550,7 @@ function runConfigFromFlags(values, env, cwd, jobRootDir, taskId) {
         ]), "--progress-heartbeat-ms") ?? 60_000,
         maxAccountCycles: parseOptionalPositiveInteger(option(values, env, "--max-account-cycles", [
             "SUBSCRIPTION_RUNTIME_MAX_ACCOUNT_CYCLES",
-        ]), "--max-account-cycles") ?? 3,
+        ]), "--max-account-cycles") ?? 5,
         ...(staleLockMs === undefined ? {} : { staleLockMs }),
         allowDuplicateAccountIdentities: flag(values, "--allow-duplicate-accounts"),
         requireGitWorkspace: !flag(values, "--no-require-git-workspace"),

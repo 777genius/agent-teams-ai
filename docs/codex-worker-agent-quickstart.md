@@ -118,7 +118,7 @@ Create one stored job per logical goal and per writer worktree:
   "serviceTier": "fast",
   "executionEngine": "app-server-goal",
   "taskTimeoutMs": 259200000,
-  "maxAccountCycles": 3
+  "maxAccountCycles": 5
 }
 ```
 

@@ -1106,7 +1106,7 @@ async function goalLaunchInput(args: GoalMcpArgs): Promise<CodexGoalLaunchInput>
     ...(numberValue(merged.staleLockMs) === undefined
       ? {}
       : { staleLockMs: numberValue(merged.staleLockMs) as number }),
-    maxAccountCycles: numberValue(merged.maxAccountCycles) ?? 3,
+    maxAccountCycles: numberValue(merged.maxAccountCycles) ?? 5,
     allowDuplicateAccountIdentities:
       booleanValue(merged.allowDuplicateAccountIdentities) ?? false,
     requireGitWorkspace: booleanValue(merged.requireGitWorkspace) ?? true,
@@ -1688,7 +1688,7 @@ function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestI
     executionEngine: args.executionEngine ?? "app-server-goal",
     taskTimeoutMs: args.taskTimeoutMs ?? defaultTimeoutMs,
     ...(args.staleLockMs ? { staleLockMs: args.staleLockMs } : {}),
-    maxAccountCycles: args.maxAccountCycles ?? 3,
+    maxAccountCycles: args.maxAccountCycles ?? 5,
     permissionMode: args.permissionMode ?? "allow-edits",
     allowDuplicateAccountIdentities: args.allowDuplicateAccountIdentities ?? false,
     requireGitWorkspace: args.requireGitWorkspace ?? true,
