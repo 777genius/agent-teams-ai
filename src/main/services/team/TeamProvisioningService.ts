@@ -337,7 +337,24 @@ import {
   isProvisionedButNotAliveFailureReason,
 } from './provisioning/TeamProvisioningLaunchFailurePolicy';
 import {
-  isOpenCodeOverlayMemberRemoved,
+  areAllExpectedLaunchMembersConfirmed as areAllExpectedLaunchMembersConfirmedHelper,
+  areLaunchStateSnapshotsSemanticallyEqual,
+  getMemberLaunchSummary as getMemberLaunchSummaryHelper,
+  getPersistedLaunchMemberNames,
+  hasMixedLaunchMetadata,
+  hasMixedSecondaryLaunchMetadata,
+  hasPrimaryOnlyLaneAwareLaunchMetadata,
+  resolveOpenCodeSecondaryLaneMemberEvidence,
+  shouldOverlayPrimaryBootstrapTruth as shouldOverlayPrimaryBootstrapTruthHelper,
+} from './provisioning/TeamProvisioningLaunchStateProjection';
+import {
+  applyOpenCodeSecondaryEvidenceOverlay as applyOpenCodeSecondaryEvidenceOverlayHelper,
+  createDefaultOpenCodeSecondaryEvidenceOverlayPorts,
+  finalizeMissingRegisteredMembersAsFailed as finalizeMissingRegisteredMembersAsFailedHelper,
+  guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper,
+  hasCommittedOpenCodeSecondaryEvidenceOverlayDelta,
+} from './provisioning/TeamProvisioningLaunchStateReconciliation';
+import {
   matchesExactTeamMemberName,
   matchesObservedMemberNameForExpected,
   matchesTeamMemberIdentity,
@@ -386,11 +403,7 @@ import {
 } from './provisioning/TeamProvisioningMemberStatusProjection';
 import {
   boundOpenCodeAppManagedBriefingText,
-  filterStaleOpenCodeOverlayDiagnostics,
   hasRealOpenCodeFailureDiagnostic,
-  hasRealOpenCodeLaunchDiagnostic,
-  hasStaleOpenCodeDiagnostics,
-  hasStaleOpenCodeSecondaryLaunchDiagnostic,
   isFileLockTimeoutError,
   isPersistedOpenCodeSecondaryLaneMember,
   normalizeOpenCodePrepareDiagnostic,
@@ -401,10 +414,8 @@ import { prepareSelectedOpenCodeModelsForProvisioning } from './provisioning/Tea
 import {
   appendDiagnosticOnce,
   buildOpenCodeSecondaryLaneTimingDiagnostic,
-  buildOpenCodeUncommittedBootstrapDiagnostic,
   collectOpenCodeSecondaryLaneFailureDiagnostics,
   createUnexpectedMixedSecondaryLaneFailureResult,
-  downgradeUncommittedOpenCodeBootstrapEvidence,
   getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
   isBootstrapMemberEvidenceCurrentForMember,
   isDefinitiveOpenCodePreLaunchFailure,
@@ -573,7 +584,6 @@ import { writeTeamLaunchFailureArtifactPack } from './TeamLaunchFailureArtifactP
 import {
   createPersistedLaunchSnapshot,
   deriveTeamLaunchAggregateState,
-  hasMixedPersistedLaunchMetadata,
   snapshotFromRuntimeMemberStatuses,
   snapshotToMemberSpawnStatuses,
 } from './TeamLaunchStateEvaluator';
@@ -596,10 +606,7 @@ import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalServi
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
-import type {
-  OpenCodeCommittedBootstrapSessionRecord,
-  OpenCodeRuntimeLaneIndexEntry,
-} from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import type { OpenCodeCommittedBootstrapSessionRecord } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
@@ -1515,84 +1522,6 @@ const OPENCODE_BOOTSTRAP_CHECKIN_RETRY_SENT_PREFIX = 'opencode_bootstrap_checkin
 
 function getOpenCodeBootstrapCheckinRetryMarker(runId: string, runtimeSessionId: string): string {
   return `${OPENCODE_BOOTSTRAP_CHECKIN_RETRY_SENT_PREFIX}:${runId}:${runtimeSessionId}`;
-}
-
-function resolveOpenCodeSecondaryLaneMemberEvidence(
-  lane: MixedSecondaryRuntimeLaneState | undefined,
-  memberName: string
-): TeamRuntimeMemberLaunchEvidence | undefined {
-  if (!lane?.result) {
-    return undefined;
-  }
-  return (
-    lane.result.members[memberName] ??
-    Object.values(lane.result.members).find((member) =>
-      matchesTeamMemberIdentity(member.memberName ?? '', memberName)
-    )
-  );
-}
-
-function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(input: {
-  current: PersistedTeamLaunchMemberState;
-  previous: PersistedTeamLaunchMemberState | null;
-  session: OpenCodeCommittedBootstrapSessionRecord;
-  now: string;
-}): PersistedTeamLaunchMemberState {
-  const observedAt = input.session.observedAt ?? input.now;
-  const diagnostics = [
-    ...new Set([
-      ...filterStaleOpenCodeOverlayDiagnostics(input.current.diagnostics),
-      'opencode_bootstrap_evidence_committed',
-    ]),
-  ];
-  const runtimeAlive = true;
-  const livenessKind =
-    input.current.livenessKind === 'runtime_process' ||
-    input.current.livenessKind === 'confirmed_bootstrap'
-      ? input.current.livenessKind
-      : 'confirmed_bootstrap';
-  return {
-    ...input.previous,
-    ...input.current,
-    launchState: 'confirmed_alive',
-    agentToolAccepted: true,
-    bootstrapConfirmed: true,
-    runtimeAlive,
-    hardFailure: false,
-    hardFailureReason: undefined,
-    runtimeRunId: input.session.runId ?? input.current.runtimeRunId,
-    runtimeSessionId: input.session.id,
-    bootstrapEvidenceSource: input.session.source,
-    bootstrapMode:
-      input.session.source === 'app_managed_bootstrap'
-        ? 'app_managed_context'
-        : 'model_tool_checkin',
-    appManagedBootstrapCandidate:
-      input.session.source === 'app_managed_bootstrap'
-        ? input.session.appManagedBootstrapCandidate
-        : undefined,
-    livenessKind,
-    runtimeDiagnostic:
-      input.session.source === 'app_managed_bootstrap'
-        ? 'OpenCode app-managed bootstrap evidence committed.'
-        : 'OpenCode bootstrap evidence committed.',
-    runtimeDiagnosticSeverity: 'info',
-    firstSpawnAcceptedAt:
-      input.current.firstSpawnAcceptedAt ?? input.previous?.firstSpawnAcceptedAt ?? observedAt,
-    lastHeartbeatAt: input.current.lastHeartbeatAt ?? input.previous?.lastHeartbeatAt ?? observedAt,
-    runtimeLastSeenAt: runtimeAlive ? (input.current.runtimeLastSeenAt ?? observedAt) : undefined,
-    lastRuntimeAliveAt: runtimeAlive
-      ? (input.current.lastRuntimeAliveAt ?? input.previous?.lastRuntimeAliveAt ?? observedAt)
-      : input.current.lastRuntimeAliveAt,
-    lastEvaluatedAt: input.now,
-    sources: {
-      ...(input.previous?.sources ?? {}),
-      ...(input.current.sources ?? {}),
-      nativeHeartbeat: true,
-      processAlive: runtimeAlive || undefined,
-    },
-    diagnostics,
-  };
 }
 
 interface PendingMemberRestartContext {
@@ -17853,47 +17782,13 @@ export class TeamProvisioningService {
   }
 
   private async finalizeMissingRegisteredMembersAsFailed(run: ProvisioningRun): Promise<void> {
-    if (!run.expectedMembers || run.expectedMembers.length === 0) return;
-    const registeredNames = await this.getRegisteredTeamMemberNames(run.teamName);
-    if (!registeredNames) {
-      return;
-    }
-
-    for (const expected of run.expectedMembers) {
-      const matchedRuntimeNames = [...registeredNames].filter((name) => {
-        if (name === expected) return true;
-        const parsed = parseNumericSuffixName(name);
-        return parsed !== null && parsed.suffix >= 2 && parsed.base === expected;
-      });
-
-      if (matchedRuntimeNames.length > 0) {
-        continue;
-      }
-      if (this.isMemberLifecycleOperationActive(run.teamName, expected)) {
-        continue;
-      }
-      if (run.pendingMemberRestarts?.has(expected) === true) {
-        continue;
-      }
-
-      const current = run.memberSpawnStatuses.get(expected);
-      if (
-        current?.launchState === 'failed_to_start' ||
-        current?.launchState === 'skipped_for_launch' ||
-        current?.skippedForLaunch === true ||
-        current?.bootstrapConfirmed ||
-        current?.runtimeAlive
-      ) {
-        continue;
-      }
-
-      this.setMemberSpawnStatus(
-        run,
-        expected,
-        'error',
-        'Teammate was not registered in config.json during launch. Persistent spawn failed.'
-      );
-    }
+    return finalizeMissingRegisteredMembersAsFailedHelper(run, {
+      getRegisteredTeamMemberNames: (teamName) => this.getRegisteredTeamMemberNames(teamName),
+      isMemberLifecycleOperationActive: (teamName, memberName) =>
+        this.isMemberLifecycleOperationActive(teamName, memberName),
+      setMemberSpawnStatus: (targetRun, memberName, status, error) =>
+        this.setMemberSpawnStatus(targetRun, memberName, status, error),
+    });
   }
 
   private markUnconfirmedBootstrapMembersFailed(
@@ -18348,255 +18243,40 @@ export class TeamProvisioningService {
     previousSnapshot?: PersistedTeamLaunchSnapshot | null;
     metaMembers?: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>;
   }): Promise<PersistedTeamLaunchSnapshot> {
-    const candidates = this.collectOpenCodeSecondaryOverlayCandidates(
-      params.snapshot,
-      params.previousSnapshot ?? null
-    );
-    if (candidates.length === 0) {
-      return params.snapshot;
-    }
-
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), params.teamName).catch(
-      () => null
-    );
-    let changed = false;
-    const nextMembers: Record<string, PersistedTeamLaunchMemberState> = {
-      ...params.snapshot.members,
-    };
-    const metaMembers = params.metaMembers ?? [];
-
-    for (const memberName of candidates) {
-      const current = nextMembers[memberName];
-      const previous = params.previousSnapshot?.members[memberName] ?? null;
-      const baseMember = current ?? previous;
-      if (!baseMember || !isPersistedOpenCodeSecondaryLaneMember(baseMember)) {
-        continue;
-      }
-      const laneId = baseMember.laneId?.trim();
-      if (!laneId) {
-        continue;
-      }
-      const laneEntry = laneIndex?.lanes[laneId] ?? null;
-      const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+    return applyOpenCodeSecondaryEvidenceOverlayHelper(
+      params,
+      createDefaultOpenCodeSecondaryEvidenceOverlayPorts({
         teamsBasePath: getTeamsBasePath(),
-        teamName: params.teamName,
-        laneId,
-      }).catch((error: unknown) => ({
-        state: 'invalid_store' as const,
-        committed: false,
-        activeRunId: null,
-        sessions: [],
-        diagnostics: [
-          `OpenCode committed bootstrap evidence read failed: ${getErrorMessage(error)}`,
-        ],
-      }));
-      const decision = await this.classifyOpenCodeSecondaryEvidenceOverlay({
-        teamName: params.teamName,
-        memberName,
-        current: baseMember,
-        previous,
-        laneEntry,
-        metaMembers,
-        activeRunId: evidence.activeRunId,
-        sessions: evidence.committed ? evidence.sessions : [],
-        diagnostics: evidence.diagnostics,
-      });
-      if (decision.kind !== 'confirmed_bootstrap') {
-        continue;
-      }
-      const promoted = promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence({
-        current: baseMember,
-        previous,
-        session: decision.session,
-        now: nowIso(),
-      });
-      if (!current || JSON.stringify(promoted) !== JSON.stringify(current)) {
-        nextMembers[memberName] = promoted;
-        changed = true;
-      }
-    }
-
-    if (!changed) {
-      return params.snapshot;
-    }
-
-    return createPersistedLaunchSnapshot({
-      teamName: params.snapshot.teamName,
-      expectedMembers: params.snapshot.expectedMembers,
-      bootstrapExpectedMembers: params.snapshot.bootstrapExpectedMembers,
-      leadSessionId: params.snapshot.leadSessionId,
-      launchPhase: params.snapshot.launchPhase,
-      members: nextMembers,
-      updatedAt: nowIso(),
-    });
+        hasBootstrapCheckinTombstone: ({ teamName, laneId, runId }) =>
+          this.hasOpenCodeBootstrapCheckinTombstone(teamName, laneId, runId),
+        nowIso,
+      })
+    );
   }
 
   private hasCommittedOpenCodeSecondaryEvidenceOverlayDelta(
     snapshot: PersistedTeamLaunchSnapshot | null,
     previousSnapshot: PersistedTeamLaunchSnapshot | null
   ): boolean {
-    if (!snapshot) {
-      return false;
-    }
-    return Object.entries(snapshot.members).some(([memberName, member]) => {
-      if (!member.diagnostics?.includes('opencode_bootstrap_evidence_committed')) {
-        return false;
-      }
-      const previous = previousSnapshot?.members[memberName];
-      return (
-        previous?.launchState !== member.launchState ||
-        previous?.bootstrapConfirmed !== member.bootstrapConfirmed ||
-        previous?.runtimeSessionId !== member.runtimeSessionId ||
-        previous?.livenessKind !== member.livenessKind
-      );
+    return hasCommittedOpenCodeSecondaryEvidenceOverlayDelta(snapshot, previousSnapshot);
+  }
+
+  private async hasOpenCodeBootstrapCheckinTombstone(
+    teamName: string,
+    laneId: string | undefined,
+    runId: string
+  ): Promise<boolean> {
+    const tombstoneStore = createRuntimeRunTombstoneStore({
+      filePath: getOpenCodeRuntimeRunTombstonesPath(getTeamsBasePath(), teamName, laneId),
     });
-  }
-
-  private collectOpenCodeSecondaryOverlayCandidates(
-    snapshot: PersistedTeamLaunchSnapshot,
-    previousSnapshot: PersistedTeamLaunchSnapshot | null
-  ): string[] {
-    const names = new Set<string>();
-    const allNames = new Set([
-      ...Object.keys(snapshot.members),
-      ...Object.keys(previousSnapshot?.members ?? {}),
-    ]);
-    for (const memberName of allNames) {
-      const current = snapshot.members[memberName];
-      const previous = previousSnapshot?.members[memberName];
-      const candidate = current ?? previous;
-      if (!isPersistedOpenCodeSecondaryLaneMember(candidate)) {
-        continue;
-      }
-      if (!current || this.needsOpenCodeSecondaryEvidenceOverlay(current, previous ?? null)) {
-        names.add(memberName);
-      }
-    }
-    return [...names].sort((left, right) => left.localeCompare(right));
-  }
-
-  private needsOpenCodeSecondaryEvidenceOverlay(
-    current: PersistedTeamLaunchMemberState,
-    previous: PersistedTeamLaunchMemberState | null
-  ): boolean {
-    if (current.launchState === 'confirmed_alive' && current.bootstrapConfirmed) {
-      return (
-        current.livenessKind !== 'confirmed_bootstrap' && current.livenessKind !== 'runtime_process'
-      );
-    }
-    if (
-      previous?.launchState === 'confirmed_alive' &&
-      previous.bootstrapConfirmed &&
-      current.launchState !== 'confirmed_alive'
-    ) {
-      return true;
-    }
-    if (
-      current.launchState === 'starting' ||
-      current.launchState === 'runtime_pending_bootstrap' ||
-      current.launchState === 'runtime_pending_permission'
-    ) {
-      return true;
-    }
-    return (
-      current.launchState === 'failed_to_start' &&
-      hasStaleOpenCodeSecondaryLaunchDiagnostic(current)
-    );
-  }
-
-  private async classifyOpenCodeSecondaryEvidenceOverlay(params: {
-    teamName: string;
-    memberName: string;
-    current: PersistedTeamLaunchMemberState;
-    previous: PersistedTeamLaunchMemberState | null;
-    laneEntry: OpenCodeRuntimeLaneIndexEntry | null;
-    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>;
-    activeRunId: string | null;
-    sessions: OpenCodeCommittedBootstrapSessionRecord[];
-    diagnostics: readonly string[];
-  }): Promise<
-    | { kind: 'blocked' | 'none' | 'ambiguous' | 'conflict'; diagnostics: string[] }
-    | { kind: 'confirmed_bootstrap'; session: OpenCodeCommittedBootstrapSessionRecord }
-  > {
-    if (isOpenCodeOverlayMemberRemoved(params.metaMembers, params.memberName)) {
-      return { kind: 'blocked', diagnostics: ['opencode_overlay_member_removed'] };
-    }
-    if (params.laneEntry?.state === 'stopped') {
-      return { kind: 'blocked', diagnostics: ['opencode_overlay_lane_stopped'] };
-    }
-    if (hasRealOpenCodeLaunchDiagnostic(params.current)) {
-      return { kind: 'blocked', diagnostics: ['opencode_overlay_real_failure_preserved'] };
-    }
-    if (
-      params.current.launchState === 'failed_to_start' &&
-      !hasStaleOpenCodeSecondaryLaunchDiagnostic(params.current)
-    ) {
-      return { kind: 'blocked', diagnostics: ['opencode_overlay_real_failure_preserved'] };
-    }
-    if (
-      params.laneEntry?.state === 'degraded' &&
-      !hasStaleOpenCodeSecondaryLaunchDiagnostic(params.current) &&
-      !hasStaleOpenCodeDiagnostics(params.laneEntry.diagnostics)
-    ) {
-      return { kind: 'blocked', diagnostics: ['opencode_overlay_degraded_lane_preserved'] };
-    }
-
-    const memberSessions = params.sessions.filter((session) =>
-      namesMatchCaseInsensitive(session.memberName, params.memberName)
-    );
-    if (memberSessions.length === 0) {
-      return { kind: 'none', diagnostics: [...params.diagnostics, 'opencode_overlay_no_session'] };
-    }
-
-    const expectedSessionId =
-      params.current.runtimeSessionId?.trim() || params.previous?.runtimeSessionId?.trim() || '';
-    const selected = expectedSessionId
-      ? memberSessions.find((session) => session.id === expectedSessionId)
-      : memberSessions.length === 1
-        ? memberSessions[0]
-        : null;
-    if (!selected) {
-      return {
-        kind: expectedSessionId ? 'conflict' : 'ambiguous',
-        diagnostics: [
-          expectedSessionId
-            ? 'opencode_overlay_session_conflict'
-            : 'opencode_overlay_ambiguous_sessions',
-        ],
-      };
-    }
-    if (
-      params.activeRunId &&
-      selected.runId &&
-      params.activeRunId.trim() !== selected.runId.trim()
-    ) {
-      return {
-        kind: 'conflict',
-        diagnostics: ['opencode_overlay_session_run_mismatch'],
-      };
-    }
-
-    if (selected.runId) {
-      const tombstoneStore = createRuntimeRunTombstoneStore({
-        filePath: getOpenCodeRuntimeRunTombstonesPath(
-          getTeamsBasePath(),
-          params.teamName,
-          params.current.laneId
-        ),
-      });
-      const tombstone = await tombstoneStore
-        .find({
-          teamName: params.teamName,
-          runId: selected.runId,
-          evidenceKind: 'bootstrap_checkin',
-        })
-        .catch(() => null);
-      if (tombstone) {
-        return { kind: 'blocked', diagnostics: ['opencode_overlay_run_tombstoned'] };
-      }
-    }
-
-    return { kind: 'confirmed_bootstrap', session: selected };
+    const tombstone = await tombstoneStore
+      .find({
+        teamName,
+        runId,
+        evidenceKind: 'bootstrap_checkin',
+      })
+      .catch(() => null);
+    return Boolean(tombstone);
   }
 
   private async writeLaunchStateSnapshot(
@@ -18657,45 +18337,7 @@ export class TeamProvisioningService {
     left: PersistedTeamLaunchSnapshot,
     right: PersistedTeamLaunchSnapshot
   ): boolean {
-    return (
-      JSON.stringify(this.toLaunchStateSemanticValue(left)) ===
-      JSON.stringify(this.toLaunchStateSemanticValue(right))
-    );
-  }
-
-  private toLaunchStateSemanticValue(snapshot: PersistedTeamLaunchSnapshot): unknown {
-    const { updatedAt: _updatedAt, members, ...rest } = snapshot;
-    const stableMembers = Object.fromEntries(
-      Object.entries(members)
-        .sort(([leftName], [rightName]) => leftName.localeCompare(rightName))
-        .map(([memberName, member]) => {
-          const {
-            lastEvaluatedAt: _lastEvaluatedAt,
-            lastRuntimeAliveAt: _lastRuntimeAliveAt,
-            ...stableMember
-          } = member;
-          return [memberName, stableMember];
-        })
-    );
-    return this.toStableJsonValue({
-      ...rest,
-      members: stableMembers,
-    });
-  }
-
-  private toStableJsonValue(value: unknown): unknown {
-    if (Array.isArray(value)) {
-      return value.map((item) => this.toStableJsonValue(item));
-    }
-    if (!value || typeof value !== 'object') {
-      return value;
-    }
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([, entryValue]) => entryValue !== undefined)
-        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-        .map(([key, entryValue]) => [key, this.toStableJsonValue(entryValue)])
-    );
+    return areLaunchStateSnapshotsSemanticallyEqual(left, right);
   }
 
   private async enqueueLaunchStateStoreOperation<T>(
@@ -18740,65 +18382,7 @@ export class TeamProvisioningService {
     noRuntimePendingCount?: number;
     permissionPendingCount?: number;
   } {
-    const expectedMembers = run.expectedMembers ?? [];
-    const memberSpawnStatuses = run.memberSpawnStatuses ?? new Map();
-    let confirmedCount = 0;
-    let pendingCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
-    let runtimeAlivePendingCount = 0;
-    let shellOnlyPendingCount = 0;
-    let runtimeProcessPendingCount = 0;
-    let runtimeCandidatePendingCount = 0;
-    let noRuntimePendingCount = 0;
-    let permissionPendingCount = 0;
-    for (const expected of expectedMembers) {
-      const entry = memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
-      if (entry.launchState === 'confirmed_alive') {
-        confirmedCount += 1;
-        continue;
-      }
-      if (entry.launchState === 'skipped_for_launch' || entry.skippedForLaunch === true) {
-        skippedCount += 1;
-        continue;
-      }
-      if (entry.launchState === 'failed_to_start') {
-        failedCount += 1;
-        continue;
-      }
-      pendingCount += 1;
-      if (entry.runtimeAlive) {
-        runtimeAlivePendingCount += 1;
-      }
-      if (entry.launchState === 'runtime_pending_permission') {
-        permissionPendingCount += 1;
-      }
-      if (entry.livenessKind === 'shell_only') {
-        shellOnlyPendingCount += 1;
-      } else if (entry.livenessKind === 'runtime_process') {
-        runtimeProcessPendingCount += 1;
-      } else if (entry.livenessKind === 'runtime_process_candidate') {
-        runtimeCandidatePendingCount += 1;
-      } else if (
-        entry.livenessKind === 'not_found' ||
-        entry.livenessKind === 'stale_metadata' ||
-        entry.livenessKind === 'registered_only'
-      ) {
-        noRuntimePendingCount += 1;
-      }
-    }
-    return {
-      confirmedCount,
-      pendingCount,
-      failedCount,
-      skippedCount,
-      runtimeAlivePendingCount,
-      shellOnlyPendingCount,
-      runtimeProcessPendingCount,
-      runtimeCandidatePendingCount,
-      noRuntimePendingCount,
-      permissionPendingCount,
-    };
+    return getMemberLaunchSummaryHelper(run);
   }
 
   private buildPendingBootstrapStatusMessage(
@@ -18997,11 +18581,7 @@ export class TeamProvisioningService {
   }
 
   private shouldOverlayPrimaryBootstrapTruth(run: ProvisioningRun): boolean {
-    return (
-      run.isLaunch ||
-      run.deterministicBootstrap === true ||
-      (run.mixedSecondaryLanes?.length ?? 0) > 0
-    );
+    return shouldOverlayPrimaryBootstrapTruthHelper(run);
   }
 
   private async overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(
@@ -19518,7 +19098,7 @@ export class TeamProvisioningService {
   }
 
   private getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): string[] {
-    return Array.from(new Set([...snapshot.expectedMembers, ...Object.keys(snapshot.members)]));
+    return getPersistedLaunchMemberNames(snapshot);
   }
 
   private buildLiveLaunchSnapshotForRun(
@@ -19578,45 +19158,7 @@ export class TeamProvisioningService {
   }
 
   private areAllExpectedLaunchMembersConfirmed(run: ProvisioningRun): boolean {
-    const expectedMembers = run.expectedMembers ?? [];
-    if (expectedMembers.length === 0) {
-      return false;
-    }
-
-    const secondaryLanes = run.mixedSecondaryLanes ?? [];
-    const confirmedSecondaryMembers = new Set<string>();
-    for (const lane of secondaryLanes) {
-      const memberName = lane.member.name.trim();
-      if (!memberName) {
-        return false;
-      }
-      if (lane.state !== 'finished' || !lane.result) {
-        return false;
-      }
-      if (lane.runId && lane.result.runId !== lane.runId) {
-        return false;
-      }
-      const evidence = resolveOpenCodeSecondaryLaneMemberEvidence(lane, memberName);
-      if (
-        evidence?.launchState !== 'confirmed_alive' ||
-        evidence.bootstrapConfirmed !== true ||
-        evidence.hardFailure === true
-      ) {
-        return false;
-      }
-      confirmedSecondaryMembers.add(memberName);
-    }
-
-    return expectedMembers.every((memberName) => {
-      const member = run.memberSpawnStatuses.get(memberName);
-      if (member?.launchState !== 'confirmed_alive' || member.bootstrapConfirmed !== true) {
-        return false;
-      }
-      const isSecondaryMember = secondaryLanes.some((lane) =>
-        matchesTeamMemberIdentity(lane.member.name, memberName)
-      );
-      return !isSecondaryMember || confirmedSecondaryMembers.has(memberName);
-    });
+    return areAllExpectedLaunchMembersConfirmedHelper(run);
   }
 
   private async publishMixedSecondaryLaneStatusChange(
@@ -19683,82 +19225,25 @@ export class TeamProvisioningService {
     result: TeamRuntimeLaunchResult;
     memberName: string;
   }): Promise<TeamRuntimeLaunchResult> {
-    // OpenCode launch can now return an app-managed bootstrap candidate without
-    // a model tool call. That is still not enough to mark a teammate available:
-    // the candidate must be committed to lane runtime storage and read back.
-    // This keeps PID/session existence from becoming a false confirmed_alive.
-    const memberEvidence = params.result.members[params.memberName];
-    if (!memberEvidence) {
-      return params.result;
-    }
-
-    const claimsBootstrapConfirmed =
-      memberEvidence.launchState === 'confirmed_alive' ||
-      memberEvidence.bootstrapConfirmed === true ||
-      memberEvidence.livenessKind === 'confirmed_bootstrap';
-    const runtimeSessionId = memberEvidence.sessionId?.trim();
-    const appManagedCandidate =
-      memberEvidence.bootstrapEvidenceSource === 'app_managed_bootstrap' &&
-      memberEvidence.bootstrapMode === 'app_managed_context'
-        ? memberEvidence.appManagedBootstrapCandidate
-        : undefined;
-    const appManagedCandidateMatches =
-      appManagedCandidate?.source === 'app_managed_bootstrap' &&
-      appManagedCandidate.teamName === params.teamName &&
-      appManagedCandidate.memberName === params.memberName &&
-      appManagedCandidate.runId === params.result.runId &&
-      appManagedCandidate.laneId === params.laneId &&
-      appManagedCandidate.runtimeSessionId === runtimeSessionId;
-    if (!claimsBootstrapConfirmed && !appManagedCandidateMatches) {
-      return params.result;
-    }
-    const committedResult = await this.commitOpenCodeRuntimeAdapterLaunchSessionEvidence({
-      teamName: params.teamName,
-      laneId: params.laneId,
-      result: params.result,
+    return guardCommittedOpenCodeSecondaryLaneEvidenceHelper(params, {
+      commitOpenCodeRuntimeAdapterLaunchSessionEvidence: (input) =>
+        this.commitOpenCodeRuntimeAdapterLaunchSessionEvidence(input),
+      inspectOpenCodeRuntimeLaneStorage: ({ teamName, laneId }) =>
+        inspectOpenCodeRuntimeLaneStorage({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          laneId,
+        }),
+      upsertOpenCodeRuntimeLaneIndexEntry: ({ teamName, laneId, state, diagnostics }) =>
+        upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          laneId,
+          state,
+          diagnostics,
+        }),
+      logWarn: (message) => logger.warn(message),
     });
-    const committedMemberEvidence = committedResult.members[params.memberName] ?? memberEvidence;
-
-    const storage = await inspectOpenCodeRuntimeLaneStorage({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: params.teamName,
-      laneId: params.laneId,
-    });
-    if (storage.hasRuntimeEvidenceOnDisk) {
-      return committedResult;
-    }
-    if (!claimsBootstrapConfirmed) {
-      return committedResult;
-    }
-
-    const diagnostics = buildOpenCodeUncommittedBootstrapDiagnostic(storage);
-    const members = {
-      ...committedResult.members,
-      [params.memberName]: downgradeUncommittedOpenCodeBootstrapEvidence(
-        committedMemberEvidence,
-        diagnostics
-      ),
-    };
-    await upsertOpenCodeRuntimeLaneIndexEntry({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: params.teamName,
-      laneId: params.laneId,
-      state: 'active',
-      diagnostics,
-    }).catch((error: unknown) => {
-      logger.warn(
-        `[${params.teamName}] Failed to annotate OpenCode lane ${params.laneId} after uncommitted bootstrap evidence: ${getErrorMessage(error)}`
-      );
-    });
-
-    const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
-    return {
-      ...params.result,
-      launchPhase: teamLaunchState === 'clean_success' ? params.result.launchPhase : 'active',
-      teamLaunchState,
-      members,
-      diagnostics: Array.from(new Set([...committedResult.diagnostics, ...diagnostics])),
-    };
   }
 
   private async buildOpenCodeSecondaryAppManagedLaunchPrompt(
@@ -19887,34 +19372,17 @@ export class TeamProvisioningService {
   }
 
   private hasMixedLaunchMetadata(snapshot: PersistedTeamLaunchSnapshot | null): boolean {
-    return hasMixedPersistedLaunchMetadata(snapshot);
+    return hasMixedLaunchMetadata(snapshot);
   }
 
   private hasMixedSecondaryLaunchMetadata(snapshot: PersistedTeamLaunchSnapshot | null): boolean {
-    if (!snapshot) {
-      return false;
-    }
-    return Object.values(snapshot.members).some(
-      (member) =>
-        member?.laneKind === 'secondary' ||
-        (typeof member?.laneId === 'string' && member.laneId.startsWith('secondary:'))
-    );
+    return hasMixedSecondaryLaunchMetadata(snapshot);
   }
 
   private hasPrimaryOnlyLaneAwareLaunchMetadata(
     snapshot: PersistedTeamLaunchSnapshot | null
   ): boolean {
-    if (!snapshot || this.hasMixedSecondaryLaunchMetadata(snapshot)) {
-      return false;
-    }
-
-    return Object.values(snapshot.members).some(
-      (member) =>
-        Boolean(member?.laneId) ||
-        Boolean(member?.laneKind) ||
-        Boolean(member?.laneOwnerProviderId) ||
-        Boolean(member?.launchIdentity)
-    );
+    return hasPrimaryOnlyLaneAwareLaunchMetadata(snapshot);
   }
 
   private hasLeadInboxLaunchReconcileHeartbeat(
