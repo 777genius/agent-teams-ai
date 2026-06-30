@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { type Dirent, promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -207,9 +208,7 @@ async function getMtimeMs(filePath: string): Promise<number | null> {
 }
 
 async function writeFileAtomic(filePath: string, content: string, mode = 0o600): Promise<void> {
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tempPath, content, { encoding: 'utf8', mode });
-  await fs.rename(tempPath, filePath);
+  await atomicWriteAsync(filePath, content, { mode });
   await fs.chmod(filePath, mode).catch(() => undefined);
 }
 

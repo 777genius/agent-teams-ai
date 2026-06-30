@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'fs/promises';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
+import { mkdir, readdir, readFile, rm, stat } from 'fs/promises';
 import path from 'path';
 
 import { isRuntimeTurnSettledProvider } from '../../core/domain';
@@ -39,7 +40,7 @@ function buildMetaFilePath(filePath: string): string {
 async function moveFileBestEffort(sourcePath: string, targetPath: string): Promise<void> {
   await mkdir(path.dirname(targetPath), { recursive: true });
   try {
-    await rename(sourcePath, targetPath);
+    await renamePathWithRetry(sourcePath, targetPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
@@ -88,7 +89,7 @@ export class FileRuntimeTurnSettledEventStore implements RuntimeTurnSettledEvent
 
       const processingPath = path.join(this.deps.paths.getProcessingDir(), fileName);
       try {
-        await rename(incomingPath, processingPath);
+        await renamePathWithRetry(incomingPath, processingPath);
       } catch {
         continue;
       }
@@ -133,10 +134,9 @@ export class FileRuntimeTurnSettledEventStore implements RuntimeTurnSettledEvent
   ): Promise<void> {
     const processedPath = path.join(this.deps.paths.getProcessedDir(), payload.fileName);
     await moveFileBestEffort(payload.filePath, processedPath);
-    await writeFile(
+    await atomicWriteAsync(
       buildMetaFilePath(processedPath),
-      `${JSON.stringify(result, null, 2)}\n`,
-      'utf8'
+      `${JSON.stringify(result, null, 2)}\n`
     );
     await this.cleanupDirectory(this.deps.paths.getProcessedDir());
   }
@@ -147,7 +147,7 @@ export class FileRuntimeTurnSettledEventStore implements RuntimeTurnSettledEvent
   ): Promise<void> {
     const invalidPath = path.join(this.deps.paths.getInvalidDir(), payload.fileName);
     await moveFileBestEffort(payload.filePath, invalidPath);
-    await writeFile(buildMetaFilePath(invalidPath), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+    await atomicWriteAsync(buildMetaFilePath(invalidPath), `${JSON.stringify(result, null, 2)}\n`);
     await this.cleanupDirectory(this.deps.paths.getInvalidDir());
   }
 
@@ -194,10 +194,9 @@ export class FileRuntimeTurnSettledEventStore implements RuntimeTurnSettledEvent
   ): Promise<void> {
     const invalidPath = path.join(this.deps.paths.getInvalidDir(), fileName);
     await moveFileBestEffort(incomingPath, invalidPath);
-    await writeFile(
+    await atomicWriteAsync(
       buildMetaFilePath(invalidPath),
-      `${JSON.stringify({ reason, processedAt: this.now().toISOString() }, null, 2)}\n`,
-      'utf8'
+      `${JSON.stringify({ reason, processedAt: this.now().toISOString() }, null, 2)}\n`
     );
   }
 

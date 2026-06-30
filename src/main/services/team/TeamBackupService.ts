@@ -2,7 +2,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, atomicWriteSync } from '@main/utils/atomicWrite';
 import {
   getAppDataPath,
   getBackupsBasePath,
@@ -471,8 +471,7 @@ export class TeamBackupService {
         const raw = fs.readFileSync(configPath, 'utf8');
         const config = JSON.parse(raw) as Record<string, unknown>;
         config._backupIdentityId = identityId;
-        fs.mkdirSync(path.dirname(configPath), { recursive: true });
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+        atomicWriteSync(configPath, JSON.stringify(config, null, 2));
       } catch {
         // best-effort
       }
@@ -496,7 +495,7 @@ export class TeamBackupService {
         const configRaw = fs.readFileSync(configPath, 'utf8');
         const config = JSON.parse(configRaw) as Record<string, unknown>;
         config._backupIdentityId = identityId;
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+        atomicWriteSync(configPath, JSON.stringify(config, null, 2));
       } catch {
         // best-effort
       }
@@ -578,8 +577,7 @@ export class TeamBackupService {
       if (descriptor.sourcePath.endsWith('.json')) {
         const content = fs.readFileSync(descriptor.sourcePath, 'utf8');
         if (!isValidJson(content)) return;
-        fs.mkdirSync(path.dirname(destPath), { recursive: true });
-        fs.writeFileSync(destPath, content, 'utf8');
+        atomicWriteSync(destPath, content);
       } else {
         fs.mkdirSync(path.dirname(destPath), { recursive: true });
         fs.copyFileSync(descriptor.sourcePath, destPath);
@@ -703,7 +701,7 @@ export class TeamBackupService {
         }
         await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         const content = await fs.promises.readFile(src);
-        await fs.promises.writeFile(dest, content);
+        await atomicWriteAsync(dest, content);
         count++;
       } catch {
         // skip individual file errors
@@ -750,9 +748,8 @@ export class TeamBackupService {
         }
 
         const src = path.join(backupDir, relPath);
-        await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         const content = await fs.promises.readFile(src);
-        await fs.promises.writeFile(dest, content);
+        await atomicWriteAsync(dest, content);
         count++;
         logger.info(`[Backup] Partial restored ${teamName}/${relPath}`);
       } catch {
@@ -1089,9 +1086,7 @@ export class TeamBackupService {
 
   private saveRegistrySync(): void {
     try {
-      const dir = path.dirname(this.getRegistryPath());
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(this.getRegistryPath(), JSON.stringify(this.registry, null, 2), 'utf8');
+      atomicWriteSync(this.getRegistryPath(), JSON.stringify(this.registry, null, 2));
     } catch (err: unknown) {
       logger.warn(`[Backup] Failed to save registry sync: ${String(err)}`);
     }
@@ -1144,8 +1139,7 @@ export class TeamBackupService {
   private saveManifestSync(teamName: string, manifest: BackupManifest): void {
     try {
       const manifestPath = path.join(this.getBackupDir(teamName), 'manifest.json');
-      fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+      atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
     } catch {
       // best-effort
     }

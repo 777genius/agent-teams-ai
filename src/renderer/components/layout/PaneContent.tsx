@@ -54,6 +54,11 @@ const TeamListView = lazy(() =>
     default: module.TeamListView,
   }))
 );
+const TeamUsageTab = lazy(() =>
+  import('../team/TeamUsageTab').then((module) => ({
+    default: module.TeamUsageTab,
+  }))
+);
 const SessionTabContent = lazy(() =>
   import('./SessionTabContent').then((module) => ({
     default: module.SessionTabContent,
@@ -176,6 +181,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
               />
             </TabUIProvider>
           )}
+          {tab.type === 'usage' && <TeamUsageTab teamName={tab.teamName ?? ''} />}
           {tab.type === 'session' && (
             <TabUIProvider tabId={tab.id}>
               <SessionTabContent tab={tab} isActive={isActive} />

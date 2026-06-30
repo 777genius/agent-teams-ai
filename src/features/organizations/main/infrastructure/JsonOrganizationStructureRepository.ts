@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -260,7 +261,7 @@ export class JsonOrganizationStructureRepository implements OrganizationsStructu
       relations: structure.relations ?? [],
       updatedAt: structure.updatedAt,
     };
-    await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await atomicWriteAsync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
     return structure;
   }
 }

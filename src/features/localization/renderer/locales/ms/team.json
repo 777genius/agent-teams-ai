@@ -334,7 +334,8 @@
       "remove": "Buang",
       "stop": "Hentikan",
       "task": "Tugasan",
-      "visualize": "Visualisasikan"
+      "visualize": "Visualisasikan",
+      "usage": "Penggunaan"
     },
     "deleteTeam": {
       "description": "Padam pasukan \"{{team}}\"? Tindakan ini tidak boleh diterbalikkan. Semua data dan tugasan pasukan akan dipadam.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
       "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
       "openTeamGraph": "Buka graf pasukan",
-      "stopTeam": "Hentikan pasukan"
+      "stopTeam": "Hentikan pasukan",
+      "openTeamUsage": "Buka penggunaan pasukan"
     },
     "waitingForProvisioning": "Data pasukan akan muncul setelah peruntukan selesai",
     "context": {

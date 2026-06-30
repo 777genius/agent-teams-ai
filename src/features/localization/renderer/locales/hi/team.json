@@ -334,7 +334,8 @@
       "remove": "निकालें",
       "stop": "रुकना",
       "task": "कार्य",
-      "visualize": "दृश्य"
+      "visualize": "दृश्य",
+      "usage": "उपयोग"
     },
     "deleteTeam": {
       "description": "Delete टीम \"{{team}}\"? यह कार्रवाई अपरिवर्तनीय है। सभी टीम डेटा और कार्यों को हटा दिया जाएगा।",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "एडिट टीम अभी भी प्रगति पर है जबकि प्रावधान अभी भी उपलब्ध नहीं है",
       "openBuiltInEditor": "अंतर्निहित संपादक में ओपन प्रोजेक्ट",
       "openTeamGraph": "ओपन टीम ग्राफ़",
-      "stopTeam": "बंद करो टीम"
+      "stopTeam": "बंद करो टीम",
+      "openTeamUsage": "टीम उपयोग खोलें"
     },
     "waitingForProvisioning": "टीम डेटा एक बार पूरा करने का प्रावधान करेगा",
     "context": {

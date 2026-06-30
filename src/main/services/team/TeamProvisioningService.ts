@@ -15817,8 +15817,7 @@ export class TeamProvisioningService {
       input.teamName,
       input.configuredMember.name
     );
-    await fs.promises.mkdir(runtimePaths.dir, { recursive: true });
-    await fs.promises.writeFile(runtimePaths.eventsPath, '', { encoding: 'utf8', mode: 0o600 });
+    await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
 
     const nativeBootstrapSpec =
       (
@@ -16091,12 +16090,7 @@ export class TeamProvisioningService {
       dir,
       `${sanitizeProcessRuntimeEventFilePrefix(input.memberName)}-${randomUUID()}.native-bootstrap.json`
     );
-    const tempPath = `${finalPath}.tmp`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(context), {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
-    await fs.promises.rename(tempPath, finalPath);
+    await atomicWriteAsync(finalPath, JSON.stringify(context), { mode: 0o600 });
     return { [NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV]: finalPath };
   }
 
@@ -39161,8 +39155,7 @@ export class TeamProvisioningService {
     const memberName = 'mcp-validation-member';
     const teamDir = path.join(claudeDir, 'teams', teamName);
 
-    await fs.promises.mkdir(teamDir, { recursive: true });
-    await fs.promises.writeFile(
+    await atomicWriteAsync(
       path.join(teamDir, 'config.json'),
       JSON.stringify(
         {
@@ -39175,8 +39168,7 @@ export class TeamProvisioningService {
         },
         null,
         2
-      ),
-      'utf8'
+      )
     );
 
     return {

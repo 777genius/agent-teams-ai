@@ -1,7 +1,7 @@
 import { withFileLock } from '@main/services/team/fileLock';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createHash } from 'crypto';
-import { mkdir, readdir, readFile, rename } from 'fs/promises';
+import { mkdir, readdir, readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
@@ -511,7 +511,7 @@ function toMetrics(teamName: string, file: MetricsIndexFile): MemberWorkSyncTeam
 
 async function quarantineFile(filePath: string): Promise<void> {
   try {
-    await rename(filePath, `${filePath}.invalid.${Date.now()}`);
+    await renamePathWithRetry(filePath, `${filePath}.invalid.${Date.now()}`);
   } catch {
     // If quarantine fails, keep the feature degraded but do not block team operation.
   }

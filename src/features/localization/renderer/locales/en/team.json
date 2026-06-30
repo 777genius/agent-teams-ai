@@ -334,6 +334,7 @@
       "remove": "Remove",
       "stop": "Stop",
       "task": "Task",
+      "usage": "Usage",
       "visualize": "Visualize"
     },
     "deleteTeam": {
@@ -389,6 +390,7 @@
       "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
       "openBuiltInEditor": "Open project in built-in editor",
       "openTeamGraph": "Open team graph",
+      "openTeamUsage": "Open team usage",
       "stopTeam": "Stop team"
     },
     "waitingForProvisioning": "Team data will appear once provisioning completes",

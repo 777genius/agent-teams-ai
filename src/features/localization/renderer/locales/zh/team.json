@@ -334,7 +334,8 @@
       "remove": "消除",
       "stop": "停止",
       "task": "任务",
-      "visualize": "可视化"
+      "visualize": "可视化",
+      "usage": "使用量"
     },
     "deleteTeam": {
       "description": "删除队伍“{{team}}”？此操作是不可逆转的。所有团队数据和任务都将被删除。",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "当配置仍在进行时，编辑团队不可用",
       "openBuiltInEditor": "在内置编辑器中打开项目",
       "openTeamGraph": "打开团队图",
-      "stopTeam": "停队"
+      "stopTeam": "停队",
+      "openTeamUsage": "打开团队使用量"
     },
     "waitingForProvisioning": "配置完成后将显示团队数据",
     "context": {

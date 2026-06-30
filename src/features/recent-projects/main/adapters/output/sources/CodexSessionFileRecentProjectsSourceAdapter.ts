@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { resolveProjectFilesystemState } from '@features/recent-projects/main/infrastructure/filesystem/resolveProjectFilesystemState';
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
@@ -714,20 +715,13 @@ export class CodexSessionFileRecentProjectsSourceAdapter implements RecentProjec
   }
 
   async #writeCacheSafe(entries: ReadonlyMap<string, CodexSessionFileCacheEntry>): Promise<void> {
-    let tempPath: string | null = null;
     try {
-      await fs.mkdir(path.dirname(this.#cachePath), { recursive: true });
       const cacheFile: CodexSessionFileCacheFile = {
         schemaVersion: CODEX_SESSION_FILE_CACHE_SCHEMA_VERSION,
         entries: Object.fromEntries(entries),
       };
-      tempPath = `${this.#cachePath}.${process.pid}.${Date.now()}.tmp`;
-      await fs.writeFile(tempPath, JSON.stringify(cacheFile), 'utf8');
-      await fs.rename(tempPath, this.#cachePath);
+      await atomicWriteAsync(this.#cachePath, JSON.stringify(cacheFile));
     } catch {
-      if (tempPath) {
-        await fs.rm(tempPath, { force: true }).catch(() => undefined);
-      }
       // Cache is an optimization only; never fail recent projects because it is unavailable.
     }
   }

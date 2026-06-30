@@ -334,7 +334,8 @@
       "remove": "Remover",
       "stop": "Parar",
       "task": "Tarefa",
-      "visualize": "Visualizar"
+      "visualize": "Visualizar",
+      "usage": "Uso"
     },
     "deleteTeam": {
       "description": "Apagar a equipa \"{{team}}\"? Esta acção é irreversível. Todos os dados e tarefas da equipe serão excluídos.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "A equipe de edição não está disponível enquanto o provisionamento ainda está em andamento",
       "openBuiltInEditor": "Abrir o projeto no editor incorporado",
       "openTeamGraph": "Abrir gráfico de equipe",
-      "stopTeam": "Parar a equipa"
+      "stopTeam": "Parar a equipa",
+      "openTeamUsage": "Abrir uso da equipe"
     },
     "waitingForProvisioning": "Os dados da equipe aparecerão assim que o provimento terminar",
     "context": {

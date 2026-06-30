@@ -334,7 +334,8 @@
       "remove": "Supprimer",
       "stop": "Arrête",
       "task": "Tâche",
-      "visualize": "Visualiser"
+      "visualize": "Visualiser",
+      "usage": "Utilisation"
     },
     "deleteTeam": {
       "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "L'équipe d'édition n'est pas disponible pendant que la fourniture est toujours en cours",
       "openBuiltInEditor": "Ouvrir le projet dans l'éditeur intégré",
       "openTeamGraph": "Ouvrir le graphique de l'équipe",
-      "stopTeam": "Arrêter l'équipe"
+      "stopTeam": "Arrêter l'équipe",
+      "openTeamUsage": "Ouvrir l'utilisation de l'équipe"
     },
     "waitingForProvisioning": "Les données de l'équipe apparaîtront une fois la fourniture terminée",
     "context": {

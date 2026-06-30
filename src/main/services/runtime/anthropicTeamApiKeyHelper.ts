@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { execFile, execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -130,18 +131,11 @@ async function writeFileAtomic(filePath: string, contents: string, mode: number)
   if (existing?.isSymbolicLink()) {
     throw new Error(`Refusing to replace symlinked Anthropic team auth file: ${filePath}`);
   }
-  const tmpPath = path.join(dir, `.tmp.${crypto.randomUUID()}`);
-  try {
-    await fs.promises.writeFile(tmpPath, contents, { encoding: 'utf8', mode });
-    if (process.platform !== 'win32') {
-      await fs.promises.chmod(tmpPath, mode).catch(() => undefined);
-    }
-    await fs.promises.rename(tmpPath, filePath);
-    await assertRegularOwnedFile(filePath, mode);
-  } catch (error) {
-    await fs.promises.rm(tmpPath, { force: true }).catch(() => undefined);
-    throw error;
+  await atomicWriteAsync(filePath, contents, { mode });
+  if (process.platform !== 'win32') {
+    await fs.promises.chmod(filePath, mode).catch(() => undefined);
   }
+  await assertRegularOwnedFile(filePath, mode);
 }
 
 function buildHelperScript(keyPath: string): string {

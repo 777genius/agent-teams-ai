@@ -2,6 +2,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 
 import type { CrossTeamMessage } from '@shared/types';
@@ -73,9 +74,7 @@ export class CrossTeamOutbox {
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
       list.push(message);
-      const dir = path.dirname(outboxPath);
-      await fs.promises.mkdir(dir, { recursive: true });
-      await fs.promises.writeFile(outboxPath, JSON.stringify(list, null, 2), 'utf8');
+      await atomicWriteAsync(outboxPath, JSON.stringify(list, null, 2));
     });
   }
 
@@ -96,9 +95,7 @@ export class CrossTeamOutbox {
       await onBeforeAppend();
 
       list.push(message);
-      const dir = path.dirname(outboxPath);
-      await fs.promises.mkdir(dir, { recursive: true });
-      await fs.promises.writeFile(outboxPath, JSON.stringify(list, null, 2), 'utf8');
+      await atomicWriteAsync(outboxPath, JSON.stringify(list, null, 2));
     });
 
     return { duplicate };

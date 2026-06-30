@@ -334,7 +334,8 @@
       "remove": "削除",
       "stop": "ストップ",
       "task": "タスク",
-      "visualize": "可視化"
+      "visualize": "可視化",
+      "usage": "使用状況"
     },
     "deleteTeam": {
       "description": "チーム「{{team}}」を削除しますか? このアクションは不可逆です。 すべてのチームデータとタスクは削除されます。",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "暫定中にチームを編集することは利用できません。",
       "openBuiltInEditor": "組み込みエディタでプロジェクトを開く",
       "openTeamGraph": "チームグラフを開く",
-      "stopTeam": "チームの停止"
+      "stopTeam": "チームの停止",
+      "openTeamUsage": "チームの使用状況を開く"
     },
     "waitingForProvisioning": "チームデータが完成したら表示されます。",
     "context": {

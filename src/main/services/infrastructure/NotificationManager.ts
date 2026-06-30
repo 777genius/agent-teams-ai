@@ -16,6 +16,7 @@
  */
 
 import { getAppIconPath } from '@main/utils/appIcon';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -672,22 +673,7 @@ function findFirstJsonArrayEnd(data: string): number | null {
 }
 
 async function writeNotificationsFileAtomically(filePath: string, data: string): Promise<void> {
-  const dir = path.dirname(filePath);
-  const tempPath = path.join(
-    dir,
-    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
-      .toString(16)
-      .slice(2)}.tmp`
-  );
-
-  try {
-    await fsp.mkdir(dir, { recursive: true });
-    await fsp.writeFile(tempPath, data, 'utf8');
-    await fsp.rename(tempPath, filePath);
-  } catch (error) {
-    await fsp.rm(tempPath, { force: true }).catch(() => undefined);
-    throw error;
-  }
+  await atomicWriteAsync(filePath, data);
 }
 
 // =============================================================================

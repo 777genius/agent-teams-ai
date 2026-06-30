@@ -6,7 +6,7 @@
  * binary detection, and size limits are enforced on every call.
  */
 
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import {
   isDevicePath,
   isGitInternalPath,
@@ -568,7 +568,7 @@ export class ProjectFileService {
 
     // 11. Perform rename with EXDEV fallback
     try {
-      await fs.rename(normalizedSrc, newPath);
+      await renamePathWithRetry(normalizedSrc, newPath);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'EXDEV') {
         // Reuse srcStat from step 5 — no need for another fs.lstat
@@ -642,7 +642,7 @@ export class ProjectFileService {
     }
 
     // 9. Perform rename
-    await fs.rename(normalizedSrc, newPath);
+    await renamePathWithRetry(normalizedSrc, newPath);
 
     log.info('File renamed:', normalizedSrc, '→', newPath);
     return { newPath, isDirectory };

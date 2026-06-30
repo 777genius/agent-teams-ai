@@ -65,6 +65,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   AlertTriangle,
+  BarChart3,
   Clock,
   Code,
   Columns3,
@@ -1436,6 +1437,15 @@ export const TeamDetailView = memo(function TeamDetailView({
       teamName,
     });
   }, [teamName]);
+  const handleOpenUsageTab = useCallback(() => {
+    const state = useStore.getState();
+    const displayName = state.teamByName[teamName]?.displayName ?? teamName;
+    state.openTab({
+      type: 'usage',
+      label: `${displayName} Usage`,
+      teamName,
+    });
+  }, [teamName]);
   const visualizeButtonStyle = useMemo<CSSProperties>(
     () =>
       isLight
@@ -1452,6 +1462,25 @@ export const TeamDetailView = memo(function TeamDetailView({
             borderColor: 'rgba(56,189,248,0.34)',
             color: 'rgba(236,253,255,0.96)',
             boxShadow: '0 12px 28px rgba(8,145,178,0.22)',
+          },
+    [isLight]
+  );
+  const usageButtonStyle = useMemo<CSSProperties>(
+    () =>
+      isLight
+        ? {
+            background:
+              'linear-gradient(135deg, rgba(16,185,129,0.13) 0%, rgba(59,130,246,0.12) 100%)',
+            borderColor: 'rgba(16,185,129,0.30)',
+            color: '#0f172a',
+            boxShadow: '0 10px 24px rgba(16,185,129,0.10)',
+          }
+        : {
+            background:
+              'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(59,130,246,0.14) 100%)',
+            borderColor: 'rgba(52,211,153,0.34)',
+            color: 'rgba(236,253,245,0.96)',
+            boxShadow: '0 12px 28px rgba(16,185,129,0.18)',
           },
     [isLight]
   );
@@ -2724,37 +2753,66 @@ export const TeamDetailView = memo(function TeamDetailView({
     ]
   );
 
-  const renderVisualizeButton = (pinned: boolean): React.JSX.Element => (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold tracking-[0.02em] transition-all',
-            pinned ? 'pointer-events-auto fixed z-50' : 'pointer-events-auto',
-            'hover:-translate-y-0.5 hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98]',
-            isLight
-              ? 'hover:border-sky-400/50'
-              : 'hover:border-cyan-300/50 hover:shadow-[0_14px_32px_rgba(8,145,178,0.28)]'
-          )}
-          style={
-            pinned && pinnedVisualizeButtonPosition
-              ? {
-                  ...visualizeButtonStyle,
-                  right: pinnedVisualizeButtonPosition.right,
-                  top: pinnedVisualizeButtonPosition.top,
-                }
-              : visualizeButtonStyle
-          }
-          onClick={handleOpenGraphTab}
-        >
-          <Network size={13} className="shrink-0" />
-          {t('detail.actions.visualize')}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
-    </Tooltip>
+  const renderTeamActionButtons = (pinned: boolean): React.JSX.Element => (
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        pinned ? 'pointer-events-auto fixed z-50' : 'pointer-events-auto'
+      )}
+      style={
+        pinned && pinnedVisualizeButtonPosition
+          ? {
+              right: pinnedVisualizeButtonPosition.right,
+              top: pinnedVisualizeButtonPosition.top,
+            }
+          : undefined
+      }
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold tracking-[0.02em] transition-all',
+              'hover:-translate-y-0.5 hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98]',
+              isLight
+                ? 'hover:border-emerald-400/50'
+                : 'hover:border-emerald-300/50 hover:shadow-[0_14px_32px_rgba(16,185,129,0.24)]'
+            )}
+            style={usageButtonStyle}
+            onClick={handleOpenUsageTab}
+          >
+            <BarChart3 size={13} className="shrink-0" />
+            {t('detail.actions.usage', { defaultValue: 'Usage' })}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {t('detail.tooltips.openTeamUsage', { defaultValue: 'Open team usage' })}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold tracking-[0.02em] transition-all',
+              'hover:-translate-y-0.5 hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98]',
+              isLight
+                ? 'hover:border-sky-400/50'
+                : 'hover:border-cyan-300/50 hover:shadow-[0_14px_32px_rgba(8,145,178,0.28)]'
+            )}
+            style={visualizeButtonStyle}
+            onClick={handleOpenGraphTab}
+          >
+            <Network size={13} className="shrink-0" />
+            {t('detail.actions.visualize')}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
+      </Tooltip>
+    </div>
   );
 
   if (!teamName) {
@@ -2900,7 +2958,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
     return (
       <>
-        {pinnedVisualizeButtonPosition ? renderVisualizeButton(true) : null}
+        {pinnedVisualizeButtonPosition ? renderTeamActionButtons(true) : null}
         <div className="relative flex size-full overflow-hidden">
           <LeadLoadBridge
             teamName={teamName}
@@ -3079,8 +3137,11 @@ export const TeamDetailView = memo(function TeamDetailView({
                       </span>
                     )}
                   </div>
-                  <div ref={visualizeButtonAnchorRef} className="-mt-2 h-8 shrink-0 self-start">
-                    {pinnedVisualizeButtonPosition ? null : renderVisualizeButton(false)}
+                  <div
+                    ref={visualizeButtonAnchorRef}
+                    className="-mt-2 flex h-8 shrink-0 self-start"
+                  >
+                    {pinnedVisualizeButtonPosition ? null : renderTeamActionButtons(false)}
                   </div>
                 </div>
                 {(() => {

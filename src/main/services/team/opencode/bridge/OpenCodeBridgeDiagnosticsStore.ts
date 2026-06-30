@@ -1,3 +1,4 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
@@ -27,10 +28,10 @@ export class OpenCodeBridgeDiagnosticsStore implements OpenCodeBridgeDiagnostics
     try {
       await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
       const sanitized = sanitizeDiagnosticEvent(event);
-      await fs.writeFile(
+      await atomicWriteAsync(
         path.join(this.directory, 'latest.json'),
         `${JSON.stringify(sanitized, null, 2)}\n`,
-        { encoding: 'utf8', mode: 0o600 }
+        { mode: 0o600 }
       );
       await this.rotateEventsIfNeeded();
       await fs.appendFile(
@@ -53,7 +54,7 @@ export class OpenCodeBridgeDiagnosticsStore implements OpenCodeBridgeDiagnostics
     const content = await fs.readFile(eventsPath, 'utf8').catch(() => '');
     const keepBytes = Math.max(0, Math.floor(this.maxEventsBytes / 2));
     const tailLines = selectNdjsonTailLines(content, keepBytes);
-    await fs.writeFile(
+    await atomicWriteAsync(
       eventsPath,
       `${JSON.stringify({
         type: 'opencode_bridge_diagnostics_truncated',
@@ -62,10 +63,7 @@ export class OpenCodeBridgeDiagnosticsStore implements OpenCodeBridgeDiagnostics
         message: 'truncated previous bridge diagnostics',
         createdAt: new Date().toISOString(),
       })}\n${tailLines.length > 0 ? `${tailLines.join('\n')}\n` : ''}`,
-      {
-        encoding: 'utf8',
-        mode: 0o600,
-      }
+      { mode: 0o600 }
     );
   }
 }

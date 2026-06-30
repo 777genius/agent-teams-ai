@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import fs from 'fs';
 import path from 'path';
 
@@ -96,26 +96,13 @@ async function writeSettingsFile(
   if (existing?.isSymbolicLink()) {
     throw new Error(`Refusing to replace symlinked team runtime settings file: ${filePath}`);
   }
-  const tmpPath = path.join(dir, `.tmp.settings.${randomUUID()}`);
-  try {
-    await fs.promises.writeFile(tmpPath, `${JSON.stringify(settings, null, 2)}\n`, {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
-    if (process.platform !== 'win32') {
-      await fs.promises.chmod(tmpPath, 0o600).catch(() => undefined);
-    }
-    await fs.promises.rename(tmpPath, filePath);
-    const written = await fs.promises.lstat(filePath);
-    if (!written.isFile() || written.isSymbolicLink()) {
-      throw new Error(`Unsafe team runtime settings file: ${filePath}`);
-    }
-    if (process.platform !== 'win32') {
-      await fs.promises.chmod(filePath, 0o600).catch(() => undefined);
-    }
-  } catch (error) {
-    await fs.promises.rm(tmpPath, { force: true }).catch(() => undefined);
-    throw error;
+  await atomicWriteAsync(filePath, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
+  const written = await fs.promises.lstat(filePath);
+  if (!written.isFile() || written.isSymbolicLink()) {
+    throw new Error(`Unsafe team runtime settings file: ${filePath}`);
+  }
+  if (process.platform !== 'win32') {
+    await fs.promises.chmod(filePath, 0o600).catch(() => undefined);
   }
 }
 

@@ -1,4 +1,5 @@
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
@@ -362,10 +363,7 @@ export class OpenCodeBridgeCommandClient {
   ): Promise<string> {
     await fs.mkdir(this.tempDirectory, { recursive: true, mode: 0o700 });
     const inputPath = path.join(this.tempDirectory, buildBridgeInputFileName(envelope.requestId));
-    await fs.writeFile(inputPath, `${JSON.stringify(envelope, null, 2)}\n`, {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
+    await atomicWriteAsync(inputPath, `${JSON.stringify(envelope, null, 2)}\n`, { mode: 0o600 });
     return inputPath;
   }
 

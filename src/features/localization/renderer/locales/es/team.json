@@ -334,7 +334,8 @@
       "remove": "Retirar",
       "stop": "Para.",
       "task": "Tareas",
-      "visualize": "Visualize"
+      "visualize": "Visualize",
+      "usage": "Uso"
     },
     "deleteTeam": {
       "description": "Eliminar el equipo \"{{team}}\"? Esta acción es irreversible. Se eliminarán todos los datos y tareas del equipo.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "El equipo de edición no está disponible mientras que el suministro sigue en curso",
       "openBuiltInEditor": "Proyecto abierto en editor incorporado",
       "openTeamGraph": "Gráfico de equipo abierto",
-      "stopTeam": "Para el equipo"
+      "stopTeam": "Para el equipo",
+      "openTeamUsage": "Abrir uso del equipo"
     },
     "waitingForProvisioning": "Los datos del equipo aparecerán una vez que se complete el suministro",
     "context": {

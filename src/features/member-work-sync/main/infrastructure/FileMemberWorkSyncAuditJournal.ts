@@ -1,5 +1,6 @@
 import { withFileLock } from '@main/services/team/fileLock';
-import { appendFile, mkdir, rename, rm, stat } from 'fs/promises';
+import { renamePathWithRetry } from '@main/utils/atomicWrite';
+import { appendFile, mkdir, rm, stat } from 'fs/promises';
 import { dirname } from 'path';
 
 import type {
@@ -109,11 +110,11 @@ async function rotateIfNeeded(
 
   await rm(rotatedPath(filePath, rotatedFileCount), { force: true }).catch(() => undefined);
   for (let index = rotatedFileCount - 1; index >= 1; index -= 1) {
-    await rename(rotatedPath(filePath, index), rotatedPath(filePath, index + 1)).catch(
+    await renamePathWithRetry(rotatedPath(filePath, index), rotatedPath(filePath, index + 1)).catch(
       () => undefined
     );
   }
-  await rename(filePath, rotatedPath(filePath, 1)).catch(() => undefined);
+  await renamePathWithRetry(filePath, rotatedPath(filePath, 1)).catch(() => undefined);
 }
 
 export class NoopMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJournalPort {
