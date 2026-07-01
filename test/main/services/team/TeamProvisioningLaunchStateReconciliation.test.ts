@@ -278,6 +278,41 @@ describe('TeamProvisioningLaunchStateReconciliation', () => {
       kind: 'blocked',
       diagnostics: ['opencode_overlay_run_tombstoned'],
     });
+
+    await expect(
+      classifyOpenCodeSecondaryEvidenceOverlay(
+        {
+          teamName: 'demo',
+          memberName: 'Builder',
+          current: makeMember({
+            runtimeRunId: 'run-current',
+            runtimeSessionId: undefined,
+          }),
+          previous: makeMember({
+            launchState: 'confirmed_alive',
+            bootstrapConfirmed: true,
+            runtimeAlive: true,
+            runtimeRunId: 'run-previous',
+            runtimeSessionId: 'session-previous',
+            livenessKind: 'confirmed_bootstrap',
+          }),
+          laneEntry: makeLaneEntry(),
+          metaMembers: [],
+          activeRunId: 'run-previous',
+          sessions: [
+            makeSession({
+              id: 'session-previous',
+              runId: 'run-previous',
+            }),
+          ],
+          diagnostics: [],
+        },
+        { hasBootstrapCheckinTombstone }
+      )
+    ).resolves.toEqual({
+      kind: 'conflict',
+      diagnostics: ['opencode_overlay_current_run_mismatch'],
+    });
   });
 
   it('promotes committed bootstrap evidence into the launch snapshot', async () => {
@@ -321,6 +356,61 @@ describe('TeamProvisioningLaunchStateReconciliation', () => {
     expect(hasCommittedOpenCodeSecondaryEvidenceOverlayDelta(overlaid, snapshot)).toBe(true);
     expect(collectOpenCodeSecondaryOverlayCandidates(snapshot, null)).toEqual(['Builder']);
     expect(needsOpenCodeSecondaryEvidenceOverlay(snapshot.members.Builder, null)).toBe(true);
+  });
+
+  it('does not promote previous-run OpenCode bootstrap evidence over a current pending run', async () => {
+    const previousSnapshot = makeSnapshot(
+      makeMember({
+        launchState: 'confirmed_alive',
+        bootstrapConfirmed: true,
+        runtimeAlive: true,
+        runtimeRunId: 'run-previous',
+        runtimeSessionId: 'session-previous',
+        livenessKind: 'confirmed_bootstrap',
+      })
+    );
+    const snapshot = makeSnapshot(
+      makeMember({
+        runtimeRunId: 'run-current',
+        runtimeSessionId: undefined,
+      })
+    );
+
+    const overlaid = await applyOpenCodeSecondaryEvidenceOverlay(
+      {
+        teamName: 'demo',
+        snapshot,
+        previousSnapshot,
+        metaMembers: [{ name: 'Builder' }],
+      },
+      {
+        readLaneIndex: vi.fn().mockResolvedValue({
+          lanes: { 'secondary:opencode:Builder': makeLaneEntry() },
+        }),
+        readCommittedBootstrapSessionEvidence: vi.fn().mockResolvedValue({
+          committed: true,
+          activeRunId: 'run-previous',
+          sessions: [
+            makeSession({
+              id: 'session-previous',
+              runId: 'run-previous',
+            }),
+          ],
+          diagnostics: [],
+        }),
+        hasBootstrapCheckinTombstone: vi.fn().mockResolvedValue(false),
+        nowIso: () => '2026-01-01T00:00:04.000Z',
+      }
+    );
+
+    expect(overlaid).toBe(snapshot);
+    expect(overlaid.members.Builder).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      bootstrapConfirmed: false,
+      runtimeAlive: false,
+      runtimeRunId: 'run-current',
+    });
+    expect(overlaid.members.Builder.runtimeSessionId).toBeUndefined();
   });
 
   it('does not resurrect previous-only OpenCode secondary members absent from current metadata', async () => {

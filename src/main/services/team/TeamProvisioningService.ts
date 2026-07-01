@@ -17556,6 +17556,7 @@ export class TeamProvisioningService {
           secondaryLane.state === 'finished' && !secondaryLane.result;
         return {
           laneId: secondaryLane.laneId,
+          runtimeRunId: secondaryLane.runId,
           member: secondaryLane.member,
           leadDefaults: {
             providerId: resolveTeamProviderId(run.request.providerId),
@@ -18356,6 +18357,7 @@ export class TeamProvisioningService {
     const primaryMembers: TeamMember[] = [];
     const secondaryMembers: {
       laneId: string;
+      runtimeRunId?: string | null;
       member: TeamMember;
       leadDefaults: typeof leadDefaults;
       evidence?: {
@@ -18445,6 +18447,7 @@ export class TeamProvisioningService {
           recoveredAny = true;
           secondaryMembers.push({
             laneId: laneIdentity.laneId,
+            runtimeRunId: persistedMember.runtimeRunId,
             member,
             leadDefaults,
             evidence: {
@@ -18484,6 +18487,7 @@ export class TeamProvisioningService {
           recoveredAny = true;
           secondaryMembers.push({
             laneId: laneIdentity.laneId,
+            runtimeRunId: persistedMember?.runtimeRunId,
             member,
             leadDefaults,
             evidence: {

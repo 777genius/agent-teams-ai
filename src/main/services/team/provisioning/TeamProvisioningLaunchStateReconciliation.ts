@@ -88,6 +88,10 @@ function hasActiveOpenCodeOverlayMetaMember(
   );
 }
 
+function normalizeOverlayRunId(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export interface GuardCommittedOpenCodeSecondaryLaneEvidencePorts {
   commitOpenCodeRuntimeAdapterLaunchSessionEvidence(input: {
     teamName: string;
@@ -373,8 +377,14 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
     return { kind: 'none', diagnostics: [...params.diagnostics, 'opencode_overlay_no_session'] };
   }
 
-  const expectedSessionId =
-    params.current.runtimeSessionId?.trim() || params.previous?.runtimeSessionId?.trim() || '';
+  const currentRunId = normalizeOverlayRunId(params.current.runtimeRunId);
+  const previousRunId = normalizeOverlayRunId(params.previous?.runtimeRunId);
+  const currentSessionId = params.current.runtimeSessionId?.trim() ?? '';
+  const previousSessionId = params.previous?.runtimeSessionId?.trim() ?? '';
+  const canUsePreviousSessionId =
+    previousSessionId.length > 0 &&
+    (!currentRunId || !previousRunId || currentRunId === previousRunId);
+  const expectedSessionId = currentSessionId || (canUsePreviousSessionId ? previousSessionId : '');
   const selected = expectedSessionId
     ? memberSessions.find((session) => session.id === expectedSessionId)
     : memberSessions.length === 1
@@ -387,6 +397,17 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
         expectedSessionId
           ? 'opencode_overlay_session_conflict'
           : 'opencode_overlay_ambiguous_sessions',
+      ],
+    };
+  }
+  const selectedRunId = normalizeOverlayRunId(selected.runId);
+  if (currentRunId && selectedRunId !== currentRunId) {
+    return {
+      kind: 'conflict',
+      diagnostics: [
+        selectedRunId
+          ? 'opencode_overlay_current_run_mismatch'
+          : 'opencode_overlay_session_run_missing',
       ],
     };
   }
