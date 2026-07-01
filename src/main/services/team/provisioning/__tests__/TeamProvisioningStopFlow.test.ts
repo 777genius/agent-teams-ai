@@ -35,6 +35,10 @@ function makeRun(runId: string, teamName = 'team-a'): StopFlowRun {
   };
 }
 
+async function withTeamLock<T>(_teamName: string, fn: () => Promise<T>): Promise<T> {
+  return fn();
+}
+
 function makePorts(
   teamName: string,
   runs: Map<string, StopFlowRun>,
@@ -51,16 +55,20 @@ function makePorts(
     stopPersistentTeamMembers: vi.fn(),
     getTrackedRunId: vi.fn(
       (candidateTeamName: string) =>
-        provisioningRunByTeam.get(candidateTeamName) ?? aliveRunByTeam.get(candidateTeamName) ?? null
+        provisioningRunByTeam.get(candidateTeamName) ??
+        aliveRunByTeam.get(candidateTeamName) ??
+        null
     ),
-    getAliveRunId: vi.fn((candidateTeamName: string) => aliveRunByTeam.get(candidateTeamName) ?? null),
+    getAliveRunId: vi.fn(
+      (candidateTeamName: string) => aliveRunByTeam.get(candidateTeamName) ?? null
+    ),
     runs,
     runtimeAdapterProgressByRunId: new Map<string, TeamProvisioningProgress>(),
     isCancellableRuntimeAdapterProgress: vi.fn(() => false),
     cancelRuntimeAdapterProvisioning: vi.fn(),
     cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(),
     runtimeAdapterRunByTeam: new Map(),
-    withTeamLock: vi.fn((_teamName: string, fn: () => Promise<unknown>) => fn()),
+    withTeamLock: vi.fn(withTeamLock),
     stopOpenCodeRuntimeAdapterTeam: vi.fn(),
     hasSecondaryRuntimeRuns: vi.fn(() => false),
     stopMixedSecondaryRuntimeLanes: vi.fn(),
