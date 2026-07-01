@@ -507,6 +507,7 @@ function parseMcpShortcut(
         ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
         ...optionalNumberArg(values, "--tail-lines", "tailLines"),
         ...optionalNumberArg(values, "--limit", "limit"),
+        ...optionalStringArg(values, "--job-prefix", "jobIdPrefix"),
       }),
       format: outputFormatFromFlags(values, io.env()),
     };
@@ -852,6 +853,15 @@ function optionalNumberArg(
   return value === undefined
     ? {}
     : { [key]: parsePositiveInteger(value, flagName) };
+}
+
+function optionalStringArg(
+  values: ParsedFlags,
+  flagName: string,
+  key: string,
+): Record<string, unknown> {
+  const value = values.values.get(flagName);
+  return value === undefined || value.trim() === "" ? {} : { [key]: value };
 }
 
 function requiredFlagValue(values: ParsedFlags, flagName: string): string {
@@ -1204,7 +1214,7 @@ function usage(): string {
   subscription-runtime-codex-goal doctor --job-root <dir> --workspace <dir> --prompt <file> --task-id <id> --accounts account-a,account-b
   subscription-runtime-codex-goal tail --job-root <dir> --task-id <id> [--lines 100]
   subscription-runtime-codex-goal doctor-control
-  subscription-runtime-codex-goal overview [--registry-root <dir>]
+  subscription-runtime-codex-goal overview [--registry-root <dir>] [--job-prefix <prefix>]
   subscription-runtime-codex-goal run-watch [jobId] [--provider codex|claude|agent-task] [--registry-root <dir>] [--state-root <dir>] [--include-log-tail] [--include-changed-files] [--json|--text]
   subscription-runtime-codex-goal reconcile-preview [--registry-root <dir>] [--continue-safe-jobs]
   subscription-runtime-codex-goal brief <jobId> [--registry-root <dir>]

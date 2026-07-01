@@ -1273,6 +1273,28 @@ describe("codex goal MCP server", () => {
         expect(String(JSON.stringify(decisionBody.commands))).not.toContain(
           "codex_goal_continue",
         );
+
+        const filteredOverview = await callToolJson(client, "codex_goal_overview", {
+          registryRootDir,
+          jobIdPrefix: "job-a",
+        });
+        expect(filteredOverview).toMatchObject({
+          ok: true,
+          safeToOperate: true,
+          totalJobs: 2,
+          matchedJobs: 1,
+          returnedJobs: 1,
+          summary: {
+            workspaceConflicts: 0,
+            blockedBySingleWriter: 0,
+          },
+          workspaceConflicts: [],
+        });
+        expect((filteredOverview.jobs as readonly Record<string, unknown>[]).map((job) => job.jobId))
+          .toEqual(["job-a"]);
+        const filteredJob = (filteredOverview.jobs as readonly Record<string, unknown>[])[0];
+        expect(filteredJob).not.toHaveProperty("blockedBySingleWriter");
+        expect(filteredJob).not.toHaveProperty("workspaceConflict");
       } finally {
         await client.close();
         await server.close();

@@ -129,6 +129,7 @@ type JobOverviewMcpArgs = JobRegistryMcpArgs & {
   readonly staleAfterMs?: number;
   readonly tailLines?: number;
   readonly limit?: number;
+  readonly jobIdPrefix?: string;
 };
 
 type JobWatchMcpArgs = JobOverviewMcpArgs & {
@@ -320,6 +321,7 @@ export function createCodexGoalMcpServer(
         staleAfterMs: z.number().int().positive().optional(),
         tailLines: z.number().int().positive().optional(),
         limit: z.number().int().positive().optional(),
+        jobIdPrefix: z.string().optional(),
       },
     },
     async (args) => withMcpErrors(async () => {
@@ -1941,8 +1943,12 @@ async function writeCodexGoalStoppedProgress(input: {
 async function buildCodexGoalOverview(args: JobOverviewMcpArgs): Promise<JsonObject> {
   const registryRootDir = registryRootFromArgs(args);
   const summaries = await listCodexGoalJobs({ registryRootDir });
+  const jobIdPrefix = stringValue(args.jobIdPrefix);
+  const matchingSummaries = jobIdPrefix
+    ? summaries.filter((summary) => summary.jobId.startsWith(jobIdPrefix))
+    : summaries;
   const limit = numberValue(args.limit);
-  const selectedSummaries = limit ? summaries.slice(0, limit) : summaries;
+  const selectedSummaries = limit ? matchingSummaries.slice(0, limit) : matchingSummaries;
   const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
   const tailLines = numberValue(args.tailLines) ?? 5;
   const rawJobs = await Promise.all(
@@ -1966,9 +1972,11 @@ async function buildCodexGoalOverview(args: JobOverviewMcpArgs): Promise<JsonObj
     ok: jobs.every((job) => job.ok),
     safeToOperate: workspaceConflicts.length === 0,
     registryRootDir,
+    ...(jobIdPrefix ? { jobIdPrefix } : {}),
     totalJobs: summaries.length,
+    ...(jobIdPrefix ? { matchedJobs: matchingSummaries.length } : {}),
     returnedJobs: jobs.length,
-    truncated: selectedSummaries.length < summaries.length,
+    truncated: selectedSummaries.length < matchingSummaries.length,
     summary: {
       running: okJobs.filter((job) => job.workerAlive).length,
       silentStale: okJobs.filter((job) => job.silentStale).length,

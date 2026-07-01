@@ -211,6 +211,8 @@ describe("codex goal cli", () => {
       "/tmp/registry",
       "--limit",
       "5",
+      "--job-prefix",
+      "quanta-s9",
     ], fakeIo());
     expect(overview).toMatchObject({
       kind: "mcp-tool",
@@ -221,6 +223,7 @@ describe("codex goal cli", () => {
     expect(JSON.parse(overview.argsJson ?? "{}")).toEqual({
       registryRootDir: "/tmp/registry",
       limit: 5,
+      jobIdPrefix: "quanta-s9",
     });
 
     const runWatch = parseCodexGoalCliArgs([
