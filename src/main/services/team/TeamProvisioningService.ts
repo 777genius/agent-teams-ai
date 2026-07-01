@@ -4886,7 +4886,7 @@ export class TeamProvisioningService {
     if (!run || run.processKilled || run.cancelRequested) {
       return;
     }
-    if (!run.child?.stdin?.writable) {
+    if (run.child && !run.child.stdin?.writable) {
       return;
     }
 

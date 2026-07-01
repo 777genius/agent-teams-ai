@@ -285,7 +285,12 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
       messageId: 'msg-1',
       providerId: 'opencode',
       delivered: true,
+      accepted: true,
       responsePending: false,
+      responseState: 'responded_visible_message',
+      ledgerStatus: 'responded',
+      ledgerRecordId: 'opencode-prompt:test',
+      laneId: 'secondary:opencode:jack',
       visibleReplyMessageId: 'reply-1',
       userVisibleImpact: { state: 'none' },
     });

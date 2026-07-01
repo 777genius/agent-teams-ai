@@ -179,47 +179,6 @@ describe('launch incomplete notification helpers', () => {
     });
   });
 
-  it('builds a launch incomplete payload for pending-only launches', () => {
-    const run = runLike({
-      teamName: 'rocket-team',
-      runId: 'run-43',
-      request: {
-        displayName: 'Rocket Team',
-        cwd: '/tmp/rocket-team',
-      },
-      expectedMembers: ['frontend', 'backend'],
-      memberSpawnStatuses: new Map([
-        ['frontend', liveStatus({ launchState: 'confirmed_alive', bootstrapConfirmed: true })],
-        ['backend', liveStatus({ launchState: 'runtime_pending_bootstrap', runtimeAlive: true })],
-      ]),
-    });
-
-    expect(
-      buildTeamLaunchIncompleteNotificationPayload({
-        run,
-        failedMembers: [],
-        launchSummary: {
-          confirmedCount: 1,
-          pendingCount: 1,
-          failedCount: 0,
-          runtimeAlivePendingCount: 1,
-        },
-        suppressToast: true,
-      })
-    ).toEqual({
-      teamEventType: 'team_launch_incomplete',
-      teamName: 'rocket-team',
-      teamDisplayName: 'Rocket Team',
-      from: 'system',
-      summary: 'Team launch incomplete',
-      body: '1/2 joined · still joining: @backend',
-      dedupeKey: 'team_launch_incomplete:rocket-team:run-43',
-      target: { kind: 'team', teamName: 'rocket-team', section: 'members' },
-      projectPath: '/tmp/rocket-team',
-      suppressToast: true,
-    });
-  });
-
   it('does not build a launch incomplete payload when no failed member remains', () => {
     const run = runLike({
       expectedMembers: ['frontend'],

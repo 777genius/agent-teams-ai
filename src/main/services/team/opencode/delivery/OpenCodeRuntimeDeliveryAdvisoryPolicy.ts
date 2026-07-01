@@ -286,16 +286,13 @@ export function selectOpenCodeAttachmentDeliveryUserVisibleMessage(input: {
   const diagnosticReasons =
     input.diagnostics
       ?.map((diagnostic) => diagnostic.trim())
-      .filter((diagnostic) =>
-        diagnostic.startsWith('opencode_attachment_delivery_prepare_failed:')
-      )
+      .filter((diagnostic) => diagnostic.startsWith('opencode_attachment_delivery_prepare_failed:'))
       .map((diagnostic) =>
         diagnostic.slice('opencode_attachment_delivery_prepare_failed:'.length).trim()
       )
       .filter(Boolean) ?? [];
   const isAttachmentFailure =
-    isOpenCodeAttachmentDeliveryFailureReason(reason) ||
-    diagnosticReasons.length > 0;
+    isOpenCodeAttachmentDeliveryFailureReason(reason) || diagnosticReasons.length > 0;
   if (!isAttachmentFailure) {
     return undefined;
   }
@@ -388,6 +385,7 @@ export function toOpenCodeRuntimeDeliveryStatus(input: {
   decision?: OpenCodeRuntimeDeliveryAdvisoryDecision;
 }): OpenCodeRuntimeDeliveryStatus {
   const failed = input.record.status === 'failed_terminal';
+  const accepted = hasOpenCodeRuntimeDeliveryAcceptanceProof(input.record);
   const responded =
     input.record.status === 'responded' &&
     Boolean(input.record.inboxReadCommittedAt || input.record.visibleReplyMessageId);
@@ -409,16 +407,35 @@ export function toOpenCodeRuntimeDeliveryStatus(input: {
     providerId: 'opencode',
     attempted: true,
     delivered: !failed,
+    accepted,
     responsePending: !failed && !responded,
     responseState: input.record.responseState,
     ledgerStatus: input.record.status,
     visibleReplyMessageId: input.record.visibleReplyMessageId ?? undefined,
     visibleReplyCorrelation: input.record.visibleReplyCorrelation ?? undefined,
+    ledgerRecordId: input.record.id,
+    laneId: input.record.laneId,
     acceptanceUnknown: input.record.acceptanceUnknown,
     reason: input.record.lastReason ?? undefined,
     diagnostics: input.record.diagnostics,
     userVisibleImpact,
   };
+}
+
+function hasOpenCodeRuntimeDeliveryAcceptanceProof(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  return Boolean(
+    record.status === 'accepted' ||
+    record.status === 'responded' ||
+    record.status === 'unanswered' ||
+    record.acceptedAt ||
+    record.deliveredUserMessageId?.trim() ||
+    record.runtimePromptMessageId?.trim() ||
+    record.lastRuntimePromptMessageId?.trim() ||
+    record.visibleReplyMessageId?.trim() ||
+    record.runtimePromptMessageIds?.some((messageId) => messageId.trim())
+  );
 }
 
 export function getOpenCodeRuntimeDeliveryAdvisoryReasonKey(input: {

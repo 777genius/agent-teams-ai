@@ -418,6 +418,7 @@ function openCodeRuntimeDeliveryStatusToRelayResult(
 ): OpenCodeMemberInboxRelayResult {
   const lastDelivery: OpenCodeMemberInboxDelivery = {
     delivered: status.delivered,
+    ...(typeof status.accepted === 'boolean' ? { accepted: status.accepted } : {}),
     ...(typeof status.responsePending === 'boolean'
       ? { responsePending: status.responsePending }
       : {}),
@@ -432,6 +433,8 @@ function openCodeRuntimeDeliveryStatusToRelayResult(
     ...(status.visibleReplyCorrelation
       ? { visibleReplyCorrelation: status.visibleReplyCorrelation }
       : {}),
+    ...(status.ledgerRecordId ? { ledgerRecordId: status.ledgerRecordId } : {}),
+    ...(status.laneId ? { laneId: status.laneId } : {}),
     ...(status.queuedBehindMessageId
       ? { queuedBehindMessageId: status.queuedBehindMessageId }
       : {}),
@@ -3340,12 +3343,15 @@ async function handleSendMessage(
           providerId: 'opencode',
           attempted: true,
           delivered: delivery.delivered,
+          accepted: delivery.accepted,
           responsePending: delivery.responsePending,
           acceptanceUnknown: delivery.acceptanceUnknown,
           responseState: delivery.responseState,
           ledgerStatus: delivery.ledgerStatus,
           visibleReplyMessageId: delivery.visibleReplyMessageId,
           visibleReplyCorrelation: delivery.visibleReplyCorrelation,
+          ledgerRecordId: delivery.ledgerRecordId,
+          laneId: delivery.laneId,
           queuedBehindMessageId: delivery.queuedBehindMessageId,
           reason: delivery.reason,
           diagnostics: delivery.diagnostics,

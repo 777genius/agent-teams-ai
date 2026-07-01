@@ -328,6 +328,8 @@ describe('ipc teams handlers', () => {
             acceptanceUnknown?: boolean;
             responseState?: NonNullable<SendMessageResult['runtimeDelivery']>['responseState'];
             ledgerStatus?: NonNullable<SendMessageResult['runtimeDelivery']>['ledgerStatus'];
+            ledgerRecordId?: string;
+            laneId?: string;
             reason?: string;
             diagnostics?: string[];
           }
@@ -850,7 +852,16 @@ describe('ipc teams handlers', () => {
       attempted: 1,
       delivered: 1,
       failed: 0,
-      lastDelivery: { delivered: true },
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        responseState: 'not_observed',
+        ledgerStatus: 'retry_scheduled',
+        ledgerRecordId: 'opencode-prompt:test',
+        laneId: 'secondary:opencode:bob',
+        diagnostics: ['opencode_delivery_response_pending'],
+      },
     });
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -893,6 +904,13 @@ describe('ipc teams handlers', () => {
       providerId: 'opencode',
       attempted: true,
       delivered: true,
+      accepted: true,
+      responsePending: true,
+      responseState: 'not_observed',
+      ledgerStatus: 'retry_scheduled',
+      ledgerRecordId: 'opencode-prompt:test',
+      laneId: 'secondary:opencode:bob',
+      diagnostics: ['opencode_delivery_response_pending'],
     });
     expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).not.toHaveBeenCalled();
   });
@@ -1020,9 +1038,12 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: true,
         responseState: 'not_observed',
         ledgerStatus: 'pending',
+        ledgerRecordId: 'opencode-prompt:durable',
+        laneId: 'secondary:opencode:bob',
         reason: 'opencode_delivery_response_pending',
         diagnostics: ['prompt accepted'],
         userVisibleImpact: { state: 'none' },
@@ -1046,9 +1067,12 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: true,
         responseState: 'not_observed',
         ledgerStatus: 'pending',
+        ledgerRecordId: 'opencode-prompt:durable',
+        laneId: 'secondary:opencode:bob',
         reason: 'opencode_delivery_response_pending',
         diagnostics: ['prompt accepted'],
         userVisibleImpact: { state: 'checking' },
@@ -1059,6 +1083,7 @@ describe('ipc teams handlers', () => {
       const impactInput = impactCalls.at(-1)?.[0];
       expect(impactInput).toMatchObject({
         delivered: true,
+        accepted: true,
         responsePending: true,
       });
       expect(impactInput).not.toHaveProperty('userVisibleImpact');
@@ -1079,11 +1104,14 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: false,
         responseState: 'responded_visible_message',
         ledgerStatus: 'responded',
         visibleReplyMessageId: 'reply-1',
         visibleReplyCorrelation: 'relayOfMessageId',
+        ledgerRecordId: 'opencode-prompt:responded',
+        laneId: 'secondary:opencode:bob',
         acceptanceUnknown: false,
         diagnostics: [],
         userVisibleImpact: { state: 'none' },
@@ -1104,11 +1132,14 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: false,
         responseState: 'responded_visible_message',
         ledgerStatus: 'responded',
         visibleReplyMessageId: 'reply-1',
         visibleReplyCorrelation: 'relayOfMessageId',
+        ledgerRecordId: 'opencode-prompt:responded',
+        laneId: 'secondary:opencode:bob',
         acceptanceUnknown: false,
         userVisibleImpact: { state: 'none' },
       });
