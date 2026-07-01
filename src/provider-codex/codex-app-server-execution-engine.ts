@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { EventEmitter, once as onceEvent } from "node:events";
 import type {
+  AgentUsage,
   ManagedRunInputRequest,
   ManagedRunRecord,
   ManagedRunResumeHandle,
@@ -92,6 +93,7 @@ type AppServerWaitingForInputResult = {
   readonly outputText: string;
   readonly request: ManagedRunInputRequest;
   readonly resumeHandle: ManagedRunResumeHandle;
+  readonly usage?: AgentUsage;
   readonly warnings: readonly AppServerWarning[];
 };
 
@@ -117,6 +119,7 @@ type CodexThreadGoal = {
   readonly threadId: string;
   readonly objective: string;
   readonly status: CodexThreadGoalStatus;
+  readonly usage?: AgentUsage;
 };
 
 const defaultTimeoutMs = 10 * 60 * 1000;
@@ -396,6 +399,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     }
     return {
       outputText,
+      ...(result.usage === undefined ? {} : { usage: result.usage }),
       warnings: [...schemaWarnings, ...result.warnings],
     };
   }
@@ -456,6 +460,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     }
     return {
       outputText,
+      ...(result.usage === undefined ? {} : { usage: result.usage }),
       warnings: [...schemaWarnings, ...result.warnings],
     };
   }
@@ -560,6 +565,7 @@ type JsonRpcResponse = {
 
 type TurnState = {
   outputText: string;
+  usage: AgentUsage | undefined;
   completed: boolean;
   error: Error | null;
   waiters: ((state: TurnState) => void)[];
@@ -679,6 +685,7 @@ class CodexAppServerClient {
   }): Promise<{
     readonly status?: "completed";
     readonly outputText: string;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }> {
     const warnings = this.drainWarnings();
@@ -707,6 +714,7 @@ class CodexAppServerClient {
     warnings.push(...this.drainWarnings());
     return {
       outputText: turn.outputText,
+      ...(turn.usage === undefined ? {} : { usage: turn.usage }),
       warnings,
     };
   }
@@ -732,6 +740,7 @@ class CodexAppServerClient {
     readonly outputText: string;
     readonly request?: ManagedRunInputRequest;
     readonly resumeHandle?: ManagedRunResumeHandle;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }> {
     const warnings = this.drainWarnings();
@@ -778,6 +787,7 @@ class CodexAppServerClient {
     readonly outputText: string;
     readonly request?: ManagedRunInputRequest;
     readonly resumeHandle?: ManagedRunResumeHandle;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }> {
     const threadId = input.resumeHandle.threadId;
@@ -856,9 +866,12 @@ class CodexAppServerClient {
     readonly outputText: string;
     readonly request?: ManagedRunInputRequest;
     readonly resumeHandle?: ManagedRunResumeHandle;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }> {
     let outputText = "";
+    let turnUsage: AgentUsage | undefined;
+    let goalUsage: AgentUsage | undefined;
     for (let turnNumber = 1; turnNumber <= input.maxGoalTurns; turnNumber += 1) {
       const turn = await this.startTurn({
         ...input,
@@ -867,6 +880,7 @@ class CodexAppServerClient {
       });
       if (turn.error) throw turn.error;
       outputText = turn.outputText;
+      turnUsage = mergeAgentUsage(turnUsage, turn.usage);
 
       const goal = await this.getGoal({
         threadId: input.threadId,
@@ -876,6 +890,7 @@ class CodexAppServerClient {
       if (!goal) {
         throw new Error("codex_app_server_goal_missing");
       }
+      goalUsage = mergeAgentUsage(goalUsage, goal.usage);
       if (goal.status === "complete") {
         input.warnings.push(...this.drainWarnings());
         await this.options.runStore.complete({
@@ -886,6 +901,7 @@ class CodexAppServerClient {
         return {
           status: "completed",
           outputText,
+          ...usageField(preferredUsage(turnUsage, goalUsage)),
           warnings: input.warnings,
         };
       }
@@ -896,6 +912,7 @@ class CodexAppServerClient {
           goal,
           outputText,
           workspacePath: input.workspacePath,
+          ...usageField(preferredUsage(turnUsage, goalUsage)),
           warnings: input.warnings,
         });
       }
@@ -918,6 +935,7 @@ class CodexAppServerClient {
     readonly goal: CodexThreadGoal;
     readonly outputText: string;
     readonly workspacePath: string;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }): Promise<{
     readonly status: "waiting_for_input";
@@ -925,6 +943,7 @@ class CodexAppServerClient {
     readonly outputText: string;
     readonly request: ManagedRunInputRequest;
     readonly resumeHandle: ManagedRunResumeHandle;
+    readonly usage?: AgentUsage;
     readonly warnings: readonly AppServerWarning[];
   }> {
     const request = goalInputRequest({
@@ -956,6 +975,7 @@ class CodexAppServerClient {
       outputText: input.outputText.trim() ? input.outputText : request.question,
       request,
       resumeHandle,
+      ...usageField(input.usage),
       warnings: input.warnings,
     };
   }
@@ -1484,6 +1504,10 @@ class CodexAppServerClient {
       const turnId = stringField(turn, "id");
       const state = this.ensureTurn(turnId);
       state.completed = true;
+      state.usage = mergeAgentUsage(
+        state.usage,
+        readUsageFromRecords(turn, params, record),
+      );
       const status = readRecord(turn?.status);
       if (status?.type === "failed") {
         state.error = new Error(
@@ -1693,6 +1717,7 @@ function spawnCodexAppServerProcess(input: {
 function createTurnState(): TurnState {
   return {
     outputText: "",
+    usage: undefined,
     completed: false,
     error: null,
     waiters: [],
@@ -2078,7 +2103,140 @@ function readGoal(value: unknown): CodexThreadGoal | null {
     threadId,
     objective,
     status,
+    ...usageField(readUsage(goal)),
   };
+}
+
+function readUsageFromRecords(...values: readonly unknown[]): AgentUsage | undefined {
+  let usage: AgentUsage | undefined;
+  for (const value of values) {
+    usage = mergeAgentUsage(usage, readUsage(value));
+  }
+  return usage;
+}
+
+function readUsage(value: unknown): AgentUsage | undefined {
+  const record = readRecord(value);
+  if (!record) return undefined;
+  const direct = normalizeUsageRecord(record);
+  const nested = readUsageFromRecords(
+    record.usage,
+    record.tokenUsage,
+    record.token_usage,
+    record.tokens,
+    record.metrics,
+    readRecord(record.status)?.usage,
+  );
+  return mergeAgentUsage(direct, nested);
+}
+
+function normalizeUsageRecord(
+  record: Record<string, unknown>,
+): AgentUsage | undefined {
+  const inputTokens = numberField(
+    record,
+    "inputTokens",
+    "input_tokens",
+    "promptTokens",
+    "prompt_tokens",
+    "totalInputTokens",
+    "total_input_tokens",
+  );
+  const outputTokens = numberField(
+    record,
+    "outputTokens",
+    "output_tokens",
+    "completionTokens",
+    "completion_tokens",
+    "totalOutputTokens",
+    "total_output_tokens",
+  );
+  const totalTokens =
+    numberField(
+      record,
+      "totalTokens",
+      "total_tokens",
+      "tokensUsed",
+      "tokens_used",
+      "usedTokens",
+      "used_tokens",
+    ) ?? derivedTotalTokens(inputTokens, outputTokens);
+  if (
+    inputTokens === undefined &&
+    outputTokens === undefined &&
+    totalTokens === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    ...(inputTokens === undefined ? {} : { inputTokens }),
+    ...(outputTokens === undefined ? {} : { outputTokens }),
+    ...(totalTokens === undefined ? {} : { totalTokens }),
+  };
+}
+
+function numberField(
+  record: Record<string, unknown>,
+  ...keys: readonly string[]
+): number | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function derivedTotalTokens(
+  inputTokens: number | undefined,
+  outputTokens: number | undefined,
+): number | undefined {
+  if (inputTokens === undefined && outputTokens === undefined) return undefined;
+  return (inputTokens ?? 0) + (outputTokens ?? 0);
+}
+
+function mergeAgentUsage(
+  left: AgentUsage | undefined,
+  right: AgentUsage | undefined,
+): AgentUsage | undefined {
+  if (!left) return right;
+  if (!right) return left;
+  const inputTokens = sumOptional(left.inputTokens, right.inputTokens);
+  const outputTokens = sumOptional(left.outputTokens, right.outputTokens);
+  const totalTokens = sumOptional(left.totalTokens, right.totalTokens);
+  return {
+    ...(inputTokens === undefined ? {} : { inputTokens }),
+    ...(outputTokens === undefined ? {} : { outputTokens }),
+    ...(totalTokens === undefined ? {} : { totalTokens }),
+  };
+}
+
+function preferredUsage(
+  turnUsage: AgentUsage | undefined,
+  goalUsage: AgentUsage | undefined,
+): AgentUsage | undefined {
+  if (hasDetailedUsage(turnUsage)) return turnUsage;
+  return turnUsage ?? goalUsage;
+}
+
+function hasDetailedUsage(usage: AgentUsage | undefined): boolean {
+  return usage?.inputTokens !== undefined || usage?.outputTokens !== undefined;
+}
+
+function usageField(
+  usage: AgentUsage | undefined,
+): { readonly usage: AgentUsage } | Record<string, never> {
+  return usage === undefined ? {} : { usage };
+}
+
+function sumOptional(
+  left: number | undefined,
+  right: number | undefined,
+): number | undefined {
+  if (left === undefined) return right;
+  if (right === undefined) return left;
+  return left + right;
 }
 
 function isGoalStatus(value: string | null): value is CodexThreadGoalStatus {

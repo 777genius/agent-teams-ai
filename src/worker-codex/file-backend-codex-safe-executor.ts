@@ -12,6 +12,7 @@ import {
 import {
   accountCapacityAwareWorkerFactory,
   type ActiveAttemptRegistry,
+  type AttemptUsage,
   BoundedSubscriptionWorkerPool,
   LocalFileAttemptJournal,
   LocalFileWorkspaceLockStore,
@@ -265,6 +266,7 @@ export class FileBackendCodexSafeExecutor {
         prompt: continuationPacket.message,
       }),
       summarizeResult: (result) => result.outputText,
+      attemptUsage: codexWorkerResultUsage,
       controlTarget: codexControlTarget({
         jobId,
         taskId,
@@ -336,6 +338,25 @@ export class FileBackendCodexSafeExecutor {
     return fallback;
   }
 }
+
+function codexWorkerResultUsage(
+  result: FileBackendCodexWorkerResult,
+): AttemptUsage | undefined {
+  const usage = result.usage;
+  if (!usage) return undefined;
+  return {
+    ...(usage.inputTokens === undefined
+      ? {}
+      : { inputTokens: usage.inputTokens }),
+    ...(usage.outputTokens === undefined
+      ? {}
+      : { outputTokens: usage.outputTokens }),
+    ...(usage.totalTokens === undefined
+      ? {}
+      : { totalTokens: usage.totalTokens }),
+  };
+}
+
 function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
   readonly jobId?: string;
   readonly taskId: string;

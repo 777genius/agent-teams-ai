@@ -1263,6 +1263,47 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("propagates app-server turn usage into provider telemetry", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-server-usage-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      turnUsage: {
+        input_tokens: 123,
+        output_tokens: 45,
+      },
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "usage please" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result.status).toBe("completed");
+      if (result.status !== "completed") throw new Error("expected completed");
+      expect(result.telemetry?.usage).toEqual({
+        inputTokens: 123,
+        outputTokens: 45,
+        totalTokens: 168,
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("disposes app-server clients when stdin close emits exit first", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-stdin-exit-test-"));
     const fakeFactory = new FakeAppServerFactory({
@@ -3317,6 +3358,7 @@ type FakeAppServerFactoryOptions = {
   readonly abortTurnReason?: string;
   readonly suppressOutputTurnNumbers?: readonly number[];
   readonly goalStatusesAfterTurns?: readonly string[];
+  readonly turnUsage?: Record<string, unknown>;
   readonly mismatchTurnStartResponseId?: boolean;
   readonly reuseActualTurnId?: string;
   readonly onPrompt?: (prompt: string) => void;
@@ -3518,7 +3560,7 @@ class FakeAppServerProcess extends EventEmitter {
               JSON.stringify({
                 method: "turn/completed",
                 params: {
-                  turn: { id: turnId, status: { type: "completed" } },
+                  turn: this.completedTurn(turnId),
                 },
               }),
             ].join("\n") + "\n",
@@ -3559,7 +3601,7 @@ class FakeAppServerProcess extends EventEmitter {
               delta: `app-server output:${prompt}`,
             });
             this.notify("turn/completed", {
-              turn: { id: turnId, status: { type: "completed" } },
+              turn: this.completedTurn(turnId),
             });
             this.notify("turn/started", {
               threadId: String(request.params?.threadId ?? ""),
@@ -3638,7 +3680,7 @@ class FakeAppServerProcess extends EventEmitter {
             }
           }
           this.notify("turn/completed", {
-            turn: { id: turnId, status: { type: "completed" } },
+            turn: this.completedTurn(turnId),
           });
         }, 5);
         continue;
@@ -3655,6 +3697,16 @@ class FakeAppServerProcess extends EventEmitter {
       return value ?? null;
     }
     return this.options.emitTopLevelErrorOnTurn ?? null;
+  }
+
+  private completedTurn(turnId: string): Record<string, unknown> {
+    return {
+      id: turnId,
+      status: { type: "completed" },
+      ...(this.options.turnUsage === undefined
+        ? {}
+        : { usage: this.options.turnUsage }),
+    };
   }
 
   private markGoalAfterCompletedTurn(threadId: string): void {

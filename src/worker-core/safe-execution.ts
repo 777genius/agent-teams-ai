@@ -83,12 +83,42 @@ export type WorkspaceSnapshot = {
   readonly capturedAt: Date;
   readonly dirty: boolean;
   readonly changedFiles: readonly string[];
+  readonly diffNumstat?: readonly WorkspaceDiffFileStat[];
   readonly fingerprint: string;
   readonly summary: string;
   readonly diffStat?: string;
   readonly shortDiff?: string;
   readonly truncated?: boolean;
   readonly warnings?: readonly string[];
+};
+
+export type WorkspaceDiffFileStat = {
+  readonly path: string;
+  readonly additions: number;
+  readonly deletions: number;
+  readonly binary?: boolean;
+};
+
+export type AttemptUsageSource =
+  | "provider_structured"
+  | "legacy_text_reported"
+  | "unavailable";
+
+export type AttemptUsage = {
+  readonly inputTokens?: number;
+  readonly outputTokens?: number;
+  readonly totalTokens?: number;
+};
+
+export type AttemptPatchStatsSource =
+  | "git_numstat_delta"
+  | "git_numstat_delta_dirty_baseline"
+  | "unavailable";
+
+export type AttemptPatchStats = {
+  readonly additions: number;
+  readonly deletions: number;
+  readonly source: AttemptPatchStatsSource;
 };
 
 export type AttemptRecord = {
@@ -106,6 +136,9 @@ export type AttemptRecord = {
   readonly workspaceDirtyBefore: boolean;
   readonly workspaceDirtyAfter?: boolean;
   readonly changedFiles: readonly string[];
+  readonly usage?: AttemptUsage;
+  readonly usageSource?: AttemptUsageSource;
+  readonly patch?: AttemptPatchStats;
   readonly lastOutputSummary?: string;
 };
 
@@ -289,6 +322,7 @@ export type SafeExecutionRunInput<Job, Result> = {
     error: unknown,
   ) => SafeExecutionFailureClassification;
   readonly summarizeResult?: (result: Result) => string | undefined;
+  readonly attemptUsage?: (result: Result) => AttemptUsage | undefined;
   readonly summarizeError?: (error: unknown) => string | undefined;
   readonly controlTarget?: WorkerControlTarget;
   readonly abortSignal?: AbortSignal;
@@ -744,6 +778,7 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
       await this.gitDiffNameOnly(input.workspacePath),
     );
     const diffStat = await this.gitDiffStat(input.workspacePath);
+    const diffNumstat = await this.gitDiffNumstat(input.workspacePath);
     const shortDiff = input.includeDiff
       ? await this.shortGitDiff(input.workspacePath)
       : undefined;
@@ -753,6 +788,7 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
       capturedAt: input.capturedAt,
       dirty: changedFiles.length > 0,
       changedFiles,
+      ...(diffNumstat.length === 0 ? {} : { diffNumstat }),
       fingerprint: hashText([`head-tree:${headTree}`, ...statusEntries].join("\n")),
       summary: changedFiles.length === 0
         ? "Git workspace is clean."
@@ -840,6 +876,14 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
       .map((line) => normalizeRelativePath(line.trim()))
       .filter(Boolean)
       .sort((left, right) => left.localeCompare(right));
+  }
+
+  private async gitDiffNumstat(
+    workspacePath: string,
+  ): Promise<readonly WorkspaceDiffFileStat[]> {
+    return parseGitNumstat(
+      await this.gitDiffOutputs(workspacePath, ["--numstat"]),
+    );
   }
 
   private async gitHeadTree(
@@ -1238,6 +1282,7 @@ export class SafeExecutionRunner {
             unavailableWorkspaceSnapshot({ workspacePath, error }),
           );
           previousOutputSummary = input.summarizeResult?.(result);
+          const usage = input.attemptUsage?.(result);
           const metadata = input.attemptMetadata?.({ result });
           const attempt = completeAttemptRecord({
             input,
@@ -1247,6 +1292,7 @@ export class SafeExecutionRunner {
             before,
             after,
             ...(metadata === undefined ? {} : { metadata }),
+            ...(usage === undefined ? {} : { usage }),
             ...(previousOutputSummary === undefined
               ? {}
               : { outputSummary: previousOutputSummary }),
@@ -1915,8 +1961,10 @@ function completeAttemptRecord<Job, Result>(input: {
     readonly workerId?: string;
     readonly accountId?: string;
   };
+  readonly usage?: AttemptUsage;
   readonly outputSummary?: string;
 }): AttemptRecord {
+  const patch = patchStatsBetween(input.before, input.after);
   return {
     taskId: input.input.taskId,
     attemptNumber: input.attemptNumber,
@@ -1933,6 +1981,11 @@ function completeAttemptRecord<Job, Result>(input: {
     workspaceDirtyBefore: input.before.dirty,
     workspaceDirtyAfter: input.after.dirty,
     changedFiles: changedFilesBetween(input.before, input.after),
+    ...(input.usage === undefined ? {} : { usage: input.usage }),
+    ...(input.usage === undefined
+      ? {}
+      : { usageSource: "provider_structured" as const }),
+    ...(patch === undefined ? {} : { patch }),
     ...(input.outputSummary === undefined
       ? {}
       : { lastOutputSummary: input.outputSummary }),
@@ -1953,6 +2006,7 @@ function failedAttemptRecord<Job, Result>(input: {
     readonly accountId?: string;
   };
 }): AttemptRecord {
+  const patch = patchStatsBetween(input.before, input.after);
   return {
     taskId: input.input.taskId,
     attemptNumber: input.attemptNumber,
@@ -1974,6 +2028,7 @@ function failedAttemptRecord<Job, Result>(input: {
     workspaceDirtyBefore: input.before.dirty,
     workspaceDirtyAfter: input.after.dirty,
     changedFiles: changedFilesBetween(input.before, input.after),
+    ...(patch === undefined ? {} : { patch }),
   };
 }
 
@@ -2007,6 +2062,40 @@ function changedFilesBetween(
   }
 
   return changedFilesDelta(before.changedFiles, after.changedFiles);
+}
+
+function patchStatsBetween(
+  before: WorkspaceSnapshot,
+  after: WorkspaceSnapshot,
+): AttemptPatchStats | undefined {
+  if (!before.diffNumstat || !after.diffNumstat) return undefined;
+  const beforeByPath = diffNumstatByPath(before.diffNumstat);
+  let additions = 0;
+  let deletions = 0;
+  for (const next of after.diffNumstat) {
+    if (next.binary) continue;
+    const previous = beforeByPath.get(next.path);
+    additions += Math.max(0, next.additions - (previous?.additions ?? 0));
+    deletions += Math.max(0, next.deletions - (previous?.deletions ?? 0));
+  }
+  if (additions === 0 && deletions === 0) return undefined;
+  return {
+    additions,
+    deletions,
+    source: before.dirty
+      ? "git_numstat_delta_dirty_baseline"
+      : "git_numstat_delta",
+  };
+}
+
+function diffNumstatByPath(
+  stats: readonly WorkspaceDiffFileStat[],
+): Map<string, WorkspaceDiffFileStat> {
+  const byPath = new Map<string, WorkspaceDiffFileStat>();
+  for (const stat of stats) {
+    byPath.set(stat.path, stat);
+  }
+  return byPath;
 }
 
 function changedFilesDelta(
@@ -2258,6 +2347,35 @@ function mergeChangedFiles(
     .sort((leftFile, rightFile) => leftFile.localeCompare(rightFile));
 }
 
+function parseGitNumstat(value: string): readonly WorkspaceDiffFileStat[] {
+  const byPath = new Map<string, WorkspaceDiffFileStat>();
+  for (const line of value.split("\n")) {
+    if (!line.trim()) continue;
+    const [rawAdditions, rawDeletions, ...pathParts] = line.split("\t");
+    const path = normalizeRelativePath(pathParts.join("\t").trim());
+    if (!path) continue;
+    const binary = rawAdditions === "-" || rawDeletions === "-";
+    const additions = binary ? 0 : Number(rawAdditions);
+    const deletions = binary ? 0 : Number(rawDeletions);
+    if (
+      !binary &&
+      (!Number.isFinite(additions) || !Number.isFinite(deletions))
+    ) {
+      continue;
+    }
+    const existing = byPath.get(path);
+    byPath.set(path, {
+      path,
+      additions: (existing?.additions ?? 0) + additions,
+      deletions: (existing?.deletions ?? 0) + deletions,
+      ...(binary || existing?.binary ? { binary: true } : {}),
+    });
+  }
+  return [...byPath.values()].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+}
+
 async function canonicalWorkspacePath(path: string): Promise<string> {
   const resolved = resolve(path);
   return realpath(resolved).catch(() => resolved);
@@ -2456,10 +2574,61 @@ function parseAttemptRecord(value: unknown): AttemptRecord {
     changedFiles: arrayValue(record.changedFiles).map((item) =>
       requireString(item, "attempt.changedFiles"),
     ),
+    ...(parseAttemptUsage(record.usage) === undefined
+      ? {}
+      : { usage: parseAttemptUsage(record.usage)! }),
+    ...(isAttemptUsageSource(record.usageSource)
+      ? { usageSource: record.usageSource }
+      : {}),
+    ...(parseAttemptPatchStats(record.patch) === undefined
+      ? {}
+      : { patch: parseAttemptPatchStats(record.patch)! }),
     ...(stringValue(record.lastOutputSummary) === undefined
       ? {}
       : { lastOutputSummary: stringValue(record.lastOutputSummary)! }),
   };
+}
+
+function parseAttemptUsage(value: unknown): AttemptUsage | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const inputTokens = numberValue(record.inputTokens);
+  const outputTokens = numberValue(record.outputTokens);
+  const totalTokens = numberValue(record.totalTokens);
+  if (
+    inputTokens === undefined &&
+    outputTokens === undefined &&
+    totalTokens === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    ...(inputTokens === undefined ? {} : { inputTokens }),
+    ...(outputTokens === undefined ? {} : { outputTokens }),
+    ...(totalTokens === undefined ? {} : { totalTokens }),
+  };
+}
+
+function parseAttemptPatchStats(
+  value: unknown,
+): AttemptPatchStats | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const additions = numberValue(record.additions);
+  const deletions = numberValue(record.deletions);
+  const source = record.source;
+  if (
+    additions === undefined ||
+    deletions === undefined ||
+    !isAttemptPatchStatsSource(source)
+  ) {
+    return undefined;
+  }
+  return { additions, deletions, source };
 }
 
 async function atomicWriteJson(
@@ -2597,6 +2766,24 @@ function isAttemptFailureReason(value: unknown): value is AttemptFailureReason {
     value === "runtime_interrupted" ||
     value === "user_abort" ||
     value === "unknown_error"
+  );
+}
+
+function isAttemptUsageSource(value: unknown): value is AttemptUsageSource {
+  return (
+    value === "provider_structured" ||
+    value === "legacy_text_reported" ||
+    value === "unavailable"
+  );
+}
+
+function isAttemptPatchStatsSource(
+  value: unknown,
+): value is AttemptPatchStatsSource {
+  return (
+    value === "git_numstat_delta" ||
+    value === "git_numstat_delta_dirty_baseline" ||
+    value === "unavailable"
   );
 }
 

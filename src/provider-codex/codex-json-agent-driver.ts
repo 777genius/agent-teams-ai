@@ -162,6 +162,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
           telemetry: {
             durationMs: Date.now() - startedAt,
             finishReason: "waiting_for_input",
+            ...(result.usage === undefined ? {} : { usage: result.usage }),
           },
           warnings: result.warnings,
         };
@@ -182,6 +183,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
         telemetry: {
           durationMs: Date.now() - startedAt,
           finishReason: "completed",
+          ...(result.usage === undefined ? {} : { usage: result.usage }),
         },
         warnings: [...result.warnings, ...snapshot.warnings],
       };
@@ -275,6 +277,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
           telemetry: {
             durationMs: Date.now() - startedAt,
             finishReason: "waiting_for_input",
+            ...(result.usage === undefined ? {} : { usage: result.usage }),
           },
           warnings: result.warnings,
         };
@@ -297,6 +300,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
         telemetry: {
           durationMs: Date.now() - startedAt,
           finishReason: "completed",
+          ...(result.usage === undefined ? {} : { usage: result.usage }),
         },
         warnings: [...result.warnings, ...snapshot.warnings],
       };

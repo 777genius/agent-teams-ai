@@ -1,4 +1,5 @@
 import type {
+  AgentUsage,
   ProviderTaskControls,
   ProviderTaskResult,
   ManagedRunInputRequest,
@@ -52,6 +53,7 @@ export type CodexExecutionCompletedResult = {
   readonly status?: "completed";
   readonly outputText: string;
   readonly structuredOutput?: unknown;
+  readonly usage?: AgentUsage;
   readonly warnings: readonly CodexExecutionWarning[];
 };
 
@@ -62,6 +64,7 @@ export type CodexExecutionWaitingForInputResult = {
   readonly structuredOutput?: unknown;
   readonly request: ManagedRunInputRequest;
   readonly resumeHandle: ManagedRunResumeHandle;
+  readonly usage?: AgentUsage;
   readonly warnings: readonly CodexExecutionWarning[];
 };
 

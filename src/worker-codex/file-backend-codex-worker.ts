@@ -5,6 +5,7 @@ import {
   createSubscriptionRuntime,
   DefaultRedactor,
   DeterministicIdGenerator,
+  type AgentUsage,
   type ClockPort,
   type ManagedRunInputRequest,
   type ManagedRunRecord,
@@ -125,6 +126,7 @@ export type FileBackendCodexWorkerResult = {
   readonly status?: "completed";
   readonly outputText: string;
   readonly structuredOutput?: unknown;
+  readonly usage?: AgentUsage;
   readonly warnings: readonly {
     readonly code: string;
     readonly safeMessage: string;
@@ -136,6 +138,7 @@ export type FileBackendCodexWorkerResult = {
   readonly request: ManagedRunInputRequest;
   readonly resumeHandle: ManagedRunResumeHandle;
   readonly structuredOutput?: unknown;
+  readonly usage?: AgentUsage;
   readonly warnings: readonly {
     readonly code: string;
     readonly safeMessage: string;
@@ -834,6 +837,9 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
         ...(waiting.structuredOutput === undefined
           ? {}
           : { structuredOutput: waiting.structuredOutput }),
+        ...(waiting.telemetry?.usage === undefined
+          ? {}
+          : { usage: waiting.telemetry.usage }),
         warnings: waiting.warnings,
       };
     }
@@ -843,6 +849,9 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
       ...(result.structuredOutput === undefined
         ? {}
         : { structuredOutput: result.structuredOutput }),
+      ...(result.telemetry?.usage === undefined
+        ? {}
+        : { usage: result.telemetry.usage }),
       warnings: result.warnings,
     };
   }
