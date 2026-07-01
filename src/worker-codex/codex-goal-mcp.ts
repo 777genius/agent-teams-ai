@@ -2579,6 +2579,12 @@ async function buildCodexGoalOverviewItem(input: {
       registryRootDir: input.registryRootDir,
       jobId: manifest.jobId,
     };
+    const recommendedAction =
+      brief.lifecycleMarkerTypes.includes("review") &&
+      !status.resultExists &&
+      !status.tmuxAlive
+        ? "review_completed"
+        : status.recommendedAction;
     return {
       ok: true,
       jobId: manifest.jobId,
@@ -2588,7 +2594,7 @@ async function buildCodexGoalOverviewItem(input: {
       taskId: launch.config.taskId,
       tmuxSession: launch.tmuxSession,
       workerAlive: Boolean(status.tmuxAlive),
-      recommendedAction: status.recommendedAction,
+      recommendedAction,
       resultStatus: status.resultStatus,
       resultReason: status.resultReason,
       progressPath: status.progressPath,

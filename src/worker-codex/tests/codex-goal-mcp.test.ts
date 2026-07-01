@@ -1485,6 +1485,7 @@ describe("codex goal MCP server", () => {
           ok: true,
           jobId: "job-a",
           workerAlive: false,
+          recommendedAction: "review_completed",
           hasAvailableAccount: false,
           lifecycleMarkerTypes: ["review", "pause_request"],
           nextBestTool: "codex_goal_accounts_status",
