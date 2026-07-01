@@ -68,7 +68,7 @@ function makePorts(
     cancelRuntimeAdapterProvisioning: vi.fn(),
     cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(),
     runtimeAdapterRunByTeam: new Map(),
-    withTeamLock: vi.fn(withTeamLock),
+    withTeamLock,
     stopOpenCodeRuntimeAdapterTeam: vi.fn(),
     hasSecondaryRuntimeRuns: vi.fn(() => false),
     stopMixedSecondaryRuntimeLanes: vi.fn(),
