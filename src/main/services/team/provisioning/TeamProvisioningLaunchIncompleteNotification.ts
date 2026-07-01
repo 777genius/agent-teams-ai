@@ -176,9 +176,6 @@ export function buildTeamLaunchIncompleteNotificationPayload(params: {
   if (expectedCount === 0) return null;
 
   const failedNames = getLaunchIncompleteFailedNames(run, expectedMembers, failedMembers, snapshot);
-  if (failedNames.length === 0) {
-    return null;
-  }
   const pendingNames = getLaunchIncompletePendingNames(run, expectedMembers, failedNames, snapshot);
   const joinedCount = getLaunchIncompleteJoinedCount(
     run,
@@ -188,6 +185,9 @@ export function buildTeamLaunchIncompleteNotificationPayload(params: {
     snapshot
   );
   const missingCount = Math.max(0, launchSummary.pendingCount + launchSummary.failedCount);
+  if (failedNames.length === 0 && pendingNames.length === 0 && missingCount === 0) {
+    return null;
+  }
   const bodyParts = [`${joinedCount}/${expectedCount} joined`];
   if (failedNames.length > 0) {
     bodyParts.push(`failed: ${formatLaunchIncompleteMemberMentions(failedNames)}`);
