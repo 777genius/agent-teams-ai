@@ -114,7 +114,7 @@ Create one stored job per logical goal and per writer worktree:
   "accounts": ["account-a", "account-b", "account-c"],
   "tmuxSession": "my-task",
   "model": "gpt-5.5",
-  "reasoningEffort": "xhigh",
+  "reasoningEffort": "high",
   "serviceTier": "fast",
   "executionEngine": "app-server-goal",
   "taskTimeoutMs": 259200000,

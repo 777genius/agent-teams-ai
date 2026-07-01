@@ -41,7 +41,7 @@ The practical runtime has these parts:
 - `FileBackendCodexSafeExecutor`;
 - `executionEngine: "app-server-goal"` for native Codex goal continuation;
 - `serviceTier: "fast"` for fast mode;
-- `reasoningEffort: "xhigh"` for hard coding tasks;
+- `reasoningEffort: "high"` for hard coding tasks;
 - a 72 hour task timeout for overnight goals;
 - tmux or a host supervisor for process lifetime;
 - a heartbeat or cron monitor for health checks.
@@ -69,7 +69,7 @@ If you inherit a running Codex worker pool, do this first:
    when `codex_goal_brief.safeToContinue` is true.
 8. If the runner stopped because of provider output, runtime, code, test or
    benchmark failure, inspect the dirty work before retrying.
-9. Keep model `gpt-5.5`, reasoning effort `xhigh`, service tier `fast`, engine
+9. Keep model `gpt-5.5`, reasoning effort `high`, service tier `fast`, engine
    `app-server-goal`, and a 72 hour task timeout unless the task owner changed
    them explicitly.
 10. Verify with targeted tests before full benchmarks.
@@ -96,7 +96,7 @@ subscription-runtime-codex-goal run \
 Defaults:
 
 - model: `gpt-5.5`;
-- reasoning effort: `xhigh`;
+- reasoning effort: `high`;
 - service tier: `fast`;
 - task timeout: `72h`;
 - max account cycles: `5`;
@@ -294,7 +294,7 @@ await runCodexGoal({
   accounts: codexGoalAccountSlots(["account-a", "account-b", "account-c"]),
   outputPath: "/Users/me/.cache/subscription-runtime/my-job/my-task-001.latest-result.json",
   model: "gpt-5.5",
-  reasoningEffort: "xhigh",
+  reasoningEffort: "high",
   serviceTier: "fast",
   taskTimeoutMs: 72 * 60 * 60 * 1000,
   maxAccountCycles: 5,
@@ -394,7 +394,7 @@ Minimal `codex_goal_create_job` input:
   "accounts": ["account-a", "account-b", "account-c"],
   "tmuxSession": "memo-locomo-cat1-recall",
   "model": "gpt-5.5",
-  "reasoningEffort": "xhigh",
+  "reasoningEffort": "high",
   "serviceTier": "fast",
   "executionEngine": "app-server-goal",
   "taskTimeoutMs": 259200000,
@@ -574,7 +574,7 @@ Minimal MCP `codex_goal_start` input:
   "accounts": ["account-a", "account-b", "account-c"],
   "tmuxSession": "my-codex-worker",
   "model": "gpt-5.5",
-  "reasoningEffort": "xhigh",
+  "reasoningEffort": "high",
   "serviceTier": "fast",
   "taskTimeoutMs": 259200000,
   "maxAccountCycles": 5,
@@ -891,7 +891,7 @@ const executor = new FileBackendCodexSafeExecutor({
       stateRootDir,
       codexBinaryPath: process.env.CODEX_BINARY_PATH ?? "codex",
       model: process.env.CODEX_MODEL ?? "gpt-5.5",
-      reasoningEffort: process.env.CODEX_REASONING_EFFORT ?? "xhigh",
+      reasoningEffort: process.env.CODEX_REASONING_EFFORT ?? "high",
       serviceTier: process.env.CODEX_SERVICE_TIER ?? "fast",
       executionEngine: "app-server-goal",
       encryptionKey,
@@ -953,7 +953,7 @@ tmux new-session -d -s my-codex-worker -c /path/to/subscription-runtime \
     SUBSCRIPTION_RUNTIME_PROMPT_PATH=$HOME/.cache/subscription-runtime/my-job/prompt.md \
     SUBSCRIPTION_RUNTIME_TASK_TIMEOUT_MS=259200000 \
     CODEX_MODEL=gpt-5.5 \
-    CODEX_REASONING_EFFORT=xhigh \
+    CODEX_REASONING_EFFORT=high \
     CODEX_SERVICE_TIER=fast \
     node $HOME/.cache/subscription-runtime/my-job/run-goal.mjs \
     2>&1 | tee -a $HOME/.cache/subscription-runtime/my-job/my-task-001.log'
@@ -1109,7 +1109,7 @@ Task id: my-task-001
 Prompt: ~/.cache/subscription-runtime/my-job/prompt.md
 Accounts: account-a,account-b,account-c
 Model: gpt-5.5
-Effort: xhigh
+Effort: high
 Service tier: fast
 Execution engine: app-server-goal
 Do not run two writers in the same worktree.

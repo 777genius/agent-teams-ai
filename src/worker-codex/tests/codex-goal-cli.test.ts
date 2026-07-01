@@ -42,7 +42,7 @@ describe("codex goal cli", () => {
       promptPath: "/tmp/job/prompt.md",
       taskId: "task-1",
       model: "gpt-5.5",
-      reasoningEffort: "xhigh",
+      reasoningEffort: "high",
       serviceTier: "fast",
       executionEngine: "app-server-goal",
       taskTimeoutMs: 72 * 60 * 60 * 1000,
@@ -146,7 +146,7 @@ describe("codex goal cli", () => {
     const noTmux = buildNoTmuxShellCommand(command);
     expect(noTmux).toContain("run --no-tmux");
     expect(noTmux).toContain("--accounts account-a,account-b");
-    expect(noTmux).toContain("--effort xhigh");
+    expect(noTmux).toContain("--effort high");
     expect(noTmux).toContain("--service-tier fast");
     expect(noTmux).toContain("--execution-engine app-server-goal");
     expect(noTmux).toContain("--progress /tmp/job/task-1.progress.json");

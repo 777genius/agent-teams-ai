@@ -689,7 +689,7 @@ function runConfigFromFlags(values, env, cwd, jobRootDir, taskId) {
     const accounts = codexGoalAccountSlots(splitCsv(requiredOption(values, env, "--accounts", ["CODEX_ACCOUNTS"])));
     const reasoningEffort = (option(values, env, "--effort", [
         "CODEX_REASONING_EFFORT",
-    ]) ?? "xhigh");
+    ]) ?? "high");
     const serviceTier = (option(values, env, "--service-tier", [
         "CODEX_SERVICE_TIER",
     ]) ?? "fast");
@@ -919,7 +919,7 @@ function usage() {
   subscription-runtime-codex-goal prompt <mcp_prompt_name> [--args-json '{"jobId":"..."}' | --args-file args.json]
 
 defaults:
-  --model gpt-5.5 --effort xhigh --service-tier fast --execution-engine app-server-goal --timeout 72h --max-account-cycles 5
+  --model gpt-5.5 --effort high --service-tier fast --execution-engine app-server-goal --timeout 72h --max-account-cycles 5
 
 escape hatches:
   --dry-run, --print-command, --no-tmux, --no-require-git-workspace
