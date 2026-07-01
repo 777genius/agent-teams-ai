@@ -198,7 +198,6 @@ export async function runCodexGoal(
       ...(config.workerReportMode === "structured-output"
         ? {
             outputSchemaName: codexWorkerReportSchemaName,
-            systemPrompt: codexWorkerReportSystemPrompt,
           }
         : {}),
       controls: {
@@ -207,7 +206,7 @@ export async function runCodexGoal(
           ? {}
           : { providerSandboxMode: config.providerSandboxMode }),
       },
-      systemPrompt: codexGoalWorkerSystemPrompt(config.taskId),
+      systemPrompt: codexGoalRunSystemPrompt(config),
       metadata: {
         goal: config.goalSummary ?? config.taskId,
         codexGoalObjective: config.codexGoalObjective ?? prompt,
@@ -370,6 +369,16 @@ function codexGoalWorkerSystemPrompt(taskId: string): string {
     `Use a task-specific directory such as /tmp/${taskId}-artifacts, include the exact fallback path in your final output, and do not mark the goal blocked solely because the external copy could not be performed.`,
     "Keep source worktrees clean unless the task explicitly requires code or docs changes.",
   ].join(" ");
+}
+
+function codexGoalRunSystemPrompt(
+  config: Pick<CodexGoalRunConfig, "taskId" | "workerReportMode">,
+): string {
+  const prompts = [codexGoalWorkerSystemPrompt(config.taskId)];
+  if (config.workerReportMode === "structured-output") {
+    prompts.push(codexWorkerReportSystemPrompt);
+  }
+  return prompts.join("\n\n");
 }
 
 function createCodexGoalProgressHeartbeat(input: {
