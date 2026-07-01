@@ -100,6 +100,28 @@ type RuntimeUsageStatsStubTarget = {
   ) => Promise<Map<number, RuntimeUsageStatsForTest>>;
 };
 
+async function expectOpenCodeTrackedPendingDelivery(
+  delivery: Promise<unknown>
+): Promise<Record<string, unknown>> {
+  const result = (await delivery) as Record<string, unknown>;
+
+  expect(result).toMatchObject({
+    delivered: true,
+    accepted: true,
+    responsePending: true,
+    responseState: 'not_observed',
+    ledgerStatus: 'retry_scheduled',
+    reason: 'opencode_delivery_response_pending',
+  });
+  expect(result.diagnostics).toEqual(
+    expect.arrayContaining(['opencode_delivery_response_pending'])
+  );
+  expect(result.ledgerRecordId).toEqual(expect.stringMatching(/^opencode-prompt:/));
+  expect(result.laneId).toEqual(expect.any(String));
+
+  return result;
+}
+
 function addRuntimeUsagePidForTest(pids: Set<number>, pid: unknown): void {
   if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
     pids.add(pid);
@@ -10618,16 +10640,13 @@ describe('Team agent launch matrix safe e2e', () => {
     trackLiveRun(svc, staleRun);
     trackLiveRun(svc, currentRun);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'use current run for direct opencode message',
         messageId: 'msg-current-direct-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -10906,16 +10925,13 @@ describe('Team agent launch matrix safe e2e', () => {
       } as any);
 
     try {
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'refresh stale mixed transport before opencode send',
           messageId: 'msg-mixed-transport-refresh-safe-e2e',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
     } finally {
       transportSpy.mockRestore();
     }
@@ -10987,16 +11003,13 @@ describe('Team agent launch matrix safe e2e', () => {
     trackLiveRun(svc, firstRun);
     trackLiveRun(svc, secondRun);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(secondTeamName, {
         memberName: 'bob',
         text: 'send to the second live mixed opencode lane only',
         messageId: 'msg-live-mixed-opencode-team-b',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -11097,26 +11110,20 @@ describe('Team agent launch matrix safe e2e', () => {
       freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
     );
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(cancelledTeamName, {
         memberName: 'bob',
         text: 'send to fresh mixed relaunch after cancelled handoff',
         messageId: 'msg-fresh-mixed-opencode-after-cancelled-handoff',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
-    await expect(
+    );
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(survivingTeamName, {
         memberName: 'tom',
         text: 'send to surviving sibling mixed lane',
         messageId: 'msg-surviving-mixed-opencode-after-cancelled-handoff',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(2);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -11227,16 +11234,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'opencode_runtime_not_active',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(survivingTeamName, {
         memberName: 'bob',
         text: 'sibling still receives direct message after cancelled launch',
         messageId: 'msg-sibling-after-cancelled-late-launch-direct',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -11278,16 +11282,13 @@ describe('Team agent launch matrix safe e2e', () => {
     trackLiveRun(svc, currentRun);
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'use alive mixed run despite stale provisioning',
         messageId: 'msg-stale-provisioning-alive-mixed',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -11329,16 +11330,13 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 'use current pure opencode run only',
         messageId: 'msg-current-pure-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -12041,16 +12039,13 @@ describe('Team agent launch matrix safe e2e', () => {
       } as any);
 
     try {
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'alice',
           text: 'refresh stale transport before pure opencode send',
           messageId: 'msg-transport-refresh-safe-e2e',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
     } finally {
       transportSpy.mockRestore();
     }
@@ -12106,16 +12101,13 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(secondTeamName, {
         memberName: 'alice',
         text: 'send to the second live pure opencode team only',
         messageId: 'msg-live-pure-opencode-team-b',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -12150,16 +12142,13 @@ describe('Team agent launch matrix safe e2e', () => {
     );
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 'use alive pure opencode run despite stale provisioning',
         messageId: 'msg-stale-provisioning-alive-pure',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -12314,16 +12303,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const restartedService = new TeamProvisioningService();
     restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([messageAdapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 'message recovered pure opencode lane',
         messageId: 'msg-recovered-pure-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(messageAdapter.messageInputs).toHaveLength(1);
     expect(messageAdapter.messageInputs[0]).toMatchObject({
       runId: launch.runId,
@@ -12352,16 +12338,13 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 'message recovered pure lane despite stale terminal state',
         messageId: 'msg-recovered-pure-stale-terminal',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -12391,16 +12374,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 'message pure opencode recovered from meta only',
         messageId: 'msg-meta-only-pure-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -12446,16 +12426,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(activeTeamName, {
         memberName: 'alice',
         text: 'message only active pure team',
         messageId: 'msg-cross-team-active-pure',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     await expect(
       svc.deliverOpenCodeMemberMessage(degradedTeamName, {
         memberName: 'alice',
@@ -12602,16 +12579,13 @@ describe('Team agent launch matrix safe e2e', () => {
     });
     expect(adapter.messageInputs).toEqual([]);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'active pure bob still receives message',
         messageId: 'msg-active-pure-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       runId,
@@ -12642,16 +12616,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'alice',
         text: 're-added pure alice should receive message',
         messageId: 'msg-readded-pure-alice',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -12677,16 +12648,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const restartedService = new TeamProvisioningService();
     restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'ALICE',
         text: 'case-insensitive alice reaches recovered pure lane',
         messageId: 'msg-case-insensitive-recovered-pure-alice',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -12728,16 +12696,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'recipient_removed',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'active pure bob still receives message despite stale removed sibling',
         messageId: 'msg-meta-removed-config-stale-pure-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -13213,16 +13178,13 @@ describe('Team agent launch matrix safe e2e', () => {
     await expect(
       readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
     ).resolves.toMatchObject({ lanes: {} });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'confirmed alive missing lane recovers',
         messageId: 'msg-recovered-confirmed-missing-lane-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.reconcileInputs).toHaveLength(1);
     expect(adapter.reconcileInputs[0]).toMatchObject({
@@ -13769,16 +13731,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'opencode_runtime_not_active',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'active mixed tom lane still receives direct message',
         messageId: 'msg-one-detached-mixed-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -13812,16 +13771,13 @@ describe('Team agent launch matrix safe e2e', () => {
       run.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
     );
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'BOB',
         text: 'case-insensitive bob reaches live mixed lane',
         messageId: 'msg-live-case-insensitive-mixed-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -13883,16 +13839,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'opencode_runtime_not_active',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'live tom still receives message despite stale bob index',
         messageId: 'msg-detached-stale-index-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -13960,16 +13913,13 @@ describe('Team agent launch matrix safe e2e', () => {
       }
     );
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'reattached bob receives direct message',
         messageId: 'msg-reattached-mixed-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14030,16 +13980,13 @@ describe('Team agent launch matrix safe e2e', () => {
       secondRun.mixedSecondaryLanes.map((lane: { member: { name: string } }) => lane.member.name)
     ).toEqual(['tom']);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(firstTeamName, {
         memberName: 'bob',
         text: 'first team bob still receives direct message',
         messageId: 'msg-cross-team-detach-first-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     await expect(
       svc.deliverOpenCodeMemberMessage(secondTeamName, {
         memberName: 'bob',
@@ -14050,16 +13997,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'opencode_runtime_not_active',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(secondTeamName, {
         memberName: 'tom',
         text: 'second team tom still receives direct message',
         messageId: 'msg-cross-team-detach-second-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(2);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14154,16 +14098,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const restartedService = new TeamProvisioningService();
     restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'message recovered mixed opencode lane',
         messageId: 'msg-recovered-mixed-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -14194,16 +14135,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const restartedService = new TeamProvisioningService();
     restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'message recovered from committed session evidence',
         messageId: 'msg-recovered-committed-session-mixed-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.reconcileInputs).toHaveLength(1);
     expect(adapter.reconcileInputs[0]).toMatchObject({
       teamName,
@@ -14253,16 +14191,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'recipient_removed',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'active tom still receives message despite removed bob stale index',
         messageId: 'msg-removed-stale-index-mixed-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14306,16 +14241,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'recipient_removed',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'active tom still receives message despite stale removed sibling',
         messageId: 'msg-meta-removed-config-stale-mixed-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14359,16 +14291,13 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered: false,
       reason: 'recipient_is_not_opencode',
     });
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'active tom still receives message despite orphan sibling lane',
         messageId: 'msg-orphan-lane-index-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14395,16 +14324,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const restartedService = new TeamProvisioningService();
     restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'BOB',
         text: 'case-insensitive bob reaches recovered mixed lane',
         messageId: 'msg-case-insensitive-recovered-mixed-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
 
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
@@ -14447,16 +14373,13 @@ describe('Team agent launch matrix safe e2e', () => {
     await writeMixedTeamConfig({ teamName, projectPath });
     await writeMembersMeta(teamName);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       restartedService.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'reattached bob receives message after removed state is cleared',
         messageId: 'msg-removed-reattached-mixed-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -14483,16 +14406,13 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'message recovered mixed lane despite stale terminal state',
         messageId: 'msg-recovered-mixed-stale-terminal',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -14517,16 +14437,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 'message mixed opencode recovered from meta only',
         messageId: 'msg-meta-only-mixed-opencode',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       teamName,
@@ -14564,16 +14481,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(activeTeamName, {
         memberName: 'bob',
         text: 'message only active mixed team',
         messageId: 'msg-cross-team-active-mixed',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     await expect(
       svc.deliverOpenCodeMemberMessage(degradedTeamName, {
         memberName: 'bob',
@@ -14687,16 +14601,13 @@ describe('Team agent launch matrix safe e2e', () => {
     });
     expect(adapter.messageInputs).toEqual([]);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'tom',
         text: 'active tom still receives direct opencode message',
         messageId: 'msg-active-tom',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       runId: run.runId,
@@ -14731,16 +14642,13 @@ describe('Team agent launch matrix safe e2e', () => {
     await markMixedOpenCodeLaneConfirmedForTest(run, 'bob');
     trackLiveRun(svc, run);
 
-    await expect(
+    await expectOpenCodeTrackedPendingDelivery(
       svc.deliverOpenCodeMemberMessage(teamName, {
         memberName: 'bob',
         text: 're-added bob should receive direct opencode message',
         messageId: 'msg-readded-bob',
       })
-    ).resolves.toEqual({
-      delivered: true,
-      diagnostics: [],
-    });
+    );
     expect(adapter.messageInputs).toHaveLength(1);
     expect(adapter.messageInputs[0]).toMatchObject({
       runId: run.runId,

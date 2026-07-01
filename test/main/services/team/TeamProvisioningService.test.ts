@@ -25,6 +25,28 @@ let tempTeamsBase = '';
 let tempTasksBase = '';
 let tempProjectsBase = '';
 
+async function expectOpenCodeTrackedPendingDelivery(
+  delivery: Promise<unknown>
+): Promise<Record<string, unknown>> {
+  const result = (await delivery) as Record<string, unknown>;
+
+  expect(result).toMatchObject({
+    delivered: true,
+    accepted: true,
+    responsePending: true,
+    responseState: 'not_observed',
+    ledgerStatus: 'retry_scheduled',
+    reason: 'opencode_delivery_response_pending',
+  });
+  expect(result.diagnostics).toEqual(
+    expect.arrayContaining(['opencode_delivery_response_pending'])
+  );
+  expect(result.ledgerRecordId).toEqual(expect.stringMatching(/^opencode-prompt:/));
+  expect(result.laneId).toEqual(expect.any(String));
+
+  return result;
+}
+
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
 }));
@@ -8762,16 +8784,13 @@ describe('TeamProvisioningService', () => {
         ]),
       };
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage('team-a', {
           memberName: 'bob',
           text: 'hello bob',
           messageId: 'msg-1',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-bob',
@@ -14374,16 +14393,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello after restart',
           messageId: 'msg-after-restart',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-durable',
@@ -14491,16 +14507,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello live lane',
           messageId: 'msg-live-lane',
         })
-      ).resolves.toMatchObject({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-live',
@@ -14943,16 +14956,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello via manifest fallback',
           messageId: 'msg-manifest-fallback',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-from-manifest',

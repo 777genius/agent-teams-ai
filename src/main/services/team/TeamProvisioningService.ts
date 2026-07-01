@@ -4886,6 +4886,9 @@ export class TeamProvisioningService {
     if (!run || run.processKilled || run.cancelRequested) {
       return;
     }
+    if (!run.child?.stdin?.writable) {
+      return;
+    }
 
     const noticeKey = `opencode_runtime_delivery_error:${input.record.teamName}:${input.record.memberName}:${input.record.id}`;
     const now = Date.now();
