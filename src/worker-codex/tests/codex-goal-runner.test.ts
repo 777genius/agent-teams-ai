@@ -85,6 +85,45 @@ describe("codex goal runner", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("adds an artifact fallback instruction to Codex goal workers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-runner-"));
+    const promptPath = join(root, "prompt.md");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath: join(root, "workspace"),
+      promptPath,
+      taskId: "task-artifacts",
+      accounts: codexGoalAccountSlots(["account-a"]),
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(config.workspacePath, { recursive: true });
+      await writeFile(promptPath, "Write a report.\n");
+
+      await runCodexGoal(config, {
+        createExecutor: () => ({
+          async run(input) {
+            expect(input.systemPrompt).toContain("Codex goal runtime artifact rule");
+            expect(input.systemPrompt).toContain("/tmp/task-artifacts-artifacts");
+            expect(input.systemPrompt).toContain("do not mark the goal blocked solely");
+            return {
+              status: "completed",
+              attempts: [],
+              task: {
+                outputText: "done",
+              },
+            } as never;
+          },
+          async dispose() {},
+        }),
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function waitForProgressStatus(

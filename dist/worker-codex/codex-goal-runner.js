@@ -42,6 +42,7 @@ export async function runCodexGoal(config, deps = {}) {
             controls: {
                 permissionMode: config.permissionMode ?? "allow-edits",
             },
+            systemPrompt: codexGoalWorkerSystemPrompt(config.taskId),
             metadata: {
                 goal: config.goalSummary ?? config.taskId,
                 codexGoalObjective: config.codexGoalObjective ?? prompt,
@@ -167,6 +168,14 @@ function assertPositiveInteger(value, code) {
         return;
     if (!Number.isInteger(value) || value <= 0)
         throw new Error(code);
+}
+function codexGoalWorkerSystemPrompt(taskId) {
+    return [
+        "Codex goal runtime artifact rule:",
+        "If the task asks you to write a report, evidence file, or other artifact to a path outside the current workspace and the sandbox denies that write, write the artifact under /tmp instead.",
+        `Use a task-specific directory such as /tmp/${taskId}-artifacts, include the exact fallback path in your final output, and do not mark the goal blocked solely because the external copy could not be performed.`,
+        "Keep source worktrees clean unless the task explicitly requires code or docs changes.",
+    ].join(" ");
 }
 function createCodexGoalProgressHeartbeat(input) {
     let stopped = false;
