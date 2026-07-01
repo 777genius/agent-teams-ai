@@ -26,6 +26,7 @@ import type {
   CodexSandboxMode,
   CodexServiceTier,
 } from "./codex-json-execution-engine";
+import { codexOutputSchemaPayload } from "./codex-json-execution-engine";
 import { parseCodexStructuredOutput } from "./structured-output";
 
 export type CodexAppServerExecutionEngineOptions = {
@@ -350,6 +351,10 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult> {
     const slot = await this.ensureSlot(input);
+    const outputSchema = codexOutputSchemaPayload(input.outputSchema);
+    const schemaWarnings = input.outputSchema && outputSchema === undefined
+      ? [appServerOutputSchemaNotNativeWarning()]
+      : [];
     const common = {
       ...(input.runId !== undefined ? { runId: input.runId } : {}),
       prompt: input.prompt,
@@ -366,6 +371,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
         ? {}
         : { serviceTier: input.serviceTier }),
       sandboxMode: input.sandboxMode ?? "read-only",
+      ...(outputSchema === undefined ? {} : { outputSchema }),
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
       abortSignal: input.abortSignal,
     };
@@ -390,7 +396,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     }
     return {
       outputText,
-      warnings: result.warnings,
+      warnings: [...schemaWarnings, ...result.warnings],
     };
   }
 
@@ -414,6 +420,10 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     }
     await this.assertManagedRunCanResume(input);
     const slot = await this.ensureSlot(input);
+    const outputSchema = codexOutputSchemaPayload(input.outputSchema);
+    const schemaWarnings = input.outputSchema && outputSchema === undefined
+      ? [appServerOutputSchemaNotNativeWarning()]
+      : [];
     const result = await slot.client.resumeGoal({
       runId: input.runId,
       requestId: input.requestId,
@@ -426,6 +436,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
         ? {}
         : { serviceTier: input.serviceTier }),
       sandboxMode: input.sandboxMode ?? "read-only",
+      ...(outputSchema === undefined ? {} : { outputSchema }),
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
       abortSignal: input.abortSignal,
       maxGoalTurns: this.options.maxGoalTurns ?? defaultMaxGoalTurns,
@@ -445,7 +456,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     }
     return {
       outputText,
-      warnings: result.warnings,
+      warnings: [...schemaWarnings, ...result.warnings],
     };
   }
 
@@ -661,6 +672,7 @@ class CodexAppServerClient {
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
     readonly sandboxMode: CodexSandboxMode;
+    readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly prepareNext?: boolean;
@@ -709,6 +721,7 @@ class CodexAppServerClient {
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
     readonly sandboxMode: CodexSandboxMode;
+    readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly maxGoalTurns: number;
@@ -754,6 +767,7 @@ class CodexAppServerClient {
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
     readonly sandboxMode: CodexSandboxMode;
+    readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly maxGoalTurns: number;
@@ -830,6 +844,7 @@ class CodexAppServerClient {
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
     readonly sandboxMode: CodexSandboxMode;
+    readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly maxGoalTurns: number;
@@ -1235,6 +1250,7 @@ class CodexAppServerClient {
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
+    readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly goalMode?: boolean;
@@ -1266,7 +1282,7 @@ class CodexAppServerClient {
         effort: input.reasoningEffort,
         summary: "none",
         personality: null,
-        outputSchema: null,
+        outputSchema: input.outputSchema ?? null,
         collaborationMode: null,
       },
       input,
@@ -1695,6 +1711,14 @@ function cleanThreadPrewarmWarning(error: unknown): AppServerWarning {
   return {
     code: "codex_app_server_clean_thread_prewarm_failed",
     safeMessage: `Codex app-server clean thread prewarm failed: ${safeMessage(error)}`,
+  };
+}
+
+function appServerOutputSchemaNotNativeWarning(): AppServerWarning {
+  return {
+    code: "codex_app_server_output_schema_not_native",
+    safeMessage:
+      "Codex app-server used final-text structured output parsing because no native JSON schema was registered.",
   };
 }
 

@@ -723,6 +723,20 @@ function parseMcpShortcut(
       }),
     });
   }
+  if (commandName === "reconcile-result") {
+    return parseJobShortcut({
+      kind: "reconcile-result",
+      tool: "codex_goal_reconcile_result",
+      argv,
+      io,
+      extraArgs: (values) => ({
+        ...(flag(values, "--force") ? { forceWrite: true } : {}),
+        ...(flag(values, "--no-preserve-patch") ? { preservePatch: false } : {}),
+        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
+        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
+      }),
+    });
+  }
   if (commandName === "continue-job") {
     return parseJobShortcut({
       kind: "continue-job",
@@ -957,6 +971,11 @@ function runConfigFromFlags(
     option(values, env, "--provider-sandbox-mode", []),
     "--provider-sandbox-mode",
   );
+  const workerReportMode = parseCodexGoalWorkerReportMode(
+    option(values, env, "--worker-report-mode", [
+      "SUBSCRIPTION_RUNTIME_WORKER_REPORT_MODE",
+    ]),
+  );
   assertCodexGoalProviderSandboxModeAllowed({
     editMode,
     providerSandboxMode,
@@ -1030,6 +1049,7 @@ function runConfigFromFlags(
     allowDuplicateAccountIdentities: flag(values, "--allow-duplicate-accounts"),
     requireGitWorkspace: !flag(values, "--no-require-git-workspace"),
     prewarmOnStart: flag(values, "--prewarm"),
+    ...(workerReportMode === undefined ? {} : { workerReportMode }),
     sourceEnv: env,
   };
   const stateRoot = option(values, env, "--state-root", []);
@@ -1171,6 +1191,14 @@ function parseDurationMs(value: string): number {
   return amount * multiplier;
 }
 
+function parseCodexGoalWorkerReportMode(
+  value: string | undefined,
+): CodexGoalRunConfig["workerReportMode"] | undefined {
+  if (value === undefined) return undefined;
+  if (value === "runtime-only" || value === "structured-output") return value;
+  throw new Error("--worker-report-mode must be runtime-only or structured-output");
+}
+
 function splitCsv(value: string): readonly string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
@@ -1245,6 +1273,7 @@ function usage(): string {
   subscription-runtime-codex-goal control-decision <jobId> [--registry-root <dir>]
   subscription-runtime-codex-goal control-reconcile <jobId> [--repair] [--accepted-stale-after-ms 300000] [--registry-root <dir>]
   subscription-runtime-codex-goal control-supersede <jobId> --signal-id <id> [--caller-kind user|operator|orchestrator|runtime|agent] [--caller-id <id>] [--registry-root <dir>]
+  subscription-runtime-codex-goal reconcile-result <jobId> [--force] [--registry-root <dir>]
   subscription-runtime-codex-goal relogin <jobId> [account] [--registry-root <dir>]
   subscription-runtime-codex-goal continue-job <jobId> --confirm [--registry-root <dir>]
   subscription-runtime-codex-goal recover-job <jobId> --confirm [--registry-root <dir>]

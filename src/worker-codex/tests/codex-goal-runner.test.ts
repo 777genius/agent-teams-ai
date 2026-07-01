@@ -1,13 +1,18 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   codexGoalAccountSlots,
+  codexWorkerReportSchemaName,
   codexGoalProgressPath,
   runCodexGoal,
   type CodexGoalRunConfig,
 } from "../codex-goal-runner";
+
+const execFileAsync = promisify(execFile);
 
 describe("codex goal runner", () => {
   it("writes heartbeat progress while a sandbox executor is still running", async () => {
@@ -79,7 +84,8 @@ describe("codex goal runner", () => {
       });
       const result = JSON.parse(await readFile(config.outputPath!, "utf8")) as
         Record<string, unknown>;
-      expect(result.status).toBe("completed");
+      expect(result.status).toBe("done");
+      expect(result.nextAction).toBe("review_completed");
     } finally {
       releaseRun?.();
       await rm(root, { recursive: true, force: true });
@@ -120,6 +126,182 @@ describe("codex goal runner", () => {
           async dispose() {},
         }),
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("writes a strict latest-result when the sandbox executor throws", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-fail-"));
+    const promptPath = join(root, "prompt.md");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath: join(root, "workspace"),
+      promptPath,
+      taskId: "task-failure",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath: join(root, "job", "task-failure.latest-result.json"),
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(config.workspacePath, { recursive: true });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+
+      await expect(runCodexGoal(config, {
+        createExecutor: () => ({
+          async run() {
+            throw new Error("synthetic executor failure");
+          },
+          async dispose() {},
+        }),
+      })).rejects.toThrow("synthetic executor failure");
+
+      const result = JSON.parse(await readFile(config.outputPath!, "utf8")) as
+        Record<string, unknown>;
+      expect(result).toMatchObject({
+        status: "failed",
+        changedFiles: [],
+        blockers: ["runner_exception"],
+        nextAction: "recover",
+        reason: "runner_exception",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses optional Codex worker reports as evidence without making them authoritative", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-report-"));
+    const promptPath = join(root, "prompt.md");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath: join(root, "workspace"),
+      promptPath,
+      taskId: "task-report",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath: join(root, "job", "task-report.latest-result.json"),
+      workerReportMode: "structured-output",
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(config.workspacePath, { recursive: true });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+
+      await runCodexGoal(config, {
+        createExecutor: (options) => {
+          expect(options.outputSchemas).toEqual({
+            [codexWorkerReportSchemaName]: expect.objectContaining({
+              type: "object",
+              additionalProperties: false,
+            }),
+          });
+          return {
+            async run(input) {
+              expect(input.outputSchemaName).toBe(codexWorkerReportSchemaName);
+              expect(input.systemPrompt).toContain("codex-worker-report schema");
+              return {
+                status: "completed",
+                attempts: [{
+                  changedFiles: ["src/runtime-result.ts"],
+                }],
+                task: {
+                  outputSummary: "worker summary",
+                },
+                result: {
+                  outputText: "done",
+                  structuredOutput: {
+                    outcome: "failed",
+                    evidence: ["model evidence"],
+                    blockers: ["model blocker"],
+                    nextActionHint: "stop",
+                    summary: "model summary",
+                  },
+                },
+              } as never;
+            },
+            async dispose() {},
+          };
+        },
+      });
+
+      const result = JSON.parse(await readFile(config.outputPath!, "utf8")) as
+        Record<string, unknown>;
+      expect(result).toMatchObject({
+        status: "done",
+        changedFiles: ["src/runtime-result.ts"],
+        nextAction: "review_completed",
+      });
+      expect(result.evidence).toEqual(expect.arrayContaining([
+        "safe_execution_status:completed",
+        "model evidence",
+        "model summary",
+      ]));
+      expect(result.blockers).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves a patch artifact when the executor fails after workspace changes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-patch-"));
+    const promptPath = join(root, "prompt.md");
+    const workspacePath = join(root, "workspace");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath,
+      promptPath,
+      taskId: "task-patch",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath: join(root, "job", "task-patch.latest-result.json"),
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await execFileAsync("git", ["config", "user.email", "test@example.com"], {
+        cwd: workspacePath,
+      });
+      await execFileAsync("git", ["config", "user.name", "Test User"], {
+        cwd: workspacePath,
+      });
+      await writeFile(join(workspacePath, "tracked.txt"), "before\n");
+      await execFileAsync("git", ["add", "tracked.txt"], { cwd: workspacePath });
+      await execFileAsync("git", ["commit", "-m", "test fixture"], {
+        cwd: workspacePath,
+      });
+
+      await expect(runCodexGoal(config, {
+        createExecutor: () => ({
+          async run() {
+            await writeFile(join(workspacePath, "tracked.txt"), "after\n");
+            await writeFile(join(workspacePath, "new.txt"), "new file\n");
+            throw new Error("synthetic executor failure");
+          },
+          async dispose() {},
+        }),
+      })).rejects.toThrow("synthetic executor failure");
+
+      const result = JSON.parse(await readFile(config.outputPath!, "utf8")) as
+        Record<string, unknown>;
+      expect(result).toMatchObject({
+        status: "partial",
+        changedFiles: ["tracked.txt", "new.txt"],
+        nextAction: "preserve_patch",
+      });
+      expect(result.evidence).toEqual(expect.arrayContaining([
+        `patch_preserved:${join(config.jobRootDir, "task-patch.preserved.patch")}`,
+      ]));
+      expect(await readFile(join(config.jobRootDir, "task-patch.preserved.patch"), "utf8"))
+        .toContain("after");
+      expect(await readFile(join(config.jobRootDir, "task-patch.preserved.patch"), "utf8"))
+        .toContain("new file");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

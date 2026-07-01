@@ -581,6 +581,17 @@ describe("Codex provider adapter", () => {
     );
   });
 
+  it("builds packaged JSON exec args with a native output schema path", () => {
+    expect(
+      buildCodexJsonExecArgs({
+        jsonFlag: "--json",
+        model: "gpt-test",
+        reasoningEffort: "low",
+        outputSchemaPath: "/tmp/schema.json",
+      }),
+    ).toEqual(expect.arrayContaining(["--output-schema", "/tmp/schema.json"]));
+  });
+
   it("runs a Codex JSON task through the packaged execution engine", async () => {
     const runner = new StaticRunner(
       `${JSON.stringify({ type: "agent_message", message: "json review output" })}\n`,
@@ -616,6 +627,68 @@ describe("Codex provider adapter", () => {
       expect(runner.lastArgs).toContain("-");
       expect(runner.lastStdin).toBe("inspect diff");
       expect(runner.lastEnv?.CODEX_HOME).toBeTruthy();
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("passes registered output schemas to packaged Codex exec", async () => {
+    let schemaPath: string | undefined;
+    const runner = new StaticRunner(
+      `${JSON.stringify({
+        type: "agent_message",
+        message: JSON.stringify({ verdict: "ok" }),
+      })}\n`,
+      async (input) => {
+        const schemaFlagIndex = input.args.indexOf("--output-schema");
+        expect(schemaFlagIndex).toBeGreaterThan(-1);
+        schemaPath = input.args[schemaFlagIndex + 1];
+        expect(schemaPath).toEqual(expect.any(String));
+        expect(JSON.parse(await readFile(schemaPath!, "utf8"))).toEqual({
+          type: "object",
+          properties: { verdict: { type: "string" } },
+          required: ["verdict"],
+          additionalProperties: false,
+        });
+      },
+    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-json-agent-test-"));
+    const driver = new CodexJsonAgentDriver({
+      engine: new PackagedCodexJsonExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+      outputSchemas: {
+        "review-verdict": {
+          type: "object",
+          properties: { verdict: { type: "string" } },
+          required: ["verdict"],
+          additionalProperties: false,
+        },
+      },
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "review",
+          prompt: "inspect diff",
+          outputSchemaName: "review-verdict",
+        },
+        workspace: { path: workspace },
+        runner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "ok" },
+      });
+      expect(schemaPath).toBeTruthy();
+      await expect(readFile(schemaPath!, "utf8")).rejects.toThrow();
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
@@ -1473,6 +1546,115 @@ describe("Codex provider adapter", () => {
         status: "completed",
         structuredOutput: { verdict: "APPROVE" },
       });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("passes registered output schemas to Codex app-server turns", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-native-schema-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const reviewVerdictSchema = {
+      type: "object",
+      properties: {
+        verdict: { type: "string" },
+      },
+      required: ["verdict"],
+      additionalProperties: false,
+    };
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+      outputSchemas: {
+        "review-verdict": reviewVerdictSchema,
+      },
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: JSON.stringify({ verdict: "APPROVE" }),
+          controls: {
+            outputSchemaName: "review-verdict",
+          },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { verdict: "APPROVE" },
+      });
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(turnStart?.params?.outputSchema).toEqual(reviewVerdictSchema);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("passes registered output schemas to Codex app-server goal turns", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-native-schema-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const workerReportSchema = {
+      type: "object",
+      properties: {
+        outcome: { type: "string" },
+      },
+      required: ["outcome"],
+      additionalProperties: false,
+    };
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+      outputSchemas: {
+        "worker-report": workerReportSchema,
+      },
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: JSON.stringify({ outcome: "done" }),
+          controls: {
+            outputSchemaName: "worker-report",
+          },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "completed",
+        structuredOutput: { outcome: "done" },
+      });
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(turnStart?.params?.outputSchema).toEqual(workerReportSchema);
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -2938,7 +3120,14 @@ class StaticRunner implements RunnerPort {
   lastEnv: Readonly<Record<string, string>> | null = null;
   lastStdin: string | null = null;
 
-  constructor(private readonly stdout: string) {}
+  constructor(
+    private readonly stdout: string,
+    private readonly onRun?: (input: {
+      readonly args: readonly string[];
+      readonly env: Readonly<Record<string, string>>;
+      readonly stdin?: Uint8Array;
+    }) => Promise<void> | void,
+  ) {}
 
   async run(input: {
     readonly args: readonly string[];
@@ -2948,6 +3137,7 @@ class StaticRunner implements RunnerPort {
     this.lastArgs = input.args;
     this.lastEnv = input.env;
     this.lastStdin = input.stdin ? new TextDecoder().decode(input.stdin) : null;
+    await this.onRun?.(input);
     return {
       exitCode: 0,
       stdout: this.stdout,

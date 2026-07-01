@@ -20,6 +20,7 @@ import { classifyCodexFailure } from "./failure-classifier";
 import {
   type CodexExecutionEngine,
   type CodexMaterializedSession,
+  type CodexOutputSchemaRequest,
   type CodexReasoningEffort,
   type CodexServiceTier,
   PackagedCodexJsonExecutionEngine,
@@ -39,6 +40,7 @@ type CodexJsonAgentDriverBaseOptions = {
   readonly serviceTier?: CodexServiceTier;
   readonly warmupPrompt?: string;
   readonly sessionMaterializer?: CodexSessionMaterializer;
+  readonly outputSchemas?: Readonly<Record<string, unknown>>;
 };
 
 export type CodexJsonAgentDriverOptions = CodexJsonAgentDriverBaseOptions &
@@ -61,6 +63,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
   private readonly model: string;
   private readonly reasoningEffort: CodexReasoningEffort;
   private readonly serviceTier: CodexServiceTier | undefined;
+  private readonly outputSchemas: Readonly<Record<string, unknown>>;
   private readonly sessionMaterializer: CodexSessionMaterializer;
   private readonly managedRunSessions = new Map<
     string,
@@ -79,6 +82,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
     this.model = options.model ?? defaultCodexModel;
     this.reasoningEffort = options.reasoningEffort ?? "low";
     this.serviceTier = options.serviceTier;
+    this.outputSchemas = options.outputSchemas ?? {};
     this.sessionMaterializer =
       options.sessionMaterializer ?? new CodexEphemeralSessionMaterializer();
   }
@@ -130,7 +134,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
         ...(input.task.systemPrompt !== undefined
           ? { systemPrompt: input.task.systemPrompt }
           : {}),
-        outputSchema: outputSchemaName ? { name: outputSchemaName } : undefined,
+        outputSchema: this.outputSchemaRequest(outputSchemaName),
         session: materialized,
         workspacePath: input.workspace.path,
         runner: input.runner,
@@ -250,7 +254,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
           ? {}
           : { serviceTier: this.serviceTier }),
         sandboxMode: codexSandboxModeForControls(input.task?.controls),
-        outputSchema: outputSchemaName ? { name: outputSchemaName } : undefined,
+        outputSchema: this.outputSchemaRequest(outputSchemaName),
         abortSignal: input.abortSignal,
       });
       if (result.status === "waiting_for_input") {
@@ -416,6 +420,17 @@ export class CodexJsonAgentDriver implements AgentDriver {
       error.code = "codex_json_agent_dispose_failed";
       throw error;
     }
+  }
+
+  private outputSchemaRequest(
+    outputSchemaName: string | undefined,
+  ): CodexOutputSchemaRequest | undefined {
+    if (!outputSchemaName) return undefined;
+    const schema = this.outputSchemas[outputSchemaName];
+    return {
+      name: outputSchemaName,
+      ...(schema === undefined ? {} : { schema }),
+    };
   }
 }
 

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access, chmod, mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -11,8 +11,11 @@ import {
   buildCodexGoalTmuxCommand,
   collectCodexGoalStatus,
   doctorCodexGoal,
+  CodexGoalRuntimeResultReconciler,
   listCodexGoalAccountStatuses,
+  reconcileCodexGoalRuntimeResult,
   startCodexGoalTmux,
+  summarizeCodexGoalProcessTree,
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
 import {
@@ -217,6 +220,42 @@ describe("codex goal ops", () => {
     );
   });
 
+  it("routes strict blocked results to user or inbox input instead of log guessing", async () => {
+    const fixture = await createGoalFixture();
+    await writeFile(
+      join(fixture.config.jobRootDir, `${fixture.config.taskId}.latest-result.json`),
+      `${JSON.stringify({
+        status: "blocked",
+        changedFiles: [],
+        evidence: ["worker requested clarification"],
+        blockers: ["app_server_goal_blocked"],
+        nextAction: "ask_user",
+        reason: "app_server_goal_blocked",
+      })}\n`,
+    );
+
+    const status = await collectCodexGoalStatus({
+      jobRootDir: fixture.config.jobRootDir,
+      taskId: fixture.config.taskId,
+      workspacePath: fixture.config.workspacePath,
+    });
+    const launch = launchInput(fixture.config, fixture.root);
+    const brief = await buildCodexGoalBrief({
+      jobId: "job-from-registry",
+      launch,
+      status,
+      accounts: [accountStatus("account-a", {})],
+      staleAfterMs: 60_000,
+      tailLines: 20,
+    });
+
+    expect(status.recommendedAction).toBe("ask_user");
+    expect(brief.nextBestTool).toBe("codex_goal_control_decision");
+    expect(brief.nextBestCommand).toBe(
+      'codex_goal_control_decision({ jobId: "job-from-registry" })',
+    );
+  });
+
   it("uses the configured result path for legacy stored jobs", async () => {
     const fixture = await createGoalFixture();
     const outputPath = join(fixture.config.jobRootDir, "output.json");
@@ -244,6 +283,7 @@ describe("codex goal ops", () => {
 
   it("does not recommend a first start when the workspace is already dirty", async () => {
     const fixture = await createGoalFixture();
+    const launch = launchInput(fixture.config, fixture.root);
     await writeFile(join(fixture.config.workspacePath, "untracked.txt"), "dirty\n");
 
     const status = await collectCodexGoalStatus({
@@ -251,10 +291,190 @@ describe("codex goal ops", () => {
       taskId: fixture.config.taskId,
       workspacePath: fixture.config.workspacePath,
     });
+    const brief = await buildCodexGoalBrief({
+      jobId: "job-from-registry",
+      launch,
+      status,
+      accounts: [accountStatus("account-a", {})],
+      staleAfterMs: 60_000,
+      tailLines: 20,
+    });
 
     expect(status.resultExists).toBe(false);
     expect(status.workspaceDirty).toBe(true);
     expect(status.recommendedAction).toBe("inspect_dirty_workspace");
+    expect(brief.nextBestTool).toBe("codex_goal_reconcile_result");
+    expect(brief.nextBestReason).toBe("missing_runtime_result");
+  });
+
+  it("reconciles a missing runtime result into a strict partial result with a patch", async () => {
+    const fixture = await createGoalFixture();
+    await execFileAsync("git", ["config", "user.email", "test@example.com"], {
+      cwd: fixture.config.workspacePath,
+    });
+    await execFileAsync("git", ["config", "user.name", "Test User"], {
+      cwd: fixture.config.workspacePath,
+    });
+    await writeFile(join(fixture.config.workspacePath, "tracked.txt"), "before\n");
+    await execFileAsync("git", ["add", "tracked.txt"], {
+      cwd: fixture.config.workspacePath,
+    });
+    await execFileAsync("git", ["commit", "-m", "test fixture"], {
+      cwd: fixture.config.workspacePath,
+    });
+    await writeFile(join(fixture.config.workspacePath, "tracked.txt"), "after\n");
+    await writeFile(join(fixture.config.workspacePath, "new.txt"), "new file\n");
+
+    const status = await collectCodexGoalStatus({
+      jobRootDir: fixture.config.jobRootDir,
+      taskId: fixture.config.taskId,
+      workspacePath: fixture.config.workspacePath,
+    });
+    const reconciliation = await reconcileCodexGoalRuntimeResult({
+      config: fixture.config,
+      status,
+    });
+    const result = JSON.parse(await readFile(fixture.config.outputPath!, "utf8")) as
+      Record<string, unknown>;
+
+    expect(reconciliation).toMatchObject({
+      wrote: true,
+      reason: "missing_runtime_result",
+      recommendedAction: "preserve_patch",
+    });
+    expect(result).toMatchObject({
+      status: "partial",
+      changedFiles: ["new.txt", "tracked.txt"],
+      nextAction: "preserve_patch",
+      reason: "missing_runtime_result",
+    });
+    expect(result.evidence).toEqual(expect.arrayContaining([
+      "supervisor_reconciled_result",
+      "latest_result_missing",
+      `patch_preserved:${join(fixture.config.jobRootDir, "task-1.preserved.patch")}`,
+    ]));
+    expect(await readFile(join(fixture.config.jobRootDir, "task-1.preserved.patch"), "utf8"))
+      .toContain("after");
+    expect(await readFile(join(fixture.config.jobRootDir, "task-1.preserved.patch"), "utf8"))
+      .toContain("new file");
+  });
+
+  it("reconciles a dead worker with a missing runtime result into strict failure", async () => {
+    const fixture = await createGoalFixture();
+
+    const reconciliation = await new CodexGoalRuntimeResultReconciler().reconcile({
+      config: fixture.config,
+      status: {
+        tmuxAlive: false,
+        resultExists: false,
+        workspaceDirty: false,
+        changedFiles: [],
+        recommendedAction: "start_worker",
+        warnings: [],
+      },
+    });
+    const result = JSON.parse(await readFile(fixture.config.outputPath!, "utf8")) as
+      Record<string, unknown>;
+
+    expect(reconciliation).toMatchObject({
+      wrote: true,
+      reason: "missing_runtime_result",
+      recommendedAction: "recover",
+    });
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "missing_runtime_result",
+      changedFiles: [],
+      evidence: expect.arrayContaining([
+        "supervisor_reconciled_result",
+        "latest_result_missing",
+        "worker_not_alive",
+      ]),
+      blockers: ["missing_runtime_result", "unknown_error"],
+      nextAction: "recover",
+    });
+  });
+
+  it("does not rewrite an existing strict runtime result during reconcile", async () => {
+    const fixture = await createGoalFixture();
+    await writeFile(
+      fixture.config.outputPath!,
+      `${JSON.stringify({
+        status: "failed",
+        changedFiles: [],
+        evidence: ["existing"],
+        blockers: ["existing"],
+        nextAction: "recover",
+      })}\n`,
+    );
+
+    const reconciliation = await reconcileCodexGoalRuntimeResult({
+      config: fixture.config,
+    });
+    const result = JSON.parse(await readFile(fixture.config.outputPath!, "utf8")) as
+      Record<string, unknown>;
+
+    expect(reconciliation).toMatchObject({
+      wrote: false,
+      reason: "strict_result_already_exists",
+    });
+    expect(result.evidence).toEqual(["existing"]);
+  });
+
+  it("rewrites a non-strict status-only runtime result during reconcile", async () => {
+    const fixture = await createGoalFixture();
+    await writeFile(
+      fixture.config.outputPath!,
+      `${JSON.stringify({
+        status: "failed",
+      })}\n`,
+    );
+
+    const reconciliation = await reconcileCodexGoalRuntimeResult({
+      config: fixture.config,
+    });
+    const result = JSON.parse(await readFile(fixture.config.outputPath!, "utf8")) as
+      Record<string, unknown>;
+
+    expect(reconciliation).toMatchObject({
+      wrote: true,
+      reason: "non_strict_runtime_result",
+    });
+    expect(result).toMatchObject({
+      status: "failed",
+      changedFiles: [],
+      evidence: expect.arrayContaining([
+        "supervisor_reconciled_result",
+        "latest_result_non_strict:failed",
+      ]),
+      blockers: ["non_strict_runtime_result", "unknown_error"],
+      nextAction: "recover",
+    });
+  });
+
+  it("rewrites a corrupt runtime result through the supervisor reconciler", async () => {
+    const fixture = await createGoalFixture();
+    await writeFile(fixture.config.outputPath!, "{not-json\n");
+
+    const reconciliation = await new CodexGoalRuntimeResultReconciler().reconcile({
+      config: fixture.config,
+    });
+    const result = JSON.parse(await readFile(fixture.config.outputPath!, "utf8")) as
+      Record<string, unknown>;
+
+    expect(reconciliation).toMatchObject({
+      wrote: true,
+      reason: "non_strict_runtime_result",
+    });
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "non_strict_runtime_result",
+      evidence: expect.arrayContaining([
+        "supervisor_reconciled_result",
+        "latest_result_non_strict:unknown",
+      ]),
+      nextAction: "recover",
+    });
   });
 
   it("builds an agent-friendly brief with recent commands and next job action", async () => {
@@ -411,6 +631,17 @@ describe("codex goal ops", () => {
     expect(String(brief.text)).toContain("progressStatus running");
     expect(JSON.stringify(status)).not.toContain("raw-secret");
     expect(JSON.stringify(brief)).not.toContain("raw-secret");
+  });
+
+  it("summarizes child process CPU as active worker progress", () => {
+    expect(summarizeCodexGoalProcessTree(100, [
+      { pid: 100, ppid: 1, cpu: 0, command: "node subscription-runtime-codex-goal" },
+      { pid: 101, ppid: 100, cpu: 0, command: "sh -c npm test" },
+      { pid: 102, ppid: 101, cpu: 84.2, command: "npm test -- --runInBand" },
+    ])).toMatchObject({
+      cpuActive: true,
+      command: "npm test -- --runInBand",
+    });
   });
 
   it("does not mark continuation safe when all configured accounts are unavailable", async () => {

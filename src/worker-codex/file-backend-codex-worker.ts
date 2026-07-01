@@ -85,6 +85,7 @@ export type FileBackendCodexWorkerOptions = {
   readonly appServerProcessFactory?: CodexAppServerProcessFactory;
   readonly executionProfile?: CodexExecutionProfile;
   readonly cleanThreadPrewarm?: boolean;
+  readonly outputSchemas?: Readonly<Record<string, unknown>>;
   readonly observability?: ObservabilityPort;
   readonly runner?: RuntimeDeps["runner"];
   readonly workspace?: RuntimeDeps["workspace"];
@@ -285,6 +286,9 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
         ...(options.serviceTier === undefined
           ? {}
           : { serviceTier: options.serviceTier }),
+        ...(options.outputSchemas === undefined
+          ? {}
+          : { outputSchemas: options.outputSchemas }),
         ...(options.warmupPrompt === false
           ? {}
           : { warmupPrompt: options.warmupPrompt ?? defaultWarmupPrompt }),

@@ -7,5 +7,6 @@ export * from "./host-command";
 export * from "./job-watch";
 export * from "./run-observability";
 export * from "./run-reconcile-preview";
+export * from "./runtime-result";
 export * from "./safe-execution";
 export * from "./worker-pool";

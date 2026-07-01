@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   LocalFileWorkerAccountCapacityStore,
   LocalFileWorkerControlInboxStore,
+  LocalFileRunObservationHistoryStore,
 } from "@vioxen/subscription-runtime/store-local-file";
 import {
   RunObservationService,
@@ -102,7 +103,7 @@ describe("CodexRunObservationAdapter", () => {
           reason: "stopped_run_with_running_progress",
         },
       });
-      expect(snapshot?.workspace?.changedFiles).toEqual(["?? changed.txt"]);
+      expect(snapshot?.workspace?.changedFiles).toEqual(["changed.txt"]);
       expect(snapshot?.logs?.tail).toContain("npm test");
       expect(JSON.stringify(snapshot).includes("rawBearerSecret")).toBe(false);
       expect(JSON.stringify(snapshot).includes("raw-secret")).toBe(false);
@@ -111,13 +112,16 @@ describe("CodexRunObservationAdapter", () => {
     }
   });
 
-  it("surfaces completed results without prescribing control actions", async () => {
+  it("surfaces strict done results without prescribing control actions", async () => {
     const fixture = await createObservationFixture();
 
     try {
       await writeFile(fixture.manifest.outputPath!, `${JSON.stringify({
-        status: "completed",
-        task: { updatedAt: "2026-06-30T00:00:00.000Z" },
+        status: "done",
+        changedFiles: [],
+        evidence: ["sandbox completion"],
+        blockers: [],
+        nextAction: "review_completed",
       })}\n`);
 
       const snapshot = await new RunObservationService(new CodexRunObservationAdapter({
@@ -127,6 +131,8 @@ describe("CodexRunObservationAdapter", () => {
       expect(snapshot).toMatchObject({
         runId: "job-a",
         status: "completed",
+        classification: "productive",
+        recommendedAction: "review_completed",
         readOnlyDecision: {
           kind: "review_completed",
         },
@@ -254,7 +260,7 @@ describe("CodexRunObservationAdapter", () => {
         taskId: fixture.manifest.taskId,
         status: "running",
         updatedAt: new Date(Date.now() - 130_000).toISOString(),
-        pid: process.pid,
+        pid: 12345,
       })}\n`);
 
       const snapshot = await new RunObservationService(new CodexRunObservationAdapter({
@@ -269,6 +275,8 @@ describe("CodexRunObservationAdapter", () => {
       expect(snapshot).toMatchObject({
         status: "running",
         liveness: "stale",
+        classification: "stale_no_progress",
+        recommendedAction: "recover",
         progress: {
           status: "running",
           stale: true,
@@ -326,6 +334,8 @@ describe("CodexRunObservationAdapter", () => {
       expect(snapshot).toMatchObject({
         status: "running",
         liveness: "alive",
+        classification: "stale_no_progress",
+        recommendedAction: "recover",
         progress: {
           status: "running",
           stale: false,
@@ -348,6 +358,42 @@ describe("CodexRunObservationAdapter", () => {
     } finally {
       await execFileAsync("tmux", ["kill-session", "-t", tmuxSession])
         .catch(() => undefined);
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("classifies log growth between observations as productive", async () => {
+    const fixture = await createObservationFixture();
+    const historyStore = new LocalFileRunObservationHistoryStore({
+      rootDir: join(fixture.root, "history"),
+    });
+
+    try {
+      await writeFile(fixture.manifest.logPath!, "first line\n");
+      const service = new RunObservationService(new CodexRunObservationAdapter({
+        registryRootDir: fixture.registryRootDir,
+        historyStore,
+      }));
+
+      const first = await service.observeRun({
+        runId: "job-a",
+        includeLogTail: true,
+      });
+      await writeFile(fixture.manifest.logPath!, "first line\nsecond line\n");
+      const second = await service.observeRun({
+        runId: "job-a",
+        includeLogTail: true,
+      });
+
+      expect(first.classification).not.toBe("productive");
+      expect(second).toMatchObject({
+        classification: "productive",
+        recommendedAction: "wait",
+        logs: {
+          byteLength: "first line\nsecond line\n".length,
+        },
+      });
+    } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }
   });

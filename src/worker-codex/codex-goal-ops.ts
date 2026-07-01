@@ -9,17 +9,27 @@ import {
   validateCodexAuthJsonBytes,
 } from "@vioxen/subscription-runtime/provider-codex";
 import {
+  GitPatchPreserver,
+  StrictResultRecorder,
+  actionForRuntimeState,
+  classifyRuntimeRunState,
   hostExecutableNotFoundMessage,
   resolveHostExecutable,
+  type RunProgressClassification,
+  type RuntimeRecommendedAction,
+  type RuntimeResultEnvelope,
+  type RuntimeResultStatus,
 } from "@vioxen/subscription-runtime/worker-core";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
-import type { AttemptFailureReason } from "@vioxen/subscription-runtime/worker-core";
 import {
+  codexGoalOutputPath,
   codexGoalProgressPath,
   type CodexGoalRunConfig,
 } from "./codex-goal-runner";
 
 const execFileAsync = promisify(execFile);
+const gitStatusTimeoutMs = 5_000;
+const processCpuActiveThreshold = 0.1;
 
 export type CodexGoalOutputFormat = "text" | "json";
 
@@ -54,6 +64,7 @@ export type CodexGoalRecommendedAction =
   | "continue_after_capacity"
   | "continue_after_timeout"
   | "continue_after_provider_output"
+  | "ask_user"
   | "inspect_dirty_workspace"
   | "inspect_dirty_failure"
   | "inspect_failure"
@@ -64,7 +75,8 @@ export type CodexGoalStatus = {
   readonly resultPath?: string;
   readonly resultExists?: boolean;
   readonly resultStatus?: string;
-  readonly resultReason?: AttemptFailureReason;
+  readonly resultReason?: string;
+  readonly resultUpdatedAt?: string;
   readonly workspaceDirty?: boolean;
   readonly changedFiles?: readonly string[];
   readonly logPath?: string;
@@ -77,12 +89,64 @@ export type CodexGoalStatus = {
   readonly progressUpdatedAt?: string;
   readonly progressHeartbeatAgeMs?: number;
   readonly progressPid?: number;
+  readonly progressCpuActive?: boolean;
+  readonly progressCommand?: string;
   readonly progressResultStatus?: string;
   readonly progressResultReason?: string;
   readonly progressAttemptCount?: number;
   readonly progressCurrentAccount?: string;
   readonly recommendedAction: CodexGoalRecommendedAction;
   readonly warnings: readonly string[];
+};
+
+export type CodexGoalRuntimeResultReconcileInput = {
+  readonly config: Pick<
+    CodexGoalRunConfig,
+    "jobRootDir" | "jobId" | "outputPath" | "taskId" | "workspacePath"
+  >;
+  readonly status?: CodexGoalStatus;
+  readonly reason?: string;
+  readonly forceWrite?: boolean;
+  readonly preservePatch?: boolean;
+  readonly silentStale?: boolean;
+  readonly heartbeatOnlyNoOutput?: boolean;
+};
+
+export type CodexGoalRuntimeResultReconcileResult = {
+  readonly wrote: boolean;
+  readonly reason: string;
+  readonly outputPath: string;
+  readonly classification?: RunProgressClassification;
+  readonly recommendedAction?: RuntimeRecommendedAction;
+  readonly result?: RuntimeResultEnvelope;
+};
+
+export type CodexGoalRuntimeResultReconcilerPort = {
+  reconcile(
+    input: CodexGoalRuntimeResultReconcileInput,
+  ): Promise<CodexGoalRuntimeResultReconcileResult>;
+};
+
+export class CodexGoalRuntimeResultReconciler
+  implements CodexGoalRuntimeResultReconcilerPort
+{
+  async reconcile(
+    input: CodexGoalRuntimeResultReconcileInput,
+  ): Promise<CodexGoalRuntimeResultReconcileResult> {
+    return reconcileCodexGoalRuntimeResult(input);
+  }
+}
+
+export type CodexGoalProcessSnapshotRow = {
+  readonly pid: number;
+  readonly ppid: number;
+  readonly cpu: number;
+  readonly command: string;
+};
+
+export type CodexGoalProcessSnapshot = {
+  readonly cpuActive?: boolean;
+  readonly command?: string;
 };
 
 export type CodexGoalDoctorCheck = {
@@ -249,9 +313,13 @@ export async function collectCodexGoalStatus(
 ): Promise<CodexGoalStatus> {
   const warnings: string[] = [];
   const resultPath = input.resultPath ?? (input.jobRootDir && input.taskId
-    ? join(input.jobRootDir, `${input.taskId}.latest-result.json`)
+    ? codexGoalOutputPath({
+        jobRootDir: input.jobRootDir,
+        taskId: input.taskId,
+      })
     : undefined);
   const resultExists = resultPath ? await fileExists(resultPath) : undefined;
+  const resultFile = resultPath ? await logFileStatus(resultPath) : {};
   const result = resultPath && resultExists
     ? await readCodexGoalResultSummary(resultPath)
     : {};
@@ -277,6 +345,9 @@ export async function collectCodexGoalStatus(
       })
     : undefined);
   const progress = progressPath ? await readCodexGoalProgressSummary(progressPath) : {};
+  const progressProcess = progress.pid === undefined
+    ? {}
+    : await inspectProcessSnapshot(progress.pid);
   if (progress.warning) warnings.push(progress.warning);
   return {
     ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
@@ -284,6 +355,9 @@ export async function collectCodexGoalStatus(
     ...(resultExists === undefined ? {} : { resultExists }),
     ...(result.status === undefined ? {} : { resultStatus: result.status }),
     ...(result.reason === undefined ? {} : { resultReason: result.reason }),
+    ...(resultFile.updatedAt === undefined
+      ? {}
+      : { resultUpdatedAt: resultFile.updatedAt }),
     ...(workspace.dirty === undefined ? {} : { workspaceDirty: workspace.dirty }),
     ...(workspace.changedFiles === undefined
       ? {}
@@ -306,6 +380,12 @@ export async function collectCodexGoalStatus(
       ? {}
       : { progressHeartbeatAgeMs: progress.heartbeatAgeMs }),
     ...(progress.pid === undefined ? {} : { progressPid: progress.pid }),
+    ...(progressProcess.cpuActive === undefined
+      ? {}
+      : { progressCpuActive: progressProcess.cpuActive }),
+    ...(progressProcess.command === undefined
+      ? {}
+      : { progressCommand: progressProcess.command }),
     ...(progress.resultStatus === undefined
       ? {}
       : { progressResultStatus: progress.resultStatus }),
@@ -328,6 +408,118 @@ export async function collectCodexGoalStatus(
       ...(resultExists === undefined ? {} : { resultExists }),
     }),
     warnings,
+  };
+}
+
+export async function reconcileCodexGoalRuntimeResult(
+  input: CodexGoalRuntimeResultReconcileInput,
+): Promise<CodexGoalRuntimeResultReconcileResult> {
+  const status = input.status ?? await collectCodexGoalStatus({
+    jobRootDir: input.config.jobRootDir,
+    taskId: input.config.taskId,
+    workspacePath: input.config.workspacePath,
+    ...(input.config.outputPath === undefined
+      ? {}
+      : { resultPath: input.config.outputPath }),
+  });
+  const outputPath = input.config.outputPath ?? codexGoalOutputPath({
+    jobRootDir: input.config.jobRootDir,
+    taskId: input.config.taskId,
+  });
+  const existingStrictResult = await readStrictRuntimeResultEnvelope(outputPath);
+  if (!input.forceWrite && existingStrictResult) {
+    return {
+      wrote: false,
+      reason: "strict_result_already_exists",
+      outputPath,
+      result: existingStrictResult,
+    };
+  }
+
+  const changedFiles = status.changedFiles ?? [];
+  const nonStrictExistingResult = status.resultExists === true && !existingStrictResult;
+  const classification = classifyRuntimeRunState({
+    status: status.tmuxAlive ? "running" : "failed",
+    liveness: status.tmuxAlive ? "alive" : "dead",
+    workspaceDirty: status.workspaceDirty,
+    changedFilesCount: changedFiles.length,
+    processAlive: status.tmuxAlive,
+    processCpuActive: status.progressCpuActive,
+    processCommand: status.progressCommand,
+    progressStatus: status.progressStatus,
+    progressStale: staleProgress(status),
+    progressSilentStale: input.silentStale,
+    heartbeatOnlyNoOutput: input.heartbeatOnlyNoOutput,
+    resultExists: status.resultExists,
+    resultStatus: status.resultStatus,
+    resultReason: status.resultReason,
+    logStale: false,
+    logByteLength: status.logByteLength,
+  });
+  const runtimeStatus = runtimeStatusForReconciledResult({
+    classification,
+    changedFilesCount: changedFiles.length,
+  });
+  const reason = input.reason ??
+    status.resultReason ??
+    (nonStrictExistingResult ? "non_strict_runtime_result" : undefined) ??
+    reasonForReconciledResult({
+      classification,
+      ...(status.resultExists === undefined ? {} : { resultExists: status.resultExists }),
+      ...(status.resultStatus === undefined ? {} : { resultStatus: status.resultStatus }),
+      ...(status.tmuxAlive === undefined ? {} : { tmuxAlive: status.tmuxAlive }),
+    });
+  const artifacts = input.preservePatch === false || changedFiles.length === 0
+    ? []
+    : await preserveCodexGoalPatchArtifact({
+        workspacePath: input.config.workspacePath,
+        outputPath: join(input.config.jobRootDir, `${input.config.taskId}.preserved.patch`),
+      });
+  const nextAction = actionForRuntimeState({
+    status: runtimeStatus,
+    classification,
+    reason,
+    changedFilesCount: changedFiles.length,
+  });
+  const result = await new StrictResultRecorder({ outputPath }).record({
+    status: runtimeStatus,
+    provider: "codex",
+    runId: input.config.jobId ?? input.config.taskId,
+    taskId: input.config.taskId,
+    classification,
+    reason,
+    changedFiles,
+    evidence: [
+      "supervisor_reconciled_result",
+      ...(status.resultExists === false ? ["latest_result_missing"] : []),
+      ...(nonStrictExistingResult
+        ? [`latest_result_non_strict:${status.resultStatus ?? "unknown"}`]
+        : []),
+      ...(status.tmuxAlive === false ? ["worker_not_alive"] : []),
+      ...(status.progressStatus ? [`progress_status:${status.progressStatus}`] : []),
+      ...status.warnings.map((warning) => `status_warning:${warning}`),
+      ...(status.logByteLength === undefined
+        ? []
+        : [`log_byte_length:${status.logByteLength}`]),
+      ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
+      ...(changedFiles.length > 0 && artifacts.length === 0
+        ? ["patch_preserve_unavailable"]
+        : []),
+    ],
+    blockers: runtimeStatus === "done" ? [] : [reason, classification],
+    nextAction,
+    ...(artifacts.length === 0 ? {} : { artifacts }),
+    details: {
+      source: "codex_goal_runtime_result_reconcile",
+    },
+  });
+  return {
+    wrote: true,
+    reason,
+    outputPath,
+    classification,
+    recommendedAction: nextAction,
+    result,
   };
 }
 
@@ -388,12 +580,14 @@ export async function listCodexGoalAccountStatuses(
 export function recommendCodexGoalAction(input: {
   readonly tmuxAlive?: boolean;
   readonly resultStatus?: string;
-  readonly resultReason?: AttemptFailureReason;
+  readonly resultReason?: string;
   readonly workspaceDirty?: boolean;
   readonly resultExists?: boolean;
 }): CodexGoalRecommendedAction {
   if (input.tmuxAlive) return "wait_for_worker";
-  if (input.resultStatus === "completed") return "review_completed";
+  if (input.resultStatus === "done" || input.resultStatus === "completed") {
+    return "review_completed";
+  }
   if (!input.resultExists) {
     return input.workspaceDirty ? "inspect_dirty_workspace" : "start_worker";
   }
@@ -411,6 +605,7 @@ export function recommendCodexGoalAction(input: {
       ? "inspect_dirty_failure"
       : "continue_after_provider_output";
   }
+  if (input.resultStatus === "blocked") return "ask_user";
   if (
     input.resultStatus === "partial" ||
     input.resultStatus === "failed" ||
@@ -419,6 +614,98 @@ export function recommendCodexGoalAction(input: {
     return input.workspaceDirty ? "inspect_dirty_failure" : "inspect_failure";
   }
   return "check_log_or_result";
+}
+
+function runtimeStatusForReconciledResult(input: {
+  readonly classification: RunProgressClassification;
+  readonly changedFilesCount: number;
+}): RuntimeResultStatus {
+  if (
+    input.classification === "provider_capacity_unavailable" ||
+    input.classification === "auth_or_quota_blocked" ||
+    input.classification === "app_server_goal_blocked"
+  ) {
+    return "blocked";
+  }
+  return input.changedFilesCount > 0 ? "partial" : "failed";
+}
+
+function reasonForReconciledResult(input: {
+  readonly classification: RunProgressClassification;
+  readonly resultExists?: boolean;
+  readonly resultStatus?: string;
+  readonly tmuxAlive?: boolean;
+}): string {
+  if (input.resultExists === false) return "missing_runtime_result";
+  if (input.resultExists === true && !isStrictRuntimeResultStatus(input.resultStatus)) {
+    return "non_strict_runtime_result";
+  }
+  if (input.tmuxAlive === false) return "worker_stopped_before_result";
+  return input.classification;
+}
+
+function staleProgress(status: CodexGoalStatus): boolean {
+  if (status.progressHeartbeatAgeMs === undefined) return false;
+  return status.progressHeartbeatAgeMs > 10 * 60_000;
+}
+
+function isStrictRuntimeResultStatus(
+  value: string | undefined,
+): value is RuntimeResultStatus {
+  return value === "done" ||
+    value === "partial" ||
+    value === "blocked" ||
+    value === "failed";
+}
+
+async function readStrictRuntimeResultEnvelope(
+  path: string,
+): Promise<RuntimeResultEnvelope | null> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
+    if (!isRecord(parsed)) return null;
+    if (!isStrictRuntimeResultStatus(
+      typeof parsed.status === "string" ? parsed.status : undefined,
+    )) return null;
+    if (!stringArrayField(parsed.changedFiles)) return null;
+    if (!stringArrayField(parsed.evidence)) return null;
+    if (!stringArrayField(parsed.blockers)) return null;
+    if (!isRuntimeRecommendedAction(parsed.nextAction)) return null;
+    return parsed as RuntimeResultEnvelope;
+  } catch {
+    return null;
+  }
+}
+
+function stringArrayField(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRuntimeRecommendedAction(
+  value: unknown,
+): value is RuntimeRecommendedAction {
+  return value === "wait" ||
+    value === "wait_with_limit" ||
+    value === "continue" ||
+    value === "recover" ||
+    value === "stop" ||
+    value === "preserve_patch" ||
+    value === "switch_account" ||
+    value === "ask_user" ||
+    value === "launch_next_slice" ||
+    value === "review_completed";
+}
+
+async function preserveCodexGoalPatchArtifact(input: {
+  readonly workspacePath: string;
+  readonly outputPath: string;
+}) {
+  try {
+    const artifact = await new GitPatchPreserver().preserve(input);
+    return artifact ? [artifact] : [];
+  } catch {
+    return [];
+  }
 }
 
 export function shellQuote(value: string): string {
@@ -628,14 +915,16 @@ async function listAccountDirectories(authRootDir: string): Promise<readonly str
 
 async function readCodexGoalResultSummary(path: string): Promise<{
   readonly status?: string;
-  readonly reason?: AttemptFailureReason;
+  readonly reason?: string;
 }> {
   try {
     const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
     if (!isRecord(parsed)) return {};
     return {
       ...(typeof parsed.status === "string" ? { status: parsed.status } : {}),
-      ...(isAttemptFailureReason(parsed.reason) ? { reason: parsed.reason } : {}),
+      ...(typeof parsed.reason === "string"
+        ? { reason: redactStatusText(parsed.reason) }
+        : {}),
     };
   } catch {
     return {};
@@ -727,11 +1016,13 @@ async function gitWorkspaceStatus(path: string): Promise<{
       path,
       "status",
       "--porcelain",
-    ]);
+    ], { timeout: gitStatusTimeoutMs });
     const changedFiles = stdout
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+      .filter((line) => line.trim().length > 0)
+      .map((line) => statusPorcelainPath(line))
+      .filter((path) => path.length > 0)
+      .sort((left, right) => left.localeCompare(right));
     return {
       dirty: changedFiles.length > 0,
       changedFiles,
@@ -743,6 +1034,12 @@ async function gitWorkspaceStatus(path: string): Promise<{
       warning: `${path} is not a readable git worktree`,
     };
   }
+}
+
+function statusPorcelainPath(line: string): string {
+  const path = line.length > 3 ? line.slice(3).trim() : line.trim();
+  const renameTarget = path.split(" -> ").at(-1);
+  return renameTarget?.trim() ?? path;
 }
 
 async function logFileStatus(path: string): Promise<{
@@ -760,6 +1057,125 @@ async function logFileStatus(path: string): Promise<{
   } catch {
     return { exists: false };
   }
+}
+
+async function inspectProcessSnapshot(
+  pid: number,
+): Promise<CodexGoalProcessSnapshot> {
+  try {
+    const { stdout } = await execFileAsync("ps", [
+      "-axo",
+      "pid=,ppid=,%cpu=,command=",
+    ], { timeout: 1_000 });
+    const summary = summarizeCodexGoalProcessTree(
+      pid,
+      parseProcessSnapshotRows(stdout),
+    );
+    if (summary.cpuActive !== undefined || summary.command !== undefined) {
+      return {
+        ...(summary.cpuActive === undefined ? {} : { cpuActive: summary.cpuActive }),
+        ...(summary.command === undefined ? {} : { command: redactStatusText(summary.command) }),
+      };
+    }
+  } catch {
+    // Fall back to direct pid inspection below.
+  }
+  try {
+    const { stdout } = await execFileAsync("ps", [
+      "-p",
+      String(pid),
+      "-o",
+      "%cpu=",
+      "-o",
+      "command=",
+    ], { timeout: 1_000 });
+    const line = stdout.trim();
+    if (!line) return {};
+    const match = line.match(/^(\S+)\s+([\s\S]*)$/);
+    const cpu = match ? Number(match[1]) : Number.NaN;
+    const command = match?.[2]?.trim();
+    return {
+      ...(Number.isFinite(cpu) ? { cpuActive: cpu > 0.1 } : {}),
+      ...(command ? { command: redactStatusText(command) } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
+
+export function summarizeCodexGoalProcessTree(
+  rootPid: number,
+  rows: readonly CodexGoalProcessSnapshotRow[],
+): CodexGoalProcessSnapshot {
+  const rowsByParent = new Map<number, CodexGoalProcessSnapshotRow[]>();
+  for (const row of rows) {
+    const group = rowsByParent.get(row.ppid) ?? [];
+    group.push(row);
+    rowsByParent.set(row.ppid, group);
+  }
+  const treeRows: CodexGoalProcessSnapshotRow[] = [];
+  const queue = rows.filter((row) => row.pid === rootPid);
+  const seen = new Set<number>();
+  while (queue.length > 0) {
+    const row = queue.shift();
+    if (!row || seen.has(row.pid)) continue;
+    seen.add(row.pid);
+    treeRows.push(row);
+    queue.push(...(rowsByParent.get(row.pid) ?? []));
+  }
+  if (treeRows.length === 0) return {};
+  const activeRows = treeRows.filter((row) => row.cpu > processCpuActiveThreshold);
+  const totalCpu = treeRows.reduce((sum, row) => sum + row.cpu, 0);
+  const commandRow = bestProcessCommandRow(activeRows.length > 0 ? activeRows : treeRows);
+  return {
+    cpuActive: activeRows.length > 0 || totalCpu > processCpuActiveThreshold,
+    ...(commandRow?.command ? { command: commandRow.command } : {}),
+  };
+}
+
+function parseProcessSnapshotRows(
+  stdout: string,
+): readonly CodexGoalProcessSnapshotRow[] {
+  return stdout
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.match(/^\s*(\d+)\s+(\d+)\s+([0-9.]+)\s*([\s\S]*)$/);
+      if (!match) return null;
+      const pid = Number(match[1]);
+      const ppid = Number(match[2]);
+      const cpu = Number(match[3]);
+      if (
+        !Number.isInteger(pid) ||
+        !Number.isInteger(ppid) ||
+        !Number.isFinite(cpu)
+      ) {
+        return null;
+      }
+      return {
+        pid,
+        ppid,
+        cpu,
+        command: match[4]?.trim() ?? "",
+      };
+    })
+    .filter((row): row is CodexGoalProcessSnapshotRow => row !== null);
+}
+
+function bestProcessCommandRow(
+  rows: readonly CodexGoalProcessSnapshotRow[],
+): CodexGoalProcessSnapshotRow | undefined {
+  return rows.slice().sort((left, right) => {
+    const buildScore = Number(isBuildLikeProcessCommand(right.command)) -
+      Number(isBuildLikeProcessCommand(left.command));
+    if (buildScore !== 0) return buildScore;
+    return right.cpu - left.cpu;
+  })[0];
+}
+
+function isBuildLikeProcessCommand(command: string | undefined): boolean {
+  return command === undefined ||
+    /\b(build|test|check|lint|tsc|vite|vitest|jest|pytest|cargo|gradle|mvn)\b/i
+      .test(command);
 }
 
 async function checkFile(
@@ -796,7 +1212,11 @@ async function checkDirectory(
 
 async function checkGitWorkspace(path: string): Promise<CodexGoalDoctorCheck> {
   try {
-    await execFileAsync("git", ["-C", path, "rev-parse", "--is-inside-work-tree"]);
+    await execFileAsync(
+      "git",
+      ["-C", path, "rev-parse", "--is-inside-work-tree"],
+      { timeout: gitStatusTimeoutMs },
+    );
     return { name: "workspace", ok: true, message: path };
   } catch {
     return { name: "workspace", ok: false, message: `${path} is not a git worktree` };
@@ -874,21 +1294,6 @@ async function fileExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function isAttemptFailureReason(value: unknown): value is AttemptFailureReason {
-  return (
-    value === "quota_limited" ||
-    value === "capacity_unavailable" ||
-    value === "account_unavailable" ||
-    value === "reconnect_required" ||
-    value === "permission_required" ||
-    value === "task_timeout" ||
-    value === "provider_output_invalid" ||
-    value === "runtime_interrupted" ||
-    value === "user_abort" ||
-    value === "unknown_error"
-  );
 }
 
 function redactStatusText(value: string): string {

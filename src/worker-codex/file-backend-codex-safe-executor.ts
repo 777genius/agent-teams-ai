@@ -75,6 +75,7 @@ export type FileBackendCodexSafeExecutorOptions = {
   readonly maxQueueSize?: number;
   readonly startTimeoutMs?: number;
   readonly shutdownTimeoutMs?: number;
+  readonly outputSchemas?: Readonly<Record<string, unknown>>;
   readonly clock?: { now(): Date };
 };
 
@@ -155,6 +156,9 @@ export class FileBackendCodexSafeExecutor {
             ...account.worker,
             workerId: account.worker.workerId ?? workerId,
             workspacePath: options.workspacePath,
+            ...(options.outputSchemas === undefined
+              ? {}
+              : { outputSchemas: options.outputSchemas }),
           });
           this.workerAccounts.push({ account, worker });
           return worker;

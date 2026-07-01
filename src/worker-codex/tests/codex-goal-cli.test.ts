@@ -378,6 +378,26 @@ describe("codex goal cli", () => {
       staleAfterMs: 1000,
     });
 
+    const reconcileResult = parseCodexGoalCliArgs([
+      "reconcile-result",
+      "job-a",
+      "--force",
+      "--no-preserve-patch",
+      "--tail-lines",
+      "12",
+    ], fakeIo());
+    expect(reconcileResult).toMatchObject({
+      kind: "mcp-tool",
+      name: "codex_goal_reconcile_result",
+    });
+    if (reconcileResult.kind !== "mcp-tool") return;
+    expect(JSON.parse(reconcileResult.argsJson ?? "{}")).toEqual({
+      jobId: "job-a",
+      forceWrite: true,
+      preservePatch: false,
+      tailLines: 12,
+    });
+
     const controlEnqueue = parseCodexGoalCliArgs([
       "control-enqueue",
       "job-a",

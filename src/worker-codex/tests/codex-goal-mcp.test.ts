@@ -1554,8 +1554,8 @@ describe("codex goal MCP server", () => {
           severity: "blocked",
           safeToContinue: false,
           safeToOperate: true,
-          nextBestTool: "manual_review",
-          nextBestReason: "stopped_worker",
+          nextBestTool: "codex_goal_reconcile_result",
+          nextBestReason: "missing_runtime_result",
         });
         expect(stoppedDecisionBody.blockers).toEqual([
           expect.objectContaining({

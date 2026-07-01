@@ -91,6 +91,7 @@ describe("codex goal job registry", () => {
         model: "gpt-5.5",
         reasoningEffort: "xhigh",
         serviceTier: "fast",
+        workerReportMode: "structured-output",
       });
       expect(args).not.toHaveProperty("schemaVersion");
       expect(args).not.toHaveProperty("createdAt");
@@ -178,6 +179,7 @@ function jobManifest(root: string): CodexGoalJobManifestInput {
     allowDuplicateAccountIdentities: false,
     requireGitWorkspace: true,
     prewarmOnStart: false,
+    workerReportMode: "structured-output",
     tmuxSession: "job-a",
     cwd: root,
     logPath: join(root, "job", "task-a.log"),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   RunObservationService,
+  compareRunObservationHistory,
   decideRunObservation,
   type RunObservationPort,
   type RunObservationSnapshot,
@@ -36,6 +37,53 @@ describe("RunObservationService", () => {
       readOnlyDecision: {
         kind: "keep_watching",
       },
+    });
+  });
+});
+
+describe("compareRunObservationHistory", () => {
+  it("treats log, result and workspace changes as growth without using heartbeat-only progress", () => {
+    const previous = {
+      schemaVersion: 1 as const,
+      runId: "run-a",
+      providerKind: "codex",
+      observedAt: "2026-07-01T00:00:00.000Z",
+      workspaceDirty: false,
+      changedFilesCount: 0,
+      workspaceSignature: "clean",
+      resultExists: false,
+      logByteLength: 10,
+    };
+
+    expect(compareRunObservationHistory(previous, {
+      ...previous,
+      observedAt: "2026-07-01T00:01:00.000Z",
+      logByteLength: 11,
+    })).toMatchObject({
+      logGrew: true,
+      anyGrowth: true,
+    });
+
+    expect(compareRunObservationHistory(previous, {
+      ...previous,
+      observedAt: "2026-07-01T00:01:00.000Z",
+      resultExists: true,
+      resultStatus: "blocked",
+      resultUpdatedAt: "2026-07-01T00:01:00.000Z",
+    })).toMatchObject({
+      resultChanged: true,
+      anyGrowth: true,
+    });
+
+    expect(compareRunObservationHistory(previous, {
+      ...previous,
+      observedAt: "2026-07-01T00:01:00.000Z",
+      workspaceDirty: true,
+      changedFilesCount: 1,
+      workspaceSignature: "dirty",
+    })).toMatchObject({
+      workspaceChanged: true,
+      anyGrowth: true,
     });
   });
 });

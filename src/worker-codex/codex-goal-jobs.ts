@@ -41,6 +41,7 @@ export type CodexGoalJobManifest = {
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly requireGitWorkspace?: boolean;
   readonly prewarmOnStart?: boolean;
+  readonly workerReportMode?: CodexGoalRunConfig["workerReportMode"];
   readonly tmuxSession?: string;
   readonly cwd?: string;
   readonly logPath?: string;
@@ -230,6 +231,7 @@ export function codexGoalJobToArgs(
     allowDuplicateAccountIdentities: manifest.allowDuplicateAccountIdentities,
     requireGitWorkspace: manifest.requireGitWorkspace,
     prewarmOnStart: manifest.prewarmOnStart,
+    workerReportMode: manifest.workerReportMode,
     tmuxSession: manifest.tmuxSession,
     cwd: manifest.cwd,
     logPath: manifest.logPath,
@@ -353,6 +355,13 @@ export function parseCodexGoalJobManifest(
     ),
     ...optionalBooleanProperty(value.requireGitWorkspace, "requireGitWorkspace"),
     ...optionalBooleanProperty(value.prewarmOnStart, "prewarmOnStart"),
+    ...(optionalWorkerReportMode(value.workerReportMode) === undefined
+      ? {}
+      : {
+          workerReportMode: optionalWorkerReportMode(
+            value.workerReportMode,
+          ) as NonNullable<CodexGoalRunConfig["workerReportMode"]>,
+        }),
     ...(optionalString(value.tmuxSession) === undefined
       ? {}
       : { tmuxSession: optionalString(value.tmuxSession) as string }),
@@ -423,6 +432,14 @@ function optionalBooleanProperty(
     throw new Error(`codex_goal_job_${key}_invalid`);
   }
   return { [key]: value } as Partial<Pick<CodexGoalJobManifest, typeof key>>;
+}
+
+function optionalWorkerReportMode(
+  value: unknown,
+): CodexGoalRunConfig["workerReportMode"] | undefined {
+  if (value === undefined) return undefined;
+  if (value === "runtime-only" || value === "structured-output") return value;
+  throw new Error("codex_goal_job_workerReportMode_invalid");
 }
 
 function resolvePath(cwd: string, value: string): string {

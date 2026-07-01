@@ -2,12 +2,22 @@ import { realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
-import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
+import {
+  LocalFileRunObservationHistoryStore,
+  LocalFileWorkerControlInboxStore,
+} from "@vioxen/subscription-runtime/store-local-file";
 import {
   decideRunObservation,
+  actionForRuntimeState,
+  classifyRuntimeRunState,
+  compareRunObservationHistory,
+  runObservationHistoryEntryFromSnapshot,
   WorkerControlService,
   type RunCapacityHint,
   type RunControlInboxSummary,
+  type RunObservationGrowth,
+  type RunObservationHistoryEntry,
+  type RunObservationHistoryStorePort,
   type RunArtifactSummary,
   type RunLogExcerpt,
   type RunObservationLiveness,
@@ -46,6 +56,7 @@ export type CodexRunObservationAdapterOptions = {
     readonly runId: string;
     readonly manifest: CodexGoalJobManifest;
   }) => Promise<RunControlInboxSummary | undefined>;
+  readonly historyStore?: RunObservationHistoryStorePort | null;
 };
 
 export class CodexRunObservationAdapter implements RunObservationPort {
@@ -53,6 +64,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
   private readonly registryRootDir: string;
   private readonly staleAfterMs: number;
   private readonly tailLines: number;
+  private readonly historyStore: RunObservationHistoryStorePort | undefined;
   private readonly redactor = new DefaultRedactor();
 
   constructor(private readonly options: CodexRunObservationAdapterOptions = {}) {
@@ -63,6 +75,11 @@ export class CodexRunObservationAdapter implements RunObservationPort {
     });
     this.staleAfterMs = options.staleAfterMs ?? defaultStaleAfterMs;
     this.tailLines = options.tailLines ?? defaultTailLines;
+    this.historyStore = options.historyStore === undefined
+      ? new LocalFileRunObservationHistoryStore({
+          rootDir: join(this.registryRootDir, "state"),
+        })
+      : options.historyStore ?? undefined;
   }
 
   async listRunIds(): Promise<readonly string[]> {
@@ -176,6 +193,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
       ...(status.resultExists === undefined ? {} : { exists: status.resultExists }),
       ...(status.resultStatus === undefined ? {} : { status: status.resultStatus }),
       ...(status.resultReason === undefined ? {} : { reason: status.resultReason }),
+      ...(status.resultUpdatedAt === undefined ? {} : { updatedAt: status.resultUpdatedAt }),
       ...(status.resultPath === undefined ? {} : { path: status.resultPath }),
     };
     const artifacts = [
@@ -199,20 +217,79 @@ export class CodexRunObservationAdapter implements RunObservationPort {
       ? await this.options.controlInboxReader({
           runId: manifest.jobId,
           manifest,
-        })
+      })
       : await this.controlInboxSummary({ manifest, paths });
+    const observedAt = new Date().toISOString();
+    const historyEntry = runObservationHistoryEntryFromSnapshot({
+      runId: manifest.jobId,
+      providerKind: "codex",
+      observedAt,
+      workspace: {
+        ...workspace,
+        changedFiles,
+      },
+      result,
+      logs,
+    });
+    const growth = await this.observationGrowth({
+      runId: manifest.jobId,
+      current: historyEntry,
+      warnings,
+    });
+    const classification = classifyRuntimeRunState({
+      status: runStatus,
+      liveness,
+      workspaceDirty: workspace.dirty,
+      changedFilesCount: workspace.changedFilesCount,
+      processAlive: status.tmuxAlive,
+      processCpuActive: status.progressCpuActive,
+      processCommand: status.progressCommand,
+      progressStatus: progress.status,
+      progressStale,
+      progressSilentStale: silentStale,
+      heartbeatOnlyNoOutput,
+      resultExists: result.exists,
+      resultStatus: result.status,
+      resultReason: result.reason,
+      logStale,
+      logByteLength: logs.byteLength,
+      logGrew: growth.logGrew,
+      resultChanged: growth.resultChanged,
+      workspaceChanged: growth.workspaceChanged,
+      capacity,
+      controlInboxPendingCount: controlInbox?.pendingCount,
+    });
+    const recommendedAction = actionForRuntimeState({
+      status: runtimeStatusForCodexObservation({
+        runStatus,
+        resultStatus: result.status,
+        workspaceDirty: workspace.dirty,
+        changedFilesCount: workspace.changedFilesCount,
+      }),
+      classification,
+      reason: result.reason,
+      changedFilesCount: workspace.changedFilesCount,
+    });
     const snapshotBase = {
       runId: manifest.jobId,
       providerKind: "codex",
-      observedAt: new Date().toISOString(),
+      observedAt,
       status: runStatus,
       liveness,
+      classification,
+      recommendedAction,
       workspace,
       process: {
         supervisor: manifest.tmuxSession ? "tmux" : "none",
         ...(manifest.tmuxSession ? { sessionId: manifest.tmuxSession } : {}),
         ...(status.tmuxAlive === undefined ? {} : { alive: status.tmuxAlive }),
         ...(status.progressPid === undefined ? {} : { pid: status.progressPid }),
+        ...(status.progressCpuActive === undefined
+          ? {}
+          : { cpuActive: status.progressCpuActive }),
+        ...(status.progressCommand === undefined
+          ? {}
+          : { command: status.progressCommand }),
       },
       progress,
       result,
@@ -275,6 +352,36 @@ export class CodexRunObservationAdapter implements RunObservationPort {
       ...(latestSignalAt === undefined ? {} : { latestSignalAt }),
       ...(latestDeliveredAt === undefined ? {} : { latestDeliveredAt }),
     };
+  }
+
+  private async observationGrowth(input: {
+    readonly runId: string;
+    readonly current: RunObservationHistoryEntry;
+    readonly warnings: RunObservationWarning[];
+  }): Promise<RunObservationGrowth> {
+    const empty = compareRunObservationHistory(null, input.current);
+    if (!this.historyStore) return empty;
+    let previous: RunObservationHistoryEntry | null = null;
+    try {
+      previous = await this.historyStore.readObservation(input.runId);
+    } catch {
+      input.warnings.push({
+        code: "observation_history_read_failed",
+        message: "run observation history could not be read; growth signals were ignored",
+        severity: "warning",
+      });
+    }
+    const growth = compareRunObservationHistory(previous, input.current);
+    try {
+      await this.historyStore.writeObservation(input.current);
+    } catch {
+      input.warnings.push({
+        code: "observation_history_write_failed",
+        message: "run observation history could not be written; later growth signals may be weaker",
+        severity: "warning",
+      });
+    }
+    return growth;
   }
 
   private async capacityHints(input: {
@@ -416,11 +523,17 @@ function codexManifestPaths(
 function codexRunStatus(input: {
   readonly status: CodexGoalStatus;
 }): RunObservationStatus {
-  if (input.status.resultStatus === "completed") return "completed";
+  if (
+    input.status.resultStatus === "done" ||
+    input.status.resultStatus === "completed"
+  ) {
+    return "completed";
+  }
   if (input.status.tmuxAlive === true) return "running";
   if (
     input.status.resultStatus === "failed" ||
     input.status.resultStatus === "partial" ||
+    input.status.resultStatus === "blocked" ||
     input.status.resultStatus === "aborted"
   ) {
     return "failed";
@@ -503,4 +616,26 @@ function latestIso(values: readonly Date[]): string | undefined {
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => b - a)[0];
   return latestTime === undefined ? undefined : new Date(latestTime).toISOString();
+}
+
+function runtimeStatusForCodexObservation(input: {
+  readonly runStatus: RunObservationStatus;
+  readonly resultStatus?: string | undefined;
+  readonly workspaceDirty?: boolean | undefined;
+  readonly changedFilesCount?: number | undefined;
+}) {
+  if (input.resultStatus === "done" || input.resultStatus === "completed") {
+    return "done" as const;
+  }
+  if (input.resultStatus === "blocked" || input.runStatus === "running") {
+    return "blocked" as const;
+  }
+  if (
+    input.resultStatus === "partial" ||
+    input.workspaceDirty ||
+    (input.changedFilesCount ?? 0) > 0
+  ) {
+    return "partial" as const;
+  }
+  return "failed" as const;
 }

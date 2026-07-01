@@ -1,7 +1,9 @@
+import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import type { ProviderTaskControls } from "@vioxen/subscription-runtime/core";
 import type {
   CodexReasoningEffort,
@@ -13,6 +15,16 @@ import type {
   TaskEffectMode,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
+  GitPatchPreserver,
+  normalizeWorkerReport,
+  StrictResultRecorder,
+  type RuntimeRecommendedAction,
+  type RuntimeResultArtifact,
+  type RuntimeResultEnvelopeInput,
+  type RuntimeResultStatus,
+  type WorkerReport,
+} from "@vioxen/subscription-runtime/worker-core";
+import {
   FileBackendCodexSafeExecutor,
   type FileBackendCodexSafeExecutorOptions,
 } from "./file-backend-codex-safe-executor";
@@ -20,6 +32,9 @@ import type {
   CodexWorkerExecutionEngine,
   FileBackendCodexWorkerResult,
 } from "./file-backend-codex-worker";
+
+const execFileAsync = promisify(execFile);
+const gitStatusTimeoutMs = 5_000;
 
 export type CodexGoalAccountSlot = {
   readonly name: string;
@@ -60,14 +75,51 @@ export type CodexGoalRunConfig = {
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly requireGitWorkspace?: boolean;
   readonly prewarmOnStart?: boolean;
+  readonly workerReportMode?: CodexGoalWorkerReportMode | undefined;
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
 };
+
+export type CodexGoalWorkerReportMode = "runtime-only" | "structured-output";
+
+export const codexWorkerReportSchemaName = "codex-worker-report";
+
+export const codexWorkerReportSchema = {
+  type: "object",
+  properties: {
+    outcome: {
+      type: "string",
+      enum: ["done", "partial", "blocked", "failed"],
+    },
+    evidence: {
+      type: "array",
+      items: { type: "string" },
+    },
+    blockers: {
+      type: "array",
+      items: { type: "string" },
+    },
+    nextActionHint: { type: "string" },
+    summary: { type: "string" },
+  },
+  required: ["outcome", "evidence", "blockers", "nextActionHint", "summary"],
+  additionalProperties: false,
+} as const;
+
+export const codexWorkerReportSystemPrompt = [
+  "When your task is finished or blocked, make the final assistant response a JSON object matching the codex-worker-report schema.",
+  "Use outcome done only when the requested work is complete.",
+  "Use partial when useful workspace changes exist but verification or completion is incomplete.",
+  "Use blocked when you need operator input, account capacity, auth, permissions, or another external condition.",
+  "Use failed when no useful result can be preserved.",
+  "Keep evidence and blockers concise and factual.",
+].join("\n");
 
 export type CodexGoalProgressStatus =
   | "starting"
   | "running"
   | "completed"
   | "partial"
+  | "blocked"
   | "failed"
   | "aborted";
 
@@ -103,6 +155,8 @@ export async function runCodexGoal(
   assertCodexGoalRunConfig(config);
   const prompt = await readFile(config.promptPath, "utf8");
   const progressPath = codexGoalProgressPath(config);
+  const outputPath = codexGoalOutputPath(config);
+  const resultRecorder = new StrictResultRecorder({ outputPath });
   const progressHeartbeat = createCodexGoalProgressHeartbeat({
     progressPath,
     taskId: config.taskId,
@@ -141,6 +195,12 @@ export async function runCodexGoal(
       ...(config.safeExecutionPolicy === undefined
         ? {}
         : { safeExecutionPolicy: config.safeExecutionPolicy }),
+      ...(config.workerReportMode === "structured-output"
+        ? {
+            outputSchemaName: codexWorkerReportSchemaName,
+            systemPrompt: codexWorkerReportSystemPrompt,
+          }
+        : {}),
       controls: {
         editMode: config.editMode ?? "allow-edits",
         ...(config.providerSandboxMode === undefined
@@ -153,15 +213,14 @@ export async function runCodexGoal(
         codexGoalObjective: config.codexGoalObjective ?? prompt,
       },
     });
-    if (config.outputPath) {
-      await writeFile(config.outputPath, `${JSON.stringify(result, null, 2)}\n`, {
-        encoding: "utf8",
-        mode: 0o600,
-      });
-    }
+    await resultRecorder.record(await codexRuntimeResultInput({ config, result }));
     await progressHeartbeat.write(progressFromResult(result));
     return result;
   } catch (error) {
+    await resultRecorder.record(await codexExceptionRuntimeResultInput({
+      config,
+      error,
+    }));
     await progressHeartbeat.write({
       status: "failed",
       reason: "runner_exception",
@@ -188,6 +247,13 @@ export function buildCodexGoalExecutorOptions(input: {
       config.allowDuplicateAccountIdentities ?? false,
     requireGitWorkspace: config.requireGitWorkspace ?? true,
     prewarmOnStart: config.prewarmOnStart ?? false,
+    ...(config.workerReportMode === "structured-output"
+      ? {
+          outputSchemas: {
+            [codexWorkerReportSchemaName]: codexWorkerReportSchema,
+          },
+        }
+      : {}),
     ...(config.effectMode === undefined ? {} : { effectMode: config.effectMode }),
     ...(config.safeExecutionPolicy === undefined
       ? {}
@@ -250,6 +316,12 @@ export async function readOrCreateCodexGoalEncryptionKey(
 
 export function codexGoalProgressPath(config: Pick<CodexGoalRunConfig, "jobRootDir" | "taskId" | "progressPath">): string {
   return config.progressPath ?? join(config.jobRootDir, `${config.taskId}.progress.json`);
+}
+
+export function codexGoalOutputPath(
+  config: Pick<CodexGoalRunConfig, "jobRootDir" | "taskId" | "outputPath">,
+): string {
+  return config.outputPath ?? join(config.jobRootDir, `${config.taskId}.latest-result.json`);
 }
 
 export function codexGoalAccountSlots(
@@ -372,6 +444,201 @@ function progressStatusFromResult(status: string): CodexGoalProgressStatus {
   if (status === "failed") return "failed";
   if (status === "aborted") return "aborted";
   return "failed";
+}
+
+async function codexRuntimeResultInput(input: {
+  readonly config: CodexGoalRunConfig;
+  readonly result: SafeExecutionRunResult<FileBackendCodexWorkerResult>;
+}): Promise<RuntimeResultEnvelopeInput> {
+  const changedFiles = changedFilesFromSafeExecutionResult(input.result);
+  const workerReport = workerReportFromSafeExecutionResult(input.result);
+  const reason = "reason" in input.result ? input.result.reason : undefined;
+  const status = runtimeStatusFromSafeExecutionResult({
+    resultStatus: input.result.status,
+    changedFilesCount: changedFiles.length,
+  });
+  const artifacts = status === "done" || changedFiles.length === 0
+    ? []
+    : await preservePatchArtifacts(input.config);
+  return {
+    status,
+    provider: "codex",
+    runId: input.config.jobId ?? input.config.taskId,
+    taskId: input.config.taskId,
+    reason,
+    changedFiles,
+    evidence: [
+      ...runtimeEvidenceFromSafeExecutionResult(input.result),
+      ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
+      ...(changedFiles.length > 0 && artifacts.length === 0 && status !== "done"
+        ? ["patch_preserve_unavailable"]
+        : []),
+    ],
+    blockers: runtimeBlockersFromSafeExecutionResult(input.result),
+    nextAction: runtimeActionFromSafeExecutionResult({
+      status,
+      reason,
+      changedFilesCount: changedFiles.length,
+    }),
+    ...(workerReport === undefined ? {} : { workerReport }),
+    ...(artifacts.length === 0 ? {} : { artifacts }),
+    ...("failureDetails" in input.result && input.result.failureDetails
+      ? { details: input.result.failureDetails }
+      : {}),
+  };
+}
+
+async function codexExceptionRuntimeResultInput(input: {
+  readonly config: CodexGoalRunConfig;
+  readonly error: unknown;
+}): Promise<RuntimeResultEnvelopeInput> {
+  const workspace = await changedFilesFromWorkspace(input.config.workspacePath);
+  const changedFiles = workspace.changedFiles;
+  const artifacts = changedFiles.length === 0
+    ? []
+    : await preservePatchArtifacts(input.config);
+  return {
+    status: changedFiles.length > 0 ? "partial" : "failed",
+    provider: "codex",
+    runId: input.config.jobId ?? input.config.taskId,
+    taskId: input.config.taskId,
+    reason: "runner_exception",
+    changedFiles,
+    evidence: [
+      "runner threw before returning a safe execution result",
+      ...(workspace.warning ? [workspace.warning] : []),
+      ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
+      ...(changedFiles.length > 0 && artifacts.length === 0
+        ? ["patch_preserve_unavailable"]
+        : []),
+    ],
+    blockers: ["runner_exception"],
+    nextAction: changedFiles.length > 0 ? "preserve_patch" : "recover",
+    ...(artifacts.length === 0 ? {} : { artifacts }),
+    details: {
+      errorName: input.error instanceof Error ? input.error.name : "unknown",
+    },
+  };
+}
+
+function runtimeStatusFromSafeExecutionResult(input: {
+  readonly resultStatus: SafeExecutionRunResult<FileBackendCodexWorkerResult>["status"];
+  readonly changedFilesCount: number;
+}): RuntimeResultStatus {
+  if (input.resultStatus === "completed") return "done";
+  if (input.resultStatus === "partial") return "partial";
+  if (input.resultStatus === "aborted" && input.changedFilesCount > 0) {
+    return "partial";
+  }
+  return "failed";
+}
+
+function runtimeActionFromSafeExecutionResult(input: {
+  readonly status: RuntimeResultStatus;
+  readonly reason?: string | undefined;
+  readonly changedFilesCount: number;
+}): RuntimeRecommendedAction {
+  if (input.status === "done") return "review_completed";
+  if (
+    input.reason === "quota_limited" ||
+    input.reason === "capacity_unavailable" ||
+    input.reason === "account_unavailable" ||
+    input.reason === "reconnect_required"
+  ) {
+    return "switch_account";
+  }
+  if (input.reason === "permission_required") return "ask_user";
+  if (input.changedFilesCount > 0) return "preserve_patch";
+  return input.status === "failed" ? "recover" : "continue";
+}
+
+function runtimeEvidenceFromSafeExecutionResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): readonly string[] {
+  const evidence = [`safe_execution_status:${result.status}`];
+  if (result.task.outputSummary) {
+    evidence.push(`output_summary:${result.task.outputSummary}`);
+  }
+  if (result.attempts.length > 0) {
+    evidence.push(`attempt_count:${result.attempts.length}`);
+  }
+  return evidence;
+}
+
+function runtimeBlockersFromSafeExecutionResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): readonly string[] {
+  if (result.status === "completed") return [];
+  const blockers: string[] = "reason" in result ? [result.reason] : [];
+  if ("safeMessage" in result && result.safeMessage) {
+    blockers.push(result.safeMessage);
+  }
+  return blockers;
+}
+
+function workerReportFromSafeExecutionResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): WorkerReport | undefined {
+  if (result.status !== "completed") return undefined;
+  if (!("result" in result) || result.result === undefined) return undefined;
+  return normalizeWorkerReport(result.result.structuredOutput);
+}
+
+function changedFilesFromSafeExecutionResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): readonly string[] {
+  return uniqueStrings(result.attempts.flatMap((attempt) => attempt.changedFiles));
+}
+
+async function changedFilesFromWorkspace(
+  workspacePath: string,
+): Promise<{
+  readonly changedFiles: readonly string[];
+  readonly warning?: string;
+}> {
+  try {
+    const { stdout } = await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "status",
+      "--porcelain",
+    ], { timeout: gitStatusTimeoutMs });
+    const changedFiles = stdout
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .map((line) => statusPorcelainPath(line))
+      .filter((path) => path.length > 0);
+    return { changedFiles };
+  } catch {
+    return {
+      changedFiles: [],
+      warning: "workspace_changed_files_unavailable",
+    };
+  }
+}
+
+function statusPorcelainPath(line: string): string {
+  const path = line.length > 3 ? line.slice(3).trim() : line.trim();
+  const renameTarget = path.split(" -> ").at(-1);
+  return renameTarget?.trim() ?? path;
+}
+
+async function preservePatchArtifacts(
+  config: Pick<CodexGoalRunConfig, "workspacePath" | "jobRootDir" | "taskId">,
+): Promise<readonly RuntimeResultArtifact[]> {
+  try {
+    const artifact = await new GitPatchPreserver().preserve({
+      workspacePath: config.workspacePath,
+      outputPath: join(config.jobRootDir, `${config.taskId}.preserved.patch`),
+    });
+    return artifact ? [artifact] : [];
+  } catch {
+    return [];
+  }
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  return [...new Set(values.filter((value) => value.trim()))];
 }
 
 async function writeCodexGoalProgress(

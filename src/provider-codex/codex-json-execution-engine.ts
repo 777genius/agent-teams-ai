@@ -7,6 +7,9 @@ import type {
   RunnerPort,
   SessionArtifact,
 } from "@vioxen/subscription-runtime/core";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { classifyCodexFailure } from "./failure-classifier";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import { composeCodexPrompt } from "./codex-prompt-composer";
@@ -20,6 +23,11 @@ export type CodexReasoningEffort =
   | "xhigh";
 
 export type CodexServiceTier = string;
+
+export type CodexOutputSchemaRequest = {
+  readonly name: string;
+  readonly schema?: unknown;
+};
 
 export type CodexSandboxMode =
   | "read-only"
@@ -164,72 +172,78 @@ export class PackagedCodexJsonExecutionEngine implements CodexExecutionEngine {
     readonly redactor: RedactorPort;
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
-    readonly serviceTier?: CodexServiceTier;
-    readonly sandboxMode?: CodexSandboxMode;
-    readonly outputSchema?: unknown;
-    readonly abortSignal: AbortSignal;
+  readonly serviceTier?: CodexServiceTier;
+  readonly sandboxMode?: CodexSandboxMode;
+  readonly outputSchema?: unknown;
+  readonly abortSignal: AbortSignal;
   }): Promise<CodexExecutionResult> {
-    const args = buildCodexJsonExecArgs({
-      jsonFlag: this.options.jsonFlag ?? "--json",
-      model: input.model,
-      reasoningEffort: input.reasoningEffort,
-      ...(input.serviceTier === undefined
-        ? {}
-        : { serviceTier: input.serviceTier }),
-      ...(input.sandboxMode === undefined
-        ? {}
-        : { sandboxMode: input.sandboxMode }),
-    });
-
-    const result = await input.runner.run({
-      command: this.options.codexBinaryPath,
-      args,
-      cwd: input.workspacePath,
-      env: {
-        ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
-        ...input.session.env,
-        CI: "true",
-      },
-      stdin: new TextEncoder().encode(
-        composeCodexPrompt({
-          prompt: input.prompt,
-          systemPrompt: input.systemPrompt,
-        }),
-      ),
-      timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
-      abortSignal: input.abortSignal,
-    });
-
-    const stdout = input.redactor.redact(result.stdout);
-    const stderr = input.redactor.redact(result.stderr);
-    input.redactor.assertNoKnownSecret(stdout, "codex-json-stdout");
-    input.redactor.assertNoKnownSecret(stderr, "codex-json-stderr");
-    assertOutputWithinBounds(stdout, this.options.maxOutputBytes);
-    assertOutputWithinBounds(stderr, this.options.maxOutputBytes);
-
-    if (result.exitCode !== 0) {
-      throw Object.assign(new Error(
-        `codex_json_exec_failed:${result.exitCode}:${safeTail(`${stdout}\n${stderr}`)}`,
-      ), {
-        exitCode: result.exitCode,
-        stdout,
-        stderr,
+    const schemaFile = await writeOutputSchemaFile(input.outputSchema);
+    try {
+      const args = buildCodexJsonExecArgs({
+        jsonFlag: this.options.jsonFlag ?? "--json",
+        model: input.model,
+        reasoningEffort: input.reasoningEffort,
+        ...(input.serviceTier === undefined
+          ? {}
+          : { serviceTier: input.serviceTier }),
+        ...(input.sandboxMode === undefined
+          ? {}
+          : { sandboxMode: input.sandboxMode }),
+        ...(schemaFile === null ? {} : { outputSchemaPath: schemaFile.path }),
       });
-    }
 
-    const outputText = extractFinalAssistantText(stdout);
-    if (input.outputSchema) {
+      const result = await input.runner.run({
+        command: this.options.codexBinaryPath,
+        args,
+        cwd: input.workspacePath,
+        env: {
+          ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
+          ...input.session.env,
+          CI: "true",
+        },
+        stdin: new TextEncoder().encode(
+          composeCodexPrompt({
+            prompt: input.prompt,
+            systemPrompt: input.systemPrompt,
+          }),
+        ),
+        timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
+        abortSignal: input.abortSignal,
+      });
+
+      const stdout = input.redactor.redact(result.stdout);
+      const stderr = input.redactor.redact(result.stderr);
+      input.redactor.assertNoKnownSecret(stdout, "codex-json-stdout");
+      input.redactor.assertNoKnownSecret(stderr, "codex-json-stderr");
+      assertOutputWithinBounds(stdout, this.options.maxOutputBytes);
+      assertOutputWithinBounds(stderr, this.options.maxOutputBytes);
+
+      if (result.exitCode !== 0) {
+        throw Object.assign(new Error(
+          `codex_json_exec_failed:${result.exitCode}:${safeTail(`${stdout}\n${stderr}`)}`,
+        ), {
+          exitCode: result.exitCode,
+          stdout,
+          stderr,
+        });
+      }
+
+      const outputText = extractFinalAssistantText(stdout);
+      if (input.outputSchema) {
+        return {
+          outputText,
+          structuredOutput: parseStructuredOutput(outputText),
+          warnings: [],
+        };
+      }
+
       return {
         outputText,
-        structuredOutput: parseStructuredOutput(outputText),
         warnings: [],
       };
+    } finally {
+      await schemaFile?.dispose();
     }
-
-    return {
-      outputText,
-      warnings: [],
-    };
   }
 
   async prewarm(): Promise<CodexExecutionPrewarmResult> {
@@ -254,6 +268,7 @@ export function buildCodexJsonExecArgs(input: {
   readonly reasoningEffort: CodexReasoningEffort;
   readonly serviceTier?: CodexServiceTier;
   readonly sandboxMode?: CodexSandboxMode;
+  readonly outputSchemaPath?: string;
 }): readonly string[] {
   return [
     "exec",
@@ -291,6 +306,7 @@ export function buildCodexJsonExecArgs(input: {
     "features.shell_snapshot=false",
     "--config",
     "features.skill_mcp_dependency_install=false",
+    ...(input.outputSchemaPath ? ["--output-schema", input.outputSchemaPath] : []),
     "--ephemeral",
     "--ignore-user-config",
     "--ignore-rules",
@@ -299,6 +315,41 @@ export function buildCodexJsonExecArgs(input: {
     "--skip-git-repo-check",
     "-",
   ];
+}
+
+async function writeOutputSchemaFile(
+  outputSchema: unknown,
+): Promise<{ readonly path: string; dispose(): Promise<void> } | null> {
+  const schema = codexOutputSchemaPayload(outputSchema);
+  if (schema === undefined) return null;
+  const dir = await mkdtemp(join(tmpdir(), "subscription-runtime-codex-schema-"));
+  const path = join(dir, "schema.json");
+  await writeFile(path, `${JSON.stringify(schema, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  return {
+    path,
+    async dispose() {
+      await rm(dir, { recursive: true, force: true });
+    },
+  };
+}
+
+export function codexOutputSchemaPayload(outputSchema: unknown): unknown | undefined {
+  if (outputSchema === undefined || outputSchema === null) return undefined;
+  if (typeof outputSchema !== "object") return outputSchema;
+  if ("schema" in outputSchema) {
+    return (outputSchema as CodexOutputSchemaRequest).schema;
+  }
+  if (
+    "type" in outputSchema ||
+    "$schema" in outputSchema ||
+    "properties" in outputSchema
+  ) {
+    return outputSchema;
+  }
+  return undefined;
 }
 
 export function codexSandboxModeForControls(

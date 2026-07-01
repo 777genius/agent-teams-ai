@@ -69,6 +69,7 @@ import {
   doctorCodexGoal,
   listCodexGoalAccountStatuses,
   prepareCodexGoalLaunchPaths,
+  reconcileCodexGoalRuntimeResult,
   shellQuote,
   startCodexGoalTmux,
   stopCodexGoalTmux,
@@ -110,6 +111,7 @@ type GoalMcpArgs = {
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly requireGitWorkspace?: boolean;
   readonly prewarmOnStart?: boolean;
+  readonly workerReportMode?: CodexGoalRunConfig["workerReportMode"];
   readonly tmuxSession?: string;
   readonly cwd?: string;
   readonly logPath?: string;
@@ -173,6 +175,11 @@ type JobLifecycleMcpArgs = JobIdMcpArgs & {
   readonly skipDoctor?: boolean;
   readonly staleAfterMs?: number;
   readonly tailLines?: number;
+};
+
+type JobResultReconcileMcpArgs = JobBriefMcpArgs & {
+  readonly forceWrite?: boolean;
+  readonly preservePatch?: boolean;
 };
 
 type JobBriefMcpArgs = JobIdMcpArgs & {
@@ -547,6 +554,25 @@ export function createCodexGoalMcpServer(
           : "A writer appears to be active; do not start another writer in this worktree.",
       });
     }),
+  );
+
+  server.registerTool(
+    "codex_goal_reconcile_result",
+    {
+      title: "Reconcile Codex Goal Runtime Result",
+      description:
+        "Write a strict latest-result.json for a stopped or stale Codex goal when the worker crashed, was stopped, or left a non-strict result.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        forceWrite: z.boolean().optional(),
+        preservePatch: z.boolean().optional(),
+        staleAfterMs: z.number().int().positive().optional(),
+        tailLines: z.number().int().positive().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      reconcileStoredJobRuntimeResult(args as JobResultReconcileMcpArgs),
+    ),
   );
 
   server.registerTool(
@@ -1574,6 +1600,9 @@ async function goalLaunchInput(args: GoalMcpArgs): Promise<CodexGoalLaunchInput>
       booleanValue(merged.allowDuplicateAccountIdentities) ?? false,
     requireGitWorkspace: booleanValue(merged.requireGitWorkspace) ?? true,
     prewarmOnStart: booleanValue(merged.prewarmOnStart) ?? false,
+    ...(workerReportModeValue(merged.workerReportMode) === undefined
+      ? {}
+      : { workerReportMode: workerReportModeValue(merged.workerReportMode) }),
   };
   const stateRootDir = stringValue(merged.stateRootDir);
   const finalConfig = stateRootDir
@@ -1793,6 +1822,13 @@ async function continueStoredJob(
       });
     }
   }
+  const resultReconciliation = shouldReconcileResultBeforeStart(status)
+    ? await reconcileCodexGoalRuntimeResult({
+        config: loaded.launch.config,
+        status,
+        preservePatch: true,
+      })
+    : undefined;
   const command = await startCodexGoalTmux(loaded.launch);
   return mcpJson({
     ok: true,
@@ -1802,6 +1838,67 @@ async function continueStoredJob(
     tmuxSession: loaded.launch.tmuxSession,
     tmuxCommand: command.preview,
     statusBefore: status,
+    ...(resultReconciliation === undefined ? {} : { resultReconciliation }),
+  });
+}
+
+function shouldReconcileResultBeforeStart(status: Awaited<ReturnType<typeof collectCodexGoalStatus>>): boolean {
+  if (status.resultExists === true) return true;
+  if (status.workspaceDirty) return true;
+  if (status.progressExists) return true;
+  if (status.logExists && (status.logByteLength ?? 0) > 0) return true;
+  return false;
+}
+
+async function reconcileStoredJobRuntimeResult(args: JobResultReconcileMcpArgs) {
+  const loaded = await loadJobLaunch(args);
+  const status = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const accounts = await listCodexGoalAccountStatuses({
+    authRootDir: loaded.launch.config.authRootDir,
+    accounts: loaded.launch.config.accounts.map((account) => account.name),
+    stateRootDir: codexGoalStateRootDir(loaded.launch),
+  });
+  const brief = await buildCodexGoalBrief({
+    jobId: loaded.manifest.jobId,
+    launch: loaded.launch,
+    status,
+    accounts,
+    staleAfterMs: numberValue(args.staleAfterMs) ?? 10 * 60_000,
+    tailLines: numberValue(args.tailLines) ?? 20,
+  });
+  if (status.tmuxAlive && !brief.silentStale && !brief.heartbeatOnlyNoOutput && !args.forceWrite) {
+    return mcpJson({
+      ok: false,
+      reason: "worker_alive",
+      jobId: loaded.manifest.jobId,
+      status,
+      brief,
+      requiredOverride: "forceWrite",
+      safeMessage:
+        "Worker still appears alive. Reconcile result only after stop/stale confirmation or with forceWrite.",
+    });
+  }
+  const reconciliation = await reconcileCodexGoalRuntimeResult({
+    config: loaded.launch.config,
+    status,
+    forceWrite: booleanValue(args.forceWrite) === true,
+    preservePatch: args.preservePatch !== false,
+    silentStale: brief.silentStale,
+    heartbeatOnlyNoOutput: brief.heartbeatOnlyNoOutput,
+    ...(brief.silentStale
+      ? { reason: "silent_stale_worker" }
+      : brief.heartbeatOnlyNoOutput
+      ? { reason: "heartbeat_only_no_output" }
+      : {}),
+  });
+  return mcpJson({
+    ok: true,
+    mode: "reconcile_result",
+    jobId: loaded.manifest.jobId,
+    taskId: loaded.launch.config.taskId,
+    status,
+    brief,
+    reconciliation,
   });
 }
 
@@ -1885,6 +1982,18 @@ async function stopStoredJob(args: JobLifecycleMcpArgs) {
     statusAfter,
     brief,
   });
+  const resultReconciliation = await reconcileCodexGoalRuntimeResult({
+    config: loaded.launch.config,
+    status: statusAfter,
+    reason: brief.silentStale
+      ? "silent_stale_worker"
+      : brief.heartbeatOnlyNoOutput
+      ? "heartbeat_only_no_output"
+      : "manual_force_stop",
+    preservePatch: true,
+    silentStale: brief.silentStale,
+    heartbeatOnlyNoOutput: brief.heartbeatOnlyNoOutput,
+  });
   return mcpJson({
     ok: true,
     mode: "stop",
@@ -1896,6 +2005,7 @@ async function stopStoredJob(args: JobLifecycleMcpArgs) {
     statusBefore: status,
     statusAfter,
     brief,
+    resultReconciliation,
     safeMessage:
       "Stopped the tmux worker session. Review workspace/log/result before continuing or recovery.",
   });
@@ -2730,6 +2840,7 @@ function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestI
     allowDuplicateAccountIdentities: args.allowDuplicateAccountIdentities ?? false,
     requireGitWorkspace: args.requireGitWorkspace ?? true,
     prewarmOnStart: args.prewarmOnStart ?? false,
+    ...(args.workerReportMode ? { workerReportMode: args.workerReportMode } : {}),
     tmuxSession: args.tmuxSession ?? jobId,
     ...(args.cwd ? { cwd } : {}),
     ...(args.logPath ? { logPath: resolvePath(cwd, args.logPath) } : {}),
@@ -2781,6 +2892,7 @@ function jobManifestPatchFromArgs(args: JobUpdateMcpArgs): CodexGoalJobManifestP
   );
   putIfDefined(patch, "requireGitWorkspace", booleanValue(args.requireGitWorkspace));
   putIfDefined(patch, "prewarmOnStart", booleanValue(args.prewarmOnStart));
+  putIfDefined(patch, "workerReportMode", workerReportModeValue(args.workerReportMode));
   putIfDefined(patch, "tmuxSession", stringValue(args.tmuxSession));
   putIfDefined(patch, "cwd", args.cwd && cwd);
   putIfDefined(patch, "logPath", args.logPath && resolvePath(cwd, args.logPath));
@@ -2854,6 +2966,9 @@ function jobManifestInputFromLaunch(
       : { requireGitWorkspace: launch.config.requireGitWorkspace }),
     ...(launch.config.prewarmOnStart
       ? { prewarmOnStart: launch.config.prewarmOnStart }
+      : {}),
+    ...(launch.config.workerReportMode
+      ? { workerReportMode: launch.config.workerReportMode }
       : {}),
     ...(launch.tmuxSession ? { tmuxSession: launch.tmuxSession } : {}),
     cwd: launch.cwd,
@@ -2937,7 +3052,22 @@ export async function buildCodexGoalBrief(input: {
       !input.status.resultExists &&
       !input.status.tmuxAlive,
   );
-  const next = silentStale
+  const needsResultReconcile = Boolean(
+    !input.status.tmuxAlive &&
+      (
+        stoppedWithoutResult ||
+        input.status.workspaceDirty ||
+        (result.strict === false && !safeStatusToContinue)
+      ),
+  );
+  const next = needsResultReconcile
+    ? {
+        tool: "codex_goal_reconcile_result",
+        reason: result.strict === false
+          ? "non_strict_runtime_result"
+          : "missing_runtime_result",
+      }
+    : silentStale
     ? {
         tool: "manual_review",
         reason: "silent_stale_worker",
@@ -3680,6 +3810,7 @@ async function readRuntimeResultBrief(path: string): Promise<{
   readonly currentAccount?: string;
   readonly lastFailureReason?: string;
   readonly updatedAt?: string;
+  readonly strict?: boolean;
 }> {
   try {
     const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
@@ -3693,13 +3824,29 @@ async function readRuntimeResultBrief(path: string): Promise<{
       ...(typeof parsed.reason === "string"
         ? { lastFailureReason: parsed.reason }
         : {}),
-      ...(isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
-        ? { updatedAt: parsed.task.updatedAt }
-        : {}),
+      ...(typeof parsed.updatedAt === "string"
+        ? { updatedAt: parsed.updatedAt }
+        : isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
+          ? { updatedAt: parsed.task.updatedAt }
+          : {}),
+      strict: isStrictRuntimeResultBrief(parsed),
     };
   } catch {
     return {};
   }
+}
+
+function isStrictRuntimeResultBrief(parsed: Record<string, unknown>): boolean {
+  return (
+    typeof parsed.status === "string" &&
+    Array.isArray(parsed.changedFiles) &&
+    parsed.changedFiles.every((item) => typeof item === "string") &&
+    Array.isArray(parsed.evidence) &&
+    parsed.evidence.every((item) => typeof item === "string") &&
+    Array.isArray(parsed.blockers) &&
+    parsed.blockers.every((item) => typeof item === "string") &&
+    typeof parsed.nextAction === "string"
+  );
 }
 
 function lastRecord(values: readonly unknown[]): Record<string, unknown> | undefined {
@@ -3735,6 +3882,12 @@ function nextActionForStatus(action: string): JsonObject {
   if (action === "review_completed") {
     return { tool: "codex_goal_mark_reviewed", reason: "worker completed" };
   }
+  if (action === "ask_user") {
+    return {
+      tool: "codex_goal_control_decision",
+      reason: "worker is blocked waiting for operator or inbox input",
+    };
+  }
   return { tool: "manual_review", reason: "status requires inspection before continuing" };
 }
 
@@ -3755,6 +3908,12 @@ function nextBestCommand(input: {
   }
   if (tool === "codex_goal_brief") {
     return `codex_goal_brief({ jobId: ${JSON.stringify(input.jobId)} })`;
+  }
+  if (tool === "codex_goal_reconcile_result") {
+    return `codex_goal_reconcile_result({ jobId: ${JSON.stringify(input.jobId)} })`;
+  }
+  if (tool === "codex_goal_control_decision") {
+    return `codex_goal_control_decision({ jobId: ${JSON.stringify(input.jobId)} })`;
   }
   if (tool === "codex_goal_accounts_status") {
     return `codex_goal_accounts_status({ jobId: ${JSON.stringify(input.jobId)} })`;
@@ -4046,6 +4205,7 @@ function goalInputSchema(): Record<string, z.ZodTypeAny> {
     allowDuplicateAccountIdentities: z.boolean().optional(),
     requireGitWorkspace: z.boolean().optional(),
     prewarmOnStart: z.boolean().optional(),
+    workerReportMode: z.enum(["runtime-only", "structured-output"]).optional(),
     tmuxSession: z.string().optional(),
     cwd: z.string().optional(),
     logPath: z.string().optional(),
@@ -4274,6 +4434,14 @@ function numberValue(value: unknown): number | undefined {
 
 function booleanValue(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
+}
+
+function workerReportModeValue(
+  value: unknown,
+): CodexGoalRunConfig["workerReportMode"] | undefined {
+  if (value === undefined) return undefined;
+  if (value === "runtime-only" || value === "structured-output") return value;
+  throw new Error("workerReportMode must be runtime-only or structured-output");
 }
 
 function resolvePath(cwd: string, value: string): string {
