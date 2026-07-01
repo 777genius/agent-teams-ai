@@ -792,9 +792,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       content: [{ type: 'text', text: 'Noted internal status.' }],
     });
     (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
-    for (let i = 0; i < 20 && service.getLiveLeadProcessMessages(teamName).length < 2; i++) {
-      await Promise.resolve();
-    }
+    await vi.waitFor(() => expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(2));
 
     const firstPayload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     const secondPayload = String(writeSpy.mock.calls[1]?.[0] ?? '');

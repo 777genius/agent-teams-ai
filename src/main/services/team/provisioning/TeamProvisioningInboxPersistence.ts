@@ -44,6 +44,22 @@ function resolveSafeInboxPath(input: MarkTeamInboxMessagesReadInput): string | n
   return inboxPath;
 }
 
+function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ENOENT'
+  );
+}
+
+async function shouldSkipNonRegularInboxFile(inboxPath: string): Promise<boolean> {
+  const stat = await lstat(inboxPath).catch((error: unknown) =>
+    isNotFoundError(error) ? null : false
+  );
+  return stat === false || (stat !== null && !stat.isFile());
+}
+
 export async function markTeamInboxMessagesRead(
   input: MarkTeamInboxMessagesReadInput
 ): Promise<void> {
@@ -54,8 +70,7 @@ export async function markTeamInboxMessagesRead(
 
   await withFileLock(inboxPath, async () => {
     await withInboxLock(inboxPath, async () => {
-      const stat = await lstat(inboxPath).catch(() => null);
-      if (!stat?.isFile()) {
+      if (await shouldSkipNonRegularInboxFile(inboxPath)) {
         return;
       }
 
