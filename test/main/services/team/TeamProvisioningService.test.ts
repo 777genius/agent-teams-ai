@@ -25400,6 +25400,7 @@ describe('TeamProvisioningService', () => {
       runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
+      runtimeRunId: 'opencode-run-alice',
       runtimeSessionId: 'ses_alice_partial_bootstrap',
       livenessKind: 'registered_only',
       bootstrapStalled: true,

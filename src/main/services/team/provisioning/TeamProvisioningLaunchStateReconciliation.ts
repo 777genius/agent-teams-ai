@@ -379,6 +379,7 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
 
   const currentRunId = normalizeOverlayRunId(params.current.runtimeRunId);
   const previousRunId = normalizeOverlayRunId(params.previous?.runtimeRunId);
+  const activeRunId = normalizeOverlayRunId(params.activeRunId);
   const currentSessionId = params.current.runtimeSessionId?.trim() ?? '';
   const previousSessionId = params.previous?.runtimeSessionId?.trim() ?? '';
   const canUsePreviousSessionId =
@@ -411,19 +412,23 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
       ],
     };
   }
-  if (params.activeRunId && selected.runId && params.activeRunId.trim() !== selected.runId.trim()) {
+  if (activeRunId && selectedRunId !== activeRunId) {
     return {
       kind: 'conflict',
-      diagnostics: ['opencode_overlay_session_run_mismatch'],
+      diagnostics: [
+        selectedRunId
+          ? 'opencode_overlay_session_run_mismatch'
+          : 'opencode_overlay_session_run_missing',
+      ],
     };
   }
 
-  if (selected.runId) {
+  if (selectedRunId) {
     const tombstoned = await ports
       .hasBootstrapCheckinTombstone({
         teamName: params.teamName,
         laneId: params.current.laneId ?? '',
-        runId: selected.runId,
+        runId: selectedRunId,
       })
       .catch(() => false);
     if (tombstoned) {
@@ -453,6 +458,7 @@ export function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(inp
     input.current.livenessKind === 'confirmed_bootstrap'
       ? input.current.livenessKind
       : 'confirmed_bootstrap';
+  const sessionRunId = normalizeOverlayRunId(input.session.runId);
   return {
     ...input.previous,
     ...input.current,
@@ -462,7 +468,7 @@ export function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(inp
     runtimeAlive,
     hardFailure: false,
     hardFailureReason: undefined,
-    runtimeRunId: input.session.runId ?? input.current.runtimeRunId,
+    runtimeRunId: sessionRunId || input.current.runtimeRunId,
     runtimeSessionId: input.session.id,
     bootstrapEvidenceSource: input.session.source,
     bootstrapMode:

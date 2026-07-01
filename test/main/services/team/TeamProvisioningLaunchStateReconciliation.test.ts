@@ -315,6 +315,93 @@ describe('TeamProvisioningLaunchStateReconciliation', () => {
     });
   });
 
+  it('requires previous-session fallback evidence to match the active OpenCode run', async () => {
+    const hasBootstrapCheckinTombstone = vi.fn().mockResolvedValue(false);
+    const current = makeMember({
+      runtimeRunId: undefined,
+      runtimeSessionId: undefined,
+    });
+    const previous = makeMember({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+      runtimeRunId: 'run-previous',
+      runtimeSessionId: 'session-previous',
+      livenessKind: 'confirmed_bootstrap',
+    });
+
+    await expect(
+      classifyOpenCodeSecondaryEvidenceOverlay(
+        {
+          teamName: 'demo',
+          memberName: 'Builder',
+          current,
+          previous,
+          laneEntry: makeLaneEntry(),
+          metaMembers: [],
+          activeRunId: 'run-current',
+          sessions: [
+            makeSession({
+              id: 'session-previous',
+              runId: null,
+            }),
+          ],
+          diagnostics: [],
+        },
+        { hasBootstrapCheckinTombstone }
+      )
+    ).resolves.toEqual({
+      kind: 'conflict',
+      diagnostics: ['opencode_overlay_session_run_missing'],
+    });
+
+    await expect(
+      classifyOpenCodeSecondaryEvidenceOverlay(
+        {
+          teamName: 'demo',
+          memberName: 'Builder',
+          current,
+          previous,
+          laneEntry: makeLaneEntry(),
+          metaMembers: [],
+          activeRunId: 'run-current',
+          sessions: [
+            makeSession({
+              id: 'session-previous',
+              runId: '',
+            }),
+          ],
+          diagnostics: [],
+        },
+        { hasBootstrapCheckinTombstone }
+      )
+    ).resolves.toEqual({
+      kind: 'conflict',
+      diagnostics: ['opencode_overlay_session_run_missing'],
+    });
+
+    const currentRunSession = makeSession({
+      id: 'session-previous',
+      runId: 'run-current',
+    });
+    await expect(
+      classifyOpenCodeSecondaryEvidenceOverlay(
+        {
+          teamName: 'demo',
+          memberName: 'Builder',
+          current,
+          previous,
+          laneEntry: makeLaneEntry(),
+          metaMembers: [],
+          activeRunId: 'run-current',
+          sessions: [currentRunSession],
+          diagnostics: [],
+        },
+        { hasBootstrapCheckinTombstone }
+      )
+    ).resolves.toEqual({ kind: 'confirmed_bootstrap', session: currentRunSession });
+  });
+
   it('promotes committed bootstrap evidence into the launch snapshot', async () => {
     const snapshot = makeSnapshot(
       makeMember({
@@ -410,6 +497,61 @@ describe('TeamProvisioningLaunchStateReconciliation', () => {
       runtimeAlive: false,
       runtimeRunId: 'run-current',
     });
+    expect(overlaid.members.Builder.runtimeSessionId).toBeUndefined();
+  });
+
+  it('does not promote previous-session OpenCode evidence without a run id', async () => {
+    const previousSnapshot = makeSnapshot(
+      makeMember({
+        launchState: 'confirmed_alive',
+        bootstrapConfirmed: true,
+        runtimeAlive: true,
+        runtimeRunId: 'run-previous',
+        runtimeSessionId: 'session-previous',
+        livenessKind: 'confirmed_bootstrap',
+      })
+    );
+    const snapshot = makeSnapshot(
+      makeMember({
+        runtimeRunId: undefined,
+        runtimeSessionId: undefined,
+      })
+    );
+
+    const overlaid = await applyOpenCodeSecondaryEvidenceOverlay(
+      {
+        teamName: 'demo',
+        snapshot,
+        previousSnapshot,
+        metaMembers: [{ name: 'Builder' }],
+      },
+      {
+        readLaneIndex: vi.fn().mockResolvedValue({
+          lanes: { 'secondary:opencode:Builder': makeLaneEntry() },
+        }),
+        readCommittedBootstrapSessionEvidence: vi.fn().mockResolvedValue({
+          committed: true,
+          activeRunId: 'run-current',
+          sessions: [
+            makeSession({
+              id: 'session-previous',
+              runId: null,
+            }),
+          ],
+          diagnostics: [],
+        }),
+        hasBootstrapCheckinTombstone: vi.fn().mockResolvedValue(false),
+        nowIso: () => '2026-01-01T00:00:04.000Z',
+      }
+    );
+
+    expect(overlaid).toBe(snapshot);
+    expect(overlaid.members.Builder).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      bootstrapConfirmed: false,
+      runtimeAlive: false,
+    });
+    expect(overlaid.members.Builder.runtimeRunId).toBeUndefined();
     expect(overlaid.members.Builder.runtimeSessionId).toBeUndefined();
   });
 

@@ -18485,9 +18485,14 @@ export class TeamProvisioningService {
         });
         if (isRecoverableOpenCodeRuntimeEvidence(runtimeEvidence)) {
           recoveredAny = true;
+          const runtimeRunId =
+            runtimeEvidence.appManagedBootstrapCandidate?.runId ??
+            (await this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)) ??
+            persistedMember?.runtimeRunId?.trim() ??
+            undefined;
           secondaryMembers.push({
             laneId: laneIdentity.laneId,
-            runtimeRunId: persistedMember?.runtimeRunId,
+            runtimeRunId,
             member,
             leadDefaults,
             evidence: {
