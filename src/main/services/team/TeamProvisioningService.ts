@@ -492,6 +492,10 @@ import {
   syncOpenCodeRuntimePermissionSpawnStatuses as syncOpenCodeRuntimePermissionSpawnStatusesHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
 import {
+  resolveOpenCodeSoloMemberIdentityFromDirectory,
+  resolveOpenCodeSoloRuntimeRecipientProviderId,
+} from './provisioning/TeamProvisioningOpenCodeSoloRuntime';
+import {
   type AuthWarningSource,
   buildStallProgressMessage,
   buildStallWarningText,
@@ -2487,74 +2491,6 @@ export class TeamProvisioningService {
     return { config, teamMeta, metaMembers };
   }
 
-  private isOpenCodeSoloRuntimeRoster(params: {
-    config?: TeamConfig | null;
-    teamMeta?: OpenCodeMemberDirectory['teamMeta'];
-    metaMembers: readonly TeamMember[];
-  }): boolean {
-    const leadMember = params.config?.members?.find((member) => isLeadMember(member));
-    const leadProviderId =
-      normalizeOptionalTeamProviderId(params.teamMeta?.launchIdentity?.providerId) ??
-      normalizeOptionalTeamProviderId(params.teamMeta?.providerId) ??
-      normalizeOptionalTeamProviderId(leadMember?.providerId) ??
-      inferTeamProviderIdFromModel(leadMember?.model);
-    if (leadProviderId !== 'opencode') {
-      return false;
-    }
-
-    const hasActiveConfigTeammate =
-      params.config?.members?.some(
-        (member) => !isLeadMember(member) && member.removedAt == null && member.name?.trim()
-      ) ?? false;
-    if (hasActiveConfigTeammate) {
-      return false;
-    }
-
-    return !params.metaMembers.some(
-      (member) => !isLeadMember(member) && member.removedAt == null && member.name?.trim()
-    );
-  }
-
-  private resolveOpenCodeSoloMemberIdentityFromDirectory(
-    memberName: string,
-    directory: OpenCodeMemberDirectory
-  ): OpenCodeMemberIdentityResolution | null {
-    if (memberName.trim().toLowerCase() !== OPEN_CODE_SOLO_MEMBER_NAME) {
-      return null;
-    }
-    if (
-      !this.isOpenCodeSoloRuntimeRoster({
-        config: directory.config,
-        teamMeta: directory.teamMeta,
-        metaMembers: directory.metaMembers,
-      })
-    ) {
-      return null;
-    }
-
-    const laneIdentity = buildPlannedMemberLaneIdentity({
-      leadProviderId: 'opencode',
-      member: {
-        name: OPEN_CODE_SOLO_MEMBER_NAME,
-        providerId: 'opencode',
-      },
-    });
-    const memberRuntimeCwd = directory.config?.projectPath?.trim();
-    return {
-      ok: true,
-      canonicalMemberName: OPEN_CODE_SOLO_MEMBER_NAME,
-      laneId: laneIdentity.laneId,
-      laneIdentity,
-      metaMember: {
-        name: OPEN_CODE_SOLO_MEMBER_NAME,
-        role: OPEN_CODE_SOLO_MEMBER_ROLE,
-        providerId: 'opencode',
-        ...(memberRuntimeCwd ? { cwd: memberRuntimeCwd } : {}),
-      },
-      ...(memberRuntimeCwd ? { memberRuntimeCwd } : {}),
-    };
-  }
-
   private getRuntimeSnapshotCacheGeneration(teamName: string): number {
     return this.runtimeSnapshotCacheGenerationByTeam.get(teamName) ?? 0;
   }
@@ -2635,7 +2571,7 @@ export class TeamProvisioningService {
       (member) => member.name?.trim().toLowerCase() === normalizedMemberName.toLowerCase()
     );
     if (!configMember && !metaMember) {
-      const soloIdentity = this.resolveOpenCodeSoloMemberIdentityFromDirectory(
+      const soloIdentity = resolveOpenCodeSoloMemberIdentityFromDirectory(
         normalizedMemberName,
         directory
       );
@@ -4031,8 +3967,11 @@ export class TeamProvisioningService {
     if (
       !configMember &&
       !metaMember &&
-      normalizedMemberName === OPEN_CODE_SOLO_MEMBER_NAME &&
-      this.isOpenCodeSoloRuntimeRoster({ config, metaMembers })
+      resolveOpenCodeSoloRuntimeRecipientProviderId({
+        memberName: normalizedMemberName,
+        config,
+        metaMembers,
+      }) === 'opencode'
     ) {
       return 'opencode';
     }
