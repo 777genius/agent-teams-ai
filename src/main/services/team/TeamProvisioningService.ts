@@ -3213,7 +3213,12 @@ export class TeamProvisioningService {
   }
 
   private canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean {
-    const runtimeProgress = this.runtimeAdapterProgressByRunId.get(runId);
+    // Terminal adapter progress is evicted to the retained map, so consult
+    // both: a residual team-map id pointing at a finished run must stay
+    // non-deliverable.
+    const runtimeProgress =
+      this.runtimeAdapterProgressByRunId.get(runId) ??
+      this.getRetainedProvisioningProgressMap().get(runId);
     if (
       runtimeProgress &&
       ['disconnected', 'failed', 'cancelled'].includes(runtimeProgress.state)
@@ -5708,6 +5713,20 @@ export class TeamProvisioningService {
   ): TeamProvisioningProgress {
     const nextProgress = this.enrichRuntimeAdapterProgressTrace(progress);
     this.runtimeAdapterProgressByRunId.set(nextProgress.runId, nextProgress);
+    if (
+      nextProgress.state === 'disconnected' ||
+      nextProgress.state === 'failed' ||
+      nextProgress.state === 'cancelled'
+    ) {
+      // Terminal adapter progress stays live for the retained TTL (the stop
+      // flow uses the live entry to dedupe a second manual stop while the
+      // runtime stop is still pending, and it writes two terminal updates),
+      // then the retention timer evicts it together with the trace maps.
+      // Without that eviction these maps grow for the lifetime of the process
+      // and a dead adapter run id counts as "tracked" in the cleanup
+      // staleness guards forever.
+      this.retainProvisioningProgress(nextProgress.runId, nextProgress);
+    }
     onProgress?.(nextProgress);
     return nextProgress;
   }
@@ -13312,6 +13331,16 @@ export class TeamProvisioningService {
     const timer = setTimeout(() => {
       retainedProgress.delete(runId);
       retainedTimers.delete(runId);
+      // Adapter-run live progress and trace history share the retention
+      // window (native run ids are simply absent from these maps). Only a
+      // still-terminal entry may be dropped — a relaunch may have reused the
+      // run id for a live run in the meantime.
+      const liveProgress = this.runtimeAdapterProgressByRunId.get(runId);
+      if (liveProgress && ['disconnected', 'failed', 'cancelled'].includes(liveProgress.state)) {
+        this.runtimeAdapterProgressByRunId.delete(runId);
+        this.runtimeAdapterTraceLinesByRunId.delete(runId);
+        this.runtimeAdapterTraceKeyByRunId.delete(runId);
+      }
     }, TeamProvisioningService.RETAINED_PROVISIONING_PROGRESS_TTL_MS);
     timer.unref?.();
     retainedTimers.set(runId, timer);
@@ -15108,7 +15137,12 @@ export class TeamProvisioningService {
       isAlive: this.isTeamAlive(teamName),
       runId: run?.runId ?? runId ?? null,
       progress:
-        run?.progress ?? (runId ? (this.runtimeAdapterProgressByRunId.get(runId) ?? null) : null),
+        run?.progress ??
+        (runId
+          ? (this.runtimeAdapterProgressByRunId.get(runId) ??
+            this.getRetainedProvisioningProgressMap().get(runId) ??
+            null)
+          : null),
     };
   }
 

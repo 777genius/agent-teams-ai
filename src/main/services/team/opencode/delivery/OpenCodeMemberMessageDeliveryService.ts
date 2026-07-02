@@ -1274,9 +1274,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
           laneId: laneIdentity.laneId,
-          reason: terminalFailure
-            ? (ledgerRecord.lastReason ?? diagnostic)
-            : diagnostic,
+          reason: terminalFailure ? (ledgerRecord.lastReason ?? diagnostic) : diagnostic,
           diagnostics: ledgerRecord.diagnostics.length
             ? ledgerRecord.diagnostics
             : [terminalFailure ? (ledgerRecord.lastReason ?? diagnostic) : diagnostic],
@@ -1532,6 +1530,11 @@ export class OpenCodeMemberMessageDeliveryService {
         : ledgerRecord?.diagnostics.length
           ? ledgerRecord.diagnostics
           : result.diagnostics;
+    // INVARIANT: `delivered: true` alone is NOT proof of acceptance. When
+    // acceptanceUnknown is set, responsePending stays true until read-commit
+    // is allowed, and callers MUST keep the inbox row unread while
+    // responsePending is true — reacting to `delivered` only would mark an
+    // unconfirmed message as read and silently lose it on a dead lane.
     return {
       delivered: promptAccepted || acceptanceUnknown,
       ...(ledgerRecord || responseObservation ? { accepted: promptAccepted } : {}),
