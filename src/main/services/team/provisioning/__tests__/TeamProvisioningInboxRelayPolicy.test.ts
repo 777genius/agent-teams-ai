@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildLeadInboxRelayPrompt,
   buildMemberInboxRelayPrompt,
   collectConfirmedSameTeamPairs,
+  inferOpenCodeInboxMessageTaskRefs,
   type NativeSameTeamFingerprint,
   type RelayInboxMessage,
   selectLeadInboxRelayBatch,
@@ -30,6 +31,40 @@ function ids(messages: readonly RelayInboxMessage[]): string[] {
 }
 
 describe('inbox relay unread policy', () => {
+  it('uses structured OpenCode inbox task refs without reading tasks', async () => {
+    const taskRef = { teamName: 'team', taskId: 'task-1', displayId: '7' };
+    const readTasks = vi.fn();
+
+    await expect(
+      inferOpenCodeInboxMessageTaskRefs({
+        teamName: 'team',
+        message: message({ taskRefs: [taskRef] }),
+        readTasks,
+      })
+    ).resolves.toEqual([taskRef]);
+    expect(readTasks).not.toHaveBeenCalled();
+  });
+
+  it('returns no OpenCode inbox task refs when task storage is empty', async () => {
+    await expect(
+      inferOpenCodeInboxMessageTaskRefs({
+        teamName: 'team',
+        message: message({ text: 'Please look at #7' }),
+        readTasks: vi.fn().mockResolvedValue([]),
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('infers OpenCode inbox task refs from message text', async () => {
+    await expect(
+      inferOpenCodeInboxMessageTaskRefs({
+        teamName: 'team',
+        message: message({ text: 'Please look at #7' }),
+        readTasks: vi.fn().mockResolvedValue([{ id: 'task-1', displayId: '7' }]),
+      })
+    ).resolves.toEqual([{ teamName: 'team', taskId: 'task-1', displayId: '7' }]);
+  });
+
   it('pairs same-team native fingerprints with inbox rows in FIFO order', () => {
     const firstSeenAt = Date.parse('2026-01-01T00:00:01.000Z');
     const secondSeenAt = Date.parse('2026-01-01T00:00:02.000Z');

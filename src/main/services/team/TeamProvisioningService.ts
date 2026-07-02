@@ -176,7 +176,6 @@ import {
   openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
-import { inferOpenCodeTaskRefsFromInboxMessage } from './opencode/delivery/OpenCodeRuntimeDeliveryTaskRefInference';
 import { OpenCodeVisibleReplyProofService } from './opencode/delivery/OpenCodeVisibleReplyProofService';
 import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
 import {
@@ -311,6 +310,7 @@ import {
   getLeadInboxRelayNoiseIds,
   getLeadRelayReadCommitBatch,
   hasStableInboxMessageId,
+  inferOpenCodeInboxMessageTaskRefs,
   isCurrentProofMissingRecoveryForegroundMessage,
   isCurrentReviewPickupRequestForegroundMessage,
   isOpenCodeProtocolProofMissingRecord,
@@ -13842,27 +13842,6 @@ export class TeamProvisioningService {
     });
   }
 
-  private async inferOpenCodeInboxMessageTaskRefs(
-    teamName: string,
-    message: InboxMessage,
-    readTasks?: () => Promise<readonly TeamTask[]>
-  ): Promise<TaskRef[]> {
-    if (Array.isArray(message.taskRefs) && message.taskRefs.length > 0) {
-      return message.taskRefs;
-    }
-
-    const tasks = await (readTasks?.() ?? new TeamTaskReader().getTasks(teamName).catch(() => []));
-    if (tasks.length === 0) {
-      return [];
-    }
-
-    return inferOpenCodeTaskRefsFromInboxMessage({
-      teamName,
-      message,
-      tasks,
-    });
-  }
-
   async relayOpenCodeMemberInboxMessages(
     teamName: string,
     memberName: string,
@@ -14207,11 +14186,11 @@ export class TeamProvisioningService {
         const inferredTaskRefs =
           existingTaskRefs || metadataTaskRefs || messageTaskRefs
             ? []
-            : await this.inferOpenCodeInboxMessageTaskRefs(
+            : await inferOpenCodeInboxMessageTaskRefs({
                 teamName,
                 message,
-                readTaskRefInferenceTasks
-              );
+                readTasks: readTaskRefInferenceTasks,
+              });
         const effectiveTaskRefs =
           existingTaskRefs ?? metadataTaskRefs ?? messageTaskRefs ?? inferredTaskRefs;
         const effectiveSource = existingRecord?.source ?? options.source ?? 'watcher';

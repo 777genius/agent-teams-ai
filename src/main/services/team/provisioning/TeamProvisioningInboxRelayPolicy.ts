@@ -16,6 +16,7 @@ import {
   normalizeOpenCodeTaskRefsForComparison,
   openCodeTaskRefKey,
 } from '../opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
+import { inferOpenCodeTaskRefsFromInboxMessage } from '../opencode/delivery/OpenCodeRuntimeDeliveryTaskRefInference';
 
 import {
   buildLeadRosterContextBlock,
@@ -24,7 +25,7 @@ import {
 } from './TeamProvisioningPromptBuilders';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
-import type { InboxMessage, TaskRef } from '@shared/types';
+import type { InboxMessage, TaskRef, TeamTask } from '@shared/types';
 
 export type InboxRelayComparableMessage = Pick<
   InboxMessage,
@@ -64,6 +65,27 @@ export interface NativeSameTeamFingerprint {
   text: string;
   summary: string;
   seenAt: number;
+}
+
+export async function inferOpenCodeInboxMessageTaskRefs(input: {
+  teamName: string;
+  message: InboxMessage;
+  readTasks: () => Promise<readonly TeamTask[]>;
+}): Promise<TaskRef[]> {
+  if (Array.isArray(input.message.taskRefs) && input.message.taskRefs.length > 0) {
+    return input.message.taskRefs;
+  }
+
+  const tasks = await input.readTasks();
+  if (tasks.length === 0) {
+    return [];
+  }
+
+  return inferOpenCodeTaskRefsFromInboxMessage({
+    teamName: input.teamName,
+    message: input.message,
+    tasks,
+  });
 }
 
 export interface ConfirmedSameTeamPairs {
