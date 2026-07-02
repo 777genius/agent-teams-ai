@@ -35,6 +35,12 @@ export interface BuildAggregatePendingLaunchMessageInput {
   snapshot?: PersistedTeamLaunchSnapshot | null;
 }
 
+export interface HasPendingLaunchMembersInput {
+  run: PendingLaunchMessageRunLike;
+  launchSummary: Pick<PendingLaunchMessageSummaryLike, 'pendingCount'>;
+  snapshot?: PersistedTeamLaunchSnapshot | null;
+}
+
 export function countRunPermissionPendingMembers(run: PendingLaunchMessageRunLike): number {
   let count = 0;
   for (const expected of run.expectedMembers ?? []) {
@@ -63,6 +69,17 @@ export function countSnapshotPermissionPendingMembers(
     }
   }
   return count;
+}
+
+export function hasPendingLaunchMembers({
+  run,
+  launchSummary,
+  snapshot,
+}: HasPendingLaunchMembersInput): boolean {
+  const expectedCount = snapshot
+    ? getPersistedLaunchMemberNames(snapshot).length
+    : (run.expectedMembers?.length ?? 0);
+  return launchSummary.pendingCount > 0 && expectedCount > 0;
 }
 
 export function buildPendingBootstrapStatusMessage({

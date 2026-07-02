@@ -357,6 +357,7 @@ import { buildTeamLaunchIncompleteNotificationPayload } from './provisioning/Tea
 import {
   buildAggregatePendingLaunchMessage as buildAggregatePendingLaunchMessageHelper,
   buildPendingBootstrapStatusMessage as buildPendingBootstrapStatusMessageHelper,
+  hasPendingLaunchMembers as hasPendingLaunchMembersHelper,
 } from './provisioning/TeamProvisioningLaunchPendingMessage';
 import {
   areAllExpectedLaunchMembersConfirmed as areAllExpectedLaunchMembersConfirmedHelper,
@@ -16854,10 +16855,7 @@ export class TeamProvisioningService {
     },
     snapshot?: PersistedTeamLaunchSnapshot | null
   ): boolean {
-    const expectedCount = snapshot
-      ? this.getPersistedLaunchMemberNames(snapshot).length
-      : (run.expectedMembers?.length ?? 0);
-    return launchSummary.pendingCount > 0 && expectedCount > 0;
+    return hasPendingLaunchMembersHelper({ run, launchSummary, snapshot });
   }
 
   private getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): string[] {

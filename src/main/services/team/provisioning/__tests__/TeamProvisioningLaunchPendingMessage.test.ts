@@ -5,6 +5,7 @@ import {
   buildPendingBootstrapStatusMessage,
   countRunPermissionPendingMembers,
   countSnapshotPermissionPendingMembers,
+  hasPendingLaunchMembers,
 } from '../TeamProvisioningLaunchPendingMessage';
 
 import type {
@@ -109,6 +110,31 @@ describe('launch pending message helpers', () => {
     });
 
     expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+  });
+
+  it('detects pending launch members from live or persisted expected member counts', () => {
+    expect(
+      hasPendingLaunchMembers({
+        run: { expectedMembers: ['api'], memberSpawnStatuses: new Map() },
+        launchSummary: { pendingCount: 1 },
+      })
+    ).toBe(true);
+    expect(
+      hasPendingLaunchMembers({
+        run: { expectedMembers: [], memberSpawnStatuses: new Map() },
+        launchSummary: { pendingCount: 1 },
+        snapshot: snapshot({
+          expectedMembers: ['api'],
+          members: {},
+        }),
+      })
+    ).toBe(true);
+    expect(
+      hasPendingLaunchMembers({
+        run: { expectedMembers: ['api'], memberSpawnStatuses: new Map() },
+        launchSummary: { pendingCount: 0 },
+      })
+    ).toBe(false);
   });
 
   it('uses persisted expected member count instead of stale run expected members', () => {
