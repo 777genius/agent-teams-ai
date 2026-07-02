@@ -103,4 +103,38 @@ describe('TeamProvisioningInboxDuplicateMerge', () => {
 
     expect(ports.unlink).not.toHaveBeenCalled();
   });
+
+  it('keeps an unreadable duplicate on disk so its messages are not destroyed unmerged', async () => {
+    const inboxDir = '/tmp/team/inboxes';
+    const reads = new Map<string, string | null>([
+      [
+        'Alice.json',
+        JSON.stringify([{ messageId: 'a', timestamp: '2026-01-01T00:00:00.000Z', text: 'old' }]),
+      ],
+      // Oversized or timed-out read: tryReadRegularFileUtf8 reports null.
+      ['Alice-2.json', null],
+      [
+        'Alice-3.json',
+        JSON.stringify([{ messageId: 'b', timestamp: '2026-01-03T00:00:00.000Z', text: 'new' }]),
+      ],
+    ]);
+    const unlink = vi.fn(async () => undefined);
+    const ports = createPorts({
+      readDir: vi.fn(async () => ['Alice.json', 'Alice-2.json', 'Alice-3.json']),
+      readRegularFileUtf8: vi.fn(async (filePath) => reads.get(path.basename(filePath)) ?? null),
+      unlink,
+    });
+
+    await mergeAndRemoveDuplicateInboxes({
+      inboxDir,
+      baseNames: new Set(['Alice']),
+      timeoutMs: 5_000,
+      maxBytes: 1_000_000,
+      ports,
+    });
+
+    expect(ports.writeFileUtf8).toHaveBeenCalledTimes(1);
+    expect(unlink).toHaveBeenCalledTimes(1);
+    expect(unlink).toHaveBeenCalledWith(path.join(inboxDir, 'Alice-3.json'));
+  });
 });

@@ -60,22 +60,29 @@ export async function mergeAndRemoveDuplicateInboxes(
 
     const canonicalList = parseInboxMessageListRaw(canonicalRaw);
     const duplicateLists: unknown[][] = [];
+    // Only duplicates whose content made it into the merged canonical list may
+    // be removed; an unreadable duplicate (oversized, read timeout) still holds
+    // messages that would otherwise be destroyed unmerged.
+    const removableDuplicateFiles: string[] = [];
     for (const dupFile of mergePlan.duplicateFiles) {
       const dupPath = path.join(input.inboxDir, dupFile);
-      let dupRaw: string;
+      let dupRaw: string | null | undefined;
       try {
-        const raw = await input.ports.readRegularFileUtf8(dupPath, {
+        dupRaw = await input.ports.readRegularFileUtf8(dupPath, {
           timeoutMs: input.timeoutMs,
           maxBytes: input.maxBytes,
         });
-        if (!raw) {
-          continue;
-        }
-        dupRaw = raw;
       } catch {
         continue;
       }
+      if (dupRaw == null) {
+        continue;
+      }
 
+      removableDuplicateFiles.push(dupFile);
+      if (!dupRaw) {
+        continue;
+      }
       duplicateLists.push(parseInboxMessageListRaw(dupRaw));
     }
 
@@ -87,7 +94,7 @@ export async function mergeAndRemoveDuplicateInboxes(
       continue;
     }
 
-    for (const dupFile of mergePlan.duplicateFiles) {
+    for (const dupFile of removableDuplicateFiles) {
       try {
         await input.ports.unlink(path.join(input.inboxDir, dupFile));
         existing.delete(dupFile);
