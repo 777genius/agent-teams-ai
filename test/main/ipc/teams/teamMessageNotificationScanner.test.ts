@@ -168,4 +168,48 @@ describe('TeamMessageNotificationScanner', () => {
       })
     );
   });
+
+  it('uses a strict default api-error predicate that ignores ordinary prose', () => {
+    // Construct directly (not via createScanner) so the real default
+    // isActionableApiErrorMessage predicate is exercised end-to-end.
+    const scanner = new TeamMessageNotificationScanner({
+      configReader: {
+        getConfig: () => ({ notifications: { autoResumeOnRateLimit: autoResumeEnabled } }),
+      },
+      notificationSink,
+      autoResumeSink,
+      now: () => new Date('2026-04-17T12:02:00.000Z'),
+      formatClockTime: () => '12:05',
+    });
+
+    scanner.checkApiErrorMessages(
+      [
+        createMessage({
+          from: 'worker-1',
+          text: 'I added rate limiting and we hit the rate limit once.',
+          messageId: 'prose-1',
+        }),
+        createMessage({
+          from: 'worker-1',
+          text: 'We should handle the case where quota exceeded events fire.',
+          messageId: 'prose-2',
+        }),
+        createMessage({
+          from: 'worker-1',
+          text: 'API Error: 500 server failed',
+          messageId: 'real-api-500',
+        }),
+      ],
+      { teamName: 'my-team', teamDisplayName: 'My Team' }
+    );
+
+    expect(notificationSink.addTeamNotification).toHaveBeenCalledTimes(1);
+    expect(notificationSink.addTeamNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamEventType: 'api_error',
+        summary: 'API Error 500',
+        dedupeKey: 'api-error:my-team:real-api-500',
+      })
+    );
+  });
 });

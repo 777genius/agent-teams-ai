@@ -136,6 +136,20 @@ vi.mock('../../../../src/main/utils/fsRead', async (importOriginal) => {
   };
 });
 
+vi.mock(
+  '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy')
+      >();
+    return {
+      ...actual,
+      inferOpenCodeInboxMessageTaskRefs: vi.fn(actual.inferOpenCodeInboxMessageTaskRefs),
+    };
+  }
+);
+
 vi.mock('agent-teams-controller', () => ({
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES: [] as readonly string[],
@@ -157,6 +171,8 @@ vi.mock('agent-teams-controller', () => ({
 }));
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
+import { isOpenCodePromptAcceptedByObservation } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
+import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
@@ -791,9 +807,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       content: [{ type: 'text', text: 'Noted internal status.' }],
     });
     (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
-    for (let i = 0; i < 20 && service.getLiveLeadProcessMessages(teamName).length < 2; i++) {
-      await Promise.resolve();
-    }
+    await vi.waitFor(() => expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(2));
 
     const firstPayload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     const secondPayload = String(writeSpy.mock.calls[1]?.[0] ?? '');
@@ -2495,6 +2509,50 @@ Messages:
     expect(nativeMatchSpy).toHaveBeenCalledWith(teamName, 'team-lead', []);
   });
 
+  it('keeps same-team native matches retryable when persisting read state fails', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    const now = Date.now();
+    seedLeadInbox(teamName, [
+      {
+        from: 'alice',
+        to: 'team-lead',
+        text: 'Native delivered update',
+        summary: 'native update',
+        timestamp: new Date(now).toISOString(),
+        read: false,
+        messageId: 'same-team-native-persist-failed-1',
+      },
+    ]);
+    (service as any).recentSameTeamNativeFingerprints.set(teamName, [
+      {
+        id: 'fingerprint-1',
+        from: 'alice',
+        text: 'Native delivered update',
+        summary: 'native update',
+        seenAt: now,
+      },
+    ]);
+    vi.spyOn(service as any, 'markInboxMessagesRead').mockRejectedValue(new Error('write failed'));
+
+    await (service as any).reconcileSameTeamNativeDeliveries(teamName, 'team-lead');
+
+    expect((service as any).relayedLeadInboxMessageIds.has(teamName)).toBe(false);
+    expect((service as any).recentSameTeamNativeFingerprints.get(teamName)).toEqual([
+      expect.objectContaining({ id: 'fingerprint-1' }),
+    ]);
+    expect((service as any).pendingTimeouts.has(`same-team-persist:${teamName}`)).toBe(true);
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/team-lead.json`) ?? '[]'
+    );
+    expect(rows[0].read).toBe(false);
+
+    const retryTimer = (service as any).pendingTimeouts.get(`same-team-persist:${teamName}`);
+    clearTimeout(retryTimer);
+    (service as any).pendingTimeouts.delete(`same-team-persist:${teamName}`);
+  });
+
   it('does not let cross-team idle-shaped payloads inherit passive idle handling', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -2637,9 +2695,9 @@ Messages:
         summary: 'Comment on #abcd1234',
       },
     ]);
-    const inferSpy = vi
-      .spyOn(service as any, 'inferOpenCodeInboxMessageTaskRefs')
-      .mockResolvedValue(taskRefs);
+    const inferMock = vi
+      .mocked(inferOpenCodeInboxMessageTaskRefs)
+      .mockResolvedValueOnce(taskRefs);
     const deliverSpy = vi
       .spyOn(service, 'deliverOpenCodeMemberMessage')
       .mockResolvedValue({ delivered: true, diagnostics: [] });
@@ -2647,10 +2705,12 @@ Messages:
     const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
 
     expect(relay).toMatchObject({ relayed: 1, attempted: 1, delivered: 1, failed: 0 });
-    expect(inferSpy).toHaveBeenCalledWith(
-      teamName,
-      expect.objectContaining({ messageId: 'opencode-relay-infer-1' }),
-      expect.any(Function)
+    expect(inferMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        message: expect.objectContaining({ messageId: 'opencode-relay-infer-1' }),
+        readTasks: expect.any(Function),
+      })
     );
     expect(deliverSpy).toHaveBeenCalledWith(
       teamName,
@@ -2768,12 +2828,8 @@ Messages:
   });
 
   it('does not treat empty OpenCode observations as accepted without delivered prompt proof', () => {
-    const service = new TeamProvisioningService();
-    const isAccepted = (
-      service as unknown as {
-        isOpenCodePromptAcceptedByObservation: (observation?: unknown) => boolean;
-      }
-    ).isOpenCodePromptAcceptedByObservation.bind(service);
+    const isAccepted = (observation?: unknown) =>
+      isOpenCodePromptAcceptedByObservation(observation as any);
 
     expect(
       isAccepted({
@@ -2893,28 +2949,34 @@ Messages:
       ])
     );
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
-    vi.spyOn(
-      service as any,
-      'findDeliverableOpenCodeRuntimeBootstrapSessionEvidence'
-    ).mockResolvedValue({
-      id: 'session-jack',
-      teamName,
-      memberName: 'jack',
-      laneId,
-      runId: 'opencode-run-1',
-      source: 'runtime_bootstrap_checkin',
-    });
-    vi.spyOn(service as any, 'applyOpenCodeVisibleDestinationProof').mockImplementation(
-      async (input: any) => ({
-        ledgerRecord: input.ledgerRecord,
-        visibleReply: null,
-      })
+    const createDeliveryService = (service as any).createOpenCodeMemberMessageDeliveryService.bind(
+      service
     );
-    vi.spyOn(service as any, 'materializeOpenCodePlainTextReplyIfNeeded').mockImplementation(
-      async (input: any) => ({
-        ledgerRecord: input.ledgerRecord,
-        visibleReply: null,
-      })
+    vi.spyOn(service as any, 'createOpenCodeMemberMessageDeliveryService').mockImplementation(
+      () => {
+        const deliveryService = createDeliveryService();
+        const deps = (deliveryService as any).deps;
+        deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = vi.fn(async () => ({
+          id: 'session-jack',
+          teamName,
+          memberName: 'jack',
+          laneId,
+          runId: 'opencode-run-1',
+          source: 'runtime_bootstrap_checkin',
+        }));
+        deps.openCodeVisibleReplyProofService = {
+          ...deps.openCodeVisibleReplyProofService,
+          applyDestinationProof: vi.fn(async (input: any) => ({
+            ledgerRecord: input.ledgerRecord,
+            visibleReply: null,
+          })),
+          materializePlainTextReplyIfNeeded: vi.fn(async (input: any) => ({
+            ledgerRecord: input.ledgerRecord,
+            visibleReply: null,
+          })),
+        };
+        return deliveryService;
+      }
     );
     const watchdogSpy = vi
       .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
@@ -3289,9 +3351,8 @@ Messages:
         taskRefs,
       },
     };
-    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
-      visibleReply
-    );
+    const proofService = (service as any).openCodeVisibleReplyProofService;
+    vi.spyOn(proofService, 'findByRelayOfMessageId').mockResolvedValue(visibleReply);
     const applyDestinationProof = vi.fn(async (input: Record<string, unknown>) => ({
       ...ledgerRecord,
       status: 'responded',
@@ -3310,7 +3371,7 @@ Messages:
     service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
     service.setTeamChangeEmitter(teamChangeEmitter);
 
-    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+    const result = await proofService.applyDestinationProof({
       ledger: { applyDestinationProof },
       ledgerRecord,
       teamName,
@@ -3399,16 +3460,15 @@ Messages:
         messageId: 'visible-reply-proven',
       },
     };
-    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
-      visibleReply
-    );
+    const proofService = (service as any).openCodeVisibleReplyProofService;
+    vi.spyOn(proofService, 'findByRelayOfMessageId').mockResolvedValue(visibleReply);
     const applyDestinationProof = vi.fn(async () => ledgerRecord);
     const advisoryInvalidator = vi.fn();
     const teamChangeEmitter = vi.fn();
     service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
     service.setTeamChangeEmitter(teamChangeEmitter);
 
-    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+    const result = await proofService.applyDestinationProof({
       ledger: { applyDestinationProof },
       ledgerRecord,
       teamName,

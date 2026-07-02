@@ -98,6 +98,9 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8':
     hash: 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
     path: patches/@radix-ui__react-tooltip@1.2.8.patch
+  fastmcp@3.35.0:
+    hash: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
+    path: patches/fastmcp@3.35.0.patch
 
 importers:
 
@@ -694,7 +697,7 @@ importers:
         version: link:../agent-teams-controller
       fastmcp:
         specifier: ^3.35.0
-        version: 3.35.0
+        version: 3.35.0(patch_hash=7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -18314,7 +18317,7 @@ snapshots:
       semver: 7.7.4
       toad-cache: 3.7.0
 
-  fastmcp@3.35.0:
+  fastmcp@3.35.0(patch_hash=7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df):
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
       '@standard-schema/spec': 1.1.0

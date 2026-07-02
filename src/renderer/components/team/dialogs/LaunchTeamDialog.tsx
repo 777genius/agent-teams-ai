@@ -2117,12 +2117,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (!selectedModel.trim()) {
         return t('launch.validation.openCodeLeadModelRequired');
       }
-      const activeMemberCount = effectiveMemberDrafts.filter(
-        (member) => !member.removedAt && member.name.trim()
-      ).length;
-      if (activeMemberCount === 0) {
-        return t('launch.validation.openCodeTeammateRequired');
-      }
     }
 
     if (!runtimeProviderLoadingById.get(selectedProviderId)) {

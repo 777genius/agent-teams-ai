@@ -25,6 +25,9 @@ export interface PlannedRuntimeMember extends RuntimeLanePlannerMemberInput {
   providerId: TeamProviderId;
 }
 
+export const OPEN_CODE_SOLO_MEMBER_NAME = 'solo';
+export const OPEN_CODE_SOLO_MEMBER_ROLE = 'Solo OpenCode Agent';
+
 export interface PlannedTeamMemberLaneIdentity {
   laneId: string;
   laneKind: 'primary' | 'secondary';
@@ -43,6 +46,13 @@ export type TeamRuntimeLanePlan =
       primaryMembers: PlannedRuntimeMember[];
       allMembers: PlannedRuntimeMember[];
       sideLanes: [];
+    }
+  | {
+      mode: 'pure_opencode_solo';
+      primaryMembers: [PlannedRuntimeMember];
+      allMembers: [PlannedRuntimeMember];
+      sideLanes: [];
+      soloMember: PlannedRuntimeMember;
     }
   | {
       mode: 'pure_opencode_worktree_root_lanes';
@@ -127,6 +137,16 @@ export function buildOpenCodeSecondaryLaneId(
   return `secondary:opencode:${member.name.trim()}`;
 }
 
+export function createOpenCodeSoloRuntimeMember(baseCwd?: string): PlannedRuntimeMember {
+  const normalizedBaseCwd = baseCwd?.trim();
+  return {
+    name: OPEN_CODE_SOLO_MEMBER_NAME,
+    role: OPEN_CODE_SOLO_MEMBER_ROLE,
+    providerId: 'opencode',
+    ...(normalizedBaseCwd ? { cwd: normalizedBaseCwd } : {}),
+  };
+}
+
 export function planTeamRuntimeLanes(params: {
   leadProviderId?: TeamProviderId;
   members: readonly RuntimeLanePlannerMemberInput[];
@@ -147,6 +167,19 @@ export function planTeamRuntimeLanes(params: {
       };
     }
     const normalizedBaseCwd = params.baseCwd?.trim();
+    if (allMembers.length === 0) {
+      const soloMember = createOpenCodeSoloRuntimeMember(normalizedBaseCwd);
+      return {
+        ok: true,
+        plan: {
+          mode: 'pure_opencode_solo',
+          primaryMembers: [soloMember],
+          allMembers: [soloMember],
+          sideLanes: [],
+          soloMember,
+        },
+      };
+    }
     const worktreeRootMembers = allMembers.filter((member) => {
       const memberCwd = member.cwd?.trim();
       return Boolean(memberCwd && (!normalizedBaseCwd || memberCwd !== normalizedBaseCwd));
@@ -226,8 +259,14 @@ export function isOpenCodeSideLanePlan(
 
 export function isPureOpenCodeLanePlan(
   plan: TeamRuntimeLanePlan
-): plan is Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode' }> {
-  return plan.mode === 'pure_opencode';
+): plan is Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode' | 'pure_opencode_solo' }> {
+  return plan.mode === 'pure_opencode' || plan.mode === 'pure_opencode_solo';
+}
+
+export function isPureOpenCodeSoloLanePlan(
+  plan: TeamRuntimeLanePlan
+): plan is Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_solo' }> {
+  return plan.mode === 'pure_opencode_solo';
 }
 
 export function isPureOpenCodeWorktreeRootLanePlan(

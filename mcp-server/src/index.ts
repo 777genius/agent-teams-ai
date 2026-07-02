@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'url';
+import { realpathSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 import { FastMCP } from 'fastmcp';
 
@@ -40,7 +41,9 @@ export interface AgentTeamsMcpHttpHealthIdentity {
   ownerInstanceId: string;
 }
 
-export function createServer(input: { healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null } = {}) {
+export function createServer(
+  input: { healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null } = {}
+) {
   const server = new FastMCP({
     name: 'agent-teams-mcp',
     version: '1.0.0',
@@ -152,13 +155,34 @@ export function resolveStartOptions(
         env.AGENT_TEAMS_MCP_HTTP_HOST?.trim() ??
         DEFAULT_HTTP_HOST,
       port: parsePort(getArgValue(argv, '--port') ?? env.AGENT_TEAMS_MCP_HTTP_PORT),
-      endpoint: normalizeEndpoint(getArgValue(argv, '--endpoint') ?? env.AGENT_TEAMS_MCP_HTTP_ENDPOINT),
+      endpoint: normalizeEndpoint(
+        getArgValue(argv, '--endpoint') ?? env.AGENT_TEAMS_MCP_HTTP_ENDPOINT
+      ),
     },
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+async function main(): Promise<void> {
   const startOptions = resolveStartOptions();
   const server = createServer({ healthIdentity: buildHttpHealthIdentity(startOptions) });
-  void server.start(startOptions);
+  await server.start(startOptions);
+}
+
+function isEntrypoint(argv: string[] = process.argv): boolean {
+  const entryPath = argv[1];
+  if (!entryPath) {
+    return false;
+  }
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(entryPath);
+  } catch {
+    return fileURLToPath(import.meta.url) === entryPath;
+  }
+}
+
+if (isEntrypoint()) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? (error.stack ?? error.message) : String(error));
+    process.exitCode = 1;
+  });
 }

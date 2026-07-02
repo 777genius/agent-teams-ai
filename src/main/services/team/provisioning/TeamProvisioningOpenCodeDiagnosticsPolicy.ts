@@ -216,7 +216,7 @@ export function isOpenCodeModelPrepareBusyDeferred(
   prepare: Extract<TeamRuntimePrepareResult, { ok: false }>,
   primaryReason: string
 ): boolean {
-  const candidates = [primaryReason, prepare.reason, ...prepare.diagnostics];
+  const candidates = [primaryReason, prepare.reason, ...prepare.diagnostics, ...prepare.warnings];
   return (
     prepare.retryable &&
     !candidates.some(isOpenCodeModelVerificationTimeoutDiagnostic) &&

@@ -1,5 +1,6 @@
 import {
   appendDiagnosticOnce,
+  applyOpenCodeSecondaryBootstrapStallOverlay,
   buildOpenCodeSecondaryLaneTimingDiagnostic,
   buildOpenCodeUncommittedBootstrapDiagnostic,
   collectOpenCodeSecondaryLaneFailureDiagnostics,
@@ -7,6 +8,7 @@ import {
   createUnexpectedMixedSecondaryLaneFailureResult,
   downgradeUncommittedOpenCodeBootstrapEvidence,
   formatOpenCodeLaneTimingMs,
+  getOpenCodeSecondaryBootstrapPendingMemberNames,
   getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
   hasMaterializedOpenCodeRuntimeForBootstrap,
   hasOpenCodeRuntimeEntryHandle,
@@ -32,6 +34,7 @@ import {
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
   summarizeRuntimeLaunchResultMembers,
+  toOpenCodePersistedLaunchMember,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { describe, expect, it } from 'vitest';
 
@@ -39,7 +42,7 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberLaunchEvidence,
 } from '@main/services/team/runtime/TeamRuntimeAdapter';
-import type { PersistedTeamLaunchMemberState } from '@shared/types';
+import type { PersistedTeamLaunchMemberState, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const acceptedAt = '2026-01-01T00:00:00.000Z';
 const stalledAtMs = Date.parse(acceptedAt) + MEMBER_BOOTSTRAP_STALL_MS + 1;
@@ -61,6 +64,26 @@ function makePersisted(
     firstSpawnAcceptedAt: acceptedAt,
     lastEvaluatedAt: acceptedAt,
     ...overrides,
+  };
+}
+
+function makeSnapshot(
+  members: Record<string, PersistedTeamLaunchMemberState>
+): PersistedTeamLaunchSnapshot {
+  return {
+    version: 2,
+    teamName: 'demo',
+    updatedAt: acceptedAt,
+    launchPhase: 'active',
+    expectedMembers: Object.keys(members),
+    members,
+    summary: {
+      confirmedCount: 0,
+      pendingCount: Object.keys(members).length,
+      failedCount: 0,
+      runtimeAlivePendingCount: 0,
+    },
+    teamLaunchState: 'partial_pending',
   };
 }
 
@@ -297,6 +320,72 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     expect(result.diagnostics).toEqual(['launch failed']);
   });
 
+  it('projects OpenCode launch evidence into persisted primary launch members', () => {
+    const member = toOpenCodePersistedLaunchMember(
+      {
+        name: 'alice',
+        providerId: 'opencode',
+        model: ' minimax-m2.5-free ',
+        effort: 'medium',
+        cwd: ' /tmp/demo ',
+      },
+      {
+        memberName: 'alice',
+        providerId: 'opencode',
+        launchState: 'runtime_pending_permission',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        pendingPermissionRequestIds: ['perm-1', 'perm-1', 'perm-2'],
+        sessionId: 'session-1',
+        appManagedBootstrapCandidate: {
+          schemaVersion: 1,
+          source: 'app_managed_bootstrap',
+          teamName: 'demo',
+          memberName: 'alice',
+          runtimeSessionId: 'session-1',
+          runId: 'candidate-run',
+          laneId: 'primary',
+          messageID: 'msg-1',
+          contextHash: 'ctx-1',
+          briefingHash: 'brief-1',
+          injectionVerifiedAt: acceptedAt,
+          candidateAt: acceptedAt,
+        },
+        diagnostics: ['waiting for permission approval'],
+      },
+      { runId: 'launch-run', nowIso: () => acceptedAt }
+    );
+
+    expect(member).toMatchObject({
+      name: 'alice',
+      providerId: 'opencode',
+      model: 'minimax-m2.5-free',
+      cwd: '/tmp/demo',
+      laneId: 'primary',
+      laneKind: 'primary',
+      laneOwnerProviderId: 'opencode',
+      launchState: 'runtime_pending_permission',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      pendingPermissionRequestIds: ['perm-1', 'perm-2'],
+      runtimeSessionId: 'session-1',
+      runtimeRunId: 'candidate-run',
+      runtimeLastSeenAt: acceptedAt,
+      firstSpawnAcceptedAt: acceptedAt,
+      lastRuntimeAliveAt: acceptedAt,
+      lastEvaluatedAt: acceptedAt,
+      sources: {
+        processAlive: true,
+        nativeHeartbeat: false,
+      },
+      diagnostics: ['waiting for permission approval'],
+    });
+  });
+
   it('recognizes runtime entry handles from pid, runtime session, or liveness', () => {
     expect(hasOpenCodeRuntimeEntryHandle({ pid: 7 })).toBe(true);
     expect(hasOpenCodeRuntimeEntryHandle({ runtimePid: 8 })).toBe(true);
@@ -526,6 +615,67 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
         stalledAtMs
       )
     ).toBe(false);
+  });
+
+  it('applies OpenCode secondary bootstrap stall overlay to persisted launch snapshots', () => {
+    const original = makeSnapshot({
+      Builder: makePersisted({
+        runtimeAlive: true,
+        livenessKind: 'runtime_process',
+        firstSpawnAcceptedAt: '2026-01-01T00:10:00.000Z',
+        diagnostics: ['member_session_recorded at 2026-01-01T00:00:00.000Z'],
+      }),
+    });
+
+    const overlaid = applyOpenCodeSecondaryBootstrapStallOverlay(original, {
+      nowMs: stalledAtMs,
+      updatedAt: '2026-01-01T00:05:01.000Z',
+    });
+
+    expect(overlaid).not.toBe(original);
+    expect(overlaid?.updatedAt).toBe('2026-01-01T00:05:01.000Z');
+    expect(overlaid?.members.Builder).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      runtimeDiagnostic: OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
+      runtimeDiagnosticSeverity: 'warning',
+      bootstrapStalled: true,
+      firstSpawnAcceptedAt: '2026-01-01T00:00:00.000Z',
+      lastEvaluatedAt: '2026-01-01T00:05:01.000Z',
+      diagnostics: [
+        'member_session_recorded at 2026-01-01T00:00:00.000Z',
+        OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
+        'opencode_bootstrap_stalled',
+      ],
+    });
+
+    const unchanged = makeSnapshot({
+      Builder: makePersisted({
+        runtimeSessionId: 'runtime-session',
+        pendingPermissionRequestIds: ['perm-1'],
+      }),
+    });
+    expect(
+      applyOpenCodeSecondaryBootstrapStallOverlay(unchanged, {
+        nowMs: stalledAtMs,
+        updatedAt: '2026-01-01T00:05:01.000Z',
+      })
+    ).toBe(unchanged);
+  });
+
+  it('selects OpenCode secondary bootstrap-pending members from persisted snapshots', () => {
+    const snapshot = makeSnapshot({
+      Builder: makePersisted({ name: 'Builder' }),
+      Done: makePersisted({ name: 'Done', launchState: 'confirmed_alive' }),
+      Failed: makePersisted({ name: 'Failed', hardFailure: true }),
+      Primary: makePersisted({ name: 'Primary', laneKind: 'primary' }),
+      Codex: makePersisted({ name: 'Codex', providerId: 'codex' }),
+    });
+
+    expect([...getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot)]).toEqual(['Builder']);
+    expect([...getOpenCodeSecondaryBootstrapPendingMemberNames(null)]).toEqual([]);
   });
 
   it('recognizes recoverable terminal persisted candidates and runtime evidence', () => {

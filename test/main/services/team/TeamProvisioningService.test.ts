@@ -25,6 +25,28 @@ let tempTeamsBase = '';
 let tempTasksBase = '';
 let tempProjectsBase = '';
 
+async function expectOpenCodeTrackedPendingDelivery(
+  delivery: Promise<unknown>
+): Promise<Record<string, unknown>> {
+  const result = (await delivery) as Record<string, unknown>;
+
+  expect(result).toMatchObject({
+    delivered: true,
+    accepted: true,
+    responsePending: true,
+    responseState: 'not_observed',
+    ledgerStatus: 'retry_scheduled',
+    reason: 'opencode_delivery_response_pending',
+  });
+  expect(result.diagnostics).toEqual(
+    expect.arrayContaining(['opencode_delivery_response_pending'])
+  );
+  expect(result.ledgerRecordId).toEqual(expect.stringMatching(/^opencode-prompt:/));
+  expect(result.laneId).toEqual(expect.any(String));
+
+  return result;
+}
+
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
 }));
@@ -1068,6 +1090,39 @@ describe('TeamProvisioningService', () => {
         agentId: 'agent-bob',
       });
       expect(internals.readPersistedTeamProjectPath(teamName)).toBe('/repo-two');
+    });
+  });
+
+  describe('OpenCode solo runtime recipients', () => {
+    it('resolves the solo runtime target only for empty OpenCode-led rosters', async () => {
+      const teamName = 'opencode-solo-recipient-team';
+      const teamDir = path.join(tempTeamsBase, teamName);
+      fs.mkdirSync(teamDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/opencode-solo-project',
+          members: [
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'opencode/big-pickle',
+            },
+          ],
+        }),
+        'utf8'
+      );
+
+      const svc = new TeamProvisioningService();
+
+      await expect(svc.resolveRuntimeRecipientProviderId(teamName, 'solo')).resolves.toBe(
+        'opencode'
+      );
+      await expect(svc.resolveRuntimeRecipientProviderId(teamName, 'alice')).resolves.toBe(
+        undefined
+      );
     });
   });
 
@@ -8762,16 +8817,13 @@ describe('TeamProvisioningService', () => {
         ]),
       };
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage('team-a', {
           memberName: 'bob',
           text: 'hello bob',
           messageId: 'msg-1',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-bob',
@@ -14374,16 +14426,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello after restart',
           messageId: 'msg-after-restart',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-durable',
@@ -14491,16 +14540,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello live lane',
           messageId: 'msg-live-lane',
         })
-      ).resolves.toMatchObject({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-live',
@@ -14943,16 +14989,13 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await expect(
+      await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
           text: 'hello via manifest fallback',
           messageId: 'msg-manifest-fallback',
         })
-      ).resolves.toEqual({
-        delivered: true,
-        diagnostics: [],
-      });
+      );
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'opencode-run-from-manifest',
@@ -25390,6 +25433,7 @@ describe('TeamProvisioningService', () => {
       runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
+      runtimeRunId: 'opencode-run-alice',
       runtimeSessionId: 'ses_alice_partial_bootstrap',
       livenessKind: 'registered_only',
       bootstrapStalled: true,

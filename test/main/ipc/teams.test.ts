@@ -248,6 +248,17 @@ describe('ipc teams handlers', () => {
         ) => Promise<{ deliveredToInbox: boolean; messageId: string }>
       >
     >,
+    sendRuntimeRecipientMessage: vi.fn(async (_teamName: string, _request: unknown) => ({
+      deliveredToInbox: true,
+      messageId: 'm1',
+    })) as ReturnType<
+      typeof vi.fn<
+        (
+          teamName: string,
+          request: unknown
+        ) => Promise<{ deliveredToInbox: boolean; messageId: string }>
+      >
+    >,
     sendDirectToLead: vi.fn(async () => ({ deliveredToInbox: false, messageId: 'direct-1' })),
     createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
     requestReview: vi.fn(async () => undefined),
@@ -328,6 +339,8 @@ describe('ipc teams handlers', () => {
             acceptanceUnknown?: boolean;
             responseState?: NonNullable<SendMessageResult['runtimeDelivery']>['responseState'];
             ledgerStatus?: NonNullable<SendMessageResult['runtimeDelivery']>['ledgerStatus'];
+            ledgerRecordId?: string;
+            laneId?: string;
             reason?: string;
             diagnostics?: string[];
           }
@@ -850,7 +863,16 @@ describe('ipc teams handlers', () => {
       attempted: 1,
       delivered: 1,
       failed: 0,
-      lastDelivery: { delivered: true },
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        responseState: 'not_observed',
+        ledgerStatus: 'retry_scheduled',
+        ledgerRecordId: 'opencode-prompt:test',
+        laneId: 'secondary:opencode:bob',
+        diagnostics: ['opencode_delivery_response_pending'],
+      },
     });
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -863,14 +885,15 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean; data?: SendMessageResult };
 
     expect(result.success).toBe(true);
-    expect(service.sendMessage).toHaveBeenCalledWith(
+    expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledWith(
       'my-team',
       expect.objectContaining({
         member: 'bob',
         text: 'Can you check this?',
       })
     );
-    expect(service.sendMessage).not.toHaveBeenCalledWith(
+    expect(service.sendMessage).not.toHaveBeenCalled();
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalledWith(
       'my-team',
       expect.objectContaining({
         text: expect.stringContaining('SendMessage'),
@@ -893,8 +916,69 @@ describe('ipc teams handlers', () => {
       providerId: 'opencode',
       attempted: true,
       delivered: true,
+      accepted: true,
+      responsePending: true,
+      responseState: 'not_observed',
+      ledgerStatus: 'retry_scheduled',
+      ledgerRecordId: 'opencode-prompt:test',
+      laneId: 'secondary:opencode:bob',
+      diagnostics: ['opencode_delivery_response_pending'],
     });
     expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).not.toHaveBeenCalled();
+  });
+
+  it('hydrates bare OpenCode read-shortcut relay success from durable delivery status', async () => {
+    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 0,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: { delivered: true },
+    });
+    provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
+      messageId: 'm1',
+      providerId: 'opencode',
+      attempted: true,
+      delivered: true,
+      accepted: true,
+      responsePending: false,
+      responseState: 'responded_visible_message',
+      ledgerStatus: 'responded',
+      visibleReplyMessageId: 'reply-1',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      ledgerRecordId: 'opencode-prompt:responded',
+      laneId: 'secondary:opencode:bob',
+      diagnostics: [],
+      userVisibleImpact: { state: 'none' },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Ping bob',
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(
+      'my-team',
+      'm1'
+    );
+    expect(result.data?.runtimeDelivery).toMatchObject({
+      providerId: 'opencode',
+      attempted: true,
+      delivered: true,
+      accepted: true,
+      responsePending: false,
+      responseState: 'responded_visible_message',
+      ledgerStatus: 'responded',
+      visibleReplyMessageId: 'reply-1',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      ledgerRecordId: 'opencode-prompt:responded',
+      laneId: 'secondary:opencode:bob',
+      userVisibleImpact: { state: 'none' },
+    });
   });
 
   it('returns runtimeDelivery failure without hiding the persisted OpenCode message', async () => {
@@ -1020,9 +1104,12 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: true,
         responseState: 'not_observed',
         ledgerStatus: 'pending',
+        ledgerRecordId: 'opencode-prompt:durable',
+        laneId: 'secondary:opencode:bob',
         reason: 'opencode_delivery_response_pending',
         diagnostics: ['prompt accepted'],
         userVisibleImpact: { state: 'none' },
@@ -1046,9 +1133,12 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: true,
         responseState: 'not_observed',
         ledgerStatus: 'pending',
+        ledgerRecordId: 'opencode-prompt:durable',
+        laneId: 'secondary:opencode:bob',
         reason: 'opencode_delivery_response_pending',
         diagnostics: ['prompt accepted'],
         userVisibleImpact: { state: 'checking' },
@@ -1059,6 +1149,7 @@ describe('ipc teams handlers', () => {
       const impactInput = impactCalls.at(-1)?.[0];
       expect(impactInput).toMatchObject({
         delivered: true,
+        accepted: true,
         responsePending: true,
       });
       expect(impactInput).not.toHaveProperty('userVisibleImpact');
@@ -1079,11 +1170,14 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: false,
         responseState: 'responded_visible_message',
         ledgerStatus: 'responded',
         visibleReplyMessageId: 'reply-1',
         visibleReplyCorrelation: 'relayOfMessageId',
+        ledgerRecordId: 'opencode-prompt:responded',
+        laneId: 'secondary:opencode:bob',
         acceptanceUnknown: false,
         diagnostics: [],
         userVisibleImpact: { state: 'none' },
@@ -1104,11 +1198,14 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: true,
+        accepted: true,
         responsePending: false,
         responseState: 'responded_visible_message',
         ledgerStatus: 'responded',
         visibleReplyMessageId: 'reply-1',
         visibleReplyCorrelation: 'relayOfMessageId',
+        ledgerRecordId: 'opencode-prompt:responded',
+        laneId: 'secondary:opencode:bob',
         acceptanceUnknown: false,
         userVisibleImpact: { state: 'none' },
       });

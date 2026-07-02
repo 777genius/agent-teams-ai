@@ -383,7 +383,10 @@ async function waitForOpenCodeRuntimeRelayForUi(input: {
     ]);
 
     if (outcome.kind === 'relay') {
-      return outcome.relay;
+      return await enrichBareOpenCodeRuntimeRelayResultForUi({
+        ...input,
+        relay: outcome.relay,
+      });
     }
 
     try {
@@ -413,11 +416,56 @@ async function waitForOpenCodeRuntimeRelayForUi(input: {
   }
 }
 
+async function enrichBareOpenCodeRuntimeRelayResultForUi(input: {
+  provisioning: TeamProvisioningService;
+  teamName: string;
+  memberName: string;
+  messageId: string;
+  relay: OpenCodeMemberInboxRelayResult;
+}): Promise<OpenCodeMemberInboxRelayResult> {
+  if (!shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay(input.relay)) {
+    return input.relay;
+  }
+
+  try {
+    const status = await withTimeoutValue(
+      input.provisioning.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
+      OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
+      null
+    );
+    return status ? openCodeRuntimeDeliveryStatusToRelayResult(status) : input.relay;
+  } catch (error) {
+    logger.warn(
+      `OpenCode runtime delivery status enrichment failed for teammate "${input.memberName}": ${getErrorMessage(error)}`
+    );
+    return input.relay;
+  }
+}
+
+function shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay(
+  relay: OpenCodeMemberInboxRelayResult
+): boolean {
+  const delivery = relay.lastDelivery;
+  if (!delivery?.delivered) {
+    return false;
+  }
+  return (
+    typeof delivery.accepted !== 'boolean' &&
+    typeof delivery.responsePending !== 'boolean' &&
+    !delivery.responseState &&
+    !delivery.ledgerStatus &&
+    !delivery.ledgerRecordId &&
+    !delivery.laneId &&
+    !delivery.userVisibleImpact
+  );
+}
+
 function openCodeRuntimeDeliveryStatusToRelayResult(
   status: OpenCodeRuntimeDeliveryStatus
 ): OpenCodeMemberInboxRelayResult {
   const lastDelivery: OpenCodeMemberInboxDelivery = {
     delivered: status.delivered,
+    ...(typeof status.accepted === 'boolean' ? { accepted: status.accepted } : {}),
     ...(typeof status.responsePending === 'boolean'
       ? { responsePending: status.responsePending }
       : {}),
@@ -432,6 +480,8 @@ function openCodeRuntimeDeliveryStatusToRelayResult(
     ...(status.visibleReplyCorrelation
       ? { visibleReplyCorrelation: status.visibleReplyCorrelation }
       : {}),
+    ...(status.ledgerRecordId ? { ledgerRecordId: status.ledgerRecordId } : {}),
+    ...(status.laneId ? { laneId: status.laneId } : {}),
     ...(status.queuedBehindMessageId
       ? { queuedBehindMessageId: status.queuedBehindMessageId }
       : {}),
@@ -3284,7 +3334,7 @@ async function handleSendMessage(
       }
     }
 
-    const result = await getTeamDataService().sendMessage(tn, {
+    const messageRequest: SendMessageRequest = {
       member: memberName,
       text: inboxText,
       summary: payload.summary,
@@ -3294,7 +3344,11 @@ async function handleSendMessage(
       taskRefs: validatedTaskRefs.value,
       ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
       ...(validatedAttachments?.length ? { attachments: validatedAttachments } : {}),
-    });
+    };
+    const teamDataService = getTeamDataService();
+    const result = isOpenCodeRecipient
+      ? await teamDataService.sendRuntimeRecipientMessage(tn, messageRequest)
+      : await teamDataService.sendMessage(tn, messageRequest);
 
     // Teammate inbox relay DISABLED (2026-03-23).
     // Codex/Claude teammates read their own inbox files directly via fs.watch.
@@ -3340,12 +3394,15 @@ async function handleSendMessage(
           providerId: 'opencode',
           attempted: true,
           delivered: delivery.delivered,
+          accepted: delivery.accepted,
           responsePending: delivery.responsePending,
           acceptanceUnknown: delivery.acceptanceUnknown,
           responseState: delivery.responseState,
           ledgerStatus: delivery.ledgerStatus,
           visibleReplyMessageId: delivery.visibleReplyMessageId,
           visibleReplyCorrelation: delivery.visibleReplyCorrelation,
+          ledgerRecordId: delivery.ledgerRecordId,
+          laneId: delivery.laneId,
           queuedBehindMessageId: delivery.queuedBehindMessageId,
           reason: delivery.reason,
           diagnostics: delivery.diagnostics,

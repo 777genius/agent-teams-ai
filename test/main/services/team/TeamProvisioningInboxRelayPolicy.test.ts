@@ -3,7 +3,11 @@ import {
   compareMemberInboxRelayMessagesByPriority,
   compareOpenCodeInboxRelayMessagesByPriority,
   getLeadInboxRelayPriority,
+  hasStableInboxMessageId,
+  isCurrentProofMissingRecoveryForegroundMessage,
+  isCurrentReviewPickupRequestForegroundMessage,
   normalizeSameTeamText,
+  openCodeTaskRefsOverlap,
   shouldSuppressUnverifiedLeadRelayStateLine,
 } from '@main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import { describe, expect, it } from 'vitest';
@@ -90,5 +94,58 @@ describe('TeamProvisioningInboxRelayPolicy', () => {
       false
     );
     expect(shouldSuppressUnverifiedLeadRelayStateLine('mergeable branch notes')).toBe(false);
+  });
+
+  it('matches OpenCode review pickup foreground messages by structured task refs', () => {
+    const taskRef = { teamName: 'team', taskId: 'task-1', displayId: '42' };
+
+    expect(
+      isCurrentReviewPickupRequestForegroundMessage(
+        {
+          from: 'system',
+          to: 'dev',
+          text: '**Please review** review_start',
+          timestamp: baseMessage.timestamp,
+          read: false,
+          source: 'system_notification',
+          taskRefs: [taskRef],
+        },
+        { workSyncIntent: 'review_pickup', taskRefs: [taskRef] }
+      )
+    ).toBe(true);
+  });
+
+  it('matches proof-missing recovery messages by stable message id', () => {
+    expect(
+      isCurrentProofMissingRecoveryForegroundMessage(
+        {
+          from: 'system',
+          to: 'dev',
+          text: 'retry',
+          timestamp: baseMessage.timestamp,
+          read: false,
+          messageId: 'msg-1',
+        },
+        { workSyncIntent: 'agenda_sync', workSyncIntentKey: 'proof-missing:msg-1' }
+      )
+    ).toBe(true);
+    expect(
+      hasStableInboxMessageId({
+        ...baseMessage,
+        text: '',
+        from: 'user',
+        to: 'dev',
+        read: false,
+      })
+    ).toBe(false);
+  });
+
+  it('detects overlapping OpenCode task refs after normalization', () => {
+    expect(
+      openCodeTaskRefsOverlap(
+        [{ teamName: 'team', taskId: 'task-1', displayId: '42' }],
+        [{ teamName: 'team', taskId: 'task-1', displayId: '42' }]
+      )
+    ).toBe(true);
   });
 });

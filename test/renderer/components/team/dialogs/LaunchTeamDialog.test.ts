@@ -1223,7 +1223,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('blocks OpenCode lead launch without an OpenCode teammate', async () => {
+  it('allows OpenCode lead launch without teammates for solo runtime teams', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -1274,12 +1274,22 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(host.textContent).toContain('OpenCode lead requires at least one OpenCode teammate.');
+    expect(host.textContent).not.toContain(
+      'OpenCode lead requires at least one OpenCode teammate.'
+    );
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
-    expect(submitButton?.hasAttribute('disabled')).toBe(true);
-    expect(onLaunch).not.toHaveBeenCalled();
+    expect(submitButton).toBeTruthy();
+    expect(submitButton?.hasAttribute('disabled')).toBe(false);
+
+    await act(async () => {
+      submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+      await flush();
+    });
+
+    expect(onLaunch).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

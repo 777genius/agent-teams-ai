@@ -747,6 +747,7 @@ export interface SendMessageResult {
     providerId: 'opencode';
     attempted: boolean;
     delivered: boolean;
+    accepted?: boolean;
     responsePending?: boolean;
     responseState?:
       | 'not_observed'
@@ -777,6 +778,8 @@ export interface SendMessageResult {
       | 'relayOfMessageId'
       | 'direct_child_message_send'
       | 'plain_assistant_text';
+    ledgerRecordId?: string;
+    laneId?: string;
     acceptanceUnknown?: boolean;
     queuedBehindMessageId?: string;
     reason?: string;

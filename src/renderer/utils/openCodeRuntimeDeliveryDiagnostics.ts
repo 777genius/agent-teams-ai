@@ -5,9 +5,12 @@ export interface OpenCodeRuntimeDeliveryDebugDetails {
   statusMessageId?: string;
   providerId: string;
   delivered: boolean | null;
+  accepted?: boolean | null;
   responsePending: boolean | null;
   responseState: string | null;
   ledgerStatus: string | null;
+  ledgerRecordId?: string | null;
+  laneId?: string | null;
   visibleReplyMessageId?: string | null;
   visibleReplyCorrelation?: string | null;
   queuedBehindMessageId?: string | null;
@@ -169,12 +172,15 @@ export function buildOpenCodeRuntimeDeliveryDiagnostics(
       statusMessageId,
       providerId: runtimeDelivery.providerId,
       delivered: typeof runtimeDelivery.delivered === 'boolean' ? runtimeDelivery.delivered : null,
+      accepted: typeof runtimeDelivery.accepted === 'boolean' ? runtimeDelivery.accepted : null,
       responsePending:
         typeof runtimeDelivery.responsePending === 'boolean'
           ? runtimeDelivery.responsePending
           : null,
       responseState: runtimeDelivery.responseState ?? null,
       ledgerStatus: runtimeDelivery.ledgerStatus ?? null,
+      ledgerRecordId: runtimeDelivery.ledgerRecordId ?? null,
+      laneId: runtimeDelivery.laneId ?? null,
       visibleReplyMessageId: runtimeDelivery.visibleReplyMessageId ?? null,
       visibleReplyCorrelation: runtimeDelivery.visibleReplyCorrelation ?? null,
       queuedBehindMessageId: runtimeDelivery.queuedBehindMessageId ?? null,
@@ -245,9 +251,12 @@ export function formatOpenCodeRuntimeDeliveryDebugDetails(
       statusMessageId: details.statusMessageId,
       providerId: details.providerId,
       delivered: details.delivered,
+      accepted: details.accepted,
       responsePending: details.responsePending,
       responseState: details.responseState,
       ledgerStatus: details.ledgerStatus,
+      ledgerRecordId: details.ledgerRecordId,
+      laneId: details.laneId,
       visibleReplyMessageId: details.visibleReplyMessageId,
       visibleReplyCorrelation: details.visibleReplyCorrelation,
       queuedBehindMessageId: details.queuedBehindMessageId,

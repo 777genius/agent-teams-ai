@@ -14,9 +14,12 @@ describe('openCodeRuntimeDeliveryDiagnostics', () => {
         providerId: 'opencode',
         attempted: true,
         delivered: false,
+        accepted: true,
         responsePending: false,
         responseState: 'empty_assistant_turn',
         ledgerStatus: 'failed_terminal',
+        ledgerRecordId: 'opencode-prompt:msg-empty',
+        laneId: 'secondary:opencode:bob',
         reason: 'empty_assistant_turn',
         diagnostics: ['empty_assistant_turn'],
         userVisibleImpact: {
@@ -34,6 +37,9 @@ describe('openCodeRuntimeDeliveryDiagnostics', () => {
     expect(diagnostics.debugDetails).toMatchObject({
       messageId: 'msg-empty',
       statusMessageId: 'msg-empty',
+      accepted: true,
+      ledgerRecordId: 'opencode-prompt:msg-empty',
+      laneId: 'secondary:opencode:bob',
       userVisibleState: 'checking',
       userVisibleNextReviewAt: '2026-05-09T12:00:00.000Z',
     });
