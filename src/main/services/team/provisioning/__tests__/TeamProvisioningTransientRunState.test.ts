@@ -38,7 +38,7 @@ function makePorts(
     cancelPendingAutoResume: vi.fn(),
     clearOpenCodeRuntimeToolApprovals: vi.fn(),
     invalidateRuntimeSnapshotCaches: vi.fn(),
-    runtimeProcessRowsForUsageSnapshotByTeam: new Map(),
+    clearRuntimeProcessRowsForTeam: vi.fn(),
     retainedClaudeLogsByTeam: new Map(),
     persistedTranscriptClaudeLogs: { invalidate: vi.fn() },
     leadInboxRelayInFlight: new Map(),
@@ -121,7 +121,6 @@ describe('TeamProvisioningTransientRunState', () => {
       'same-team-deferred:beta',
       makeTimer(() => undefined)
     );
-    (ports.runtimeProcessRowsForUsageSnapshotByTeam as Map<string, unknown>).set('alpha', {});
     (ports.retainedClaudeLogsByTeam as Map<string, unknown>).set('alpha', {});
     (ports.leadInboxRelayInFlight as Map<string, unknown>).set('alpha', {});
     (ports.relayedLeadInboxMessageIds as Map<string, unknown>).set('alpha', {});

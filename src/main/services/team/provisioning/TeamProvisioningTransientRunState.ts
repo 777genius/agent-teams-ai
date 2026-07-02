@@ -29,7 +29,7 @@ export interface TeamProvisioningTransientRunStatePorts {
   cancelPendingAutoResume(teamName: string): void;
   clearOpenCodeRuntimeToolApprovals(teamName: string, options: { emitDismiss: boolean }): void;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
-  runtimeProcessRowsForUsageSnapshotByTeam: DeleteByTeamName;
+  clearRuntimeProcessRowsForTeam(teamName: string): void;
   retainedClaudeLogsByTeam: DeleteByTeamName;
   persistedTranscriptClaudeLogs: { invalidate(teamName: string): void };
   leadInboxRelayInFlight: DeleteByTeamName;
@@ -105,7 +105,7 @@ export class TeamProvisioningTransientRunState {
     this.ports.cancelPendingAutoResume(teamName);
     this.ports.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
     this.ports.invalidateRuntimeSnapshotCaches(teamName);
-    this.ports.runtimeProcessRowsForUsageSnapshotByTeam.delete(teamName);
+    this.ports.clearRuntimeProcessRowsForTeam(teamName);
     this.ports.retainedClaudeLogsByTeam.delete(teamName);
     this.ports.persistedTranscriptClaudeLogs.invalidate(teamName);
     this.ports.leadInboxRelayInFlight.delete(teamName);

@@ -644,19 +644,13 @@ import {
   requireRuntimeString,
   teamToolTaskRefs,
 } from './provisioning/TeamProvisioningRuntimeMetadata';
-import {
-  type LiveTeamAgentRuntimeMetadata,
-  readCachedRuntimeProcessRowsForLiveRuntimeMetadata,
-  type RuntimeProcessRowsCacheEntry,
-} from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
+import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
+import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
   buildLiveTeamAgentRuntimeMetadata as buildLiveTeamAgentRuntimeMetadataHelper,
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
-  readProcessUsageStatsByPid as readProcessUsageStatsByPidHelper,
-  readRuntimeProcessRowsForUsageSnapshot as readRuntimeProcessRowsForUsageSnapshotHelper,
-  type RuntimeProcessUsageStatsCacheEntry,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import {
   clearMemberSpawnToolTracking as clearMemberSpawnToolTrackingHelper,
@@ -746,7 +740,6 @@ import {
   buildDesktopTeammateModeCliArgs,
   resolveDesktopTeammateModeDecision,
 } from './runtimeTeammateMode';
-import { TeamAgentRuntimeResourceHistory } from './TeamAgentRuntimeResourceHistory';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   choosePreferredLaunchSnapshot,
@@ -772,14 +765,6 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { commandArgEquals } from './TeamRuntimeLivenessResolver';
-import {
-  buildRuntimeProcessLoadStats,
-  buildRuntimeUsageProcessTrees,
-  type RuntimeProcessLoadStats,
-  type RuntimeProcessUsageStats,
-  type RuntimeTelemetryProcessTableRow,
-  type RuntimeUsageProcessTree,
-} from './TeamRuntimeTelemetry';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 import { TeamTaskReader } from './TeamTaskReader';
@@ -796,6 +781,10 @@ import type {
   TeamRuntimeMemberSpec,
   TeamRuntimeStopInput,
 } from './runtime';
+import type {
+  RuntimeTelemetryProcessTableRow,
+  RuntimeUsageProcessTree,
+} from './TeamRuntimeTelemetry';
 
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 export { buildDirectTmuxRestartEnvAssignments } from './provisioning/TeamProvisioningDirectRestart';
@@ -865,7 +854,6 @@ import type {
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeLivenessKind,
   TeamAgentRuntimePidSource,
-  TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamConfig,
@@ -1534,18 +1522,35 @@ export class TeamProvisioningService {
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
   >();
-  private readonly agentRuntimeResourceHistory = new TeamAgentRuntimeResourceHistory({
-    historyLimit: TeamProvisioningService.AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT,
-    minSampleIntervalMs: TeamProvisioningService.RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS,
-  });
-  private readonly runtimeProcessRowsForUsageSnapshotByTeam = new Map<
-    string,
-    RuntimeProcessRowsCacheEntry
-  >();
-  private readonly runtimeProcessUsageStatsCacheByPid = new Map<
-    number,
-    RuntimeProcessUsageStatsCacheEntry
-  >();
+  private readonly runtimeResourceSampling = new TeamProvisioningRuntimeResourceSampling(
+    {
+      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
+      windowsProcessTableTimeoutMs:
+        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
+      livenessProcessTableCacheTtlMs:
+        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
+      livenessProcessTableFailureCacheTtlMs:
+        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
+      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
+      resourceTelemetryFailureCacheTtlMs:
+        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
+      processUsageCacheTtlMs: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
+      processUsageCacheMaxEntries: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES,
+      pidusageBatchTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
+      pidusageSingleTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
+      pidusageFallbackConcurrency: TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY,
+      maxRuntimeTreePidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
+      maxRuntimeUsagePidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
+      historyLimit: TeamProvisioningService.AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT,
+      minSampleIntervalMs: TeamProvisioningService.RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS,
+    },
+    {
+      getRuntimeSnapshotCacheGeneration: (teamName) =>
+        this.getRuntimeSnapshotCacheGeneration(teamName),
+      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+    },
+    { logDebug: (message) => logger.debug(message) }
+  );
   private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
   private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
     string,
@@ -1712,7 +1717,8 @@ export class TeamProvisioningService {
           this.clearOpenCodeRuntimeToolApprovals(teamName, options),
         invalidateRuntimeSnapshotCaches: (teamName) =>
           this.invalidateRuntimeSnapshotCaches(teamName),
-        runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
+        clearRuntimeProcessRowsForTeam: (teamName) =>
+          this.runtimeResourceSampling.clearRuntimeProcessRowsForTeam(teamName),
         retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
         persistedTranscriptClaudeLogs: this.persistedTranscriptClaudeLogs,
         leadInboxRelayInFlight: this.leadInboxRelayInFlight,
@@ -1754,15 +1760,13 @@ export class TeamProvisioningService {
   private readCachedRuntimeProcessRowsForLiveRuntimeMetadata(
     teamName: string,
     runId: string | null
-  ): ReturnType<typeof readCachedRuntimeProcessRowsForLiveRuntimeMetadata> {
-    return readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
-      cached: this.runtimeProcessRowsForUsageSnapshotByTeam.get(teamName),
-      runId,
-      nowMs: Date.now(),
-      processTableCacheTtlMs: TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
-      processTableFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
-    });
+  ): ReturnType<
+    TeamProvisioningRuntimeResourceSampling['readCachedRuntimeProcessRowsForLiveRuntimeMetadata']
+  > {
+    return this.runtimeResourceSampling.readCachedRuntimeProcessRowsForLiveRuntimeMetadata(
+      teamName,
+      runId
+    );
   }
 
   private buildRuntimeUsageProcessTrees(
@@ -1770,35 +1774,32 @@ export class TeamProvisioningService {
     processRows: readonly RuntimeTelemetryProcessTableRow[] | null,
     rootOwnersByPid?: ReadonlyMap<number, ReadonlySet<string>>
   ): Map<number, RuntimeUsageProcessTree> {
-    return buildRuntimeUsageProcessTrees({
+    return this.runtimeResourceSampling.buildRuntimeUsageProcessTrees(
       rootPids,
       processRows,
-      rootOwnersByPid,
-      limits: {
-        maxPidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
-        maxPidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
-      },
-      platform: process.platform,
-    });
+      rootOwnersByPid
+    );
   }
 
   private buildRuntimeProcessLoadStats(
-    input: Parameters<typeof buildRuntimeProcessLoadStats>[0]
-  ): RuntimeProcessLoadStats | undefined {
-    return buildRuntimeProcessLoadStats(input);
+    input: Parameters<TeamProvisioningRuntimeResourceSampling['buildRuntimeProcessLoadStats']>[0]
+  ): ReturnType<TeamProvisioningRuntimeResourceSampling['buildRuntimeProcessLoadStats']> {
+    return this.runtimeResourceSampling.buildRuntimeProcessLoadStats(input);
   }
 
   private recordAgentRuntimeResourceSample(
-    input: Parameters<TeamAgentRuntimeResourceHistory['record']>[0]
-  ): TeamAgentRuntimeResourceSample[] | undefined {
-    return this.agentRuntimeResourceHistory.record(input);
+    input: Parameters<
+      TeamProvisioningRuntimeResourceSampling['recordAgentRuntimeResourceSample']
+    >[0]
+  ): ReturnType<TeamProvisioningRuntimeResourceSampling['recordAgentRuntimeResourceSample']> {
+    return this.runtimeResourceSampling.recordAgentRuntimeResourceSample(input);
   }
 
   private pruneAgentRuntimeResourceHistory(
     teamName: string,
     activeKeys: ReadonlySet<string>
   ): void {
-    this.agentRuntimeResourceHistory.prune(teamName, activeKeys);
+    this.runtimeResourceSampling.pruneAgentRuntimeResourceHistory(teamName, activeKeys);
   }
 
   private findOpenCodeVisibleReplyByRelayOfMessageId(
@@ -5009,7 +5010,13 @@ export class TeamProvisioningService {
     previousState: 'active' | 'idle' | 'offline',
     at = nowIso()
   ): void {
-    syncLeadTaskActivityForStateHelper(run, state, previousState, this.createLeadActivityPorts(), at);
+    syncLeadTaskActivityForStateHelper(
+      run,
+      state,
+      previousState,
+      this.createLeadActivityPorts(),
+      at
+    );
   }
 
   private setLeadActivity(run: ProvisioningRun, state: 'active' | 'idle' | 'offline'): void {
@@ -5620,29 +5627,23 @@ export class TeamProvisioningService {
       getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
         this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
       readRuntimeProcessRowsForUsageSnapshot: (targetTeamName, options) =>
-        this.readRuntimeProcessRowsForUsageSnapshot(targetTeamName, options),
-      readProcessUsageStatsByPid: (pids, cacheOptions) =>
-        this.readProcessUsageStatsByPid(pids, cacheOptions),
-      buildRuntimeUsageProcessTrees: (input) =>
-        this.buildRuntimeUsageProcessTrees(
-          input.rootPids,
-          input.processRows,
-          input.rootOwnersByPid
+        this.runtimeResourceSampling.readRuntimeProcessRowsForUsageSnapshot(
+          targetTeamName,
+          options
         ),
-      buildRuntimeProcessLoadStats: (input) => this.buildRuntimeProcessLoadStats(input),
-      agentRuntimeResourceHistory: {
-        record: (input) => this.recordAgentRuntimeResourceSample(input),
-        prune: (targetTeamName, activeKeys) =>
-          this.pruneAgentRuntimeResourceHistory(targetTeamName, activeKeys),
-      },
+      readProcessUsageStatsByPid: (pids, cacheOptions) =>
+        this.runtimeResourceSampling.readProcessUsageStatsByPid(pids, cacheOptions),
+      buildRuntimeUsageProcessTrees: (input) =>
+        this.runtimeResourceSampling.buildRuntimeUsageProcessTrees(input),
+      buildRuntimeProcessLoadStats: (input) =>
+        this.runtimeResourceSampling.buildRuntimeProcessLoadStats(input),
+      agentRuntimeResourceHistory: this.runtimeResourceSampling.agentRuntimeResourceHistoryPort,
       agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
       getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
         this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
-      maxRuntimeTreePidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
-      maxRuntimeUsagePidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
       logDebug: (message) => logger.debug(message),
     });
   }
@@ -10774,10 +10775,7 @@ export class TeamProvisioningService {
   }
 
   async relayMemberInboxMessages(teamName: string, memberName: string): Promise<number> {
-    if (
-      isCrossTeamPseudoRecipientName(memberName) ||
-      isCrossTeamToolRecipientName(memberName)
-    ) {
+    if (isCrossTeamPseudoRecipientName(memberName) || isCrossTeamToolRecipientName(memberName)) {
       return 0;
     }
     const relayKey = this.getMemberRelayKey(teamName, memberName);
@@ -10919,10 +10917,7 @@ export class TeamProvisioningService {
     inboxName: string,
     options: OpenCodeMemberInboxRelayOptions = {}
   ): Promise<LiveInboxRelayResult> {
-    if (
-      isCrossTeamPseudoRecipientName(inboxName) ||
-      isCrossTeamToolRecipientName(inboxName)
-    ) {
+    if (isCrossTeamPseudoRecipientName(inboxName) || isCrossTeamToolRecipientName(inboxName)) {
       return { kind: 'ignored', relayed: 0 };
     }
 
@@ -12897,69 +12892,36 @@ export class TeamProvisioningService {
       readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
       readPersistedRuntimeMembers: (targetTeamName) =>
         this.readPersistedRuntimeMembers(targetTeamName),
-      runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
       liveTeamAgentRuntimeMetadataCache: this.liveTeamAgentRuntimeMetadataCache,
       cloneLiveTeamAgentRuntimeMetadata: (metadata) =>
         this.cloneLiveTeamAgentRuntimeMetadata(metadata),
+      readRuntimeProcessRowsForLiveRuntimeMetadata: (input) =>
+        this.runtimeResourceSampling.readRuntimeProcessRowsForLiveRuntimeMetadata(input),
+      readWindowsHostProcessRowsForLiveRuntimeMetadata: (targetTeamName) =>
+        this.runtimeResourceSampling.readWindowsHostProcessRowsForLiveRuntimeMetadata(
+          targetTeamName
+        ),
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
       getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
         this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
-      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-      windowsProcessTableTimeoutMs:
-        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
-      livenessProcessTableCacheTtlMs:
-        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
-      livenessProcessTableFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
-      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
-      resourceTelemetryFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
       logDebug: (message) => logger.debug(message),
     });
   }
 
-  private async readRuntimeProcessRowsForUsageSnapshot(
+  private readRuntimeProcessRowsForUsageSnapshot(
     teamName: string,
     options: { includeWindowsHostRows?: boolean } = {}
-  ): Promise<RuntimeTelemetryProcessTableRow[] | null> {
-    return readRuntimeProcessRowsForUsageSnapshotHelper({
-      teamName,
-      options,
-      runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
-      cacheAccess: {
-        getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
-          this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-        getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
-        getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-          this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
-      },
-      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-      windowsProcessTableTimeoutMs:
-        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
-      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
-      resourceTelemetryFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
-      logDebug: (message) => logger.debug(message),
-    });
+  ): ReturnType<TeamProvisioningRuntimeResourceSampling['readRuntimeProcessRowsForUsageSnapshot']> {
+    return this.runtimeResourceSampling.readRuntimeProcessRowsForUsageSnapshot(teamName, options);
   }
 
-  private async readProcessUsageStatsByPid(
+  private readProcessUsageStatsByPid(
     pids: readonly number[],
     cacheOptions: { ignoreCachedMisses?: boolean } = {}
-  ): Promise<Map<number, RuntimeProcessUsageStats>> {
-    return readProcessUsageStatsByPidHelper({
-      pids,
-      cacheOptions,
-      runtimeProcessUsageStatsCacheByPid: this.runtimeProcessUsageStatsCacheByPid,
-      usageCacheTtlMs: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
-      usageCacheMaxEntries: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES,
-      batchTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
-      singleTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
-      fallbackConcurrency: TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY,
-      logDebug: (message) => logger.debug(message),
-    });
+  ): ReturnType<TeamProvisioningRuntimeResourceSampling['readProcessUsageStatsByPid']> {
+    return this.runtimeResourceSampling.readProcessUsageStatsByPid(pids, cacheOptions);
   }
 
   private async clearPersistedLaunchState(
