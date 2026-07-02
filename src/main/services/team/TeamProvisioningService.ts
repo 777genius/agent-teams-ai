@@ -82,11 +82,7 @@ import {
   parseAllTeammateMessages,
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
-import {
-  buildTeamMemberMcpSettingSources,
-  normalizeTeamMemberMcpPolicy,
-  requiresStrictTeamMemberMcpConfig,
-} from '@shared/utils/teamMemberMcpPolicy';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import {
   inferTeamProviderIdFromModel,
@@ -398,6 +394,7 @@ import {
   TeamProvisioningMemberLifecycleController,
   type TeamProvisioningMemberLifecycleHost,
 } from './provisioning/TeamProvisioningMemberLifecycle';
+import { TeamProvisioningMemberMcpLaunchConfigProvisioner } from './provisioning/TeamProvisioningMemberMcpLaunchConfig';
 import {
   compareMemberSpawnInboxCursor,
   isMemberSpawnHeartbeatTimestampNewer,
@@ -1596,6 +1593,7 @@ export class TeamProvisioningService {
   private readonly memberLifecycleController = new TeamProvisioningMemberLifecycleController(
     this as unknown as TeamProvisioningMemberLifecycleHost
   );
+  private readonly memberMcpLaunchConfigProvisioner: TeamProvisioningMemberMcpLaunchConfigProvisioner<ProvisioningRun>;
   private memberRuntimeAdvisoryInvalidator:
     | ((teamName: string, memberName: string) => void)
     | null = null;
@@ -1658,6 +1656,15 @@ export class TeamProvisioningService {
     private readonly memberWorktreeManager: TeamMemberWorktreeManager = new TeamMemberWorktreeManager(),
     private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore()
   ) {
+    this.memberMcpLaunchConfigProvisioner = new TeamProvisioningMemberMcpLaunchConfigProvisioner({
+      mcpConfigBuilder: this.mcpConfigBuilder,
+      ensureCwdExists,
+      resolveControlApiBaseUrl: () => this.resolveControlApiBaseUrl(),
+      getAliveRun: (teamName) => {
+        const runId = this.getAliveRunId(teamName);
+        return runId ? this.runs.get(runId) : undefined;
+      },
+    });
     this.openCodeVisibleReplyProofService = new OpenCodeVisibleReplyProofService({
       inboxReader: this.inboxReader,
       inboxWriter: this.inboxWriter,
@@ -4942,68 +4949,7 @@ export class TeamProvisioningService {
     run: ProvisioningRun;
     controlApiBaseUrl?: string | null;
   }): Promise<Map<string, RuntimeBootstrapMemberMcpLaunchConfig>> {
-    const configs = new Map<string, RuntimeBootstrapMemberMcpLaunchConfig>();
-    for (const member of input.members) {
-      const mcpPolicy = normalizeTeamMemberMcpPolicy(member.mcpPolicy);
-      if (!mcpPolicy) {
-        continue;
-      }
-
-      const memberCwd = member.cwd?.trim() || input.cwd;
-      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(memberCwd, {
-        mcpPolicy,
-        controlApiBaseUrl: input.controlApiBaseUrl,
-      });
-      const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-      input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-      memberMcpConfigPaths.push(mcpConfigPath);
-      configs.set(member.name, {
-        mcpConfigPath,
-        mcpSettingSources: buildTeamMemberMcpSettingSources(mcpPolicy),
-        strictMcpConfig: requiresStrictTeamMemberMcpConfig(mcpPolicy),
-      });
-    }
-    return configs;
-  }
-
-  private async buildTrackedMemberMcpLaunchConfig(input: {
-    cwd: string;
-    mcpPolicy: unknown;
-    run: ProvisioningRun;
-    controlApiBaseUrl?: string | null;
-  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null> {
-    const mcpPolicy = normalizeTeamMemberMcpPolicy(input.mcpPolicy);
-    if (!mcpPolicy) {
-      return null;
-    }
-
-    const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(input.cwd, {
-      mcpPolicy,
-      controlApiBaseUrl: input.controlApiBaseUrl,
-    });
-    const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-    input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-    memberMcpConfigPaths.push(mcpConfigPath);
-    return {
-      mcpConfigPath,
-      mcpSettingSources: buildTeamMemberMcpSettingSources(mcpPolicy),
-      strictMcpConfig: requiresStrictTeamMemberMcpConfig(mcpPolicy),
-    };
-  }
-
-  private async removeTrackedMemberMcpLaunchConfig(
-    run: ProvisioningRun,
-    mcpLaunchConfig: RuntimeBootstrapMemberMcpLaunchConfig | null | undefined
-  ): Promise<void> {
-    if (!mcpLaunchConfig?.mcpConfigPath) {
-      return;
-    }
-    const memberMcpConfigPaths = (run.memberMcpConfigPaths ??= []);
-    const index = memberMcpConfigPaths.indexOf(mcpLaunchConfig.mcpConfigPath);
-    if (index >= 0) {
-      memberMcpConfigPaths.splice(index, 1);
-    }
-    await this.mcpConfigBuilder.removeConfigFile(mcpLaunchConfig.mcpConfigPath);
+    return this.memberMcpLaunchConfigProvisioner.buildRuntimeBootstrapMemberMcpLaunchConfigs(input);
   }
 
   async prepareLiveMemberMcpLaunchConfig(input: {
@@ -5011,57 +4957,22 @@ export class TeamProvisioningService {
     cwd?: string;
     mcpPolicy?: unknown;
   }): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null> {
-    const mcpPolicy = normalizeTeamMemberMcpPolicy(input.mcpPolicy);
-    if (!mcpPolicy) {
-      return null;
-    }
-
-    const runId = this.getAliveRunId(input.teamName);
-    const run = runId ? this.runs.get(runId) : undefined;
-    if (!run || run.processKilled || run.cancelRequested) {
-      throw new Error(`Team "${input.teamName}" is not currently running`);
-    }
-
-    const cwd = input.cwd?.trim() || run.request.cwd?.trim();
-    if (!cwd) {
-      throw new Error(`Team "${input.teamName}" project path is not available`);
-    }
-    await ensureCwdExists(cwd);
-
-    return this.buildTrackedMemberMcpLaunchConfig({
-      cwd,
-      mcpPolicy,
-      run,
-      controlApiBaseUrl: await this.resolveControlApiBaseUrl().catch(() => null),
-    });
+    return this.memberMcpLaunchConfigProvisioner.prepareLiveMemberMcpLaunchConfig(input);
   }
 
   async discardLiveMemberMcpLaunchConfig(input: {
     teamName: string;
     mcpLaunchConfig: RuntimeBootstrapMemberMcpLaunchConfig | null | undefined;
   }): Promise<void> {
-    const runId = this.getAliveRunId(input.teamName);
-    const run = runId ? this.runs.get(runId) : undefined;
-    if (!run) {
-      if (input.mcpLaunchConfig?.mcpConfigPath) {
-        await this.mcpConfigBuilder.removeConfigFile(input.mcpLaunchConfig.mcpConfigPath);
-      }
-      return;
-    }
-    await this.removeTrackedMemberMcpLaunchConfig(run, input.mcpLaunchConfig);
+    await this.memberMcpLaunchConfigProvisioner.discardLiveMemberMcpLaunchConfig(input);
   }
 
   private async removeRunMemberMcpConfigFiles(run: ProvisioningRun): Promise<void> {
-    const paths = run.memberMcpConfigPaths?.splice(0) ?? [];
-    await Promise.all(
-      paths.map((configPath) => this.mcpConfigBuilder.removeConfigFile(configPath))
-    );
+    await this.memberMcpLaunchConfigProvisioner.removeRunMemberMcpConfigFiles(run);
   }
 
   private removeRunMemberMcpConfigFilesLater(run: ProvisioningRun): void {
-    for (const configPath of run.memberMcpConfigPaths?.splice(0) ?? []) {
-      void this.mcpConfigBuilder.removeConfigFile(configPath);
-    }
+    this.memberMcpLaunchConfigProvisioner.removeRunMemberMcpConfigFilesLater(run);
   }
 
   private enrichRuntimeAdapterProgressTrace(
