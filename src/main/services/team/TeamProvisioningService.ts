@@ -410,6 +410,7 @@ import {
   resolveLeadMemberName,
   shouldPreferCurrentLaunchMemberStatus,
 } from './provisioning/TeamProvisioningMemberStatusProjection';
+import { buildMixedSecondaryLaunchSnapshotForRun as buildMixedSecondaryLaunchSnapshotForRunHelper } from './provisioning/TeamProvisioningMixedSecondaryLaunchReconciliation';
 import { resolveOpenCodeInboxAttachmentPayloads as resolveOpenCodeInboxAttachmentPayloadsHelper } from './provisioning/TeamProvisioningOpenCodeAttachmentPayloads';
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
@@ -12417,99 +12418,10 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     launchPhase: PersistedTeamLaunchPhase
   ): PersistedTeamLaunchSnapshot | null {
-    const mixedSecondaryLanes = run.mixedSecondaryLanes ?? [];
-    if (mixedSecondaryLanes.length === 0) {
-      return null;
-    }
-
-    return this.runtimeLaneCoordinator.buildAggregateLaunchSnapshot({
-      teamName: run.teamName,
-      leadSessionId: run.detectedSessionId ?? undefined,
-      launchPhase,
-      leadDefaults: {
-        providerId: resolveTeamProviderId(run.request.providerId),
-        providerBackendId:
-          migrateProviderBackendId(run.request.providerId, run.request.providerBackendId) ?? null,
-        selectedFastMode: run.request.fastMode,
-        resolvedFastMode:
-          typeof run.launchIdentity?.resolvedFastMode === 'boolean'
-            ? run.launchIdentity.resolvedFastMode
-            : null,
-        launchIdentity: run.launchIdentity ?? null,
-      },
-      primaryMembers: run.effectiveMembers,
-      primaryStatuses: this.buildRuntimeSpawnStatusRecord(run),
-      secondaryMembers: mixedSecondaryLanes.map((secondaryLane) => {
-        const evidenceEntry = secondaryLane.result?.members[secondaryLane.member.name];
-        const currentSpawnStatus = run.memberSpawnStatuses.get(secondaryLane.member.name);
-        const laneFirstSpawnAcceptedAt =
-          currentSpawnStatus?.firstSpawnAcceptedAt ??
-          (typeof secondaryLane.launchFinishedAtMs === 'number' &&
-          Number.isFinite(secondaryLane.launchFinishedAtMs)
-            ? new Date(secondaryLane.launchFinishedAtMs).toISOString()
-            : undefined);
-        const finishedWithoutRuntimeEvidence =
-          secondaryLane.state === 'finished' && !secondaryLane.result;
-        return {
-          laneId: secondaryLane.laneId,
-          runtimeRunId: secondaryLane.runId,
-          member: secondaryLane.member,
-          leadDefaults: {
-            providerId: resolveTeamProviderId(run.request.providerId),
-            providerBackendId:
-              migrateProviderBackendId(run.request.providerId, run.request.providerBackendId) ??
-              null,
-            selectedFastMode: run.request.fastMode,
-            resolvedFastMode:
-              typeof run.launchIdentity?.resolvedFastMode === 'boolean'
-                ? run.launchIdentity.resolvedFastMode
-                : null,
-            launchIdentity: run.launchIdentity ?? null,
-          },
-          evidence: evidenceEntry
-            ? {
-                launchState: evidenceEntry.launchState,
-                agentToolAccepted: evidenceEntry.agentToolAccepted,
-                runtimeAlive: evidenceEntry.runtimeAlive,
-                bootstrapConfirmed: evidenceEntry.bootstrapConfirmed,
-                hardFailure: evidenceEntry.hardFailure,
-                hardFailureReason: evidenceEntry.hardFailureReason,
-                pendingPermissionRequestIds: evidenceEntry.pendingPermissionRequestIds,
-                runtimePid: evidenceEntry.runtimePid,
-                sessionId: evidenceEntry.sessionId,
-                livenessKind: evidenceEntry.livenessKind,
-                pidSource: evidenceEntry.pidSource,
-                runtimeDiagnostic: evidenceEntry.runtimeDiagnostic,
-                runtimeDiagnosticSeverity: evidenceEntry.runtimeDiagnosticSeverity,
-                bootstrapStalled: currentSpawnStatus?.bootstrapStalled === true ? true : undefined,
-                firstSpawnAcceptedAt: laneFirstSpawnAcceptedAt,
-                diagnostics: evidenceEntry.diagnostics,
-              }
-            : finishedWithoutRuntimeEvidence
-              ? {
-                  launchState: 'runtime_pending_bootstrap',
-                  agentToolAccepted: false,
-                  runtimeAlive: false,
-                  bootstrapConfirmed: false,
-                  hardFailure: false,
-                  bootstrapStalled:
-                    currentSpawnStatus?.bootstrapStalled === true ? true : undefined,
-                  diagnostics:
-                    secondaryLane.diagnostics.length > 0
-                      ? [...secondaryLane.diagnostics]
-                      : [
-                          'OpenCode secondary lane finished without runtime evidence. Waiting for runtime reconciliation.',
-                        ],
-                }
-              : null,
-          pendingReason:
-            secondaryLane.result || secondaryLane.state === 'finished'
-              ? undefined
-              : secondaryLane.state === 'launching'
-                ? 'Launching through OpenCode secondary lane.'
-                : 'Queued for OpenCode secondary lane launch.',
-        };
-      }),
+    return buildMixedSecondaryLaunchSnapshotForRunHelper(run, launchPhase, {
+      buildRuntimeSpawnStatusRecord: (inputRun) => this.buildRuntimeSpawnStatusRecord(inputRun),
+      buildAggregateLaunchSnapshot: (params) =>
+        this.runtimeLaneCoordinator.buildAggregateLaunchSnapshot(params),
     });
   }
 
