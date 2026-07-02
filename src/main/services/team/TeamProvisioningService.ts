@@ -388,6 +388,13 @@ import {
   type TeamProvisioningMemberLifecycleHost,
 } from './provisioning/TeamProvisioningMemberLifecycle';
 import {
+  compareMemberSpawnInboxCursor,
+  isMemberSpawnHeartbeatTimestampNewer,
+  maxMemberSpawnInboxCursor,
+  type MemberSpawnInboxCursor,
+  toMemberSpawnInboxCursor,
+} from './provisioning/TeamProvisioningMemberSpawnCursor';
+import {
   buildRestartDuplicateUnconfirmedReason,
   buildRestartGraceTimeoutReason,
   buildRestartStillRunningReason,
@@ -400,13 +407,6 @@ import {
   shouldWarnOnUnreadableMemberAuditConfig,
   summarizeMemberSpawnStatusRecord,
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
-import {
-  compareMemberSpawnInboxCursor,
-  isMemberSpawnHeartbeatTimestampNewer,
-  type MemberSpawnInboxCursor,
-  maxMemberSpawnInboxCursor,
-  toMemberSpawnInboxCursor,
-} from './provisioning/TeamProvisioningMemberSpawnCursor';
 import {
   buildEffectiveTeamMemberSpec,
   buildEffectiveTeamMemberSpecs,
@@ -525,6 +525,11 @@ import {
   emitProvisioningCheckpoint,
   initializeProvisioningTrace,
 } from './provisioning/TeamProvisioningProgressBuffers';
+import {
+  isTerminalFailureProvisioningState,
+  looksLikeClaudeStdoutJsonFragment,
+  shouldIgnoreProvisioningProgressRegression,
+} from './provisioning/TeamProvisioningProgressState';
 import {
   buildDeterministicLaunchHydrationPrompt,
   buildGeminiPostLaunchHydrationPrompt,
@@ -944,38 +949,7 @@ function buildMissingCliError(): Error {
   return new Error('Claude CLI not found; install it or provide a valid path');
 }
 
-function looksLikeClaudeStdoutJsonFragment(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-    return false;
-  }
-  return (
-    /"type"\s*:/.test(trimmed) ||
-    /"message"\s*:/.test(trimmed) ||
-    /"content"\s*:/.test(trimmed) ||
-    /"subtype"\s*:/.test(trimmed) ||
-    /"session_id"\s*:/.test(trimmed)
-  );
-}
-
 const DETERMINISTIC_BOOTSTRAP_COMPLETION_RECOVERY_MS = 12_000;
-
-function isTerminalFailureProvisioningState(state: TeamProvisioningProgress['state']): boolean {
-  return state === 'failed' || state === 'cancelled' || state === 'disconnected';
-}
-
-function shouldIgnoreProvisioningProgressRegression(
-  currentState: TeamProvisioningProgress['state'],
-  nextState: TeamProvisioningProgress['state']
-): boolean {
-  if (currentState === 'ready') {
-    return nextState !== 'ready' && nextState !== 'disconnected';
-  }
-  if (isTerminalFailureProvisioningState(currentState)) {
-    return nextState !== currentState;
-  }
-  return false;
-}
 
 interface ProvisioningRun {
   runId: string;
