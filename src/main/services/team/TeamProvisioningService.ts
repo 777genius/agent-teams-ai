@@ -3,11 +3,6 @@ import {
   buildCodexNativeAttachmentDeliveryParts,
   type CodexNativeImageArgPart,
 } from '@features/agent-attachments/main';
-import {
-  resolveAnthropicEffortSupport,
-  resolveAnthropicFastMode,
-} from '@features/anthropic-runtime-profile/main';
-import { resolveCodexFastMode } from '@features/codex-runtime-profile/main';
 import { type RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 import {
   buildOpenCodeSecondaryLaneId,
@@ -86,7 +81,6 @@ import {
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { inferProviderBillingMode } from '@shared/utils/providerBillingMode';
 import {
   isTeamInternalControlMessageText,
   stripExactInternalControlEchoPrefix,
@@ -570,26 +564,21 @@ import {
   addModelCatalogLaunchModels,
   buildAnthropicSettingsObject,
   buildProviderFastModeArgs,
+  buildProviderModelLaunchIdentity as buildProviderModelLaunchIdentityHelper,
   buildRuntimeSettingsTempDirectory,
   extractJsonObjectFromCli,
   filterOutSettingsPathArgs,
-  formatAnthropicEffortSupportFailure,
   getLaunchModelArg,
   getTeamsBasePathsToProbe,
-  hasAuthoritativeCodexLaunchCatalog,
   hasPathBasedSettingsArgs,
-  isCodexEffortRuntimeSupported,
-  isLegacySafeEffort,
   logsSuggestShutdownOrCleanup,
   normalizeProviderModelListModels,
   normalizeProvisioningModelCheckRequests,
   type ProviderModelListCommandResponse,
-  resolveAnthropicSelectionFromFacts,
-  resolveCodexSelectionFromFacts,
-  resolveRequestedLaunchModel,
   type RuntimeProviderLaunchFacts,
   type RuntimeStatusCommandResponse,
   type TeamsBaseLocation,
+  validateRuntimeLaunchSelection as validateRuntimeLaunchSelectionHelper,
   type ValidConfigProbeResult,
 } from './provisioning/TeamProvisioningRuntimeLaunchSelection';
 import {
@@ -3191,132 +3180,10 @@ export class TeamProvisioningService {
     >;
     facts: RuntimeProviderLaunchFacts;
   }): ProviderModelLaunchIdentity {
-    const providerId = resolveTeamProviderId(params.request.providerId);
-    const explicitModel = getExplicitLaunchModelSelection(params.request.model);
-    const resolvedLaunchModel = resolveRequestedLaunchModel({
-      providerId,
-      selectedModel: params.request.model,
-      limitContext: params.request.limitContext,
-      facts: params.facts,
+    return buildProviderModelLaunchIdentityHelper({
+      ...params,
+      anthropicFastModeDefault: getAnthropicFastModeDefault(),
     });
-    if (providerId === 'anthropic') {
-      const selection = resolveAnthropicSelectionFromFacts({
-        selectedModel: params.request.model,
-        limitContext: params.request.limitContext,
-        facts: params.facts,
-      });
-      const fastResolution = resolveAnthropicFastMode({
-        selection,
-        selectedFastMode: params.request.fastMode,
-        providerFastModeDefault: getAnthropicFastModeDefault(),
-      });
-      const providerBackendId =
-        migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null;
-
-      return {
-        providerId,
-        providerBackendId,
-        billingMode: inferProviderBillingMode({
-          providerId,
-          providerBackendId,
-          authMethod: params.facts.providerStatus?.authMethod,
-          authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
-          backendKind: params.facts.providerStatus?.backend?.kind,
-          selectedBackendId: params.facts.providerStatus?.selectedBackendId,
-          resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
-          authenticated: params.facts.providerStatus?.authenticated,
-          model: selection.resolvedLaunchModel ?? resolvedLaunchModel,
-          catalogModel: selection.catalogModel,
-        }),
-        selectedModel: explicitModel ?? null,
-        selectedModelKind: explicitModel ? 'explicit' : 'default',
-        resolvedLaunchModel: selection.resolvedLaunchModel ?? resolvedLaunchModel,
-        catalogId:
-          selection.catalogModel?.id?.trim() ||
-          selection.resolvedLaunchModel ||
-          resolvedLaunchModel,
-        catalogSource: selection.catalogSource,
-        catalogFetchedAt: selection.catalogFetchedAt,
-        selectedEffort: params.request.effort ?? null,
-        resolvedEffort: params.request.effort ?? selection.defaultEffort ?? null,
-        selectedFastMode: params.request.fastMode ?? 'inherit',
-        resolvedFastMode: fastResolution.resolvedFastMode,
-        fastResolutionReason: fastResolution.disabledReason,
-      };
-    }
-
-    if (providerId === 'codex') {
-      const selection = resolveCodexSelectionFromFacts({
-        selectedModel: params.request.model,
-        providerBackendId: params.request.providerBackendId,
-        facts: params.facts,
-      });
-      const fastResolution = resolveCodexFastMode({
-        selection,
-        selectedFastMode: params.request.fastMode,
-      });
-      const resolvedCodexModel = selection.resolvedLaunchModel ?? resolvedLaunchModel;
-      const providerBackendId =
-        migrateProviderBackendId(providerId, params.request.providerBackendId) ??
-        selection.providerBackendId;
-
-      return {
-        providerId,
-        providerBackendId,
-        billingMode: inferProviderBillingMode({
-          providerId,
-          providerBackendId,
-          authMethod: params.facts.providerStatus?.authMethod,
-          authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
-          backendKind: params.facts.providerStatus?.backend?.kind,
-          selectedBackendId: params.facts.providerStatus?.selectedBackendId,
-          resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
-          authenticated: params.facts.providerStatus?.authenticated,
-          model: resolvedCodexModel,
-          catalogModel: selection.catalogModel,
-        }),
-        selectedModel: explicitModel ?? null,
-        selectedModelKind: explicitModel ? 'explicit' : 'default',
-        resolvedLaunchModel: resolvedCodexModel,
-        catalogId:
-          selection.catalogModel?.id?.trim() || selection.resolvedLaunchModel || resolvedCodexModel,
-        catalogSource: selection.catalogSource,
-        catalogFetchedAt: selection.catalogFetchedAt,
-        selectedEffort: params.request.effort ?? null,
-        resolvedEffort: params.request.effort ?? null,
-        selectedFastMode: params.request.fastMode ?? 'inherit',
-        resolvedFastMode: fastResolution.resolvedFastMode,
-        fastResolutionReason: fastResolution.disabledReason,
-      };
-    }
-
-    const resolvedEffort = params.request.effort ?? null;
-    const providerBackendId =
-      migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null;
-
-    return {
-      providerId,
-      providerBackendId,
-      billingMode: inferProviderBillingMode({
-        providerId,
-        providerBackendId,
-        authMethod: params.facts.providerStatus?.authMethod,
-        authMethodDetail: params.facts.providerStatus?.backend?.authMethodDetail,
-        backendKind: params.facts.providerStatus?.backend?.kind,
-        selectedBackendId: params.facts.providerStatus?.selectedBackendId,
-        resolvedBackendId: params.facts.providerStatus?.resolvedBackendId,
-        authenticated: params.facts.providerStatus?.authenticated,
-        model: resolvedLaunchModel,
-      }),
-      selectedModel: explicitModel ?? null,
-      selectedModelKind: explicitModel ? 'explicit' : 'default',
-      resolvedLaunchModel,
-      catalogId: resolvedLaunchModel,
-      catalogSource: 'runtime',
-      catalogFetchedAt: null,
-      selectedEffort: params.request.effort ?? null,
-      resolvedEffort,
-    };
   }
 
   private validateRuntimeLaunchSelection(params: {
@@ -3328,102 +3195,11 @@ export class TeamProvisioningService {
     limitContext?: boolean;
     facts: RuntimeProviderLaunchFacts;
   }): void {
-    const explicitModel = getExplicitLaunchModelSelection(params.model);
-
-    if (params.providerId === 'anthropic') {
-      const selection = resolveAnthropicSelectionFromFacts({
-        selectedModel: params.model,
-        limitContext: params.limitContext,
-        facts: params.facts,
-      });
-      const resolvedLaunchModel = selection.resolvedLaunchModel?.trim() || null;
-      if (!resolvedLaunchModel) {
-        throw new Error(
-          `${params.actorLabel} could not resolve the selected Anthropic model against the current runtime catalog.`
-        );
-      }
-      if (params.facts.modelIds.size > 0 && !params.facts.modelIds.has(resolvedLaunchModel)) {
-        throw new Error(
-          `${params.actorLabel} resolves to Anthropic model "${resolvedLaunchModel}", but the current runtime does not list it as launchable.`
-        );
-      }
-      if (params.effort) {
-        const modelLabel = selection.displayName ?? resolvedLaunchModel;
-        const effortSupport = resolveAnthropicEffortSupport({
-          selection,
-          effort: params.effort,
-          runtimeCapabilities: params.facts.runtimeCapabilities,
-        });
-        if (effortSupport.kind !== 'supported') {
-          throw new Error(
-            `${params.actorLabel} uses Anthropic effort "${params.effort}", but ${formatAnthropicEffortSupportFailure(
-              {
-                effort: params.effort,
-                modelLabel,
-                kind: effortSupport.kind,
-                supportedEfforts:
-                  effortSupport.kind === 'unverified-catalog-missing'
-                    ? undefined
-                    : effortSupport.supportedEfforts,
-              }
-            )}`
-          );
-        }
-      }
-
-      const fastResolution = resolveAnthropicFastMode({
-        selection,
-        selectedFastMode: params.fastMode,
-        providerFastModeDefault: getAnthropicFastModeDefault(),
-      });
-      if ((params.fastMode ?? 'inherit') === 'on' && !fastResolution.selectable) {
-        throw new Error(
-          `${params.actorLabel} enables Anthropic Fast mode, but ${
-            fastResolution.disabledReason ?? 'it is unavailable for the selected runtime or model.'
-          }`
-        );
-      }
-      return;
-    }
-
-    if (params.providerId !== 'codex') {
-      if (params.effort && !isLegacySafeEffort(params.effort)) {
-        throw new Error(
-          `${params.actorLabel} uses effort "${params.effort}", but ${getTeamProviderLabel(
-            params.providerId
-          )} currently supports only low, medium, or high effort in Agent Teams.`
-        );
-      }
-      return;
-    }
-
-    if (
-      params.effort &&
-      !isCodexEffortRuntimeSupported(params.effort, params.facts.runtimeCapabilities)
-    ) {
-      throw new Error(
-        `${params.actorLabel} uses Codex effort "${params.effort}", but this Agent Teams runtime does not expose Codex reasoning config passthrough yet. Use low, medium, or high for now.`
-      );
-    }
-
-    // Codex Fast is optional acceleration. If it is no longer eligible, the launch identity
-    // resolves it to normal Codex mode instead of blocking an otherwise launch-ready model.
-
-    if (!explicitModel || params.facts.modelIds.has(explicitModel)) {
-      return;
-    }
-
-    if (params.facts.runtimeCapabilities?.modelCatalog?.dynamic === true) {
-      return;
-    }
-
-    if (!hasAuthoritativeCodexLaunchCatalog(params.facts)) {
-      return;
-    }
-
-    throw new Error(
-      `${params.actorLabel} uses Codex model "${explicitModel}", but this Agent Teams runtime does not declare dynamic Codex model launch support yet. Upgrade the runtime or pick a listed Codex model.`
-    );
+    validateRuntimeLaunchSelectionHelper({
+      ...params,
+      anthropicFastModeDefault: getAnthropicFastModeDefault(),
+      getProviderLabel: getTeamProviderLabel,
+    });
   }
 
   private async resolveAndValidateLaunchIdentity(params: {
