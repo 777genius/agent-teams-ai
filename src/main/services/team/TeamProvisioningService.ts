@@ -77,12 +77,7 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import {
-  extractToolPreview,
-  extractToolResultPreview,
-  formatToolSummaryFromCalls,
-  parseAgentToolResultStatus,
-} from '@shared/utils/toolSummary';
+import { formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, execFileSync, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -384,20 +379,14 @@ import {
   toMemberSpawnInboxCursor,
 } from './provisioning/TeamProvisioningMemberSpawnCursor';
 import {
-  buildRestartDuplicateUnconfirmedReason,
   buildRestartGraceTimeoutReason,
-  buildRestartStillRunningReason,
   createInitialMemberSpawnStatusEntry,
-  deriveTaskActivityPauseAt,
-  deriveTaskActivityResumeAt,
   MEMBER_LAUNCH_GRACE_MS,
-  parseOptionalIsoMs,
   shouldWarnOnMissingRegisteredMember,
   shouldWarnOnUnreadableMemberAuditConfig,
   summarizeMemberSpawnStatusRecord,
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import {
-  buildMemberSpawnFailureMessage,
   buildMemberSpawnStatusTransition,
   buildMemberSpawnTranscriptConfirmationTransition,
 } from './provisioning/TeamProvisioningMemberSpawnTransitions';
@@ -557,7 +546,6 @@ import {
   extractHeartbeatTimestamp,
   getCanonicalSendMessageFieldRule,
   getCanonicalSendMessageToolRule,
-  normalizeMemberDiagnosticText,
 } from './provisioning/TeamProvisioningPromptBuilders';
 import {
   createDefaultTeamProvisioningProviderDiagnosticsPorts,
@@ -648,8 +636,15 @@ import {
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import {
+  appendMemberBootstrapDiagnostic as appendMemberBootstrapDiagnosticHelper,
   clearMemberSpawnToolTracking as clearMemberSpawnToolTrackingHelper,
+  emitToolActivity as emitToolActivityHelper,
+  finishRuntimeToolActivity as finishRuntimeToolActivityHelper,
+  handleMemberSpawnFailure as handleMemberSpawnFailureHelper,
+  pauseMemberTaskActivityForRuntimeLoss as pauseMemberTaskActivityForRuntimeLossHelper,
   resetRuntimeToolActivity as resetRuntimeToolActivityHelper,
+  startRuntimeToolActivity as startRuntimeToolActivityHelper,
+  syncMemberTaskActivityForRuntimeTransition as syncMemberTaskActivityForRuntimeTransitionHelper,
 } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
   buildRuntimeTurnSettledEnvironment as buildRuntimeTurnSettledEnvironmentHelper,
@@ -4635,12 +4630,9 @@ export class TeamProvisioningService {
   }
 
   private emitToolActivity(run: ProvisioningRun, payload: ToolActivityEventPayload): void {
-    if (!this.isCurrentTrackedRun(run)) return;
-    this.teamChangeEmitter?.({
-      type: 'tool-activity',
-      teamName: run.teamName,
-      runId: run.runId,
-      detail: JSON.stringify(payload),
+    emitToolActivityHelper(run, payload, {
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
     });
   }
 
@@ -4649,35 +4641,10 @@ export class TeamProvisioningService {
     memberName: string,
     block: Record<string, unknown>
   ): void {
-    const rawId = typeof block.id === 'string' ? block.id.trim() : '';
-    if (!rawId) return;
-
-    const toolUseId = rawId;
-    if (run.activeToolCalls.has(toolUseId)) return;
-
-    const toolName = typeof block.name === 'string' ? block.name : 'unknown';
-    const input = (block.input ?? {}) as Record<string, unknown>;
-    const activity: ActiveToolCall = {
-      memberName,
-      toolUseId,
-      toolName,
-      preview: extractToolPreview(toolName, input),
-      startedAt: nowIso(),
-      state: 'running',
-      source: 'runtime',
-    };
-
-    run.activeToolCalls.set(toolUseId, activity);
-    this.emitToolActivity(run, {
-      action: 'start',
-      activity: {
-        memberName: activity.memberName,
-        toolUseId: activity.toolUseId,
-        toolName: activity.toolName,
-        preview: activity.preview,
-        startedAt: activity.startedAt,
-        source: activity.source,
-      },
+    startRuntimeToolActivityHelper(run, memberName, block, {
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      nowIso,
     });
   }
 
@@ -4687,83 +4654,19 @@ export class TeamProvisioningService {
     resultContent: unknown,
     isError: boolean
   ): void {
-    const active = run.activeToolCalls.get(toolUseId);
-    if (!active) return;
-
-    run.activeToolCalls.delete(toolUseId);
-    this.emitToolActivity(run, {
-      action: 'finish',
-      memberName: active.memberName,
-      toolUseId,
-      finishedAt: nowIso(),
-      resultPreview: extractToolResultPreview(resultContent),
-      isError,
+    finishRuntimeToolActivityHelper(run, toolUseId, resultContent, isError, {
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      nowIso,
+      logInfo: (message) => logger.info(message),
+      logWarn: (message) => logger.warn(message),
+      updateProgress,
+      setMemberSpawnStatus: (targetRun, memberName, status, error) =>
+        this.setMemberSpawnStatus(targetRun, memberName, status, error),
+      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+      reevaluateMemberLaunchStatus: (targetRun, memberName) =>
+        this.reevaluateMemberLaunchStatus(targetRun, memberName),
     });
-
-    const spawnedMemberName = run.memberSpawnToolUseIds.get(toolUseId);
-    if (spawnedMemberName) {
-      run.memberSpawnToolUseIds.delete(toolUseId);
-      const pendingRestart = run.pendingMemberRestarts.get(spawnedMemberName);
-      if (isError) {
-        const resultPreview = extractToolResultPreview(resultContent);
-        this.handleMemberSpawnFailure(run, spawnedMemberName, resultPreview);
-      } else if (active.toolName === 'Agent') {
-        const parsedStatus = parseAgentToolResultStatus(resultContent);
-        if (parsedStatus?.status === 'duplicate_skipped') {
-          const detail =
-            parsedStatus.reason === 'already_running'
-              ? 'duplicate spawn skipped - already running'
-              : parsedStatus.reason === 'bootstrap_pending'
-                ? 'duplicate spawn skipped - teammate bootstrap still pending'
-                : parsedStatus.rawReason
-                  ? `duplicate spawn skipped - unrecognized reason: ${parsedStatus.rawReason}`
-                  : 'duplicate spawn skipped - reason unavailable';
-          this.appendMemberBootstrapDiagnostic(run, spawnedMemberName, detail);
-          if (pendingRestart && !parsedStatus.reason) {
-            logger.warn(
-              `[${run.teamName}] Restart for teammate "${spawnedMemberName}" returned duplicate_skipped without a recognized reason`
-            );
-            run.pendingMemberRestarts.delete(spawnedMemberName);
-            this.setMemberSpawnStatus(
-              run,
-              spawnedMemberName,
-              'error',
-              buildRestartDuplicateUnconfirmedReason(spawnedMemberName, parsedStatus.rawReason)
-            );
-            return;
-          }
-          if (parsedStatus.reason === 'already_running') {
-            if (pendingRestart) {
-              run.pendingMemberRestarts.delete(spawnedMemberName);
-              this.setMemberSpawnStatus(
-                run,
-                spawnedMemberName,
-                'error',
-                buildRestartStillRunningReason(spawnedMemberName)
-              );
-              return;
-            }
-            this.invalidateRuntimeSnapshotCaches(run.teamName);
-            this.setMemberSpawnStatus(run, spawnedMemberName, 'waiting');
-            this.appendMemberBootstrapDiagnostic(
-              run,
-              spawnedMemberName,
-              'already_running requires strong runtime verification'
-            );
-            void this.reevaluateMemberLaunchStatus(run, spawnedMemberName);
-          } else {
-            this.setMemberSpawnStatus(run, spawnedMemberName, 'waiting');
-          }
-          return;
-        }
-
-        // Agent tool_result only confirms that the runtime accepted the spawn.
-        // The teammate becomes truly "online" only after the first inbox heartbeat.
-        this.setMemberSpawnStatus(run, spawnedMemberName, 'waiting');
-      } else {
-        this.setMemberSpawnStatus(run, spawnedMemberName, 'waiting');
-      }
-    }
   }
 
   private handleMemberSpawnFailure(
@@ -4771,26 +4674,11 @@ export class TeamProvisioningService {
     memberName: string,
     resultPreview?: string
   ): void {
-    const pendingRestart = run.pendingMemberRestarts.get(memberName);
-    const message = buildMemberSpawnFailureMessage({ memberName, resultPreview, pendingRestart });
-
-    run.pendingMemberRestarts.delete(memberName);
-
-    this.setMemberSpawnStatus(run, memberName, 'error', message);
-
-    const lastIndex = run.provisioningOutputParts.length - 1;
-    if (lastIndex < 0 || run.provisioningOutputParts[lastIndex]?.trim() !== message) {
-      run.provisioningOutputParts.push(message);
-      boundRunProvisioningOutputParts(run);
-    }
-
-    if (
-      !run.provisioningComplete &&
-      (run.progress.state === 'assembling' || run.progress.state === 'configuring')
-    ) {
-      const progress = updateProgress(run, 'assembling', `Failed to start member ${memberName}`);
-      run.onProgress(progress);
-    }
+    handleMemberSpawnFailureHelper(run, memberName, resultPreview, {
+      setMemberSpawnStatus: (targetRun, targetMemberName, status, error) =>
+        this.setMemberSpawnStatus(targetRun, targetMemberName, status, error),
+      updateProgress,
+    });
   }
 
   private appendMemberBootstrapDiagnostic(
@@ -4798,14 +4686,9 @@ export class TeamProvisioningService {
     memberName: string,
     text: string
   ): void {
-    const line = normalizeMemberDiagnosticText(memberName, text);
-    const lastIndex = run.provisioningOutputParts.length - 1;
-    if (lastIndex >= 0 && run.provisioningOutputParts[lastIndex]?.trim() === line) {
-      return;
-    }
-    run.provisioningOutputParts.push(line);
-    boundRunProvisioningOutputParts(run);
-    logger.info(`[${run.teamName}] [bootstrap] ${line}`);
+    appendMemberBootstrapDiagnosticHelper(run, memberName, text, {
+      logInfo: (message) => logger.info(message),
+    });
   }
 
   private resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void {
@@ -4827,12 +4710,14 @@ export class TeamProvisioningService {
     previous: MemberSpawnStatusEntry,
     observedAt: string
   ): void {
-    if (previous.runtimeAlive !== true) return;
-    this.taskActivityIntervalService.pauseActiveIntervalsForMember(
-      run.teamName,
-      memberName,
-      deriveTaskActivityPauseAt(previous, observedAt)
-    );
+    pauseMemberTaskActivityForRuntimeLossHelper(run, memberName, previous, observedAt, {
+      pauseActiveIntervalsForMember: (teamName, targetMemberName, at) =>
+        this.taskActivityIntervalService.pauseActiveIntervalsForMember(
+          teamName,
+          targetMemberName,
+          at
+        ),
+    });
   }
 
   private syncMemberTaskActivityForRuntimeTransition(
@@ -4842,21 +4727,21 @@ export class TeamProvisioningService {
     next: MemberSpawnStatusEntry,
     observedAt: string
   ): void {
-    if (previous.runtimeAlive === true && next.runtimeAlive !== true) {
-      this.pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, observedAt);
-    } else if (previous.runtimeAlive !== true && next.runtimeAlive === true) {
-      const nextUpdatedMs = parseOptionalIsoMs(next.updatedAt);
-      const previousUpdatedMs = parseOptionalIsoMs(previous.updatedAt);
-      const resumeFallbackAt =
-        nextUpdatedMs > 0 && (previousUpdatedMs <= 0 || nextUpdatedMs > previousUpdatedMs)
-          ? next.updatedAt
-          : nowIso();
-      this.taskActivityIntervalService.resumeActiveIntervalsForMember(
-        run.teamName,
-        memberName,
-        deriveTaskActivityResumeAt(previous, observedAt, resumeFallbackAt)
-      );
-    }
+    syncMemberTaskActivityForRuntimeTransitionHelper(run, memberName, previous, next, observedAt, {
+      pauseActiveIntervalsForMember: (teamName, targetMemberName, at) =>
+        this.taskActivityIntervalService.pauseActiveIntervalsForMember(
+          teamName,
+          targetMemberName,
+          at
+        ),
+      resumeActiveIntervalsForMember: (teamName, targetMemberName, at) =>
+        this.taskActivityIntervalService.resumeActiveIntervalsForMember(
+          teamName,
+          targetMemberName,
+          at
+        ),
+      nowIso,
+    });
   }
 
   /**
