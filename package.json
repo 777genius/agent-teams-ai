@@ -40,6 +40,11 @@
       "import": "./dist/provider-codex/index.js",
       "default": "./dist/provider-codex/index.js"
     },
+    "./openai-compatible-codex": {
+      "types": "./dist/openai-compatible-codex/index.d.ts",
+      "import": "./dist/openai-compatible-codex/index.js",
+      "default": "./dist/openai-compatible-codex/index.js"
+    },
     "./provider-claude": {
       "types": "./dist/provider-claude/index.d.ts",
       "import": "./dist/provider-claude/index.js",
@@ -64,6 +69,11 @@
       "types": "./dist/worker-local/index.d.ts",
       "import": "./dist/worker-local/index.js",
       "default": "./dist/worker-local/index.js"
+    },
+    "./orchestrator-core": {
+      "types": "./dist/orchestrator-core/index.d.ts",
+      "import": "./dist/orchestrator-core/index.js",
+      "default": "./dist/orchestrator-core/index.js"
     },
     "./queue-core": {
       "types": "./dist/queue-core/index.d.ts",
@@ -112,6 +122,7 @@
   "bin": {
     "subscription-runtime-codex-goal": "./dist/worker-codex/codex-goal-cli.js",
     "subscription-runtime-codex-goal-mcp": "./dist/worker-codex/codex-goal-mcp.js",
+    "subscription-runtime-openai-codex-bridge": "./dist/openai-compatible-codex/cli.js",
     "subscription-runtime-agent-task": "./dist/agent-task/cli.js",
     "subscription-runtime-account-status": "./dist/worker-local/account-diagnostics-cli.js",
     "subscription-runtime-run-agent-task": "./dist/worker-local/agent-task-runner-cli.js"
@@ -129,6 +140,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "e2e:live-workers": "npm run build && node scripts/e2e-live-workers/run.mjs",
+    "ops:sync-codex-auth": "node scripts/ops/sync-codex-auth-to-host.mjs",
     "smoke:worker-claude": "npm run build && node scripts/smoke-claude-worker.mjs",
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs && node scripts/check-boundaries-self-test.mjs",

@@ -12,6 +12,7 @@ import {
   classifyRuntimeRunState,
   compareRunObservationHistory,
   runObservationHistoryEntryFromSnapshot,
+  RunEventProviderKind,
   WorkerControlService,
   type RunCapacityHint,
   type RunControlInboxSummary,
@@ -222,7 +223,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
     const observedAt = new Date().toISOString();
     const historyEntry = runObservationHistoryEntryFromSnapshot({
       runId: manifest.jobId,
-      providerKind: "codex",
+      providerKind: RunEventProviderKind.Codex,
       observedAt,
       workspace: {
         ...workspace,
@@ -272,7 +273,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
     });
     const snapshotBase = {
       runId: manifest.jobId,
-      providerKind: "codex",
+      providerKind: RunEventProviderKind.Codex,
       observedAt,
       status: runStatus,
       liveness,

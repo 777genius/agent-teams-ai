@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import type { ProviderTaskControls } from "@vioxen/subscription-runtime/core";
@@ -117,6 +117,8 @@ export const codexWorkerReportSystemPrompt = [
 export type CodexGoalProgressStatus =
   | "starting"
   | "running"
+  | "stopped"
+  | "maintenance_paused"
   | "completed"
   | "partial"
   | "blocked"
@@ -133,6 +135,18 @@ export type CodexGoalProgressSnapshot = {
   readonly resultStatus?: string;
   readonly attemptCount?: number;
   readonly currentAccount?: string;
+};
+
+export type CodexGoalRuntimeEventLevel = "info" | "warning" | "error";
+
+export type CodexGoalRuntimeEvent = {
+  readonly schemaVersion: 1;
+  readonly taskId: string;
+  readonly event: string;
+  readonly level: CodexGoalRuntimeEventLevel;
+  readonly timestamp: string;
+  readonly pid: number;
+  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
 };
 
 export type CodexGoalRunDeps = {
@@ -155,12 +169,22 @@ export async function runCodexGoal(
   assertCodexGoalRunConfig(config);
   const prompt = await readFile(config.promptPath, "utf8");
   const progressPath = codexGoalProgressPath(config);
+  const runtimeEventsPath = codexGoalRuntimeEventsPath(config);
   const outputPath = codexGoalOutputPath(config);
   const resultRecorder = new StrictResultRecorder({ outputPath });
   const progressHeartbeat = createCodexGoalProgressHeartbeat({
     progressPath,
     taskId: config.taskId,
     intervalMs: config.progressHeartbeatMs ?? 60_000,
+  });
+  const runtimeEvents = createCodexGoalRuntimeEventWriter({
+    eventPath: runtimeEventsPath,
+    taskId: config.taskId,
+  });
+  await runtimeEvents.write("runner_starting", {
+    jobId: config.jobId ?? config.taskId,
+    executionEngine: config.executionEngine ?? "app-server-goal",
+    accountCount: config.accounts.length,
   });
   await progressHeartbeat.write({ status: "starting" });
   const encryptionKey = await readOrCreateCodexGoalEncryptionKey(
@@ -180,6 +204,10 @@ export async function runCodexGoal(
 
   try {
     progressHeartbeat.start();
+    await runtimeEvents.write("executor_started", {
+      jobId: config.jobId ?? config.taskId,
+      executionEngine: config.executionEngine ?? "app-server-goal",
+    });
     const result = await executor.run({
       ...(config.jobId === undefined ? {} : { jobId: config.jobId }),
       taskId: config.taskId,
@@ -214,6 +242,11 @@ export async function runCodexGoal(
     });
     await resultRecorder.record(await codexRuntimeResultInput({ config, result }));
     await progressHeartbeat.write(progressFromResult(result));
+    await runtimeEvents.write("executor_finished", {
+      status: result.status,
+      attemptCount: attemptCountFromResult(result),
+      currentAccount: currentAccountFromResult(result) ?? "",
+    });
     return result;
   } catch (error) {
     await resultRecorder.record(await codexExceptionRuntimeResultInput({
@@ -224,10 +257,18 @@ export async function runCodexGoal(
       status: "failed",
       reason: "runner_exception",
     });
+    await runtimeEvents.write("runner_exception", {
+      level: "error",
+      reason: "runner_exception",
+      safeMessage: error instanceof Error ? error.message : "unknown_error",
+    });
     throw error;
   } finally {
     await progressHeartbeat.stop();
     await executor.dispose();
+    await runtimeEvents.write("runner_disposed", {
+      jobId: config.jobId ?? config.taskId,
+    });
   }
 }
 
@@ -321,6 +362,12 @@ export function codexGoalOutputPath(
   config: Pick<CodexGoalRunConfig, "jobRootDir" | "taskId" | "outputPath">,
 ): string {
   return config.outputPath ?? join(config.jobRootDir, `${config.taskId}.latest-result.json`);
+}
+
+export function codexGoalRuntimeEventsPath(
+  config: Pick<CodexGoalRunConfig, "jobRootDir" | "taskId">,
+): string {
+  return join(config.jobRootDir, `${config.taskId}.events.jsonl`);
 }
 
 export function codexGoalAccountSlots(
@@ -427,12 +474,63 @@ function createCodexGoalProgressHeartbeat(input: {
   };
 }
 
+function createCodexGoalRuntimeEventWriter(input: {
+  readonly eventPath: string;
+  readonly taskId: string;
+}) {
+  let writes = Promise.resolve();
+  const write = (
+    event: string,
+    attributes: Readonly<Record<string, string | number | boolean>> = {},
+    level: CodexGoalRuntimeEventLevel = "info",
+  ) => {
+    writes = writes.then(async () => {
+      await mkdir(dirname(input.eventPath), { recursive: true, mode: 0o700 });
+      const compactedAttributes = compactEventAttributes(attributes);
+      const entry: CodexGoalRuntimeEvent = {
+        schemaVersion: 1,
+        taskId: input.taskId,
+        event,
+        level,
+        timestamp: new Date().toISOString(),
+        pid: process.pid,
+        ...(compactedAttributes === undefined ? {} : { attributes: compactedAttributes }),
+      };
+      await appendFile(input.eventPath, `${JSON.stringify(entry)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+    });
+    return writes;
+  };
+  return {
+    write(
+      event: string,
+      attributes?: Readonly<Record<string, string | number | boolean>> & {
+        readonly level?: CodexGoalRuntimeEventLevel;
+      },
+    ): Promise<void> {
+      const { level, ...eventAttributes } = attributes ?? {};
+      return write(event, eventAttributes, level ?? "info");
+    },
+  };
+}
+
+function compactEventAttributes(
+  attributes: Readonly<Record<string, string | number | boolean>>,
+): Readonly<Record<string, string | number | boolean>> | undefined {
+  const compacted = Object.fromEntries(
+    Object.entries(attributes).filter(([, value]) =>
+      value !== "" && value !== undefined && value !== null
+    ),
+  );
+  return Object.keys(compacted).length ? compacted : undefined;
+}
+
 function progressFromResult(
   result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
 ): Omit<CodexGoalProgressSnapshot, "schemaVersion" | "taskId" | "updatedAt" | "pid"> {
-  const attempts = "attempts" in result && Array.isArray(result.attempts)
-    ? result.attempts
-    : [];
+  const attempts = attemptsFromResult(result);
   const lastAttempt = attempts.at(-1);
   return {
     status: progressStatusFromResult(result.status),
@@ -445,6 +543,31 @@ function progressFromResult(
       ? { currentAccount: lastAttempt.accountId }
       : {}),
   };
+}
+
+function attemptsFromResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+) {
+  const attempts = "attempts" in result && Array.isArray(result.attempts)
+    ? result.attempts
+    : [];
+  return attempts;
+}
+
+function attemptCountFromResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): number {
+  return attemptsFromResult(result).length;
+}
+
+function currentAccountFromResult(
+  result: SafeExecutionRunResult<FileBackendCodexWorkerResult>,
+): string | undefined {
+  const lastAttempt = attemptsFromResult(result).at(-1);
+  return lastAttempt && "accountId" in lastAttempt &&
+    typeof lastAttempt.accountId === "string"
+    ? lastAttempt.accountId
+    : undefined;
 }
 
 function progressStatusFromResult(status: string): CodexGoalProgressStatus {

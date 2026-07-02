@@ -232,6 +232,139 @@ describe("codex goal MCP server", () => {
           },
         });
         expect(JSON.stringify(watch).includes("rawBearerSecret")).toBe(false);
+
+        const eventRootDir = join(root, "events");
+        const projected = await callToolJson(client, "agent_run_project_events", {
+          registryRootDir,
+          jobId: "job-observed",
+          eventRootDir,
+          hostId: "test-host",
+        });
+
+        expect(projected).toMatchObject({
+          ok: true,
+          mode: "project_events",
+          sideEffects: ["append_run_events", "write_projection_state"],
+          providerKind: "codex",
+          appendedCount: expect.any(Number),
+          projectedRuns: [
+            expect.objectContaining({
+              runId: "job-observed",
+              status: "completed",
+            }),
+          ],
+        });
+        expect((projected.appendedCount as number)).toBeGreaterThan(0);
+        expect(JSON.stringify(projected).includes("rawBearerSecret")).toBe(false);
+
+        const events = await callToolJson(client, "agent_run_events", {
+          registryRootDir,
+          jobId: "job-observed",
+          eventRootDir,
+          type: "run.completed",
+        });
+
+        expect(events).toMatchObject({
+          ok: true,
+          mode: "read_only",
+          sideEffects: [],
+          returnedEvents: 1,
+          events: [
+            expect.objectContaining({
+              runId: "job-observed",
+              type: "run.completed",
+              source: expect.objectContaining({
+                providerKind: "codex",
+                hostId: "test-host",
+              }),
+            }),
+          ],
+        });
+        expect(JSON.stringify(events).includes("rawBearerSecret")).toBe(false);
+
+        const state = await callToolJson(client, "agent_run_state", {
+          registryRootDir,
+          jobId: "job-observed",
+          eventRootDir,
+        });
+
+        expect(state).toMatchObject({
+          ok: true,
+          mode: "read_only_state",
+          sideEffects: [],
+          providerKind: "codex",
+          runId: "job-observed",
+          readModels: {
+            safety: {
+              safeToContinue: false,
+              reviewOnly: true,
+            },
+            outcome: {
+              status: "completed",
+            },
+          },
+        });
+        expect(JSON.stringify(state).includes("rawBearerSecret")).toBe(false);
+
+        const compactionPlan = await callToolJson(
+          client,
+          "agent_run_event_compaction_plan",
+          {
+            registryRootDir,
+            eventRootDir,
+            keepLatestEventsPerRun: 1,
+          },
+        );
+
+        expect(compactionPlan).toMatchObject({
+          ok: true,
+          mode: "compaction_plan",
+          sideEffects: [],
+          eventRootDir,
+          policy: {
+            keepLatestEventsPerRun: 1,
+          },
+          plan: {
+            schemaVersion: 1,
+            retainedLineCount: expect.any(Number),
+            removableLineCount: expect.any(Number),
+          },
+        });
+
+        const compactWithoutConfirm = await callToolJson(
+          client,
+          "agent_run_event_compact",
+          {
+            registryRootDir,
+            eventRootDir,
+            keepLatestEventsPerRun: 1,
+          },
+        );
+
+        expect(compactWithoutConfirm).toMatchObject({
+          ok: false,
+          mode: "compact_events",
+          sideEffects: [],
+          reason: "confirm_compact_required",
+        });
+
+        const compact = await callToolJson(client, "agent_run_event_compact", {
+          registryRootDir,
+          eventRootDir,
+          keepLatestEventsPerRun: 1,
+          confirmCompact: true,
+        });
+
+        expect(compact).toMatchObject({
+          ok: true,
+          mode: "compact_events",
+          sideEffects: ["rewrite_run_event_log", "rewrite_delivery_cursors"],
+          result: {
+            compacted: expect.any(Boolean),
+            retainedLineCount: expect.any(Number),
+            removableLineCount: expect.any(Number),
+          },
+        });
       } finally {
         await client.close();
         await server.close();
@@ -855,6 +988,146 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("marks planned maintenance pauses as continuable without runtime reconciliation", async () => {
+    if (!(await hasTmux())) return;
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-maintenance-pause-"));
+    const registryRootDir = join(root, "registry");
+    const jobRootDir = join(root, "job");
+    const stateRootDir = join(root, "state");
+    const authRootDir = join(root, "auth");
+    const workspacePath = join(root, "workspace");
+    const promptPath = join(jobRootDir, "prompt.md");
+    const taskId = "sandbox-maintenance-task";
+    const jobId = "job-maintenance";
+    const tmuxSession = `subscription-runtime-maintenance-${process.pid}-${Date.now()}`;
+    const outputPath = join(jobRootDir, `${taskId}.latest-result.json`);
+    const codexSlow = join(root, "codex-slow.sh");
+
+    try {
+      await mkdir(jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+      await writeFile(codexSlow, "#!/bin/sh\nsleep 30\n");
+      await chmod(codexSlow, 0o700);
+      await writeFakeAuth(authRootDir, "account-a", {
+        lastRefresh: "2026-06-03T00:00:00.000Z",
+      });
+      await execFileAsync("tmux", [
+        "new-session",
+        "-d",
+        "-s",
+        tmuxSession,
+        "-c",
+        root,
+        "sleep 300",
+      ]);
+
+      const server = createCodexGoalMcpServer();
+      const client = new Client({ name: "subscription-runtime-test", version: "0.0.0" });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      try {
+        await callToolJson(client, "codex_goal_create_job", {
+          registryRootDir,
+          jobId,
+          jobRootDir,
+          authRootDir,
+          stateRootDir,
+          workspacePath,
+          promptPath,
+          taskId,
+          accounts: ["account-a"],
+          outputPath,
+          logPath: join(jobRootDir, `${taskId}.log`),
+          tmuxSession,
+          codexBinaryPath: codexSlow,
+          requireGitWorkspace: true,
+        });
+
+        const paused = await callToolJson(client, "codex_goal_maintenance_pause", {
+          registryRootDir,
+          jobId,
+          confirmPause: true,
+          reason: "resize",
+        });
+
+        expect(paused).toMatchObject({
+          ok: true,
+          mode: "maintenance_pause",
+          jobId,
+          taskId,
+          tmuxSession,
+        });
+        const progress = JSON.parse(
+          await readFile(join(jobRootDir, `${taskId}.progress.json`), "utf8"),
+        );
+        expect(progress).toMatchObject({
+          taskId,
+          status: "maintenance_paused",
+          reason: "resize",
+        });
+        const marker = JSON.parse(await readFile(String(paused.maintenancePausePath), "utf8"));
+        expect(marker).toMatchObject({
+          schemaVersion: 1,
+          jobId,
+          taskId,
+          tmuxSession,
+          forcePause: false,
+          reason: "resize",
+        });
+        expect(JSON.stringify(marker)).not.toContain("refresh-secret");
+        expect(JSON.stringify(marker)).not.toContain("access-secret");
+
+        const brief = await callToolJson(client, "codex_goal_brief", {
+          registryRootDir,
+          jobId,
+        });
+        expect(brief.brief).toMatchObject({
+          safeToContinue: true,
+          maintenancePaused: true,
+          lifecycleMarkerTypes: ["maintenance_pause"],
+          nextBestTool: "codex_goal_continue",
+        });
+
+        const decision = await callToolJson(client, "codex_goal_decision", {
+          registryRootDir,
+          jobId,
+        });
+        expect(decision.decision).toMatchObject({
+          action: "continue",
+          safeToContinue: true,
+          safeToOperate: true,
+        });
+
+        const continued = await callToolJson(client, "codex_goal_continue", {
+          registryRootDir,
+          jobId,
+          confirmContinue: true,
+          skipDoctor: true,
+        });
+        expect(continued).toMatchObject({
+          ok: true,
+          mode: "continue",
+          jobId,
+          tmuxSession,
+        });
+        await expect(access(outputPath)).rejects.toThrow();
+      } finally {
+        await execFileAsync("tmux", ["kill-session", "-t", tmuxSession]).catch(() => undefined);
+        await client.close();
+        await server.close();
+      }
+    } finally {
+      await execFileAsync("tmux", ["kill-session", "-t", tmuxSession]).catch(() => undefined);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("exposes worker control inbox tools for stored Codex goal jobs", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-control-mcp-"));
     const registryRootDir = join(root, "registry");
@@ -1304,6 +1577,88 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("does not treat reviewed stopped jobs as workspace-conflict writers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-reviewed-conflict-"));
+    const registryRootDir = join(root, "registry");
+    const authRootDir = join(root, "auth");
+    const workspacePath = join(root, "workspace");
+    const jobRootA = join(root, "job-a");
+    const jobRootB = join(root, "job-b");
+
+    try {
+      await mkdir(jobRootA, { recursive: true });
+      await mkdir(jobRootB, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await writeFile(join(jobRootA, "prompt.md"), "Do old sandbox task.\n");
+      await writeFile(join(jobRootB, "prompt.md"), "Do active sandbox task.\n");
+      await writeFakeAuth(authRootDir, "account-a", {
+        lastRefresh: "2026-06-03T00:00:00.000Z",
+      });
+
+      const server = createCodexGoalMcpServer();
+      const client = new Client({ name: "subscription-runtime-test", version: "0.0.0" });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      try {
+        for (const [jobId, jobRootDir, taskId] of [
+          ["job-a", jobRootA, "task-a"],
+          ["job-b", jobRootB, "task-b"],
+        ] as const) {
+          await callToolJson(client, "codex_goal_create_job", {
+            registryRootDir,
+            jobId,
+            jobRootDir,
+            authRootDir,
+            workspacePath,
+            promptPath: join(jobRootDir, "prompt.md"),
+            taskId,
+            accounts: ["account-a"],
+            tmuxSession: `${jobId}-worker`,
+          });
+        }
+        await callToolJson(client, "codex_goal_mark_reviewed", {
+          registryRootDir,
+          jobId: "job-a",
+          note: "superseded by job-b",
+        });
+
+        const reviewedBrief = await callToolJson(client, "codex_goal_brief", {
+          registryRootDir,
+          jobId: "job-a",
+        });
+        expect(reviewedBrief.brief).toMatchObject({
+          safeToContinue: false,
+          lifecycleMarkerTypes: ["review"],
+          nextBestTool: "manual_review",
+          nextBestReason: "reviewed_no_result",
+        });
+
+        const overview = await callToolJson(client, "codex_goal_overview", {
+          registryRootDir,
+        });
+        expect(overview).toMatchObject({
+          ok: true,
+          safeToOperate: true,
+          summary: {
+            workspaceConflicts: 0,
+            blockedBySingleWriter: 0,
+          },
+          workspaceConflicts: [],
+        });
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("exposes job account tools without requiring manual auth or state paths", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-mcp-"));
     const registryRootDir = join(root, "registry");
@@ -1575,10 +1930,21 @@ describe("codex goal MCP server", () => {
           authRootDir,
           stateRootDir,
           capacityAware: true,
+          count: 3,
+          available: 0,
+          hasAvailableAccount: false,
+          summary: {
+            configured: 3,
+            availableDeduped: 0,
+            capacityBlocked: 2,
+          },
           availableDedupedAccountNames: [],
         });
         expect(
           (status.slots as readonly { readonly name: string }[]).map((slot) => slot.name),
+        ).toEqual(["account-a", "account-b", "account-c"]);
+        expect(
+          (status.accounts as readonly { readonly name: string }[]).map((slot) => slot.name),
         ).toEqual(["account-a", "account-b", "account-c"]);
         expect(JSON.stringify(status)).not.toContain("refresh-secret");
         expect(JSON.stringify(status)).not.toContain("access-secret");
@@ -1654,7 +2020,7 @@ describe("codex goal MCP server", () => {
           accounts: ["account-a"],
           liveCheck: true,
           codexBinaryPath: codexFail,
-          liveCheckTimeoutMs: 1000,
+          liveCheckTimeoutMs: 10_000,
         });
         expect(liveStatus).toMatchObject({
           ok: false,

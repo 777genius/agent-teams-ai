@@ -49,6 +49,38 @@ const cases = [
     expectText: "worker-core must stay provider and adapter neutral",
   },
   {
+    name: "worker-core event kernel rejects file system",
+    files: {
+      "src/worker-core/run-events.ts": "import { readFile } from 'node:fs/promises';\n",
+    },
+    expectPass: false,
+    expectText: "worker-core event kernel must not depend",
+  },
+  {
+    name: "worker-core event kernel rejects require file system",
+    files: {
+      "src/worker-core/run-events.ts": "const fs = require('node:fs');\n",
+    },
+    expectPass: false,
+    expectText: "worker-core event kernel must not depend",
+  },
+  {
+    name: "orchestrator-core rejects local stores",
+    files: {
+      "src/orchestrator-core/bad.ts": "import '@vioxen/subscription-runtime/store-local-file';\n",
+    },
+    expectPass: false,
+    expectText: "orchestrator-core must consume runtime ports",
+  },
+  {
+    name: "orchestrator-core rejects require local stores",
+    files: {
+      "src/orchestrator-core/bad.ts": "const store = require('@vioxen/subscription-runtime/store-local-file');\n",
+    },
+    expectPass: false,
+    expectText: "orchestrator-core must consume runtime ports",
+  },
+  {
     name: "agent-task rejects provider implementations",
     files: {
       "src/agent-task/bad.ts": "import '@vioxen/subscription-runtime/provider-claude';\n",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  RunEventProviderKind,
   RunObservationService,
   compareRunObservationHistory,
   decideRunObservation,
@@ -30,7 +31,7 @@ describe("RunObservationService", () => {
 
     expect(observed).toMatchObject({
       runId: "run-a",
-      providerKind: "fake",
+      providerKind: RunEventProviderKind.Unknown,
       observedAt: "2026-06-30T00:00:00.000Z",
       status: "running",
       liveness: "alive",
@@ -46,7 +47,7 @@ describe("compareRunObservationHistory", () => {
     const previous = {
       schemaVersion: 1 as const,
       runId: "run-a",
-      providerKind: "codex",
+      providerKind: RunEventProviderKind.Codex,
       observedAt: "2026-07-01T00:00:00.000Z",
       workspaceDirty: false,
       changedFilesCount: 0,
@@ -245,7 +246,7 @@ function snapshot(input: {
 }): RunObservationSnapshot {
   return {
     runId: input.runId,
-    providerKind: "fake",
+    providerKind: RunEventProviderKind.Unknown,
     observedAt: "",
     status: input.status,
     liveness: input.liveness,

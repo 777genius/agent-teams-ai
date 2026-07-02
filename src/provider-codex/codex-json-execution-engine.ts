@@ -431,6 +431,12 @@ function extractTextFromEvent(event: unknown): string | null {
   const record = event as Record<string, unknown>;
   const type = typeof record.type === "string" ? record.type : null;
   if (!hasAssistantRole(record)) return null;
+  if (type === "item.completed") {
+    const item = record.item;
+    return item && typeof item === "object"
+      ? extractTextFromRecord(item as Record<string, unknown>)
+      : null;
+  }
   if (type === "response.completed") {
     const response = record.response;
     return response && typeof response === "object"

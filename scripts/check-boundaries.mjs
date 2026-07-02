@@ -94,6 +94,20 @@ const forbidden = [
       "provider-claude must not depend on Codex, workers, queues, stores, or runners",
   },
   {
+    from: /^src\/worker-core\/(?:run-events|run-observability|run-provider-kind)\.ts$/,
+    imports: [
+      /^node:fs(?:\/promises)?$/,
+      /(?:^|\/)(?:provider-|worker-(?:codex|claude)|queue-|store-|runner-)/,
+      /bullmq/,
+      /temporal/i,
+      /jetstream/i,
+      /redis/i,
+      /webhook/i,
+    ],
+    message:
+      "worker-core event kernel must not depend on file system, transports, providers, queues, stores, or orchestrators",
+  },
+  {
     from: /^src\/worker-core\//,
     imports: [
       runtimeSubpathPattern(
@@ -108,6 +122,23 @@ const forbidden = [
       /github/i,
     ],
     message: "worker-core must stay provider and adapter neutral",
+  },
+  {
+    from: /^src\/orchestrator-core\//,
+    imports: [
+      /^node:fs(?:\/promises)?$/,
+      runtimeSubpathPattern("(?:provider-|worker-(?:codex|claude)|store-|runner-)"),
+      internalPathPattern("(?:provider-|worker-(?:codex|claude)|store-|runner-)"),
+      /bullmq/,
+      /temporal/i,
+      /jetstream/i,
+      /redis/i,
+      /webhook/i,
+      /progress\.json/i,
+      /latest-result\.json/i,
+    ],
+    message:
+      "orchestrator-core must consume runtime ports/read-models, not files, transports, providers, or stores",
   },
   {
     from: /^src\/worker-codex\//,
@@ -186,6 +217,7 @@ const forbidden = [
 const staticImportPattern =
   /(?:import|export)\s+(?:type\s+)?(?:[^'"]+\s+from\s+)?["']([^"']+)["']/g;
 const dynamicImportPattern = /import\s*\(\s*["']([^"']+)["']\s*\)/g;
+const requirePattern = /require\s*\(\s*["']([^"']+)["']\s*\)/g;
 
 const violations = [];
 for (const file of await listFiles(srcDir)) {
@@ -229,6 +261,7 @@ function extractImports(text) {
   return [
     ...[...text.matchAll(staticImportPattern)].map((match) => match[1]),
     ...[...text.matchAll(dynamicImportPattern)].map((match) => match[1]),
+    ...[...text.matchAll(requirePattern)].map((match) => match[1]),
   ];
 }
 

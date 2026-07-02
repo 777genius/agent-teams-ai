@@ -8,6 +8,7 @@ import {
   codexGoalAccountSlots,
   codexWorkerReportSchemaName,
   codexGoalProgressPath,
+  codexGoalRuntimeEventsPath,
   runCodexGoal,
   type CodexGoalRunConfig,
 } from "../codex-goal-runner";
@@ -86,6 +87,20 @@ describe("codex goal runner", () => {
         Record<string, unknown>;
       expect(result.status).toBe("done");
       expect(result.nextAction).toBe("review_completed");
+
+      const events = await readJsonLines(codexGoalRuntimeEventsPath(config));
+      expect(events.map((event) => event.event)).toEqual([
+        "runner_starting",
+        "executor_started",
+        "executor_finished",
+        "runner_disposed",
+      ]);
+      expect(events.at(-1)).toMatchObject({
+        schemaVersion: 1,
+        taskId: "task-heartbeat",
+        event: "runner_disposed",
+        level: "info",
+      });
     } finally {
       releaseRun?.();
       await rm(root, { recursive: true, force: true });
@@ -325,4 +340,12 @@ async function waitForProgressStatus(
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   throw new Error(`progress status ${status} was not observed: ${String(lastError)}`);
+}
+
+async function readJsonLines(path: string): Promise<readonly Record<string, unknown>[]> {
+  const text = await readFile(path, "utf8");
+  return text
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }

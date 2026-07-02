@@ -11,7 +11,11 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
-import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
+import {
+  LocalFileRunEventProjectionStateStore,
+  LocalFileRunEventStore,
+  LocalFileWorkerControlInboxStore,
+} from "@vioxen/subscription-runtime/store-local-file";
 import {
   watchClaudeRuns,
   type ClaudeRunWatchArgs,
@@ -19,9 +23,20 @@ import {
 import {
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
+  RunEventCompactionSafetyMode,
+  RunEventProviderKind,
+  RunEventType,
   WorkerControlService,
   decideRunObservation,
+  isRunEventCompactionSafetyMode,
+  isRunEventProviderKind,
+  isRunEventType,
+  projectRunObservationEvents,
+  projectRunReadModelsFromEvents,
   reconcileRunPreview,
+  runEventProviderKindFromString,
+  type RunEventReadResult,
+  type RunEventRetentionPolicy,
   type RunObservationSnapshot,
   type RunReconcilePreviewDecision,
   type RunReconcilePreviewStatus,
@@ -154,6 +169,31 @@ type AgentRunWatchMcpArgs = JobOverviewMcpArgs & {
   readonly includeLogTail?: boolean;
 };
 
+type AgentRunEventsMcpArgs = AgentRunWatchMcpArgs & {
+  readonly eventRootDir?: string;
+  readonly cursor?: string;
+  readonly type?: string | readonly string[];
+  readonly types?: string | readonly string[];
+};
+
+type AgentRunStateMcpArgs = AgentRunWatchMcpArgs & {
+  readonly eventRootDir?: string;
+};
+
+type AgentRunEventCompactionMcpArgs = JobRegistryMcpArgs & {
+  readonly eventRootDir?: string;
+  readonly keepEventsAfter?: string;
+  readonly keepLatestEventsPerRun?: number;
+  readonly compactDeliveredEvents?: boolean;
+  readonly dropInvalidLines?: boolean;
+  readonly safetyMode?: string;
+  readonly confirmCompact?: boolean;
+};
+
+type AgentRunProjectEventsMcpArgs = AgentRunEventsMcpArgs & {
+  readonly hostId?: string;
+};
+
 type JobIdMcpArgs = JobRegistryMcpArgs & {
   readonly jobId?: string;
 };
@@ -170,11 +210,14 @@ type JobLifecycleMcpArgs = JobIdMcpArgs & {
   readonly confirmContinue?: boolean;
   readonly confirmRecover?: boolean;
   readonly confirmStop?: boolean;
+  readonly confirmPause?: boolean;
   readonly forceStart?: boolean;
   readonly forceStop?: boolean;
+  readonly forcePause?: boolean;
   readonly skipDoctor?: boolean;
   readonly staleAfterMs?: number;
   readonly tailLines?: number;
+  readonly reason?: string;
 };
 
 type JobResultReconcileMcpArgs = JobBriefMcpArgs & {
@@ -229,7 +272,7 @@ type AccountPoolMcpArgs = {
 };
 
 type CodexGoalLifecycleMarkerSpec = {
-  readonly type: "pause_request" | "review" | "stop_event";
+  readonly type: "pause_request" | "maintenance_pause" | "review" | "stop_event";
   readonly suffix: string;
   readonly timestampKeys: readonly string[];
 };
@@ -239,6 +282,11 @@ const lifecycleMarkerSpecs: readonly CodexGoalLifecycleMarkerSpec[] = [
     type: "pause_request",
     suffix: "pause-request.json",
     timestampKeys: ["requestedAt"],
+  },
+  {
+    type: "maintenance_pause",
+    suffix: "maintenance-pause.json",
+    timestampKeys: ["pausedAt"],
   },
   {
     type: "review",
@@ -401,6 +449,173 @@ export function createCodexGoalMcpServer(
     async (args) => withMcpErrors(async () => {
       const watch = await watchAgentRuns(args as AgentRunWatchMcpArgs);
       return mcpJson(watch);
+    }),
+  );
+
+  const agentRunEventsTool = {
+    title: "Agent Run Events",
+    description:
+      "Read normalized durable run events from the local outbox. This is read-only and does not observe, start, stop, continue or recover workers.",
+    inputSchema: {
+      ...jobRegistryInputSchema(),
+      providerKind: z.string().optional(),
+      jobId: z.string().optional(),
+      eventRootDir: z.string().optional(),
+      cursor: z.string().optional(),
+      type: z.union([z.string(), z.array(z.string())]).optional(),
+      types: z.union([z.string(), z.array(z.string())]).optional(),
+      limit: z.number().int().positive().optional(),
+    },
+  };
+
+  server.registerTool(
+    "agent_run_events",
+    agentRunEventsTool,
+    async (args) => withMcpErrors(async () => {
+      const events = await readAgentRunEvents(args as AgentRunEventsMcpArgs);
+      return mcpJson(events);
+    }),
+  );
+
+  server.registerTool(
+    "codex_goal_events",
+    {
+      ...agentRunEventsTool,
+      title: "Codex Goal Events",
+      description:
+        "Read normalized durable Codex goal run events from the local outbox. This is read-only and does not observe, start, stop, continue or recover workers.",
+    },
+    async (args) => withMcpErrors(async () => {
+      const events = await readAgentRunEvents({
+        ...(args as AgentRunEventsMcpArgs),
+        providerKind: "codex",
+      });
+      return mcpJson(events);
+    }),
+  );
+
+  const agentRunStateTool = {
+    title: "Agent Run State",
+    description:
+      "Read projected run read-model state from the local event projection store. This is read-only and does not observe, start, stop, continue or recover workers.",
+    inputSchema: {
+      ...jobRegistryInputSchema(),
+      providerKind: z.string().optional(),
+      jobId: z.string(),
+      eventRootDir: z.string().optional(),
+    },
+  };
+
+  server.registerTool(
+    "agent_run_state",
+    agentRunStateTool,
+    async (args) => withMcpErrors(async () => {
+      const state = await readAgentRunState(args as AgentRunStateMcpArgs);
+      return mcpJson(state);
+    }),
+  );
+
+  server.registerTool(
+    "codex_goal_state",
+    {
+      ...agentRunStateTool,
+      title: "Codex Goal State",
+      description:
+        "Read projected Codex goal run read-model state from the local event projection store. This is read-only and does not observe, start, stop, continue or recover workers.",
+    },
+    async (args) => withMcpErrors(async () => {
+      const state = await readAgentRunState({
+        ...(args as AgentRunStateMcpArgs),
+        providerKind: "codex",
+      });
+      return mcpJson(state);
+    }),
+  );
+
+  const agentRunEventCompactionTool = {
+    title: "Agent Run Event Compaction",
+    description:
+      "Plan or run explicit local RunEvent JSONL compaction. This touches only the event outbox and delivery cursors; it does not observe, start, stop, continue or recover workers.",
+    inputSchema: {
+      ...jobRegistryInputSchema(),
+      eventRootDir: z.string().optional(),
+      keepEventsAfter: z.string().optional(),
+      keepLatestEventsPerRun: z.number().int().positive().optional(),
+      compactDeliveredEvents: z.boolean().optional(),
+      dropInvalidLines: z.boolean().optional(),
+      safetyMode: z.string().optional(),
+      confirmCompact: z.boolean().optional(),
+    },
+  };
+
+  server.registerTool(
+    "agent_run_event_compaction_plan",
+    {
+      ...agentRunEventCompactionTool,
+      title: "Agent Run Event Compaction Plan",
+      description:
+        "Read-only plan for local RunEvent JSONL compaction. No files are rewritten.",
+    },
+    async (args) => withMcpErrors(async () => {
+      const plan = await planAgentRunEventCompaction(
+        args as AgentRunEventCompactionMcpArgs,
+      );
+      return mcpJson(plan);
+    }),
+  );
+
+  server.registerTool(
+    "agent_run_event_compact",
+    {
+      ...agentRunEventCompactionTool,
+      title: "Agent Run Event Compact",
+      description:
+        "Run explicit local RunEvent JSONL compaction. Requires confirmCompact=true and never controls workers.",
+    },
+    async (args) => withMcpErrors(async () => {
+      const result = await compactAgentRunEvents(
+        args as AgentRunEventCompactionMcpArgs,
+      );
+      return mcpJson(result);
+    }),
+  );
+
+  const agentRunProjectEventsTool = {
+    title: "Agent Run Project Events",
+    description:
+      "Observe runs and project normalized durable RunEvent records into the local outbox. This writes event/projection state only; it does not start, stop, continue or recover workers.",
+    inputSchema: {
+      ...agentRunWatchTool.inputSchema,
+      eventRootDir: z.string().optional(),
+      hostId: z.string().optional(),
+      type: z.union([z.string(), z.array(z.string())]).optional(),
+      types: z.union([z.string(), z.array(z.string())]).optional(),
+    },
+  };
+
+  server.registerTool(
+    "agent_run_project_events",
+    agentRunProjectEventsTool,
+    async (args) => withMcpErrors(async () => {
+      const projected = await projectAgentRunEvents(args as AgentRunProjectEventsMcpArgs);
+      return mcpJson(projected);
+    }),
+  );
+
+  server.registerTool(
+    "codex_goal_project_events",
+    {
+      ...agentRunProjectEventsTool,
+      title: "Codex Goal Project Events",
+      description:
+        "Observe Codex goal runs and project normalized durable RunEvent records into the local outbox. This writes event/projection state only; it does not start, stop, continue or recover workers.",
+    },
+    async (args) => withMcpErrors(async () => {
+      const projected = await projectAgentRunEvents({
+        ...(args as AgentRunProjectEventsMcpArgs),
+        providerKind: "codex",
+      });
+      return mcpJson(projected);
     }),
   );
 
@@ -632,6 +847,26 @@ export function createCodexGoalMcpServer(
       },
     },
     async (args) => withMcpErrors(async () => stopStoredJob(args as JobLifecycleMcpArgs)),
+  );
+
+  server.registerTool(
+    "codex_goal_maintenance_pause",
+    {
+      title: "Maintenance Pause Codex Goal Worker",
+      description:
+        "Stop a stored job's tmux worker for planned maintenance without reconciling it as a runtime failure.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        confirmPause: z.boolean().optional(),
+        forcePause: z.boolean().optional(),
+        reason: z.string().optional(),
+        staleAfterMs: z.number().int().positive().optional(),
+        tailLines: z.number().int().positive().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      maintenancePauseStoredJob(args as JobLifecycleMcpArgs),
+    ),
   );
 
   server.registerTool(
@@ -1726,12 +1961,32 @@ async function codexAccountStatusPayload(input: {
   const duplicates = duplicateAccountGroups(slots);
   const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
   const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
+  const readySlots = slots.filter((slot) => slot.status === "ready");
+  const missingSlots = slots.filter((slot) => slot.status === "auth_missing");
+  const invalidSlots = slots.filter((slot) => slot.status === "auth_invalid");
+  const capacityBlockedSlots = slots.filter((slot) =>
+    slot.capacityAvailability && slot.capacityAvailability !== "available"
+  );
   return {
     ok: availableDedupedSlots.length > 0,
     authRootDir: input.authRootDir,
     capacityAware: Boolean(input.stateRootDir),
     liveCheck: Boolean(input.liveCheck),
     ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+    count: slots.length,
+    available: availableDedupedSlots.length,
+    hasAvailableAccount: availableDedupedSlots.length > 0,
+    summary: {
+      configured: slots.length,
+      ready: readySlots.length,
+      missing: missingSlots.length,
+      invalid: invalidSlots.length,
+      deduped: dedupedSlots.length,
+      availableDeduped: availableDedupedSlots.length,
+      capacityBlocked: capacityBlockedSlots.length,
+      duplicateGroups: duplicates.length,
+    },
+    accounts: slots,
     slots,
     duplicates,
     dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
@@ -1843,6 +2098,17 @@ async function continueStoredJob(
 }
 
 function shouldReconcileResultBeforeStart(status: Awaited<ReturnType<typeof collectCodexGoalStatus>>): boolean {
+  if (
+    status.progressStatus === "maintenance_paused" &&
+    status.resultExists !== true &&
+    !status.workspaceDirty &&
+    (
+      status.logExists !== true ||
+      (status.logByteLength ?? 0) === 0
+    )
+  ) {
+    return false;
+  }
   if (status.resultExists === true) return true;
   if (status.workspaceDirty) return true;
   if (status.progressExists) return true;
@@ -1969,6 +2235,7 @@ async function stopStoredJob(args: JobLifecycleMcpArgs) {
       taskId: loaded.launch.config.taskId,
     }),
     taskId: loaded.launch.config.taskId,
+    status: "stopped",
   });
   const statusAfter = await collectCodexGoalStatus(statusInput(loaded.launch));
   const stopEventPath = await writeCodexGoalStopEvent({
@@ -2008,6 +2275,110 @@ async function stopStoredJob(args: JobLifecycleMcpArgs) {
     resultReconciliation,
     safeMessage:
       "Stopped the tmux worker session. Review workspace/log/result before continuing or recovery.",
+  });
+}
+
+async function maintenancePauseStoredJob(args: JobLifecycleMcpArgs) {
+  const loaded = await loadJobLaunch(args);
+  const status = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const accounts = await listCodexGoalAccountStatuses({
+    authRootDir: loaded.launch.config.authRootDir,
+    accounts: loaded.launch.config.accounts.map((account) => account.name),
+    stateRootDir: codexGoalStateRootDir(loaded.launch),
+  });
+  const brief = await buildCodexGoalBrief({
+    jobId: loaded.manifest.jobId,
+    launch: loaded.launch,
+    status,
+    accounts,
+    staleAfterMs: numberValue(args.staleAfterMs) ?? 10 * 60_000,
+    tailLines: numberValue(args.tailLines) ?? 20,
+  });
+  if (!loaded.launch.tmuxSession) {
+    return mcpJson({
+      ok: false,
+      reason: "tmux_session_required",
+      jobId: loaded.manifest.jobId,
+      status,
+      brief,
+    });
+  }
+  const stopCommand = buildCodexGoalStopTmuxCommand(loaded.launch.tmuxSession);
+  if (!status.tmuxAlive) {
+    return mcpJson({
+      ok: false,
+      reason: status.progressStatus === "maintenance_paused"
+        ? "already_maintenance_paused"
+        : "worker_not_running",
+      jobId: loaded.manifest.jobId,
+      tmuxSession: loaded.launch.tmuxSession,
+      stopCommand: stopCommand.preview,
+      status,
+      brief,
+    });
+  }
+  if (status.workspaceDirty && !args.forcePause) {
+    return mcpJson({
+      ok: false,
+      reason: "workspace_dirty_requires_force_pause",
+      jobId: loaded.manifest.jobId,
+      tmuxSession: loaded.launch.tmuxSession,
+      requiredOverride: "forcePause",
+      stopCommand: stopCommand.preview,
+      status,
+      brief,
+      safeMessage:
+        "Workspace has uncommitted changes. Wait for a clean checkpoint or pass forcePause after manual review.",
+    });
+  }
+  if (!args.confirmPause) {
+    return mcpJson({
+      ok: false,
+      reason: "confirm_pause_required",
+      jobId: loaded.manifest.jobId,
+      tmuxSession: loaded.launch.tmuxSession,
+      stopCommand: stopCommand.preview,
+      status,
+      brief,
+    });
+  }
+  const command = await stopCodexGoalTmux(loaded.launch.tmuxSession);
+  const pauseReason = stringValue(args.reason) ?? "planned_maintenance";
+  await writeCodexGoalStoppedProgress({
+    progressPath: loaded.launch.config.progressPath ?? codexGoalProgressPath({
+      jobRootDir: loaded.launch.config.jobRootDir,
+      taskId: loaded.launch.config.taskId,
+    }),
+    taskId: loaded.launch.config.taskId,
+    status: "maintenance_paused",
+    reason: pauseReason,
+  });
+  const statusAfter = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const maintenancePausePath = await writeCodexGoalMaintenancePauseEvent({
+    jobId: loaded.manifest.jobId,
+    taskId: loaded.launch.config.taskId,
+    jobRootDir: loaded.launch.config.jobRootDir,
+    tmuxSession: loaded.launch.tmuxSession,
+    stopCommand: command.preview,
+    reason: pauseReason,
+    forcePause: Boolean(args.forcePause),
+    statusBefore: status,
+    statusAfter,
+    brief,
+  });
+  return mcpJson({
+    ok: true,
+    mode: "maintenance_pause",
+    jobId: loaded.manifest.jobId,
+    taskId: loaded.launch.config.taskId,
+    tmuxSession: loaded.launch.tmuxSession,
+    stopCommand: command.preview,
+    maintenancePausePath,
+    statusBefore: status,
+    statusAfter,
+    brief,
+    safeMessage:
+      "Worker paused for planned maintenance. No failure result was reconciled; codex_goal_continue can resume after maintenance.",
   });
 }
 
@@ -2057,9 +2428,52 @@ async function writeCodexGoalStopEvent(input: {
   return path;
 }
 
+async function writeCodexGoalMaintenancePauseEvent(input: {
+  readonly jobId: string;
+  readonly taskId: string;
+  readonly jobRootDir: string;
+  readonly tmuxSession: string;
+  readonly stopCommand: string;
+  readonly reason: string;
+  readonly forcePause: boolean;
+  readonly statusBefore: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
+  readonly statusAfter: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
+  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
+}): Promise<string> {
+  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
+  const path = join(input.jobRootDir, `${input.taskId}.maintenance-pause.json`);
+  await writeFile(
+    path,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      jobId: input.jobId,
+      taskId: input.taskId,
+      pausedAt: new Date().toISOString(),
+      tmuxSession: input.tmuxSession,
+      stopCommand: input.stopCommand,
+      forcePause: input.forcePause,
+      reason: input.reason,
+      brief: {
+        lastProgressAt: input.brief.lastProgressAt,
+        lastProgressAgeMs: input.brief.lastProgressAgeMs,
+        staleAfterMs: input.brief.staleAfterMs,
+        logByteLength: input.brief.logByteLength,
+        workspaceDirty: input.statusBefore.workspaceDirty,
+        changedFiles: input.statusBefore.changedFiles ?? [],
+      },
+      statusBefore: input.statusBefore,
+      statusAfter: input.statusAfter,
+    }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return path;
+}
+
 async function writeCodexGoalStoppedProgress(input: {
   readonly progressPath: string;
   readonly taskId: string;
+  readonly status: "stopped" | "maintenance_paused";
+  readonly reason?: string;
 }): Promise<void> {
   await mkdir(dirname(input.progressPath), { recursive: true, mode: 0o700 });
   const tempPath = `${input.progressPath}.${process.pid}.${Date.now()}.tmp`;
@@ -2070,7 +2484,8 @@ async function writeCodexGoalStoppedProgress(input: {
       taskId: input.taskId,
       updatedAt: new Date().toISOString(),
       pid: process.pid,
-      status: "stopped",
+      status: input.status,
+      ...(input.reason ? { reason: input.reason } : {}),
     }, null, 2)}\n`,
     { encoding: "utf8", mode: 0o600 },
   );
@@ -2207,8 +2622,9 @@ function reconcilePreviewDecisionJson(
 }
 
 async function watchAgentRuns(args: AgentRunWatchMcpArgs): Promise<JsonObject> {
-  const providerKind = stringValue(args.providerKind) ?? "codex";
-  if (providerKind === "claude") {
+  const providerKindInput = stringValue(args.providerKind) ?? RunEventProviderKind.Codex;
+  const providerKind = runEventProviderKindFromString(providerKindInput);
+  if (providerKind === RunEventProviderKind.Claude) {
     const jobId = stringValue(args.jobId);
     const staleAfterMs = numberValue(args.staleAfterMs);
     const tailLines = numberValue(args.tailLines);
@@ -2227,16 +2643,16 @@ async function watchAgentRuns(args: AgentRunWatchMcpArgs): Promise<JsonObject> {
       ...(limit === undefined ? {} : { limit }),
     } satisfies ClaudeRunWatchArgs);
   }
-  if (providerKind !== "codex") {
+  if (providerKind !== RunEventProviderKind.Codex) {
     return {
       ok: false,
       mode: "read_only",
       sideEffects: [],
       providerKind,
-      supportedProviderKinds: ["codex", "claude"],
+      supportedProviderKinds: [RunEventProviderKind.Codex, RunEventProviderKind.Claude],
       reason: "provider_observation_not_implemented",
       safeMessage:
-        `Run observation for provider '${providerKind}' is not implemented yet. Watch did not start, stop, continue, recover or deliver work.`,
+        `Run observation for provider '${providerKindInput}' is not implemented yet. Watch did not start, stop, continue, recover or deliver work.`,
     };
   }
   const registryRootDir = registryRootFromArgs(args);
@@ -2312,11 +2728,262 @@ async function watchAgentRuns(args: AgentRunWatchMcpArgs): Promise<JsonObject> {
   };
 }
 
+async function readAgentRunEvents(
+  args: AgentRunEventsMcpArgs,
+): Promise<JsonObject> {
+  const registryRootDir = registryRootFromArgs(args);
+  const eventRootDir = runEventRootFromArgs(args, registryRootDir);
+  const providerKind = optionalRunEventProviderKind(args.providerKind);
+  const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+  const result = await eventStore.read({
+    ...(stringValue(args.cursor) === undefined
+      ? {}
+      : { cursor: { value: stringValue(args.cursor) as string } }),
+    ...(stringValue(args.jobId) === undefined
+      ? {}
+      : { runId: stringValue(args.jobId) as string }),
+    ...(numberValue(args.limit) === undefined
+      ? {}
+      : { limit: numberValue(args.limit) as number }),
+    ...runEventTypeFilter(args),
+  });
+  const events = providerKind === undefined
+    ? result.events
+    : result.events.filter((event) => event.source.providerKind === providerKind);
+  return {
+    ok: result.warnings.length === 0,
+    mode: "read_only",
+    sideEffects: [],
+    providerKind: providerKind ?? "all",
+    registryRootDir,
+    eventRootDir,
+    returnedEvents: events.length,
+    nextCursor: result.nextCursor?.value,
+    warnings: result.warnings,
+    events,
+  };
+}
+
+async function readAgentRunState(
+  args: AgentRunStateMcpArgs,
+): Promise<JsonObject> {
+  const registryRootDir = registryRootFromArgs(args);
+  const eventRootDir = runEventRootFromArgs(args, registryRootDir);
+  const providerKind = optionalRunEventProviderKind(args.providerKind);
+  const runId = requiredRawString(args.jobId, "jobId");
+  const stateStore = new LocalFileRunEventProjectionStateStore({
+    rootDir: eventRootDir,
+  });
+  const state = await stateStore.readProjectionState(runId);
+  if (state === null) {
+    const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+    const read = await eventStore.read({ runId });
+    const replayed = projectRunReadModelsFromEvents(read.events);
+    if (
+      replayed !== null &&
+      (providerKind === undefined || replayed.providerKind === providerKind)
+    ) {
+      return {
+        ok: read.warnings.length === 0,
+        mode: "read_only_state",
+        sideEffects: [],
+        providerKind: replayed.providerKind,
+        registryRootDir,
+        eventRootDir,
+        runId,
+        observedAt: replayed.observedAt,
+        replayOnly: true,
+        warnings: read.warnings,
+        readModels: replayed,
+      };
+    }
+    return {
+      ok: false,
+      mode: "read_only_state",
+      sideEffects: [],
+      providerKind: providerKind ?? "all",
+      registryRootDir,
+      eventRootDir,
+      runId,
+      reason: "projection_state_not_found",
+      safeMessage:
+        "No projected run state exists yet and no replayable run events were found. Run agent_run_project_events first to observe and project this run.",
+    };
+  }
+  if (providerKind !== undefined && state.providerKind !== providerKind) {
+    return {
+      ok: false,
+      mode: "read_only_state",
+      sideEffects: [],
+      providerKind,
+      registryRootDir,
+      eventRootDir,
+      runId,
+      reason: "projection_state_provider_mismatch",
+      safeMessage:
+        "Projected run state exists for a different provider. No worker action was taken.",
+    };
+  }
+  return {
+    ok: true,
+    mode: "read_only_state",
+    sideEffects: [],
+    providerKind: state.providerKind,
+    registryRootDir,
+    eventRootDir,
+    runId,
+    observedAt: state.observedAt,
+    status: state.status,
+    liveness: state.liveness,
+    readModels: state.readModels,
+    state,
+  };
+}
+
+async function planAgentRunEventCompaction(
+  args: AgentRunEventCompactionMcpArgs,
+): Promise<JsonObject> {
+  const registryRootDir = registryRootFromArgs(args);
+  const eventRootDir = runEventRootFromArgs(args, registryRootDir);
+  const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+  const policy = runEventRetentionPolicyFromArgs(args);
+  const plan = await eventStore.planCompaction(policy);
+  return {
+    ok: plan.warnings.length === 0,
+    mode: "compaction_plan",
+    sideEffects: [],
+    registryRootDir,
+    eventRootDir,
+    policy,
+    plan,
+  };
+}
+
+async function compactAgentRunEvents(
+  args: AgentRunEventCompactionMcpArgs,
+): Promise<JsonObject> {
+  const registryRootDir = registryRootFromArgs(args);
+  const eventRootDir = runEventRootFromArgs(args, registryRootDir);
+  const policy = runEventRetentionPolicyFromArgs(args);
+  if (booleanValue(args.confirmCompact) !== true) {
+    const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+    const plan = await eventStore.planCompaction(policy);
+    return {
+      ok: false,
+      mode: "compact_events",
+      sideEffects: [],
+      registryRootDir,
+      eventRootDir,
+      policy,
+      reason: "confirm_compact_required",
+      safeMessage:
+        "Compaction rewrites the local event log. Re-run with confirmCompact=true after reviewing the plan.",
+      plan,
+    };
+  }
+  const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+  const result = await eventStore.compact(policy);
+  return {
+    ok: result.warnings.length === 0 &&
+      result.cursorRewrites.every((rewrite) => !rewrite.invalidatedUnreadEvents),
+    mode: "compact_events",
+    sideEffects: ["rewrite_run_event_log", "rewrite_delivery_cursors"],
+    registryRootDir,
+    eventRootDir,
+    policy,
+    result,
+  };
+}
+
+async function projectAgentRunEvents(
+  args: AgentRunProjectEventsMcpArgs,
+): Promise<JsonObject> {
+  const providerKind = optionalRunEventProviderKind(args.providerKind) ??
+    RunEventProviderKind.Codex;
+  if (providerKind !== RunEventProviderKind.Codex) {
+    return {
+      ok: false,
+      mode: "project_events",
+      sideEffects: [],
+      providerKind,
+      supportedProviderKinds: [RunEventProviderKind.Codex],
+      reason: "provider_event_projection_not_implemented",
+      safeMessage:
+        `Run event projection for provider '${providerKind}' is not implemented yet. Projection did not start, stop, continue, recover or deliver work.`,
+    };
+  }
+  const registryRootDir = registryRootFromArgs(args);
+  const eventRootDir = runEventRootFromArgs(args, registryRootDir);
+  const watch = await watchAgentRuns({
+    ...args,
+    providerKind,
+    includeChangedFiles: booleanValue(args.includeChangedFiles) === true,
+    includeLogTail: false,
+  });
+  const snapshots = Array.isArray(watch.snapshots)
+    ? watch.snapshots as readonly RunObservationSnapshot[]
+    : [];
+  const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+  const stateStore = new LocalFileRunEventProjectionStateStore({
+    rootDir: eventRootDir,
+  });
+  const projectedRuns = [];
+  let appendedCount = 0;
+  let skippedDuplicateCount = 0;
+  for (const snapshot of snapshots) {
+    const previousState = await stateStore.readProjectionState(snapshot.runId);
+    const projection = projectRunObservationEvents({
+      snapshot,
+      previousState,
+      ...(stringValue(args.hostId) === undefined
+        ? {}
+        : { hostId: stringValue(args.hostId) as string }),
+      registryRootDir,
+    });
+    const appendResult = await eventStore.append(projection.events);
+    await stateStore.writeProjectionState(projection.nextState);
+    appendedCount += appendResult.appendedCount;
+    skippedDuplicateCount += appendResult.skippedDuplicateCount;
+    projectedRuns.push({
+      runId: snapshot.runId,
+      projectedEvents: projection.events.length,
+      appendedEvents: appendResult.appendedCount,
+      skippedDuplicateEvents: appendResult.skippedDuplicateCount,
+      eventTypes: projection.events.map((event) => event.type),
+      decision: snapshot.readOnlyDecision.kind,
+      status: snapshot.status,
+      readModels: projection.nextState.readModels,
+    });
+  }
+  const readBack: RunEventReadResult = await eventStore.read({
+    ...(numberValue(args.limit) === undefined
+      ? {}
+      : { limit: numberValue(args.limit) as number }),
+    ...runEventTypeFilter(args),
+  });
+  return {
+    ok: watch.ok === true && readBack.warnings.length === 0,
+    mode: "project_events",
+    sideEffects: ["append_run_events", "write_projection_state"],
+    providerKind,
+    registryRootDir,
+    eventRootDir,
+    totalRuns: watch.totalRuns,
+    returnedRuns: snapshots.length,
+    appendedCount,
+    skippedDuplicateCount,
+    warnings: readBack.warnings,
+    projectedRuns,
+    nextCursor: readBack.nextCursor?.value,
+    events: readBack.events,
+  };
+}
+
 async function observeOrphanCodexRun(input: {
   readonly runId: string;
   readonly error: unknown;
   readonly args: AgentRunWatchMcpArgs;
-  readonly providerKind: string;
+  readonly providerKind: RunEventProviderKind;
   readonly staleAfterMs: number;
   readonly tailLines: number;
 }): Promise<RunObservationSnapshot | null> {
@@ -2513,7 +3180,7 @@ function isoAgeMsForMcp(value: string | undefined): number | undefined {
 
 function failedRunObservationSnapshot(input: {
   readonly runId: string;
-  readonly providerKind: string;
+  readonly providerKind: RunEventProviderKind;
   readonly error: unknown;
 }): RunObservationSnapshot {
   const message = safeObservationErrorMessage(input.error);
@@ -2806,6 +3473,69 @@ function registryRootFromArgs(args: JobRegistryMcpArgs): string {
   });
 }
 
+function runEventRootFromArgs(
+  args: AgentRunEventsMcpArgs,
+  registryRootDir: string,
+): string {
+  const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
+  return stringValue(args.eventRootDir)
+    ? resolvePath(cwd, stringValue(args.eventRootDir) as string)
+    : join(registryRootDir, ".run-events");
+}
+
+function optionalRunEventProviderKind(
+  value: unknown,
+): RunEventProviderKind | undefined {
+  const text = stringValue(value);
+  if (text === undefined) return undefined;
+  if (isRunEventProviderKind(text)) return text;
+  throw new Error(`unsupported run event provider kind: ${text}`);
+}
+
+function runEventTypeFilter(args: AgentRunEventsMcpArgs): {
+  readonly types?: readonly RunEventType[];
+} {
+  const values = [
+    ...stringsFromValue(args.type),
+    ...stringsFromValue(args.types),
+  ];
+  if (values.length === 0) return {};
+  return {
+    types: values.map((value) => {
+      if (!isRunEventType(value)) {
+        throw new Error(`unsupported run event type: ${value}`);
+      }
+      return value;
+    }),
+  };
+}
+
+function runEventRetentionPolicyFromArgs(
+  args: AgentRunEventCompactionMcpArgs,
+): RunEventRetentionPolicy {
+  const safetyMode = optionalRunEventCompactionSafetyMode(args.safetyMode);
+  const keepEventsAfter = stringValue(args.keepEventsAfter);
+  const keepLatestEventsPerRun = numberValue(args.keepLatestEventsPerRun);
+  const compactDeliveredEvents = booleanValue(args.compactDeliveredEvents);
+  const dropInvalidLines = booleanValue(args.dropInvalidLines);
+  return {
+    ...(safetyMode === undefined ? {} : { safetyMode }),
+    ...(keepEventsAfter === undefined ? {} : { keepEventsAfter }),
+    ...(keepLatestEventsPerRun === undefined ? {} : { keepLatestEventsPerRun }),
+    ...(compactDeliveredEvents === undefined ? {} : { compactDeliveredEvents }),
+    ...(dropInvalidLines === undefined ? {} : { dropInvalidLines }),
+  };
+}
+
+function optionalRunEventCompactionSafetyMode(
+  value: unknown,
+): RunEventCompactionSafetyMode | undefined {
+  const text = stringValue(value);
+  if (text === undefined) return undefined;
+  if (isRunEventCompactionSafetyMode(text)) return text;
+  throw new Error(`unsupported run event compaction safety mode: ${text}`);
+}
+
 function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestInput {
   const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
   const jobId = requiredRawString(args.jobId, "jobId");
@@ -3042,8 +3772,10 @@ export async function buildCodexGoalBrief(input: {
   const lifecycleMarkerTypes = lifecycleMarkers
     .map((marker) => marker.type)
     .filter((type): type is string => typeof type === "string");
+  const reviewed = lifecycleMarkerTypes.includes("review");
+  const reviewedStopped = Boolean(reviewed && !input.status.tmuxAlive);
   const reviewedWithoutResult = Boolean(
-    lifecycleMarkerTypes.includes("review") &&
+    reviewedStopped &&
       !input.status.resultExists &&
       !input.status.tmuxAlive,
   );
@@ -3052,10 +3784,15 @@ export async function buildCodexGoalBrief(input: {
       !input.status.resultExists &&
       !input.status.tmuxAlive,
   );
+  const maintenancePaused = Boolean(
+    lifecycleMarkerTypes.includes("maintenance_pause") &&
+      input.status.progressStatus === "maintenance_paused" &&
+      !input.status.tmuxAlive,
+  );
   const needsResultReconcile = Boolean(
     !input.status.tmuxAlive &&
       (
-        stoppedWithoutResult ||
+        (stoppedWithoutResult && !maintenancePaused) ||
         input.status.workspaceDirty ||
         (result.strict === false && !safeStatusToContinue)
       ),
@@ -3077,7 +3814,7 @@ export async function buildCodexGoalBrief(input: {
         tool: "manual_review",
         reason: "heartbeat_only_no_output",
       }
-    : stoppedWithoutResult
+    : stoppedWithoutResult && !maintenancePaused
     ? {
         tool: "manual_review",
         reason: "stopped_worker",
@@ -3087,10 +3824,10 @@ export async function buildCodexGoalBrief(input: {
         tool: "codex_goal_accounts_status",
         reason: "no available account slots for this job",
       }
-    : reviewedWithoutResult
+    : reviewedStopped
     ? {
         tool: "manual_review",
-        reason: "reviewed_no_result",
+        reason: reviewedWithoutResult ? "reviewed_no_result" : "reviewed_result",
       }
     : nextActionForStatus(input.status.recommendedAction);
   const recentLogTail = redactLogTail(await safeTail(input.launch.logPath, input.tailLines));
@@ -3118,8 +3855,10 @@ export async function buildCodexGoalBrief(input: {
       lifecycleMarkerTypes.length
         ? `lifecycle markers ${lifecycleMarkerTypes.join(",")}`
         : "lifecycle markers none",
+      reviewedStopped ? "reviewedStopped true" : "reviewedStopped false",
       reviewedWithoutResult ? "reviewedWithoutResult true" : "reviewedWithoutResult false",
       stoppedWithoutResult ? "stoppedWithoutResult true" : "stoppedWithoutResult false",
+      maintenancePaused ? "maintenancePaused true" : "maintenancePaused false",
     ].join(", "),
     lastProgressAt,
     lastProgressAgeMs,
@@ -3139,14 +3878,21 @@ export async function buildCodexGoalBrief(input: {
     progressResultReason: input.status.progressResultReason,
     progressAttemptCount: input.status.progressAttemptCount,
     progressCurrentAccount: input.status.progressCurrentAccount,
+    runtimeEventsPath: input.status.runtimeEventsPath,
+    runtimeEventsExists: input.status.runtimeEventsExists,
+    runtimeEventsByteLength: input.status.runtimeEventsByteLength,
+    lastRuntimeEvent: input.status.lastRuntimeEvent,
+    lastRuntimeEventAt: input.status.lastRuntimeEventAt,
+    lastRuntimeEventLevel: input.status.lastRuntimeEventLevel,
     currentAccount: result.currentAccount,
     lastFailureReason: input.status.resultReason ?? result.lastFailureReason,
     changedFiles: input.status.changedFiles ?? [],
     safeToContinue:
       safeStatusToContinue &&
       hasAvailableAccount &&
+      !reviewedStopped &&
       !reviewedWithoutResult &&
-      !stoppedWithoutResult,
+      (!stoppedWithoutResult || maintenancePaused),
     hasAvailableAccount,
     configuredAccounts: input.accounts.map((slot) => slot.name),
     dedupedAccounts: dedupedAccounts.map((slot) => slot.name),
@@ -3156,6 +3902,7 @@ export async function buildCodexGoalBrief(input: {
     duplicateAccounts,
     lifecycleMarkers,
     lifecycleMarkerTypes,
+    maintenancePaused,
     capacityBlockedAccounts: capacityBlockedAccounts.map((slot) => ({
       name: slot.name,
       availability: slot.capacityAvailability,
@@ -3244,6 +3991,10 @@ function buildCodexGoalDecision(input: {
       logByteLength: input.brief.logByteLength,
       silentStale: input.brief.silentStale,
       heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
+      runtimeEventsPath: input.brief.runtimeEventsPath,
+      lastRuntimeEvent: input.brief.lastRuntimeEvent,
+      lastRuntimeEventAt: input.brief.lastRuntimeEventAt,
+      lastRuntimeEventLevel: input.brief.lastRuntimeEventLevel,
     },
     {
       code: "account_state",
@@ -3740,6 +4491,7 @@ async function readCodexGoalLifecycleMarker(input: {
       ...(typeof parsed.mode === "string" ? { mode: redactText(parsed.mode) } : {}),
       ...(typeof parsed.note === "string" ? { note: truncateText(redactText(parsed.note), 300) } : {}),
       ...(typeof parsed.forceStop === "boolean" ? { forceStop: parsed.forceStop } : {}),
+      ...(typeof parsed.forcePause === "boolean" ? { forcePause: parsed.forcePause } : {}),
       ...(typeof brief.silentStale === "boolean" ? { silentStale: brief.silentStale } : {}),
       ...(typeof brief.lastProgressAt === "string"
         ? { lastProgressAt: brief.lastProgressAt }
@@ -4411,6 +5163,10 @@ function workerControlReceiptJson(
 }
 
 function jobIdsFromValue(value: unknown): readonly string[] {
+  return accountNames(value);
+}
+
+function stringsFromValue(value: unknown): readonly string[] {
   return accountNames(value);
 }
 

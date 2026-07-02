@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import {
   decideRunObservation,
+  RunEventProviderKind,
   type RunArtifactSummary,
   type RunCapacityHint,
   type RunLogExcerpt,
@@ -101,7 +102,7 @@ export class ClaudeRunObservationAdapter implements RunObservationPort {
       : processAlive(progress.pid);
     const snapshotBase = {
       runId: manifest.runId,
-      providerKind: "claude",
+      providerKind: RunEventProviderKind.Claude,
       observedAt: new Date().toISOString(),
       status,
       liveness,

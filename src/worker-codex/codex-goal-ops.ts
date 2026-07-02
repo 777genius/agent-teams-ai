@@ -24,6 +24,7 @@ import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtim
 import {
   codexGoalOutputPath,
   codexGoalProgressPath,
+  codexGoalRuntimeEventsPath,
   type CodexGoalRunConfig,
 } from "./codex-goal-runner";
 
@@ -95,6 +96,13 @@ export type CodexGoalStatus = {
   readonly progressResultReason?: string;
   readonly progressAttemptCount?: number;
   readonly progressCurrentAccount?: string;
+  readonly runtimeEventsPath?: string;
+  readonly runtimeEventsExists?: boolean;
+  readonly runtimeEventsUpdatedAt?: string;
+  readonly runtimeEventsByteLength?: number;
+  readonly lastRuntimeEvent?: string;
+  readonly lastRuntimeEventAt?: string;
+  readonly lastRuntimeEventLevel?: string;
   readonly recommendedAction: CodexGoalRecommendedAction;
   readonly warnings: readonly string[];
 };
@@ -349,6 +357,19 @@ export async function collectCodexGoalStatus(
     ? {}
     : await inspectProcessSnapshot(progress.pid);
   if (progress.warning) warnings.push(progress.warning);
+  const runtimeEventsPath = input.jobRootDir && input.taskId
+    ? codexGoalRuntimeEventsPath({
+        jobRootDir: input.jobRootDir,
+        taskId: input.taskId,
+      })
+    : undefined;
+  const runtimeEventsStatus = runtimeEventsPath
+    ? await logFileStatus(runtimeEventsPath)
+    : {};
+  const lastRuntimeEvent = runtimeEventsPath
+    ? await readLastCodexGoalRuntimeEvent(runtimeEventsPath)
+    : {};
+  if (lastRuntimeEvent.warning) warnings.push(lastRuntimeEvent.warning);
   return {
     ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
     ...(resultPath === undefined ? {} : { resultPath }),
@@ -398,10 +419,30 @@ export async function collectCodexGoalStatus(
     ...(progress.currentAccount === undefined
       ? {}
       : { progressCurrentAccount: progress.currentAccount }),
+    ...(runtimeEventsPath === undefined ? {} : { runtimeEventsPath }),
+    ...(runtimeEventsStatus.exists === undefined
+      ? {}
+      : { runtimeEventsExists: runtimeEventsStatus.exists }),
+    ...(runtimeEventsStatus.updatedAt === undefined
+      ? {}
+      : { runtimeEventsUpdatedAt: runtimeEventsStatus.updatedAt }),
+    ...(runtimeEventsStatus.byteLength === undefined
+      ? {}
+      : { runtimeEventsByteLength: runtimeEventsStatus.byteLength }),
+    ...(lastRuntimeEvent.event === undefined
+      ? {}
+      : { lastRuntimeEvent: lastRuntimeEvent.event }),
+    ...(lastRuntimeEvent.timestamp === undefined
+      ? {}
+      : { lastRuntimeEventAt: lastRuntimeEvent.timestamp }),
+    ...(lastRuntimeEvent.level === undefined
+      ? {}
+      : { lastRuntimeEventLevel: lastRuntimeEvent.level }),
     recommendedAction: recommendCodexGoalAction({
       ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
       ...(result.status === undefined ? {} : { resultStatus: result.status }),
       ...(result.reason === undefined ? {} : { resultReason: result.reason }),
+      ...(progress.status === undefined ? {} : { progressStatus: progress.status }),
       ...(workspace.dirty === undefined
         ? {}
         : { workspaceDirty: workspace.dirty }),
@@ -581,10 +622,12 @@ export function recommendCodexGoalAction(input: {
   readonly tmuxAlive?: boolean;
   readonly resultStatus?: string;
   readonly resultReason?: string;
+  readonly progressStatus?: string;
   readonly workspaceDirty?: boolean;
   readonly resultExists?: boolean;
 }): CodexGoalRecommendedAction {
   if (input.tmuxAlive) return "wait_for_worker";
+  if (input.progressStatus === "maintenance_paused") return "start_worker";
   if (input.resultStatus === "done" || input.resultStatus === "completed") {
     return "review_completed";
   }
@@ -970,6 +1013,33 @@ async function readCodexGoalProgressSummary(path: string): Promise<{
     return safeMessage.includes("ENOENT")
       ? { exists: false }
       : { exists: false, warning: `progress file is unreadable: ${safeMessage}` };
+  }
+}
+
+async function readLastCodexGoalRuntimeEvent(path: string): Promise<{
+  readonly event?: string;
+  readonly timestamp?: string;
+  readonly level?: string;
+  readonly warning?: string;
+}> {
+  try {
+    const text = await readFile(path, "utf8");
+    const line = text.split(/\r?\n/).reverse().find((item) => item.trim());
+    if (!line) return {};
+    const parsed: unknown = JSON.parse(line);
+    if (!isRecord(parsed)) return {};
+    return {
+      ...(typeof parsed.event === "string"
+        ? { event: redactStatusText(parsed.event) }
+        : {}),
+      ...(typeof parsed.timestamp === "string" ? { timestamp: parsed.timestamp } : {}),
+      ...(typeof parsed.level === "string" ? { level: redactStatusText(parsed.level) } : {}),
+    };
+  } catch (error) {
+    const safeMessage = error instanceof Error ? error.message : "runtime_event_unreadable";
+    return safeMessage.includes("ENOENT")
+      ? {}
+      : { warning: `runtime event file is unreadable: ${safeMessage}` };
   }
 }
 

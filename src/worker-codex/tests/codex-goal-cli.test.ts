@@ -2,6 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { LocalFileRunEventStore } from "@vioxen/subscription-runtime/store-local-file";
+import {
+  RunEventProviderKind,
+  RunEventType,
+  makeRunEvent,
+} from "@vioxen/subscription-runtime/worker-core";
 import {
   buildNoTmuxShellCommand,
   buildTmuxCommand,
@@ -171,6 +177,14 @@ describe("codex goal cli", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "agent_run_watch" }),
         expect.objectContaining({ name: "codex_goal_run_watch" }),
+        expect.objectContaining({ name: "agent_run_events" }),
+        expect.objectContaining({ name: "codex_goal_events" }),
+        expect.objectContaining({ name: "agent_run_state" }),
+        expect.objectContaining({ name: "codex_goal_state" }),
+        expect.objectContaining({ name: "agent_run_event_compaction_plan" }),
+        expect.objectContaining({ name: "agent_run_event_compact" }),
+        expect.objectContaining({ name: "agent_run_project_events" }),
+        expect.objectContaining({ name: "codex_goal_project_events" }),
         expect.objectContaining({ name: "codex_goal_reconcile_preview" }),
         expect.objectContaining({ name: "codex_goal_brief" }),
         expect.objectContaining({ name: "codex_goal_decision" }),
@@ -251,6 +265,164 @@ describe("codex goal cli", () => {
       includeLogTail: true,
       includeChangedFiles: true,
       tailLines: 25,
+    });
+
+    const events = parseCodexGoalCliArgs([
+      "events",
+      "job-a",
+      "--registry-root",
+      "/tmp/registry",
+      "--event-root",
+      "/tmp/events",
+      "--cursor",
+      "12",
+      "--type",
+      "run.completed",
+      "--limit",
+      "10",
+    ], fakeIo());
+    expect(events).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_events",
+      format: "json",
+    });
+    if (events.kind !== "mcp-tool") return;
+    expect(JSON.parse(events.argsJson ?? "{}")).toEqual({
+      providerKind: "codex",
+      jobId: "job-a",
+      registryRootDir: "/tmp/registry",
+      eventRootDir: "/tmp/events",
+      cursor: "12",
+      type: "run.completed",
+      limit: 10,
+    });
+
+    const state = parseCodexGoalCliArgs([
+      "state",
+      "job-a",
+      "--registry-root",
+      "/tmp/registry",
+      "--event-root",
+      "/tmp/events",
+    ], fakeIo());
+    expect(state).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_state",
+      format: "json",
+    });
+    if (state.kind !== "mcp-tool") return;
+    expect(JSON.parse(state.argsJson ?? "{}")).toEqual({
+      providerKind: "codex",
+      jobId: "job-a",
+      registryRootDir: "/tmp/registry",
+      eventRootDir: "/tmp/events",
+    });
+
+    const compactionPlan = parseCodexGoalCliArgs([
+      "event-compaction-plan",
+      "--registry-root",
+      "/tmp/registry",
+      "--event-root",
+      "/tmp/events",
+      "--keep-after",
+      "2026-07-02T00:00:00.000Z",
+      "--keep-latest-per-run",
+      "3",
+      "--compact-delivered",
+      "--drop-invalid-lines",
+    ], fakeIo());
+    expect(compactionPlan).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_event_compaction_plan",
+      format: "json",
+    });
+    if (compactionPlan.kind !== "mcp-tool") return;
+    expect(JSON.parse(compactionPlan.argsJson ?? "{}")).toEqual({
+      registryRootDir: "/tmp/registry",
+      eventRootDir: "/tmp/events",
+      keepEventsAfter: "2026-07-02T00:00:00.000Z",
+      keepLatestEventsPerRun: 3,
+      compactDeliveredEvents: true,
+      dropInvalidLines: true,
+    });
+
+    const compact = parseCodexGoalCliArgs([
+      "event-compact",
+      "--registry-root",
+      "/tmp/registry",
+      "--event-root",
+      "/tmp/events",
+      "--keep-latest-per-run",
+      "1",
+      "--force",
+      "--confirm",
+    ], fakeIo());
+    expect(compact).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_event_compact",
+      format: "json",
+    });
+    if (compact.kind !== "mcp-tool") return;
+    expect(JSON.parse(compact.argsJson ?? "{}")).toEqual({
+      registryRootDir: "/tmp/registry",
+      eventRootDir: "/tmp/events",
+      keepLatestEventsPerRun: 1,
+      safetyMode: "force",
+      confirmCompact: true,
+    });
+
+    const projectEvents = parseCodexGoalCliArgs([
+      "project-events",
+      "job-a",
+      "--registry-root",
+      "/tmp/registry",
+      "--event-root",
+      "/tmp/events",
+      "--host-id",
+      "host-a",
+      "--include-changed-files",
+    ], fakeIo());
+    expect(projectEvents).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_project_events",
+      format: "json",
+    });
+    if (projectEvents.kind !== "mcp-tool") return;
+    expect(JSON.parse(projectEvents.argsJson ?? "{}")).toEqual({
+      providerKind: "codex",
+      jobId: "job-a",
+      registryRootDir: "/tmp/registry",
+      eventRootDir: "/tmp/events",
+      hostId: "host-a",
+      includeChangedFiles: true,
+    });
+
+    const relayEvents = parseCodexGoalCliArgs([
+      "relay-events",
+      "--event-root",
+      "/tmp/events",
+      "--consumer-id",
+      "orchestrator-a",
+      "--publisher",
+      "webhook",
+      "--webhook-url",
+      "https://orchestrator.example.test/events",
+      "--limit",
+      "20",
+      "--run-id",
+      "job-a",
+      "--type",
+      "run.completed",
+    ], fakeIo());
+    expect(relayEvents).toMatchObject({
+      kind: "relay-events",
+      eventRootDir: "/tmp/events",
+      consumerId: "orchestrator-a",
+      publisherKind: "webhook",
+      webhookUrl: "https://orchestrator.example.test/events",
+      limit: 20,
+      runId: "job-a",
+      types: ["run.completed"],
     });
 
     const claudeRunWatch = parseCodexGoalCliArgs([
@@ -520,6 +692,53 @@ describe("codex goal cli", () => {
       jobId: "job-a",
       account: "account-c",
     });
+  });
+
+  it("relays run events to stdout and advances the delivery cursor", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-relay-events-"));
+    const store = new LocalFileRunEventStore({ rootDir: root });
+    await store.append([
+      makeRunEvent({
+        runId: "run-a",
+        type: RunEventType.Completed,
+        occurredAt: "2026-07-02T00:00:00.000Z",
+        source: {
+          providerKind: RunEventProviderKind.Codex,
+        },
+        idempotencyParts: ["completed"],
+      }),
+    ]);
+
+    const firstIo = captureIo();
+    const firstExitCode = await runCodexGoalCli([
+      "relay-events",
+      "--event-root",
+      root,
+      "--consumer-id",
+      "consumer-a",
+      "--publisher",
+      "stdout",
+    ], firstIo);
+
+    expect(firstExitCode).toBe(0);
+    expect(JSON.parse(firstIo.stdout.trim())).toMatchObject({
+      runId: "run-a",
+      type: "run.completed",
+    });
+
+    const secondIo = captureIo();
+    const secondExitCode = await runCodexGoalCli([
+      "relay-events",
+      "--event-root",
+      root,
+      "--consumer-id",
+      "consumer-a",
+      "--publisher",
+      "stdout",
+    ], secondIo);
+
+    expect(secondExitCode).toBe(0);
+    expect(secondIo.stdout).toBe("");
   });
 
   it("doctors the SDK-backed control surface", async () => {

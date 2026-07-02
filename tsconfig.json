@@ -25,6 +25,9 @@
       "@vioxen/subscription-runtime/provider-codex": [
         "src/provider-codex/index.ts"
       ],
+      "@vioxen/subscription-runtime/openai-compatible-codex": [
+        "src/openai-compatible-codex/index.ts"
+      ],
       "@vioxen/subscription-runtime/provider-claude": [
         "src/provider-claude/index.ts"
       ],
@@ -39,6 +42,9 @@
       ],
       "@vioxen/subscription-runtime/worker-local": [
         "src/worker-local/index.ts"
+      ],
+      "@vioxen/subscription-runtime/orchestrator-core": [
+        "src/orchestrator-core/index.ts"
       ],
       "@vioxen/subscription-runtime/queue-core": [
         "src/queue-core/index.ts"

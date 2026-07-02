@@ -55,6 +55,7 @@ subscription-runtime-codex-goal decision my-task
 subscription-runtime-codex-goal handoff my-task
 subscription-runtime-codex-goal accounts my-task
 subscription-runtime-codex-goal stop-job my-task --confirm
+subscription-runtime-codex-goal maintenance-pause-job my-task --confirm --reason resize
 subscription-runtime-codex-goal tool codex_goal_brief --args-json '{"jobId":"my-task"}'
 subscription-runtime-codex-goal tool codex_goal_accounts_status --args-json '{"jobId":"my-task"}'
 subscription-runtime-codex-goal tool codex_goal_continue --args-json '{"jobId":"my-task","confirmContinue":true}'
@@ -77,11 +78,17 @@ subscription-runtime-codex-goal tool codex_goal_continue --args-json '{"jobId":"
    recent log tail and git status. If it is truly stuck, call
    `codex_goal_stop({ jobId, confirmStop: true })` before recovery. Successful
    stops write `<taskId>.stop-event.json` in the job root.
+   For planned resize, deploy or host maintenance, prefer
+   `codex_goal_maintenance_pause({ jobId, confirmPause: true, reason })`.
+   It writes `maintenance_paused` progress and avoids synthetic failure
+   reconciliation before the next continue.
    `brief.lifecycleMarkers` and `codex_goal_overview.jobs[].lifecycleMarkers`
    show existing pause, review and stop markers so agents do not have to inspect
    jobRootDir by hand.
    Prefer `brief.progressUpdatedAt` and `brief.progressHeartbeatAgeMs` over
    stdout silence when deciding whether a worker is actually stale.
+   If stdout log is empty, inspect `brief.runtimeEventsPath`,
+   `brief.lastRuntimeEvent` and `brief.lastRuntimeEventAt`.
 9. If `brief.safeToContinue === true`, call
    `codex_goal_continue({ jobId, confirmContinue: true })`.
 10. If `brief.hasAvailableAccount === false`, call

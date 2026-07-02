@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { RunEventProviderKind } from "../../worker-core";
 import { LocalFileRunObservationHistoryStore } from "../local-run-observation-history-store";
 
 describe("LocalFileRunObservationHistoryStore", () => {
@@ -12,7 +13,7 @@ describe("LocalFileRunObservationHistoryStore", () => {
       await store.writeObservation({
         schemaVersion: 1,
         runId: "run-a",
-        providerKind: "codex",
+        providerKind: RunEventProviderKind.Codex,
         observedAt: "2026-07-01T00:00:00.000Z",
         workspaceDirty: true,
         changedFilesCount: 2,
@@ -40,7 +41,7 @@ describe("LocalFileRunObservationHistoryStore", () => {
       await store.writeObservation({
         schemaVersion: 1,
         runId: "run-a",
-        providerKind: "codex",
+        providerKind: RunEventProviderKind.Codex,
         observedAt: "2026-07-01T00:00:00.000Z",
       });
       const recordPath = await firstRecordPath(root);

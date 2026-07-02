@@ -346,6 +346,7 @@ subscription-runtime-codex-goal handoff memo-locomo-cat1-recall
 subscription-runtime-codex-goal accounts memo-locomo-cat1-recall
 subscription-runtime-codex-goal continue-job memo-locomo-cat1-recall --confirm
 subscription-runtime-codex-goal stop-job memo-locomo-cat1-recall --confirm
+subscription-runtime-codex-goal maintenance-pause-job memo-locomo-cat1-recall --confirm --reason resize
 subscription-runtime-codex-goal tool codex_goal_brief --args-json '{"jobId":"memo-locomo-cat1-recall"}'
 subscription-runtime-codex-goal tool codex_goal_accounts_status --args-json '{"jobId":"memo-locomo-cat1-recall"}'
 subscription-runtime-codex-goal tool codex_goal_continue --args-json '{"jobId":"memo-locomo-cat1-recall","confirmContinue":true}'
@@ -476,6 +477,11 @@ Lifecycle tools:
   confirmation. By default it allows silent-stale workers only; use `forceStop`
   only after manual review. A successful stop writes
   `<taskId>.stop-event.json` in the job root.
+- `codex_goal_maintenance_pause`: planned stop for resize, deploy or host
+  maintenance. It kills the tmux worker, writes `maintenance_paused` progress
+  and `<taskId>.maintenance-pause.json`, but does not reconcile a synthetic
+  failure result. After maintenance, use `codex_goal_continue` when the brief
+  or decision reports `safeToContinue: true`.
 - `codex_goal_pause`: soft pause marker for human handoff. It does not kill
   tmux or discard work.
 - `codex_goal_mark_reviewed`: mark completed worker output as reviewed.
@@ -514,12 +520,17 @@ agents. It returns:
 - `progressUpdatedAt`
 - `progressHeartbeatAgeMs`
 - `logByteLength`
+- `runtimeEventsPath`
+- `lastRuntimeEvent`
+- `lastRuntimeEventAt`
+- `lastRuntimeEventLevel`
 - `currentAccount`
 - `lastFailureReason`
 - `recentCommands`
 - `changedFiles`
 - `lifecycleMarkers`
 - `lifecycleMarkerTypes`
+- `maintenancePaused`
 - `safeToContinue`
 - `hasAvailableAccount`
 - `availableDedupedAccounts`
@@ -548,6 +559,26 @@ because it also excludes cooldown, quota exhausted and auth-broken slots.
 Pass the job `stateRootDir` whenever you care about quota/cooldown state;
 without it, account tools can validate auth files but cannot see worker
 capacity records.
+
+`codex_goal_accounts_status` also returns top-level `count`, `available`,
+`hasAvailableAccount`, `summary` and an `accounts` alias for `slots`. Monitors
+should prefer those fields for compact status cards instead of inferring counts
+from one response shape.
+
+For a host that keeps worker auth outside the local machine, sync only the
+auth-relevant files after a manual relogin:
+
+```sh
+node scripts/ops/sync-codex-auth-to-host.mjs \
+  --host codex-workers-eu-01 \
+  --accounts account-a,account-d \
+  --remote-root /var/data/codex-home/live-codex-auth
+```
+
+The helper uploads `auth.json`, `models_cache.json` and `installation_id` through
+a temporary remote directory and then swaps the account directory. It does not
+print auth payloads and does not copy Codex sqlite state, logs, shell snapshots,
+memories, plugin cache or auth backups.
 
 `codex_accounts_list_pools` also accepts `stateRootDir`. Use it when choosing
 between pools for a specific job. Its response includes `capacityAware` so an

@@ -4,6 +4,7 @@ import {
   type RunProgressClassification,
   type RuntimeRecommendedAction,
 } from "./runtime-result";
+import type { RunEventProviderKind } from "./run-provider-kind";
 
 export type RunObservationStatus =
   | "running"
@@ -128,7 +129,7 @@ export type RunReadOnlyDecision = {
 
 export type RunObservationSnapshot = {
   readonly runId: string;
-  readonly providerKind: string;
+  readonly providerKind: RunEventProviderKind;
   readonly observedAt: string;
   readonly status: RunObservationStatus;
   readonly liveness: RunObservationLiveness;
@@ -162,7 +163,7 @@ export type RunObservationRequest = {
 export type RunObservationHistoryEntry = {
   readonly schemaVersion: 1;
   readonly runId: string;
-  readonly providerKind: string;
+  readonly providerKind: RunEventProviderKind;
   readonly observedAt: string;
   readonly workspaceDirty?: boolean;
   readonly changedFilesCount?: number;

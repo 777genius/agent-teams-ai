@@ -15,7 +15,10 @@ import {
   type ProviderTaskTelemetry,
   type RuntimeWarning,
 } from "@vioxen/subscription-runtime/core";
-import type { WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
+import {
+  RunEventProviderKind,
+  type WorkerCapacitySnapshot,
+} from "@vioxen/subscription-runtime/worker-core";
 
 export const claudeRunArtifactSchemaVersion = 1;
 
@@ -27,7 +30,7 @@ export type ClaudeRunArtifactStatus =
 
 export type ClaudeRunManifest = {
   readonly schemaVersion: typeof claudeRunArtifactSchemaVersion;
-  readonly providerKind: "claude";
+  readonly providerKind: RunEventProviderKind.Claude;
   readonly runId: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -148,7 +151,7 @@ export class FileClaudeRunArtifactStore {
     await mkdir(paths.runDir, { recursive: true, mode: 0o700 });
     await writeJsonAtomic(paths.manifestPath, {
       schemaVersion: claudeRunArtifactSchemaVersion,
-      providerKind: "claude",
+      providerKind: RunEventProviderKind.Claude,
       runId: input.runId,
       createdAt: now,
       updatedAt: now,
@@ -398,7 +401,7 @@ function parseManifest(value: unknown): ClaudeRunManifest {
     throw new Error("claude_run_manifest_invalid");
   }
   if (
-    value.providerKind !== "claude" ||
+    value.providerKind !== RunEventProviderKind.Claude ||
     typeof value.runId !== "string" ||
     typeof value.createdAt !== "string" ||
     typeof value.updatedAt !== "string" ||

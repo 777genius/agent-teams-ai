@@ -5,6 +5,7 @@ import type {
   RunObservationHistoryEntry,
   RunObservationHistoryStorePort,
 } from "@vioxen/subscription-runtime/worker-core";
+import { runEventProviderKindFromString } from "@vioxen/subscription-runtime/worker-core";
 
 const storageVersion = "local-run-observation-history-v1";
 
@@ -100,7 +101,7 @@ function parsePersistedEntry(
   return {
     schemaVersion: 1,
     runId: value.runId,
-    providerKind: value.providerKind,
+    providerKind: runEventProviderKindFromString(value.providerKind),
     observedAt: value.observedAt,
     ...(value.workspaceDirty === undefined
       ? {}

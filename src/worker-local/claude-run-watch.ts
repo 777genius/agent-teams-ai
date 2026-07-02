@@ -1,5 +1,6 @@
 import {
   RunObservationService,
+  RunEventProviderKind,
   decideRunObservation,
   type RunObservationSnapshot,
   type RunObservationWarning,
@@ -69,7 +70,7 @@ export async function watchClaudeRuns(args: ClaudeRunWatchArgs): Promise<Record<
     ok: observationFailures.length === 0,
     mode: "read_only",
     sideEffects: [],
-    providerKind: "claude",
+    providerKind: RunEventProviderKind.Claude,
     ...(args.stateRootDir === undefined ? {} : { stateRootDir: args.stateRootDir }),
     ...(args.runArtifactsRootDir === undefined
       ? {}
@@ -95,7 +96,7 @@ function failedRunObservationSnapshot(input: {
   const manualReviewReasons = ["run_observation_failed"];
   return {
     runId: input.runId,
-    providerKind: "claude",
+    providerKind: RunEventProviderKind.Claude,
     observedAt: new Date().toISOString(),
     status: "unknown",
     liveness: "unknown",
