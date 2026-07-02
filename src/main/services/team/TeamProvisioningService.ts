@@ -471,6 +471,7 @@ import {
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
   summarizeRuntimeLaunchResultMembers,
+  toOpenCodePersistedLaunchMember as toOpenCodePersistedLaunchMemberHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { shouldEmitOpenCodeRuntimeLivenessMemberSpawnChange as shouldEmitOpenCodeRuntimeLivenessMemberSpawnChangeHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeLivenessPolicy';
 import {
@@ -12453,59 +12454,7 @@ export class TeamProvisioningService {
     evidence: TeamRuntimeMemberLaunchEvidence | undefined,
     runId?: string
   ): PersistedTeamLaunchMemberState {
-    const now = nowIso();
-    const launchState = evidence?.launchState ?? 'failed_to_start';
-    const hardFailure = evidence?.hardFailure === true || launchState === 'failed_to_start';
-    return {
-      name: member.name,
-      providerId: 'opencode',
-      providerBackendId: undefined,
-      model: member.model?.trim() || evidence?.model?.trim() || undefined,
-      effort: member.effort,
-      cwd: member.cwd?.trim() || undefined,
-      laneId: 'primary',
-      laneKind: 'primary',
-      laneOwnerProviderId: 'opencode',
-      launchState,
-      agentToolAccepted: evidence?.agentToolAccepted === true,
-      runtimeAlive: evidence?.runtimeAlive === true,
-      bootstrapConfirmed: evidence?.bootstrapConfirmed === true,
-      hardFailure,
-      hardFailureReason: hardFailure ? evidence?.hardFailureReason : undefined,
-      pendingPermissionRequestIds: evidence?.pendingPermissionRequestIds?.length
-        ? [...new Set(evidence.pendingPermissionRequestIds)]
-        : undefined,
-      ...(evidence?.runtimePid ? { runtimePid: evidence.runtimePid } : {}),
-      ...(evidence?.sessionId ? { runtimeSessionId: evidence.sessionId } : {}),
-      ...(evidence?.sessionId
-        ? { runtimeRunId: evidence.appManagedBootstrapCandidate?.runId ?? runId }
-        : {}),
-      ...(evidence?.bootstrapEvidenceSource
-        ? { bootstrapEvidenceSource: evidence.bootstrapEvidenceSource }
-        : {}),
-      ...(evidence?.bootstrapMode ? { bootstrapMode: evidence.bootstrapMode } : {}),
-      ...(evidence?.appManagedBootstrapCandidate
-        ? { appManagedBootstrapCandidate: evidence.appManagedBootstrapCandidate }
-        : {}),
-      ...(evidence?.livenessKind ? { livenessKind: evidence.livenessKind } : {}),
-      ...(evidence?.pidSource ? { pidSource: evidence.pidSource } : {}),
-      ...(evidence?.runtimeDiagnostic ? { runtimeDiagnostic: evidence.runtimeDiagnostic } : {}),
-      ...(evidence?.runtimeDiagnosticSeverity
-        ? { runtimeDiagnosticSeverity: evidence.runtimeDiagnosticSeverity }
-        : evidence?.runtimeDiagnostic
-          ? { runtimeDiagnosticSeverity: 'info' as const }
-          : {}),
-      ...(evidence?.runtimeAlive ? { runtimeLastSeenAt: now } : {}),
-      firstSpawnAcceptedAt: evidence?.agentToolAccepted ? now : undefined,
-      lastHeartbeatAt: evidence?.bootstrapConfirmed ? now : undefined,
-      lastRuntimeAliveAt: evidence?.runtimeAlive ? now : undefined,
-      lastEvaluatedAt: now,
-      sources: {
-        processAlive: evidence?.runtimeAlive === true,
-        nativeHeartbeat: evidence?.bootstrapConfirmed === true,
-      },
-      diagnostics: evidence?.diagnostics,
-    };
+    return toOpenCodePersistedLaunchMemberHelper(member, evidence, { runId, nowIso });
   }
 
   async launchTeam(

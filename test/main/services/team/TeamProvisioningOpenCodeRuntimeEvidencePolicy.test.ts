@@ -32,6 +32,7 @@ import {
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
   summarizeRuntimeLaunchResultMembers,
+  toOpenCodePersistedLaunchMember,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { describe, expect, it } from 'vitest';
 
@@ -295,6 +296,72 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
       diagnostics: ['launch failed'],
     });
     expect(result.diagnostics).toEqual(['launch failed']);
+  });
+
+  it('projects OpenCode launch evidence into persisted primary launch members', () => {
+    const member = toOpenCodePersistedLaunchMember(
+      {
+        name: 'alice',
+        providerId: 'opencode',
+        model: ' minimax-m2.5-free ',
+        effort: 'medium',
+        cwd: ' /tmp/demo ',
+      },
+      {
+        memberName: 'alice',
+        providerId: 'opencode',
+        launchState: 'runtime_pending_permission',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        pendingPermissionRequestIds: ['perm-1', 'perm-1', 'perm-2'],
+        sessionId: 'session-1',
+        appManagedBootstrapCandidate: {
+          schemaVersion: 1,
+          source: 'app_managed_bootstrap',
+          teamName: 'demo',
+          memberName: 'alice',
+          runtimeSessionId: 'session-1',
+          runId: 'candidate-run',
+          laneId: 'primary',
+          messageID: 'msg-1',
+          contextHash: 'ctx-1',
+          briefingHash: 'brief-1',
+          injectionVerifiedAt: acceptedAt,
+          candidateAt: acceptedAt,
+        },
+        diagnostics: ['waiting for permission approval'],
+      },
+      { runId: 'launch-run', nowIso: () => acceptedAt }
+    );
+
+    expect(member).toMatchObject({
+      name: 'alice',
+      providerId: 'opencode',
+      model: 'minimax-m2.5-free',
+      cwd: '/tmp/demo',
+      laneId: 'primary',
+      laneKind: 'primary',
+      laneOwnerProviderId: 'opencode',
+      launchState: 'runtime_pending_permission',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      pendingPermissionRequestIds: ['perm-1', 'perm-2'],
+      runtimeSessionId: 'session-1',
+      runtimeRunId: 'candidate-run',
+      runtimeLastSeenAt: acceptedAt,
+      firstSpawnAcceptedAt: acceptedAt,
+      lastRuntimeAliveAt: acceptedAt,
+      lastEvaluatedAt: acceptedAt,
+      sources: {
+        processAlive: true,
+        nativeHeartbeat: false,
+      },
+      diagnostics: ['waiting for permission approval'],
+    });
   });
 
   it('recognizes runtime entry handles from pid, runtime session, or liveness', () => {
