@@ -154,7 +154,6 @@ import {
 import { createRuntimeRunTombstoneStore } from './opencode/store/RuntimeRunTombstoneStore';
 import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
 import { ensureCwdExists, sleep } from './provisioning/TeamProvisioningAsyncUtils';
-import { getOpenCodeBootstrapCheckinRetryMarker } from './provisioning/TeamProvisioningBootstrapCheckinMarker';
 import {
   buildDeterministicCreateBootstrapSpec,
   buildDeterministicLaunchBootstrapSpec,
@@ -328,7 +327,6 @@ import {
   hasMixedLaunchMetadata,
   hasMixedSecondaryLaunchMetadata,
   hasPrimaryOnlyLaneAwareLaunchMetadata,
-  resolveOpenCodeSecondaryLaneMemberEvidence,
   shouldOverlayPrimaryBootstrapTruth as shouldOverlayPrimaryBootstrapTruthHelper,
 } from './provisioning/TeamProvisioningLaunchStateProjection';
 import {
@@ -361,7 +359,6 @@ import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisionin
 import {
   matchesExactTeamMemberName,
   matchesObservedMemberNameForExpected,
-  matchesTeamMemberIdentity,
 } from './provisioning/TeamProvisioningMemberIdentity';
 import {
   type LiveRosterAttachReason,
@@ -423,8 +420,18 @@ import {
   type OpenCodeRuntimeBootstrapEvidencePorts,
 } from './provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
 import {
+  buildOpenCodeSecondaryBootstrapStallDiagnostic as buildOpenCodeSecondaryBootstrapStallDiagnosticHelper,
+  isOpenCodeBootstrapStallWindowElapsed as isOpenCodeBootstrapStallWindowElapsedHelper,
+  maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt as maybeSendOpenCodeSecondaryBootstrapCheckinRetryPromptHelper,
+  OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_PENDING_DIAGNOSTIC,
+  OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC,
+  scheduleOpenCodeBootstrapStallReevaluation as scheduleOpenCodeBootstrapStallReevaluationHelper,
+  setOpenCodeRuntimePendingBootstrapStatus as setOpenCodeRuntimePendingBootstrapStatusHelper,
+  setOpenCodeSecondaryBootstrapStalledStatus as setOpenCodeSecondaryBootstrapStalledStatusHelper,
+  toOpenCodeRuntimeProcessBootstrapStallDiagnostic,
+} from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
+import {
   boundOpenCodeAppManagedBriefingText,
-  hasRealOpenCodeFailureDiagnostic,
   isPersistedOpenCodeSecondaryLaneMember,
   normalizeOpenCodePrepareDiagnostic,
   promoteOpenCodePersistedFailureReasonsFromDiagnostics,
@@ -459,17 +466,13 @@ import {
   getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
   isBootstrapMemberEvidenceCurrentForMember,
   isDefinitiveOpenCodePreLaunchFailure,
-  isExplicitLegacyOpenCodeBootstrap,
-  isMaterializedOpenCodeSessionId,
   isRecoverableOpenCodeBootstrapPendingLaunchResult,
   isRecoverableOpenCodeRuntimeEvidence,
   isRecoverablePersistedOpenCodeRuntimeCandidate,
   isRecoverablePersistedOpenCodeTerminalRuntimeCandidate,
   MEMBER_BOOTSTRAP_STALL_MS,
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
-  OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
-  selectOpenCodeSecondaryBootstrapStallDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember as toOpenCodePersistedLaunchMemberHelper,
@@ -4760,6 +4763,21 @@ export class TeamProvisioningService {
     });
   }
 
+  private updateLaunchDiagnosticsForRun(run: ProvisioningRun, observedAt: string): void {
+    const launchDiagnostics = boundLaunchDiagnostics(
+      buildLaunchDiagnosticsFromRun(run, { nowIso: () => observedAt })
+    );
+    if (!launchDiagnostics) {
+      return;
+    }
+    run.progress = {
+      ...run.progress,
+      updatedAt: observedAt,
+      launchDiagnostics,
+    };
+    run.onProgress(run.progress);
+  }
+
   private resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void {
     resetRuntimeToolActivityHelper(run, memberName, {
       emitToolActivity: (payload) => this.emitToolActivity(run, payload),
@@ -5077,17 +5095,14 @@ export class TeamProvisioningService {
           ? await this.buildOpenCodeSecondaryBootstrapStallDiagnostic(run, memberName, refreshed)
           : null;
         const runtimeProcessStallDiagnostic =
-          stalledDiagnostic ===
-          'OpenCode bootstrap did not complete runtime_bootstrap_checkin after 5 min.'
-            ? 'Runtime process is alive, but no bootstrap check-in after 5 min.'
-            : stalledDiagnostic;
+          toOpenCodeRuntimeProcessBootstrapStallDiagnostic(stalledDiagnostic);
         this.setOpenCodeRuntimePendingBootstrapStatus(run, memberName, refreshed, {
           bootstrapStalled,
           runtimeDiagnostic: bootstrapStalled
             ? (runtimeProcessStallDiagnostic ??
-              'Runtime process is alive, but no bootstrap check-in after 5 min.')
+              OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC)
             : (runtimeDiagnostic ??
-              'OpenCode runtime process is alive, waiting for bootstrap check-in.'),
+              OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_PENDING_DIAGNOSTIC),
           runtimeDiagnosticSeverity: bootstrapStalled
             ? 'warning'
             : (metadata.runtimeDiagnosticSeverity ?? 'info'),
@@ -5099,7 +5114,7 @@ export class TeamProvisioningService {
             current: refreshed,
             runtimeDiagnostic:
               runtimeProcessStallDiagnostic ??
-              'Runtime process is alive, but no bootstrap check-in after 5 min.',
+              OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC,
             runtimeSessionId: metadata.runtimeSessionId,
           });
         }
@@ -5142,19 +5157,11 @@ export class TeamProvisioningService {
       };
       run.memberSpawnStatuses.set(memberName, next);
       this.emitMemberSpawnChange(run, memberName);
-      const stallDelayMs = Math.max(
-        1_000,
-        Date.parse(refreshedFirstSpawnAcceptedAt) + MEMBER_BOOTSTRAP_STALL_MS - Date.now()
+      this.scheduleOpenCodeBootstrapStallReevaluation(
+        run,
+        memberName,
+        refreshedFirstSpawnAcceptedAt
       );
-      const stallKey = `${this.getMemberLaunchGraceKey(run, memberName)}:bootstrap-stall`;
-      if (!this.pendingTimeouts.has(stallKey)) {
-        const timer = setTimeout(() => {
-          this.pendingTimeouts.delete(stallKey);
-          void this.reevaluateMemberLaunchStatus(run, memberName);
-        }, stallDelayMs);
-        timer.unref?.();
-        this.pendingTimeouts.set(stallKey, timer);
-      }
       return;
     }
     if (
@@ -5230,57 +5237,27 @@ export class TeamProvisioningService {
       runtimeDiagnosticSeverity: TeamAgentRuntimeDiagnosticSeverity;
     }
   ): void {
-    const observedAt = nowIso();
-    const wasBootstrapStalled = current.bootstrapStalled === true;
-    const next: MemberSpawnStatusEntry = {
-      ...current,
-      status: 'waiting',
-      launchState: 'runtime_pending_bootstrap',
-      agentToolAccepted: true,
-      runtimeAlive: true,
-      bootstrapConfirmed: false,
-      hardFailure: false,
-      error: undefined,
-      hardFailureReason: undefined,
-      livenessSource: undefined,
-      livenessKind: 'runtime_process',
-      runtimeDiagnostic: options.runtimeDiagnostic,
-      runtimeDiagnosticSeverity: options.runtimeDiagnosticSeverity,
-      bootstrapStalled: options.bootstrapStalled ? true : undefined,
-      livenessLastCheckedAt: observedAt,
-      firstSpawnAcceptedAt: current.firstSpawnAcceptedAt ?? observedAt,
-      updatedAt: observedAt,
-    };
-
-    this.syncMemberTaskActivityForRuntimeTransition(run, memberName, current, next, observedAt);
-    run.memberSpawnStatuses.set(memberName, next);
-    const launchDiagnostics = boundLaunchDiagnostics(buildLaunchDiagnosticsFromRun(run));
-    if (launchDiagnostics) {
-      run.progress = {
-        ...run.progress,
-        updatedAt: observedAt,
-        launchDiagnostics,
-      };
-      run.onProgress(run.progress);
-    }
-
-    if (options.bootstrapStalled && !wasBootstrapStalled) {
-      this.appendMemberBootstrapDiagnostic(run, memberName, 'opencode_bootstrap_stalled');
-    } else if (
-      !options.bootstrapStalled &&
-      (current.status !== 'waiting' || current.livenessKind !== 'runtime_process')
-    ) {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        'runtime process is alive, teammate check-in not yet received'
-      );
-    }
-    if (!this.isCurrentTrackedRun(run)) return;
-    this.emitMemberSpawnChange(run, memberName);
-    if (run.isLaunch) {
-      void this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
-    }
+    setOpenCodeRuntimePendingBootstrapStatusHelper(run, memberName, current, options, {
+      nowIso,
+      syncMemberTaskActivityForRuntimeTransition: (targetRun, targetMember, previous, next, at) =>
+        this.syncMemberTaskActivityForRuntimeTransition(
+          targetRun as ProvisioningRun,
+          targetMember,
+          previous,
+          next,
+          at
+        ),
+      updateLaunchDiagnostics: (targetRun, observedAt) =>
+        this.updateLaunchDiagnosticsForRun(targetRun as ProvisioningRun, observedAt),
+      appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
+        this.appendMemberBootstrapDiagnostic(targetRun as ProvisioningRun, targetMember, text),
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun as ProvisioningRun),
+      emitMemberSpawnChange: (targetRun, targetMember) =>
+        this.emitMemberSpawnChange(targetRun as ProvisioningRun, targetMember),
+      persistLaunchStateSnapshot: (targetRun, phase) => {
+        void this.persistLaunchStateSnapshot(targetRun as ProvisioningRun, phase);
+      },
+    });
   }
 
   private async buildOpenCodeSecondaryBootstrapStallDiagnostic(
@@ -5288,42 +5265,13 @@ export class TeamProvisioningService {
     memberName: string,
     current: MemberSpawnStatusEntry
   ): Promise<string> {
-    const lane = (run.mixedSecondaryLanes ?? []).find(
-      (candidate) =>
-        candidate.providerId === 'opencode' &&
-        matchesTeamMemberIdentity(candidate.member.name, memberName)
+    return await buildOpenCodeSecondaryBootstrapStallDiagnosticHelper(
+      { run, memberName, current },
+      {
+        findBootstrapTranscriptOutcome: (teamName, targetMember, acceptedAtMs) =>
+          this.findBootstrapTranscriptOutcome(teamName, targetMember, acceptedAtMs),
+      }
     );
-    if (
-      !isExplicitLegacyOpenCodeBootstrap(
-        resolveOpenCodeSecondaryLaneMemberEvidence(lane, memberName)
-      )
-    ) {
-      return OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC;
-    }
-    const selectedDiagnostic = selectOpenCodeSecondaryBootstrapStallDiagnostic([
-      current.runtimeDiagnostic,
-      ...(lane?.diagnostics ?? []),
-      ...(lane?.result?.diagnostics ?? []),
-      ...(lane?.result?.members[memberName]?.diagnostics ?? []),
-      ...Object.values(lane?.result?.members ?? {})
-        .filter((member) => matchesTeamMemberIdentity(member.memberName ?? '', memberName))
-        .flatMap((member) => member.diagnostics ?? []),
-    ]);
-    if (selectedDiagnostic) {
-      return selectedDiagnostic;
-    }
-
-    const acceptedAtMs =
-      current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-    const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
-      run.teamName,
-      memberName,
-      Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-    );
-    if (transcriptOutcome?.kind === 'success' && transcriptOutcome.source === 'member_briefing') {
-      return 'OpenCode member_briefing completed, but runtime_bootstrap_checkin did not complete after 5 min.';
-    }
-    return 'OpenCode bootstrap did not complete runtime_bootstrap_checkin after 5 min.';
   }
 
   private setOpenCodeSecondaryBootstrapStalledStatus(
@@ -5332,51 +5280,33 @@ export class TeamProvisioningService {
     current: MemberSpawnStatusEntry,
     runtimeDiagnostic: string
   ): void {
-    const observedAt = nowIso();
-    const wasBootstrapStalled = current.bootstrapStalled === true;
-    const runtimeProcessAlive =
-      current.runtimeAlive === true && current.livenessKind === 'runtime_process';
-    const next: MemberSpawnStatusEntry = {
-      ...current,
-      status: 'waiting',
-      launchState: 'runtime_pending_bootstrap',
-      agentToolAccepted: true,
-      runtimeAlive: runtimeProcessAlive,
-      bootstrapConfirmed: false,
-      hardFailure: false,
-      error: undefined,
-      hardFailureReason: undefined,
-      livenessSource: undefined,
-      livenessKind:
-        current.livenessKind ?? (runtimeProcessAlive ? 'runtime_process' : 'registered_only'),
+    setOpenCodeSecondaryBootstrapStalledStatusHelper(
+      run,
+      memberName,
+      current,
       runtimeDiagnostic,
-      runtimeDiagnosticSeverity: 'warning',
-      bootstrapStalled: true,
-      livenessLastCheckedAt: observedAt,
-      firstSpawnAcceptedAt: current.firstSpawnAcceptedAt ?? observedAt,
-      updatedAt: observedAt,
-    };
-
-    this.syncMemberTaskActivityForRuntimeTransition(run, memberName, current, next, observedAt);
-    run.memberSpawnStatuses.set(memberName, next);
-    const launchDiagnostics = boundLaunchDiagnostics(buildLaunchDiagnosticsFromRun(run));
-    if (launchDiagnostics) {
-      run.progress = {
-        ...run.progress,
-        updatedAt: observedAt,
-        launchDiagnostics,
-      };
-      run.onProgress(run.progress);
-    }
-
-    if (!wasBootstrapStalled) {
-      this.appendMemberBootstrapDiagnostic(run, memberName, runtimeDiagnostic);
-    }
-    if (!this.isCurrentTrackedRun(run)) return;
-    this.emitMemberSpawnChange(run, memberName);
-    if (run.isLaunch) {
-      void this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
-    }
+      {
+        nowIso,
+        syncMemberTaskActivityForRuntimeTransition: (targetRun, targetMember, previous, next, at) =>
+          this.syncMemberTaskActivityForRuntimeTransition(
+            targetRun as ProvisioningRun,
+            targetMember,
+            previous,
+            next,
+            at
+          ),
+        updateLaunchDiagnostics: (targetRun, observedAt) =>
+          this.updateLaunchDiagnosticsForRun(targetRun as ProvisioningRun, observedAt),
+        appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
+          this.appendMemberBootstrapDiagnostic(targetRun as ProvisioningRun, targetMember, text),
+        isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun as ProvisioningRun),
+        emitMemberSpawnChange: (targetRun, targetMember) =>
+          this.emitMemberSpawnChange(targetRun as ProvisioningRun, targetMember),
+        persistLaunchStateSnapshot: (targetRun, phase) => {
+          void this.persistLaunchStateSnapshot(targetRun as ProvisioningRun, phase);
+        },
+      }
+    );
   }
 
   private async maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt(input: {
@@ -5386,106 +5316,14 @@ export class TeamProvisioningService {
     runtimeDiagnostic: string;
     runtimeSessionId?: string;
   }): Promise<void> {
-    const { run, memberName, current, runtimeDiagnostic } = input;
-    if (
-      !this.isCurrentTrackedRun(run) ||
-      run.processKilled ||
-      run.cancelRequested ||
-      current.launchState !== 'runtime_pending_bootstrap' ||
-      current.bootstrapConfirmed === true ||
-      current.hardFailure === true ||
-      current.skippedForLaunch === true ||
-      (current.pendingPermissionRequestIds?.length ?? 0) > 0
-    ) {
-      return;
-    }
-
-    const lane = (run.mixedSecondaryLanes ?? []).find(
-      (candidate) =>
-        candidate.providerId === 'opencode' &&
-        matchesTeamMemberIdentity(candidate.member.name, memberName)
-    );
-    const laneRunId = lane?.runId?.trim();
-    const runtimeSessionId =
-      input.runtimeSessionId?.trim() ||
-      lane?.result?.members[memberName]?.sessionId?.trim() ||
-      Object.values(lane?.result?.members ?? {})
-        .find((member) => matchesTeamMemberIdentity(member.memberName ?? '', memberName))
-        ?.sessionId?.trim() ||
-      '';
-    if (!lane || !laneRunId || !isMaterializedOpenCodeSessionId(runtimeSessionId)) {
-      return;
-    }
-    if (
-      !isExplicitLegacyOpenCodeBootstrap(
-        resolveOpenCodeSecondaryLaneMemberEvidence(lane, memberName)
-      )
-    ) {
-      return;
-    }
-
-    const diagnostics = [
-      runtimeDiagnostic,
-      current.runtimeDiagnostic,
-      ...(lane.diagnostics ?? []),
-      ...(lane.result?.diagnostics ?? []),
-      ...(lane.result?.members[memberName]?.diagnostics ?? []),
-    ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
-    if (hasRealOpenCodeFailureDiagnostic(diagnostics.join('\n').toLowerCase())) {
-      return;
-    }
-
-    const marker = getOpenCodeBootstrapCheckinRetryMarker(laneRunId, runtimeSessionId);
-    if (
-      run.provisioningOutputParts.some((line) => line.includes(marker)) ||
-      diagnostics.some((line) => line.includes(marker))
-    ) {
-      return;
-    }
-
-    const adapter = this.getOpenCodeRuntimeMessageAdapter();
-    if (!adapter) {
-      return;
-    }
-
-    lane.diagnostics = [...new Set([...(lane.diagnostics ?? []), marker])];
-    this.appendMemberBootstrapDiagnostic(run, memberName, marker);
-
-    try {
-      const result = await this.sendOpenCodeMemberMessageToRuntimeSerialized({
-        teamName: run.teamName,
-        laneId: lane.laneId,
-        send: async () =>
-          await adapter.sendMessageToMember({
-            runId: laneRunId,
-            teamName: run.teamName,
-            laneId: lane.laneId,
-            memberName,
-            cwd: lane.member.cwd?.trim() || run.request.cwd,
-            text: '',
-            messageId: `bootstrap-checkin-retry-${run.runId}-${memberName}-${runtimeSessionId}`,
-            bootstrapCheckinRetry: {
-              runtimeSessionId,
-              reason: runtimeDiagnostic,
-            },
-          }),
-      });
-      if (!result.ok) {
-        this.appendMemberBootstrapDiagnostic(
-          run,
-          memberName,
-          `opencode_bootstrap_checkin_retry_prompt_failed: ${
-            result.diagnostics.join('; ') || 'OpenCode bridge did not accept retry prompt'
-          }`
-        );
-      }
-    } catch (error) {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        `opencode_bootstrap_checkin_retry_prompt_failed: ${getErrorMessage(error)}`
-      );
-    }
+    await maybeSendOpenCodeSecondaryBootstrapCheckinRetryPromptHelper(input, {
+      getOpenCodeRuntimeMessageAdapter: () => this.getOpenCodeRuntimeMessageAdapter(),
+      sendOpenCodeMemberMessageToRuntimeSerialized: (sendInput) =>
+        this.sendOpenCodeMemberMessageToRuntimeSerialized(sendInput),
+      appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
+        this.appendMemberBootstrapDiagnostic(targetRun as ProvisioningRun, targetMember, text),
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun as ProvisioningRun),
+    });
   }
 
   private scheduleOpenCodeBootstrapStallReevaluation(
@@ -5493,29 +5331,21 @@ export class TeamProvisioningService {
     memberName: string,
     firstSpawnAcceptedAt: string
   ): void {
-    const acceptedAtMs = Date.parse(firstSpawnAcceptedAt);
-    if (!Number.isFinite(acceptedAtMs)) {
-      return;
-    }
-    const stallDelayMs = Math.max(1_000, acceptedAtMs + MEMBER_BOOTSTRAP_STALL_MS - Date.now());
-    const stallKey = `${this.getMemberLaunchGraceKey(run, memberName)}:bootstrap-stall`;
-    if (this.pendingTimeouts.has(stallKey)) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      this.pendingTimeouts.delete(stallKey);
-      void this.reevaluateMemberLaunchStatus(run, memberName);
-    }, stallDelayMs);
-    timer.unref?.();
-    this.pendingTimeouts.set(stallKey, timer);
+    scheduleOpenCodeBootstrapStallReevaluationHelper(run, memberName, firstSpawnAcceptedAt, {
+      nowMs: () => Date.now(),
+      getMemberLaunchGraceKey: (targetRun, targetMember) =>
+        this.getMemberLaunchGraceKey(targetRun as ProvisioningRun, targetMember),
+      hasPendingTimeout: (key) => this.pendingTimeouts.has(key),
+      setPendingTimeout: (key, timer) => this.pendingTimeouts.set(key, timer),
+      deletePendingTimeout: (key) => this.pendingTimeouts.delete(key),
+      setTimeout: (callback, delayMs) => setTimeout(callback, delayMs),
+      reevaluateMemberLaunchStatus: (targetRun, targetMember) =>
+        this.reevaluateMemberLaunchStatus(targetRun as ProvisioningRun, targetMember),
+    });
   }
 
   private isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt: string | undefined): boolean {
-    if (!firstSpawnAcceptedAt) {
-      return false;
-    }
-    const acceptedAtMs = Date.parse(firstSpawnAcceptedAt);
-    return Number.isFinite(acceptedAtMs) && Date.now() - acceptedAtMs >= MEMBER_BOOTSTRAP_STALL_MS;
+    return isOpenCodeBootstrapStallWindowElapsedHelper(firstSpawnAcceptedAt, Date.now());
   }
 
   private shouldSkipMemberSpawnAudit(run: ProvisioningRun): boolean {
@@ -11818,17 +11648,14 @@ export class TeamProvisioningService {
             ? await this.buildOpenCodeSecondaryBootstrapStallDiagnostic(run, expected, base)
             : null;
           const runtimeProcessStallDiagnostic =
-            stalledDiagnostic ===
-            'OpenCode bootstrap did not complete runtime_bootstrap_checkin after 5 min.'
-              ? 'Runtime process is alive, but no bootstrap check-in after 5 min.'
-              : stalledDiagnostic;
+            toOpenCodeRuntimeProcessBootstrapStallDiagnostic(stalledDiagnostic);
           this.setOpenCodeRuntimePendingBootstrapStatus(run, expected, base, {
             bootstrapStalled,
             runtimeDiagnostic: bootstrapStalled
               ? (runtimeProcessStallDiagnostic ??
-                'Runtime process is alive, but no bootstrap check-in after 5 min.')
+                OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC)
               : (base.runtimeDiagnostic ??
-                'OpenCode runtime process is alive, waiting for bootstrap check-in.'),
+                OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_PENDING_DIAGNOSTIC),
             runtimeDiagnosticSeverity: bootstrapStalled
               ? 'warning'
               : (base.runtimeDiagnosticSeverity ?? 'info'),
@@ -11840,7 +11667,7 @@ export class TeamProvisioningService {
               current: base,
               runtimeDiagnostic:
                 runtimeProcessStallDiagnostic ??
-                'Runtime process is alive, but no bootstrap check-in after 5 min.',
+                OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC,
             });
           }
           continue;
