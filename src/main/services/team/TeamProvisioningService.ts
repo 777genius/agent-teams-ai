@@ -659,6 +659,7 @@ import {
   type RuntimeTurnSettledEnvironmentProvider,
   type RuntimeTurnSettledHookSettingsProvider,
 } from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
+import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import {
   clearSecondaryRuntimeRuns as clearSecondaryRuntimeRunsInMap,
   createMixedSecondaryLaneStateForMember as buildMixedSecondaryLaneStateForMember,
@@ -1348,8 +1349,6 @@ export class TeamProvisioningService {
   private static readonly SAME_TEAM_MATCH_WINDOW_MS = 30_000;
   private static readonly SAME_TEAM_RUN_START_SKEW_MS = 1_000;
   private static readonly SAME_TEAM_PERSIST_RETRY_MS = 2_000;
-  private static readonly AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS = 2_000;
-  private static readonly PERSISTED_AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS = 10_000;
   private static readonly RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS = 60_000;
   private static readonly RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS = 10_000;
   private static readonly RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS = 30_000;
@@ -1402,6 +1401,26 @@ export class TeamProvisioningService {
       members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
     }
   >();
+  private readonly runTrackingDelivery = new TeamProvisioningRunTrackingDeliveryHelper({
+    state: {
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      aliveRunByTeam: this.aliveRunByTeam,
+      runs: this.runs,
+      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      getRetainedProvisioningProgressMap: () => this.getRetainedProvisioningProgressMap(),
+    },
+    ports: {
+      notifyTeamWatchScopeChanged,
+      isTeamAlive: (teamName) => this.isTeamAlive(teamName),
+      hasAlivePersistedTeamProcess: (teamName) => this.hasAlivePersistedTeamProcess(teamName),
+      hasOnlyExplicitlyStoppedPersistedTeamProcesses: (teamName) =>
+        this.hasOnlyExplicitlyStoppedPersistedTeamProcesses(teamName),
+      logDebug: (message) => logger.debug(message),
+    },
+    liveRuntimeSnapshotCacheTtlMs: 2_000,
+    persistedRuntimeSnapshotCacheTtlMs: 10_000,
+  });
   private readonly cancelledRuntimeAdapterRunIds = new Set<string>();
   private stopAllTeamsGeneration = 0;
   private readonly transientProbeProcesses = new Set<ReturnType<typeof spawn>>();
@@ -2464,40 +2483,23 @@ export class TeamProvisioningService {
   }
 
   private getProvisioningRunId(teamName: string): string | null {
-    return this.provisioningRunByTeam.get(teamName) ?? null;
+    return this.runTrackingDelivery.getProvisioningRunId(teamName);
   }
 
   private getResolvableProvisioningRunId(teamName: string): string | null {
-    const runId = this.getProvisioningRunId(teamName);
-    if (!runId) {
-      return null;
-    }
-    if (this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId)) {
-      return runId;
-    }
-    if (this.provisioningRunByTeam.get(teamName) === runId) {
-      this.provisioningRunByTeam.delete(teamName);
-    }
-    logger.debug(`[${teamName}] Cleared stale provisioning run id before launch: ${runId}`);
-    return null;
+    return this.runTrackingDelivery.getResolvableProvisioningRunId(teamName);
   }
 
   private getAliveRunId(teamName: string): string | null {
-    return this.aliveRunByTeam.get(teamName) ?? null;
+    return this.runTrackingDelivery.getAliveRunId(teamName);
   }
 
   private setAliveRunId(teamName: string, runId: string): void {
-    if (!teamName || !runId || this.aliveRunByTeam.get(teamName) === runId) {
-      return;
-    }
-    this.aliveRunByTeam.set(teamName, runId);
-    notifyTeamWatchScopeChanged();
+    this.runTrackingDelivery.setAliveRunId(teamName, runId);
   }
 
   private deleteAliveRunId(teamName: string): void {
-    if (this.aliveRunByTeam.delete(teamName)) {
-      notifyTeamWatchScopeChanged();
-    }
+    this.runTrackingDelivery.deleteAliveRunId(teamName);
   }
 
   /**
@@ -2506,79 +2508,31 @@ export class TeamProvisioningService {
    * runs start and stop).
    */
   getAliveTeamNames(): string[] {
-    return [...this.aliveRunByTeam.keys()];
+    return this.runTrackingDelivery.getAliveTeamNames();
   }
 
   private getTrackedRunId(teamName: string): string | null {
-    return this.getProvisioningRunId(teamName) ?? this.getAliveRunId(teamName);
+    return this.runTrackingDelivery.getTrackedRunId(teamName);
   }
 
   private getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number {
-    if (runId || this.runtimeAdapterRunByTeam.has(teamName)) {
-      return TeamProvisioningService.AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS;
-    }
-    return TeamProvisioningService.PERSISTED_AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS;
+    return this.runTrackingDelivery.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId);
   }
 
   private canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean {
-    // Terminal adapter progress is evicted to the retained map, so consult
-    // both: a residual team-map id pointing at a finished run must stay
-    // non-deliverable.
-    const runtimeProgress =
-      this.runtimeAdapterProgressByRunId.get(runId) ??
-      this.getRetainedProvisioningProgressMap().get(runId);
-    if (
-      runtimeProgress &&
-      ['disconnected', 'failed', 'cancelled'].includes(runtimeProgress.state)
-    ) {
-      return false;
-    }
-    const run = this.runs.get(runId);
-    if (
-      run &&
-      (run.processKilled ||
-        run.cancelRequested ||
-        ['disconnected', 'failed', 'cancelled'].includes(run.progress.state))
-    ) {
-      return false;
-    }
-    return (
-      this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId ||
-      this.provisioningRunByTeam.get(teamName) === runId ||
-      this.aliveRunByTeam.get(teamName) === runId
-    );
+    return this.runTrackingDelivery.canDeliverToTrackedRuntimeRun(teamName, runId);
   }
 
   private resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null {
-    const candidates = Array.from(
-      new Set(
-        [
-          this.provisioningRunByTeam.get(teamName),
-          this.aliveRunByTeam.get(teamName),
-          this.runtimeAdapterRunByTeam.get(teamName)?.runId,
-        ].filter((runId): runId is string => typeof runId === 'string' && runId.trim() !== '')
-      )
-    );
-    for (const runId of candidates) {
-      if (this.canDeliverToTrackedRuntimeRun(teamName, runId)) {
-        return runId;
-      }
-    }
-    return null;
+    return this.runTrackingDelivery.resolveDeliverableTrackedRuntimeRunId(teamName);
   }
 
   private canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean {
-    if (this.isTeamAlive(teamName)) {
-      return true;
-    }
-    return this.hasAlivePersistedTeamProcess(teamName);
+    return this.runTrackingDelivery.canDeliverToOpenCodeRuntimeForTeam(teamName);
   }
 
   private canAttemptCommittedOpenCodeSessionRecovery(teamName: string): boolean {
-    if (this.canDeliverToOpenCodeRuntimeForTeam(teamName)) {
-      return true;
-    }
-    return !this.hasOnlyExplicitlyStoppedPersistedTeamProcesses(teamName);
+    return this.runTrackingDelivery.canAttemptCommittedOpenCodeSessionRecovery(teamName);
   }
 
   private hasAlivePersistedTeamProcess(teamName: string): boolean {
