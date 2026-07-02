@@ -12,6 +12,7 @@ function createPorts(overrides: Partial<DuplicateInboxMergePorts> = {}): Duplica
     readRegularFileUtf8: vi.fn(async () => '[]'),
     writeFileUtf8: vi.fn(async () => undefined),
     unlink: vi.fn(async () => undefined),
+    withCanonicalInboxLock: vi.fn(async (_filePath: string, fn: () => Promise<void>) => fn()),
     ...overrides,
   };
 }

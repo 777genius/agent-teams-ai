@@ -642,6 +642,8 @@ import {
   getConfiguredCliCommandLabel,
   getConfiguredCliFlavor,
 } from './cliFlavor';
+import { withFileLock } from './fileLock';
+import { withInboxLock } from './inboxLock';
 import { type ProcessBootstrapTransportSummary } from './ProcessBootstrapTransportEvidence';
 import {
   boundLaunchDiagnostics,
@@ -21917,6 +21919,8 @@ export class TeamProvisioningService {
         readRegularFileUtf8: tryReadRegularFileUtf8,
         writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
         unlink: (filePath) => fs.promises.unlink(filePath),
+        withCanonicalInboxLock: (filePath, fn) =>
+          withFileLock(filePath, () => withInboxLock(filePath, fn)),
       },
     });
   }

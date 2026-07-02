@@ -15,6 +15,7 @@ export interface DuplicateInboxMergePorts {
   ): Promise<string | null | undefined>;
   writeFileUtf8(filePath: string, contents: string): Promise<void>;
   unlink(filePath: string): Promise<void>;
+  withCanonicalInboxLock(filePath: string, fn: () => Promise<void>): Promise<void>;
 }
 
 export interface MergeAndRemoveDuplicateInboxesInput {
@@ -23,6 +24,72 @@ export interface MergeAndRemoveDuplicateInboxesInput {
   timeoutMs: number;
   maxBytes: number;
   ports: DuplicateInboxMergePorts;
+}
+
+async function mergeSingleInboxBase(
+  input: MergeAndRemoveDuplicateInboxesInput,
+  mergePlan: { canonicalFile: string; duplicateFiles: string[] },
+  canonicalPath: string,
+  existing: Set<string>
+): Promise<void> {
+  let canonicalRaw: string;
+  try {
+    const raw = await input.ports.readRegularFileUtf8(canonicalPath, {
+      timeoutMs: input.timeoutMs,
+      maxBytes: input.maxBytes,
+    });
+    if (!raw) {
+      return;
+    }
+    canonicalRaw = raw;
+  } catch {
+    return;
+  }
+
+  const canonicalList = parseInboxMessageListRaw(canonicalRaw);
+  const duplicateLists: unknown[][] = [];
+  // Only duplicates whose content made it into the merged canonical list may
+  // be removed; an unreadable duplicate (oversized, read timeout) still holds
+  // messages that would otherwise be destroyed unmerged.
+  const removableDuplicateFiles: string[] = [];
+  for (const dupFile of mergePlan.duplicateFiles) {
+    const dupPath = path.join(input.inboxDir, dupFile);
+    let dupRaw: string | null | undefined;
+    try {
+      dupRaw = await input.ports.readRegularFileUtf8(dupPath, {
+        timeoutMs: input.timeoutMs,
+        maxBytes: input.maxBytes,
+      });
+    } catch {
+      continue;
+    }
+    if (dupRaw == null) {
+      continue;
+    }
+
+    removableDuplicateFiles.push(dupFile);
+    if (!dupRaw) {
+      continue;
+    }
+    duplicateLists.push(parseInboxMessageListRaw(dupRaw));
+  }
+
+  const mergedDeduped = mergeInboxMessageLists(canonicalList, duplicateLists);
+
+  try {
+    await input.ports.writeFileUtf8(canonicalPath, JSON.stringify(mergedDeduped, null, 2));
+  } catch {
+    return;
+  }
+
+  for (const dupFile of removableDuplicateFiles) {
+    try {
+      await input.ports.unlink(path.join(input.inboxDir, dupFile));
+      existing.delete(dupFile);
+    } catch {
+      // Best-effort cleanup.
+    }
+  }
 }
 
 export async function mergeAndRemoveDuplicateInboxes(
@@ -44,63 +111,10 @@ export async function mergeAndRemoveDuplicateInboxes(
     if (!mergePlan) continue;
 
     const canonicalPath = path.join(input.inboxDir, mergePlan.canonicalFile);
-    let canonicalRaw: string;
-    try {
-      const raw = await input.ports.readRegularFileUtf8(canonicalPath, {
-        timeoutMs: input.timeoutMs,
-        maxBytes: input.maxBytes,
-      });
-      if (!raw) {
-        continue;
-      }
-      canonicalRaw = raw;
-    } catch {
-      continue;
-    }
-
-    const canonicalList = parseInboxMessageListRaw(canonicalRaw);
-    const duplicateLists: unknown[][] = [];
-    // Only duplicates whose content made it into the merged canonical list may
-    // be removed; an unreadable duplicate (oversized, read timeout) still holds
-    // messages that would otherwise be destroyed unmerged.
-    const removableDuplicateFiles: string[] = [];
-    for (const dupFile of mergePlan.duplicateFiles) {
-      const dupPath = path.join(input.inboxDir, dupFile);
-      let dupRaw: string | null | undefined;
-      try {
-        dupRaw = await input.ports.readRegularFileUtf8(dupPath, {
-          timeoutMs: input.timeoutMs,
-          maxBytes: input.maxBytes,
-        });
-      } catch {
-        continue;
-      }
-      if (dupRaw == null) {
-        continue;
-      }
-
-      removableDuplicateFiles.push(dupFile);
-      if (!dupRaw) {
-        continue;
-      }
-      duplicateLists.push(parseInboxMessageListRaw(dupRaw));
-    }
-
-    const mergedDeduped = mergeInboxMessageLists(canonicalList, duplicateLists);
-
-    try {
-      await input.ports.writeFileUtf8(canonicalPath, JSON.stringify(mergedDeduped, null, 2));
-    } catch {
-      continue;
-    }
-
-    for (const dupFile of removableDuplicateFiles) {
-      try {
-        await input.ports.unlink(path.join(input.inboxDir, dupFile));
-        existing.delete(dupFile);
-      } catch {
-        // Best-effort cleanup.
-      }
-    }
+    // Hold the same canonical-file lock as every other inbox writer so a
+    // concurrent append cannot land between our read and the atomic rewrite.
+    await input.ports.withCanonicalInboxLock(canonicalPath, () =>
+      mergeSingleInboxBase(input, mergePlan, canonicalPath, existing)
+    );
   }
 }
