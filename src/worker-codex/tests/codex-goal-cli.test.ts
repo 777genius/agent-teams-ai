@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ import {
   buildTmuxCommand,
   parseCodexGoalCliArgs,
   runCodexGoalCli,
+  upsertRunCommandManifest,
   type CodexGoalCliIo,
 } from "../codex-goal-cli";
 
@@ -164,6 +165,69 @@ describe("codex goal cli", () => {
     );
     expect(tmux.preview).toContain("tmux new-session");
     expect(tmux.preview).toContain("tee -a /tmp/job/task-1.log");
+  });
+
+  it("upserts a registry manifest for registry-aware run commands", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-cli-registry-"));
+    const registryRoot = join(root, "registry");
+    const jobRoot = join(root, "job");
+    const workspace = join(root, "workspace");
+    const prompt = join(jobRoot, "prompt.md");
+    const command = parseCodexGoalCliArgs(
+      [
+        "run",
+        "--job-root",
+        jobRoot,
+        "--auth-root",
+        join(root, "auth"),
+        "--workspace",
+        workspace,
+        "--prompt",
+        prompt,
+        "--task-id",
+        "task-1",
+        "--job-id",
+        "job-1",
+        "--accounts",
+        "account-a,account-b",
+        "--tmux-session",
+        "goal-worker",
+        "--registry-root",
+        registryRoot,
+        "--description",
+        "Registry aware worker",
+        "--tags",
+        "team,refactor",
+        "--format",
+        "json",
+      ],
+      fakeIo(),
+    );
+
+    try {
+      expect(command.kind).toBe("run");
+      if (command.kind !== "run") return;
+      await upsertRunCommandManifest(command);
+      const manifest = JSON.parse(
+        await readFile(join(registryRoot, "job-1", "job.json"), "utf8"),
+      );
+
+      expect(manifest).toMatchObject({
+        schemaVersion: 1,
+        jobId: "job-1",
+        description: "Registry aware worker",
+        tags: ["team", "refactor"],
+        jobRootDir: jobRoot,
+        workspacePath: workspace,
+        promptPath: prompt,
+        taskId: "task-1",
+        accounts: ["account-a", "account-b"],
+        tmuxSession: "goal-worker",
+        outputFormat: "json",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("exposes the full MCP tool surface through the CLI fallback", async () => {

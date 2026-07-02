@@ -45,6 +45,10 @@ import {
   listCodexGoalMcpTools,
   readCodexGoalMcpResource,
 } from "./codex-goal-mcp-client";
+import {
+  upsertCodexGoalLaunchManifest,
+  type CodexGoalLaunchManifestMetadata,
+} from "./codex-goal-launch-manifest";
 
 type OutputFormat = "text" | "json";
 type CodexGoalCliCommand =
@@ -62,7 +66,7 @@ type CodexGoalCliCommand =
   | ControlDoctorCommand
   | HelpCommand;
 
-type RunCommand = {
+export type RunCommand = {
   readonly kind: "run";
   readonly config: CodexGoalRunConfig;
   readonly tmuxSession?: string;
@@ -71,6 +75,8 @@ type RunCommand = {
   readonly format: OutputFormat;
   readonly cwd: string;
   readonly logPath: string;
+  readonly registryRootDir?: string;
+  readonly registryMetadata?: CodexGoalLaunchManifestMetadata;
 };
 
 type StatusCommand = {
@@ -248,6 +254,7 @@ export async function runCodexGoalCli(
         io.writeStdout(`${tmuxCommand.preview}\n`);
         return 0;
       }
+      await upsertRunCommandManifest(command);
       await startCodexGoalTmux(cliLaunchInput(command));
       io.writeStdout(
         `started ${command.tmuxSession} for ${command.config.taskId}\n`,
@@ -258,6 +265,7 @@ export async function runCodexGoalCli(
       io.writeStdout(`${buildNoTmuxShellCommand(command)}\n`);
       return 0;
     }
+    await upsertRunCommandManifest(command);
     const result = await runCodexGoal(command.config);
     writeJsonOrText(command.format, result, io);
     return result.status === "completed" ? 0 : 1;
@@ -333,6 +341,15 @@ export function buildNoTmuxShellCommand(command: RunCommand): string {
   return buildCodexGoalNoTmuxCommand(cliLaunchInput(command));
 }
 
+export async function upsertRunCommandManifest(command: RunCommand) {
+  if (!command.registryRootDir) return undefined;
+  return upsertCodexGoalLaunchManifest({
+    registryRootDir: command.registryRootDir,
+    launch: cliLaunchInput(command),
+    ...(command.registryMetadata ? { metadata: command.registryMetadata } : {}),
+  });
+}
+
 function cliLaunchInput(command: RunCommand) {
   return {
     config: command.config,
@@ -360,6 +377,11 @@ function parseRun(
   const logPath = option(values, env, "--log", []) ??
     join(jobRootDir, `${taskId}.log`);
   const config = runConfigFromFlags(values, env, io.cwd(), jobRootDir, taskId);
+  const registryRootDir = option(values, env, "--registry-root", [
+    "SUBSCRIPTION_RUNTIME_CODEX_GOAL_REGISTRY_ROOT",
+    "CODEX_GOAL_REGISTRY_ROOT",
+  ]);
+  const registryMetadata = registryMetadataFromFlags(values);
   return {
     kind: "run",
     config,
@@ -371,6 +393,10 @@ function parseRun(
     format: outputFormat(option(values, env, "--format", []) ?? "text"),
     cwd: resolvePath(io.cwd(), option(values, env, "--cwd", []) ?? io.cwd()),
     logPath,
+    ...(registryRootDir
+      ? { registryRootDir: resolvePath(io.cwd(), registryRootDir) }
+      : {}),
+    ...(registryMetadata ? { registryMetadata } : {}),
   };
 }
 
@@ -1058,6 +1084,21 @@ function registryArg(values: ParsedFlags): Record<string, unknown> {
   return registryRootDir ? { registryRootDir } : {};
 }
 
+function registryMetadataFromFlags(
+  values: ParsedFlags,
+): CodexGoalLaunchManifestMetadata | undefined {
+  const description =
+    values.values.get("--description") ?? values.values.get("--registry-description");
+  const tags = splitCsv(
+    values.values.get("--tags") ?? values.values.get("--registry-tags") ?? "",
+  );
+  if (!description && tags.length === 0) return undefined;
+  return {
+    ...(description ? { description } : {}),
+    ...(tags.length ? { tags } : {}),
+  };
+}
+
 function callerArgs(values: ParsedFlags): Record<string, unknown> {
   const callerKind =
     values.values.get("--caller-kind") ?? values.values.get("--caller-actor");
@@ -1541,7 +1582,7 @@ function currentCliPath(): string {
 
 function usage(): string {
   return `usage:
-  subscription-runtime-codex-goal run --job-root <dir> --workspace <dir> --prompt <file> --task-id <id> --accounts account-a,account-b [--tmux-session <name>]
+  subscription-runtime-codex-goal run --job-root <dir> --workspace <dir> --prompt <file> --task-id <id> --accounts account-a,account-b [--tmux-session <name>] [--registry-root <dir>]
   subscription-runtime-codex-goal status --job-root <dir> --task-id <id> [--workspace <dir>] [--tmux-session <name>]
   subscription-runtime-codex-goal doctor --job-root <dir> --workspace <dir> --prompt <file> --task-id <id> --accounts account-a,account-b
   subscription-runtime-codex-goal tail --job-root <dir> --task-id <id> [--lines 100]
@@ -1582,6 +1623,10 @@ defaults:
 
 escape hatches:
   --dry-run, --print-command, --no-tmux, --no-require-git-workspace
+
+registry:
+  pass --registry-root to write or update job.json before starting the worker.
+  optional --description and --tags annotate the manifest.
 
 MCP fallback:
   use tool/resources/prompts when native MCP tools are unavailable in a Codex thread.
