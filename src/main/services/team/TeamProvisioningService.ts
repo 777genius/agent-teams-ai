@@ -99,7 +99,6 @@ import { type ChildProcess, execFileSync, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 
 import {
   ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS,
@@ -671,6 +670,9 @@ import {
   TOOL_APPROVAL_TIMEOUT_CONTROL_DENY_MESSAGE,
 } from './provisioning/TeamProvisioningToolApprovalFlow';
 import {
+  TeamProvisioningTranscriptClaudeLogsCache,
+} from './provisioning/TeamProvisioningTranscriptClaudeLogs';
+import {
   handleTeamProvisioningTurnComplete,
   type TeamProvisioningTurnCompletePorts,
 } from './provisioning/TeamProvisioningTurnComplete';
@@ -698,7 +700,6 @@ import { type ProcessBootstrapTransportSummary } from './ProcessBootstrapTranspo
 import {
   boundLaunchDiagnostics,
   boundProgressAssistantParts,
-  boundProgressLogLines,
   buildProgressLiveOutput,
   buildProgressLogsTail,
   buildProgressTraceLine,
@@ -1258,13 +1259,6 @@ function updateProgress(
  * early in provisioning before any output has been line-split).
  */
 
-interface PersistedTranscriptClaudeLogsCacheEntry {
-  transcriptPath: string;
-  mtimeMs: number;
-  size: number;
-  snapshot: RetainedClaudeLogsSnapshot;
-}
-
 /**
  * Emit a throttled progress update for the renderer. Payloads are capped to a
  * tail window so that the hot emission path (called every LOG_PROGRESS_THROTTLE_MS
@@ -1448,10 +1442,7 @@ export class TeamProvisioningService {
   >();
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
-  private readonly persistedTranscriptClaudeLogsCache = new Map<
-    string,
-    PersistedTranscriptClaudeLogsCacheEntry
-  >();
+  private readonly persistedTranscriptClaudeLogs: TeamProvisioningTranscriptClaudeLogsCache;
   private readonly bootstrapTranscriptOutcomeCache = new Map<
     string,
     BootstrapTranscriptOutcomeCacheEntry
@@ -1688,6 +1679,9 @@ export class TeamProvisioningService {
     );
     this.transcriptProjectResolver = new TeamTranscriptProjectResolver({
       getConfig: (teamName) => this.configReader.getConfigSnapshot(teamName),
+    });
+    this.persistedTranscriptClaudeLogs = new TeamProvisioningTranscriptClaudeLogsCache({
+      getContext: (teamName) => this.transcriptProjectResolver.getContext(teamName),
     });
     this.scheduleStaleAnthropicTeamApiKeyHelperCleanup();
   }
@@ -5029,83 +5023,7 @@ export class TeamProvisioningService {
   private async getPersistedTranscriptClaudeLogs(
     teamName: string
   ): Promise<RetainedClaudeLogsSnapshot | null> {
-    const context = await this.transcriptProjectResolver.getContext(teamName);
-    const leadSessionId =
-      typeof context?.config.leadSessionId === 'string' ? context.config.leadSessionId.trim() : '';
-    if (!context || leadSessionId.length === 0) {
-      this.persistedTranscriptClaudeLogsCache.delete(teamName);
-      return null;
-    }
-
-    const transcriptPath = path.join(context.projectDir, `${leadSessionId}.jsonl`);
-
-    let stat: fs.Stats;
-    try {
-      stat = await fs.promises.stat(transcriptPath);
-    } catch {
-      this.persistedTranscriptClaudeLogsCache.delete(teamName);
-      return null;
-    }
-
-    if (!stat.isFile()) {
-      this.persistedTranscriptClaudeLogsCache.delete(teamName);
-      return null;
-    }
-
-    const cached = this.persistedTranscriptClaudeLogsCache.get(teamName);
-    if (
-      cached?.transcriptPath === transcriptPath &&
-      cached.mtimeMs === stat.mtimeMs &&
-      cached.size === stat.size
-    ) {
-      return cached.snapshot;
-    }
-
-    const lines = await this.readTranscriptClaudeLogLines(transcriptPath);
-    if (lines.length === 0) {
-      this.persistedTranscriptClaudeLogsCache.delete(teamName);
-      return null;
-    }
-
-    const snapshot = {
-      lines,
-      updatedAt: stat.mtime.toISOString(),
-    };
-    this.persistedTranscriptClaudeLogsCache.set(teamName, {
-      transcriptPath,
-      mtimeMs: stat.mtimeMs,
-      size: stat.size,
-      snapshot,
-    });
-    return snapshot;
-  }
-
-  private async readTranscriptClaudeLogLines(filePath: string): Promise<string[]> {
-    const lines: string[] = [];
-    const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const rawLine of rl) {
-        const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
-        if (!line.trim()) {
-          continue;
-        }
-        lines.push(line);
-        const bounded = boundProgressLogLines(lines);
-        if (
-          bounded.length !== lines.length ||
-          bounded.some((boundedLine, index) => boundedLine !== lines[index])
-        ) {
-          lines.splice(0, lines.length, ...bounded);
-        }
-      }
-    } finally {
-      rl.close();
-      stream.close();
-    }
-
-    return lines;
+    return this.persistedTranscriptClaudeLogs.get(teamName);
   }
 
   private clearSameTeamRetryTimers(teamName: string): void {
@@ -5148,7 +5066,7 @@ export class TeamProvisioningService {
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.runtimeProcessRowsForUsageSnapshotByTeam.delete(teamName);
     this.retainedClaudeLogsByTeam.delete(teamName);
-    this.persistedTranscriptClaudeLogsCache.delete(teamName);
+    this.persistedTranscriptClaudeLogs.invalidate(teamName);
     this.leadInboxRelayInFlight.delete(teamName);
     this.relayedLeadInboxMessageIds.delete(teamName);
     this.pendingCrossTeamFirstReplies.delete(teamName);
