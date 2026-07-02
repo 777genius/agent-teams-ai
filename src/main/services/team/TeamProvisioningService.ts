@@ -48,7 +48,6 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
-import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
 import { listWindowsProcessTableSync } from '@main/utils/windowsProcessTable';
@@ -125,6 +124,7 @@ import {
   type RuntimeToolApprovalEntry,
 } from './approvals/RuntimeToolApprovalCoordinator';
 import { buildNativeAppManagedBootstrapSpecsWithDiagnostics } from './bootstrap/NativeAppManagedBootstrapContextBuilder';
+import { isOpenCodeServeCommand } from './opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import {
   type OpenCodeMemberDirectory,
   type OpenCodeMemberIdentityResolution,
@@ -491,10 +491,18 @@ import {
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember as toOpenCodePersistedLaunchMemberHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import {
+  cleanupStoppedTeamOpenCodeRuntimeLanesInBackground as cleanupStoppedTeamOpenCodeRuntimeLanesInBackgroundHelper,
+  hasAlivePersistedTeamProcess as hasAlivePersistedTeamProcessHelper,
+  hasOnlyExplicitlyStoppedPersistedTeamProcesses as hasOnlyExplicitlyStoppedPersistedTeamProcessesHelper,
+  readProcessCommandByPid as readOpenCodeRuntimeLaneProcessCommandByPid,
+  stopOpenCodeRuntimeLanesForStoppedTeam as stopOpenCodeRuntimeLanesForStoppedTeamHelper,
+  stopOpenCodeRuntimeLanesForStoppedTeamOnce,
+  tryStopPersistedOpenCodeRuntimePidForStoppedLane as tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
 import { shouldEmitOpenCodeRuntimeLivenessMemberSpawnChange as shouldEmitOpenCodeRuntimeLivenessMemberSpawnChangeHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeLivenessPolicy';
 import {
   buildOpenCodeRuntimePendingPermissionsLaunchSnapshot,
-  extractOpenCodeRuntimeLaneMemberName,
   findPersistedLaunchMemberForLane as findPersistedLaunchMemberForLaneHelper,
   type OpenCodeRuntimePendingPermissionsPersistenceInput,
   type OpenCodeRuntimePermissionListingAdapter,
@@ -2837,261 +2845,74 @@ export class TeamProvisioningService {
   }
 
   private hasAlivePersistedTeamProcess(teamName: string): boolean {
-    const parsed = this.readPersistedTeamProcessRows(teamName);
-    if (!Array.isArray(parsed)) {
-      return false;
-    }
-    return parsed.some((row) => {
-      if (!row || typeof row !== 'object') {
-        return false;
-      }
-      const processRow = row as { pid?: unknown; stoppedAt?: unknown };
-      return (
-        typeof processRow.pid === 'number' &&
-        Number.isFinite(processRow.pid) &&
-        processRow.stoppedAt == null &&
-        isProcessAlive(processRow.pid)
-      );
+    return hasAlivePersistedTeamProcessHelper({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
     });
   }
 
   private hasOnlyExplicitlyStoppedPersistedTeamProcesses(teamName: string): boolean {
-    const parsed = this.readPersistedTeamProcessRows(teamName);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return false;
-    }
-    return parsed.every((row) => {
-      if (!row || typeof row !== 'object') {
-        return false;
-      }
-      return (row as { stoppedAt?: unknown }).stoppedAt != null;
+    return hasOnlyExplicitlyStoppedPersistedTeamProcessesHelper({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
     });
   }
 
-  private readPersistedTeamProcessRows(teamName: string): unknown[] | null {
-    const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(fs.readFileSync(processesPath, 'utf8')) as unknown;
-    } catch {
-      return null;
-    }
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed;
-  }
-
   private cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName: string): void {
-    void this.stopOpenCodeRuntimeLanesForStoppedTeam(teamName).catch((error) => {
-      logger.warn(
-        `[${teamName}] Failed to clean up stopped-team OpenCode runtime lanes: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+    cleanupStoppedTeamOpenCodeRuntimeLanesInBackgroundHelper({
+      teamName,
+      stopOpenCodeRuntimeLanesForStoppedTeam: (candidateTeamName) =>
+        this.stopOpenCodeRuntimeLanesForStoppedTeam(candidateTeamName),
+      logWarning: (message) => logger.warn(message),
     });
   }
 
   private stopOpenCodeRuntimeLanesForStoppedTeam(teamName: string): Promise<number> {
-    const existing = this.stoppedTeamOpenCodeRuntimeCleanupInFlight.get(teamName);
-    if (existing) {
-      return existing;
-    }
-    const cleanup = this.stopOpenCodeRuntimeLanesForStoppedTeamInternal(teamName).finally(() => {
-      if (this.stoppedTeamOpenCodeRuntimeCleanupInFlight.get(teamName) === cleanup) {
-        this.stoppedTeamOpenCodeRuntimeCleanupInFlight.delete(teamName);
-      }
+    return stopOpenCodeRuntimeLanesForStoppedTeamOnce({
+      teamName,
+      inFlight: this.stoppedTeamOpenCodeRuntimeCleanupInFlight,
+      stopInternal: (candidateTeamName) =>
+        this.stopOpenCodeRuntimeLanesForStoppedTeamInternal(candidateTeamName),
     });
-    this.stoppedTeamOpenCodeRuntimeCleanupInFlight.set(teamName, cleanup);
-    return cleanup;
   }
 
   private async stopOpenCodeRuntimeLanesForStoppedTeamInternal(teamName: string): Promise<number> {
-    if (this.canDeliverToOpenCodeRuntimeForTeam(teamName)) {
-      return 0;
-    }
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
-      () => null
-    );
-    const activeLaneIds = Object.entries(laneIndex?.lanes ?? {})
-      .filter(([, entry]) => entry.state === 'active')
-      .map(([laneId]) => laneId)
-      .sort((left, right) => left.localeCompare(right));
-    if (activeLaneIds.length === 0) {
-      return 0;
-    }
-
-    const adapter = this.getOpenCodeRuntimeAdapter();
-    const previousLaunchState = await this.launchStateStore.read(teamName).catch(() => null);
-    const [config, metaMembers] = await Promise.all([
-      this.readConfigForObservation(teamName).catch(() => null),
-      this.membersMetaStore.getMembers(teamName).catch(() => []),
-    ]);
-    const evidenceReader = new OpenCodeRuntimeManifestEvidenceReader({
+    return stopOpenCodeRuntimeLanesForStoppedTeamHelper({
+      teamName,
       teamsBasePath: getTeamsBasePath(),
+      ports: {
+        canDeliverToOpenCodeRuntimeForTeam: (candidateTeamName) =>
+          this.canDeliverToOpenCodeRuntimeForTeam(candidateTeamName),
+        getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+        readPreviousLaunchState: (candidateTeamName) =>
+          this.launchStateStore.read(candidateTeamName),
+        readConfigForObservation: (candidateTeamName) =>
+          this.readConfigForObservation(candidateTeamName),
+        readMembersMeta: (candidateTeamName) => this.membersMetaStore.getMembers(candidateTeamName),
+        readPersistedTeamProjectPath: (candidateTeamName) =>
+          this.readPersistedTeamProjectPath(candidateTeamName),
+        tryStopPersistedOpenCodeRuntimePidForStoppedLane: (input) =>
+          tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper(input, {
+            readProcessCommandByPid: readOpenCodeRuntimeLaneProcessCommandByPid,
+            isOpenCodeServeCommand,
+            killProcessByPid,
+            logInfo: (message) => logger.info(message),
+            logWarning: (message) => logger.warn(message),
+          }),
+        deleteSecondaryRuntimeRun: (candidateTeamName, laneId) =>
+          this.deleteSecondaryRuntimeRun(candidateTeamName, laneId),
+        clearPrimaryRuntimeRun: (candidateTeamName) => {
+          this.runtimeAdapterRunByTeam.delete(candidateTeamName);
+          this.deleteAliveRunId(candidateTeamName);
+          this.provisioningRunByTeam.delete(candidateTeamName);
+          this.invalidateRuntimeSnapshotCaches(candidateTeamName);
+        },
+        markStoppedTeamOpenCodeRuntimeLanesCleaned: (candidateTeamName) => {
+          this.cleanedStoppedTeamOpenCodeRuntimeLanes.add(candidateTeamName);
+        },
+        logWarning: (message) => logger.warn(message),
+      },
     });
-    let stopped = 0;
-    let cleaned = 0;
-    for (const laneId of activeLaneIds) {
-      const evidence = await evidenceReader.read(teamName, laneId).catch(() => null);
-      const runId = evidence?.activeRunId?.trim() || null;
-      if (adapter && runId) {
-        try {
-          await adapter.stop({
-            runId,
-            laneId,
-            teamName,
-            cwd: this.resolveOpenCodeRuntimeLaneCleanupCwd(teamName, laneId, config, metaMembers),
-            providerId: 'opencode',
-            reason: 'cleanup',
-            previousLaunchState,
-            force: true,
-          });
-          stopped += 1;
-        } catch (error) {
-          logger.warn(
-            `[${teamName}] Failed to stop orphaned OpenCode lane ${laneId}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-          continue;
-        }
-      } else if (runId) {
-        logger.warn(
-          `[${teamName}] OpenCode lane ${laneId} belongs to stopped team, but runtime adapter is unavailable.`
-        );
-        continue;
-      } else if (!runId) {
-        const pidStopResult = this.tryStopPersistedOpenCodeRuntimePidForStoppedLane({
-          teamName,
-          laneId,
-          previousLaunchState,
-        });
-        if (pidStopResult === 'unsafe') {
-          continue;
-        }
-      }
-
-      await clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId,
-      }).catch(() => undefined);
-      cleaned += 1;
-      this.deleteSecondaryRuntimeRun(teamName, laneId);
-      if (laneId === 'primary') {
-        this.runtimeAdapterRunByTeam.delete(teamName);
-        this.deleteAliveRunId(teamName);
-        this.provisioningRunByTeam.delete(teamName);
-        this.invalidateRuntimeSnapshotCaches(teamName);
-      }
-    }
-    if (cleaned > 0) {
-      this.cleanedStoppedTeamOpenCodeRuntimeLanes.add(teamName);
-    }
-    return stopped;
-  }
-
-  private tryStopPersistedOpenCodeRuntimePidForStoppedLane(input: {
-    teamName: string;
-    laneId: string;
-    previousLaunchState: PersistedTeamLaunchSnapshot | null;
-  }): 'stopped' | 'no_pid' | 'unsafe' {
-    const persistedMember = Object.values(input.previousLaunchState?.members ?? {}).find(
-      (member) => member.providerId === 'opencode' && member.laneId === input.laneId
-    );
-    if (!persistedMember) {
-      return 'no_pid';
-    }
-    const pid = persistedMember.runtimePid;
-    if (typeof pid !== 'number' || !Number.isFinite(pid) || pid <= 0) {
-      return 'no_pid';
-    }
-    const command = this.readProcessCommandByPid(pid);
-    if (!command) {
-      return 'no_pid';
-    }
-    const persistedProcessCommand = (persistedMember as { processCommand?: unknown })
-      .processCommand;
-    const expectedCommand =
-      typeof persistedProcessCommand === 'string' ? persistedProcessCommand.trim() : '';
-    if (expectedCommand && command !== expectedCommand) {
-      logger.warn(
-        `[${input.teamName}] Refusing to stop persisted OpenCode pid ${pid} for lane ${input.laneId}: process command changed.`
-      );
-      return 'unsafe';
-    }
-    if (!this.isOpenCodeServeCommand(command)) {
-      logger.warn(
-        `[${input.teamName}] Refusing to stop persisted OpenCode pid ${pid} for lane ${input.laneId}: process is not opencode serve.`
-      );
-      return 'unsafe';
-    }
-    try {
-      killProcessByPid(pid);
-      logger.info(
-        `[${input.teamName}] Killed orphaned OpenCode runtime pid=${pid} for stopped lane ${input.laneId}`
-      );
-      return 'stopped';
-    } catch (error) {
-      logger.warn(
-        `[${input.teamName}] Failed to kill orphaned OpenCode runtime pid=${pid} for stopped lane ${
-          input.laneId
-        }: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return 'unsafe';
-    }
-  }
-
-  private readProcessCommandByPid(pid: number): string | null {
-    if (process.platform === 'win32') {
-      try {
-        return (
-          listWindowsProcessTableSync()
-            .find((row) => row.pid === pid)
-            ?.command?.trim() || null
-        );
-      } catch {
-        return null;
-      }
-    }
-    try {
-      return execFileSync('ps', ['-p', String(pid), '-o', 'command='], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
-    } catch {
-      return null;
-    }
-  }
-
-  private isOpenCodeServeCommand(command: string): boolean {
-    return /(^|[/\\\s])opencode(?:\.exe)?(\s|$)/i.test(command) && /\sserve(\s|$)/i.test(command);
-  }
-
-  private resolveOpenCodeRuntimeLaneCleanupCwd(
-    teamName: string,
-    laneId: string,
-    config: TeamConfig | null,
-    metaMembers: readonly TeamMember[]
-  ): string | undefined {
-    const projectPath = config?.projectPath?.trim() || this.readPersistedTeamProjectPath(teamName);
-    const memberName = this.extractOpenCodeRuntimeLaneMemberName(laneId);
-    if (!memberName) {
-      return projectPath || undefined;
-    }
-    const normalized = memberName.toLowerCase();
-    const configMember = config?.members?.find(
-      (member) => member.name?.trim().toLowerCase() === normalized
-    );
-    const metaMember = metaMembers.find(
-      (member) => member.name?.trim().toLowerCase() === normalized
-    );
-    return metaMember?.cwd?.trim() || configMember?.cwd?.trim() || projectPath || undefined;
-  }
-
-  private extractOpenCodeRuntimeLaneMemberName(laneId: string): string | null {
-    return extractOpenCodeRuntimeLaneMemberName(laneId);
   }
 
   private getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
@@ -3565,8 +3386,8 @@ export class TeamProvisioningService {
       return;
     }
 
-    const command = this.readProcessCommandByPid(runtimePid);
-    if (!command || !this.isOpenCodeServeCommand(command)) {
+    const command = readOpenCodeRuntimeLaneProcessCommandByPid(runtimePid);
+    if (!command || !isOpenCodeServeCommand(command)) {
       logger.debug(
         `[${input.teamName}] Ignoring OpenCode bridge runtime pid ${runtimePid} for ${input.memberName}: process identity is not an active opencode serve host.`
       );
