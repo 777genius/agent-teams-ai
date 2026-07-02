@@ -551,10 +551,7 @@ import {
   appendProvisioningTrace,
   boundLiveLeadProcessMessage,
   boundLiveLeadProcessText,
-  boundPendingLogLineCarry,
-  boundRunClaudeLogLines,
   boundRunProvisioningOutputParts,
-  boundSingleRetainedLogLine,
   boundStdoutParserCarry,
   buildProvisioningLiveOutput,
   emitProvisioningCheckpoint,
@@ -687,9 +684,11 @@ import {
   resolveToolApprovalTimeoutAutoResolution,
   TOOL_APPROVAL_TIMEOUT_CONTROL_DENY_MESSAGE,
 } from './provisioning/TeamProvisioningToolApprovalFlow';
+import { TeamProvisioningTranscriptClaudeLogsCache } from './provisioning/TeamProvisioningTranscriptClaudeLogs';
 import {
-  TeamProvisioningTranscriptClaudeLogsCache,
-} from './provisioning/TeamProvisioningTranscriptClaudeLogs';
+  createTeamProvisioningTransientRunStatePorts,
+  TeamProvisioningTransientRunState,
+} from './provisioning/TeamProvisioningTransientRunState';
 import {
   handleTeamProvisioningTurnComplete,
   type TeamProvisioningTurnCompletePorts,
@@ -1620,6 +1619,7 @@ export class TeamProvisioningService {
   private helpOutputCacheTime = 0;
   private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
+  private readonly transientRunState: TeamProvisioningTransientRunState;
   private inFlightResponses = new Set<string>();
   private readonly prepareForProvisioningInFlight = new Map<
     string,
@@ -1698,6 +1698,34 @@ export class TeamProvisioningService {
     this.persistedTranscriptClaudeLogs = new TeamProvisioningTranscriptClaudeLogsCache({
       getContext: (teamName) => this.transcriptProjectResolver.getContext(teamName),
     });
+    this.transientRunState = new TeamProvisioningTransientRunState(
+      createTeamProvisioningTransientRunStatePorts({
+        pendingTimeouts: this.pendingTimeouts,
+        teamOpLocks: this.teamOpLocks,
+        cancelPendingAutoResume: (teamName) =>
+          peekAutoResumeService()?.cancelPendingAutoResume(teamName),
+        clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
+          this.clearOpenCodeRuntimeToolApprovals(teamName, options),
+        invalidateRuntimeSnapshotCaches: (teamName) =>
+          this.invalidateRuntimeSnapshotCaches(teamName),
+        runtimeProcessRowsForUsageSnapshotByTeam: this.runtimeProcessRowsForUsageSnapshotByTeam,
+        retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
+        persistedTranscriptClaudeLogs: this.persistedTranscriptClaudeLogs,
+        leadInboxRelayInFlight: this.leadInboxRelayInFlight,
+        relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
+        pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
+        recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
+        recentSameTeamNativeFingerprints: this.recentSameTeamNativeFingerprints,
+        memberInboxRelayInFlight: this.memberInboxRelayInFlight,
+        openCodeMemberInboxRelayInFlight: this.openCodeMemberInboxRelayInFlight,
+        openCodeMemberSendInFlightByLane: this.openCodeMemberSendInFlightByLane,
+        openCodePromptDeliveryWatchdogScheduler: this.openCodePromptDeliveryWatchdogScheduler,
+        relayedMemberInboxMessageIds: this.relayedMemberInboxMessageIds,
+        liveLeadProcessMessages: this.liveLeadProcessMessages,
+        relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
+        warn: (message) => logger.warn(message),
+      })
+    );
     this.scheduleStaleAnthropicTeamApiKeyHelperCleanup();
   }
 
@@ -4575,107 +4603,23 @@ export class TeamProvisioningService {
   }
 
   private clearSameTeamRetryTimers(teamName: string): void {
-    for (const suffix of ['deferred', 'persist']) {
-      const key = `same-team-${suffix}:${teamName}`;
-      const timer = this.pendingTimeouts.get(key);
-      if (timer) {
-        clearTimeout(timer);
-        this.pendingTimeouts.delete(key);
-      }
-    }
+    this.transientRunState.clearSameTeamRetryTimers(teamName);
   }
 
   private clearLeadInboxFollowUpRelayTimer(teamName: string): void {
-    const key = `lead-inbox-follow-up:${teamName}`;
-    const timer = this.pendingTimeouts.get(key);
-    if (timer) {
-      clearTimeout(timer);
-      this.pendingTimeouts.delete(key);
-    }
+    this.transientRunState.clearLeadInboxFollowUpRelayTimer(teamName);
   }
 
   private scheduleLeadInboxFollowUpRelay(teamName: string): void {
-    const key = `lead-inbox-follow-up:${teamName}`;
-    if (this.pendingTimeouts.has(key)) return;
-
-    const timer = setTimeout(() => {
-      this.pendingTimeouts.delete(key);
-      void this.relayLeadInboxMessages(teamName).catch((error: unknown) =>
-        logger.warn(`[${teamName}] lead inbox follow-up relay failed: ${String(error)}`)
-      );
-    }, 50);
-    timer.unref?.();
-    this.pendingTimeouts.set(key, timer);
+    this.transientRunState.scheduleLeadInboxFollowUpRelay(teamName);
   }
 
   private resetTeamScopedTransientStateForNewRun(teamName: string): void {
-    peekAutoResumeService()?.cancelPendingAutoResume(teamName);
-    this.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.runtimeProcessRowsForUsageSnapshotByTeam.delete(teamName);
-    this.retainedClaudeLogsByTeam.delete(teamName);
-    this.persistedTranscriptClaudeLogs.invalidate(teamName);
-    this.leadInboxRelayInFlight.delete(teamName);
-    this.relayedLeadInboxMessageIds.delete(teamName);
-    this.pendingCrossTeamFirstReplies.delete(teamName);
-    this.recentCrossTeamLeadDeliveryMessageIds.delete(teamName);
-    this.recentSameTeamNativeFingerprints.delete(teamName);
-    this.clearSameTeamRetryTimers(teamName);
-    this.clearLeadInboxFollowUpRelayTimer(teamName);
-
-    for (const key of Array.from(this.memberInboxRelayInFlight.keys())) {
-      if (key.startsWith(`${teamName}:`)) {
-        this.memberInboxRelayInFlight.delete(key);
-      }
-    }
-    for (const key of Array.from(this.openCodeMemberInboxRelayInFlight.keys())) {
-      if (key.startsWith(`opencode:${teamName}:`)) {
-        this.openCodeMemberInboxRelayInFlight.delete(key);
-      }
-    }
-    for (const key of Array.from(this.openCodeMemberSendInFlightByLane.keys())) {
-      if (key.startsWith(`opencode-send:${teamName}:`)) {
-        this.openCodeMemberSendInFlightByLane.delete(key);
-      }
-    }
-    this.openCodePromptDeliveryWatchdogScheduler.cancelTeam(teamName);
-    for (const key of Array.from(this.relayedMemberInboxMessageIds.keys())) {
-      if (key.startsWith(`${teamName}:`)) {
-        this.relayedMemberInboxMessageIds.delete(key);
-      }
-    }
-
-    this.liveLeadProcessMessages.delete(teamName);
+    this.transientRunState.resetTeamScopedTransientStateForNewRun(teamName);
   }
 
   private appendCliLogs(run: ProvisioningRun, stream: 'stdout' | 'stderr', text: string): void {
-    const nowMs = Date.now();
-    run.claudeLogsUpdatedAt = new Date(nowMs).toISOString();
-
-    const marker = stream === 'stdout' ? '[stdout]' : '[stderr]';
-    if (run.lastClaudeLogStream !== stream) {
-      run.lastClaudeLogStream = stream;
-      run.claudeLogLines.push(marker);
-    }
-
-    if (stream === 'stdout') {
-      run.stdoutLogLineBuf += text;
-      const parts = run.stdoutLogLineBuf.split('\n');
-      run.stdoutLogLineBuf = boundPendingLogLineCarry(parts.pop() ?? '');
-      for (const part of parts) {
-        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(boundSingleRetainedLogLine(normalized));
-      }
-    } else {
-      run.stderrLogLineBuf += text;
-      const parts = run.stderrLogLineBuf.split('\n');
-      run.stderrLogLineBuf = boundPendingLogLineCarry(parts.pop() ?? '');
-      for (const part of parts) {
-        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(boundSingleRetainedLogLine(normalized));
-      }
-    }
-    boundRunClaudeLogLines(run);
+    this.transientRunState.appendCliLogs(run, stream, text);
   }
 
   /**
@@ -4684,21 +4628,7 @@ export class TeamProvisioningService {
    * Prevents TOCTOU races between concurrent createTeam/launchTeam calls.
    */
   private async withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
-    const prev = this.teamOpLocks.get(teamName) ?? Promise.resolve();
-    let release!: () => void;
-    const mine = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    this.teamOpLocks.set(teamName, mine);
-    await prev;
-    try {
-      return await fn();
-    } finally {
-      release();
-      if (this.teamOpLocks.get(teamName) === mine) {
-        this.teamOpLocks.delete(teamName);
-      }
-    }
+    return this.transientRunState.withTeamLock(teamName, fn);
   }
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
