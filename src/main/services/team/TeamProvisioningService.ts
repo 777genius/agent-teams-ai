@@ -164,7 +164,6 @@ import {
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
   prepareOpenCodeRuntimeLaneForLaunchGeneration,
-  readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
   setOpenCodeRuntimeActiveRunManifest,
@@ -522,6 +521,14 @@ import {
   syncOpenCodeRuntimePermissionsAfterDelivery,
   syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
+import {
+  type OpenCodeRuntimeLaneRecoveryPorts,
+  resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper,
+  tryRecoverOpenCodeRuntimeLaneBeforeDelivery as tryRecoverOpenCodeRuntimeLaneBeforeDeliveryHelper,
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery as tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDeliveryHelper,
+  tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery as tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDeliveryHelper,
+  tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog as tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdogHelper,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 import { resolveOpenCodeSoloRuntimeRecipientProviderId } from './provisioning/TeamProvisioningOpenCodeSoloRuntime';
 import {
@@ -3927,38 +3934,43 @@ export class TeamProvisioningService {
     return this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId);
   }
 
+  private createOpenCodeRuntimeLaneRecoveryPorts(): OpenCodeRuntimeLaneRecoveryPorts {
+    return {
+      teamsBasePath: getTeamsBasePath(),
+      logger,
+      canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
+        this.canDeliverToOpenCodeRuntimeForTeam(teamName),
+      canAttemptCommittedOpenCodeSessionRecovery: (teamName) =>
+        this.canAttemptCommittedOpenCodeSessionRecovery(teamName),
+      cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
+        this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+      tryRecoverMissingOpenCodeSecondaryLaneFromRuntime: (recoverInput) =>
+        this.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime(recoverInput),
+      tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: (recoverInput) =>
+        this.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime(recoverInput),
+      readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
+      resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
+        this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
+      readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
+      readTeamMeta: (teamName) => this.teamMetaStore.getMeta(teamName),
+      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+      readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
+      isOpenCodeRuntimeLaneIndexActive: (teamName, laneId) =>
+        this.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
+    };
+  }
+
   private async tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input: {
     teamName: string;
     laneId: string;
     member: TeamMember;
     projectPath: string | null;
   }): Promise<boolean> {
-    if (!this.canDeliverToOpenCodeRuntimeForTeam(input.teamName)) {
-      this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(input.teamName);
-      return false;
-    }
-    const snapshot = await this.launchStateStore.read(input.teamName).catch(() => null);
-    const persistedMember =
-      snapshot?.members?.[input.member.name] ??
-      Object.values(snapshot?.members ?? {}).find((member) => member.laneId === input.laneId);
-    if (!persistedMember || !isRecoverablePersistedOpenCodeRuntimeCandidate(persistedMember)) {
-      return false;
-    }
-    const runtimeEvidence = await this.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime({
-      teamName: input.teamName,
-      laneId: input.laneId,
-      member: input.member,
-      projectPath: input.projectPath,
-      previousLaunchState: snapshot,
-      persistedMember,
-    });
-    if (!runtimeEvidence) {
-      return false;
-    }
-    logger.info(
-      `[${input.teamName}] Recovered OpenCode lane ${input.laneId} before message delivery.`
+    return tryRecoverOpenCodeRuntimeLaneBeforeDeliveryHelper(
+      input,
+      this.createOpenCodeRuntimeLaneRecoveryPorts()
     );
-    return true;
   }
 
   private async tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(input: {
@@ -3968,144 +3980,20 @@ export class TeamProvisioningService {
     projectPath: string | null;
     previousLaunchState?: PersistedTeamLaunchSnapshot | null;
   }): Promise<boolean> {
-    if (!this.canAttemptCommittedOpenCodeSessionRecovery(input.teamName)) {
-      this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(input.teamName);
-      return false;
-    }
-    const currentLaneIndex = await readOpenCodeRuntimeLaneIndex(
-      getTeamsBasePath(),
-      input.teamName
-    ).catch(() => null);
-    const currentEntry = currentLaneIndex?.lanes[input.laneId];
-    if (currentEntry?.state === 'active') {
-      return true;
-    }
-    if (currentEntry?.state === 'degraded' || currentEntry?.state === 'stopped') {
-      return false;
-    }
-
-    const committedSessionEvidence = await readCommittedOpenCodeBootstrapSessionEvidence({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: input.teamName,
-      laneId: input.laneId,
-    }).catch(() => null);
-    if (!committedSessionEvidence?.committed || committedSessionEvidence.sessions.length === 0) {
-      return false;
-    }
-    const expectedMemberName = input.member.name.trim().toLowerCase();
-    const matchingSession = committedSessionEvidence.sessions.find(
-      (session) => session.memberName.trim().toLowerCase() === expectedMemberName
+    return tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDeliveryHelper(
+      input,
+      this.createOpenCodeRuntimeLaneRecoveryPorts()
     );
-    if (!matchingSession) {
-      return false;
-    }
-
-    const runtimeEvidence = await this.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime({
-      teamName: input.teamName,
-      laneId: input.laneId,
-      member: input.member,
-      projectPath: input.projectPath,
-      previousLaunchState: input.previousLaunchState ?? null,
-    });
-    if (!isRecoverableOpenCodeRuntimeEvidence(runtimeEvidence)) {
-      return false;
-    }
-
-    const diagnostics = Array.from(
-      new Set([
-        'Recovered missing OpenCode runtime lane index from committed session evidence.',
-        ...committedSessionEvidence.diagnostics,
-        ...(runtimeEvidence.diagnostics ?? []),
-      ])
-    );
-    await upsertOpenCodeRuntimeLaneIndexEntry({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: input.teamName,
-      laneId: input.laneId,
-      state: 'active',
-      diagnostics,
-    }).catch((error: unknown) => {
-      logger.warn(
-        `[${input.teamName}] Failed to recover missing OpenCode lane index ${input.laneId} from committed session evidence: ${getErrorMessage(error)}`
-      );
-    });
-    await setOpenCodeRuntimeActiveRunManifest({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: input.teamName,
-      laneId: input.laneId,
-      runId: committedSessionEvidence.activeRunId ?? matchingSession.runId ?? null,
-    }).catch((error: unknown) => {
-      logger.warn(
-        `[${input.teamName}] Failed to materialize committed-session recovered OpenCode lane manifest ${input.laneId}: ${getErrorMessage(error)}`
-      );
-    });
-    logger.info(
-      `[${input.teamName}] Recovered OpenCode lane ${input.laneId} from committed session evidence before message delivery.`
-    );
-    return true;
-  }
-
-  private buildOpenCodeRecoveryMember(input: {
-    canonicalMemberName: string;
-    configMember?: TeamMember;
-    metaMember?: TeamMember;
-  }): TeamMember {
-    return {
-      ...(input.configMember ?? {}),
-      ...(input.metaMember ?? {}),
-      name: input.canonicalMemberName,
-      providerId: 'opencode',
-      model: input.metaMember?.model ?? input.configMember?.model,
-      role: input.metaMember?.role ?? input.configMember?.role,
-      workflow: input.metaMember?.workflow ?? input.configMember?.workflow,
-      effort: input.metaMember?.effort ?? input.configMember?.effort,
-      cwd: input.metaMember?.cwd ?? input.configMember?.cwd,
-      isolation: input.metaMember?.isolation ?? input.configMember?.isolation,
-    };
   }
 
   private async tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input: {
     teamName: string;
     memberName: string;
   }): Promise<boolean> {
-    const directory = await this.readOpenCodeMemberDirectory(input.teamName).catch(() => null);
-    if (!directory) {
-      return false;
-    }
-    const identity = this.resolveOpenCodeMemberIdentityFromDirectory(
-      input.teamName,
-      input.memberName,
-      directory
+    return tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDeliveryHelper(
+      input,
+      this.createOpenCodeRuntimeLaneRecoveryPorts()
     );
-    if (!identity.ok) {
-      return false;
-    }
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
-      () => null
-    );
-    const currentEntry = laneIndex?.lanes[identity.laneId];
-    if (currentEntry?.state === 'active') {
-      return true;
-    }
-    if (currentEntry?.state === 'degraded' || currentEntry?.state === 'stopped') {
-      return false;
-    }
-    const previousLaunchState = await this.launchStateStore.read(input.teamName).catch(() => null);
-    const projectPath =
-      identity.memberRuntimeCwd ??
-      directory.config?.projectPath?.trim() ??
-      this.readPersistedTeamProjectPath(input.teamName);
-    return this.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery({
-      teamName: input.teamName,
-      laneId: identity.laneId,
-      member: this.buildOpenCodeRecoveryMember({
-        canonicalMemberName: identity.canonicalMemberName,
-        configMember: identity.configMember,
-        metaMember: identity.metaMember,
-      }),
-      projectPath,
-      previousLaunchState,
-    });
   }
 
   private async tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input: {
@@ -4120,130 +4008,21 @@ export class TeamProvisioningService {
     if (!recovered) {
       return false;
     }
-    return this.isOpenCodeRuntimeLaneIndexActive(input.teamName, input.laneId).catch(() => false);
+    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
+      () => null
+    );
+    return laneIndex?.lanes[input.laneId]?.state === 'active';
   }
 
   private async tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(
     teamName: string,
     options: { allowCommittedSessionRecoveryWithoutTeamRuntime?: boolean } = {}
   ): Promise<string[]> {
-    const canDeliverToTeamRuntime = this.canDeliverToOpenCodeRuntimeForTeam(teamName);
-    if (!canDeliverToTeamRuntime && !options.allowCommittedSessionRecoveryWithoutTeamRuntime) {
-      this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
-      return [];
-    }
-    if (!canDeliverToTeamRuntime && !this.canAttemptCommittedOpenCodeSessionRecovery(teamName)) {
-      this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
-      return [];
-    }
-    const snapshot = await this.launchStateStore.read(teamName).catch(() => null);
-    const candidates = canDeliverToTeamRuntime
-      ? Object.values(snapshot?.members ?? {}).filter(
-          isRecoverablePersistedOpenCodeRuntimeCandidate
-        )
-      : [];
-
-    const [config, teamMeta, metaMembers, currentLaneIndex] = await Promise.all([
-      this.readConfigForObservation(teamName).catch(() => null),
-      this.teamMetaStore.getMeta(teamName).catch(() => null),
-      this.membersMetaStore.getMembers(teamName).catch(() => []),
-      readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(() => null),
-    ]);
-    const projectPath = config?.projectPath?.trim() || this.readPersistedTeamProjectPath(teamName);
-    const leadMember = config?.members?.find((member) => isLeadMember(member));
-    const leadProviderId =
-      normalizeOptionalTeamProviderId(teamMeta?.launchIdentity?.providerId) ??
-      normalizeOptionalTeamProviderId(teamMeta?.providerId) ??
-      normalizeOptionalTeamProviderId(leadMember?.providerId);
-    const recoveredLaneIds: string[] = [];
-    for (const persistedMember of candidates) {
-      const memberName = persistedMember.name.trim();
-      const configMember = config?.members?.find(
-        (member) => member.name?.trim().toLowerCase() === memberName.toLowerCase()
-      );
-      const metaMember = metaMembers.find(
-        (member) => member.name?.trim().toLowerCase() === memberName.toLowerCase()
-      );
-      if (metaMember?.removedAt != null || configMember?.removedAt != null) {
-        continue;
-      }
-      const laneIdentity = buildPlannedMemberLaneIdentity({
-        leadProviderId,
-        member: {
-          name: memberName,
-          providerId: 'opencode',
-        },
-      });
-      if (laneIdentity.laneId !== persistedMember.laneId) {
-        continue;
-      }
-      if (currentLaneIndex?.lanes[laneIdentity.laneId]) {
-        continue;
-      }
-      const recovered = await this.tryRecoverOpenCodeRuntimeLaneBeforeDelivery({
-        teamName,
-        laneId: laneIdentity.laneId,
-        member: {
-          ...(configMember ?? {}),
-          ...(metaMember ?? {}),
-          name: memberName,
-          providerId: 'opencode',
-          model: metaMember?.model ?? configMember?.model ?? persistedMember.model,
-          role: metaMember?.role ?? configMember?.role,
-          workflow: metaMember?.workflow ?? configMember?.workflow,
-          effort: metaMember?.effort ?? configMember?.effort ?? persistedMember.effort,
-          cwd: metaMember?.cwd ?? configMember?.cwd ?? persistedMember.cwd,
-          isolation: metaMember?.isolation ?? configMember?.isolation,
-        },
-        projectPath,
-      });
-      if (recovered) {
-        recoveredLaneIds.push(laneIdentity.laneId);
-      }
-    }
-    const directory: OpenCodeMemberDirectory = { config, teamMeta, metaMembers };
-    const configuredNames = new Set<string>();
-    for (const member of config?.members ?? []) {
-      if (member.name?.trim()) {
-        configuredNames.add(member.name.trim());
-      }
-    }
-    for (const member of metaMembers) {
-      if (member.name?.trim()) {
-        configuredNames.add(member.name.trim());
-      }
-    }
-    for (const memberName of configuredNames) {
-      const identity = this.resolveOpenCodeMemberIdentityFromDirectory(
-        teamName,
-        memberName,
-        directory
-      );
-      if (!identity.ok) {
-        continue;
-      }
-      if (currentLaneIndex?.lanes[identity.laneId] || recoveredLaneIds.includes(identity.laneId)) {
-        continue;
-      }
-      const recovered = await this.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery({
-        teamName,
-        laneId: identity.laneId,
-        member: this.buildOpenCodeRecoveryMember({
-          canonicalMemberName: identity.canonicalMemberName,
-          configMember: identity.configMember,
-          metaMember: identity.metaMember,
-        }),
-        projectPath:
-          identity.memberRuntimeCwd ??
-          config?.projectPath?.trim() ??
-          this.readPersistedTeamProjectPath(teamName),
-        previousLaunchState: snapshot,
-      });
-      if (recovered) {
-        recoveredLaneIds.push(identity.laneId);
-      }
-    }
-    return [...new Set(recoveredLaneIds)];
+    return tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdogHelper(
+      teamName,
+      options,
+      this.createOpenCodeRuntimeLaneRecoveryPorts()
+    );
   }
 
   private async resolveOpenCodeRuntimeLaneId(params: {
@@ -4251,39 +4030,13 @@ export class TeamProvisioningService {
     runId: string;
     memberName?: string;
   }): Promise<string> {
-    const runtimeRun = this.runtimeAdapterRunByTeam.get(params.teamName);
-    if (runtimeRun?.providerId === 'opencode' && runtimeRun.runId === params.runId) {
-      return 'primary';
-    }
-
-    for (const lane of this.getSecondaryRuntimeRuns(params.teamName)) {
-      if (lane.runId === params.runId) {
-        return lane.laneId;
-      }
-    }
-
-    if (params.memberName) {
-      const trackedRunId = this.getTrackedRunId(params.teamName);
-      const trackedRun = trackedRunId ? this.runs.get(trackedRunId) : null;
-      const plannedLane = trackedRun?.mixedSecondaryLanes.find(
-        (lane) => lane.member.name.trim() === params.memberName
-      );
-      if (plannedLane) {
-        return plannedLane.laneId;
-      }
-
-      const persisted = await this.launchStateStore.read(params.teamName).catch(() => null);
-      const persistedMember = persisted?.members?.[params.memberName];
-      if (
-        persistedMember?.laneOwnerProviderId === 'opencode' &&
-        typeof persistedMember.laneId === 'string' &&
-        persistedMember.laneId.trim().length > 0
-      ) {
-        return persistedMember.laneId.trim();
-      }
-    }
-
-    return 'primary';
+    return resolveOpenCodeRuntimeLaneIdHelper(params, {
+      getRuntimeAdapterRun: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
+      getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
+      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId) ?? null,
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+    });
   }
 
   private buildConfiguredProvisioningMember(
