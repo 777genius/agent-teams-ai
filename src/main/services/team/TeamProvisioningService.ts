@@ -579,6 +579,11 @@ import {
   warmupProviderPreflight,
 } from './provisioning/TeamProvisioningProviderPreflight';
 import {
+  buildRetainedClaudeLogsSnapshot,
+  extractCliLogsFromRun,
+  type RetainedClaudeLogsSnapshot,
+} from './provisioning/TeamProvisioningRetainedLogs';
+import {
   buildRuntimeLaunchWarning,
   getAnthropicFastModeDefault,
   getPromptSizeSummary,
@@ -1141,11 +1146,9 @@ interface MixedSecondaryRuntimeLaneState {
 
 type LeadActivityState = 'active' | 'idle' | 'offline';
 
-
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 
 interface PendingMemberRestartContext {
   requestedAt: string;
@@ -1156,7 +1159,6 @@ interface PendingMemberRestartContext {
 }
 
 type LeadInboxMemberSpawnMessage = InboxMessage & { messageId: string };
-
 
 async function tryReadRegularFileUtf8(
   filePath: string,
@@ -1188,7 +1190,6 @@ async function tryReadRegularFileUtf8(
     return null;
   }
 }
-
 
 /** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
 const wrapInAgentBlock = wrapAgentBlock;
@@ -1251,57 +1252,12 @@ function updateProgress(
  * back to the legacy tail extraction only when claudeLogLines is empty (e.g.
  * early in provisioning before any output has been line-split).
  */
-function extractCliLogsFromRun(run: ProvisioningRun): string | undefined {
-  const claudeLogLines = Array.isArray(run.claudeLogLines) ? run.claudeLogLines : [];
-  if (claudeLogLines.length > 0) {
-    const joined = boundProgressLogLines(claudeLogLines).join('\n').trim();
-    if (joined.length === 0) {
-      return undefined;
-    }
-    return joined;
-  }
-  return extractLogsTail(run.stdoutBuffer, run.stderrBuffer);
-}
-
-interface RetainedClaudeLogsSnapshot {
-  lines: string[];
-  updatedAt?: string;
-}
 
 interface PersistedTranscriptClaudeLogsCacheEntry {
   transcriptPath: string;
   mtimeMs: number;
   size: number;
   snapshot: RetainedClaudeLogsSnapshot;
-}
-
-function buildRetainedClaudeLogsSnapshot(run: ProvisioningRun): RetainedClaudeLogsSnapshot | null {
-  const claudeLogLines = Array.isArray(run.claudeLogLines) ? run.claudeLogLines : [];
-  if (claudeLogLines.length > 0) {
-    return {
-      lines: boundProgressLogLines(claudeLogLines),
-      updatedAt: run.claudeLogsUpdatedAt,
-    };
-  }
-
-  const fallback = extractCliLogsFromRun(run);
-  if (!fallback) {
-    return null;
-  }
-
-  const lines = fallback
-    .split('\n')
-    .map((line) => (line.endsWith('\r') ? line.slice(0, -1) : line))
-    .filter((line) => line.length > 0);
-
-  if (lines.length === 0) {
-    return null;
-  }
-
-  return {
-    lines: boundProgressLogLines(lines),
-    updatedAt: run.claudeLogsUpdatedAt ?? run.progress.updatedAt,
-  };
 }
 
 /**
