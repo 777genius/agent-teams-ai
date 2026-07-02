@@ -62,7 +62,6 @@ import { type AttachmentPayload, DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
-import { isUsableCodexModelCatalog } from '@shared/utils/codexModelCatalog';
 import { deriveContextMetrics } from '@shared/utils/contextMetrics';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import {
@@ -350,6 +349,11 @@ import {
   isCliProvisionedButNotAliveFailureReason,
   isProvisionedButNotAliveFailureReason,
 } from './provisioning/TeamProvisioningLaunchFailurePolicy';
+import {
+  readRuntimeProviderLaunchFacts as readRuntimeProviderLaunchFactsHelper,
+  resolveAndValidateLaunchIdentity as resolveAndValidateLaunchIdentityHelper,
+  resolveDirectMemberLaunchIdentity as resolveDirectMemberLaunchIdentityHelper,
+} from './provisioning/TeamProvisioningLaunchIdentity';
 import { buildTeamLaunchIncompleteNotificationPayload } from './provisioning/TeamProvisioningLaunchIncompleteNotification';
 import {
   buildAggregatePendingLaunchMessage as buildAggregatePendingLaunchMessageHelper,
@@ -601,7 +605,6 @@ import {
   getRuntimeFailureLabelForRequest,
 } from './provisioning/TeamProvisioningRuntimeFailureLabels';
 import {
-  addModelCatalogLaunchModels,
   buildProviderModelLaunchIdentity as buildProviderModelLaunchIdentityHelper,
   buildTeamRuntimeLaunchArgsPlan as buildTeamRuntimeLaunchArgsPlanHelper,
   extractJsonObjectFromCli,
@@ -821,8 +824,6 @@ interface LaunchStateWriteResult {
 import type {
   ActiveToolCall,
   AgentActionMode,
-  CliProviderModelCatalog,
-  CliProviderRuntimeCapabilities,
   CrossTeamSendResult,
   EffortLevel,
   InboxMessage,
@@ -2437,140 +2438,11 @@ export class TeamProvisioningService {
     providerArgs?: string[];
     limitContext?: boolean;
   }): Promise<RuntimeProviderLaunchFacts> {
-    const providerArgs = params.providerArgs ?? [];
-    const modelListPromise = execCli(
-      params.claudePath,
-      buildProviderControlPlaneCliCommandArgs(providerArgs, [
-        'model',
-        'list',
-        '--json',
-        '--provider',
-        params.providerId,
-      ]),
-      {
-        cwd: params.cwd,
-        env: params.env,
-        timeout: PROVIDER_MODEL_LIST_TIMEOUT_MS,
-      }
-    );
-    const runtimeStatusPromise =
-      params.providerId === 'codex' || params.providerId === 'anthropic'
-        ? execCli(
-            params.claudePath,
-            buildProviderControlPlaneCliCommandArgs(providerArgs, [
-              'runtime',
-              'status',
-              '--json',
-              '--provider',
-              params.providerId,
-            ]),
-            {
-              cwd: params.cwd,
-              env: params.env,
-              timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
-            }
-          )
-        : null;
-
-    const [modelListResult, runtimeStatusResult] = await Promise.allSettled([
-      modelListPromise,
-      runtimeStatusPromise,
-    ]);
-
-    let defaultModel: string | null = null;
-    let modelIds = new Set<string>();
-    let modelListParsed = false;
-    if (modelListResult.status === 'fulfilled') {
-      try {
-        const parsed = extractJsonObjectFromCli<ProviderModelListCommandResponse>(
-          modelListResult.value.stdout
-        );
-        modelListParsed = true;
-        const provider = parsed.providers?.[params.providerId];
-        defaultModel =
-          typeof provider?.defaultModel === 'string' && provider.defaultModel.trim().length > 0
-            ? provider.defaultModel.trim()
-            : null;
-        modelIds = normalizeProviderModelListModels(provider);
-      } catch (error) {
-        logger.warn(
-          `[${params.providerId}] Failed to parse runtime model list for launch validation: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    let runtimeCapabilities: CliProviderRuntimeCapabilities | null = null;
-    let modelCatalog: CliProviderModelCatalog | null = null;
-    let providerStatus: RuntimeProviderLaunchFacts['providerStatus'] = null;
-    if (
-      runtimeStatusResult.status === 'fulfilled' &&
-      runtimeStatusResult.value &&
-      typeof runtimeStatusResult.value.stdout === 'string'
-    ) {
-      try {
-        const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(
-          runtimeStatusResult.value.stdout
-        );
-        const parsedProviderStatus = parsed.providers?.[params.providerId] ?? null;
-        providerStatus = parsedProviderStatus
-          ? {
-              ...parsedProviderStatus,
-              providerId: parsedProviderStatus.providerId ?? params.providerId,
-            }
-          : null;
-        runtimeCapabilities = providerStatus?.runtimeCapabilities ?? null;
-        modelCatalog =
-          providerStatus?.modelCatalog?.providerId === params.providerId
-            ? providerStatus.modelCatalog
-            : null;
-      } catch (error) {
-        logger.warn(
-          `[${params.providerId}] Failed to parse runtime capabilities for launch validation: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (modelCatalog) {
-      addModelCatalogLaunchModels(modelIds, modelCatalog);
-      defaultModel = modelCatalog.defaultLaunchModel?.trim() || defaultModel;
-    }
-
-    if (
-      params.providerId === 'codex' &&
-      !isUsableCodexModelCatalog(modelCatalog) &&
-      runtimeCapabilities?.modelCatalog?.dynamic === true
-    ) {
-      const codexCatalog = await this.providerConnectionService.getCodexModelCatalog({
-        cwd: params.cwd,
-      });
-      if (isUsableCodexModelCatalog(codexCatalog)) {
-        addModelCatalogLaunchModels(modelIds, codexCatalog);
-
-        modelCatalog = codexCatalog;
-        defaultModel = codexCatalog.defaultLaunchModel?.trim() || defaultModel;
-      }
-    }
-
-    return {
-      defaultModel:
-        params.providerId === 'anthropic'
-          ? resolveAnthropicLaunchModel({
-              limitContext: params.limitContext === true,
-              availableLaunchModels:
-                modelCatalog?.models.map((model) => model.launchModel) ?? modelIds,
-              defaultLaunchModel: defaultModel,
-            })
-          : defaultModel,
-      modelIds,
-      modelListParsed,
-      modelCatalog,
-      runtimeCapabilities,
-      providerStatus,
-    };
+    return readRuntimeProviderLaunchFactsHelper(params, {
+      execCli,
+      getCodexModelCatalog: (input) => this.providerConnectionService.getCodexModelCatalog(input),
+      warn: (message) => logger.warn(message),
+    });
   }
 
   private buildProviderModelLaunchIdentity(params: {
@@ -2613,52 +2485,10 @@ export class TeamProvisioningService {
     effectiveMembers: TeamCreateRequest['members'];
     providerArgsByProvider?: Map<TeamProviderId, string[]>;
   }): Promise<ProviderModelLaunchIdentity> {
-    const leadProviderId = resolveTeamProviderId(params.request.providerId);
-    const factsByProvider = new Map<TeamProviderId, RuntimeProviderLaunchFacts>();
-    const getFacts = async (providerId: TeamProviderId): Promise<RuntimeProviderLaunchFacts> => {
-      const cached = factsByProvider.get(providerId);
-      if (cached) {
-        return cached;
-      }
-      const facts = await this.readRuntimeProviderLaunchFacts({
-        claudePath: params.claudePath,
-        cwd: params.cwd,
-        providerId,
-        env: params.env,
-        providerArgs: params.providerArgsByProvider?.get(providerId),
-        limitContext: params.request.limitContext,
-      });
-      factsByProvider.set(providerId, facts);
-      return facts;
-    };
-
-    const leadFacts = await getFacts(leadProviderId);
-    this.validateRuntimeLaunchSelection({
-      actorLabel: 'Team lead',
-      providerId: leadProviderId,
-      model: params.request.model,
-      effort: params.request.effort,
-      fastMode: params.request.fastMode,
-      limitContext: params.request.limitContext,
-      facts: leadFacts,
-    });
-
-    for (const member of params.effectiveMembers) {
-      const memberProviderId = resolveTeamProviderId(member.providerId);
-      const memberFacts = await getFacts(memberProviderId);
-      this.validateRuntimeLaunchSelection({
-        actorLabel: `Member ${member.name}`,
-        providerId: memberProviderId,
-        model: member.model,
-        effort: member.effort,
-        limitContext: params.request.limitContext,
-        facts: memberFacts,
-      });
-    }
-
-    return this.buildProviderModelLaunchIdentity({
-      request: params.request,
-      facts: leadFacts,
+    return resolveAndValidateLaunchIdentityHelper(params, {
+      readRuntimeProviderLaunchFacts: (input) => this.readRuntimeProviderLaunchFacts(input),
+      buildProviderModelLaunchIdentity: (input) => this.buildProviderModelLaunchIdentity(input),
+      validateRuntimeLaunchSelection: (input) => this.validateRuntimeLaunchSelection(input),
     });
   }
 
@@ -2671,38 +2501,17 @@ export class TeamProvisioningService {
     memberSpec: TeamCreateRequest['members'][number];
     run: ProvisioningRun;
   }): Promise<ProviderModelLaunchIdentity> {
-    const request: Pick<
-      TeamCreateRequest,
-      'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode' | 'limitContext'
-    > = {
-      providerId: input.providerId,
-      ...(input.providerBackendId ? { providerBackendId: input.providerBackendId } : {}),
-      ...(input.memberSpec.model ? { model: input.memberSpec.model } : {}),
-      ...(input.memberSpec.effort ? { effort: input.memberSpec.effort } : {}),
-      ...(input.memberSpec.fastMode ? { fastMode: input.memberSpec.fastMode } : {}),
-      ...(input.run.request.limitContext ? { limitContext: input.run.request.limitContext } : {}),
-    };
-    const facts = await this.readRuntimeProviderLaunchFacts({
-      claudePath: input.claudePath,
-      cwd: input.cwd,
-      providerId: input.providerId,
-      env: input.provisioningEnv.env,
-      providerArgs: input.provisioningEnv.providerArgs,
-      limitContext: input.run.request.limitContext,
-    });
-    this.validateRuntimeLaunchSelection({
-      actorLabel: `Member ${input.memberSpec.name}`,
-      providerId: input.providerId,
-      model: input.memberSpec.model,
-      effort: input.memberSpec.effort,
-      fastMode: input.memberSpec.fastMode,
-      limitContext: input.run.request.limitContext,
-      facts,
-    });
-    return this.buildProviderModelLaunchIdentity({
-      request,
-      facts,
-    });
+    return resolveDirectMemberLaunchIdentityHelper(
+      {
+        ...input,
+        requestLimitContext: input.run.request.limitContext,
+      },
+      {
+        readRuntimeProviderLaunchFacts: (params) => this.readRuntimeProviderLaunchFacts(params),
+        buildProviderModelLaunchIdentity: (params) => this.buildProviderModelLaunchIdentity(params),
+        validateRuntimeLaunchSelection: (params) => this.validateRuntimeLaunchSelection(params),
+      }
+    );
   }
 
   async getClaudeLogs(
