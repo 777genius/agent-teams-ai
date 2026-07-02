@@ -2,7 +2,6 @@ import {
   buildClaudeAttachmentDeliveryParts,
   buildCodexNativeAttachmentDeliveryParts,
 } from '@features/agent-attachments/main';
-import { type RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 import {
   buildOpenCodeSecondaryLaneId,
   buildPlannedMemberLaneIdentity,
@@ -17,18 +16,11 @@ import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/m
 import { killTmuxPaneForCurrentPlatformSync } from '@features/tmux-installer/main';
 import {
   resolveWorkspaceTrustFeatureFlags,
-  type WorkspaceTrustArgsOnlyPlanRequest,
-  type WorkspaceTrustArgsOnlyPlanResult,
   type WorkspaceTrustCoordinator,
   type WorkspaceTrustDiagnosticsManifest,
   type WorkspaceTrustExecutionResult,
   type WorkspaceTrustFeatureFlags,
-  type WorkspaceTrustFullPlanRequest,
   type WorkspaceTrustFullPlanResult,
-  type WorkspaceTrustLaunchArgPatch,
-  type WorkspaceTrustLaunchArgTargetSurface,
-  type WorkspaceTrustProvider,
-  type WorkspaceTrustWorkspace,
 } from '@features/workspace-trust/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
@@ -109,7 +101,6 @@ import { mergeJsonSettingsArgs } from '../runtime/cliSettingsArgs';
 import { buildProviderControlPlaneCliCommandArgs } from '../runtime/providerCliCommandArgs';
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
 import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
-import { type TeamRuntimeSettingsJson } from '../runtime/teamRuntimeSettingsBundle';
 
 import { openCodeRuntimeApprovalProvider } from './approvals/OpenCodeRuntimeApprovalProvider';
 import {
@@ -671,6 +662,14 @@ import {
   clearMemberSpawnToolTracking as clearMemberSpawnToolTrackingHelper,
   resetRuntimeToolActivity as resetRuntimeToolActivityHelper,
 } from './provisioning/TeamProvisioningRuntimeToolActivity';
+import {
+  buildRuntimeTurnSettledEnvironment as buildRuntimeTurnSettledEnvironmentHelper,
+  buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
+  buildRuntimeTurnSettledHookSettingsArgs as buildRuntimeTurnSettledHookSettingsArgsHelper,
+  buildRuntimeTurnSettledHookSettingsObject as buildRuntimeTurnSettledHookSettingsObjectHelper,
+  type RuntimeTurnSettledEnvironmentProvider,
+  type RuntimeTurnSettledHookSettingsProvider,
+} from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
 import { scanForNewestProjectSession } from './provisioning/TeamProvisioningSessionDiscovery';
 import {
   stopAllTeamsFlow,
@@ -708,10 +707,8 @@ import {
   planWorkspaceTrustArgsOnlySafely as planWorkspaceTrustArgsOnlySafelyHelper,
   planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
   prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
-  resolveWorkspaceTrustGitRoot as resolveWorkspaceTrustGitRootHelper,
-  toWorkspaceTrustProvider as toWorkspaceTrustProviderHelper,
-  type WorkspaceTrustProviderArgsResolver,
 } from './provisioning/TeamProvisioningWorkspaceTrust';
+import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { isAgentTeamsToolUse } from './agentTeamsToolNames';
 import { atomicWriteAsync } from './atomicWrite';
@@ -1620,12 +1617,12 @@ export class TeamProvisioningService {
   private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
   private workspaceTrustCoordinator: WorkspaceTrustCoordinator | null = null;
-  private runtimeTurnSettledHookSettingsProvider:
-    | ((input: { provider: RuntimeTurnSettledProvider }) => Promise<Record<string, unknown> | null>)
-    | null = null;
-  private runtimeTurnSettledEnvironmentProvider:
-    | ((input: { provider: RuntimeTurnSettledProvider }) => Promise<Record<string, string> | null>)
-    | null = null;
+  private readonly workspaceTrustWorkspaceCollectionPorts =
+    createNodeWorkspaceTrustWorkspaceCollectionPorts();
+  private runtimeTurnSettledHookSettingsProvider: RuntimeTurnSettledHookSettingsProvider | null =
+    null;
+  private runtimeTurnSettledEnvironmentProvider: RuntimeTurnSettledEnvironmentProvider | null =
+    null;
   private readonly stoppedTeamOpenCodeRuntimeCleanupInFlight = new Map<string, Promise<number>>();
   private readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   private crossTeamSender:
@@ -2180,85 +2177,15 @@ export class TeamProvisioningService {
   }
 
   setRuntimeTurnSettledHookSettingsProvider(
-    provider:
-      | ((input: {
-          provider: RuntimeTurnSettledProvider;
-        }) => Promise<Record<string, unknown> | null>)
-      | null
+    provider: RuntimeTurnSettledHookSettingsProvider | null
   ): void {
     this.runtimeTurnSettledHookSettingsProvider = provider;
   }
 
   setRuntimeTurnSettledEnvironmentProvider(
-    provider:
-      | ((input: {
-          provider: RuntimeTurnSettledProvider;
-        }) => Promise<Record<string, string> | null>)
-      | null
+    provider: RuntimeTurnSettledEnvironmentProvider | null
   ): void {
     this.runtimeTurnSettledEnvironmentProvider = provider;
-  }
-
-  private toWorkspaceTrustProvider(providerId: TeamProviderId): WorkspaceTrustProvider {
-    return toWorkspaceTrustProviderHelper(providerId);
-  }
-
-  private collectWorkspaceTrustProviders(input: {
-    leadProviderId?: TeamProviderId;
-    members: TeamCreateRequest['members'];
-  }): WorkspaceTrustProvider[] {
-    return collectWorkspaceTrustProvidersHelper({
-      leadProviderId: resolveTeamProviderId(input.leadProviderId),
-      memberProviderIds: input.members.map(
-        (member) =>
-          normalizeTeamMemberProviderId(member.providerId) ??
-          normalizeTeamMemberProviderId((member as { provider?: unknown }).provider)
-      ),
-    });
-  }
-
-  private async resolveWorkspaceTrustGitRoot(cwd: string): Promise<string | null> {
-    return resolveWorkspaceTrustGitRootHelper(cwd);
-  }
-
-  private async collectWorkspaceTrustWorkspaces(input: {
-    cwd: string;
-    members: TeamCreateRequest['members'];
-  }): Promise<WorkspaceTrustWorkspace[]> {
-    return collectWorkspaceTrustWorkspacesHelper(input);
-  }
-
-  private applyWorkspaceTrustArgPatches(input: {
-    args: string[];
-    patches: WorkspaceTrustLaunchArgPatch[];
-    targetProvider: TeamProviderId;
-    targetSurface: WorkspaceTrustLaunchArgTargetSurface;
-  }): string[] {
-    return applyWorkspaceTrustArgPatchesHelper(input);
-  }
-
-  private createDefaultModelWorkspaceTrustProviderArgsResolver(
-    plan: Pick<WorkspaceTrustArgsOnlyPlanResult, 'launchArgPatches'>
-  ): WorkspaceTrustProviderArgsResolver {
-    return createDefaultModelWorkspaceTrustProviderArgsResolverHelper(plan);
-  }
-
-  private async planWorkspaceTrustArgsOnlySafely(
-    request: WorkspaceTrustArgsOnlyPlanRequest
-  ): Promise<WorkspaceTrustArgsOnlyPlanResult> {
-    return planWorkspaceTrustArgsOnlySafelyHelper({
-      coordinator: this.workspaceTrustCoordinator,
-      request,
-    });
-  }
-
-  private async planWorkspaceTrustFullSafely(
-    request: WorkspaceTrustFullPlanRequest
-  ): Promise<WorkspaceTrustFullPlanResult | null> {
-    return planWorkspaceTrustFullSafelyHelper({
-      coordinator: this.workspaceTrustCoordinator,
-      request,
-    });
   }
 
   private isLaunchRunStillCurrent(run: ProvisioningRun): boolean {
@@ -2268,13 +2195,6 @@ export class TeamProvisioningService {
       !run.cancelRequested &&
       !run.processKilled
     );
-  }
-
-  private async buildRuntimeTurnSettledHookSettingsArgs(
-    providerId: TeamProviderId
-  ): Promise<string[]> {
-    const settings = await this.buildRuntimeTurnSettledHookSettingsObject(providerId);
-    return settings ? ['--settings', JSON.stringify(settings)] : [];
   }
 
   private async prepareWorkspaceTrustForDeterministicRun(input: {
@@ -2355,26 +2275,6 @@ export class TeamProvisioningService {
     throw new Error('Team launch cancelled by app shutdown');
   }
 
-  private async buildRuntimeTurnSettledHookSettingsObject(
-    providerId: TeamProviderId
-  ): Promise<TeamRuntimeSettingsJson | null> {
-    if (providerId !== 'anthropic' || !this.runtimeTurnSettledHookSettingsProvider) {
-      return null;
-    }
-
-    try {
-      const settings = await this.runtimeTurnSettledHookSettingsProvider({ provider: 'claude' });
-      return settings ?? null;
-    } catch (error) {
-      logger.warn(
-        `Failed to build member work sync Stop hook settings: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      return null;
-    }
-  }
-
   private async buildTeamRuntimeLaunchArgsPlan(input: {
     teamName: string;
     providerId: TeamProviderId;
@@ -2387,51 +2287,22 @@ export class TeamProvisioningService {
   }): Promise<TeamRuntimeLaunchArgsPlan> {
     return buildTeamRuntimeLaunchArgsPlanHelper(input, {
       buildRuntimeTurnSettledHookSettingsArgs: (providerId) =>
-        this.buildRuntimeTurnSettledHookSettingsArgs(providerId),
+        buildRuntimeTurnSettledHookSettingsArgsHelper(
+          { providerId },
+          {
+            hookSettingsProvider: this.runtimeTurnSettledHookSettingsProvider,
+            logger,
+          }
+        ),
       buildRuntimeTurnSettledHookSettingsObject: (providerId) =>
-        this.buildRuntimeTurnSettledHookSettingsObject(providerId),
+        buildRuntimeTurnSettledHookSettingsObjectHelper(
+          { providerId },
+          {
+            hookSettingsProvider: this.runtimeTurnSettledHookSettingsProvider,
+            logger,
+          }
+        ),
     });
-  }
-
-  private async buildRuntimeTurnSettledEnvironment(
-    providerId: TeamProviderId
-  ): Promise<Record<string, string>> {
-    if (providerId !== 'codex' || !this.runtimeTurnSettledEnvironmentProvider) {
-      return {};
-    }
-
-    try {
-      return (await this.runtimeTurnSettledEnvironmentProvider({ provider: 'codex' })) ?? {};
-    } catch (error) {
-      logger.warn(
-        `Failed to build member work sync runtime turn-settled environment: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      return {};
-    }
-  }
-
-  private async buildRuntimeTurnSettledEnvironmentForMembers(
-    primaryProviderId: TeamProviderId | undefined,
-    memberSpecs: TeamCreateRequest['members']
-  ): Promise<Record<string, string>> {
-    const resolvedPrimaryProviderId = resolveTeamProviderId(primaryProviderId);
-    const needsCodexTurnSettledEnv = memberSpecs.some((member) => {
-      const configuredProviderId = normalizeTeamMemberProviderId(member.providerId);
-      const inferredProviderId = inferTeamProviderIdFromModel(member.model);
-      return (
-        resolvedPrimaryProviderId === 'codex' ||
-        configuredProviderId === 'codex' ||
-        inferredProviderId === 'codex'
-      );
-    });
-
-    if (!needsCodexTurnSettledEnv) {
-      return {};
-    }
-
-    return this.buildRuntimeTurnSettledEnvironment('codex');
   }
 
   private async readRuntimeProviderLaunchFacts(params: {
@@ -9163,27 +9034,31 @@ export class TeamProvisioningService {
       }
       const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
       const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
-        ? this.collectWorkspaceTrustProviders({
+        ? collectWorkspaceTrustProvidersHelper({
             leadProviderId: request.providerId,
             members: request.members,
           })
         : [];
       const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await this.collectWorkspaceTrustWorkspaces({
+        ? await collectWorkspaceTrustWorkspacesHelper({
             cwd: request.cwd,
             members: [],
+            ports: this.workspaceTrustWorkspaceCollectionPorts,
           })
         : [];
       const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
-        ? await this.planWorkspaceTrustArgsOnlySafely({
-            providers: workspaceTrustProviders,
-            workspaces: workspaceTrustEarlyWorkspaces,
-            targetSurfaces: ['default_model_probe'],
-            featureFlags: workspaceTrustFeatureFlags,
+        ? await planWorkspaceTrustArgsOnlySafelyHelper({
+            coordinator: this.workspaceTrustCoordinator,
+            request: {
+              providers: workspaceTrustProviders,
+              workspaces: workspaceTrustEarlyWorkspaces,
+              targetSurfaces: ['default_model_probe'],
+              featureFlags: workspaceTrustFeatureFlags,
+            },
           })
         : { launchArgPatches: [] };
       const workspaceTrustProviderArgsResolver =
-        this.createDefaultModelWorkspaceTrustProviderArgsResolver(workspaceTrustEarlyPlan);
+        createDefaultModelWorkspaceTrustProviderArgsResolverHelper(workspaceTrustEarlyPlan);
       const materializedMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
         claudePath,
         cwd: request.cwd,
@@ -9207,9 +9082,15 @@ export class TeamProvisioningService {
       });
       Object.assign(
         shellEnv,
-        await this.buildRuntimeTurnSettledEnvironmentForMembers(
-          request.providerId,
-          allEffectiveMemberSpecs
+        await buildRuntimeTurnSettledEnvironmentForMembersHelper(
+          {
+            primaryProviderId: request.providerId,
+            memberSpecs: allEffectiveMemberSpecs,
+          },
+          {
+            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
+            logger,
+          }
         )
       );
       const lanePlan = this.planRuntimeLanesOrThrow(
@@ -9230,30 +9111,34 @@ export class TeamProvisioningService {
         { teamRuntimeAuth }
       );
       const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await this.collectWorkspaceTrustWorkspaces({
+        ? await collectWorkspaceTrustWorkspacesHelper({
             cwd: request.cwd,
             members: allEffectiveMemberSpecs,
+            ports: this.workspaceTrustWorkspaceCollectionPorts,
           })
         : [];
       const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
-        ? await this.planWorkspaceTrustFullSafely({
-            providers: this.collectWorkspaceTrustProviders({
-              leadProviderId: request.providerId,
-              members: allEffectiveMemberSpecs,
-            }),
-            workspaces: workspaceTrustFullWorkspaces,
-            featureFlags: workspaceTrustFeatureFlags,
+        ? await planWorkspaceTrustFullSafelyHelper({
+            coordinator: this.workspaceTrustCoordinator,
+            request: {
+              providers: collectWorkspaceTrustProvidersHelper({
+                leadProviderId: request.providerId,
+                members: allEffectiveMemberSpecs,
+              }),
+              workspaces: workspaceTrustFullWorkspaces,
+              featureFlags: workspaceTrustFeatureFlags,
+            },
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const providerArgsForLaunch = this.applyWorkspaceTrustArgPatches({
+      const providerArgsForLaunch = applyWorkspaceTrustArgPatchesHelper({
         args: providerArgs,
         patches: workspaceTrustPatches,
         targetProvider: resolvedProviderId,
         targetSurface: 'primary_provider_args',
       });
       const crossProviderArgsForLaunch = crossProviderMemberArgs.providerArgsByProvider.has('codex')
-        ? this.applyWorkspaceTrustArgPatches({
+        ? applyWorkspaceTrustArgPatchesHelper({
             args: crossProviderMemberArgs.args,
             patches: workspaceTrustPatches,
             targetProvider: 'codex',
@@ -9277,7 +9162,7 @@ export class TeamProvisioningService {
       ])) {
         providerArgsByProvider.set(
           providerId,
-          this.applyWorkspaceTrustArgPatches({
+          applyWorkspaceTrustArgPatchesHelper({
             args,
             patches: workspaceTrustPatches,
             targetProvider: providerId,
@@ -10869,27 +10754,31 @@ export class TeamProvisioningService {
       }
       const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
       const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
-        ? this.collectWorkspaceTrustProviders({
+        ? collectWorkspaceTrustProvidersHelper({
             leadProviderId: request.providerId,
             members: expectedMemberSpecs,
           })
         : [];
       const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await this.collectWorkspaceTrustWorkspaces({
+        ? await collectWorkspaceTrustWorkspacesHelper({
             cwd: request.cwd,
             members: [],
+            ports: this.workspaceTrustWorkspaceCollectionPorts,
           })
         : [];
       const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
-        ? await this.planWorkspaceTrustArgsOnlySafely({
-            providers: workspaceTrustProviders,
-            workspaces: workspaceTrustEarlyWorkspaces,
-            targetSurfaces: ['default_model_probe'],
-            featureFlags: workspaceTrustFeatureFlags,
+        ? await planWorkspaceTrustArgsOnlySafelyHelper({
+            coordinator: this.workspaceTrustCoordinator,
+            request: {
+              providers: workspaceTrustProviders,
+              workspaces: workspaceTrustEarlyWorkspaces,
+              targetSurfaces: ['default_model_probe'],
+              featureFlags: workspaceTrustFeatureFlags,
+            },
           })
         : { launchArgPatches: [] };
       const workspaceTrustProviderArgsResolver =
-        this.createDefaultModelWorkspaceTrustProviderArgsResolver(workspaceTrustEarlyPlan);
+        createDefaultModelWorkspaceTrustProviderArgsResolverHelper(workspaceTrustEarlyPlan);
 
       const materializedMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
         claudePath,
@@ -10914,9 +10803,15 @@ export class TeamProvisioningService {
       });
       Object.assign(
         shellEnv,
-        await this.buildRuntimeTurnSettledEnvironmentForMembers(
-          request.providerId,
-          allEffectiveMemberSpecs
+        await buildRuntimeTurnSettledEnvironmentForMembersHelper(
+          {
+            primaryProviderId: request.providerId,
+            memberSpecs: allEffectiveMemberSpecs,
+          },
+          {
+            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
+            logger,
+          }
         )
       );
       const lanePlan = this.planRuntimeLanesOrThrow(
@@ -10941,30 +10836,34 @@ export class TeamProvisioningService {
         { teamRuntimeAuth }
       );
       const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await this.collectWorkspaceTrustWorkspaces({
+        ? await collectWorkspaceTrustWorkspacesHelper({
             cwd: request.cwd,
             members: allEffectiveMemberSpecs,
+            ports: this.workspaceTrustWorkspaceCollectionPorts,
           })
         : [];
       const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
-        ? await this.planWorkspaceTrustFullSafely({
-            providers: this.collectWorkspaceTrustProviders({
-              leadProviderId: request.providerId,
-              members: allEffectiveMemberSpecs,
-            }),
-            workspaces: workspaceTrustFullWorkspaces,
-            featureFlags: workspaceTrustFeatureFlags,
+        ? await planWorkspaceTrustFullSafelyHelper({
+            coordinator: this.workspaceTrustCoordinator,
+            request: {
+              providers: collectWorkspaceTrustProvidersHelper({
+                leadProviderId: request.providerId,
+                members: allEffectiveMemberSpecs,
+              }),
+              workspaces: workspaceTrustFullWorkspaces,
+              featureFlags: workspaceTrustFeatureFlags,
+            },
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const providerArgsForLaunch = this.applyWorkspaceTrustArgPatches({
+      const providerArgsForLaunch = applyWorkspaceTrustArgPatchesHelper({
         args: providerArgs,
         patches: workspaceTrustPatches,
         targetProvider: resolvedProviderId,
         targetSurface: 'primary_provider_args',
       });
       const crossProviderArgsForLaunch = crossProviderMemberArgs.providerArgsByProvider.has('codex')
-        ? this.applyWorkspaceTrustArgPatches({
+        ? applyWorkspaceTrustArgPatchesHelper({
             args: crossProviderMemberArgs.args,
             patches: workspaceTrustPatches,
             targetProvider: 'codex',
@@ -10988,7 +10887,7 @@ export class TeamProvisioningService {
       ])) {
         providerArgsByProvider.set(
           providerId,
-          this.applyWorkspaceTrustArgPatches({
+          applyWorkspaceTrustArgPatchesHelper({
             args,
             patches: workspaceTrustPatches,
             targetProvider: providerId,
@@ -19889,7 +19788,13 @@ export class TeamProvisioningService {
     return {
       providerConnectionService: this.providerConnectionService,
       buildRuntimeTurnSettledEnvironment: (providerId) =>
-        this.buildRuntimeTurnSettledEnvironment(providerId),
+        buildRuntimeTurnSettledEnvironmentHelper(
+          { providerId },
+          {
+            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
+            logger,
+          }
+        ),
       resolveControlApiBaseUrl: () => this.resolveControlApiBaseUrl(),
       logger,
     };
@@ -19924,7 +19829,13 @@ export class TeamProvisioningService {
         buildProvisioningEnv: (providerIdForEnv, providerBackendId, buildOptions) =>
           this.buildProvisioningEnv(providerIdForEnv, providerBackendId, buildOptions),
         buildRuntimeTurnSettledHookSettingsArgs: (providerIdForArgs) =>
-          this.buildRuntimeTurnSettledHookSettingsArgs(providerIdForArgs),
+          buildRuntimeTurnSettledHookSettingsArgsHelper(
+            { providerId: providerIdForArgs },
+            {
+              hookSettingsProvider: this.runtimeTurnSettledHookSettingsProvider,
+              logger,
+            }
+          ),
         logger,
       },
     });
