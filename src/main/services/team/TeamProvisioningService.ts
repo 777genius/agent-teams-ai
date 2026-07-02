@@ -134,7 +134,6 @@ import {
   OpenCodePromptDeliveryFollowUpPolicy,
 } from './opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
 import {
-  createOpenCodePromptDeliveryLedgerStore,
   hashOpenCodePromptDeliveryPayload,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
@@ -152,7 +151,6 @@ import {
   normalizeOpenCodeDeliveryResponseObservation,
 } from './opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
 import {
-  buildOpenCodePromptDeliveryActiveBusyStatus,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
   type OpenCodeVisibleReplyProof,
 } from './opencode/delivery/OpenCodePromptDeliveryWatchdog';
@@ -164,24 +162,15 @@ import {
   isOpenCodeAttachmentDeliveryFailureReason,
   isPotentialOpenCodeRuntimeDeliveryError,
   type OpenCodeRuntimeDeliveryAdvisoryDecision,
-  toOpenCodeRuntimeDeliveryStatus,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
-import { createOpenCodeRuntimeDeliveryPorts } from './opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import {
   normalizeOpenCodeTaskRefsForComparison as normalizeOpenCodeTaskRefsForComparisonValue,
   openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
 import { OpenCodeVisibleReplyProofService } from './opencode/delivery/OpenCodeVisibleReplyProofService';
-import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
-import {
-  RuntimeDeliveryDestinationRegistry,
-  RuntimeDeliveryReconciler,
-  RuntimeDeliveryService,
-} from './opencode/delivery/RuntimeDeliveryService';
 import {
   clearOpenCodeRuntimeLaneStorage,
-  getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeRunTombstonesPath,
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
@@ -324,8 +313,6 @@ import {
   getLeadRelayReadCommitBatch,
   hasStableInboxMessageId,
   inferOpenCodeInboxMessageTaskRefs,
-  isCurrentProofMissingRecoveryForegroundMessage,
-  isCurrentReviewPickupRequestForegroundMessage,
   isOpenCodeProtocolProofMissingRecord,
   type NativeSameTeamFingerprint,
   normalizeSameTeamText,
@@ -480,6 +467,15 @@ import {
 } from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { resolveOpenCodeMemberIdentityFromDirectory as resolveOpenCodeMemberIdentityFromDirectoryHelper } from './provisioning/TeamProvisioningOpenCodeMemberIdentity';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './provisioning/TeamProvisioningOpenCodeModelPreparation';
+import {
+  createOpenCodePromptDeliveryLedger as createOpenCodePromptDeliveryLedgerHelper,
+  createOpenCodeRuntimeDeliveryPorts as createOpenCodeRuntimeDeliveryPortsHelper,
+  createOpenCodeRuntimeDeliveryService as createOpenCodeRuntimeDeliveryServiceHelper,
+  getOpenCodeMemberDeliveryBusyStatus as getOpenCodeMemberDeliveryBusyStatusHelper,
+  getOpenCodeRuntimeDeliveryStatus as getOpenCodeRuntimeDeliveryStatusHelper,
+  recoverOpenCodeRuntimeDeliveryJournal as recoverOpenCodeRuntimeDeliveryJournalHelper,
+  tryGetActiveOpenCodePromptDeliveryRecord as tryGetActiveOpenCodePromptDeliveryRecordHelper,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   appendDiagnosticOnce,
   applyOpenCodeSecondaryBootstrapStallOverlay as applyOpenCodeSecondaryBootstrapStallOverlayHelper,
@@ -6002,50 +5998,26 @@ export class TeamProvisioningService {
     });
   }
 
-  private createOpenCodeRuntimeDeliveryService(
-    teamName: string,
-    laneId: string
-  ): RuntimeDeliveryService {
-    const journal = createRuntimeDeliveryJournalStore({
-      filePath: getOpenCodeLaneScopedRuntimeFilePath({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId,
-        fileName: 'opencode-delivery-journal.json',
-      }),
+  private createOpenCodeRuntimeDeliveryService(teamName: string, laneId: string) {
+    return createOpenCodeRuntimeDeliveryServiceHelper(teamName, laneId, {
+      teamsBasePath: getTeamsBasePath(),
+      resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
+        this.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
+      createOpenCodeRuntimeDeliveryPorts: () => this.createOpenCodeRuntimeDeliveryPorts(),
+      emitTeamChange: (event) => {
+        this.teamChangeEmitter?.({
+          type: event.type as TeamChangeEvent['type'],
+          teamName: event.teamName,
+          detail: typeof event.data?.detail === 'string' ? event.data.detail : undefined,
+        });
+      },
+      logger,
     });
-    return new RuntimeDeliveryService(
-      {
-        getCurrentRunId: async (candidateTeamName) =>
-          this.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, laneId),
-      },
-      journal,
-      new RuntimeDeliveryDestinationRegistry(this.createOpenCodeRuntimeDeliveryPorts()),
-      {
-        append: async (event) => {
-          logger.warn(`[${event.teamName}] ${event.message}`);
-        },
-      },
-      {
-        emit: (event) => {
-          this.teamChangeEmitter?.({
-            type: event.type as TeamChangeEvent['type'],
-            teamName: event.teamName,
-            detail: typeof event.data?.detail === 'string' ? event.data.detail : undefined,
-          });
-        },
-      }
-    );
   }
 
   private createOpenCodePromptDeliveryLedger(teamName: string, laneId: string) {
-    return createOpenCodePromptDeliveryLedgerStore({
-      filePath: getOpenCodeLaneScopedRuntimeFilePath({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId,
-        fileName: 'opencode-prompt-delivery-ledger.json',
-      }),
+    return createOpenCodePromptDeliveryLedgerHelper(teamName, laneId, {
+      teamsBasePath: getTeamsBasePath(),
     });
   }
 
@@ -6053,65 +6025,28 @@ export class TeamProvisioningService {
     teamName: string,
     messageId: string
   ): Promise<OpenCodeRuntimeDeliveryStatus | null> {
-    const normalizedMessageId = messageId.trim();
-    if (!normalizedMessageId) {
-      return null;
-    }
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
-      () => null
-    );
-    const laneIds = [
-      ...new Set(
-        Object.values(laneIndex?.lanes ?? {})
-          .map((entry) => entry.laneId.trim())
-          .filter(Boolean)
-      ),
-    ];
-    for (const laneId of laneIds) {
-      const records = await this.createOpenCodePromptDeliveryLedger(teamName, laneId)
-        .list()
-        .catch(() => []);
-      const record = records.find((candidate) => candidate.inboxMessageId === normalizedMessageId);
-      if (record) {
-        const { record: latestRecord, decision } =
-          await this.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(record);
-        return toOpenCodeRuntimeDeliveryStatus({ record: latestRecord, decision });
-      }
-    }
-    return null;
+    return getOpenCodeRuntimeDeliveryStatusHelper(teamName, messageId, {
+      teamsBasePath: getTeamsBasePath(),
+      createOpenCodePromptDeliveryLedger: (candidateTeamName, laneId) =>
+        this.createOpenCodePromptDeliveryLedger(candidateTeamName, laneId),
+      decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>
+        this.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(record),
+    });
   }
 
   private async tryGetActiveOpenCodePromptDeliveryRecord(input: {
     teamName: string;
     memberName: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
-    const identity = await this.resolveOpenCodeMemberDeliveryIdentity(
-      input.teamName,
-      input.memberName
-    ).catch(() => null);
-    if (!identity?.ok) {
-      return null;
-    }
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
-      () => null
-    );
-    if (laneIndex?.lanes[identity.laneId]?.state !== 'active') {
-      const recovered = await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      });
-      if (!recovered) {
-        return null;
-      }
-    }
-    return await this.createOpenCodePromptDeliveryLedger(input.teamName, identity.laneId)
-      .getActiveForMember({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      })
-      .catch(() => null);
+    return tryGetActiveOpenCodePromptDeliveryRecordHelper(input, {
+      teamsBasePath: getTeamsBasePath(),
+      resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
+        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
+        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
+      createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
+        this.createOpenCodePromptDeliveryLedger(teamName, laneId),
+    });
   }
 
   async getOpenCodeMemberDeliveryBusyStatus(input: {
@@ -6128,150 +6063,24 @@ export class TeamProvisioningService {
     activeMessageId?: string;
     activeMessageKind?: string | null;
   }> {
-    if (!(await this.isOpenCodeRuntimeRecipient(input.teamName, input.memberName))) {
-      return { busy: false };
-    }
-
-    const nowMs = Date.parse(input.nowIso);
-    const retryAfterIso = new Date(
-      (Number.isFinite(nowMs) ? nowMs : Date.now()) + 60_000
-    ).toISOString();
-
-    let inboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>>;
-    try {
-      inboxMessages = await this.inboxReader.getMessagesFor(input.teamName, input.memberName);
-    } catch {
-      return {
-        busy: true,
-        reason: 'opencode_inbox_read_failed',
-        retryAfterIso,
-      };
-    }
-
-    const foregroundMessages = inboxMessages.filter(
-      (message) => message.messageKind !== 'member_work_sync_nudge'
-    );
-    const agendaSyncRecoveryBypassMessageIds =
-      await this.getOpenCodeAgendaSyncRecoveryBypassMessageIds({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        workSyncIntent: input.workSyncIntent,
-        taskRefs: input.taskRefs,
-        foregroundMessages,
-      });
-    const blockingForegroundMessages = foregroundMessages.filter((message) => {
-      const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-      return (
-        !agendaSyncRecoveryBypassMessageIds.has(messageId) &&
-        !isCurrentReviewPickupRequestForegroundMessage(message, input) &&
-        !isCurrentProofMissingRecoveryForegroundMessage(message, input)
-      );
+    return getOpenCodeMemberDeliveryBusyStatusHelper(input, {
+      teamsBasePath: getTeamsBasePath(),
+      isOpenCodeRuntimeRecipient: (teamName, memberName) =>
+        this.isOpenCodeRuntimeRecipient(teamName, memberName),
+      inboxReader: this.inboxReader,
+      getOpenCodeAgendaSyncRecoveryBypassMessageIds: (bypassInput) =>
+        this.getOpenCodeAgendaSyncRecoveryBypassMessageIds(bypassInput),
+      tryGetActiveOpenCodePromptDeliveryRecord: (activeInput) =>
+        this.tryGetActiveOpenCodePromptDeliveryRecord(activeInput),
+      scheduleOpenCodeMemberInboxDeliveryWake: (wakeInput) =>
+        this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
+      resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
+        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
+        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
+      createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
+        this.createOpenCodePromptDeliveryLedger(teamName, laneId),
     });
-    const unreadForeground = blockingForegroundMessages.find(
-      (message) =>
-        !message.read &&
-        typeof message.text === 'string' &&
-        message.text.trim().length > 0 &&
-        hasStableInboxMessageId(message)
-    );
-    if (unreadForeground?.messageId) {
-      const activeRecord = await this.tryGetActiveOpenCodePromptDeliveryRecord({
-        teamName: input.teamName,
-        memberName: input.memberName,
-      });
-      if (activeRecord) {
-        return buildOpenCodePromptDeliveryActiveBusyStatus({
-          teamName: input.teamName,
-          memberName: input.memberName,
-          retryAfterIso,
-          nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
-          activeRecord,
-          scheduleWake: (wakeInput) => this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
-        });
-      }
-      this.scheduleOpenCodeMemberInboxDeliveryWake({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        messageId: unreadForeground.messageId,
-        delayMs: 500,
-      });
-      return {
-        busy: true,
-        reason: 'opencode_foreground_inbox_unread',
-        retryAfterIso,
-        activeMessageId: unreadForeground.messageId,
-        activeMessageKind: unreadForeground.messageKind ?? null,
-      };
-    }
-
-    const recentForeground = blockingForegroundMessages.find((message) => {
-      const timestampMs = Date.parse(message.timestamp);
-      return Number.isFinite(timestampMs) && Number.isFinite(nowMs) && nowMs - timestampMs < 60_000;
-    });
-    if (recentForeground?.messageId) {
-      return {
-        busy: true,
-        reason: 'opencode_foreground_inbox_recent',
-        retryAfterIso,
-        activeMessageId: recentForeground.messageId,
-        activeMessageKind: recentForeground.messageKind ?? null,
-      };
-    }
-
-    const identity = await this.resolveOpenCodeMemberDeliveryIdentity(
-      input.teamName,
-      input.memberName
-    );
-    if (!identity.ok) {
-      return { busy: true, reason: identity.reason, retryAfterIso };
-    }
-
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
-      () => null
-    );
-    if (!laneIndex) {
-      return { busy: true, reason: 'opencode_lane_index_unavailable', retryAfterIso };
-    }
-    if (
-      laneIndex.lanes[identity.laneId]?.state !== 'active' &&
-      !(await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      }).catch(() => false))
-    ) {
-      return { busy: true, reason: 'opencode_no_active_lane', retryAfterIso };
-    }
-
-    let activeRecord: OpenCodePromptDeliveryLedgerRecord | null;
-    try {
-      activeRecord = await this.createOpenCodePromptDeliveryLedger(
-        input.teamName,
-        identity.laneId
-      ).getActiveForMember({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      });
-    } catch {
-      return {
-        busy: true,
-        reason: 'opencode_prompt_ledger_unavailable',
-        retryAfterIso,
-      };
-    }
-    if (activeRecord) {
-      return buildOpenCodePromptDeliveryActiveBusyStatus({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        retryAfterIso,
-        nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
-        activeRecord,
-        scheduleWake: (wakeInput) => this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
-      });
-    }
-
-    return { busy: false };
   }
 
   scheduleOpenCodeMemberInboxDeliveryWake(input: {
@@ -6300,7 +6109,7 @@ export class TeamProvisioningService {
   }
 
   private createOpenCodeRuntimeDeliveryPorts() {
-    return createOpenCodeRuntimeDeliveryPorts({
+    return createOpenCodeRuntimeDeliveryPortsHelper({
       sentMessagesStore: this.sentMessagesStore,
       inboxReader: this.inboxReader,
       inboxWriter: this.inboxWriter,
@@ -6309,59 +6118,14 @@ export class TeamProvisioningService {
   }
 
   async recoverOpenCodeRuntimeDeliveryJournal(teamName: string): Promise<{ recovered: true }> {
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
-      () => ({
-        version: 1 as const,
-        updatedAt: nowIso(),
-        lanes: {},
-      })
-    );
-    const recoveryLaneIds = await this.getOpenCodeRuntimeRecoveryLaneIds(teamName, laneIndex.lanes);
-    for (const laneId of recoveryLaneIds) {
-      const journal = createRuntimeDeliveryJournalStore({
-        filePath: getOpenCodeLaneScopedRuntimeFilePath({
-          teamsBasePath: getTeamsBasePath(),
-          teamName,
-          laneId,
-          fileName: 'opencode-delivery-journal.json',
-        }),
-      });
-      const reconciler = new RuntimeDeliveryReconciler(
-        journal,
-        new RuntimeDeliveryDestinationRegistry(this.createOpenCodeRuntimeDeliveryPorts()),
-        {
-          append: async (event) => {
-            logger.warn(`[${event.teamName}] ${event.message}`);
-          },
-        }
-      );
-      await reconciler.reconcileTeam(teamName);
-    }
-    return { recovered: true };
-  }
-
-  private async getOpenCodeRuntimeRecoveryLaneIds(
-    teamName: string,
-    laneIndexEntries?: Record<string, { laneId: string }>
-  ): Promise<string[]> {
-    const laneIds = Object.keys(laneIndexEntries ?? {});
-    if (laneIds.length > 0) {
-      return laneIds;
-    }
-
-    const snapshot = await this.launchStateStore.read(teamName).catch(() => null);
-    const snapshotLaneIds = Array.from(
-      new Set(
-        Object.values(snapshot?.members ?? {})
-          .map((member) =>
-            member?.laneOwnerProviderId === 'opencode' && typeof member.laneId === 'string'
-              ? member.laneId.trim()
-              : ''
-          )
-          .filter((laneId) => laneId.length > 0)
-      )
-    );
-    return snapshotLaneIds.length > 0 ? snapshotLaneIds : ['primary'];
+    return recoverOpenCodeRuntimeDeliveryJournalHelper(teamName, {
+      teamsBasePath: getTeamsBasePath(),
+      createOpenCodeRuntimeDeliveryPorts: () => this.createOpenCodeRuntimeDeliveryPorts(),
+      readLaunchState: (candidateTeamName) =>
+        this.launchStateStore.read(candidateTeamName).catch(() => null),
+      nowIso,
+      logger,
+    });
   }
 
   getLeadActivityState(teamName: string): {
