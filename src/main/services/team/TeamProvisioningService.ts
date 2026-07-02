@@ -420,6 +420,11 @@ import {
   summarizeMemberSpawnStatusRecord,
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import {
+  buildMemberSpawnFailureMessage,
+  buildMemberSpawnStatusTransition,
+  buildMemberSpawnTranscriptConfirmationTransition,
+} from './provisioning/TeamProvisioningMemberSpawnTransitions';
+import {
   buildEffectiveTeamMemberSpec,
   buildEffectiveTeamMemberSpecs,
   getExplicitLaunchModelSelection,
@@ -483,7 +488,6 @@ import {
   isRecoverablePersistedOpenCodeRuntimeCandidate,
   isRecoverablePersistedOpenCodeTerminalRuntimeCandidate,
   MEMBER_BOOTSTRAP_STALL_MS,
-  normalizeIsoTimestamp,
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
@@ -6817,13 +6821,7 @@ export class TeamProvisioningService {
     resultPreview?: string
   ): void {
     const pendingRestart = run.pendingMemberRestarts.get(memberName);
-    const reason =
-      (typeof resultPreview === 'string' && resultPreview.trim().length > 0
-        ? resultPreview.trim()
-        : 'Teammate spawn failed immediately after launch.') || 'Teammate spawn failed.';
-    const message = pendingRestart
-      ? `Failed to restart teammate "${memberName}": ${reason}`
-      : `Teammate "${memberName}" failed to start: ${reason}`;
+    const message = buildMemberSpawnFailureMessage({ memberName, resultPreview, pendingRestart });
 
     run.pendingMemberRestarts.delete(memberName);
 
@@ -6922,182 +6920,30 @@ export class TeamProvisioningService {
     heartbeatAt?: string
   ): void {
     const prev = run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
-    if (
-      status === 'waiting' &&
-      !prev.hardFailure &&
-      (prev.bootstrapConfirmed || prev.runtimeAlive)
-    ) {
-      this.setMemberSpawnStatus(
-        run,
-        memberName,
-        'online',
-        undefined,
-        prev.livenessSource,
-        prev.lastHeartbeatAt
-      );
-      return;
-    }
     const updatedAt = nowIso();
-    const next: MemberSpawnStatusEntry = {
-      ...prev,
-      status,
+    const transition = buildMemberSpawnStatusTransition({
+      previous: prev,
+      requestedStatus: status,
       updatedAt,
-    };
-
-    if (status === 'spawning') {
-      const pendingRestart = run.pendingMemberRestarts?.get(memberName);
-      next.skippedForLaunch = false;
-      next.skipReason = undefined;
-      next.skippedAt = undefined;
-      next.agentToolAccepted = false;
-      next.runtimeAlive = false;
-      next.bootstrapConfirmed = false;
-      next.hardFailure = false;
-      next.bootstrapStalled = undefined;
-      next.error = undefined;
-      next.hardFailureReason = undefined;
-      next.livenessSource = undefined;
-      next.livenessKind = undefined;
-      next.runtimeDiagnostic = undefined;
-      next.runtimeDiagnosticSeverity = undefined;
-      next.livenessLastCheckedAt = undefined;
-      next.firstSpawnAcceptedAt = pendingRestart?.requestedAt;
-      next.lastHeartbeatAt = undefined;
-      if (pendingRestart) {
-        next.runtimeDiagnostic =
-          'Manual restart is already in progress; waiting for teammate bootstrap.';
-        next.runtimeDiagnosticSeverity = 'info';
-      }
-      next.launchState = 'starting';
-    } else if (status === 'waiting') {
-      next.skippedForLaunch = false;
-      next.skipReason = undefined;
-      next.skippedAt = undefined;
-      next.agentToolAccepted = true;
-      next.runtimeAlive = false;
-      next.bootstrapConfirmed = false;
-      next.hardFailure = false;
-      next.bootstrapStalled = undefined;
-      next.error = undefined;
-      next.hardFailureReason = undefined;
-      next.livenessSource = undefined;
-      next.livenessKind = undefined;
-      next.runtimeDiagnostic = undefined;
-      next.runtimeDiagnosticSeverity = undefined;
-      next.livenessLastCheckedAt = undefined;
-      next.firstSpawnAcceptedAt = prev.firstSpawnAcceptedAt ?? updatedAt;
-      next.lastHeartbeatAt = undefined;
-      next.launchState = 'runtime_pending_bootstrap';
-    } else if (status === 'online') {
-      next.skippedForLaunch = false;
-      next.skipReason = undefined;
-      next.skippedAt = undefined;
-      next.agentToolAccepted = true;
-      next.runtimeAlive = true;
-      next.livenessSource = livenessSource;
-      next.firstSpawnAcceptedAt = prev.firstSpawnAcceptedAt ?? updatedAt;
-      if (livenessSource === 'heartbeat') {
-        const incomingHeartbeatAt = heartbeatAt?.trim() || updatedAt;
-        next.bootstrapConfirmed = true;
-        next.lastHeartbeatAt = isMemberSpawnHeartbeatTimestampNewer(
-          prev.lastHeartbeatAt,
-          incomingHeartbeatAt
-        )
-          ? incomingHeartbeatAt
-          : prev.lastHeartbeatAt;
-      }
-      next.hardFailure = false;
-      next.bootstrapStalled = undefined;
-      next.error = undefined;
-      next.hardFailureReason = undefined;
-      next.launchState = deriveMemberLaunchState(next);
-    } else if (status === 'error') {
-      next.skippedForLaunch = false;
-      next.skipReason = undefined;
-      next.skippedAt = undefined;
-      next.error = error;
-      next.hardFailure = true;
-      next.bootstrapStalled = undefined;
-      next.hardFailureReason = error;
-      next.launchState = 'failed_to_start';
-    } else if (status === 'skipped') {
-      next.skippedForLaunch = true;
-      next.skipReason =
-        error?.trim() || prev.hardFailureReason || prev.error || 'Skipped for this launch';
-      next.skippedAt = updatedAt;
-      next.agentToolAccepted = false;
-      next.runtimeAlive = false;
-      next.bootstrapConfirmed = false;
-      next.hardFailure = false;
-      next.bootstrapStalled = undefined;
-      next.error = undefined;
-      next.hardFailureReason = undefined;
-      next.livenessSource = undefined;
-      next.livenessKind = undefined;
-      next.runtimeDiagnostic = undefined;
-      next.runtimeDiagnosticSeverity = undefined;
-      next.livenessLastCheckedAt = undefined;
-      next.firstSpawnAcceptedAt = undefined;
-      next.lastHeartbeatAt = undefined;
-      next.launchState = 'skipped_for_launch';
-    } else if (status === 'offline') {
-      Object.assign(next, createInitialMemberSpawnStatusEntry(), { updatedAt });
-      next.error = undefined;
-      next.hardFailureReason = undefined;
-      next.skippedForLaunch = false;
-      next.skipReason = undefined;
-      next.skippedAt = undefined;
-      next.livenessSource = undefined;
-      next.livenessKind = undefined;
-      next.runtimeDiagnostic = undefined;
-      next.runtimeDiagnosticSeverity = undefined;
-      next.livenessLastCheckedAt = undefined;
-      next.firstSpawnAcceptedAt = undefined;
-      next.lastHeartbeatAt = undefined;
-    }
-
-    next.launchState = deriveMemberLaunchState(next);
-    if (
-      prev.status === next.status &&
-      prev.launchState === next.launchState &&
-      prev.error === next.error &&
-      prev.hardFailureReason === next.hardFailureReason &&
-      (prev.skippedForLaunch === true) === (next.skippedForLaunch === true) &&
-      prev.skipReason === next.skipReason &&
-      prev.skippedAt === next.skippedAt &&
-      prev.livenessSource === next.livenessSource &&
-      prev.agentToolAccepted === next.agentToolAccepted &&
-      prev.runtimeAlive === next.runtimeAlive &&
-      prev.bootstrapConfirmed === next.bootstrapConfirmed &&
-      prev.hardFailure === next.hardFailure &&
-      prev.livenessKind === next.livenessKind &&
-      prev.runtimeDiagnostic === next.runtimeDiagnostic &&
-      prev.runtimeDiagnosticSeverity === next.runtimeDiagnosticSeverity &&
-      prev.bootstrapStalled === next.bootstrapStalled &&
-      prev.firstSpawnAcceptedAt === next.firstSpawnAcceptedAt &&
-      prev.lastHeartbeatAt === next.lastHeartbeatAt
-    ) {
+      error,
+      livenessSource,
+      heartbeatAt,
+      pendingRestart: run.pendingMemberRestarts?.get(memberName),
+    });
+    const { next } = transition;
+    if (!transition.changed) {
       return;
     }
 
-    const runtimeTransitionAt =
-      status === 'online' && livenessSource === 'heartbeat'
-        ? (normalizeIsoTimestamp(heartbeatAt) ?? updatedAt)
-        : updatedAt;
     this.syncMemberTaskActivityForRuntimeTransition(
       run,
       memberName,
       prev,
       next,
-      runtimeTransitionAt
+      transition.runtimeTransitionAt
     );
     run.memberSpawnStatuses.set(memberName, next);
-    if (
-      (status === 'online' && (next.bootstrapConfirmed || livenessSource === 'process')) ||
-      status === 'offline' ||
-      status === 'error' ||
-      status === 'skipped'
-    ) {
+    if (transition.shouldClearPendingRestart) {
       run.pendingMemberRestarts?.delete(memberName);
     }
     this.syncMemberLaunchGraceCheck(run, memberName, next);
@@ -7111,40 +6957,8 @@ export class TeamProvisioningService {
       run.onProgress(run.progress);
     }
 
-    if (status === 'spawning') {
-      this.appendMemberBootstrapDiagnostic(run, memberName, 'Agent tool invoked');
-    } else if (status === 'waiting') {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        'spawn accepted, waiting for teammate check-in'
-      );
-    } else if (status === 'online' && livenessSource === 'heartbeat' && !prev.bootstrapConfirmed) {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        'bootstrap confirmed via first heartbeat'
-      );
-    } else if (status === 'online' && livenessSource === 'process') {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        'runtime process is alive, teammate check-in not yet received'
-      );
-    } else if (status === 'error') {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        error?.trim().length ? error.trim() : 'bootstrap failed'
-      );
-    } else if (status === 'skipped') {
-      this.appendMemberBootstrapDiagnostic(
-        run,
-        memberName,
-        error?.trim().length
-          ? `skipped for this launch: ${error.trim()}`
-          : 'skipped for this launch'
-      );
+    if (transition.diagnosticText) {
+      this.appendMemberBootstrapDiagnostic(run, memberName, transition.diagnosticText);
     }
     if (!this.isCurrentTrackedRun(run)) return;
     this.emitMemberSpawnChange(run, memberName);
@@ -7161,61 +6975,28 @@ export class TeamProvisioningService {
   ): void {
     const prev = run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
     const updatedAt = nowIso();
-    const next: MemberSpawnStatusEntry = {
-      ...prev,
-      status: 'online',
+    const transition = buildMemberSpawnTranscriptConfirmationTransition({
+      previous: prev,
       updatedAt,
-      agentToolAccepted: true,
-      runtimeAlive: source === 'runtime-proof' ? true : prev.runtimeAlive,
-      bootstrapConfirmed: true,
-      hardFailure: false,
-      bootstrapStalled: undefined,
-      error: undefined,
-      hardFailureReason: undefined,
-      livenessSource:
-        source === 'runtime-proof' ? (prev.livenessSource ?? 'process') : prev.livenessSource,
-      firstSpawnAcceptedAt: prev.firstSpawnAcceptedAt ?? observedAt,
-      lastHeartbeatAt: isMemberSpawnHeartbeatTimestampNewer(prev.lastHeartbeatAt, observedAt)
-        ? observedAt
-        : prev.lastHeartbeatAt,
-    };
-    next.launchState = deriveMemberLaunchState(next);
-
-    if (
-      prev.status === next.status &&
-      prev.launchState === next.launchState &&
-      prev.error === next.error &&
-      prev.hardFailureReason === next.hardFailureReason &&
-      prev.livenessSource === next.livenessSource &&
-      prev.agentToolAccepted === next.agentToolAccepted &&
-      prev.runtimeAlive === next.runtimeAlive &&
-      prev.bootstrapConfirmed === next.bootstrapConfirmed &&
-      prev.hardFailure === next.hardFailure &&
-      prev.bootstrapStalled === next.bootstrapStalled &&
-      prev.firstSpawnAcceptedAt === next.firstSpawnAcceptedAt &&
-      prev.lastHeartbeatAt === next.lastHeartbeatAt
-    ) {
+      observedAt,
+      source,
+    });
+    const { next } = transition;
+    if (!transition.changed) {
       return;
     }
 
-    const runtimeTransitionAt = source === 'runtime-proof' ? observedAt : updatedAt;
     this.syncMemberTaskActivityForRuntimeTransition(
       run,
       memberName,
       prev,
       next,
-      runtimeTransitionAt
+      transition.runtimeTransitionAt
     );
     run.memberSpawnStatuses.set(memberName, next);
     run.pendingMemberRestarts?.delete(memberName);
     this.syncMemberLaunchGraceCheck(run, memberName, next);
-    this.appendMemberBootstrapDiagnostic(
-      run,
-      memberName,
-      source === 'runtime-proof'
-        ? 'bootstrap confirmed via runtime proof'
-        : 'bootstrap confirmed via transcript'
-    );
+    this.appendMemberBootstrapDiagnostic(run, memberName, transition.diagnosticText);
     if (!this.isCurrentTrackedRun(run)) return;
     this.emitMemberSpawnChange(run, memberName);
     if (run.isLaunch) {
