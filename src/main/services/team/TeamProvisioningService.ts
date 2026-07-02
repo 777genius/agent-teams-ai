@@ -1,7 +1,6 @@
 import {
   buildClaudeAttachmentDeliveryParts,
   buildCodexNativeAttachmentDeliveryParts,
-  type CodexNativeImageArgPart,
 } from '@features/agent-attachments/main';
 import { type RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 import {
@@ -369,6 +368,10 @@ import {
   guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper,
   hasCommittedOpenCodeSecondaryEvidenceOverlayDelta,
 } from './provisioning/TeamProvisioningLaunchStateReconciliation';
+import {
+  codexImagePartToContentBlock,
+  toLeadAttachmentPayloads,
+} from './provisioning/TeamProvisioningLeadAttachments';
 import {
   buildLeadContextUsagePayloadFromState,
   getInitialLeadContextWindowTokensForRequest,
@@ -13524,7 +13527,7 @@ export class TeamProvisioningService {
       throw new Error(`Team "${run.teamName}" process stdin is not writable`);
     }
 
-    const attachmentPayloads = this.toLeadAttachmentPayloads(attachments);
+    const attachmentPayloads = toLeadAttachmentPayloads(attachments);
     const contentBlocks =
       normalizeOptionalTeamProviderId(run.request.providerId) === 'codex' &&
       attachmentPayloads.length > 0
@@ -13551,22 +13554,6 @@ export class TeamProvisioningService {
     this.setLeadActivity(run, 'active');
   }
 
-  private toLeadAttachmentPayloads(
-    attachments?: { data: string; mimeType: string; filename?: string }[]
-  ): AttachmentPayload[] {
-    return (attachments ?? []).map((attachment, index) => {
-      const filename = attachment.filename?.trim() || `attachment-${index + 1}`;
-      const bytes = Buffer.from(attachment.data, 'base64');
-      return {
-        id: `lead_att_${index + 1}`,
-        filename,
-        mimeType: attachment.mimeType,
-        size: bytes.byteLength,
-        data: attachment.data,
-      };
-    });
-  }
-
   private async buildCodexLeadAttachmentContentBlocks(
     run: ProvisioningRun,
     message: string,
@@ -13580,19 +13567,8 @@ export class TeamProvisioningService {
     });
     return [
       { type: 'text', text: prepared.promptText },
-      ...prepared.imageParts.map((part) => this.codexImagePartToContentBlock(part)),
+      ...prepared.imageParts.map((part) => codexImagePartToContentBlock(part)),
     ];
-  }
-
-  private codexImagePartToContentBlock(part: CodexNativeImageArgPart): Record<string, unknown> {
-    return {
-      type: 'image',
-      source: {
-        type: 'file',
-        path: part.path,
-        media_type: part.mimeType,
-      },
-    };
   }
 
   /**
