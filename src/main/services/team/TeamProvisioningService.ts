@@ -22194,6 +22194,8 @@ export class TeamProvisioningService {
   private cleanupRun(run: ProvisioningRun): void {
     cleanupProvisioningRun(run, {
       getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      isRunIdTracked: (runId) =>
+        this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId),
       buildRetainedClaudeLogsSnapshot,
       shouldFinalizeIncompleteLaunchState: (run) => shouldFinalizeIncompleteLaunchStateHelper(run),
       buildIncompleteLaunchCleanupReason: (run) => buildIncompleteLaunchCleanupReasonHelper(run),

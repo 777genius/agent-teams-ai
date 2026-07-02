@@ -93,6 +93,7 @@ interface TimeoutMap {
 
 export interface TeamProvisioningCleanupPorts<TRun extends TeamProvisioningCleanupRun> {
   getTrackedRunId(teamName: string): string | null;
+  isRunIdTracked(runId: string): boolean;
   buildRetainedClaudeLogsSnapshot(run: TRun): RetainedClaudeLogsSnapshotLike | null;
   shouldFinalizeIncompleteLaunchState(run: TRun): boolean;
   buildIncompleteLaunchCleanupReason(run: TRun): string;
@@ -170,10 +171,15 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
   const currentProvisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
   const currentAliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
   const currentTrackedRunId = ports.getTrackedRunId(run.teamName);
+  // A residual id left behind by an already-untracked run must not masquerade as
+  // a newer run: that would skip the team-scoped cleanup below with nothing left
+  // to perform it later.
+  const isNewerTrackedRunId = (candidateRunId: string | null): boolean =>
+    candidateRunId !== null && candidateRunId !== run.runId && ports.isRunIdTracked(candidateRunId);
   const hasNewerTrackedRun =
-    (currentTrackedRunId !== null && currentTrackedRunId !== run.runId) ||
-    (currentProvisioningRunId !== null && currentProvisioningRunId !== run.runId) ||
-    (currentAliveRunId !== null && currentAliveRunId !== run.runId);
+    isNewerTrackedRunId(currentTrackedRunId) ||
+    isNewerTrackedRunId(currentProvisioningRunId) ||
+    isNewerTrackedRunId(currentAliveRunId);
   const retainedClaudeLogs = hasNewerTrackedRun ? null : ports.buildRetainedClaudeLogsSnapshot(run);
 
   if (!hasNewerTrackedRun) {

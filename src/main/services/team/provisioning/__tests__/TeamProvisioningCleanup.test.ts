@@ -104,6 +104,7 @@ function makeCleanupPorts(
 } {
   return {
     getTrackedRunId: vi.fn(() => trackedRunId),
+    isRunIdTracked: vi.fn(() => true),
     buildRetainedClaudeLogsSnapshot: vi.fn(() => ({
       lines: ['log line'],
       updatedAt: '2026-01-01T00:00:02.000Z',
@@ -363,6 +364,25 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.memberInboxRelayInFlight.get(`${cleanup.teamName}:worker-a`)).toBe('member');
     expect(ports.liveLeadProcessMessages.get(cleanup.teamName)).toBe('live');
     expect(ports.pruneLiveLeadMessagesForCleanedRun).toHaveBeenCalledWith(cleanup);
+    expect(ports.runs.has(cleanup.runId)).toBe(false);
+  });
+
+  it('ignores a residual untracked alive id and still performs full team-scoped cleanup', () => {
+    const cleanup = cleanupRun();
+    const ports = makeCleanupPorts(cleanup.runId);
+    seedTeamScopedCleanupState(ports, cleanup, cleanup.runId);
+    ports.aliveRunByTeam.set(cleanup.teamName, 'stale-dead-run');
+    ports.isRunIdTracked = vi.fn((runId: string) => runId !== 'stale-dead-run');
+
+    cleanupProvisioningRun(cleanup, ports);
+
+    expect(ports.setLeadActivity).toHaveBeenCalledWith(cleanup, 'offline');
+    expect(ports.resetRuntimeToolActivity).toHaveBeenCalledWith(cleanup);
+    expect(ports.clearSecondaryRuntimeRuns).toHaveBeenCalledWith(cleanup.teamName);
+    expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith(cleanup.teamName);
+    expect(ports.leadInboxRelayInFlight.has(cleanup.teamName)).toBe(false);
+    expect(ports.memberInboxRelayInFlight.has(`${cleanup.teamName}:worker-a`)).toBe(false);
+    expect(ports.liveLeadProcessMessages.has(cleanup.teamName)).toBe(false);
     expect(ports.runs.has(cleanup.runId)).toBe(false);
   });
 });
