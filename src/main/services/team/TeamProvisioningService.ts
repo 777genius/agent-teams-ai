@@ -667,6 +667,7 @@ import {
   shouldAcceptDeterministicBootstrapEvent,
   type TeamProvisioningStreamEventPorts,
 } from './provisioning/TeamProvisioningStreamEvents';
+import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
 import {
   readTaskActivityRepairLaunchSnapshot as readTaskActivityRepairLaunchSnapshotHelper,
   repairStaleTaskActivityIntervalsBeforeSnapshot as repairStaleTaskActivityIntervalsBeforeSnapshotHelper,
@@ -10280,64 +10281,14 @@ export class TeamProvisioningService {
    * Sets member spawn status to 'spawning' when the lead issues a Task call with team_name + name.
    */
   private captureTeamSpawnEvents(run: ProvisioningRun, content: Record<string, unknown>[]): void {
-    for (const part of content) {
-      if (part.type !== 'tool_use' || part.name !== 'Agent') continue;
-      const input = part.input;
-      if (!input || typeof input !== 'object') continue;
-      const inp = input as Record<string, unknown>;
-      const teamName = typeof inp.team_name === 'string' ? inp.team_name.trim() : '';
-      const memberName = typeof inp.name === 'string' ? inp.name.trim() : '';
-      if (teamName && !memberName) {
-        logger.warn(
-          `[captureTeamSpawnEvents] Agent call for team "${run.teamName}" is missing name - ` +
-            `runtime will spawn an ephemeral subagent instead of a persistent teammate`
-        );
-        continue;
-      }
-      if (!memberName) continue;
-      if (!teamName) {
-        logger.warn(
-          `[captureTeamSpawnEvents] Agent call for "${memberName}" is missing team_name - ` +
-            `teammate will be an ephemeral subagent, not a persistent member of "${run.teamName}"`
-        );
-        this.setMemberSpawnStatus(
-          run,
-          memberName,
-          'error',
-          `Agent spawn for "${memberName}" is missing team_name - spawned as ephemeral subagent instead of persistent teammate`
-        );
-        continue;
-      }
-      // Only track spawns for this team
-      if (teamName !== run.teamName) continue;
-      const existing = run.memberSpawnStatuses.get(memberName);
-      if (
-        existing &&
-        !existing.hardFailure &&
-        (existing.bootstrapConfirmed || existing.runtimeAlive || existing.agentToolAccepted)
-      ) {
-        this.appendMemberBootstrapDiagnostic(
-          run,
-          memberName,
-          'respawn blocked as duplicate - teammate already online'
-        );
-        continue;
-      }
-      this.setMemberSpawnStatus(run, memberName, 'spawning');
-      const toolUseId = typeof part.id === 'string' ? part.id.trim() : '';
-      if (toolUseId) {
-        run.memberSpawnToolUseIds.set(toolUseId, memberName);
-      }
-
-      // Advance stepper to "Members joining" when first member spawn is detected
-      if (
-        !run.provisioningComplete &&
-        (run.progress.state === 'configuring' || run.progress.state === 'spawning')
-      ) {
-        const progress = updateProgress(run, 'assembling', `Spawning member ${memberName}...`);
-        run.onProgress(progress);
-      }
-    }
+    captureTeamSpawnEventsHelper(run, content, {
+      logger,
+      setMemberSpawnStatus: (run, memberName, status, error) =>
+        this.setMemberSpawnStatus(run, memberName, status, error),
+      appendMemberBootstrapDiagnostic: (run, memberName, detail) =>
+        this.appendMemberBootstrapDiagnostic(run, memberName, detail),
+      updateProgress,
+    });
   }
 
   /**
