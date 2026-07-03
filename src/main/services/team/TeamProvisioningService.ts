@@ -210,17 +210,18 @@ import {
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
 import { buildProvisioningTraceDetail } from './provisioning/TeamProvisioningDiagnosticsHelpers';
 import {
-  buildCrossProviderMemberArgs as buildCrossProviderMemberArgsHelper,
-  buildProvisioningEnv as buildProvisioningEnvHelper,
   type CrossProviderMemberArgsResult,
   type ProvisioningEnvResolution,
-  type TeamProvisioningEnvBuilderPorts,
   type TeamRuntimeAuthContext,
 } from './provisioning/TeamProvisioningEnvBuilder';
 import {
   applyAppManagedRuntimeSettingsPathEnv,
   assertAppDeterministicBootstrapEnabled,
 } from './provisioning/TeamProvisioningEnvGuards';
+import {
+  createTeamProvisioningEnvRuntimePorts,
+  type TeamProvisioningEnvRuntimePorts,
+} from './provisioning/TeamProvisioningEnvRuntimePorts';
 import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
@@ -657,7 +658,6 @@ import {
   createRuntimeToolActivityHandlers,
 } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
-  buildRuntimeTurnSettledEnvironment as buildRuntimeTurnSettledEnvironmentHelper,
   buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
   buildRuntimeTurnSettledHookSettingsArgs as buildRuntimeTurnSettledHookSettingsArgsHelper,
   buildRuntimeTurnSettledHookSettingsObject as buildRuntimeTurnSettledHookSettingsObjectHelper,
@@ -1696,6 +1696,7 @@ export class TeamProvisioningService {
   private readonly toolApprovalTimeouts: TeamProvisioningToolApprovalTimeouts<ProvisioningRun>;
   private readonly transientRunState: TeamProvisioningTransientRunState;
   private inFlightResponses = new Set<string>();
+  private readonly provisioningEnvRuntimePorts: TeamProvisioningEnvRuntimePorts;
   private readonly prepareCoordinator: TeamProvisioningPrepareCoordinator;
   private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
@@ -1759,6 +1760,15 @@ export class TeamProvisioningService {
         logInfo: (message) => logger.info(message),
       }
     );
+    this.provisioningEnvRuntimePorts = createTeamProvisioningEnvRuntimePorts({
+      providerConnectionService: this.providerConnectionService,
+      getControlApiBaseUrlResolver: () => this.controlApiBaseUrlResolver,
+      getRuntimeTurnSettledEnvironmentProvider: () =>
+        this.runtimeTurnSettledEnvironmentProvider,
+      getRuntimeTurnSettledHookSettingsProvider: () =>
+        this.runtimeTurnSettledHookSettingsProvider,
+      logger,
+    });
     this.prepareCoordinator = new TeamProvisioningPrepareCoordinator(
       createDefaultTeamProvisioningPrepareCoordinatorPorts({
         getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
@@ -14600,22 +14610,6 @@ export class TeamProvisioningService {
     );
   }
 
-  private getProvisioningEnvBuilderPorts(): TeamProvisioningEnvBuilderPorts {
-    return {
-      providerConnectionService: this.providerConnectionService,
-      buildRuntimeTurnSettledEnvironment: (providerId) =>
-        buildRuntimeTurnSettledEnvironmentHelper(
-          { providerId },
-          {
-            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
-            logger,
-          }
-        ),
-      resolveControlApiBaseUrl: () => this.resolveControlApiBaseUrl(),
-      logger,
-    };
-  }
-
   private async buildProvisioningEnv(
     providerId: TeamProviderId | undefined = 'anthropic',
     providerBackendId?: string | null,
@@ -14624,12 +14618,11 @@ export class TeamProvisioningService {
       teamRuntimeAuth?: TeamRuntimeAuthContext;
     }
   ): Promise<ProvisioningEnvResolution> {
-    return buildProvisioningEnvHelper({
+    return this.provisioningEnvRuntimePorts.buildProvisioningEnv(
       providerId,
       providerBackendId,
-      options,
-      ports: this.getProvisioningEnvBuilderPorts(),
-    });
+      options
+    );
   }
 
   private async buildCrossProviderMemberArgs(
@@ -14637,45 +14630,15 @@ export class TeamProvisioningService {
     memberSpecs: TeamCreateRequest['members'],
     options?: { teamRuntimeAuth?: TeamRuntimeAuthContext }
   ): Promise<CrossProviderMemberArgsResult> {
-    return buildCrossProviderMemberArgsHelper({
+    return this.provisioningEnvRuntimePorts.buildCrossProviderMemberArgs(
       primaryProviderId,
       memberSpecs,
-      options,
-      ports: {
-        buildProvisioningEnv: (providerIdForEnv, providerBackendId, buildOptions) =>
-          this.buildProvisioningEnv(providerIdForEnv, providerBackendId, buildOptions),
-        buildRuntimeTurnSettledHookSettingsArgs: (providerIdForArgs) =>
-          buildRuntimeTurnSettledHookSettingsArgsHelper(
-            { providerId: providerIdForArgs },
-            {
-              hookSettingsProvider: this.runtimeTurnSettledHookSettingsProvider,
-              logger,
-            }
-          ),
-        logger,
-      },
-    });
+      options
+    );
   }
 
   private async resolveControlApiBaseUrl(): Promise<string | null> {
-    if (!this.controlApiBaseUrlResolver) {
-      return null;
-    }
-
-    try {
-      const baseUrl = await this.controlApiBaseUrlResolver();
-      if (!baseUrl) {
-        throw new Error('Team control API resolver returned no base URL after startup.');
-      }
-      process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
-      return baseUrl;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Failed to resolve team control API base URL: ${message}`);
-      throw new Error(
-        `Team control API failed to start or publish its base URL. Team runtime commands require the desktop Control API. ${message}`
-      );
-    }
+    return this.provisioningEnvRuntimePorts.resolveControlApiBaseUrl();
   }
 
   /**
