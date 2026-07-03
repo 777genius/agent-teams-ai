@@ -708,6 +708,10 @@ import {
   writeLaunchFailureArtifactPackBestEffort as writeLaunchFailureArtifactPackBestEffortHelper,
 } from './provisioning/TeamProvisioningTaskActivityRepair';
 import {
+  handleTeammatePermissionRequest as handleTeammatePermissionRequestHelper,
+  type TeamProvisioningTeammatePermissionRequestPorts,
+} from './provisioning/TeamProvisioningTeammatePermissionRequest';
+import {
   respondToTeammatePermission as respondToTeammatePermissionHelper,
   type TeamProvisioningTeammatePermissionResponsePorts,
 } from './provisioning/TeamProvisioningTeammatePermissionResponse';
@@ -12201,66 +12205,12 @@ export class TeamProvisioningService {
     perm: ParsedPermissionRequest,
     messageTimestamp: string
   ): void {
-    // Skip if already tracked (idempotency — multiple paths can trigger this:
-    // early inbox scan, stdout parsing, native message blocks, relay Category 4)
-    if (run.processedPermissionRequestIds.has(perm.requestId)) return;
-    if (run.pendingApprovals.has(perm.requestId)) return;
-    run.processedPermissionRequestIds.add(perm.requestId);
-
-    logger.warn(
-      `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+    handleTeammatePermissionRequestHelper(
+      run,
+      perm,
+      messageTimestamp,
+      this.getTeammatePermissionRequestPorts()
     );
-
-    const approval = buildTeammateToolApprovalRequest({
-      requestId: perm.requestId,
-      runId: run.runId,
-      teamName: run.teamName,
-      source: perm.agentId,
-      toolName: perm.toolName,
-      toolInput: perm.input,
-      receivedAt: messageTimestamp || new Date().toISOString(),
-      teamColor: run.request.color,
-      teamDisplayName: run.request.displayName,
-      permissionSuggestions:
-        perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
-    });
-
-    const autoResult = shouldAutoAllow(
-      this.getToolApprovalSettings(run.teamName),
-      perm.toolName,
-      perm.input
-    );
-    if (autoResult.autoAllow) {
-      logger.info(
-        `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
-      );
-      void respondToTeammatePermissionHelper(
-        {
-          run,
-          agentId: perm.agentId,
-          requestId: perm.requestId,
-          allow: true,
-          permissionSuggestions: perm.permissionSuggestions,
-          toolName: perm.toolName,
-          toolInput: perm.input,
-        },
-        this.getTeammatePermissionResponsePorts()
-      );
-      this.emitToolApprovalEvent(
-        buildToolApprovalAutoResolvedEvent({
-          requestId: perm.requestId,
-          runId: run.runId,
-          teamName: run.teamName,
-          reason: 'auto_allow_category',
-        })
-      );
-      return;
-    }
-
-    run.pendingApprovals.set(perm.requestId, approval);
-    this.emitToolApprovalEvent(approval);
-    this.startApprovalTimeout(run, perm.requestId);
-    this.maybeShowToolApprovalOsNotification(run, approval);
   }
 
   private syncOpenCodeRuntimeToolApprovals(input: {
@@ -12360,6 +12310,22 @@ export class TeamProvisioningService {
       startApprovalTimeout: (run, requestId) => this.startApprovalTimeout(run, requestId),
       dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
       buildLeadToolApprovalDecisionPayload,
+    };
+  }
+
+  private getTeammatePermissionRequestPorts(): TeamProvisioningTeammatePermissionRequestPorts<ProvisioningRun> {
+    return {
+      logger,
+      getSettings: (teamName) => this.getToolApprovalSettings(teamName),
+      shouldAutoAllow,
+      buildTeammateToolApprovalRequest,
+      respondToTeammatePermission: (input) =>
+        respondToTeammatePermissionHelper(input, this.getTeammatePermissionResponsePorts()),
+      buildToolApprovalAutoResolvedEvent,
+      emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
+      startApprovalTimeout: (run, requestId) => this.startApprovalTimeout(run, requestId),
+      maybeShowToolApprovalOsNotification: (run, approval) =>
+        this.maybeShowToolApprovalOsNotification(run, approval),
     };
   }
 
