@@ -614,6 +614,15 @@ import {
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
   resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
+import {
+  getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
+  getOpenCodeRuntimeMessageAdapter as getOpenCodeRuntimeMessageAdapterHelper,
+  getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterHelper,
+  isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
+  isOpenCodeRuntimeRecipientFromSources as isOpenCodeRuntimeRecipientFromSourcesHelper,
+  resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
+  resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
+} from './provisioning/TeamProvisioningRuntimeRecipientResolution';
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
