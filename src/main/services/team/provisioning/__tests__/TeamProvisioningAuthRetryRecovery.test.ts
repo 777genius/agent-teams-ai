@@ -35,7 +35,9 @@ function makeChild(pid = 123): ChildProcess {
   return child;
 }
 
-function makeRun(overrides: Partial<TeamProvisioningAuthRetryRun> = {}): TeamProvisioningAuthRetryRun {
+function makeRun(
+  overrides: Partial<TeamProvisioningAuthRetryRun> = {}
+): TeamProvisioningAuthRetryRun {
   return {
     runId: 'run-1',
     teamName: 'team-a',
@@ -54,7 +56,11 @@ function makeRun(overrides: Partial<TeamProvisioningAuthRetryRun> = {}): TeamPro
     child: makeChild(111),
     onProgress: vi.fn(),
     expectedMembers: [],
-    request: { teamName: 'team-a', cwd: '/project', members: [] } as TeamProvisioningAuthRetryRun['request'],
+    request: {
+      teamName: 'team-a',
+      cwd: '/project',
+      members: [],
+    } as TeamProvisioningAuthRetryRun['request'],
     lastLogProgressAt: 0,
     lastDataReceivedAt: 0,
     lastStdoutReceivedAt: 0,
@@ -75,7 +81,12 @@ function makeRun(overrides: Partial<TeamProvisioningAuthRetryRun> = {}): TeamPro
     claudeLogsUpdatedAt: '2026-01-01T00:00:00.000Z',
     spawnContext: {
       claudePath: '/bin/claude',
-      args: ['--mcp-config', '/missing-mcp', '--team-bootstrap-user-prompt-file', '/missing-prompt'],
+      args: [
+        '--mcp-config',
+        '/missing-mcp',
+        '--team-bootstrap-user-prompt-file',
+        '/missing-prompt',
+      ],
       cwd: '/project',
       env: { CLAUDE_TEAM_CONTROL_URL: 'http://localhost:1234' },
       prompt: 'hello',
@@ -105,7 +116,7 @@ function makePorts(): TeamProvisioningAuthRetryPorts<TeamProvisioningAuthRetryRu
     mcpConfigBuilder: {
       writeConfigFile: vi.fn(async () => '/new-mcp'),
     },
-    readBootstrapRealTaskSubmissionState: vi.fn(async () => 'not_submitted'),
+    readBootstrapRealTaskSubmissionState: vi.fn(async () => 'not_submitted' as const),
     writeDeterministicBootstrapUserPromptFile: vi.fn(async () => '/new-prompt'),
     validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
     spawnCli: vi.fn(() => spawnedChild),

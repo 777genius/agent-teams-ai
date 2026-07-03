@@ -50,15 +50,17 @@ function createHelpers(input: {
     readOpenCodeMemberDirectory: vi.fn(async () => input.directory ?? createDirectory()),
     resolveOpenCodeMemberIdentityFromDirectory:
       input.identityResolver ??
-      vi.fn((_, memberName) => ({
-        ok: true,
-        canonicalMemberName: memberName.trim(),
-        laneId: 'primary',
-        laneIdentity: {
+      vi.fn(
+        (_, memberName): OpenCodeMemberIdentityResolution => ({
+          ok: true,
+          canonicalMemberName: memberName.trim(),
           laneId: 'primary',
-          laneKind: 'primary',
-        },
-      })),
+          laneIdentity: {
+            laneId: 'primary',
+            laneKind: 'primary',
+          },
+        })
+      ),
     readOpenCodeRuntimeLaneIndex: input.readLaneIndex
       ? vi.fn(async () => input.readLaneIndex?.() ?? createLaneIndex({}))
       : undefined,
@@ -77,17 +79,19 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
         teamName: 'team-a',
         memberName: 'bob',
         directory,
-        resolveOpenCodeMemberIdentityFromDirectory: vi.fn(() => ({
-          ok: true,
-          canonicalMemberName: 'Bob',
-          laneId: 'secondary:opencode:bob',
-          laneIdentity: {
+        resolveOpenCodeMemberIdentityFromDirectory: vi.fn(
+          (): OpenCodeMemberIdentityResolution => ({
+            ok: true,
+            canonicalMemberName: 'Bob',
             laneId: 'secondary:opencode:bob',
-            laneKind: 'secondary',
-            laneOwnerProviderId: 'opencode',
-          },
-          memberRuntimeCwd: '/fake/member',
-        })),
+            laneIdentity: {
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+            },
+            memberRuntimeCwd: '/fake/member',
+          })
+        ),
       })
     ).toEqual({
       ok: true,
@@ -123,29 +127,33 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
         teamName: 'team-a',
         laneId: 'secondary:opencode:bob',
         directory,
-        resolveOpenCodeMemberIdentityFromDirectory: vi.fn((_, memberName) => ({
-          ok: true,
-          canonicalMemberName: ['bob', 'robert'].includes(memberName.trim().toLowerCase())
-            ? 'Bob'
-            : memberName.trim(),
-          laneId:
-            memberName.trim().toLowerCase() === 'alice' ? 'primary' : 'secondary:opencode:bob',
-          laneIdentity: {
-            laneId: 'secondary:opencode:bob',
-            laneKind: 'secondary',
-            laneOwnerProviderId: 'opencode',
-          },
-        })),
+        resolveOpenCodeMemberIdentityFromDirectory: vi.fn(
+          (_, memberName): OpenCodeMemberIdentityResolution => ({
+            ok: true,
+            canonicalMemberName: ['bob', 'robert'].includes(memberName.trim().toLowerCase())
+              ? 'Bob'
+              : memberName.trim(),
+            laneId:
+              memberName.trim().toLowerCase() === 'alice' ? 'primary' : 'secondary:opencode:bob',
+            laneIdentity: {
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+            },
+          })
+        ),
       })
     ).toEqual(['Bob']);
   });
 
   it('uses case-insensitive secondary lane fallback only when the suffix has content', () => {
     const directory = createDirectory();
-    const resolveOpenCodeMemberIdentityFromDirectory = vi.fn(() => ({
-      ok: false as const,
-      reason: 'opencode_recipient_unavailable' as const,
-    }));
+    const resolveOpenCodeMemberIdentityFromDirectory = vi.fn(
+      (): OpenCodeMemberIdentityResolution => ({
+        ok: false as const,
+        reason: 'opencode_recipient_unavailable' as const,
+      })
+    );
 
     expect(
       resolveOpenCodeMembersForRuntimeLaneFromDirectory({
@@ -226,17 +234,19 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
     const directory = createDirectory();
     const helpers = createHelpers({
       directory,
-      identityResolver: vi.fn(() => ({
-        ok: true,
-        canonicalMemberName: 'Bob',
-        laneId: 'secondary:opencode:bob',
-        laneIdentity: {
+      identityResolver: vi.fn(
+        (): OpenCodeMemberIdentityResolution => ({
+          ok: true,
+          canonicalMemberName: 'Bob',
           laneId: 'secondary:opencode:bob',
-          laneKind: 'secondary',
-          laneOwnerProviderId: 'opencode',
-        },
-        memberRuntimeCwd: '/fake/member',
-      })),
+          laneIdentity: {
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+          },
+          memberRuntimeCwd: '/fake/member',
+        })
+      ),
     });
 
     await expect(helpers.resolveOpenCodeMemberDeliveryIdentity('team-a', 'bob')).resolves.toEqual({
@@ -268,16 +278,19 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
           { name: 'charlie', role: 'Reviewer', providerId: 'opencode' },
         ],
       }),
-      identityResolver: vi.fn((_, memberName) => ({
-        ok: true,
-        canonicalMemberName: memberName.trim().toUpperCase(),
-        laneId: memberName.trim().toLowerCase() === 'alice' ? 'primary' : 'secondary:opencode:bob',
-        laneIdentity: {
-          laneId: 'secondary:opencode:bob',
-          laneKind: 'secondary',
-          laneOwnerProviderId: 'opencode',
-        },
-      })),
+      identityResolver: vi.fn(
+        (_, memberName): OpenCodeMemberIdentityResolution => ({
+          ok: true,
+          canonicalMemberName: memberName.trim().toUpperCase(),
+          laneId:
+            memberName.trim().toLowerCase() === 'alice' ? 'primary' : 'secondary:opencode:bob',
+          laneIdentity: {
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+          },
+        })
+      ),
     });
 
     await expect(
@@ -287,7 +300,12 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
 
   it('falls back to the secondary lane id member suffix when no directory member resolves', async () => {
     const helpers = createHelpers({
-      identityResolver: vi.fn(() => ({ ok: false, reason: 'opencode_recipient_unavailable' })),
+      identityResolver: vi.fn(
+        (): OpenCodeMemberIdentityResolution => ({
+          ok: false,
+          reason: 'opencode_recipient_unavailable',
+        })
+      ),
     });
 
     await expect(

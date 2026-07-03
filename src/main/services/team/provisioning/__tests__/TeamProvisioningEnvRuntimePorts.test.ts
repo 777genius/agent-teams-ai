@@ -96,7 +96,7 @@ describe('TeamProvisioningEnvRuntimePorts', () => {
     const runtimePorts = createTeamProvisioningEnvRuntimePorts(deps);
     runtimePorts.buildProvisioningEnv = vi.fn(async () => ({
       env: {},
-      authSource: 'none',
+      authSource: 'none' as const,
       geminiRuntimeAuth: null,
     }));
 

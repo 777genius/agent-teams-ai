@@ -29,6 +29,8 @@ function createRun(
     lastLeadTextEmitMs: 0,
     provisioningOutputParts: [],
     provisioningOutputIndexByMessageId: new Map(),
+    stallWarningIndex: null,
+    apiRetryWarningIndex: null,
     detectedSessionId: null,
     ...overrides,
   };

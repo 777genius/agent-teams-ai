@@ -41,6 +41,8 @@ describe('lead process message helpers', () => {
     const run = {
       provisioningOutputParts: [] as string[],
       provisioningOutputIndexByMessageId: new Map<string, number>(),
+      stallWarningIndex: null,
+      apiRetryWarningIndex: null,
     };
 
     appendProvisioningAssistantText(run, { uuid: 'u1' }, 'first');
@@ -60,6 +62,8 @@ describe('lead process message helpers', () => {
         ['b', 1],
         ['c', 2],
       ]),
+      stallWarningIndex: null,
+      apiRetryWarningIndex: null,
     };
 
     shiftProvisioningOutputIndexesAfterRemoval(run, 0);
