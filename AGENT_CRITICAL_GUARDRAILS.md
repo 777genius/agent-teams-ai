@@ -8,6 +8,7 @@ These are the hard rules to keep agent work predictable and safe in this repo.
 - Do not test agent teams, launch/provisioning, terminal runtime, task assignment, smoke-flow, or agent actions on real user projects. Use only new sandbox/test projects or explicitly test-only existing projects. Real projects such as `~/dev/projects/ai/claude-runtime` must not be used even for opening a runtime/terminal without fresh direct user permission.
 - Do not run `pnpm lint:fix` unless the user explicitly asks for broad formatting changes.
 - Keep main, preload, renderer, and shared responsibilities separate.
+- Build interactive UI controls from reusable Radix UI headless primitives under `src/renderer/components/ui` when a shared primitive exists. Do not add one-off native or hand-rolled controls for selects, dialogs, popovers, tabs, menus, tooltips, switches, or checkboxes.
 - Use `wrapAgentBlock(text)` instead of manually concatenating agent block markers.
 - Preserve task/subagent filtering, structured task refs, and message parsing semantics.
 - Validate IPC and other main-process inputs defensively and fail gracefully.

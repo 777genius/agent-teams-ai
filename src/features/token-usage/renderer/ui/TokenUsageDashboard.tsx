@@ -5,6 +5,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
@@ -932,17 +939,22 @@ const BudgetAlertsPanel = ({
               {budgetScopeLabel(target.scope, t)}
             </span>
           </div>
-          <select
-            value={budgetTargetKey}
-            onChange={(event) => onBudgetTargetKeyChange(event.target.value)}
-            className="mb-2 h-8 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text outline-none focus:border-fuchsia-500/60"
-          >
-            {budgetTargetOptions.map((option) => (
-              <option key={budgetOptionKey(option)} value={budgetOptionKey(option)}>
-                {budgetScopeLabel(option.scope, t)} / {option.label}
-              </option>
-            ))}
-          </select>
+          <Select value={budgetTargetKey} onValueChange={onBudgetTargetKeyChange}>
+            <SelectTrigger className="mb-2 h-8 rounded-sm border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text shadow-none focus:border-fuchsia-500/60 focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {budgetTargetOptions.map((option) => (
+                <SelectItem
+                  key={budgetOptionKey(option)}
+                  value={budgetOptionKey(option)}
+                  className="text-xs"
+                >
+                  {budgetScopeLabel(option.scope, t)} / {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
             <BudgetLimitInput
               label={t('tokenUsage.budgets.tokenLimit')}

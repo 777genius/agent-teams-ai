@@ -224,6 +224,15 @@ Responsibilities:
 - `adapters/` transform DTOs into view models
 - `utils/` contain small pure renderer helpers
 
+### UI primitives
+
+Build interactive UI controls from reusable shared components backed by Radix UI
+headless primitives. Prefer existing components under `src/renderer/components/ui`
+for controls such as selects, dialogs, popovers, tabs, menus, tooltips, switches,
+and checkboxes. Avoid hand-rolled or native controls when a shared Radix-based
+primitive exists; add or extend the shared primitive instead of styling a one-off
+control inside a feature.
+
 ## Import Rules
 
 ### Public entrypoints only
