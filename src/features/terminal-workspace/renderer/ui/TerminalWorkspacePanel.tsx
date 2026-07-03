@@ -586,6 +586,11 @@ const TerminalWorkspaceKernelView = ({
     readStoredTerminalAppearanceSettings(teamName)
   );
   const activeScreen = snapshot.attachedSession?.focused_screen ?? null;
+  const terminalConnectionBootstrapping =
+    snapshot.connection.state === 'idle' || snapshot.connection.state === 'bootstrapping';
+  const terminalScreenPending = snapshot.connection.state === 'ready' && activeScreen === null;
+  const showTerminalContentSkeleton =
+    terminalContentPending || terminalConnectionBootstrapping || terminalScreenPending;
   const activeScreenLines = activeScreen?.surface.lines;
   const activeCommandSessionId =
     snapshot.selection.activeSessionId ?? snapshot.catalog.sessions[0]?.session_id ?? null;
@@ -1204,7 +1209,7 @@ const TerminalWorkspaceKernelView = ({
               )}
               commandPresentationMetadata={activeCommandRuns}
             />
-            {terminalContentPending ? <TerminalTabContentSkeleton /> : null}
+            {showTerminalContentSkeleton ? <TerminalTabContentSkeleton /> : null}
           </div>
           <div slot="command-dock" className="grid min-w-0 shrink-0 grid-rows-[auto_auto]">
             <TerminalWorkingDirectoryBar projectPath={projectPath} gitBranch={gitBranch} />
@@ -1244,7 +1249,7 @@ const TerminalTabContentSkeleton = (): React.JSX.Element => {
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-20 border-t border-white/10 bg-[#080c14]/65 px-6 py-5 backdrop-blur-xl"
+      className="pointer-events-none absolute inset-0 z-20 border-t border-white/10 bg-[#080c14] px-6 py-5 backdrop-blur-xl"
       data-testid="agent-team-terminal-content-skeleton"
       aria-label={t('terminalWorkspace.loadingTerminalTab')}
     >
