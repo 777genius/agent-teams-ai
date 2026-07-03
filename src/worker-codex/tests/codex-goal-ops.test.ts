@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
-import { RunProcessAliveReason } from "@vioxen/subscription-runtime/worker-core";
+import {
+  RunProcessAliveReason,
+  RunProcessSupervisorKind,
+} from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalAccountSlots, type CodexGoalRunConfig } from "../codex-goal-runner";
 import {
   buildCodexGoalNoTmuxCommand,
@@ -657,9 +660,59 @@ describe("codex goal ops", () => {
       progressStale: false,
     })).toMatchObject({
       alive: true,
+      supervisorKind: RunProcessSupervisorKind.External,
       processAlive: false,
       freshProgressAlive: true,
       aliveReason: RunProcessAliveReason.FreshProgress,
+    });
+  });
+
+  it("does not treat maintenance-paused progress as a live worker", () => {
+    expect(resolveCodexGoalWorkerLiveness({
+      status: {
+        progressExists: true,
+        progressStatus: "maintenance_paused",
+        progressHeartbeatAgeMs: 1_000,
+        progressProcessAlive: true,
+      },
+      progressStale: false,
+    })).toMatchObject({
+      alive: false,
+      supervisorKind: RunProcessSupervisorKind.None,
+      processAlive: false,
+      freshProgressAlive: false,
+      aliveReason: RunProcessAliveReason.TerminalResult,
+    });
+  });
+
+  it("keeps a live dirty worker in wait state instead of manual review", async () => {
+    const fixture = await createGoalFixture();
+    const launch = launchInput(fixture.config, fixture.root);
+    const brief = await buildCodexGoalBrief({
+      jobId: "job-live-dirty",
+      launch,
+      status: {
+        recommendedAction: "inspect_dirty_workspace",
+        workspaceDirty: true,
+        changedFiles: ["src/active-write.ts"],
+        resultExists: false,
+        progressExists: true,
+        progressStatus: "running",
+        progressHeartbeatAgeMs: 1_000,
+        progressProcessAlive: true,
+        warnings: [],
+      } as Awaited<ReturnType<typeof collectCodexGoalStatus>>,
+      accounts: [accountStatus("account-a", {})],
+      staleAfterMs: 60_000,
+      tailLines: 20,
+    });
+
+    expect(brief).toMatchObject({
+      workerAlive: true,
+      workerSupervisorKind: RunProcessSupervisorKind.Direct,
+      safeToContinue: false,
+      nextBestTool: "codex_goal_brief",
+      nextBestReason: "worker is already running",
     });
   });
 

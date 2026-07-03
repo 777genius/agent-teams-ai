@@ -427,8 +427,10 @@ Core launch and inspection tools:
   anything.
 - `codex_goal_start`: start one detached tmux worker. Requires
   `confirmStart: true`, checks that the tmux session is not already alive, and
-  runs `doctor` unless `skipDoctor` is explicitly set. Completed, dirty, or
-  unknown states require the explicit `forceStart` override.
+  writes/updates the registry manifest before `doctor` and tmux start. This
+  keeps the job visible to `overview` even if a confirmed launch fails during
+  preflight. It runs `doctor` unless `skipDoctor` is explicitly set. Completed,
+  dirty, or unknown states require the explicit `forceStart` override.
 - `codex_goal_status`: inspect tmux, result JSON, log freshness, workspace
   dirtiness, and `recommendedAction`.
 - `codex_goal_doctor`: validate prompt, job root, auth root, workspace and
@@ -524,6 +526,11 @@ agents. It returns:
 - `progressStatus`
 - `progressUpdatedAt`
 - `progressHeartbeatAgeMs`
+- `workerAlive`
+- `workerSupervisorKind`
+- `workerAliveReason`
+- `workerProcessAlive`
+- `workerFreshProgressAlive`
 - `logByteLength`
 - `runtimeEventsPath`
 - `lastRuntimeEvent`
@@ -759,8 +766,14 @@ Parallel worker split:
 
 1. Create separate git worktrees and separate `jobId`s.
 2. Give each job a focused prompt and its own tmux session.
-3. Never run two writer workers in one worktree.
-4. Merge or cherry-pick only after each worker has a stable commit and focused
+3. Start production worker-pool jobs through `codex_goal_create_job` plus
+   `codex_goal_continue`, or through `codex_goal_start` with full launch config.
+   Do not hand-roll `tmux new-session ... codex-goal run --no-tmux` for pooled
+   workers. `--no-tmux` is the inner runner command used by the official
+   launcher, or a foreground debug mode when the caller accepts direct-process
+   ownership.
+4. Never run two writer workers in one worktree.
+5. Merge or cherry-pick only after each worker has a stable commit and focused
    verification.
 
 Read-only or analysis task:

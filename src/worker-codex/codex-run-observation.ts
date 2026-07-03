@@ -27,7 +27,6 @@ import {
   type RunObservationSnapshot,
   type RunObservationStatus,
   type RunObservationWarning,
-  RunProcessSupervisorKind,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   codexGoalJobToArgs,
@@ -294,11 +293,7 @@ export class CodexRunObservationAdapter implements RunObservationPort {
       recommendedAction,
       workspace,
       process: {
-        supervisor: manifest.tmuxSession
-          ? RunProcessSupervisorKind.Tmux
-          : workerLiveness.alive
-          ? RunProcessSupervisorKind.Direct
-          : RunProcessSupervisorKind.None,
+        supervisor: workerLiveness.supervisorKind,
         ...(manifest.tmuxSession ? { sessionId: manifest.tmuxSession } : {}),
         alive: workerLiveness.alive,
         aliveReason: workerLiveness.aliveReason,

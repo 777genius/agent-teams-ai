@@ -16,6 +16,7 @@ import {
   hostExecutableNotFoundMessage,
   resolveHostExecutable,
   RunProcessAliveReason,
+  RunProcessSupervisorKind,
   type RunProgressClassification,
   type RuntimeRecommendedAction,
   type RuntimeResultEnvelope,
@@ -162,6 +163,7 @@ export type CodexGoalProcessSnapshot = {
 
 export type CodexGoalWorkerLiveness = {
   readonly alive: boolean;
+  readonly supervisorKind: RunProcessSupervisorKind;
   readonly aliveReason: RunProcessAliveReason;
   readonly processAlive: boolean;
   readonly freshProgressAlive: boolean;
@@ -477,18 +479,35 @@ export function resolveCodexGoalWorkerLiveness(input: {
   readonly progressStale?: boolean;
 }): CodexGoalWorkerLiveness {
   const tmuxAlive = input.status.tmuxAlive === true;
-  const processAlive = tmuxAlive || input.status.progressProcessAlive === true;
+  const terminalProgress = input.status.progressStatus === "completed" ||
+    input.status.progressStatus === "failed" ||
+    input.status.progressStatus === "maintenance_paused";
+  const processAlive = !terminalProgress &&
+    (tmuxAlive || input.status.progressProcessAlive === true);
   const freshProgressAlive = Boolean(
-    input.status.progressExists &&
+    !terminalProgress &&
+      input.status.progressExists &&
       input.status.progressStatus === "running" &&
       input.status.progressHeartbeatAgeMs !== undefined &&
       input.progressStale !== true,
   );
   const alive = processAlive || freshProgressAlive;
+  const supervisorKind = tmuxAlive
+    ? RunProcessSupervisorKind.Tmux
+    : terminalProgress
+    ? RunProcessSupervisorKind.None
+    : input.status.progressProcessAlive === true
+    ? RunProcessSupervisorKind.Direct
+    : freshProgressAlive
+    ? RunProcessSupervisorKind.External
+    : RunProcessSupervisorKind.None;
   return {
     alive,
+    supervisorKind,
     aliveReason: tmuxAlive
       ? RunProcessAliveReason.Tmux
+      : terminalProgress
+      ? RunProcessAliveReason.TerminalResult
       : input.status.progressProcessAlive === true
       ? RunProcessAliveReason.Pid
       : freshProgressAlive

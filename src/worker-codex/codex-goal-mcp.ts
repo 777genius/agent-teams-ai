@@ -26,7 +26,6 @@ import {
   RunEventCompactionSafetyMode,
   RunEventProviderKind,
   RunEventType,
-  RunProcessSupervisorKind,
   WorkerControlService,
   decideRunObservation,
   isRunEventCompactionSafetyMode,
@@ -1573,6 +1572,11 @@ export function createCodexGoalMcpServer(
           summary: launchSummary(launch),
         });
       }
+      const registryRootDir = registryRootFromArgs(args as StartMcpArgs);
+      const manifest = await upsertCodexGoalLaunchManifest({
+        registryRootDir,
+        launch,
+      });
       if (!(args as StartMcpArgs).skipDoctor) {
         const doctor = await doctorCodexGoal({
           config: launch.config,
@@ -1586,11 +1590,6 @@ export function createCodexGoalMcpServer(
           });
         }
       }
-      const registryRootDir = registryRootFromArgs(args as StartMcpArgs);
-      const manifest = await upsertCodexGoalLaunchManifest({
-        registryRootDir,
-        launch,
-      });
       const command = await startCodexGoalTmux(launch);
       return mcpJson({
         ok: true,
@@ -2042,6 +2041,7 @@ async function continueStoredJob(
       reason: "worker_already_running",
       jobId: loaded.manifest.jobId,
       status,
+      workerSupervisorKind: workerLiveness.supervisorKind,
       workerAliveReason: workerLiveness.aliveReason,
     });
   }
@@ -3037,8 +3037,9 @@ async function observeOrphanCodexRun(input: {
     status,
     progressStale,
   });
+  const workerAlive = false;
   const heartbeatOnlyNoOutput = Boolean(
-    workerLiveness.alive &&
+    workerAlive &&
       status.progressExists &&
       !status.resultExists &&
       (status.logByteLength ?? 0) === 0,
@@ -3064,16 +3065,16 @@ async function observeOrphanCodexRun(input: {
         }]
       : []),
   ];
-  const runStatus = workerLiveness.alive && status.progressStatus === "running"
+  const runStatus = workerAlive && status.progressStatus === "running"
     ? "running"
     : status.resultStatus === "completed"
     ? "completed"
     : status.resultStatus === "failed"
     ? "failed"
-    : workerLiveness.alive
+    : workerAlive
     ? "running"
     : "unknown";
-  const liveness = workerLiveness.alive
+  const liveness = workerAlive
     ? (progressStale || logStale ? "stale" : "alive")
     : "dead";
   const manualReviewReasons = [
@@ -3087,9 +3088,9 @@ async function observeOrphanCodexRun(input: {
     status: runStatus,
     liveness,
     process: {
-      supervisor: RunProcessSupervisorKind.Tmux,
+      supervisor: workerLiveness.supervisorKind,
       sessionId: input.runId,
-      alive: workerLiveness.alive,
+      alive: workerAlive,
       aliveReason: workerLiveness.aliveReason,
       ...(status.progressPid === undefined ? {} : { pid: status.progressPid }),
     },
@@ -3101,7 +3102,7 @@ async function observeOrphanCodexRun(input: {
         : { heartbeatAgeMs: status.progressHeartbeatAgeMs }),
       staleAfterMs: input.staleAfterMs,
       stale: progressStale,
-      silentStale: Boolean(workerLiveness.alive && (progressStale || logStale)),
+      silentStale: Boolean(workerAlive && (progressStale || logStale)),
       heartbeatOnlyNoOutput,
       ...(status.progressAttemptCount === undefined
         ? {}
@@ -3422,6 +3423,7 @@ async function buildCodexGoalOverviewItem(input: {
       taskId: launch.config.taskId,
       tmuxSession: launch.tmuxSession,
       workerAlive: Boolean(brief.workerAlive),
+      workerSupervisorKind: brief.workerSupervisorKind,
       workerAliveReason: brief.workerAliveReason,
       workerProcessAlive: brief.workerProcessAlive,
       workerFreshProgressAlive: brief.workerFreshProgressAlive,
@@ -3738,7 +3740,12 @@ export async function buildCodexGoalBrief(input: {
         (result.strict === false && !safeStatusToContinue)
       ),
   );
-  const next = needsResultReconcile
+  const next = workerLiveness.alive && !silentStale && !heartbeatOnlyNoOutput
+    ? {
+        tool: "codex_goal_brief",
+        reason: "worker is already running",
+      }
+    : needsResultReconcile
     ? {
         tool: "codex_goal_reconcile_result",
         reason: result.strict === false
@@ -3806,6 +3813,7 @@ export async function buildCodexGoalBrief(input: {
     staleAfterMs: input.staleAfterMs,
     isStale,
     workerAlive: workerLiveness.alive,
+    workerSupervisorKind: workerLiveness.supervisorKind,
     workerAliveReason: workerLiveness.aliveReason,
     workerProcessAlive: workerLiveness.processAlive,
     workerFreshProgressAlive: workerLiveness.freshProgressAlive,
@@ -3922,6 +3930,7 @@ function buildCodexGoalDecision(input: {
     {
       code: "worker_state",
       workerAlive: Boolean(input.brief.workerAlive),
+      workerSupervisorKind: input.brief.workerSupervisorKind,
       workerAliveReason: input.brief.workerAliveReason,
       workerProcessAlive: input.brief.workerProcessAlive,
       workerFreshProgressAlive: input.brief.workerFreshProgressAlive,
@@ -4311,6 +4320,7 @@ function buildCodexGoalHandoff(input: {
     "",
     "## Current State",
     `- worker: ${input.brief.workerAlive ? "alive" : "not running"}`,
+    `- workerSupervisorKind: ${String(input.brief.workerSupervisorKind ?? "")}`,
     `- workerAliveReason: ${String(input.brief.workerAliveReason ?? "")}`,
     `- recommendedAction: ${input.status.recommendedAction}`,
     `- resultStatus: ${input.status.resultStatus ?? ""}`,
