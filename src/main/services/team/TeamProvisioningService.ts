@@ -570,6 +570,7 @@ import {
   extractCliLogsFromRun,
   type RetainedClaudeLogsSnapshot,
 } from './provisioning/TeamProvisioningRetainedLogs';
+import { TeamProvisioningRuntimeAdapterProgressState } from './provisioning/TeamProvisioningRuntimeAdapterProgressState';
 import {
   createMixedSecondaryLaneStates as createMixedSecondaryLaneStatesHelper,
   createOpenCodeMemberMessageDeliveryService as createOpenCodeMemberMessageDeliveryServiceHelper,
@@ -714,9 +715,7 @@ import { type ProcessBootstrapTransportSummary } from './ProcessBootstrapTranspo
 import {
   boundLaunchDiagnostics,
   boundProgressAssistantParts,
-  buildProgressLiveOutput,
   buildProgressLogsTail,
-  buildProgressTraceLine,
 } from './progressPayload';
 import {
   applyDesktopTeammateModeDecisionToEnv,
@@ -867,7 +866,6 @@ const VERIFY_POLL_MS = 500;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
-const PROVISIONING_TRACE_STORAGE_LIMIT = 500;
 // Progress emissions fan out the latest CLI tail + assistant output to the
 // renderer over IPC. Under load the previous 300ms cadence combined with an
 // unbounded payload (see `emitLogsProgress`) caused renderer OOM crashes
@@ -1292,6 +1290,15 @@ export class TeamProvisioningService {
     runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
     runtimeAdapterTraceLinesByRunId: this.runtimeAdapterTraceLinesByRunId,
     runtimeAdapterTraceKeyByRunId: this.runtimeAdapterTraceKeyByRunId,
+  });
+  private readonly runtimeAdapterProgressState = new TeamProvisioningRuntimeAdapterProgressState({
+    state: {
+      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
+      runtimeAdapterTraceLinesByRunId: this.runtimeAdapterTraceLinesByRunId,
+      runtimeAdapterTraceKeyByRunId: this.runtimeAdapterTraceKeyByRunId,
+    },
+    retainProvisioningProgress: (runId, progress) =>
+      this.retainProvisioningProgress(runId, progress),
   });
   private readonly runtimeToolApprovalCoordinator = new RuntimeToolApprovalCoordinator({
     getSettings: (teamName) => this.getToolApprovalSettings(teamName),
@@ -3502,57 +3509,6 @@ export class TeamProvisioningService {
 
   private removeRunMemberMcpConfigFilesLater(run: ProvisioningRun): void {
     this.memberMcpLaunchConfigProvisioner.removeRunMemberMcpConfigFilesLater(run);
-  }
-
-  private enrichRuntimeAdapterProgressTrace(
-    progress: TeamProvisioningProgress
-  ): TeamProvisioningProgress {
-    const detail = buildProvisioningTraceDetail(progress);
-    const key = `${progress.state}\u0000${progress.message}\u0000${detail ?? ''}`;
-    const lines = this.runtimeAdapterTraceLinesByRunId.get(progress.runId) ?? [];
-    if (this.runtimeAdapterTraceKeyByRunId.get(progress.runId) !== key) {
-      this.runtimeAdapterTraceKeyByRunId.set(progress.runId, key);
-      lines.push(
-        buildProgressTraceLine({
-          timestamp: progress.updatedAt,
-          state: progress.state,
-          message: progress.message,
-          detail,
-        })
-      );
-      if (lines.length > PROVISIONING_TRACE_STORAGE_LIMIT) {
-        lines.splice(0, lines.length - PROVISIONING_TRACE_STORAGE_LIMIT);
-      }
-      this.runtimeAdapterTraceLinesByRunId.set(progress.runId, lines);
-    }
-    return {
-      ...progress,
-      assistantOutput: buildProgressLiveOutput(lines, []) ?? progress.assistantOutput,
-    };
-  }
-
-  private setRuntimeAdapterProgress(
-    progress: TeamProvisioningProgress,
-    onProgress?: (progress: TeamProvisioningProgress) => void
-  ): TeamProvisioningProgress {
-    const nextProgress = this.enrichRuntimeAdapterProgressTrace(progress);
-    this.runtimeAdapterProgressByRunId.set(nextProgress.runId, nextProgress);
-    if (
-      nextProgress.state === 'disconnected' ||
-      nextProgress.state === 'failed' ||
-      nextProgress.state === 'cancelled'
-    ) {
-      // Terminal adapter progress stays live for the retained TTL (the stop
-      // flow uses the live entry to dedupe a second manual stop while the
-      // runtime stop is still pending, and it writes two terminal updates),
-      // then the retention timer evicts it together with the trace maps.
-      // Without that eviction these maps grow for the lifetime of the process
-      // and a dead adapter run id counts as "tracked" in the cleanup
-      // staleness guards forever.
-      this.retainProvisioningProgress(nextProgress.runId, nextProgress);
-    }
-    onProgress?.(nextProgress);
-    return nextProgress;
   }
 
   private async getPersistedTranscriptClaudeLogs(
@@ -5910,7 +5866,7 @@ export class TeamProvisioningService {
       warnings: input.sourceWarning ? [input.sourceWarning] : undefined,
     };
     this.provisioningRunByTeam.set(input.request.teamName, runId);
-    const initialRuntimeProgress = this.setRuntimeAdapterProgress(
+    const initialRuntimeProgress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
       initialProgress,
       input.onProgress
     );
@@ -5930,7 +5886,7 @@ export class TeamProvisioningService {
     this.runs.set(runId, run);
     this.invalidateRuntimeSnapshotCaches(input.request.teamName);
 
-    const launching = this.setRuntimeAdapterProgress(
+    const launching = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
       {
         ...initialRuntimeProgress,
         state: 'spawning',
@@ -5969,7 +5925,7 @@ export class TeamProvisioningService {
       const success = launchState === 'clean_success';
       const pending = launchState === 'partial_pending';
       const failed = launchState === 'partial_failure';
-      const finalProgress = this.setRuntimeAdapterProgress(
+      const finalProgress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
         {
           ...launching,
           state: success || pending ? 'ready' : 'failed',
@@ -6033,7 +5989,7 @@ export class TeamProvisioningService {
         }).catch(() => undefined);
       }
       const message = error instanceof Error ? error.message : String(error);
-      const failedProgress = this.setRuntimeAdapterProgress(
+      const failedProgress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
         {
           ...launching,
           state: 'failed',
@@ -6104,7 +6060,7 @@ export class TeamProvisioningService {
       warnings: input.sourceWarning ? [input.sourceWarning] : undefined,
     };
     this.provisioningRunByTeam.set(input.request.teamName, runId);
-    this.setRuntimeAdapterProgress(initialProgress, input.onProgress);
+    this.runtimeAdapterProgressState.setRuntimeAdapterProgress(initialProgress, input.onProgress);
     this.resetTeamScopedTransientStateForNewRun(input.request.teamName);
     const previousLaunchState = await this.launchStateStore.read(input.request.teamName);
     await this.clearPersistedLaunchState(input.request.teamName);
@@ -6143,7 +6099,7 @@ export class TeamProvisioningService {
       previousLaunchState,
     };
 
-    const launching = this.setRuntimeAdapterProgress(
+    const launching = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
       {
         ...initialProgress,
         state: 'spawning',
@@ -6188,7 +6144,7 @@ export class TeamProvisioningService {
       const success = result.teamLaunchState === 'clean_success';
       const pending = result.teamLaunchState === 'partial_pending';
       const failed = result.teamLaunchState === 'partial_failure';
-      const finalProgress = this.setRuntimeAdapterProgress(
+      const finalProgress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
         {
           ...launching,
           state: success || pending ? 'ready' : 'failed',
@@ -6256,7 +6212,7 @@ export class TeamProvisioningService {
         laneId: 'primary',
       }).catch(() => undefined);
       const message = error instanceof Error ? error.message : String(error);
-      this.setRuntimeAdapterProgress(
+      this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
         {
           ...launching,
           state: 'failed',
@@ -7257,7 +7213,7 @@ export class TeamProvisioningService {
       this.provisioningRunByTeam.delete(teamName);
     }
     this.invalidateRuntimeSnapshotCaches(teamName);
-    this.setRuntimeAdapterProgress({
+    this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
       ...runtimeProgress,
       state: 'cancelled',
       message: 'Provisioning cancelled by user',
@@ -7353,7 +7309,7 @@ export class TeamProvisioningService {
       updatedAt: timestamp,
       warnings: sourceWarning ? [sourceWarning] : undefined,
     };
-    this.setRuntimeAdapterProgress(progress, onProgress);
+    this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress);
     this.teamChangeEmitter?.({
       type: 'process',
       teamName,
@@ -12169,7 +12125,7 @@ export class TeamProvisioningService {
     const startedAt = nowIso();
     const previousProgress = this.runtimeAdapterProgressByRunId.get(runId);
     const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
-    this.setRuntimeAdapterProgress({
+    this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
       runId,
       teamName,
       state: 'disconnected',
@@ -12214,7 +12170,7 @@ export class TeamProvisioningService {
           members: previousLaunchState?.members ?? {},
         })
       );
-      this.setRuntimeAdapterProgress({
+      this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
         runId,
         teamName,
         state: result.stopped ? 'disconnected' : 'failed',
@@ -12227,7 +12183,7 @@ export class TeamProvisioningService {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.setRuntimeAdapterProgress({
+      this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
         runId,
         teamName,
         state: 'failed',
