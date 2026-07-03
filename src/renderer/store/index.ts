@@ -1392,6 +1392,11 @@ export function initializeNotificationListeners(): () => void {
 
   // Track team deletions and clean up activity maps
   const unsubscribeTeamDeletion = useStore.subscribe((state, prevState) => {
+    // The listener fires on every store write; only diff team names when the
+    // teams array reference actually changed.
+    if (state.teams === prevState.teams) {
+      return;
+    }
     const prevTeamNames = new Set(prevState.teams.map((t) => t.teamName));
     const nextTeamNames = new Set(state.teams.map((t) => t.teamName));
     // Find deleted teams
@@ -1402,11 +1407,10 @@ export function initializeNotificationListeners(): () => void {
         teamLastIdleWatchdogRefreshAt.delete(teamName);
         inProgressChangePresenceCursorByTeam.delete(teamName);
         // Cancel any pending timers for this team
-        const timerKeys = Array.from(teamRefreshTimers.keys()).filter((k) => k === teamName);
-        for (const key of timerKeys) {
-          const timer = teamRefreshTimers.get(key);
-          if (timer) clearTimeout(timer);
-          teamRefreshTimers.delete(key);
+        const teamRefreshTimer = teamRefreshTimers.get(teamName);
+        if (teamRefreshTimer) {
+          clearTimeout(teamRefreshTimer);
+          teamRefreshTimers.delete(teamName);
         }
         // Clear similar timers from other maps
         for (const [key, timer] of teamMessageRefreshTimers.entries()) {
@@ -1446,7 +1450,7 @@ export function initializeNotificationListeners(): () => void {
           }
         }
         for (const [key, timer] of taskLogActivityTimers.entries()) {
-          if (key.startsWith(`${teamName} `)) {
+          if (key.startsWith(`${teamName}\u0000`)) {
             clearTimeout(timer);
             taskLogActivityTimers.delete(key);
           }

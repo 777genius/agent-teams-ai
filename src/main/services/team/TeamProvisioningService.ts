@@ -3406,6 +3406,10 @@ export class TeamProvisioningService {
   private static readonly OPENCODE_RUNTIME_DELIVERY_ADVISORY_EVENT_TTL_MS = 24 * 60 * 60_000;
   private static readonly OPENCODE_RUNTIME_DELIVERY_LEAD_NOTICE_TTL_MS = 24 * 60 * 60_000;
   private static readonly INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS = 2 * 60_000;
+  /** Unreferenced runtime-adapter run state older than this is swept from memory. */
+  private static readonly RUNTIME_ADAPTER_RUN_STATE_TTL_MS = 15 * 60_000;
+  /** Minimum spacing between runtime-adapter run-state sweeps. */
+  private static readonly RUNTIME_ADAPTER_RUN_STATE_SWEEP_INTERVAL_MS = 60_000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -3418,6 +3422,7 @@ export class TeamProvisioningService {
     | undefined = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly runtimeAdapterTraceLinesByRunId = new Map<string, string[]>();
   private readonly runtimeAdapterTraceKeyByRunId = new Map<string, string>();
+  private lastRuntimeAdapterRunStateSweepAt = 0;
   private readonly runtimeToolApprovalCoordinator = new RuntimeToolApprovalCoordinator({
     getSettings: (teamName) => this.getToolApprovalSettings(teamName),
     answerApproval: ({ entry, allow, message }) =>
@@ -10781,8 +10786,73 @@ export class TeamProvisioningService {
   ): TeamProvisioningProgress {
     const nextProgress = this.enrichRuntimeAdapterProgressTrace(progress);
     this.runtimeAdapterProgressByRunId.set(nextProgress.runId, nextProgress);
+    this.sweepRuntimeAdapterRunState();
     onProgress?.(nextProgress);
     return nextProgress;
+  }
+
+  /**
+   * Evict runtime-adapter run state (progress + trace) for runs that are no
+   * longer referenced by any tracking map and have been quiet past the TTL.
+   * Without this the per-runId maps grow by one entry per launch/retry for the
+   * whole app lifetime. Referenced runs (alive, pending, or tracked by
+   * runtimeAdapterRunByTeam) are never evicted, so message-delivery checks and
+   * relaunch/recovery reads keep their exact behavior. Evicted progress is
+   * retained via retainProvisioningProgress so getProvisioningStatus keeps
+   * resolving the runId for the standard retention window.
+   */
+  private sweepRuntimeAdapterRunState(nowMs: number = Date.now()): void {
+    if (
+      nowMs - this.lastRuntimeAdapterRunStateSweepAt <
+      TeamProvisioningService.RUNTIME_ADAPTER_RUN_STATE_SWEEP_INTERVAL_MS
+    ) {
+      return;
+    }
+    this.lastRuntimeAdapterRunStateSweepAt = nowMs;
+
+    const referencedRunIds = new Set<string>();
+    for (const runId of this.provisioningRunByTeam.values()) {
+      referencedRunIds.add(runId);
+    }
+    for (const runId of this.aliveRunByTeam.values()) {
+      referencedRunIds.add(runId);
+    }
+    for (const entry of this.runtimeAdapterRunByTeam.values()) {
+      referencedRunIds.add(entry.runId);
+    }
+
+    const isEvictable = (runId: string): boolean =>
+      !this.runs.has(runId) && !referencedRunIds.has(runId);
+
+    for (const [runId, progress] of this.runtimeAdapterProgressByRunId) {
+      if (!isEvictable(runId)) {
+        continue;
+      }
+      const updatedAtMs = Date.parse(progress.updatedAt);
+      if (
+        Number.isFinite(updatedAtMs) &&
+        nowMs - updatedAtMs < TeamProvisioningService.RUNTIME_ADAPTER_RUN_STATE_TTL_MS
+      ) {
+        continue;
+      }
+      this.retainProvisioningProgress(runId, progress);
+      this.runtimeAdapterProgressByRunId.delete(runId);
+      this.runtimeAdapterTraceLinesByRunId.delete(runId);
+      this.runtimeAdapterTraceKeyByRunId.delete(runId);
+    }
+
+    // Trace entries whose progress record is already gone have no readers left.
+    for (const runId of [...this.runtimeAdapterTraceLinesByRunId.keys()]) {
+      if (!this.runtimeAdapterProgressByRunId.has(runId) && isEvictable(runId)) {
+        this.runtimeAdapterTraceLinesByRunId.delete(runId);
+        this.runtimeAdapterTraceKeyByRunId.delete(runId);
+      }
+    }
+    for (const runId of [...this.runtimeAdapterTraceKeyByRunId.keys()]) {
+      if (!this.runtimeAdapterProgressByRunId.has(runId) && isEvictable(runId)) {
+        this.runtimeAdapterTraceKeyByRunId.delete(runId);
+      }
+    }
   }
 
   private async getPersistedTranscriptClaudeLogs(

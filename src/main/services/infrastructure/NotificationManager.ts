@@ -108,6 +108,22 @@ const LEGACY_NOTIFICATION_PATHS = LEGACY_NOTIFICATION_FILENAMES.map((filename) =
 );
 const SENDER_ICON_CACHE = new Map<string, NotificationConstructorOptions['icon'] | undefined>();
 const WINDOWS_TOAST_AVATAR_CACHE = new Map<string, string | undefined>();
+/**
+ * Sender icons are decoded NativeImages (~260KB each), keyed per team+member.
+ * Bound both caches so long sessions across many teams cannot grow them
+ * without limit; eviction is FIFO (oldest inserted entry first).
+ */
+const NOTIFICATION_CACHE_MAX_ENTRIES = 128;
+
+function setBoundedCacheEntry<K, V>(cache: Map<K, V>, key: K, value: V): void {
+  if (!cache.has(key) && cache.size >= NOTIFICATION_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next();
+    if (!oldestKey.done) {
+      cache.delete(oldestKey.value);
+    }
+  }
+  cache.set(key, value);
+}
 const PARTICIPANT_AVATAR_COUNT = 13;
 const LEAD_PARTICIPANT_AVATAR_NUMBER = 1;
 
@@ -424,20 +440,20 @@ function getWindowsToastAvatarPath(avatarPath: string): string {
 
   const NativeImage = getNativeImage();
   if (!NativeImage) {
-    WINDOWS_TOAST_AVATAR_CACHE.set(avatarPath, avatarPath);
+    setBoundedCacheEntry(WINDOWS_TOAST_AVATAR_CACHE, avatarPath, avatarPath);
     return avatarPath;
   }
 
   try {
     const source = NativeImage.createFromPath(avatarPath);
     if (source.isEmpty()) {
-      WINDOWS_TOAST_AVATAR_CACHE.set(avatarPath, avatarPath);
+      setBoundedCacheEntry(WINDOWS_TOAST_AVATAR_CACHE, avatarPath, avatarPath);
       return avatarPath;
     }
 
     const resized = source.resize({ width: 96, height: 96 });
     if (resized.isEmpty()) {
-      WINDOWS_TOAST_AVATAR_CACHE.set(avatarPath, avatarPath);
+      setBoundedCacheEntry(WINDOWS_TOAST_AVATAR_CACHE, avatarPath, avatarPath);
       return avatarPath;
     }
 
@@ -447,11 +463,11 @@ function getWindowsToastAvatarPath(avatarPath: string): string {
     const parsed = path.parse(avatarPath);
     const outPath = path.join(cacheDir, `${parsed.name}-96.png`);
     writeFileSync(outPath, resized.toPNG());
-    WINDOWS_TOAST_AVATAR_CACHE.set(avatarPath, outPath);
+    setBoundedCacheEntry(WINDOWS_TOAST_AVATAR_CACHE, avatarPath, outPath);
     return outPath;
   } catch (error) {
     logger.debug(`[team-toast] failed to prepare Windows toast avatar: ${String(error)}`);
-    WINDOWS_TOAST_AVATAR_CACHE.set(avatarPath, avatarPath);
+    setBoundedCacheEntry(WINDOWS_TOAST_AVATAR_CACHE, avatarPath, avatarPath);
     return avatarPath;
   }
 }
@@ -476,7 +492,7 @@ function buildSenderNotificationIcon(
       if (NativeImage) {
         const avatarIcon = NativeImage.createFromPath(senderAvatarPath);
         if (!avatarIcon.isEmpty()) {
-          SENDER_ICON_CACHE.set(cacheKey, avatarIcon);
+          setBoundedCacheEntry(SENDER_ICON_CACHE, cacheKey, avatarIcon);
           return avatarIcon;
         }
       }
@@ -499,12 +515,12 @@ function buildSenderNotificationIcon(
       `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
     );
     const resolvedIcon = icon && !icon.isEmpty() ? icon : getAppIconPath();
-    SENDER_ICON_CACHE.set(cacheKey, resolvedIcon);
+    setBoundedCacheEntry(SENDER_ICON_CACHE, cacheKey, resolvedIcon);
     return resolvedIcon;
   } catch (error) {
     logger.debug(`[team-toast] sender icon fallback for "${senderLabel}": ${String(error)}`);
     const fallbackIcon = getAppIconPath();
-    SENDER_ICON_CACHE.set(cacheKey, fallbackIcon);
+    setBoundedCacheEntry(SENDER_ICON_CACHE, cacheKey, fallbackIcon);
     return fallbackIcon;
   }
 }
