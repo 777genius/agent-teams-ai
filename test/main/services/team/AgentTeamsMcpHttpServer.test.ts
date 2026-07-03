@@ -584,7 +584,7 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     expect(second).toBe(first);
     expect(spawnProcess).toHaveBeenCalledTimes(1);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 20_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 60_000);
     expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 3_000);
     expect(hoisted.killProcessTreeMock).not.toHaveBeenCalled();
   });
@@ -635,9 +635,9 @@ describe('AgentTeamsMcpHttpServer', () => {
     expect(spawnProcess).toHaveBeenCalledTimes(2);
     expect(allocatePort).toHaveBeenCalledTimes(1);
     expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(firstChild, 'SIGKILL');
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 20_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000);
     expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 3_000);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 20_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
     expect(vi.mocked(console.warn).mock.calls[1]?.join(' ')).toContain(
       'opencode_app_mcp_restart_reason:health_reuse_failed'

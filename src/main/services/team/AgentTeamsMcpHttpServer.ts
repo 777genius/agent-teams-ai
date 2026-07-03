@@ -20,7 +20,7 @@ import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpCon
 const logger = createLogger('Service:AgentTeamsMcpHttpServer');
 const MCP_HTTP_HOST = '127.0.0.1';
 const MCP_HTTP_ENDPOINT = '/mcp';
-const MCP_HTTP_READY_TIMEOUT_MS = 20_000;
+const MCP_HTTP_READY_TIMEOUT_MS = 60_000;
 const MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS = 3_000;
 const MCP_HTTP_READY_POLL_MS = 100;
 const MCP_HTTP_PORT_RELEASE_TIMEOUT_MS = 3_000;

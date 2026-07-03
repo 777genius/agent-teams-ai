@@ -334,7 +334,8 @@
       "remove": "Entfernen",
       "stop": "Stopp.",
       "task": "Aufgaben",
-      "visualize": "Visualisieren"
+      "visualize": "Visualisieren",
+      "usage": "Nutzung"
     },
     "deleteTeam": {
       "description": "Team löschen \"{{team}}\"? Diese Aktion ist irreversibel. Alle Teamdaten und Aufgaben werden gelöscht.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Edit-Team ist nicht verfügbar, während die Bereitstellung noch im Gang ist",
       "openBuiltInEditor": "Open-Projekt im integrierten Editor",
       "openTeamGraph": "Teamgraphen öffnen",
-      "stopTeam": "Stop Team"
+      "stopTeam": "Stop Team",
+      "openTeamUsage": "Teamnutzung öffnen"
     },
     "waitingForProvisioning": "Teamdaten erscheinen, sobald die Bereitstellung abgeschlossen ist",
     "context": {

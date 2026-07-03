@@ -7,6 +7,7 @@ import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
+import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
@@ -507,6 +508,7 @@ const electronAPI: ElectronAPI = {
   memberLogStream: createMemberLogStreamBridge(),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
+  tokenUsage: createTokenUsageBridge(ipcRenderer),
   telemetry: {
     getSentryContext: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_CONTEXT),
   },

@@ -132,6 +132,7 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.39.15",
+    "@daypicker/react": "10.0.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -496,7 +497,8 @@
       "@radix-ui/react-slot@1.2.4": "patches/@radix-ui__react-slot@1.2.4.patch",
       "@radix-ui/react-tooltip@1.2.8": "patches/@radix-ui__react-tooltip@1.2.8.patch",
       "@radix-ui/react-menu@2.1.16": "patches/@radix-ui__react-menu@2.1.16.patch",
-      "@radix-ui/react-checkbox@1.3.3": "patches/@radix-ui__react-checkbox@1.3.3.patch"
+      "@radix-ui/react-checkbox@1.3.3": "patches/@radix-ui__react-checkbox@1.3.3.patch",
+      "fastmcp@3.35.0": "patches/fastmcp@3.35.0.patch"
     }
   },
   "knip": {

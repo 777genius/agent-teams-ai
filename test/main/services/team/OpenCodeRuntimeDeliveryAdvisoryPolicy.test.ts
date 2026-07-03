@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOpenCodeRuntimeDeliveryUserVisibleImpact,
   decideOpenCodeRuntimeDeliveryAdvisory,
   OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS,
+  toOpenCodeRuntimeDeliveryStatus,
 } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
@@ -224,5 +226,73 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
         now: Date.parse(record.failedAt!) + OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS + 1,
       })
     ).toMatchObject({ action: 'suppress' });
+  });
+
+  it('turns attachment preparation failures into user-visible delivery messages', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        reason: 'attachment_model_unsupported',
+      })
+    ).toMatchObject({
+      state: 'error',
+      message:
+        'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.',
+    });
+  });
+
+  it('does not expose raw attachment preparation diagnostics to users', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        reason: 'opencode_attachment_delivery_prepare_failed',
+        diagnostics: [
+          'opencode_attachment_delivery_prepare_failed: ENOENT /Users/example/private.png',
+        ],
+      })
+    ).toMatchObject({
+      state: 'error',
+      message:
+        'OpenCode could not prepare the attachment for live delivery. Remove the attachment or try again.',
+    });
+  });
+
+  it('maps attachment diagnostic codes without surfacing the diagnostic payload', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        diagnostics: ['opencode_attachment_delivery_prepare_failed: attachment_too_large'],
+      })
+    ).toMatchObject({
+      state: 'error',
+      message:
+        'The attachment is too large for live OpenCode delivery. Reduce the image size or remove the attachment.',
+    });
+  });
+
+  it('maps prompt delivery records to runtime delivery status with advisory impact', () => {
+    const record = makeRecord({
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      inboxReadCommittedAt: '2026-05-09T12:01:00.000Z',
+      visibleReplyMessageId: 'reply-1',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      lastReason: null,
+      diagnostics: [],
+    });
+
+    expect(toOpenCodeRuntimeDeliveryStatus({ record })).toMatchObject({
+      messageId: 'msg-1',
+      providerId: 'opencode',
+      delivered: true,
+      accepted: true,
+      responsePending: false,
+      responseState: 'responded_visible_message',
+      ledgerStatus: 'responded',
+      ledgerRecordId: 'opencode-prompt:test',
+      laneId: 'secondary:opencode:jack',
+      visibleReplyMessageId: 'reply-1',
+      userVisibleImpact: { state: 'none' },
+    });
   });
 });

@@ -24,6 +24,7 @@ import {
   Bell,
   Calendar,
   FileText,
+  Gauge,
   LayoutDashboard,
   Network,
   Pin,
@@ -63,6 +64,7 @@ const TAB_ICONS = {
   extensions: Puzzle,
   schedules: Calendar,
   graph: Network,
+  'token-usage': Gauge,
   usage: BarChart3,
 } as const;
 

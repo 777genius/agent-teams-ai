@@ -170,6 +170,19 @@ function createSyntheticLeadAssistantChunk(
   };
 }
 
+function createSyntheticLeadApiErrorEntry(
+  uuid: string,
+  timestamp: string,
+  text: string
+): Record<string, unknown> {
+  return {
+    ...createSyntheticLeadAssistantChunk(uuid, timestamp, text),
+    error: 'rate_limit',
+    isApiErrorMessage: true,
+    entrypoint: 'sdk-cli',
+  };
+}
+
 async function createTempJsonl(entries: Record<string, unknown>[]): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-lead-session-'));
   tempPaths.push(dir);
@@ -5112,6 +5125,39 @@ describe('TeamDataService', () => {
     expect(messages[0]).toMatchObject({
       messageId: 'lead-thought-stream-chunk-1',
       text: 'Создал стартовую задачу для /212 и раздал работу.',
+    });
+  });
+
+  it('extracts Claude synthetic quota errors as lead-session messages', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createSyntheticLeadApiErrorEntry(
+        'quota-1',
+        '2026-07-01T20:46:55.944Z',
+        "You're out of extra usage · resets 11:50pm (Europe/Kiev)"
+      ),
+    ]);
+
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<InboxMessage[]>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const messages = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      from: 'team-lead',
+      source: 'lead_session',
+      leadSessionId: 'lead-1',
+      messageId: 'lead-thought-stream-quota-1',
+      text: "You're out of extra usage · resets 11:50pm (Europe/Kiev)",
     });
   });
 

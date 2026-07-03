@@ -5,7 +5,7 @@ import {
   planRateLimitAutoResume,
   type RateLimitAutoResumePlan,
 } from '@main/services/team/AutoResumeService';
-import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
+import { isActionableApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 
 import type { TeamNotificationPayload } from '@main/utils/teamNotificationBuilder';
@@ -94,7 +94,8 @@ function evictOldestIfNeeded(keys: Set<string>, maxSize: number): void {
 
 function createDefaultNotificationSink(): TeamNotificationSink {
   return {
-    addTeamNotification: (payload) => NotificationManager.getInstance().addTeamNotification(payload),
+    addTeamNotification: (payload) =>
+      NotificationManager.getInstance().addTeamNotification(payload),
   };
 }
 
@@ -115,7 +116,7 @@ export class TeamMessageNotificationScanner {
     this.#notificationSink = deps.notificationSink ?? createDefaultNotificationSink();
     this.#planAutoResume = deps.planAutoResume ?? planRateLimitAutoResume;
     this.#isRateLimit = deps.isRateLimit ?? isRateLimitMessage;
-    this.#isApiError = deps.isApiError ?? isApiErrorMessage;
+    this.#isApiError = deps.isApiError ?? isActionableApiErrorMessage;
     this.#now = deps.now ?? (() => new Date());
     this.#formatClockTime = deps.formatClockTime ?? formatNotificationClockTime;
     this.#autoResumeSink = deps.autoResumeSink ?? null;
@@ -143,9 +144,7 @@ export class TeamMessageNotificationScanner {
       const autoResumePlan = this.#planAutoResume({
         enabled: autoResumeEnabled,
         canAutoResume:
-          (context.teamIsAlive ?? true) &&
-          isLeadAutoResumeCandidate &&
-          autoResumeSessionMatches,
+          (context.teamIsAlive ?? true) && isLeadAutoResumeCandidate && autoResumeSessionMatches,
         messageText: msg.text,
         observedAt,
         messageTimestamp: new Date(msg.timestamp),
@@ -227,7 +226,10 @@ export class TeamMessageNotificationScanner {
     }
   }
 
-  scan(messages: readonly TeamNotificationMessage[], context: TeamMessageNotificationContext): void {
+  scan(
+    messages: readonly TeamNotificationMessage[],
+    context: TeamMessageNotificationContext
+  ): void {
     if (messages.length === 0) {
       return;
     }

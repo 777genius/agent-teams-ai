@@ -193,5 +193,168 @@
     "newVersionAvailable": "نیا نسخہ دستیاب ہے",
     "restartNow": "اب",
     "viewDetails": "تفصیلات دیکھیں"
+  },
+  "tokenUsage": {
+    "title": "استعمال",
+    "partialData": "جزوی ڈیٹا",
+    "actions": {
+      "refresh": "تازہ کریں",
+      "openTeam": "{{team}} کھولیں"
+    },
+    "aria": {
+      "modelUsageBySegment": "سیگمنٹ کے لحاظ سے ماڈل استعمال"
+    },
+    "controls": {
+      "includeCacheTokens": "کیش ٹوکن شامل کریں"
+    },
+    "dateRange": {
+      "allCollectedUsage": "ایپ کا تمام جمع شدہ استعمال",
+      "customRange": "حسب ضرورت رینج",
+      "default": "ڈیفالٹ",
+      "selectRange": "شروع اور ختم تاریخ منتخب کریں",
+      "presets": {
+        "all-time": "تمام وقت",
+        "today": "آج",
+        "this-week": "یہ ہفتہ",
+        "this-month": "یہ مہینہ",
+        "this-quarter": "یہ سہ ماہی",
+        "this-year": "یہ سال",
+        "last-week": "پچھلا ہفتہ",
+        "last-month": "پچھلا مہینہ",
+        "last-7-days": "آخری 7 دن",
+        "last-30-days": "آخری 30 دن"
+      }
+    },
+    "empty": {
+      "noActivityData": "کوئی سرگرمی نہیں",
+      "noAgents": "کوئی ایجنٹ نہیں",
+      "noChartData": "کوئی چارٹ ڈیٹا نہیں",
+      "noModelData": "کوئی ماڈل ڈیٹا نہیں",
+      "noRows": "کوئی قطار نہیں",
+      "noRuns": "کوئی رن نہیں",
+      "noTeams": "کوئی ٹیم نہیں",
+      "noTrendData": "کوئی ٹرینڈ ڈیٹا نہیں",
+      "noUsageDetail": "0 ایپ رن / 0 درخواستیں",
+      "noUsageYet": "ابھی کوئی استعمال نہیں"
+    },
+    "filters": {
+      "allTeams": "تمام ٹیمیں",
+      "filterTeams": "ٹیمیں فلٹر کریں",
+      "selectedTeams": "{{count}} ٹیمیں"
+    },
+    "labels": {
+      "cost": "لاگت",
+      "days": "{{count}} دن",
+      "less": "کم",
+      "more": "زیادہ",
+      "notAvailable": "دستیاب نہیں",
+      "now": "ابھی",
+      "otherModels": "دیگر ماڈلز",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} رنز",
+      "share": "حصہ",
+      "sourceCount": "{{count}} ذرائع",
+      "tokens": "ٹوکن",
+      "tokensCost": "{{tokens}} ٹوکن / {{cost}}",
+      "total": "کل",
+      "unassigned": "غیر تفویض",
+      "unknownAgent": "نامعلوم ایجنٹ"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Sources",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

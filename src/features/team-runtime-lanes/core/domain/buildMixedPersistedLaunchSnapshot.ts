@@ -36,6 +36,7 @@ export interface MixedLaneLeadRuntimeDefaults {
 
 export interface MixedSecondaryLaneMemberStateInput {
   laneId: string;
+  runtimeRunId?: string | null;
   member: TeamProvisioningMemberInput;
   leadDefaults: MixedLaneLeadRuntimeDefaults;
   evidence?: {
@@ -344,6 +345,7 @@ function createSecondaryLaneMemberState(
   const firstSpawnAcceptedAt = evidence
     ? resolveOpenCodeSecondaryFirstSpawnAcceptedAt(evidence, params.updatedAt)
     : undefined;
+  const runtimeRunId = params.runtimeRunId?.trim();
   const base: PersistedTeamLaunchMemberState = {
     name: params.member.name.trim(),
     providerId,
@@ -383,6 +385,7 @@ function createSecondaryLaneMemberState(
         ? Math.trunc(evidence.runtimePid)
         : undefined,
     runtimeSessionId: evidence?.runtimeSessionId ?? evidence?.sessionId,
+    runtimeRunId: runtimeRunId || undefined,
     bootstrapEvidenceSource: evidence?.bootstrapEvidenceSource,
     bootstrapMode: evidence?.bootstrapMode,
     appManagedBootstrapCandidate: evidence?.appManagedBootstrapCandidate,

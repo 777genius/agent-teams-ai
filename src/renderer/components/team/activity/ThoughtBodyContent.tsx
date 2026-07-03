@@ -84,7 +84,12 @@ export const ThoughtBodyContent = memo(
         )}
         <div className="group/thought relative flex text-[11px]">
           <div
-            className={`min-w-0 flex-1 [&>span>div>div>div]:py-2${isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : ''}`}
+            className={[
+              'min-w-0 flex-1 [&>span>div>div>div]:py-2',
+              isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             style={{ color: isApiError ? '#f87171' : CARD_TEXT_LIGHT }}
           >
             <span onClickCapture={onTaskIdClick ? handleTaskLinkClick : undefined}>

@@ -75,6 +75,13 @@ import {
   removeTerminalWorkspaceIpc,
   type TerminalWorkspaceFeatureFacade,
 } from '@features/terminal-workspace/main';
+import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  createTokenUsageFeature,
+  registerTokenUsageIpc,
+  removeTokenUsageIpc,
+  type TokenUsageFeatureFacade,
+} from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
@@ -204,6 +211,7 @@ import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
 import {
   getAutoDetectedClaudeBasePath,
+  getAppDataPath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
@@ -328,6 +336,54 @@ function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: num
   }
   relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
   return true;
+}
+
+function readOptionalEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
+function readOptionalEnvNumber(name: string): number | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function readOptionalEnvArgs(name: string): string[] | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  if (value.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        const args = parsed.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0
+        );
+        return args.length > 0 ? args : undefined;
+      }
+    } catch {
+      logger.warn(`Ignoring invalid JSON args in ${name}`);
+    }
+  }
+  const args = value.split(/\s+/).filter(Boolean);
+  return args.length > 0 ? args : undefined;
+}
+
+function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
+  return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
+}
+
+function formatTokenUsageBudgetValue(
+  value: number,
+  metric: 'tokens' | 'apiEquivalentCostUsd'
+): string {
+  if (metric === 'apiEquivalentCostUsd') {
+    return `$${value.toFixed(value >= 10 ? 0 : 2)}`;
+  }
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M tokens`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tokens`;
+  return `${Math.round(value)} tokens`;
 }
 
 if (
@@ -984,6 +1040,7 @@ let recentProjectsFeature: RecentProjectsFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
+let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
@@ -1017,6 +1074,7 @@ const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
+const TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS = 15_000;
 const STARTUP_RECOVERY_CONCURRENCY = 1;
 const MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY = 2;
 const MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_MS = 15_000;
@@ -2015,6 +2073,67 @@ async function initializeServices(): Promise<void> {
     teamsBasePath: getTeamsBasePath(),
     logger: createLogger('Feature:TerminalWorkspace'),
   });
+  const tokenUsageLogger = createLogger('Feature:TokenUsage');
+  tokenUsageFeature = createTokenUsageFeature({
+    ledgerPath: join(getAppDataPath(), 'token-usage', 'ledger.json'),
+    budgetSettingsPath: join(getAppDataPath(), 'token-usage', 'budget-settings.json'),
+    budgetNotificationStatePath: join(
+      getAppDataPath(),
+      'token-usage',
+      'budget-notification-state.json'
+    ),
+    teamsBasePath: getTeamsBasePath(),
+    claudeProjectsBasePath: getProjectsBasePath(),
+    ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
+    tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
+    ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
+    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS'),
+    tokscaleCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND'),
+    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS'),
+    commandImporterRefreshIntervalMs: readOptionalEnvNumber(
+      'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
+    ),
+    budgetNotificationSettings: {
+      getSettings: () => {
+        const notifications = configManager.getConfig().notifications;
+        return {
+          enabled: notifications.notifyOnUsageBudgetAlerts,
+          notifyAtWarning: notifications.notifyOnUsageBudgetWarning,
+          notifyAtCritical: notifications.notifyOnUsageBudgetCritical,
+          nativeToasts: notifications.notifyOnUsageBudgetNativeToast,
+        };
+      },
+    },
+    budgetNotificationSink: {
+      notifyBudgetThreshold: async (event) => {
+        await notificationManager.addTeamNotification({
+          teamEventType:
+            event.severity === 'critical' ? 'usage_budget_exceeded' : 'usage_budget_warning',
+          teamName: 'token-usage',
+          teamDisplayName: 'Usage budgets',
+          from: 'Usage',
+          summary: `${event.label} reached ${Math.round(event.percent)}% of ${formatTokenUsageBudgetMetricLabel(event.metric)} budget`,
+          body: `${formatTokenUsageBudgetValue(event.value, event.metric)} used of ${formatTokenUsageBudgetValue(event.limit, event.metric)} ${event.metric === 'apiEquivalentCostUsd' ? 'API-equivalent estimate' : 'limit'}.`,
+          dedupeKey: event.dedupeKey,
+          target: { kind: 'token_usage', focus: 'budgets' },
+          suppressToast: event.suppressToast,
+        });
+      },
+    },
+    publisher: {
+      publishSnapshot: (snapshot) => {
+        safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+        httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+      },
+    },
+    logger: tokenUsageLogger,
+  });
+  const tokenUsageStartupRefreshTimer = setTimeout(() => {
+    void tokenUsageFeature?.refreshSnapshot().catch((error: unknown) => {
+      tokenUsageLogger.warn('Failed to refresh token usage after startup', error);
+    });
+  }, TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS);
+  tokenUsageStartupRefreshTimer.unref?.();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
   type MemberWorkSyncRuntimeSnapshot = Awaited<
     ReturnType<TeamProvisioningService['getTeamAgentRuntimeSnapshot']>
@@ -2500,6 +2619,9 @@ async function initializeServices(): Promise<void> {
   registerOrganizationsIpc(ipcMain, organizationsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
+  if (tokenUsageFeature) {
+    registerTokenUsageIpc(ipcMain, tokenUsageFeature);
+  }
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
@@ -2560,6 +2682,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         organizationsFeature,
+        tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
@@ -2711,6 +2834,7 @@ async function shutdownServices(): Promise<void> {
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeTerminalWorkspaceIpc(ipcMain);
+      removeTokenUsageIpc(ipcMain);
       removeMemberWorkSyncIpc(ipcMain);
       removeMemberLogStreamIpc(ipcMain);
     });

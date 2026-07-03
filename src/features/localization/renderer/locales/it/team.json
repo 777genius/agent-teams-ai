@@ -334,7 +334,8 @@
       "remove": "Rimuovi",
       "stop": "Ferma",
       "task": "Task",
-      "visualize": "Visualizza"
+      "visualize": "Visualizza",
+      "usage": "Utilizzo"
     },
     "deleteTeam": {
       "description": "Eliminare il team \"{{team}}\"? Questa azione è irreversibile. Tutti i dati e i task del team verranno eliminati.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "La modifica del team non è disponibile mentre il provisioning è ancora in corso",
       "openBuiltInEditor": "Apri il progetto nell'editor integrato",
       "openTeamGraph": "Apri il grafo del team",
-      "stopTeam": "Ferma team"
+      "stopTeam": "Ferma team",
+      "openTeamUsage": "Apri utilizzo del team"
     },
     "waitingForProvisioning": "I dati del team appariranno una volta completato il provisioning",
     "context": {

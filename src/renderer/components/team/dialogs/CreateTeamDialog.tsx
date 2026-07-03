@@ -1965,12 +1965,6 @@ export const CreateTeamDialog = ({
       if (!selectedModel.trim()) {
         return t('create.validation.openCodeLeadModelRequired');
       }
-      const activeMemberCount = soloTeam
-        ? 0
-        : effectiveMemberDrafts.filter((member) => !member.removedAt && member.name.trim()).length;
-      if (activeMemberCount === 0) {
-        return t('create.validation.openCodeTeammateRequired');
-      }
     }
 
     if (!runtimeProviderLoadingById.get(selectedProviderId)) {
@@ -2013,7 +2007,6 @@ export const CreateTeamDialog = ({
     runtimeProviderLoadingById,
     selectedModel,
     selectedProviderId,
-    soloTeam,
     t,
   ]);
   const leadModelIssueText = useMemo(() => {

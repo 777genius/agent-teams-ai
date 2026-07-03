@@ -334,7 +334,8 @@
       "remove": "Xóa",
       "stop": "Dừng",
       "task": "Tác vụ",
-      "visualize": "Trực quan hóa"
+      "visualize": "Trực quan hóa",
+      "usage": "Mức dùng"
     },
     "deleteTeam": {
       "description": "Xóa đội ngũ \"{{team}}\"? Hành động này không thể đảo ngược. Tất cả dữ liệu và tác vụ của đội ngũ sẽ bị xóa.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Chỉnh sửa đội ngũ không khả dụng khi việc tạo vẫn đang diễn ra",
       "openBuiltInEditor": "Mở dự án trong trình soạn thảo tích hợp",
       "openTeamGraph": "Mở đồ thị đội ngũ",
-      "stopTeam": "Dừng đội ngũ"
+      "stopTeam": "Dừng đội ngũ",
+      "openTeamUsage": "Mở mức dùng của đội"
     },
     "waitingForProvisioning": "Dữ liệu đội ngũ sẽ xuất hiện khi quá trình tạo hoàn tất",
     "context": {

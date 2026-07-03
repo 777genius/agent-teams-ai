@@ -1,7 +1,7 @@
 /**
  * MoreMenu - Dropdown menu behind a "..." icon for less-frequent toolbar actions.
  *
- * Groups: Teams, Settings, Extensions, Search, Schedules, Docs, Export (session-only), Analyze (session-only).
+ * Groups: Teams, Settings, Extensions, Search, Schedules, Usage, Docs, Export (session-only), Analyze (session-only).
  * Closes on outside click or Escape.
  */
 
@@ -19,6 +19,7 @@ import {
   Braces,
   Calendar,
   FileText,
+  Gauge,
   MoreHorizontal,
   Puzzle,
   Search,
@@ -66,6 +67,7 @@ export const MoreMenu = ({
     openSchedulesTab,
     openSettingsTab,
     openTeamsTab,
+    openTab,
   } = useStore(
     useShallow((s) => ({
       openCommandPalette: s.openCommandPalette,
@@ -74,6 +76,7 @@ export const MoreMenu = ({
       openSchedulesTab: s.openSchedulesTab,
       openSettingsTab: s.openSettingsTab,
       openTeamsTab: s.openTeamsTab,
+      openTab: s.openTab,
     }))
   );
 
@@ -167,6 +170,15 @@ export const MoreMenu = ({
       icon: Calendar,
       onClick: () => {
         openSchedulesTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'token-usage',
+      label: 'Usage',
+      icon: Gauge,
+      onClick: () => {
+        openTab({ type: 'token-usage', label: 'Usage' });
         setIsOpen(false);
       },
     },
