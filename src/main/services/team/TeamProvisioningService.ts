@@ -169,21 +169,9 @@ import {
   shouldFinalizeIncompleteLaunchState as shouldFinalizeIncompleteLaunchStateHelper,
 } from './provisioning/TeamProvisioningCleanup';
 import { buildCombinedLogs } from './provisioning/TeamProvisioningCliExitPresentation';
-import {
-  assertConfigRawLeadOnlyForLaunch,
-  buildMembersMetaWritePayload,
-  collectConfigLaunchBaseNamesFromConfigMembers,
-  collectConfigLaunchBaseNamesFromMetaMembers,
-  getPrelaunchConfigBackupPath,
-  planCliAutoSuffixedConfigMemberCleanup,
-  planCliAutoSuffixedMetaMemberCleanup,
-  planTeamConfigLaunchNormalization,
-  selectMembersMetaTeammates,
-} from './provisioning/TeamProvisioningConfigLaunchNormalization';
-import {
-  type TeamProvisioningEffectiveLaunchState,
-  updateTeamConfigPostLaunch,
-} from './provisioning/TeamProvisioningConfigMaterialization';
+import { buildMembersMetaWritePayload } from './provisioning/TeamProvisioningConfigLaunchNormalization';
+import { TeamProvisioningConfigMaintenance } from './provisioning/TeamProvisioningConfigMaintenance';
+import { type TeamProvisioningEffectiveLaunchState } from './provisioning/TeamProvisioningConfigMaterialization';
 import {
   assertCreateTeamDoesNotExist,
   buildDeterministicCreateSpawnArgs,
@@ -218,7 +206,6 @@ import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
 } from './provisioning/TeamProvisioningFilesystemMonitor';
-import { mergeAndRemoveDuplicateInboxes as mergeAndRemoveDuplicateInboxesHelper } from './provisioning/TeamProvisioningInboxDuplicateMerge';
 import { markTeamInboxMessagesRead } from './provisioning/TeamProvisioningInboxPersistence';
 import {
   armSilentTeammateForward,
@@ -1722,6 +1709,7 @@ export class TeamProvisioningService {
   private inFlightResponses = new Set<string>();
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
   private readonly prepareCoordinator: TeamProvisioningPrepareCoordinator;
+  private readonly configMaintenance: TeamProvisioningConfigMaintenance;
   private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
   private workspaceTrustCoordinator: WorkspaceTrustCoordinator | null = null;
@@ -1799,6 +1787,31 @@ export class TeamProvisioningService {
         getRuntimeTurnSettledHookSettingsProvider: () => this.runtimeTurnSettledHookSettingsProvider,
         logger,
       }),
+    });
+    this.configMaintenance = new TeamProvisioningConfigMaintenance({
+      ports: {
+        getTeamsBasePath,
+        getProjectsBasePath,
+        readRegularFileUtf8: tryReadRegularFileUtf8,
+        writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
+        unlink: (filePath) => fs.promises.unlink(filePath),
+        readDir: (dirPath) => fs.promises.readdir(dirPath),
+        stat: (filePath) => fs.promises.stat(filePath),
+        withCanonicalInboxLock: (filePath, fn) =>
+          withFileLock(filePath, () => withInboxLock(filePath, fn)),
+        scanForNewestProjectSession,
+        membersMetaStore: this.membersMetaStore,
+        invalidateTeam: (teamName) => TeamConfigReader.invalidateTeam(teamName),
+        getLanguage: () =>
+          ConfigManager.getInstance().getConfig().general.agentLanguage || 'system',
+        now: () => Date.now(),
+        logger,
+      },
+      limits: {
+        teamJsonReadTimeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        teamConfigMaxBytes: TEAM_CONFIG_MAX_BYTES,
+        teamInboxMaxBytes: TEAM_INBOX_MAX_BYTES,
+      },
     });
     this.prepareCoordinator = new TeamProvisioningPrepareCoordinator(
       createDefaultTeamProvisioningPrepareCoordinatorPorts({
@@ -13999,34 +14012,7 @@ export class TeamProvisioningService {
    * is interrupted. On failure, restorePrelaunchConfig() reverts to the backup.
    */
   private async updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    try {
-      const raw = await tryReadRegularFileUtf8(configPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_CONFIG_MAX_BYTES,
-      });
-      if (!raw) {
-        throw new Error('config.json unreadable');
-      }
-      const config = JSON.parse(raw) as Record<string, unknown>;
-
-      config.projectPath = cwd;
-
-      const pathHistory = Array.isArray(config.projectPathHistory)
-        ? (config.projectPathHistory as string[]).filter((p) => typeof p === 'string' && p !== cwd)
-        : [];
-      pathHistory.push(cwd);
-      config.projectPathHistory = pathHistory.slice(-500);
-
-      await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-      TeamConfigReader.invalidateTeam(teamName);
-      logger.info(`[${teamName}] Updated config.projectPath immediately: ${cwd}`);
-    } catch (error) {
-      // Non-fatal: updateConfigPostLaunch will update it later if provisioning succeeds.
-      logger.warn(
-        `[${teamName}] Failed to update projectPath early: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    await this.configMaintenance.updateConfigProjectPath(teamName, cwd);
   }
 
   /**
@@ -14041,226 +14027,43 @@ export class TeamProvisioningService {
     color?: string,
     launchState?: TeamProvisioningEffectiveLaunchState
   ): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await updateTeamConfigPostLaunch(
-      { teamName, projectPath, detectedSessionId, color, launchState },
-      {
-        readConfig: () =>
-          tryReadRegularFileUtf8(configPath, {
-            timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-            maxBytes: TEAM_CONFIG_MAX_BYTES,
-          }),
-        writeConfig: (raw) => atomicWriteAsync(configPath, raw),
-        invalidateTeam: (name) => TeamConfigReader.invalidateTeam(name),
-        scanForNewestSession: (scanProjectPath, knownSessions) =>
-          scanForNewestProjectSession({
-            projectPath: scanProjectPath,
-            knownSessions,
-            projectsBasePath: getProjectsBasePath(),
-            ports: {
-              readDir: (dirPath) => fs.promises.readdir(dirPath),
-              stat: (filePath) => fs.promises.stat(filePath),
-            },
-          }),
-        getLanguage: () =>
-          ConfigManager.getInstance().getConfig().general.agentLanguage || 'system',
-        info: (message) => logger.info(message),
-        warn: (message) => logger.warn(message),
-      }
+    await this.configMaintenance.updateConfigPostLaunch(
+      teamName,
+      projectPath,
+      detectedSessionId,
+      color,
+      launchState
     );
   }
 
   private async cleanupCliAutoSuffixedMembers(teamName: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-
-    try {
-      const raw = await tryReadRegularFileUtf8(configPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_CONFIG_MAX_BYTES,
-      });
-      if (raw) {
-        const cleanupPlan = planCliAutoSuffixedConfigMemberCleanup(raw);
-        if (cleanupPlan) {
-          cleanupPlan.config.members = cleanupPlan.nextMembers;
-          await atomicWriteAsync(configPath, JSON.stringify(cleanupPlan.config, null, 2));
-          TeamConfigReader.invalidateTeam(teamName);
-          logger.warn(
-            `[${teamName}] Removed CLI auto-suffixed members from config.json: ${cleanupPlan.removedNames.join(', ')}`
-          );
-        }
-      }
-    } catch {
-      // best-effort
-    }
-
-    let activeNamesForInboxCleanup = new Set<string>();
-    try {
-      const metaMembers = await this.membersMetaStore.getMembers(teamName);
-      if (metaMembers.length > 0) {
-        const cleanupPlan = planCliAutoSuffixedMetaMemberCleanup(metaMembers);
-
-        if (cleanupPlan.removedNames.length > 0) {
-          await this.membersMetaStore.writeMembers(teamName, cleanupPlan.nextMembers);
-          logger.warn(
-            `[${teamName}] Removed CLI auto-suffixed members from members.meta.json: ${cleanupPlan.removedNames.join(', ')}`
-          );
-        }
-
-        activeNamesForInboxCleanup = cleanupPlan.activeNamesForInboxCleanup;
-      }
-    } catch {
-      // best-effort
-    }
-
-    // Also attempt inbox cleanup (merge alice-2.json into alice.json).
-    if (activeNamesForInboxCleanup.size > 0) {
-      try {
-        await this.mergeAndRemoveDuplicateInboxes(teamName, activeNamesForInboxCleanup);
-      } catch {
-        // best-effort
-      }
-    }
+    await this.configMaintenance.cleanupCliAutoSuffixedMembers(teamName);
   }
 
   private async assertConfigLeadOnlyForLaunch(teamName: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    const raw = await tryReadRegularFileUtf8(configPath, {
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-    });
-    assertConfigRawLeadOnlyForLaunch(raw);
+    await this.configMaintenance.assertConfigLeadOnlyForLaunch(teamName);
   }
 
   private async normalizeTeamConfigForLaunch(teamName: string, configRaw: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    const backupPath = getPrelaunchConfigBackupPath(configPath);
-    const normalizationPlan = planTeamConfigLaunchNormalization(configRaw);
-    if (!normalizationPlan) return;
-
-    // Try to determine base teammate names for inbox cleanup (prefer meta).
-    let baseNames = new Set<string>();
-    try {
-      const metaMembers = await this.membersMetaStore.getMembers(teamName);
-      baseNames = collectConfigLaunchBaseNamesFromMetaMembers(metaMembers);
-    } catch {
-      // ignore
-    }
-    if (baseNames.size === 0) {
-      baseNames = collectConfigLaunchBaseNamesFromConfigMembers(normalizationPlan.members);
-    }
-
-    // Backup current config on disk for crash recovery / debugging.
-    try {
-      await atomicWriteAsync(backupPath, configRaw);
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to write config prelaunch backup: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    // Write normalized config atomically.
-    normalizationPlan.config.members = normalizationPlan.leadMembers;
-    try {
-      await atomicWriteAsync(configPath, JSON.stringify(normalizationPlan.config, null, 2));
-      TeamConfigReader.invalidateTeam(teamName);
-      logger.info(
-        `[${teamName}] Normalized config.json for launch: kept ${normalizationPlan.leadMembers.length} lead member(s)`
-      );
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to normalize config.json for launch: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      return;
-    }
-
-    // Best-effort: merge and remove suffixed inboxes like alice-2.json to avoid UI duplicates.
-    await this.mergeAndRemoveDuplicateInboxes(teamName, baseNames);
+    await this.configMaintenance.normalizeTeamConfigForLaunch(teamName, configRaw);
   }
 
   /**
    * Restore config.json from prelaunch backup if launch fails after normalization.
    */
   private async restorePrelaunchConfig(teamName: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    const backupPath = getPrelaunchConfigBackupPath(configPath);
-    try {
-      const backupRaw = await tryReadRegularFileUtf8(backupPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_CONFIG_MAX_BYTES,
-      });
-      if (!backupRaw) {
-        return;
-      }
-      await atomicWriteAsync(configPath, backupRaw);
-      TeamConfigReader.invalidateTeam(teamName);
-      logger.info(`[${teamName}] Restored config.json from prelaunch backup after launch failure`);
-    } catch {
-      logger.debug(`[${teamName}] No prelaunch backup to restore (or read failed)`);
-    }
+    await this.configMaintenance.restorePrelaunchConfig(teamName);
   }
 
   /**
    * Remove the prelaunch backup file after a successful launch.
    */
   async cleanupPrelaunchBackup(teamName: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    const backupPath = getPrelaunchConfigBackupPath(configPath);
-    try {
-      await fs.promises.unlink(backupPath);
-    } catch {
-      // Backup may not exist — that's fine
-    }
-  }
-
-  private async mergeAndRemoveDuplicateInboxes(
-    teamName: string,
-    baseNames: Set<string>
-  ): Promise<void> {
-    await mergeAndRemoveDuplicateInboxesHelper({
-      inboxDir: path.join(getTeamsBasePath(), teamName, 'inboxes'),
-      baseNames,
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_INBOX_MAX_BYTES,
-      ports: {
-        readDir: (dirPath) => fs.promises.readdir(dirPath),
-        readRegularFileUtf8: tryReadRegularFileUtf8,
-        writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
-        unlink: (filePath) => fs.promises.unlink(filePath),
-        withCanonicalInboxLock: (filePath, fn) =>
-          withFileLock(filePath, () => withInboxLock(filePath, fn)),
-      },
-    });
+    await this.configMaintenance.cleanupPrelaunchBackup(teamName);
   }
 
   private async persistMembersMeta(teamName: string, request: TeamCreateRequest): Promise<void> {
-    const teammateMembers = selectMembersMetaTeammates(request.members);
-    if (teammateMembers.length === 0) {
-      return;
-    }
-
-    const joinedAt = Date.now();
-
-    try {
-      const membersToWrite = buildMembersMetaWritePayload(
-        teammateMembers.map((member) => ({
-          ...member,
-          joinedAt,
-        }))
-      );
-      await this.membersMetaStore.writeMembers(teamName, membersToWrite, {
-        providerBackendId: request.providerBackendId,
-      });
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to persist members.meta.json: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
+    await this.configMaintenance.persistMembersMeta(teamName, request);
   }
 
   private async resolveLaunchExpectedMembers(
