@@ -201,7 +201,6 @@ import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   createCrossTeamLeadSuppressionState,
   type CrossTeamDeliveredLeadBlock,
-  getPendingCrossTeamReplyExpectationKeys,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
@@ -3616,15 +3615,6 @@ export class TeamProvisioningService {
       teamName,
       otherTeam,
       conversationId
-    );
-  }
-
-  private getPendingCrossTeamReplyExpectationKeys(teamName: string): Set<string> {
-    return getPendingCrossTeamReplyExpectationKeys(
-      this.pendingCrossTeamFirstReplies,
-      teamName,
-      Date.now(),
-      TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
     );
   }
 
