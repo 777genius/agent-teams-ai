@@ -402,10 +402,7 @@ import {
   setOpenCodeRuntimePendingBootstrapStatus as setOpenCodeRuntimePendingBootstrapStatusHelper,
   setOpenCodeSecondaryBootstrapStalledStatus as setOpenCodeSecondaryBootstrapStalledStatusHelper,
 } from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
-import {
-  boundOpenCodeAppManagedBriefingText,
-  isPersistedOpenCodeSecondaryLaneMember,
-} from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
+import { boundOpenCodeAppManagedBriefingText } from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { resolveOpenCodeMemberIdentityFromDirectory as resolveOpenCodeMemberIdentityFromDirectoryHelper } from './provisioning/TeamProvisioningOpenCodeMemberIdentity';
 import {
   type OpenCodeMemberInboxRelayOptions,
@@ -440,7 +437,6 @@ import {
   tryStopPersistedOpenCodeRuntimePidForStoppedLane as tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
 import {
-  findPersistedLaunchMemberForLane as findPersistedLaunchMemberForLaneHelper,
   type OpenCodeRuntimePendingPermissionsPersistencePorts,
   type OpenCodeRuntimePermissionListingAdapter,
   type OpenCodeRuntimePermissionSpawnStatusPorts,
@@ -449,6 +445,7 @@ import {
   syncOpenCodeRuntimePermissionsAfterDelivery,
   syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
+import { rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromBridgeHelper } from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
 import {
   type OpenCodeRuntimeLaneRecoveryPorts,
   resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper,
@@ -582,10 +579,7 @@ import {
   validateRuntimeLaunchSelection as validateRuntimeLaunchSelectionHelper,
   type ValidConfigProbeResult,
 } from './provisioning/TeamProvisioningRuntimeLaunchSelection';
-import {
-  mergeRuntimeDiagnostics,
-  normalizeRuntimePositiveInteger,
-} from './provisioning/TeamProvisioningRuntimeMetadata';
+import { mergeRuntimeDiagnostics } from './provisioning/TeamProvisioningRuntimeMetadata';
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import {
   getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
@@ -2957,112 +2951,19 @@ export class TeamProvisioningService {
     runtimePid?: number;
     reason: string;
   }): Promise<void> {
-    const runtimePid = normalizeRuntimePositiveInteger(input.runtimePid);
-    if (!runtimePid) {
-      return;
-    }
-
-    const command = readOpenCodeRuntimeLaneProcessCommandByPid(runtimePid);
-    if (!command || !isOpenCodeServeCommand(command)) {
-      logger.debug(
-        `[${input.teamName}] Ignoring OpenCode bridge runtime pid ${runtimePid} for ${input.memberName}: process identity is not an active opencode serve host.`
-      );
-      return;
-    }
-
-    const observedAt = nowIso();
-    try {
-      const changed = await this.enqueueLaunchStateStoreOperation(input.teamName, async () => {
-        const previous = await this.launchStateStore.read(input.teamName).catch(() => null);
-        const previousEntry = this.findPersistedLaunchMemberForLane({
-          previousLaunchState: previous,
-          laneId: input.laneId,
-          memberName: input.memberName,
-          runId: input.runId,
-        });
-        if (!previous || !previousEntry) {
-          return false;
-        }
-        const previousMember = previousEntry.member;
-        if (!isPersistedOpenCodeSecondaryLaneMember(previousMember)) {
-          return false;
-        }
-        if (previousMember.laneId && previousMember.laneId !== input.laneId) {
-          return false;
-        }
-        const previousRunId = previousMember.runtimeRunId?.trim();
-        const incomingRunId = input.runId?.trim();
-        if (previousRunId && incomingRunId && previousRunId !== incomingRunId) {
-          return false;
-        }
-        const previousSessionId = previousMember.runtimeSessionId?.trim();
-        const incomingSessionId = input.runtimeSessionId?.trim();
-        if (previousSessionId && incomingSessionId && previousSessionId !== incomingSessionId) {
-          return false;
-        }
-        if (
-          previousMember.runtimePid === runtimePid &&
-          previousMember.pidSource === 'opencode_bridge'
-        ) {
-          return false;
-        }
-
-        const nextMember: PersistedTeamLaunchMemberState = {
-          ...previousMember,
-          runtimePid,
-          ...(incomingRunId ? { runtimeRunId: incomingRunId } : {}),
-          ...(incomingSessionId ? { runtimeSessionId: incomingSessionId } : {}),
-          pidSource: 'opencode_bridge',
-          lastRuntimeAliveAt: observedAt,
-          lastEvaluatedAt: observedAt,
-          sources: {
-            ...(previousMember.sources ?? {}),
-            processAlive: true,
-          },
-          diagnostics: mergeRuntimeDiagnostics(
-            previousMember.diagnostics,
-            [`runtime pid: ${runtimePid}`, input.reason],
-            previousMember.runtimeDiagnostic
-          ),
-        };
-        const nextSnapshot = createPersistedLaunchSnapshot({
-          teamName: previous.teamName,
-          expectedMembers: previous.expectedMembers,
-          bootstrapExpectedMembers: previous.bootstrapExpectedMembers,
-          leadSessionId: previous.leadSessionId,
-          launchPhase: previous.launchPhase,
-          members: {
-            ...previous.members,
-            [previousEntry.key]: nextMember,
-          },
-          updatedAt: observedAt,
-        });
-        await this.writeLaunchStateSnapshotNow(input.teamName, nextSnapshot);
-        return true;
-      });
-      if (changed) {
-        this.invalidateRuntimeSnapshotCaches(input.teamName);
-        this.teamChangeEmitter?.({
-          type: 'member-spawn',
-          teamName: input.teamName,
-          ...(input.runId ? { runId: input.runId } : {}),
-          detail: input.memberName,
-        });
-      }
-    } catch (error) {
-      logger.debug(
-        `[${input.teamName}] Failed to persist OpenCode bridge runtime pid ${runtimePid} for ${input.memberName}: ${getErrorMessage(error)}`
-      );
-    }
-  }
-
-  private findPersistedLaunchMemberForLane(input: {
-    previousLaunchState: PersistedTeamLaunchSnapshot | null | undefined;
-    laneId: string;
-    memberName: string;
-    runId?: string | null;
-  }): { key: string; member: PersistedTeamLaunchMemberState } | null {
-    return findPersistedLaunchMemberForLaneHelper(input);
+    await rememberOpenCodeRuntimePidFromBridgeHelper(input, {
+      nowIso,
+      readProcessCommandByPid: readOpenCodeRuntimeLaneProcessCommandByPid,
+      isOpenCodeServeCommand,
+      enqueueLaunchStateStoreOperation: (teamName, operation) =>
+        this.enqueueLaunchStateStoreOperation(teamName, operation),
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+      writeLaunchStateSnapshot: (teamName, snapshot) =>
+        this.writeLaunchStateSnapshotNow(teamName, snapshot),
+      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      logDebug: (message) => logger.debug(message),
+    });
   }
 
   private async maybeSyncOpenCodeRuntimePermissionsAfterDelivery(
