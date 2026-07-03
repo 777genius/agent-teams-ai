@@ -170,7 +170,6 @@ import {
 import {
   buildIncompleteLaunchCleanupReason as buildIncompleteLaunchCleanupReasonHelper,
   cleanupProvisioningRun,
-  clearPostCompactReminderState,
   shouldFinalizeIncompleteLaunchState as shouldFinalizeIncompleteLaunchStateHelper,
 } from './provisioning/TeamProvisioningCleanup';
 import { buildCombinedLogs } from './provisioning/TeamProvisioningCliExitPresentation';
@@ -211,6 +210,10 @@ import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
 } from './provisioning/TeamProvisioningFilesystemMonitor';
+import {
+  injectGeminiPostLaunchHydration as injectGeminiPostLaunchHydrationHelper,
+  injectPostCompactReminder as injectPostCompactReminderHelper,
+} from './provisioning/TeamProvisioningIdlePromptInjection';
 import { markTeamInboxMessagesRead } from './provisioning/TeamProvisioningInboxPersistence';
 import {
   armSilentTeammateForward,
@@ -12404,301 +12407,51 @@ export class TeamProvisioningService {
    * If the injection fails (stdin not writable, process killed), we do not retry.
    */
   private async injectPostCompactReminder(run: ProvisioningRun): Promise<void> {
-    // Consume the pending flag immediately — strict one-shot policy.
-    run.pendingPostCompactReminder = false;
-
-    // Guard: process must be alive and writable.
-    if (!run.child?.stdin?.writable || run.processKilled || run.cancelRequested) {
-      logger.warn(
-        `[${run.teamName}] post-compact reminder skipped — process not writable or killed`
-      );
-      return;
-    }
-
-    // Guard: don't inject if another turn is actively processing (race with user send / inbox relay).
-    if (run.leadActivityState !== 'idle') {
-      logger.info(
-        `[${run.teamName}] post-compact reminder deferred — lead is ${run.leadActivityState}, not idle`
-      );
-      // Re-arm so it triggers on next idle.
-      run.pendingPostCompactReminder = true;
-      return;
-    }
-
-    // Guard: don't inject while a relay capture is in-flight.
-    if (run.leadRelayCapture) {
-      logger.info(`[${run.teamName}] post-compact reminder deferred — relay capture in-flight`);
-      run.pendingPostCompactReminder = true;
-      return;
-    }
-
-    // Guard: don't inject while a silent DM forward is in progress.
-    if (run.silentUserDmForward) {
-      logger.info(
-        `[${run.teamName}] post-compact reminder deferred — silent DM forward in progress`
-      );
-      run.pendingPostCompactReminder = true;
-      return;
-    }
-
-    // Read current team config for up-to-date members (may have changed since launch).
-    let currentMembers: TeamCreateRequest['members'] = run.request.members;
-    let leadName = 'team-lead';
-    try {
-      const config = await this.readConfigForObservation(run.teamName);
-      if (config?.members) {
-        const configLead = config.members.find((m) => isLeadMember(m));
-        leadName = configLead?.name?.trim() || 'team-lead';
-        // Convert config members (excluding lead) to TeamCreateRequest member format.
-        const configTeammates = config.members
-          .filter((m) => !isLeadMember(m) && m?.name)
-          .map((m) => ({
-            name: m.name,
-            role: m.role ?? undefined,
-          }));
-        // When config.members only has the lead (pre-created config without
-        // TeamCreate), fall back to run.request.members for the teammate list.
-        if (configTeammates.length > 0) {
-          currentMembers = configTeammates;
-        }
-      } else {
-        leadName =
-          run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
-          'team-lead';
-      }
-    } catch {
-      // Fallback to launch-time members if config is unavailable.
-      leadName =
-        run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
-        'team-lead';
-      logger.warn(
-        `[${run.teamName}] post-compact reminder: config unavailable, using launch-time members`
-      );
-    }
-    const isSolo = currentMembers.length === 0;
-
-    // Build persistent lead context.
-    const persistentContext = buildPersistentLeadContext({
-      teamName: run.teamName,
-      leadName,
-      isSolo,
-      members: currentMembers,
-      compact: true,
+    await injectPostCompactReminderHelper(run, {
+      logger,
+      readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
+      readTasks: (teamName) => new TeamTaskReader().getTasks(teamName),
+      isLeadMember,
+      buildPersistentLeadContext,
+      buildTaskBoardSnapshot,
+      buildGeminiPostLaunchHydrationPrompt,
+      getPromptSizeSummary,
+      writeLeadStdin: (targetRun, payload) =>
+        new Promise<void>((resolve, reject) => {
+          targetRun.child!.stdin!.write(payload + '\n', (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        }),
+      setLeadActivity: (targetRun, state) => this.setLeadActivity(targetRun, state),
+      resetRuntimeToolActivity: (targetRun, memberName) =>
+        this.resetRuntimeToolActivity(targetRun, memberName),
+      getRunLeadName: (targetRun) => this.getRunLeadName(targetRun),
     });
-
-    // Best-effort: fetch fresh task board snapshot.
-    let taskBoardBlock = '';
-    try {
-      const taskReader = new TeamTaskReader();
-      const tasks = await taskReader.getTasks(run.teamName);
-      taskBoardBlock = buildTaskBoardSnapshot(tasks);
-    } catch {
-      // If tasks can't be read, inject without the snapshot.
-      logger.warn(`[${run.teamName}] post-compact reminder: task board snapshot unavailable`);
-    }
-
-    // Re-check guards after async work.
-    if (!run.child?.stdin?.writable || run.processKilled || run.cancelRequested) {
-      logger.warn(
-        `[${run.teamName}] post-compact reminder aborted — process state changed during preparation`
-      );
-      return;
-    }
-    if (run.leadActivityState !== 'idle') {
-      logger.info(
-        `[${run.teamName}] post-compact reminder deferred — lead activity changed to ${run.leadActivityState as string}`
-      );
-      // Re-arm so it triggers on next idle.
-      run.pendingPostCompactReminder = true;
-      return;
-    }
-
-    const message = [
-      `Apply these standing rules and current team state before responding:`,
-      ``,
-      `You are "${leadName}", the team lead of team "${run.teamName}".`,
-      `You are running in a non-interactive CLI session. Do not ask questions.`,
-      `CRITICAL: Execute ALL steps directly yourself in sequence. Do NOT delegate any step to a sub-agent via the Agent tool. The ONLY valid use of the Agent tool is spawning individual teammates.`,
-      ``,
-      persistentContext,
-      taskBoardBlock.trim() ? `\n${taskBoardBlock}` : '',
-      ``,
-      `Do NOT start new work or execute tasks in this turn. Reply with one concise user-facing team status line about board readiness and teammate availability. Only report board readiness and teammate availability.`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const payload = JSON.stringify({
-      type: 'user',
-      message: {
-        role: 'user',
-        content: [{ type: 'text', text: message }],
-      },
-    });
-
-    run.postCompactReminderInFlight = true;
-    run.suppressPostCompactReminderOutput = true;
-    this.setLeadActivity(run, 'active');
-
-    try {
-      const stdin = run.child.stdin;
-      await new Promise<void>((resolve, reject) => {
-        stdin.write(payload + '\n', (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      logger.info(`[${run.teamName}] post-compact reminder injected`);
-    } catch (error) {
-      // Strict drop-after-attempt — do not re-arm.
-      clearPostCompactReminderState(run);
-      this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
-      this.setLeadActivity(run, 'idle');
-      logger.warn(
-        `[${run.teamName}] post-compact reminder injection failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
   }
 
   private async injectGeminiPostLaunchHydration(run: ProvisioningRun): Promise<void> {
-    run.pendingGeminiPostLaunchHydration = false;
-
-    if (
-      run.geminiPostLaunchHydrationSent ||
-      !run.child?.stdin?.writable ||
-      run.processKilled ||
-      run.cancelRequested
-    ) {
-      logger.warn(
-        `[${run.teamName}] Gemini post-launch hydration skipped — process not writable, killed, or already sent`
-      );
-      return;
-    }
-
-    if (run.leadActivityState !== 'idle') {
-      logger.info(
-        `[${run.teamName}] Gemini post-launch hydration deferred — lead is ${run.leadActivityState}, not idle`
-      );
-      run.pendingGeminiPostLaunchHydration = true;
-      return;
-    }
-
-    if (run.leadRelayCapture) {
-      logger.info(
-        `[${run.teamName}] Gemini post-launch hydration deferred — relay capture in-flight`
-      );
-      run.pendingGeminiPostLaunchHydration = true;
-      return;
-    }
-
-    if (run.silentUserDmForward) {
-      logger.info(
-        `[${run.teamName}] Gemini post-launch hydration deferred — silent DM forward in progress`
-      );
-      run.pendingGeminiPostLaunchHydration = true;
-      return;
-    }
-
-    let currentMembers: TeamCreateRequest['members'] = run.effectiveMembers;
-    let leadName =
-      run.effectiveMembers.find((m) => m.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
-    try {
-      const config = await this.readConfigForObservation(run.teamName);
-      if (config?.members) {
-        const configLead = config.members.find((m) => isLeadMember(m));
-        leadName = configLead?.name?.trim() || leadName;
-        const configTeammates = config.members
-          .filter((m) => !isLeadMember(m) && m?.name)
-          .map((m) => ({
-            name: m.name,
-            role: m.role ?? undefined,
-          }));
-        if (configTeammates.length > 0) {
-          const launchMembersByName = new Map(
-            run.effectiveMembers.map((member) => [member.name, member] as const)
-          );
-          currentMembers = configTeammates.map((member) => ({
-            ...launchMembersByName.get(member.name),
-            ...member,
-          }));
-        }
-      }
-    } catch {
-      logger.warn(
-        `[${run.teamName}] Gemini post-launch hydration: config unavailable, using launch-time members`
-      );
-    }
-
-    let tasks: TeamTask[] = [];
-    try {
-      tasks = await new TeamTaskReader().getTasks(run.teamName);
-    } catch {
-      logger.warn(
-        `[${run.teamName}] Gemini post-launch hydration: task board snapshot unavailable`
-      );
-    }
-
-    if (
-      run.geminiPostLaunchHydrationSent ||
-      !run.child?.stdin?.writable ||
-      run.processKilled ||
-      run.cancelRequested
-    ) {
-      logger.warn(
-        `[${run.teamName}] Gemini post-launch hydration aborted — process state changed during preparation`
-      );
-      return;
-    }
-    if (run.leadActivityState !== 'idle') {
-      logger.info(
-        `[${run.teamName}] Gemini post-launch hydration deferred — lead activity changed to ${run.leadActivityState as string}`
-      );
-      run.pendingGeminiPostLaunchHydration = true;
-      return;
-    }
-
-    const message = buildGeminiPostLaunchHydrationPrompt(run, leadName, currentMembers, tasks);
-    const promptSize = getPromptSizeSummary(message);
-    logger.info(
-      `[${run.teamName}] Gemini post-launch hydration prepared (${promptSize.chars} chars / ${promptSize.lines} lines)`
-    );
-
-    const payload = JSON.stringify({
-      type: 'user',
-      message: {
-        role: 'user',
-        content: [{ type: 'text', text: message }],
-      },
+    await injectGeminiPostLaunchHydrationHelper(run, {
+      logger,
+      readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
+      readTasks: (teamName) => new TeamTaskReader().getTasks(teamName),
+      isLeadMember,
+      buildPersistentLeadContext,
+      buildTaskBoardSnapshot,
+      buildGeminiPostLaunchHydrationPrompt,
+      getPromptSizeSummary,
+      writeLeadStdin: (targetRun, payload) =>
+        new Promise<void>((resolve, reject) => {
+          targetRun.child!.stdin!.write(payload + '\n', (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        }),
+      setLeadActivity: (targetRun, state) => this.setLeadActivity(targetRun, state),
+      resetRuntimeToolActivity: (targetRun, memberName) =>
+        this.resetRuntimeToolActivity(targetRun, memberName),
+      getRunLeadName: (targetRun) => this.getRunLeadName(targetRun),
     });
-
-    run.geminiPostLaunchHydrationInFlight = true;
-    run.geminiPostLaunchHydrationSent = true;
-    run.suppressGeminiPostLaunchHydrationOutput = true;
-    this.setLeadActivity(run, 'active');
-
-    try {
-      const stdin = run.child.stdin;
-      await new Promise<void>((resolve, reject) => {
-        stdin.write(payload + '\n', (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      logger.info(`[${run.teamName}] Gemini post-launch hydration injected`);
-    } catch (error) {
-      run.geminiPostLaunchHydrationInFlight = false;
-      run.geminiPostLaunchHydrationSent = false;
-      run.suppressGeminiPostLaunchHydrationOutput = false;
-      this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
-      this.setLeadActivity(run, 'idle');
-      logger.warn(
-        `[${run.teamName}] Gemini post-launch hydration injection failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
   }
 
   /**
