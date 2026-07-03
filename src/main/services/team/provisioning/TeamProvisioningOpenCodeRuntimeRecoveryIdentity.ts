@@ -54,6 +54,71 @@ export interface OpenCodeRuntimeRecoveryIdentityHelpers {
   isOpenCodeRuntimeLaneIndexActive(teamName: string, laneId: string): Promise<boolean>;
 }
 
+export function resolveOpenCodeMemberDeliveryIdentityFromDirectory(input: {
+  teamName: string;
+  memberName: string;
+  directory: OpenCodeMemberDirectory;
+  resolveOpenCodeMemberIdentityFromDirectory: (
+    teamName: string,
+    memberName: string,
+    directory: OpenCodeMemberDirectory
+  ) => OpenCodeMemberIdentityResolution;
+}): OpenCodeMemberDeliveryIdentityResolution {
+  const laneIdentity = input.resolveOpenCodeMemberIdentityFromDirectory(
+    input.teamName,
+    input.memberName,
+    input.directory
+  );
+  if (!laneIdentity.ok) {
+    return laneIdentity;
+  }
+  return {
+    ok: true,
+    canonicalMemberName: laneIdentity.canonicalMemberName,
+    laneId: laneIdentity.laneId,
+  };
+}
+
+export function resolveOpenCodeMembersForRuntimeLaneFromDirectory(input: {
+  teamName: string;
+  laneId: string;
+  directory: OpenCodeMemberDirectory;
+  resolveOpenCodeMemberIdentityFromDirectory: (
+    teamName: string,
+    memberName: string,
+    directory: OpenCodeMemberDirectory
+  ) => OpenCodeMemberIdentityResolution;
+}): string[] {
+  const names = new Set<string>();
+  for (const member of input.directory.config?.members ?? []) {
+    if (member.name?.trim()) {
+      names.add(member.name.trim());
+    }
+  }
+  for (const member of input.directory.metaMembers) {
+    if (member.name?.trim()) {
+      names.add(member.name.trim());
+    }
+  }
+  const resolved: string[] = [];
+  for (const name of names) {
+    const identity = input.resolveOpenCodeMemberIdentityFromDirectory(
+      input.teamName,
+      name,
+      input.directory
+    );
+    if (identity.ok && identity.laneId === input.laneId) {
+      resolved.push(identity.canonicalMemberName);
+    }
+  }
+  if (resolved.length > 0) {
+    return [...new Set(resolved)];
+  }
+  const secondaryMatch = /^secondary:opencode:(.+)$/i.exec(input.laneId);
+  const fallbackMember = secondaryMatch?.[1]?.trim();
+  return fallbackMember ? [fallbackMember] : [];
+}
+
 export function createOpenCodeRuntimeRecoveryIdentityHelpers(
   ports: OpenCodeRuntimeRecoveryIdentityHelperPorts
 ): OpenCodeRuntimeRecoveryIdentityHelpers {
@@ -78,11 +143,9 @@ export function createOpenCodeRuntimeRecoveryIdentityHelpers(
         return null;
       }
 
-      const evidence = await readManifestEvidence(
-        ports.getTeamsBasePath(),
-        teamName,
-        laneId
-      ).catch(() => null);
+      const evidence = await readManifestEvidence(ports.getTeamsBasePath(), teamName, laneId).catch(
+        () => null
+      );
       const durableRunId = evidence?.activeRunId?.trim();
       return durableRunId || null;
     },
@@ -92,19 +155,13 @@ export function createOpenCodeRuntimeRecoveryIdentityHelpers(
       memberName: string
     ): Promise<OpenCodeMemberDeliveryIdentityResolution> {
       const directory = await ports.readOpenCodeMemberDirectory(teamName);
-      const laneIdentity = ports.resolveOpenCodeMemberIdentityFromDirectory(
+      return resolveOpenCodeMemberDeliveryIdentityFromDirectory({
         teamName,
         memberName,
-        directory
-      );
-      if (!laneIdentity.ok) {
-        return laneIdentity;
-      }
-      return {
-        ok: true,
-        canonicalMemberName: laneIdentity.canonicalMemberName,
-        laneId: laneIdentity.laneId,
-      };
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory:
+          ports.resolveOpenCodeMemberIdentityFromDirectory,
+      });
     },
 
     async resolveOpenCodeMembersForRuntimeLane(
@@ -112,30 +169,13 @@ export function createOpenCodeRuntimeRecoveryIdentityHelpers(
       laneId: string
     ): Promise<string[]> {
       const directory = await ports.readOpenCodeMemberDirectory(teamName);
-      const names = new Set<string>();
-      for (const member of directory.config?.members ?? []) {
-        if (member.name?.trim()) {
-          names.add(member.name.trim());
-        }
-      }
-      for (const member of directory.metaMembers) {
-        if (member.name?.trim()) {
-          names.add(member.name.trim());
-        }
-      }
-      const resolved: string[] = [];
-      for (const name of names) {
-        const identity = ports.resolveOpenCodeMemberIdentityFromDirectory(teamName, name, directory);
-        if (identity.ok && identity.laneId === laneId) {
-          resolved.push(identity.canonicalMemberName);
-        }
-      }
-      if (resolved.length > 0) {
-        return [...new Set(resolved)];
-      }
-      const secondaryMatch = /^secondary:opencode:(.+)$/i.exec(laneId);
-      const fallbackMember = secondaryMatch?.[1]?.trim();
-      return fallbackMember ? [fallbackMember] : [];
+      return resolveOpenCodeMembersForRuntimeLaneFromDirectory({
+        teamName,
+        laneId,
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory:
+          ports.resolveOpenCodeMemberIdentityFromDirectory,
+      });
     },
 
     async isOpenCodeRuntimeLaneIndexActive(teamName: string, laneId: string): Promise<boolean> {

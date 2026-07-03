@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createOpenCodeRuntimeRecoveryIdentityHelpers } from '../TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
+import {
+  createOpenCodeRuntimeRecoveryIdentityHelpers,
+  resolveOpenCodeMemberDeliveryIdentityFromDirectory,
+  resolveOpenCodeMembersForRuntimeLaneFromDirectory,
+} from '../TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 
 import type {
   OpenCodeMemberDirectory,
@@ -65,6 +69,96 @@ function createHelpers(input: {
 }
 
 describe('TeamProvisioningOpenCodeRuntimeRecoveryIdentity', () => {
+  it('projects directory identity resolution to the delivery identity contract', () => {
+    const directory = createDirectory();
+
+    expect(
+      resolveOpenCodeMemberDeliveryIdentityFromDirectory({
+        teamName: 'team-a',
+        memberName: 'bob',
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory: vi.fn(() => ({
+          ok: true,
+          canonicalMemberName: 'Bob',
+          laneId: 'secondary:opencode:bob',
+          laneIdentity: {
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+          },
+          memberRuntimeCwd: '/fake/member',
+        })),
+      })
+    ).toEqual({
+      ok: true,
+      canonicalMemberName: 'Bob',
+      laneId: 'secondary:opencode:bob',
+    });
+  });
+
+  it('deduplicates canonical members resolved from config and meta sources for a lane', () => {
+    const directory = createDirectory({
+      config: {
+        name: 'runtime-recovery-team',
+        projectPath: '/fake/project',
+        members: [
+          { name: ' bob ', role: 'Builder', providerId: 'opencode' },
+          { name: 'Robert', role: 'Builder', providerId: 'opencode' },
+        ],
+      },
+      metaMembers: [
+        { name: 'bob', role: 'Builder', providerId: 'opencode' },
+        { name: 'alice', role: 'Reviewer', providerId: 'opencode' },
+      ],
+    });
+
+    expect(
+      resolveOpenCodeMembersForRuntimeLaneFromDirectory({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory: vi.fn((_, memberName) => ({
+          ok: true,
+          canonicalMemberName: ['bob', 'robert'].includes(memberName.trim().toLowerCase())
+            ? 'Bob'
+            : memberName.trim(),
+          laneId:
+            memberName.trim().toLowerCase() === 'alice' ? 'primary' : 'secondary:opencode:bob',
+          laneIdentity: {
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+          },
+        })),
+      })
+    ).toEqual(['Bob']);
+  });
+
+  it('uses case-insensitive secondary lane fallback only when the suffix has content', () => {
+    const directory = createDirectory();
+    const resolveOpenCodeMemberIdentityFromDirectory = vi.fn(() => ({
+      ok: false as const,
+      reason: 'opencode_recipient_unavailable' as const,
+    }));
+
+    expect(
+      resolveOpenCodeMembersForRuntimeLaneFromDirectory({
+        teamName: 'team-a',
+        laneId: 'SECONDARY:OPENCODE: Bob ',
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory,
+      })
+    ).toEqual(['Bob']);
+    expect(
+      resolveOpenCodeMembersForRuntimeLaneFromDirectory({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:   ',
+        directory,
+        resolveOpenCodeMemberIdentityFromDirectory,
+      })
+    ).toEqual([]);
+  });
+
   it('prefers the in-memory runtime run id before reading durable lane state', async () => {
     const readLaneIndex = vi.fn(async () => createLaneIndex({}));
     const helpers = createOpenCodeRuntimeRecoveryIdentityHelpers({

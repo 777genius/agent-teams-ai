@@ -1550,8 +1550,15 @@ export class TeamProvisioningService {
       getInboxMessages: (input) =>
         this.inboxReader.getMessagesFor(input.teamName, input.memberName),
       resolveIdentity: (input) =>
-        this.resolveOpenCodeMemberDeliveryIdentity(input.teamName, input.memberName),
-      isLaneActive: (input) => this.isOpenCodeRuntimeLaneIndexActive(input.teamName, input.laneId),
+        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
+          input.teamName,
+          input.memberName
+        ),
+      isLaneActive: (input) =>
+        this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(
+          input.teamName,
+          input.laneId
+        ),
       isRecordNotFoundError: (error) =>
         getErrorMessage(error).startsWith('OpenCode prompt delivery record not found:'),
       info: (message) => logger.info(message),
@@ -1868,11 +1875,14 @@ export class TeamProvisioningService {
         createLedger: (teamName, laneId) =>
           this.createOpenCodePromptDeliveryLedger(teamName, laneId),
         resolveMembersForRuntimeLane: (teamName, laneId) =>
-          this.resolveOpenCodeMembersForRuntimeLane(teamName, laneId),
+          this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMembersForRuntimeLane(
+            teamName,
+            laneId
+          ),
         getInboxMessages: (teamName, memberName) =>
           this.inboxReader.getMessagesFor(teamName, memberName),
         resolveCurrentRuntimeRunId: (teamName, laneId) =>
-          this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+          this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
         hasStableInboxMessageId,
         logPromptDeliveryEvent: (event, record, extra) =>
           this.logOpenCodePromptDeliveryEvent(event, record, extra),
@@ -3138,9 +3148,9 @@ export class TeamProvisioningService {
       getCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
         this.getCurrentOpenCodeRuntimeRunId(teamName, laneId),
       resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-        this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+        this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
       isOpenCodeRuntimeLaneIndexActive: (teamName, laneId) =>
-        this.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
+        this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
       tryRecoverOpenCodeRuntimeLaneBeforeDelivery: (input) =>
         this.tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input),
       tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: (input) =>
@@ -3262,56 +3272,6 @@ export class TeamProvisioningService {
     });
   }
 
-  private async resolveCurrentOpenCodeRuntimeRunId(
-    teamName: string,
-    laneId: string
-  ): Promise<string | null> {
-    return this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
-      teamName,
-      laneId
-    );
-  }
-
-  private async resolveOpenCodeMemberDeliveryIdentity(
-    teamName: string,
-    memberName: string
-  ): Promise<
-    | {
-        ok: true;
-        canonicalMemberName: string;
-        laneId: string;
-      }
-    | {
-        ok: false;
-        reason:
-          | 'recipient_is_not_opencode'
-          | 'recipient_removed'
-          | 'opencode_recipient_unavailable';
-      }
-  > {
-    return this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
-      teamName,
-      memberName
-    );
-  }
-
-  private async resolveOpenCodeMembersForRuntimeLane(
-    teamName: string,
-    laneId: string
-  ): Promise<string[]> {
-    return this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMembersForRuntimeLane(
-      teamName,
-      laneId
-    );
-  }
-
-  private async isOpenCodeRuntimeLaneIndexActive(
-    teamName: string,
-    laneId: string
-  ): Promise<boolean> {
-    return this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId);
-  }
-
   private createOpenCodeRuntimeLaneRecoveryPorts(): OpenCodeRuntimeLaneRecoveryPorts {
     return {
       teamsBasePath: getTeamsBasePath(),
@@ -3335,7 +3295,7 @@ export class TeamProvisioningService {
       readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
       readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
       isOpenCodeRuntimeLaneIndexActive: (teamName, laneId) =>
-        this.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
+        this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
     };
   }
 
@@ -3962,7 +3922,7 @@ export class TeamProvisioningService {
       teamsBasePath: getTeamsBasePath(),
       resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
       resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-        this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+        this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
       writeLaunchState: async (teamName, snapshot) => {
         await this.writeLaunchStateSnapshot(teamName, snapshot);
@@ -4007,7 +3967,10 @@ export class TeamProvisioningService {
     return createOpenCodeRuntimeDeliveryServiceHelper(teamName, laneId, {
       teamsBasePath: getTeamsBasePath(),
       resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
-        this.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
+        this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
+          candidateTeamName,
+          candidateLaneId
+        ),
       createOpenCodeRuntimeDeliveryPorts: () => this.createOpenCodeRuntimeDeliveryPorts(),
       emitTeamChange: (event) => {
         this.teamChangeEmitter?.({
@@ -4046,7 +4009,10 @@ export class TeamProvisioningService {
     return tryGetActiveOpenCodePromptDeliveryRecordHelper(input, {
       teamsBasePath: getTeamsBasePath(),
       resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
+          teamName,
+          memberName
+        ),
       tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
         this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
       createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
@@ -4080,7 +4046,10 @@ export class TeamProvisioningService {
       scheduleOpenCodeMemberInboxDeliveryWake: (wakeInput) =>
         this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
       resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
+          teamName,
+          memberName
+        ),
       tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
         this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
       createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
@@ -8095,7 +8064,11 @@ export class TeamProvisioningService {
         result.lastDelivery = { delivered: false, reason: 'recipient_is_not_opencode' };
         return result;
       }
-      const memberIdentity = await this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName);
+      const memberIdentity =
+        await this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
+          teamName,
+          memberName
+        );
       if (!memberIdentity.ok) {
         result.lastDelivery = { delivered: false, reason: memberIdentity.reason };
         return result;
@@ -8295,7 +8268,10 @@ export class TeamProvisioningService {
             ports: {
               ledger: promptLedger,
               resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-                this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+                this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
+                  teamName,
+                  laneId
+                ),
               markFailedTerminal: (input) => this.markOpenCodePromptLedgerFailedTerminal(input),
               logPromptDeliveryEvent: (event, record, extra) =>
                 this.logOpenCodePromptDeliveryEvent(event, record, extra),
@@ -8430,7 +8406,10 @@ export class TeamProvisioningService {
   }): Promise<Set<string>> {
     return getOpenCodeAgendaSyncRecoveryBypassMessageIdsHelper(input, {
       resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
+          teamName,
+          memberName
+        ),
       readLaneState: async (teamName, laneId) => {
         const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
           () => null
@@ -8502,8 +8481,7 @@ export class TeamProvisioningService {
 
     const work = (async (): Promise<number> => {
       const runId =
-        this.runTracking.getAliveRunId(teamName) ??
-        this.runTracking.getProvisioningRunId(teamName);
+        this.runTracking.getAliveRunId(teamName) ?? this.runTracking.getProvisioningRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
@@ -11297,7 +11275,10 @@ export class TeamProvisioningService {
           recoveredAny = true;
           const runtimeRunId =
             runtimeEvidence.appManagedBootstrapCandidate?.runId ??
-            (await this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)) ??
+            (await this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
+              teamName,
+              laneIdentity.laneId
+            )) ??
             persistedMember?.runtimeRunId?.trim() ??
             undefined;
           secondaryMembers.push({
