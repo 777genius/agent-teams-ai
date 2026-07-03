@@ -19,7 +19,7 @@ import {
 } from '../TeamProvisioningSecondaryRuntimeRuns';
 
 import type { TeamRuntimeLaunchResult } from '../../runtime/TeamRuntimeAdapter';
-import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
+import type { PlannedRuntimeMember, TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types';
 
 const baseRequest = {
@@ -32,14 +32,14 @@ const baseRequest = {
 function member(
   name: string,
   providerId: 'codex' | 'opencode',
-  extra: Partial<TeamCreateRequest['members'][number]> = {}
-): TeamCreateRequest['members'][number] {
+  extra: Omit<Partial<TeamCreateRequest['members'][number]>, 'providerId'> = {}
+): PlannedRuntimeMember {
   return {
     name,
     role: 'engineer',
     providerId,
     ...extra,
-  } as TeamCreateRequest['members'][number];
+  } as PlannedRuntimeMember;
 }
 
 function runtimeResult(teamLaunchState: TeamRuntimeLaunchResult['teamLaunchState']) {
@@ -118,7 +118,7 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
     });
 
     it('reuses the existing lane id when rebuilding a member lane state', () => {
-      const run = {
+      const run: Pick<SecondaryRuntimeRunProvisioningRun, 'request' | 'mixedSecondaryLanes'> = {
         request: { ...baseRequest, providerId: 'opencode' },
         mixedSecondaryLanes: [
           {
@@ -266,7 +266,7 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
     it('resolves current OpenCode run ids from primary and secondary runtime maps', () => {
       const shouldRouteOpenCodeToRuntimeAdapter = vi.fn(() => true);
       const isCancellableRuntimeAdapterProgress = vi.fn(() => true);
-      const runs = new Map([
+      const runs = new Map<string, { request: TeamCreateRequest }>([
         ['run-tracked', { request: { ...baseRequest, providerId: 'opencode' } }],
       ]);
       const secondaryRuns = new Map<string, Map<string, SecondaryRuntimeRunEntry>>();
