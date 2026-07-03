@@ -59,6 +59,13 @@ export interface LeadInboxRelayBatchSelection {
   hasPendingFollowUpRelay: boolean;
 }
 
+export interface LeadInboxRelayReadOnlyPlan {
+  permanentlyIgnored: RelayInboxMessage[];
+  passiveIdleUnread: RelayInboxMessage[];
+  readOnlyIgnoredIds: Set<string>;
+  remainingUnread: RelayInboxMessage[];
+}
+
 export interface NativeSameTeamFingerprint {
   id: string;
   from: string;
@@ -409,6 +416,48 @@ export function getLeadInboxRelayNoiseIds(
         .map(({ message }) => message.messageId)
     ),
   };
+}
+
+export function planLeadInboxRelayReadOnlyMessages(input: {
+  unread: readonly RelayInboxMessage[];
+  silentIdleIds: ReadonlySet<string>;
+  passiveIdleIds: ReadonlySet<string>;
+  coarseNonIdleNoiseIds: ReadonlySet<string>;
+  isPermanentlyIgnored: (message: RelayInboxMessage) => boolean;
+}): LeadInboxRelayReadOnlyPlan {
+  const permanentlyIgnored = input.unread.filter(
+    (message) =>
+      input.silentIdleIds.has(message.messageId) ||
+      input.coarseNonIdleNoiseIds.has(message.messageId) ||
+      input.isPermanentlyIgnored(message)
+  );
+  const passiveIdleUnread = input.unread.filter((message) =>
+    input.passiveIdleIds.has(message.messageId)
+  );
+  const readOnlyIgnoredIds = new Set([
+    ...permanentlyIgnored.map((message) => message.messageId),
+    ...passiveIdleUnread.map((message) => message.messageId),
+  ]);
+  return {
+    permanentlyIgnored,
+    passiveIdleUnread,
+    readOnlyIgnoredIds,
+    remainingUnread: input.unread.filter((message) => !readOnlyIgnoredIds.has(message.messageId)),
+  };
+}
+
+export function selectActionableLeadRelayUnread(input: {
+  remainingUnread: readonly RelayInboxMessage[];
+  nativeMatchedMessageIds: ReadonlySet<string>;
+  deferredIds: ReadonlySet<string>;
+  permissionRequestIds: ReadonlySet<string>;
+}): RelayInboxMessage[] {
+  return input.remainingUnread.filter(
+    (message) =>
+      !input.nativeMatchedMessageIds.has(message.messageId) &&
+      !input.deferredIds.has(message.messageId) &&
+      !input.permissionRequestIds.has(message.messageId)
+  );
 }
 
 export function selectMemberInboxRelayBatch(

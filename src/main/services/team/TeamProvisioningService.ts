@@ -58,10 +58,6 @@ import {
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import {
-  isTeamInternalControlMessageText,
-  stripExactInternalControlEchoPrefix,
-} from '@shared/utils/teamInternalControlMessages';
 import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
 import {
   parseAllTeammateMessages,
@@ -212,17 +208,17 @@ import {
   updateTeamConfigPostLaunch,
 } from './provisioning/TeamProvisioningConfigMaterialization';
 import {
-  buildCrossTeamConversationKey,
+  buildLeadActiveCrossTeamReplyHints,
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   type CrossTeamDeliveredLeadBlock,
-  getCrossTeamSourceTeam,
   getPendingCrossTeamReplyExpectationKeys,
+  getPendingHistoricalCrossTeamReplyKeys,
+  isCrossTeamLeadReplyToOwnOutbound,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
   matchCrossTeamLeadInboxMessages as matchCrossTeamLeadInboxMessagesHelper,
   parseCrossTeamRecipient,
-  parseCrossTeamTargetTeam,
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
   rememberRecentCrossTeamLeadDeliveryMessageIds,
   resolveSingleActiveCrossTeamReplyHint,
@@ -269,11 +265,12 @@ import {
   type NativeSameTeamFingerprint,
   normalizeSameTeamText,
   openCodeTaskRefsOverlap,
+  planLeadInboxRelayReadOnlyMessages,
+  selectActionableLeadRelayUnread,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
   shouldDeferSameTeamMessage as shouldDeferSameTeamMessageHelper,
-  shouldSuppressUnverifiedLeadRelayStateLine,
   splitMemberInboxRelayUnread,
 } from './provisioning/TeamProvisioningInboxRelayPolicy';
 import {
@@ -337,11 +334,17 @@ import {
   deriveLeadContextUsageStateFromUsage,
   getInitialLeadContextWindowTokensForRequest,
 } from './provisioning/TeamProvisioningLeadContextUsage';
+import { projectLeadRelayReply } from './provisioning/TeamProvisioningLeadRelayProjection';
 import {
   getPreCompleteCliErrorTextFromRun,
   getRunTrackedCwdFromRun,
   isCurrentTrackedRunById,
 } from './provisioning/TeamProvisioningLeadRunDerivation';
+import {
+  hasAcceptedMemberWorkSyncReport as hasAcceptedMemberWorkSyncReportHelper,
+  type MemberWorkSyncAcceptedReportChecker,
+  scheduleLeadProofMissingWorkSyncRecovery as scheduleLeadProofMissingWorkSyncRecoveryHelper,
+} from './provisioning/TeamProvisioningLeadWorkSyncRecovery';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import {
   matchesExactTeamMemberName,
@@ -1284,11 +1287,6 @@ interface OpenCodeMemberInboxRelayOptions {
     taskRefs?: TaskRef[];
   };
 }
-
-type MemberWorkSyncAcceptedReportChecker = (input: {
-  teamName: string;
-  memberName: string;
-}) => Promise<boolean> | boolean;
 
 export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
@@ -3612,6 +3610,15 @@ export class TeamProvisioningService {
       teamName,
       otherTeam,
       conversationId
+    );
+  }
+
+  private getPendingCrossTeamReplyExpectationKeys(teamName: string): Set<string> {
+    return getPendingCrossTeamReplyExpectationKeys(
+      this.pendingCrossTeamFirstReplies,
+      teamName,
+      Date.now(),
+      TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
     );
   }
 
@@ -9564,24 +9571,14 @@ export class TeamProvisioningService {
     teamName: string;
     memberName: string;
   }): Promise<boolean> {
-    const checker = this.memberWorkSyncAcceptedReportChecker;
-    if (!checker) {
-      return false;
-    }
-
-    try {
-      return (
-        (await checker({
-          teamName: input.teamName,
-          memberName: input.memberName,
-        })) === true
-      );
-    } catch (error) {
-      logger.warn(
-        `[${input.teamName}] Failed to check accepted work sync report for ${input.memberName}: ${getErrorMessage(error)}`
-      );
-      return false;
-    }
+    return hasAcceptedMemberWorkSyncReportHelper({
+      ...input,
+      checker: this.memberWorkSyncAcceptedReportChecker,
+      onError: (error) =>
+        logger.warn(
+          `[${input.teamName}] Failed to check accepted work sync report for ${input.memberName}: ${getErrorMessage(error)}`
+        ),
+    });
   }
 
   private async hasAcceptedLeadWorkSyncReport(input: {
@@ -9599,26 +9596,14 @@ export class TeamProvisioningService {
     leadName: string;
     message: InboxMessage & { messageId: string };
   }): Promise<boolean> {
-    const scheduler = this.memberWorkSyncProofMissingRecoveryScheduler;
-    if (!scheduler) {
-      return false;
-    }
-
-    try {
-      const result = (await scheduler({
-        teamName: input.teamName,
-        memberName: input.leadName,
-        originalMessageId: input.message.messageId,
-        taskRefs: input.message.taskRefs,
-        reason: 'lead_member_work_sync_report_required',
-      })) as { scheduled?: boolean; reason?: string } | null | undefined;
-      return result?.scheduled === true || result?.reason === 'coalesced_recent';
-    } catch (error) {
-      logger.warn(
-        `[${input.teamName}] Failed to schedule lead proof-missing work sync recovery for ${input.leadName}: ${getErrorMessage(error)}`
-      );
-      return false;
-    }
+    return scheduleLeadProofMissingWorkSyncRecoveryHelper({
+      ...input,
+      scheduler: this.memberWorkSyncProofMissingRecoveryScheduler,
+      onError: (error) =>
+        logger.warn(
+          `[${input.teamName}] Failed to schedule lead proof-missing work sync recovery for ${input.leadName}: ${getErrorMessage(error)}`
+        ),
+    });
   }
 
   async relayLeadInboxMessages(teamName: string): Promise<number> {
@@ -9739,47 +9724,8 @@ export class TeamProvisioningService {
       const { silentIdleIds, passiveIdleIds, coarseNonIdleNoiseIds } =
         getLeadInboxRelayNoiseIds(unread);
 
-      const latestOutboundByConversation = new Map<string, number>();
-      const latestReadInboundByConversation = new Map<string, number>();
-      for (const message of leadInboxMessages) {
-        const timestampMs = Date.parse(message.timestamp);
-        if (!Number.isFinite(timestampMs)) continue;
-        if (message.source === CROSS_TEAM_SENT_SOURCE) {
-          const conversationId = message.conversationId?.trim();
-          const targetTeam = parseCrossTeamTargetTeam(message.to);
-          if (!conversationId || !targetTeam) continue;
-          const key = buildCrossTeamConversationKey(targetTeam, conversationId);
-          latestOutboundByConversation.set(
-            key,
-            Math.max(latestOutboundByConversation.get(key) ?? 0, timestampMs)
-          );
-          continue;
-        }
-        if (message.source === CROSS_TEAM_SOURCE && message.read) {
-          const conversationId =
-            message.replyToConversationId?.trim() ??
-            message.conversationId?.trim() ??
-            parseCrossTeamPrefix(message.text)?.conversationId;
-          const sourceTeam = getCrossTeamSourceTeam(message.from);
-          if (!conversationId || !sourceTeam) continue;
-          const key = buildCrossTeamConversationKey(sourceTeam, conversationId);
-          latestReadInboundByConversation.set(
-            key,
-            Math.max(latestReadInboundByConversation.get(key) ?? 0, timestampMs)
-          );
-        }
-      }
-      const pendingHistoricalReplies = new Set(
-        Array.from(latestOutboundByConversation.entries())
-          .filter(([key, sentAtMs]) => sentAtMs > (latestReadInboundByConversation.get(key) ?? 0))
-          .map(([key]) => key)
-      );
-      const pendingTransientReplies = getPendingCrossTeamReplyExpectationKeys(
-        this.pendingCrossTeamFirstReplies,
-        teamName,
-        Date.now(),
-        TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
-      );
+      const pendingHistoricalReplies = getPendingHistoricalCrossTeamReplyKeys(leadInboxMessages);
+      const pendingTransientReplies = this.getPendingCrossTeamReplyExpectationKeys(teamName);
       const matchedTransientReplyKeys = new Set<string>();
 
       const wasRecentlyDeliveredCrossTeam = (message: InboxMessage): boolean => {
@@ -9794,35 +9740,27 @@ export class TeamProvisioningService {
         );
       };
       const isCrossTeamReplyToOwnOutbound = (message: InboxMessage): boolean => {
-        if (message.source !== CROSS_TEAM_SOURCE) return false;
-        const conversationId =
-          message.replyToConversationId?.trim() ??
-          message.conversationId?.trim() ??
-          parseCrossTeamPrefix(message.text)?.conversationId;
-        if (!conversationId) return false;
-        const sourceTeam = getCrossTeamSourceTeam(message.from);
-        if (!sourceTeam) return false;
-        const key = buildCrossTeamConversationKey(sourceTeam, conversationId);
-        if (pendingHistoricalReplies.has(key)) {
-          return true;
-        }
-        if (pendingTransientReplies.has(key)) {
-          matchedTransientReplyKeys.add(key);
-          return true;
-        }
-        return false;
+        return isCrossTeamLeadReplyToOwnOutbound({
+          message,
+          pendingHistoricalReplies,
+          pendingTransientReplies,
+          matchedTransientReplyKeys,
+        });
       };
 
       // Category 1: permanently ignored → mark as read.
       // Includes noise (idle/shutdown), cross-team sender copies, cross-team reply dedup.
-      const permanentlyIgnored = unread.filter(
-        (m) =>
-          silentIdleIds.has(m.messageId) ||
-          coarseNonIdleNoiseIds.has(m.messageId) ||
-          m.source === CROSS_TEAM_SENT_SOURCE ||
-          isCrossTeamReplyToOwnOutbound(m) ||
-          wasRecentlyDeliveredCrossTeam(m)
-      );
+      const { permanentlyIgnored, passiveIdleUnread, readOnlyIgnoredIds, remainingUnread } =
+        planLeadInboxRelayReadOnlyMessages({
+          unread,
+          silentIdleIds,
+          passiveIdleIds,
+          coarseNonIdleNoiseIds,
+          isPermanentlyIgnored: (message) =>
+            message.source === CROSS_TEAM_SENT_SOURCE ||
+            isCrossTeamReplyToOwnOutbound(message) ||
+            wasRecentlyDeliveredCrossTeam(message),
+        });
       if (permanentlyIgnored.length > 0) {
         try {
           await this.markInboxMessagesRead(teamName, leadName, permanentlyIgnored);
@@ -9837,7 +9775,6 @@ export class TeamProvisioningService {
         }
       }
 
-      const passiveIdleUnread = unread.filter((m) => passiveIdleIds.has(m.messageId));
       if (passiveIdleUnread.length > 0) {
         try {
           await this.markInboxMessagesRead(teamName, leadName, passiveIdleUnread);
@@ -9853,11 +9790,6 @@ export class TeamProvisioningService {
         }
       }
 
-      const readOnlyIgnoredIds = new Set([
-        ...permanentlyIgnored.map((m) => m.messageId),
-        ...passiveIdleUnread.map((m) => m.messageId),
-      ]);
-      const remainingUnread = unread.filter((m) => !readOnlyIgnoredIds.has(m.messageId));
       if (isStaleRelayRun()) return 0;
 
       // Category 2: same-team native delivery confirmation (one-to-one pairing).
@@ -9891,12 +9823,12 @@ export class TeamProvisioningService {
       );
 
       // Actionable: everything not in any category.
-      const actionableUnread = remainingUnread.filter(
-        (m) =>
-          !nativeMatchedMessageIds.has(m.messageId) &&
-          !deferredIds.has(m.messageId) &&
-          !permissionRequestIds.has(m.messageId)
-      );
+      const actionableUnread = selectActionableLeadRelayUnread({
+        remainingUnread,
+        nativeMatchedMessageIds,
+        deferredIds,
+        permissionRequestIds,
+      });
 
       // Layer 3: schedule retry timers.
       if (nativeMatchedMessageIds.size > 0 && !sameTeamPersisted) {
@@ -9924,13 +9856,7 @@ export class TeamProvisioningService {
           ...(member.role?.trim() ? { role: member.role.trim() } : {}),
         }));
       const workSyncControlUrl = await this.resolveControlApiBaseUrl();
-      run.activeCrossTeamReplyHints = batch.flatMap((m) => {
-        if (m.source !== 'cross_team') return [];
-        const sourceTeam = m.from.includes('.') ? m.from.split('.', 1)[0] : '';
-        const conversationId = m.conversationId ?? parseCrossTeamPrefix(m.text)?.conversationId;
-        if (!sourceTeam || !conversationId) return [];
-        return [{ toTeam: sourceTeam, conversationId }];
-      });
+      run.activeCrossTeamReplyHints = buildLeadActiveCrossTeamReplyHints(batch);
       const message = buildLeadInboxRelayPrompt({
         teamName,
         leadName,
@@ -10025,13 +9951,10 @@ export class TeamProvisioningService {
         }
       }
 
-      const readCommitBatch = await getLeadRelayReadCommitBatch({
+      const readCommitBatch = await this.getLeadRelayReadCommitBatch({
         teamName,
         leadName,
         batch,
-        hasAcceptedLeadWorkSyncReport: (report) => this.hasAcceptedLeadWorkSyncReport(report),
-        scheduleLeadProofMissingWorkSyncRecovery: (recoveryInput) =>
-          this.scheduleLeadProofMissingWorkSyncRecovery(recoveryInput),
       });
       for (const m of readCommitBatch) {
         relayedIds.add(m.messageId);
@@ -10045,54 +9968,41 @@ export class TeamProvisioningService {
         }
       }
 
-      // Strip agent-only blocks — lead may respond with pure coordination content
-      // that is not meant for the human user.
-      const cleanReply = replyText
-        ? stripExactInternalControlEchoPrefix(
-            stripAgentBlocks(replyText),
-            stripAgentBlocks(message)
-          )
-        : null;
-      if (cleanReply) {
-        if (isTeamInternalControlMessageText(cleanReply)) {
+      const replyProjection = projectLeadRelayReply({
+        replyText,
+        relayPrompt: message,
+        replyVisibility,
+        capturedVisibleSendMessage,
+        capturedUserVisibleSendMessage,
+        leadName,
+        runId,
+        nowIso: nowIso(),
+        nowMs: Date.now(),
+      });
+      if (replyProjection.kind === 'suppressed') {
+        if (replyProjection.reason === 'internal_control') {
           logger.debug(`[${teamName}] Suppressed internal lead relay echo`);
-        } else if (
-          (replyVisibility === 'internal_activity' && capturedVisibleSendMessage) ||
-          (replyVisibility === 'user' && capturedUserVisibleSendMessage)
-        ) {
+        } else if (replyProjection.reason === 'visible_duplicate') {
           logger.debug(`[${teamName}] Suppressed lead relay text duplicated by visible message`);
-        } else if (
-          replyVisibility === 'internal_activity' &&
-          shouldSuppressUnverifiedLeadRelayStateLine(cleanReply)
-        ) {
+        } else if (replyProjection.reason === 'unverified_state') {
           logger.debug(`[${teamName}] Suppressed unverified lead relay state claim`);
-        } else if (replyVisibility === 'internal_activity') {
-          this.pushLiveLeadTextMessage(
-            run,
-            cleanReply,
-            `lead-relay-${runId}-${Date.now()}`,
-            nowIso()
-          );
-        } else {
-          const relayMsg: InboxMessage = {
-            from: leadName,
-            to: 'user',
-            text: cleanReply,
-            timestamp: nowIso(),
-            read: true,
-            summary: cleanReply.length > 60 ? cleanReply.slice(0, 57) + '...' : cleanReply,
-            messageId: `lead-process-${runId}-${Date.now()}`,
-            source: 'lead_process',
-          };
-          this.pushLiveLeadProcessMessage(teamName, relayMsg);
-          // Persist to disk so relayed replies survive app restart and trigger FileWatcher
-          this.persistSentMessage(teamName, relayMsg);
-          this.teamChangeEmitter?.({
-            type: 'inbox',
-            teamName,
-            detail: 'lead-process-reply',
-          });
         }
+      } else if (replyProjection.kind === 'live_activity') {
+        this.pushLiveLeadTextMessage(
+          run,
+          replyProjection.text,
+          replyProjection.messageId,
+          replyProjection.timestamp
+        );
+      } else {
+        this.pushLiveLeadProcessMessage(teamName, replyProjection.message);
+        // Persist to disk so relayed replies survive app restart and trigger FileWatcher
+        this.persistSentMessage(teamName, replyProjection.message);
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName,
+          detail: 'lead-process-reply',
+        });
       }
       if (hasPendingFollowUpRelay) {
         this.scheduleLeadInboxFollowUpRelay(teamName);

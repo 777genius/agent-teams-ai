@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildCrossTeamConversationKey,
+  buildLeadActiveCrossTeamReplyHints,
   clearPendingCrossTeamReplyExpectation,
   extractCrossTeamPseudoTargetTeam,
   getCrossTeamSourceTeam,
   getPendingCrossTeamReplyExpectationKeys,
+  getPendingHistoricalCrossTeamReplyKeys,
+  isCrossTeamLeadReplyToOwnOutbound,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
@@ -190,5 +193,83 @@ describe('cross-team relay helpers', () => {
       wasRecentlyDeliveredToLead(recentMessageIds, 'local-team', 'message-2', 12_000, ttlMs)
     ).toBe(false);
     expect(recentMessageIds.has('local-team')).toBe(false);
+  });
+
+  it('detects historical cross-team replies only when outbound is newer than read inbound', () => {
+    const pending = getPendingHistoricalCrossTeamReplyKeys([
+      inboxMessage({
+        source: 'cross_team_sent',
+        to: 'peer-team.team-lead',
+        conversationId: 'conv-new',
+        timestamp: '2026-01-01T00:00:10.000Z',
+      }),
+      inboxMessage({
+        source: 'cross_team',
+        from: 'peer-team.team-lead',
+        conversationId: 'conv-new',
+        read: true,
+        timestamp: '2026-01-01T00:00:05.000Z',
+      }),
+      inboxMessage({
+        source: 'cross_team_sent',
+        to: 'quiet-team.team-lead',
+        conversationId: 'conv-done',
+        timestamp: '2026-01-01T00:00:10.000Z',
+      }),
+      inboxMessage({
+        source: 'cross_team',
+        from: 'quiet-team.team-lead',
+        conversationId: 'conv-done',
+        read: true,
+        timestamp: '2026-01-01T00:00:11.000Z',
+      }),
+    ]);
+
+    expect(pending).toEqual(new Set([buildCrossTeamConversationKey('peer-team', 'conv-new')]));
+  });
+
+  it('recognizes cross-team lead replies to historical and transient outbound expectations', () => {
+    const matchedTransientReplyKeys = new Set<string>();
+    const transientKey = buildCrossTeamConversationKey('transient-team', 'conv-transient');
+
+    expect(
+      isCrossTeamLeadReplyToOwnOutbound({
+        message: inboxMessage({ from: 'peer-team.lead', conversationId: 'conv-1' }),
+        pendingHistoricalReplies: new Set([buildCrossTeamConversationKey('peer-team', 'conv-1')]),
+        pendingTransientReplies: new Set(),
+        matchedTransientReplyKeys,
+      })
+    ).toBe(true);
+
+    expect(
+      isCrossTeamLeadReplyToOwnOutbound({
+        message: inboxMessage({
+          from: 'transient-team.lead',
+          conversationId: 'conv-transient',
+        }),
+        pendingHistoricalReplies: new Set(),
+        pendingTransientReplies: new Set([transientKey]),
+        matchedTransientReplyKeys,
+      })
+    ).toBe(true);
+
+    expect(matchedTransientReplyKeys).toEqual(new Set([transientKey]));
+  });
+
+  it('builds lead active cross-team reply hints from relay batches', () => {
+    expect(
+      buildLeadActiveCrossTeamReplyHints([
+        inboxMessage({ from: 'peer-team.lead', conversationId: 'conv-1' }),
+        inboxMessage({ source: 'inbox', from: 'alice', conversationId: 'ignored' }),
+        inboxMessage({
+          from: 'other-team.lead',
+          conversationId: undefined,
+          text: '<cross-team from="other-team.team-lead" depth="0" conversationId="conv-2" />\nHi',
+        }),
+      ])
+    ).toEqual([
+      { toTeam: 'peer-team', conversationId: 'conv-1' },
+      { toTeam: 'other-team', conversationId: 'conv-2' },
+    ]);
   });
 });

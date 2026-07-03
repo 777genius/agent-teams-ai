@@ -6,7 +6,9 @@ import {
   collectConfirmedSameTeamPairs,
   inferOpenCodeInboxMessageTaskRefs,
   type NativeSameTeamFingerprint,
+  planLeadInboxRelayReadOnlyMessages,
   type RelayInboxMessage,
+  selectActionableLeadRelayUnread,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
@@ -345,6 +347,42 @@ describe('inbox relay unread policy', () => {
     expect(ids(selection.batch)).toEqual(['sync-new']);
     expect(selection.replyVisibility).toBe('internal_activity');
     expect(selection.hasPendingFollowUpRelay).toBe(true);
+  });
+
+  it('plans lead read-only rows separately from remaining unread relay candidates', () => {
+    const permanent = message({ messageId: 'permanent' });
+    const passive = message({ messageId: 'passive' });
+    const coarse = message({ messageId: 'coarse' });
+    const actionable = message({ messageId: 'actionable' });
+
+    const plan = planLeadInboxRelayReadOnlyMessages({
+      unread: [permanent, passive, coarse, actionable],
+      silentIdleIds: new Set(),
+      passiveIdleIds: new Set(['passive']),
+      coarseNonIdleNoiseIds: new Set(['coarse']),
+      isPermanentlyIgnored: (candidate) => candidate.messageId === 'permanent',
+    });
+
+    expect(ids(plan.permanentlyIgnored)).toEqual(['permanent', 'coarse']);
+    expect(ids(plan.passiveIdleUnread)).toEqual(['passive']);
+    expect(plan.readOnlyIgnoredIds).toEqual(new Set(['permanent', 'coarse', 'passive']));
+    expect(ids(plan.remainingUnread)).toEqual(['actionable']);
+  });
+
+  it('selects actionable lead unread rows after native, deferred, and permission filters', () => {
+    const result = selectActionableLeadRelayUnread({
+      remainingUnread: [
+        message({ messageId: 'native' }),
+        message({ messageId: 'deferred' }),
+        message({ messageId: 'permission' }),
+        message({ messageId: 'actionable' }),
+      ],
+      nativeMatchedMessageIds: new Set(['native']),
+      deferredIds: new Set(['deferred']),
+      permissionRequestIds: new Set(['permission']),
+    });
+
+    expect(ids(result)).toEqual(['actionable']);
   });
 });
 
