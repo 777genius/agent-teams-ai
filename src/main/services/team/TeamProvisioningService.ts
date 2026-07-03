@@ -324,6 +324,7 @@ import {
   deriveLeadContextUsageStateFromUsage,
   getInitialLeadContextWindowTokensForRequest,
 } from './provisioning/TeamProvisioningLeadContextUsage';
+import { scanLeadInboxPermissionRequests } from './provisioning/TeamProvisioningLeadPermissionScan';
 import {
   appendProvisioningAssistantText as appendProvisioningAssistantTextHelper,
   joinLeadRelayCaptureText,
@@ -9317,39 +9318,18 @@ export class TeamProvisioningService {
       if (isStaleRelayRun()) return 0;
       if (config) {
         const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
-        try {
-          const leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
-          if (isStaleRelayRun()) return 0;
-          const permMsgsToMarkRead: { messageId: string }[] = [];
-          const runStartedAtMs = Date.parse(run.startedAt);
-          for (const msg of leadInboxMessages) {
-            if (typeof msg.text !== 'string') continue;
-            const perm = parsePermissionRequest(msg.text);
-            if (!perm) continue;
-            // Skip permission_requests from previous runs — they're stale
-            const msgTs = Date.parse(msg.timestamp);
-            if (
-              Number.isFinite(msgTs) &&
-              Number.isFinite(runStartedAtMs) &&
-              msgTs < runStartedAtMs
-            ) {
-              continue;
-            }
-            // Dedup is handled inside handleTeammatePermissionRequest via processedPermissionRequestIds
-            this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
-            // Mark unread permission_request messages as read to prevent stale unread indicators
-            if (!msg.read && hasStableInboxMessageId(msg)) {
-              permMsgsToMarkRead.push({ messageId: msg.messageId });
-            }
+        const permissionScanResult = await scanLeadInboxPermissionRequests(
+          { teamName, leadName, run, isStaleRelayRun },
+          {
+            readLeadInboxMessages: (teamName, leadName) =>
+              this.inboxReader.getMessagesFor(teamName, leadName),
+            handleTeammatePermissionRequest: (run, permissionRequest, timestamp) =>
+              this.handleTeammatePermissionRequest(run, permissionRequest, timestamp),
+            markInboxMessagesRead: (teamName, leadName, messages) =>
+              this.markInboxMessagesRead(teamName, leadName, messages),
           }
-          if (permMsgsToMarkRead.length > 0) {
-            await this.markInboxMessagesRead(teamName, leadName, permMsgsToMarkRead).catch(
-              () => {}
-            );
-          }
-        } catch {
-          // best-effort — inbox may not exist yet
-        }
+        );
+        if (permissionScanResult === 'stale') return 0;
       }
 
       if (!run.provisioningComplete) return 0;
