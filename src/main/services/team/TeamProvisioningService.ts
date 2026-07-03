@@ -44,7 +44,6 @@ import {
   CROSS_TEAM_SENT_SOURCE,
   CROSS_TEAM_SOURCE,
   parseCrossTeamPrefix,
-  stripCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
 import { type AttachmentPayload, DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
@@ -220,11 +219,9 @@ import {
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
   matchCrossTeamLeadInboxMessages as matchCrossTeamLeadInboxMessagesHelper,
-  parseCrossTeamRecipient,
   parseCrossTeamTargetTeam,
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
   rememberRecentCrossTeamLeadDeliveryMessageIds,
-  resolveSingleActiveCrossTeamReplyHint,
   wasRecentlyDeliveredToLead,
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
 import { buildProvisioningTraceDetail } from './provisioning/TeamProvisioningDiagnosticsHelpers';
@@ -248,7 +245,6 @@ import { mergeAndRemoveDuplicateInboxes as mergeAndRemoveDuplicateInboxesHelper 
 import { markTeamInboxMessagesRead } from './provisioning/TeamProvisioningInboxPersistence';
 import {
   armSilentTeammateForward,
-  consumePendingInboxRelayCandidate,
   forgetPendingInboxRelayCandidates,
   isInboxRelayInFlightTimeoutError,
   type PendingInboxRelayCandidate,
@@ -349,6 +345,7 @@ import {
   getRunTrackedCwdFromRun,
   isCurrentTrackedRunById,
 } from './provisioning/TeamProvisioningLeadRunDerivation';
+import { captureLeadSendMessages } from './provisioning/TeamProvisioningLeadSendMessageCapture';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import {
   matchesExactTeamMemberName,
@@ -605,7 +602,6 @@ import {
   normalizeRuntimeIso,
   normalizeRuntimePositiveInteger,
   requireRuntimeString,
-  teamToolTaskRefs,
 } from './provisioning/TeamProvisioningRuntimeMetadata';
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import {
@@ -705,7 +701,6 @@ import {
 } from './provisioning/TeamProvisioningWorkspaceTrust';
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
-import { isAgentTeamsToolUse } from './agentTeamsToolNames';
 import { atomicWriteAsync } from './atomicWrite';
 import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
@@ -13598,225 +13593,24 @@ export class TeamProvisioningService {
   }
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
-    for (const part of content) {
-      if (part.type !== 'tool_use' || typeof part.name !== 'string') continue;
-      const isNativeSendMessage = part.name === 'SendMessage';
-      const input = part.input;
-      if (!input || typeof input !== 'object') continue;
-      const inp = input as Record<string, unknown>;
-      const isTeamMessageSendTool = isAgentTeamsToolUse({
-        rawName: part.name,
-        canonicalName: 'message_send',
-        toolInput: inp,
-        currentTeamName: run.teamName,
-      });
-      const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
-        rawName: part.name,
-        canonicalName: 'cross_team_send',
-        toolInput: inp,
-        currentTeamName: run.teamName,
-      });
-      if (!isNativeSendMessage && !isTeamMessageSendTool && !isDirectCrossTeamSendTool) continue;
-
-      if (isDirectCrossTeamSendTool) {
-        const toTeam = typeof inp.toTeam === 'string' ? inp.toTeam.trim() : '';
-        const text = typeof inp.text === 'string' ? stripAgentBlocks(inp.text).trim() : '';
-        if (toTeam && text) {
-          run.pendingDirectCrossTeamSendRefresh = true;
-        }
-        continue;
-      }
-
-      const rawRecipient = isNativeSendMessage
-        ? typeof inp.recipient === 'string'
-          ? inp.recipient
-          : ''
-        : typeof inp.to === 'string'
-          ? inp.to
-          : '';
-      const trimmedRecipient = rawRecipient.trim();
-      if (!trimmedRecipient) continue;
-      const recipient = trimmedRecipient.toLowerCase() === 'user' ? 'user' : trimmedRecipient;
-
-      const msgContent = isNativeSendMessage
-        ? typeof inp.content === 'string'
-          ? inp.content
-          : ''
-        : typeof inp.text === 'string'
-          ? inp.text
-          : '';
-      if (msgContent.trim().length === 0) continue;
-
-      const summary = typeof inp.summary === 'string' ? inp.summary : '';
-      const leadName =
-        run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
-        'team-lead';
-
-      const cleanContent = stripAgentBlocks(msgContent);
-      if (cleanContent.trim().length === 0) continue;
-      const strippedCrossTeamContent = stripCrossTeamPrefix(cleanContent).trim();
-      if (strippedCrossTeamContent.length === 0) continue;
-      const localRecipientNames = new Set(
-        (run.request.members ?? [])
-          .map((member) => (typeof member.name === 'string' ? member.name.trim() : ''))
-          .filter((name) => name.length > 0)
-      );
-      localRecipientNames.add('user');
-      localRecipientNames.add('team-lead');
-
-      const mistakenToolHint = isCrossTeamToolRecipientName(recipient)
-        ? resolveSingleActiveCrossTeamReplyHint(run.activeCrossTeamReplyHints)
-        : null;
-      const crossTeamRecipient =
-        parseCrossTeamRecipient(run.teamName, recipient, localRecipientNames) ??
-        (mistakenToolHint ? { teamName: mistakenToolHint.toTeam, memberName: 'team-lead' } : null);
-      if (crossTeamRecipient && this.crossTeamSender) {
-        const inferredReplyMeta =
-          mistakenToolHint?.toTeam === crossTeamRecipient.teamName
-            ? {
-                conversationId: mistakenToolHint.conversationId,
-                replyToConversationId: mistakenToolHint.conversationId,
-              }
-            : this.resolveCrossTeamReplyMetadata(run.teamName, crossTeamRecipient.teamName);
-        const crossTeamMeta = parseCrossTeamPrefix(cleanContent);
-        const replyMeta = inferredReplyMeta;
-        const timestamp = nowIso();
-        const messageId = `lead-sendmsg-${run.runId}-${Date.now()}`;
-        const taskRefs = teamToolTaskRefs(run.teamName, inp.taskRefs);
-
-        void this.crossTeamSender({
-          fromTeam: run.teamName,
-          fromMember: leadName,
-          toTeam: crossTeamRecipient.teamName,
-          text: strippedCrossTeamContent,
-          summary,
-          ...(taskRefs ? { taskRefs } : {}),
-          messageId,
-          timestamp,
-          conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
-          replyToConversationId:
-            replyMeta?.replyToConversationId ??
-            crossTeamMeta?.conversationId ??
-            replyMeta?.conversationId,
-        })
-          .then((result) => {
-            if (result.deduplicated) {
-              return;
-            }
-            if (this.getTrackedRunId(run.teamName) !== run.runId) {
-              logger.debug(
-                `[${run.teamName}] Skipping stale cross-team send result for old run ${run.runId}`
-              );
-              return;
-            }
-            const msg: InboxMessage = {
-              from: leadName,
-              to: recipient.startsWith('cross-team:')
-                ? recipient
-                : isCrossTeamToolRecipientName(recipient)
-                  ? `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`
-                  : `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
-              text: strippedCrossTeamContent,
-              timestamp,
-              read: true,
-              summary:
-                (summary || strippedCrossTeamContent).length > 60
-                  ? (summary || strippedCrossTeamContent).slice(0, 57) + '...'
-                  : summary || strippedCrossTeamContent,
-              messageId: result.messageId,
-              source: 'cross_team_sent',
-              conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
-              replyToConversationId:
-                replyMeta?.replyToConversationId ??
-                crossTeamMeta?.conversationId ??
-                replyMeta?.conversationId,
-              ...(taskRefs ? { taskRefs } : {}),
-            };
-            this.pushLiveLeadProcessMessage(run.teamName, msg);
-            this.teamChangeEmitter?.({
-              type: 'lead-message',
-              teamName: run.teamName,
-              runId: run.runId,
-              detail: 'cross-team-send',
-            });
-          })
-          .catch((error: unknown) => {
-            logger.warn(
-              `[${run.teamName}] qualified SendMessage→${recipient} cross-team fallback failed: ${
-                error instanceof Error ? error.message : String(error)
-              }`
-            );
-          });
-        continue;
-      }
-
-      if (isCrossTeamToolRecipientName(recipient)) {
-        continue;
-      }
-
-      if (!isNativeSendMessage) {
-        continue;
-      }
-
-      // Suppress SendMessage(to="user") during member_inbox_relay.
-      // Context: when relaying inbox messages, the lead sometimes ignores the relay
-      // instruction and responds to the user directly instead of forwarding to the
-      // target teammate. This filter prevents that wrong response from appearing
-      // in the UI and being persisted to sentMessages.json.
-      // Note: teammate DM relay is currently disabled (see teams.ts handleSendMessage
-      // and index.ts FileWatcher). This guard is kept as safety net in case relay
-      // is re-enabled in the future.
-      if (recipient === 'user' && run.silentUserDmForward?.mode === 'member_inbox_relay') {
-        logger.debug(
-          `[${run.teamName}] Suppressed SendMessage→user during member_inbox_relay to "${run.silentUserDmForward.target}"`
-        );
-        continue;
-      }
-
-      const relayOfMessageId =
-        recipient !== 'user'
-          ? consumePendingInboxRelayCandidate(run, recipient, strippedCrossTeamContent, summary)
-          : undefined;
-
-      const msg: InboxMessage = {
-        from: leadName,
-        to: recipient,
-        text: strippedCrossTeamContent,
-        timestamp: nowIso(),
-        read: recipient !== 'user',
-        summary:
-          (summary || strippedCrossTeamContent).length > 60
-            ? (summary || strippedCrossTeamContent).slice(0, 57) + '...'
-            : summary || strippedCrossTeamContent,
-        messageId: `lead-sendmsg-${run.runId}-${Date.now()}`,
-        ...(relayOfMessageId ? { relayOfMessageId } : {}),
-        source: 'lead_process',
-      };
-
-      this.pushLiveLeadProcessMessage(run.teamName, msg);
-
-      if (recipient === 'user') {
-        // User-directed messages go to sentMessages.json (canonical outbound store)
-        this.persistSentMessage(run.teamName, msg);
-        this.teamChangeEmitter?.({
-          type: 'inbox',
-          teamName: run.teamName,
-          detail: 'sentMessages.json',
-        });
-      } else {
-        // Non-user messages go to canonical recipient inbox for relay delivery
-        this.persistInboxMessage(run.teamName, recipient, msg);
-        this.teamChangeEmitter?.({
-          type: 'inbox',
-          teamName: run.teamName,
-          detail: `inboxes/${recipient}.json`,
-        });
-      }
-
-      logger.debug(
-        `[${run.teamName}] Captured SendMessage→${recipient} from stdout: ${cleanContent.slice(0, 100)}`
-      );
-    }
+    captureLeadSendMessages(run, content, {
+      nowIso,
+      nowMs: () => Date.now(),
+      logger,
+      crossTeamSender: this.crossTeamSender,
+      resolveCrossTeamReplyMetadata: (teamName, toTeam) =>
+        this.resolveCrossTeamReplyMetadata(teamName, toTeam),
+      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      pushLiveLeadProcessMessage: (teamName, message) =>
+        this.pushLiveLeadProcessMessage(teamName, message),
+      persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
+      persistInboxMessage: (teamName, recipient, message) =>
+        this.persistInboxMessage(teamName, recipient, message),
+      emitLeadMessageChange: (teamName, runId, detail) =>
+        this.teamChangeEmitter?.({ type: 'lead-message', teamName, runId, detail }),
+      emitInboxChange: (teamName, detail) =>
+        this.teamChangeEmitter?.({ type: 'inbox', teamName, detail }),
+    });
   }
 
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
