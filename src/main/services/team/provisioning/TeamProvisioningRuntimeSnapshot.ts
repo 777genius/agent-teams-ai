@@ -25,7 +25,6 @@ import {
   type RuntimeProcessLoadStats,
   type RuntimeProcessUsageStats,
   type RuntimeTelemetryProcessTableRow,
-  type RuntimeUsageProcessTree,
 } from '../TeamRuntimeTelemetry';
 
 import {
@@ -63,7 +62,7 @@ import {
 } from './TeamProvisioningRuntimeMetadataPolicy';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
-import type { TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
+import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -592,31 +591,12 @@ export async function buildTeamAgentRuntimeSnapshot(
     getLiveTeamAgentRuntimeMetadata(
       teamName: string
     ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
-    readRuntimeProcessRowsForUsageSnapshot(
-      teamName: string,
-      options?: { includeWindowsHostRows?: boolean }
-    ): Promise<RuntimeTelemetryProcessTableRow[] | null>;
-    readProcessUsageStatsByPid(
-      pids: readonly number[],
-      cacheOptions?: { ignoreCachedMisses?: boolean }
-    ): Promise<Map<number, RuntimeProcessUsageStats>>;
-    buildRuntimeUsageProcessTrees(input: {
-      rootPids: readonly number[];
-      processRows: readonly RuntimeTelemetryProcessTableRow[] | null;
-      rootOwnersByPid?: ReadonlyMap<number, ReadonlySet<string>>;
-    }): Map<number, RuntimeUsageProcessTree>;
-    buildRuntimeProcessLoadStats: typeof buildRuntimeProcessLoadStatsDefault;
-    agentRuntimeResourceHistory: {
-      record(
-        params: TeamAgentRuntimeResourceHistoryRecordInput
-      ): TeamAgentRuntimeResourceSample[] | undefined;
-      prune(teamName: string, activeKeys: ReadonlySet<string>): void;
-    };
     agentRuntimeSnapshotCache: Map<
       string,
       { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
     >;
-  } & RuntimeSnapshotStores &
+  } & TeamProvisioningRuntimeSnapshotResourceSamplingPorts &
+    RuntimeSnapshotStores &
     RuntimeSnapshotCacheAccess &
     RuntimeSnapshotLogging
 ): Promise<TeamAgentRuntimeSnapshot> {

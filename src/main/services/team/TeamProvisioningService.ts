@@ -639,15 +639,6 @@ import {
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
   resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
-import {
-  getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
-  getOpenCodeRuntimeMessageAdapter as getOpenCodeRuntimeMessageAdapterHelper,
-  getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterHelper,
-  isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
-  isOpenCodeRuntimeRecipientFromSources as isOpenCodeRuntimeRecipientFromSourcesHelper,
-  resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
-  resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
-} from './provisioning/TeamProvisioningRuntimeRecipientResolution';
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
@@ -4523,18 +4514,7 @@ export class TeamProvisioningService {
       getMemberSpawnStatuses: (targetTeamName) => this.getMemberSpawnStatuses(targetTeamName),
       getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
         this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
-      readRuntimeProcessRowsForUsageSnapshot: (targetTeamName, options) =>
-        this.runtimeResourceSampling.readRuntimeProcessRowsForUsageSnapshot(
-          targetTeamName,
-          options
-        ),
-      readProcessUsageStatsByPid: (pids, cacheOptions) =>
-        this.runtimeResourceSampling.readProcessUsageStatsByPid(pids, cacheOptions),
-      buildRuntimeUsageProcessTrees: (input) =>
-        this.runtimeResourceSampling.buildRuntimeUsageProcessTrees(input),
-      buildRuntimeProcessLoadStats: (input) =>
-        this.runtimeResourceSampling.buildRuntimeProcessLoadStats(input),
-      agentRuntimeResourceHistory: this.runtimeResourceSampling.agentRuntimeResourceHistoryPort,
+      ...this.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
       agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),

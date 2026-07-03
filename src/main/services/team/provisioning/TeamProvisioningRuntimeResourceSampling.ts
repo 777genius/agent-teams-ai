@@ -76,6 +76,31 @@ export interface RuntimeResourceSamplingPidUsageReader {
   read(pids: number | readonly number[], options?: { maxage?: number }): Promise<unknown>;
 }
 
+export interface TeamProvisioningRuntimeSnapshotResourceSamplingPorts {
+  readRuntimeProcessRowsForUsageSnapshot(
+    teamName: string,
+    options?: { includeWindowsHostRows?: boolean }
+  ): Promise<RuntimeTelemetryProcessTableRow[] | null>;
+  readProcessUsageStatsByPid(
+    pids: readonly number[],
+    cacheOptions?: { ignoreCachedMisses?: boolean }
+  ): Promise<Map<number, RuntimeProcessUsageStats>>;
+  buildRuntimeUsageProcessTrees(input: {
+    rootPids: readonly number[];
+    processRows: readonly RuntimeTelemetryProcessTableRow[] | null;
+    rootOwnersByPid?: ReadonlyMap<number, ReadonlySet<string>>;
+  }): Map<number, RuntimeUsageProcessTree>;
+  buildRuntimeProcessLoadStats(
+    input: Parameters<typeof buildRuntimeProcessLoadStats>[0]
+  ): RuntimeProcessLoadStats | undefined;
+  agentRuntimeResourceHistory: {
+    record(
+      params: TeamAgentRuntimeResourceHistoryRecordInput
+    ): TeamAgentRuntimeResourceSample[] | undefined;
+    prune(teamName: string, activeKeys: ReadonlySet<string>): void;
+  };
+}
+
 export class TeamProvisioningRuntimeResourceSampling {
   private readonly runtimeProcessRowsForUsageSnapshotByTeam = new Map<
     string,
@@ -122,6 +147,18 @@ export class TeamProvisioningRuntimeResourceSampling {
 
   getRuntimeProcessRowsCache(): Map<string, RuntimeProcessRowsCacheEntry> {
     return this.runtimeProcessRowsForUsageSnapshotByTeam;
+  }
+
+  createRuntimeSnapshotResourceSamplingPorts(): TeamProvisioningRuntimeSnapshotResourceSamplingPorts {
+    return {
+      readRuntimeProcessRowsForUsageSnapshot: (teamName, options) =>
+        this.readRuntimeProcessRowsForUsageSnapshot(teamName, options),
+      readProcessUsageStatsByPid: (pids, cacheOptions) =>
+        this.readProcessUsageStatsByPid(pids, cacheOptions),
+      buildRuntimeUsageProcessTrees: (input) => this.buildRuntimeUsageProcessTrees(input),
+      buildRuntimeProcessLoadStats: (input) => this.buildRuntimeProcessLoadStats(input),
+      agentRuntimeResourceHistory: this.agentRuntimeResourceHistoryPort,
+    };
   }
 
   readCachedRuntimeProcessRowsForLiveRuntimeMetadata(
