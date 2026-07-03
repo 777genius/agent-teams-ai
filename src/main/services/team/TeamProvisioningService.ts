@@ -323,6 +323,14 @@ import {
   hasCommittedOpenCodeSecondaryEvidenceOverlayDelta,
 } from './provisioning/TeamProvisioningLaunchStateReconciliation';
 import {
+  buildDeterministicLaunchProcessArgs,
+  buildLaunchSyntheticRequest,
+  getInitialLaunchValidationMessage,
+  parseLaunchConfigProjectPath,
+  prepareDeterministicLaunchRunState,
+  resolveExistingLaunchRunReuse,
+} from './provisioning/TeamProvisioningLaunchTeamFlow';
+import {
   type LeadActivityState,
   setLeadActivity as setLeadActivityHelper,
   syncLeadTaskActivityForState as syncLeadTaskActivityForStateHelper,
@@ -7537,40 +7545,25 @@ export class TeamProvisioningService {
       if (!configRaw) {
         throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
       }
-      let configProjectPath: string | null = null;
-      try {
-        const parsedConfig = JSON.parse(configRaw) as { projectPath?: unknown };
-        configProjectPath =
-          typeof parsedConfig.projectPath === 'string' && parsedConfig.projectPath.trim().length > 0
-            ? path.resolve(parsedConfig.projectPath.trim())
-            : null;
-      } catch {
-        configProjectPath = null;
-      }
+      const configProjectPath = parseLaunchConfigProjectPath(configRaw);
 
       const existingAliveRunId = this.getAliveRunId(request.teamName);
-      if (existingAliveRunId) {
-        const existingRun = this.runs.get(existingAliveRunId);
-        const requestedCwd = path.resolve(request.cwd);
-        const existingRunCwd = this.getRunTrackedCwd(existingRun) ?? configProjectPath;
-        if (existingRun?.child && !existingRun.processKilled && !existingRun.cancelRequested) {
-          if (!existingRunCwd) {
-            this.provisioningRunByTeam.delete(request.teamName);
-            throw new Error(
-              `Team "${request.teamName}" is already running, but its cwd could not be determined. ` +
-                'Stop it before launching again.'
-            );
-          }
-          if (existingRunCwd && existingRunCwd !== requestedCwd) {
-            this.provisioningRunByTeam.delete(request.teamName);
-            throw new Error(
-              `Team "${request.teamName}" is already running in "${existingRunCwd}". ` +
-                `Stop it before launching with cwd "${request.cwd}".`
-            );
-          }
-          this.provisioningRunByTeam.delete(request.teamName);
-          return { runId: existingAliveRunId };
-        }
+      const existingRun = existingAliveRunId ? this.runs.get(existingAliveRunId) : null;
+      const existingRunReuse = resolveExistingLaunchRunReuse({
+        teamName: request.teamName,
+        cwd: request.cwd,
+        existingAliveRunId,
+        existingRun,
+        existingRunCwd: this.getRunTrackedCwd(existingRun),
+        configProjectPath,
+      });
+      if (existingRunReuse.kind === 'blocked') {
+        this.provisioningRunByTeam.delete(request.teamName);
+        throw new Error(existingRunReuse.message);
+      }
+      if (existingRunReuse.kind === 'reuse') {
+        this.provisioningRunByTeam.delete(request.teamName);
+        return { runId: existingRunReuse.runId };
       }
 
       const launchCompatibility = await this.probeLaunchCompatibility(
@@ -7814,31 +7807,11 @@ export class TeamProvisioningService {
         providerArgsByProvider,
       });
 
-      // Build a synthetic TeamCreateRequest for reuse by shared infrastructure
-      const syntheticRequest: TeamCreateRequest = {
-        teamName: request.teamName,
+      const syntheticRequest = buildLaunchSyntheticRequest({
+        request,
         members: allEffectiveMemberSpecs,
-        cwd: request.cwd,
-        providerId: request.providerId,
-        providerBackendId: request.providerBackendId,
-        model: request.model,
-        effort: request.effort,
-        fastMode: request.fastMode,
-        skipPermissions: request.skipPermissions,
-      };
-
-      // Enrich with color/displayName from config.json (always available for launched teams)
-      try {
-        const cfg = JSON.parse(configRaw) as Record<string, unknown>;
-        if (typeof cfg.color === 'string' && cfg.color.trim().length > 0) {
-          syntheticRequest.color = cfg.color.trim();
-        }
-        if (typeof cfg.name === 'string' && cfg.name.trim().length > 0) {
-          syntheticRequest.displayName = cfg.name.trim();
-        }
-      } catch {
-        // config already validated above — ignore parse errors here
-      }
+        configRaw,
+      });
 
       const run: ProvisioningRun = {
         runId,
@@ -7944,12 +7917,7 @@ export class TeamProvisioningService {
           runId,
           teamName: request.teamName,
           state: 'validating',
-          message:
-            source === 'members-meta'
-              ? 'Validating team launch request (members from members.meta.json)'
-              : source === 'inboxes'
-                ? 'Validating team launch request (members from inboxes)'
-                : 'Validating team launch request (fallback members from config.json)',
+          message: getInitialLaunchValidationMessage(source),
           startedAt,
           updatedAt: startedAt,
           warnings: initialLaunchWarnings.length > 0 ? initialLaunchWarnings : undefined,
@@ -7957,28 +7925,33 @@ export class TeamProvisioningService {
         },
       };
 
-      this.resetTeamScopedTransientStateForNewRun(request.teamName);
-      this.runs.set(runId, run);
-      this.provisioningRunByTeam.set(request.teamName, runId);
-      initializeProvisioningTrace(run);
-      run.onProgress(run.progress);
-      await this.prepareWorkspaceTrustForDeterministicRun({
-        mode: 'launch',
+      await prepareDeterministicLaunchRunState({
+        teamName: request.teamName,
         run,
-        claudePath,
-        shellEnv,
-        stopAllGenerationAtStart,
-        workspaceTrustPlan: workspaceTrustFullPlan,
-        featureFlags: workspaceTrustFeatureFlags,
-        provisioningEnv,
+        prepareWorkspaceTrustForDeterministicRun: () =>
+          this.prepareWorkspaceTrustForDeterministicRun({
+            mode: 'launch',
+            run,
+            claudePath,
+            shellEnv,
+            stopAllGenerationAtStart,
+            workspaceTrustPlan: workspaceTrustFullPlan,
+            featureFlags: workspaceTrustFeatureFlags,
+            provisioningEnv,
+          }),
+        resetTeamScopedTransientStateForNewRun: (teamName) =>
+          this.resetTeamScopedTransientStateForNewRun(teamName),
+        registerRun: (nextRunId, nextRun) => {
+          this.runs.set(nextRunId, nextRun);
+        },
+        setProvisioningRunByTeam: (teamName, nextRunId) => {
+          this.provisioningRunByTeam.set(teamName, nextRunId);
+        },
+        clearPersistedLaunchState: (teamName, options) =>
+          this.clearPersistedLaunchState(teamName, options),
+        publishMixedSecondaryLaneStatusChange: (nextRun, lane: MixedSecondaryRuntimeLaneState) =>
+          this.publishMixedSecondaryLaneStatusChange(nextRun, lane),
       });
-      emitProvisioningCheckpoint(run, 'Clearing persisted launch state');
-      await this.clearPersistedLaunchState(request.teamName, { expectedRunId: run.runId });
-      run.launchStateClearedForRun = true;
-      emitProvisioningCheckpoint(run, 'Publishing mixed secondary lane status');
-      for (const lane of run.mixedSecondaryLanes ?? []) {
-        await this.publishMixedSecondaryLaneStatusChange(run, lane);
-      }
 
       // Read existing tasks to include in teammate prompts for work resumption
       emitProvisioningCheckpoint(run, 'Reading existing tasks for launch prompt');
@@ -8089,35 +8062,6 @@ export class TeamProvisioningService {
         await this.restorePrelaunchConfig(request.teamName);
         throw error;
       }
-      const launchArgs = [
-        '--print',
-        '--input-format',
-        'stream-json',
-        '--output-format',
-        'stream-json',
-        '--verbose',
-        '--setting-sources',
-        'user,project,local',
-        '--mcp-config',
-        mcpConfigPath,
-        '--team-bootstrap-spec',
-        bootstrapSpecPath,
-        ...(bootstrapUserPromptPath
-          ? ['--team-bootstrap-user-prompt-file', bootstrapUserPromptPath]
-          : []),
-        '--disallowedTools',
-        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-        // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
-        // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
-        ...(request.skipPermissions !== false
-          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-      ];
-      const launchModelArg = getLaunchModelArg(
-        resolveTeamProviderId(request.providerId),
-        request.model,
-        launchIdentity
-      );
       const extraCliArgs = parseCliArgs(request.extraCliArgs);
       const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
         teamName: request.teamName,
@@ -8129,29 +8073,25 @@ export class TeamProvisioningService {
         includeAnthropicHelper: resolvedProviderId === 'anthropic',
         contextLabel: 'Team launch',
       });
-      if (launchModelArg) {
-        launchArgs.push('--model', launchModelArg);
-      }
-      if (launchIdentity.resolvedEffort) {
-        launchArgs.push('--effort', launchIdentity.resolvedEffort);
-      }
-      launchArgs.push(...runtimeArgsPlan.providerArgs);
-      launchArgs.push(...runtimeArgsPlan.fastModeArgs);
-      launchArgs.push(...runtimeArgsPlan.runtimeTurnSettledHookArgs);
-      if (request.worktree) {
-        launchArgs.push('--worktree', request.worktree);
-      }
-      launchArgs.push(...buildDesktopTeammateModeCliArgs(teammateModeDecision));
-      launchArgs.push(...runtimeArgsPlan.extraArgs);
-      launchArgs.push(...runtimeArgsPlan.settingsArgs);
       // When the lead uses a different provider than some teammates (e.g., anthropic lead
       // with codex teammates), the lead needs the teammate provider's launch args so they
       // can be inherited by the teammate subprocess via buildInheritedCliFlags.
       // Without this, a codex teammate spawned from an anthropic lead has no way to learn
       // about the required forced_login_method (chatgpt/api) and fails to start.
       emitProvisioningCheckpoint(run, 'Resolving cross-provider member launch args');
-      launchArgs.push(...runtimeArgsPlan.inheritedProviderArgs);
-      const finalLaunchArgs = mergeJsonSettingsArgs(launchArgs);
+      const finalLaunchArgs = buildDeterministicLaunchProcessArgs({
+        mcpConfigPath,
+        bootstrapSpecPath,
+        bootstrapUserPromptPath,
+        skipPermissions: request.skipPermissions,
+        worktree: request.worktree,
+        providerId: resolvedProviderId,
+        model: request.model,
+        launchIdentity,
+        runtimeArgsPlan,
+        teammateModeDecision,
+        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+      });
       applyAppManagedRuntimeSettingsPathEnv(shellEnv, runtimeArgsPlan.appManagedSettingsPath);
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
         geminiRuntimeAuth,
