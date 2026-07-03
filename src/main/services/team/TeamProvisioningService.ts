@@ -1,8 +1,4 @@
 import {
-  buildClaudeAttachmentDeliveryParts,
-  buildCodexNativeAttachmentDeliveryParts,
-} from '@features/agent-attachments/main';
-import {
   buildOpenCodeSecondaryLaneId,
   buildPlannedMemberLaneIdentity,
   isPureOpenCodeWorktreeRootLanePlan,
@@ -287,7 +283,7 @@ import {
   syncLeadTaskActivityForState as syncLeadTaskActivityForStateHelper,
 } from './provisioning/TeamProvisioningLeadActivity';
 import {
-  codexImagePartToContentBlock,
+  buildLeadMessageStdinPayload,
   toLeadAttachmentPayloads,
 } from './provisioning/TeamProvisioningLeadAttachments';
 import {
@@ -6939,21 +6935,12 @@ export class TeamProvisioningService {
     }
 
     const attachmentPayloads = toLeadAttachmentPayloads(attachments);
-    const contentBlocks =
-      normalizeOptionalTeamProviderId(run.request.providerId) === 'codex' &&
-      attachmentPayloads.length > 0
-        ? await this.buildCodexLeadAttachmentContentBlocks(run, message, attachmentPayloads)
-        : (buildClaudeAttachmentDeliveryParts({
-            text: message,
-            attachments: attachmentPayloads,
-          }).blocks as Record<string, unknown>[]);
-
-    const payload = JSON.stringify({
-      type: 'user',
-      message: {
-        role: 'user',
-        content: contentBlocks,
-      },
+    const payload = await buildLeadMessageStdinPayload({
+      teamName: run.teamName,
+      runId: run.runId,
+      providerId: run.request.providerId,
+      text: message,
+      attachments: attachmentPayloads,
     });
     const stdin = run.child.stdin;
     await new Promise<void>((resolve, reject) => {
@@ -6963,23 +6950,6 @@ export class TeamProvisioningService {
       });
     });
     this.setLeadActivity(run, 'active');
-  }
-
-  private async buildCodexLeadAttachmentContentBlocks(
-    run: ProvisioningRun,
-    message: string,
-    attachments: AttachmentPayload[]
-  ): Promise<Record<string, unknown>[]> {
-    const prepared = await buildCodexNativeAttachmentDeliveryParts({
-      teamName: run.teamName,
-      messageId: `lead_${run.runId}_${Date.now()}`,
-      text: message,
-      attachments,
-    });
-    return [
-      { type: 'text', text: prepared.promptText },
-      ...prepared.imageParts.map((part) => codexImagePartToContentBlock(part)),
-    ];
   }
 
   /**

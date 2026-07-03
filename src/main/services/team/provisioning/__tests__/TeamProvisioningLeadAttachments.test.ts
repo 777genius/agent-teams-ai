@@ -1,11 +1,49 @@
-import { describe, expect, it } from 'vitest';
+import {
+  buildClaudeAttachmentDeliveryParts,
+  buildCodexNativeAttachmentDeliveryParts,
+} from '@features/agent-attachments/main';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildLeadMessageStdinPayload,
   codexImagePartToContentBlock,
   toLeadAttachmentPayloads,
 } from '../TeamProvisioningLeadAttachments';
 
+import type { AttachmentPayload } from '@shared/types';
+
+vi.mock('@features/agent-attachments/main', () => ({
+  buildClaudeAttachmentDeliveryParts: vi.fn(
+    (input: { text: string; attachments?: AttachmentPayload[] }) => ({
+      kind: (input.attachments?.length ?? 0) > 0 ? 'structured_blocks' : 'legacy_text',
+      blocks: [{ type: 'text', text: input.text }],
+    })
+  ),
+  buildCodexNativeAttachmentDeliveryParts: vi.fn(
+    async (input: { text: string; attachments?: AttachmentPayload[] }) => ({
+      kind: (input.attachments?.length ?? 0) > 0 ? 'text_with_images' : 'legacy_text',
+      promptText: input.text,
+      imageParts: [
+        {
+          kind: 'codex-image-arg',
+          attachmentId: 'lead_att_1',
+          filename: 'img.png',
+          mimeType: 'image/png',
+          path: '/fake/prepared-image.png',
+          sizeBytes: 3,
+        },
+      ],
+      diagnostics: [],
+    })
+  ),
+}));
+
 describe('lead attachment helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('converts lead attachment inputs into payloads with stable ids and byte sizes', () => {
     expect(
       toLeadAttachmentPayloads([
@@ -48,5 +86,94 @@ describe('lead attachment helpers', () => {
         media_type: 'image/png',
       },
     });
+  });
+
+  it('builds the legacy stream-json user payload through the Claude-compatible path', async () => {
+    await expect(
+      buildLeadMessageStdinPayload({
+        teamName: 'Team',
+        runId: 'run-1',
+        providerId: 'codex',
+        text: 'hello',
+        attachments: [],
+      })
+    ).resolves.toBe(
+      JSON.stringify({
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [{ type: 'text', text: 'hello' }],
+        },
+      })
+    );
+
+    expect(buildClaudeAttachmentDeliveryParts).toHaveBeenCalledWith({
+      text: 'hello',
+      attachments: [],
+    });
+    expect(buildCodexNativeAttachmentDeliveryParts).not.toHaveBeenCalled();
+  });
+
+  it('uses the Claude attachment block fallback for non-Codex providers with attachments', async () => {
+    const attachments = toLeadAttachmentPayloads([
+      { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+    ]);
+
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'anthropic',
+      text: 'hello',
+      attachments,
+    });
+
+    expect(buildClaudeAttachmentDeliveryParts).toHaveBeenCalledWith({
+      text: 'hello',
+      attachments,
+    });
+    expect(buildCodexNativeAttachmentDeliveryParts).not.toHaveBeenCalled();
+  });
+
+  it('uses Codex native image blocks only for Codex providers with attachments', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(123456);
+    const attachments = toLeadAttachmentPayloads([
+      { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+    ]);
+
+    await expect(
+      buildLeadMessageStdinPayload({
+        teamName: 'Team',
+        runId: 'run-1',
+        providerId: 'codex',
+        text: 'hello',
+        attachments,
+      })
+    ).resolves.toBe(
+      JSON.stringify({
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'hello' },
+            {
+              type: 'image',
+              source: {
+                type: 'file',
+                path: '/fake/prepared-image.png',
+                media_type: 'image/png',
+              },
+            },
+          ],
+        },
+      })
+    );
+
+    expect(buildCodexNativeAttachmentDeliveryParts).toHaveBeenCalledWith({
+      teamName: 'Team',
+      messageId: 'lead_run-1_123456',
+      text: 'hello',
+      attachments,
+    });
+    expect(buildClaudeAttachmentDeliveryParts).not.toHaveBeenCalled();
   });
 });
