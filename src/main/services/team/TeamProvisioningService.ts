@@ -122,7 +122,6 @@ import {
   type OpenCodeRuntimeDeliveryAdvisoryDecision,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import {
-  normalizeOpenCodeTaskRefsForComparison as normalizeOpenCodeTaskRefsForComparisonValue,
   openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
@@ -257,10 +256,8 @@ import {
   getLeadRelayReadCommitBatch,
   hasStableInboxMessageId,
   inferOpenCodeInboxMessageTaskRefs,
-  isOpenCodeProtocolProofMissingRecord,
   type NativeSameTeamFingerprint,
   normalizeSameTeamText,
-  openCodeTaskRefsOverlap,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
@@ -401,6 +398,7 @@ import {
 } from './provisioning/TeamProvisioningMemberStatusProjection';
 import { buildMixedSecondaryLaunchSnapshotForRun as buildMixedSecondaryLaunchSnapshotForRunHelper } from './provisioning/TeamProvisioningMixedSecondaryLaunchReconciliation';
 import { handleNativeTeammateUserMessage as handleNativeTeammateUserMessageHelper } from './provisioning/TeamProvisioningNativeTeammateMessages';
+import { getOpenCodeAgendaSyncRecoveryBypassMessageIds as getOpenCodeAgendaSyncRecoveryBypassMessageIdsHelper } from './provisioning/TeamProvisioningOpenCodeAgendaSyncRecovery';
 import { resolveOpenCodeInboxAttachmentPayloads as resolveOpenCodeInboxAttachmentPayloadsHelper } from './provisioning/TeamProvisioningOpenCodeAttachmentPayloads';
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
@@ -9318,88 +9316,22 @@ export class TeamProvisioningService {
     taskRefs?: TaskRef[];
     foregroundMessages: InboxMessage[];
   }): Promise<Set<string>> {
-    const bypassMessageIds = new Set<string>();
-    if (input.workSyncIntent !== 'agenda_sync') {
-      return bypassMessageIds;
-    }
-
-    const expectedRefs = normalizeOpenCodeTaskRefsForComparisonValue(input.taskRefs);
-    if (expectedRefs.length === 0) {
-      return bypassMessageIds;
-    }
-
-    const candidateMessages = input.foregroundMessages.filter(
-      (message): message is InboxMessage & { messageId: string } => {
-        if (!hasStableInboxMessageId(message)) {
-          return false;
-        }
-        if (typeof message.text !== 'string' || message.text.trim().length === 0) {
-          return false;
-        }
-        if (Array.isArray(message.attachments) && message.attachments.length > 0) {
-          return false;
-        }
-        return true;
-      }
-    );
-    if (candidateMessages.length === 0) {
-      return bypassMessageIds;
-    }
-
-    const identity = await this.resolveOpenCodeMemberDeliveryIdentity(
-      input.teamName,
-      input.memberName
-    ).catch(() => null);
-    if (!identity?.ok) {
-      return bypassMessageIds;
-    }
-
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
-      () => null
-    );
-    if (!laneIndex) {
-      return bypassMessageIds;
-    }
-    const laneActive =
-      laneIndex.lanes[identity.laneId]?.state === 'active' ||
-      (await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      }).catch(() => false));
-    if (!laneActive) {
-      return bypassMessageIds;
-    }
-
-    const records = await this.createOpenCodePromptDeliveryLedger(input.teamName, identity.laneId)
-      .list()
-      .catch(() => null);
-    const proofMissingRecords = (records ?? []).filter(
-      (record) =>
-        record.teamName.trim().toLowerCase() === input.teamName.trim().toLowerCase() &&
-        record.memberName.trim().toLowerCase() ===
-          identity.canonicalMemberName.trim().toLowerCase() &&
-        record.laneId === identity.laneId &&
-        record.status === 'failed_terminal' &&
-        !record.inboxReadCommittedAt &&
-        openCodeTaskRefsOverlap(record.taskRefs, expectedRefs) &&
-        isOpenCodeProtocolProofMissingRecord(record)
-    );
-    if (proofMissingRecords.length === 0) {
-      return bypassMessageIds;
-    }
-
-    const proofMissingMessageIds = new Set(
-      proofMissingRecords.map((record) => record.inboxMessageId.trim()).filter(Boolean)
-    );
-    for (const message of candidateMessages) {
-      const messageId = message.messageId.trim();
-      if (proofMissingMessageIds.has(messageId)) {
-        bypassMessageIds.add(messageId);
-      }
-    }
-
-    return bypassMessageIds;
+    return getOpenCodeAgendaSyncRecoveryBypassMessageIdsHelper(input, {
+      resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
+        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+      readLaneState: async (teamName, laneId) => {
+        const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
+          () => null
+        );
+        return laneIndex?.lanes[laneId]?.state ?? null;
+      },
+      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoveryInput) =>
+        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoveryInput),
+      listOpenCodePromptDeliveryLedgerRecords: (teamName, laneId) =>
+        this.createOpenCodePromptDeliveryLedger(teamName, laneId)
+          .list()
+          .catch(() => null),
+    });
   }
 
   private async hasAcceptedMemberWorkSyncReport(input: {
