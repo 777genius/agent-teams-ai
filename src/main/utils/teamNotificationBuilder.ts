@@ -76,6 +76,8 @@ const TEAM_NOTIFICATION_CONFIG: Record<TeamEventType, TeamNotificationConfig> = 
   schedule_failed: { triggerName: 'Schedule Failed', triggerColor: 'red' },
   team_launched: { triggerName: 'Team Launched', triggerColor: 'green' },
   team_launch_incomplete: { triggerName: 'Launch Incomplete', triggerColor: 'orange' },
+  usage_budget_warning: { triggerName: 'Usage Budget', triggerColor: 'orange' },
+  usage_budget_exceeded: { triggerName: 'Usage Budget', triggerColor: 'red' },
 };
 
 // =============================================================================

@@ -193,5 +193,174 @@
     "newVersionAvailable": "Доступна новая версия",
     "restartNow": "Перезапустить сейчас",
     "viewDetails": "Подробнее"
+  },
+  "tokenUsage": {
+    "title": "Использование",
+    "partialData": "Частичные данные",
+    "actions": {
+      "refresh": "Обновить",
+      "openTeam": "Открыть {{team}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Использование моделей по сегментам"
+    },
+    "controls": {
+      "includeCacheTokens": "Учитывать cache tokens"
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "activity": "Активность",
+      "breakdowns": "Разрезы",
+      "runs": "Запуски"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Реальная стоимость API от провайдера или gateway, если runtime ее отдал.",
+      "apiEquivalentHelp": "Shadow-оценка по pricing table для собранного usage. Это не счет за подписку.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage, который runtime или importer явно пометил как free.",
+      "legacyUnclassifiedHelp": "Старые импортированные request без явного billing mode. Они считаются отдельно, чтобы не смешивать subscription и API billing.",
+      "subscriptionUsageHelp": "Requests и tokens в subscription mode. Billable API dollars для этого bucket не считаются."
+    },
+    "burnRate": {
+      "basis": "На основе последних {{days}} видимых дней",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "Прогноз до конца месяца",
+      "forecastWeek": "Прогноз до конца недели"
+    },
+    "budgets": {
+      "allTeams": "Все команды",
+      "configureFor": "Бюджет для {{scope}}",
+      "costLimit": "Лимит API-equivalent $",
+      "costLimitDetail": "{{cost}} из {{limit}}",
+      "critical": "Превышен бюджет",
+      "loadFailed": "Не удалось загрузить настройки бюджета",
+      "noBudgets": "Бюджеты не настроены",
+      "notificationSettings": "Настройки уведомлений",
+      "ok": "В норме",
+      "saveFailed": "Не удалось сохранить настройки бюджета",
+      "team": "Команда",
+      "tokenLimit": "Лимит токенов",
+      "tokenLimitDetail": "{{tokens}} из {{limit}}",
+      "warning": "Предупреждение",
+      "project": "Проект"
+    },
+    "dateRange": {
+      "allCollectedUsage": "Всё собранное использование приложения",
+      "customRange": "Свой диапазон",
+      "default": "По умолчанию",
+      "selectRange": "Выберите дату начала и окончания",
+      "presets": {
+        "all-time": "За всё время",
+        "today": "Сегодня",
+        "this-week": "Эта неделя",
+        "this-month": "Этот месяц",
+        "this-quarter": "Этот квартал",
+        "this-year": "Этот год",
+        "last-week": "Прошлая неделя",
+        "last-month": "Прошлый месяц",
+        "last-7-days": "Последние 7 дней",
+        "last-30-days": "Последние 30 дней"
+      }
+    },
+    "empty": {
+      "noActivityData": "Нет активности",
+      "noAgents": "Нет агентов",
+      "noChartData": "Нет данных графика",
+      "noModelData": "Нет данных по моделям",
+      "noRows": "Нет строк",
+      "noRuns": "Нет запусков",
+      "noTeams": "Нет команд",
+      "noTrendData": "Нет данных тренда",
+      "noUsageDetail": "0 запусков приложения / 0 запросов",
+      "noUsageYet": "Использования пока нет"
+    },
+    "filters": {
+      "allTeams": "Все команды",
+      "filterTeams": "Фильтр команд",
+      "selectedTeams": "{{count}} команд"
+    },
+    "labels": {
+      "cost": "Стоимость",
+      "days": "{{count}} дн.",
+      "less": "Меньше",
+      "more": "Больше",
+      "notAvailable": "н/д",
+      "now": "сейчас",
+      "otherModels": "Другие модели",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} запусков",
+      "share": "Доля",
+      "sourceCount": "{{count}} источников",
+      "tokens": "токены",
+      "tokensCost": "{{tokens}} токенов / {{cost}}",
+      "total": "Всего",
+      "unassigned": "Без команды",
+      "unknownAgent": "Неизвестный агент"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "Запуски приложения",
+      "billableApiRequests": "{{count}} billable API-запросов",
+      "billing": "Billing",
+      "billingHelp": "Billable показывает только реальную API стоимость от provider или gateway. Subscription usage считается, когда у запуска есть billingMode=subscription. API-equivalent - shadow-оценка по pricing table для сравнения, не счет за подписку.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "Нет est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Запросы",
+      "runningSessions": "{{running}} выполняется / {{sessions}} сессий",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Всего токенов",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Активность по дням",
+      "agents": "Агенты",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate",
+      "commandPeriods": "Периоды команд",
+      "commandSpend": "Расход команд",
+      "commands": "Команды",
+      "expensiveRuns": "Дорогие запуски",
+      "modelUsage": "Использование моделей",
+      "models": "Модели",
+      "recentRuns": "Последние запуски",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Сессии",
+      "sources": "Источники",
+      "teams": "Команды",
+      "usageTrend": "Тренд использования"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} токенов / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} токенов / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} токенов / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Пт",
+      "mon": "Пн",
+      "sun": "Вс",
+      "wed": "Ср"
+    }
   }
 }

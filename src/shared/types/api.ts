@@ -118,6 +118,7 @@ import type { OrganizationsElectronApi } from '@features/organizations/contracts
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
+import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
 import type {
   ConversationGroup,
   FileChangeEvent,
@@ -836,7 +837,8 @@ export interface WindowsElevationStatus {
 /**
  * Complete Electron API exposed to the renderer process via preload script.
  */
-export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElectronApi {
+export interface ElectronAPI
+  extends RecentProjectsElectronApi, CodexAccountElectronApi, TokenUsageElectronApi {
   startup?: AppStartupAPI;
   telemetry: TelemetryAPI;
   getAppVersion: () => Promise<string>;

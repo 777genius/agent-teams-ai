@@ -33,6 +33,7 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       secondaryMembers: [
         {
           laneId: 'secondary:opencode:bob',
+          runtimeRunId: 'run-bob',
           member: {
             name: 'bob',
             providerId: 'opencode',
@@ -65,6 +66,7 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       laneKind: 'secondary',
       laneOwnerProviderId: 'opencode',
       launchState: 'starting',
+      runtimeRunId: 'run-bob',
       hardFailure: false,
       hardFailureReason: undefined,
     });
@@ -115,6 +117,7 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       secondaryMembers: [
         {
           laneId: 'secondary:opencode:bob',
+          runtimeRunId: 'run-bob',
           member: {
             name: 'bob',
             providerId: 'opencode',
@@ -155,6 +158,7 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       runtimeAlive: true,
       bootstrapConfirmed: true,
       runtimePid: 333,
+      runtimeRunId: 'run-bob',
       runtimeSessionId: 'session-bob',
       livenessKind: 'confirmed_bootstrap',
       pidSource: 'runtime_bootstrap',

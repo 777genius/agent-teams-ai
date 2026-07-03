@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { planTeamRuntimeLanes } from '../planTeamRuntimeLanes';
+import { OPEN_CODE_SOLO_MEMBER_NAME, planTeamRuntimeLanes } from '../planTeamRuntimeLanes';
 
 describe('planTeamRuntimeLanes', () => {
   it('keeps non-OpenCode members on the primary lane', () => {
@@ -108,6 +108,40 @@ describe('planTeamRuntimeLanes', () => {
             }),
           },
         ],
+      },
+    });
+  });
+
+  it('creates an addressable solo runtime member for OpenCode-led solo teams', () => {
+    const result = planTeamRuntimeLanes({
+      leadProviderId: 'opencode',
+      baseCwd: '/repo',
+      members: [],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      plan: {
+        mode: 'pure_opencode_solo',
+        primaryMembers: [
+          expect.objectContaining({
+            name: OPEN_CODE_SOLO_MEMBER_NAME,
+            role: 'Solo OpenCode Agent',
+            providerId: 'opencode',
+            cwd: '/repo',
+          }),
+        ],
+        allMembers: [
+          expect.objectContaining({
+            name: OPEN_CODE_SOLO_MEMBER_NAME,
+            providerId: 'opencode',
+          }),
+        ],
+        sideLanes: [],
+        soloMember: expect.objectContaining({
+          name: OPEN_CODE_SOLO_MEMBER_NAME,
+          providerId: 'opencode',
+        }),
       },
     });
   });

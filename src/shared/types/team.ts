@@ -747,6 +747,7 @@ export interface SendMessageResult {
     providerId: 'opencode';
     attempted: boolean;
     delivered: boolean;
+    accepted?: boolean;
     responsePending?: boolean;
     responseState?:
       | 'not_observed'
@@ -777,6 +778,8 @@ export interface SendMessageResult {
       | 'relayOfMessageId'
       | 'direct_child_message_send'
       | 'plain_assistant_text';
+    ledgerRecordId?: string;
+    laneId?: string;
     acceptanceUnknown?: boolean;
     queuedBehindMessageId?: string;
     reason?: string;
@@ -976,11 +979,13 @@ export type TeamProviderBackendId =
   | 'cli-sdk'
   | 'codex-native'
   | 'opencode-cli';
+export type ProviderBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
 
 export interface ProviderModelLaunchIdentity {
   providerId: TeamProviderId;
   providerBackendId: TeamProviderBackendId | null;
+  billingMode?: ProviderBillingMode;
   selectedModel: string | null;
   selectedModelKind: 'default' | 'explicit';
   resolvedLaunchModel: string | null;
@@ -1105,6 +1110,7 @@ export interface PersistedTeamLaunchMemberState {
   name: string;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
+  billingMode?: ProviderBillingMode;
   model?: string;
   effort?: EffortLevel;
   cwd?: string;

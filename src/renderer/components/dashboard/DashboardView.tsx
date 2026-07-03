@@ -10,7 +10,7 @@ import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Command, Search, Users } from 'lucide-react';
+import { Command, Gauge, Search, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CliStatusBanner } from './CliStatusBanner';
@@ -108,6 +108,7 @@ export const DashboardView = (): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
+  const openTab = useStore((state) => state.openTab);
 
   return (
     <div className="relative flex-1 overflow-auto bg-surface">
@@ -123,15 +124,24 @@ export const DashboardView = (): React.JSX.Element => {
         <CliStatusBanner />
         <TmuxStatusBanner />
 
-        <div className="mb-12 flex items-center justify-center gap-3">
+        <div className="mb-12 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <button
             onClick={openTeamsTab}
-            className="flex shrink-0 items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
           >
             <Users className="size-4" />
             {t('actions.selectTeam')}
           </button>
-          <span className="shrink-0 text-xs text-text-muted">{t('actions.or')}</span>
+          <button
+            onClick={() => openTab({ type: 'token-usage', label: 'Usage' })}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
+          >
+            <Gauge className="size-4" />
+            Usage
+          </button>
+          <span className="hidden shrink-0 text-xs text-text-muted sm:block">
+            {t('actions.or')}
+          </span>
           <div className="flex-1">
             <CommandSearch value={searchQuery} onChange={setSearchQuery} />
           </div>

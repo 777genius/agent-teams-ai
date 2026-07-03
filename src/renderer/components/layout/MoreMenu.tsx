@@ -1,7 +1,7 @@
 /**
  * MoreMenu - Dropdown menu behind a "..." icon for less-frequent toolbar actions.
  *
- * Groups: Teams, Settings, Extensions, Search, Schedules, Docs, Export (session-only), Analyze (session-only).
+ * Groups: Teams, Settings, Extensions, Search, Schedules, Usage, Docs, Export (session-only), Analyze (session-only).
  * Closes on outside click or Escape.
  */
 
@@ -19,6 +19,7 @@ import {
   Braces,
   Calendar,
   FileText,
+  Gauge,
   MoreHorizontal,
   Puzzle,
   Search,
@@ -66,6 +67,7 @@ export const MoreMenu = ({
     openSchedulesTab,
     openSettingsTab,
     openTeamsTab,
+    openTab,
   } = useStore(
     useShallow((s) => ({
       openCommandPalette: s.openCommandPalette,
@@ -74,10 +76,11 @@ export const MoreMenu = ({
       openSchedulesTab: s.openSchedulesTab,
       openSettingsTab: s.openSettingsTab,
       openTeamsTab: s.openTeamsTab,
+      openTab: s.openTab,
     }))
   );
 
-  // Close on outside click
+  // Close on outside click or Escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -87,22 +90,18 @@ export const MoreMenu = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-
     const handleEscape = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         setIsOpen(false);
       }
     };
 
+    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isOpen]);
 
   const handleExport = useCallback(
@@ -171,6 +170,15 @@ export const MoreMenu = ({
       icon: Calendar,
       onClick: () => {
         openSchedulesTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'token-usage',
+      label: 'Usage',
+      icon: Gauge,
+      onClick: () => {
+        openTab({ type: 'token-usage', label: 'Usage' });
         setIsOpen(false);
       },
     },

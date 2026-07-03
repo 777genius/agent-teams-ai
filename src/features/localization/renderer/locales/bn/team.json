@@ -334,7 +334,8 @@
       "remove": "অপসারণ",
       "stop": "বন্ধ করুন",
       "task": "কাজ",
-      "visualize": "দৃশ্যমান"
+      "visualize": "দৃশ্যমান",
+      "usage": "ব্যবহার"
     },
     "deleteTeam": {
       "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "সম্পাদনা গ্রুপ উপলব্ধ নেই",
       "openBuiltInEditor": "নির্মিত সম্পাদকে প্রকল্প খুলুন",
       "openTeamGraph": "OpenGL গ্রাফ",
-      "stopTeam": "বন্ধ করুন"
+      "stopTeam": "বন্ধ করুন",
+      "openTeamUsage": "টিমের ব্যবহার খুলুন"
     },
     "waitingForProvisioning": "দলের তথ্য একযোগে উপলব্ধ করা হবে",
     "context": {

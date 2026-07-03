@@ -1,12 +1,11 @@
 /**
- * Decides which teams' team-root and task artifacts should be file-watched.
+ * Decides which team artifacts should be file-watched.
  *
- * The scope is (teams with a live runtime run) ∪ (teams recently engaged in the
- * UI). FileWatcher always watches the teams root and every team's `inboxes/`
- * regardless of this scope, so cross-team message delivery, the lead inbox→stdin
- * relay, and notifications are unaffected. This module only narrows the heavier
- * per-team team-root (config/kanban/processes/meta) and task watching, which
- * otherwise scales with the number of teams on disk and dominates startup cost.
+ * Team root/task scope is (teams with a live runtime run) + (teams recently
+ * engaged in the UI). Inbox scope is stricter: only teams with a live runtime
+ * run. That keeps the expensive per-inbox file watchers tied to teams that can
+ * actually produce live runtime activity, while opened idle teams still get
+ * their root/task artifacts watched for UI refreshes.
  *
  * Module-level state mirrors the existing IPC/registry singletons in this layer.
  */
@@ -64,6 +63,17 @@ export function computeTeamWatchScope(nowMs: number = Date.now()): ReadonlySet<s
     }
   }
   return scope;
+}
+
+/**
+ * Current set of teams whose inboxes should be watched live. Inbox writes only
+ * need immediate watcher delivery while a runtime is alive; otherwise the next
+ * launch or explicit team read can catch up from disk without holding one fd per
+ * inbox file for every historical team.
+ */
+export function computeLiveTeamWatchScope(): ReadonlySet<string> | null {
+  const scope = new Set<string>();
+  return collectAliveTeams(scope) ? scope : null;
 }
 
 /**

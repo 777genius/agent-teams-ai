@@ -94,9 +94,11 @@ export class FileWatcher extends EventEmitter {
   private todosPath: string;
   private teamsPath: string;
   private tasksPath: string;
-  // Optional scope for team-root/task watching (alive ∪ engaged teams). Inboxes
-  // and the teams root are always watched. Null => watch every team (fallback).
+  // Optional scopes for team artifact watching. Team root/task scope is usually
+  // alive + recently engaged. Inbox scope is usually live-only to avoid holding
+  // one fd per inbox file for every historical team. Null => watch every team.
   private teamWatchScopeProvider: (() => ReadonlySet<string> | null) | null = null;
+  private teamInboxWatchScopeProvider: (() => ReadonlySet<string> | null) | null = null;
   private teamsRegistry: TeamTaskWatchRegistry | null = null;
   private tasksRegistry: TeamTaskWatchRegistry | null = null;
   private dataCache: DataCache;
@@ -252,16 +254,25 @@ export class FileWatcher extends EventEmitter {
    * Sets the filesystem provider. Used when switching between local and SSH modes.
    */
   /**
-   * Inject the provider that decides which teams' team-root and task artifacts
-   * are watched (typically alive ∪ engaged teams). The teams root and every
-   * team's inboxes are always watched. Returning null (or leaving the provider
-   * unset) watches every team - the safe fallback / original behavior.
+   * Inject the provider that decides which teams' team-root/task artifacts are
+   * watched (typically alive + recently engaged teams). The teams root is
+   * always watched. Returning null (or leaving the provider unset) watches every
+   * team - the safe fallback / original behavior.
    *
    * Only the chokidar registry path is scoped; the EMFILE polling fallback still
    * watches every team so a scope change can never be mistaken for a deletion.
    */
   setTeamWatchScopeProvider(provider: (() => ReadonlySet<string> | null) | null): void {
     this.teamWatchScopeProvider = provider;
+  }
+
+  /**
+   * Inject the provider that decides which teams' inboxes are watched for live
+   * delivery. This is intentionally narrower than the root/task scope in normal
+   * operation: only live teams can produce immediate runtime inbox activity.
+   */
+  setTeamInboxWatchScopeProvider(provider: (() => ReadonlySet<string> | null) | null): void {
+    this.teamInboxWatchScopeProvider = provider;
   }
 
   /**
@@ -576,6 +587,8 @@ export class FileWatcher extends EventEmitter {
       },
       onError,
       getScopedTeamNames: () => this.teamWatchScopeProvider?.() ?? null,
+      getScopedInboxTeamNames: () =>
+        watcherType === 'teams' ? (this.teamInboxWatchScopeProvider?.() ?? null) : null,
     });
 
     if (watcherType === 'teams') {

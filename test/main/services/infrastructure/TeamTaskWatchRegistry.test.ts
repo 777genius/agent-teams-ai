@@ -82,27 +82,31 @@ describe('TeamTaskWatchRegistry scoping', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it('watches only scoped team dirs but every team inbox (teams kind)', async () => {
+  it('watches team dirs by artifact scope and inboxes by live scope (teams kind)', async () => {
     const registry = new TeamTaskWatchRegistry({
       kind: 'teams',
       rootPath: root,
       onChange: () => {},
       onError: () => {},
-      getScopedTeamNames: () => new Set(['alpha']),
+      getScopedTeamNames: () => new Set(['alpha', 'beta']),
+      getScopedInboxTeamNames: () => new Set(['alpha']),
     });
     await registry.start();
     const targets = latestTargets();
     await registry.close();
 
     expect(targets).toContain(path.normalize(root));
-    // scoped team root watched, unscoped team roots not watched
+    // alpha is live: root and inbox are watched
     expect(targets).toContain(path.normalize(path.join(root, 'alpha')));
-    expect(targets).not.toContain(path.normalize(path.join(root, 'beta')));
-    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma')));
-    // ALL inboxes watched regardless of scope (cross-team delivery)
     expect(targets).toContain(path.normalize(path.join(root, 'alpha', 'inboxes')));
-    expect(targets).toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
-    expect(targets).toContain(path.normalize(path.join(root, 'gamma', 'inboxes')));
+
+    // beta is only UI-engaged: root is watched, inbox is not
+    expect(targets).toContain(path.normalize(path.join(root, 'beta')));
+    expect(targets).not.toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
+
+    // gamma is idle: nothing per-team is watched
+    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma')));
+    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma', 'inboxes')));
   });
 
   it('falls back to watching every team when no scope provider is given', async () => {
@@ -177,6 +181,35 @@ describe('TeamTaskWatchRegistry scoping', () => {
     await registry.close();
 
     expect(targets).toContain(path.normalize(path.join(root, 'beta')));
+  });
+
+  it('backfills existing inbox files when a live team enters inbox scope', async () => {
+    const artifactScoped = new Set<string>(['alpha', 'beta']);
+    const inboxScoped = new Set<string>(['alpha']);
+    const events: Array<{ eventType: string; relativePath: string }> = [];
+    const registry = new TeamTaskWatchRegistry({
+      kind: 'teams',
+      rootPath: root,
+      onChange: (eventType, relativePath) => {
+        events.push({ eventType, relativePath });
+      },
+      onError: () => {},
+      getScopedTeamNames: () => artifactScoped,
+      getScopedInboxTeamNames: () => inboxScoped,
+    });
+    await registry.start();
+    expect(latestTargets()).not.toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
+    expect(events).toEqual([]);
+
+    inboxScoped.add('beta');
+    await registry.requestReconcile();
+
+    await registry.close();
+    expect(latestTargets()).toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
+    expect(events).toContainEqual({
+      eventType: 'add',
+      relativePath: path.join('beta', 'inboxes', 'team-lead.json'),
+    });
   });
 
   it('coalesces a burst of addDir events into a single incremental watcher update', async () => {
