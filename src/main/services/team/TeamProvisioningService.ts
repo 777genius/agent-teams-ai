@@ -73,7 +73,6 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import { formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, execFileSync, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -338,6 +337,14 @@ import {
   getInitialLeadContextWindowTokensForRequest,
 } from './provisioning/TeamProvisioningLeadContextUsage';
 import {
+  appendProvisioningAssistantText as appendProvisioningAssistantTextHelper,
+  joinLeadRelayCaptureText,
+  pushLiveLeadProcessMessage as pushLiveLeadProcessMessageHelper,
+  pushLiveLeadTextMessage as pushLiveLeadTextMessageHelper,
+  resetLiveLeadTextBuffer as resetLiveLeadTextBufferHelper,
+  shiftProvisioningOutputIndexesAfterRemoval as shiftProvisioningOutputIndexesAfterRemovalHelper,
+} from './provisioning/TeamProvisioningLeadProcessMessages';
+import {
   getPreCompleteCliErrorTextFromRun,
   getRunTrackedCwdFromRun,
   isCurrentTrackedRunById,
@@ -522,8 +529,6 @@ import {
 } from './provisioning/TeamProvisioningProcessExit';
 import {
   appendProvisioningTrace,
-  boundLiveLeadProcessMessage,
-  boundLiveLeadProcessText,
   boundRunProvisioningOutputParts,
   boundStdoutParserCarry,
   buildProvisioningLiveOutput,
@@ -661,7 +666,6 @@ import {
 } from './provisioning/TeamProvisioningStopFlow';
 import {
   extractStreamUserText,
-  getStableLeadThoughtMessageId,
   handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
   shouldAcceptDeterministicBootstrapEvent,
@@ -13816,34 +13820,12 @@ export class TeamProvisioningService {
   }
 
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
-    let cacheMessage = message;
-    // Enrich with leadSessionId if missing — needed for session boundary separators
-    if (!cacheMessage.leadSessionId) {
-      const runId = this.getTrackedRunId(teamName);
-      if (runId) {
-        const run = this.runs.get(runId);
-        if (run?.detectedSessionId) {
-          cacheMessage = { ...cacheMessage, leadSessionId: run.detectedSessionId };
-        }
-      }
-    }
-    cacheMessage = boundLiveLeadProcessMessage(cacheMessage);
-    const list = this.liveLeadProcessMessages.get(teamName) ?? [];
-    const id = typeof cacheMessage.messageId === 'string' ? cacheMessage.messageId.trim() : '';
-    if (id) {
-      const existingIdx = list.findIndex((m) => (m.messageId ?? '').trim() === id);
-      if (existingIdx >= 0) {
-        list[existingIdx] = cacheMessage;
-      } else {
-        list.push(cacheMessage);
-      }
-    } else {
-      list.push(cacheMessage);
-    }
-    if (list.length > LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT) {
-      list.splice(0, list.length - LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT);
-    }
-    this.liveLeadProcessMessages.set(teamName, list);
+    pushLiveLeadProcessMessageHelper(teamName, message, {
+      liveLeadProcessMessages: this.liveLeadProcessMessages,
+      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      cacheLimit: LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT,
+    });
   }
 
   resolveCrossTeamReplyMetadata(
@@ -13873,11 +13855,11 @@ export class TeamProvisioningService {
   private joinLeadRelayCaptureText(
     capture: NonNullable<ProvisioningRun['leadRelayCapture']>
   ): string {
-    return capture.textParts.join(capture.textJoinMode === 'stream' ? '' : '\n').trim();
+    return joinLeadRelayCaptureText(capture);
   }
 
   private resetLiveLeadTextBuffer(run: ProvisioningRun): void {
-    run.liveLeadTextBuffer = null;
+    resetLiveLeadTextBufferHelper(run);
   }
 
   private appendProvisioningAssistantText(
@@ -13885,42 +13867,14 @@ export class TeamProvisioningService {
     msg: Record<string, unknown>,
     text: string
   ): void {
-    const normalized = text.trim();
-    if (normalized.length === 0) {
-      return;
-    }
-
-    const stableMessageId = getStableLeadThoughtMessageId(msg);
-    if (stableMessageId) {
-      const existingIndex = run.provisioningOutputIndexByMessageId.get(stableMessageId);
-      if (existingIndex != null) {
-        run.provisioningOutputParts[existingIndex] = text;
-        boundRunProvisioningOutputParts(run);
-        return;
-      }
-    }
-
-    const lastIndex = run.provisioningOutputParts.length - 1;
-    if (lastIndex >= 0 && run.provisioningOutputParts[lastIndex]?.trim() === normalized) {
-      return;
-    }
-
-    const newIndex = run.provisioningOutputParts.push(text) - 1;
-    if (stableMessageId) {
-      run.provisioningOutputIndexByMessageId.set(stableMessageId, newIndex);
-    }
-    boundRunProvisioningOutputParts(run);
+    appendProvisioningAssistantTextHelper(run, msg, text);
   }
 
   private shiftProvisioningOutputIndexesAfterRemoval(
     run: ProvisioningRun,
     removedIndex: number
   ): void {
-    for (const [messageId, index] of run.provisioningOutputIndexByMessageId.entries()) {
-      if (index > removedIndex) {
-        run.provisioningOutputIndexByMessageId.set(messageId, index - 1);
-      }
-    }
+    shiftProvisioningOutputIndexesAfterRemovalHelper(run, removedIndex);
   }
 
   private pushLiveLeadTextMessage(
@@ -13930,78 +13884,15 @@ export class TeamProvisioningService {
     messageTimestamp?: string,
     options?: { coalesceStreamChunk?: boolean }
   ): void {
-    const leadName = this.getRunLeadName(run);
-    const timestamp =
-      typeof messageTimestamp === 'string' &&
-      messageTimestamp.trim().length > 0 &&
-      Number.isFinite(Date.parse(messageTimestamp))
-        ? messageTimestamp
-        : nowIso();
-    const coalesceStreamChunk = options?.coalesceStreamChunk === true;
-    let messageId = stableMessageId;
-    let text = cleanText;
-    let timestampForMessage = timestamp;
-    let toolCalls: ToolCallMeta[] | undefined;
-    let toolSummary: string | undefined;
-
-    if (coalesceStreamChunk) {
-      if (!run.liveLeadTextBuffer) {
-        run.leadMsgSeq += 1;
-        toolCalls = run.pendingToolCalls.length > 0 ? [...run.pendingToolCalls] : undefined;
-        toolSummary = toolCalls ? formatToolSummaryFromCalls(toolCalls) : undefined;
-        run.liveLeadTextBuffer = {
-          messageId: `lead-turn-${run.runId}-${run.leadMsgSeq}`,
-          text: boundLiveLeadProcessText(cleanText),
-          timestamp,
-          toolCalls,
-          toolSummary,
-        };
-        run.pendingToolCalls = [];
-      } else {
-        run.liveLeadTextBuffer.text = boundLiveLeadProcessText(
-          run.liveLeadTextBuffer.text + cleanText
-        );
-      }
-
-      messageId = run.liveLeadTextBuffer.messageId;
-      text = stripAgentBlocks(run.liveLeadTextBuffer.text).trim();
-      timestampForMessage = run.liveLeadTextBuffer.timestamp;
-      toolCalls = run.liveLeadTextBuffer.toolCalls;
-      toolSummary = run.liveLeadTextBuffer.toolSummary;
-    } else {
-      this.resetLiveLeadTextBuffer(run);
-      run.leadMsgSeq += 1;
-      messageId = messageId || `lead-turn-${run.runId}-${run.leadMsgSeq}`;
-      // Attach accumulated tool call details from preceding tool_use messages, then reset.
-      toolCalls = run.pendingToolCalls.length > 0 ? [...run.pendingToolCalls] : undefined;
-      toolSummary = toolCalls ? formatToolSummaryFromCalls(toolCalls) : undefined;
-      run.pendingToolCalls = [];
-    }
-
-    const leadMsg: InboxMessage = {
-      from: leadName,
-      text,
-      timestamp: timestampForMessage,
-      read: true,
-      summary: text.length > 60 ? text.slice(0, 57) + '...' : text,
-      messageId,
-      source: 'lead_process',
-      toolSummary,
-      toolCalls,
-    };
-    this.pushLiveLeadProcessMessage(run.teamName, leadMsg);
-
-    // Coalesced refresh: at most one event per LEAD_TEXT_EMIT_THROTTLE_MS per team.
-    const now = Date.now();
-    if (now - run.lastLeadTextEmitMs >= TeamProvisioningService.LEAD_TEXT_EMIT_THROTTLE_MS) {
-      run.lastLeadTextEmitMs = now;
-      this.teamChangeEmitter?.({
-        type: 'lead-message',
-        teamName: run.teamName,
-        runId: run.runId,
-        detail: 'lead-text',
-      });
-    }
+    pushLiveLeadTextMessageHelper(run, cleanText, stableMessageId, messageTimestamp, options, {
+      nowMs: () => Date.now(),
+      nowIso,
+      getRunLeadName: (run) => this.getRunLeadName(run),
+      pushLiveLeadProcessMessage: (teamName, message) =>
+        this.pushLiveLeadProcessMessage(teamName, message),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      leadTextEmitThrottleMs: TeamProvisioningService.LEAD_TEXT_EMIT_THROTTLE_MS,
+    });
   }
 
   /**
