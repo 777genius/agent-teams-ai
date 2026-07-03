@@ -396,6 +396,12 @@ import {
   resolveLeadMemberName,
   shouldPreferCurrentLaunchMemberStatus,
 } from './provisioning/TeamProvisioningMemberStatusProjection';
+import {
+  hasAcceptedLeadWorkSyncReport as hasAcceptedLeadWorkSyncReportHelper,
+  hasAcceptedMemberWorkSyncReport as hasAcceptedMemberWorkSyncReportHelper,
+  type MemberWorkSyncAcceptedReportChecker,
+  scheduleLeadProofMissingWorkSyncRecovery as scheduleLeadProofMissingWorkSyncRecoveryHelper,
+} from './provisioning/TeamProvisioningMemberWorkSyncProof';
 import { buildMixedSecondaryLaunchSnapshotForRun as buildMixedSecondaryLaunchSnapshotForRunHelper } from './provisioning/TeamProvisioningMixedSecondaryLaunchReconciliation';
 import { handleNativeTeammateUserMessage as handleNativeTeammateUserMessageHelper } from './provisioning/TeamProvisioningNativeTeammateMessages';
 import { getOpenCodeAgendaSyncRecoveryBypassMessageIds as getOpenCodeAgendaSyncRecoveryBypassMessageIdsHelper } from './provisioning/TeamProvisioningOpenCodeAgendaSyncRecovery';
@@ -1278,11 +1284,6 @@ interface OpenCodeMemberInboxRelayOptions {
     taskRefs?: TaskRef[];
   };
 }
-
-type MemberWorkSyncAcceptedReportChecker = (input: {
-  teamName: string;
-  memberName: string;
-}) => Promise<boolean> | boolean;
 
 export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
@@ -9338,33 +9339,19 @@ export class TeamProvisioningService {
     teamName: string;
     memberName: string;
   }): Promise<boolean> {
-    const checker = this.memberWorkSyncAcceptedReportChecker;
-    if (!checker) {
-      return false;
-    }
-
-    try {
-      return (
-        (await checker({
-          teamName: input.teamName,
-          memberName: input.memberName,
-        })) === true
-      );
-    } catch (error) {
-      logger.warn(
-        `[${input.teamName}] Failed to check accepted work sync report for ${input.memberName}: ${getErrorMessage(error)}`
-      );
-      return false;
-    }
+    return hasAcceptedMemberWorkSyncReportHelper(input, this.memberWorkSyncAcceptedReportChecker, {
+      logger,
+      getErrorMessage,
+    });
   }
 
   private async hasAcceptedLeadWorkSyncReport(input: {
     teamName: string;
     leadName: string;
   }): Promise<boolean> {
-    return this.hasAcceptedMemberWorkSyncReport({
-      teamName: input.teamName,
-      memberName: input.leadName,
+    return hasAcceptedLeadWorkSyncReportHelper(input, this.memberWorkSyncAcceptedReportChecker, {
+      logger,
+      getErrorMessage,
     });
   }
 
@@ -9373,26 +9360,11 @@ export class TeamProvisioningService {
     leadName: string;
     message: InboxMessage & { messageId: string };
   }): Promise<boolean> {
-    const scheduler = this.memberWorkSyncProofMissingRecoveryScheduler;
-    if (!scheduler) {
-      return false;
-    }
-
-    try {
-      const result = (await scheduler({
-        teamName: input.teamName,
-        memberName: input.leadName,
-        originalMessageId: input.message.messageId,
-        taskRefs: input.message.taskRefs,
-        reason: 'lead_member_work_sync_report_required',
-      })) as { scheduled?: boolean; reason?: string } | null | undefined;
-      return result?.scheduled === true || result?.reason === 'coalesced_recent';
-    } catch (error) {
-      logger.warn(
-        `[${input.teamName}] Failed to schedule lead proof-missing work sync recovery for ${input.leadName}: ${getErrorMessage(error)}`
-      );
-      return false;
-    }
+    return scheduleLeadProofMissingWorkSyncRecoveryHelper(
+      input,
+      this.memberWorkSyncProofMissingRecoveryScheduler,
+      { logger, getErrorMessage }
+    );
   }
 
   async relayLeadInboxMessages(teamName: string): Promise<number> {
