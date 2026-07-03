@@ -11,6 +11,7 @@ import type {
   TeamProvisioningProviderDiagnosticsRuntime,
   TeamProvisioningProviderDiagnosticsRuntimeInput,
 } from '../TeamProvisioningProviderDiagnosticsPorts';
+import type { TeamProviderId } from '@shared/types';
 
 function createDiagnosticsRuntime(
   overrides: Partial<TeamProvisioningProviderDiagnosticsRuntime> = {}
@@ -47,12 +48,14 @@ function createEnvRuntimePorts(): TeamProvisioningEnvRuntimePorts {
     getProvisioningEnvBuilderPorts: vi.fn(() => ({}) as never),
     buildProvisioningEnv: vi.fn(async () => ({
       env: { PATH: '/bin' },
-      authSource: 'none',
+      authSource: 'none' as const,
       geminiRuntimeAuth: null,
     })),
     buildCrossProviderMemberArgs: vi.fn(async () => ({
       args: ['--provider', 'codex'],
-      providerArgsByProvider: new Map([['codex', ['--provider', 'codex']]]),
+      providerArgsByProvider: new Map<TeamProviderId, string[]>([
+        ['codex', ['--provider', 'codex']],
+      ]),
       envPatch: { CODEX_HOME: '/tmp/codex' },
       usesAnthropicApiKeyHelper: false,
     })),
@@ -96,7 +99,13 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       '--provider',
       'codex',
     ]);
-    await facade.validateAgentTeamsMcpRuntime('/bin/claude', '/repo', env, '/tmp/mcp.json', options);
+    await facade.validateAgentTeamsMcpRuntime(
+      '/bin/claude',
+      '/repo',
+      env,
+      '/tmp/mcp.json',
+      options
+    );
     await facade.spawnProbe('/bin/claude', ['--version'], '/repo', env, 1000);
 
     expect(createDiagnosticsRuntimeMock).toHaveBeenCalledTimes(4);
@@ -143,7 +152,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       facade.buildProvisioningEnv('codex', 'openai', { teamRuntimeAuth })
     ).resolves.toMatchObject({
       env: { PATH: '/bin' },
-      authSource: 'none',
+      authSource: 'none' as const,
     });
     await expect(
       facade.buildCrossProviderMemberArgs(
