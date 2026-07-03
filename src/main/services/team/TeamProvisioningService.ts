@@ -30,7 +30,7 @@ import {
 } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
-import { type AttachmentPayload, DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
+import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { type ParsedPermissionRequest } from '@shared/utils/inboxNoise';
@@ -300,12 +300,8 @@ import {
   resolveLeadMemberName,
   shouldPreferCurrentLaunchMemberStatus,
 } from './provisioning/TeamProvisioningMemberStatusProjection';
-import {
-  hasAcceptedLeadWorkSyncReport as hasAcceptedLeadWorkSyncReportHelper,
-  hasAcceptedMemberWorkSyncReport as hasAcceptedMemberWorkSyncReportHelper,
-  type MemberWorkSyncAcceptedReportChecker,
-  scheduleLeadProofMissingWorkSyncRecovery as scheduleLeadProofMissingWorkSyncRecoveryHelper,
-} from './provisioning/TeamProvisioningMemberWorkSyncProof';
+import { type MemberWorkSyncAcceptedReportChecker } from './provisioning/TeamProvisioningMemberWorkSyncProof';
+import { createTeamProvisioningMemberWorkSyncProofBoundary } from './provisioning/TeamProvisioningMemberWorkSyncProofBoundaryFactory';
 import {
   persistTeamProvisioningInboxMessage,
   persistTeamProvisioningSentMessage,
@@ -324,7 +320,6 @@ import {
   summarizeOpenCodeAggregateLaunchState as summarizeOpenCodeAggregateLaunchStateHelper,
 } from './provisioning/TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { runOpenCodeWorktreeRootAggregateLaunch as runOpenCodeWorktreeRootAggregateLaunchHelper } from './provisioning/TeamProvisioningOpenCodeAggregateRun';
-import { resolveOpenCodeInboxAttachmentPayloads as resolveOpenCodeInboxAttachmentPayloadsHelper } from './provisioning/TeamProvisioningOpenCodeAttachmentPayloads';
 import { type OpenCodeRuntimeBootstrapEvidencePorts } from './provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
 import {
   isOpenCodeBootstrapStallWindowElapsed as isOpenCodeBootstrapStallWindowElapsedHelper,
@@ -332,6 +327,7 @@ import {
   scheduleOpenCodeBootstrapStallReevaluation as scheduleOpenCodeBootstrapStallReevaluationHelper,
 } from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
 import { boundOpenCodeAppManagedBriefingText } from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
+import { createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary } from './provisioning/TeamProvisioningOpenCodeInboxAttachmentPayloadBoundaryFactory';
 import { resolveOpenCodeMemberIdentityFromDirectory as resolveOpenCodeMemberIdentityFromDirectoryHelper } from './provisioning/TeamProvisioningOpenCodeMemberIdentity';
 import {
   type OpenCodeMemberInboxRelayOptions,
@@ -1282,6 +1278,16 @@ export class TeamProvisioningService {
   private readonly openCodeMemberSendSerializer = new OpenCodeMemberSendSerializer({
     inFlightByLane: this.openCodeMemberSendInFlightByLane,
   });
+  private readonly openCodeInboxAttachmentPayloadBoundary =
+    createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary({
+      getAttachmentStore: () => this.attachmentStore,
+    });
+  private readonly memberWorkSyncProofBoundary = createTeamProvisioningMemberWorkSyncProofBoundary({
+    getAcceptedReportChecker: () => this.memberWorkSyncAcceptedReportChecker,
+    getProofMissingRecoveryScheduler: () => this.memberWorkSyncProofMissingRecoveryScheduler,
+    logger,
+    getErrorMessage,
+  });
   private readonly openCodeRuntimeDeliveryProofReader = new OpenCodeRuntimeDeliveryProofReader();
   private readonly openCodeRuntimeDeliveryAdvisory =
     new TeamProvisioningOpenCodeRuntimeDeliveryAdvisory({
@@ -1534,9 +1540,10 @@ export class TeamProvisioningService {
       scheduleSameTeamDeferredRetry: (teamName) => this.scheduleSameTeamDeferredRetry(teamName),
       resolveControlApiBaseUrl: () => this.providerRuntime.resolveControlApiBaseUrl(),
       sendMessageToRun: (run, message) => this.sendMessageToRun(run, message),
-      hasAcceptedLeadWorkSyncReport: (input) => this.hasAcceptedLeadWorkSyncReport(input),
+      hasAcceptedLeadWorkSyncReport: (input) =>
+        this.memberWorkSyncProofBoundary.hasAcceptedLeadWorkSyncReport(input),
       scheduleLeadProofMissingWorkSyncRecovery: (input) =>
-        this.scheduleLeadProofMissingWorkSyncRecovery(input),
+        this.memberWorkSyncProofBoundary.scheduleLeadProofMissingWorkSyncRecovery(input),
       pushLiveLeadTextMessage: (run, text, messageId, timestamp) =>
         this.pushLiveLeadTextMessage(run, text, messageId, timestamp),
       pushLiveLeadProcessMessage: (teamName, message) =>
@@ -2138,7 +2145,8 @@ export class TeamProvisioningService {
     });
     this.openCodePromptDeliveryWatchdogCoordinator =
       createOpenCodePromptDeliveryWatchdogCoordinator({
-        hasAcceptedMemberWorkSyncReport: (input) => this.hasAcceptedMemberWorkSyncReport(input),
+        hasAcceptedMemberWorkSyncReport: (input) =>
+          this.memberWorkSyncProofBoundary.hasAcceptedMemberWorkSyncReport(input),
         taskRefsIncludeAll: openCodeTaskRefsIncludeAllValue,
         visibleReplyProofService: this.openCodeVisibleReplyProofService,
         maybeSyncRuntimePermissionsAfterDelivery: (input) =>
@@ -5933,7 +5941,8 @@ export class TeamProvisioningService {
         markInboxMessagesRead: (teamName, memberName, messages) =>
           this.markInboxMessagesRead(teamName, memberName, messages),
         sendMessageToRun: (run, message) => this.sendMessageToRun(run, message),
-        hasAcceptedMemberWorkSyncReport: (input) => this.hasAcceptedMemberWorkSyncReport(input),
+        hasAcceptedMemberWorkSyncReport: (input) =>
+          this.memberWorkSyncProofBoundary.hasAcceptedMemberWorkSyncReport(input),
         relayedMemberInboxMessageIds: this.relayedMemberInboxMessageIds,
         trimRelayedSet: (relayedIds) => this.trimRelayedSet(relayedIds),
         logger,
@@ -5961,18 +5970,6 @@ export class TeamProvisioningService {
         isTeamAlive: (teamName) => this.isTeamAlive(teamName),
       }
     );
-  }
-
-  private async resolveOpenCodeInboxAttachmentPayloads(input: {
-    teamName: string;
-    message: InboxMessage & { messageId: string };
-  }): Promise<
-    | { ok: true; attachments?: AttachmentPayload[] }
-    | { ok: false; reason: string; diagnostics: string[] }
-  > {
-    return resolveOpenCodeInboxAttachmentPayloadsHelper(input, {
-      attachmentStore: this.attachmentStore,
-    });
   }
 
   async relayOpenCodeMemberInboxMessages(
@@ -6013,7 +6010,7 @@ export class TeamProvisioningService {
         readTaskRefInferenceTasks: (teamName) =>
           new TeamTaskReader().getTasks(teamName).catch(() => []),
         resolveOpenCodeInboxAttachmentPayloads: (input) =>
-          this.resolveOpenCodeInboxAttachmentPayloads(input),
+          this.openCodeInboxAttachmentPayloadBoundary.resolveOpenCodeInboxAttachmentPayloads(input),
         resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
           this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
         markOpenCodePromptLedgerFailedTerminal: (input) =>
@@ -6064,38 +6061,6 @@ export class TeamProvisioningService {
           .list()
           .catch(() => null),
     });
-  }
-
-  private async hasAcceptedMemberWorkSyncReport(input: {
-    teamName: string;
-    memberName: string;
-  }): Promise<boolean> {
-    return hasAcceptedMemberWorkSyncReportHelper(input, this.memberWorkSyncAcceptedReportChecker, {
-      logger,
-      getErrorMessage,
-    });
-  }
-
-  private async hasAcceptedLeadWorkSyncReport(input: {
-    teamName: string;
-    leadName: string;
-  }): Promise<boolean> {
-    return hasAcceptedLeadWorkSyncReportHelper(input, this.memberWorkSyncAcceptedReportChecker, {
-      logger,
-      getErrorMessage,
-    });
-  }
-
-  private async scheduleLeadProofMissingWorkSyncRecovery(input: {
-    teamName: string;
-    leadName: string;
-    message: InboxMessage & { messageId: string };
-  }): Promise<boolean> {
-    return scheduleLeadProofMissingWorkSyncRecoveryHelper(
-      input,
-      this.memberWorkSyncProofMissingRecoveryScheduler,
-      { logger, getErrorMessage }
-    );
   }
 
   async relayLeadInboxMessages(teamName: string): Promise<number> {
