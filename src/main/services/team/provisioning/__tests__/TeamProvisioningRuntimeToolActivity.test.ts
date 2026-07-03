@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   clearMemberSpawnToolTracking,
+  createRuntimeToolActivityHandlers,
   finishRuntimeToolActivity,
   pauseMemberTaskActivityForRuntimeLoss,
   resetRuntimeToolActivity,
@@ -306,6 +307,41 @@ describe('runtime tool activity helpers', () => {
       'team',
       'api',
       '2026-01-01T00:00:08.000Z'
+    );
+  });
+
+  it('wires runtime tool activity handler ports for reset and spawn tracking cleanup', () => {
+    const emitTeamChange = vi.fn<(event: TeamChangeEvent) => void>();
+    const logInfo = vi.fn();
+    const targetRun = run({
+      activeToolCalls: new Map([['tool-api', active('api', 'tool-api')]]),
+      memberSpawnToolUseIds: new Map([['tool-api', 'api']]),
+    });
+    const handlers = createRuntimeToolActivityHandlers({
+      isCurrentTrackedRun: () => true,
+      emitTeamChange,
+      nowIso: () => ISO_LATER,
+      logInfo,
+      logWarn: vi.fn(),
+      updateProgress: vi.fn(),
+      setMemberSpawnStatus: vi.fn(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      reevaluateMemberLaunchStatus: vi.fn(),
+      pauseActiveIntervalsForMember: vi.fn(),
+      resumeActiveIntervalsForMember: vi.fn(),
+    });
+
+    handlers.resetRuntimeToolActivity(targetRun, 'api');
+    handlers.clearMemberSpawnToolTracking(targetRun, 'api');
+
+    expect(targetRun.activeToolCalls.size).toBe(0);
+    expect(targetRun.memberSpawnToolUseIds.size).toBe(0);
+    expect(JSON.parse(emitTeamChange.mock.calls[0]?.[0].detail ?? '{}')).toEqual({
+      action: 'reset',
+      memberName: 'api',
+    });
+    expect(logInfo).toHaveBeenCalledWith(
+      '[team] [bootstrap] api: cleared stale spawn tool tracking before manual restart'
     );
   });
 });

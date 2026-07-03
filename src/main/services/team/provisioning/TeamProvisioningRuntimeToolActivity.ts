@@ -108,6 +108,86 @@ export interface RuntimeTransitionTaskActivityPorts extends RuntimeLossTaskActiv
   nowIso(): string;
 }
 
+export interface RuntimeToolActivityHandlerPorts<TRun extends RuntimeToolActivityRunLike>
+  extends FinishRuntimeToolActivityPorts<TRun>,
+    RuntimeTransitionTaskActivityPorts {}
+
+export interface RuntimeToolActivityHandlers<TRun extends RuntimeToolActivityRunLike> {
+  emitToolActivity(run: TRun, payload: ToolActivityEventPayload): void;
+  startRuntimeToolActivity(
+    run: TRun,
+    memberName: string,
+    block: Record<string, unknown>
+  ): void;
+  finishRuntimeToolActivity(
+    run: TRun,
+    toolUseId: string,
+    resultContent: unknown,
+    isError: boolean
+  ): void;
+  appendMemberBootstrapDiagnostic(run: TRun, memberName: string, text: string): void;
+  resetRuntimeToolActivity(run: TRun, memberName?: string): void;
+  clearMemberSpawnToolTracking(run: TRun, memberName: string): void;
+  pauseMemberTaskActivityForRuntimeLoss(
+    run: TRun,
+    memberName: string,
+    previous: MemberSpawnStatusEntry,
+    observedAt: string
+  ): void;
+  syncMemberTaskActivityForRuntimeTransition(
+    run: TRun,
+    memberName: string,
+    previous: MemberSpawnStatusEntry,
+    next: MemberSpawnStatusEntry,
+    observedAt: string
+  ): void;
+}
+
+export function createRuntimeToolActivityHandlers<TRun extends RuntimeToolActivityRunLike>(
+  ports: RuntimeToolActivityHandlerPorts<TRun>
+): RuntimeToolActivityHandlers<TRun> {
+  const handlers: RuntimeToolActivityHandlers<TRun> = {
+    emitToolActivity(run, payload) {
+      emitToolActivity(run, payload, ports);
+    },
+    startRuntimeToolActivity(run, memberName, block) {
+      startRuntimeToolActivity(run, memberName, block, ports);
+    },
+    finishRuntimeToolActivity(run, toolUseId, resultContent, isError) {
+      finishRuntimeToolActivity(run, toolUseId, resultContent, isError, ports);
+    },
+    appendMemberBootstrapDiagnostic(run, memberName, text) {
+      appendMemberBootstrapDiagnostic(run, memberName, text, ports);
+    },
+    resetRuntimeToolActivity(run, memberName) {
+      resetRuntimeToolActivity(run, memberName, {
+        emitToolActivity: (payload) => handlers.emitToolActivity(run, payload),
+      });
+    },
+    clearMemberSpawnToolTracking(run, memberName) {
+      clearMemberSpawnToolTracking(run, memberName, {
+        appendMemberBootstrapDiagnostic: (targetMemberName, text) =>
+          handlers.appendMemberBootstrapDiagnostic(run, targetMemberName, text),
+      });
+    },
+    pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, observedAt) {
+      pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, observedAt, ports);
+    },
+    syncMemberTaskActivityForRuntimeTransition(run, memberName, previous, next, observedAt) {
+      syncMemberTaskActivityForRuntimeTransition(
+        run,
+        memberName,
+        previous,
+        next,
+        observedAt,
+        ports
+      );
+    },
+  };
+
+  return handlers;
+}
+
 export function emitToolActivity<
   TRun extends Pick<RuntimeToolActivityRunLike, 'teamName' | 'runId'>,
 >(

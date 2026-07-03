@@ -650,15 +650,7 @@ import {
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import {
-  appendMemberBootstrapDiagnostic as appendMemberBootstrapDiagnosticHelper,
-  clearMemberSpawnToolTracking as clearMemberSpawnToolTrackingHelper,
-  emitToolActivity as emitToolActivityHelper,
-  finishRuntimeToolActivity as finishRuntimeToolActivityHelper,
-  handleMemberSpawnFailure as handleMemberSpawnFailureHelper,
-  pauseMemberTaskActivityForRuntimeLoss as pauseMemberTaskActivityForRuntimeLossHelper,
-  resetRuntimeToolActivity as resetRuntimeToolActivityHelper,
-  startRuntimeToolActivity as startRuntimeToolActivityHelper,
-  syncMemberTaskActivityForRuntimeTransition as syncMemberTaskActivityForRuntimeTransitionHelper,
+  createRuntimeToolActivityHandlers,
 } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
   buildRuntimeTurnSettledEnvironment as buildRuntimeTurnSettledEnvironmentHelper,
@@ -890,7 +882,6 @@ import type {
   TeamProvisioningState,
   TeamRuntimeState,
   TeamTask,
-  ToolActivityEventPayload,
   ToolApprovalEvent,
   ToolApprovalRequest,
   ToolApprovalSettings,
@@ -1672,6 +1663,23 @@ export class TeamProvisioningService {
   private readonly memberLogsFinder: TeamMemberLogsFinder;
   private readonly transcriptProjectResolver: TeamTranscriptProjectResolver;
   private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
+  private readonly runtimeToolActivity = createRuntimeToolActivityHandlers<ProvisioningRun>({
+    isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
+    emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+    nowIso,
+    logInfo: (message) => logger.info(message),
+    logWarn: (message) => logger.warn(message),
+    updateProgress,
+    setMemberSpawnStatus: (run, memberName, status, error) =>
+      this.setMemberSpawnStatus(run, memberName, status, error),
+    invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+    reevaluateMemberLaunchStatus: (run, memberName) =>
+      this.reevaluateMemberLaunchStatus(run, memberName),
+    pauseActiveIntervalsForMember: (teamName, memberName, at) =>
+      this.taskActivityIntervalService.pauseActiveIntervalsForMember(teamName, memberName, at),
+    resumeActiveIntervalsForMember: (teamName, memberName, at) =>
+      this.taskActivityIntervalService.resumeActiveIntervalsForMember(teamName, memberName, at),
+  });
   private readonly leadTaskActivitySyncedRunKeys = new Set<string>();
   private readonly crashRepairedActivityIntervalsByTeam = new Set<string>();
   private readonly pendingCrashRepairSnapshotByTeam = new Map<
@@ -4264,23 +4272,12 @@ export class TeamProvisioningService {
     };
   }
 
-  private emitToolActivity(run: ProvisioningRun, payload: ToolActivityEventPayload): void {
-    emitToolActivityHelper(run, payload, {
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-    });
-  }
-
   private startRuntimeToolActivity(
     run: ProvisioningRun,
     memberName: string,
     block: Record<string, unknown>
   ): void {
-    startRuntimeToolActivityHelper(run, memberName, block, {
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      nowIso,
-    });
+    this.runtimeToolActivity.startRuntimeToolActivity(run, memberName, block);
   }
 
   private finishRuntimeToolActivity(
@@ -4289,31 +4286,7 @@ export class TeamProvisioningService {
     resultContent: unknown,
     isError: boolean
   ): void {
-    finishRuntimeToolActivityHelper(run, toolUseId, resultContent, isError, {
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      nowIso,
-      logInfo: (message) => logger.info(message),
-      logWarn: (message) => logger.warn(message),
-      updateProgress,
-      setMemberSpawnStatus: (targetRun, memberName, status, error) =>
-        this.setMemberSpawnStatus(targetRun, memberName, status, error),
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      reevaluateMemberLaunchStatus: (targetRun, memberName) =>
-        this.reevaluateMemberLaunchStatus(targetRun, memberName),
-    });
-  }
-
-  private handleMemberSpawnFailure(
-    run: ProvisioningRun,
-    memberName: string,
-    resultPreview?: string
-  ): void {
-    handleMemberSpawnFailureHelper(run, memberName, resultPreview, {
-      setMemberSpawnStatus: (targetRun, targetMemberName, status, error) =>
-        this.setMemberSpawnStatus(targetRun, targetMemberName, status, error),
-      updateProgress,
-    });
+    this.runtimeToolActivity.finishRuntimeToolActivity(run, toolUseId, resultContent, isError);
   }
 
   private appendMemberBootstrapDiagnostic(
@@ -4321,9 +4294,7 @@ export class TeamProvisioningService {
     memberName: string,
     text: string
   ): void {
-    appendMemberBootstrapDiagnosticHelper(run, memberName, text, {
-      logInfo: (message) => logger.info(message),
-    });
+    this.runtimeToolActivity.appendMemberBootstrapDiagnostic(run, memberName, text);
   }
 
   private updateLaunchDiagnosticsForRun(run: ProvisioningRun, observedAt: string): void {
@@ -4342,16 +4313,11 @@ export class TeamProvisioningService {
   }
 
   private resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void {
-    resetRuntimeToolActivityHelper(run, memberName, {
-      emitToolActivity: (payload) => this.emitToolActivity(run, payload),
-    });
+    this.runtimeToolActivity.resetRuntimeToolActivity(run, memberName);
   }
 
   private clearMemberSpawnToolTracking(run: ProvisioningRun, memberName: string): void {
-    clearMemberSpawnToolTrackingHelper(run, memberName, {
-      appendMemberBootstrapDiagnostic: (targetMemberName, text) =>
-        this.appendMemberBootstrapDiagnostic(run, targetMemberName, text),
-    });
+    this.runtimeToolActivity.clearMemberSpawnToolTracking(run, memberName);
   }
 
   private pauseMemberTaskActivityForRuntimeLoss(
@@ -4360,14 +4326,12 @@ export class TeamProvisioningService {
     previous: MemberSpawnStatusEntry,
     observedAt: string
   ): void {
-    pauseMemberTaskActivityForRuntimeLossHelper(run, memberName, previous, observedAt, {
-      pauseActiveIntervalsForMember: (teamName, targetMemberName, at) =>
-        this.taskActivityIntervalService.pauseActiveIntervalsForMember(
-          teamName,
-          targetMemberName,
-          at
-        ),
-    });
+    this.runtimeToolActivity.pauseMemberTaskActivityForRuntimeLoss(
+      run,
+      memberName,
+      previous,
+      observedAt
+    );
   }
 
   private syncMemberTaskActivityForRuntimeTransition(
@@ -4377,21 +4341,13 @@ export class TeamProvisioningService {
     next: MemberSpawnStatusEntry,
     observedAt: string
   ): void {
-    syncMemberTaskActivityForRuntimeTransitionHelper(run, memberName, previous, next, observedAt, {
-      pauseActiveIntervalsForMember: (teamName, targetMemberName, at) =>
-        this.taskActivityIntervalService.pauseActiveIntervalsForMember(
-          teamName,
-          targetMemberName,
-          at
-        ),
-      resumeActiveIntervalsForMember: (teamName, targetMemberName, at) =>
-        this.taskActivityIntervalService.resumeActiveIntervalsForMember(
-          teamName,
-          targetMemberName,
-          at
-        ),
-      nowIso,
-    });
+    this.runtimeToolActivity.syncMemberTaskActivityForRuntimeTransition(
+      run,
+      memberName,
+      previous,
+      next,
+      observedAt
+    );
   }
 
   /**
