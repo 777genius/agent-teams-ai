@@ -199,6 +199,7 @@ import {
   waitForInboxRelayInFlight,
 } from './provisioning/TeamProvisioningInboxRelayCandidates';
 import { hasStableInboxMessageId } from './provisioning/TeamProvisioningInboxRelayPolicy';
+import { notifyAliveTeamsAboutLanguageChangeWithPorts } from './provisioning/TeamProvisioningLanguageChangeNotification';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   assertOpenCodeNotLaunchedThroughLegacyProvisioning,
@@ -6391,51 +6392,17 @@ export class TeamProvisioningService {
    */
   async notifyLanguageChange(newLangCode: string): Promise<void> {
     this.languageChangeInFlight = this.languageChangeInFlight.then(() =>
-      this.doNotifyLanguageChange(newLangCode)
+      notifyAliveTeamsAboutLanguageChangeWithPorts(newLangCode, {
+        getAliveTeams: () => this.getAliveTeams(),
+        readConfigForStrictDecision: (teamName) => this.readConfigForStrictDecision(teamName),
+        updateConfig: (teamName, update) => this.configReader.updateConfig(teamName, update),
+        sendMessageToTeam: (teamName, message) => this.sendMessageToTeam(teamName, message),
+        getSystemLocale,
+        resolveLanguageName,
+        logger,
+      })
     );
     return this.languageChangeInFlight;
-  }
-
-  private async doNotifyLanguageChange(newLangCode: string): Promise<void> {
-    const aliveTeams = this.getAliveTeams();
-    if (aliveTeams.length === 0) return;
-
-    const systemLocale = getSystemLocale();
-    const newResolved = resolveLanguageName(newLangCode, systemLocale);
-
-    for (const teamName of aliveTeams) {
-      try {
-        const config = await this.readConfigForStrictDecision(teamName);
-        if (!config) continue;
-
-        const oldCode = config.language || 'system';
-        if (oldCode === newLangCode) continue;
-
-        // Compare resolved names to avoid spurious notifications
-        // e.g. switching from 'ru' to 'system' when system locale is Russian
-        const oldResolved = resolveLanguageName(oldCode, systemLocale);
-        if (oldResolved === newResolved) {
-          // Effective language unchanged — just update stored code silently
-          await this.configReader.updateConfig(teamName, { language: newLangCode });
-          continue;
-        }
-
-        const message =
-          `The user has changed the preferred communication language from "${oldResolved}" to "${newResolved}". ` +
-          `Please switch to ${newResolved} for all future responses and broadcast this change to all teammates ` +
-          `so they also switch to ${newResolved}.`;
-
-        await this.sendMessageToTeam(teamName, message);
-        await this.configReader.updateConfig(teamName, { language: newLangCode });
-        logger.info(`[${teamName}] Notified about language change: ${oldCode} → ${newLangCode}`);
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] Failed to notify language change: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
   }
 
   private async markInboxMessagesRead(
