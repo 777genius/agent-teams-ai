@@ -30,7 +30,7 @@ function createRun(overrides: Partial<RegisteredMemberAuditRun> = {}): Registere
   return {
     runId: 'run-1',
     teamName: 'alpha',
-    request: { cwd: '/tmp/project' },
+    request: { cwd: '/home/tester/project' },
     provisioningOutputParts: [],
     memberSpawnStatuses: new Map(),
     progress: {} as never,
@@ -96,7 +96,7 @@ describe('registered member audit helpers', () => {
 
     await expect(
       readRegisteredTeamMemberNamesFromConfig({
-        configPath: '/tmp/config.json',
+        configPath: '/home/tester/config.json',
         timeoutMs: 5000,
         maxBytes: 1024,
         ports: { readRegularFileUtf8 },
@@ -104,7 +104,7 @@ describe('registered member audit helpers', () => {
     ).resolves.toEqual(new Set(['lead']));
     await expect(
       readRegisteredTeamMemberNamesFromConfig({
-        configPath: '/tmp/config.json',
+        configPath: '/home/tester/config.json',
         timeoutMs: 5000,
         maxBytes: 1024,
         ports: { readRegularFileUtf8 },
@@ -112,7 +112,7 @@ describe('registered member audit helpers', () => {
     ).resolves.toBeNull();
     await expect(
       readRegisteredTeamMemberNamesFromConfig({
-        configPath: '/tmp/config.json',
+        configPath: '/home/tester/config.json',
         timeoutMs: 5000,
         maxBytes: 1024,
         ports: { readRegularFileUtf8 },
