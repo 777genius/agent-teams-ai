@@ -212,7 +212,7 @@ function createDeps(
     })),
     openCodeInboxAttachmentPayloadBoundary: {
       resolveOpenCodeInboxAttachmentPayloads: vi.fn(async () => ({
-        ok: true,
+        ok: true as const,
         attachments: [],
       })),
     },
@@ -256,6 +256,7 @@ function ledgerRecord(): OpenCodePromptDeliveryLedgerRecord {
     memberName: 'worker',
     laneId: 'lane-worker',
     runId: null,
+    runtimeSessionId: null,
     inboxMessageId: 'message-1',
     inboxTimestamp: '2026-01-01T00:00:00.000Z',
     source: 'watcher',
@@ -266,22 +267,42 @@ function ledgerRecord(): OpenCodePromptDeliveryLedgerRecord {
     taskRefs: [],
     payloadHash: 'sha256:payload',
     status: 'pending',
+    responseState: 'not_observed',
     attempts: 0,
+    maxAttempts: 3,
+    acceptanceUnknown: false,
+    nextAttemptAt: null,
+    lastAttemptAt: null,
+    lastObservedAt: null,
+    acceptedAt: null,
+    respondedAt: null,
+    failedAt: null,
+    inboxReadCommittedAt: null,
+    inboxReadCommitError: null,
+    prePromptCursor: null,
+    postPromptCursor: null,
+    deliveredUserMessageId: null,
+    observedAssistantMessageId: null,
+    observedAssistantPreview: null,
+    observedToolCallNames: [],
+    observedVisibleMessageId: null,
+    visibleReplyMessageId: null,
+    visibleReplyInbox: null,
+    visibleReplyCorrelation: null,
+    lastReason: null,
     diagnostics: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
-  } as OpenCodePromptDeliveryLedgerRecord;
+  };
 }
 
 function teamTask(): TeamTask {
   return {
     id: 'task-1',
-    title: 'Task',
+    subject: 'Task',
     description: '',
-    status: 'todo',
-    priority: 'medium',
-    assignee: null,
+    status: 'pending',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
-  } as TeamTask;
+  };
 }
