@@ -297,7 +297,7 @@ export interface OpenCodeSecondaryRetryOutcome {
 
 type EffectiveConfiguredMember = TeamCreateRequest['members'][number] & {
   agentType?: string;
-  removedAt?: number;
+  removedAt?: number | string;
 };
 
 interface PendingMemberRestartContextLike {
@@ -499,7 +499,7 @@ export interface TeamProvisioningMemberLifecycleHost {
     cwd: string;
     mcpPolicy: TeamCreateRequest['members'][number]['mcpPolicy'];
     run: ProvisioningRun;
-  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig>;
+  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null>;
   removeTrackedMemberMcpLaunchConfig(
     run: ProvisioningRun,
     config: RuntimeBootstrapMemberMcpLaunchConfig | null
@@ -729,7 +729,7 @@ export class TeamProvisioningMemberLifecycleController {
 
   private buildTrackedMemberMcpLaunchConfig(
     input: Parameters<TeamProvisioningMemberLifecycleHost['buildTrackedMemberMcpLaunchConfig']>[0]
-  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig> {
+  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null> {
     return this.host.buildTrackedMemberMcpLaunchConfig(input);
   }
 
