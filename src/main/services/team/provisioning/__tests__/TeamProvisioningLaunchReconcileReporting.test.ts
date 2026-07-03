@@ -66,7 +66,7 @@ describe('launch reconcile reporting helpers', () => {
   it('applies runtime proof and metadata when reconciling a persisted member', async () => {
     const findBootstrapRuntimeProofObservedAt = vi.fn(async () => observedAt);
     const runtime = new Map<string, LiveTeamAgentRuntimeMetadata>([
-      ['Builder', { alive: true, livenessKind: 'runtime_process', pidSource: 'runtime_snapshot' }],
+      ['Builder', { alive: true, livenessKind: 'runtime_process', pidSource: 'runtime_bootstrap' }],
     ]);
 
     const next = await reconcilePersistedLaunchMember({
@@ -103,7 +103,7 @@ describe('launch reconcile reporting helpers', () => {
       lastHeartbeatAt: observedAt,
       lastRuntimeAliveAt: at,
       livenessKind: 'runtime_process',
-      pidSource: 'runtime_snapshot',
+      pidSource: 'runtime_bootstrap',
       sources: {
         processAlive: true,
         configRegistered: true,

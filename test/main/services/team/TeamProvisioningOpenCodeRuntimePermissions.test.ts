@@ -144,7 +144,7 @@ describe('TeamProvisioningOpenCodeRuntimePermissions', () => {
     });
     const persisted = persistPendingPermissions.mock.calls[0]?.[0];
     expect(persisted?.previousLaunchState).toBe(previousLaunchState);
-    expect(persisted?.permissionsByMember.get('Builder')?.map((permission) => permission.requestId))
+    expect(persisted?.permissionsByMember.get('Builder')?.map((permission: { requestId: string }) => permission.requestId))
       .toEqual(['req-builder']);
     expect(syncSpawnStatuses.mock.calls[0]?.[0].permissionsByMember.get('Builder')).toHaveLength(1);
     expect(syncToolApprovals.mock.calls[0]?.[0]).toMatchObject({
@@ -227,10 +227,10 @@ describe('TeamProvisioningOpenCodeRuntimePermissions', () => {
       previousLaunchState,
     });
 
-    expect(grouped.get('Reviewer')?.map((permission) => permission.requestId)).toEqual([
+    expect(grouped.get('Reviewer')?.map((permission: { requestId: string }) => permission.requestId)).toEqual([
       'req-reviewer',
     ]);
-    expect(grouped.get('Builder')?.map((permission) => permission.requestId)).toEqual([
+    expect(grouped.get('Builder')?.map((permission: { requestId: string }) => permission.requestId)).toEqual([
       'req-delivered',
       'req-no-session',
     ]);
@@ -270,7 +270,7 @@ describe('TeamProvisioningOpenCodeRuntimePermissions', () => {
       runtimeDiagnostic: 'OpenCode runtime is waiting for permission approval',
       runtimeDiagnosticSeverity: 'warning',
     });
-    expect(evidence.pendingPermissions?.map((permission) => permission.requestId)).toEqual([
+    expect(evidence.pendingPermissions?.map((permission: { requestId: string }) => permission.requestId)).toEqual([
       'req-1',
       'req-1',
       'req-2',

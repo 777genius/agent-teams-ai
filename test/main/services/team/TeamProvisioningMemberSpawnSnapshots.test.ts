@@ -207,7 +207,7 @@ function makeSnapshotPorts(params?: {
         alice: baseStatus({ status: 'online', launchState: 'confirmed_alive' }),
       })),
       getPersistedLaunchMemberNames: vi.fn(() => ['alice']),
-      deriveTeamLaunchAggregateState: vi.fn(() => 'clean_success'),
+      deriveTeamLaunchAggregateState: vi.fn(() => 'clean_success' as const),
     },
     nowIso: () => '2026-01-01T00:00:10.000Z',
   };
