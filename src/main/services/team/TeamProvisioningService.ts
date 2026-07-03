@@ -9,7 +9,6 @@ import {
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
-import { killTmuxPaneForCurrentPlatformSync } from '@features/tmux-installer/main';
 import {
   resolveWorkspaceTrustFeatureFlags,
   type WorkspaceTrustCoordinator,
@@ -38,7 +37,6 @@ import {
 } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
-import { listWindowsProcessTableSync } from '@main/utils/windowsProcessTable';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -70,7 +68,7 @@ import {
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
-import { type ChildProcess, execFileSync, type spawn } from 'child_process';
+import { type ChildProcess, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -660,6 +658,10 @@ import {
   stopTeamFlow,
 } from './provisioning/TeamProvisioningStopFlow';
 import {
+  killOrphanedTeamAgentProcesses as killOrphanedTeamAgentProcessesHelper,
+  killPersistedPaneMembers as killPersistedPaneMembersHelper,
+} from './provisioning/TeamProvisioningStopProcessCleanup';
+import {
   handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
   shouldAcceptDeterministicBootstrapEvent,
@@ -743,7 +745,6 @@ import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
-import { commandArgEquals } from './TeamRuntimeLivenessResolver';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 import { TeamTaskReader } from './TeamTaskReader';
@@ -13705,86 +13706,14 @@ export class TeamProvisioningService {
   }
 
   private killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): void {
-    for (const member of members) {
-      const name = typeof member.name === 'string' ? member.name.trim() : '';
-      const paneId = typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : '';
-      const backendType =
-        typeof member.backendType === 'string' ? member.backendType.trim().toLowerCase() : '';
-      if (!name || name === 'team-lead' || !paneId || backendType !== 'tmux') {
-        continue;
-      }
-      try {
-        killTmuxPaneForCurrentPlatformSync(paneId);
-        logger.info(`[${teamName}] Killed teammate pane ${name} (${paneId}) during stop`);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to kill teammate pane ${name} (${paneId}) during stop: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
+    killPersistedPaneMembersHelper(teamName, members, logger);
   }
 
   private killOrphanedTeamAgentProcesses(teamName: string): void {
     const currentRunPid = this.getTrackedRunId(teamName)
       ? this.runs.get(this.getTrackedRunId(teamName)!)?.child?.pid
       : undefined;
-    const pids = new Set<number>();
-    const rows: { pid: number; command: string }[] = [];
-
-    if (process.platform === 'win32') {
-      try {
-        rows.push(
-          ...listWindowsProcessTableSync().map((row) => ({ pid: row.pid, command: row.command }))
-        );
-      } catch {
-        return;
-      }
-    } else {
-      let output = '';
-      try {
-        output = execFileSync('ps', ['-ax', '-o', 'pid=,command='], {
-          encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'ignore'],
-        });
-      } catch {
-        return;
-      }
-
-      for (const line of output.split('\n')) {
-        const trimmed = line.trim();
-        const match = /^(\d+)\s+(.*)$/.exec(trimmed);
-        if (!match) continue;
-        const pid = Number.parseInt(match[1], 10);
-        if (!Number.isFinite(pid) || pid <= 0) continue;
-        rows.push({ pid, command: match[2] ?? '' });
-      }
-    }
-
-    for (const row of rows) {
-      if (
-        !commandArgEquals(row.command, '--team-name', teamName) ||
-        !row.command.includes('--agent-id')
-      ) {
-        continue;
-      }
-      if (currentRunPid && row.pid === currentRunPid) continue;
-      pids.add(row.pid);
-    }
-
-    for (const pid of pids) {
-      try {
-        killProcessByPid(pid);
-        logger.info(`[${teamName}] Killed orphaned teammate process pid=${pid} during stop`);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
+    killOrphanedTeamAgentProcessesHelper({ teamName, currentRunPid, logger });
   }
 
   /**
