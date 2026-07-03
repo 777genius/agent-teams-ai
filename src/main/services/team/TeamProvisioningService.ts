@@ -616,6 +616,15 @@ import {
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
+  getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
+  getOpenCodeRuntimeMessageAdapter as getOpenCodeRuntimeMessageAdapterHelper,
+  getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterHelper,
+  isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
+  isOpenCodeRuntimeRecipientFromSources as isOpenCodeRuntimeRecipientFromSourcesHelper,
+  resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
+  resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
+} from './provisioning/TeamProvisioningRuntimeRecipientResolution';
+import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
   buildLiveTeamAgentRuntimeMetadata as buildLiveTeamAgentRuntimeMetadataHelper,
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
