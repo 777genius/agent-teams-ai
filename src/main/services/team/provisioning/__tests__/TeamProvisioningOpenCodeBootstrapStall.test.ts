@@ -7,6 +7,8 @@ import {
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   OPENCODE_LEGACY_BOOTSTRAP_STALLED_DIAGNOSTIC,
   OPENCODE_MEMBER_BRIEFING_WITHOUT_CHECKIN_DIAGNOSTIC,
+  type OpenCodeBootstrapStallLaneLike,
+  type OpenCodeBootstrapStallRunLike,
   planOpenCodeSecondaryBootstrapCheckinRetryPrompt,
   reconcileOpenCodeRuntimeProcessBootstrapStatus,
   scheduleOpenCodeBootstrapStallReevaluation,
@@ -26,7 +28,9 @@ function status(overrides: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnSta
   };
 }
 
-function opencodeLane(overrides: Record<string, unknown> = {}) {
+function opencodeLane(
+  overrides: Partial<OpenCodeBootstrapStallLaneLike> = {}
+): OpenCodeBootstrapStallLaneLike {
   return {
     providerId: 'opencode',
     laneId: 'lane-worker',
@@ -59,7 +63,31 @@ function opencodeLane(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function bootstrapRun() {
+function appManagedOpenCodeLane(): OpenCodeBootstrapStallLaneLike {
+  const lane = opencodeLane();
+  const result = lane.result;
+  if (!result) {
+    throw new Error('Expected OpenCode lane fixture to include a launch result.');
+  }
+  const worker = result.members.Worker;
+  if (!worker) {
+    throw new Error('Expected OpenCode lane fixture to include Worker evidence.');
+  }
+
+  return opencodeLane({
+    result: {
+      ...result,
+      members: {
+        Worker: {
+          ...worker,
+          bootstrapMode: 'app_managed_context',
+        },
+      },
+    },
+  });
+}
+
+function bootstrapRun(): OpenCodeBootstrapStallRunLike {
   return {
     runId: 'run-1',
     teamName: 'Team',
@@ -80,19 +108,7 @@ describe('OpenCode bootstrap stall helpers', () => {
       {
         run: {
           teamName: 'Team',
-          mixedSecondaryLanes: [
-            opencodeLane({
-              result: {
-                ...opencodeLane().result,
-                members: {
-                  Worker: {
-                    ...opencodeLane().result.members.Worker,
-                    bootstrapMode: 'app_managed_context',
-                  },
-                },
-              },
-            }),
-          ],
+          mixedSecondaryLanes: [appManagedOpenCodeLane()],
         },
         memberName: 'Worker',
         current: status(),
@@ -164,19 +180,7 @@ describe('OpenCode bootstrap stall helpers', () => {
 
     const appManagedPlan = planOpenCodeSecondaryBootstrapCheckinRetryPrompt({
       run: {
-        mixedSecondaryLanes: [
-          opencodeLane({
-            result: {
-              ...opencodeLane().result,
-              members: {
-                Worker: {
-                  ...opencodeLane().result.members.Worker,
-                  bootstrapMode: 'app_managed_context',
-                },
-              },
-            },
-          }),
-        ],
+        mixedSecondaryLanes: [appManagedOpenCodeLane()],
         provisioningOutputParts: [],
       },
       memberName: 'Worker',
@@ -228,9 +232,7 @@ describe('OpenCode bootstrap stall helpers', () => {
   it('reconciles stalled runtime-process bootstrap status with retry prompt diagnostics', async () => {
     const current = status({ firstSpawnAcceptedAt: '2026-01-01T00:00:00.000Z' });
     const run = bootstrapRun();
-    const buildDiagnostic = vi
-      .fn()
-      .mockResolvedValue(OPENCODE_LEGACY_BOOTSTRAP_STALLED_DIAGNOSTIC);
+    const buildDiagnostic = vi.fn().mockResolvedValue(OPENCODE_LEGACY_BOOTSTRAP_STALLED_DIAGNOSTIC);
     const setPendingStatus = vi.fn();
     const sendRetryPrompt = vi.fn();
     const scheduleReevaluation = vi.fn();
@@ -335,34 +337,24 @@ describe('OpenCode bootstrap stall helpers', () => {
     expect(isOpenCodeBootstrapStallWindowElapsed(acceptedAt, nowMs)).toBe(false);
     expect(isOpenCodeBootstrapStallWindowElapsed(acceptedAt, nowMs + 2_500)).toBe(true);
 
-    scheduleOpenCodeBootstrapStallReevaluation(
-      bootstrapRun(),
-      'Worker',
-      acceptedAt,
-      {
-        nowMs: () => nowMs,
-        getMemberLaunchGraceKey: () => 'Team:Worker',
-        hasPendingTimeout: (key) => timers.has(key),
-        setPendingTimeout: (key, timer) => timers.set(key, timer),
-        deletePendingTimeout: (key) => timers.delete(key),
-        setTimeout: setTimeoutPort,
-        reevaluateMemberLaunchStatus: vi.fn(),
-      }
-    );
-    scheduleOpenCodeBootstrapStallReevaluation(
-      bootstrapRun(),
-      'Worker',
-      acceptedAt,
-      {
-        nowMs: () => nowMs,
-        getMemberLaunchGraceKey: () => 'Team:Worker',
-        hasPendingTimeout: (key) => timers.has(key),
-        setPendingTimeout: (key, timer) => timers.set(key, timer),
-        deletePendingTimeout: (key) => timers.delete(key),
-        setTimeout: setTimeoutPort,
-        reevaluateMemberLaunchStatus: vi.fn(),
-      }
-    );
+    scheduleOpenCodeBootstrapStallReevaluation(bootstrapRun(), 'Worker', acceptedAt, {
+      nowMs: () => nowMs,
+      getMemberLaunchGraceKey: () => 'Team:Worker',
+      hasPendingTimeout: (key) => timers.has(key),
+      setPendingTimeout: (key, timer) => timers.set(key, timer),
+      deletePendingTimeout: (key) => timers.delete(key),
+      setTimeout: setTimeoutPort,
+      reevaluateMemberLaunchStatus: vi.fn(),
+    });
+    scheduleOpenCodeBootstrapStallReevaluation(bootstrapRun(), 'Worker', acceptedAt, {
+      nowMs: () => nowMs,
+      getMemberLaunchGraceKey: () => 'Team:Worker',
+      hasPendingTimeout: (key) => timers.has(key),
+      setPendingTimeout: (key, timer) => timers.set(key, timer),
+      deletePendingTimeout: (key) => timers.delete(key),
+      setTimeout: setTimeoutPort,
+      reevaluateMemberLaunchStatus: vi.fn(),
+    });
 
     expect(setTimeoutPort).toHaveBeenCalledTimes(1);
     expect(timers.has('Team:Worker:bootstrap-stall')).toBe(true);
