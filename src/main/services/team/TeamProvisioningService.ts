@@ -347,7 +347,10 @@ import {
   type MemberWorkSyncProofMissingRecoveryScheduler,
   TeamProvisioningOpenCodeRuntimeDeliveryAdvisory,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryAdvisory';
-import { createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts } from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
+import {
+  createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost,
+  type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 import {
   applyOpenCodeSecondaryBootstrapStallOverlay as applyOpenCodeSecondaryBootstrapStallOverlayHelper,
   getOpenCodeSecondaryBootstrapPendingMemberNames as getOpenCodeSecondaryBootstrapPendingMemberNamesHelper,
@@ -3951,70 +3954,14 @@ export class TeamProvisioningService {
   }
 
   private createOpenCodeRuntimeDeliveryBoundary() {
-    return createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<ProvisioningRun>({
-      getTeamsBasePath,
-      resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
-      resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-        this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      writeLaunchStateSnapshot: async (teamName, snapshot) => {
-        await this.writeLaunchStateSnapshot(teamName, snapshot);
-      },
-      readConfigForStrictDecision: (teamName) => this.readConfigForStrictDecision(teamName),
-      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
-      readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getRun: (runId) => this.runs.get(runId),
-      persistLaunchStateSnapshot: (run, launchPhase) =>
-        this.persistLaunchStateSnapshot(run, launchPhase),
-      getMixedSecondaryLaunchPhase: (run) => this.getMixedSecondaryLaunchPhase(run),
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      createOpenCodeRuntimeBootstrapEvidencePorts: () =>
-        this.createOpenCodeRuntimeBootstrapEvidencePorts(),
-      upsertOpenCodeTaskRecord: (teamName, record) =>
-        this.openCodeTaskLogAttributionStore.upsertTaskRecord(teamName, record),
-      syncMemberTaskActivityForRuntimeTransition: (
-        run,
-        memberName,
-        previousStatus,
-        nextStatus,
-        observedAt
-      ) =>
-        this.syncMemberTaskActivityForRuntimeTransition(
-          run,
-          memberName,
-          previousStatus,
-          nextStatus,
-          observedAt
-        ),
-      syncMemberLaunchGraceCheck: (run, memberName, nextStatus) =>
-        this.syncMemberLaunchGraceCheck(run, memberName, nextStatus),
-      sentMessagesStore: this.sentMessagesStore,
-      inboxReader: this.inboxReader,
-      inboxWriter: this.inboxWriter,
-      getCrossTeamSender: () => this.crossTeamSender,
-      isOpenCodeRuntimeRecipient: (teamName, memberName) =>
-        this.isOpenCodeRuntimeRecipient(teamName, memberName),
-      getOpenCodeAgendaSyncRecoveryBypassMessageIds: (bypassInput) =>
-        this.getOpenCodeAgendaSyncRecoveryBypassMessageIds(bypassInput),
-      resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
-          teamName,
-          memberName
-        ),
-      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
-        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
-      decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>
-        this.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(record),
-      isOpenCodePromptDeliveryWatchdogEnabled: () =>
-        this.openCodePromptDeliveryWatchdogScheduler.isEnabled(),
-      scheduleOpenCodePromptDeliveryWatchdog: (watchdogInput) =>
-        this.scheduleOpenCodePromptDeliveryWatchdog(watchdogInput),
-      nowIso,
-      logger,
-    });
+    return createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<ProvisioningRun>(
+      this as unknown as TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>,
+      {
+        getTeamsBasePath,
+        nowIso,
+        logger,
+      }
+    );
   }
 
   private createOpenCodePromptDeliveryLedger(teamName: string, laneId: string) {

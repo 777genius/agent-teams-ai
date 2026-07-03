@@ -5,8 +5,10 @@ import {
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
 } from '../TeamProvisioningOpenCodeRuntimeDelivery';
 import {
+  createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost,
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts,
+  type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
 } from '../TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 
 import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
@@ -131,6 +133,62 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
     expect(boundaryPorts.getCrossTeamSender()).toBe('cross-team-sender');
     expect(boundaryPorts.logger).toBe(ports.logger);
   });
+
+  it('builds the delivery boundary from a TeamProvisioning host without importing the service', async () => {
+    const fakeBoundary = createFakeBoundary();
+    createBoundaryMock.mockReturnValue(fakeBoundary);
+    const run = createRun();
+    const teamChangeEmitter = vi.fn();
+    const host = createHost({
+      run,
+      teamChangeEmitter,
+      readLaunchState: vi.fn(async () => ({ teamName: 'Team' }) as never),
+    });
+    const deps = createDeps();
+
+    const boundary = createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost(host, deps);
+
+    expect(boundary).toBe(fakeBoundary);
+    expect(createBoundaryMock).toHaveBeenCalledTimes(1);
+    const boundaryPorts = createBoundaryMock.mock.calls[0]?.[0] as
+      | TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<OpenCodeRuntimeCheckinRun>
+      | undefined;
+    expect(boundaryPorts).toBeDefined();
+    if (!boundaryPorts) {
+      return;
+    }
+
+    await expect(
+      boundaryPorts.resolveOpenCodeRuntimeLaneId({
+        teamName: 'Team',
+        runId: 'run-1',
+        memberName: 'Builder',
+      })
+    ).resolves.toBe('lane-1');
+    await expect(boundaryPorts.resolveCurrentOpenCodeRuntimeRunId('Team', 'lane-1')).resolves.toBe(
+      'run-1'
+    );
+    await expect(boundaryPorts.readLaunchState('Team')).resolves.toEqual({ teamName: 'Team' });
+    expect(boundaryPorts.getTrackedRun('Team')).toBe(run);
+    expect(boundaryPorts.getTeamsBasePath()).toBe('/tmp/teams');
+
+    await boundaryPorts.writeLaunchState('Team', { teamName: 'Team' } as never);
+    boundaryPorts.emitTeamChange({ type: 'member-spawn', teamName: 'Team', detail: 'Builder' });
+    await boundaryPorts.upsertOpenCodeTaskRecord('Team', { taskId: 'task-1' } as never);
+
+    expect(host.writeLaunchStateSnapshot).toHaveBeenCalledWith('Team', { teamName: 'Team' });
+    expect(teamChangeEmitter).toHaveBeenCalledWith({
+      type: 'member-spawn',
+      teamName: 'Team',
+      detail: 'Builder',
+    });
+    expect(host.openCodeTaskLogAttributionStore.upsertTaskRecord).toHaveBeenCalledWith('Team', {
+      taskId: 'task-1',
+    });
+    expect(boundaryPorts.getCrossTeamSender()).toBe('cross-team-sender');
+    expect(boundaryPorts.nowIso()).toBe('2026-01-01T00:00:00.000Z');
+    expect(boundaryPorts.logger).toBe(deps.logger);
+  });
 });
 
 function createFakeBoundary() {
@@ -240,6 +298,84 @@ function createPorts(
       warn: vi.fn(),
     },
     ...overrides,
+  };
+}
+
+function createDeps() {
+  return {
+    getTeamsBasePath: vi.fn(() => '/tmp/teams'),
+    nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
+    logger: {
+      warn: vi.fn(),
+    },
+  };
+}
+
+function createHost(options: {
+  run: OpenCodeRuntimeCheckinRun;
+  teamChangeEmitter: vi.Mock;
+  readLaunchState: vi.Mock;
+}): TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<OpenCodeRuntimeCheckinRun> {
+  return {
+    resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+    openCodeRuntimeRecoveryIdentity: {
+      resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
+      resolveOpenCodeMemberDeliveryIdentity: vi.fn(async () => ({
+        ok: true,
+        canonicalMemberName: 'Builder',
+        laneId: 'lane-1',
+      })),
+    },
+    launchStateStore: {
+      read: options.readLaunchState,
+    },
+    writeLaunchStateSnapshot: vi.fn(async () => undefined),
+    readConfigForStrictDecision: vi.fn(async () => null),
+    membersMetaStore: {
+      getMembers: vi.fn(async () => []),
+    },
+    readPersistedRuntimeMembers: vi.fn(() => []),
+    runTracking: {
+      getTrackedRunId: vi.fn(() => 'run-1'),
+    },
+    runs: {
+      get: vi.fn(() => options.run),
+    },
+    persistLaunchStateSnapshot: vi.fn(async () => undefined),
+    getMixedSecondaryLaunchPhase: vi.fn(() => 'active'),
+    invalidateRuntimeSnapshotCaches: vi.fn(),
+    emitMemberSpawnChange: vi.fn(),
+    teamChangeEmitter: options.teamChangeEmitter,
+    createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(() => {
+      throw new Error('unused');
+    }),
+    openCodeTaskLogAttributionStore: {
+      upsertTaskRecord: vi.fn(async () => ({ created: true }) as never),
+    },
+    syncMemberTaskActivityForRuntimeTransition: vi.fn(),
+    syncMemberLaunchGraceCheck: vi.fn(),
+    sentMessagesStore: {
+      appendMessage: vi.fn(),
+      readMessages: vi.fn(),
+    },
+    inboxReader: {
+      getMessagesFor: vi.fn(),
+    },
+    inboxWriter: {
+      sendMessage: vi.fn(),
+    },
+    crossTeamSender: 'cross-team-sender' as never,
+    isOpenCodeRuntimeRecipient: vi.fn(async () => true),
+    getOpenCodeAgendaSyncRecoveryBypassMessageIds: vi.fn(async () => new Set()),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: vi.fn(async () => true),
+    decideOpenCodeRuntimeDeliveryUserFacingAdvisory: vi.fn(async (record) => ({
+      record,
+      decision: { action: 'defer' },
+    })),
+    openCodePromptDeliveryWatchdogScheduler: {
+      isEnabled: vi.fn(() => true),
+    },
+    scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
   };
 }
 
