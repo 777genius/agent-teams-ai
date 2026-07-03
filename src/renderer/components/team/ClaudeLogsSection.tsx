@@ -40,6 +40,9 @@ const PREVIEW_ICONS = {
   tool: <Wrench size={12} className="shrink-0" />,
 } as const;
 
+// Temporarily hide the latest log preview in the compact logs header.
+const SHOW_LATEST_LOG_PREVIEW = false;
+
 const LogsHeaderSkeletonPill = ({
   className,
 }: Readonly<{ className?: string }>): React.JSX.Element => (
@@ -341,16 +344,23 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
     setSelectedSourceKey(LEAD_LOG_SOURCE_KEY);
   }, [selectedMember, selectedSourceKey, setSelectedSourceKey]);
 
-  const sectionHeaderExtra = useMemo(
-    () => (
-      <span className={cn('flex min-w-0 items-center gap-2', isSidebar && 'basis-full pt-0.5')}>
-        {showingLeadLogs && ctrl.online ? (
+  const sectionHeaderExtra = useMemo(() => {
+    const showLatestLogPreview =
+      SHOW_LATEST_LOG_PREVIEW && showingLeadLogs && ctrl.lastLogPreview != null;
+
+    if (!showHeaderSkeleton && !showLatestLogPreview) {
+      return null;
+    }
+
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        {showLatestLogPreview && ctrl.online ? (
           <span className="pointer-events-none relative inline-flex size-2 shrink-0">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
           </span>
         ) : null}
-        {showingLeadLogs && ctrl.lastLogPreview ? (
+        {showLatestLogPreview && ctrl.lastLogPreview ? (
           <LogPreviewInline preview={ctrl.lastLogPreview} />
         ) : null}
         {showHeaderSkeleton ? (
@@ -362,9 +372,8 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
           </span>
         ) : null}
       </span>
-    ),
-    [ctrl.online, ctrl.lastLogPreview, isSidebar, showingLeadLogs, showHeaderSkeleton]
-  );
+    );
+  }, [ctrl.online, ctrl.lastLogPreview, showingLeadLogs, showHeaderSkeleton]);
 
   const canOpenFullscreen = showingLeadLogs ? ctrl.data.total > 0 : selectedMember !== null;
 
@@ -393,7 +402,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         <Button
           variant="ghost"
           size="sm"
-          className="pointer-events-auto ml-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          className="pointer-events-auto ml-auto size-6 p-0 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text)] group-focus-within:opacity-100 group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             setDialogOpen(true);
@@ -415,9 +424,17 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         icon={null}
         badge={showingLeadLogs ? ctrl.badge : undefined}
         afterBadge={afterBadge}
-        headerClassName={isSidebar ? '-mx-3 w-[calc(100%+1.5rem)] py-0' : undefined}
-        headerSurfaceClassName={isSidebar ? '!rounded-none' : undefined}
-        headerContentClassName={isSidebar ? 'flex-wrap items-center gap-y-1 py-1 pr-1' : 'pr-1'}
+        headerClassName={
+          isSidebar
+            ? 'group -mx-3 w-[calc(100%+1.5rem)] bg-[var(--color-surface-sidebar)] py-0'
+            : 'group'
+        }
+        headerSurfaceClassName={
+          isSidebar
+            ? '!rounded-none !bg-[var(--color-surface-sidebar)] hover:!bg-[var(--color-surface-sidebar)]'
+            : undefined
+        }
+        headerContentClassName={isSidebar ? 'items-center !pl-3 pr-3 py-2' : 'pr-1'}
         headerExtra={sectionHeaderExtra}
         defaultOpen={false}
         onOpenChange={onOpenChange}

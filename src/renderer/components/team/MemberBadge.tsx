@@ -35,6 +35,8 @@ interface MemberBadgeProps {
   onClick?: (name: string) => void;
   /** Disable the hover card (e.g. inside MemberHoverCard itself to avoid nesting) */
   disableHoverCard?: boolean;
+  /** Render only colored text, without the badge frame. */
+  variant?: 'badge' | 'text';
 }
 
 const EMPTY_TEAM_MEMBERS: readonly ResolvedTeamMember[] = [];
@@ -76,6 +78,7 @@ const MemberBadgeResolvedContent = memo(
     hideAvatar,
     onClick,
     disableHoverCard,
+    variant = 'badge',
   }: MemberBadgeResolvedContentProps): React.JSX.Element => {
     const colors = getTeamColorSet(color ?? '');
     const avatarSize = size === 'md' ? 32 : size === 'sm' ? 24 : 18;
@@ -100,8 +103,12 @@ const MemberBadgeResolvedContent = memo(
 
     const badge = (
       <span
-        className={`rounded ${paddingClass} ${textClass} font-medium tracking-wide`}
-        style={badgeStyle}
+        className={
+          variant === 'text'
+            ? `${textClass} font-medium leading-none tracking-wide`
+            : `rounded ${paddingClass} ${textClass} font-medium tracking-wide`
+        }
+        style={variant === 'text' ? { color: getThemedText(colors, isLight) } : badgeStyle}
       >
         {displayMemberName(name)}
       </span>

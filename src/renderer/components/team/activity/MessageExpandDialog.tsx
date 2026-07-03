@@ -68,7 +68,7 @@ const DialogThoughtsContent = ({
           className="size-6 rounded-full bg-[var(--color-surface-raised)]"
           loading="lazy"
         />
-        <MemberBadge name={newest.from} color={memberColor} hideAvatar />
+        <MemberBadge name={newest.from} color={memberColor} hideAvatar variant="text" />
         <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
           {t('activity.thoughts.count', { count: thoughts.length })}
         </span>

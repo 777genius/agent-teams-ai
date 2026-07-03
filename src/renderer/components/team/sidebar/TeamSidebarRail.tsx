@@ -30,7 +30,7 @@ export const TeamSidebarRail = memo(function TeamSidebarRail({
   const [logsOpen, setLogsOpen] = useState(false);
   const logsSeparator = logsOpen ? (
     <div
-      className={`group relative h-3 shrink-0 cursor-row-resize ${isLogsResizing ? 'bg-blue-500/10' : ''}`}
+      className={`group relative h-3 shrink-0 cursor-row-resize border-t border-[var(--color-border)] ${isLogsResizing ? 'bg-blue-500/10' : ''}`}
       onMouseDown={onLogsResizeMouseDown}
     >
       <div
@@ -42,11 +42,11 @@ export const TeamSidebarRail = memo(function TeamSidebarRail({
       />
     </div>
   ) : (
-    <div className="bg-[var(--color-text-muted)]/35 h-px shrink-0" />
+    <div className="h-px shrink-0 bg-[var(--color-border)]" />
   );
 
   return (
-    <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]">
+    <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-sidebar)]">
       <div className="shrink-0 overflow-hidden px-3">
         <ClaudeLogsSection
           teamName={teamName}

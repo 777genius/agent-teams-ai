@@ -48,6 +48,12 @@ import {
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
 import { ThoughtBodyContent } from './ThoughtBodyContent';
+import {
+  getTimelineCardBorderRadius,
+  getTimelineHeaderGradient,
+  joinsPreviousTimelineCard,
+  type TimelineCardPosition,
+} from './timelineCardStack';
 
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
@@ -154,6 +160,9 @@ const LIVE_WINDOW_MS = 5_000;
 const COLLAPSED_THOUGHTS_HEIGHT = 200;
 const AUTO_SCROLL_THRESHOLD = 30;
 const THOUGHT_HEIGHT_ANIMATION_MS = ENTRY_REVEAL_ANIMATION_MS;
+const ACTIVITY_HEADER_BG_DARK = 'rgba(0, 0, 0, 0.18)';
+const ACTIVITY_HEADER_BG_LIGHT = 'rgba(15, 23, 42, 0.055)';
+const ACTIVITY_ERROR_HEADER_BG = 'rgba(248, 113, 113, 0.1)';
 const leadThoughtTimeCache = new Map<string, string>();
 
 interface LeadThoughtsGroupRowProps {
@@ -203,6 +212,7 @@ interface LeadThoughtsGroupRowProps {
   onExpand?: (key: string) => void;
   /** Stable key for expand identification. */
   expandItemKey?: string;
+  timelineCardPosition?: TimelineCardPosition;
 }
 
 function formatTime(timestamp: string): string {
@@ -566,6 +576,7 @@ const LeadThoughtsGroupRowComponent = ({
   compactHeader = false,
   onExpand,
   expandItemKey,
+  timelineCardPosition = 'single',
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -807,14 +818,25 @@ const LeadThoughtsGroupRowComponent = ({
     const newestTime = formatTime(newest.timestamp);
     return oldestTime === newestTime ? oldestTime : `${oldestTime}–${newestTime}`;
   }, [newest.timestamp, oldest.timestamp]);
+  const activityAccentColor = hasApiError ? '#f87171' : colors.border;
+  const headerStyle = {
+    backgroundColor: hasApiError
+      ? ACTIVITY_ERROR_HEADER_BG
+      : isLight
+        ? ACTIVITY_HEADER_BG_LIGHT
+        : ACTIVITY_HEADER_BG_DARK,
+    backgroundImage: getTimelineHeaderGradient(activityAccentColor, isLight),
+  };
+
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref} style={{ overflowAnchor: 'none' }}>
       <article
-        className="activity-timeline-card group rounded-md [overflow:clip]"
+        className="activity-timeline-card group [overflow:clip]"
         style={{
+          borderRadius: getTimelineCardBorderRadius(timelineCardPosition),
           backgroundColor: zebraShade ? CARD_BG_ZEBRA : CARD_BG,
           border: hasApiError ? '1px solid rgba(248, 113, 113, 0.3)' : CARD_BORDER_STYLE,
-          borderLeft: `3px solid ${hasApiError ? '#f87171' : colors.border}`,
+          borderTopWidth: joinsPreviousTimelineCard(timelineCardPosition) ? 0 : undefined,
         }}
       >
         {/* Header */}
@@ -828,7 +850,7 @@ const LeadThoughtsGroupRowComponent = ({
               : 'flex select-none items-center gap-2 px-3 py-1.5',
             canToggleBodyVisibility ? 'cursor-pointer' : '',
           ].join(' ')}
-          style={hasApiError ? { backgroundColor: 'rgba(248, 113, 113, 0.08)' } : undefined}
+          style={headerStyle}
           onClick={handleBodyToggle}
           onKeyDown={
             canToggleBodyVisibility
@@ -845,7 +867,13 @@ const LeadThoughtsGroupRowComponent = ({
             <div className="min-w-0">
               <div className="flex min-w-0 items-start gap-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                  <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
+                  <MemberBadge
+                    name={leadName}
+                    color={memberColor}
+                    isLight={isLight}
+                    hideAvatar
+                    variant="text"
+                  />
                   <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                     {t('activity.thoughts.count', { count: thoughts.length })}
                   </span>
@@ -918,7 +946,13 @@ const LeadThoughtsGroupRowComponent = ({
                     />
                   </div>
                 ) : null}
-                <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
+                <MemberBadge
+                  name={leadName}
+                  color={memberColor}
+                  isLight={isLight}
+                  hideAvatar
+                  variant="text"
+                />
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {t('activity.thoughts.count', { count: thoughts.length })}
                 </span>
@@ -989,7 +1023,13 @@ const LeadThoughtsGroupRowComponent = ({
                   />
                 </div>
               ) : null}
-              <MemberBadge name={leadName} color={memberColor} isLight={isLight} hideAvatar />
+              <MemberBadge
+                name={leadName}
+                color={memberColor}
+                isLight={isLight}
+                hideAvatar
+                variant="text"
+              />
               <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                 {t('activity.thoughts.count', { count: thoughts.length })}
               </span>
@@ -1138,6 +1178,7 @@ export const LeadThoughtsGroupRow = memo(
     prev.compactHeader === next.compactHeader &&
     prev.onExpand === next.onExpand &&
     prev.expandItemKey === next.expandItemKey &&
+    prev.timelineCardPosition === next.timelineCardPosition &&
     prev.observerRoot === next.observerRoot &&
     areThoughtGroupsEquivalent(prev.group, next.group)
 );

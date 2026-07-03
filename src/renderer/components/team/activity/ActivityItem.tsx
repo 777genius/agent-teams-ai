@@ -88,11 +88,21 @@ import {
   taskRefsCacheSignature,
 } from './activityRenderCache';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
+import {
+  getTimelineCardBorderRadius,
+  getTimelineHeaderGradient,
+  joinsPreviousTimelineCard,
+  type TimelineCardPosition,
+} from './timelineCardStack';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
 
 type StructuredMessage = Record<string, unknown>;
+
+const ACTIVITY_HEADER_BG_DARK = 'rgba(0, 0, 0, 0.18)';
+const ACTIVITY_HEADER_BG_LIGHT = 'rgba(15, 23, 42, 0.055)';
+const ACTIVITY_ERROR_HEADER_BG = 'rgba(248, 113, 113, 0.1)';
 
 interface PermissionStatusIconProps {
   requestId: string;
@@ -269,6 +279,7 @@ interface ActivityItemProps {
   expandItemKey?: string;
   /** Called when ExpandableContent is expanded via "Show more". */
   onExpandContent?: () => void;
+  timelineCardPosition?: TimelineCardPosition;
 }
 
 function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
@@ -455,7 +466,7 @@ const PassiveIdlePeerSummaryRow = ({
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5" style={{ opacity: 0.78 }}>
-      <span className="bg-sky-500/12 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-300">
+      <span className="bg-sky-500/12 rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-sky-300">
         {t('activity.badges.note')}
       </span>
       <MemberBadge
@@ -463,6 +474,7 @@ const PassiveIdlePeerSummaryRow = ({
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar={false}
         onClick={onMemberNameClick}
       />
@@ -517,12 +529,12 @@ const TaskStallRemediationRow = ({
   return (
     <div className="flex items-center gap-2 px-3 py-1.5" style={{ opacity: 0.82 }}>
       <span
-        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
+        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-amber-300"
         style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)' }}
       >
         {t('activity.badges.automation')}
       </span>
-      <span className="text-[11px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+      <span className="text-[11px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {t('activity.badges.stallNudge')}
       </span>
       <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
@@ -531,6 +543,7 @@ const TaskStallRemediationRow = ({
         color={recipientColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -594,12 +607,12 @@ const MemberWorkSyncNudgeRow = ({
   return (
     <div className="flex items-center gap-2 px-3 py-1.5" style={{ opacity: 0.82 }}>
       <span
-        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
+        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-amber-300"
         style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)' }}
       >
         {t('activity.badges.automation')}
       </span>
-      <span className="text-[11px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+      <span className="text-[11px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {t('activity.badges.workSync')}
       </span>
       <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
@@ -608,6 +621,7 @@ const MemberWorkSyncNudgeRow = ({
         color={recipientColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -665,7 +679,7 @@ const BootstrapSystemRow = ({
   return (
     <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.82 }}>
       <span
-        className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+        className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide ${
           isRestart ? 'bg-amber-500/12 text-amber-300' : 'bg-sky-500/12 text-sky-300'
         }`}
       >
@@ -676,6 +690,7 @@ const BootstrapSystemRow = ({
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -685,6 +700,7 @@ const BootstrapSystemRow = ({
         color={recipientColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -721,7 +737,7 @@ const BootstrapAcknowledgementRow = ({
   const { t } = useAppTranslation('team');
   return (
     <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.72 }}>
-      <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+      <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-emerald-300">
         {t('activity.badges.bootstrap')}
       </span>
       <MemberBadge
@@ -729,6 +745,7 @@ const BootstrapAcknowledgementRow = ({
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -738,6 +755,7 @@ const BootstrapAcknowledgementRow = ({
         color={recipientColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar
         onClick={onMemberNameClick}
       />
@@ -992,6 +1010,7 @@ export const ActivityItem = memo(
     onExpand,
     expandItemKey,
     onExpandContent,
+    timelineCardPosition = 'single',
   }: Readonly<ActivityItemProps>): React.JSX.Element => {
     const { t } = useAppTranslation('team');
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
@@ -1317,9 +1336,28 @@ export const ActivityItem = memo(
       }
     }, [collapseToggleKey, isHeaderClickable, onToggleCollapse]);
     const useCompactCollapsedHeader = compactHeader && !isExpanded;
+    const activityAccentColor =
+      rateLimited || isApiError
+        ? 'var(--tool-result-error-text)'
+        : isSlashCommandResult || isSlashCommandMessage
+          ? 'rgba(245, 158, 11, 0.85)'
+          : isCrossTeamAny
+            ? 'var(--cross-team-accent)'
+            : isSystemMessage
+              ? 'var(--system-activity-accent)'
+              : getThemedBorder(colors, isLight);
+    const headerStyle = {
+      backgroundColor:
+        rateLimited || isApiError
+          ? ACTIVITY_ERROR_HEADER_BG
+          : isLight
+            ? ACTIVITY_HEADER_BG_LIGHT
+            : ACTIVITY_HEADER_BG_DARK,
+      backgroundImage: getTimelineHeaderGradient(activityAccentColor, isLight),
+    };
 
     const senderBadge = isSlashCommandResult ? (
-      <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+      <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-300">
         {t('activity.badges.result')}
       </span>
     ) : (
@@ -1328,6 +1366,7 @@ export const ActivityItem = memo(
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
+        variant="text"
         hideAvatar={senderHideAvatar || compactHeader}
         onClick={onMemberNameClick}
         disableHoverCard={crossTeamOrigin != null}
@@ -1335,39 +1374,39 @@ export const ActivityItem = memo(
     );
 
     const messageTypeBadge = systemLabel ? (
-      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+      <span className="text-[10px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {systemLabel}
       </span>
     ) : commentTaskRef ? (
-      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+      <span className="text-[10px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {t('activity.badges.comment')}
       </span>
     ) : isSlashCommandResult && message.commandOutput ? (
       <span
         className={[
-          'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+          'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] tracking-wide',
           isCommandOutputError ? 'bg-rose-500/15 text-rose-300' : 'bg-amber-500/15 text-amber-300',
         ].join(' ')}
       >
         {message.commandOutput.stream}
       </span>
     ) : isSlashCommandMessage ? (
-      <span className="text-[10px] uppercase tracking-wide text-amber-400">
+      <span className="text-[10px] tracking-wide text-amber-400">
         {t('activity.badges.command')}
       </span>
     ) : messageType ? (
-      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+      <span className="text-[10px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {messageType}
       </span>
     ) : null;
 
     const leadSourceBadge =
       message.source === 'lead_session' && !isSlashCommandResult ? (
-        <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        <span className="text-[10px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
           {t('activity.badges.session')}
         </span>
       ) : message.source === 'lead_process' && !isSlashCommandResult ? (
-        <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        <span className="text-[10px] tracking-wide" style={{ color: CARD_ICON_MUTED }}>
           {t('activity.badges.live')}
         </span>
       ) : null;
@@ -1377,14 +1416,14 @@ export const ActivityItem = memo(
         <AlertTriangle size={10} />
         {t('activity.badges.rateLimited')}
       </span>
-	    ) : isApiError ? (
-	      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-	        <AlertTriangle size={10} />
-	        {message.messageKind === 'agent_error'
-	          ? t('activity.badges.agentError')
-	          : t('activity.badges.apiError')}
-	      </span>
-	    ) : null;
+    ) : isApiError ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+        <AlertTriangle size={10} />
+        {message.messageKind === 'agent_error'
+          ? t('activity.badges.agentError')
+          : t('activity.badges.apiError')}
+      </span>
+    ) : null;
 
     const recipientBadge =
       commentTaskRef && commentTaskDisplayId ? (
@@ -1409,6 +1448,7 @@ export const ActivityItem = memo(
               color={crossTeamTarget ? undefined : recipientColor}
               teamName={crossTeamTarget ? undefined : teamName}
               isLight={isLight}
+              variant="text"
               hideAvatar={
                 compactHeader ||
                 (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
@@ -1465,8 +1505,9 @@ export const ActivityItem = memo(
 
     return (
       <article
-        className="activity-timeline-card group overflow-hidden rounded-md"
+        className="activity-timeline-card group overflow-hidden"
         style={{
+          borderRadius: getTimelineCardBorderRadius(timelineCardPosition),
           marginLeft: isSlashCommandResult ? 26 : isUserSent ? 15 : undefined,
           backgroundColor:
             rateLimited || isApiError
@@ -1494,18 +1535,7 @@ export const ActivityItem = memo(
                     : isSystemMessage
                       ? '1px solid var(--system-activity-border)'
                       : CARD_BORDER_STYLE,
-          borderLeft:
-            rateLimited || isApiError
-              ? '3px solid var(--tool-result-error-text)'
-              : isSlashCommandResult
-                ? '3px solid rgba(245, 158, 11, 0.85)'
-                : isSlashCommandMessage
-                  ? '3px solid rgba(245, 158, 11, 0.85)'
-                  : isCrossTeamAny
-                    ? '3px solid var(--cross-team-accent)'
-                    : isSystemMessage
-                      ? '3px solid var(--system-activity-accent)'
-                      : `3px solid ${getThemedBorder(colors, isLight)}`,
+          borderTopWidth: joinsPreviousTimelineCard(timelineCardPosition) ? 0 : undefined,
         }}
       >
         {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
@@ -1514,11 +1544,10 @@ export const ActivityItem = memo(
           role={isHeaderClickable ? 'button' : undefined}
           tabIndex={isHeaderClickable ? 0 : undefined}
           className={[
-            useCompactCollapsedHeader
-              ? 'min-w-0 px-2.5 py-1.5'
-              : 'flex min-w-0 items-center gap-2 px-2.5 py-1.5',
+            isExpanded ? 'flex min-w-0 items-center gap-2 px-2.5 py-1.5' : 'min-w-0',
             isHeaderClickable ? 'cursor-pointer select-none' : '',
           ].join(' ')}
+          style={isExpanded ? headerStyle : undefined}
           onClick={handleHeaderToggle}
           onKeyDown={
             isHeaderClickable
@@ -1533,7 +1562,7 @@ export const ActivityItem = memo(
         >
           {useCompactCollapsedHeader ? (
             <div className="min-w-0">
-              <div className="flex min-w-0 items-start gap-3">
+              <div className="flex min-w-0 items-start gap-3 px-2.5 py-1.5" style={headerStyle}>
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                   {isUnread ? (
                     <span
@@ -1579,7 +1608,7 @@ export const ActivityItem = memo(
                   )}
                 </div>
               </div>
-              <div title={compactPreviewTooltipText}>
+              <div className="px-2.5 pb-1.5" title={compactPreviewTooltipText}>
                 <CompactMarkdownPreview
                   content={compactPreviewMarkdown}
                   className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
@@ -1590,7 +1619,7 @@ export const ActivityItem = memo(
             </div>
           ) : !isExpanded ? (
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2 px-2.5 py-1.5" style={headerStyle}>
                 {isUnread ? (
                   <span
                     className="size-2 shrink-0 rounded-full bg-blue-500"
@@ -1648,7 +1677,7 @@ export const ActivityItem = memo(
                   )}
                 </div>
               </div>
-              <div title={compactPreviewTooltipText}>
+              <div className="px-2.5 pb-1.5" title={compactPreviewTooltipText}>
                 <CompactMarkdownPreview
                   content={compactPreviewMarkdown}
                   className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"
@@ -1766,7 +1795,7 @@ export const ActivityItem = memo(
                   </span>
                   <span
                     className={[
-                      'rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+                      'rounded-full px-1.5 py-0.5 text-[10px] tracking-wide',
                       isCommandOutputError
                         ? 'bg-rose-500/15 text-rose-300'
                         : 'bg-amber-500/15 text-amber-300',
@@ -1975,6 +2004,7 @@ export const ActivityItem = memo(
     prev.onExpand === next.onExpand &&
     prev.expandItemKey === next.expandItemKey &&
     prev.onExpandContent === next.onExpandContent &&
+    prev.timelineCardPosition === next.timelineCardPosition &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );
 

@@ -29,6 +29,7 @@ import {
   isLeadThought,
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
+import { getTimelineCardPosition, type TimelineCardPosition } from './timelineCardStack';
 import { useNewItemKeys } from './useNewItemKeys';
 
 import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
@@ -150,7 +151,7 @@ const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
-const VIRTUALIZATION_ROW_GAP_PX = 4;
+const VIRTUALIZATION_ROW_GAP_PX = 0;
 
 /**
  * Row count above which virtualization is worth its complexity cost. Below
@@ -243,6 +244,21 @@ function getItemSessionAnchorId(item: TimelineItem): string | undefined {
   return undefined;
 }
 
+function isCardTimelineRow(row: TimelineRow | undefined): boolean {
+  return row?.kind === 'message-row' || row?.kind === 'lead-thought-group';
+}
+
+function getCardPositionForRow(
+  rows: readonly TimelineRow[],
+  rowIndex: number | undefined
+): TimelineCardPosition {
+  if (rowIndex == null || rowIndex < 0) return 'single';
+  return getTimelineCardPosition(
+    isCardTimelineRow(rows[rowIndex - 1]),
+    isCardTimelineRow(rows[rowIndex + 1])
+  );
+}
+
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
@@ -305,6 +321,7 @@ const MessageRowWithObserver = ({
   expandItemKey,
   onExpandContent,
   observerRoot,
+  timelineCardPosition,
 }: {
   message: InboxMessage;
   teamName: string;
@@ -337,6 +354,7 @@ const MessageRowWithObserver = ({
   expandItemKey?: string;
   onExpandContent?: () => void;
   observerRoot?: RefObject<HTMLElement | null>;
+  timelineCardPosition?: TimelineCardPosition;
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -403,6 +421,7 @@ const MessageRowWithObserver = ({
         onExpand={onExpand}
         expandItemKey={expandItemKey}
         onExpandContent={onExpandContent}
+        timelineCardPosition={timelineCardPosition}
       />
     </AnimatedHeightReveal>
   );
@@ -441,6 +460,7 @@ const MemoizedMessageRowWithObserver = React.memo(
     prev.expandItemKey === next.expandItemKey &&
     prev.onExpandContent === next.onExpandContent &&
     prev.observerRoot === next.observerRoot &&
+    prev.timelineCardPosition === next.timelineCardPosition &&
     areInboxMessagesEquivalentForRender(prev.message, next.message)
 );
 
@@ -803,9 +823,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   // runs on real data-set additions.
   const renderTimelineRow = (
     row: TimelineRow,
-    options?: { suppressEntryAnimation?: boolean }
+    options?: { suppressEntryAnimation?: boolean; rowIndex?: number }
   ): React.JSX.Element | null => {
     const suppressEntry = options?.suppressEntryAnimation === true;
+    const cardPosition = getCardPositionForRow(renderRows, options?.rowIndex);
     switch (row.kind) {
       case 'session-separator':
         return (
@@ -860,6 +881,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             onTeamClick={onTeamClick}
             onExpand={compactHeader ? onExpandItem : undefined}
             expandItemKey={compactHeader ? key : undefined}
+            timelineCardPosition={cardPosition}
           />
         );
       }
@@ -904,6 +926,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             expandItemKey={compactHeader ? key : undefined}
             observerRoot={observerRoot}
             onExpandContent={onExpandContent}
+            timelineCardPosition={cardPosition}
           />
         );
       }
@@ -912,14 +935,14 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   if (messages.length === 0) {
     return (
-      <div ref={rootRef} className="space-y-1">
+      <div ref={rootRef} className="flex flex-col">
         {loading ? <TimelineLoadingState /> : <TimelineEmptyState />}
       </div>
     );
   }
 
   return (
-    <div ref={rootRef} className="space-y-1">
+    <div ref={rootRef} className="flex flex-col">
       {shouldVirtualize ? (
         <div
           style={{
@@ -955,13 +978,16 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                   transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
                 }}
               >
-                {renderTimelineRow(row, { suppressEntryAnimation: true })}
+                {renderTimelineRow(row, {
+                  suppressEntryAnimation: true,
+                  rowIndex: virtualRow.index,
+                })}
               </div>
             );
           })}
         </div>
       ) : (
-        renderRows.map((row) => renderTimelineRow(row))
+        renderRows.map((row, index) => renderTimelineRow(row, { rowIndex: index }))
       )}
       {hiddenCount > 0 && (
         <div className="relative flex justify-center pb-3 pt-1">
