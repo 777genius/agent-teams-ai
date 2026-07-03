@@ -1,14 +1,19 @@
+import {
+  mapAppApprovalDecisionToProviderDecision,
+  type RuntimeApprovalLaunchPolicy,
+  type RuntimeApprovalProviderPort,
+  type RuntimeToolApprovalAnswerInput,
+  type RuntimeToolApprovalEntry,
+} from './RuntimeToolApprovalCoordinator';
+
 import type {
+  TeamRuntimeLaunchInput,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberSpec,
   TeamRuntimePendingApproval,
+  TeamRuntimePermissionAnswerInput,
 } from '../runtime/TeamRuntimeAdapter';
-import type {
-  RuntimeApprovalLaunchPolicy,
-  RuntimeApprovalProviderPort,
-  RuntimeToolApprovalAnswerInput,
-  RuntimeToolApprovalEntry,
-} from './RuntimeToolApprovalCoordinator';
+import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 import type { ToolApprovalRequest } from '@shared/types/team';
 
 interface CollectOpenCodeRuntimeApprovalsInput {
@@ -102,6 +107,41 @@ export function collectOpenCodeRuntimeApprovalEntries(
     }
   }
   return entries;
+}
+
+export function buildOpenCodeRuntimePermissionAnswerInput(
+  entry: RuntimeToolApprovalEntry,
+  allow: boolean,
+  previousLaunchState: PersistedTeamLaunchSnapshot | null
+): TeamRuntimePermissionAnswerInput {
+  return {
+    runId: entry.approval.runId,
+    laneId: entry.laneId,
+    teamName: entry.approval.teamName,
+    cwd: entry.cwd ?? '',
+    providerId: 'opencode',
+    memberName: entry.memberName,
+    requestId: entry.providerRequestId,
+    decision: mapAppApprovalDecisionToProviderDecision(allow ? 'allow' : 'deny'),
+    expectedMembers: entry.expectedMembers ?? [],
+    previousLaunchState,
+  };
+}
+
+export function buildOpenCodeRuntimePermissionLaunchInput(
+  entry: RuntimeToolApprovalEntry,
+  previousLaunchState: PersistedTeamLaunchSnapshot | null
+): TeamRuntimeLaunchInput {
+  return {
+    runId: entry.approval.runId,
+    laneId: entry.laneId,
+    teamName: entry.approval.teamName,
+    cwd: entry.cwd ?? '',
+    providerId: 'opencode',
+    skipPermissions: false,
+    expectedMembers: entry.expectedMembers ?? [],
+    previousLaunchState,
+  };
 }
 
 function collectOpenCodeRuntimePendingApprovals(

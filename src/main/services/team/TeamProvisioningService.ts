@@ -72,7 +72,11 @@ import {
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
 import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 
-import { openCodeRuntimeApprovalProvider } from './approvals/OpenCodeRuntimeApprovalProvider';
+import {
+  buildOpenCodeRuntimePermissionAnswerInput,
+  buildOpenCodeRuntimePermissionLaunchInput,
+  openCodeRuntimeApprovalProvider,
+} from './approvals/OpenCodeRuntimeApprovalProvider';
 import {
   RuntimeToolApprovalCoordinator,
   type RuntimeToolApprovalEntry,
@@ -698,8 +702,12 @@ import {
 import {
   buildAllowControlResponsePayload,
   buildDenyControlResponsePayload,
+  buildLeadToolApprovalDecisionPayload,
+  buildLeadToolApprovalRequest,
+  buildTeammatePermissionUpdatedInput,
+  buildTeammateToolApprovalRequest,
   buildToolApprovalAutoResolvedEvent,
-  formatToolApprovalBody,
+  planToolApprovalNotification,
   resolveToolApprovalTimeoutAutoResolution,
   TOOL_APPROVAL_TIMEOUT_CONTROL_DENY_MESSAGE,
 } from './provisioning/TeamProvisioningToolApprovalFlow';
@@ -1922,12 +1930,6 @@ export class TeamProvisioningService {
     request: Parameters<typeof buildStallWarningText>[1]
   ): ReturnType<typeof buildStallWarningText> {
     return buildStallWarningText(silenceSec, request);
-  }
-
-  private formatToolApprovalBody(
-    ...args: Parameters<typeof formatToolApprovalBody>
-  ): ReturnType<typeof formatToolApprovalBody> {
-    return formatToolApprovalBody(...args);
   }
 
   private getLeadRelayReadCommitBatch(
@@ -13750,18 +13752,16 @@ export class TeamProvisioningService {
     const toolInput = (request?.input ?? {}) as Record<string, unknown>;
     const providerId = toolInput.provider === 'codex' ? 'codex' : undefined;
 
-    const approval: ToolApprovalRequest = {
+    const approval = buildLeadToolApprovalRequest({
       requestId,
       runId: run.runId,
       teamName: run.teamName,
       ...(providerId ? { providerId } : {}),
-      source: 'lead',
       toolName,
       toolInput,
-      receivedAt: new Date().toISOString(),
       teamColor: run.request.color,
       teamDisplayName: run.request.displayName,
-    };
+    });
 
     // Check auto-allow rules before prompting user
     const autoResult = shouldAutoAllow(
@@ -13810,7 +13810,7 @@ export class TeamProvisioningService {
       `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
     );
 
-    const approval: ToolApprovalRequest = {
+    const approval = buildTeammateToolApprovalRequest({
       requestId: perm.requestId,
       runId: run.runId,
       teamName: run.teamName,
@@ -13822,7 +13822,7 @@ export class TeamProvisioningService {
       teamDisplayName: run.request.displayName,
       permissionSuggestions:
         perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
-    };
+    });
 
     const autoResult = shouldAutoAllow(
       this.getToolApprovalSettings(run.teamName),
@@ -13894,37 +13894,41 @@ export class TeamProvisioningService {
     approval: ToolApprovalRequest
   ): void {
     const win = this.mainWindowRef;
-    if (win && !win.isDestroyed() && win.isFocused()) return;
+    const isWindowFocused = Boolean(win && !win.isDestroyed() && win.isFocused());
+    if (isWindowFocused) return;
 
     const config = ConfigManager.getInstance().getConfig();
-    if (!config.notifications.enabled || !config.notifications.notifyOnToolApproval) return;
+    const notifications = config.notifications;
+    if (!notifications.enabled || !notifications.notifyOnToolApproval) return;
 
-    // Respect snooze — consistent with other notification types
-    const snoozedUntil = config.notifications.snoozedUntil;
+    // Respect snooze - consistent with other notification types.
+    const snoozedUntil = notifications.snoozedUntil;
     if (snoozedUntil && Date.now() < snoozedUntil) return;
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Notification: ElectronNotification } = require('electron') as Partial<
       typeof import('electron')
     >;
-    if (!ElectronNotification?.isSupported?.()) return;
 
     const isMac = process.platform === 'darwin';
-    const isLinux = process.platform === 'linux';
     const iconPath = isMac ? undefined : getAppIconPath();
-    const teamLabel = approval.teamDisplayName ?? run?.request.displayName ?? approval.teamName;
-    const body = formatToolApprovalBody(approval.toolName, approval.toolInput);
-
-    // Actions (Allow/Deny buttons) supported on macOS and Windows.
-    // Linux libnotify doesn't fire the 'action' event — users get click-to-focus.
-    const supportsActions = !isLinux;
+    const plan = planToolApprovalNotification({
+      approval,
+      notifications,
+      isWindowFocused,
+      isNotificationSupported: Boolean(ElectronNotification?.isSupported?.()),
+      platform: process.platform,
+      iconPath,
+      teamLabel: approval.teamDisplayName ?? run?.request.displayName ?? approval.teamName,
+    });
+    if (!plan || !ElectronNotification) return;
 
     const notification = new ElectronNotification({
-      title: `Tool Approval — ${teamLabel}`,
-      body,
-      sound: config.notifications.soundEnabled ? 'default' : undefined,
-      ...(iconPath ? { icon: iconPath } : {}),
-      ...(supportsActions
+      title: plan.title,
+      body: plan.body,
+      sound: plan.sound,
+      ...(plan.icon ? { icon: plan.icon } : {}),
+      ...(plan.supportsActions
         ? {
             actions: [
               { type: 'button' as const, text: 'Allow' },
@@ -13954,7 +13958,7 @@ export class TeamProvisioningService {
 
     // Action buttons: Allow (index 0) / Deny (index 1)
     // 'action' event fires on macOS and Windows (not Linux)
-    if (supportsActions) {
+    if (plan.supportsActions) {
       notification.on('action', (_event, index) => {
         cleanup();
         const allow = index === 0;
@@ -14178,30 +14182,12 @@ export class TeamProvisioningService {
     }
 
     const previousLaunchState = await this.launchStateStore.read(entry.approval.teamName);
-    const result = await adapter.answerRuntimePermission({
-      runId: entry.approval.runId,
-      laneId: entry.laneId,
-      teamName: entry.approval.teamName,
-      cwd: entry.cwd ?? '',
-      providerId: 'opencode',
-      memberName: entry.memberName,
-      requestId: entry.providerRequestId,
-      decision: allow ? 'allow' : 'reject',
-      expectedMembers: entry.expectedMembers ?? [],
-      previousLaunchState,
-    });
+    const result = await adapter.answerRuntimePermission(
+      buildOpenCodeRuntimePermissionAnswerInput(entry, allow, previousLaunchState)
+    );
 
     if (entry.laneId === 'primary') {
-      const launchInput: TeamRuntimeLaunchInput = {
-        runId: entry.approval.runId,
-        laneId: entry.laneId,
-        teamName: entry.approval.teamName,
-        cwd: entry.cwd ?? '',
-        providerId: 'opencode',
-        skipPermissions: false,
-        expectedMembers: entry.expectedMembers ?? [],
-        previousLaunchState,
-      };
+      const launchInput = buildOpenCodeRuntimePermissionLaunchInput(entry, previousLaunchState);
       const { result: committed } = await this.persistOpenCodeRuntimeAdapterLaunchResult(
         result,
         launchInput
@@ -14322,27 +14308,12 @@ export class TeamProvisioningService {
 
     // IMPORTANT: request_id is NESTED inside response, NOT top-level
     // (asymmetry with control_request — confirmed by Python SDK, Elixir SDK and issue #29991)
-    const allowResponse: Record<string, unknown> = { behavior: 'allow', updatedInput: {} };
-    // For AskUserQuestion: pass user's answers via updatedInput so the CLI
-    // can deliver them without re-prompting. Format follows --permission-prompt-tool spec.
-    if (allow && message) {
-      const pending = run.pendingApprovals.get(requestId);
-      if (pending?.toolName === 'AskUserQuestion') {
-        try {
-          const answers = JSON.parse(message) as Record<string, string>;
-          allowResponse.updatedInput = { ...pending.toolInput, answers };
-        } catch {
-          // If message isn't JSON, use as-is for the first question
-          const questions = (pending.toolInput.questions as { question?: string }[]) ?? [];
-          const answers: Record<string, string> = {};
-          if (questions[0]?.question) answers[questions[0].question] = message;
-          allowResponse.updatedInput = { ...pending.toolInput, answers };
-        }
-      }
-    }
-    const response = allow
-      ? buildAllowControlResponsePayload(requestId, allowResponse)
-      : buildDenyControlResponsePayload(requestId, message ?? 'User denied');
+    const response = buildLeadToolApprovalDecisionPayload({
+      requestId,
+      approval,
+      allow,
+      message,
+    });
 
     const stdin = run.child.stdin;
     const responseJson = JSON.stringify(response) + '\n';
@@ -14527,8 +14498,7 @@ export class TeamProvisioningService {
     // but is now fixed. Belt-and-suspenders: settings handle future calls,
     // control_response may unblock the CURRENT waiting prompt.
     if (allow && run.child?.stdin?.writable) {
-      const updatedInput =
-        this.buildTeammatePermissionUpdatedInput(toolName, toolInput, message) ?? {};
+      const updatedInput = buildTeammatePermissionUpdatedInput(toolName, toolInput, message) ?? {};
       const controlResponse = {
         type: 'control_response',
         response: {
@@ -14565,7 +14535,7 @@ export class TeamProvisioningService {
           request_id: requestId,
           subtype: 'success',
           response: {
-            updated_input: this.buildTeammatePermissionUpdatedInput(
+            updated_input: buildTeammatePermissionUpdatedInput(
               params.toolName,
               params.toolInput,
               params.message
@@ -14599,42 +14569,6 @@ export class TeamProvisioningService {
       teamName: run.teamName,
       detail: `inboxes/${agentId}.json`,
     });
-  }
-
-  private buildTeammatePermissionUpdatedInput(
-    toolName: string | undefined,
-    toolInput: Record<string, unknown> | undefined,
-    message: string | undefined
-  ): Record<string, unknown> | undefined {
-    if (!toolInput) return undefined;
-    if (toolName !== 'AskUserQuestion' || message === undefined) return toolInput;
-
-    const answers = this.parseAskUserQuestionAnswers(message, toolInput);
-    return Object.keys(answers).length > 0 ? { ...toolInput, answers } : toolInput;
-  }
-
-  private parseAskUserQuestionAnswers(
-    message: string,
-    toolInput: Record<string, unknown>
-  ): Record<string, string> {
-    try {
-      const parsed = JSON.parse(message) as unknown;
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return Object.fromEntries(
-          Object.entries(parsed as Record<string, unknown>).filter(
-            (entry): entry is [string, string] => typeof entry[1] === 'string'
-          )
-        );
-      }
-    } catch {
-      // Fall back to using the raw message as the first answer.
-    }
-
-    const questions = Array.isArray(toolInput.questions)
-      ? (toolInput.questions as { question?: unknown }[])
-      : [];
-    const firstQuestion = questions.find((question) => typeof question.question === 'string');
-    return typeof firstQuestion?.question === 'string' ? { [firstQuestion.question]: message } : {};
   }
 
   /**
