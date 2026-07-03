@@ -180,6 +180,9 @@ import {
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
   resolveCrossTeamLeadName,
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
+import {
+  recoverDeterministicBootstrapCompletion as recoverDeterministicBootstrapCompletionHelper,
+} from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { buildProvisioningTraceDetail } from './provisioning/TeamProvisioningDiagnosticsHelpers';
 import {
   type ProvisioningEnvResolution,
@@ -7519,111 +7522,38 @@ export class TeamProvisioningService {
   }
 
   private async recoverDeterministicBootstrapCompletion(run: ProvisioningRun): Promise<void> {
-    if (
-      !run.provisioningComplete ||
-      run.cancelRequested ||
-      run.processKilled ||
-      isTerminalFailureProvisioningState(run.progress.state) ||
-      this.isProvisioningRunPromotedToAlive(run) ||
-      this.hasPendingDeterministicFirstRealTurn(run) ||
-      !this.isProvisioningRunStillPromotable(run) ||
-      this.provisioningRunByTeam.get(run.teamName) !== run.runId
-    ) {
-      return;
-    }
-
-    if ((run.mixedSecondaryLanes ?? []).length > 0) {
-      return;
-    }
-
-    const snapshot = await readBootstrapLaunchSnapshot(run.teamName).catch(() => null);
-    if (!this.isProvisioningRunStillPromotable(run)) {
-      return;
-    }
-    if (
-      !snapshot ||
-      (snapshot.launchPhase !== 'finished' && snapshot.launchPhase !== 'reconciled')
-    ) {
-      return;
-    }
-
-    const runStartedAtMs = Date.parse(run.startedAt);
-    const snapshotUpdatedAtMs = Date.parse(snapshot.updatedAt);
-    if (
-      Number.isFinite(runStartedAtMs) &&
-      Number.isFinite(snapshotUpdatedAtMs) &&
-      snapshotUpdatedAtMs < runStartedAtMs
-    ) {
-      return;
-    }
-
-    const memberNames = this.getPersistedLaunchMemberNames(snapshot);
-    if (memberNames.length === 0) {
-      return;
-    }
-
-    this.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot);
-    await this.writeLaunchStateSnapshot(run.teamName, snapshot).catch((error: unknown) => {
-      logger.warn(
-        `[${run.teamName}] Failed to persist recovered deterministic bootstrap snapshot: ${getErrorMessage(
-          error
-        )}`
-      );
+    await recoverDeterministicBootstrapCompletionHelper(run, {
+      isProvisioningRunPromotedToAlive: (targetRun) =>
+        this.isProvisioningRunPromotedToAlive(targetRun),
+      hasPendingDeterministicFirstRealTurn: (targetRun) =>
+        this.hasPendingDeterministicFirstRealTurn(targetRun),
+      isProvisioningRunStillPromotable: (targetRun) =>
+        this.isProvisioningRunStillPromotable(targetRun),
+      isCurrentProvisioningRun: (targetRun) =>
+        this.provisioningRunByTeam.get(targetRun.teamName) === targetRun.runId,
+      readBootstrapLaunchSnapshot,
+      syncRunMemberSpawnStatusesFromSnapshot: (targetRun, snapshot) =>
+        this.syncRunMemberSpawnStatusesFromSnapshot(targetRun, snapshot),
+      writeLaunchStateSnapshot: (teamName, snapshot) =>
+        this.writeLaunchStateSnapshot(teamName, snapshot),
+      nowIso,
+      getMemberLaunchSummary: (targetRun) => this.getMemberLaunchSummary(targetRun),
+      hasPendingLaunchMembers: (targetRun, launchSummary, snapshot) =>
+        this.hasPendingLaunchMembers(targetRun, launchSummary, snapshot),
+      buildAggregatePendingLaunchMessage: (prefix, targetRun, launchSummary, snapshot) =>
+        this.buildAggregatePendingLaunchMessage(prefix, targetRun, launchSummary, snapshot),
+      updateProgress,
+      extractCliLogsFromRun,
+      deleteProvisioningRun: (teamName) => {
+        this.provisioningRunByTeam.delete(teamName);
+      },
+      setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      fireTeamLaunchedNotification: (targetRun) => this.fireTeamLaunchedNotification(targetRun),
+      fireTeamLaunchIncompleteNotification: (targetRun, failedMembers, launchSummary, snapshot) =>
+        this.fireTeamLaunchIncompleteNotification(targetRun, failedMembers, launchSummary, snapshot),
+      warn: (message) => logger.warn(message),
     });
-    if (!this.isProvisioningRunStillPromotable(run)) {
-      return;
-    }
-
-    const failedSpawnMembers = memberNames
-      .filter((memberName) => snapshot.members[memberName]?.launchState === 'failed_to_start')
-      .map((memberName) => ({
-        name: memberName,
-        error: snapshot.members[memberName]?.hardFailureReason,
-        updatedAt: snapshot.members[memberName]?.lastEvaluatedAt ?? nowIso(),
-      }));
-    const launchSummary = snapshot.summary ?? this.getMemberLaunchSummary(run);
-    const hasSpawnFailures = failedSpawnMembers.length > 0;
-    const hasPendingBootstrap =
-      !hasSpawnFailures && this.hasPendingLaunchMembers(run, launchSummary, snapshot);
-    const messagePrefix = run.isLaunch ? 'Launch completed' : 'Team provisioned';
-    const readyMessage = hasSpawnFailures
-      ? `${messagePrefix} with teammate errors - ${failedSpawnMembers
-          .map((member) => member.name)
-          .join(', ')} failed to start`
-      : hasPendingBootstrap
-        ? this.buildAggregatePendingLaunchMessage(messagePrefix, run, launchSummary, snapshot)
-        : run.isLaunch
-          ? 'Team launched - process alive and ready'
-          : 'Team provisioned - process alive and ready';
-
-    const progress = updateProgress(run, 'ready', readyMessage, {
-      cliLogsTail: extractCliLogsFromRun(run),
-      messageSeverity: hasSpawnFailures || hasPendingBootstrap ? 'warning' : undefined,
-    });
-    run.onProgress(progress);
-    this.provisioningRunByTeam.delete(run.teamName);
-    this.runTracking.setAliveRunId(run.teamName, run.runId);
-    logger.warn(
-      `[${run.teamName}] Recovered ready state from completed deterministic bootstrap snapshot after post-bootstrap finalization delay.`
-    );
-
-    this.teamChangeEmitter?.({
-      type: 'lead-message',
-      teamName: run.teamName,
-      runId: run.runId,
-      detail: 'lead-session-sync',
-    });
-
-    if (!hasSpawnFailures && !hasPendingBootstrap) {
-      void this.fireTeamLaunchedNotification(run);
-    } else if (hasSpawnFailures) {
-      void this.fireTeamLaunchIncompleteNotification(
-        run,
-        failedSpawnMembers,
-        launchSummary,
-        snapshot
-      );
-    }
   }
 
   private isProvisioningRunPromotedToAlive(run: ProvisioningRun): boolean {
