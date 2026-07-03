@@ -586,6 +586,7 @@ import {
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
+import { TeamProvisioningRuntimeStateProjection } from './provisioning/TeamProvisioningRuntimeStateProjection';
 import { createRuntimeToolActivityHandlers } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
   buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
@@ -1319,6 +1320,23 @@ export class TeamProvisioningService {
   private readonly setSecondaryRuntimeRun = this.secondaryRuntimeRuns.setSecondaryRuntimeRun;
   private readonly deleteSecondaryRuntimeRun = this.secondaryRuntimeRuns.deleteSecondaryRuntimeRun;
   private readonly clearSecondaryRuntimeRuns = this.secondaryRuntimeRuns.clearSecondaryRuntimeRuns;
+  private readonly runtimeStateProjection = new TeamProvisioningRuntimeStateProjection({
+    state: {
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      runs: this.runs,
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
+      getRetainedProvisioningProgressMap: () =>
+        this.retainedProvisioningProgressState.getRetainedProvisioningProgressMap(),
+    },
+    ports: {
+      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getAliveTeamNames: () => this.runTracking.getAliveTeamNames(),
+      hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
+      readBootstrapRuntimeState,
+    },
+  });
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   private readonly persistedTranscriptClaudeLogs: TeamProvisioningTranscriptClaudeLogsCache;
@@ -6318,30 +6336,21 @@ export class TeamProvisioningService {
    * Check if a team has an active provisioning run (started but not yet finished).
    */
   hasProvisioningRun(teamName: string): boolean {
-    return this.provisioningRunByTeam.has(teamName);
+    return this.runtimeStateProjection.hasProvisioningRun(teamName);
   }
 
   /**
    * Check if a team has a live process.
    */
   isTeamAlive(teamName: string): boolean {
-    const runId = this.runTracking.getAliveRunId(teamName);
-    if (!runId) return false;
-    const run = this.runs.get(runId);
-    if (!run && this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
-      return true;
-    }
-    if (run && this.hasSecondaryRuntimeRuns(teamName)) {
-      return !run.processKilled && !run.cancelRequested;
-    }
-    return run?.child != null && !run.processKilled && !run.cancelRequested;
+    return this.runtimeStateProjection.isTeamAlive(teamName);
   }
 
   /**
    * Get list of teams with active processes.
    */
   getAliveTeams(): string[] {
-    return Array.from(this.aliveRunByTeam.keys()).filter((name) => this.isTeamAlive(name));
+    return this.runtimeStateProjection.getAliveTeams();
   }
 
   /**
@@ -6354,30 +6363,7 @@ export class TeamProvisioningService {
   }
 
   async getRuntimeState(teamName: string): Promise<TeamRuntimeState> {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    const run = runId ? (this.runs.get(runId) ?? null) : null;
-
-    if (!run) {
-      const recovered = await readBootstrapRuntimeState(teamName);
-      if (recovered) {
-        return recovered;
-      }
-    }
-
-    return {
-      teamName,
-      isAlive: this.isTeamAlive(teamName),
-      runId: run?.runId ?? runId ?? null,
-      progress:
-        run?.progress ??
-        (runId
-          ? (this.runtimeAdapterProgressByRunId.get(runId) ??
-            this.retainedProvisioningProgressState
-              .getRetainedProvisioningProgressMap()
-              .get(runId) ??
-            null)
-          : null),
-    };
+    return this.runtimeStateProjection.getRuntimeState(teamName);
   }
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
