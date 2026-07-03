@@ -203,9 +203,7 @@ import {
   applyAppManagedRuntimeSettingsPathEnv,
   assertAppDeterministicBootstrapEnabled,
 } from './provisioning/TeamProvisioningEnvGuards';
-import {
-  createTeamProvisioningEnvRuntimePorts,
-} from './provisioning/TeamProvisioningEnvRuntimePorts';
+import { createTeamProvisioningEnvRuntimePorts } from './provisioning/TeamProvisioningEnvRuntimePorts';
 import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
@@ -246,23 +244,14 @@ import {
   mergeProvisioningWarnings,
   type TeamLaunchCompatibilityReport,
 } from './provisioning/TeamProvisioningLaunchCompatibility';
-import {
-  buildLaunchDiagnosticsFromRun,
-  mentionsProcessTableUnavailable,
-} from './provisioning/TeamProvisioningLaunchDiagnostics';
+import { buildLaunchDiagnosticsFromRun } from './provisioning/TeamProvisioningLaunchDiagnostics';
 import {
   probeLaunchCompatibility as probeLaunchCompatibilityHelper,
   resolveLaunchExpectedMembers as resolveLaunchExpectedMembersHelper,
   resolveLaunchExpectedMembersFromCompatibility,
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from './provisioning/TeamProvisioningLaunchExpectedMembers';
-import {
-  deriveMemberLaunchState,
-  isAutoClearableLaunchFailureReason,
-  isBootstrapCheckInTimeoutFailureReason,
-  isCliProvisionedButNotAliveFailureReason,
-  isProvisionedButNotAliveFailureReason,
-} from './provisioning/TeamProvisioningLaunchFailurePolicy';
+import { isProvisionedButNotAliveFailureReason } from './provisioning/TeamProvisioningLaunchFailurePolicy';
 import {
   readRuntimeProviderLaunchFacts as readRuntimeProviderLaunchFactsHelper,
   resolveAndValidateLaunchIdentity as resolveAndValidateLaunchIdentityHelper,
@@ -275,6 +264,11 @@ import {
   buildPendingBootstrapStatusMessage as buildPendingBootstrapStatusMessageHelper,
   hasPendingLaunchMembers as hasPendingLaunchMembersHelper,
 } from './provisioning/TeamProvisioningLaunchPendingMessage';
+import {
+  createDefaultLaunchReconcileConfigMembers,
+  parseLaunchReconcileConfigMembers,
+  reconcilePersistedLaunchMember,
+} from './provisioning/TeamProvisioningLaunchReconcileReporting';
 import {
   areAllExpectedLaunchMembersConfirmed as areAllExpectedLaunchMembersConfirmedHelper,
   areLaunchStateSnapshotsSemanticallyEqual,
@@ -485,7 +479,6 @@ import {
   collectOpenCodeSecondaryLaneFailureDiagnostics,
   createUnexpectedMixedSecondaryLaneFailureResult,
   getOpenCodeSecondaryBootstrapPendingMemberNames as getOpenCodeSecondaryBootstrapPendingMemberNamesHelper,
-  getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
   isBootstrapMemberEvidenceCurrentForMember,
   isDefinitiveOpenCodePreLaunchFailure,
   isRecoverableOpenCodeBootstrapPendingLaunchResult,
@@ -494,7 +487,6 @@ import {
   isRecoverablePersistedOpenCodeTerminalRuntimeCandidate,
   MEMBER_BOOTSTRAP_STALL_MS,
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
-  shouldMarkPersistedOpenCodeBootstrapStalled,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   cleanupStoppedTeamOpenCodeRuntimeLanesInBackground as cleanupStoppedTeamOpenCodeRuntimeLanesInBackgroundHelper,
@@ -591,7 +583,6 @@ import {
   buildGeminiPostLaunchHydrationPrompt,
   buildPersistentLeadContext,
   buildTaskBoardSnapshot,
-  extractBootstrapFailureReason,
   getCanonicalSendMessageFieldRule,
   getCanonicalSendMessageToolRule,
 } from './provisioning/TeamProvisioningPromptBuilders';
@@ -744,9 +735,7 @@ import {
   planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
   prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
 } from './provisioning/TeamProvisioningWorkspaceTrust';
-import {
-  buildWorkspaceTrustLaunchArgs as buildWorkspaceTrustLaunchArgsHelper,
-} from './provisioning/TeamProvisioningWorkspaceTrustLaunchArgs';
+import { buildWorkspaceTrustLaunchArgs as buildWorkspaceTrustLaunchArgsHelper } from './provisioning/TeamProvisioningWorkspaceTrustLaunchArgs';
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { atomicWriteAsync } from './atomicWrite';
@@ -1865,7 +1854,8 @@ export class TeamProvisioningService {
         providerConnectionService: this.providerConnectionService,
         getControlApiBaseUrlResolver: () => this.controlApiBaseUrlResolver,
         getRuntimeTurnSettledEnvironmentProvider: () => this.runtimeTurnSettledEnvironmentProvider,
-        getRuntimeTurnSettledHookSettingsProvider: () => this.runtimeTurnSettledHookSettingsProvider,
+        getRuntimeTurnSettledHookSettingsProvider: () =>
+          this.runtimeTurnSettledHookSettingsProvider,
         logger,
       }),
     });
@@ -4060,8 +4050,7 @@ export class TeamProvisioningService {
       getRun: (runId) => this.runs.get(runId),
       getRuntimeAdapterRun: (targetTeamName) =>
         this.runtimeAdapterRunByTeam.get(targetTeamName) ?? null,
-      getRuntimeAdapterProgress: (runId) =>
-        this.runtimeAdapterProgressByRunId.get(runId) ?? null,
+      getRuntimeAdapterProgress: (runId) => this.runtimeAdapterProgressByRunId.get(runId) ?? null,
       // Read-repair active lead task intervals for runs that were already active
       // before interval tracking was introduced or before the renderer polled state.
       syncLeadTaskActivityForState: (run, state, previousState) =>
@@ -5243,16 +5232,13 @@ export class TeamProvisioningService {
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const {
-        providerArgsForLaunch,
-        crossProviderMemberArgsForLaunch,
-        providerArgsByProvider,
-      } = buildWorkspaceTrustLaunchArgsHelper({
-        providerArgs,
-        resolvedProviderId,
-        crossProviderMemberArgs,
-        workspaceTrustPatches,
-      });
+      const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
+        buildWorkspaceTrustLaunchArgsHelper({
+          providerArgs,
+          resolvedProviderId,
+          crossProviderMemberArgs,
+          workspaceTrustPatches,
+        });
       Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
       if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
         for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
@@ -6583,16 +6569,13 @@ export class TeamProvisioningService {
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const {
-        providerArgsForLaunch,
-        crossProviderMemberArgsForLaunch,
-        providerArgsByProvider,
-      } = buildWorkspaceTrustLaunchArgsHelper({
-        providerArgs,
-        resolvedProviderId,
-        crossProviderMemberArgs,
-        workspaceTrustPatches,
-      });
+      const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
+        buildWorkspaceTrustLaunchArgsHelper({
+          providerArgs,
+          resolvedProviderId,
+          crossProviderMemberArgs,
+          workspaceTrustPatches,
+        });
       Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
       if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
         for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
@@ -10985,36 +10968,14 @@ export class TeamProvisioningService {
     }
 
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    let configMembers = new Set<string>();
-    let configBootstrapRunIds = new Map<string, string>();
-    let leadName = 'team-lead';
+    let launchReconcileConfigMembers = createDefaultLaunchReconcileConfigMembers();
     try {
       const raw = await tryReadRegularFileUtf8(configPath, {
         timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
         maxBytes: TEAM_CONFIG_MAX_BYTES,
       });
       if (raw) {
-        const config = JSON.parse(raw) as {
-          members?: { name?: string; agentType?: string; bootstrapRunId?: string }[];
-        };
-        const configuredMembers = config.members ?? [];
-        leadName =
-          configuredMembers.find((member) => isLeadMember(member))?.name?.trim() || leadName;
-        configMembers = new Set(
-          configuredMembers
-            .map((member) => (typeof member?.name === 'string' ? member.name.trim() : ''))
-            .filter((name) => name.length > 0 && !isLeadMember({ name }))
-        );
-        configBootstrapRunIds = new Map(
-          configuredMembers.flatMap((member) => {
-            const name = typeof member?.name === 'string' ? member.name.trim() : '';
-            const runId =
-              typeof member?.bootstrapRunId === 'string' ? member.bootstrapRunId.trim() : '';
-            return name.length > 0 && runId.length > 0 && !isLeadMember({ name })
-              ? [[name, runId] as const]
-              : [];
-          })
-        );
+        launchReconcileConfigMembers = parseLaunchReconcileConfigMembers(raw);
       }
     } catch {
       // best-effort
@@ -11022,7 +10983,7 @@ export class TeamProvisioningService {
 
     const leadInboxMessages = await this.readLeadInboxMessagesForLaunchReconcile(
       teamName,
-      leadName
+      launchReconcileConfigMembers.leadName
     );
 
     if (
@@ -11050,318 +11011,42 @@ export class TeamProvisioningService {
     const persistedMemberNames = this.getPersistedLaunchMemberNames(persistedWithCommittedEvidence);
     const now = nowIso();
     for (const expected of persistedMemberNames) {
-      const bootstrapMember = bootstrapSnapshot?.members[expected];
-      let current = nextMembers[expected] ?? {
-        name: expected,
-        launchState: 'starting',
-        agentToolAccepted: false,
-        runtimeAlive: false,
-        bootstrapConfirmed: false,
-        hardFailure: false,
-        lastEvaluatedAt: now,
-      };
-      const isOpenCodeSecondaryLaneMember = isPersistedOpenCodeSecondaryLaneMember(current);
-      const matchedConfigNames = [...configMembers].filter((name) =>
-        matchesObservedMemberNameForExpected(name, expected)
-      );
-      const configBootstrapRunId = matchedConfigNames
-        .map((name) => configBootstrapRunIds.get(name))
-        .find((runId): runId is string => typeof runId === 'string' && runId.length > 0);
-      const currentBootstrapEvidenceBoundary = configBootstrapRunId
-        ? { ...current, runtimeRunId: configBootstrapRunId }
-        : current;
-      if (
-        bootstrapMember?.agentToolAccepted &&
-        !current.agentToolAccepted &&
-        isBootstrapMemberEvidenceCurrentForMember(
-          currentBootstrapEvidenceBoundary,
-          bootstrapMember,
-          'acceptance'
-        )
-      ) {
-        current.agentToolAccepted = true;
-        current.firstSpawnAcceptedAt =
-          current.firstSpawnAcceptedAt ?? bootstrapMember.firstSpawnAcceptedAt;
-      }
-      if (
-        bootstrapMember?.bootstrapConfirmed &&
-        !current.bootstrapConfirmed &&
-        !isOpenCodeSecondaryLaneMember &&
-        isBootstrapMemberEvidenceCurrentForMember(
-          currentBootstrapEvidenceBoundary,
-          bootstrapMember,
-          'confirmation'
-        )
-      ) {
-        current.bootstrapConfirmed = true;
-        current.lastHeartbeatAt = current.lastHeartbeatAt ?? bootstrapMember.lastHeartbeatAt;
-      }
-      const runtimeMetadataCandidates = [...liveRuntimeByMember.entries()].filter(([name]) =>
-        matchesObservedMemberNameForExpected(name, expected)
-      );
-      const runtimeMetadata =
-        runtimeMetadataCandidates.find(([, metadata]) => metadata.alive) ??
-        runtimeMetadataCandidates[0];
-      const observedRuntimeAlive = runtimeMetadata?.[1].alive === true;
-      const heartbeatMessage = this.selectLatestLeadInboxLaunchReconcileMessage(
-        leadInboxMessages,
-        persistedMemberNames,
+      nextMembers[expected] = await reconcilePersistedLaunchMember({
+        teamName,
         expected,
-        current.firstSpawnAcceptedAt
-      );
-      const heartbeatReason = heartbeatMessage
-        ? extractBootstrapFailureReason(heartbeatMessage.text)
-        : null;
-      const bootstrapFailureReason =
-        bootstrapMember?.hardFailure === true &&
-        !bootstrapMember.bootstrapConfirmed &&
-        isBootstrapMemberEvidenceCurrentForMember(
-          currentBootstrapEvidenceBoundary,
-          bootstrapMember,
-          'confirmation'
-        )
-          ? (bootstrapMember.hardFailureReason ?? bootstrapMember.runtimeDiagnostic)
-          : null;
-      const acceptedAtMs =
-        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      const initialFailureReason = current.hardFailureReason ?? current.runtimeDiagnostic;
-      const hasBootstrapCheckInTimeoutFailure =
-        isBootstrapCheckInTimeoutFailureReason(initialFailureReason);
-      const hadAutoClearableFailure = isAutoClearableLaunchFailureReason(initialFailureReason);
-      const requiresConfirmedBootstrapToClearFailure =
-        isCliProvisionedButNotAliveFailureReason(initialFailureReason);
-      const metadataRuntimeDiagnostic = runtimeMetadata?.[1].runtimeDiagnostic;
-      const metadataRuntimeDiagnosticSeverity = runtimeMetadata?.[1].runtimeDiagnosticSeverity;
-      const metadataLivenessKind = runtimeMetadata?.[1].livenessKind;
-      const refreshedRuntimeDiagnosticEvidence =
-        metadataRuntimeDiagnostic &&
-        current.runtimeDiagnostic &&
-        metadataRuntimeDiagnostic !== current.runtimeDiagnostic
-          ? `${metadataRuntimeDiagnostic}; ${current.runtimeDiagnostic}`
-          : (metadataRuntimeDiagnostic ?? current.runtimeDiagnostic);
-      const hasUnsafeProvisionedButNotAliveFailure =
-        requiresConfirmedBootstrapToClearFailure &&
-        hasUnsafeProvisionedButNotAliveRuntimeEvidence({
-          ...current,
-          runtimeDiagnostic: refreshedRuntimeDiagnosticEvidence,
-          runtimeDiagnosticSeverity:
-            metadataRuntimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity,
-          livenessKind: metadataLivenessKind ?? current.livenessKind,
-        });
-      const shouldPreserveUnsafeMetadataLivenessKind =
-        hasUnsafeProvisionedButNotAliveFailure &&
-        (metadataLivenessKind === 'not_found' ||
-          metadataLivenessKind === 'shell_only' ||
-          metadataLivenessKind === 'runtime_process_candidate' ||
-          ((metadataLivenessKind === 'registered_only' ||
-            metadataLivenessKind === 'stale_metadata') &&
-            (metadataRuntimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
-            !mentionsProcessTableUnavailable(refreshedRuntimeDiagnosticEvidence) &&
-            !mentionsProcessTableUnavailable(initialFailureReason)));
-      const nextLivenessKind = current.bootstrapConfirmed
-        ? metadataLivenessKind === 'runtime_process' ||
-          metadataLivenessKind === 'confirmed_bootstrap' ||
-          shouldPreserveUnsafeMetadataLivenessKind
-          ? metadataLivenessKind
-          : current.livenessKind === 'stale_metadata' || current.livenessKind === 'registered_only'
-            ? 'confirmed_bootstrap'
-            : (current.livenessKind ?? 'confirmed_bootstrap')
-        : (metadataLivenessKind ?? current.livenessKind);
-      current.runtimeAlive = observedRuntimeAlive;
-      current.lastRuntimeAliveAt = observedRuntimeAlive ? now : current.lastRuntimeAliveAt;
-      current.livenessKind = nextLivenessKind;
-      current.pidSource = runtimeMetadata?.[1].pidSource;
-      const shouldKeepUnsafeRuntimeDiagnostic =
-        hasUnsafeProvisionedButNotAliveFailure &&
-        (metadataRuntimeDiagnostic == null ||
-          (current.runtimeDiagnosticSeverity === 'error' &&
-            metadataRuntimeDiagnosticSeverity !== 'error'));
-      current.runtimeDiagnostic = shouldKeepUnsafeRuntimeDiagnostic
-        ? current.runtimeDiagnostic
-        : metadataRuntimeDiagnostic;
-      current.runtimeDiagnosticSeverity = shouldKeepUnsafeRuntimeDiagnostic
-        ? current.runtimeDiagnosticSeverity
-        : metadataRuntimeDiagnosticSeverity;
-      current.sources = {
-        ...(current.sources ?? {}),
-        processAlive: observedRuntimeAlive || undefined,
-        configRegistered: matchedConfigNames.length > 0 || undefined,
-        configDrift:
-          heartbeatMessage != null && matchedConfigNames.length === 0
-            ? true
-            : current.sources?.configDrift,
-        inboxHeartbeat: heartbeatMessage != null ? true : current.sources?.inboxHeartbeat,
-      };
-      const bootstrapProvesSpawnAcceptance =
-        bootstrapMember?.agentToolAccepted === true ||
-        typeof bootstrapMember?.firstSpawnAcceptedAt === 'string';
-      const currentProvesSpawnAcceptance =
-        current.agentToolAccepted === true || typeof current.firstSpawnAcceptedAt === 'string';
-      if (
-        !bootstrapFailureReason &&
-        !hasBootstrapCheckInTimeoutFailure &&
-        hadAutoClearableFailure &&
-        !requiresConfirmedBootstrapToClearFailure &&
-        (bootstrapProvesSpawnAcceptance || currentProvesSpawnAcceptance)
-      ) {
-        current.hardFailure = false;
-        current.hardFailureReason = undefined;
-        if (current.sources) {
-          current.sources.hardFailureSignal = undefined;
-        }
-      }
-      if (
-        current.bootstrapConfirmed &&
-        !isOpenCodeSecondaryLaneMember &&
-        !hasUnsafeProvisionedButNotAliveFailure &&
-        isBootstrapProofClearableLaunchFailureReason(current.hardFailureReason)
-      ) {
-        if (isProvisionedButNotAliveFailureReason(current.hardFailureReason)) {
-          current.runtimeAlive = true;
-        }
-        current.hardFailure = false;
-        current.hardFailureReason = undefined;
-        if (current.sources) {
-          current.sources.hardFailureSignal = undefined;
-        }
-      }
-      if (heartbeatReason) {
-        current.hardFailure = true;
-        current.hardFailureReason = heartbeatReason;
-        current.runtimeDiagnostic = heartbeatReason;
-        current.runtimeDiagnosticSeverity = 'error';
-        current.diagnostics = mergeRuntimeDiagnostics(current.diagnostics, [heartbeatReason]);
-        current.sources.hardFailureSignal = true;
-      } else if (bootstrapFailureReason) {
-        current.hardFailure = true;
-        current.hardFailureReason = bootstrapFailureReason;
-        current.runtimeDiagnostic = bootstrapFailureReason;
-        current.runtimeDiagnosticSeverity = 'error';
-        current.diagnostics = mergeRuntimeDiagnostics(current.diagnostics, [
-          bootstrapFailureReason,
-        ]);
-        current.sources.hardFailureSignal = true;
-      } else if (heartbeatMessage && !isOpenCodeSecondaryLaneMember) {
-        current.bootstrapConfirmed = true;
-        current.lastHeartbeatAt = heartbeatMessage.timestamp;
-        current.hardFailure = false;
-        current.hardFailureReason = undefined;
-      }
-      const canApplyBootstrapSuccess =
-        !heartbeatReason &&
-        !hasUnsafeProvisionedButNotAliveFailure &&
-        (current.launchState !== 'failed_to_start' ||
-          hadAutoClearableFailure ||
-          isBootstrapProofClearableLaunchFailureReason(
-            current.hardFailureReason ?? current.runtimeDiagnostic
-          ));
-      if (!current.bootstrapConfirmed && canApplyBootstrapSuccess) {
-        const runtimeProofObservedAt = !isOpenCodeSecondaryLaneMember
-          ? await this.findBootstrapRuntimeProofObservedAt(teamName, expected, current)
-          : null;
-        const transcriptOutcome = runtimeProofObservedAt
-          ? null
-          : await this.findBootstrapTranscriptOutcome(
-              teamName,
+        current: nextMembers[expected],
+        bootstrapMember: bootstrapSnapshot?.members[expected],
+        persistedMemberNames,
+        configMembers: launchReconcileConfigMembers.configMembers,
+        configBootstrapRunIds: launchReconcileConfigMembers.configBootstrapRunIds,
+        leadInboxMessages,
+        liveRuntimeByMember,
+        launchPhase: persistedWithCommittedEvidence.launchPhase,
+        now,
+        ports: {
+          selectLatestLeadInboxLaunchReconcileMessage: ({
+            messages,
+            expectedMembers,
+            expected,
+            firstSpawnAcceptedAt,
+          }) =>
+            this.selectLatestLeadInboxLaunchReconcileMessage(
+              messages,
+              expectedMembers,
               expected,
-              Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-            );
-        const bootstrapObservedAt =
-          runtimeProofObservedAt ??
-          (transcriptOutcome?.kind === 'success' ? transcriptOutcome.observedAt : null);
-        if (bootstrapObservedAt && !isOpenCodeSecondaryLaneMember) {
-          current.bootstrapConfirmed = true;
-          current.lastHeartbeatAt = current.lastHeartbeatAt ?? bootstrapObservedAt;
-          current.runtimeAlive = runtimeProofObservedAt
-            ? true
-            : current.runtimeAlive === true || requiresConfirmedBootstrapToClearFailure;
-          current.lastRuntimeAliveAt = runtimeProofObservedAt
-            ? (current.lastRuntimeAliveAt ?? bootstrapObservedAt)
-            : current.lastRuntimeAliveAt;
-          current.hardFailure = false;
-          current.hardFailureReason = undefined;
-          if (current.sources) {
-            current.sources.hardFailureSignal = undefined;
-          }
-        } else if (transcriptOutcome?.kind === 'failure' && !current.hardFailure) {
-          current.hardFailure = true;
-          current.hardFailureReason = transcriptOutcome.reason;
-          current.sources.hardFailureSignal = true;
-        }
-      }
-      const graceExpired =
-        Number.isFinite(acceptedAtMs) && Date.now() - acceptedAtMs >= MEMBER_LAUNCH_GRACE_MS;
-      if (!isOpenCodeSecondaryLaneMember) {
-        current = this.applyProcessBootstrapTransportOverlay({
-          member: current,
-          summary: await this.readProcessBootstrapTransportSummary({
-            teamName,
-            memberName: expected,
-            member: current,
-          }),
-          launchPhase: persistedWithCommittedEvidence.launchPhase,
-          finalTimeoutReached: graceExpired,
-        });
-      }
-      if (current.bootstrapConfirmed && !current.hardFailure && !isOpenCodeSecondaryLaneMember) {
-        current.livenessKind =
-          current.livenessKind === 'stale_metadata' ||
-          current.livenessKind === 'registered_only' ||
-          current.livenessKind == null
-            ? 'confirmed_bootstrap'
-            : current.livenessKind;
-        current.pidSource =
-          current.pidSource === 'persisted_metadata' || current.pidSource == null
-            ? 'runtime_bootstrap'
-            : current.pidSource;
-        if (shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(current.runtimeDiagnostic)) {
-          current.runtimeDiagnostic = undefined;
-          current.runtimeDiagnosticSeverity = undefined;
-        } else if (!current.runtimeDiagnostic) {
-          current.runtimeDiagnosticSeverity = undefined;
-        }
-        current.bootstrapStalled = undefined;
-      }
-      if (
-        isOpenCodeSecondaryLaneMember &&
-        shouldMarkPersistedOpenCodeBootstrapStalled(current, Date.now())
-      ) {
-        const runtimeDiagnostic =
-          getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(current);
-        current.launchState = 'runtime_pending_bootstrap';
-        current.agentToolAccepted = true;
-        current.runtimeAlive =
-          current.runtimeAlive === true && current.livenessKind === 'runtime_process';
-        current.bootstrapConfirmed = false;
-        current.hardFailure = false;
-        current.hardFailureReason = undefined;
-        current.livenessKind = current.livenessKind ?? 'registered_only';
-        current.runtimeDiagnostic = runtimeDiagnostic;
-        current.runtimeDiagnosticSeverity = 'warning';
-        current.bootstrapStalled = true;
-        current.diagnostics = mergeRuntimeDiagnostics(current.diagnostics, [
-          runtimeDiagnostic,
-          'opencode_bootstrap_stalled',
-        ]);
-      }
-      if (
-        current.agentToolAccepted === true &&
-        !current.bootstrapConfirmed &&
-        !current.runtimeAlive &&
-        !current.hardFailure &&
-        current.bootstrapStalled !== true &&
-        graceExpired
-      ) {
-        current.hardFailure = true;
-        current.hardFailureReason =
-          current.hardFailureReason ?? 'Teammate did not join within the launch grace window.';
-      }
-      current.launchState = deriveMemberLaunchState(current);
-      current.lastEvaluatedAt = now;
-      nextMembers[expected] = {
-        ...current,
-        diagnostics: undefined,
-      };
+              firstSpawnAcceptedAt
+            ),
+          findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
+            this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
+          findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+            this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+          readProcessBootstrapTransportSummary: (input) =>
+            this.readProcessBootstrapTransportSummary(input),
+          applyProcessBootstrapTransportOverlay: (input) =>
+            this.applyProcessBootstrapTransportOverlay(input),
+          nowMs: Date.now,
+        },
+      });
     }
 
     const reconciled = createPersistedLaunchSnapshot({
