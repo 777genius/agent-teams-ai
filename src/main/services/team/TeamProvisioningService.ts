@@ -254,25 +254,15 @@ import {
 } from './provisioning/TeamProvisioningLeadContextUsage';
 import { relayLeadInboxMessagesForTeam } from './provisioning/TeamProvisioningLeadInboxRelayFlow';
 import {
-  appendProvisioningAssistantText as appendProvisioningAssistantTextHelper,
-  getCurrentLeadSessionId as getCurrentLeadSessionIdHelper,
-  getLiveLeadProcessMessages as getLiveLeadProcessMessagesHelper,
-  pruneLiveLeadMessagesForCleanedRun as pruneLiveLeadMessagesForCleanedRunHelper,
-  pushLiveLeadProcessMessage as pushLiveLeadProcessMessageHelper,
-  pushLiveLeadTextMessage as pushLiveLeadTextMessageHelper,
-  resetLiveLeadTextBuffer as resetLiveLeadTextBufferHelper,
-  shiftProvisioningOutputIndexesAfterRemoval as shiftProvisioningOutputIndexesAfterRemovalHelper,
-} from './provisioning/TeamProvisioningLeadProcessMessages';
-import {
   getPreCompleteCliErrorTextFromRun,
   getRunTrackedCwdFromRun,
   isCurrentTrackedRunById,
 } from './provisioning/TeamProvisioningLeadRunDerivation';
-import { captureLeadSendMessages } from './provisioning/TeamProvisioningLeadSendMessageCapture';
 import {
   type LiveInboxRelayResult,
   relayInboxFileToLiveRecipientWithPorts,
 } from './provisioning/TeamProvisioningLiveInboxRelayRouting';
+import { createTeamProvisioningLiveLeadMessagePortsBoundary } from './provisioning/TeamProvisioningLiveLeadMessagePortsFactory';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import { relayMemberInboxMessagesWithPorts } from './provisioning/TeamProvisioningMemberInboxRelayFlow';
 import {
@@ -754,6 +744,7 @@ const VERIFY_POLL_MS = 500;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
+const LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
 // Progress emissions fan out the latest CLI tail + assistant output to the
 // renderer over IPC. Under load the previous 300ms cadence combined with an
 // unbounded payload (see `emitLogsProgress`) caused renderer OOM crashes
@@ -1490,6 +1481,24 @@ export class TeamProvisioningService {
   private readonly pendingCrossTeamFirstReplies = new Map<string, Map<string, number>>();
   private readonly recentCrossTeamLeadDeliveryMessageIds = new Map<string, Map<string, number>>();
   private readonly liveLeadProcessMessages = new Map<string, InboxMessage[]>();
+  private readonly liveLeadMessagePortsBoundary =
+    createTeamProvisioningLiveLeadMessagePortsBoundary<ProvisioningRun>({
+      liveLeadProcessMessages: this.liveLeadProcessMessages,
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      getRunLeadName: (run) => this.getRunLeadName(run),
+      getCrossTeamSender: () => this.crossTeamSender,
+      persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
+      persistInboxMessage: (teamName, recipient, message) =>
+        this.persistInboxMessage(teamName, recipient, message),
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+      logger,
+      nowIso,
+      nowMs: () => Date.now(),
+      cacheLimit: LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT,
+      leadTextEmitThrottleMs: LEAD_TEXT_EMIT_THROTTLE_MS,
+    });
   private readonly sameTeamNativeDelivery: TeamProvisioningSameTeamNativeDelivery;
   private readonly agentRuntimeSnapshotCache = new Map<
     string,
@@ -3744,22 +3753,15 @@ export class TeamProvisioningService {
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {
-    return getLiveLeadProcessMessagesHelper(teamName, {
-      liveLeadProcessMessages: this.liveLeadProcessMessages,
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getRun: (runId) => this.runs.get(runId),
-    });
+    return this.liveLeadMessagePortsBoundary.getLiveLeadProcessMessages(teamName);
   }
 
   private pruneLiveLeadMessagesForCleanedRun(run: ProvisioningRun): void {
-    pruneLiveLeadMessagesForCleanedRunHelper(run, this.liveLeadProcessMessages);
+    this.liveLeadMessagePortsBoundary.pruneLiveLeadMessagesForCleanedRun(run);
   }
 
   getCurrentLeadSessionId(teamName: string): string | null {
-    return getCurrentLeadSessionIdHelper(teamName, {
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getRun: (runId) => this.runs.get(runId),
-    });
+    return this.liveLeadMessagePortsBoundary.getCurrentLeadSessionId(teamName);
   }
 
   getCurrentRunId(teamName: string): string | null {
@@ -4404,7 +4406,6 @@ export class TeamProvisioningService {
   }
 
   private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
-  private static readonly LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
 
   private emitLeadContextUsage(run: ProvisioningRun): void {
     if (!run.leadContextUsage || !run.provisioningComplete) return;
@@ -7451,52 +7452,18 @@ export class TeamProvisioningService {
   }
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
-    captureLeadSendMessages(run, content, {
-      nowIso,
-      nowMs: () => Date.now(),
-      logger,
-      crossTeamSender: this.crossTeamSender,
-      resolveCrossTeamReplyMetadata: (teamName, toTeam) =>
-        this.resolveCrossTeamReplyMetadata(teamName, toTeam),
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      pushLiveLeadProcessMessage: (teamName, message) =>
-        this.pushLiveLeadProcessMessage(teamName, message),
-      persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
-      persistInboxMessage: (teamName, recipient, message) =>
-        this.persistInboxMessage(teamName, recipient, message),
-      emitLeadMessageChange: (teamName, runId, detail) =>
-        this.teamChangeEmitter?.({ type: 'lead-message', teamName, runId, detail }),
-      emitInboxChange: (teamName, detail) =>
-        this.teamChangeEmitter?.({ type: 'inbox', teamName, detail }),
-    });
+    this.liveLeadMessagePortsBoundary.captureSendMessages(run, content);
   }
 
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
-    pushLiveLeadProcessMessageHelper(teamName, message, {
-      liveLeadProcessMessages: this.liveLeadProcessMessages,
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getRun: (runId) => this.runs.get(runId),
-      cacheLimit: LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT,
-    });
+    this.liveLeadMessagePortsBoundary.pushLiveLeadProcessMessage(teamName, message);
   }
 
   resolveCrossTeamReplyMetadata(
     teamName: string,
     toTeam: string
   ): { conversationId: string; replyToConversationId: string } | null {
-    const runId = this.runTracking.getAliveRunId(teamName);
-    if (!runId) return null;
-    const run = this.runs.get(runId);
-    const hints = run?.activeCrossTeamReplyHints ?? [];
-    if (hints.length === 0) return null;
-
-    const matches = hints.filter((hint) => hint.toTeam === toTeam);
-    if (matches.length !== 1) return null;
-
-    return {
-      conversationId: matches[0].conversationId,
-      replyToConversationId: matches[0].conversationId,
-    };
+    return this.liveLeadMessagePortsBoundary.resolveCrossTeamReplyMetadata(teamName, toTeam);
   }
 
   /**
@@ -7505,7 +7472,7 @@ export class TeamProvisioningService {
    * Emits a coalesced `lead-message` event for renderer refresh.
    */
   private resetLiveLeadTextBuffer(run: ProvisioningRun): void {
-    resetLiveLeadTextBufferHelper(run);
+    this.liveLeadMessagePortsBoundary.resetLiveLeadTextBuffer(run);
   }
 
   private appendProvisioningAssistantText(
@@ -7513,14 +7480,14 @@ export class TeamProvisioningService {
     msg: Record<string, unknown>,
     text: string
   ): void {
-    appendProvisioningAssistantTextHelper(run, msg, text);
+    this.liveLeadMessagePortsBoundary.appendProvisioningAssistantText(run, msg, text);
   }
 
   private shiftProvisioningOutputIndexesAfterRemoval(
     run: ProvisioningRun,
     removedIndex: number
   ): void {
-    shiftProvisioningOutputIndexesAfterRemovalHelper(run, removedIndex);
+    this.liveLeadMessagePortsBoundary.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex);
   }
 
   private pushLiveLeadTextMessage(
@@ -7530,15 +7497,13 @@ export class TeamProvisioningService {
     messageTimestamp?: string,
     options?: { coalesceStreamChunk?: boolean }
   ): void {
-    pushLiveLeadTextMessageHelper(run, cleanText, stableMessageId, messageTimestamp, options, {
-      nowMs: () => Date.now(),
-      nowIso,
-      getRunLeadName: (run) => this.getRunLeadName(run),
-      pushLiveLeadProcessMessage: (teamName, message) =>
-        this.pushLiveLeadProcessMessage(teamName, message),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      leadTextEmitThrottleMs: TeamProvisioningService.LEAD_TEXT_EMIT_THROTTLE_MS,
-    });
+    this.liveLeadMessagePortsBoundary.pushLiveLeadTextMessage(
+      run,
+      cleanText,
+      stableMessageId,
+      messageTimestamp,
+      options
+    );
   }
 
   /**
