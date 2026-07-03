@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  getLeadActivityStateForTeam,
   getLeadTaskActivityRunKey,
   type LeadActivityRunLike,
   setLeadActivity,
@@ -24,6 +25,94 @@ function createPorts(
 }
 
 describe('lead activity helpers', () => {
+  it('returns offline when no run is tracked', () => {
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => null,
+        getRun: () => undefined,
+        getRuntimeAdapterRun: () => null,
+        getRuntimeAdapterProgress: () => null,
+        syncLeadTaskActivityForState: vi.fn(),
+      })
+    ).toEqual({ state: 'offline', runId: null });
+  });
+
+  it('returns idle for a non-terminal runtime-adapter run without an in-memory run', () => {
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => 'run-1',
+        getRun: () => undefined,
+        getRuntimeAdapterRun: () => ({ runId: 'run-1' }),
+        getRuntimeAdapterProgress: () => ({ state: 'running' }),
+        syncLeadTaskActivityForState: vi.fn(),
+      })
+    ).toEqual({ state: 'idle', runId: 'run-1' });
+  });
+
+  it('returns offline for terminal runtime-adapter progress without an in-memory run', () => {
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => 'run-1',
+        getRun: () => undefined,
+        getRuntimeAdapterRun: () => ({ runId: 'run-1' }),
+        getRuntimeAdapterProgress: () => ({ state: 'failed' }),
+        syncLeadTaskActivityForState: vi.fn(),
+      })
+    ).toEqual({ state: 'offline', runId: null });
+  });
+
+  it('returns offline for killed or cancelled in-memory runs', () => {
+    const baseRun = {
+      teamName: 'team-a',
+      runId: 'run-1',
+      leadActivityState: 'active' as const,
+      processKilled: false,
+      cancelRequested: true,
+    };
+
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => 'run-1',
+        getRun: () => baseRun,
+        getRuntimeAdapterRun: () => null,
+        getRuntimeAdapterProgress: () => null,
+        syncLeadTaskActivityForState: vi.fn(),
+      })
+    ).toEqual({ state: 'offline', runId: null });
+
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => 'run-1',
+        getRun: () => ({ ...baseRun, cancelRequested: false, processKilled: true }),
+        getRuntimeAdapterRun: () => null,
+        getRuntimeAdapterProgress: () => null,
+        syncLeadTaskActivityForState: vi.fn(),
+      })
+    ).toEqual({ state: 'offline', runId: null });
+  });
+
+  it('read-repairs task activity before returning active in-memory state', () => {
+    const run = {
+      teamName: 'team-a',
+      runId: 'run-1',
+      leadActivityState: 'active' as const,
+      processKilled: false,
+      cancelRequested: false,
+    };
+    const syncLeadTaskActivityForState = vi.fn();
+
+    expect(
+      getLeadActivityStateForTeam('team-a', {
+        getTrackedRunId: () => 'run-1',
+        getRun: () => run,
+        getRuntimeAdapterRun: () => null,
+        getRuntimeAdapterProgress: () => null,
+        syncLeadTaskActivityForState,
+      })
+    ).toEqual({ state: 'active', runId: 'run-1' });
+    expect(syncLeadTaskActivityForState).toHaveBeenCalledWith(run, 'active', 'active');
+  });
+
   it('builds a stable task activity key from team and run ids', () => {
     expect(getLeadTaskActivityRunKey({ teamName: 'team-a', runId: 'run-1' })).toBe(
       'team-a\u0000run-1'

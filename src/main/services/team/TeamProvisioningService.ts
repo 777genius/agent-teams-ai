@@ -291,6 +291,7 @@ import {
   resolveExistingLaunchRunReuse,
 } from './provisioning/TeamProvisioningLaunchTeamFlow';
 import {
+  getLeadActivityStateForTeam,
   type LeadActivityState,
   setLeadActivity as setLeadActivityHelper,
   syncLeadTaskActivityForState as syncLeadTaskActivityForStateHelper,
@@ -300,9 +301,9 @@ import {
   toLeadAttachmentPayloads,
 } from './provisioning/TeamProvisioningLeadAttachments';
 import {
-  buildLeadContextUsagePayloadFromState,
-  deriveLeadContextUsageStateFromUsage,
-  getInitialLeadContextWindowTokensForRequest,
+  buildLeadContextUsagePayloadForRun,
+  getLeadContextUsageForTeam,
+  updateLeadContextUsageFromUsageForRun,
 } from './provisioning/TeamProvisioningLeadContextUsage';
 import { scanLeadInboxPermissionRequests } from './provisioning/TeamProvisioningLeadPermissionScan';
 import {
@@ -3986,58 +3987,25 @@ export class TeamProvisioningService {
     state: 'active' | 'idle' | 'offline';
     runId: string | null;
   } {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    if (!runId) return { state: 'offline', runId: null };
-    const run = this.runs.get(runId);
-    if (!run) {
-      const runtimeAdapterRun = this.runtimeAdapterRunByTeam.get(teamName);
-      const runtimeProgress = this.runtimeAdapterProgressByRunId.get(runId);
-      if (
-        runtimeAdapterRun?.runId === runId &&
-        !['cancelled', 'disconnected', 'failed'].includes(runtimeProgress?.state ?? '')
-      ) {
-        return { state: 'idle', runId };
-      }
-      return { state: 'offline', runId: null };
-    }
-    if (run.processKilled || run.cancelRequested) return { state: 'offline', runId: null };
-    // Read-repair active lead task intervals for runs that were already active
-    // before interval tracking was introduced or before the renderer polled state.
-    this.syncLeadTaskActivityForState(run, run.leadActivityState, run.leadActivityState);
-    return { state: run.leadActivityState, runId };
+    return getLeadActivityStateForTeam(teamName, {
+      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
+      getRun: (runId) => this.runs.get(runId),
+      getRuntimeAdapterRun: (targetTeamName) =>
+        this.runtimeAdapterRunByTeam.get(targetTeamName) ?? null,
+      getRuntimeAdapterProgress: (runId) =>
+        this.runtimeAdapterProgressByRunId.get(runId) ?? null,
+      // Read-repair active lead task intervals for runs that were already active
+      // before interval tracking was introduced or before the renderer polled state.
+      syncLeadTaskActivityForState: (run, state, previousState) =>
+        this.syncLeadTaskActivityForState(run, state, previousState),
+    });
   }
 
   getLeadContextUsage(teamName: string): { usage: LeadContextUsage | null; runId: string | null } {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    if (!runId) return { usage: null, runId: null };
-    const run = this.runs.get(runId);
-    if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) {
-      return { usage: null, runId: null };
-    }
-    return {
-      usage: this.buildLeadContextUsagePayload(run),
-      runId,
-    };
-  }
-
-  private getInitialLeadContextWindowTokens(run: ProvisioningRun): number | null {
-    return getInitialLeadContextWindowTokensForRequest(run.request);
-  }
-
-  private buildLeadContextUsagePayload(run: ProvisioningRun): LeadContextUsage {
-    return buildLeadContextUsagePayloadFromState(run.leadContextUsage, new Date().toISOString());
-  }
-
-  private updateLeadContextUsageFromUsage(
-    run: ProvisioningRun,
-    usage: Record<string, unknown>,
-    modelName: string | undefined
-  ): void {
-    run.leadContextUsage = deriveLeadContextUsageStateFromUsage({
-      previousUsage: run.leadContextUsage,
-      request: run.request,
-      usage,
-      modelName,
+    return getLeadContextUsageForTeam(teamName, {
+      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
+      getRun: (runId) => this.runs.get(runId),
+      nowIso: () => new Date().toISOString(),
     });
   }
 
@@ -4667,7 +4635,7 @@ export class TeamProvisioningService {
       return;
     }
     run.leadContextUsage.lastEmittedAt = now;
-    const payload = this.buildLeadContextUsagePayload(run);
+    const payload = buildLeadContextUsagePayloadForRun(run);
     this.teamChangeEmitter?.({
       type: 'lead-context',
       teamName: run.teamName,
@@ -12410,7 +12378,7 @@ export class TeamProvisioningService {
       captureTeamSpawnEvents: (run, content) => this.captureTeamSpawnEvents(run, content),
       captureSendMessages: (run, content) => this.captureSendMessages(run, content),
       updateLeadContextUsageFromUsage: (run, usage, modelName) =>
-        this.updateLeadContextUsageFromUsage(run, usage, modelName),
+        updateLeadContextUsageFromUsageForRun(run, usage, modelName),
       emitLeadContextUsage: (run) => this.emitLeadContextUsage(run),
       resetRuntimeToolActivity: (run, memberName) => this.resetRuntimeToolActivity(run, memberName),
       setLeadActivity: (run, state) => this.setLeadActivity(run, state),

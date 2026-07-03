@@ -23,6 +23,22 @@ export interface StoredLeadContextUsageState extends LeadContextUsageState {
   lastEmittedAt: number;
 }
 
+export interface LeadContextUsageRunLike {
+  request: LeadContextUsageRequestLike;
+  leadContextUsage: StoredLeadContextUsageState | null;
+}
+
+export interface LeadContextUsageAccessorRunLike extends LeadContextUsageRunLike {
+  processKilled: boolean;
+  cancelRequested: boolean;
+}
+
+export interface LeadContextUsageAccessorPorts<TRun extends LeadContextUsageAccessorRunLike> {
+  getTrackedRunId(teamName: string): string | null;
+  getRun(runId: string): TRun | undefined;
+  nowIso(): string;
+}
+
 export function getInitialLeadContextWindowTokensForRequest(
   request: LeadContextUsageRequestLike
 ): number | null {
@@ -72,6 +88,50 @@ export function buildLeadContextUsagePayloadFromState(
     promptInputSource: usage.promptInputSource,
     updatedAt,
   };
+}
+
+export function getInitialLeadContextWindowTokensForRun(
+  run: LeadContextUsageRunLike
+): number | null {
+  return getInitialLeadContextWindowTokensForRequest(run.request);
+}
+
+export function buildLeadContextUsagePayloadForRun(
+  run: LeadContextUsageRunLike,
+  nowIso: () => string = () => new Date().toISOString()
+): LeadContextUsage {
+  return buildLeadContextUsagePayloadFromState(run.leadContextUsage, nowIso());
+}
+
+export function getLeadContextUsageForTeam<TRun extends LeadContextUsageAccessorRunLike>(
+  teamName: string,
+  ports: LeadContextUsageAccessorPorts<TRun>
+): { usage: LeadContextUsage | null; runId: string | null } {
+  const runId = ports.getTrackedRunId(teamName);
+  if (!runId) return { usage: null, runId: null };
+
+  const run = ports.getRun(runId);
+  if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) {
+    return { usage: null, runId: null };
+  }
+
+  return {
+    usage: buildLeadContextUsagePayloadForRun(run, ports.nowIso),
+    runId,
+  };
+}
+
+export function updateLeadContextUsageFromUsageForRun(
+  run: LeadContextUsageRunLike,
+  usage: Record<string, unknown>,
+  modelName: string | undefined
+): void {
+  run.leadContextUsage = deriveLeadContextUsageStateFromUsage({
+    previousUsage: run.leadContextUsage,
+    request: run.request,
+    usage,
+    modelName,
+  });
 }
 
 export function deriveLeadContextUsageStateFromUsage(params: {

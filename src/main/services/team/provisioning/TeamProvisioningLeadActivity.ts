@@ -8,6 +8,23 @@ export interface LeadActivityRunLike {
   leadActivityState: LeadActivityState;
 }
 
+export interface LeadActivityAccessorRunLike extends LeadActivityRunLike {
+  processKilled: boolean;
+  cancelRequested: boolean;
+}
+
+export interface LeadActivityAccessorPorts<TRun extends LeadActivityAccessorRunLike> {
+  getTrackedRunId(teamName: string): string | null;
+  getRun(runId: string): TRun | undefined;
+  getRuntimeAdapterRun(teamName: string): { runId: string } | null | undefined;
+  getRuntimeAdapterProgress(runId: string): { state?: string } | null | undefined;
+  syncLeadTaskActivityForState(
+    run: TRun,
+    state: LeadActivityState,
+    previousState: LeadActivityState
+  ): void;
+}
+
 export interface LeadTaskActivityIntervalPorts<TRun extends LeadActivityRunLike> {
   syncedRunKeys: Set<string>;
   getRunLeadName(run: TRun): string;
@@ -32,6 +49,32 @@ export interface SetLeadActivityPorts<TRun extends LeadActivityRunLike>
 
 export function getLeadTaskActivityRunKey(run: Pick<LeadActivityRunLike, 'teamName' | 'runId'>): string {
   return `${run.teamName}\u0000${run.runId}`;
+}
+
+export function getLeadActivityStateForTeam<TRun extends LeadActivityAccessorRunLike>(
+  teamName: string,
+  ports: LeadActivityAccessorPorts<TRun>
+): { state: LeadActivityState; runId: string | null } {
+  const runId = ports.getTrackedRunId(teamName);
+  if (!runId) return { state: 'offline', runId: null };
+
+  const run = ports.getRun(runId);
+  if (!run) {
+    const runtimeAdapterRun = ports.getRuntimeAdapterRun(teamName);
+    const runtimeProgress = ports.getRuntimeAdapterProgress(runId);
+    if (
+      runtimeAdapterRun?.runId === runId &&
+      !['cancelled', 'disconnected', 'failed'].includes(runtimeProgress?.state ?? '')
+    ) {
+      return { state: 'idle', runId };
+    }
+    return { state: 'offline', runId: null };
+  }
+
+  if (run.processKilled || run.cancelRequested) return { state: 'offline', runId: null };
+
+  ports.syncLeadTaskActivityForState(run, run.leadActivityState, run.leadActivityState);
+  return { state: run.leadActivityState, runId };
 }
 
 export function syncLeadTaskActivityForState<TRun extends LeadActivityRunLike>(
