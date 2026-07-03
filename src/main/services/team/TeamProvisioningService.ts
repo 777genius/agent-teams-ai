@@ -135,7 +135,6 @@ import {
   type TeamProvisioningCleanupPorts,
 } from './provisioning/TeamProvisioningCleanup';
 import { createTeamProvisioningCleanupRunPorts } from './provisioning/TeamProvisioningCleanupRunPortsFactory';
-import { buildCombinedLogs } from './provisioning/TeamProvisioningCliExitPresentation';
 import { getCliHelpOutputWithProvisioningPorts } from './provisioning/TeamProvisioningCliHelpOutputPortsFactory';
 import { buildMembersMetaWritePayload } from './provisioning/TeamProvisioningConfigLaunchNormalization';
 import { TeamProvisioningConfigMaintenance } from './provisioning/TeamProvisioningConfigMaintenance';
@@ -397,14 +396,13 @@ import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/Tea
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
 import {
   type AuthWarningSource,
-  buildStallProgressMessage,
-  buildStallWarningText,
-  extractApiErrorSnippet,
-  hasApiError,
   isAuthFailureWarning,
   normalizeApiRetryErrorMessage,
 } from './provisioning/TeamProvisioningOutputErrorPolicy';
-import { createTeamProvisioningOutputRecoveryHelper } from './provisioning/TeamProvisioningOutputRecovery';
+import {
+  createTeamProvisioningOutputRecoveryBoundary,
+  type TeamProvisioningOutputRecoveryBoundary,
+} from './provisioning/TeamProvisioningOutputRecoveryBoundaryFactory';
 import { reconcilePersistedLaunchStateWithTeamProvisioningPorts } from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
 import {
   listPersistedTeamNames as listPersistedTeamNamesHelper,
@@ -427,13 +425,10 @@ import {
 import { createTeamProvisioningProcessExitPorts } from './provisioning/TeamProvisioningProcessExitPortsFactory';
 import {
   appendProvisioningTrace,
-  boundRunProvisioningOutputParts,
-  boundStdoutParserCarry,
   buildProvisioningLiveOutput,
 } from './provisioning/TeamProvisioningProgressBuffers';
 import {
   isTerminalFailureProvisioningState,
-  looksLikeClaudeStdoutJsonFragment,
   shouldIgnoreProvisioningProgressRegression,
   TeamProvisioningRetainedProgressState,
 } from './provisioning/TeamProvisioningProgressState';
@@ -719,8 +714,6 @@ const {
 const VERIFY_TIMEOUT_MS = 15_000;
 
 const VERIFY_POLL_MS = 500;
-const STDERR_RING_LIMIT = 64 * 1024;
-const STDOUT_RING_LIMIT = 64 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT = 100;
 const LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
 // Progress emissions fan out the latest CLI tail + assistant output to the
@@ -729,9 +722,6 @@ const LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
 // (about 3 full-history serializations per second, each holding thousands of
 // lines). The tail cap in `emitLogsProgress` bounds each payload; we also
 // slow the cadence to ~1s so Zustand can keep up on large teams.
-const LOG_PROGRESS_THROTTLE_MS = 1000;
-const STALL_CHECK_INTERVAL_MS = 10_000;
-const STALL_WARNING_THRESHOLD_MS = 20_000;
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
@@ -1126,6 +1116,22 @@ export class TeamProvisioningService {
       getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
       getRuntimeAdapterProviderId: (teamName) =>
         this.runtimeAdapterRunByTeam.get(teamName)?.providerId ?? null,
+    });
+  private readonly outputRecoveryBoundary: TeamProvisioningOutputRecoveryBoundary<ProvisioningRun> =
+    createTeamProvisioningOutputRecoveryBoundary({
+      service: {
+        updateProgress,
+        emitLogsProgress,
+        killTeamProcess,
+        cleanupRun: (run) => this.cleanupRun(run),
+        respawnAfterAuthFailure: (run) => this.respawnAfterAuthFailure(run),
+        appendCliLogs: (run, stream, text) => this.appendCliLogs(run, stream, text),
+        handleStreamJsonMessage: (run, msg) => this.handleStreamJsonMessage(run, msg),
+        shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
+          this.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex),
+      },
+      logger,
+      nowIso,
     });
 
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
@@ -2506,20 +2512,6 @@ export class TeamProvisioningService {
     input: Parameters<OpenCodeVisibleReplyProofService['findByRelayOfMessageId']>[0]
   ): ReturnType<OpenCodeVisibleReplyProofService['findByRelayOfMessageId']> {
     return this.openCodeVisibleReplyProofService.findByRelayOfMessageId(input);
-  }
-
-  private buildStallProgressMessage(
-    silenceSec: number,
-    elapsed: string
-  ): ReturnType<typeof buildStallProgressMessage> {
-    return buildStallProgressMessage(silenceSec, elapsed);
-  }
-
-  private buildStallWarningText(
-    silenceSec: number,
-    request: Parameters<typeof buildStallWarningText>[1]
-  ): ReturnType<typeof buildStallWarningText> {
-    return buildStallWarningText(silenceSec, request);
   }
 
   private handleDeterministicBootstrapEvent(
@@ -4770,48 +4762,8 @@ export class TeamProvisioningService {
     return this.prepareCoordinator.getCachedOrProbeResult(cwd, providerId);
   }
 
-  private createOutputRecoveryHelper() {
-    return createTeamProvisioningOutputRecoveryHelper<ProvisioningRun>(
-      {
-        logger,
-        nowMs: () => Date.now(),
-        nowIso,
-        setInterval: (callback, ms) => setInterval(callback, ms),
-        clearInterval: (handle) => clearInterval(handle),
-        buildCombinedLogs,
-        extractApiErrorSnippet,
-        hasApiError,
-        isAuthFailureWarning,
-        buildStallWarningText,
-        buildStallProgressMessage,
-        boundStdoutParserCarry,
-        looksLikeClaudeStdoutJsonFragment,
-        boundRunProvisioningOutputParts,
-        buildProvisioningLiveOutput,
-        extractCliLogsFromRun,
-        updateProgress,
-        emitLogsProgress,
-        killTeamProcess,
-        cleanupRun: (run) => this.cleanupRun(run),
-        respawnAfterAuthFailure: (run) => this.respawnAfterAuthFailure(run),
-        appendCliLogs: (run, stream, text) => this.appendCliLogs(run, stream, text),
-        handleStreamJsonMessage: (run, msg) => this.handleStreamJsonMessage(run, msg),
-        shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
-          this.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex),
-      },
-      {
-        stderrRingLimit: STDERR_RING_LIMIT,
-        stdoutRingLimit: STDOUT_RING_LIMIT,
-        logProgressThrottleMs: LOG_PROGRESS_THROTTLE_MS,
-        stallCheckIntervalMs: STALL_CHECK_INTERVAL_MS,
-        stallWarningThresholdMs: STALL_WARNING_THRESHOLD_MS,
-        preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS,
-      }
-    );
-  }
-
   private failProvisioningWithApiError(run: ProvisioningRun, source: string): void {
-    this.createOutputRecoveryHelper().failProvisioningWithApiError(run, source);
+    this.outputRecoveryBoundary.failProvisioningWithApiError(run, source);
   }
 
   /**
@@ -4820,7 +4772,7 @@ export class TeamProvisioningService {
    * Deduplicates: only the first warning per run is shown.
    */
   private emitApiErrorWarning(run: ProvisioningRun, text: string): void {
-    this.createOutputRecoveryHelper().emitApiErrorWarning(run, text);
+    this.outputRecoveryBoundary.emitApiErrorWarning(run, text);
   }
 
   /**
@@ -4829,11 +4781,11 @@ export class TeamProvisioningService {
    * into provisioningOutputParts so they appear in the Live output section.
    */
   private startStallWatchdog(run: ProvisioningRun): void {
-    this.createOutputRecoveryHelper().startStallWatchdog(run);
+    this.outputRecoveryBoundary.startStallWatchdog(run);
   }
 
   private stopStallWatchdog(run: ProvisioningRun): void {
-    this.createOutputRecoveryHelper().stopStallWatchdog(run);
+    this.outputRecoveryBoundary.stopStallWatchdog(run);
   }
 
   /**
@@ -4846,7 +4798,7 @@ export class TeamProvisioningService {
     text: string,
     source: AuthWarningSource
   ): void {
-    this.createOutputRecoveryHelper().handleAuthFailureInOutput(run, text, source);
+    this.outputRecoveryBoundary.handleAuthFailureInOutput(run, text, source);
   }
 
   /**
@@ -4906,36 +4858,36 @@ export class TeamProvisioningService {
 
   /** Attaches the stdout stream-json parser to the current child process. */
   private attachStdoutHandler(run: ProvisioningRun): void {
-    this.createOutputRecoveryHelper().attachStdoutHandler(run);
+    this.outputRecoveryBoundary.attachStdoutHandler(run);
   }
 
   private updateStdoutParserCarry(run: ProvisioningRun, carry: string): void {
-    this.createOutputRecoveryHelper().updateStdoutParserCarry(run, carry);
+    this.outputRecoveryBoundary.updateStdoutParserCarry(run, carry);
   }
 
   private flushStdoutParserCarry(run: ProvisioningRun): void {
-    this.createOutputRecoveryHelper().flushStdoutParserCarry(run);
+    this.outputRecoveryBoundary.flushStdoutParserCarry(run);
   }
 
   private buildStdoutCarryDiagnostic(run: ProvisioningRun): Record<string, unknown> {
-    return this.createOutputRecoveryHelper().buildStdoutCarryDiagnostic(run);
+    return this.outputRecoveryBoundary.buildStdoutCarryDiagnostic(run);
   }
 
   private getUnconfirmedBootstrapMemberNames(run: ProvisioningRun): string[] {
-    return this.createOutputRecoveryHelper().getUnconfirmedBootstrapMemberNames(run);
+    return this.outputRecoveryBoundary.getUnconfirmedBootstrapMemberNames(run);
   }
 
   private handleStdoutParserLine(run: ProvisioningRun, trimmed: string): void {
-    this.createOutputRecoveryHelper().handleStdoutParserLine(run, trimmed);
+    this.outputRecoveryBoundary.handleStdoutParserLine(run, trimmed);
   }
 
   private handleParsedStdoutJsonMessage(run: ProvisioningRun, msg: Record<string, unknown>): void {
-    this.createOutputRecoveryHelper().handleParsedStdoutJsonMessage(run, msg);
+    this.outputRecoveryBoundary.handleParsedStdoutJsonMessage(run, msg);
   }
 
   /** Attaches the stderr handler with auth failure detection. */
   private attachStderrHandler(run: ProvisioningRun): void {
-    this.createOutputRecoveryHelper().attachStderrHandler(run);
+    this.outputRecoveryBoundary.attachStderrHandler(run);
   }
 
   private createDeterministicCreateRunFlowPorts(): DeterministicCreateRunFlowPorts<
