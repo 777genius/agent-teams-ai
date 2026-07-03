@@ -296,6 +296,10 @@ import {
   type TeamProvisioningLeadToolApprovalPorts,
   type TeamProvisioningLeadToolApprovalResponsePorts,
 } from './provisioning/TeamProvisioningLeadToolApproval';
+import {
+  type LiveInboxRelayResult,
+  relayInboxFileToLiveRecipientWithPorts,
+} from './provisioning/TeamProvisioningLiveInboxRelayRouting';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import { relayMemberInboxMessagesWithPorts } from './provisioning/TeamProvisioningMemberInboxRelayFlow';
 import {
@@ -1205,13 +1209,6 @@ function emitLogsProgress(run: ProvisioningRun): void {
     ...(assistantOutputChanged && { assistantOutput }),
   };
   run.onProgress(run.progress);
-}
-
-interface LiveInboxRelayResult {
-  kind: 'ignored' | 'native_lead' | 'native_member_noop' | 'opencode_member';
-  relayed: number;
-  diagnostics?: string[];
-  lastDelivery?: OpenCodeMemberInboxDelivery;
 }
 
 export class TeamProvisioningService {
@@ -6080,61 +6077,19 @@ export class TeamProvisioningService {
     inboxName: string,
     options: OpenCodeMemberInboxRelayOptions = {}
   ): Promise<LiveInboxRelayResult> {
-    if (isCrossTeamPseudoRecipientName(inboxName) || isCrossTeamToolRecipientName(inboxName)) {
-      return { kind: 'ignored', relayed: 0 };
-    }
-
-    const [config, metaMembers] = await Promise.all([
-      this.readConfigSnapshot(teamName).catch(() => null),
-      this.membersMetaStore.getMembers(teamName).catch(() => []),
-    ]);
-    const leadName = config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null;
-    const isOpenCodeRecipient = this.isOpenCodeRuntimeRecipientFromSources(
-      inboxName,
-      config,
-      metaMembers
-    );
-    if (inboxName.trim().toLowerCase() === leadName?.toLowerCase()) {
-      if (isOpenCodeRecipient) {
-        const relayOptions: OpenCodeMemberInboxRelayOptions = {
-          source: options.source ?? 'watcher',
-          ...(options.onlyMessageId ? { onlyMessageId: options.onlyMessageId } : {}),
-          ...(options.deliveryMetadata ? { deliveryMetadata: options.deliveryMetadata } : {}),
-        };
-        const relay = await this.relayOpenCodeMemberInboxMessages(
-          teamName,
-          inboxName,
-          relayOptions
-        );
-        return {
-          kind: 'opencode_member',
-          relayed: relay.relayed,
-          diagnostics: relay.diagnostics,
-          lastDelivery: relay.lastDelivery,
-        };
+    return relayInboxFileToLiveRecipientWithPorts(
+      { teamName, inboxName, options },
+      {
+        readConfigSnapshot: (teamName) => this.readConfigSnapshot(teamName),
+        readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+        isOpenCodeRuntimeRecipientFromSources: ({ memberName, config, metaMembers }) =>
+          this.isOpenCodeRuntimeRecipientFromSources(memberName, config, metaMembers),
+        relayOpenCodeMemberInboxMessages: (teamName, memberName, relayOptions) =>
+          this.relayOpenCodeMemberInboxMessages(teamName, memberName, relayOptions),
+        relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
+        isTeamAlive: (teamName) => this.isTeamAlive(teamName),
       }
-      return {
-        kind: 'native_lead',
-        relayed: this.isTeamAlive(teamName) ? await this.relayLeadInboxMessages(teamName) : 0,
-      };
-    }
-
-    if (isOpenCodeRecipient) {
-      const relayOptions: OpenCodeMemberInboxRelayOptions = {
-        source: options.source ?? 'watcher',
-        ...(options.onlyMessageId ? { onlyMessageId: options.onlyMessageId } : {}),
-        ...(options.deliveryMetadata ? { deliveryMetadata: options.deliveryMetadata } : {}),
-      };
-      const relay = await this.relayOpenCodeMemberInboxMessages(teamName, inboxName, relayOptions);
-      return {
-        kind: 'opencode_member',
-        relayed: relay.relayed,
-        diagnostics: relay.diagnostics,
-        lastDelivery: relay.lastDelivery,
-      };
-    }
-
-    return { kind: 'native_member_noop', relayed: 0 };
+    );
   }
 
   private async resolveOpenCodeInboxAttachmentPayloads(input: {
