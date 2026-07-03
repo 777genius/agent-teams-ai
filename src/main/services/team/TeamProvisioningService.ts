@@ -541,6 +541,12 @@ import {
   shouldReturnSnapshotBeforeRuntimeReconcileFromPorts,
 } from './provisioning/TeamProvisioningPersistedLaunchReconciliation';
 import {
+  listPersistedTeamNames as listPersistedTeamNamesHelper,
+  type PersistedTeamConfigCacheEntry,
+  readPersistedRuntimeMembers as readPersistedRuntimeMembersHelper,
+  readPersistedTeamProjectPath as readPersistedTeamProjectPathHelper,
+} from './provisioning/TeamProvisioningPersistedTeamConfigAccess';
+import {
   type CachedProbeResult,
   createDefaultTeamProvisioningPrepareCoordinatorPorts,
   type PrepareForProvisioningOptions,
@@ -819,15 +825,6 @@ export {
  */
 function killTeamProcess(child: ChildProcess | null | undefined): void {
   killProcessTree(child, 'SIGKILL');
-}
-
-interface PersistedTeamConfigCacheEntry {
-  path: string;
-  size: number;
-  mtimeMs: number;
-  ctimeMs: number;
-  projectPath: string | null;
-  members: PersistedRuntimeMemberLike[];
 }
 
 interface LaunchStateWriteResult {
@@ -12759,86 +12756,22 @@ export class TeamProvisioningService {
     }
   }
 
-  private clonePersistedRuntimeMember(
-    member: PersistedRuntimeMemberLike
-  ): PersistedRuntimeMemberLike {
-    return { ...member };
-  }
-
-  private isPersistedRuntimeMemberLike(member: unknown): member is PersistedRuntimeMemberLike {
-    return !!member && typeof member === 'object';
-  }
-
-  private readPersistedTeamConfig(teamName: string): PersistedTeamConfigCacheEntry | null {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    let stat: fs.Stats;
-    try {
-      stat = fs.statSync(configPath);
-    } catch {
-      this.persistedTeamConfigCache.delete(teamName);
-      return null;
-    }
-
-    const cached = this.persistedTeamConfigCache.get(teamName);
-    if (
-      cached &&
-      cached.path === configPath &&
-      cached.size === stat.size &&
-      cached.mtimeMs === stat.mtimeMs &&
-      cached.ctimeMs === stat.ctimeMs
-    ) {
-      return cached;
-    }
-
-    try {
-      const raw = fs.readFileSync(configPath, 'utf8');
-      const parsed = JSON.parse(raw) as { projectPath?: unknown; members?: unknown };
-      const projectPath = typeof parsed.projectPath === 'string' ? parsed.projectPath.trim() : '';
-      const members = Array.isArray(parsed.members)
-        ? parsed.members
-            .filter((member): member is PersistedRuntimeMemberLike =>
-              this.isPersistedRuntimeMemberLike(member)
-            )
-            .map((member) => this.clonePersistedRuntimeMember(member))
-        : [];
-      const entry: PersistedTeamConfigCacheEntry = {
-        path: configPath,
-        size: stat.size,
-        mtimeMs: stat.mtimeMs,
-        ctimeMs: stat.ctimeMs,
-        projectPath: projectPath || null,
-        members,
-      };
-      this.persistedTeamConfigCache.set(teamName, entry);
-      return entry;
-    } catch {
-      this.persistedTeamConfigCache.delete(teamName);
-      return null;
-    }
-  }
-
   private readPersistedTeamProjectPath(teamName: string): string | null {
-    return this.readPersistedTeamConfig(teamName)?.projectPath ?? null;
+    return readPersistedTeamProjectPathHelper(teamName, {
+      teamsBasePath: getTeamsBasePath(),
+      cache: this.persistedTeamConfigCache,
+    });
   }
 
   private readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[] {
-    return (
-      this.readPersistedTeamConfig(teamName)?.members.map((member) =>
-        this.clonePersistedRuntimeMember(member)
-      ) ?? []
-    );
+    return readPersistedRuntimeMembersHelper(teamName, {
+      teamsBasePath: getTeamsBasePath(),
+      cache: this.persistedTeamConfigCache,
+    });
   }
 
   private listPersistedTeamNames(): string[] {
-    try {
-      return fs
-        .readdirSync(getTeamsBasePath(), { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name.trim())
-        .filter((name) => name.length > 0);
-    } catch {
-      return [];
-    }
+    return listPersistedTeamNamesHelper(getTeamsBasePath());
   }
 
   private killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): void {
