@@ -577,17 +577,14 @@ import {
   getCanonicalSendMessageToolRule,
 } from './provisioning/TeamProvisioningPromptBuilders';
 import {
-  createDefaultTeamProvisioningProviderDiagnosticsPorts,
   PREFLIGHT_AUTH_RETRY_DELAY_MS,
-  probeClaudeRuntime,
-  probeProviderRuntimeControlPlane,
-  runProviderOneShotDiagnostic,
-  spawnProbe as spawnProbeDiagnostic,
   type SpawnProbeOptions,
   type SpawnProbeResult,
-  type TeamProvisioningProviderDiagnosticsPorts,
-  validateAgentTeamsMcpRuntime,
 } from './provisioning/TeamProvisioningProviderDiagnostics';
+import {
+  createTeamProvisioningProviderDiagnosticsRuntime,
+  type TeamProvisioningProviderDiagnosticsRuntime,
+} from './provisioning/TeamProvisioningProviderDiagnosticsPorts';
 import { getCliHelpOutputForProvisioning } from './provisioning/TeamProvisioningProviderPreflight';
 import {
   buildRetainedClaudeLogsSnapshot,
@@ -14742,23 +14739,14 @@ export class TeamProvisioningService {
     return normalizeApiRetryErrorMessage(text);
   }
 
-  private getProviderDiagnosticsBasePorts(): TeamProvisioningProviderDiagnosticsPorts {
-    return createDefaultTeamProvisioningProviderDiagnosticsPorts({
+  private getProviderDiagnosticsRuntime(): TeamProvisioningProviderDiagnosticsRuntime {
+    return createTeamProvisioningProviderDiagnosticsRuntime({
       transientProbeProcesses: this.transientProbeProcesses,
       providerConnectionService: this.providerConnectionService,
       logger,
       isAuthFailureWarning: (text, source) => this.isAuthFailureWarning(text, source),
       normalizeApiRetryErrorMessage: (text) => this.normalizeApiRetryErrorMessage(text),
     });
-  }
-
-  private getProviderDiagnosticsPorts(): TeamProvisioningProviderDiagnosticsPorts {
-    const ports = this.getProviderDiagnosticsBasePorts();
-    return {
-      ...ports,
-      spawnProbe: (claudePath, args, cwd, env, timeoutMs, options) =>
-        this.spawnProbe(claudePath, args, cwd, env, timeoutMs, options),
-    };
   }
 
   private async probeClaudeRuntime(
@@ -14768,27 +14756,13 @@ export class TeamProvisioningService {
     providerId: TeamProviderId | undefined = 'anthropic',
     providerArgs: string[] = []
   ): Promise<{ warning?: string }> {
-    return probeClaudeRuntime({
+    return this.getProviderDiagnosticsRuntime().probeClaudeRuntime(
       claudePath,
       cwd,
       env,
       providerId,
-      providerArgs,
-      ports: this.getProviderDiagnosticsPorts(),
-    });
-  }
-
-  private async probeProviderRuntimeControlPlane(input: {
-    claudePath: string;
-    cwd: string;
-    env: NodeJS.ProcessEnv;
-    providerId: TeamProviderId;
-    providerArgs: string[];
-  }): Promise<{ warning?: string }> {
-    return probeProviderRuntimeControlPlane({
-      ...input,
-      ports: this.getProviderDiagnosticsPorts(),
-    });
+      providerArgs
+    );
   }
 
   private async runProviderOneShotDiagnostic(
@@ -14798,14 +14772,13 @@ export class TeamProvisioningService {
     providerId: TeamProviderId | undefined = 'anthropic',
     providerArgs: string[] = []
   ): Promise<{ warning?: string }> {
-    return runProviderOneShotDiagnostic({
+    return this.getProviderDiagnosticsRuntime().runProviderOneShotDiagnostic(
       claudePath,
       cwd,
       env,
       providerId,
-      providerArgs,
-      ports: this.getProviderDiagnosticsPorts(),
-    });
+      providerArgs
+    );
   }
 
   private async validateAgentTeamsMcpRuntime(
@@ -14815,14 +14788,13 @@ export class TeamProvisioningService {
     mcpConfigPath: string,
     options: { isCancelled?: () => boolean } = {}
   ): Promise<void> {
-    await validateAgentTeamsMcpRuntime({
+    await this.getProviderDiagnosticsRuntime().validateAgentTeamsMcpRuntime(
       claudePath,
       cwd,
       env,
       mcpConfigPath,
-      options,
-      ports: this.getProviderDiagnosticsPorts(),
-    });
+      options
+    );
   }
 
   private async spawnProbe(
@@ -14833,15 +14805,14 @@ export class TeamProvisioningService {
     timeoutMs: number,
     options?: SpawnProbeOptions
   ): Promise<SpawnProbeResult> {
-    return spawnProbeDiagnostic({
+    return this.getProviderDiagnosticsRuntime().spawnProbe(
       claudePath,
       args,
       cwd,
       env,
       timeoutMs,
-      options,
-      ports: this.getProviderDiagnosticsBasePorts(),
-    });
+      options
+    );
   }
 
   private getProvisioningEnvBuilderPorts(): TeamProvisioningEnvBuilderPorts {
