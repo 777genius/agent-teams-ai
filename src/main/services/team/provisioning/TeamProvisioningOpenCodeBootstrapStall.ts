@@ -122,6 +122,64 @@ export interface BuildOpenCodeSecondaryBootstrapStallDiagnosticPorts {
   ): Promise<OpenCodeBootstrapTranscriptOutcome | null | undefined>;
 }
 
+export interface OpenCodeSecondaryBootstrapRuntimeMetadataLike {
+  livenessKind?: MemberSpawnStatusEntry['livenessKind'];
+  runtimeDiagnostic?: string;
+  runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+  runtimeSessionId?: string;
+}
+
+export interface ReconcileOpenCodeRuntimeProcessBootstrapPorts {
+  buildOpenCodeSecondaryBootstrapStallDiagnostic(
+    run: OpenCodeBootstrapStallRunLike,
+    memberName: string,
+    current: MemberSpawnStatusEntry
+  ): Promise<string>;
+  setOpenCodeRuntimePendingBootstrapStatus(
+    run: OpenCodeBootstrapStallRunLike,
+    memberName: string,
+    current: MemberSpawnStatusEntry,
+    options: {
+      bootstrapStalled: boolean;
+      runtimeDiagnostic: string;
+      runtimeDiagnosticSeverity: TeamAgentRuntimeDiagnosticSeverity;
+    }
+  ): void;
+  maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt(input: {
+    run: OpenCodeBootstrapStallRunLike;
+    memberName: string;
+    current: MemberSpawnStatusEntry;
+    runtimeDiagnostic: string;
+    runtimeSessionId?: string;
+  }): Promise<void>;
+  scheduleOpenCodeBootstrapStallReevaluation(
+    run: OpenCodeBootstrapStallRunLike,
+    memberName: string,
+    firstSpawnAcceptedAt: string
+  ): void;
+}
+
+export interface MarkOpenCodeSecondaryBootstrapStalledPorts {
+  buildOpenCodeSecondaryBootstrapStallDiagnostic(
+    run: OpenCodeBootstrapStallRunLike,
+    memberName: string,
+    current: MemberSpawnStatusEntry
+  ): Promise<string>;
+  setOpenCodeSecondaryBootstrapStalledStatus(
+    run: OpenCodeBootstrapStallRunLike,
+    memberName: string,
+    current: MemberSpawnStatusEntry,
+    runtimeDiagnostic: string
+  ): void;
+  maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt(input: {
+    run: OpenCodeBootstrapStallRunLike;
+    memberName: string;
+    current: MemberSpawnStatusEntry;
+    runtimeDiagnostic: string;
+    runtimeSessionId?: string;
+  }): Promise<void>;
+}
+
 export function isOpenCodeBootstrapStallWindowElapsed(
   firstSpawnAcceptedAt: string | undefined,
   nowMs: number
@@ -294,6 +352,117 @@ export function setOpenCodeSecondaryBootstrapStalledStatus(
   if (run.isLaunch) {
     ports.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
   }
+}
+
+export async function reconcileOpenCodeRuntimeProcessBootstrapStatus(
+  input: {
+    run: OpenCodeBootstrapStallRunLike;
+    memberName: string;
+    current: MemberSpawnStatusEntry;
+    bootstrapStalled: boolean;
+    runtimeDiagnostic?: string;
+    runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+    runtimeSessionId?: string;
+    firstSpawnAcceptedAt?: string;
+    scheduleReevaluation: boolean;
+  },
+  ports: ReconcileOpenCodeRuntimeProcessBootstrapPorts
+): Promise<void> {
+  const stalledDiagnostic = input.bootstrapStalled
+    ? await ports.buildOpenCodeSecondaryBootstrapStallDiagnostic(
+        input.run,
+        input.memberName,
+        input.current
+      )
+    : null;
+  const runtimeProcessStallDiagnostic =
+    toOpenCodeRuntimeProcessBootstrapStallDiagnostic(stalledDiagnostic);
+  ports.setOpenCodeRuntimePendingBootstrapStatus(input.run, input.memberName, input.current, {
+    bootstrapStalled: input.bootstrapStalled,
+    runtimeDiagnostic: input.bootstrapStalled
+      ? (runtimeProcessStallDiagnostic ?? OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC)
+      : (input.runtimeDiagnostic ?? OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_PENDING_DIAGNOSTIC),
+    runtimeDiagnosticSeverity: input.bootstrapStalled
+      ? 'warning'
+      : (input.runtimeDiagnosticSeverity ?? 'info'),
+  });
+  if (input.bootstrapStalled) {
+    await ports.maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt({
+      run: input.run,
+      memberName: input.memberName,
+      current: input.current,
+      runtimeDiagnostic:
+        runtimeProcessStallDiagnostic ?? OPENCODE_RUNTIME_PROCESS_BOOTSTRAP_STALLED_DIAGNOSTIC,
+      runtimeSessionId: input.runtimeSessionId,
+    });
+    return;
+  }
+  if (input.scheduleReevaluation && input.firstSpawnAcceptedAt) {
+    ports.scheduleOpenCodeBootstrapStallReevaluation(
+      input.run,
+      input.memberName,
+      input.firstSpawnAcceptedAt
+    );
+  }
+}
+
+export function shouldMarkOpenCodeSecondaryBootstrapStalled(input: {
+  isOpenCodeSecondaryLaneMember: boolean;
+  current: MemberSpawnStatusEntry;
+  bootstrapStallWindowElapsed: boolean;
+}): boolean {
+  return (
+    input.isOpenCodeSecondaryLaneMember &&
+    input.current.launchState === 'runtime_pending_bootstrap' &&
+    input.current.bootstrapConfirmed !== true &&
+    input.current.hardFailure !== true &&
+    input.bootstrapStallWindowElapsed
+  );
+}
+
+export async function markOpenCodeSecondaryBootstrapStalled(
+  input: {
+    run: OpenCodeBootstrapStallRunLike;
+    memberName: string;
+    current: MemberSpawnStatusEntry;
+    isOpenCodeSecondaryLaneMember: boolean;
+    bootstrapStallWindowElapsed: boolean;
+    runtimeMetadata?: OpenCodeSecondaryBootstrapRuntimeMetadataLike;
+  },
+  ports: MarkOpenCodeSecondaryBootstrapStalledPorts
+): Promise<boolean> {
+  if (!shouldMarkOpenCodeSecondaryBootstrapStalled(input)) {
+    return false;
+  }
+  const enriched: MemberSpawnStatusEntry = {
+    ...input.current,
+    ...(input.runtimeMetadata?.livenessKind ? { livenessKind: input.runtimeMetadata.livenessKind } : {}),
+    ...(input.runtimeMetadata?.runtimeDiagnostic
+      ? { runtimeDiagnostic: input.runtimeMetadata.runtimeDiagnostic }
+      : {}),
+    ...(input.runtimeMetadata?.runtimeDiagnosticSeverity
+      ? { runtimeDiagnosticSeverity: input.runtimeMetadata.runtimeDiagnosticSeverity }
+      : {}),
+  };
+  const diagnostic = await ports.buildOpenCodeSecondaryBootstrapStallDiagnostic(
+    input.run,
+    input.memberName,
+    enriched
+  );
+  ports.setOpenCodeSecondaryBootstrapStalledStatus(
+    input.run,
+    input.memberName,
+    enriched,
+    diagnostic
+  );
+  await ports.maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt({
+    run: input.run,
+    memberName: input.memberName,
+    current: enriched,
+    runtimeDiagnostic: diagnostic,
+    runtimeSessionId: input.runtimeMetadata?.runtimeSessionId,
+  });
+  return true;
 }
 
 export type OpenCodeBootstrapCheckinRetryPromptPlan =

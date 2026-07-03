@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildOpenCodeSecondaryBootstrapStallDiagnostic,
   isOpenCodeBootstrapStallWindowElapsed,
+  markOpenCodeSecondaryBootstrapStalled,
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   OPENCODE_LEGACY_BOOTSTRAP_STALLED_DIAGNOSTIC,
   OPENCODE_MEMBER_BRIEFING_WITHOUT_CHECKIN_DIAGNOSTIC,
   planOpenCodeSecondaryBootstrapCheckinRetryPrompt,
+  reconcileOpenCodeRuntimeProcessBootstrapStatus,
   scheduleOpenCodeBootstrapStallReevaluation,
 } from '../TeamProvisioningOpenCodeBootstrapStall';
 import { MEMBER_BOOTSTRAP_STALL_MS } from '../TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -54,6 +56,20 @@ function opencodeLane(overrides: Record<string, unknown> = {}) {
       diagnostics: [],
     },
     ...overrides,
+  };
+}
+
+function bootstrapRun() {
+  return {
+    runId: 'run-1',
+    teamName: 'Team',
+    request: { cwd: '/tmp/project' },
+    provisioningOutputParts: [],
+    memberSpawnStatuses: new Map(),
+    progress: {} as never,
+    onProgress: vi.fn(),
+    isLaunch: true,
+    provisioningComplete: false,
   };
 }
 
@@ -171,6 +187,141 @@ describe('OpenCode bootstrap stall helpers', () => {
     expect(appManagedPlan).toEqual({ shouldSend: false, reason: 'app_managed_bootstrap' });
   });
 
+  it('reconciles runtime-process bootstrap pending status and schedules reevaluation', async () => {
+    const buildDiagnostic = vi.fn();
+    const setPendingStatus = vi.fn();
+    const sendRetryPrompt = vi.fn();
+    const scheduleReevaluation = vi.fn();
+    const firstSpawnAcceptedAt = '2026-01-01T00:00:00.000Z';
+    const current = status({ firstSpawnAcceptedAt });
+    const run = bootstrapRun();
+
+    await reconcileOpenCodeRuntimeProcessBootstrapStatus(
+      {
+        run,
+        memberName: 'Worker',
+        current,
+        bootstrapStalled: false,
+        runtimeDiagnostic: 'OpenCode runtime process is alive',
+        runtimeDiagnosticSeverity: 'info',
+        firstSpawnAcceptedAt,
+        scheduleReevaluation: true,
+      },
+      {
+        buildOpenCodeSecondaryBootstrapStallDiagnostic: buildDiagnostic,
+        setOpenCodeRuntimePendingBootstrapStatus: setPendingStatus,
+        maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt: sendRetryPrompt,
+        scheduleOpenCodeBootstrapStallReevaluation: scheduleReevaluation,
+      }
+    );
+
+    expect(buildDiagnostic).not.toHaveBeenCalled();
+    expect(setPendingStatus).toHaveBeenCalledWith(run, 'Worker', current, {
+      bootstrapStalled: false,
+      runtimeDiagnostic: 'OpenCode runtime process is alive',
+      runtimeDiagnosticSeverity: 'info',
+    });
+    expect(sendRetryPrompt).not.toHaveBeenCalled();
+    expect(scheduleReevaluation).toHaveBeenCalledWith(run, 'Worker', firstSpawnAcceptedAt);
+  });
+
+  it('reconciles stalled runtime-process bootstrap status with retry prompt diagnostics', async () => {
+    const current = status({ firstSpawnAcceptedAt: '2026-01-01T00:00:00.000Z' });
+    const run = bootstrapRun();
+    const buildDiagnostic = vi
+      .fn()
+      .mockResolvedValue(OPENCODE_LEGACY_BOOTSTRAP_STALLED_DIAGNOSTIC);
+    const setPendingStatus = vi.fn();
+    const sendRetryPrompt = vi.fn();
+    const scheduleReevaluation = vi.fn();
+
+    await reconcileOpenCodeRuntimeProcessBootstrapStatus(
+      {
+        run,
+        memberName: 'Worker',
+        current,
+        bootstrapStalled: true,
+        runtimeSessionId: 'session-1',
+        scheduleReevaluation: true,
+      },
+      {
+        buildOpenCodeSecondaryBootstrapStallDiagnostic: buildDiagnostic,
+        setOpenCodeRuntimePendingBootstrapStatus: setPendingStatus,
+        maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt: sendRetryPrompt,
+        scheduleOpenCodeBootstrapStallReevaluation: scheduleReevaluation,
+      }
+    );
+
+    expect(setPendingStatus).toHaveBeenCalledWith(run, 'Worker', current, {
+      bootstrapStalled: true,
+      runtimeDiagnostic: 'Runtime process is alive, but no bootstrap check-in after 5 min.',
+      runtimeDiagnosticSeverity: 'warning',
+    });
+    expect(sendRetryPrompt).toHaveBeenCalledWith({
+      run,
+      memberName: 'Worker',
+      current,
+      runtimeDiagnostic: 'Runtime process is alive, but no bootstrap check-in after 5 min.',
+      runtimeSessionId: 'session-1',
+    });
+    expect(scheduleReevaluation).not.toHaveBeenCalled();
+  });
+
+  it('marks elapsed secondary bootstrap as stalled with runtime metadata enrichment', async () => {
+    const current = status({
+      firstSpawnAcceptedAt: '2026-01-01T00:00:00.000Z',
+      runtimeDiagnostic: 'previous diagnostic',
+    });
+    const run = bootstrapRun();
+    const buildDiagnostic = vi.fn().mockResolvedValue('diagnostic from transcript');
+    const setStalledStatus = vi.fn();
+    const sendRetryPrompt = vi.fn();
+
+    await expect(
+      markOpenCodeSecondaryBootstrapStalled(
+        {
+          run,
+          memberName: 'Worker',
+          current,
+          isOpenCodeSecondaryLaneMember: true,
+          bootstrapStallWindowElapsed: true,
+          runtimeMetadata: {
+            livenessKind: 'runtime_process_candidate',
+            runtimeDiagnostic: 'candidate diagnostic',
+            runtimeDiagnosticSeverity: 'warning',
+            runtimeSessionId: 'session-1',
+          },
+        },
+        {
+          buildOpenCodeSecondaryBootstrapStallDiagnostic: buildDiagnostic,
+          setOpenCodeSecondaryBootstrapStalledStatus: setStalledStatus,
+          maybeSendOpenCodeSecondaryBootstrapCheckinRetryPrompt: sendRetryPrompt,
+        }
+      )
+    ).resolves.toBe(true);
+
+    const enriched = {
+      ...current,
+      livenessKind: 'runtime_process_candidate',
+      runtimeDiagnostic: 'candidate diagnostic',
+      runtimeDiagnosticSeverity: 'warning',
+    };
+    expect(buildDiagnostic).toHaveBeenCalledWith(run, 'Worker', enriched);
+    expect(setStalledStatus).toHaveBeenCalledWith(
+      run,
+      'Worker',
+      enriched,
+      'diagnostic from transcript'
+    );
+    expect(sendRetryPrompt).toHaveBeenCalledWith({
+      run,
+      memberName: 'Worker',
+      current: enriched,
+      runtimeDiagnostic: 'diagnostic from transcript',
+      runtimeSessionId: 'session-1',
+    });
+  });
+
   it('calculates stall windows and schedules one reevaluation timer', () => {
     const nowMs = Date.parse('2026-01-01T00:05:00.000Z');
     const acceptedAt = new Date(nowMs - MEMBER_BOOTSTRAP_STALL_MS + 2_500).toISOString();
@@ -185,17 +336,7 @@ describe('OpenCode bootstrap stall helpers', () => {
     expect(isOpenCodeBootstrapStallWindowElapsed(acceptedAt, nowMs + 2_500)).toBe(true);
 
     scheduleOpenCodeBootstrapStallReevaluation(
-      {
-        runId: 'run-1',
-        teamName: 'Team',
-        request: { cwd: '/tmp/project' },
-        provisioningOutputParts: [],
-        memberSpawnStatuses: new Map(),
-        progress: {} as never,
-        onProgress: vi.fn(),
-        isLaunch: true,
-        provisioningComplete: false,
-      },
+      bootstrapRun(),
       'Worker',
       acceptedAt,
       {
@@ -209,17 +350,7 @@ describe('OpenCode bootstrap stall helpers', () => {
       }
     );
     scheduleOpenCodeBootstrapStallReevaluation(
-      {
-        runId: 'run-1',
-        teamName: 'Team',
-        request: { cwd: '/tmp/project' },
-        provisioningOutputParts: [],
-        memberSpawnStatuses: new Map(),
-        progress: {} as never,
-        onProgress: vi.fn(),
-        isLaunch: true,
-        provisioningComplete: false,
-      },
+      bootstrapRun(),
       'Worker',
       acceptedAt,
       {
