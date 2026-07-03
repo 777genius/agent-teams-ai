@@ -52,7 +52,6 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
 import { type ParsedTeammateContent } from '@shared/utils/teammateMessageParser';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
@@ -354,8 +353,6 @@ import {
   buildRestartGraceTimeoutReason,
   createInitialMemberSpawnStatusEntry,
   MEMBER_LAUNCH_GRACE_MS,
-  shouldWarnOnMissingRegisteredMember,
-  shouldWarnOnUnreadableMemberAuditConfig,
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import {
   buildEffectiveTeamMemberSpec,
@@ -549,6 +546,10 @@ import {
   createTeamProvisioningProviderRuntimeFacade,
   type TeamProvisioningProviderRuntimeFacade,
 } from './provisioning/TeamProvisioningProviderRuntimeFacade';
+import {
+  auditRegisteredMemberSpawnStatuses as auditRegisteredMemberSpawnStatusesHelper,
+  readRegisteredTeamMemberNamesFromConfig,
+} from './provisioning/TeamProvisioningRegisteredMemberAudit';
 import {
   buildRetainedClaudeLogsSnapshot,
   extractCliLogsFromRun,
@@ -7689,169 +7690,40 @@ export class TeamProvisioningService {
    */
   private async getRegisteredTeamMemberNames(teamName: string): Promise<Set<string> | null> {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    try {
-      const raw = await tryReadRegularFileUtf8(configPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_CONFIG_MAX_BYTES,
-      });
-      if (!raw) {
-        return null;
-      }
-      const config = JSON.parse(raw) as {
-        members?: { name?: string; agentType?: string }[];
-      };
-      return new Set(
-        (config.members ?? [])
-          .map((m) => (typeof m.name === 'string' ? m.name.trim() : ''))
-          .filter(Boolean)
-      );
-    } catch {
-      return null;
-    }
+    return readRegisteredTeamMemberNamesFromConfig({
+      configPath,
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_CONFIG_MAX_BYTES,
+      ports: {
+        readRegularFileUtf8: tryReadRegularFileUtf8,
+      },
+    });
   }
 
   private async auditMemberSpawnStatuses(run: ProvisioningRun): Promise<void> {
-    if (!run.expectedMembers || run.expectedMembers.length === 0) return;
-
-    // Read config.json to get the actual registered members
-    const registeredNames = await this.getRegisteredTeamMemberNames(run.teamName);
-    if (!registeredNames) {
-      try {
-        await fs.promises.access(path.join(getTeamsBasePath(), run.teamName));
-      } catch {
-        return;
-      }
-      const now = Date.now();
-      if (
-        shouldWarnOnUnreadableMemberAuditConfig({
-          nowMs: now,
-          lastWarnAt: run.lastMemberSpawnAuditConfigReadWarningAt,
-          expectedMembers: run.expectedMembers,
-          memberSpawnStatuses: run.memberSpawnStatuses,
-        })
-      ) {
-        run.lastMemberSpawnAuditConfigReadWarningAt = now;
-        logger.debug(`[${run.teamName}] auditMemberSpawnStatuses: config.json not readable`);
-      }
-      return;
-    }
-
-    const liveAgentNames = await this.getLiveTeamAgentNames(run.teamName);
-
-    // Flag any expected member not found in config.json (excluding the lead)
-    for (const expected of run.expectedMembers) {
-      const current = run.memberSpawnStatuses.get(expected);
-      if (
-        current?.launchState === 'failed_to_start' ||
-        current?.launchState === 'confirmed_alive' ||
-        current?.launchState === 'skipped_for_launch' ||
-        current?.skippedForLaunch === true
-      ) {
-        continue;
-      }
-
-      const matchedRuntimeNames = [...registeredNames].filter((name) => {
-        if (name === expected) return true;
-        const parsed = parseNumericSuffixName(name);
-        return parsed !== null && parsed.suffix >= 2 && parsed.base === expected;
-      });
-
-      const runtimeAlive =
-        liveAgentNames.has(expected) ||
-        matchedRuntimeNames.some((runtimeName) => liveAgentNames.has(runtimeName));
-
-      // A teammate may intentionally stay silent after bootstrap. If Claude Code
-      // registered the runtime and the OS process is still alive, treat it as
-      // process-confirmed running. Keep this distinct from heartbeat-confirmed online.
-      if (runtimeAlive) {
-        if (this.isOpenCodeSecondaryLaneMemberInRun(run, expected)) {
-          const base = current ?? createInitialMemberSpawnStatusEntry();
-          const bootstrapStalled =
-            base.bootstrapStalled === true ||
-            this.isOpenCodeBootstrapStallWindowElapsed(base.firstSpawnAcceptedAt);
-          await reconcileOpenCodeRuntimeProcessBootstrapStatusHelper(
-            {
-              run,
-              memberName: expected,
-              current: base,
-              bootstrapStalled,
-              runtimeDiagnostic: base.runtimeDiagnostic,
-              runtimeDiagnosticSeverity: base.runtimeDiagnosticSeverity,
-              scheduleReevaluation: false,
-            },
-            this.getOpenCodeBootstrapStallReconciliationPorts()
-          );
-          continue;
+    await auditRegisteredMemberSpawnStatusesHelper(run, {
+      nowMs: () => Date.now(),
+      getRegisteredTeamMemberNames: (teamName) => this.getRegisteredTeamMemberNames(teamName),
+      hasTeamDirectory: async (teamName) => {
+        try {
+          await fs.promises.access(path.join(getTeamsBasePath(), teamName));
+          return true;
+        } catch {
+          return false;
         }
-        this.setMemberSpawnStatus(run, expected, 'online', undefined, 'process');
-        continue;
-      }
-
-      if (matchedRuntimeNames.length > 0) {
-        if (current?.agentToolAccepted) {
-          if (
-            await markOpenCodeSecondaryBootstrapStalledHelper(
-              {
-                run,
-                memberName: expected,
-                current,
-                isOpenCodeSecondaryLaneMember: this.isOpenCodeSecondaryLaneMemberInRun(
-                  run,
-                  expected
-                ),
-                bootstrapStallWindowElapsed: this.isOpenCodeBootstrapStallWindowElapsed(
-                  current.firstSpawnAcceptedAt
-                ),
-              },
-              this.getOpenCodeBootstrapStallReconciliationPorts()
-            )
-          ) {
-            continue;
-          }
-          this.setMemberSpawnStatus(run, expected, 'waiting');
-        }
-        continue;
-      }
-
-      if (run.pendingMemberRestarts?.has(expected) === true) {
-        continue;
-      }
-
-      const acceptedAtMs =
-        current?.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      const graceExpired =
-        current?.agentToolAccepted === true &&
-        Number.isFinite(acceptedAtMs) &&
-        Date.now() - acceptedAtMs >= MEMBER_LAUNCH_GRACE_MS;
-
-      if (current?.agentToolAccepted && !graceExpired) {
-        this.setMemberSpawnStatus(run, expected, 'waiting');
-        continue;
-      }
-
-      const now = Date.now();
-      const lastWarnAt = run.lastMemberSpawnAuditMissingWarningAt.get(expected) ?? 0;
-      if (
-        shouldWarnOnMissingRegisteredMember({
-          nowMs: now,
-          lastWarnAt,
-          graceExpired,
-        })
-      ) {
-        run.lastMemberSpawnAuditMissingWarningAt.set(expected, now);
-        logger.warn(
-          `[${run.teamName}] Member "${expected}" not found in config.json members after provisioning`
-        );
-      }
-      if (graceExpired) {
-        this.setMemberSpawnStatus(
-          run,
-          expected,
-          'error',
-          'Teammate not registered after provisioning within the launch grace window.'
-        );
-      }
-    }
+      },
+      getLiveTeamAgentNames: (teamName) => this.getLiveTeamAgentNames(teamName),
+      isOpenCodeSecondaryLaneMemberInRun: (targetRun, memberName) =>
+        this.isOpenCodeSecondaryLaneMemberInRun(targetRun, memberName),
+      isOpenCodeBootstrapStallWindowElapsed: (firstSpawnAcceptedAt) =>
+        this.isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt),
+      getOpenCodeBootstrapStallReconciliationPorts: () =>
+        this.getOpenCodeBootstrapStallReconciliationPorts(),
+      setMemberSpawnStatus: (targetRun, memberName, status, error, livenessSource) =>
+        this.setMemberSpawnStatus(targetRun, memberName, status, error, livenessSource),
+      debug: (message) => logger.debug(message),
+      warn: (message) => logger.warn(message),
+    });
   }
 
   private async finalizeMissingRegisteredMembersAsFailed(run: ProvisioningRun): Promise<void> {
