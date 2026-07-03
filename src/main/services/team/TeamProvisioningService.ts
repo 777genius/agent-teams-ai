@@ -247,6 +247,7 @@ import {
   type LiveInboxRelayResult,
   relayInboxFileToLiveRecipientWithPorts,
 } from './provisioning/TeamProvisioningLiveInboxRelayRouting';
+import { createTeamProvisioningLiveLaunchSnapshotBoundary } from './provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { createTeamProvisioningLiveLeadMessagePortsBoundary } from './provisioning/TeamProvisioningLiveLeadMessagePortsFactory';
 import { createTeamProvisioningLiveRuntimeMetadataPorts } from './provisioning/TeamProvisioningLiveRuntimeMetadataPortsFactory';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
@@ -592,11 +593,7 @@ import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { writeTeamLaunchFailureArtifactPack } from './TeamLaunchFailureArtifactPack';
-import {
-  createPersistedLaunchSnapshot,
-  snapshotFromRuntimeMemberStatuses,
-  snapshotToMemberSpawnStatuses,
-} from './TeamLaunchStateEvaluator';
+import { createPersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
 import { TeamMcpConfigBuilder } from './TeamMcpConfigBuilder';
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
@@ -1330,6 +1327,23 @@ export class TeamProvisioningService {
       warn: (message) => logger.warn(message),
     },
   });
+  private readonly liveLaunchSnapshotBoundary =
+    createTeamProvisioningLiveLaunchSnapshotBoundary<ProvisioningRun>({
+      getPersistedLaunchMemberNames: (snapshot) => this.getPersistedLaunchMemberNames(snapshot),
+      pauseMemberTaskActivityForRuntimeLoss: (run, memberName, previous, observedAt) =>
+        this.pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, observedAt),
+      buildMixedPersistedLaunchSnapshotForRun: (run, launchPhase) =>
+        this.buildMixedPersistedLaunchSnapshotForRun(run, launchPhase),
+      buildRuntimeSpawnStatusRecord: (run) => this.buildRuntimeSpawnStatusRecord(run),
+      invalidateMemberSpawnStatusesCache: (teamName) =>
+        this.invalidateMemberSpawnStatusesCache(teamName),
+      emitTeamChange: (event) => {
+        this.teamChangeEmitter?.(event);
+      },
+      getRun: (runId) => this.runs.get(runId),
+      maybeFireTeamLaunchedNotificationWhenAllMembersJoined: (run) =>
+        this.maybeFireTeamLaunchedNotificationWhenAllMembersJoined(run),
+    });
   private readonly primaryBootstrapTruthReporting =
     createTeamProvisioningPrimaryBootstrapTruthReportingBoundary<ProvisioningRun>({
       service: {
@@ -6728,23 +6742,7 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     snapshot: PersistedTeamLaunchSnapshot
   ): void {
-    const memberNames = this.getPersistedLaunchMemberNames(snapshot);
-    const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
-    run.expectedMembers = memberNames;
-    for (const memberName of memberNames) {
-      if (run.pendingMemberRestarts?.has(memberName) === true) {
-        continue;
-      }
-      const entry = snapshotStatuses[memberName];
-      if (entry) {
-        const previous =
-          run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
-        if (previous.runtimeAlive === true && entry.runtimeAlive !== true) {
-          this.pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, entry.updatedAt);
-        }
-        run.memberSpawnStatuses.set(memberName, entry);
-      }
-    }
+    this.liveLaunchSnapshotBoundary.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot);
   }
 
   private hasPendingLaunchMembers(
@@ -6765,39 +6763,14 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     launchPhase: PersistedTeamLaunchPhase = run.provisioningComplete ? 'finished' : 'active'
   ): PersistedTeamLaunchSnapshot | null {
-    const mixedSnapshot = this.buildMixedPersistedLaunchSnapshotForRun(run, launchPhase);
-    if (mixedSnapshot) {
-      return mixedSnapshot;
-    }
-
-    if (!run.isLaunch || !run.expectedMembers || run.expectedMembers.length === 0) {
-      return null;
-    }
-
-    return snapshotFromRuntimeMemberStatuses({
-      teamName: run.teamName,
-      expectedMembers: run.expectedMembers,
-      leadSessionId: run.detectedSessionId ?? undefined,
-      launchPhase,
-      statuses: this.buildRuntimeSpawnStatusRecord(run),
-    });
+    return this.liveLaunchSnapshotBoundary.buildLiveLaunchSnapshotForRun(run, launchPhase);
   }
 
   private emitMemberSpawnChange(
     run: Pick<ProvisioningRun, 'teamName' | 'runId'>,
     memberName: string
   ): void {
-    this.invalidateMemberSpawnStatusesCache(run.teamName);
-    this.teamChangeEmitter?.({
-      type: 'member-spawn',
-      teamName: run.teamName,
-      runId: run.runId,
-      detail: memberName,
-    });
-    const trackedRun = this.runs.get(run.runId);
-    if (trackedRun?.teamName === run.teamName) {
-      void this.maybeFireTeamLaunchedNotificationWhenAllMembersJoined(trackedRun);
-    }
+    this.liveLaunchSnapshotBoundary.emitMemberSpawnChange(run, memberName);
   }
 
   private async maybeFireTeamLaunchedNotificationWhenAllMembersJoined(
