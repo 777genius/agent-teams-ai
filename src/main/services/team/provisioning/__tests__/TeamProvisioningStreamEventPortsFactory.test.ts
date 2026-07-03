@@ -185,7 +185,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     const run = createRun();
 
     ports.setLeadActivity(run, 'active');
-    ports.emitTeamChange({ type: 'tasks', teamName: 'atlas-hq' });
+    ports.emitTeamChange({ type: 'task', teamName: 'atlas-hq' });
     ports.pushLiveLeadProcessMessage('atlas-hq', {
       messageId: 'msg-1',
       from: 'lead',
@@ -196,7 +196,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     });
 
     expect(callbacks.setLeadActivity).toHaveBeenCalledWith(run, 'active');
-    expect(emitTeamChange).toHaveBeenCalledWith({ type: 'tasks', teamName: 'atlas-hq' });
+    expect(emitTeamChange).toHaveBeenCalledWith({ type: 'task', teamName: 'atlas-hq' });
     expect(callbacks.pushLiveLeadProcessMessage).toHaveBeenCalledWith('atlas-hq', {
       messageId: 'msg-1',
       from: 'lead',

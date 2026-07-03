@@ -22,7 +22,7 @@ const NOW = '2026-07-03T00:00:00.000Z';
 
 function createSpawnStatus(input: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnStatusEntry {
   return {
-    status: 'pending',
+    status: 'waiting',
     launchState: 'starting',
     updatedAt: NOW,
     ...input,
@@ -96,9 +96,7 @@ function createRuntimeEvidence(
   };
 }
 
-function createLaneIndex(
-  lanes: OpenCodeRuntimeLaneIndex['lanes']
-): OpenCodeRuntimeLaneIndex {
+function createLaneIndex(lanes: OpenCodeRuntimeLaneIndex['lanes']): OpenCodeRuntimeLaneIndex {
   return {
     version: 1,
     updatedAt: NOW,
@@ -106,9 +104,7 @@ function createLaneIndex(
   };
 }
 
-function createPorts(
-  input: Partial<StaleMixedSecondaryRecoveryPorts> = {}
-): {
+function createPorts(input: Partial<StaleMixedSecondaryRecoveryPorts> = {}): {
   ports: StaleMixedSecondaryRecoveryPorts;
   getAggregateParams(): AggregateParams | null;
   getWrittenSnapshot(): PersistedTeamLaunchSnapshot | null;

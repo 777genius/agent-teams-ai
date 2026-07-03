@@ -75,7 +75,7 @@ function createHarness(
         .mockReturnValue('fp-next'),
       setTimeout: ((handler: () => void, ms: number) => {
         scheduled.push({ handler, ms });
-        return { unref: vi.fn() } as ReturnType<typeof setTimeout>;
+        return { unref: vi.fn() } as unknown as ReturnType<typeof setTimeout>;
       }) as typeof setTimeout,
     })
   );

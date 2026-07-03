@@ -26,7 +26,7 @@ type SnapshotParams = Parameters<
 
 function createSpawnStatus(input: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnStatusEntry {
   return {
-    status: 'pending',
+    status: 'waiting',
     launchState: 'starting',
     updatedAt: '2026-07-02T00:00:00.000Z',
     ...input,

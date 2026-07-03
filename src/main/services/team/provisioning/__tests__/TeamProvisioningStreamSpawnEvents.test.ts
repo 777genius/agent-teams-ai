@@ -17,7 +17,7 @@ function createRun(
     message: 'Configuring',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
-  } as TeamProvisioningProgress;
+  } as unknown as TeamProvisioningProgress;
   return {
     teamName: 'alpha',
     provisioningComplete: false,
@@ -36,11 +36,13 @@ function createPorts() {
     },
     setMemberSpawnStatus: vi.fn(),
     appendMemberBootstrapDiagnostic: vi.fn(),
-    updateProgress: vi.fn((run: TeamProvisioningStreamSpawnRun, state: 'assembling', message: string) => ({
-      ...run.progress,
-      state,
-      message,
-    })),
+    updateProgress: vi.fn(
+      (run: TeamProvisioningStreamSpawnRun, state: 'assembling', message: string) => ({
+        ...run.progress,
+        state,
+        message,
+      })
+    ),
   };
 }
 
@@ -51,7 +53,14 @@ describe('stream spawn event helpers', () => {
 
     captureTeamSpawnEvents(
       run,
-      [{ type: 'tool_use', name: 'Agent', id: 'tool-1', input: { team_name: 'alpha', name: 'dev' } }],
+      [
+        {
+          type: 'tool_use',
+          name: 'Agent',
+          id: 'tool-1',
+          input: { team_name: 'alpha', name: 'dev' },
+        },
+      ],
       ports
     );
 
@@ -67,7 +76,11 @@ describe('stream spawn event helpers', () => {
     const run = createRun();
     const ports = createPorts();
 
-    captureTeamSpawnEvents(run, [{ type: 'tool_use', name: 'Agent', input: { name: 'dev' } }], ports);
+    captureTeamSpawnEvents(
+      run,
+      [{ type: 'tool_use', name: 'Agent', input: { name: 'dev' } }],
+      ports
+    );
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[captureTeamSpawnEvents] Agent call for "dev" is missing team_name - teammate will be an ephemeral subagent, not a persistent member of "alpha"'
@@ -84,7 +97,11 @@ describe('stream spawn event helpers', () => {
     const run = createRun();
     const ports = createPorts();
 
-    captureTeamSpawnEvents(run, [{ type: 'tool_use', name: 'Agent', input: { team_name: 'alpha' } }], ports);
+    captureTeamSpawnEvents(
+      run,
+      [{ type: 'tool_use', name: 'Agent', input: { team_name: 'alpha' } }],
+      ports
+    );
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[captureTeamSpawnEvents] Agent call for team "alpha" is missing name - runtime will spawn an ephemeral subagent instead of a persistent teammate'
