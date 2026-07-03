@@ -8,8 +8,9 @@ import {
   decideTimeoutCompletion,
   hasIncompleteClaudeStdoutCarry,
   isProvisioningRunFailed,
+  waitForValidConfig,
 } from '@main/services/team/provisioning/TeamProvisioningProcessExit';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('TeamProvisioningProcessExit', () => {
   it('classifies process exit guards before parser flushing', () => {
@@ -186,6 +187,70 @@ describe('TeamProvisioningProcessExit', () => {
         'Some inboxes not created yet',
       ],
     });
+  });
+
+  it('waits for valid config across configured and default probe roots', async () => {
+    const readPaths: string[] = [];
+    const result = await waitForValidConfig(
+      {
+        teamName: 'demo',
+        cancelRequested: false,
+        teamsBasePathsToProbe: [
+          { location: 'configured', basePath: '/configured/teams' },
+          { location: 'default', basePath: '/default/teams' },
+        ],
+      },
+      {
+        readRegularFileUtf8: vi.fn(async (filePath: string) => {
+          readPaths.push(filePath);
+          return filePath.startsWith('/default/') ? '{"name":"demo"}' : null;
+        }),
+        timeoutMs: 1_000,
+        pollMs: 10,
+        teamJsonReadTimeoutMs: 25,
+        teamConfigMaxBytes: 1_024,
+        sleep: vi.fn(async () => undefined),
+      }
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      location: 'default',
+      configPath: '/default/teams/demo/config.json',
+    });
+    expect(readPaths).toEqual([
+      '/configured/teams/demo/config.json',
+      '/default/teams/demo/config.json',
+    ]);
+  });
+
+  it('keeps polling malformed config until the deadline', async () => {
+    const now = vi.spyOn(Date, 'now');
+    now.mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(10);
+    const sleep = vi.fn(async () => undefined);
+
+    try {
+      const result = await waitForValidConfig(
+        {
+          teamName: 'demo',
+          cancelRequested: false,
+          teamsBasePathsToProbe: [{ location: 'configured', basePath: '/configured/teams' }],
+        },
+        {
+          readRegularFileUtf8: vi.fn(async () => '{"name":""}'),
+          timeoutMs: 10,
+          pollMs: 10,
+          teamJsonReadTimeoutMs: 25,
+          teamConfigMaxBytes: 1_024,
+          sleep,
+        }
+      );
+
+      expect(result).toEqual({ ok: false });
+      expect(sleep).toHaveBeenCalledWith(10);
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('detects failed progress and incomplete stream-json carry', () => {

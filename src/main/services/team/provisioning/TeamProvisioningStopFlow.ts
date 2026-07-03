@@ -9,7 +9,7 @@ interface RuntimeAdapterRunEntry {
   providerId: string;
 }
 
-interface StopRun {
+export interface TeamProvisioningStopRun {
   runId: string;
   teamName: string;
   processKilled: boolean;
@@ -18,7 +18,7 @@ interface StopRun {
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
-export interface TeamProvisioningStopTeamPorts<TRun extends StopRun> {
+export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   pauseActiveIntervalsForTeam(teamName: string): void;
   stopPersistentTeamMembers(teamName: string): void;
@@ -78,7 +78,7 @@ export function getOrphanPersistedTeamNames(
   return persistedTeamNames.filter((teamName) => !tracked.has(teamName));
 }
 
-export async function stopTeamFlow<TRun extends StopRun>(
+export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {

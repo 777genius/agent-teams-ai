@@ -440,11 +440,7 @@ import {
   tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog as tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdogHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
-import {
-  stopMixedSecondaryRuntimeLanes as stopMixedSecondaryRuntimeLanesHelper,
-  stopOpenCodeRuntimeAdapterTeam as stopOpenCodeRuntimeAdapterTeamHelper,
-  stopSingleMixedSecondaryRuntimeLane as stopSingleMixedSecondaryRuntimeLaneHelper,
-} from './provisioning/TeamProvisioningOpenCodeRuntimeStopFlow';
+import { stopSingleMixedSecondaryRuntimeLane as stopSingleMixedSecondaryRuntimeLaneHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeStopFlow';
 import {
   type AuthWarningSource,
   buildStallProgressMessage,
@@ -481,6 +477,7 @@ import {
   tryCompleteAfterTimeout as tryCompleteAfterTimeoutHelper,
   waitForMissingInboxes as waitForMissingInboxesHelper,
   waitForTeamInList as waitForTeamInListHelper,
+  waitForValidConfig as waitForValidConfigHelper,
 } from './provisioning/TeamProvisioningProcessExit';
 import {
   appendProvisioningTrace,
@@ -605,8 +602,8 @@ import { recoverStaleMixedSecondaryLaunchSnapshotWithPorts } from './provisionin
 import {
   stopAllTeamsFlow,
   stopPersistentTeamMembersFlow,
-  stopTeamFlow,
 } from './provisioning/TeamProvisioningStopFlow';
+import { createTeamProvisioningStopFlowBoundary } from './provisioning/TeamProvisioningStopFlowPortsFactory';
 import {
   killOrphanedTeamAgentProcesses as killOrphanedTeamAgentProcessesHelper,
   killPersistedPaneMembers as killPersistedPaneMembersHelper,
@@ -1711,6 +1708,49 @@ export class TeamProvisioningService {
     null;
   private readonly stoppedTeamOpenCodeRuntimeCleanupInFlight = new Map<string, Promise<number>>();
   private readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
+  private readonly stopFlowBoundary = createTeamProvisioningStopFlowBoundary<ProvisioningRun>({
+    getTeamsBasePath,
+    getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
+    stoppingSecondaryRuntimeTeams: this.stoppingSecondaryRuntimeTeams,
+    getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+    readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+    writeLaunchStateSnapshot: (teamName, snapshot) =>
+      this.writeLaunchStateSnapshot(teamName, snapshot),
+    readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
+    clearOpenCodeRuntimeLaneStorage,
+    deleteSecondaryRuntimeRun: (teamName, laneId) =>
+      this.deleteSecondaryRuntimeRun(teamName, laneId),
+    clearSecondaryRuntimeRuns: (teamName) => this.clearSecondaryRuntimeRuns(teamName),
+    runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+    runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
+    setRuntimeAdapterProgress: (progress) =>
+      this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress),
+    clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
+      this.clearOpenCodeRuntimeToolApprovals(teamName, options),
+    getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+    getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+    deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
+    runs: this.runs,
+    provisioningRunByTeam: this.provisioningRunByTeam,
+    invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+    pauseActiveIntervalsForTeam: (teamName) =>
+      this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
+    stopPersistentTeamMembers: (teamName) => this.stopPersistentTeamMembers(teamName),
+    isCancellableRuntimeAdapterProgress: (progress) =>
+      this.isCancellableRuntimeAdapterProgress(progress),
+    cancelRuntimeAdapterProvisioning: (runId, progress) =>
+      this.cancelRuntimeAdapterProvisioning(runId, progress),
+    cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: (teamName) =>
+      this.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName),
+    withTeamLock: (teamName, fn) => this.withTeamLock(teamName, fn),
+    hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
+    killTeamProcess,
+    updateProgress,
+    cleanupRun: (run) => this.cleanupRun(run),
+    emitTeamChange: (event) => this.teamChangeEmitter?.(event),
+    logger,
+    nowIso,
+  });
   private crossTeamSender:
     | ((request: {
         fromTeam: string;
@@ -7647,79 +7687,15 @@ export class TeamProvisioningService {
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   async stopTeam(teamName: string): Promise<void> {
-    await stopTeamFlow(teamName, {
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      pauseActiveIntervalsForTeam: (teamName) =>
-        this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
-      stopPersistentTeamMembers: (teamName) => this.stopPersistentTeamMembers(teamName),
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
-      runs: this.runs,
-      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
-      isCancellableRuntimeAdapterProgress: (progress) =>
-        this.isCancellableRuntimeAdapterProgress(progress),
-      cancelRuntimeAdapterProvisioning: (runId, progress) =>
-        this.cancelRuntimeAdapterProvisioning(runId, progress),
-      cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: (teamName) =>
-        this.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName),
-      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      withTeamLock: (teamName, fn) => this.withTeamLock(teamName, fn),
-      stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
-        this.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
-      hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
-      stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
-      provisioningRunByTeam: this.provisioningRunByTeam,
-      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
-      killTeamProcess,
-      updateProgress,
-      cleanupRun: (run) => this.cleanupRun(run),
-      logger,
-    });
+    await this.stopFlowBoundary.stopTeam(teamName);
   }
 
   private async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {
-    await stopMixedSecondaryRuntimeLanesHelper(teamName, this.createOpenCodeRuntimeStopFlowPorts());
+    await this.stopFlowBoundary.stopMixedSecondaryRuntimeLanes(teamName);
   }
 
   private async stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
-    await stopOpenCodeRuntimeAdapterTeamHelper(
-      teamName,
-      runId,
-      this.createOpenCodeRuntimeStopFlowPorts()
-    );
-  }
-
-  private createOpenCodeRuntimeStopFlowPorts() {
-    return {
-      teamsBasePath: getTeamsBasePath(),
-      getSecondaryRuntimeRuns: (teamName: string) => this.getSecondaryRuntimeRuns(teamName),
-      stoppingSecondaryRuntimeTeams: this.stoppingSecondaryRuntimeTeams,
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
-      readLaunchState: (teamName: string) => this.launchStateStore.read(teamName),
-      writeLaunchStateSnapshot: (teamName: string, snapshot: PersistedTeamLaunchSnapshot) =>
-        this.writeLaunchStateSnapshot(teamName, snapshot),
-      readPersistedTeamProjectPath: (teamName: string) =>
-        this.readPersistedTeamProjectPath(teamName),
-      clearOpenCodeRuntimeLaneStorage,
-      deleteSecondaryRuntimeRun: (teamName: string, laneId: string) =>
-        this.deleteSecondaryRuntimeRun(teamName, laneId),
-      clearSecondaryRuntimeRuns: (teamName: string) => this.clearSecondaryRuntimeRuns(teamName),
-      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
-      setRuntimeAdapterProgress: (progress: TeamProvisioningProgress) =>
-        this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress),
-      clearOpenCodeRuntimeToolApprovals: (
-        teamName: string,
-        options: { runId?: string; laneId?: string; emitDismiss?: boolean }
-      ) => this.clearOpenCodeRuntimeToolApprovals(teamName, options),
-      deleteAliveRunId: (teamName: string) => this.runTracking.deleteAliveRunId(teamName),
-      provisioningRunByTeam: this.provisioningRunByTeam,
-      invalidateRuntimeSnapshotCaches: (teamName: string) =>
-        this.invalidateRuntimeSnapshotCaches(teamName),
-      emitTeamChange: (event: TeamChangeEvent) => this.teamChangeEmitter?.(event),
-      logger,
-      nowIso,
-    };
+    await this.stopFlowBoundary.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
   }
 
   private stopPersistentTeamMembers(teamName: string): void {
@@ -8482,40 +8458,14 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     timeoutMs: number = VERIFY_TIMEOUT_MS
   ): Promise<ValidConfigProbeResult> {
-    const probes = run.teamsBasePathsToProbe.map((probe) => ({
-      ...probe,
-      configPath: path.join(probe.basePath, run.teamName, 'config.json'),
-    }));
-    const deadline = Date.now() + timeoutMs;
-
-    while (Date.now() < deadline) {
-      if (run.cancelRequested) {
-        return { ok: false };
-      }
-      for (const probe of probes) {
-        try {
-          const raw = await tryReadRegularFileUtf8(probe.configPath, {
-            timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-            maxBytes: TEAM_CONFIG_MAX_BYTES,
-          });
-          if (!raw) {
-            continue;
-          }
-          const parsed = JSON.parse(raw) as unknown;
-          if (parsed && typeof parsed === 'object') {
-            const candidate = parsed as { name?: unknown };
-            if (typeof candidate.name === 'string' && candidate.name.trim().length > 0) {
-              return { ok: true, location: probe.location, configPath: probe.configPath };
-            }
-          }
-        } catch {
-          // Best-effort polling until deadline.
-        }
-      }
-      await sleep(VERIFY_POLL_MS);
-    }
-
-    return { ok: false };
+    return waitForValidConfigHelper(run, {
+      readRegularFileUtf8: tryReadRegularFileUtf8,
+      timeoutMs,
+      pollMs: VERIFY_POLL_MS,
+      teamJsonReadTimeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      teamConfigMaxBytes: TEAM_CONFIG_MAX_BYTES,
+      sleep,
+    });
   }
 
   private async waitForTeamInList(teamName: string, run?: ProvisioningRun): Promise<boolean> {

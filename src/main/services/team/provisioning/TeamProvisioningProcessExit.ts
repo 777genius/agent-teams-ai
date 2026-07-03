@@ -6,6 +6,7 @@ import {
   buildCombinedLogs,
   type CliExitPresentationRun,
 } from './TeamProvisioningCliExitPresentation';
+import { type TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types';
 
@@ -18,7 +19,25 @@ type ProgressExtras = Pick<
 
 export type ValidConfigProbeResultLike =
   | { ok: false }
-  | { ok: true; location: 'configured' | 'default' | string; configPath: string };
+  | { ok: true; location: TeamsBaseLocation; configPath: string };
+
+export interface WaitForValidConfigRun {
+  teamName: string;
+  cancelRequested: boolean;
+  teamsBasePathsToProbe: readonly { location: TeamsBaseLocation; basePath: string }[];
+}
+
+export interface WaitForValidConfigPorts {
+  readRegularFileUtf8(
+    filePath: string,
+    opts: { timeoutMs: number; maxBytes: number }
+  ): Promise<string | null>;
+  timeoutMs: number;
+  pollMs: number;
+  teamJsonReadTimeoutMs: number;
+  teamConfigMaxBytes: number;
+  sleep?(ms: number): Promise<void>;
+}
 
 export interface TeamProvisioningProcessExitRun extends CliExitPresentationRun {
   runId: string;
@@ -297,6 +316,47 @@ export async function pathExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function waitForValidConfig(
+  run: WaitForValidConfigRun,
+  ports: WaitForValidConfigPorts
+): Promise<ValidConfigProbeResultLike> {
+  const probes = run.teamsBasePathsToProbe.map((probe) => ({
+    ...probe,
+    configPath: path.join(probe.basePath, run.teamName, 'config.json'),
+  }));
+  const sleep = ports.sleep ?? defaultSleep;
+  const deadline = Date.now() + ports.timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (run.cancelRequested) {
+      return { ok: false };
+    }
+    for (const probe of probes) {
+      try {
+        const raw = await ports.readRegularFileUtf8(probe.configPath, {
+          timeoutMs: ports.teamJsonReadTimeoutMs,
+          maxBytes: ports.teamConfigMaxBytes,
+        });
+        if (!raw) {
+          continue;
+        }
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === 'object') {
+          const candidate = parsed as { name?: unknown };
+          if (typeof candidate.name === 'string' && candidate.name.trim().length > 0) {
+            return { ok: true, location: probe.location, configPath: probe.configPath };
+          }
+        }
+      } catch {
+        // Best-effort polling until deadline.
+      }
+    }
+    await sleep(ports.pollMs);
+  }
+
+  return { ok: false };
 }
 
 export async function waitForTeamInList(
