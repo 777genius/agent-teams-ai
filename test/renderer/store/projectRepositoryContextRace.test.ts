@@ -101,6 +101,28 @@ describe('project and repository context races', () => {
     expect(store.getState().projectsLoading).toBe(false);
   });
 
+  it('clears stale grouped project selection when selecting a flat project', () => {
+    const store = createProjectRepositoryStore();
+    store.setState({
+      activeProjectId: 'repo-worktree',
+      selectedProjectId: 'repo-worktree',
+      selectedRepositoryId: 'repo',
+      selectedWorktreeId: 'repo-worktree',
+    });
+
+    store.getState().selectProject('flat-project');
+
+    expect(store.getState()).toEqual(
+      expect.objectContaining({
+        activeProjectId: 'flat-project',
+        selectedProjectId: 'flat-project',
+        selectedRepositoryId: null,
+        selectedWorktreeId: null,
+      })
+    );
+    expect(store.getState().fetchSessionsInitial).toHaveBeenCalledWith('flat-project');
+  });
+
   it('ignores project loads resolved for a previous context', async () => {
     const store = createProjectRepositoryStore();
     const localProjects = deferred<Project[]>();

@@ -19,6 +19,12 @@ export interface ResolvedTeamProjectSelection {
   projectId: string | null;
 }
 
+export interface ResolveCreateTeamDefaultProjectPathInput {
+  initialProjectPath: string | null | undefined;
+  selectedProjectPath: string | null | undefined;
+  priorityProjectPath: string | null | undefined;
+}
+
 export type TeamProjectSelectionTarget =
   | {
       kind: 'grouped';
@@ -88,6 +94,11 @@ export function resolveTeamProjectSelection({
   selectedProjectId,
   activeProjectId,
 }: ResolveTeamProjectSelectionInput): ResolvedTeamProjectSelection {
+  if (selectedProjectId && selectedProjectId !== selectedWorktreeId) {
+    const selectedFlatProjectSelection = resolveFlatProjectSelection(projects, selectedProjectId);
+    if (selectedFlatProjectSelection) return selectedFlatProjectSelection;
+  }
+
   const selectedWorktreeSelection =
     resolveWorktreeProjectSelection(repositoryGroups, selectedWorktreeId) ??
     resolveWorktreeProjectSelection(repositoryGroups, selectedProjectId);
@@ -122,6 +133,14 @@ export function resolveTeamProjectSelection({
     worktreeId: null,
     projectId: null,
   };
+}
+
+export function resolveCreateTeamDefaultProjectPath({
+  initialProjectPath,
+  selectedProjectPath,
+  priorityProjectPath,
+}: ResolveCreateTeamDefaultProjectPathInput): string | null {
+  return initialProjectPath ?? selectedProjectPath ?? priorityProjectPath ?? null;
 }
 
 export function findTeamProjectSelectionTarget(

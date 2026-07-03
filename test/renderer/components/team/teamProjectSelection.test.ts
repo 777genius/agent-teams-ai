@@ -1,5 +1,6 @@
 import {
   findTeamProjectSelectionTarget,
+  resolveCreateTeamDefaultProjectPath,
   resolveTeamProjectSelection,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
@@ -94,6 +95,54 @@ describe('teamProjectSelection', () => {
       worktreeId: null,
       projectId: 'project-standalone',
     });
+  });
+
+  it('prefers a selected flat project over a stale selected worktree', () => {
+    expect(
+      resolveTeamProjectSelection({
+        repositoryGroups,
+        projects,
+        selectedRepositoryId: 'repo-headless',
+        selectedWorktreeId: 'wt-headless',
+        selectedProjectId: 'project-standalone',
+        activeProjectId: 'wt-headless',
+      })
+    ).toEqual({
+      projectPath: '/Users/test/standalone',
+      repositoryId: null,
+      worktreeId: null,
+      projectId: 'project-standalone',
+    });
+  });
+
+  it('prefers copied project path over selected and priority project paths for create defaults', () => {
+    expect(
+      resolveCreateTeamDefaultProjectPath({
+        initialProjectPath: '/Users/test/copied',
+        selectedProjectPath: '/Users/test/selected',
+        priorityProjectPath: '/Users/test/priority',
+      })
+    ).toBe('/Users/test/copied');
+  });
+
+  it('prefers selected project path over stale priority project path for create defaults', () => {
+    expect(
+      resolveCreateTeamDefaultProjectPath({
+        initialProjectPath: null,
+        selectedProjectPath: '/Users/test/selected',
+        priorityProjectPath: '/Users/test/priority',
+      })
+    ).toBe('/Users/test/selected');
+  });
+
+  it('uses priority project path as a create default fallback', () => {
+    expect(
+      resolveCreateTeamDefaultProjectPath({
+        initialProjectPath: null,
+        selectedProjectPath: null,
+        priorityProjectPath: '/Users/test/priority',
+      })
+    ).toBe('/Users/test/priority');
   });
 
   it('falls back to the active project when the selected project id is stale', () => {
