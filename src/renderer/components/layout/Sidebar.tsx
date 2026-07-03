@@ -8,7 +8,7 @@
  * - Collapsible: Cmd+B to toggle (Notion-style)
  */
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
@@ -21,13 +21,14 @@ import { defaultTaskFiltersState } from '../sidebar/taskFiltersState';
 
 import type { TaskFiltersState } from '../sidebar/taskFiltersState';
 
-type SidebarTab = 'tasks' | 'sessions';
-
-const DateGroupedSessions = lazy(() =>
-  import('../sidebar/DateGroupedSessions').then((module) => ({
-    default: module.DateGroupedSessions,
-  }))
-);
+// Sessions mode is temporarily hidden; the right sidebar always shows tasks.
+// type SidebarTab = 'tasks' | 'sessions';
+//
+// const DateGroupedSessions = lazy(() =>
+//   import('../sidebar/DateGroupedSessions').then((module) => ({
+//     default: module.DateGroupedSessions,
+//   }))
+// );
 
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
@@ -43,8 +44,8 @@ export const Sidebar = (): React.JSX.Element => {
   );
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
-  const [hasOpenedSessionsTab, setHasOpenedSessionsTab] = useState(false);
+  // const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
+  // const [hasOpenedSessionsTab, setHasOpenedSessionsTab] = useState(false);
   const [taskFilters, setTaskFilters] = useState<TaskFiltersState>(defaultTaskFiltersState);
   const [taskFiltersPopoverOpen, setTaskFiltersPopoverOpen] = useState(false);
   const [isCollapseHovered, setIsCollapseHovered] = useState(false);
@@ -85,11 +86,11 @@ export const Sidebar = (): React.JSX.Element => {
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
-  useEffect(() => {
-    if (sidebarTab === 'sessions') {
-      setHasOpenedSessionsTab(true);
-    }
-  }, [sidebarTab]);
+  // useEffect(() => {
+  //   if (sidebarTab === 'sessions') {
+  //     setHasOpenedSessionsTab(true);
+  //   }
+  // }, [sidebarTab]);
 
   const handleResizeStart = (e: React.MouseEvent): void => {
     e.preventDefault();
@@ -116,9 +117,9 @@ export const Sidebar = (): React.JSX.Element => {
           minWidth: sidebarCollapsed ? 0 : width,
         }}
       >
-        {/* Tab bar: Collapse button + Tasks | Sessions */}
+        {/* Tasks-only header. The Tasks | Sessions tab switcher is temporarily hidden. */}
         <div
-          className="flex shrink-0 items-end gap-2 border-b px-3 pt-1"
+          className="flex shrink-0 items-center gap-2 border-b px-3 py-2"
           style={{ borderColor: 'var(--color-border)' }}
         >
           {/* Collapse sidebar button */}
@@ -126,7 +127,7 @@ export const Sidebar = (): React.JSX.Element => {
             onClick={toggleSidebar}
             onMouseEnter={() => setIsCollapseHovered(true)}
             onMouseLeave={() => setIsCollapseHovered(false)}
-            className="mb-1 shrink-0 rounded-md p-1 transition-colors"
+            className="shrink-0 rounded-md p-1 transition-colors"
             style={{
               color: isCollapseHovered ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
               backgroundColor: isCollapseHovered ? 'var(--color-surface-raised)' : 'transparent',
@@ -136,64 +137,11 @@ export const Sidebar = (): React.JSX.Element => {
             <PanelLeft className="size-3.5" />
           </button>
 
-          <div className="flex-1" />
-          <div className="flex" role="tablist" aria-label={t('layout.sidebarView')}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarTab === 'tasks'}
-              aria-controls="sidebar-tasks-panel"
-              id="sidebar-tab-tasks"
-              className={`relative px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                sidebarTab === 'tasks' ? 'text-text' : 'text-text-muted hover:text-text-secondary'
-              }`}
-              style={
-                sidebarTab === 'tasks'
-                  ? {
-                      borderBottom: '2px solid var(--color-text)',
-                      marginBottom: '-1px',
-                    }
-                  : undefined
-              }
-              onClick={() => setSidebarTab('tasks')}
-            >
-              {t('tasksPanel.title')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarTab === 'sessions'}
-              aria-controls="sidebar-sessions-panel"
-              id="sidebar-tab-sessions"
-              className={`relative px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                sidebarTab === 'sessions'
-                  ? 'text-text'
-                  : 'text-text-muted hover:text-text-secondary'
-              }`}
-              style={
-                sidebarTab === 'sessions'
-                  ? {
-                      borderBottom: '2px solid var(--color-text)',
-                      marginBottom: '-1px',
-                    }
-                  : undefined
-              }
-              onClick={() => setSidebarTab('sessions')}
-            >
-              {t('sessions.title')}
-            </button>
-          </div>
-          <div className="flex-1" />
+          <span className="text-[13px] font-semibold text-text">{t('tasksPanel.title')}</span>
         </div>
 
-        {/* Content: Tasks list or Sessions list */}
-        <div
-          id="sidebar-tasks-panel"
-          role="tabpanel"
-          aria-labelledby="sidebar-tab-tasks"
-          hidden={sidebarTab !== 'tasks'}
-          className="min-w-0 flex-1 overflow-hidden"
-        >
+        {/* Content: tasks list. Sessions panel is temporarily hidden with the mode switcher above. */}
+        <div id="sidebar-tasks-panel" className="min-w-0 flex-1 overflow-hidden">
           <GlobalTaskList
             hideHeader
             filters={taskFilters}
@@ -202,19 +150,15 @@ export const Sidebar = (): React.JSX.Element => {
             onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
           />
         </div>
-        <div
-          id="sidebar-sessions-panel"
-          role="tabpanel"
-          aria-labelledby="sidebar-tab-sessions"
-          hidden={sidebarTab !== 'sessions'}
-          className="min-w-0 flex-1 overflow-hidden"
-        >
+        {/*
+        <div id="sidebar-sessions-panel" className="min-w-0 flex-1 overflow-hidden">
           {hasOpenedSessionsTab && (
             <Suspense fallback={null}>
               <DateGroupedSessions />
             </Suspense>
           )}
         </div>
+        */}
       </div>
 
       {/* Resize handle - only interactive when expanded */}

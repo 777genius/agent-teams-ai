@@ -70,6 +70,7 @@ interface SidebarTaskItemProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  revealTeamNameOnTaskHover?: boolean;
   /** Optional theme value from list parents to avoid one theme subscription per row. */
   isLight?: boolean;
   /** Pauses the in-progress spinner when the parent team is offline. */
@@ -92,6 +93,7 @@ const SidebarTaskItemContent = ({
   hideTeamName,
   hideProjectName,
   showTeamName,
+  revealTeamNameOnTaskHover,
   isLight,
   teamOffline = false,
   renamingKey,
@@ -195,7 +197,7 @@ const SidebarTaskItemContent = ({
   return (
     <button
       type="button"
-      className={`sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
+      className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onClick={() => {
         if (!isRenaming) {
@@ -284,9 +286,13 @@ const SidebarTaskItemContent = ({
         )}
         {!showTeamRow && (
           <>
-            {projectLabel && <span className="opacity-100 dark:opacity-40">·</span>}
+            {projectLabel && (
+              <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
+                ·
+              </span>
+            )}
             <span
-              className="shrink-0 opacity-100 dark:opacity-60"
+              className="hidden shrink-0 opacity-100 group-hover/task-row:inline dark:opacity-60"
               style={ownerTextColor ? { color: ownerTextColor } : undefined}
             >
               {task.owner ?? t('tasks.unassigned')}
@@ -305,7 +311,10 @@ const SidebarTaskItemContent = ({
       {/* Row 3: Team: name · owner */}
       {showTeamRow && (
         <div
-          className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
+          className={cn(
+            'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
+            revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
+          )}
           style={{ color: 'var(--color-text-muted)' }}
         >
           <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>

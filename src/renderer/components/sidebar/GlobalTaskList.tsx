@@ -407,6 +407,7 @@ interface GlobalTaskRowProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  revealTeamNameOnTaskHover?: boolean;
   isLight: boolean;
   onTogglePin: TaskRowAction;
   onToggleArchive: TaskRowAction;
@@ -470,6 +471,7 @@ const GlobalTaskRow = memo(
     hideTeamName,
     hideProjectName,
     showTeamName,
+    revealTeamNameOnTaskHover,
     isLight,
     onTogglePin,
     onToggleArchive,
@@ -520,6 +522,7 @@ const GlobalTaskRow = memo(
             hideTeamName={hideTeamName}
             hideProjectName={hideProjectName}
             showTeamName={showTeamName}
+            revealTeamNameOnTaskHover={revealTeamNameOnTaskHover}
             isLight={isLight}
             teamOffline={teamOffline}
             renamingKey={rowRenamingKey}
@@ -544,6 +547,7 @@ const GlobalTaskRow = memo(
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
+    prev.revealTeamNameOnTaskHover === next.revealTeamNameOnTaskHover &&
     prev.isLight === next.isLight &&
     prev.onTogglePin === next.onTogglePin &&
     prev.onToggleArchive === next.onToggleArchive &&
@@ -567,6 +571,7 @@ interface TaskRowsProps {
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
+  revealTeamNameOnTaskHover?: boolean;
   isLight: boolean;
   showTeamHeader?: boolean;
   pinnedOverride?: boolean;
@@ -648,6 +653,7 @@ const TaskRows = memo(function TaskRows({
   hideTeamName,
   hideProjectName,
   showTeamName,
+  revealTeamNameOnTaskHover,
   isLight,
   showTeamHeader,
   pinnedOverride,
@@ -681,6 +687,7 @@ const TaskRows = memo(function TaskRows({
             hideTeamName={hideTeamName}
             hideProjectName={hideProjectName}
             showTeamName={showTeamName}
+            revealTeamNameOnTaskHover={revealTeamNameOnTaskHover}
             isLight={isLight}
             teamOffline={isTeamOffline(task.teamName)}
             ownerColorName={getOwnerColorName(task)}
@@ -725,6 +732,7 @@ function areTaskRowsPropsEqual(prev: TaskRowsProps, next: TaskRowsProps): boolea
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
+    prev.revealTeamNameOnTaskHover === next.revealTeamNameOnTaskHover &&
     prev.isLight === next.isLight &&
     prev.showTeamHeader === next.showTeamHeader &&
     prev.pinnedOverride === next.pinnedOverride &&
@@ -1007,7 +1015,9 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   const filtersPopoverOpen = externalFiltersPopoverOpen ?? internalFiltersPopoverOpen;
   const setFiltersPopoverOpen = externalOnFiltersPopoverOpenChange ?? setInternalFiltersPopoverOpen;
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
   const [groupingMode, setGroupingModeState] = useState<TaskGroupingMode>(loadGroupingMode);
+  const [groupingPopoverOpen, setGroupingPopoverOpen] = useState(false);
   const [sortMode, setSortModeState] = useState<TaskSortMode>(loadSortMode);
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -1022,6 +1032,12 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   const readState = useReadStateSnapshot();
   const taskLocalState = useTaskLocalState();
   const electronMode = isElectronMode();
+
+  useEffect(() => {
+    if (searchVisible) {
+      searchInputRef.current?.focus();
+    }
+  }, [searchVisible]);
 
   const taskLocalPresentationByTask = useMemo(
     () =>
@@ -1226,6 +1242,13 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     setSortModeState(mode);
     saveSortMode(mode);
   };
+
+  const groupingModeLabel =
+    groupingMode === 'none'
+      ? t('tasksPanel.groupModes.none')
+      : groupingMode === 'project'
+        ? t('tasksPanel.groupModes.project')
+        : t('tasksPanel.groupModes.time');
 
   const handleRenameComplete = useCallback(
     (teamName: string, taskId: string, newSubject: string): void => {
@@ -1489,79 +1512,158 @@ export const GlobalTaskList = memo(function GlobalTaskList({
         </div>
       )}
 
-      {/* Search bar */}
-      <div
-        className="mb-[5px] flex shrink-0 items-center gap-1.5 border-b px-2 py-1"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        <Search className="size-3 shrink-0 text-text-muted" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder={t('tasksPanel.searchPlaceholder')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-[12px] text-text placeholder:text-text-muted focus:outline-none"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            className="shrink-0 text-text-muted hover:text-text-secondary"
-            onClick={() => {
-              setSearchQuery('');
-              searchInputRef.current?.focus();
-            }}
-          >
-            <X className="size-3" />
-          </button>
-        )}
-        <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary data-[state=open]:bg-surface-raised data-[state=open]:text-text"
-            >
-              <ArrowUpDown className="size-3.5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-40 p-1" align="end" sideOffset={6}>
-            <div className="flex flex-col">
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    setSortMode(opt.id);
-                    setSortPopoverOpen(false);
-                  }}
-                  className={cn(
-                    'flex items-center gap-2 rounded px-2 py-1.5 text-[12px] transition-colors',
-                    sortMode === opt.id
-                      ? 'bg-surface-raised text-text'
-                      : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
-                  )}
-                >
-                  <Check
+      {/* Controls */}
+      <div className="mb-[5px] shrink-0 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-center gap-1.5 px-2 py-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary',
+                  (searchVisible || searchQuery) && 'bg-surface-raised text-text'
+                )}
+                onClick={() => {
+                  setSearchVisible(true);
+                  searchInputRef.current?.focus();
+                }}
+                aria-label={t('tasksPanel.searchPlaceholder')}
+              >
+                <Search className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('tasksPanel.searchPlaceholder')}</TooltipContent>
+          </Tooltip>
+
+          <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary data-[state=open]:bg-surface-raised data-[state=open]:text-text"
+              >
+                <ArrowUpDown className="size-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-40 p-1" align="end" sideOffset={6}>
+              <div className="flex flex-col">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setSortMode(opt.id);
+                      setSortPopoverOpen(false);
+                    }}
                     className={cn(
-                      'size-3 shrink-0',
-                      sortMode === opt.id ? 'opacity-100' : 'opacity-0'
+                      'flex items-center gap-2 rounded px-2 py-1.5 text-[12px] transition-colors',
+                      sortMode === opt.id
+                        ? 'bg-surface-raised text-text'
+                        : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
                     )}
-                  />
-                  {t(opt.labelKey)}
+                  >
+                    <Check
+                      className={cn(
+                        'size-3 shrink-0',
+                        sortMode === opt.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    {t(opt.labelKey)}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover open={groupingPopoverOpen} onOpenChange={setGroupingPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex min-w-0 shrink items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-muted transition-colors hover:bg-surface-raised hover:text-text data-[state=open]:bg-surface-raised data-[state=open]:text-text"
+                aria-label={t('tasksPanel.groupByAria')}
+              >
+                <span className="truncate">{groupingModeLabel}</span>
+                <ChevronDown className="size-3 shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-36 p-1" align="end" sideOffset={6}>
+              <div className="flex flex-col">
+                {(['none', 'project', 'time'] as const).map((mode) => {
+                  const label =
+                    mode === 'none'
+                      ? t('tasksPanel.groupModes.none')
+                      : mode === 'project'
+                        ? t('tasksPanel.groupModes.project')
+                        : t('tasksPanel.groupModes.time');
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setGroupingMode(mode);
+                        setGroupingPopoverOpen(false);
+                      }}
+                      className={cn(
+                        'flex items-center gap-2 rounded px-2 py-1.5 text-[12px] transition-colors',
+                        groupingMode === mode
+                          ? 'bg-surface-raised text-text'
+                          : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
+                      )}
+                    >
+                      <Check
+                        className={cn(
+                          'size-3 shrink-0',
+                          groupingMode === mode ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="ml-auto">
+            <TaskFiltersPopover
+              open={filtersPopoverOpen}
+              onOpenChange={setFiltersPopoverOpen}
+              teams={taskFilterTeams}
+              projectOptions={projectFilterOptions}
+              filters={filters}
+              onFiltersChange={setFilters}
+              onApply={() => {}}
+            />
+          </div>
+        </div>
+
+        {searchVisible && (
+          <div className="flex items-center gap-1.5 px-2 pb-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+              <Search className="size-3 shrink-0 text-text-muted" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder={t('tasksPanel.searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-[12px] text-text placeholder:text-text-muted focus:outline-none"
+              />
+              {(searchQuery || searchVisible) && (
+                <button
+                  type="button"
+                  className="shrink-0 text-text-muted hover:text-text-secondary"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchVisible(false);
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X className="size-3" />
                 </button>
-              ))}
+              )}
             </div>
-          </PopoverContent>
-        </Popover>
-        <TaskFiltersPopover
-          open={filtersPopoverOpen}
-          onOpenChange={setFiltersPopoverOpen}
-          teams={taskFilterTeams}
-          projectOptions={projectFilterOptions}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onApply={() => {}}
-        />
+          </div>
+        )}
       </div>
 
       {/* Pinned tasks section */}
@@ -1580,7 +1682,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
             isLight={isLight}
             pinnedOverride={true}
             archivedOverride={false}
-            showTeamName
+            showTeamName={groupingMode !== 'none'}
             renamingKey={renamingTaskKey}
             onTogglePin={handleToggleTaskPin}
             onToggleArchive={handleToggleTaskArchive}
@@ -1594,36 +1696,8 @@ export const GlobalTaskList = memo(function GlobalTaskList({
         </div>
       )}
 
-      {/* Grouping mode — compact text toggle */}
-      <div className="flex shrink-0 items-center gap-1.5 px-2 py-1">
-        <span className="shrink-0 text-[11px] text-text-muted">{t('tasksPanel.groupByLabel')}</span>
-        <div
-          className="inline-flex gap-1 text-[11px]"
-          role="group"
-          aria-label={t('tasksPanel.groupByAria')}
-        >
-          {(['none', 'project', 'time'] as const).map((mode) => {
-            const label =
-              mode === 'none'
-                ? t('tasksPanel.groupModes.none')
-                : mode === 'project'
-                  ? t('tasksPanel.groupModes.project')
-                  : t('tasksPanel.groupModes.time');
-            return (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setGroupingMode(mode)}
-                className={cn(
-                  'rounded px-1.5 py-0.5 transition-colors',
-                  groupingMode === mode ? 'text-text' : 'text-text-muted hover:text-text-secondary'
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+      {/* Secondary controls */}
+      <div className="flex shrink-0 items-center px-2 py-1">
         {/* Archive toggle — only visible when archived tasks exist */}
         {hasArchivedTasks && (
           <div className="ml-auto">
@@ -1680,7 +1754,6 @@ export const GlobalTaskList = memo(function GlobalTaskList({
             isNewTask={isNewTask}
             isTeamOffline={isTeamOffline}
             isLight={isLight}
-            showTeamName
             renamingKey={renamingTaskKey}
             onTogglePin={handleToggleTaskPin}
             onToggleArchive={handleToggleTaskArchive}
