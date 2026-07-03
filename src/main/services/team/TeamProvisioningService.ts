@@ -512,6 +512,10 @@ import {
 } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 import {
+  stopMixedSecondaryRuntimeLanes as stopMixedSecondaryRuntimeLanesHelper,
+  stopOpenCodeRuntimeAdapterTeam as stopOpenCodeRuntimeAdapterTeamHelper,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeStopFlow';
+import {
   type AuthWarningSource,
   buildStallProgressMessage,
   buildStallWarningText,
@@ -12003,171 +12007,48 @@ export class TeamProvisioningService {
   }
 
   private async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {
-    const secondaryRuns = this.getSecondaryRuntimeRuns(teamName);
-    if (secondaryRuns.length === 0) {
-      return;
-    }
-    this.stoppingSecondaryRuntimeTeams.add(teamName);
-    try {
-      const adapter = this.getOpenCodeRuntimeAdapter();
-      const previousLaunchState = await this.launchStateStore.read(teamName);
-      if (!adapter) {
-        await Promise.all(
-          secondaryRuns.map((secondaryRun) =>
-            clearOpenCodeRuntimeLaneStorage({
-              teamsBasePath: getTeamsBasePath(),
-              teamName,
-              laneId: secondaryRun.laneId,
-            }).catch(() => undefined)
-          )
-        );
-        this.clearSecondaryRuntimeRuns(teamName);
-        return;
-      }
-      try {
-        for (const secondaryRun of secondaryRuns) {
-          await clearOpenCodeRuntimeLaneStorage({
-            teamsBasePath: getTeamsBasePath(),
-            teamName,
-            laneId: secondaryRun.laneId,
-          }).catch(() => undefined);
-          try {
-            await adapter.stop({
-              runId: secondaryRun.runId,
-              laneId: secondaryRun.laneId,
-              teamName,
-              cwd: secondaryRun.cwd ?? this.readPersistedTeamProjectPath(teamName) ?? undefined,
-              providerId: 'opencode',
-              reason: 'user_requested',
-              previousLaunchState,
-              force: true,
-            });
-          } catch (error) {
-            logger.warn(
-              `[${teamName}] Failed to stop mixed OpenCode secondary lane ${secondaryRun.laneId}: ${
-                error instanceof Error ? error.message : String(error)
-              }`
-            );
-          } finally {
-            await clearOpenCodeRuntimeLaneStorage({
-              teamsBasePath: getTeamsBasePath(),
-              teamName,
-              laneId: secondaryRun.laneId,
-            }).catch(() => undefined);
-            this.deleteSecondaryRuntimeRun(teamName, secondaryRun.laneId);
-          }
-        }
-      } finally {
-        this.clearSecondaryRuntimeRuns(teamName);
-      }
-    } finally {
-      this.stoppingSecondaryRuntimeTeams.delete(teamName);
-    }
+    await stopMixedSecondaryRuntimeLanesHelper(teamName, this.createOpenCodeRuntimeStopFlowPorts());
   }
 
   private async stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
-    const adapter = this.getOpenCodeRuntimeAdapter();
-    const previousLaunchState = await this.launchStateStore.read(teamName);
-    if (!adapter) {
-      await clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId: 'primary',
-      }).catch(() => undefined);
-      this.runtimeAdapterRunByTeam.delete(teamName);
-      this.runTracking.deleteAliveRunId(teamName);
-      this.provisioningRunByTeam.delete(teamName);
-      this.invalidateRuntimeSnapshotCaches(teamName);
-      return;
-    }
-    const startedAt = nowIso();
-    const previousProgress = this.runtimeAdapterProgressByRunId.get(runId);
-    const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
-    this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
-      runId,
+    await stopOpenCodeRuntimeAdapterTeamHelper(
       teamName,
-      state: 'disconnected',
-      message: 'Stopping OpenCode team through runtime adapter',
-      startedAt: previousProgress?.startedAt ?? startedAt,
-      updatedAt: startedAt,
-    });
-    this.clearOpenCodeRuntimeToolApprovals(teamName, {
       runId,
-      laneId: 'primary',
-      emitDismiss: true,
-    });
-    this.runtimeAdapterRunByTeam.delete(teamName);
-    this.runTracking.deleteAliveRunId(teamName);
-    if (this.provisioningRunByTeam.get(teamName) === runId) {
-      this.provisioningRunByTeam.delete(teamName);
-    }
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    try {
-      await clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId: 'primary',
-      }).catch(() => undefined);
-      const result = await adapter.stop({
-        runId,
-        laneId: 'primary',
-        teamName,
-        cwd: runtimeRun?.cwd ?? this.readPersistedTeamProjectPath(teamName) ?? undefined,
-        providerId: 'opencode',
-        reason: 'user_requested',
-        previousLaunchState,
-        force: true,
-      });
-      await this.writeLaunchStateSnapshot(
-        teamName,
-        createPersistedLaunchSnapshot({
-          teamName,
-          expectedMembers: previousLaunchState?.expectedMembers ?? [],
-          leadSessionId: previousLaunchState?.leadSessionId,
-          launchPhase: 'reconciled',
-          members: previousLaunchState?.members ?? {},
-        })
-      );
-      this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
-        runId,
-        teamName,
-        state: result.stopped ? 'disconnected' : 'failed',
-        message: result.stopped ? 'OpenCode team stopped' : 'OpenCode team stop failed',
-        messageSeverity: result.stopped ? undefined : 'error',
-        startedAt: previousProgress?.startedAt ?? startedAt,
-        updatedAt: nowIso(),
-        cliLogsTail: result.diagnostics.join('\n') || undefined,
-        warnings: result.warnings.length > 0 ? result.warnings : undefined,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.runtimeAdapterProgressState.setRuntimeAdapterProgress({
-        runId,
-        teamName,
-        state: 'failed',
-        message: 'OpenCode team stop failed',
-        messageSeverity: 'error',
-        startedAt: previousProgress?.startedAt ?? startedAt,
-        updatedAt: nowIso(),
-        error: message,
-        cliLogsTail: message,
-      });
-    } finally {
-      await clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        laneId: 'primary',
-      }).catch(() => undefined);
-      this.runtimeAdapterRunByTeam.delete(teamName);
-      this.runTracking.deleteAliveRunId(teamName);
-      this.provisioningRunByTeam.delete(teamName);
-      this.teamChangeEmitter?.({
-        type: 'process',
-        teamName,
-        runId,
-        detail: 'stopped',
-      });
-    }
+      this.createOpenCodeRuntimeStopFlowPorts()
+    );
+  }
+
+  private createOpenCodeRuntimeStopFlowPorts() {
+    return {
+      teamsBasePath: getTeamsBasePath(),
+      getSecondaryRuntimeRuns: (teamName: string) => this.getSecondaryRuntimeRuns(teamName),
+      stoppingSecondaryRuntimeTeams: this.stoppingSecondaryRuntimeTeams,
+      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      readLaunchState: (teamName: string) => this.launchStateStore.read(teamName),
+      writeLaunchStateSnapshot: (teamName: string, snapshot: PersistedTeamLaunchSnapshot) =>
+        this.writeLaunchStateSnapshot(teamName, snapshot),
+      readPersistedTeamProjectPath: (teamName: string) =>
+        this.readPersistedTeamProjectPath(teamName),
+      clearOpenCodeRuntimeLaneStorage,
+      deleteSecondaryRuntimeRun: (teamName: string, laneId: string) =>
+        this.deleteSecondaryRuntimeRun(teamName, laneId),
+      clearSecondaryRuntimeRuns: (teamName: string) => this.clearSecondaryRuntimeRuns(teamName),
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
+      setRuntimeAdapterProgress: (progress: TeamProvisioningProgress) =>
+        this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress),
+      clearOpenCodeRuntimeToolApprovals: (
+        teamName: string,
+        options: { runId?: string; laneId?: string; emitDismiss?: boolean }
+      ) => this.clearOpenCodeRuntimeToolApprovals(teamName, options),
+      deleteAliveRunId: (teamName: string) => this.runTracking.deleteAliveRunId(teamName),
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      invalidateRuntimeSnapshotCaches: (teamName: string) =>
+        this.invalidateRuntimeSnapshotCaches(teamName),
+      emitTeamChange: (event: TeamChangeEvent) => this.teamChangeEmitter?.(event),
+      logger,
+      nowIso,
+    };
   }
 
   private stopPersistentTeamMembers(teamName: string): void {
