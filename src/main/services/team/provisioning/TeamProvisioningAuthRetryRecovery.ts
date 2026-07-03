@@ -1,5 +1,9 @@
 import type { TeamProvisioningOutputRecoveryRun } from './TeamProvisioningOutputRecovery';
-import type { TeamCreateRequest, TeamProvisioningProgress, TeamProvisioningState } from '@shared/types';
+import type {
+  TeamCreateRequest,
+  TeamProvisioningProgress,
+  TeamProvisioningState,
+} from '@shared/types';
 import type { ChildProcess } from 'child_process';
 
 export type BootstrapRealTaskSubmissionState = 'not_submitted' | 'submitted' | 'unknown' | null;
@@ -35,10 +39,7 @@ export interface TeamProvisioningAuthRetryLogger {
 }
 
 export interface TeamProvisioningAuthRetryMcpConfigBuilder {
-  writeConfigFile(
-    cwd: string,
-    options: { controlApiBaseUrl: string | undefined }
-  ): Promise<string>;
+  writeConfigFile(cwd: string, options: { controlApiBaseUrl: string | undefined }): Promise<string>;
 }
 
 export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAuthRetryRun> {
@@ -97,7 +98,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   const ctx = run.spawnContext;
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
   if (!ctx) {
-    ports.logger.error(`[${run.teamName}] Cannot respawn — no spawn context saved`);
+    ports.logger.error(`[${run.teamName}] Cannot respawn - no spawn context saved`);
     run.authRetryInProgress = false;
     return;
   }
@@ -130,7 +131,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   run.authFailureRetried = true;
   run.apiErrorWarningEmitted = false;
 
-  ports.updateProgress(run, 'spawning', 'Auth failed — retrying after short delay');
+  ports.updateProgress(run, 'spawning', 'Auth failed - retrying after short delay');
   run.onProgress(run.progress);
 
   await ports.sleep(options.preflightAuthRetryDelayMs);
@@ -232,7 +233,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
     }
   }
 
-  // Respawn with saved context — CLI handles its own auth refresh.
+  // Respawn with saved context - CLI handles its own auth refresh.
   let child: ChildProcess;
   try {
     if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
@@ -278,7 +279,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   run.processClosed = false;
   run.authRetryInProgress = false;
 
-  ports.updateProgress(run, 'spawning', 'CLI respawned — sending prompt', {
+  ports.updateProgress(run, 'spawning', 'CLI respawned - sending prompt', {
     pid: child.pid ?? undefined,
   });
   run.onProgress(run.progress);
