@@ -119,6 +119,18 @@ describe('TeamProvisioningRunTrackingDeliveryHelper', () => {
     expect(helper.resolveDeliverableTrackedRuntimeRunId('team')).toBe('adapter-run');
   });
 
+  it('requires deliverable runtime runs to be tracked by the team', () => {
+    const { helper, state } = createHarness();
+    state.provisioningRunByTeam.set('team', '   ');
+    state.aliveRunByTeam.set('team', '');
+    state.runtimeAdapterRunByTeam.set('team', { runId: 'adapter-run' });
+    state.runtimeAdapterProgressByRunId.set('untracked-run', progress('spawning'));
+    state.runtimeAdapterProgressByRunId.set('adapter-run', progress('spawning'));
+
+    expect(helper.canDeliverToTrackedRuntimeRun('team', 'untracked-run')).toBe(false);
+    expect(helper.resolveDeliverableTrackedRuntimeRunId('team')).toBe('adapter-run');
+  });
+
   it('keeps retained terminal adapter progress non-deliverable after live progress eviction', () => {
     const { helper, state } = createHarness();
     state.runtimeAdapterRunByTeam.set('team', { runId: 'retained-run' });

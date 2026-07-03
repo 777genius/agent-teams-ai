@@ -1338,7 +1338,7 @@ export class TeamProvisioningService {
       members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
     }
   >();
-  private readonly runTrackingDelivery = new TeamProvisioningRunTrackingDeliveryHelper({
+  private readonly runTracking = new TeamProvisioningRunTrackingDeliveryHelper({
     state: {
       provisioningRunByTeam: this.provisioningRunByTeam,
       aliveRunByTeam: this.aliveRunByTeam,
@@ -1426,7 +1426,7 @@ export class TeamProvisioningService {
       scheduleProofMissingWorkSyncRecovery: (input) =>
         this.memberWorkSyncProofMissingRecoveryScheduler?.(input),
       getLeadNoticeSink: (teamName) => {
-        const runId = this.getAliveRunId(teamName);
+        const runId = this.runTracking.getAliveRunId(teamName);
         const run = runId ? this.runs.get(runId) : null;
         if (!run || run.processKilled || run.cancelRequested) {
           return null;
@@ -1456,7 +1456,7 @@ export class TeamProvisioningService {
   private readonly openCodeRuntimePermissionPersistencePorts: OpenCodeRuntimePendingPermissionsPersistencePorts =
     {
       nowIso,
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       enqueueLaunchStateStoreOperation: (teamName, operation) =>
         this.enqueueLaunchStateStoreOperation(teamName, operation),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName).catch(() => null),
@@ -1476,7 +1476,7 @@ export class TeamProvisioningService {
   private readonly openCodeRuntimePermissionSpawnStatusPorts: OpenCodeRuntimePermissionSpawnStatusPorts<ProvisioningRun> =
     {
       nowIso,
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       getRun: (runId) => this.runs.get(runId) ?? null,
       isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
       emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
@@ -1537,7 +1537,8 @@ export class TeamProvisioningService {
   });
   private readonly openCodePromptDeliveryWatchdogScheduler =
     new OpenCodePromptDeliveryWatchdogScheduler({
-      canDeliverToTeamRuntime: (teamName) => this.canDeliverToOpenCodeRuntimeForTeam(teamName),
+      canDeliverToTeamRuntime: (teamName) =>
+        this.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
       recoverBeforeDelivery: (input) =>
         this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input),
       relay: async (input) => {
@@ -1592,7 +1593,7 @@ export class TeamProvisioningService {
     {
       getRuntimeSnapshotCacheGeneration: (teamName) =>
         this.getRuntimeSnapshotCacheGeneration(teamName),
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
     },
     { logDebug: (message) => logger.debug(message) }
   );
@@ -1818,7 +1819,7 @@ export class TeamProvisioningService {
       ensureCwdExists,
       resolveControlApiBaseUrl: () => this.resolveControlApiBaseUrl(),
       getAliveRun: (teamName) => {
-        const runId = this.getAliveRunId(teamName);
+        const runId = this.runTracking.getAliveRunId(teamName);
         return runId ? this.runs.get(runId) : undefined;
       },
     });
@@ -1847,7 +1848,8 @@ export class TeamProvisioningService {
           this.maybeSyncOpenCodeRuntimePermissionsAfterDelivery(input),
         rememberRuntimePidFromBridge: (input) => this.rememberOpenCodeRuntimePidFromBridge(input),
         watchdogScheduler: this.openCodePromptDeliveryWatchdogScheduler,
-        canDeliverToTeamRuntime: (teamName) => this.canDeliverToOpenCodeRuntimeForTeam(teamName),
+        canDeliverToTeamRuntime: (teamName) =>
+          this.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
         recoverRuntimeLanesForWatchdog: (teamName, options) =>
           this.tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(teamName, options),
         stopRuntimeLanesForStoppedTeam: (teamName) =>
@@ -2203,7 +2205,7 @@ export class TeamProvisioningService {
         repairedTeams: this.crashRepairedActivityIntervalsByTeam,
         pendingSnapshots: this.pendingCrashRepairSnapshotByTeam,
       },
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       hasRun: (runId) => this.runs.has(runId),
       readRepairLaunchSnapshot: (teamName) => this.readTaskActivityRepairLaunchSnapshot(teamName),
       repairOnce: (teamName, launchSnapshot) =>
@@ -2273,7 +2275,7 @@ export class TeamProvisioningService {
         snapshotCache: this.memberSpawnStatusesSnapshotCache,
         inFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
         getCacheGeneration: (teamName) => this.getMemberSpawnStatusesCacheGeneration(teamName),
-        getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+        getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
         nowMs: () => Date.now(),
         liveCacheTtlMs: TeamProvisioningService.MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
         persistedCacheTtlMs:
@@ -2617,7 +2619,7 @@ export class TeamProvisioningService {
     teamName: string,
     query?: { offset?: number; limit?: number }
   ): Promise<{ lines: string[]; total: number; hasMore: boolean; updatedAt?: string }> {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     if (runId) {
       const run = this.runs.get(runId);
       if (run) {
@@ -2637,57 +2639,13 @@ export class TeamProvisioningService {
     return sliceClaudeLogs(retained.lines, retained.updatedAt, query);
   }
 
-  private getProvisioningRunId(teamName: string): string | null {
-    return this.runTrackingDelivery.getProvisioningRunId(teamName);
-  }
-
-  private getResolvableProvisioningRunId(teamName: string): string | null {
-    return this.runTrackingDelivery.getResolvableProvisioningRunId(teamName);
-  }
-
-  private getAliveRunId(teamName: string): string | null {
-    return this.runTrackingDelivery.getAliveRunId(teamName);
-  }
-
-  private setAliveRunId(teamName: string, runId: string): void {
-    this.runTrackingDelivery.setAliveRunId(teamName, runId);
-  }
-
-  private deleteAliveRunId(teamName: string): void {
-    this.runTrackingDelivery.deleteAliveRunId(teamName);
-  }
-
   /**
    * Snapshot of teams that currently have a live runtime run. Used to keep the
    * file-watch scope covering running teams (read-only; the map is maintained as
    * runs start and stop).
    */
   getAliveTeamNames(): string[] {
-    return this.runTrackingDelivery.getAliveTeamNames();
-  }
-
-  private getTrackedRunId(teamName: string): string | null {
-    return this.runTrackingDelivery.getTrackedRunId(teamName);
-  }
-
-  private getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number {
-    return this.runTrackingDelivery.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId);
-  }
-
-  private canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean {
-    return this.runTrackingDelivery.canDeliverToTrackedRuntimeRun(teamName, runId);
-  }
-
-  private resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null {
-    return this.runTrackingDelivery.resolveDeliverableTrackedRuntimeRunId(teamName);
-  }
-
-  private canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean {
-    return this.runTrackingDelivery.canDeliverToOpenCodeRuntimeForTeam(teamName);
-  }
-
-  private canAttemptCommittedOpenCodeSessionRecovery(teamName: string): boolean {
-    return this.runTrackingDelivery.canAttemptCommittedOpenCodeSessionRecovery(teamName);
+    return this.runTracking.getAliveTeamNames();
   }
 
   private hasAlivePersistedTeamProcess(teamName: string): boolean {
@@ -2728,7 +2686,7 @@ export class TeamProvisioningService {
       teamsBasePath: getTeamsBasePath(),
       ports: {
         canDeliverToOpenCodeRuntimeForTeam: (candidateTeamName) =>
-          this.canDeliverToOpenCodeRuntimeForTeam(candidateTeamName),
+          this.runTracking.canDeliverToOpenCodeRuntimeForTeam(candidateTeamName),
         getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
         readPreviousLaunchState: (candidateTeamName) =>
           this.launchStateStore.read(candidateTeamName),
@@ -2749,7 +2707,7 @@ export class TeamProvisioningService {
           this.deleteSecondaryRuntimeRun(candidateTeamName, laneId),
         clearPrimaryRuntimeRun: (candidateTeamName) => {
           this.runtimeAdapterRunByTeam.delete(candidateTeamName);
-          this.deleteAliveRunId(candidateTeamName);
+          this.runTracking.deleteAliveRunId(candidateTeamName);
           this.provisioningRunByTeam.delete(candidateTeamName);
           this.invalidateRuntimeSnapshotCaches(candidateTeamName);
         },
@@ -3052,11 +3010,11 @@ export class TeamProvisioningService {
     input: OpenCodeRuntimePermissionSyncInput
   ): Promise<void> {
     await syncOpenCodeRuntimePermissionsAfterDelivery(input, {
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       getPermissionListingAdapter: () => this.getOpenCodeRuntimePermissionListingAdapter(),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName).catch(() => null),
       getTrackedRun: (teamName) => {
-        const trackedRunId = this.getTrackedRunId(teamName);
+        const trackedRunId = this.runTracking.getTrackedRunId(teamName);
         return trackedRunId ? (this.runs.get(trackedRunId) ?? null) : null;
       },
       getRuntimeAdapterRun: (teamName) => this.runtimeAdapterRunByTeam.get(teamName) ?? null,
@@ -3175,7 +3133,7 @@ export class TeamProvisioningService {
       stoppingSecondaryRuntimeTeams: this.stoppingSecondaryRuntimeTeams,
       readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
       resolveDeliverableTrackedRuntimeRunId: (teamName) =>
-        this.resolveDeliverableTrackedRuntimeRunId(teamName),
+        this.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
       runs: this.runs,
       getCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
         this.getCurrentOpenCodeRuntimeRunId(teamName, laneId),
@@ -3291,7 +3249,7 @@ export class TeamProvisioningService {
     return resolveOpenCodeRuntimeRunIdFromMaps({
       teamName,
       laneId,
-      trackedRunId: this.getTrackedRunId(teamName),
+      trackedRunId: this.runTracking.getTrackedRunId(teamName),
       runs: this.runs,
       provisioningRunByTeam: this.provisioningRunByTeam,
       runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
@@ -3359,9 +3317,9 @@ export class TeamProvisioningService {
       teamsBasePath: getTeamsBasePath(),
       logger,
       canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
-        this.canDeliverToOpenCodeRuntimeForTeam(teamName),
+        this.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
       canAttemptCommittedOpenCodeSessionRecovery: (teamName) =>
-        this.canAttemptCommittedOpenCodeSessionRecovery(teamName),
+        this.runTracking.canAttemptCommittedOpenCodeSessionRecovery(teamName),
       cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
         this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
@@ -3453,7 +3411,7 @@ export class TeamProvisioningService {
     return resolveOpenCodeRuntimeLaneIdHelper(params, {
       getRuntimeAdapterRun: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
       getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       getRun: (runId) => this.runs.get(runId) ?? null,
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
     });
@@ -3884,7 +3842,7 @@ export class TeamProvisioningService {
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     const detectedSessionId = runId ? (this.runs.get(runId)?.detectedSessionId ?? null) : null;
 
     return (this.liveLeadProcessMessages.get(teamName) ?? []).map((message) =>
@@ -3929,13 +3887,13 @@ export class TeamProvisioningService {
   }
 
   getCurrentLeadSessionId(teamName: string): string | null {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     if (!runId) return null;
     return this.runs.get(runId)?.detectedSessionId ?? null;
   }
 
   getCurrentRunId(teamName: string): string | null {
-    return this.getAliveRunId(teamName);
+    return this.runTracking.getAliveRunId(teamName);
   }
 
   async recordOpenCodeRuntimeBootstrapCheckin(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
@@ -4013,7 +3971,7 @@ export class TeamProvisioningService {
       readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
       readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
       getTrackedRun: (teamName) => {
-        const trackedRunId = this.getTrackedRunId(teamName);
+        const trackedRunId = this.runTracking.getTrackedRunId(teamName);
         return trackedRunId ? (this.runs.get(trackedRunId) ?? null) : null;
       },
       persistTrackedRunLaunchState: async (run) => {
@@ -4179,7 +4137,7 @@ export class TeamProvisioningService {
     state: 'active' | 'idle' | 'offline';
     runId: string | null;
   } {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     if (!runId) return { state: 'offline', runId: null };
     const run = this.runs.get(runId);
     if (!run) {
@@ -4201,7 +4159,7 @@ export class TeamProvisioningService {
   }
 
   getLeadContextUsage(teamName: string): { usage: LeadContextUsage | null; runId: string | null } {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     if (!runId) return { usage: null, runId: null };
     const run = this.runs.get(runId);
     if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) {
@@ -4235,7 +4193,7 @@ export class TeamProvisioningService {
   }
 
   private isCurrentTrackedRun(run: ProvisioningRun): boolean {
-    return isCurrentTrackedRunById(run, this.getTrackedRunId(run.teamName));
+    return isCurrentTrackedRunById(run, this.runTracking.getTrackedRunId(run.teamName));
   }
 
   private getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null {
@@ -4432,7 +4390,7 @@ export class TeamProvisioningService {
   }
 
   async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     const cached = this.agentRuntimeSnapshotCache.get(teamName);
     if (cached && cached.expiresAtMs > Date.now() && cached.snapshot.runId === runId) {
       return cached.snapshot;
@@ -4483,9 +4441,9 @@ export class TeamProvisioningService {
       agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
       logDebug: (message) => logger.debug(message),
     });
   }
@@ -5241,7 +5199,9 @@ export class TeamProvisioningService {
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
     this.cleanedStoppedTeamOpenCodeRuntimeLanes.delete(request.teamName);
-    const existingProvisioningRunId = this.getResolvableProvisioningRunId(request.teamName);
+    const existingProvisioningRunId = this.runTracking.getResolvableProvisioningRunId(
+      request.teamName
+    );
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
@@ -6338,9 +6298,9 @@ export class TeamProvisioningService {
       );
       run.progress = finalProgress;
       if (success || pending) {
-        this.setAliveRunId(input.request.teamName, runId);
+        this.runTracking.setAliveRunId(input.request.teamName, runId);
       } else {
-        this.deleteAliveRunId(input.request.teamName);
+        this.runTracking.deleteAliveRunId(input.request.teamName);
         this.runtimeAdapterRunByTeam.delete(input.request.teamName);
       }
       if (this.provisioningRunByTeam.get(input.request.teamName) === runId) {
@@ -6394,7 +6354,7 @@ export class TeamProvisioningService {
         this.provisioningRunByTeam.delete(input.request.teamName);
       }
       this.runtimeAdapterRunByTeam.delete(input.request.teamName);
-      this.deleteAliveRunId(input.request.teamName);
+      this.runTracking.deleteAliveRunId(input.request.teamName);
       this.invalidateRuntimeSnapshotCaches(input.request.teamName);
       throw error;
     }
@@ -6564,7 +6524,7 @@ export class TeamProvisioningService {
           laneId: 'primary',
         }).catch(() => undefined);
         this.runtimeAdapterRunByTeam.delete(input.request.teamName);
-        this.deleteAliveRunId(input.request.teamName);
+        this.runTracking.deleteAliveRunId(input.request.teamName);
         this.invalidateRuntimeSnapshotCaches(input.request.teamName);
       } else {
         this.runtimeAdapterRunByTeam.set(input.request.teamName, {
@@ -6573,7 +6533,7 @@ export class TeamProvisioningService {
           cwd: launchCwd,
           members: result.members,
         });
-        this.setAliveRunId(input.request.teamName, runId);
+        this.runTracking.setAliveRunId(input.request.teamName, runId);
         this.invalidateRuntimeSnapshotCaches(input.request.teamName);
       }
       if (this.provisioningRunByTeam.get(input.request.teamName) === runId) {
@@ -6798,7 +6758,9 @@ export class TeamProvisioningService {
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    const existingProvisioningRunId = this.getResolvableProvisioningRunId(request.teamName);
+    const existingProvisioningRunId = this.runTracking.getResolvableProvisioningRunId(
+      request.teamName
+    );
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
@@ -6825,7 +6787,7 @@ export class TeamProvisioningService {
       }
       const configProjectPath = parseLaunchConfigProjectPath(configRaw);
 
-      const existingAliveRunId = this.getAliveRunId(request.teamName);
+      const existingAliveRunId = this.runTracking.getAliveRunId(request.teamName);
       const existingRun = existingAliveRunId ? this.runs.get(existingAliveRunId) : null;
       const existingRunReuse = resolveExistingLaunchRunReuse({
         teamName: request.teamName,
@@ -7570,7 +7532,7 @@ export class TeamProvisioningService {
     // team files during cleanup. SIGKILL is uncatchable — files are preserved.
     killTeamProcess(run.child);
     if (
-      this.getTrackedRunId(run.teamName) === run.runId &&
+      this.runTracking.getTrackedRunId(run.teamName) === run.runId &&
       this.hasSecondaryRuntimeRuns(run.teamName)
     ) {
       void this.stopMixedSecondaryRuntimeLanes(run.teamName);
@@ -7608,7 +7570,7 @@ export class TeamProvisioningService {
       emitDismiss: true,
     });
     this.runtimeAdapterRunByTeam.delete(teamName);
-    this.deleteAliveRunId(teamName);
+    this.runTracking.deleteAliveRunId(teamName);
     if (this.provisioningRunByTeam.get(teamName) === runId) {
       this.provisioningRunByTeam.delete(teamName);
     }
@@ -7687,7 +7649,7 @@ export class TeamProvisioningService {
       this.runtimeAdapterRunByTeam.delete(teamName);
     }
     if (this.aliveRunByTeam.get(teamName) === runId) {
-      this.deleteAliveRunId(teamName);
+      this.runTracking.deleteAliveRunId(teamName);
     }
     if (this.provisioningRunByTeam.get(teamName) === runId) {
       this.provisioningRunByTeam.delete(teamName);
@@ -7704,7 +7666,7 @@ export class TeamProvisioningService {
     const timestamp = nowIso();
     this.provisioningRunByTeam.delete(teamName);
     this.runtimeAdapterRunByTeam.delete(teamName);
-    this.deleteAliveRunId(teamName);
+    this.runTracking.deleteAliveRunId(teamName);
     this.invalidateRuntimeSnapshotCaches(teamName);
     const progress: TeamProvisioningProgress = {
       runId,
@@ -7734,7 +7696,7 @@ export class TeamProvisioningService {
     message: string,
     attachments?: { data: string; mimeType: string; filename?: string }[]
   ): Promise<void> {
-    const runId = this.getAliveRunId(teamName);
+    const runId = this.runTracking.getAliveRunId(teamName);
     if (!runId) {
       throw new Error(`No active process for team "${teamName}"`);
     }
@@ -7817,7 +7779,7 @@ export class TeamProvisioningService {
     userText: string,
     userSummary?: string
   ): Promise<void> {
-    const runId = this.getAliveRunId(teamName);
+    const runId = this.runTracking.getAliveRunId(teamName);
     if (!runId) {
       throw new Error(`No active process for team "${teamName}"`);
     }
@@ -7881,7 +7843,7 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.getAliveRunId(teamName);
+      const runId = this.runTracking.getAliveRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
@@ -8539,7 +8501,9 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.getAliveRunId(teamName) ?? this.getProvisioningRunId(teamName);
+      const runId =
+        this.runTracking.getAliveRunId(teamName) ??
+        this.runTracking.getProvisioningRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
@@ -8928,7 +8892,7 @@ export class TeamProvisioningService {
    * Check if a team has a live process.
    */
   isTeamAlive(teamName: string): boolean {
-    const runId = this.getAliveRunId(teamName);
+    const runId = this.runTracking.getAliveRunId(teamName);
     if (!runId) return false;
     const run = this.runs.get(runId);
     if (!run && this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
@@ -8957,7 +8921,7 @@ export class TeamProvisioningService {
   }
 
   async getRuntimeState(teamName: string): Promise<TeamRuntimeState> {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     const run = runId ? (this.runs.get(runId) ?? null) : null;
 
     if (!run) {
@@ -9486,7 +9450,7 @@ export class TeamProvisioningService {
   private async getLiveTeamAgentRuntimeMetadata(
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
-    const runId = this.getTrackedRunId(teamName);
+    const runId = this.runTracking.getTrackedRunId(teamName);
     const cached = this.liveTeamAgentRuntimeMetadataCache.get(teamName);
     if (cached && cached.expiresAtMs > Date.now() && cached.runId === runId) {
       return this.cloneLiveTeamAgentRuntimeMetadata(cached.metadata);
@@ -9543,9 +9507,9 @@ export class TeamProvisioningService {
         ),
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
       logDebug: (message) => logger.debug(message),
     });
   }
@@ -9580,7 +9544,7 @@ export class TeamProvisioningService {
     if (!expectedRunId) {
       return true;
     }
-    const trackedRunId = this.getTrackedRunId(teamName);
+    const trackedRunId = this.runTracking.getTrackedRunId(teamName);
     if (trackedRunId !== expectedRunId) {
       return false;
     }
@@ -10173,7 +10137,7 @@ export class TeamProvisioningService {
     });
     run.onProgress(progress);
     this.provisioningRunByTeam.delete(run.teamName);
-    this.setAliveRunId(run.teamName, run.runId);
+    this.runTracking.setAliveRunId(run.teamName, run.runId);
     logger.warn(
       `[${run.teamName}] Recovered ready state from completed deterministic bootstrap snapshot after post-bootstrap finalization delay.`
     );
@@ -10362,7 +10326,7 @@ export class TeamProvisioningService {
     entry: RuntimeToolApprovalEntry,
     result: TeamRuntimeLaunchResult
   ): Promise<void> {
-    const trackedRunId = this.getTrackedRunId(entry.approval.teamName);
+    const trackedRunId = this.runTracking.getTrackedRunId(entry.approval.teamName);
     const run = trackedRunId ? this.runs.get(trackedRunId) : null;
     if (!run) {
       throw new Error(`Run not found for team "${entry.approval.teamName}"`);
@@ -12206,7 +12170,7 @@ export class TeamProvisioningService {
       sinceMs,
       lookupCache: this.bootstrapTranscriptOutcomeLookupCache,
       lookupCacheEnabled:
-        !this.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
+        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
       findMemberLogs: (lookupTeamName, lookupMemberName, lookupSinceMs) =>
         this.memberLogsFinder.findMemberLogs(lookupTeamName, lookupMemberName, lookupSinceMs),
       readRecentBootstrapTranscriptOutcome: (
@@ -12312,7 +12276,7 @@ export class TeamProvisioningService {
       crossTeamSender: this.crossTeamSender,
       resolveCrossTeamReplyMetadata: (teamName, toTeam) =>
         this.resolveCrossTeamReplyMetadata(teamName, toTeam),
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       pushLiveLeadProcessMessage: (teamName, message) =>
         this.pushLiveLeadProcessMessage(teamName, message),
       persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
@@ -12328,7 +12292,7 @@ export class TeamProvisioningService {
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
     pushLiveLeadProcessMessageHelper(teamName, message, {
       liveLeadProcessMessages: this.liveLeadProcessMessages,
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
       cacheLimit: LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT,
     });
@@ -12338,7 +12302,7 @@ export class TeamProvisioningService {
     teamName: string,
     toTeam: string
   ): { conversationId: string; replyToConversationId: string } | null {
-    const runId = this.getAliveRunId(teamName);
+    const runId = this.runTracking.getAliveRunId(teamName);
     if (!runId) return null;
     const run = this.runs.get(runId);
     const hints = run?.activeCrossTeamReplyHints ?? [];
@@ -12411,8 +12375,8 @@ export class TeamProvisioningService {
       pauseActiveIntervalsForTeam: (teamName) =>
         this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
       stopPersistentTeamMembers: (teamName) => this.stopPersistentTeamMembers(teamName),
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
-      getAliveRunId: (teamName) => this.getAliveRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
       runs: this.runs,
       runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
       isCancellableRuntimeAdapterProgress: (progress) =>
@@ -12428,7 +12392,7 @@ export class TeamProvisioningService {
       hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
       stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
       provisioningRunByTeam: this.provisioningRunByTeam,
-      deleteAliveRunId: (teamName) => this.deleteAliveRunId(teamName),
+      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
       killTeamProcess,
       updateProgress,
       cleanupRun: (run) => this.cleanupRun(run),
@@ -12609,7 +12573,7 @@ export class TeamProvisioningService {
         laneId: 'primary',
       }).catch(() => undefined);
       this.runtimeAdapterRunByTeam.delete(teamName);
-      this.deleteAliveRunId(teamName);
+      this.runTracking.deleteAliveRunId(teamName);
       this.provisioningRunByTeam.delete(teamName);
       this.invalidateRuntimeSnapshotCaches(teamName);
       return;
@@ -12631,7 +12595,7 @@ export class TeamProvisioningService {
       emitDismiss: true,
     });
     this.runtimeAdapterRunByTeam.delete(teamName);
-    this.deleteAliveRunId(teamName);
+    this.runTracking.deleteAliveRunId(teamName);
     if (this.provisioningRunByTeam.get(teamName) === runId) {
       this.provisioningRunByTeam.delete(teamName);
     }
@@ -12693,7 +12657,7 @@ export class TeamProvisioningService {
         laneId: 'primary',
       }).catch(() => undefined);
       this.runtimeAdapterRunByTeam.delete(teamName);
-      this.deleteAliveRunId(teamName);
+      this.runTracking.deleteAliveRunId(teamName);
       this.provisioningRunByTeam.delete(teamName);
       this.teamChangeEmitter?.({
         type: 'process',
@@ -12753,8 +12717,8 @@ export class TeamProvisioningService {
   }
 
   private killOrphanedTeamAgentProcesses(teamName: string): void {
-    const currentRunPid = this.getTrackedRunId(teamName)
-      ? this.runs.get(this.getTrackedRunId(teamName)!)?.child?.pid
+    const currentRunPid = this.runTracking.getTrackedRunId(teamName)
+      ? this.runs.get(this.runTracking.getTrackedRunId(teamName)!)?.child?.pid
       : undefined;
     killOrphanedTeamAgentProcessesHelper({ teamName, currentRunPid, logger });
   }
@@ -13547,7 +13511,7 @@ export class TeamProvisioningService {
           cwd: entry.cwd,
           members: committed.members,
         });
-        this.setAliveRunId(entry.approval.teamName, entry.approval.runId);
+        this.runTracking.setAliveRunId(entry.approval.teamName, entry.approval.runId);
       }
       this.syncOpenCodeRuntimeToolApprovals({
         teamName: entry.approval.teamName,
@@ -13594,7 +13558,7 @@ export class TeamProvisioningService {
     }
 
     // Look in both provisioning and alive runs — control_requests arrive during provisioning too
-    const currentRunId = this.getTrackedRunId(teamName);
+    const currentRunId = this.runTracking.getTrackedRunId(teamName);
     if (!currentRunId) throw new Error(`No active process for team "${teamName}"`);
     const run = this.runs.get(currentRunId);
     if (!run) throw new Error(`Run not found for team "${teamName}"`);
@@ -14047,7 +14011,7 @@ export class TeamProvisioningService {
       updateProgress,
       extractCliLogsFromRun,
       provisioningRunByTeam: this.provisioningRunByTeam,
-      setAliveRunId: (teamName, runId) => this.setAliveRunId(teamName, runId),
+      setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
       emitTeamChange: (event) => this.teamChangeEmitter?.(event),
       fireTeamLaunchedNotification: (run) => this.fireTeamLaunchedNotification(run),
       fireTeamLaunchIncompleteNotification: (run, failedMembers, launchSummary, snapshot) =>
@@ -14233,7 +14197,7 @@ export class TeamProvisioningService {
    */
   private cleanupRun(run: ProvisioningRun): void {
     cleanupProvisioningRun(run, {
-      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       isRunIdTracked: (runId) =>
         this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId),
       buildRetainedClaudeLogsSnapshot,
@@ -14250,7 +14214,7 @@ export class TeamProvisioningService {
       stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
       provisioningRunByTeam: this.provisioningRunByTeam,
       aliveRunByTeam: this.aliveRunByTeam,
-      deleteAliveRunId: (teamName) => this.deleteAliveRunId(teamName),
+      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
       clearSecondaryRuntimeRuns: (teamName) => this.clearSecondaryRuntimeRuns(teamName),
       invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
       invalidateMemberSpawnStatusesCache: (teamName) =>
