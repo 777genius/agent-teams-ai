@@ -32,6 +32,8 @@ export interface TokenUsageBreakdownRowViewModel {
   label: string;
   teamName?: string;
   agentName?: string;
+  taskId?: string;
+  taskDisplayId?: string;
   tokens: string;
   cost: string;
   requests: string;
@@ -74,6 +76,7 @@ export interface TokenUsageModelSegmentViewModel {
 export interface TokenUsageSourceQualityViewModel {
   label: string;
   count: number;
+  countLabel: string;
   percent: number;
   tone: 'exact' | 'parsed' | 'estimated';
 }
@@ -148,13 +151,15 @@ export interface TokenUsageBarChartItemViewModel {
   id: string;
   label: string;
   teamName?: string;
+  taskId?: string;
+  taskDisplayId?: string;
   value: string;
   cost: string;
   requests: string;
   detail: string;
   tooltip: string;
   percent: number;
-  tone: 'team' | 'agent' | 'command' | 'runtime' | 'model';
+  tone: 'team' | 'agent' | 'command' | 'runtime' | 'model' | 'task';
 }
 
 export interface TokenUsageTeamFilterOptionViewModel {
@@ -179,12 +184,14 @@ export interface TokenUsageDashboardViewModel {
   trendPoints: TokenUsageTrendPointViewModel[];
   activityDays: TokenUsageActivityDayViewModel[];
   commandSpendBars: TokenUsageBarChartItemViewModel[];
+  taskSpendBars: TokenUsageBarChartItemViewModel[];
   runtimeBars: TokenUsageBarChartItemViewModel[];
   modelBars: TokenUsageBarChartItemViewModel[];
   teamFilterOptions: TokenUsageTeamFilterOptionViewModel[];
   budgetTargetOptions: TokenUsageBudgetTargetOptionViewModel[];
   teamRows: TokenUsageBreakdownRowViewModel[];
   agentRows: TokenUsageBreakdownRowViewModel[];
+  taskRows: TokenUsageBreakdownRowViewModel[];
   commandBreakdownRows: TokenUsageBreakdownRowViewModel[];
   sessionBreakdownRows: TokenUsageBreakdownRowViewModel[];
   projectRows: TokenUsageBreakdownRowViewModel[];
@@ -253,6 +260,7 @@ export interface TokenUsageViewModelText {
   runningSessions: (running: string, sessions: string) => string;
   sdkExact: string;
   sourceCount: (count: string) => string;
+  sourceEventCount: (count: string) => string;
   subscriptionUsage: string;
   subscriptionUsageHelp: string;
   tokenLimitDetail: (tokens: string, limit: string) => string;
@@ -313,6 +321,7 @@ const DEFAULT_TEXT: TokenUsageViewModelText = {
   runningSessions: (running, sessions) => `${running} running / ${sessions} sessions`,
   sdkExact: 'SDK exact',
   sourceCount: (count) => `${count} ${count === '1' ? 'source' : 'sources'}`,
+  sourceEventCount: (count) => `${count} ${count === '1' ? 'event' : 'events'}`,
   subscriptionUsage: 'Subscription usage',
   subscriptionUsageHelp:
     'Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket.',
@@ -343,7 +352,7 @@ export function toTokenUsageDashboardViewModel(
 ): TokenUsageDashboardViewModel {
   const text = { ...DEFAULT_TEXT, ...options.text };
   const locale = options.locale;
-  const includeCacheTokens = options.includeCacheTokens ?? true;
+  const includeCacheTokens = options.includeCacheTokens ?? false;
   const summary = snapshot?.summary ?? emptySummary();
   const visibleSummaryTotal = visibleTokenTotal(summary, includeCacheTokens);
   const metrics: TokenUsageMetricViewModel[] = [
@@ -409,6 +418,14 @@ export function toTokenUsageDashboardViewModel(
       text,
       locale
     ),
+    taskSpendBars: toBarChartItems(
+      snapshot?.byTask ?? [],
+      'task',
+      8,
+      includeCacheTokens,
+      text,
+      locale
+    ),
     runtimeBars: toBarChartItems(
       snapshot?.byRuntime ?? [],
       'runtime',
@@ -434,6 +451,7 @@ export function toTokenUsageDashboardViewModel(
     budgetTargetOptions: toBudgetTargetOptions(snapshot, includeCacheTokens, text, locale),
     teamRows: toBreakdownRows(snapshot?.byTeam ?? [], includeCacheTokens, text, locale),
     agentRows: toBreakdownRows(snapshot?.byAgent ?? [], includeCacheTokens, text, locale),
+    taskRows: toBreakdownRows(snapshot?.byTask ?? [], includeCacheTokens, text, locale),
     commandBreakdownRows: toBreakdownRows(
       snapshot?.byCommand ?? [],
       includeCacheTokens,
@@ -461,7 +479,7 @@ export function toTokenUsageDashboardViewModel(
     expensiveRuns: (snapshot?.expensiveRuns ?? []).map((run) =>
       toRunRow(run, includeCacheTokens, text, locale)
     ),
-    sourceQuality: toSourceQuality(snapshot?.sourceCounts, text),
+    sourceQuality: toSourceQuality(snapshot?.sourceCounts, text, locale),
     unmappedEventCount: snapshot?.unmappedEventCount ?? 0,
     updatedAtLabel: formatDateTime(snapshot?.updatedAt, text, locale),
     empty: summary.runCount === 0 && summary.requestCount === 0,
@@ -777,9 +795,10 @@ function toBreakdownRow(
   locale: string | undefined
 ): TokenUsageBreakdownRowViewModel {
   const visibleTokens = visibleTokenTotal(item.summary, includeCacheTokens);
-  return {
+  const task = toTaskItemMetadata(item);
+  const row: TokenUsageBreakdownRowViewModel = {
     id: item.id,
-    label: item.label,
+    label: task?.subject ?? item.label,
     teamName: item.teamName,
     agentName: item.agentName,
     tokens: formatCompactNumber(visibleTokens, locale),
@@ -791,6 +810,11 @@ function toBreakdownRow(
     percent:
       maxTokens > 0 && visibleTokens > 0 ? Math.max(2, (visibleTokens / maxTokens) * 100) : 0,
   };
+  if (task) {
+    row.taskId = task.taskId;
+    if (task.displayId) row.taskDisplayId = task.displayId;
+  }
+  return row;
 }
 
 function toModelUsageSegments(
@@ -967,7 +991,8 @@ function toTokenMix(
 
 function toSourceQuality(
   sourceCounts: TokenUsageAnalyticsSnapshotDto['sourceCounts'] | undefined,
-  text: TokenUsageViewModelText
+  text: TokenUsageViewModelText,
+  locale: string | undefined
 ): TokenUsageSourceQualityViewModel[] {
   const sourceLabels: Record<TokenUsageSourceKind, string> = {
     sdk_exact: text.sdkExact,
@@ -977,17 +1002,24 @@ function toSourceQuality(
     cost_estimated: text.costEstimated,
   };
   const total = Object.values(sourceCounts ?? {}).reduce((sum, value) => sum + value, 0);
-  return (Object.keys(sourceLabels) as TokenUsageSourceKind[]).map((sourceKind) => ({
-    label: sourceLabels[sourceKind],
-    count: sourceCounts?.[sourceKind] ?? 0,
-    percent: total > 0 ? ((sourceCounts?.[sourceKind] ?? 0) / total) * 100 : 0,
-    tone:
-      sourceKind === 'sdk_exact' || sourceKind === 'gateway_exact'
-        ? 'exact'
-        : sourceKind === 'log_parsed'
-          ? 'parsed'
-          : 'estimated',
-  }));
+  return (Object.keys(sourceLabels) as TokenUsageSourceKind[])
+    .map((sourceKind) => {
+      const count = sourceCounts?.[sourceKind] ?? 0;
+      const tone: TokenUsageSourceQualityViewModel['tone'] =
+        sourceKind === 'sdk_exact' || sourceKind === 'gateway_exact'
+          ? 'exact'
+          : sourceKind === 'log_parsed'
+            ? 'parsed'
+            : 'estimated';
+      return {
+        label: sourceLabels[sourceKind],
+        count,
+        countLabel: text.sourceEventCount(formatCompactNumber(count, locale)),
+        percent: total > 0 ? (count / total) * 100 : 0,
+        tone,
+      };
+    })
+    .filter((item) => item.count > 0);
 }
 
 function toTrendPoints(
@@ -1090,23 +1122,41 @@ function toBarChartItems(
     ...limitedRows.map((item) => visibleTokenTotal(item.summary, includeCacheTokens))
   );
   return limitedRows.map((item) => {
+    const task = toTaskItemMetadata(item);
     const tokenValue = visibleTokenTotal(item.summary, includeCacheTokens);
     const value = formatCompactNumber(tokenValue, locale);
     const cost = formatCostLabel(item.summary, text, locale);
     const requests = text.requestCount(formatCompactNumber(item.summary.requestCount, locale));
-    return {
+    const chartItem: TokenUsageBarChartItemViewModel = {
       id: item.id,
-      label: item.label,
+      label: task?.subject ?? item.label,
       teamName: item.teamName,
       value,
       cost,
       requests,
       detail: `${cost} / ${requests}`,
-      tooltip: text.tokenCostTooltip(item.label, value, cost, requests),
+      tooltip: text.tokenCostTooltip(task?.subject ?? item.label, value, cost, requests),
       percent: maxTokens > 0 && tokenValue > 0 ? Math.max(2, (tokenValue / maxTokens) * 100) : 0,
       tone,
     };
+    if (task) {
+      chartItem.taskId = task.taskId;
+      if (task.displayId) chartItem.taskDisplayId = task.displayId;
+    }
+    return chartItem;
   });
+}
+
+function toTaskItemMetadata(
+  item: TokenUsageBreakdownItemDto
+): { taskId: string; displayId?: string; subject: string } | null {
+  if (!('taskId' in item) || !('subject' in item)) return null;
+  const taskId = typeof item.taskId === 'string' ? item.taskId : '';
+  const subject = typeof item.subject === 'string' ? item.subject : '';
+  const displayId =
+    'displayId' in item && typeof item.displayId === 'string' ? item.displayId : undefined;
+  if (!taskId || !subject) return null;
+  return { taskId, displayId, subject };
 }
 
 function emptySummary(): TokenUsageSummaryDto {

@@ -38,6 +38,7 @@ import {
   tokenUsageSnapshotRequestForDateRange,
 } from '../adapters/tokenUsageDateRange';
 import { useOpenTokenUsageNotificationSettings } from '../hooks/useOpenTokenUsageNotificationSettings';
+import { useOpenTokenUsageTask } from '../hooks/useOpenTokenUsageTask';
 import { useOpenTokenUsageTeam } from '../hooks/useOpenTokenUsageTeam';
 import { useTokenUsageBudgetSettings } from '../hooks/useTokenUsageBudgetSettings';
 import { useTokenUsageSnapshot } from '../hooks/useTokenUsageSnapshot';
@@ -65,6 +66,7 @@ import type React from 'react';
 type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
 
 const DAY_PICKER_CLASS_NAMES = buildDayPickerClassNames();
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PANEL_CLASS =
   'min-w-0 rounded-sm border border-[var(--color-border-emphasis)] bg-surface-raised';
 const MODEL_DONUT_SIZE = 160;
@@ -86,12 +88,13 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
     [t]
   );
   const openTeamTab = useOpenTokenUsageTeam();
+  const openTaskDetail = useOpenTokenUsageTask();
   const openNotificationSettings = useOpenTokenUsageNotificationSettings();
   const [dateRange, setDateRange] = useState<TokenUsageDateRangeValue>(() =>
     createDefaultTokenUsageDateRange()
   );
   const [selectedTeamNames, setSelectedTeamNames] = useState<string[]>([]);
-  const [includeCacheTokens, setIncludeCacheTokens] = useState(true);
+  const [includeCacheTokens, setIncludeCacheTokens] = useState(false);
   const [activeDashboardTab, setActiveDashboardTab] = useState<TokenUsageDashboardTab>('overview');
   const { budgetConfig, budgetConfigError, updateBudgetConfig } = useTokenUsageBudgetSettings({
     loadErrorMessage: tokenUsageT('tokenUsage.budgets.loadFailed'),
@@ -255,6 +258,12 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
                       t={tokenUsageT}
                     />
                     <HorizontalBarsPanel
+                      heading={tokenUsageT('tokenUsage.panels.taskSpend')}
+                      items={viewModel.taskSpendBars}
+                      onOpenTask={openTaskDetail}
+                      t={tokenUsageT}
+                    />
+                    <HorizontalBarsPanel
                       heading={tokenUsageT('tokenUsage.panels.runtimeMix')}
                       items={viewModel.runtimeBars}
                       t={tokenUsageT}
@@ -281,10 +290,25 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
                   />
                 </section>
 
-                <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                <section className="grid gap-5 xl:grid-cols-2">
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.tasks')}
+                    rows={viewModel.taskRows}
+                    onOpenTask={openTaskDetail}
+                    t={tokenUsageT}
+                  />
                   <BreakdownPanel
                     heading={tokenUsageT('tokenUsage.panels.commands')}
                     rows={viewModel.commandBreakdownRows}
+                    compact
+                    t={tokenUsageT}
+                  />
+                </section>
+
+                <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.sessions')}
+                    rows={viewModel.sessionBreakdownRows}
                     compact
                     t={tokenUsageT}
                   />
@@ -294,13 +318,6 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
                     t={tokenUsageT}
                   />
                 </section>
-
-                <BreakdownPanel
-                  heading={tokenUsageT('tokenUsage.panels.sessions')}
-                  rows={viewModel.sessionBreakdownRows}
-                  compact
-                  t={tokenUsageT}
-                />
               </TabsContent>
 
               <TabsContent value="runs" className="mt-5 space-y-5">
@@ -387,6 +404,7 @@ function createTokenUsageViewModelText(t: TokenUsageT): TokenUsageViewModelText 
       t('tokenUsage.metrics.runningSessions', { running, sessions }),
     sdkExact: t('tokenUsage.sources.sdkExact'),
     sourceCount: (count) => t('tokenUsage.labels.sourceCount', { count }),
+    sourceEventCount: (count) => t('tokenUsage.labels.eventCount', { count }),
     subscriptionUsage: t('tokenUsage.metrics.subscriptionUsage'),
     subscriptionUsageHelp: t('tokenUsage.billingSplit.subscriptionUsageHelp'),
     tokenLimitDetail: (tokens, limit) =>
@@ -1316,10 +1334,14 @@ const ActivityHeatmapPanel = ({
   t: TokenUsageT;
 }): React.JSX.Element => {
   const years = useMemo(() => buildActivityHeatmapYears(days), [days]);
+  const streak = useMemo(() => buildActivityStreak(days), [days]);
 
   return (
     <section className={PANEL_CLASS}>
-      <PanelTitle heading={t('tokenUsage.panels.activityByDay')} />
+      <PanelTitle
+        heading={t('tokenUsage.panels.activityByDay')}
+        action={<ActivityStreakBadge streak={streak} t={t} />}
+      />
       <div className="p-4">
         {days.length === 0 ? (
           <EmptyRows label={t('tokenUsage.empty.noActivityData')} />
@@ -1407,6 +1429,34 @@ const ActivityHeatmapPanel = ({
         )}
       </div>
     </section>
+  );
+};
+
+const ActivityStreakBadge = ({
+  streak,
+  t,
+}: {
+  streak: number;
+  t: TokenUsageT;
+}): React.JSX.Element => {
+  const fireCount = Math.floor(streak / 3);
+  const visibleFireCount = Math.min(fireCount, 5);
+  const hiddenFireCount = fireCount - visibleFireCount;
+
+  return (
+    <div className="flex max-w-[50%] shrink-0 items-center gap-1 rounded-sm border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
+      <span className="truncate">{t('tokenUsage.labels.streakCount', { count: streak })}</span>
+      {visibleFireCount > 0 && (
+        <span className="shrink-0 whitespace-nowrap" aria-hidden="true">
+          {Array.from({ length: visibleFireCount }, (_, index) => (
+            <span key={index}>🔥</span>
+          ))}
+          {hiddenFireCount > 0 && (
+            <span className="ml-0.5 text-[10px] text-amber-200/80">+{hiddenFireCount}</span>
+          )}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -1534,11 +1584,13 @@ const HorizontalBarsPanel = ({
   heading,
   items,
   onOpenTeam,
+  onOpenTask,
   t,
 }: {
   heading: string;
   items: TokenUsageBarChartItemViewModel[];
   onOpenTeam?: (teamName: string) => void;
+  onOpenTask?: (teamName: string, taskId: string) => void;
   t: TokenUsageT;
 }): React.JSX.Element => {
   return (
@@ -1550,14 +1602,28 @@ const HorizontalBarsPanel = ({
         ) : (
           items.map((item) => {
             const targetTeamName = item.teamName;
-            const clickable = !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const taskClickable =
+              item.tone === 'task' &&
+              !!targetTeamName &&
+              targetTeamName !== 'unassigned' &&
+              !!item.taskId &&
+              !!onOpenTask;
+            const teamClickable =
+              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const clickable = taskClickable || teamClickable;
+            const actionLabel = taskClickable
+              ? t('tokenUsage.actions.openTask', { task: item.label })
+              : t('tokenUsage.actions.openTeam', { team: targetTeamName });
             const itemContent = (
               <>
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="min-w-0 truncate font-medium text-text">{item.label}</span>
-                    {clickable && (
+                    {teamClickable && (
                       <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                    )}
+                    {taskClickable && (
+                      <Info className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
                     )}
                   </span>
                   <span className="shrink-0 text-text-secondary">{item.value}</span>
@@ -1565,7 +1631,14 @@ const HorizontalBarsPanel = ({
                 <div className="mt-1 h-2 overflow-hidden rounded-sm bg-surface">
                   <div className={barToneClass(item.tone)} style={{ width: `${item.percent}%` }} />
                 </div>
-                <div className="mt-1 truncate text-xs text-text-muted">{item.detail}</div>
+                <div className="mt-1 flex min-w-0 items-center justify-between gap-3 text-xs text-text-muted">
+                  <span className="min-w-0 truncate">{item.detail}</span>
+                  {item.taskDisplayId && (
+                    <span className="text-text-muted/80 shrink-0 font-mono text-[11px]">
+                      {item.taskDisplayId}
+                    </span>
+                  )}
+                </div>
               </>
             );
 
@@ -1574,16 +1647,20 @@ const HorizontalBarsPanel = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => onOpenTeam?.(targetTeamName)}
-                    aria-label={t('tokenUsage.actions.openTeam', { team: targetTeamName })}
+                    onClick={() => {
+                      if (taskClickable && item.taskId) {
+                        onOpenTask?.(targetTeamName, item.taskId);
+                        return;
+                      }
+                      onOpenTeam?.(targetTeamName);
+                    }}
+                    aria-label={actionLabel}
                     className="group -mx-2 block w-[calc(100%+1rem)] min-w-0 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-surface focus:bg-surface focus:outline-none"
                   >
                     {itemContent}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('tokenUsage.actions.openTeam', { team: targetTeamName })}
-                </TooltipContent>
+                <TooltipContent side="top">{actionLabel}</TooltipContent>
               </Tooltip>
             ) : (
               <Tooltip key={item.id}>
@@ -1611,6 +1688,7 @@ const BreakdownPanel = ({
   rows,
   compact = false,
   onOpenTeam,
+  onOpenTask,
   showMemberBadge = false,
   teamPanel = false,
   t,
@@ -1619,6 +1697,7 @@ const BreakdownPanel = ({
   rows: TokenUsageBreakdownRowViewModel[];
   compact?: boolean;
   onOpenTeam?: (teamName: string) => void;
+  onOpenTask?: (teamName: string, taskId: string) => void;
   showMemberBadge?: boolean;
   teamPanel?: boolean;
   t: TokenUsageT;
@@ -1632,7 +1711,14 @@ const BreakdownPanel = ({
         ) : (
           rows.slice(0, compact ? 6 : 8).map((row) => {
             const targetTeamName = row.teamName ?? (teamPanel ? row.id : undefined);
-            const clickable = !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const taskClickable =
+              !!targetTeamName && targetTeamName !== 'unassigned' && !!row.taskId && !!onOpenTask;
+            const teamClickable =
+              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const clickable = taskClickable || teamClickable;
+            const actionLabel = taskClickable
+              ? t('tokenUsage.actions.openTask', { task: row.label })
+              : t('tokenUsage.actions.openTeam', { team: targetTeamName });
             const rowClassName = cn(
               'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto]',
               clickable &&
@@ -1655,11 +1741,21 @@ const BreakdownPanel = ({
                     {showMemberBadge && !row.agentName && (
                       <div className="truncate font-medium text-text">{row.label}</div>
                     )}
-                    {clickable && (
-                      <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                    {clickable &&
+                      (taskClickable ? (
+                        <Info className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                      ) : (
+                        <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                      ))}
+                  </div>
+                  <div className="mt-0.5 flex min-w-0 items-center justify-between gap-3 text-xs text-text-muted">
+                    <span className="min-w-0 truncate">{row.lastActivity}</span>
+                    {row.taskDisplayId && (
+                      <span className="text-text-muted/80 shrink-0 font-mono text-[11px]">
+                        {row.taskDisplayId}
+                      </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-xs text-text-muted">{row.lastActivity}</div>
                   <div className="mt-2 h-1 overflow-hidden rounded-sm bg-surface">
                     <div className="h-full bg-blue-500" style={{ width: `${row.percent}%` }} />
                   </div>
@@ -1681,16 +1777,21 @@ const BreakdownPanel = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => onOpenTeam?.(targetTeamName)}
+                    onClick={() => {
+                      if (!targetTeamName) return;
+                      if (taskClickable && row.taskId) {
+                        onOpenTask?.(targetTeamName, row.taskId);
+                        return;
+                      }
+                      onOpenTeam?.(targetTeamName);
+                    }}
                     className={rowClassName}
-                    aria-label={t('tokenUsage.actions.openTeam', { team: targetTeamName })}
+                    aria-label={actionLabel}
                   >
                     {rowContent}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('tokenUsage.actions.openTeam', { team: targetTeamName })}
-                </TooltipContent>
+                <TooltipContent side="top">{actionLabel}</TooltipContent>
               </Tooltip>
             ) : (
               <div key={row.id} className={rowClassName}>
@@ -1724,7 +1825,7 @@ const SourceQualityPanel = ({
                 <span className={`size-2 rounded-full ${sourceToneClass(item.tone)}`} />
                 <span className="truncate text-text-secondary">{item.label}</span>
               </div>
-              <span className="font-medium text-text">{item.count}</span>
+              <span className="font-medium text-text">{item.countLabel}</span>
             </div>
             <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-surface">
               <div
@@ -1911,6 +2012,7 @@ function formatPanelPercent(value: number): string {
 
 function barToneClass(tone: TokenUsageBarChartItemViewModel['tone']): string {
   if (tone === 'command') return 'h-full bg-blue-500';
+  if (tone === 'task') return 'h-full bg-fuchsia-500';
   if (tone === 'runtime') return 'h-full bg-teal-500';
   if (tone === 'model') return 'h-full bg-indigo-500';
   if (tone === 'agent') return 'h-full bg-emerald-500';
@@ -1960,6 +2062,22 @@ function buildActivityHeatmapCells(
   if (!Number.isFinite(timestamp)) return days;
   const mondayOffset = (new Date(timestamp).getUTCDay() + 6) % 7;
   return [...Array<TokenUsageActivityDayViewModel | null>(mondayOffset).fill(null), ...days];
+}
+
+function buildActivityStreak(days: TokenUsageActivityDayViewModel[]): number {
+  const activeDayIds = new Set(days.filter((day) => day.tokenValue > 0).map((day) => day.id));
+  const latestActiveDayId = [...activeDayIds].sort().at(-1);
+  if (!latestActiveDayId) return 0;
+
+  const latestTimestamp = Date.parse(`${latestActiveDayId}T00:00:00.000Z`);
+  if (!Number.isFinite(latestTimestamp)) return 0;
+
+  let streak = 0;
+  for (let timestamp = latestTimestamp; ; timestamp -= DAY_MS) {
+    const dayId = new Date(timestamp).toISOString().slice(0, 10);
+    if (!activeDayIds.has(dayId)) return streak;
+    streak += 1;
+  }
 }
 
 function mergeTeamFilterOptions(

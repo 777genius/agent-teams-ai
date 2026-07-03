@@ -199,7 +199,8 @@
     "partialData": "Dữ liệu một phần",
     "actions": {
       "refresh": "Làm mới",
-      "openTeam": "Mở {{team}}"
+      "openTeam": "Mở {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Mức dùng model theo phân đoạn"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} token / {{cost}}",
       "total": "Tổng",
       "unassigned": "Chưa gán",
-      "unknownAgent": "Agent không rõ"
+      "unknownAgent": "Agent không rõ",
+      "eventCount": "{{count}} sự kiện",
+      "streakCount": "{{count}} ngày liên tiếp"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Sự kiện nguồn",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

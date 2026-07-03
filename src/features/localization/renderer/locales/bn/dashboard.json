@@ -199,7 +199,8 @@
     "partialData": "আংশিক ডেটা",
     "actions": {
       "refresh": "রিফ্রেশ",
-      "openTeam": "{{team}} খুলুন"
+      "openTeam": "{{team}} খুলুন",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "সেগমেন্ট অনুযায়ী মডেল ব্যবহার"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} টোকেন / {{cost}}",
       "total": "মোট",
       "unassigned": "অ্যাসাইন করা নেই",
-      "unknownAgent": "অজানা এজেন্ট"
+      "unknownAgent": "অজানা এজেন্ট",
+      "eventCount": "{{count}} ইভেন্ট",
+      "streakCount": "{{count}} দিনের স্ট্রিক"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "সোর্স ইভেন্ট",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

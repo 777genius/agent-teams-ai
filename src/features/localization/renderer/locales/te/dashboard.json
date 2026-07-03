@@ -199,7 +199,8 @@
     "partialData": "భాగిక డేటా",
     "actions": {
       "refresh": "రిఫ్రెష్",
-      "openTeam": "{{team}} తెరువు"
+      "openTeam": "{{team}} తెరువు",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "సెగ్మెంట్ వారీగా model వినియోగం"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "మొత్తం",
       "unassigned": "కేటాయించలేదు",
-      "unknownAgent": "తెలియని agent"
+      "unknownAgent": "తెలియని agent",
+      "eventCount": "{{count}} ఈవెంట్లు",
+      "streakCount": "{{count}} రోజుల స్ట్రీక్"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "మూల ఈవెంట్లు",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

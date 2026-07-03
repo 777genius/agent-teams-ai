@@ -80,6 +80,7 @@ import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
   removeTokenUsageIpc,
+  TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
@@ -2130,6 +2131,7 @@ async function initializeServices(): Promise<void> {
         httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
       },
     },
+    taskAttributionSource: new TeamTaskUsageAttributionSource(new TeamTaskReader()),
     logger: tokenUsageLogger,
   });
   const tokenUsageStartupRefreshTimer = setTimeout(() => {

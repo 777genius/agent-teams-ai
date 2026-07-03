@@ -199,7 +199,8 @@
     "partialData": "Dati parziali",
     "actions": {
       "refresh": "Aggiorna",
-      "openTeam": "Apri {{team}}"
+      "openTeam": "Apri {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Uso modelli per segmento"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} token / {{cost}}",
       "total": "Totale",
       "unassigned": "Non assegnato",
-      "unknownAgent": "Agente sconosciuto"
+      "unknownAgent": "Agente sconosciuto",
+      "eventCount": "{{count}} eventi",
+      "streakCount": "{{count}} giorni di streak"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Eventi origine",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

@@ -199,7 +199,8 @@
     "partialData": "பகுதி தரவு",
     "actions": {
       "refresh": "புதுப்பி",
-      "openTeam": "{{team}} திற"
+      "openTeam": "{{team}} திற",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "பகுதி வாரியாக model பயன்பாடு"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "மொத்தம்",
       "unassigned": "ஒதுக்கப்படவில்லை",
-      "unknownAgent": "தெரியாத agent"
+      "unknownAgent": "தெரியாத agent",
+      "eventCount": "{{count}} நிகழ்வுகள்",
+      "streakCount": "{{count}} நாள் தொடர்ச்சி"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "மூல நிகழ்வுகள்",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

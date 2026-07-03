@@ -6,6 +6,7 @@ import type {
   TokenUsageEventDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
+  TokenUsageTaskAttributionDto,
 } from '../../contracts';
 import type {
   TokenUsageAnalyticsServicePort,
@@ -17,6 +18,7 @@ import type {
   TokenUsageLoggerPort,
   TokenUsageRealtimePublisherPort,
   TokenUsageRunSourceDiscoveryPort,
+  TokenUsageTaskAttributionSourcePort,
 } from './ports';
 
 export interface TokenUsageAnalyticsServiceDeps {
@@ -27,6 +29,7 @@ export interface TokenUsageAnalyticsServiceDeps {
   budgets?: TokenUsageBudgetSettingsRepositoryPort;
   budgetNotifications?: TokenUsageBudgetNotificationEvaluatorPort;
   publisher?: TokenUsageRealtimePublisherPort;
+  taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   logger?: TokenUsageLoggerPort;
 }
 
@@ -34,13 +37,15 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
   constructor(private readonly deps: TokenUsageAnalyticsServiceDeps) {}
 
   async getSnapshot(request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto> {
-    const [runs, events] = await Promise.all([
+    const [runs, events, tasks] = await Promise.all([
       this.deps.ledger.listRuns(),
       this.deps.ledger.listEvents(),
+      this.listTaskAttributions(false),
     ]);
     return buildTokenUsageSnapshot({
       runs,
       events,
+      tasks,
       request,
       nowIso: this.deps.clock.now().toISOString(),
     });
@@ -69,13 +74,18 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       }
     }
 
-    const [nextRuns, nextEvents] = await Promise.all([
+    const [nextRuns, nextEvents, taskAttributionResult] = await Promise.all([
       this.deps.ledger.listRuns(),
       this.deps.ledger.listEvents(),
+      this.listTaskAttributions(true),
     ]);
+    if (taskAttributionResult.degraded) {
+      degraded = true;
+    }
     const canonicalSnapshot = buildTokenUsageSnapshot({
       runs: nextRuns,
       events: nextEvents,
+      tasks: taskAttributionResult.tasks,
       nowIso: this.deps.clock.now().toISOString(),
       degraded,
     });
@@ -83,6 +93,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       ? buildTokenUsageSnapshot({
           runs: nextRuns,
           events: nextEvents,
+          tasks: taskAttributionResult.tasks,
           request,
           nowIso: canonicalSnapshot.updatedAt,
           degraded,
@@ -118,17 +129,44 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
 
   private async publishCurrentSnapshot(): Promise<void> {
     if (!this.deps.publisher) return;
-    const [runs, events] = await Promise.all([
+    const [runs, events, tasks] = await Promise.all([
       this.deps.ledger.listRuns(),
       this.deps.ledger.listEvents(),
+      this.listTaskAttributions(false),
     ]);
     const snapshot = buildTokenUsageSnapshot({
       runs,
       events,
+      tasks,
       nowIso: this.deps.clock.now().toISOString(),
     });
     this.deps.publisher.publishSnapshot(snapshot);
     this.evaluateBudgetNotifications(snapshot, 'snapshot');
+  }
+
+  private async listTaskAttributions(
+    withDegradedFlag: true
+  ): Promise<{ tasks: TokenUsageTaskAttributionDto[]; degraded: boolean }>;
+  private async listTaskAttributions(
+    withDegradedFlag: false
+  ): Promise<TokenUsageTaskAttributionDto[]>;
+  private async listTaskAttributions(withDegradedFlag: boolean): Promise<
+    | TokenUsageTaskAttributionDto[]
+    | {
+        tasks: TokenUsageTaskAttributionDto[];
+        degraded: boolean;
+      }
+  > {
+    if (!this.deps.taskAttributionSource) {
+      return withDegradedFlag ? { tasks: [], degraded: false } : [];
+    }
+    try {
+      const tasks = await this.deps.taskAttributionSource.listTaskAttributions();
+      return withDegradedFlag ? { tasks, degraded: false } : tasks;
+    } catch (error) {
+      this.deps.logger?.warn('Failed to list token usage task attribution refs', error);
+      return withDegradedFlag ? { tasks: [], degraded: true } : [];
+    }
   }
 
   private evaluateBudgetNotifications(

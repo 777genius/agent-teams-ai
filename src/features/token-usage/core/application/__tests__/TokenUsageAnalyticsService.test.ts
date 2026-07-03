@@ -34,12 +34,46 @@ describe('TokenUsageAnalyticsService', () => {
       clock: { now: () => new Date(NOW) },
       publisher: { publishSnapshot: (snapshot) => published.push(snapshot) },
       budgetNotifications: evaluator,
+      taskAttributionSource: {
+        listTaskAttributions: async () => [
+          {
+            id: '1',
+            displayId: 'AT-1',
+            teamName: 'alpha',
+            owner: 'builder',
+            subject: 'Alpha task',
+            status: 'in_progress',
+            workIntervals: [
+              {
+                startedAt: '2026-06-30T00:00:00.000Z',
+                completedAt: '2026-06-30T00:05:00.000Z',
+              },
+            ],
+          },
+          {
+            id: '2',
+            displayId: 'BT-2',
+            teamName: 'beta',
+            owner: 'builder',
+            subject: 'Beta task',
+            status: 'in_progress',
+            workIntervals: [
+              {
+                startedAt: '2026-06-30T00:00:00.000Z',
+                completedAt: '2026-06-30T00:05:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
     });
 
     const filtered = await service.refreshSnapshot({ teamNames: ['alpha'] });
 
     expect(filtered.summary.totalTokens).toBe(100);
+    expect(filtered.byTask.map((item) => item.id)).toEqual(['task:alpha:1']);
     expect(published[0]?.summary.totalTokens).toBe(300);
+    expect(published[0]?.byTask.map((item) => item.id)).toEqual(['task:beta:2', 'task:alpha:1']);
     expect(evaluator.snapshots[0]?.summary.totalTokens).toBe(300);
   });
 });

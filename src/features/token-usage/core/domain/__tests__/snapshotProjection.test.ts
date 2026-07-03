@@ -256,6 +256,95 @@ describe('buildTokenUsageSnapshot', () => {
     expect(snapshot.byModel.map((item) => item.id)).toEqual(['gpt-5.4']);
   });
 
+  it('attributes events to the owner-matched task work interval', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run()],
+      events: [
+        event({
+          id: 'builder-event',
+          occurredAt: '2026-06-30T00:03:00.000Z',
+          tokens: {
+            inputTokens: 120,
+            outputTokens: 80,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            reasoningTokens: 0,
+            audioTokens: 0,
+            imageTokens: 0,
+            totalTokens: 200,
+          },
+          cost: {
+            estimatedUsd: 0.24,
+            billableUsd: 0,
+            apiEquivalentUsd: 0.24,
+            source: 'pricing_table',
+            billingMode: 'subscription',
+          },
+        }),
+        event({
+          id: 'reviewer-event',
+          agentId: 'alpha:reviewer',
+          agentName: 'reviewer',
+          occurredAt: '2026-06-30T00:04:00.000Z',
+        }),
+        event({
+          id: 'outside-task-interval',
+          occurredAt: '2026-06-30T00:20:00.000Z',
+        }),
+      ],
+      tasks: [
+        {
+          id: '1',
+          displayId: 'AT-1',
+          teamName: 'alpha',
+          owner: 'reviewer',
+          subject: 'Review task',
+          status: 'in_progress',
+          workIntervals: [
+            {
+              startedAt: '2026-06-30T00:00:00.000Z',
+              completedAt: '2026-06-30T00:10:00.000Z',
+            },
+          ],
+        },
+        {
+          id: '2',
+          displayId: 'AT-2',
+          teamName: 'alpha',
+          owner: 'builder',
+          subject: 'Build task',
+          status: 'in_progress',
+          workIntervals: [
+            {
+              startedAt: '2026-06-30T00:02:00.000Z',
+              completedAt: '2026-06-30T00:08:00.000Z',
+            },
+          ],
+        },
+      ],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.byTask).toEqual([
+      expect.objectContaining({
+        id: 'task:alpha:2',
+        taskId: '2',
+        displayId: 'AT-2',
+        label: 'AT-2 Build task',
+        teamName: 'alpha',
+        agentName: 'builder',
+        summary: expect.objectContaining({ requestCount: 1, totalTokens: 200 }),
+      }),
+      expect.objectContaining({
+        id: 'task:alpha:1',
+        taskId: '1',
+        label: 'AT-1 Review task',
+        agentName: 'reviewer',
+        summary: expect.objectContaining({ requestCount: 1, totalTokens: 100 }),
+      }),
+    ]);
+  });
+
   it('sorts model breakdowns by token usage before cost', () => {
     const snapshot = buildTokenUsageSnapshot({
       runs: [

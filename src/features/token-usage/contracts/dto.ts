@@ -157,6 +157,29 @@ export interface TokenUsageBreakdownItemDto {
   lastActivityAt?: string;
 }
 
+export interface TokenUsageTaskWorkIntervalDto {
+  startedAt: string;
+  completedAt?: string;
+}
+
+export interface TokenUsageTaskAttributionDto {
+  id: string;
+  displayId?: string;
+  teamName: string;
+  owner?: string;
+  subject: string;
+  status?: string;
+  workIntervals: TokenUsageTaskWorkIntervalDto[];
+}
+
+export interface TokenUsageTaskBreakdownItemDto extends TokenUsageBreakdownItemDto {
+  taskId: string;
+  displayId?: string;
+  subject: string;
+  owner?: string;
+  status?: string;
+}
+
 export interface TokenUsageRecentRunDto {
   appRunId: string;
   teamName?: string;
@@ -232,6 +255,7 @@ export interface TokenUsageAnalyticsSnapshotDto {
   byProject: TokenUsageBreakdownItemDto[];
   byRuntime: TokenUsageBreakdownItemDto[];
   byModel: TokenUsageBreakdownItemDto[];
+  byTask: TokenUsageTaskBreakdownItemDto[];
   commandRuns: TokenUsageCommandRunDto[];
   sessionRuns: TokenUsageSessionRunDto[];
   tokenTrend: TokenUsageTimeSeriesPointDto[];

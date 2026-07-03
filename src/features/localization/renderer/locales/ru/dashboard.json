@@ -199,7 +199,8 @@
     "partialData": "Частичные данные",
     "actions": {
       "refresh": "Обновить",
-      "openTeam": "Открыть {{team}}"
+      "openTeam": "Открыть {{team}}",
+      "openTask": "Открыть задачу {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Использование моделей по сегментам"
@@ -297,7 +298,9 @@
       "tokensCost": "{{tokens}} токенов / {{cost}}",
       "total": "Всего",
       "unassigned": "Без команды",
-      "unknownAgent": "Неизвестный агент"
+      "unknownAgent": "Неизвестный агент",
+      "eventCount": "{{count}} событий",
+      "streakCount": "{{count}} дн. подряд"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -323,6 +326,7 @@
       "burnRate": "Burn rate",
       "commandPeriods": "Периоды команд",
       "commandSpend": "Расход команд",
+      "taskSpend": "Расход задач",
       "commands": "Команды",
       "expensiveRuns": "Дорогие запуски",
       "modelUsage": "Использование моделей",
@@ -330,7 +334,8 @@
       "recentRuns": "Последние запуски",
       "runtimeMix": "Runtime mix",
       "sessions": "Сессии",
-      "sources": "Источники",
+      "sources": "События источников",
+      "tasks": "Задачи",
       "teams": "Команды",
       "usageTrend": "Тренд использования"
     },

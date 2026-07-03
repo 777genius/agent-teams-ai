@@ -1113,6 +1113,7 @@ export default interface Resources {
     tokenUsage: {
       actions: {
         openTeam: 'Open {{team}}';
+        openTask: 'Open task {{task}}';
         refresh: 'Refresh';
       };
       aria: {
@@ -1207,6 +1208,8 @@ export default interface Resources {
         runCount: '{{count}} runs';
         share: 'Share';
         sourceCount: '{{count}} sources';
+        eventCount: '{{count}} events';
+        streakCount: '{{count}} day streak';
         tokens: 'tokens';
         tokensCost: '{{tokens}} tokens / {{cost}}';
         total: 'Total';
@@ -1237,6 +1240,7 @@ export default interface Resources {
         burnRate: 'Burn rate';
         commandPeriods: 'Command periods';
         commandSpend: 'Command spend';
+        taskSpend: 'Task spend';
         commands: 'Commands';
         expensiveRuns: 'Expensive runs';
         modelUsage: 'Model usage';
@@ -1244,7 +1248,8 @@ export default interface Resources {
         recentRuns: 'Recent runs';
         runtimeMix: 'Runtime mix';
         sessions: 'Sessions';
-        sources: 'Sources';
+        sources: 'Source events';
+        tasks: 'Tasks';
         teams: 'Teams';
         usageTrend: 'Usage trend';
       };

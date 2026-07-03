@@ -199,7 +199,8 @@
     "partialData": "Часткові дані",
     "actions": {
       "refresh": "Оновити",
-      "openTeam": "Відкрити {{team}}"
+      "openTeam": "Відкрити {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Використання моделей за сегментами"
@@ -297,7 +298,9 @@
       "tokensCost": "{{tokens}} токенів / {{cost}}",
       "total": "Усього",
       "unassigned": "Без команди",
-      "unknownAgent": "Невідомий агент"
+      "unknownAgent": "Невідомий агент",
+      "eventCount": "{{count}} подій",
+      "streakCount": "{{count}} дн. поспіль"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -323,6 +326,7 @@
       "burnRate": "Burn rate",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -330,7 +334,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Події джерел",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend"
     },

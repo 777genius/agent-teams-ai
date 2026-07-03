@@ -199,7 +199,8 @@
     "partialData": "일부 데이터",
     "actions": {
       "refresh": "새로고침",
-      "openTeam": "{{team}} 열기"
+      "openTeam": "{{team}} 열기",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "세그먼트별 모델 사용량"
@@ -264,7 +265,9 @@
       "tokensCost": "{{tokens}} 토큰 / {{cost}}",
       "total": "합계",
       "unassigned": "미할당",
-      "unknownAgent": "알 수 없는 에이전트"
+      "unknownAgent": "알 수 없는 에이전트",
+      "eventCount": "{{count}} 이벤트",
+      "streakCount": "{{count}}일 연속"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -287,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -294,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "소스 이벤트",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",
