@@ -204,15 +204,13 @@ import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   assertOpenCodeNotLaunchedThroughLegacyProvisioning,
   buildLargeDeterministicBootstrapWarning,
-  getMixedLaunchFallbackRecoveryError,
   type TeamLaunchCompatibilityReport,
 } from './provisioning/TeamProvisioningLaunchCompatibility';
+import { prepareDeterministicLaunchSetup } from './provisioning/TeamProvisioningLaunchDeterministicSetupFlow';
 import { runDeterministicLaunchSpawnFlow } from './provisioning/TeamProvisioningLaunchDeterministicSpawnFlow';
 import { buildLaunchDiagnosticsFromRun } from './provisioning/TeamProvisioningLaunchDiagnostics';
 import {
-  probeLaunchCompatibility as probeLaunchCompatibilityHelper,
   resolveLaunchExpectedMembers as resolveLaunchExpectedMembersHelper,
-  resolveLaunchExpectedMembersFromCompatibility,
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from './provisioning/TeamProvisioningLaunchExpectedMembers';
 import {
@@ -251,11 +249,8 @@ import {
   TeamProvisioningLaunchStateStoreBoundary,
 } from './provisioning/TeamProvisioningLaunchStateStoreBoundary';
 import {
-  buildLaunchSyntheticRequest,
   createDeterministicLaunchProvisioningRun,
-  parseLaunchConfigProjectPath,
   prepareDeterministicLaunchRunState,
-  resolveExistingLaunchRunReuse,
 } from './provisioning/TeamProvisioningLaunchTeamFlow';
 import {
   getLeadActivityStateForTeam,
@@ -5485,254 +5480,76 @@ export class TeamProvisioningService {
     this.provisioningRunByTeam.set(request.teamName, pendingKey);
 
     try {
-      // Verify config.json exists — team must already be provisioned
-      const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
-      const configRaw = await tryReadRegularFileUtf8(configPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_CONFIG_MAX_BYTES,
-      });
-      if (!configRaw) {
-        throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
-      }
-      const configProjectPath = parseLaunchConfigProjectPath(configRaw);
-
-      const existingAliveRunId = this.runTracking.getAliveRunId(request.teamName);
-      const existingRun = existingAliveRunId ? this.runs.get(existingAliveRunId) : null;
-      const existingRunReuse = resolveExistingLaunchRunReuse({
-        teamName: request.teamName,
-        cwd: request.cwd,
-        existingAliveRunId,
-        existingRun,
-        existingRunCwd: this.getRunTrackedCwd(existingRun),
-        configProjectPath,
-      });
-      if (existingRunReuse.kind === 'blocked') {
-        this.provisioningRunByTeam.delete(request.teamName);
-        throw new Error(existingRunReuse.message);
-      }
-      if (existingRunReuse.kind === 'reuse') {
-        this.provisioningRunByTeam.delete(request.teamName);
-        return { runId: existingRunReuse.runId };
-      }
-
-      const launchCompatibility = await probeLaunchCompatibilityHelper(
-        {
-          teamName: request.teamName,
-          configRaw,
-          leadProviderId: request.providerId,
+      const setup = await prepareDeterministicLaunchSetup(request, {
+        readTeamConfigRaw: (teamName) => {
+          const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+          return tryReadRegularFileUtf8(configPath, {
+            timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+            maxBytes: TEAM_CONFIG_MAX_BYTES,
+          });
         },
-        this.createLaunchExpectedMembersPorts()
-      );
-      if (launchCompatibility.level === 'unsafe') {
-        this.provisioningRunByTeam.delete(request.teamName);
-        throw new Error(launchCompatibility.blockers[0] ?? getMixedLaunchFallbackRecoveryError());
-      }
-      if (launchCompatibility.repairAction === 'materialize-members-meta') {
-        await this.materializeLaunchCompatibilityRepair(request, launchCompatibility);
+        getExistingAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+        getExistingRun: (runId) => this.runs.get(runId),
+        getRunTrackedCwd: (existingRun) => this.getRunTrackedCwd(existingRun as ProvisioningRun),
+        deleteProvisioningRunByTeam: (teamName) => {
+          this.provisioningRunByTeam.delete(teamName);
+        },
+        launchExpectedMembersPorts: this.createLaunchExpectedMembersPorts(),
+        materializeLaunchCompatibilityRepair: (launchRequest, report) =>
+          this.materializeLaunchCompatibilityRepair(launchRequest, report),
+        normalizeTeamConfigForLaunch: (teamName, configRaw) =>
+          this.normalizeTeamConfigForLaunch(teamName, configRaw),
+        assertConfigLeadOnlyForLaunch: (teamName) => this.assertConfigLeadOnlyForLaunch(teamName),
+        updateConfigProjectPath: (teamName, cwd) => this.updateConfigProjectPath(teamName, cwd),
+        restorePrelaunchConfig: (teamName) => this.restorePrelaunchConfig(teamName),
+        resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
+        buildProvisioningEnv: (providerId, providerBackendId, options) =>
+          this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
+        workspaceTrustCoordinator: this.workspaceTrustCoordinator,
+        workspaceTrustWorkspaceCollectionPorts: this.workspaceTrustWorkspaceCollectionPorts,
+        materializeEffectiveTeamMemberSpecs: (params) =>
+          this.materializeEffectiveTeamMemberSpecs(params),
+        resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
+          this.resolveOpenCodeMemberWorkspacesForRuntime(params),
+        runtimeTurnSettledEnvironmentProvider: this.runtimeTurnSettledEnvironmentProvider,
+        planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
+          this.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
+        createMixedSecondaryLaneStates: (lanePlan) => this.createMixedSecondaryLaneStates(lanePlan),
+        buildCrossProviderMemberArgs: (primaryProviderId, memberSpecs, options) =>
+          this.providerRuntime.buildCrossProviderMemberArgs(
+            primaryProviderId,
+            memberSpecs,
+            options
+          ),
+        resolveAndValidateLaunchIdentity: (params) => this.resolveAndValidateLaunchIdentity(params),
+        randomUUID,
+        nowIso,
+        logger,
+      });
+      if (setup.kind === 'reuse') {
+        return { runId: setup.runId };
       }
       const {
-        members: expectedMemberSpecs,
-        source,
-        warning,
-      } = resolveLaunchExpectedMembersFromCompatibility(launchCompatibility);
-      assertOpenCodeNotLaunchedThroughLegacyProvisioning({
-        providerId: request.providerId,
-        members: expectedMemberSpecs,
-      });
-      // Deterministic launch always sends --team-bootstrap-spec. The orchestrator
-      // rejects combining that startup mode with --resume, so relaunch starts a
-      // fresh lead runtime session and restores operational context from durable
-      // team state instead of the previous transcript.
-      if (request.clearContext) {
-        logger.info(
-          `[${request.teamName}] clearContext requested - starting fresh deterministic bootstrap session`
-        );
-      } else {
-        logger.info(
-          `[${request.teamName}] Starting fresh deterministic bootstrap session because ` +
-            `--team-bootstrap-spec cannot be combined with --resume`
-        );
-      }
-
-      // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
-      // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
-      try {
-        await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
-        await this.assertConfigLeadOnlyForLaunch(request.teamName);
-
-        // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
-        // even if provisioning is interrupted or the user stops the team early.
-        // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
-        await this.updateConfigProjectPath(request.teamName, request.cwd);
-      } catch (error) {
-        // Restore pre-launch backup so config.json is not left in normalized (lead-only) state.
-        await this.restorePrelaunchConfig(request.teamName);
-        throw error;
-      }
-
-      let claudePath: string | null;
-      try {
-        await ensureCwdExists(request.cwd);
-
-        claudePath = await ClaudeBinaryResolver.resolve();
-        if (!claudePath) {
-          throw buildMissingCliError();
-        }
-      } catch (error) {
-        // Restore pre-launch backup so config.json is not left in normalized (lead-only) state
-        await this.restorePrelaunchConfig(request.teamName);
-        throw error;
-      }
-
-      const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-      const runId = randomUUID();
-      const startedAt = nowIso();
-      const teamRuntimeAuth: TeamRuntimeAuthContext = {
-        teamName: request.teamName,
-        authMaterialId: runId,
-        allowAnthropicApiKeyHelper: true,
-      };
-
-      const provisioningEnv = await this.providerRuntime.buildProvisioningEnv(
-        request.providerId,
-        request.providerBackendId,
-        { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
-      );
-      const { env: shellEnv, providerArgs = [], warning: envWarning } = provisioningEnv;
-      if (envWarning) {
-        throw new Error(envWarning);
-      }
-      const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
-      const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
-        ? collectWorkspaceTrustProvidersHelper({
-            leadProviderId: request.providerId,
-            members: expectedMemberSpecs,
-          })
-        : [];
-      const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await collectWorkspaceTrustWorkspacesHelper({
-            cwd: request.cwd,
-            members: [],
-            ports: this.workspaceTrustWorkspaceCollectionPorts,
-          })
-        : [];
-      const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
-        ? await planWorkspaceTrustArgsOnlySafelyHelper({
-            coordinator: this.workspaceTrustCoordinator,
-            request: {
-              providers: workspaceTrustProviders,
-              workspaces: workspaceTrustEarlyWorkspaces,
-              targetSurfaces: ['default_model_probe'],
-              featureFlags: workspaceTrustFeatureFlags,
-            },
-          })
-        : { launchArgPatches: [] };
-      const workspaceTrustProviderArgsResolver =
-        createDefaultModelWorkspaceTrustProviderArgsResolverHelper(workspaceTrustEarlyPlan);
-
-      const materializedMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
+        teamsBasePathsToProbe,
+        runId,
+        startedAt,
         claudePath,
-        cwd: request.cwd,
-        members: expectedMemberSpecs,
-        defaults: {
-          providerId: request.providerId,
-          model: request.model,
-          effort: request.effort,
-        },
-        primaryProviderId: request.providerId,
-        primaryEnv: provisioningEnv,
-        teamRuntimeAuth,
-        limitContext: request.limitContext,
-        providerArgsResolver: workspaceTrustProviderArgsResolver,
-      });
-      const allEffectiveMemberSpecs = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-        teamName: request.teamName,
-        baseCwd: request.cwd,
-        leadProviderId: request.providerId,
-        members: materializedMemberSpecs,
-      });
-      Object.assign(
         shellEnv,
-        await buildRuntimeTurnSettledEnvironmentForMembersHelper(
-          {
-            primaryProviderId: request.providerId,
-            memberSpecs: allEffectiveMemberSpecs,
-          },
-          {
-            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
-            logger,
-          }
-        )
-      );
-      const lanePlan = this.planRuntimeLanesOrThrow(
-        request.providerId,
-        allEffectiveMemberSpecs,
-        request.cwd
-      );
-      const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
-      const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
-        primaryMemberNames.has(member.name)
-      );
-      assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
-      const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
-      const initialLaunchWarnings = [warning, largeTeamWarning].filter((value): value is string =>
-        Boolean(value)
-      );
-      const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
-      const resolvedProviderId = resolveTeamProviderId(request.providerId);
-      const crossProviderMemberArgs = await this.providerRuntime.buildCrossProviderMemberArgs(
+        provisioningEnv,
+        workspaceTrustFeatureFlags,
+        workspaceTrustFullPlan,
         resolvedProviderId,
+        providerArgsForLaunch,
+        crossProviderMemberArgsForLaunch,
+        expectedMembers,
         effectiveMemberSpecs,
-        { teamRuntimeAuth }
-      );
-      const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await collectWorkspaceTrustWorkspacesHelper({
-            cwd: request.cwd,
-            members: allEffectiveMemberSpecs,
-            ports: this.workspaceTrustWorkspaceCollectionPorts,
-          })
-        : [];
-      const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
-        ? await planWorkspaceTrustFullSafelyHelper({
-            coordinator: this.workspaceTrustCoordinator,
-            request: {
-              providers: collectWorkspaceTrustProvidersHelper({
-                leadProviderId: request.providerId,
-                members: allEffectiveMemberSpecs,
-              }),
-              workspaces: workspaceTrustFullWorkspaces,
-              featureFlags: workspaceTrustFeatureFlags,
-            },
-          })
-        : null;
-      const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
-        buildWorkspaceTrustLaunchArgsHelper({
-          providerArgs,
-          resolvedProviderId,
-          crossProviderMemberArgs,
-          workspaceTrustPatches,
-        });
-      Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
-      if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
-        for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
-          delete shellEnv[key];
-        }
-      }
-      const launchIdentity = await this.resolveAndValidateLaunchIdentity({
-        claudePath,
-        cwd: request.cwd,
-        env: shellEnv,
-        request,
-        effectiveMembers: effectiveMemberSpecs,
-        providerArgsByProvider,
-      });
-
-      const syntheticRequest = buildLaunchSyntheticRequest({
-        request,
-        members: allEffectiveMemberSpecs,
-        configRaw,
-      });
+        allEffectiveMemberSpecs,
+        launchIdentity,
+        syntheticRequest,
+        mixedSecondaryLanes,
+        initialLaunchWarnings,
+        initialLaunchWarningSource,
+      } = setup;
 
       const run: ProvisioningRun = createDeterministicLaunchProvisioningRun({
         runId,
@@ -5745,11 +5562,11 @@ export class TeamProvisioningService {
         effectiveMemberSpecs,
         allEffectiveMemberSpecs,
         launchIdentity,
-        mixedSecondaryLanes: this.createMixedSecondaryLaneStates(lanePlan),
+        mixedSecondaryLanes,
         workspaceTrustFullPlan,
         anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
         initialLaunchWarnings,
-        initialLaunchWarningSource: source,
+        initialLaunchWarningSource,
         createInitialMemberSpawnStatusEntry,
       });
 
