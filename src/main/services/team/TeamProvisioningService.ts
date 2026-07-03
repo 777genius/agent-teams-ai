@@ -98,16 +98,15 @@ import {
 } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
 import { ensureCwdExists, sleep } from './provisioning/TeamProvisioningAsyncUtils';
-import { respawnCliAfterAuthFailure } from './provisioning/TeamProvisioningAuthRetryRecovery';
+import {
+  createTeamProvisioningAuthRetryRecoveryBoundary,
+  type TeamProvisioningAuthRetryRecoveryBoundary,
+} from './provisioning/TeamProvisioningAuthRetryRecoveryBoundaryFactory';
 import {
   createTeamProvisioningBootstrapFailureMarker,
   type TeamProvisioningBootstrapFailureMarker,
 } from './provisioning/TeamProvisioningBootstrapFailureMarking';
-import {
-  getProvisioningRunTimeoutMs,
-  type RuntimeBootstrapMemberMcpLaunchConfig,
-  writeDeterministicBootstrapUserPromptFile,
-} from './provisioning/TeamProvisioningBootstrapSpec';
+import { type RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 import {
   createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
   createTeamProvisioningOpenCodeBootstrapStallStatusPorts,
@@ -448,7 +447,6 @@ import {
   getCanonicalSendMessageFieldRule,
   getCanonicalSendMessageToolRule,
 } from './provisioning/TeamProvisioningPromptBuilders';
-import { PREFLIGHT_AUTH_RETRY_DELAY_MS } from './provisioning/TeamProvisioningProviderDiagnostics';
 import {
   createTeamProvisioningProviderRuntimeFacade,
   type TeamProvisioningProviderRuntimeFacade,
@@ -602,7 +600,6 @@ import {
   choosePreferredLaunchSnapshot,
   clearBootstrapState,
   readBootstrapLaunchSnapshot,
-  readBootstrapRealTaskSubmissionState,
   readBootstrapRuntimeState,
 } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -1915,6 +1912,7 @@ export class TeamProvisioningService {
   private readonly toolApprovalPortsBoundary: TeamProvisioningToolApprovalPortsBoundary<ProvisioningRun>;
   private readonly idlePromptInjectionBoundary: TeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>;
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
+  private readonly authRetryRecoveryBoundary: TeamProvisioningAuthRetryRecoveryBoundary<ProvisioningRun>;
   private readonly deterministicCreateSpawnFlowBoundary: TeamProvisioningCreateDeterministicSpawnFlowBoundary<ProvisioningRun>;
   private readonly deterministicLaunchFlowBoundary: TeamProvisioningLaunchDeterministicFlowBoundary<MixedSecondaryRuntimeLaneState>;
   private readonly prepareCoordinator: TeamProvisioningPrepareCoordinator;
@@ -2317,6 +2315,26 @@ export class TeamProvisioningService {
         logger,
       }),
     });
+    this.authRetryRecoveryBoundary =
+      createTeamProvisioningAuthRetryRecoveryBoundary<ProvisioningRun>({
+        service: {
+          getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+          stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
+          stopStallWatchdog: (run) => this.stopStallWatchdog(run),
+          cleanupRun: (run) => this.cleanupRun(run),
+          attachStdoutHandler: (run) => this.attachStdoutHandler(run),
+          attachStderrHandler: (run) => this.attachStderrHandler(run),
+          startStallWatchdog: (run) => this.startStallWatchdog(run),
+          startFilesystemMonitor: (run, request) => this.startFilesystemMonitor(run, request),
+          tryCompleteAfterTimeout: (run) => this.tryCompleteAfterTimeout(run),
+          handleProcessExit: (run, code) => this.handleProcessExit(run, code),
+        },
+        logger,
+        mcpConfigBuilder: this.mcpConfigBuilder,
+        providerRuntime: this.providerRuntime,
+        killTeamProcess,
+        updateProgress,
+      });
     const deterministicLaunchFlowHost: TeamProvisioningLaunchDeterministicFlowHost<
       ProvisioningRun,
       MixedSecondaryRuntimeLaneState
@@ -5136,61 +5154,7 @@ export class TeamProvisioningService {
    * Reattaches all stream listeners and resends the prompt.
    */
   private async respawnAfterAuthFailure(run: ProvisioningRun): Promise<void> {
-    await respawnCliAfterAuthFailure<ProvisioningRun>(
-      run,
-      {
-        logger,
-        clearTimeout: (handle) => clearTimeout(handle),
-        setTimeout: (callback, ms) => setTimeout(callback, ms),
-        nowMs: () => Date.now(),
-        sleep,
-        pathExists: async (filePath) => {
-          try {
-            await fs.promises.access(filePath, fs.constants.F_OK);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        mcpConfigBuilder: this.mcpConfigBuilder,
-        readBootstrapRealTaskSubmissionState,
-        writeDeterministicBootstrapUserPromptFile,
-        validateAgentTeamsMcpRuntime: (claudePath, cwd, env, mcpConfigPath, options) =>
-          this.providerRuntime.validateAgentTeamsMcpRuntime(
-            claudePath,
-            cwd,
-            env,
-            mcpConfigPath,
-            options
-          ),
-        spawnCli,
-        getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
-        isStopAllTeamsGenerationChanged: (stopAllGenerationAtStart) =>
-          this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-        stopFilesystemMonitor: (provisioningRun) =>
-          this.stopFilesystemMonitor(provisioningRun as ProvisioningRun),
-        stopStallWatchdog: (provisioningRun) =>
-          this.stopStallWatchdog(provisioningRun as ProvisioningRun),
-        killTeamProcess,
-        updateProgress,
-        extractCliLogsFromRun,
-        cleanupRun: (provisioningRun) => this.cleanupRun(provisioningRun as ProvisioningRun),
-        attachStdoutHandler: (provisioningRun) =>
-          this.attachStdoutHandler(provisioningRun as ProvisioningRun),
-        attachStderrHandler: (provisioningRun) =>
-          this.attachStderrHandler(provisioningRun as ProvisioningRun),
-        startStallWatchdog: (provisioningRun) =>
-          this.startStallWatchdog(provisioningRun as ProvisioningRun),
-        startFilesystemMonitor: (provisioningRun, request) =>
-          this.startFilesystemMonitor(provisioningRun as ProvisioningRun, request),
-        tryCompleteAfterTimeout: (provisioningRun) =>
-          this.tryCompleteAfterTimeout(provisioningRun as ProvisioningRun),
-        getProvisioningRunTimeoutMs,
-        handleProcessExit: (provisioningRun, code) =>
-          this.handleProcessExit(provisioningRun as ProvisioningRun, code),
-      },
-      { preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS }
-    );
+    await this.authRetryRecoveryBoundary.respawnAfterAuthFailure(run);
   }
 
   /** Attaches the stdout stream-json parser to the current child process. */
