@@ -379,8 +379,6 @@ import {
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import {
   buildEffectiveTeamMemberSpec,
-  buildEffectiveTeamMemberSpecs,
-  getExplicitLaunchModelSelection,
   normalizeTeamMemberProviderId,
   teamRequestIncludesCodexMember,
 } from './provisioning/TeamProvisioningMemberSpecs';
@@ -434,6 +432,7 @@ import {
   recordOpenCodeRuntimeHeartbeat as recordOpenCodeRuntimeHeartbeatHelper,
   recordOpenCodeRuntimeTaskEvent as recordOpenCodeRuntimeTaskEventHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
+import { materializeOpenCodeRuntimeAdapterDefaults as materializeOpenCodeRuntimeAdapterDefaultsHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeDefaults';
 import {
   createOpenCodePromptDeliveryLedger as createOpenCodePromptDeliveryLedgerHelper,
   createOpenCodeRuntimeDeliveryPorts as createOpenCodeRuntimeDeliveryPortsHelper,
@@ -5266,100 +5265,20 @@ export class TeamProvisioningService {
     request: TRequest;
     members: TeamCreateRequest['members'];
   }> {
-    const effectiveMembers = buildEffectiveTeamMemberSpecs(params.members, {
-      providerId: params.request.providerId,
-      model: params.request.model,
-      effort: params.request.effort,
+    return materializeOpenCodeRuntimeAdapterDefaultsHelper(params, {
+      resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
+      buildProvisioningEnv: (providerId, providerBackendId) =>
+        this.buildProvisioningEnv(providerId, providerBackendId),
+      resolveProviderDefaultModel: (claudePath, cwd, providerId, env, providerArgs, limitContext) =>
+        this.resolveProviderDefaultModel(
+          claudePath,
+          cwd,
+          providerId,
+          env,
+          providerArgs,
+          limitContext
+        ),
     });
-    const explicitRootModel = getExplicitLaunchModelSelection(params.request.model);
-    const memberModels = [
-      ...new Set(
-        effectiveMembers
-          .map((member) => member.model?.trim())
-          .filter((model): model is string => Boolean(model))
-      ),
-    ];
-    if (!explicitRootModel && memberModels.length > 1) {
-      throw new Error(
-        'OpenCode runtime adapter launch supports one selected model per lane. Select one team model or align OpenCode teammate models.'
-      );
-    }
-    const inheritedRootModel = explicitRootModel ? undefined : memberModels[0];
-    const rootModel = explicitRootModel ?? inheritedRootModel;
-    const needsMemberModel = effectiveMembers.some((member) => {
-      const providerId = normalizeTeamMemberProviderId(member.providerId) ?? 'opencode';
-      return providerId === 'opencode' && !member.model?.trim();
-    });
-    if (rootModel && !needsMemberModel) {
-      return {
-        request: {
-          ...params.request,
-          model: rootModel,
-        } as TRequest,
-        members: effectiveMembers,
-      };
-    }
-    if (rootModel) {
-      return {
-        request: {
-          ...params.request,
-          model: rootModel,
-        } as TRequest,
-        members: effectiveMembers.map((member) => {
-          const providerId = normalizeTeamMemberProviderId(member.providerId) ?? 'opencode';
-          if (providerId !== 'opencode' || member.model?.trim()) {
-            return member;
-          }
-          return {
-            ...member,
-            model: rootModel,
-          };
-        }),
-      };
-    }
-
-    const claudePath = await ClaudeBinaryResolver.resolve();
-    if (!claudePath) {
-      throw buildMissingCliError();
-    }
-    const provisioningEnv = await this.buildProvisioningEnv(
-      'opencode',
-      params.request.providerBackendId
-    );
-    if (provisioningEnv.warning) {
-      throw new Error(provisioningEnv.warning);
-    }
-    const resolvedDefaultModel = await this.resolveProviderDefaultModel(
-      claudePath,
-      params.request.cwd,
-      'opencode',
-      provisioningEnv.env,
-      provisioningEnv.providerArgs ?? [],
-      params.request.limitContext === true
-    );
-    const normalizedDefaultModel = resolvedDefaultModel?.trim();
-    if (!normalizedDefaultModel) {
-      throw new Error(
-        'Could not resolve the runtime default model for OpenCode teammates. Select an explicit model and retry.'
-      );
-    }
-
-    return {
-      request: {
-        ...params.request,
-        model: normalizedDefaultModel,
-      } as TRequest,
-      members: effectiveMembers.map((member) => {
-        const providerId = normalizeTeamMemberProviderId(member.providerId) ?? 'opencode';
-        if (providerId !== 'opencode' || member.model?.trim()) {
-          return member;
-        }
-        return {
-          ...member,
-          model: normalizedDefaultModel,
-        };
-      }),
-    };
   }
 
   private buildOpenCodeRuntimeAdapterLaunchMembers(
