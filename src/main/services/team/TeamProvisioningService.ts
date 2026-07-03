@@ -36,10 +36,7 @@ import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { type AttachmentPayload, DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
-import {
-  isMeaningfulBootstrapCheckInMessage,
-  type ParsedPermissionRequest,
-} from '@shared/utils/inboxNoise';
+import { type ParsedPermissionRequest } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -121,28 +118,19 @@ import {
   writeDeterministicBootstrapUserPromptFile,
 } from './provisioning/TeamProvisioningBootstrapSpec';
 import {
-  applyBootstrapTranscriptEvidenceOverlay as applyBootstrapTranscriptEvidenceOverlayHelper,
-  applyProcessBootstrapTransportOverlay as applyProcessBootstrapTransportOverlayHelper,
   BOOTSTRAP_FAILURE_TAIL_BYTES,
   BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS,
   BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
   type BootstrapTranscriptOutcome,
   type BootstrapTranscriptOutcomeCacheEntry,
   type BootstrapTranscriptOutcomeLookupCacheEntry,
-  cleanConfirmedBootstrapRuntimeDiagnostics as cleanConfirmedBootstrapRuntimeDiagnosticsHelper,
   findBootstrapRuntimeProofObservedAt as findBootstrapRuntimeProofObservedAtHelper,
   findBootstrapTranscriptOutcome as findBootstrapTranscriptOutcomeHelper,
   getParsedBootstrapTranscriptTail as getParsedBootstrapTranscriptTailHelper,
-  hasBootstrapTranscriptLaunchReconcileOutcome as hasBootstrapTranscriptLaunchReconcileOutcomeHelper,
-  type LeadInboxLaunchReconcileMessage,
-  needsBootstrapAcceptanceReconcile as needsBootstrapAcceptanceReconcileHelper,
-  needsConfirmedBootstrapDiagnosticReconcile as needsConfirmedBootstrapDiagnosticReconcileHelper,
   type ParsedBootstrapTranscriptTailCacheEntry,
   type ParsedBootstrapTranscriptTailLine,
   PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
   readBootstrapTranscriptOutcomesInProjectRoot as readBootstrapTranscriptOutcomesInProjectRootHelper,
-  readLeadInboxMessagesForLaunchReconcile as readLeadInboxMessagesForLaunchReconcileHelper,
-  readProcessBootstrapTransportSummary as readProcessBootstrapTransportSummaryHelper,
   readRecentBootstrapTranscriptOutcome as readRecentBootstrapTranscriptOutcomeHelper,
 } from './provisioning/TeamProvisioningBootstrapTranscript';
 import {
@@ -227,10 +215,6 @@ import {
   buildPendingBootstrapStatusMessage as buildPendingBootstrapStatusMessageHelper,
   hasPendingLaunchMembers as hasPendingLaunchMembersHelper,
 } from './provisioning/TeamProvisioningLaunchPendingMessage';
-import {
-  createDefaultLaunchReconcileConfigMembers,
-  parseLaunchReconcileConfigMembers,
-} from './provisioning/TeamProvisioningLaunchReconcileReporting';
 import {
   areAllExpectedLaunchMembersConfirmed as areAllExpectedLaunchMembersConfirmedHelper,
   areLaunchStateSnapshotsSemanticallyEqual,
@@ -360,8 +344,6 @@ import {
 } from './provisioning/TeamProvisioningMixedSecondaryLaunchQueue';
 import {
   buildMixedSecondaryLaunchSnapshotForRun as buildMixedSecondaryLaunchSnapshotForRunHelper,
-  hasMixedSecondaryLaunchReconcileHeartbeat as hasMixedSecondaryLaunchReconcileHeartbeatHelper,
-  selectLatestMixedSecondaryLaunchReconcileMessage as selectLatestMixedSecondaryLaunchReconcileMessageHelper,
   shouldRecoverStalePersistedMixedLaunchSnapshot as shouldRecoverStalePersistedMixedLaunchSnapshotHelper,
 } from './provisioning/TeamProvisioningMixedSecondaryLaunchReconciliation';
 import { handleNativeTeammateUserMessage as handleNativeTeammateUserMessageHelper } from './provisioning/TeamProvisioningNativeTeammateMessages';
@@ -450,7 +432,7 @@ import {
   normalizeApiRetryErrorMessage,
 } from './provisioning/TeamProvisioningOutputErrorPolicy';
 import { createTeamProvisioningOutputRecoveryHelper } from './provisioning/TeamProvisioningOutputRecovery';
-import { reconcilePersistedLaunchStateWithPorts } from './provisioning/TeamProvisioningPersistedLaunchReconciliation';
+import { reconcilePersistedLaunchStateWithTeamProvisioningPorts } from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
 import {
   listPersistedTeamNames as listPersistedTeamNamesHelper,
   type PersistedTeamConfigCacheEntry,
@@ -551,7 +533,6 @@ import {
   validateRuntimeLaunchSelection as validateRuntimeLaunchSelectionHelper,
   type ValidConfigProbeResult,
 } from './provisioning/TeamProvisioningRuntimeLaunchSelection';
-import { mergeRuntimeDiagnostics } from './provisioning/TeamProvisioningRuntimeMetadata';
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import {
   getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
@@ -661,7 +642,6 @@ import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 import { getConfiguredCliCommandLabel } from './cliFlavor';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
-import { type ProcessBootstrapTransportSummary } from './ProcessBootstrapTransportEvidence';
 import { boundLaunchDiagnostics, buildProgressLogsTail } from './progressPayload';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
@@ -6462,7 +6442,7 @@ export class TeamProvisioningService {
     teamName: string;
     snapshot: PersistedTeamLaunchSnapshot;
     previousSnapshot?: PersistedTeamLaunchSnapshot | null;
-    metaMembers?: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>;
+    metaMembers?: readonly TeamMember[];
   }): Promise<PersistedTeamLaunchSnapshot> {
     return applyOpenCodeSecondaryEvidenceOverlayHelper(
       params,
@@ -6950,42 +6930,6 @@ export class TeamProvisioningService {
     return hasPrimaryOnlyLaneAwareLaunchMetadata(snapshot);
   }
 
-  private hasLeadInboxLaunchReconcileHeartbeat(
-    snapshot: PersistedTeamLaunchSnapshot,
-    messages: readonly LeadInboxLaunchReconcileMessage[]
-  ): boolean {
-    const expectedMembers = this.getPersistedLaunchMemberNames(snapshot);
-    return hasMixedSecondaryLaunchReconcileHeartbeatHelper({
-      snapshot,
-      messages,
-      expectedMembers,
-      ports: {
-        resolveExpectedLaunchMemberName: (members, candidateName) =>
-          this.resolveExpectedLaunchMemberName(members, candidateName),
-        isMeaningfulBootstrapCheckInMessage,
-      },
-    });
-  }
-
-  private selectLatestLeadInboxLaunchReconcileMessage(
-    messages: readonly LeadInboxLaunchReconcileMessage[],
-    expectedMembers: readonly string[],
-    expected: string,
-    firstSpawnAcceptedAt?: string
-  ): LeadInboxLaunchReconcileMessage | null {
-    return selectLatestMixedSecondaryLaunchReconcileMessageHelper({
-      messages,
-      expectedMembers,
-      expected,
-      firstSpawnAcceptedAt,
-      ports: {
-        resolveExpectedLaunchMemberName: (members, candidateName) =>
-          this.resolveExpectedLaunchMemberName(members, candidateName),
-        isMeaningfulBootstrapCheckInMessage,
-      },
-    });
-  }
-
   private shouldRecoverStalePersistedMixedLaunchSnapshot(
     snapshot: PersistedTeamLaunchSnapshot
   ): boolean {
@@ -7287,33 +7231,6 @@ export class TeamProvisioningService {
     };
   }
 
-  private async readLeadInboxMessagesForLaunchReconcile(
-    teamName: string,
-    leadName: string
-  ): Promise<LeadInboxLaunchReconcileMessage[]> {
-    return readLeadInboxMessagesForLaunchReconcileHelper({
-      teamName,
-      leadName,
-      teamsBasePath: getTeamsBasePath(),
-      readRegularFileUtf8: tryReadRegularFileUtf8,
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_INBOX_MAX_BYTES,
-    });
-  }
-
-  private async hasBootstrapTranscriptLaunchReconcileOutcome(
-    snapshot: PersistedTeamLaunchSnapshot
-  ): Promise<boolean> {
-    return hasBootstrapTranscriptLaunchReconcileOutcomeHelper({
-      snapshot,
-      expectedMembers: this.getPersistedLaunchMemberNames(snapshot),
-      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
-        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
-      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
-    });
-  }
-
   private async findBootstrapRuntimeProofObservedAt(
     teamName: string,
     memberName: string,
@@ -7331,78 +7248,11 @@ export class TeamProvisioningService {
     });
   }
 
-  private async readProcessBootstrapTransportSummary(input: {
-    teamName: string;
-    memberName: string;
-    member: PersistedTeamLaunchMemberState;
-  }): Promise<ProcessBootstrapTransportSummary | null> {
-    return readProcessBootstrapTransportSummaryHelper({
-      ...input,
-      teamsBasePath: getTeamsBasePath(),
-      runtimeMembers: this.readPersistedRuntimeMembers(input.teamName),
-    });
-  }
-
-  private applyProcessBootstrapTransportOverlay(input: {
-    member: PersistedTeamLaunchMemberState;
-    summary: ProcessBootstrapTransportSummary | null;
-    launchPhase: PersistedTeamLaunchPhase;
-    finalTimeoutReached?: boolean;
-  }): PersistedTeamLaunchMemberState {
-    return applyProcessBootstrapTransportOverlayHelper({
-      ...input,
-      nowIso,
-      mergeRuntimeDiagnostics,
-    });
-  }
-
-  private async applyBootstrapTranscriptEvidenceOverlay(
-    snapshot: PersistedTeamLaunchSnapshot | null
-  ): Promise<PersistedTeamLaunchSnapshot | null> {
-    return applyBootstrapTranscriptEvidenceOverlayHelper({
-      snapshot,
-      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
-      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
-        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
-      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
-      nowIso,
-    });
-  }
-
-  private needsBootstrapAcceptanceReconcile(
-    snapshot: PersistedTeamLaunchSnapshot | null,
-    bootstrapSnapshot: PersistedTeamLaunchSnapshot | null
-  ): boolean {
-    return needsBootstrapAcceptanceReconcileHelper({
-      snapshot,
-      bootstrapSnapshot,
-      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
-    });
-  }
-
-  private needsConfirmedBootstrapDiagnosticReconcile(
-    snapshot: PersistedTeamLaunchSnapshot | null
-  ): boolean {
-    return needsConfirmedBootstrapDiagnosticReconcileHelper(snapshot);
-  }
-
-  private cleanConfirmedBootstrapRuntimeDiagnostics(
-    snapshot: PersistedTeamLaunchSnapshot | null
-  ): PersistedTeamLaunchSnapshot | null {
-    return cleanConfirmedBootstrapRuntimeDiagnosticsHelper({
-      snapshot,
-      expectedMembers: snapshot ? this.getPersistedLaunchMemberNames(snapshot) : [],
-      nowIso,
-    });
-  }
-
   private async reconcilePersistedLaunchState(teamName: string): Promise<{
     snapshot: ReturnType<typeof createPersistedLaunchSnapshot> | null;
     statuses: Record<string, MemberSpawnStatusEntry>;
   }> {
-    return reconcilePersistedLaunchStateWithPorts(teamName, {
-      readBootstrapLaunchSnapshot,
+    return reconcilePersistedLaunchStateWithTeamProvisioningPorts(teamName, {
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
       readMembersMeta: (teamName) => this.membersMetaStore.getMembers(teamName),
       recoverStaleMixedSecondaryLaunchSnapshot: (teamName, bootstrapSnapshot, persistedSnapshot) =>
@@ -7418,52 +7268,14 @@ export class TeamProvisioningService {
       writeLaunchStateSnapshot: (teamName, snapshot) =>
         this.writeLaunchStateSnapshot(teamName, snapshot),
       clearPersistedLaunchState: (teamName) => this.clearPersistedLaunchState(teamName),
-      applyBootstrapTranscriptEvidenceOverlay: (snapshot) =>
-        this.applyBootstrapTranscriptEvidenceOverlay(snapshot),
-      needsBootstrapAcceptanceReconcile: (snapshot, bootstrapSnapshot) =>
-        this.needsBootstrapAcceptanceReconcile(snapshot, bootstrapSnapshot),
-      needsConfirmedBootstrapDiagnosticReconcile: (snapshot) =>
-        this.needsConfirmedBootstrapDiagnosticReconcile(snapshot),
-      cleanConfirmedBootstrapRuntimeDiagnostics: (snapshot) =>
-        this.cleanConfirmedBootstrapRuntimeDiagnostics(snapshot),
-      hasBootstrapTranscriptLaunchReconcileOutcome: (snapshot) =>
-        this.hasBootstrapTranscriptLaunchReconcileOutcome(snapshot),
-      choosePreferredLaunchSnapshot,
-      createDefaultLaunchReconcileConfigMembers,
-      parseLaunchReconcileConfigMembers,
-      getTeamsBasePath,
-      pathJoin: (...parts) => path.join(...parts),
-      readRegularFileUtf8: tryReadRegularFileUtf8,
-      teamJsonReadTimeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      teamConfigMaxBytes: TEAM_CONFIG_MAX_BYTES,
-      readLeadInboxMessagesForLaunchReconcile: (teamName, leadName) =>
-        this.readLeadInboxMessagesForLaunchReconcile(teamName, leadName),
-      hasLeadInboxLaunchReconcileHeartbeat: (snapshot, messages) =>
-        this.hasLeadInboxLaunchReconcileHeartbeat(snapshot, messages),
       getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
-      getPersistedLaunchMemberNames: (snapshot) => this.getPersistedLaunchMemberNames(snapshot),
-      selectLatestLeadInboxLaunchReconcileMessage: ({
-        messages,
-        expectedMembers,
-        expected,
-        firstSpawnAcceptedAt,
-      }) =>
-        this.selectLatestLeadInboxLaunchReconcileMessage(
-          messages,
-          expectedMembers,
-          expected,
-          firstSpawnAcceptedAt
-        ),
+      resolveExpectedLaunchMemberName: (members, candidateName) =>
+        this.resolveExpectedLaunchMemberName(members, candidateName),
       findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
         this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
       findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
         this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
-      readProcessBootstrapTransportSummary: (input) =>
-        this.readProcessBootstrapTransportSummary(input),
-      applyProcessBootstrapTransportOverlay: (input) =>
-        this.applyProcessBootstrapTransportOverlay(input),
-      nowIso,
-      nowMs: () => Date.now(),
+      readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
     });
   }
 
