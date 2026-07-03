@@ -665,17 +665,13 @@ import {
 } from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import {
-  clearSecondaryRuntimeRuns as clearSecondaryRuntimeRunsInMap,
   createMixedSecondaryLaneStateForMember as buildMixedSecondaryLaneStateForMember,
-  deleteSecondaryRuntimeRun as deleteSecondaryRuntimeRunFromMap,
+  createSecondaryRuntimeRunStore,
   getCurrentOpenCodeRuntimeRunId as resolveOpenCodeRuntimeRunIdFromMaps,
   getMixedSecondaryLaunchPhase as getMixedSecondaryLaunchPhaseFromRun,
-  getSecondaryRuntimeRuns as getSecondaryRuntimeRunsFromMap,
-  hasSecondaryRuntimeRuns as hasSecondaryRuntimeRunsInMap,
   type MixedSecondaryRuntimeLaneState,
   removeRunAllEffectiveMember as removeRunAllEffectiveMemberFromRun,
   type SecondaryRuntimeRunEntry,
-  setSecondaryRuntimeRun as setSecondaryRuntimeRunInMap,
   upsertRunAllEffectiveMember as upsertRunAllEffectiveMemberInRun,
 } from './provisioning/TeamProvisioningSecondaryRuntimeRuns';
 import { scanForNewestProjectSession } from './provisioning/TeamProvisioningSessionDiscovery';
@@ -1370,6 +1366,18 @@ export class TeamProvisioningService {
     string,
     Map<string, SecondaryRuntimeRunEntry>
   >();
+  private readonly secondaryRuntimeRuns = createSecondaryRuntimeRunStore({
+    secondaryRuntimeRunByTeam: this.secondaryRuntimeRunByTeam,
+    ports: {
+      clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
+        this.clearOpenCodeRuntimeToolApprovals(teamName, options),
+    },
+  });
+  private readonly hasSecondaryRuntimeRuns = this.secondaryRuntimeRuns.hasSecondaryRuntimeRuns;
+  private readonly getSecondaryRuntimeRuns = this.secondaryRuntimeRuns.getSecondaryRuntimeRuns;
+  private readonly setSecondaryRuntimeRun = this.secondaryRuntimeRuns.setSecondaryRuntimeRun;
+  private readonly deleteSecondaryRuntimeRun = this.secondaryRuntimeRuns.deleteSecondaryRuntimeRun;
+  private readonly clearSecondaryRuntimeRuns = this.secondaryRuntimeRuns.clearSecondaryRuntimeRuns;
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   private readonly persistedTranscriptClaudeLogs: TeamProvisioningTranscriptClaudeLogsCache;
@@ -3234,28 +3242,6 @@ export class TeamProvisioningService {
 
   private removeRunAllEffectiveMember(run: ProvisioningRun, memberName: string): void {
     removeRunAllEffectiveMemberFromRun(run, memberName);
-  }
-
-  private hasSecondaryRuntimeRuns(teamName: string): boolean {
-    return hasSecondaryRuntimeRunsInMap(this.secondaryRuntimeRunByTeam, teamName);
-  }
-
-  private getSecondaryRuntimeRuns(teamName: string): SecondaryRuntimeRunEntry[] {
-    return getSecondaryRuntimeRunsFromMap(this.secondaryRuntimeRunByTeam, teamName);
-  }
-
-  private setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void {
-    setSecondaryRuntimeRunInMap(this.secondaryRuntimeRunByTeam, input);
-  }
-
-  private deleteSecondaryRuntimeRun(teamName: string, laneId: string): void {
-    this.clearOpenCodeRuntimeToolApprovals(teamName, { laneId, emitDismiss: true });
-    deleteSecondaryRuntimeRunFromMap(this.secondaryRuntimeRunByTeam, teamName, laneId);
-  }
-
-  private clearSecondaryRuntimeRuns(teamName: string): void {
-    this.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
-    clearSecondaryRuntimeRunsInMap(this.secondaryRuntimeRunByTeam, teamName);
   }
 
   private getCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): string | null {

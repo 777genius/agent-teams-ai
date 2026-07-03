@@ -48,6 +48,21 @@ export interface RuntimeAdapterRunEntry {
   providerId: TeamProviderId;
 }
 
+export interface SecondaryRuntimeRunStore {
+  hasSecondaryRuntimeRuns(teamName: string): boolean;
+  getSecondaryRuntimeRuns(teamName: string): SecondaryRuntimeRunEntry[];
+  setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
+  deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  clearSecondaryRuntimeRuns(teamName: string): void;
+}
+
+export interface SecondaryRuntimeRunStorePorts {
+  clearOpenCodeRuntimeToolApprovals(
+    teamName: string,
+    options: { runId?: string; laneId?: string; emitDismiss?: boolean }
+  ): void;
+}
+
 export interface SecondaryRuntimeRunProvisioningRun {
   request: TeamCreateRequest;
   allEffectiveMembers?: TeamCreateRequest['members'];
@@ -243,6 +258,28 @@ export function clearSecondaryRuntimeRuns(
   teamName: string
 ): void {
   secondaryRuntimeRunByTeam.delete(teamName);
+}
+
+export function createSecondaryRuntimeRunStore(input: {
+  secondaryRuntimeRunByTeam: SecondaryRuntimeRunMap;
+  ports: SecondaryRuntimeRunStorePorts;
+}): SecondaryRuntimeRunStore {
+  return {
+    hasSecondaryRuntimeRuns: (teamName) =>
+      hasSecondaryRuntimeRuns(input.secondaryRuntimeRunByTeam, teamName),
+    getSecondaryRuntimeRuns: (teamName) =>
+      getSecondaryRuntimeRuns(input.secondaryRuntimeRunByTeam, teamName),
+    setSecondaryRuntimeRun: (runInput) =>
+      setSecondaryRuntimeRun(input.secondaryRuntimeRunByTeam, runInput),
+    deleteSecondaryRuntimeRun: (teamName, laneId) => {
+      input.ports.clearOpenCodeRuntimeToolApprovals(teamName, { laneId, emitDismiss: true });
+      deleteSecondaryRuntimeRun(input.secondaryRuntimeRunByTeam, teamName, laneId);
+    },
+    clearSecondaryRuntimeRuns: (teamName) => {
+      input.ports.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
+      clearSecondaryRuntimeRuns(input.secondaryRuntimeRunByTeam, teamName);
+    },
+  };
 }
 
 export function getCurrentOpenCodeRuntimeRunId(input: {

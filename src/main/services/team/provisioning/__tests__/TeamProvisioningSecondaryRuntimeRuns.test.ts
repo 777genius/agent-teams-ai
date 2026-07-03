@@ -4,6 +4,7 @@ import {
   clearSecondaryRuntimeRuns,
   createMixedSecondaryLaneStateForMember,
   createMixedSecondaryLaneStates,
+  createSecondaryRuntimeRunStore,
   deleteSecondaryRuntimeRun,
   getCurrentOpenCodeRuntimeRunId,
   getMixedSecondaryLaunchPhase,
@@ -219,6 +220,47 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
 
       clearSecondaryRuntimeRuns(runs, 'team-a');
       expect(hasSecondaryRuntimeRuns(runs, 'team-a')).toBe(false);
+    });
+
+    it('creates a store that dismisses OpenCode tool approvals when deleting or clearing runs', () => {
+      const runs = new Map<string, Map<string, SecondaryRuntimeRunEntry>>();
+      const clearOpenCodeRuntimeToolApprovals = vi.fn();
+      const store = createSecondaryRuntimeRunStore({
+        secondaryRuntimeRunByTeam: runs,
+        ports: { clearOpenCodeRuntimeToolApprovals },
+      });
+
+      store.setSecondaryRuntimeRun({
+        teamName: 'team-a',
+        runId: 'run-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+      });
+      store.setSecondaryRuntimeRun({
+        teamName: 'team-a',
+        runId: 'run-2',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:tom',
+        memberName: 'tom',
+      });
+
+      expect(store.hasSecondaryRuntimeRuns('team-a')).toBe(true);
+
+      store.deleteSecondaryRuntimeRun('team-a', 'secondary:opencode:bob');
+      expect(clearOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith('team-a', {
+        laneId: 'secondary:opencode:bob',
+        emitDismiss: true,
+      });
+      expect(store.getSecondaryRuntimeRuns('team-a')).toEqual([
+        expect.objectContaining({ runId: 'run-2', laneId: 'secondary:opencode:tom' }),
+      ]);
+
+      store.clearSecondaryRuntimeRuns('team-a');
+      expect(clearOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith('team-a', {
+        emitDismiss: true,
+      });
+      expect(store.hasSecondaryRuntimeRuns('team-a')).toBe(false);
     });
 
     it('resolves current OpenCode run ids from primary and secondary runtime maps', () => {
