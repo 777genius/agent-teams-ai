@@ -349,8 +349,11 @@ import {
   type TeamProvisioningOpenCodeMemberMessageDeliveryHost,
 } from './provisioning/TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
 import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
+import {
+  type PreparedOpenCodeRuntimeAdapterLaunch,
+  prepareOpenCodeRuntimeAdapterLaunch,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterPreparation';
 import { type OpenCodeRuntimeControlAck } from './provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
-import { materializeOpenCodeRuntimeAdapterDefaults as materializeOpenCodeRuntimeAdapterDefaultsHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeDefaults';
 import {
   type MemberWorkSyncProofMissingRecoveryScheduler,
   TeamProvisioningOpenCodeRuntimeDeliveryAdvisory,
@@ -373,6 +376,10 @@ import {
   stopOpenCodeRuntimeLanesForStoppedTeamOnce,
   tryStopPersistedOpenCodeRuntimePidForStoppedLane as tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
+import {
+  createTeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFromHost,
+  type TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactoryHost,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactory';
 import {
   type OpenCodeRuntimePendingPermissionsPersistencePorts,
   type OpenCodeRuntimePermissionListingAdapter,
@@ -3561,34 +3568,26 @@ export class TeamProvisioningService {
   }
 
   private createOpenCodeRuntimeLaneRecoveryPorts(): OpenCodeRuntimeLaneRecoveryPorts {
-    return {
-      teamsBasePath: getTeamsBasePath(),
-      logger,
-      canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
-        this.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
-      canAttemptCommittedOpenCodeSessionRecovery: (teamName) =>
-        this.runTracking.canAttemptCommittedOpenCodeSessionRecovery(teamName),
+    const host: TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactoryHost = {
+      runTracking: this.runTracking,
       cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
         this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      tryRecoverMissingOpenCodeSecondaryLaneFromRuntime: (recoverInput) =>
-        this.openCodeRuntimeRecoveryBoundary.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime(
-          recoverInput
-        ),
-      tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: (recoverInput) =>
-        this.openCodeRuntimeRecoveryBoundary.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime(
-          recoverInput
-        ),
+      launchStateStore: this.launchStateStore,
+      openCodeRuntimeRecoveryBoundary: this.openCodeRuntimeRecoveryBoundary,
       readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
       resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
         this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
       readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
-      readTeamMeta: (teamName) => this.teamMetaStore.getMeta(teamName),
-      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+      teamMetaStore: this.teamMetaStore,
+      membersMetaStore: this.membersMetaStore,
       readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
-      isOpenCodeRuntimeLaneIndexActive: (teamName, laneId) =>
-        this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
+      openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
     };
+
+    return createTeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFromHost(host, {
+      teamsBasePath: getTeamsBasePath(),
+      logger,
+    });
   }
 
   private async tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input: {
@@ -4697,16 +4696,13 @@ export class TeamProvisioningService {
     return this.prepareCoordinator.getOpenCodeRuntimeLaunchCwd(fallbackCwd, members);
   }
 
-  private async materializeOpenCodeRuntimeAdapterDefaults<
+  private async prepareOpenCodeRuntimeAdapterLaunch<
     TRequest extends TeamCreateRequest | TeamLaunchRequest,
   >(params: {
     request: TRequest;
     members: TeamCreateRequest['members'];
-  }): Promise<{
-    request: TRequest;
-    members: TeamCreateRequest['members'];
-  }> {
-    return materializeOpenCodeRuntimeAdapterDefaultsHelper(params, {
+  }): Promise<PreparedOpenCodeRuntimeAdapterLaunch<TRequest>> {
+    return prepareOpenCodeRuntimeAdapterLaunch(params, {
       resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
       buildProvisioningEnv: (providerId, providerBackendId) =>
         this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId),
@@ -4719,6 +4715,12 @@ export class TeamProvisioningService {
           providerArgs,
           limitContext
         ),
+      resolveOpenCodeMemberWorkspacesForRuntime: (workspaceParams) =>
+        this.resolveOpenCodeMemberWorkspacesForRuntime(workspaceParams),
+      planRuntimeLanesOrThrow: (leadProviderId, members, cwd) =>
+        this.planRuntimeLanesOrThrow(leadProviderId, members, cwd),
+      buildOpenCodeRuntimeAdapterLaunchMembers: (launchRequest, members, lanePlan) =>
+        this.buildOpenCodeRuntimeAdapterLaunchMembers(launchRequest, members, lanePlan),
     });
   }
 
@@ -5042,27 +5044,11 @@ export class TeamProvisioningService {
     }
 
     await ensureCwdExists(request.cwd);
-    const materialized = await this.materializeOpenCodeRuntimeAdapterDefaults({
+    const preparedLaunch = await this.prepareOpenCodeRuntimeAdapterLaunch({
       request,
       members: request.members,
     });
-    const launchRequest = materialized.request;
-    const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName: launchRequest.teamName,
-      baseCwd: launchRequest.cwd,
-      leadProviderId: launchRequest.providerId,
-      members: materialized.members,
-    });
-    const lanePlan = this.planRuntimeLanesOrThrow(
-      launchRequest.providerId,
-      effectiveMembers,
-      launchRequest.cwd
-    );
-    const runtimeLaunchMembers = this.buildOpenCodeRuntimeAdapterLaunchMembers(
-      launchRequest,
-      effectiveMembers,
-      lanePlan
-    );
+    const { launchRequest, effectiveMembers, lanePlan, runtimeLaunchMembers } = preparedLaunch;
     const teamDir = path.join(getTeamsBasePath(), launchRequest.teamName);
     const tasksDir = path.join(getTasksBasePath(), launchRequest.teamName);
     await fs.promises.mkdir(teamDir, { recursive: true });
@@ -5126,27 +5112,11 @@ export class TeamProvisioningService {
       configRaw,
       request.providerId
     );
-    const materialized = await this.materializeOpenCodeRuntimeAdapterDefaults({
+    const preparedLaunch = await this.prepareOpenCodeRuntimeAdapterLaunch({
       request,
       members,
     });
-    const launchRequest = materialized.request;
-    const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName: launchRequest.teamName,
-      baseCwd: launchRequest.cwd,
-      leadProviderId: launchRequest.providerId,
-      members: materialized.members,
-    });
-    const lanePlan = this.planRuntimeLanesOrThrow(
-      launchRequest.providerId,
-      effectiveMembers,
-      launchRequest.cwd
-    );
-    const runtimeLaunchMembers = this.buildOpenCodeRuntimeAdapterLaunchMembers(
-      launchRequest,
-      effectiveMembers,
-      lanePlan
-    );
+    const { launchRequest, effectiveMembers, lanePlan, runtimeLaunchMembers } = preparedLaunch;
     await this.updateConfigProjectPath(launchRequest.teamName, launchRequest.cwd);
 
     let existingTasks: TeamTask[] = [];
