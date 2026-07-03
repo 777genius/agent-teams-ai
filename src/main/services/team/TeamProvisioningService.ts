@@ -199,6 +199,7 @@ import {
   resolveLaunchExpectedMembers as resolveLaunchExpectedMembersHelper,
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from './provisioning/TeamProvisioningLaunchExpectedMembers';
+import { createTeamProvisioningLaunchExpectedMembersPorts } from './provisioning/TeamProvisioningLaunchExpectedMembersPortsFactory';
 import {
   readRuntimeProviderLaunchFacts as readRuntimeProviderLaunchFactsHelper,
   resolveAndValidateLaunchIdentity as resolveAndValidateLaunchIdentityHelper,
@@ -1576,6 +1577,14 @@ export class TeamProvisioningService {
     memberSpawnStatusesInFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
   });
   private readonly launchStateStore = new TeamLaunchStateStore();
+  private readonly launchExpectedMembersPorts: TeamProvisioningLaunchExpectedMembersPorts =
+    createTeamProvisioningLaunchExpectedMembersPorts({
+      launchStateStore: this.launchStateStore,
+      readBootstrapLaunchSnapshot,
+      membersMetaStore: this.membersMetaStore,
+      inboxReader: this.inboxReader,
+      logger,
+    });
   private readonly launchStateStoreBoundary = new TeamProvisioningLaunchStateStoreBoundary({
     launchStateStore: this.launchStateStore,
     membersMetaStore: this.membersMetaStore,
@@ -5419,7 +5428,7 @@ export class TeamProvisioningService {
         deleteProvisioningRunByTeam: (teamName) => {
           this.provisioningRunByTeam.delete(teamName);
         },
-        launchExpectedMembersPorts: this.createLaunchExpectedMembersPorts(),
+        launchExpectedMembersPorts: this.launchExpectedMembersPorts,
         materializeLaunchCompatibilityRepair: (launchRequest, report) =>
           this.materializeLaunchCompatibilityRepair(launchRequest, report),
         normalizeTeamConfigForLaunch: (teamName, configRaw) =>
@@ -8215,18 +8224,8 @@ export class TeamProvisioningService {
   }> {
     return resolveLaunchExpectedMembersHelper(
       { teamName, configRaw, leadProviderId },
-      this.createLaunchExpectedMembersPorts()
+      this.launchExpectedMembersPorts
     );
-  }
-
-  private createLaunchExpectedMembersPorts(): TeamProvisioningLaunchExpectedMembersPorts {
-    return {
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      readBootstrapLaunchSnapshot,
-      getMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
-      listInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
-      warn: (message) => logger.warn(message),
-    };
   }
 
   private async materializeLaunchCompatibilityRepair(
