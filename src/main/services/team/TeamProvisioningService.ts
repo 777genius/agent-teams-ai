@@ -147,7 +147,6 @@ import { createRuntimeRunTombstoneStore } from './opencode/store/RuntimeRunTombs
 import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
 import { ensureCwdExists, sleep } from './provisioning/TeamProvisioningAsyncUtils';
 import {
-  buildDeterministicCreateBootstrapSpec,
   buildDeterministicLaunchBootstrapSpec,
   getProvisioningRunTimeoutMs,
   removeDeterministicBootstrapSpecFile,
@@ -211,6 +210,11 @@ import {
   type TeamProvisioningEffectiveLaunchState,
   updateTeamConfigPostLaunch,
 } from './provisioning/TeamProvisioningConfigMaterialization';
+import {
+  assertCreateTeamDoesNotExist,
+  buildDeterministicCreateSpawnArgs,
+  materializeDeterministicCreateTeamBootstrapFiles,
+} from './provisioning/TeamProvisioningCreateTeamFlow';
 import {
   buildCrossTeamConversationKey,
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
@@ -5903,13 +5907,9 @@ export class TeamProvisioningService {
 
     try {
       const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-      for (const probe of teamsBasePathsToProbe) {
-        const configPath = path.join(probe.basePath, request.teamName, 'config.json');
-        if (await this.pathExists(configPath)) {
-          const suffix = probe.location === 'configured' ? '' : ` (found under ${probe.basePath})`;
-          throw new Error(`Team already exists${suffix}`);
-        }
-      }
+      await assertCreateTeamDoesNotExist(request.teamName, teamsBasePathsToProbe, (filePath) =>
+        this.pathExists(filePath)
+      );
 
       await ensureCwdExists(request.cwd);
 
@@ -6230,96 +6230,48 @@ export class TeamProvisioningService {
         // Pre-save our meta files before native app-managed briefing generation.
         // member_briefing intentionally reads canonical team metadata/inboxes, so
         // createTeam must materialize those files before building the bootstrap spec.
-        emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-        const teamDir = path.join(getTeamsBasePath(), request.teamName);
-        const tasksDir = path.join(getTasksBasePath(), request.teamName);
-        await fs.promises.mkdir(teamDir, { recursive: true });
-        await fs.promises.mkdir(tasksDir, { recursive: true });
-        await this.teamMetaStore.writeMeta(request.teamName, {
-          displayName: request.displayName,
-          description: request.description,
-          color: request.color,
-          cwd: request.cwd,
-          prompt: request.prompt,
-          providerId: request.providerId,
-          providerBackendId: request.providerBackendId,
-          model: request.model,
-          effort: request.effort,
-          fastMode: request.fastMode,
-          skipPermissions: request.skipPermissions,
-          worktree: request.worktree,
-          extraCliArgs: request.extraCliArgs,
-          limitContext: request.limitContext,
-          launchIdentity,
-          createdAt: Date.now(),
-        });
-        const membersToWrite = buildMembersMetaWritePayload(allEffectiveMemberSpecs);
-        await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
-          providerBackendId: request.providerBackendId,
-        });
-        emitProvisioningCheckpoint(
-          run,
-          'Building deterministic create bootstrap spec',
-          `expectedMembers=${effectiveMemberSpecs.length}`
-        );
-        const nativeBootstrapBuild = await buildNativeAppManagedBootstrapSpecsWithDiagnostics({
-          teamName: request.teamName,
-          cwd: request.cwd,
-          members: effectiveMemberSpecs,
-        });
-        const memberMcpLaunchConfigs = await this.buildRuntimeBootstrapMemberMcpLaunchConfigs({
-          controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-          cwd: request.cwd,
-          members: effectiveMemberSpecs,
-          run,
-        });
-        if (nativeBootstrapBuild.diagnostics.warning) {
-          run.progress = {
-            ...run.progress,
-            warnings: mergeProvisioningWarnings(
-              run.progress.warnings,
-              nativeBootstrapBuild.diagnostics.warning
-            ),
-          };
-          emitProvisioningCheckpoint(
-            run,
-            'Native bootstrap startup context is large',
-            nativeBootstrapBuild.diagnostics.warning
-          );
-        }
-        const bootstrapSpec = buildDeterministicCreateBootstrapSpec(
-          runId,
+        const materializedBootstrapFiles = await materializeDeterministicCreateTeamBootstrapFiles({
           request,
+          run,
           effectiveMemberSpecs,
-          nativeBootstrapBuild.specs,
-          memberMcpLaunchConfigs
-        );
-        emitProvisioningCheckpoint(run, 'Writing deterministic bootstrap spec file');
-        bootstrapSpecPath = await writeDeterministicBootstrapSpecFile(bootstrapSpec);
-        run.bootstrapSpecPath = bootstrapSpecPath;
-        if (initialUserPrompt) {
-          emitProvisioningCheckpoint(
-            run,
-            'Writing deferred user prompt file',
-            `chars=${promptSize.chars} lines=${promptSize.lines}`
-          );
-          bootstrapUserPromptPath =
-            await writeDeterministicBootstrapUserPromptFile(initialUserPrompt);
-          run.bootstrapUserPromptPath = bootstrapUserPromptPath;
-          run.requiresFirstRealTurnSuccess = true;
-        }
-        emitProvisioningCheckpoint(run, 'Writing MCP config file');
-        mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd, {
+          allEffectiveMemberSpecs,
+          launchIdentity,
+          initialUserPrompt,
+          promptSize,
           controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+          teamMetaStore: {
+            writeMeta: (teamName, payload) =>
+              this.teamMetaStore.writeMeta(
+                teamName,
+                payload as Parameters<typeof this.teamMetaStore.writeMeta>[1]
+              ),
+          },
+          membersMetaStore: this.membersMetaStore,
+          mcpConfigBuilder: this.mcpConfigBuilder,
+          buildMemberMcpLaunchConfigs: () =>
+            this.buildRuntimeBootstrapMemberMcpLaunchConfigs({
+              controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+              cwd: request.cwd,
+              members: effectiveMemberSpecs,
+              run,
+            }),
+          validateAgentTeamsMcpRuntime: (createdMcpConfigPath) =>
+            this.validateAgentTeamsMcpRuntime(
+              claudePath,
+              request.cwd,
+              shellEnv,
+              createdMcpConfigPath,
+              {
+                isCancelled: () =>
+                  run.cancelRequested ||
+                  run.processKilled ||
+                  this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
+              }
+            ),
         });
-        run.mcpConfigPath = mcpConfigPath;
-        emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
-        await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
-          isCancelled: () =>
-            run.cancelRequested ||
-            run.processKilled ||
-            this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-        });
+        mcpConfigPath = materializedBootstrapFiles.mcpConfigPath;
+        bootstrapSpecPath = materializedBootstrapFiles.bootstrapSpecPath;
+        bootstrapUserPromptPath = materializedBootstrapFiles.bootstrapUserPromptPath;
       } catch (error) {
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
@@ -6362,40 +6314,23 @@ export class TeamProvisioningService {
         includeAnthropicHelper: resolvedProviderId === 'anthropic',
         contextLabel: 'Team create launch',
       });
-      const spawnArgs = mergeJsonSettingsArgs([
-        '--print',
-        '--input-format',
-        'stream-json',
-        '--output-format',
-        'stream-json',
-        '--verbose',
-        '--setting-sources',
-        'user,project,local',
-        '--mcp-config',
+      const spawnArgs = buildDeterministicCreateSpawnArgs({
         mcpConfigPath,
-        '--team-bootstrap-spec',
         bootstrapSpecPath,
-        ...(bootstrapUserPromptPath
-          ? ['--team-bootstrap-user-prompt-file', bootstrapUserPromptPath]
-          : []),
-        '--disallowedTools',
-        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-        // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
-        // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
-        ...(request.skipPermissions !== false
-          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-        ...(launchModelArg ? ['--model', launchModelArg] : []),
-        ...(launchIdentity.resolvedEffort ? ['--effort', launchIdentity.resolvedEffort] : []),
-        ...runtimeArgsPlan.providerArgs,
-        ...runtimeArgsPlan.fastModeArgs,
-        ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-        ...(request.worktree ? ['--worktree', request.worktree] : []),
-        ...buildDesktopTeammateModeCliArgs(teammateModeDecision),
-        ...runtimeArgsPlan.extraArgs,
-        ...runtimeArgsPlan.settingsArgs,
-        ...runtimeArgsPlan.inheritedProviderArgs,
-      ]);
+        bootstrapUserPromptPath,
+        skipPermissions: request.skipPermissions,
+        launchModelArg,
+        resolvedEffort: launchIdentity.resolvedEffort ?? undefined,
+        providerArgs: runtimeArgsPlan.providerArgs,
+        fastModeArgs: runtimeArgsPlan.fastModeArgs,
+        runtimeTurnSettledHookArgs: runtimeArgsPlan.runtimeTurnSettledHookArgs,
+        runtimeExtraArgs: runtimeArgsPlan.extraArgs,
+        settingsArgs: runtimeArgsPlan.settingsArgs,
+        inheritedProviderArgs: runtimeArgsPlan.inheritedProviderArgs,
+        worktree: request.worktree,
+        teammateModeDecision,
+        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+      });
       applyAppManagedRuntimeSettingsPathEnv(shellEnv, runtimeArgsPlan.appManagedSettingsPath);
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
         geminiRuntimeAuth,
