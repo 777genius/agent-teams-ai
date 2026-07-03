@@ -39,11 +39,25 @@ export interface TeamProvisioningLiveLeadMessageRun {
   detectedSessionId?: string | null;
 }
 
+export interface TeamProvisioningLiveLeadMessageCleanupRun {
+  runId: string;
+  teamName: string;
+  detectedSessionId?: string | null;
+}
+
 export interface PushLiveLeadProcessMessagePorts<TRun extends TeamProvisioningLiveLeadMessageRun> {
   liveLeadProcessMessages: Map<string, InboxMessage[]>;
   getTrackedRunId(teamName: string): string | null;
   getRun(runId: string): TRun | undefined;
   cacheLimit: number;
+}
+
+export interface LiveLeadProcessMessageStatePorts<
+  TRun extends TeamProvisioningLiveLeadMessageRun,
+> {
+  liveLeadProcessMessages: Map<string, InboxMessage[]>;
+  getTrackedRunId(teamName: string): string | null;
+  getRun(runId: string): TRun | undefined;
 }
 
 export interface PushLiveLeadTextMessagePorts<TRun extends TeamProvisioningLeadTextRun> {
@@ -94,6 +108,64 @@ export function pushLiveLeadProcessMessage<TRun extends TeamProvisioningLiveLead
     list.splice(0, list.length - ports.cacheLimit);
   }
   ports.liveLeadProcessMessages.set(teamName, list);
+}
+
+export function getCurrentLeadSessionId<TRun extends TeamProvisioningLiveLeadMessageRun>(
+  teamName: string,
+  ports: Pick<LiveLeadProcessMessageStatePorts<TRun>, 'getTrackedRunId' | 'getRun'>
+): string | null {
+  const runId = ports.getTrackedRunId(teamName);
+  if (!runId) return null;
+  return ports.getRun(runId)?.detectedSessionId ?? null;
+}
+
+export function getLiveLeadProcessMessages<TRun extends TeamProvisioningLiveLeadMessageRun>(
+  teamName: string,
+  ports: LiveLeadProcessMessageStatePorts<TRun>
+): InboxMessage[] {
+  const detectedSessionId = getCurrentLeadSessionId(teamName, ports);
+
+  return (ports.liveLeadProcessMessages.get(teamName) ?? []).map((message) =>
+    !message.leadSessionId && detectedSessionId
+      ? { ...message, leadSessionId: detectedSessionId }
+      : { ...message }
+  );
+}
+
+export function pruneLiveLeadMessagesForCleanedRun<
+  TRun extends TeamProvisioningLiveLeadMessageCleanupRun,
+>(run: TRun, liveLeadProcessMessages: Map<string, InboxMessage[]>): void {
+  const list = liveLeadProcessMessages.get(run.teamName);
+  if (!list || list.length === 0) {
+    return;
+  }
+
+  const runMessageIdPrefixes = [
+    `lead-turn-${run.runId}-`,
+    `lead-sendmsg-${run.runId}-`,
+    `lead-process-${run.runId}-`,
+    `compact-${run.runId}-`,
+  ];
+
+  const filtered = list.filter((message) => {
+    const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+    if (messageId && runMessageIdPrefixes.some((prefix) => messageId.startsWith(prefix))) {
+      return false;
+    }
+
+    if (run.detectedSessionId && message.leadSessionId === run.detectedSessionId) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    liveLeadProcessMessages.delete(run.teamName);
+    return;
+  }
+
+  liveLeadProcessMessages.set(run.teamName, filtered);
 }
 
 export function resetLiveLeadTextBuffer(run: TeamProvisioningLeadTextRun): void {

@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   appendProvisioningAssistantText,
+  getCurrentLeadSessionId,
+  getLiveLeadProcessMessages,
   joinLeadRelayCaptureText,
+  pruneLiveLeadMessagesForCleanedRun,
   pushLiveLeadProcessMessage,
   pushLiveLeadTextMessage,
   resetLiveLeadTextBuffer,
@@ -94,6 +97,107 @@ describe('lead process message helpers', () => {
         leadSessionId: 'session-1',
       }),
     ]);
+  });
+
+  it('returns cloned live lead process messages enriched with the current session id', () => {
+    const existingMessage: InboxMessage = {
+      from: 'lead',
+      text: 'hello',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      read: true,
+      messageId: 'm1',
+      source: 'lead_process',
+    };
+    const messageWithSession: InboxMessage = {
+      ...existingMessage,
+      text: 'already session scoped',
+      messageId: 'm2',
+      leadSessionId: 'existing-session',
+    };
+    const liveLeadProcessMessages = new Map<string, InboxMessage[]>([
+      ['alpha', [existingMessage, messageWithSession]],
+    ]);
+    const ports = {
+      liveLeadProcessMessages,
+      getTrackedRunId: () => 'run-1',
+      getRun: () => ({ detectedSessionId: 'session-1' }),
+    };
+
+    expect(getCurrentLeadSessionId('alpha', ports)).toBe('session-1');
+
+    const result = getLiveLeadProcessMessages('alpha', ports);
+
+    expect(result).toEqual([
+      expect.objectContaining({ messageId: 'm1', leadSessionId: 'session-1' }),
+      expect.objectContaining({ messageId: 'm2', leadSessionId: 'existing-session' }),
+    ]);
+    expect(result[0]).not.toBe(existingMessage);
+    expect(existingMessage.leadSessionId).toBeUndefined();
+  });
+
+  it('returns null current lead session id when no run is tracked', () => {
+    expect(
+      getCurrentLeadSessionId('alpha', {
+        getTrackedRunId: () => null,
+        getRun: () => ({ detectedSessionId: 'session-1' }),
+      })
+    ).toBeNull();
+  });
+
+  it('prunes live lead process messages for a cleaned run by run ids and session id', () => {
+    const keepMessage: InboxMessage = {
+      from: 'lead',
+      text: 'keep',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      read: true,
+      messageId: 'lead-turn-other-run-1',
+      source: 'lead_process',
+    };
+    const liveLeadProcessMessages = new Map<string, InboxMessage[]>([
+      [
+        'alpha',
+        [
+          { ...keepMessage },
+          { ...keepMessage, messageId: ' lead-turn-run-1-1 ' },
+          { ...keepMessage, messageId: 'lead-sendmsg-run-1-1' },
+          { ...keepMessage, messageId: 'lead-process-run-1-1' },
+          { ...keepMessage, messageId: 'compact-run-1-1' },
+          { ...keepMessage, messageId: 'manual', leadSessionId: 'session-1' },
+        ],
+      ],
+    ]);
+
+    pruneLiveLeadMessagesForCleanedRun(
+      { teamName: 'alpha', runId: 'run-1', detectedSessionId: 'session-1' },
+      liveLeadProcessMessages
+    );
+
+    expect(liveLeadProcessMessages.get('alpha')).toEqual([keepMessage]);
+  });
+
+  it('deletes live lead process message cache when pruning removes every cleaned-run message', () => {
+    const liveLeadProcessMessages = new Map<string, InboxMessage[]>([
+      [
+        'alpha',
+        [
+          {
+            from: 'lead',
+            text: 'remove',
+            timestamp: '2026-01-01T00:00:00.000Z',
+            read: true,
+            messageId: 'lead-turn-run-1-1',
+            source: 'lead_process',
+          },
+        ],
+      ],
+    ]);
+
+    pruneLiveLeadMessagesForCleanedRun(
+      { teamName: 'alpha', runId: 'run-1', detectedSessionId: null },
+      liveLeadProcessMessages
+    );
+
+    expect(liveLeadProcessMessages.has('alpha')).toBe(false);
   });
 
   it('coalesces streamed lead text chunks and emits throttled refresh events', () => {

@@ -322,7 +322,10 @@ import {
 import { scanLeadInboxPermissionRequests } from './provisioning/TeamProvisioningLeadPermissionScan';
 import {
   appendProvisioningAssistantText as appendProvisioningAssistantTextHelper,
+  getCurrentLeadSessionId as getCurrentLeadSessionIdHelper,
+  getLiveLeadProcessMessages as getLiveLeadProcessMessagesHelper,
   joinLeadRelayCaptureText,
+  pruneLiveLeadMessagesForCleanedRun as pruneLiveLeadMessagesForCleanedRunHelper,
   pushLiveLeadProcessMessage as pushLiveLeadProcessMessageHelper,
   pushLiveLeadTextMessage as pushLiveLeadTextMessageHelper,
   resetLiveLeadTextBuffer as resetLiveLeadTextBufferHelper,
@@ -3782,54 +3785,22 @@ export class TeamProvisioningService {
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    const detectedSessionId = runId ? (this.runs.get(runId)?.detectedSessionId ?? null) : null;
-
-    return (this.liveLeadProcessMessages.get(teamName) ?? []).map((message) =>
-      !message.leadSessionId && detectedSessionId
-        ? { ...message, leadSessionId: detectedSessionId }
-        : { ...message }
-    );
+    return getLiveLeadProcessMessagesHelper(teamName, {
+      liveLeadProcessMessages: this.liveLeadProcessMessages,
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+    });
   }
 
   private pruneLiveLeadMessagesForCleanedRun(run: ProvisioningRun): void {
-    const list = this.liveLeadProcessMessages.get(run.teamName);
-    if (!list || list.length === 0) {
-      return;
-    }
-
-    const runMessageIdPrefixes = [
-      `lead-turn-${run.runId}-`,
-      `lead-sendmsg-${run.runId}-`,
-      `lead-process-${run.runId}-`,
-      `compact-${run.runId}-`,
-    ];
-
-    const filtered = list.filter((message) => {
-      const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-      if (messageId && runMessageIdPrefixes.some((prefix) => messageId.startsWith(prefix))) {
-        return false;
-      }
-
-      if (run.detectedSessionId && message.leadSessionId === run.detectedSessionId) {
-        return false;
-      }
-
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      this.liveLeadProcessMessages.delete(run.teamName);
-      return;
-    }
-
-    this.liveLeadProcessMessages.set(run.teamName, filtered);
+    pruneLiveLeadMessagesForCleanedRunHelper(run, this.liveLeadProcessMessages);
   }
 
   getCurrentLeadSessionId(teamName: string): string | null {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    if (!runId) return null;
-    return this.runs.get(runId)?.detectedSessionId ?? null;
+    return getCurrentLeadSessionIdHelper(teamName, {
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+    });
   }
 
   getCurrentRunId(teamName: string): string | null {
