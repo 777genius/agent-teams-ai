@@ -238,14 +238,11 @@ import {
 import {
   buildLeadInboxRelayPrompt,
   buildMemberInboxRelayPrompt,
-  collectConfirmedSameTeamPairs as collectConfirmedSameTeamPairsHelper,
   DEFAULT_INBOX_RELAY_BATCH_SIZE,
   getLeadInboxRelayNoiseIds,
   getLeadRelayReadCommitBatch,
   hasStableInboxMessageId,
   inferOpenCodeInboxMessageTaskRefs,
-  type NativeSameTeamFingerprint,
-  normalizeSameTeamText,
   planLeadInboxRelayReadOnlyMessages,
   selectActionableLeadRelayUnread,
   selectLeadInboxRelayBatch,
@@ -653,9 +650,7 @@ import {
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
-import {
-  createRuntimeToolActivityHandlers,
-} from './provisioning/TeamProvisioningRuntimeToolActivity';
+import { createRuntimeToolActivityHandlers } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
   buildRuntimeTurnSettledEnvironment as buildRuntimeTurnSettledEnvironmentHelper,
   buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
@@ -665,6 +660,10 @@ import {
   type RuntimeTurnSettledHookSettingsProvider,
 } from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
+import {
+  createTeamProvisioningSameTeamNativeDeliveryPorts,
+  TeamProvisioningSameTeamNativeDelivery,
+} from './provisioning/TeamProvisioningSameTeamNativeDelivery';
 import {
   createMixedSecondaryLaneStateForMember as buildMixedSecondaryLaneStateForMember,
   createSecondaryRuntimeRunStore,
@@ -1562,10 +1561,7 @@ export class TeamProvisioningService {
   private readonly pendingCrossTeamFirstReplies = new Map<string, Map<string, number>>();
   private readonly recentCrossTeamLeadDeliveryMessageIds = new Map<string, Map<string, number>>();
   private readonly liveLeadProcessMessages = new Map<string, InboxMessage[]>();
-  private readonly recentSameTeamNativeFingerprints = new Map<
-    string,
-    NativeSameTeamFingerprint[]
-  >();
+  private readonly sameTeamNativeDelivery: TeamProvisioningSameTeamNativeDelivery;
   private readonly agentRuntimeSnapshotCache = new Map<
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
@@ -1877,6 +1873,24 @@ export class TeamProvisioningService {
     this.persistedTranscriptClaudeLogs = new TeamProvisioningTranscriptClaudeLogsCache({
       getContext: (teamName) => this.transcriptProjectResolver.getContext(teamName),
     });
+    this.sameTeamNativeDelivery = new TeamProvisioningSameTeamNativeDelivery(
+      {
+        fingerprintTtlMs: TeamProvisioningService.SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS,
+        matchWindowMs: TeamProvisioningService.SAME_TEAM_MATCH_WINDOW_MS,
+        nativeDeliveryGraceMs: TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS,
+        persistRetryMs: TeamProvisioningService.SAME_TEAM_PERSIST_RETRY_MS,
+      },
+      createTeamProvisioningSameTeamNativeDeliveryPorts({
+        inboxReader: this.inboxReader,
+        relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
+        pendingTimeouts: this.pendingTimeouts,
+        markInboxMessagesRead: (teamName, leadName, messages) =>
+          this.markInboxMessagesRead(teamName, leadName, messages),
+        relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
+        trimRelayedSet: (set) => this.trimRelayedSet(set),
+        warn: (message) => logger.warn(message),
+      })
+    );
     this.transientRunState = new TeamProvisioningTransientRunState(
       createTeamProvisioningTransientRunStatePorts({
         pendingTimeouts: this.pendingTimeouts,
@@ -1895,7 +1909,7 @@ export class TeamProvisioningService {
         relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
         pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
         recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-        recentSameTeamNativeFingerprints: this.recentSameTeamNativeFingerprints,
+        recentSameTeamNativeFingerprints: this.sameTeamNativeDelivery,
         memberInboxRelayInFlight: this.memberInboxRelayInFlight,
         openCodeMemberInboxRelayInFlight: this.openCodeMemberInboxRelayInFlight,
         openCodeMemberSendInFlightByLane: this.openCodeMemberSendInFlightByLane,
@@ -4730,8 +4744,8 @@ export class TeamProvisioningService {
     };
   }
 
-  private getOpenCodeBootstrapStallReconciliationPorts():
-    ReconcileOpenCodeRuntimeProcessBootstrapPorts & MarkOpenCodeSecondaryBootstrapStalledPorts {
+  private getOpenCodeBootstrapStallReconciliationPorts(): ReconcileOpenCodeRuntimeProcessBootstrapPorts &
+    MarkOpenCodeSecondaryBootstrapStalledPorts {
     return {
       buildOpenCodeSecondaryBootstrapStallDiagnostic: (targetRun, targetMember, targetCurrent) =>
         buildOpenCodeSecondaryBootstrapStallDiagnosticHelper(
@@ -5170,8 +5184,7 @@ export class TeamProvisioningService {
           this.startFilesystemMonitor(provisioningRun, request),
         tryCompleteAfterTimeout: (provisioningRun) => this.tryCompleteAfterTimeout(provisioningRun),
         getProvisioningRunTimeoutMs,
-        handleProcessExit: (provisioningRun, code) =>
-          this.handleProcessExit(provisioningRun, code),
+        handleProcessExit: (provisioningRun, code) => this.handleProcessExit(provisioningRun, code),
       },
       { preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS }
     );
@@ -14143,50 +14156,7 @@ export class TeamProvisioningService {
     teamName: string,
     blocks: ParsedTeammateContent[]
   ): void {
-    const teamKey = teamName.trim();
-    const existing = this.recentSameTeamNativeFingerprints.get(teamKey) ?? [];
-    const now = Date.now();
-    const cutoff = now - TeamProvisioningService.SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS;
-    const fresh = existing.filter((fp) => fp.seenAt > cutoff);
-
-    for (const block of blocks) {
-      fresh.push({
-        id: randomUUID(),
-        from: block.teammateId.trim(),
-        text: normalizeSameTeamText(block.content),
-        summary: (block.summary ?? '').trim(),
-        seenAt: now,
-      });
-    }
-
-    this.recentSameTeamNativeFingerprints.set(teamKey, fresh);
-  }
-
-  private consumeMatchedSameTeamFingerprints(teamName: string, matchedIds: Set<string>): void {
-    if (matchedIds.size === 0) return;
-    const current = this.recentSameTeamNativeFingerprints.get(teamName.trim()) ?? [];
-    if (current.length === 0) return;
-    const remaining = current.filter((fp) => !matchedIds.has(fp.id));
-    if (remaining.length > 0) {
-      this.recentSameTeamNativeFingerprints.set(teamName.trim(), remaining);
-    } else {
-      this.recentSameTeamNativeFingerprints.delete(teamName.trim());
-    }
-  }
-
-  private getFreshSameTeamNativeFingerprints(teamName: string): NativeSameTeamFingerprint[] {
-    const all = this.recentSameTeamNativeFingerprints.get(teamName) ?? [];
-    if (all.length === 0) return [];
-    const cutoff = Date.now() - TeamProvisioningService.SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS;
-    const fresh = all.filter((fp) => fp.seenAt > cutoff);
-    if (fresh.length !== all.length) {
-      if (fresh.length > 0) {
-        this.recentSameTeamNativeFingerprints.set(teamName, fresh);
-      } else {
-        this.recentSameTeamNativeFingerprints.delete(teamName);
-      }
-    }
-    return fresh;
+    this.sameTeamNativeDelivery.rememberSameTeamNativeFingerprints(teamName, blocks);
   }
 
   private async confirmSameTeamNativeMatches(
@@ -14194,77 +14164,18 @@ export class TeamProvisioningService {
     leadName: string,
     messages: InboxMessage[]
   ): Promise<{ nativeMatchedMessageIds: Set<string>; persisted: boolean }> {
-    const fingerprints = this.getFreshSameTeamNativeFingerprints(teamName);
-    const { confirmedMessageIds, matchedFingerprintIds } = collectConfirmedSameTeamPairsHelper({
-      messages,
-      fingerprints,
-      leadName,
-      matchWindowMs: TeamProvisioningService.SAME_TEAM_MATCH_WINDOW_MS,
-    });
-
-    if (confirmedMessageIds.size === 0) {
-      return { nativeMatchedMessageIds: confirmedMessageIds, persisted: true };
-    }
-
-    const toMarkRead = Array.from(confirmedMessageIds, (messageId) => ({ messageId }));
-    let persisted = false;
-    try {
-      await this.markInboxMessagesRead(teamName, leadName, toMarkRead);
-      persisted = true;
-    } catch {
-      // keep fingerprints alive for next attempt
-    }
-
-    if (persisted) {
-      // Durable: inbox says read=true. Safe to add in-memory dedup and consume fingerprints.
-      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
-      for (const messageId of confirmedMessageIds) {
-        relayedIds.add(messageId);
-      }
-      this.relayedLeadInboxMessageIds.set(teamName, this.trimRelayedSet(relayedIds));
-      this.consumeMatchedSameTeamFingerprints(teamName, matchedFingerprintIds);
-    }
-    // If NOT persisted: don't add to relayedIds, don't consume fingerprints.
-    // Next relay cycle will see the message in unread, re-match, and retry persist.
-
-    return { nativeMatchedMessageIds: confirmedMessageIds, persisted };
+    return this.sameTeamNativeDelivery.confirmSameTeamNativeMatches(teamName, leadName, messages);
   }
 
   private async reconcileSameTeamNativeDeliveries(
     teamName: string,
     leadName: string
   ): Promise<void> {
-    let leadInboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
-    try {
-      leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
-    } catch {
-      return;
-    }
-
-    const { nativeMatchedMessageIds, persisted } = await this.confirmSameTeamNativeMatches(
-      teamName,
-      leadName,
-      leadInboxMessages
-    );
-    // If native was matched but persist failed, schedule a quick retry
-    // so we don't wait for the 16s deferred timer to retry the disk write.
-    if (nativeMatchedMessageIds.size > 0 && !persisted) {
-      this.scheduleSameTeamPersistRetry(teamName);
-    }
+    await this.sameTeamNativeDelivery.reconcileSameTeamNativeDeliveries(teamName, leadName);
   }
 
   private scheduleSameTeamDeferredRetry(teamName: string): void {
-    const key = `same-team-deferred:${teamName}`;
-    if (this.pendingTimeouts.has(key)) return;
-
-    const timer = setTimeout(() => {
-      this.pendingTimeouts.delete(key);
-      void this.relayLeadInboxMessages(teamName).catch((e: unknown) =>
-        logger.warn(`[${teamName}] same-team deferred retry failed: ${String(e)}`)
-      );
-    }, TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS + 1_000);
-
-    this.pendingTimeouts.set(key, timer);
+    this.sameTeamNativeDelivery.scheduleSameTeamDeferredRetry(teamName);
   }
 
   /**
@@ -14273,17 +14184,7 @@ export class TeamProvisioningService {
    * may still relay the row once because in-memory dedupe is not durable.
    */
   private scheduleSameTeamPersistRetry(teamName: string): void {
-    const key = `same-team-persist:${teamName}`;
-    if (this.pendingTimeouts.has(key)) return;
-
-    const timer = setTimeout(() => {
-      this.pendingTimeouts.delete(key);
-      void this.relayLeadInboxMessages(teamName).catch((e: unknown) =>
-        logger.warn(`[${teamName}] same-team persist retry failed: ${String(e)}`)
-      );
-    }, TeamProvisioningService.SAME_TEAM_PERSIST_RETRY_MS);
-
-    this.pendingTimeouts.set(key, timer);
+    this.sameTeamNativeDelivery.scheduleSameTeamPersistRetry(teamName);
   }
 
   private markIncompleteLaunchStateFinalized(run: ProvisioningRun, cleanupReason: string): void {
@@ -14355,7 +14256,7 @@ export class TeamProvisioningService {
       relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
       pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
       recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-      recentSameTeamNativeFingerprints: this.recentSameTeamNativeFingerprints,
+      recentSameTeamNativeFingerprints: this.sameTeamNativeDelivery,
       clearSameTeamRetryTimers: (teamName) => this.clearSameTeamRetryTimers(teamName),
       clearLeadInboxFollowUpRelayTimer: (teamName) =>
         this.clearLeadInboxFollowUpRelayTimer(teamName),
