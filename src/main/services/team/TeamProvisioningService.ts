@@ -443,6 +443,7 @@ import {
   resolveOpenCodeMemberInboxDeliveryDecision,
   selectOpenCodeMemberInboxRelayUnreadMessages,
 } from './provisioning/TeamProvisioningOpenCodeMemberInboxRelay';
+import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
 import {
   assertOpenCodeRuntimeEvidenceAccepted as assertOpenCodeRuntimeEvidenceAcceptedHelper,
   createOpenCodeRuntimeCheckinPorts as createOpenCodeRuntimeCheckinPortsHelper,
@@ -1408,6 +1409,9 @@ export class TeamProvisioningService {
     string,
     Promise<OpenCodeTeamRuntimeMessageResult>
   >();
+  private readonly openCodeMemberSendSerializer = new OpenCodeMemberSendSerializer({
+    inFlightByLane: this.openCodeMemberSendInFlightByLane,
+  });
   private readonly openCodeRuntimeDeliveryProofReader = new OpenCodeRuntimeDeliveryProofReader();
   private readonly openCodeRuntimeDeliveryAdvisory =
     new TeamProvisioningOpenCodeRuntimeDeliveryAdvisory({
@@ -3737,15 +3741,11 @@ export class TeamProvisioningService {
   }
 
   private getMemberRelayKey(teamName: string, memberName: string): string {
-    return `${teamName}:${memberName.trim()}`;
+    return this.openCodeMemberSendSerializer.getMemberRelayKey(teamName, memberName);
   }
 
   private getOpenCodeMemberRelayKey(teamName: string, memberName: string): string {
-    return `opencode:${this.getMemberRelayKey(teamName, memberName)}`;
-  }
-
-  private getOpenCodeMemberSendLaneKey(teamName: string, laneId: string): string {
-    return `opencode-send:${teamName}:${laneId.trim()}`;
+    return this.openCodeMemberSendSerializer.getOpenCodeMemberRelayKey(teamName, memberName);
   }
 
   private async sendOpenCodeMemberMessageToRuntimeSerialized(input: {
@@ -3753,27 +3753,7 @@ export class TeamProvisioningService {
     laneId: string;
     send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   }): Promise<OpenCodeTeamRuntimeMessageResult> {
-    const laneKey = this.getOpenCodeMemberSendLaneKey(input.teamName, input.laneId);
-    const previous = this.openCodeMemberSendInFlightByLane.get(laneKey);
-    const work = (async (): Promise<OpenCodeTeamRuntimeMessageResult> => {
-      if (previous) {
-        try {
-          await previous;
-        } catch {
-          // A failed send must not permanently block later deliveries on the same lane.
-        }
-      }
-      return await input.send();
-    })();
-
-    this.openCodeMemberSendInFlightByLane.set(laneKey, work);
-    try {
-      return await work;
-    } finally {
-      if (this.openCodeMemberSendInFlightByLane.get(laneKey) === work) {
-        this.openCodeMemberSendInFlightByLane.delete(laneKey);
-      }
-    }
+    return this.openCodeMemberSendSerializer.sendSerialized(input);
   }
 
   private toolApprovalEventEmitter: ((event: ToolApprovalEvent) => void) | null = null;
