@@ -16,7 +16,12 @@ import {
   updateOpenCodeRuntimeMemberLiveness,
 } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 
-import type { MemberSpawnStatusEntry, TeamConfig, TeamCreateRequest } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  PersistedTeamLaunchSnapshot,
+  TeamConfig,
+  TeamCreateRequest,
+} from '@shared/types';
 
 type TestRun = OpenCodeRuntimeCheckinRun;
 
@@ -28,9 +33,9 @@ function createRun(): TestRun {
     teamName: 'Team',
     request: {
       teamName: 'Team',
-      projectPath: '/tmp/project',
+      cwd: '/tmp/project',
       members: [],
-    } as TeamCreateRequest,
+    },
     effectiveMembers: [],
     processKilled: false,
     cancelRequested: false,
@@ -77,7 +82,7 @@ function createPorts(
           OpenCodeRuntimeCheckinPorts<TestRun>['createOpenCodeRuntimeBootstrapEvidencePorts']
         >
     ),
-    upsertOpenCodeTaskRecord: vi.fn(async () => 'created'),
+    upsertOpenCodeTaskRecord: vi.fn(async () => 'created' as const),
     syncMemberTaskActivityForRuntimeTransition: vi.fn(),
     syncMemberLaunchGraceCheck: vi.fn(),
     ...overrides,
@@ -128,6 +133,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
           readConfigForStrictDecision: vi.fn(
             async () =>
               ({
+                name: 'Team',
                 members: [{ name: 'Alice' }],
               }) as TeamConfig
           ),
@@ -143,7 +149,8 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
           readConfigForStrictDecision: vi.fn(
             async () =>
               ({
-                members: [{ name: 'Removed', removedAt: observedAt }],
+                name: 'Team',
+                members: [{ name: 'Removed', removedAt: Date.parse(observedAt) }],
               }) as TeamConfig
           ),
           readMetaMembers: vi.fn(async () => []),
@@ -155,7 +162,9 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
       assertOpenCodeRuntimeMemberCheckinAllowed(
         { teamName: 'Team', memberName: 'Unknown' },
         {
-          readConfigForStrictDecision: vi.fn(async () => ({ members: [] }) as TeamConfig),
+          readConfigForStrictDecision: vi.fn(
+            async () => ({ name: 'Team', members: [] }) as TeamConfig
+          ),
           readMetaMembers: vi.fn(async () => []),
         }
       )
@@ -280,7 +289,9 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
   });
 
   it('writes persisted liveness and emits a member spawn change for newly confirmed runtime identity', async () => {
-    const writeLaunchState = vi.fn(async () => undefined);
+    const writeLaunchState = vi.fn(
+      async (_teamName: string, _snapshot: PersistedTeamLaunchSnapshot) => undefined
+    );
     const emitRuntimeMemberSpawnChange = vi.fn();
     const ports = createPorts({
       writeLaunchState,

@@ -84,7 +84,7 @@ export interface OpenCodeRuntimeCheckinRun {
   cancelRequested: boolean;
   mixedSecondaryLanes: OpenCodeRuntimeCheckinLane[];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
-  pendingMemberRestarts?: { delete(memberName: string): boolean };
+  pendingMemberRestarts?: Pick<Map<string, unknown>, 'delete' | 'has'>;
 }
 
 export interface OpenCodeRuntimeCheckinPorts<Run extends OpenCodeRuntimeCheckinRun> {
