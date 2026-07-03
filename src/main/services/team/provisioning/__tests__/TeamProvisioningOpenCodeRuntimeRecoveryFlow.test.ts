@@ -31,7 +31,7 @@ function createRecoverableEvidence(
   return {
     memberName: 'Bob',
     providerId: 'opencode',
-    launchState: 'ready',
+    launchState: 'confirmed_alive',
     agentToolAccepted: true,
     runtimeAlive: true,
     bootstrapConfirmed: true,
@@ -45,7 +45,7 @@ function createCommittedEvidence(
   input: Partial<OpenCodeCommittedBootstrapSessionEvidence> = {}
 ): OpenCodeCommittedBootstrapSessionEvidence {
   return {
-    state: 'active',
+    state: 'healthy',
     committed: true,
     activeRunId: 'run-active',
     diagnostics: [],
@@ -87,8 +87,8 @@ function createPorts(
       metaMembers: [],
     })),
     resolveOpenCodeMemberIdentityFromDirectory: vi.fn(() => ({
-      ok: false,
-      reason: 'opencode_recipient_unavailable',
+      ok: false as const,
+      reason: 'opencode_recipient_unavailable' as const,
     })),
     readConfigForObservation: vi.fn(async () => null),
     readTeamMeta: vi.fn(async () => null),
@@ -268,7 +268,7 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryFlow', () => {
           laneId: 'secondary:opencode:persisted-bob',
         },
       },
-    } as PersistedTeamLaunchSnapshot;
+    } as unknown as PersistedTeamLaunchSnapshot;
     const ports = {
       getRuntimeAdapterRun: vi.fn((teamName: string) =>
         teamName === 'primary-team' ? { runId: 'run-primary', providerId: 'opencode' } : undefined
@@ -302,18 +302,24 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryFlow', () => {
       resolveOpenCodeRuntimeLaneId({ teamName: 'secondary-team', runId: 'run-secondary' }, ports)
     ).resolves.toBe('secondary:opencode:bob');
     await expect(
-      resolveOpenCodeRuntimeLaneId({
-        teamName: 'planned-team',
-        runId: 'unknown',
-        memberName: 'Bob',
-      }, ports)
+      resolveOpenCodeRuntimeLaneId(
+        {
+          teamName: 'planned-team',
+          runId: 'unknown',
+          memberName: 'Bob',
+        },
+        ports
+      )
     ).resolves.toBe('secondary:opencode:planned-bob');
     await expect(
-      resolveOpenCodeRuntimeLaneId({
-        teamName: 'persisted-team',
-        runId: 'unknown',
-        memberName: 'Bob',
-      }, ports)
+      resolveOpenCodeRuntimeLaneId(
+        {
+          teamName: 'persisted-team',
+          runId: 'unknown',
+          memberName: 'Bob',
+        },
+        ports
+      )
     ).resolves.toBe('secondary:opencode:persisted-bob');
     await expect(
       resolveOpenCodeRuntimeLaneId({ teamName: 'fallback-team', runId: 'unknown' }, ports)

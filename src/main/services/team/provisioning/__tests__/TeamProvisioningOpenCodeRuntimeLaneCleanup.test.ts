@@ -12,9 +12,7 @@ import {
 
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
 
-function buildLaunchSnapshot(
-  member: Record<string, unknown>
-): PersistedTeamLaunchSnapshot {
+function buildLaunchSnapshot(member: Record<string, unknown>): PersistedTeamLaunchSnapshot {
   return {
     members: {
       teammate: member,
@@ -41,8 +39,9 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
     expect(isProcessAlive).toHaveBeenCalledWith(42);
     expect(isProcessAlive).not.toHaveBeenCalledWith(43);
 
-    expect(hasAlivePersistedTeamProcessRows([{ pid: 99, stoppedAt: 'done' }], { isProcessAlive }))
-      .toBe(false);
+    expect(
+      hasAlivePersistedTeamProcessRows([{ pid: 99, stoppedAt: 'done' }], { isProcessAlive })
+    ).toBe(false);
     expect(hasAlivePersistedTeamProcessRows(null, { isProcessAlive })).toBe(false);
   });
 
@@ -62,9 +61,14 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
     expect(
       selectActiveOpenCodeRuntimeLaneIds({
         lanes: {
-          'secondary:opencode:zeta': { state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
-          primary: { state: 'inactive', updatedAt: '2026-01-01T00:00:00.000Z' },
+          'secondary:opencode:zeta': {
+            laneId: 'secondary:opencode:zeta',
+            state: 'active',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          primary: { laneId: 'primary', state: 'stopped', updatedAt: '2026-01-01T00:00:00.000Z' },
           'secondary:opencode:alpha': {
+            laneId: 'secondary:opencode:alpha',
             state: 'active',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },

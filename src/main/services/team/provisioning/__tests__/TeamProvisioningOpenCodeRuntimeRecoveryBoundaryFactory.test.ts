@@ -23,7 +23,7 @@ function createRuntimeEvidence(
   return {
     memberName: 'Bob',
     providerId: 'opencode',
-    launchState: 'ready',
+    launchState: 'confirmed_alive',
     agentToolAccepted: true,
     runtimeAlive: true,
     bootstrapConfirmed: true,
@@ -42,7 +42,7 @@ function createPersistedMember(
     laneId: 'secondary:opencode:bob',
     laneKind: 'secondary',
     laneOwnerProviderId: 'opencode',
-    launchState: 'ready',
+    launchState: 'confirmed_alive',
     agentToolAccepted: true,
     runtimeAlive: true,
     bootstrapConfirmed: true,
