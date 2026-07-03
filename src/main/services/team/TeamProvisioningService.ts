@@ -709,7 +709,6 @@ import {
   type TeamProvisioningTurnCompletePorts,
 } from './provisioning/TeamProvisioningTurnComplete';
 import {
-  applyWorkspaceTrustArgPatches as applyWorkspaceTrustArgPatchesHelper,
   collectWorkspaceTrustProviders as collectWorkspaceTrustProvidersHelper,
   collectWorkspaceTrustWorkspaces as collectWorkspaceTrustWorkspacesHelper,
   createDefaultModelWorkspaceTrustProviderArgsResolver as createDefaultModelWorkspaceTrustProviderArgsResolverHelper,
@@ -717,6 +716,9 @@ import {
   planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
   prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
 } from './provisioning/TeamProvisioningWorkspaceTrust';
+import {
+  buildWorkspaceTrustLaunchArgs as buildWorkspaceTrustLaunchArgsHelper,
+} from './provisioning/TeamProvisioningWorkspaceTrustLaunchArgs';
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { atomicWriteAsync } from './atomicWrite';
@@ -5156,44 +5158,21 @@ export class TeamProvisioningService {
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const providerArgsForLaunch = applyWorkspaceTrustArgPatchesHelper({
-        args: providerArgs,
-        patches: workspaceTrustPatches,
-        targetProvider: resolvedProviderId,
-        targetSurface: 'primary_provider_args',
+      const {
+        providerArgsForLaunch,
+        crossProviderMemberArgsForLaunch,
+        providerArgsByProvider,
+      } = buildWorkspaceTrustLaunchArgsHelper({
+        providerArgs,
+        resolvedProviderId,
+        crossProviderMemberArgs,
+        workspaceTrustPatches,
       });
-      const crossProviderArgsForLaunch = crossProviderMemberArgs.providerArgsByProvider.has('codex')
-        ? applyWorkspaceTrustArgPatchesHelper({
-            args: crossProviderMemberArgs.args,
-            patches: workspaceTrustPatches,
-            targetProvider: 'codex',
-            targetSurface: 'cross_provider_member_args',
-          })
-        : crossProviderMemberArgs.args;
-      const crossProviderMemberArgsForLaunch = {
-        ...crossProviderMemberArgs,
-        args: crossProviderArgsForLaunch,
-      };
       Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
       if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
         for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
           delete shellEnv[key];
         }
-      }
-      const providerArgsByProvider = new Map<TeamProviderId, string[]>();
-      for (const [providerId, args] of new Map<TeamProviderId, string[]>([
-        [resolvedProviderId, providerArgsForLaunch],
-        ...crossProviderMemberArgs.providerArgsByProvider,
-      ])) {
-        providerArgsByProvider.set(
-          providerId,
-          applyWorkspaceTrustArgPatchesHelper({
-            args,
-            patches: workspaceTrustPatches,
-            targetProvider: providerId,
-            targetSurface: 'provider_facts_probe',
-          })
-        );
       }
       const launchIdentity = await this.resolveAndValidateLaunchIdentity({
         claudePath,
@@ -6699,44 +6678,21 @@ export class TeamProvisioningService {
           })
         : null;
       const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const providerArgsForLaunch = applyWorkspaceTrustArgPatchesHelper({
-        args: providerArgs,
-        patches: workspaceTrustPatches,
-        targetProvider: resolvedProviderId,
-        targetSurface: 'primary_provider_args',
+      const {
+        providerArgsForLaunch,
+        crossProviderMemberArgsForLaunch,
+        providerArgsByProvider,
+      } = buildWorkspaceTrustLaunchArgsHelper({
+        providerArgs,
+        resolvedProviderId,
+        crossProviderMemberArgs,
+        workspaceTrustPatches,
       });
-      const crossProviderArgsForLaunch = crossProviderMemberArgs.providerArgsByProvider.has('codex')
-        ? applyWorkspaceTrustArgPatchesHelper({
-            args: crossProviderMemberArgs.args,
-            patches: workspaceTrustPatches,
-            targetProvider: 'codex',
-            targetSurface: 'cross_provider_member_args',
-          })
-        : crossProviderMemberArgs.args;
-      const crossProviderMemberArgsForLaunch = {
-        ...crossProviderMemberArgs,
-        args: crossProviderArgsForLaunch,
-      };
       Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
       if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
         for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
           delete shellEnv[key];
         }
-      }
-      const providerArgsByProvider = new Map<TeamProviderId, string[]>();
-      for (const [providerId, args] of new Map<TeamProviderId, string[]>([
-        [resolvedProviderId, providerArgsForLaunch],
-        ...crossProviderMemberArgs.providerArgsByProvider,
-      ])) {
-        providerArgsByProvider.set(
-          providerId,
-          applyWorkspaceTrustArgPatchesHelper({
-            args,
-            patches: workspaceTrustPatches,
-            targetProvider: providerId,
-            targetSurface: 'provider_facts_probe',
-          })
-        );
       }
       const launchIdentity = await this.resolveAndValidateLaunchIdentity({
         claudePath,
