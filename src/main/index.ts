@@ -88,6 +88,7 @@ import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMult
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
+  computeLiveTeamWatchScope,
   computeTeamWatchScope,
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
@@ -1602,15 +1603,17 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
 
-  // Scope team-root/task file watching to alive + UI-engaged teams so it no longer
-  // scales with the number of teams on disk. Inboxes and the teams root stay fully
-  // watched, so cross-team delivery, the lead inbox relay, and notifications are
-  // unaffected. Unsetting the provider on cleanup reverts to watching every team.
+  // Scope team-root/task file watching to alive + UI-engaged teams, and scope
+  // inbox watching to live teams only. Idle historical teams cannot produce
+  // immediate runtime inbox activity, so their inbox files do not need live fd
+  // watchers; when a team launches, target reconciliation backfills existing
+  // inbox files before live delivery resumes.
   setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
   setTeamWatchScopeChangeListener(() => {
     void context.fileWatcher.refreshTeamWatchScope();
   });
   context.fileWatcher.setTeamWatchScopeProvider(() => computeTeamWatchScope());
+  context.fileWatcher.setTeamInboxWatchScopeProvider(() => computeLiveTeamWatchScope());
   void context.fileWatcher.refreshTeamWatchScope();
 
   teamChangeCleanup = () => {
@@ -1618,6 +1621,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     setAliveTeamsProvider(null);
     setTeamWatchScopeChangeListener(null);
     context.fileWatcher.setTeamWatchScopeProvider(null);
+    context.fileWatcher.setTeamInboxWatchScopeProvider(null);
     reconcileScheduler?.dispose();
   };
 
