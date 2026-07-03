@@ -178,15 +178,9 @@ import {
   planCliAutoSuffixedConfigMemberCleanup,
   planCliAutoSuffixedMetaMemberCleanup,
   planTeamConfigLaunchNormalization,
-  resolveLaunchExpectedMembersFromCompatibilityReport,
   selectMembersMetaTeammates,
 } from './provisioning/TeamProvisioningConfigLaunchNormalization';
 import {
-  buildConfigLaunchCompatibilityReport,
-  buildInboxLaunchCompatibilityReport,
-  buildLaunchMembersFromMeta,
-  extractTeammateSpecsFromConfig,
-  selectLaunchCompatibilityInboxNames,
   type TeamProvisioningEffectiveLaunchState,
   updateTeamConfigPostLaunch,
 } from './provisioning/TeamProvisioningConfigMaterialization';
@@ -263,6 +257,12 @@ import {
   buildLaunchDiagnosticsFromRun,
   mentionsProcessTableUnavailable,
 } from './provisioning/TeamProvisioningLaunchDiagnostics';
+import {
+  probeLaunchCompatibility as probeLaunchCompatibilityHelper,
+  resolveLaunchExpectedMembers as resolveLaunchExpectedMembersHelper,
+  resolveLaunchExpectedMembersFromCompatibility,
+  type TeamProvisioningLaunchExpectedMembersPorts,
+} from './provisioning/TeamProvisioningLaunchExpectedMembers';
 import {
   deriveMemberLaunchState,
   isAutoClearableLaunchFailureReason,
@@ -6485,10 +6485,13 @@ export class TeamProvisioningService {
         return { runId: existingRunReuse.runId };
       }
 
-      const launchCompatibility = await this.probeLaunchCompatibility(
-        request.teamName,
-        configRaw,
-        request.providerId
+      const launchCompatibility = await probeLaunchCompatibilityHelper(
+        {
+          teamName: request.teamName,
+          configRaw,
+          leadProviderId: request.providerId,
+        },
+        this.createLaunchExpectedMembersPorts()
       );
       if (launchCompatibility.level === 'unsafe') {
         this.provisioningRunByTeam.delete(request.teamName);
@@ -6501,7 +6504,7 @@ export class TeamProvisioningService {
         members: expectedMemberSpecs,
         source,
         warning,
-      } = this.resolveLaunchExpectedMembersFromCompatibility(launchCompatibility);
+      } = resolveLaunchExpectedMembersFromCompatibility(launchCompatibility);
       assertOpenCodeNotLaunchedThroughLegacyProvisioning({
         providerId: request.providerId,
         members: expectedMemberSpecs,
@@ -14446,102 +14449,19 @@ export class TeamProvisioningService {
     source: 'members-meta' | 'inboxes' | 'config-fallback';
     warning?: string;
   }> {
-    return this.resolveLaunchExpectedMembersFromCompatibility(
-      await this.probeLaunchCompatibility(teamName, configRaw, leadProviderId)
+    return resolveLaunchExpectedMembersHelper(
+      { teamName, configRaw, leadProviderId },
+      this.createLaunchExpectedMembersPorts()
     );
   }
 
-  private resolveLaunchExpectedMembersFromCompatibility(report: TeamLaunchCompatibilityReport): {
-    members: TeamCreateRequest['members'];
-    source: 'members-meta' | 'inboxes' | 'config-fallback';
-    warning?: string;
-  } {
-    return resolveLaunchExpectedMembersFromCompatibilityReport(report);
-  }
-
-  private async probeLaunchCompatibility(
-    teamName: string,
-    configRaw: string,
-    leadProviderId?: TeamProviderId
-  ): Promise<TeamLaunchCompatibilityReport> {
-    // Keep this probe read-only: launch-state/bootstrap-state may inform existing resume guards,
-    // but compatibility repair must not mutate or trust stale runtime projections.
-    await Promise.allSettled([
-      this.launchStateStore.read(teamName),
-      readBootstrapLaunchSnapshot(teamName),
-    ]);
-
-    try {
-      const metaMembers = await this.membersMetaStore.getMembers(teamName);
-      const members = buildLaunchMembersFromMeta(metaMembers);
-      if (members.length > 0) {
-        return {
-          level: 'ready',
-          rosterSource: 'members-meta',
-          members,
-          warnings: [],
-          blockers: [],
-        };
-      }
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to read members.meta.json: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    const configMembers = extractTeammateSpecsFromConfig(configRaw);
-    if (configMembers.length === 0) {
-      try {
-        JSON.parse(configRaw);
-      } catch {
-        logger.warn(`[${teamName}] Failed to parse config.json for launch fallback members`);
-      }
-    }
-
-    try {
-      const inboxNames = selectLaunchCompatibilityInboxNames(
-        await this.inboxReader.listInboxNames(teamName)
-      );
-      if (inboxNames.length > 0) {
-        return buildInboxLaunchCompatibilityReport({
-          teamName,
-          inboxNames,
-          configMembers,
-          leadProviderId,
-        });
-      }
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to read inbox member names: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    if (configMembers.length > 0) {
-      return buildConfigLaunchCompatibilityReport(teamName, configMembers, leadProviderId);
-    }
-
-    let configParseFailed = false;
-    try {
-      JSON.parse(configRaw);
-    } catch {
-      configParseFailed = true;
-    }
-
+  private createLaunchExpectedMembersPorts(): TeamProvisioningLaunchExpectedMembersPorts {
     return {
-      level: 'ready',
-      rosterSource: 'missing',
-      members: [],
-      warnings: configParseFailed
-        ? [
-            'Config could not be parsed during launch roster discovery. ' +
-              'Launch will continue without explicit teammate names.',
-          ]
-        : [],
-      blockers: [],
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+      readBootstrapLaunchSnapshot,
+      getMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+      listInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
+      warn: (message) => logger.warn(message),
     };
   }
 
