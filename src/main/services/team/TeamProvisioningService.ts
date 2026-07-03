@@ -204,19 +204,17 @@ import {
   updateTeamConfigPostLaunch,
 } from './provisioning/TeamProvisioningConfigMaterialization';
 import {
-  buildCrossTeamConversationKey,
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
+  createCrossTeamLeadSuppressionState,
   type CrossTeamDeliveredLeadBlock,
-  getCrossTeamSourceTeam,
-  getPendingCrossTeamReplyExpectationKeys,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
+  markCrossTeamReplyToOwnOutbound,
   matchCrossTeamLeadInboxMessages as matchCrossTeamLeadInboxMessagesHelper,
-  parseCrossTeamTargetTeam,
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
   rememberRecentCrossTeamLeadDeliveryMessageIds,
-  wasRecentlyDeliveredToLead,
+  wasRecentlyDeliveredCrossTeamLeadMessage,
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
 import { buildProvisioningTraceDetail } from './provisioning/TeamProvisioningDiagnosticsHelpers';
 import {
@@ -9373,78 +9371,25 @@ export class TeamProvisioningService {
       const { silentIdleIds, passiveIdleIds, coarseNonIdleNoiseIds } =
         getLeadInboxRelayNoiseIds(unread);
 
-      const latestOutboundByConversation = new Map<string, number>();
-      const latestReadInboundByConversation = new Map<string, number>();
-      for (const message of leadInboxMessages) {
-        const timestampMs = Date.parse(message.timestamp);
-        if (!Number.isFinite(timestampMs)) continue;
-        if (message.source === CROSS_TEAM_SENT_SOURCE) {
-          const conversationId = message.conversationId?.trim();
-          const targetTeam = parseCrossTeamTargetTeam(message.to);
-          if (!conversationId || !targetTeam) continue;
-          const key = buildCrossTeamConversationKey(targetTeam, conversationId);
-          latestOutboundByConversation.set(
-            key,
-            Math.max(latestOutboundByConversation.get(key) ?? 0, timestampMs)
-          );
-          continue;
-        }
-        if (message.source === CROSS_TEAM_SOURCE && message.read) {
-          const conversationId =
-            message.replyToConversationId?.trim() ??
-            message.conversationId?.trim() ??
-            parseCrossTeamPrefix(message.text)?.conversationId;
-          const sourceTeam = getCrossTeamSourceTeam(message.from);
-          if (!conversationId || !sourceTeam) continue;
-          const key = buildCrossTeamConversationKey(sourceTeam, conversationId);
-          latestReadInboundByConversation.set(
-            key,
-            Math.max(latestReadInboundByConversation.get(key) ?? 0, timestampMs)
-          );
-        }
-      }
-      const pendingHistoricalReplies = new Set(
-        Array.from(latestOutboundByConversation.entries())
-          .filter(([key, sentAtMs]) => sentAtMs > (latestReadInboundByConversation.get(key) ?? 0))
-          .map(([key]) => key)
-      );
-      const pendingTransientReplies = getPendingCrossTeamReplyExpectationKeys(
-        this.pendingCrossTeamFirstReplies,
+      const crossTeamSuppression = createCrossTeamLeadSuppressionState({
+        leadInboxMessages,
+        pendingReplies: this.pendingCrossTeamFirstReplies,
         teamName,
-        Date.now(),
-        TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
-      );
-      const matchedTransientReplyKeys = new Set<string>();
+        now: Date.now(),
+        ttlMs: TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
+      });
 
       const wasRecentlyDeliveredCrossTeam = (message: InboxMessage): boolean => {
-        if (message.source !== CROSS_TEAM_SOURCE) return false;
-        if (!hasStableInboxMessageId(message)) return false;
-        return wasRecentlyDeliveredToLead(
-          this.recentCrossTeamLeadDeliveryMessageIds,
+        return wasRecentlyDeliveredCrossTeamLeadMessage({
+          message,
+          recentMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
           teamName,
-          message.messageId,
-          Date.now(),
-          TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
-        );
+          now: Date.now(),
+          ttlMs: TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
+        });
       };
       const isCrossTeamReplyToOwnOutbound = (message: InboxMessage): boolean => {
-        if (message.source !== CROSS_TEAM_SOURCE) return false;
-        const conversationId =
-          message.replyToConversationId?.trim() ??
-          message.conversationId?.trim() ??
-          parseCrossTeamPrefix(message.text)?.conversationId;
-        if (!conversationId) return false;
-        const sourceTeam = getCrossTeamSourceTeam(message.from);
-        if (!sourceTeam) return false;
-        const key = buildCrossTeamConversationKey(sourceTeam, conversationId);
-        if (pendingHistoricalReplies.has(key)) {
-          return true;
-        }
-        if (pendingTransientReplies.has(key)) {
-          matchedTransientReplyKeys.add(key);
-          return true;
-        }
-        return false;
+        return markCrossTeamReplyToOwnOutbound(message, crossTeamSuppression);
       };
 
       // Category 1: permanently ignored → mark as read.
@@ -9463,7 +9408,7 @@ export class TeamProvisioningService {
         } catch {
           // best-effort
         }
-        for (const key of matchedTransientReplyKeys) {
+        for (const key of crossTeamSuppression.matchedTransientReplyKeys) {
           const [otherTeam, conversationId] = key.split('\0');
           if (otherTeam && conversationId) {
             this.clearPendingCrossTeamReplyExpectation(teamName, otherTeam, conversationId);

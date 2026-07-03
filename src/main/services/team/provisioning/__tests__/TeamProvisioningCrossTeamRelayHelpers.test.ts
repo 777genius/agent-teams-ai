@@ -3,18 +3,21 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCrossTeamConversationKey,
   clearPendingCrossTeamReplyExpectation,
+  createCrossTeamLeadSuppressionState,
   extractCrossTeamPseudoTargetTeam,
   getCrossTeamSourceTeam,
   getPendingCrossTeamReplyExpectationKeys,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
   looksLikeQualifiedExternalRecipientName,
+  markCrossTeamReplyToOwnOutbound,
   matchCrossTeamLeadInboxMessages,
   parseCrossTeamRecipient,
   parseCrossTeamTargetTeam,
   registerPendingCrossTeamReplyExpectation,
   rememberRecentCrossTeamLeadDeliveryMessageIds,
   resolveSingleActiveCrossTeamReplyHint,
+  wasRecentlyDeliveredCrossTeamLeadMessage,
   wasRecentlyDeliveredToLead,
 } from '../TeamProvisioningCrossTeamRelayHelpers';
 
@@ -190,5 +193,84 @@ describe('cross-team relay helpers', () => {
       wasRecentlyDeliveredToLead(recentMessageIds, 'local-team', 'message-2', 12_000, ttlMs)
     ).toBe(false);
     expect(recentMessageIds.has('local-team')).toBe(false);
+  });
+
+  it('builds lead suppression state from pending historical and transient cross-team replies', () => {
+    const pendingReplies = new Map<string, Map<string, number>>([
+      [
+        'local-team',
+        new Map([[buildCrossTeamConversationKey('transient-team', 'transient-conv'), 10_000]]),
+      ],
+    ]);
+    const state = createCrossTeamLeadSuppressionState({
+      leadInboxMessages: [
+        inboxMessage({
+          source: 'cross_team_sent',
+          from: 'local-team.team-lead',
+          to: 'peer-team.team-lead',
+          conversationId: 'conv-1',
+          timestamp: '2026-01-01T00:01:00.000Z',
+          read: true,
+        }),
+        inboxMessage({
+          source: 'cross_team',
+          from: 'peer-team.team-lead',
+          conversationId: 'conv-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: true,
+        }),
+      ],
+      pendingReplies,
+      teamName: 'local-team',
+      now: 10_500,
+      ttlMs: 1000,
+    });
+
+    expect(
+      markCrossTeamReplyToOwnOutbound(inboxMessage({ from: 'peer-team.team-lead' }), state)
+    ).toBe(true);
+    expect(
+      markCrossTeamReplyToOwnOutbound(
+        inboxMessage({
+          from: 'transient-team.team-lead',
+          conversationId: 'transient-conv',
+        }),
+        state
+      )
+    ).toBe(true);
+    expect(state.matchedTransientReplyKeys).toEqual(
+      new Set([buildCrossTeamConversationKey('transient-team', 'transient-conv')])
+    );
+    expect(
+      markCrossTeamReplyToOwnOutbound(
+        inboxMessage({ from: 'unrelated-team.team-lead', conversationId: 'other-conv' }),
+        state
+      )
+    ).toBe(false);
+  });
+
+  it('detects recently delivered cross-team lead messages', () => {
+    const recentMessageIds = new Map<string, Map<string, number>>([
+      ['local-team', new Map([['message-1', 10_000]])],
+    ]);
+
+    expect(
+      wasRecentlyDeliveredCrossTeamLeadMessage({
+        message: inboxMessage({ messageId: 'message-1' }),
+        recentMessageIds,
+        teamName: 'local-team',
+        now: 10_500,
+        ttlMs: 1000,
+      })
+    ).toBe(true);
+    expect(
+      wasRecentlyDeliveredCrossTeamLeadMessage({
+        message: inboxMessage({ source: 'cross_team_sent', messageId: 'message-1' }),
+        recentMessageIds,
+        teamName: 'local-team',
+        now: 10_500,
+        ttlMs: 1000,
+      })
+    ).toBe(false);
   });
 });
