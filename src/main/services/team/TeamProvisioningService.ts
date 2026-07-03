@@ -447,6 +447,7 @@ import {
 } from './provisioning/TeamProvisioningOpenCodeMemberInboxRelay';
 import {
   assertOpenCodeRuntimeEvidenceAccepted as assertOpenCodeRuntimeEvidenceAcceptedHelper,
+  createOpenCodeRuntimeCheckinPorts as createOpenCodeRuntimeCheckinPortsHelper,
   type OpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeControlAck,
   recordOpenCodeRuntimeBootstrapCheckin as recordOpenCodeRuntimeBootstrapCheckinHelper,
@@ -3968,7 +3969,7 @@ export class TeamProvisioningService {
   }
 
   private createOpenCodeRuntimeCheckinPorts(): OpenCodeRuntimeCheckinPorts<ProvisioningRun> {
-    return {
+    return createOpenCodeRuntimeCheckinPortsHelper({
       teamsBasePath: getTeamsBasePath(),
       resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
       resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
@@ -3989,24 +3990,7 @@ export class TeamProvisioningService {
       },
       invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
       emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
-      emitRuntimeMemberSpawnChange: (event) => {
-        this.teamChangeEmitter?.({
-          type: 'member-spawn',
-          teamName: event.teamName,
-          runId: event.runId,
-          detail: event.memberName,
-        });
-      },
-      emitTaskLogChange: (event) => {
-        this.teamChangeEmitter?.({
-          type: 'task-log-change',
-          teamName: event.teamName,
-          runId: event.runId,
-          taskId: event.taskId,
-          detail: event.detail,
-          taskSignalKind: 'log',
-        });
-      },
+      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
       createOpenCodeRuntimeBootstrapEvidencePorts: () =>
         this.createOpenCodeRuntimeBootstrapEvidencePorts(),
       upsertOpenCodeTaskRecord: (teamName, record) =>
@@ -4027,7 +4011,7 @@ export class TeamProvisioningService {
         ),
       syncMemberLaunchGraceCheck: (run, memberName, nextStatus) =>
         this.syncMemberLaunchGraceCheck(run, memberName, nextStatus),
-    };
+    });
   }
 
   private createOpenCodeRuntimeDeliveryService(teamName: string, laneId: string) {

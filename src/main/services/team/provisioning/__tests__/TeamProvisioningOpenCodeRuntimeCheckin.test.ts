@@ -9,6 +9,7 @@ import {
   applyOpenCodeRuntimeBootstrapCheckinToTrackedRun,
   assertOpenCodeRuntimeEvidenceAccepted,
   assertOpenCodeRuntimeMemberCheckinAllowed,
+  createOpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinRun,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotency,
@@ -196,6 +197,41 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     } finally {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }
+  });
+
+  it('maps check-in port events onto team change events', () => {
+    const emitTeamChange = vi.fn();
+    const ports = createOpenCodeRuntimeCheckinPorts({
+      ...createPorts(),
+      emitTeamChange,
+    });
+
+    ports.emitRuntimeMemberSpawnChange({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Alice',
+    });
+    ports.emitTaskLogChange({
+      teamName: 'Team',
+      runId: 'run-1',
+      taskId: 'task-1',
+      detail: 'opencode-runtime-task-event:started',
+    });
+
+    expect(emitTeamChange).toHaveBeenNthCalledWith(1, {
+      type: 'member-spawn',
+      teamName: 'Team',
+      runId: 'run-1',
+      detail: 'Alice',
+    });
+    expect(emitTeamChange).toHaveBeenNthCalledWith(2, {
+      type: 'task-log-change',
+      teamName: 'Team',
+      runId: 'run-1',
+      taskId: 'task-1',
+      detail: 'opencode-runtime-task-event:started',
+      taskSignalKind: 'log',
+    });
   });
 
   it('applies tracked-run liveness and reports no material change for duplicate evidence', () => {

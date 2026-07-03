@@ -44,6 +44,7 @@ import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
+  TeamChangeEvent,
   TeamConfig,
   TeamCreateRequest,
   TeamMember,
@@ -131,6 +132,56 @@ export interface OpenCodeRuntimeCheckinPorts<Run extends OpenCodeRuntimeCheckinR
     memberName: string,
     nextStatus: MemberSpawnStatusEntry
   ): void;
+}
+
+export type OpenCodeRuntimeCheckinPortCallbacks<Run extends OpenCodeRuntimeCheckinRun> = Omit<
+  OpenCodeRuntimeCheckinPorts<Run>,
+  'emitRuntimeMemberSpawnChange' | 'emitTaskLogChange'
+> & {
+  emitTeamChange(event: TeamChangeEvent): void;
+};
+
+export function createOpenCodeRuntimeCheckinPorts<Run extends OpenCodeRuntimeCheckinRun>(
+  callbacks: OpenCodeRuntimeCheckinPortCallbacks<Run>
+): OpenCodeRuntimeCheckinPorts<Run> {
+  return {
+    teamsBasePath: callbacks.teamsBasePath,
+    resolveOpenCodeRuntimeLaneId: callbacks.resolveOpenCodeRuntimeLaneId,
+    resolveCurrentOpenCodeRuntimeRunId: callbacks.resolveCurrentOpenCodeRuntimeRunId,
+    readLaunchState: callbacks.readLaunchState,
+    writeLaunchState: callbacks.writeLaunchState,
+    readConfigForStrictDecision: callbacks.readConfigForStrictDecision,
+    readMetaMembers: callbacks.readMetaMembers,
+    readPersistedRuntimeMembers: callbacks.readPersistedRuntimeMembers,
+    getTrackedRun: callbacks.getTrackedRun,
+    persistTrackedRunLaunchState: callbacks.persistTrackedRunLaunchState,
+    invalidateRuntimeSnapshotCaches: callbacks.invalidateRuntimeSnapshotCaches,
+    emitMemberSpawnChange: callbacks.emitMemberSpawnChange,
+    emitRuntimeMemberSpawnChange: (event) => {
+      callbacks.emitTeamChange({
+        type: 'member-spawn',
+        teamName: event.teamName,
+        runId: event.runId,
+        detail: event.memberName,
+      });
+    },
+    emitTaskLogChange: (event) => {
+      callbacks.emitTeamChange({
+        type: 'task-log-change',
+        teamName: event.teamName,
+        runId: event.runId,
+        taskId: event.taskId,
+        detail: event.detail,
+        taskSignalKind: 'log',
+      });
+    },
+    createOpenCodeRuntimeBootstrapEvidencePorts:
+      callbacks.createOpenCodeRuntimeBootstrapEvidencePorts,
+    upsertOpenCodeTaskRecord: callbacks.upsertOpenCodeTaskRecord,
+    syncMemberTaskActivityForRuntimeTransition:
+      callbacks.syncMemberTaskActivityForRuntimeTransition,
+    syncMemberLaunchGraceCheck: callbacks.syncMemberLaunchGraceCheck,
+  };
 }
 
 interface OpenCodeRuntimeLivenessInput {
