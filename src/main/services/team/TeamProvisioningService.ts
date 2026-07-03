@@ -1,7 +1,4 @@
-import {
-  isPureOpenCodeWorktreeRootLanePlan,
-  type TeamRuntimeLanePlan,
-} from '@features/team-runtime-lanes';
+import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import {
   type WorkspaceTrustCoordinator,
@@ -355,6 +352,11 @@ import {
   type PreparedOpenCodeRuntimeAdapterLaunch,
   prepareOpenCodeRuntimeAdapterLaunch,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterPreparation';
+import {
+  createOpenCodeTeamThroughRuntimeAdapterFlow,
+  launchOpenCodeTeamThroughRuntimeAdapterFlow,
+  type OpenCodeRuntimeAdapterTeamFlowPorts,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterTeamFlow';
 import { type OpenCodeRuntimeControlAck } from './provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   type MemberWorkSyncProofMissingRecoveryScheduler,
@@ -702,7 +704,6 @@ import type {
   TeamProvisioningProgress,
   TeamProvisioningState,
   TeamRuntimeState,
-  TeamTask,
   ToolApprovalEvent,
   ToolApprovalRequest,
   ToolApprovalSettings,
@@ -5079,6 +5080,46 @@ export class TeamProvisioningService {
     );
   }
 
+  private createOpenCodeRuntimeAdapterTeamFlowPorts(): OpenCodeRuntimeAdapterTeamFlowPorts {
+    return {
+      getTeamsBasePathsToProbe,
+      getTeamsBasePath,
+      getTasksBasePath,
+      pathExists: (filePath) => this.pathExists(filePath),
+      ensureCwdExists,
+      mkdir: async (directoryPath) => {
+        await fs.promises.mkdir(directoryPath, { recursive: true });
+      },
+      nowMs: () => Date.now(),
+      writeTeamMeta: (teamName, data) => this.teamMetaStore.writeMeta(teamName, data),
+      writeMembersMeta: (teamName, members, options) =>
+        this.membersMetaStore.writeMembers(teamName, members, options),
+      writeOpenCodeTeamConfig: (launchRequest, members) =>
+        writeOpenCodeTeamConfig(launchRequest, members),
+      prepareOpenCodeRuntimeAdapterLaunch: (params) =>
+        this.prepareOpenCodeRuntimeAdapterLaunch(params),
+      readTeamConfigRaw: (teamName) => {
+        const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+        return tryReadRegularFileUtf8(configPath, {
+          timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+          maxBytes: TEAM_CONFIG_MAX_BYTES,
+        });
+      },
+      resolveLaunchExpectedMembers: (teamName, configRaw, leadProviderId) =>
+        this.resolveLaunchExpectedMembers(teamName, configRaw, leadProviderId),
+      updateConfigProjectPath: (teamName, cwd) => this.updateConfigProjectPath(teamName, cwd),
+      readExistingTasks: (teamName) => new TeamTaskReader().getTasks(teamName),
+      warn: (message) => {
+        logger.warn(message);
+      },
+      buildDeterministicLaunchHydrationPrompt,
+      runOpenCodeWorktreeRootAggregateLaunch: (input) =>
+        this.runOpenCodeWorktreeRootAggregateLaunch(input),
+      runOpenCodeTeamRuntimeAdapterLaunch: (input) =>
+        this.runOpenCodeTeamRuntimeAdapterLaunch(input),
+    };
+  }
+
   private async resolveOpenCodeMemberWorkspacesForRuntime(params: {
     teamName: string;
     baseCwd: string;
@@ -5323,123 +5364,22 @@ export class TeamProvisioningService {
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-    for (const probe of teamsBasePathsToProbe) {
-      const configPath = path.join(probe.basePath, request.teamName, 'config.json');
-      if (await this.pathExists(configPath)) {
-        const suffix = probe.location === 'configured' ? '' : ` (found under ${probe.basePath})`;
-        throw new Error(`Team already exists${suffix}`);
-      }
-    }
-
-    await ensureCwdExists(request.cwd);
-    const preparedLaunch = await this.prepareOpenCodeRuntimeAdapterLaunch({
+    return createOpenCodeTeamThroughRuntimeAdapterFlow(
       request,
-      members: request.members,
-    });
-    const { launchRequest, effectiveMembers, lanePlan, runtimeLaunchMembers } = preparedLaunch;
-    const teamDir = path.join(getTeamsBasePath(), launchRequest.teamName);
-    const tasksDir = path.join(getTasksBasePath(), launchRequest.teamName);
-    await fs.promises.mkdir(teamDir, { recursive: true });
-    await fs.promises.mkdir(tasksDir, { recursive: true });
-    await this.teamMetaStore.writeMeta(launchRequest.teamName, {
-      displayName: launchRequest.displayName,
-      description: launchRequest.description,
-      color: launchRequest.color,
-      cwd: launchRequest.cwd,
-      prompt: launchRequest.prompt,
-      providerId: launchRequest.providerId,
-      providerBackendId: launchRequest.providerBackendId,
-      model: launchRequest.model,
-      effort: launchRequest.effort,
-      skipPermissions: launchRequest.skipPermissions,
-      worktree: launchRequest.worktree,
-      extraCliArgs: launchRequest.extraCliArgs,
-      limitContext: launchRequest.limitContext,
-      createdAt: Date.now(),
-    });
-    const membersToWrite = buildMembersMetaWritePayload(effectiveMembers);
-    await this.membersMetaStore.writeMembers(launchRequest.teamName, membersToWrite, {
-      providerBackendId: launchRequest.providerBackendId,
-    });
-    await writeOpenCodeTeamConfig(launchRequest, effectiveMembers);
-    if (isPureOpenCodeWorktreeRootLanePlan(lanePlan)) {
-      return this.runOpenCodeWorktreeRootAggregateLaunch({
-        request: launchRequest,
-        members: effectiveMembers,
-        lanePlan,
-        prompt: launchRequest.prompt?.trim() ?? '',
-        sourceWarning: undefined,
-        onProgress,
-      });
-    }
-
-    return this.runOpenCodeTeamRuntimeAdapterLaunch({
-      request: launchRequest,
-      members: runtimeLaunchMembers,
-      prompt: launchRequest.prompt?.trim() ?? '',
-      sourceWarning: undefined,
       onProgress,
-    });
+      this.createOpenCodeRuntimeAdapterTeamFlowPorts()
+    );
   }
 
   private async launchOpenCodeTeamThroughRuntimeAdapter(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
-    const configRaw = await tryReadRegularFileUtf8(configPath, {
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-    });
-    if (!configRaw) {
-      throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
-    }
-    await ensureCwdExists(request.cwd);
-    const { members, warning } = await this.resolveLaunchExpectedMembers(
-      request.teamName,
-      configRaw,
-      request.providerId
-    );
-    const preparedLaunch = await this.prepareOpenCodeRuntimeAdapterLaunch({
+    return launchOpenCodeTeamThroughRuntimeAdapterFlow(
       request,
-      members,
-    });
-    const { launchRequest, effectiveMembers, lanePlan, runtimeLaunchMembers } = preparedLaunch;
-    await this.updateConfigProjectPath(launchRequest.teamName, launchRequest.cwd);
-
-    let existingTasks: TeamTask[] = [];
-    try {
-      existingTasks = await new TeamTaskReader().getTasks(request.teamName);
-    } catch (error) {
-      logger.warn(
-        `[${request.teamName}] Failed to read tasks for OpenCode launch prompt: ${String(error)}`
-      );
-    }
-    const prompt = buildDeterministicLaunchHydrationPrompt(
-      launchRequest,
-      effectiveMembers,
-      existingTasks,
-      false
-    );
-    if (isPureOpenCodeWorktreeRootLanePlan(lanePlan)) {
-      return this.runOpenCodeWorktreeRootAggregateLaunch({
-        request: launchRequest,
-        members: effectiveMembers,
-        lanePlan,
-        prompt,
-        sourceWarning: warning,
-        onProgress,
-      });
-    }
-
-    return this.runOpenCodeTeamRuntimeAdapterLaunch({
-      request: launchRequest,
-      members: runtimeLaunchMembers,
-      prompt,
-      sourceWarning: warning,
       onProgress,
-    });
+      this.createOpenCodeRuntimeAdapterTeamFlowPorts()
+    );
   }
 
   private async launchOpenCodeAggregatePrimaryLane(params: {
