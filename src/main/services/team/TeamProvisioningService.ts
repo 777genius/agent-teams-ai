@@ -55,10 +55,7 @@ import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/te
 import { type ParsedTeammateContent } from '@shared/utils/teammateMessageParser';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
-import {
-  inferTeamProviderIdFromModel,
-  normalizeOptionalTeamProviderId,
-} from '@shared/utils/teamProvider';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -181,10 +178,10 @@ import {
 } from './provisioning/TeamProvisioningConfigLaunchNormalization';
 import {
   buildConfigLaunchCompatibilityReport,
+  buildInboxLaunchCompatibilityReport,
   buildLaunchMembersFromMeta,
   extractTeammateSpecsFromConfig,
-  hasIncompleteOpenCodeLaunchCompatibilityMember,
-  isUnsafeMixedLaunchFallback,
+  selectLaunchCompatibilityInboxNames,
   type TeamProvisioningEffectiveLaunchState,
   updateTeamConfigPostLaunch,
 } from './provisioning/TeamProvisioningConfigMaterialization';
@@ -200,7 +197,6 @@ import {
   type CrossTeamDeliveredLeadBlock,
   isCrossTeamPseudoRecipientName,
   isCrossTeamToolRecipientName,
-  looksLikeQualifiedExternalRecipientName,
   markCrossTeamReplyToOwnOutbound,
   matchCrossTeamLeadInboxMessages as matchCrossTeamLeadInboxMessagesHelper,
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
@@ -15778,88 +15774,16 @@ export class TeamProvisioningService {
     }
 
     try {
-      const allInboxNames = Array.from(
-        new Set(
-          (await this.inboxReader.listInboxNames(teamName))
-            .map((name) => name.trim())
-            .filter((name) => name.length > 0)
-        )
+      const inboxNames = selectLaunchCompatibilityInboxNames(
+        await this.inboxReader.listInboxNames(teamName)
       );
-      const inboxNameSetLower = new Set(allInboxNames.map((n) => n.toLowerCase()));
-      const inboxNames = allInboxNames
-        .filter((name) => name !== 'team-lead' && name !== 'user')
-        .filter((name) => !isCrossTeamPseudoRecipientName(name))
-        .filter((name) => !isCrossTeamToolRecipientName(name))
-        .filter((name) => !looksLikeQualifiedExternalRecipientName(name))
-        .filter((name) => {
-          const match = /^(.+)-(\d+)$/.exec(name);
-          if (!match?.[1] || !match[2]) return true;
-          const suffix = Number(match[2]);
-          // Only filter CLI-suffixed names (alice-2) when the base name (alice) also exists.
-          // Important: do NOT filter names like dev-1 (common intentional naming). Only consider -2+ as auto-suffix.
-          if (!Number.isFinite(suffix) || suffix < 2) return true;
-          return !inboxNameSetLower.has(match[1].toLowerCase());
-        });
       if (inboxNames.length > 0) {
-        const configHasOpenCodeMember = configMembers.some((member) => {
-          const providerId = normalizeOptionalTeamProviderId(member.providerId);
-          const model = typeof member.model === 'string' ? member.model.trim() : '';
-          return providerId === 'opencode' || inferTeamProviderIdFromModel(model) === 'opencode';
+        return buildInboxLaunchCompatibilityReport({
+          teamName,
+          inboxNames,
+          configMembers,
+          leadProviderId,
         });
-        if (configHasOpenCodeMember) {
-          return buildConfigLaunchCompatibilityReport(teamName, configMembers, leadProviderId, {
-            ignoredInboxNames: true,
-          });
-        }
-        const configMembersByName = new Map(
-          configMembers.map((member) => [member.name.toLowerCase(), member] as const)
-        );
-        const members = inboxNames.map((name) => {
-          const configMember = configMembersByName.get(name.toLowerCase());
-          return {
-            name,
-            role: configMember?.role,
-            workflow: configMember?.workflow,
-            isolation: configMember?.isolation,
-            cwd: configMember?.cwd,
-            providerId: configMember?.providerId,
-            model: configMember?.model,
-            effort: configMember?.effort,
-            mcpPolicy: configMember?.mcpPolicy,
-          };
-        });
-        const memberOverridesUsed = members.some(
-          (member) => member.providerId || member.model || member.effort || member.isolation
-        );
-        if (
-          hasIncompleteOpenCodeLaunchCompatibilityMember(members) ||
-          isUnsafeMixedLaunchFallback({
-            leadProviderId,
-            members,
-          })
-        ) {
-          return {
-            level: 'unsafe',
-            rosterSource: 'inboxes',
-            members: [],
-            warnings: [],
-            blockers: [
-              `[${teamName}] ${getMixedLaunchFallbackRecoveryError()} Fallback source: inboxes.`,
-            ],
-          };
-        }
-        return {
-          level: 'ready',
-          rosterSource: 'inboxes',
-          members,
-          warnings: memberOverridesUsed
-            ? [
-                'Launch roster was recovered from inboxes and merged with config.json provider/model/effort overrides. ' +
-                  'Multimodel reconnect is best-effort in this fallback path.',
-              ]
-            : [],
-          blockers: [],
-        };
       }
     } catch (error) {
       logger.warn(

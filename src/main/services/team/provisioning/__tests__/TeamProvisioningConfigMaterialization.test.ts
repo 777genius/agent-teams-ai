@@ -4,10 +4,12 @@ import {
   applyConfigPostLaunchMaterialization,
   applyEffectiveLaunchStateToConfig,
   buildConfigLaunchCompatibilityReport,
+  buildInboxLaunchCompatibilityReport,
   buildLaunchMembersFromMeta,
   collectPostLaunchSessionHistory,
   extractTeammateSpecsFromConfig,
   hasIncompleteOpenCodeLaunchCompatibilityMember,
+  selectLaunchCompatibilityInboxNames,
   updateTeamConfigPostLaunch,
 } from '../TeamProvisioningConfigMaterialization';
 import { getMixedLaunchFallbackRecoveryError } from '../TeamProvisioningLaunchCompatibility';
@@ -341,6 +343,89 @@ describe('team provisioning config materialization', () => {
       warnings: [
         'members.meta.json and inboxes are empty; launch fell back to config.json members. ' +
           'Run a fresh team bootstrap to persist stable member metadata.',
+      ],
+      blockers: [],
+      repairAction: 'materialize-members-meta',
+    });
+  });
+
+  it('filters launch compatibility inbox names while keeping intentional numeric names', () => {
+    expect(
+      selectLaunchCompatibilityInboxNames([
+        ' team-lead ',
+        'user',
+        'worker',
+        'worker-2',
+        'dev-1',
+        'cross_team--peer-team',
+        'cross_team_send',
+        'other-team.reviewer',
+        'worker',
+      ])
+    ).toEqual(['worker', 'dev-1']);
+  });
+
+  it('builds inbox launch compatibility reports with config member overrides', () => {
+    const report = buildInboxLaunchCompatibilityReport({
+      teamName: 'legacy-team',
+      inboxNames: ['Reviewer'],
+      configMembers: [
+        {
+          name: 'Reviewer',
+          model: 'gpt-5',
+          effort: 'high',
+          isolation: 'worktree',
+        },
+      ],
+      leadProviderId: 'codex',
+    });
+
+    expect(report).toEqual({
+      level: 'ready',
+      rosterSource: 'inboxes',
+      members: [
+        {
+          name: 'Reviewer',
+          role: undefined,
+          workflow: undefined,
+          isolation: 'worktree',
+          cwd: undefined,
+          providerId: undefined,
+          model: 'gpt-5',
+          effort: 'high',
+          mcpPolicy: undefined,
+        },
+      ],
+      warnings: [
+        'Launch roster was recovered from inboxes and merged with config.json provider/model/effort overrides. ' +
+          'Multimodel reconnect is best-effort in this fallback path.',
+      ],
+      blockers: [],
+    });
+  });
+
+  it('preserves config fallback when inbox names would drop OpenCode member metadata', () => {
+    const members = [
+      {
+        name: 'Reviewer',
+        providerId: 'opencode' as const,
+        model: 'opencode/openai/gpt-5.4',
+      },
+    ];
+
+    expect(
+      buildInboxLaunchCompatibilityReport({
+        teamName: 'legacy-team',
+        inboxNames: ['Reviewer'],
+        configMembers: members,
+        leadProviderId: 'anthropic',
+      })
+    ).toEqual({
+      level: 'repairable',
+      rosterSource: 'config',
+      members,
+      warnings: [
+        'members.meta.json is missing; launch used complete config.json member metadata instead of inbox fallback to preserve mixed provider/model layout.',
       ],
       blockers: [],
       repairAction: 'materialize-members-meta',
