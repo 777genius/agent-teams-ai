@@ -301,6 +301,35 @@ function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   );
 }
 
+/**
+ * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
+ * reason) on every file change, flooding the dev console with identical lines.
+ * Log a given team/inbox diagnostics message at most once per window; a
+ * CHANGED message always logs immediately so real transitions stay visible.
+ */
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
+const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
+
+function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
+  const previous = relayDiagnosticsLogDedup.get(dedupKey);
+  if (
+    previous &&
+    previous.message === message &&
+    nowMs - previous.loggedAt < RELAY_DIAGNOSTICS_LOG_DEDUP_MS
+  ) {
+    return false;
+  }
+  if (!previous && relayDiagnosticsLogDedup.size >= RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES) {
+    const oldestKey = relayDiagnosticsLogDedup.keys().next();
+    if (!oldestKey.done) {
+      relayDiagnosticsLogDedup.delete(oldestKey.value);
+    }
+  }
+  relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
+  return true;
+}
+
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -1436,6 +1465,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
               .then((relay) => {
                 if (relay.diagnostics?.length) {
                   const message = `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}: ${relay.diagnostics.join('; ')}`;
+                  if (!shouldLogRelayDiagnostics(`${teamName}/${inboxName}`, message, Date.now())) {
+                    return;
+                  }
                   if (hasWarningRelayDiagnostics(relay.diagnostics)) {
                     logger.warn(message);
                   } else {

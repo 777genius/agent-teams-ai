@@ -2,11 +2,13 @@
  * Decides which teams' team-root and task artifacts should be file-watched.
  *
  * The scope is (teams with a live runtime run) ∪ (teams recently engaged in the
- * UI). FileWatcher always watches the teams root and every team's `inboxes/`
- * regardless of this scope, so cross-team message delivery, the lead inbox→stdin
- * relay, and notifications are unaffected. This module only narrows the heavier
- * per-team team-root (config/kanban/processes/meta) and task watching, which
- * otherwise scales with the number of teams on disk and dominates startup cost.
+ * UI). FileWatcher always watches the teams root (to detect new/removed teams);
+ * per-team artifacts — team root (config/kanban/processes/meta), tasks, and
+ * inboxes — are watched only for scoped teams, since per-file watchers hold one
+ * fd each (kqueue) and otherwise scale with the number of teams on disk. Inbox
+ * traffic for out-of-scope teams is recovered by the existing-file backfill the
+ * moment the team launches or is engaged; live delivery paths (lead inbox→stdin
+ * relay, runtime recipients) always concern alive teams, which are in scope.
  *
  * Module-level state mirrors the existing IPC/registry singletons in this layer.
  */

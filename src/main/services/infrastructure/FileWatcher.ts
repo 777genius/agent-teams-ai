@@ -94,8 +94,9 @@ export class FileWatcher extends EventEmitter {
   private todosPath: string;
   private teamsPath: string;
   private tasksPath: string;
-  // Optional scope for team-root/task watching (alive ∪ engaged teams). Inboxes
-  // and the teams root are always watched. Null => watch every team (fallback).
+  // Optional scope for team artifact watching (alive ∪ engaged teams), covering
+  // team roots, tasks, and inboxes. The teams root itself is always watched.
+  // Null => watch every team (fallback).
   private teamWatchScopeProvider: (() => ReadonlySet<string> | null) | null = null;
   private teamsRegistry: TeamTaskWatchRegistry | null = null;
   private tasksRegistry: TeamTaskWatchRegistry | null = null;
@@ -252,10 +253,10 @@ export class FileWatcher extends EventEmitter {
    * Sets the filesystem provider. Used when switching between local and SSH modes.
    */
   /**
-   * Inject the provider that decides which teams' team-root and task artifacts
-   * are watched (typically alive ∪ engaged teams). The teams root and every
-   * team's inboxes are always watched. Returning null (or leaving the provider
-   * unset) watches every team - the safe fallback / original behavior.
+   * Inject the provider that decides which teams' artifacts (team root, tasks,
+   * inboxes) are watched (typically alive ∪ engaged teams). The teams root is
+   * always watched. Returning null (or leaving the provider unset) watches
+   * every team - the safe fallback / original behavior.
    *
    * Only the chokidar registry path is scoped; the EMFILE polling fallback still
    * watches every team so a scope change can never be mistaken for a deletion.

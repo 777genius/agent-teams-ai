@@ -82,7 +82,7 @@ describe('TeamTaskWatchRegistry scoping', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it('watches only scoped team dirs but every team inbox (teams kind)', async () => {
+  it('watches team dirs and inboxes only for scoped teams (teams kind)', async () => {
     const registry = new TeamTaskWatchRegistry({
       kind: 'teams',
       rootPath: root,
@@ -95,14 +95,15 @@ describe('TeamTaskWatchRegistry scoping', () => {
     await registry.close();
 
     expect(targets).toContain(path.normalize(root));
-    // scoped team root watched, unscoped team roots not watched
+    // scoped team root + inboxes watched
     expect(targets).toContain(path.normalize(path.join(root, 'alpha')));
-    expect(targets).not.toContain(path.normalize(path.join(root, 'beta')));
-    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma')));
-    // ALL inboxes watched regardless of scope (cross-team delivery)
     expect(targets).toContain(path.normalize(path.join(root, 'alpha', 'inboxes')));
-    expect(targets).toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
-    expect(targets).toContain(path.normalize(path.join(root, 'gamma', 'inboxes')));
+    // unscoped teams not watched at all — inbox writes are recovered by the
+    // existing-file backfill when the team enters the scope
+    expect(targets).not.toContain(path.normalize(path.join(root, 'beta')));
+    expect(targets).not.toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
+    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma')));
+    expect(targets).not.toContain(path.normalize(path.join(root, 'gamma', 'inboxes')));
   });
 
   it('falls back to watching every team when no scope provider is given', async () => {

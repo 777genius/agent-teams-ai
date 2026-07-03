@@ -15,17 +15,18 @@ export interface TeamTaskWatchRegistryOptions {
   onChange: (eventType: TeamTaskWatchEventType, relativePath: string) => void;
   onError: (error: unknown) => void;
   /**
-   * Optional provider for the set of team names whose team-root and task
-   * artifacts should be watched. The root directory is always watched (to detect
-   * new/removed teams), and for the 'teams' kind every team's `inboxes/` is
-   * always watched (cross-team message delivery and notifications must stay
-   * immediate). Return `null` (or omit the provider) to watch every team - the
-   * original behavior and the safe fallback.
+   * Optional provider for the set of team names whose artifacts (team root,
+   * tasks, and for the 'teams' kind `inboxes/`) should be watched. The root
+   * directory is always watched to detect new/removed teams. Return `null`
+   * (or omit the provider) to watch every team - the original behavior and
+   * the safe fallback.
    *
-   * Scoping exists because team-root (config/kanban/processes/meta) and task
-   * artifacts only change for teams that are running or currently engaged in the
-   * UI; idle teams are static, so watching all of them is pure overhead that
-   * scales with the number of teams on disk.
+   * Scoping exists because artifacts only change for teams that are running
+   * or currently engaged in the UI; idle teams are static, so watching all of
+   * them is pure overhead (one fd per inbox file on kqueue platforms) that
+   * scales with the number of teams on disk. Inbox writes to out-of-scope
+   * teams are picked up via the existing-file backfill when the team enters
+   * the scope (launch or UI engagement).
    */
   getScopedTeamNames?: () => ReadonlySet<string> | null;
 }
@@ -60,7 +61,8 @@ const TEAM_ROOT_FILES = new Set([
  *   broad recursive watcher mostly watches runtime/log/member noise.
  *
  * Contract:
- * - Watch only teams/, teams/<team>/, teams/<team>/inboxes/, tasks/, tasks/<team>/.
+ * - Watch only teams/, teams/<team>/, teams/<team>/inboxes/, tasks/, tasks/<team>/,
+ *   with <team> limited to the scoped (running/engaged) set when a provider is set.
  * - Do not enable Chokidar polling here. Polling is owned by FileWatcher fallback.
  * - Initial app startup baseline must stay silent to avoid replaying old files.
  * - Newly discovered targets are scanned once so files created before rebuild
@@ -318,12 +320,16 @@ export class TeamTaskWatchRegistry {
       const teamPath = path.join(this.options.rootPath, entry.name);
       const inScope = scopedTeams === null || scopedTeams.has(entry.name);
 
-      // Team-root and task artifacts only change for running/engaged teams, so
-      // scope those. Inboxes are always watched so cross-team delivery and
-      // notifications to non-visible teams stay immediate.
-      if (inScope) {
-        targets.add(path.normalize(teamPath));
+      // Watch only running/engaged teams. This includes inboxes: watching every
+      // team's inbox holds one fd per inbox file (kqueue) and scales with the
+      // number of teams on disk. Messages written to an out-of-scope team are
+      // not lost — when the team launches or its page opens it enters the scope
+      // and emitExistingFilesForNewTargets backfills 'add' events for existing
+      // inbox files, so relay/notification/reconcile catch up then.
+      if (!inScope) {
+        continue;
       }
+      targets.add(path.normalize(teamPath));
 
       if (this.options.kind === 'teams') {
         const inboxPath = path.join(teamPath, 'inboxes');
