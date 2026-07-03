@@ -337,6 +337,15 @@ import {
   isCurrentTrackedRunById,
 } from './provisioning/TeamProvisioningLeadRunDerivation';
 import { captureLeadSendMessages } from './provisioning/TeamProvisioningLeadSendMessageCapture';
+import {
+  autoAllowLeadControlRequest,
+  autoDenyLeadControlRequest,
+  createDefaultLeadToolApprovalPorts,
+  handleLeadControlRequest,
+  respondToLeadToolApproval,
+  type TeamProvisioningLeadToolApprovalPorts,
+  type TeamProvisioningLeadToolApprovalResponsePorts,
+} from './provisioning/TeamProvisioningLeadToolApproval';
 import { extractLogsTail, sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import { matchesObservedMemberNameForExpected } from './provisioning/TeamProvisioningMemberIdentity';
 import {
@@ -699,13 +708,9 @@ import {
   type TeamProvisioningTeammatePermissionResponsePorts,
 } from './provisioning/TeamProvisioningTeammatePermissionResponse';
 import {
-  buildAllowControlResponsePayload,
-  buildDenyControlResponsePayload,
   buildLeadToolApprovalDecisionPayload,
-  buildLeadToolApprovalRequest,
   buildTeammateToolApprovalRequest,
   buildToolApprovalAutoResolvedEvent,
-  TOOL_APPROVAL_TIMEOUT_CONTROL_DENY_MESSAGE,
 } from './provisioning/TeamProvisioningToolApprovalFlow';
 import {
   type TeamProvisioningToolApprovalNotification,
@@ -12252,66 +12257,7 @@ export class TeamProvisioningService {
    * All other subtypes (hook_callback, etc.) → auto-allowed to prevent deadlock.
    */
   private handleControlRequest(run: ProvisioningRun, msg: Record<string, unknown>): void {
-    const requestId = typeof msg.request_id === 'string' ? msg.request_id : null;
-    if (!requestId) {
-      logger.warn(`[${run.teamName}] control_request missing request_id, ignoring`);
-      return;
-    }
-
-    const request = msg.request as Record<string, unknown> | undefined;
-    const subtype = request?.subtype;
-
-    // Non-`can_use_tool` subtypes (hook_callback, etc.) are auto-allowed to prevent
-    // CLI deadlock — hooks are user-configured and should not block on manual approval.
-    if (subtype !== 'can_use_tool') {
-      logger.debug(
-        `[${run.teamName}] control_request subtype=${String(subtype)}, auto-allowing to prevent deadlock`
-      );
-      this.autoAllowControlRequest(run, requestId);
-      return;
-    }
-
-    const toolName = typeof request?.tool_name === 'string' ? request.tool_name : 'Unknown';
-    const toolInput = (request?.input ?? {}) as Record<string, unknown>;
-    const providerId = toolInput.provider === 'codex' ? 'codex' : undefined;
-
-    const approval = buildLeadToolApprovalRequest({
-      requestId,
-      runId: run.runId,
-      teamName: run.teamName,
-      ...(providerId ? { providerId } : {}),
-      toolName,
-      toolInput,
-      teamColor: run.request.color,
-      teamDisplayName: run.request.displayName,
-    });
-
-    // Check auto-allow rules before prompting user
-    const autoResult = shouldAutoAllow(
-      this.getToolApprovalSettings(run.teamName),
-      toolName,
-      toolInput
-    );
-    if (autoResult.autoAllow) {
-      logger.info(`[${run.teamName}] Auto-allowing ${toolName} (${autoResult.reason})`);
-      this.autoAllowControlRequest(run, requestId);
-      this.emitToolApprovalEvent(
-        buildToolApprovalAutoResolvedEvent({
-          requestId,
-          runId: run.runId,
-          teamName: run.teamName,
-          reason: 'auto_allow_category',
-        })
-      );
-      return;
-    }
-
-    run.pendingApprovals.set(requestId, approval);
-    this.emitToolApprovalEvent(approval);
-    this.startApprovalTimeout(run, requestId);
-
-    // Show OS notification when window is not focused
-    this.maybeShowToolApprovalOsNotification(run, approval);
+    handleLeadControlRequest(run, msg, this.getLeadToolApprovalPorts());
   }
 
   /**
@@ -12445,20 +12391,7 @@ export class TeamProvisioningService {
    * Prevents CLI deadlock for hook_callback and other non-`can_use_tool` subtypes.
    */
   private autoAllowControlRequest(run: ProvisioningRun, requestId: string): void {
-    if (!run.child?.stdin?.writable) {
-      logger.warn(`[${run.teamName}] Cannot auto-allow control_request: stdin not writable`);
-      return;
-    }
-
-    const response = buildAllowControlResponsePayload(requestId);
-
-    run.child.stdin.write(JSON.stringify(response) + '\n', (err) => {
-      if (err) {
-        logger.error(
-          `[${run.teamName}] Failed to auto-allow control_request ${requestId}: ${err.message}`
-        );
-      }
-    });
+    autoAllowLeadControlRequest(run, requestId, this.getLeadToolApprovalPorts());
   }
 
   private tryClaimResponse(requestId: string): boolean {
@@ -12473,24 +12406,33 @@ export class TeamProvisioningService {
     this.toolApprovalTimeouts.clear(requestId);
   }
 
-  private autoDenyControlRequest(run: ProvisioningRun, requestId: string): void {
-    if (!run.child?.stdin?.writable) {
-      logger.warn(`[${run.teamName}] Cannot auto-deny control_request: stdin not writable`);
-      return;
-    }
-
-    const response = buildDenyControlResponsePayload(
-      requestId,
-      TOOL_APPROVAL_TIMEOUT_CONTROL_DENY_MESSAGE
-    );
-
-    run.child.stdin.write(JSON.stringify(response) + '\n', (err) => {
-      if (err) {
-        logger.error(
-          `[${run.teamName}] Failed to auto-deny control_request ${requestId}: ${err.message}`
-        );
-      }
+  private getLeadToolApprovalPorts(): TeamProvisioningLeadToolApprovalPorts<ProvisioningRun> {
+    return createDefaultLeadToolApprovalPorts<ProvisioningRun>({
+      logger,
+      getSettings: (teamName) => this.getToolApprovalSettings(teamName),
+      emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
+      startApprovalTimeout: (run, requestId) => this.startApprovalTimeout(run, requestId),
+      maybeShowToolApprovalOsNotification: (run, approval) =>
+        this.maybeShowToolApprovalOsNotification(run, approval),
     });
+  }
+
+  private getLeadToolApprovalResponsePorts(): TeamProvisioningLeadToolApprovalResponsePorts<ProvisioningRun> {
+    return {
+      logger,
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      clearApprovalTimeout: (requestId) => this.clearApprovalTimeout(requestId),
+      tryClaimResponse: (requestId) => this.tryClaimResponse(requestId),
+      inFlightResponses: this.inFlightResponses,
+      startApprovalTimeout: (run, requestId) => this.startApprovalTimeout(run, requestId),
+      dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
+      buildLeadToolApprovalDecisionPayload,
+    };
+  }
+
+  private autoDenyControlRequest(run: ProvisioningRun, requestId: string): void {
+    autoDenyLeadControlRequest(run, requestId, this.getLeadToolApprovalPorts());
   }
 
   private reEvaluatePendingApprovals(): void {
@@ -12577,101 +12519,40 @@ export class TeamProvisioningService {
       return;
     }
 
-    // Look in both provisioning and alive runs — control_requests arrive during provisioning too
-    const currentRunId = this.runTracking.getTrackedRunId(teamName);
-    if (!currentRunId) throw new Error(`No active process for team "${teamName}"`);
-    const run = this.runs.get(currentRunId);
-    if (!run) throw new Error(`Run not found for team "${teamName}"`);
-
-    if (run.runId !== runId) {
-      throw new Error(`Stale approval: runId mismatch (expected ${run.runId}, got ${runId})`);
-    }
-
-    // Clear timeout and claim response FIRST (before pendingApprovals check)
-    // to handle the race where timeout already responded and deleted the approval
-    this.clearApprovalTimeout(requestId);
-    if (!this.tryClaimResponse(requestId)) {
-      // Another response is already being written; leave the pending approval tracked
-      // until that write succeeds or fails.
+    const leadResponse = await respondToLeadToolApproval(
+      {
+        teamName,
+        runId,
+        requestId,
+        allow,
+        message,
+      },
+      this.getLeadToolApprovalResponsePorts()
+    );
+    if (leadResponse.handled) {
       return;
     }
 
-    if (!run.pendingApprovals.has(requestId)) {
-      // Approval was removed (e.g. by reEvaluatePendingApprovals) — clean up claim and exit
-      this.inFlightResponses.delete(requestId);
-      return;
-    }
-
-    const approval = run.pendingApprovals.get(requestId)!;
+    const { run, approval } = leadResponse;
 
     // Teammate permission requests: apply permission_suggestions to project settings
-    if (approval.source !== 'lead') {
-      try {
-        await respondToTeammatePermissionHelper(
-          {
-            run,
-            agentId: approval.source,
-            requestId,
-            allow,
-            message,
-            permissionSuggestions: approval.permissionSuggestions,
-            toolName: approval.toolName,
-            toolInput: approval.toolInput,
-          },
-          this.getTeammatePermissionResponsePorts()
-        );
-        this.inFlightResponses.delete(requestId);
-        run.pendingApprovals.delete(requestId);
-        this.dismissApprovalNotification(requestId);
-      } catch (error) {
-        this.inFlightResponses.delete(requestId);
-        if (run.pendingApprovals.has(requestId)) {
-          this.startApprovalTimeout(run, requestId);
-        }
-        throw error;
-      }
-      return;
-    }
-
-    if (!run.child?.stdin?.writable) {
-      this.inFlightResponses.delete(requestId);
-      this.startApprovalTimeout(run, requestId);
-      throw new Error(`Team "${teamName}" process stdin is not writable`);
-    }
-
-    // IMPORTANT: request_id is NESTED inside response, NOT top-level
-    // (asymmetry with control_request — confirmed by Python SDK, Elixir SDK and issue #29991)
-    const response = buildLeadToolApprovalDecisionPayload({
-      requestId,
-      approval,
-      allow,
-      message,
-    });
-
-    const stdin = run.child.stdin;
-    const responseJson = JSON.stringify(response) + '\n';
-    logger.info(
-      `[${teamName}] Writing control_response for ${requestId}: ${allow ? 'allow' : 'deny'}`
-    );
     try {
-      await new Promise<void>((resolve, reject) => {
-        // Safety timeout — if stdin.write callback is never called (e.g. process died
-        // between the writable check and the write), reject instead of hanging forever.
-        const writeTimeout = setTimeout(() => {
-          reject(new Error(`Timeout writing control_response to stdin (process may have exited)`));
-        }, 5000);
-
-        stdin.write(responseJson, (err) => {
-          clearTimeout(writeTimeout);
-          if (err) {
-            logger.error(`[${teamName}] Failed to write control_response: ${err.message}`);
-            reject(err);
-          } else {
-            logger.info(`[${teamName}] control_response written successfully for ${requestId}`);
-            resolve();
-          }
-        });
-      });
+      await respondToTeammatePermissionHelper(
+        {
+          run,
+          agentId: approval.source,
+          requestId,
+          allow,
+          message,
+          permissionSuggestions: approval.permissionSuggestions,
+          toolName: approval.toolName,
+          toolInput: approval.toolInput,
+        },
+        this.getTeammatePermissionResponsePorts()
+      );
+      this.inFlightResponses.delete(requestId);
+      run.pendingApprovals.delete(requestId);
+      this.dismissApprovalNotification(requestId);
     } catch (error) {
       this.inFlightResponses.delete(requestId);
       if (run.pendingApprovals.has(requestId)) {
@@ -12679,9 +12560,6 @@ export class TeamProvisioningService {
       }
       throw error;
     }
-    run.pendingApprovals.delete(requestId);
-    this.inFlightResponses.delete(requestId);
-    this.dismissApprovalNotification(requestId);
   }
 
   /**
