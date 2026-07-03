@@ -62,10 +62,7 @@ import {
   stripExactInternalControlEchoPrefix,
 } from '@shared/utils/teamInternalControlMessages';
 import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
-import {
-  parseAllTeammateMessages,
-  type ParsedTeammateContent,
-} from '@shared/utils/teammateMessageParser';
+import { type ParsedTeammateContent } from '@shared/utils/teammateMessageParser';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import {
@@ -405,6 +402,7 @@ import {
   shouldPreferCurrentLaunchMemberStatus,
 } from './provisioning/TeamProvisioningMemberStatusProjection';
 import { buildMixedSecondaryLaunchSnapshotForRun as buildMixedSecondaryLaunchSnapshotForRunHelper } from './provisioning/TeamProvisioningMixedSecondaryLaunchReconciliation';
+import { handleNativeTeammateUserMessage as handleNativeTeammateUserMessageHelper } from './provisioning/TeamProvisioningNativeTeammateMessages';
 import { resolveOpenCodeInboxAttachmentPayloads as resolveOpenCodeInboxAttachmentPayloadsHelper } from './provisioning/TeamProvisioningOpenCodeAttachmentPayloads';
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
@@ -661,7 +659,6 @@ import {
   stopTeamFlow,
 } from './provisioning/TeamProvisioningStopFlow';
 import {
-  extractStreamUserText,
   handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
   shouldAcceptDeterministicBootstrapEvent,
@@ -3650,99 +3647,25 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     msg: Record<string, unknown>
   ): void {
-    const rawText = extractStreamUserText(msg);
-    if (!rawText) return;
-
-    const blocks = parseAllTeammateMessages(rawText);
-    if (blocks.length === 0) return;
-
-    // Intercept teammate permission_request messages delivered natively via stdout.
-    // This runs even during provisioning (unlike relayLeadInboxMessages which waits
-    // for provisioningComplete). The lead already received the message — we can't
-    // prevent that — but we create a ToolApprovalRequest so the user sees the dialog.
-    for (const block of blocks) {
-      const perm = parsePermissionRequest(block.content);
-      if (perm) {
-        this.handleTeammatePermissionRequest(run, perm, new Date().toISOString());
-      }
-    }
-
-    const crossTeamBlocks = blocks.flatMap((block) => {
-      const origin = parseCrossTeamPrefix(block.content);
-      const sourceTeam = origin?.from.includes('.') ? origin.from.split('.', 1)[0] : null;
-      const conversationId =
-        origin?.conversationId?.trim() || origin?.replyToConversationId?.trim();
-      if (!sourceTeam || !conversationId) return [];
-      return [
-        {
-          teammateId: block.teammateId,
-          content: block.content,
-          toTeam: sourceTeam,
-          conversationId,
-        },
-      ];
+    handleNativeTeammateUserMessageHelper(run, msg, {
+      recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
+      recentCrossTeamLeadDeliveryTtlMs: TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
+      nowMs: () => Date.now(),
+      nowIso,
+      getRunLeadName: (run) => this.getRunLeadName(run),
+      handleTeammatePermissionRequest: (run, permissionRequest, timestamp) =>
+        this.handleTeammatePermissionRequest(run, permissionRequest, timestamp),
+      matchCrossTeamLeadInboxMessages: (teamName, leadName, deliveredBlocks) =>
+        this.matchCrossTeamLeadInboxMessages(teamName, leadName, deliveredBlocks),
+      markInboxMessagesRead: (teamName, leadName, messages) =>
+        this.markInboxMessagesRead(teamName, leadName, messages),
+      setMemberSpawnStatus: (run, memberName, status, error, source) =>
+        this.setMemberSpawnStatus(run, memberName, status, error, source),
+      rememberSameTeamNativeFingerprints: (teamName, blocks) =>
+        this.rememberSameTeamNativeFingerprints(teamName, blocks),
+      reconcileSameTeamNativeDeliveries: (teamName, leadName) =>
+        this.reconcileSameTeamNativeDeliveries(teamName, leadName),
     });
-    // Cross-team reconciliation (existing logic)
-    if (crossTeamBlocks.length > 0) {
-      const leadName = this.getRunLeadName(run);
-      void (async () => {
-        const matches = await this.matchCrossTeamLeadInboxMessages(
-          run.teamName,
-          leadName,
-          crossTeamBlocks
-        );
-        const unreadMatches = matches.filter((match) => !match.wasRead);
-        if (unreadMatches.length > 0) {
-          try {
-            await this.markInboxMessagesRead(run.teamName, leadName, unreadMatches);
-          } catch {
-            // best-effort
-          }
-        }
-        const freshMatches = matches.filter(
-          (match) =>
-            !wasRecentlyDeliveredToLead(
-              this.recentCrossTeamLeadDeliveryMessageIds,
-              run.teamName,
-              match.messageId,
-              Date.now(),
-              TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
-            )
-        );
-        rememberRecentCrossTeamLeadDeliveryMessageIds(
-          this.recentCrossTeamLeadDeliveryMessageIds,
-          run.teamName,
-          freshMatches.map((match) => match.messageId),
-          Date.now(),
-          TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
-        );
-        run.activeCrossTeamReplyHints = freshMatches.map((match) => ({
-          toTeam: match.toTeam,
-          conversationId: match.conversationId,
-        }));
-      })();
-    }
-
-    // Same-team teammate messages are the canonical heartbeat signal: they prove the
-    // runtime produced a real post-spawn message, unlike writes to inboxes/<member>.json
-    // which may simply be user/lead messages addressed TO the teammate.
-    const sameTeamBlocks = blocks.filter((block) => !parseCrossTeamPrefix(block.content));
-    const meaningfulSameTeamBlocks = sameTeamBlocks.filter((block) =>
-      isMeaningfulBootstrapCheckInMessage(block.content)
-    );
-    for (const block of meaningfulSameTeamBlocks) {
-      this.setMemberSpawnStatus(run, block.teammateId, 'online', undefined, 'heartbeat');
-    }
-    for (const block of sameTeamBlocks) {
-      const bootstrapFailureReason = extractBootstrapFailureReason(block.content);
-      if (!bootstrapFailureReason) continue;
-      this.setMemberSpawnStatus(run, block.teammateId, 'error', bootstrapFailureReason);
-    }
-    if (sameTeamBlocks.length > 0) {
-      this.rememberSameTeamNativeFingerprints(run.teamName, sameTeamBlocks);
-      const leadName = this.getRunLeadName(run);
-      void this.reconcileSameTeamNativeDeliveries(run.teamName, leadName);
-    }
   }
 
   private async refreshMemberSpawnStatusesFromLeadInbox(run: ProvisioningRun): Promise<void> {
