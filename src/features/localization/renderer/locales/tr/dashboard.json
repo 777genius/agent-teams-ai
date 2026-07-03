@@ -193,5 +193,179 @@
     "newVersionAvailable": "Yeni sürüm mevcut",
     "restartNow": "Şimdi yeniden başlat",
     "viewDetails": "Ayrıntıları görüntüle"
+  },
+  "tokenUsage": {
+    "title": "Kullanım",
+    "partialData": "Kısmi veri",
+    "actions": {
+      "refresh": "Yenile",
+      "openTeam": "{{team}} aç",
+      "openTask": "Open task {{task}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Segmente göre model kullanımı"
+    },
+    "controls": {
+      "includeCacheTokens": "Cache tokenlarını dahil et"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
+    },
+    "dateRange": {
+      "allCollectedUsage": "Toplanan tüm app kullanımı",
+      "customRange": "Özel aralık",
+      "default": "Varsayılan",
+      "selectRange": "Başlangıç ve bitiş tarihi seçin",
+      "presets": {
+        "all-time": "Tüm zamanlar",
+        "today": "Bugün",
+        "this-week": "Bu hafta",
+        "this-month": "Bu ay",
+        "this-quarter": "Bu çeyrek",
+        "this-year": "Bu yıl",
+        "last-week": "Geçen hafta",
+        "last-month": "Geçen ay",
+        "last-7-days": "Son 7 gün",
+        "last-30-days": "Son 30 gün"
+      }
+    },
+    "empty": {
+      "noActivityData": "Aktivite yok",
+      "noAgents": "Agent yok",
+      "noChartData": "Grafik verisi yok",
+      "noModelData": "Model verisi yok",
+      "noRows": "Satır yok",
+      "noRuns": "Çalıştırma yok",
+      "noTeams": "Takım yok",
+      "noTrendData": "Trend verisi yok",
+      "noUsageDetail": "0 app çalıştırması / 0 istek",
+      "noUsageYet": "Henüz kullanım yok"
+    },
+    "filters": {
+      "allTeams": "Tüm takımlar",
+      "filterTeams": "Takımları filtrele",
+      "selectedTeams": "{{count}} takım"
+    },
+    "labels": {
+      "cost": "Maliyet",
+      "days": "{{count}} gün",
+      "less": "Az",
+      "more": "Çok",
+      "notAvailable": "yok",
+      "now": "şimdi",
+      "otherModels": "Diğer modeller",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} çalıştırma",
+      "share": "Pay",
+      "sourceCount": "{{count}} kaynak",
+      "tokens": "token",
+      "tokensCost": "{{tokens}} token / {{cost}}",
+      "total": "Toplam",
+      "unassigned": "Atanmamış",
+      "unknownAgent": "Bilinmeyen agent",
+      "eventCount": "{{count}} olay",
+      "streakCount": "{{count}} günlük seri"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Kaynak olayları",
+      "tasks": "Tasks",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

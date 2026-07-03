@@ -10,6 +10,7 @@ import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -89,6 +90,10 @@ interface NotificationsSectionProps {
       | 'notifyOnCrossTeamMessage'
       | 'notifyOnTeamLaunched'
       | 'notifyOnToolApproval'
+      | 'notifyOnUsageBudgetAlerts'
+      | 'notifyOnUsageBudgetWarning'
+      | 'notifyOnUsageBudgetCritical'
+      | 'notifyOnUsageBudgetNativeToast'
       | 'autoResumeOnRateLimit'
       | 'statusChangeOnlySolo',
     value: boolean
@@ -285,6 +290,83 @@ export const NotificationsSection = ({
           )}
         </div>
       </SettingRow>
+
+      <div id="usage-budget-notifications" className="scroll-mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <SettingsSectionHeader
+            title={t('notifications.usageBudgets.title')}
+            icon={<Bell className="size-3.5" />}
+          />
+          <SettingsInfoTooltip
+            label={t('notifications.usageBudgets.infoAriaLabel')}
+            description={t('notifications.usageBudgets.info')}
+          />
+        </div>
+        <div
+          className="mb-4 rounded-lg border p-4"
+          style={{
+            borderColor: 'var(--color-border)',
+            backgroundColor: 'var(--color-surface-raised)',
+          }}
+        >
+          <SettingRow
+            label={t('notifications.usageBudgets.enabled.label')}
+            description={t('notifications.usageBudgets.enabled.description')}
+            icon={<BellRing className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnUsageBudgetAlerts}
+              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetAlerts', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.usageBudgets.warning.label')}
+            description={t('notifications.usageBudgets.warning.description')}
+            icon={<AlertTriangle className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnUsageBudgetWarning}
+              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetWarning', v)}
+              disabled={
+                saving ||
+                !safeConfig.notifications.enabled ||
+                !safeConfig.notifications.notifyOnUsageBudgetAlerts
+              }
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.usageBudgets.critical.label')}
+            description={t('notifications.usageBudgets.critical.description')}
+            icon={<AlertTriangle className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnUsageBudgetCritical}
+              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetCritical', v)}
+              disabled={
+                saving ||
+                !safeConfig.notifications.enabled ||
+                !safeConfig.notifications.notifyOnUsageBudgetAlerts
+              }
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.usageBudgets.nativeToast.label')}
+            description={t('notifications.usageBudgets.nativeToast.description')}
+            icon={<Volume2 className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnUsageBudgetNativeToast}
+              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetNativeToast', v)}
+              disabled={
+                saving ||
+                !safeConfig.notifications.enabled ||
+                !safeConfig.notifications.notifyOnUsageBudgetAlerts
+              }
+            />
+          </SettingRow>
+        </div>
+      </div>
 
       {/* Team Notifications — grouped card */}
       <SettingsSectionHeader
@@ -585,4 +667,27 @@ const StatusCheckboxGroup = ({
       );
     })}
   </div>
+);
+
+const SettingsInfoTooltip = ({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}): React.JSX.Element => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        className="mt-6 inline-flex size-6 items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-[var(--color-surface-raised)] hover:text-text"
+        aria-label={label}
+      >
+        <Info className="size-3.5" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-72 text-pretty text-xs leading-relaxed">
+      {description}
+    </TooltipContent>
+  </Tooltip>
 );

@@ -398,6 +398,14 @@ export function initializeNotificationListeners(): () => void {
     const reasons = pending.get(teamName) ?? new Set<string>();
     reasons.add(reason);
     pending.set(teamName, reasons);
+    // Cap the diagnostic maps to prevent unbounded growth
+    if (pending.size > 1000) {
+      const entries = Array.from(pending.entries()).sort(([, a], [, b]) => a.size - b.size);
+      pending.clear();
+      for (const [name, reasonSet] of entries.slice(-500)) {
+        pending.set(name, reasonSet);
+      }
+    }
   };
   const drainPendingGlobalRefreshDiagnostics = (
     pending: Map<string, Set<string>>,
@@ -1381,6 +1389,84 @@ export function initializeNotificationListeners(): () => void {
       trackedTeamNames.clear();
     });
   }
+
+  // Track team deletions and clean up activity maps
+  const unsubscribeTeamDeletion = useStore.subscribe((state, prevState) => {
+    // The listener fires on every store write; only diff team names when the
+    // teams array reference actually changed.
+    if (state.teams === prevState.teams) {
+      return;
+    }
+    const prevTeamNames = new Set(prevState.teams.map((t) => t.teamName));
+    const nextTeamNames = new Set(state.teams.map((t) => t.teamName));
+    // Find deleted teams
+    for (const teamName of prevTeamNames) {
+      if (!nextTeamNames.has(teamName)) {
+        // Clean up activity maps when team is deleted
+        teamLastRelevantActivityAt.delete(teamName);
+        teamLastIdleWatchdogRefreshAt.delete(teamName);
+        inProgressChangePresenceCursorByTeam.delete(teamName);
+        // Cancel any pending timers for this team
+        const teamRefreshTimer = teamRefreshTimers.get(teamName);
+        if (teamRefreshTimer) {
+          clearTimeout(teamRefreshTimer);
+          teamRefreshTimers.delete(teamName);
+        }
+        // Clear similar timers from other maps
+        for (const [key, timer] of teamMessageRefreshTimers.entries()) {
+          if (key === teamName) {
+            clearTimeout(timer);
+            teamMessageRefreshTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of teamPresenceRefreshTimers.entries()) {
+          if (key === teamName) {
+            clearTimeout(timer);
+            teamPresenceRefreshTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of memberAdvisorySafetyRefreshTimers.entries()) {
+          if (key === teamName) {
+            clearTimeout(timer);
+            memberAdvisorySafetyRefreshTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of memberSpawnRefreshTimers.entries()) {
+          if (key.startsWith(`${teamName}:`)) {
+            clearTimeout(timer);
+            memberSpawnRefreshTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of teamAgentRuntimeRefreshTimers.entries()) {
+          if (key.startsWith(`${teamName}:`)) {
+            clearTimeout(timer);
+            teamAgentRuntimeRefreshTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of toolActivityTimers.entries()) {
+          if (key.startsWith(`${teamName}:`)) {
+            clearTimeout(timer);
+            toolActivityTimers.delete(key);
+          }
+        }
+        for (const [key, timer] of taskLogActivityTimers.entries()) {
+          if (key.startsWith(`${teamName}\u0000`)) {
+            clearTimeout(timer);
+            taskLogActivityTimers.delete(key);
+          }
+        }
+        for (const [key, { timer }] of processLiteStructuralReconcileTimers.entries()) {
+          if (key === teamName) {
+            clearTimeout(timer);
+            processLiteStructuralReconcileTimers.delete(key);
+          }
+        }
+      }
+    }
+  });
+  cleanupFns.push(() => {
+    unsubscribeTeamDeletion();
+  });
 
   if (api.teams?.setTaskLogStreamTracking) {
     let trackedTeamNames = new Set<string>();
@@ -2557,6 +2643,53 @@ export function initializeNotificationListeners(): () => void {
       clearTimeout(timer);
     }
     pendingProjectRefreshTimers.clear();
+    // Clear all team-related timers
+    for (const timer of teamRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    teamRefreshTimers.clear();
+    for (const timer of teamMessageRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    teamMessageRefreshTimers.clear();
+    for (const timer of teamPresenceRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    teamPresenceRefreshTimers.clear();
+    for (const timer of memberAdvisorySafetyRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    memberAdvisorySafetyRefreshTimers.clear();
+    for (const timer of memberSpawnRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    memberSpawnRefreshTimers.clear();
+    for (const timer of teamAgentRuntimeRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    teamAgentRuntimeRefreshTimers.clear();
+    for (const timer of toolActivityTimers.values()) {
+      clearTimeout(timer);
+    }
+    toolActivityTimers.clear();
+    for (const timer of taskLogActivityTimers.values()) {
+      clearTimeout(timer);
+    }
+    taskLogActivityTimers.clear();
+    for (const { timer } of processLiteStructuralReconcileTimers.values()) {
+      clearTimeout(timer);
+    }
+    processLiteStructuralReconcileTimers.clear();
+    // Clear activity tracking maps
+    teamLastRelevantActivityAt.clear();
+    teamLastIdleWatchdogRefreshAt.clear();
+    inProgressChangePresenceCursorByTeam.clear();
+    // Clear diagnostic maps
+    pendingTeamListRefreshDiagnostics.clear();
+    pendingGlobalTasksRefreshDiagnostics.clear();
+    // Clear top-level timers
+    if (teamListRefreshTimer) clearTimeout(teamListRefreshTimer);
+    if (globalTasksRefreshTimer) clearTimeout(globalTasksRefreshTimer);
     cleanupFns.forEach((fn) => fn());
   };
 }

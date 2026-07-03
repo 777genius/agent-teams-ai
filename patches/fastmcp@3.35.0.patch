@@ -1,0 +1,16 @@
+diff --git a/dist/chunk-UVX47AE5.js b/dist/chunk-UVX47AE5.js
+index 6d64173785227bbb12d7801cf4e4f56ca2fb0429..dc0c0bcb1f0272e6dd0ef618f7f2298e72fe961d 100644
+--- a/dist/chunk-UVX47AE5.js
++++ b/dist/chunk-UVX47AE5.js
+@@ -21,10 +21,10 @@
+ import { Hono } from "hono";
+ import { startHTTPServer } from "mcp-proxy";
+ import { setTimeout as delay } from "timers/promises";
+-import { fetch as fetch2 } from "undici";
+ import parseURITemplate from "uri-templates";
+ import { toJsonSchema } from "xsschema";
+ import { z } from "zod";
++var fetch2 = globalThis.fetch.bind(globalThis);
+ 
+ // src/DiscoveryDocumentCache.ts
+ var DiscoveryDocumentCache = class {

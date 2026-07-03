@@ -1,6 +1,7 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -107,6 +108,7 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     providerId,
     providerBackendId:
       migrateProviderBackendId(providerId, normalizeOptionalString(raw.providerBackendId)) ?? null,
+    billingMode: normalizeProviderBillingMode(raw.billingMode),
     selectedModel: normalizeOptionalString(raw.selectedModel),
     selectedModelKind,
     resolvedLaunchModel: normalizeOptionalString(raw.resolvedLaunchModel),

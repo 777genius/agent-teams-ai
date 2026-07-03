@@ -334,7 +334,8 @@
       "remove": "Kaldır",
       "stop": "Durdur",
       "task": "Görev",
-      "visualize": "Görselleştir"
+      "visualize": "Görselleştir",
+      "usage": "Kullanım"
     },
     "deleteTeam": {
       "description": "\"{{team}}\" ekibi silinsin mi? Bu işlem geri alınamaz. Tüm ekip verileri ve görevler silinecek.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Sağlama hâlâ devam ederken ekibi düzenleme kullanılamaz",
       "openBuiltInEditor": "Projeyi yerleşik düzenleyicide aç",
       "openTeamGraph": "Ekip grafiğini aç",
-      "stopTeam": "Ekibi durdur"
+      "stopTeam": "Ekibi durdur",
+      "openTeamUsage": "Ekip kullanımını aç"
     },
     "waitingForProvisioning": "Sağlama tamamlandığında ekip verileri görünecek",
     "context": {

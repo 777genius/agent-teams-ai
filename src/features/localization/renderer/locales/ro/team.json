@@ -334,7 +334,8 @@
       "remove": "Elimină",
       "stop": "Oprește",
       "task": "Sarcină",
-      "visualize": "Vizualizează"
+      "visualize": "Vizualizează",
+      "usage": "Utilizare"
     },
     "deleteTeam": {
       "description": "Ștergi echipa \"{{team}}\"? Această acțiune este ireversibilă. Toate datele și sarcinile echipei vor fi șterse.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Editarea echipei este indisponibilă cât timp aprovizionarea este încă în curs",
       "openBuiltInEditor": "Deschide proiectul în editorul integrat",
       "openTeamGraph": "Deschide graficul echipei",
-      "stopTeam": "Oprește echipa"
+      "stopTeam": "Oprește echipa",
+      "openTeamUsage": "Deschide utilizarea echipei"
     },
     "waitingForProvisioning": "Datele echipei vor apărea după finalizarea aprovizionării",
     "context": {

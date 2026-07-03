@@ -24,8 +24,22 @@ function isTransientSessionsPaginatedIpcError(error: unknown): boolean {
 /**
  * Tracks the latest in-place refresh generation per project.
  * Used to guarantee last-write-wins under rapid file change events.
+ * Capped at 500 projects to prevent unbounded growth.
  */
 const projectRefreshGeneration = new Map<string, number>();
+const MAX_PROJECT_REFRESH_GENERATIONS = 500;
+
+function recordProjectRefreshGeneration(projectId: string, generation: number): void {
+  projectRefreshGeneration.set(projectId, generation);
+  // Cap the map to prevent unbounded growth
+  if (projectRefreshGeneration.size > MAX_PROJECT_REFRESH_GENERATIONS) {
+    const entries = Array.from(projectRefreshGeneration.entries());
+    projectRefreshGeneration.clear();
+    for (const [id, gen] of entries.slice(-MAX_PROJECT_REFRESH_GENERATIONS)) {
+      projectRefreshGeneration.set(id, gen);
+    }
+  }
+}
 
 // =============================================================================
 // Slice Interface
@@ -265,7 +279,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     }
 
     const generation = (projectRefreshGeneration.get(projectId) ?? 0) + 1;
-    projectRefreshGeneration.set(projectId, generation);
+    recordProjectRefreshGeneration(projectId, generation);
 
     const fetchPage = async () => {
       const { connectionMode } = get();

@@ -2,7 +2,6 @@ import {
   getOpenCodeTeamModelRecommendation,
   getOpenCodeTeamModelRecommendationSortRank,
 } from '@renderer/utils/openCodeModelRecommendations';
-import { isSupportedAnthropicTeamModel } from '@renderer/utils/teamModelCatalog';
 
 import type {
   OpenCodeTeamModelRecommendation,
@@ -23,6 +22,24 @@ const CODEX_TEAM_RECOMMENDED_MODELS = new Set<string>([
 
 const CODEX_RECOMMENDED_REASON =
   'This Codex model passed real Agent Teams launch and task-flow stress testing and is selected for stable team-agent behavior.';
+
+const ANTHROPIC_TEAM_RECOMMENDED_MODELS = new Set<string>([
+  'haiku',
+  'sonnet',
+  'sonnet[1m]',
+  'opus',
+  'opus[1m]',
+  'claude-haiku-4-5',
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-6',
+  'claude-sonnet-4-6[1m]',
+  'claude-opus-4-8',
+  'claude-opus-4-8[1m]',
+  'claude-opus-4-7',
+  'claude-opus-4-7[1m]',
+  'claude-opus-4-6',
+  'claude-opus-4-6[1m]',
+]);
 
 const ANTHROPIC_RECOMMENDED_REASON =
   'This Claude model passed real Agent Teams launch, restart, and teammate-workflow stress testing.';
@@ -56,7 +73,7 @@ export function getTeamModelRecommendation(
     return getRecommendedRecommendation(CODEX_RECOMMENDED_REASON);
   }
 
-  if (providerId === 'anthropic' && isSupportedAnthropicTeamModel(normalizedModelId)) {
+  if (providerId === 'anthropic' && ANTHROPIC_TEAM_RECOMMENDED_MODELS.has(normalizedModelId)) {
     return getRecommendedRecommendation(ANTHROPIC_RECOMMENDED_REASON);
   }
 

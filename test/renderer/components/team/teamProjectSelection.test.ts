@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   findTeamProjectSelectionTarget,
   resolveTeamProjectSelection,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
+import { describe, expect, it } from 'vitest';
 
 import type { Project, RepositoryGroup } from '@renderer/types/data';
 import type { TeamSummary } from '@shared/types';
@@ -69,6 +68,42 @@ describe('teamProjectSelection', () => {
         selectedRepositoryId: null,
         selectedWorktreeId: null,
         selectedProjectId: null,
+        activeProjectId: 'wt-headless',
+      })
+    ).toEqual({
+      projectPath: '/Users/test/headless',
+      repositoryId: 'repo-headless',
+      worktreeId: 'wt-headless',
+      projectId: 'wt-headless',
+    });
+  });
+
+  it('prefers the selected project over the active project', () => {
+    expect(
+      resolveTeamProjectSelection({
+        repositoryGroups,
+        projects,
+        selectedRepositoryId: null,
+        selectedWorktreeId: null,
+        selectedProjectId: 'project-standalone',
+        activeProjectId: 'wt-headless',
+      })
+    ).toEqual({
+      projectPath: '/Users/test/standalone',
+      repositoryId: null,
+      worktreeId: null,
+      projectId: 'project-standalone',
+    });
+  });
+
+  it('falls back to the active project when the selected project id is stale', () => {
+    expect(
+      resolveTeamProjectSelection({
+        repositoryGroups,
+        projects,
+        selectedRepositoryId: null,
+        selectedWorktreeId: null,
+        selectedProjectId: 'missing-project',
         activeProjectId: 'wt-headless',
       })
     ).toEqual({

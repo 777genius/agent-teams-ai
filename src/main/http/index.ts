@@ -13,6 +13,7 @@ import {
   type RecentProjectsFeatureFacade,
   registerRecentProjectsHttp,
 } from '@features/recent-projects/main';
+import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { registerConfigRoutes } from './config';
@@ -52,6 +53,7 @@ export interface HttpServices {
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
   organizationsFeature?: OrganizationsFeatureFacade;
+  tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
@@ -82,6 +84,9 @@ export function registerHttpRoutes(
   }
   if (services.organizationsFeature) {
     registerOrganizationsHttp(app, services.organizationsFeature);
+  }
+  if (services.tokenUsageFeature) {
+    registerTokenUsageHttp(app, services.tokenUsageFeature);
   }
   registerEventRoutes(app);
 

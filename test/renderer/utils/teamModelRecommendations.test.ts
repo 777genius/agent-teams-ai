@@ -47,6 +47,9 @@ describe('getTeamModelRecommendation', () => {
 
     expect(getTeamModelRecommendation('anthropic', '')).toBeNull();
     expect(getTeamModelRecommendation('anthropic', 'default')).toBeNull();
+    expect(getTeamModelRecommendation('anthropic', 'fable')).toBeNull();
+    expect(getTeamModelRecommendation('anthropic', 'claude-fable-5')).toBeNull();
+    expect(isTeamModelRecommended('anthropic', 'fable')).toBe(false);
   });
 
   it('delegates OpenCode verdicts and keeps MiniMax below recommended', () => {

@@ -111,7 +111,13 @@ function isAnthropicNativeLongContextModel(modelName: string | undefined): boole
     return false;
   }
 
-  if (normalized.startsWith('claude-mythos')) {
+  if (
+    normalized === 'fable' ||
+    normalized.startsWith('claude-fable') ||
+    normalized.startsWith('claude-mythos') ||
+    normalized === 'claude-sonnet-5' ||
+    normalized.startsWith('claude-sonnet-5-')
+  ) {
     return true;
   }
 

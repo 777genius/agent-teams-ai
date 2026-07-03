@@ -193,5 +193,179 @@
     "newVersionAvailable": "New version available",
     "restartNow": "Restart now",
     "viewDetails": "View details"
+  },
+  "tokenUsage": {
+    "title": "Usage",
+    "partialData": "Partial data",
+    "actions": {
+      "refresh": "Refresh",
+      "openTeam": "Open {{team}}",
+      "openTask": "Open task {{task}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Model usage by segment"
+    },
+    "controls": {
+      "includeCacheTokens": "Include cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "loadFailed": "Failed to load budget settings",
+      "noBudgets": "No budgets configured",
+      "notificationSettings": "Notification settings",
+      "ok": "On track",
+      "saveFailed": "Failed to save budget settings",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project"
+    },
+    "dateRange": {
+      "allCollectedUsage": "All collected app usage",
+      "customRange": "Custom range",
+      "default": "Default",
+      "selectRange": "Select a start and end date",
+      "presets": {
+        "all-time": "All time",
+        "today": "Today",
+        "this-week": "This week",
+        "this-month": "This month",
+        "this-quarter": "This quarter",
+        "this-year": "This year",
+        "last-week": "Last week",
+        "last-month": "Last month",
+        "last-7-days": "Last 7 days",
+        "last-30-days": "Last 30 days"
+      }
+    },
+    "empty": {
+      "noActivityData": "No activity data",
+      "noAgents": "No agents",
+      "noChartData": "No chart data",
+      "noModelData": "No model data",
+      "noRows": "No rows",
+      "noRuns": "No runs",
+      "noTeams": "No teams",
+      "noTrendData": "No trend data",
+      "noUsageDetail": "0 app runs / 0 requests",
+      "noUsageYet": "No usage yet"
+    },
+    "filters": {
+      "allTeams": "All teams",
+      "filterTeams": "Filter teams",
+      "selectedTeams": "{{count}} teams"
+    },
+    "labels": {
+      "cost": "Cost",
+      "days": "{{count}} days",
+      "less": "Less",
+      "more": "More",
+      "notAvailable": "n/a",
+      "now": "now",
+      "otherModels": "Other models",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} runs",
+      "share": "Share",
+      "sourceCount": "{{count}} sources",
+      "tokens": "tokens",
+      "tokensCost": "{{tokens}} tokens / {{cost}}",
+      "total": "Total",
+      "unassigned": "Unassigned",
+      "unknownAgent": "Unknown agent",
+      "eventCount": "{{count}} events",
+      "streakCount": "{{count}} day streak"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Source events",
+      "tasks": "Tasks",
+      "teams": "Teams",
+      "usageTrend": "Usage trend"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    }
   }
 }

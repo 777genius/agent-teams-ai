@@ -111,6 +111,14 @@ export interface NotificationConfig {
   notifyOnTeamLaunched: boolean;
   /** Whether to show native OS notifications when a tool needs user approval */
   notifyOnToolApproval: boolean;
+  /** Whether to create notifications for token usage budget thresholds */
+  notifyOnUsageBudgetAlerts: boolean;
+  /** Whether to notify when a token usage budget reaches 80% */
+  notifyOnUsageBudgetWarning: boolean;
+  /** Whether to notify when a token usage budget reaches 100% */
+  notifyOnUsageBudgetCritical: boolean;
+  /** Whether usage budget notifications should also show native OS toasts */
+  notifyOnUsageBudgetNativeToast: boolean;
   /** Whether to automatically resume a rate-limited team when the limit resets.
    * When enabled, the app parses the reset time from Claude's rate-limit
    * message and schedules a nudge to the team lead once the limit expires.
@@ -374,6 +382,10 @@ const DEFAULT_CONFIG: AppConfig = {
     notifyOnCrossTeamMessage: true,
     notifyOnTeamLaunched: true,
     notifyOnToolApproval: true,
+    notifyOnUsageBudgetAlerts: true,
+    notifyOnUsageBudgetWarning: true,
+    notifyOnUsageBudgetCritical: true,
+    notifyOnUsageBudgetNativeToast: true,
     autoResumeOnRateLimit: false,
     statusChangeOnlySolo: false,
     statusChangeStatuses: ['in_progress', 'completed'],
@@ -679,6 +691,18 @@ export class ConfigManager {
         notifyOnToolApproval:
           loadedNotifications.notifyOnToolApproval ??
           DEFAULT_CONFIG.notifications.notifyOnToolApproval,
+        notifyOnUsageBudgetAlerts:
+          loadedNotifications.notifyOnUsageBudgetAlerts ??
+          DEFAULT_CONFIG.notifications.notifyOnUsageBudgetAlerts,
+        notifyOnUsageBudgetWarning:
+          loadedNotifications.notifyOnUsageBudgetWarning ??
+          DEFAULT_CONFIG.notifications.notifyOnUsageBudgetWarning,
+        notifyOnUsageBudgetCritical:
+          loadedNotifications.notifyOnUsageBudgetCritical ??
+          DEFAULT_CONFIG.notifications.notifyOnUsageBudgetCritical,
+        notifyOnUsageBudgetNativeToast:
+          loadedNotifications.notifyOnUsageBudgetNativeToast ??
+          DEFAULT_CONFIG.notifications.notifyOnUsageBudgetNativeToast,
         autoResumeOnRateLimit:
           loadedNotifications.autoResumeOnRateLimit ??
           DEFAULT_CONFIG.notifications.autoResumeOnRateLimit,

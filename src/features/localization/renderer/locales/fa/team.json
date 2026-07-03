@@ -334,7 +334,8 @@
       "remove": "حذف",
       "stop": "توقف",
       "task": "وظیفه",
-      "visualize": "تجسم"
+      "visualize": "تجسم",
+      "usage": "استفاده"
     },
     "deleteTeam": {
       "description": "تیم «{{team}}» حذف شود؟ این عمل برگشت‌ناپذیر است. تمام داده‌ها و وظایف تیم حذف خواهند شد.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "ویرایش تیم در حالی که تأمین هنوز در حال انجام است در دسترس نیست",
       "openBuiltInEditor": "باز کردن پروژه در ویرایشگر داخلی",
       "openTeamGraph": "باز کردن گراف تیم",
-      "stopTeam": "توقف تیم"
+      "stopTeam": "توقف تیم",
+      "openTeamUsage": "باز کردن میزان استفاده تیم"
     },
     "waitingForProvisioning": "داده‌های تیم پس از اتمام تأمین ظاهر می‌شوند",
     "context": {

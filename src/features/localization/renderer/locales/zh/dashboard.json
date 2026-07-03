@@ -193,5 +193,179 @@
     "newVersionAvailable": "新版本可用",
     "restartNow": "立即重新启动",
     "viewDetails": "查看详情"
+  },
+  "tokenUsage": {
+    "title": "用量",
+    "partialData": "部分数据",
+    "actions": {
+      "refresh": "刷新",
+      "openTeam": "打开 {{team}}",
+      "openTask": "Open task {{task}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "按分段的模型用量"
+    },
+    "controls": {
+      "includeCacheTokens": "包含缓存 token"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
+    },
+    "dateRange": {
+      "allCollectedUsage": "已收集的全部应用用量",
+      "customRange": "自定义范围",
+      "default": "默认",
+      "selectRange": "选择开始和结束日期",
+      "presets": {
+        "all-time": "全部时间",
+        "today": "今天",
+        "this-week": "本周",
+        "this-month": "本月",
+        "this-quarter": "本季度",
+        "this-year": "今年",
+        "last-week": "上周",
+        "last-month": "上月",
+        "last-7-days": "最近 7 天",
+        "last-30-days": "最近 30 天"
+      }
+    },
+    "empty": {
+      "noActivityData": "无活动数据",
+      "noAgents": "无代理",
+      "noChartData": "无图表数据",
+      "noModelData": "无模型数据",
+      "noRows": "无行",
+      "noRuns": "无运行",
+      "noTeams": "无团队",
+      "noTrendData": "无趋势数据",
+      "noUsageDetail": "0 次应用运行 / 0 次请求",
+      "noUsageYet": "暂无用量"
+    },
+    "filters": {
+      "allTeams": "所有团队",
+      "filterTeams": "筛选团队",
+      "selectedTeams": "{{count}} 个团队"
+    },
+    "labels": {
+      "cost": "成本",
+      "days": "{{count}} 天",
+      "less": "少",
+      "more": "多",
+      "notAvailable": "无",
+      "now": "现在",
+      "otherModels": "其他模型",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} 次运行",
+      "share": "占比",
+      "sourceCount": "{{count}} 个来源",
+      "tokens": "token",
+      "tokensCost": "{{tokens}} token / {{cost}}",
+      "total": "总计",
+      "unassigned": "未分配",
+      "unknownAgent": "未知代理",
+      "eventCount": "{{count}} 个事件",
+      "streakCount": "连续 {{count}} 天"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "来源事件",
+      "tasks": "Tasks",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

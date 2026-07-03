@@ -218,6 +218,11 @@ vi.mock('@terminal-platform/workspace-react', async () => {
 
     const metadata = props.commandPresentationMetadata;
     const serializedMetadata = JSON.stringify(Array.isArray(metadata) ? metadata : []);
+    const snapshot = (props.kernel as MockKernel | undefined)?.__snapshot;
+    const content =
+      snapshot?.attachedSession.focused_screen === null
+        ? 'select a pane first'
+        : serializedMetadata;
 
     return React.createElement(
       'div',
@@ -227,7 +232,7 @@ vi.mock('@terminal-platform/workspace-react', async () => {
         'data-testid': 'mock-terminal-screen',
         ref: elementRef,
       },
-      serializedMetadata
+      content
     );
   });
   TerminalScreen.displayName = 'MockTerminalScreen';
@@ -996,6 +1001,26 @@ describe('terminal workspace panel fixture-e2e', () => {
     ).toBeNull();
   });
 
+  it('keeps startup pane fallback covered until a focused terminal screen arrives', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedScreenReady: false,
+    });
+
+    await renderPanel();
+
+    expect(getRequiredElement('mock-terminal-screen').textContent).toContain('select a pane first');
+    expect(getRequiredElement('agent-team-terminal-content-skeleton')).toBeTruthy();
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedScreenReady: true,
+    });
+    await renderPanel();
+
+    expect(
+      document.querySelector('[data-testid="agent-team-terminal-content-skeleton"]')
+    ).toBeNull();
+  });
+
   it('forwards command lifecycle metadata into terminal screen presentations and scrolls down', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       tabs: [
@@ -1544,7 +1569,7 @@ describe('terminal workspace panel fixture-e2e', () => {
       canFocusTab: false,
     };
     nextSnapshot = createWorkspaceSnapshot({
-      connectionState: 'closed',
+      connectionState: 'disposed',
       controls,
     });
     await renderPanel();
@@ -1564,7 +1589,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(kernel.commands.attachSession).toHaveBeenCalledTimes(1);
 
     currentKernel().__snapshot = createWorkspaceSnapshot({
-      connectionState: 'closed',
+      connectionState: 'disposed',
       controls,
     });
     await renderPanel();
@@ -1657,7 +1682,7 @@ interface MockWorkspaceSnapshot {
       surface: {
         lines: Array<{ text: string }>;
       };
-    };
+    } | null;
     session_id: string;
     topology: {
       focused_tab: string;
@@ -1671,7 +1696,7 @@ interface MockWorkspaceSnapshot {
     entries: string[];
   };
   connection: {
-    state: 'ready' | 'connecting' | 'closed';
+    state: 'idle' | 'bootstrapping' | 'ready' | 'error' | 'disposed';
   };
   historicalPanes: Record<string, { lines: string[] }>;
   selection: {
@@ -1759,6 +1784,7 @@ function createWorkspaceSnapshot({
   connectionState = 'ready',
   controls = {},
   focusedTabId = 'tab-1',
+  focusedScreenReady = true,
   fontScale = 'default',
   focusedLines = [],
   historicalPanes = {},
@@ -1776,6 +1802,7 @@ function createWorkspaceSnapshot({
     }
   >;
   focusedTabId?: string;
+  focusedScreenReady?: boolean;
   fontScale?: string;
   focusedLines?: Array<{ text: string }>;
   historicalPanes?: Record<string, { lines: string[] }>;
@@ -1798,13 +1825,15 @@ function createWorkspaceSnapshot({
       canRenameTab: controls.canRenameTab ?? true,
     },
     attachedSession: {
-      focused_screen: {
-        pane_id: activePaneId,
-        sequence,
-        surface: {
-          lines: focusedLines,
-        },
-      },
+      focused_screen: focusedScreenReady
+        ? {
+            pane_id: activePaneId,
+            sequence,
+            surface: {
+              lines: focusedLines,
+            },
+          }
+        : null,
       session_id: activeSessionId,
       topology: {
         focused_tab: activeTab?.tab_id ?? focusedTabId,

@@ -224,6 +224,15 @@ Responsibilities:
 - `adapters/` transform DTOs into view models
 - `utils/` contain small pure renderer helpers
 
+### UI primitives
+
+Build interactive UI controls from reusable shared components backed by Radix UI
+headless primitives. Prefer existing components under `src/renderer/components/ui`
+for controls such as selects, dialogs, popovers, tabs, menus, tooltips, switches,
+and checkboxes. Avoid hand-rolled or native controls when a shared Radix-based
+primitive exists; add or extend the shared primitive instead of styling a one-off
+control inside a feature.
+
 ## Import Rules
 
 ### Public entrypoints only
@@ -295,6 +304,42 @@ To keep that path clean:
 - keep Electron-specific concerns in `main/` and `preload/`
 - keep business rules in `core/`
 
+### HTTP/server mode as a first-class target
+
+For any medium or large feature that is not inherently desktop-only, design the
+feature so the same user-visible workflow can function through the HTTP/server
+adapter path.
+
+This is critical because the HTTP path is the most portable integration surface:
+
+- browser mode can use it directly
+- Electron can keep using IPC without changing feature semantics
+- future shells can add their own transport without rewriting the feature
+- tests can exercise the same use cases without Electron-specific wiring
+
+The rule is:
+
+- the feature contract belongs in `contracts/`
+- the use case belongs in `core/application` or a main-owned application service
+- IPC handlers and HTTP routes are only transport adapters
+- both adapters call the same feature facade or use case
+- renderer code goes through the app API abstraction and must not know whether
+  the active transport is IPC or HTTP
+
+Do not implement business behavior only inside an IPC handler. If desktop needs
+native capabilities, put those capabilities behind ports or main-process
+services, then expose the workflow through the same feature facade. Only skip
+HTTP/server support when the feature is explicitly desktop-only, for example a
+native window management operation with no meaningful browser equivalent.
+
+When adding or changing feature APIs, keep transport parity explicit:
+
+- add or update IPC coverage for the Electron desktop path
+- add or update HTTP route/client coverage for browser/server mode
+- document any unsupported browser-mode behavior as a deliberate exception
+- add tests or typed contract checks when drift between transports would be
+  risky
+
 ## When To Use The Full Slice
 
 Use the full template when a feature has:
@@ -345,6 +390,7 @@ A feature is reference-quality when:
 - core is side-effect free
 - app shell imports only public entrypoints
 - renderer UI is dumb and presentational
+- browser/server mode is first-class for non-desktop-only workflows
 - at least the main domain and application rules are tested when those layers
   exist
 - architecture is enforced by lint rules

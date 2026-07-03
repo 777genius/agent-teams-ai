@@ -193,5 +193,179 @@
     "newVersionAvailable": "Доступна нова версія",
     "restartNow": "Перезапустити зараз",
     "viewDetails": "Переглянути деталі"
+  },
+  "tokenUsage": {
+    "title": "Використання",
+    "partialData": "Часткові дані",
+    "actions": {
+      "refresh": "Оновити",
+      "openTeam": "Відкрити {{team}}",
+      "openTask": "Open task {{task}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Використання моделей за сегментами"
+    },
+    "controls": {
+      "includeCacheTokens": "Враховувати cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Реальна вартість API від провайдера або gateway, якщо runtime її передав.",
+      "apiEquivalentHelp": "Shadow-оцінка за pricing table для зібраного usage. Це не рахунок за підписку.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage, який runtime або importer явно позначив як free.",
+      "legacyUnclassifiedHelp": "Старі імпортовані request без явного billing mode. Вони рахуються окремо, щоб не змішувати subscription і API billing.",
+      "subscriptionUsageHelp": "Requests і tokens у subscription mode. Billable API dollars для цього bucket не рахуються."
+    },
+    "burnRate": {
+      "basis": "На основі останніх {{days}} видимих днів",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "Прогноз до кінця місяця",
+      "forecastWeek": "Прогноз до кінця тижня"
+    },
+    "budgets": {
+      "allTeams": "Усі команди",
+      "configureFor": "Бюджет для {{scope}}",
+      "costLimit": "Ліміт API-equivalent $",
+      "costLimitDetail": "{{cost}} з {{limit}}",
+      "critical": "Бюджет перевищено",
+      "loadFailed": "Не вдалося завантажити налаштування бюджету",
+      "noBudgets": "Бюджети не налаштовані",
+      "notificationSettings": "Налаштування сповіщень",
+      "ok": "У нормі",
+      "saveFailed": "Не вдалося зберегти налаштування бюджету",
+      "team": "Команда",
+      "tokenLimit": "Ліміт токенів",
+      "tokenLimitDetail": "{{tokens}} з {{limit}}",
+      "warning": "Попередження",
+      "project": "Проєкт"
+    },
+    "dateRange": {
+      "allCollectedUsage": "Усе зібране використання застосунку",
+      "customRange": "Свій діапазон",
+      "default": "За замовчуванням",
+      "selectRange": "Виберіть дату початку та завершення",
+      "presets": {
+        "all-time": "За весь час",
+        "today": "Сьогодні",
+        "this-week": "Цей тиждень",
+        "this-month": "Цей місяць",
+        "this-quarter": "Цей квартал",
+        "this-year": "Цей рік",
+        "last-week": "Минулий тиждень",
+        "last-month": "Минулий місяць",
+        "last-7-days": "Останні 7 днів",
+        "last-30-days": "Останні 30 днів"
+      }
+    },
+    "empty": {
+      "noActivityData": "Немає активності",
+      "noAgents": "Немає агентів",
+      "noChartData": "Немає даних графіка",
+      "noModelData": "Немає даних моделей",
+      "noRows": "Немає рядків",
+      "noRuns": "Немає запусків",
+      "noTeams": "Немає команд",
+      "noTrendData": "Немає даних тренду",
+      "noUsageDetail": "0 запусків застосунку / 0 запитів",
+      "noUsageYet": "Використання ще немає"
+    },
+    "filters": {
+      "allTeams": "Усі команди",
+      "filterTeams": "Фільтр команд",
+      "selectedTeams": "{{count}} команд"
+    },
+    "labels": {
+      "cost": "Вартість",
+      "days": "{{count}} дн.",
+      "less": "Менше",
+      "more": "Більше",
+      "notAvailable": "н/д",
+      "now": "зараз",
+      "otherModels": "Інші моделі",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} запусків",
+      "share": "Частка",
+      "sourceCount": "{{count}} джерел",
+      "tokens": "токени",
+      "tokensCost": "{{tokens}} токенів / {{cost}}",
+      "total": "Усього",
+      "unassigned": "Без команди",
+      "unknownAgent": "Невідомий агент",
+      "eventCount": "{{count}} подій",
+      "streakCount": "{{count}} дн. поспіль"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable показує тільки реальну API вартість від provider або gateway. Subscription usage рахується, коли запуск має billingMode=subscription. API-equivalent - shadow-оцінка за pricing table для порівняння, не рахунок за підписку.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Події джерел",
+      "tasks": "Tasks",
+      "teams": "Teams",
+      "usageTrend": "Usage trend"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    }
   }
 }

@@ -334,7 +334,8 @@
       "remove": "إزالة الألغام",
       "stop": "توقف",
       "task": "المهام",
-      "visualize": "الرؤية"
+      "visualize": "الرؤية",
+      "usage": "الاستخدام"
     },
     "deleteTeam": {
       "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "فريق إيديت غير متاح بينما لا يزال الإمداد جاريا",
       "openBuiltInEditor": "مشروع مفتوح في المحررة",
       "openTeamGraph": "الفريق المفتوح",
-      "stopTeam": "الفريق"
+      "stopTeam": "الفريق",
+      "openTeamUsage": "فتح استخدام الفريق"
     },
     "waitingForProvisioning": "ستظهر بيانات الفريق بمجرد الانتهاء من توفيرها",
     "context": {

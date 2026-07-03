@@ -334,7 +334,8 @@
       "remove": "Usuń",
       "stop": "Zatrzymaj",
       "task": "Zadanie",
-      "visualize": "Wizualizuj"
+      "visualize": "Wizualizuj",
+      "usage": "Użycie"
     },
     "deleteTeam": {
       "description": "Usunąć zespół \"{{team}}\"? Ta akcja jest nieodwracalna. Wszystkie dane zespołu i zadania zostaną usunięte.",
@@ -389,7 +390,8 @@
       "editUnavailableProvisioning": "Edycja zespołu jest niedostępna, gdy przygotowywanie jest wciąż w toku",
       "openBuiltInEditor": "Otwórz projekt we wbudowanym edytorze",
       "openTeamGraph": "Otwórz graf zespołu",
-      "stopTeam": "Zatrzymaj zespół"
+      "stopTeam": "Zatrzymaj zespół",
+      "openTeamUsage": "Otwórz użycie zespołu"
     },
     "waitingForProvisioning": "Dane zespołu pojawią się po zakończeniu przygotowywania",
     "context": {

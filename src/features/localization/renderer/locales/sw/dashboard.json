@@ -193,5 +193,179 @@
     "newVersionAvailable": "Toleo jipya linapatikana",
     "restartNow": "Anzisha upya sasa",
     "viewDetails": "Tazama maelezo"
+  },
+  "tokenUsage": {
+    "title": "Matumizi",
+    "partialData": "Data ya sehemu",
+    "actions": {
+      "refresh": "Onyesha upya",
+      "openTeam": "Fungua {{team}}",
+      "openTask": "Open task {{task}}"
+    },
+    "aria": {
+      "modelUsageBySegment": "Matumizi ya model kwa sehemu"
+    },
+    "controls": {
+      "includeCacheTokens": "Jumuisha cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
+    },
+    "dateRange": {
+      "allCollectedUsage": "Matumizi yote ya app yaliyokusanywa",
+      "customRange": "Kipindi maalum",
+      "default": "Chaguo-msingi",
+      "selectRange": "Chagua tarehe ya kuanza na kumaliza",
+      "presets": {
+        "all-time": "Muda wote",
+        "today": "Leo",
+        "this-week": "Wiki hii",
+        "this-month": "Mwezi huu",
+        "this-quarter": "Robo hii",
+        "this-year": "Mwaka huu",
+        "last-week": "Wiki iliyopita",
+        "last-month": "Mwezi uliopita",
+        "last-7-days": "Siku 7 zilizopita",
+        "last-30-days": "Siku 30 zilizopita"
+      }
+    },
+    "empty": {
+      "noActivityData": "Hakuna shughuli",
+      "noAgents": "Hakuna agents",
+      "noChartData": "Hakuna data ya chati",
+      "noModelData": "Hakuna data ya model",
+      "noRows": "Hakuna safu",
+      "noRuns": "Hakuna runs",
+      "noTeams": "Hakuna teams",
+      "noTrendData": "Hakuna data ya mwenendo",
+      "noUsageDetail": "0 app runs / 0 requests",
+      "noUsageYet": "Bado hakuna matumizi"
+    },
+    "filters": {
+      "allTeams": "Teams zote",
+      "filterTeams": "Chuja teams",
+      "selectedTeams": "{{count}} teams"
+    },
+    "labels": {
+      "cost": "Gharama",
+      "days": "{{count}} siku",
+      "less": "Chache",
+      "more": "Nyingi",
+      "notAvailable": "n/a",
+      "now": "sasa",
+      "otherModels": "Models nyingine",
+      "reqCount": "{{count}} req",
+      "runCount": "{{count}} runs",
+      "share": "Sehemu",
+      "sourceCount": "{{count}} sources",
+      "tokens": "tokens",
+      "tokensCost": "{{tokens}} tokens / {{cost}}",
+      "total": "Jumla",
+      "unassigned": "Haijapangiwa",
+      "unknownAgent": "Agent asiyejulikana",
+      "eventCount": "{{count}} matukio",
+      "streakCount": "{{count}} siku mfululizo"
+    },
+    "metrics": {
+      "apiEquivalent": "API-equivalent",
+      "appRuns": "App runs",
+      "billableApiRequests": "{{count}} billable API requests",
+      "billing": "Billing",
+      "billingHelp": "Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.",
+      "estimatedRequests": "{{pricedCount}} / {{totalCount}} est. req",
+      "legacyUnclassified": "Legacy unclassified",
+      "noEstimatedRequests": "No est. req",
+      "reasoningTokens": "{{count}} reasoning tokens",
+      "requests": "Requests",
+      "runningSessions": "{{running}} running / {{sessions}} sessions",
+      "subscriptionUsage": "Subscription usage",
+      "totalTokens": "Total tokens",
+      "totalTokensDetail": "{{input}} in / {{output}} out"
+    },
+    "panels": {
+      "activityByDay": "Activity by day",
+      "agents": "Agents",
+      "commandPeriods": "Command periods",
+      "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
+      "commands": "Commands",
+      "expensiveRuns": "Expensive runs",
+      "modelUsage": "Model usage",
+      "models": "Models",
+      "recentRuns": "Recent runs",
+      "runtimeMix": "Runtime mix",
+      "sessions": "Sessions",
+      "sources": "Matukio ya chanzo",
+      "tasks": "Tasks",
+      "teams": "Teams",
+      "usageTrend": "Usage trend",
+      "billingSplit": "Billing split",
+      "budgetAlerts": "Budget alerts",
+      "burnRate": "Burn rate"
+    },
+    "segments": {
+      "cache": "Cache",
+      "input": "Input",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "sources": {
+      "costEstimated": "Cost est.",
+      "gatewayExact": "Gateway exact",
+      "logParsed": "Log parsed",
+      "sdkExact": "SDK exact",
+      "tokenizerEstimated": "Tokenizer est."
+    },
+    "tooltips": {
+      "modelSegment": "{{label}}: {{tokens}} tokens / {{cost}} / {{percent}}",
+      "tokenCostRequests": "{{label}}: {{tokens}} tokens / {{cost}} / {{requests}}",
+      "tokensCost": "{{label}}: {{tokens}} tokens / {{cost}}",
+      "trendColumn": "{{label}}: {{tokens}} / {{cost}}"
+    },
+    "warnings": {
+      "unmappedEvents": "{{count}} unmapped events ignored"
+    },
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sun": "Sun",
+      "wed": "Wed"
+    },
+    "billingSplit": {
+      "apiBillable": "API billable",
+      "apiBillableHelp": "Actual provider or gateway API cost when reported by the runtime.",
+      "apiEquivalentHelp": "Pricing-table shadow estimate across collected usage. This is not a subscription bill.",
+      "freeUsage": "Free usage",
+      "freeUsageHelp": "Usage explicitly marked as free by the runtime or importer.",
+      "legacyUnclassifiedHelp": "Older imported requests without explicit billing mode. They are counted separately to avoid mixing subscription and API billing.",
+      "subscriptionUsageHelp": "Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket."
+    },
+    "burnRate": {
+      "basis": "Based on the last {{days}} visible days",
+      "dailyCost": "Cost/day",
+      "dailyTokens": "Tokens/day",
+      "forecastMonth": "End of month forecast",
+      "forecastWeek": "End of week forecast"
+    },
+    "budgets": {
+      "allTeams": "All teams",
+      "configureFor": "Budget for {{scope}}",
+      "costLimit": "API-equivalent $ limit",
+      "costLimitDetail": "{{cost}} of {{limit}}",
+      "critical": "Over budget",
+      "noBudgets": "No budgets configured",
+      "ok": "On track",
+      "team": "Team",
+      "tokenLimit": "Token limit",
+      "tokenLimitDetail": "{{tokens}} of {{limit}}",
+      "warning": "Warning",
+      "project": "Project",
+      "loadFailed": "Failed to load budget settings",
+      "notificationSettings": "Notification settings",
+      "saveFailed": "Failed to save budget settings"
+    }
   }
 }

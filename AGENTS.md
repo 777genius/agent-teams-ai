@@ -59,6 +59,7 @@ For new features:
 - When running live smoke tests, keep cleanup narrow: stop only the smoke-owned team/run and launch-owned process teammates. Do not kill shared OpenCode hosts, unrelated tmux panes, or user teams while trying to clean stale smoke artifacts.
 - Verify new medium and large features follow `docs/FEATURE_ARCHITECTURE_STANDARD.md`, especially cross-process boundaries and public feature entrypoints.
 - Check that Electron main, preload, renderer, and shared code keep their responsibilities separate and use the documented path aliases.
+- Check that interactive UI controls use reusable Radix UI headless primitives from `src/renderer/components/ui` instead of one-off native or hand-rolled controls when a shared primitive exists.
 - Flag changes that manually concatenate agent block markers instead of using `wrapAgentBlock(text)`.
 - Flag changes that can break `isMeta` semantics, chunk generation, teammate message parsing, task/subagent filtering, or structured task references.
 - Ensure IPC and main-process handlers validate inputs, fail gracefully, and do not expose unsafe filesystem or process access.

@@ -75,12 +75,21 @@ import {
   removeTerminalWorkspaceIpc,
   type TerminalWorkspaceFeatureFacade,
 } from '@features/terminal-workspace/main';
+import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  createTokenUsageFeature,
+  registerTokenUsageIpc,
+  removeTokenUsageIpc,
+  TeamTaskUsageAttributionSource,
+  type TokenUsageFeatureFacade,
+} from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
+  computeLiveTeamWatchScope,
   computeTeamWatchScope,
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
@@ -204,6 +213,7 @@ import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
 import {
   getAutoDetectedClaudeBasePath,
+  getAppDataPath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
@@ -299,6 +309,83 @@ function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   return diagnostics.some(
     (diagnostic) => !isInformationalOpenCodeRuntimeDeliveryDiagnostic(diagnostic)
   );
+}
+
+/**
+ * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
+ * reason) on every file change, flooding the dev console with identical lines.
+ * Log a given team/inbox diagnostics message at most once per window; a
+ * CHANGED message always logs immediately so real transitions stay visible.
+ */
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
+const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
+
+function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
+  const previous = relayDiagnosticsLogDedup.get(dedupKey);
+  if (
+    previous &&
+    previous.message === message &&
+    nowMs - previous.loggedAt < RELAY_DIAGNOSTICS_LOG_DEDUP_MS
+  ) {
+    return false;
+  }
+  if (!previous && relayDiagnosticsLogDedup.size >= RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES) {
+    const oldestKey = relayDiagnosticsLogDedup.keys().next();
+    if (!oldestKey.done) {
+      relayDiagnosticsLogDedup.delete(oldestKey.value);
+    }
+  }
+  relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
+  return true;
+}
+
+function readOptionalEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
+function readOptionalEnvNumber(name: string): number | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function readOptionalEnvArgs(name: string): string[] | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  if (value.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        const args = parsed.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0
+        );
+        return args.length > 0 ? args : undefined;
+      }
+    } catch {
+      logger.warn(`Ignoring invalid JSON args in ${name}`);
+    }
+  }
+  const args = value.split(/\s+/).filter(Boolean);
+  return args.length > 0 ? args : undefined;
+}
+
+function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
+  return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
+}
+
+function formatTokenUsageBudgetValue(
+  value: number,
+  metric: 'tokens' | 'apiEquivalentCostUsd'
+): string {
+  if (metric === 'apiEquivalentCostUsd') {
+    return `$${value.toFixed(value >= 10 ? 0 : 2)}`;
+  }
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M tokens`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tokens`;
+  return `${Math.round(value)} tokens`;
 }
 
 if (
@@ -955,6 +1042,7 @@ let recentProjectsFeature: RecentProjectsFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
+let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
@@ -988,6 +1076,7 @@ const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
+const TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS = 15_000;
 const STARTUP_RECOVERY_CONCURRENCY = 1;
 const MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY = 2;
 const MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_MS = 15_000;
@@ -1436,6 +1525,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
               .then((relay) => {
                 if (relay.diagnostics?.length) {
                   const message = `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}: ${relay.diagnostics.join('; ')}`;
+                  if (!shouldLogRelayDiagnostics(`${teamName}/${inboxName}`, message, Date.now())) {
+                    return;
+                  }
                   if (hasWarningRelayDiagnostics(relay.diagnostics)) {
                     logger.warn(message);
                   } else {
@@ -1512,15 +1604,17 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
 
-  // Scope team-root/task file watching to alive + UI-engaged teams so it no longer
-  // scales with the number of teams on disk. Inboxes and the teams root stay fully
-  // watched, so cross-team delivery, the lead inbox relay, and notifications are
-  // unaffected. Unsetting the provider on cleanup reverts to watching every team.
+  // Scope team-root/task file watching to alive + UI-engaged teams, and scope
+  // inbox watching to live teams only. Idle historical teams cannot produce
+  // immediate runtime inbox activity, so their inbox files do not need live fd
+  // watchers; when a team launches, target reconciliation backfills existing
+  // inbox files before live delivery resumes.
   setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
   setTeamWatchScopeChangeListener(() => {
     void context.fileWatcher.refreshTeamWatchScope();
   });
   context.fileWatcher.setTeamWatchScopeProvider(() => computeTeamWatchScope());
+  context.fileWatcher.setTeamInboxWatchScopeProvider(() => computeLiveTeamWatchScope());
   void context.fileWatcher.refreshTeamWatchScope();
 
   teamChangeCleanup = () => {
@@ -1528,6 +1622,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     setAliveTeamsProvider(null);
     setTeamWatchScopeChangeListener(null);
     context.fileWatcher.setTeamWatchScopeProvider(null);
+    context.fileWatcher.setTeamInboxWatchScopeProvider(null);
     reconcileScheduler?.dispose();
   };
 
@@ -1983,6 +2078,68 @@ async function initializeServices(): Promise<void> {
     teamsBasePath: getTeamsBasePath(),
     logger: createLogger('Feature:TerminalWorkspace'),
   });
+  const tokenUsageLogger = createLogger('Feature:TokenUsage');
+  tokenUsageFeature = createTokenUsageFeature({
+    ledgerPath: join(getAppDataPath(), 'token-usage', 'ledger.json'),
+    budgetSettingsPath: join(getAppDataPath(), 'token-usage', 'budget-settings.json'),
+    budgetNotificationStatePath: join(
+      getAppDataPath(),
+      'token-usage',
+      'budget-notification-state.json'
+    ),
+    teamsBasePath: getTeamsBasePath(),
+    claudeProjectsBasePath: getProjectsBasePath(),
+    ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
+    tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
+    ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
+    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS'),
+    tokscaleCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND'),
+    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS'),
+    commandImporterRefreshIntervalMs: readOptionalEnvNumber(
+      'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
+    ),
+    budgetNotificationSettings: {
+      getSettings: () => {
+        const notifications = configManager.getConfig().notifications;
+        return {
+          enabled: notifications.notifyOnUsageBudgetAlerts,
+          notifyAtWarning: notifications.notifyOnUsageBudgetWarning,
+          notifyAtCritical: notifications.notifyOnUsageBudgetCritical,
+          nativeToasts: notifications.notifyOnUsageBudgetNativeToast,
+        };
+      },
+    },
+    budgetNotificationSink: {
+      notifyBudgetThreshold: async (event) => {
+        await notificationManager.addTeamNotification({
+          teamEventType:
+            event.severity === 'critical' ? 'usage_budget_exceeded' : 'usage_budget_warning',
+          teamName: 'token-usage',
+          teamDisplayName: 'Usage budgets',
+          from: 'Usage',
+          summary: `${event.label} reached ${Math.round(event.percent)}% of ${formatTokenUsageBudgetMetricLabel(event.metric)} budget`,
+          body: `${formatTokenUsageBudgetValue(event.value, event.metric)} used of ${formatTokenUsageBudgetValue(event.limit, event.metric)} ${event.metric === 'apiEquivalentCostUsd' ? 'API-equivalent estimate' : 'limit'}.`,
+          dedupeKey: event.dedupeKey,
+          target: { kind: 'token_usage', focus: 'budgets' },
+          suppressToast: event.suppressToast,
+        });
+      },
+    },
+    publisher: {
+      publishSnapshot: (snapshot) => {
+        safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+        httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+      },
+    },
+    taskAttributionSource: new TeamTaskUsageAttributionSource(new TeamTaskReader()),
+    logger: tokenUsageLogger,
+  });
+  const tokenUsageStartupRefreshTimer = setTimeout(() => {
+    void tokenUsageFeature?.refreshSnapshot().catch((error: unknown) => {
+      tokenUsageLogger.warn('Failed to refresh token usage after startup', error);
+    });
+  }, TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS);
+  tokenUsageStartupRefreshTimer.unref?.();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
   type MemberWorkSyncRuntimeSnapshot = Awaited<
     ReturnType<TeamProvisioningService['getTeamAgentRuntimeSnapshot']>
@@ -2468,6 +2625,9 @@ async function initializeServices(): Promise<void> {
   registerOrganizationsIpc(ipcMain, organizationsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
+  if (tokenUsageFeature) {
+    registerTokenUsageIpc(ipcMain, tokenUsageFeature);
+  }
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
@@ -2528,6 +2688,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         organizationsFeature,
+        tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
@@ -2679,6 +2840,7 @@ async function shutdownServices(): Promise<void> {
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeTerminalWorkspaceIpc(ipcMain);
+      removeTokenUsageIpc(ipcMain);
       removeMemberWorkSyncIpc(ipcMain);
       removeMemberLogStreamIpc(ipcMain);
     });

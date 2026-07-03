@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  computeLiveTeamWatchScope,
   computeTeamWatchScope,
   markTeamEngaged,
   notifyTeamWatchScopeChanged,
@@ -19,6 +20,15 @@ describe('teamWatchScope', () => {
   it('includes alive teams from the provider', () => {
     setAliveTeamsProvider(() => ['t-alive']);
     expect([...(computeTeamWatchScope(1000) ?? [])]).toContain('t-alive');
+  });
+
+  it('keeps inbox live scope limited to alive teams', () => {
+    setAliveTeamsProvider(() => ['t-alive']);
+    markTeamEngaged('t-engaged', 0);
+
+    expect(computeTeamWatchScope(1000)?.has('t-engaged')).toBe(true);
+    expect(computeLiveTeamWatchScope()?.has('t-alive')).toBe(true);
+    expect(computeLiveTeamWatchScope()?.has('t-engaged')).toBe(false);
   });
 
   it('includes engaged teams within TTL and prunes after expiry', () => {
@@ -67,6 +77,7 @@ describe('teamWatchScope', () => {
     });
     expect(() => computeTeamWatchScope(0)).not.toThrow();
     expect(computeTeamWatchScope(0)).toBeNull();
+    expect(computeLiveTeamWatchScope()).toBeNull();
   });
 
   it('notifies on engagement when alive provider fails so watcher can refresh to fallback', () => {

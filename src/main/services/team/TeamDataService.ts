@@ -2484,7 +2484,10 @@ export class TeamDataService {
     return comment;
   }
 
-  async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
+  private async buildEnrichedSendMessageRequest(
+    teamName: string,
+    request: SendMessageRequest
+  ): Promise<SendMessageRequest> {
     // Enrich with leadSessionId so session boundary separators work
     let enrichedRequest = request;
     if (!enrichedRequest.leadSessionId) {
@@ -2506,6 +2509,11 @@ export class TeamDataService {
         slashCommand: slashCommandMeta,
       };
     }
+    return enrichedRequest;
+  }
+
+  async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
+    const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
     const result = this.getController(teamName).messages.sendMessage({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
@@ -2532,6 +2540,16 @@ export class TeamDataService {
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
     }) as SendMessageResult;
+    this.invalidateMessageFeed(teamName);
+    return result;
+  }
+
+  async sendRuntimeRecipientMessage(
+    teamName: string,
+    request: SendMessageRequest
+  ): Promise<SendMessageResult> {
+    const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
+    const result = await this.inboxWriter.sendMessage(teamName, enrichedRequest);
     this.invalidateMessageFeed(teamName);
     return result;
   }
