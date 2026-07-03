@@ -2,6 +2,9 @@ import {
   buildMemberSpawnStatusesSnapshotForRun,
   confirmMemberSpawnStatusFromTranscriptForRun,
   getMemberSpawnStatusesSnapshot,
+  maybeAuditMemberSpawnStatusesForRun,
+  type MemberSpawnStatusAuditPorts,
+  type MemberSpawnStatusAuditRun,
   type MemberSpawnStatusesSnapshotPorts,
   type MemberSpawnStatusMutationPorts,
   type MemberSpawnStatusRun,
@@ -44,6 +47,14 @@ function makeRun(patch: Partial<MemberSpawnStatusRun> = {}): MemberSpawnStatusRu
   };
 }
 
+function makeAuditRun(patch: Partial<MemberSpawnStatusAuditRun> = {}): MemberSpawnStatusAuditRun {
+  return {
+    ...makeRun(),
+    lastMemberSpawnAuditAt: 0,
+    ...patch,
+  };
+}
+
 function makeMutationPorts(): MemberSpawnStatusMutationPorts<MemberSpawnStatusRun> {
   return {
     nowIso: () => '2026-01-01T00:00:10.000Z',
@@ -55,6 +66,45 @@ function makeMutationPorts(): MemberSpawnStatusMutationPorts<MemberSpawnStatusRu
     emitMemberSpawnChange: vi.fn(),
     persistLaunchStateSnapshot: vi.fn(async () => undefined),
   };
+}
+
+function makeAuditPorts(
+  patch: Partial<MemberSpawnStatusAuditPorts<MemberSpawnStatusAuditRun>> = {}
+): MemberSpawnStatusAuditPorts<MemberSpawnStatusAuditRun> {
+  const ports: MemberSpawnStatusAuditPorts<MemberSpawnStatusAuditRun> = {
+    nowMs: () => 1_000,
+    minAuditIntervalMs: 500,
+    auditMemberSpawnStatuses: vi.fn(async () => undefined),
+    findBootstrapTranscriptFailureReason: vi.fn(async () => null),
+    findBootstrapRuntimeProofObservedAt: vi.fn(async () => null),
+    findBootstrapTranscriptOutcome: vi.fn(async () => null),
+    setMemberSpawnStatus: vi.fn((run, memberName, status, error) => {
+      run.memberSpawnStatuses.set(memberName, {
+        ...baseStatus({
+          status,
+          error,
+          hardFailure: status === 'error',
+          launchState: status === 'error' ? 'failed_to_start' : 'runtime_pending_bootstrap',
+        }),
+        updatedAt: '2026-01-01T00:00:10.000Z',
+      });
+    }),
+    confirmMemberSpawnStatusFromTranscript: vi.fn((run, memberName, observedAt, source) => {
+      run.memberSpawnStatuses.set(memberName, {
+        ...baseStatus({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          runtimeAlive: true,
+          lastHeartbeatAt: observedAt,
+          livenessKind: source === 'runtime-proof' ? 'confirmed_bootstrap' : undefined,
+        }),
+      });
+    }),
+    isOpenCodeSecondaryLaneMemberInRun: vi.fn(() => false),
+    ...patch,
+  };
+  return ports;
 }
 
 function makeLaunchSnapshot(): PersistedTeamLaunchSnapshot {
@@ -269,5 +319,67 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
       generation: 1,
       runId: 'run-1',
     });
+  });
+
+  it('reconciles bootstrap transcript failures before auditing pending members', async () => {
+    const run = makeAuditRun({
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          baseStatus({
+            firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z',
+          }),
+        ],
+      ]),
+    });
+    const ports = makeAuditPorts({
+      findBootstrapTranscriptFailureReason: vi.fn(async () => 'bootstrap failed'),
+    });
+
+    await maybeAuditMemberSpawnStatusesForRun(run, ports);
+
+    expect(ports.findBootstrapTranscriptFailureReason).toHaveBeenCalledWith(
+      'team-a',
+      'alice',
+      Date.parse('2026-01-01T00:00:05.000Z')
+    );
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledWith(
+      run,
+      'alice',
+      'error',
+      'bootstrap failed'
+    );
+    expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
+  });
+
+  it('clears retryable bootstrap failures when runtime proof is found', async () => {
+    const run = makeAuditRun({
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          baseStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            hardFailure: true,
+            hardFailureReason:
+              'CLI process exited (code 1) - team provisioned but not alive',
+            firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z',
+          }),
+        ],
+      ]),
+    });
+    const ports = makeAuditPorts({
+      findBootstrapRuntimeProofObservedAt: vi.fn(async () => '2026-01-01T00:00:09.000Z'),
+    });
+
+    await maybeAuditMemberSpawnStatusesForRun(run, ports, { force: true });
+
+    expect(ports.confirmMemberSpawnStatusFromTranscript).toHaveBeenCalledWith(
+      run,
+      'alice',
+      '2026-01-01T00:00:09.000Z',
+      'runtime-proof'
+    );
+    expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
   });
 });

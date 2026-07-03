@@ -1,3 +1,4 @@
+import { isBootstrapProofClearableLaunchFailureReason } from './TeamProvisioningBootstrapTranscript';
 import {
   createInitialMemberSpawnStatusEntry,
   summarizeMemberSpawnStatusRecord,
@@ -30,6 +31,10 @@ export interface MemberSpawnStatusRun {
   provisioningComplete: boolean;
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
   pendingMemberRestarts?: Map<string, PendingMemberSpawnRestart>;
+}
+
+export interface MemberSpawnStatusAuditRun extends MemberSpawnStatusRun {
+  lastMemberSpawnAuditAt: number;
 }
 
 export interface MemberSpawnStatusMutationPorts<TRun extends MemberSpawnStatusRun> {
@@ -137,6 +142,49 @@ export interface MemberSpawnStatusesSnapshotPorts<TRun extends MemberSpawnStatus
   persisted: MemberSpawnStatusesPersistedPorts;
   live: MemberSpawnStatusesLiveSnapshotPorts<TRun>;
   nowIso(): string;
+}
+
+type MemberSpawnTranscriptOutcome =
+  | {
+      kind: 'success';
+      observedAt: string;
+    }
+  | {
+      kind: string;
+    };
+
+export interface MemberSpawnStatusAuditPorts<TRun extends MemberSpawnStatusAuditRun> {
+  nowMs(): number;
+  minAuditIntervalMs: number;
+  auditMemberSpawnStatuses(run: TRun): Promise<void>;
+  findBootstrapTranscriptFailureReason(
+    teamName: string,
+    memberName: string,
+    sinceMs: number | null
+  ): Promise<string | null>;
+  findBootstrapRuntimeProofObservedAt(
+    teamName: string,
+    memberName: string,
+    current: MemberSpawnStatusEntry
+  ): Promise<string | null>;
+  findBootstrapTranscriptOutcome(
+    teamName: string,
+    memberName: string,
+    sinceMs: number | null
+  ): Promise<MemberSpawnTranscriptOutcome | null>;
+  setMemberSpawnStatus(
+    run: TRun,
+    memberName: string,
+    status: MemberSpawnStatus,
+    error?: string
+  ): void;
+  confirmMemberSpawnStatusFromTranscript(
+    run: TRun,
+    memberName: string,
+    observedAt: string,
+    source?: 'transcript' | 'runtime-proof'
+  ): void;
+  isOpenCodeSecondaryLaneMemberInRun(run: TRun, memberName: string): boolean;
 }
 
 export function cloneMemberSpawnStatusesSnapshot(
@@ -258,6 +306,127 @@ export function confirmMemberSpawnStatusFromTranscriptForRun<TRun extends Member
   if (run.isLaunch) {
     void ports.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
   }
+}
+
+export function shouldSkipMemberSpawnAudit(run: MemberSpawnStatusRun): boolean {
+  if (!run.expectedMembers || run.expectedMembers.length === 0) {
+    return true;
+  }
+  return run.expectedMembers.every((memberName) => {
+    const entry = run.memberSpawnStatuses.get(memberName);
+    return (
+      entry?.launchState === 'failed_to_start' ||
+      entry?.launchState === 'confirmed_alive' ||
+      entry?.launchState === 'skipped_for_launch' ||
+      entry?.hardFailure === true
+    );
+  });
+}
+
+export async function reconcileBootstrapTranscriptFailuresForRun<
+  TRun extends MemberSpawnStatusAuditRun,
+>(run: TRun, ports: MemberSpawnStatusAuditPorts<TRun>): Promise<void> {
+  for (const memberName of run.expectedMembers ?? []) {
+    const current = run.memberSpawnStatuses.get(memberName);
+    if (
+      !current ||
+      current.launchState === 'failed_to_start' ||
+      current.launchState === 'confirmed_alive' ||
+      current.hardFailure === true ||
+      current.agentToolAccepted !== true
+    ) {
+      continue;
+    }
+    const acceptedAtMs =
+      current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
+    const transcriptFailureReason = await ports.findBootstrapTranscriptFailureReason(
+      run.teamName,
+      memberName,
+      Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
+    );
+    if (!transcriptFailureReason) {
+      continue;
+    }
+    ports.setMemberSpawnStatus(run, memberName, 'error', transcriptFailureReason);
+  }
+}
+
+export async function reconcileBootstrapTranscriptSuccessesForRun<
+  TRun extends MemberSpawnStatusAuditRun,
+>(run: TRun, ports: MemberSpawnStatusAuditPorts<TRun>): Promise<void> {
+  for (const memberName of run.expectedMembers ?? []) {
+    const current = run.memberSpawnStatuses.get(memberName);
+    if (ports.isOpenCodeSecondaryLaneMemberInRun(run, memberName)) {
+      continue;
+    }
+    const failureReason = current?.hardFailureReason ?? current?.error;
+    const canClearFailedBootstrap =
+      current?.launchState === 'failed_to_start' &&
+      current.agentToolAccepted === true &&
+      isBootstrapProofClearableLaunchFailureReason(failureReason);
+    if (
+      !current ||
+      (current.launchState === 'failed_to_start' && !canClearFailedBootstrap) ||
+      current.launchState === 'confirmed_alive' ||
+      current.bootstrapConfirmed === true ||
+      (current.agentToolAccepted !== true && !canClearFailedBootstrap)
+    ) {
+      continue;
+    }
+    const acceptedAtMs =
+      current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
+    const runtimeProofObservedAt = await ports.findBootstrapRuntimeProofObservedAt(
+      run.teamName,
+      memberName,
+      current
+    );
+    if (runtimeProofObservedAt) {
+      ports.confirmMemberSpawnStatusFromTranscript(
+        run,
+        memberName,
+        runtimeProofObservedAt,
+        'runtime-proof'
+      );
+      continue;
+    }
+    const transcriptOutcome = await ports.findBootstrapTranscriptOutcome(
+      run.teamName,
+      memberName,
+      Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
+    );
+    if (transcriptOutcome?.kind !== 'success') {
+      continue;
+    }
+    ports.confirmMemberSpawnStatusFromTranscript(run, memberName, transcriptOutcome.observedAt);
+  }
+}
+
+export async function maybeAuditMemberSpawnStatusesForRun<
+  TRun extends MemberSpawnStatusAuditRun,
+>(
+  run: TRun,
+  ports: MemberSpawnStatusAuditPorts<TRun>,
+  options?: { force?: boolean }
+): Promise<void> {
+  if (!run.expectedMembers || run.expectedMembers.length === 0) {
+    return;
+  }
+  await reconcileBootstrapTranscriptFailuresForRun(run, ports);
+  await reconcileBootstrapTranscriptSuccessesForRun(run, ports);
+  if (shouldSkipMemberSpawnAudit(run)) {
+    return;
+  }
+  const now = ports.nowMs();
+  if (
+    !options?.force &&
+    run.lastMemberSpawnAuditAt > 0 &&
+    now - run.lastMemberSpawnAuditAt < ports.minAuditIntervalMs
+  ) {
+    return;
+  }
+  run.lastMemberSpawnAuditAt = now;
+  await ports.auditMemberSpawnStatuses(run);
+  await reconcileBootstrapTranscriptSuccessesForRun(run, ports);
 }
 
 async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawnStatusRun>(params: {

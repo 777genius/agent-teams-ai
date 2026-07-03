@@ -358,6 +358,8 @@ import {
 import {
   confirmMemberSpawnStatusFromTranscriptForRun,
   getMemberSpawnStatusesSnapshot,
+  maybeAuditMemberSpawnStatusesForRun,
+  type MemberSpawnStatusAuditPorts,
   type MemberSpawnStatusesSnapshotPorts,
   type MemberSpawnStatusMutationPorts,
   setMemberSpawnStatusForRun,
@@ -1522,6 +1524,23 @@ export class TeamProvisioningService {
       emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
       persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
     };
+  private readonly memberSpawnStatusAuditPorts: MemberSpawnStatusAuditPorts<ProvisioningRun> = {
+    nowMs: () => Date.now(),
+    minAuditIntervalMs: MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
+    auditMemberSpawnStatuses: (run) => this.auditMemberSpawnStatuses(run),
+    findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
+      this.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
+    findBootstrapRuntimeProofObservedAt: (teamName, memberName, current) =>
+      this.findBootstrapRuntimeProofObservedAt(teamName, memberName, current),
+    findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+      this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+    setMemberSpawnStatus: (run, memberName, status, error) =>
+      this.setMemberSpawnStatus(run, memberName, status, error),
+    confirmMemberSpawnStatusFromTranscript: (run, memberName, observedAt, source) =>
+      this.confirmMemberSpawnStatusFromTranscript(run, memberName, observedAt, source),
+    isOpenCodeSecondaryLaneMemberInRun: (run, memberName) =>
+      this.isOpenCodeSecondaryLaneMemberInRun(run, memberName),
+  };
   private readonly openCodePromptDeliveryFollowUpPolicy = new OpenCodePromptDeliveryFollowUpPolicy({
     markFailedTerminal: (input) => this.markOpenCodePromptLedgerFailedTerminal(input),
     logEvent: (event, record, extra) => this.logOpenCodePromptDeliveryEvent(event, record, extra),
@@ -4925,99 +4944,7 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     options?: { force?: boolean }
   ): Promise<void> {
-    if (!run.expectedMembers || run.expectedMembers.length === 0) {
-      return;
-    }
-    await this.reconcileBootstrapTranscriptFailures(run);
-    await this.reconcileBootstrapTranscriptSuccesses(run);
-    if (this.shouldSkipMemberSpawnAudit(run)) {
-      return;
-    }
-    const now = Date.now();
-    if (
-      !options?.force &&
-      run.lastMemberSpawnAuditAt > 0 &&
-      now - run.lastMemberSpawnAuditAt < MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS
-    ) {
-      return;
-    }
-    run.lastMemberSpawnAuditAt = now;
-    await this.auditMemberSpawnStatuses(run);
-    await this.reconcileBootstrapTranscriptSuccesses(run);
-  }
-
-  private async reconcileBootstrapTranscriptFailures(run: ProvisioningRun): Promise<void> {
-    for (const memberName of run.expectedMembers ?? []) {
-      const current = run.memberSpawnStatuses.get(memberName);
-      if (
-        !current ||
-        current.launchState === 'failed_to_start' ||
-        current.launchState === 'confirmed_alive' ||
-        current.hardFailure === true ||
-        current.agentToolAccepted !== true
-      ) {
-        continue;
-      }
-      const acceptedAtMs =
-        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      const transcriptFailureReason = await this.findBootstrapTranscriptFailureReason(
-        run.teamName,
-        memberName,
-        Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-      );
-      if (!transcriptFailureReason) {
-        continue;
-      }
-      this.setMemberSpawnStatus(run, memberName, 'error', transcriptFailureReason);
-    }
-  }
-
-  private async reconcileBootstrapTranscriptSuccesses(run: ProvisioningRun): Promise<void> {
-    for (const memberName of run.expectedMembers ?? []) {
-      const current = run.memberSpawnStatuses.get(memberName);
-      if (this.isOpenCodeSecondaryLaneMemberInRun(run, memberName)) {
-        continue;
-      }
-      const failureReason = current?.hardFailureReason ?? current?.error;
-      const canClearFailedBootstrap =
-        current?.launchState === 'failed_to_start' &&
-        current.agentToolAccepted === true &&
-        isBootstrapProofClearableLaunchFailureReason(failureReason);
-      if (
-        !current ||
-        (current.launchState === 'failed_to_start' && !canClearFailedBootstrap) ||
-        current.launchState === 'confirmed_alive' ||
-        current.bootstrapConfirmed === true ||
-        (current.agentToolAccepted !== true && !canClearFailedBootstrap)
-      ) {
-        continue;
-      }
-      const acceptedAtMs =
-        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
-      const runtimeProofObservedAt = await this.findBootstrapRuntimeProofObservedAt(
-        run.teamName,
-        memberName,
-        current
-      );
-      if (runtimeProofObservedAt) {
-        this.confirmMemberSpawnStatusFromTranscript(
-          run,
-          memberName,
-          runtimeProofObservedAt,
-          'runtime-proof'
-        );
-        continue;
-      }
-      const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
-        run.teamName,
-        memberName,
-        Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
-      );
-      if (transcriptOutcome?.kind !== 'success') {
-        continue;
-      }
-      this.confirmMemberSpawnStatusFromTranscript(run, memberName, transcriptOutcome.observedAt);
-    }
+    await maybeAuditMemberSpawnStatusesForRun(run, this.memberSpawnStatusAuditPorts, options);
   }
 
   private isOpenCodeSecondaryLaneMemberInRun(run: ProvisioningRun, memberName: string): boolean {
