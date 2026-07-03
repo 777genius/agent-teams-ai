@@ -394,11 +394,11 @@ import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpe
 import { runOpenCodeTeamRuntimeAdapterLaunch as runOpenCodeTeamRuntimeAdapterLaunchHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterLaunch';
 import { type OpenCodeRuntimeControlAck } from './provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
 import { materializeOpenCodeRuntimeAdapterDefaults as materializeOpenCodeRuntimeAdapterDefaultsHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeDefaults';
-import { createTeamProvisioningOpenCodeRuntimeDeliveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   type MemberWorkSyncProofMissingRecoveryScheduler,
   TeamProvisioningOpenCodeRuntimeDeliveryAdvisory,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryAdvisory';
+import { createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts } from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 import {
   applyOpenCodeSecondaryBootstrapStallOverlay as applyOpenCodeSecondaryBootstrapStallOverlayHelper,
   buildOpenCodeSecondaryLaneTimingDiagnostic,
@@ -3662,25 +3662,23 @@ export class TeamProvisioningService {
   }
 
   private createOpenCodeRuntimeDeliveryBoundary() {
-    return createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<ProvisioningRun>({
+    return createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<ProvisioningRun>({
       getTeamsBasePath,
       resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
       resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
         this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      writeLaunchState: async (teamName, snapshot) => {
+      writeLaunchStateSnapshot: async (teamName, snapshot) => {
         await this.writeLaunchStateSnapshot(teamName, snapshot);
       },
       readConfigForStrictDecision: (teamName) => this.readConfigForStrictDecision(teamName),
       readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
       readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
-      getTrackedRun: (teamName) => {
-        const trackedRunId = this.runTracking.getTrackedRunId(teamName);
-        return trackedRunId ? (this.runs.get(trackedRunId) ?? null) : null;
-      },
-      persistTrackedRunLaunchState: async (run) => {
-        await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
-      },
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      persistLaunchStateSnapshot: (run, launchPhase) =>
+        this.persistLaunchStateSnapshot(run, launchPhase),
+      getMixedSecondaryLaunchPhase: (run) => this.getMixedSecondaryLaunchPhase(run),
       invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
       emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
       emitTeamChange: (event) => this.teamChangeEmitter?.(event),
@@ -3725,8 +3723,6 @@ export class TeamProvisioningService {
         this.openCodePromptDeliveryWatchdogScheduler.isEnabled(),
       scheduleOpenCodePromptDeliveryWatchdog: (watchdogInput) =>
         this.scheduleOpenCodePromptDeliveryWatchdog(watchdogInput),
-      readLaunchStateForDeliveryRecovery: (candidateTeamName) =>
-        this.launchStateStore.read(candidateTeamName).catch(() => null),
       nowIso,
       logger,
     });
