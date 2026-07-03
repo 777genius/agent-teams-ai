@@ -118,21 +118,14 @@ import {
   type TeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
 } from './provisioning/TeamProvisioningBootstrapStallPortsFactory';
 import {
-  BOOTSTRAP_FAILURE_TAIL_BYTES,
-  BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS,
-  BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
   type BootstrapTranscriptOutcome,
-  type BootstrapTranscriptOutcomeCacheEntry,
-  type BootstrapTranscriptOutcomeLookupCacheEntry,
   findBootstrapRuntimeProofObservedAt as findBootstrapRuntimeProofObservedAtHelper,
-  findBootstrapTranscriptOutcome as findBootstrapTranscriptOutcomeHelper,
-  getParsedBootstrapTranscriptTail as getParsedBootstrapTranscriptTailHelper,
   type ParsedBootstrapTranscriptTailCacheEntry,
-  type ParsedBootstrapTranscriptTailLine,
-  PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
-  readBootstrapTranscriptOutcomesInProjectRoot as readBootstrapTranscriptOutcomesInProjectRootHelper,
-  readRecentBootstrapTranscriptOutcome as readRecentBootstrapTranscriptOutcomeHelper,
 } from './provisioning/TeamProvisioningBootstrapTranscript';
+import {
+  createTeamProvisioningBootstrapTranscriptOutcomePorts,
+  type TeamProvisioningBootstrapTranscriptOutcomePorts,
+} from './provisioning/TeamProvisioningBootstrapTranscriptOutcomePortsFactory';
 import {
   addPermissionRulesToSettings as addClaudePermissionRulesToSettings,
   type ClaudePermissionSettingsFilePorts,
@@ -1259,21 +1252,28 @@ export class TeamProvisioningService {
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   private readonly persistedTranscriptClaudeLogs: TeamProvisioningTranscriptClaudeLogsCache;
-  private readonly bootstrapTranscriptOutcomeCache = new Map<
-    string,
-    BootstrapTranscriptOutcomeCacheEntry
-  >();
-  // Shared parsed-tail cache keyed by filePath (validated by mtime+size) so the
-  // same growing transcript is read + JSON.parsed ONCE per change instead of once
-  // per member per poll. The per-member outcome scan below is unchanged.
-  private readonly parsedBootstrapTranscriptTailCache = new Map<
+  private readonly bootstrapTranscriptOutcomePorts: TeamProvisioningBootstrapTranscriptOutcomePorts =
+    createTeamProvisioningBootstrapTranscriptOutcomePorts({
+      nowIso,
+      isLookupCacheEnabled: (teamName) =>
+        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
+      findMemberLogs: (teamName, memberName, sinceMs) =>
+        this.memberLogsFinder.findMemberLogs(teamName, memberName, sinceMs),
+      readConfigSnapshot: (teamName) => this.readConfigSnapshot(teamName),
+      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+      readRecentBootstrapTranscriptOutcome: (filePath, sinceMs, memberName, teamName, options) =>
+        this.readRecentBootstrapTranscriptOutcome(filePath, sinceMs, memberName, teamName, options),
+      readBootstrapTranscriptOutcomesInProjectRoot: (teamName, memberName, sinceMs) =>
+        this.readBootstrapTranscriptOutcomesInProjectRoot(teamName, memberName, sinceMs),
+    });
+
+  private get parsedBootstrapTranscriptTailCache(): Map<
     string,
     ParsedBootstrapTranscriptTailCacheEntry
-  >();
-  private readonly bootstrapTranscriptOutcomeLookupCache = new Map<
-    string,
-    BootstrapTranscriptOutcomeLookupCacheEntry
-  >();
+  > {
+    return this.bootstrapTranscriptOutcomePorts.parsedBootstrapTranscriptTailCache;
+  }
+
   private readonly teamOpLocks = new Map<string, Promise<void>>();
   private readonly shutdownCoordination = createTeamProvisioningShutdownCoordination(
     {
@@ -1428,11 +1428,19 @@ export class TeamProvisioningService {
     minAuditIntervalMs: MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
     auditMemberSpawnStatuses: (run) => this.auditMemberSpawnStatuses(run),
     findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
-      this.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
+      this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptFailureReason(
+        teamName,
+        memberName,
+        sinceMs
+      ),
     findBootstrapRuntimeProofObservedAt: (teamName, memberName, current) =>
       this.findBootstrapRuntimeProofObservedAt(teamName, memberName, current),
     findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-      this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+      this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
+        teamName,
+        memberName,
+        sinceMs
+      ),
     setMemberSpawnStatus: (run, memberName, status, error) =>
       this.setMemberSpawnStatus(run, memberName, status, error),
     confirmMemberSpawnStatusFromTranscript: (run, memberName, observedAt, source) =>
@@ -4340,7 +4348,11 @@ export class TeamProvisioningService {
     return createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts<ProvisioningRun>({
       getOpenCodeBootstrapStallStatusPorts: () => this.getOpenCodeBootstrapStallStatusPorts(),
       findBootstrapTranscriptOutcome: (teamName, memberName, acceptedAtMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, acceptedAtMs),
+        this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
+          teamName,
+          memberName,
+          acceptedAtMs
+        ),
       getOpenCodeRuntimeMessageAdapter: () => this.getOpenCodeRuntimeMessageAdapter(),
       sendOpenCodeMemberMessageToRuntimeSerialized: (sendInput) =>
         this.sendOpenCodeMemberMessageToRuntimeSerialized(sendInput),
@@ -7327,7 +7339,11 @@ export class TeamProvisioningService {
       findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
         this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
       findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+        this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
+          teamName,
+          memberName,
+          sinceMs
+        ),
       readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
     });
   }
@@ -7337,8 +7353,11 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<string | null> {
-    const outcome = await this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs);
-    return outcome?.kind === 'failure' ? outcome.reason : null;
+    return this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptFailureReason(
+      teamName,
+      memberName,
+      sinceMs
+    );
   }
 
   private async findBootstrapTranscriptOutcome(
@@ -7346,42 +7365,11 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome | null> {
-    return findBootstrapTranscriptOutcomeHelper({
+    return this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
       teamName,
       memberName,
-      sinceMs,
-      lookupCache: this.bootstrapTranscriptOutcomeLookupCache,
-      lookupCacheEnabled:
-        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
-      findMemberLogs: (lookupTeamName, lookupMemberName, lookupSinceMs) =>
-        this.memberLogsFinder.findMemberLogs(lookupTeamName, lookupMemberName, lookupSinceMs),
-      readRecentBootstrapTranscriptOutcome: (
-        filePath,
-        lookupSinceMs,
-        lookupMemberName,
-        lookupTeamName,
-        options
-      ) =>
-        this.readRecentBootstrapTranscriptOutcome(
-          filePath,
-          lookupSinceMs,
-          lookupMemberName,
-          lookupTeamName,
-          options
-        ),
-      readBootstrapTranscriptOutcomesInProjectRoot: (
-        lookupTeamName,
-        lookupMemberName,
-        lookupSinceMs
-      ) =>
-        this.readBootstrapTranscriptOutcomesInProjectRoot(
-          lookupTeamName,
-          lookupMemberName,
-          lookupSinceMs
-        ),
-      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
-      lookupCacheTtlMs: PERSISTED_BOOTSTRAP_TRANSCRIPT_OUTCOME_LOOKUP_CACHE_TTL_MS,
-    });
+      sinceMs
+    );
   }
 
   private async readRecentBootstrapTranscriptOutcome(
@@ -7394,31 +7382,13 @@ export class TeamProvisioningService {
       contextMemberNames?: readonly string[];
     } = {}
   ): Promise<BootstrapTranscriptOutcome | null> {
-    return readRecentBootstrapTranscriptOutcomeHelper({
+    return this.bootstrapTranscriptOutcomePorts.readRecentBootstrapTranscriptOutcome(
       filePath,
       sinceMs,
       memberName,
       teamName,
-      options,
-      outcomeCache: this.bootstrapTranscriptOutcomeCache,
-      getParsedBootstrapTranscriptTail: (transcriptPath, stat) =>
-        this.getParsedBootstrapTranscriptTail(transcriptPath, stat),
-      nowIso,
-      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
-    });
-  }
-
-  private async getParsedBootstrapTranscriptTail(
-    filePath: string,
-    stat: { mtimeMs: number; size: number }
-  ): Promise<ParsedBootstrapTranscriptTailLine[]> {
-    return getParsedBootstrapTranscriptTailHelper({
-      filePath,
-      stat,
-      cache: this.parsedBootstrapTranscriptTailCache,
-      tailBytes: BOOTSTRAP_FAILURE_TAIL_BYTES,
-      maxCacheEntries: BOOTSTRAP_TRANSCRIPT_OUTCOME_CACHE_MAX_ENTRIES,
-    });
+      options
+    );
   }
 
   private async readBootstrapTranscriptOutcomesInProjectRoot(
@@ -7426,28 +7396,11 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome[]> {
-    return readBootstrapTranscriptOutcomesInProjectRootHelper({
+    return this.bootstrapTranscriptOutcomePorts.readBootstrapTranscriptOutcomesInProjectRoot(
       teamName,
       memberName,
-      sinceMs,
-      readConfigSnapshot: (lookupTeamName) => this.readConfigSnapshot(lookupTeamName),
-      readMetaMembers: (lookupTeamName) => this.membersMetaStore.getMembers(lookupTeamName),
-      readRecentBootstrapTranscriptOutcome: (
-        filePath,
-        lookupSinceMs,
-        lookupMemberName,
-        lookupTeamName,
-        options
-      ) =>
-        this.readRecentBootstrapTranscriptOutcome(
-          filePath,
-          lookupSinceMs,
-          lookupMemberName,
-          lookupTeamName,
-          options
-        ),
-      mtimeSlackMs: BOOTSTRAP_TRANSCRIPT_MTIME_SLACK_MS,
-    });
+      sinceMs
+    );
   }
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
