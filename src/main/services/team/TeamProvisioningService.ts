@@ -662,6 +662,7 @@ import {
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
 import { createRuntimeToolActivityHandlers } from './provisioning/TeamProvisioningRuntimeToolActivity';
+import { answerOpenCodeRuntimeToolApproval } from './provisioning/TeamProvisioningRuntimeToolApprovalAnswer';
 import {
   buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
   buildRuntimeTurnSettledHookSettingsArgs as buildRuntimeTurnSettledHookSettingsArgsHelper,
@@ -10005,47 +10006,6 @@ export class TeamProvisioningService {
     this.emitMemberSpawnChange(run, lane.member.name);
   }
 
-  private async applyOpenCodeSecondaryPermissionAnswerResult(
-    entry: RuntimeToolApprovalEntry,
-    result: TeamRuntimeLaunchResult
-  ): Promise<void> {
-    const trackedRunId = this.runTracking.getTrackedRunId(entry.approval.teamName);
-    const run = trackedRunId ? this.runs.get(trackedRunId) : null;
-    if (!run) {
-      throw new Error(`Run not found for team "${entry.approval.teamName}"`);
-    }
-    const lane = (run.mixedSecondaryLanes ?? []).find(
-      (candidate) => candidate.laneId === entry.laneId
-    );
-    if (!lane) {
-      throw new Error(
-        `OpenCode secondary lane ${entry.laneId} was not found for team "${entry.approval.teamName}"`
-      );
-    }
-
-    const guarded = await this.guardCommittedOpenCodeSecondaryLaneEvidence({
-      teamName: entry.approval.teamName,
-      laneId: entry.laneId,
-      memberName: entry.memberName,
-      result,
-    });
-    lane.result = guarded;
-    lane.warnings = [...guarded.warnings];
-    lane.diagnostics = [...guarded.diagnostics];
-    lane.state = 'finished';
-    await this.publishMixedSecondaryLaneStatusChange(run, lane);
-    this.syncOpenCodeRuntimeToolApprovals({
-      teamName: entry.approval.teamName,
-      runId: entry.approval.runId,
-      laneId: entry.laneId,
-      cwd: entry.cwd ?? '',
-      members: guarded.members,
-      expectedMembers: entry.expectedMembers ?? [],
-      teamDisplayName: entry.approval.teamDisplayName,
-      teamColor: entry.approval.teamColor,
-    });
-  }
-
   private async guardCommittedOpenCodeSecondaryLaneEvidence(params: {
     teamName: string;
     laneId: string;
@@ -12284,55 +12244,30 @@ export class TeamProvisioningService {
     allow: boolean,
     _message?: string
   ): Promise<void> {
-    if (entry.providerId !== 'opencode') {
-      throw new Error(`Runtime approval provider is not supported: ${entry.providerId}`);
-    }
-    const adapter = this.getOpenCodeRuntimeAdapter();
-    if (!adapter?.answerRuntimePermission) {
-      throw new Error('OpenCode runtime permission answer bridge is not available');
-    }
-
-    const previousLaunchState = await this.launchStateStore.read(entry.approval.teamName);
-    const result = await adapter.answerRuntimePermission(
-      buildOpenCodeRuntimePermissionAnswerInput(entry, allow, previousLaunchState)
-    );
-
-    if (entry.laneId === 'primary') {
-      const launchInput = buildOpenCodeRuntimePermissionLaunchInput(entry, previousLaunchState);
-      const { result: committed } = await this.persistOpenCodeRuntimeAdapterLaunchResult(
-        result,
-        launchInput
-      );
-      if (committed.teamLaunchState === 'partial_failure') {
-        this.runtimeAdapterRunByTeam.delete(entry.approval.teamName);
-      } else {
-        this.runtimeAdapterRunByTeam.set(entry.approval.teamName, {
-          runId: entry.approval.runId,
-          providerId: 'opencode',
-          cwd: entry.cwd,
-          members: committed.members,
-        });
-        this.runTracking.setAliveRunId(entry.approval.teamName, entry.approval.runId);
-      }
-      this.syncOpenCodeRuntimeToolApprovals({
-        teamName: entry.approval.teamName,
-        runId: entry.approval.runId,
-        laneId: entry.laneId,
-        cwd: entry.cwd ?? '',
-        members: committed.members,
-        expectedMembers: entry.expectedMembers ?? [],
-        teamDisplayName: entry.approval.teamDisplayName,
-        teamColor: entry.approval.teamColor,
-      });
-    } else {
-      await this.applyOpenCodeSecondaryPermissionAnswerResult(entry, result);
-    }
-
-    this.teamChangeEmitter?.({
-      type: 'process',
-      teamName: entry.approval.teamName,
-      runId: entry.approval.runId,
-      detail: allow ? 'permission-allowed' : 'permission-denied',
+    await answerOpenCodeRuntimeToolApproval(entry, allow, {
+      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+      buildOpenCodeRuntimePermissionAnswerInput,
+      buildOpenCodeRuntimePermissionLaunchInput,
+      persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+        this.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
+      deleteRuntimeAdapterRunByTeam: (teamName) => {
+        this.runtimeAdapterRunByTeam.delete(teamName);
+      },
+      setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
+        this.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
+      },
+      setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getRun: (runId) => this.runs.get(runId),
+      guardCommittedOpenCodeSecondaryLaneEvidence: (input) =>
+        this.guardCommittedOpenCodeSecondaryLaneEvidence(input),
+      publishMixedSecondaryLaneStatusChange: (run, lane) =>
+        this.publishMixedSecondaryLaneStatusChange(run, lane),
+      syncOpenCodeRuntimeToolApprovals: (input) => this.syncOpenCodeRuntimeToolApprovals(input),
+      emitTeamChange: (event) => {
+        this.teamChangeEmitter?.(event);
+      },
     });
   }
 
