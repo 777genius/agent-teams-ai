@@ -334,8 +334,11 @@ import {
 import {
   type OpenCodeMemberInboxRelayOptions,
   type OpenCodeMemberInboxRelayResult,
-  relayOpenCodeMemberInboxMessagesWithPorts,
 } from './provisioning/TeamProvisioningOpenCodeMemberInboxRelay';
+import {
+  createTeamProvisioningOpenCodeMemberInboxRelayBoundary,
+  type TeamProvisioningOpenCodeMemberInboxRelayHost,
+} from './provisioning/TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory';
 import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
 import { runOpenCodeTeamRuntimeAdapterLaunch as runOpenCodeTeamRuntimeAdapterLaunchHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterLaunch';
 import { type OpenCodeRuntimeControlAck } from './provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
@@ -1787,6 +1790,19 @@ export class TeamProvisioningService {
     null;
   private readonly stoppedTeamOpenCodeRuntimeCleanupInFlight = new Map<string, Promise<number>>();
   private readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
+  private readonly openCodeMemberInboxRelayBoundary =
+    createTeamProvisioningOpenCodeMemberInboxRelayBoundary({
+      host: this as unknown as TeamProvisioningOpenCodeMemberInboxRelayHost,
+      inFlight: this.openCodeMemberInboxRelayInFlight,
+      getInboxReader: () => this.inboxReader,
+      openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
+      getOpenCodeVisibleReplyProofService: () => this.openCodeVisibleReplyProofService,
+      openCodeInboxAttachmentPayloadBoundary: this.openCodeInboxAttachmentPayloadBoundary,
+      cleanedStoppedTeamOpenCodeRuntimeLanes: this.cleanedStoppedTeamOpenCodeRuntimeLanes,
+      logger,
+      nowIso,
+      getErrorMessage,
+    });
   private readonly stopFlowBoundary = createTeamProvisioningStopFlowBoundary<ProvisioningRun>({
     getTeamsBasePath,
     getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
@@ -5933,52 +5949,10 @@ export class TeamProvisioningService {
     memberName: string,
     options: OpenCodeMemberInboxRelayOptions = {}
   ): Promise<OpenCodeMemberInboxRelayResult> {
-    const relayKey = this.getOpenCodeMemberRelayKey(teamName, memberName);
-    return relayOpenCodeMemberInboxMessagesWithPorts(
-      { teamName, memberName, relayKey, options },
-      {
-        inFlight: this.openCodeMemberInboxRelayInFlight,
-        readInboxMessages: (teamName, memberName) =>
-          this.inboxReader.getMessagesFor(teamName, memberName),
-        scheduleOpenCodeMemberInboxDeliveryWake: (input) =>
-          this.scheduleOpenCodeMemberInboxDeliveryWake(input),
-        isOpenCodeRuntimeRecipient: (teamName, memberName) =>
-          this.isOpenCodeRuntimeRecipient(teamName, memberName),
-        resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-          this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
-            teamName,
-            memberName
-          ),
-        createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
-          this.createOpenCodePromptDeliveryLedger(teamName, laneId),
-        requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: (input) =>
-          this.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input),
-        requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded: (input) =>
-          this.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded(input),
-        applyDestinationProof: (input) =>
-          this.openCodeVisibleReplyProofService.applyDestinationProof(input),
-        isOpenCodeDeliveryResponseReadCommitAllowed: (input) =>
-          this.isOpenCodeDeliveryResponseReadCommitAllowed(input),
-        markInboxMessagesRead: (teamName, memberName, messages) =>
-          this.markInboxMessagesRead(teamName, memberName, messages),
-        logOpenCodePromptDeliveryEvent: (event, record, extra) =>
-          this.logOpenCodePromptDeliveryEvent(event, record, extra),
-        readTaskRefInferenceTasks: (teamName) =>
-          new TeamTaskReader().getTasks(teamName).catch(() => []),
-        resolveOpenCodeInboxAttachmentPayloads: (input) =>
-          this.openCodeInboxAttachmentPayloadBoundary.resolveOpenCodeInboxAttachmentPayloads(input),
-        resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-          this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
-        markOpenCodePromptLedgerFailedTerminal: (input) =>
-          this.markOpenCodePromptLedgerFailedTerminal(input),
-        deliverOpenCodeMemberMessage: (teamName, input) =>
-          this.deliverOpenCodeMemberMessage(teamName, input),
-        suppressRuntimeInactiveWarning: (teamName) =>
-          this.cleanedStoppedTeamOpenCodeRuntimeLanes.has(teamName),
-        logWarning: (message) => logger.warn(message),
-        nowIso,
-        getErrorMessage,
-      }
+    return this.openCodeMemberInboxRelayBoundary.relayOpenCodeMemberInboxMessages(
+      teamName,
+      memberName,
+      options
     );
   }
 
