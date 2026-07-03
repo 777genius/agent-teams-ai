@@ -6,7 +6,6 @@ import {
 } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import {
-  resolveWorkspaceTrustFeatureFlags,
   type WorkspaceTrustCoordinator,
   type WorkspaceTrustDiagnosticsManifest,
   type WorkspaceTrustExecutionResult,
@@ -54,7 +53,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
-  ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS,
   type AnthropicTeamApiKeyHelperMaterial,
   cleanupAnthropicTeamApiKeyHelperForTeam,
   cleanupAnthropicTeamApiKeyHelperMaterial,
@@ -161,11 +159,9 @@ import { buildCombinedLogs } from './provisioning/TeamProvisioningCliExitPresent
 import { buildMembersMetaWritePayload } from './provisioning/TeamProvisioningConfigLaunchNormalization';
 import { TeamProvisioningConfigMaintenance } from './provisioning/TeamProvisioningConfigMaintenance';
 import { type TeamProvisioningEffectiveLaunchState } from './provisioning/TeamProvisioningConfigMaterialization';
+import { prepareDeterministicCreateSetupFlow } from './provisioning/TeamProvisioningCreateDeterministicSetupFlow';
 import { runDeterministicCreateSpawnFlow } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlow';
-import {
-  assertCreateTeamDoesNotExist,
-  createDeterministicCreateProvisioningRun,
-} from './provisioning/TeamProvisioningCreateTeamFlow';
+import { createDeterministicCreateProvisioningRun } from './provisioning/TeamProvisioningCreateTeamFlow';
 import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   type CrossTeamDeliveredLeadBlock,
@@ -201,9 +197,7 @@ import {
 import { hasStableInboxMessageId } from './provisioning/TeamProvisioningInboxRelayPolicy';
 import { notifyAliveTeamsAboutLanguageChangeWithPorts } from './provisioning/TeamProvisioningLanguageChangeNotification';
 import {
-  assertDeterministicBootstrapPrimaryMemberLimit,
   assertOpenCodeNotLaunchedThroughLegacyProvisioning,
-  buildLargeDeterministicBootstrapWarning,
   type TeamLaunchCompatibilityReport,
 } from './provisioning/TeamProvisioningLaunchCompatibility';
 import { prepareDeterministicLaunchSetup } from './provisioning/TeamProvisioningLaunchDeterministicSetupFlow';
@@ -328,7 +322,6 @@ import {
 import {
   buildEffectiveTeamMemberSpec,
   normalizeTeamMemberProviderId,
-  teamRequestIncludesCodexMember,
 } from './provisioning/TeamProvisioningMemberSpecs';
 import {
   buildLaunchMemberSpawnStatus,
@@ -584,7 +577,6 @@ import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/Tea
 import { TeamProvisioningRuntimeStateProjection } from './provisioning/TeamProvisioningRuntimeStateProjection';
 import { createRuntimeToolActivityHandlers } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
-  buildRuntimeTurnSettledEnvironmentForMembers as buildRuntimeTurnSettledEnvironmentForMembersHelper,
   buildRuntimeTurnSettledHookSettingsArgs as buildRuntimeTurnSettledHookSettingsArgsHelper,
   buildRuntimeTurnSettledHookSettingsObject as buildRuntimeTurnSettledHookSettingsObjectHelper,
   type RuntimeTurnSettledEnvironmentProvider,
@@ -663,15 +655,7 @@ import {
   handleTeamProvisioningTurnComplete,
   type TeamProvisioningTurnCompletePorts,
 } from './provisioning/TeamProvisioningTurnComplete';
-import {
-  collectWorkspaceTrustProviders as collectWorkspaceTrustProvidersHelper,
-  collectWorkspaceTrustWorkspaces as collectWorkspaceTrustWorkspacesHelper,
-  createDefaultModelWorkspaceTrustProviderArgsResolver as createDefaultModelWorkspaceTrustProviderArgsResolverHelper,
-  planWorkspaceTrustArgsOnlySafely as planWorkspaceTrustArgsOnlySafelyHelper,
-  planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
-  prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
-} from './provisioning/TeamProvisioningWorkspaceTrust';
-import { buildWorkspaceTrustLaunchArgs as buildWorkspaceTrustLaunchArgsHelper } from './provisioning/TeamProvisioningWorkspaceTrustLaunchArgs';
+import { prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper } from './provisioning/TeamProvisioningWorkspaceTrust';
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { atomicWriteAsync } from './atomicWrite';
@@ -4775,158 +4759,55 @@ export class TeamProvisioningService {
     this.provisioningRunByTeam.set(request.teamName, pendingKey);
 
     try {
-      const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-      await assertCreateTeamDoesNotExist(request.teamName, teamsBasePathsToProbe, (filePath) =>
-        this.pathExists(filePath)
-      );
-
-      await ensureCwdExists(request.cwd);
-
-      const claudePath = await ClaudeBinaryResolver.resolve();
-      if (!claudePath) {
-        throw buildMissingCliError();
-      }
-
       const runtimeAuthMaterialId = randomUUID();
-      const teamRuntimeAuth: TeamRuntimeAuthContext = {
-        teamName: request.teamName,
-        authMaterialId: runtimeAuthMaterialId,
-        allowAnthropicApiKeyHelper: true,
-      };
-      const provisioningEnv = await this.providerRuntime.buildProvisioningEnv(
-        request.providerId,
-        request.providerBackendId,
-        { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
-      );
-      const {
-        env: shellEnv,
-        geminiRuntimeAuth,
-        providerArgs = [],
-        warning: envWarning,
-      } = provisioningEnv;
-      if (envWarning) {
-        throw new Error(envWarning);
-      }
-      const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
-      const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
-        ? collectWorkspaceTrustProvidersHelper({
-            leadProviderId: request.providerId,
-            members: request.members,
-          })
-        : [];
-      const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await collectWorkspaceTrustWorkspacesHelper({
-            cwd: request.cwd,
-            members: [],
-            ports: this.workspaceTrustWorkspaceCollectionPorts,
-          })
-        : [];
-      const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
-        ? await planWorkspaceTrustArgsOnlySafelyHelper({
-            coordinator: this.workspaceTrustCoordinator,
-            request: {
-              providers: workspaceTrustProviders,
-              workspaces: workspaceTrustEarlyWorkspaces,
-              targetSurfaces: ['default_model_probe'],
-              featureFlags: workspaceTrustFeatureFlags,
-            },
-          })
-        : { launchArgPatches: [] };
-      const workspaceTrustProviderArgsResolver =
-        createDefaultModelWorkspaceTrustProviderArgsResolverHelper(workspaceTrustEarlyPlan);
-      const materializedMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
-        claudePath,
-        cwd: request.cwd,
-        members: request.members,
-        defaults: {
-          providerId: request.providerId,
-          model: request.model,
-          effort: request.effort,
-        },
-        primaryProviderId: request.providerId,
-        primaryEnv: provisioningEnv,
-        teamRuntimeAuth,
-        limitContext: request.limitContext,
-        providerArgsResolver: workspaceTrustProviderArgsResolver,
-      });
-      const allEffectiveMemberSpecs = await this.resolveOpenCodeMemberWorkspacesForRuntime({
-        teamName: request.teamName,
-        baseCwd: request.cwd,
-        leadProviderId: request.providerId,
-        members: materializedMemberSpecs,
-      });
-      Object.assign(
-        shellEnv,
-        await buildRuntimeTurnSettledEnvironmentForMembersHelper(
-          {
-            primaryProviderId: request.providerId,
-            memberSpecs: allEffectiveMemberSpecs,
-          },
-          {
-            environmentProvider: this.runtimeTurnSettledEnvironmentProvider,
-            logger,
-          }
-        )
-      );
-      const lanePlan = this.planRuntimeLanesOrThrow(
-        request.providerId,
-        allEffectiveMemberSpecs,
-        request.cwd
-      );
-      const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
-      const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
-        primaryMemberNames.has(member.name)
-      );
-      assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
-      const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
-      const resolvedProviderId = resolveTeamProviderId(request.providerId);
-      const crossProviderMemberArgs = await this.providerRuntime.buildCrossProviderMemberArgs(
-        resolvedProviderId,
-        effectiveMemberSpecs,
-        { teamRuntimeAuth }
-      );
-      const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
-        ? await collectWorkspaceTrustWorkspacesHelper({
-            cwd: request.cwd,
-            members: allEffectiveMemberSpecs,
-            ports: this.workspaceTrustWorkspaceCollectionPorts,
-          })
-        : [];
-      const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
-        ? await planWorkspaceTrustFullSafelyHelper({
-            coordinator: this.workspaceTrustCoordinator,
-            request: {
-              providers: collectWorkspaceTrustProvidersHelper({
-                leadProviderId: request.providerId,
-                members: allEffectiveMemberSpecs,
-              }),
-              workspaces: workspaceTrustFullWorkspaces,
-              featureFlags: workspaceTrustFeatureFlags,
-            },
-          })
-        : null;
-      const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-      const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
-        buildWorkspaceTrustLaunchArgsHelper({
-          providerArgs,
-          resolvedProviderId,
-          crossProviderMemberArgs,
-          workspaceTrustPatches,
-        });
-      Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
-      if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
-        for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
-          delete shellEnv[key];
-        }
-      }
-      const launchIdentity = await this.resolveAndValidateLaunchIdentity({
-        claudePath,
-        cwd: request.cwd,
-        env: shellEnv,
+      const createSetup = await prepareDeterministicCreateSetupFlow({
         request,
-        effectiveMembers: effectiveMemberSpecs,
-        providerArgsByProvider,
+        runtimeAuthMaterialId,
+        ports: {
+          pathExists: (filePath) => this.pathExists(filePath),
+          resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
+          buildMissingCliError,
+          buildProvisioningEnv: (providerId, providerBackendId, options) =>
+            this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
+          materializeEffectiveTeamMemberSpecs: (params) =>
+            this.materializeEffectiveTeamMemberSpecs(params),
+          resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
+            this.resolveOpenCodeMemberWorkspacesForRuntime(params),
+          planRuntimeLanesOrThrow: (leadProviderId, members, cwd) =>
+            this.planRuntimeLanesOrThrow(leadProviderId, members, cwd),
+          buildCrossProviderMemberArgs: (primaryProviderId, memberSpecs, options) =>
+            this.providerRuntime.buildCrossProviderMemberArgs(
+              primaryProviderId,
+              memberSpecs,
+              options
+            ),
+          resolveAndValidateLaunchIdentity: (params) =>
+            this.resolveAndValidateLaunchIdentity(params),
+          createMixedSecondaryLaneStates: (lanePlan) =>
+            this.createMixedSecondaryLaneStates(lanePlan),
+          workspaceTrustCoordinator: this.workspaceTrustCoordinator,
+          workspaceTrustWorkspaceCollectionPorts: this.workspaceTrustWorkspaceCollectionPorts,
+          runtimeTurnSettledEnvironmentProvider: this.runtimeTurnSettledEnvironmentProvider,
+          logger,
+        },
       });
+      const {
+        teamsBasePathsToProbe,
+        claudePath,
+        provisioningEnv,
+        shellEnv,
+        geminiRuntimeAuth,
+        resolvedProviderId,
+        providerArgsForLaunch,
+        inheritedProviderArgsForLaunch,
+        effectiveMemberSpecs,
+        allEffectiveMemberSpecs,
+        launchIdentity,
+        mixedSecondaryLanes,
+        workspaceTrustFeatureFlags,
+        workspaceTrustFullPlan,
+        largeTeamWarning,
+      } = createSetup;
       const runId = randomUUID();
       const startedAt = nowIso();
       const run: ProvisioningRun = createDeterministicCreateProvisioningRun({
@@ -4939,7 +4820,7 @@ export class TeamProvisioningService {
         effectiveMemberSpecs,
         allEffectiveMemberSpecs,
         launchIdentity,
-        mixedSecondaryLanes: this.createMixedSecondaryLaneStates(lanePlan),
+        mixedSecondaryLanes,
         workspaceTrustFullPlan,
         largeTeamWarning,
         anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
@@ -4977,7 +4858,7 @@ export class TeamProvisioningService {
         shellEnv,
         resolvedProviderId,
         providerArgsForLaunch,
-        inheritedProviderArgsForLaunch: crossProviderMemberArgsForLaunch.args,
+        inheritedProviderArgsForLaunch,
         geminiRuntimeAuth,
         stopAllGenerationAtStart,
         disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
