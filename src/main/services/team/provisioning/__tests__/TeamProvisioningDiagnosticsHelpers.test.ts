@@ -1,10 +1,11 @@
-import type { TeamProvisioningSupportDiagnostic } from '@shared/types';
 import { describe, expect, it } from 'vitest';
 
 import {
   buildProvisioningTraceDetail,
   pushUniqueSupportDiagnostics,
 } from '../TeamProvisioningDiagnosticsHelpers';
+
+import type { TeamProvisioningSupportDiagnostic } from '@shared/types';
 
 describe('TeamProvisioningDiagnosticsHelpers', () => {
   describe('buildProvisioningTraceDetail', () => {

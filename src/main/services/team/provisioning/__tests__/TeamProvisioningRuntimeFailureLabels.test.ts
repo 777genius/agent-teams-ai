@@ -1,10 +1,11 @@
-import type { TeamCreateRequest } from '@shared/types';
 import { describe, expect, it } from 'vitest';
 
 import {
   getProviderRuntimeFailureLabel,
   getRuntimeFailureLabelForRequest,
 } from '../TeamProvisioningRuntimeFailureLabels';
+
+import type { TeamCreateRequest } from '@shared/types';
 
 type LabelRequest = Pick<TeamCreateRequest, 'providerId' | 'model' | 'members'>;
 
