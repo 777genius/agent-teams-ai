@@ -311,6 +311,41 @@ describe('team provisioning launch identity resolution', () => {
     });
   });
 
+  it('propagates invalid member launch selections before building the lead identity', async () => {
+    const facts = buildFacts();
+    const readRuntimeProviderLaunchFacts = vi.fn(async () => facts);
+    const validateRuntimeLaunchSelection = vi.fn(
+      (params: Parameters<LaunchIdentityResolutionPorts['validateRuntimeLaunchSelection']>[0]) => {
+        if (params.actorLabel === 'Member BadModel') {
+          throw new Error('Member BadModel uses an unsupported launch model');
+        }
+      }
+    );
+    const buildProviderModelLaunchIdentity = vi.fn(() => buildLaunchIdentity());
+    const ports: LaunchIdentityResolutionPorts = {
+      readRuntimeProviderLaunchFacts,
+      validateRuntimeLaunchSelection,
+      buildProviderModelLaunchIdentity,
+    };
+
+    await expect(
+      resolveAndValidateLaunchIdentity(
+        {
+          claudePath: '/bin/claude',
+          cwd: '/repo',
+          env: { PATH: '/bin' },
+          request: { providerId: 'codex', model: 'gpt-5' },
+          effectiveMembers: [{ name: 'BadModel', providerId: 'codex', model: 'unknown-model' }],
+        },
+        ports
+      )
+    ).rejects.toThrow('Member BadModel uses an unsupported launch model');
+
+    expect(readRuntimeProviderLaunchFacts).toHaveBeenCalledTimes(1);
+    expect(validateRuntimeLaunchSelection).toHaveBeenCalledTimes(2);
+    expect(buildProviderModelLaunchIdentity).not.toHaveBeenCalled();
+  });
+
   it('resolves direct member launch identity from member-scoped launch fields', async () => {
     const facts = buildFacts({ defaultModel: 'codex-default' });
     const identity = buildLaunchIdentity({ resolvedLaunchModel: 'codex-default' });
