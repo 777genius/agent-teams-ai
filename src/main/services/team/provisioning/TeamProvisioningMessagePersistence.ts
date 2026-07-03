@@ -84,6 +84,37 @@ function mapControllerMessagePayload(message: InboxMessage): TeamProvisioningPer
   };
 }
 
+function mapControllerInboxMessagePayload(
+  recipient: string,
+  message: InboxMessage
+): TeamProvisioningPersistedInboxMessagePayload {
+  const payload = mapControllerMessagePayload(message);
+  return {
+    member: recipient,
+    from: payload.from,
+    text: payload.text,
+    timestamp: payload.timestamp,
+    summary: payload.summary,
+    messageId: payload.messageId,
+    relayOfMessageId: payload.relayOfMessageId,
+    source: payload.source,
+    leadSessionId: payload.leadSessionId,
+    conversationId: payload.conversationId,
+    replyToConversationId: payload.replyToConversationId,
+    taskRefs: payload.taskRefs,
+    attachments: payload.attachments,
+    color: payload.color,
+    toolSummary: payload.toolSummary,
+    toolCalls: payload.toolCalls,
+    messageKind: payload.messageKind,
+    workSyncIntent: payload.workSyncIntent,
+    workSyncIntentKey: payload.workSyncIntentKey,
+    workSyncReviewRequestEventIds: payload.workSyncReviewRequestEventIds,
+    slashCommand: payload.slashCommand,
+    commandOutput: payload.commandOutput,
+  };
+}
+
 function createControllerForTeam(
   teamName: string,
   ports: TeamProvisioningMessagePersistencePorts
@@ -115,11 +146,9 @@ export function persistTeamProvisioningInboxMessage(
   ports: TeamProvisioningInboxMessagePersistencePorts
 ): void {
   try {
-    const { to: _to, ...payload } = mapControllerMessagePayload(message);
-    createControllerForTeam(teamName, ports).messages.sendMessage({
-      member: recipient,
-      ...payload,
-    });
+    createControllerForTeam(teamName, ports).messages.sendMessage(
+      mapControllerInboxMessagePayload(recipient, message)
+    );
     ports.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message);
   } catch (error) {
     ports.logger.warn(

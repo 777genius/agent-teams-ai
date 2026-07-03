@@ -29,7 +29,7 @@ function createMessage(): InboxMessage {
         filename: 'notes.txt',
         mimeType: 'text/plain',
         size: 12,
-        filePath: '/tmp/notes.txt',
+        filePath: '/home/tester/notes.txt',
       },
     ],
     leadSessionId: 'session-1',
@@ -67,7 +67,7 @@ function createExpectedSentPayload() {
         filename: 'notes.txt',
         mimeType: 'text/plain',
         size: 12,
-        filePath: '/tmp/notes.txt',
+        filePath: '/home/tester/notes.txt',
       },
     ],
     color: '#123456',
@@ -131,7 +131,9 @@ describe('TeamProvisioningMessagePersistence', () => {
   it('persists inbox messages with the existing controller field mapping and advisory refresh', () => {
     const ports = createPorts();
     const message = createMessage();
-    const { to: _to, ...expectedPayload } = createExpectedSentPayload();
+    const expectedPayload = Object.fromEntries(
+      Object.entries(createExpectedSentPayload()).filter(([key]) => key !== 'to')
+    );
 
     persistTeamProvisioningInboxMessage('alpha', 'worker', message, ports);
 
