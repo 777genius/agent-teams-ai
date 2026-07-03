@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildIncompleteLaunchCleanupReason,
   cleanupProvisioningRun,
+  finalizeIncompleteLaunchStateBeforeCleanup,
   type IncompleteLaunchCleanupRun,
   shouldFinalizeIncompleteLaunchState,
   type TeamProvisioningCleanupPorts,
@@ -223,6 +224,44 @@ describe('team provisioning cleanup policy', () => {
     ).toBe('failed message');
 
     expect(buildIncompleteLaunchCleanupReason(run(), 'fallback')).toBe('fallback');
+  });
+
+  it('finalizes incomplete launch state before cleanup and rolls back the finalized flag on persist failure', async () => {
+    const cleanup = run();
+    const persistError = new Error('write failed');
+    const ports = {
+      markIncompleteLaunchStateFinalized: vi.fn((targetRun: IncompleteLaunchCleanupRun) => {
+        targetRun.launchCleanupStateFinalized = true;
+      }),
+      persistLaunchStateSnapshot: vi.fn(() => Promise.reject(persistError)),
+    };
+    const onPersistFailure = vi.fn();
+
+    await finalizeIncompleteLaunchStateBeforeCleanup(cleanup, ports, {
+      fallbackReason: 'fallback reason',
+      onPersistFailure,
+    });
+
+    expect(ports.markIncompleteLaunchStateFinalized).toHaveBeenCalledWith(
+      cleanup,
+      'fallback reason'
+    );
+    expect(ports.persistLaunchStateSnapshot).toHaveBeenCalledWith(cleanup, 'finished');
+    expect(cleanup.launchCleanupStateFinalized).toBe(false);
+    expect(onPersistFailure).toHaveBeenCalledWith(cleanup, persistError);
+  });
+
+  it('does not finalize launch state before cleanup when the run is already finalized', async () => {
+    const cleanup = run({ launchCleanupStateFinalized: true });
+    const ports = {
+      markIncompleteLaunchStateFinalized: vi.fn(),
+      persistLaunchStateSnapshot: vi.fn(() => Promise.resolve()),
+    };
+
+    await finalizeIncompleteLaunchStateBeforeCleanup(cleanup, ports);
+
+    expect(ports.markIncompleteLaunchStateFinalized).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
   });
 
   it('clears current-run team-scoped cleanup state', () => {

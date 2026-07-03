@@ -79,7 +79,7 @@ interface GetDeleteStringMap {
 }
 
 interface DeleteStringMap {
-  delete(key: string): boolean;
+  delete(key: string): boolean | void;
 }
 
 interface KeyedDeleteStringMap extends DeleteStringMap {
@@ -143,6 +143,13 @@ export interface TeamProvisioningCleanupPorts<TRun extends TeamProvisioningClean
   runs: DeleteStringMap;
 }
 
+export interface FinalizeIncompleteLaunchStateBeforeCleanupPorts<
+  TRun extends IncompleteLaunchCleanupRun,
+> {
+  markIncompleteLaunchStateFinalized(run: TRun, cleanupReason: string): void;
+  persistLaunchStateSnapshot(run: TRun, phase: 'finished'): Promise<unknown>;
+}
+
 export function shouldFinalizeIncompleteLaunchState(run: IncompleteLaunchCleanupRun): boolean {
   return (
     run.isLaunch &&
@@ -162,6 +169,29 @@ export function buildIncompleteLaunchCleanupReason(
     : run.progress.state === 'failed' && run.progress.message.trim()
       ? run.progress.message.trim()
       : fallback;
+}
+
+export async function finalizeIncompleteLaunchStateBeforeCleanup<
+  TRun extends IncompleteLaunchCleanupRun,
+>(
+  run: TRun,
+  ports: FinalizeIncompleteLaunchStateBeforeCleanupPorts<TRun>,
+  options: {
+    fallbackReason?: string;
+    onPersistFailure?: (run: TRun, error: unknown) => void;
+  } = {}
+): Promise<void> {
+  if (!shouldFinalizeIncompleteLaunchState(run)) {
+    return;
+  }
+  const cleanupReason = buildIncompleteLaunchCleanupReason(run, options.fallbackReason);
+  ports.markIncompleteLaunchStateFinalized(run, cleanupReason);
+  try {
+    await ports.persistLaunchStateSnapshot(run, 'finished');
+  } catch (error) {
+    run.launchCleanupStateFinalized = false;
+    options.onPersistFailure?.(run, error);
+  }
 }
 
 export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(

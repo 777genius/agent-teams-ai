@@ -134,10 +134,11 @@ import {
   seedLeadBootstrapPermissionRules as seedLeadBootstrapPermissionRulesHelper,
 } from './provisioning/TeamProvisioningClaudePermissionSettings';
 import {
-  buildIncompleteLaunchCleanupReason as buildIncompleteLaunchCleanupReasonHelper,
   cleanupProvisioningRun,
-  shouldFinalizeIncompleteLaunchState as shouldFinalizeIncompleteLaunchStateHelper,
+  finalizeIncompleteLaunchStateBeforeCleanup as finalizeIncompleteLaunchStateBeforeCleanupHelper,
+  type TeamProvisioningCleanupPorts,
 } from './provisioning/TeamProvisioningCleanup';
+import { createTeamProvisioningCleanupRunPorts } from './provisioning/TeamProvisioningCleanupRunPortsFactory';
 import { buildCombinedLogs } from './provisioning/TeamProvisioningCliExitPresentation';
 import { buildMembersMetaWritePayload } from './provisioning/TeamProvisioningConfigLaunchNormalization';
 import { TeamProvisioningConfigMaintenance } from './provisioning/TeamProvisioningConfigMaintenance';
@@ -475,7 +476,6 @@ import {
   readRegisteredTeamMemberNamesFromConfig,
 } from './provisioning/TeamProvisioningRegisteredMemberAudit';
 import {
-  buildRetainedClaudeLogsSnapshot,
   extractCliLogsFromRun,
   type RetainedClaudeLogsSnapshot,
 } from './provisioning/TeamProvisioningRetainedLogs';
@@ -1640,6 +1640,7 @@ export class TeamProvisioningService {
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly toolApprovalTimeouts: TeamProvisioningToolApprovalTimeouts<ProvisioningRun>;
   private readonly transientRunState: TeamProvisioningTransientRunState;
+  private readonly cleanupRunPorts: TeamProvisioningCleanupPorts<ProvisioningRun>;
   private inFlightResponses = new Set<string>();
   private readonly toolApprovalPortsBoundary: TeamProvisioningToolApprovalPortsBoundary<ProvisioningRun>;
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
@@ -2007,6 +2008,54 @@ export class TeamProvisioningService {
         warn: (message) => logger.warn(message),
       })
     );
+    this.cleanupRunPorts = createTeamProvisioningCleanupRunPorts({
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      isRunIdTracked: (runId) =>
+        this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId),
+      markIncompleteLaunchStateFinalized: (run, cleanupReason) =>
+        this.markIncompleteLaunchStateFinalized(run, cleanupReason),
+      persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
+      writeLaunchFailureArtifactPackBestEffort: (run, options) =>
+        this.writeLaunchFailureArtifactPackBestEffort(run, options),
+      resetRuntimeToolActivity: (run) => this.resetRuntimeToolActivity(run),
+      setLeadActivity: (run, state) => this.setLeadActivity(run, state),
+      stopStallWatchdog: (run) => this.stopStallWatchdog(run),
+      stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      aliveRunByTeam: this.aliveRunByTeam,
+      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
+      clearSecondaryRuntimeRuns: (teamName) => this.clearSecondaryRuntimeRuns(teamName),
+      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
+      invalidateMemberSpawnStatusesCache: (teamName) =>
+        this.invalidateMemberSpawnStatusesCache(teamName),
+      leadInboxRelayInFlight: this.leadInboxRelayInFlight,
+      relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
+      pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
+      recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
+      recentSameTeamNativeFingerprints: this.sameTeamNativeDelivery,
+      clearSameTeamRetryTimers: (teamName) => this.clearSameTeamRetryTimers(teamName),
+      clearLeadInboxFollowUpRelayTimer: (teamName) =>
+        this.clearLeadInboxFollowUpRelayTimer(teamName),
+      getMemberLaunchGraceKey: (run, memberName) => this.getMemberLaunchGraceKey(run, memberName),
+      pendingTimeouts: this.pendingTimeouts,
+      memberInboxRelayInFlight: this.memberInboxRelayInFlight,
+      openCodeMemberInboxRelayInFlight: this.openCodeMemberInboxRelayInFlight,
+      openCodeMemberSendInFlightByLane: this.openCodeMemberSendInFlightByLane,
+      openCodePromptDeliveryWatchdogScheduler: this.openCodePromptDeliveryWatchdogScheduler,
+      relayedMemberInboxMessageIds: this.relayedMemberInboxMessageIds,
+      liveLeadProcessMessages: this.liveLeadProcessMessages,
+      pruneLiveLeadMessagesForCleanedRun: (run) => this.pruneLiveLeadMessagesForCleanedRun(run),
+      clearApprovalTimeout: (requestId) => this.clearApprovalTimeout(requestId),
+      inFlightResponses: this.inFlightResponses,
+      dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
+      emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
+      mcpConfigBuilder: this.mcpConfigBuilder,
+      removeRunMemberMcpConfigFilesLater: (run) => this.removeRunMemberMcpConfigFilesLater(run),
+      retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
+      retainProvisioningProgress: (runId, progress) =>
+        this.retainProvisioningProgress(runId, progress),
+      runs: this.runs,
+    });
     this.transientRunState = new TeamProvisioningTransientRunState(
       createTeamProvisioningTransientRunStatePorts({
         pendingTimeouts: this.pendingTimeouts,
@@ -8002,78 +8051,23 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     fallbackReason?: string
   ): Promise<void> {
-    if (!shouldFinalizeIncompleteLaunchStateHelper(run)) {
-      return;
-    }
-    const cleanupReason = buildIncompleteLaunchCleanupReasonHelper(run, fallbackReason);
-    this.markIncompleteLaunchStateFinalized(run, cleanupReason);
-    try {
-      await this.persistLaunchStateSnapshot(run, 'finished');
-    } catch (error) {
-      run.launchCleanupStateFinalized = false;
-      logger.warn(
-        `[${run.teamName}] Failed to finalize launch state before cleanup: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
+    await finalizeIncompleteLaunchStateBeforeCleanupHelper(run, this.cleanupRunPorts, {
+      fallbackReason,
+      onPersistFailure: (run, error) => {
+        logger.warn(
+          `[${run.teamName}] Failed to finalize launch state before cleanup: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      },
+    });
   }
 
   /**
    * Remove a run from tracking maps.
    */
   private cleanupRun(run: ProvisioningRun): void {
-    cleanupProvisioningRun(run, {
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      isRunIdTracked: (runId) =>
-        this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId),
-      buildRetainedClaudeLogsSnapshot,
-      shouldFinalizeIncompleteLaunchState: (run) => shouldFinalizeIncompleteLaunchStateHelper(run),
-      buildIncompleteLaunchCleanupReason: (run) => buildIncompleteLaunchCleanupReasonHelper(run),
-      markIncompleteLaunchStateFinalized: (run, cleanupReason) =>
-        this.markIncompleteLaunchStateFinalized(run, cleanupReason),
-      persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
-      writeLaunchFailureArtifactPackBestEffort: (run, options) =>
-        this.writeLaunchFailureArtifactPackBestEffort(run, options),
-      resetRuntimeToolActivity: (run) => this.resetRuntimeToolActivity(run),
-      setLeadActivity: (run, state) => this.setLeadActivity(run, state),
-      stopStallWatchdog: (run) => this.stopStallWatchdog(run),
-      stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
-      provisioningRunByTeam: this.provisioningRunByTeam,
-      aliveRunByTeam: this.aliveRunByTeam,
-      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
-      clearSecondaryRuntimeRuns: (teamName) => this.clearSecondaryRuntimeRuns(teamName),
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      invalidateMemberSpawnStatusesCache: (teamName) =>
-        this.invalidateMemberSpawnStatusesCache(teamName),
-      leadInboxRelayInFlight: this.leadInboxRelayInFlight,
-      relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
-      pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
-      recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-      recentSameTeamNativeFingerprints: this.sameTeamNativeDelivery,
-      clearSameTeamRetryTimers: (teamName) => this.clearSameTeamRetryTimers(teamName),
-      clearLeadInboxFollowUpRelayTimer: (teamName) =>
-        this.clearLeadInboxFollowUpRelayTimer(teamName),
-      getMemberLaunchGraceKey: (run, memberName) => this.getMemberLaunchGraceKey(run, memberName),
-      pendingTimeouts: this.pendingTimeouts,
-      memberInboxRelayInFlight: this.memberInboxRelayInFlight,
-      openCodeMemberInboxRelayInFlight: this.openCodeMemberInboxRelayInFlight,
-      openCodeMemberSendInFlightByLane: this.openCodeMemberSendInFlightByLane,
-      openCodePromptDeliveryWatchdogScheduler: this.openCodePromptDeliveryWatchdogScheduler,
-      relayedMemberInboxMessageIds: this.relayedMemberInboxMessageIds,
-      liveLeadProcessMessages: this.liveLeadProcessMessages,
-      pruneLiveLeadMessagesForCleanedRun: (run) => this.pruneLiveLeadMessagesForCleanedRun(run),
-      clearApprovalTimeout: (requestId) => this.clearApprovalTimeout(requestId),
-      inFlightResponses: this.inFlightResponses,
-      dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
-      emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
-      mcpConfigBuilder: this.mcpConfigBuilder,
-      removeRunMemberMcpConfigFilesLater: (run) => this.removeRunMemberMcpConfigFilesLater(run),
-      retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
-      retainProvisioningProgress: (runId, progress) =>
-        this.retainProvisioningProgress(runId, progress),
-      runs: this.runs,
-    });
+    cleanupProvisioningRun(run, this.cleanupRunPorts);
   }
 
   /**
