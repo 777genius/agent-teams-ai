@@ -166,10 +166,11 @@ import { buildMembersMetaWritePayload } from './provisioning/TeamProvisioningCon
 import { TeamProvisioningConfigMaintenance } from './provisioning/TeamProvisioningConfigMaintenance';
 import { type TeamProvisioningEffectiveLaunchState } from './provisioning/TeamProvisioningConfigMaterialization';
 import {
+  runDeterministicCreateSpawnFlow,
+} from './provisioning/TeamProvisioningCreateDeterministicSpawnFlow';
+import {
   assertCreateTeamDoesNotExist,
-  buildDeterministicCreateSpawnArgs,
   createDeterministicCreateProvisioningRun,
-  materializeDeterministicCreateTeamBootstrapFiles,
 } from './provisioning/TeamProvisioningCreateTeamFlow';
 import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
@@ -573,7 +574,6 @@ import {
 import {
   buildProviderModelLaunchIdentity as buildProviderModelLaunchIdentityHelper,
   buildTeamRuntimeLaunchArgsPlan as buildTeamRuntimeLaunchArgsPlanHelper,
-  getLaunchModelArg,
   getTeamsBasePathsToProbe,
   logsSuggestShutdownOrCleanup,
   type RuntimeProviderLaunchFacts,
@@ -4980,251 +4980,67 @@ export class TeamProvisioningService {
       await this.clearPersistedLaunchState(request.teamName, { expectedRunId: run.runId });
       run.launchStateClearedForRun = true;
 
-      const initialUserPrompt = request.prompt?.trim() ?? '';
-      const promptSize = getPromptSizeSummary(initialUserPrompt);
-      let child: ReturnType<typeof spawn>;
-      shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
-      const teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs);
-      applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
-      let mcpConfigPath: string;
-      let bootstrapSpecPath: string;
-      let bootstrapUserPromptPath: string | null = null;
-      try {
-        // Pre-save our meta files before native app-managed briefing generation.
-        // member_briefing intentionally reads canonical team metadata/inboxes, so
-        // createTeam must materialize those files before building the bootstrap spec.
-        const materializedBootstrapFiles = await materializeDeterministicCreateTeamBootstrapFiles({
-          request,
-          run,
-          effectiveMemberSpecs,
-          allEffectiveMemberSpecs,
-          launchIdentity,
-          initialUserPrompt,
-          promptSize,
-          controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+      return await runDeterministicCreateSpawnFlow({
+        request,
+        run,
+        runId,
+        effectiveMemberSpecs,
+        allEffectiveMemberSpecs,
+        launchIdentity,
+        provisioningEnv,
+        claudePath,
+        shellEnv,
+        resolvedProviderId,
+        providerArgsForLaunch,
+        inheritedProviderArgsForLaunch: crossProviderMemberArgsForLaunch.args,
+        geminiRuntimeAuth,
+        stopAllGenerationAtStart,
+        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        logger,
+        ports: {
           teamMetaStore: {
             writeMeta: (teamName, payload) =>
               this.teamMetaStore.writeMeta(
                 teamName,
                 payload as Parameters<typeof this.teamMetaStore.writeMeta>[1]
               ),
+            deleteMeta: (teamName) => this.teamMetaStore.deleteMeta(teamName),
           },
           membersMetaStore: this.membersMetaStore,
           mcpConfigBuilder: this.mcpConfigBuilder,
-          buildMemberMcpLaunchConfigs: () =>
-            this.buildRuntimeBootstrapMemberMcpLaunchConfigs({
-              controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-              cwd: request.cwd,
-              members: effectiveMemberSpecs,
-              run,
-            }),
-          validateAgentTeamsMcpRuntime: (createdMcpConfigPath) =>
+          buildMemberMcpLaunchConfigs: (input) =>
+            this.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
+          validateAgentTeamsMcpRuntime: (createdMcpConfigPath, options) =>
             this.providerRuntime.validateAgentTeamsMcpRuntime(
               claudePath,
               request.cwd,
               shellEnv,
               createdMcpConfigPath,
-              {
-                isCancelled: () =>
-                  run.cancelRequested ||
-                  run.processKilled ||
-                  this.stopAllTeamsGeneration !== stopAllGenerationAtStart,
-              }
+              options
             ),
-        });
-        mcpConfigPath = materializedBootstrapFiles.mcpConfigPath;
-        bootstrapSpecPath = materializedBootstrapFiles.bootstrapSpecPath;
-        bootstrapUserPromptPath = materializedBootstrapFiles.bootstrapUserPromptPath;
-      } catch (error) {
-        this.runs.delete(runId);
-        this.provisioningRunByTeam.delete(request.teamName);
-        if (provisioningEnv.anthropicApiKeyHelper) {
-          await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
-          }).catch(() => undefined);
-        }
-        await this.teamMetaStore.deleteMeta(request.teamName).catch(() => {});
-        const teamDir = path.join(getTeamsBasePath(), request.teamName);
-        const tasksDir = path.join(getTasksBasePath(), request.teamName);
-        await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => {});
-        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => {});
-        await removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath).catch(() => {});
-        run.bootstrapSpecPath = null;
-        await removeDeterministicBootstrapUserPromptFile(run.bootstrapUserPromptPath).catch(
-          () => {}
-        );
-        run.bootstrapUserPromptPath = null;
-        if (run.mcpConfigPath) {
-          await this.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath).catch(() => {});
-          run.mcpConfigPath = null;
-        }
-        await this.removeRunMemberMcpConfigFiles(run).catch(() => {});
-        throw error;
-      }
-      const launchModelArg = getLaunchModelArg(
-        resolveTeamProviderId(request.providerId),
-        request.model,
-        launchIdentity
-      );
-      const extraCliArgs = parseCliArgs(request.extraCliArgs);
-      const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-        teamName: request.teamName,
-        providerId: resolvedProviderId,
-        launchIdentity,
-        envResolution: { ...provisioningEnv, providerArgs: providerArgsForLaunch },
-        extraArgs: extraCliArgs,
-        inheritedProviderArgs: crossProviderMemberArgsForLaunch.args,
-        includeAnthropicHelper: resolvedProviderId === 'anthropic',
-        contextLabel: 'Team create launch',
+          buildTeamRuntimeLaunchArgsPlan: (input) => this.buildTeamRuntimeLaunchArgsPlan(input),
+          seedLeadBootstrapPermissionRules: (teamName, cwd) =>
+            this.seedLeadBootstrapPermissionRules(teamName, cwd),
+          spawnCli,
+          updateProgress,
+          attachStdoutHandler: (targetRun) => this.attachStdoutHandler(targetRun),
+          attachStderrHandler: (targetRun) => this.attachStderrHandler(targetRun),
+          startStallWatchdog: (targetRun) => this.startStallWatchdog(targetRun),
+          startFilesystemMonitor: (targetRun, targetRequest) =>
+            this.startFilesystemMonitor(targetRun, targetRequest),
+          tryCompleteAfterTimeout: (targetRun) => this.tryCompleteAfterTimeout(targetRun),
+          handleProcessExit: (targetRun, code) => this.handleProcessExit(targetRun, code),
+          killTeamProcess,
+          cleanupRun: (targetRun) => this.cleanupRun(targetRun),
+          removeRunMemberMcpConfigFiles: (targetRun) =>
+            this.removeRunMemberMcpConfigFiles(targetRun),
+          unregisterRun: (targetRunId, teamName) => {
+            this.runs.delete(targetRunId);
+            this.provisioningRunByTeam.delete(teamName);
+          },
+          getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+        },
       });
-      const spawnArgs = buildDeterministicCreateSpawnArgs({
-        mcpConfigPath,
-        bootstrapSpecPath,
-        bootstrapUserPromptPath,
-        skipPermissions: request.skipPermissions,
-        launchModelArg,
-        resolvedEffort: launchIdentity.resolvedEffort ?? undefined,
-        providerArgs: runtimeArgsPlan.providerArgs,
-        fastModeArgs: runtimeArgsPlan.fastModeArgs,
-        runtimeTurnSettledHookArgs: runtimeArgsPlan.runtimeTurnSettledHookArgs,
-        runtimeExtraArgs: runtimeArgsPlan.extraArgs,
-        settingsArgs: runtimeArgsPlan.settingsArgs,
-        inheritedProviderArgs: runtimeArgsPlan.inheritedProviderArgs,
-        worktree: request.worktree,
-        teammateModeDecision,
-        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-      });
-      applyAppManagedRuntimeSettingsPathEnv(shellEnv, runtimeArgsPlan.appManagedSettingsPath);
-      const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
-        geminiRuntimeAuth,
-        promptSize,
-        expectedMembersCount: effectiveMemberSpecs.length,
-      });
-      logRuntimeLaunchSnapshot(logger, request.teamName, claudePath, spawnArgs, request, shellEnv, {
-        geminiRuntimeAuth,
-        promptSize,
-        expectedMembersCount: effectiveMemberSpecs.length,
-        launchIdentity,
-      });
-      try {
-        if (
-          run.cancelRequested ||
-          run.processKilled ||
-          this.stopAllTeamsGeneration !== stopAllGenerationAtStart
-        ) {
-          throw new Error('Team launch cancelled by app shutdown');
-        }
-        if (request.skipPermissions === false) {
-          emitProvisioningCheckpoint(run, 'Seeding lead bootstrap permission rules');
-          await this.seedLeadBootstrapPermissionRules(request.teamName, request.cwd);
-        }
-
-        emitProvisioningCheckpoint(
-          run,
-          'Spawning Claude CLI process',
-          `args=${spawnArgs.length} cwd=${request.cwd}`
-        );
-        child = spawnCli(claudePath, spawnArgs, {
-          cwd: request.cwd,
-          env: { ...shellEnv },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-      } catch (error) {
-        // Clean up pre-saved meta files if spawn failed (instant failure, not transient)
-        await this.teamMetaStore.deleteMeta(request.teamName).catch(() => {});
-        const teamDir = path.join(getTeamsBasePath(), request.teamName);
-        const tasksDir = path.join(getTasksBasePath(), request.teamName);
-        await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => {});
-        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => {});
-        await removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath).catch(() => {});
-        run.bootstrapSpecPath = null;
-        await removeDeterministicBootstrapUserPromptFile(run.bootstrapUserPromptPath).catch(
-          () => {}
-        );
-        run.bootstrapUserPromptPath = null;
-        if (run.mcpConfigPath) {
-          await this.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath).catch(() => {});
-          run.mcpConfigPath = null;
-        }
-        await this.removeRunMemberMcpConfigFiles(run).catch(() => {});
-        if (provisioningEnv.anthropicApiKeyHelper) {
-          await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
-          }).catch(() => undefined);
-        }
-        this.runs.delete(runId);
-        this.provisioningRunByTeam.delete(request.teamName);
-        throw error;
-      }
-
-      updateProgress(run, 'spawning', 'Starting Claude CLI process', {
-        pid: child.pid ?? undefined,
-        warnings: mergeProvisioningWarnings(run.progress.warnings, runtimeWarning),
-      });
-      run.onProgress(run.progress);
-      run.child = child;
-      run.processClosed = false;
-      run.spawnContext = {
-        claudePath,
-        args: spawnArgs,
-        cwd: request.cwd,
-        env: { ...shellEnv },
-        prompt: initialUserPrompt,
-      };
-
-      this.attachStdoutHandler(run);
-      this.attachStderrHandler(run);
-
-      // Reset AFTER spawn — not at run init — because async operations (buildProvisioningEnv,
-      // writeConfigFile) between init and spawn can take seconds, causing false stall warnings.
-      run.lastDataReceivedAt = Date.now();
-      run.lastStdoutReceivedAt = Date.now();
-      this.startStallWatchdog(run);
-
-      // Filesystem-based progress monitor: actively polls team files instead
-      // of relying on stdout (which only arrives at the end in text mode).
-      // When config + members + tasks are all present, kill the process early
-      // rather than waiting for it to deadlock on system-reminder shutdown.
-      updateProgress(run, 'configuring', 'Waiting for team configuration...');
-      run.onProgress(run.progress);
-      this.startFilesystemMonitor(run, request);
-
-      run.timeoutHandle = setTimeout(() => {
-        if (!run.processKilled && !run.provisioningComplete) {
-          run.processKilled = true;
-          run.finalizingByTimeout = true;
-          void (async () => {
-            const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-            killTeamProcess(run.child);
-            if (readyOnTimeout) {
-              return; // cleanupRun already called inside tryCompleteAfterTimeout
-            }
-
-            const progress = updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-              error:
-                'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            });
-            run.onProgress(progress);
-            this.cleanupRun(run);
-          })();
-        }
-      }, getProvisioningRunTimeoutMs(run));
-
-      child.once('error', (error) => {
-        const progress = updateProgress(run, 'failed', 'Failed to start Claude CLI', {
-          error: error.message,
-          cliLogsTail: extractCliLogsFromRun(run),
-        });
-        run.onProgress(progress);
-        this.cleanupRun(run);
-      });
-
-      child.once('close', (code) => {
-        void this.handleProcessExit(run, code);
-      });
-
-      return { runId };
     } catch (error) {
       // Ensure the per-team lock doesn't get stuck on failures.
       if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
