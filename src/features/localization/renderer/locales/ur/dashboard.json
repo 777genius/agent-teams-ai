@@ -199,13 +199,20 @@
     "partialData": "جزوی ڈیٹا",
     "actions": {
       "refresh": "تازہ کریں",
-      "openTeam": "{{team}} کھولیں"
+      "openTeam": "{{team}} کھولیں",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "سیگمنٹ کے لحاظ سے ماڈل استعمال"
     },
     "controls": {
       "includeCacheTokens": "کیش ٹوکن شامل کریں"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "ایپ کا تمام جمع شدہ استعمال",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} ٹوکن / {{cost}}",
       "total": "کل",
       "unassigned": "غیر تفویض",
-      "unknownAgent": "نامعلوم ایجنٹ"
+      "unknownAgent": "نامعلوم ایجنٹ",
+      "eventCount": "{{count}} ایونٹس",
+      "streakCount": "{{count}} دن کا اسٹریک"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "ماخذ ایونٹس",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

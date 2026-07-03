@@ -11,6 +11,8 @@ import type {
   TokenUsageSessionRunDto,
   TokenUsageSnapshotRequest,
   TokenUsageSourceKind,
+  TokenUsageTaskAttributionDto,
+  TokenUsageTaskBreakdownItemDto,
   TokenUsageTimeSeriesPointDto,
 } from '../../contracts';
 
@@ -25,9 +27,24 @@ const HEATMAP_DAY_LIMIT = 366 * HEATMAP_ALL_TIME_YEAR_LIMIT;
 interface BuildSnapshotInput {
   runs: readonly TokenUsageRunDto[];
   events: readonly TokenUsageEventDto[];
+  tasks?: readonly TokenUsageTaskAttributionDto[];
   request?: TokenUsageSnapshotRequest;
   nowIso: string;
   degraded?: boolean;
+}
+
+interface NormalizedTaskAttribution {
+  key: string;
+  task: TokenUsageTaskAttributionDto;
+  label: string;
+  intervals: NormalizedTaskWorkInterval[];
+}
+
+interface NormalizedTaskWorkInterval {
+  startedAt: string;
+  completedAt?: string;
+  startMs: number;
+  endMs: number;
 }
 
 export function buildTokenUsageSnapshot(input: BuildSnapshotInput): TokenUsageAnalyticsSnapshotDto {
@@ -60,6 +77,7 @@ export function buildTokenUsageSnapshot(input: BuildSnapshotInput): TokenUsageAn
       (run) => runModelKey(run, eventsByRun.get(run.appRunId)),
       compareBreakdownItemsByTokens
     ),
+    byTask: buildTaskBreakdown(input.tasks ?? [], events, input.nowIso),
     commandRuns: buildCommandRuns(runs, events, runById, eventsByRun, input.nowIso),
     sessionRuns: buildSessionRuns(runs, eventsByRun, input.nowIso),
     tokenTrend: buildTokenTrend(events),
@@ -201,6 +219,166 @@ function buildBreakdown(
   }
 
   return [...groups.values()].sort(compareItems);
+}
+
+function buildTaskBreakdown(
+  tasks: readonly TokenUsageTaskAttributionDto[],
+  events: readonly TokenUsageEventDto[],
+  nowIso: string
+): TokenUsageTaskBreakdownItemDto[] {
+  const tasksByTeam = groupTaskAttributionsByTeam(tasks, nowIso);
+  const groups = new Map<string, TokenUsageTaskBreakdownItemDto>();
+
+  for (const event of events) {
+    const task = selectTaskForEvent(event, tasksByTeam);
+    if (!task) continue;
+
+    const current = groups.get(task.key) ?? {
+      id: task.key,
+      taskId: task.task.id,
+      displayId: task.task.displayId,
+      subject: task.task.subject,
+      owner: task.task.owner,
+      status: task.task.status,
+      label: task.label,
+      teamName: task.task.teamName,
+      agentName: task.task.owner,
+      summary: { ...ZERO_TOKEN_USAGE_SUMMARY },
+      lastActivityAt: undefined,
+    };
+    current.summary = addEventToSummary(current.summary, event);
+    current.lastActivityAt = maxIso(current.lastActivityAt, event.occurredAt);
+    groups.set(task.key, current);
+  }
+
+  return [...groups.values()].sort(compareBreakdownItems);
+}
+
+function groupTaskAttributionsByTeam(
+  tasks: readonly TokenUsageTaskAttributionDto[],
+  nowIso: string
+): Map<string, NormalizedTaskAttribution[]> {
+  const nowMs = parseIso(nowIso);
+  const byTeam = new Map<string, NormalizedTaskAttribution[]>();
+
+  for (const task of tasks) {
+    const teamName = task.teamName.trim();
+    if (!teamName) continue;
+
+    const intervals = task.workIntervals
+      .map((interval): NormalizedTaskWorkInterval | null => {
+        const startMs = parseIso(interval.startedAt);
+        const endMs = parseIso(interval.completedAt ?? nowIso) ?? nowMs;
+        if (startMs === undefined || endMs === undefined || endMs < startMs) return null;
+        return {
+          startedAt: interval.startedAt,
+          completedAt: interval.completedAt,
+          startMs,
+          endMs,
+        };
+      })
+      .filter((interval): interval is NormalizedTaskWorkInterval => interval !== null);
+
+    if (intervals.length === 0) continue;
+
+    const current = byTeam.get(teamName) ?? [];
+    current.push({
+      key: taskBreakdownId(teamName, task.id),
+      task,
+      label: taskLabel(task),
+      intervals,
+    });
+    byTeam.set(teamName, current);
+  }
+
+  return byTeam;
+}
+
+function selectTaskForEvent(
+  event: TokenUsageEventDto,
+  tasksByTeam: Map<string, NormalizedTaskAttribution[]>
+): NormalizedTaskAttribution | null {
+  if (!event.teamName) return null;
+  const eventMs = parseIso(event.occurredAt);
+  if (eventMs === undefined) return null;
+
+  let best: {
+    task: NormalizedTaskAttribution;
+    ownerScore: number;
+    intervalMs: number;
+    startedAtMs: number;
+  } | null = null;
+
+  for (const task of tasksByTeam.get(event.teamName) ?? []) {
+    const ownerScore = taskOwnerScore(task.task.owner, event);
+    if (ownerScore < 0) continue;
+
+    for (const interval of task.intervals) {
+      if (eventMs < interval.startMs || eventMs > interval.endMs) continue;
+      const candidate = {
+        task,
+        ownerScore,
+        intervalMs: interval.endMs - interval.startMs,
+        startedAtMs: interval.startMs,
+      };
+      if (!best || compareTaskCandidate(candidate, best) < 0) {
+        best = candidate;
+      }
+    }
+  }
+
+  return best?.task ?? null;
+}
+
+function compareTaskCandidate(
+  left: {
+    ownerScore: number;
+    intervalMs: number;
+    startedAtMs: number;
+  },
+  right: {
+    ownerScore: number;
+    intervalMs: number;
+    startedAtMs: number;
+  }
+): number {
+  return (
+    right.ownerScore - left.ownerScore ||
+    left.intervalMs - right.intervalMs ||
+    right.startedAtMs - left.startedAtMs
+  );
+}
+
+function taskOwnerScore(owner: string | undefined, event: TokenUsageEventDto): number {
+  const normalizedOwner = normalizeIdentity(owner);
+  if (!normalizedOwner) return 0;
+
+  const eventAgents = [
+    event.agentName,
+    event.agentId,
+    event.agentId?.includes(':') ? event.agentId.split(':').pop() : undefined,
+  ]
+    .map(normalizeIdentity)
+    .filter((value): value is string => Boolean(value));
+
+  if (eventAgents.length === 0) return 0;
+  return eventAgents.includes(normalizedOwner) ? 1 : -1;
+}
+
+function taskBreakdownId(teamName: string, taskId: string): string {
+  return `task:${teamName}:${taskId}`;
+}
+
+function taskLabel(task: TokenUsageTaskAttributionDto): string {
+  const displayId = task.displayId?.trim();
+  const subject = task.subject.trim();
+  if (displayId && subject) return `${displayId} ${subject}`;
+  return subject || displayId || task.id;
+}
+
+function normalizeIdentity(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || undefined;
 }
 
 function buildRecentRuns(

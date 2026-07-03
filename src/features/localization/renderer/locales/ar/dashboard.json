@@ -199,13 +199,20 @@
     "partialData": "بيانات جزئية",
     "actions": {
       "refresh": "تحديث",
-      "openTeam": "فتح {{team}}"
+      "openTeam": "فتح {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "استخدام النماذج حسب المقطع"
     },
     "controls": {
       "includeCacheTokens": "تضمين رموز التخزين المؤقت"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "كل استخدام التطبيق المجمع",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} رموز / {{cost}}",
       "total": "الإجمالي",
       "unassigned": "غير معين",
-      "unknownAgent": "وكيل غير معروف"
+      "unknownAgent": "وكيل غير معروف",
+      "eventCount": "{{count}} حدث",
+      "streakCount": "{{count}} يوم متتالية"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "أحداث المصدر",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

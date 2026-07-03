@@ -199,13 +199,20 @@
     "partialData": "Kısmi veri",
     "actions": {
       "refresh": "Yenile",
-      "openTeam": "{{team}} aç"
+      "openTeam": "{{team}} aç",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Segmente göre model kullanımı"
     },
     "controls": {
       "includeCacheTokens": "Cache tokenlarını dahil et"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Toplanan tüm app kullanımı",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} token / {{cost}}",
       "total": "Toplam",
       "unassigned": "Atanmamış",
-      "unknownAgent": "Bilinmeyen agent"
+      "unknownAgent": "Bilinmeyen agent",
+      "eventCount": "{{count}} olay",
+      "streakCount": "{{count}} günlük seri"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Kaynak olayları",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

@@ -250,6 +250,11 @@ describe('computeEffectiveTeamModel', () => {
   });
 
   it('returns haiku as-is', () => {
+    expect(computeEffectiveTeamModel('fable', false, 'anthropic')).toBe('fable');
+    expect(computeEffectiveTeamModel('claude-fable-5', false, 'anthropic')).toBe('claude-fable-5');
+    expect(computeEffectiveTeamModel('claude-sonnet-5', false, 'anthropic')).toBe(
+      'claude-sonnet-5'
+    );
     expect(computeEffectiveTeamModel('haiku', false, 'anthropic')).toBe('haiku');
     expect(computeEffectiveTeamModel('claude-haiku-4-5-20251001', false, 'anthropic')).toBe(
       'claude-haiku-4-5-20251001'

@@ -39,6 +39,7 @@ interface TeamLogSourceSnapshot {
 
 export type TeamLogSourceTrackingConsumer =
   | 'change_presence'
+  | 'change_presence_ensure'
   | 'tool_activity'
   | 'task_log_stream'
   | 'member_log_stream'
@@ -59,6 +60,7 @@ interface TrackingState {
   snapshot: TeamLogSourceSnapshot;
   consumerCounts: Map<TeamLogSourceTrackingConsumer, number>;
   lifecycleVersion: number;
+  ensureIdleReleaseTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface PendingUnknownSessionCandidate {
@@ -182,8 +184,61 @@ export class TeamLogSourceTracker {
     return state ? { ...state.snapshot } : null;
   }
 
+  /**
+   * Read-style "make sure tracking is warm" entry point used by change
+   * extraction. Unlike enableTracking, repeated calls do NOT stack consumer
+   * acquisitions: the dedicated 'change_presence_ensure' consumer is held at
+   * most once and is auto-released after an idle window. Before this was
+   * idempotent, every call permanently incremented 'change_presence', so the
+   * per-team watcher (one fd per watched file) could never be released for the
+   * app lifetime once a team's changes were viewed.
+   */
   async ensureTracking(teamName: string): Promise<TeamLogSourceSnapshot> {
-    return this.enableTracking(teamName, 'change_presence');
+    const state = this.getOrCreateState(teamName);
+    this.scheduleEnsureTrackingIdleRelease(teamName, state);
+
+    if ((state.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+      if (
+        state.initializePromise &&
+        state.initializeVersion === state.lifecycleVersion &&
+        this.getActiveConsumerCount(state) > 0
+      ) {
+        return state.initializePromise;
+      }
+      if (
+        state.watcher !== null ||
+        state.projectDir !== null ||
+        state.snapshot.logSourceGeneration !== null
+      ) {
+        return { ...state.snapshot };
+      }
+      // Tracking was torn down while our acquisition record survived (e.g. an
+      // explicit consumer released last). Drop the stale record and reacquire
+      // through the normal initialization path.
+      state.consumerCounts.delete('change_presence_ensure');
+    }
+
+    return this.enableTracking(teamName, 'change_presence_ensure');
+  }
+
+  private static readonly ENSURE_TRACKING_IDLE_RELEASE_MS = 10 * 60_000;
+
+  private scheduleEnsureTrackingIdleRelease(teamName: string, state: TrackingState): void {
+    if (state.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+    }
+    const timer = setTimeout(() => {
+      const current = this.stateByTeam.get(teamName);
+      if (!current || current.ensureIdleReleaseTimer !== timer) {
+        return;
+      }
+      current.ensureIdleReleaseTimer = null;
+      if ((current.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+        void this.disableTracking(teamName, 'change_presence_ensure').catch(() => undefined);
+      }
+    }, TeamLogSourceTracker.ENSURE_TRACKING_IDLE_RELEASE_MS);
+    timer.unref?.();
+    state.ensureIdleReleaseTimer = timer;
   }
 
   async enableTracking(
@@ -258,6 +313,7 @@ export class TeamLogSourceTracker {
       snapshot: { projectFingerprint: null, logSourceGeneration: null },
       consumerCounts: new Map(),
       lifecycleVersion: 0,
+      ensureIdleReleaseTimer: null,
     };
     this.stateByTeam.set(teamName, created);
     return created;
@@ -272,6 +328,12 @@ export class TeamLogSourceTracker {
   }
 
   async stopTracking(teamName: string): Promise<void> {
+    const state = this.stateByTeam.get(teamName);
+    if (state?.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+      state.ensureIdleReleaseTimer = null;
+    }
+    await this.disableTracking(teamName, 'change_presence_ensure');
     await this.disableTracking(teamName, 'change_presence');
   }
 

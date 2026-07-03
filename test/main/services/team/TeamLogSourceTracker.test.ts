@@ -1,17 +1,17 @@
 import { createHash } from 'crypto';
-import { mkdtemp, mkdir, rm, stat, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
-  getTeamsBasePath,
-  setClaudeBasePathOverride,
-} from '../../../../src/main/utils/pathDecoder';
-import {
   shouldIgnoreLogSourceWatcherPath,
   TeamLogSourceTracker,
 } from '../../../../src/main/services/team/TeamLogSourceTracker';
+import {
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
 import type { TeamMemberLogsFinder } from '../../../../src/main/services/team/TeamMemberLogsFinder';
 import type { TeamChangeEvent } from '../../../../src/shared/types';
@@ -396,6 +396,67 @@ describe('TeamLogSourceTracker', () => {
 
     await tracker.disableTracking('demo', 'task_log_stream');
     await tracker.disableTracking('demo', 'tool_activity');
+  });
+
+  it('holds at most one acquisition across repeated ensureTracking calls', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-ensure-'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+
+    for (let i = 0; i < 5; i += 1) {
+      await tracker.ensureTracking('demo');
+    }
+    expect(logsFinder.getLiveLogSourceWatchContext).toHaveBeenCalledTimes(1);
+
+    // A single release of the ensure consumer must fully tear tracking down —
+    // repeated ensure calls previously stacked acquisitions that nothing ever
+    // released, so the per-team watcher lived for the whole app lifetime.
+    // Re-ensuring after the release re-initializes, proving teardown happened.
+    await tracker.disableTracking('demo', 'change_presence_ensure');
+    await tracker.ensureTracking('demo');
+    expect(logsFinder.getLiveLogSourceWatchContext).toHaveBeenCalledTimes(2);
+
+    await tracker.disableTracking('demo', 'change_presence_ensure');
+  });
+
+  it('keeps tracking alive for explicit consumers when the ensure acquisition is released', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-ensure-mix-'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+
+    await tracker.ensureTracking('demo');
+    await tracker.enableTracking('demo', 'tool_activity');
+    expect(logsFinder.getLiveLogSourceWatchContext).toHaveBeenCalledTimes(1);
+
+    // Releasing the ensure acquisition must not tear down tracking held by an
+    // explicit consumer: a follow-up ensure joins without re-initializing.
+    await tracker.disableTracking('demo', 'change_presence_ensure');
+    await tracker.ensureTracking('demo');
+    expect(logsFinder.getLiveLogSourceWatchContext).toHaveBeenCalledTimes(1);
+
+    // Once every consumer is gone, tracking re-initializes on the next ensure.
+    await tracker.disableTracking('demo', 'tool_activity');
+    await tracker.disableTracking('demo', 'change_presence_ensure');
+    await tracker.ensureTracking('demo');
+    expect(logsFinder.getLiveLogSourceWatchContext).toHaveBeenCalledTimes(2);
+
+    await tracker.disableTracking('demo', 'change_presence_ensure');
   });
 
   it('notifies log-source listeners before forwarding the external team change event', () => {

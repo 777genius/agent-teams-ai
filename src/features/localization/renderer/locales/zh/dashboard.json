@@ -199,13 +199,20 @@
     "partialData": "部分数据",
     "actions": {
       "refresh": "刷新",
-      "openTeam": "打开 {{team}}"
+      "openTeam": "打开 {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "按分段的模型用量"
     },
     "controls": {
       "includeCacheTokens": "包含缓存 token"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "已收集的全部应用用量",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} token / {{cost}}",
       "total": "总计",
       "unassigned": "未分配",
-      "unknownAgent": "未知代理"
+      "unknownAgent": "未知代理",
+      "eventCount": "{{count}} 个事件",
+      "streakCount": "连续 {{count}} 天"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "来源事件",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

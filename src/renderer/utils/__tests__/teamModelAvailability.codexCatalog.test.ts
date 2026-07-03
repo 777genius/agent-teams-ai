@@ -324,7 +324,7 @@ describe('team model availability Codex catalog integration', () => {
     expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.4']);
   });
 
-  it('keeps the curated Anthropic picker surface while using runtime-backed labels', () => {
+  it('uses the first-party Anthropic catalog as the picker surface with runtime-backed labels', () => {
     const providerStatus = createAnthropicProviderStatus([
       {
         id: 'opus',
@@ -411,11 +411,10 @@ describe('team model availability Codex catalog integration', () => {
     ]);
 
     expect(getAvailableTeamProviderModels('anthropic', providerStatus)).toEqual([
-      'haiku',
       'opus',
-      'claude-opus-4-7',
       'claude-opus-4-6',
       'sonnet',
+      'haiku',
     ]);
     expect(getAvailableTeamProviderModelOptions('anthropic', providerStatus)).toEqual([
       {
@@ -429,13 +428,6 @@ describe('team model availability Codex catalog integration', () => {
         value: 'opus',
         label: 'Opus 4.8',
         badgeLabel: 'Opus 4.8',
-        availabilityStatus: 'available',
-        availabilityReason: null,
-      },
-      {
-        value: 'claude-opus-4-7',
-        label: 'Opus 4.7',
-        badgeLabel: 'Opus 4.7',
         availabilityStatus: 'available',
         availabilityReason: null,
       },

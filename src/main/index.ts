@@ -80,6 +80,7 @@ import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
   removeTokenUsageIpc,
+  TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
@@ -88,6 +89,7 @@ import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMult
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
+  computeLiveTeamWatchScope,
   computeTeamWatchScope,
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
@@ -307,6 +309,35 @@ function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   return diagnostics.some(
     (diagnostic) => !isInformationalOpenCodeRuntimeDeliveryDiagnostic(diagnostic)
   );
+}
+
+/**
+ * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
+ * reason) on every file change, flooding the dev console with identical lines.
+ * Log a given team/inbox diagnostics message at most once per window; a
+ * CHANGED message always logs immediately so real transitions stay visible.
+ */
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
+const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
+const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
+
+function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
+  const previous = relayDiagnosticsLogDedup.get(dedupKey);
+  if (
+    previous &&
+    previous.message === message &&
+    nowMs - previous.loggedAt < RELAY_DIAGNOSTICS_LOG_DEDUP_MS
+  ) {
+    return false;
+  }
+  if (!previous && relayDiagnosticsLogDedup.size >= RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES) {
+    const oldestKey = relayDiagnosticsLogDedup.keys().next();
+    if (!oldestKey.done) {
+      relayDiagnosticsLogDedup.delete(oldestKey.value);
+    }
+  }
+  relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
+  return true;
 }
 
 function readOptionalEnv(name: string): string | undefined {
@@ -1494,6 +1525,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
               .then((relay) => {
                 if (relay.diagnostics?.length) {
                   const message = `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}: ${relay.diagnostics.join('; ')}`;
+                  if (!shouldLogRelayDiagnostics(`${teamName}/${inboxName}`, message, Date.now())) {
+                    return;
+                  }
                   if (hasWarningRelayDiagnostics(relay.diagnostics)) {
                     logger.warn(message);
                   } else {
@@ -1570,15 +1604,17 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
 
-  // Scope team-root/task file watching to alive + UI-engaged teams so it no longer
-  // scales with the number of teams on disk. Inboxes and the teams root stay fully
-  // watched, so cross-team delivery, the lead inbox relay, and notifications are
-  // unaffected. Unsetting the provider on cleanup reverts to watching every team.
+  // Scope team-root/task file watching to alive + UI-engaged teams, and scope
+  // inbox watching to live teams only. Idle historical teams cannot produce
+  // immediate runtime inbox activity, so their inbox files do not need live fd
+  // watchers; when a team launches, target reconciliation backfills existing
+  // inbox files before live delivery resumes.
   setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
   setTeamWatchScopeChangeListener(() => {
     void context.fileWatcher.refreshTeamWatchScope();
   });
   context.fileWatcher.setTeamWatchScopeProvider(() => computeTeamWatchScope());
+  context.fileWatcher.setTeamInboxWatchScopeProvider(() => computeLiveTeamWatchScope());
   void context.fileWatcher.refreshTeamWatchScope();
 
   teamChangeCleanup = () => {
@@ -1586,6 +1622,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     setAliveTeamsProvider(null);
     setTeamWatchScopeChangeListener(null);
     context.fileWatcher.setTeamWatchScopeProvider(null);
+    context.fileWatcher.setTeamInboxWatchScopeProvider(null);
     reconcileScheduler?.dispose();
   };
 
@@ -2094,6 +2131,7 @@ async function initializeServices(): Promise<void> {
         httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
       },
     },
+    taskAttributionSource: new TeamTaskUsageAttributionSource(new TeamTaskReader()),
     logger: tokenUsageLogger,
   });
   const tokenUsageStartupRefreshTimer = setTimeout(() => {

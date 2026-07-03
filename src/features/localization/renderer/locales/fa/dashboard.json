@@ -199,13 +199,20 @@
     "partialData": "داده جزئی",
     "actions": {
       "refresh": "بازآوری",
-      "openTeam": "باز کردن {{team}}"
+      "openTeam": "باز کردن {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "مصرف مدل بر اساس بخش"
     },
     "controls": {
       "includeCacheTokens": "شامل توکن‌های کش"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "همه مصرف جمع‌آوری‌شده برنامه",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} توکن / {{cost}}",
       "total": "کل",
       "unassigned": "تخصیص‌نیافته",
-      "unknownAgent": "عامل ناشناس"
+      "unknownAgent": "عامل ناشناس",
+      "eventCount": "{{count}} رویداد",
+      "streakCount": "{{count}} روز پیاپی"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "رویدادهای منبع",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

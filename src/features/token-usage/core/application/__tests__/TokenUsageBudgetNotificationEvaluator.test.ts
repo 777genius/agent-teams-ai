@@ -184,6 +184,7 @@ function makeSnapshot({
     byProject: [],
     byRuntime: [],
     byModel: [],
+    byTask: [],
     commandRuns: [],
     sessionRuns: [],
     tokenTrend: [],

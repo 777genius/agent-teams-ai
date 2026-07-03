@@ -19,6 +19,12 @@ export interface ResolvedTeamProjectSelection {
   projectId: string | null;
 }
 
+export interface ResolveCreateTeamDefaultProjectPathInput {
+  initialProjectPath: string | null | undefined;
+  selectedProjectPath: string | null | undefined;
+  priorityProjectPath: string | null | undefined;
+}
+
 export type TeamProjectSelectionTarget =
   | {
       kind: 'grouped';
@@ -50,6 +56,36 @@ function findWorktreeSelection(
   return null;
 }
 
+function resolveWorktreeProjectSelection(
+  repositoryGroups: readonly RepositoryGroup[],
+  worktreeId: string | null
+): ResolvedTeamProjectSelection | null {
+  if (!worktreeId) return null;
+  const worktreeSelection = findWorktreeSelection(repositoryGroups, worktreeId);
+  if (!worktreeSelection) return null;
+  return {
+    projectPath: worktreeSelection.projectPath,
+    repositoryId: worktreeSelection.repositoryId,
+    worktreeId: worktreeSelection.worktreeId,
+    projectId: worktreeSelection.worktreeId,
+  };
+}
+
+function resolveFlatProjectSelection(
+  projects: readonly Project[],
+  projectId: string | null
+): ResolvedTeamProjectSelection | null {
+  if (!projectId) return null;
+  const project = projects.find((candidate) => candidate.id === projectId);
+  if (!project) return null;
+  return {
+    projectPath: project.path,
+    repositoryId: null,
+    worktreeId: null,
+    projectId: project.id,
+  };
+}
+
 export function resolveTeamProjectSelection({
   repositoryGroups,
   projects,
@@ -58,31 +94,23 @@ export function resolveTeamProjectSelection({
   selectedProjectId,
   activeProjectId,
 }: ResolveTeamProjectSelectionInput): ResolvedTeamProjectSelection {
-  const effectiveWorktreeId = selectedWorktreeId ?? activeProjectId ?? selectedProjectId ?? null;
-  if (effectiveWorktreeId) {
-    const worktreeSelection = findWorktreeSelection(repositoryGroups, effectiveWorktreeId);
-    if (worktreeSelection) {
-      return {
-        projectPath: worktreeSelection.projectPath,
-        repositoryId: worktreeSelection.repositoryId,
-        worktreeId: worktreeSelection.worktreeId,
-        projectId: worktreeSelection.worktreeId,
-      };
-    }
+  if (selectedProjectId && selectedProjectId !== selectedWorktreeId) {
+    const selectedFlatProjectSelection = resolveFlatProjectSelection(projects, selectedProjectId);
+    if (selectedFlatProjectSelection) return selectedFlatProjectSelection;
   }
 
-  const effectiveProjectId = activeProjectId ?? selectedProjectId ?? null;
-  if (effectiveProjectId) {
-    const project = projects.find((candidate) => candidate.id === effectiveProjectId);
-    if (project) {
-      return {
-        projectPath: project.path,
-        repositoryId: null,
-        worktreeId: null,
-        projectId: project.id,
-      };
-    }
-  }
+  const selectedWorktreeSelection =
+    resolveWorktreeProjectSelection(repositoryGroups, selectedWorktreeId) ??
+    resolveWorktreeProjectSelection(repositoryGroups, selectedProjectId);
+  if (selectedWorktreeSelection) return selectedWorktreeSelection;
+
+  const selectedFlatProjectSelection = resolveFlatProjectSelection(projects, selectedProjectId);
+  if (selectedFlatProjectSelection) return selectedFlatProjectSelection;
+
+  const activeProjectSelection =
+    resolveWorktreeProjectSelection(repositoryGroups, activeProjectId) ??
+    resolveFlatProjectSelection(projects, activeProjectId);
+  if (activeProjectSelection) return activeProjectSelection;
 
   if (selectedRepositoryId) {
     const repositoryGroup = repositoryGroups.find(
@@ -105,6 +133,14 @@ export function resolveTeamProjectSelection({
     worktreeId: null,
     projectId: null,
   };
+}
+
+export function resolveCreateTeamDefaultProjectPath({
+  initialProjectPath,
+  selectedProjectPath,
+  priorityProjectPath,
+}: ResolveCreateTeamDefaultProjectPathInput): string | null {
+  return initialProjectPath ?? selectedProjectPath ?? priorityProjectPath ?? null;
 }
 
 export function findTeamProjectSelectionTarget(

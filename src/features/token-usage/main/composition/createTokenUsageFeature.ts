@@ -25,6 +25,7 @@ import type {
   TokenUsageImporterPort,
   TokenUsageLoggerPort,
   TokenUsageRealtimePublisherPort,
+  TokenUsageTaskAttributionSourcePort,
 } from '../../core/application';
 
 export interface TokenUsageFeatureFacade {
@@ -53,6 +54,7 @@ export interface CreateTokenUsageFeatureDeps {
   budgetNotificationSink?: TokenUsageBudgetNotificationSinkPort;
   budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
   publisher?: TokenUsageRealtimePublisherPort;
+  taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   logger?: TokenUsageLoggerPort;
 }
 
@@ -86,6 +88,7 @@ export function createTokenUsageFeature(
     budgets: budgetSettingsRepository,
     budgetNotifications: budgetNotificationEvaluator,
     publisher: deps.publisher,
+    taskAttributionSource: deps.taskAttributionSource,
     logger: deps.logger,
   });
 

@@ -349,7 +349,7 @@ function getAnthropicFirstPartySelectorModels(
   const seenLabels = new Set<string>();
   const merged: string[] = [];
 
-  const appendModel = (model: string, skipDuplicateLabel: boolean): void => {
+  const appendModel = (model: string): void => {
     const trimmed = model.trim();
     if (!trimmed || seenModels.has(trimmed)) {
       return;
@@ -358,7 +358,7 @@ function getAnthropicFirstPartySelectorModels(
     const label =
       getRuntimeAwareProviderScopedTeamModelLabel('anthropic', trimmed, providerStatus) ?? trimmed;
     const labelKey = label.trim().toLowerCase();
-    if (skipDuplicateLabel && labelKey && seenLabels.has(labelKey)) {
+    if (labelKey && seenLabels.has(labelKey)) {
       return;
     }
 
@@ -369,11 +369,8 @@ function getAnthropicFirstPartySelectorModels(
     merged.push(trimmed);
   };
 
-  for (const option of getTeamProviderModelOptions('anthropic')) {
-    appendModel(option.value, false);
-  }
   for (const model of catalogModels) {
-    appendModel(model, true);
+    appendModel(model);
   }
 
   return merged;
@@ -558,9 +555,17 @@ function getRuntimeModelAvailability(
       return isSupportedAnthropicTeamModel(model) ? 'available' : null;
     }
 
-    return getAnthropicCatalogModel(model, providerStatus) || isSupportedAnthropicTeamModel(model)
-      ? 'available'
-      : null;
+    const firstPartyCatalogModels = getAnthropicFirstPartyRuntimeModels(providerStatus);
+    if (firstPartyCatalogModels) {
+      const catalogModel = getAnthropicCatalogModel(model, providerStatus);
+      if (!catalogModel || catalogModel.hidden) {
+        return null;
+      }
+      const runtimeAvailability = getModelAvailabilityMap(providerStatus).get(model)?.status;
+      return runtimeAvailability === 'unavailable' ? 'unavailable' : 'available';
+    }
+
+    return isSupportedAnthropicTeamModel(model) ? 'available' : null;
   }
 
   if (!providerStatus) {
@@ -621,17 +626,17 @@ export function getAvailableTeamProviderModels(
       );
     }
 
-    const visibleAnthropicModels =
-      getAnthropicFirstPartySelectorModels(providerStatus) ??
-      getFallbackTeamProviderModels(providerId);
-
-    return sortTeamProviderModels(
-      providerId,
-      visibleAnthropicModels.filter(
-        (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
-      ),
-      providerStatus
+    const firstPartyModels = getAnthropicFirstPartySelectorModels(providerStatus);
+    const visibleAnthropicModels = firstPartyModels ?? getFallbackTeamProviderModels(providerId);
+    const availableModels = visibleAnthropicModels.filter(
+      (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
     );
+
+    if (firstPartyModels) {
+      return availableModels;
+    }
+
+    return sortTeamProviderModels(providerId, availableModels, providerStatus);
   }
 
   if (!providerStatus) {
@@ -813,7 +818,8 @@ export function normalizeTeamModelForUi(
   model: string | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): string {
-  const normalized = normalizeCatalogTeamModelForUi(providerId, model);
+  const staticNormalized = normalizeCatalogTeamModelForUi(providerId, model);
+  const normalized = staticNormalized.trim() ? staticNormalized : (model ?? '');
   const trimmed = normalized.trim();
   if (!providerId || !trimmed) {
     return normalized;

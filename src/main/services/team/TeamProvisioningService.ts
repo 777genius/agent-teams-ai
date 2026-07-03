@@ -1175,6 +1175,11 @@ export class TeamProvisioningService {
     },
     retainProvisioningProgress: (runId, progress) =>
       this.retainProvisioningProgress(runId, progress),
+    isRuntimeAdapterRunStateReferenced: (runId) =>
+      this.runs.has(runId) ||
+      [...this.provisioningRunByTeam.values()].includes(runId) ||
+      [...this.aliveRunByTeam.values()].includes(runId) ||
+      [...this.runtimeAdapterRunByTeam.values()].some((entry) => entry.runId === runId),
   });
   private readonly runtimeToolApprovalCoordinator = new RuntimeToolApprovalCoordinator({
     getSettings: (teamName) => this.getToolApprovalSettings(teamName),
@@ -3749,6 +3754,10 @@ export class TeamProvisioningService {
 
   private removeRunMemberMcpConfigFilesLater(run: ProvisioningRun): void {
     this.memberMcpLaunchConfigProvisioner.removeRunMemberMcpConfigFilesLater(run);
+  }
+
+  private sweepRuntimeAdapterRunState(nowMs: number = Date.now()): void {
+    this.runtimeAdapterProgressState.sweepRuntimeAdapterRunState(nowMs);
   }
 
   private async getPersistedTranscriptClaudeLogs(

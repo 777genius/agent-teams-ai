@@ -963,12 +963,17 @@ export default defineConfig([
       'sonarjs/no-small-switch': 'off',
       // Allow nested ternaries in JSX (common React pattern)
       'sonarjs/no-nested-conditional': 'off',
+      // AWS/CloudFormation rule — irrelevant to an Electron app and one of the
+      // most expensive rules in the run (~11% of lint time, see TIMING=10)
+      'sonarjs/aws-restricted-ip-admin-access': 'off',
+      // Type-aware deprecation warnings duplicate IDE hints and alone cost
+      // ~30% of lint time; drop them from the CLI/CI run
+      'sonarjs/deprecation': 'off',
 
       // === Downgraded to warn — existing code, fix incrementally ===
       'sonarjs/slow-regex': 'warn',
       'sonarjs/pseudo-random': 'warn',
       'sonarjs/different-types-comparison': 'warn',
-      'sonarjs/deprecation': 'warn',
       'sonarjs/no-dead-store': 'warn',
       'sonarjs/unused-import': 'warn',
       'sonarjs/no-unused-vars': 'warn',

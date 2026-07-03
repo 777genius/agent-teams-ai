@@ -4,6 +4,7 @@ import type {
   TokenUsageEventDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
+  TokenUsageTaskAttributionDto,
 } from '../../contracts';
 
 export interface TokenUsageLedgerRepositoryPort {
@@ -27,6 +28,10 @@ export interface TokenUsageImporterPort {
 
 export interface TokenUsageRealtimePublisherPort {
   publishSnapshot(snapshot: TokenUsageAnalyticsSnapshotDto): void;
+}
+
+export interface TokenUsageTaskAttributionSourcePort {
+  listTaskAttributions(): Promise<TokenUsageTaskAttributionDto[]>;
 }
 
 export interface TokenUsageClockPort {

@@ -93,8 +93,13 @@ function stripOneMillionSuffix(model: string): string {
 function isKnownAnthropicReasoningModel(model: string | null | undefined): boolean {
   const normalized = stripOneMillionSuffix(model ?? '');
   return (
+    normalized === 'fable' ||
+    normalized === 'claude-fable-5' ||
+    normalized.startsWith('claude-fable-5-') ||
     normalized === 'opus' ||
     normalized === 'sonnet' ||
+    normalized === 'claude-sonnet-5' ||
+    normalized.startsWith('claude-sonnet-5-') ||
     normalized === 'claude-opus-4-8' ||
     normalized.startsWith('claude-opus-4-8-') ||
     normalized === 'claude-opus-4-7' ||

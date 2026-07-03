@@ -199,13 +199,20 @@
     "partialData": "一部データ",
     "actions": {
       "refresh": "更新",
-      "openTeam": "{{team}} を開く"
+      "openTeam": "{{team}} を開く",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "セグメント別モデル使用量"
     },
     "controls": {
       "includeCacheTokens": "キャッシュトークンを含める"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "収集済みの全アプリ使用量",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} トークン / {{cost}}",
       "total": "合計",
       "unassigned": "未割り当て",
-      "unknownAgent": "不明なエージェント"
+      "unknownAgent": "不明なエージェント",
+      "eventCount": "{{count}} 件のイベント",
+      "streakCount": "{{count}}日連続"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "ソースイベント",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

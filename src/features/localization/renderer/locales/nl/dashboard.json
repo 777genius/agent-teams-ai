@@ -199,13 +199,20 @@
     "partialData": "Gedeeltelijke data",
     "actions": {
       "refresh": "Vernieuwen",
-      "openTeam": "Open {{team}}"
+      "openTeam": "Open {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Modelgebruik per segment"
     },
     "controls": {
       "includeCacheTokens": "Cachetokens meenemen"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Alle verzamelde app-usage",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "Totaal",
       "unassigned": "Niet toegewezen",
-      "unknownAgent": "Onbekende agent"
+      "unknownAgent": "Onbekende agent",
+      "eventCount": "{{count}} gebeurtenissen",
+      "streakCount": "{{count}} dagen reeks"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Brongebeurtenissen",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

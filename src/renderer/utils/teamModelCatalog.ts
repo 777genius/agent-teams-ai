@@ -50,12 +50,16 @@ const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
 };
 
 const ANTHROPIC_ALIAS_LABELS = {
+  fable: 'Fable 5',
   opus: 'Opus 4.8',
   sonnet: 'Sonnet 4.6',
   haiku: 'Haiku 4.5',
 } as const;
 
 const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
+  'fable',
+  'claude-fable-5',
+  'claude-sonnet-5',
   'claude-opus-4-8',
   'claude-opus-4-8[1m]',
   'claude-opus-4-7',
@@ -63,6 +67,9 @@ const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
 ] as const;
 
 const ANTHROPIC_MODEL_ORDER = [
+  'fable',
+  'claude-fable-5',
+  'claude-mythos-5',
   'haiku',
   'claude-haiku-4-5-20251001',
   'claude-haiku-4-5',
@@ -74,6 +81,7 @@ const ANTHROPIC_MODEL_ORDER = [
   'claude-opus-4-7[1m]',
   'claude-opus-4-6',
   'claude-opus-4-6[1m]',
+  'claude-sonnet-5',
   'sonnet',
   'sonnet[1m]',
   'claude-sonnet-4-6',
@@ -83,6 +91,9 @@ const ANTHROPIC_MODEL_ORDER = [
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   default: 'Default',
   ...ANTHROPIC_ALIAS_LABELS,
+  'claude-fable-5': 'Fable 5',
+  'claude-mythos-5': 'Mythos 5',
+  'claude-sonnet-5': 'Sonnet 5',
   'opus[1m]': 'Opus 4.8 (1M)',
   'sonnet[1m]': 'Sonnet 4.6 (1M)',
   'claude-opus-4-8': 'Opus 4.8',
@@ -113,7 +124,9 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
   {
     anthropic: [
       { value: '', label: 'Default', badgeLabel: 'Default' },
+      { value: 'fable', label: 'Fable 5', badgeLabel: 'Fable 5' },
       { value: 'opus', label: 'Opus 4.8', badgeLabel: 'Opus 4.8' },
+      { value: 'claude-sonnet-5', label: 'Sonnet 5', badgeLabel: 'Sonnet 5' },
       { value: 'claude-opus-4-7', label: 'Opus 4.7', badgeLabel: 'Opus 4.7' },
       { value: 'claude-opus-4-6', label: 'Opus 4.6', badgeLabel: 'Opus 4.6' },
       { value: 'sonnet', label: 'Sonnet 4.6', badgeLabel: 'Sonnet 4.6' },
@@ -158,6 +171,8 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
     ],
     opencode: [{ value: '', label: 'Default', badgeLabel: 'Default' }],
   };
+
+type AnthropicAliasFamily = keyof typeof ANTHROPIC_ALIAS_LABELS;
 
 const TEAM_PROVIDER_MODEL_ORDER: Record<SupportedProviderId, Map<string, number>> = {
   anthropic: new Map(ANTHROPIC_MODEL_ORDER.map((model, index) => [model, index])),
@@ -218,11 +233,14 @@ function formatParsedClaudeModelLabel(model: string): string | null {
 }
 
 const SUPPORTED_ANTHROPIC_TEAM_MODELS = new Set<string>([
+  'fable',
+  'claude-fable-5',
   'opus',
   'opus[1m]',
   'sonnet',
   'sonnet[1m]',
   'haiku',
+  'claude-sonnet-5',
   'claude-opus-4-8',
   'claude-opus-4-8[1m]',
   'claude-opus-4-7',
@@ -348,13 +366,18 @@ function getRuntimeCatalogModel(
   return getRuntimeCatalogModelIndex(providerStatus.modelCatalog).get(trimmed) ?? null;
 }
 
-function getAnthropicAliasFamily(model: string | undefined): 'opus' | 'sonnet' | 'haiku' | null {
+function getAnthropicAliasFamily(model: string | undefined): AnthropicAliasFamily | null {
   const baseModel =
     model
       ?.trim()
       .toLowerCase()
       .replace(/\[1m\]$/i, '') ?? '';
-  if (baseModel === 'opus' || baseModel === 'sonnet' || baseModel === 'haiku') {
+  if (
+    baseModel === 'fable' ||
+    baseModel === 'opus' ||
+    baseModel === 'sonnet' ||
+    baseModel === 'haiku'
+  ) {
     return baseModel;
   }
   return null;
@@ -362,7 +385,7 @@ function getAnthropicAliasFamily(model: string | undefined): 'opus' | 'sonnet' |
 
 function readAnthropicDisplayVersion(
   label: string | undefined,
-  family: 'opus' | 'sonnet' | 'haiku'
+  family: AnthropicAliasFamily
 ): { major: number; minor: number | null } | null {
   const pattern = new RegExp(`\\b${family}\\s+(\\d+)(?:\\.(\\d+))?\\b`, 'i');
   const match = pattern.exec(label ?? '');
@@ -701,10 +724,17 @@ function getSupplementalVisibleModels(
       .map((model) => getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase())
       .filter((label): label is string => Boolean(label))
   );
-  const supplementalModels = ANTHROPIC_VISIBLE_MODEL_FALLBACKS.filter((model) => {
+  const supplementalModels: string[] = [];
+  for (const model of ANTHROPIC_VISIBLE_MODEL_FALLBACKS) {
     const label = getTeamModelBadgeLabel(providerId, model)?.trim().toLowerCase();
-    return !label || !existingLabels.has(label);
-  });
+    if (label && existingLabels.has(label)) {
+      continue;
+    }
+    supplementalModels.push(model);
+    if (label) {
+      existingLabels.add(label);
+    }
+  }
 
   return [...models, ...supplementalModels];
 }
@@ -751,6 +781,15 @@ export function getRuntimeAwareTeamModelUiDisabledReason(
 ): string | null {
   const staticReason = getTeamModelUiDisabledReason(providerId, model);
   if (staticReason) {
+    const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
+    if (
+      providerId === 'anthropic' &&
+      providerStatus?.modelCatalog?.status !== 'unavailable' &&
+      runtimeModel &&
+      !runtimeModel.hidden
+    ) {
+      return null;
+    }
     return staticReason;
   }
 

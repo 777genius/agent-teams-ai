@@ -4,13 +4,12 @@ import {
   RUNTIME_ADAPTER_PROVISIONING_TRACE_STORAGE_LIMIT,
   type TeamProvisioningRuntimeAdapterProgressMaps,
   TeamProvisioningRuntimeAdapterProgressState,
+  type TeamProvisioningRuntimeAdapterProgressStateOptions,
 } from '../TeamProvisioningRuntimeAdapterProgressState';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 
-function progress(
-  overrides: Partial<TeamProvisioningProgress> = {}
-): TeamProvisioningProgress {
+function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
   return {
     runId: 'run-1',
     teamName: 'team',
@@ -22,7 +21,7 @@ function progress(
   };
 }
 
-function harness() {
+function harness(overrides: Partial<TeamProvisioningRuntimeAdapterProgressStateOptions> = {}) {
   const state: TeamProvisioningRuntimeAdapterProgressMaps = {
     runtimeAdapterProgressByRunId: new Map<string, TeamProvisioningProgress>(),
     runtimeAdapterTraceLinesByRunId: new Map<string, string[]>(),
@@ -32,6 +31,7 @@ function harness() {
   const helper = new TeamProvisioningRuntimeAdapterProgressState({
     state,
     retainProvisioningProgress,
+    ...overrides,
   });
   return { helper, retainProvisioningProgress, state };
 }
@@ -80,10 +80,7 @@ describe('TeamProvisioningRuntimeAdapterProgressState', () => {
   it('preserves incoming assistantOutput when duplicate trace state leaves no live output', () => {
     const { helper, state } = harness();
     state.runtimeAdapterTraceLinesByRunId.set('run-1', []);
-    state.runtimeAdapterTraceKeyByRunId.set(
-      'run-1',
-      'spawning\u0000Launching runtime\u0000'
-    );
+    state.runtimeAdapterTraceKeyByRunId.set('run-1', 'spawning\u0000Launching runtime\u0000');
 
     const next = helper.setRuntimeAdapterProgress(
       progress({ assistantOutput: 'existing assistant output' })
@@ -122,5 +119,55 @@ describe('TeamProvisioningRuntimeAdapterProgressState', () => {
     helper.setRuntimeAdapterProgress(progress({ state: 'verifying' }));
 
     expect(retainProvisioningProgress).not.toHaveBeenCalled();
+  });
+
+  it('sweeps stale unreferenced runtime adapter progress and orphan trace state', () => {
+    const { helper, retainProvisioningProgress, state } = harness({
+      isRuntimeAdapterRunStateReferenced: (runId) => runId === 'live-run',
+      runStateTtlMs: 1_000,
+      runStateSweepIntervalMs: 0,
+    });
+    const staleProgress = progress({
+      runId: 'stale-run',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const liveProgress = progress({
+      runId: 'live-run',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    state.runtimeAdapterProgressByRunId.set('stale-run', staleProgress);
+    state.runtimeAdapterProgressByRunId.set('live-run', liveProgress);
+    state.runtimeAdapterTraceLinesByRunId.set('stale-run', ['stale trace']);
+    state.runtimeAdapterTraceKeyByRunId.set('stale-run', 'stale-key');
+    state.runtimeAdapterTraceLinesByRunId.set('orphan-run', ['orphan trace']);
+    state.runtimeAdapterTraceKeyByRunId.set('orphan-run', 'orphan-key');
+
+    helper.sweepRuntimeAdapterRunState(Date.parse('2026-01-01T00:00:02.000Z'));
+
+    expect(retainProvisioningProgress).toHaveBeenCalledWith('stale-run', staleProgress);
+    expect(state.runtimeAdapterProgressByRunId.has('stale-run')).toBe(false);
+    expect(state.runtimeAdapterTraceLinesByRunId.has('stale-run')).toBe(false);
+    expect(state.runtimeAdapterTraceKeyByRunId.has('stale-run')).toBe(false);
+    expect(state.runtimeAdapterProgressByRunId.get('live-run')).toBe(liveProgress);
+    expect(state.runtimeAdapterTraceLinesByRunId.has('orphan-run')).toBe(false);
+    expect(state.runtimeAdapterTraceKeyByRunId.has('orphan-run')).toBe(false);
+  });
+
+  it('keeps recent unreferenced runtime adapter progress during sweep', () => {
+    const { helper, retainProvisioningProgress, state } = harness({
+      isRuntimeAdapterRunStateReferenced: () => false,
+      runStateTtlMs: 1_000,
+      runStateSweepIntervalMs: 0,
+    });
+    const recentProgress = progress({
+      runId: 'recent-run',
+      updatedAt: '2026-01-01T00:00:01.500Z',
+    });
+    state.runtimeAdapterProgressByRunId.set('recent-run', recentProgress);
+
+    helper.sweepRuntimeAdapterRunState(Date.parse('2026-01-01T00:00:02.000Z'));
+
+    expect(retainProvisioningProgress).not.toHaveBeenCalled();
+    expect(state.runtimeAdapterProgressByRunId.get('recent-run')).toBe(recentProgress);
   });
 });

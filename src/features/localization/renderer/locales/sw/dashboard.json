@@ -199,13 +199,20 @@
     "partialData": "Data ya sehemu",
     "actions": {
       "refresh": "Onyesha upya",
-      "openTeam": "Fungua {{team}}"
+      "openTeam": "Fungua {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Matumizi ya model kwa sehemu"
     },
     "controls": {
       "includeCacheTokens": "Jumuisha cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Matumizi yote ya app yaliyokusanywa",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "Jumla",
       "unassigned": "Haijapangiwa",
-      "unknownAgent": "Agent asiyejulikana"
+      "unknownAgent": "Agent asiyejulikana",
+      "eventCount": "{{count}} matukio",
+      "streakCount": "{{count}} siku mfululizo"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Matukio ya chanzo",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

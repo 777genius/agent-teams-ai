@@ -199,13 +199,20 @@
     "partialData": "Data separa",
     "actions": {
       "refresh": "Segar semula",
-      "openTeam": "Buka {{team}}"
+      "openTeam": "Buka {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Penggunaan model mengikut segmen"
     },
     "controls": {
       "includeCacheTokens": "Sertakan token cache"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Semua penggunaan app yang dikumpul",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} token / {{cost}}",
       "total": "Jumlah",
       "unassigned": "Belum ditetapkan",
-      "unknownAgent": "Agen tidak diketahui"
+      "unknownAgent": "Agen tidak diketahui",
+      "eventCount": "{{count}} peristiwa",
+      "streakCount": "{{count}} hari berturut-turut"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Peristiwa sumber",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

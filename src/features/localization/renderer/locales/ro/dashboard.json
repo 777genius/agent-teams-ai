@@ -199,13 +199,20 @@
     "partialData": "Date parțiale",
     "actions": {
       "refresh": "Actualizează",
-      "openTeam": "Deschide {{team}}"
+      "openTeam": "Deschide {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Utilizarea modelelor pe segment"
     },
     "controls": {
       "includeCacheTokens": "Include tokenii cache"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Toată utilizarea colectată a aplicației",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} tokeni / {{cost}}",
       "total": "Total",
       "unassigned": "Neatribuit",
-      "unknownAgent": "Agent necunoscut"
+      "unknownAgent": "Agent necunoscut",
+      "eventCount": "{{count}} evenimente",
+      "streakCount": "{{count}} zile la rând"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Evenimente sursă",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

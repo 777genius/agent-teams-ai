@@ -257,8 +257,10 @@ export async function hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
 
 export function getOpenCodeAppMcpTransportMismatchDiagnostic(
   session: OpenCodeCommittedBootstrapSessionRecord,
-  currentTransportEvidence: Pick<AgentTeamsMcpHttpTransportEvidence, 'urlHash'> | null =
-    getCurrentAgentTeamsMcpHttpTransportEvidence()
+  currentTransportEvidence: Pick<
+    AgentTeamsMcpHttpTransportEvidence,
+    'urlHash'
+  > | null = getCurrentAgentTeamsMcpHttpTransportEvidence()
 ): string | null {
   const committedHash = session.appMcpTransportHash?.trim();
   const currentHash = currentTransportEvidence?.urlHash?.trim();
@@ -343,7 +345,9 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
     throw error;
   }
   if (!(await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(input, ports))) {
-    throw new Error(`OpenCode bootstrap session evidence write did not verify for ${input.memberName}`);
+    throw new Error(
+      `OpenCode bootstrap session evidence write did not verify for ${input.memberName}`
+    );
   }
 }
 
@@ -485,10 +489,7 @@ export async function findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(
     })
     .catch(() => null);
 
-  return findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence(
-    evidence,
-    input
-  );
+  return findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence(evidence, input);
 }
 
 export async function hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence(

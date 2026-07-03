@@ -1633,6 +1633,160 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('hydrates Anthropic static fallback catalogs before clearing live-only selections', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const onValueChange = vi.fn();
+    const staticAnthropicProvider = {
+      providerId: 'anthropic',
+      models: ['opus', 'claude-opus-4-6', 'sonnet', 'haiku'],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'anthropic',
+        source: 'static-fallback',
+        status: 'degraded',
+        fetchedAt: '2026-07-03T00:00:00.000Z',
+        staleAt: '2026-07-03T00:10:00.000Z',
+        defaultModelId: 'opus',
+        defaultLaunchModel: 'opus',
+        models: [
+          {
+            id: 'opus',
+            launchModel: 'opus',
+            displayName: 'Opus 4.8',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: null,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'static-fallback',
+          },
+        ],
+        diagnostics: {
+          configReadState: 'failed',
+          appServerState: 'degraded',
+          message: 'Using fallback Anthropic model list',
+        },
+      },
+      runtimeCapabilities: {
+        modelCatalog: {
+          dynamic: true,
+          source: 'anthropic-models-api',
+        },
+      },
+    };
+    const liveAnthropicProvider = {
+      ...staticAnthropicProvider,
+      models: ['claude-fable-5', 'claude-mythos-5', 'claude-sonnet-5'],
+      modelCatalog: {
+        ...staticAnthropicProvider.modelCatalog,
+        source: 'anthropic-models-api',
+        status: 'ready',
+        defaultModelId: 'claude-fable-5',
+        defaultLaunchModel: 'claude-fable-5',
+        models: [
+          {
+            id: 'claude-fable-5',
+            launchModel: 'claude-fable-5',
+            displayName: 'Fable 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: null,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'claude-mythos-5',
+            launchModel: 'claude-mythos-5',
+            displayName: 'Mythos 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: null,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'claude-sonnet-5',
+            launchModel: 'claude-sonnet-5',
+            displayName: 'Sonnet 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: null,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+        ],
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+          message: null,
+        },
+      },
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [staticAnthropicProvider],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'claude-mythos-5',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', { silent: false });
+    expect(onValueChange).not.toHaveBeenCalledWith('');
+    expect(host.textContent).not.toContain('Mythos 5');
+
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [liveAnthropicProvider],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'claude-mythos-5',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Fable 5');
+    expect(host.textContent).toContain('Mythos 5');
+    expect(host.textContent).toContain('Sonnet 5');
+    expect(onValueChange).not.toHaveBeenCalledWith('');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('opens readiness-gated OpenCode as diagnostics without selecting it', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

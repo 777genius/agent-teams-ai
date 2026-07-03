@@ -5,6 +5,14 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import {
@@ -37,6 +45,7 @@ import {
   tokenUsageSnapshotRequestForDateRange,
 } from '../adapters/tokenUsageDateRange';
 import { useOpenTokenUsageNotificationSettings } from '../hooks/useOpenTokenUsageNotificationSettings';
+import { useOpenTokenUsageTask } from '../hooks/useOpenTokenUsageTask';
 import { useOpenTokenUsageTeam } from '../hooks/useOpenTokenUsageTeam';
 import { useTokenUsageBudgetSettings } from '../hooks/useTokenUsageBudgetSettings';
 import { useTokenUsageSnapshot } from '../hooks/useTokenUsageSnapshot';
@@ -64,6 +73,7 @@ import type React from 'react';
 type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
 
 const DAY_PICKER_CLASS_NAMES = buildDayPickerClassNames();
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PANEL_CLASS =
   'min-w-0 rounded-sm border border-[var(--color-border-emphasis)] bg-surface-raised';
 const MODEL_DONUT_SIZE = 160;
@@ -71,8 +81,12 @@ const MODEL_DONUT_CENTER = MODEL_DONUT_SIZE / 2;
 const MODEL_DONUT_RADIUS = 63;
 const MODEL_DONUT_STROKE_WIDTH = 30;
 const MODEL_DONUT_CIRCUMFERENCE = 2 * Math.PI * MODEL_DONUT_RADIUS;
+const TOKEN_USAGE_TAB_TRIGGER_CLASS =
+  'gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2 text-sm text-text-muted shadow-none data-[state=active]:border-fuchsia-400 data-[state=active]:bg-transparent data-[state=active]:text-text data-[state=active]:shadow-none';
+const TOKEN_USAGE_DASHBOARD_TABS = ['overview', 'activity', 'breakdowns', 'runs'] as const;
 
 type TokenUsageStoredBudgetConfig = TokenUsageBudgetLimits;
+type TokenUsageDashboardTab = (typeof TOKEN_USAGE_DASHBOARD_TABS)[number];
 
 export const TokenUsageDashboard = (): React.JSX.Element => {
   const { t, resolvedLanguage } = useAppTranslation('dashboard');
@@ -81,12 +95,14 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
     [t]
   );
   const openTeamTab = useOpenTokenUsageTeam();
+  const openTaskDetail = useOpenTokenUsageTask();
   const openNotificationSettings = useOpenTokenUsageNotificationSettings();
   const [dateRange, setDateRange] = useState<TokenUsageDateRangeValue>(() =>
     createDefaultTokenUsageDateRange()
   );
   const [selectedTeamNames, setSelectedTeamNames] = useState<string[]>([]);
-  const [includeCacheTokens, setIncludeCacheTokens] = useState(true);
+  const [includeCacheTokens, setIncludeCacheTokens] = useState(false);
+  const [activeDashboardTab, setActiveDashboardTab] = useState<TokenUsageDashboardTab>('overview');
   const { budgetConfig, budgetConfigError, updateBudgetConfig } = useTokenUsageBudgetSettings({
     loadErrorMessage: tokenUsageT('tokenUsage.budgets.loadFailed'),
     saveErrorMessage: tokenUsageT('tokenUsage.budgets.saveFailed'),
@@ -137,6 +153,11 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <TokenUsageCacheTokenToggle
+            checked={includeCacheTokens}
+            onChange={setIncludeCacheTokens}
+            t={tokenUsageT}
+          />
           <TeamFilterSelector
             options={teamOptions}
             selectedTeamNames={selectedTeamNames}
@@ -172,126 +193,169 @@ export const TokenUsageDashboard = (): React.JSX.Element => {
             </div>
           )}
 
-          <SummaryMetricsPanel
-            metrics={viewModel.metrics}
-            includeCacheTokens={includeCacheTokens}
-            onIncludeCacheTokensChange={setIncludeCacheTokens}
-            t={tokenUsageT}
-          />
-
-          <section className="grid gap-5 lg:grid-cols-3">
-            <BillingSplitPanel items={viewModel.billingSplit} t={tokenUsageT} />
-            <BurnRatePanel burnRate={viewModel.burnRate} t={tokenUsageT} />
-            <BudgetAlertsPanel
-              alerts={viewModel.budgetAlerts}
-              budgetConfig={budgetConfig}
-              budgetTargetKey={budgetTargetKey}
-              budgetTargetOptions={viewModel.budgetTargetOptions}
-              error={budgetConfigError}
-              onBudgetTargetKeyChange={setBudgetTargetKey}
-              onBudgetConfigChange={updateBudgetConfig}
-              onOpenNotificationSettings={openNotificationSettings}
-              t={tokenUsageT}
-            />
-          </section>
+          <SummaryMetricsPanel metrics={viewModel.metrics} />
 
           {loading && viewModel.empty ? (
             <LoadingPanel />
           ) : viewModel.empty ? (
             <EmptyPanel t={tokenUsageT} />
           ) : (
-            <>
-              <UsageOverviewPanel
-                modelSegments={viewModel.modelUsage}
-                modelBars={viewModel.modelBars}
-                t={tokenUsageT}
-              />
-              <ActivityHeatmapPanel days={viewModel.activityDays} t={tokenUsageT} />
+            <Tabs
+              value={activeDashboardTab}
+              onValueChange={(value) => {
+                if (isTokenUsageDashboardTab(value)) {
+                  setActiveDashboardTab(value);
+                }
+              }}
+              className="min-w-0"
+            >
+              <div className="-mb-1 overflow-x-auto border-b border-[var(--color-border)]">
+                <TabsList className="h-auto min-w-max justify-start gap-1 rounded-none bg-transparent p-0">
+                  <TabsTrigger value="overview" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
+                    <Gauge className="size-3.5" />
+                    {tokenUsageT('tokenUsage.tabs.overview')}
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
+                    <Activity className="size-3.5" />
+                    {tokenUsageT('tokenUsage.tabs.activity')}
+                  </TabsTrigger>
+                  <TabsTrigger value="breakdowns" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
+                    <Rows3 className="size-3.5" />
+                    {tokenUsageT('tokenUsage.tabs.breakdowns')}
+                  </TabsTrigger>
+                  <TabsTrigger value="runs" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
+                    <Clock3 className="size-3.5" />
+                    {tokenUsageT('tokenUsage.tabs.runs')}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <section className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-                <TrendPanel points={viewModel.trendPoints} t={tokenUsageT} />
-                <div className="grid min-w-0 gap-5 md:grid-cols-2 2xl:grid-cols-1">
-                  <HorizontalBarsPanel
-                    heading={tokenUsageT('tokenUsage.panels.commandSpend')}
-                    items={viewModel.commandSpendBars}
+              <TabsContent value="overview" className="mt-5 space-y-5">
+                <section className="grid gap-5 lg:grid-cols-3">
+                  <BillingSplitPanel items={viewModel.billingSplit} t={tokenUsageT} />
+                  <BurnRatePanel burnRate={viewModel.burnRate} t={tokenUsageT} />
+                  <BudgetAlertsPanel
+                    alerts={viewModel.budgetAlerts}
+                    budgetConfig={budgetConfig}
+                    budgetTargetKey={budgetTargetKey}
+                    budgetTargetOptions={viewModel.budgetTargetOptions}
+                    error={budgetConfigError}
+                    onBudgetTargetKeyChange={setBudgetTargetKey}
+                    onBudgetConfigChange={updateBudgetConfig}
+                    onOpenNotificationSettings={openNotificationSettings}
+                    t={tokenUsageT}
+                  />
+                </section>
+                <UsageOverviewPanel
+                  modelSegments={viewModel.modelUsage}
+                  modelBars={viewModel.modelBars}
+                  t={tokenUsageT}
+                />
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-5 space-y-5">
+                <ActivityHeatmapPanel days={viewModel.activityDays} t={tokenUsageT} />
+                <section className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+                  <TrendPanel points={viewModel.trendPoints} t={tokenUsageT} />
+                  <div className="grid min-w-0 gap-5 md:grid-cols-2 2xl:grid-cols-1">
+                    <HorizontalBarsPanel
+                      heading={tokenUsageT('tokenUsage.panels.commandSpend')}
+                      items={viewModel.commandSpendBars}
+                      onOpenTeam={openTeamTab}
+                      t={tokenUsageT}
+                    />
+                    <HorizontalBarsPanel
+                      heading={tokenUsageT('tokenUsage.panels.taskSpend')}
+                      items={viewModel.taskSpendBars}
+                      onOpenTask={openTaskDetail}
+                      t={tokenUsageT}
+                    />
+                    <HorizontalBarsPanel
+                      heading={tokenUsageT('tokenUsage.panels.runtimeMix')}
+                      items={viewModel.runtimeBars}
+                      t={tokenUsageT}
+                    />
+                  </div>
+                </section>
+              </TabsContent>
+
+              <TabsContent value="breakdowns" className="mt-5 space-y-5">
+                <section className="grid gap-5 xl:grid-cols-2">
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.teams')}
+                    teamPanel
+                    rows={viewModel.teamRows}
                     onOpenTeam={openTeamTab}
                     t={tokenUsageT}
                   />
-                  <HorizontalBarsPanel
-                    heading={tokenUsageT('tokenUsage.panels.runtimeMix')}
-                    items={viewModel.runtimeBars}
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.agents')}
+                    rows={viewModel.agentRows}
+                    onOpenTeam={openTeamTab}
+                    showMemberBadge
                     t={tokenUsageT}
                   />
-                </div>
-              </section>
+                </section>
 
-              <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                <RunsPanel
-                  heading={tokenUsageT('tokenUsage.panels.commandPeriods')}
-                  rows={viewModel.commandRuns}
-                  primary
-                  t={tokenUsageT}
-                />
-                <RunsPanel
-                  heading={tokenUsageT('tokenUsage.panels.sessions')}
-                  rows={viewModel.sessionRuns}
-                  t={tokenUsageT}
-                />
-              </section>
+                <section className="grid gap-5 xl:grid-cols-2">
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.tasks')}
+                    rows={viewModel.taskRows}
+                    onOpenTask={openTaskDetail}
+                    t={tokenUsageT}
+                  />
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.commands')}
+                    rows={viewModel.commandBreakdownRows}
+                    compact
+                    t={tokenUsageT}
+                  />
+                </section>
 
-              <section className="grid gap-5 xl:grid-cols-2">
-                <BreakdownPanel
-                  heading={tokenUsageT('tokenUsage.panels.teams')}
-                  teamPanel
-                  rows={viewModel.teamRows}
-                  onOpenTeam={openTeamTab}
-                  t={tokenUsageT}
-                />
-                <BreakdownPanel
-                  heading={tokenUsageT('tokenUsage.panels.agents')}
-                  rows={viewModel.agentRows}
-                  onOpenTeam={openTeamTab}
-                  showMemberBadge
-                  t={tokenUsageT}
-                />
-              </section>
+                <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                  <BreakdownPanel
+                    heading={tokenUsageT('tokenUsage.panels.sessions')}
+                    rows={viewModel.sessionBreakdownRows}
+                    compact
+                    t={tokenUsageT}
+                  />
+                  <SourceQualityPanel
+                    items={viewModel.sourceQuality}
+                    unmappedEventCount={viewModel.unmappedEventCount}
+                    t={tokenUsageT}
+                  />
+                </section>
+              </TabsContent>
 
-              <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-                <BreakdownPanel
-                  heading={tokenUsageT('tokenUsage.panels.commands')}
-                  rows={viewModel.commandBreakdownRows}
-                  compact
-                  t={tokenUsageT}
-                />
-                <SourceQualityPanel
-                  items={viewModel.sourceQuality}
-                  unmappedEventCount={viewModel.unmappedEventCount}
-                  t={tokenUsageT}
-                />
-              </section>
+              <TabsContent value="runs" className="mt-5 space-y-5">
+                <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                  <RunsPanel
+                    heading={tokenUsageT('tokenUsage.panels.commandPeriods')}
+                    rows={viewModel.commandRuns}
+                    primary
+                    t={tokenUsageT}
+                  />
+                  <RunsPanel
+                    heading={tokenUsageT('tokenUsage.panels.sessions')}
+                    rows={viewModel.sessionRuns}
+                    t={tokenUsageT}
+                  />
+                </section>
 
-              <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
-                <BreakdownPanel
-                  heading={tokenUsageT('tokenUsage.panels.sessions')}
-                  rows={viewModel.sessionBreakdownRows}
-                  compact
-                  t={tokenUsageT}
-                />
-                <RunsPanel
-                  heading={tokenUsageT('tokenUsage.panels.recentRuns')}
-                  rows={viewModel.recentRuns}
-                  t={tokenUsageT}
-                />
-              </section>
-
-              <section>
-                <RunsPanel
-                  heading={tokenUsageT('tokenUsage.panels.expensiveRuns')}
-                  rows={viewModel.expensiveRuns}
-                  t={tokenUsageT}
-                />
-              </section>
-            </>
+                <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+                  <RunsPanel
+                    heading={tokenUsageT('tokenUsage.panels.recentRuns')}
+                    rows={viewModel.recentRuns}
+                    t={tokenUsageT}
+                  />
+                  <RunsPanel
+                    heading={tokenUsageT('tokenUsage.panels.expensiveRuns')}
+                    rows={viewModel.expensiveRuns}
+                    t={tokenUsageT}
+                  />
+                </section>
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </main>
@@ -347,6 +411,7 @@ function createTokenUsageViewModelText(t: TokenUsageT): TokenUsageViewModelText 
       t('tokenUsage.metrics.runningSessions', { running, sessions }),
     sdkExact: t('tokenUsage.sources.sdkExact'),
     sourceCount: (count) => t('tokenUsage.labels.sourceCount', { count }),
+    sourceEventCount: (count) => t('tokenUsage.labels.eventCount', { count }),
     subscriptionUsage: t('tokenUsage.metrics.subscriptionUsage'),
     subscriptionUsageHelp: t('tokenUsage.billingSplit.subscriptionUsageHelp'),
     tokenLimitDetail: (tokens, limit) =>
@@ -377,6 +442,10 @@ function localizedDateRangeDetail(value: TokenUsageDateRangeValue, t: TokenUsage
 
 function localizedDateRangeTitle(value: TokenUsageDateRangeValue, t: TokenUsageT): string {
   return `${localizedDateRangeLabel(value, t)}: ${localizedDateRangeDetail(value, t)}`;
+}
+
+function isTokenUsageDashboardTab(value: string): value is TokenUsageDashboardTab {
+  return (TOKEN_USAGE_DASHBOARD_TABS as readonly string[]).includes(value);
 }
 
 const TeamFilterSelector = ({
@@ -618,14 +687,8 @@ const DateRangeSelector = ({
 
 const SummaryMetricsPanel = ({
   metrics,
-  includeCacheTokens,
-  onIncludeCacheTokensChange,
-  t,
 }: {
   metrics: TokenUsageMetricViewModel[];
-  includeCacheTokens: boolean;
-  onIncludeCacheTokensChange: (include: boolean) => void;
-  t: TokenUsageT;
 }): React.JSX.Element => {
   return (
     <section
@@ -635,14 +698,7 @@ const SummaryMetricsPanel = ({
       )}
     >
       {metrics.map((metric, index) => (
-        <SummaryMetricCell
-          key={metric.id}
-          metric={metric}
-          index={index}
-          includeCacheTokens={includeCacheTokens}
-          onIncludeCacheTokensChange={onIncludeCacheTokensChange}
-          t={t}
-        />
+        <SummaryMetricCell key={metric.id} metric={metric} index={index} />
       ))}
     </section>
   );
@@ -651,15 +707,9 @@ const SummaryMetricsPanel = ({
 const SummaryMetricCell = ({
   metric,
   index,
-  includeCacheTokens,
-  onIncludeCacheTokensChange,
-  t,
 }: {
   metric: TokenUsageMetricViewModel;
   index: number;
-  includeCacheTokens: boolean;
-  onIncludeCacheTokensChange: (include: boolean) => void;
-  t: TokenUsageT;
 }): React.JSX.Element => {
   return (
     <div className={cn('min-w-0 p-4', summaryMetricCellBorderClass(index))}>
@@ -674,18 +724,6 @@ const SummaryMetricCell = ({
       </div>
       <div className="mt-3 text-2xl font-semibold text-text">{metric.value}</div>
       <div className="mt-1 truncate text-xs text-text-muted">{metric.detail}</div>
-      {metric.id === 'tokens' && (
-        <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-xs text-text-muted transition-colors hover:text-text-secondary">
-          <input
-            type="checkbox"
-            checked={includeCacheTokens}
-            onChange={(event) => onIncludeCacheTokensChange(event.target.checked)}
-            className="size-3.5 rounded-sm border border-[var(--color-border-emphasis)] bg-surface accent-fuchsia-500"
-            aria-label={t('tokenUsage.controls.includeCacheTokens')}
-          />
-          <span>{t('tokenUsage.controls.includeCacheTokens')}</span>
-        </label>
-      )}
       {metric.rows && metric.rows.length > 0 && (
         <div className="mt-3 space-y-1.5 border-t border-[var(--color-border)] pt-2">
           {metric.rows.map((row) => (
@@ -726,6 +764,30 @@ const MetricInfoTooltip = ({ label, help }: { label: string; help: string }): Re
         {help}
       </TooltipContent>
     </Tooltip>
+  );
+};
+
+const TokenUsageCacheTokenToggle = ({
+  checked,
+  onChange,
+  t,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  t: TokenUsageT;
+}): React.JSX.Element => {
+  const label = t('tokenUsage.controls.includeCacheTokens');
+  return (
+    <label className="flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-3 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="size-3.5 rounded-sm border border-[var(--color-border-emphasis)] bg-surface accent-fuchsia-500"
+        aria-label={label}
+      />
+      <span className="whitespace-nowrap">{label}</span>
+    </label>
   );
 };
 
@@ -895,17 +957,22 @@ const BudgetAlertsPanel = ({
               {budgetScopeLabel(target.scope, t)}
             </span>
           </div>
-          <select
-            value={budgetTargetKey}
-            onChange={(event) => onBudgetTargetKeyChange(event.target.value)}
-            className="mb-2 h-8 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text outline-none focus:border-fuchsia-500/60"
-          >
-            {budgetTargetOptions.map((option) => (
-              <option key={budgetOptionKey(option)} value={budgetOptionKey(option)}>
-                {budgetScopeLabel(option.scope, t)} / {option.label}
-              </option>
-            ))}
-          </select>
+          <Select value={budgetTargetKey} onValueChange={onBudgetTargetKeyChange}>
+            <SelectTrigger className="mb-2 h-8 rounded-sm border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text shadow-none focus:border-fuchsia-500/60 focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {budgetTargetOptions.map((option) => (
+                <SelectItem
+                  key={budgetOptionKey(option)}
+                  value={budgetOptionKey(option)}
+                  className="text-xs"
+                >
+                  {budgetScopeLabel(option.scope, t)} / {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
             <BudgetLimitInput
               label={t('tokenUsage.budgets.tokenLimit')}
@@ -1279,10 +1346,14 @@ const ActivityHeatmapPanel = ({
   t: TokenUsageT;
 }): React.JSX.Element => {
   const years = useMemo(() => buildActivityHeatmapYears(days), [days]);
+  const streak = useMemo(() => buildActivityStreak(days), [days]);
 
   return (
     <section className={PANEL_CLASS}>
-      <PanelTitle heading={t('tokenUsage.panels.activityByDay')} />
+      <PanelTitle
+        heading={t('tokenUsage.panels.activityByDay')}
+        action={<ActivityStreakBadge streak={streak} t={t} />}
+      />
       <div className="p-4">
         {days.length === 0 ? (
           <EmptyRows label={t('tokenUsage.empty.noActivityData')} />
@@ -1370,6 +1441,34 @@ const ActivityHeatmapPanel = ({
         )}
       </div>
     </section>
+  );
+};
+
+const ActivityStreakBadge = ({
+  streak,
+  t,
+}: {
+  streak: number;
+  t: TokenUsageT;
+}): React.JSX.Element => {
+  const fireCount = Math.floor(streak / 3);
+  const visibleFireCount = Math.min(fireCount, 5);
+  const hiddenFireCount = fireCount - visibleFireCount;
+
+  return (
+    <div className="flex max-w-[50%] shrink-0 items-center gap-1 rounded-sm border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
+      <span className="truncate">{t('tokenUsage.labels.streakCount', { count: streak })}</span>
+      {visibleFireCount > 0 && (
+        <span className="shrink-0 whitespace-nowrap" aria-hidden="true">
+          {Array.from({ length: visibleFireCount }, (_, index) => (
+            <span key={index}>🔥</span>
+          ))}
+          {hiddenFireCount > 0 && (
+            <span className="ml-0.5 text-[10px] text-amber-200/80">+{hiddenFireCount}</span>
+          )}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -1497,11 +1596,13 @@ const HorizontalBarsPanel = ({
   heading,
   items,
   onOpenTeam,
+  onOpenTask,
   t,
 }: {
   heading: string;
   items: TokenUsageBarChartItemViewModel[];
   onOpenTeam?: (teamName: string) => void;
+  onOpenTask?: (teamName: string, taskId: string) => void;
   t: TokenUsageT;
 }): React.JSX.Element => {
   return (
@@ -1513,14 +1614,28 @@ const HorizontalBarsPanel = ({
         ) : (
           items.map((item) => {
             const targetTeamName = item.teamName;
-            const clickable = !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const taskClickable =
+              item.tone === 'task' &&
+              !!targetTeamName &&
+              targetTeamName !== 'unassigned' &&
+              !!item.taskId &&
+              !!onOpenTask;
+            const teamClickable =
+              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const clickable = taskClickable || teamClickable;
+            const actionLabel = taskClickable
+              ? t('tokenUsage.actions.openTask', { task: item.label })
+              : t('tokenUsage.actions.openTeam', { team: targetTeamName });
             const itemContent = (
               <>
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="min-w-0 truncate font-medium text-text">{item.label}</span>
-                    {clickable && (
+                    {teamClickable && (
                       <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                    )}
+                    {taskClickable && (
+                      <Info className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
                     )}
                   </span>
                   <span className="shrink-0 text-text-secondary">{item.value}</span>
@@ -1528,7 +1643,14 @@ const HorizontalBarsPanel = ({
                 <div className="mt-1 h-2 overflow-hidden rounded-sm bg-surface">
                   <div className={barToneClass(item.tone)} style={{ width: `${item.percent}%` }} />
                 </div>
-                <div className="mt-1 truncate text-xs text-text-muted">{item.detail}</div>
+                <div className="mt-1 flex min-w-0 items-center justify-between gap-3 text-xs text-text-muted">
+                  <span className="min-w-0 truncate">{item.detail}</span>
+                  {item.taskDisplayId && (
+                    <span className="text-text-muted/80 shrink-0 font-mono text-[11px]">
+                      {item.taskDisplayId}
+                    </span>
+                  )}
+                </div>
               </>
             );
 
@@ -1537,16 +1659,20 @@ const HorizontalBarsPanel = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => onOpenTeam?.(targetTeamName)}
-                    aria-label={t('tokenUsage.actions.openTeam', { team: targetTeamName })}
+                    onClick={() => {
+                      if (taskClickable && item.taskId) {
+                        onOpenTask?.(targetTeamName, item.taskId);
+                        return;
+                      }
+                      onOpenTeam?.(targetTeamName);
+                    }}
+                    aria-label={actionLabel}
                     className="group -mx-2 block w-[calc(100%+1rem)] min-w-0 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-surface focus:bg-surface focus:outline-none"
                   >
                     {itemContent}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('tokenUsage.actions.openTeam', { team: targetTeamName })}
-                </TooltipContent>
+                <TooltipContent side="top">{actionLabel}</TooltipContent>
               </Tooltip>
             ) : (
               <Tooltip key={item.id}>
@@ -1574,6 +1700,7 @@ const BreakdownPanel = ({
   rows,
   compact = false,
   onOpenTeam,
+  onOpenTask,
   showMemberBadge = false,
   teamPanel = false,
   t,
@@ -1582,6 +1709,7 @@ const BreakdownPanel = ({
   rows: TokenUsageBreakdownRowViewModel[];
   compact?: boolean;
   onOpenTeam?: (teamName: string) => void;
+  onOpenTask?: (teamName: string, taskId: string) => void;
   showMemberBadge?: boolean;
   teamPanel?: boolean;
   t: TokenUsageT;
@@ -1595,7 +1723,14 @@ const BreakdownPanel = ({
         ) : (
           rows.slice(0, compact ? 6 : 8).map((row) => {
             const targetTeamName = row.teamName ?? (teamPanel ? row.id : undefined);
-            const clickable = !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const taskClickable =
+              !!targetTeamName && targetTeamName !== 'unassigned' && !!row.taskId && !!onOpenTask;
+            const teamClickable =
+              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const clickable = taskClickable || teamClickable;
+            const actionLabel = taskClickable
+              ? t('tokenUsage.actions.openTask', { task: row.label })
+              : t('tokenUsage.actions.openTeam', { team: targetTeamName });
             const rowClassName = cn(
               'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto]',
               clickable &&
@@ -1618,11 +1753,21 @@ const BreakdownPanel = ({
                     {showMemberBadge && !row.agentName && (
                       <div className="truncate font-medium text-text">{row.label}</div>
                     )}
-                    {clickable && (
-                      <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                    {clickable &&
+                      (taskClickable ? (
+                        <Info className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                      ) : (
+                        <ArrowUpRight className="size-3.5 shrink-0 text-text-muted transition-colors group-hover:text-text-secondary" />
+                      ))}
+                  </div>
+                  <div className="mt-0.5 flex min-w-0 items-center justify-between gap-3 text-xs text-text-muted">
+                    <span className="min-w-0 truncate">{row.lastActivity}</span>
+                    {row.taskDisplayId && (
+                      <span className="text-text-muted/80 shrink-0 font-mono text-[11px]">
+                        {row.taskDisplayId}
+                      </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-xs text-text-muted">{row.lastActivity}</div>
                   <div className="mt-2 h-1 overflow-hidden rounded-sm bg-surface">
                     <div className="h-full bg-blue-500" style={{ width: `${row.percent}%` }} />
                   </div>
@@ -1644,16 +1789,21 @@ const BreakdownPanel = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => onOpenTeam?.(targetTeamName)}
+                    onClick={() => {
+                      if (!targetTeamName) return;
+                      if (taskClickable && row.taskId) {
+                        onOpenTask?.(targetTeamName, row.taskId);
+                        return;
+                      }
+                      onOpenTeam?.(targetTeamName);
+                    }}
                     className={rowClassName}
-                    aria-label={t('tokenUsage.actions.openTeam', { team: targetTeamName })}
+                    aria-label={actionLabel}
                   >
                     {rowContent}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('tokenUsage.actions.openTeam', { team: targetTeamName })}
-                </TooltipContent>
+                <TooltipContent side="top">{actionLabel}</TooltipContent>
               </Tooltip>
             ) : (
               <div key={row.id} className={rowClassName}>
@@ -1687,7 +1837,7 @@ const SourceQualityPanel = ({
                 <span className={`size-2 rounded-full ${sourceToneClass(item.tone)}`} />
                 <span className="truncate text-text-secondary">{item.label}</span>
               </div>
-              <span className="font-medium text-text">{item.count}</span>
+              <span className="font-medium text-text">{item.countLabel}</span>
             </div>
             <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-surface">
               <div
@@ -1874,6 +2024,7 @@ function formatPanelPercent(value: number): string {
 
 function barToneClass(tone: TokenUsageBarChartItemViewModel['tone']): string {
   if (tone === 'command') return 'h-full bg-blue-500';
+  if (tone === 'task') return 'h-full bg-fuchsia-500';
   if (tone === 'runtime') return 'h-full bg-teal-500';
   if (tone === 'model') return 'h-full bg-indigo-500';
   if (tone === 'agent') return 'h-full bg-emerald-500';
@@ -1923,6 +2074,22 @@ function buildActivityHeatmapCells(
   if (!Number.isFinite(timestamp)) return days;
   const mondayOffset = (new Date(timestamp).getUTCDay() + 6) % 7;
   return [...Array<TokenUsageActivityDayViewModel | null>(mondayOffset).fill(null), ...days];
+}
+
+function buildActivityStreak(days: TokenUsageActivityDayViewModel[]): number {
+  const activeDayIds = new Set(days.filter((day) => day.tokenValue > 0).map((day) => day.id));
+  const latestActiveDayId = [...activeDayIds].sort().at(-1);
+  if (!latestActiveDayId) return 0;
+
+  const latestTimestamp = Date.parse(`${latestActiveDayId}T00:00:00.000Z`);
+  if (!Number.isFinite(latestTimestamp)) return 0;
+
+  let streak = 0;
+  for (let timestamp = latestTimestamp; ; timestamp -= DAY_MS) {
+    const dayId = new Date(timestamp).toISOString().slice(0, 10);
+    if (!activeDayIds.has(dayId)) return streak;
+    streak += 1;
+  }
 }
 
 function mergeTeamFilterOptions(

@@ -3,7 +3,7 @@
  * Uses the same mouse-event pattern as Sidebar.tsx for resize.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,10 +17,11 @@ export const PaneResizeHandle = ({ leftPaneId }: PaneResizeHandleProps): React.J
   const [isResizing, setIsResizing] = useState(false);
   const resizePanes = useStore((s) => s.resizePanes);
   const paneLayout = useStore(useShallow((s) => s.paneLayout));
+  const isResizingRef = useRef(false);
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isResizing) return;
+      if (!isResizingRef.current) return;
 
       // Calculate the new width fraction based on mouse position relative to container
       const container = document.getElementById('pane-container');
@@ -42,14 +43,16 @@ export const PaneResizeHandle = ({ leftPaneId }: PaneResizeHandleProps): React.J
       const leftPaneNewWidth = newFraction - cumulativeWidth;
       resizePanes(leftPaneId, leftPaneNewWidth);
     },
-    [isResizing, leftPaneId, paneLayout.panes, resizePanes]
+    [leftPaneId, paneLayout.panes, resizePanes]
   );
 
   const handleMouseUp = useCallback(() => {
+    isResizingRef.current = false;
     setIsResizing(false);
   }, []);
 
   useEffect(() => {
+    isResizingRef.current = isResizing;
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);

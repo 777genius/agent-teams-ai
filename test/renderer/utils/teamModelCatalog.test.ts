@@ -33,6 +33,7 @@ describe('teamModelCatalog', () => {
         'claude-sonnet-4-6[1m]',
       ])
     ).toEqual([
+      'fable',
       'claude-haiku-4-5-20251001',
       'claude-opus-4-8',
       'claude-opus-4-8[1m]',
@@ -40,6 +41,7 @@ describe('teamModelCatalog', () => {
       'claude-opus-4-7[1m]',
       'claude-opus-4-6',
       'claude-opus-4-6[1m]',
+      'claude-sonnet-5',
       'claude-sonnet-4-6',
       'claude-sonnet-4-6[1m]',
     ]);
@@ -54,10 +56,13 @@ describe('teamModelCatalog', () => {
     ]);
 
     expect(models).toContain('opus');
+    expect(models).toContain('fable');
+    expect(models).not.toContain('claude-fable-5');
     expect(models).not.toContain('claude-opus-4-8');
     expect(models).toContain('claude-opus-4-8[1m]');
 
     const labels = models.map((model) => getTeamModelBadgeLabel('anthropic', model));
+    expect(labels.filter((label) => label === 'Fable 5')).toHaveLength(1);
     expect(labels.filter((label) => label === 'Opus 4.8')).toHaveLength(1);
   });
 
@@ -321,6 +326,9 @@ describe('teamModelCatalog', () => {
     expect(isAnthropicOneMillionContextTeamModel('sonnet')).toBe(false);
     expect(isAnthropicOneMillionContextTeamModel('sonnet[1m]')).toBe(true);
     expect(isAnthropicOneMillionContextTeamModel('claude-opus-4-8')).toBe(true);
+    expect(isAnthropicOneMillionContextTeamModel('claude-fable-5')).toBe(true);
+    expect(isAnthropicOneMillionContextTeamModel('fable')).toBe(true);
+    expect(isAnthropicOneMillionContextTeamModel('claude-sonnet-5')).toBe(true);
     expect(isAnthropicOneMillionContextTeamModel('claude-opus-4-8[1m]')).toBe(true);
     expect(isAnthropicOneMillionContextTeamModel('claude-opus-4-7')).toBe(true);
     expect(isAnthropicOneMillionContextTeamModel('claude-opus-4-7[1m]')).toBe(true);

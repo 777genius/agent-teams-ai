@@ -80,7 +80,10 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   // Select a project and fetch its sessions (paginated)
   selectProject: (id: string) => {
     set({
+      selectedRepositoryId: null,
+      selectedWorktreeId: null,
       selectedProjectId: id,
+      activeProjectId: id,
       ...getSessionResetState(),
     });
 

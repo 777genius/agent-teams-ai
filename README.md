@@ -35,7 +35,7 @@
   <img src="docs/screenshots/1.jpg" alt="Kanban board with agent tasks" width="100%" />
 </td>
 <td width="33.33%">
-  <img src="https://github.com/user-attachments/assets/a07d39b2-8529-42c8-8133-4685628b5a92" alt="Agent Teams AI product screenshot" width="100%" />
+  <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
 </td>
 </tr>
 </table>

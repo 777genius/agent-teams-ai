@@ -112,6 +112,30 @@ describe('contextMetrics', () => {
     expect(
       inferContextWindowTokens({
         providerId: 'anthropic',
+        modelName: 'fable',
+      })
+    ).toBe(1_000_000);
+    expect(
+      inferContextWindowTokens({
+        providerId: 'anthropic',
+        modelName: 'claude-fable-5',
+      })
+    ).toBe(1_000_000);
+    expect(
+      inferContextWindowTokens({
+        providerId: 'anthropic',
+        modelName: 'claude-mythos-5',
+      })
+    ).toBe(1_000_000);
+    expect(
+      inferContextWindowTokens({
+        providerId: 'anthropic',
+        modelName: 'claude-sonnet-5',
+      })
+    ).toBe(1_000_000);
+    expect(
+      inferContextWindowTokens({
+        providerId: 'anthropic',
         modelName: 'claude-opus-4-8',
       })
     ).toBe(1_000_000);

@@ -111,9 +111,7 @@ export function resolveProviderCompatibilityModel(params: {
   }
 
   const availableModels = params.runtimeFacts.modelIds;
-  let resolvedModelId: string | null = availableModels.has(trimmedModelId)
-    ? trimmedModelId
-    : null;
+  let resolvedModelId: string | null = availableModels.has(trimmedModelId) ? trimmedModelId : null;
 
   if (!resolvedModelId && params.providerId === 'anthropic') {
     resolvedModelId =
@@ -263,10 +261,7 @@ export async function verifySelectedProviderModelsForProvisioning({
     });
   };
 
-  const recordAnthropicEffortOutcome = (
-    requestedModelId: string,
-    effort: EffortLevel
-  ): boolean => {
+  const recordAnthropicEffortOutcome = (requestedModelId: string, effort: EffortLevel): boolean => {
     const selection = resolveAnthropicSelectionFromFacts({
       selectedModel: requestedModelId,
       limitContext,

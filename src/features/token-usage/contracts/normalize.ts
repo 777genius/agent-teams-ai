@@ -11,6 +11,7 @@ import type {
   TokenUsageRuntimeKind,
   TokenUsageSessionRunDto,
   TokenUsageSummaryDto,
+  TokenUsageTaskBreakdownItemDto,
   TokenUsageTimeSeriesPointDto,
   TokenUsageTokenBreakdownDto,
 } from './dto';
@@ -115,6 +116,22 @@ function normalizeBreakdownItem(value: unknown): TokenUsageBreakdownItemDto | nu
     agentName: readString(record?.agentName),
     summary: normalizeTokenUsageSummary(record?.summary),
     lastActivityAt: readString(record?.lastActivityAt),
+  };
+}
+
+function normalizeTaskBreakdownItem(value: unknown): TokenUsageTaskBreakdownItemDto | null {
+  const item = normalizeBreakdownItem(value);
+  const record = isRecord(value) ? value : null;
+  const taskId = readString(record?.taskId);
+  const subject = readString(record?.subject);
+  if (!item || !taskId || !subject) return null;
+  return {
+    ...item,
+    taskId,
+    displayId: readString(record?.displayId),
+    subject,
+    owner: readString(record?.owner),
+    status: readString(record?.status),
   };
 }
 
@@ -253,6 +270,10 @@ export function normalizeTokenUsageSnapshot(value: unknown): TokenUsageAnalytics
     (Array.isArray(items) ? items : [])
       .map((item) => normalizeBreakdownItem(item))
       .filter((item): item is TokenUsageBreakdownItemDto => item !== null);
+  const normalizeTaskItems = (items: unknown): TokenUsageTaskBreakdownItemDto[] =>
+    (Array.isArray(items) ? items : [])
+      .map((item) => normalizeTaskBreakdownItem(item))
+      .filter((item): item is TokenUsageTaskBreakdownItemDto => item !== null);
   const normalizeRuns = (items: unknown): TokenUsageRecentRunDto[] =>
     (Array.isArray(items) ? items : [])
       .map((item) => normalizeRecentRun(item))
@@ -297,6 +318,7 @@ export function normalizeTokenUsageSnapshot(value: unknown): TokenUsageAnalytics
     byProject: normalizeItems(record?.byProject),
     byRuntime: normalizeItems(record?.byRuntime),
     byModel: normalizeItems(record?.byModel),
+    byTask: normalizeTaskItems(record?.byTask),
     commandRuns: normalizeCommandRuns(record?.commandRuns),
     sessionRuns: normalizeSessionRuns(record?.sessionRuns),
     tokenTrend: normalizeTrend(record?.tokenTrend),

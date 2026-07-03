@@ -63,6 +63,7 @@ export function registerTokenUsageHttp(
         byProject: [],
         byRuntime: [],
         byModel: [],
+        byTask: [],
         commandRuns: [],
         sessionRuns: [],
         tokenTrend: [],

@@ -58,6 +58,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 300,
+          cacheReadTokens: 150,
           requestCount: 2,
           estimatedCostUsd: 1.25,
           apiEquivalentCostUsd: 1.25,
@@ -74,6 +75,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 300,
+          cacheReadTokens: 150,
           requestCount: 2,
           estimatedCostUsd: 1.25,
           apiEquivalentCostUsd: 1.25,
@@ -89,6 +91,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 300,
+          cacheReadTokens: 150,
           requestCount: 2,
           estimatedCostUsd: 1.25,
           apiEquivalentCostUsd: 1.25,
@@ -103,6 +106,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 200,
+          cacheReadTokens: 150,
           requestCount: 1,
           estimatedCostUsd: 0.75,
           apiEquivalentCostUsd: 0.75,
@@ -130,6 +134,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 300,
+          cacheReadTokens: 150,
           requestCount: 2,
           estimatedCostUsd: 1.25,
           apiEquivalentCostUsd: 1.25,
@@ -144,6 +149,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         summary: {
           ...ZERO_SUMMARY,
           totalTokens: 200,
+          cacheReadTokens: 150,
           requestCount: 1,
           estimatedCostUsd: 0.75,
           apiEquivalentCostUsd: 0.75,
@@ -169,8 +175,90 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         lastActivityAt: '2026-06-28T00:00:00.000Z',
       },
     ],
-    commandRuns: [],
-    sessionRuns: [],
+    byTask: [
+      {
+        id: 'task:alpha:2',
+        taskId: '2',
+        displayId: 'AT-2',
+        subject: 'Build cache stats',
+        owner: 'builder',
+        status: 'in_progress',
+        label: 'AT-2 Build cache stats',
+        teamName: 'alpha',
+        agentName: 'builder',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 200,
+          cacheReadTokens: 150,
+          requestCount: 1,
+          estimatedCostUsd: 0.75,
+          apiEquivalentCostUsd: 0.75,
+        },
+        lastActivityAt: '2026-06-30T00:00:00.000Z',
+      },
+      {
+        id: 'task:alpha:1',
+        taskId: '1',
+        displayId: 'AT-1',
+        subject: 'Fix usage UI',
+        owner: 'builder',
+        status: 'completed',
+        label: 'AT-1 Fix usage UI',
+        teamName: 'alpha',
+        agentName: 'builder',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 100,
+          requestCount: 1,
+          estimatedCostUsd: 0.5,
+          apiEquivalentCostUsd: 0.5,
+        },
+        lastActivityAt: '2026-06-29T00:00:00.000Z',
+      },
+    ],
+    commandRuns: [
+      {
+        id: 'command-run-a',
+        label: 'Command Run A',
+        teamName: 'alpha',
+        agentNames: ['builder'],
+        runtimeKinds: ['codex'],
+        models: ['gpt-5.4'],
+        runCount: 1,
+        startedAt: '2026-06-30T00:00:00.000Z',
+        durationMs: 1_000,
+        status: 'completed',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 100,
+          cacheReadTokens: 25,
+          requestCount: 1,
+          apiEquivalentCostUsd: 0.4,
+        },
+      },
+    ],
+    sessionRuns: [
+      {
+        id: 'session-a',
+        label: 'Session A',
+        appRunId: 'run-session-a',
+        teamName: 'alpha',
+        agentName: 'builder',
+        runtimeKind: 'codex',
+        model: 'gpt-5.4',
+        startedAt: '2026-06-30T00:00:00.000Z',
+        durationMs: 1_000,
+        status: 'completed',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 80,
+          cacheReadTokens: 30,
+          requestCount: 1,
+          apiEquivalentCostUsd: 0.3,
+        },
+        sources: [],
+      },
+    ],
     tokenTrend: [
       {
         id: '2026-06-29',
@@ -235,8 +323,44 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
         },
       },
     ],
-    recentRuns: [],
-    expensiveRuns: [],
+    recentRuns: [
+      {
+        appRunId: 'run-a',
+        teamName: 'alpha',
+        agentName: 'builder',
+        runtimeKind: 'codex',
+        model: 'gpt-5.4',
+        status: 'completed',
+        startedAt: '2026-06-30T00:00:00.000Z',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 60,
+          cacheReadTokens: 10,
+          requestCount: 1,
+          apiEquivalentCostUsd: 0.2,
+        },
+        sources: [],
+      },
+    ],
+    expensiveRuns: [
+      {
+        appRunId: 'run-expensive-a',
+        teamName: 'alpha',
+        agentName: 'builder',
+        runtimeKind: 'codex',
+        model: 'gpt-5.4',
+        status: 'completed',
+        startedAt: '2026-06-30T00:00:00.000Z',
+        summary: {
+          ...ZERO_SUMMARY,
+          totalTokens: 40,
+          cacheReadTokens: 15,
+          requestCount: 1,
+          apiEquivalentCostUsd: 0.1,
+        },
+        sources: [],
+      },
+    ],
     unmappedEventCount: 3,
     sourceCounts: {
       sdk_exact: 0,
@@ -249,8 +373,8 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
 }
 
 describe('toTokenUsageDashboardViewModel', () => {
-  it('builds numeric chart models without parsing formatted labels', () => {
-    const viewModel = toTokenUsageDashboardViewModel(snapshot());
+  it('builds numeric chart models with cache tokens when explicitly enabled', () => {
+    const viewModel = toTokenUsageDashboardViewModel(snapshot(), { includeCacheTokens: true });
 
     expect(viewModel.trendPoints.map((point) => point.heightPercent)).toEqual([
       expect.any(Number),
@@ -275,6 +399,30 @@ describe('toTokenUsageDashboardViewModel', () => {
       })
     );
     expect(viewModel.commandSpendBars.map((item) => item.percent)).toEqual([100, 50]);
+    expect(
+      viewModel.taskSpendBars.map((item) => ({
+        id: item.id,
+        label: item.label,
+        taskDisplayId: item.taskDisplayId,
+        taskId: item.taskId,
+        percent: item.percent,
+      }))
+    ).toEqual([
+      {
+        id: 'task:alpha:2',
+        label: 'Build cache stats',
+        taskDisplayId: 'AT-2',
+        taskId: '2',
+        percent: 100,
+      },
+      {
+        id: 'task:alpha:1',
+        label: 'Fix usage UI',
+        taskDisplayId: 'AT-1',
+        taskId: '1',
+        percent: 50,
+      },
+    ]);
     expect(viewModel.metrics.find((metric) => metric.id === 'billing')).toEqual(
       expect.objectContaining({
         label: 'Billing',
@@ -314,10 +462,25 @@ describe('toTokenUsageDashboardViewModel', () => {
     expect(viewModel.unmappedEventCount).toBe(3);
   });
 
-  it('excludes cache tokens from headline and trend points when disabled', () => {
-    const viewModel = toTokenUsageDashboardViewModel(snapshot(), { includeCacheTokens: false });
+  it('excludes cache tokens from dashboard token statistics by default', () => {
+    const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
+      budgetLimits: {
+        global: { monthlyTokenLimit: 300 },
+        projects: { 'project:workspace-a': { monthlyTokenLimit: 300 } },
+        teams: { alpha: { monthlyTokenLimit: 200 } },
+      },
+    });
 
     expect(viewModel.metrics.find((metric) => metric.id === 'tokens')?.value).toBe('150');
+    expect(viewModel.tokenMix.map((segment) => segment.id)).toEqual(['input', 'output']);
+    expect(viewModel.tokenMix.find((segment) => segment.id === 'input')?.percent).toBeCloseTo(
+      66.67,
+      2
+    );
+    expect(viewModel.tokenMix.find((segment) => segment.id === 'output')?.percent).toBeCloseTo(
+      33.33,
+      2
+    );
     expect(viewModel.trendPoints[1]).toEqual(
       expect.objectContaining({
         tokenValue: 150,
@@ -328,10 +491,56 @@ describe('toTokenUsageDashboardViewModel', () => {
         ],
       })
     );
+    expect(viewModel.commandSpendBars.map((item) => item.id)).toEqual(['cmd-b', 'cmd-a']);
+    expect(viewModel.commandSpendBars.map((item) => item.value)).toEqual(['100', '50']);
+    expect(viewModel.commandSpendBars.map((item) => item.percent)).toEqual([100, 50]);
+    expect(viewModel.taskSpendBars.map((item) => item.id)).toEqual([
+      'task:alpha:1',
+      'task:alpha:2',
+    ]);
+    expect(viewModel.taskSpendBars.map((item) => item.label)).toEqual([
+      'Fix usage UI',
+      'Build cache stats',
+    ]);
+    expect(viewModel.taskSpendBars.map((item) => item.value)).toEqual(['100', '50']);
+    expect(viewModel.taskRows.map((row) => row.id)).toEqual(['task:alpha:1', 'task:alpha:2']);
+    expect(viewModel.taskRows.map((row) => [row.label, row.taskDisplayId, row.taskId])).toEqual([
+      ['Fix usage UI', 'AT-1', '1'],
+      ['Build cache stats', 'AT-2', '2'],
+    ]);
+    expect(viewModel.commandBreakdownRows.map((row) => row.id)).toEqual(['cmd-b', 'cmd-a']);
+    expect(viewModel.modelUsage.map((segment) => segment.id)).toEqual(['claude-sonnet', 'gpt-5.4']);
+    expect(viewModel.modelUsage.map((segment) => Math.round(segment.percent))).toEqual([67, 33]);
+    expect(viewModel.modelBars.map((item) => ({ id: item.id, value: item.value }))).toEqual([
+      { id: 'claude-sonnet', value: '100' },
+      { id: 'gpt-5.4', value: '50' },
+      { id: 'unused-model', value: '0' },
+    ]);
+    expect(viewModel.activityDays.map((day) => day.tokenValue)).toEqual([75, 150]);
+    expect(viewModel.teamRows[0]).toEqual(
+      expect.objectContaining({ id: 'alpha', tokenValue: 150 })
+    );
+    expect(viewModel.teamFilterOptions[0]).toEqual(
+      expect.objectContaining({ id: 'alpha', tokens: '150', tokenValue: 150 })
+    );
+    expect(
+      viewModel.budgetTargetOptions.map((option) => [option.scope, option.id, option.tokens])
+    ).toEqual([
+      ['global', 'global', '150'],
+      ['team', 'alpha', '150'],
+      ['project', 'project:workspace-a', '150'],
+    ]);
+    expect(viewModel.budgetAlerts.find((alert) => alert.id === 'global')?.percent).toBe(50);
+    expect(viewModel.budgetAlerts.find((alert) => alert.id === 'alpha')?.percent).toBe(75);
+    expect(viewModel.commandRuns[0]?.tokens).toBe('75');
+    expect(viewModel.sessionRuns[0]?.tokens).toBe('50');
+    expect(viewModel.recentRuns[0]?.tokens).toBe('50');
+    expect(viewModel.expensiveRuns[0]?.tokens).toBe('25');
   });
 
   it('builds billing split, burn rate, and budget alerts', () => {
     const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
+      includeCacheTokens: true,
       budgetLimits: {
         global: { monthlyTokenLimit: 500 },
         projects: { 'project:workspace-a': { monthlyTokenLimit: 100 } },

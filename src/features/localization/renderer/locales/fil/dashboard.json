@@ -199,13 +199,20 @@
     "partialData": "Bahagyang data",
     "actions": {
       "refresh": "I-refresh",
-      "openTeam": "Buksan {{team}}"
+      "openTeam": "Buksan {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "Paggamit ng model bawat segment"
     },
     "controls": {
       "includeCacheTokens": "Isama ang cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "Lahat ng nakolektang paggamit ng app",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "Kabuuan",
       "unassigned": "Hindi naka-assign",
-      "unknownAgent": "Hindi kilalang agent"
+      "unknownAgent": "Hindi kilalang agent",
+      "eventCount": "{{count}} event",
+      "streakCount": "{{count}} araw na streak"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "Mga event ng source",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

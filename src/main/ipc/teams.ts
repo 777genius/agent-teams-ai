@@ -5178,11 +5178,18 @@ export function showTeamNativeNotification(opts: {
     ...(iconPath ? { icon: iconPath } : {}),
   });
 
-  // Hold a strong reference to prevent GC from collecting the notification
+  // Hold a strong reference to prevent GC from collecting the notification.
+  // macOS never fires 'close' for toasts the user ignores, so also drop the
+  // reference after a grace window — otherwise ignored toasts accumulate for
+  // the whole session. Late clicks from Notification Center past this window
+  // are best-effort only.
   activeTeamNotifications.add(notification);
-  const cleanup = (): void => {
+  const releaseTimer = setTimeout(cleanup, 15 * 60_000);
+  releaseTimer.unref?.();
+  function cleanup(): void {
+    clearTimeout(releaseTimer);
     activeTeamNotifications.delete(notification);
-  };
+  }
 
   notification.on('click', () => {
     const windows = BrowserWindow.getAllWindows();

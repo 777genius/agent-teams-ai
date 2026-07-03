@@ -2,6 +2,7 @@ import {
   getAvailableTeamProviderModelOptions,
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
+  getTeamModelUiDisabledReason,
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
   GPT_5_2_CODEX_UI_DISABLED_REASON,
   GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
@@ -538,7 +539,7 @@ describe('teamModelAvailability', () => {
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
   });
 
-  it('keeps Anthropic Opus 4.8, explicit 4.7, and explicit 4.6 in the fallback selector options', () => {
+  it('keeps Anthropic Fable, Sonnet 5, Opus 4.8, explicit 4.7, and explicit 4.6 in the fallback selector options', () => {
     expect(getAvailableTeamProviderModelOptions('anthropic')).toEqual([
       {
         value: '',
@@ -548,9 +549,23 @@ describe('teamModelAvailability', () => {
         availabilityReason: undefined,
       },
       {
+        value: 'fable',
+        label: 'Fable 5',
+        badgeLabel: 'Fable 5',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
         value: 'opus',
         label: 'Opus 4.8',
         badgeLabel: 'Opus 4.8',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'claude-sonnet-5',
+        label: 'Sonnet 5',
+        badgeLabel: 'Sonnet 5',
         availabilityStatus: 'available',
         availabilityReason: null,
       },
@@ -610,6 +625,19 @@ describe('teamModelAvailability', () => {
         },
         models: [
           {
+            id: 'claude-sonnet-5',
+            launchModel: 'claude-sonnet-5',
+            displayName: 'Sonnet 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
             id: 'opus',
             launchModel: 'opus',
             displayName: 'Opus 4.7',
@@ -632,13 +660,10 @@ describe('teamModelAvailability', () => {
       label: 'Opus 4.8',
       badgeLabel: 'Opus 4.8',
     });
-    expect(options.find((option) => option.value === 'claude-opus-4-7')).toMatchObject({
-      label: 'Opus 4.7',
-      badgeLabel: 'Opus 4.7',
-    });
+    expect(options.find((option) => option.value === 'claude-opus-4-7')).toBeUndefined();
   });
 
-  it('merges first-party Anthropic catalog models with curated safety fallbacks', () => {
+  it('uses first-party Anthropic catalog models without curated fallback rows', () => {
     const providerStatus: TeamModelRuntimeProviderStatus = {
       providerId: 'anthropic',
       models: ['opus', 'claude-sonnet-4-7'],
@@ -662,6 +687,19 @@ describe('teamModelAvailability', () => {
           appServerState: 'healthy',
         },
         models: [
+          {
+            id: 'claude-sonnet-5',
+            launchModel: 'claude-sonnet-5',
+            displayName: 'Sonnet 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
           {
             id: 'opus',
             launchModel: 'opus',
@@ -708,12 +746,20 @@ describe('teamModelAvailability', () => {
     const options = getAvailableTeamProviderModelOptions('anthropic', providerStatus);
     const values = options.map((option) => option.value);
 
+    expect(values).not.toContain('fable');
+    expect(values).not.toContain('claude-mythos-5');
     expect(options.find((option) => option.value === 'opus')).toMatchObject({
       label: 'Opus 4.9',
       badgeLabel: 'Opus 4.9',
     });
+    expect(options.find((option) => option.value === 'claude-sonnet-5')).toMatchObject({
+      label: 'Sonnet 5',
+      badgeLabel: 'Sonnet 5',
+      availabilityStatus: 'available',
+    });
+    expect(values.indexOf('claude-sonnet-5')).toBeLessThan(values.indexOf('opus'));
     expect(values).toContain('claude-sonnet-4-7');
-    expect(values).toContain('claude-opus-4-7');
+    expect(values).not.toContain('claude-opus-4-7');
     expect(values).not.toContain('claude-sonnet-4-7[1m]');
     expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-4-7', providerStatus)).toBe(
       'claude-sonnet-4-7'
@@ -723,7 +769,81 @@ describe('teamModelAvailability', () => {
     ).toBeNull();
   });
 
+  it('makes Mythos selectable when the first-party Anthropic catalog reports account access', () => {
+    const providerStatus: TeamModelRuntimeProviderStatus = {
+      providerId: 'anthropic',
+      models: ['claude-mythos-5'],
+      authMethod: 'oauth',
+      backend: null,
+      authenticated: true,
+      supported: true,
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'anthropic',
+        source: 'anthropic-models-api',
+        status: 'ready',
+        fetchedAt: '2026-06-20T00:00:00.000Z',
+        staleAt: '2026-06-20T00:10:00.000Z',
+        defaultModelId: 'claude-fable-5',
+        defaultLaunchModel: 'claude-fable-5',
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+        models: [
+          {
+            id: 'claude-fable-5',
+            launchModel: 'claude-fable-5',
+            displayName: 'Fable 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'claude-mythos-5',
+            launchModel: 'claude-mythos-5',
+            displayName: 'Mythos 5',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high', 'max'],
+            defaultReasoningEffort: 'high',
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+        ],
+      },
+    };
+
+    expect(getTeamModelUiDisabledReason('anthropic', 'claude-mythos-5', providerStatus)).toBeNull();
+    expect(normalizeTeamModelForUi('anthropic', 'claude-mythos-5', providerStatus)).toBe(
+      'claude-mythos-5'
+    );
+    expect(getTeamModelSelectionError('anthropic', 'claude-mythos-5', providerStatus)).toBeNull();
+    expect(getAvailableTeamProviderModelOptions('anthropic', providerStatus)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: 'claude-mythos-5',
+          label: 'Mythos 5',
+          badgeLabel: 'Mythos 5',
+          availabilityStatus: 'available',
+        }),
+      ])
+    );
+  });
+
   it('keeps known Anthropic full model ids selectable without runtime verification', () => {
+    expect(normalizeTeamModelForUi('anthropic', 'fable')).toBe('fable');
+    expect(normalizeTeamModelForUi('anthropic', 'claude-fable-5')).toBe('claude-fable-5');
+    expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-5')).toBe('claude-sonnet-5');
     expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-8')).toBe('claude-opus-4-8');
     expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-8[1m]')).toBe('claude-opus-4-8[1m]');
     expect(normalizeTeamModelForUi('anthropic', 'claude-opus-4-7')).toBe('claude-opus-4-7');

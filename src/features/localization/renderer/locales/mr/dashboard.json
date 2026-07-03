@@ -199,13 +199,20 @@
     "partialData": "आंशिक डेटा",
     "actions": {
       "refresh": "रीफ्रेश",
-      "openTeam": "{{team}} उघडा"
+      "openTeam": "{{team}} उघडा",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "सेगमेंटनुसार मॉडेल वापर"
     },
     "controls": {
       "includeCacheTokens": "cache tokens समाविष्ट करा"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "गोळा केलेला सर्व app वापर",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} टोकन / {{cost}}",
       "total": "एकूण",
       "unassigned": "नसोपवलेले",
-      "unknownAgent": "अज्ञात एजंट"
+      "unknownAgent": "अज्ञात एजंट",
+      "eventCount": "{{count}} इव्हेंट",
+      "streakCount": "{{count}} दिवसांची स्ट्रीक"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "स्रोत इव्हेंट",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",

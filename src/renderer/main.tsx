@@ -16,6 +16,7 @@ import type { AppStartupStatus, AppStartupStep } from '@shared/types/api';
 declare global {
   interface Window {
     __claudeTeamsUiDidInit?: boolean;
+    __claudeTeamsUiCleanup?: () => void;
     __claudeTeamsSplashStaticTimer?: number;
     __claudeTeamsSplashScene?: SplashSceneHandle;
     __claudeTeamsSplashEnhancedDisabled?: boolean;
@@ -188,7 +189,8 @@ function mountApp(): void {
   // module-level side effect guarded by a global flag.
   if (!window.__claudeTeamsUiDidInit) {
     window.__claudeTeamsUiDidInit = true;
-    initializeNotificationListeners();
+    // Keep the cleanup reachable for hot module reload / shutdown paths.
+    window.__claudeTeamsUiCleanup = initializeNotificationListeners();
   }
 
   root = ReactDOM.createRoot(document.getElementById('root')!);

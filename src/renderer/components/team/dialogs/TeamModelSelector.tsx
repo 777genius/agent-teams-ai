@@ -463,6 +463,41 @@ function hasFreeOpenCodeModelRoute(providerStatus: CliProviderStatus | null | un
   );
 }
 
+function shouldHydrateProviderModelCatalog(
+  providerId: TeamProviderId,
+  providerStatus: CliProviderStatus | null | undefined
+): boolean {
+  if (!providerStatus) {
+    return false;
+  }
+
+  if (providerId === 'anthropic') {
+    const catalog = providerStatus?.modelCatalog;
+    const runtimeCatalog = providerStatus?.runtimeCapabilities?.modelCatalog;
+    return (
+      catalog?.source === 'static-fallback' ||
+      (runtimeCatalog?.dynamic === true &&
+        runtimeCatalog.source !== 'anthropic-compatible-api' &&
+        catalog?.source !== 'anthropic-models-api')
+    );
+  }
+
+  if (providerId === 'opencode') {
+    return isOpenCodeCatalogHydrating(providerStatus);
+  }
+
+  if (providerId === 'codex') {
+    const catalog = providerStatus?.modelCatalog;
+    return (
+      providerStatus?.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+      catalog?.providerId !== 'codex' &&
+      (providerStatus.models.length === 0 || providerStatus.modelCatalogRefreshState === 'idle')
+    );
+  }
+
+  return false;
+}
+
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
 export const OPENCODE_ONE_SHOT_DISABLED_REASON =
   'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.';
@@ -813,6 +848,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const [inspectedProviderId, setInspectedProviderId] = useState<TeamProviderId | null>(null);
   const previousEffectiveProviderIdRef = useRef<TeamProviderId>(selectedProviderId);
   const previousSelectedProviderIdRef = useRef<TeamProviderId>(selectedProviderId);
+  const catalogHydrationRequestedRef = useRef<Set<TeamProviderId>>(new Set());
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   const {
@@ -823,6 +859,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } = useEffectiveCliProviderStatus(effectiveProviderId);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
+  const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
   const runtimeProviderStatusById = useMemo(
@@ -962,6 +999,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId !== 'anthropic' &&
     (runtimeProviderStatus == null ||
       isTeamProviderModelVerificationPending(effectiveProviderId, runtimeProviderStatus));
+  const providerModelCatalogLoading =
+    cliProviderStatusLoading[effectiveProviderId] === true ||
+    runtimeProviderStatus?.modelCatalogRefreshState === 'loading';
+  const shouldHydrateRuntimeModelCatalog = shouldHydrateProviderModelCatalog(
+    effectiveProviderId,
+    runtimeProviderStatus
+  );
+  const catalogHydrationAlreadyRequested =
+    catalogHydrationRequestedRef.current.has(effectiveProviderId);
+  const shouldDeferModelNormalization =
+    providerModelCatalogLoading ||
+    (shouldHydrateRuntimeModelCatalog && !catalogHydrationAlreadyRequested);
   const normalizedValue = normalizeTeamModelForUi(
     effectiveProviderId,
     value,
@@ -969,13 +1018,45 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   );
 
   useEffect(() => {
+    if (
+      !multimodelAvailable ||
+      effectiveCliStatus?.flavor !== 'agent_teams_orchestrator' ||
+      providerModelCatalogLoading ||
+      !shouldHydrateRuntimeModelCatalog ||
+      catalogHydrationAlreadyRequested
+    ) {
+      return;
+    }
+
+    catalogHydrationRequestedRef.current.add(effectiveProviderId);
+    void fetchCliProviderStatus(effectiveProviderId, { silent: false });
+  }, [
+    effectiveCliStatus?.flavor,
+    catalogHydrationAlreadyRequested,
+    effectiveProviderId,
+    fetchCliProviderStatus,
+    multimodelAvailable,
+    providerModelCatalogLoading,
+    shouldHydrateRuntimeModelCatalog,
+  ]);
+
+  useEffect(() => {
     if (isInspectingInactiveProvider) {
+      return;
+    }
+    if (shouldDeferModelNormalization) {
       return;
     }
     if (normalizedValue !== value) {
       onValueChange(normalizedValue);
     }
-  }, [isInspectingInactiveProvider, normalizedValue, onValueChange, value]);
+  }, [
+    isInspectingInactiveProvider,
+    normalizedValue,
+    onValueChange,
+    shouldDeferModelNormalization,
+    value,
+  ]);
 
   const modelOptions = useMemo(() => {
     if (shouldAwaitRuntimeModelList) {

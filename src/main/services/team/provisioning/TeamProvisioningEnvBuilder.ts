@@ -337,22 +337,25 @@ export async function buildProvisioningEnv({
     const apiKey =
       await ports.providerConnectionService.getConfiguredAnthropicApiKeyForTeamRuntime(providerEnv);
     if (apiKey) {
-      const helper = await (ports.materializeAnthropicTeamApiKeyHelper ??
-        materializeAnthropicTeamApiKeyHelper)({
+      const helper = await (
+        ports.materializeAnthropicTeamApiKeyHelper ?? materializeAnthropicTeamApiKeyHelper
+      )({
         teamName: teamRuntimeAuth.teamName!,
         authMaterialId: teamRuntimeAuth.authMaterialId!,
         apiKey,
         baseClaudeDir: resolvedClaudeBasePath,
       });
       try {
-        await (ports.verifyAnthropicTeamApiKeyHelperMaterial ??
-          verifyAnthropicTeamApiKeyHelperMaterial)({
+        await (
+          ports.verifyAnthropicTeamApiKeyHelperMaterial ?? verifyAnthropicTeamApiKeyHelperMaterial
+        )({
           helperPath: helper.helperPath,
           expectedApiKey: apiKey,
         });
       } catch (error) {
-        await (ports.cleanupAnthropicTeamApiKeyHelperMaterial ??
-          cleanupAnthropicTeamApiKeyHelperMaterial)({
+        await (
+          ports.cleanupAnthropicTeamApiKeyHelperMaterial ?? cleanupAnthropicTeamApiKeyHelperMaterial
+        )({
           directory: helper.directory,
         });
         throw error;

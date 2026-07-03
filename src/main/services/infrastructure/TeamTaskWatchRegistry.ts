@@ -15,19 +15,22 @@ export interface TeamTaskWatchRegistryOptions {
   onChange: (eventType: TeamTaskWatchEventType, relativePath: string) => void;
   onError: (error: unknown) => void;
   /**
-   * Optional provider for the set of team names whose team-root and task
-   * artifacts should be watched. The root directory is always watched (to detect
-   * new/removed teams), and for the 'teams' kind every team's `inboxes/` is
-   * always watched (cross-team message delivery and notifications must stay
-   * immediate). Return `null` (or omit the provider) to watch every team - the
-   * original behavior and the safe fallback.
+   * Optional provider for the set of team names whose team root/task artifacts
+   * should be watched. The root directory is always watched to detect new or
+   * removed teams. Return `null` (or omit the provider) to watch every team -
+   * the original behavior and safe fallback.
    *
-   * Scoping exists because team-root (config/kanban/processes/meta) and task
-   * artifacts only change for teams that are running or currently engaged in the
-   * UI; idle teams are static, so watching all of them is pure overhead that
-   * scales with the number of teams on disk.
+   * Scoping exists because idle historical teams are static, so watching all of
+   * them is pure overhead that scales with the number of teams on disk.
    */
   getScopedTeamNames?: () => ReadonlySet<string> | null;
+  /**
+   * Optional provider for teams whose `inboxes/` directories should be watched
+   * for live delivery. If omitted, inboxes follow getScopedTeamNames for
+   * backward compatibility. Return `null` to watch every inbox as a safe
+   * fallback.
+   */
+  getScopedInboxTeamNames?: () => ReadonlySet<string> | null;
 }
 
 const RECONCILE_INTERVAL_MS = 30_000;
@@ -61,6 +64,8 @@ const TEAM_ROOT_FILES = new Set([
  *
  * Contract:
  * - Watch only teams/, teams/<team>/, teams/<team>/inboxes/, tasks/, tasks/<team>/.
+ *   Team root/task scope and inbox scope can differ: inboxes are normally only
+ *   watched for live/running teams.
  * - Do not enable Chokidar polling here. Polling is owned by FileWatcher fallback.
  * - Initial app startup baseline must stay silent to avoid replaying old files.
  * - Newly discovered targets are scanned once so files created before rebuild
@@ -309,6 +314,12 @@ export class TeamTaskWatchRegistry {
     const rootEntries = await this.readDirectory(this.options.rootPath);
     // null => no scoping: watch every team (original behavior / safe fallback).
     const scopedTeams = this.options.getScopedTeamNames?.() ?? null;
+    const scopedInboxTeams =
+      this.options.kind !== 'teams'
+        ? scopedTeams
+        : this.options.getScopedInboxTeamNames
+          ? this.options.getScopedInboxTeamNames()
+          : scopedTeams;
 
     for (const entry of rootEntries) {
       if (!entry.isDirectory()) {
@@ -316,16 +327,22 @@ export class TeamTaskWatchRegistry {
       }
 
       const teamPath = path.join(this.options.rootPath, entry.name);
-      const inScope = scopedTeams === null || scopedTeams.has(entry.name);
+      const artifactInScope = scopedTeams === null || scopedTeams.has(entry.name);
+      const inboxInScope =
+        this.options.kind === 'teams' &&
+        (scopedInboxTeams === null || scopedInboxTeams.has(entry.name));
 
-      // Team-root and task artifacts only change for running/engaged teams, so
-      // scope those. Inboxes are always watched so cross-team delivery and
-      // notifications to non-visible teams stay immediate.
-      if (inScope) {
+      // Watch root/task artifacts for running or recently opened teams, but
+      // watch inboxes only for live teams. If either scope falls back to all,
+      // include the team root too so newly created inbox dirs are still seen.
+      if (!artifactInScope && !inboxInScope) {
+        continue;
+      }
+      if (artifactInScope || inboxInScope) {
         targets.add(path.normalize(teamPath));
       }
 
-      if (this.options.kind === 'teams') {
+      if (inboxInScope) {
         const inboxPath = path.join(teamPath, 'inboxes');
         if (await this.isDirectory(inboxPath)) {
           targets.add(path.normalize(inboxPath));

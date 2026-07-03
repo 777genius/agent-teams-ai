@@ -129,9 +129,9 @@ describe('TeamProvisioningOpenCodeBootstrapEvidence', () => {
       appManagedBootstrapCandidate: candidate,
     };
 
-    expect(
-      hasMatchingCommittedOpenCodeRuntimeBootstrapSessionEvidence(evidence, baseInput)
-    ).toBe(true);
+    expect(hasMatchingCommittedOpenCodeRuntimeBootstrapSessionEvidence(evidence, baseInput)).toBe(
+      true
+    );
     expect(
       hasMatchingCommittedOpenCodeRuntimeBootstrapSessionEvidence(evidence, {
         ...baseInput,

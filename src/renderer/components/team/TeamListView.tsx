@@ -69,6 +69,7 @@ import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 import {
   findTeamProjectSelectionTarget,
+  resolveCreateTeamDefaultProjectPath,
   resolveTeamProjectSelection,
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
@@ -700,6 +701,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     ]
   );
   const currentProjectPath = teamPriorityProjectPath ?? currentProjectSelection.projectPath;
+  const createTeamDefaultProjectPath = resolveCreateTeamDefaultProjectPath({
+    initialProjectPath: copyData?.cwd,
+    selectedProjectPath: currentProjectSelection.projectPath,
+    priorityProjectPath: teamPriorityProjectPath,
+  });
 
   const filteredTeams = useMemo<TeamSummary[]>(() => {
     let result = teamsWithProvisioning;
@@ -1102,7 +1108,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         provisioningTeamNames={provisioningTeamNames}
         activeTeams={activeTeams}
         initialData={copyData ?? undefined}
-        defaultProjectPath={copyData?.cwd ?? currentProjectPath}
+        defaultProjectPath={createTeamDefaultProjectPath}
         onClose={handleCreateDialogClose}
         onCreate={handleCreateSubmit}
         onOpenTeam={openTeamTab}

@@ -199,13 +199,20 @@
     "partialData": "ข้อมูลบางส่วน",
     "actions": {
       "refresh": "รีเฟรช",
-      "openTeam": "เปิด {{team}}"
+      "openTeam": "เปิด {{team}}",
+      "openTask": "Open task {{task}}"
     },
     "aria": {
       "modelUsageBySegment": "การใช้โมเดลตามส่วน"
     },
     "controls": {
       "includeCacheTokens": "รวม cache tokens"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "breakdowns": "Breakdowns",
+      "runs": "Runs"
     },
     "dateRange": {
       "allCollectedUsage": "การใช้งาน app ทั้งหมดที่รวบรวม",
@@ -258,7 +265,9 @@
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "รวม",
       "unassigned": "ยังไม่กำหนด",
-      "unknownAgent": "agent ไม่ทราบชื่อ"
+      "unknownAgent": "agent ไม่ทราบชื่อ",
+      "eventCount": "{{count}} เหตุการณ์",
+      "streakCount": "{{count}} วันติดกัน"
     },
     "metrics": {
       "apiEquivalent": "API-equivalent",
@@ -281,6 +290,7 @@
       "agents": "Agents",
       "commandPeriods": "Command periods",
       "commandSpend": "Command spend",
+      "taskSpend": "Task spend",
       "commands": "Commands",
       "expensiveRuns": "Expensive runs",
       "modelUsage": "Model usage",
@@ -288,7 +298,8 @@
       "recentRuns": "Recent runs",
       "runtimeMix": "Runtime mix",
       "sessions": "Sessions",
-      "sources": "Sources",
+      "sources": "เหตุการณ์แหล่งที่มา",
+      "tasks": "Tasks",
       "teams": "Teams",
       "usageTrend": "Usage trend",
       "billingSplit": "Billing split",
