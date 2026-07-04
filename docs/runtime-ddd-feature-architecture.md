@@ -306,7 +306,8 @@ Current implementation status: the core `worker-core/integration` bounded
 context owns the domain model, ports and application use cases for the
 integration lifecycle. `store-local-file` provides
 `LocalIntegrationAttemptStore` for restart-safe attempt snapshots and audit
-event logs. Provider-facing MCP/CLI tools and real git/check adapters should be
+event logs. `worker-local` provides local Git/check/secret-scan/workspace-lock
+adapters for real sandbox repositories. Provider-facing MCP/CLI tools should be
 added on top of that layer, without duplicating policy logic in handlers.
 
 ### Phase 1: domain model
@@ -349,6 +350,18 @@ Current local persistence adapter:
 - audit events append to `events.jsonl` in the same attempt directory;
 - attempt ids are hashed before use as path segments, so ids such as `../x`
   cannot escape the store root.
+
+Current local execution adapters:
+
+- `LocalGitIntegrationAdapter` uses `execFile("git", args)` without shell
+  interpolation, applies worker commits or patch files, runs `diff --check`,
+  creates commits and pushes explicit `HEAD:<branch>` refs;
+- `LocalProjectCheckRunner` runs declared check command arrays with cwd
+  canonicalized inside the workspace and redacted output tails;
+- `SimpleSecretScanner` scans approved files with pluggable patterns and fails
+  closed on unreadable existing files;
+- `LocalWorkspaceIntegrationLock` adapts the existing local file workspace lock
+  store for integration attempts.
 
 Policy must validate:
 

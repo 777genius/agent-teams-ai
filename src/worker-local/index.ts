@@ -3,6 +3,7 @@ export * from "./agent-run-watch";
 export * from "./claude-run-watch";
 export * from "./node-process-runner";
 export * from "./observability";
+export * from "./project-integration-local-adapters";
 export * from "./stdout-run-event-publisher";
 export * from "./temp-workspace";
 export * from "./webhook-run-event-publisher";
