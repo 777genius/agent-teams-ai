@@ -92,10 +92,7 @@ import {
   findBootstrapRuntimeProofObservedAt as findBootstrapRuntimeProofObservedAtHelper,
   type ParsedBootstrapTranscriptTailCacheEntry,
 } from './provisioning/TeamProvisioningBootstrapTranscript';
-import {
-  createTeamProvisioningBootstrapTranscriptOutcomePorts,
-  type TeamProvisioningBootstrapTranscriptOutcomePorts,
-} from './provisioning/TeamProvisioningBootstrapTranscriptOutcomePortsFactory';
+import { TeamProvisioningBootstrapTranscriptFacade } from './provisioning/TeamProvisioningBootstrapTranscriptFacade';
 import {
   addPermissionRulesToSettings as addClaudePermissionRulesToSettings,
   type ClaudePermissionSettingsFilePorts,
@@ -484,7 +481,6 @@ import {
 import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
 import { TeamProvisioningTaskActivityRepairBoundary } from './provisioning/TeamProvisioningTaskActivityRepairBoundary';
 import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
-import { TeamProvisioningTranscriptClaudeLogsCache } from './provisioning/TeamProvisioningTranscriptClaudeLogs';
 import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
@@ -520,14 +516,12 @@ import { writeTeamLaunchFailureArtifactPack } from './TeamLaunchFailureArtifactP
 import { createPersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
 import { TeamMcpConfigBuilder } from './TeamMcpConfigBuilder';
-import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 import { TeamTaskReader } from './TeamTaskReader';
-import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
 import type {
   OpenCodeTeamRuntimeMessageInput,
@@ -778,27 +772,13 @@ export class TeamProvisioningService {
   });
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
-  private readonly persistedTranscriptClaudeLogs: TeamProvisioningTranscriptClaudeLogsCache;
-  private readonly bootstrapTranscriptOutcomePorts: TeamProvisioningBootstrapTranscriptOutcomePorts =
-    createTeamProvisioningBootstrapTranscriptOutcomePorts({
-      nowIso,
-      isLookupCacheEnabled: (teamName) =>
-        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
-      findMemberLogs: (teamName, memberName, sinceMs) =>
-        this.memberLogsFinder.findMemberLogs(teamName, memberName, sinceMs),
-      readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
-      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
-      readRecentBootstrapTranscriptOutcome: (filePath, sinceMs, memberName, teamName, options) =>
-        this.readRecentBootstrapTranscriptOutcome(filePath, sinceMs, memberName, teamName, options),
-      readBootstrapTranscriptOutcomesInProjectRoot: (teamName, memberName, sinceMs) =>
-        this.readBootstrapTranscriptOutcomesInProjectRoot(teamName, memberName, sinceMs),
-    });
+  private readonly bootstrapTranscriptFacade!: TeamProvisioningBootstrapTranscriptFacade;
 
   private get parsedBootstrapTranscriptTailCache(): Map<
     string,
     ParsedBootstrapTranscriptTailCacheEntry
   > {
-    return this.bootstrapTranscriptOutcomePorts.parsedBootstrapTranscriptTailCache;
+    return this.bootstrapTranscriptFacade.parsedBootstrapTranscriptTailCache;
   }
 
   private readonly teamOpLocks = new Map<string, Promise<void>>();
@@ -1025,19 +1005,11 @@ export class TeamProvisioningService {
     minAuditIntervalMs: MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
     auditMemberSpawnStatuses: (run) => this.auditMemberSpawnStatuses(run),
     findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
-      this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptFailureReason(
-        teamName,
-        memberName,
-        sinceMs
-      ),
+      this.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
     findBootstrapRuntimeProofObservedAt: (teamName, memberName, current) =>
       this.findBootstrapRuntimeProofObservedAt(teamName, memberName, current),
     findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-      this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
-        teamName,
-        memberName,
-        sinceMs
-      ),
+      this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
     setMemberSpawnStatus: (run, memberName, status, error) =>
       this.setMemberSpawnStatus(run, memberName, status, error),
     confirmMemberSpawnStatusFromTranscript: (run, memberName, observedAt, source) =>
@@ -1267,8 +1239,6 @@ export class TeamProvisioningService {
   private memberWorkSyncProofMissingRecoveryScheduler: MemberWorkSyncProofMissingRecoveryScheduler | null =
     null;
   private memberWorkSyncAcceptedReportChecker: MemberWorkSyncAcceptedReportChecker | null = null;
-  private readonly memberLogsFinder: TeamMemberLogsFinder;
-  private readonly transcriptProjectResolver: TeamTranscriptProjectResolver;
   private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
   private readonly runtimeToolActivity = createRuntimeToolActivityHandlers<ProvisioningRun>({
     isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
@@ -2001,16 +1971,14 @@ export class TeamProvisioningService {
         sleep,
         getErrorMessage,
       });
-    this.memberLogsFinder = new TeamMemberLogsFinder(
-      this.configReader,
-      this.inboxReader,
-      this.membersMetaStore
-    );
-    this.transcriptProjectResolver = new TeamTranscriptProjectResolver({
-      getConfig: (teamName) => this.configReader.getConfigSnapshot(teamName),
-    });
-    this.persistedTranscriptClaudeLogs = new TeamProvisioningTranscriptClaudeLogsCache({
-      getContext: (teamName) => this.transcriptProjectResolver.getContext(teamName),
+    this.bootstrapTranscriptFacade = new TeamProvisioningBootstrapTranscriptFacade({
+      nowIso,
+      isLookupCacheEnabled: (teamName) =>
+        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
+      configReader: this.configReader,
+      inboxReader: this.inboxReader,
+      membersMetaStore: this.membersMetaStore,
+      readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
     });
     this.sameTeamNativeDelivery = new TeamProvisioningSameTeamNativeDelivery(
       {
@@ -2092,7 +2060,10 @@ export class TeamProvisioningService {
         clearRuntimeProcessRowsForTeam: (teamName) =>
           this.runtimeResourceSampling.clearRuntimeProcessRowsForTeam(teamName),
         retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
-        persistedTranscriptClaudeLogs: this.persistedTranscriptClaudeLogs,
+        persistedTranscriptClaudeLogs: {
+          invalidate: (teamName) =>
+            this.bootstrapTranscriptFacade.invalidatePersistedTranscriptClaudeLogs(teamName),
+        },
         leadInboxRelayInFlight: this.leadInboxRelayInFlight,
         relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
         pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
@@ -3087,7 +3058,7 @@ export class TeamProvisioningService {
   private async getPersistedTranscriptClaudeLogs(
     teamName: string
   ): Promise<RetainedClaudeLogsSnapshot | null> {
-    return this.persistedTranscriptClaudeLogs.get(teamName);
+    return this.bootstrapTranscriptFacade.getPersistedTranscriptClaudeLogs(teamName);
   }
 
   private clearSameTeamRetryTimers(teamName: string): void {
@@ -3837,11 +3808,7 @@ export class TeamProvisioningService {
     return createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts<ProvisioningRun>({
       getOpenCodeBootstrapStallStatusPorts: () => this.getOpenCodeBootstrapStallStatusPorts(),
       findBootstrapTranscriptOutcome: (teamName, memberName, acceptedAtMs) =>
-        this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
-          teamName,
-          memberName,
-          acceptedAtMs
-        ),
+        this.findBootstrapTranscriptOutcome(teamName, memberName, acceptedAtMs),
       getOpenCodeRuntimeMessageAdapter: () => this.getOpenCodeRuntimeMessageAdapter(),
       sendOpenCodeMemberMessageToRuntimeSerialized: (sendInput) =>
         this.sendOpenCodeMemberMessageToRuntimeSerialized(sendInput),
@@ -5314,11 +5281,7 @@ export class TeamProvisioningService {
       findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
         this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
       findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-        this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
-          teamName,
-          memberName,
-          sinceMs
-        ),
+        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
       readPersistedRuntimeMembers: (teamName) =>
         this.configFacade.readPersistedRuntimeMembers(teamName),
     });
@@ -5329,7 +5292,7 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<string | null> {
-    return this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptFailureReason(
+    return this.bootstrapTranscriptFacade.findBootstrapTranscriptFailureReason(
       teamName,
       memberName,
       sinceMs
@@ -5341,7 +5304,7 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome | null> {
-    return this.bootstrapTranscriptOutcomePorts.findBootstrapTranscriptOutcome(
+    return this.bootstrapTranscriptFacade.findBootstrapTranscriptOutcome(
       teamName,
       memberName,
       sinceMs
@@ -5358,7 +5321,7 @@ export class TeamProvisioningService {
       contextMemberNames?: readonly string[];
     } = {}
   ): Promise<BootstrapTranscriptOutcome | null> {
-    return this.bootstrapTranscriptOutcomePorts.readRecentBootstrapTranscriptOutcome(
+    return this.bootstrapTranscriptFacade.readRecentBootstrapTranscriptOutcome(
       filePath,
       sinceMs,
       memberName,
@@ -5372,7 +5335,7 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<BootstrapTranscriptOutcome[]> {
-    return this.bootstrapTranscriptOutcomePorts.readBootstrapTranscriptOutcomesInProjectRoot(
+    return this.bootstrapTranscriptFacade.readBootstrapTranscriptOutcomesInProjectRoot(
       teamName,
       memberName,
       sinceMs
