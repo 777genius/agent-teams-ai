@@ -1282,6 +1282,15 @@ export function createCodexGoalMcpServer(
         tailLines: z.number().int().positive().optional(),
         includeRegistryConflicts: z.boolean().optional(),
       },
+      outputSchema: {
+        ok: z.boolean(),
+        registryRootDir: z.string(),
+        jobId: z.string(),
+        decision: z.object({
+          controlSurface: CODEX_GOAL_CONTROL_SURFACE_SCHEMA,
+        }).passthrough(),
+        status: z.unknown().optional(),
+      },
     },
     async (args) => withMcpErrors(async () => {
       const decisionArgs = args as JobDecisionMcpArgs;
@@ -4244,17 +4253,36 @@ function codexGoalDecisionChecklist(input: {
 }
 
 interface CodexGoalControlSurface {
-  readonly executionEngine: string;
+  readonly executionEngine: NonNullable<CodexGoalRunConfig["executionEngine"]>;
   readonly childWorkerSpawn: string;
   readonly hostAuthSurfaces: readonly string[];
   readonly guidance: string;
 }
 
-const DEFAULT_CODEX_GOAL_EXECUTION_ENGINE = "app-server-goal";
+const CODEX_GOAL_EXECUTION_ENGINE_SCHEMA = z.enum([
+  "app-server",
+  "app-server-goal",
+  "packaged-exec",
+  "plain-exec",
+]);
+
+const CODEX_GOAL_CONTROL_SURFACE_SCHEMA = z.object({
+  executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
+  childWorkerSpawn: z.string(),
+  hostAuthSurfaces: z.array(z.string()),
+  guidance: z.string(),
+});
+
+const DEFAULT_CODEX_GOAL_EXECUTION_ENGINE: NonNullable<CodexGoalRunConfig["executionEngine"]> = "app-server-goal";
 
 function codexGoalControlSurface(launch: CodexGoalLaunchInput): CodexGoalControlSurface {
   // Keep this default aligned with create/load launch config defaults above.
-  const executionEngine = launch.config.executionEngine ?? DEFAULT_CODEX_GOAL_EXECUTION_ENGINE;
+  const parsedExecutionEngine = CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.safeParse(
+    launch.config.executionEngine ?? DEFAULT_CODEX_GOAL_EXECUTION_ENGINE,
+  );
+  const executionEngine = parsedExecutionEngine.success
+    ? parsedExecutionEngine.data
+    : DEFAULT_CODEX_GOAL_EXECUTION_ENGINE;
   const appServerGoal = executionEngine === "app-server-goal";
   return {
     executionEngine,
@@ -4954,7 +4982,7 @@ function goalInputSchema(): Record<string, z.ZodTypeAny> {
     model: z.string().optional(),
     reasoningEffort: z.string().optional(),
     serviceTier: z.string().optional(),
-    executionEngine: z.string().optional(),
+    executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.optional(),
     taskTimeoutMs: z.number().int().positive().optional(),
     staleLockMs: z.number().int().positive().optional(),
     maxAccountCycles: z.number().int().positive().optional(),
