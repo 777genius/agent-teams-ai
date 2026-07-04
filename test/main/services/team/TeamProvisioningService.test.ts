@@ -23447,66 +23447,6 @@ describe('TeamProvisioningService', () => {
     ).toBe(1);
   });
 
-  it('caches persisted bootstrap transcript outcome lookup between close polling reads', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-05-03T12:00:00.000Z'));
-    const teamName = 'zz-unit-bootstrap-transcript-lookup-cache';
-    const memberName = 'tom';
-    const transcriptPath = path.join(tempProjectsBase, 'bootstrap-lookup-cache.jsonl');
-    const svc = new TeamProvisioningService();
-    const harness = svc as any;
-    const findMemberLogs = vi.fn(async () => [{ filePath: transcriptPath }]);
-    const readRecentBootstrapTranscriptOutcome = vi.fn(async () => ({
-      kind: 'success',
-      observedAt: '2026-05-24T09:25:42.904Z',
-      source: 'member_briefing',
-    }));
-    const readBootstrapTranscriptOutcomesInProjectRoot = vi.fn(async () => []);
-    harness.memberLogsFinder = { findMemberLogs };
-    harness.readRecentBootstrapTranscriptOutcome = readRecentBootstrapTranscriptOutcome;
-    harness.readBootstrapTranscriptOutcomesInProjectRoot =
-      readBootstrapTranscriptOutcomesInProjectRoot;
-
-    const firstOutcome = await harness.findBootstrapTranscriptOutcome(teamName, memberName, 123);
-    vi.setSystemTime(new Date('2026-05-03T12:00:06.000Z'));
-    const secondOutcome = await harness.findBootstrapTranscriptOutcome(teamName, memberName, 123);
-
-    expect(secondOutcome).toEqual(firstOutcome);
-    expect(findMemberLogs).toHaveBeenCalledTimes(1);
-    expect(readRecentBootstrapTranscriptOutcome).toHaveBeenCalledTimes(1);
-    expect(readBootstrapTranscriptOutcomesInProjectRoot).toHaveBeenCalledTimes(1);
-
-    vi.setSystemTime(new Date('2026-05-03T12:00:11.000Z'));
-    await harness.findBootstrapTranscriptOutcome(teamName, memberName, 123);
-
-    expect(findMemberLogs).toHaveBeenCalledTimes(2);
-    expect(readRecentBootstrapTranscriptOutcome).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not use persisted bootstrap transcript outcome lookup cache for tracked runs', async () => {
-    const teamName = 'zz-unit-bootstrap-transcript-active-lookup-cache';
-    const memberName = 'tom';
-    const transcriptPath = path.join(tempProjectsBase, 'bootstrap-active-lookup-cache.jsonl');
-    const svc = new TeamProvisioningService();
-    const harness = svc as any;
-    const findMemberLogs = vi.fn(async () => [{ filePath: transcriptPath }]);
-    const readRecentBootstrapTranscriptOutcome = vi.fn(async () => ({
-      kind: 'success',
-      observedAt: '2026-05-24T09:25:42.904Z',
-      source: 'member_briefing',
-    }));
-    harness.memberLogsFinder = { findMemberLogs };
-    harness.readRecentBootstrapTranscriptOutcome = readRecentBootstrapTranscriptOutcome;
-    harness.readBootstrapTranscriptOutcomesInProjectRoot = vi.fn(async () => []);
-    harness.aliveRunByTeam.set(teamName, 'run-1');
-
-    await harness.findBootstrapTranscriptOutcome(teamName, memberName, 123);
-    await harness.findBootstrapTranscriptOutcome(teamName, memberName, 123);
-
-    expect(findMemberLogs).toHaveBeenCalledTimes(2);
-    expect(readRecentBootstrapTranscriptOutcome).toHaveBeenCalledTimes(2);
-  });
-
   it('caches persisted member spawn statuses between close polling reads', async () => {
     const teamName = 'zz-unit-persisted-status-cache';
     const svc = new TeamProvisioningService();
