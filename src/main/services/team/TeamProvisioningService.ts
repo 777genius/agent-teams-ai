@@ -2138,12 +2138,6 @@ export class TeamProvisioningService {
     return isOpenCodeSessionRefreshRetryRecord(...args);
   }
 
-  private findOpenCodeVisibleReplyByRelayOfMessageId(
-    input: Parameters<OpenCodeVisibleReplyProofService['findByRelayOfMessageId']>[0]
-  ): ReturnType<OpenCodeVisibleReplyProofService['findByRelayOfMessageId']> {
-    return this.openCodeVisibleReplyProofService.findByRelayOfMessageId(input);
-  }
-
   private handleDeterministicBootstrapEvent(
     run: ProvisioningRun,
     msg: Record<string, unknown>
