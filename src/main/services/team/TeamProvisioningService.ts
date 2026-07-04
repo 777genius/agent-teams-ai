@@ -423,9 +423,8 @@ import {
   getOpenCodeRuntimeMessageAdapter as getOpenCodeRuntimeMessageAdapterHelper,
   getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterHelper,
   isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
-  isOpenCodeRuntimeRecipientFromSources as isOpenCodeRuntimeRecipientFromSourcesHelper,
+  isOpenCodeRuntimeRecipientFromSources,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
-  resolveRuntimeRecipientProviderIdFromSources as resolveRuntimeRecipientProviderIdFromSourcesHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
@@ -566,7 +565,6 @@ import type {
   TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
-  TeamConfig,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchAggregateState,
@@ -2568,22 +2566,6 @@ export class TeamProvisioningService {
     return getOpenCodeRuntimePermissionListingAdapterHelper(this.getOpenCodeRuntimeAdapter());
   }
 
-  private resolveRuntimeRecipientProviderIdFromSources(
-    memberName: string,
-    config: TeamConfig | null | undefined,
-    metaMembers: readonly TeamMember[]
-  ): TeamProviderId | undefined {
-    return resolveRuntimeRecipientProviderIdFromSourcesHelper({ memberName, config, metaMembers });
-  }
-
-  private isOpenCodeRuntimeRecipientFromSources(
-    memberName: string,
-    config: TeamConfig | null | undefined,
-    metaMembers: readonly TeamMember[]
-  ): boolean {
-    return isOpenCodeRuntimeRecipientFromSourcesHelper({ memberName, config, metaMembers });
-  }
-
   async resolveRuntimeRecipientProviderId(
     teamName: string,
     memberName: string
@@ -4443,7 +4425,7 @@ export class TeamProvisioningService {
         readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
         readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
         isOpenCodeRuntimeRecipientFromSources: ({ memberName, config, metaMembers }) =>
-          this.isOpenCodeRuntimeRecipientFromSources(memberName, config, metaMembers),
+          isOpenCodeRuntimeRecipientFromSources({ memberName, config, metaMembers }),
         relayOpenCodeMemberInboxMessages: (teamName, memberName, relayOptions) =>
           this.relayOpenCodeMemberInboxMessages(teamName, memberName, relayOptions),
         relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
