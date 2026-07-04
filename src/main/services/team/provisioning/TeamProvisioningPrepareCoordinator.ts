@@ -89,7 +89,6 @@ export interface ProviderProbeCachePort {
     cacheKey: string,
     create: () => Promise<ProbeResult | null>
   ): Promise<ProbeResult | null>;
-  clear(): void;
 }
 
 export function createInMemoryProviderProbeCachePort({
@@ -132,10 +131,6 @@ export function createInMemoryProviderProbeCachePort({
       });
       probeInFlightByKey.set(cacheKey, probePromise);
       return probePromise;
-    },
-    clear() {
-      cachedProbeResults.clear();
-      probeInFlightByKey.clear();
     },
   };
 }

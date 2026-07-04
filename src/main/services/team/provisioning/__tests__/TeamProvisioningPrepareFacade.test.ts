@@ -89,6 +89,27 @@ describe('TeamProvisioningPrepareFacade', () => {
     );
   });
 
+  it('isolates default probe caches per facade instance', async () => {
+    const cwd = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'prepare-facade-isolated-'));
+    const buildProvisioningEnv = vi.fn().mockResolvedValue({
+      env: { PATH: '/bin' },
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--codex'],
+    });
+    const probeClaudeRuntime = vi.fn().mockResolvedValue({});
+    const first = createFacade({ buildProvisioningEnv, probeClaudeRuntime });
+    const second = createFacade({ buildProvisioningEnv, probeClaudeRuntime });
+
+    await first.prepareForProvisioning(cwd, { providerId: 'codex' });
+    await first.prepareForProvisioning(cwd, { providerId: 'codex' });
+    await second.prepareForProvisioning(cwd, { providerId: 'codex' });
+    await second.prepareForProvisioning(cwd, { providerId: 'codex' });
+
+    expect(buildProvisioningEnv).toHaveBeenCalledTimes(2);
+    expect(probeClaudeRuntime).toHaveBeenCalledTimes(2);
+  });
+
   it('prepares OpenCode runtime adapter launches through explicit facade ports', async () => {
     const cwd = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'prepare-facade-opencode-'));
     const buildProvisioningEnv = vi.fn().mockResolvedValue({
