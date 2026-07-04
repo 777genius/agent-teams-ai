@@ -44,6 +44,10 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     this.writtenRunIdByTeam = ports.writtenRunIdByTeam ?? new Map<string, string>();
   }
 
+  getWrittenRunIdByTeam(): Map<string, string> {
+    return this.writtenRunIdByTeam;
+  }
+
   async clearPersistedLaunchState(
     teamName: string,
     options?: { expectedRunId?: string }

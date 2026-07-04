@@ -132,7 +132,12 @@ export class TeamProvisioningRuntimeResourceSampling {
       listWindowsProcessTable,
     },
     private readonly pidUsageReader: RuntimeResourceSamplingPidUsageReader = {
-      read: (pids, options) => pidusage(Array.isArray(pids) ? [...pids] : [pids], options),
+      read: (pids, options) => {
+        if (typeof pids === 'number') {
+          return pidusage(pids, options);
+        }
+        return pidusage([...pids], options);
+      },
     }
   ) {
     this.agentRuntimeResourceHistory = new TeamAgentRuntimeResourceHistory({

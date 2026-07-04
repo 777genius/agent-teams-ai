@@ -19,6 +19,8 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+type BuildTeamAgentRuntimeSnapshotParams = Parameters<typeof buildTeamAgentRuntimeSnapshotHelper>[0];
+
 export interface TeamProvisioningRuntimeSnapshotFacadePorts {
   runs: ReadonlyMap<string, TeamProvisioningRuntimeSnapshotRun>;
   runtimeAdapterRunByTeam: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
@@ -50,6 +52,9 @@ export interface TeamProvisioningRuntimeSnapshotFacadePorts {
   getRuntimeSnapshotCacheGeneration(teamName: string): number;
   getTrackedRunId(teamName: string): string | null;
   getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number;
+  buildTeamAgentRuntimeSnapshot?(
+    params: BuildTeamAgentRuntimeSnapshotParams
+  ): Promise<TeamAgentRuntimeSnapshot>;
   logDebug(message: string): void;
 }
 
@@ -98,7 +103,9 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     runId: string | null,
     generationAtStart: number
   ): Promise<TeamAgentRuntimeSnapshot> {
-    return buildTeamAgentRuntimeSnapshotHelper({
+    const buildSnapshot =
+      this.ports.buildTeamAgentRuntimeSnapshot ?? buildTeamAgentRuntimeSnapshotHelper;
+    return buildSnapshot({
       teamName,
       runId,
       generationAtStart,

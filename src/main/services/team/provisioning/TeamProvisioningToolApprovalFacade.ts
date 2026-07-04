@@ -8,6 +8,7 @@ import {
   type RuntimeToolApprovalEntry,
 } from '../approvals/RuntimeToolApprovalCoordinator';
 
+import { type RespondToTeammatePermissionInput } from './TeamProvisioningTeammatePermissionResponse';
 import {
   type TeamProvisioningToolApprovalNotification,
   type TeamProvisioningToolApprovalNotificationConstructor,
@@ -292,6 +293,10 @@ export class TeamProvisioningToolApprovalFacade<
 
   autoDenyControlRequest(run: TRun, requestId: string): void {
     this.toolApprovalPortsBoundary.autoDenyControlRequest(run, requestId);
+  }
+
+  async respondToTeammatePermission(input: RespondToTeammatePermissionInput): Promise<void> {
+    await this.toolApprovalPortsBoundary.respondToTeammatePermission(input);
   }
 
   reEvaluatePendingApprovals(): void {

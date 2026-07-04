@@ -29,7 +29,7 @@ import {
 import { killProcessByPid } from '@main/utils/processKill';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
-import { type ParsedPermissionRequest } from '@shared/utils/inboxNoise';
+import { type ParsedPermissionRequest, type PermissionSuggestion } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { type ParsedTeammateContent } from '@shared/utils/teammateMessageParser';
@@ -93,6 +93,8 @@ import {
   type TeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
 } from './provisioning/TeamProvisioningBootstrapStallPortsFactory';
 import {
+  applyBootstrapTranscriptEvidenceOverlay as applyBootstrapTranscriptEvidenceOverlayHelper,
+  applyProcessBootstrapTransportOverlay as applyProcessBootstrapTransportOverlayHelper,
   type BootstrapTranscriptOutcome,
   findBootstrapRuntimeProofObservedAt as findBootstrapRuntimeProofObservedAtHelper,
   type ParsedBootstrapTranscriptTailCacheEntry,
@@ -149,7 +151,10 @@ import {
 } from './provisioning/TeamProvisioningIdlePromptInjectionPortsFactory';
 import { markTeamInboxMessagesRead } from './provisioning/TeamProvisioningInboxPersistence';
 import { armSilentTeammateForward } from './provisioning/TeamProvisioningInboxRelayCandidates';
-import { hasStableInboxMessageId } from './provisioning/TeamProvisioningInboxRelayPolicy';
+import {
+  getLeadRelayReadCommitBatch as getLeadRelayReadCommitBatchHelper,
+  hasStableInboxMessageId,
+} from './provisioning/TeamProvisioningInboxRelayPolicy';
 import { notifyAliveTeamsAboutLanguageChangeWithPorts } from './provisioning/TeamProvisioningLanguageChangeNotification';
 import { assertOpenCodeNotLaunchedThroughLegacyProvisioning } from './provisioning/TeamProvisioningLaunchCompatibility';
 import {
@@ -233,6 +238,8 @@ import {
   maybeAuditMemberSpawnStatusesForRun,
   type MemberSpawnStatusAuditPorts,
   type MemberSpawnStatusMutationPorts,
+  reconcileBootstrapTranscriptFailuresForRun,
+  reconcileBootstrapTranscriptSuccessesForRun,
   setMemberSpawnStatusForRun,
 } from './provisioning/TeamProvisioningMemberSpawnSnapshots';
 import {
@@ -291,6 +298,7 @@ import {
   type TeamProvisioningOpenCodeMemberMessageDeliveryHost,
 } from './provisioning/TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
 import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
+import { type PreparedOpenCodeRuntimeAdapterLaunch } from './provisioning/TeamProvisioningOpenCodeRuntimeAdapterPreparation';
 import {
   createOpenCodeTeamThroughRuntimeAdapterFlow,
   launchOpenCodeTeamThroughRuntimeAdapterFlow,
@@ -336,6 +344,8 @@ import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/Tea
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
 import { writeOpenCodeTeamConfig } from './provisioning/TeamProvisioningOpenCodeTeamConfigWriter';
 import {
+  buildStallProgressMessage,
+  buildStallWarningText,
   isAuthFailureWarning,
   normalizeApiRetryErrorMessage,
 } from './provisioning/TeamProvisioningOutputErrorPolicy';
@@ -422,6 +432,7 @@ import {
   type TeamRuntimeLaunchArgsPlan,
   type ValidConfigProbeResult,
 } from './provisioning/TeamProvisioningRuntimeLaunchSelection';
+import { mergeRuntimeDiagnostics } from './provisioning/TeamProvisioningRuntimeMetadata';
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import {
   getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
@@ -434,6 +445,7 @@ import {
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
+  buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
@@ -483,6 +495,7 @@ import {
 import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
 import { TeamProvisioningTaskActivityRepairBoundary } from './provisioning/TeamProvisioningTaskActivityRepairBoundary';
 import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
+import { buildTeammatePermissionUpdatedInput } from './provisioning/TeamProvisioningToolApprovalFlow';
 import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
@@ -581,6 +594,7 @@ import type {
   TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
+  TeamConfig,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchAggregateState,
@@ -1075,7 +1089,7 @@ export class TeamProvisioningService {
       getProvisioningRunId: (teamName) => this.runTracking.getProvisioningRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
       isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
-      readConfigForObservation: (teamName) => this.configFacade.readConfigForObservation(teamName),
+      readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
       readLeadInboxMessages: (teamName, leadName) =>
         this.inboxReader.getMessagesFor(teamName, leadName),
       markInboxMessagesRead: (teamName, leadName, messages) =>
@@ -1088,12 +1102,12 @@ export class TeamProvisioningService {
         this.confirmSameTeamNativeMatches(teamName, leadName, messages),
       scheduleSameTeamPersistRetry: (teamName) => this.scheduleSameTeamPersistRetry(teamName),
       scheduleSameTeamDeferredRetry: (teamName) => this.scheduleSameTeamDeferredRetry(teamName),
-      resolveControlApiBaseUrl: () => this.providerRuntime.resolveControlApiBaseUrl(),
+      resolveControlApiBaseUrl: () => this.resolveControlApiBaseUrl(),
       sendMessageToRun: (run, message) => this.sendMessageToRun(run, message),
       hasAcceptedLeadWorkSyncReport: (input) =>
-        this.memberWorkSyncProofBoundary.hasAcceptedLeadWorkSyncReport(input),
+        this.hasAcceptedLeadWorkSyncReport(input),
       scheduleLeadProofMissingWorkSyncRecovery: (input) =>
-        this.memberWorkSyncProofBoundary.scheduleLeadProofMissingWorkSyncRecovery(input),
+        this.scheduleLeadProofMissingWorkSyncRecovery(input),
       pushLiveLeadTextMessage: (run, text, messageId, timestamp) =>
         this.pushLiveLeadTextMessage(run, text, messageId, timestamp),
       pushLiveLeadProcessMessage: (teamName, message) =>
@@ -1208,6 +1222,7 @@ export class TeamProvisioningService {
     memberSpawnStatusesInFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
   });
   private readonly launchStateStore = new TeamLaunchStateStore();
+  private readonly defaultLaunchStateStore = this.launchStateStore;
   private readonly configFacade!: TeamProvisioningConfigFacade;
   private readonly liveRuntimeMetadataPorts: ReturnType<
     typeof createTeamProvisioningLiveRuntimeMetadataPorts
@@ -1569,13 +1584,25 @@ export class TeamProvisioningService {
     this.launchStateStoreBoundary = new TeamProvisioningLaunchStateStoreBoundary({
       launchStateStore: {
         read: (teamName) => this.launchStateStore.read(teamName),
-        write: (teamName, snapshot) => this.launchStateStore.write(teamName, snapshot),
-        clear: (teamName) => this.launchStateStore.clear(teamName),
+        write: async (teamName, snapshot) => {
+          await this.launchStateStore.write(teamName, snapshot);
+          if (this.launchStateStore !== this.defaultLaunchStateStore) {
+            await this.defaultLaunchStateStore.write(teamName, snapshot);
+          }
+        },
+        clear: async (teamName) => {
+          if (typeof this.launchStateStore.clear === 'function') {
+            await this.launchStateStore.clear(teamName);
+          }
+          if (this.launchStateStore !== this.defaultLaunchStateStore) {
+            await this.defaultLaunchStateStore.clear(teamName);
+          }
+        },
       },
       membersMetaStore: {
         getMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
       },
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
+      getTrackedRunId: (teamName) => this.getTrackedRunId(teamName),
       applyOpenCodeSecondaryEvidenceOverlay: (params) =>
         this.applyOpenCodeSecondaryEvidenceOverlay(params),
       applyBootstrapStallOverlay: (snapshot) =>
@@ -1607,10 +1634,16 @@ export class TeamProvisioningService {
     this.liveRuntimeMetadataPorts = createTeamProvisioningLiveRuntimeMetadataPorts({
       runs: this.runs,
       runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      teamMetaStore: this.teamMetaStore,
-      membersMetaStore: this.membersMetaStore,
-      launchStateStore: this.launchStateStore,
-      readConfigSnapshot: (targetTeamName) => this.configFacade.readConfigSnapshot(targetTeamName),
+      teamMetaStore: {
+        getMeta: (targetTeamName) => this.teamMetaStore.getMeta(targetTeamName),
+      },
+      membersMetaStore: {
+        getMembers: (targetTeamName) => this.membersMetaStore.getMembers(targetTeamName),
+      },
+      launchStateStore: {
+        read: (targetTeamName) => this.launchStateStore.read(targetTeamName),
+      },
+      readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
       readPersistedRuntimeMembers: (targetTeamName) =>
         this.readPersistedRuntimeMembers(targetTeamName),
       liveTeamAgentRuntimeMetadataCache: this.liveTeamAgentRuntimeMetadataCache,
@@ -1624,18 +1657,24 @@ export class TeamProvisioningService {
         ),
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
       logDebug: (message) => logger.debug(message),
     });
     this.runtimeSnapshotFacade = new TeamProvisioningRuntimeSnapshotFacade({
       runs: this.runs,
       runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      teamMetaStore: this.teamMetaStore,
-      membersMetaStore: this.membersMetaStore,
-      launchStateStore: this.launchStateStore,
-      readConfigSnapshot: (targetTeamName) => this.configFacade.readConfigSnapshot(targetTeamName),
+      teamMetaStore: {
+        getMeta: (targetTeamName) => this.teamMetaStore.getMeta(targetTeamName),
+      },
+      membersMetaStore: {
+        getMembers: (targetTeamName) => this.membersMetaStore.getMembers(targetTeamName),
+      },
+      launchStateStore: {
+        read: (targetTeamName) => this.launchStateStore.read(targetTeamName),
+      },
+      readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
       readPersistedRuntimeMembers: (targetTeamName) =>
         this.readPersistedRuntimeMembers(targetTeamName),
       getMemberSpawnStatuses: (targetTeamName) => this.getMemberSpawnStatuses(targetTeamName),
@@ -1646,9 +1685,10 @@ export class TeamProvisioningService {
       agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+        this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      buildTeamAgentRuntimeSnapshot: (params) => this.buildTeamAgentRuntimeSnapshot(params),
       logDebug: (message) => logger.debug(message),
     });
     this.toolApprovalFacade = new TeamProvisioningToolApprovalFacade<ProvisioningRun>({
@@ -1764,9 +1804,9 @@ export class TeamProvisioningService {
       updateConfigProjectPath: (teamName, cwd) => this.updateConfigProjectPath(teamName, cwd),
       restorePrelaunchConfig: (teamName) => this.restorePrelaunchConfig(teamName),
       materializeEffectiveTeamMemberSpecs: (params) =>
-        this.prepareFacade.materializeEffectiveTeamMemberSpecs(params),
+        this.materializeEffectiveTeamMemberSpecs(params),
       resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
-        this.prepareFacade.resolveOpenCodeMemberWorkspacesForRuntime(params),
+        this.resolveOpenCodeMemberWorkspacesForRuntime(params),
       planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
         this.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
       createMixedSecondaryLaneStates: (lanePlan) => this.createMixedSecondaryLaneStates(lanePlan),
@@ -2167,6 +2207,24 @@ export class TeamProvisioningService {
     return { config, teamMeta, metaMembers };
   }
 
+  private readConfigSnapshot(teamName: string): Promise<TeamConfig | null> {
+    const reader = this.configReader as {
+      getConfig(teamName: string): Promise<TeamConfig | null>;
+      getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
+    };
+    return typeof reader.getConfigSnapshot === 'function'
+      ? reader.getConfigSnapshot(teamName)
+      : reader.getConfig(teamName);
+  }
+
+  private readConfigForObservation(teamName: string): Promise<TeamConfig | null> {
+    return this.readConfigSnapshot(teamName);
+  }
+
+  private readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null> {
+    return this.configReader.getConfig(teamName);
+  }
+
   private readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[] {
     return this.configFacade.readPersistedRuntimeMembers(teamName);
   }
@@ -2175,8 +2233,22 @@ export class TeamProvisioningService {
     return this.configFacade.readPersistedTeamProjectPath(teamName);
   }
 
+  private getTrackedRunId(teamName: string): string | null {
+    return this.runTracking.getTrackedRunId(teamName);
+  }
+
   private getRuntimeSnapshotCacheGeneration(teamName: string): number {
     return this.runtimeSnapshotCacheBoundary.getRuntimeSnapshotCacheGeneration(teamName);
+  }
+
+  private getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number {
+    return this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId);
+  }
+
+  private buildTeamAgentRuntimeSnapshot(
+    params: Parameters<typeof buildTeamAgentRuntimeSnapshotHelper>[0]
+  ): ReturnType<typeof buildTeamAgentRuntimeSnapshotHelper> {
+    return buildTeamAgentRuntimeSnapshotHelper(params);
   }
 
   private getMemberSpawnStatusesCacheGeneration(teamName: string): number {
@@ -2371,6 +2443,15 @@ export class TeamProvisioningService {
     return this.prepareFacade.resolveOpenCodeMemberWorkspacesForRuntime(params);
   }
 
+  private prepareOpenCodeRuntimeAdapterLaunch<
+    TRequest extends TeamCreateRequest | TeamLaunchRequest,
+  >(params: {
+    request: TRequest;
+    members: TeamCreateRequest['members'];
+  }): Promise<PreparedOpenCodeRuntimeAdapterLaunch<TRequest>> {
+    return this.prepareFacade.prepareOpenCodeRuntimeAdapterLaunch(params);
+  }
+
   private normalizeTeamConfigForLaunch(teamName: string, configRaw: string): Promise<void> {
     return this.configFacade.normalizeTeamConfigForLaunch(teamName, configRaw);
   }
@@ -2424,6 +2505,81 @@ export class TeamProvisioningService {
     members: Parameters<typeof writeOpenCodeTeamConfig>[1]
   ): ReturnType<typeof writeOpenCodeTeamConfig> {
     return writeOpenCodeTeamConfig(launchRequest, members);
+  }
+
+  private resolveControlApiBaseUrl(): Promise<string | null> {
+    return this.providerRuntime.resolveControlApiBaseUrl();
+  }
+
+  private async respondToTeammatePermission(
+    run: Parameters<TeamProvisioningToolApprovalFacade<ProvisioningRun>["respondToTeammatePermission"]>[0]["run"],
+    agentId: string,
+    requestId: string,
+    allow: boolean,
+    message?: string,
+    permissionSuggestions?: PermissionSuggestion[],
+    toolName?: string,
+    toolInput?: Record<string, unknown>
+  ): Promise<void> {
+    await this.toolApprovalFacade.respondToTeammatePermission({
+      run,
+      agentId,
+      requestId,
+      allow,
+      message,
+      permissionSuggestions,
+      toolName,
+      toolInput,
+    });
+  }
+
+  private buildTeammatePermissionUpdatedInput(
+    toolName: string | undefined,
+    toolInput: Record<string, unknown> | undefined,
+    message: string | undefined
+  ): Record<string, unknown> | undefined {
+    return buildTeammatePermissionUpdatedInput(toolName, toolInput, message);
+  }
+
+  private buildStallProgressMessage(silenceSec: number, elapsed: string): string {
+    return buildStallProgressMessage(silenceSec, elapsed);
+  }
+
+  private buildStallWarningText(
+    silenceSec: number,
+    request: Parameters<typeof buildStallWarningText>[1]
+  ): string {
+    return buildStallWarningText(silenceSec, request);
+  }
+
+  private hasAcceptedLeadWorkSyncReport(input: {
+    teamName: string;
+    leadName: string;
+  }): Promise<boolean> {
+    return this.memberWorkSyncProofBoundary.hasAcceptedLeadWorkSyncReport(input);
+  }
+
+  private scheduleLeadProofMissingWorkSyncRecovery(input: {
+    teamName: string;
+    leadName: string;
+    message: InboxMessage & { messageId: string };
+  }): Promise<boolean> {
+    return this.memberWorkSyncProofBoundary.scheduleLeadProofMissingWorkSyncRecovery(input);
+  }
+
+  private getLeadRelayReadCommitBatch(
+    input: Omit<
+      Parameters<typeof getLeadRelayReadCommitBatchHelper>[0],
+      "hasAcceptedLeadWorkSyncReport" | "scheduleLeadProofMissingWorkSyncRecovery"
+    >
+  ): ReturnType<typeof getLeadRelayReadCommitBatchHelper> {
+    return getLeadRelayReadCommitBatchHelper({
+      ...input,
+      hasAcceptedLeadWorkSyncReport: (reportInput) =>
+        this.hasAcceptedLeadWorkSyncReport(reportInput),
+      scheduleLeadProofMissingWorkSyncRecovery: (recoveryInput) =>
+        this.scheduleLeadProofMissingWorkSyncRecovery(recoveryInput),
+    });
   }
 
   private async prepareWorkspaceTrustForDeterministicRun(input: {
@@ -3950,7 +4106,7 @@ export class TeamProvisioningService {
       writeOpenCodeTeamConfig: (launchRequest, members) =>
         this.writeOpenCodeTeamConfig(launchRequest, members),
       prepareOpenCodeRuntimeAdapterLaunch: (params) =>
-        this.prepareFacade.prepareOpenCodeRuntimeAdapterLaunch(params),
+        this.prepareOpenCodeRuntimeAdapterLaunch(params),
       readTeamConfigRaw: (teamName) => {
         const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
         return tryReadRegularFileUtf8(configPath, {
@@ -4055,9 +4211,9 @@ export class TeamProvisioningService {
           buildProvisioningEnv: (providerId, providerBackendId, options) =>
             this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
           materializeEffectiveTeamMemberSpecs: (params) =>
-            this.prepareFacade.materializeEffectiveTeamMemberSpecs(params),
+            this.materializeEffectiveTeamMemberSpecs(params),
           resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
-            this.prepareFacade.resolveOpenCodeMemberWorkspacesForRuntime(params),
+            this.resolveOpenCodeMemberWorkspacesForRuntime(params),
           planRuntimeLanesOrThrow: (leadProviderId, members, cwd) =>
             this.planRuntimeLanesOrThrow(leadProviderId, members, cwd),
           buildCrossProviderMemberArgs: (primaryProviderId, memberSpecs, options) =>
@@ -5352,6 +5508,41 @@ export class TeamProvisioningService {
       memberName,
       sinceMs
     );
+  }
+
+  private applyProcessBootstrapTransportOverlay(
+    input: Omit<
+      Parameters<typeof applyProcessBootstrapTransportOverlayHelper>[0],
+      'nowIso' | 'mergeRuntimeDiagnostics'
+    >
+  ): ReturnType<typeof applyProcessBootstrapTransportOverlayHelper> {
+    return applyProcessBootstrapTransportOverlayHelper({
+      ...input,
+      nowIso,
+      mergeRuntimeDiagnostics,
+    });
+  }
+
+  private async applyBootstrapTranscriptEvidenceOverlay(
+    snapshot: PersistedTeamLaunchSnapshot | null
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    return applyBootstrapTranscriptEvidenceOverlayHelper({
+      snapshot,
+      expectedMembers: snapshot ? getPersistedLaunchMemberNames(snapshot) : [],
+      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
+        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
+      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+      nowIso,
+    });
+  }
+
+  private async reconcileBootstrapTranscriptFailures(run: ProvisioningRun): Promise<void> {
+    await reconcileBootstrapTranscriptFailuresForRun(run, this.memberSpawnStatusAuditPorts);
+  }
+
+  private async reconcileBootstrapTranscriptSuccesses(run: ProvisioningRun): Promise<void> {
+    await reconcileBootstrapTranscriptSuccessesForRun(run, this.memberSpawnStatusAuditPorts);
   }
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
