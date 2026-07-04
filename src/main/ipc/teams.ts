@@ -180,6 +180,7 @@ import type {
   TeamMemberLogsFinder,
   TeamProvisioningService,
 } from '../services';
+import type { TeamProvisioningStartApi } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type {
@@ -738,6 +739,7 @@ function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string |
 
 let teamDataService: TeamDataService | null = null;
 let teamProvisioningService: TeamProvisioningService | null = null;
+let teamProvisioningStartApi: TeamProvisioningStartApi | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
@@ -802,6 +804,7 @@ export function initializeTeamHandlers(
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
+  teamProvisioningStartApi = provisioningService;
   initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
@@ -1003,6 +1006,13 @@ function getTeamProvisioningService(): TeamProvisioningService {
     throw new Error('Team provisioning handlers are not initialized');
   }
   return teamProvisioningService;
+}
+
+function getTeamProvisioningStartApi(): TeamProvisioningStartApi {
+  if (!teamProvisioningStartApi) {
+    throw new Error('Team provisioning handlers are not initialized');
+  }
+  return teamProvisioningStartApi;
 }
 
 function getTeammateToolTracker(): TeammateToolTracker {
@@ -2216,7 +2226,7 @@ async function handleCreateTeam(
     // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
-      const response = await getTeamProvisioningService().createTeam(
+      const response = await getTeamProvisioningStartApi().createTeam(
         validation.value,
         (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2384,7 +2394,7 @@ async function handleLaunchTeam(
       // as a normal launch before startup files begin changing.
       markTeamEngaged(tn);
       try {
-        const response = await getTeamProvisioningService().createTeam(
+        const response = await getTeamProvisioningStartApi().createTeam(
           createRequest,
           (progress) => {
             launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2468,7 +2478,7 @@ async function handleLaunchTeam(
     // 0-30s window before the periodic watch-scope reconcile would otherwise pick it up.
     markTeamEngaged(validatedTeamName.value!);
     try {
-      const response = await getTeamProvisioningService().launchTeam(
+      const response = await getTeamProvisioningStartApi().launchTeam(
         {
           teamName: validatedTeamName.value!,
           cwd,
@@ -2674,7 +2684,7 @@ async function handleProvisioningStatus(
     return { success: false, error: 'runId is required' };
   }
   return wrapTeamHandler('provisioningStatus', () =>
-    getTeamProvisioningService().getProvisioningStatus(runId.trim())
+    getTeamProvisioningStartApi().getProvisioningStatus(runId.trim())
   );
 }
 

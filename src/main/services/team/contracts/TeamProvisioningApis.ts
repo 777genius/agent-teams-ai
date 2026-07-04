@@ -1,4 +1,24 @@
-import type { TeamRuntimeState } from '@shared/types/team';
+import type {
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamLaunchRequest,
+  TeamLaunchResponse,
+  TeamProvisioningProgress,
+  TeamRuntimeState,
+} from '@shared/types/team';
+
+export interface TeamProvisioningStartApi {
+  createTeam(
+    request: TeamCreateRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamCreateResponse>;
+  launchTeam(
+    request: TeamLaunchRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamLaunchResponse>;
+  getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress>;
+  repairStaleTaskActivityIntervalsBeforeSnapshot?(teamName: string): Promise<void>;
+}
 
 export interface OpenCodeRuntimeControlAck {
   ok: true;
