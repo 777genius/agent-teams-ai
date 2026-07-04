@@ -15,6 +15,22 @@ export {
   type TeamMetaFixtureOptions,
 } from './fixtures';
 export {
+  memberLifecycleControllerHarness,
+  memberLifecycleHostHarness,
+  outputRecoveryFacadeHarness,
+  privateHarness,
+  providerRuntimeHarness,
+  provisioningConfigFacadeHarness,
+  runtimeResourceSamplingHarness,
+  stubMemberLifecyclePersistedRuntimeMembers,
+  stubProvisioningConfigProjectPath,
+  type TeamProvisioningOutputRecoveryFacadeHarness,
+  type TeamProvisioningProviderRuntimeHarness,
+  type TeamProvisioningServicePrivateHarness,
+  type TeamProvisioningVerificationProbePortsHarness,
+  verificationProbePortsHarness,
+} from './servicePrivateHarness';
+export {
   type HarnessTeamConfigReaderPort,
   type HarnessTeamMembersMetaStorePort,
   type HarnessTeamMetaStorePort,

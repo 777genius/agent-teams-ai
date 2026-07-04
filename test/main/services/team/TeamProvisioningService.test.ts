@@ -242,10 +242,7 @@ import { toOpenCodePersistedLaunchMember } from '@main/services/team/provisionin
 import { readProcessCommandByPid } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 import { formatToolApprovalBody } from '@main/services/team/provisioning/TeamProvisioningToolApprovalFlow';
-import {
-  OpenCodeTeamRuntimeAdapter,
-  type OpenCodeTeamRuntimeMessageResult,
-} from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { getTeamBootstrapStatePath } from '@main/services/team/TeamBootstrapStateReader';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -275,12 +272,20 @@ import {
 } from 'agent-teams-controller';
 import pidusage from 'pidusage';
 
+import {
+  memberLifecycleControllerHarness,
+  memberLifecycleHostHarness,
+  outputRecoveryFacadeHarness,
+  privateHarness,
+  providerRuntimeHarness,
+  provisioningConfigFacadeHarness,
+  runtimeResourceSamplingHarness,
+  stubMemberLifecyclePersistedRuntimeMembers,
+  stubProvisioningConfigProjectPath,
+  verificationProbePortsHarness,
+} from './provisioningHarness';
+
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
-import type {
-  TeamProvisioningMemberLifecycleController,
-  TeamProvisioningMemberLifecycleHost,
-} from '@main/services/team/provisioning/TeamProvisioningMemberLifecycle';
-import type { TeamProvisioningRuntimeResourceSampling } from '@main/services/team/provisioning/TeamProvisioningRuntimeResourceSampling';
 import type { TeamConfig, TeamMember, TeamProvisioningMemberInput } from '@shared/types/team';
 
 const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
@@ -829,149 +834,6 @@ function createMemberSpawnStatusEntry(
   };
 }
 
-type TeamProvisioningServicePrivateHarness = {
-  getLiveTeamAgentRuntimeMetadata: (
-    teamName: string
-  ) => Promise<Map<string, Record<string, unknown>>>;
-  attachLiveRuntimeMetadataToStatuses: (
-    teamName: string,
-    statuses: Record<string, Record<string, unknown>>,
-    options?: Record<string, unknown>
-  ) => Promise<Record<string, Record<string, unknown>>>;
-  applyBootstrapTranscriptEvidenceOverlay: (
-    snapshot: ReturnType<typeof createPersistedLaunchSnapshot> | null
-  ) => Promise<ReturnType<typeof createPersistedLaunchSnapshot> | null>;
-  applyProcessBootstrapTransportOverlay: (
-    input: Record<string, unknown>
-  ) => Record<string, unknown>;
-  reconcilePersistedLaunchState: (teamName: string) => Promise<{
-    snapshot: null;
-    statuses: Record<string, never>;
-  }>;
-  sendOpenCodeMemberMessageToRuntimeSerialized: (input: {
-    teamName: string;
-    laneId: string;
-    send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
-  }) => Promise<OpenCodeTeamRuntimeMessageResult>;
-  getRuntimeSnapshotCacheGeneration: (teamName: string) => number;
-  invalidateRuntimeSnapshotCaches: (teamName: string) => void;
-  aliveRunByTeam: Map<string, string>;
-  readRecentBootstrapTranscriptOutcome: (
-    filePath: string,
-    sinceMs: number | null,
-    memberName: string,
-    teamName: string,
-    options?: { allowAnonymousFailure?: boolean; contextMemberNames?: readonly string[] }
-  ) => Promise<{ kind: string; observedAt: string; source?: string; reason?: string } | null>;
-  readPersistedRuntimeMembers: (teamName: string) => Array<Record<string, unknown>>;
-  readPersistedTeamProjectPath: (teamName: string) => string | null;
-};
-
-function privateHarness(svc: TeamProvisioningService): TeamProvisioningServicePrivateHarness {
-  return svc as unknown as TeamProvisioningServicePrivateHarness;
-}
-
-interface TeamProvisioningOutputRecoveryFacadeHarness {
-  updateStdoutParserCarry(run: unknown, carry: string): void;
-  flushStdoutParserCarry(run: unknown): void;
-  respawnAfterAuthFailure(run: unknown): Promise<void>;
-}
-
-function outputRecoveryFacadeHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningOutputRecoveryFacadeHarness {
-  return (
-    svc as unknown as {
-      outputRecoveryFacade: TeamProvisioningOutputRecoveryFacadeHarness;
-    }
-  ).outputRecoveryFacade;
-}
-
-interface TeamProvisioningProviderRuntimeHarness {
-  buildProvisioningEnv(
-    providerId?: unknown,
-    providerBackendId?: unknown,
-    options?: unknown
-  ): Promise<Record<string, unknown>>;
-  validateAgentTeamsMcpRuntime(
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    mcpConfigPath: string,
-    options?: unknown
-  ): Promise<void>;
-}
-
-function providerRuntimeHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningProviderRuntimeHarness {
-  return (
-    svc as unknown as {
-      providerRuntime: TeamProvisioningProviderRuntimeHarness;
-    }
-  ).providerRuntime;
-}
-
-interface TeamProvisioningVerificationProbePortsHarness {
-  waitForValidConfig(run: unknown): Promise<{
-    ok: boolean;
-    location?: string;
-    configPath?: string;
-  }>;
-  waitForTeamInList(teamName: string, run?: unknown): Promise<boolean>;
-  waitForMissingInboxes(run: unknown): Promise<string[]>;
-}
-
-function verificationProbePortsHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningVerificationProbePortsHarness {
-  return (
-    svc as unknown as {
-      verificationProbePorts: TeamProvisioningVerificationProbePortsHarness;
-    }
-  ).verificationProbePorts;
-}
-
-function runtimeResourceSamplingHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningRuntimeResourceSampling {
-  return (
-    svc as unknown as {
-      runtimeResourceSampling: TeamProvisioningRuntimeResourceSampling;
-    }
-  ).runtimeResourceSampling;
-}
-
-function memberLifecycleControllerHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningMemberLifecycleController {
-  return (
-    svc as unknown as {
-      memberLifecycleController: TeamProvisioningMemberLifecycleController;
-    }
-  ).memberLifecycleController;
-}
-
-function memberLifecycleHostHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningMemberLifecycleHost {
-  return (
-    svc as unknown as {
-      memberLifecycleHost: TeamProvisioningMemberLifecycleHost;
-    }
-  ).memberLifecycleHost;
-}
-
-function provisioningConfigFacadeHarness(
-  svc: TeamProvisioningService
-): TeamProvisioningConfigFacade {
-  return (
-    svc as unknown as {
-      configFacade: TeamProvisioningConfigFacade;
-    }
-  ).configFacade;
-}
-
 function createConfigReaderForConfig(
   config: unknown
 ): ConstructorParameters<typeof TeamProvisioningService>[0] {
@@ -990,20 +852,6 @@ function createServiceWithConfigReader(
   configReader: ConstructorParameters<typeof TeamProvisioningService>[0]
 ): TeamProvisioningService {
   return new TeamProvisioningService(configReader);
-}
-
-function stubMemberLifecyclePersistedRuntimeMembers(
-  svc: TeamProvisioningService,
-  members: ReturnType<TeamProvisioningConfigFacade['readPersistedRuntimeMembers']>
-): void {
-  memberLifecycleHostHarness(svc).readPersistedRuntimeMembers = vi.fn(() => members);
-}
-
-function stubProvisioningConfigProjectPath(
-  svc: TeamProvisioningService,
-  projectPath: string
-): void {
-  provisioningConfigFacadeHarness(svc).readPersistedTeamProjectPath = vi.fn(() => projectPath);
 }
 
 function createOpenCodeRuntimeCheckinPortsForTest(
