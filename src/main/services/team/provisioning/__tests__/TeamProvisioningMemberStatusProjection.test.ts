@@ -46,7 +46,8 @@ describe('member status projection helpers', () => {
     const projected = projectPendingRestartStatusForSnapshot(
       'worker',
       baseStatus(),
-      new Map([['worker', { requestedAt: '2026-01-01T00:01:00.000Z' }]])
+      new Map([['worker', { requestedAt: '2026-01-01T00:01:00.000Z' }]]),
+      Date.parse('2026-01-01T00:01:30.000Z')
     );
 
     expect(projected).toMatchObject({
@@ -59,6 +60,25 @@ describe('member status projection helpers', () => {
       firstSpawnAcceptedAt: '2026-01-01T00:01:00.000Z',
       runtimeDiagnostic: 'Manual restart is already in progress; waiting for teammate bootstrap.',
       runtimeDiagnosticSeverity: 'info',
+    });
+  });
+
+  it('projects a pending restart as failed once the settle window elapses', () => {
+    const projected = projectPendingRestartStatusForSnapshot(
+      'worker',
+      baseStatus(),
+      new Map([['worker', { requestedAt: '2026-01-01T00:01:00.000Z' }]]),
+      Date.parse('2026-01-01T00:01:00.000Z') + 181_000
+    );
+
+    expect(projected).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      bootstrapConfirmed: false,
+      runtimeAlive: false,
+      hardFailureReason: 'Restart did not confirm teammate bootstrap within the expected window.',
+      runtimeDiagnosticSeverity: 'error',
     });
   });
 
@@ -79,11 +99,14 @@ describe('member status projection helpers', () => {
   });
 
   it('builds status records for expected members and applies restart projection', () => {
-    const statuses = buildRuntimeSpawnStatusRecord({
-      expectedMembers: ['lead', 'worker'],
-      memberSpawnStatuses: new Map([['lead', baseStatus({ launchState: 'confirmed_alive' })]]),
-      pendingMemberRestarts: new Map([['worker', { requestedAt: '2026-01-01T00:01:00.000Z' }]]),
-    });
+    const statuses = buildRuntimeSpawnStatusRecord(
+      {
+        expectedMembers: ['lead', 'worker'],
+        memberSpawnStatuses: new Map([['lead', baseStatus({ launchState: 'confirmed_alive' })]]),
+        pendingMemberRestarts: new Map([['worker', { requestedAt: '2026-01-01T00:01:00.000Z' }]]),
+      },
+      Date.parse('2026-01-01T00:01:30.000Z')
+    );
 
     expect(statuses.lead).toMatchObject({ launchState: 'confirmed_alive' });
     expect(statuses.worker).toMatchObject({

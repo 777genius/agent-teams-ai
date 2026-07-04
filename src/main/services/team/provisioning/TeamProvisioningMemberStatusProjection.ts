@@ -385,10 +385,19 @@ export function getFailedSpawnMembersFromStatuses(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// A restarted teammate that never confirms bootstrap can otherwise keep the
+// team in partial_pending indefinitely. The CLI waits about 150s for bootstrap
+// submission, so 180s gives it a grace window before the projection settles the
+// restart as a terminal launch failure.
+const PENDING_MEMBER_RESTART_SETTLE_TIMEOUT_MS = 180_000;
+const PENDING_MEMBER_RESTART_SETTLE_REASON =
+  'Restart did not confirm teammate bootstrap within the expected window.';
+
 export function projectPendingRestartStatusForSnapshot(
   memberName: string,
   current: MemberSpawnStatusEntry,
-  pendingMemberRestarts: Map<string, PendingMemberRestartProjection> | undefined
+  pendingMemberRestarts: Map<string, PendingMemberRestartProjection> | undefined,
+  nowMs: number = Date.now()
 ): MemberSpawnStatusEntry {
   const pendingRestart = pendingMemberRestarts?.get(memberName);
   if (!pendingRestart) {
@@ -401,6 +410,33 @@ export function projectPendingRestartStatusForSnapshot(
     current.skippedForLaunch === true
   ) {
     return current;
+  }
+
+  const requestedAtMs = Date.parse(pendingRestart.requestedAt);
+  if (
+    Number.isFinite(requestedAtMs) &&
+    nowMs - requestedAtMs > PENDING_MEMBER_RESTART_SETTLE_TIMEOUT_MS
+  ) {
+    const failed: MemberSpawnStatusEntry = {
+      ...current,
+      status: 'error',
+      updatedAt: current.updatedAt ?? pendingRestart.requestedAt,
+      skippedForLaunch: false,
+      skipReason: undefined,
+      skippedAt: undefined,
+      agentToolAccepted: current.agentToolAccepted ?? true,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: true,
+      hardFailureReason: current.hardFailureReason ?? PENDING_MEMBER_RESTART_SETTLE_REASON,
+      error: current.error ?? PENDING_MEMBER_RESTART_SETTLE_REASON,
+      bootstrapStalled: undefined,
+      runtimeDiagnostic: PENDING_MEMBER_RESTART_SETTLE_REASON,
+      runtimeDiagnosticSeverity: 'error',
+      firstSpawnAcceptedAt: current.firstSpawnAcceptedAt ?? pendingRestart.requestedAt,
+    };
+    failed.launchState = deriveMemberLaunchState(failed);
+    return failed;
   }
 
   // Manual restarts requested after launch completion must not be persisted as
@@ -433,7 +469,8 @@ export function projectPendingRestartStatusForSnapshot(
 }
 
 export function buildRuntimeSpawnStatusRecord(
-  source: RuntimeSpawnStatusProjectionSource
+  source: RuntimeSpawnStatusProjectionSource,
+  nowMs: number = Date.now()
 ): Record<string, MemberSpawnStatusEntry> {
   const statuses: Record<string, MemberSpawnStatusEntry> = {};
   for (const expected of source.expectedMembers) {
@@ -442,7 +479,8 @@ export function buildRuntimeSpawnStatusRecord(
     statuses[expected] = projectPendingRestartStatusForSnapshot(
       expected,
       current,
-      source.pendingMemberRestarts
+      source.pendingMemberRestarts,
+      nowMs
     );
   }
   return statuses;

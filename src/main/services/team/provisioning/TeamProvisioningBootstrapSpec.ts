@@ -77,8 +77,12 @@ export interface RuntimeBootstrapSpec {
 }
 
 const DETERMINISTIC_BOOTSTRAP_MIN_TIMEOUT_MS = 120_000;
-const DETERMINISTIC_BOOTSTRAP_TIMEOUT_PER_MEMBER_MS = 75_000;
-const DETERMINISTIC_BOOTSTRAP_MAX_TIMEOUT_MS = 900_000;
+// The deterministic CLI runner currently serializes teammate bootstrap and can
+// wait up to about 150s for one teammate to submit bootstrap. Keep the app-side
+// global budget aligned with that real per-member ceiling so one stalled member
+// does not starve later members before the CLI can report partial success.
+const DETERMINISTIC_BOOTSTRAP_TIMEOUT_PER_MEMBER_MS = 150_000;
+const DETERMINISTIC_BOOTSTRAP_MAX_TIMEOUT_MS = 1_200_000;
 const DETERMINISTIC_BOOTSTRAP_OUTER_TIMEOUT_GRACE_MS = 30_000;
 
 export function getDeterministicBootstrapTimeoutMs(memberCount: number): number {
