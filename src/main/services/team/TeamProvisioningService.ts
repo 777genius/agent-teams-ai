@@ -8,7 +8,6 @@ import {
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { notifyTeamWatchScopeChanged } from '@main/services/infrastructure/teamWatchScope';
-import { getAppIconPath } from '@main/utils/appIcon';
 import {
   execCli,
   killProcessTree,
@@ -23,7 +22,6 @@ import {
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { type ParsedPermissionRequest } from '@shared/utils/inboxNoise';
@@ -43,11 +41,6 @@ import {
 } from '../runtime/anthropicTeamApiKeyHelper';
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
 
-import { openCodeRuntimeApprovalProvider } from './approvals/OpenCodeRuntimeApprovalProvider';
-import {
-  RuntimeToolApprovalCoordinator,
-  type RuntimeToolApprovalEntry,
-} from './approvals/RuntimeToolApprovalCoordinator';
 import { isOpenCodeServeCommand } from './opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import {
   type OpenCodeMemberDirectory,
@@ -519,16 +512,7 @@ import {
   repairStaleTaskActivityIntervalsOnce as repairStaleTaskActivityIntervalsOnceHelper,
   writeLaunchFailureArtifactPackBestEffort as writeLaunchFailureArtifactPackBestEffortHelper,
 } from './provisioning/TeamProvisioningTaskActivityRepair';
-import {
-  type TeamProvisioningToolApprovalNotification,
-  type TeamProvisioningToolApprovalNotificationConstructor,
-  TeamProvisioningToolApprovalNotifications,
-} from './provisioning/TeamProvisioningToolApprovalNotifications';
-import {
-  createTeamProvisioningToolApprovalPortsBoundary,
-  type TeamProvisioningToolApprovalPortsBoundary,
-} from './provisioning/TeamProvisioningToolApprovalPortsFactory';
-import { TeamProvisioningToolApprovalTimeouts } from './provisioning/TeamProvisioningToolApprovalTimeouts';
+import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
 import { TeamProvisioningTranscriptClaudeLogsCache } from './provisioning/TeamProvisioningTranscriptClaudeLogs';
 import {
   createTeamProvisioningTransientRunStatePorts,
@@ -636,7 +620,6 @@ import type {
   TeamProvisioningProgress,
   TeamRuntimeState,
   ToolApprovalEvent,
-  ToolApprovalRequest,
   ToolApprovalSettings,
 } from '@shared/types';
 
@@ -774,16 +757,6 @@ export class TeamProvisioningService {
       [...this.provisioningRunByTeam.values()].includes(runId) ||
       [...this.aliveRunByTeam.values()].includes(runId) ||
       [...this.runtimeAdapterRunByTeam.values()].some((entry) => entry.runId === runId),
-  });
-  private readonly runtimeToolApprovalCoordinator = new RuntimeToolApprovalCoordinator({
-    getSettings: (teamName) => this.getToolApprovalSettings(teamName),
-    answerApproval: ({ entry, allow, message }) =>
-      this.answerRuntimeToolApproval(entry, allow, message),
-    emitApprovalEvent: (event) => this.emitToolApprovalEvent(event),
-    showApprovalNotification: (approval) =>
-      this.maybeShowToolApprovalOsNotification(undefined, approval),
-    dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
-    logWarning: (message) => logger.warn(message),
   });
   private readonly runtimeAdapterRunByTeam = new Map<
     string,
@@ -1369,13 +1342,10 @@ export class TeamProvisioningService {
   >();
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   private readonly helpOutputCache = { output: null as string | null, cachedAtMs: 0 };
-  private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
-  private readonly toolApprovalTimeouts: TeamProvisioningToolApprovalTimeouts<ProvisioningRun>;
+  private readonly toolApprovalFacade: TeamProvisioningToolApprovalFacade<ProvisioningRun>;
   private readonly transientRunState: TeamProvisioningTransientRunState;
   private readonly cleanupRunPorts: TeamProvisioningCleanupPorts<ProvisioningRun>;
-  private inFlightResponses = new Set<string>();
-  private readonly toolApprovalPortsBoundary: TeamProvisioningToolApprovalPortsBoundary<ProvisioningRun>;
   private readonly idlePromptInjectionBoundary: TeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>;
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
   private readonly authRetryRecoveryBoundary: TeamProvisioningAuthRetryRecoveryBoundary<ProvisioningRun>;
@@ -1689,51 +1659,41 @@ export class TeamProvisioningService {
         this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
       logDebug: (message) => logger.debug(message),
     });
-    this.toolApprovalPortsBoundary =
-      createTeamProvisioningToolApprovalPortsBoundary<ProvisioningRun>({
-        logger,
-        getToolApprovalSettings: (teamName) => this.getToolApprovalSettings(teamName),
-        emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
-        startApprovalTimeout: (run, requestId) => this.startApprovalTimeout(run, requestId),
-        clearApprovalTimeout: (requestId) => this.clearApprovalTimeout(requestId),
-        tryClaimResponse: (requestId) => this.tryClaimResponse(requestId),
-        maybeShowToolApprovalOsNotification: (run, approval) =>
-          this.maybeShowToolApprovalOsNotification(run, approval),
-        dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
-        getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName) ?? undefined,
-        getRun: (runId) => this.runs.get(runId),
-        inFlightResponses: this.inFlightResponses,
-        runtimeToolApprovalCoordinator: this.runtimeToolApprovalCoordinator,
-        getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
-        readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-        persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
-          this.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
-        deleteRuntimeAdapterRunByTeam: (teamName) => {
-          this.runtimeAdapterRunByTeam.delete(teamName);
-        },
-        setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
-          this.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
-        },
-        setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
-        guardCommittedOpenCodeSecondaryLaneEvidence: (input) =>
-          this.guardCommittedOpenCodeSecondaryLaneEvidence(input),
-        publishMixedSecondaryLaneStatusChange: (run, lane) =>
-          this.publishMixedSecondaryLaneStatusChange(run, lane),
-        syncOpenCodeRuntimeToolApprovals: (input) => this.syncOpenCodeRuntimeToolApprovals(input),
-        emitTeamChange: (event) => {
-          this.teamChangeEmitter?.(event);
-        },
-        readConfigForStrictDecision: (teamName) =>
-          this.configFacade.readConfigForStrictDecision(teamName),
-        addPermissionRulesToSettings: (settingsPath, toolNames, behavior) =>
-          this.addPermissionRulesToSettings(settingsPath, toolNames, behavior),
-        persistInboxMessage: (teamName, recipient, message) =>
-          this.persistInboxMessage(teamName, recipient, message),
-        nowIso,
-        nowMs: () => Date.now(),
-        joinPath: (...parts) => path.join(...parts),
-        teammateOperationalToolNames: AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
-      });
+    this.toolApprovalFacade = new TeamProvisioningToolApprovalFacade<ProvisioningRun>({
+      logger,
+      pendingTimeouts: this.pendingTimeouts,
+      getRuns: () => this.runs.values(),
+      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName) ?? undefined,
+      getRun: (runId) => this.runs.get(runId),
+      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
+      persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+        this.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
+      deleteRuntimeAdapterRunByTeam: (teamName) => {
+        this.runtimeAdapterRunByTeam.delete(teamName);
+      },
+      setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
+        this.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
+      },
+      setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
+      guardCommittedOpenCodeSecondaryLaneEvidence: (input) =>
+        this.guardCommittedOpenCodeSecondaryLaneEvidence(input),
+      publishMixedSecondaryLaneStatusChange: (run, lane) =>
+        this.publishMixedSecondaryLaneStatusChange(run, lane),
+      emitTeamChange: (event) => {
+        this.teamChangeEmitter?.(event);
+      },
+      readConfigForStrictDecision: (teamName) =>
+        this.configFacade.readConfigForStrictDecision(teamName),
+      addPermissionRulesToSettings: (settingsPath, toolNames, behavior) =>
+        this.addPermissionRulesToSettings(settingsPath, toolNames, behavior),
+      persistInboxMessage: (teamName, recipient, message) =>
+        this.persistInboxMessage(teamName, recipient, message),
+      nowIso,
+      nowMs: () => Date.now(),
+      joinPath: (...parts) => path.join(...parts),
+      teammateOperationalToolNames: AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+    });
     this.idlePromptInjectionBoundary =
       createTeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>({
         logger,
@@ -1746,31 +1706,6 @@ export class TeamProvisioningService {
           getRunLeadName: (run) => this.getRunLeadName(run),
         },
       });
-    this.toolApprovalTimeouts = new TeamProvisioningToolApprovalTimeouts<ProvisioningRun>(
-      {
-        pendingTimeouts: this.pendingTimeouts,
-        inFlightResponses: this.inFlightResponses,
-      },
-      {
-        getSettings: (teamName) => this.getToolApprovalSettings(teamName),
-        autoAllowControlRequest: (run, requestId) => this.autoAllowControlRequest(run, requestId),
-        autoDenyControlRequest: (run, requestId) => this.autoDenyControlRequest(run, requestId),
-        respondToTeammatePermission: (run, approval, allow, message) =>
-          this.toolApprovalPortsBoundary.respondToTeammatePermission({
-            run,
-            agentId: approval.source,
-            requestId: approval.requestId,
-            allow,
-            message,
-            permissionSuggestions: approval.permissionSuggestions,
-            toolName: approval.toolName,
-            toolInput: approval.toolInput,
-          }),
-        dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
-        emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
-        logInfo: (message) => logger.info(message),
-      }
-    );
     this.providerRuntime = createTeamProvisioningProviderRuntimeFacade({
       diagnosticsRuntimeInput: {
         transientProbeProcesses: this.transientProbeProcesses,
@@ -2143,7 +2078,7 @@ export class TeamProvisioningService {
       liveLeadProcessMessages: this.liveLeadProcessMessages,
       pruneLiveLeadMessagesForCleanedRun: (run) => this.pruneLiveLeadMessagesForCleanedRun(run),
       clearApprovalTimeout: (requestId) => this.clearApprovalTimeout(requestId),
-      inFlightResponses: this.inFlightResponses,
+      inFlightResponses: this.toolApprovalFacade.inFlightResponsesForCleanup,
       dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
       emitToolApprovalEvent: (event) => this.emitToolApprovalEvent(event),
       mcpConfigBuilder: this.mcpConfigBuilder,
@@ -3439,52 +3374,20 @@ export class TeamProvisioningService {
     return this.openCodeMemberSendSerializer.sendSerialized(input);
   }
 
-  private toolApprovalEventEmitter: ((event: ToolApprovalEvent) => void) | null = null;
-  private mainWindowRef: import('electron').BrowserWindow | null = null;
-  private activeApprovalNotifications = new Map<string, TeamProvisioningToolApprovalNotification>();
-  private readonly toolApprovalOsNotifications =
-    new TeamProvisioningToolApprovalNotifications<ProvisioningRun>({
-      getMainWindow: () => this.mainWindowRef,
-      getNotificationSettings: () => ConfigManager.getInstance().getConfig().notifications,
-      getNotificationConstructor: () => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { Notification: ElectronNotification } = require('electron') as Partial<
-          typeof import('electron')
-        >;
-        return (ElectronNotification ??
-          null) as TeamProvisioningToolApprovalNotificationConstructor | null;
-      },
-      getAppIconPath,
-      platform: process.platform,
-      activeApprovalNotifications: this.activeApprovalNotifications,
-      respondToToolApproval: (teamName, runId, requestId, allow, message) =>
-        this.respondToToolApproval(teamName, runId, requestId, allow, message),
-      logger: {
-        info: (message) => logger.info(message),
-        error: (message) => logger.error(message),
-      },
-      nowMs: () => Date.now(),
-    });
-
   setToolApprovalEventEmitter(emitter: (event: ToolApprovalEvent) => void): void {
-    this.toolApprovalEventEmitter = emitter;
+    this.toolApprovalFacade.setToolApprovalEventEmitter(emitter);
   }
 
   setMainWindow(win: import('electron').BrowserWindow | null): void {
-    this.mainWindowRef = win;
-  }
-
-  private getToolApprovalSettings(teamName: string): ToolApprovalSettings {
-    return this.toolApprovalSettingsByTeam.get(teamName) ?? DEFAULT_TOOL_APPROVAL_SETTINGS;
+    this.toolApprovalFacade.setMainWindow(win);
   }
 
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
-    this.toolApprovalSettingsByTeam.set(teamName, settings);
-    this.reEvaluatePendingApprovals();
+    this.toolApprovalFacade.updateToolApprovalSettings(teamName, settings);
   }
 
   private emitToolApprovalEvent(event: ToolApprovalEvent): void {
-    this.toolApprovalEventEmitter?.(event);
+    this.toolApprovalFacade.emitToolApprovalEvent(event);
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {
@@ -5871,7 +5774,7 @@ export class TeamProvisioningService {
    * All other subtypes (hook_callback, etc.) → auto-allowed to prevent deadlock.
    */
   private handleControlRequest(run: ProvisioningRun, msg: Record<string, unknown>): void {
-    this.toolApprovalPortsBoundary.handleControlRequest(run, msg);
+    this.toolApprovalFacade.handleControlRequest(run, msg);
   }
 
   /**
@@ -5883,7 +5786,7 @@ export class TeamProvisioningService {
     perm: ParsedPermissionRequest,
     messageTimestamp: string
   ): void {
-    this.toolApprovalPortsBoundary.handleTeammatePermissionRequest(run, perm, messageTimestamp);
+    this.toolApprovalFacade.handleTeammatePermissionRequest(run, perm, messageTimestamp);
   }
 
   private syncOpenCodeRuntimeToolApprovals(input: {
@@ -5897,85 +5800,23 @@ export class TeamProvisioningService {
     teamColor?: string;
     teamDisplayName?: string;
   }): void {
-    const entries = openCodeRuntimeApprovalProvider.collectPendingApprovals(input);
-    this.runtimeToolApprovalCoordinator.sync(
-      {
-        teamName: input.teamName,
-        runId: input.runId,
-        laneId: input.laneId,
-        memberNames: input.memberNames,
-        providerId: 'opencode',
-      },
-      entries
-    );
-  }
-
-  /**
-   * Shows a native OS notification for a pending tool approval when the app
-   * is not in focus. On macOS, adds Allow/Deny action buttons that respond
-   * directly from the notification without switching to the app.
-   */
-  private maybeShowToolApprovalOsNotification(
-    run: ProvisioningRun | undefined,
-    approval: ToolApprovalRequest
-  ): void {
-    this.toolApprovalOsNotifications.maybeShow(run, approval);
+    this.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(input);
   }
 
   /** Dismiss the OS notification for a resolved/dismissed approval. */
   dismissApprovalNotification(requestId: string): void {
-    const notification = this.activeApprovalNotifications.get(requestId);
-    if (notification) {
-      notification.close();
-      this.activeApprovalNotifications.delete(requestId);
-    }
+    this.toolApprovalFacade.dismissApprovalNotification(requestId);
   }
 
   private clearOpenCodeRuntimeToolApprovals(
     teamName: string,
     options: { runId?: string; laneId?: string; emitDismiss?: boolean } = {}
   ): void {
-    this.runtimeToolApprovalCoordinator.clear(teamName, {
-      ...options,
-      providerId: 'opencode',
-    });
-  }
-
-  /**
-   * Immediately sends an "allow" control_response for a non-tool control_request.
-   * Prevents CLI deadlock for hook_callback and other non-`can_use_tool` subtypes.
-   */
-  private autoAllowControlRequest(run: ProvisioningRun, requestId: string): void {
-    this.toolApprovalPortsBoundary.autoAllowControlRequest(run, requestId);
-  }
-
-  private tryClaimResponse(requestId: string): boolean {
-    return this.toolApprovalTimeouts.tryClaimResponse(requestId);
-  }
-
-  private startApprovalTimeout(run: ProvisioningRun, requestId: string): void {
-    this.toolApprovalTimeouts.start(run, requestId);
+    this.toolApprovalFacade.clearOpenCodeRuntimeToolApprovals(teamName, options);
   }
 
   private clearApprovalTimeout(requestId: string): void {
-    this.toolApprovalTimeouts.clear(requestId);
-  }
-
-  private autoDenyControlRequest(run: ProvisioningRun, requestId: string): void {
-    this.toolApprovalPortsBoundary.autoDenyControlRequest(run, requestId);
-  }
-
-  private reEvaluatePendingApprovals(): void {
-    this.toolApprovalTimeouts.reEvaluate(this.runs.values());
-    this.runtimeToolApprovalCoordinator.reEvaluate();
-  }
-
-  private async answerRuntimeToolApproval(
-    entry: RuntimeToolApprovalEntry,
-    allow: boolean,
-    message?: string
-  ): Promise<void> {
-    await this.toolApprovalPortsBoundary.answerRuntimeToolApproval({ entry, allow, message });
+    this.toolApprovalFacade.clearApprovalTimeout(requestId);
   }
 
   /**
@@ -5989,13 +5830,7 @@ export class TeamProvisioningService {
     allow: boolean,
     message?: string
   ): Promise<void> {
-    await this.toolApprovalPortsBoundary.respondToToolApproval({
-      teamName,
-      runId,
-      requestId,
-      allow,
-      message,
-    });
+    await this.toolApprovalFacade.respondToToolApproval(teamName, runId, requestId, allow, message);
   }
 
   /**

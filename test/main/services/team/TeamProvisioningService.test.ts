@@ -206,6 +206,7 @@ import {
   PROGRESS_RETAINED_OUTPUT_PARTS,
 } from '@main/services/team/progressPayload';
 import { buildPrimaryOwnedMemberSpecForRuntime } from '@main/services/team/provisioning/TeamProvisioningConfiguredMemberSpecs';
+import { formatToolApprovalBody } from '@main/services/team/provisioning/TeamProvisioningToolApprovalFlow';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeMessageResult,
@@ -21136,10 +21137,8 @@ describe('TeamProvisioningService', () => {
   });
 
   it('formats AskUserQuestion approvals with readable question text', () => {
-    const svc = new TeamProvisioningService();
-
     expect(
-      (svc as any).formatToolApprovalBody('AskUserQuestion', {
+      formatToolApprovalBody('AskUserQuestion', {
         questions: [
           {
             question:
@@ -21153,10 +21152,8 @@ describe('TeamProvisioningService', () => {
   });
 
   it('formats AskUserQuestion approvals with a compact multi-question summary', () => {
-    const svc = new TeamProvisioningService();
-
     expect(
-      (svc as any).formatToolApprovalBody('AskUserQuestion', {
+      formatToolApprovalBody('AskUserQuestion', {
         questions: [
           { question: '  First question with   extra spacing.  ' },
           { question: 'Second question.' },
