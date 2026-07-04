@@ -2825,22 +2825,8 @@ export class TeamProvisioningService {
     return await this.openCodeRuntimeDeliveryAdvisory.decideUserFacingAdvisory(record);
   }
 
-  private async fireOpenCodeRuntimeDeliveryErrorNotification(
-    record: OpenCodePromptDeliveryLedgerRecord,
-    decision: OpenCodeRuntimeDeliveryAdvisoryDecision
-  ): Promise<void> {
-    await this.openCodeRuntimeDeliveryAdvisory.fireErrorNotification(record, decision);
-  }
-
   private emitRuntimeDeliveryReplyAdvisoryRefresh(teamName: string, message: InboxMessage): void {
     this.openCodeRuntimeDeliveryAdvisory.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message);
-  }
-
-  private scheduleOpenCodeRuntimeDeliveryAdvisoryReview(
-    record: OpenCodePromptDeliveryLedgerRecord,
-    decision: OpenCodeRuntimeDeliveryAdvisoryDecision
-  ): void {
-    this.openCodeRuntimeDeliveryAdvisory.scheduleAdvisoryReview(record, decision);
   }
 
   async scanOpenCodePromptDeliveryWatchdog(teamName: string): Promise<number> {
