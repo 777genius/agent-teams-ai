@@ -6844,7 +6844,14 @@ describe('TeamProvisioningService', () => {
     });
 
     it('re-reads teammate runtime settings immediately before respawn so stale edit snapshots are not reused', async () => {
-      const svc = new TeamProvisioningService();
+      const getConfig = vi.fn().mockResolvedValue({
+        name: 'Edited Team',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      });
+      const svc = new TeamProvisioningService({
+        getConfig,
+        getConfigSnapshot: getConfig,
+      } as unknown as ConstructorParameters<typeof TeamProvisioningService>[0]);
       const run = createMemberSpawnRun({
         teamName: 'edited-team',
         expectedMembers: ['alice'],
@@ -6869,10 +6876,6 @@ describe('TeamProvisioningService', () => {
       run.cancelRequested = false;
 
       const sendMessageToRun = vi.fn(async () => {});
-      const getConfig = vi.fn().mockResolvedValue({
-        name: 'Edited Team',
-        members: [{ name: 'team-lead', agentType: 'team-lead' }],
-      });
       const getMembers = vi
         .fn()
         .mockResolvedValueOnce([
@@ -6899,7 +6902,6 @@ describe('TeamProvisioningService', () => {
         ]);
 
       (svc as any).sendMessageToRun = sendMessageToRun;
-      (svc as any).configReader = { getConfig };
       (svc as any).membersMetaStore = { getMembers };
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
@@ -7765,7 +7767,14 @@ describe('TeamProvisioningService', () => {
     });
 
     it('aborts restart if the teammate is removed before respawn is requested', async () => {
-      const svc = new TeamProvisioningService();
+      const getConfig = vi.fn().mockResolvedValue({
+        name: 'Edited Team',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      });
+      const svc = new TeamProvisioningService({
+        getConfig,
+        getConfigSnapshot: getConfig,
+      } as unknown as ConstructorParameters<typeof TeamProvisioningService>[0]);
       const run = createMemberSpawnRun({
         teamName: 'edited-team',
         expectedMembers: ['alice'],
@@ -7790,10 +7799,6 @@ describe('TeamProvisioningService', () => {
       run.cancelRequested = false;
 
       const sendMessageToRun = vi.fn(async () => {});
-      const getConfig = vi.fn().mockResolvedValue({
-        name: 'Edited Team',
-        members: [{ name: 'team-lead', agentType: 'team-lead' }],
-      });
       const getMembers = vi
         .fn()
         .mockResolvedValueOnce([
@@ -7819,7 +7824,6 @@ describe('TeamProvisioningService', () => {
         ]);
 
       (svc as any).sendMessageToRun = sendMessageToRun;
-      (svc as any).configReader = { getConfig };
       (svc as any).membersMetaStore = { getMembers };
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
@@ -7840,7 +7844,17 @@ describe('TeamProvisioningService', () => {
     });
 
     it('aborts restart if team config disappears before respawn is requested', async () => {
-      const svc = new TeamProvisioningService();
+      const getConfig = vi
+        .fn()
+        .mockResolvedValueOnce({
+          name: 'Edited Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })
+        .mockResolvedValueOnce(null);
+      const svc = new TeamProvisioningService({
+        getConfig,
+        getConfigSnapshot: getConfig,
+      } as unknown as ConstructorParameters<typeof TeamProvisioningService>[0]);
       const run = createMemberSpawnRun({
         teamName: 'edited-team',
         expectedMembers: ['alice'],
@@ -7865,13 +7879,6 @@ describe('TeamProvisioningService', () => {
       run.cancelRequested = false;
 
       const sendMessageToRun = vi.fn(async () => {});
-      const getConfig = vi
-        .fn()
-        .mockResolvedValueOnce({
-          name: 'Edited Team',
-          members: [{ name: 'team-lead', agentType: 'team-lead' }],
-        })
-        .mockResolvedValueOnce(null);
       const getMembers = vi.fn(async () => [
         {
           name: 'alice',
@@ -7884,7 +7891,6 @@ describe('TeamProvisioningService', () => {
       ]);
 
       (svc as any).sendMessageToRun = sendMessageToRun;
-      (svc as any).configReader = { getConfig };
       (svc as any).membersMetaStore = { getMembers };
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());

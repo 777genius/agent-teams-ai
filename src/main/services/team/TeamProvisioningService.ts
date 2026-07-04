@@ -2372,6 +2372,12 @@ export class TeamProvisioningService {
     );
   }
 
+  private materializeEffectiveTeamMemberSpecs(
+    params: Parameters<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']>[0]
+  ): ReturnType<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']> {
+    return this.prepareFacade.materializeEffectiveTeamMemberSpecs(params);
+  }
+
   private async prepareWorkspaceTrustForDeterministicRun(input: {
     mode: 'create' | 'launch';
     run: ProvisioningRun;
