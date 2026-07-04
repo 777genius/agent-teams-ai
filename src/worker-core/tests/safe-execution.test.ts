@@ -835,6 +835,32 @@ describe("SafeExecutionRunner", () => {
     });
   });
 
+  it("preserves worker pool recovery hints for auth-stale capacity failures", () => {
+    const poolFailure = new SubscriptionWorkerError(
+      "subscription_worker_pool_capacity_unavailable",
+      "Worker pool has no available or resettable-capacity slots.",
+      {
+        details: {
+          availability: "disabled:1",
+          reasons: "auth_invalid:1",
+          recoveryHint:
+            "One or more worker account slots look auth-stale. Run account diagnostics, relogin the affected slot or sync the per-account auth root to this host, then retry the worker.",
+        },
+      },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(poolFailure)).toMatchObject({
+      reason: "capacity_unavailable",
+      safeMessage: "Worker pool has no available or resettable-capacity slots.",
+      retryable: true,
+      details: {
+        availability: "disabled:1",
+        reasons: "auth_invalid:1",
+        recoveryHint: expect.stringContaining("sync the per-account auth root"),
+      },
+    });
+  });
+
   it("classifies raw Codex app-server goal blocks before unknown_error", () => {
     const processFailure = Object.assign(
       new Error("node_process_runner_failed:1:codex_app_server_goal_blocked"),

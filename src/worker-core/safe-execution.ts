@@ -1661,6 +1661,7 @@ export function defaultSafeExecutionErrorClassifier(
         reason: "capacity_unavailable",
         safeMessage: item.message,
         retryable: true,
+        details: item.details,
       };
     }
     if (item.code === "subscription_worker_account_unavailable") {
@@ -1668,6 +1669,7 @@ export function defaultSafeExecutionErrorClassifier(
         reason: "account_unavailable",
         safeMessage: item.message,
         retryable: true,
+        details: item.details,
       };
     }
     const classified = classifyWorkerFailureCode(

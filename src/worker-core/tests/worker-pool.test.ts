@@ -245,7 +245,7 @@ describe("BoundedSubscriptionWorkerPool", () => {
     await pool.start();
     workers[0]!.capacitySnapshot = {
       availability: "disabled",
-      reason: "manual_disable",
+      reason: "auth_invalid",
     };
     workers[1]!.capacitySnapshot = {
       availability: "quota_exhausted",
@@ -254,7 +254,11 @@ describe("BoundedSubscriptionWorkerPool", () => {
 
     await expect(pool.run("must-not-hang")).rejects.toMatchObject({
       code: "subscription_worker_pool_capacity_unavailable",
-      details: { availability: "disabled:1,quota_exhausted:1" },
+      details: {
+        availability: "disabled:1,quota_exhausted:1",
+        reasons: "auth_invalid:1,quota_limited:1",
+        recoveryHint: expect.stringContaining("auth-stale"),
+      },
     });
     expect(pool.stats().queued).toBe(0);
     await pool.dispose();

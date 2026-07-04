@@ -581,9 +581,19 @@ For a host that keeps worker auth outside the local machine, sync only the
 auth-relevant files after a manual relogin:
 
 ```sh
+# optional: preview first
 node scripts/ops/sync-codex-auth-to-host.mjs \
-  --host codex-workers-eu-01 \
-  --accounts account-a,account-d \
+  --host <worker-host> \
+  --accounts account-a,account-e \
+  --local-root ~/.cache/subscription-runtime/live-codex-auth \
+  --remote-root /var/data/codex-home/live-codex-auth \
+  --dry-run
+
+# apply after the dry-run looks right
+node scripts/ops/sync-codex-auth-to-host.mjs \
+  --host <worker-host> \
+  --accounts account-a,account-e \
+  --local-root ~/.cache/subscription-runtime/live-codex-auth \
   --remote-root /var/data/codex-home/live-codex-auth
 ```
 
@@ -591,6 +601,13 @@ The helper uploads `auth.json`, `models_cache.json` and `installation_id` throug
 a temporary remote directory and then swaps the account directory. It does not
 print auth payloads and does not copy Codex sqlite state, logs, shell snapshots,
 memories, plugin cache or auth backups.
+
+When a worker result reports `capacity_unavailable` with a `recoveryHint`
+mentioning `auth-stale`, treat it as a stale or missing per-account auth root,
+not as a code failure. Run account diagnostics, relogin the affected slot on the
+machine that can complete browser auth, run the sync helper above for exactly
+the affected accounts, then retry the worker. Use the host's actual auth root
+when it is not `/var/data/codex-home/live-codex-auth`.
 
 `codex_accounts_list_pools` also accepts `stateRootDir`. Use it when choosing
 between pools for a specific job. Its response includes `capacityAware` so an

@@ -876,9 +876,37 @@ function capacityUnavailableError(
     {
       details: {
         availability: summarizeAvailability(unavailable),
+        ...capacityRecoveryDetails(unavailable),
       },
     },
   );
+}
+
+function capacityRecoveryDetails(
+  snapshots: readonly WorkerPoolSlotSnapshot[],
+): Readonly<Record<string, string>> {
+  const reasons = summarizeReasons(snapshots);
+  const authBlocked = snapshots.some((snapshot) =>
+    isAuthBlockedCapacity(snapshot.capacity)
+  );
+  return {
+    ...(reasons ? { reasons } : {}),
+    ...(authBlocked
+      ? {
+          recoveryHint:
+            "One or more worker account slots look auth-stale. Run account diagnostics, relogin the affected slot or sync the per-account auth root to this host, then retry the worker.",
+        }
+      : {}),
+  };
+}
+
+function isAuthBlockedCapacity(capacity: WorkerCapacitySnapshot): boolean {
+  return capacity.reason === "auth_invalid" ||
+    capacity.reason === "auth_missing" ||
+    capacity.reason === "account_unavailable" ||
+    capacity.reason === "reconnect_required" ||
+    capacity.details?.code === "auth_invalid" ||
+    capacity.details?.code === "provider_session_invalid";
 }
 
 function summarizeAvailability(
@@ -894,5 +922,18 @@ function summarizeAvailability(
   return [...counts.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([availability, count]) => `${availability}:${count}`)
+    .join(",");
+}
+
+function summarizeReasons(snapshots: readonly WorkerPoolSlotSnapshot[]): string {
+  const counts = new Map<string, number>();
+  for (const snapshot of snapshots) {
+    const reason = snapshot.capacity.reason ?? snapshot.capacity.details?.code;
+    if (!reason) continue;
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([reason, count]) => `${reason}:${count}`)
     .join(",");
 }
