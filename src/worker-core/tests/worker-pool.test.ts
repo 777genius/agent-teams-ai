@@ -264,6 +264,35 @@ describe("BoundedSubscriptionWorkerPool", () => {
     await pool.dispose();
   });
 
+  it("surfaces auth recovery hints for provider session invalid capacity reasons", async () => {
+    const pool = new BoundedSubscriptionWorkerPool<string, string>({
+      poolId: "provider-session-invalid-capacity",
+      slots: 1,
+      workerFactory: ({ workerId }) => {
+        const worker = new FakeWorker(
+          workerId,
+          async (job) => `${workerId}:${job}`,
+        );
+        worker.capacitySnapshot = {
+          availability: "disabled",
+          reason: "provider_session_invalid",
+        };
+        return worker;
+      },
+    });
+
+    await pool.start();
+    await expect(pool.run("must-not-hang")).rejects.toMatchObject({
+      code: "subscription_worker_pool_capacity_unavailable",
+      details: {
+        availability: "disabled:1",
+        reasons: "provider_session_invalid:1",
+        recoveryHint: expect.stringContaining("sync the per-account auth root"),
+      },
+    });
+    await pool.dispose();
+  });
+
   it("normalizes expired cooldown snapshots before slot selection", async () => {
     const resetAt = new Date("2026-06-01T00:00:00.000Z");
     const selectedSnapshots: WorkerCapacitySnapshot[] = [];

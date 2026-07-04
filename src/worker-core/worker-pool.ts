@@ -904,6 +904,7 @@ function isAuthBlockedCapacity(capacity: WorkerCapacitySnapshot): boolean {
   return capacity.reason === "auth_invalid" ||
     capacity.reason === "auth_missing" ||
     capacity.reason === "account_unavailable" ||
+    capacity.reason === "provider_session_invalid" ||
     capacity.reason === "reconnect_required" ||
     capacity.details?.code === "auth_invalid" ||
     capacity.details?.code === "provider_session_invalid";
