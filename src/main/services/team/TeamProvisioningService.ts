@@ -2782,15 +2782,6 @@ export class TeamProvisioningService {
     this.openCodePromptDeliveryWatchdogCoordinator.schedule(input);
   }
 
-  private async isStaleOpenCodePromptDeliveryWatchdogError(input: {
-    teamName: string;
-    memberName: string;
-    messageId: string;
-    error: unknown;
-  }): Promise<boolean> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.isStaleError(input);
-  }
-
   private async rememberOpenCodeRuntimePidFromBridge(input: {
     teamName: string;
     memberName: string;
