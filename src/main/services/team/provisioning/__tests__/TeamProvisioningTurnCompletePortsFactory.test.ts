@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningTurnCompletePorts,
+  type TeamProvisioningTurnCompleteOutputRecoveryAdapter,
   type TeamProvisioningTurnCompletePortsFactoryRun,
   type TeamProvisioningTurnCompleteServiceAdapter,
 } from '../TeamProvisioningTurnCompletePortsFactory';
@@ -62,14 +63,11 @@ function createServiceAdapter(overrides: Partial<TestServiceAdapter> = {}): Test
     hasPendingDeterministicFirstRealTurn: vi.fn(() => false),
     isProvisioningRunStillPromotable: vi.fn(() => true),
     getPreCompleteCliErrorText: vi.fn(() => ''),
-    failProvisioningWithApiError: vi.fn(),
-    handleAuthFailureInOutput: vi.fn(),
     scheduleDeterministicBootstrapCompletionRecovery: vi.fn(),
     resetRuntimeToolActivity: vi.fn(),
     getRunLeadName: vi.fn(() => 'Lead'),
     setLeadActivity: vi.fn(),
     stopFilesystemMonitor: vi.fn(),
-    stopStallWatchdog: vi.fn(),
     refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
     maybeAuditMemberSpawnStatuses: vi.fn(async () => undefined),
     finalizeMissingRegisteredMembersAsFailed: vi.fn(async () => undefined),
@@ -97,6 +95,17 @@ function createServiceAdapter(overrides: Partial<TestServiceAdapter> = {}): Test
   };
 }
 
+function createOutputRecoveryAdapter(): TeamProvisioningTurnCompleteOutputRecoveryAdapter<
+  TestRun,
+  TestSecondaryLaunchResult
+> {
+  return {
+    failProvisioningWithApiError: vi.fn(),
+    handleAuthFailureInOutput: vi.fn(),
+    stopStallWatchdog: vi.fn(),
+  };
+}
+
 describe('TeamProvisioningTurnCompletePortsFactory', () => {
   it('wires service callbacks and shared provisioning helpers into turn-complete ports', async () => {
     const service = createServiceAdapter();
@@ -106,12 +115,14 @@ describe('TeamProvisioningTurnCompletePortsFactory', () => {
       persistMembersMeta: vi.fn(async () => undefined),
     };
     const updateProgress = vi.fn((_run, state, message) => createProgress({ state, message }));
+    const outputRecovery = createOutputRecoveryAdapter();
     const provisioningRunByTeam = new Map<string, TestRun>();
     const setAliveRunId = vi.fn();
     const emitTeamChange = vi.fn();
     const killTeamProcess = vi.fn();
     const ports = createTeamProvisioningTurnCompletePorts({
       service,
+      outputRecovery,
       config,
       updateProgress,
       provisioningRunByTeam,

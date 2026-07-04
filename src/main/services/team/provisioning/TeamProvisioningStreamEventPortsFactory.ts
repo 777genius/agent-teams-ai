@@ -73,13 +73,18 @@ export interface TeamProvisioningStreamEventPortCallbacks<
   persistLaunchStateSnapshot: TeamProvisioningStreamEventPorts<TRun>['persistLaunchStateSnapshot'];
 }
 
+export type TeamProvisioningStreamEventOutputRecoveryAdapter<
+  TRun extends TeamProvisioningStreamEventPortsFactoryRun,
+> = Pick<
+  TeamProvisioningStreamEventPorts<TRun>,
+  'handleAuthFailureInOutput' | 'failProvisioningWithApiError' | 'emitApiErrorWarning'
+>;
+
 type StreamEventServicePortKey =
   | 'resetLiveLeadTextBuffer'
   | 'handleTeammatePermissionRequest'
   | 'finishRuntimeToolActivity'
   | 'handleNativeTeammateUserMessage'
-  | 'handleAuthFailureInOutput'
-  | 'failProvisioningWithApiError'
   | 'appendProvisioningAssistantText'
   | 'pushLiveLeadTextMessage'
   | 'startRuntimeToolActivity'
@@ -96,7 +101,6 @@ type StreamEventServicePortKey =
   | 'handleControlRequest'
   | 'handleProvisioningTurnComplete'
   | 'cleanupRun'
-  | 'emitApiErrorWarning'
   | 'setMemberSpawnStatus'
   | 'appendMemberBootstrapDiagnostic'
   | 'reevaluateMemberLaunchStatus'
@@ -113,6 +117,7 @@ export interface TeamProvisioningStreamEventPortsBoundaryDeps<
   TRun extends TeamProvisioningStreamEventPortsFactoryRun,
 > {
   service: TeamProvisioningStreamEventServiceAdapter<TRun>;
+  outputRecovery: TeamProvisioningStreamEventOutputRecoveryAdapter<TRun>;
   updateProgress: TeamProvisioningStreamEventPorts<TRun>['updateProgress'];
   emitTeamChange?: TeamProvisioningStreamEventPorts<TRun>['emitTeamChange'];
 }
@@ -133,9 +138,9 @@ export function createTeamProvisioningStreamEventPortsBoundary<
     handleNativeTeammateUserMessage: (run, msg) =>
       deps.service.handleNativeTeammateUserMessage(run, msg),
     handleAuthFailureInOutput: (run, text, source) =>
-      deps.service.handleAuthFailureInOutput(run, text, source),
+      deps.outputRecovery.handleAuthFailureInOutput(run, text, source),
     failProvisioningWithApiError: (run, text) =>
-      deps.service.failProvisioningWithApiError(run, text),
+      deps.outputRecovery.failProvisioningWithApiError(run, text),
     appendProvisioningAssistantText: (run, msg, text) =>
       deps.service.appendProvisioningAssistantText(run, msg, text),
     pushLiveLeadTextMessage: (run, text, messageId, timestamp, options) =>
@@ -159,7 +164,7 @@ export function createTeamProvisioningStreamEventPortsBoundary<
     handleControlRequest: (run, msg) => deps.service.handleControlRequest(run, msg),
     handleProvisioningTurnComplete: (run) => deps.service.handleProvisioningTurnComplete(run),
     cleanupRun: (run) => deps.service.cleanupRun(run),
-    emitApiErrorWarning: (run, text) => deps.service.emitApiErrorWarning(run, text),
+    emitApiErrorWarning: (run, text) => deps.outputRecovery.emitApiErrorWarning(run, text),
     setMemberSpawnStatus: (run, memberName, status, error) =>
       deps.service.setMemberSpawnStatus(run, memberName, status, error),
     appendMemberBootstrapDiagnostic: (run, memberName, detail) =>

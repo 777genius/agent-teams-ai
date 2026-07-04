@@ -11,18 +11,23 @@ import type {
 export type TeamProvisioningTurnCompletePortsFactoryRun = TeamProvisioningTurnCompleteRun &
   RetainedLogsRunLike;
 
+export type TeamProvisioningTurnCompleteOutputRecoveryAdapter<
+  TRun extends TeamProvisioningTurnCompletePortsFactoryRun,
+  TSecondaryLaunchResult,
+> = Pick<
+  TeamProvisioningTurnCompletePorts<TRun, TSecondaryLaunchResult>,
+  'failProvisioningWithApiError' | 'handleAuthFailureInOutput' | 'stopStallWatchdog'
+>;
+
 type ServicePortKey =
   | 'hasPendingDeterministicFirstRealTurn'
   | 'isProvisioningRunStillPromotable'
   | 'getPreCompleteCliErrorText'
-  | 'failProvisioningWithApiError'
-  | 'handleAuthFailureInOutput'
   | 'scheduleDeterministicBootstrapCompletionRecovery'
   | 'resetRuntimeToolActivity'
   | 'getRunLeadName'
   | 'setLeadActivity'
   | 'stopFilesystemMonitor'
-  | 'stopStallWatchdog'
   | 'refreshMemberSpawnStatusesFromLeadInbox'
   | 'maybeAuditMemberSpawnStatuses'
   | 'finalizeMissingRegisteredMembersAsFailed'
@@ -52,6 +57,7 @@ export interface TeamProvisioningTurnCompletePortsFactoryDeps<
   TSecondaryLaunchResult,
 > {
   service: TeamProvisioningTurnCompleteServiceAdapter<TRun, TSecondaryLaunchResult>;
+  outputRecovery: TeamProvisioningTurnCompleteOutputRecoveryAdapter<TRun, TSecondaryLaunchResult>;
   config: Pick<
     TeamProvisioningTurnCompletePorts<TRun, TSecondaryLaunchResult>,
     'updateConfigPostLaunch' | 'cleanupPrelaunchBackup' | 'persistMembersMeta'
@@ -100,9 +106,9 @@ export function createTeamProvisioningTurnCompletePorts<
     hasApiError,
     isAuthFailureWarning,
     failProvisioningWithApiError: (run, text) =>
-      deps.service.failProvisioningWithApiError(run, text),
+      deps.outputRecovery.failProvisioningWithApiError(run, text),
     handleAuthFailureInOutput: (run, text, source) =>
-      deps.service.handleAuthFailureInOutput(run, text, source),
+      deps.outputRecovery.handleAuthFailureInOutput(run, text, source),
     scheduleDeterministicBootstrapCompletionRecovery: (run) =>
       deps.service.scheduleDeterministicBootstrapCompletionRecovery(run),
     resetRuntimeToolActivity: (run, memberName) =>
@@ -110,7 +116,7 @@ export function createTeamProvisioningTurnCompletePorts<
     getRunLeadName: (run) => deps.service.getRunLeadName(run),
     setLeadActivity: (run, state) => deps.service.setLeadActivity(run, state),
     stopFilesystemMonitor: (run) => deps.service.stopFilesystemMonitor(run),
-    stopStallWatchdog: (run) => deps.service.stopStallWatchdog(run),
+    stopStallWatchdog: (run) => deps.outputRecovery.stopStallWatchdog(run),
     updateConfigPostLaunch: (teamName, cwd, detectedSessionId, color, options) =>
       deps.config.updateConfigPostLaunch(teamName, cwd, detectedSessionId, color, options),
     cleanupPrelaunchBackup: (teamName) => deps.config.cleanupPrelaunchBackup(teamName),

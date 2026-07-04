@@ -81,10 +81,6 @@ import {
 import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
 import { ensureCwdExists, sleep } from './provisioning/TeamProvisioningAsyncUtils';
 import {
-  createTeamProvisioningAuthRetryRecoveryBoundary,
-  type TeamProvisioningAuthRetryRecoveryBoundary,
-} from './provisioning/TeamProvisioningAuthRetryRecoveryBoundaryFactory';
-import {
   createTeamProvisioningBootstrapFailureMarker,
   type TeamProvisioningBootstrapFailureMarker,
 } from './provisioning/TeamProvisioningBootstrapFailureMarking';
@@ -358,10 +354,7 @@ import {
   isAuthFailureWarning,
   normalizeApiRetryErrorMessage,
 } from './provisioning/TeamProvisioningOutputErrorPolicy';
-import {
-  createTeamProvisioningOutputRecoveryBoundary,
-  type TeamProvisioningOutputRecoveryBoundary,
-} from './provisioning/TeamProvisioningOutputRecoveryBoundaryFactory';
+import { TeamProvisioningOutputRecoveryFacade } from './provisioning/TeamProvisioningOutputRecoveryFacade';
 import { reconcilePersistedLaunchStateWithTeamProvisioningPorts } from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
 import { type PersistedTeamConfigCacheEntry } from './provisioning/TeamProvisioningPersistedTeamConfigAccess';
 import { TeamProvisioningPrepareFacade } from './provisioning/TeamProvisioningPrepareFacade';
@@ -692,23 +685,6 @@ export class TeamProvisioningService {
       getRuntimeAdapterProviderId: (teamName) =>
         this.runtimeAdapterRunByTeam.get(teamName)?.providerId ?? null,
     });
-  private readonly outputRecoveryBoundary: TeamProvisioningOutputRecoveryBoundary<ProvisioningRun> =
-    createTeamProvisioningOutputRecoveryBoundary({
-      service: {
-        updateProgress,
-        emitLogsProgress,
-        killTeamProcess,
-        cleanupRun: (run) => this.cleanupRun(run),
-        respawnAfterAuthFailure: (run) => this.respawnAfterAuthFailure(run),
-        appendCliLogs: (run, stream, text) => this.appendCliLogs(run, stream, text),
-        handleStreamJsonMessage: (run, msg) => this.handleStreamJsonMessage(run, msg),
-        shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
-          this.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex),
-      },
-      logger,
-      nowIso,
-    });
-
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
   private static readonly SAME_TEAM_NATIVE_DELIVERY_GRACE_MS = 15_000;
   private static readonly SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS = 60_000;
@@ -1348,7 +1324,7 @@ export class TeamProvisioningService {
   private readonly cleanupRunPorts: TeamProvisioningCleanupPorts<ProvisioningRun>;
   private readonly idlePromptInjectionBoundary: TeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>;
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
-  private readonly authRetryRecoveryBoundary: TeamProvisioningAuthRetryRecoveryBoundary<ProvisioningRun>;
+  private readonly outputRecoveryFacade: TeamProvisioningOutputRecoveryFacade<ProvisioningRun>;
   private readonly deterministicCreateSpawnFlowBoundary: TeamProvisioningCreateDeterministicSpawnFlowBoundary<ProvisioningRun>;
   private readonly deterministicLaunchFlowBoundary: TeamProvisioningLaunchDeterministicFlowBoundary<MixedSecondaryRuntimeLaneState>;
   private readonly prepareFacade!: TeamProvisioningPrepareFacade;
@@ -1723,26 +1699,29 @@ export class TeamProvisioningService {
         logger,
       }),
     });
-    this.authRetryRecoveryBoundary =
-      createTeamProvisioningAuthRetryRecoveryBoundary<ProvisioningRun>({
-        service: {
-          getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
-          stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
-          stopStallWatchdog: (run) => this.stopStallWatchdog(run),
-          cleanupRun: (run) => this.cleanupRun(run),
-          attachStdoutHandler: (run) => this.attachStdoutHandler(run),
-          attachStderrHandler: (run) => this.attachStderrHandler(run),
-          startStallWatchdog: (run) => this.startStallWatchdog(run),
-          startFilesystemMonitor: (run, request) => this.startFilesystemMonitor(run, request),
-          tryCompleteAfterTimeout: (run) => this.tryCompleteAfterTimeout(run),
-          handleProcessExit: (run, code) => this.handleProcessExit(run, code),
-        },
-        logger,
-        mcpConfigBuilder: this.mcpConfigBuilder,
-        providerRuntime: this.providerRuntime,
-        killTeamProcess,
+    this.outputRecoveryFacade = new TeamProvisioningOutputRecoveryFacade<ProvisioningRun>({
+      service: {
         updateProgress,
-      });
+        emitLogsProgress,
+        killTeamProcess,
+        cleanupRun: (run) => this.cleanupRun(run),
+        appendCliLogs: (run, stream, text) => this.appendCliLogs(run, stream, text),
+        handleStreamJsonMessage: (run, msg) => this.handleStreamJsonMessage(run, msg),
+        shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
+          this.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex),
+        getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+        stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
+        startFilesystemMonitor: (run, request) => this.startFilesystemMonitor(run, request),
+        tryCompleteAfterTimeout: (run) => this.tryCompleteAfterTimeout(run),
+        handleProcessExit: (run, code) => this.handleProcessExit(run, code),
+      },
+      logger,
+      mcpConfigBuilder: this.mcpConfigBuilder,
+      providerRuntime: this.providerRuntime,
+      killTeamProcess,
+      updateProgress,
+      nowIso,
+    });
     const deterministicLaunchFlowHost: TeamProvisioningLaunchDeterministicFlowHost<
       ProvisioningRun,
       MixedSecondaryRuntimeLaneState
@@ -1791,9 +1770,9 @@ export class TeamProvisioningService {
       buildTeamRuntimeLaunchArgsPlan: (input) => this.buildTeamRuntimeLaunchArgsPlan(input),
       seedLeadBootstrapPermissionRules: (teamName, cwd) =>
         this.seedLeadBootstrapPermissionRules(teamName, cwd),
-      attachStdoutHandler: (run) => this.attachStdoutHandler(run),
-      attachStderrHandler: (run) => this.attachStderrHandler(run),
-      startStallWatchdog: (run) => this.startStallWatchdog(run),
+      attachStdoutHandler: (run) => this.outputRecoveryFacade.attachStdoutHandler(run),
+      attachStderrHandler: (run) => this.outputRecoveryFacade.attachStderrHandler(run),
+      startStallWatchdog: (run) => this.outputRecoveryFacade.startStallWatchdog(run),
       tryCompleteAfterTimeout: (run) => this.tryCompleteAfterTimeout(run),
       cleanupRun: (run) => this.cleanupRun(run),
       handleProcessExit: (run, code) => this.handleProcessExit(run, code),
@@ -1841,9 +1820,9 @@ export class TeamProvisioningService {
           this.seedLeadBootstrapPermissionRules(teamName, cwd),
         spawnCli,
         updateProgress,
-        attachStdoutHandler: (run) => this.attachStdoutHandler(run),
-        attachStderrHandler: (run) => this.attachStderrHandler(run),
-        startStallWatchdog: (run) => this.startStallWatchdog(run),
+        attachStdoutHandler: (run) => this.outputRecoveryFacade.attachStdoutHandler(run),
+        attachStderrHandler: (run) => this.outputRecoveryFacade.attachStderrHandler(run),
+        startStallWatchdog: (run) => this.outputRecoveryFacade.startStallWatchdog(run),
         startFilesystemMonitor: (run, request) => this.startFilesystemMonitor(run, request),
         tryCompleteAfterTimeout: (run) => this.tryCompleteAfterTimeout(run),
         handleProcessExit: (run, code) => this.handleProcessExit(run, code),
@@ -1891,9 +1870,10 @@ export class TeamProvisioningService {
     });
     this.processExitPorts = createTeamProvisioningProcessExitPorts<ProvisioningRun>({
       service: {
-        buildStdoutCarryDiagnostic: (run) => this.buildStdoutCarryDiagnostic(run),
-        flushStdoutParserCarry: (run) => this.flushStdoutParserCarry(run),
-        stopStallWatchdog: (run) => this.stopStallWatchdog(run),
+        buildStdoutCarryDiagnostic: (run) =>
+          this.outputRecoveryFacade.buildStdoutCarryDiagnostic(run),
+        flushStdoutParserCarry: (run) => this.outputRecoveryFacade.flushStdoutParserCarry(run),
+        stopStallWatchdog: (run) => this.outputRecoveryFacade.stopStallWatchdog(run),
         hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
         stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
         persistMembersMeta: (teamName, request) =>
@@ -2050,7 +2030,7 @@ export class TeamProvisioningService {
         this.writeLaunchFailureArtifactPackBestEffort(run, options),
       resetRuntimeToolActivity: (run) => this.resetRuntimeToolActivity(run),
       setLeadActivity: (run, state) => this.setLeadActivity(run, state),
-      stopStallWatchdog: (run) => this.stopStallWatchdog(run),
+      stopStallWatchdog: (run) => this.outputRecoveryFacade.stopStallWatchdog(run),
       stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
       provisioningRunByTeam: this.provisioningRunByTeam,
       aliveRunByTeam: this.aliveRunByTeam,
@@ -4110,84 +4090,63 @@ export class TeamProvisioningService {
   }
 
   private failProvisioningWithApiError(run: ProvisioningRun, source: string): void {
-    this.outputRecoveryBoundary.failProvisioningWithApiError(run, source);
+    this.outputRecoveryFacade.failProvisioningWithApiError(run, source);
   }
 
-  /**
-   * Shows a non-fatal API error warning in the Live output section.
-   * Unlike failProvisioningWithApiError, does NOT kill the process — lets the SDK retry.
-   * Deduplicates: only the first warning per run is shown.
-   */
   private emitApiErrorWarning(run: ProvisioningRun, text: string): void {
-    this.outputRecoveryBoundary.emitApiErrorWarning(run, text);
+    this.outputRecoveryFacade.emitApiErrorWarning(run, text);
   }
 
-  /**
-   * Starts a periodic watchdog that detects when the CLI process has produced
-   * no stdout/stderr data for an extended period. Pushes progressive warnings
-   * into provisioningOutputParts so they appear in the Live output section.
-   */
   private startStallWatchdog(run: ProvisioningRun): void {
-    this.outputRecoveryBoundary.startStallWatchdog(run);
+    this.outputRecoveryFacade.startStallWatchdog(run);
   }
 
   private stopStallWatchdog(run: ProvisioningRun): void {
-    this.outputRecoveryBoundary.stopStallWatchdog(run);
+    this.outputRecoveryFacade.stopStallWatchdog(run);
   }
 
-  /**
-   * Detects auth failure keywords in stderr/stdout during provisioning.
-   * On first detection: kills process, waits, and respawns automatically.
-   * On second detection (after retry): fails fast with a clear error.
-   */
   private handleAuthFailureInOutput(
     run: ProvisioningRun,
     text: string,
     source: AuthWarningSource
   ): void {
-    this.outputRecoveryBoundary.handleAuthFailureInOutput(run, text, source);
+    this.outputRecoveryFacade.handleAuthFailureInOutput(run, text, source);
   }
 
-  /**
-   * Kills the current process, waits for lock release, and respawns with saved context.
-   * Reattaches all stream listeners and resends the prompt.
-   */
   private async respawnAfterAuthFailure(run: ProvisioningRun): Promise<void> {
-    await this.authRetryRecoveryBoundary.respawnAfterAuthFailure(run);
+    await this.outputRecoveryFacade.respawnAfterAuthFailure(run);
   }
 
-  /** Attaches the stdout stream-json parser to the current child process. */
   private attachStdoutHandler(run: ProvisioningRun): void {
-    this.outputRecoveryBoundary.attachStdoutHandler(run);
+    this.outputRecoveryFacade.attachStdoutHandler(run);
   }
 
   private updateStdoutParserCarry(run: ProvisioningRun, carry: string): void {
-    this.outputRecoveryBoundary.updateStdoutParserCarry(run, carry);
+    this.outputRecoveryFacade.updateStdoutParserCarry(run, carry);
   }
 
   private flushStdoutParserCarry(run: ProvisioningRun): void {
-    this.outputRecoveryBoundary.flushStdoutParserCarry(run);
+    this.outputRecoveryFacade.flushStdoutParserCarry(run);
   }
 
   private buildStdoutCarryDiagnostic(run: ProvisioningRun): Record<string, unknown> {
-    return this.outputRecoveryBoundary.buildStdoutCarryDiagnostic(run);
+    return this.outputRecoveryFacade.buildStdoutCarryDiagnostic(run);
   }
 
   private getUnconfirmedBootstrapMemberNames(run: ProvisioningRun): string[] {
-    return this.outputRecoveryBoundary.getUnconfirmedBootstrapMemberNames(run);
+    return this.outputRecoveryFacade.getUnconfirmedBootstrapMemberNames(run);
   }
 
   private handleStdoutParserLine(run: ProvisioningRun, trimmed: string): void {
-    this.outputRecoveryBoundary.handleStdoutParserLine(run, trimmed);
+    this.outputRecoveryFacade.handleStdoutParserLine(run, trimmed);
   }
 
   private handleParsedStdoutJsonMessage(run: ProvisioningRun, msg: Record<string, unknown>): void {
-    this.outputRecoveryBoundary.handleParsedStdoutJsonMessage(run, msg);
+    this.outputRecoveryFacade.handleParsedStdoutJsonMessage(run, msg);
   }
 
-  /** Attaches the stderr handler with auth failure detection. */
   private attachStderrHandler(run: ProvisioningRun): void {
-    this.outputRecoveryBoundary.attachStderrHandler(run);
+    this.outputRecoveryFacade.attachStderrHandler(run);
   }
 
   private createDeterministicCreateRunFlowPorts(): DeterministicCreateRunFlowPorts<
@@ -5732,6 +5691,7 @@ export class TeamProvisioningService {
   private getStreamJsonEventPorts(): TeamProvisioningStreamEventPorts<ProvisioningRun> {
     return createTeamProvisioningStreamEventPortsBoundary({
       service: this as TeamProvisioningStreamEventServiceAdapter<ProvisioningRun>,
+      outputRecovery: this.outputRecoveryFacade,
       updateProgress,
       emitTeamChange: (event) => this.teamChangeEmitter?.(event),
     });
@@ -5882,6 +5842,7 @@ export class TeamProvisioningService {
         ProvisioningRun,
         SecondaryLaunchResult
       >,
+      outputRecovery: this.outputRecoveryFacade,
       config: this.configFacade,
       updateProgress,
       provisioningRunByTeam: this.provisioningRunByTeam,
@@ -5969,8 +5930,8 @@ export class TeamProvisioningService {
       progressMessage: run.progress.message,
       progressError: run.progress.error ?? null,
       cleanupReason,
-      unconfirmedMembers: this.getUnconfirmedBootstrapMemberNames(run),
-      ...this.buildStdoutCarryDiagnostic(run),
+      unconfirmedMembers: this.outputRecoveryFacade.getUnconfirmedBootstrapMemberNames(run),
+      ...this.outputRecoveryFacade.buildStdoutCarryDiagnostic(run),
     });
     this.markUnconfirmedBootstrapMembersFailed(run, cleanupReason, {
       cleanupRequested: true,

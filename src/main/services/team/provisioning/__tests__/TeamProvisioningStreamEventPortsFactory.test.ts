@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createTeamProvisioningStreamEventPorts,
   createTeamProvisioningStreamEventPortsBoundary,
+  type TeamProvisioningStreamEventOutputRecoveryAdapter,
   type TeamProvisioningStreamEventPortCallbacks,
   type TeamProvisioningStreamEventPortsFactoryRun,
   type TeamProvisioningStreamEventServiceAdapter,
@@ -123,8 +124,6 @@ function createServiceAdapter(
     handleTeammatePermissionRequest: callbacks.handleTeammatePermissionRequest,
     finishRuntimeToolActivity: callbacks.finishRuntimeToolActivity,
     handleNativeTeammateUserMessage: callbacks.handleNativeTeammateUserMessage,
-    handleAuthFailureInOutput: callbacks.handleAuthFailureInOutput,
-    failProvisioningWithApiError: callbacks.failProvisioningWithApiError,
     appendProvisioningAssistantText: callbacks.appendProvisioningAssistantText,
     pushLiveLeadTextMessage: callbacks.pushLiveLeadTextMessage,
     startRuntimeToolActivity: callbacks.startRuntimeToolActivity,
@@ -141,7 +140,6 @@ function createServiceAdapter(
     handleControlRequest: callbacks.handleControlRequest,
     handleProvisioningTurnComplete: callbacks.handleProvisioningTurnComplete,
     cleanupRun: callbacks.cleanupRun,
-    emitApiErrorWarning: callbacks.emitApiErrorWarning,
     setMemberSpawnStatus: callbacks.setMemberSpawnStatus,
     appendMemberBootstrapDiagnostic: callbacks.appendMemberBootstrapDiagnostic,
     reevaluateMemberLaunchStatus: callbacks.reevaluateMemberLaunchStatus,
@@ -149,6 +147,16 @@ function createServiceAdapter(
     markUnconfirmedBootstrapMembersFailed: callbacks.markUnconfirmedBootstrapMembersFailed,
     stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
     persistLaunchStateSnapshot: callbacks.persistLaunchStateSnapshot,
+  };
+}
+
+function createOutputRecoveryAdapter(
+  callbacks: TeamProvisioningStreamEventPortCallbacks<TestRun>
+): TeamProvisioningStreamEventOutputRecoveryAdapter<TestRun> {
+  return {
+    handleAuthFailureInOutput: callbacks.handleAuthFailureInOutput,
+    failProvisioningWithApiError: callbacks.failProvisioningWithApiError,
+    emitApiErrorWarning: callbacks.emitApiErrorWarning,
   };
 }
 
@@ -179,6 +187,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     const emitTeamChange = vi.fn();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
       service: createServiceAdapter(callbacks),
+      outputRecovery: createOutputRecoveryAdapter(callbacks),
       updateProgress: callbacks.updateProgress,
       emitTeamChange,
     });
@@ -211,6 +220,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
       service: createServiceAdapter(callbacks),
+      outputRecovery: createOutputRecoveryAdapter(callbacks),
       updateProgress: callbacks.updateProgress,
     });
     const run = createRun();
