@@ -143,6 +143,7 @@ describe("OpenAI-compatible Codex bridge", () => {
         codexBinaryPath,
         [
           "#!/bin/sh",
+          "while IFS= read -r _; do :; done",
           `printf '%s\\n' "$CODEX_HOME" > ${JSON.stringify(capturePath)}`,
           "printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"OK\"}}'",
         ].join("\n"),

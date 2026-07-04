@@ -2,7 +2,7 @@ import { access, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { execPath } from "node:process";
 import { promisify } from "node:util";
 import type {
@@ -58,7 +58,15 @@ describe("FileBackendCodexWorker", () => {
         },
       });
       expect(appServer.spawnCount).toBe(1);
-      expect(appServer.envs[0]).toMatchObject({ PATH: process.env.PATH });
+      const expectedPathEntries = [
+        ...(process.env.PATH ?? "").split(delimiter).filter(Boolean),
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+      ];
+      expect(appServer.envs[0]!.PATH!.split(delimiter)).toEqual(
+        expect.arrayContaining(expectedPathEntries),
+      );
       expect(appServer.prompts).toEqual(["Return exactly OK."]);
       await worker.dispose();
       await expect(access(join(rootDir, "codex-cache"))).rejects.toThrow();

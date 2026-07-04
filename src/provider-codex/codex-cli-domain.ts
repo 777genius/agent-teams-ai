@@ -1,4 +1,6 @@
+import { accessSync, constants } from "node:fs";
 import { createHash } from "node:crypto";
+import { delimiter, dirname, isAbsolute } from "node:path";
 import { codexEnvironmentPolicy } from "./capabilities";
 
 export const codexAuthJsonMaxBytes = 32 * 1024;
@@ -250,7 +252,18 @@ export function pruneCodexChildEnv(
     if (!shouldAllowChildEnvKey(key)) continue;
     allowed[key] = value;
   }
+  allowed.PATH = codexChildPath(env);
   return allowed;
+}
+
+export function codexChildPath(
+  env: Readonly<Record<string, string | undefined>>,
+): string {
+  return uniquePathEntries([
+    ...(env.PATH ?? "").split(delimiter),
+    ...standardHostPathEntries,
+    ...availableExecutableDirs(env),
+  ]).join(delimiter);
 }
 
 export function buildCodexRefreshBootstrapPlan(input: {
@@ -415,6 +428,63 @@ function matchesEnvPattern(key: string, pattern: string): boolean {
     return key.endsWith(pattern.slice(1));
   }
   return key === pattern;
+}
+
+const standardHostPathEntries = [
+  "/usr/local/sbin",
+  "/usr/local/bin",
+  "/usr/sbin",
+  "/usr/bin",
+  "/sbin",
+  "/bin",
+] as const;
+
+const explicitGhPathEnvNames = [
+  "SUBSCRIPTION_RUNTIME_GH_PATH",
+  "GH_PATH",
+] as const;
+
+const ghPathCandidates = [
+  "/usr/bin/gh",
+  "/usr/local/bin/gh",
+  "/opt/homebrew/bin/gh",
+] as const;
+
+function availableExecutableDirs(
+  env: Readonly<Record<string, string | undefined>>,
+): readonly string[] {
+  const candidates = [
+    ...explicitGhPathEnvNames
+      .map((name) => env[name]?.trim())
+      .filter((path): path is string =>
+        path !== undefined && path.length > 0 && isAbsolute(path),
+      ),
+    ...ghPathCandidates,
+  ];
+  return candidates
+    .filter(isExecutable)
+    .map((path) => dirname(path));
+}
+
+function isExecutable(path: string): boolean {
+  try {
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function uniquePathEntries(entries: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const entry of entries) {
+    const normalized = entry.trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    unique.push(normalized);
+  }
+  return unique;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

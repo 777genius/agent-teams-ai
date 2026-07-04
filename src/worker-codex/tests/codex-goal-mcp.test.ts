@@ -991,7 +991,6 @@ describe("codex goal MCP server", () => {
         taskId,
         status: "running",
         updatedAt: new Date(Date.now() - 130_000).toISOString(),
-        pid: process.pid,
       })}\n`);
 
       const server = createCodexGoalMcpServer();
@@ -2138,10 +2137,14 @@ async function callToolJson(
 }
 
 async function hasTmux(): Promise<boolean> {
+  const session = `subscription-runtime-tmux-probe-${process.pid}-${Date.now()}`;
   try {
     await execFileAsync("tmux", ["-V"]);
+    await execFileAsync("tmux", ["new-session", "-d", "-s", session, "sleep 60"]);
+    await execFileAsync("tmux", ["kill-session", "-t", session]).catch(() => undefined);
     return true;
   } catch {
+    await execFileAsync("tmux", ["kill-session", "-t", session]).catch(() => undefined);
     return false;
   }
 }
