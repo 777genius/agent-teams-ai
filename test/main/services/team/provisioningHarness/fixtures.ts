@@ -96,7 +96,9 @@ export const teamMetaFixture = {
 export interface SecretLikeFixtureFinding {
   path: string;
   reason: string;
-  valuePreview?: string;
+  patternName?: string;
+  stringLength?: number;
+  redactedValue?: '<redacted>';
 }
 
 const SECRET_LIKE_KEY_PATTERN = new RegExp(
@@ -115,18 +117,14 @@ const SECRET_LIKE_KEY_PATTERN = new RegExp(
   ].join('|'),
   'i'
 );
-const SECRET_LIKE_VALUE_PATTERNS: readonly RegExp[] = [
-  /\bBearer\s+[A-Za-z0-9._-]{10,}\b/i,
-  /\bsk-(?:live|test|proj)?[A-Za-z0-9_-]{10,}\b/i,
-  /\bgh[pousr]_[A-Za-z0-9_]{10,}\b/i,
-  /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/i,
-  /\bAKIA[0-9A-Z]{12,}\b/,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+const SECRET_LIKE_VALUE_PATTERNS: readonly { name: string; pattern: RegExp }[] = [
+  { name: 'bearer-token', pattern: /\bBearer\s+[A-Za-z0-9._-]{10,}\b/i },
+  { name: 'openai-api-key', pattern: /\bsk-(?:live|test|proj)?[A-Za-z0-9_-]{10,}\b/i },
+  { name: 'github-token', pattern: /\bgh[pousr]_[A-Za-z0-9_]{10,}\b/i },
+  { name: 'slack-token', pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/i },
+  { name: 'aws-access-key-id', pattern: /\bAKIA[0-9A-Z]{12,}\b/ },
+  { name: 'private-key-block', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ];
-
-function preview(value: string): string {
-  return value.length > 80 ? `${value.slice(0, 77)}...` : value;
-}
 
 function scanFixtureValue(
   value: unknown,
@@ -134,12 +132,14 @@ function scanFixtureValue(
   findings: SecretLikeFixtureFinding[]
 ): void {
   if (typeof value === 'string') {
-    const matchedPattern = SECRET_LIKE_VALUE_PATTERNS.find((pattern) => pattern.test(value));
+    const matchedPattern = SECRET_LIKE_VALUE_PATTERNS.find(({ pattern }) => pattern.test(value));
     if (matchedPattern) {
       findings.push({
         path,
-        reason: `value matched ${matchedPattern.toString()}`,
-        valuePreview: preview(value),
+        reason: `value matched secret-like pattern ${matchedPattern.name}`,
+        patternName: matchedPattern.name,
+        stringLength: value.length,
+        redactedValue: '<redacted>',
       });
     }
     return;
@@ -180,8 +180,9 @@ export function assertNoSecretLikeFixtureValues(value: unknown): void {
 
   const details = findings
     .map((finding) =>
-      finding.valuePreview
-        ? `${finding.path}: ${finding.reason} (${finding.valuePreview})`
+      finding.redactedValue
+        ? `${finding.path}: ${finding.reason} ` +
+          `(length=${finding.stringLength}, value=${finding.redactedValue})`
         : `${finding.path}: ${finding.reason}`
     )
     .join('\n');

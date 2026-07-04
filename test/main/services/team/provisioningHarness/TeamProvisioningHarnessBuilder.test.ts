@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Test paths are owned by the harness temp workspace. */
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import { access, readdir, readFile, stat } from 'fs/promises';
+import { access, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -23,6 +23,7 @@ import type { TeamConfig } from '@shared/types';
 
 const harnesses: TeamProvisioningHarness[] = [];
 const HOME_ENV_KEYS = ['HOME', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH'] as const;
+const RESERVED_FILENAME_CHARS_WITHOUT_SEPARATORS = [':', '<', '>', '"', '|', '?', '*'] as const;
 const ORIGINAL_HOME_ENV = Object.fromEntries(
   HOME_ENV_KEYS.map((key) => [key, process.env[key]])
 ) as Record<(typeof HOME_ENV_KEYS)[number], string | undefined>;
@@ -70,6 +71,10 @@ function setAutoDetectedHomeForTest(label: string): string {
   delete process.env.HOMEDRIVE;
   delete process.env.HOMEPATH;
   return path.join(homePath, '.claude', 'teams');
+}
+
+function charLabel(char: string): string {
+  return char.charCodeAt(0).toString(16).padStart(2, '0');
 }
 
 afterEach(async () => {
@@ -128,6 +133,139 @@ describe('TeamProvisioningHarnessBuilder', () => {
     expect(getTeamsBasePath()).toBe(newAutoTeamsBasePath);
     expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
   });
+
+  it('rejects traversal team names before creating temp dirs or writing escaped files', async () => {
+    const prefix = 'team-provisioning-harness-invalid-team-path-test-';
+    const outsideDir = path.join(
+      os.tmpdir(),
+      `team-provisioning-harness-team-escape-${process.pid}`
+    );
+    await rm(outsideDir, { recursive: true, force: true });
+    const beforeEntries = await listTempWorkspaceNames(prefix);
+    const traversalTeamName = path.join('..', '..', '..', path.basename(outsideDir));
+
+    await expect(
+      TeamProvisioningHarnessBuilder.create()
+        .withTempWorkspace({ prefix })
+        .withTeam(traversalTeamName)
+        .build()
+    ).rejects.toThrow(/Invalid team name/);
+
+    expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+    expect(await pathExists(outsideDir)).toBe(false);
+  });
+
+  it('rejects traversal inbox member names before creating temp dirs or writing escaped files', async () => {
+    const prefix = 'team-provisioning-harness-invalid-member-path-test-';
+    const teamName = 'invalid-member-path-team';
+    const outsideDir = path.join(
+      os.tmpdir(),
+      `team-provisioning-harness-member-escape-${process.pid}`
+    );
+    await rm(outsideDir, { recursive: true, force: true });
+    const beforeEntries = await listTempWorkspaceNames(prefix);
+    const traversalMemberName = path.join('..', '..', '..', path.basename(outsideDir));
+
+    await expect(
+      TeamProvisioningHarnessBuilder.create()
+        .withTempWorkspace({ prefix })
+        .withTeam(
+          teamName,
+          teamConfigFixture.basic({
+            teamName,
+            members: [memberFixture.lead(), memberFixture.codex(traversalMemberName)],
+          })
+        )
+        .build()
+    ).rejects.toThrow(/Invalid member name/);
+
+    expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+    expect(await pathExists(outsideDir)).toBe(false);
+  });
+
+  it('rejects traversal member names in inbox paths before writing escaped files', async () => {
+    const harness = await track(TeamProvisioningHarnessBuilder.create().build());
+    const outsideFileName = `team-provisioning-harness-inbox-escape-${process.pid}`;
+    const outsideFile = path.join(os.tmpdir(), `${outsideFileName}.json`);
+    await rm(outsideFile, { force: true });
+    const traversalMemberName = path.join('..', '..', '..', '..', '..', outsideFileName);
+
+    await expect(
+      (async () => {
+        const inboxPath = harness.paths.inboxPath(harness.teamName, traversalMemberName);
+        await writeFile(inboxPath, '{}\n', 'utf8');
+      })()
+    ).rejects.toThrow(/Invalid member name/);
+
+    expect(await pathExists(outsideFile)).toBe(false);
+  });
+
+  it.each(RESERVED_FILENAME_CHARS_WITHOUT_SEPARATORS)(
+    'rejects team names containing reserved filename char %s before side effects',
+    async (reservedChar) => {
+      const prefix = `team-provisioning-harness-reserved-team-${charLabel(reservedChar)}-`;
+      const beforeEntries = await listTempWorkspaceNames(prefix);
+      const teamName = `bad${reservedChar}team`;
+
+      await expect(
+        TeamProvisioningHarnessBuilder.create()
+          .withTempWorkspace({ prefix })
+          .withTeam(teamName)
+          .build()
+      ).rejects.toThrow(/Invalid team name/);
+
+      expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+    }
+  );
+
+  it.each(RESERVED_FILENAME_CHARS_WITHOUT_SEPARATORS)(
+    'rejects member names containing reserved filename char %s before side effects',
+    async (reservedChar) => {
+      const prefix = `team-provisioning-harness-reserved-member-${charLabel(reservedChar)}-`;
+      const teamName = `reserved-member-team-${charLabel(reservedChar)}`;
+      const beforeEntries = await listTempWorkspaceNames(prefix);
+
+      await expect(
+        TeamProvisioningHarnessBuilder.create()
+          .withTempWorkspace({ prefix })
+          .withTeam(
+            teamName,
+            teamConfigFixture.basic({
+              teamName,
+              members: [
+                memberFixture.lead(),
+                memberFixture.codex(`bad${reservedChar}member`),
+              ],
+            })
+          )
+          .build()
+      ).rejects.toThrow(/Invalid member name/);
+
+      expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+    }
+  );
+
+  it.each(RESERVED_FILENAME_CHARS_WITHOUT_SEPARATORS)(
+    'rejects reserved filename char %s in member inbox paths before writing files',
+    async (reservedChar) => {
+      const harness = await track(TeamProvisioningHarnessBuilder.create().build());
+      const memberName = `bad${reservedChar}member`;
+      const literalInboxPath = path.join(
+        harness.paths.teamDir(harness.teamName),
+        'inboxes',
+        `${memberName}.json`
+      );
+
+      await expect(
+        (async () => {
+          const inboxPath = harness.paths.inboxPath(harness.teamName, memberName);
+          await writeFile(inboxPath, '{}\n', 'utf8');
+        })()
+      ).rejects.toThrow(/Invalid member name/);
+
+      expect(await pathExists(literalInboxPath)).toBe(false);
+    }
+  );
 
   it('validates caller fixtures before creating temp dirs or applying path overrides', async () => {
     const prefix = 'team-provisioning-harness-invalid-fixture-test-';
@@ -200,6 +338,20 @@ describe('TeamProvisioningHarnessBuilder', () => {
     ['parent projectDirName', { projectDirName: '..' }],
     ['separator projectDirName', { projectDirName: 'nested/project' }],
     ['windows separator projectDirName', { projectDirName: 'nested\\project' }],
+    ['reserved prefix colon', { prefix: 'bad:prefix-' }],
+    ['reserved prefix less-than', { prefix: 'bad<prefix-' }],
+    ['reserved prefix greater-than', { prefix: 'bad>prefix-' }],
+    ['reserved prefix quote', { prefix: 'bad"prefix-' }],
+    ['reserved prefix pipe', { prefix: 'bad|prefix-' }],
+    ['reserved prefix question', { prefix: 'bad?prefix-' }],
+    ['reserved prefix star', { prefix: 'bad*prefix-' }],
+    ['reserved projectDirName colon', { projectDirName: 'bad:project' }],
+    ['reserved projectDirName less-than', { projectDirName: 'bad<project' }],
+    ['reserved projectDirName greater-than', { projectDirName: 'bad>project' }],
+    ['reserved projectDirName quote', { projectDirName: 'bad"project' }],
+    ['reserved projectDirName pipe', { projectDirName: 'bad|project' }],
+    ['reserved projectDirName question', { projectDirName: 'bad?project' }],
+    ['reserved projectDirName star', { projectDirName: 'bad*project' }],
   ])('rejects unsafe temp workspace %s', async (_label, options) => {
     await expect(
       TeamProvisioningHarnessBuilder.create()
@@ -379,8 +531,35 @@ describe('TeamProvisioningHarnessBuilder', () => {
       collectSecretLikeFixtureValues({ nested: { authToken: 'fixture-placeholder' } })
     ).toEqual([expect.objectContaining({ path: '$.nested.authToken' })]);
     expect(collectSecretLikeFixtureValues({ value: 'Bearer [defanged fixture]' })).toEqual([]);
+    expect(
+      collectSecretLikeFixtureValues({ value: `Bearer ${'fixtureToken'.repeat(2)}` })
+    ).toEqual([
+      expect.objectContaining({
+        path: '$.value',
+        patternName: 'bearer-token',
+        stringLength: 31,
+        redactedValue: '<redacted>',
+      }),
+    ]);
     expect(() =>
       assertNoSecretLikeFixtureValues({ member: { password: 'fixture-placeholder' } })
     ).toThrow(/Secret-like fixture values/);
+  });
+
+  it('does not include matched secret-like raw values in thrown scanner errors', () => {
+    const matchedValue = `Bearer ${'fixtureToken'.repeat(2)}`;
+
+    let thrown: unknown;
+    try {
+      assertNoSecretLikeFixtureValues({ value: matchedValue });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    const message = thrown instanceof Error ? thrown.message : String(thrown);
+    expect(message).not.toContain(matchedValue);
+    expect(message).toContain('<redacted>');
+    expect(message).toContain('length=31');
   });
 });

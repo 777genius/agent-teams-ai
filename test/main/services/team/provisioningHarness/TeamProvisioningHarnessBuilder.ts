@@ -544,15 +544,21 @@ export class TeamProvisioningHarnessBuilder {
       assertCanApplyPathOverride();
     }
 
+    validateTeamNamePathSegment(this.defaultTeamName);
     toIsoString(this.clockIso);
     assertNoSecretLikeFixtureValues(this.uuidSequence);
     for (const [teamName, config] of this.teamConfigs) {
+      validateTeamNamePathSegment(teamName);
+      validateConfigMemberPathSegments(config);
       assertNoSecretLikeFixtureValues({ teamName, config });
     }
     for (const [teamName, meta] of this.teamMeta) {
+      validateTeamNamePathSegment(teamName);
       assertNoSecretLikeFixtureValues({ teamName, meta });
     }
     for (const [teamName, meta] of this.membersMeta) {
+      validateTeamNamePathSegment(teamName);
+      validateMemberPathSegments(meta.members);
       assertNoSecretLikeFixtureValues({ teamName, meta });
     }
   }
@@ -622,40 +628,89 @@ export class TeamProvisioningHarnessBuilder {
   }
 }
 
-function assertContainedPath(parentPath: string, childPath: string, label: string): void {
-  const relative = path.relative(parentPath, childPath);
+function assertContainedPath(
+  parentPath: string,
+  childPath: string,
+  label: string,
+  parentLabel: string
+): void {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(childPath));
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error(`${label} must stay inside the harness temp root.`);
+    throw new Error(`${label} must stay inside ${parentLabel}.`);
   }
 }
+
+const RESERVED_FILENAME_PATH_CHARS = new Set(['/', '\\', ':', '*', '?', '"', '<', '>', '|']);
 
 function hasUnsafePathCharacter(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
     const char = value[index];
-    if (char === ':' || char.charCodeAt(0) <= 31) {
+    const charCode = char.charCodeAt(0);
+    if (
+      charCode <= 31 ||
+      (charCode >= 127 && charCode <= 159) ||
+      RESERVED_FILENAME_PATH_CHARS.has(char)
+    ) {
       return true;
     }
   }
   return false;
 }
 
-function validateTempPathSegment(value: string, optionName: keyof TempWorkspaceOptions): void {
+function assertPathSegment(value: string, label: string): void {
   if (value.length === 0) {
-    throw new Error(`Invalid temp workspace ${optionName}: value must not be empty.`);
+    throw new Error(`Invalid ${label}: value must not be empty.`);
   }
   if (path.isAbsolute(value) || path.posix.isAbsolute(value) || path.win32.isAbsolute(value)) {
-    throw new Error(`Invalid temp workspace ${optionName}: absolute paths are not allowed.`);
+    throw new Error(`Invalid ${label}: absolute paths are not allowed.`);
   }
   if (value.includes('/') || value.includes('\\')) {
-    throw new Error(`Invalid temp workspace ${optionName}: path separators are not allowed.`);
+    throw new Error(`Invalid ${label}: path separators are not allowed.`);
   }
-  if (value === '.' || value === '..' || value.includes('..')) {
-    throw new Error(`Invalid temp workspace ${optionName}: parent traversal is not allowed.`);
+  if (value === '.' || value === '..') {
+    throw new Error(`Invalid ${label}: path traversal is not allowed.`);
   }
   if (hasUnsafePathCharacter(value)) {
-    throw new Error(
-      `Invalid temp workspace ${optionName}: unsafe path characters are not allowed.`
-    );
+    throw new Error(`Invalid ${label}: unsafe path characters are not allowed.`);
+  }
+  if (
+    path.normalize(value) !== value ||
+    path.posix.normalize(value) !== value ||
+    path.win32.normalize(value) !== value ||
+    value.normalize('NFC') !== value
+  ) {
+    throw new Error(`Invalid ${label}: normalized value must match the original value.`);
+  }
+}
+
+function validateTeamNamePathSegment(teamName: string): void {
+  assertPathSegment(teamName, 'team name');
+}
+
+function validateMemberNamePathSegment(memberName: string): void {
+  assertPathSegment(memberName, 'member name');
+}
+
+function validateMemberPathSegments(members: readonly TeamMember[] | undefined): void {
+  for (const [index, member] of (members ?? []).entries()) {
+    if (typeof member.name !== 'string') {
+      throw new Error(`Invalid member name at members[${index}]: value must be a string.`);
+    }
+    validateMemberNamePathSegment(member.name);
+  }
+}
+
+function validateConfigMemberPathSegments(config: TeamConfig | null): void {
+  if (!config) {
+    return;
+  }
+  validateMemberPathSegments(config.members);
+}
+
+function validateTempPathSegment(value: string, optionName: keyof TempWorkspaceOptions): void {
+  assertPathSegment(value, `temp workspace ${optionName}`);
+  if (value.includes('..')) {
+    throw new Error(`Invalid temp workspace ${optionName}: parent traversal is not allowed.`);
   }
 }
 
@@ -670,7 +725,19 @@ function createPaths(root: string, projectDirName: string): TeamProvisioningHarn
   const tasksBase = path.join(claudeRoot, 'tasks');
   const projectsBase = path.join(claudeRoot, 'projects');
   const projectPath = path.join(root, projectDirName);
-  assertContainedPath(root, projectPath, 'projectDirName');
+  assertContainedPath(root, claudeRoot, 'claudeRoot', 'the harness temp root');
+  assertContainedPath(root, teamsBase, 'teamsBase', 'the harness temp root');
+  assertContainedPath(root, tasksBase, 'tasksBase', 'the harness temp root');
+  assertContainedPath(root, projectsBase, 'projectsBase', 'the harness temp root');
+  assertContainedPath(root, projectPath, 'projectDirName', 'the harness temp root');
+
+  const teamPath = (teamName: string, label: string, ...segments: string[]): string => {
+    validateTeamNamePathSegment(teamName);
+    const candidate = path.join(teamsBase, teamName, ...segments);
+    assertContainedPath(root, candidate, label, 'the harness temp root');
+    assertContainedPath(teamsBase, candidate, label, 'the harness teams base');
+    return candidate;
+  };
 
   return {
     root,
@@ -679,17 +746,19 @@ function createPaths(root: string, projectDirName: string): TeamProvisioningHarn
     tasksBase,
     projectsBase,
     projectPath,
-    teamDir: (teamName) => path.join(teamsBase, teamName),
-    configPath: (teamName) => path.join(teamsBase, teamName, 'config.json'),
-    teamMetaPath: (teamName) => path.join(teamsBase, teamName, 'team.meta.json'),
-    membersMetaPath: (teamName) => path.join(teamsBase, teamName, 'members.meta.json'),
-    inboxPath: (teamName, memberName) =>
-      path.join(teamsBase, teamName, 'inboxes', `${memberName}.json`),
-    launchStatePath: (teamName) => path.join(teamsBase, teamName, 'launch-state.json'),
+    teamDir: (teamName) => teamPath(teamName, 'team directory'),
+    configPath: (teamName) => teamPath(teamName, 'team config path', 'config.json'),
+    teamMetaPath: (teamName) => teamPath(teamName, 'team meta path', 'team.meta.json'),
+    membersMetaPath: (teamName) => teamPath(teamName, 'members meta path', 'members.meta.json'),
+    inboxPath: (teamName, memberName) => {
+      validateMemberNamePathSegment(memberName);
+      return teamPath(teamName, 'member inbox path', 'inboxes', `${memberName}.json`);
+    },
+    launchStatePath: (teamName) => teamPath(teamName, 'launch state path', 'launch-state.json'),
     bootstrapStatePath: (teamName) =>
-      path.join(teamsBase, teamName, 'bootstrap', 'bootstrap-state.json'),
+      teamPath(teamName, 'bootstrap state path', 'bootstrap', 'bootstrap-state.json'),
     runtimeStorePath: (teamName) =>
-      path.join(teamsBase, teamName, 'runtime', 'opencode-sessions.json'),
+      teamPath(teamName, 'runtime store path', 'runtime', 'opencode-sessions.json'),
   };
 }
 
