@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DefaultRedactor,
@@ -43,8 +43,10 @@ import {
 } from "../index";
 import type { CodexExecutionEngine } from "../codex-json-execution-engine";
 import type { CodexSessionMaterializer } from "../codex-session-materializer";
-import { classifyCodexRuntimeFailure } from "../codex-cli-domain";
-import { pruneCodexChildEnv } from "../codex-cli-domain";
+import {
+  classifyCodexRuntimeFailure,
+  pruneCodexChildEnv,
+} from "../codex-cli-domain";
 import { isTransientCodexTempCleanupError } from "../codex-cli-temp-cleanup";
 
 const validAuthJson = JSON.stringify({
@@ -315,7 +317,7 @@ describe("Codex provider adapter", () => {
 
   it("applies the provider-owned environment policy before Codex subprocesses", () => {
     const env = pruneCodexChildEnv({
-      PATH: "/usr/bin",
+      PATH: "/codex/bin",
       HOME: "/tmp/home",
       CI: "true",
       CODEX_HOME: "/tmp/codex-home",
@@ -325,12 +327,60 @@ describe("Codex provider adapter", () => {
       SAFE_PUBLIC_FLAG: "ok",
     });
 
-    expect(env).toEqual({
-      PATH: "/usr/bin",
+    expect(env).toMatchObject({
       HOME: "/tmp/home",
       CI: "true",
       CODEX_HOME: "/tmp/codex-home",
     });
+    expect(env.PATH!.split(delimiter)).toEqual(expect.arrayContaining([
+      "/codex/bin",
+      "/usr/local/sbin",
+      "/usr/local/bin",
+      "/usr/sbin",
+      "/usr/bin",
+      "/sbin",
+      "/bin",
+    ]));
+    expect(env).not.toHaveProperty("GITHUB_TOKEN");
+    expect(env).not.toHaveProperty("OPENAI_API_KEY");
+    expect(env).not.toHaveProperty("REVIEWROUTER_CODEX_AUTH_JSON");
+    expect(env).not.toHaveProperty("SAFE_PUBLIC_FLAG");
+  });
+
+  it("uses a standard host PATH when Codex worker PATH is sandbox-local", () => {
+    const env = pruneCodexChildEnv({
+      PATH: "/codex/sandbox/bin",
+      GH_TOKEN: "must-not-pass",
+    });
+
+    const entries = env.PATH!.split(delimiter);
+    expect(entries[0]).toBe("/codex/sandbox/bin");
+    expect(entries).toEqual(expect.arrayContaining([
+      "/usr/local/bin",
+      "/usr/bin",
+      "/bin",
+    ]));
+    expect(env).not.toHaveProperty("GH_TOKEN");
+  });
+
+  it("adds an explicit GitHub CLI directory to Codex child PATH when configured", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codex-provider-gh-path-"));
+    const ghPath = join(root, "gh");
+
+    try {
+      await writeFile(ghPath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      await chmod(ghPath, 0o755);
+
+      const env = pruneCodexChildEnv({
+        PATH: "/codex/sandbox/bin",
+        SUBSCRIPTION_RUNTIME_GH_PATH: ghPath,
+      });
+
+      expect(env.PATH!.split(delimiter)).toContain(root);
+      expect(env).not.toHaveProperty("SUBSCRIPTION_RUNTIME_GH_PATH");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("exposes a combined provider driver and manifest for composition roots", () => {

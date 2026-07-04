@@ -23,6 +23,22 @@ import {
 const execFileAsync = promisify(execFile);
 
 describe("codex goal MCP server", () => {
+  it("treats restricted tmux probes as unavailable instead of throwing", async () => {
+    const calls: string[][] = [];
+    const available = await hasTmux((args) => {
+      calls.push([...args]);
+      if (args[0] === "-V") return Promise.resolve();
+      throw new Error("tmux new-session not permitted");
+    });
+
+    expect(available).toBe(false);
+    expect(calls).toEqual([
+      ["-V"],
+      expect.arrayContaining(["new-session"]),
+      expect.arrayContaining(["kill-session"]),
+    ]);
+  });
+
   it("flags alive workers with stale logs as silent-stale", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-silent-stale-"));
     const logPath = join(root, "task.log");
@@ -991,7 +1007,8 @@ describe("codex goal MCP server", () => {
         taskId,
         status: "running",
         updatedAt: new Date(Date.now() - 130_000).toISOString(),
-        pid: process.pid,
+        // Intentionally omit pid: heartbeat-only workers can have fresh progress without
+        // a runtime pid, and stop/reconcile must still classify that shape safely.
       })}\n`);
 
       const server = createCodexGoalMcpServer();
@@ -2137,13 +2154,27 @@ async function callToolJson(
   return JSON.parse(first.text ?? "{}") as Record<string, unknown>;
 }
 
-async function hasTmux(): Promise<boolean> {
+type TmuxExec = (args: readonly string[]) => Promise<void>;
+
+async function hasTmux(execTmux: TmuxExec = execTmuxCommand): Promise<boolean> {
+  const session = `subscription-runtime-tmux-probe-${process.pid}-${Date.now()}`;
   try {
-    await execFileAsync("tmux", ["-V"]);
+    await execTmux(["-V"]);
+    await execTmux(["new-session", "-d", "-s", session, "sleep 60"]);
     return true;
   } catch {
     return false;
+  } finally {
+    try {
+      await execTmux(["kill-session", "-t", session]);
+    } catch {
+      // Cleanup is best-effort: restricted CI may deny tmux session operations.
+    }
   }
+}
+
+async function execTmuxCommand(args: readonly string[]): Promise<void> {
+  await execFileAsync("tmux", [...args], { timeout: 2_000 });
 }
 
 async function writeFakeAuth(
