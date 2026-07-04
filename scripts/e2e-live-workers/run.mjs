@@ -13,7 +13,14 @@ import {
 import { existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  AccessBoundary,
+  LaunchPlanStatus,
+  NetworkAccessMode,
+  buildLaunchPlan,
+} from "../../dist/worker-core/access-control.js";
 import { FileBackendClaudeWorker } from "../../dist/worker-claude/file-backend-claude-worker.js";
+import { CommandPolicyRunner } from "../../dist/worker-codex/command-policy-runner.js";
 import { FileBackendCodexSafeExecutor } from "../../dist/worker-codex/file-backend-codex-safe-executor.js";
 import { LocalFileWorkerControlInboxStore } from "../../dist/store-local-file/local-worker-control-inbox-store.js";
 import { WorkerControlService } from "../../dist/worker-core/control/worker-control-service.js";
@@ -37,6 +44,7 @@ async function main() {
   await run("codex broken auth skips account", codexBrokenAuthSkipsAccount);
   await run("codex quota continuation delivers inbox to real account", codexQuotaContinuationInbox);
   await run("codex project integration lifecycle tools", codexProjectIntegrationLifecycleTools);
+  await run("codex command policy rejects project bypass", codexCommandPolicyRejectsProjectBypass);
   await run("codex project controller starts real child worker", codexProjectControllerStartsChildWorker);
   await run("claude real cli safe-point inbox read-only", claudeInboxReadOnly);
   await run("claude real cli safe-point inbox edit", claudeInboxEdit);
@@ -245,6 +253,14 @@ async function codexProjectControllerStartsChildWorker() {
     const sourceWorkspace = await gitSandbox(join(root, "source"), {
       "README.md": "Codex project-control live sandbox only.\n",
     });
+    const branch = runChecked("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: sourceWorkspace,
+    }).stdout.trim();
+    const remotePath = join(root, "remote.git");
+    runChecked("git", ["init", "--bare", remotePath]);
+    runChecked("git", ["remote", "add", "origin", remotePath], {
+      cwd: sourceWorkspace,
+    });
     const registryRootDir = join(root, "registry");
     const jobsRoot = join(root, "jobs");
     const worktreesRoot = join(root, "worktrees");
@@ -259,6 +275,8 @@ async function codexProjectControllerStartsChildWorker() {
     const controllerJobRoot = join(jobsRoot, controllerJobId);
     const childJobRoot = join(jobsRoot, childJobId);
     const childWorkspace = join(worktreesRoot, childJobId);
+    const childOutputFile = "project-control-real-codex-ok.txt";
+    const childPatchPath = join(childWorkspace, "project-control-real-codex-ok.patch");
     const controllerPrompt = join(controllerJobRoot, "prompt.md");
     const childPrompt = join(childJobRoot, "prompt.md");
     await mkdir(controllerJobRoot, { recursive: true });
@@ -353,6 +371,79 @@ async function codexProjectControllerStartsChildWorker() {
       workspacePath: childWorkspace,
     });
     if (result.skipped) return result;
+    runChecked("git", ["add", "-N", childOutputFile], { cwd: childWorkspace });
+    const childPatch = runChecked("git", ["diff", "--", childOutputFile], {
+      cwd: childWorkspace,
+    }).stdout;
+    assert(childPatch.includes(childOutputFile), "child output patch must include marker file");
+    await writeFile(childPatchPath, childPatch);
+
+    const attemptId = `${prefix}attempt`;
+    assertToolOk(codexGoalTool("codex_goal_project_open_integration_attempt", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      workerJobId: childJobId,
+      workerWorkspacePath: childWorkspace,
+      workerPatchPath: childPatchPath,
+      targetWorkspacePath: sourceWorkspace,
+      targetBranch: branch,
+      targetRemote: "origin",
+      changedFiles: [childOutputFile],
+      approvedFiles: [childOutputFile],
+      allowedPathPrefixes: [childOutputFile],
+      requiredCheckIds: ["check:marker"],
+      requiredChecks: [{
+        checkId: "check:marker",
+        command: [
+          process.execPath,
+          "-e",
+          "const fs=require('fs');if(fs.readFileSync('project-control-real-codex-ok.txt','utf8').trim()!=='PROJECT_CONTROL_REAL_CODEX_OK')process.exit(1)",
+        ],
+      }],
+      reviewedBy: controllerJobId,
+      reviewReason: "live child marker output reviewed by e2e controller",
+      confirmOpen: true,
+    }), "open live child integration attempt");
+    assertToolOk(codexGoalTool("codex_goal_project_apply_worker_output", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmApply: true,
+    }), "apply live child output");
+    assertToolOk(codexGoalTool("codex_goal_project_run_required_checks", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmRunChecks: true,
+    }), "run live child integration checks");
+    const committed = assertToolOk(codexGoalTool(
+      "codex_goal_project_commit_approved_changes",
+      {
+        registryRootDir,
+        controllerJobId,
+        attemptId,
+        message: "test(worker): integrate live child output",
+        allowedPathPrefixes: [childOutputFile],
+        requiredCheckIds: ["check:marker"],
+        confirmCommit: true,
+      },
+    ), "commit live child output");
+    assertToolOk(codexGoalTool("codex_goal_project_push_approved_commit", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmPush: true,
+    }), "push live child output");
+
+    const commitSha = committed.attempt?.commitCandidate?.commitSha;
+    const pushedSha = runChecked("git", [
+      "--git-dir",
+      remotePath,
+      "rev-parse",
+      `refs/heads/${branch}`,
+    ]).stdout.trim();
+    assertEqual(pushedSha, commitSha);
     const auditPath = join(
       controllerJobRoot,
       `${controllerJobId}.project-control-events.jsonl`,
@@ -365,6 +456,7 @@ async function codexProjectControllerStartsChildWorker() {
     return {
       root: keepArtifacts ? root : undefined,
       changedFiles: result.changedFiles,
+      integrationCommit: commitSha,
     };
   } finally {
     if (childTmuxSession) killTmuxSession(childTmuxSession);
@@ -500,6 +592,73 @@ async function codexProjectIntegrationLifecycleTools() {
     ]).stdout.trim();
     assertEqual(pushedSha, commitSha);
     return { root: keepArtifacts ? root : undefined, branch };
+  } finally {
+    await cleanup(root);
+  }
+}
+
+async function codexCommandPolicyRejectsProjectBypass() {
+  const root = await sandboxRoot("codex-command-policy-bypass-");
+  try {
+    const workspacePath = await gitSandbox(join(root, "workspace"), {
+      "README.md": "Command policy bypass sandbox only.\n",
+    });
+    const registryRootDir = join(root, "registry");
+    const plan = buildLaunchPlan({
+      boundary: AccessBoundary.ProjectScopedControl,
+      networkAccess: NetworkAccessMode.Restricted,
+      scope: {
+        projectId: "codex-command-policy-bypass-e2e",
+        registryRoot: registryRootDir,
+        workspaceRoots: [workspacePath],
+        worktreeRoots: [join(root, "worktrees")],
+        jobIdPrefixes: ["pc-bypass-"],
+        tmuxSessionPrefixes: ["pc-bypass-"],
+        allowedBranches: ["main", "master"],
+        allowedGitRemotes: ["origin"],
+      },
+      adapter: {
+        canEnforceFilesystemPolicy: true,
+        canIsolateHome: true,
+        canIsolateTemp: true,
+        canDisableRawShell: true,
+        canBrokerProjectControl: true,
+        canRestrictNetwork: true,
+      },
+    });
+    assertEqual(plan.status, LaunchPlanStatus.Ready);
+    const runner = new CommandPolicyRunner(new E2EStaticRunner(), plan.commandPolicy);
+    await assertCommandPolicyDenied(runner, {
+      command: "git",
+      args: ["push", "origin", "main"],
+      cwd: workspacePath,
+    }, "denied_git_subcommand");
+    await assertCommandPolicyDenied(runner, {
+      command: "tmux",
+      args: ["new-session", "-s", "pc-bypass-child"],
+      cwd: workspacePath,
+    }, "denied_executable");
+    await assertCommandPolicyDenied(runner, {
+      command: process.execPath,
+      args: ["-e", "process.exit(0)"],
+      cwd: workspacePath,
+    }, "inline_code_denied");
+    await assertCommandPolicyDenied(runner, {
+      command: "cat",
+      args: [join(registryRootDir, "jobs.json")],
+      cwd: workspacePath,
+    }, "denied_path_prefix");
+
+    const allowed = await runner.run({
+      command: "git",
+      args: ["status", "--short"],
+      cwd: workspacePath,
+      env: {},
+      timeoutMs: 1_000,
+      abortSignal: new AbortController().signal,
+    });
+    assertEqual(allowed.exitCode, 0);
+    return { root: keepArtifacts ? root : undefined, deniedCommands: 4 };
   } finally {
     await cleanup(root);
   }
@@ -866,6 +1025,26 @@ function assertToolOk(result, label) {
   return result;
 }
 
+async function assertCommandPolicyDenied(runner, input, expectedReason) {
+  try {
+    await runner.run({
+      ...input,
+      env: {},
+      timeoutMs: 1_000,
+      abortSignal: new AbortController().signal,
+    });
+  } catch (error) {
+    assert(
+      String(error instanceof Error ? error.message : error).includes(
+        `command_policy_denied:${expectedReason}`,
+      ),
+      `expected ${expectedReason}, got ${safeError(error).message}`,
+    );
+    return;
+  }
+  throw new Error(`expected command policy denial: ${expectedReason}`);
+}
+
 async function waitForCodexProjectChildResult(input) {
   const markerPath = join(input.workspacePath, "project-control-real-codex-ok.txt");
   let lastBrief = null;
@@ -892,12 +1071,14 @@ async function waitForCodexProjectChildResult(input) {
         changedFiles: brief.changedFiles ?? status.changedFiles ?? [],
       };
     }
+    if (status.tmuxAlive === false) {
+      const providerSkip = codexBriefProviderUnavailableSkip(lastBrief);
+      if (providerSkip) return providerSkip;
+    }
     if (
       status.tmuxAlive === false &&
       (status.resultStatus === "failed" || brief.progressStatus === "failed")
     ) {
-      const providerSkip = codexBriefProviderUnavailableSkip(lastBrief);
-      if (providerSkip) return providerSkip;
       throw new Error(`project child failed: ${safeTail(JSON.stringify(lastBrief))}`);
     }
     await sleep(5_000);
@@ -1046,6 +1227,25 @@ function redactSensitive(value) {
     .replace(/access_token["=: ]+[^",\s]+/gi, "access_token:<redacted>")
     .replace(/id_token["=: ]+[^",\s]+/gi, "id_token:<redacted>")
     .replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer <redacted>");
+}
+
+class E2EStaticRunner {
+  runnerId = "e2e-static";
+
+  capabilities = {
+    runnerId: this.runnerId,
+    supportsEnvAllowlist: true,
+    supportsCwd: true,
+    supportsTimeout: true,
+  };
+
+  async run() {
+    return {
+      exitCode: 0,
+      stdout: "",
+      stderr: "",
+    };
+  }
 }
 
 await main();

@@ -462,7 +462,13 @@ Current e2e coverage:
 - `codex project integration lifecycle tools` runs open/apply/check/commit/push
   through `subscription-runtime-codex-goal tool ...` on a sandbox repository;
 - the same scenario checks that `push_approved_commit` rejects an unapproved
-  remote before pushing the approved commit.
+  remote before pushing the approved commit;
+- `codex command policy rejects project bypass` builds a project-scoped Codex
+  launch plan from `dist` and proves raw `git push`, raw `tmux`, inline code and
+  direct registry path access are denied before a runner executes them;
+- `codex project controller starts real child worker`, when live Codex accounts
+  are enabled, now carries the child marker output through the integration
+  lifecycle and pushes the approved commit to a sandbox bare remote.
 
 Optional later:
 
