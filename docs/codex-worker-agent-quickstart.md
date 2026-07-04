@@ -165,6 +165,40 @@ subscription-runtime-codex-goal handoff my-task
 subscription-runtime-codex-goal continue-job my-task --confirm
 ```
 
+## Project-scoped controller jobs
+
+Use `accessBoundary: "project_scoped_control"` only for a controller manifest
+that coordinates scoped project work through broker tools. Do not run it as a
+normal Codex writer with `codex_goal_continue`; ordinary launches fail closed
+because raw shell cannot enforce project-scoped control.
+
+Controller manifest requirements:
+
+- `accessBoundary: "project_scoped_control"`;
+- `networkAccess: "restricted"`;
+- `projectAccessScope.registryRoot` points at the worker registry;
+- `workspaceRoots` and `worktreeRoots` include only this project's roots;
+- `jobIdPrefixes` and `tmuxSessionPrefixes` are project-specific;
+- `allowedBranches`, `allowedGitRemotes` and optional `allowedAccountIds` are
+  explicitly scoped;
+- never set `allowDangerFullAccess` for a controller or child job.
+
+Controller actions must use brokered MCP tools:
+
+```txt
+codex_goal_project_create_worktree({ controllerJobId, ... })
+codex_goal_project_create_job({ controllerJobId, ... })
+codex_goal_project_start({ controllerJobId, jobId, confirmStart: true })
+codex_goal_project_mark_reviewed({ controllerJobId, jobId })
+codex_goal_project_integrate_commit({ controllerJobId, ... })
+codex_goal_project_push_branch({ controllerJobId, ... })
+```
+
+Child jobs created by `codex_goal_project_create_job` inherit a narrowed scope
+from the controller. They default to
+`accessBoundary: "isolated_workspace_write"` and cannot request
+`project_scoped_control` or `danger_full_access` through the controller path.
+
 ## Recovery rules
 
 - quota, capacity, auth broken or reconnect: use the pool continuation path;

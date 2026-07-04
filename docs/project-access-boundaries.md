@@ -114,3 +114,38 @@ Codex broker git/worktree operations use fixed structured requests and
 workspace roots, worktree roots, branches, remotes, force-push policy and
 commit SHA shape before executing git. Push force mode uses `--force-with-lease`
 and is denied unless project scope explicitly allows force push.
+
+## Project controller recipe
+
+For a long-running project coordinator, create a stored controller job with
+`accessBoundary: "project_scoped_control"` and a tight `projectAccessScope`.
+The controller is a policy anchor for broker calls, not an ordinary raw-shell
+writer. It should coordinate child jobs only through project-control tools.
+
+Minimum safe scope:
+
+- `registryRoot`: the single worker registry this controller may write through
+  the broker;
+- `workspaceRoots`: existing project integration/checkpoint workspaces;
+- `worktreeRoots`: parent directories where child worktrees may be created;
+- `jobIdPrefixes`: project-specific prefixes for child job ids and job roots;
+- `tmuxSessionPrefixes`: project-specific prefixes for child worker sessions;
+- `allowedBranches`: branches the controller may integrate or push;
+- `allowedGitRemotes`: usually `origin`;
+- `allowedAccountIds`: optional account allow-list for child worker manifests.
+
+The expected control loop is:
+
+1. inspect status with read-only tools;
+2. create a scoped worktree with `codex_goal_project_create_worktree`;
+3. create a child job with `codex_goal_project_create_job`;
+4. start it with `codex_goal_project_start`;
+5. review the child diff and verification evidence;
+6. write a review marker with `codex_goal_project_mark_reviewed`;
+7. integrate reviewed commits with `codex_goal_project_integrate_commit`;
+8. push allowed branches with `codex_goal_project_push_branch`.
+
+The broker rejects child manifests that try to override the controller-owned
+scope, request `danger_full_access`, request `project_scoped_control`, use
+unapproved accounts, write job roots outside the registry base, or use
+workspace paths outside the controller scope.
