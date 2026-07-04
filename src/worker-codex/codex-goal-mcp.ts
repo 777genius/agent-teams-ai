@@ -4243,8 +4243,18 @@ function codexGoalDecisionChecklist(input: {
   ];
 }
 
-function codexGoalControlSurface(launch: CodexGoalLaunchInput): JsonObject {
-  const executionEngine = launch.config.executionEngine ?? "app-server-goal";
+interface CodexGoalControlSurface {
+  readonly executionEngine: string;
+  readonly childWorkerSpawn: string;
+  readonly hostAuthSurfaces: readonly string[];
+  readonly guidance: string;
+}
+
+const DEFAULT_CODEX_GOAL_EXECUTION_ENGINE = "app-server-goal";
+
+function codexGoalControlSurface(launch: CodexGoalLaunchInput): CodexGoalControlSurface {
+  // Keep this default aligned with create/load launch config defaults above.
+  const executionEngine = launch.config.executionEngine ?? DEFAULT_CODEX_GOAL_EXECUTION_ENGINE;
   const appServerGoal = executionEngine === "app-server-goal";
   return {
     executionEngine,
@@ -4384,11 +4394,7 @@ function buildCodexGoalHandoff(input: {
     "",
     "## Control Surface",
     `- childWorkerSpawn: ${String(controlSurface.childWorkerSpawn)}`,
-    `- hostAuthSurfaces: ${
-      Array.isArray(controlSurface.hostAuthSurfaces)
-        ? controlSurface.hostAuthSurfaces.join(", ")
-        : ""
-    }`,
+    `- hostAuthSurfaces: ${controlSurface.hostAuthSurfaces.join(", ")}`,
     `- guidance: ${String(controlSurface.guidance)}`,
     "",
     "## Safety Rules",

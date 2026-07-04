@@ -1761,13 +1761,16 @@ describe("codex goal MCP server", () => {
     const poolRootDir = join(root, "auth-pools");
     const authRootDir = join(poolRootDir, "live-codex-auth");
     const workspacePath = join(root, "workspace");
+    const workspacePathB = join(root, "workspace-b");
     const promptPath = join(jobRootDir, "prompt.md");
     const taskId = "sandbox-task";
 
     try {
       await mkdir(jobRootDir, { recursive: true });
       await mkdir(workspacePath, { recursive: true });
+      await mkdir(workspacePathB, { recursive: true });
       await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await execFileAsync("git", ["init"], { cwd: workspacePathB });
       await writeFile(promptPath, "Do a sandbox task.\n");
       await writeFakeAuth(authRootDir, "account-a", {
         lastRefresh: "2026-06-01T00:00:00.000Z",
@@ -1823,6 +1826,30 @@ describe("codex goal MCP server", () => {
           requireGitWorkspace: true,
           prewarmOnStart: false,
           tmuxSession: "sandbox-task-worker",
+          outputFormat: "json",
+        });
+        await callToolJson(client, "codex_goal_create_job", {
+          registryRootDir,
+          jobId: "job-b",
+          description: "runtime adapter sandbox job",
+          jobRootDir,
+          authRootDir,
+          stateRootDir,
+          workspacePath: workspacePathB,
+          promptPath,
+          taskId: "sandbox-task-b",
+          accounts: ["account-a", "account-b", "account-c"],
+          outputPath: join(jobRootDir, "sandbox-task-b.latest-result.json"),
+          logPath: join(jobRootDir, "sandbox-task-b.log"),
+          model: "gpt-5.5",
+          reasoningEffort: "xhigh",
+          serviceTier: "fast",
+          executionEngine: "app-server",
+          taskTimeoutMs: 72 * 60 * 60 * 1000,
+          maxAccountCycles: 3,
+          requireGitWorkspace: true,
+          prewarmOnStart: false,
+          tmuxSession: "sandbox-task-worker-b",
           outputFormat: "json",
         });
         await writeFile(
@@ -1909,6 +1936,18 @@ describe("codex goal MCP server", () => {
             ],
           },
         });
+        const runtimeDecision = await callToolJson(client, "codex_goal_decision", {
+          registryRootDir,
+          jobId: "job-b",
+        });
+        expect(runtimeDecision.decision).toMatchObject({
+          controlSurface: {
+            executionEngine: "app-server",
+            childWorkerSpawn: "runtime_adapter_owned",
+            hostAuthSurfaces: ["provider_environment_policy_applies"],
+          },
+        });
+
         expect(decisionBody.blockers).toEqual([
           expect.objectContaining({
             code: "no_available_accounts",
@@ -1929,16 +1968,17 @@ describe("codex goal MCP server", () => {
         expect(overview).toMatchObject({
           ok: true,
           registryRootDir,
-          totalJobs: 1,
-          returnedJobs: 1,
+          totalJobs: 2,
+          returnedJobs: 2,
           summary: {
             running: 0,
             safeToContinue: 0,
-            needsHumanRelogin: 1,
+            needsHumanRelogin: 2,
           },
         });
         const overviewJobs = overview.jobs as readonly Record<string, unknown>[];
-        expect(overviewJobs[0]).toMatchObject({
+        const overviewJobA = overviewJobs.find((job) => job.jobId === "job-a");
+        expect(overviewJobA).toMatchObject({
           ok: true,
           jobId: "job-a",
           workerAlive: false,
@@ -1947,11 +1987,11 @@ describe("codex goal MCP server", () => {
           lifecycleMarkerTypes: ["review", "pause_request"],
           nextBestTool: "codex_goal_accounts_status",
         });
-        expect(overviewJobs[0]?.lifecycleMarkers).toEqual([
+        expect(overviewJobA?.lifecycleMarkers).toEqual([
           expect.objectContaining({ type: "review" }),
           expect.objectContaining({ type: "pause_request" }),
         ]);
-        expect(String((overviewJobs[0]?.commands as Record<string, unknown>).brief))
+        expect(String((overviewJobA?.commands as Record<string, unknown>).brief))
           .toContain("registryRootDir");
         expect(JSON.stringify(overview)).not.toContain("refresh-secret");
         expect(JSON.stringify(overview)).not.toContain("access-secret");
