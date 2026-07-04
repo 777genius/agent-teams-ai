@@ -205,6 +205,8 @@ class FakeTeamConfigReader {
   }
 
   setConfig(teamName: string, config: TeamConfig): void {
+    validateTeamNamePathSegment(teamName);
+    validateConfigMemberPathSegments(config);
     assertNoSecretLikeFixtureValues({ teamName, config });
     this.configs.set(teamName, cloneFixture(config));
   }
@@ -245,8 +247,12 @@ class FakeTeamMembersMetaStore {
   }
 
   setMeta(teamName: string, meta: TeamMembersMetaFile): void {
+    validateTeamNamePathSegment(teamName);
     assertNoSecretLikeFixtureValues({ teamName, meta });
-    this.metaByTeam.set(teamName, normalizeMembersMetaFile(cloneFixture(meta)));
+    const normalizedMeta = normalizeMembersMetaFile(cloneFixture(meta));
+    validateStoredMemberPathSegments(normalizedMeta.members);
+    assertNoSecretLikeFixtureValues({ teamName, meta: normalizedMeta });
+    this.metaByTeam.set(teamName, normalizedMeta);
   }
 
   async getMeta(teamName: string): Promise<TeamMembersMetaFile | null> {
@@ -263,11 +269,12 @@ class FakeTeamMembersMetaStore {
     members: TeamMember[],
     options?: { providerBackendId?: string }
   ): Promise<void> {
-    this.setMeta(teamName, {
+    const meta: TeamMembersMetaFile = {
       version: 1,
       providerBackendId: options?.providerBackendId,
       members: normalizeMembers(members),
-    });
+    };
+    this.setMeta(teamName, meta);
   }
 }
 
@@ -281,6 +288,7 @@ class FakeTeamMetaStore {
   }
 
   setMeta(teamName: string, meta: TeamMetaFile): void {
+    validateTeamNamePathSegment(teamName);
     assertNoSecretLikeFixtureValues({ teamName, meta });
     this.metaByTeam.set(teamName, cloneFixture(meta));
   }
@@ -683,12 +691,34 @@ function assertPathSegment(value: string, label: string): void {
   }
 }
 
+function assertTrimmedPathSegmentIfPresent(value: string, label: string): void {
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed === value) {
+    return;
+  }
+  assertPathSegment(trimmed, label);
+}
+
 function validateTeamNamePathSegment(teamName: string): void {
   assertPathSegment(teamName, 'team name');
+  const trimmed = teamName.trim();
+  if (trimmed !== teamName) {
+    assertPathSegment(trimmed, 'team name');
+  }
 }
 
 function validateMemberNamePathSegment(memberName: string): void {
   assertPathSegment(memberName, 'member name');
+  assertTrimmedPathSegmentIfPresent(memberName, 'member name');
+}
+
+function validateStoredMemberPathSegments(members: readonly TeamMember[] | undefined): void {
+  for (const [index, member] of (members ?? []).entries()) {
+    if (typeof member.name !== 'string') {
+      throw new Error(`Invalid member name at members[${index}]: value must be a string.`);
+    }
+    validateMemberNamePathSegment(member.name);
+  }
 }
 
 function validateMemberPathSegments(members: readonly TeamMember[] | undefined): void {
@@ -696,8 +726,9 @@ function validateMemberPathSegments(members: readonly TeamMember[] | undefined):
     if (typeof member.name !== 'string') {
       throw new Error(`Invalid member name at members[${index}]: value must be a string.`);
     }
-    validateMemberNamePathSegment(member.name);
+    assertPathSegment(member.name, 'member name');
   }
+  validateStoredMemberPathSegments(normalizeMembers(members ?? []));
 }
 
 function validateConfigMemberPathSegments(config: TeamConfig | null): void {

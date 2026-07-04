@@ -155,6 +155,20 @@ describe('TeamProvisioningHarnessBuilder', () => {
     expect(await pathExists(outsideDir)).toBe(false);
   });
 
+  it('rejects team names that trim to traversal before creating temp dirs', async () => {
+    const prefix = 'team-provisioning-harness-trimmed-team-path-test-';
+    const beforeEntries = await listTempWorkspaceNames(prefix);
+
+    await expect(
+      TeamProvisioningHarnessBuilder.create()
+        .withTempWorkspace({ prefix })
+        .withTeam(' .. ')
+        .build()
+    ).rejects.toThrow(/Invalid team name/);
+
+    expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+  });
+
   it('rejects traversal inbox member names before creating temp dirs or writing escaped files', async () => {
     const prefix = 'team-provisioning-harness-invalid-member-path-test-';
     const teamName = 'invalid-member-path-team';
@@ -181,6 +195,39 @@ describe('TeamProvisioningHarnessBuilder', () => {
 
     expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
     expect(await pathExists(outsideDir)).toBe(false);
+  });
+
+  it('rejects member names that trim to traversal before temp dirs or fake stores are created', async () => {
+    const prefix = 'team-provisioning-harness-trimmed-member-path-test-';
+    const teamName = 'trimmed-member-path-team';
+    const beforeEntries = await listTempWorkspaceNames(prefix);
+
+    await expect(
+      TeamProvisioningHarnessBuilder.create()
+        .withTempWorkspace({ prefix })
+        .withTeam(
+          teamName,
+          teamConfigFixture.basic({
+            teamName,
+            members: [memberFixture.lead(), memberFixture.codex(' .. ')],
+          })
+        )
+        .build()
+    ).rejects.toThrow(/Invalid member name/);
+
+    expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
+  });
+
+  it('rejects fake member store writes that normalize to traversal names', async () => {
+    const harness = await track(TeamProvisioningHarnessBuilder.create().build());
+
+    await expect(
+      harness.stores.membersMetaStore.writeMembers('trimmed-store-team', [
+        memberFixture.codex(' .. '),
+      ])
+    ).rejects.toThrow(/Invalid member name/);
+
+    await expect(harness.stores.membersMetaStore.getMeta('trimmed-store-team')).resolves.toBeNull();
   });
 
   it('rejects traversal member names in inbox paths before writing escaped files', async () => {
@@ -524,18 +571,29 @@ describe('TeamProvisioningHarnessBuilder', () => {
 
     expect(collectSecretLikeFixtureValues(sampleFixtures)).toEqual([]);
     expect(() => assertNoSecretLikeFixtureValues(sampleFixtures)).not.toThrow();
-    expect(collectSecretLikeFixtureValues({ apiKey: 'fixture-placeholder' })).toEqual([
-      expect.objectContaining({ path: '$.apiKey' }),
+    const keyFinding = collectSecretLikeFixtureValues({ apiKey: 'fixture-placeholder' });
+    expect(keyFinding).toEqual([
+      expect.objectContaining({ path: '$[key#0:redacted]', patternName: 'secret-like-key' }),
     ]);
-    expect(
-      collectSecretLikeFixtureValues({ nested: { authToken: 'fixture-placeholder' } })
-    ).toEqual([expect.objectContaining({ path: '$.nested.authToken' })]);
+    expect(keyFinding[0]?.path).not.toContain('apiKey');
+
+    const nestedKeyFinding = collectSecretLikeFixtureValues({
+      nested: { authToken: 'fixture-placeholder' },
+    });
+    expect(nestedKeyFinding).toEqual([
+      expect.objectContaining({
+        path: '$[key#0:safe][key#0:redacted]',
+        patternName: 'secret-like-key',
+      }),
+    ]);
+    expect(nestedKeyFinding[0]?.path).not.toContain('nested');
+    expect(nestedKeyFinding[0]?.path).not.toContain('authToken');
     expect(collectSecretLikeFixtureValues({ value: 'Bearer [defanged fixture]' })).toEqual([]);
     expect(
       collectSecretLikeFixtureValues({ value: `Bearer ${'fixtureToken'.repeat(2)}` })
     ).toEqual([
       expect.objectContaining({
-        path: '$.value',
+        path: '$[key#0:safe]',
         patternName: 'bearer-token',
         stringLength: 31,
         redactedValue: '<redacted>',
@@ -544,6 +602,46 @@ describe('TeamProvisioningHarnessBuilder', () => {
     expect(() =>
       assertNoSecretLikeFixtureValues({ member: { password: 'fixture-placeholder' } })
     ).toThrow(/Secret-like fixture values/);
+  });
+
+  it('does not include secret-like raw object keys in scanner findings or thrown errors', () => {
+    const rawSecretKey = `Bearer ${'fixtureKey'.repeat(2)}`;
+    const nestedSecretKey = 'authToken';
+    const matchedValue = `Bearer ${'fixtureToken'.repeat(2)}`;
+    const fixture = {
+      [rawSecretKey]: {
+        [nestedSecretKey]: matchedValue,
+      },
+    };
+
+    const findings = collectSecretLikeFixtureValues(fixture);
+    expect(findings.length).toBeGreaterThan(0);
+    for (const finding of findings) {
+      expect(finding.path).not.toContain(rawSecretKey);
+      expect(finding.path).not.toContain(nestedSecretKey);
+      expect(finding.reason).not.toContain(rawSecretKey);
+      expect(finding.reason).not.toContain(nestedSecretKey);
+    }
+    expect(findings.map((finding) => finding.path)).toEqual(
+      expect.arrayContaining([
+        '$[key#0:redacted]',
+        '$[key#0:redacted][key#0:redacted]',
+      ])
+    );
+
+    let thrown: unknown;
+    try {
+      assertNoSecretLikeFixtureValues(fixture);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    const message = thrown instanceof Error ? thrown.message : String(thrown);
+    expect(message).not.toContain(rawSecretKey);
+    expect(message).not.toContain(nestedSecretKey);
+    expect(message).not.toContain(matchedValue);
+    expect(message).toContain('<redacted>');
   });
 
   it('does not include matched secret-like raw values in thrown scanner errors', () => {

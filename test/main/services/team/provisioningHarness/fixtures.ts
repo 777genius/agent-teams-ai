@@ -126,13 +126,42 @@ const SECRET_LIKE_VALUE_PATTERNS: readonly { name: string; pattern: RegExp }[] =
   { name: 'private-key-block', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ];
 
+const SAFE_FIXTURE_PATH_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
+
+function findSecretLikeValuePattern(
+  value: string
+): (typeof SECRET_LIKE_VALUE_PATTERNS)[number] | undefined {
+  return SECRET_LIKE_VALUE_PATTERNS.find(({ pattern }) => pattern.test(value));
+}
+
+function findSecretLikeKeyPattern(key: string): { name: string } | undefined {
+  if (SECRET_LIKE_KEY_PATTERN.test(key)) {
+    return { name: 'secret-like-key' };
+  }
+  const matchedValuePattern = findSecretLikeValuePattern(key);
+  if (matchedValuePattern) {
+    return { name: `secret-like-${matchedValuePattern.name}` };
+  }
+  return undefined;
+}
+
+function formatObjectKeyPathSegment(key: string, index: number): string {
+  if (findSecretLikeKeyPattern(key)) {
+    return `[key#${index}:redacted]`;
+  }
+  if (SAFE_FIXTURE_PATH_KEY_PATTERN.test(key)) {
+    return `[key#${index}:safe]`;
+  }
+  return `[key#${index}:sanitized]`;
+}
+
 function scanFixtureValue(
   value: unknown,
   path: string,
   findings: SecretLikeFixtureFinding[]
 ): void {
   if (typeof value === 'string') {
-    const matchedPattern = SECRET_LIKE_VALUE_PATTERNS.find(({ pattern }) => pattern.test(value));
+    const matchedPattern = findSecretLikeValuePattern(value);
     if (matchedPattern) {
       findings.push({
         path,
@@ -154,12 +183,14 @@ function scanFixtureValue(
     return;
   }
 
-  for (const [key, child] of Object.entries(value)) {
-    const childPath = `${path}.${key}`;
-    if (SECRET_LIKE_KEY_PATTERN.test(key)) {
+  for (const [index, [key, child]] of Object.entries(value).entries()) {
+    const childPath = `${path}${formatObjectKeyPathSegment(key, index)}`;
+    const matchedKeyPattern = findSecretLikeKeyPattern(key);
+    if (matchedKeyPattern) {
       findings.push({
         path: childPath,
-        reason: `key matched ${SECRET_LIKE_KEY_PATTERN.toString()}`,
+        reason: 'key matched secret-like pattern',
+        patternName: matchedKeyPattern.name,
       });
     }
     scanFixtureValue(child, childPath, findings);
