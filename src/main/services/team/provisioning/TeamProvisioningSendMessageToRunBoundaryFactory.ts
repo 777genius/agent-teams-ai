@@ -3,6 +3,7 @@ import {
   type BuildLeadMessageStdinPayloadInput,
   type LeadAttachmentInput,
   toLeadAttachmentPayloads as defaultToLeadAttachmentPayloads,
+  tryBuildLeadMessageStdinPayloadSync as defaultTryBuildLeadMessageStdinPayloadSync,
 } from './TeamProvisioningLeadAttachments';
 
 export interface TeamProvisioningSendMessageToRunWritableStdin {
@@ -30,6 +31,9 @@ export interface TeamProvisioningSendMessageToRunBoundaryDeps<
   setLeadActivity(run: TRun, state: 'active'): void;
   toLeadAttachmentPayloads?: typeof defaultToLeadAttachmentPayloads;
   buildLeadMessageStdinPayload?: (input: BuildLeadMessageStdinPayloadInput) => Promise<string>;
+  tryBuildLeadMessageStdinPayloadSync?: (
+    input: BuildLeadMessageStdinPayloadInput
+  ) => string | null;
 }
 
 export interface TeamProvisioningSendMessageToRunBoundary<
@@ -50,6 +54,9 @@ export function createTeamProvisioningSendMessageToRunBoundary<
   const toLeadAttachmentPayloads = deps.toLeadAttachmentPayloads ?? defaultToLeadAttachmentPayloads;
   const buildLeadMessageStdinPayload =
     deps.buildLeadMessageStdinPayload ?? defaultBuildLeadMessageStdinPayload;
+  const tryBuildLeadMessageStdinPayloadSync =
+    deps.tryBuildLeadMessageStdinPayloadSync ??
+    (deps.buildLeadMessageStdinPayload ? null : defaultTryBuildLeadMessageStdinPayloadSync);
 
   return {
     async sendMessageToRun(
@@ -65,13 +72,15 @@ export function createTeamProvisioningSendMessageToRunBoundary<
       }
 
       const attachmentPayloads = toLeadAttachmentPayloads(attachments);
-      const payload = await buildLeadMessageStdinPayload({
+      const payloadInput = {
         teamName: run.teamName,
         runId: run.runId,
         providerId: run.request.providerId,
         text: message,
         attachments: attachmentPayloads,
-      });
+      };
+      const syncPayload = tryBuildLeadMessageStdinPayloadSync?.(payloadInput) ?? null;
+      const payload = syncPayload ?? (await buildLeadMessageStdinPayload(payloadInput));
       const stdin = run.child.stdin;
       await new Promise<void>((resolve, reject) => {
         stdin.write(payload + '\n', (error) => {

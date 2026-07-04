@@ -57,7 +57,27 @@ export function codexImagePartToContentBlock(
 export async function buildLeadMessageStdinPayload(
   input: BuildLeadMessageStdinPayloadInput
 ): Promise<string> {
-  const content = await buildLeadMessageContentBlocks(input);
+  const syncPayload = tryBuildLeadMessageStdinPayloadSync(input);
+  if (syncPayload !== null) {
+    return syncPayload;
+  }
+  const content = await buildCodexLeadAttachmentContentBlocks({
+    teamName: input.teamName,
+    runId: input.runId,
+    text: input.text,
+    attachments: input.attachments ?? [],
+  });
+  return stringifyLeadMessageStdinPayload(content);
+}
+
+export function tryBuildLeadMessageStdinPayloadSync(
+  input: BuildLeadMessageStdinPayloadInput
+): string | null {
+  const content = tryBuildLeadMessageContentBlocksSync(input);
+  return content ? stringifyLeadMessageStdinPayload(content) : null;
+}
+
+function stringifyLeadMessageStdinPayload(content: Record<string, unknown>[]): string {
   return JSON.stringify({
     type: 'user',
     message: {
@@ -70,14 +90,25 @@ export async function buildLeadMessageStdinPayload(
 export async function buildLeadMessageContentBlocks(
   input: BuildLeadMessageStdinPayloadInput
 ): Promise<Record<string, unknown>[]> {
+  const syncContent = tryBuildLeadMessageContentBlocksSync(input);
+  if (syncContent) {
+    return syncContent;
+  }
+  const attachments = input.attachments ?? [];
+  return buildCodexLeadAttachmentContentBlocks({
+    teamName: input.teamName,
+    runId: input.runId,
+    text: input.text,
+    attachments,
+  });
+}
+
+export function tryBuildLeadMessageContentBlocksSync(
+  input: BuildLeadMessageStdinPayloadInput
+): Record<string, unknown>[] | null {
   const attachments = input.attachments ?? [];
   if (normalizeOptionalTeamProviderId(input.providerId) === 'codex' && attachments.length > 0) {
-    return buildCodexLeadAttachmentContentBlocks({
-      teamName: input.teamName,
-      runId: input.runId,
-      text: input.text,
-      attachments,
-    });
+    return null;
   }
 
   return buildClaudeLeadAttachmentContentBlocks({

@@ -78,6 +78,9 @@ export async function getOpenCodeAgendaSyncRecoveryBypassMessageIds(
   }
 
   const laneState = await ports.readLaneState(input.teamName, identity.laneId).catch(() => null);
+  if (laneState === null || laneState === 'unreadable') {
+    return bypassMessageIds;
+  }
   const laneActive =
     laneState === 'active' ||
     (await ports

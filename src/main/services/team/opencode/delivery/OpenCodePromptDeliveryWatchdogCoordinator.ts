@@ -73,6 +73,12 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
     OpenCodePromptDeliveryWatchdogScheduler,
     'isEnabled' | 'schedule' | 'isStaleError'
   >;
+  schedulePromptDeliveryWatchdog?(input: {
+    teamName: string;
+    memberName: string;
+    messageId?: string | null;
+    delayMs: number;
+  }): void;
   canDeliverToTeamRuntime(teamName: string): boolean;
   recoverRuntimeLanesForWatchdog(
     teamName: string,
@@ -417,6 +423,10 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     messageId?: string | null;
     delayMs: number;
   }): void {
+    if (this.ports.schedulePromptDeliveryWatchdog) {
+      this.ports.schedulePromptDeliveryWatchdog(input);
+      return;
+    }
     this.ports.watchdogScheduler.schedule(input);
   }
 

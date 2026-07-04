@@ -49,11 +49,10 @@ export function createTeamProvisioningSameTeamNativeDeliveryPorts(
 }
 
 export class TeamProvisioningSameTeamNativeDelivery {
-  private readonly recentFingerprints = new Map<string, NativeSameTeamFingerprint[]>();
-
   constructor(
     private readonly config: TeamProvisioningSameTeamNativeDeliveryConfig,
-    private readonly ports: TeamProvisioningSameTeamNativeDeliveryPorts
+    private readonly ports: TeamProvisioningSameTeamNativeDeliveryPorts,
+    private readonly recentFingerprints = new Map<string, NativeSameTeamFingerprint[]>()
   ) {}
 
   delete(teamName: string): void {
