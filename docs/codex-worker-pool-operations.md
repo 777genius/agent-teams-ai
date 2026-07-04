@@ -268,6 +268,26 @@ direct API only when the agent is editing a host integration. Direct API should
 not be used as a shortcut to bypass `codex_goal_brief.safeToContinue`,
 single-writer checks, capacity-aware account status or dirty-worktree review.
 
+### Sandboxed lane orchestrators
+
+A lane orchestrator running inside a Codex `app-server-goal` worker is still
+inside the provider sandbox. It should assume host GitHub credentials, raw
+account auth roots, tmux supervision and worker-spawn privileges are unavailable
+unless the host explicitly exposes them through subscription-runtime controls.
+
+Use that boundary deliberately:
+
+- child worker creation, continuation, stop and account repair belong on the
+  host-side MCP, CLI or SDK control surface;
+- lane workers may request those actions with `codex_goal_handoff`,
+  `codex_goal_decision`, `codex_goal_control_enqueue` or a host-owned
+  orchestrator port;
+- do not pass `GITHUB_TOKEN`, `GH_TOKEN`, raw `auth.json` bytes or provider
+  credentials into the worker sandbox to make a lane orchestrator self-spawn;
+- if native MCP is not available in the worker thread, use the CLI MCP fallback
+  command from the handoff rather than invoking provider or host auth surfaces
+  directly.
+
 ### Flexible and custom integrations
 
 Use the SDK MCP client when a host or agent cannot access native MCP tools but
