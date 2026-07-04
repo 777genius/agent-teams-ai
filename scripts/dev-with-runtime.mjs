@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
@@ -425,7 +426,7 @@ async function downloadWithProgress(download, destinationPath) {
         response,
         lockPath: runtimeLockPath,
         notFoundHint:
-          '404 usually means the runtime release or asset is missing, private, or still a draft. pnpm dev needs runtime.lock.json to point at a published public runtime release, for example runtime-v0.0.58.',
+          '404 usually means the runtime release or asset is missing, private, or inaccessible. If the orchestrator repository is private, run gh auth login with access to it or set CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH to a local runtime.',
         ...download,
       })
     );
@@ -505,6 +506,41 @@ async function downloadWithProgress(download, destinationPath) {
   ) {
     process.stdout.write(`${formatProgressSummary(writtenBytes, totalBytes, hasTotal)}\n`);
   }
+}
+
+function downloadReleaseAssetWithGh(download, destinationPath) {
+  fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+  const result = spawnSync(
+    'gh',
+    [
+      'release',
+      'download',
+      download.releaseTag,
+      '--repo',
+      download.repository,
+      '--pattern',
+      download.assetName,
+      '--dir',
+      path.dirname(destinationPath),
+      '--clobber',
+    ],
+    {
+      cwd: uiRepoRoot,
+      encoding: 'utf8',
+      env: process.env,
+      shell: false,
+      stdio: 'pipe',
+    }
+  );
+
+  if (result.status === 0 && fs.existsSync(destinationPath)) {
+    process.stdout.write(
+      `Downloaded runtime ${download.assetName} from ${download.repository}@${download.releaseTag} via gh\n`
+    );
+    return true;
+  }
+
+  return false;
 }
 
 function extractArchive(archivePath, extractDir, archiveKind) {
@@ -612,7 +648,10 @@ async function ensureBootstrappedRuntime() {
 
     try {
       const archivePath = path.join(workDir, asset.file);
-      await downloadWithProgress(getReleaseAssetDownload(runtimeLock, asset), archivePath);
+      const download = getReleaseAssetDownload(runtimeLock, asset);
+      if (!downloadReleaseAssetWithGh(download, archivePath)) {
+        await downloadWithProgress(download, archivePath);
+      }
 
       const extractDir = path.join(workDir, 'extracted');
       extractArchive(archivePath, extractDir, asset.archiveKind);

@@ -185,11 +185,12 @@ jobs:
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         id: runtime-assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${RELEASE_TAG}"
-          existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+          RELEASE_REPO="$(node ./scripts/runtime-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/runtime-lock.mjs release-tag)"
+          existing="$(gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)"
           missing=0
           while IFS= read -r asset; do
             [ -n "$asset" ] || continue
@@ -211,11 +212,12 @@ jobs:
             exit 1
           fi
 
-          TARGET_TAG="${RELEASE_TAG}"
           SOURCE_REPO="$(node ./scripts/runtime-lock.mjs source-repository)"
           SOURCE_REF="$(node ./scripts/runtime-lock.mjs source-ref)"
+          RELEASE_REPO="$(node ./scripts/runtime-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/runtime-lock.mjs release-tag)"
           RUNTIME_VERSION="$(node ./scripts/runtime-lock.mjs version)"
-          RUN_TITLE="runtime ${RUNTIME_VERSION} -> ${GITHUB_REPOSITORY}@${TARGET_TAG}"
+          RUN_TITLE="runtime ${RUNTIME_VERSION} -> ${RELEASE_REPO}@${RELEASE_TAG}"
           STARTED_AT="$(node -e 'console.log(new Date(Date.now() - 120000).toISOString())')"
 
           gh workflow run release-runtime.yml \
@@ -223,8 +225,8 @@ jobs:
             --ref main \
             -f "source_ref=$SOURCE_REF" \
             -f "runtime_version=$RUNTIME_VERSION" \
-            -f "target_release_repo=$GITHUB_REPOSITORY" \
-            -f "target_release_tag=$TARGET_TAG"
+            -f "target_release_repo=$RELEASE_REPO" \
+            -f "target_release_tag=$RELEASE_TAG"
 
           run_id=""
           for attempt in $(seq 1 60); do
@@ -278,12 +280,13 @@ jobs:
       - name: Verify runtime assets
         if: steps.runtime-assets.outputs.missing == '1'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${RELEASE_TAG}"
+          RELEASE_REPO="$(node ./scripts/runtime-lock.mjs release-repository)"
+          RELEASE_TAG="$(node ./scripts/runtime-lock.mjs release-tag)"
           for attempt in $(seq 1 12); do
-            existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+            existing="$(gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)"
             all_found=1
             while IFS= read -r asset; do
               [ -n "$asset" ] || continue
@@ -302,7 +305,7 @@ jobs:
             sleep 10
           done
 
-          echo "Timed out waiting for runtime assets in release $TAG" >&2
+          echo "Timed out waiting for runtime assets in release $RELEASE_REPO@$RELEASE_TAG" >&2
           exit 1
 
   prepare-terminal-platform-runtime:
@@ -505,7 +508,7 @@ jobs:
 
       - name: Stage bundled runtime (macOS ${{ matrix.arch }})
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         shell: bash
         run: node ./scripts/stage-runtime.mjs --platform "darwin-${{ matrix.arch }}"
 
@@ -634,7 +637,7 @@ jobs:
       - name: Stage bundled runtime (Windows)
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: node ./scripts/stage-runtime.mjs --platform win32-x64
 
       - name: Stage terminal-platform runtime (Windows)
@@ -763,7 +766,7 @@ jobs:
 
       - name: Stage bundled runtime (Linux)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         shell: bash
         run: node ./scripts/stage-runtime.mjs --platform linux-x64
 

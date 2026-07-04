@@ -371,7 +371,6 @@ new runtime before building the app release:
 
 ```bash
 RUNTIME_VERSION=0.0.52
-APP_VERSION=2.4.0
 RUNTIME_REPO=/Users/belief/dev/projects/claude/agent_teams_orchestrator
 
 cd "$RUNTIME_REPO"
@@ -392,8 +391,8 @@ gh workflow run release-runtime.yml \
   --ref "v$RUNTIME_VERSION" \
   -f source_ref="v$RUNTIME_VERSION" \
   -f runtime_version="$RUNTIME_VERSION" \
-  -f target_release_repo=777genius/agent-teams-ai \
-  -f target_release_tag="v$APP_VERSION"
+  -f target_release_repo=777genius/agent_teams_orchestrator \
+  -f target_release_tag="v$RUNTIME_VERSION"
 
 gh run list \
   --repo 777genius/agent_teams_orchestrator \
@@ -411,9 +410,9 @@ After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
 - `sourceRef`: the matching runtime tag, for example `v0.0.52`
-- `releaseRepository`: the public repository that hosts runtime assets, normally
-  `777genius/agent-teams-ai`
-- `releaseTag`: the public runtime channel tag, for example `runtime-v0.0.52`
+- `releaseRepository`: the runtime repository that hosts runtime assets, normally
+  `777genius/agent_teams_orchestrator`
+- `releaseTag`: the matching runtime release tag, for example `v0.0.52`
 - each `assets.*.file`: replace the old runtime version suffix with the new one
 
 Then verify the lock points at real uploaded assets:
@@ -434,12 +433,14 @@ done
 node scripts/stage-runtime.mjs
 ```
 
-Do not point `runtime.lock.json` at an unpublished app draft release. Development
-bootstrap uses direct GitHub release URLs, so `pnpm dev` must be able to download
-runtime assets from the lock without relying on draft-only app release assets. A
-runtime tag push publishes `runtime-v<runtime version>` assets to the public app
-repository, while the app release workflow separately ensures the same runtime
-asset names are present on the app release before publishing.
+Do not create standalone runtime releases in the frontend repository. The
+canonical runtime release is in `777genius/agent_teams_orchestrator`, for example
+`v0.0.52`. The frontend release workflow stages those archives into packaged app
+installers.
+
+If the orchestrator repository is private, local `pnpm dev` needs GitHub CLI
+authentication with access to `777genius/agent_teams_orchestrator`, or a local
+runtime override through `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH`.
 
 ### 3. Create tag and push
 
@@ -495,7 +496,7 @@ Draft releases must be treated as review artifacts:
 Do not publish or call a release finished until this is true:
 
 - `runtime.lock.json` points at the runtime tag intended for this app release.
-- `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json assets -q '.assets[].name'` includes every file from `node scripts/runtime-lock.mjs asset-list`.
+- `gh release view "$(node scripts/runtime-lock.mjs release-tag)" --repo "$(node scripts/runtime-lock.mjs release-repository)" --json assets -q '.assets[].name'` includes every file from `node scripts/runtime-lock.mjs asset-list`.
 - `git -C /Users/belief/dev/projects/claude/agent_teams_orchestrator log --oneline "$(node scripts/runtime-lock.mjs source-ref)"..origin/main` has been reviewed. If it is non-empty, the skipped runtime commits are explicitly known to be irrelevant to the packaged app.
 - The GitHub release body is not just auto-generated `Full Changelog`.
 - The release body starts with short user-facing notes: what changed, why users care, and the most important fixes.

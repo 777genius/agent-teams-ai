@@ -2,8 +2,8 @@
   "version": "0.0.58",
   "sourceRef": "v0.0.58",
   "sourceRepository": "777genius/agent_teams_orchestrator",
-  "releaseRepository": "777genius/agent-teams-ai",
-  "releaseTag": "runtime-v0.0.58",
+  "releaseRepository": "777genius/agent_teams_orchestrator",
+  "releaseTag": "v0.0.58",
   "assets": {
     "darwin-arm64": {
       "file": "agent-teams-runtime-darwin-arm64-v0.0.58.tar.gz",

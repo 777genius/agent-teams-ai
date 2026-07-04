@@ -25,7 +25,6 @@ const sourceRepository =
 const releaseRepository =
   typeof lock.releaseRepository === 'string' ? lock.releaseRepository.trim() : '';
 const releaseTag = typeof lock.releaseTag === 'string' ? lock.releaseTag.trim() : '';
-const expectedReleaseTag = `runtime-${sourceRef}`;
 
 if (!version) {
   fail('version is required');
@@ -39,15 +38,15 @@ if (!sourceRepository) {
   fail('sourceRepository is required');
 }
 
-if (releaseRepository !== '777genius/agent-teams-ai') {
+if (releaseRepository !== sourceRepository) {
   fail(
-    `releaseRepository must point at the public app repository runtime channel (777genius/agent-teams-ai), got ${releaseRepository || '<empty>'}.`
+    `releaseRepository must point at the runtime source repository (${sourceRepository}), got ${releaseRepository || '<empty>'}.`
   );
 }
 
-if (releaseTag !== expectedReleaseTag) {
+if (releaseTag !== sourceRef) {
   fail(
-    `releaseTag must point at the public runtime channel (${expectedReleaseTag}), got ${releaseTag || '<empty>'}. Do not point runtime.lock.json at an app draft release.`
+    `releaseTag must point at the runtime release tag (${sourceRef}), got ${releaseTag || '<empty>'}.`
   );
 }
 

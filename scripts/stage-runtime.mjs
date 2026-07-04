@@ -133,7 +133,7 @@ async function downloadFile(url, destinationPath, context = {}) {
         url,
         lockPath: runtimeLockPath,
         notFoundHint:
-          '404 usually means the runtime release or asset is missing, private, or still a draft. runtime.lock.json must point at a published public runtime release.',
+          '404 usually means the runtime release or asset is missing, private, or inaccessible. Authenticate gh with access to the runtime repository or run from the release workflow with RUNTIME_BUILD_DISPATCH_TOKEN.',
         ...context,
       })
     );
@@ -143,10 +143,6 @@ async function downloadFile(url, destinationPath, context = {}) {
 }
 
 function downloadReleaseAssetWithGh(runtimeLock, releaseTag, asset, destinationPath) {
-  if (!process.env.GH_TOKEN) {
-    return false;
-  }
-
   fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
   const result = spawnSync(
     'gh',
