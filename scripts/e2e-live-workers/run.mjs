@@ -22,6 +22,7 @@ const allowLive = process.argv.includes("--allow-live") ||
   process.env.SUBSCRIPTION_RUNTIME_LIVE_WORKERS === "1";
 const keepArtifacts = process.argv.includes("--keep-artifacts") ||
   process.env.SUBSCRIPTION_RUNTIME_KEEP_LIVE_E2E_ARTIFACTS === "1";
+const onlyScenarios = scenarioFilter();
 const codexAuthRoot = resolveHome(
   process.env.CODEX_LIVE_AUTH_ROOT ??
     "~/.cache/subscription-runtime/live-codex-auth",
@@ -35,6 +36,7 @@ async function main() {
   await run("codex real app-server sandbox", codexRealAppServerSandbox);
   await run("codex broken auth skips account", codexBrokenAuthSkipsAccount);
   await run("codex quota continuation delivers inbox to real account", codexQuotaContinuationInbox);
+  await run("codex project controller starts real child worker", codexProjectControllerStartsChildWorker);
   await run("claude real cli safe-point inbox read-only", claudeInboxReadOnly);
   await run("claude real cli safe-point inbox edit", claudeInboxEdit);
 
@@ -52,6 +54,7 @@ async function main() {
 }
 
 async function run(name, fn) {
+  if (!shouldRunScenario(name)) return;
   const startedAt = Date.now();
   try {
     const detail = await fn();
@@ -232,6 +235,142 @@ async function codexQuotaContinuationInbox() {
   }
 }
 
+async function codexProjectControllerStartsChildWorker() {
+  const skip = codexProjectControlSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("codex-project-control-");
+  let childTmuxSession = null;
+  try {
+    const sourceWorkspace = await gitSandbox(join(root, "source"), {
+      "README.md": "Codex project-control live sandbox only.\n",
+    });
+    const registryRootDir = join(root, "registry");
+    const jobsRoot = join(root, "jobs");
+    const worktreesRoot = join(root, "worktrees");
+    await mkdir(registryRootDir, { recursive: true });
+    await mkdir(jobsRoot, { recursive: true });
+    await mkdir(worktreesRoot, { recursive: true });
+
+    const prefix = "pc-live-e2e-";
+    const controllerJobId = `${prefix}controller`;
+    const childJobId = `${prefix}child`;
+    childTmuxSession = childJobId;
+    const controllerJobRoot = join(jobsRoot, controllerJobId);
+    const childJobRoot = join(jobsRoot, childJobId);
+    const childWorkspace = join(worktreesRoot, childJobId);
+    const controllerPrompt = join(controllerJobRoot, "prompt.md");
+    const childPrompt = join(childJobRoot, "prompt.md");
+    await mkdir(controllerJobRoot, { recursive: true });
+    await mkdir(childJobRoot, { recursive: true });
+    await writeFile(
+      controllerPrompt,
+      "Controller manifest only. Use project-control broker tools, not raw shell.\n",
+    );
+    await writeFile(
+      childPrompt,
+      "Create project-control-real-codex-ok.txt with exact content PROJECT_CONTROL_REAL_CODEX_OK. Do not print secrets.\n",
+    );
+
+    const projectAccessScope = {
+      projectId: "codex-project-control-live-e2e",
+      registryRoot: registryRootDir,
+      workspaceRoots: [sourceWorkspace],
+      worktreeRoots: [worktreesRoot],
+      jobIdPrefixes: [prefix],
+      tmuxSessionPrefixes: [prefix],
+      allowedBranches: ["main", "master"],
+      allowedGitRemotes: ["origin"],
+      allowedAccountIds: [codexAccount],
+    };
+
+    await codexGoalTool("codex_goal_create_job", {
+      registryRootDir,
+      jobId: controllerJobId,
+      description: "Sandbox project-scoped controller live e2e",
+      jobRootDir: controllerJobRoot,
+      authRootDir: codexAuthRoot,
+      stateRootDir: join(controllerJobRoot, "state"),
+      workspacePath: sourceWorkspace,
+      promptPath: controllerPrompt,
+      taskId: controllerJobId,
+      progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
+      accounts: [codexAccount],
+      tmuxSession: controllerJobId,
+      model: process.env.CODEX_LIVE_MODEL ?? "gpt-5.5",
+      reasoningEffort: process.env.CODEX_LIVE_EFFORT ?? "high",
+      serviceTier: process.env.CODEX_LIVE_SERVICE_TIER ?? "fast",
+      executionEngine: "app-server-goal",
+      taskTimeoutMs: 10 * 60 * 1000,
+      maxAccountCycles: 1,
+      accessBoundary: "project_scoped_control",
+      projectAccessScope,
+      networkAccess: "restricted",
+      confirmCreate: true,
+    });
+
+    await codexGoalTool("codex_goal_project_create_worktree", {
+      registryRootDir,
+      controllerJobId,
+      sourceWorkspacePath: sourceWorkspace,
+      path: childWorkspace,
+      confirmCreateWorktree: true,
+    });
+    await codexGoalTool("codex_goal_project_create_job", {
+      registryRootDir,
+      controllerJobId,
+      jobId: childJobId,
+      description: "Sandbox child real Codex worker live e2e",
+      jobRootDir: childJobRoot,
+      authRootDir: codexAuthRoot,
+      stateRootDir: join(childJobRoot, "state"),
+      workspacePath: childWorkspace,
+      promptPath: childPrompt,
+      taskId: childJobId,
+      progressPath: join(childJobRoot, `${childJobId}.progress.json`),
+      accounts: [codexAccount],
+      tmuxSession: childTmuxSession,
+      model: process.env.CODEX_LIVE_MODEL ?? "gpt-5.5",
+      reasoningEffort: process.env.CODEX_LIVE_EFFORT ?? "high",
+      serviceTier: process.env.CODEX_LIVE_SERVICE_TIER ?? "fast",
+      executionEngine: "app-server-goal",
+      taskTimeoutMs: 10 * 60 * 1000,
+      maxAccountCycles: 1,
+      accessBoundary: "isolated_workspace_write",
+      networkAccess: "restricted",
+      confirmCreate: true,
+    });
+    await codexGoalTool("codex_goal_project_start", {
+      registryRootDir,
+      controllerJobId,
+      jobId: childJobId,
+      confirmStart: true,
+    });
+
+    const result = await waitForCodexProjectChildResult({
+      registryRootDir,
+      jobId: childJobId,
+      workspacePath: childWorkspace,
+    });
+    if (result.skipped) return result;
+    const auditPath = join(
+      controllerJobRoot,
+      `${controllerJobId}.project-control-events.jsonl`,
+    );
+    const auditText = await readFile(auditPath, "utf8");
+    assert(
+      auditText.includes('"operation":"start_worker"'),
+      "project controller audit must record start_worker",
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      changedFiles: result.changedFiles,
+    };
+  } finally {
+    if (childTmuxSession) killTmuxSession(childTmuxSession);
+    await cleanup(root);
+  }
+}
+
 async function claudeInboxReadOnly() {
   const skip = claudeSkipReason();
   if (skip) return { skipped: true, reason: skip };
@@ -362,6 +501,10 @@ function claudeSkipReason() {
   if (!allowLive) return "set SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 or pass --allow-live";
   if (!hasCommand("claude")) return "claude command not found";
   return null;
+}
+
+function codexProjectControlSkipReason() {
+  return codexSkipReason() ?? (!hasCommand("tmux") ? "tmux command not found" : null);
 }
 
 function realCodexAccount(root, suffix, options = {}) {
@@ -567,17 +710,125 @@ function runChecked(command, args, options = {}) {
   return result;
 }
 
+function codexGoalTool(name, args) {
+  const result = runChecked(process.execPath, [
+    join(process.cwd(), "dist/worker-codex/codex-goal-cli.js"),
+    "tool",
+    name,
+    "--args-json",
+    JSON.stringify(args),
+  ]);
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    throw new Error(`${name} returned non-json output: ${safeTail(result.stdout)}`);
+  }
+}
+
+async function waitForCodexProjectChildResult(input) {
+  const markerPath = join(input.workspacePath, "project-control-real-codex-ok.txt");
+  let lastBrief = null;
+  for (let index = 0; index < 90; index += 1) {
+    lastBrief = codexGoalTool("codex_goal_brief", {
+      registryRootDir: input.registryRootDir,
+      jobId: input.jobId,
+      tailLines: 20,
+      staleAfterMs: 120_000,
+    });
+    const brief = lastBrief.brief ?? {};
+    const status = lastBrief.status ?? {};
+    const markerExists = existsSync(markerPath);
+    const done =
+      status.tmuxAlive === false &&
+      (status.resultStatus === "done" ||
+        brief.progressStatus === "completed" ||
+        brief.progressResultStatus === "completed");
+    if (markerExists && done) {
+      const content = await readFile(markerPath, "utf8");
+      assertEqual(content.trim(), "PROJECT_CONTROL_REAL_CODEX_OK");
+      assertGitStatus(input.workspacePath, "?? project-control-real-codex-ok.txt");
+      return {
+        changedFiles: brief.changedFiles ?? status.changedFiles ?? [],
+      };
+    }
+    if (
+      status.tmuxAlive === false &&
+      (status.resultStatus === "failed" || brief.progressStatus === "failed")
+    ) {
+      const providerSkip = codexBriefProviderUnavailableSkip(lastBrief);
+      if (providerSkip) return providerSkip;
+      throw new Error(`project child failed: ${safeTail(JSON.stringify(lastBrief))}`);
+    }
+    await sleep(5_000);
+  }
+  throw new Error(`project child timed out: ${safeTail(JSON.stringify(lastBrief))}`);
+}
+
+function codexBriefProviderUnavailableSkip(value) {
+  const brief = value?.brief ?? {};
+  const status = value?.status ?? {};
+  const reason =
+    brief.progressResultReason ??
+    brief.lastFailureReason ??
+    status.resultReason ??
+    status.progressResultReason;
+  const unavailableReasons = new Set([
+    "account_unavailable",
+    "capacity_unavailable",
+    "quota_limited",
+  ]);
+  return unavailableReasons.has(reason)
+    ? { skipped: true, reason: `Codex live account unavailable: ${reason}` }
+    : null;
+}
+
+function killTmuxSession(sessionName) {
+  spawnSync("tmux", ["kill-session", "-t", sessionName], {
+    encoding: "utf8",
+    timeout: 30_000,
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function cleanup(root) {
   if (keepArtifacts) return;
   await rm(root, { recursive: true, force: true });
 }
 
 function hasCommand(command) {
-  const result = spawnSync(command, ["--version"], {
+  const result = spawnSync(command, commandVersionArgs(command), {
     encoding: "utf8",
     timeout: 30_000,
   });
   return result.status === 0;
+}
+
+function commandVersionArgs(command) {
+  return command === "tmux" ? ["-V"] : ["--version"];
+}
+
+function scenarioFilter() {
+  const cliOnly = process.argv
+    .find((arg) => arg.startsWith("--only="))
+    ?.slice("--only=".length);
+  const raw = cliOnly ?? process.env.SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY ?? "";
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function shouldRunScenario(name) {
+  if (onlyScenarios.length === 0) return true;
+  const key = scenarioKey(name);
+  return onlyScenarios.some((item) => item === name || scenarioKey(item) === key);
+}
+
+function scenarioKey(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function fakeCodexAuthJson(refreshToken) {

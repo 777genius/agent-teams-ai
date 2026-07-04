@@ -248,10 +248,19 @@ workspaces:
 SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 npm run e2e:live-workers
 ```
 
+To run only the project-scoped controller regression, use:
+
+```sh
+SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
+  SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=codex-project-controller-starts-real-child-worker \
+  npm run e2e:live-workers
+```
+
 The harness covers Codex app-server sandbox execution, broken-auth skip,
-quota-to-next-account continuation with inbox delivery, and Claude CLI
-safe-point inbox delivery. It redacts token-shaped strings from result output
-and should not be pointed at real user projects.
+quota-to-next-account continuation with inbox delivery, project-scoped
+controller child-worker startup through broker tools, and Claude CLI safe-point
+inbox delivery. It redacts token-shaped strings from result output and should
+not be pointed at real user projects.
 
 ## Choosing the control surface
 
