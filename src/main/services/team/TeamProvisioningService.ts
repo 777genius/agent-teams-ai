@@ -429,10 +429,10 @@ import {
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
-  buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
+import { TeamProvisioningRuntimeSnapshotFacade } from './provisioning/TeamProvisioningRuntimeSnapshotFacade';
 import { TeamProvisioningRuntimeStateProjection } from './provisioning/TeamProvisioningRuntimeStateProjection';
 import { createRuntimeToolActivityHandlers } from './provisioning/TeamProvisioningRuntimeToolActivity';
 import {
@@ -1158,14 +1158,7 @@ export class TeamProvisioningService {
     { logDebug: (message) => logger.debug(message) }
   );
   private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
-  private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
-    string,
-    {
-      generationAtStart: number;
-      runIdAtStart: string | null;
-      promise: Promise<TeamAgentRuntimeSnapshot>;
-    }
-  >();
+  private readonly runtimeSnapshotFacade!: TeamProvisioningRuntimeSnapshotFacade;
   private readonly liveTeamAgentRuntimeMetadataCache = new Map<
     string,
     {
@@ -1613,6 +1606,28 @@ export class TeamProvisioningService {
         this.runtimeResourceSampling.readWindowsHostProcessRowsForLiveRuntimeMetadata(
           targetTeamName
         ),
+      getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
+        this.getRuntimeSnapshotCacheGeneration(targetTeamName),
+      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
+      getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
+        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      logDebug: (message) => logger.debug(message),
+    });
+    this.runtimeSnapshotFacade = new TeamProvisioningRuntimeSnapshotFacade({
+      runs: this.runs,
+      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
+      teamMetaStore: this.teamMetaStore,
+      membersMetaStore: this.membersMetaStore,
+      launchStateStore: this.launchStateStore,
+      readConfigSnapshot: (targetTeamName) => this.configFacade.readConfigSnapshot(targetTeamName),
+      readPersistedRuntimeMembers: (targetTeamName) =>
+        this.configFacade.readPersistedRuntimeMembers(targetTeamName),
+      getMemberSpawnStatuses: (targetTeamName) => this.getMemberSpawnStatuses(targetTeamName),
+      getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
+        this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
+      createRuntimeSnapshotResourceSamplingPorts: () =>
+        this.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
+      agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.getRuntimeSnapshotCacheGeneration(targetTeamName),
       getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
@@ -3593,62 +3608,7 @@ export class TeamProvisioningService {
   }
 
   async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    const cached = this.agentRuntimeSnapshotCache.get(teamName);
-    if (cached && cached.expiresAtMs > Date.now() && cached.snapshot.runId === runId) {
-      return cached.snapshot;
-    }
-
-    const generationAtStart = this.getRuntimeSnapshotCacheGeneration(teamName);
-    const existingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
-    if (existingRequest?.runIdAtStart === runId) {
-      return existingRequest.promise;
-    }
-
-    const request = this.buildTeamAgentRuntimeSnapshot(teamName, runId, generationAtStart).finally(
-      () => {
-        if (this.agentRuntimeSnapshotInFlightByTeam.get(teamName)?.promise === request) {
-          this.agentRuntimeSnapshotInFlightByTeam.delete(teamName);
-        }
-      }
-    );
-    this.agentRuntimeSnapshotInFlightByTeam.set(teamName, {
-      generationAtStart,
-      runIdAtStart: runId,
-      promise: request,
-    });
-    return request;
-  }
-
-  private async buildTeamAgentRuntimeSnapshot(
-    teamName: string,
-    runId: string | null,
-    generationAtStart: number
-  ): Promise<TeamAgentRuntimeSnapshot> {
-    return buildTeamAgentRuntimeSnapshotHelper({
-      teamName,
-      runId,
-      generationAtStart,
-      runs: this.runs,
-      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      teamMetaStore: this.teamMetaStore,
-      membersMetaStore: this.membersMetaStore,
-      launchStateStore: this.launchStateStore,
-      readConfigSnapshot: (targetTeamName) => this.configFacade.readConfigSnapshot(targetTeamName),
-      readPersistedRuntimeMembers: (targetTeamName) =>
-        this.configFacade.readPersistedRuntimeMembers(targetTeamName),
-      getMemberSpawnStatuses: (targetTeamName) => this.getMemberSpawnStatuses(targetTeamName),
-      getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
-        this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
-      ...this.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
-      agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
-      getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
-        this.getRuntimeSnapshotCacheGeneration(targetTeamName),
-      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
-      getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
-        this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
-      logDebug: (message) => logger.debug(message),
-    });
+    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
   }
 
   private isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
