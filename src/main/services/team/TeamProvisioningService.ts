@@ -223,7 +223,6 @@ import {
 } from './provisioning/TeamProvisioningMemberLifecycleHostFactory';
 import { TeamProvisioningMemberMcpLaunchConfigProvisioner } from './provisioning/TeamProvisioningMemberMcpLaunchConfig';
 import {
-  applyLeadInboxSpawnSignal as applyLeadInboxSpawnSignalHelper,
   refreshMemberSpawnStatusesFromLeadInbox as refreshMemberSpawnStatusesFromLeadInboxHelper,
   resolveExpectedLaunchMemberName as resolveExpectedLaunchMemberNameHelper,
 } from './provisioning/TeamProvisioningMemberSpawnLeadInbox';
@@ -3221,17 +3220,6 @@ export class TeamProvisioningService {
       getRunLeadName: (run) => this.getRunLeadName(run),
       readLeadInboxMessages: (teamName, leadName) =>
         this.inboxReader.getMessagesFor(teamName, leadName),
-      setMemberSpawnStatus: (run, memberName, status, error, source, heartbeatTimestamp) =>
-        this.setMemberSpawnStatus(run, memberName, status, error, source, heartbeatTimestamp),
-    });
-  }
-
-  private applyLeadInboxSpawnSignal(
-    run: ProvisioningRun,
-    memberName: string,
-    message: InboxMessage & { messageId: string }
-  ): void {
-    applyLeadInboxSpawnSignalHelper(run, memberName, message, {
       setMemberSpawnStatus: (run, memberName, status, error, source, heartbeatTimestamp) =>
         this.setMemberSpawnStatus(run, memberName, status, error, source, heartbeatTimestamp),
     });

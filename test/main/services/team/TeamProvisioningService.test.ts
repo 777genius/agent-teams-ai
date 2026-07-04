@@ -25466,11 +25466,15 @@ describe('TeamProvisioningService', () => {
       },
     ]);
 
-    const applySignalSpy = vi.spyOn(svc as any, 'applyLeadInboxSpawnSignal');
+    const existingEntry = run.memberSpawnStatuses.get('alice');
 
     await (svc as any).refreshMemberSpawnStatusesFromLeadInbox(run);
 
-    expect(applySignalSpy).not.toHaveBeenCalled();
+    expect(run.memberSpawnStatuses.get('alice')).toBe(existingEntry);
+    expect(run.memberSpawnLeadInboxCursorByMember.get('alice')).toEqual({
+      timestamp: '2026-04-16T10:00:00.000Z',
+      messageId: 'msg-2',
+    });
   });
 
   it('processes an unseen teammate heartbeat on the first refresh', async () => {
@@ -25551,11 +25555,8 @@ describe('TeamProvisioningService', () => {
       },
     ]);
 
-    const applySignalSpy = vi.spyOn(svc as any, 'applyLeadInboxSpawnSignal');
-
     await (svc as any).refreshMemberSpawnStatusesFromLeadInbox(run);
 
-    expect(applySignalSpy).not.toHaveBeenCalled();
     expect(run.memberSpawnLeadInboxCursorByMember.size).toBe(0);
     expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
       status: 'waiting',
@@ -25606,11 +25607,8 @@ describe('TeamProvisioningService', () => {
       },
     ]);
 
-    const applySignalSpy = vi.spyOn(svc as any, 'applyLeadInboxSpawnSignal');
-
     await (svc as any).refreshMemberSpawnStatusesFromLeadInbox(run);
 
-    expect(applySignalSpy).not.toHaveBeenCalled();
     expect(run.memberSpawnStatuses.get('alice')).toBe(existingEntry);
     expect(run.memberSpawnLeadInboxCursorByMember.get('alice')).toEqual({
       timestamp: latestHeartbeatAt,
@@ -25892,7 +25890,7 @@ describe('TeamProvisioningService', () => {
     vi.spyOn((svc as any).inboxReader, 'getMessagesFor').mockResolvedValue([
       {
         from: 'alice',
-        text: 'heartbeat',
+        text: 'Bootstrap failed: stale duplicate failure',
         timestamp: '2026-04-16T10:00:00.000Z',
         messageId: 'msg-2',
         read: false,
@@ -25906,16 +25904,15 @@ describe('TeamProvisioningService', () => {
       },
     ]);
 
-    const applySignalSpy = vi.spyOn(svc as any, 'applyLeadInboxSpawnSignal');
-
     await (svc as any).refreshMemberSpawnStatusesFromLeadInbox(run);
 
-    expect(applySignalSpy).toHaveBeenCalledTimes(1);
-    expect(applySignalSpy).toHaveBeenCalledWith(
-      run,
-      'alice',
-      expect.objectContaining({ messageId: 'msg-3' })
-    );
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+      lastHeartbeatAt: '2026-04-16T10:00:00.000Z',
+    });
+    expect(run.provisioningOutputParts.join('\n')).not.toContain('stale duplicate failure');
     expect(run.memberSpawnLeadInboxCursorByMember.get('alice')).toEqual({
       timestamp: '2026-04-16T10:00:00.000Z',
       messageId: 'msg-3',
