@@ -429,7 +429,7 @@ Each write step requires an explicit confirmation flag and delegates to
 
 For Codex:
 
-- use permissions profiles and command rules for defense-in-depth;
+- use app-server approval requests and command rules for defense-in-depth;
 - deny direct `git push`, `tmux`, registry writes and auth-root reads for
   non-broker workers;
 - use project-control tools for brokered operations.
@@ -466,18 +466,24 @@ Current e2e coverage:
 - `codex command policy rejects project bypass` builds a project-scoped Codex
   launch plan from `dist` and proves raw `git push`, raw `tmux`, inline code and
   direct registry path access are denied before a runner executes them;
+- `codex real app-server command approval denies raw push`, when live Codex
+  accounts are enabled, requires real app-server command-approval denial
+  evidence before treating a raw `git push` bypass attempt as blocked;
 - `codex project controller starts real child worker`, when live Codex accounts
   are enabled, now carries the child marker output through the integration
   lifecycle and pushes the approved commit to a sandbox bare remote.
 
-Current hardening gap:
+Current app-server enforcement status:
 
-- the command-policy bypass scenario proves the runtime wrapper denies dangerous
-  commands before a wrapped runner executes them, but Codex `app-server` /
-  `app-server-goal` shell/tool calls are not currently routed through that
-  wrapper. Do not claim live app-server raw-command denial until Codex exposes an
-  enforceable command hook, a stronger permissions profile, or the worker runs
-  inside OS/container isolation that blocks the command independently.
+- Codex `app-server` / `app-server-goal` command approvals are routed through a
+  provider callback when a runtime command policy is configured. Dangerous
+  approval requests are denied before the app-server receives approval;
+- provider-side file-change grants and permission expansion requests are denied
+  fail-closed;
+- the deterministic runner bypass test and fake app-server approval tests prove
+  the runtime path. The live raw-push app-server scenario remains the required
+  external proof and may skip when live Codex accounts are quota-limited or
+  unavailable.
 
 Optional later:
 

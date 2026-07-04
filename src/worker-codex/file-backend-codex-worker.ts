@@ -35,6 +35,7 @@ import {
   PackagedCodexJsonExecutionEngine,
   defaultCodexModel,
   type CodexAppServerProcessFactory,
+  type CodexAppServerCommandApprovalPolicy,
   type CodexReasoningEffort,
   type CodexServiceTier,
   classifyCodexFailure,
@@ -54,6 +55,7 @@ import {
   type SubscriptionWorkerState,
   type WorkerCapacitySnapshot,
   type CommandPolicy,
+  validateCommandAgainstPolicy,
 } from "@vioxen/subscription-runtime/worker-core";
 import { NodeProcessRunner } from "../worker-local/node-process-runner";
 import { NullWorkerObservability } from "../worker-local/observability";
@@ -285,6 +287,18 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
                 : {}),
               ...(options.executionProfile
                 ? { executionProfile: options.executionProfile }
+                : {}),
+              ...(options.commandPolicy?.validateCommands
+                ? {
+                    commandApprovalPolicy: codexAppServerCommandApprovalPolicy(
+                      options.commandPolicy,
+                      this.observability,
+                      {
+                        workerId: this.workerId,
+                        providerInstanceId: options.providerInstanceId,
+                      },
+                    ),
+                  }
                 : {}),
               cleanThreadPrewarm: options.cleanThreadPrewarm ?? true,
               goalMode: executionEngine === "app-server-goal",
@@ -1573,6 +1587,67 @@ function delay(ms: number, abortSignal: AbortSignal): Promise<void> {
       { once: true },
     );
   });
+}
+
+function codexAppServerCommandApprovalPolicy(
+  policy: CommandPolicy,
+  observability: ObservabilityPort,
+  metadata: Readonly<Record<string, string>>,
+): CodexAppServerCommandApprovalPolicy {
+  return {
+    reviewCommand(input) {
+      const command = commandApprovalVector(input);
+      if (command === null) {
+        observability.emit({
+          name: "command_policy.denied",
+          providerId: "codex",
+          metadata: {
+            ...metadata,
+            reason: "command_unparseable",
+            source: input.source,
+          },
+        });
+        return { approved: false, reason: "command_unparseable" };
+      }
+      const decision = validateCommandAgainstPolicy({ command, policy });
+      if (!decision.allowed) {
+        observability.emit({
+          name: "command_policy.denied",
+          providerId: "codex",
+          metadata: {
+            ...metadata,
+            reason: decision.reason,
+            source: input.source,
+            ...(decision.executableName === undefined
+              ? {}
+              : { executableName: decision.executableName }),
+          },
+        });
+      }
+      return {
+        approved: decision.allowed,
+        reason: decision.allowed ? "command_policy_allowed" : decision.reason,
+      };
+    },
+  };
+}
+
+function commandApprovalVector(input: {
+  readonly command?: readonly string[];
+  readonly commandText?: string;
+}): readonly string[] | null {
+  if (input.command !== undefined) {
+    return input.command.length > 0 && input.command.every((part) => part.trim())
+      ? input.command
+      : null;
+  }
+  const commandText = input.commandText?.trim();
+  if (!commandText) return null;
+  if (/[`$<>|;&\n\r]/.test(commandText)) {
+    return ["sh", "-lc", commandText];
+  }
+  const parts = commandText.split(/\s+/).filter(Boolean);
+  return parts.length > 0 ? parts : null;
 }
 
 function assertWorkerOptions(options: FileBackendCodexWorkerOptions): void {

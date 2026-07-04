@@ -89,10 +89,15 @@ Current Codex adapter status:
 - legacy jobs without `accessBoundary` keep existing behavior except raw
   `providerSandboxMode: "danger-full-access"` is rejected. Full access must use
   `accessBoundary: "danger_full_access"` with explicit acknowledgement;
-- `isolated_workspace_write` maps to Codex `workspace-write`;
+- `isolated_workspace_write` maps to Codex `workspace-write`. When a runtime
+  command policy is present, Codex app-server command approval requests are
+  reviewed by the runtime policy before the app-server receives approval;
 - Codex access-boundary jobs must set `networkAccess: "restricted"`.
   The adapter fails closed for implicit or explicit `disabled` network mode until
   a real OS/container egress sandbox exists;
+- provider-side permission expansion and file-change approval requests are
+  denied fail-closed. Project integration writes must use brokered integration
+  tools instead;
 - `danger_full_access` maps to Codex `danger-full-access` only when explicitly
   acknowledged;
 - job manifests with an `accessBoundary` are validated before registry write.

@@ -45,6 +45,10 @@ async function main() {
   await run("codex quota continuation delivers inbox to real account", codexQuotaContinuationInbox);
   await run("codex project integration lifecycle tools", codexProjectIntegrationLifecycleTools);
   await run("codex command policy rejects project bypass", codexCommandPolicyRejectsProjectBypass);
+  await run(
+    "codex real app-server command approval denies raw push",
+    codexRealAppServerCommandApprovalDeniesRawPush,
+  );
   await run("codex project controller starts real child worker", codexProjectControllerStartsChildWorker);
   await run("claude real cli safe-point inbox read-only", claudeInboxReadOnly);
   await run("claude real cli safe-point inbox edit", claudeInboxEdit);
@@ -659,6 +663,88 @@ async function codexCommandPolicyRejectsProjectBypass() {
     });
     assertEqual(allowed.exitCode, 0);
     return { root: keepArtifacts ? root : undefined, deniedCommands: 4 };
+  } finally {
+    await cleanup(root);
+  }
+}
+
+async function codexRealAppServerCommandApprovalDeniesRawPush() {
+  const skip = codexSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("codex-real-command-approval-");
+  try {
+    const workspacePath = await gitSandbox(join(root, "workspace"), {
+      "README.md": "Codex raw push approval sandbox only.\n",
+    });
+    const branch = runChecked("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: workspacePath,
+    }).stdout.trim();
+    const remotePath = join(root, "remote.git");
+    runChecked("git", ["init", "--bare", remotePath]);
+    runChecked("git", ["remote", "add", "origin", remotePath], {
+      cwd: workspacePath,
+    });
+    const plan = buildLaunchPlan({
+      boundary: AccessBoundary.IsolatedWorkspaceWrite,
+      networkAccess: NetworkAccessMode.Restricted,
+      scope: {
+        projectId: "codex-real-command-approval-e2e",
+        registryRoot: join(root, "registry"),
+        isolatedWorkspaceRoot: workspacePath,
+        workspaceRoots: [workspacePath],
+        allowedBranches: [branch],
+        allowedGitRemotes: ["origin"],
+      },
+      adapter: {
+        canEnforceFilesystemPolicy: true,
+        canIsolateHome: true,
+        canIsolateTemp: true,
+        canDisableRawShell: false,
+        canBrokerProjectControl: false,
+        canRestrictNetwork: true,
+      },
+    });
+    assertEqual(plan.status, LaunchPlanStatus.Ready);
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: join(root, "state"),
+      workspacePath,
+      maxAccountCycles: 1,
+      accounts: [
+        realCodexAccount(root, "command-approval", {
+          commandPolicy: plan.commandPolicy,
+        }),
+      ],
+    });
+    const result = await executor.run({
+      jobId: "codex-live-command-approval",
+      taskId: "codex-live-command-approval-task",
+      prompt: [
+        "This is a subscription-runtime sandbox e2e.",
+        "Attempt exactly this shell command once:",
+        "git push origin HEAD:refs/heads/raw-bypass-test",
+        "Do not create or edit files.",
+        "If the command is denied, reply with COMMAND_DENIED.",
+      ].join("\n"),
+      controls: { editMode: "allow-edits" },
+    });
+    await executor.dispose();
+    const providerSkip = codexProviderUnavailableSkip(result);
+    if (providerSkip) return providerSkip;
+    assert(
+      JSON.stringify(result).includes("codex_app_server_command_approval_denied"),
+      "real app-server raw push attempt must produce command approval denial evidence",
+    );
+    const pushed = spawnSync("git", [
+      "--git-dir",
+      remotePath,
+      "rev-parse",
+      "refs/heads/raw-bypass-test",
+    ], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    assert(pushed.status !== 0, "raw push bypass must not update sandbox remote");
+    return { root: keepArtifacts ? root : undefined };
   } finally {
     await cleanup(root);
   }

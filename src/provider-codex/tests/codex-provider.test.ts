@@ -2497,6 +2497,121 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("enables granular app-server approvals when command approval policy is configured", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-approval-policy-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        commandApprovalPolicy: {
+          reviewCommand: () => ({ approved: true }),
+        },
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "approval policy task" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const expectedApprovalPolicy = {
+        granular: {
+          mcp_elicitations: false,
+          request_permissions: false,
+          rules: true,
+          sandbox_approval: true,
+          skill_approval: false,
+        },
+      };
+      const threadStart = fakeFactory.requests.find(
+        (request) => request.method === "thread/start",
+      );
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(threadStart?.params).toMatchObject({
+        approvalPolicy: expectedApprovalPolicy,
+        config: {
+          approval_policy: "on-request",
+        },
+      });
+      expect(turnStart?.params).toMatchObject({
+        approvalPolicy: expectedApprovalPolicy,
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("denies app-server command approval requests through command approval policy", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-command-approval-test-"));
+    const reviewedCommands: unknown[] = [];
+    const fakeFactory = new FakeAppServerFactory({
+      emitServerRequestOnTurn: {
+        id: 9_101,
+        method: "item/commandExecution/requestApproval",
+        params: {
+          command: "git push origin main",
+          cwd: workspace,
+        },
+      },
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        commandApprovalPolicy: {
+          reviewCommand: (input) => {
+            reviewedCommands.push(input);
+            return { approved: false, reason: "denied_git_push" };
+          },
+        },
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "command approval task" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(reviewedCommands).toEqual([
+        {
+          source: "command_execution",
+          commandText: "git push origin main",
+          cwd: workspace,
+        },
+      ]);
+      expect(fakeFactory.responses).toContainEqual({
+        id: 9_101,
+        result: { decision: "decline" },
+      });
+      expect(result.warnings.map((warning) => warning.code)).toContain(
+        "codex_app_server_command_approval_denied",
+      );
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("does not reuse prewarmed app-server threads across system prompts", async () => {
     const workspace = await mkdtemp(
       join(tmpdir(), "codex-app-system-prewarm-test-"),
@@ -3488,8 +3603,14 @@ type FakeAppServerFactoryOptions = {
   readonly turnUsage?: Record<string, unknown>;
   readonly mismatchTurnStartResponseId?: boolean;
   readonly reuseActualTurnId?: string;
+  readonly emitServerRequestOnTurn?: {
+    readonly id?: number;
+    readonly method: string;
+    readonly params?: Record<string, unknown>;
+  };
   readonly onPrompt?: (prompt: string) => void;
   readonly onRequest?: (request: FakeAppServerRequest) => void;
+  readonly onResponse?: (response: FakeAppServerResponse) => void;
 };
 
 type FakeAppServerRequest = {
@@ -3498,12 +3619,19 @@ type FakeAppServerRequest = {
   readonly params?: Record<string, unknown>;
 };
 
+type FakeAppServerResponse = {
+  readonly id: number;
+  readonly result?: unknown;
+  readonly error?: unknown;
+};
+
 class FakeAppServerFactory {
   spawnCount = 0;
   readonly codexHomes: string[] = [];
   readonly cwds: string[] = [];
   readonly prompts: string[] = [];
   readonly requests: FakeAppServerRequest[] = [];
+  readonly responses: FakeAppServerResponse[] = [];
   readonly processes: FakeAppServerProcess[] = [];
 
   constructor(private readonly options: FakeAppServerFactoryOptions = {}) {}
@@ -3521,6 +3649,10 @@ class FakeAppServerFactory {
       onRequest: (request) => {
         this.requests.push(request);
         this.options.onRequest?.(request);
+      },
+      onResponse: (response) => {
+        this.responses.push(response);
+        this.options.onResponse?.(response);
       },
     });
     this.processes.push(process);
@@ -3586,6 +3718,10 @@ class FakeAppServerProcess extends EventEmitter {
     for (const line of chunk.split(/\n/)) {
       if (!line.trim()) continue;
       const request = JSON.parse(line) as FakeAppServerRequest;
+      if (request.method === undefined && ("result" in request || "error" in request)) {
+        this.options.onResponse?.(request as FakeAppServerResponse);
+        continue;
+      }
       if (request.method === this.options.throwOnRequestMethod) {
         throw new Error("fake app-server stdin write failed");
       }
@@ -3720,6 +3856,16 @@ class FakeAppServerProcess extends EventEmitter {
         if (this.options.emitProcessErrorAfterTurnStartResponse) {
           this.emit("error", new Error("fake app-server process failed"));
           continue;
+        }
+        if (this.options.emitServerRequestOnTurn) {
+          this.stdout.emit(
+            "data",
+            `${JSON.stringify({
+              id: this.options.emitServerRequestOnTurn.id ?? 9_002,
+              method: this.options.emitServerRequestOnTurn.method,
+              params: this.options.emitServerRequestOnTurn.params ?? {},
+            })}\n`,
+          );
         }
         setTimeout(() => {
           if (this.options.emitTurnCompletionBeforeStarted) {

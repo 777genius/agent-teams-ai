@@ -44,6 +44,28 @@ export type CodexAppServerExecutionEngineOptions = {
   readonly maxGoalTurns?: number;
   readonly goalContinuePrompt?: string;
   readonly runStore?: ManagedRunStorePort;
+  readonly commandApprovalPolicy?: CodexAppServerCommandApprovalPolicy;
+};
+
+export type CodexAppServerCommandApprovalInput = {
+  readonly source:
+    | "command_execution"
+    | "legacy_exec"
+    | "thread_shell_command";
+  readonly command?: readonly string[];
+  readonly commandText?: string;
+  readonly cwd?: string;
+};
+
+export type CodexAppServerCommandApprovalDecision = {
+  readonly approved: boolean;
+  readonly reason?: string;
+};
+
+export type CodexAppServerCommandApprovalPolicy = {
+  readonly reviewCommand: (
+    input: CodexAppServerCommandApprovalInput,
+  ) => CodexAppServerCommandApprovalDecision;
 };
 
 export type CodexAppServerProcessFactory = (input: {
@@ -531,6 +553,9 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
       session: input.session,
       workspacePath: input.workspacePath,
       executionProfile: this.executionProfile,
+      ...(this.options.commandApprovalPolicy === undefined
+        ? {}
+        : { commandApprovalPolicy: this.options.commandApprovalPolicy }),
       cleanThreadPrewarm: this.options.cleanThreadPrewarm ?? true,
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
       reconnectGraceMs: this.options.reconnectGraceMs ?? defaultReconnectGraceMs,
@@ -604,6 +629,7 @@ class CodexAppServerClient {
       readonly session: CodexMaterializedSession;
       readonly workspacePath: string;
       readonly executionProfile: ResolvedCodexExecutionProfile;
+      readonly commandApprovalPolicy?: CodexAppServerCommandApprovalPolicy;
       readonly cleanThreadPrewarm: boolean;
       readonly timeoutMs: number;
       readonly reconnectGraceMs: number;
@@ -1163,17 +1189,17 @@ class CodexAppServerClient {
         serviceTier: input.serviceTier ?? null,
         cwd: input.workspacePath,
         runtimeWorkspaceRoots: [input.workspacePath],
-        approvalPolicy: "never",
+        approvalPolicy: this.approvalPolicyForThread(),
         approvalsReviewer: null,
         sandbox: input.sandboxMode ?? "read-only",
-        permissions: null,
         config: {
           model_reasoning_effort: input.reasoningEffort,
           model_verbosity: "low",
           ...(input.serviceTier === undefined
             ? {}
             : { service_tier: input.serviceTier }),
-          approval_policy: "never",
+          approval_policy:
+            this.options.commandApprovalPolicy === undefined ? "never" : "on-request",
           sandbox_mode: input.sandboxMode ?? "read-only",
           web_search: "disabled",
           features,
@@ -1294,10 +1320,9 @@ class CodexAppServerClient {
         ...(disableTools ? { environments: [] } : {}),
         cwd: null,
         runtimeWorkspaceRoots: null,
-        approvalPolicy: "never",
+        approvalPolicy: this.approvalPolicyForThread(),
         approvalsReviewer: null,
         sandboxPolicy: null,
-        permissions: null,
         model: input.model,
         serviceTier: input.serviceTier ?? null,
         effort: input.reasoningEffort,
@@ -1371,6 +1396,19 @@ class CodexAppServerClient {
         );
       }
     });
+  }
+
+  private approvalPolicyForThread(): unknown {
+    if (this.options.commandApprovalPolicy === undefined) return "never";
+    return {
+      granular: {
+        mcp_elicitations: false,
+        request_permissions: false,
+        rules: true,
+        sandbox_approval: true,
+        skill_approval: false,
+      },
+    };
   }
 
   private waitForTurn(
@@ -1454,13 +1492,13 @@ class CodexAppServerClient {
       return;
     }
 
+    const params = readRecord(record.params);
     if (typeof record.id === "number" && typeof record.method === "string") {
-      this.onServerRequest(record.id, record.method);
+      this.onServerRequest(record.id, record.method, params);
       return;
     }
 
     if (typeof record.method !== "string") return;
-    const params = readRecord(record.params);
     if (record.method === "item/agentMessage/delta") {
       const turnId = stringField(params, "turnId");
       const turn = this.ensureTurn(turnId);
@@ -1597,18 +1635,125 @@ class CodexAppServerClient {
     }, this.options.reconnectGraceMs);
   }
 
-  private onServerRequest(id: number, method: string): void {
+  private onServerRequest(
+    id: number,
+    method: string,
+    params: Record<string, unknown> | null,
+  ): void {
+    if (this.tryHandleApprovalServerRequest(id, method, params)) return;
     this.serverRequests.push({
       code: "codex_app_server_unsupported_request",
       safeMessage: `Codex app-server requested unsupported client method: ${method}`,
     });
+    this.respondServerRequestError(id, `unsupported_server_request:${method}`);
+  }
+
+  private tryHandleApprovalServerRequest(
+    id: number,
+    method: string,
+    params: Record<string, unknown> | null,
+  ): boolean {
+    if (method === "item/commandExecution/requestApproval") {
+      const commandText = stringField(params, "command") ?? undefined;
+      const cwd = stringField(params, "cwd") ?? undefined;
+      const decision = this.reviewCommandApproval({
+        source: "command_execution",
+        ...(commandText === undefined ? {} : { commandText }),
+        ...(cwd === undefined ? {} : { cwd }),
+      });
+      this.respondServerRequest(id, {
+        decision: decision.approved ? "accept" : "decline",
+      });
+      return true;
+    }
+    if (method === "execCommandApproval") {
+      const command = stringArrayField(params, "command") ?? undefined;
+      const cwd = stringField(params, "cwd") ?? undefined;
+      const decision = this.reviewCommandApproval({
+        source: "legacy_exec",
+        ...(command === undefined ? {} : { command }),
+        ...(cwd === undefined ? {} : { cwd }),
+      });
+      this.respondServerRequest(id, {
+        decision: decision.approved ? "approved" : "denied",
+      });
+      return true;
+    }
+    if (method === "item/fileChange/requestApproval") {
+      this.serverRequests.push({
+        code: "codex_app_server_file_change_approval_denied",
+        safeMessage:
+          "Codex app-server requested file change approval; subscription-runtime denies provider-side file grants.",
+      });
+      this.respondServerRequest(id, { decision: "decline" });
+      return true;
+    }
+    if (method === "applyPatchApproval") {
+      this.serverRequests.push({
+        code: "codex_app_server_apply_patch_approval_denied",
+        safeMessage:
+          "Codex app-server requested patch approval; subscription-runtime denies provider-side patch grants.",
+      });
+      this.respondServerRequest(id, { decision: "denied" });
+      return true;
+    }
+    if (method === "item/permissions/requestApproval") {
+      this.serverRequests.push({
+        code: "codex_app_server_permission_request_denied",
+        safeMessage:
+          "Codex app-server requested additional permissions; subscription-runtime denies provider-side permission expansion.",
+      });
+      this.respondServerRequestError(
+        id,
+        "codex_app_server_permission_request_denied",
+      );
+      return true;
+    }
+    return false;
+  }
+
+  private reviewCommandApproval(
+    input: CodexAppServerCommandApprovalInput,
+  ): CodexAppServerCommandApprovalDecision {
+    const policy = this.options.commandApprovalPolicy;
+    const decision = policy?.reviewCommand(input) ?? {
+      approved: false,
+      reason: "approval_policy_not_configured",
+    };
+    if (!decision.approved) {
+      this.serverRequests.push({
+        code: "codex_app_server_command_approval_denied",
+        safeMessage: `Codex app-server command approval denied: ${safeMessage(decision.reason ?? "unknown")}`,
+      });
+    }
+    return decision;
+  }
+
+  private respondServerRequest(id: number, result: Record<string, unknown>): void {
+    try {
+      this.child?.stdin.write(
+        `${JSON.stringify({
+          id,
+          result,
+        })}\n`,
+      );
+    } catch (error) {
+      this.recordTerminalError(
+        new Error(
+          `codex_app_server_unsupported_response_failed:${safeMessage(error)}`,
+        ),
+      );
+    }
+  }
+
+  private respondServerRequestError(id: number, message: string): void {
     try {
       this.child?.stdin.write(
         `${JSON.stringify({
           id,
           error: {
             code: -32000,
-            message: `unsupported_server_request:${method}`,
+            message,
           },
         })}\n`,
       );
@@ -2052,6 +2197,16 @@ function stringField(
 ): string | null {
   const value = record?.[field];
   return typeof value === "string" ? value : null;
+}
+
+function stringArrayField(
+  record: Record<string, unknown> | null,
+  field: string,
+): readonly string[] | null {
+  const value = record?.[field];
+  if (!Array.isArray(value)) return null;
+  const values = value.filter((item): item is string => typeof item === "string");
+  return values.length === value.length ? values : null;
 }
 
 function agentMessageText(item: Record<string, unknown>): string | null {
