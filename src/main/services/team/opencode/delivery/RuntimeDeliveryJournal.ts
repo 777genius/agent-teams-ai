@@ -1,6 +1,8 @@
 import { stableHash, stableJsonStringify } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
+import type { TaskRef } from '@shared/types/team';
+
 export const RUNTIME_DELIVERY_JOURNAL_SCHEMA_VERSION = 1;
 
 export type RuntimeDeliveryJournalStatus =
@@ -295,7 +297,7 @@ export interface RuntimeDeliveryEnvelope {
   text: string;
   createdAt: string;
   summary?: string | null;
-  taskRefs?: string[];
+  taskRefs?: TaskRef[];
 }
 
 export function normalizeRuntimeDeliveryEnvelope(value: unknown): RuntimeDeliveryEnvelope {
@@ -303,6 +305,7 @@ export function normalizeRuntimeDeliveryEnvelope(value: unknown): RuntimeDeliver
     throw new Error('Runtime delivery envelope must be an object');
   }
 
+  const taskRefs = normalizeRuntimeDeliveryTaskRefs(value.taskRefs);
   const envelope: RuntimeDeliveryEnvelope = {
     idempotencyKey: requireNonEmptyString(value.idempotencyKey, 'idempotencyKey'),
     runId: requireNonEmptyString(value.runId, 'runId'),
@@ -314,9 +317,7 @@ export function normalizeRuntimeDeliveryEnvelope(value: unknown): RuntimeDeliver
     text: requireNonEmptyString(value.text, 'text'),
     createdAt: requireNonEmptyString(value.createdAt, 'createdAt'),
     summary: value.summary === undefined || value.summary === null ? null : String(value.summary),
-    taskRefs: Array.isArray(value.taskRefs)
-      ? value.taskRefs.filter((item): item is string => typeof item === 'string')
-      : [],
+    ...(taskRefs ? { taskRefs } : {}),
   };
   return envelope;
 }
@@ -392,6 +393,37 @@ function normalizeRuntimeDeliveryTarget(value: unknown): RuntimeDeliveryTarget {
     return { teamName: value.teamName, memberName };
   }
   return { memberName };
+}
+
+function normalizeRuntimeDeliveryTaskRefs(value: unknown): TaskRef[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error('Runtime delivery envelope taskRefs must be an array');
+  }
+  if (value.length === 0) {
+    return undefined;
+  }
+  return value.map((item, index) => normalizeRuntimeDeliveryTaskRef(item, index));
+}
+
+function normalizeRuntimeDeliveryTaskRef(value: unknown, index: number): TaskRef {
+  if (!isRecord(value)) {
+    throw new Error(`Runtime delivery envelope taskRefs[${index}] must be a TaskRef`);
+  }
+  return {
+    taskId: requireRuntimeDeliveryTaskRefString(value.taskId, `taskRefs[${index}].taskId`),
+    displayId: requireRuntimeDeliveryTaskRefString(value.displayId, `taskRefs[${index}].displayId`),
+    teamName: requireRuntimeDeliveryTaskRefString(value.teamName, `taskRefs[${index}].teamName`),
+  };
+}
+
+function requireRuntimeDeliveryTaskRefString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`Runtime delivery envelope missing ${fieldName}`);
+  }
+  return value.trim();
 }
 
 function isRuntimeDeliveryJournalRecord(value: unknown): value is RuntimeDeliveryJournalRecord {

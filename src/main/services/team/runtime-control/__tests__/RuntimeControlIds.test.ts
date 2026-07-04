@@ -4,6 +4,7 @@ import {
   buildRuntimeBootstrapCheckinCommandId,
   buildRuntimeControlCommandId,
   buildRuntimeControlEventId,
+  buildRuntimeDeliverMessageCommandId,
   buildRuntimeHeartbeatCommandId,
   buildRuntimePermissionAnswerCommandId,
   buildRuntimeTaskEventCommandId,
@@ -64,6 +65,16 @@ describe('RuntimeControlIds', () => {
         idempotencyKey: 'task-key-1',
       })
     ).toBe('opencode:task-event:Team:lane-1:run-1:task-key-1');
+
+    expect(
+      buildRuntimeDeliverMessageCommandId({
+        providerId: 'opencode',
+        teamName: 'Team',
+        laneId: 'lane-1',
+        runId: 'run-1',
+        idempotencyKey: 'message-key-1',
+      })
+    ).toBe('opencode:deliver-message:Team:lane-1:run-1:message-key-1');
 
     expect(
       buildRuntimePermissionAnswerCommandId({

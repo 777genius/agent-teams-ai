@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,12 +13,12 @@ import {
   type RuntimeDeliveryLocation,
 } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
 import {
-  RuntimeDeliveryDestinationRegistry,
-  RuntimeDeliveryReconciler,
-  RuntimeDeliveryService,
   type RuntimeDeliveryDestinationPort,
+  RuntimeDeliveryDestinationRegistry,
   type RuntimeDeliveryDiagnosticsSink,
+  RuntimeDeliveryReconciler,
   type RuntimeDeliveryRunStateReader,
+  RuntimeDeliveryService,
   type RuntimeDeliveryTeamChangeEmitter,
   type RuntimeDeliveryTeamChangeEvent,
   type RuntimeDeliveryVerifyResult,
@@ -205,7 +204,9 @@ describe('RuntimeDeliveryService', () => {
 
 describe('RuntimeDeliveryReconciler', () => {
   it('diagnoses pending records that are not visible in destination', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-'));
+    const tempDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-')
+    );
     try {
       const now = new Date('2026-04-21T12:00:00.000Z');
       const journal = createRuntimeDeliveryJournalStore({
@@ -271,7 +272,7 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
     to: { memberName: 'Reviewer' },
     text: 'Please review this',
     createdAt: '2026-04-21T12:00:00.000Z',
-    taskRefs: ['task-1'],
+    taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'team-a' }],
     ...overrides,
   };
 }

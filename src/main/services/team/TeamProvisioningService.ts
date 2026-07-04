@@ -499,6 +499,10 @@ import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 import { getConfiguredCliCommandLabel } from './cliFlavor';
 import { boundLaunchDiagnostics } from './progressPayload';
+import {
+  createOpenCodeRuntimeControlApi,
+  createOpenCodeRuntimeControlRouter,
+} from './runtime-control';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   choosePreferredLaunchSnapshot,
@@ -547,6 +551,7 @@ export {
 
 import type {
   AgentActionMode,
+  CrossTeamSendRequest,
   CrossTeamSendResult,
   InboxMessage,
   LeadContextUsage,
@@ -1496,20 +1501,23 @@ export class TeamProvisioningService {
       },
     });
   private crossTeamSender:
-    | ((request: {
-        fromTeam: string;
-        fromMember: string;
-        toTeam: string;
-        text: string;
-        summary?: string;
-        messageId?: string;
-        timestamp?: string;
-        conversationId?: string;
-        replyToConversationId?: string;
-      }) => Promise<CrossTeamSendResult>)
+    | ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>)
     | null = null;
   private readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun> =
     this.createOpenCodeRuntimeDeliveryBoundaryHost();
+  private readonly openCodeRuntimeControlApi = createOpenCodeRuntimeControlApi({
+    runtimeControl: createOpenCodeRuntimeControlRouter({
+      recordOpenCodeRuntimeBootstrapCheckin: (raw) =>
+        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeBootstrapCheckin(raw),
+      deliverOpenCodeRuntimeMessage: (raw) =>
+        this.createOpenCodeRuntimeDeliveryBoundary().deliverOpenCodeRuntimeMessage(raw),
+      recordOpenCodeRuntimeTaskEvent: (raw) =>
+        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeTaskEvent(raw),
+      recordOpenCodeRuntimeHeartbeat: (raw) =>
+        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeHeartbeat(raw),
+    }),
+    resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
+  });
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -2249,19 +2257,7 @@ export class TeamProvisioningService {
   }
 
   setCrossTeamSender(
-    sender:
-      | ((request: {
-          fromTeam: string;
-          fromMember: string;
-          toTeam: string;
-          text: string;
-          summary?: string;
-          messageId?: string;
-          timestamp?: string;
-          conversationId?: string;
-          replyToConversationId?: string;
-        }) => Promise<CrossTeamSendResult>)
-      | null
+    sender: ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>) | null
   ): void {
     this.crossTeamSender = sender;
   }
@@ -3234,19 +3230,19 @@ export class TeamProvisioningService {
   }
 
   async recordOpenCodeRuntimeBootstrapCheckin(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
-    return this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeBootstrapCheckin(raw);
+    return this.openCodeRuntimeControlApi.recordOpenCodeRuntimeBootstrapCheckin(raw);
   }
 
   async deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
-    return this.createOpenCodeRuntimeDeliveryBoundary().deliverOpenCodeRuntimeMessage(raw);
+    return this.openCodeRuntimeControlApi.deliverOpenCodeRuntimeMessage(raw);
   }
 
   async recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
-    return this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeTaskEvent(raw);
+    return this.openCodeRuntimeControlApi.recordOpenCodeRuntimeTaskEvent(raw);
   }
 
   async recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
-    return this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeHeartbeat(raw);
+    return this.openCodeRuntimeControlApi.recordOpenCodeRuntimeHeartbeat(raw);
   }
 
   private createOpenCodeRuntimeDeliveryBoundary() {

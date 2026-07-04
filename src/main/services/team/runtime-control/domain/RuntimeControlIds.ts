@@ -47,6 +47,8 @@ export interface RuntimeTaskEventCommandIdInput {
   idempotencyKey: RuntimeControlIdempotencyKey;
 }
 
+export type RuntimeDeliverMessageCommandIdInput = RuntimeTaskEventCommandIdInput;
+
 export interface RuntimePermissionAnswerCommandIdInput {
   providerId: RuntimeControlProviderId;
   teamName: RuntimeControlTeamName;
@@ -115,6 +117,16 @@ export function buildRuntimeTaskEventCommandId(
   return buildRuntimeControlCommandId({
     ...input,
     verb: 'task-event',
+    parts: [input.idempotencyKey],
+  });
+}
+
+export function buildRuntimeDeliverMessageCommandId(
+  input: RuntimeDeliverMessageCommandIdInput
+): RuntimeControlCommandId {
+  return buildRuntimeControlCommandId({
+    ...input,
+    verb: 'deliver-message',
     parts: [input.idempotencyKey],
   });
 }

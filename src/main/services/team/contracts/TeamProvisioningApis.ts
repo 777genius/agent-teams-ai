@@ -1,3 +1,4 @@
+import type { OpenCodeRuntimeControlAck } from '../runtime-control/domain/RuntimeControlAck';
 import type {
   TeamCreateRequest,
   TeamCreateResponse,
@@ -20,19 +21,7 @@ export interface TeamProvisioningStartApi {
   repairStaleTaskActivityIntervalsBeforeSnapshot?(teamName: string): Promise<void>;
 }
 
-export interface OpenCodeRuntimeControlAck {
-  ok: true;
-  providerId: 'opencode';
-  teamName: string;
-  runId: string;
-  state: 'accepted' | 'delivered' | 'duplicate' | 'recorded';
-  memberName?: string;
-  runtimeSessionId?: string;
-  idempotencyKey?: string;
-  location?: unknown;
-  diagnostics: string[];
-  observedAt: string;
-}
+export type { OpenCodeRuntimeControlAck };
 
 export interface TeamRuntimeApi {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { normalizeRuntimeDeliveryEnvelope } from '../../opencode/delivery/RuntimeDeliveryJournal';
 import {
   createOpenCodeRuntimeDeliveryPorts,
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
@@ -7,8 +8,10 @@ import {
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
 } from '../TeamProvisioningOpenCodeRuntimeDelivery';
 
+import type { OpenCodeRuntimeDeliveryCrossTeamSender } from '../../opencode/delivery/OpenCodeRuntimeDeliveryPorts';
+import type { RuntimeDeliveryEnvelope } from '../../opencode/delivery/RuntimeDeliveryJournal';
 import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type { InboxMessage, PersistedTeamLaunchSnapshot, SendMessageRequest } from '@shared/types';
 
 describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
   describe('createOpenCodeRuntimeDeliveryPorts', () => {
@@ -32,6 +35,85 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
         'member_inbox',
         'cross_team_outbox',
       ]);
+    });
+
+    it('preserves structured task refs in sent, inbox, and cross-team messages', async () => {
+      const taskRefs = [{ taskId: 'task-1', displayId: '#1', teamName: 'Team' }];
+      const sentMessages: InboxMessage[] = [];
+      const inboxRequests: SendMessageRequest[] = [];
+      const crossTeamRequests: Array<Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0]> = [];
+      const ports = createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage: vi.fn(async (_teamName: string, message: InboxMessage) => {
+            sentMessages.push(message);
+          }),
+          readMessages: vi.fn(async () => sentMessages),
+        },
+        inboxReader: {
+          getMessagesFor: vi.fn(async () => []),
+        },
+        inboxWriter: {
+          sendMessage: vi.fn(async (_teamName: string, request: SendMessageRequest) => {
+            inboxRequests.push(request);
+            return {
+              deliveredToInbox: true,
+              messageId: request.messageId ?? 'member-message-1',
+            };
+          }),
+        },
+        getCrossTeamSender: () => async (request) => {
+          crossTeamRequests.push(request);
+          return { deliveredToInbox: true, messageId: request.messageId ?? 'cross-message-1' };
+        },
+      });
+
+      const userPort = ports.find((port) => port.kind === 'user_sent_messages');
+      const memberPort = ports.find((port) => port.kind === 'member_inbox');
+      const crossTeamPort = ports.find((port) => port.kind === 'cross_team_outbox');
+      expect(userPort).toBeDefined();
+      expect(memberPort).toBeDefined();
+      expect(crossTeamPort).toBeDefined();
+      if (!userPort || !memberPort || !crossTeamPort) {
+        return;
+      }
+
+      await userPort.write({
+        envelope: createDeliveryEnvelope({ to: 'user', taskRefs }),
+        destinationMessageId: 'user-message-1',
+      });
+      await memberPort.write({
+        envelope: createDeliveryEnvelope({ to: { memberName: 'Reviewer' }, taskRefs }),
+        destinationMessageId: 'member-message-1',
+      });
+      await crossTeamPort.write({
+        envelope: createDeliveryEnvelope({
+          to: { teamName: 'other-team', memberName: 'Reviewer' },
+          taskRefs,
+        }),
+        destinationMessageId: 'cross-message-1',
+      });
+
+      expect(sentMessages[0]?.taskRefs).toEqual(taskRefs);
+      expect(inboxRequests[0]?.taskRefs).toEqual(taskRefs);
+      expect(crossTeamRequests[0]?.taskRefs).toEqual(taskRefs);
+    });
+  });
+
+  describe('normalizeRuntimeDeliveryEnvelope', () => {
+    it('accepts structured task refs and rejects legacy strings after runtime-control ingress', () => {
+      expect(
+        normalizeRuntimeDeliveryEnvelope({
+          ...createDeliveryEnvelope(),
+          taskRefs: [{ taskId: ' task-1 ', displayId: ' #1 ', teamName: ' Team ' }],
+        }).taskRefs
+      ).toEqual([{ taskId: 'task-1', displayId: '#1', teamName: 'Team' }]);
+
+      expect(() =>
+        normalizeRuntimeDeliveryEnvelope({
+          ...createDeliveryEnvelope(),
+          taskRefs: ['task-1'],
+        })
+      ).toThrow('Runtime delivery envelope taskRefs[0] must be a TaskRef');
     });
   });
 
@@ -146,6 +228,23 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     });
   });
 });
+
+function createDeliveryEnvelope(
+  overrides: Partial<RuntimeDeliveryEnvelope> = {}
+): RuntimeDeliveryEnvelope {
+  return {
+    idempotencyKey: 'message-key-1',
+    runId: 'run-1',
+    teamName: 'Team',
+    fromMemberName: 'Builder',
+    providerId: 'opencode',
+    runtimeSessionId: 'session-1',
+    to: 'user',
+    text: 'Delivered text',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 function createBoundary(
   overrides: Partial<

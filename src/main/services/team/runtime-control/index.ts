@@ -1,4 +1,15 @@
 export type {
+  OpenCodeRuntimeControlApi,
+  OpenCodeRuntimeControlApiPorts,
+  OpenCodeRuntimeControlRouter,
+} from './application/OpenCodeRuntimeControlApi';
+export { createOpenCodeRuntimeControlApi } from './application/OpenCodeRuntimeControlApi';
+export type { OpenCodeRuntimeControlPort } from './application/OpenCodeRuntimeControlProvider';
+export {
+  createOpenCodeRuntimeControlProvider,
+  createOpenCodeRuntimeControlRouter,
+} from './application/OpenCodeRuntimeControlProvider';
+export type {
   RuntimeControlProviderOperation,
   RuntimeControlProviderRoutingErrorReason,
 } from './application/RuntimeControlProviderRegistry';
@@ -52,6 +63,7 @@ export type {
   RuntimeControlRunId,
   RuntimeControlRuntimeSessionId,
   RuntimeControlTeamName,
+  RuntimeDeliverMessageCommandIdInput,
   RuntimeHeartbeatCommandIdInput,
   RuntimePermissionAnswerCommandIdInput,
   RuntimeTaskEventCommandIdInput,
@@ -60,6 +72,7 @@ export {
   buildRuntimeBootstrapCheckinCommandId,
   buildRuntimeControlCommandId,
   buildRuntimeControlEventId,
+  buildRuntimeDeliverMessageCommandId,
   buildRuntimeHeartbeatCommandId,
   buildRuntimePermissionAnswerCommandId,
   buildRuntimeTaskEventCommandId,
