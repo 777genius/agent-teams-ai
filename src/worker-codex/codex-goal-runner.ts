@@ -5,20 +5,20 @@ import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import type { ProviderTaskControls } from "@vioxen/subscription-runtime/core";
-import type {
+import {
   AccessBoundary,
-  NetworkAccessMode,
-  ProjectAccessScope,
+  type NetworkAccessMode,
+  type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
-import type {
-  CodexReasoningEffort,
-  CodexServiceTier,
-} from "@vioxen/subscription-runtime/provider-codex";
 import type {
   SafeExecutionPolicy,
   SafeExecutionRunResult,
   TaskEffectMode,
 } from "@vioxen/subscription-runtime/worker-core";
+import type {
+  CodexReasoningEffort,
+  CodexServiceTier,
+} from "@vioxen/subscription-runtime/provider-codex";
 import {
   GitPatchPreserver,
   LaunchPlanStatus,
@@ -46,6 +46,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 const gitStatusTimeoutMs = 5_000;
+const gitMetadataTimeoutMs = 5_000;
 
 export type CodexGoalAccountSlot = {
   readonly name: string;
@@ -129,6 +130,14 @@ export const codexWorkerReportSystemPrompt = [
   "Keep evidence and blockers concise and factual.",
 ].join("\n");
 
+export const codexGoalLinkedWorktreeHandoffSystemPrompt = [
+  "Linked git worktree sandbox rule:",
+  "You are edit/test/handoff-only in this isolated linked worktree.",
+  "Do not run git add, git commit, or git push.",
+  "Run targeted verification, leave the workspace diff intact, and summarize changed files, tests, blockers, and risks in your final handoff.",
+  "The project controller will apply, commit, and push through the Project Integration lifecycle.",
+].join(" ");
+
 export type CodexGoalProgressStatus =
   | "starting"
   | "running"
@@ -202,6 +211,24 @@ export async function runCodexGoal(
     executionEngine: config.executionEngine ?? "app-server-goal",
     accountCount: config.accounts.length,
   });
+  const linkedWorktreeHandoff = await codexGoalLinkedWorktreeHandoffPreflight({
+    config,
+    prompt,
+  });
+  if (linkedWorktreeHandoff.enabled) {
+    await runtimeEvents.write("linked_worktree_handoff_guardrail", {
+      accessBoundary: config.accessBoundary ?? "",
+      workspaceKind: "linked_git_worktree",
+    });
+  }
+  if (linkedWorktreeHandoff.commitRequested) {
+    await runtimeEvents.write("linked_worktree_commit_preflight_warning", {
+      level: "warning",
+      accessBoundary: config.accessBoundary ?? "",
+      workspaceKind: "linked_git_worktree",
+      guidance: "edit_test_handoff_only",
+    });
+  }
   await progressHeartbeat.write({ status: "starting" });
   const encryptionKey = await readOrCreateCodexGoalEncryptionKey(
     config.encryptionKeyPath ?? join(config.jobRootDir, "encryption-key.hex"),
@@ -248,7 +275,9 @@ export async function runCodexGoal(
       controls: {
         ...controls,
       },
-      systemPrompt: codexGoalRunSystemPrompt(config),
+      systemPrompt: codexGoalRunSystemPrompt(config, {
+        linkedWorktreeHandoff: linkedWorktreeHandoff.enabled,
+      }),
       metadata: {
         goal: config.goalSummary ?? config.taskId,
         codexGoalObjective: config.codexGoalObjective ?? prompt,
@@ -441,12 +470,70 @@ function codexGoalWorkerSystemPrompt(taskId: string): string {
 
 function codexGoalRunSystemPrompt(
   config: Pick<CodexGoalRunConfig, "taskId" | "workerReportMode">,
+  options: { readonly linkedWorktreeHandoff?: boolean } = {},
 ): string {
   const prompts = [codexGoalWorkerSystemPrompt(config.taskId)];
+  if (options.linkedWorktreeHandoff === true) {
+    prompts.push(codexGoalLinkedWorktreeHandoffSystemPrompt);
+  }
   if (config.workerReportMode === "structured-output") {
     prompts.push(codexWorkerReportSystemPrompt);
   }
   return prompts.join("\n\n");
+}
+
+async function codexGoalLinkedWorktreeHandoffPreflight(input: {
+  readonly config: Pick<CodexGoalRunConfig, "accessBoundary" | "workspacePath">;
+  readonly prompt: string;
+}): Promise<{ readonly enabled: boolean; readonly commitRequested: boolean }> {
+  if (input.config.accessBoundary !== AccessBoundary.IsolatedWorkspaceWrite) {
+    return { enabled: false, commitRequested: false };
+  }
+  const linkedWorktree = await isLinkedGitWorktree(input.config.workspacePath);
+  if (!linkedWorktree) return { enabled: false, commitRequested: false };
+  return {
+    enabled: true,
+    commitRequested: promptRequestsWorkerGitCommit(input.prompt),
+  };
+}
+
+async function isLinkedGitWorktree(workspacePath: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "rev-parse",
+      "--path-format=absolute",
+      "--git-dir",
+      "--git-common-dir",
+    ], { timeout: gitMetadataTimeoutMs });
+    const [gitDir, gitCommonDir] = stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return Boolean(gitDir && gitCommonDir && gitDir !== gitCommonDir);
+  } catch {
+    return false;
+  }
+}
+
+function promptRequestsWorkerGitCommit(prompt: string): boolean {
+  const normalized = prompt.toLowerCase();
+  if (/\bdo not\s+(?:run\s+)?git\s+(?:add|commit|push)\b/.test(normalized)) {
+    return false;
+  }
+  if (/\bdo not\s+(?:commit|push)\b/.test(normalized)) return false;
+  if (/\bwithout\s+(?:committing|pushing)\b/.test(normalized)) return false;
+  if (/\bgit\s+(?:add|commit|push)\b/.test(normalized)) return true;
+  if (/\b(?:create|make|produce)\s+(?:a\s+)?commit\b/.test(normalized)) {
+    return true;
+  }
+  if (/\b(?:commit|push)\s+(?:the\s+)?(?:changes|diff|work)\b/.test(normalized)) {
+    return true;
+  }
+  return /(?:закоммит|закаммит|закамить|закомить|закоммить|запуш)/u.test(
+    normalized,
+  );
 }
 
 function createCodexGoalProgressHeartbeat(input: {

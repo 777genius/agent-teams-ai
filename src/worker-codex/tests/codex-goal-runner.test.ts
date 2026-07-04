@@ -151,6 +151,133 @@ describe("codex goal runner", () => {
     }
   });
 
+  it("adds linked-worktree handoff guardrails and commit preflight warnings", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-linked-"));
+    const promptPath = join(root, "prompt.md");
+    const workspacePath = join(root, "worker");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath,
+      promptPath,
+      taskId: "task-linked",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
+      networkAccess: NetworkAccessMode.Restricted,
+      projectAccessScope: {
+        projectId: "infinity-context",
+        isolatedWorkspaceRoot: workspacePath,
+        workspaceRoots: [workspacePath],
+      },
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await createLinkedGitWorktree(root, workspacePath);
+      await writeFile(
+        promptPath,
+        "Change the file, run tests, then git commit the changes.\n",
+      );
+
+      await runCodexGoal(config, {
+        createExecutor: () => ({
+          async run(input) {
+            expect(input.systemPrompt).toContain("Linked git worktree sandbox rule");
+            expect(input.systemPrompt).toContain("edit/test/handoff-only");
+            expect(input.systemPrompt).toContain(
+              "Do not run git add, git commit, or git push.",
+            );
+            expect(input.systemPrompt).toContain(
+              "Project Integration lifecycle",
+            );
+            return {
+              status: "completed",
+              attempts: [],
+              task: {
+                outputText: "done",
+              },
+            } as never;
+          },
+          async dispose() {},
+        }),
+      });
+
+      const events = await readJsonLines(codexGoalRuntimeEventsPath(config));
+      expect(events.map((event) => event.event)).toEqual([
+        "runner_starting",
+        "linked_worktree_handoff_guardrail",
+        "linked_worktree_commit_preflight_warning",
+        "executor_started",
+        "executor_finished",
+        "runner_disposed",
+      ]);
+      expect(events.find((event) =>
+        event.event === "linked_worktree_commit_preflight_warning"
+      )).toMatchObject({
+        level: "warning",
+        attributes: {
+          workspaceKind: "linked_git_worktree",
+          guidance: "edit_test_handoff_only",
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not warn when a linked-worktree prompt already forbids commits", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-linked-"));
+    const promptPath = join(root, "prompt.md");
+    const workspacePath = join(root, "worker");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath,
+      promptPath,
+      taskId: "task-linked-no-warning",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
+      networkAccess: NetworkAccessMode.Restricted,
+      projectAccessScope: {
+        projectId: "infinity-context",
+        isolatedWorkspaceRoot: workspacePath,
+        workspaceRoots: [workspacePath],
+      },
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await createLinkedGitWorktree(root, workspacePath);
+      await writeFile(promptPath, "Do not commit. Leave a patch handoff.\n");
+
+      await runCodexGoal(config, {
+        createExecutor: () => ({
+          async run(input) {
+            expect(input.systemPrompt).toContain("Linked git worktree sandbox rule");
+            return {
+              status: "completed",
+              attempts: [],
+              task: {
+                outputText: "done",
+              },
+            } as never;
+          },
+          async dispose() {},
+        }),
+      });
+
+      const events = await readJsonLines(codexGoalRuntimeEventsPath(config));
+      expect(events.map((event) => event.event)).toContain(
+        "linked_worktree_handoff_guardrail",
+      );
+      expect(events.map((event) => event.event)).not.toContain(
+        "linked_worktree_commit_preflight_warning",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("writes a strict latest-result when the sandbox executor throws", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-fail-"));
     const promptPath = join(root, "prompt.md");
@@ -501,6 +628,29 @@ describe("codex goal runner", () => {
     }
   });
 });
+
+async function createLinkedGitWorktree(
+  root: string,
+  worktreePath: string,
+): Promise<void> {
+  const repoPath = join(root, "repo");
+  await mkdir(repoPath, { recursive: true });
+  await execFileAsync("git", ["init"], { cwd: repoPath });
+  await execFileAsync("git", ["config", "user.email", "test@example.com"], {
+    cwd: repoPath,
+  });
+  await execFileAsync("git", ["config", "user.name", "Test User"], {
+    cwd: repoPath,
+  });
+  await writeFile(join(repoPath, "README.md"), "fixture\n");
+  await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
+  await execFileAsync("git", ["commit", "-m", "test fixture"], {
+    cwd: repoPath,
+  });
+  await execFileAsync("git", ["worktree", "add", "-b", "worker", worktreePath], {
+    cwd: repoPath,
+  });
+}
 
 async function waitForProgressStatus(
   progressPath: string,
