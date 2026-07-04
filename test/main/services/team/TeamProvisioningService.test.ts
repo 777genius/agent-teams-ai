@@ -281,7 +281,7 @@ import type {
   TeamProvisioningMemberLifecycleHost,
 } from '@main/services/team/provisioning/TeamProvisioningMemberLifecycle';
 import type { TeamProvisioningRuntimeResourceSampling } from '@main/services/team/provisioning/TeamProvisioningRuntimeResourceSampling';
-import type { TeamConfig, TeamProvisioningMemberInput } from '@shared/types/team';
+import type { TeamConfig, TeamMember, TeamProvisioningMemberInput } from '@shared/types/team';
 
 const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
   process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
@@ -1084,6 +1084,7 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
       memberName ? `secondary:opencode:${memberName}` : 'primary',
     resolveCurrentOpenCodeRuntimeRunId: async () => null,
     readLaunchState: async () => null,
+    readLaunchStateForDeliveryRecovery: async () => null,
     writeLaunchState: async () => {},
     readConfigForStrictDecision: async () => null,
     readMetaMembers: async () => [],
@@ -1119,9 +1120,7 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: async (record) => ({
       record,
       decision: {
-        state: 'delivered',
-        reason: null,
-        retryAfterIso: null,
+        action: 'suppress',
       },
     }),
     isOpenCodePromptDeliveryWatchdogEnabled: () => false,
@@ -7847,8 +7846,8 @@ describe('TeamProvisioningService', () => {
         ]),
       };
       memberLifecycleHostHarness(svc).resolveOpenCodeMemberWorkspacesForRuntime = vi.fn(
-        async (input: any) =>
-          (input.members as Array<Record<string, unknown>>).map((member) => ({
+        async (input: { members: TeamProvisioningMemberInput[] }) =>
+          input.members.map((member) => ({
             ...member,
             cwd: '/repo',
           }))
@@ -9516,7 +9515,8 @@ describe('TeamProvisioningService', () => {
       const getConfig = vi.fn(async () => {
         throw new Error('verified config read should not be used for delivery routing');
       });
-      const getConfigSnapshot = vi.fn(async () => ({
+      const getConfigSnapshot = vi.fn(async (): Promise<TeamConfig> => ({
+        name: 'team-a',
         projectPath: '/repo',
         members: [
           { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
@@ -9584,7 +9584,8 @@ describe('TeamProvisioningService', () => {
       const getConfig = vi.fn(async () => {
         throw new Error('verified config read should not be used for lane member resolution');
       });
-      const getConfigSnapshot = vi.fn(async () => ({
+      const getConfigSnapshot = vi.fn(async (): Promise<TeamConfig> => ({
+        name: 'team-a',
         projectPath: '/repo',
         members: [
           { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
@@ -9596,7 +9597,7 @@ describe('TeamProvisioningService', () => {
         launchIdentity: { providerId: 'codex' },
         providerId: 'codex',
       }));
-      const getMembers = vi.fn(async () => [
+      const getMembers = vi.fn(async (): Promise<TeamMember[]> => [
         { name: 'bob', providerId: 'opencode', model: 'opencode/minimax-m2.5-free' },
       ]);
       const readOpenCodeMemberDirectory = vi.fn(async () => ({
@@ -9608,9 +9609,8 @@ describe('TeamProvisioningService', () => {
         getTeamsBasePath: () => tempTeamsBase,
         getCurrentOpenCodeRuntimeRunId: () => null,
         readOpenCodeMemberDirectory,
-        resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
+        resolveOpenCodeMemberIdentityFromDirectory: (_teamName, memberName, directory) =>
           resolveOpenCodeMemberIdentityFromDirectory({
-            teamName,
             memberName,
             directory,
           }),
@@ -17504,8 +17504,11 @@ describe('TeamProvisioningService', () => {
           providerId: 'opencode',
           model: 'minimax-m2.5-free',
           effort: 'medium',
+          cwd: '/tmp/opencode-team',
         },
         {
+          memberName: 'alice',
+          providerId: 'opencode',
           launchState: 'runtime_pending_permission',
           agentToolAccepted: true,
           runtimeAlive: true,
@@ -21739,7 +21742,7 @@ describe('TeamProvisioningService', () => {
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
 
-    await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
 
     const launchArgs = vi.mocked(spawnCli).mock.calls.at(-1)?.[1] as string[];
     expect(launchArgs).not.toContain('--resume');
