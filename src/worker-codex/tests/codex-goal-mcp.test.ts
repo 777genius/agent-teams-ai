@@ -807,6 +807,162 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("runs project integration lifecycle tools through policy and local adapters", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-integration-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const workspacePath = join(root, "workspaces", "infinity-context-main");
+    const remotePath = join(root, "remote.git");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await mkdir(join(workspacePath, "src"), { recursive: true });
+      await gitInitRepository(workspacePath);
+      await writeFile(join(workspacePath, "src", "memory.ts"), "export const value = 1;\n");
+      await git(workspacePath, ["add", "."]);
+      await git(workspacePath, ["commit", "-m", "test: base"]);
+      await execFileAsync("git", ["init", "--bare", remotePath]);
+      await git(workspacePath, ["remote", "add", "origin", remotePath]);
+      await git(workspacePath, ["checkout", "-b", "infinity-context-worker-v1"]);
+      await writeFile(join(workspacePath, "src", "memory.ts"), "export const value = 2;\n");
+      await git(workspacePath, ["add", "."]);
+      await git(workspacePath, ["commit", "-m", "fix: worker output"]);
+      const workerCommitSha = (await gitStdout(workspacePath, ["rev-parse", "HEAD"])).trim();
+      await git(workspacePath, ["checkout", "main"]);
+
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [workspacePath],
+          registryRoot: registryRootDir,
+          jobIdPrefixes: ["infinity-context-"],
+          tmuxSessionPrefixes: ["infinity-context-"],
+          allowedBranches: ["main"],
+          allowedGitRemotes: ["origin"],
+        },
+      });
+
+      await expect(callToolJson(client, "codex_goal_project_open_integration_attempt", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        workerJobId: "infinity-context-worker-v1",
+        workerWorkspacePath: workspacePath,
+        workerCommitSha,
+        targetWorkspacePath: workspacePath,
+        targetBranch: "main",
+        targetRemote: "origin",
+        changedFiles: ["src/memory.ts"],
+        approvedFiles: ["src/memory.ts"],
+        allowedPathPrefixes: ["src"],
+        requiredCheckIds: ["check:unit"],
+        requiredChecks: [{
+          checkId: "check:unit",
+          command: [process.execPath, "-e", "process.exit(0)"],
+        }],
+        confirmOpen: true,
+      })).resolves.toMatchObject({
+        ok: true,
+        mode: "project_integration_open_attempt",
+        attempt: {
+          status: "opened",
+          expectedFiles: ["src/memory.ts"],
+        },
+      });
+
+      await expect(callToolJson(client, "codex_goal_project_apply_worker_output", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        confirmApply: true,
+      })).resolves.toMatchObject({
+        ok: true,
+        mode: "project_integration_apply_worker_output",
+        attempt: {
+          status: "applied",
+        },
+      });
+
+      await expect(callToolJson(client, "codex_goal_project_run_required_checks", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        confirmRunChecks: true,
+      })).resolves.toMatchObject({
+        ok: true,
+        mode: "project_integration_run_required_checks",
+        attempt: {
+          status: "checks_passed",
+        },
+      });
+
+      const committed = await callToolJson(client, "codex_goal_project_commit_approved_changes", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        message: "fix(memory): integrate worker output",
+        allowedPathPrefixes: ["src"],
+        requiredCheckIds: ["check:unit"],
+        confirmCommit: true,
+      });
+      expect(committed).toMatchObject({
+        ok: true,
+        mode: "project_integration_commit_approved_changes",
+        attempt: {
+          status: "commit_created",
+        },
+      });
+      const commitSha = (((committed.attempt as Record<string, unknown>)
+        .commitCandidate as Record<string, unknown>).commitSha);
+      expect(String(commitSha)).toMatch(/^[a-f0-9]{40}$/);
+
+      await expect(callToolJson(client, "codex_goal_project_push_approved_commit", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        confirmPush: true,
+      })).resolves.toMatchObject({
+        ok: true,
+        mode: "project_integration_push_approved_commit",
+        attempt: {
+          status: "pushed",
+        },
+      });
+
+      const pushedSha = await execFileAsync("git", [
+        "--git-dir",
+        remotePath,
+        "rev-parse",
+        "refs/heads/main",
+      ]);
+      expect(pushedSha.stdout.trim()).toBe(commitSha);
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("creates a job manifest when starting a detached worker", async () => {
     if (!(await hasTmux())) return;
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-start-job-"));

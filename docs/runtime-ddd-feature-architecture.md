@@ -307,8 +307,9 @@ context owns the domain model, ports and application use cases for the
 integration lifecycle. `store-local-file` provides
 `LocalIntegrationAttemptStore` for restart-safe attempt snapshots and audit
 event logs. `worker-local` provides local Git/check/secret-scan/workspace-lock
-adapters for real sandbox repositories. Provider-facing MCP/CLI tools should be
-added on top of that layer, without duplicating policy logic in handlers.
+adapters for real sandbox repositories. `worker-codex` exposes structured MCP
+tools for the integration attempt lifecycle. CLI wrappers and live provider e2e
+coverage should be added without duplicating policy logic in handlers.
 
 ### Phase 1: domain model
 
@@ -407,6 +408,18 @@ Suggested tool names:
 - `codex_goal_project_reject_integration_attempt`
 
 Tool handlers should be thin adapters. They must not duplicate policy logic.
+
+Current Codex MCP tools:
+
+- `codex_goal_project_open_integration_attempt`
+- `codex_goal_project_apply_worker_output`
+- `codex_goal_project_run_required_checks`
+- `codex_goal_project_commit_approved_changes`
+- `codex_goal_project_push_approved_commit`
+- `codex_goal_project_reject_integration_attempt`
+
+Each write step requires an explicit confirmation flag and delegates to
+`worker-core/integration` use cases.
 
 ### Phase 5: provider launch enforcement
 
