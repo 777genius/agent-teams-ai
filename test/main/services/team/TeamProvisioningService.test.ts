@@ -468,19 +468,27 @@ async function startDeterministicLaunchCloseHarness(options?: {
     writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
     removeConfigFile: vi.fn(async () => {}),
   } as any);
-  (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+  vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
     env: { CODEX_API_KEY: 'test' },
     authSource: 'codex_runtime',
   }));
-  (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+  vi.spyOn(provisioningConfigFacadeHarness(svc), 'resolveLaunchExpectedMembers').mockResolvedValue({
     members: members.map((name) => ({ name })),
     source: 'members-meta',
     warning: undefined,
-  }));
-  (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-  (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-  (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-  (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+  });
+  vi.spyOn(provisioningConfigFacadeHarness(svc), 'normalizeTeamConfigForLaunch').mockResolvedValue(
+    undefined
+  );
+  vi.spyOn(provisioningConfigFacadeHarness(svc), 'assertConfigLeadOnlyForLaunch').mockResolvedValue(
+    undefined
+  );
+  vi.spyOn(provisioningConfigFacadeHarness(svc), 'updateConfigProjectPath').mockResolvedValue(
+    undefined
+  );
+  vi.spyOn(provisioningConfigFacadeHarness(svc), 'restorePrelaunchConfig').mockResolvedValue(
+    undefined
+  );
   vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(
     undefined
   );
@@ -844,6 +852,11 @@ function outputRecoveryFacadeHarness(
 }
 
 interface TeamProvisioningProviderRuntimeHarness {
+  buildProvisioningEnv(
+    providerId?: unknown,
+    providerBackendId?: unknown,
+    options?: unknown
+  ): Promise<Record<string, unknown>>;
   validateAgentTeamsMcpRuntime(
     claudePath: string,
     cwd: string,
@@ -869,6 +882,8 @@ interface TeamProvisioningVerificationProbePortsHarness {
     location?: string;
     configPath?: string;
   }>;
+  waitForTeamInList(teamName: string, run?: unknown): Promise<boolean>;
+  waitForMissingInboxes(run: unknown): Promise<string[]>;
 }
 
 function verificationProbePortsHarness(
@@ -7229,7 +7244,7 @@ describe('TeamProvisioningService', () => {
 
       const sendMessageToRun = vi.fn(async () => {});
       (svc as any).sendMessageToRun = sendMessageToRun;
-      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
         env: { OPENAI_API_KEY: 'test-openai-key' },
         authSource: 'openai_api_key',
         providerArgs: [],
@@ -18134,7 +18149,7 @@ describe('TeamProvisioningService', () => {
         members: [{ name: 'team-lead', agentType: 'team-lead' }, configuredMember],
       } satisfies TeamConfig;
 
-      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
         env: { CODEX_API_KEY: 'test-openai-key' },
         authSource: 'openai_api_key',
         providerArgs: [],
@@ -18257,7 +18272,7 @@ describe('TeamProvisioningService', () => {
         members: [{ name: 'team-lead', agentType: 'team-lead' }, configuredMember],
       } satisfies TeamConfig;
 
-      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
         env: { CODEX_API_KEY: 'test-openai-key' },
         authSource: 'openai_api_key',
         providerArgs: [],
@@ -18352,7 +18367,7 @@ describe('TeamProvisioningService', () => {
         members: [{ name: 'team-lead', agentType: 'team-lead' }, configuredMember],
       } satisfies TeamConfig;
 
-      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
         env: { CODEX_API_KEY: 'test-openai-key' },
         authSource: 'openai_api_key',
         providerArgs: [],
@@ -18748,7 +18763,7 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -18803,11 +18818,11 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
       providerId: 'codex',
@@ -18946,11 +18961,11 @@ describe('TeamProvisioningService', () => {
         options?.memberWorktreeManager as any
       );
 
-      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
         env: { CODEX_API_KEY: 'test' },
         authSource: 'codex_runtime',
       }));
-      (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+      vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
       (svc as any).pathExists = vi.fn(async () => false);
       (svc as any).startFilesystemMonitor = vi.fn();
       (svc as any).stopFilesystemMonitor = vi.fn();
@@ -20509,20 +20524,28 @@ describe('TeamProvisioningService', () => {
       undefined,
       mcpConfigBuilder as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'resolveLaunchExpectedMembers').mockResolvedValue({
       members: [{ name: 'alice' }],
       source: 'members-meta',
       warning: undefined,
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = restorePrelaunchConfig;
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    });
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'normalizeTeamConfigForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'assertConfigLeadOnlyForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'updateConfigProjectPath').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'restorePrelaunchConfig').mockImplementation(
+      restorePrelaunchConfig
+    );
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
 
     await expect(svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {})).rejects.toThrow(
@@ -20571,7 +20594,7 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -20655,11 +20678,11 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
 
     await expect(
@@ -21240,7 +21263,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21249,11 +21272,21 @@ describe('TeamProvisioningService', () => {
       source: 'members-meta',
       warning: undefined,
     }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'normalizeTeamConfigForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'assertConfigLeadOnlyForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'updateConfigProjectPath').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'restorePrelaunchConfig').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(
+      undefined
+    );
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -21304,7 +21337,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21317,7 +21350,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -21370,7 +21403,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21383,7 +21416,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -21422,20 +21455,28 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'resolveLaunchExpectedMembers').mockResolvedValue({
       members: [{ name: 'alice' }],
       source: 'members-meta',
       warning: undefined,
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    });
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'normalizeTeamConfigForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'assertConfigLeadOnlyForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'updateConfigProjectPath').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'restorePrelaunchConfig').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -21464,20 +21505,30 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
     }));
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'resolveLaunchExpectedMembers').mockResolvedValue({
       members: [{ name: 'alice' }],
       source: 'members-meta',
       warning: undefined,
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    });
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'normalizeTeamConfigForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'assertConfigLeadOnlyForLaunch').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'updateConfigProjectPath').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(provisioningConfigFacadeHarness(svc), 'restorePrelaunchConfig').mockResolvedValue(
+      undefined
+    );
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(
+      undefined
+    );
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -21520,7 +21571,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21566,7 +21617,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21618,7 +21669,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21686,7 +21737,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21699,7 +21750,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
@@ -21747,7 +21798,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -21760,7 +21811,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
@@ -21829,11 +21880,11 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
@@ -21920,11 +21971,11 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
@@ -22009,11 +22060,11 @@ describe('TeamProvisioningService', () => {
       mcpConfigBuilder as any,
       teamMetaStore as any
     );
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
@@ -22078,7 +22129,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -22091,7 +22142,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
@@ -22139,7 +22190,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -22147,15 +22198,15 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).writeLaunchFailureArtifactPackBestEffort = vi.fn();
-    vi.spyOn(svc as any, 'waitForValidConfig').mockResolvedValue({
+    vi.spyOn(verificationProbePortsHarness(svc), 'waitForValidConfig').mockResolvedValue({
       ok: true,
       location: 'configured',
       configPath: path.join(tempTeamsBase, teamName, 'config.json'),
     });
-    vi.spyOn(svc as any, 'waitForTeamInList').mockResolvedValue(true);
+    vi.spyOn(verificationProbePortsHarness(svc), 'waitForTeamInList').mockResolvedValue(true);
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
@@ -22206,7 +22257,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -22219,15 +22270,16 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).writeLaunchFailureArtifactPackBestEffort = vi.fn();
-    vi.spyOn(svc as any, 'waitForValidConfig').mockResolvedValue({
+    vi.spyOn(verificationProbePortsHarness(svc), 'waitForValidConfig').mockResolvedValue({
       ok: true,
       location: 'configured',
       configPath: path.join(tempTeamsBase, teamName, 'config.json'),
     });
-    vi.spyOn(svc as any, 'waitForTeamInList').mockResolvedValue(true);
+    vi.spyOn(verificationProbePortsHarness(svc), 'waitForTeamInList').mockResolvedValue(true);
+    vi.spyOn(verificationProbePortsHarness(svc), 'waitForMissingInboxes').mockResolvedValue([]);
     (svc as any).pathExists = vi.fn(async (targetPath: string) => {
       const basename = path.basename(targetPath);
       return basename === `${leadSessionId}.jsonl` || basename === 'alice.json';
@@ -22288,7 +22340,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -22571,7 +22623,7 @@ describe('TeamProvisioningService', () => {
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
     } as any);
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
@@ -22584,7 +22636,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.spyOn(providerRuntimeHarness(svc), 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
     (svc as any).pathExists = vi.fn(async (targetPath: string) =>
       targetPath.endsWith(`${leadSessionId}.jsonl`)
     );
