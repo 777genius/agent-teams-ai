@@ -482,9 +482,7 @@ import {
   type TeamProvisioningStreamEventServiceAdapter,
 } from './provisioning/TeamProvisioningStreamEventPortsFactory';
 import {
-  handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
-  shouldAcceptDeterministicBootstrapEvent,
   type TeamProvisioningStreamEventPorts,
 } from './provisioning/TeamProvisioningStreamEvents';
 import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
@@ -599,8 +597,6 @@ import type {
   ToolApprovalEvent,
   ToolApprovalSettings,
 } from '@shared/types';
-
-export { shouldAcceptDeterministicBootstrapEvent };
 
 const logger = createLogger('Service:TeamProvisioning');
 const {
@@ -2136,13 +2132,6 @@ export class TeamProvisioningService {
     ...args: Parameters<typeof isOpenCodeSessionRefreshRetryRecord>
   ): ReturnType<typeof isOpenCodeSessionRefreshRetryRecord> {
     return isOpenCodeSessionRefreshRetryRecord(...args);
-  }
-
-  private handleDeterministicBootstrapEvent(
-    run: ProvisioningRun,
-    msg: Record<string, unknown>
-  ): ReturnType<typeof handleDeterministicBootstrapEvent> {
-    return handleDeterministicBootstrapEvent(run, msg, this.getStreamJsonEventPorts());
   }
 
   private repairStaleTaskActivityIntervalsOnce(
