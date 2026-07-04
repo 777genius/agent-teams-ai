@@ -10,6 +10,7 @@ import {
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
 
+import { projectRuntimeResource } from '../runtime-projection';
 import { type TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
 import {
   choosePreferredLaunchSnapshot,
@@ -63,6 +64,7 @@ import {
 } from './TeamProvisioningRuntimeMetadataPolicy';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { RuntimeProjectionEvidenceSource } from '../runtime-projection';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
 import type {
   MemberSpawnStatusEntry,
@@ -74,6 +76,7 @@ import type {
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeLoadScope,
+  TeamAgentRuntimePidSource,
   TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
   TeamConfig,
@@ -290,6 +293,39 @@ function recordAgentRuntimeResourceSampleSafely(
     );
     return undefined;
   }
+}
+
+type RuntimeSnapshotResourceFields = Pick<
+  TeamAgentRuntimeEntry,
+  | 'rssBytes'
+  | 'cpuPercent'
+  | 'primaryRssBytes'
+  | 'primaryCpuPercent'
+  | 'childRssBytes'
+  | 'childCpuPercent'
+  | 'processCount'
+  | 'runtimeLoadScope'
+  | 'runtimeLoadTruncated'
+  | 'resourceHistory'
+>;
+
+function projectRuntimeSnapshotResourceFields(params: {
+  source: RuntimeProjectionEvidenceSource;
+  pid?: number;
+  runtimePid?: number;
+  pidSource?: TeamAgentRuntimePidSource;
+  usageStats?: RuntimeProcessLoadStats;
+  resourceHistory?: TeamAgentRuntimeResourceSample[];
+}): RuntimeSnapshotResourceFields {
+  return projectRuntimeResource({
+    source: params.source,
+    pid: params.pid,
+    runtimePid: params.runtimePid,
+    pidSource: params.pidSource,
+    // Intentionally omit processAlive: persisted/shared OpenCode hosts can expose metrics while not live.
+    usage: params.usageStats,
+    history: params.resourceHistory,
+  });
 }
 
 export function attachLiveRuntimeMetadataToStatuses(params: {
@@ -856,6 +892,13 @@ export async function buildTeamAgentRuntimeSnapshot(
             params.logDebug
           )
         : undefined;
+      const runtimeResourceFields = projectRuntimeSnapshotResourceFields({
+        source: 'live-process',
+        pid,
+        pidSource: 'lead_process',
+        usageStats,
+        resourceHistory,
+      });
       snapshotMembers[memberName] = {
         memberName,
         alive: Boolean(pid && !run?.processKilled && !run?.cancelRequested),
@@ -863,23 +906,8 @@ export async function buildTeamAgentRuntimeSnapshot(
         backendType: 'lead',
         ...(pid ? { pid } : {}),
         ...(runtimeModel ? { runtimeModel } : {}),
-        ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
-        ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
-        ...(usageStats?.primaryRssBytes != null
-          ? { primaryRssBytes: usageStats.primaryRssBytes }
-          : {}),
-        ...(usageStats?.primaryCpuPercent != null
-          ? { primaryCpuPercent: usageStats.primaryCpuPercent }
-          : {}),
-        ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
-        ...(usageStats?.childCpuPercent != null
-          ? { childCpuPercent: usageStats.childCpuPercent }
-          : {}),
-        ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
-        ...(usageStats?.runtimeLoadScope ? { runtimeLoadScope: usageStats.runtimeLoadScope } : {}),
-        ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
+        ...runtimeResourceFields,
         ...(pid ? { pidSource: 'lead_process' as const } : {}),
-        ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
         updatedAt,
       };
       continue;
@@ -1104,6 +1132,14 @@ export async function buildTeamAgentRuntimeSnapshot(
           params.logDebug
         )
       : undefined;
+    const runtimeResourceFields = projectRuntimeSnapshotResourceFields({
+      source: isSharedOpenCodeHost ? 'runtime-adapter' : 'live-process',
+      pid: rssPid,
+      runtimePid: liveRuntimeMember?.metricsPid,
+      pidSource: liveRuntimeMember?.pidSource,
+      usageStats,
+      resourceHistory,
+    });
 
     snapshotMembers[memberName] = {
       memberName,
@@ -1117,22 +1153,7 @@ export async function buildTeamAgentRuntimeSnapshot(
       ...(displayPid ? { pid: displayPid } : {}),
       ...(runtimeModel ? { runtimeModel } : {}),
       ...(runtimeCwd ? { cwd: runtimeCwd } : {}),
-      ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
-      ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
-      ...(usageStats?.primaryRssBytes != null
-        ? { primaryRssBytes: usageStats.primaryRssBytes }
-        : {}),
-      ...(usageStats?.primaryCpuPercent != null
-        ? { primaryCpuPercent: usageStats.primaryCpuPercent }
-        : {}),
-      ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
-      ...(usageStats?.childCpuPercent != null
-        ? { childCpuPercent: usageStats.childCpuPercent }
-        : {}),
-      ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
-      ...(usageStats?.runtimeLoadScope ? { runtimeLoadScope: usageStats.runtimeLoadScope } : {}),
-      ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
-      ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
+      ...runtimeResourceFields,
       ...(effectiveLivenessKind ? { livenessKind: effectiveLivenessKind } : {}),
       ...(effectivePidSource ? { pidSource: effectivePidSource } : {}),
       ...(liveRuntimeMember?.processCommand
