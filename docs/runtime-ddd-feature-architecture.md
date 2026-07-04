@@ -304,9 +304,10 @@ script. It should be implemented as project integration capabilities.
 
 Current implementation status: the core `worker-core/integration` bounded
 context owns the domain model, ports and application use cases for the
-integration lifecycle. Provider-facing MCP/CLI tools and real git/check
-adapters should be added on top of that layer, without duplicating policy logic
-in handlers.
+integration lifecycle. `store-local-file` provides
+`LocalIntegrationAttemptStore` for restart-safe attempt snapshots and audit
+event logs. Provider-facing MCP/CLI tools and real git/check adapters should be
+added on top of that layer, without duplicating policy logic in handlers.
 
 ### Phase 1: domain model
 
@@ -340,6 +341,14 @@ Add small ports:
 - `SecretScannerPort`
 - `IntegrationAuditPort`
 - `WorkspaceLockPort`
+
+Current local persistence adapter:
+
+- `LocalIntegrationAttemptStore` persists each attempt under
+  `integration-attempts/<sha256(attemptId)>/attempt.json`;
+- audit events append to `events.jsonl` in the same attempt directory;
+- attempt ids are hashed before use as path segments, so ids such as `../x`
+  cannot escape the store root.
 
 Policy must validate:
 
