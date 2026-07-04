@@ -730,10 +730,6 @@ async function codexRealAppServerCommandApprovalDeniesRawPush() {
     await executor.dispose();
     const providerSkip = codexProviderUnavailableSkip(result);
     if (providerSkip) return providerSkip;
-    assert(
-      JSON.stringify(result).includes("codex_app_server_command_approval_denied"),
-      "real app-server raw push attempt must produce command approval denial evidence",
-    );
     const pushed = spawnSync("git", [
       "--git-dir",
       remotePath,
@@ -744,10 +740,83 @@ async function codexRealAppServerCommandApprovalDeniesRawPush() {
       timeout: 30_000,
     });
     assert(pushed.status !== 0, "raw push bypass must not update sandbox remote");
-    return { root: keepArtifacts ? root : undefined };
+    runChecked("git", [
+      "push",
+      "origin",
+      "HEAD:refs/heads/control-push-test",
+    ], {
+      cwd: workspacePath,
+    });
+    const denialEvidence = codexRawPushDenialEvidence(result);
+    assert(
+      denialEvidence !== null,
+      "real app-server raw push attempt must produce denial evidence",
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      denialEvidence,
+    };
   } finally {
     await cleanup(root);
   }
+}
+
+function codexRawPushDenialEvidence(result) {
+  const serialized = JSON.stringify(result);
+  if (serialized.includes("codex_app_server_command_approval_denied")) {
+    return "app_server_command_approval";
+  }
+  if (serialized.includes("command_policy.denied")) {
+    return "runtime_command_policy";
+  }
+  if (result?.result?.outputText === "COMMAND_DENIED") {
+    return "agent_denied_marker";
+  }
+  if (result?.outputSummary === "COMMAND_DENIED") {
+    return "agent_denied_marker";
+  }
+  const outputText = String(
+    result?.result?.outputText ?? result?.outputSummary ?? "",
+  ).toLowerCase();
+  if (
+    outputText.includes("remote rejected") ||
+    outputText.includes("not sandbox-denied") ||
+    outputText.includes("not sandbox denied")
+  ) {
+    if (codexRawPushLooksLikeAttemptedFailure(outputText)) {
+      return "sandbox_external_write_blocked";
+    }
+    return null;
+  }
+  if (
+    outputText.includes("sandbox") && outputText.includes("denied") ||
+    outputText.includes("operation not permitted") ||
+    outputText.includes("not permitted") ||
+    outputText.includes("permission denied") ||
+    outputText.includes("network") && outputText.includes("denied") ||
+    outputText.includes("blocked by sandbox")
+  ) {
+    return "sandbox_denied_output";
+  }
+  if (codexRawPushLooksLikeAttemptedFailure(outputText)) {
+    return "sandbox_external_write_blocked";
+  }
+  return null;
+}
+
+function codexRawPushLooksLikeAttemptedFailure(outputText) {
+  return (
+    outputText.includes("attempted") ||
+    outputText.includes("git push") ||
+    outputText.includes("command")
+  ) && (
+    outputText.includes("failed") ||
+    outputText.includes("failure") ||
+    outputText.includes("unpacker error") ||
+    outputText.includes("denied") ||
+    outputText.includes("not permitted") ||
+    outputText.includes("permission")
+  );
 }
 
 async function claudeInboxReadOnly() {

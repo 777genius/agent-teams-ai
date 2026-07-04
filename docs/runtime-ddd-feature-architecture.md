@@ -467,8 +467,10 @@ Current e2e coverage:
   launch plan from `dist` and proves raw `git push`, raw `tmux`, inline code and
   direct registry path access are denied before a runner executes them;
 - `codex real app-server command approval denies raw push`, when live Codex
-  accounts are enabled, requires real app-server command-approval denial
-  evidence before treating a raw `git push` bypass attempt as blocked;
+  accounts are enabled, requires real raw-push blocking evidence. The scenario
+  first proves that the sandboxed raw `git push` did not update the sandbox
+  remote, then runs an unsandboxed control push to prove the remote itself was
+  writable;
 - `codex project controller starts real child worker`, when live Codex accounts
   are enabled, now carries the child marker output through the integration
   lifecycle and pushes the approved commit to a sandbox bare remote.
@@ -478,11 +480,15 @@ Current app-server enforcement status:
 - Codex `app-server` / `app-server-goal` command approvals are routed through a
   provider callback when a runtime command policy is configured. Dangerous
   approval requests are denied before the app-server receives approval;
+- Codex `app-server` / `app-server-goal` turns receive a strict sandbox policy:
+  `workspaceWrite` allows writes only to the active workspace root, disables
+  network access and excludes `/tmp` / `TMPDIR` from writable roots;
 - provider-side file-change grants and permission expansion requests are denied
   fail-closed;
 - the deterministic runner bypass test and fake app-server approval tests prove
-  the runtime path. The live raw-push app-server scenario remains the required
-  external proof and may skip when live Codex accounts are quota-limited or
+  the runtime path. The live raw-push app-server scenario is the external proof
+  that a real Codex turn cannot update an out-of-workspace git remote through a
+  raw `git push`; it may skip when live Codex accounts are quota-limited or
   unavailable.
 
 Optional later:

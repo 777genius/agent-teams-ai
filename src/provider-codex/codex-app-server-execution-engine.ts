@@ -68,6 +68,17 @@ export type CodexAppServerCommandApprovalPolicy = {
   ) => CodexAppServerCommandApprovalDecision;
 };
 
+type CodexAppServerSandboxPolicy =
+  | { readonly type: "dangerFullAccess" }
+  | { readonly type: "readOnly"; readonly networkAccess: false }
+  | {
+      readonly type: "workspaceWrite";
+      readonly writableRoots: readonly string[];
+      readonly networkAccess: false;
+      readonly excludeSlashTmp: true;
+      readonly excludeTmpdirEnvVar: true;
+    };
+
 export type CodexAppServerProcessFactory = (input: {
   readonly command: string;
   readonly args: readonly string[];
@@ -1297,6 +1308,7 @@ class CodexAppServerClient {
     readonly model: string;
     readonly reasoningEffort: CodexReasoningEffort;
     readonly serviceTier?: CodexServiceTier;
+    readonly workspacePath: string;
     readonly outputSchema?: unknown;
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
@@ -1322,7 +1334,7 @@ class CodexAppServerClient {
         runtimeWorkspaceRoots: null,
         approvalPolicy: this.approvalPolicyForThread(),
         approvalsReviewer: null,
-        sandboxPolicy: null,
+        sandboxPolicy: this.sandboxPolicyFor(input),
         model: input.model,
         serviceTier: input.serviceTier ?? null,
         effort: input.reasoningEffort,
@@ -1409,6 +1421,26 @@ class CodexAppServerClient {
         skill_approval: false,
       },
     };
+  }
+
+  private sandboxPolicyFor(input: {
+    readonly sandboxMode?: CodexSandboxMode;
+    readonly workspacePath: string;
+  }): CodexAppServerSandboxPolicy {
+    const sandboxMode = input.sandboxMode ?? "read-only";
+    if (sandboxMode === "danger-full-access") {
+      return { type: "dangerFullAccess" };
+    }
+    if (sandboxMode === "workspace-write") {
+      return {
+        type: "workspaceWrite",
+        writableRoots: [input.workspacePath],
+        networkAccess: false,
+        excludeSlashTmp: true,
+        excludeTmpdirEnvVar: true,
+      };
+    }
+    return { type: "readOnly", networkAccess: false };
   }
 
   private waitForTurn(

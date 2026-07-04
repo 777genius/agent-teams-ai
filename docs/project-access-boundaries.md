@@ -91,7 +91,10 @@ Current Codex adapter status:
   `accessBoundary: "danger_full_access"` with explicit acknowledgement;
 - `isolated_workspace_write` maps to Codex `workspace-write`. When a runtime
   command policy is present, Codex app-server command approval requests are
-  reviewed by the runtime policy before the app-server receives approval;
+  reviewed by the runtime policy before the app-server receives approval.
+  App-server turns also receive a strict `workspaceWrite` sandbox policy with
+  the active workspace as the only writable root, network disabled and `/tmp` /
+  `TMPDIR` excluded from writable roots;
 - Codex access-boundary jobs must set `networkAccess: "restricted"`.
   The adapter fails closed for implicit or explicit `disabled` network mode until
   a real OS/container egress sandbox exists;

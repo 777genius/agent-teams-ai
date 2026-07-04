@@ -2546,6 +2546,55 @@ describe("Codex provider adapter", () => {
       });
       expect(turnStart?.params).toMatchObject({
         approvalPolicy: expectedApprovalPolicy,
+        sandboxPolicy: {
+          type: "readOnly",
+          networkAccess: false,
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("sends strict workspace-write sandbox policy to app-server turns", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-sandbox-policy-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "review",
+          prompt: "workspace sandbox policy task",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(turnStart?.params).toMatchObject({
+        sandboxPolicy: {
+          type: "workspaceWrite",
+          writableRoots: [workspace],
+          networkAccess: false,
+          excludeSlashTmp: true,
+          excludeTmpdirEnvVar: true,
+        },
       });
     } finally {
       await driver.dispose();
