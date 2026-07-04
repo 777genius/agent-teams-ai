@@ -57,16 +57,6 @@ const renderSidebar = async (root: Root): Promise<void> => {
   });
 };
 
-function findButtonByText(host: HTMLElement, text: string): HTMLButtonElement {
-  const button = Array.from(host.querySelectorAll('button')).find(
-    (candidate) => candidate.textContent?.trim() === text
-  );
-  if (!(button instanceof HTMLButtonElement)) {
-    throw new Error(`Button not found: ${text}`);
-  }
-  return button;
-}
-
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -96,25 +86,17 @@ describe('Sidebar', () => {
     expect(storeMock.sessionsModuleLoads).toBe(0);
   });
 
-  it('mounts the sessions panel on first activation and keeps it mounted when hidden', async () => {
+  it('keeps the hidden sessions tab unmounted in the tasks-only sidebar', async () => {
     const { host, root } = createHarness();
     await renderSidebar(root);
 
-    await act(async () => {
-      findButtonByText(host, 'Sessions').click();
-      await flushReact();
-    });
+    const buttons = Array.from(host.querySelectorAll('button')).map((button) =>
+      button.textContent?.trim()
+    );
 
-    const sessionsPanel = host.querySelector('[data-testid="sessions-panel"]');
-    expect(sessionsPanel).not.toBeNull();
-    expect(sessionsPanel?.closest<HTMLElement>('[role="tabpanel"]')?.hidden).toBe(false);
-
-    await act(async () => {
-      findButtonByText(host, 'Tasks').click();
-      await flushReact();
-    });
-
-    expect(host.querySelector('[data-testid="sessions-panel"]')).toBe(sessionsPanel);
-    expect(sessionsPanel?.closest<HTMLElement>('[role="tabpanel"]')?.hidden).toBe(true);
+    expect(buttons).not.toContain('Sessions');
+    expect(host.querySelector('[data-testid="tasks-panel"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="sessions-panel"]')).toBeNull();
+    expect(storeMock.sessionsModuleLoads).toBe(0);
   });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { InboxMessage } from '@shared/types';
@@ -82,7 +83,7 @@ describe('ActivityTimeline virtualization config', () => {
     vi.unstubAllGlobals();
   });
 
-  it('passes the direct-path row gap into useVirtualizer when virtualization activates', async () => {
+  it('passes the stacked-card row gap into useVirtualizer when virtualization activates', async () => {
     const scrollHost = document.createElement('div');
     document.body.appendChild(scrollHost);
     const scrollRef = { current: scrollHost };
@@ -125,7 +126,7 @@ describe('ActivityTimeline virtualization config', () => {
       | undefined;
 
     expect(lastCall?.count).toBeGreaterThanOrEqual(60);
-    expect(lastCall?.gap).toBe(4);
+    expect(lastCall?.gap).toBe(0);
 
     await act(async () => {
       root.unmount();
