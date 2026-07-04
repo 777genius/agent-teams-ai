@@ -1,9 +1,14 @@
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import {
+  type WorkspaceTrustArgsOnlyPlanRequest,
+  type WorkspaceTrustArgsOnlyPlanResult,
   type WorkspaceTrustCoordinator,
   type WorkspaceTrustFeatureFlags,
+  type WorkspaceTrustFullPlanRequest,
   type WorkspaceTrustFullPlanResult,
+  type WorkspaceTrustProvider,
+  type WorkspaceTrustWorkspace,
 } from '@features/workspace-trust/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
@@ -491,7 +496,13 @@ import {
   createTeamProvisioningVerificationProbePorts,
   type TeamProvisioningVerificationProbePorts,
 } from './provisioning/TeamProvisioningVerificationProbePortsFactory';
-import { prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper } from './provisioning/TeamProvisioningWorkspaceTrust';
+import {
+  collectWorkspaceTrustProviders as collectWorkspaceTrustProvidersHelper,
+  collectWorkspaceTrustWorkspaces as collectWorkspaceTrustWorkspacesHelper,
+  planWorkspaceTrustArgsOnlySafely as planWorkspaceTrustArgsOnlySafelyHelper,
+  planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
+  prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
+} from './provisioning/TeamProvisioningWorkspaceTrust';
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { atomicWriteAsync } from './atomicWrite';
@@ -2283,6 +2294,43 @@ export class TeamProvisioningService {
 
   setWorkspaceTrustCoordinator(coordinator: WorkspaceTrustCoordinator | null): void {
     this.workspaceTrustCoordinator = coordinator;
+  }
+
+  private collectWorkspaceTrustProviders(input: {
+    leadProviderId?: TeamProviderId;
+    members: TeamCreateRequest['members'];
+  }): WorkspaceTrustProvider[] {
+    return collectWorkspaceTrustProvidersHelper(input);
+  }
+
+  private async collectWorkspaceTrustWorkspaces(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+  }): Promise<WorkspaceTrustWorkspace[]> {
+    return collectWorkspaceTrustWorkspacesHelper({
+      ...input,
+      ports: this.workspaceTrustWorkspaceCollectionPorts,
+    });
+  }
+
+  private async planWorkspaceTrustArgsOnlySafely(
+    request: WorkspaceTrustArgsOnlyPlanRequest
+  ): Promise<WorkspaceTrustArgsOnlyPlanResult> {
+    return planWorkspaceTrustArgsOnlySafelyHelper({
+      coordinator: this.workspaceTrustCoordinator,
+      request,
+      logger,
+    });
+  }
+
+  private async planWorkspaceTrustFullSafely(
+    request: WorkspaceTrustFullPlanRequest
+  ): Promise<WorkspaceTrustFullPlanResult | null> {
+    return planWorkspaceTrustFullSafelyHelper({
+      coordinator: this.workspaceTrustCoordinator,
+      request,
+      logger,
+    });
   }
 
   setRuntimeTurnSettledHookSettingsProvider(
