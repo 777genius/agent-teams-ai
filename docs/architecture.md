@@ -41,3 +41,7 @@ control-layer apps.
 See `docs/project-access-boundaries.md` for the provider-neutral worker access
 model used to separate read-only observers, isolated workspace writers,
 project-scoped coordinators and explicit full-access escape hatches.
+
+See `docs/runtime-ddd-feature-architecture.md` for the balanced strict DDD,
+Clean Architecture and feature-slice rules for complex runtime features such as
+project-scoped control and policy-controlled integration rights.

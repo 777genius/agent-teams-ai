@@ -3,6 +3,7 @@
 ## Architecture
 
 - Keep Clean Architecture boundaries: core/domain code owns contracts and ports; transport, files, queues, CLI, MCP and provider details stay in adapters.
+- For complex runtime features, follow balanced strict DDD with feature-sliced bounded contexts. See `docs/runtime-ddd-feature-architecture.md`.
 - Prefer small focused modules over mixed orchestration files.
 - Do not put orchestrator policy into runtime adapters. Runtime reports facts, normalized events and safety decisions; orchestrators decide what to do.
 - Keep Temporal, JetStream, Redis, webhooks and file-system details out of `worker-core`; add them only through adapter packages/layers.
