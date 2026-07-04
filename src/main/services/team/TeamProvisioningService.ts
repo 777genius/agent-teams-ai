@@ -323,10 +323,7 @@ import {
   stopOpenCodeRuntimeLanesForStoppedTeamOnce,
   tryStopPersistedOpenCodeRuntimePidForStoppedLane as tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
-import {
-  createTeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFromHost,
-  type TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactoryHost,
-} from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactory';
+import { TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade';
 import {
   type OpenCodeRuntimePendingPermissionsPersistencePorts,
   type OpenCodeRuntimePermissionListingAdapter,
@@ -338,14 +335,7 @@ import {
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
 import { rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromBridgeHelper } from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
 import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
-import {
-  type OpenCodeRuntimeLaneRecoveryPorts,
-  resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper,
-  tryRecoverOpenCodeRuntimeLaneBeforeDelivery as tryRecoverOpenCodeRuntimeLaneBeforeDeliveryHelper,
-  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery as tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDeliveryHelper,
-  tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery as tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDeliveryHelper,
-  tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog as tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdogHelper,
-} from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
+import { resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
 import { writeOpenCodeTeamConfig } from './provisioning/TeamProvisioningOpenCodeTeamConfigWriter';
@@ -981,6 +971,7 @@ export class TeamProvisioningService {
       createRunId: randomUUID,
       getErrorMessage,
     });
+  private readonly openCodeRuntimeLaneRecoveryFacade!: TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade;
   private readonly openCodeRuntimePermissionPersistencePorts: OpenCodeRuntimePendingPermissionsPersistencePorts =
     {
       nowIso,
@@ -1594,6 +1585,29 @@ export class TeamProvisioningService {
       readRegularFileUtf8: tryReadRegularFileUtf8,
       logger,
     });
+    this.openCodeRuntimeLaneRecoveryFacade = new TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade(
+      {
+        runTracking: this.runTracking,
+        cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
+          this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
+        launchStateStore: this.launchStateStore,
+        openCodeRuntimeRecoveryBoundary: this.openCodeRuntimeRecoveryBoundary,
+        readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
+        resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
+          this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
+        readConfigForObservation: (teamName) =>
+          this.configFacade.readConfigForObservation(teamName),
+        teamMetaStore: this.teamMetaStore,
+        membersMetaStore: this.membersMetaStore,
+        readPersistedTeamProjectPath: (teamName) =>
+          this.configFacade.readPersistedTeamProjectPath(teamName),
+        openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
+      },
+      {
+        getTeamsBasePath,
+        logger,
+      }
+    );
     this.launchStateStoreBoundary = new TeamProvisioningLaunchStateStoreBoundary({
       launchStateStore: this.launchStateStore,
       membersMetaStore: this.membersMetaStore,
@@ -3042,39 +3056,14 @@ export class TeamProvisioningService {
     });
   }
 
-  private createOpenCodeRuntimeLaneRecoveryPorts(): OpenCodeRuntimeLaneRecoveryPorts {
-    const host: TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactoryHost = {
-      runTracking: this.runTracking,
-      cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
-        this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
-      launchStateStore: this.launchStateStore,
-      openCodeRuntimeRecoveryBoundary: this.openCodeRuntimeRecoveryBoundary,
-      readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
-      resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
-        this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
-      readConfigForObservation: (teamName) => this.configFacade.readConfigForObservation(teamName),
-      teamMetaStore: this.teamMetaStore,
-      membersMetaStore: this.membersMetaStore,
-      readPersistedTeamProjectPath: (teamName) =>
-        this.configFacade.readPersistedTeamProjectPath(teamName),
-      openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
-    };
-
-    return createTeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFromHost(host, {
-      teamsBasePath: getTeamsBasePath(),
-      logger,
-    });
-  }
-
   private async tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input: {
     teamName: string;
     laneId: string;
     member: TeamMember;
     projectPath: string | null;
   }): Promise<boolean> {
-    return tryRecoverOpenCodeRuntimeLaneBeforeDeliveryHelper(
-      input,
-      this.createOpenCodeRuntimeLaneRecoveryPorts()
+    return await this.openCodeRuntimeLaneRecoveryFacade.tryRecoverOpenCodeRuntimeLaneBeforeDelivery(
+      input
     );
   }
 
@@ -3085,9 +3074,8 @@ export class TeamProvisioningService {
     projectPath: string | null;
     previousLaunchState?: PersistedTeamLaunchSnapshot | null;
   }): Promise<boolean> {
-    return tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDeliveryHelper(
-      input,
-      this.createOpenCodeRuntimeLaneRecoveryPorts()
+    return await this.openCodeRuntimeLaneRecoveryFacade.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
+      input
     );
   }
 
@@ -3095,9 +3083,8 @@ export class TeamProvisioningService {
     teamName: string;
     memberName: string;
   }): Promise<boolean> {
-    return tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDeliveryHelper(
-      input,
-      this.createOpenCodeRuntimeLaneRecoveryPorts()
+    return await this.openCodeRuntimeLaneRecoveryFacade.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(
+      input
     );
   }
 
@@ -3106,27 +3093,18 @@ export class TeamProvisioningService {
     memberName: string;
     laneId: string;
   }): Promise<boolean> {
-    const recovered = await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery({
-      teamName: input.teamName,
-      memberName: input.memberName,
-    }).catch(() => false);
-    if (!recovered) {
-      return false;
-    }
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
-      () => null
+    return await this.openCodeRuntimeLaneRecoveryFacade.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(
+      input
     );
-    return laneIndex?.lanes[input.laneId]?.state === 'active';
   }
 
   private async tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(
     teamName: string,
     options: { allowCommittedSessionRecoveryWithoutTeamRuntime?: boolean } = {}
   ): Promise<string[]> {
-    return tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdogHelper(
+    return await this.openCodeRuntimeLaneRecoveryFacade.tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(
       teamName,
-      options,
-      this.createOpenCodeRuntimeLaneRecoveryPorts()
+      options
     );
   }
 
