@@ -5,20 +5,41 @@ import { TeamInboxReader } from '../TeamInboxReader';
 import { TeamInboxWriter } from '../TeamInboxWriter';
 
 import type { TeamDataService } from '../TeamDataService';
-import type { TeamProvisioningService } from '../TeamProvisioningService';
 import type { TaskStallAlert } from './TeamTaskStallTypes';
 import type { SendMessageRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskStallNotifier');
 
-type OpenCodeTaskStallRelayService = Pick<
-  TeamProvisioningService,
-  'relayOpenCodeMemberInboxMessages'
->;
-type OpenCodeTaskStallRelayResult = Awaited<
-  ReturnType<OpenCodeTaskStallRelayService['relayOpenCodeMemberInboxMessages']>
->;
-type OpenCodeTaskStallDelivery = NonNullable<OpenCodeTaskStallRelayResult['lastDelivery']>;
+interface OpenCodeTaskStallRelayOptions {
+  onlyMessageId: string;
+  source: 'watchdog';
+  deliveryMetadata: {
+    replyRecipient: 'user';
+    actionMode: 'do';
+    taskRefs: TaskStallAlert['taskRef'][];
+  };
+}
+
+interface OpenCodeTaskStallDelivery {
+  delivered?: boolean;
+  accepted?: boolean;
+  responsePending?: boolean;
+  queuedBehindMessageId?: string;
+  reason?: string;
+}
+
+interface OpenCodeTaskStallRelayResult {
+  lastDelivery?: OpenCodeTaskStallDelivery;
+  diagnostics?: string[];
+}
+
+interface OpenCodeTaskStallRelayService {
+  relayOpenCodeMemberInboxMessages(
+    teamName: string,
+    memberName: string,
+    options: OpenCodeTaskStallRelayOptions
+  ): Promise<OpenCodeTaskStallRelayResult>;
+}
 
 function buildLeadAlertText(alerts: TaskStallAlert[]): string {
   return alerts

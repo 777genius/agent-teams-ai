@@ -1,4 +1,8 @@
-import { sanitizeRuntimeProjectionProcessCommand } from './runtime-projection';
+import {
+  projectRuntimeLiveness,
+  type RuntimeProjectionLivenessProjection,
+  sanitizeRuntimeProjectionProcessCommand,
+} from './runtime-projection';
 
 import type { RuntimeProcessTableRow, TmuxPaneRuntimeInfo } from '@features/tmux-installer/main';
 import type {
@@ -287,6 +291,29 @@ function result(params: {
   };
 }
 
+function resultFromRuntimeProjection(
+  projection: RuntimeProjectionLivenessProjection,
+  params: {
+    runtimeDiagnostic: string;
+    runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+    diagnostics?: string[];
+    pid?: number;
+    runtimeSessionId?: string;
+  }
+): ResolvedTeamMemberRuntimeLiveness {
+  return result({
+    alive: projection.alive,
+    livenessKind: projection.livenessKind,
+    pidSource: projection.pidSource,
+    pid: projection.pid,
+    metricsPid: projection.metricsPid,
+    processCommand: projection.processCommand,
+    runtimeSessionId: projection.runtimeSessionId,
+    runtimeLastSeenAt: projection.runtimeLastSeenAt,
+    ...params,
+  });
+}
+
 export function resolveTeamMemberRuntimeLiveness(
   input: ResolveTeamMemberRuntimeLivenessInput
 ): ResolvedTeamMemberRuntimeLiveness {
@@ -319,16 +346,23 @@ export function resolveTeamMemberRuntimeLiveness(
     agentId: input.agentId,
   });
   if (verifiedProcess) {
-    return result({
-      alive: true,
-      livenessKind: 'runtime_process',
-      pidSource: 'agent_process_table',
-      pid: verifiedProcess.pid,
-      runtimeSessionId,
-      processCommand: sanitizeProcessCommandForDiagnostics(verifiedProcess.command),
-      runtimeDiagnostic: 'verified runtime process detected',
-      diagnostics: [...diagnostics, 'matched process table by team-name and agent-id'],
-    });
+    return resultFromRuntimeProjection(
+      projectRuntimeLiveness({
+        registration: { runtimeSessionId },
+        process: {
+          pid: verifiedProcess.pid,
+          command: verifiedProcess.command,
+          running: true,
+          identityVerified: true,
+          pidSource: 'agent_process_table',
+        },
+      }),
+      {
+        runtimeSessionId,
+        runtimeDiagnostic: 'verified runtime process detected',
+        diagnostics: [...diagnostics, 'matched process table by team-name and agent-id'],
+      }
+    );
   }
 
   const runtimePid = input.runtimePid ?? input.persistedRuntimePid;
@@ -472,27 +506,50 @@ export function resolveTeamMemberRuntimeLiveness(
 
   if (runtimePid && !runtimePidRow) {
     if (!input.processTableAvailable) {
-      return result({
-        alive: false,
-        livenessKind: 'registered_only',
-        pidSource: 'persisted_metadata',
+      return resultFromRuntimeProjection(
+        projectRuntimeLiveness({
+          registration: {
+            runtimePid,
+            runtimeSessionId,
+          },
+          process: {
+            pid: runtimePid,
+            running: false,
+            pidSource: 'persisted_metadata',
+            processTableAvailable: false,
+          },
+        }),
+        {
+          pid: runtimePid,
+          runtimeSessionId,
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          diagnostics: [...diagnostics, 'runtime pid could not be verified'],
+        }
+      );
+    }
+    return resultFromRuntimeProjection(
+      projectRuntimeLiveness({
+        registration: {
+          runtimePid,
+          runtimeSessionId,
+        },
+        process: {
+          pid: runtimePid,
+          running: false,
+          pidSource: 'persisted_metadata',
+          processTableAvailable: true,
+        },
+      }),
+      {
         pid: runtimePid,
         runtimeSessionId,
-        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
         runtimeDiagnosticSeverity: 'warning',
-        diagnostics: [...diagnostics, 'runtime pid could not be verified'],
-      });
-    }
-    return result({
-      alive: false,
-      livenessKind: 'stale_metadata',
-      pidSource: 'persisted_metadata',
-      pid: runtimePid,
-      runtimeSessionId,
-      runtimeDiagnostic: 'persisted runtime pid is not alive',
-      runtimeDiagnosticSeverity: 'warning',
-      diagnostics: [...diagnostics, 'persisted runtime pid was not found in process table'],
-    });
+        diagnostics: [...diagnostics, 'persisted runtime pid was not found in process table'],
+      }
+    );
   }
 
   if (hasPersistedEvidence(input)) {

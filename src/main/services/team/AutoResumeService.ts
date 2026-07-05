@@ -3,8 +3,6 @@ import { parseRateLimitResetTime } from '@shared/utils/rateLimitDetector';
 
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
-import type { TeamProvisioningService } from './TeamProvisioningService';
-
 const logger = createLogger('Service:AutoResume');
 
 const AUTO_RESUME_BUFFER_MS = 30 * 1000;
@@ -78,10 +76,11 @@ export function planRateLimitAutoResume(input: {
   };
 }
 
-type AutoResumeProvisioning = Pick<
-  TeamProvisioningService,
-  'getCurrentRunId' | 'isTeamAlive' | 'sendMessageToTeam'
->;
+interface AutoResumeProvisioning {
+  getCurrentRunId(teamName: string): string | null;
+  isTeamAlive(teamName: string): boolean;
+  sendMessageToTeam(teamName: string, message: string): Promise<void>;
+}
 type AutoResumeConfigReader = Pick<ConfigManager, 'getConfig'>;
 
 export class AutoResumeService {
