@@ -2,6 +2,7 @@ export * from "./errors";
 export * from "./types";
 export * from "./access-control";
 export * from "./account-capacity";
+export * from "./account-capacity-selection";
 export * from "./abort-signal";
 export * from "./base-revision";
 export * from "./controlled-agent";
