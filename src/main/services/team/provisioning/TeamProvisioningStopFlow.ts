@@ -9,7 +9,7 @@ interface RuntimeAdapterRunEntry {
   providerId: string;
 }
 
-export interface TeamProvisioningStopRun {
+interface StopRun {
   runId: string;
   teamName: string;
   processKilled: boolean;
@@ -18,11 +18,10 @@ export interface TeamProvisioningStopRun {
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
-export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
+export interface TeamProvisioningStopTeamPorts<TRun extends StopRun> {
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   pauseActiveIntervalsForTeam(teamName: string): void;
   stopPersistentTeamMembers(teamName: string): void;
-  openCodeRuntimeDeliveryAdvisory: { cancelTeam(teamName: string): void };
   getTrackedRunId(teamName: string): string | null;
   getAliveRunId(teamName: string): string | null;
   runs: ReadonlyMap<string, TRun>;
@@ -79,14 +78,13 @@ export function getOrphanPersistedTeamNames(
   return persistedTeamNames.filter((teamName) => !tracked.has(teamName));
 }
 
-export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+export async function stopTeamFlow<TRun extends StopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
   ports.invalidateRuntimeSnapshotCaches(teamName);
   ports.pauseActiveIntervalsForTeam(teamName);
   ports.stopPersistentTeamMembers(teamName);
-  ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
 
   let runId = ports.getTrackedRunId(teamName);
   if (!runId) {

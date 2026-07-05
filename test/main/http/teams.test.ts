@@ -4,13 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
 import type {
-  OpenCodeRuntimeControlAck,
-  TeamRuntimeApi,
-} from '@main/services/team/contracts/TeamProvisioningApis';
-import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
-  TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningProgress,
@@ -31,23 +26,13 @@ describe('HTTP team runtime routes', () => {
     const getRuntimeState = vi.fn<(teamName: string) => Promise<TeamRuntimeState>>();
     const getProvisioningStatus = vi.fn<(runId: string) => Promise<TeamProvisioningProgress>>();
     const stopTeam = vi.fn<(teamName: string) => Promise<void>>(() => Promise.resolve());
-    const isTeamAlive = vi.fn<(teamName: string) => boolean>(() => false);
     const getAliveTeams = vi.fn<() => string[]>();
-    const getCurrentRunId = vi.fn<(teamName: string) => string | null>(() => null);
-    const recordOpenCodeRuntimeBootstrapCheckin =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    const deliverOpenCodeRuntimeMessage =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    const recordOpenCodeRuntimeTaskEvent =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    const recordOpenCodeRuntimeHeartbeat =
-      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
     const createTeam =
       vi.fn<
         (
           request: TeamCreateRequest,
           onProgress: (progress: TeamProvisioningProgress) => void
-        ) => Promise<TeamCreateResponse>
+        ) => Promise<TeamLaunchResponse>
       >();
     const listTeams = vi.fn<() => Promise<TeamSummary[]>>();
     const getTeamData = vi.fn<(teamName: string) => Promise<TeamViewSnapshot>>();
@@ -58,22 +43,19 @@ describe('HTTP team runtime routes', () => {
     const teamProvisioningService = {
       createTeam,
       launchTeam,
-      getProvisioningStatus,
-    } satisfies Pick<
-      NonNullable<HttpServices['teamProvisioningService']>,
-      'createTeam' | 'launchTeam' | 'getProvisioningStatus'
-    >;
-    const teamRuntimeApi = {
       getRuntimeState,
+      getProvisioningStatus,
       stopTeam,
-      isTeamAlive,
       getAliveTeams,
-      getCurrentRunId,
-      recordOpenCodeRuntimeBootstrapCheckin,
-      deliverOpenCodeRuntimeMessage,
-      recordOpenCodeRuntimeTaskEvent,
-      recordOpenCodeRuntimeHeartbeat,
-    } satisfies TeamRuntimeApi;
+    } as Pick<
+      NonNullable<HttpServices['teamProvisioningService']>,
+      | 'createTeam'
+      | 'launchTeam'
+      | 'getRuntimeState'
+      | 'getProvisioningStatus'
+      | 'stopTeam'
+      | 'getAliveTeams'
+    > as HttpServices['teamProvisioningService'];
     const teamDataService = {
       listTeams,
       getTeamData,
@@ -94,7 +76,6 @@ describe('HTTP team runtime routes', () => {
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataService,
       teamProvisioningService,
-      teamRuntimeApi,
     } satisfies HttpServices;
 
     return {
@@ -103,13 +84,7 @@ describe('HTTP team runtime routes', () => {
       getRuntimeState,
       getProvisioningStatus,
       stopTeam,
-      isTeamAlive,
       getAliveTeams,
-      getCurrentRunId,
-      recordOpenCodeRuntimeBootstrapCheckin,
-      deliverOpenCodeRuntimeMessage,
-      recordOpenCodeRuntimeTaskEvent,
-      recordOpenCodeRuntimeHeartbeat,
       createTeam,
       listTeams,
       getTeamData,
@@ -735,97 +710,6 @@ describe('HTTP team runtime routes', () => {
           },
         },
       ]);
-    } finally {
-      await app.close();
-    }
-  });
-
-  it('routes OpenCode runtime callbacks through the runtime API facade', async () => {
-    const {
-      app,
-      recordOpenCodeRuntimeBootstrapCheckin,
-      deliverOpenCodeRuntimeMessage,
-      recordOpenCodeRuntimeTaskEvent,
-      recordOpenCodeRuntimeHeartbeat,
-    } = await createApp();
-    const callbackPayload = {
-      runId: 'run-opencode',
-      idempotencyKey: 'callback-1',
-      location: { line: 12 },
-    };
-    const callbackCases = [
-      {
-        url: '/api/teams/demo-team/opencode/runtime/bootstrap-checkin',
-        handler: recordOpenCodeRuntimeBootstrapCheckin,
-        state: 'accepted',
-      },
-      {
-        url: '/api/teams/demo-team/opencode/runtime/deliver-message',
-        handler: deliverOpenCodeRuntimeMessage,
-        state: 'delivered',
-      },
-      {
-        url: '/api/teams/demo-team/opencode/runtime/task-event',
-        handler: recordOpenCodeRuntimeTaskEvent,
-        state: 'recorded',
-      },
-      {
-        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
-        handler: recordOpenCodeRuntimeHeartbeat,
-        state: 'recorded',
-      },
-    ] as const;
-
-    try {
-      for (const callbackCase of callbackCases) {
-        const ack: OpenCodeRuntimeControlAck = {
-          ok: true,
-          providerId: 'opencode',
-          teamName: 'demo-team',
-          runId: 'run-opencode',
-          state: callbackCase.state,
-          idempotencyKey: 'callback-1',
-          diagnostics: [],
-          observedAt: '2026-03-12T00:00:02.000Z',
-        };
-        callbackCase.handler.mockResolvedValueOnce(ack);
-
-        const response = await app.inject({
-          method: 'POST',
-          url: callbackCase.url,
-          payload: callbackPayload,
-        });
-
-        expect(response.statusCode).toBe(200);
-        expect(response.json()).toEqual(ack);
-        expect(callbackCase.handler).toHaveBeenCalledWith({
-          ...callbackPayload,
-          teamName: 'demo-team',
-        });
-      }
-    } finally {
-      await app.close();
-    }
-  });
-
-  it('rejects OpenCode runtime callback bodies for a different team', async () => {
-    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
-
-    try {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
-        payload: {
-          teamName: 'other-team',
-          runId: 'run-opencode',
-        },
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({
-        error: 'runtime body teamName must match route teamName',
-      });
-      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

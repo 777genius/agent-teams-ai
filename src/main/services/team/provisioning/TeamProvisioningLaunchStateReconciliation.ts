@@ -1,5 +1,9 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
+import {
+  readCommittedOpenCodeBootstrapSessionEvidence,
+  readOpenCodeRuntimeLaneIndex,
+} from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
 import {
@@ -581,5 +585,27 @@ export async function guardCommittedOpenCodeSecondaryLaneEvidence(
     teamLaunchState,
     members,
     diagnostics: Array.from(new Set([...committedResult.diagnostics, ...diagnostics])),
+  };
+}
+
+export function createDefaultOpenCodeSecondaryEvidenceOverlayPorts(input: {
+  teamsBasePath: string;
+  hasBootstrapCheckinTombstone(input: {
+    teamName: string;
+    laneId: string;
+    runId: string;
+  }): Promise<boolean>;
+  nowIso(): string;
+}): OpenCodeSecondaryEvidenceOverlayPorts {
+  return {
+    readLaneIndex: (teamName) => readOpenCodeRuntimeLaneIndex(input.teamsBasePath, teamName),
+    readCommittedBootstrapSessionEvidence: ({ teamName, laneId }) =>
+      readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: input.teamsBasePath,
+        teamName,
+        laneId,
+      }),
+    hasBootstrapCheckinTombstone: input.hasBootstrapCheckinTombstone,
+    nowIso: input.nowIso,
   };
 }

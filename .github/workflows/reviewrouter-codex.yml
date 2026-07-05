@@ -15,13 +15,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Skip ReviewRouter for huge pull requests
-        if: ${{ github.event.pull_request.changed_files > 300 }}
-        run: |
-          echo "::notice::Skipping ReviewRouter Codex review because this pull request changes ${{ github.event.pull_request.changed_files }} files, which exceeds GitHub's 300-file pull request diff API limit."
-
       - name: ReviewRouter Codex OAuth review
-        if: ${{ github.event.pull_request.changed_files <= 300 }}
         id: run_codex
         uses: 777genius/review-router@97fdbdf1685350ac9a7f29e0430e82c2360c2821
         with:

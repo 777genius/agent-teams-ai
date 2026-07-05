@@ -486,7 +486,7 @@ The existing `relayOfMessageId` and task progress checks are the right base shap
 
 The proof reader must mirror the read-only parts of these current provisioning paths:
 
-- `OpenCodeVisibleReplyProofService.findByRelayOfMessageId`
+- `findOpenCodeVisibleReplyByRelayOfMessageId`
 - `findOpenCodeVisibleReplyByObservedMessageId`
 - `findOpenCodeVisibleReplyByTaskRefs`
 - `isOpenCodeRecoveredVisibleReplyCandidate`

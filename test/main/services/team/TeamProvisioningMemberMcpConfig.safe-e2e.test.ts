@@ -13,8 +13,6 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { stubMemberLifecycleHostOptionalSeam } from './provisioningHarness/servicePrivateHarness';
-
 const hoisted = vi.hoisted(() => ({
   paths: {
     claudeRoot: '',
@@ -772,12 +770,11 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
       configureExplicitFastRuntimeArgsPlan(svc);
-      stubMemberLifecycleHostOptionalSeam(
-        svc,
-        'updateDirectTmuxRestartMemberConfig',
-        vi.fn(async () => {})
-      );
-      stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
+      (
+        svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
+      ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
+      (svc as unknown as { enqueueDirectRestartPrompt: () => void }).enqueueDirectRestartPrompt =
+        vi.fn();
 
       vi.mocked(spawnCli).mockClear();
       await svc.restartMember(teamName, 'alice');
@@ -887,12 +884,11 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
       configureExplicitFastRuntimeArgsPlan(svc);
-      stubMemberLifecycleHostOptionalSeam(
-        svc,
-        'updateDirectTmuxRestartMemberConfig',
-        vi.fn(async () => {})
-      );
-      stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
+      (
+        svc as unknown as { updateDirectTmuxRestartMemberConfig: () => Promise<void> }
+      ).updateDirectTmuxRestartMemberConfig = vi.fn(async () => {});
+      (svc as unknown as { enqueueDirectRestartPrompt: () => void }).enqueueDirectRestartPrompt =
+        vi.fn();
 
       vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockClear();
       await svc.restartMember(teamName, 'alice');

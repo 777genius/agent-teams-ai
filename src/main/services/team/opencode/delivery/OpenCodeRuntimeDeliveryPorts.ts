@@ -23,14 +23,23 @@ export interface OpenCodeRuntimeDeliveryPortsDependencies {
   getCrossTeamSender: () => OpenCodeRuntimeDeliveryCrossTeamSender | null;
 }
 
-function runtimeTaskRefs(
-  value: readonly TaskRef[] | undefined
-): InboxMessage['taskRefs'] | undefined {
-  return value?.length
-    ? value.map((taskRef) => ({
-        taskId: taskRef.taskId,
-        displayId: taskRef.displayId,
-        teamName: taskRef.teamName,
+function normalizeRuntimeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRefs'] | undefined {
+  const refs = normalizeRuntimeStringArray(value);
+  return refs.length > 0
+    ? refs.map((ref) => ({
+        teamName,
+        taskId: ref,
+        displayId: ref,
       }))
     : undefined;
 }
@@ -51,7 +60,7 @@ export function createOpenCodeRuntimeDeliveryPorts(
         messageId: destinationMessageId,
         source: 'lead_process',
         leadSessionId: envelope.runtimeSessionId,
-        taskRefs: runtimeTaskRefs(envelope.taskRefs),
+        taskRefs: runtimeTaskRefs(envelope.teamName, envelope.taskRefs),
       });
       return {
         kind: 'user_sent_messages',
@@ -101,7 +110,7 @@ export function createOpenCodeRuntimeDeliveryPorts(
         summary: envelope.summary ?? undefined,
         source: 'inbox',
         leadSessionId: envelope.runtimeSessionId,
-        taskRefs: runtimeTaskRefs(envelope.taskRefs),
+        taskRefs: runtimeTaskRefs(envelope.teamName, envelope.taskRefs),
       });
       return {
         kind: 'member_inbox',
@@ -152,7 +161,7 @@ export function createOpenCodeRuntimeDeliveryPorts(
       if (!crossTeamSender) {
         throw new Error('Cross-team sender is not configured');
       }
-      const taskRefs = runtimeTaskRefs(envelope.taskRefs);
+      const taskRefs = runtimeTaskRefs(envelope.teamName, envelope.taskRefs);
       await crossTeamSender({
         fromTeam: envelope.teamName,
         fromMember: envelope.fromMemberName,

@@ -9,11 +9,6 @@ import {
 } from '@shared/utils/teamProvider';
 
 import {
-  isCrossTeamPseudoRecipientName,
-  isCrossTeamToolRecipientName,
-  looksLikeQualifiedExternalRecipientName,
-} from './TeamProvisioningCrossTeamRelayHelpers';
-import {
   getMixedLaunchFallbackRecoveryError,
   type TeamLaunchCompatibilityReport,
 } from './TeamProvisioningLaunchCompatibility';
@@ -474,104 +469,6 @@ export function buildConfigLaunchCompatibilityReport(
     ],
     blockers: [],
     repairAction: 'materialize-members-meta',
-  };
-}
-
-export function selectLaunchCompatibilityInboxNames(allInboxNames: readonly string[]): string[] {
-  const normalizedNames = Array.from(
-    new Set(allInboxNames.map((name) => name.trim()).filter((name) => name.length > 0))
-  );
-  const inboxNameSetLower = new Set(normalizedNames.map((name) => name.toLowerCase()));
-  return normalizedNames
-    .filter((name) => name !== 'team-lead' && name !== 'user')
-    .filter((name) => !isCrossTeamPseudoRecipientName(name))
-    .filter((name) => !isCrossTeamToolRecipientName(name))
-    .filter((name) => !looksLikeQualifiedExternalRecipientName(name))
-    .filter((name) => {
-      const match = /^(.+)-(\d+)$/.exec(name);
-      if (!match?.[1] || !match[2]) return true;
-      const suffix = Number(match[2]);
-      // Only filter CLI-suffixed names (alice-2) when the base name (alice) also exists.
-      // Important: do not filter names like dev-1, which are common intentional names.
-      if (!Number.isFinite(suffix) || suffix < 2) return true;
-      return !inboxNameSetLower.has(match[1].toLowerCase());
-    });
-}
-
-export function hasConfigLaunchOpenCodeMember(
-  configMembers: TeamCreateRequest['members']
-): boolean {
-  return configMembers.some((member) => {
-    const providerId = normalizeOptionalTeamProviderId(member.providerId);
-    const model = typeof member.model === 'string' ? member.model.trim() : '';
-    return providerId === 'opencode' || inferTeamProviderIdFromModel(model) === 'opencode';
-  });
-}
-
-export function buildInboxLaunchCompatibilityReport(params: {
-  teamName: string;
-  inboxNames: readonly string[];
-  configMembers: TeamCreateRequest['members'];
-  leadProviderId?: TeamProviderId;
-}): TeamLaunchCompatibilityReport {
-  if (hasConfigLaunchOpenCodeMember(params.configMembers)) {
-    return buildConfigLaunchCompatibilityReport(
-      params.teamName,
-      params.configMembers,
-      params.leadProviderId,
-      {
-        ignoredInboxNames: true,
-      }
-    );
-  }
-  const configMembersByName = new Map(
-    params.configMembers.map((member) => [member.name.toLowerCase(), member] as const)
-  );
-  const members = params.inboxNames.map((name) => {
-    const configMember = configMembersByName.get(name.toLowerCase());
-    return {
-      name,
-      role: configMember?.role,
-      workflow: configMember?.workflow,
-      isolation: configMember?.isolation,
-      cwd: configMember?.cwd,
-      providerId: configMember?.providerId,
-      model: configMember?.model,
-      effort: configMember?.effort,
-      mcpPolicy: configMember?.mcpPolicy,
-    };
-  });
-  const memberOverridesUsed = members.some(
-    (member) => member.providerId || member.model || member.effort || member.isolation
-  );
-  if (
-    hasIncompleteOpenCodeLaunchCompatibilityMember(members) ||
-    isUnsafeMixedLaunchFallback({
-      leadProviderId: params.leadProviderId,
-      members,
-    })
-  ) {
-    return {
-      level: 'unsafe',
-      rosterSource: 'inboxes',
-      members: [],
-      warnings: [],
-      blockers: [
-        `[${params.teamName}] ${getMixedLaunchFallbackRecoveryError()} Fallback source: inboxes.`,
-      ],
-    };
-  }
-  return {
-    level: 'ready',
-    rosterSource: 'inboxes',
-    members,
-    warnings: memberOverridesUsed
-      ? [
-          'Launch roster was recovered from inboxes and merged with config.json provider/model/effort overrides. ' +
-            'Multimodel reconnect is best-effort in this fallback path.',
-        ]
-      : [],
-    blockers: [],
   };
 }
 

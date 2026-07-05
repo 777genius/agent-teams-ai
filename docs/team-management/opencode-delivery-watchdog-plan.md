@@ -1284,7 +1284,7 @@ let record = await promptDeliveryLedger.ensurePending(...);
 const delivery = await deliverOpenCodeMemberMessage(...);
 record = await promptDeliveryLedger.applyDeliveryResult(record.id, delivery);
 
-const visibleReply = await openCodeVisibleReplyProofService.findByRelayOfMessageId({
+const visibleReply = await findOpenCodeVisibleReplyByRelayOfMessageId({
   teamName,
   replyRecipient: record.replyRecipient,
   from: memberName,
@@ -1338,7 +1338,7 @@ It should return false for:
 Destination proof helper:
 
 ```ts
-OpenCodeVisibleReplyProofService.findByRelayOfMessageId(input: {
+async function findOpenCodeVisibleReplyByRelayOfMessageId(input: {
   teamName: string;
   replyRecipient: string;
   from: string;

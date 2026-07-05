@@ -297,7 +297,7 @@ export interface OpenCodeSecondaryRetryOutcome {
 
 type EffectiveConfiguredMember = TeamCreateRequest['members'][number] & {
   agentType?: string;
-  removedAt?: number | string;
+  removedAt?: number;
 };
 
 interface PendingMemberRestartContextLike {
@@ -391,7 +391,7 @@ interface TeamMetaLike {
   extraCliArgs?: string;
 }
 
-export interface TeamProvisioningMemberLifecycleSharedStatePorts {
+export interface TeamProvisioningMemberLifecycleHost {
   runs: Map<string, ProvisioningRun>;
   runtimeAdapterRunByTeam: Map<string, { providerId: TeamProviderId; runId: string; cwd?: string }>;
   failedOpenCodeSecondaryRetryInFlightByTeam: Map<
@@ -399,34 +399,26 @@ export interface TeamProvisioningMemberLifecycleSharedStatePorts {
     Promise<RetryFailedOpenCodeSecondaryLanesResult>
   >;
   memberLifecycleOperations: Map<string, MemberLifecycleOperation>;
-}
-
-export interface TeamProvisioningMemberLifecycleStorePorts {
   mcpConfigBuilder: Pick<TeamMcpConfigBuilder, 'writeConfigFile'>;
   membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
   teamMetaStore: { getMeta(teamName: string): Promise<TeamMetaLike | null> };
-  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
-  readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
-  readPersistedTeamProjectPath(teamName: string): string | null;
-}
-
-export interface TeamProvisioningMemberLifecycleLaunchStatePorts {
   launchStateStore: { read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null> };
-  persistLaunchStateSnapshot(
-    run: ProvisioningRun,
-    phase: PersistedTeamLaunchPhase
-  ): Promise<PersistedTeamLaunchSnapshot | null>;
-  writeLaunchStateSnapshot(
-    teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
-  ): Promise<unknown>;
-}
-
-export interface TeamProvisioningMemberLifecycleMemberSpecPorts {
+  getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null;
   buildPrimaryOwnedMemberSpecForRuntime(input: {
     configuredMember: EffectiveConfiguredMember;
     run: ProvisioningRun;
   }): TeamCreateRequest['members'][number];
+  buildProvisioningEnv(
+    providerId: TeamProviderId,
+    providerBackendId: TeamProviderBackendId | undefined,
+    options: {
+      teamRuntimeAuth: {
+        teamName: string;
+        authMaterialId: string;
+        allowAnthropicApiKeyHelper: boolean;
+      };
+    }
+  ): Promise<ProvisioningEnvResolution>;
   materializeEffectiveTeamMemberSpecs(input: {
     claudePath: string;
     cwd: string;
@@ -444,22 +436,26 @@ export interface TeamProvisioningMemberLifecycleMemberSpecPorts {
       allowAnthropicApiKeyHelper: boolean;
     };
   }): Promise<TeamCreateRequest['members']>;
-  resolveEffectiveConfiguredMember(
-    configMembers: TeamConfig['members'],
-    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>,
-    memberName: string
-  ): EffectiveConfiguredMember | null;
-  resolveLeadMemberName(
-    configMembers: TeamConfig['members'],
-    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>
-  ): string;
-  buildConfiguredProvisioningMember(
-    member: EffectiveConfiguredMember
-  ): TeamCreateRequest['members'][number];
-}
-
-export interface TeamProvisioningMemberLifecycleRunStatePorts {
-  getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null;
+  resolveDirectMemberLaunchIdentity(input: {
+    claudePath: string;
+    cwd: string;
+    providerId: TeamProviderId;
+    providerBackendId?: TeamProviderBackendId;
+    provisioningEnv: ProvisioningEnvResolution;
+    memberSpec: TeamCreateRequest['members'][number];
+    run: ProvisioningRun;
+  }): Promise<ProviderModelLaunchIdentity | null>;
+  buildTeamRuntimeLaunchArgsPlan(input: {
+    teamName: string;
+    providerId: TeamProviderId;
+    launchIdentity: ProviderModelLaunchIdentity | null;
+    envResolution: ProvisioningEnvResolution;
+    extraArgs: string[];
+    includeAnthropicHelper: boolean;
+    contextLabel: string;
+  }): Promise<TeamRuntimeLaunchArgsPlan>;
+  persistInboxMessage(teamName: string, memberName: string, message: Record<string, unknown>): void;
+  persistSentMessage(teamName: string, message: Record<string, unknown>): void;
   appendMemberBootstrapDiagnostic(run: ProvisioningRun, memberName: string, text: string): void;
   setMemberSpawnStatus(
     run: ProvisioningRun,
@@ -481,61 +477,34 @@ export interface TeamProvisioningMemberLifecycleRunStatePorts {
   getTrackedRunId(teamName: string): string | null;
   getProvisioningRunId(teamName: string): string | null;
   isCurrentTrackedRun(run: ProvisioningRun): boolean;
+  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
+  resolveEffectiveConfiguredMember(
+    configMembers: TeamConfig['members'],
+    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>,
+    memberName: string
+  ): EffectiveConfiguredMember | null;
+  resolveLeadMemberName(
+    configMembers: TeamConfig['members'],
+    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>
+  ): string;
   getLiveTeamAgentRuntimeMetadata(
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
-}
-
-export interface TeamProvisioningMemberLifecycleRuntimeLaunchPorts {
-  buildProvisioningEnv(
-    providerId: TeamProviderId,
-    providerBackendId: TeamProviderBackendId | undefined,
-    options: {
-      teamRuntimeAuth: {
-        teamName: string;
-        authMaterialId: string;
-        allowAnthropicApiKeyHelper: boolean;
-      };
-    }
-  ): Promise<ProvisioningEnvResolution>;
-  resolveDirectMemberLaunchIdentity(input: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    providerBackendId?: TeamProviderBackendId;
-    provisioningEnv: ProvisioningEnvResolution;
-    memberSpec: TeamCreateRequest['members'][number];
-    run: ProvisioningRun;
-  }): Promise<ProviderModelLaunchIdentity | null>;
-  buildTeamRuntimeLaunchArgsPlan(input: {
-    teamName: string;
-    providerId: TeamProviderId;
-    launchIdentity: ProviderModelLaunchIdentity | null;
-    envResolution: ProvisioningEnvResolution;
-    extraArgs: string[];
-    includeAnthropicHelper: boolean;
-    contextLabel: string;
-  }): Promise<TeamRuntimeLaunchArgsPlan>;
-  updateDirectTmuxRestartMemberConfig?(input: DirectTmuxRestartMemberConfigInput): Promise<void>;
+  readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
+  persistLaunchStateSnapshot(
+    run: ProvisioningRun,
+    phase: PersistedTeamLaunchPhase
+  ): Promise<PersistedTeamLaunchSnapshot | null>;
   buildTrackedMemberMcpLaunchConfig(input: {
     cwd: string;
     mcpPolicy: TeamCreateRequest['members'][number]['mcpPolicy'];
     run: ProvisioningRun;
-  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null>;
+  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig>;
   removeTrackedMemberMcpLaunchConfig(
     run: ProvisioningRun,
     config: RuntimeBootstrapMemberMcpLaunchConfig | null
   ): Promise<void>;
   sendMessageToRun(run: ProvisioningRun, message: string): Promise<unknown>;
-}
-
-export interface TeamProvisioningMemberLifecycleMessagingPorts {
-  persistInboxMessage(teamName: string, memberName: string, message: Record<string, unknown>): void;
-  persistSentMessage(teamName: string, message: Record<string, unknown>): void;
-  enqueueDirectRestartPrompt?(input: DirectRestartPromptInput): void;
-}
-
-export interface TeamProvisioningMemberLifecycleOpenCodeRuntimePorts {
   getOpenCodeRuntimeAdapter(): unknown | null;
   resolveOpenCodeMemberWorkspacesForRuntime(input: {
     teamName: string;
@@ -543,6 +512,9 @@ export interface TeamProvisioningMemberLifecycleOpenCodeRuntimePorts {
     leadProviderId: TeamProviderId;
     members: TeamCreateRequest['members'];
   }): Promise<TeamCreateRequest['members']>;
+  buildConfiguredProvisioningMember(
+    member: EffectiveConfiguredMember
+  ): TeamCreateRequest['members'][number];
   runOpenCodeTeamRuntimeAdapterLaunch(input: {
     request: TeamCreateRequest | TeamLaunchRequest;
     members: TeamCreateRequest['members'];
@@ -550,9 +522,6 @@ export interface TeamProvisioningMemberLifecycleOpenCodeRuntimePorts {
     sourceWarning?: string;
     onProgress: (progress: unknown) => void;
   }): Promise<unknown>;
-}
-
-export interface TeamProvisioningMemberLifecycleMixedSecondaryRuntimePorts {
   createMixedSecondaryLaneStateForMember(
     run: ProvisioningRun,
     member: TeamCreateRequest['members'][number]
@@ -568,19 +537,12 @@ export interface TeamProvisioningMemberLifecycleMixedSecondaryRuntimePorts {
     lane: MixedSecondaryRuntimeLaneState
   ): Promise<void>;
   getMixedSecondaryLaunchPhase(run: ProvisioningRun): PersistedTeamLaunchPhase;
+  writeLaunchStateSnapshot(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<unknown>;
+  readPersistedTeamProjectPath(teamName: string): string | null;
 }
-
-export interface TeamProvisioningMemberLifecycleHost
-  extends
-    TeamProvisioningMemberLifecycleSharedStatePorts,
-    TeamProvisioningMemberLifecycleStorePorts,
-    TeamProvisioningMemberLifecycleLaunchStatePorts,
-    TeamProvisioningMemberLifecycleMemberSpecPorts,
-    TeamProvisioningMemberLifecycleRunStatePorts,
-    TeamProvisioningMemberLifecycleRuntimeLaunchPorts,
-    TeamProvisioningMemberLifecycleMessagingPorts,
-    TeamProvisioningMemberLifecycleOpenCodeRuntimePorts,
-    TeamProvisioningMemberLifecycleMixedSecondaryRuntimePorts {}
 
 export class TeamProvisioningMemberLifecycleController {
   constructor(private readonly host: TeamProvisioningMemberLifecycleHost) {}
@@ -767,7 +729,7 @@ export class TeamProvisioningMemberLifecycleController {
 
   private buildTrackedMemberMcpLaunchConfig(
     input: Parameters<TeamProvisioningMemberLifecycleHost['buildTrackedMemberMcpLaunchConfig']>[0]
-  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null> {
+  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig> {
     return this.host.buildTrackedMemberMcpLaunchConfig(input);
   }
 

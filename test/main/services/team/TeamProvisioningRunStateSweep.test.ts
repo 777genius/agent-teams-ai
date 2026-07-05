@@ -9,8 +9,6 @@ interface SweepInternals {
   runtimeAdapterTraceLinesByRunId: Map<string, string[]>;
   runtimeAdapterTraceKeyByRunId: Map<string, string>;
   provisioningRunByTeam: Map<string, string>;
-  aliveRunByTeam: Map<string, string>;
-  runtimeAdapterRunByTeam: Map<string, { runId: string }>;
   sweepRuntimeAdapterRunState(nowMs?: number): void;
 }
 
@@ -59,35 +57,6 @@ describe('TeamProvisioningService runtime-adapter run-state sweep', () => {
       runId: 'stale-run',
       state: 'failed',
     });
-  });
-
-  it('keeps stale run state referenced by alive and runtime adapter maps', () => {
-    const service = new TeamProvisioningService();
-    const internals = service as unknown as SweepInternals;
-
-    const now = Date.now();
-    const staleMs = now - 60 * 60_000;
-
-    internals.runtimeAdapterProgressByRunId.set(
-      'alive-run',
-      buildProgress('alive-run', 'team-alive', staleMs)
-    );
-    internals.runtimeAdapterProgressByRunId.set(
-      'adapter-run',
-      buildProgress('adapter-run', 'team-adapter', staleMs)
-    );
-    internals.runtimeAdapterProgressByRunId.set(
-      'unreferenced-run',
-      buildProgress('unreferenced-run', 'team-free', staleMs)
-    );
-    internals.aliveRunByTeam.set('team-alive', 'alive-run');
-    internals.runtimeAdapterRunByTeam.set('team-adapter', { runId: 'adapter-run' });
-
-    internals.sweepRuntimeAdapterRunState(now);
-
-    expect(internals.runtimeAdapterProgressByRunId.has('alive-run')).toBe(true);
-    expect(internals.runtimeAdapterProgressByRunId.has('adapter-run')).toBe(true);
-    expect(internals.runtimeAdapterProgressByRunId.has('unreferenced-run')).toBe(false);
   });
 
   it('throttles repeated sweeps within the sweep interval', () => {

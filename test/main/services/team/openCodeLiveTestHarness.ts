@@ -32,8 +32,7 @@ import type { HttpServices } from '../../../../src/main/http';
 import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { TaskRef } from '../../../../src/shared/types';
 
-const DEFAULT_ORCHESTRATOR_CLI =
-  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 
 export interface InboxMessage {
   from?: string;
@@ -216,9 +215,8 @@ export async function waitForOpenCodePeerRelay(
   timeoutMs: number
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  let lastRelay: Awaited<
-    ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>
-  > | null = null;
+  let lastRelay: Awaited<ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>> | null =
+    null;
 
   while (Date.now() < deadline) {
     lastRelay = await svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
@@ -351,7 +349,6 @@ async function startLiveTeamControlApi(
   const app = Fastify({ logger: false });
   registerTeamRoutes(app, {
     teamProvisioningService: svc,
-    teamRuntimeApi: svc,
     ...extraServices,
   } as HttpServices);
   await app.listen({ host: '127.0.0.1', port: 0 });
