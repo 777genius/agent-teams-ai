@@ -9,7 +9,18 @@ type JsonRecord = Record<string, unknown>;
 type SuperviseEvent =
   | { readonly type: "start"; readonly result: unknown }
   | { readonly type: "status"; readonly result: unknown }
+  | { readonly type: "reconcile"; readonly result: unknown }
   | { readonly type: "stop"; readonly result: unknown };
+
+export enum ControllerSupervisorObservedStatus {
+  Planned = "planned",
+  Running = "running",
+  Completed = "completed",
+  Stopped = "stopped",
+  Blocked = "blocked",
+  Failed = "failed",
+  Stale = "stale",
+}
 
 const requiredCodexGoalMcpTools = [
   "codex_goal_list_jobs",
@@ -92,13 +103,21 @@ export async function superviseCodexGoalProjectController(input: {
       }));
       lastStatus = status;
       input.onEvent?.({ type: "status", result: status });
-      const runStatus = isRecord(status) ? status.status : undefined;
-      if (
-        typeof runStatus === "string" &&
-        runStatus !== "running" &&
-        runStatus !== "planned"
-      ) {
-        return { ok: mcpResultOk(status), start, finalStatus: status };
+      if (!mcpResultOk(status)) {
+        return { ok: false, start, finalStatus: status };
+      }
+      const runStatus = controllerSupervisorObservedStatus(status);
+      if (runStatus !== undefined && controllerSupervisorStatusIsTerminal(runStatus)) {
+        const reconcile = parseMcpJsonResult(await client.callTool({
+          name: "codex_goal_project_controller_reconcile",
+          arguments: input.args,
+        }));
+        input.onEvent?.({ type: "reconcile", result: reconcile });
+        return {
+          ok: mcpResultOk(reconcile) && controllerSupervisorTerminalStatusSucceeded(runStatus),
+          start,
+          finalStatus: reconcile,
+        };
       }
     }
 
@@ -120,6 +139,51 @@ export async function superviseCodexGoalProjectController(input: {
     await client.close();
     await server.close();
   }
+}
+
+export function controllerSupervisorObservedStatus(
+  result: unknown,
+): ControllerSupervisorObservedStatus | undefined {
+  return controllerSupervisorStatusValue([
+    nestedRecord(result, "providerObserved")?.status,
+    nestedRecord(result, "liveController")?.providerObservedStatus,
+    nestedRecord(result, "run")?.status,
+    nestedRecord(result, "session")?.status,
+    isRecord(result) ? result.status : undefined,
+  ]);
+}
+
+export function controllerSupervisorStatusIsTerminal(
+  status: ControllerSupervisorObservedStatus,
+): boolean {
+  return status !== ControllerSupervisorObservedStatus.Planned &&
+    status !== ControllerSupervisorObservedStatus.Running;
+}
+
+function controllerSupervisorTerminalStatusSucceeded(
+  status: ControllerSupervisorObservedStatus,
+): boolean {
+  return status === ControllerSupervisorObservedStatus.Completed ||
+    status === ControllerSupervisorObservedStatus.Stopped;
+}
+
+function controllerSupervisorStatusValue(
+  candidates: readonly unknown[],
+): ControllerSupervisorObservedStatus | undefined {
+  for (const candidate of candidates) {
+    if (
+      candidate === ControllerSupervisorObservedStatus.Planned ||
+      candidate === ControllerSupervisorObservedStatus.Running ||
+      candidate === ControllerSupervisorObservedStatus.Completed ||
+      candidate === ControllerSupervisorObservedStatus.Stopped ||
+      candidate === ControllerSupervisorObservedStatus.Blocked ||
+      candidate === ControllerSupervisorObservedStatus.Failed ||
+      candidate === ControllerSupervisorObservedStatus.Stale
+    ) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 export async function listCodexGoalMcpResources(): Promise<unknown> {
@@ -227,6 +291,12 @@ function parseMcpJsonResult(result: unknown): unknown {
 
 function mcpResultOk(value: unknown): boolean {
   return isRecord(value) && value.ok !== false;
+}
+
+function nestedRecord(value: unknown, key: string): Record<string, unknown> | undefined {
+  if (!isRecord(value)) return undefined;
+  const nested = value[key];
+  return isRecord(nested) ? nested : undefined;
 }
 
 function isAbortError(error: unknown): boolean {

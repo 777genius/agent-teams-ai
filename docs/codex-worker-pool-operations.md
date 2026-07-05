@@ -306,7 +306,8 @@ subscription-runtime-codex-goal controller-supervise \
 ```
 
 This process owns the in-memory provider runner until it receives SIGINT or
-SIGTERM. It is the safe CLI alternative to an unsafe full-access controller.
+SIGTERM, or until the controlled provider reaches terminal status and is
+reconciled. It is the safe CLI alternative to an unsafe full-access controller.
 Its status output includes `liveController`: when
 `providerRunnerAttached=false` or `ownerMatches=false`, the current process does
 not prove live ownership of the controller. If `providerObservedStatus` is

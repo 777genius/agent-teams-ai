@@ -215,8 +215,9 @@ subscription-runtime-codex-goal controller-supervise \
 
 `controller-supervise` keeps the in-process MCP server and provider runner alive
 for the lifetime of the process. It starts through the same
-`codex_goal_project_controller_start` policy path, polls status, and stops the
-controlled provider on SIGINT/SIGTERM. Do not replace it with
+`codex_goal_project_controller_start` policy path, polls status, reconciles and
+exits when provider status becomes terminal, and stops the controlled provider
+on SIGINT/SIGTERM. Do not replace it with
 `danger_full_access` if a one-shot start fails.
 
 Status responses include `liveController`. Treat `providerRunnerAttached=false`

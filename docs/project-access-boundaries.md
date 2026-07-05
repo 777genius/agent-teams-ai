@@ -219,7 +219,8 @@ The controlled-agent MCP lifecycle tools are:
 `subscription-runtime-codex-goal controller-supervise` is the durable CLI owner
 for a live controller session. It keeps the in-process MCP server and provider
 runner alive, calls `codex_goal_project_controller_start`, polls status, and
-stops the controlled provider on SIGINT/SIGTERM. The one-shot
+reconciles and exits when provider status becomes terminal. It stops the
+controlled provider on SIGINT/SIGTERM. The one-shot
 `subscription-runtime-codex-goal tool codex_goal_project_controller_start`
 remains fail-closed because it cannot own provider liveness after process exit.
 
