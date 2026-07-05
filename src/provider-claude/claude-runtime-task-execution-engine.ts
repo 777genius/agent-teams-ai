@@ -220,6 +220,9 @@ export class ClaudeRuntimeTaskExecutionEngine
     assertReadOnlyToolPolicy(input.editMode, input.allowedTools);
     return {
       ...(input.allowedTools === undefined ? {} : { allowedTools: input.allowedTools }),
+      ...(input.disallowedTools === undefined
+        ? {}
+        : { disallowedTools: input.disallowedTools }),
       ...(input.appendSystemPrompt === undefined
         ? {}
         : { appendSystemPrompt: input.appendSystemPrompt }),

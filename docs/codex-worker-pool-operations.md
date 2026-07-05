@@ -259,13 +259,61 @@ That regression does not use real provider accounts. It creates a sandbox
 `project_scoped_control` controller manifest, proves ordinary worker startup
 fails closed, then proves brokered child worktree/job creation still works.
 
-To run the real Codex controller-to-child regression, use:
+To inspect whether a controller manifest can become a live broker-only LLM
+controller, use the launch-plan tool:
+
+```sh
+subscription-runtime-codex-goal tool codex_goal_project_controller_launch_plan \
+  --args-json '{"registryRootDir":"/var/data/infinity-context/worker-jobs/registry","controllerJobId":"infinity-context-project-controller-v1"}'
+
+subscription-runtime-codex-goal tool codex_goal_project_controller_status \
+  --args-json '{"registryRootDir":"/var/data/infinity-context/worker-jobs/registry","controllerJobId":"infinity-context-project-controller-v1"}'
+```
+
+If the result is `provider_cannot_disable_raw_shell`, the selected provider
+profile still exposes raw shell and must not be used for a live controller. Do
+not switch the controller to `danger_full_access`; that bypasses the
+project-scoped control boundary.
+If `codex_goal_project_controller_start`, `stop` or `reconcile` returns
+`controlled_agent_provider_runner_not_connected`, the persisted run is not owned
+by the current MCP process. Treat this as expected fail-closed behavior after a
+process restart or split-brain attempt. Do not use `danger_full_access`; stop or
+reconcile from the owning process, or restart from clean controlled-agent state.
+For Codex `start` also requires `projectAccessScope.authRoot` to match the
+controller job `authRootDir` and at least one ready allowed account.
+
+To run the real Codex controller-to-child regression through the host-side
+broker tools, use:
 
 ```sh
 SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
   SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=codex-project-controller-starts-real-child-worker \
   npm run e2e:live-workers
 ```
+
+This proves the project broker can start a real child Codex worker and integrate
+its output from a sandbox project. It does not prove that a broker-only LLM
+controller made those broker calls by itself.
+
+To run only the controlled-agent Codex launcher smoke on a real account, use a
+sandbox-only scenario:
+
+```sh
+SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
+  CODEX_LIVE_ACCOUNT=account-e \
+  CODEX_CONTROLLED_LIVE_MAX_GOAL_TURNS=1 \
+  SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=codex-controlled-controller-real-app-server-launcher \
+  npm run e2e:live-workers
+```
+
+This proves the live Codex controlled-agent provider can start with native
+app-server environments disabled and with only broker/status MCP tools in the
+generated profile. It is intentionally bounded with `maxGoalTurns` and should
+not be treated as a long-running production controller.
+
+If the selected account is expired, quota-limited or capacity-limited, the
+harness reports the scenario as skipped. That means auth/account state must be
+repaired before claiming a successful live controller pass.
 
 The harness covers Codex app-server sandbox execution, broken-auth skip,
 quota-to-next-account continuation with inbox delivery, project-scoped

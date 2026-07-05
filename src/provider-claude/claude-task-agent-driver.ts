@@ -53,6 +53,7 @@ export type ClaudeTaskEngineInput = {
   readonly model: string;
   readonly maxTurns?: number;
   readonly allowedTools?: readonly string[];
+  readonly disallowedTools?: readonly string[];
   readonly mcpConfig?: readonly string[];
   readonly editMode?: ProviderTaskControls["editMode"];
   readonly providerSandboxMode?: ProviderTaskControls["providerSandboxMode"];
@@ -82,6 +83,7 @@ export type ClaudeTaskAgentDriverOptions = {
   readonly model?: string;
   readonly maxTurns?: number;
   readonly allowedTools?: readonly string[];
+  readonly disallowedTools?: readonly string[];
   readonly mcpConfig?: readonly string[];
   readonly strictMcpConfig?: boolean;
 };
@@ -252,6 +254,8 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
     const maxTurns = input.task.controls?.maxTurns ?? this.options.maxTurns;
     const allowedTools =
       input.task.controls?.allowedTools ?? this.options.allowedTools;
+    const disallowedTools =
+      input.task.controls?.disallowedTools ?? this.options.disallowedTools;
     const editMode = input.task.controls?.editMode;
     const providerSandboxMode = input.task.controls?.providerSandboxMode;
     const outputSchemaName =
@@ -271,6 +275,9 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
     }
     if (allowedTools !== undefined) {
       engineInput = { ...engineInput, allowedTools };
+    }
+    if (disallowedTools !== undefined) {
+      engineInput = { ...engineInput, disallowedTools };
     }
     if (this.options.mcpConfig !== undefined) {
       engineInput = { ...engineInput, mcpConfig: this.options.mcpConfig };

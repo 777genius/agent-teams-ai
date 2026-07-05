@@ -45,7 +45,10 @@ export type CodexAppServerExecutionEngineOptions = {
   readonly goalContinuePrompt?: string;
   readonly runStore?: ManagedRunStorePort;
   readonly commandApprovalPolicy?: CodexAppServerCommandApprovalPolicy;
+  readonly nativeToolSurface?: CodexAppServerNativeToolSurface;
 };
+
+export type CodexAppServerNativeToolSurface = "default" | "disabled";
 
 export type CodexAppServerCommandApprovalInput = {
   readonly source:
@@ -579,6 +582,9 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
       ...(this.options.commandApprovalPolicy === undefined
         ? {}
         : { commandApprovalPolicy: this.options.commandApprovalPolicy }),
+      ...(this.options.nativeToolSurface === undefined
+        ? {}
+        : { nativeToolSurface: this.options.nativeToolSurface }),
       cleanThreadPrewarm: this.options.cleanThreadPrewarm ?? true,
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
       reconnectGraceMs: this.options.reconnectGraceMs ?? defaultReconnectGraceMs,
@@ -653,6 +659,7 @@ class CodexAppServerClient {
       readonly workspacePath: string;
       readonly executionProfile: ResolvedCodexExecutionProfile;
       readonly commandApprovalPolicy?: CodexAppServerCommandApprovalPolicy;
+      readonly nativeToolSurface?: CodexAppServerNativeToolSurface;
       readonly cleanThreadPrewarm: boolean;
       readonly timeoutMs: number;
       readonly reconnectGraceMs: number;
@@ -1192,8 +1199,8 @@ class CodexAppServerClient {
     readonly abortSignal: AbortSignal;
     readonly goalMode?: boolean;
   }): Promise<string> {
-    const disableTools =
-      this.options.executionProfile.disableTools && input.goalMode !== true;
+    const disableTools = this.disableAllTools(input.goalMode);
+    const disableNativeEnvironments = this.disableNativeEnvironments(input.goalMode);
     const features = {
       apps: false,
       hooks: false,
@@ -1255,6 +1262,10 @@ class CodexAppServerClient {
               environments: [],
               dynamicTools: [],
               experimentalRawEvents: false,
+            }
+          : disableNativeEnvironments
+          ? {
+              environments: [],
             }
           : {}),
       },
@@ -1329,8 +1340,8 @@ class CodexAppServerClient {
     readonly abortSignal: AbortSignal;
     readonly goalMode?: boolean;
   }): Promise<TurnState> {
-    const disableTools =
-      this.options.executionProfile.disableTools && input.goalMode !== true;
+    const disableTools = this.disableAllTools(input.goalMode);
+    const disableNativeEnvironments = this.disableNativeEnvironments(input.goalMode);
     const response = await this.send(
       "turn/start",
       {
@@ -1344,7 +1355,7 @@ class CodexAppServerClient {
         ],
         responsesapiClientMetadata: null,
         additionalContext: null,
-        ...(disableTools ? { environments: [] } : {}),
+        ...(disableTools || disableNativeEnvironments ? { environments: [] } : {}),
         cwd: null,
         runtimeWorkspaceRoots: null,
         approvalPolicy: this.approvalPolicyForThread(),
@@ -1436,6 +1447,15 @@ class CodexAppServerClient {
         skill_approval: false,
       },
     };
+  }
+
+  private disableAllTools(goalMode: boolean | undefined): boolean {
+    return this.options.executionProfile.disableTools && goalMode !== true;
+  }
+
+  private disableNativeEnvironments(goalMode: boolean | undefined): boolean {
+    return this.options.nativeToolSurface === "disabled" &&
+      (goalMode === true || !this.disableAllTools(goalMode));
   }
 
   private sandboxPolicyFor(input: {

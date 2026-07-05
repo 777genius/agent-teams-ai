@@ -174,6 +174,28 @@ Typical invariants:
 - controller tools cannot create child controllers unless policy explicitly
   allows it.
 
+### Controlled agent
+
+Purpose: safely launch an autonomous LLM controller without giving it raw host
+authority.
+
+Core concepts:
+
+- `ControlledAgentSession`
+- `ControlledAgentRun`
+- `ToolSurfacePolicy`
+- `ControlledAgentLaunchPlan`
+- `ProviderEnforcementCapabilities`
+
+Typical invariants:
+
+- a controlled controller requires `project_scoped_control`;
+- provider tool-surface enforcement is required before launch;
+- raw shell, raw git, raw tmux, direct registry writes, auth roots and Docker
+  sockets are not controller capabilities;
+- deny rules are defense-in-depth, not proof that raw shell is disabled;
+- launch fails closed when provider enforcement is incomplete.
+
 ### Project integration
 
 Purpose: safely integrate reviewed worker output.
@@ -424,6 +446,44 @@ Current Codex MCP tools:
 
 Each write step requires an explicit confirmation flag and delegates to
 `worker-core/integration` use cases.
+
+### Phase 4.5: controlled-agent lifecycle
+
+`worker-core/controlled-agent` owns the provider-neutral lifecycle for a live
+broker-only LLM controller:
+
+- `ControlledAgentSession`: long-lived controller identity, project scope and
+  effective tool surface;
+- `ControlledAgentRun`: one concrete provider run/process/thread for that
+  session;
+- `ToolSurfacePolicy`: exact broker/status tool allow-list and denied raw
+  capabilities;
+- `ProviderEnforcementCapabilities`: the adapter's claim about what it can
+  physically enforce;
+- `ControlledAgentLaunchPlan`: ready/blocked decision with evidence.
+
+Application use cases own state transitions:
+
+- build launch plan;
+- start run;
+- read status;
+- stop run;
+- reconcile run after provider crash, host reboot or stale persisted state.
+
+Adapters own persistence and provider execution. A start tool must not persist
+`running` unless the provider runner actually started a controlled LLM surface.
+For Codex, the provider runner starts app-server with native environments
+disabled and a generated broker-only `CODEX_HOME`. It reads auth only host-side
+from the controller's scoped auth root. If persisted state is later observed
+from a process that does not own the provider instance, return
+`controlled_agent_provider_runner_not_connected` and keep orchestration in the
+owning process or host boss/supervisor.
+
+For Claude, the controlled provider uses the same lifecycle with strict MCP
+config, a broker/status MCP `allowedTools` allow-list and raw host tools in
+`disallowedTools` as defense in depth. It must still fail closed when a valid
+Claude session artifact is unavailable; `danger_full_access` is not a fallback
+for missing Claude auth.
 
 ### Phase 5: provider launch enforcement
 

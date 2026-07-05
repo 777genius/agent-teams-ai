@@ -15,6 +15,7 @@ import {
   AccessBoundary,
   InMemoryActiveAttemptRegistry,
   NetworkAccessMode,
+  projectScopedControllerToolNames,
   type WorkerControlDeliveryReceipt,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
@@ -724,6 +725,157 @@ describe("codex goal MCP server", () => {
         "infinity-context-controller-v1",
       );
       expect(audit.some((event) => auditDecision(event).allowed === true)).toBe(true);
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("builds a fail-closed controlled-agent launch plan for project controllers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-controller-plan-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: join(root, "workspaces", "controller"),
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [join(root, "workspaces")],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registryRootDir,
+          jobIdPrefixes: ["infinity-context-"],
+          tmuxSessionPrefixes: ["infinity-context-"],
+          allowedAccountIds: ["account-a"],
+        },
+      });
+
+      const defaultPlan = await callToolJson(
+        client,
+        "codex_goal_project_controller_launch_plan",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+        },
+      );
+      expect(defaultPlan).toMatchObject({
+        ok: true,
+        mode: "project_controller_launch_plan",
+        controllerJobId: "infinity-context-controller-v1",
+        status: "ready",
+        rawShellMode: "disabled-by-provider",
+      });
+      expect(defaultPlan.allowedTools).toEqual(projectScopedControllerToolNames());
+
+      const denyOnlyPlan = await callToolJson(
+        client,
+        "codex_goal_project_controller_launch_plan",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          rawShellMode: "sandboxed-deny-rules-only",
+        },
+      );
+      expect(denyOnlyPlan).toMatchObject({
+        ok: false,
+        mode: "project_controller_launch_plan",
+        controllerJobId: "infinity-context-controller-v1",
+        status: "blocked",
+        reason: "provider_cannot_disable_raw_shell",
+      });
+
+      const readyPlan = await callToolJson(
+        client,
+        "codex_goal_project_controller_launch_plan",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          rawShellMode: "disabled-by-provider",
+          stateDir: join(root, "controller-state"),
+          mcpArgs: ["--stdio"],
+        },
+      );
+      expect(readyPlan).toMatchObject({
+        ok: true,
+        mode: "project_controller_launch_plan",
+        controllerJobId: "infinity-context-controller-v1",
+        status: "ready",
+        rawShellMode: "disabled-by-provider",
+        session: {
+          identity: {
+            controllerJobId: "infinity-context-controller-v1",
+            projectId: "infinity-context",
+          },
+        },
+      });
+      expect(readyPlan.allowedTools).toEqual(projectScopedControllerToolNames());
+      expect(String(readyPlan.configToml)).toContain("enabled_tools");
+      expect(String(readyPlan.configToml)).not.toContain("danger-full-access");
+      expect(String(readyPlan.rulesText)).toContain('pattern = ["git"]');
+
+      const blockedStart = await callToolJson(
+        client,
+        "codex_goal_project_controller_start",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+        },
+      );
+      expect(blockedStart).toMatchObject({
+        ok: false,
+        error: "project_control_controller_auth_root_scope_required",
+      });
+
+      const blockedWithoutScopedAuth = await callToolJson(
+        client,
+        "codex_goal_project_controller_start",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          rawShellMode: "disabled-by-provider",
+          stateDir: join(root, "controller-state"),
+        },
+      );
+      expect(blockedWithoutScopedAuth).toMatchObject({
+        ok: false,
+        error: "project_control_controller_auth_root_scope_required",
+      });
+
+      const missingStatus = await callToolJson(
+        client,
+        "codex_goal_project_controller_status",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          stateDir: join(root, "controller-state"),
+        },
+      );
+      expect(missingStatus).toMatchObject({
+        ok: false,
+        mode: "project_controller_status",
+        reason: "session_missing",
+      });
     } finally {
       await client.close();
       await server.close();

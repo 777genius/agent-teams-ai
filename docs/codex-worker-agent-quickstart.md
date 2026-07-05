@@ -185,11 +185,56 @@ direct registry writes and auth roots while exposing read-only status plus
 host supervisor calling broker tools directly. Never switch the controller to
 `danger_full_access` just to make it "alive".
 
+Before starting a live LLM controller, build the controlled-agent launch plan:
+
+```txt
+codex_goal_project_controller_launch_plan({ controllerJobId, registryRootDir })
+codex_goal_project_controller_status({ controllerJobId, registryRootDir })
+codex_goal_project_controller_start({ controllerJobId, registryRootDir })
+codex_goal_project_controller_stop({ controllerJobId, registryRootDir, reason })
+codex_goal_project_controller_reconcile({ controllerJobId, registryRootDir })
+```
+
+The Codex controlled-agent profile disables native app-server environments and
+keeps only the configured broker/status MCP surface. If a profile can only add
+deny rules around raw shell, the launch plan returns blocked with
+`provider_cannot_disable_raw_shell`. That is not a bug. A live controller may be
+started only when the provider adapter can enforce broker-only tools without
+raw shell access. The launch-plan output includes the exact allowed MCP tools,
+generated Codex profile preview and safe evidence; it does not start an LLM
+process.
+
+`codex_goal_project_controller_start` is also fail-closed. For Codex it starts
+the app-server controlled-agent provider only after the launch plan is ready,
+the controller scope includes `projectAccessScope.authRoot`, and at least one
+configured account is ready and allowed. The runtime reads `auth.json` only
+host-side to build a `SessionArtifact`; the LLM never receives auth payloads.
+The controller job `prompt.md` is passed into the live controller task as the
+project objective, not only kept as manifest metadata. For smoke tests only,
+`maxGoalTurns` may be supplied to the start tool to bound a tiny controller
+slice; production controllers normally omit it and are stopped through the safe
+provider runner.
+`status` reads persisted controlled-agent session/run state and, when the
+provider is still attached in this MCP process, also reports provider liveness.
+`stop` and `reconcile` use the same provider adapter. If a different process
+tries to stop/reconcile a persisted run without the in-memory provider instance,
+it returns `controlled_agent_provider_runner_not_connected` instead of guessing
+or using `danger_full_access`.
+
+Claude has the same controlled provider shape through the controlled-agent
+lifecycle. Its CLI profile uses strict MCP config, broker/status MCP tools in
+`allowedTools`, and raw host tools such as Bash, Edit, Write, Read, WebFetch,
+WebSearch and Task in `disallowedTools`. A live Claude controller still needs a
+valid Claude session artifact; if session wiring or account state is missing,
+the adapter must fail closed instead of falling back to raw shell or
+`danger_full_access`.
+
 Controller manifest requirements:
 
 - `accessBoundary: "project_scoped_control"`;
 - `networkAccess: "restricted"`;
 - `projectAccessScope.registryRoot` points at the worker registry;
+- `projectAccessScope.authRoot` equals the controller job `authRootDir`;
 - `workspaceRoots` and `worktreeRoots` include only this project's roots;
 - `jobIdPrefixes` and `tmuxSessionPrefixes` are project-specific;
 - `allowedBranches`, `allowedGitRemotes` and optional `allowedAccountIds` are
@@ -201,10 +246,16 @@ Controller actions must use brokered MCP tools:
 ```txt
 codex_goal_project_create_worktree({ controllerJobId, ... })
 codex_goal_project_create_job({ controllerJobId, ... })
+codex_goal_project_controller_launch_plan({ controllerJobId, ... })
+codex_goal_project_controller_status({ controllerJobId, ... })
 codex_goal_project_start({ controllerJobId, jobId, confirmStart: true })
 codex_goal_project_mark_reviewed({ controllerJobId, jobId })
-codex_goal_project_integrate_commit({ controllerJobId, ... })
-codex_goal_project_push_branch({ controllerJobId, ... })
+codex_goal_project_open_integration_attempt({ controllerJobId, ... })
+codex_goal_project_apply_worker_output({ controllerJobId, attemptId, ... })
+codex_goal_project_run_required_checks({ controllerJobId, attemptId, ... })
+codex_goal_project_commit_approved_changes({ controllerJobId, attemptId, ... })
+codex_goal_project_push_approved_commit({ controllerJobId, attemptId, ... })
+codex_goal_project_reject_integration_attempt({ controllerJobId, attemptId, ... })
 ```
 
 Child jobs created by `codex_goal_project_create_job` inherit a narrowed scope

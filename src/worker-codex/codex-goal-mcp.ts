@@ -12,12 +12,17 @@ import {
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
+import {
+  DefaultRedactor,
+  type SessionArtifact,
+} from "@vioxen/subscription-runtime/core";
+import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import {
   LocalIntegrationAttemptStore,
   LocalFileRunEventProjectionStateStore,
   LocalFileRunEventStore,
   LocalFileWorkerControlInboxStore,
+  LocalControlledAgentStateStore,
 } from "@vioxen/subscription-runtime/store-local-file";
 import {
   LocalGitIntegrationAdapter,
@@ -29,6 +34,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-local";
 import {
   AccessBoundary,
+  LaunchPlanStatus,
   NetworkAccessMode,
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
@@ -40,6 +46,11 @@ import {
   WorkerControlService,
   assessBaseRevision,
   assessWorkerHealth,
+  buildControlledAgentLaunchPlan,
+  getControlledAgentStatus,
+  reconcileControlledAgentRun,
+  startControlledAgentRun,
+  stopControlledAgentRun,
   applyWorkerOutput,
   buildWorkerStatusView,
   commitApprovedChanges,
@@ -132,11 +143,16 @@ import {
   parseCodexGoalProjectAccessScope,
 } from "./codex-goal-access-plan";
 import { LocalGitRevisionReader } from "./codex-goal-git-revision";
+import {
+  buildCodexControlledAgentProfile,
+  CodexControlledAgentProvider,
+} from "./controlled-agent";
 
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
 const execFileAsync = promisify(execFile);
+const controlledAgentProviders = new Map<string, CodexControlledAgentProvider>();
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -271,6 +287,17 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly skipDoctor?: boolean;
   readonly note?: string;
   readonly overwrite?: boolean;
+};
+
+type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
+  readonly stateDir?: string;
+  readonly mcpServerName?: string;
+  readonly mcpCommand?: string;
+  readonly mcpArgs?: readonly string[] | string;
+  readonly mcpCwd?: string;
+  readonly rawShellMode?: "disabled-by-provider" | "sandboxed-deny-rules-only";
+  readonly maxGoalTurns?: number;
+  readonly reason?: string;
 };
 
 type ProjectIntegrationMcpArgs = ProjectControlMcpArgs & {
@@ -1744,6 +1771,110 @@ export function createCodexGoalMcpServer(
   );
 
   server.registerTool(
+    "codex_goal_project_controller_launch_plan",
+    {
+      title: "Project Controller Controlled-Agent Launch Plan",
+      description:
+        "Build a fail-closed broker-only LLM controller launch plan for a ProjectScopedControl controller manifest. Does not start an LLM.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        stateDir: z.string().optional(),
+        mcpServerName: z.string().optional(),
+        mcpCommand: z.string().optional(),
+        mcpArgs: z.union([z.string(), z.array(z.string())]).optional(),
+        mcpCwd: z.string().optional(),
+        rawShellMode: z.enum([
+          "disabled-by-provider",
+          "sandboxed-deny-rules-only",
+        ]).optional(),
+        maxGoalTurns: z.number().int().positive().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControllerLaunchPlan(args as ProjectControllerLaunchPlanMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_controller_start",
+    {
+      title: "Project Controller Controlled-Agent Start",
+      description:
+        "Start a broker-only LLM controller when the provider adapter can enforce the controlled-agent launch plan. Fails closed when no safe provider runner is available.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        stateDir: z.string().optional(),
+        mcpServerName: z.string().optional(),
+        mcpCommand: z.string().optional(),
+        mcpArgs: z.union([z.string(), z.array(z.string())]).optional(),
+        mcpCwd: z.string().optional(),
+        rawShellMode: z.enum([
+          "disabled-by-provider",
+          "sandboxed-deny-rules-only",
+        ]).optional(),
+        maxGoalTurns: z.number().int().positive().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControllerStart(args as ProjectControllerLaunchPlanMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_controller_status",
+    {
+      title: "Project Controller Controlled-Agent Status",
+      description:
+        "Read the persisted controlled-agent controller session/run state for a ProjectScopedControl manifest.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        stateDir: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControllerStatus(args as ProjectControllerLaunchPlanMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_controller_stop",
+    {
+      title: "Project Controller Controlled-Agent Stop",
+      description:
+        "Stop a broker-only LLM controller through its provider adapter. Fails closed while no safe provider runner is connected.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        stateDir: z.string().optional(),
+        reason: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControllerStop(args as ProjectControllerLaunchPlanMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_controller_reconcile",
+    {
+      title: "Project Controller Controlled-Agent Reconcile",
+      description:
+        "Reconcile a broker-only LLM controller run through its provider adapter. Fails closed while no safe provider runner is connected.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        stateDir: z.string().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControllerReconcile(args as ProjectControllerLaunchPlanMcpArgs),
+    ),
+  );
+
+  server.registerTool(
     "codex_goal_project_start",
     {
       title: "Project Control Start Codex Goal Worker",
@@ -2536,6 +2667,380 @@ function operationResult(resourceId: string): ProjectControlOperationResult {
   return {
     status: "applied",
     resourceId,
+  };
+}
+
+async function projectControllerLaunchPlan(args: ProjectControllerLaunchPlanMcpArgs) {
+  const controller = await loadProjectControlController(args);
+  const state = projectControllerState(args, controller);
+  const profile = projectControllerProfile(args, state);
+  const plan = projectControllerLaunchInput(controller, state, profile);
+  const ready = plan.status === LaunchPlanStatus.Ready;
+  return mcpJson({
+    ok: ready,
+    mode: "project_controller_launch_plan",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    stateDir: state.stateDir,
+    sessionId: state.sessionId,
+    rawShellMode: args.rawShellMode ?? "disabled-by-provider",
+    status: plan.status,
+    ...(ready
+      ? {
+          session: plan.session,
+          allowedTools: profile.enabledTools,
+          codexHome: profile.codexHome,
+          configToml: profile.configToml,
+          rulesText: profile.rulesText,
+          evidence: plan.evidence,
+        }
+      : {
+          reason: plan.reason,
+          accessReason: plan.accessReason,
+          evidence: plan.evidence,
+          allowedTools: profile.enabledTools,
+          safeMessage:
+            "Controlled LLM controller launch is blocked until the provider can enforce broker-only tools without raw shell.",
+        }),
+  });
+}
+
+async function projectControllerStart(args: ProjectControllerLaunchPlanMcpArgs) {
+  const controller = await loadProjectControlController(args);
+  const state = projectControllerState(args, controller);
+  const profile = projectControllerProfile(args, state);
+  const plan = projectControllerLaunchInput(controller, state, profile);
+  if (plan.status === LaunchPlanStatus.Blocked) {
+    return mcpJson({
+      ok: false,
+      mode: "project_controller_start",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      stateDir: state.stateDir,
+      sessionId: state.sessionId,
+      status: plan.status,
+      reason: plan.reason,
+      accessReason: plan.accessReason,
+      evidence: plan.evidence,
+      safeMessage:
+        "Controlled LLM controller start is blocked by the fail-closed launch plan.",
+    });
+  }
+  const launch = await goalLaunchInput(codexGoalJobToArgs(controller.controller));
+  const account = await controlledAgentAccount({
+    controller,
+    launch,
+  });
+  const provider = new CodexControlledAgentProvider({
+    profile,
+    sessionArtifact: account.sessionArtifact,
+    workspacePath: launch.config.workspacePath,
+    codexBinaryPath: launch.config.codexBinaryPath ?? "codex",
+    controllerObjective: await readFile(launch.config.promptPath, "utf8"),
+    ...(launch.config.model === undefined ? {} : { model: launch.config.model }),
+    ...(launch.config.reasoningEffort === undefined
+      ? {}
+      : { reasoningEffort: launch.config.reasoningEffort }),
+    ...(launch.config.serviceTier === undefined
+      ? {}
+      : { serviceTier: launch.config.serviceTier }),
+    ...(args.maxGoalTurns === undefined ? {} : { maxGoalTurns: args.maxGoalTurns }),
+  });
+  const result = await startControlledAgentRun({
+    controllerJobId: controller.controller.jobId,
+    sessionId: state.sessionId,
+    stateDir: state.stateDir,
+    boundary: AccessBoundary.ProjectScopedControl,
+    projectAccessScope: controller.scope,
+    provider: profile.enforcement,
+    networkAccess: NetworkAccessMode.Restricted,
+  }, {
+    provider,
+    stateStore: state.store,
+    events: state.store,
+  });
+  if (!result.ok) {
+    if ("reason" in result) {
+      return mcpJson({
+        ok: false,
+        mode: "project_controller_start",
+        controllerJobId: controller.controller.jobId,
+        registryRootDir: controller.registryRootDir,
+        stateDir: state.stateDir,
+        sessionId: state.sessionId,
+        reason: result.reason,
+        session: result.session,
+        run: result.run,
+        safeMessage:
+          "Controlled LLM controller already has an active run. Use status, stop or reconcile before starting another run.",
+      });
+    }
+    return mcpJson({
+      ok: false,
+      mode: "project_controller_start",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      stateDir: state.stateDir,
+      sessionId: state.sessionId,
+      status: result.plan.status,
+      reason: result.plan.reason,
+      evidence: result.plan.evidence,
+      safeMessage:
+        "Controlled LLM controller start was blocked by the controlled-agent use case.",
+    });
+  }
+  controlledAgentProviders.set(state.sessionId, provider);
+  return mcpJson({
+    ok: true,
+    mode: "project_controller_start",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    stateDir: state.stateDir,
+    sessionId: state.sessionId,
+    status: result.run.status,
+    run: result.run,
+    provider: result.provider,
+    account: {
+      name: account.name,
+      authJsonSha256Prefix: account.authJsonSha256Prefix,
+    },
+    allowedTools: profile.enabledTools,
+    safeMessage:
+      "Codex broker-only controlled-agent provider started with native app-server environments disabled.",
+    evidence: plan.evidence,
+  });
+}
+
+async function projectControllerStatus(args: ProjectControllerLaunchPlanMcpArgs) {
+  const controller = await loadProjectControlController(args);
+  const state = projectControllerState(args, controller);
+  const result = await getControlledAgentStatus(state.sessionId, {
+    stateStore: state.store,
+  });
+  const provider = controlledAgentProviders.get(state.sessionId);
+  const observed = result.ok && provider
+    ? await provider.status({ session: result.session, run: result.run })
+    : undefined;
+  return mcpJson({
+    ok: result.ok,
+    mode: "project_controller_status",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    stateDir: state.stateDir,
+    sessionId: state.sessionId,
+    reason: result.reason,
+    ...(result.session === undefined ? {} : { session: result.session }),
+    ...(result.ok && "run" in result ? { run: result.run } : {}),
+    ...(observed === undefined ? {} : { providerObserved: observed }),
+    safeMessage: result.ok
+      ? provider
+        ? "Controller state is persisted and provider liveness was observed in this MCP process."
+        : "Controller state is persisted, but provider liveness is unavailable in this MCP process."
+      : "No persisted controlled-agent session/run exists for this controller.",
+  });
+}
+
+async function projectControllerStop(args: ProjectControllerLaunchPlanMcpArgs) {
+  const controller = await loadProjectControlController(args);
+  const state = projectControllerState(args, controller);
+  const result = await getControlledAgentStatus(state.sessionId, {
+    stateStore: state.store,
+  });
+  const provider = controlledAgentProviders.get(state.sessionId);
+  if (result.ok && provider) {
+    const stopped = await stopControlledAgentRun({
+      sessionId: state.sessionId,
+      reason: stringValue(args.reason) ?? "project_controller_stop",
+    }, {
+      stateStore: state.store,
+      provider,
+      events: state.store,
+    });
+    if (stopped.ok) controlledAgentProviders.delete(state.sessionId);
+    return mcpJson({
+      ok: stopped.ok,
+      mode: "project_controller_stop",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      stateDir: state.stateDir,
+      sessionId: state.sessionId,
+      reason: stopped.reason,
+      ...(stopped.ok ? { session: stopped.session, run: stopped.run } : {}),
+      safeMessage: stopped.ok
+        ? "Controlled-agent provider stopped through the safe provider adapter."
+        : "Controlled-agent stop failed before reaching provider stop.",
+    });
+  }
+  return mcpJson({
+    ok: false,
+    mode: "project_controller_stop",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    stateDir: state.stateDir,
+    sessionId: state.sessionId,
+    reason: result.ok
+      ? "controlled_agent_provider_runner_not_connected"
+      : result.reason,
+    ...(result.ok ? { session: result.session, run: result.run } : {}),
+    safeMessage: result.ok
+      ? "A safe provider runner is required to stop a live controlled-agent controller. Do not kill unrelated processes or use danger_full_access from this tool."
+      : "No persisted controlled-agent run exists to stop.",
+  });
+}
+
+async function projectControllerReconcile(args: ProjectControllerLaunchPlanMcpArgs) {
+  const controller = await loadProjectControlController(args);
+  const state = projectControllerState(args, controller);
+  const result = await getControlledAgentStatus(state.sessionId, {
+    stateStore: state.store,
+  });
+  const provider = controlledAgentProviders.get(state.sessionId);
+  if (result.ok && provider) {
+    const reconciled = await reconcileControlledAgentRun(state.sessionId, {
+      stateStore: state.store,
+      provider,
+      events: state.store,
+    });
+    return mcpJson({
+      ok: reconciled.ok,
+      mode: "project_controller_reconcile",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      stateDir: state.stateDir,
+      sessionId: state.sessionId,
+      reason: reconciled.reason,
+      ...(reconciled.session === undefined ? {} : { session: reconciled.session }),
+      ...(reconciled.run === undefined ? {} : { run: reconciled.run }),
+      ...(reconciled.ok || reconciled.safeMessage === undefined ? {} : {
+        safeMessage: reconciled.safeMessage,
+      }),
+    });
+  }
+  return mcpJson({
+    ok: false,
+    mode: "project_controller_reconcile",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    stateDir: state.stateDir,
+    sessionId: state.sessionId,
+    reason: result.ok
+      ? "controlled_agent_provider_runner_not_connected"
+      : result.reason,
+    ...(result.ok ? { session: result.session, run: result.run } : {}),
+    safeMessage: result.ok
+      ? "A safe provider runner is required to reconcile provider liveness. Persisted state is available, but runtime liveness cannot be asserted."
+      : "No persisted controlled-agent run exists to reconcile.",
+  });
+}
+
+function projectControllerState(
+  args: ProjectControllerLaunchPlanMcpArgs,
+  controller: {
+    readonly controller: CodexGoalJobManifest;
+  },
+): {
+  readonly stateDir: string;
+  readonly cwd: string;
+  readonly sessionId: string;
+  readonly store: LocalControlledAgentStateStore;
+} {
+  const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
+  const stateDir = resolvePath(
+    cwd,
+    stringValue(args.stateDir) ??
+      join(controller.controller.jobRootDir, "controlled-agent"),
+  );
+  return {
+    cwd,
+    stateDir,
+    sessionId: `${controller.controller.jobId}:controlled-agent`,
+    store: new LocalControlledAgentStateStore({ rootDir: stateDir }),
+  };
+}
+
+function projectControllerProfile(
+  args: ProjectControllerLaunchPlanMcpArgs,
+  state: {
+    readonly stateDir: string;
+    readonly cwd: string;
+  },
+): ReturnType<typeof buildCodexControlledAgentProfile> {
+  return buildCodexControlledAgentProfile({
+    stateDir: state.stateDir,
+    rawShellMode: args.rawShellMode ?? "disabled-by-provider",
+    ...(stringValue(args.mcpServerName) === undefined
+      ? {}
+      : { mcpServerName: stringValue(args.mcpServerName) as string }),
+    ...(stringValue(args.mcpCommand) === undefined
+      ? {}
+      : { mcpCommand: stringValue(args.mcpCommand) as string }),
+    ...(args.mcpArgs === undefined ? {} : { mcpArgs: stringArrayArg(args.mcpArgs) }),
+    ...(stringValue(args.mcpCwd) === undefined
+      ? {}
+      : { mcpCwd: resolvePath(state.cwd, stringValue(args.mcpCwd) as string) }),
+  });
+}
+
+function projectControllerLaunchInput(
+  controller: {
+    readonly controller: CodexGoalJobManifest;
+    readonly scope: ProjectAccessScope;
+  },
+  state: {
+    readonly sessionId: string;
+    readonly stateDir: string;
+  },
+  profile: ReturnType<typeof buildCodexControlledAgentProfile>,
+) {
+  return buildControlledAgentLaunchPlan({
+    controllerJobId: controller.controller.jobId,
+    sessionId: state.sessionId,
+    stateDir: state.stateDir,
+    boundary: AccessBoundary.ProjectScopedControl,
+    projectAccessScope: controller.scope,
+    provider: profile.enforcement,
+    networkAccess: NetworkAccessMode.Restricted,
+  });
+}
+
+async function controlledAgentAccount(input: {
+  readonly controller: {
+    readonly scope: ProjectAccessScope;
+  };
+  readonly launch: CodexGoalLaunchInput;
+}): Promise<{
+  readonly name: string;
+  readonly authJsonSha256Prefix?: string;
+  readonly sessionArtifact: SessionArtifact;
+}> {
+  if (!input.controller.scope.authRoot) {
+    throw new Error("project_control_controller_auth_root_scope_required");
+  }
+  if (resolve(input.launch.config.authRootDir) !== resolve(input.controller.scope.authRoot)) {
+    throw new Error("project_control_controller_auth_root_outside_scope");
+  }
+  const slots = await listCodexGoalAccountStatuses({
+    authRootDir: input.launch.config.authRootDir,
+    accounts: input.launch.config.accounts.map((account) => account.name),
+    stateRootDir: codexGoalStateRootDir(input.launch),
+  });
+  const allowedAccountIds = input.controller.scope.allowedAccountIds;
+  const available = availableCodexGoalAccountSlots(dedupeCodexGoalAccountSlots(slots))
+    .filter((slot) =>
+      allowedAccountIds === undefined ||
+      allowedAccountIds.includes(slot.name),
+    );
+  const selected = available[0];
+  if (!selected) {
+    throw new Error("project_control_controller_no_available_account");
+  }
+  const authJsonBytes = await readFile(selected.authJsonPath, "utf8");
+  return {
+    name: selected.name,
+    ...(selected.authJsonSha256Prefix === undefined
+      ? {}
+      : { authJsonSha256Prefix: selected.authJsonSha256Prefix }),
+    sessionArtifact: sessionArtifactFromCodexAuthJson(authJsonBytes),
   };
 }
 

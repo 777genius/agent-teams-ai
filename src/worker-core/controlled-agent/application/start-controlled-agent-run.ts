@@ -1,0 +1,142 @@
+import { randomUUID } from "node:crypto";
+
+import { LaunchPlanStatus } from "../../access-control";
+import {
+  ControlledAgentEventType,
+  ControlledAgentRunStatus,
+} from "../domain/controlled-agent";
+import type {
+  ControlledAgentLaunchPlan,
+  ControlledAgentLaunchPlanInput,
+  ControlledAgentRun,
+  ControlledAgentSession,
+} from "../domain/controlled-agent";
+import type {
+  ControlledAgentEventPort,
+  ControlledAgentProviderPort,
+  ControlledAgentProviderStartResult,
+  ControllerStateStorePort,
+} from "../ports";
+import { buildControlledAgentLaunchPlan } from "./build-controlled-agent-launch-plan";
+import { controlledAgentControllerSystemPrompt } from "./controller-system-prompt";
+
+export type StartControlledAgentRunDeps = {
+  readonly provider: ControlledAgentProviderPort;
+  readonly stateStore?: ControllerStateStorePort;
+  readonly events?: ControlledAgentEventPort;
+  readonly clock?: { now(): Date };
+  readonly idGenerator?: { randomId(): string };
+};
+
+export type StartControlledAgentRunResult =
+  | {
+      readonly ok: true;
+      readonly plan: Extract<
+        ControlledAgentLaunchPlan,
+        { readonly status: LaunchPlanStatus.Ready }
+      >;
+      readonly session: ControlledAgentSession;
+      readonly run: ControlledAgentRun;
+      readonly provider: ControlledAgentProviderStartResult;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: StartControlledAgentRunBlockReason.ExistingActiveRun;
+      readonly session: ControlledAgentSession;
+      readonly run: ControlledAgentRun;
+    }
+  | {
+      readonly ok: false;
+      readonly plan: Extract<
+        ControlledAgentLaunchPlan,
+        { readonly status: LaunchPlanStatus.Blocked }
+      >;
+    };
+
+export enum StartControlledAgentRunBlockReason {
+  ExistingActiveRun = "existing_active_run",
+}
+
+export class StartControlledAgentRunUseCase {
+  constructor(private readonly deps: StartControlledAgentRunDeps) {}
+
+  async start(input: ControlledAgentLaunchPlanInput): Promise<StartControlledAgentRunResult> {
+    const plan = buildControlledAgentLaunchPlan(input);
+    if (plan.status === LaunchPlanStatus.Blocked) {
+      return { ok: false, plan };
+    }
+    const existingSession = await this.deps.stateStore?.readSession(plan.session.sessionId);
+    const existingRun = existingSession?.activeRunId
+      ? await this.deps.stateStore?.readRun(existingSession.activeRunId)
+      : null;
+    if (
+      existingSession &&
+      existingRun &&
+      existingRun.status === ControlledAgentRunStatus.Running
+    ) {
+      return {
+        ok: false,
+        reason: StartControlledAgentRunBlockReason.ExistingActiveRun,
+        session: existingSession,
+        run: existingRun,
+      };
+    }
+    const now = (this.deps.clock?.now() ?? new Date()).toISOString();
+    const runId = this.deps.idGenerator?.randomId() ?? randomUUID();
+    const provider = await this.deps.provider.start({
+      session: plan.session,
+      systemPrompt: controlledAgentControllerSystemPrompt(),
+    });
+    const run: ControlledAgentRun = {
+      schemaVersion: 1,
+      runId,
+      sessionId: plan.session.sessionId,
+      controllerJobId: plan.session.identity.controllerJobId,
+      providerKind: plan.session.identity.providerKind,
+      status: ControlledAgentRunStatus.Running,
+      ...(provider.providerRunId === undefined ? {} : {
+        providerRunId: provider.providerRunId,
+      }),
+      ...(provider.safeMessage === undefined ? {} : {
+        safeMessage: provider.safeMessage,
+      }),
+      startedAt: now,
+      updatedAt: now,
+    };
+    const runningSession: ControlledAgentSession = {
+      ...plan.session,
+      status: ControlledAgentRunStatus.Running,
+      activeRunId: run.runId,
+      updatedAt: now,
+    };
+    await this.deps.stateStore?.saveSession(runningSession);
+    await this.deps.stateStore?.saveRun(run);
+    await this.deps.events?.append({
+      schemaVersion: 1,
+      eventId: this.deps.idGenerator?.randomId() ?? randomUUID(),
+      sessionId: runningSession.sessionId,
+      runId: run.runId,
+      controllerJobId: runningSession.identity.controllerJobId,
+      type: ControlledAgentEventType.RunStarted,
+      occurredAt: now,
+      payload: {
+        providerKind: runningSession.identity.providerKind,
+        providerRunId: provider.providerRunId ?? null,
+      },
+    });
+    return {
+      ok: true,
+      plan,
+      session: runningSession,
+      run,
+      provider,
+    };
+  }
+}
+
+export async function startControlledAgentRun(
+  input: ControlledAgentLaunchPlanInput,
+  deps: StartControlledAgentRunDeps,
+): Promise<StartControlledAgentRunResult> {
+  return new StartControlledAgentRunUseCase(deps).start(input);
+}

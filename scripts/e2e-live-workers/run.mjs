@@ -19,9 +19,24 @@ import {
   NetworkAccessMode,
   buildLaunchPlan,
 } from "../../dist/worker-core/access-control.js";
+import {
+  ControlledAgentRunStatus,
+  startControlledAgentRun,
+  stopControlledAgentRun,
+} from "../../dist/worker-core/index.js";
+import {
+  sessionArtifactFromCodexAuthJson,
+} from "../../dist/provider-codex/index.js";
 import { FileBackendClaudeWorker } from "../../dist/worker-claude/file-backend-claude-worker.js";
 import { CommandPolicyRunner } from "../../dist/worker-codex/command-policy-runner.js";
+import {
+  CodexControlledAgentProvider,
+  buildCodexControlledAgentProfile,
+} from "../../dist/worker-codex/index.js";
 import { FileBackendCodexSafeExecutor } from "../../dist/worker-codex/file-backend-codex-safe-executor.js";
+import {
+  LocalControlledAgentStateStore,
+} from "../../dist/store-local-file/index.js";
 import { LocalFileWorkerControlInboxStore } from "../../dist/store-local-file/local-worker-control-inbox-store.js";
 import { WorkerControlService } from "../../dist/worker-core/control/worker-control-service.js";
 
@@ -48,6 +63,10 @@ async function main() {
   await run(
     "codex project controller manifest liveness contract",
     codexProjectControllerManifestLivenessContract,
+  );
+  await run(
+    "codex controlled controller real app-server launcher",
+    codexControlledControllerRealAppServerLauncher,
   );
   await run(
     "codex real app-server command approval denies raw push",
@@ -786,6 +805,136 @@ async function codexProjectControllerManifestLivenessContract() {
   }
 }
 
+async function codexControlledControllerRealAppServerLauncher() {
+  const skip = codexSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("codex-controlled-controller-");
+  let provider = null;
+  let stateStore = null;
+  let started = null;
+  try {
+    const workspacePath = await gitSandbox(join(root, "workspace"), {
+      "README.md": "Codex controlled controller live sandbox only.\n",
+    });
+    const registryRootDir = join(root, "registry");
+    const worktreesRoot = join(root, "worktrees");
+    const stateDir = join(root, "controller-state");
+    await mkdir(registryRootDir, { recursive: true });
+    await mkdir(worktreesRoot, { recursive: true });
+
+    const profile = buildCodexControlledAgentProfile({
+      stateDir,
+      mcpCommand: process.execPath,
+      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+      mcpCwd: process.cwd(),
+      rawShellMode: "disabled-by-provider",
+    });
+    stateStore = new LocalControlledAgentStateStore({ rootDir: stateDir });
+    provider = new CodexControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromCodexAuthJson(
+        await readFile(codexAuthJsonPath, "utf8"),
+      ),
+      workspacePath,
+      codexBinaryPath: "codex",
+      model: process.env.CODEX_LIVE_MODEL ?? "gpt-5.5",
+      reasoningEffort: process.env.CODEX_LIVE_EFFORT ?? "high",
+      serviceTier: process.env.CODEX_LIVE_SERVICE_TIER ?? "fast",
+      maxGoalTurns: Number(process.env.CODEX_CONTROLLED_LIVE_MAX_GOAL_TURNS ?? "1"),
+      controllerObjective: [
+        "This is a subscription-runtime live controlled-agent e2e.",
+        "Inspect the broker/status tool surface only.",
+        "Do not create child workers, do not edit files, do not use raw shell/git/tmux.",
+        "Finish after confirming the controller launch surface is available.",
+      ].join("\n"),
+    });
+
+    started = await startControlledAgentRun({
+      controllerJobId: "controlled-live-controller",
+      sessionId: "controlled-live-controller:controlled-agent",
+      stateDir,
+      boundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope: {
+        projectId: "codex-controlled-controller-live-e2e",
+        registryRoot: registryRootDir,
+        authRoot: codexAuthRoot,
+        workspaceRoots: [workspacePath],
+        worktreeRoots: [worktreesRoot],
+        jobIdPrefixes: ["controlled-live-"],
+        tmuxSessionPrefixes: ["controlled-live-"],
+        allowedBranches: ["main", "master"],
+        allowedGitRemotes: ["origin"],
+        allowedAccountIds: [codexAccount],
+      },
+      provider: profile.enforcement,
+      networkAccess: NetworkAccessMode.Restricted,
+    }, {
+      provider,
+      stateStore,
+      events: stateStore,
+    });
+    assert(started.ok === true, "controlled controller live start must pass launch policy");
+    assertEqual(started.run.status, ControlledAgentRunStatus.Running);
+    assert(
+      started.provider?.safeMessage?.includes("native environments disabled"),
+      "controlled provider must report native environment disablement",
+    );
+
+    const configPath = join(profile.codexHome, "config.toml");
+    const beforeConfig = await waitForControlledFileOrTerminal({
+      path: configPath,
+      provider,
+      session: started.session,
+      run: started.run,
+      timeoutMs: 120_000,
+    });
+    const beforeConfigSkip = codexControlledProviderUnavailableSkip(beforeConfig);
+    if (beforeConfigSkip) return beforeConfigSkip;
+    assert(
+      existsSync(configPath),
+      `controlled config was not materialized before provider status ${beforeConfig?.status ?? "unknown"}: ${safeTail(beforeConfig?.safeMessage ?? "")}`,
+    );
+    const configToml = await readFile(configPath, "utf8");
+    assert(configToml.includes("enabled_tools"), "controlled config must pin enabled broker tools");
+    assert(configToml.includes("codex_goal_project_start"), "controlled config must include broker start tool");
+    assert(!configToml.includes("danger-full-access"), "controlled config must not request danger-full-access");
+
+    const observed = await waitForControlledStatus({
+      provider,
+      session: started.session,
+      run: started.run,
+      timeoutMs: 180_000,
+    });
+    const providerSkip = codexControlledProviderUnavailableSkip(observed);
+    if (providerSkip) return providerSkip;
+    assert(
+      [
+        ControlledAgentRunStatus.Running,
+        ControlledAgentRunStatus.Completed,
+        ControlledAgentRunStatus.Blocked,
+      ].includes(observed.status),
+      `unexpected controlled provider status: ${observed.status}: ${safeTail(observed.safeMessage ?? "")}`,
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      providerStatus: observed.status,
+      allowedTools: profile.enabledTools.length,
+    };
+  } finally {
+    if (provider && started?.ok === true && stateStore) {
+      await stopControlledAgentRun({
+        sessionId: started.session.sessionId,
+        reason: "live_e2e_cleanup",
+      }, {
+        stateStore,
+        provider,
+        events: stateStore,
+      }).catch(() => undefined);
+    }
+    await cleanup(root);
+  }
+}
+
 async function codexCommandPolicyRejectsProjectBypass() {
   const root = await sandboxRoot("codex-command-policy-bypass-");
   try {
@@ -1424,6 +1573,57 @@ async function waitForCodexProjectChildResult(input) {
     await sleep(5_000);
   }
   throw new Error(`project child timed out: ${safeTail(JSON.stringify(lastBrief))}`);
+}
+
+async function waitForControlledFileOrTerminal(input) {
+  const deadline = Date.now() + input.timeoutMs;
+  let observed = null;
+  while (Date.now() < deadline) {
+    if (existsSync(input.path)) return observed;
+    observed = input.provider.status({
+      session: input.session,
+      run: input.run,
+    });
+    if (observed.status !== ControlledAgentRunStatus.Running) return observed;
+    await sleep(2_000);
+  }
+  return observed;
+}
+
+async function waitForControlledStatus(input) {
+  const deadline = Date.now() + input.timeoutMs;
+  let observed = null;
+  while (Date.now() < deadline) {
+    observed = input.provider.status({
+      session: input.session,
+      run: input.run,
+    });
+    if (observed.status !== ControlledAgentRunStatus.Running) return observed;
+    await sleep(2_000);
+  }
+  return observed ?? input.provider.status({
+    session: input.session,
+    run: input.run,
+  });
+}
+
+function codexControlledProviderUnavailableSkip(status) {
+  if (!status || status.status !== ControlledAgentRunStatus.Failed) return null;
+  const message = String(status.safeMessage ?? "").toLowerCase();
+  if (
+    message.includes("usage limit") ||
+    message.includes("capacity") ||
+    message.includes("quota") ||
+    message.includes("account_unavailable") ||
+    message.includes("session is invalid") ||
+    message.includes("provider_session_invalid")
+  ) {
+    return {
+      skipped: true,
+      reason: `Codex live account unavailable: ${safeTail(status.safeMessage ?? status.status)}`,
+    };
+  }
+  return null;
 }
 
 function codexBriefProviderUnavailableSkip(value) {

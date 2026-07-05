@@ -1854,6 +1854,57 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("can disable native app-server environments in goal mode without clearing dynamic tools", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-native-tools-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+        nativeToolSurface: "disabled",
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "coordinate broker tools only",
+          metadata: {
+            codexGoalObjective: "broker-only controller goal",
+          },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const threadStart = fakeFactory.requests.find(
+        (request) => request.method === "thread/start",
+      );
+      expect(threadStart?.params).toMatchObject({
+        environments: [],
+      });
+      expect(threadStart?.params).not.toHaveProperty("dynamicTools");
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(turnStart?.params).toMatchObject({
+        environments: [],
+      });
+      expect(turnStart?.params).not.toHaveProperty("dynamicTools");
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("continues an active Codex app-server goal until the goal is complete", async () => {
     const workspace = await mkdtemp(
       join(tmpdir(), "codex-app-goal-loop-test-"),

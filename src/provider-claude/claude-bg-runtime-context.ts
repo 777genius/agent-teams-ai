@@ -225,6 +225,7 @@ export interface AgentRunHandleLike {
 
 export interface AgentCommandLike {
   readonly allowedTools?: readonly string[];
+  readonly disallowedTools?: readonly string[];
   readonly appendSystemPrompt?: string;
   readonly createdAt: string;
   readonly cwd: string;

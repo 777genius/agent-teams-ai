@@ -87,6 +87,9 @@ export class ClaudeCliTaskExecutionEngine implements ClaudeTaskExecutionEngine {
     if (input.allowedTools !== undefined) {
       args.push("--allowedTools", input.allowedTools.join(","));
     }
+    if (input.disallowedTools !== undefined) {
+      args.push("--disallowedTools", input.disallowedTools.join(","));
+    }
     if (input.mcpConfig !== undefined) {
       args.push("--mcp-config", ...input.mcpConfig);
     }

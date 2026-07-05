@@ -4,6 +4,7 @@ export * from "./access-control";
 export * from "./account-capacity";
 export * from "./abort-signal";
 export * from "./base-revision";
+export * from "./controlled-agent";
 export * from "./control";
 export * from "./handoff-contract";
 export * from "./host-command";

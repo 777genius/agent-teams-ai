@@ -121,9 +121,13 @@ Current Codex adapter status:
   controller manifest can operate only through broker MCP tools such as
   `codex_goal_project_create_job`, `codex_goal_project_start`,
   `codex_goal_project_stop`, `codex_goal_project_mark_reviewed`,
-  `codex_goal_project_create_worktree`,
-  `codex_goal_project_integrate_commit` and
-  `codex_goal_project_push_branch`.
+  `codex_goal_project_create_worktree`, and the Project Integration lifecycle
+  tools `codex_goal_project_open_integration_attempt`,
+  `codex_goal_project_apply_worker_output`,
+  `codex_goal_project_run_required_checks`,
+  `codex_goal_project_commit_approved_changes`,
+  `codex_goal_project_push_approved_commit`, and
+  `codex_goal_project_reject_integration_attempt`.
 
 A stored `project_scoped_control` manifest is not a live autonomous LLM process.
 It does not think, loop, watch status, start children or call broker tools by
@@ -156,10 +160,56 @@ If that restricted LLM launcher is not available, keep orchestration in the host
 boss/supervisor. Do not substitute `danger_full_access`; that creates an admin
 worker, not a project-scoped controller.
 
+Use `codex_goal_project_controller_launch_plan` as the preflight before any live
+LLM-controller attempt. It loads the stored controller manifest, builds the
+controlled-agent profile and returns either:
+
+- `ok: true` with the exact broker/status tool allow-list and generated profile
+  preview;
+- or `ok: false` with fail-closed evidence such as
+  `provider_cannot_disable_raw_shell`.
+
+For Codex, the controlled-agent profile uses app-server native environment
+disablement as the provider-level raw-shell boundary and keeps MCP/dynamic tools
+available for the broker allow-list. Deny rules around `git`, `tmux`, shell
+wrappers and Docker remain only a defense-in-depth layer. They do not by
+themselves prove that raw shell has been removed from the LLM tool surface.
+
+For Claude, the controlled-agent provider generates a strict MCP config and an
+`allowedTools` list containing only `mcp__<server>__codex_goal_project_*` and
+status tools. It also sends raw host tools such as Bash, Edit, Write, Read,
+WebFetch, WebSearch and Task through `disallowedTools` as defense in depth. A
+live Claude controller still requires a valid Claude session artifact and must
+fail closed when that session cannot be provided.
+
+The controlled-agent MCP lifecycle tools are:
+
+- `codex_goal_project_controller_launch_plan`: build the fail-closed plan;
+- `codex_goal_project_controller_start`: start the Codex app-server controlled
+  provider only when the plan is ready, `projectAccessScope.authRoot` is scoped,
+  a configured account is ready and the provider can enforce broker-only tools.
+  The stored controller `prompt.md` becomes the live controller objective.
+  `maxGoalTurns` is available for bounded smoke/debug runs, not as the normal
+  production orchestration mode;
+- `codex_goal_project_controller_status`: read persisted controller session/run
+  state and include provider liveness only when the provider instance is still
+  attached in this MCP process;
+- `codex_goal_project_controller_stop`: stop through the safe provider runner;
+- `codex_goal_project_controller_reconcile`: reconcile provider liveness through
+  the safe provider runner after crash/reboot.
+
+If `start`, `stop` or `reconcile` return
+`controlled_agent_provider_runner_not_connected`, the persisted state exists but
+this MCP process does not own the live provider instance. That is not permission
+to use `danger_full_access`. Use the owning process, restart from a clean
+controller state, or keep orchestration in the host boss/supervisor.
+
 Minimum safe scope:
 
 - `registryRoot`: the single worker registry this controller may write through
   the broker;
+- `authRoot`: the single Codex auth root the host-side runtime may read to seed
+  the controlled provider session;
 - `workspaceRoots`: existing project integration/checkpoint workspaces;
 - `worktreeRoots`: parent directories where child worktrees may be created;
 - `jobIdPrefixes`: project-specific prefixes for child job ids and job roots;
@@ -176,16 +226,17 @@ The expected control loop is:
 4. start it with `codex_goal_project_start`;
 5. review the child diff and verification evidence;
 6. write a review marker with `codex_goal_project_mark_reviewed`;
-7. integrate reviewed commits with `codex_goal_project_integrate_commit`;
-8. push allowed branches with `codex_goal_project_push_branch`.
+7. open the reviewed output with `codex_goal_project_open_integration_attempt`;
+8. apply it with `codex_goal_project_apply_worker_output`;
+9. run required checks with `codex_goal_project_run_required_checks`;
+10. commit with `codex_goal_project_commit_approved_changes`;
+11. push with `codex_goal_project_push_approved_commit` or reject with
+    `codex_goal_project_reject_integration_attempt`.
 
-`codex_goal_project_integrate_commit` and `codex_goal_project_push_branch`
-are low-level broker operations. They validate scope, branch, remote and force
-policy, but they do not by themselves prove that a worker output has passed the
-full autonomous integration gate. Policy-controlled merge rights should use the
-Project Integration lifecycle in `worker-core/integration`: open attempt, apply
-worker output, run required checks, create a commit candidate, then push or
-reject.
+Low-level git operations are not controller rights. Policy-controlled merge
+rights must go through the Project Integration lifecycle in
+`worker-core/integration`: open attempt, apply worker output, run required
+checks, create a commit candidate, then push or reject.
 
 The broker rejects child manifests that try to override the controller-owned
 scope, request `danger_full_access`, request `project_scoped_control`, use
