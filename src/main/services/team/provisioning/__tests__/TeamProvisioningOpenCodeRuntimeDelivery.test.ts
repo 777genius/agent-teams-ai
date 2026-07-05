@@ -41,7 +41,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
       const taskRefs = [{ taskId: 'task-1', displayId: '#1', teamName: 'Team' }];
       const sentMessages: InboxMessage[] = [];
       const inboxRequests: SendMessageRequest[] = [];
-      const crossTeamRequests: Array<Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0]> = [];
+      const crossTeamRequests: Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0][] = [];
       const ports = createOpenCodeRuntimeDeliveryPorts({
         sentMessagesStore: {
           appendMessage: vi.fn(async (_teamName: string, message: InboxMessage) => {
@@ -250,9 +250,9 @@ function createBoundary(
   overrides: Partial<
     TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<OpenCodeRuntimeCheckinRun>
   > = {}
-) {
+): ReturnType<typeof createTeamProvisioningOpenCodeRuntimeDeliveryBoundary> {
   const ports: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<OpenCodeRuntimeCheckinRun> = {
-    getTeamsBasePath: () => '/tmp/teams',
+    getTeamsBasePath: () => '/workspace/teams',
     resolveOpenCodeRuntimeLaneId: async () => 'primary',
     resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
     readLaunchState: async () => null,

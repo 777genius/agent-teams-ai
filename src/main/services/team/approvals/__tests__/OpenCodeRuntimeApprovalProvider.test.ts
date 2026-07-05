@@ -8,6 +8,8 @@ import {
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
+const TEST_CWD = '/repo/project';
+
 describe('OpenCode runtime approval provider', () => {
   it('collects pending runtime approvals into UI approval entries', () => {
     expect(
@@ -15,8 +17,8 @@ describe('OpenCode runtime approval provider', () => {
         teamName: 'alpha',
         runId: 'run-1',
         laneId: 'primary',
-        cwd: '/tmp/project',
-        expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: '/tmp/project' }],
+        cwd: TEST_CWD,
+        expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: TEST_CWD }],
         teamColor: '#123456',
         teamDisplayName: 'Alpha',
         nowIso: () => '2026-01-01T00:00:00.000Z',
@@ -50,8 +52,8 @@ describe('OpenCode runtime approval provider', () => {
         providerRequestId: 'provider-req',
         laneId: 'primary',
         memberName: 'worker',
-        cwd: '/tmp/project',
-        expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: '/tmp/project' }],
+        cwd: TEST_CWD,
+        expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: TEST_CWD }],
         approval: {
           requestId: 'opencode:run-1:provider-req',
           runId: 'run-1',
@@ -87,8 +89,8 @@ describe('OpenCode runtime approval provider', () => {
       teamName: 'alpha',
       runId: 'run-2',
       laneId: 'primary',
-      cwd: '/tmp/project',
-      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: '/tmp/project' }],
+      cwd: TEST_CWD,
+      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: TEST_CWD }],
       nowIso: () => '2026-01-01T00:00:00.000Z',
       members: {
         worker: {
@@ -134,12 +136,12 @@ describe('OpenCode runtime approval provider', () => {
       runId: 'run-2',
       laneId: 'primary',
       teamName: 'alpha',
-      cwd: '/tmp/project',
+      cwd: TEST_CWD,
       providerId: 'opencode',
       memberName: 'worker',
       requestId: 'provider-req',
       decision: 'reject',
-      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: '/tmp/project' }],
+      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: TEST_CWD }],
       previousLaunchState,
     });
 
@@ -147,10 +149,10 @@ describe('OpenCode runtime approval provider', () => {
       runId: 'run-2',
       laneId: 'primary',
       teamName: 'alpha',
-      cwd: '/tmp/project',
+      cwd: TEST_CWD,
       providerId: 'opencode',
       skipPermissions: false,
-      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: '/tmp/project' }],
+      expectedMembers: [{ name: 'worker', providerId: 'opencode', cwd: TEST_CWD }],
       previousLaunchState,
     });
   });

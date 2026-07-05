@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   launchOpenCodeAggregatePrimaryLane,
+  type LaunchOpenCodeAggregatePrimaryLanePorts,
   persistOpenCodeRuntimeAdapterLaunchResult,
+  type PersistOpenCodeRuntimeAdapterLaunchResultPorts,
   summarizeOpenCodeAggregateLaunchState,
 } from '../TeamProvisioningOpenCodeAggregateLaunchPersistence';
 
@@ -13,11 +15,11 @@ import type {
 } from '../../runtime';
 import type { OpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
-import type { TeamCreateRequest } from '@shared/types';
+import type { MemberSpawnStatusEntry, TeamCreateRequest } from '@shared/types';
 
 function bootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts {
   return {
-    teamsBasePath: '/tmp/teams',
+    teamsBasePath: '/workspace/teams',
     readFileUtf8: vi.fn(),
     mkdirRecursive: vi.fn(),
     readCommittedBootstrapSessionEvidence: vi.fn(),
@@ -120,7 +122,9 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
   });
 
   it('persists runtime adapter launch results through the provided snapshot port', async () => {
-    const writeLaunchStateSnapshot = vi.fn(async (_teamName, snapshot) => snapshot);
+    const writeLaunchStateSnapshot = vi.fn<
+      PersistOpenCodeRuntimeAdapterLaunchResultPorts['writeLaunchStateSnapshot']
+    >(async (_teamName, snapshot) => snapshot);
     const result: TeamRuntimeLaunchResult = {
       runId: 'run-1',
       teamName: 'team-a',
@@ -208,9 +212,11 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       displayName: 'Team A',
       members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
     } as TeamCreateRequest;
-    const memberSpawnStatuses = new Map();
+    const memberSpawnStatuses = new Map<string, MemberSpawnStatusEntry>();
     const runtimeRuns = new Map();
-    const syncedApprovals = vi.fn((input) => {
+    const syncedApprovals = vi.fn<
+      LaunchOpenCodeAggregatePrimaryLanePorts['syncOpenCodeRuntimeToolApprovals']
+    >((input) => {
       calls.push('syncApprovals');
       expect(input.teamColor).toBe('blue');
       expect(input.teamDisplayName).toBe('Team A');
@@ -232,7 +238,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       {
         getTeamsBasePath: () => {
           calls.push('getTeamsBasePath');
-          return '/tmp/teams';
+          return '/workspace/teams';
         },
         getOpenCodeRuntimeLaunchCwd: () => {
           calls.push('getLaunchCwd');

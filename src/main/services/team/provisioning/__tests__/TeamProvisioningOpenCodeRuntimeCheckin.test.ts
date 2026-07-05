@@ -1,5 +1,4 @@
-import { mkdtempSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
+import { mkdirSync, mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +25,14 @@ import type {
 type TestRun = OpenCodeRuntimeCheckinRun;
 
 const observedAt = '2026-01-01T00:00:00.000Z';
+const TEST_CWD = '/repo/project';
+const TEST_TEAMS_BASE_PATH = '/workspace/teams';
+const TEST_RESULTS_ROOT = join(process.cwd(), 'test-results');
+
+function createSafeTempDir(prefix: string): string {
+  mkdirSync(TEST_RESULTS_ROOT, { recursive: true });
+  return mkdtempSync(join(TEST_RESULTS_ROOT, prefix));
+}
 
 function createRun(): TestRun {
   return {
@@ -33,7 +40,7 @@ function createRun(): TestRun {
     teamName: 'Team',
     request: {
       teamName: 'Team',
-      cwd: '/tmp/project',
+      cwd: TEST_CWD,
       members: [],
     },
     effectiveMembers: [],
@@ -60,7 +67,7 @@ function createPorts(
   overrides: Partial<OpenCodeRuntimeCheckinPorts<TestRun>> = {}
 ): OpenCodeRuntimeCheckinPorts<TestRun> {
   return {
-    teamsBasePath: tmpdir(),
+    teamsBasePath: TEST_TEAMS_BASE_PATH,
     resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'secondary:opencode:alice'),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
     readLaunchState: vi.fn(async () => null),
@@ -77,7 +84,7 @@ function createPorts(
     createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(
       () =>
         ({
-          teamsBasePath: tmpdir(),
+          teamsBasePath: TEST_TEAMS_BASE_PATH,
         }) as ReturnType<
           OpenCodeRuntimeCheckinPorts<TestRun>['createOpenCodeRuntimeBootstrapEvidencePorts']
         >
@@ -172,7 +179,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
   });
 
   it('accepts evidence only for the current runtime run', async () => {
-    const teamsBasePath = mkdtempSync(join(tmpdir(), 'opencode-runtime-checkin-'));
+    const teamsBasePath = createSafeTempDir('opencode-runtime-checkin-');
     try {
       await expect(
         assertOpenCodeRuntimeEvidenceAccepted(

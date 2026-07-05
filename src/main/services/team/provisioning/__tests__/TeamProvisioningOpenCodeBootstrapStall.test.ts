@@ -18,6 +18,7 @@ import { MEMBER_BOOTSTRAP_STALL_MS } from '../TeamProvisioningOpenCodeRuntimeEvi
 import type { MemberSpawnStatusEntry } from '@shared/types';
 
 const ISO = '2026-01-01T00:00:00.000Z';
+const TEST_CWD = '/repo/project';
 
 function status(overrides: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnStatusEntry {
   return {
@@ -36,7 +37,7 @@ function opencodeLane(
     laneId: 'lane-worker',
     runId: 'runtime-run-1',
     diagnostics: [],
-    member: { name: 'Worker', cwd: '/tmp/project' },
+    member: { name: 'Worker', cwd: TEST_CWD },
     result: {
       runId: 'runtime-run-1',
       teamName: 'Team',
@@ -91,7 +92,7 @@ function bootstrapRun(): OpenCodeBootstrapStallRunLike {
   return {
     runId: 'run-1',
     teamName: 'Team',
-    request: { cwd: '/tmp/project' },
+    request: { cwd: TEST_CWD },
     provisioningOutputParts: [],
     memberSpawnStatuses: new Map(),
     progress: {} as never,

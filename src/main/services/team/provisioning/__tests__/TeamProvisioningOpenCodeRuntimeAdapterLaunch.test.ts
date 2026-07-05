@@ -360,7 +360,7 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
     },
     getTeamsBasePath: () => {
       calls.push('getTeamsBasePath');
-      return '/tmp/teams';
+      return '/workspace/teams';
     },
     migrateLegacyOpenCodeRuntimeState: async () => {
       calls.push('migrateLegacyState');
