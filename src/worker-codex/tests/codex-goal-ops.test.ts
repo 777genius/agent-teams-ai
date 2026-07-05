@@ -764,6 +764,39 @@ describe("codex goal ops", () => {
     expect(String(brief.text)).toContain("reviewedWithoutResult true");
   });
 
+  it("does not offer raw worker starts for project-scoped-control anchors", async () => {
+    const fixture = await createGoalFixture();
+    const launch = launchInput({
+      ...fixture.config,
+      accessBoundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope: {
+        projectId: "quanta",
+        workspaceRoots: [fixture.config.workspacePath],
+        jobIdPrefixes: ["quanta-"],
+      },
+    }, fixture.root);
+
+    const status = await collectCodexGoalStatus({
+      jobRootDir: fixture.config.jobRootDir,
+      taskId: fixture.config.taskId,
+      workspacePath: fixture.config.workspacePath,
+      logPath: launch.logPath,
+      accessBoundary: AccessBoundary.ProjectScopedControl,
+    });
+    const brief = await buildCodexGoalBrief({
+      jobId: "quanta-project-controller",
+      launch,
+      status,
+      accounts: [accountStatus("account-a", {})],
+      staleAfterMs: 60_000,
+      tailLines: 20,
+    });
+
+    expect(status.recommendedAction).toBe("check_log_or_result");
+    expect(status.warnings.join("\\n")).toContain("broker-only anchor");
+    expect(brief.nextBestTool).toBe("manual_review");
+  });
+
   it("does not offer to start no-result jobs when the workspace is missing", async () => {
     const fixture = await createGoalFixture();
     const launch = launchInput(fixture.config, fixture.root);

@@ -10,6 +10,7 @@ import {
   validateCodexAuthJsonBytes,
 } from "@vioxen/subscription-runtime/provider-codex";
 import {
+  AccessBoundary,
   GitPatchPreserver,
   StrictResultRecorder,
   actionForRuntimeState,
@@ -61,6 +62,7 @@ export type CodexGoalStatusInput = {
   readonly tmuxSession?: string;
   readonly logPath?: string;
   readonly progressPath?: string;
+  readonly accessBoundary?: AccessBoundary;
 };
 
 export type CodexGoalRecommendedAction =
@@ -406,6 +408,12 @@ export async function collectCodexGoalStatus(
   const lastRuntimeEvent = runtimeEventsPath
     ? await readLastCodexGoalRuntimeEvent(runtimeEventsPath)
     : {};
+  if (
+    input.accessBoundary === AccessBoundary.ProjectScopedControl &&
+    resultExists === false
+  ) {
+    warnings.push("project_scoped_control broker-only anchor; use project broker tools, not raw worker start");
+  }
   if (lastRuntimeEvent.warning) warnings.push(lastRuntimeEvent.warning);
   return {
     ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
@@ -484,6 +492,9 @@ export async function collectCodexGoalStatus(
       ...(result.status === undefined ? {} : { resultStatus: result.status }),
       ...(result.reason === undefined ? {} : { resultReason: result.reason }),
       ...(progress.status === undefined ? {} : { progressStatus: progress.status }),
+      ...(input.accessBoundary === undefined
+        ? {}
+        : { accessBoundary: input.accessBoundary }),
       ...(workspace.exists === undefined
         ? {}
         : { workspaceExists: workspace.exists }),
@@ -743,6 +754,7 @@ export function recommendCodexGoalAction(input: {
   readonly workspaceExists?: boolean;
   readonly workspaceDirty?: boolean;
   readonly resultExists?: boolean;
+  readonly accessBoundary?: AccessBoundary;
 }): CodexGoalRecommendedAction {
   if (input.tmuxAlive) return "wait_for_worker";
   if (input.workspaceExists === false) return "inspect_failure";
@@ -752,6 +764,12 @@ export function recommendCodexGoalAction(input: {
   }
   if (input.resultStatus === "waiting_capacity") {
     return "continue_after_capacity";
+  }
+  if (
+    input.accessBoundary === AccessBoundary.ProjectScopedControl &&
+    !input.resultExists
+  ) {
+    return "check_log_or_result";
   }
   if (!input.resultExists) {
     return input.workspaceDirty ? "inspect_dirty_workspace" : "start_worker";

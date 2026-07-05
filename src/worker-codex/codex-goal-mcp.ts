@@ -7603,6 +7603,7 @@ function statusInputSchema(): Record<string, z.ZodTypeAny> {
     tmuxSession: z.string().optional(),
     logPath: z.string().optional(),
     progressPath: z.string().optional(),
+    accessBoundary: z.string().optional(),
     cwd: z.string().optional(),
   };
 }
@@ -7616,6 +7617,9 @@ function statusInput(launch: CodexGoalLaunchInput) {
     ...(launch.tmuxSession ? { tmuxSession: launch.tmuxSession } : {}),
     logPath: launch.logPath,
     ...(launch.config.progressPath ? { progressPath: launch.config.progressPath } : {}),
+    ...(launch.config.accessBoundary === undefined
+      ? {}
+      : { accessBoundary: launch.config.accessBoundary }),
   };
 }
 
