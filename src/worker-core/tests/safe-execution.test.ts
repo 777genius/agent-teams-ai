@@ -913,6 +913,80 @@ describe("SafeExecutionRunner", () => {
     15_000,
   );
 
+  it(
+    "resumes clean waiting_capacity work with a continuation packet after capacity returns",
+    async () => {
+      const workspacePath = await gitWorkspace("safe-execution-resume-capacity-");
+      const journal = new InMemoryAttemptJournal();
+      const firstRunner = new SafeExecutionRunner({
+        lockStore: new InMemoryWorkspaceLockStore(),
+        journal,
+      });
+
+      const first = await firstRunner.run({
+        taskId: "task-resume-capacity",
+        workspace: { mode: "existing_locked", path: workspacePath },
+        effectMode: "workspace_patch",
+        provider: "codex",
+        pool: {
+          async run(): Promise<PromptResult> {
+            throw new SubscriptionWorkerError(
+              "subscription_worker_pool_capacity_unavailable",
+              "Worker pool has no available accounts.",
+              {
+                details: {
+                  availability: "quota_exhausted:2",
+                  reasons: "quota_limited:2",
+                  waitUntil: "2026-06-01T01:00:00.000Z",
+                },
+              },
+            );
+          },
+        },
+        job: { prompt: "Implement capacity-resume feature.", workspacePath },
+        originalPrompt: "Implement capacity-resume feature.",
+        policy: { maxAttempts: 1 },
+      });
+
+      expect(first.status).toBe("waiting_capacity");
+      expect(first.attempts).toHaveLength(1);
+      expect(first.task.lastFailureReason).toBe("capacity_unavailable");
+
+      let resumedPrompt = "";
+      const secondRunner = new SafeExecutionRunner({
+        lockStore: new InMemoryWorkspaceLockStore(),
+        journal,
+      });
+      const resumed = await secondRunner.run({
+        taskId: "task-resume-capacity",
+        workspace: { mode: "existing_locked", path: workspacePath },
+        effectMode: "workspace_patch",
+        provider: "codex",
+        pool: {
+          async run(job: PromptJob): Promise<PromptResult> {
+            resumedPrompt = job.prompt;
+            await writeFile(join(job.workspacePath, "capacity.txt"), "done\n");
+            return { output: "capacity returned" };
+          },
+        },
+        job: { prompt: "Implement capacity-resume feature.", workspacePath },
+        originalPrompt: "Implement capacity-resume feature.",
+        policy: { maxAttempts: 2 },
+      });
+
+      expect(resumed.status).toBe("completed");
+      expect(resumed.attempts).toHaveLength(2);
+      expect(resumedPrompt).toContain("Continue the same task");
+      expect(resumedPrompt).toContain(
+        "Previous attempt stopped because: capacity_unavailable",
+      );
+      expect(await readFile(join(workspacePath, "capacity.txt"), "utf8")).toBe(
+        "done\n",
+      );
+    },
+    15_000,
+  );
+
   it("classifies raw Codex app-server goal blocks before unknown_error", () => {
     const processFailure = Object.assign(
       new Error("node_process_runner_failed:1:codex_app_server_goal_blocked"),
