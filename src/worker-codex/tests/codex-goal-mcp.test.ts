@@ -873,6 +873,162 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("denies generic child creation when an existing controller owns the scope", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-generic-child-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const sourceWorkspacePath = join(root, "workspaces", "infinity-context-main");
+    const childWorkspace = join(root, "worktrees", "infinity-context-memory-child-v1");
+    const childJobRoot = join(root, "worker-jobs", "infinity-context-memory-child-v1");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: sourceWorkspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [sourceWorkspacePath],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registryRootDir,
+          jobIdPrefixes: ["infinity-context-"],
+          tmuxSessionPrefixes: ["infinity-context-"],
+          allowedAccountIds: ["account-a"],
+        },
+      });
+
+      const result = await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-memory-child-v1",
+        jobRootDir: childJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: childWorkspace,
+        promptPath: join(childJobRoot, "prompt.md"),
+        taskId: "infinity-context-memory-child-v1",
+        accounts: ["account-a"],
+        networkAccess: NetworkAccessMode.Restricted,
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "project_control_broker_required",
+        controllerJobId: "infinity-context-controller-v1",
+        requiredTool: "codex_goal_project_create_job",
+      });
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("denies generic lifecycle for legacy project-like jobs after controller adoption", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-legacy-generic-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const sourceWorkspacePath = join(root, "workspaces", "infinity-context-main");
+    const legacyWorkspace = join(root, "worktrees", "infinity-context-memory-legacy-v1");
+    const legacyJobRoot = join(root, "worker-jobs", "infinity-context-memory-legacy-v1");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-memory-legacy-v1",
+        jobRootDir: legacyJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: legacyWorkspace,
+        promptPath: join(legacyJobRoot, "prompt.md"),
+        taskId: "infinity-context-memory-legacy-v1",
+        accounts: ["account-a"],
+        networkAccess: NetworkAccessMode.Restricted,
+      });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: sourceWorkspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [sourceWorkspacePath],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registryRootDir,
+          jobIdPrefixes: ["infinity-context-"],
+          tmuxSessionPrefixes: ["infinity-context-"],
+          allowedAccountIds: ["account-a"],
+        },
+      });
+
+      const update = await callToolJson(client, "codex_goal_update_job", {
+        registryRootDir,
+        jobId: "infinity-context-memory-legacy-v1",
+        description: "legacy mutation should go through broker",
+      });
+      expect(update).toMatchObject({
+        ok: false,
+        reason: "project_control_broker_required",
+        requiredTool: "brokered_project_manifest_repair",
+      });
+      const continued = await callToolJson(client, "codex_goal_continue", {
+        registryRootDir,
+        jobId: "infinity-context-memory-legacy-v1",
+        confirmContinue: true,
+      });
+      expect(continued).toMatchObject({
+        ok: false,
+        reason: "project_control_broker_required",
+        requiredTool: "codex_goal_project_start",
+      });
+      const reviewed = await callToolJson(client, "codex_goal_mark_reviewed", {
+        registryRootDir,
+        jobId: "infinity-context-memory-legacy-v1",
+      });
+      expect(reviewed).toMatchObject({
+        ok: false,
+        reason: "project_control_broker_required",
+        requiredTool: "codex_goal_project_mark_reviewed",
+      });
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("denies project start when an existing child manifest uses an account outside scope", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-start-account-"));
     const registryRootDir = join(root, "worker-jobs", "registry");
@@ -908,6 +1064,23 @@ describe("codex goal MCP server", () => {
 
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,
+        jobId: "infinity-context-memory-child-v1",
+        jobRootDir: childJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: childWorkspace,
+        promptPath: join(childJobRoot, "prompt.md"),
+        taskId: "infinity-context-memory-child-v1",
+        accounts: ["account-b"],
+        accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          isolatedWorkspaceRoot: childWorkspace,
+          workspaceRoots: [childWorkspace],
+        },
+      });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
         jobId: "infinity-context-controller-v1",
         jobRootDir: controllerJobRoot,
         authRootDir: join(root, "auth"),
@@ -925,23 +1098,6 @@ describe("codex goal MCP server", () => {
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedAccountIds: ["account-a"],
-        },
-      });
-      await callToolJson(client, "codex_goal_create_job", {
-        registryRootDir,
-        jobId: "infinity-context-memory-child-v1",
-        jobRootDir: childJobRoot,
-        authRootDir: join(root, "auth"),
-        workspacePath: childWorkspace,
-        promptPath: join(childJobRoot, "prompt.md"),
-        taskId: "infinity-context-memory-child-v1",
-        accounts: ["account-b"],
-        accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
-        networkAccess: NetworkAccessMode.Restricted,
-        projectAccessScope: {
-          projectId: "infinity-context",
-          isolatedWorkspaceRoot: childWorkspace,
-          workspaceRoots: [childWorkspace],
         },
       });
 
@@ -1000,6 +1156,17 @@ describe("codex goal MCP server", () => {
 
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,
+        jobId: "infinity-context-memory-child-v1",
+        jobRootDir: childJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: childWorkspace,
+        promptPath: join(childJobRoot, "prompt.md"),
+        taskId: "infinity-context-memory-child-v1",
+        accounts: ["account-a"],
+        networkAccess: NetworkAccessMode.Restricted,
+      });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
         jobId: "infinity-context-controller-v1",
         jobRootDir: controllerJobRoot,
         authRootDir: join(root, "auth"),
@@ -1018,17 +1185,6 @@ describe("codex goal MCP server", () => {
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedAccountIds: ["account-a"],
         },
-      });
-      await callToolJson(client, "codex_goal_create_job", {
-        registryRootDir,
-        jobId: "infinity-context-memory-child-v1",
-        jobRootDir: childJobRoot,
-        authRootDir: join(root, "auth"),
-        workspacePath: childWorkspace,
-        promptPath: join(childJobRoot, "prompt.md"),
-        taskId: "infinity-context-memory-child-v1",
-        accounts: ["account-a"],
-        networkAccess: NetworkAccessMode.Restricted,
       });
 
       await expect(callToolJson(client, "codex_goal_project_start", {

@@ -814,9 +814,21 @@ export function createCodexGoalMcpServer(
     },
     async (args) => withMcpErrors(async () => {
       const registryRootDir = registryRootFromArgs(args as JobCreateMcpArgs);
+      const createManifest = jobManifestInputFromArgs(args as JobCreateMcpArgs);
+      const projectControlDenial = await projectControlGenericScopeDenial({
+        registryRootDir,
+        jobId: createManifest.jobId,
+        workspacePath: createManifest.workspacePath,
+        accessBoundary: createManifest.accessBoundary,
+        projectAccessScope: createManifest.projectAccessScope,
+        requiredTool: "codex_goal_project_create_job",
+        allowProjectScopedControlBootstrap: true,
+        skipDirectProjectManifestDenial: true,
+      });
+      if (projectControlDenial) return mcpJson(projectControlDenial);
       const manifest = await createCodexGoalJob({
         registryRootDir,
-        manifest: jobManifestInputFromArgs(args as JobCreateMcpArgs),
+        manifest: createManifest,
         overwrite: booleanValue(args.overwrite) ?? false,
       });
       return mcpJson({
@@ -852,6 +864,11 @@ export function createCodexGoalMcpServer(
         accessBoundary: existing.accessBoundary ?? patch.accessBoundary,
         projectAccessScope: existing.projectAccessScope ?? patch.projectAccessScope,
         jobId: existing.jobId,
+        requiredTool: "brokered_project_manifest_repair",
+      }) ?? await projectControlGenericScopeDenial({
+        registryRootDir,
+        jobId: existing.jobId,
+        workspacePath: stringValue(patch.workspacePath) ?? existing.workspacePath,
         requiredTool: "brokered_project_manifest_repair",
       });
       if (projectControlDenial) return mcpJson(projectControlDenial);
@@ -1382,6 +1399,11 @@ export function createCodexGoalMcpServer(
         projectAccessScope: loaded.manifest.projectAccessScope,
         jobId: loaded.manifest.jobId,
         requiredTool: "codex_goal_project_mark_reviewed",
+      }) ?? await projectControlGenericScopeDenial({
+        registryRootDir: loaded.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        workspacePath: loaded.launch.config.workspacePath,
+        requiredTool: "codex_goal_project_mark_reviewed",
       });
       if (projectControlDenial) return mcpJson(projectControlDenial);
       await mkdir(loaded.launch.config.jobRootDir, { recursive: true, mode: 0o700 });
@@ -1731,6 +1753,11 @@ export function createCodexGoalMcpServer(
       const projectControlDenial = projectControlGenericToolDenial({
         accessBoundary: launch.config.accessBoundary,
         projectAccessScope: launch.config.projectAccessScope,
+      }) ?? await projectControlGenericScopeDenial({
+        registryRootDir: registryRootFromArgs(args as StartMcpArgs),
+        jobId: launch.config.jobId ?? launch.config.taskId,
+        workspacePath: launch.config.workspacePath,
+        requiredTool: "codex_goal_project_start",
       });
       if (projectControlDenial) return mcpJson(projectControlDenial);
       if (!launch.tmuxSession) {
@@ -5149,11 +5176,7 @@ async function projectControlRealPathOutsideWorkspaceScope(
 ): Promise<string | undefined> {
   const realPath = await optionalRealPathForAdmission(path);
   if (!realPath) return undefined;
-  const roots = uniqueProjectControlStrings([
-    ...(scope.workspaceRoots ?? []),
-    ...(scope.worktreeRoots ?? []),
-    ...(scope.isolatedWorkspaceRoot ? [scope.isolatedWorkspaceRoot] : []),
-  ]);
+  const roots = projectControlWorkspaceRoots(scope);
   const realRoots = (await Promise.all(
     roots.map((root) => optionalRealPathForAdmission(root)),
   )).filter((root): root is string => Boolean(root));
@@ -5162,6 +5185,14 @@ async function projectControlRealPathOutsideWorkspaceScope(
     ...realRoots,
   ]);
   return pathInsideAnyProjectRoot(realPath, allowedRoots) ? undefined : realPath;
+}
+
+function projectControlWorkspaceRoots(scope: ProjectAccessScope): readonly string[] {
+  return uniqueProjectControlStrings([
+    ...(scope.workspaceRoots ?? []),
+    ...(scope.worktreeRoots ?? []),
+    ...(scope.isolatedWorkspaceRoot ? [scope.isolatedWorkspaceRoot] : []),
+  ]);
 }
 
 function pathInsideOrEqual(path: string, root: string): boolean {
@@ -5462,6 +5493,11 @@ async function continueStoredJob(
     accessBoundary: loaded.manifest.accessBoundary,
     projectAccessScope: loaded.manifest.projectAccessScope,
     jobId: loaded.manifest.jobId,
+  }) ?? await projectControlGenericScopeDenial({
+    registryRootDir: loaded.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    workspacePath: loaded.launch.config.workspacePath,
+    requiredTool: "codex_goal_project_start",
   });
   if (projectControlDenial) return mcpJson(projectControlDenial);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
@@ -5576,6 +5612,96 @@ function projectControlGenericToolDenial(input: {
   };
 }
 
+async function projectControlGenericScopeDenial(input: {
+  readonly registryRootDir: string;
+  readonly jobId: string;
+  readonly workspacePath?: string | undefined;
+  readonly accessBoundary?: AccessBoundary | undefined;
+  readonly projectAccessScope?: CodexGoalRunConfig["projectAccessScope"] | undefined;
+  readonly requiredTool: string;
+  readonly allowProjectScopedControlBootstrap?: boolean;
+  readonly skipDirectProjectManifestDenial?: boolean;
+}): Promise<JsonObject | undefined> {
+  if (
+    !input.skipDirectProjectManifestDenial &&
+    (
+      !input.allowProjectScopedControlBootstrap ||
+      input.accessBoundary !== AccessBoundary.ProjectScopedControl
+    )
+  ) {
+    const directDenial = projectControlGenericToolDenial(input);
+    if (directDenial) return directDenial;
+  }
+  const controller = await matchingProjectControlController(input);
+  if (!controller) return undefined;
+  return {
+    ok: false,
+    reason: "project_control_broker_required",
+    jobId: input.jobId,
+    controllerJobId: controller.jobId,
+    projectId: controller.projectId,
+    requiredTool: input.requiredTool,
+    safeMessage:
+      "This job matches an existing ProjectScopedControl controller scope. Use brokered project-control tools so admission debt, audit and controller adoption are enforced.",
+  };
+}
+
+async function matchingProjectControlController(input: {
+  readonly registryRootDir: string;
+  readonly jobId: string;
+  readonly workspacePath?: string | undefined;
+}): Promise<
+  | {
+      readonly jobId: string;
+      readonly projectId: string;
+    }
+  | undefined
+> {
+  let summaries;
+  try {
+    summaries = await listCodexGoalJobs({ registryRootDir: input.registryRootDir });
+  } catch {
+    return undefined;
+  }
+  for (const summary of summaries) {
+    let manifest: CodexGoalJobManifest;
+    try {
+      manifest = await readCodexGoalJob({
+        registryRootDir: input.registryRootDir,
+        jobId: summary.jobId,
+      });
+    } catch {
+      continue;
+    }
+    if (
+      manifest.accessBoundary !== AccessBoundary.ProjectScopedControl ||
+      !manifest.projectAccessScope
+    ) {
+      continue;
+    }
+    const scope = manifest.projectAccessScope;
+    const registryMatches = scope.registryRoot === undefined ||
+      resolve(scope.registryRoot) === resolve(input.registryRootDir);
+    if (!registryMatches) continue;
+    const prefixes = scope.jobIdPrefixes ?? [];
+    const jobMatches = prefixes.length > 0 &&
+      matchesProjectControlPrefix(input.jobId, prefixes);
+    const workspaceMatches = input.workspacePath
+      ? pathInsideAnyProjectRoot(
+          input.workspacePath,
+          projectControlWorkspaceRoots(scope),
+        )
+      : false;
+    if (jobMatches || workspaceMatches) {
+      return {
+        jobId: manifest.jobId,
+        projectId: scope.projectId,
+      };
+    }
+  }
+  return undefined;
+}
+
 function shouldReconcileResultBeforeStart(status: Awaited<ReturnType<typeof collectCodexGoalStatus>>): boolean {
   if (
     status.progressStatus === "maintenance_paused" &&
@@ -5653,6 +5779,11 @@ async function stopStoredJob(args: JobLifecycleMcpArgs) {
     accessBoundary: loaded.manifest.accessBoundary,
     projectAccessScope: loaded.manifest.projectAccessScope,
     jobId: loaded.manifest.jobId,
+    requiredTool: "codex_goal_project_stop",
+  }) ?? await projectControlGenericScopeDenial({
+    registryRootDir: loaded.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    workspacePath: loaded.launch.config.workspacePath,
     requiredTool: "codex_goal_project_stop",
   });
   if (projectControlDenial) return mcpJson(projectControlDenial);
@@ -5770,6 +5901,11 @@ async function maintenancePauseStoredJob(args: JobLifecycleMcpArgs) {
     accessBoundary: loaded.manifest.accessBoundary,
     projectAccessScope: loaded.manifest.projectAccessScope,
     jobId: loaded.manifest.jobId,
+    requiredTool: "codex_goal_project_stop",
+  }) ?? await projectControlGenericScopeDenial({
+    registryRootDir: loaded.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    workspacePath: loaded.launch.config.workspacePath,
     requiredTool: "codex_goal_project_stop",
   });
   if (projectControlDenial) return mcpJson(projectControlDenial);
