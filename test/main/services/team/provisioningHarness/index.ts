@@ -33,12 +33,18 @@ export {
   verificationProbePortsHarness,
 } from './servicePrivateHarness';
 export {
+  type HarnessLaunchStateStorePort,
   type HarnessTeamConfigReaderPort,
+  type HarnessTeamInboxReaderPort,
   type HarnessTeamMembersMetaStorePort,
   type HarnessTeamMetaStorePort,
   type TeamProvisioningHarness,
   TeamProvisioningHarnessBuilder,
   type TeamProvisioningHarnessClock,
+  type TeamProvisioningHarnessFacades,
+  type TeamProvisioningHarnessLogEntry,
+  type TeamProvisioningHarnessLogger,
+  type TeamProvisioningHarnessLogLevel,
   type TeamProvisioningHarnessPaths,
   type TeamProvisioningHarnessStores,
   type TeamProvisioningHarnessUuidSource,

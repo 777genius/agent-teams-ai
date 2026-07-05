@@ -1,5 +1,11 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Test harness paths are created under mkdtemp. */
 import {
+  TeamProvisioningConfigFacade,
+  type TeamProvisioningConfigFacadeInboxReader,
+  type TeamProvisioningConfigFacadeOptions,
+  type TeamProvisioningConfigFacadeReader,
+} from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
+import {
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   setClaudeBasePathOverride,
@@ -9,7 +15,7 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -22,8 +28,10 @@ import {
   teamMetaFixture,
 } from './fixtures';
 
-import type { TeamProvisioningConfigFacadeReader } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
-import type { TeamProvisioningConfigMaintenanceMembersMetaStore } from '@main/services/team/provisioning/TeamProvisioningConfigMaintenance';
+import type {
+  TeamProvisioningConfigMaintenanceMembersMetaStore,
+  TeamProvisioningConfigMaintenanceReadOptions,
+} from '@main/services/team/provisioning/TeamProvisioningConfigMaintenance';
 import type {
   TeamMembersMetaFile,
   TeamMembersMetaStore,
@@ -62,10 +70,22 @@ export type HarnessTeamMetaStorePort = Pick<TeamMetaStore, 'getMeta'>;
 export type HarnessTeamMembersMetaStorePort = Pick<TeamMembersMetaStore, 'getMeta'> &
   TeamProvisioningConfigMaintenanceMembersMetaStore;
 
+export type HarnessTeamInboxReaderPort = TeamProvisioningConfigFacadeInboxReader;
+
+export interface HarnessLaunchStateStorePort {
+  read(teamName: string): Promise<unknown>;
+}
+
 export interface TeamProvisioningHarnessStores {
   configReader: HarnessTeamConfigReaderPort;
+  inboxReader: HarnessTeamInboxReaderPort;
+  launchStateStore: HarnessLaunchStateStorePort;
   teamMetaStore: HarnessTeamMetaStorePort;
   membersMetaStore: HarnessTeamMembersMetaStorePort;
+}
+
+export interface TeamProvisioningHarnessFacades {
+  configFacade: TeamProvisioningConfigFacade;
 }
 
 export interface TeamProvisioningHarnessClock {
@@ -79,12 +99,28 @@ export interface TeamProvisioningHarnessUuidSource {
   generated(): readonly string[];
 }
 
+export type TeamProvisioningHarnessLogLevel = 'info' | 'warn' | 'debug';
+
+export interface TeamProvisioningHarnessLogEntry {
+  level: TeamProvisioningHarnessLogLevel;
+  message: string;
+}
+
+export interface TeamProvisioningHarnessLogger {
+  info(message: string): void;
+  warn(message: string): void;
+  debug(message: string): void;
+  entries(): readonly TeamProvisioningHarnessLogEntry[];
+}
+
 export interface TeamProvisioningHarness {
   readonly teamName: string;
   readonly paths: TeamProvisioningHarnessPaths;
   readonly stores: TeamProvisioningHarnessStores;
+  readonly facades: TeamProvisioningHarnessFacades;
   readonly clock: TeamProvisioningHarnessClock;
   readonly uuid: TeamProvisioningHarnessUuidSource;
+  readonly logger: TeamProvisioningHarnessLogger;
   cleanup(): Promise<void>;
 }
 
@@ -198,7 +234,10 @@ function normalizeMembersMetaFile(meta: TeamMembersMetaFile): TeamMembersMetaFil
 class FakeTeamConfigReader {
   private readonly configs = new Map<string, TeamConfig>();
 
-  constructor(configs: Iterable<readonly [string, TeamConfig]> = []) {
+  constructor(
+    configs: Iterable<readonly [string, TeamConfig]> = [],
+    private readonly paths?: TeamProvisioningHarnessPaths
+  ) {
     for (const [teamName, config] of configs) {
       this.setConfig(teamName, config);
     }
@@ -220,11 +259,21 @@ class FakeTeamConfigReader {
   }
 
   async getConfigSnapshot(teamName: string): Promise<TeamConfig | null> {
+    const fileConfig = await this.readConfigFromDisk(teamName);
+    if (fileConfig !== undefined) {
+      return fileConfig;
+    }
+
     const config = this.configs.get(teamName);
     return config ? cloneFixture(config) : null;
   }
 
   async readTeamConfigRaw(teamName: string): Promise<string | null> {
+    const raw = await this.readConfigRawFromDisk(teamName);
+    if (raw !== undefined) {
+      return raw;
+    }
+
     const config = await this.getConfigSnapshot(teamName);
     return config ? JSON.stringify(config, null, 2) : null;
   }
@@ -235,12 +284,47 @@ class FakeTeamConfigReader {
       cloneFixture(config),
     ]);
   }
+
+  private async readConfigFromDisk(teamName: string): Promise<TeamConfig | null | undefined> {
+    const raw = await this.readConfigRawFromDisk(teamName);
+    if (raw === undefined) {
+      return undefined;
+    }
+    if (raw === null) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as TeamConfig;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readConfigRawFromDisk(teamName: string): Promise<string | null | undefined> {
+    if (!this.paths) {
+      return undefined;
+    }
+
+    validateTeamNamePathSegment(teamName);
+    try {
+      return await readFile(this.paths.configPath(teamName), 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
+  }
 }
 
 class FakeTeamMembersMetaStore {
   private readonly metaByTeam = new Map<string, TeamMembersMetaFile>();
 
-  constructor(metaEntries: Iterable<readonly [string, TeamMembersMetaFile]> = []) {
+  constructor(
+    metaEntries: Iterable<readonly [string, TeamMembersMetaFile]> = [],
+    private readonly paths?: TeamProvisioningHarnessPaths
+  ) {
     for (const [teamName, meta] of metaEntries) {
       this.setMeta(teamName, meta);
     }
@@ -256,6 +340,11 @@ class FakeTeamMembersMetaStore {
   }
 
   async getMeta(teamName: string): Promise<TeamMembersMetaFile | null> {
+    const fileMeta = await this.readMetaFromDisk(teamName);
+    if (fileMeta !== undefined) {
+      return fileMeta;
+    }
+
     const meta = this.metaByTeam.get(teamName);
     return meta ? cloneFixture(meta) : null;
   }
@@ -275,13 +364,38 @@ class FakeTeamMembersMetaStore {
       members: normalizeMembers(members),
     };
     this.setMeta(teamName, meta);
+    if (this.paths) {
+      await writeJsonFile(this.paths.membersMetaPath(teamName), meta);
+    }
+  }
+
+  private async readMetaFromDisk(
+    teamName: string
+  ): Promise<TeamMembersMetaFile | null | undefined> {
+    if (!this.paths) {
+      return undefined;
+    }
+
+    validateTeamNamePathSegment(teamName);
+    try {
+      const raw = await readFile(this.paths.membersMetaPath(teamName), 'utf8');
+      return normalizeMembersMetaFile(JSON.parse(raw) as TeamMembersMetaFile);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
   }
 }
 
 class FakeTeamMetaStore {
   private readonly metaByTeam = new Map<string, TeamMetaFile>();
 
-  constructor(metaEntries: Iterable<readonly [string, TeamMetaFile]> = []) {
+  constructor(
+    metaEntries: Iterable<readonly [string, TeamMetaFile]> = [],
+    private readonly paths?: TeamProvisioningHarnessPaths
+  ) {
     for (const [teamName, meta] of metaEntries) {
       this.setMeta(teamName, meta);
     }
@@ -294,8 +408,86 @@ class FakeTeamMetaStore {
   }
 
   async getMeta(teamName: string): Promise<TeamMetaFile | null> {
+    const fileMeta = await this.readMetaFromDisk(teamName);
+    if (fileMeta !== undefined) {
+      return fileMeta;
+    }
+
     const meta = this.metaByTeam.get(teamName);
     return meta ? cloneFixture(meta) : null;
+  }
+
+  private async readMetaFromDisk(teamName: string): Promise<TeamMetaFile | null | undefined> {
+    if (!this.paths) {
+      return undefined;
+    }
+
+    validateTeamNamePathSegment(teamName);
+    try {
+      const raw = await readFile(this.paths.teamMetaPath(teamName), 'utf8');
+      return normalizeTeamMeta(JSON.parse(raw) as TeamMetaFile);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
+  }
+}
+
+class FakeTeamInboxReader {
+  constructor(private readonly paths: TeamProvisioningHarnessPaths) {}
+
+  async listInboxNames(teamName: string): Promise<string[]> {
+    validateTeamNamePathSegment(teamName);
+    const inboxDir = path.join(this.paths.teamDir(teamName), 'inboxes');
+
+    let entries: string[];
+    try {
+      entries = await readdir(inboxDir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+      throw error;
+    }
+
+    return entries
+      .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
+      .map((name) => name.replace(/\.json$/, ''))
+      .filter((name) => name !== '*');
+  }
+}
+
+class FakeLaunchStateStore {
+  constructor(private readonly paths: TeamProvisioningHarnessPaths) {}
+
+  async read(teamName: string): Promise<unknown> {
+    return readHarnessJsonFile(this.paths.launchStatePath(teamName));
+  }
+}
+
+class HarnessLogger implements TeamProvisioningHarnessLogger {
+  private readonly logs: TeamProvisioningHarnessLogEntry[] = [];
+
+  info(message: string): void {
+    this.push('info', message);
+  }
+
+  warn(message: string): void {
+    this.push('warn', message);
+  }
+
+  debug(message: string): void {
+    this.push('debug', message);
+  }
+
+  entries(): readonly TeamProvisioningHarnessLogEntry[] {
+    return [...this.logs];
+  }
+
+  private push(level: TeamProvisioningHarnessLogLevel, message: string): void {
+    this.logs.push({ level, message });
   }
 }
 
@@ -322,6 +514,62 @@ function createTeamMetaStorePort(store: FakeTeamMetaStore): HarnessTeamMetaStore
   return {
     getMeta: (teamName) => store.getMeta(teamName),
   };
+}
+
+function createInboxReaderPort(reader: FakeTeamInboxReader): HarnessTeamInboxReaderPort {
+  return {
+    listInboxNames: (teamName) => reader.listInboxNames(teamName),
+  };
+}
+
+function createLaunchStateStorePort(store: FakeLaunchStateStore): HarnessLaunchStateStorePort {
+  return {
+    read: (teamName) => store.read(teamName),
+  };
+}
+
+async function readHarnessJsonFile(filePath: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+async function readHarnessRegularFileUtf8(
+  paths: TeamProvisioningHarnessPaths,
+  filePath: string,
+  _options: TeamProvisioningConfigMaintenanceReadOptions
+): Promise<string | null> {
+  assertContainedPath(paths.root, filePath, 'readRegularFileUtf8 path', 'the harness temp root');
+  try {
+    return await readFile(filePath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function createConfigFacade(
+  paths: TeamProvisioningHarnessPaths,
+  stores: TeamProvisioningHarnessStores,
+  logger: TeamProvisioningHarnessLogger
+): TeamProvisioningConfigFacade {
+  const options: TeamProvisioningConfigFacadeOptions = {
+    configReader: stores.configReader,
+    inboxReader: stores.inboxReader,
+    membersMetaStore: stores.membersMetaStore,
+    launchStateStore: stores.launchStateStore,
+    persistedTeamConfigCache: new Map(),
+    readBootstrapLaunchSnapshot: (teamName) =>
+      readHarnessJsonFile(paths.bootstrapStatePath(teamName)),
+    readRegularFileUtf8: (filePath, readOptions) =>
+      readHarnessRegularFileUtf8(paths, filePath, readOptions),
+    logger,
+  };
+  return new TeamProvisioningConfigFacade(options);
 }
 
 interface HarnessPathOverrideLease {
@@ -428,8 +676,10 @@ class TeamProvisioningHarnessImpl implements TeamProvisioningHarness {
     readonly teamName: string,
     readonly paths: TeamProvisioningHarnessPaths,
     readonly stores: TeamProvisioningHarnessStores,
+    readonly facades: TeamProvisioningHarnessFacades,
     readonly clock: TeamProvisioningHarnessClock,
     readonly uuid: TeamProvisioningHarnessUuidSource,
+    readonly logger: TeamProvisioningHarnessLogger,
     private readonly cleanupFns: readonly (() => Promise<void> | void)[]
   ) {}
 
@@ -524,20 +774,30 @@ export class TeamProvisioningHarnessBuilder {
 
       await writeHarnessFiles(paths, configs, teamMeta, membersMeta);
 
-      const configReader = new FakeTeamConfigReader(configs.entries());
-      const teamMetaStore = new FakeTeamMetaStore(teamMeta.entries());
-      const membersMetaStore = new FakeTeamMembersMetaStore(membersMeta.entries());
+      const configReader = new FakeTeamConfigReader(configs.entries(), paths);
+      const teamMetaStore = new FakeTeamMetaStore(teamMeta.entries(), paths);
+      const membersMetaStore = new FakeTeamMembersMetaStore(membersMeta.entries(), paths);
+      const inboxReader = new FakeTeamInboxReader(paths);
+      const launchStateStore = new FakeLaunchStateStore(paths);
+      const stores: TeamProvisioningHarnessStores = {
+        configReader: createConfigReaderPort(configReader),
+        inboxReader: createInboxReaderPort(inboxReader),
+        launchStateStore: createLaunchStateStorePort(launchStateStore),
+        teamMetaStore: createTeamMetaStorePort(teamMetaStore),
+        membersMetaStore: createMembersMetaStorePort(membersMetaStore),
+      };
+      const harnessLogger = new HarnessLogger();
 
       return new TeamProvisioningHarnessImpl(
         this.defaultTeamName,
         paths,
+        stores,
         {
-          configReader: createConfigReaderPort(configReader),
-          teamMetaStore: createTeamMetaStorePort(teamMetaStore),
-          membersMetaStore: createMembersMetaStorePort(membersMetaStore),
+          configFacade: createConfigFacade(paths, stores, harnessLogger),
         },
         new HarnessClock(this.clockIso),
         new HarnessUuidSource(this.uuidSequence),
+        harnessLogger,
         cleanupFns
       );
     } catch (error) {

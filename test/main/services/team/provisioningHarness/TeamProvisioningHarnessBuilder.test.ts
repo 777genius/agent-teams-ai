@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Test paths are owned by the harness temp workspace. */
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import { access, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
+import { access, mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -321,7 +321,7 @@ describe('TeamProvisioningHarnessBuilder', () => {
     const beforeEntries = await listTempWorkspaceNames(prefix);
     const invalidConfig = {
       ...teamConfigFixture.basic({ teamName }),
-      apiKey: 'fixture-placeholder',
+      apiKey: 'fixture',
     } as unknown as TeamConfig;
 
     await expect(
@@ -471,6 +471,8 @@ describe('TeamProvisioningHarnessBuilder', () => {
       'writeMembers',
     ]);
     expect(Object.keys(harness.stores.teamMetaStore).sort()).toEqual(['getMeta']);
+    expect(Object.keys(harness.stores.inboxReader).sort()).toEqual(['listInboxNames']);
+    expect(Object.keys(harness.stores.launchStateStore).sort()).toEqual(['read']);
     expect('updateConfig' in harness.stores.configReader).toBe(false);
     expect('writeMeta' in harness.stores.teamMetaStore).toBe(false);
 
@@ -499,6 +501,88 @@ describe('TeamProvisioningHarnessBuilder', () => {
     await expect(harness.stores.membersMetaStore.getMeta('port-team')).resolves.toMatchObject({
       providerBackendId: 'adapter',
     });
+  });
+
+  it('wires config facade launch-member discovery to harness config, meta, and inbox fixtures', async () => {
+    const teamName = 'facade-inbox-team';
+    const harness = await track(
+      TeamProvisioningHarnessBuilder.create()
+        .withTeam(teamName)
+        .withMembersMeta(teamName, [])
+        .build()
+    );
+
+    const aliceInboxPath = harness.paths.inboxPath(teamName, 'alice');
+    await mkdir(path.dirname(aliceInboxPath), { recursive: true });
+    await writeFile(aliceInboxPath, '[]\n', 'utf8');
+    const configRaw = await harness.stores.configReader.readTeamConfigRaw(teamName);
+
+    expect(harness.facades.configFacade.readPersistedTeamProjectPath(teamName)).toBe(
+      harness.paths.projectPath
+    );
+    await expect(harness.stores.inboxReader.listInboxNames(teamName)).resolves.toEqual(['alice']);
+    await expect(
+      harness.facades.configFacade.resolveLaunchExpectedMembers(
+        teamName,
+        configRaw ?? '{}',
+        'codex'
+      )
+    ).resolves.toMatchObject({
+      source: 'inboxes',
+      members: [expect.objectContaining({ name: 'alice' })],
+    });
+  });
+
+  it('lets config facade materialize repair members into harness members metadata', async () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(987_654);
+    const teamName = 'facade-repair-team';
+    const harness = await track(
+      TeamProvisioningHarnessBuilder.create()
+        .withTeam(teamName, teamConfigFixture.basic({ teamName }))
+        .withMembersMeta(teamName, [])
+        .build()
+    );
+
+    try {
+      await harness.facades.configFacade.materializeLaunchCompatibilityRepair(
+        {
+          teamName,
+          cwd: harness.paths.projectPath,
+          providerBackendId: 'codex-native',
+        },
+        {
+          level: 'repairable',
+          rosterSource: 'config',
+          repairAction: 'materialize-members-meta',
+          members: [{ name: 'Builder', role: 'Engineer' }],
+          warnings: [],
+          blockers: [],
+        }
+      );
+
+      await expect(harness.stores.membersMetaStore.getMembers(teamName)).resolves.toEqual([
+        expect.objectContaining({
+          name: 'Builder',
+          role: 'Engineer',
+          joinedAt: 987_654,
+        }),
+      ]);
+      const persistedMeta = JSON.parse(
+        await readFile(harness.paths.membersMetaPath(teamName), 'utf8')
+      ) as unknown;
+      expect(persistedMeta).toMatchObject({
+        providerBackendId: 'codex-native',
+        members: [
+          expect.objectContaining({
+            name: 'Builder',
+            role: 'Engineer',
+            joinedAt: 987_654,
+          }),
+        ],
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('honors explicit team fixtures and deterministic uuid sequences', async () => {
@@ -571,14 +655,14 @@ describe('TeamProvisioningHarnessBuilder', () => {
 
     expect(collectSecretLikeFixtureValues(sampleFixtures)).toEqual([]);
     expect(() => assertNoSecretLikeFixtureValues(sampleFixtures)).not.toThrow();
-    const keyFinding = collectSecretLikeFixtureValues({ apiKey: 'fixture-placeholder' });
+    const keyFinding = collectSecretLikeFixtureValues({ apiKey: 'fixture' });
     expect(keyFinding).toEqual([
       expect.objectContaining({ path: '$[key#0:redacted]', patternName: 'secret-like-key' }),
     ]);
     expect(keyFinding[0]?.path).not.toContain('apiKey');
 
     const nestedKeyFinding = collectSecretLikeFixtureValues({
-      nested: { authToken: 'fixture-placeholder' },
+      nested: { authToken: 'fixture' },
     });
     expect(nestedKeyFinding).toEqual([
       expect.objectContaining({
