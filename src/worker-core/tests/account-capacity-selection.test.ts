@@ -3,6 +3,7 @@ import {
   InMemoryWorkerAccountCapacityStore,
   InMemoryWorkerAccountLeaseStore,
   SelectRuntimeAccountUseCase,
+  type WorkerAccountLeaseStore,
   type WorkerRuntimeDemand,
 } from "../index";
 
@@ -296,6 +297,55 @@ describe("SelectRuntimeAccountUseCase", () => {
     });
   });
 
+  it("does not invent a wait time when every blocker lacks a reset time", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const capacityStore = new InMemoryWorkerAccountCapacityStore();
+    capacityStore.observe({
+      accountId: "account-a",
+      demand,
+      observedAt: now,
+      capacity: {
+        availability: "quota_exhausted",
+        reason: "account_exhausted",
+      },
+    });
+    const leaseStore: WorkerAccountLeaseStore = {
+      async acquire() {
+        return {
+          status: "denied",
+          reason: "leased",
+        };
+      },
+      async release() {},
+    };
+
+    await expect(
+      new SelectRuntimeAccountUseCase().execute({
+        allowedAccounts: ["account-a", "account-b"],
+        demand,
+        ownerId: "worker-1",
+        leaseTtlMs: 60_000,
+        capacityStore,
+        leaseStore,
+        now,
+      }),
+    ).resolves.toEqual({
+      type: "all_unavailable",
+      waitPlan: {
+        unavailable: [
+          {
+            accountId: "account-a",
+            reason: "account_exhausted",
+          },
+          {
+            accountId: "account-b",
+            reason: "leased",
+          },
+        ],
+      },
+    });
+  });
+
   it("uses a lease reset time when quota blockers have no reset time", async () => {
     const now = new Date("2026-06-01T00:00:00.000Z");
     const capacityStore = new InMemoryWorkerAccountCapacityStore();
@@ -347,6 +397,44 @@ describe("SelectRuntimeAccountUseCase", () => {
     });
   });
 
+  it("uses zero wait when a lease backend reports an already elapsed reset time", async () => {
+    const now = new Date("2026-06-01T00:01:00.000Z");
+    const elapsedReset = new Date("2026-06-01T00:00:30.000Z");
+    const leaseStore: WorkerAccountLeaseStore = {
+      async acquire() {
+        return {
+          status: "denied",
+          reason: "leased",
+          currentLeaseExpiresAt: elapsedReset,
+        };
+      },
+      async release() {},
+    };
+
+    await expect(
+      new SelectRuntimeAccountUseCase().execute({
+        allowedAccounts: ["account-a"],
+        demand,
+        ownerId: "worker-1",
+        leaseTtlMs: 60_000,
+        capacityStore: new InMemoryWorkerAccountCapacityStore(),
+        leaseStore,
+        now,
+      }),
+    ).resolves.toEqual({
+      type: "all_unavailable",
+      waitPlan: {
+        waitUntil: elapsedReset,
+        waitMs: 0,
+        unavailable: [{
+          accountId: "account-a",
+          reason: "leased",
+          waitUntil: elapsedReset,
+        }],
+      },
+    });
+  });
+
   it("ignores expired account cooldowns while selecting", async () => {
     const now = new Date("2026-06-01T00:10:00.001Z");
     const capacityStore = new InMemoryWorkerAccountCapacityStore();
@@ -374,6 +462,35 @@ describe("SelectRuntimeAccountUseCase", () => {
     ).resolves.toMatchObject({
       type: "selected",
       accountId: "account-a",
+    });
+  });
+
+  it("falls back to generic account-wide capacity for demand-specific selection", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const capacityStore = new InMemoryWorkerAccountCapacityStore();
+    capacityStore.observe({
+      accountId: "account-a",
+      observedAt: now,
+      capacity: {
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: new Date("2026-06-01T01:00:00.000Z"),
+      },
+    });
+
+    await expect(
+      new SelectRuntimeAccountUseCase().execute({
+        allowedAccounts: ["account-a", "account-b"],
+        demand,
+        ownerId: "worker-1",
+        leaseTtlMs: 60_000,
+        capacityStore,
+        leaseStore: new InMemoryWorkerAccountLeaseStore(),
+        now,
+      }),
+    ).resolves.toMatchObject({
+      type: "selected",
+      accountId: "account-b",
     });
   });
 

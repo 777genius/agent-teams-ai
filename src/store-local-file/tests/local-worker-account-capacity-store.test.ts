@@ -105,6 +105,103 @@ describe("Local file worker account capacity store", () => {
     }
   });
 
+  it("falls back to generic persisted account capacity for demand-specific reads", async () => {
+    const rootDir = await tempRoot();
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+
+    try {
+      new LocalFileWorkerAccountCapacityStore({ rootDir }).observe({
+        accountId: "account-a",
+        observedAt,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+        },
+      });
+
+      const restarted = new LocalFileWorkerAccountCapacityStore({ rootDir });
+
+      expect(
+        restarted.read({
+          accountId: "account-a",
+          now: observedAt,
+          demand: {
+            provider: "codex",
+            model: "gpt-5.5",
+            reasoningEffort: "xhigh",
+            serviceTier: "fast",
+          },
+        }),
+      ).toMatchObject({
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: resetAt,
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("aggregates demand-specific persisted records for account-wide reads", async () => {
+    const rootDir = await tempRoot();
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const shortResetAt = new Date("2026-06-01T00:30:00.000Z");
+    const longResetAt = new Date("2026-06-01T01:00:00.000Z");
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt,
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "high",
+          serviceTier: "fast",
+        },
+        capacity: {
+          availability: "cooldown",
+          reason: "rate_limit_threshold",
+          cooldownUntil: shortResetAt,
+        },
+      });
+      store.observe({
+        accountId: "account-a",
+        observedAt,
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "xhigh",
+          serviceTier: "fast",
+        },
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: longResetAt,
+        },
+      });
+
+      expect(
+        new LocalFileWorkerAccountCapacityStore({ rootDir }).read({
+          accountId: "account-a",
+          now: observedAt,
+        }),
+      ).toMatchObject({
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: longResetAt,
+        details: {
+          accountId: "account-a",
+          capacityReasoningEffort: "xhigh",
+        },
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("expires cooldown records at reset time", async () => {
     const rootDir = await tempRoot();
     const observedAt = new Date("2026-06-01T00:00:00.000Z");
@@ -233,6 +330,57 @@ describe("Local file worker account capacity store", () => {
       store.clear({ accountId: "account-a" });
 
       expect(store.read({ accountId: " account-a ", now })).toBeNull();
+      await expect(readCapacityFiles(rootDir)).resolves.toEqual([]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("clears both generic and demand-specific account records", async () => {
+    const rootDir = await tempRoot();
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt: now,
+        capacity: {
+          availability: "cooldown",
+          cooldownUntil: new Date("2026-06-01T00:30:00.000Z"),
+        },
+      });
+      store.observe({
+        accountId: "account-a",
+        observedAt: now,
+        demand: {
+          provider: "codex",
+          reasoningEffort: "xhigh",
+          serviceTier: "fast",
+        },
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date("2026-06-01T01:00:00.000Z"),
+        },
+      });
+
+      expect(await readCapacityFiles(rootDir)).toHaveLength(2);
+
+      store.clear({ accountId: " account-a " });
+
+      expect(store.read({ accountId: "account-a", now })).toBeNull();
+      expect(
+        store.read({
+          accountId: "account-a",
+          now,
+          demand: {
+            provider: "codex",
+            reasoningEffort: "xhigh",
+            serviceTier: "fast",
+          },
+        }),
+      ).toBeNull();
       await expect(readCapacityFiles(rootDir)).resolves.toEqual([]);
     } finally {
       await rm(rootDir, { recursive: true, force: true });
