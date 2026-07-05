@@ -485,6 +485,7 @@ Public release notes must follow this standard every time:
 
 Draft releases must be treated as review artifacts:
 
+- There must be at most one draft release in `777genius/agent-teams-ai` at any time. Before creating a new draft, check existing drafts with `gh release list --repo 777genius/agent-teams-ai --limit 20`. If any draft already exists, stop and resolve it first by publishing it or by explicitly deleting it after a direct user command.
 - Do not hand off a draft release for review while it still has generated notes, stale notes from an earlier run, or a `Full Changelog`-only body.
 - Before telling the user a draft is ready, always edit the draft body with the current release notes template and then re-check it with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json body,assets,isDraft,isPrerelease,targetCommitish`.
 - Confirm the draft targets the intended commit with `targetCommitish`; do not put the raw commit SHA in the release body.
