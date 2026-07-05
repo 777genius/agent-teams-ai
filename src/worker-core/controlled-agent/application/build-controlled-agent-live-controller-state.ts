@@ -6,6 +6,7 @@ import {
 
 export type ControlledAgentLiveControllerState = {
   readonly providerRunnerAttached: boolean;
+  readonly providerStatusFailed: boolean;
   readonly live: boolean;
   readonly currentOwner: ControlledAgentProcessOwner;
   readonly persistedOwner?: ControlledAgentProcessOwner;
@@ -20,6 +21,7 @@ export type BuildControlledAgentLiveControllerStateInput = {
   readonly providerAttached: boolean;
   readonly currentOwner: ControlledAgentProcessOwner;
   readonly providerObservedStatus?: ControlledAgentRunStatus | undefined;
+  readonly providerStatusFailed?: boolean | undefined;
 };
 
 export function buildControlledAgentLiveControllerState(
@@ -28,15 +30,18 @@ export function buildControlledAgentLiveControllerState(
   const persistedOwner = input.session?.owner;
   const persistedStatus = input.session?.status;
   const ownerMatches = persistedOwner?.ownerId === input.currentOwner.ownerId;
+  const providerStatusFailed = input.providerStatusFailed === true;
   const observedStatusAllowsLive = input.providerObservedStatus === undefined ||
     input.providerObservedStatus === ControlledAgentRunStatus.Running;
   const live = input.providerAttached &&
+    !providerStatusFailed &&
     ownerMatches &&
     persistedStatus === ControlledAgentRunStatus.Running &&
     observedStatusAllowsLive;
 
   return {
     providerRunnerAttached: input.providerAttached,
+    providerStatusFailed,
     live,
     currentOwner: input.currentOwner,
     ...(persistedOwner === undefined ? {} : { persistedOwner }),
@@ -47,6 +52,7 @@ export function buildControlledAgentLiveControllerState(
     ownerMatches,
     safeMessage: controlledAgentLiveControllerSafeMessage({
       providerAttached: input.providerAttached,
+      providerStatusFailed,
       live,
       persistedOwner,
       persistedStatus,
@@ -58,6 +64,7 @@ export function buildControlledAgentLiveControllerState(
 
 function controlledAgentLiveControllerSafeMessage(input: {
   readonly providerAttached: boolean;
+  readonly providerStatusFailed: boolean;
   readonly live: boolean;
   readonly persistedOwner?: ControlledAgentProcessOwner | undefined;
   readonly persistedStatus?: ControlledAgentRunStatus | undefined;
@@ -71,6 +78,9 @@ function controlledAgentLiveControllerSafeMessage(input: {
   }
   if (input.live) {
     return "Provider runner is attached to this durable MCP process.";
+  }
+  if (input.providerStatusFailed) {
+    return "Provider runner is attached, but provider status probe failed.";
   }
   if (!input.ownerMatches) {
     return "Provider runner is attached, but persisted owner metadata does not match this process.";

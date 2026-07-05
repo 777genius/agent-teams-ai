@@ -3122,15 +3122,22 @@ async function projectControllerStatus(args: ProjectControllerLaunchPlanMcpArgs)
     stateStore: state.store,
   });
   const provider = controlledAgentProviders.get(state.sessionId);
-  const observed = result.ok && provider
-    ? await provider.status({ session: result.session, run: result.run })
-    : undefined;
+  let observed: Awaited<ReturnType<ControlledAgentProviderPort["status"]>> | undefined;
+  let providerStatusError: string | undefined;
+  if (result.ok && provider) {
+    try {
+      observed = await provider.status({ session: result.session, run: result.run });
+    } catch (error) {
+      providerStatusError = safeObservationErrorMessage(error);
+    }
+  }
   const liveController = result.ok
     ? buildControlledAgentLiveControllerState({
         session: result.session,
         providerAttached: provider !== undefined,
         currentOwner: controlledAgentProcessOwner,
         providerObservedStatus: observed?.status,
+        providerStatusFailed: providerStatusError !== undefined,
       })
     : buildControlledAgentLiveControllerState({
       providerAttached: false,
@@ -3144,12 +3151,17 @@ async function projectControllerStatus(args: ProjectControllerLaunchPlanMcpArgs)
     registryRootDir: controller.registryRootDir,
     stateDir: state.stateDir,
     sessionId: state.sessionId,
-    reason: result.reason,
+    reason: providerStatusError === undefined ? result.reason : "provider_status_failed",
     ...(result.session === undefined ? {} : { session: result.session }),
     ...(result.ok && "run" in result ? { run: result.run } : {}),
     ...(observed === undefined ? {} : { providerObserved: observed }),
+    ...(providerStatusError === undefined
+      ? {}
+      : { providerObservedError: { safeMessage: providerStatusError } }),
     liveController,
-    safeMessage: result.ok
+    safeMessage: providerStatusError !== undefined
+      ? "Controller state is persisted, but provider status failed in this MCP process."
+      : result.ok
       ? provider
         ? "Controller state is persisted and provider liveness was observed in this MCP process."
         : "Controller state is persisted, but provider liveness is unavailable in this MCP process."

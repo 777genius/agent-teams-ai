@@ -79,6 +79,30 @@ describe("buildControlledAgentLiveControllerState", () => {
       ownerMatches: false,
     });
   });
+
+  it("does not report live ownership when provider status probing fails", () => {
+    const owner = processOwner("owner-1");
+    const session = controlledSession({
+      owner,
+      status: ControlledAgentRunStatus.Running,
+    });
+
+    const live = buildControlledAgentLiveControllerState({
+      session,
+      providerAttached: true,
+      currentOwner: owner,
+      providerStatusFailed: true,
+    });
+
+    expect(live).toMatchObject({
+      providerRunnerAttached: true,
+      providerStatusFailed: true,
+      live: false,
+      ownerMatches: true,
+      persistedStatus: "running",
+    });
+    expect(live.safeMessage).toContain("provider status probe failed");
+  });
 });
 
 function processOwner(ownerId: string): ControlledAgentProcessOwner {
