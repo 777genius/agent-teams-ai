@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isStrongRuntimeEvidence,
   projectRuntimeDiagnostics,
   projectRuntimeLiveness,
   projectRuntimeResource,
@@ -69,6 +70,13 @@ describe('runtime projection foundation', () => {
       runtimeDiagnosticSeverity: 'warning',
     });
     expect(liveness.diagnostics).toContain('bootstrap evidence exists, but the heartbeat is stale');
+  });
+
+  it('classifies only verified process and bootstrap liveness as strong evidence', () => {
+    expect(isStrongRuntimeEvidence({ livenessKind: 'runtime_process' })).toBe(true);
+    expect(isStrongRuntimeEvidence({ livenessKind: 'confirmed_bootstrap' })).toBe(true);
+    expect(isStrongRuntimeEvidence({ livenessKind: 'runtime_process_candidate' })).toBe(false);
+    expect(isStrongRuntimeEvidence(undefined)).toBe(false);
   });
 
   it('keeps running process evidence weak until identity is verified', () => {

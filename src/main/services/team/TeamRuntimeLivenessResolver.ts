@@ -8,6 +8,8 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+export { isStrongRuntimeEvidence } from './runtime-projection';
+
 export interface ResolveTeamMemberRuntimeLivenessInput {
   teamName: string;
   memberName: string;
@@ -515,10 +517,4 @@ export function resolveTeamMemberRuntimeLiveness(
     runtimeDiagnosticSeverity: 'warning',
     diagnostics: [...diagnostics, 'runtime process not found'],
   });
-}
-
-export function isStrongRuntimeEvidence(
-  value: { livenessKind?: TeamAgentRuntimeLivenessKind } | undefined
-): boolean {
-  return value?.livenessKind === 'confirmed_bootstrap' || value?.livenessKind === 'runtime_process';
 }

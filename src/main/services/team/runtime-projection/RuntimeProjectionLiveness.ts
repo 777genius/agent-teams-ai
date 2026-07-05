@@ -29,6 +29,12 @@ export interface RuntimeProjectionLivenessProjection {
   diagnostics: string[];
 }
 
+export function isStrongRuntimeEvidence(
+  value: { livenessKind?: TeamAgentRuntimeLivenessKind } | undefined
+): boolean {
+  return value?.livenessKind === 'confirmed_bootstrap' || value?.livenessKind === 'runtime_process';
+}
+
 const DEFAULT_HEARTBEAT_STALE_AFTER_MS = 120_000;
 const SECRET_CLI_FLAG_PATTERN =
   /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;

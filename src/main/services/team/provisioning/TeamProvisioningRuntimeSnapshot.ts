@@ -10,16 +10,13 @@ import {
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
 
-import { projectRuntimeResource } from '../runtime-projection';
+import { isStrongRuntimeEvidence, projectRuntimeResource } from '../runtime-projection';
 import { type TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from '../TeamBootstrapStateReader';
-import {
-  isStrongRuntimeEvidence,
-  resolveTeamMemberRuntimeLiveness,
-} from '../TeamRuntimeLivenessResolver';
+import { resolveTeamMemberRuntimeLiveness } from '../TeamRuntimeLivenessResolver';
 import {
   addRuntimeRootOwnersFromProcessRows,
   buildProcessUsageStatsFromRows,
