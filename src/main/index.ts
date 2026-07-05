@@ -2697,7 +2697,7 @@ async function startHttpServer(
         updaterService,
         sshConnectionManager,
         teamDataService,
-        teamProvisioningService: bindTeamLaunchApi(teamProvisioningService),
+        teamLaunchApi: bindTeamLaunchApi(teamProvisioningService),
         teamRuntimeApi: bindTeamRuntimeApi(teamProvisioningService),
       },
       modeSwitchHandler,

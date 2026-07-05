@@ -232,7 +232,7 @@ function createServices(claudeRoot: string): {
     };
   }
 
-  const teamProvisioningService = {
+  const teamLaunchApi = {
     createTeam,
     launchTeam: async (
       request: TeamLaunchRequest,
@@ -263,7 +263,7 @@ function createServices(claudeRoot: string): {
       }
       return Promise.resolve(progress);
     },
-  } satisfies NonNullable<HttpServices['teamProvisioningService']>;
+  } satisfies NonNullable<HttpServices['teamLaunchApi']>;
   const teamRuntimeApi = {
     getRuntimeState: (teamName: string): Promise<TeamRuntimeState> => {
       const runId = runIdByTeam.get(teamName) ?? null;
@@ -302,7 +302,7 @@ function createServices(claudeRoot: string): {
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataService,
-      teamProvisioningService,
+      teamLaunchApi,
       teamRuntimeApi,
     },
   };

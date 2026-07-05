@@ -35,13 +35,11 @@ function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncRepo
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
 }
 
-function getTeamProvisioningService(
-  services: HttpServices
-): NonNullable<HttpServices['teamProvisioningService']> {
-  if (!services.teamProvisioningService) {
-    throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
+function getTeamLaunchApi(services: HttpServices): NonNullable<HttpServices['teamLaunchApi']> {
+  if (!services.teamLaunchApi) {
+    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
   }
-  return services.teamProvisioningService;
+  return services.teamLaunchApi;
 }
 
 function getTeamRuntimeApi(services: HttpServices): NonNullable<HttpServices['teamRuntimeApi']> {
@@ -177,9 +175,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
-      await services.teamProvisioningService?.repairStaleTaskActivityIntervalsBeforeSnapshot?.(
-        teamName
-      );
+      await services.teamLaunchApi?.repairStaleTaskActivityIntervalsBeforeSnapshot?.(teamName);
       return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {
       if (shouldLogError(error)) {
@@ -201,11 +197,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         const teamName = validatedTeamName.value!;
         const draftSavedRequest = await getDraftSavedRequest(services, teamName);
         const response = draftSavedRequest
-          ? await getTeamProvisioningService(services).createTeam(
+          ? await getTeamLaunchApi(services).createTeam(
               parseDraftLaunchCreateRequest(draftSavedRequest, request.body),
               () => undefined
             )
-          : await getTeamProvisioningService(services).launchTeam(
+          : await getTeamLaunchApi(services).launchTeam(
               parseLaunchRequest(teamName, request.body),
               () => undefined
             );
@@ -281,7 +277,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: 'runId is required' });
         }
 
-        return reply.send(await getTeamProvisioningService(services).getProvisioningStatus(runId));
+        return reply.send(await getTeamLaunchApi(services).getProvisioningStatus(runId));
       } catch (error) {
         const message = getErrorMessage(error);
         const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);

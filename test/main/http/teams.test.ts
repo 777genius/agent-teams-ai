@@ -55,12 +55,12 @@ describe('HTTP team runtime routes', () => {
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
-    const teamProvisioningService = {
+    const teamLaunchApi = {
       createTeam,
       launchTeam,
       getProvisioningStatus,
     } satisfies Pick<
-      NonNullable<HttpServices['teamProvisioningService']>,
+      NonNullable<HttpServices['teamLaunchApi']>,
       'createTeam' | 'launchTeam' | 'getProvisioningStatus'
     >;
     const teamRuntimeApi = {
@@ -93,7 +93,7 @@ describe('HTTP team runtime routes', () => {
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataService,
-      teamProvisioningService,
+      teamLaunchApi,
       teamRuntimeApi,
     } satisfies HttpServices;
 

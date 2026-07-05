@@ -39,7 +39,7 @@ import type {
 } from '../services';
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
 import type {
-  TeamProvisioningStartApi,
+  TeamLaunchApi,
   TeamRuntimeApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../services/team/TeamDataService';
@@ -61,7 +61,7 @@ export interface HttpServices {
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamDataService?: TeamDataService;
-  teamProvisioningService?: TeamProvisioningStartApi;
+  teamLaunchApi?: TeamLaunchApi;
   teamRuntimeApi?: TeamRuntimeApi;
 }
 
@@ -74,7 +74,7 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  if (services.teamDataService || services.teamProvisioningService || services.teamRuntimeApi) {
+  if (services.teamDataService || services.teamLaunchApi || services.teamRuntimeApi) {
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);
