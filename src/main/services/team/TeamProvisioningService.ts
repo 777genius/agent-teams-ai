@@ -1174,7 +1174,7 @@ export class TeamProvisioningService {
       getProvisioningRunId: (teamName) => this.runTracking.getProvisioningRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
       isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
-      readConfigForObservation: (teamName) => this.readConfigForObservation(teamName),
+      readConfigForObservation: (teamName) => this.configFacade.readConfigForObservation(teamName),
       readLeadInboxMessages: (teamName, leadName) =>
         this.inboxReader.getMessagesFor(teamName, leadName),
       markInboxMessagesRead: (teamName, leadName, messages) =>
@@ -2401,10 +2401,6 @@ export class TeamProvisioningService {
     return typeof reader.getConfigSnapshot === 'function'
       ? reader.getConfigSnapshot(teamName)
       : reader.getConfig(teamName);
-  }
-
-  private readConfigForObservation(teamName: string): Promise<TeamConfig | null> {
-    return this.readConfigSnapshot(teamName);
   }
 
   private readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null> {
