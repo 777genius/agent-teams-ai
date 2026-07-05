@@ -20,6 +20,8 @@ type OpenCodeWorktreeLanePlan = Extract<
 >;
 type OpenCodeWorktreeMember = OpenCodeWorktreeLanePlan['allMembers'][number];
 
+const testTeamsBasePath = '/safe-test/teams';
+
 function member(name: string, extra: Partial<OpenCodeWorktreeMember> = {}): OpenCodeWorktreeMember {
   return {
     name,
@@ -576,7 +578,7 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     consumeCancelledRuntimeAdapterRunId: () => false,
     getTeamsBasePath: () => {
       calls.push('getTeamsBasePath');
-      return '/tmp/teams';
+      return testTeamsBasePath;
     },
     clearOpenCodeRuntimeLaneStorage: async (input) => {
       calls.push(`clearLaneStorage:${input.laneId}`);

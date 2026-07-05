@@ -14,6 +14,8 @@ import {
 import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 
 const createBoundaryMock = vi.mocked(createTeamProvisioningOpenCodeRuntimeDeliveryBoundary);
+const testProjectPath = '/safe-test/project';
+const testTeamsBasePath = '/safe-test/teams';
 
 vi.mock('../TeamProvisioningOpenCodeRuntimeDelivery', async (importOriginal) => {
   const actual =
@@ -119,7 +121,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
     await expect(boundaryPorts.readLaunchState('Team')).resolves.toEqual({ teamName: 'Team' });
     await expect(boundaryPorts.readLaunchStateForDeliveryRecovery('Team')).resolves.toBeNull();
     expect(boundaryPorts.getTrackedRun('Team')).toBe(run);
-    expect(boundaryPorts.getTeamsBasePath()).toBe('/tmp/teams');
+    expect(boundaryPorts.getTeamsBasePath()).toBe(testTeamsBasePath);
 
     await boundaryPorts.writeLaunchState('Team', { teamName: 'Team' } as never);
     await boundaryPorts.persistTrackedRunLaunchState(run);
@@ -170,7 +172,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
     );
     await expect(boundaryPorts.readLaunchState('Team')).resolves.toEqual({ teamName: 'Team' });
     expect(boundaryPorts.getTrackedRun('Team')).toBe(run);
-    expect(boundaryPorts.getTeamsBasePath()).toBe('/tmp/teams');
+    expect(boundaryPorts.getTeamsBasePath()).toBe(testTeamsBasePath);
 
     await boundaryPorts.writeLaunchState('Team', { teamName: 'Team' } as never);
     boundaryPorts.emitTeamChange({ type: 'member-spawn', teamName: 'Team', detail: 'Builder' });
@@ -251,7 +253,7 @@ function createPorts(
   > = {}
 ): TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<OpenCodeRuntimeCheckinRun> {
   return {
-    getTeamsBasePath: vi.fn(() => '/tmp/teams'),
+    getTeamsBasePath: vi.fn(() => testTeamsBasePath),
     resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
     readLaunchState: vi.fn(async () => null),
@@ -307,7 +309,7 @@ function createPorts(
 
 function createDeps() {
   return {
-    getTeamsBasePath: vi.fn(() => '/tmp/teams'),
+    getTeamsBasePath: vi.fn(() => testTeamsBasePath),
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     logger: {
       warn: vi.fn(),
@@ -389,7 +391,7 @@ function createRun(): OpenCodeRuntimeCheckinRun {
     teamName: 'Team',
     request: {
       teamName: 'Team',
-      cwd: '/tmp/project',
+      cwd: testProjectPath,
       members: [],
     },
     effectiveMembers: [],

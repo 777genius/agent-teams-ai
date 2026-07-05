@@ -7,10 +7,12 @@ import {
 
 import type { TeamCreateRequest } from '@shared/types';
 
+const testProjectPath = '/safe-test/project';
+
 function createRequest(overrides: Partial<TeamCreateRequest> = {}): TeamCreateRequest {
   return {
     teamName: 'alpha',
-    cwd: '/tmp/project',
+    cwd: testProjectPath,
     members: [],
     leadPrompt: 'lead',
     tasks: [],
@@ -102,7 +104,7 @@ describe('OpenCode runtime defaults', () => {
     expect(ports.buildProvisioningEnv).toHaveBeenCalledWith('opencode', undefined);
     expect(ports.resolveProviderDefaultModel).toHaveBeenCalledWith(
       '/usr/bin/claude',
-      '/tmp/project',
+      testProjectPath,
       'opencode',
       { A: 'B' },
       ['--x'],

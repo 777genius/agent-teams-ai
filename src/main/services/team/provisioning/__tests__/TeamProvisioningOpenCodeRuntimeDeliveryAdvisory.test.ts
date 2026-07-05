@@ -7,6 +7,8 @@ import {
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 
+const testProjectPath = '/safe-test/team-alpha';
+
 describe('TeamProvisioningOpenCodeRuntimeDeliveryAdvisory', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -160,7 +162,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryAdvisory', () => {
         summary: 'OpenCode runtime error #7',
         dedupeKey: 'opencode_runtime_delivery_error:team-a:builder:delivery-1',
         body: 'Team Team Alpha: @builder hit an OpenCode runtime delivery error while handling #7. permission_blocked',
-        projectPath: '/tmp/team-alpha',
+        projectPath: testProjectPath,
       })
     );
     expect(sendLeadNotice).toHaveBeenCalledTimes(1);
@@ -223,7 +225,7 @@ function createPorts(
     }),
     readConfigSnapshot: vi.fn().mockResolvedValue({
       name: 'Team Alpha',
-      projectPath: '/tmp/team-alpha',
+      projectPath: testProjectPath,
     }),
     addTeamNotification: vi.fn().mockResolvedValue(undefined),
     emitTeamChange: vi.fn(),

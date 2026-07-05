@@ -9,6 +9,7 @@ import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery
 import type { InboxMessage, TaskRef } from '@shared/types';
 
 const taskRef: TaskRef = { teamName: 'alpha', taskId: 'task-1', displayId: 'T-1' };
+const testAttachmentFilePath = '/safe-test/a.txt';
 
 function createMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
   return {
@@ -110,7 +111,7 @@ describe('OpenCode agenda sync recovery bypass helpers', () => {
                 filename: 'a.txt',
                 mimeType: 'text/plain',
                 size: 1,
-                filePath: '/tmp/a.txt',
+                filePath: testAttachmentFilePath,
               },
             ],
           }),

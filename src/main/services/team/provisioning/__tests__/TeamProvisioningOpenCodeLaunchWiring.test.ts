@@ -14,7 +14,7 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/pathDecoder')>();
   return {
     ...actual,
-    getTeamsBasePath: () => '/tmp/team-provisioning-opencode-launch-wiring-test',
+    getTeamsBasePath: () => '/safe-test/team-provisioning-opencode-launch-wiring-test',
   };
 });
 
