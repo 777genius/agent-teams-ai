@@ -226,6 +226,24 @@ export const MembersEditorSection = ({
     setJsonEditorOpen((prev) => !prev);
   };
 
+  function getCompatibleMemberEffort(
+    providerId: TeamProviderId,
+    model: string | undefined,
+    effort: EffortLevel | undefined
+  ): EffortLevel | undefined {
+    if (!effort) {
+      return undefined;
+    }
+    const nextEffort = getAvailableTeamEffortValue({
+      providerId,
+      model,
+      limitContext: providerId === 'anthropic' ? limitContext : false,
+      providerStatus: runtimeProviderStatusById?.get(providerId) ?? null,
+      value: effort,
+    });
+    return isTeamEffortLevel(nextEffort) ? nextEffort : undefined;
+  }
+
   useEffect(() => {
     if (!jsonEditorOpen || jsonError !== null) return;
     queueMicrotask(() => setJsonText(membersToJsonText(members)));
@@ -234,7 +252,11 @@ export const MembersEditorSection = ({
   const handleJsonChange = (text: string): void => {
     setJsonText(text);
     try {
-      const drafts = parseJsonToDrafts(text);
+      const drafts = parseJsonToDrafts(text).map((draft) => {
+        const providerId = draft.providerId ?? inheritedProviderId ?? defaultProviderId;
+        const effort = getCompatibleMemberEffort(providerId, draft.model, draft.effort);
+        return effort === draft.effort ? draft : { ...draft, effort };
+      });
       emitMembersChange(drafts);
       setJsonError(null);
     } catch (e) {
@@ -271,24 +293,6 @@ export const MembersEditorSection = ({
 
   const updateMemberWorkflowChips = (memberId: string, workflowChips: InlineChip[]): void => {
     emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, workflowChips } : c)));
-  };
-
-  const getCompatibleMemberEffort = (
-    providerId: TeamProviderId,
-    model: string | undefined,
-    effort: EffortLevel | undefined
-  ): EffortLevel | undefined => {
-    if (!effort) {
-      return undefined;
-    }
-    const nextEffort = getAvailableTeamEffortValue({
-      providerId,
-      model,
-      limitContext: providerId === 'anthropic' ? limitContext : false,
-      providerStatus: runtimeProviderStatusById?.get(providerId) ?? null,
-      value: effort,
-    });
-    return isTeamEffortLevel(nextEffort) ? nextEffort : undefined;
   };
 
   const updateMemberProvider = (memberId: string, providerId: TeamProviderId): void => {

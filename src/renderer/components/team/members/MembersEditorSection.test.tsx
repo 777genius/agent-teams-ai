@@ -268,6 +268,49 @@ describe('MembersEditorSection runtime model selection', () => {
       effort: undefined,
     });
   });
+
+  it('clears stale teammate effort imported through the JSON editor', async () => {
+    const { host, onChange } = renderMembersEditor({
+      inheritedProviderId: 'anthropic',
+      inheritedEffort: 'medium',
+      members: [createMemberDraft({ id: 'alice', name: 'alice' })],
+      runtimeProviderStatusById: new Map([['anthropic', anthropicStatusWithHaikuWithoutEffort()]]),
+    });
+
+    await act(async () => {
+      editJsonButton(host).click();
+      await Promise.resolve();
+    });
+
+    const editor = host.querySelector<HTMLTextAreaElement>('[data-testid="members-json-editor"]')!;
+    const textareaValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      'value'
+    )?.set;
+    await act(async () => {
+      textareaValueSetter?.call(
+        editor,
+        JSON.stringify([
+          {
+            name: 'alice',
+            providerId: 'anthropic',
+            model: 'claude-haiku-4-5-20251001',
+            effort: 'medium',
+          },
+        ])
+      );
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const nextMembers = onChange.mock.calls[0]?.[0] as MemberDraft[];
+    expect(nextMembers[0]).toMatchObject({
+      name: 'alice',
+      providerId: 'anthropic',
+      model: 'claude-haiku-4-5-20251001',
+      effort: undefined,
+    });
+  });
 });
 
 describe('MembersEditorSection worktree master checkbox', () => {
