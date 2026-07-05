@@ -8,6 +8,7 @@ import {
   bindTeamProvisioningPreflightApi,
   bindTeamRuntimeApi,
   bindTeamRuntimeControlCompatibilityApi,
+  bindTeamToolApprovalApi,
 } from '../TeamProvisioningApis';
 
 import type {
@@ -20,6 +21,7 @@ import type {
   TeamProvisioningPreflightApi,
   TeamRuntimeApi,
   TeamRuntimeControlCompatibilityApi,
+  TeamToolApprovalApi,
 } from '../TeamProvisioningApis';
 import type {
   InboxMessage,
@@ -33,6 +35,7 @@ import type {
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
+  ToolApprovalSettings,
 } from '@shared/types/team';
 
 const TEST_TEAM_CWD = '/workspace/team';
@@ -411,5 +414,87 @@ describe('TeamProvisioning API binders', () => {
     });
     expect(api.getCurrentLeadSessionId('team-bound')).toBe('session:team-bound');
     expect(api.getLiveLeadProcessMessages('team-bound')).toHaveLength(1);
+  });
+
+  it('binds tool approval methods to the source object', async () => {
+    interface ToolApprovalSource extends TeamToolApprovalApi {
+      readonly sourceName: string;
+      response: {
+        teamName: string;
+        runId: string;
+        requestId: string;
+        allow: boolean;
+        message?: string;
+        sourceName: string;
+      } | null;
+      settingsUpdate: {
+        teamName: string;
+        settings: ToolApprovalSettings;
+        sourceName: string;
+      } | null;
+    }
+
+    const settings: ToolApprovalSettings = {
+      autoAllowAll: false,
+      autoAllowFileEdits: true,
+      autoAllowSafeBash: false,
+      timeoutAction: 'deny',
+      timeoutSeconds: 45,
+    };
+    const source: ToolApprovalSource = {
+      sourceName: 'approval-source',
+      response: null,
+      settingsUpdate: null,
+      respondToToolApproval(
+        this: ToolApprovalSource,
+        teamName: string,
+        runId: string,
+        requestId: string,
+        allow: boolean,
+        message?: string
+      ): Promise<void> {
+        this.response = {
+          teamName,
+          runId,
+          requestId,
+          allow,
+          ...(message !== undefined ? { message } : {}),
+          sourceName: this.sourceName,
+        };
+        return Promise.resolve();
+      },
+      updateToolApprovalSettings(
+        this: ToolApprovalSource,
+        teamName: string,
+        nextSettings: ToolApprovalSettings
+      ): void {
+        this.settingsUpdate = {
+          teamName,
+          settings: nextSettings,
+          sourceName: this.sourceName,
+        };
+      },
+    };
+
+    const api = bindTeamToolApprovalApi(source);
+    const respondToToolApproval = api.respondToToolApproval.bind(undefined);
+    const updateToolApprovalSettings = api.updateToolApprovalSettings.bind(undefined);
+
+    await respondToToolApproval('team-bound', 'run-1', 'request-1', true, 'approved');
+    updateToolApprovalSettings('team-bound', settings);
+
+    expect(source.response).toEqual({
+      teamName: 'team-bound',
+      runId: 'run-1',
+      requestId: 'request-1',
+      allow: true,
+      message: 'approved',
+      sourceName: 'approval-source',
+    });
+    expect(source.settingsUpdate).toEqual({
+      teamName: 'team-bound',
+      settings,
+      sourceName: 'approval-source',
+    });
   });
 });

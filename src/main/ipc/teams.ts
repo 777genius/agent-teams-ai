@@ -144,6 +144,7 @@ import {
   bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
   bindTeamRuntimeApi,
+  bindTeamToolApprovalApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import {
   cloneLaunchIoGovernorPayload,
@@ -197,6 +198,7 @@ import type {
   TeamOpenCodeMemberInboxRelayResult,
   TeamProvisioningPreflightApi,
   TeamRuntimeApi,
+  TeamToolApprovalApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
@@ -760,6 +762,7 @@ let teamRuntimeApi: TeamRuntimeApi | null = null;
 let teamMemberLifecycleApi: TeamMemberLifecycleApi | null = null;
 let teamDiagnosticsApi: TeamDiagnosticsApi | null = null;
 let teamMessagingApi: TeamMessagingApi | null = null;
+let teamToolApprovalApi: TeamToolApprovalApi | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
@@ -830,6 +833,7 @@ export function initializeTeamHandlers(
   teamMemberLifecycleApi = bindTeamMemberLifecycleApi(provisioningService);
   teamDiagnosticsApi = bindTeamDiagnosticsApi(provisioningService);
   teamMessagingApi = bindTeamMessagingApi(provisioningService);
+  teamToolApprovalApi = bindTeamToolApprovalApi(provisioningService);
   initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
@@ -1073,6 +1077,13 @@ function getTeamMessagingApi(): TeamMessagingApi {
     throw new Error('Team messaging handlers are not initialized');
   }
   return teamMessagingApi;
+}
+
+function getTeamToolApprovalApi(): TeamToolApprovalApi {
+  if (!teamToolApprovalApi) {
+    throw new Error('Team tool approval handlers are not initialized');
+  }
+  return teamToolApprovalApi;
 }
 
 function getTeammateToolTracker(): TeammateToolTracker {
@@ -5543,7 +5554,7 @@ async function handleToolApprovalRespond(
     return { success: false, error: 'allow must be a boolean' };
   }
   return wrapTeamHandler('toolApprovalRespond', () =>
-    getTeamProvisioningService().respondToToolApproval(
+    getTeamToolApprovalApi().respondToToolApproval(
       validated.value!,
       runId,
       requestId,
@@ -5587,7 +5598,7 @@ async function handleToolApprovalSettings(
   }
 
   try {
-    getTeamProvisioningService().updateToolApprovalSettings(
+    getTeamToolApprovalApi().updateToolApprovalSettings(
       teamName,
       s as unknown as ToolApprovalSettings
     );

@@ -21,6 +21,7 @@ import type {
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
+  ToolApprovalSettings,
 } from '@shared/types/team';
 
 export interface TeamLaunchApi {
@@ -161,6 +162,17 @@ export interface TeamMessagingApi {
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
 }
 
+export interface TeamToolApprovalApi {
+  respondToToolApproval(
+    teamName: string,
+    runId: string,
+    requestId: string,
+    allow: boolean,
+    message?: string
+  ): Promise<void>;
+  updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void;
+}
+
 export function bindTeamLaunchApi(source: TeamLaunchApi): TeamLaunchApi {
   const api: TeamLaunchApi = {
     createTeam: source.createTeam.bind(source),
@@ -235,5 +247,12 @@ export function bindTeamMessagingApi(source: TeamMessagingApi): TeamMessagingApi
     getLiveLeadProcessMessages: source.getLiveLeadProcessMessages.bind(source),
     getCurrentLeadSessionId: source.getCurrentLeadSessionId.bind(source),
     pushLiveLeadProcessMessage: source.pushLiveLeadProcessMessage.bind(source),
+  };
+}
+
+export function bindTeamToolApprovalApi(source: TeamToolApprovalApi): TeamToolApprovalApi {
+  return {
+    respondToToolApproval: source.respondToToolApproval.bind(source),
+    updateToolApprovalSettings: source.updateToolApprovalSettings.bind(source),
   };
 }
