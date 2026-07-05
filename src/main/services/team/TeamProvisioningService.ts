@@ -2605,7 +2605,7 @@ export class TeamProvisioningService {
     return this.configFacade.restorePrelaunchConfig(teamName);
   }
 
-  private cleanupPrelaunchBackup(teamName: string): Promise<void> {
+  cleanupPrelaunchBackup(teamName: string): Promise<void> {
     return this.configFacade.cleanupPrelaunchBackup(teamName);
   }
 

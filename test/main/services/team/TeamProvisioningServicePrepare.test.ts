@@ -718,6 +718,17 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     delete process.env.ANTHROPIC_AUTH_TOKEN;
   });
 
+  it('keeps cleanupPrelaunchBackup available on the service API', async () => {
+    const svc = new TeamProvisioningService();
+    const cleanup = vi
+      .spyOn(configFacadeHarness(svc), 'cleanupPrelaunchBackup')
+      .mockResolvedValue(undefined);
+
+    await svc.cleanupPrelaunchBackup('team-alpha');
+
+    expect(cleanup).toHaveBeenCalledWith('team-alpha');
+  });
+
   it('blanks Anthropic auth carriers for direct tmux restart in helper mode', () => {
     const assignments = buildDirectTmuxRestartEnvAssignments(
       {
