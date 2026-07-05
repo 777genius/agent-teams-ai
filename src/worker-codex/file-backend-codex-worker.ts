@@ -310,6 +310,7 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
         sessionMaterializer: new CodexWorkerCacheSessionPoolMaterializer({
           cacheKey: `codex:${options.providerInstanceId}`,
           slots: options.sessionCacheSlots ?? 1,
+          rootDir: join(options.stateRootDir, "codex-session-cache"),
         }),
         model: options.model ?? defaultCodexModel,
         reasoningEffort: options.reasoningEffort ?? "low",

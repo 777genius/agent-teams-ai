@@ -139,6 +139,7 @@ describe("FileBackendCodexWorker", () => {
           engineReusable: "true",
         },
       });
+      await expect(access(join(rootDir, "codex-session-cache"))).resolves.toBeUndefined();
       expect(appServer.spawnCount).toBe(1);
       const expectedPathEntries = [
         ...(process.env.PATH ?? "").split(delimiter).filter(Boolean),
