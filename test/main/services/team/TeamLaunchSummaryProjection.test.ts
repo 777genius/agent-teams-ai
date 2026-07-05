@@ -331,6 +331,98 @@ describe('TeamLaunchSummaryProjection', () => {
     });
   });
 
+  it('projects confirmed native bootstrap-control metadata as confirmed', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['cody'],
+        members: {
+          cody: {
+            name: 'cody',
+            providerId: 'codex',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic:
+              '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+            runtimeDiagnosticSeverity: 'warning',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      teamLaunchState: 'clean_success',
+      confirmedMemberCount: 1,
+      confirmedCount: 1,
+      failedCount: 0,
+    });
+  });
+
+  it('keeps confirmed native bootstrap-control metadata failed with runtime error evidence', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['cody'],
+        members: {
+          cody: {
+            name: 'cody',
+            providerId: 'codex',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+            livenessKind: 'not_found',
+            runtimeDiagnostic: 'Runtime process crashed',
+            runtimeDiagnosticSeverity: 'error',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['cody'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
   it('keeps provisioned-but-not-alive failures with runtime error evidence as failed', () => {
     const summary = choosePreferredLaunchStateSummary({
       launchSnapshot: {

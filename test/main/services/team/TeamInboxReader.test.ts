@@ -277,6 +277,79 @@ describe('TeamInboxReader', () => {
     expect(older.sourceRevision).toBe(head.sourceRevision);
   });
 
+  it('getMessagesWindow ignores native bootstrap-control text in sourceRevision', async () => {
+    hoisted.dirs.set(inboxDir, ['alice.json']);
+    const writeInbox = (controlText: string) => {
+      hoisted.files.set(
+        '/mock/teams/my-team/inboxes/alice.json',
+        JSON.stringify([
+          {
+            from: 'team-lead',
+            text: controlText,
+            timestamp: '2026-01-04T00:00:00.000Z',
+            read: false,
+            messageId: 'internal-bootstrap-control',
+          },
+          {
+            from: 'alice',
+            text: 'visible message',
+            timestamp: '2026-01-03T00:00:00.000Z',
+            read: false,
+            messageId: 'visible',
+          },
+        ])
+      );
+    };
+    writeInbox(
+      '<agent_teams_native_bootstrap_control>\nprivate v1\n</agent_teams_native_bootstrap_control>'
+    );
+
+    const first = await reader.getMessagesWindow('my-team', { limit: 10 });
+    writeInbox(
+      '<agent_teams_native_bootstrap_control>\nprivate v2\n</agent_teams_native_bootstrap_control>'
+    );
+    const second = await reader.getMessagesWindow('my-team', { limit: 10 });
+
+    expect(second.messages.map((message) => message.messageId)).toEqual([
+      'internal-bootstrap-control',
+      'visible',
+    ]);
+    expect(second.sourceRevision).toBe(first.sourceRevision);
+  });
+
+  it('getMessagesWindow tracks user-authored native bootstrap-control quotes in sourceRevision', async () => {
+    hoisted.dirs.set(inboxDir, ['alice.json']);
+    const writeInbox = (quotedText: string) => {
+      hoisted.files.set(
+        '/mock/teams/my-team/inboxes/alice.json',
+        JSON.stringify([
+          {
+            from: 'user',
+            source: 'user_sent',
+            text: quotedText,
+            timestamp: '2026-01-04T00:00:00.000Z',
+            read: false,
+            messageId: 'visible-bootstrap-control-quote',
+          },
+        ])
+      );
+    };
+    writeInbox(
+      '<agent_teams_native_bootstrap_control>\nquoted v1\n</agent_teams_native_bootstrap_control>'
+    );
+
+    const first = await reader.getMessagesWindow('my-team', { limit: 10 });
+    writeInbox(
+      '<agent_teams_native_bootstrap_control>\nquoted v2\n</agent_teams_native_bootstrap_control>'
+    );
+    const second = await reader.getMessagesWindow('my-team', { limit: 10 });
+
+    expect(second.messages.map((message) => message.messageId)).toEqual([
+      'visible-bootstrap-control-quote',
+    ]);
+    expect(second.sourceRevision).not.toBe(first.sourceRevision);
+  });
+
   it('getMessagesWindow keeps same-timestamp rows after the cursor by message id', async () => {
     hoisted.dirs.set(inboxDir, ['alice.json']);
     hoisted.files.set(

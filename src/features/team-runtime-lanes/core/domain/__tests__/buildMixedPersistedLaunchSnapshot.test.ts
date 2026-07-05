@@ -359,6 +359,116 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
     });
   });
 
+  it('heals bootstrap-confirmed native bootstrap-control primary metadata', () => {
+    const snapshot = buildMixedPersistedLaunchSnapshot({
+      teamName: 'mixed-team',
+      launchPhase: 'finished',
+      updatedAt: '2026-07-05T12:31:45.399Z',
+      leadDefaults: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        selectedFastMode: 'off',
+        resolvedFastMode: false,
+        launchIdentity: null,
+      },
+      primaryMembers: [{ name: 'alice', providerId: 'codex', model: 'gpt-5.5', effort: 'high' }],
+      primaryStatuses: {
+        alice: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'verified runtime process detected',
+          runtimeDiagnosticSeverity: 'info',
+          updatedAt: '2026-07-05T12:25:53.384Z',
+        } as never,
+      },
+      secondaryMembers: [],
+    });
+
+    expect(snapshot.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+    });
+    expect(snapshot.summary).toMatchObject({
+      confirmedCount: 1,
+      failedCount: 0,
+      pendingCount: 0,
+    });
+    expect(snapshot.teamLaunchState).toBe('clean_success');
+  });
+
+  it('heals bootstrap-confirmed native bootstrap-control secondary metadata', () => {
+    const snapshot = buildMixedPersistedLaunchSnapshot({
+      teamName: 'mixed-team',
+      launchPhase: 'finished',
+      updatedAt: '2026-07-05T12:31:45.399Z',
+      leadDefaults: {
+        providerId: 'anthropic',
+        providerBackendId: null,
+        selectedFastMode: 'off',
+        resolvedFastMode: false,
+        launchIdentity: null,
+      },
+      primaryMembers: [],
+      primaryStatuses: {},
+      secondaryMembers: [
+        {
+          laneId: 'secondary:codex:alice',
+          member: {
+            name: 'alice',
+            providerId: 'codex',
+            model: 'gpt-5.5',
+            effort: 'high',
+          },
+          leadDefaults: {
+            providerId: 'anthropic',
+            providerBackendId: null,
+            selectedFastMode: 'off',
+            resolvedFastMode: false,
+            launchIdentity: null,
+          },
+          evidence: {
+            status: 'error',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic: 'verified runtime process detected',
+            runtimeDiagnosticSeverity: 'info',
+          } as never,
+        },
+      ],
+    });
+
+    expect(snapshot.members.alice).toMatchObject({
+      laneKind: 'secondary',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+    });
+    expect(snapshot.summary).toMatchObject({
+      confirmedCount: 1,
+      failedCount: 0,
+      pendingCount: 0,
+    });
+    expect(snapshot.teamLaunchState).toBe('clean_success');
+  });
+
   it('keeps bootstrap-confirmed provisioned-but-not-alive primary status failed when diagnostics are errors', () => {
     const snapshot = buildMixedPersistedLaunchSnapshot({
       teamName: 'signal-ops',

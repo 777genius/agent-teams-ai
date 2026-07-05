@@ -5,7 +5,7 @@ import {
   getTeamProviderLabel,
 } from '@renderer/utils/teamModelCatalog';
 import {
-  isNativeAppManagedBootstrapCheckText,
+  isNativeBootstrapControlText,
   isTeamInternalControlMessageEnvelope,
 } from '@shared/utils/teamInternalControlMessages';
 
@@ -140,7 +140,7 @@ export function getInternalControlMessageDisplay(
   if (!isTeamInternalControlMessageEnvelope(message)) {
     return null;
   }
-  if (isNativeAppManagedBootstrapCheckText(message.text)) {
+  if (isNativeBootstrapControlText(message.text)) {
     return {
       summary: 'Internal bootstrap check',
       body: 'Internal bootstrap check hidden in the UI.',

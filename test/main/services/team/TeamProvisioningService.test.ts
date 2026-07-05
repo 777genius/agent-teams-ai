@@ -23268,6 +23268,93 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.alice?.runtimeDiagnosticSeverity).toBeUndefined();
   });
 
+  it('heals native bootstrap-control failures when bootstrap-state confirms the member', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-native-bootstrap-control-bootstrap-state-heals';
+    const leadSessionId = 'lead-session';
+    const projectPath = '/Users/test/proj';
+    const acceptedAt = new Date(Date.now() - 90_000).toISOString();
+    const bootstrapAt = new Date(Date.now() - 60_000).toISOString();
+    const cleanupAt = new Date(Date.now() - 30_000).toISOString();
+    const runtimePid = 15_328;
+    const nativeBootstrapControlReason =
+      '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.';
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['cody']);
+    writeLaunchState(
+      teamName,
+      leadSessionId,
+      {
+        cody: {
+          providerId: 'codex',
+          model: 'gpt-5.5',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'anthropic',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          runtimePid,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: nativeBootstrapControlReason,
+          runtimeDiagnostic: nativeBootstrapControlReason,
+          runtimeDiagnosticSeverity: 'error',
+          firstSpawnAcceptedAt: acceptedAt,
+          lastEvaluatedAt: cleanupAt,
+        },
+      },
+      { launchPhase: 'finished', updatedAt: cleanupAt }
+    );
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'cody',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse(acceptedAt),
+          lastObservedAt: Date.parse(bootstrapAt),
+        },
+      ],
+      bootstrapAt
+    );
+
+    const svc = new TeamProvisioningService();
+    privateHarness(svc).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'cody',
+            {
+              alive: false,
+              backendType: 'process',
+              providerId: 'codex',
+              livenessKind: 'stale_metadata',
+              pidSource: 'persisted_metadata',
+              runtimeDiagnostic: 'persisted runtime pid is not alive',
+              runtimeDiagnosticSeverity: 'warning',
+              metricsPid: runtimePid,
+              model: 'gpt-5.5',
+            },
+          ],
+        ])
+    );
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(result.statuses.cody).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      error: undefined,
+    });
+    expect(result.statuses.cody?.hardFailureReason).toBeUndefined();
+    expect(result.statuses.cody?.runtimeDiagnostic).toBeUndefined();
+    expect(result.statuses.cody?.runtimeDiagnosticSeverity).toBeUndefined();
+  });
+
   it('heals provisioned-but-not-alive launch failures when bootstrap-state confirms the member', async () => {
     allowConsoleLogs();
     const teamName = 'zz-unit-provisioned-not-alive-bootstrap-state-heals';

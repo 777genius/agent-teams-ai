@@ -288,6 +288,42 @@ describe('buildTeamRuntimeDisplayRows', () => {
     });
   });
 
+  it('does not degrade bootstrap-confirmed native bootstrap-control rows', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'cody' }],
+      runtimeSnapshot: createRuntimeSnapshot({
+        cody: createRuntimeEntry({
+          memberName: 'cody',
+          alive: false,
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'persisted runtime pid is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+        }),
+      }),
+      spawnStatuses: {
+        cody: createSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+          livenessKind: 'confirmed_bootstrap',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'cody',
+      state: 'running',
+      source: 'mixed',
+      stateReason: 'Bootstrap confirmed',
+      diagnosticSeverity: 'warning',
+      actionsAllowed: false,
+    });
+  });
+
   it('does not degrade Windows process-table-unavailable registered metadata rows', () => {
     const rows = buildTeamRuntimeDisplayRows({
       members: [{ name: 'alice' }],

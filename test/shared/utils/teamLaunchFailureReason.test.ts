@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidence,
   hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
   isBootstrapConfirmedProvisionedButNotAliveFailure,
 } from '@shared/utils/teamLaunchFailureReason';
+import { describe, expect, it } from 'vitest';
 
 describe('teamLaunchFailureReason', () => {
   it('treats runtime process candidates as unsafe provisioned-but-not-alive evidence', () => {
@@ -145,5 +144,28 @@ describe('teamLaunchFailureReason', () => {
         status: 'error',
       })
     ).toBe(true);
+  });
+
+  it('recognizes confirmed native bootstrap-control failures as recoverable launch failures', () => {
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason:
+          '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+        launchState: 'failed_to_start',
+        status: 'error',
+      })
+    ).toBe(true);
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason:
+          '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+        launchState: 'failed_to_start',
+        status: 'error',
+      })
+    ).toBe(false);
   });
 });

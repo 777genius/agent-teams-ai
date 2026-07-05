@@ -181,6 +181,42 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
     expect(milestones.pendingSpawnCount).toBe(0);
   });
 
+  it('counts bootstrap-confirmed native bootstrap-control entries as joined', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'cody' }],
+      memberSpawnStatuses: {
+        cody: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'persisted runtime pid is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        cody: {
+          memberName: 'cody',
+          alive: false,
+          restartable: true,
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'persisted runtime pid is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(1);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
   it('uses spawn process-table proof when runtime registered metadata has no diagnostic text', () => {
     const milestones = getLaunchJoinMilestonesFromMembers({
       members: [{ name: 'tom' }],

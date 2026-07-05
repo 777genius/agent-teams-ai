@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
-  getInternalControlMessageDisplay,
   getBootstrapPromptDisplay,
+  getInternalControlMessageDisplay,
   getSanitizedInboxMessageText,
 } from '@renderer/utils/bootstrapPromptSanitizer';
+import { describe, expect, it } from 'vitest';
 
 import type { InboxMessage } from '@shared/types';
 
@@ -78,23 +77,51 @@ Your Agent Teams startup context was already loaded by the app.
     expect(getSanitizedInboxMessageText(message)).toBe('Internal bootstrap check hidden in the UI.');
   });
 
+  it('sanitizes native bootstrap-control private prompts defensively', () => {
+    const message = makeMessage(
+      `<agent_teams_native_bootstrap_control>
+System-level bootstrap rules:
+- This is a private startup context handoff.
+</agent_teams_native_bootstrap_control>`,
+      { source: undefined }
+    );
+
+    expect(getInternalControlMessageDisplay(message)?.summary).toBe('Internal bootstrap check');
+    expect(getSanitizedInboxMessageText(message)).toBe('Internal bootstrap check hidden in the UI.');
+  });
+
   it('does not sanitize user-authored native bootstrap marker quotes', () => {
     const text = `<agent_teams_native_app_managed_bootstrap_check>
 Your Agent Teams startup context was already loaded by the app.
 </agent_teams_native_app_managed_bootstrap_check>`;
     const message = makeMessage(text, { from: 'user', source: 'user_sent' });
+    const controlText = `<agent_teams_native_bootstrap_control>
+System-level bootstrap rules:
+- This is a private startup context handoff.
+</agent_teams_native_bootstrap_control>`;
+    const controlMessage = makeMessage(controlText, { from: 'user', source: 'user_sent' });
 
     expect(getInternalControlMessageDisplay(message)).toBeNull();
     expect(getSanitizedInboxMessageText(message)).toBe(text);
+    expect(getInternalControlMessageDisplay(controlMessage)).toBeNull();
+    expect(getSanitizedInboxMessageText(controlMessage)).toBe(controlText);
   });
 
   it('does not sanitize visible lead text that only mentions the native bootstrap marker', () => {
-    const text =
+    const appManagedText =
       'Visible note quoting <agent_teams_native_app_managed_bootstrap_check> for diagnostics.';
-    const message = makeMessage(text, { from: 'team-lead', source: 'lead_process' });
+    const bootstrapControlText =
+      'Visible note quoting <agent_teams_native_bootstrap_control> for diagnostics.';
+    const message = makeMessage(appManagedText, { from: 'team-lead', source: 'lead_process' });
+    const controlMessage = makeMessage(bootstrapControlText, {
+      from: 'team-lead',
+      source: 'lead_process',
+    });
 
     expect(getInternalControlMessageDisplay(message)).toBeNull();
-    expect(getSanitizedInboxMessageText(message)).toBe(text);
+    expect(getSanitizedInboxMessageText(message)).toBe(appManagedText);
+    expect(getInternalControlMessageDisplay(controlMessage)).toBeNull();
+    expect(getSanitizedInboxMessageText(controlMessage)).toBe(bootstrapControlText);
   });
 
   it('sanitizes leaked lead inbox relay prompts defensively', () => {

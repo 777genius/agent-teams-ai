@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { describe, expect, it } from 'vitest';
 import { afterEach, beforeEach, vi } from 'vitest';
 
@@ -143,10 +144,17 @@ Messages:
       const teammateEcho = makeLeadSessionMsg(
         'Human: <teammate-message teammate_id="alice">{"type":"idle_notification"}</teammate-message>'
       );
+      const nativeBootstrapControlEcho = makeLeadSessionMsg(`Human: <agent_teams_native_bootstrap_control>
+System-level bootstrap rules:
+- This is a private startup context handoff.
+</agent_teams_native_bootstrap_control>`);
 
       expect(isLeadThought(leadRelayEcho)).toBe(false);
       expect(isLeadThought(teammateEcho)).toBe(false);
-      expect(groupTimelineItems([leadRelayEcho, teammateEcho])).toEqual([]);
+      expect(isLeadThought(nativeBootstrapControlEcho)).toBe(false);
+      expect(groupTimelineItems([leadRelayEcho, teammateEcho, nativeBootstrapControlEcho])).toEqual(
+        []
+      );
     });
 
     it('does not exclude noise messages with a recipient (captured SendMessage)', () => {

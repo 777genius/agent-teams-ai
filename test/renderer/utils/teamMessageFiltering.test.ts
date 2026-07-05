@@ -82,13 +82,16 @@ describe('filterTeamMessages', () => {
     expect(result.map((message) => message.messageId)).toEqual(['visible-message']);
   });
 
-  it('keeps user-authored native bootstrap marker quotes visible', () => {
+  it('hides native bootstrap-control private messages', () => {
     const messages = [
       makeMessage({
-        from: 'user',
-        messageId: 'user-native-bootstrap-quote',
-        source: 'user_sent',
-        text: '<agent_teams_native_app_managed_bootstrap_check>\nquoted\n</agent_teams_native_app_managed_bootstrap_check>',
+        messageId: 'native-bootstrap-control',
+        source: undefined,
+        text: '<agent_teams_native_bootstrap_control>\nprivate\n</agent_teams_native_bootstrap_control>',
+      }),
+      makeMessage({
+        messageId: 'visible-message',
+        text: 'Visible message',
       }),
     ];
 
@@ -98,7 +101,35 @@ describe('filterTeamMessages', () => {
       searchQuery: '',
     });
 
-    expect(result.map((message) => message.messageId)).toEqual(['user-native-bootstrap-quote']);
+    expect(result.map((message) => message.messageId)).toEqual(['visible-message']);
+  });
+
+  it('keeps user-authored native bootstrap marker quotes visible', () => {
+    const messages = [
+      makeMessage({
+        from: 'user',
+        messageId: 'user-native-bootstrap-quote',
+        source: 'user_sent',
+        text: '<agent_teams_native_app_managed_bootstrap_check>\nquoted\n</agent_teams_native_app_managed_bootstrap_check>',
+      }),
+      makeMessage({
+        from: 'user',
+        messageId: 'user-native-bootstrap-control-quote',
+        source: 'user_sent',
+        text: '<agent_teams_native_bootstrap_control>\nquoted\n</agent_teams_native_bootstrap_control>',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result.map((message) => message.messageId)).toEqual([
+      'user-native-bootstrap-quote',
+      'user-native-bootstrap-control-quote',
+    ]);
   });
 
   it('hides leaked lead inbox relay prompt echoes', () => {

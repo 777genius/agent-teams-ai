@@ -996,6 +996,56 @@ describe('buildTeamProvisioningPresentation', () => {
     expect(presentation?.compactTone).not.toBe('error');
   });
 
+  it('does not present bootstrap-confirmed native bootstrap-control entries as failed', () => {
+    const presentation = buildTeamProvisioningPresentation({
+      progress: {
+        runId: 'run-signal-ops',
+        teamName: 'signal-ops',
+        state: 'ready',
+        startedAt: '2026-05-25T20:13:40.000Z',
+        updatedAt: '2026-05-25T20:14:05.411Z',
+        message: 'Team provisioned',
+        messageSeverity: undefined,
+        pid: 27036,
+        cliLogsTail: '',
+        assistantOutput: '',
+      },
+      members: [
+        {
+          name: 'cody',
+          providerId: 'codex',
+          laneKind: 'primary',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+      ],
+      memberSpawnStatuses: {
+        cody: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'persisted runtime pid is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+    });
+
+    expect(presentation?.isFailed).toBe(false);
+    expect(presentation?.failedSpawnCount).toBe(0);
+    expect(presentation?.heartbeatConfirmedCount).toBe(1);
+    expect(presentation?.panelTone).not.toBe('error');
+    expect(presentation?.compactTone).not.toBe('error');
+  });
+
   it('presents unsafe bootstrap-confirmed provisioned-but-not-alive entries as failed', () => {
     const presentation = buildTeamProvisioningPresentation({
       progress: {

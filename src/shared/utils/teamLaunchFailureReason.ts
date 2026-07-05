@@ -1,3 +1,5 @@
+import { isNativeBootstrapControlText } from '@shared/utils/teamInternalControlMessages';
+
 import type {
   MemberLaunchState,
   MemberSpawnStatus,
@@ -72,11 +74,32 @@ export function isProvisionedButNotAliveLaunchFailure(
   );
 }
 
+export function isNativeBootstrapControlLaunchFailure(
+  entry: ProvisionedButNotAliveLaunchEntry | undefined
+): boolean {
+  if (!entry) {
+    return false;
+  }
+  const hardFailureReason = entry.hardFailureReason?.trim();
+  const failureReasonMatches = hardFailureReason
+    ? isNativeBootstrapControlText(hardFailureReason)
+    : isNativeBootstrapControlText(entry.error ?? entry.runtimeDiagnostic);
+  if (!failureReasonMatches) {
+    return false;
+  }
+  return (
+    entry.launchState === 'failed_to_start' ||
+    entry.status === 'error' ||
+    entry.hardFailure === true
+  );
+}
+
 export function isBootstrapConfirmedProvisionedButNotAliveFailure(
   entry: ProvisionedButNotAliveLaunchEntry | undefined
 ): boolean {
   return (
-    isProvisionedButNotAliveLaunchFailure(entry) &&
+    (isProvisionedButNotAliveLaunchFailure(entry) ||
+      isNativeBootstrapControlLaunchFailure(entry)) &&
     hasBootstrapConfirmationProofForLaunchFailure(entry)
   );
 }

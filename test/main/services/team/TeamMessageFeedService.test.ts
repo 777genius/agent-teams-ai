@@ -99,6 +99,31 @@ describe('TeamMessageFeedService', () => {
     expect(feed.messages.map((message) => message.messageId)).toEqual(['visible-user-message']);
   });
 
+  it('hides native bootstrap-control private messages from the feed', async () => {
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => config),
+      getInboxMessages: vi.fn(async () => [
+        makeMessage({
+          from: 'team-lead',
+          to: undefined,
+          messageId: 'native-bootstrap-control',
+          source: undefined,
+          text: '<agent_teams_native_bootstrap_control>\nprivate\n</agent_teams_native_bootstrap_control>',
+        }),
+        makeMessage({
+          messageId: 'visible-user-message',
+          text: 'Visible message',
+        }),
+      ]),
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const feed = await service.getFeed('signal-ops-4');
+
+    expect(feed.messages.map((message) => message.messageId)).toEqual(['visible-user-message']);
+  });
+
   it('includes Codex runtimeProvider in synthetic teammate bootstrap prompts', async () => {
     const service = new TeamMessageFeedService({
       getConfig: vi.fn(async () => ({
@@ -185,9 +210,16 @@ Messages:
       getConfig: vi.fn(async () => config),
       getInboxMessages: vi.fn(async () => [
         makeMessage({
+          messageId: 'quoted-native-app-bootstrap-check',
+          source: 'user_sent',
+          timestamp: '2026-04-19T18:46:37.000Z',
+          text: '<agent_teams_native_app_managed_bootstrap_check>\nquoted\n</agent_teams_native_app_managed_bootstrap_check>',
+        }),
+        makeMessage({
           messageId: 'quoted-native-bootstrap-control',
           source: 'user_sent',
-          text: '<agent_teams_native_app_managed_bootstrap_check>\nquoted\n</agent_teams_native_app_managed_bootstrap_check>',
+          timestamp: '2026-04-19T18:46:38.000Z',
+          text: '<agent_teams_native_bootstrap_control>\nquoted\n</agent_teams_native_bootstrap_control>',
         }),
       ]),
       getLeadSessionMessages: vi.fn(async () => []),
@@ -198,6 +230,7 @@ Messages:
 
     expect(feed.messages.map((message) => message.messageId)).toEqual([
       'quoted-native-bootstrap-control',
+      'quoted-native-app-bootstrap-check',
     ]);
   });
 

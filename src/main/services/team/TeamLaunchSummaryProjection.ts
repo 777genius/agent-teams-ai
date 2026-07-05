@@ -1,4 +1,5 @@
 import { isMixedOpenCodeSideLanePlan, planTeamRuntimeLanes } from '@features/team-runtime-lanes';
+import { isNativeBootstrapControlText } from '@shared/utils/teamInternalControlMessages';
 import {
   hasBootstrapConfirmationProofForLaunchFailure,
   hasUnsafeProvisionedButNotAliveRuntimeEvidence,
@@ -91,6 +92,27 @@ function shouldProjectProvisionedButNotAliveAsConfirmed(params: {
   );
 }
 
+function shouldProjectNativeBootstrapControlAsConfirmed(params: {
+  member: PersistedTeamLaunchMemberState | undefined;
+  bootstrapMember?: PersistedTeamLaunchMemberState;
+}): params is { member: PersistedTeamLaunchMemberState } {
+  const member = params.member;
+  if (member?.launchState !== 'failed_to_start' || member.hardFailure !== true) {
+    return false;
+  }
+  if (
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(member) ||
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(params.bootstrapMember)
+  ) {
+    return false;
+  }
+  const reason = member.hardFailureReason ?? member.runtimeDiagnostic;
+  return (
+    isNativeBootstrapControlText(reason) &&
+    hasBootstrapConfirmationProof(member, params.bootstrapMember)
+  );
+}
+
 function buildProjectedMembersForSummary(
   snapshot: PersistedTeamLaunchSnapshot,
   bootstrapSnapshot?: PersistedTeamLaunchSnapshot | null
@@ -100,6 +122,10 @@ function buildProjectedMembersForSummary(
   for (const [memberName, member] of Object.entries(snapshot.members)) {
     if (
       shouldProjectProvisionedButNotAliveAsConfirmed({
+        member,
+        bootstrapMember: bootstrapSnapshot?.members[memberName],
+      }) ||
+      shouldProjectNativeBootstrapControlAsConfirmed({
         member,
         bootstrapMember: bootstrapSnapshot?.members[memberName],
       })

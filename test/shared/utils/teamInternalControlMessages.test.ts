@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-
 import {
-  isTeamInternalControlMessageEnvelope,
   isLeadInboxRelayControlPromptText,
+  isNativeBootstrapControlText,
+  isTeamInternalControlMessageEnvelope,
   isTeamInternalControlMessageText,
   isTeammateProtocolControlText,
   stripExactInternalControlEchoPrefix,
 } from '@shared/utils/teamInternalControlMessages';
+import { describe, expect, it } from 'vitest';
 
 const leadRelayPrompt = `You have new inbox messages addressed to you (team lead "team-lead").
 Process them in order (oldest first).
@@ -21,6 +21,10 @@ Messages:
 const nativeBootstrapPrompt = `<agent_teams_native_app_managed_bootstrap_check>
 Your Agent Teams startup context was already loaded by the app.
 </agent_teams_native_app_managed_bootstrap_check>`;
+const nativeBootstrapControlPrompt = `<agent_teams_native_bootstrap_control>
+System-level bootstrap rules:
+- This is a private startup context handoff.
+</agent_teams_native_bootstrap_control>`;
 
 describe('teamInternalControlMessages', () => {
   it('detects lead inbox relay prompts and Human-prefixed echoes', () => {
@@ -76,10 +80,39 @@ describe('teamInternalControlMessages', () => {
       })
     ).toBe(true);
     expect(isTeamInternalControlMessageText(`Human: ${nativeBootstrapPrompt}`)).toBe(true);
+    expect(isNativeBootstrapControlText(`Human: ${nativeBootstrapControlPrompt}`)).toBe(true);
+    expect(isTeamInternalControlMessageText(`Human: ${nativeBootstrapControlPrompt}`)).toBe(true);
+    expect(
+      isTeamInternalControlMessageEnvelope({
+        text: nativeBootstrapControlPrompt,
+        from: 'orchestrator',
+      })
+    ).toBe(true);
+    for (const source of ['lead_process', 'lead_session', 'runtime_delivery', 'system_notification']) {
+      expect(
+        isTeamInternalControlMessageEnvelope({
+          source,
+          text: `User: ${nativeBootstrapControlPrompt}`,
+          from: 'alice',
+        })
+      ).toBe(true);
+    }
+    expect(
+      isTeamInternalControlMessageEnvelope({
+        text: nativeBootstrapControlPrompt,
+        from: 'alice',
+      })
+    ).toBe(false);
     expect(
       isTeamInternalControlMessageEnvelope({
         source: 'lead_process',
         text: `Visible note quoting ${nativeBootstrapPrompt}`,
+      })
+    ).toBe(false);
+    expect(
+      isTeamInternalControlMessageEnvelope({
+        source: 'lead_process',
+        text: `Visible note quoting ${nativeBootstrapControlPrompt}`,
       })
     ).toBe(false);
     expect(
@@ -92,6 +125,13 @@ describe('teamInternalControlMessages', () => {
     expect(
       isTeamInternalControlMessageEnvelope({
         text: nativeBootstrapPrompt,
+        from: 'user',
+      })
+    ).toBe(false);
+    expect(
+      isTeamInternalControlMessageEnvelope({
+        source: 'user_sent',
+        text: nativeBootstrapControlPrompt,
         from: 'user',
       })
     ).toBe(false);

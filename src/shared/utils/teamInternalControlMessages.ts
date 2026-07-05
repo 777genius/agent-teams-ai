@@ -1,4 +1,5 @@
 const NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_OPEN = '<agent_teams_native_app_managed_bootstrap_check>';
+const NATIVE_BOOTSTRAP_CONTROL_OPEN = '<agent_teams_native_bootstrap_control>';
 const LEAD_INBOX_RELAY_PROMPT_OPEN = 'You have new inbox messages addressed to you (team lead ';
 const TEAMMATE_MESSAGE_OPEN_RE = /^<teammate-message\s/i;
 
@@ -35,6 +36,17 @@ export function isNativeAppManagedBootstrapCheckText(value: unknown): boolean {
   );
 }
 
+export function isNativeBootstrapControlText(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const text = stripTranscriptSpeakerPrefix(value);
+  return (
+    text.startsWith(NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_OPEN) ||
+    text.startsWith(NATIVE_BOOTSTRAP_CONTROL_OPEN)
+  );
+}
+
 export function isLeadInboxRelayControlPromptText(value: unknown): boolean {
   if (typeof value !== 'string') {
     return false;
@@ -57,7 +69,7 @@ export function isTeammateProtocolControlText(value: unknown): boolean {
 export function isTeamInternalControlMessageText(value: unknown): boolean {
   return (
     isTranscriptSpeakerPlaceholderText(value) ||
-    isNativeAppManagedBootstrapCheckText(value) ||
+    isNativeBootstrapControlText(value) ||
     isLeadInboxRelayControlPromptText(value) ||
     isTeammateProtocolControlText(value)
   );
@@ -68,7 +80,7 @@ export function isTeamInternalControlMessageEnvelope(message: {
   source?: unknown;
   from?: unknown;
 }): boolean {
-  if (isNativeAppManagedBootstrapCheckText(message.text)) {
+  if (isNativeBootstrapControlText(message.text)) {
     if (typeof message.source === 'string') {
       return INTERNAL_CONTROL_MESSAGE_SOURCES.has(message.source);
     }

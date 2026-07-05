@@ -9,6 +9,7 @@ import {
   isLaunchCleanupBootstrapIncompleteFailureReason,
   isLaunchGraceWindowFailureReason,
   isNativeAppManagedBootstrapCheckFailureReason,
+  isNativeBootstrapControlFailureReason,
   isNeverSpawnedDuringLaunchReason,
   isOpenCodeBridgeLaunchFailureReason,
   isProcessTableUnavailableFailureReason,
@@ -92,8 +93,22 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
     ).toBe(true);
     const nativeBootstrapCheck =
       '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>';
+    const nativeBootstrapControl =
+      '<agent_teams_native_bootstrap_control> System-level bootstrap rules </agent_teams_native_bootstrap_control>';
+    const truncatedNativeBootstrapControl =
+      '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.';
     expect(isNativeAppManagedBootstrapCheckFailureReason(nativeBootstrapCheck)).toBe(true);
+    expect(isNativeBootstrapControlFailureReason(nativeBootstrapCheck)).toBe(true);
+    expect(isNativeBootstrapControlFailureReason(nativeBootstrapControl)).toBe(true);
+    expect(isNativeBootstrapControlFailureReason(truncatedNativeBootstrapControl)).toBe(true);
     expect(extractBootstrapFailureReason(nativeBootstrapCheck)).toBe(null);
+    expect(extractBootstrapFailureReason(nativeBootstrapControl)).toBe(null);
+    expect(extractBootstrapFailureReason(truncatedNativeBootstrapControl)).toBe(null);
+    expect(
+      extractBootstrapFailureReason(
+        `Bootstrap failed after receiving ${truncatedNativeBootstrapControl}`
+      )
+    ).toContain('Bootstrap failed');
   });
 
   it('handles process-table unavailable reasons and suffixes conservatively', () => {
@@ -131,6 +146,16 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
     expect(
       isAutoClearableLaunchFailureReason(
         '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>'
+      )
+    ).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(
+        '<agent_teams_native_bootstrap_control> System-level bootstrap rules </agent_teams_native_bootstrap_control>'
+      )
+    ).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(
+        '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.'
       )
     ).toBe(true);
     expect(

@@ -86,6 +86,92 @@ describe('TeamProvisioningRuntimeSnapshot', () => {
     });
   });
 
+  it('heals confirmed native bootstrap-control failures when runtime is alive', () => {
+    const result = attachLiveRuntimeMetadataToStatuses({
+      statuses: {
+        cody: baseStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control> System-level bootstrap rules </agent_teams_native_bootstrap_control>',
+          error:
+            '<agent_teams_native_bootstrap_control> System-level bootstrap rules </agent_teams_native_bootstrap_control>',
+        }),
+      },
+      runtimeByMember: new Map([
+        [
+          'cody',
+          {
+            alive: true,
+            livenessKind: 'runtime_process',
+            runtimeDiagnostic: 'verified runtime process detected',
+            runtimeDiagnosticSeverity: 'info',
+          },
+        ],
+      ]),
+      isOpenCodeBootstrapStallWindowElapsed: () => false,
+    });
+
+    expect(result.cody).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+    });
+  });
+
+  it('keeps runtime error evidence after healing confirmed native bootstrap-control failures', () => {
+    const result = attachLiveRuntimeMetadataToStatuses({
+      statuses: {
+        cody: baseStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+          error:
+            '<agent_teams_native_bootstrap_control>\nSystem-level bootstrap rules:\n- This is a private startup context handoff.',
+        }),
+      },
+      runtimeByMember: new Map([
+        [
+          'cody',
+          {
+            alive: false,
+            livenessKind: 'not_found',
+            runtimeDiagnostic: 'Runtime process crashed',
+            runtimeDiagnosticSeverity: 'error',
+          },
+        ],
+      ]),
+      isOpenCodeBootstrapStallWindowElapsed: () => false,
+    });
+
+    expect(result.cody).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: false,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      livenessKind: 'not_found',
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+    });
+  });
+
   it('marks OpenCode secondary bootstrap pending members stalled after the deadline', () => {
     const result = attachLiveRuntimeMetadataToStatuses({
       statuses: {
