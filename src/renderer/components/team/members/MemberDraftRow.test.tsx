@@ -9,7 +9,8 @@ vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/EffortLevelSelector', () => ({
-  EffortLevelSelector: () => React.createElement('div', null, 'effort-selector'),
+  EffortLevelSelector: ({ value }: { value: string }) =>
+    React.createElement('div', null, `effort-selector:${value}`),
 }));
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
@@ -392,6 +393,35 @@ describe('MemberDraftRow', () => {
     expect(host.textContent).toContain(
       'Provider, model, and effort are inherited from the lead while sync is enabled.'
     );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('does not inherit lead effort for an explicit teammate model override', () => {
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+      }),
+      inheritedProviderId: 'anthropic',
+      inheritedModel: 'claude-sonnet-5',
+      inheritedEffort: 'medium',
+    });
+
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="anthropic provider, claude-haiku-4-5-20251001"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    expect(host.textContent).toContain('effort-selector:');
+    expect(host.textContent).not.toContain('effort-selector:medium');
 
     act(() => {
       root.unmount();

@@ -347,9 +347,13 @@ export const MemberDraftRow = ({
   const effectiveModel = forceInheritedModelSettings
     ? inheritedModel
     : (member.model ?? inheritedModel);
+  const memberProviderId = member.providerId;
+  const explicitMemberModel = member.model?.trim() ?? '';
+  const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
   const effectiveEffort = forceInheritedModelSettings
     ? inheritedEffort
-    : (member.effort ?? inheritedEffort);
+    : (member.effort ??
+      (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
     : t('memberDraft.model.default');

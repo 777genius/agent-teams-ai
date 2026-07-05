@@ -7,7 +7,7 @@ import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
 interface TeamRosterEditorSectionProps {
   members: MemberDraft[];
@@ -35,6 +35,7 @@ interface TeamRosterEditorSectionProps {
   model: string;
   effort?: EffortLevel;
   limitContext: boolean;
+  runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
@@ -92,6 +93,7 @@ const TeamRosterEditorSectionImpl = ({
   model,
   effort,
   limitContext,
+  runtimeProviderStatusById,
   onProviderChange,
   onModelChange,
   onEffortChange,
@@ -164,6 +166,7 @@ const TeamRosterEditorSectionImpl = ({
       inheritedEffort={inheritedEffort}
       limitContext={limitContext}
       onLimitContextChange={onLimitContextChange}
+      runtimeProviderStatusById={runtimeProviderStatusById}
       inheritModelSettingsByDefault={inheritModelSettingsByDefault}
       lockProviderModel={lockProviderModel}
       forceInheritedModelSettings={forceInheritedModelSettings}

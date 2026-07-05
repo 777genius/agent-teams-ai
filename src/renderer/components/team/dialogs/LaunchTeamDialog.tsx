@@ -2828,6 +2828,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   model={selectedModel}
                   effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
+                  runtimeProviderStatusById={runtimeProviderStatusById}
                   leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}

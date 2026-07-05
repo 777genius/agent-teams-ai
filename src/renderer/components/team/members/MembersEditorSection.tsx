@@ -7,6 +7,7 @@ import { Label } from '@renderer/components/ui/label';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
+import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -28,7 +29,7 @@ import {
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
 function membersToJsonText(drafts: MemberDraft[]): string {
   const arr = drafts
@@ -134,6 +135,7 @@ export interface MembersEditorSectionProps {
   inheritedEffort?: EffortLevel;
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
+  runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
@@ -184,6 +186,7 @@ export const MembersEditorSection = ({
   inheritedEffort,
   limitContext = false,
   onLimitContextChange,
+  runtimeProviderStatusById,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
   modelLockReason,
@@ -270,19 +273,41 @@ export const MembersEditorSection = ({
     emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, workflowChips } : c)));
   };
 
+  const getCompatibleMemberEffort = (
+    providerId: TeamProviderId,
+    model: string | undefined,
+    effort: EffortLevel | undefined
+  ): EffortLevel | undefined => {
+    if (!effort) {
+      return undefined;
+    }
+    const nextEffort = getAvailableTeamEffortValue({
+      providerId,
+      model,
+      limitContext: providerId === 'anthropic' ? limitContext : false,
+      providerStatus: runtimeProviderStatusById?.get(providerId) ?? null,
+      value: effort,
+    });
+    return isTeamEffortLevel(nextEffort) ? nextEffort : undefined;
+  };
+
   const updateMemberProvider = (memberId: string, providerId: TeamProviderId): void => {
     emitMembersChange(
       members.map((c) =>
         c.id === memberId
           ? (() => {
-              const previousProviderId = c.providerId ?? inheritedProviderId;
+              const previousProviderId = c.providerId ?? inheritedProviderId ?? defaultProviderId;
               const providerChanged = previousProviderId !== providerId;
+              const nextModel = providerChanged ? '' : c.model;
+              const nextEffort = providerChanged
+                ? undefined
+                : getCompatibleMemberEffort(providerId, nextModel, c.effort);
               return {
                 ...c,
                 providerId,
                 providerBackendId: migrateProviderBackendId(providerId, c.providerBackendId),
-                model: providerChanged ? '' : c.model,
-                effort: providerChanged ? undefined : c.effort,
+                model: nextModel,
+                effort: nextEffort,
                 fastMode: providerChanged ? undefined : c.fastMode,
               };
             })()
@@ -292,7 +317,21 @@ export const MembersEditorSection = ({
   };
 
   const updateMemberModel = (memberId: string, model: string): void => {
-    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, model } : c)));
+    emitMembersChange(
+      members.map((c) =>
+        c.id === memberId
+          ? {
+              ...c,
+              model,
+              effort: getCompatibleMemberEffort(
+                c.providerId ?? inheritedProviderId ?? defaultProviderId,
+                model,
+                c.effort
+              ),
+            }
+          : c
+      )
+    );
   };
 
   const updateMemberEffort = (memberId: string, effort: string): void => {

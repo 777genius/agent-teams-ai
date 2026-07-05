@@ -67,18 +67,22 @@ vi.mock('./MemberDraftRow', () => ({
     onWorktreeIsolationChange,
     onRemove,
     onRestore,
+    onModelChange,
     agentTeamsMcpLocked,
   }: {
     member: {
       id: string;
       name: string;
       isolation?: 'worktree';
+      model?: string;
+      effort?: string;
       mcpPolicy?: { mode?: string };
       removedAt?: number | string | null;
     };
     onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
     onRemove?: (id: string) => void;
     onRestore?: (id: string) => void;
+    onModelChange?: (id: string, model: string) => void;
     agentTeamsMcpLocked?: boolean;
   }) =>
     React.createElement(
@@ -114,6 +118,17 @@ vi.mock('./MemberDraftRow', () => ({
           onClick: () => onRestore?.(member.id),
         },
         'restore'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': `model-${member.name}`,
+          'data-model': member.model ?? '',
+          'data-effort': member.effort ?? '',
+          onClick: () => onModelChange?.(member.id, 'claude-haiku-4-5-20251001'),
+        },
+        'select haiku'
       )
     ),
 }));
@@ -122,6 +137,7 @@ import { MembersEditorSection } from './MembersEditorSection';
 import { createMemberDraft } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 const mountedRoots: ReturnType<typeof createRoot>[] = [];
 
@@ -134,6 +150,10 @@ function renderMembersEditor(props: {
   teammateWorktreeDefault?: boolean;
   onChange?: (members: MemberDraft[]) => void;
   softDeleteMembers?: boolean;
+  inheritedProviderId?: TeamProviderId;
+  inheritedEffort?: React.ComponentProps<typeof MembersEditorSection>['inheritedEffort'];
+  limitContext?: boolean;
+  runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus>;
 }): {
   host: HTMLDivElement;
   onChange: ReturnType<typeof vi.fn>;
@@ -153,6 +173,10 @@ function renderMembersEditor(props: {
         showWorktreeIsolationControls
         teammateWorktreeDefault={props.teammateWorktreeDefault}
         softDeleteMembers={props.softDeleteMembers}
+        inheritedProviderId={props.inheritedProviderId}
+        inheritedEffort={props.inheritedEffort}
+        limitContext={props.limitContext}
+        runtimeProviderStatusById={props.runtimeProviderStatusById}
         draftKeyPrefix="worktree-test"
       />
     );
@@ -216,6 +240,36 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+describe('MembersEditorSection runtime model selection', () => {
+  it('clears stale teammate effort immediately when selecting a model without effort support', () => {
+    const { host, onChange } = renderMembersEditor({
+      inheritedProviderId: 'anthropic',
+      inheritedEffort: 'medium',
+      members: [
+        createMemberDraft({
+          id: 'alice',
+          name: 'alice',
+          providerId: 'anthropic',
+          model: 'claude-sonnet-5',
+          effort: 'medium',
+        }),
+      ],
+      runtimeProviderStatusById: new Map([['anthropic', anthropicStatusWithHaikuWithoutEffort()]]),
+    });
+
+    act(() => {
+      host.querySelector<HTMLButtonElement>('[data-testid="model-alice"]')?.click();
+    });
+
+    const nextMembers = onChange.mock.calls[0]?.[0] as MemberDraft[];
+    expect(nextMembers[0]).toMatchObject({
+      id: 'alice',
+      model: 'claude-haiku-4-5-20251001',
+      effort: undefined,
+    });
+  });
+});
+
 describe('MembersEditorSection worktree master checkbox', () => {
   it('renders indeterminate when only some active members use worktrees', () => {
     const { host } = renderMembersEditor({
@@ -263,6 +317,67 @@ describe('MembersEditorSection worktree master checkbox', () => {
     expect(nextMembers.map((member) => member.isolation)).toEqual(['worktree', 'worktree']);
   });
 });
+
+function anthropicStatusWithHaikuWithoutEffort(): CliProviderStatus {
+  return {
+    providerId: 'anthropic',
+    displayName: 'Anthropic',
+    supported: true,
+    authenticated: true,
+    authMethod: 'api_key',
+    verificationState: 'verified',
+    models: ['claude-haiku-4-5-20251001'],
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'anthropic',
+      source: 'anthropic-models-api',
+      status: 'ready',
+      fetchedAt: '2026-07-04T00:00:00.000Z',
+      staleAt: '2026-07-04T00:10:00.000Z',
+      defaultModelId: 'claude-haiku-4-5-20251001',
+      defaultLaunchModel: 'claude-haiku-4-5-20251001',
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'healthy',
+      },
+      models: [
+        {
+          id: 'claude-haiku-4-5-20251001',
+          launchModel: 'claude-haiku-4-5-20251001',
+          displayName: 'Haiku 4.5',
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'anthropic-models-api',
+        },
+      ],
+    },
+    modelAvailability: [],
+    runtimeCapabilities: {
+      modelCatalog: { dynamic: true, source: 'anthropic-models-api' },
+      reasoningEffort: {
+        supported: true,
+        values: [],
+        configPassthrough: false,
+      },
+    },
+    canLoginFromUi: true,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: {
+        plugins: { status: 'supported', ownership: 'shared', reason: null },
+        mcp: { status: 'supported', ownership: 'shared', reason: null },
+        skills: { status: 'supported', ownership: 'shared', reason: null },
+        apiKeys: { status: 'supported', ownership: 'shared', reason: null },
+      },
+    },
+  } as CliProviderStatus;
+}
 
 describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
   it('renders to the right of the worktree master control', () => {

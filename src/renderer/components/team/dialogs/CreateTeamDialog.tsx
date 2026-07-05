@@ -2556,6 +2556,7 @@ export const CreateTeamDialog = ({
               model={selectedModel}
               effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
               limitContext={effectiveAnthropicRuntimeLimitContext}
+              runtimeProviderStatusById={runtimeProviderStatusById}
               leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
