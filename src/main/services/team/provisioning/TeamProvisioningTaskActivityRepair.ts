@@ -130,10 +130,7 @@ export interface RepairStaleTaskActivityIntervalsBeforeSnapshotPorts {
   getTrackedRunId(teamName: string): string | null;
   hasRun(runId: string): boolean;
   readRepairLaunchSnapshot(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-  repairOnce(
-    teamName: string,
-    launchSnapshot: PersistedTeamLaunchSnapshot | null
-  ): boolean;
+  repairOnce(teamName: string, launchSnapshot: PersistedTeamLaunchSnapshot | null): boolean;
 }
 
 export async function repairStaleTaskActivityIntervalsBeforeSnapshot(
@@ -206,7 +203,7 @@ export function buildLaunchFailureArtifactPackInput<TRun extends LaunchFailureAr
     getRuntimeAdapterTraceLines(runId: string): string[] | undefined;
   }
 ): TeamLaunchFailureArtifactPackInput {
-  const request = run.request as Partial<TeamCreateRequest> | undefined;
+  const request = run.request;
   return {
     teamName: run.teamName,
     runId: run.runId,
@@ -242,9 +239,7 @@ export interface LaunchFailureArtifactPackWriterPort {
   write(input: TeamLaunchFailureArtifactPackInput): Promise<unknown>;
 }
 
-export function writeLaunchFailureArtifactPackBestEffort<
-  TRun extends LaunchFailureArtifactPackRun,
->(
+export function writeLaunchFailureArtifactPackBestEffort<TRun extends LaunchFailureArtifactPackRun>(
   run: TRun,
   options: {
     reason: string;

@@ -137,7 +137,7 @@ export async function injectPostCompactReminder<
       const configTeammates = config.members
         .filter((m) => !ports.isLeadMember(m) && m?.name)
         .map((m) => ({
-          name: m.name as string,
+          name: m.name!,
           role: m.role ?? undefined,
         }));
       // When config.members only has the lead (pre-created config without
@@ -280,7 +280,7 @@ export async function injectGeminiPostLaunchHydration<
       const configTeammates = config.members
         .filter((m) => !ports.isLeadMember(m) && m?.name)
         .map((m) => ({
-          name: m.name as string,
+          name: m.name!,
           role: m.role ?? undefined,
         }));
       if (configTeammates.length > 0) {

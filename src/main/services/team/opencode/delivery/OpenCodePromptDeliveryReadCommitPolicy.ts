@@ -621,7 +621,7 @@ export function isOpenCodeNoAssistantTerminalDeliveryFailure(
   );
 }
 
-export type OpenCodePromptDeliveryRequeuePlan = {
+export interface OpenCodePromptDeliveryRequeuePlan {
   markInput: {
     id: string;
     status: 'retry_scheduled';
@@ -631,7 +631,7 @@ export type OpenCodePromptDeliveryRequeuePlan = {
   };
   logEvent: string;
   logContext: Record<string, unknown>;
-};
+}
 
 export function buildOpenCodeNoAssistantTerminalDeliveryRequeuePlan(input: {
   ledgerRecord: OpenCodePromptDeliveryLedgerRecord;

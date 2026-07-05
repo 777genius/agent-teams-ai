@@ -140,7 +140,9 @@ export class TeamProvisioningMemberMcpLaunchConfigProvisioner<
   async removeRunMemberMcpConfigFiles(run: TRun): Promise<void> {
     const paths = run.memberMcpConfigPaths?.splice(0) ?? [];
     await Promise.all(
-      paths.map((configPath) => this.ports.mcpConfigBuilder.removeConfigFile(configPath))
+      paths.map((configPath) =>
+        Promise.resolve(this.ports.mcpConfigBuilder.removeConfigFile(configPath))
+      )
     );
   }
 

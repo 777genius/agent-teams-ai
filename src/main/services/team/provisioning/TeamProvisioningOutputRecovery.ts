@@ -6,14 +6,14 @@ import type { TeamProvisioningProgress, TeamProvisioningState } from '@shared/ty
 
 export type TeamProvisioningOutputRecoverySource = AuthWarningSource;
 
-type DataStreamLike = {
+interface DataStreamLike {
   on(event: 'data', listener: (chunk: Buffer) => void): unknown;
-};
+}
 
-type ProcessLike = {
+interface ProcessLike {
   stdout?: DataStreamLike | null;
   stderr?: DataStreamLike | null;
-};
+}
 
 export interface TeamProvisioningOutputRecoveryRun {
   runId: string;

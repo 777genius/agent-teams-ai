@@ -27,47 +27,45 @@ export type OpenCodeMemberMessageDeliveryFactoryPorts = Omit<
   createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
 };
 
-type DeliveryPorts = OpenCodeMemberMessageDeliveryFactoryPorts;
-
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
-  getOpenCodeRuntimeMessageAdapter: DeliveryPorts['getOpenCodeRuntimeMessageAdapter'];
-  readOpenCodeMemberDirectory: DeliveryPorts['readOpenCodeMemberDirectory'];
-  resolveOpenCodeMemberIdentityFromDirectory: DeliveryPorts['resolveOpenCodeMemberIdentityFromDirectory'];
-  stoppingSecondaryRuntimeTeams: DeliveryPorts['stoppingSecondaryRuntimeTeams'];
-  readPersistedTeamProjectPath: DeliveryPorts['readPersistedTeamProjectPath'];
+  getOpenCodeRuntimeMessageAdapter: OpenCodeMemberMessageDeliveryFactoryPorts['getOpenCodeRuntimeMessageAdapter'];
+  readOpenCodeMemberDirectory: OpenCodeMemberMessageDeliveryFactoryPorts['readOpenCodeMemberDirectory'];
+  resolveOpenCodeMemberIdentityFromDirectory: OpenCodeMemberMessageDeliveryFactoryPorts['resolveOpenCodeMemberIdentityFromDirectory'];
+  stoppingSecondaryRuntimeTeams: OpenCodeMemberMessageDeliveryFactoryPorts['stoppingSecondaryRuntimeTeams'];
+  readPersistedTeamProjectPath: OpenCodeMemberMessageDeliveryFactoryPorts['readPersistedTeamProjectPath'];
   runTracking: {
-    resolveDeliverableTrackedRuntimeRunId: DeliveryPorts['resolveDeliverableTrackedRuntimeRunId'];
+    resolveDeliverableTrackedRuntimeRunId: OpenCodeMemberMessageDeliveryFactoryPorts['resolveDeliverableTrackedRuntimeRunId'];
   };
-  runs: DeliveryPorts['runs'];
-  getCurrentOpenCodeRuntimeRunId: DeliveryPorts['getCurrentOpenCodeRuntimeRunId'];
+  runs: OpenCodeMemberMessageDeliveryFactoryPorts['runs'];
+  getCurrentOpenCodeRuntimeRunId: OpenCodeMemberMessageDeliveryFactoryPorts['getCurrentOpenCodeRuntimeRunId'];
   openCodeRuntimeRecoveryIdentity: {
-    resolveCurrentOpenCodeRuntimeRunId: DeliveryPorts['resolveCurrentOpenCodeRuntimeRunId'];
-    isOpenCodeRuntimeLaneIndexActive: DeliveryPorts['isOpenCodeRuntimeLaneIndexActive'];
+    resolveCurrentOpenCodeRuntimeRunId: OpenCodeMemberMessageDeliveryFactoryPorts['resolveCurrentOpenCodeRuntimeRunId'];
+    isOpenCodeRuntimeLaneIndexActive: OpenCodeMemberMessageDeliveryFactoryPorts['isOpenCodeRuntimeLaneIndexActive'];
   };
-  tryRecoverOpenCodeRuntimeLaneBeforeDelivery: DeliveryPorts['tryRecoverOpenCodeRuntimeLaneBeforeDelivery'];
-  tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: DeliveryPorts['tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery'];
-  deleteSecondaryRuntimeRun: DeliveryPorts['deleteSecondaryRuntimeRun'];
-  cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: DeliveryPorts['cleanupStoppedTeamOpenCodeRuntimeLanesInBackground'];
+  tryRecoverOpenCodeRuntimeLaneBeforeDelivery: OpenCodeMemberMessageDeliveryFactoryPorts['tryRecoverOpenCodeRuntimeLaneBeforeDelivery'];
+  tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: OpenCodeMemberMessageDeliveryFactoryPorts['tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery'];
+  deleteSecondaryRuntimeRun: OpenCodeMemberMessageDeliveryFactoryPorts['deleteSecondaryRuntimeRun'];
+  cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: OpenCodeMemberMessageDeliveryFactoryPorts['cleanupStoppedTeamOpenCodeRuntimeLanesInBackground'];
   createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
   providerRuntime: {
-    resolveControlApiBaseUrl: DeliveryPorts['resolveControlApiBaseUrl'];
+    resolveControlApiBaseUrl: OpenCodeMemberMessageDeliveryFactoryPorts['resolveControlApiBaseUrl'];
   };
-  sendOpenCodeMemberMessageToRuntimeSerialized: DeliveryPorts['sendOpenCodeMemberMessageToRuntimeSerialized'];
-  rememberOpenCodeRuntimePidFromBridge: DeliveryPorts['rememberOpenCodeRuntimePidFromBridge'];
-  maybeSyncOpenCodeRuntimePermissionsAfterDelivery: DeliveryPorts['maybeSyncOpenCodeRuntimePermissionsAfterDelivery'];
-  isLegacyOpenCodeMemberWorkSyncReadCommitAllowed: DeliveryPorts['isLegacyOpenCodeMemberWorkSyncReadCommitAllowed'];
-  createOpenCodePromptDeliveryLedger: DeliveryPorts['createOpenCodePromptDeliveryLedger'];
-  openCodeVisibleReplyProofService: DeliveryPorts['openCodeVisibleReplyProofService'];
-  openCodePromptDeliveryWatchdogScheduler: DeliveryPorts['openCodePromptDeliveryWatchdogScheduler'];
-  openCodePromptDeliveryFollowUpPolicy: DeliveryPorts['openCodePromptDeliveryFollowUpPolicy'];
-  isOpenCodeDeliveryResponseReadCommitAllowed: DeliveryPorts['isOpenCodeDeliveryResponseReadCommitAllowed'];
-  getOpenCodeDeliveryPendingReason: DeliveryPorts['getOpenCodeDeliveryPendingReason'];
-  markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: DeliveryPorts['markOpenCodeAcceptedDeliveryMissingPromptProofForRetry'];
-  scheduleOpenCodePromptDeliveryWatchdog: DeliveryPorts['scheduleOpenCodePromptDeliveryWatchdog'];
-  logOpenCodePromptDeliveryEvent: DeliveryPorts['logOpenCodePromptDeliveryEvent'];
-  requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: DeliveryPorts['requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded'];
-  emitOpenCodePromptDeliveryTaskLogChange: DeliveryPorts['emitOpenCodePromptDeliveryTaskLogChange'];
-  observeOpenCodeDirectUserDeliveryInlineIfNeeded: DeliveryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
+  sendOpenCodeMemberMessageToRuntimeSerialized: OpenCodeMemberMessageDeliveryFactoryPorts['sendOpenCodeMemberMessageToRuntimeSerialized'];
+  rememberOpenCodeRuntimePidFromBridge: OpenCodeMemberMessageDeliveryFactoryPorts['rememberOpenCodeRuntimePidFromBridge'];
+  maybeSyncOpenCodeRuntimePermissionsAfterDelivery: OpenCodeMemberMessageDeliveryFactoryPorts['maybeSyncOpenCodeRuntimePermissionsAfterDelivery'];
+  isLegacyOpenCodeMemberWorkSyncReadCommitAllowed: OpenCodeMemberMessageDeliveryFactoryPorts['isLegacyOpenCodeMemberWorkSyncReadCommitAllowed'];
+  createOpenCodePromptDeliveryLedger: OpenCodeMemberMessageDeliveryFactoryPorts['createOpenCodePromptDeliveryLedger'];
+  openCodeVisibleReplyProofService: OpenCodeMemberMessageDeliveryFactoryPorts['openCodeVisibleReplyProofService'];
+  openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberMessageDeliveryFactoryPorts['openCodePromptDeliveryWatchdogScheduler'];
+  openCodePromptDeliveryFollowUpPolicy: OpenCodeMemberMessageDeliveryFactoryPorts['openCodePromptDeliveryFollowUpPolicy'];
+  isOpenCodeDeliveryResponseReadCommitAllowed: OpenCodeMemberMessageDeliveryFactoryPorts['isOpenCodeDeliveryResponseReadCommitAllowed'];
+  getOpenCodeDeliveryPendingReason: OpenCodeMemberMessageDeliveryFactoryPorts['getOpenCodeDeliveryPendingReason'];
+  markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: OpenCodeMemberMessageDeliveryFactoryPorts['markOpenCodeAcceptedDeliveryMissingPromptProofForRetry'];
+  scheduleOpenCodePromptDeliveryWatchdog: OpenCodeMemberMessageDeliveryFactoryPorts['scheduleOpenCodePromptDeliveryWatchdog'];
+  logOpenCodePromptDeliveryEvent: OpenCodeMemberMessageDeliveryFactoryPorts['logOpenCodePromptDeliveryEvent'];
+  requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded'];
+  emitOpenCodePromptDeliveryTaskLogChange: OpenCodeMemberMessageDeliveryFactoryPorts['emitOpenCodePromptDeliveryTaskLogChange'];
+  observeOpenCodeDirectUserDeliveryInlineIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
 }
 
 export function createOpenCodeRuntimeBootstrapEvidencePorts(
