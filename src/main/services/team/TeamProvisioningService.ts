@@ -1639,8 +1639,7 @@ export class TeamProvisioningService {
         runs: this.runs as TeamProvisioningMemberLifecycleHost['runs'],
         runtimeAdapterRunByTeam: this
           .runtimeAdapterRunByTeam as TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam'],
-        failedOpenCodeSecondaryRetryInFlightByTeam: this
-          .failedOpenCodeSecondaryRetryInFlightByTeam as TeamProvisioningMemberLifecycleHost['failedOpenCodeSecondaryRetryInFlightByTeam'],
+        failedOpenCodeSecondaryRetryInFlightByTeam: this.failedOpenCodeSecondaryRetryInFlightByTeam,
         memberLifecycleOperations: this.memberLifecycleOperations,
       },
       stores: {
