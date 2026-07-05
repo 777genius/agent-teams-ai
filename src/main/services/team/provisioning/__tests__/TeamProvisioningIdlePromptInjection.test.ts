@@ -19,7 +19,7 @@ type TestPorts = TeamProvisioningIdlePromptInjectionPorts<TestRun>;
 function makeRequest(): TeamCreateRequest {
   return {
     teamName: 'team-a',
-    cwd: '/tmp/team-a',
+    cwd: '/repo/team-a',
     members: [
       { name: 'lead', role: 'Lead' },
       { name: 'worker', role: 'Engineer' },

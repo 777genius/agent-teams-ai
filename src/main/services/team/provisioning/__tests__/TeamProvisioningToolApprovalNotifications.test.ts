@@ -16,11 +16,10 @@ import {
 import type { ToolApprovalRequest } from '@shared/types';
 
 class FakeNotification implements TeamProvisioningToolApprovalNotification {
-  static instances: FakeNotification[] = [];
-  static supported = true;
+  static readonly instances: FakeNotification[] = [];
 
   static isSupported(): boolean {
-    return FakeNotification.supported;
+    return true;
   }
 
   readonly clickListeners: Array<() => void> = [];
@@ -71,8 +70,7 @@ class FakeNotification implements TeamProvisioningToolApprovalNotification {
 
 describe('TeamProvisioningToolApprovalNotifications', () => {
   beforeEach(() => {
-    FakeNotification.instances = [];
-    FakeNotification.supported = true;
+    FakeNotification.instances.length = 0;
   });
 
   it('does not create a notification when the main window is focused', () => {

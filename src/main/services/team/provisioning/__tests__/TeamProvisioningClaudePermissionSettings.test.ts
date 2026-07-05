@@ -8,8 +8,8 @@ import {
 
 interface FakePortsOptions {
   raw?: string;
-  readError?: unknown;
-  writeError?: unknown;
+  readError?: Error;
+  writeError?: Error;
 }
 
 function createPorts(options: FakePortsOptions = {}): ClaudePermissionSettingsFilePorts {

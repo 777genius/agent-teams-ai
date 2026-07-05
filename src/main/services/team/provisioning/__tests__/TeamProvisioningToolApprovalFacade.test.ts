@@ -31,11 +31,10 @@ import type {
 import type { ParsedPermissionRequest } from '@shared/utils/inboxNoise';
 
 class FakeNotification implements TeamProvisioningToolApprovalNotification {
-  static instances: FakeNotification[] = [];
-  static supported = true;
+  static readonly instances: FakeNotification[] = [];
 
   static isSupported(): boolean {
-    return FakeNotification.supported;
+    return true;
   }
 
   readonly clickListeners: Array<() => void> = [];
@@ -76,8 +75,7 @@ class FakeNotification implements TeamProvisioningToolApprovalNotification {
 
 describe('TeamProvisioningToolApprovalFacade', () => {
   beforeEach(() => {
-    FakeNotification.instances = [];
-    FakeNotification.supported = true;
+    FakeNotification.instances.length = 0;
   });
 
   afterEach(() => {

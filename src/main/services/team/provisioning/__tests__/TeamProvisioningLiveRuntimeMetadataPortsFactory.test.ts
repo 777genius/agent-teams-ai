@@ -102,7 +102,7 @@ describe('TeamProvisioningLiveRuntimeMetadataPortsFactory', () => {
           name: 'Worker',
           providerId: 'anthropic',
           agentId: 'agent-worker',
-          cwd: '/tmp/team-alpha',
+          cwd: '/repo/team-alpha',
         },
       ]),
     });
@@ -120,12 +120,12 @@ describe('TeamProvisioningLiveRuntimeMetadataPortsFactory', () => {
     expect(firstResult.get('Worker')).not.toBe(secondResult.get('Worker'));
     expect(firstResult.get('Worker')).toMatchObject({
       agentId: 'agent-worker',
-      cwd: '/tmp/team-alpha',
+      cwd: '/repo/team-alpha',
       providerId: 'anthropic',
     });
     expect(secondResult.get('Worker')).toMatchObject({
       agentId: 'agent-worker',
-      cwd: '/tmp/team-alpha',
+      cwd: '/repo/team-alpha',
       providerId: 'anthropic',
     });
     expect(inFlightByTeam.has('alpha')).toBe(false);

@@ -65,7 +65,7 @@ describe('TeamProvisioningEnvRuntimePorts', () => {
 
   it('builds env builder ports from current runtime provider getters', async () => {
     let environmentProvider: RuntimeTurnSettledEnvironmentProvider | null = vi.fn(async () => ({
-      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/tmp/first',
+      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/spool/first',
     }));
     const deps = createDeps({
       getRuntimeTurnSettledEnvironmentProvider: vi.fn(() => environmentProvider),
@@ -74,15 +74,15 @@ describe('TeamProvisioningEnvRuntimePorts', () => {
     const builderPorts = runtimePorts.getProvisioningEnvBuilderPorts();
 
     await expect(builderPorts.buildRuntimeTurnSettledEnvironment('codex')).resolves.toEqual({
-      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/tmp/first',
+      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/spool/first',
     });
 
     environmentProvider = vi.fn(async () => ({
-      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/tmp/second',
+      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/spool/second',
     }));
 
     await expect(builderPorts.buildRuntimeTurnSettledEnvironment('codex')).resolves.toEqual({
-      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/tmp/second',
+      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/spool/second',
     });
   });
 

@@ -56,7 +56,7 @@ function createEnvRuntimePorts(): TeamProvisioningEnvRuntimePorts {
       providerArgsByProvider: new Map<TeamProviderId, string[]>([
         ['codex', ['--provider', 'codex']],
       ]),
-      envPatch: { CODEX_HOME: '/tmp/codex' },
+      envPatch: { CODEX_HOME: '/repo/codex-home' },
       usesAnthropicApiKeyHelper: false,
     })),
     resolveControlApiBaseUrl: vi.fn(async () => 'http://127.0.0.1:4567'),
@@ -103,7 +103,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       '/bin/claude',
       '/repo',
       env,
-      '/tmp/mcp.json',
+      '/repo/mcp.json',
       options
     );
     await facade.spawnProbe('/bin/claude', ['--version'], '/repo', env, 1000);
@@ -128,7 +128,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       '/bin/claude',
       '/repo',
       env,
-      '/tmp/mcp.json',
+      '/repo/mcp.json',
       options
     );
     expect(runtimes[3].spawnProbe).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       )
     ).resolves.toMatchObject({
       args: ['--provider', 'codex'],
-      envPatch: { CODEX_HOME: '/tmp/codex' },
+      envPatch: { CODEX_HOME: '/repo/codex-home' },
     });
     await expect(facade.resolveControlApiBaseUrl()).resolves.toBe('http://127.0.0.1:4567');
 

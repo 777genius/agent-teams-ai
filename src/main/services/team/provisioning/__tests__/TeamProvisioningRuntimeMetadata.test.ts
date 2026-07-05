@@ -174,7 +174,9 @@ describe('TeamProvisioningRuntimeMetadata', () => {
   describe('mergeRuntimeDiagnostics', () => {
     it('merges, dedupes, and drops blanks', () => {
       expect(mergeRuntimeDiagnostics(['a'], ['b', 'a', '  '], 'c')).toEqual(['a', 'b', 'c']);
-      expect(mergeRuntimeDiagnostics(undefined, [], undefined)).toBeUndefined();
+      let previous: string[] | undefined;
+      let fallback: string | undefined;
+      expect(mergeRuntimeDiagnostics(previous, [], fallback)).toBeUndefined();
     });
   });
 });

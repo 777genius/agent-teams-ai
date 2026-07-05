@@ -1,5 +1,3 @@
-/* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
-
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -102,7 +100,10 @@ describe('TeamProvisioningTranscriptClaudeLogs', () => {
     let leadSessionId: string | undefined | null = 'session-1';
     const readLogLines = vi.fn(async () => [`read-${readLogLines.mock.calls.length}`]);
     const cache = new TeamProvisioningTranscriptClaudeLogsCache(
-      makeResolver(() => tempDir!, () => leadSessionId),
+      makeResolver(
+        () => tempDir!,
+        () => leadSessionId
+      ),
       readLogLines
     );
 

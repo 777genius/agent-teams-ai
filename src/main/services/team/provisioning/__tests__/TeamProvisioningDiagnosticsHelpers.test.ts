@@ -10,7 +10,7 @@ import type { TeamProvisioningSupportDiagnostic } from '@shared/types';
 describe('TeamProvisioningDiagnosticsHelpers', () => {
   describe('buildProvisioningTraceDetail', () => {
     it('returns undefined when no extras are present', () => {
-      expect(buildProvisioningTraceDetail(undefined)).toBeUndefined();
+      expect(buildProvisioningTraceDetail()).toBeUndefined();
       expect(buildProvisioningTraceDetail({})).toBeUndefined();
     });
 
@@ -53,7 +53,8 @@ describe('TeamProvisioningDiagnosticsHelpers', () => {
 
     it('tolerates undefined incoming', () => {
       const acc = [diag('a')];
-      pushUniqueSupportDiagnostics(acc, undefined);
+      let incoming: TeamProvisioningSupportDiagnostic[] | undefined;
+      pushUniqueSupportDiagnostics(acc, incoming);
       expect(acc.map((d) => d.id)).toEqual(['a']);
     });
   });
