@@ -8,6 +8,7 @@ import {
   isConfigRegistrationFailureReason,
   isLaunchCleanupBootstrapIncompleteFailureReason,
   isLaunchGraceWindowFailureReason,
+  isNativeAppManagedBootstrapCheckFailureReason,
   isNeverSpawnedDuringLaunchReason,
   isOpenCodeBridgeLaunchFailureReason,
   isProcessTableUnavailableFailureReason,
@@ -15,6 +16,7 @@ import {
   isRegisteredRuntimeMetadataFailureReason,
   stripProcessTableUnavailableDiagnosticSuffix,
 } from '@main/services/team/provisioning/TeamProvisioningLaunchFailurePolicy';
+import { extractBootstrapFailureReason } from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
 import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it } from 'vitest';
 
@@ -88,6 +90,10 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'Launch ended before teammate bootstrap completed. Runtime process was alive after bootstrap failure'
       )
     ).toBe(true);
+    const nativeBootstrapCheck =
+      '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>';
+    expect(isNativeAppManagedBootstrapCheckFailureReason(nativeBootstrapCheck)).toBe(true);
+    expect(extractBootstrapFailureReason(nativeBootstrapCheck)).toBe(null);
   });
 
   it('handles process-table unavailable reasons and suffixes conservatively', () => {
@@ -120,6 +126,11 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
     expect(
       isAutoClearableLaunchFailureReason(
         'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before submitted-confirmation timeout (3m). Last transport stage: bootstrap_submitted'
+      )
+    ).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(
+        '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>'
       )
     ).toBe(true);
     expect(

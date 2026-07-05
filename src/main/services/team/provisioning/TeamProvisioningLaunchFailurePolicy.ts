@@ -1,3 +1,4 @@
+import { isNativeAppManagedBootstrapCheckText } from '@shared/utils/teamInternalControlMessages';
 import { stripProcessTableUnavailableDiagnosticSuffix } from '@shared/utils/teamLaunchFailureReason';
 
 import { mentionsProcessTableUnavailable } from './TeamProvisioningLaunchDiagnostics';
@@ -55,6 +56,7 @@ function isBaseAutoClearableLaunchFailureReason(reason?: string): boolean {
     isBootstrapMcpResourceReadFailureReason(reason) ||
     isBootstrapCheckInTimeoutFailureReason(reason) ||
     isBootstrapInstructionPromptFailureReason(reason) ||
+    isNativeAppManagedBootstrapCheckFailureReason(reason) ||
     isLaunchCleanupBootstrapIncompleteFailureReason(reason)
   );
 }
@@ -87,6 +89,10 @@ export function isBootstrapCheckInTimeoutFailureReason(reason?: string): boolean
 
 export function isBootstrapInstructionPromptFailureReason(reason?: string): boolean {
   return typeof reason === 'string' && isBootstrapInstructionPrompt(reason);
+}
+
+export function isNativeAppManagedBootstrapCheckFailureReason(reason?: string): boolean {
+  return isNativeAppManagedBootstrapCheckText(reason);
 }
 
 export function isLaunchCleanupBootstrapIncompleteFailureReason(reason?: string): boolean {

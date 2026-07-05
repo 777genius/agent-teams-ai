@@ -22998,6 +22998,101 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('heals native app managed bootstrap check launch-state failures from runtime proof', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-native-bootstrap-check-proof-heals';
+    const leadSessionId = 'lead-session';
+    const projectPath = '/Users/test/proj';
+    const acceptedAt = new Date(Date.now() - 90_000).toISOString();
+    const proofAt = new Date(Date.now() - 60_000).toISOString();
+    const proofToken = 'proof-token-native-alice';
+    const bootstrapRunId = 'run-native-bootstrap-check';
+    const contextHash = 'c'.repeat(64);
+    const briefingHash = 'd'.repeat(64);
+    const runtimePid = 15327;
+    const runtimeEventsPath = path.join(tempTeamsBase, teamName, 'runtime', 'alice.runtime.jsonl');
+    const nativeBootstrapCheckReason =
+      '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>';
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
+    const configPath = path.join(tempTeamsBase, teamName, 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      members: Array<Record<string, unknown>>;
+    };
+    config.members = config.members.map((member) =>
+      member.name === 'alice'
+        ? {
+            ...member,
+            agentId: `alice@${teamName}`,
+            backendType: 'process',
+            tmuxPaneId: `process:${runtimePid}`,
+            runtimePid,
+            bootstrapExpectedAfter: acceptedAt,
+            bootstrapProofToken: proofToken,
+            bootstrapRunId,
+            bootstrapProofMode: 'native_app_managed_context',
+            bootstrapContextHash: contextHash,
+            bootstrapBriefingHash: briefingHash,
+            bootstrapRuntimeEventsPath: runtimeEventsPath,
+          }
+        : member
+    );
+    fs.writeFileSync(configPath, JSON.stringify(config), 'utf8');
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName,
+      leadSessionId,
+      launchPhase: 'finished',
+      expectedMembers: ['alice'],
+      members: {
+        alice: {
+          name: 'alice',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          runtimePid,
+          runtimeRunId: bootstrapRunId,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: nativeBootstrapCheckReason,
+          runtimeDiagnostic: nativeBootstrapCheckReason,
+          runtimeDiagnosticSeverity: 'error',
+          firstSpawnAcceptedAt: acceptedAt,
+          lastEvaluatedAt: acceptedAt,
+        },
+      },
+    });
+    fs.mkdirSync(path.dirname(runtimeEventsPath), { recursive: true });
+    fs.writeFileSync(
+      runtimeEventsPath,
+      `${JSON.stringify({
+        version: 1,
+        type: 'bootstrap_confirmed',
+        timestamp: proofAt,
+        pid: runtimePid,
+        teamName,
+        agentName: 'alice',
+        agentId: `alice@${teamName}`,
+        runId: bootstrapRunId,
+        source: 'native_app_managed_bootstrap_private_turn',
+        bootstrapProofToken: proofToken,
+        contextHash,
+        briefingHash,
+      })}\n`,
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await privateHarness(svc).applyBootstrapTranscriptEvidenceOverlay(snapshot);
+
+    expect(result?.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+    });
+  });
+
   it('heals cleanup-finalized launch failures when bootstrap-state confirms an Anthropic primary member', async () => {
     allowConsoleLogs();
     const teamName = 'zz-unit-cleanup-finalized-bootstrap-state-heals';
@@ -23084,6 +23179,93 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.jack?.hardFailureReason).toBeUndefined();
     expect(result.statuses.jack?.runtimeDiagnostic).toBeUndefined();
     expect(result.statuses.jack?.runtimeDiagnosticSeverity).toBeUndefined();
+  });
+
+  it('heals native app managed bootstrap check failures when bootstrap-state confirms the member', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-native-bootstrap-check-bootstrap-state-heals';
+    const leadSessionId = 'lead-session';
+    const projectPath = '/Users/test/proj';
+    const acceptedAt = new Date(Date.now() - 90_000).toISOString();
+    const bootstrapAt = new Date(Date.now() - 60_000).toISOString();
+    const cleanupAt = new Date(Date.now() - 30_000).toISOString();
+    const runtimePid = 15_327;
+    const nativeBootstrapCheckReason =
+      '<agent_teams_native_app_managed_bootstrap_check> startup context loaded </agent_teams_native_app_managed_bootstrap_check>';
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
+    writeLaunchState(
+      teamName,
+      leadSessionId,
+      {
+        alice: {
+          providerId: 'codex',
+          model: 'gpt-5.5',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'anthropic',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          runtimePid,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: nativeBootstrapCheckReason,
+          runtimeDiagnostic: nativeBootstrapCheckReason,
+          runtimeDiagnosticSeverity: 'error',
+          firstSpawnAcceptedAt: acceptedAt,
+          lastEvaluatedAt: cleanupAt,
+        },
+      },
+      { launchPhase: 'finished', updatedAt: cleanupAt }
+    );
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'alice',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse(acceptedAt),
+          lastObservedAt: Date.parse(bootstrapAt),
+        },
+      ],
+      bootstrapAt
+    );
+
+    const svc = new TeamProvisioningService();
+    privateHarness(svc).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'alice',
+            {
+              alive: false,
+              backendType: 'process',
+              providerId: 'codex',
+              livenessKind: 'stale_metadata',
+              pidSource: 'persisted_metadata',
+              runtimeDiagnostic: 'persisted runtime pid is not alive',
+              runtimeDiagnosticSeverity: 'warning',
+              metricsPid: runtimePid,
+              model: 'gpt-5.5',
+            },
+          ],
+        ])
+    );
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      error: undefined,
+    });
+    expect(result.statuses.alice?.hardFailureReason).toBeUndefined();
+    expect(result.statuses.alice?.runtimeDiagnostic).toBeUndefined();
+    expect(result.statuses.alice?.runtimeDiagnosticSeverity).toBeUndefined();
   });
 
   it('heals provisioned-but-not-alive launch failures when bootstrap-state confirms the member', async () => {

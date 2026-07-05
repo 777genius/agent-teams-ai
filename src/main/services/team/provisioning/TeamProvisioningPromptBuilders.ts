@@ -2,6 +2,7 @@ import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { CROSS_TEAM_PREFIX_TAG } from '@shared/constants/crossTeam';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
+import { isNativeAppManagedBootstrapCheckText } from '@shared/utils/teamInternalControlMessages';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidence,
   isBootstrapConfirmedProvisionedButNotAliveFailure,
@@ -196,6 +197,7 @@ export function extractBootstrapFailureReason(text: string): string | null {
   const trimmed = normalizeLaunchFailureReasonText(text) ?? text.trim();
   if (!trimmed) return null;
   if (isBootstrapInstructionPrompt(trimmed)) return null;
+  if (isNativeAppManagedBootstrapCheckText(trimmed)) return null;
   const lower = trimmed.toLowerCase();
   const looksLikeBootstrapFailure =
     lower.includes('bootstrap failed') ||
