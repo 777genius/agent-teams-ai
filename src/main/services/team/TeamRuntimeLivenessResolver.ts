@@ -8,8 +8,6 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
-export { isStrongRuntimeEvidence } from './runtime-projection';
-
 export interface ResolveTeamMemberRuntimeLivenessInput {
   teamName: string;
   memberName: string;
