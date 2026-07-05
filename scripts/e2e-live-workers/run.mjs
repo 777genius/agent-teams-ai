@@ -1657,7 +1657,12 @@ function sleep(ms) {
 
 async function cleanup(root) {
   if (keepArtifacts) return;
-  await rm(root, { recursive: true, force: true });
+  await rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 250,
+  });
 }
 
 function hasCommand(command) {
