@@ -168,6 +168,18 @@ function normalizeSystemPrompt(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+function uniqueNonEmptyStrings(values: readonly string[]): readonly string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function codexExtraWritableRootsFromEnv(
+  sourceEnv: Readonly<Record<string, string | undefined>> | undefined,
+): readonly string[] {
+  const raw = sourceEnv?.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS;
+  if (!raw) return [];
+  return uniqueNonEmptyStrings(raw.split(/[,\n:]/u));
+}
+
 function mergeDeveloperInstructions(input: {
   readonly base: string | null;
   readonly systemPrompt?: string | undefined;
@@ -1195,11 +1207,14 @@ class CodexAppServerClient {
     const response = await this.send(
       "thread/start",
       {
+        runtimeWorkspaceRoots: uniqueNonEmptyStrings([
+          input.workspacePath,
+          ...codexExtraWritableRootsFromEnv(this.options.sourceEnv),
+        ]),
         model: input.model,
         modelProvider: null,
         serviceTier: input.serviceTier ?? null,
         cwd: input.workspacePath,
-        runtimeWorkspaceRoots: [input.workspacePath],
         approvalPolicy: this.approvalPolicyForThread(),
         approvalsReviewer: null,
         sandbox: input.sandboxMode ?? "read-only",
@@ -1434,7 +1449,10 @@ class CodexAppServerClient {
     if (sandboxMode === "workspace-write") {
       return {
         type: "workspaceWrite",
-        writableRoots: [input.workspacePath],
+        writableRoots: uniqueNonEmptyStrings([
+          input.workspacePath,
+          ...codexExtraWritableRootsFromEnv(this.options.sourceEnv),
+        ]),
         networkAccess: false,
         excludeSlashTmp: true,
         excludeTmpdirEnvVar: true,

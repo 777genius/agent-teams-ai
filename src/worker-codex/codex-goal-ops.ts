@@ -265,7 +265,12 @@ export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string
   if (config.allowDuplicateAccountIdentities) args.push("--allow-duplicate-accounts");
   if (config.requireGitWorkspace === false) args.push("--no-require-git-workspace");
   if (config.prewarmOnStart) args.push("--prewarm");
-  return args.map(shellQuote).join(" ");
+  const extraWritableRoots =
+    process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS?.trim();
+  const envPrefix = extraWritableRoots
+    ? `SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS=${shellQuote(extraWritableRoots)} `
+    : "";
+  return `${envPrefix}${args.map(shellQuote).join(" ")}`;
 }
 
 export function buildCodexGoalTmuxCommand(
