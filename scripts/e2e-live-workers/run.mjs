@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -27,7 +27,14 @@ import {
 import {
   sessionArtifactFromCodexAuthJson,
 } from "../../dist/provider-codex/index.js";
+import {
+  sessionArtifactFromClaudeOAuth,
+} from "../../dist/provider-claude/index.js";
 import { FileBackendClaudeWorker } from "../../dist/worker-claude/file-backend-claude-worker.js";
+import {
+  ClaudeControlledAgentProvider,
+  buildClaudeControlledAgentProfile,
+} from "../../dist/worker-claude/index.js";
 import { CommandPolicyRunner } from "../../dist/worker-codex/command-policy-runner.js";
 import {
   CodexControlledAgentProvider,
@@ -73,6 +80,18 @@ async function main() {
     codexRealAppServerCommandApprovalDeniesRawPush,
   );
   await run("codex project controller starts real child worker", codexProjectControllerStartsChildWorker);
+  await run(
+    "claude controlled controller real cli launcher",
+    claudeControlledControllerRealCliLauncher,
+  );
+  await run(
+    "claude controlled controller integrates reviewed worker output",
+    claudeControlledControllerIntegratesReviewedOutput,
+  );
+  await run(
+    "claude controlled controller starts real child worker",
+    claudeControlledControllerStartsChildWorker,
+  );
   await run("claude real cli safe-point inbox read-only", claudeInboxReadOnly);
   await run("claude real cli safe-point inbox edit", claudeInboxEdit);
 
@@ -1002,6 +1021,676 @@ async function codexCommandPolicyRejectsProjectBypass() {
   }
 }
 
+async function claudeControlledControllerRealCliLauncher() {
+  const skip = claudeSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("claude-controlled-controller-");
+  let provider = null;
+  let stateStore = null;
+  let started = null;
+  try {
+    const sourceWorkspace = await gitSandbox(join(root, "source"), {
+      "README.md": "Claude controlled controller live sandbox only.\n",
+    });
+    const branch = runChecked("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: sourceWorkspace,
+    }).stdout.trim();
+    const registryRootDir = join(root, "registry");
+    const jobsRoot = join(root, "jobs");
+    const worktreesRoot = join(root, "worktrees");
+    const authRoot = join(root, "auth");
+    await mkdir(registryRootDir, { recursive: true });
+    await mkdir(jobsRoot, { recursive: true });
+    await mkdir(worktreesRoot, { recursive: true });
+    await mkdir(authRoot, { recursive: true });
+
+    const prefix = "claude-controlled-live-";
+    const controllerJobId = `${prefix}controller`;
+    const controllerJobRoot = join(jobsRoot, controllerJobId);
+    const controllerPrompt = join(controllerJobRoot, "prompt.md");
+    const brokerWorktree = join(worktreesRoot, `${prefix}broker-worktree`);
+    await mkdir(controllerJobRoot, { recursive: true });
+    await writeFile(
+      controllerPrompt,
+      "Claude controller launcher smoke. Use only broker MCP tools.\n",
+    );
+
+    const projectAccessScope = {
+      projectId: "claude-controlled-controller-live-e2e",
+      registryRoot: registryRootDir,
+      workspaceRoots: [sourceWorkspace],
+      worktreeRoots: [worktreesRoot],
+      jobIdPrefixes: [prefix],
+      tmuxSessionPrefixes: [prefix],
+      allowedBranches: [branch],
+      allowedGitRemotes: ["origin"],
+      allowedAccountIds: ["account-a"],
+    };
+    assertToolOk(codexGoalTool("codex_goal_create_job", {
+      registryRootDir,
+      jobId: controllerJobId,
+      description: "Sandbox Claude project-scoped controller live e2e",
+      jobRootDir: controllerJobRoot,
+      authRootDir: authRoot,
+      stateRootDir: join(controllerJobRoot, "state"),
+      workspacePath: sourceWorkspace,
+      promptPath: controllerPrompt,
+      taskId: controllerJobId,
+      progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
+      accounts: ["account-a"],
+      tmuxSession: controllerJobId,
+      accessBoundary: "project_scoped_control",
+      projectAccessScope,
+      networkAccess: "restricted",
+      confirmCreate: true,
+    }), "create Claude controller manifest");
+
+    const stateDir = join(root, "controlled-state");
+    const profile = buildClaudeControlledAgentProfile({
+      stateDir,
+      mcpCommand: process.execPath,
+      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+      mcpCwd: process.cwd(),
+    });
+    const createWorktreeTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_create_worktree`;
+    stateStore = new LocalControlledAgentStateStore({ rootDir: stateDir });
+    provider = new ClaudeControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromClaudeOAuth({
+        oauthToken: "ambient-claude-live-e2e-token-not-used",
+      }),
+      workspacePath: sourceWorkspace,
+      engine: new RealClaudeControlledEngine(),
+      model: process.env.CLAUDE_LIVE_MODEL ?? "sonnet",
+      controllerObjective: [
+        "This is a subscription-runtime Claude controlled-agent live e2e.",
+        `Call the MCP broker tool ${createWorktreeTool} exactly once with this JSON:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          sourceWorkspacePath: sourceWorkspace,
+          path: brokerWorktree,
+          confirmCreateWorktree: true,
+        }),
+        "After the tool succeeds, reply with CLAUDE_CONTROLLED_WORKTREE_OK.",
+        "Do not use Bash, Read, Edit, Write, raw git, raw tmux or direct filesystem access.",
+      ].join("\n"),
+    });
+
+    started = await startControlledAgentRun({
+      controllerJobId,
+      sessionId: `${controllerJobId}:claude-controlled-agent`,
+      stateDir,
+      boundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope,
+      provider: profile.enforcement,
+      networkAccess: NetworkAccessMode.Restricted,
+    }, {
+      provider,
+      stateStore,
+      events: stateStore,
+    });
+    assert(started.ok === true, "Claude controlled controller live start must pass launch policy");
+    assertEqual(started.run.status, ControlledAgentRunStatus.Running);
+
+    const observed = await waitForControlledStatus({
+      provider,
+      session: started.session,
+      run: started.run,
+      timeoutMs: 240_000,
+    });
+    const providerSkip = claudeControlledProviderUnavailableSkip(observed);
+    if (providerSkip) return providerSkip;
+    assertEqual(observed.status, ControlledAgentRunStatus.Completed);
+    assert(existsSync(brokerWorktree), "Claude controller must create the broker worktree through MCP");
+    const auditText = await readFile(
+      join(controllerJobRoot, `${controllerJobId}.project-control-events.jsonl`),
+      "utf8",
+    );
+    assert(
+      auditText.includes('"operation":"create_worktree"'),
+      "Claude controller broker smoke must audit create_worktree",
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      providerStatus: observed.status,
+      allowedTools: profile.allowedTools.length,
+    };
+  } finally {
+    if (provider && started?.ok === true && stateStore) {
+      await stopControlledAgentRun({
+        sessionId: started.session.sessionId,
+        reason: "live_e2e_cleanup",
+      }, {
+        stateStore,
+        provider,
+        events: stateStore,
+      }).catch(() => undefined);
+    }
+    await cleanup(root);
+  }
+}
+
+async function claudeControlledControllerIntegratesReviewedOutput() {
+  const skip = claudeSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("claude-controller-integration-");
+  let provider = null;
+  let stateStore = null;
+  let started = null;
+  try {
+    const workspacePath = await gitSandbox(join(root, "workspace"), {
+      "memory.txt": "before\n",
+    });
+    const branch = runChecked("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: workspacePath,
+    }).stdout.trim();
+    const remotePath = join(root, "remote.git");
+    runChecked("git", ["init", "--bare", remotePath]);
+    runChecked("git", ["remote", "add", "origin", remotePath], {
+      cwd: workspacePath,
+    });
+    runChecked("git", ["checkout", "-b", "claude-integration-worker"], {
+      cwd: workspacePath,
+    });
+    await writeFile(join(workspacePath, "memory.txt"), "after\n");
+    runChecked("git", ["add", "memory.txt"], { cwd: workspacePath });
+    runChecked("git", ["commit", "-m", "fix: claude worker output"], {
+      cwd: workspacePath,
+    });
+    const workerCommitSha = runChecked("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+    }).stdout.trim();
+    runChecked("git", ["checkout", branch], { cwd: workspacePath });
+
+    const registryRootDir = join(root, "registry");
+    const jobsRoot = join(root, "jobs");
+    const authRoot = join(root, "auth");
+    await mkdir(registryRootDir, { recursive: true });
+    await mkdir(jobsRoot, { recursive: true });
+    await mkdir(authRoot, { recursive: true });
+    const prefix = "claude-integration-e2e-";
+    const controllerJobId = `${prefix}controller`;
+    const controllerJobRoot = join(jobsRoot, controllerJobId);
+    const controllerPrompt = join(controllerJobRoot, "prompt.md");
+    await mkdir(controllerJobRoot, { recursive: true });
+    await writeFile(
+      controllerPrompt,
+      "Claude controller integrates reviewed worker output through broker MCP tools.\n",
+    );
+    const projectAccessScope = {
+      projectId: "claude-controller-integration-e2e",
+      registryRoot: registryRootDir,
+      workspaceRoots: [workspacePath],
+      jobIdPrefixes: [prefix, "claude-integration-worker"],
+      tmuxSessionPrefixes: [prefix],
+      allowedBranches: [branch],
+      allowedGitRemotes: ["origin"],
+    };
+    assertToolOk(codexGoalTool("codex_goal_create_job", {
+      registryRootDir,
+      jobId: controllerJobId,
+      description: "Sandbox Claude controller integration lifecycle e2e",
+      jobRootDir: controllerJobRoot,
+      authRootDir: authRoot,
+      stateRootDir: join(controllerJobRoot, "state"),
+      workspacePath,
+      promptPath: controllerPrompt,
+      taskId: controllerJobId,
+      progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
+      accounts: ["account-a"],
+      tmuxSession: controllerJobId,
+      accessBoundary: "project_scoped_control",
+      projectAccessScope,
+      networkAccess: "restricted",
+      confirmCreate: true,
+    }), "create Claude integration controller manifest");
+
+    const stateDir = join(root, "controlled-state");
+    const profile = buildClaudeControlledAgentProfile({
+      stateDir,
+      mcpCommand: process.execPath,
+      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+      mcpCwd: process.cwd(),
+    });
+    const openTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_open_integration_attempt`;
+    const applyTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_apply_worker_output`;
+    const checksTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_run_required_checks`;
+    const commitTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_commit_approved_changes`;
+    const pushTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_push_approved_commit`;
+    const attemptId = `${prefix}attempt`;
+    stateStore = new LocalControlledAgentStateStore({ rootDir: stateDir });
+    provider = new ClaudeControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromClaudeOAuth({
+        oauthToken: "ambient-claude-live-e2e-token-not-used",
+      }),
+      workspacePath,
+      engine: new RealClaudeControlledEngine(),
+      model: process.env.CLAUDE_LIVE_MODEL ?? "sonnet",
+      controllerObjective: [
+        "This is a subscription-runtime Claude controlled-agent integration lifecycle e2e.",
+        "Use only MCP broker tools. Call these tools in order with the exact JSON shown.",
+        `1. ${openTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          attemptId,
+          workerJobId: "claude-integration-worker",
+          workerWorkspacePath: workspacePath,
+          workerCommitSha,
+          targetWorkspacePath: workspacePath,
+          targetBranch: branch,
+          targetRemote: "origin",
+          changedFiles: ["memory.txt"],
+          approvedFiles: ["memory.txt"],
+          allowedPathPrefixes: ["memory.txt"],
+          requiredCheckIds: ["check:memory"],
+          requiredChecks: [{
+            checkId: "check:memory",
+            command: [
+              process.execPath,
+              "-e",
+              "const fs=require('fs');if(fs.readFileSync('memory.txt','utf8').trim()!=='after')process.exit(1)",
+            ],
+          }],
+          reviewedBy: controllerJobId,
+          reviewReason: "live Claude controlled controller reviewed sandbox worker output",
+          confirmOpen: true,
+        }),
+        `2. ${applyTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          attemptId,
+          confirmApply: true,
+        }),
+        `3. ${checksTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          attemptId,
+          confirmRunChecks: true,
+        }),
+        `4. ${commitTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          attemptId,
+          message: "test(worker): integrate claude controller output",
+          allowedPathPrefixes: ["memory.txt"],
+          requiredCheckIds: ["check:memory"],
+          confirmCommit: true,
+        }),
+        `5. ${pushTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          attemptId,
+          confirmPush: true,
+        }),
+        "After the fifth tool succeeds, reply with CLAUDE_CONTROLLED_INTEGRATION_OK.",
+        "Do not use raw shell/git/tmux/filesystem tools.",
+      ].join("\n"),
+    });
+
+    started = await startControlledAgentRun({
+      controllerJobId,
+      sessionId: `${controllerJobId}:claude-controlled-agent`,
+      stateDir,
+      boundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope,
+      provider: profile.enforcement,
+      networkAccess: NetworkAccessMode.Restricted,
+    }, {
+      provider,
+      stateStore,
+      events: stateStore,
+    });
+    assert(started.ok === true, "Claude integration controller live start must pass launch policy");
+
+    const observed = await waitForControlledStatus({
+      provider,
+      session: started.session,
+      run: started.run,
+      timeoutMs: 360_000,
+    });
+    const providerSkip = claudeControlledProviderUnavailableSkip(observed);
+    if (providerSkip) return providerSkip;
+    assertEqual(observed.status, ControlledAgentRunStatus.Completed);
+    const content = await readFile(join(workspacePath, "memory.txt"), "utf8");
+    assertEqual(content.trim(), "after");
+    const pushedSha = runChecked("git", [
+      "--git-dir",
+      remotePath,
+      "rev-parse",
+      `refs/heads/${branch}`,
+    ]).stdout.trim();
+    const localSha = runChecked("git", ["rev-parse", branch], {
+      cwd: workspacePath,
+    }).stdout.trim();
+    assertEqual(pushedSha, localSha);
+    const eventsText = await readFile(
+      integrationAttemptEventsPath(controllerJobRoot, attemptId),
+      "utf8",
+    );
+    assert(
+      eventsText.includes('"type":"integration_attempt.opened"') &&
+        eventsText.includes('"type":"integration_attempt.pushed"'),
+      "Claude controller integration store must record lifecycle events",
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      providerStatus: observed.status,
+      pushedCommit: pushedSha,
+    };
+  } finally {
+    if (provider && started?.ok === true && stateStore) {
+      await stopControlledAgentRun({
+        sessionId: started.session.sessionId,
+        reason: "live_e2e_cleanup",
+      }, {
+        stateStore,
+        provider,
+        events: stateStore,
+      }).catch(() => undefined);
+    }
+    await cleanup(root);
+  }
+}
+
+async function claudeControlledControllerStartsChildWorker() {
+  const skip = claudeProjectControlSkipReason();
+  if (skip) return { skipped: true, reason: skip };
+  const root = await sandboxRoot("claude-project-control-");
+  let provider = null;
+  let stateStore = null;
+  let started = null;
+  let childTmuxSession = null;
+  try {
+    const sourceWorkspace = await gitSandbox(join(root, "source"), {
+      "README.md": "Claude controller child-worker live sandbox only.\n",
+    });
+    const branch = runChecked("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: sourceWorkspace,
+    }).stdout.trim();
+    const remotePath = join(root, "remote.git");
+    runChecked("git", ["init", "--bare", remotePath]);
+    runChecked("git", ["remote", "add", "origin", remotePath], {
+      cwd: sourceWorkspace,
+    });
+    const registryRootDir = join(root, "registry");
+    const jobsRoot = join(root, "jobs");
+    const worktreesRoot = join(root, "worktrees");
+    const authRoot = codexAuthRoot;
+    await mkdir(registryRootDir, { recursive: true });
+    await mkdir(jobsRoot, { recursive: true });
+    await mkdir(worktreesRoot, { recursive: true });
+
+    const prefix = "claude-pc-live-e2e-";
+    const controllerJobId = `${prefix}controller`;
+    const childJobId = `${prefix}child`;
+    childTmuxSession = childJobId;
+    const controllerJobRoot = join(jobsRoot, controllerJobId);
+    const childJobRoot = join(jobsRoot, childJobId);
+    const childWorkspace = join(worktreesRoot, childJobId);
+    const childOutputFile = "claude-controller-real-child-ok.txt";
+    const childPatchPath = join(childWorkspace, "claude-controller-real-child-ok.patch");
+    const controllerPrompt = join(controllerJobRoot, "prompt.md");
+    const childPrompt = join(childJobRoot, "prompt.md");
+    await mkdir(controllerJobRoot, { recursive: true });
+    await mkdir(childJobRoot, { recursive: true });
+    await writeFile(
+      controllerPrompt,
+      "Claude controller starts a real child worker through broker MCP tools.\n",
+    );
+    await writeFile(
+      childPrompt,
+      "Create claude-controller-real-child-ok.txt with exact content CLAUDE_CONTROLLER_REAL_CHILD_OK. Do not print secrets.\n",
+    );
+
+    const projectAccessScope = {
+      projectId: "claude-project-control-live-e2e",
+      registryRoot: registryRootDir,
+      workspaceRoots: [sourceWorkspace],
+      worktreeRoots: [worktreesRoot],
+      jobIdPrefixes: [prefix],
+      tmuxSessionPrefixes: [prefix],
+      allowedBranches: ["main", "master"],
+      allowedGitRemotes: ["origin"],
+      allowedAccountIds: [codexAccount],
+    };
+    assertToolOk(codexGoalTool("codex_goal_create_job", {
+      registryRootDir,
+      jobId: controllerJobId,
+      description: "Sandbox Claude project-scoped controller child-worker e2e",
+      jobRootDir: controllerJobRoot,
+      authRootDir: join(root, "controller-auth"),
+      stateRootDir: join(controllerJobRoot, "state"),
+      workspacePath: sourceWorkspace,
+      promptPath: controllerPrompt,
+      taskId: controllerJobId,
+      progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
+      accounts: ["account-a"],
+      tmuxSession: controllerJobId,
+      accessBoundary: "project_scoped_control",
+      projectAccessScope,
+      networkAccess: "restricted",
+      confirmCreate: true,
+    }), "create Claude child-controller manifest");
+
+    const stateDir = join(root, "controlled-state");
+    const profile = buildClaudeControlledAgentProfile({
+      stateDir,
+      mcpCommand: process.execPath,
+      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+      mcpCwd: process.cwd(),
+    });
+    const createWorktreeTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_create_worktree`;
+    const createJobTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_create_job`;
+    const startTool =
+      `mcp__${profile.mcpServerName}__codex_goal_project_start`;
+    stateStore = new LocalControlledAgentStateStore({ rootDir: stateDir });
+    provider = new ClaudeControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromClaudeOAuth({
+        oauthToken: "ambient-claude-live-e2e-token-not-used",
+      }),
+      workspacePath: sourceWorkspace,
+      engine: new RealClaudeControlledEngine(),
+      model: process.env.CLAUDE_LIVE_MODEL ?? "sonnet",
+      controllerObjective: [
+        "This is a subscription-runtime Claude controlled-agent child-worker e2e.",
+        "Use only MCP broker tools. Call these tools in order with the exact JSON shown.",
+        `1. ${createWorktreeTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          sourceWorkspacePath: sourceWorkspace,
+          path: childWorkspace,
+          confirmCreateWorktree: true,
+        }),
+        `2. ${createJobTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          jobId: childJobId,
+          description: "Sandbox child real Codex worker started by Claude controller",
+          jobRootDir: childJobRoot,
+          authRootDir: authRoot,
+          stateRootDir: join(childJobRoot, "state"),
+          workspacePath: childWorkspace,
+          promptPath: childPrompt,
+          taskId: childJobId,
+          progressPath: join(childJobRoot, `${childJobId}.progress.json`),
+          accounts: [codexAccount],
+          tmuxSession: childTmuxSession,
+          model: process.env.CODEX_LIVE_MODEL ?? "gpt-5.5",
+          reasoningEffort: process.env.CODEX_LIVE_EFFORT ?? "high",
+          serviceTier: process.env.CODEX_LIVE_SERVICE_TIER ?? "fast",
+          executionEngine: "app-server-goal",
+          taskTimeoutMs: 10 * 60 * 1000,
+          maxAccountCycles: 1,
+          accessBoundary: "isolated_workspace_write",
+          networkAccess: "restricted",
+          confirmCreate: true,
+        }),
+        `3. ${startTool}:`,
+        JSON.stringify({
+          registryRootDir,
+          controllerJobId,
+          jobId: childJobId,
+          confirmStart: true,
+        }),
+        "After the third tool succeeds, reply with CLAUDE_CONTROLLER_STARTED_CHILD_OK.",
+        "Do not wait for the child result and do not use raw shell/git/tmux/filesystem tools.",
+      ].join("\n"),
+    });
+
+    started = await startControlledAgentRun({
+      controllerJobId,
+      sessionId: `${controllerJobId}:claude-controlled-agent`,
+      stateDir,
+      boundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope,
+      provider: profile.enforcement,
+      networkAccess: NetworkAccessMode.Restricted,
+    }, {
+      provider,
+      stateStore,
+      events: stateStore,
+    });
+    assert(started.ok === true, "Claude child-controller live start must pass launch policy");
+
+    const observed = await waitForControlledStatus({
+      provider,
+      session: started.session,
+      run: started.run,
+      timeoutMs: 360_000,
+    });
+    const providerSkip = claudeControlledProviderUnavailableSkip(observed);
+    if (providerSkip) return providerSkip;
+    assertEqual(observed.status, ControlledAgentRunStatus.Completed);
+
+    const result = await waitForClaudeControllerChildResult({
+      registryRootDir,
+      jobId: childJobId,
+      workspacePath: childWorkspace,
+      outputFile: childOutputFile,
+      expectedContent: "CLAUDE_CONTROLLER_REAL_CHILD_OK",
+    });
+    if (result.skipped) return result;
+    runChecked("git", ["add", "-N", childOutputFile], { cwd: childWorkspace });
+    const childPatch = runChecked("git", ["diff", "--", childOutputFile], {
+      cwd: childWorkspace,
+    }).stdout;
+    assert(childPatch.includes(childOutputFile), "Claude child output patch must include marker file");
+    await writeFile(childPatchPath, childPatch);
+
+    const attemptId = `${prefix}attempt`;
+    assertToolOk(codexGoalTool("codex_goal_project_open_integration_attempt", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      workerJobId: childJobId,
+      workerWorkspacePath: childWorkspace,
+      workerPatchPath: childPatchPath,
+      targetWorkspacePath: sourceWorkspace,
+      targetBranch: branch,
+      targetRemote: "origin",
+      changedFiles: [childOutputFile],
+      approvedFiles: [childOutputFile],
+      allowedPathPrefixes: [childOutputFile],
+      requiredCheckIds: ["check:marker"],
+      requiredChecks: [{
+        checkId: "check:marker",
+        command: [
+          process.execPath,
+          "-e",
+          "const fs=require('fs');if(fs.readFileSync('claude-controller-real-child-ok.txt','utf8').trim()!=='CLAUDE_CONTROLLER_REAL_CHILD_OK')process.exit(1)",
+        ],
+      }],
+      reviewedBy: controllerJobId,
+      reviewReason: "live Claude controller child marker output reviewed by e2e",
+      confirmOpen: true,
+    }), "open Claude child integration attempt");
+    assertToolOk(codexGoalTool("codex_goal_project_apply_worker_output", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmApply: true,
+    }), "apply Claude child output");
+    assertToolOk(codexGoalTool("codex_goal_project_run_required_checks", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmRunChecks: true,
+    }), "run Claude child integration checks");
+    const committed = assertToolOk(codexGoalTool(
+      "codex_goal_project_commit_approved_changes",
+      {
+        registryRootDir,
+        controllerJobId,
+        attemptId,
+        message: "test(worker): integrate claude controller child output",
+        allowedPathPrefixes: [childOutputFile],
+        requiredCheckIds: ["check:marker"],
+        confirmCommit: true,
+      },
+    ), "commit Claude child output");
+    assertToolOk(codexGoalTool("codex_goal_project_push_approved_commit", {
+      registryRootDir,
+      controllerJobId,
+      attemptId,
+      confirmPush: true,
+    }), "push Claude child output");
+
+    const commitSha = committed.attempt?.commitCandidate?.commitSha;
+    const pushedSha = runChecked("git", [
+      "--git-dir",
+      remotePath,
+      "rev-parse",
+      `refs/heads/${branch}`,
+    ]).stdout.trim();
+    assertEqual(pushedSha, commitSha);
+    const auditText = await readFile(
+      join(controllerJobRoot, `${controllerJobId}.project-control-events.jsonl`),
+      "utf8",
+    );
+    assert(
+      auditText.includes('"operation":"start_worker"'),
+      "Claude controller audit must record start_worker",
+    );
+    return {
+      root: keepArtifacts ? root : undefined,
+      providerStatus: observed.status,
+      changedFiles: result.changedFiles,
+      integrationCommit: commitSha,
+    };
+  } finally {
+    if (provider && started?.ok === true && stateStore) {
+      await stopControlledAgentRun({
+        sessionId: started.session.sessionId,
+        reason: "live_e2e_cleanup",
+      }, {
+        stateStore,
+        provider,
+        events: stateStore,
+      }).catch(() => undefined);
+    }
+    if (childTmuxSession) killTmuxSession(childTmuxSession);
+    await cleanup(root);
+  }
+}
+
 async function codexRealAppServerCommandApprovalDeniesRawPush() {
   const skip = codexSkipReason();
   if (skip) return { skipped: true, reason: skip };
@@ -1285,6 +1974,10 @@ function claudeSkipReason() {
   return null;
 }
 
+function claudeProjectControlSkipReason() {
+  return claudeSkipReason() ?? codexProjectControlSkipReason();
+}
+
 function codexProjectControlSkipReason() {
   return codexSkipReason() ?? (!hasCommand("tmux") ? "tmux command not found" : null);
 }
@@ -1391,9 +2084,26 @@ class RealClaudeEditEngine {
     return runClaude(input, [
       "--tools",
       "Read,Write,Edit,Bash",
+      "--allowedTools",
+      "Read,Write,Edit,Bash",
       "--permission-mode",
-      "bypassPermissions",
+      "acceptEdits",
     ]);
+  }
+}
+
+class RealClaudeControlledEngine {
+  kind = "real-claude-controlled-e2e";
+  capabilities = {
+    supportsStreaming: false,
+    supportsToolCalls: true,
+    supportsUsage: false,
+    supportsProviderRunId: true,
+    supportsCleanup: false,
+  };
+
+  async run(input) {
+    return runClaudeControlled(input);
   }
 }
 
@@ -1427,6 +2137,67 @@ function runClaude(input, extraArgs) {
     outputText: child.stdout.trim(),
     telemetry: { providerRunId: "real-claude-live-e2e" },
     warnings: [],
+  };
+}
+
+function runClaudeControlled(input) {
+  const systemPromptArgs = input.appendSystemPrompt
+    ? ["--append-system-prompt", input.appendSystemPrompt]
+    : [];
+  const mcpConfigArgs = (input.mcpConfig ?? []).flatMap((config) => [
+    "--mcp-config",
+    config,
+  ]);
+  const strictMcpArgs = input.strictMcpConfig ? ["--strict-mcp-config"] : [];
+  const allowedToolArgs = input.allowedTools
+    ? ["--allowedTools", input.allowedTools.join(",")]
+    : [];
+  const disallowedToolArgs = input.disallowedTools
+    ? ["--disallowedTools", input.disallowedTools.join(",")]
+    : [];
+  const child = spawnSync("claude", [
+    "-p",
+    "--model",
+    process.env.CLAUDE_LIVE_MODEL ?? input.model ?? "sonnet",
+    "--effort",
+    process.env.CLAUDE_LIVE_EFFORT ?? "high",
+    "--max-budget-usd",
+    process.env.CLAUDE_CONTROLLED_LIVE_MAX_BUDGET_USD ??
+      process.env.CLAUDE_LIVE_MAX_BUDGET_USD ??
+      "1.25",
+    ...systemPromptArgs,
+    ...mcpConfigArgs,
+    ...strictMcpArgs,
+    ...allowedToolArgs,
+    ...disallowedToolArgs,
+    "--permission-mode",
+    "dontAsk",
+    "--no-session-persistence",
+    input.prompt,
+  ], {
+    cwd: input.workspacePath,
+    encoding: "utf8",
+    env: { ...process.env, NO_COLOR: "1" },
+    timeout: Number(process.env.CLAUDE_CONTROLLED_LIVE_TIMEOUT_MS ?? "420000"),
+  });
+  if (child.error) throw child.error;
+  const stdout = input.redactor.redact((child.stdout ?? "").trim());
+  const stderr = input.redactor.redact((child.stderr ?? "").trim());
+  input.redactor.assertNoKnownSecret(stdout, "claude-controlled-live-stdout");
+  input.redactor.assertNoKnownSecret(stderr, "claude-controlled-live-stderr");
+  if (child.status !== 0) {
+    throw new Error(`claude controlled exited ${child.status}: ${safeTail(stderr || stdout)}`);
+  }
+  return {
+    outputText: stdout,
+    telemetry: { providerRunId: "real-claude-controlled-live-e2e" },
+    warnings: stderr
+      ? [{
+          code: "claude_controlled_live_stderr",
+          safeMessage: "Claude controlled live e2e wrote diagnostics to stderr.",
+          details: { stderrPreview: safeTail(stderr) },
+        }]
+      : [],
   };
 }
 
@@ -1514,6 +2285,17 @@ function assertToolOk(result, label) {
   return result;
 }
 
+function integrationAttemptEventsPath(controllerJobRoot, attemptId) {
+  const hash = createHash("sha256").update(attemptId).digest("hex");
+  return join(
+    controllerJobRoot,
+    "project-integration",
+    "integration-attempts",
+    hash,
+    "events.jsonl",
+  );
+}
+
 async function assertCommandPolicyDenied(runner, input, expectedReason) {
   try {
     await runner.run({
@@ -1575,6 +2357,47 @@ async function waitForCodexProjectChildResult(input) {
   throw new Error(`project child timed out: ${safeTail(JSON.stringify(lastBrief))}`);
 }
 
+async function waitForClaudeControllerChildResult(input) {
+  const markerPath = join(input.workspacePath, input.outputFile);
+  let lastBrief = null;
+  for (let index = 0; index < 90; index += 1) {
+    lastBrief = codexGoalTool("codex_goal_brief", {
+      registryRootDir: input.registryRootDir,
+      jobId: input.jobId,
+      tailLines: 20,
+      staleAfterMs: 120_000,
+    });
+    const brief = lastBrief.brief ?? {};
+    const status = lastBrief.status ?? {};
+    const markerExists = existsSync(markerPath);
+    const done =
+      status.tmuxAlive === false &&
+      (status.resultStatus === "done" ||
+        brief.progressStatus === "completed" ||
+        brief.progressResultStatus === "completed");
+    if (markerExists && done) {
+      const content = await readFile(markerPath, "utf8");
+      assertEqual(content.trim(), input.expectedContent);
+      assertGitStatus(input.workspacePath, `?? ${input.outputFile}`);
+      return {
+        changedFiles: brief.changedFiles ?? status.changedFiles ?? [],
+      };
+    }
+    if (status.tmuxAlive === false) {
+      const providerSkip = codexBriefProviderUnavailableSkip(lastBrief);
+      if (providerSkip) return providerSkip;
+    }
+    if (
+      status.tmuxAlive === false &&
+      (status.resultStatus === "failed" || brief.progressStatus === "failed")
+    ) {
+      throw new Error(`Claude controller child failed: ${safeTail(JSON.stringify(lastBrief))}`);
+    }
+    await sleep(5_000);
+  }
+  throw new Error(`Claude controller child timed out: ${safeTail(JSON.stringify(lastBrief))}`);
+}
+
 async function waitForControlledFileOrTerminal(input) {
   const deadline = Date.now() + input.timeoutMs;
   let observed = null;
@@ -1621,6 +2444,26 @@ function codexControlledProviderUnavailableSkip(status) {
     return {
       skipped: true,
       reason: `Codex live account unavailable: ${safeTail(status.safeMessage ?? status.status)}`,
+    };
+  }
+  return null;
+}
+
+function claudeControlledProviderUnavailableSkip(status) {
+  if (!status || status.status !== ControlledAgentRunStatus.Failed) return null;
+  const message = String(status.safeMessage ?? "").toLowerCase();
+  if (
+    message.includes("not authenticated") ||
+    message.includes("login") ||
+    message.includes("invalid api key") ||
+    message.includes("oauth") ||
+    message.includes("usage limit") ||
+    message.includes("quota") ||
+    message.includes("rate limit")
+  ) {
+    return {
+      skipped: true,
+      reason: `Claude live account unavailable: ${safeTail(status.safeMessage ?? status.status)}`,
     };
   }
   return null;

@@ -324,6 +324,47 @@ app-server environments disabled and with only broker/status MCP tools in the
 generated profile. It is intentionally bounded with `maxGoalTurns` and should
 not be treated as a long-running production controller.
 
+Claude Code has parallel live controller checks. The launcher smoke proves that
+real Claude Code can start as a broker-only controller and call a scoped MCP
+broker tool without raw shell, git, tmux or filesystem tools:
+
+```sh
+SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
+  SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=claude-controlled-controller-real-cli-launcher \
+  npm run e2e:live-workers
+```
+
+The deterministic integration smoke proves that real Claude Code can drive the
+policy-controlled integration lifecycle through MCP tools:
+
+```sh
+SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
+  SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=claude-controlled-controller-integrates-reviewed-worker-output \
+  npm run e2e:live-workers
+```
+
+That scenario prepares a sandbox worker commit, then Claude calls
+`open_integration_attempt -> apply_worker_output -> run_required_checks ->
+commit_approved_changes -> push_approved_commit`. It does not require a live
+Codex child account, so it should keep catching broker-only Claude regressions
+even when Codex quota is exhausted.
+
+The full mixed-provider scenario proves that Claude can start a real child
+Codex worker through the same broker, then the harness integrates the child's
+reviewed output:
+
+```sh
+SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 \
+  CODEX_LIVE_ACCOUNT=account-f \
+  SUBSCRIPTION_RUNTIME_LIVE_E2E_ONLY=claude-controlled-controller-starts-real-child-worker \
+  npm run e2e:live-workers
+```
+
+If the selected Codex account is quota-limited, this scenario reports a safe
+skip instead of faking a result. A safe skip means the Claude controller surface
+can still be valid, but the child-worker evidence must be rerun with a live
+Codex account before claiming the mixed-provider path passed.
+
 If the selected account is expired, quota-limited or capacity-limited, the
 harness reports the scenario as skipped. That means auth/account state must be
 repaired before claiming a successful live controller pass.
