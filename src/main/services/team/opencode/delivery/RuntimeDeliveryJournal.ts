@@ -54,6 +54,7 @@ export interface RuntimeDeliveryJournalRecord {
 export interface RuntimeDeliveryJournalBeginInput {
   idempotencyKey: string;
   payloadHash: string;
+  compatiblePayloadHashes?: string[];
   runId: string;
   teamName: string;
   fromMemberName: string;
@@ -78,7 +79,10 @@ export class RuntimeDeliveryJournalStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.idempotencyKey === input.idempotencyKey);
       if (existing) {
-        if (existing.payloadHash !== input.payloadHash) {
+        const hasCompatiblePayloadHash =
+          existing.payloadHash === input.payloadHash ||
+          input.compatiblePayloadHashes?.includes(existing.payloadHash) === true;
+        if (!hasCompatiblePayloadHash) {
           result = { state: 'payload_conflict', record: existing };
           return records;
         }
@@ -90,6 +94,7 @@ export class RuntimeDeliveryJournalStore {
 
         const resumed = {
           ...existing,
+          payloadHash: input.payloadHash,
           attempts: existing.attempts + 1,
           status: existing.status === 'failed_terminal' ? existing.status : 'pending',
           updatedAt: input.now,
@@ -259,6 +264,25 @@ export function validateRuntimeDeliveryJournalRecords(
 }
 
 export function hashRuntimeDeliveryEnvelope(envelope: RuntimeDeliveryEnvelope): string {
+  return hashRuntimeDeliveryEnvelopeWithTaskRefs(envelope, envelope.taskRefs ?? []);
+}
+
+export function hashRuntimeDeliveryEnvelopeLegacyTaskRefs(
+  envelope: RuntimeDeliveryEnvelope
+): string | null {
+  if (!envelope.taskRefs?.length) {
+    return null;
+  }
+  return hashRuntimeDeliveryEnvelopeWithTaskRefs(
+    envelope,
+    envelope.taskRefs.map((taskRef) => taskRef.taskId)
+  );
+}
+
+function hashRuntimeDeliveryEnvelopeWithTaskRefs(
+  envelope: RuntimeDeliveryEnvelope,
+  taskRefs: unknown[]
+): string {
   return `sha256:${stableHash({
     providerId: envelope.providerId,
     runId: envelope.runId,
@@ -268,7 +292,7 @@ export function hashRuntimeDeliveryEnvelope(envelope: RuntimeDeliveryEnvelope): 
     to: envelope.to,
     text: envelope.text,
     summary: envelope.summary ?? null,
-    taskRefs: envelope.taskRefs ?? [],
+    taskRefs,
     createdAt: envelope.createdAt,
   })}`;
 }

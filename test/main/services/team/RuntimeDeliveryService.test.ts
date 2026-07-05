@@ -51,9 +51,7 @@ describe('RuntimeDeliveryService', () => {
   });
 
   it('does not poison idempotency when crash happens before destination write', async () => {
-    destination.writeImpl = async () => {
-      throw new Error('simulated crash before write');
-    };
+    destination.writeImpl = () => Promise.reject(new Error('simulated crash before write'));
     const service = createService();
 
     await expect(service.deliver(envelope())).rejects.toThrow('simulated crash before write');
@@ -144,6 +142,52 @@ describe('RuntimeDeliveryService', () => {
       status: 'committed',
     });
   });
+
+  it.each(['pending', 'failed_retryable'] as const)(
+    'resumes pre-refactor %s journal hashed with legacy string taskRefs',
+    async (status) => {
+      const message = envelope();
+      const legacyMessage = {
+        ...message,
+        taskRefs: ['task-1'],
+      } as unknown as RuntimeDeliveryEnvelope;
+      await journal.begin({
+        idempotencyKey: message.idempotencyKey,
+        payloadHash: hashRuntimeDeliveryEnvelope(legacyMessage),
+        runId: message.runId,
+        teamName: message.teamName,
+        fromMemberName: message.fromMemberName,
+        providerId: message.providerId,
+        runtimeSessionId: message.runtimeSessionId,
+        destination: resolveRuntimeDeliveryDestination(message),
+        destinationMessageId: buildRuntimeDestinationMessageId(message),
+        now: now.toISOString(),
+      });
+      if (status === 'failed_retryable') {
+        await journal.markFailed({
+          idempotencyKey: message.idempotencyKey,
+          status,
+          error: 'simulated retryable failure',
+          updatedAt: now.toISOString(),
+        });
+      }
+      const service = createService();
+
+      await expect(service.deliver(message)).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+        reason: null,
+      });
+
+      await expect(journal.get(message.idempotencyKey)).resolves.toMatchObject({
+        status: 'committed',
+        attempts: 2,
+        payloadHash: hashRuntimeDeliveryEnvelope(message),
+      });
+      expect(destination.messages).toHaveLength(1);
+      expect(diagnostics.append).not.toHaveBeenCalled();
+    }
+  );
 
   it('rejects same idempotency key with different payload hash', async () => {
     const service = createService();
@@ -280,8 +324,8 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
 class FakeRunStateReader implements RuntimeDeliveryRunStateReader {
   constructor(public currentRunId: string | null) {}
 
-  async getCurrentRunId(): Promise<string | null> {
-    return this.currentRunId;
+  getCurrentRunId(): Promise<string | null> {
+    return Promise.resolve(this.currentRunId);
   }
 }
 
@@ -318,16 +362,16 @@ class FakeDestinationPort implements RuntimeDeliveryDestinationPort {
     return location;
   }
 
-  async verify(input: {
+  verify(input: {
     destination: RuntimeDeliveryDestinationRef;
     destinationMessageId: string;
   }): Promise<RuntimeDeliveryVerifyResult> {
     const location = this.messages.get(input.destinationMessageId) ?? null;
-    return {
+    return Promise.resolve({
       found: location !== null,
       location,
       diagnostics: [],
-    };
+    });
   }
 
   buildChangeEvent(input: {
@@ -345,7 +389,7 @@ class FakeDestinationPort implements RuntimeDeliveryDestinationPort {
 }
 
 class FakeDiagnosticsSink implements RuntimeDeliveryDiagnosticsSink {
-  readonly append = vi.fn(async () => {});
+  readonly append = vi.fn(() => Promise.resolve());
 }
 
 class FakeTeamChangeEmitter implements RuntimeDeliveryTeamChangeEmitter {
