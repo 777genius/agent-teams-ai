@@ -9,9 +9,16 @@ import {
   type ProjectJobAccessRequest,
   type ProjectWorktreeAccessRequest,
 } from "../../access-control";
+import {
+  ProjectAdmissionDecisionReason,
+  type ProjectAdmissionDecision,
+  type ProjectAdmissionGate,
+  type ProjectAdmissionWorkerRole,
+} from "../domain/project-admission";
 
 export enum ProjectControlAuditEventType {
   DecisionRecorded = "project_control.decision_recorded",
+  AdmissionDecisionRecorded = "project_control.admission_decision_recorded",
 }
 
 export type ProjectControlOperationResult = {
@@ -23,6 +30,8 @@ export type ProjectControlOperationResult = {
 export type ProjectControlCreateJobInput = ProjectJobAccessRequest & {
   readonly promptPath?: string;
   readonly accounts?: readonly string[];
+  readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
+  readonly tags?: readonly string[];
 };
 
 export type ProjectControlWriteReviewMarkerInput = ProjectJobAccessRequest & {
@@ -30,13 +39,36 @@ export type ProjectControlWriteReviewMarkerInput = ProjectJobAccessRequest & {
   readonly note?: string;
 };
 
-export type ProjectControlBrokerEvent = {
+export type ProjectControlAdmissionMetadata = {
+  readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
+  readonly tags?: readonly string[];
+};
+
+export type ProjectControlCreateWorktreeInput =
+  ProjectWorktreeAccessRequest & ProjectControlAdmissionMetadata;
+
+export type ProjectControlStartWorkerInput =
+  ProjectJobAccessRequest & ProjectControlAdmissionMetadata;
+
+export type ProjectControlPolicyBrokerEvent = {
   readonly schemaVersion: 1;
-  readonly type: ProjectControlAuditEventType;
+  readonly type: ProjectControlAuditEventType.DecisionRecorded;
   readonly occurredAt: string;
   readonly operation: ProjectOperation;
   readonly decision: PolicyDecision;
 };
+
+export type ProjectControlAdmissionBrokerEvent = {
+  readonly schemaVersion: 1;
+  readonly type: ProjectControlAuditEventType.AdmissionDecisionRecorded;
+  readonly occurredAt: string;
+  readonly operation: ProjectOperation;
+  readonly decision: ProjectAdmissionDecision;
+};
+
+export type ProjectControlBrokerEvent =
+  | ProjectControlPolicyBrokerEvent
+  | ProjectControlAdmissionBrokerEvent;
 
 export interface ProjectControlAuditPort {
   record(event: ProjectControlBrokerEvent): Promise<void> | void;
@@ -50,13 +82,13 @@ export interface ProjectJobRegistryPort {
 }
 
 export interface ProjectWorkerSupervisorPort {
-  startWorker(input: ProjectJobAccessRequest): Promise<ProjectControlOperationResult>;
+  startWorker(input: ProjectControlStartWorkerInput): Promise<ProjectControlOperationResult>;
   stopWorker(input: ProjectJobAccessRequest): Promise<ProjectControlOperationResult>;
 }
 
 export interface ProjectWorkspacePort {
   createWorktree(
-    input: ProjectWorktreeAccessRequest,
+    input: ProjectControlCreateWorktreeInput,
   ): Promise<ProjectControlOperationResult>;
 }
 
@@ -70,6 +102,7 @@ export type ProjectControlBrokerPorts = {
   readonly supervisor: ProjectWorkerSupervisorPort;
   readonly workspace: ProjectWorkspacePort;
   readonly git: ProjectGitPort;
+  readonly admission?: ProjectAdmissionGate;
   readonly audit?: ProjectControlAuditPort;
   readonly clock?: { now(): Date };
 };
@@ -80,6 +113,16 @@ export class ProjectControlDeniedError extends Error {
   constructor(decision: PolicyDecision) {
     super(`project_control_denied:${decision.reason}`);
     this.name = "ProjectControlDeniedError";
+    this.decision = decision;
+  }
+}
+
+export class ProjectControlAdmissionDeniedError extends Error {
+  readonly decision: ProjectAdmissionDecision;
+
+  constructor(decision: ProjectAdmissionDecision) {
+    super(`project_control_admission_denied:${decision.reason}`);
+    this.name = "ProjectControlAdmissionDeniedError";
     this.decision = decision;
   }
 }
@@ -105,13 +148,15 @@ export class ProjectControlBroker {
     for (const accountId of input.accounts ?? []) {
       await this.authorize(this.policy.canUseAccount({ accountId }));
     }
+    await this.admit(ProjectOperation.CreateJob, input);
     return this.ports.registry.createJob(input);
   }
 
   async startWorker(
-    input: ProjectJobAccessRequest,
+    input: ProjectControlStartWorkerInput,
   ): Promise<ProjectControlOperationResult> {
     await this.authorize(this.policy.canStartWorker(input));
+    await this.admit(ProjectOperation.StartWorker, input);
     return this.ports.supervisor.startWorker(input);
   }
 
@@ -123,9 +168,14 @@ export class ProjectControlBroker {
   }
 
   async createWorktree(
-    input: ProjectWorktreeAccessRequest,
+    input: ProjectControlCreateWorktreeInput,
   ): Promise<ProjectControlOperationResult> {
     await this.authorize(this.policy.canCreateWorktree(input));
+    await this.admit(ProjectOperation.CreateWorktree, {
+      workspacePath: input.path,
+      ...(input.workerRole ? { workerRole: input.workerRole } : {}),
+      ...(input.tags ? { tags: input.tags } : {}),
+    });
     return this.ports.workspace.createWorktree(input);
   }
 
@@ -160,10 +210,45 @@ export class ProjectControlBroker {
     });
     if (!decision.allowed) throw new ProjectControlDeniedError(decision);
   }
+
+  private async admit(
+    operation: ProjectOperation.CreateJob | ProjectOperation.StartWorker | ProjectOperation.CreateWorktree,
+    input: ProjectControlAdmissionMetadata & {
+      readonly jobId?: string;
+      readonly workspacePath?: string;
+    },
+  ): Promise<void> {
+    if (!this.ports.admission) return;
+    const decision = await this.ports.admission.evaluate({
+      operation,
+      ...(input.jobId ? { jobId: input.jobId } : {}),
+      ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
+      ...(input.workerRole ? { workerRole: input.workerRole } : {}),
+      ...(input.tags ? { tags: input.tags } : {}),
+    });
+    await this.ports.audit?.record({
+      schemaVersion: 1,
+      type: ProjectControlAuditEventType.AdmissionDecisionRecorded,
+      occurredAt: this.clock.now().toISOString(),
+      operation,
+      decision,
+    });
+    if (!decision.allowed) {
+      throw new ProjectControlAdmissionDeniedError(decision);
+    }
+  }
 }
 
 export function projectControlDeniedReason(error: unknown): AccessDecisionReason | null {
   return error instanceof ProjectControlDeniedError
+    ? error.decision.reason
+    : null;
+}
+
+export function projectControlAdmissionDeniedReason(
+  error: unknown,
+): ProjectAdmissionDecisionReason | null {
+  return error instanceof ProjectControlAdmissionDeniedError
     ? error.decision.reason
     : null;
 }

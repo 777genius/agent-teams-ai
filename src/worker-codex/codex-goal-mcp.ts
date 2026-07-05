@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { execPath } from "node:process";
@@ -39,6 +39,8 @@ import {
   AccessBoundary,
   LaunchPlanStatus,
   NetworkAccessMode,
+  ProjectAdmissionWorkerRole,
+  ProjectDebtReason,
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
   ProjectControlBroker,
@@ -61,6 +63,7 @@ import {
   commitApprovedChanges,
   decideRunObservation,
   describeProjectControlSurface,
+  evaluateProjectAdmission,
   isRunEventCompactionSafetyMode,
   isRunEventProviderKind,
   isRunEventType,
@@ -74,12 +77,16 @@ import {
   readTargetRevision,
   runEventProviderKindFromString,
   buildHandoffManifest,
+  ProjectOperation,
   type BaseRevisionStatus,
   type RuntimeResultArtifact,
   type RunEventReadResult,
   type RunEventRetentionPolicy,
   type RunObservationSnapshot,
   type ProjectAccessScope,
+  type ProjectAdmissionGate,
+  type ProjectAdmissionSnapshot,
+  type ProjectDebtItem,
   type ProjectIntegrationCheckSpec,
   type ProjectIntegrationPolicy,
   type ProjectControlBrokerEvent,
@@ -305,6 +312,7 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly confirmRefill?: boolean;
   readonly startWorker?: boolean;
   readonly workerRole?: string;
+  readonly operation?: string;
 };
 
 type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
@@ -1782,6 +1790,14 @@ export function createCodexGoalMcpServer(
         controllerJobId: z.string().optional(),
         description: z.string().optional(),
         tags: z.union([z.string(), z.array(z.string())]).optional(),
+        workerRole: z.enum([
+          ProjectAdmissionWorkerRole.Producer,
+          ProjectAdmissionWorkerRole.Fastgate,
+          ProjectAdmissionWorkerRole.Reviewer,
+          ProjectAdmissionWorkerRole.Integration,
+          ProjectAdmissionWorkerRole.Adoption,
+          ProjectAdmissionWorkerRole.ReadOnly,
+        ]).optional(),
         overwrite: z.boolean().optional(),
         confirmCreate: z.boolean().optional(),
       },
@@ -1815,6 +1831,35 @@ export function createCodexGoalMcpServer(
     },
     async (args) => withMcpErrors(async () =>
       projectControlRefillWorker(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_admission_snapshot",
+    {
+      title: "Project Admission Snapshot",
+      description:
+        "Read project output debt used by the ProjectScopedControl admission gate. This is read-only.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        operation: z.enum([
+          ProjectOperation.CreateJob,
+          ProjectOperation.StartWorker,
+          ProjectOperation.CreateWorktree,
+        ]).optional(),
+        workerRole: z.enum([
+          ProjectAdmissionWorkerRole.Producer,
+          ProjectAdmissionWorkerRole.Fastgate,
+          ProjectAdmissionWorkerRole.Reviewer,
+          ProjectAdmissionWorkerRole.Integration,
+          ProjectAdmissionWorkerRole.Adoption,
+          ProjectAdmissionWorkerRole.ReadOnly,
+        ]).optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlAdmissionSnapshot(args as ProjectControlMcpArgs),
     ),
   );
 
@@ -1963,6 +2008,14 @@ export function createCodexGoalMcpServer(
         sourceWorkspacePath: z.string().optional(),
         path: z.string().optional(),
         baseBranch: z.string().optional(),
+        workerRole: z.enum([
+          ProjectAdmissionWorkerRole.Producer,
+          ProjectAdmissionWorkerRole.Fastgate,
+          ProjectAdmissionWorkerRole.Reviewer,
+          ProjectAdmissionWorkerRole.Integration,
+          ProjectAdmissionWorkerRole.Adoption,
+          ProjectAdmissionWorkerRole.ReadOnly,
+        ]).optional(),
         confirmCreateWorktree: z.boolean().optional(),
       },
     },
@@ -2521,10 +2574,361 @@ async function loadProjectControlController(args: ProjectControlMcpArgs): Promis
   };
 }
 
+async function projectControlAdmissionSnapshot(
+  args: ProjectControlMcpArgs,
+) {
+  const controller = await loadProjectControlController(args);
+  const snapshot = await buildCodexProjectAdmissionSnapshot({
+    registryRootDir: controller.registryRootDir,
+    scope: controller.scope,
+  });
+  const operation = projectAdmissionOperation(args.operation);
+  const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
+  const decision = operation
+    ? evaluateProjectAdmission({
+        request: {
+          operation,
+          projectId: controller.scope.projectId,
+          ...(workerRole ? { workerRole } : {}),
+        },
+        snapshot,
+      })
+    : undefined;
+  return mcpJson({
+    ok: true,
+    mode: "project_admission_snapshot",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    snapshot: snapshot as unknown as JsonObject,
+    ...(decision ? { decision: decision as unknown as JsonObject } : {}),
+  });
+}
+
+function codexProjectAdmissionGate(input: {
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+}): ProjectAdmissionGate {
+  return {
+    async evaluate(request) {
+      const snapshot = await buildCodexProjectAdmissionSnapshot(input);
+      return evaluateProjectAdmission({
+        request: {
+          ...request,
+          projectId: request.projectId ?? input.scope.projectId,
+        },
+        snapshot,
+      });
+    },
+  };
+}
+
+async function buildCodexProjectAdmissionSnapshot(input: {
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+}): Promise<ProjectAdmissionSnapshot> {
+  const debt: ProjectDebtItem[] = [];
+  const knownWorkspacePaths = new Set<string>();
+  const prefixes = input.scope.jobIdPrefixes ?? [];
+  const staleAfterMs = 10 * 60_000;
+  let summaries;
+  try {
+    summaries = await listCodexGoalJobs({ registryRootDir: input.registryRootDir });
+  } catch (error) {
+    debt.push({
+      reason: ProjectDebtReason.UnreadableRoot,
+      subject: input.registryRootDir,
+      severity: "blocking",
+      evidence: [
+        `registry unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    });
+    summaries = [];
+  }
+  const projectSummaries = summaries.filter((summary) =>
+    matchesProjectControlPrefix(summary.jobId, prefixes)
+  );
+  const overviewItems = await Promise.all(
+    projectSummaries.map((summary) =>
+      buildCodexGoalOverviewItem({
+        registryRootDir: input.registryRootDir,
+        jobId: summary.jobId,
+        staleAfterMs,
+        tailLines: 0,
+      })
+    ),
+  );
+  for (const item of overviewItems) {
+    if (typeof item.workspacePath === "string") {
+      await rememberKnownWorkspacePath(knownWorkspacePaths, item.workspacePath);
+    }
+    debt.push(...debtFromOverviewItem(item));
+  }
+  const roots = uniqueProjectControlStrings([
+    ...(input.scope.workspaceRoots ?? []),
+    ...(input.scope.worktreeRoots ?? []),
+  ]);
+  for (const root of roots) {
+    debt.push(...await orphanDirtyWorkspaceDebt({
+      root,
+      prefixes,
+      knownWorkspacePaths,
+    }));
+    debt.push(...await diskPressureDebt(root));
+  }
+  return {
+    schemaVersion: 1,
+    projectId: input.scope.projectId,
+    observedAt: new Date().toISOString(),
+    debt,
+    counts: projectAdmissionDebtCounts(debt),
+  };
+}
+
+function debtFromOverviewItem(item: JsonObject): ProjectDebtItem[] {
+  const jobId = stringValue(item.jobId) ?? "unknown-job";
+  const workspacePath = stringValue(item.workspacePath);
+  if (item.ok !== true) {
+    return [{
+      reason: ProjectDebtReason.UnreadableRoot,
+      subject: jobId,
+      severity: "blocking",
+      evidence: [stringValue(item.safeMessage) ?? "job overview unavailable"],
+    }];
+  }
+  const debt: ProjectDebtItem[] = [];
+  if (item.activeWriterRisk === true || item.workspaceConflict === true) {
+    debt.push({
+      reason: ProjectDebtReason.ActiveWriterConflict,
+      subject: jobId,
+      severity: "blocking",
+      evidence: safeStringArray(item.activeWriterRiskReasons)
+        .concat(["active writer conflict risk"]),
+    });
+  }
+  if (item.workspaceDirty !== true) return debt;
+  const subject = workspacePath ?? jobId;
+  const workerAlive = item.workerAlive === true;
+  const stale = item.silentStale === true || item.workerFreshProgressAlive === false;
+  if (workerAlive && stale) {
+    debt.push({
+      reason: ProjectDebtReason.StaleDirtyWorker,
+      subject,
+      severity: "blocking",
+      evidence: [`${jobId} is alive/stale with dirty workspace`],
+    });
+    return debt;
+  }
+  if (workerAlive) return debt;
+  const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
+  const recommendedAction = stringValue(item.recommendedAction);
+  const resultStatus = stringValue(item.resultStatus);
+  const completedOrReviewed = resultStatus === "completed" ||
+    recommendedAction === "review_completed" ||
+    markerTypes.includes("review");
+  debt.push({
+    reason: completedOrReviewed
+      ? ProjectDebtReason.UnconsumedCompletedJob
+      : ProjectDebtReason.InactiveDirtyWorkspace,
+    subject,
+    severity: "blocking",
+    evidence: [
+      `${jobId} is inactive with dirty workspace`,
+      `reviewed marker present: ${String(markerTypes.includes("review"))}`,
+      "reviewed is not consumed; output must be integrated/rejected/archived",
+    ],
+  });
+  return debt;
+}
+
+async function rememberKnownWorkspacePath(
+  target: Set<string>,
+  workspacePath: string,
+): Promise<void> {
+  target.add(resolve(workspacePath));
+  try {
+    target.add(await realpath(workspacePath));
+  } catch {
+    // Missing workspaces are handled by overview debt; keep the raw path.
+  }
+}
+
+async function orphanDirtyWorkspaceDebt(input: {
+  readonly root: string;
+  readonly prefixes: readonly string[];
+  readonly knownWorkspacePaths: ReadonlySet<string>;
+}): Promise<readonly ProjectDebtItem[]> {
+  const root = resolve(input.root);
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (nodeErrorCode(error) === "ENOENT") return [];
+    return [{
+      reason: ProjectDebtReason.UnreadableRoot,
+      subject: root,
+      severity: "blocking",
+      evidence: [
+        `workspace root unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    }];
+  }
+  const debt: ProjectDebtItem[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!matchesProjectControlPrefix(entry.name, input.prefixes)) continue;
+    const workspacePath = join(root, entry.name);
+    if (!await pathLooksLikeGitWorkspace(workspacePath)) continue;
+    const resolved = await optionalRealPathForAdmission(workspacePath);
+    if (
+      input.knownWorkspacePaths.has(resolve(workspacePath)) ||
+      (resolved && input.knownWorkspacePaths.has(resolved))
+    ) {
+      continue;
+    }
+    const status = await gitStatusShort(workspacePath);
+    if (status.ok && status.lines.length === 0) continue;
+    debt.push({
+      reason: status.ok
+        ? ProjectDebtReason.OrphanLegacyWorkspace
+        : ProjectDebtReason.UnreadableRoot,
+      subject: workspacePath,
+      severity: "blocking",
+      evidence: status.ok
+        ? [
+            "dirty project workspace is not represented by the controller registry",
+            ...status.lines.slice(0, 5),
+          ]
+        : [`git status failed: ${status.error}`],
+    });
+  }
+  return debt;
+}
+
+async function diskPressureDebt(root: string): Promise<readonly ProjectDebtItem[]> {
+  const minFreeKb = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB ?? "0");
+  if (!Number.isFinite(minFreeKb) || minFreeKb <= 0) return [];
+  try {
+    const result = await execFileAsync("df", ["-Pk", root], {
+      timeout: 8_000,
+      maxBuffer: 256 * 1024,
+    });
+    const [, line] = result.stdout.trim().split(/\n/);
+    const availableKb = Number(line?.trim().split(/\s+/)[3]);
+    if (Number.isFinite(availableKb) && availableKb < minFreeKb) {
+      return [{
+        reason: ProjectDebtReason.DiskPressure,
+        subject: root,
+        severity: "blocking",
+        evidence: [`availableKb=${availableKb} minFreeKb=${minFreeKb}`],
+      }];
+    }
+    return [];
+  } catch (error) {
+    return [{
+      reason: ProjectDebtReason.UnreadableRoot,
+      subject: root,
+      severity: "blocking",
+      evidence: [
+        `disk pressure check failed: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    }];
+  }
+}
+
+async function pathLooksLikeGitWorkspace(path: string): Promise<boolean> {
+  try {
+    await lstat(join(path, ".git"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function optionalRealPathForAdmission(path: string): Promise<string | undefined> {
+  try {
+    return await realpath(path);
+  } catch {
+    return undefined;
+  }
+}
+
+async function gitStatusShort(path: string): Promise<
+  | { readonly ok: true; readonly lines: readonly string[] }
+  | { readonly ok: false; readonly error: string }
+> {
+  try {
+    const result = await execFileAsync("git", [
+      "-C",
+      path,
+      "status",
+      "--short",
+      "--untracked-files=all",
+    ], {
+      timeout: 8_000,
+      maxBuffer: 1024 * 1024,
+    });
+    return {
+      ok: true,
+      lines: result.stdout.split(/\n/).filter((line) => line.length > 0),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function projectAdmissionDebtCounts(
+  debt: readonly ProjectDebtItem[],
+): NonNullable<ProjectAdmissionSnapshot["counts"]> {
+  const count = (reason: ProjectDebtReason) =>
+    debt.filter((item) => item.reason === reason).length;
+  return {
+    inactiveDirtyWorkspaces: count(ProjectDebtReason.InactiveDirtyWorkspace),
+    unconsumedCompletedJobs: count(ProjectDebtReason.UnconsumedCompletedJob),
+    orphanLegacyWorkspaces: count(ProjectDebtReason.OrphanLegacyWorkspace),
+    activeWriterConflicts: count(ProjectDebtReason.ActiveWriterConflict),
+    staleDirtyWorkers: count(ProjectDebtReason.StaleDirtyWorker),
+    unreadableRoots: count(ProjectDebtReason.UnreadableRoot),
+    diskPressure: count(ProjectDebtReason.DiskPressure),
+  };
+}
+
+function safeStringArray(value: unknown): readonly string[] {
+  try {
+    return stringArrayArg(value);
+  } catch {
+    return [];
+  }
+}
+
+function projectAdmissionOperation(value: unknown): ProjectOperation | undefined {
+  const operation = stringValue(value);
+  if (operation === undefined) return undefined;
+  if (operation === ProjectOperation.CreateJob) return ProjectOperation.CreateJob;
+  if (operation === ProjectOperation.StartWorker) return ProjectOperation.StartWorker;
+  if (operation === ProjectOperation.CreateWorktree) return ProjectOperation.CreateWorktree;
+  throw new Error("project_admission_operation_invalid");
+}
+
+function projectAdmissionWorkerRoleArg(
+  value: unknown,
+): ProjectAdmissionWorkerRole | undefined {
+  const role = stringValue(value);
+  if (role === undefined) return undefined;
+  if ((Object.values(ProjectAdmissionWorkerRole) as readonly string[]).includes(role)) {
+    return role as ProjectAdmissionWorkerRole;
+  }
+  throw new Error("project_admission_worker_role_invalid");
+}
+
 type CodexGoalProjectCreateWorktreeInput = {
   readonly sourceWorkspacePath: string;
   readonly path: string;
   readonly baseBranch?: string;
+  readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
+  readonly tags?: readonly string[];
 };
 
 type CodexGoalProjectIntegrateCommitInput = {
@@ -2558,7 +2962,13 @@ function codexProjectControlBroker(input: {
   return new ProjectControlBroker({
     boundary: AccessBoundary.ProjectScopedControl,
     scope: input.scope,
-  }, codexProjectControlPorts(input));
+  }, {
+    ...codexProjectControlPorts(input),
+    admission: codexProjectAdmissionGate({
+      registryRootDir: input.registryRootDir,
+      scope: input.scope,
+    }),
+  });
 }
 
 function codexProjectControlPorts(input: {
@@ -2876,6 +3286,7 @@ async function createOrReuseProjectJob(input: {
   readonly registryRootDir: string;
   readonly manifest: CodexGoalJobManifestInput;
   readonly promptBody: string;
+  readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
 }): Promise<{
   readonly result: ProjectControlOperationResult;
   readonly manifest: CodexGoalJobManifest;
@@ -2906,6 +3317,8 @@ async function createOrReuseProjectJob(input: {
       ? { tmuxSession: input.manifest.tmuxSession }
       : {}),
     accounts: input.manifest.accounts,
+    ...(input.workerRole ? { workerRole: input.workerRole } : {}),
+    ...(input.manifest.tags ? { tags: input.manifest.tags } : {}),
   });
   return {
     result,
@@ -3713,6 +4126,7 @@ async function projectControlCreateCodexGoalJob(args: ProjectControlMcpArgs) {
     createManifest,
     createOverwrite: booleanValue(args.overwrite) ?? false,
   });
+  const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
   const result = await broker.createJob({
     jobId: createManifest.jobId,
     registryRoot: controller.registryRootDir,
@@ -3721,6 +4135,8 @@ async function projectControlCreateCodexGoalJob(args: ProjectControlMcpArgs) {
       ? { tmuxSession: createManifest.tmuxSession }
       : {}),
     accounts: createManifest.accounts,
+    ...(workerRole ? { workerRole } : {}),
+    ...(createManifest.tags ? { tags: createManifest.tags } : {}),
   });
   const manifest = await readCodexGoalJob({
     registryRootDir: controller.registryRootDir,
@@ -3792,6 +4208,8 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     sourceWorkspacePath,
     path: createManifest.workspacePath,
     baseBranch,
+    workerRole: role,
+    ...(createManifest.tags ? { tags: createManifest.tags } : {}),
   };
 
   if (!args.confirmRefill) {
@@ -3859,6 +4277,7 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
       registryRootDir: controller.registryRootDir,
       manifest: createManifest,
       promptBody,
+      workerRole: role,
     });
     createJob = createResult.result;
     manifest = createResult.manifest;
@@ -3895,6 +4314,8 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
       registryRoot: controller.registryRootDir,
       workspacePath: launch.config.workspacePath,
       ...(launch.tmuxSession ? { tmuxSession: launch.tmuxSession } : {}),
+      workerRole: role,
+      ...(manifest.tags ? { tags: manifest.tags } : {}),
     });
   }
 
@@ -4002,6 +4423,7 @@ async function projectControlStartStoredJob(args: ProjectControlMcpArgs) {
     registryRoot: controller.registryRootDir,
     workspacePath: loaded.launch.config.workspacePath,
     tmuxSession: loaded.launch.tmuxSession,
+    ...(loaded.manifest.tags ? { tags: loaded.manifest.tags } : {}),
   });
   return mcpJson({
     ok: true,
@@ -4027,10 +4449,12 @@ async function projectControlCreateWorktree(args: ProjectControlMcpArgs) {
   const path = projectControlPathArg(args, args.path, "path");
   const baseBranch = stringValue(args.baseBranch);
   if (baseBranch) assertSafeGitRefName(baseBranch, "baseBranch");
+  const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
   const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
     sourceWorkspacePath,
     path,
     ...(baseBranch ? { baseBranch } : {}),
+    ...(workerRole ? { workerRole } : {}),
   };
 
   if (!args.confirmCreateWorktree) {

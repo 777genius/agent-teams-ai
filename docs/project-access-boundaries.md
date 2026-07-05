@@ -60,6 +60,43 @@ filesystem sandbox and broker remain the primary boundary.
 Denied commands emit a `command_policy.denied` runtime event with the decision
 reason and executable name only. Raw command arguments are not recorded.
 
+## Project Admission Gate
+
+`ProjectScopedControl` also has a project admission gate. Access policy answers
+"may this controller perform this kind of operation?". Admission policy answers
+"is it safe to start more work right now?".
+
+The gate runs before brokered producer work such as `create_job`,
+`create_worktree` and `start_worker`. It blocks producer starts/refills when the
+project has unresolved output debt, for example:
+
+- inactive dirty workspaces;
+- completed dirty jobs that are not integrated, rejected or archived;
+- dirty orphan workspaces found under project-owned roots but not represented
+  in the controller registry;
+- stale dirty workers;
+- active writer conflicts;
+- unreadable project state;
+- optional disk pressure checks.
+
+`reviewed` is not a consumed-output state. A reviewed marker is useful context
+for a drain agent, but the debt remains until output is integrated, rejected,
+marked duplicate/superseded or archived with backup.
+
+The admission decision is not a boolean. Under ordinary output debt, producer
+work is denied, but drain roles such as `reviewer`, `fastgate`, `integration`
+and `adoption` can be admitted as `allowed_for_drain_only`. If the snapshot is
+unavailable, stale, unreadable or under disk pressure, the gate fails closed.
+
+Runtime admission is intentionally not an orchestrator. It does not decide which
+memory task to run, how many workers to keep alive or how to prioritize
+benchmarks. Those strategy decisions belong to the controller/orchestrator
+layer. The runtime gate only enforces the safety invariant that new producer
+work cannot bypass unresolved project output debt.
+
+Use `codex_goal_project_admission_snapshot` to inspect the read-only snapshot
+and optional decision for a proposed operation and worker role.
+
 ## Edge cases covered by policy tests
 
 - similar path prefixes, for example `/work/project` vs `/work/project-other`;

@@ -4,10 +4,17 @@ import {
   AccessBoundary,
   AccessDecisionReason,
   ProjectControlAuditEventType,
+  ProjectAdmissionDecisionReason,
+  ProjectAdmissionDecisionStatus,
+  ProjectAdmissionWorkerRole,
   ProjectControlBroker,
+  ProjectControlAdmissionDeniedError,
   ProjectControlDeniedError,
+  ProjectDebtReason,
   projectControlDeniedReason,
   type ProjectAccessScope,
+  type ProjectAdmissionDecision,
+  type ProjectAdmissionGate,
   type ProjectControlBrokerEvent,
   type ProjectControlBrokerPorts,
   type ProjectControlOperationResult,
@@ -133,11 +140,100 @@ describe("ProjectControlBroker", () => {
       );
     }
   });
+
+  it("blocks producer work before broker side effects when project output debt exists", async () => {
+    const calls: string[] = [];
+    const audits: ProjectControlBrokerEvent[] = [];
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, audits, admission({
+      allowed: false,
+      status: ProjectAdmissionDecisionStatus.Denied,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+      evidence: ["dirty completed worker output blocks producer work"],
+      debt: [{
+        reason: ProjectDebtReason.UnconsumedCompletedJob,
+        subject: "infinity-context-worker-v1",
+        evidence: ["reviewed is not consumed"],
+      }],
+    })));
+
+    await expect(broker.createJob({
+      jobId: "infinity-context-child-v1",
+      registryRoot: "/var/data/worker-jobs/registry",
+      workspacePath: "/work/infinity-context-child",
+      tmuxSession: "infinity-context-child-v1",
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+    })).rejects.toBeInstanceOf(ProjectControlAdmissionDeniedError);
+
+    expect(calls).toEqual([]);
+    expect(audits.map((event) => event.type)).toEqual([
+      ProjectControlAuditEventType.DecisionRecorded,
+      ProjectControlAuditEventType.AdmissionDecisionRecorded,
+    ]);
+  });
+
+  it("allows reviewer work through the broker when admission is drain-only", async () => {
+    const calls: string[] = [];
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, [], admission({
+      allowed: true,
+      status: ProjectAdmissionDecisionStatus.AllowedForDrainOnly,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+      workerRole: ProjectAdmissionWorkerRole.Reviewer,
+      evidence: ["debt exists but reviewer drains it"],
+      debt: [{
+        reason: ProjectDebtReason.InactiveDirtyWorkspace,
+        subject: "/work/infinity-context-old",
+        evidence: ["dirty inactive workspace"],
+      }],
+    })));
+
+    await expect(broker.startWorker({
+      jobId: "infinity-context-reviewer-v1",
+      tmuxSession: "infinity-context-reviewer-v1",
+      workerRole: ProjectAdmissionWorkerRole.Reviewer,
+    })).resolves.toMatchObject({ status: "applied" });
+
+    expect(calls).toEqual(["start:infinity-context-reviewer-v1"]);
+  });
+
+  it("gates refill worktree creation before creating filesystem side effects", async () => {
+    const calls: string[] = [];
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, [], admission({
+      allowed: false,
+      status: ProjectAdmissionDecisionStatus.Denied,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+      evidence: ["producer refill is blocked by output debt"],
+      debt: [{
+        reason: ProjectDebtReason.OrphanLegacyWorkspace,
+        subject: "/work/orphan",
+        evidence: ["legacy workspace not adopted"],
+      }],
+    })));
+
+    await expect(broker.createWorktree({
+      path: "/work/infinity-context-child",
+      baseBranch: "main",
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+    })).rejects.toBeInstanceOf(ProjectControlAdmissionDeniedError);
+
+    expect(calls).toEqual([]);
+  });
 });
 
 function ports(
   calls: string[],
   audits: ProjectControlBrokerEvent[],
+  admissionGate?: ProjectAdmissionGate,
 ): ProjectControlBrokerPorts {
   const result = (resourceId: string): ProjectControlOperationResult => ({
     status: "applied",
@@ -184,6 +280,20 @@ function ports(
         calls.push(`push:${input.branch}`);
         return result(input.branch);
       },
+    },
+    ...(admissionGate ? { admission: admissionGate } : {}),
+  };
+}
+
+function admission(
+  decision: Omit<ProjectAdmissionDecision, "operation">,
+): ProjectAdmissionGate {
+  return {
+    evaluate(request) {
+      return {
+        ...decision,
+        operation: request.operation,
+      };
     },
   };
 }
