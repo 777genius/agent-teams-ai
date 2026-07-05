@@ -198,6 +198,55 @@ describe('AskUserQuestion teammate permission input shaping', () => {
     });
   });
 
+  it('merges parsed JSON answers into AskUserQuestion teammate tool input', () => {
+    const toolInput = {
+      questions: [
+        {
+          question: 'What type of calculator app would you like?',
+          header: 'App type',
+          options: [
+            { label: 'Web UI (Recommended)', description: 'Browser app' },
+            { label: 'CLI', description: 'Terminal app' },
+          ],
+          multiSelect: false,
+        },
+      ],
+    };
+
+    expect(
+      buildTeammatePermissionUpdatedInput(
+        'AskUserQuestion',
+        toolInput,
+        JSON.stringify({
+          'What type of calculator app would you like?': 'Web UI (Recommended)',
+        })
+      )
+    ).toEqual({
+      ...toolInput,
+      answers: {
+        'What type of calculator app would you like?': 'Web UI (Recommended)',
+      },
+    });
+  });
+
+  it('preserves blank AskUserQuestion teammate answers', () => {
+    const toolInput = {
+      questions: [
+        {
+          question: 'Anything else?',
+          options: [{ label: 'Skip', description: 'No extra details' }],
+        },
+      ],
+    };
+
+    expect(buildTeammatePermissionUpdatedInput('AskUserQuestion', toolInput, '')).toEqual({
+      ...toolInput,
+      answers: {
+        'Anything else?': '',
+      },
+    });
+  });
+
   it('keeps non-question teammate tool input unchanged', () => {
     const input = { file_path: 'src/app.ts' };
     expect(buildTeammatePermissionUpdatedInput('Edit', input, 'ignored')).toBe(input);

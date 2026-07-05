@@ -505,7 +505,6 @@ import {
 import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
 import { TeamProvisioningTaskActivityRepairBoundary } from './provisioning/TeamProvisioningTaskActivityRepairBoundary';
 import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
-import { buildTeammatePermissionUpdatedInput } from './provisioning/TeamProvisioningToolApprovalFlow';
 import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
@@ -2737,14 +2736,6 @@ export class TeamProvisioningService {
       toolName,
       toolInput,
     });
-  }
-
-  private buildTeammatePermissionUpdatedInput(
-    toolName: string | undefined,
-    toolInput: Record<string, unknown> | undefined,
-    message: string | undefined
-  ): Record<string, unknown> | undefined {
-    return buildTeammatePermissionUpdatedInput(toolName, toolInput, message);
   }
 
   private hasAcceptedLeadWorkSyncReport(input: {

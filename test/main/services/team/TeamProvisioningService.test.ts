@@ -19919,59 +19919,6 @@ describe('TeamProvisioningService', () => {
     expect(settings.permissions?.allow).toEqual(['mcp__agent-teams__team_stop']);
   });
 
-  it('builds teammate AskUserQuestion permission responses with answers', () => {
-    const svc = new TeamProvisioningService();
-    const toolInput = {
-      questions: [
-        {
-          question: 'What type of calculator app would you like?',
-          header: 'App type',
-          options: [
-            { label: 'Web UI (Recommended)', description: 'Browser app' },
-            { label: 'CLI', description: 'Terminal app' },
-          ],
-          multiSelect: false,
-        },
-      ],
-    };
-
-    expect(
-      (svc as any).buildTeammatePermissionUpdatedInput(
-        'AskUserQuestion',
-        toolInput,
-        JSON.stringify({
-          'What type of calculator app would you like?': 'Web UI (Recommended)',
-        })
-      )
-    ).toEqual({
-      ...toolInput,
-      answers: {
-        'What type of calculator app would you like?': 'Web UI (Recommended)',
-      },
-    });
-  });
-
-  it('preserves blank teammate AskUserQuestion answers', () => {
-    const svc = new TeamProvisioningService();
-    const toolInput = {
-      questions: [
-        {
-          question: 'Anything else?',
-          options: [{ label: 'Skip', description: 'No extra details' }],
-        },
-      ],
-    };
-
-    expect(
-      (svc as any).buildTeammatePermissionUpdatedInput('AskUserQuestion', toolInput, '')
-    ).toEqual({
-      ...toolInput,
-      answers: {
-        'Anything else?': '',
-      },
-    });
-  });
-
   it('sends teammate AskUserQuestion permission responses to the teammate inbox', async () => {
     const svc = new TeamProvisioningService();
     const persistInboxMessage = vi.fn();
