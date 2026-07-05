@@ -7,6 +7,7 @@ import {
 
 const APP_FLAG = 'CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP';
 const RUNTIME_FLAG = 'CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP';
+const TEST_SETTINGS_PATH = '/repo/.agent-teams/settings.json';
 
 describe('TeamProvisioningEnvGuards', () => {
   let savedApp: string | undefined;
@@ -50,8 +51,8 @@ describe('TeamProvisioningEnvGuards', () => {
   describe('applyAppManagedRuntimeSettingsPathEnv', () => {
     it('sets the settings path when provided', () => {
       const env: NodeJS.ProcessEnv = {};
-      applyAppManagedRuntimeSettingsPathEnv(env, '/tmp/settings.json');
-      expect(env.CLAUDE_TEAM_RUNTIME_SETTINGS_PATH).toBe('/tmp/settings.json');
+      applyAppManagedRuntimeSettingsPathEnv(env, TEST_SETTINGS_PATH);
+      expect(env.CLAUDE_TEAM_RUNTIME_SETTINGS_PATH).toBe(TEST_SETTINGS_PATH);
     });
 
     it('clears the settings path when null', () => {

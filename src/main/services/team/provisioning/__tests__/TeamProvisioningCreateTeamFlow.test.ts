@@ -13,6 +13,10 @@ import type {
   TeamCreateRequest,
 } from '@shared/types';
 
+const TEST_BOOTSTRAP_SPEC_PATH = '/repo/.agent-teams/bootstrap.json';
+const TEST_BOOTSTRAP_PROMPT_PATH = '/repo/.agent-teams/prompt.txt';
+const TEST_MCP_CONFIG_PATH = '/repo/.agent-teams/mcp.json';
+
 function buildRequest(overrides: Partial<TeamCreateRequest> = {}): TeamCreateRequest {
   return {
     teamName: 'runtime-team',
@@ -171,9 +175,9 @@ describe('TeamProvisioningCreateTeamFlow', () => {
 
   it('builds deterministic create launch arguments in the expected order', () => {
     const args = buildDeterministicCreateSpawnArgs({
-      mcpConfigPath: '/tmp/mcp.json',
-      bootstrapSpecPath: '/tmp/bootstrap.json',
-      bootstrapUserPromptPath: '/tmp/prompt.txt',
+      mcpConfigPath: TEST_MCP_CONFIG_PATH,
+      bootstrapSpecPath: TEST_BOOTSTRAP_SPEC_PATH,
+      bootstrapUserPromptPath: TEST_BOOTSTRAP_PROMPT_PATH,
       skipPermissions: false,
       launchModelArg: 'gpt-5.4',
       resolvedEffort: 'high',
@@ -198,11 +202,11 @@ describe('TeamProvisioningCreateTeamFlow', () => {
       '--setting-sources',
       'user,project,local',
       '--mcp-config',
-      '/tmp/mcp.json',
+      TEST_MCP_CONFIG_PATH,
       '--team-bootstrap-spec',
-      '/tmp/bootstrap.json',
+      TEST_BOOTSTRAP_SPEC_PATH,
       '--team-bootstrap-user-prompt-file',
-      '/tmp/prompt.txt',
+      TEST_BOOTSTRAP_PROMPT_PATH,
       '--disallowedTools',
       'TeamDelete',
       '--permission-prompt-tool',

@@ -13,7 +13,9 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
-type TestLane = { memberName: string };
+interface TestLane {
+  memberName: string;
+}
 type TestRun = DeterministicCreateRunFlowRun & {
   observedProgress: TeamProvisioningProgress[];
 };

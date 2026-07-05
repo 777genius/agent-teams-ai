@@ -11,6 +11,8 @@ import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types'
 
 type TestRun = DeterministicCreateSpawnFlowRun;
 
+const TEST_MCP_CONFIG_PATH = '/repo/.agent-teams/mcp.json';
+
 const request: TeamCreateRequest = {
   teamName: 'demo',
   cwd: '/repo',
@@ -103,7 +105,7 @@ function createDeps(host: BoundCallbackHost): {
         writeMembers: vi.fn(async () => undefined),
       },
       mcpConfigBuilder: {
-        writeConfigFile: vi.fn(async () => '/tmp/mcp.json'),
+        writeConfigFile: vi.fn(async () => TEST_MCP_CONFIG_PATH),
         removeConfigFile: vi.fn(async () => undefined),
       },
       buildMemberMcpLaunchConfigs: vi.fn(async () => new Map()),
@@ -158,7 +160,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
     const metaPayload = buildCreateTeamMetaPayload(request, null, 123);
 
     await ports.teamMetaStore.writeMeta(request.teamName, metaPayload);
-    await ports.validateAgentTeamsMcpRuntime('/tmp/mcp.json', cancellationOptions);
+    await ports.validateAgentTeamsMcpRuntime(TEST_MCP_CONFIG_PATH, cancellationOptions);
     ports.attachStdoutHandler(run);
     ports.startFilesystemMonitor(run, request);
     ports.cleanupRun(run);
@@ -169,7 +171,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       claudePath: '/bin/claude',
       cwd: request.cwd,
       shellEnv,
-      mcpConfigPath: '/tmp/mcp.json',
+      mcpConfigPath: TEST_MCP_CONFIG_PATH,
       options: cancellationOptions,
     });
     expect(host.calls).toEqual([

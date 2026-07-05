@@ -13,7 +13,9 @@ import type {
 } from '@features/workspace-trust/main';
 import type { ProviderModelLaunchIdentity, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
-type MixedLane = { memberName: string };
+interface MixedLane {
+  memberName: string;
+}
 
 const disabledWorkspaceTrustFlags: WorkspaceTrustFeatureFlags = {
   enabled: false,
@@ -119,7 +121,7 @@ function buildPorts(
       authSource: 'codex_runtime' as const,
       geminiRuntimeAuth: null,
       providerArgs: ['--provider-base'],
-      anthropicApiKeyHelper: { directory: '/tmp/helper' } as never,
+      anthropicApiKeyHelper: { directory: '/repo/.agent-teams/helpers/anthropic' } as never,
     })),
     materializeEffectiveTeamMemberSpecs: vi.fn(async (params) => params.members),
     resolveOpenCodeMemberWorkspacesForRuntime: vi.fn(async (params) => params.members),

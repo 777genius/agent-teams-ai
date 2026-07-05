@@ -14,14 +14,16 @@ import type { TeamRuntimeLaunchResult } from '../../runtime/TeamRuntimeAdapter';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest, TeamMember } from '@shared/types';
 
-type TestRun = {
+interface TestRun {
   teamName: string;
   cancelRequested: boolean;
   processKilled: boolean;
   request: Pick<TeamCreateRequest, 'cwd' | 'skipPermissions' | 'color' | 'displayName'>;
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
   mixedSecondaryLaneLaunchQueue?: Promise<void>;
-};
+}
+
+const TEST_PROJECT_PATH = '/repo/project';
 
 function createLane(
   overrides: Partial<MixedSecondaryRuntimeLaneState> = {}
@@ -33,7 +35,7 @@ function createLane(
       name: 'Builder',
       role: 'Build changes',
       color: 'blue',
-      cwd: '/tmp/project',
+      cwd: TEST_PROJECT_PATH,
     } as TeamMember,
     runId: 'lane-run-1',
     state: 'queued',
@@ -50,7 +52,7 @@ function createRun(overrides: Partial<TestRun> = {}): TestRun {
     cancelRequested: false,
     processKilled: false,
     request: {
-      cwd: '/tmp/project',
+      cwd: TEST_PROJECT_PATH,
       skipPermissions: true,
       color: 'blue',
       displayName: 'Atlas HQ',
@@ -103,7 +105,7 @@ function createService(
     shouldRecoverStalePersistedMixedLaunchSnapshot: vi.fn(() => false),
     readTeamMeta: vi.fn(async () => null),
     readMembersMeta: vi.fn(async () => null),
-    readPersistedTeamProjectPath: vi.fn(() => '/tmp/project'),
+    readPersistedTeamProjectPath: vi.fn(() => TEST_PROJECT_PATH),
     tryRecoverMissingOpenCodeSecondaryLaneFromRuntime: vi.fn(async () => null),
     tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: vi.fn(async () => null),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'lane-run-1'),
@@ -142,7 +144,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       providerId: 'opencode',
       laneId: lane.laneId,
       memberName: 'Builder',
-      cwd: '/tmp/project',
+      cwd: TEST_PROJECT_PATH,
     });
     await expect(ports.buildOpenCodeSecondaryAppManagedLaunchPrompt(run, lane)).resolves.toBe(
       'launch prompt'
@@ -159,7 +161,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       teamName: 'atlas-hq',
       runId: 'lane-run-1',
       laneId: lane.laneId,
-      cwd: '/tmp/project',
+      cwd: TEST_PROJECT_PATH,
       members: {},
       expectedMembers: [],
     });
@@ -172,7 +174,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       providerId: 'opencode',
       laneId: lane.laneId,
       memberName: 'Builder',
-      cwd: '/tmp/project',
+      cwd: TEST_PROJECT_PATH,
     });
     expect(deps.service.syncOpenCodeRuntimeToolApprovals).toHaveBeenCalledTimes(1);
     expect(ports.randomUuid()).toMatch(
@@ -212,13 +214,13 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     expect(ports.shouldRecoverStalePersistedMixedLaunchSnapshot(snapshot)).toBe(false);
     await expect(ports.readTeamMeta('atlas-hq')).resolves.toBeNull();
     await expect(ports.readMembersMeta('atlas-hq')).resolves.toBeNull();
-    expect(ports.readPersistedTeamProjectPath('atlas-hq')).toBe('/tmp/project');
+    expect(ports.readPersistedTeamProjectPath('atlas-hq')).toBe(TEST_PROJECT_PATH);
     await expect(
       ports.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime({
         teamName: 'atlas-hq',
         laneId: 'secondary:opencode:Builder',
         member,
-        projectPath: '/tmp/project',
+        projectPath: TEST_PROJECT_PATH,
         previousLaunchState: snapshot,
         persistedMember: snapshot.members.Builder,
       })
@@ -228,7 +230,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
         teamName: 'atlas-hq',
         laneId: 'secondary:opencode:Builder',
         member,
-        projectPath: '/tmp/project',
+        projectPath: TEST_PROJECT_PATH,
         previousLaunchState: snapshot,
       })
     ).resolves.toBeNull();

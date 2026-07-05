@@ -7,24 +7,29 @@ import {
   shouldCancelDeterministicCreateSpawn,
 } from '../TeamProvisioningCreateDeterministicSpawnFlow';
 
+const TEST_BOOTSTRAP_SPEC_PATH = '/repo/.agent-teams/bootstrap.json';
+const TEST_BOOTSTRAP_PROMPT_PATH = '/repo/.agent-teams/prompt.txt';
+const TEST_MCP_CONFIG_PATH = '/repo/.agent-teams/mcp.json';
+const TEST_ANTHROPIC_HELPER_DIR = '/repo/.agent-teams/helpers/anthropic';
+
 describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
   it('plans deterministic create cleanup targets from run materialization state', () => {
     expect(
       buildDeterministicCreateCleanupTargets({
         teamName: 'runtime-team',
-        bootstrapSpecPath: '/tmp/bootstrap.json',
-        bootstrapUserPromptPath: '/tmp/prompt.txt',
-        mcpConfigPath: '/tmp/mcp.json',
-        anthropicApiKeyHelperDirectory: '/tmp/anthropic-helper',
+        bootstrapSpecPath: TEST_BOOTSTRAP_SPEC_PATH,
+        bootstrapUserPromptPath: TEST_BOOTSTRAP_PROMPT_PATH,
+        mcpConfigPath: TEST_MCP_CONFIG_PATH,
+        anthropicApiKeyHelperDirectory: TEST_ANTHROPIC_HELPER_DIR,
       })
     ).toEqual({
       teamName: 'runtime-team',
       teamDir: path.join(getTeamsBasePath(), 'runtime-team'),
       tasksDir: path.join(getTasksBasePath(), 'runtime-team'),
-      bootstrapSpecPath: '/tmp/bootstrap.json',
-      bootstrapUserPromptPath: '/tmp/prompt.txt',
-      mcpConfigPath: '/tmp/mcp.json',
-      anthropicApiKeyHelperDirectory: '/tmp/anthropic-helper',
+      bootstrapSpecPath: TEST_BOOTSTRAP_SPEC_PATH,
+      bootstrapUserPromptPath: TEST_BOOTSTRAP_PROMPT_PATH,
+      mcpConfigPath: TEST_MCP_CONFIG_PATH,
+      anthropicApiKeyHelperDirectory: TEST_ANTHROPIC_HELPER_DIR,
     });
   });
 
