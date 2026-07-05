@@ -455,7 +455,6 @@ import {
 import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
-  buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
 } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
@@ -1900,7 +1899,6 @@ export class TeamProvisioningService {
       getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
         this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
-      buildTeamAgentRuntimeSnapshot: (params) => this.buildTeamAgentRuntimeSnapshot(params),
       logDebug: (message) => logger.debug(message),
     });
     this.toolApprovalFacade = new TeamProvisioningToolApprovalFacade<ProvisioningRun>({
@@ -2455,12 +2453,6 @@ export class TeamProvisioningService {
 
   private getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number {
     return this.runTracking.getAgentRuntimeSnapshotCacheTtlMs(teamName, runId);
-  }
-
-  private buildTeamAgentRuntimeSnapshot(
-    params: Parameters<typeof buildTeamAgentRuntimeSnapshotHelper>[0]
-  ): ReturnType<typeof buildTeamAgentRuntimeSnapshotHelper> {
-    return buildTeamAgentRuntimeSnapshotHelper(params);
   }
 
   private getMemberSpawnStatusesCacheGeneration(teamName: string): number {

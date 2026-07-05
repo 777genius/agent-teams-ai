@@ -1,7 +1,10 @@
 import { TeamAgentRuntimeResourceHistory } from '@main/services/team/TeamAgentRuntimeResourceHistory';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { TeamProvisioningRuntimeSnapshotFacade } from '../TeamProvisioningRuntimeSnapshotFacade';
+import {
+  TeamProvisioningRuntimeSnapshotFacade,
+  type TeamProvisioningRuntimeSnapshotFacadePorts,
+} from '../TeamProvisioningRuntimeSnapshotFacade';
 
 import type {
   MemberSpawnStatusesSnapshot,
@@ -19,9 +22,19 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function createFacadeHarness(options: { ttlMs?: number; getMeta?: () => Promise<null> } = {}) {
+type BuildTeamAgentRuntimeSnapshotPort = NonNullable<
+  TeamProvisioningRuntimeSnapshotFacadePorts['buildTeamAgentRuntimeSnapshot']
+>;
+
+function createFacadeHarness(
+  options: {
+    ttlMs?: number;
+    getMeta?: () => Promise<null>;
+    buildTeamAgentRuntimeSnapshot?: BuildTeamAgentRuntimeSnapshotPort;
+  } = {}
+) {
   let runId: string | null = null;
-  const generation = 0;
+  let generation = 0;
   let buildCount = 0;
   const agentRuntimeSnapshotCache = new Map<
     string,
@@ -67,6 +80,9 @@ function createFacadeHarness(options: { ttlMs?: number; getMeta?: () => Promise<
     getRuntimeSnapshotCacheGeneration: () => generation,
     getTrackedRunId: () => runId,
     getAgentRuntimeSnapshotCacheTtlMs: () => options.ttlMs ?? 60_000,
+    ...(options.buildTeamAgentRuntimeSnapshot
+      ? { buildTeamAgentRuntimeSnapshot: options.buildTeamAgentRuntimeSnapshot }
+      : {}),
     logDebug: () => undefined,
   });
 
@@ -76,6 +92,9 @@ function createFacadeHarness(options: { ttlMs?: number; getMeta?: () => Promise<
     getBuildCount: () => buildCount,
     setRunId: (nextRunId: string | null) => {
       runId = nextRunId;
+    },
+    incrementGeneration: () => {
+      generation += 1;
     },
   };
 }
@@ -111,6 +130,50 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
 
     await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
     expect(harness.getBuildCount()).toBe(2);
+  });
+
+  it('keeps in-flight snapshot builds single-flight across cache invalidation for the same tracked run', async () => {
+    const firstProbe = createDeferred<TeamAgentRuntimeSnapshot>();
+    const secondProbe = createDeferred<TeamAgentRuntimeSnapshot>();
+    const firstSnapshot: TeamAgentRuntimeSnapshot = {
+      teamName: 'alpha',
+      updatedAt: '2026-06-20T17:19:11.000Z',
+      runId: null,
+      members: {},
+    };
+    const secondSnapshot: TeamAgentRuntimeSnapshot = {
+      ...firstSnapshot,
+      updatedAt: '2026-06-20T17:20:11.000Z',
+    };
+    const buildTeamAgentRuntimeSnapshot = vi.fn<BuildTeamAgentRuntimeSnapshotPort>();
+    buildTeamAgentRuntimeSnapshot
+      .mockReturnValueOnce(firstProbe.promise)
+      .mockReturnValueOnce(secondProbe.promise);
+    const harness = createFacadeHarness({ buildTeamAgentRuntimeSnapshot });
+
+    const first = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+    harness.incrementGeneration();
+    const second = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+
+    expect(buildTeamAgentRuntimeSnapshot).toHaveBeenCalledTimes(1);
+    expect(buildTeamAgentRuntimeSnapshot.mock.calls[0]?.[0]).toMatchObject({
+      teamName: 'alpha',
+      runId: null,
+      generationAtStart: 0,
+    });
+    firstProbe.resolve(firstSnapshot);
+    await expect(first).resolves.toBe(firstSnapshot);
+    await expect(second).resolves.toBe(firstSnapshot);
+
+    const fresh = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+    expect(buildTeamAgentRuntimeSnapshot).toHaveBeenCalledTimes(2);
+    expect(buildTeamAgentRuntimeSnapshot.mock.calls[1]?.[0]).toMatchObject({
+      teamName: 'alpha',
+      runId: null,
+      generationAtStart: 1,
+    });
+    secondProbe.resolve(secondSnapshot);
+    await expect(fresh).resolves.toBe(secondSnapshot);
   });
 
   it('starts a separate in-flight snapshot when the tracked run changes', async () => {
