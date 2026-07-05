@@ -1,17 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  getRegisteredProvisioningRunId,
+  getResolvableProvisioningRunId,
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
   outputRecoveryFacadeHarness,
   privateHarness,
   providerRuntimeHarness,
   provisioningConfigFacadeHarness,
+  registerAliveRun,
+  registerProvisioningRun,
   runtimeResourceSamplingHarness,
   stubMemberLifecyclePersistedRuntimeMembers,
   stubProvisioningConfigProjectPath,
   verificationProbePortsHarness,
-} from './index';
+} from './servicePrivateHarness';
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
@@ -24,8 +28,11 @@ describe('team provisioning private harness seams', () => {
       memberLifecycleController: { marker: 'controller' },
       memberLifecycleHost: { marker: 'host' },
       outputRecoveryFacade: { marker: 'output' },
+      provisioningRunByTeam: new Map(),
       providerRuntime: { marker: 'provider' },
       runtimeResourceSampling: { marker: 'sampling' },
+      runtimeAdapterProgressByRunId: new Map(),
+      runs: new Map(),
       verificationProbePorts: { marker: 'probe' },
     };
     const service = serviceSeams as unknown as TeamProvisioningService;
@@ -42,6 +49,41 @@ describe('team provisioning private harness seams', () => {
     expect(verificationProbePortsHarness(service)).toBe(serviceSeams.verificationProbePorts);
   });
 
+  it('registers run-tracking state through narrow typed helpers', () => {
+    const serviceSeams = {
+      aliveRunByTeam: new Map<string, string>(),
+      provisioningRunByTeam: new Map<string, string>(),
+      runtimeAdapterProgressByRunId: new Map<string, { runId: string; state: 'spawning' }>(),
+      runs: new Map(),
+      getResolvableProvisioningRunId: vi.fn((teamName: string) => {
+        return serviceSeams.provisioningRunByTeam.get(teamName) ?? null;
+      }),
+    };
+    const service = serviceSeams as unknown as TeamProvisioningService;
+    const aliveRun = {
+      runId: 'alive-run-1',
+      teamName: 'team-a',
+      request: { cwd: '/workspace/project' },
+      child: null,
+      processKilled: false,
+      cancelRequested: false,
+    };
+
+    registerAliveRun(service, aliveRun);
+    registerProvisioningRun(service, 'team-a', 'runtime-adapter-run-1', {
+      runtimeAdapterProgressState: 'spawning',
+    });
+
+    expect(serviceSeams.runs.get(aliveRun.runId)).toBe(aliveRun);
+    expect(serviceSeams.aliveRunByTeam.get('team-a')).toBe(aliveRun.runId);
+    expect(getRegisteredProvisioningRunId(service, 'team-a')).toBe('runtime-adapter-run-1');
+    expect(serviceSeams.runtimeAdapterProgressByRunId.get('runtime-adapter-run-1')).toEqual({
+      runId: 'runtime-adapter-run-1',
+      state: 'spawning',
+    });
+    expect(getResolvableProvisioningRunId(service, 'team-a')).toBe('runtime-adapter-run-1');
+  });
+
   it('stubs persisted member and project-path seams with vi mocks', () => {
     const runtimeMembers: ReturnType<
       TeamProvisioningConfigFacade['readPersistedRuntimeMembers']
@@ -52,13 +94,13 @@ describe('team provisioning private harness seams', () => {
     } as unknown as TeamProvisioningService;
 
     stubMemberLifecyclePersistedRuntimeMembers(service, runtimeMembers);
-    stubProvisioningConfigProjectPath(service, '/tmp/harness-project');
+    stubProvisioningConfigProjectPath(service, '/workspace/harness-project');
 
     expect(memberLifecycleHostHarness(service).readPersistedRuntimeMembers('team-a')).toBe(
       runtimeMembers
     );
     expect(provisioningConfigFacadeHarness(service).readPersistedTeamProjectPath('team-a')).toBe(
-      '/tmp/harness-project'
+      '/workspace/harness-project'
     );
     expect(
       vi.isMockFunction(memberLifecycleHostHarness(service).readPersistedRuntimeMembers)

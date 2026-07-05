@@ -9,8 +9,28 @@ import type { TeamProvisioningRuntimeResourceSampling } from '@main/services/tea
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import type { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import type { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import type { TeamProvisioningProgress } from '@shared/types';
 
-export type TeamProvisioningServicePrivateHarness = {
+export interface TeamProvisioningServicePrivateRunHarness {
+  runId: string;
+  teamName: string;
+  request: {
+    cwd?: string;
+  };
+  child: unknown;
+  processKilled: boolean;
+  cancelRequested: boolean;
+  spawnContext?: {
+    cwd?: string;
+  };
+}
+
+export interface TeamProvisioningServicePrivateRuntimeAdapterProgressHarness {
+  runId: TeamProvisioningProgress['runId'];
+  state: TeamProvisioningProgress['state'];
+}
+
+export interface TeamProvisioningServicePrivateHarness {
   getLiveTeamAgentRuntimeMetadata: (
     teamName: string
   ) => Promise<Map<string, Record<string, unknown>>>;
@@ -36,7 +56,14 @@ export type TeamProvisioningServicePrivateHarness = {
   }) => Promise<OpenCodeTeamRuntimeMessageResult>;
   getRuntimeSnapshotCacheGeneration: (teamName: string) => number;
   invalidateRuntimeSnapshotCaches: (teamName: string) => void;
+  runs: Map<string, TeamProvisioningServicePrivateRunHarness>;
+  provisioningRunByTeam: Map<string, string>;
   aliveRunByTeam: Map<string, string>;
+  runtimeAdapterProgressByRunId: Map<
+    string,
+    TeamProvisioningServicePrivateRuntimeAdapterProgressHarness
+  >;
+  getResolvableProvisioningRunId: (teamName: string) => string | null;
   readRecentBootstrapTranscriptOutcome: (
     filePath: string,
     sinceMs: number | null,
@@ -44,14 +71,55 @@ export type TeamProvisioningServicePrivateHarness = {
     teamName: string,
     options?: { allowAnonymousFailure?: boolean; contextMemberNames?: readonly string[] }
   ) => Promise<{ kind: string; observedAt: string; source?: string; reason?: string } | null>;
-  readPersistedRuntimeMembers: (teamName: string) => Array<Record<string, unknown>>;
+  readPersistedRuntimeMembers: (teamName: string) => Record<string, unknown>[];
   readPersistedTeamProjectPath: (teamName: string) => string | null;
-};
+}
 
 export function privateHarness(
   svc: TeamProvisioningService
 ): TeamProvisioningServicePrivateHarness {
   return svc as unknown as TeamProvisioningServicePrivateHarness;
+}
+
+export function registerAliveRun(
+  svc: TeamProvisioningService,
+  run: TeamProvisioningServicePrivateRunHarness
+): void {
+  const harness = privateHarness(svc);
+  harness.runs.set(run.runId, run);
+  harness.aliveRunByTeam.set(run.teamName, run.runId);
+}
+
+export function registerProvisioningRun(
+  svc: TeamProvisioningService,
+  teamName: string,
+  runId: string,
+  options: {
+    runtimeAdapterProgressState?: TeamProvisioningServicePrivateRuntimeAdapterProgressHarness['state'];
+  } = {}
+): void {
+  const harness = privateHarness(svc);
+  harness.provisioningRunByTeam.set(teamName, runId);
+  if (options.runtimeAdapterProgressState) {
+    harness.runtimeAdapterProgressByRunId.set(runId, {
+      runId,
+      state: options.runtimeAdapterProgressState,
+    });
+  }
+}
+
+export function getResolvableProvisioningRunId(
+  svc: TeamProvisioningService,
+  teamName: string
+): string | null {
+  return privateHarness(svc).getResolvableProvisioningRunId(teamName);
+}
+
+export function getRegisteredProvisioningRunId(
+  svc: TeamProvisioningService,
+  teamName: string
+): string | undefined {
+  return privateHarness(svc).provisioningRunByTeam.get(teamName);
 }
 
 export interface TeamProvisioningOutputRecoveryFacadeHarness {
