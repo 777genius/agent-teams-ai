@@ -133,6 +133,7 @@ export interface MembersEditorSectionProps {
   inheritedModel?: string;
   inheritedEffort?: EffortLevel;
   limitContext?: boolean;
+  onLimitContextChange?: (value: boolean) => void;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
@@ -182,6 +183,7 @@ export const MembersEditorSection = ({
   inheritedModel,
   inheritedEffort,
   limitContext = false,
+  onLimitContextChange,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
   modelLockReason,
@@ -544,6 +546,7 @@ export const MembersEditorSection = ({
                   onProviderChange={updateMemberProvider}
                   onModelChange={updateMemberModel}
                   onEffortChange={updateMemberEffort}
+                  onLimitContextChange={onLimitContextChange}
                   showWorktreeIsolationControls={showWorktreeIsolationControls}
                   worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
                   onWorktreeIsolationChange={updateMemberIsolation}
@@ -598,6 +601,7 @@ export const MembersEditorSection = ({
                         onProviderChange={updateMemberProvider}
                         onModelChange={updateMemberModel}
                         onEffortChange={updateMemberEffort}
+                        onLimitContextChange={onLimitContextChange}
                         showWorktreeIsolationControls={showWorktreeIsolationControls}
                         onWorktreeIsolationChange={updateMemberIsolation}
                         onMcpPolicyChange={updateMemberMcpPolicy}

@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   formatTeamModelSummary,
@@ -31,7 +32,10 @@ import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
-import { isAnthropicSonnetOneMillionContextTeamModel } from '@renderer/utils/teamModelCatalog';
+import {
+  isAnthropicHaikuTeamModel,
+  isAnthropicSonnetOneMillionContextTeamModel,
+} from '@renderer/utils/teamModelCatalog';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import {
   normalizeTeamMemberMcpPolicy,
@@ -75,6 +79,7 @@ interface MemberDraftRowProps {
   onProviderChange: (id: string, providerId: TeamProviderId) => void;
   onModelChange: (id: string, model: string) => void;
   onEffortChange: (id: string, effort: string) => void;
+  onLimitContextChange?: (value: boolean) => void;
   inheritedProviderId?: TeamProviderId;
   inheritedModel?: string;
   inheritedEffort?: EffortLevel;
@@ -137,6 +142,7 @@ export const MemberDraftRow = ({
   onProviderChange,
   onModelChange,
   onEffortChange,
+  onLimitContextChange,
   inheritedProviderId = 'anthropic',
   inheritedModel = '',
   inheritedEffort,
@@ -434,6 +440,7 @@ export const MemberDraftRow = ({
   const anthropicContextModeLabel = limitContext
     ? t('memberDraft.anthropicContext.limitEnabled')
     : t('memberDraft.anthropicContext.defaultSetting');
+  const disableAnthropicContextLimit = isAnthropicHaikuTeamModel(effectiveModel ?? '');
   const workflowTooltipText = workflowDraft.value.trim()
     ? t('memberDraft.workflow.editTooltip')
     : t('memberDraft.workflow.addTooltip');
@@ -919,13 +926,24 @@ export const MemberDraftRow = ({
               />
               {effectiveProviderId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
               {effectiveProviderId === 'anthropic' ? (
-                <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-                  <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
-                  <p className="text-[11px] leading-relaxed text-sky-300">
-                    {t('memberDraft.anthropicContext.description', {
-                      mode: anthropicContextModeLabel,
-                    })}
-                  </p>
+                <div className="rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
+                    <p className="text-[11px] leading-relaxed text-sky-300">
+                      {t('memberDraft.anthropicContext.description', {
+                        mode: anthropicContextModeLabel,
+                      })}
+                    </p>
+                  </div>
+                  {onLimitContextChange ? (
+                    <LimitContextCheckbox
+                      id={`member-${member.id}-limit-context`}
+                      checked={limitContext}
+                      onCheckedChange={onLimitContextChange}
+                      disabled={disableAnthropicContextLimit}
+                      scopeLabel={t('members.leadModel.anthropicTeamWide')}
+                    />
+                  ) : null}
                 </div>
               ) : null}
               {lockProviderModel && (

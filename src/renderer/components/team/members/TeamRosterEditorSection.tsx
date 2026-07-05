@@ -163,6 +163,7 @@ const TeamRosterEditorSectionImpl = ({
       inheritedModel={inheritedModel}
       inheritedEffort={inheritedEffort}
       limitContext={limitContext}
+      onLimitContextChange={onLimitContextChange}
       inheritModelSettingsByDefault={inheritModelSettingsByDefault}
       lockProviderModel={lockProviderModel}
       forceInheritedModelSettings={forceInheritedModelSettings}

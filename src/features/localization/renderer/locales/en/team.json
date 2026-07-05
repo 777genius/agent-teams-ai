@@ -269,7 +269,7 @@
     },
     "anthropicContext": {
       "defaultSetting": "default context setting",
-      "description": "Anthropic context is team-wide for this launch: {{mode}}. Use the lead runtime panel's Limit context checkbox to change it.",
+      "description": "Anthropic context is team-wide for this launch: {{mode}}. Use Limit context to 200K tokens to avoid long-context behavior.",
       "limitEnabled": "200K limit enabled"
     },
     "mcp": {

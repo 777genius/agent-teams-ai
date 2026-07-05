@@ -418,6 +418,44 @@ describe('MemberDraftRow', () => {
     });
   });
 
+  it('lets an Anthropic teammate toggle the team-wide 200K context limit inline', () => {
+    const onLimitContextChange = vi.fn();
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-5',
+      }),
+      limitContext: false,
+      onLimitContextChange,
+    });
+
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="anthropic provider, claude-sonnet-5"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    expect(host.textContent).toContain('Limit context to 200K tokens');
+    expect(host.textContent).toContain('Anthropic team-wide');
+
+    const limitContextCheckbox = host.querySelector<HTMLInputElement>(
+      '#member-member-1-limit-context'
+    )!;
+    act(() => {
+      limitContextCheckbox.click();
+    });
+
+    expect(onLimitContextChange).toHaveBeenCalledWith(true);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('shows the OpenCode context config hint inside OpenCode teammate provider settings after effort', () => {
     const { host, root } = renderMemberDraftRow({
       member: createMemberDraft({
