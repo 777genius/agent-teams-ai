@@ -227,6 +227,9 @@ export type RunEventReadRequest = {
   readonly cursor?: RunEventCursor;
   readonly limit?: number;
   readonly runId?: string;
+  readonly runIds?: readonly string[];
+  readonly sourceProviderKind?: RunEventProviderKind;
+  readonly sourceRegistryRootDir?: string;
   readonly types?: readonly RunEventType[];
 };
 

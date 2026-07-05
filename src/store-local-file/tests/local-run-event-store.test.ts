@@ -83,6 +83,33 @@ describe("LocalFileRunEventStore", () => {
     ]);
   });
 
+  it("applies scoped read filters before limit", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "run-event-store-"));
+    const store = new LocalFileRunEventStore({ rootDir });
+    const foreign = event("run-foreign", RunEventType.ProgressUpdated, "foreign", {
+      providerKind: RunEventProviderKind.Claude,
+      registryRootDir: "/tmp/other-registry",
+    });
+    const first = event("run-a", RunEventType.ProgressUpdated, "progress-a", {
+      registryRootDir: "/tmp/registry",
+    });
+    const second = event("run-b", RunEventType.Completed, "completed-b", {
+      registryRootDir: "/tmp/registry",
+    });
+
+    await store.append([foreign, first, second]);
+
+    const read = await store.read({
+      limit: 1,
+      runIds: ["run-a", "run-b"],
+      sourceProviderKind: RunEventProviderKind.Codex,
+      sourceRegistryRootDir: "/tmp/registry",
+    });
+
+    expect(read.events.map((item) => item.eventId)).toEqual([first.eventId]);
+    expect(read.nextCursor?.value).toBe("2");
+  });
+
   it("recovers stale append locks", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "run-event-store-"));
     const path = join(rootDir, "run-events", "events.ndjson");
@@ -265,13 +292,20 @@ function event(
   runId: string,
   type: RunEventType,
   idempotencyPart: string,
+  options: {
+    readonly providerKind?: RunEventProviderKind;
+    readonly registryRootDir?: string;
+  } = {},
 ) {
   return makeRunEvent({
     runId,
     type,
     occurredAt: "2026-07-02T00:00:00.000Z",
     source: {
-      providerKind: RunEventProviderKind.Codex,
+      providerKind: options.providerKind ?? RunEventProviderKind.Codex,
+      ...(options.registryRootDir === undefined ? {} : {
+        registryRootDir: options.registryRootDir,
+      }),
     },
     payload: { idempotencyPart },
     idempotencyParts: [idempotencyPart],

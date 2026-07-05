@@ -109,6 +109,7 @@ export class LocalFileRunEventStore
     const events: RunEvent[] = [];
     const warnings: RunEventReadWarning[] = [];
     const typeFilter = input.types === undefined ? null : new Set(input.types);
+    const runIdFilter = runEventRunIdFilter(input.runId, input.runIds);
     let nextLine = startLine;
 
     for (let index = startLine; index < lines.length; index += 1) {
@@ -135,7 +136,15 @@ export class LocalFileRunEventStore
         });
         continue;
       }
-      if (input.runId !== undefined && event.runId !== input.runId) continue;
+      if (!runIdFilter(event.runId)) continue;
+      if (
+        input.sourceProviderKind !== undefined &&
+        event.source.providerKind !== input.sourceProviderKind
+      ) continue;
+      if (
+        input.sourceRegistryRootDir !== undefined &&
+        event.source.registryRootDir !== input.sourceRegistryRootDir
+      ) continue;
       if (typeFilter && !typeFilter.has(event.type)) continue;
       events.push(event);
       if (input.limit !== undefined && events.length >= input.limit) {
@@ -404,6 +413,18 @@ export class LocalFileRunEventStore
       lockPollMs: this.lockPollMs(),
     }, fn);
   }
+}
+
+function runEventRunIdFilter(
+  runId: string | undefined,
+  runIds: readonly string[] | undefined,
+): (value: string) => boolean {
+  const runIdSet = runIds === undefined ? undefined : new Set(runIds);
+  return (value) => {
+    if (runId !== undefined && value !== runId) return false;
+    if (runIdSet !== undefined && !runIdSet.has(value)) return false;
+    return true;
+  };
 }
 
 export class LocalFileRunEventProjectionStateStore

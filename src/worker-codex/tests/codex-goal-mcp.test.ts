@@ -8,6 +8,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import {
+  LocalFileRunEventStore,
   LocalFileWorkerAccountCapacityStore,
   LocalFileWorkerControlInboxStore,
 } from "@vioxen/subscription-runtime/store-local-file";
@@ -15,6 +16,9 @@ import {
   AccessBoundary,
   InMemoryActiveAttemptRegistry,
   NetworkAccessMode,
+  RunEventProviderKind,
+  RunEventType,
+  makeRunEvent,
   projectScopedControllerToolNames,
   type WorkerControlDeliveryReceipt,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -418,6 +422,19 @@ describe("codex goal MCP server", () => {
         expect(JSON.stringify(watch).includes("rawBearerSecret")).toBe(false);
 
         const eventRootDir = join(root, "events");
+        const eventStore = new LocalFileRunEventStore({ rootDir: eventRootDir });
+        const foreignEvent = makeRunEvent({
+          runId: "foreign-claude-run",
+          type: RunEventType.Completed,
+          occurredAt: "2026-07-03T00:00:00.000Z",
+          source: {
+            providerKind: RunEventProviderKind.Claude,
+            registryRootDir,
+          },
+          payload: { status: "completed" },
+          idempotencyParts: ["foreign-claude-run"],
+        });
+        await eventStore.append([foreignEvent]);
         const projected = await callToolJson(client, "agent_run_project_events", {
           registryRootDir,
           jobId: "job-observed",
@@ -439,6 +456,15 @@ describe("codex goal MCP server", () => {
           ],
         });
         expect((projected.appendedCount as number)).toBeGreaterThan(0);
+        const projectedEvents = projected.events as readonly Record<string, unknown>[];
+        expect(projectedEvents.map((event) => event.runId)).not.toContain(
+          "foreign-claude-run",
+        );
+        expect(
+          projectedEvents.every((event) =>
+            (event.source as { providerKind?: unknown }).providerKind === "codex"
+          ),
+        ).toBe(true);
         expect(JSON.stringify(projected).includes("rawBearerSecret")).toBe(false);
 
         const events = await callToolJson(client, "agent_run_events", {

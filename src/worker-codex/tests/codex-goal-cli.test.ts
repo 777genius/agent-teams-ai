@@ -303,6 +303,33 @@ describe("codex goal cli", () => {
     }
   });
 
+  it("rejects one-shot CLI starts for live project controllers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-cli-controller-"));
+    const io = captureIo();
+
+    try {
+      const exitCode = await runCodexGoalCli([
+        "tool",
+        "codex_goal_project_controller_start",
+        "--args-json",
+        JSON.stringify({
+          registryRootDir: root,
+          controllerJobId: "controller-v1",
+        }),
+      ], io);
+
+      expect(exitCode).toBe(1);
+      expect(JSON.parse(io.stdout)).toMatchObject({
+        ok: false,
+        mode: "mcp_tool_guard",
+        tool: "codex_goal_project_controller_start",
+        reason: "durable_controller_process_required",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("builds shortcut commands for common agent operations", () => {
     const overview = parseCodexGoalCliArgs([
       "overview",

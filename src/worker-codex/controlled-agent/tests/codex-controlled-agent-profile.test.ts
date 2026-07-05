@@ -47,4 +47,3 @@ describe("buildCodexControlledAgentProfile", () => {
     expect(profile.rulesText).toContain('pattern = ["bash", "-lc"]');
   });
 });
-

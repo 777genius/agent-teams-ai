@@ -195,6 +195,14 @@ codex_goal_project_controller_stop({ controllerJobId, registryRootDir, providerK
 codex_goal_project_controller_reconcile({ controllerJobId, registryRootDir, providerKind })
 ```
 
+Use the CLI fallback for launch plans, status reads and diagnostics only. The
+CLI fallback command `subscription-runtime-codex-goal tool
+codex_goal_project_controller_start` is deliberately blocked because it uses a
+one-shot in-process MCP server and cannot keep the provider runner attached
+after the command exits. Start live controllers only from the host supervisor,
+daemon, native MCP server or SDK process that will continue owning `status`,
+`stop` and `reconcile`.
+
 The Codex controlled-agent profile disables native app-server environments and
 keeps only the configured broker/status MCP surface. If a profile can only add
 deny rules around raw shell, the launch plan returns blocked with

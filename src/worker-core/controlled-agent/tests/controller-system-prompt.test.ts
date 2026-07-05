@@ -12,4 +12,3 @@ describe("controlledAgentControllerSystemPrompt", () => {
     expect(prompt).toContain("Never read or print secrets");
   });
 });
-

@@ -160,6 +160,12 @@ If that restricted LLM launcher is not available, keep orchestration in the host
 boss/supervisor. Do not substitute `danger_full_access`; that creates an admin
 worker, not a project-scoped controller.
 
+`subscription-runtime-codex-goal tool codex_goal_project_controller_start` is
+intentionally rejected by the CLI fallback because it creates a one-shot
+in-process MCP server and exits immediately after the tool call. A live
+controller must be started by a durable MCP/supervisor process that keeps the
+provider runner attached for `status`, `stop` and `reconcile`.
+
 Use `codex_goal_project_controller_launch_plan` as the preflight before any live
 LLM-controller attempt. It loads the stored controller manifest, builds the
 controlled-agent profile and returns either:

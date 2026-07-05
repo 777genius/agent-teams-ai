@@ -287,6 +287,12 @@ If the result is `provider_cannot_disable_raw_shell`, the selected provider
 profile still exposes raw shell and must not be used for a live controller. Do
 not switch the controller to `danger_full_access`; that bypasses the
 project-scoped control boundary.
+The CLI fallback may inspect launch/status state, but it must not own a live
+controller start. `subscription-runtime-codex-goal tool
+codex_goal_project_controller_start` returns
+`durable_controller_process_required`; use a durable host supervisor, daemon,
+native MCP server or SDK process for live starts so provider liveness remains
+attached after startup.
 If `codex_goal_project_controller_start`, `stop` or `reconcile` returns
 `controlled_agent_provider_runner_not_connected`, the persisted run is not owned
 by the current MCP process. Treat this as expected fail-closed behavior after a

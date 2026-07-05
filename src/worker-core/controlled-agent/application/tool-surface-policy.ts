@@ -90,4 +90,3 @@ function grant(
 ): ControlledAgentToolGrant {
   return { name, group, sideEffect };
 }
-

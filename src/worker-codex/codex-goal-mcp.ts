@@ -5060,11 +5060,9 @@ async function readAgentRunEvents(
     ...(numberValue(args.limit) === undefined
       ? {}
       : { limit: numberValue(args.limit) as number }),
+    ...(providerKind === undefined ? {} : { sourceProviderKind: providerKind }),
     ...runEventTypeFilter(args),
   });
-  const events = providerKind === undefined
-    ? result.events
-    : result.events.filter((event) => event.source.providerKind === providerKind);
   return {
     ok: result.warnings.length === 0,
     mode: "read_only",
@@ -5072,10 +5070,10 @@ async function readAgentRunEvents(
     providerKind: providerKind ?? "all",
     registryRootDir,
     eventRootDir,
-    returnedEvents: events.length,
+    returnedEvents: result.events.length,
     nextCursor: result.nextCursor?.value,
     warnings: result.warnings,
-    events,
+    events: result.events,
   };
 }
 
@@ -5273,7 +5271,11 @@ async function projectAgentRunEvents(
       readModels: projection.nextState.readModels,
     });
   }
+  const projectedRunIds = snapshots.map((snapshot) => snapshot.runId);
   const readBack: RunEventReadResult = await eventStore.read({
+    runIds: projectedRunIds,
+    sourceProviderKind: providerKind,
+    sourceRegistryRootDir: registryRootDir,
     ...(numberValue(args.limit) === undefined
       ? {}
       : { limit: numberValue(args.limit) as number }),

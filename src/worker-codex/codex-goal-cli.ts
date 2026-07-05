@@ -211,6 +211,11 @@ export async function runCodexGoalCli(
       return 0;
     }
     if (command.kind === "mcp-tool") {
+      const oneShotGuard = oneShotMcpToolGuard(command.name);
+      if (oneShotGuard !== undefined) {
+        writeJsonOrText(command.format, oneShotGuard, io);
+        return 1;
+      }
       writeJsonOrText(
         command.format,
         await callCodexGoalMcpTool({
@@ -1631,6 +1636,19 @@ function writeJsonOrText(
     return;
   }
   io.writeStdout(`${JSON.stringify(value)}\n`);
+}
+
+function oneShotMcpToolGuard(name: string): Record<string, unknown> | undefined {
+  if (name !== "codex_goal_project_controller_start") return undefined;
+  return {
+    ok: false,
+    mode: "mcp_tool_guard",
+    sideEffects: [],
+    tool: name,
+    reason: "durable_controller_process_required",
+    safeMessage:
+      "codex_goal_project_controller_start must run through a durable MCP/supervisor process that keeps the provider runner attached. The one-shot CLI fallback exits after the tool call and cannot safely own live controller liveness. Start subscription-runtime-codex-goal-mcp under the host supervisor or use an in-process MCP client owned by that supervisor.",
+  };
 }
 
 function currentCliPath(): string {

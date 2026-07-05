@@ -11,4 +11,3 @@ export function controlledAgentControllerSystemPrompt(): string {
     "Stay inside the controller project scope and do not operate on other projects.",
   ].join("\n");
 }
-

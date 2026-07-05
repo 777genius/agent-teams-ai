@@ -145,9 +145,10 @@
     "smoke:worker-claude": "npm run build && node scripts/smoke-claude-worker.mjs",
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs && node scripts/check-boundaries-self-test.mjs",
+    "check:diff": "node scripts/check-git-diff.mjs",
     "check:dist": "node scripts/check-dist.mjs",
     "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
-    "check": "npm run typecheck && npm run build && npm run check:dist && npm test && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer"
+    "check": "npm run check:diff && npm run typecheck && npm run build && npm run check:dist && npm test && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
