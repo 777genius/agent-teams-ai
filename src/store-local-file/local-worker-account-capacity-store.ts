@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   mkdirSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -63,11 +64,13 @@ export class LocalFileWorkerAccountCapacityStore
     const accountId = normalizeWorkerAccountId(input.accountId);
     if (!accountId) return null;
     const demand = normalizeWorkerRuntimeDemand(input.demand);
+    const now = input.now ?? new Date();
 
-    const record =
-      (demand ? this.readRecord(accountId, demand) : null) ??
-      this.readRecord(accountId, null) ??
-      this.readLegacyRecord(accountId);
+    const record = demand
+      ? this.readRecord(accountId, demand) ??
+        this.readRecord(accountId, null) ??
+        this.readLegacyRecord(accountId)
+      : this.readAggregateRecord(accountId, now);
     if (!record) return null;
     if (record.accountId !== accountId) {
       this.clear({ accountId });
@@ -87,7 +90,6 @@ export class LocalFileWorkerAccountCapacityStore
       return null;
     }
 
-    const now = input.now ?? new Date();
     if (
       capacity.cooldownUntil &&
       capacity.cooldownUntil.getTime() <= now.getTime()
@@ -148,6 +150,80 @@ export class LocalFileWorkerAccountCapacityStore
     accountId: string,
   ): PersistedWorkerAccountCapacityRecord | null {
     return this.readRecordPath(this.legacyRecordPath(accountId));
+  }
+
+  private readAggregateRecord(
+    accountId: string,
+    now: Date,
+  ): PersistedWorkerAccountCapacityRecord | null {
+    let selected = this.readActiveRecordPath(
+      this.recordPath(accountId, null),
+      now,
+    ) ?? this.readActiveRecordPath(this.legacyRecordPath(accountId), now);
+    for (const record of this.readDemandRecords(accountId, now)) {
+      const selectedCapacity = selected
+        ? parsePersistedCapacity(selected.capacity)
+        : null;
+      const recordCapacity = parsePersistedCapacity(record.capacity);
+      if (!recordCapacity) continue;
+      if (
+        recordCapacity.cooldownUntil &&
+        recordCapacity.cooldownUntil.getTime() <= now.getTime()
+      ) {
+        continue;
+      }
+      if (
+        !selectedCapacity ||
+        !shouldKeepExistingWorkerAccountCapacity(
+          selectedCapacity,
+          recordCapacity,
+        )
+      ) {
+        selected = record;
+      }
+    }
+    return selected;
+  }
+
+  private readDemandRecords(
+    accountId: string,
+    now: Date,
+  ): readonly PersistedWorkerAccountCapacityRecord[] {
+    const dir = this.accountRecordDir(accountId);
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") return [];
+      throw error;
+    }
+    const records: PersistedWorkerAccountCapacityRecord[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || entry.name === "account.json") continue;
+      const record = this.readActiveRecordPath(join(dir, entry.name), now);
+      if (record) records.push(record);
+    }
+    return records;
+  }
+
+  private readActiveRecordPath(
+    path: string,
+    now: Date,
+  ): PersistedWorkerAccountCapacityRecord | null {
+    const record = this.readRecordPath(path);
+    if (!record) return null;
+    const capacity = parsePersistedCapacity(record.capacity);
+    if (
+      !capacity ||
+      (
+        capacity.cooldownUntil &&
+        capacity.cooldownUntil.getTime() <= now.getTime()
+      )
+    ) {
+      rmSync(path, { force: true });
+      return null;
+    }
+    return record;
   }
 
   private readRecordPath(

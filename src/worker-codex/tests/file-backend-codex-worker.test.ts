@@ -1821,8 +1821,10 @@ describe("FileBackendCodexWorker", () => {
         controls: { editMode: "allow-edits" },
       });
 
-      expect(result.status).toBe("partial");
-      if (result.status !== "partial") throw new Error("expected partial");
+      expect(result.status).toBe("waiting_capacity");
+      if (result.status !== "waiting_capacity") {
+        throw new Error("expected waiting capacity");
+      }
       expect(result.attempts).toHaveLength(10);
       expect(result.reason).toBe("quota_limited");
       expect(result.safeMessage).toBe("Safe execution has no attempts remaining.");
@@ -1897,7 +1899,7 @@ describe("FileBackendCodexWorker", () => {
         controls: { editMode: "allow-edits" },
       });
 
-      expect(result.status).toBe("partial");
+      expect(result.status).toBe("waiting_capacity");
       expect(result.attempts).toHaveLength(2);
       expect(appServers[0]!.prompts).toHaveLength(1);
       expect(appServers[1]!.prompts).toHaveLength(1);
@@ -1986,7 +1988,7 @@ describe("FileBackendCodexWorker", () => {
     }
   });
 
-  it("resumes a partial safe Codex goal on another account after executor restart", async () => {
+  it("resumes a parked safe Codex goal on another account after executor restart", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-goal-"));
     const workspacePath = await gitWorkspace("codex-safe-goal-workspace-");
     const clock = {
@@ -2031,8 +2033,10 @@ describe("FileBackendCodexWorker", () => {
         controls: { editMode: "allow-edits" },
       });
 
-      expect(first.status).toBe("partial");
-      if (first.status !== "partial") throw new Error("expected partial");
+      expect(first.status).toBe("waiting_capacity");
+      if (first.status !== "waiting_capacity") {
+        throw new Error("expected waiting capacity");
+      }
       expect(first.reason).toBe("quota_limited");
       expect(first.attempts).toHaveLength(1);
       expect(firstAccountServer.prompts).toEqual(["Finish the long goal."]);

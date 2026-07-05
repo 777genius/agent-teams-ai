@@ -82,7 +82,7 @@ export class InMemoryWorkerAccountCapacityStore
     if (demand) {
       return this.readByKey(accountCapacityKey(accountId, null), now);
     }
-    return null;
+    return this.readAggregate(accountId, now);
   }
 
   private readByKey(key: string, now: Date): WorkerCapacitySnapshot | null {
@@ -96,6 +96,26 @@ export class InMemoryWorkerAccountCapacityStore
       return null;
     }
     return current;
+  }
+
+  private readAggregate(
+    accountId: string,
+    now: Date,
+  ): WorkerCapacitySnapshot | null {
+    const prefix = `${accountId}\u0000`;
+    let selected: WorkerCapacitySnapshot | null = null;
+    for (const key of this.records.keys()) {
+      if (key !== accountId && !key.startsWith(prefix)) continue;
+      const capacity = this.readByKey(key, now);
+      if (!capacity) continue;
+      if (
+        !selected ||
+        !shouldKeepExistingWorkerAccountCapacity(selected, capacity)
+      ) {
+        selected = capacity;
+      }
+    }
+    return selected;
   }
 
   observe(input: WorkerAccountLimitSignal): void {
