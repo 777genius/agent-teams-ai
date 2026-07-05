@@ -4399,7 +4399,11 @@ export class TeamProvisioningService {
       request.teamName
     );
     if (existingProvisioningRunId) {
-      return { runId: existingProvisioningRunId };
+      return {
+        runId: existingProvisioningRunId,
+        launchStatus: 'already_launching',
+        alreadyLaunching: true,
+      };
     }
     const previousLaunchSnapshot = await this.readTaskActivityRepairLaunchSnapshot(
       request.teamName
@@ -4592,7 +4596,11 @@ export class TeamProvisioningService {
       request.teamName
     );
     if (existingProvisioningRunId) {
-      return { runId: existingProvisioningRunId };
+      return {
+        runId: existingProvisioningRunId,
+        launchStatus: 'already_launching',
+        alreadyLaunching: true,
+      };
     }
     const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
     assertAppDeterministicBootstrapEnabled();
@@ -4611,7 +4619,11 @@ export class TeamProvisioningService {
         this.deterministicLaunchFlowBoundary.createSetupPorts()
       );
       if (setup.kind === 'reuse') {
-        return { runId: setup.runId };
+        return {
+          runId: setup.runId,
+          launchStatus: 'already_running',
+          alreadyRunning: true,
+        };
       }
 
       return runDeterministicLaunchRunFlow(
@@ -5585,9 +5597,10 @@ export class TeamProvisioningService {
   }
 
   private async launchMixedSecondaryLaneIfNeeded(
-    run: ProvisioningRun
+    run: ProvisioningRun,
+    options: { waitForCompletion?: boolean } = {}
   ): Promise<PersistedTeamLaunchSnapshot | null> {
-    return this.mixedSecondaryLaneWiring.launchMixedSecondaryLaneIfNeeded(run);
+    return this.mixedSecondaryLaneWiring.launchMixedSecondaryLaneIfNeeded(run, options);
   }
 
   private async recoverStaleMixedSecondaryLaunchSnapshot(

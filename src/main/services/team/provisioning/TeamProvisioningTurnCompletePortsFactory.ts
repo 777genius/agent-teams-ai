@@ -133,7 +133,8 @@ export function createTeamProvisioningTurnCompletePorts<
       deps.service.maybeAuditMemberSpawnStatuses(run, options),
     finalizeMissingRegisteredMembersAsFailed: (run) =>
       deps.service.finalizeMissingRegisteredMembersAsFailed(run),
-    launchMixedSecondaryLaneIfNeeded: (run) => deps.service.launchMixedSecondaryLaneIfNeeded(run),
+    launchMixedSecondaryLaneIfNeeded: (run, options) =>
+      deps.service.launchMixedSecondaryLaneIfNeeded(run, options),
     reconcileFinalLaunchReportingSnapshot: (run, secondaryLaunchResult) =>
       deps.service.reconcileFinalLaunchReportingSnapshot(run, secondaryLaunchResult),
     getFailedSpawnMembers: (run) => getFailedSpawnMembersFromStatuses(run.memberSpawnStatuses),

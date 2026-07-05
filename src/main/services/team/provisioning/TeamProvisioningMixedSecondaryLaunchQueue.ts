@@ -136,11 +136,10 @@ export function launchQueuedMixedSecondaryLaneInBackground<
   void run.mixedSecondaryLaneLaunchQueue;
 }
 
-export async function launchMixedSecondaryLaneIfNeeded<
-  TRun extends MixedSecondaryLaunchQueueRun,
->(
+export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSecondaryLaunchQueueRun>(
   run: TRun,
-  ports: MixedSecondaryLaunchQueuePorts<TRun>
+  ports: MixedSecondaryLaunchQueuePorts<TRun>,
+  options: { waitForCompletion?: boolean } = {}
 ): Promise<PersistedTeamLaunchSnapshot | null> {
   if (run.cancelRequested || run.processKilled) {
     return ports.readLaunchState(run.teamName).catch(() => null);
@@ -184,6 +183,13 @@ export async function launchMixedSecondaryLaneIfNeeded<
 
   for (const lane of mixedSecondaryLanes) {
     launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+  }
+
+  if (options.waitForCompletion) {
+    await run.mixedSecondaryLaneLaunchQueue;
+    if (run.cancelRequested || run.processKilled) {
+      return ports.readLaunchState(run.teamName).catch(() => null);
+    }
   }
 
   return ports.persistLaunchStateSnapshot(run, ports.getMixedSecondaryLaunchPhase(run));

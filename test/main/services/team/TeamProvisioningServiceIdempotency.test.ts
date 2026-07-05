@@ -28,6 +28,8 @@ import { TeamProvisioningService } from '@main/services/team/TeamProvisioningSer
 
 import {
   getRegisteredProvisioningRunId,
+  getResolvableProvisioningRunId,
+  privateHarness,
   registerAliveRun,
   registerProvisioningRun,
 } from './provisioningHarness/servicePrivateHarness';
@@ -80,6 +82,71 @@ describe('TeamProvisioningService idempotent launch guards', () => {
     const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
 
     expect(response.runId).toBe(aliveRun.runId);
+  });
+
+  it('returns already_launching for an active provisioning run', async () => {
+    const teamName = 'team-alpha';
+    const runId = 'launching-run-1';
+    const svc = new TeamProvisioningService();
+
+    registerProvisioningRun(svc, teamName, runId);
+    privateHarness(svc).runs.set(runId, {
+      runId,
+      teamName,
+      request: {},
+      child: null,
+      processKilled: false,
+      cancelRequested: false,
+    });
+
+    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+
+    expect(response).toMatchObject({
+      runId,
+      launchStatus: 'already_launching',
+      alreadyLaunching: true,
+    });
+  });
+
+  it('returns already_launching for active runtime adapter progress', async () => {
+    const teamName = 'team-alpha';
+    const runId = 'runtime-adapter-run-1';
+    const svc = new TeamProvisioningService();
+
+    registerProvisioningRun(svc, teamName, runId, {
+      runtimeAdapterProgressState: 'finalizing',
+    });
+
+    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+
+    expect(response).toMatchObject({
+      runId,
+      launchStatus: 'already_launching',
+      alreadyLaunching: true,
+    });
+  });
+
+  it('does not expose unresolved internal provisioning ids', () => {
+    const teamName = 'team-alpha';
+    const svc = new TeamProvisioningService();
+
+    registerProvisioningRun(svc, teamName, 'pending-stale-run');
+
+    expect(getResolvableProvisioningRunId(svc, teamName)).toBeNull();
+    expect(getRegisteredProvisioningRunId(svc, teamName)).toBeUndefined();
+  });
+
+  it('keeps runtime adapter provisioning ids while their progress is still tracked', () => {
+    const teamName = 'team-alpha';
+    const runId = 'runtime-adapter-run-1';
+    const svc = new TeamProvisioningService();
+
+    registerProvisioningRun(svc, teamName, runId, {
+      runtimeAdapterProgressState: 'spawning',
+    });
+
+    expect(getResolvableProvisioningRunId(svc, teamName)).toBe(runId);
+    expect(getRegisteredProvisioningRunId(svc, teamName)).toBe(runId);
   });
 
   it('clears stale pending provisioning ids before reusing an alive run', async () => {

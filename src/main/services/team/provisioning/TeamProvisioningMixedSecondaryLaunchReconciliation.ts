@@ -174,6 +174,13 @@ export function buildMixedSecondaryLaunchSnapshotForRun<
           : undefined);
       const finishedWithoutRuntimeEvidence =
         secondaryLane.state === 'finished' && !secondaryLane.result;
+      const missingEvidenceDiagnostics =
+        secondaryLane.diagnostics.length > 0
+          ? [...secondaryLane.diagnostics]
+          : [
+              'OpenCode secondary lane finished without committed runtime evidence.',
+              'Retry the OpenCode teammate or relaunch the team.',
+            ];
       return {
         laneId: secondaryLane.laneId,
         runtimeRunId: secondaryLane.runId,
@@ -200,18 +207,17 @@ export function buildMixedSecondaryLaunchSnapshotForRun<
             }
           : finishedWithoutRuntimeEvidence
             ? {
-                launchState: 'runtime_pending_bootstrap',
+                launchState: 'failed_to_start' as const,
                 agentToolAccepted: false,
                 runtimeAlive: false,
                 bootstrapConfirmed: false,
-                hardFailure: false,
+                hardFailure: true,
+                hardFailureReason: 'opencode_runtime_evidence_missing',
+                runtimeDiagnostic:
+                  'OpenCode secondary lane finished without committed runtime evidence.',
+                runtimeDiagnosticSeverity: 'warning' as const,
                 bootstrapStalled: currentSpawnStatus?.bootstrapStalled === true ? true : undefined,
-                diagnostics:
-                  secondaryLane.diagnostics.length > 0
-                    ? [...secondaryLane.diagnostics]
-                    : [
-                        'OpenCode secondary lane finished without runtime evidence. Waiting for runtime reconciliation.',
-                      ],
+                diagnostics: missingEvidenceDiagnostics,
               }
             : null,
         pendingReason:

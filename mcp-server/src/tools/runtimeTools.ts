@@ -14,6 +14,8 @@ const toolContextSchema = {
 
 const runtimeMetadataSchema = z.record(z.string(), z.unknown()).optional();
 const runtimeDiagnosticsSchema = z.array(z.string().min(1)).optional();
+const providerIdSchema = z.enum(['anthropic', 'codex', 'gemini', 'opencode']);
+const effortSchema = z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const runtimeIdentitySchema = {
   ...toolContextSchema,
   runId: z.string().min(1),
@@ -36,8 +38,12 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       cwd: z.string().min(1),
       prompt: z.string().min(1).optional(),
+      providerId: providerIdSchema.optional(),
+      providerBackendId: z.string().min(1).optional(),
       model: z.string().min(1).optional(),
-      effort: z.enum(['low', 'medium', 'high']).optional(),
+      effort: effortSchema.optional(),
+      fastMode: z.enum(['inherit', 'on', 'off']).optional(),
+      limitContext: z.boolean().optional(),
       clearContext: z.boolean().optional(),
       skipPermissions: z.boolean().optional(),
       worktree: z.string().min(1).optional(),
@@ -51,8 +57,12 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       waitTimeoutMs,
       cwd,
       prompt,
+      providerId,
+      providerBackendId,
       model,
       effort,
+      fastMode,
+      limitContext,
       clearContext,
       skipPermissions,
       worktree,
@@ -64,8 +74,12 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
         await getController(teamName, claudeDir).runtime.launchTeam({
           cwd,
           ...(prompt ? { prompt } : {}),
+          ...(providerId ? { providerId } : {}),
+          ...(providerBackendId ? { providerBackendId } : {}),
           ...(model ? { model } : {}),
           ...(effort ? { effort } : {}),
+          ...(fastMode ? { fastMode } : {}),
+          ...(limitContext !== undefined ? { limitContext } : {}),
           ...(clearContext !== undefined ? { clearContext } : {}),
           ...(skipPermissions !== undefined ? { skipPermissions } : {}),
           ...(worktree ? { worktree } : {}),

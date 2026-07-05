@@ -207,7 +207,7 @@ describe('TeamProvisioningTurnCompletePortsFactory', () => {
         members: [],
       }
     );
-    expect(service.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    expect(service.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run, undefined);
     expect(setAliveRunId).toHaveBeenCalledWith('atlas-hq', 'run-1');
     expect(emitTeamChange).toHaveBeenCalledWith({
       type: 'inbox',

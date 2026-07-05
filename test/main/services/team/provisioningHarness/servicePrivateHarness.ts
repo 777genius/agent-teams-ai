@@ -114,6 +114,16 @@ export function getRegisteredProvisioningRunId(
   return privateHarness(svc).provisioningRunByTeam.get(teamName);
 }
 
+export function getResolvableProvisioningRunId(
+  svc: TeamProvisioningService,
+  teamName: string
+): string | null {
+  const withRunTracking = svc as unknown as {
+    runTracking: { getResolvableProvisioningRunId(teamName: string): string | null };
+  };
+  return withRunTracking.runTracking.getResolvableProvisioningRunId(teamName);
+}
+
 export interface TeamProvisioningOutputRecoveryFacadeHarness {
   updateStdoutParserCarry(run: unknown, carry: string): void;
   flushStdoutParserCarry(run: unknown): void;

@@ -116,7 +116,10 @@ export interface TeamProvisioningMixedSecondaryLaneWiring<
     reason: TeamRuntimeStopInput['reason']
   ): Promise<void>;
   launchQueuedMixedSecondaryLaneInBackground(run: TRun, lane: MixedSecondaryRuntimeLaneState): void;
-  launchMixedSecondaryLaneIfNeeded(run: TRun): Promise<PersistedTeamLaunchSnapshot | null>;
+  launchMixedSecondaryLaneIfNeeded(
+    run: TRun,
+    options?: { waitForCompletion?: boolean }
+  ): Promise<PersistedTeamLaunchSnapshot | null>;
   recoverStaleMixedSecondaryLaunchSnapshot(
     teamName: string,
     bootstrapSnapshot: PersistedTeamLaunchSnapshot | null,
@@ -255,8 +258,12 @@ export function createTeamProvisioningMixedSecondaryLaneWiring<
         lane,
         createMixedSecondaryLaunchQueuePorts(deps)
       ),
-    launchMixedSecondaryLaneIfNeeded: (run) =>
-      launchMixedSecondaryLaneIfNeededHelper(run, createMixedSecondaryLaunchQueuePorts(deps)),
+    launchMixedSecondaryLaneIfNeeded: (run, options) =>
+      launchMixedSecondaryLaneIfNeededHelper(
+        run,
+        createMixedSecondaryLaunchQueuePorts(deps),
+        options
+      ),
     recoverStaleMixedSecondaryLaunchSnapshot: (teamName, bootstrapSnapshot, persistedSnapshot) =>
       recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
         teamName,

@@ -85,6 +85,10 @@ type RuntimeUsageProcessRowForTest = RuntimeUsageStatsForTest & {
   command: string;
   runtimeTelemetrySource?: 'native' | 'wsl' | 'windows-host';
 };
+type PersistedLaunchSnapshotForTest = {
+  members: Record<string, Record<string, unknown>>;
+  summary?: Record<string, unknown>;
+};
 type RuntimeUsageStatsStubTarget = {
   aliveRunByTeam?: Map<string, string>;
   provisioningRunByTeam?: Map<string, string>;
@@ -5136,6 +5140,99 @@ describe('Team agent launch matrix safe e2e', () => {
       launchState: 'runtime_pending_permission',
       runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-tom'],
+    });
+  });
+
+  it('waits for mixed OpenCode secondary lane completion during final launch reporting', async () => {
+    const teamName = 'mixed-final-reporting-waits-opencode-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    const adapter = new BlockingOpenCodeRuntimeAdapter('clean_success', {
+      bob: 'confirmed',
+      tom: 'confirmed',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const run = createMixedLiveRun({ teamName, projectPath });
+    trackLiveRun(svc, run);
+
+    let settled = false;
+    const completion = (
+      svc as unknown as {
+        launchMixedSecondaryLaneIfNeeded(
+          targetRun: typeof run,
+          options: { waitForCompletion: true }
+        ): Promise<unknown | null>;
+      }
+    )
+      .launchMixedSecondaryLaneIfNeeded(run, { waitForCompletion: true })
+      .finally(() => {
+        settled = true;
+      });
+
+    await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
+      'launching',
+      'queued',
+    ]);
+
+    adapter.releaseLaunches();
+    const snapshot = await completion;
+
+    expect(adapter.launchInputs.map((input) => input.laneId).sort()).toEqual([
+      'secondary:opencode:bob',
+      'secondary:opencode:tom',
+    ]);
+    expect(snapshot).toBeNull();
+
+    const statuses = await svc.getMemberSpawnStatuses(teamName);
+    expect(statuses.teamLaunchState).toBe('clean_success');
+    expect(statuses.statuses.bob).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+    });
+  });
+
+  it('marks a finished OpenCode secondary lane without runtime evidence as retryable failure', async () => {
+    const teamName = 'mixed-missing-opencode-evidence-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    const svc = new TeamProvisioningService();
+    const run = createMixedLiveRun({ teamName, projectPath });
+    trackLiveRun(svc, run);
+
+    const lane = run.mixedSecondaryLanes.find(
+      (candidate: { member: { name: string } }) => candidate.member.name === 'bob'
+    );
+    expect(lane).toBeTruthy();
+    lane.state = 'finished';
+    lane.result = null;
+    lane.diagnostics = ['synthetic OpenCode launch handoff ended before evidence commit'];
+
+    const snapshot = await (
+      svc as unknown as {
+        persistLaunchStateSnapshot(
+          targetRun: typeof run,
+          phase: 'finished'
+        ): Promise<PersistedLaunchSnapshotForTest>;
+      }
+    ).persistLaunchStateSnapshot(run, 'finished');
+
+    expect(snapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      laneId: 'secondary:opencode:bob',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      hardFailureReason: 'opencode_runtime_evidence_missing',
+      runtimeDiagnostic: 'OpenCode secondary lane finished without committed runtime evidence.',
+    });
+    expect(snapshot.summary).toMatchObject({
+      failedCount: 1,
     });
   });
 

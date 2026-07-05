@@ -242,20 +242,51 @@ async function requestJsonWithBoundedRetry(baseUrls, pathname, options = {}, ret
   throw lastError || new Error('Team control API request failed');
 }
 
+function normalizeOptionalLaunchEffort(flags = {}, providerId) {
+  const rawEffort =
+    typeof flags.effort === 'string' && flags.effort.trim() ? flags.effort.trim() : '';
+  if (!rawEffort) {
+    return undefined;
+  }
+  if (rawEffort === 'minimal' && providerId !== 'codex') {
+    return 'low';
+  }
+  return rawEffort;
+}
+
 function buildLaunchRequest(flags = {}) {
   const cwd = typeof flags.cwd === 'string' ? flags.cwd.trim() : '';
   if (!cwd) {
     throw new Error('Missing cwd');
   }
+  const providerId =
+    (typeof flags.providerId === 'string' && flags.providerId.trim()) ||
+    (typeof flags['provider-id'] === 'string' && flags['provider-id'].trim()) ||
+    '';
+  const providerBackendId =
+    (typeof flags.providerBackendId === 'string' && flags.providerBackendId.trim()) ||
+    (typeof flags['provider-backend-id'] === 'string' && flags['provider-backend-id'].trim()) ||
+    '';
+  const effort = normalizeOptionalLaunchEffort(flags, providerId);
 
   return {
     cwd,
+    ...(providerId ? { providerId } : {}),
+    ...(providerBackendId ? { providerBackendId } : {}),
     ...(typeof flags.prompt === 'string' && flags.prompt.trim()
       ? { prompt: flags.prompt.trim() }
       : {}),
     ...(typeof flags.model === 'string' && flags.model.trim() ? { model: flags.model.trim() } : {}),
-    ...(typeof flags.effort === 'string' && flags.effort.trim()
-      ? { effort: flags.effort.trim() }
+    ...(effort ? { effort } : {}),
+    ...(typeof flags.fastMode === 'string' && flags.fastMode.trim()
+      ? { fastMode: flags.fastMode.trim() }
+      : {}),
+    ...(typeof flags['fast-mode'] === 'string' && flags['fast-mode'].trim()
+      ? { fastMode: flags['fast-mode'].trim() }
+      : {}),
+    ...(typeof flags.limitContext === 'boolean' ? { limitContext: flags.limitContext } : {}),
+    ...(typeof flags['limit-context'] === 'boolean'
+      ? { limitContext: flags['limit-context'] }
       : {}),
     ...(typeof flags.clearContext === 'boolean' ? { clearContext: flags.clearContext } : {}),
     ...(typeof flags['clear-context'] === 'boolean'
@@ -277,6 +308,14 @@ function buildLaunchRequest(flags = {}) {
       ? { extraCliArgs: flags['extra-cli-args'].trim() }
       : {}),
   };
+}
+
+function isAlreadyLaunchingResponse(launch) {
+  return Boolean(
+    launch &&
+      typeof launch === 'object' &&
+      (launch.alreadyLaunching === true || launch.launchStatus === 'already_launching')
+  );
 }
 
 function shouldWaitForReady(flags = {}) {
@@ -406,6 +445,14 @@ async function launchTeam(context, flags = {}) {
   );
 
   if (!shouldWaitForReady(flags)) {
+    return {
+      teamName: context.teamName,
+      waitForReady: false,
+      ...launch,
+    };
+  }
+
+  if (isAlreadyLaunchingResponse(launch)) {
     return {
       teamName: context.teamName,
       waitForReady: false,

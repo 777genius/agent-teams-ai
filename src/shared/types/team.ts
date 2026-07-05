@@ -1028,6 +1028,9 @@ export interface TeamLaunchRequest {
 
 export interface TeamLaunchResponse {
   runId: string;
+  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  alreadyLaunching?: boolean;
+  alreadyRunning?: boolean;
 }
 
 export interface CreateTaskRequest {
@@ -1486,6 +1489,9 @@ export interface TeamCreateConfigRequest {
 
 export interface TeamCreateResponse {
   runId: string;
+  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  alreadyLaunching?: boolean;
+  alreadyRunning?: boolean;
 }
 
 export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
