@@ -6,15 +6,12 @@ import {
   collectConfirmedSameTeamPairs,
   inferOpenCodeInboxMessageTaskRefs,
   type NativeSameTeamFingerprint,
-  planLeadInboxRelayReadOnlyMessages,
   type RelayInboxMessage,
-  selectActionableLeadRelayUnread,
   selectLeadInboxRelayBatch,
   selectMemberInboxRelayBatch,
   selectOpenCodeInboxRelayBatch,
   shouldDeferSameTeamMessage,
   splitMemberInboxRelayUnread,
-  trimRelayedMessageIdSet,
 } from '../TeamProvisioningInboxRelayPolicy';
 
 function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
@@ -34,19 +31,6 @@ function ids(messages: readonly RelayInboxMessage[]): string[] {
 }
 
 describe('inbox relay unread policy', () => {
-  it('keeps small relayed message id sets by reference', () => {
-    const set = new Set(['a', 'b']);
-
-    expect(trimRelayedMessageIdSet(set, 3)).toBe(set);
-  });
-
-  it('trims relayed message id sets to the most recent ids in insertion order', () => {
-    const set = new Set(['a', 'b', 'c', 'd']);
-
-    expect([...trimRelayedMessageIdSet(set, 2)]).toEqual(['c', 'd']);
-    expect([...set]).toEqual(['a', 'b', 'c', 'd']);
-  });
-
   it('uses structured OpenCode inbox task refs without reading tasks', async () => {
     const taskRef = { teamName: 'team', taskId: 'task-1', displayId: '7' };
     const readTasks = vi.fn();
@@ -361,42 +345,6 @@ describe('inbox relay unread policy', () => {
     expect(ids(selection.batch)).toEqual(['sync-new']);
     expect(selection.replyVisibility).toBe('internal_activity');
     expect(selection.hasPendingFollowUpRelay).toBe(true);
-  });
-
-  it('plans lead read-only rows separately from remaining unread relay candidates', () => {
-    const permanent = message({ messageId: 'permanent' });
-    const passive = message({ messageId: 'passive' });
-    const coarse = message({ messageId: 'coarse' });
-    const actionable = message({ messageId: 'actionable' });
-
-    const plan = planLeadInboxRelayReadOnlyMessages({
-      unread: [permanent, passive, coarse, actionable],
-      silentIdleIds: new Set(),
-      passiveIdleIds: new Set(['passive']),
-      coarseNonIdleNoiseIds: new Set(['coarse']),
-      isPermanentlyIgnored: (candidate) => candidate.messageId === 'permanent',
-    });
-
-    expect(ids(plan.permanentlyIgnored)).toEqual(['permanent', 'coarse']);
-    expect(ids(plan.passiveIdleUnread)).toEqual(['passive']);
-    expect(plan.readOnlyIgnoredIds).toEqual(new Set(['permanent', 'coarse', 'passive']));
-    expect(ids(plan.remainingUnread)).toEqual(['actionable']);
-  });
-
-  it('selects actionable lead unread rows after native, deferred, and permission filters', () => {
-    const result = selectActionableLeadRelayUnread({
-      remainingUnread: [
-        message({ messageId: 'native' }),
-        message({ messageId: 'deferred' }),
-        message({ messageId: 'permission' }),
-        message({ messageId: 'actionable' }),
-      ],
-      nativeMatchedMessageIds: new Set(['native']),
-      deferredIds: new Set(['deferred']),
-      permissionRequestIds: new Set(['permission']),
-    });
-
-    expect(ids(result)).toEqual(['actionable']);
   });
 });
 

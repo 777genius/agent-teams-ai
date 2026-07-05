@@ -9,13 +9,8 @@ import {
   parseAgentTeamsMcpLaunchSpec,
   readAgentTeamsMcpLaunchSpec,
   runProviderOneShotDiagnostic,
-  type TeamProvisioningProbeChild,
   type TeamProvisioningProviderDiagnosticsPorts,
 } from '../TeamProvisioningProviderDiagnostics';
-import {
-  buildTeamProvisioningProviderDiagnosticsPorts,
-  createTeamProvisioningProviderDiagnosticsBasePorts,
-} from '../TeamProvisioningProviderDiagnosticsPorts';
 
 function createFakePorts(
   overrides: Partial<TeamProvisioningProviderDiagnosticsPorts> = {}
@@ -198,48 +193,5 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
       'provider_one_shot_diagnostic_start',
       'provider_one_shot_diagnostic_complete',
     ]);
-  });
-});
-
-describe('TeamProvisioningProviderDiagnostics ports factory', () => {
-  it('overlays spawnProbe while preserving base ports', () => {
-    const basePorts = createFakePorts();
-    const spawnProbe = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>();
-
-    const ports = buildTeamProvisioningProviderDiagnosticsPorts({ basePorts, spawnProbe });
-
-    expect(ports.execCli).toBe(basePorts.execCli);
-    expect(ports.pathExistsAsDirectory).toBe(basePorts.pathExistsAsDirectory);
-    expect(ports.spawnProbe).toBe(spawnProbe);
-  });
-
-  it('wires default base ports to injected process, provider, and policy ports', () => {
-    const transientProbeProcesses = new Set<TeamProvisioningProbeChild>();
-    const child = { pid: 123 } as unknown as TeamProvisioningProbeChild;
-    const providerConnectionService = {
-      getConfiguredCodexCustomProviderModel: vi.fn(() => 'gpt-5'),
-    };
-    const logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-    };
-    const isAuthFailureWarning = vi.fn(() => true);
-    const normalizeApiRetryErrorMessage = vi.fn((text: string) => `normalized:${text}`);
-
-    const ports = createTeamProvisioningProviderDiagnosticsBasePorts({
-      transientProbeProcesses,
-      providerConnectionService,
-      logger,
-      isAuthFailureWarning,
-      normalizeApiRetryErrorMessage,
-    });
-
-    ports.addTransientProbeProcess(child);
-    expect(transientProbeProcesses.has(child)).toBe(true);
-    ports.removeTransientProbeProcess(child);
-    expect(transientProbeProcesses.has(child)).toBe(false);
-    expect(ports.getConfiguredCodexCustomProviderModel()).toBe('gpt-5');
-    expect(ports.isAuthFailureWarning('auth failed', 'probe')).toBe(true);
-    expect(ports.normalizeApiRetryErrorMessage('api error')).toBe('normalized:api error');
   });
 });

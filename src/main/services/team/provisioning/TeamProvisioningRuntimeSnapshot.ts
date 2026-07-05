@@ -1,7 +1,9 @@
 import {
+  listRuntimeProcessTableForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   type TmuxPaneRuntimeInfo,
 } from '@features/tmux-installer/main';
+import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
@@ -9,21 +11,31 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
+import pidusage from 'pidusage';
 
-import { isStrongRuntimeEvidence, projectRuntimeResource } from '../runtime-projection';
-import { type TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
+const runtimePidusageOptions = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
+
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from '../TeamBootstrapStateReader';
-import { resolveTeamMemberRuntimeLiveness } from '../TeamRuntimeLivenessResolver';
+import {
+  isStrongRuntimeEvidence,
+  resolveTeamMemberRuntimeLiveness,
+} from '../TeamRuntimeLivenessResolver';
 import {
   addRuntimeRootOwnersFromProcessRows,
   buildProcessUsageStatsFromRows,
   buildRuntimeProcessLoadStats as buildRuntimeProcessLoadStatsDefault,
+  buildRuntimeUsageProcessTrees as buildRuntimeUsageProcessTreesDefault,
+  isRuntimePidusageTelemetryEnabled,
+  normalizeRuntimeProcessRowsForTelemetry,
+  normalizeRuntimeProcessUsageStats,
   type RuntimeProcessLoadStats,
   type RuntimeProcessUsageStats,
   type RuntimeTelemetryProcessTableRow,
+  RuntimeTelemetryTimeoutError,
+  withRuntimeTelemetryTimeout,
 } from '../TeamRuntimeTelemetry';
 
 import {
@@ -57,12 +69,13 @@ import {
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   type LiveTeamAgentRuntimeMetadata,
+  readCachedRuntimeProcessRowsForLiveRuntimeMetadata,
+  type RuntimeProcessRowsCacheEntry,
   shouldReadProcessTableForLiveRuntimeMetadata,
 } from './TeamProvisioningRuntimeMetadataPolicy';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
-import type { RuntimeProjectionEvidenceSource } from '../runtime-projection';
-import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
+import type { TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -73,7 +86,6 @@ import type {
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeLoadScope,
-  TeamAgentRuntimePidSource,
   TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
   TeamConfig,
@@ -100,6 +112,11 @@ export interface PersistedRuntimeMemberLike {
   bootstrapRuntimeEventsPath?: string;
   runtimePid?: number;
   runtimeSessionId?: string;
+}
+
+export interface RuntimeProcessUsageStatsCacheEntry {
+  expiresAtMs: number;
+  stats: RuntimeProcessUsageStats | null;
 }
 
 export interface RuntimeAdapterRunSnapshotSource {
@@ -290,39 +307,6 @@ function recordAgentRuntimeResourceSampleSafely(
     );
     return undefined;
   }
-}
-
-type RuntimeSnapshotResourceFields = Pick<
-  TeamAgentRuntimeEntry,
-  | 'rssBytes'
-  | 'cpuPercent'
-  | 'primaryRssBytes'
-  | 'primaryCpuPercent'
-  | 'childRssBytes'
-  | 'childCpuPercent'
-  | 'processCount'
-  | 'runtimeLoadScope'
-  | 'runtimeLoadTruncated'
-  | 'resourceHistory'
->;
-
-function projectRuntimeSnapshotResourceFields(params: {
-  source: RuntimeProjectionEvidenceSource;
-  pid?: number;
-  runtimePid?: number;
-  pidSource?: TeamAgentRuntimePidSource;
-  usageStats?: RuntimeProcessLoadStats;
-  resourceHistory?: TeamAgentRuntimeResourceSample[];
-}): RuntimeSnapshotResourceFields {
-  return projectRuntimeResource({
-    source: params.source,
-    pid: params.pid,
-    runtimePid: params.runtimePid,
-    pidSource: params.pidSource,
-    // Intentionally omit processAlive: persisted/shared OpenCode hosts can expose metrics while not live.
-    usage: params.usageStats,
-    history: params.resourceHistory,
-  });
 }
 
 export function attachLiveRuntimeMetadataToStatuses(params: {
@@ -616,6 +600,227 @@ export function attachLiveRuntimeMetadataToStatuses(params: {
   return nextStatuses;
 }
 
+export async function readRuntimeProcessRowsForUsageSnapshot(
+  params: {
+    teamName: string;
+    options?: { includeWindowsHostRows?: boolean };
+    runtimeProcessRowsForUsageSnapshotByTeam: Map<string, RuntimeProcessRowsCacheEntry>;
+    cacheAccess: RuntimeSnapshotCacheAccess;
+    processTableTimeoutMs: number;
+    windowsProcessTableTimeoutMs: number;
+    resourceTelemetryCacheTtlMs: number;
+    resourceTelemetryFailureCacheTtlMs: number;
+  } & RuntimeSnapshotLogging
+): Promise<RuntimeTelemetryProcessTableRow[] | null> {
+  const includeWindowsHostRows =
+    process.platform === 'win32' && params.options?.includeWindowsHostRows === true;
+  const cached = params.runtimeProcessRowsForUsageSnapshotByTeam.get(params.teamName);
+  const canUseCached =
+    cached &&
+    cached.expiresAtMs > Date.now() &&
+    cached.runId === params.cacheAccess.getTrackedRunId(params.teamName);
+  if (canUseCached && (!includeWindowsHostRows || cached.includesWindowsHostRows)) {
+    return cached.rows;
+  }
+
+  let rows = canUseCached && cached.rows ? cached.rows : null;
+  let runtimeProcessTableAvailable = rows != null;
+  try {
+    if (!rows) {
+      rows =
+        normalizeRuntimeProcessRowsForTelemetry(
+          await withRuntimeTelemetryTimeout(
+            listRuntimeProcessTableForCurrentPlatform(),
+            params.processTableTimeoutMs,
+            'process table runtime telemetry'
+          ),
+          process.platform === 'win32' ? 'wsl' : 'native'
+        ) ?? [];
+      runtimeProcessTableAvailable = true;
+    }
+  } catch (error) {
+    params.logDebug(
+      `[${params.teamName}] Failed to read process table for runtime usage snapshot: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    rows = null;
+    runtimeProcessTableAvailable = false;
+  }
+
+  let includesWindowsHostRows = false;
+  if (includeWindowsHostRows) {
+    try {
+      const windowsHostRows = await withRuntimeTelemetryTimeout(
+        listWindowsProcessTable(params.windowsProcessTableTimeoutMs),
+        params.windowsProcessTableTimeoutMs,
+        'Windows process table runtime telemetry'
+      );
+      rows = [
+        ...(rows ?? []),
+        ...(normalizeRuntimeProcessRowsForTelemetry(windowsHostRows, 'windows-host') ?? []),
+      ];
+      includesWindowsHostRows = true;
+    } catch (error) {
+      params.logDebug(
+        `[${params.teamName}] Failed to read Windows host process table for runtime usage snapshot: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  const resultRows = rows && rows.length > 0 ? rows : runtimeProcessTableAvailable ? [] : null;
+  const sampledAtMs = Date.now();
+  params.runtimeProcessRowsForUsageSnapshotByTeam.set(params.teamName, {
+    expiresAtMs:
+      sampledAtMs +
+      (resultRows === null
+        ? params.resourceTelemetryFailureCacheTtlMs
+        : params.resourceTelemetryCacheTtlMs),
+    generation: params.cacheAccess.getRuntimeSnapshotCacheGeneration(params.teamName),
+    runId: params.cacheAccess.getTrackedRunId(params.teamName),
+    sampledAtMs,
+    rows: resultRows,
+    includesWindowsHostRows,
+  });
+  return resultRows;
+}
+
+export async function readProcessUsageStatsByPid(
+  params: {
+    pids: readonly number[];
+    cacheOptions?: { ignoreCachedMisses?: boolean };
+    runtimeProcessUsageStatsCacheByPid: Map<number, RuntimeProcessUsageStatsCacheEntry>;
+    usageCacheTtlMs: number;
+    usageCacheMaxEntries: number;
+    batchTimeoutMs: number;
+    singleTimeoutMs: number;
+    fallbackConcurrency: number;
+  } & RuntimeSnapshotLogging
+): Promise<Map<number, RuntimeProcessUsageStats>> {
+  const pidCandidates = Array.isArray(params.pids) ? params.pids : [];
+  const uniquePids = [...new Set(pidCandidates.filter((pid) => Number.isFinite(pid) && pid > 0))];
+  if (uniquePids.length === 0) {
+    return new Map();
+  }
+
+  const usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
+  const pidsToRead: number[] = [];
+  const now = Date.now();
+  for (const pid of uniquePids) {
+    const cached = params.runtimeProcessUsageStatsCacheByPid.get(pid);
+    if (cached && cached.expiresAtMs > now) {
+      if (cached.stats) {
+        usageStatsByPid.set(pid, { ...cached.stats });
+        continue;
+      }
+      if (!params.cacheOptions?.ignoreCachedMisses) {
+        continue;
+      }
+    }
+    if (cached) {
+      params.runtimeProcessUsageStatsCacheByPid.delete(pid);
+    }
+    pidsToRead.push(pid);
+  }
+  if (pidsToRead.length === 0) {
+    return usageStatsByPid;
+  }
+  if (!isRuntimePidusageTelemetryEnabled()) {
+    return usageStatsByPid;
+  }
+
+  const rememberUsageStats = (
+    pid: number,
+    stats: RuntimeProcessUsageStats | null | undefined
+  ): void => {
+    const normalized = stats ? { ...stats } : null;
+    const nowMs = Date.now();
+    for (const [cachedPid, cached] of params.runtimeProcessUsageStatsCacheByPid) {
+      if (cached.expiresAtMs <= nowMs) {
+        params.runtimeProcessUsageStatsCacheByPid.delete(cachedPid);
+      }
+    }
+    while (
+      !params.runtimeProcessUsageStatsCacheByPid.has(pid) &&
+      params.runtimeProcessUsageStatsCacheByPid.size >= params.usageCacheMaxEntries
+    ) {
+      const oldestPid = params.runtimeProcessUsageStatsCacheByPid.keys().next().value;
+      if (oldestPid == null) {
+        break;
+      }
+      params.runtimeProcessUsageStatsCacheByPid.delete(oldestPid);
+    }
+    params.runtimeProcessUsageStatsCacheByPid.set(pid, {
+      expiresAtMs: nowMs + params.usageCacheTtlMs,
+      stats: normalized,
+    });
+    if (normalized) {
+      usageStatsByPid.set(pid, { ...normalized });
+    }
+  };
+
+  try {
+    const statsByPid = await withRuntimeTelemetryTimeout(
+      pidusage(pidsToRead, runtimePidusageOptions),
+      params.batchTimeoutMs,
+      'pidusage batch runtime telemetry'
+    );
+    const observedPids = new Set<number>();
+    for (const [rawPid, stat] of Object.entries(
+      statsByPid && typeof statsByPid === 'object' ? statsByPid : {}
+    )) {
+      const pid = Number.parseInt(rawPid, 10);
+      const usageStats = normalizeRuntimeProcessUsageStats(stat);
+      if (Number.isFinite(pid) && pid > 0) {
+        observedPids.add(pid);
+        rememberUsageStats(pid, usageStats);
+      }
+    }
+    for (const pid of pidsToRead) {
+      if (!observedPids.has(pid)) {
+        rememberUsageStats(pid, null);
+      }
+    }
+    return usageStatsByPid;
+  } catch (error) {
+    if (error instanceof RuntimeTelemetryTimeoutError) {
+      params.logDebug(`${error.message}; continuing without runtime resource metrics`);
+      return usageStatsByPid;
+    }
+    params.logDebug(
+      `pidusage batch runtime snapshot failed; falling back to per-pid reads: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  for (let offset = 0; offset < pidsToRead.length; offset += params.fallbackConcurrency) {
+    const chunk = pidsToRead.slice(offset, offset + params.fallbackConcurrency);
+    await Promise.all(
+      chunk.map(async (pid) => {
+        try {
+          const stat = await withRuntimeTelemetryTimeout(
+            pidusage(pid, runtimePidusageOptions),
+            params.singleTimeoutMs,
+            `pidusage runtime telemetry pid=${pid}`
+          );
+          const usageStats = normalizeRuntimeProcessUsageStats(stat);
+          rememberUsageStats(pid, usageStats);
+        } catch (error) {
+          if (error instanceof RuntimeTelemetryTimeoutError) {
+            params.logDebug(error.message);
+          }
+          rememberUsageStats(pid, null);
+          // Process likely exited between discovery and sampling.
+        }
+      })
+    );
+  }
+  return usageStatsByPid;
+}
+
 export async function buildTeamAgentRuntimeSnapshot(
   params: {
     teamName: string;
@@ -625,12 +830,29 @@ export async function buildTeamAgentRuntimeSnapshot(
     getLiveTeamAgentRuntimeMetadata(
       teamName: string
     ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
+    readRuntimeProcessRowsForUsageSnapshot(
+      teamName: string,
+      options?: { includeWindowsHostRows?: boolean }
+    ): Promise<RuntimeTelemetryProcessTableRow[] | null>;
+    readProcessUsageStatsByPid(
+      pids: readonly number[],
+      cacheOptions?: { ignoreCachedMisses?: boolean }
+    ): Promise<Map<number, RuntimeProcessUsageStats>>;
+    buildRuntimeUsageProcessTrees: typeof buildRuntimeUsageProcessTreesDefault;
+    buildRuntimeProcessLoadStats: typeof buildRuntimeProcessLoadStatsDefault;
+    agentRuntimeResourceHistory: {
+      record(
+        params: TeamAgentRuntimeResourceHistoryRecordInput
+      ): TeamAgentRuntimeResourceSample[] | undefined;
+      prune(teamName: string, activeKeys: ReadonlySet<string>): void;
+    };
     agentRuntimeSnapshotCache: Map<
       string,
       { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
     >;
-  } & TeamProvisioningRuntimeSnapshotResourceSamplingPorts &
-    RuntimeSnapshotStores &
+    maxRuntimeTreePidsPerRoot: number;
+    maxRuntimeUsagePidsPerSnapshot: number;
+  } & RuntimeSnapshotStores &
     RuntimeSnapshotCacheAccess &
     RuntimeSnapshotLogging
 ): Promise<TeamAgentRuntimeSnapshot> {
@@ -729,13 +951,18 @@ export async function buildTeamAgentRuntimeSnapshot(
       rootPids: [...runtimeUsageRootPids],
       processRows: runtimeProcessRows,
       rootOwnersByPid: runtimeRootOwnersByPid,
+      limits: {
+        maxPidsPerRoot: params.maxRuntimeTreePidsPerRoot,
+        maxPidsPerSnapshot: params.maxRuntimeUsagePidsPerSnapshot,
+      },
+      platform: process.platform,
     });
     const runtimeUsagePids = [
       ...new Set([...runtimeUsageTreesByRootPid.values()].flatMap((tree) => tree.pids)),
     ];
     usageStatsByPid = buildProcessUsageStatsFromRows(runtimeProcessRows, runtimeUsagePids);
     const pidsMissingUsageStats = runtimeUsagePids.filter((pid) => !usageStatsByPid.has(pid));
-    if (pidsMissingUsageStats.length > 0) {
+    if (pidsMissingUsageStats.length > 0 && isRuntimePidusageTelemetryEnabled()) {
       const sampledUsageStats = await params.readProcessUsageStatsByPid(pidsMissingUsageStats);
       for (const [pid, stats] of sampledUsageStats) {
         usageStatsByPid.set(pid, stats);
@@ -889,13 +1116,6 @@ export async function buildTeamAgentRuntimeSnapshot(
             params.logDebug
           )
         : undefined;
-      const runtimeResourceFields = projectRuntimeSnapshotResourceFields({
-        source: 'live-process',
-        pid,
-        pidSource: 'lead_process',
-        usageStats,
-        resourceHistory,
-      });
       snapshotMembers[memberName] = {
         memberName,
         alive: Boolean(pid && !run?.processKilled && !run?.cancelRequested),
@@ -903,8 +1123,23 @@ export async function buildTeamAgentRuntimeSnapshot(
         backendType: 'lead',
         ...(pid ? { pid } : {}),
         ...(runtimeModel ? { runtimeModel } : {}),
-        ...runtimeResourceFields,
+        ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
+        ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
+        ...(usageStats?.primaryRssBytes != null
+          ? { primaryRssBytes: usageStats.primaryRssBytes }
+          : {}),
+        ...(usageStats?.primaryCpuPercent != null
+          ? { primaryCpuPercent: usageStats.primaryCpuPercent }
+          : {}),
+        ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
+        ...(usageStats?.childCpuPercent != null
+          ? { childCpuPercent: usageStats.childCpuPercent }
+          : {}),
+        ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
+        ...(usageStats?.runtimeLoadScope ? { runtimeLoadScope: usageStats.runtimeLoadScope } : {}),
+        ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
         ...(pid ? { pidSource: 'lead_process' as const } : {}),
+        ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
         updatedAt,
       };
       continue;
@@ -1073,7 +1308,8 @@ export async function buildTeamAgentRuntimeSnapshot(
       !usageStatsByPid.has(rssPid) &&
       isSharedOpenCodeHost &&
       typeof rssPid === 'number' &&
-      rssPid > 0
+      rssPid > 0 &&
+      isRuntimePidusageTelemetryEnabled()
     ) {
       try {
         const refreshedUsageStats = (
@@ -1129,14 +1365,6 @@ export async function buildTeamAgentRuntimeSnapshot(
           params.logDebug
         )
       : undefined;
-    const runtimeResourceFields = projectRuntimeSnapshotResourceFields({
-      source: isSharedOpenCodeHost ? 'runtime-adapter' : 'live-process',
-      pid: rssPid,
-      runtimePid: liveRuntimeMember?.metricsPid,
-      pidSource: liveRuntimeMember?.pidSource,
-      usageStats,
-      resourceHistory,
-    });
 
     snapshotMembers[memberName] = {
       memberName,
@@ -1150,7 +1378,22 @@ export async function buildTeamAgentRuntimeSnapshot(
       ...(displayPid ? { pid: displayPid } : {}),
       ...(runtimeModel ? { runtimeModel } : {}),
       ...(runtimeCwd ? { cwd: runtimeCwd } : {}),
-      ...runtimeResourceFields,
+      ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
+      ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
+      ...(usageStats?.primaryRssBytes != null
+        ? { primaryRssBytes: usageStats.primaryRssBytes }
+        : {}),
+      ...(usageStats?.primaryCpuPercent != null
+        ? { primaryCpuPercent: usageStats.primaryCpuPercent }
+        : {}),
+      ...(usageStats?.childRssBytes != null ? { childRssBytes: usageStats.childRssBytes } : {}),
+      ...(usageStats?.childCpuPercent != null
+        ? { childCpuPercent: usageStats.childCpuPercent }
+        : {}),
+      ...(usageStats?.processCount != null ? { processCount: usageStats.processCount } : {}),
+      ...(usageStats?.runtimeLoadScope ? { runtimeLoadScope: usageStats.runtimeLoadScope } : {}),
+      ...(usageStats?.runtimeLoadTruncated ? { runtimeLoadTruncated: true } : {}),
+      ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
       ...(effectiveLivenessKind ? { livenessKind: effectiveLivenessKind } : {}),
       ...(effectivePidSource ? { pidSource: effectivePidSource } : {}),
       ...(liveRuntimeMember?.processCommand
@@ -1227,6 +1470,7 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     teamName: string;
     runId: string | null;
     generationAtStart: number;
+    runtimeProcessRowsForUsageSnapshotByTeam: Map<string, RuntimeProcessRowsCacheEntry>;
     liveTeamAgentRuntimeMetadataCache: Map<
       string,
       {
@@ -1238,14 +1482,12 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     cloneLiveTeamAgentRuntimeMetadata(
       metadata: ReadonlyMap<string, LiveTeamAgentRuntimeMetadata>
     ): Map<string, LiveTeamAgentRuntimeMetadata>;
-    readRuntimeProcessRowsForLiveRuntimeMetadata(params: {
-      teamName: string;
-      runId: string | null;
-      generationAtStart: number;
-    }): Promise<{ rows: RuntimeTelemetryProcessTableRow[]; processTableAvailable: boolean }>;
-    readWindowsHostProcessRowsForLiveRuntimeMetadata(
-      teamName: string
-    ): Promise<{ rows: RuntimeTelemetryProcessTableRow[]; processTableAvailable: boolean }>;
+    processTableTimeoutMs: number;
+    windowsProcessTableTimeoutMs: number;
+    livenessProcessTableCacheTtlMs: number;
+    livenessProcessTableFailureCacheTtlMs: number;
+    resourceTelemetryCacheTtlMs: number;
+    resourceTelemetryFailureCacheTtlMs: number;
   } & RuntimeSnapshotStores &
     RuntimeSnapshotCacheAccess &
     RuntimeSnapshotLogging
@@ -1496,19 +1738,62 @@ export async function buildLiveTeamAgentRuntimeMetadata(
 
   let processRows: RuntimeTelemetryProcessTableRow[] = [];
   let processTableAvailable = true;
+  let processRowsReadForMetadata = false;
   const shouldReadProcessTable = shouldReadProcessTableForLiveRuntimeMetadata({
     metadataByMember,
     launchSnapshot: persistedLaunchSnapshot,
     paneInfoById,
   });
   if (shouldReadProcessTable) {
-    const processRowsResult = await params.readRuntimeProcessRowsForLiveRuntimeMetadata({
-      teamName: params.teamName,
+    const cachedRows = readCachedRuntimeProcessRowsForLiveRuntimeMetadata({
+      cached: params.runtimeProcessRowsForUsageSnapshotByTeam.get(params.teamName),
       runId: params.runId,
-      generationAtStart: params.generationAtStart,
+      nowMs: Date.now(),
+      processTableCacheTtlMs: params.livenessProcessTableCacheTtlMs,
+      processTableFailureCacheTtlMs: params.livenessProcessTableFailureCacheTtlMs,
     });
-    processRows = processRowsResult.rows;
-    processTableAvailable = processRowsResult.processTableAvailable;
+    if (cachedRows) {
+      processTableAvailable = cachedRows.rows !== null;
+      processRows = cachedRows.rows ?? [];
+    } else {
+      processRowsReadForMetadata = true;
+      try {
+        processRows =
+          normalizeRuntimeProcessRowsForTelemetry(
+            await withRuntimeTelemetryTimeout(
+              listRuntimeProcessTableForCurrentPlatform(),
+              params.processTableTimeoutMs,
+              'process table runtime snapshot'
+            ),
+            process.platform === 'win32' ? 'wsl' : 'native'
+          ) ?? [];
+      } catch (error) {
+        processTableAvailable = false;
+        params.logDebug(
+          `[${params.teamName}] Failed to read process table for runtime snapshot: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+  }
+  if (
+    processRowsReadForMetadata &&
+    params.getRuntimeSnapshotCacheGeneration(params.teamName) === params.generationAtStart
+  ) {
+    const sampledAtMs = Date.now();
+    params.runtimeProcessRowsForUsageSnapshotByTeam.set(params.teamName, {
+      expiresAtMs:
+        sampledAtMs +
+        (processTableAvailable
+          ? params.resourceTelemetryCacheTtlMs
+          : params.resourceTelemetryFailureCacheTtlMs),
+      generation: params.generationAtStart,
+      runId: params.runId,
+      sampledAtMs,
+      rows: processTableAvailable ? processRows : null,
+      includesWindowsHostRows: false,
+    });
   }
   let windowsHostProcessRows: RuntimeTelemetryProcessTableRow[] | null = null;
   let windowsHostProcessTableAvailable = false;
@@ -1516,9 +1801,25 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     if (windowsHostProcessRows) {
       return windowsHostProcessRows;
     }
-    const result = await params.readWindowsHostProcessRowsForLiveRuntimeMetadata(params.teamName);
-    windowsHostProcessRows = result.rows;
-    windowsHostProcessTableAvailable = result.processTableAvailable;
+    try {
+      windowsHostProcessRows =
+        normalizeRuntimeProcessRowsForTelemetry(
+          await withRuntimeTelemetryTimeout(
+            listWindowsProcessTable(params.windowsProcessTableTimeoutMs),
+            params.windowsProcessTableTimeoutMs,
+            'Windows process table runtime snapshot'
+          ),
+          'windows-host'
+        ) ?? [];
+      windowsHostProcessTableAvailable = true;
+    } catch (error) {
+      windowsHostProcessRows = [];
+      params.logDebug(
+        `[${params.teamName}] Failed to read Windows host process table for runtime snapshot: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
     return windowsHostProcessRows;
   };
 

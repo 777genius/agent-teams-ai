@@ -38,6 +38,7 @@ import {
 } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import type { TeamMemberWorktreeManager } from '../../../../src/main/services/team/TeamMemberWorktreeManager';
 import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
@@ -58,7 +59,6 @@ import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
 } from '../../../../src/main/services/team/runtime';
-import type { TeamMemberWorktreeManager } from '../../../../src/main/services/team/TeamMemberWorktreeManager';
 import type {
   InboxMessage,
   TaskRef,
@@ -92,14 +92,12 @@ type RuntimeUsageStatsStubTarget = {
   getLiveTeamAgentRuntimeMetadata?: (
     teamName: string
   ) => Promise<Map<string, { pid?: number; metricsPid?: number }>>;
-  runtimeResourceSampling: {
-    readRuntimeProcessRowsForUsageSnapshot: (
-      teamName: string
-    ) => Promise<RuntimeUsageProcessRowForTest[]>;
-    readProcessUsageStatsByPid: (
-      pids: readonly number[]
-    ) => Promise<Map<number, RuntimeUsageStatsForTest>>;
-  };
+  readRuntimeProcessRowsForUsageSnapshot: (
+    teamName: string
+  ) => Promise<RuntimeUsageProcessRowForTest[]>;
+  readProcessUsageStatsByPid: (
+    pids: readonly number[]
+  ) => Promise<Map<number, RuntimeUsageStatsForTest>>;
 };
 
 async function expectOpenCodeTrackedPendingDelivery(
@@ -143,9 +141,7 @@ function stubRuntimeUsageStatsByPid(
   const configuredStatsByPid = createRuntimeUsageStatsMap(entries);
   const target = service as unknown as RuntimeUsageStatsStubTarget;
 
-  target.runtimeResourceSampling.readRuntimeProcessRowsForUsageSnapshot = async (
-    teamName: string
-  ) => {
+  target.readRuntimeProcessRowsForUsageSnapshot = async (teamName: string) => {
     const statsByPid = new Map(configuredStatsByPid);
     const candidatePids = new Set<number>();
     const runId = target.aliveRunByTeam?.get(teamName) ?? target.provisioningRunByTeam?.get(teamName);
@@ -173,7 +169,7 @@ function stubRuntimeUsageStatsByPid(
     }));
   };
 
-  target.runtimeResourceSampling.readProcessUsageStatsByPid = async (pids: readonly number[]) => {
+  target.readProcessUsageStatsByPid = async (pids: readonly number[]) => {
     const requestedPids = new Set(pids);
     return new Map(
       [...pids]

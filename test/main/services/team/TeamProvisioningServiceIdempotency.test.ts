@@ -1,7 +1,8 @@
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { EventEmitter } from 'events';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -25,12 +26,6 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
 });
 
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
-
-import {
-  getRegisteredProvisioningRunId,
-  registerAliveRun,
-  registerProvisioningRun,
-} from './provisioningHarness/servicePrivateHarness';
 
 describe('TeamProvisioningService idempotent launch guards', () => {
   beforeEach(() => {
@@ -75,11 +70,34 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       cancelRequested: false,
     };
 
-    registerAliveRun(svc, aliveRun);
+    (svc as any).runs.set(aliveRun.runId, aliveRun);
+    (svc as any).aliveRunByTeam.set(teamName, aliveRun.runId);
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => {});
 
     expect(response.runId).toBe(aliveRun.runId);
+  });
+
+  it('does not expose unresolved internal provisioning ids', () => {
+    const teamName = 'team-alpha';
+    const svc = new TeamProvisioningService();
+
+    (svc as any).provisioningRunByTeam.set(teamName, 'pending-stale-run');
+
+    expect((svc as any).getResolvableProvisioningRunId(teamName)).toBeNull();
+    expect((svc as any).provisioningRunByTeam.get(teamName)).toBeUndefined();
+  });
+
+  it('keeps runtime adapter provisioning ids while their progress is still tracked', () => {
+    const teamName = 'team-alpha';
+    const runId = 'runtime-adapter-run-1';
+    const svc = new TeamProvisioningService();
+
+    (svc as any).provisioningRunByTeam.set(teamName, runId);
+    (svc as any).runtimeAdapterProgressByRunId.set(runId, { runId, state: 'launching' });
+
+    expect((svc as any).getResolvableProvisioningRunId(teamName)).toBe(runId);
+    expect((svc as any).provisioningRunByTeam.get(teamName)).toBe(runId);
   });
 
   it('clears stale pending provisioning ids before reusing an alive run', async () => {
@@ -109,13 +127,14 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       cancelRequested: false,
     };
 
-    registerProvisioningRun(svc, teamName, 'pending-stale-run');
-    registerAliveRun(svc, aliveRun);
+    (svc as any).provisioningRunByTeam.set(teamName, 'pending-stale-run');
+    (svc as any).runs.set(aliveRun.runId, aliveRun);
+    (svc as any).aliveRunByTeam.set(teamName, aliveRun.runId);
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => {});
 
     expect(response.runId).toBe(aliveRun.runId);
-    expect(getRegisteredProvisioningRunId(svc, teamName)).toBeUndefined();
+    expect((svc as any).provisioningRunByTeam.get(teamName)).toBeUndefined();
   });
 
   it('does not reuse an alive run when cwd differs', async () => {
@@ -147,9 +166,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       cancelRequested: false,
     };
 
-    registerAliveRun(svc, aliveRun);
+    (svc as any).runs.set(aliveRun.runId, aliveRun);
+    (svc as any).aliveRunByTeam.set(teamName, aliveRun.runId);
 
-    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => undefined)).rejects.toThrow(
+    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => {})).rejects.toThrow(
       `Team "${teamName}" is already running in "${path.resolve(currentCwd)}".`
     );
   });
@@ -182,9 +202,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       spawnContext: { cwd: '' },
     };
 
-    registerAliveRun(svc, aliveRun);
+    (svc as any).runs.set(aliveRun.runId, aliveRun);
+    (svc as any).aliveRunByTeam.set(teamName, aliveRun.runId);
 
-    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => undefined)).rejects.toThrow(
+    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => {})).rejects.toThrow(
       `Team "${teamName}" is already running, but its cwd could not be determined.`
     );
   });

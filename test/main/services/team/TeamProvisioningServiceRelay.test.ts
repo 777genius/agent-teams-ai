@@ -3187,6 +3187,43 @@ Messages:
     }
   });
 
+  it('does not classify missing OpenCode watchdog ledger rows as stale while the lane is active', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    attachAliveRun(service, teamName);
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Please sync.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-active-watchdog-1',
+      },
+    ]);
+    vi.spyOn(service as any, 'isOpenCodeRuntimeLaneIndexActive').mockResolvedValue(true);
+
+    await expect(
+      (service as any).isStaleOpenCodePromptDeliveryWatchdogError({
+        teamName,
+        memberName: 'jack',
+        messageId: 'opencode-active-watchdog-1',
+        error: new Error('OpenCode prompt delivery record not found: opencode-prompt:active'),
+      })
+    ).resolves.toBe(false);
+  });
+
   it('skips failed-terminal OpenCode rows without blocking newer unread rows', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
