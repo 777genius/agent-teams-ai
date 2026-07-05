@@ -307,11 +307,16 @@ subscription-runtime-codex-goal controller-supervise \
 
 This process owns the in-memory provider runner until it receives SIGINT or
 SIGTERM. It is the safe CLI alternative to an unsafe full-access controller.
+Its status output includes `liveController`: when
+`providerRunnerAttached=false` or `ownerMatches=false`, the current process does
+not prove live ownership of the controller.
+
 For child capacity refill, prefer the one-shot broker helper
 `codex_goal_project_refill_worker` instead of manually chaining
 `create_worktree`, prompt writes, `create_job` and `start`. The helper still
 requires explicit child identity and scope, including `jobId`, `workspacePath`,
 `sourceWorkspacePath` and `promptBody`.
+
 If `codex_goal_project_controller_start`, `stop` or `reconcile` returns
 `controlled_agent_provider_runner_not_connected`, the persisted run is not owned
 by the current MCP process. Treat this as expected fail-closed behavior after a

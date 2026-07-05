@@ -8,6 +8,7 @@ import {
 import type {
   ControlledAgentLaunchPlan,
   ControlledAgentLaunchPlanInput,
+  ControlledAgentProcessOwner,
   ControlledAgentRun,
   ControlledAgentSession,
 } from "../domain/controlled-agent";
@@ -24,6 +25,7 @@ export type StartControlledAgentRunDeps = {
   readonly provider: ControlledAgentProviderPort;
   readonly stateStore?: ControllerStateStorePort;
   readonly events?: ControlledAgentEventPort;
+  readonly owner?: ControlledAgentProcessOwner;
   readonly clock?: { now(): Date };
   readonly idGenerator?: { randomId(): string };
 };
@@ -97,6 +99,7 @@ export class StartControlledAgentRunUseCase {
       ...(provider.providerRunId === undefined ? {} : {
         providerRunId: provider.providerRunId,
       }),
+      ...(this.deps.owner === undefined ? {} : { owner: this.deps.owner }),
       ...(provider.safeMessage === undefined ? {} : {
         safeMessage: provider.safeMessage,
       }),
@@ -107,6 +110,7 @@ export class StartControlledAgentRunUseCase {
       ...plan.session,
       status: ControlledAgentRunStatus.Running,
       activeRunId: run.runId,
+      ...(this.deps.owner === undefined ? {} : { owner: this.deps.owner }),
       updatedAt: now,
     };
     await this.deps.stateStore?.saveSession(runningSession);
@@ -122,6 +126,8 @@ export class StartControlledAgentRunUseCase {
       payload: {
         providerKind: runningSession.identity.providerKind,
         providerRunId: provider.providerRunId ?? null,
+        ownerId: this.deps.owner?.ownerId ?? null,
+        ownerKind: this.deps.owner?.kind ?? null,
       },
     });
     return {

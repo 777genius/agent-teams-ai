@@ -60,6 +60,24 @@ export enum ControlledAgentRunStatus {
   Stale = "stale",
 }
 
+export enum ControlledAgentProcessOwnerKind {
+  DurableMcp = "durable_mcp",
+  HostSupervisor = "host_supervisor",
+  Sdk = "sdk",
+}
+
+export type ControlledAgentProcessOwner = {
+  readonly schemaVersion: 1;
+  readonly ownerId: string;
+  readonly kind: ControlledAgentProcessOwnerKind;
+  readonly startedAt: string;
+  readonly heartbeatAt: string;
+  readonly pid?: number;
+  readonly hostname?: string;
+  readonly runtimeVersion?: string;
+  readonly runtimeSha?: string;
+};
+
 export enum ControlledAgentEventType {
   SessionCreated = "controlled_agent.session.created",
   RunStarted = "controlled_agent.run.started",
@@ -104,6 +122,7 @@ export type ControlledAgentSession = {
   readonly stateDir: string;
   readonly status: ControlledAgentRunStatus;
   readonly activeRunId?: string;
+  readonly owner?: ControlledAgentProcessOwner;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly toolSurface: ControlledAgentToolSurfacePolicy;
@@ -117,6 +136,7 @@ export type ControlledAgentRun = {
   readonly providerKind: RunEventProviderKind.Codex | RunEventProviderKind.Claude;
   readonly status: ControlledAgentRunStatus;
   readonly providerRunId?: string;
+  readonly owner?: ControlledAgentProcessOwner;
   readonly safeMessage?: string;
   readonly startedAt: string;
   readonly stoppedAt?: string;

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AccessBoundary,
+  ControlledAgentProcessOwnerKind,
   ControlledAgentEventType,
   ControlledAgentRunStatus,
   RunEventProviderKind,
@@ -34,10 +35,18 @@ describe("LocalControlledAgentStateStore", () => {
     expect(await store.readSession("session-1")).toMatchObject({
       sessionId: "session-1",
       activeRunId: "run-1",
+      owner: {
+        ownerId: "owner-1",
+        kind: ControlledAgentProcessOwnerKind.DurableMcp,
+      },
     });
     expect(await store.readRun("run-1")).toMatchObject({
       runId: "run-1",
       providerRunId: "provider-run-1",
+      owner: {
+        ownerId: "owner-1",
+        runtimeSha: "sha-1",
+      },
     });
     expect(await store.readLatestRunForSession("session-1")).toMatchObject({
       runId: "run-1",
@@ -74,6 +83,7 @@ function session(): ControlledAgentSession {
     stateDir: "/tmp/state",
     status: ControlledAgentRunStatus.Running,
     activeRunId: "run-1",
+    owner: owner(),
     createdAt: "2026-07-05T11:00:00.000Z",
     updatedAt: "2026-07-05T11:00:00.000Z",
     toolSurface: {
@@ -93,7 +103,22 @@ function run(): ControlledAgentRun {
     providerKind: RunEventProviderKind.Codex,
     status: ControlledAgentRunStatus.Running,
     providerRunId: "provider-run-1",
+    owner: owner(),
     startedAt: "2026-07-05T11:00:00.000Z",
     updatedAt: "2026-07-05T11:00:00.000Z",
+  };
+}
+
+function owner() {
+  return {
+    schemaVersion: 1 as const,
+    ownerId: "owner-1",
+    kind: ControlledAgentProcessOwnerKind.DurableMcp,
+    pid: 12345,
+    hostname: "host-a",
+    runtimeVersion: "0.1.0-test",
+    runtimeSha: "sha-1",
+    startedAt: "2026-07-05T10:59:00.000Z",
+    heartbeatAt: "2026-07-05T10:59:00.000Z",
   };
 }

@@ -11,9 +11,12 @@ import {
   LocalFileRunEventStore,
   LocalFileWorkerAccountCapacityStore,
   LocalFileWorkerControlInboxStore,
+  LocalControlledAgentStateStore,
 } from "@vioxen/subscription-runtime/store-local-file";
 import {
   AccessBoundary,
+  ControlledAgentProcessOwnerKind,
+  ControlledAgentRunStatus,
   InMemoryActiveAttemptRegistry,
   NetworkAccessMode,
   RunEventProviderKind,
@@ -1230,6 +1233,82 @@ describe("codex goal MCP server", () => {
         ok: false,
         mode: "project_controller_status",
         reason: "session_missing",
+        liveController: {
+          providerRunnerAttached: false,
+          live: false,
+          ownerMatches: false,
+        },
+      });
+
+      const stateDir = join(root, "controller-state");
+      const sessionId = "infinity-context-controller-v1:controlled-agent";
+      const store = new LocalControlledAgentStateStore({ rootDir: stateDir });
+      const owner = {
+        schemaVersion: 1 as const,
+        ownerId: "old-owner",
+        kind: ControlledAgentProcessOwnerKind.DurableMcp,
+        pid: 1111,
+        hostname: "old-host",
+        runtimeVersion: "0.1.0-old",
+        runtimeSha: "old-sha",
+        startedAt: "2026-07-05T10:00:00.000Z",
+        heartbeatAt: "2026-07-05T10:00:00.000Z",
+      };
+      await store.saveSession({
+        schemaVersion: 1,
+        sessionId,
+        identity: {
+          controllerJobId: "infinity-context-controller-v1",
+          projectId: "infinity-context",
+          providerKind: RunEventProviderKind.Codex,
+        },
+        stateDir,
+        status: ControlledAgentRunStatus.Running,
+        activeRunId: "run-old",
+        owner,
+        createdAt: "2026-07-05T10:00:00.000Z",
+        updatedAt: "2026-07-05T10:00:00.000Z",
+        toolSurface: {
+          boundary: AccessBoundary.ProjectScopedControl,
+          allowedTools: [],
+          deniedRawCapabilities: [],
+        },
+      });
+      await store.saveRun({
+        schemaVersion: 1,
+        runId: "run-old",
+        sessionId,
+        controllerJobId: "infinity-context-controller-v1",
+        providerKind: RunEventProviderKind.Codex,
+        status: ControlledAgentRunStatus.Running,
+        owner,
+        startedAt: "2026-07-05T10:00:00.000Z",
+        updatedAt: "2026-07-05T10:00:00.000Z",
+      });
+
+      const persistedOnlyStatus = await callToolJson(
+        client,
+        "codex_goal_project_controller_status",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          stateDir,
+        },
+      );
+      expect(persistedOnlyStatus).toMatchObject({
+        ok: true,
+        mode: "project_controller_status",
+        reason: "provider_status_unavailable",
+        liveController: {
+          providerRunnerAttached: false,
+          live: false,
+          ownerMatches: false,
+          persistedOwner: {
+            ownerId: "old-owner",
+            runtimeSha: "old-sha",
+          },
+          persistedStatus: "running",
+        },
       });
     } finally {
       await client.close();

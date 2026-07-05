@@ -166,6 +166,12 @@ in-process MCP server and exits immediately after the tool call. A live
 controller must be started by a durable MCP/supervisor process that keeps the
 provider runner attached for `status`, `stop` and `reconcile`.
 
+The canonical packaged CLI owner for that durable process is
+`subscription-runtime-codex-goal controller-supervise`. It creates an in-process
+MCP server, starts the controller through that server and keeps the provider
+runner attached until SIGINT or SIGTERM. Native MCP/SDK callers may provide the
+same durable ownership contract, but one-shot tool calls may not.
+
 Use `codex_goal_project_controller_launch_plan` as the preflight before any live
 LLM-controller attempt. It loads the stored controller manifest, builds the
 controlled-agent profile and returns either:
@@ -201,7 +207,8 @@ The controlled-agent MCP lifecycle tools are:
   smoke/debug runs, not as the normal production orchestration mode;
 - `codex_goal_project_controller_status`: read persisted controller session/run
   state and include provider liveness only when the provider instance is still
-  attached in this MCP process;
+  attached in this MCP process. The response includes `liveController` with the
+  current durable process owner, the persisted owner and whether they match;
 - `codex_goal_project_controller_stop`: stop through the safe provider runner;
 - `codex_goal_project_controller_reconcile`: reconcile provider liveness through
   the safe provider runner after crash/reboot.
@@ -218,6 +225,10 @@ If `start`, `stop` or `reconcile` return
 this MCP process does not own the live provider instance. That is not permission
 to use `danger_full_access`. Use the owning process, restart from a clean
 controller state, or keep orchestration in the host boss/supervisor.
+
+Persisted owner metadata is diagnostic only. It records safe fields such as
+owner id, process kind, pid, hostname, runtime version and runtime sha. It never
+records auth payloads, prompts, token contents or provider payloads.
 
 Minimum safe scope:
 

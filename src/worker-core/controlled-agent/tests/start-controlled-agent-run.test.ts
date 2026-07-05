@@ -4,6 +4,8 @@ import {
   NetworkAccessMode,
   RunEventProviderKind,
   ControlledAgentRunStatus,
+  ControlledAgentProcessOwnerKind,
+  buildControlledAgentProcessOwner,
   startControlledAgentRun,
   type ControlledAgentEvent,
   type ControlledAgentLaunchPlanInput,
@@ -81,6 +83,62 @@ describe("startControlledAgentRun", () => {
     expect(started[0]?.session.toolSurface.deniedRawCapabilities).toContain(
       "raw_shell",
     );
+  });
+
+  it("persists durable process owner metadata for live controller liveness", async () => {
+    const owner = buildControlledAgentProcessOwner({
+      kind: ControlledAgentProcessOwnerKind.DurableMcp,
+      ownerId: "owner-1",
+      now: new Date("2026-07-05T10:59:00.000Z"),
+      pid: 12345,
+      hostname: "host-a",
+      runtimeVersion: "0.1.0-test",
+      runtimeSha: "abc123",
+    });
+    const saved: ControlledAgentSession[] = [];
+    const savedRuns: ControlledAgentRun[] = [];
+    const provider: ControlledAgentProviderPort = {
+      start() {
+        return { providerRunId: "provider-run-1" };
+      },
+      status() {
+        return { status: ControlledAgentRunStatus.Running };
+      },
+      stop() {
+        return { status: ControlledAgentRunStatus.Stopped };
+      },
+    };
+
+    const result = await startControlledAgentRun(launchInput(true), {
+      provider,
+      owner,
+      stateStore: {
+        readSession() {
+          return null;
+        },
+        saveSession(session) {
+          saved.push(session);
+        },
+        readRun() {
+          return null;
+        },
+        readLatestRunForSession() {
+          return null;
+        },
+        saveRun(run) {
+          savedRuns.push(run);
+        },
+      },
+      clock: { now: () => new Date("2026-07-05T11:00:00.000Z") },
+      idGenerator: { randomId: () => "run-1" },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected start success");
+    expect(result.session.owner).toEqual(owner);
+    expect(result.run.owner).toEqual(owner);
+    expect(saved[0]?.owner?.ownerId).toBe("owner-1");
+    expect(savedRuns[0]?.owner?.runtimeSha).toBe("abc123");
   });
 
   it("does not call the provider when enforcement is incomplete", async () => {

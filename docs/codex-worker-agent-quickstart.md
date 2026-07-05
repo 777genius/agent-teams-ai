@@ -202,9 +202,7 @@ codex_goal_project_controller_start` is deliberately blocked because it uses a
 one-shot in-process MCP server and cannot keep the provider runner attached
 after the command exits. Start live controllers only from the host supervisor,
 daemon, native MCP server or SDK process that will continue owning `status`,
-`stop` and `reconcile`.
-
-For a durable CLI-owned controller process, use:
+`stop` and `reconcile`. For a durable CLI-owned controller process, use:
 
 ```sh
 subscription-runtime-codex-goal controller-supervise \
@@ -220,6 +218,10 @@ for the lifetime of the process. It starts through the same
 `codex_goal_project_controller_start` policy path, polls status, and stops the
 controlled provider on SIGINT/SIGTERM. Do not replace it with
 `danger_full_access` if a one-shot start fails.
+
+Status responses include `liveController`. Treat `providerRunnerAttached=false`
+or `ownerMatches=false` as "manifest/state exists, but this process does not own
+the live LLM controller".
 
 The Codex controlled-agent profile disables native app-server environments and
 keeps only the configured broker/status MCP surface. If a profile can only add
