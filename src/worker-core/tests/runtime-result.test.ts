@@ -127,6 +127,15 @@ describe("runtime result protocol", () => {
     })).toBe("provider_capacity_unavailable");
 
     expect(classifyRuntimeRunState({
+      status: "running",
+      liveness: "alive",
+      capacity: [
+        { availability: "cooldown" },
+        { status: "ready" },
+      ],
+    })).toBe("productive");
+
+    expect(classifyRuntimeRunState({
       resultStatus: "blocked",
     })).toBe("app_server_goal_blocked");
 

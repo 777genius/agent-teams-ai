@@ -350,10 +350,10 @@ export function classifyRuntimeRunState(
   ) {
     return "productive";
   }
-  if (input.capacity?.some((hint) => isAuthOrQuotaBlockedCapacity(hint)) === true) {
+  if (input.capacity && hasOnlyAuthOrQuotaBlockedCapacity(input.capacity)) {
     return "auth_or_quota_blocked";
   }
-  if (input.capacity?.some((hint) => isBlockedCapacity(hint)) === true) {
+  if (input.capacity && hasOnlyBlockedCapacity(input.capacity)) {
     return "provider_capacity_unavailable";
   }
   if (
@@ -526,6 +526,27 @@ function isAuthOrQuotaBlockedCapacity(hint: {
     hint.reason === "quota_limited" ||
     hint.reason === "account_unavailable" ||
     hint.reason === "reconnect_required";
+}
+
+function hasOnlyBlockedCapacity(
+  capacity: readonly {
+    readonly status?: string | undefined;
+    readonly availability?: string | undefined;
+    readonly reason?: string | undefined;
+  }[],
+): boolean {
+  return capacity.length > 0 && capacity.every((hint) => isBlockedCapacity(hint));
+}
+
+function hasOnlyAuthOrQuotaBlockedCapacity(
+  capacity: readonly {
+    readonly status?: string | undefined;
+    readonly availability?: string | undefined;
+    readonly reason?: string | undefined;
+  }[],
+): boolean {
+  return capacity.length > 0 &&
+    capacity.every((hint) => isAuthOrQuotaBlockedCapacity(hint));
 }
 
 function isCapacityReason(reason: string | undefined): boolean {
