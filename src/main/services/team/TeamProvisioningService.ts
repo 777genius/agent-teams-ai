@@ -12626,7 +12626,11 @@ export class TeamProvisioningService {
             );
           }
           this.provisioningRunByTeam.delete(request.teamName);
-          return { runId: existingAliveRunId };
+          return {
+            runId: existingAliveRunId,
+            launchStatus: 'already_running',
+            alreadyRunning: true,
+          };
         }
       }
 
@@ -16839,6 +16843,13 @@ export class TeamProvisioningService {
             : undefined);
         const finishedWithoutRuntimeEvidence =
           secondaryLane.state === 'finished' && !secondaryLane.result;
+        const missingEvidenceDiagnostics =
+          secondaryLane.diagnostics.length > 0
+            ? [...secondaryLane.diagnostics]
+            : [
+                'OpenCode secondary lane finished without committed runtime evidence.',
+                'Retry the OpenCode teammate or relaunch the team.',
+              ];
         return {
           laneId: secondaryLane.laneId,
           runtimeRunId: secondaryLane.runId,
@@ -16876,19 +16887,18 @@ export class TeamProvisioningService {
               }
             : finishedWithoutRuntimeEvidence
               ? {
-                  launchState: 'runtime_pending_bootstrap',
+                  launchState: 'failed_to_start',
                   agentToolAccepted: false,
                   runtimeAlive: false,
                   bootstrapConfirmed: false,
-                  hardFailure: false,
+                  hardFailure: true,
+                  hardFailureReason: 'opencode_runtime_evidence_missing',
+                  runtimeDiagnostic:
+                    'OpenCode secondary lane finished without committed runtime evidence.',
+                  runtimeDiagnosticSeverity: 'warning',
                   bootstrapStalled:
                     currentSpawnStatus?.bootstrapStalled === true ? true : undefined,
-                  diagnostics:
-                    secondaryLane.diagnostics.length > 0
-                      ? [...secondaryLane.diagnostics]
-                      : [
-                          'OpenCode secondary lane finished without runtime evidence. Waiting for runtime reconciliation.',
-                        ],
+                  diagnostics: missingEvidenceDiagnostics,
                 }
               : null,
           pendingReason:
@@ -17525,7 +17535,8 @@ export class TeamProvisioningService {
   }
 
   private async launchMixedSecondaryLaneIfNeeded(
-    run: ProvisioningRun
+    run: ProvisioningRun,
+    options: { waitForCompletion?: boolean } = {}
   ): Promise<PersistedTeamLaunchSnapshot | null> {
     if (run.cancelRequested || run.processKilled) {
       return this.launchStateStore.read(run.teamName).catch(() => null);
@@ -17569,6 +17580,13 @@ export class TeamProvisioningService {
 
     for (const lane of mixedSecondaryLanes) {
       this.launchQueuedMixedSecondaryLaneInBackground(run, lane);
+    }
+
+    if (options.waitForCompletion) {
+      await run.mixedSecondaryLaneLaunchQueue;
+      if (run.cancelRequested || run.processKilled) {
+        return this.launchStateStore.read(run.teamName).catch(() => null);
+      }
     }
 
     return this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
@@ -21120,7 +21138,8 @@ export class TeamProvisioningService {
         this.maybeAuditMemberSpawnStatuses(run, options),
       finalizeMissingRegisteredMembersAsFailed: (run) =>
         this.finalizeMissingRegisteredMembersAsFailed(run),
-      launchMixedSecondaryLaneIfNeeded: (run) => this.launchMixedSecondaryLaneIfNeeded(run),
+      launchMixedSecondaryLaneIfNeeded: (run, options) =>
+        this.launchMixedSecondaryLaneIfNeeded(run, options),
       reconcileFinalLaunchReportingSnapshot: (run, secondaryLaunchResult) =>
         this.reconcileFinalLaunchReportingSnapshot(run, secondaryLaunchResult),
       getFailedSpawnMembers: (run) => this.getFailedSpawnMembers(run),

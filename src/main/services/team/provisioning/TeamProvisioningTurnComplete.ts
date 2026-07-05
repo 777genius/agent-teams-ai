@@ -100,7 +100,10 @@ export interface TeamProvisioningTurnCompletePorts<
   refreshMemberSpawnStatusesFromLeadInbox(run: TRun): Promise<unknown>;
   maybeAuditMemberSpawnStatuses(run: TRun, options: { force: true }): Promise<unknown>;
   finalizeMissingRegisteredMembersAsFailed(run: TRun): Promise<unknown>;
-  launchMixedSecondaryLaneIfNeeded(run: TRun): Promise<TSecondaryLaunchResult>;
+  launchMixedSecondaryLaneIfNeeded(
+    run: TRun,
+    options?: { waitForCompletion?: boolean }
+  ): Promise<TSecondaryLaunchResult>;
   reconcileFinalLaunchReportingSnapshot(
     run: TRun,
     secondaryLaunchResult: TSecondaryLaunchResult
@@ -320,7 +323,7 @@ async function runFinalLaunchReporting<
   await ports.finalizeMissingRegisteredMembersAsFailed(run);
   const persistedLaunchSnapshot = await ports.reconcileFinalLaunchReportingSnapshot(
     run,
-    await ports.launchMixedSecondaryLaneIfNeeded(run)
+    await ports.launchMixedSecondaryLaneIfNeeded(run, { waitForCompletion: true })
   );
   const failedSpawnMembers = getFailedSpawnMembers(run, persistedLaunchSnapshot, ports);
   const launchSummary = persistedLaunchSnapshot?.summary ?? ports.getMemberLaunchSummary(run);
