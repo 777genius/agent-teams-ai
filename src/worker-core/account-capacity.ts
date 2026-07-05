@@ -322,6 +322,13 @@ export function accountCapacityAwareWorkerFactory<Job, Result>(
               options.accountIdFromCapacityDetails,
           }
         : {}),
+      ...(options.runtimeDemand ? { runtimeDemand: options.runtimeDemand } : {}),
+      ...(options.runtimeDemandFromCapacityDetails
+        ? {
+            runtimeDemandFromCapacityDetails:
+              options.runtimeDemandFromCapacityDetails,
+          }
+        : {}),
       ...(options.limitReasons ? { limitReasons: options.limitReasons } : {}),
       ...(options.clock ? { clock: options.clock } : {}),
     });

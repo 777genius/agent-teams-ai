@@ -4,6 +4,7 @@ import {
   BoundedSubscriptionWorkerPool,
   InMemoryWorkerAccountCapacityStore,
   accountCapacityAwareWorkerFactory,
+  type CapacityAwareSubscriptionWorker,
   type SubscriptionWorker,
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
@@ -418,6 +419,82 @@ describe("AccountCapacityAwareWorker", () => {
     await pool.start();
     await expect(pool.run("review")).resolves.toBe("slot-3:review");
     await pool.dispose();
+  });
+
+  it("keeps factory-provided runtime demand scoped by account", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+    const store = new InMemoryWorkerAccountCapacityStore();
+    const highFactory = accountCapacityAwareWorkerFactory({
+      accountCapacityStore: store,
+      runtimeDemand: {
+        provider: "codex",
+        model: "gpt-5.5",
+        reasoningEffort: "high",
+        serviceTier: "fast",
+      },
+      clock: { now: () => now },
+      workerFactory: ({ workerId }) =>
+        new FakeWorker(workerId, "high", {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+          details: { accountId: "account-a" },
+        }),
+    });
+    const xhighFactory = accountCapacityAwareWorkerFactory({
+      accountCapacityStore: store,
+      runtimeDemand: {
+        provider: "codex",
+        model: "gpt-5.5",
+        reasoningEffort: "xhigh",
+        serviceTier: "fast",
+      },
+      clock: { now: () => now },
+      workerFactory: ({ workerId }) =>
+        new FakeWorker(workerId, "xhigh", {
+          availability: "available",
+          details: { accountId: "account-a" },
+        }),
+    });
+
+    const high = highFactory({
+      slotIndex: 0,
+      workerId: "worker-high",
+    }) as CapacityAwareSubscriptionWorker<string, string>;
+    await high.start();
+    expect(high.capacity()).toMatchObject({
+      availability: "quota_exhausted",
+    });
+    expect(
+      store.read({
+        accountId: "account-a",
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "high",
+          serviceTier: "fast",
+        },
+        now,
+      }),
+    ).toMatchObject({
+      availability: "quota_exhausted",
+      details: {
+        accountId: "account-a",
+        capacityReasoningEffort: "high",
+      },
+    });
+
+    const xhigh = xhighFactory({
+      slotIndex: 1,
+      workerId: "worker-xhigh",
+    }) as CapacityAwareSubscriptionWorker<string, string>;
+    await xhigh.start();
+    await expect(xhigh.run("second")).resolves.toBe("xhigh:second");
+    expect(xhigh.capacity()).toMatchObject({
+      availability: "available",
+      details: { accountId: "account-a" },
+    });
   });
 });
 
