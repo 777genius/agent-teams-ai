@@ -241,12 +241,25 @@ the package and skips all real provider work:
 npm run e2e:live-workers
 ```
 
+Use that build-and-run command from a normal development checkout or a throwaway
+release clone. Do not run it from `/var/data/runtimes/subscription-runtime/current/repo`
+on a live host, because it cleans and rebuilds `dist` in place while the
+production wrapper may import the same files. For an already deployed release,
+first deploy with the release script checks, then run the no-build harness:
+
+```sh
+npm run e2e:live-workers:dist
+```
+
 To run it against real sandbox workers, use only explicit test/sandbox
 workspaces:
 
 ```sh
 SUBSCRIPTION_RUNTIME_LIVE_WORKERS=1 npm run e2e:live-workers
 ```
+
+On `/current/repo`, replace `npm run e2e:live-workers` with
+`npm run e2e:live-workers:dist` in the examples below.
 
 To run only the project-scoped controller regression, use:
 

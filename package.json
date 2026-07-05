@@ -140,6 +140,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "e2e:live-workers": "npm run build && node scripts/e2e-live-workers/run.mjs",
+    "e2e:live-workers:dist": "node scripts/e2e-live-workers/run.mjs",
     "ops:sync-codex-auth": "node scripts/ops/sync-codex-auth-to-host.mjs",
     "smoke:worker-claude": "npm run build && node scripts/smoke-claude-worker.mjs",
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
