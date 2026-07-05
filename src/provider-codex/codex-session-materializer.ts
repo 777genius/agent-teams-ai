@@ -3,14 +3,14 @@ import type {
   SessionArtifact,
 } from "@vioxen/subscription-runtime/core";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   codexAuthJsonFromArtifact,
   sessionArtifactFromCodexAuthJson,
 } from "./codex-auth-json-codec";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
+import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import type { CodexMaterializedSession } from "./codex-json-execution-engine";
 
 export type CodexSessionPrewarmResult = {
@@ -53,9 +53,9 @@ export class CodexEphemeralSessionMaterializer implements CodexSessionMaterializ
     const authJson = codexAuthJsonFromArtifact(input.session);
     input.redactor.registerSecret(authJson, "codex-auth-json");
 
-    const tempRoot = await mkdtemp(
-      join(tmpdir(), "subscription-runtime-codex-"),
-    );
+    const tempRoot = await createCodexRuntimeTempRoot({
+      prefix: "subscription-runtime-codex-",
+    });
     const home = join(tempRoot, "home");
     const codexHome = join(tempRoot, "codex-home");
     await mkdir(home, { recursive: true, mode: 0o700 });
@@ -241,7 +241,9 @@ export class CodexWorkerCacheSessionMaterializer implements CodexSessionMaterial
   private async createEntry(): Promise<WorkerCacheEntry> {
     const cacheRoot = this.options.rootDir
       ? join(this.options.rootDir, `codex-${this.cacheKeyHash}`)
-      : await mkdtemp(join(tmpdir(), "subscription-runtime-codex-cache-"));
+      : await createCodexRuntimeTempRoot({
+          prefix: "subscription-runtime-codex-cache-",
+        });
     const entry = {
       cacheRoot,
       home: join(cacheRoot, "home"),

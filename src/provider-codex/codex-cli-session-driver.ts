@@ -11,8 +11,7 @@ import type {
   SessionValidationResult,
   WorkspaceHandle,
 } from "@vioxen/subscription-runtime/core";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   codexAuthJsonFromArtifact,
@@ -25,6 +24,7 @@ import {
   pruneCodexChildEnv,
 } from "./codex-cli-domain";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
+import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import {
   codexAuthJsonFormatVersion,
   defaultCodexModel,
@@ -74,9 +74,10 @@ export class CodexCliSessionDriver implements ProviderSessionDriver {
     const authJson = codexAuthJsonFromArtifact(input.session);
     input.redactor.registerSecret(authJson, "codex-auth-json");
 
-    const tempRoot = await mkdtemp(
-      join(tmpdir(), "subscription-runtime-codex-"),
-    );
+    const tempRoot = await createCodexRuntimeTempRoot({
+      prefix: "subscription-runtime-codex-",
+      sourceEnv: this.options.sourceEnv,
+    });
     const tempHome = join(tempRoot, "home");
     const tempCodexHome = join(tempRoot, "codex-home");
     const emptyWorkingDirectory = join(tempRoot, "empty-workdir");

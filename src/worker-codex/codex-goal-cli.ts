@@ -1278,6 +1278,14 @@ function runConfigFromFlags(
     ]),
     "--network-access",
   );
+  const resolvedJobRootDir = resolvePath(cwd, jobRootDir);
+  const sourceEnv = {
+    ...env,
+    SUBSCRIPTION_RUNTIME_JOB_ROOT: resolvedJobRootDir,
+    SUBSCRIPTION_RUNTIME_TMPDIR:
+      env.SUBSCRIPTION_RUNTIME_TMPDIR ?? join(resolvedJobRootDir, "tmp"),
+    TMPDIR: env.TMPDIR ?? join(resolvedJobRootDir, "tmp"),
+  } as const;
   const config: CodexGoalRunConfig = {
     ...(option(values, env, "--job-id", ["SUBSCRIPTION_RUNTIME_JOB_ID"]) === undefined
       ? {}
@@ -1286,7 +1294,7 @@ function runConfigFromFlags(
             "SUBSCRIPTION_RUNTIME_JOB_ID",
           ]) as string,
         }),
-    jobRootDir: resolvePath(cwd, jobRootDir),
+    jobRootDir: resolvedJobRootDir,
     authRootDir,
     workspacePath: resolvePath(
       cwd,
@@ -1351,7 +1359,7 @@ function runConfigFromFlags(
     requireGitWorkspace: !flag(values, "--no-require-git-workspace"),
     prewarmOnStart: flag(values, "--prewarm"),
     ...(workerReportMode === undefined ? {} : { workerReportMode }),
-    sourceEnv: env,
+    sourceEnv,
   };
   const stateRoot = option(values, env, "--state-root", []);
   return stateRoot

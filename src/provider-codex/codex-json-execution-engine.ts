@@ -8,9 +8,9 @@ import type {
   RunnerPort,
   SessionArtifact,
 } from "@vioxen/subscription-runtime/core";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import { classifyCodexFailure } from "./failure-classifier";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import { composeCodexPrompt } from "./codex-prompt-composer";
@@ -325,7 +325,9 @@ async function writeOutputSchemaFile(
 ): Promise<{ readonly path: string; dispose(): Promise<void> } | null> {
   const schema = codexOutputSchemaPayload(outputSchema);
   if (schema === undefined) return null;
-  const dir = await mkdtemp(join(tmpdir(), "subscription-runtime-codex-schema-"));
+  const dir = await createCodexRuntimeTempRoot({
+    prefix: "subscription-runtime-codex-schema-",
+  });
   const path = join(dir, "schema.json");
   await writeFile(path, `${JSON.stringify(schema, null, 2)}\n`, {
     encoding: "utf8",

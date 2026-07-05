@@ -7,12 +7,12 @@ import {
   type SessionArtifact,
   type WorkspaceHandle,
 } from "@vioxen/subscription-runtime/core";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { codexAuthJsonFromArtifact } from "./codex-auth-json-codec";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
+import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import { composeCodexPrompt } from "./codex-prompt-composer";
 import { codexSandboxModeForControls } from "./codex-json-execution-engine";
 import {
@@ -63,9 +63,10 @@ export class CodexCliAgentDriver implements AgentDriver {
     const authJson = codexAuthJsonFromArtifact(input.session);
     input.redactor.registerSecret(authJson, "codex-auth-json");
 
-    const tempRoot = await mkdtemp(
-      join(tmpdir(), "subscription-runtime-codex-"),
-    );
+    const tempRoot = await createCodexRuntimeTempRoot({
+      prefix: "subscription-runtime-codex-",
+      sourceEnv: this.options.sourceEnv,
+    });
     const tempHome = join(tempRoot, "home");
     const tempCodexHome = join(tempRoot, "codex-home");
     await mkdir(tempHome, { recursive: true, mode: 0o700 });
