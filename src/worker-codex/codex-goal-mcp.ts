@@ -2512,7 +2512,9 @@ function projectIntegrationDeps(controller: {
   const rootDir = join(controller.controller.jobRootDir, "project-integration");
   return {
     store: new LocalIntegrationAttemptStore({ rootDir }),
-    git: new LocalGitIntegrationAdapter(),
+    git: new LocalGitIntegrationAdapter({
+      allowedPatchRoots: controller.controller.projectAccessScope?.workspaceRoots ?? [],
+    }),
     checks: new LocalProjectCheckRunner(),
     scanner: new SimpleSecretScanner(),
     locks: new LocalWorkspaceIntegrationLock({

@@ -28,6 +28,7 @@ export type LocalGitIntegrationAdapterOptions = {
   readonly gitBinaryPath?: string;
   readonly timeoutMs?: number;
   readonly maxBuffer?: number;
+  readonly allowedPatchRoots?: readonly string[];
 };
 
 export class LocalGitIntegrationAdapter implements GitPort {
@@ -64,9 +65,10 @@ export class LocalGitIntegrationAdapter implements GitPort {
     if (input.workerOutput.commitSha) {
       await this.git(["cherry-pick", "--no-commit", input.workerOutput.commitSha], workspacePath);
     } else if (input.workerOutput.patchPath) {
-      const patchPath = await canonicalPathInsideRoot({
-        rootPath: input.workerOutput.workspacePath,
+      const patchPath = await canonicalPatchPath({
+        workspacePath: input.workerOutput.workspacePath,
         path: input.workerOutput.patchPath,
+        allowedPatchRoots: this.options.allowedPatchRoots ?? [],
       });
       await this.git(["apply", "--whitespace=nowarn", patchPath], workspacePath);
     } else {
@@ -394,19 +396,24 @@ async function canonicalDirectory(path: string): Promise<string> {
   return await realpath(path);
 }
 
-async function canonicalPathInsideRoot(input: {
-  readonly rootPath: string;
+async function canonicalPatchPath(input: {
+  readonly workspacePath: string;
   readonly path: string;
+  readonly allowedPatchRoots: readonly string[];
 }): Promise<string> {
-  const root = await canonicalDirectory(input.rootPath);
+  const workspaceRoot = await canonicalDirectory(input.workspacePath);
   const candidate = input.path && isAbsolute(input.path)
     ? input.path
-    : resolve(root, input.path);
+    : resolve(workspaceRoot, input.path);
   const canonical = await realpath(candidate);
-  if (!isPathInside(canonical, root)) {
-    throw new Error("local_project_integration_path_outside_root");
+  if (isPathInside(canonical, workspaceRoot)) return canonical;
+
+  for (const rootPath of input.allowedPatchRoots) {
+    const root = await canonicalDirectory(rootPath);
+    if (isPathInside(canonical, root)) return canonical;
   }
-  return canonical;
+
+  throw new Error("local_project_integration_path_outside_root");
 }
 
 async function checkCwd(

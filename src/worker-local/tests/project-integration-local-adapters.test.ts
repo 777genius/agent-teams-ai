@@ -66,6 +66,31 @@ describe("local project integration adapters", () => {
     expect(pushed).toContain(commit.commitSha);
   });
 
+  it("applies an approved patch artifact from an allowed project root", async () => {
+    const fixture = await createGitFixture();
+    const patchRoot = join(fixture.rootDir, "worker-jobs");
+    await mkdir(patchRoot);
+    const patchPath = join(patchRoot, "worker-output.patch");
+    const patch = await gitOutput(fixture.workspacePath, [
+      "show",
+      "--format=",
+      fixture.workerCommitSha,
+    ]);
+    await writeFile(patchPath, patch);
+
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [patchRoot],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: { targetWorkspacePath: fixture.workspacePath },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        patchPath,
+      },
+    })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+  });
+
   it("runs declared checks and redacts unsafe output tails", async () => {
     const fixture = await createGitFixture();
     const runner = new LocalProjectCheckRunner();
