@@ -241,6 +241,19 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
     });
   });
 
+  it('treats policy none as authoritative over raw failed delivery facts', () => {
+    expect(
+      buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+        delivered: false,
+        responsePending: false,
+        ledgerStatus: 'failed_terminal',
+        reason: 'empty_assistant_turn',
+        diagnostics: ['empty_assistant_turn'],
+        policyImpact: { state: 'none' },
+      })
+    ).toEqual({ state: 'none' });
+  });
+
   it('does not expose raw attachment preparation diagnostics to users', () => {
     expect(
       buildOpenCodeRuntimeDeliveryUserVisibleImpact({

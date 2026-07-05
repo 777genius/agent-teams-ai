@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,12 +13,12 @@ import {
   type RuntimeDeliveryLocation,
 } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
 import {
-  RuntimeDeliveryDestinationRegistry,
-  RuntimeDeliveryReconciler,
-  RuntimeDeliveryService,
   type RuntimeDeliveryDestinationPort,
+  RuntimeDeliveryDestinationRegistry,
   type RuntimeDeliveryDiagnosticsSink,
+  RuntimeDeliveryReconciler,
   type RuntimeDeliveryRunStateReader,
+  RuntimeDeliveryService,
   type RuntimeDeliveryTeamChangeEmitter,
   type RuntimeDeliveryTeamChangeEvent,
   type RuntimeDeliveryVerifyResult,
@@ -52,9 +51,7 @@ describe('RuntimeDeliveryService', () => {
   });
 
   it('does not poison idempotency when crash happens before destination write', async () => {
-    destination.writeImpl = async () => {
-      throw new Error('simulated crash before write');
-    };
+    destination.writeImpl = () => Promise.reject(new Error('simulated crash before write'));
     const service = createService();
 
     await expect(service.deliver(envelope())).rejects.toThrow('simulated crash before write');
@@ -146,6 +143,52 @@ describe('RuntimeDeliveryService', () => {
     });
   });
 
+  it.each(['pending', 'failed_retryable'] as const)(
+    'resumes pre-refactor %s journal hashed with legacy string taskRefs',
+    async (status) => {
+      const message = envelope();
+      const legacyMessage = {
+        ...message,
+        taskRefs: ['task-1'],
+      } as unknown as RuntimeDeliveryEnvelope;
+      await journal.begin({
+        idempotencyKey: message.idempotencyKey,
+        payloadHash: hashRuntimeDeliveryEnvelope(legacyMessage),
+        runId: message.runId,
+        teamName: message.teamName,
+        fromMemberName: message.fromMemberName,
+        providerId: message.providerId,
+        runtimeSessionId: message.runtimeSessionId,
+        destination: resolveRuntimeDeliveryDestination(message),
+        destinationMessageId: buildRuntimeDestinationMessageId(message),
+        now: now.toISOString(),
+      });
+      if (status === 'failed_retryable') {
+        await journal.markFailed({
+          idempotencyKey: message.idempotencyKey,
+          status,
+          error: 'simulated retryable failure',
+          updatedAt: now.toISOString(),
+        });
+      }
+      const service = createService();
+
+      await expect(service.deliver(message)).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+        reason: null,
+      });
+
+      await expect(journal.get(message.idempotencyKey)).resolves.toMatchObject({
+        status: 'committed',
+        attempts: 2,
+        payloadHash: hashRuntimeDeliveryEnvelope(message),
+      });
+      expect(destination.messages).toHaveLength(1);
+      expect(diagnostics.append).not.toHaveBeenCalled();
+    }
+  );
+
   it('rejects same idempotency key with different payload hash', async () => {
     const service = createService();
     await expect(service.deliver(envelope())).resolves.toMatchObject({
@@ -205,7 +248,9 @@ describe('RuntimeDeliveryService', () => {
 
 describe('RuntimeDeliveryReconciler', () => {
   it('diagnoses pending records that are not visible in destination', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-'));
+    const tempDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-')
+    );
     try {
       const now = new Date('2026-04-21T12:00:00.000Z');
       const journal = createRuntimeDeliveryJournalStore({
@@ -271,7 +316,7 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
     to: { memberName: 'Reviewer' },
     text: 'Please review this',
     createdAt: '2026-04-21T12:00:00.000Z',
-    taskRefs: ['task-1'],
+    taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'team-a' }],
     ...overrides,
   };
 }
@@ -279,8 +324,8 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
 class FakeRunStateReader implements RuntimeDeliveryRunStateReader {
   constructor(public currentRunId: string | null) {}
 
-  async getCurrentRunId(): Promise<string | null> {
-    return this.currentRunId;
+  getCurrentRunId(): Promise<string | null> {
+    return Promise.resolve(this.currentRunId);
   }
 }
 
@@ -317,16 +362,16 @@ class FakeDestinationPort implements RuntimeDeliveryDestinationPort {
     return location;
   }
 
-  async verify(input: {
+  verify(input: {
     destination: RuntimeDeliveryDestinationRef;
     destinationMessageId: string;
   }): Promise<RuntimeDeliveryVerifyResult> {
     const location = this.messages.get(input.destinationMessageId) ?? null;
-    return {
+    return Promise.resolve({
       found: location !== null,
       location,
       diagnostics: [],
-    };
+    });
   }
 
   buildChangeEvent(input: {
@@ -344,7 +389,7 @@ class FakeDestinationPort implements RuntimeDeliveryDestinationPort {
 }
 
 class FakeDiagnosticsSink implements RuntimeDeliveryDiagnosticsSink {
-  readonly append = vi.fn(async () => {});
+  readonly append = vi.fn(() => Promise.resolve());
 }
 
 class FakeTeamChangeEmitter implements RuntimeDeliveryTeamChangeEmitter {

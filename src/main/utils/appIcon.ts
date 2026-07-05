@@ -18,11 +18,12 @@ let resolved = false;
 export function getAppIconPath(): string | undefined {
   if (resolved) return cachedPath;
 
+  const packagedResourcesPath = process.resourcesPath?.trim();
   const isDev = process.env.NODE_ENV === 'development';
   const candidates = isDev
     ? [join(process.cwd(), 'resources/icon.png')]
     : [
-        join(process.resourcesPath, 'resources/icon.png'),
+        ...(packagedResourcesPath ? [join(packagedResourcesPath, 'resources/icon.png')] : []),
         join(__dirname, '../../resources/icon.png'),
       ];
 

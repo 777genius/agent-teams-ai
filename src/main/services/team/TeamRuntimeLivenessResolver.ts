@@ -516,9 +516,3 @@ export function resolveTeamMemberRuntimeLiveness(
     diagnostics: [...diagnostics, 'runtime process not found'],
   });
 }
-
-export function isStrongRuntimeEvidence(
-  value: { livenessKind?: TeamAgentRuntimeLivenessKind } | undefined
-): boolean {
-  return value?.livenessKind === 'confirmed_bootstrap' || value?.livenessKind === 'runtime_process';
-}

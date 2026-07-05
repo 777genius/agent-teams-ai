@@ -110,6 +110,35 @@ export interface OpenCodeRuntimePermissionSyncPorts {
   logWarning(message: string): void;
 }
 
+export interface OpenCodeRuntimePendingPermissionsPersistencePorts {
+  nowIso(): string;
+  getTrackedRunId(teamName: string): string | null;
+  enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  writeLaunchStateSnapshot(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<unknown>;
+  invalidateRuntimeSnapshotCaches(teamName: string): void;
+  emitMemberSpawnChange(input: {
+    teamName: string;
+    runId?: string | null;
+    memberName: string;
+  }): void;
+  logDebug(message: string): void;
+}
+
+export interface OpenCodeRuntimePermissionSpawnStatusPorts<
+  TRun extends OpenCodeRuntimePermissionTrackedRunLike,
+> {
+  getTrackedRunId(teamName: string): string | null;
+  getRun(runId: string): TRun | null;
+  nowIso(): string;
+  isCurrentTrackedRun(run: TRun): boolean;
+  emitMemberSpawnChange(run: TRun, memberName: string): void;
+  persistLaunchStateSnapshot(run: TRun, launchPhase: 'active' | 'finished'): void | Promise<void>;
+}
+
 export const OPENCODE_PENDING_PERMISSION_REQUEST_PATTERN =
   /\b(?:pending permission request(?:\(s\)|s)?|permission[_ -]blocked)\b/i;
 
@@ -585,6 +614,81 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     members,
     updatedAt: input.observedAt,
   });
+}
+
+export async function persistOpenCodeRuntimePendingPermissions(
+  input: OpenCodeRuntimePendingPermissionsPersistenceInput,
+  ports: OpenCodeRuntimePendingPermissionsPersistencePorts
+): Promise<void> {
+  if (!input.previousLaunchState) {
+    return;
+  }
+  const observedAt = ports.nowIso();
+  try {
+    const changed = await ports.enqueueLaunchStateStoreOperation(input.teamName, async () => {
+      const incomingRunId = input.runId?.trim();
+      if (incomingRunId && ports.getTrackedRunId(input.teamName) !== incomingRunId) {
+        return false;
+      }
+      const previous = await ports.readLaunchState(input.teamName);
+      if (!previous) {
+        return false;
+      }
+      const nextSnapshot = buildOpenCodeRuntimePendingPermissionsLaunchSnapshot({
+        previous,
+        runId: input.runId,
+        laneId: input.laneId,
+        sessionId: input.sessionId,
+        permissionsByMember: input.permissionsByMember,
+        observedAt,
+      });
+      if (!nextSnapshot) {
+        return false;
+      }
+      await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot);
+      return true;
+    });
+    if (changed) {
+      ports.invalidateRuntimeSnapshotCaches(input.teamName);
+      for (const memberName of input.permissionsByMember.keys()) {
+        ports.emitMemberSpawnChange({
+          teamName: input.teamName,
+          runId: input.runId,
+          memberName,
+        });
+      }
+    }
+  } catch (error) {
+    ports.logDebug(
+      `[${input.teamName}] Failed to persist OpenCode pending runtime permissions: ${getErrorMessage(error)}`
+    );
+  }
+}
+
+export function syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun<
+  TRun extends OpenCodeRuntimePermissionTrackedRunLike,
+>(
+  input: OpenCodeRuntimePermissionSpawnStatusSyncInput,
+  ports: OpenCodeRuntimePermissionSpawnStatusPorts<TRun>
+): void {
+  const trackedRunId = ports.getTrackedRunId(input.teamName);
+  const run = trackedRunId ? ports.getRun(trackedRunId) : null;
+  const result = syncOpenCodeRuntimePermissionSpawnStatuses({
+    run: run ?? null,
+    expectedRunId: input.runId,
+    laneId: input.laneId,
+    permissionsByMember: input.permissionsByMember,
+    updatedAt: ports.nowIso(),
+    isCurrentTrackedRun: (candidateRun) => ports.isCurrentTrackedRun(candidateRun as TRun),
+    emitMemberSpawnChange: (memberName) => {
+      if (run) {
+        ports.emitMemberSpawnChange(run, memberName);
+      }
+    },
+  });
+  if (run && result.shouldPersistLaunchSnapshot) {
+    void ports.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
+  }
 }
 
 export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {

@@ -2,7 +2,6 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -38,10 +37,14 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
   };
 });
 
-import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
+
+import { toMetaMembers } from './provisioningHarness';
+
+import type { TeamCreateRequest, TeamMember, TeamProviderId } from '@shared/types';
 
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
@@ -57,6 +60,105 @@ function createFakeChild() {
     kill: vi.fn(),
   });
   return { child, writeSpy, endSpy };
+}
+
+type ProvisioningEnvHarness = {
+  env: NodeJS.ProcessEnv;
+  authSource?: string;
+  geminiRuntimeAuth?: unknown;
+  providerArgs?: string[];
+  warning?: string;
+};
+
+type ProviderRuntimeHarness = {
+  buildProvisioningEnv(
+    providerId?: TeamProviderId,
+    providerBackendId?: string | null,
+    options?: unknown
+  ): Promise<ProvisioningEnvHarness>;
+  buildCrossProviderMemberArgs(
+    primaryProviderId: TeamProviderId,
+    memberSpecs: TeamCreateRequest['members'],
+    options?: unknown
+  ): Promise<{
+    args: string[];
+    providerArgsByProvider: Map<TeamProviderId, string[]>;
+    envPatch: NodeJS.ProcessEnv;
+    usesAnthropicApiKeyHelper: boolean;
+  }>;
+  validateAgentTeamsMcpRuntime(...args: unknown[]): Promise<void>;
+};
+
+type ConfigFacadeHarness = {
+  readConfigForObservation(teamName: string): Promise<unknown>;
+  normalizeTeamConfigForLaunch(teamName: string, configRaw: string): Promise<void>;
+  updateConfigProjectPath(teamName: string, cwd: string): Promise<void>;
+  restorePrelaunchConfig(teamName: string): Promise<void>;
+  assertConfigLeadOnlyForLaunch(teamName: string): Promise<void>;
+  launchExpectedMembersPorts: {
+    getMembers(teamName: string): Promise<TeamMember[]>;
+    listInboxNames(teamName: string): Promise<string[]>;
+  };
+};
+
+function providerRuntimeHarness(svc: TeamProvisioningService): ProviderRuntimeHarness {
+  return (svc as unknown as { providerRuntime: ProviderRuntimeHarness }).providerRuntime;
+}
+
+function configFacadeHarness(svc: TeamProvisioningService): ConfigFacadeHarness {
+  return (svc as unknown as { configFacade: ConfigFacadeHarness }).configFacade;
+}
+
+function mockProviderRuntime(
+  svc: TeamProvisioningService,
+  buildProvisioningEnv: ProviderRuntimeHarness['buildProvisioningEnv'] = async () => ({
+    env: { ANTHROPIC_API_KEY: 'test' },
+    authSource: 'anthropic_api_key',
+  })
+): void {
+  const providerRuntime = providerRuntimeHarness(svc);
+  vi.spyOn(providerRuntime, 'buildProvisioningEnv').mockImplementation(buildProvisioningEnv);
+  vi.spyOn(providerRuntime, 'buildCrossProviderMemberArgs').mockImplementation(
+    async (primaryProviderId, memberSpecs) => {
+      const effectivePrimaryProviderId = primaryProviderId ?? 'anthropic';
+      const providerArgsByProvider = new Map<TeamProviderId, string[]>();
+      const args: string[] = [];
+      for (const member of memberSpecs) {
+        const memberProviderId = member.providerId ?? effectivePrimaryProviderId;
+        if (
+          memberProviderId !== effectivePrimaryProviderId &&
+          !providerArgsByProvider.has(memberProviderId)
+        ) {
+          const envResolution = await providerRuntime.buildProvisioningEnv(memberProviderId);
+          const providerArgs = envResolution.providerArgs ?? [];
+          providerArgsByProvider.set(memberProviderId, providerArgs);
+          args.push(...providerArgs);
+        }
+      }
+      return {
+        args,
+        providerArgsByProvider,
+        envPatch: {},
+        usesAnthropicApiKeyHelper: false,
+      };
+    }
+  );
+  vi.spyOn(providerRuntime, 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
+}
+
+function mockLaunchConfigFacade(
+  svc: TeamProvisioningService,
+  members: TeamCreateRequest['members']
+): void {
+  const configFacade = configFacadeHarness(svc);
+  vi.spyOn(configFacade, 'normalizeTeamConfigForLaunch').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'updateConfigProjectPath').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'restorePrelaunchConfig').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'assertConfigLeadOnlyForLaunch').mockResolvedValue(undefined);
+  vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMembers').mockResolvedValue(
+    toMetaMembers(members)
+  );
+  vi.spyOn(configFacade.launchExpectedMembersPorts, 'listInboxNames').mockResolvedValue([]);
 }
 
 /** Create a TeamProvisioningService with a running lead process (post-provisioning). */
@@ -138,21 +240,9 @@ async function setupRunningTeam(teamName: string) {
   });
 
   const svc = new TeamProvisioningService();
-  (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-    env: { ANTHROPIC_API_KEY: 'test' },
-    authSource: 'anthropic_api_key',
-  }));
-  (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-  (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-  (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-  (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
-  (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+  mockProviderRuntime(svc);
+  mockLaunchConfigFacade(svc, [{ name: 'alice', role: 'developer' }]);
   (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-  (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-    members: [{ name: 'alice', role: 'developer' }],
-    source: 'config-fallback',
-    warning: undefined,
-  }));
   (svc as any).pathExists = vi.fn(async () => false);
   (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -374,7 +464,7 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
     expect(text).toContain('Do NOT use cross-team messaging when your own team can answer');
     expect(text).toContain('resolve it through your own task board and teammates first');
     expect(text).toContain('do NOT appear silent');
-    expect(text).toContain("canonical progress trail should be team-visible first");
+    expect(text).toContain('canonical progress trail should be team-visible first');
     expect(text).toContain('Do NOT default to messaging "user" for cross-team coordination');
 
     await svc.cancelProvisioning(runId);
@@ -532,18 +622,16 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
     // Original launch had only alice
     run.request.members = [{ name: 'alice', role: 'developer' }];
 
-    // Mock configReader.getConfig to return updated team with alice + bob
-    (svc as any).configReader = {
-      getConfig: vi.fn(async () => ({
-        name: 'compact-test-15',
-        description: 'Test team',
-        members: [
-          { name: 'team-lead', agentType: 'team-lead' },
-          { name: 'alice', agentType: 'teammate', role: 'developer' },
-          { name: 'bob', agentType: 'teammate', role: 'tester' },
-        ],
-      })),
-    };
+    // Mock the config facade read used by reminder injection to return alice + bob.
+    vi.spyOn(configFacadeHarness(svc), 'readConfigForObservation').mockResolvedValue({
+      name: 'compact-test-15',
+      description: 'Test team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'alice', agentType: 'teammate', role: 'developer' },
+        { name: 'bob', agentType: 'teammate', role: 'tester' },
+      ],
+    });
 
     run.pendingPostCompactReminder = true;
     writeSpy.mockClear();

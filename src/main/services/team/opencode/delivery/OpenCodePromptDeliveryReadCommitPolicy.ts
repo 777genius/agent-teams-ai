@@ -400,6 +400,41 @@ export function isOpenCodeAcceptedDeliveryMissingPromptProof(
   );
 }
 
+export const OPENCODE_ACCEPTED_DELIVERY_MISSING_PROMPT_PROOF_RETRY_REASON =
+  'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id';
+
+export function buildOpenCodeAcceptedDeliveryMissingPromptProofRetry(input: {
+  ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  now: string;
+  eventContext?: Record<string, unknown>;
+}): {
+  markInput: {
+    id: string;
+    reason: string;
+    nextAttemptAt: string;
+    diagnostics: string[];
+    markedAt: string;
+  };
+  eventExtra: Record<string, unknown>;
+} {
+  const reason = OPENCODE_ACCEPTED_DELIVERY_MISSING_PROMPT_PROOF_RETRY_REASON;
+  return {
+    markInput: {
+      id: input.ledgerRecord.id,
+      reason,
+      nextAttemptAt: input.now,
+      diagnostics: ['opencode_accepted_prompt_missing_runtime_prompt_id_recovered'],
+      markedAt: input.now,
+    },
+    eventExtra: {
+      acceptanceUnknown: true,
+      recoveredLegacyAcceptedWithoutPromptProof: true,
+      ...input.eventContext,
+      reason,
+    },
+  };
+}
+
 export function isOpenCodeDeliveryRetryablePendingResponse(input: {
   ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
   visibleReply?: OpenCodeVisibleReplyProof | null;
@@ -584,6 +619,108 @@ export function isOpenCodeNoAssistantTerminalDeliveryFailure(
     record.attempts <= record.maxAttempts &&
     isOpenCodeNoAssistantDeliveryFailure(record)
   );
+}
+
+export interface OpenCodePromptDeliveryRequeuePlan {
+  markInput: {
+    id: string;
+    status: 'retry_scheduled';
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+  };
+  logEvent: string;
+  logContext: Record<string, unknown>;
+}
+
+export function buildOpenCodeNoAssistantTerminalDeliveryRequeuePlan(input: {
+  ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  scheduledAt: string;
+}): OpenCodePromptDeliveryRequeuePlan | null {
+  if (!isOpenCodeNoAssistantTerminalDeliveryFailure(input.ledgerRecord)) {
+    return null;
+  }
+
+  return {
+    markInput: {
+      id: input.ledgerRecord.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: input.scheduledAt,
+      reason: 'opencode_prompt_delivery_requeued_after_terminal_no_assistant_response',
+      scheduledAt: input.scheduledAt,
+    },
+    logEvent: 'opencode_prompt_delivery_requeued_after_terminal_no_assistant_response',
+    logContext: {
+      teamName: input.ledgerRecord.teamName,
+      memberName: input.ledgerRecord.memberName,
+      laneId: input.ledgerRecord.laneId,
+      runId: input.ledgerRecord.runId,
+      inboxMessageId: input.ledgerRecord.inboxMessageId,
+      attempts: input.ledgerRecord.attempts,
+      maxAttempts: input.ledgerRecord.maxAttempts,
+    },
+  };
+}
+
+export function buildOpenCodeRuntimeManifestWatermarkDeliveryRequeuePlan(input: {
+  ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  scheduledAt: string;
+}): OpenCodePromptDeliveryRequeuePlan | null {
+  if (
+    input.ledgerRecord.status !== 'failed_terminal' ||
+    input.ledgerRecord.inboxReadCommittedAt ||
+    !isOpenCodeRuntimeManifestWatermarkDeliveryFailure(input.ledgerRecord)
+  ) {
+    return null;
+  }
+
+  return {
+    markInput: {
+      id: input.ledgerRecord.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: input.scheduledAt,
+      reason: 'opencode_prompt_delivery_requeued_after_runtime_manifest_high_watermark_fix',
+      scheduledAt: input.scheduledAt,
+    },
+    logEvent: 'opencode_prompt_delivery_requeued_after_runtime_manifest_high_watermark_fix',
+    logContext: {
+      teamName: input.ledgerRecord.teamName,
+      memberName: input.ledgerRecord.memberName,
+      laneId: input.ledgerRecord.laneId,
+      runId: input.ledgerRecord.runId,
+      inboxMessageId: input.ledgerRecord.inboxMessageId,
+      attempts: input.ledgerRecord.attempts,
+    },
+  };
+}
+
+export function buildOpenCodePromptLedgerFailedTerminalPlan(input: {
+  id: string;
+  reason: string;
+  diagnostics?: string[];
+  failedAt: string;
+  eventContext?: Record<string, unknown>;
+}): {
+  markInput: {
+    id: string;
+    reason: string;
+    diagnostics?: string[];
+    failedAt: string;
+  };
+  eventExtra: Record<string, unknown>;
+} {
+  return {
+    markInput: {
+      id: input.id,
+      reason: input.reason,
+      ...(input.diagnostics ? { diagnostics: input.diagnostics } : {}),
+      failedAt: input.failedAt,
+    },
+    eventExtra: {
+      reason: input.reason,
+      ...(input.eventContext ?? {}),
+    },
+  };
 }
 
 export function canMaterializeOpenCodePlainTextReply(

@@ -138,6 +138,12 @@ import {
   initializeAutoResumeService,
 } from '../services/team/AutoResumeService';
 import {
+  bindTeamDiagnosticsApi,
+  bindTeamLaunchApi,
+  bindTeamMemberLifecycleApi,
+  bindTeamRuntimeApi,
+} from '../services/team/contracts/TeamProvisioningApis';
+import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
@@ -149,6 +155,7 @@ import {
   mergeLiveLeadProcessMessages,
   mergeLiveLeadProcessMessagesPage,
 } from '../services/team/mergeLiveLeadProcessMessages';
+import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
@@ -180,6 +187,12 @@ import type {
   TeamMemberLogsFinder,
   TeamProvisioningService,
 } from '../services';
+import type {
+  TeamDiagnosticsApi,
+  TeamLaunchApi,
+  TeamMemberLifecycleApi,
+  TeamRuntimeApi,
+} from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type {
@@ -738,6 +751,10 @@ function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string |
 
 let teamDataService: TeamDataService | null = null;
 let teamProvisioningService: TeamProvisioningService | null = null;
+let teamProvisioningStartApi: TeamLaunchApi | null = null;
+let teamRuntimeApi: TeamRuntimeApi | null = null;
+let teamMemberLifecycleApi: TeamMemberLifecycleApi | null = null;
+let teamDiagnosticsApi: TeamDiagnosticsApi | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
@@ -802,6 +819,10 @@ export function initializeTeamHandlers(
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
+  teamProvisioningStartApi = bindTeamLaunchApi(provisioningService);
+  teamRuntimeApi = bindTeamRuntimeApi(provisioningService);
+  teamMemberLifecycleApi = bindTeamMemberLifecycleApi(provisioningService);
+  teamDiagnosticsApi = bindTeamDiagnosticsApi(provisioningService);
   initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
@@ -1005,6 +1026,34 @@ function getTeamProvisioningService(): TeamProvisioningService {
   return teamProvisioningService;
 }
 
+function getTeamProvisioningStartApi(): TeamLaunchApi {
+  if (!teamProvisioningStartApi) {
+    throw new Error('Team provisioning handlers are not initialized');
+  }
+  return teamProvisioningStartApi;
+}
+
+function getTeamRuntimeApi(): TeamRuntimeApi {
+  if (!teamRuntimeApi) {
+    throw new Error('Team runtime handlers are not initialized');
+  }
+  return teamRuntimeApi;
+}
+
+function getTeamMemberLifecycleApi(): TeamMemberLifecycleApi {
+  if (!teamMemberLifecycleApi) {
+    throw new Error('Team member lifecycle handlers are not initialized');
+  }
+  return teamMemberLifecycleApi;
+}
+
+function getTeamDiagnosticsApi(): TeamDiagnosticsApi {
+  if (!teamDiagnosticsApi) {
+    throw new Error('Team diagnostics handlers are not initialized');
+  }
+  return teamDiagnosticsApi;
+}
+
 function getTeammateToolTracker(): TeammateToolTracker {
   if (!teammateToolTracker) {
     throw new Error('Teammate tool tracker is not initialized');
@@ -1200,7 +1249,7 @@ async function handleGetData(
       return { success: false, error: 'TEAM_DRAFT' };
     }
 
-    await getTeamProvisioningService().repairStaleTaskActivityIntervalsBeforeSnapshot?.(tn);
+    await getTeamProvisioningStartApi().repairStaleTaskActivityIntervalsBeforeSnapshot?.(tn);
 
     if (workerAvailable) {
       try {
@@ -1261,7 +1310,7 @@ async function handleGetData(
     teamDataService.untrackProcessHealthForTeam?.(tn);
   }
   const provisioning = getTeamProvisioningService();
-  const isAlive = provisioning.isTeamAlive(tn);
+  const isAlive = getTeamRuntimeApi().isTeamAlive(tn);
   const currentLeadSessionId = provisioning.getCurrentLeadSessionId(tn);
 
   const displayName = data.config.name || tn;
@@ -1454,7 +1503,7 @@ async function handleDeleteTeam(
   }
   return wrapTeamHandler('deleteTeam', async () => {
     getAutoResumeService().cancelPendingAutoResume(validated.value!);
-    await getTeamProvisioningService().stopTeam(validated.value!);
+    await getTeamRuntimeApi().stopTeam(validated.value!);
     await getTeamDataService().deleteTeam(validated.value!);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
   });
@@ -2216,7 +2265,7 @@ async function handleCreateTeam(
     // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
-      const response = await getTeamProvisioningService().createTeam(
+      const response = await getTeamProvisioningStartApi().createTeam(
         validation.value,
         (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2384,7 +2433,7 @@ async function handleLaunchTeam(
       // as a normal launch before startup files begin changing.
       markTeamEngaged(tn);
       try {
-        const response = await getTeamProvisioningService().createTeam(
+        const response = await getTeamProvisioningStartApi().createTeam(
           createRequest,
           (progress) => {
             launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2468,7 +2517,7 @@ async function handleLaunchTeam(
     // 0-30s window before the periodic watch-scope reconcile would otherwise pick it up.
     markTeamEngaged(validatedTeamName.value!);
     try {
-      const response = await getTeamProvisioningService().launchTeam(
+      const response = await getTeamProvisioningStartApi().launchTeam(
         {
           teamName: validatedTeamName.value!,
           cwd,
@@ -2674,7 +2723,7 @@ async function handleProvisioningStatus(
     return { success: false, error: 'runId is required' };
   }
   return wrapTeamHandler('provisioningStatus', () =>
-    getTeamProvisioningService().getProvisioningStatus(runId.trim())
+    getTeamProvisioningStartApi().getProvisioningStatus(runId.trim())
   );
 }
 
@@ -3407,8 +3456,7 @@ async function handleSendMessage(
           reason: delivery.reason,
           diagnostics: delivery.diagnostics,
           userVisibleImpact:
-            delivery.userVisibleImpact ??
-            provisioning.buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
+            delivery.userVisibleImpact ?? buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
         };
         if (
           !delivery.delivered &&
@@ -3429,7 +3477,7 @@ async function handleSendMessage(
           delivered: false,
           reason,
           diagnostics: [reason],
-          userVisibleImpact: provisioning.buildOpenCodeRuntimeDeliveryUserVisibleImpact({
+          userVisibleImpact: buildOpenCodeRuntimeDeliveryUserVisibleImpact({
             delivered: false,
             reason,
             diagnostics: [reason],
@@ -3849,7 +3897,7 @@ async function handleProcessAlive(
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('processAlive', async () =>
-    getTeamProvisioningService().isTeamAlive(validatedTeamName.value!)
+    getTeamRuntimeApi().isTeamAlive(validatedTeamName.value!)
   );
 }
 
@@ -4301,7 +4349,7 @@ async function handleGetMemberStats(
 }
 
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
-  return wrapTeamHandler('aliveList', async () => getTeamProvisioningService().getAliveTeams());
+  return wrapTeamHandler('aliveList', async () => getTeamRuntimeApi().getAliveTeams());
 }
 
 async function handleLeadActivity(
@@ -4313,7 +4361,7 @@ async function handleLeadActivity(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('leadActivity', async () =>
-    getTeamProvisioningService().getLeadActivityState(validated.value!)
+    getTeamDiagnosticsApi().getLeadActivityState(validated.value!)
   );
 }
 
@@ -4326,7 +4374,7 @@ async function handleLeadContext(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('leadContext', async () =>
-    getTeamProvisioningService().getLeadContextUsage(validated.value!)
+    getTeamDiagnosticsApi().getLeadContextUsage(validated.value!)
   );
 }
 
@@ -4339,7 +4387,7 @@ async function handleMemberSpawnStatuses(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('memberSpawnStatuses', async () =>
-    getTeamProvisioningService().getMemberSpawnStatuses(validated.value!)
+    getTeamMemberLifecycleApi().getMemberSpawnStatuses(validated.value!)
   );
 }
 
@@ -4352,7 +4400,7 @@ async function handleGetAgentRuntime(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('getAgentRuntime', async () =>
-    getTeamProvisioningService().getTeamAgentRuntimeSnapshot(validated.value!)
+    getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(validated.value!)
   );
 }
 
@@ -4371,7 +4419,7 @@ async function handleRestartMember(
   }
   return wrapTeamHandler('restartMember', async () => {
     try {
-      await getTeamProvisioningService().restartMember(
+      await getTeamMemberLifecycleApi().restartMember(
         validatedTeamName.value!,
         validatedMemberName.value!
       );
@@ -4390,7 +4438,7 @@ async function handleRetryFailedOpenCodeSecondaryLanes(
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('retryFailedOpenCodeSecondaryLanes', async () =>
-    getTeamProvisioningService().retryFailedOpenCodeSecondaryLanes(validatedTeamName.value!)
+    getTeamMemberLifecycleApi().retryFailedOpenCodeSecondaryLanes(validatedTeamName.value!)
   );
 }
 
@@ -4408,7 +4456,7 @@ async function handleSkipMemberForLaunch(
     return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
   }
   return wrapTeamHandler('skipMemberForLaunch', async () =>
-    getTeamProvisioningService().skipMemberForLaunch(
+    getTeamMemberLifecycleApi().skipMemberForLaunch(
       validatedTeamName.value!,
       validatedMemberName.value!
     )
@@ -4426,7 +4474,7 @@ async function handleStopTeam(
   return wrapTeamHandler('stop', async () => {
     addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
     getAutoResumeService().cancelPendingAutoResume(validated.value!);
-    await getTeamProvisioningService().stopTeam(validated.value!);
+    await getTeamRuntimeApi().stopTeam(validated.value!);
   });
 }
 

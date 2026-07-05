@@ -53,6 +53,7 @@ function makePorts(
     invalidateRuntimeSnapshotCaches: vi.fn(),
     pauseActiveIntervalsForTeam: vi.fn(),
     stopPersistentTeamMembers: vi.fn(),
+    openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
     getTrackedRunId: vi.fn(
       (candidateTeamName: string) =>
         provisioningRunByTeam.get(candidateTeamName) ??
@@ -101,6 +102,17 @@ function makePorts(
 }
 
 describe('team provisioning stop flow', () => {
+  it('cancels OpenCode runtime advisory timers even when no tracked run remains', async () => {
+    const teamName = 'team-a';
+    const ports = makePorts(teamName, new Map());
+
+    await stopTeamFlow(teamName, ports);
+
+    expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
+  });
+
   it('stops the newer alive run when a stale provisioning id masks it', async () => {
     const teamName = 'team-a';
     const currentRun = makeRun('current-run', teamName);
@@ -112,6 +124,7 @@ describe('team provisioning stop flow', () => {
     await stopTeamFlow(teamName, ports);
 
     expect(provisioningRunByTeam.has(teamName)).toBe(false);
+    expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
     expect(ports.killTeamProcess).toHaveBeenCalledWith(currentRun.child);
     expect(currentRun.processKilled).toBe(true);
     expect(currentRun.cancelRequested).toBe(true);

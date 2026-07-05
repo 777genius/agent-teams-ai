@@ -79,7 +79,7 @@ interface GetDeleteStringMap {
 }
 
 interface DeleteStringMap {
-  delete(key: string): boolean;
+  delete(key: string): boolean | void;
 }
 
 interface KeyedDeleteStringMap extends DeleteStringMap {
@@ -126,6 +126,7 @@ export interface TeamProvisioningCleanupPorts<TRun extends TeamProvisioningClean
   openCodeMemberInboxRelayInFlight: KeyedDeleteStringMap;
   openCodeMemberSendInFlightByLane: KeyedDeleteStringMap;
   openCodePromptDeliveryWatchdogScheduler: { cancelTeam(teamName: string): void };
+  openCodeRuntimeDeliveryAdvisory: { cancelTeam(teamName: string): void };
   relayedMemberInboxMessageIds: KeyedDeleteStringMap;
   liveLeadProcessMessages: DeleteStringMap;
   pruneLiveLeadMessagesForCleanedRun(run: TRun): void;
@@ -141,6 +142,13 @@ export interface TeamProvisioningCleanupPorts<TRun extends TeamProvisioningClean
   };
   retainProvisioningProgress(runId: string, progress: TeamProvisioningProgress): void;
   runs: DeleteStringMap;
+}
+
+export interface FinalizeIncompleteLaunchStateBeforeCleanupPorts<
+  TRun extends IncompleteLaunchCleanupRun,
+> {
+  markIncompleteLaunchStateFinalized(run: TRun, cleanupReason: string): void;
+  persistLaunchStateSnapshot(run: TRun, phase: 'finished'): Promise<unknown>;
 }
 
 export function shouldFinalizeIncompleteLaunchState(run: IncompleteLaunchCleanupRun): boolean {
@@ -162,6 +170,29 @@ export function buildIncompleteLaunchCleanupReason(
     : run.progress.state === 'failed' && run.progress.message.trim()
       ? run.progress.message.trim()
       : fallback;
+}
+
+export async function finalizeIncompleteLaunchStateBeforeCleanup<
+  TRun extends IncompleteLaunchCleanupRun,
+>(
+  run: TRun,
+  ports: FinalizeIncompleteLaunchStateBeforeCleanupPorts<TRun>,
+  options: {
+    fallbackReason?: string;
+    onPersistFailure?: (run: TRun, error: unknown) => void;
+  } = {}
+): Promise<void> {
+  if (!shouldFinalizeIncompleteLaunchState(run)) {
+    return;
+  }
+  const cleanupReason = buildIncompleteLaunchCleanupReason(run, options.fallbackReason);
+  ports.markIncompleteLaunchStateFinalized(run, cleanupReason);
+  try {
+    await ports.persistLaunchStateSnapshot(run, 'finished');
+  } catch (error) {
+    run.launchCleanupStateFinalized = false;
+    options.onPersistFailure?.(run, error);
+  }
 }
 
 export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
@@ -276,6 +307,7 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
       }
     }
     ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam(run.teamName);
+    ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(run.teamName);
     for (const key of Array.from(ports.relayedMemberInboxMessageIds.keys())) {
       if (key.startsWith(`${run.teamName}:`)) {
         ports.relayedMemberInboxMessageIds.delete(key);

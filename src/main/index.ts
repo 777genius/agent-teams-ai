@@ -110,6 +110,10 @@ import {
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import {
+  bindTeamLaunchApi,
+  bindTeamRuntimeApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -2693,7 +2697,8 @@ async function startHttpServer(
         updaterService,
         sshConnectionManager,
         teamDataService,
-        teamProvisioningService,
+        teamProvisioningService: bindTeamLaunchApi(teamProvisioningService),
+        teamRuntimeApi: bindTeamRuntimeApi(teamProvisioningService),
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

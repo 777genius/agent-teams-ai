@@ -38,8 +38,11 @@ import type {
   UpdaterService,
 } from '../services';
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
+import type {
+  TeamProvisioningStartApi,
+  TeamRuntimeApi,
+} from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../services/team/TeamDataService';
-import type { TeamProvisioningService } from '../services/team/TeamProvisioningService';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { FastifyInstance } from 'fastify';
 
@@ -58,7 +61,8 @@ export interface HttpServices {
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamDataService?: TeamDataService;
-  teamProvisioningService?: TeamProvisioningService;
+  teamProvisioningService?: TeamProvisioningStartApi;
+  teamRuntimeApi?: TeamRuntimeApi;
 }
 
 export function registerHttpRoutes(
@@ -70,7 +74,7 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  if (services.teamProvisioningService || services.teamDataService) {
+  if (services.teamDataService || services.teamProvisioningService || services.teamRuntimeApi) {
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);

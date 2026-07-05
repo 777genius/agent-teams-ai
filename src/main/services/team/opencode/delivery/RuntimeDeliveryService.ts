@@ -2,6 +2,7 @@ import {
   buildLocationFromJournal,
   buildRuntimeDestinationMessageId,
   hashRuntimeDeliveryEnvelope,
+  hashRuntimeDeliveryEnvelopeLegacyTaskRefs,
   normalizeRuntimeDeliveryEnvelope,
   resolveRuntimeDeliveryDestination,
   type RuntimeDeliveryDestinationRef,
@@ -134,9 +135,11 @@ export class RuntimeDeliveryService {
     const destination = resolveRuntimeDeliveryDestination(envelope);
     const destinationMessageId = buildRuntimeDestinationMessageId(envelope);
     const payloadHash = hashRuntimeDeliveryEnvelope(envelope);
+    const legacyPayloadHash = hashRuntimeDeliveryEnvelopeLegacyTaskRefs(envelope);
     const begin = await this.journal.begin({
       idempotencyKey: envelope.idempotencyKey,
       payloadHash,
+      ...(legacyPayloadHash ? { compatiblePayloadHashes: [legacyPayloadHash] } : {}),
       runId: envelope.runId,
       teamName: envelope.teamName,
       fromMemberName: envelope.fromMemberName,

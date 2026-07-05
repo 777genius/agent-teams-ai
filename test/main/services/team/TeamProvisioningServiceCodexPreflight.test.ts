@@ -39,22 +39,24 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
-type CodexProbeHarness = {
-  probeClaudeRuntime: (
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    providerId: 'codex',
-    providerArgs: string[]
-  ) => Promise<{ warning?: string }>;
-  runProviderOneShotDiagnostic: (
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    providerId: 'codex',
-    providerArgs: string[]
-  ) => Promise<{ warning?: string }>;
-};
+interface CodexProbeHarness {
+  providerRuntime: {
+    probeClaudeRuntime: (
+      claudePath: string,
+      cwd: string,
+      env: NodeJS.ProcessEnv,
+      providerId: 'codex',
+      providerArgs: string[]
+    ) => Promise<{ warning?: string }>;
+    runProviderOneShotDiagnostic: (
+      claudePath: string,
+      cwd: string,
+      env: NodeJS.ProcessEnv,
+      providerId: 'codex',
+      providerArgs: string[]
+    ) => Promise<{ warning?: string }>;
+  };
+}
 
 describe('TeamProvisioningService Codex create-team preflight', () => {
   let tempRoot = '';
@@ -69,6 +71,7 @@ describe('TeamProvisioningService Codex create-team preflight', () => {
     });
     buildProviderAwareCliEnvMock.mockImplementation(
       async ({ env, providerId }: { env: NodeJS.ProcessEnv; providerId?: string }) => {
+        await Promise.resolve();
         expect(providerId).toBe('codex');
         env.CODEX_CLI_PATH = '/Users/tester/.local/bin/codex';
         env.CODEX_HOME = '/Users/tester/.codex-custom';
@@ -88,20 +91,12 @@ describe('TeamProvisioningService Codex create-team preflight', () => {
 
   it('uses refreshed Codex provider env for both runtime probe and deep one-shot preflight', async () => {
     const service = new TeamProvisioningService();
-    const harness = service as unknown as CodexProbeHarness;
+    const providerRuntime = (service as unknown as CodexProbeHarness).providerRuntime;
     const probeClaudeRuntime = vi
-      .spyOn(
-        harness as unknown as { probeClaudeRuntime: CodexProbeHarness['probeClaudeRuntime'] },
-        'probeClaudeRuntime'
-      )
+      .spyOn(providerRuntime, 'probeClaudeRuntime')
       .mockResolvedValue({});
     const runProviderOneShotDiagnostic = vi
-      .spyOn(
-        harness as unknown as {
-          runProviderOneShotDiagnostic: CodexProbeHarness['runProviderOneShotDiagnostic'];
-        },
-        'runProviderOneShotDiagnostic'
-      )
+      .spyOn(providerRuntime, 'runProviderOneShotDiagnostic')
       .mockResolvedValue({});
 
     const result = await service.prepareForProvisioning(tempRoot, {
