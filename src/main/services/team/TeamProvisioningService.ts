@@ -356,8 +356,6 @@ import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/Tea
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
 import { writeOpenCodeTeamConfig } from './provisioning/TeamProvisioningOpenCodeTeamConfigWriter';
 import {
-  buildStallProgressMessage,
-  buildStallWarningText,
   isAuthFailureWarning,
   normalizeApiRetryErrorMessage,
 } from './provisioning/TeamProvisioningOutputErrorPolicy';
@@ -2747,17 +2745,6 @@ export class TeamProvisioningService {
     message: string | undefined
   ): Record<string, unknown> | undefined {
     return buildTeammatePermissionUpdatedInput(toolName, toolInput, message);
-  }
-
-  private buildStallProgressMessage(silenceSec: number, elapsed: string): string {
-    return buildStallProgressMessage(silenceSec, elapsed);
-  }
-
-  private buildStallWarningText(
-    silenceSec: number,
-    request: Parameters<typeof buildStallWarningText>[1]
-  ): string {
-    return buildStallWarningText(silenceSec, request);
   }
 
   private hasAcceptedLeadWorkSyncReport(input: {

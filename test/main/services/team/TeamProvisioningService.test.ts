@@ -20310,34 +20310,6 @@ describe('TeamProvisioningService', () => {
     });
   });
 
-  it('uses a non-alarming model delay message before 2 minutes of silence', () => {
-    const svc = new TeamProvisioningService();
-
-    expect((svc as any).buildStallProgressMessage(90, '1m 30s')).toBe(
-      'Waiting for model response for 1m 30s - logs can be delayed, this is still OK'
-    );
-
-    expect(
-      (svc as any).buildStallWarningText(90, {
-        request: { model: 'sonnet' },
-      })
-    ).toContain('Logs can sometimes show up after 1-1.5 minutes, and that is still okay.');
-  });
-
-  it('marks a model wait as unusual after 2 minutes of silence', () => {
-    const svc = new TeamProvisioningService();
-
-    expect((svc as any).buildStallProgressMessage(120, '2m')).toBe(
-      'Still waiting for model response for 2m - this is unusual'
-    );
-
-    expect(
-      (svc as any).buildStallWarningText(120, {
-        request: { model: 'sonnet' },
-      })
-    ).toContain('but no logs for 2m is already unusual.');
-  });
-
   it('formats AskUserQuestion approvals with readable question text', () => {
     expect(
       formatToolApprovalBody('AskUserQuestion', {
