@@ -141,6 +141,96 @@ describe("AccountCapacityAwareWorker", () => {
     expect(store.read({ accountId: "account-a", now: clock.now() })).toBeNull();
   });
 
+  it("keeps account capacity scoped to runtime demand", () => {
+    const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+    const store = new InMemoryWorkerAccountCapacityStore();
+
+    store.observe({
+      accountId: "account-a",
+      observedAt: clock.now(),
+      demand: {
+        provider: "codex",
+        model: "gpt-5.5",
+        reasoningEffort: "high",
+        serviceTier: "fast",
+      },
+      capacity: {
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: resetAt,
+      },
+    });
+
+    expect(
+      store.read({
+        accountId: "account-a",
+        now: clock.now(),
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "high",
+          serviceTier: "fast",
+        },
+      }),
+    ).toMatchObject({
+      availability: "quota_exhausted",
+      cooldownUntil: resetAt,
+    });
+    expect(
+      store.read({
+        accountId: "account-a",
+        now: clock.now(),
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "xhigh",
+          serviceTier: "fast",
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it("does not propagate a demand-specific limit to the same account on another demand", () => {
+    const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+    const store = new InMemoryWorkerAccountCapacityStore();
+    const high = accountAware(
+      new FakeWorker("worker-high", "high", {
+        availability: "cooldown",
+        reason: "quota_limited",
+        cooldownUntil: resetAt,
+        details: codexDemandDetails("account-a", "high"),
+      }),
+      store,
+      clock,
+    );
+    const xhigh = accountAware(
+      new FakeWorker("worker-xhigh", "xhigh", {
+        availability: "available",
+        details: codexDemandDetails("account-a", "xhigh"),
+      }),
+      store,
+      clock,
+    );
+
+    expect(high.capacity()).toMatchObject({
+      availability: "cooldown",
+      reason: "quota_limited",
+      details: {
+        accountId: "account-a",
+        capacityReasoningEffort: "high",
+      },
+    });
+    expect(xhigh.capacity()).toMatchObject({
+      availability: "available",
+      details: {
+        accountId: "account-a",
+        capacityReasoningEffort: "xhigh",
+      },
+    });
+  });
+
   it("replaces same-severity account limits when the next signal adds a reset time", () => {
     const clock = new MutableClock(new Date("2026-06-01T00:00:00.000Z"));
     const resetAt = new Date("2026-06-01T01:00:00.000Z");
@@ -399,4 +489,17 @@ class MutableClock {
   advanceMs(ms: number): void {
     this.current = new Date(this.current.getTime() + ms);
   }
+}
+
+function codexDemandDetails(
+  accountId: string,
+  reasoningEffort: string,
+): Readonly<Record<string, string>> {
+  return {
+    accountId,
+    capacityProvider: "codex",
+    capacityModel: "gpt-5.5",
+    capacityReasoningEffort: reasoningEffort,
+    capacityServiceTier: "fast",
+  };
 }

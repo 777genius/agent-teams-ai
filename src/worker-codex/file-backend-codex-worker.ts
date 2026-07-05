@@ -1197,6 +1197,12 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
           ? { accountId: this.capacityAccountId }
           : {}),
         ...(this.quotaGroup ? { quotaGroup: this.quotaGroup } : {}),
+        capacityProvider: "codex",
+        capacityModel: this.options.model ?? defaultCodexModel,
+        capacityReasoningEffort: this.options.reasoningEffort ?? "low",
+        ...(this.options.serviceTier
+          ? { capacityServiceTier: this.options.serviceTier }
+          : {}),
       },
     };
   }

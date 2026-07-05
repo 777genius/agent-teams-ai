@@ -13,14 +13,23 @@ import type {
 export type WorkerAccountCapacityStore = {
   read(input: {
     readonly accountId: string;
+    readonly demand?: WorkerRuntimeDemand;
     readonly now?: Date;
   }): WorkerCapacitySnapshot | null;
   observe(input: WorkerAccountLimitSignal): void;
   clear(input: { readonly accountId: string }): void;
 };
 
+export type WorkerRuntimeDemand = {
+  readonly provider: string;
+  readonly model?: string;
+  readonly reasoningEffort?: string;
+  readonly serviceTier?: string;
+};
+
 export type WorkerAccountLimitSignal = {
   readonly accountId: string;
+  readonly demand?: WorkerRuntimeDemand;
   readonly capacity: WorkerCapacitySnapshot;
   readonly observedAt: Date;
   readonly sourceWorkerId?: string;
@@ -33,6 +42,10 @@ export type AccountCapacityAwareWorkerOptions<Job, Result> = {
   readonly accountIdFromCapacityDetails?: (
     details: Readonly<Record<string, string>> | undefined,
   ) => string | null;
+  readonly runtimeDemand?: WorkerRuntimeDemand;
+  readonly runtimeDemandFromCapacityDetails?: (
+    details: Readonly<Record<string, string>> | undefined,
+  ) => WorkerRuntimeDemand | null;
   readonly limitReasons?: readonly string[];
   readonly clock?: { now(): Date };
 };
@@ -57,18 +70,29 @@ export class InMemoryWorkerAccountCapacityStore
 
   read(input: {
     readonly accountId: string;
+    readonly demand?: WorkerRuntimeDemand;
     readonly now?: Date;
   }): WorkerCapacitySnapshot | null {
     const accountId = normalizeWorkerAccountId(input.accountId);
     if (!accountId) return null;
-    const current = this.records.get(accountId);
-    if (!current) return null;
+    const demand = normalizeWorkerRuntimeDemand(input.demand);
     const now = input.now ?? new Date();
+    const current = this.readByKey(accountCapacityKey(accountId, demand), now);
+    if (current) return current;
+    if (demand) {
+      return this.readByKey(accountCapacityKey(accountId, null), now);
+    }
+    return null;
+  }
+
+  private readByKey(key: string, now: Date): WorkerCapacitySnapshot | null {
+    const current = this.records.get(key);
+    if (!current) return null;
     if (
       current.cooldownUntil &&
       current.cooldownUntil.getTime() <= now.getTime()
     ) {
-      this.records.delete(accountId);
+      this.records.delete(key);
       return null;
     }
     return current;
@@ -79,9 +103,12 @@ export class InMemoryWorkerAccountCapacityStore
     if (!accountId) return;
     const capacity = normalizeWorkerAccountCapacitySignal(input);
     if (!capacity) return;
+    const demand = normalizeWorkerRuntimeDemand(input.demand) ??
+      defaultRuntimeDemandFromCapacityDetails(input.capacity.details);
 
     const existing = this.read({
       accountId,
+      ...(demand ? { demand } : {}),
       now: input.observedAt,
     });
     if (
@@ -90,13 +117,18 @@ export class InMemoryWorkerAccountCapacityStore
     ) {
       return;
     }
-    this.records.set(accountId, capacity);
+    this.records.set(accountCapacityKey(accountId, demand), capacity);
   }
 
   clear(input: { readonly accountId: string }): void {
     const accountId = normalizeWorkerAccountId(input.accountId);
     if (!accountId) return;
-    this.records.delete(accountId);
+    const prefix = `${accountId}\u0000`;
+    for (const key of this.records.keys()) {
+      if (key === accountId || key.startsWith(prefix)) {
+        this.records.delete(key);
+      }
+    }
   }
 }
 
@@ -197,9 +229,11 @@ export class AccountCapacityAwareWorker<Job, Result>
     this.observeWorkerCapacity(workerCapacity);
     const accountId = this.accountId(workerCapacity);
     if (!accountId) return workerCapacity;
+    const demand = this.runtimeDemand(workerCapacity);
 
     const accountCapacity = this.options.accountCapacityStore.read({
       accountId,
+      ...(demand ? { demand } : {}),
       now,
     });
     if (!accountCapacity) {
@@ -226,8 +260,10 @@ export class AccountCapacityAwareWorker<Job, Result>
     if (!isAccountLimitCapacity(capacity, this.limitReasons)) return;
     const accountId = this.accountId(capacity);
     if (!accountId) return;
+    const demand = this.runtimeDemand(capacity);
     this.options.accountCapacityStore.observe({
       accountId,
+      ...(demand ? { demand } : {}),
       capacity,
       observedAt: capacity.lastLimitSignalAt ?? this.clock.now(),
       sourceWorkerId: this.workerId,
@@ -240,6 +276,14 @@ export class AccountCapacityAwareWorker<Job, Result>
     return (
       this.options.accountIdFromCapacityDetails?.(capacity.details) ??
       defaultAccountIdFromCapacityDetails(capacity.details)
+    );
+  }
+
+  private runtimeDemand(capacity: WorkerCapacitySnapshot): WorkerRuntimeDemand | null {
+    return (
+      normalizeWorkerRuntimeDemand(this.options.runtimeDemand) ??
+      this.options.runtimeDemandFromCapacityDetails?.(capacity.details) ??
+      defaultRuntimeDemandFromCapacityDetails(capacity.details)
     );
   }
 }
@@ -278,6 +322,51 @@ export function normalizeWorkerAccountId(
   return normalized ? normalized : null;
 }
 
+export function normalizeWorkerRuntimeDemand(
+  value: WorkerRuntimeDemand | null | undefined,
+): WorkerRuntimeDemand | null {
+  const provider = value?.provider.trim();
+  if (!provider) return null;
+  const model = optionalTrimmed(value?.model);
+  const reasoningEffort = optionalTrimmed(value?.reasoningEffort);
+  const serviceTier = optionalTrimmed(value?.serviceTier);
+  return {
+    provider,
+    ...(model ? { model } : {}),
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(serviceTier ? { serviceTier } : {}),
+  };
+}
+
+export function defaultRuntimeDemandFromCapacityDetails(
+  details: Readonly<Record<string, string>> | undefined,
+): WorkerRuntimeDemand | null {
+  const provider = details?.capacityProvider ?? details?.provider ?? "";
+  const model = details?.capacityModel ?? details?.model;
+  const reasoningEffort =
+    details?.capacityReasoningEffort ?? details?.reasoningEffort;
+  const serviceTier = details?.capacityServiceTier ?? details?.serviceTier;
+  return normalizeWorkerRuntimeDemand({
+    provider,
+    ...(model ? { model } : {}),
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(serviceTier ? { serviceTier } : {}),
+  });
+}
+
+export function workerRuntimeDemandKey(
+  value: WorkerRuntimeDemand | null | undefined,
+): string | null {
+  const demand = normalizeWorkerRuntimeDemand(value);
+  if (!demand) return null;
+  return [
+    `provider=${demand.provider}`,
+    `model=${demand.model ?? ""}`,
+    `reasoningEffort=${demand.reasoningEffort ?? ""}`,
+    `serviceTier=${demand.serviceTier ?? ""}`,
+  ].join("\u001f");
+}
+
 export function normalizeWorkerAccountCapacitySignal(
   input: WorkerAccountLimitSignal,
 ): WorkerCapacitySnapshot | null {
@@ -301,6 +390,10 @@ export function normalizeWorkerAccountCapacitySignal(
     details: {
       ...(capacity.details ?? {}),
       accountId,
+      ...runtimeDemandDetails(
+        normalizeWorkerRuntimeDemand(input.demand) ??
+          defaultRuntimeDemandFromCapacityDetails(capacity.details),
+      ),
       ...(input.sourceWorkerId ? { sourceWorkerId: input.sourceWorkerId } : {}),
     },
   };
@@ -458,3 +551,30 @@ const systemClock = {
     return new Date();
   },
 };
+
+function accountCapacityKey(
+  accountId: string,
+  demand: WorkerRuntimeDemand | null,
+): string {
+  const demandKey = workerRuntimeDemandKey(demand);
+  return demandKey ? `${accountId}\u0000${demandKey}` : accountId;
+}
+
+function runtimeDemandDetails(
+  demand: WorkerRuntimeDemand | null,
+): Readonly<Record<string, string>> {
+  if (!demand) return {};
+  return {
+    capacityProvider: demand.provider,
+    ...(demand.model ? { capacityModel: demand.model } : {}),
+    ...(demand.reasoningEffort
+      ? { capacityReasoningEffort: demand.reasoningEffort }
+      : {}),
+    ...(demand.serviceTier ? { capacityServiceTier: demand.serviceTier } : {}),
+  };
+}
+
+function optionalTrimmed(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}

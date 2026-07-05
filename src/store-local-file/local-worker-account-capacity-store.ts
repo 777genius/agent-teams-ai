@@ -13,21 +13,29 @@ import type {
   WorkerCapacitySnapshot,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
+  defaultRuntimeDemandFromCapacityDetails,
   isPersistableWorkerAccountAvailability,
   normalizeWorkerAccountCapacitySignal,
   normalizeWorkerAccountId,
+  normalizeWorkerRuntimeDemand,
   shouldKeepExistingWorkerAccountCapacity,
+  workerRuntimeDemandKey,
+  type WorkerRuntimeDemand,
 } from "@vioxen/subscription-runtime/worker-core";
 
 const storageVersion = "local-file-worker-account-capacity-v1";
+const demandAwareStorageVersion = "local-file-worker-account-capacity-v2";
 
 export type LocalFileWorkerAccountCapacityStoreOptions = {
   readonly rootDir: string;
 };
 
 type PersistedWorkerAccountCapacityRecord = {
-  readonly storageVersion: typeof storageVersion;
+  readonly storageVersion:
+    | typeof storageVersion
+    | typeof demandAwareStorageVersion;
   readonly accountId: string;
+  readonly demand?: WorkerRuntimeDemand;
   readonly capacity: PersistedWorkerCapacitySnapshot;
   readonly updatedAt: string;
 };
@@ -49,16 +57,28 @@ export class LocalFileWorkerAccountCapacityStore
 
   read(input: {
     readonly accountId: string;
+    readonly demand?: WorkerRuntimeDemand;
     readonly now?: Date;
   }): WorkerCapacitySnapshot | null {
     const accountId = normalizeWorkerAccountId(input.accountId);
     if (!accountId) return null;
+    const demand = normalizeWorkerRuntimeDemand(input.demand);
 
-    const record = this.readRecord(accountId);
+    const record =
+      (demand ? this.readRecord(accountId, demand) : null) ??
+      this.readRecord(accountId, null) ??
+      this.readLegacyRecord(accountId);
     if (!record) return null;
     if (record.accountId !== accountId) {
       this.clear({ accountId });
       return null;
+    }
+    if (demand && record.demand) {
+      const persistedDemandKey = workerRuntimeDemandKey(record.demand);
+      if (persistedDemandKey !== workerRuntimeDemandKey(demand)) {
+        this.clear({ accountId });
+        return null;
+      }
     }
 
     const capacity = parsePersistedCapacity(record.capacity);
@@ -84,9 +104,13 @@ export class LocalFileWorkerAccountCapacityStore
 
     const capacity = normalizeWorkerAccountCapacitySignal(input);
     if (!capacity) return;
+    const demand =
+      normalizeWorkerRuntimeDemand(input.demand) ??
+      defaultRuntimeDemandFromCapacityDetails(input.capacity.details);
 
     const existing = this.read({
       accountId,
+      ...(demand ? { demand } : {}),
       now: input.observedAt,
     });
     if (
@@ -97,8 +121,9 @@ export class LocalFileWorkerAccountCapacityStore
     }
 
     this.writeRecord({
-      storageVersion,
+      storageVersion: demandAwareStorageVersion,
       accountId,
+      ...(demand ? { demand } : {}),
       capacity: persistCapacity(capacity),
       updatedAt: input.observedAt.toISOString(),
     });
@@ -107,13 +132,27 @@ export class LocalFileWorkerAccountCapacityStore
   clear(input: { readonly accountId: string }): void {
     const accountId = normalizeWorkerAccountId(input.accountId);
     if (!accountId) return;
-    rmSync(this.recordPath(accountId), { force: true });
+    rmSync(this.legacyRecordPath(accountId), { force: true });
+    rmSync(this.accountRecordDir(accountId), { recursive: true, force: true });
   }
 
   private readRecord(
     accountId: string,
+    demand: WorkerRuntimeDemand | null,
   ): PersistedWorkerAccountCapacityRecord | null {
-    const path = this.recordPath(accountId);
+    const path = this.recordPath(accountId, demand);
+    return this.readRecordPath(path);
+  }
+
+  private readLegacyRecord(
+    accountId: string,
+  ): PersistedWorkerAccountCapacityRecord | null {
+    return this.readRecordPath(this.legacyRecordPath(accountId));
+  }
+
+  private readRecordPath(
+    path: string,
+  ): PersistedWorkerAccountCapacityRecord | null {
     let parsed: unknown;
     try {
       parsed = JSON.parse(readFileSync(path, "utf8"));
@@ -127,7 +166,8 @@ export class LocalFileWorkerAccountCapacityStore
     }
     if (
       !isRecord(parsed) ||
-      parsed.storageVersion !== storageVersion ||
+      (parsed.storageVersion !== storageVersion &&
+        parsed.storageVersion !== demandAwareStorageVersion) ||
       typeof parsed.accountId !== "string" ||
       !isRecord(parsed.capacity) ||
       typeof parsed.updatedAt !== "string"
@@ -139,7 +179,10 @@ export class LocalFileWorkerAccountCapacityStore
   }
 
   private writeRecord(record: PersistedWorkerAccountCapacityRecord): void {
-    const path = this.recordPath(record.accountId);
+    const path = this.recordPath(
+      record.accountId,
+      normalizeWorkerRuntimeDemand(record.demand),
+    );
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     const tempPath = join(dirname(path), `${randomUUID()}.tmp`);
     try {
@@ -153,7 +196,24 @@ export class LocalFileWorkerAccountCapacityStore
     }
   }
 
-  private recordPath(accountId: string): string {
+  private recordPath(
+    accountId: string,
+    demand: WorkerRuntimeDemand | null,
+  ): string {
+    const demandKey = workerRuntimeDemandKey(demand);
+    const fileName = demandKey ? `${hashText(demandKey)}.json` : "account.json";
+    return join(this.accountRecordDir(accountId), fileName);
+  }
+
+  private accountRecordDir(accountId: string): string {
+    return join(
+      this.options.rootDir,
+      "account-capacity-v2",
+      hashText(accountId),
+    );
+  }
+
+  private legacyRecordPath(accountId: string): string {
     return join(this.options.rootDir, "account-capacity", hashText(accountId));
   }
 }

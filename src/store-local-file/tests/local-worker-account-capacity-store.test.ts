@@ -44,6 +44,67 @@ describe("Local file worker account capacity store", () => {
     }
   });
 
+  it("persists demand-specific account capacity separately", async () => {
+    const rootDir = await tempRoot();
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const resetAt = new Date("2026-06-01T01:00:00.000Z");
+
+    try {
+      new LocalFileWorkerAccountCapacityStore({ rootDir }).observe({
+        accountId: "account-a",
+        observedAt,
+        demand: {
+          provider: "codex",
+          model: "gpt-5.5",
+          reasoningEffort: "high",
+          serviceTier: "fast",
+        },
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+        },
+      });
+
+      const restarted = new LocalFileWorkerAccountCapacityStore({ rootDir });
+
+      expect(
+        restarted.read({
+          accountId: "account-a",
+          now: observedAt,
+          demand: {
+            provider: "codex",
+            model: "gpt-5.5",
+            reasoningEffort: "high",
+            serviceTier: "fast",
+          },
+        }),
+      ).toMatchObject({
+        availability: "quota_exhausted",
+        cooldownUntil: resetAt,
+        details: {
+          accountId: "account-a",
+          capacityProvider: "codex",
+          capacityReasoningEffort: "high",
+        },
+      });
+      expect(
+        restarted.read({
+          accountId: "account-a",
+          now: observedAt,
+          demand: {
+            provider: "codex",
+            model: "gpt-5.5",
+            reasoningEffort: "xhigh",
+            serviceTier: "fast",
+          },
+        }),
+      ).toBeNull();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("expires cooldown records at reset time", async () => {
     const rootDir = await tempRoot();
     const observedAt = new Date("2026-06-01T00:00:00.000Z");
@@ -332,8 +393,33 @@ async function tempRoot(): Promise<string> {
 }
 
 async function readCapacityFiles(rootDir: string): Promise<readonly string[]> {
+  return [
+    ...(await readFilesUnder(rootDir, "account-capacity")),
+    ...(await readFilesUnder(rootDir, "account-capacity-v2")),
+  ].sort();
+}
+
+async function readFilesUnder(
+  rootDir: string,
+  relativeDir: string,
+): Promise<readonly string[]> {
+  const root = join(rootDir, relativeDir);
   try {
-    return await readdir(join(rootDir, "account-capacity"));
+    const entries = await readdir(root, { withFileTypes: true });
+    const files: string[] = [];
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        for (const child of await readFilesUnder(
+          root,
+          entry.name,
+        )) {
+          files.push(`${entry.name}/${child}`);
+        }
+      } else {
+        files.push(entry.name);
+      }
+    }
+    return files;
   } catch {
     return [];
   }
