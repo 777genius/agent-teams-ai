@@ -1248,7 +1248,7 @@ async function handleGetData(
       return { success: false, error: 'TEAM_DRAFT' };
     }
 
-    await getTeamProvisioningService().repairStaleTaskActivityIntervalsBeforeSnapshot?.(tn);
+    await getTeamProvisioningStartApi().repairStaleTaskActivityIntervalsBeforeSnapshot?.(tn);
 
     if (workerAvailable) {
       try {
@@ -1309,7 +1309,7 @@ async function handleGetData(
     teamDataService.untrackProcessHealthForTeam?.(tn);
   }
   const provisioning = getTeamProvisioningService();
-  const isAlive = provisioning.isTeamAlive(tn);
+  const isAlive = getTeamRuntimeApi().isTeamAlive(tn);
   const currentLeadSessionId = provisioning.getCurrentLeadSessionId(tn);
 
   const displayName = data.config.name || tn;
