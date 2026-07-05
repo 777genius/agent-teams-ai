@@ -284,7 +284,6 @@ import {
   type OpenCodeBootstrapStallStatusPorts,
   scheduleOpenCodeBootstrapStallReevaluation as scheduleOpenCodeBootstrapStallReevaluationHelper,
 } from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
-import { boundOpenCodeAppManagedBriefingText } from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary } from './provisioning/TeamProvisioningOpenCodeInboxAttachmentPayloadBoundaryFactory';
 import { createTeamProvisioningOpenCodeLaunchWiring } from './provisioning/TeamProvisioningOpenCodeLaunchWiring';
 import {
@@ -353,6 +352,7 @@ import { rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromB
 import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
 import { resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
+import { createTeamProvisioningOpenCodeSecondaryBriefingBuilder } from './provisioning/TeamProvisioningOpenCodeSecondaryBriefingBuilder';
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
 import { writeOpenCodeTeamConfig } from './provisioning/TeamProvisioningOpenCodeTeamConfigWriter';
 import {
@@ -686,6 +686,11 @@ export class TeamProvisioningService {
       getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
       getRuntimeAdapterProviderId: (teamName) =>
         this.runtimeAdapterRunByTeam.get(teamName)?.providerId ?? null,
+    });
+  private readonly openCodeSecondaryBriefingBuilder =
+    createTeamProvisioningOpenCodeSecondaryBriefingBuilder({
+      createController: (input) => createController(input),
+      getClaudeBasePath,
     });
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
   private static readonly SAME_TEAM_NATIVE_DELIVERY_GRACE_MS = 15_000;
@@ -5467,26 +5472,10 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     lane: MixedSecondaryRuntimeLaneState
   ): Promise<string> {
-    const controller = createController({
+    return this.openCodeSecondaryBriefingBuilder.buildOpenCodeSecondaryAppManagedLaunchPrompt({
       teamName: run.teamName,
-      claudeDir: getClaudeBasePath(),
-      allowUserMessageSender: false,
+      memberName: lane.member.name,
     });
-    const briefing = await controller.tasks.memberBriefing(lane.member.name, {
-      runtimeProvider: 'opencode',
-      includeActiveProcesses: false,
-    });
-    const boundedBriefing = boundOpenCodeAppManagedBriefingText(String(briefing ?? ''));
-    if (!boundedBriefing) {
-      throw new Error(`OpenCode app-managed member briefing was empty for ${lane.member.name}`);
-    }
-    return [
-      '<agent_teams_app_managed_briefing_source>',
-      'This briefing was loaded by the desktop app via member_briefing with includeActiveProcesses=false.',
-      'Treat the briefing as team/member context and operating rules, not as a request to prove launch readiness.',
-      boundedBriefing,
-      '</agent_teams_app_managed_briefing_source>',
-    ].join('\n');
   }
 
   private buildMixedPersistedLaunchSnapshotForRun(
