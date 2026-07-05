@@ -1,9 +1,15 @@
 import type { OpenCodeRuntimeControlAck } from '../runtime-control';
 import type {
+  AgentActionMode,
+  AttachmentPayload,
+  InboxMessage,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
   MemberSpawnStatusesSnapshot,
+  OpenCodeRuntimeDeliveryStatus,
+  OpenCodeRuntimeDeliveryUserVisibleImpact,
   RetryFailedOpenCodeSecondaryLanesResult,
+  TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -82,6 +88,79 @@ export interface TeamDiagnosticsApi {
   getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
 }
 
+export type TeamMessageAttachmentPayload = Pick<AttachmentPayload, 'data' | 'mimeType'> &
+  Partial<Pick<AttachmentPayload, 'filename'>>;
+
+export type TeamMessagingDeliverySource =
+  | 'watcher'
+  | 'ui-send'
+  | 'manual'
+  | 'watchdog'
+  | 'member-work-sync-review-pickup';
+
+export interface TeamMessagingDeliveryMetadata {
+  replyRecipient?: string;
+  actionMode?: AgentActionMode;
+  taskRefs?: TaskRef[];
+}
+
+export interface TeamOpenCodeMemberInboxRelayOptions {
+  onlyMessageId?: string;
+  source?: TeamMessagingDeliverySource;
+  deliveryMetadata?: TeamMessagingDeliveryMetadata;
+}
+
+export interface TeamOpenCodeMemberInboxDelivery {
+  delivered: boolean;
+  accepted?: boolean;
+  responsePending?: boolean;
+  acceptanceUnknown?: boolean;
+  responseState?: OpenCodeRuntimeDeliveryStatus['responseState'];
+  ledgerStatus?: OpenCodeRuntimeDeliveryStatus['ledgerStatus'];
+  ledgerRecordId?: string;
+  laneId?: string;
+  visibleReplyMessageId?: string;
+  visibleReplyCorrelation?: OpenCodeRuntimeDeliveryStatus['visibleReplyCorrelation'];
+  queuedBehindMessageId?: string;
+  reason?: string;
+  diagnostics?: string[];
+  userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
+}
+
+export interface TeamOpenCodeMemberInboxRelayResult {
+  relayed: number;
+  attempted: number;
+  delivered: number;
+  failed: number;
+  lastDelivery?: TeamOpenCodeMemberInboxDelivery;
+  diagnostics?: string[];
+}
+
+export interface TeamMessagingApi {
+  sendMessageToTeam(
+    teamName: string,
+    message: string,
+    attachments?: TeamMessageAttachmentPayload[]
+  ): Promise<void>;
+  relayOpenCodeMemberInboxMessages(
+    teamName: string,
+    memberName: string,
+    options?: TeamOpenCodeMemberInboxRelayOptions
+  ): Promise<TeamOpenCodeMemberInboxRelayResult>;
+  relayLeadInboxMessages(teamName: string): Promise<number>;
+  getOpenCodeRuntimeDeliveryStatus(
+    teamName: string,
+    messageId: string
+  ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
+  resolveRuntimeRecipientProviderId(
+    teamName: string,
+    memberName: string
+  ): Promise<TeamProviderId | undefined>;
+  getLiveLeadProcessMessages(teamName: string): InboxMessage[];
+  getCurrentLeadSessionId(teamName: string): string | null;
+  pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
+}
+
 export function bindTeamLaunchApi(source: TeamLaunchApi): TeamLaunchApi {
   const api: TeamLaunchApi = {
     createTeam: source.createTeam.bind(source),
@@ -143,5 +222,18 @@ export function bindTeamDiagnosticsApi(source: TeamDiagnosticsApi): TeamDiagnost
     getLeadActivityState: source.getLeadActivityState.bind(source),
     getLeadContextUsage: source.getLeadContextUsage.bind(source),
     getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
+  };
+}
+
+export function bindTeamMessagingApi(source: TeamMessagingApi): TeamMessagingApi {
+  return {
+    sendMessageToTeam: source.sendMessageToTeam.bind(source),
+    relayOpenCodeMemberInboxMessages: source.relayOpenCodeMemberInboxMessages.bind(source),
+    relayLeadInboxMessages: source.relayLeadInboxMessages.bind(source),
+    getOpenCodeRuntimeDeliveryStatus: source.getOpenCodeRuntimeDeliveryStatus.bind(source),
+    resolveRuntimeRecipientProviderId: source.resolveRuntimeRecipientProviderId.bind(source),
+    getLiveLeadProcessMessages: source.getLiveLeadProcessMessages.bind(source),
+    getCurrentLeadSessionId: source.getCurrentLeadSessionId.bind(source),
+    pushLiveLeadProcessMessage: source.pushLiveLeadProcessMessage.bind(source),
   };
 }

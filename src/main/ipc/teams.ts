@@ -141,6 +141,7 @@ import {
   bindTeamDiagnosticsApi,
   bindTeamLaunchApi,
   bindTeamMemberLifecycleApi,
+  bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
   bindTeamRuntimeApi,
 } from '../services/team/contracts/TeamProvisioningApis';
@@ -192,6 +193,8 @@ import type {
   TeamDiagnosticsApi,
   TeamLaunchApi,
   TeamMemberLifecycleApi,
+  TeamMessagingApi,
+  TeamOpenCodeMemberInboxRelayResult,
   TeamProvisioningPreflightApi,
   TeamRuntimeApi,
 } from '../services/team/contracts/TeamProvisioningApis';
@@ -271,9 +274,7 @@ const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
   'opencode_runtime_delivery_ui_timeout_pending';
 const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 
-type OpenCodeMemberInboxRelayResult = Awaited<
-  ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>
->;
+type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
 type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
 
 type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
@@ -353,7 +354,7 @@ async function withTimeoutValue<T>(
 }
 
 async function waitForOpenCodeRuntimeRelayForUi(input: {
-  provisioning: TeamProvisioningService;
+  messaging: TeamMessagingApi;
   teamName: string;
   memberName: string;
   messageId: string;
@@ -406,7 +407,7 @@ async function waitForOpenCodeRuntimeRelayForUi(input: {
 
     try {
       const status = await withTimeoutValue(
-        input.provisioning.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
+        input.messaging.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
         OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
         null
       );
@@ -432,7 +433,7 @@ async function waitForOpenCodeRuntimeRelayForUi(input: {
 }
 
 async function enrichBareOpenCodeRuntimeRelayResultForUi(input: {
-  provisioning: TeamProvisioningService;
+  messaging: TeamMessagingApi;
   teamName: string;
   memberName: string;
   messageId: string;
@@ -444,7 +445,7 @@ async function enrichBareOpenCodeRuntimeRelayResultForUi(input: {
 
   try {
     const status = await withTimeoutValue(
-      input.provisioning.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
+      input.messaging.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
       OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
       null
     );
@@ -758,6 +759,7 @@ let teamProvisioningPreflightApi: TeamProvisioningPreflightApi | null = null;
 let teamRuntimeApi: TeamRuntimeApi | null = null;
 let teamMemberLifecycleApi: TeamMemberLifecycleApi | null = null;
 let teamDiagnosticsApi: TeamDiagnosticsApi | null = null;
+let teamMessagingApi: TeamMessagingApi | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
@@ -827,6 +829,7 @@ export function initializeTeamHandlers(
   teamRuntimeApi = bindTeamRuntimeApi(provisioningService);
   teamMemberLifecycleApi = bindTeamMemberLifecycleApi(provisioningService);
   teamDiagnosticsApi = bindTeamDiagnosticsApi(provisioningService);
+  teamMessagingApi = bindTeamMessagingApi(provisioningService);
   initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
@@ -1063,6 +1066,13 @@ function getTeamDiagnosticsApi(): TeamDiagnosticsApi {
     throw new Error('Team diagnostics handlers are not initialized');
   }
   return teamDiagnosticsApi;
+}
+
+function getTeamMessagingApi(): TeamMessagingApi {
+  if (!teamMessagingApi) {
+    throw new Error('Team messaging handlers are not initialized');
+  }
+  return teamMessagingApi;
 }
 
 function getTeammateToolTracker(): TeammateToolTracker {
@@ -1320,13 +1330,13 @@ async function handleGetData(
   } else {
     teamDataService.untrackProcessHealthForTeam?.(tn);
   }
-  const provisioning = getTeamProvisioningService();
+  const messaging = getTeamMessagingApi();
   const isAlive = getTeamRuntimeApi().isTeamAlive(tn);
-  const currentLeadSessionId = provisioning.getCurrentLeadSessionId(tn);
+  const currentLeadSessionId = messaging.getCurrentLeadSessionId(tn);
 
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
-  const live = provisioning.getLiveLeadProcessMessages(tn);
+  const live = messaging.getLiveLeadProcessMessages(tn);
   const durableMessages = Array.isArray((data as { messages?: unknown }).messages)
     ? ((data as { messages?: typeof live }).messages ?? [])
     : [];
@@ -1602,11 +1612,11 @@ async function handleUpdateConfig(
 
     // Notify running lead about the rename so it stays aware of current team name
     if (requestedName && requestedName !== (previousDisplayName?.trim() || tn)) {
-      const provisioning = getTeamProvisioningService();
-      if (provisioning.isTeamAlive(tn)) {
+      const messaging = getTeamMessagingApi();
+      if (getTeamRuntimeApi().isTeamAlive(tn)) {
         const msg = `The team has been renamed to "${requestedName}". Please use this name when referring to the team going forward.`;
         try {
-          await provisioning.sendMessageToTeam(tn, msg);
+          await messaging.sendMessageToTeam(tn, msg);
         } catch {
           logger.warn(`Failed to notify lead about team rename for ${tn}`);
         }
@@ -3052,7 +3062,7 @@ async function handleGetMessagesPage(
         });
     };
     const liveMessages =
-      cursor == null ? getTeamProvisioningService().getLiveLeadProcessMessages(teamName) : [];
+      cursor == null ? getTeamMessagingApi().getLiveLeadProcessMessages(teamName) : [];
 
     if (liveMessages.length > 0) {
       page = await getNewestMessagesPageWithLiveOverlay({
@@ -3195,8 +3205,9 @@ async function handleSendMessage(
   }
 
   return wrapTeamHandler('sendMessage', async () => {
-    const provisioning = getTeamProvisioningService();
-    const isAlive = provisioning.isTeamAlive(tn);
+    const messaging = getTeamMessagingApi();
+    const runtime = getTeamRuntimeApi();
+    const isAlive = runtime.isTeamAlive(tn);
 
     const leadName =
       prevalidatedLeadName !== undefined
@@ -3208,10 +3219,7 @@ async function handleSendMessage(
         : leadName !== null && memberName === leadName;
     const actionMode = payload.actionMode;
 
-    const recipientProviderId = await provisioning.resolveRuntimeRecipientProviderId(
-      tn,
-      memberName
-    );
+    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
 
     // Attachments are routed through explicit provider transports only.
@@ -3273,7 +3281,7 @@ async function handleSendMessage(
 
       let stdinSent = false;
       try {
-        await provisioning.sendMessageToTeam(
+        await messaging.sendMessageToTeam(
           tn,
           stdinTextForLead,
           rawSlashCommandText ? undefined : validatedAttachments
@@ -3283,9 +3291,7 @@ async function handleSendMessage(
         // If attachments were requested, fail rather than silently dropping them.
         // Only report offline when liveness confirms the process is unavailable.
         if (validatedAttachments?.length) {
-          throw new Error(
-            formatAttachmentDeliveryFailure(stdinError, provisioning.isTeamAlive(tn))
-          );
+          throw new Error(formatAttachmentDeliveryFailure(stdinError, runtime.isTeamAlive(tn)));
         }
         const errMsg = stdinError instanceof Error ? stdinError.message : 'unknown error';
         logger.warn(`stdin fallback for ${tn}: ${errMsg}`);
@@ -3337,7 +3343,7 @@ async function handleSendMessage(
 
         // Attachment files already saved above (before metadata construction)
 
-        provisioning.pushLiveLeadProcessMessage(tn, {
+        messaging.pushLiveLeadProcessMessage(tn, {
           from: 'user',
           to: resolvedLeadName,
           text: persistTextForLead,
@@ -3431,11 +3437,11 @@ async function handleSendMessage(
     if (isOpenCodeRecipient) {
       try {
         const relay = await waitForOpenCodeRuntimeRelayForUi({
-          provisioning,
+          messaging,
           teamName: tn,
           memberName,
           messageId: result.messageId,
-          relayPromise: provisioning.relayOpenCodeMemberInboxMessages(tn, memberName, {
+          relayPromise: messaging.relayOpenCodeMemberInboxMessages(tn, memberName, {
             onlyMessageId: result.messageId,
             source: 'ui-send',
             deliveryMetadata: {
@@ -3502,7 +3508,7 @@ async function handleSendMessage(
 
     // Best-effort relay for lead via inbox
     if (isLeadRecipient && isAlive) {
-      void provisioning
+      void messaging
         .relayLeadInboxMessages(tn)
         .catch((e: unknown) =>
           logger.warn(`Relay after sendMessage failed for ${tn}: ${String(e)}`)
@@ -3530,10 +3536,7 @@ async function handleGetOpenCodeRuntimeDeliveryStatus(
     return { success: false, error: 'Invalid messageId' };
   }
   return wrapTeamHandler('getOpenCodeRuntimeDeliveryStatus', async () =>
-    getTeamProvisioningService().getOpenCodeRuntimeDeliveryStatus(
-      validatedTeamName.value!,
-      safeMessageId
-    )
+    getTeamMessagingApi().getOpenCodeRuntimeDeliveryStatus(validatedTeamName.value!, safeMessageId)
   );
 }
 
@@ -3895,7 +3898,7 @@ async function handleProcessSend(
     return { success: false, error: 'message must be a non-empty string' };
   }
   return wrapTeamHandler('processSend', () =>
-    getTeamProvisioningService().sendMessageToTeam(validatedTeamName.value!, message)
+    getTeamMessagingApi().sendMessageToTeam(validatedTeamName.value!, message)
   );
 }
 
@@ -4624,7 +4627,7 @@ async function handleAddMember(
     const previousTeamData = await teamDataService.getTeamData(tn);
     const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
-    const isTeamAlive = provisioning.isTeamAlive(tn);
+    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
       throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
     }
@@ -4767,7 +4770,7 @@ async function handleReplaceMembers(
     const tn = vTeam.value!;
     const teamDataService = getTeamDataService();
     const provisioning = getTeamProvisioningService();
-    const isTeamAlive = provisioning.isTeamAlive(tn);
+    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
     if (!isTeamAlive) {
       await teamDataService.replaceMembers(tn, { members });
       invalidateTeamRosterSnapshotCaches(tn);
@@ -4907,7 +4910,7 @@ async function handleReplaceMembers(
       return;
     }
     try {
-      await provisioning.sendMessageToTeam(tn, summaryMessage);
+      await getTeamMessagingApi().sendMessageToTeam(tn, summaryMessage);
     } catch {
       logger.warn(`Failed to notify lead about member updates in ${tn}`);
     }
@@ -4932,7 +4935,7 @@ async function handleRemoveMember(
     const previousTeamData = await teamDataService.getTeamData(tn);
     const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
-    const isTeamAlive = provisioning.isTeamAlive(tn);
+    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
       throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
     }
@@ -4958,7 +4961,7 @@ async function handleRemoveMember(
         `Teammate "${name}" has been removed from the team. ` +
         `They will no longer participate in team activities. Please reassign their tasks if needed.`;
       try {
-        await provisioning.sendMessageToTeam(tn, message);
+        await getTeamMessagingApi().sendMessageToTeam(tn, message);
       } catch {
         logger.warn(`Failed to notify lead about removal of "${name}" in ${tn}`);
       }
@@ -4984,7 +4987,7 @@ async function handleRestoreMember(
     const previousTeamData = await teamDataService.getTeamData(tn);
     const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
-    const isTeamAlive = provisioning.isTeamAlive(tn);
+    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
       throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
     }
@@ -5052,8 +5055,7 @@ async function handleUpdateTaskFields(
     await getTeamDataService().updateTaskFields(tn, tid, validFields);
 
     // Notify the lead about updated task fields
-    const provisioning = getTeamProvisioningService();
-    if (provisioning.isTeamAlive(tn)) {
+    if (getTeamRuntimeApi().isTeamAlive(tn)) {
       const changedParts: string[] = [];
       if (validFields.subject) changedParts.push('title');
       if (validFields.description !== undefined) changedParts.push('description');
@@ -5061,7 +5063,7 @@ async function handleUpdateTaskFields(
         `Task #${tid} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
         `New title: "${validFields.subject ?? '(unchanged)'}".`;
       try {
-        await provisioning.sendMessageToTeam(tn, message);
+        await getTeamMessagingApi().sendMessageToTeam(tn, message);
       } catch {
         logger.warn(`Failed to notify lead about task fields update for #${tid} in ${tn}`);
       }
@@ -5098,13 +5100,12 @@ async function handleUpdateMemberRole(
 
     if (changed) {
       invalidateTeamRosterSnapshotCaches(tn);
-      const provisioning = getTeamProvisioningService();
-      if (provisioning.isTeamAlive(tn)) {
+      if (getTeamRuntimeApi().isTeamAlive(tn)) {
         const oldDesc = oldRole ? `"${oldRole}"` : 'none';
         const newDesc = normalizedRole ? `"${normalizedRole}"` : 'none';
         const message = `Teammate "${name}" role changed from ${oldDesc} to ${newDesc}. This will take effect on next launch.`;
         try {
-          await provisioning.sendMessageToTeam(tn, message);
+          await getTeamMessagingApi().sendMessageToTeam(tn, message);
         } catch {
           logger.warn(`Failed to notify lead about role change for "${name}" in ${tn}`);
         }
@@ -5142,13 +5143,12 @@ async function handleKillProcess(
     await getTeamDataService().killProcess(tn, pidNum);
 
     // Notify the team lead about the killed process
-    const provisioning = getTeamProvisioningService();
-    if (provisioning.isTeamAlive(tn)) {
+    if (getTeamRuntimeApi().isTeamAlive(tn)) {
       const message =
         `Process "${processLabel}" (PID ${pidNum}) has been stopped by the user from the UI. ` +
         `You may need to restart it if it was still needed.`;
       try {
-        await provisioning.sendMessageToTeam(tn, message);
+        await getTeamMessagingApi().sendMessageToTeam(tn, message);
       } catch {
         logger.warn(`Failed to notify lead about killed process ${pidNum} in ${tn}`);
       }
