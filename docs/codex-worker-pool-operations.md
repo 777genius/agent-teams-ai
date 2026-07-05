@@ -309,7 +309,9 @@ This process owns the in-memory provider runner until it receives SIGINT or
 SIGTERM. It is the safe CLI alternative to an unsafe full-access controller.
 Its status output includes `liveController`: when
 `providerRunnerAttached=false` or `ownerMatches=false`, the current process does
-not prove live ownership of the controller.
+not prove live ownership of the controller. If `providerObservedStatus` is
+present and terminal, `liveController.live` remains false until reconcile records
+the terminal state.
 
 For child capacity refill, prefer the one-shot broker helper
 `codex_goal_project_refill_worker` instead of manually chaining

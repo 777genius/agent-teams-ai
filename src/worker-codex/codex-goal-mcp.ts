@@ -46,11 +46,11 @@ import {
   RunEventCompactionSafetyMode,
   RunEventProviderKind,
   RunEventType,
-  ControlledAgentRunStatus,
   WorkerControlService,
   assessBaseRevision,
   assessWorkerHealth,
   buildControlledAgentLaunchPlan,
+  buildControlledAgentLiveControllerState,
   buildControlledAgentProcessOwner,
   getControlledAgentStatus,
   reconcileControlledAgentRun,
@@ -3100,9 +3100,10 @@ async function projectControllerStart(args: ProjectControllerLaunchPlanMcpArgs) 
     status: result.run.status,
     run: result.run,
     provider: result.provider,
-    liveController: projectControllerLiveState({
+    liveController: buildControlledAgentLiveControllerState({
       session: result.session,
       providerAttached: true,
+      currentOwner: controlledAgentProcessOwner,
     }),
     ...(providerInput.account === undefined ? {} : { account: providerInput.account }),
     ...(providerInput.sessionArtifact === undefined
@@ -3125,11 +3126,16 @@ async function projectControllerStatus(args: ProjectControllerLaunchPlanMcpArgs)
     ? await provider.status({ session: result.session, run: result.run })
     : undefined;
   const liveController = result.ok
-    ? projectControllerLiveState({
+    ? buildControlledAgentLiveControllerState({
         session: result.session,
         providerAttached: provider !== undefined,
+        currentOwner: controlledAgentProcessOwner,
+        providerObservedStatus: observed?.status,
       })
-    : projectControllerLiveState({ providerAttached: false });
+    : buildControlledAgentLiveControllerState({
+      providerAttached: false,
+      currentOwner: controlledAgentProcessOwner,
+    });
   return mcpJson({
     ok: result.ok,
     mode: "project_controller_status",
@@ -3178,9 +3184,10 @@ async function projectControllerStop(args: ProjectControllerLaunchPlanMcpArgs) {
       sessionId: state.sessionId,
       reason: stopped.reason,
       ...(stopped.ok ? { session: stopped.session, run: stopped.run } : {}),
-      liveController: projectControllerLiveState({
+      liveController: buildControlledAgentLiveControllerState({
         session: stopped.ok ? stopped.session : result.session,
         providerAttached: false,
+        currentOwner: controlledAgentProcessOwner,
       }),
       safeMessage: stopped.ok
         ? "Controlled-agent provider stopped through the safe provider adapter."
@@ -3199,9 +3206,10 @@ async function projectControllerStop(args: ProjectControllerLaunchPlanMcpArgs) {
       ? "controlled_agent_provider_runner_not_connected"
       : result.reason,
     ...(result.ok ? { session: result.session, run: result.run } : {}),
-    liveController: projectControllerLiveState({
+    liveController: buildControlledAgentLiveControllerState({
       session: result.ok ? result.session : undefined,
       providerAttached: false,
+      currentOwner: controlledAgentProcessOwner,
     }),
     safeMessage: result.ok
       ? "A safe provider runner is required to stop a live controlled-agent controller. Do not kill unrelated processes or use danger_full_access from this tool."
@@ -3233,9 +3241,10 @@ async function projectControllerReconcile(args: ProjectControllerLaunchPlanMcpAr
       reason: reconciled.reason,
       ...(reconciled.session === undefined ? {} : { session: reconciled.session }),
       ...(reconciled.run === undefined ? {} : { run: reconciled.run }),
-      liveController: projectControllerLiveState({
+      liveController: buildControlledAgentLiveControllerState({
         session: reconciled.session,
         providerAttached: true,
+        currentOwner: controlledAgentProcessOwner,
       }),
       ...(reconciled.ok || reconciled.safeMessage === undefined ? {} : {
         safeMessage: reconciled.safeMessage,
@@ -3254,43 +3263,15 @@ async function projectControllerReconcile(args: ProjectControllerLaunchPlanMcpAr
       ? "controlled_agent_provider_runner_not_connected"
       : result.reason,
     ...(result.ok ? { session: result.session, run: result.run } : {}),
-    liveController: projectControllerLiveState({
+    liveController: buildControlledAgentLiveControllerState({
       session: result.ok ? result.session : undefined,
       providerAttached: false,
+      currentOwner: controlledAgentProcessOwner,
     }),
     safeMessage: result.ok
       ? "A safe provider runner is required to reconcile provider liveness. Persisted state is available, but runtime liveness cannot be asserted."
       : "No persisted controlled-agent run exists to reconcile.",
   });
-}
-
-function projectControllerLiveState(input: {
-  readonly session?: ControlledAgentSession | undefined;
-  readonly providerAttached: boolean;
-}): JsonObject {
-  const persistedOwner = input.session?.owner;
-  const persistedStatus = input.session?.status;
-  const ownerMatches = persistedOwner?.ownerId === controlledAgentProcessOwner.ownerId;
-  const live = input.providerAttached &&
-    ownerMatches &&
-    persistedStatus === ControlledAgentRunStatus.Running;
-  return {
-    providerRunnerAttached: input.providerAttached,
-    live,
-    currentOwner: controlledAgentProcessOwner,
-    ...(persistedOwner === undefined ? {} : { persistedOwner }),
-    ...(persistedStatus === undefined ? {} : { persistedStatus }),
-    ownerMatches,
-    safeMessage: input.providerAttached
-      ? live
-        ? "Provider runner is attached to this durable MCP process."
-        : ownerMatches
-        ? "Provider runner is attached, but persisted controller status is not running."
-        : "Provider runner is attached, but persisted owner metadata does not match this process."
-      : persistedOwner
-      ? "Persisted controller state exists, but this process does not own the provider runner."
-      : "No persisted live controller owner is recorded.",
-  };
 }
 
 function projectControllerState(

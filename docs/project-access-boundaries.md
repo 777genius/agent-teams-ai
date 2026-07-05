@@ -208,7 +208,10 @@ The controlled-agent MCP lifecycle tools are:
 - `codex_goal_project_controller_status`: read persisted controller session/run
   state and include provider liveness only when the provider instance is still
   attached in this MCP process. The response includes `liveController` with the
-  current durable process owner, the persisted owner and whether they match;
+  current durable process owner, the persisted owner, whether they match and the
+  observed provider status when available. `liveController.live=true` requires
+  an attached runner, matching owner metadata, persisted `running` state and no
+  observed terminal provider status;
 - `codex_goal_project_controller_stop`: stop through the safe provider runner;
 - `codex_goal_project_controller_reconcile`: reconcile provider liveness through
   the safe provider runner after crash/reboot.

@@ -1,4 +1,5 @@
 export * from "./application/build-controlled-agent-launch-plan";
+export * from "./application/build-controlled-agent-live-controller-state";
 export * from "./application/build-controlled-agent-process-owner";
 export * from "./application/controller-system-prompt";
 export * from "./application/get-controlled-agent-status";

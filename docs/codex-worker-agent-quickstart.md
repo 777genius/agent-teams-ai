@@ -221,7 +221,9 @@ controlled provider on SIGINT/SIGTERM. Do not replace it with
 
 Status responses include `liveController`. Treat `providerRunnerAttached=false`
 or `ownerMatches=false` as "manifest/state exists, but this process does not own
-the live LLM controller".
+the live LLM controller". If `providerObservedStatus` is present and not
+`running`, the controller is not live even when the provider runner is still
+attached before reconcile updates persisted state.
 
 The Codex controlled-agent profile disables native app-server environments and
 keeps only the configured broker/status MCP surface. If a profile can only add
