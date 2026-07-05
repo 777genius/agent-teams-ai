@@ -13,6 +13,8 @@ import {
 import { existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   AccessBoundary,
   LaunchPlanStatus,
@@ -40,6 +42,7 @@ import {
   CodexControlledAgentProvider,
   buildCodexControlledAgentProfile,
 } from "../../dist/worker-codex/index.js";
+import { createCodexGoalMcpServer } from "../../dist/worker-codex/codex-goal-mcp.js";
 import { FileBackendCodexSafeExecutor } from "../../dist/worker-codex/file-backend-codex-safe-executor.js";
 import {
   LocalControlledAgentStateStore,
@@ -1200,6 +1203,7 @@ async function claudeProjectControllerProductionMcpStart() {
   }
 
   const root = await sandboxRoot("claude-controller-production-mcp-");
+  let started = null;
   try {
     const sourceWorkspace = await gitSandbox(join(root, "source"), {
       "README.md": "Claude production MCP controller live sandbox only.\n",
@@ -1241,63 +1245,103 @@ async function claudeProjectControllerProductionMcpStart() {
       allowedGitRemotes: ["origin"],
       allowedAccountIds: ["claude-session"],
     };
-    assertToolOk(codexGoalTool("codex_goal_create_job", {
-      registryRootDir,
-      jobId: controllerJobId,
-      description: "Production MCP Claude project controller live e2e",
-      jobRootDir: controllerJobRoot,
-      authRootDir: authRoot,
-      stateRootDir: join(controllerJobRoot, "state"),
-      workspacePath: sourceWorkspace,
-      promptPath: controllerPrompt,
-      taskId: controllerJobId,
-      progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
-      accounts: ["claude-session"],
-      tmuxSession: controllerJobId,
-      accessBoundary: "project_scoped_control",
-      projectAccessScope,
-      networkAccess: "restricted",
-      model: process.env.CLAUDE_LIVE_MODEL ?? "sonnet",
-      confirmCreate: true,
-    }), "create production Claude controller manifest");
+    return await withCodexGoalMcpClient(async (client) => {
+      try {
+        assertToolOk(await codexGoalMcpTool(client, "codex_goal_create_job", {
+          registryRootDir,
+          jobId: controllerJobId,
+          description: "Production MCP Claude project controller live e2e",
+          jobRootDir: controllerJobRoot,
+          authRootDir: authRoot,
+          stateRootDir: join(controllerJobRoot, "state"),
+          workspacePath: sourceWorkspace,
+          promptPath: controllerPrompt,
+          taskId: controllerJobId,
+          progressPath: join(controllerJobRoot, `${controllerJobId}.progress.json`),
+          accounts: ["claude-session"],
+          tmuxSession: controllerJobId,
+          accessBoundary: "project_scoped_control",
+          projectAccessScope,
+          networkAccess: "restricted",
+          model: process.env.CLAUDE_LIVE_MODEL ?? "sonnet",
+          confirmCreate: true,
+        }), "create production Claude controller manifest");
 
-    const plan = assertToolOk(codexGoalTool("codex_goal_project_controller_launch_plan", {
-      registryRootDir,
-      controllerJobId,
-      providerKind: "claude",
-      mcpCommand: process.execPath,
-      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
-      mcpCwd: process.cwd(),
-    }), "production Claude controller launch plan");
-    assertEqual(plan.providerKind, "claude");
-    assert(
-      String(plan.sessionId).endsWith(":controlled-agent:claude"),
-      "Claude production controller must use provider-specific session id",
-    );
+        const plan = assertToolOk(await codexGoalMcpTool(
+          client,
+          "codex_goal_project_controller_launch_plan",
+          {
+            registryRootDir,
+            controllerJobId,
+            providerKind: "claude",
+            mcpCommand: process.execPath,
+            mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+            mcpCwd: process.cwd(),
+          },
+        ), "production Claude controller launch plan");
+        assertEqual(plan.providerKind, "claude");
+        assert(
+          String(plan.sessionId).endsWith(":controlled-agent:claude"),
+          "Claude production controller must use provider-specific session id",
+        );
 
-    const started = assertToolOk(codexGoalTool("codex_goal_project_controller_start", {
-      registryRootDir,
-      controllerJobId,
-      providerKind: "claude",
-      sessionArtifactPath: claudeLiveSessionArtifactPath,
-      mcpCommand: process.execPath,
-      mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
-      mcpCwd: process.cwd(),
-      maxGoalTurns: Number(process.env.CLAUDE_CONTROLLED_LIVE_MAX_TURNS ?? "1"),
-    }), "production Claude controller start");
-    assertEqual(started.providerKind, "claude");
-    assertEqual(started.status, ControlledAgentRunStatus.Running);
-    assert(
-      !JSON.stringify(started).includes("oauth"),
-      "production start response must not include Claude oauth payloads",
-    );
+        started = assertToolOk(await codexGoalMcpTool(
+          client,
+          "codex_goal_project_controller_start",
+          {
+            registryRootDir,
+            controllerJobId,
+            providerKind: "claude",
+            sessionArtifactPath: claudeLiveSessionArtifactPath,
+            mcpCommand: process.execPath,
+            mcpArgs: [join(process.cwd(), "dist/worker-codex/codex-goal-mcp.js")],
+            mcpCwd: process.cwd(),
+            maxGoalTurns: Number(process.env.CLAUDE_CONTROLLED_LIVE_MAX_TURNS ?? "1"),
+          },
+        ), "production Claude controller start");
+        assertEqual(started.providerKind, "claude");
+        assertEqual(started.status, ControlledAgentRunStatus.Running);
+        assert(
+          !JSON.stringify(started).includes("oauth"),
+          "production start response must not include Claude oauth payloads",
+        );
 
-    return {
-      root: keepArtifacts ? root : undefined,
-      providerKind: started.providerKind,
-      status: started.status,
-      sessionArtifactSha256Prefix: started.sessionArtifact?.sha256Prefix,
-    };
+        const observed = await waitForProjectControllerMcpStatus({
+          client,
+          registryRootDir,
+          controllerJobId,
+          providerKind: "claude",
+          timeoutMs: Number(process.env.CLAUDE_CONTROLLED_LIVE_TIMEOUT_MS ?? "180000"),
+        });
+        const providerStatus = projectControllerProviderStatus(observed);
+        const providerSkip = claudeControlledProviderUnavailableSkip({
+          status: providerStatus,
+          safeMessage: projectControllerProviderSafeMessage(observed),
+        });
+        if (providerSkip) return providerSkip;
+        assertEqual(providerStatus, ControlledAgentRunStatus.Completed);
+        assert(
+          !JSON.stringify(observed).includes("oauth"),
+          "production status response must not include Claude oauth payloads",
+        );
+
+        return {
+          root: keepArtifacts ? root : undefined,
+          providerKind: started.providerKind,
+          providerStatus,
+          sessionArtifactSha256Prefix: started.sessionArtifact?.sha256Prefix,
+        };
+      } finally {
+        if (started?.ok === true) {
+          await codexGoalMcpTool(client, "codex_goal_project_controller_stop", {
+            registryRootDir,
+            controllerJobId,
+            providerKind: "claude",
+            reason: "live_e2e_cleanup",
+          }).catch(() => undefined);
+        }
+      }
+    });
   } finally {
     await cleanup(root);
   }
@@ -2409,6 +2453,51 @@ function runChecked(command, args, options = {}) {
   return result;
 }
 
+async function withCodexGoalMcpClient(action) {
+  const server = createCodexGoalMcpServer();
+  const client = new Client({
+    name: "subscription-runtime-live-e2e",
+    version: "0.0.0",
+  });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([
+    server.connect(serverTransport),
+    client.connect(clientTransport),
+  ]);
+  try {
+    return await action(client);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
+async function codexGoalMcpTool(client, name, args) {
+  return parseMcpJsonResult(await client.callTool({
+    name,
+    arguments: args ?? {},
+  }));
+}
+
+function parseMcpJsonResult(result) {
+  if (result && typeof result === "object" && "structuredContent" in result) {
+    return result.structuredContent;
+  }
+  const content = result && typeof result === "object" && Array.isArray(result.content)
+    ? result.content
+    : undefined;
+  const first = content?.[0];
+  if (first && typeof first === "object" && first.type === "text" &&
+    typeof first.text === "string") {
+    try {
+      return JSON.parse(first.text);
+    } catch {
+      return { text: first.text };
+    }
+  }
+  return result;
+}
+
 function codexGoalTool(name, args) {
   const result = runChecked(process.execPath, [
     join(process.cwd(), "dist/worker-codex/codex-goal-cli.js"),
@@ -2574,6 +2663,43 @@ async function waitForControlledStatus(input) {
     session: input.session,
     run: input.run,
   });
+}
+
+async function waitForProjectControllerMcpStatus(input) {
+  const deadline = Date.now() + input.timeoutMs;
+  let observed = null;
+  while (Date.now() < deadline) {
+    observed = assertToolOk(await codexGoalMcpTool(
+      input.client,
+      "codex_goal_project_controller_status",
+      {
+        registryRootDir: input.registryRootDir,
+        controllerJobId: input.controllerJobId,
+        providerKind: input.providerKind,
+      },
+    ), "production Claude controller status");
+    const status = projectControllerProviderStatus(observed);
+    if (status !== ControlledAgentRunStatus.Running) return observed;
+    await sleep(2_000);
+  }
+  return observed ?? assertToolOk(await codexGoalMcpTool(
+    input.client,
+    "codex_goal_project_controller_status",
+    {
+      registryRootDir: input.registryRootDir,
+      controllerJobId: input.controllerJobId,
+      providerKind: input.providerKind,
+    },
+  ), "production Claude controller status");
+}
+
+function projectControllerProviderStatus(value) {
+  return value?.providerObserved?.status ?? value?.run?.status ?? "unknown";
+}
+
+function projectControllerProviderSafeMessage(value) {
+  return value?.providerObserved?.safeMessage ?? value?.run?.safeMessage ??
+    value?.safeMessage ?? "";
 }
 
 function codexControlledProviderUnavailableSkip(status) {
