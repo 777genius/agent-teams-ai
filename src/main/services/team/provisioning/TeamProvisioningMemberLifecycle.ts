@@ -45,11 +45,13 @@ import {
   matchesObservedMemberNameForExpected,
   matchesTeamMemberIdentity,
 } from './TeamProvisioningMemberIdentity';
+import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
 import {
-  createMemberLifecycleOperationInProgressError,
-  getMemberLifecycleOperationKey,
-  isMemberLifecycleOperationInProgressError,
-} from './TeamProvisioningMemberLifecycleKeys';
+  createTeamProvisioningMemberLifecycleOperationRunner,
+  type MemberLifecycleOperation,
+  type MemberLifecycleOperationKind,
+  type TeamProvisioningMemberLifecycleOperationRunner,
+} from './TeamProvisioningMemberLifecycleOperationRunner';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   hasOpenCodeRuntimeEntryHandle,
@@ -222,16 +224,10 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   }
 }
 
-export type MemberLifecycleOperationKind =
-  | 'manual_restart'
-  | 'opencode_retry'
-  | 'opencode_member_added'
-  | 'opencode_member_updated'
-  | 'opencode_member_removed'
-  | 'primary_member_added'
-  | 'primary_member_restored'
-  | 'primary_member_updated'
-  | 'primary_member_removed';
+export type {
+  MemberLifecycleOperation,
+  MemberLifecycleOperationKind,
+} from './TeamProvisioningMemberLifecycleOperationRunner';
 
 interface DirectRestartPromptInput {
   teamName: string;
@@ -278,12 +274,6 @@ interface DirectProcessRuntimeEventInput {
 
 export type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
 type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;
-
-export interface MemberLifecycleOperation {
-  kind: MemberLifecycleOperationKind;
-  token: symbol;
-  startedAtMs: number;
-}
 
 export interface OpenCodeSecondaryRetryCandidate {
   memberName: string;
@@ -583,7 +573,15 @@ export interface TeamProvisioningMemberLifecycleHost
     TeamProvisioningMemberLifecycleMixedSecondaryRuntimePorts {}
 
 export class TeamProvisioningMemberLifecycleController {
-  constructor(private readonly host: TeamProvisioningMemberLifecycleHost) {}
+  private readonly operationRunner: TeamProvisioningMemberLifecycleOperationRunner;
+
+  constructor(private readonly host: TeamProvisioningMemberLifecycleHost) {
+    this.operationRunner = createTeamProvisioningMemberLifecycleOperationRunner({
+      memberLifecycleOperations: host.memberLifecycleOperations,
+      invalidateRuntimeSnapshotCaches: (teamName) => host.invalidateRuntimeSnapshotCaches(teamName),
+      nowMs: () => Date.now(),
+    });
+  }
 
   private getHostSeam<T>(name: string): T | null {
     const value = (this.host as unknown as Record<string, unknown>)[name];
@@ -600,10 +598,6 @@ export class TeamProvisioningMemberLifecycleController {
 
   private get failedOpenCodeSecondaryRetryInFlightByTeam(): TeamProvisioningMemberLifecycleHost['failedOpenCodeSecondaryRetryInFlightByTeam'] {
     return this.host.failedOpenCodeSecondaryRetryInFlightByTeam;
-  }
-
-  private get memberLifecycleOperations(): TeamProvisioningMemberLifecycleHost['memberLifecycleOperations'] {
-    return this.host.memberLifecycleOperations;
   }
 
   private get mcpConfigBuilder(): TeamProvisioningMemberLifecycleHost['mcpConfigBuilder'] {
@@ -1689,27 +1683,8 @@ export class TeamProvisioningMemberLifecycleController {
     );
   }
 
-  private getMemberLifecycleOperationKey(teamName: string, memberName: string): string {
-    return getMemberLifecycleOperationKey(teamName, memberName);
-  }
-
-  private getActiveMemberLifecycleOperation(
-    teamName: string,
-    memberName: string
-  ): MemberLifecycleOperation | null {
-    return (
-      this.memberLifecycleOperations.get(
-        this.getMemberLifecycleOperationKey(teamName, memberName)
-      ) ?? null
-    );
-  }
-
   isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
-    return this.getActiveMemberLifecycleOperation(teamName, memberName) !== null;
-  }
-
-  private createMemberLifecycleOperationInProgressError(memberName: string): Error {
-    return createMemberLifecycleOperationInProgressError(memberName);
+    return this.operationRunner.isMemberLifecycleOperationActive(teamName, memberName);
   }
 
   private isMemberLifecycleOperationInProgressError(error: unknown): boolean {
@@ -1742,26 +1717,7 @@ export class TeamProvisioningMemberLifecycleController {
     kind: MemberLifecycleOperationKind,
     operation: () => Promise<T>
   ): Promise<T> {
-    const key = this.getMemberLifecycleOperationKey(teamName, memberName);
-    if (this.memberLifecycleOperations.has(key)) {
-      throw this.createMemberLifecycleOperationInProgressError(memberName);
-    }
-
-    const token = Symbol(`${kind}:${teamName}:${memberName}`);
-    this.memberLifecycleOperations.set(key, {
-      kind,
-      token,
-      startedAtMs: Date.now(),
-    });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    try {
-      return await operation();
-    } finally {
-      if (this.memberLifecycleOperations.get(key)?.token === token) {
-        this.memberLifecycleOperations.delete(key);
-      }
-      this.invalidateRuntimeSnapshotCaches(teamName);
-    }
+    return this.operationRunner.runMemberLifecycleOperation(teamName, memberName, kind, operation);
   }
 
   private getOpenCodeReattachLifecycleKind(

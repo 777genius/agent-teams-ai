@@ -52,16 +52,19 @@ export interface TeamProvisioningPreflightApi {
   ): Promise<TeamProvisioningPrepareResult>;
 }
 
-export interface TeamRuntimeApi {
+export interface TeamRuntimeControlCompatibilityApi {
+  recordOpenCodeRuntimeBootstrapCheckin(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+  deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+  recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+  recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+}
+
+export interface TeamRuntimeApi extends TeamRuntimeControlCompatibilityApi {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
   stopTeam(teamName: string): Promise<void>;
   isTeamAlive(teamName: string): boolean;
   getAliveTeams(): string[];
   getCurrentRunId(teamName: string): string | null;
-  recordOpenCodeRuntimeBootstrapCheckin(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
-  deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
-  recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
-  recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
 }
 
 export interface TeamMemberLifecycleApi {
@@ -103,6 +106,18 @@ export function bindTeamProvisioningPreflightApi(
   };
 }
 
+export function bindTeamRuntimeControlCompatibilityApi(
+  source: TeamRuntimeControlCompatibilityApi
+): TeamRuntimeControlCompatibilityApi {
+  return {
+    recordOpenCodeRuntimeBootstrapCheckin:
+      source.recordOpenCodeRuntimeBootstrapCheckin.bind(source),
+    deliverOpenCodeRuntimeMessage: source.deliverOpenCodeRuntimeMessage.bind(source),
+    recordOpenCodeRuntimeTaskEvent: source.recordOpenCodeRuntimeTaskEvent.bind(source),
+    recordOpenCodeRuntimeHeartbeat: source.recordOpenCodeRuntimeHeartbeat.bind(source),
+  };
+}
+
 export function bindTeamRuntimeApi(source: TeamRuntimeApi): TeamRuntimeApi {
   return {
     getRuntimeState: source.getRuntimeState.bind(source),
@@ -110,11 +125,7 @@ export function bindTeamRuntimeApi(source: TeamRuntimeApi): TeamRuntimeApi {
     isTeamAlive: source.isTeamAlive.bind(source),
     getAliveTeams: source.getAliveTeams.bind(source),
     getCurrentRunId: source.getCurrentRunId.bind(source),
-    recordOpenCodeRuntimeBootstrapCheckin:
-      source.recordOpenCodeRuntimeBootstrapCheckin.bind(source),
-    deliverOpenCodeRuntimeMessage: source.deliverOpenCodeRuntimeMessage.bind(source),
-    recordOpenCodeRuntimeTaskEvent: source.recordOpenCodeRuntimeTaskEvent.bind(source),
-    recordOpenCodeRuntimeHeartbeat: source.recordOpenCodeRuntimeHeartbeat.bind(source),
+    ...bindTeamRuntimeControlCompatibilityApi(source),
   };
 }
 

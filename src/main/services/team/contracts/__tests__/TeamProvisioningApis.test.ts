@@ -6,6 +6,7 @@ import {
   bindTeamMemberLifecycleApi,
   bindTeamProvisioningPreflightApi,
   bindTeamRuntimeApi,
+  bindTeamRuntimeControlCompatibilityApi,
 } from '../TeamProvisioningApis';
 
 import type {
@@ -15,6 +16,7 @@ import type {
   TeamMemberLifecycleApi,
   TeamProvisioningPreflightApi,
   TeamRuntimeApi,
+  TeamRuntimeControlCompatibilityApi,
 } from '../TeamProvisioningApis';
 import type {
   LeadActivitySnapshot,
@@ -127,6 +129,7 @@ describe('TeamProvisioning API binders', () => {
     interface RuntimeSource extends TeamRuntimeApi {
       readonly teamName: string;
       stoppedTeamName: string | null;
+      compatibilityCalls: number;
     }
 
     const ack = (source: RuntimeSource): OpenCodeRuntimeControlAck => ({
@@ -141,6 +144,7 @@ describe('TeamProvisioning API binders', () => {
     const source: RuntimeSource = {
       teamName: 'team-bound',
       stoppedTeamName: null,
+      compatibilityCalls: 0,
       getRuntimeState(this: RuntimeSource): Promise<TeamRuntimeState> {
         return Promise.resolve({
           teamName: this.teamName,
@@ -165,23 +169,31 @@ describe('TeamProvisioning API binders', () => {
       recordOpenCodeRuntimeBootstrapCheckin(
         this: RuntimeSource
       ): Promise<OpenCodeRuntimeControlAck> {
+        this.compatibilityCalls += 1;
         return Promise.resolve(ack(this));
       },
       deliverOpenCodeRuntimeMessage(this: RuntimeSource): Promise<OpenCodeRuntimeControlAck> {
+        this.compatibilityCalls += 1;
         return Promise.resolve({ ...ack(this), state: 'delivered' });
       },
       recordOpenCodeRuntimeTaskEvent(this: RuntimeSource): Promise<OpenCodeRuntimeControlAck> {
+        this.compatibilityCalls += 1;
         return Promise.resolve(ack(this));
       },
       recordOpenCodeRuntimeHeartbeat(this: RuntimeSource): Promise<OpenCodeRuntimeControlAck> {
+        this.compatibilityCalls += 1;
         return Promise.resolve(ack(this));
       },
     };
 
     const api = bindTeamRuntimeApi(source);
+    const controlCompatibilityApi: TeamRuntimeControlCompatibilityApi =
+      bindTeamRuntimeControlCompatibilityApi(source);
     const getRuntimeState = api.getRuntimeState.bind(undefined);
     const stopTeam = api.stopTeam.bind(undefined);
     const deliverOpenCodeRuntimeMessage = api.deliverOpenCodeRuntimeMessage.bind(undefined);
+    const recordOpenCodeRuntimeHeartbeat =
+      controlCompatibilityApi.recordOpenCodeRuntimeHeartbeat.bind(undefined);
 
     await expect(getRuntimeState('team-bound')).resolves.toMatchObject({
       teamName: 'team-bound',
@@ -193,6 +205,11 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-bound',
       state: 'delivered',
     });
+    await expect(recordOpenCodeRuntimeHeartbeat({})).resolves.toMatchObject({
+      teamName: 'team-bound',
+      state: 'recorded',
+    });
+    expect(source.compatibilityCalls).toBe(2);
   });
 
   it('binds member lifecycle and diagnostics methods to the source object', async () => {
