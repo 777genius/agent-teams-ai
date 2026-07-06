@@ -1905,6 +1905,58 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("reports overlong app-server goal objectives before goal set", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-objective-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "full task lives in promptPath",
+          metadata: {
+            codexGoalObjective: "x".repeat(4001),
+          },
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "unknown_runtime_failure",
+          details: {
+            rawCause:
+              "codex_app_server_goal_set_failed:Prompt too long: 4001/4000 chars. Use compact prompt with docs links.",
+          },
+        },
+      });
+      expect(
+        fakeFactory.requests.map((request) => request.method),
+      ).not.toContain("thread/goal/set");
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("continues an active Codex app-server goal until the goal is complete", async () => {
     const workspace = await mkdtemp(
       join(tmpdir(), "codex-app-goal-loop-test-"),
@@ -3173,6 +3225,113 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("uses a bounded app-server startup timeout separate from task timeout", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-init-timeout-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      suppressInitializeResponse: true,
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        timeoutMs: 60_000,
+        startupTimeoutMs: 25,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "timeout initialize" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "task_timeout",
+          safeMessage: "Codex task timed out.",
+        },
+      });
+      expect(fakeFactory.spawnCount).toBe(1);
+      expect(fakeFactory.processes[0]?.isExited()).toBe(true);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid app-server startup timeout options", () => {
+    expect(
+      () =>
+        new CodexAppServerExecutionEngine({
+          codexBinaryPath: "/bin/codex-test",
+          timeoutMs: 0,
+        }),
+    ).toThrow("codex_app_server_timeout_invalid");
+    expect(
+      () =>
+        new CodexAppServerExecutionEngine({
+          codexBinaryPath: "/bin/codex-test",
+          startupTimeoutMs: 0,
+        }),
+    ).toThrow("codex_app_server_startup_timeout_invalid");
+    expect(
+      () =>
+        new CodexAppServerExecutionEngine({
+          codexBinaryPath: "/bin/codex-test",
+          startupTimeoutMs: 1.5,
+        }),
+    ).toThrow("codex_app_server_startup_timeout_invalid");
+  });
+
+  it("classifies app-server initialize usage limits as quota limited", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-init-quota-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      initializeError: "You've hit your usage limit.",
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        startupTimeoutMs: 250,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "quota initialize" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "quota_limited",
+          safeMessage: "Codex quota or billing limit was reached.",
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("waits through transient app-server reconnect progress errors", async () => {
     const workspace = await mkdtemp(
       join(tmpdir(), "codex-app-reconnect-test-"),
@@ -3734,6 +3893,7 @@ type FakeAppServerFactoryOptions = {
   readonly failThreadStart?: boolean;
   readonly failThreadStartNumbers?: readonly number[];
   readonly suppressInitializeResponse?: boolean;
+  readonly initializeError?: string;
   readonly emitUnsupportedServerRequestOnTurn?: boolean;
   readonly throwOnUnsupportedServerResponse?: boolean;
   readonly emitTransientTopLevelErrorOnTurn?: string;
@@ -3880,6 +4040,10 @@ class FakeAppServerProcess extends EventEmitter {
       this.options.onRequest?.(request);
       if (request.method === "initialize") {
         if (this.options.suppressInitializeResponse) continue;
+        if (this.options.initializeError) {
+          this.respondError(request.id, this.options.initializeError);
+          continue;
+        }
         this.respond(request.id, {
           userAgent: "fake-codex",
           codexHome: "/tmp/fake-codex-home",

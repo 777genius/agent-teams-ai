@@ -76,6 +76,7 @@ export type CodexAppServerExecutionEngineOptions = {
   readonly codexBinaryPath: string;
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
   readonly timeoutMs?: number;
+  readonly startupTimeoutMs?: number;
   readonly maxOutputBytes?: number;
   readonly fallback?: CodexExecutionEngine;
   readonly processFactory?: CodexAppServerProcessFactory;
@@ -122,10 +123,12 @@ type PreparedThread = {
 };
 
 const defaultTimeoutMs = 10 * 60 * 1000;
+const defaultStartupTimeoutMs = 2 * 60 * 1000;
 const defaultControlRequestTimeoutMs = 30 * 1000;
 const defaultReconnectGraceMs = 10 * 60 * 1000;
 const defaultMaxOutputBytes = 512 * 1024;
 const defaultMaxGoalTurns = 20;
+const appServerGoalObjectiveMaxChars = 4000;
 const defaultGoalContinuePrompt =
   "Continue working toward the active goal. If the goal is complete, mark it complete and summarize the result.";
 
@@ -147,6 +150,11 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     if (!options.codexBinaryPath.trim()) {
       throw new Error("codex_app_server_binary_required");
     }
+    assertPositiveInteger(options.timeoutMs, "codex_app_server_timeout_invalid");
+    assertPositiveInteger(
+      options.startupTimeoutMs,
+      "codex_app_server_startup_timeout_invalid",
+    );
     this.kind = options.goalMode ? "app-server-goal" : "app-server-pool";
     this.executionProfile = resolveCodexExecutionProfile(
       options.executionProfile,
@@ -523,6 +531,14 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
         : { nativeToolSurface: this.options.nativeToolSurface }),
       cleanThreadPrewarm: this.options.cleanThreadPrewarm ?? true,
       timeoutMs: this.options.timeoutMs ?? defaultTimeoutMs,
+      startupTimeoutMs: appServerStartupTimeoutMs({
+        ...(this.options.timeoutMs === undefined
+          ? {}
+          : { timeoutMs: this.options.timeoutMs }),
+        ...(this.options.startupTimeoutMs === undefined
+          ? {}
+          : { startupTimeoutMs: this.options.startupTimeoutMs }),
+      }),
       reconnectGraceMs: this.options.reconnectGraceMs ?? defaultReconnectGraceMs,
       abortSignal: input.abortSignal,
     });
@@ -592,6 +608,7 @@ class CodexAppServerClient {
       readonly nativeToolSurface?: CodexAppServerNativeToolSurface;
       readonly cleanThreadPrewarm: boolean;
       readonly timeoutMs: number;
+      readonly startupTimeoutMs: number;
       readonly reconnectGraceMs: number;
       readonly abortSignal: AbortSignal;
     },
@@ -645,7 +662,7 @@ class CodexAppServerClient {
         },
       },
       {
-        timeoutMs: this.options.timeoutMs,
+        timeoutMs: this.options.startupTimeoutMs,
         abortSignal: this.options.abortSignal,
       },
     );
@@ -1226,6 +1243,10 @@ class CodexAppServerClient {
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexThreadGoal> {
+    const objectiveLimitError = appServerGoalObjectiveLimitError(input.objective);
+    if (objectiveLimitError) {
+      throw new Error(`codex_app_server_goal_set_failed:${objectiveLimitError}`);
+    }
     const response = await this.send(
       "thread/goal/set",
       {
@@ -1237,7 +1258,10 @@ class CodexAppServerClient {
     );
     if (response.error) {
       throw new Error(
-        `codex_app_server_goal_set_failed:${response.error.message ?? "unknown"}`,
+        `codex_app_server_goal_set_failed:${formatGoalSetError(
+          response.error.message,
+          input.objective,
+        )}`,
       );
     }
     const goal = readGoal(response.result?.goal);
@@ -2024,6 +2048,40 @@ function assertOutputWithinBounds(
 
 function controlRequestTimeoutMs(taskTimeoutMs: number): number {
   return Math.min(taskTimeoutMs, defaultControlRequestTimeoutMs);
+}
+
+function formatGoalSetError(
+  message: string | undefined,
+  objective: string,
+): string {
+  if (
+    message &&
+    /goal objective must be at most 4000 characters/i.test(message)
+  ) {
+    return appServerGoalObjectiveLimitError(objective) ?? message;
+  }
+  return message ?? "unknown";
+}
+
+function appServerGoalObjectiveLimitError(objective: string): string | null {
+  const length = objective.length;
+  if (length <= appServerGoalObjectiveMaxChars) return null;
+  return `Prompt too long: ${length}/${appServerGoalObjectiveMaxChars} chars. Use compact prompt with docs links.`;
+}
+
+function appServerStartupTimeoutMs(input: {
+  readonly timeoutMs?: number;
+  readonly startupTimeoutMs?: number;
+}): number {
+  return Math.min(
+    input.timeoutMs ?? defaultTimeoutMs,
+    input.startupTimeoutMs ?? defaultStartupTimeoutMs,
+  );
+}
+
+function assertPositiveInteger(value: number | undefined, code: string): void {
+  if (value === undefined) return;
+  if (!Number.isInteger(value) || value <= 0) throw new Error(code);
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
