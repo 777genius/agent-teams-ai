@@ -26,6 +26,7 @@ import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } fr
 import { LocalGitRevisionReader } from "./codex-goal-git-revision.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
+import { createProjectControlOperation, patchProjectControlOperation, projectControlOperationExecutionMode, projectControlOperationView, projectControlOperationsRoot, readProjectControlOperationById, startProjectControlOperationRunner, } from "./project-control-operation-lifecycle.js";
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
@@ -1181,9 +1182,20 @@ export function createCodexGoalMcpServer(options = {}) {
             startWorker: z.boolean().optional(),
             dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
             confirmDependencyBootstrap: z.boolean().optional(),
+            executionMode: z.enum(["sync", "bounded", "async"]).optional(),
             confirmRefill: z.boolean().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControlRefillWorker(args)));
+    server.registerTool("codex_goal_project_operation_status", {
+        title: "Project Control Operation Status",
+        description: "Read a durable async ProjectScopedControl operation status handle created by bounded project-control tools.",
+        inputSchema: {
+            ...jobRegistryInputSchema(),
+            controllerJobId: z.string().optional(),
+            operationId: z.string(),
+            includeResult: z.boolean().optional(),
+        },
+    }, async (args) => withMcpErrors(async () => projectControlOperationStatus(args)));
     server.registerTool("codex_goal_project_admission_snapshot", {
         title: "Project Admission Snapshot",
         description: "Read project output debt used by the ProjectScopedControl admission gate. This is read-only.",
@@ -3500,6 +3512,9 @@ async function projectControlCreateCodexGoalJob(args) {
     });
 }
 async function projectControlRefillWorker(args) {
+    if (projectControlOperationExecutionMode(args.executionMode) === "bounded") {
+        return projectControlRefillWorkerBounded(args);
+    }
     const controller = await loadProjectControlController(args);
     if (args.projectAccessScope !== undefined) {
         throw new Error("project_control_child_scope_is_controller_owned");
@@ -3698,6 +3713,109 @@ async function projectControlRefillWorker(args) {
         ...(start ? { start: start } : { startSkipped: true }),
         manifest,
         summary: summarizeCodexGoalJob(manifest, controller.registryRootDir),
+    });
+}
+async function projectControlRefillWorkerBounded(args) {
+    const controller = await loadProjectControlController(args);
+    if (args.projectAccessScope !== undefined) {
+        throw new Error("project_control_child_scope_is_controller_owned");
+    }
+    if (args.allowDangerFullAccess === true) {
+        throw new Error("project_control_child_danger_full_access_denied");
+    }
+    if (!args.confirmRefill) {
+        return mcpJson({
+            ok: false,
+            reason: "confirm_refill_required",
+            mode: "project_control_refill_worker_operation_preview",
+            executionMode: "bounded",
+            controllerJobId: controller.controller.jobId,
+            auditPath: projectControlAuditPath(controller.controller),
+            requiredConfirmation: "confirmRefill",
+        });
+    }
+    requiredRawString(args.promptBody, "promptBody");
+    projectControlPathArg(args, args.sourceWorkspacePath, "sourceWorkspacePath");
+    const requested = jobManifestInputFromArgs(args);
+    if (requested.accessBoundary === AccessBoundary.ProjectScopedControl ||
+        requested.accessBoundary === AccessBoundary.DangerFullAccess) {
+        throw new Error("project_control_child_boundary_denied");
+    }
+    const createManifest = {
+        ...requested,
+        accessBoundary: requested.accessBoundary ?? AccessBoundary.IsolatedWorkspaceWrite,
+        projectAccessScope: projectControlChildScope(controller.scope, requested.workspacePath),
+        allowDangerFullAccess: false,
+        networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
+    };
+    assertProjectControlCreateManifestPaths({
+        scope: controller.scope,
+        registryRootDir: controller.registryRootDir,
+        manifest: createManifest,
+    });
+    const operationArgs = {
+        ...jsonRecordFromProjectControlArgs(args),
+        executionMode: "sync",
+        confirmRefill: true,
+    };
+    const operationsRootDir = projectControlOperationsRoot(controller.controller.jobRootDir);
+    const operation = await createProjectControlOperation({
+        operationsRootDir,
+        controllerJobId: controller.controller.jobId,
+        toolName: "codex_goal_project_refill_worker",
+        args: operationArgs,
+        targetJobId: createManifest.jobId,
+    });
+    const runner = await startProjectControlOperationRunner({
+        operationFilePath: operation.operationFilePath,
+        cwd: controller.controller.workspacePath,
+    });
+    const updated = await patchProjectControlOperation({
+        operationFilePath: operation.operationFilePath,
+        patch: {
+            runner: {
+                hostname: hostname(),
+                pid: runner.pid,
+                command: runner.command,
+                startedAt: new Date().toISOString(),
+            },
+        },
+    });
+    return mcpJson({
+        ok: true,
+        mode: "project_control_refill_worker_operation_started",
+        executionMode: "bounded",
+        controllerJobId: controller.controller.jobId,
+        registryRootDir: controller.registryRootDir,
+        auditPath: projectControlAuditPath(controller.controller),
+        operationId: updated.operationId,
+        operationStatusTool: "codex_goal_project_operation_status",
+        operationStatusArgs: {
+            registryRootDir: controller.registryRootDir,
+            controllerJobId: controller.controller.jobId,
+            operationId: updated.operationId,
+        },
+        targetJobId: createManifest.jobId,
+        runnerPid: runner.pid,
+        operation: projectControlOperationView({ operation: updated }),
+    });
+}
+async function projectControlOperationStatus(args) {
+    const controller = await loadProjectControlController(args);
+    const operationId = requiredRawString(args.operationId, "operationId");
+    const operation = await readProjectControlOperationById({
+        operationsRootDir: projectControlOperationsRoot(controller.controller.jobRootDir),
+        operationId,
+    });
+    return mcpJson({
+        ok: true,
+        mode: "project_control_operation_status",
+        controllerJobId: controller.controller.jobId,
+        registryRootDir: controller.registryRootDir,
+        operation: projectControlOperationView({
+            operation,
+            includeResult: booleanValue(args.includeResult) === true,
+        }),
     });
 }
 async function projectControlStartStoredJob(args) {
@@ -7833,6 +7951,9 @@ function mcpJson(value) {
         content: [{ type: "text", text: JSON.stringify(value, null, 2) }],
         structuredContent: value,
     };
+}
+function jsonRecordFromProjectControlArgs(args) {
+    return JSON.parse(JSON.stringify(args));
 }
 function controlledAgentOwnerIsLive(owner) {
     if (owner.hostname !== undefined && owner.hostname !== hostname())
