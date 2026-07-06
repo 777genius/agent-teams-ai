@@ -81,6 +81,14 @@ describe("codex goal MCP client supervisor helpers", () => {
     )).toBe(true);
     expect(controllerSupervisorTerminalStatusCanRetry(
       ControllerSupervisorObservedStatus.Failed,
+      { ok: true, run: { safeMessage: "Codex provider output was invalid." } },
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Failed,
+      { ok: true, run: { safeMessage: "Codex runtime failed." } },
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Failed,
       { ok: true, run: { safeMessage: "Codex session is invalid." } },
     )).toBe(true);
     expect(controllerSupervisorTerminalStatusCanRetry(
