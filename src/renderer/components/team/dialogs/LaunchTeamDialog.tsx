@@ -387,6 +387,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     codexAccount.loading &&
     Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
     !codexAccount.snapshot;
+  const runtimeProviderStatusById = useMemo(
+    () =>
+      new Map(
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
+      ),
+    [effectiveCliStatus?.providers]
+  );
   const isSchedule = props.mode === 'schedule';
   const schedule = isSchedule ? (props.schedule ?? null) : null;
   const isEditing = isSchedule && !!schedule;
@@ -526,10 +535,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [worktreePathByMemberName, setWorktreePathByMemberName] = useState<Record<string, string>>(
     {}
   );
-  const effectiveMemberDrafts = useMemo(
-    () => (syncModelsWithLead ? membersDrafts.map(clearMemberModelOverrides) : membersDrafts),
-    [membersDrafts, syncModelsWithLead]
-  );
+  const effectiveMemberDrafts = useMemo(() => {
+    const scopedMembers = syncModelsWithLead
+      ? membersDrafts.map(clearMemberModelOverrides)
+      : membersDrafts;
+    return clearInheritedMemberModelsUnavailableForProvider({
+      members: scopedMembers,
+      selectedProviderId,
+      runtimeProviderStatusById,
+    }).members;
+  }, [membersDrafts, runtimeProviderStatusById, selectedProviderId, syncModelsWithLead]);
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
@@ -605,15 +620,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareWarningsByProviderIdRef.current.clear();
     }
   }, [open]);
-  const runtimeProviderStatusById = useMemo(
-    () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map(
-          (provider) => [provider.providerId, provider] as const
-        )
-      ),
-    [effectiveCliStatus?.providers]
-  );
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
@@ -2136,12 +2142,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     cronExpression,
   ]);
   const modelValidationError = useMemo(() => {
-    if (isLaunchMode && selectedProviderId === 'opencode') {
-      if (!selectedModel.trim()) {
-        return t('launch.validation.openCodeLeadModelRequired');
-      }
-    }
-
     if (!runtimeProviderLoadingById.get(selectedProviderId)) {
       const leadError = getTeamModelSelectionError(
         selectedProviderId,
@@ -2187,7 +2187,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     runtimeProviderStatusById,
     selectedModel,
     selectedProviderId,
-    t,
   ]);
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(
