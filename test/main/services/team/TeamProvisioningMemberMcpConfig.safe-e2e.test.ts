@@ -13,7 +13,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { stubMemberLifecycleHostOptionalSeam } from './provisioningHarness/servicePrivateHarness';
+import {
+  markTeamRunAlive,
+  stubMemberLifecycleHostOptionalSeam,
+} from './provisioningHarness';
 
 const hoisted = vi.hoisted(() => ({
   paths: {
@@ -675,10 +678,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         () => {}
       );
       runId = created.runId;
-      (svc as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
-        teamName,
-        runId
-      );
+      markTeamRunAlive(svc, teamName, runId);
 
       const liveMcpConfig = await svc.prepareLiveMemberMcpLaunchConfig({
         teamName,
@@ -746,10 +746,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         () => {}
       );
       runId = created.runId;
-      (svc as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
-        teamName,
-        runId
-      );
+      markTeamRunAlive(svc, teamName, runId);
 
       (svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }).readConfigForStrictDecision =
         vi.fn(async () => ({
@@ -853,10 +850,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         () => {}
       );
       runId = created.runId;
-      (svc as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
-        teamName,
-        runId
-      );
+      markTeamRunAlive(svc, teamName, runId);
 
       (svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }).readConfigForStrictDecision =
         vi.fn(async () => ({

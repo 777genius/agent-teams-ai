@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   getRegisteredProvisioningRunId,
+  markTeamRunAlive,
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
   outputRecoveryFacadeHarness,
@@ -75,6 +76,7 @@ describe('team provisioning private harness seams', () => {
     };
 
     registerAliveRun(service, aliveRun);
+    markTeamRunAlive(service, 'team-c', 'alive-run-id-only');
     registerActiveProvisioningRun(service, activeProvisioningRun);
     registerProvisioningRun(service, 'team-a', 'runtime-adapter-run-1', {
       runtimeAdapterProgressState: 'spawning',
@@ -83,6 +85,8 @@ describe('team provisioning private harness seams', () => {
     expect(serviceSeams.runs.get(aliveRun.runId)).toBe(aliveRun);
     expect(serviceSeams.runs.get(activeProvisioningRun.runId)).toBe(activeProvisioningRun);
     expect(serviceSeams.aliveRunByTeam.get('team-a')).toBe(aliveRun.runId);
+    expect(serviceSeams.aliveRunByTeam.get('team-c')).toBe('alive-run-id-only');
+    expect(serviceSeams.runs.has('alive-run-id-only')).toBe(false);
     expect(getRegisteredProvisioningRunId(service, 'team-b')).toBe(
       activeProvisioningRun.runId
     );

@@ -16,6 +16,7 @@ export {
   toMetaMembers,
 } from './fixtures';
 export {
+  markTeamRunAlive,
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
   outputRecoveryFacadeHarness,
