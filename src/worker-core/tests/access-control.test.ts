@@ -414,7 +414,7 @@ describe("project access control", () => {
 function scope(): ProjectAccessScope {
   return {
     projectId: "infinity-context",
-    projectSlug: "777genius/infinity-context",
+    projectSlug: "example/infinity-context",
     readRoots: ["/work/infinity-context"],
     isolatedWorkspaceRoot: "/work/infinity-context",
     workspaceRoots: ["/work/infinity-context"],

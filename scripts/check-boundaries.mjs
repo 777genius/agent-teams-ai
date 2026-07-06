@@ -17,7 +17,9 @@ if (typeof packageJson.name !== "string" || packageJson.name.length === 0) {
 }
 
 const currentPackageName = packageJson.name;
-const legacyPackageNames = ["@777genius/subscription-runtime"];
+const legacyPackageNames = parseLegacyPackageNames(
+  process.env.SUBSCRIPTION_RUNTIME_LEGACY_PACKAGE_NAMES,
+);
 const runtimePackageNames = [currentPackageName, ...legacyPackageNames];
 const runtimePackagePattern = runtimePackageNames.map(escapeRegExp).join("|");
 
@@ -278,4 +280,12 @@ async function listFiles(dir) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseLegacyPackageNames(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

@@ -156,10 +156,14 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "claude-runtime": "0.0.0"
+    "claude-runtime": "0.0.0",
+    "vitest": "^4.1.5"
   },
   "peerDependenciesMeta": {
     "claude-runtime": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },

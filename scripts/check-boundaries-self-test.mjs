@@ -27,8 +27,12 @@ const cases = [
   },
   {
     name: "legacy package scope violation",
+    env: {
+      SUBSCRIPTION_RUNTIME_LEGACY_PACKAGE_NAMES:
+        "@legacy/subscription-runtime",
+    },
     files: {
-      "src/provider-claude/bad.ts": "import '@777genius/subscription-runtime/core';\n",
+      "src/provider-claude/bad.ts": "import '@legacy/subscription-runtime/core';\n",
     },
     expectPass: false,
     expectText: "legacy package scope",
@@ -157,6 +161,7 @@ for (const testCase of cases) {
       cwd: fixtureDir,
       env: {
         ...process.env,
+        ...(testCase.env ?? {}),
         SUBSCRIPTION_RUNTIME_BOUNDARY_ROOT_DIR: fixtureDir,
       },
       encoding: "utf8",
