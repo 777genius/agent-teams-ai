@@ -7,6 +7,7 @@ import {
   ProjectAdmissionWorkerRole,
   ProjectDebtReason,
   evaluateProjectAdmission,
+  summarizeProjectAdmissionDebt,
   type ProjectAdmissionSnapshot,
 } from "../index";
 
@@ -170,6 +171,46 @@ describe("evaluateProjectAdmission", () => {
     expect(reviewer).toMatchObject({
       allowed: true,
       status: ProjectAdmissionDecisionStatus.AllowedForDrainOnly,
+    });
+  });
+
+  it("summarizes debt for admission decisions without letting consumed output block producers", () => {
+    const consumedDebtItem = {
+      reason: ProjectDebtReason.ConsumedDirtyWorkspace,
+      subject: "/var/data/workspaces/infinity-context-consumed",
+      severity: "info" as const,
+      evidence: ["dirty output consumed by terminal ledger status: duplicate"],
+    };
+    const debt: ProjectAdmissionSnapshot["debt"] = [
+      consumedDebtItem,
+      {
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: "infinity-context-memory-v1",
+        severity: "blocking",
+        evidence: ["terminal consumed-output record is missing backup"],
+      },
+    ];
+
+    expect(summarizeProjectAdmissionDebt(debt)).toMatchObject({
+      blockingAdmissionDebt: [
+        expect.objectContaining({
+          reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        }),
+      ],
+      counts: {
+        consumedDirtyWorkspaces: 1,
+        incompleteConsumedOutputRecords: 1,
+      },
+    });
+    expect(evaluateProjectAdmission({
+      request: {
+        operation: ProjectOperation.StartWorker,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+      },
+      snapshot: snapshot([consumedDebtItem]),
+    })).toMatchObject({
+      allowed: true,
+      reason: ProjectAdmissionDecisionReason.Allowed,
     });
   });
 });

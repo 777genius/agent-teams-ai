@@ -66,6 +66,14 @@ export type ProjectAdmissionSnapshot = {
   };
 };
 
+export type ProjectAdmissionDebtSummary = {
+  readonly unreadableProjectState: readonly ProjectDebtItem[];
+  readonly staleSnapshot: readonly ProjectDebtItem[];
+  readonly diskPressure: readonly ProjectDebtItem[];
+  readonly blockingAdmissionDebt: readonly ProjectDebtItem[];
+  readonly counts: NonNullable<ProjectAdmissionSnapshot["counts"]>;
+};
+
 export type ProjectAdmissionRequest = {
   readonly projectId?: string;
   readonly operation: ProjectOperation;
@@ -116,45 +124,34 @@ export function evaluateProjectAdmission(input: {
       debt: [],
     });
   }
-  const unreadableDebt = snapshot.debt.filter((item) =>
-    item.reason === ProjectDebtReason.UnreadableRoot
-  );
-  if (unreadableDebt.length > 0) {
+  const debtSummary = summarizeProjectAdmissionDebt(snapshot.debt);
+  if (debtSummary.unreadableProjectState.length > 0) {
     return denied({
       ...base,
       reason: ProjectAdmissionDecisionReason.UnreadableProjectState,
-      evidence: unreadableDebt.flatMap((item) => item.evidence),
-      debt: unreadableDebt,
+      evidence: debtSummary.unreadableProjectState.flatMap((item) => item.evidence),
+      debt: debtSummary.unreadableProjectState,
     });
   }
-  const staleDebt = snapshot.debt.filter((item) =>
-    item.reason === ProjectDebtReason.SnapshotStale
-  );
-  if (snapshot.stale || staleDebt.length > 0) {
+  if (snapshot.stale || debtSummary.staleSnapshot.length > 0) {
     return denied({
       ...base,
       reason: ProjectAdmissionDecisionReason.SnapshotStale,
-      evidence: staleDebt.length > 0
-        ? staleDebt.flatMap((item) => item.evidence)
+      evidence: debtSummary.staleSnapshot.length > 0
+        ? debtSummary.staleSnapshot.flatMap((item) => item.evidence)
         : ["project admission snapshot is stale"],
-      debt: staleDebt,
+      debt: debtSummary.staleSnapshot,
     });
   }
-  const diskDebt = snapshot.debt.filter((item) =>
-    item.reason === ProjectDebtReason.DiskPressure
-  );
-  if (diskDebt.length > 0) {
+  if (debtSummary.diskPressure.length > 0) {
     return denied({
       ...base,
       reason: ProjectAdmissionDecisionReason.DiskPressure,
-      evidence: diskDebt.flatMap((item) => item.evidence),
-      debt: diskDebt,
+      evidence: debtSummary.diskPressure.flatMap((item) => item.evidence),
+      debt: debtSummary.diskPressure,
     });
   }
-  const blockingDebt = snapshot.debt.filter((item) =>
-    item.severity !== "info"
-  );
-  if (blockingDebt.length === 0) {
+  if (debtSummary.blockingAdmissionDebt.length === 0) {
     return {
       ...base,
       status: ProjectAdmissionDecisionStatus.Allowed,
@@ -171,15 +168,33 @@ export function evaluateProjectAdmission(input: {
       allowed: true,
       reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
       evidence: ["project output debt exists; only drain/review roles are admitted"],
-      debt: blockingDebt,
+      debt: debtSummary.blockingAdmissionDebt,
     };
   }
   return denied({
     ...base,
     reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
     evidence: ["project output debt blocks producer work"],
-    debt: blockingDebt,
+    debt: debtSummary.blockingAdmissionDebt,
   });
+}
+
+export function summarizeProjectAdmissionDebt(
+  debt: readonly ProjectDebtItem[],
+): ProjectAdmissionDebtSummary {
+  return {
+    unreadableProjectState: debt.filter((item) =>
+      item.reason === ProjectDebtReason.UnreadableRoot
+    ),
+    staleSnapshot: debt.filter((item) =>
+      item.reason === ProjectDebtReason.SnapshotStale
+    ),
+    diskPressure: debt.filter((item) =>
+      item.reason === ProjectDebtReason.DiskPressure
+    ),
+    blockingAdmissionDebt: debt.filter((item) => item.severity !== "info"),
+    counts: projectAdmissionDebtCounts(debt),
+  };
 }
 
 export function normalizeProjectAdmissionWorkerRole(
@@ -215,5 +230,24 @@ function denied(input: Omit<ProjectAdmissionDecision, "status" | "allowed">): Pr
     ...input,
     status: ProjectAdmissionDecisionStatus.Denied,
     allowed: false,
+  };
+}
+
+function projectAdmissionDebtCounts(
+  debt: readonly ProjectDebtItem[],
+): NonNullable<ProjectAdmissionSnapshot["counts"]> {
+  const count = (reason: ProjectDebtReason) =>
+    debt.filter((item) => item.reason === reason).length;
+  return {
+    inactiveDirtyWorkspaces: count(ProjectDebtReason.InactiveDirtyWorkspace),
+    unconsumedCompletedJobs: count(ProjectDebtReason.UnconsumedCompletedJob),
+    orphanLegacyWorkspaces: count(ProjectDebtReason.OrphanLegacyWorkspace),
+    consumedDirtyWorkspaces: count(ProjectDebtReason.ConsumedDirtyWorkspace),
+    incompleteConsumedOutputRecords: count(ProjectDebtReason.IncompleteConsumedOutputRecord),
+    activeWriterConflicts: count(ProjectDebtReason.ActiveWriterConflict),
+    staleDirtyWorkers: count(ProjectDebtReason.StaleDirtyWorker),
+    unreadableRoots: count(ProjectDebtReason.UnreadableRoot),
+    unreadableWorkspaces: count(ProjectDebtReason.UnreadableWorkspace),
+    diskPressure: count(ProjectDebtReason.DiskPressure),
   };
 }

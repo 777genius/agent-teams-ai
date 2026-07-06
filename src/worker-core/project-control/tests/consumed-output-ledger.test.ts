@@ -9,6 +9,7 @@ import {
   consumedDebt,
   consumedOutputRecordFor,
   consumedOutputRecordFromJson,
+  projectAdmissionDebtCounts,
   readConsumedOutputLedgers,
 } from "../index";
 
@@ -83,6 +84,9 @@ describe("consumed output ledger", () => {
         severity: "blocking",
       }),
     ]);
+    expect(projectAdmissionDebtCounts(consumedDebt(missingCommit!))).toMatchObject({
+      incompleteConsumedOutputRecords: 1,
+    });
   });
 
   it("rejects terminal records without complete backup or with active claims", async () => {

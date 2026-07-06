@@ -5,6 +5,7 @@ import {
   ProjectDebtReason,
   type ProjectAdmissionSnapshot,
   type ProjectDebtItem,
+  summarizeProjectAdmissionDebt,
 } from "../domain/project-admission";
 
 const CONSUMED_OUTPUT_TERMINAL_STATUSES = new Set([
@@ -240,20 +241,7 @@ export function consumedDebt(record: ConsumedOutputRecord): readonly ProjectDebt
 export function projectAdmissionDebtCounts(
   debt: readonly ProjectDebtItem[],
 ): NonNullable<ProjectAdmissionSnapshot["counts"]> {
-  const count = (reason: ProjectDebtReason) =>
-    debt.filter((item) => item.reason === reason).length;
-  return {
-    inactiveDirtyWorkspaces: count(ProjectDebtReason.InactiveDirtyWorkspace),
-    unconsumedCompletedJobs: count(ProjectDebtReason.UnconsumedCompletedJob),
-    orphanLegacyWorkspaces: count(ProjectDebtReason.OrphanLegacyWorkspace),
-    consumedDirtyWorkspaces: count(ProjectDebtReason.ConsumedDirtyWorkspace),
-    incompleteConsumedOutputRecords: count(ProjectDebtReason.IncompleteConsumedOutputRecord),
-    activeWriterConflicts: count(ProjectDebtReason.ActiveWriterConflict),
-    staleDirtyWorkers: count(ProjectDebtReason.StaleDirtyWorker),
-    unreadableRoots: count(ProjectDebtReason.UnreadableRoot),
-    unreadableWorkspaces: count(ProjectDebtReason.UnreadableWorkspace),
-    diskPressure: count(ProjectDebtReason.DiskPressure),
-  };
+  return summarizeProjectAdmissionDebt(debt).counts;
 }
 
 async function consumedOutputBackupEvidence(
