@@ -1,9 +1,10 @@
 import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import type { Plugin } from 'vite'
+import { loadEnv, type Plugin } from 'vite'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -13,6 +14,22 @@ const prodDeps = Object.keys(pkg.dependencies || {})
 const terminalPlatformLocalRoot = resolveTerminalPlatformLocalRoot()
 const terminalPlatformSdkAliases = createTerminalPlatformSdkAliases()
 const rendererDependencyEsbuildTarget = 'esnext'
+const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', __dirname, '')
+const buildGitSha = resolveBuildGitSha()
+const buildId = resolveBuildId(buildGitSha)
+const releaseChannel = resolveReleaseChannel()
+const posthogKey =
+  process.env.POSTHOG_KEY ??
+  localEnv.POSTHOG_KEY ??
+  process.env.VITE_POSTHOG_KEY ??
+  localEnv.VITE_POSTHOG_KEY ??
+  ''
+const posthogHost =
+  process.env.POSTHOG_HOST ??
+  localEnv.POSTHOG_HOST ??
+  process.env.VITE_POSTHOG_HOST ??
+  localEnv.VITE_POSTHOG_HOST ??
+  'https://eu.i.posthog.com'
 
 // Fastify and its plugins rely on runtime module resolution that breaks when bundled.
 const runtimeExternalDeps = new Set([
@@ -28,6 +45,58 @@ const runtimeExternalDeps = new Set([
 // node-pty is a native addon that cannot be bundled by Rollup.
 // It must remain external and be loaded at runtime via require().
 const bundledDeps = prodDeps.filter(d => !runtimeExternalDeps.has(d))
+
+function firstNonEmptyEnv(...values: Array<string | undefined>): string {
+  return values.map(value => value?.trim() ?? '').find(Boolean) ?? ''
+}
+
+function resolveBuildGitSha(): string {
+  const fromEnv = firstNonEmptyEnv(
+    process.env.GIT_SHA,
+    localEnv.GIT_SHA,
+    process.env.GITHUB_SHA,
+    localEnv.GITHUB_SHA,
+    process.env.VERCEL_GIT_COMMIT_SHA,
+    localEnv.VERCEL_GIT_COMMIT_SHA,
+    process.env.COMMIT_SHA,
+    localEnv.COMMIT_SHA
+  )
+  if (fromEnv) return fromEnv
+
+  try {
+    return execSync('git rev-parse HEAD', {
+      cwd: __dirname,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
+}
+
+function resolveBuildId(gitSha: string): string {
+  return (
+    firstNonEmptyEnv(
+      process.env.BUILD_ID,
+      localEnv.BUILD_ID,
+      process.env.VITE_BUILD_ID,
+      localEnv.VITE_BUILD_ID
+    ) || gitSha.slice(0, 12)
+  )
+}
+
+function resolveReleaseChannel(): string {
+  return (
+    firstNonEmptyEnv(
+      process.env.RELEASE_CHANNEL,
+      localEnv.RELEASE_CHANNEL,
+      process.env.AGENT_TEAMS_RELEASE_CHANNEL,
+      localEnv.AGENT_TEAMS_RELEASE_CHANNEL,
+      process.env.VITE_RELEASE_CHANNEL,
+      localEnv.VITE_RELEASE_CHANNEL
+    ) || (process.env.NODE_ENV === 'production' ? 'production' : 'development')
+  )
+}
 
 // Rollup plugin: stub out native .node addon imports with empty modules.
 // ssh2 and cpu-features use optional native bindings that can't be bundled,
@@ -111,6 +180,9 @@ export default defineConfig({
     ],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
+      __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
+      __BUILD_ID__: JSON.stringify(buildId),
+      __RELEASE_CHANNEL__: JSON.stringify(releaseChannel),
       // Inject DSN at compile time - process.env.SENTRY_DSN is NOT available
       // at runtime in packaged Electron apps (only during CI build).
       'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
@@ -200,8 +272,14 @@ export default defineConfig({
     },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
+      __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
+      __BUILD_ID__: JSON.stringify(buildId),
+      __RELEASE_CHANNEL__: JSON.stringify(releaseChannel),
       // Pass SENTRY_DSN to renderer as VITE_SENTRY_DSN (Vite replaces at compile time)
       'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
+      // PostHog project API keys are public browser SDK keys. Prefer POSTHOG_* in CI.
+      'import.meta.env.VITE_POSTHOG_KEY': JSON.stringify(posthogKey),
+      'import.meta.env.VITE_POSTHOG_HOST': JSON.stringify(posthogHost),
     },
     resolve: {
       alias: {
