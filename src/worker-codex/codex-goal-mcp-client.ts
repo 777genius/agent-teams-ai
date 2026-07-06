@@ -10,6 +10,7 @@ type SuperviseEvent =
   | { readonly type: "start"; readonly result: unknown }
   | { readonly type: "status"; readonly result: unknown }
   | { readonly type: "reconcile"; readonly result: unknown }
+  | { readonly type: "control_decision"; readonly result: unknown }
   | { readonly type: "accounts"; readonly result: unknown }
   | { readonly type: "capacity_wait"; readonly result: unknown }
   | { readonly type: "stop"; readonly result: unknown };
@@ -118,9 +119,22 @@ export async function superviseCodexGoalProjectController(input: {
             arguments: input.args,
           }));
           input.onEvent?.({ type: "reconcile", result: reconcile });
+          const controlDecision = status === ControllerSupervisorObservedStatus.Blocked
+            ? parseMcpJsonResult(await client.callTool({
+              name: "codex_goal_control_decision",
+              arguments: controllerSupervisorJobArgs(input.args),
+            }))
+            : undefined;
+          if (controlDecision !== undefined) {
+            input.onEvent?.({ type: "control_decision", result: controlDecision });
+          }
           if (
             mcpResultOk(reconcile) &&
-            controllerSupervisorTerminalStatusCanRetry(runStatus, reconcile)
+            controllerSupervisorTerminalStatusCanRetry(
+              runStatus,
+              reconcile,
+              controlDecision,
+            )
           ) {
             const accountsStatus = parseMcpJsonResult(await client.callTool({
               name: "codex_goal_accounts_status",
@@ -201,7 +215,11 @@ export function controllerSupervisorStatusIsTerminal(
 export function controllerSupervisorTerminalStatusCanRetry(
   status: ControllerSupervisorObservedStatus,
   reconcile: unknown,
+  controlDecision?: unknown,
 ): boolean {
+  if (status === ControllerSupervisorObservedStatus.Blocked) {
+    return controllerSupervisorHasDeliverableGuidance(controlDecision);
+  }
   return status === ControllerSupervisorObservedStatus.Failed &&
     (
       controllerSupervisorQuotaFailure(reconcile) ||
@@ -215,6 +233,28 @@ export function controllerSupervisorHasAvailableAccounts(result: unknown): boole
   const available = summary?.availableDeduped ??
     (isRecord(result) ? result.available : undefined);
   return typeof available === "number" && available > 0;
+}
+
+export function controllerSupervisorHasDeliverableGuidance(result: unknown): boolean {
+  if (isRecord(result) && result.ok === false) return false;
+  const decision = nestedRecord(result, "decision");
+  const candidates = [
+    decision?.deliverableCount,
+    decision?.deliverableGuidanceCount,
+    decision?.pendingDeliverableCount,
+    decision?.pendingCount,
+    isRecord(result) ? result.deliverableCount : undefined,
+    isRecord(result) ? result.deliverableGuidanceCount : undefined,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && candidate > 0) return true;
+  }
+  const signals = Array.isArray(decision?.deliverableSignals)
+    ? decision?.deliverableSignals
+    : Array.isArray(decision?.signals)
+    ? decision?.signals
+    : undefined;
+  return Array.isArray(signals) && signals.length > 0;
 }
 
 export function controllerSupervisorNextCapacityRetryDelayMs(
