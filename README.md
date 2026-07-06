@@ -95,6 +95,24 @@ adapters, queue adapters and runner adapters. Each module carries a different
 operational responsibility instead of pushing all behavior into one large
 service class.
 
+## Orchestration Boundary
+
+This repository is the execution and safety kernel. It owns provider adapters,
+session custody, brokered project-control operations, admission gates, audit
+events and fail-closed runtime invariants.
+
+It must not become the project orchestration layer. Decisions such as which
+project tasks to run, how many producer or reviewer workers to keep alive,
+which benchmark matters next, how to prioritize a dirty-worktree drain backlog,
+or when to launch a higher-level autonomous controller belong in a host
+orchestration layer above this package. That layer should call the
+`codex_goal_project_*` broker tools and admission snapshot APIs exposed here,
+not bypass them with raw shell, tmux, git or registry writes.
+
+When a new safety invariant is project-neutral, implement it here. When a new
+policy is about one project's goals, capacity strategy or task prioritization,
+implement it above this package, for example in hosted-agent operations.
+
 ## Architecture Map
 
 | Module | Main responsibility | Reliability responsibilities | Why it exists |

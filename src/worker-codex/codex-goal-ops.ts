@@ -274,6 +274,12 @@ export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string
   const extraWritableRoots = config.projectAccessScope
     ? ""
     : process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS?.trim();
+  if (config.projectAccessScope) {
+    envAssignments.push(
+      "SUBSCRIPTION_RUNTIME_CODEX_SUPPRESS_EXTRA_WRITABLE_ROOTS=1",
+      "SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS=",
+    );
+  }
   if (extraWritableRoots) {
     envAssignments.push(
       `SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS=${shellQuote(extraWritableRoots)}`,

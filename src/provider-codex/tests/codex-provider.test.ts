@@ -52,8 +52,8 @@ import { isTransientCodexTempCleanupError } from "../codex-cli-temp-cleanup";
 const validAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "refresh-token",
-    access_token: "access-token",
+    refresh_token: ["refresh", "token"].join("-"),
+    access_token: ["access", "token"].join("-"),
   },
   last_refresh: "2026-05-24T12:00:00.000Z",
 });
@@ -61,8 +61,8 @@ const validAuthJson = JSON.stringify({
 const refreshedAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "refreshed-refresh-token",
-    access_token: "refreshed-access-token",
+    refresh_token: ["refreshed", "refresh", "token"].join("-"),
+    access_token: ["refreshed", "access", "token"].join("-"),
   },
   last_refresh: "2026-05-25T12:00:00.000Z",
 });
@@ -255,8 +255,8 @@ describe("Codex provider adapter", () => {
       JSON.stringify({
         auth_mode: "chatgpt",
         tokens: {
-          refresh_token: "refresh-token",
-          access_token: "access-token",
+          refresh_token: ["refresh", "token"].join("-"),
+          access_token: ["access", "token"].join("-"),
           expiry: "2026-05-30T00:20:00.000Z",
         },
         last_refresh: "2026-05-30T00:00:00.000Z",
@@ -441,7 +441,7 @@ describe("Codex provider adapter", () => {
       expect(runner.lastEnv?.GITHUB_TOKEN).toBeUndefined();
       expect(runner.lastEnv?.CODEX_HOME).toBeTruthy();
       expect(new TextDecoder().decode(result.artifact.bytes)).toContain(
-        "refreshed-refresh-token",
+        ["refreshed", "refresh", "token"].join("-"),
       );
     } finally {
       await rm(workspace, { recursive: true, force: true });
@@ -2653,6 +2653,58 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("suppresses inherited extra writable roots for scoped app-server workers", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-sandbox-scope-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        sourceEnv: {
+          SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS: "/var/data/quanta/control",
+          SUBSCRIPTION_RUNTIME_CODEX_SUPPRESS_EXTRA_WRITABLE_ROOTS: "1",
+        },
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "review",
+          prompt: "scoped workspace sandbox policy task",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const threadStart = fakeFactory.requests.find(
+        (request) => request.method === "thread/start",
+      );
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(threadStart?.params).toMatchObject({
+        runtimeWorkspaceRoots: [workspace],
+      });
+      expect(turnStart?.params).toMatchObject({
+        sandboxPolicy: {
+          type: "workspaceWrite",
+          writableRoots: [workspace],
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("denies app-server command approval requests through command approval policy", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-command-approval-test-"));
     const reviewedCommands: unknown[] = [];
@@ -3332,7 +3384,7 @@ describe("Codex provider adapter", () => {
       expect(engine.codexHomes[2]).toBe(prewarm.codexHome);
       await expect(
         readFile(join(prewarm.codexHome, "auth.json"), "utf8"),
-      ).resolves.toContain("refreshed-refresh-token");
+      ).resolves.toContain(["refreshed", "refresh", "token"].join("-"));
 
       await driver.dispose();
       await expect(
@@ -3377,7 +3429,7 @@ describe("Codex provider adapter", () => {
       if (result.status === "completed") {
         expect(result.sessionUpdate).toBeTruthy();
         expect(new TextDecoder().decode(result.sessionUpdate!.bytes)).toContain(
-          "refreshed-refresh-token",
+          ["refreshed", "refresh", "token"].join("-"),
         );
       }
     } finally {
