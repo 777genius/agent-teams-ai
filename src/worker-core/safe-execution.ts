@@ -14,12 +14,9 @@ import {
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import type {
-  ActiveAttemptRegistry,
   WorkerControlContinuationBatch,
-  WorkerControlContinuationSource,
   WorkerControlTarget,
 } from "./control";
-import type { WorkerPoolRunOptions } from "./types";
 import {
   SafeExecutionError,
   attemptFailureReasons,
@@ -43,6 +40,32 @@ import {
   type SafeExecutionPolicy,
   type TaskEffectMode,
 } from "./safe-execution/domain/safe-execution-policy";
+import type {
+  AttemptPatchStats,
+  AttemptPatchStatsSource,
+  AttemptRecord,
+  AttemptStatus,
+  AttemptUsage,
+  AttemptUsageSource,
+  ContinuationPacket,
+  SafeExecutionTaskRecord,
+  SafeExecutionTaskStatus,
+  TaskRunId,
+  WorkspaceDiffFileStat,
+  WorkspaceLockHandle,
+  WorkspaceLockRecord,
+  WorkspaceRunId,
+  WorkspaceSnapshot,
+} from "./safe-execution/domain/safe-execution-task";
+import type {
+  AttemptJournal,
+  ContinuationPacketBuilder,
+  SafeExecutionRunInput,
+  SafeExecutionRunnerOptions,
+  SafeExecutionRunResult,
+  WorkspaceLockStore,
+  WorkspaceSnapshotter,
+} from "./safe-execution/ports/safe-execution-ports";
 
 export {
   SafeExecutionError,
@@ -56,273 +79,38 @@ export {
   type SafeExecutionPolicy,
   type TaskEffectMode,
 } from "./safe-execution/domain/safe-execution-policy";
+export type {
+  AttemptPatchStats,
+  AttemptPatchStatsSource,
+  AttemptRecord,
+  AttemptStatus,
+  AttemptUsage,
+  AttemptUsageSource,
+  ContinuationPacket,
+  ExistingLockedWorkspaceStrategy,
+  SafeExecutionTaskRecord,
+  SafeExecutionTaskStatus,
+  TaskRunId,
+  WorkspaceDiffFileStat,
+  WorkspaceLockHandle,
+  WorkspaceLockRecord,
+  WorkspaceRunId,
+  WorkspaceSnapshot,
+  WorkspaceSnapshotMode,
+  WorkspaceStrategy,
+} from "./safe-execution/domain/safe-execution-task";
+export type {
+  AttemptJournal,
+  ContinuationPacketBuilder,
+  SafeExecutionRunInput,
+  SafeExecutionRunnerOptions,
+  SafeExecutionRunResult,
+  SafeExecutionWorkerPool,
+  WorkspaceLockStore,
+  WorkspaceSnapshotter,
+} from "./safe-execution/ports/safe-execution-ports";
 
 const execFileAsync = promisify(execFile);
-
-export type TaskRunId = string;
-export type WorkspaceRunId = string;
-
-export type ExistingLockedWorkspaceStrategy = {
-  readonly mode: "existing_locked";
-  readonly path: string;
-  readonly staleLockMs?: number;
-  readonly requireGitWorkspace?: boolean;
-};
-
-export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
-
-export type AttemptStatus = "running" | "completed" | "blocked" | "failed";
-
-export type SafeExecutionTaskStatus =
-  | "running"
-  | "completed"
-  | "waiting_capacity"
-  | "partial"
-  | "failed"
-  | "aborted";
-
-export type WorkspaceSnapshotMode = "git" | "filesystem" | "unavailable";
-
-export type WorkspaceSnapshot = {
-  readonly mode: WorkspaceSnapshotMode;
-  readonly workspacePath: string;
-  readonly capturedAt: Date;
-  readonly dirty: boolean;
-  readonly changedFiles: readonly string[];
-  readonly diffNumstat?: readonly WorkspaceDiffFileStat[];
-  readonly fingerprint: string;
-  readonly summary: string;
-  readonly diffStat?: string;
-  readonly shortDiff?: string;
-  readonly truncated?: boolean;
-  readonly warnings?: readonly string[];
-};
-
-export type WorkspaceDiffFileStat = {
-  readonly path: string;
-  readonly additions: number;
-  readonly deletions: number;
-  readonly binary?: boolean;
-};
-
-export type AttemptUsageSource =
-  | "provider_structured"
-  | "legacy_text_reported"
-  | "unavailable";
-
-export type AttemptUsage = {
-  readonly inputTokens?: number;
-  readonly outputTokens?: number;
-  readonly totalTokens?: number;
-};
-
-export type AttemptPatchStatsSource =
-  | "git_numstat_delta"
-  | "git_numstat_delta_dirty_baseline"
-  | "unavailable";
-
-export type AttemptPatchStats = {
-  readonly additions: number;
-  readonly deletions: number;
-  readonly source: AttemptPatchStatsSource;
-};
-
-export type AttemptRecord = {
-  readonly taskId: TaskRunId;
-  readonly attemptNumber: number;
-  readonly workerId?: string;
-  readonly accountId?: string;
-  readonly provider: string;
-  readonly startedAt: Date;
-  readonly finishedAt?: Date;
-  readonly status: AttemptStatus;
-  readonly failureReason?: AttemptFailureReason;
-  readonly failureMessage?: string;
-  readonly failureDetails?: Readonly<Record<string, string>>;
-  readonly workspaceDirtyBefore: boolean;
-  readonly workspaceDirtyAfter?: boolean;
-  readonly changedFiles: readonly string[];
-  readonly usage?: AttemptUsage;
-  readonly usageSource?: AttemptUsageSource;
-  readonly patch?: AttemptPatchStats;
-  readonly lastOutputSummary?: string;
-};
-
-export type ContinuationPacket = {
-  readonly taskId: TaskRunId;
-  readonly attemptNumber: number;
-  readonly provider: string;
-  readonly workspacePath: string;
-  readonly originalPrompt: string;
-  readonly previousFailureReason: AttemptFailureReason;
-  readonly changedFiles: readonly string[];
-  readonly workspaceSummary: string;
-  readonly previousOutputSummary?: string;
-  readonly workerControlSignalIds?: readonly string[];
-  readonly message: string;
-};
-
-export type SafeExecutionTaskRecord = {
-  readonly taskId: TaskRunId;
-  readonly workspaceRunId: WorkspaceRunId;
-  readonly workspacePath: string;
-  readonly effectMode: TaskEffectMode;
-  readonly provider: string;
-  readonly status: SafeExecutionTaskStatus;
-  readonly startedAt: Date;
-  readonly updatedAt: Date;
-  readonly attempts: readonly AttemptRecord[];
-  readonly completedAt?: Date;
-  readonly result?: unknown;
-  readonly outputSummary?: string;
-  readonly lastFailureReason?: AttemptFailureReason;
-  readonly lastFailureMessage?: string;
-  readonly lastFailureDetails?: Readonly<Record<string, string>>;
-};
-
-export type WorkspaceLockRecord = {
-  readonly taskId: TaskRunId;
-  readonly workspacePath: string;
-  readonly ownerId: string;
-  readonly ownerPid?: number;
-  readonly acquiredAt: Date;
-  readonly staleLockMs?: number;
-};
-
-export type WorkspaceLockHandle = WorkspaceLockRecord & {
-  release(): Promise<void>;
-};
-
-export interface WorkspaceLockStore {
-  acquire(input: {
-    readonly taskId: TaskRunId;
-    readonly workspacePath: string;
-    readonly ownerId: string;
-    readonly ownerPid?: number;
-    readonly staleLockMs?: number;
-    readonly now?: Date;
-  }): Promise<WorkspaceLockHandle>;
-}
-
-export interface AttemptJournal {
-  readTask(input: { readonly taskId: TaskRunId }): Promise<SafeExecutionTaskRecord | null>;
-  startTask(input: {
-    readonly taskId: TaskRunId;
-    readonly workspaceRunId: WorkspaceRunId;
-    readonly workspacePath: string;
-    readonly effectMode: TaskEffectMode;
-    readonly provider: string;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  appendAttempt(input: {
-    readonly taskId: TaskRunId;
-    readonly attempt: AttemptRecord;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  completeTask(input: {
-    readonly taskId: TaskRunId;
-    readonly result: unknown;
-    readonly outputSummary?: string;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  markPartial(input: {
-    readonly taskId: TaskRunId;
-    readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
-    readonly reason: AttemptFailureReason;
-    readonly message?: string;
-    readonly details?: Readonly<Record<string, string>>;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-}
-
-export interface WorkspaceSnapshotter {
-  capture(input: {
-    readonly workspacePath: string;
-    readonly includeDiff?: boolean;
-    readonly abortSignal?: AbortSignal;
-  }): Promise<WorkspaceSnapshot>;
-}
-
-export interface ContinuationPacketBuilder {
-  build(input: {
-    readonly taskId: TaskRunId;
-    readonly attemptNumber: number;
-    readonly provider: string;
-    readonly workspacePath: string;
-    readonly originalPrompt: string;
-    readonly previousFailureReason: AttemptFailureReason;
-    readonly snapshot: WorkspaceSnapshot;
-    readonly previousOutputSummary?: string;
-    readonly controlBatch?: WorkerControlContinuationBatch;
-  }): ContinuationPacket;
-}
-
-export type SafeExecutionWorkerPool<Job, Result> = {
-  run(job: Job, options?: WorkerPoolRunOptions): Promise<Result>;
-};
-
-export type SafeExecutionRunInput<Job, Result> = {
-  readonly taskId: TaskRunId;
-  readonly workspace: WorkspaceStrategy;
-  readonly effectMode: TaskEffectMode;
-  readonly provider: string;
-  readonly pool: SafeExecutionWorkerPool<Job, Result>;
-  readonly job: Job;
-  readonly originalPrompt: string;
-  readonly continuationMode?: ContinuationMode;
-  readonly policy?: SafeExecutionPolicy;
-  readonly continuationJobFactory?: (input: {
-    readonly job: Job;
-    readonly continuationPacket: ContinuationPacket;
-    readonly attemptNumber: number;
-  }) => Job;
-  readonly attemptMetadata?: (input: {
-    readonly result?: Result;
-    readonly error?: unknown;
-  }) => {
-    readonly workerId?: string;
-    readonly accountId?: string;
-  };
-  readonly classifyError?: (
-    error: unknown,
-  ) => SafeExecutionFailureClassification;
-  readonly summarizeResult?: (result: Result) => string | undefined;
-  readonly attemptUsage?: (result: Result) => AttemptUsage | undefined;
-  readonly summarizeError?: (error: unknown) => string | undefined;
-  readonly summarizeErrorOutput?: (error: unknown) => string | undefined;
-  readonly controlTarget?: WorkerControlTarget;
-  readonly abortSignal?: AbortSignal;
-};
-
-export type SafeExecutionRunResult<Result> =
-  | {
-      readonly status: "completed";
-      readonly task: SafeExecutionTaskRecord;
-      readonly result: Result;
-      readonly attempts: readonly AttemptRecord[];
-      readonly replayed: boolean;
-    }
-  | {
-      readonly status: "waiting_capacity" | "partial" | "failed" | "aborted";
-      readonly task: SafeExecutionTaskRecord;
-      readonly attempts: readonly AttemptRecord[];
-      readonly reason: AttemptFailureReason;
-      readonly safeMessage: string;
-      readonly failureDetails?: Readonly<Record<string, string>>;
-      readonly error?: unknown;
-    };
-
-export type SafeExecutionRunnerOptions = {
-  readonly lockStore: WorkspaceLockStore;
-  readonly journal: AttemptJournal;
-  readonly snapshotter?: WorkspaceSnapshotter;
-  readonly continuationPacketBuilder?: ContinuationPacketBuilder;
-  readonly controlInbox?: WorkerControlContinuationSource;
-  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
-  readonly ownerId?: string;
-  readonly ownerPid?: number;
-  readonly clock?: { now(): Date };
-};
 
 export class InMemoryWorkspaceLockStore implements WorkspaceLockStore {
   private readonly locks = new Map<string, WorkspaceLockRecord>();
