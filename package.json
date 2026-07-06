@@ -152,6 +152,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/node": "^22.20.0",
     "libsodium-wrappers": "^0.8.4",
     "zod": "^4.4.3"
   },
@@ -168,7 +169,6 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^22.19.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   }

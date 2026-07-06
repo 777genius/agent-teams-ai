@@ -47,6 +47,15 @@ function rewriteFile(filePath) {
     (_match, prefix, specifier, suffix) =>
       `${prefix}${rewriteSpecifier(filePath, specifier)}${suffix}`,
   );
+  if (filePath.endsWith(".d.ts")) {
+    after = after.replace(/^#!.*\n/, "");
+  }
+  if (
+    filePath.endsWith(".d.ts") &&
+    !after.startsWith('/// <reference types="node" />')
+  ) {
+    after = `/// <reference types="node" />\n${after}`;
+  }
 
   if (after !== before) {
     writeFileSync(filePath, after);
