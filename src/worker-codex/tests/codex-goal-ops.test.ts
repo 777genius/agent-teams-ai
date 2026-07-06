@@ -940,6 +940,18 @@ describe("codex goal ops", () => {
     });
   });
 
+  it("does not summarize defunct process rows as live worker progress", () => {
+    expect(summarizeCodexGoalProcessTree(100, [
+      {
+        pid: 100,
+        ppid: 1,
+        stat: "Z",
+        cpu: 52.1,
+        command: "[ps] <defunct>",
+      },
+    ])).toEqual({});
+  });
+
   it("treats fresh running progress as observable liveness without tmux", () => {
     expect(resolveCodexGoalWorkerLiveness({
       status: {

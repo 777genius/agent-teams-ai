@@ -157,6 +157,7 @@ export class CodexGoalRuntimeResultReconciler
 export type CodexGoalProcessSnapshotRow = {
   readonly pid: number;
   readonly ppid: number;
+  readonly stat?: string;
   readonly cpu: number;
   readonly command: string;
 };
@@ -1317,7 +1318,7 @@ async function inspectProcessSnapshot(
   try {
     const { stdout } = await execFileAsync("ps", [
       "-axo",
-      "pid=,ppid=,%cpu=,command=",
+      "pid=,ppid=,stat=,%cpu=,command=",
     ], { timeout: 1_000 });
     const summary = summarizeCodexGoalProcessTree(
       pid,
@@ -1342,15 +1343,26 @@ async function inspectProcessSnapshot(
       "-p",
       String(pid),
       "-o",
+      "stat=",
+      "-o",
       "%cpu=",
       "-o",
       "command=",
     ], { timeout: 1_000 });
     const line = stdout.trim();
     if (!line) return {};
-    const match = line.match(/^(\S+)\s+([\s\S]*)$/);
-    const cpu = match ? Number(match[1]) : Number.NaN;
-    const command = match?.[2]?.trim();
+    const match = line.match(/^(\S+)\s+(\S+)\s+([\s\S]*)$/);
+    const statText = match?.[1] ?? "";
+    if (processStatIsZombie(statText)) {
+      const command = match?.[3]?.trim();
+      return {
+        alive: false,
+        cpuActive: false,
+        ...(command ? { command: redactStatusText(command) } : {}),
+      };
+    }
+    const cpu = match ? Number(match[2]) : Number.NaN;
+    const command = match?.[3]?.trim();
     return {
       alive: true,
       ...(Number.isFinite(cpu) ? { cpuActive: cpu > 0.1 } : {}),
@@ -1366,13 +1378,13 @@ export function summarizeCodexGoalProcessTree(
   rows: readonly CodexGoalProcessSnapshotRow[],
 ): CodexGoalProcessSnapshot {
   const rowsByParent = new Map<number, CodexGoalProcessSnapshotRow[]>();
-  for (const row of rows) {
+  for (const row of rows.filter((item) => !processSnapshotRowIsZombie(item))) {
     const group = rowsByParent.get(row.ppid) ?? [];
     group.push(row);
     rowsByParent.set(row.ppid, group);
   }
   const treeRows: CodexGoalProcessSnapshotRow[] = [];
-  const queue = rows.filter((row) => row.pid === rootPid);
+  const queue = rows.filter((row) => row.pid === rootPid && !processSnapshotRowIsZombie(row));
   const seen = new Set<number>();
   while (queue.length > 0) {
     const row = queue.shift();
@@ -1397,12 +1409,13 @@ function parseProcessSnapshotRows(
 ): readonly CodexGoalProcessSnapshotRow[] {
   return stdout
     .split(/\r?\n/)
-    .map((line) => {
-      const match = line.match(/^\s*(\d+)\s+(\d+)\s+([0-9.]+)\s*([\s\S]*)$/);
+    .map((line): CodexGoalProcessSnapshotRow | null => {
+      const match = line.match(/^\s*(\d+)\s+(\d+)\s+(\S+)\s+([0-9.]+)\s*([\s\S]*)$/);
       if (!match) return null;
       const pid = Number(match[1]);
       const ppid = Number(match[2]);
-      const cpu = Number(match[3]);
+      const statText = match[3] ?? "";
+      const cpu = Number(match[4]);
       if (
         !Number.isInteger(pid) ||
         !Number.isInteger(ppid) ||
@@ -1413,11 +1426,22 @@ function parseProcessSnapshotRows(
       return {
         pid,
         ppid,
+        stat: statText,
         cpu,
-        command: match[4]?.trim() ?? "",
+        command: match[5]?.trim() ?? "",
       };
     })
     .filter((row): row is CodexGoalProcessSnapshotRow => row !== null);
+}
+
+function processSnapshotRowIsZombie(
+  row: CodexGoalProcessSnapshotRow,
+): boolean {
+  return processStatIsZombie(row.stat) || /\b<defunct>\b/i.test(row.command);
+}
+
+function processStatIsZombie(statText: string | undefined): boolean {
+  return /\bZ/.test(statText ?? "");
 }
 
 function bestProcessCommandRow(
