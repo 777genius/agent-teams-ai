@@ -219,6 +219,75 @@ describe('TeamProvisioning API binders', () => {
     expect(source.compatibilityCalls).toBe(2);
   });
 
+  it('keeps runtime and member lifecycle APIs as separate control surfaces', () => {
+    const ack: OpenCodeRuntimeControlAck = {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'team-bound',
+      runId: 'run-bound',
+      state: 'recorded',
+      diagnostics: [],
+      observedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const runtimeSource: TeamRuntimeApi = {
+      getRuntimeState: () =>
+        Promise.resolve({
+          teamName: 'team-bound',
+          isAlive: true,
+          runId: 'run-bound',
+          progress: null,
+        }),
+      stopTeam: () => Promise.resolve(),
+      isTeamAlive: () => true,
+      getAliveTeams: () => ['team-bound'],
+      getCurrentRunId: () => 'run-bound',
+      recordOpenCodeRuntimeBootstrapCheckin: () => Promise.resolve(ack),
+      deliverOpenCodeRuntimeMessage: () => Promise.resolve({ ...ack, state: 'delivered' }),
+      recordOpenCodeRuntimeTaskEvent: () => Promise.resolve(ack),
+      recordOpenCodeRuntimeHeartbeat: () => Promise.resolve(ack),
+    };
+    const lifecycleSource: TeamMemberLifecycleApi = {
+      getMemberSpawnStatuses: () => Promise.resolve({ statuses: {}, runId: 'run-bound' }),
+      attachLiveRosterMember: () => Promise.resolve(),
+      detachLiveRosterMember: () => Promise.resolve(),
+      restartMember: () => Promise.resolve(),
+      retryFailedOpenCodeSecondaryLanes: () =>
+        Promise.resolve({
+          attempted: [],
+          confirmed: [],
+          pending: [],
+          failed: [],
+          skipped: [],
+        }),
+      skipMemberForLaunch: () => Promise.resolve(),
+    };
+
+    const runtimeApi = bindTeamRuntimeApi(runtimeSource);
+    const lifecycleApi = bindTeamMemberLifecycleApi(lifecycleSource);
+
+    expect(Object.keys(runtimeApi).sort()).toEqual([
+      'deliverOpenCodeRuntimeMessage',
+      'getAliveTeams',
+      'getCurrentRunId',
+      'getRuntimeState',
+      'isTeamAlive',
+      'recordOpenCodeRuntimeBootstrapCheckin',
+      'recordOpenCodeRuntimeHeartbeat',
+      'recordOpenCodeRuntimeTaskEvent',
+      'stopTeam',
+    ]);
+    expect(Object.keys(lifecycleApi).sort()).toEqual([
+      'attachLiveRosterMember',
+      'detachLiveRosterMember',
+      'getMemberSpawnStatuses',
+      'restartMember',
+      'retryFailedOpenCodeSecondaryLanes',
+      'skipMemberForLaunch',
+    ]);
+    const runtimeKeys = new Set(Object.keys(runtimeApi));
+    expect(Object.keys(lifecycleApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
+  });
+
   it('binds member lifecycle and diagnostics methods to the source object', async () => {
     interface MemberLifecycleSource extends TeamMemberLifecycleApi {
       readonly runId: string;

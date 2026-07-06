@@ -296,6 +296,57 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
     ).toEqual([]);
   });
 
+  it('routes OpenCode runtime operations through their dedicated port group', async () => {
+    const service = createService();
+    const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);
+    const openCodeEvents: string[] = [];
+    const adapter = { providerId: 'opencode' };
+    portGroups.openCodeRuntime = {
+      getOpenCodeRuntimeAdapter() {
+        openCodeEvents.push('opencode:adapter');
+        return adapter;
+      },
+      async resolveOpenCodeMemberWorkspacesForRuntime(input) {
+        openCodeEvents.push(`opencode:workspaces:${input.teamName}:${input.members.length}`);
+        return input.members;
+      },
+      async runOpenCodeTeamRuntimeAdapterLaunch(input) {
+        openCodeEvents.push(`opencode:launch:${input.request.teamName}:${input.members.length}`);
+        return { ok: true };
+      },
+    };
+    const host = createTeamProvisioningMemberLifecycleHostFromPortGroups(portGroups);
+    const run = { id: 'run-opencode', cwd: '/project' } as unknown as HostRun;
+    const member = { name: 'OpenCode Worker' } as HostMember;
+
+    expect(host.getOpenCodeRuntimeAdapter()).toBe(adapter);
+    await host.resolveOpenCodeMemberWorkspacesForRuntime({
+      teamName: 'team-opencode',
+      baseCwd: '/project',
+      leadProviderId: 'codex',
+      members: [member],
+    });
+    await host.runOpenCodeTeamRuntimeAdapterLaunch({
+      request: {
+        teamName: 'team-opencode',
+        cwd: '/project',
+        providerId: 'codex',
+        members: [member],
+      },
+      members: [member],
+      prompt: 'prompt',
+      onProgress: () => undefined,
+    });
+    await host.sendMessageToRun(run, 'still-runtime-launch');
+
+    expect(openCodeEvents).toEqual([
+      'opencode:adapter',
+      'opencode:workspaces:team-opencode:1',
+      'opencode:launch:team-opencode:1',
+    ]);
+    expect(service.events).toEqual(['service:send:run-opencode:still-runtime-launch']);
+  });
+
   it('forwards callbacks through the service receivers with run and lane casts intact', async () => {
     const service = createService();
     const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);
