@@ -347,6 +347,132 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
     expect(service.events).toEqual(['service:send:run-opencode:still-runtime-launch']);
   });
 
+  it('routes lifecycle use-case seams through their dedicated port group', async () => {
+    const service = createService();
+    const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);
+    const useCaseEvents: string[] = [];
+    portGroups.useCases = {
+      marker: 'use-case',
+      persistOpenCodeMemberRestartSystemMessage(this: { marker: string }, input) {
+        useCaseEvents.push(`${this.marker}:persist-opencode:${input.member.name}`);
+      },
+      async launchDirectProcessMemberRestart(this: { marker: string }, input) {
+        useCaseEvents.push(`${this.marker}:launch-process:${input.run.id}`);
+      },
+      async appendDirectProcessRuntimeEvent(this: { marker: string }, input) {
+        useCaseEvents.push(`${this.marker}:runtime-event:${input.type}`);
+      },
+      async runMemberLifecycleOperation(this: { marker: string }, teamName, memberName, kind, op) {
+        useCaseEvents.push(`${this.marker}:operation:${teamName}:${memberName}:${kind}`);
+        return await op();
+      },
+      async stopPrimaryOwnedRosterRuntime(this: { marker: string }, input) {
+        useCaseEvents.push(`${this.marker}:stop-primary:${input.memberName}`);
+      },
+      async collectFailedOpenCodeSecondaryRetryCandidates(this: { marker: string }, run) {
+        useCaseEvents.push(`${this.marker}:collect:${run.id}`);
+        return [{ memberName: 'Worker', laneId: 'secondary:opencode:worker' }];
+      },
+      async readOpenCodeSecondaryRetryOutcome(this: { marker: string }, run, memberName, laneId) {
+        useCaseEvents.push(`${this.marker}:outcome:${run.id}:${memberName}:${laneId}`);
+        return { launchState: 'confirmed_alive' };
+      },
+      async notifyLeadAboutConfirmedOpenCodeRetries(this: { marker: string }, run, result) {
+        useCaseEvents.push(`${this.marker}:notify:${run.id}:${result.confirmed.join(',')}`);
+      },
+      async reattachOpenCodeOwnedMemberLaneUnlocked(
+        this: { marker: string },
+        teamName,
+        memberName
+      ) {
+        useCaseEvents.push(`${this.marker}:reattach:${teamName}:${memberName}`);
+      },
+      async detachOpenCodeOwnedMemberLaneUnlocked(this: { marker: string }, teamName, memberName) {
+        useCaseEvents.push(`${this.marker}:detach:${teamName}:${memberName}`);
+      },
+    } as typeof portGroups.useCases & { marker: string };
+    const host = createTeamProvisioningMemberLifecycleHostFromPortGroups(portGroups);
+    const run = { id: 'run-use-case', cwd: '/project' } as unknown as HostRun;
+    const member = { name: 'Worker' } as HostMember;
+    const retryResult = {
+      attempted: ['Worker'],
+      confirmed: ['Worker'],
+      pending: [],
+      failed: [],
+      skipped: [],
+    };
+
+    host.persistOpenCodeMemberRestartSystemMessage!({
+      teamName: 'team-a',
+      leadName: 'Lead',
+      leadSessionId: 'lead-session',
+      displayName: 'Team A',
+      member,
+      reason: 'manual_restart',
+    });
+    await host.launchDirectProcessMemberRestart!({
+      run,
+      teamName: 'team-a',
+      displayName: 'Team A',
+      leadName: 'Lead',
+      memberName: 'Worker',
+      config: { name: 'Team A', members: [] } as never,
+      configuredMember: member as never,
+      persistedRuntimeMembers: [],
+    });
+    await host.appendDirectProcessRuntimeEvent!({
+      type: 'process_spawned',
+      eventsPath: '/tmp/events.jsonl',
+      pid: 123,
+      teamName: 'team-a',
+      agentName: 'Worker',
+      agentId: 'worker@team-a',
+      runId: 'lead-session',
+      bootstrapRunId: 'run-use-case',
+      source: 'test',
+    });
+    await expect(
+      host.runMemberLifecycleOperation!(
+        'team-a',
+        'Worker',
+        'manual_restart',
+        async () => 'operation-result'
+      )
+    ).resolves.toBe('operation-result');
+    await host.stopPrimaryOwnedRosterRuntime!({
+      teamName: 'team-a',
+      memberName: 'Worker',
+      persistedRuntimeMembers: [],
+      liveRuntimeByMember: new Map(),
+      actionLabel: 'Stop Worker',
+    });
+    await expect(host.collectFailedOpenCodeSecondaryRetryCandidates!(run)).resolves.toEqual([
+      { memberName: 'Worker', laneId: 'secondary:opencode:worker' },
+    ]);
+    await expect(
+      host.readOpenCodeSecondaryRetryOutcome!(run, 'Worker', 'secondary:opencode:worker')
+    ).resolves.toEqual({ launchState: 'confirmed_alive' });
+    await host.notifyLeadAboutConfirmedOpenCodeRetries!(run, retryResult);
+    await host.reattachOpenCodeOwnedMemberLaneUnlocked!('team-a', 'Worker', {
+      reason: 'manual_restart',
+    });
+    await host.detachOpenCodeOwnedMemberLaneUnlocked!('team-a', 'Worker');
+
+    expect(useCaseEvents).toEqual([
+      'use-case:persist-opencode:Worker',
+      'use-case:launch-process:run-use-case',
+      'use-case:runtime-event:process_spawned',
+      'use-case:operation:team-a:Worker:manual_restart',
+      'use-case:stop-primary:Worker',
+      'use-case:collect:run-use-case',
+      'use-case:outcome:run-use-case:Worker:secondary:opencode:worker',
+      'use-case:notify:run-use-case:Worker',
+      'use-case:reattach:team-a:Worker',
+      'use-case:detach:team-a:Worker',
+    ]);
+    expect(service.events).toEqual([]);
+  });
+
   it('forwards callbacks through the service receivers with run and lane casts intact', async () => {
     const service = createService();
     const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);

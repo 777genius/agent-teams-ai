@@ -1730,6 +1730,7 @@ export class TeamProvisioningService {
           this.launchSingleMixedSecondaryLane(run, lane),
         getMixedSecondaryLaunchPhase: (run) => this.getMixedSecondaryLaunchPhase(run),
       },
+      useCases: {},
     };
   }
 
