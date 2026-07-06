@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { LocalFileRunEventStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
@@ -484,6 +485,18 @@ describe("codex goal cli", () => {
         maxGoalTurns: 120,
       },
     });
+  });
+
+  it("keeps MCP shortcut parsing out of runtime ops adapters", async () => {
+    const shortcutSource = await readFile(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "codex-goal-cli-shortcuts.ts"),
+      "utf8",
+    );
+
+    expect(shortcutSource).not.toContain("./codex-goal-ops");
+    expect(shortcutSource).not.toContain("./codex-goal-runner");
+    expect(shortcutSource).not.toContain("./codex-goal-mcp-client");
+    expect(shortcutSource).not.toContain("node:child_process");
   });
 
   it("builds shortcut commands for common agent operations", () => {
