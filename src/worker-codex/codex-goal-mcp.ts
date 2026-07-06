@@ -2956,8 +2956,6 @@ async function orphanDirtyWorkspaceDebt(input: {
     ) {
       continue;
     }
-    const status = await gitStatusShort(workspacePath);
-    if (status.ok && status.lines.length === 0) continue;
     const consumed = consumedOutputRecordFor({
       ledger: input.consumedOutput,
       jobId: entry.name,
@@ -2967,6 +2965,8 @@ async function orphanDirtyWorkspaceDebt(input: {
       debt.push(...consumedDebt(consumed));
       continue;
     }
+    const status = await gitStatusShort(workspacePath);
+    if (status.ok && status.lines.length === 0) continue;
     debt.push({
       reason: status.ok
         ? ProjectDebtReason.OrphanLegacyWorkspace
