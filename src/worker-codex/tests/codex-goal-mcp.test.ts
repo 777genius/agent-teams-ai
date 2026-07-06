@@ -1674,7 +1674,18 @@ describe("codex goal MCP server", () => {
       await mkdir(sourceWorkspacePath, { recursive: true });
       await gitInitRepository(sourceWorkspacePath);
       await writeFile(join(sourceWorkspacePath, "README.md"), "base\n");
-      await git(sourceWorkspacePath, ["add", "README.md"]);
+      await writeFile(join(sourceWorkspacePath, "package.json"), JSON.stringify({
+        packageManager: "npm@11.0.0",
+        scripts: {
+          test: "vitest run",
+          lint: "eslint .",
+        },
+      }));
+      await writeFile(join(sourceWorkspacePath, "package-lock.json"), JSON.stringify({
+        lockfileVersion: 3,
+        packages: {},
+      }));
+      await git(sourceWorkspacePath, ["add", "README.md", "package.json", "package-lock.json"]);
       await git(sourceWorkspacePath, ["commit", "-m", "test: base"]);
       await git(sourceWorkspacePath, [
         "update-ref",
@@ -1744,11 +1755,34 @@ describe("codex goal MCP server", () => {
             "worker-role-fastgate",
           ]),
         },
+        dependencyPreflight: {
+          status: "deps_missing",
+          packageManager: {
+            name: "npm",
+            source: "packageManager",
+            versionSpec: "npm@11.0.0",
+            lockfilePath: join(childWorkspace, "package-lock.json"),
+          },
+          nodeModulesPath: join(childWorkspace, "node_modules"),
+          nodeModulesExists: false,
+          diagnosticPath: join(childJobRoot, "dependency-preflight.json"),
+          installCommand: `npm ci --prefer-offline --cache ${
+            join(root, "worker-jobs", ".dependency-cache", "npm-cache")
+          }`,
+        },
       });
       await expect(readFile(join(childJobRoot, "prompt.md"), "utf8")).resolves.toBe(
         "Run a focused memory fastgate and report cleanly.\n",
       );
       await expect(access(join(childWorkspace, "README.md"))).resolves.toBeUndefined();
+      const dependencyPreflight = JSON.parse(
+        await readFile(join(childJobRoot, "dependency-preflight.json"), "utf8"),
+      ) as Record<string, unknown>;
+      expect(dependencyPreflight).toMatchObject({
+        status: "deps_missing",
+        nodeModulesPath: join(childWorkspace, "node_modules"),
+        cacheRoot: join(root, "worker-jobs", ".dependency-cache"),
+      });
       const retry = await callToolJson(client, "codex_goal_project_refill_worker", {
         registryRootDir,
         controllerJobId: "infinity-context-controller-v1",

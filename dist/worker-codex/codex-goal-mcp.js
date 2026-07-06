@@ -16,6 +16,7 @@ import { LocalGitIntegrationAdapter, LocalProjectCheckRunner, LocalWorkspaceInte
 import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, ReviewDecisionStatus, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, applyWorkerOutput, buildWorkerStatusView, commitApprovedChanges, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, isRunEventCompactionSafetyMode, isRunEventProviderKind, isRunEventType, openProjectIntegrationAttempt, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, runRequiredChecks, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, codexGoalObjectiveMaxChars, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
+import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
 import { codexGoalAccountSlots, codexGoalProgressPath, } from "./codex-goal-runner.js";
 import { assertCodexGoalProviderSandboxModeAllowed, optionalCodexGoalEditMode, optionalCodexGoalProviderSandboxMode, parseCodexGoalEditMode, } from "./codex-goal-control-modes.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, reconcileCodexGoalRuntimeResult, resolveCodexGoalWorkerLiveness, shellQuote, startCodexGoalTmux, stopCodexGoalDirectProcess, stopCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
@@ -1178,6 +1179,8 @@ export function createCodexGoalMcpServer(options = {}) {
             overwrite: z.boolean().optional(),
             skipDoctor: z.boolean().optional(),
             startWorker: z.boolean().optional(),
+            dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+            confirmDependencyBootstrap: z.boolean().optional(),
             confirmRefill: z.boolean().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControlRefillWorker(args)));
@@ -1317,6 +1320,8 @@ export function createCodexGoalMcpServer(options = {}) {
             confirmStart: z.boolean().optional(),
             forceStart: z.boolean().optional(),
             skipDoctor: z.boolean().optional(),
+            dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+            confirmDependencyBootstrap: z.boolean().optional(),
             staleAfterMs: z.number().int().positive().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControlStartStoredJob(args)));
@@ -1339,6 +1344,8 @@ export function createCodexGoalMcpServer(options = {}) {
                 ProjectAdmissionWorkerRole.Adoption,
                 ProjectAdmissionWorkerRole.ReadOnly,
             ]).optional(),
+            dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+            confirmDependencyBootstrap: z.boolean().optional(),
             confirmCreateWorktree: z.boolean().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControlCreateWorktree(args)));
@@ -3585,6 +3592,7 @@ async function projectControlRefillWorker(args) {
     let createJob;
     let manifest;
     let prompt;
+    let dependencyPreflight;
     try {
         const worktreeResult = await createOrReuseProjectWorktree({
             broker: worktreeBroker,
@@ -3625,6 +3633,13 @@ async function projectControlRefillWorker(args) {
         });
         createJob = createResult.result;
         manifest = createResult.manifest;
+        dependencyPreflight = await runDependencyBootstrap({
+            workspacePath: manifest.workspacePath,
+            jobRootDir: manifest.jobRootDir,
+            mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+            confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+        });
+        assertProjectControlDependencyBootstrapReady(dependencyPreflight);
     }
     catch (error) {
         const rolledBack = await rollbackProjectRefillPartial({
@@ -3676,6 +3691,7 @@ async function projectControlRefillWorker(args) {
         baseBranch,
         prompt,
         accountCapacityFacts,
+        dependencyPreflight: dependencyPreflight,
         jobId: manifest.jobId,
         worktree: worktree,
         createJob: createJob,
@@ -3756,6 +3772,13 @@ async function projectControlStartStoredJob(args) {
             status,
         });
     }
+    const dependencyPreflight = await runDependencyBootstrap({
+        workspacePath: loaded.manifest.workspacePath,
+        jobRootDir: loaded.manifest.jobRootDir,
+        mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+        confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+    });
+    assertProjectControlDependencyBootstrapReady(dependencyPreflight);
     const broker = codexProjectControlBroker({
         registryRootDir: controller.registryRootDir,
         controller: controller.controller,
@@ -3783,6 +3806,7 @@ async function projectControlStartStoredJob(args) {
         taskId: loaded.launch.config.taskId,
         tmuxSession: loaded.launch.tmuxSession,
         statusBefore: status,
+        dependencyPreflight: dependencyPreflight,
         result: result,
     });
 }
@@ -3836,12 +3860,19 @@ async function projectControlCreateWorktree(args) {
         createWorktreeInput,
     });
     const result = await broker.createWorktree(createWorktreeInput);
+    const dependencyPreflight = await runDependencyBootstrap({
+        workspacePath: path,
+        mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+        confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+    });
+    assertProjectControlDependencyBootstrapReady(dependencyPreflight);
     return mcpJson({
         ok: true,
         mode: "project_control_create_worktree",
         controllerJobId: controller.controller.jobId,
         registryRootDir: controller.registryRootDir,
         auditPath: projectControlAuditPath(controller.controller),
+        dependencyPreflight: dependencyPreflight,
         result: result,
     });
 }
@@ -4359,6 +4390,18 @@ function projectControlWorkerRole(value) {
         return role;
     }
     throw new Error("project_control_worker_role_invalid");
+}
+function projectControlDependencyBootstrapMode(value) {
+    const mode = stringValue(value) ?? "preflight";
+    if (mode === "off" || mode === "preflight" || mode === "install") {
+        return mode;
+    }
+    throw new Error("project_control_dependency_bootstrap_mode_invalid");
+}
+function assertProjectControlDependencyBootstrapReady(result) {
+    if (result.mode === "install" && result.status === "install_failed") {
+        throw new Error(`project_control_dependency_bootstrap_failed:${result.warnings.join(",")}`);
+    }
 }
 function assertProjectControlCreateManifestPaths(input) {
     const jobRootBase = dirname(input.scope.registryRoot ?? input.registryRootDir);

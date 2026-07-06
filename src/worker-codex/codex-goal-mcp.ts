@@ -131,6 +131,11 @@ import {
 } from "./codex-goal-jobs";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest";
 import {
+  runDependencyBootstrap,
+  type DependencyBootstrapMode,
+  type DependencyPreflightResult,
+} from "./dependency-bootstrap";
+import {
   codexGoalAccountSlots,
   codexGoalProgressPath,
   type CodexGoalRunConfig,
@@ -335,6 +340,8 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly confirmRepair?: boolean;
   readonly startWorker?: boolean;
   readonly workerRole?: string;
+  readonly dependencyBootstrap?: string;
+  readonly confirmDependencyBootstrap?: boolean;
   readonly operation?: string;
   readonly includeDetails?: boolean;
   readonly maxDebtItems?: number;
@@ -1903,6 +1910,8 @@ export function createCodexGoalMcpServer(
         overwrite: z.boolean().optional(),
         skipDoctor: z.boolean().optional(),
         startWorker: z.boolean().optional(),
+        dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+        confirmDependencyBootstrap: z.boolean().optional(),
         confirmRefill: z.boolean().optional(),
       },
     },
@@ -2122,6 +2131,8 @@ export function createCodexGoalMcpServer(
         confirmStart: z.boolean().optional(),
         forceStart: z.boolean().optional(),
         skipDoctor: z.boolean().optional(),
+        dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+        confirmDependencyBootstrap: z.boolean().optional(),
         staleAfterMs: z.number().int().positive().optional(),
       },
     },
@@ -2152,6 +2163,8 @@ export function createCodexGoalMcpServer(
           ProjectAdmissionWorkerRole.Adoption,
           ProjectAdmissionWorkerRole.ReadOnly,
         ]).optional(),
+        dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+        confirmDependencyBootstrap: z.boolean().optional(),
         confirmCreateWorktree: z.boolean().optional(),
       },
     },
@@ -4994,6 +5007,7 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
   let createJob: ProjectControlOperationResult;
   let manifest: CodexGoalJobManifest;
   let prompt: { readonly promptPath: string; readonly bytes: number };
+  let dependencyPreflight: DependencyPreflightResult | undefined;
   try {
     const worktreeResult = await createOrReuseProjectWorktree({
       broker: worktreeBroker,
@@ -5036,6 +5050,13 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     });
     createJob = createResult.result;
     manifest = createResult.manifest;
+    dependencyPreflight = await runDependencyBootstrap({
+      workspacePath: manifest.workspacePath,
+      jobRootDir: manifest.jobRootDir,
+      mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+      confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+    });
+    assertProjectControlDependencyBootstrapReady(dependencyPreflight);
   } catch (error) {
     const rolledBack = await rollbackProjectRefillPartial({
       sourceWorkspacePath,
@@ -5091,6 +5112,7 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     baseBranch,
     prompt,
     accountCapacityFacts,
+    dependencyPreflight: dependencyPreflight as unknown as JsonObject,
     jobId: manifest.jobId,
     worktree: worktree as unknown as JsonObject,
     createJob: createJob as unknown as JsonObject,
@@ -5171,6 +5193,13 @@ async function projectControlStartStoredJob(args: ProjectControlMcpArgs) {
       status,
     });
   }
+  const dependencyPreflight = await runDependencyBootstrap({
+    workspacePath: loaded.manifest.workspacePath,
+    jobRootDir: loaded.manifest.jobRootDir,
+    mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+    confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+  });
+  assertProjectControlDependencyBootstrapReady(dependencyPreflight);
 
   const broker = codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
@@ -5202,6 +5231,7 @@ async function projectControlStartStoredJob(args: ProjectControlMcpArgs) {
     taskId: loaded.launch.config.taskId,
     tmuxSession: loaded.launch.tmuxSession,
     statusBefore: status,
+    dependencyPreflight: dependencyPreflight as unknown as JsonObject,
     result: result as unknown as JsonObject,
   });
 }
@@ -5262,12 +5292,19 @@ async function projectControlCreateWorktree(args: ProjectControlMcpArgs) {
     createWorktreeInput,
   });
   const result = await broker.createWorktree(createWorktreeInput);
+  const dependencyPreflight = await runDependencyBootstrap({
+    workspacePath: path,
+    mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
+    confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
+  });
+  assertProjectControlDependencyBootstrapReady(dependencyPreflight);
   return mcpJson({
     ok: true,
     mode: "project_control_create_worktree",
     controllerJobId: controller.controller.jobId,
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
+    dependencyPreflight: dependencyPreflight as unknown as JsonObject,
     result: result as unknown as JsonObject,
   });
 }
@@ -5848,6 +5885,24 @@ function projectControlWorkerRole(value: unknown): "producer" | "fastgate" | "re
     return role;
   }
   throw new Error("project_control_worker_role_invalid");
+}
+
+function projectControlDependencyBootstrapMode(value: unknown): DependencyBootstrapMode {
+  const mode = stringValue(value) ?? "preflight";
+  if (mode === "off" || mode === "preflight" || mode === "install") {
+    return mode;
+  }
+  throw new Error("project_control_dependency_bootstrap_mode_invalid");
+}
+
+function assertProjectControlDependencyBootstrapReady(
+  result: DependencyPreflightResult,
+): void {
+  if (result.mode === "install" && result.status === "install_failed") {
+    throw new Error(
+      `project_control_dependency_bootstrap_failed:${result.warnings.join(",")}`,
+    );
+  }
 }
 
 function assertProjectControlCreateManifestPaths(input: {
