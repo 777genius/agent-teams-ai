@@ -29,11 +29,35 @@ import {
 import {
   buildCodexGoalBrief,
   createCodexGoalMcpServer,
+  projectControllerPendingGuidancePromptContext,
 } from "../codex-goal-mcp";
 
 const execFileAsync = promisify(execFile);
 
 describe("codex goal MCP server", () => {
+  it("renders bounded controller guidance context without exposing sensitive values", () => {
+    const context = projectControllerPendingGuidancePromptContext({
+      pendingCount: 7,
+      deliverableSignals: Array.from({ length: 6 }, (_, index) => ({
+        signal: {
+          createdAt: new Date(`2026-07-06T10:0${index}:00.000Z`),
+          createdBy: index === 0 ? "operator" : "orchestrator",
+          priority: index === 0 ? "high" : "normal",
+          body: index === 0
+            ? `Refill S10 workers with token ${"a".repeat(48)} and keep capacity high.`
+            : `Guidance ${index}`,
+        },
+      })),
+    });
+
+    expect(context).toContain("Pending controller guidance from durable inbox");
+    expect(context).toContain("pendingCount=7 deliverableCount=6");
+    expect(context).toContain("operator/high");
+    expect(context).toContain("[redacted]");
+    expect(context).not.toContain("a".repeat(48));
+    expect(context).toContain("1 older deliverable guidance item(s) omitted");
+  });
+
   it("treats restricted tmux probes as unavailable instead of throwing", async () => {
     const calls: string[][] = [];
     const available = await hasTmux((args) => {

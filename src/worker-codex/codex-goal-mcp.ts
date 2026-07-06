@@ -4539,7 +4539,10 @@ async function projectControllerProvider(input: {
 }> {
   if (input.profile.providerKind === RunEventProviderKind.Claude) {
     const loaded = await controlledAgentClaudeSessionArtifact(input);
-    const controllerObjective = await readFile(input.launch.config.promptPath, "utf8");
+    const controllerObjective = await projectControllerObjectiveWithPendingGuidance(
+      input.controller,
+      input.launch,
+    );
     return {
       provider: createLocalClaudeControlledAgentProvider({
         profile: input.profile,
@@ -4567,7 +4570,10 @@ async function projectControllerProvider(input: {
     controller: input.controller,
     launch: input.launch,
   });
-  const controllerObjective = await readFile(input.launch.config.promptPath, "utf8");
+  const controllerObjective = await projectControllerObjectiveWithPendingGuidance(
+    input.controller,
+    input.launch,
+  );
   return {
     provider: new CodexControlledAgentProvider({
       profile: input.profile,
@@ -4595,6 +4601,81 @@ async function projectControllerProvider(input: {
     safeMessage:
       "Codex broker-only controlled-agent provider started with native app-server environments disabled.",
   };
+}
+
+async function projectControllerObjectiveWithPendingGuidance(
+  controller: {
+    readonly controller: CodexGoalJobManifest;
+  },
+  launch: CodexGoalLaunchInput,
+): Promise<string> {
+  const baseObjective = await readFile(launch.config.promptPath, "utf8");
+  const guidanceContext = await projectControllerPendingGuidanceContext(controller, launch);
+  return guidanceContext === undefined
+    ? baseObjective
+    : `${baseObjective}\n\n${guidanceContext}`;
+}
+
+async function projectControllerPendingGuidanceContext(
+  controller: {
+    readonly controller: CodexGoalJobManifest;
+  },
+  launch: CodexGoalLaunchInput,
+): Promise<string | undefined> {
+  try {
+    const control = codexGoalWorkerControlService(launch);
+    const target = codexGoalWorkerControlTarget({
+      manifest: controller.controller,
+      launch,
+    });
+    const decision = await control.getDecision({ target });
+    return projectControllerPendingGuidancePromptContext({
+      pendingCount: decision.pendingSignals.length,
+      deliverableSignals: decision.deliverableSignals,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+export function projectControllerPendingGuidancePromptContext(input: {
+  readonly pendingCount: number;
+  readonly deliverableSignals: readonly {
+    readonly signal: {
+      readonly createdAt: Date;
+      readonly createdBy: string;
+      readonly priority: string;
+      readonly body: string;
+    };
+  }[];
+}): string | undefined {
+  const deliverable = input.deliverableSignals.slice(0, 5);
+  if (deliverable.length === 0) return undefined;
+
+  const lines = [
+    "Pending controller guidance from durable inbox:",
+    "- Treat this as read-only context for this run.",
+    "- Before applying it, call codex_goal_project_controller_consume_guidance for your controller job so the inbox records delivery.",
+    `- pendingCount=${input.pendingCount} deliverableCount=${input.deliverableSignals.length}`,
+  ];
+  for (const view of deliverable) {
+    const signal = view.signal;
+    lines.push(
+      `- ${signal.createdAt.toISOString()} ${signal.createdBy}/${signal.priority}: ${
+        truncateText(redactPromptGuidanceText(signal.body), 800)
+      }`,
+    );
+  }
+  if (input.deliverableSignals.length > deliverable.length) {
+    lines.push(
+      `- ${input.deliverableSignals.length - deliverable.length} older deliverable guidance item(s) omitted from prompt context.`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function redactPromptGuidanceText(value: string): string {
+  return redactText(value).replace(/[A-Za-z0-9_=-]{32,}/g, "[redacted]");
 }
 
 async function controlledAgentCodexAccount(input: {
