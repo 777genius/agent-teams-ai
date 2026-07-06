@@ -27,6 +27,16 @@ describe("buildCodexControlledAgentProfile", () => {
     expect(profile.configToml).toContain('sandbox_mode = "read-only"');
     expect(profile.configToml).toContain('approval_policy = "never"');
     expect(profile.configToml).toContain('web_search = "disabled"');
+    expect(profile.configToml).toContain('cli_auth_credentials_store = "file"');
+    expect(profile.configToml).toContain("disable_response_storage = true");
+    expect(profile.configToml).toContain("[features]");
+    expect(profile.configToml).toContain("multi_agent = false");
+    expect(profile.configToml).toContain("[history]");
+    expect(profile.configToml).toContain('persistence = "none"');
+    expect(profile.configToml).toContain("[otel]");
+    expect(profile.configToml).toContain('exporter = "none"');
+    expect(profile.configToml).toContain("[shell_environment_policy]");
+    expect(profile.configToml).toContain('inherit = "none"');
     expect(profile.configToml).not.toContain("danger-full-access");
     expect(profile.enforcement).toMatchObject({
       providerKind: RunEventProviderKind.Codex,
