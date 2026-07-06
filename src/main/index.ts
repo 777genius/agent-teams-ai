@@ -113,6 +113,7 @@ import {
 import {
   bindTeamLaunchApi,
   bindTeamRuntimeApi,
+  bindTeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
@@ -2699,6 +2700,7 @@ async function startHttpServer(
         teamDataService,
         teamLaunchApi: bindTeamLaunchApi(teamProvisioningService),
         teamRuntimeApi: bindTeamRuntimeApi(teamProvisioningService),
+        teamRuntimeControlApi: bindTeamRuntimeControlCompatibilityApi(teamProvisioningService),
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

@@ -353,6 +353,8 @@ describe('ipc teams handlers', () => {
       updatedAt: new Date().toISOString(),
     })),
     cancelProvisioning: vi.fn(() => resolvedUndefined()),
+    hasProvisioningRun: vi.fn(() => false),
+    getClaudeLogs: vi.fn(() => resolved({ lines: [], total: 0, hasMore: false })),
     launchTeam: vi.fn(() => resolved({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(() => resolvedUndefined()),
     prepareLiveMemberMcpLaunchConfig: vi.fn(() => resolved(null)),

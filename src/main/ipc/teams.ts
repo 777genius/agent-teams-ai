@@ -138,11 +138,13 @@ import {
   initializeAutoResumeService,
 } from '../services/team/AutoResumeService';
 import {
+  bindTeamClaudeLogsApi,
   bindTeamDiagnosticsApi,
   bindTeamLaunchApi,
   bindTeamMemberLifecycleApi,
   bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
+  bindTeamProvisioningRunApi,
   bindTeamRuntimeApi,
   bindTeamToolApprovalApi,
 } from '../services/team/contracts/TeamProvisioningApis';
@@ -188,15 +190,16 @@ import type {
   TeamLogSourceTracker,
   TeammateToolTracker,
   TeamMemberLogsFinder,
-  TeamProvisioningService,
 } from '../services';
 import type {
+  TeamClaudeLogsApi,
   TeamDiagnosticsApi,
   TeamLaunchApi,
   TeamMemberLifecycleApi,
   TeamMessagingApi,
   TeamOpenCodeMemberInboxRelayResult,
   TeamProvisioningPreflightApi,
+  TeamProvisioningRunApi,
   TeamRuntimeApi,
   TeamToolApprovalApi,
 } from '../services/team/contracts/TeamProvisioningApis';
@@ -754,13 +757,24 @@ function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string |
   );
 }
 
+type TeamHandlerProvisioningApis = TeamLaunchApi &
+  TeamProvisioningPreflightApi &
+  TeamProvisioningRunApi &
+  TeamRuntimeApi &
+  TeamMemberLifecycleApi &
+  TeamDiagnosticsApi &
+  TeamClaudeLogsApi &
+  TeamMessagingApi &
+  TeamToolApprovalApi;
+
 let teamDataService: TeamDataService | null = null;
-let teamProvisioningService: TeamProvisioningService | null = null;
 let teamProvisioningStartApi: TeamLaunchApi | null = null;
 let teamProvisioningPreflightApi: TeamProvisioningPreflightApi | null = null;
+let teamProvisioningRunApi: TeamProvisioningRunApi | null = null;
 let teamRuntimeApi: TeamRuntimeApi | null = null;
 let teamMemberLifecycleApi: TeamMemberLifecycleApi | null = null;
 let teamDiagnosticsApi: TeamDiagnosticsApi | null = null;
+let teamClaudeLogsApi: TeamClaudeLogsApi | null = null;
 let teamMessagingApi: TeamMessagingApi | null = null;
 let teamToolApprovalApi: TeamToolApprovalApi | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
@@ -811,7 +825,7 @@ const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
 export function initializeTeamHandlers(
   service: TeamDataService,
-  provisioningService: TeamProvisioningService,
+  provisioningService: TeamHandlerProvisioningApis,
   logsFinder?: TeamMemberLogsFinder,
   statsComputer?: MemberStatsComputer,
   backupService?: TeamBackupService,
@@ -826,15 +840,20 @@ export function initializeTeamHandlers(
   ioGovernor?: LaunchIoGovernor
 ): void {
   teamDataService = service;
-  teamProvisioningService = provisioningService;
   teamProvisioningStartApi = bindTeamLaunchApi(provisioningService);
   teamProvisioningPreflightApi = bindTeamProvisioningPreflightApi(provisioningService);
+  teamProvisioningRunApi = bindTeamProvisioningRunApi(provisioningService);
   teamRuntimeApi = bindTeamRuntimeApi(provisioningService);
   teamMemberLifecycleApi = bindTeamMemberLifecycleApi(provisioningService);
   teamDiagnosticsApi = bindTeamDiagnosticsApi(provisioningService);
+  teamClaudeLogsApi = bindTeamClaudeLogsApi(provisioningService);
   teamMessagingApi = bindTeamMessagingApi(provisioningService);
   teamToolApprovalApi = bindTeamToolApprovalApi(provisioningService);
-  initializeAutoResumeService(provisioningService);
+  initializeAutoResumeService({
+    getCurrentRunId: teamRuntimeApi.getCurrentRunId,
+    isTeamAlive: teamRuntimeApi.isTeamAlive,
+    sendMessageToTeam: teamMessagingApi.sendMessageToTeam,
+  });
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
   teamBackupService = backupService ?? null;
@@ -1030,13 +1049,6 @@ function getTeamDataService(): TeamDataService {
   return teamDataService;
 }
 
-function getTeamProvisioningService(): TeamProvisioningService {
-  if (!teamProvisioningService) {
-    throw new Error('Team provisioning handlers are not initialized');
-  }
-  return teamProvisioningService;
-}
-
 function getTeamProvisioningStartApi(): TeamLaunchApi {
   if (!teamProvisioningStartApi) {
     throw new Error('Team provisioning handlers are not initialized');
@@ -1049,6 +1061,13 @@ function getTeamProvisioningPreflightApi(): TeamProvisioningPreflightApi {
     throw new Error('Team provisioning preflight handlers are not initialized');
   }
   return teamProvisioningPreflightApi;
+}
+
+function getTeamProvisioningRunApi(): TeamProvisioningRunApi {
+  if (!teamProvisioningRunApi) {
+    throw new Error('Team provisioning run handlers are not initialized');
+  }
+  return teamProvisioningRunApi;
 }
 
 function getTeamRuntimeApi(): TeamRuntimeApi {
@@ -1070,6 +1089,13 @@ function getTeamDiagnosticsApi(): TeamDiagnosticsApi {
     throw new Error('Team diagnostics handlers are not initialized');
   }
   return teamDiagnosticsApi;
+}
+
+function getTeamClaudeLogsApi(): TeamClaudeLogsApi {
+  if (!teamClaudeLogsApi) {
+    throw new Error('Team log handlers are not initialized');
+  }
+  return teamClaudeLogsApi;
 }
 
 function getTeamMessagingApi(): TeamMessagingApi {
@@ -1307,7 +1333,7 @@ async function handleGetData(
     const message = error instanceof Error ? error.message : String(error);
     if (
       message === `Team not found: ${tn}` &&
-      getTeamProvisioningService().hasProvisioningRun?.(tn) === true
+      getTeamProvisioningRunApi().hasProvisioningRun(tn) === true
     ) {
       return { success: false, error: 'TEAM_PROVISIONING' };
     }
@@ -1425,7 +1451,7 @@ async function classifyMissingTeamData(teamName: string): Promise<'provisioning'
   if (configExists !== false) {
     return null;
   }
-  if (getTeamProvisioningService().hasProvisioningRun?.(teamName) === true) {
+  if (getTeamProvisioningRunApi().hasProvisioningRun(teamName) === true) {
     return 'provisioning';
   }
   const meta = await withTimeoutValue(
@@ -2248,7 +2274,7 @@ async function handleGetClaudeLogs(
   }
 
   return wrapTeamHandler('getClaudeLogs', async () => {
-    const data = await getTeamProvisioningService().getClaudeLogs(validated.value!, parsed);
+    const data = await getTeamClaudeLogsApi().getClaudeLogs(validated.value!, parsed);
     return {
       lines: data.lines,
       total: data.total,
@@ -2782,7 +2808,7 @@ async function handleCancelProvisioning(
     return { success: false, error: 'runId is required' };
   }
   return wrapTeamHandler('cancelProvisioning', () =>
-    getTeamProvisioningService().cancelProvisioning(runId.trim())
+    getTeamProvisioningRunApi().cancelProvisioning(runId.trim())
   );
 }
 

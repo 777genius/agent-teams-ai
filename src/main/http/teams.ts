@@ -49,6 +49,15 @@ function getTeamRuntimeApi(services: HttpServices): NonNullable<HttpServices['te
   return services.teamRuntimeApi;
 }
 
+function getTeamRuntimeControlApi(
+  services: HttpServices
+): NonNullable<HttpServices['teamRuntimeControlApi']> {
+  if (!services.teamRuntimeControlApi) {
+    throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
+  }
+  return services.teamRuntimeControlApi;
+}
+
 function getTeamDataService(services: HttpServices): NonNullable<HttpServices['teamDataService']> {
   if (!services.teamDataService) {
     throw new HttpFeatureUnavailableError('Team data control is not available in this mode');
@@ -313,7 +322,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamRuntimeApi(services).recordOpenCodeRuntimeBootstrapCheckin(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeBootstrapCheckin(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -338,7 +347,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamRuntimeApi(services).deliverOpenCodeRuntimeMessage(
+          await getTeamRuntimeControlApi(services).deliverOpenCodeRuntimeMessage(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -363,7 +372,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamRuntimeApi(services).recordOpenCodeRuntimeTaskEvent(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeTaskEvent(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -388,7 +397,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamRuntimeApi(services).recordOpenCodeRuntimeHeartbeat(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeHeartbeat(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );

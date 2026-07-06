@@ -11,6 +11,8 @@ import type {
   RetryFailedOpenCodeSecondaryLanesResult,
   TaskRef,
   TeamAgentRuntimeSnapshot,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
@@ -39,6 +41,11 @@ export interface TeamLaunchApi {
 
 export type TeamProvisioningStartApi = TeamLaunchApi;
 
+export interface TeamProvisioningRunApi {
+  cancelProvisioning(runId: string): Promise<void>;
+  hasProvisioningRun(teamName: string): boolean;
+}
+
 export type { OpenCodeRuntimeControlAck };
 
 export interface TeamProvisioningPrepareOptions {
@@ -66,7 +73,7 @@ export interface TeamRuntimeControlCompatibilityApi {
   recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
 }
 
-export interface TeamRuntimeApi extends TeamRuntimeControlCompatibilityApi {
+export interface TeamRuntimeApi {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
   stopTeam(teamName: string): Promise<void>;
   isTeamAlive(teamName: string): boolean;
@@ -95,6 +102,10 @@ export interface TeamDiagnosticsApi {
   getLeadActivityState(teamName: string): LeadActivitySnapshot;
   getLeadContextUsage(teamName: string): LeadContextUsageSnapshot;
   getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
+}
+
+export interface TeamClaudeLogsApi {
+  getClaudeLogs(teamName: string, query?: TeamClaudeLogsQuery): Promise<TeamClaudeLogsResponse>;
 }
 
 export type TeamMessageAttachmentPayload = Pick<AttachmentPayload, 'data' | 'mimeType'> &
@@ -205,6 +216,13 @@ export function bindTeamProvisioningPreflightApi(
   };
 }
 
+export function bindTeamProvisioningRunApi(source: TeamProvisioningRunApi): TeamProvisioningRunApi {
+  return {
+    cancelProvisioning: source.cancelProvisioning.bind(source),
+    hasProvisioningRun: source.hasProvisioningRun.bind(source),
+  };
+}
+
 export function bindTeamRuntimeControlCompatibilityApi(
   source: TeamRuntimeControlCompatibilityApi
 ): TeamRuntimeControlCompatibilityApi {
@@ -224,7 +242,6 @@ export function bindTeamRuntimeApi(source: TeamRuntimeApi): TeamRuntimeApi {
     isTeamAlive: source.isTeamAlive.bind(source),
     getAliveTeams: source.getAliveTeams.bind(source),
     getCurrentRunId: source.getCurrentRunId.bind(source),
-    ...bindTeamRuntimeControlCompatibilityApi(source),
   };
 }
 
@@ -244,6 +261,12 @@ export function bindTeamDiagnosticsApi(source: TeamDiagnosticsApi): TeamDiagnost
     getLeadActivityState: source.getLeadActivityState.bind(source),
     getLeadContextUsage: source.getLeadContextUsage.bind(source),
     getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
+  };
+}
+
+export function bindTeamClaudeLogsApi(source: TeamClaudeLogsApi): TeamClaudeLogsApi {
+  return {
+    getClaudeLogs: source.getClaudeLogs.bind(source),
   };
 }
 

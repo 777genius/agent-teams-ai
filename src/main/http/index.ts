@@ -41,6 +41,7 @@ import type { SshConnectionManager } from '../services/infrastructure/SshConnect
 import type {
   TeamLaunchApi,
   TeamRuntimeApi,
+  TeamRuntimeControlCompatibilityApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../services/team/TeamDataService';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
@@ -63,6 +64,7 @@ export interface HttpServices {
   teamDataService?: TeamDataService;
   teamLaunchApi?: TeamLaunchApi;
   teamRuntimeApi?: TeamRuntimeApi;
+  teamRuntimeControlApi?: TeamRuntimeControlCompatibilityApi;
 }
 
 export function registerHttpRoutes(
@@ -74,7 +76,12 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  if (services.teamDataService || services.teamLaunchApi || services.teamRuntimeApi) {
+  if (
+    services.teamDataService ||
+    services.teamLaunchApi ||
+    services.teamRuntimeApi ||
+    services.teamRuntimeControlApi
+  ) {
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);

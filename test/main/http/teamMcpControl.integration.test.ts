@@ -14,6 +14,7 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamRuntimeApi,
+  TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
   TeamCreateRequest,
@@ -282,6 +283,8 @@ function createServices(claudeRoot: string): {
     isTeamAlive: (teamName: string): boolean => aliveTeams.has(teamName),
     getAliveTeams: (): string[] => [...aliveTeams],
     getCurrentRunId: (teamName: string): string | null => runIdByTeam.get(teamName) ?? null,
+  } satisfies TeamRuntimeApi;
+  const teamRuntimeControlApi = {
     recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('accepted')),
     deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
@@ -290,7 +293,7 @@ function createServices(claudeRoot: string): {
       Promise.resolve(runtimeAck('recorded')),
     recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-  } satisfies TeamRuntimeApi;
+  } satisfies TeamRuntimeControlCompatibilityApi;
 
   return {
     createTeamCalls,
@@ -305,6 +308,7 @@ function createServices(claudeRoot: string): {
       teamDataService,
       teamLaunchApi,
       teamRuntimeApi,
+      teamRuntimeControlApi,
     },
   };
 }

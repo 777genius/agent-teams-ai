@@ -6,6 +6,7 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamRuntimeApi,
+  TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
   TeamCreateConfigRequest,
@@ -69,11 +70,13 @@ describe('HTTP team runtime routes', () => {
       isTeamAlive,
       getAliveTeams,
       getCurrentRunId,
+    } satisfies TeamRuntimeApi;
+    const teamRuntimeControlApi = {
       recordOpenCodeRuntimeBootstrapCheckin,
       deliverOpenCodeRuntimeMessage,
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
-    } satisfies TeamRuntimeApi;
+    } satisfies TeamRuntimeControlCompatibilityApi;
     const teamDataService = {
       listTeams,
       getTeamData,
@@ -95,6 +98,7 @@ describe('HTTP team runtime routes', () => {
       teamDataService,
       teamLaunchApi,
       teamRuntimeApi,
+      teamRuntimeControlApi,
     } satisfies HttpServices;
 
     return {
@@ -826,6 +830,35 @@ describe('HTTP team runtime routes', () => {
         error: 'runtime body teamName must match route teamName',
       });
       expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for OpenCode runtime callbacks without the runtime-control facade', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamRuntimeControlApi: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'demo-team',
+          runId: 'run-opencode',
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Team runtime callbacks are not available in this mode',
+      });
+      expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

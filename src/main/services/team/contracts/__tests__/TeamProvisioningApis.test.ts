@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  bindTeamClaudeLogsApi,
   bindTeamDiagnosticsApi,
   bindTeamLaunchApi,
   bindTeamMemberLifecycleApi,
   bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
+  bindTeamProvisioningRunApi,
   bindTeamRuntimeApi,
   bindTeamRuntimeControlCompatibilityApi,
   bindTeamToolApprovalApi,
@@ -13,12 +15,14 @@ import {
 
 import type {
   OpenCodeRuntimeControlAck,
+  TeamClaudeLogsApi,
   TeamDiagnosticsApi,
   TeamLaunchApi,
   TeamMemberLifecycleApi,
   TeamMessagingApi,
   TeamOpenCodeMemberInboxRelayOptions,
   TeamProvisioningPreflightApi,
+  TeamProvisioningRunApi,
   TeamRuntimeApi,
   TeamRuntimeControlCompatibilityApi,
   TeamToolApprovalApi,
@@ -132,8 +136,54 @@ describe('TeamProvisioning API binders', () => {
     });
   });
 
+  it('binds provisioning run and log diagnostic methods to the source object', async () => {
+    interface RunSource extends TeamProvisioningRunApi {
+      activeTeamName: string | null;
+      canceledRunId: string | null;
+    }
+    interface ClaudeLogsSource extends TeamClaudeLogsApi {
+      readonly sourceName: string;
+    }
+
+    const runSource: RunSource = {
+      activeTeamName: 'team-bound',
+      canceledRunId: null,
+      cancelProvisioning(this: RunSource, runId: string): Promise<void> {
+        this.canceledRunId = runId;
+        return Promise.resolve();
+      },
+      hasProvisioningRun(this: RunSource, teamName: string): boolean {
+        return teamName === this.activeTeamName;
+      },
+    };
+    const claudeLogsSource: ClaudeLogsSource = {
+      sourceName: 'logs-bound',
+      getClaudeLogs(this: ClaudeLogsSource, teamName: string) {
+        return Promise.resolve({
+          lines: [`${this.sourceName}:${teamName}`],
+          total: 1,
+          hasMore: false,
+        });
+      },
+    };
+
+    const runApi = bindTeamProvisioningRunApi(runSource);
+    const logsApi = bindTeamClaudeLogsApi(claudeLogsSource);
+    const cancelProvisioning = runApi.cancelProvisioning.bind(undefined);
+    const getClaudeLogs = logsApi.getClaudeLogs.bind(undefined);
+
+    expect(runApi.hasProvisioningRun('team-bound')).toBe(true);
+    await cancelProvisioning('run-bound');
+    expect(runSource.canceledRunId).toBe('run-bound');
+    await expect(getClaudeLogs('team-bound')).resolves.toEqual({
+      lines: ['logs-bound:team-bound'],
+      total: 1,
+      hasMore: false,
+    });
+  });
+
   it('binds runtime control methods to the source object', async () => {
-    interface RuntimeSource extends TeamRuntimeApi {
+    interface RuntimeSource extends TeamRuntimeApi, TeamRuntimeControlCompatibilityApi {
       readonly teamName: string;
       stoppedTeamName: string | null;
       compatibilityCalls: number;
@@ -198,7 +248,8 @@ describe('TeamProvisioning API binders', () => {
       bindTeamRuntimeControlCompatibilityApi(source);
     const getRuntimeState = api.getRuntimeState.bind(undefined);
     const stopTeam = api.stopTeam.bind(undefined);
-    const deliverOpenCodeRuntimeMessage = api.deliverOpenCodeRuntimeMessage.bind(undefined);
+    const deliverOpenCodeRuntimeMessage =
+      controlCompatibilityApi.deliverOpenCodeRuntimeMessage.bind(undefined);
     const recordOpenCodeRuntimeHeartbeat =
       controlCompatibilityApi.recordOpenCodeRuntimeHeartbeat.bind(undefined);
 
@@ -219,7 +270,7 @@ describe('TeamProvisioning API binders', () => {
     expect(source.compatibilityCalls).toBe(2);
   });
 
-  it('keeps runtime and member lifecycle APIs as separate control surfaces', () => {
+  it('keeps runtime, runtime-control, and member lifecycle APIs as separate control surfaces', () => {
     const ack: OpenCodeRuntimeControlAck = {
       ok: true,
       providerId: 'opencode',
@@ -241,6 +292,8 @@ describe('TeamProvisioning API binders', () => {
       isTeamAlive: () => true,
       getAliveTeams: () => ['team-bound'],
       getCurrentRunId: () => 'run-bound',
+    };
+    const runtimeControlSource: TeamRuntimeControlCompatibilityApi = {
       recordOpenCodeRuntimeBootstrapCheckin: () => Promise.resolve(ack),
       deliverOpenCodeRuntimeMessage: () => Promise.resolve({ ...ack, state: 'delivered' }),
       recordOpenCodeRuntimeTaskEvent: () => Promise.resolve(ack),
@@ -263,18 +316,21 @@ describe('TeamProvisioning API binders', () => {
     };
 
     const runtimeApi = bindTeamRuntimeApi(runtimeSource);
+    const runtimeControlApi = bindTeamRuntimeControlCompatibilityApi(runtimeControlSource);
     const lifecycleApi = bindTeamMemberLifecycleApi(lifecycleSource);
 
     expect(Object.keys(runtimeApi).sort()).toEqual([
-      'deliverOpenCodeRuntimeMessage',
       'getAliveTeams',
       'getCurrentRunId',
       'getRuntimeState',
       'isTeamAlive',
+      'stopTeam',
+    ]);
+    expect(Object.keys(runtimeControlApi).sort()).toEqual([
+      'deliverOpenCodeRuntimeMessage',
       'recordOpenCodeRuntimeBootstrapCheckin',
       'recordOpenCodeRuntimeHeartbeat',
       'recordOpenCodeRuntimeTaskEvent',
-      'stopTeam',
     ]);
     expect(Object.keys(lifecycleApi).sort()).toEqual([
       'attachLiveRosterMember',
@@ -285,7 +341,10 @@ describe('TeamProvisioning API binders', () => {
       'skipMemberForLaunch',
     ]);
     const runtimeKeys = new Set(Object.keys(runtimeApi));
+    const runtimeControlKeys = new Set(Object.keys(runtimeControlApi));
+    expect(Object.keys(runtimeControlApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
+    expect(Object.keys(lifecycleApi).filter((key) => runtimeControlKeys.has(key))).toEqual([]);
   });
 
   it('binds member lifecycle and diagnostics methods to the source object', async () => {
