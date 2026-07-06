@@ -2207,6 +2207,8 @@ describe("codex goal MCP server", () => {
         decision: {
           allowed: true,
           reason: "allowed",
+          debt: [],
+          detailsIncluded: false,
         },
         snapshot: {
           counts: {
@@ -2214,6 +2216,34 @@ describe("codex goal MCP server", () => {
             consumedDirtyWorkspaces: 1,
             incompleteConsumedOutputRecords: 0,
           },
+          debt: [],
+          debtCount: 1,
+          debtOmittedCount: 1,
+          detailsIncluded: false,
+        },
+      });
+
+      const detailedSnapshot = await callToolJson(
+        client,
+        "codex_goal_project_admission_snapshot",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          operation: "create_job",
+          workerRole: "producer",
+          includeDetails: true,
+          maxDebtItems: 1,
+        },
+      );
+      expect(detailedSnapshot).toMatchObject({
+        ok: true,
+        snapshot: {
+          debtCount: 1,
+          debtOmittedCount: 0,
+          detailsIncluded: true,
+          debt: [{
+            reason: "consumed_dirty_workspace",
+          }],
         },
       });
 
