@@ -324,6 +324,8 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly startWorker?: boolean;
   readonly workerRole?: string;
   readonly operation?: string;
+  readonly includeDetails?: boolean;
+  readonly maxDebtItems?: number;
 };
 
 type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
@@ -1887,6 +1889,8 @@ export function createCodexGoalMcpServer(
           ProjectAdmissionWorkerRole.Adoption,
           ProjectAdmissionWorkerRole.ReadOnly,
         ]).optional(),
+        includeDetails: z.boolean().optional(),
+        maxDebtItems: z.number().int().min(0).optional(),
       },
     },
     async (args) => withMcpErrors(async () =>
@@ -2571,14 +2575,71 @@ async function projectControlAdmissionSnapshot(
         snapshot,
       })
     : undefined;
+  const detailView = projectAdmissionDetailView({
+    snapshot,
+    ...(decision ? { decision } : {}),
+    includeDetails: args.includeDetails === true,
+    ...(args.maxDebtItems === undefined ? {} : { maxDebtItems: args.maxDebtItems }),
+  });
   return mcpJson({
     ok: true,
     mode: "project_admission_snapshot",
     controllerJobId: controller.controller.jobId,
     registryRootDir: controller.registryRootDir,
-    snapshot: snapshot as unknown as JsonObject,
-    ...(decision ? { decision: decision as unknown as JsonObject } : {}),
+    snapshot: detailView.snapshot,
+    ...(detailView.decision ? { decision: detailView.decision } : {}),
   });
+}
+
+function projectAdmissionDetailView(input: {
+  readonly snapshot: ProjectAdmissionSnapshot;
+  readonly decision?: ReturnType<typeof evaluateProjectAdmission>;
+  readonly includeDetails: boolean;
+  readonly maxDebtItems?: number;
+}): {
+  readonly snapshot: JsonObject;
+  readonly decision?: JsonObject;
+} {
+  const debtLimit = projectAdmissionDebtLimit(input.maxDebtItems);
+  const snapshotDebt = input.includeDetails
+    ? limitedProjectDebt(input.snapshot.debt, debtLimit)
+    : [];
+  const decisionDebt = input.decision && input.includeDetails
+    ? limitedProjectDebt(input.decision.debt, debtLimit)
+    : [];
+  return {
+    snapshot: {
+      ...input.snapshot,
+      debt: snapshotDebt,
+      debtCount: input.snapshot.debt.length,
+      debtOmittedCount: input.snapshot.debt.length - snapshotDebt.length,
+      detailsIncluded: input.includeDetails,
+    } as unknown as JsonObject,
+    ...(input.decision
+      ? {
+          decision: {
+            ...input.decision,
+            debt: decisionDebt,
+            debtCount: input.decision.debt.length,
+            debtOmittedCount: input.decision.debt.length - decisionDebt.length,
+            detailsIncluded: input.includeDetails,
+          } as unknown as JsonObject,
+        }
+      : {}),
+  };
+}
+
+function projectAdmissionDebtLimit(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  if (!Number.isFinite(value)) return undefined;
+  return Math.max(0, Math.floor(value));
+}
+
+function limitedProjectDebt(
+  debt: readonly ProjectDebtItem[],
+  limit: number | undefined,
+): readonly ProjectDebtItem[] {
+  return limit === undefined ? debt : debt.slice(0, limit);
 }
 
 async function projectControlUpdateControllerScope(
