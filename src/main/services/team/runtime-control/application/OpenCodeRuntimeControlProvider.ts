@@ -9,6 +9,7 @@ import type {
 } from '../domain/RuntimeControlCommand';
 import type { RuntimeControlProviderHandler } from '../domain/RuntimeControlProvider';
 import type { OpenCodeRuntimeControlRouter } from './OpenCodeRuntimeControlApi';
+import type { RuntimeControlEventSink } from './RuntimeControlPorts';
 import type { TaskRef } from '@shared/types';
 
 export interface OpenCodeRuntimeControlPort {
@@ -16,6 +17,10 @@ export interface OpenCodeRuntimeControlPort {
   deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+}
+
+export interface OpenCodeRuntimeControlRouterOptions {
+  eventSink?: RuntimeControlEventSink;
 }
 
 export function createOpenCodeRuntimeControlProvider(
@@ -35,9 +40,13 @@ export function createOpenCodeRuntimeControlProvider(
 }
 
 export function createOpenCodeRuntimeControlRouter(
-  port: OpenCodeRuntimeControlPort
+  port: OpenCodeRuntimeControlPort,
+  options: OpenCodeRuntimeControlRouterOptions = {}
 ): OpenCodeRuntimeControlRouter {
-  const service = new RuntimeControlService([createOpenCodeRuntimeControlProvider(port)]);
+  const service = new RuntimeControlService({
+    providers: [createOpenCodeRuntimeControlProvider(port)],
+    eventSink: options.eventSink,
+  });
   return {
     recordBootstrapCheckin: async (command) =>
       toOpenCodeRuntimeControlAck(await service.recordBootstrapCheckin(command)),

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildRuntimeBootstrapCheckinCommandId,
+  buildRuntimeControlCommandEventId,
   buildRuntimeDeliverMessageCommandId,
   buildRuntimeHeartbeatCommandId,
   buildRuntimeTaskEventCommandId,
@@ -77,6 +78,36 @@ describe('OpenCodeRuntimeControlProvider', () => {
     const router = createOpenCodeRuntimeControlRouter(createPort(ack));
 
     await expect(router.deliverMessage(createDeliveryCommand())).resolves.toBe(ack);
+  });
+
+  it('passes the event sink through the OpenCode router into RuntimeControlService', async () => {
+    const ack = createAck('delivered');
+    const record = vi.fn();
+    const command = createDeliveryCommand();
+    const router = createOpenCodeRuntimeControlRouter(createPort(ack), {
+      eventSink: { record },
+    });
+
+    await expect(router.deliverMessage(command)).resolves.toBe(ack);
+
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: buildRuntimeControlCommandEventId({
+          providerId: 'opencode',
+          eventType: 'RuntimeMessageDelivered',
+          commandId: command.commandId,
+        }),
+        type: 'RuntimeMessageDelivered',
+        providerId: 'opencode',
+        teamName: 'Team',
+        runId: 'run-1',
+        laneId: 'lane-1',
+        commandId: command.commandId,
+        idempotencyKey: 'message-key-1',
+        fromMemberName: 'Builder',
+      })
+    );
   });
 });
 

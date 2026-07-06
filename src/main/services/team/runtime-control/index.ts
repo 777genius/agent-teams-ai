@@ -4,7 +4,10 @@ export type {
   OpenCodeRuntimeControlRouter,
 } from './application/OpenCodeRuntimeControlApi';
 export { createOpenCodeRuntimeControlApi } from './application/OpenCodeRuntimeControlApi';
-export type { OpenCodeRuntimeControlPort } from './application/OpenCodeRuntimeControlProvider';
+export type {
+  OpenCodeRuntimeControlPort,
+  OpenCodeRuntimeControlRouterOptions,
+} from './application/OpenCodeRuntimeControlProvider';
 export {
   createOpenCodeRuntimeControlProvider,
   createOpenCodeRuntimeControlRouter,
