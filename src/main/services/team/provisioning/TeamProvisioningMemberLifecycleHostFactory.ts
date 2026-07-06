@@ -38,7 +38,6 @@ export interface TeamProvisioningMemberLifecycleHostFactorySharedStatePorts {
   runs: TeamProvisioningMemberLifecycleHost['runs'];
   runtimeAdapterRunByTeam: TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam'];
   failedOpenCodeSecondaryRetryInFlightByTeam: TeamProvisioningMemberLifecycleHost['failedOpenCodeSecondaryRetryInFlightByTeam'];
-  memberLifecycleOperations: TeamProvisioningMemberLifecycleHost['memberLifecycleOperations'];
 }
 
 export interface TeamProvisioningMemberLifecycleHostFactoryStorePorts {
@@ -190,9 +189,6 @@ export interface TeamProvisioningMemberLifecycleHostFactoryMixedSecondaryRuntime
 type HostLaunchDirectProcessMemberRestart = NonNullable<
   TeamProvisioningMemberLifecycleHost['launchDirectProcessMemberRestart']
 >;
-type HostRunMemberLifecycleOperation = NonNullable<
-  TeamProvisioningMemberLifecycleHost['runMemberLifecycleOperation']
->;
 type HostStopPrimaryOwnedRosterRuntime = NonNullable<
   TeamProvisioningMemberLifecycleHost['stopPrimaryOwnedRosterRuntime']
 >;
@@ -220,7 +216,6 @@ export interface TeamProvisioningMemberLifecycleHostFactoryUseCasePorts<
     input: WithServiceRun<Parameters<HostLaunchDirectProcessMemberRestart>[0], TRun>
   ) => ReturnType<HostLaunchDirectProcessMemberRestart>;
   appendDirectProcessRuntimeEvent?: AppendDirectProcessRuntimeEventUseCase;
-  runMemberLifecycleOperation?: HostRunMemberLifecycleOperation;
   stopPrimaryOwnedRosterRuntime?: HostStopPrimaryOwnedRosterRuntime;
   collectFailedOpenCodeSecondaryRetryCandidates?: (
     run: TRun
@@ -276,12 +271,7 @@ export interface TeamProvisioningMemberLifecycleHostFactoryPortGroups<
 }
 
 export const TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS = {
-  sharedState: [
-    'runs',
-    'runtimeAdapterRunByTeam',
-    'failedOpenCodeSecondaryRetryInFlightByTeam',
-    'memberLifecycleOperations',
-  ],
+  sharedState: ['runs', 'runtimeAdapterRunByTeam', 'failedOpenCodeSecondaryRetryInFlightByTeam'],
   stores: [
     'mcpConfigBuilder',
     'membersMetaStore',
@@ -341,7 +331,6 @@ export const TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS = {
     'persistOpenCodeMemberRestartSystemMessage',
     'launchDirectProcessMemberRestart',
     'appendDirectProcessRuntimeEvent',
-    'runMemberLifecycleOperation',
     'stopPrimaryOwnedRosterRuntime',
     'collectFailedOpenCodeSecondaryRetryCandidates',
     'readOpenCodeSecondaryRetryOutcome',
@@ -440,7 +429,6 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
     useCases.persistOpenCodeMemberRestartSystemMessage;
   const launchDirectProcessMemberRestartSeam = useCases.launchDirectProcessMemberRestart;
   const appendDirectProcessRuntimeEventSeam = useCases.appendDirectProcessRuntimeEvent;
-  const runMemberLifecycleOperationSeam = useCases.runMemberLifecycleOperation;
   const stopPrimaryOwnedRosterRuntimeSeam = useCases.stopPrimaryOwnedRosterRuntime;
   const collectFailedOpenCodeSecondaryRetryCandidatesSeam =
     useCases.collectFailedOpenCodeSecondaryRetryCandidates;
@@ -456,7 +444,6 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
     runtimeAdapterRunByTeam: sharedState.runtimeAdapterRunByTeam,
     failedOpenCodeSecondaryRetryInFlightByTeam:
       sharedState.failedOpenCodeSecondaryRetryInFlightByTeam,
-    memberLifecycleOperations: sharedState.memberLifecycleOperations,
     mcpConfigBuilder: {
       writeConfigFile: (projectPath, options) =>
         stores.mcpConfigBuilder.writeConfigFile(projectPath, options as never),
@@ -588,23 +575,6 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
       : undefined,
     appendDirectProcessRuntimeEvent: appendDirectProcessRuntimeEventSeam
       ? (input) => appendDirectProcessRuntimeEventSeam.call(useCases, input)
-      : undefined,
-    runMemberLifecycleOperation: runMemberLifecycleOperationSeam
-      ? <TValue>(
-          teamName: string,
-          memberName: string,
-          kind: Parameters<
-            NonNullable<TeamProvisioningMemberLifecycleHost['runMemberLifecycleOperation']>
-          >[2],
-          operation: () => Promise<TValue>
-        ): Promise<TValue> =>
-          runMemberLifecycleOperationSeam.call(
-            useCases,
-            teamName,
-            memberName,
-            kind,
-            operation
-          ) as Promise<TValue>
       : undefined,
     stopPrimaryOwnedRosterRuntime: stopPrimaryOwnedRosterRuntimeSeam
       ? (input) => stopPrimaryOwnedRosterRuntimeSeam.call(useCases, input)

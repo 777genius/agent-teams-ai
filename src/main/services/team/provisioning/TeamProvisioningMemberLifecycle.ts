@@ -51,12 +51,8 @@ import {
   matchesTeamMemberIdentity,
 } from './TeamProvisioningMemberIdentity';
 import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
-import {
-  createTeamProvisioningMemberLifecycleOperationRunner,
-  type MemberLifecycleOperation,
-  type MemberLifecycleOperationKind,
-  type TeamProvisioningMemberLifecycleOperationRunner,
-} from './TeamProvisioningMemberLifecycleOperationRunner';
+import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
+import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
@@ -409,7 +405,6 @@ export interface TeamProvisioningMemberLifecycleSharedStatePorts {
     string,
     Promise<RetryFailedOpenCodeSecondaryLanesResult>
   >;
-  memberLifecycleOperations: Map<string, MemberLifecycleOperation>;
 }
 
 export interface TeamProvisioningMemberLifecycleStorePorts {
@@ -585,20 +580,6 @@ export interface TeamProvisioningMemberLifecycleUseCasePorts {
   persistOpenCodeMemberRestartSystemMessage?: PersistOpenCodeMemberRestartSystemMessageUseCase;
   launchDirectProcessMemberRestart?(input: DirectProcessMemberRestartInput): Promise<void>;
   appendDirectProcessRuntimeEvent?: AppendDirectProcessRuntimeEventUseCase;
-  /**
-   * Overrides the controller's operation runner entirely: implementations MUST
-   * provide the same per-member mutual exclusion backed by the shared
-   * memberLifecycleOperations registry (see
-   * TeamProvisioningMemberLifecycleOperationRunner), otherwise concurrent
-   * restarts pass isMemberLifecycleOperationActive and spawn duplicate
-   * teammate processes.
-   */
-  runMemberLifecycleOperation?<T>(
-    teamName: string,
-    memberName: string,
-    kind: MemberLifecycleOperationKind,
-    operation: () => Promise<T>
-  ): Promise<T>;
   stopPrimaryOwnedRosterRuntime?(input: StopPrimaryOwnedRosterRuntimeInput): Promise<void>;
   collectFailedOpenCodeSecondaryRetryCandidates?(
     run: ProvisioningRun
@@ -634,7 +615,6 @@ export interface TeamProvisioningMemberLifecycleHost
     TeamProvisioningMemberLifecycleUseCasePorts {}
 
 export class TeamProvisioningMemberLifecycleController {
-  private readonly operationRunner: TeamProvisioningMemberLifecycleOperationRunner;
   private readonly persistOpenCodeMemberRestartSystemMessageFallback =
     createPersistOpenCodeMemberRestartSystemMessageUseCase({
       persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
@@ -644,13 +624,10 @@ export class TeamProvisioningMemberLifecycleController {
   private readonly appendDirectProcessRuntimeEventFallback =
     createAppendDirectProcessRuntimeEventUseCase();
 
-  constructor(private readonly host: TeamProvisioningMemberLifecycleHost) {
-    this.operationRunner = createTeamProvisioningMemberLifecycleOperationRunner({
-      memberLifecycleOperations: host.memberLifecycleOperations,
-      invalidateRuntimeSnapshotCaches: (teamName) => host.invalidateRuntimeSnapshotCaches(teamName),
-      nowMs: () => Date.now(),
-    });
-  }
+  constructor(
+    private readonly host: TeamProvisioningMemberLifecycleHost,
+    private readonly operationUseCases: TeamProvisioningMemberLifecycleOperationUseCases
+  ) {}
 
   private get runs(): TeamProvisioningMemberLifecycleHost['runs'] {
     return this.host.runs;
@@ -1666,7 +1643,7 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
-    return this.operationRunner.isMemberLifecycleOperationActive(teamName, memberName);
+    return this.operationUseCases.isMemberLifecycleOperationActive(teamName, memberName);
   }
 
   private isMemberLifecycleOperationInProgressError(error: unknown): boolean {
@@ -1679,10 +1656,6 @@ export class TeamProvisioningMemberLifecycleController {
     kind: MemberLifecycleOperationKind,
     operation: () => Promise<T>
   ): Promise<T> {
-    const seam = this.host.runMemberLifecycleOperation;
-    if (seam) {
-      return await seam(teamName, memberName, kind, operation);
-    }
     return await this.runMemberLifecycleOperationInternal(teamName, memberName, kind, operation);
   }
 
@@ -1692,7 +1665,12 @@ export class TeamProvisioningMemberLifecycleController {
     kind: MemberLifecycleOperationKind,
     operation: () => Promise<T>
   ): Promise<T> {
-    return this.operationRunner.runMemberLifecycleOperation(teamName, memberName, kind, operation);
+    return this.operationUseCases.runMemberLifecycleOperation(
+      teamName,
+      memberName,
+      kind,
+      operation
+    );
   }
 
   private getOpenCodeReattachLifecycleKind(

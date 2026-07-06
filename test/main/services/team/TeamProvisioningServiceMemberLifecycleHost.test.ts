@@ -22,6 +22,9 @@ type MemberLifecycleHostProbe = {
       run: { id: string };
     }): Promise<unknown>;
     removeTrackedMemberMcpLaunchConfig(run: { id: string }, config: unknown): Promise<void>;
+  };
+  memberLifecycleOperationUseCases: {
+    isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean;
     runMemberLifecycleOperation?<T>(
       teamName: string,
       memberName: string,
@@ -120,6 +123,9 @@ describe('TeamProvisioningService member lifecycle host', () => {
     expect(
       (host as { enqueueDirectRestartPrompt?: unknown }).enqueueDirectRestartPrompt
     ).toBeUndefined();
+    expect(
+      (host as { runMemberLifecycleOperation?: unknown }).runMemberLifecycleOperation
+    ).toBeUndefined();
     expect(calls).toEqual([]);
   });
 
@@ -154,15 +160,16 @@ describe('TeamProvisioningService member lifecycle host', () => {
   it('runs lifecycle operations through the service-owned use case port', async () => {
     const service = new TeamProvisioningService();
     const serviceProbe = service as unknown as MemberLifecycleHostProbe;
-    const host = serviceProbe.memberLifecycleHost;
+    const operationUseCases = serviceProbe.memberLifecycleOperationUseCases;
     let resolveOperation: () => void = () => undefined;
     const operationBlocker = new Promise<void>((resolve) => {
       resolveOperation = resolve;
     });
 
-    expect(host.runMemberLifecycleOperation).toBeTypeOf('function');
+    expect(operationUseCases.runMemberLifecycleOperation).toBeTypeOf('function');
+    expect(operationUseCases.isMemberLifecycleOperationActive('team-a', 'Worker')).toBe(false);
 
-    const operation = host.runMemberLifecycleOperation!(
+    const operation = operationUseCases.runMemberLifecycleOperation!(
       'team-a',
       'Worker',
       'manual_restart',
@@ -180,11 +187,12 @@ describe('TeamProvisioningService member lifecycle host', () => {
       ).toMatchObject({
         kind: 'manual_restart',
       });
+      expect(operationUseCases.isMemberLifecycleOperationActive('team-a', 'Worker')).toBe(true);
       const generationDuringOperation =
         serviceProbe.getRuntimeSnapshotCacheGeneration('team-a');
 
       await expect(
-        host.runMemberLifecycleOperation!(
+        operationUseCases.runMemberLifecycleOperation!(
           ' TEAM-A ',
           ' worker ',
           'primary_member_updated',

@@ -13,6 +13,14 @@ describe('TeamProvisioningMemberLifecycleOperationUseCases', () => {
     const operationCalls: string[] = [];
     const operationRunner = {
       marker: 'runner-bound',
+      isMemberLifecycleOperationActive(
+        this: { marker: string },
+        teamName: string,
+        memberName: string
+      ) {
+        operationCalls.push(`${this.marker}:active:${teamName}:${memberName}`);
+        return true;
+      },
       async runMemberLifecycleOperation<T>(
         this: { marker: string },
         teamName: string,
@@ -23,19 +31,27 @@ describe('TeamProvisioningMemberLifecycleOperationUseCases', () => {
         operationCalls.push(`${this.marker}:${teamName}:${memberName}:${kind}`);
         return await operation();
       },
-    } as Pick<TeamProvisioningMemberLifecycleOperationRunner, 'runMemberLifecycleOperation'> & {
-      marker: string;
-    };
+    } as Pick<
+      TeamProvisioningMemberLifecycleOperationRunner,
+      'isMemberLifecycleOperationActive' | 'runMemberLifecycleOperation'
+    > & { marker: string };
 
     const useCases = createTeamProvisioningMemberLifecycleOperationUseCases({
       operationRunner,
     });
 
-    expect(Object.keys(useCases)).toEqual(['runMemberLifecycleOperation']);
+    expect(Object.keys(useCases).sort()).toEqual([
+      'isMemberLifecycleOperationActive',
+      'runMemberLifecycleOperation',
+    ]);
+    expect(useCases.isMemberLifecycleOperationActive('team-a', 'Worker')).toBe(true);
     await expect(
       useCases.runMemberLifecycleOperation('team-a', 'Worker', 'manual_restart', async () => 'done')
     ).resolves.toBe('done');
 
-    expect(operationCalls).toEqual(['runner-bound:team-a:Worker:manual_restart']);
+    expect(operationCalls).toEqual([
+      'runner-bound:active:team-a:Worker',
+      'runner-bound:team-a:Worker:manual_restart',
+    ]);
   });
 });

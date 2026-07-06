@@ -1368,7 +1368,8 @@ export class TeamProvisioningService {
     MixedSecondaryRuntimeLaneState
   >(this.createMemberLifecycleHostPortGroups());
   private readonly memberLifecycleController = new TeamProvisioningMemberLifecycleController(
-    this.memberLifecycleHost
+    this.memberLifecycleHost,
+    this.memberLifecycleOperationUseCases
   );
   private readonly memberMcpLaunchConfigProvisioner: TeamProvisioningMemberMcpLaunchConfigProvisioner<ProvisioningRun>;
   private memberRuntimeAdvisoryInvalidator:
@@ -1663,8 +1664,6 @@ export class TeamProvisioningService {
           .runtimeAdapterRunByTeam as unknown as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['runtimeAdapterRunByTeam'],
         failedOpenCodeSecondaryRetryInFlightByTeam: this
           .failedOpenCodeSecondaryRetryInFlightByTeam as unknown as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['failedOpenCodeSecondaryRetryInFlightByTeam'],
-        memberLifecycleOperations: this
-          .memberLifecycleOperations as unknown as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['memberLifecycleOperations'],
       },
       stores: {
         mcpConfigBuilder: {
@@ -1761,7 +1760,6 @@ export class TeamProvisioningService {
       },
       useCases: {
         ...this.memberLifecycleUseCases,
-        ...this.memberLifecycleOperationUseCases,
       },
     };
   }

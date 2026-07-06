@@ -66,7 +66,6 @@ function createService(): ReceiverBoundService {
     runs: new Map([['team-a', serviceRun as unknown as HostRun]]),
     runtimeAdapterRunByTeam: new Map(),
     failedOpenCodeSecondaryRetryInFlightByTeam: new Map(),
-    memberLifecycleOperations: new Map(),
     mcpConfigBuilder: {
       async writeConfigFile(this: { marker: string }, projectPath) {
         return `${projectPath}/${this.marker}.json`;
@@ -244,7 +243,6 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
     expect(host.failedOpenCodeSecondaryRetryInFlightByTeam).toBe(
       service.failedOpenCodeSecondaryRetryInFlightByTeam
     );
-    expect(host.memberLifecycleOperations).toBe(service.memberLifecycleOperations);
   });
 
   it('groups every lifecycle host member exactly once', () => {
@@ -362,10 +360,6 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       async appendDirectProcessRuntimeEvent(this: { marker: string }, input) {
         useCaseEvents.push(`${this.marker}:runtime-event:${input.type}`);
       },
-      async runMemberLifecycleOperation(this: { marker: string }, teamName, memberName, kind, op) {
-        useCaseEvents.push(`${this.marker}:operation:${teamName}:${memberName}:${kind}`);
-        return await op();
-      },
       async stopPrimaryOwnedRosterRuntime(this: { marker: string }, input) {
         useCaseEvents.push(`${this.marker}:stop-primary:${input.memberName}`);
       },
@@ -431,14 +425,6 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       bootstrapRunId: 'run-use-case',
       source: 'test',
     });
-    await expect(
-      host.runMemberLifecycleOperation!(
-        'team-a',
-        'Worker',
-        'manual_restart',
-        async () => 'operation-result'
-      )
-    ).resolves.toBe('operation-result');
     await host.stopPrimaryOwnedRosterRuntime!({
       teamName: 'team-a',
       memberName: 'Worker',
@@ -462,7 +448,6 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       'use-case:persist-opencode:Worker',
       'use-case:launch-process:run-use-case',
       'use-case:runtime-event:process_spawned',
-      'use-case:operation:team-a:Worker:manual_restart',
       'use-case:stop-primary:Worker',
       'use-case:collect:run-use-case',
       'use-case:outcome:run-use-case:Worker:secondary:opencode:worker',
