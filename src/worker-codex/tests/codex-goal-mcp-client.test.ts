@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ControllerSupervisorObservedStatus,
+  controllerSupervisorHasDeliverableGuidance,
   controllerSupervisorHasAvailableAccounts,
   controllerSupervisorJobArgs,
   controllerSupervisorNextCapacityRetryDelayMs,
@@ -69,6 +70,35 @@ describe("codex goal MCP client supervisor helpers", () => {
       ControllerSupervisorObservedStatus.Blocked,
       { ok: true, run: { safeMessage: "Codex quota or billing limit was reached." } },
     )).toBe(false);
+  });
+
+  it("retries blocked project controllers only when guidance is deliverable", () => {
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Blocked,
+      { ok: true, run: { safeMessage: "Codex controlled-agent is waiting for input." } },
+      { ok: true, decision: { deliverableCount: 1 } },
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Blocked,
+      { ok: true, run: { safeMessage: "Codex controlled-agent is waiting for input." } },
+      { ok: true, decision: { pendingCount: 0 } },
+    )).toBe(false);
+  });
+
+  it("recognizes read-only control decisions with deliverable guidance", () => {
+    expect(controllerSupervisorHasDeliverableGuidance({
+      ok: true,
+      decision: { deliverableCount: 2 },
+    })).toBe(true);
+    expect(controllerSupervisorHasDeliverableGuidance({
+      ok: true,
+      decision: { deliverableSignals: [{ id: "signal-a" }] },
+    })).toBe(true);
+    expect(controllerSupervisorHasDeliverableGuidance({
+      ok: true,
+      decision: { pendingCount: 0 },
+    })).toBe(false);
+    expect(controllerSupervisorHasDeliverableGuidance({ ok: false })).toBe(false);
   });
 
   it("continues only while project accounts remain available", () => {
