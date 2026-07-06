@@ -1,4 +1,13 @@
-import { isAbsolute, resolve, sep } from "node:path";
+import {
+  matchesAnyPattern,
+  matchesAnyPrefix,
+  normalizePath,
+  normalizePathOrNull,
+  parseRemoteTrackingBranch,
+  pathInsideAnyRoot,
+  sensitiveAccessPathDecision,
+  uniqueStrings,
+} from "./access-control/domain/access-control-path-policy";
 
 export enum AccessBoundary {
   ReadOnly = "read_only",
@@ -989,89 +998,18 @@ function sensitivePathDecision(input: {
   readonly scope: ProjectAccessScope;
   readonly denyRegistryRawWrite: boolean;
 }): { readonly reason: AccessDecisionReason; readonly evidence: readonly string[] } | null {
-  if (pathInsideAnyRoot(input.path, deniedRootsFor(input.scope))) {
-    return {
-      reason: dockerSocketPath(input.path)
-        ? AccessDecisionReason.DockerSocketDenied
-        : AccessDecisionReason.AuthPathDenied,
-      evidence: ["path is in a denied root"],
-    };
-  }
-  if (hasPathSegment(input.path, ".git")) {
-    return {
-      reason: AccessDecisionReason.GitInternalPathDenied,
-      evidence: ["direct .git internals access is not allowed"],
-    };
-  }
-  if (
-    input.denyRegistryRawWrite &&
-    input.scope.registryRoot &&
-    pathInside(input.path, input.scope.registryRoot)
-  ) {
-    return {
-      reason: AccessDecisionReason.RegistryRawWriteDenied,
-      evidence: ["registry writes must go through project control broker operations"],
-    };
-  }
-  return null;
-}
-
-function normalizePathOrNull(path: string): string | null {
-  if (!path.trim() || !isAbsolute(path)) return null;
-  return normalizePath(path);
-}
-
-function normalizePath(path: string): string {
-  return stripTrailingSeparator(resolve(path));
-}
-
-function pathInsideAnyRoot(path: string, roots: readonly string[]): boolean {
-  return roots.some((root) => pathInside(path, root));
-}
-
-function pathInside(path: string, root: string): boolean {
-  const normalizedPath = normalizePath(path);
-  const normalizedRoot = normalizePath(root);
-  return (
-    normalizedPath === normalizedRoot ||
-    normalizedPath.startsWith(`${normalizedRoot}${sep}`)
-  );
-}
-
-function stripTrailingSeparator(path: string): string {
-  return path.length > 1 && path.endsWith(sep) ? path.slice(0, -1) : path;
-}
-
-function hasPathSegment(path: string, segment: string): boolean {
-  return normalizePath(path).split(/[\\/]+/).includes(segment);
-}
-
-function dockerSocketPath(path: string): boolean {
-  return normalizePath(path).endsWith(`${sep}docker.sock`);
-}
-
-function matchesAnyPrefix(value: string, prefixes: readonly string[]): boolean {
-  return prefixes.length > 0 && prefixes.some((prefix) => value.startsWith(prefix));
-}
-
-function matchesAnyPattern(value: string, patterns: readonly string[]): boolean {
-  return patterns.length > 0 && patterns.some((pattern) => {
-    if (pattern.endsWith("*")) return value.startsWith(pattern.slice(0, -1));
-    return value === pattern;
+  return sensitiveAccessPathDecision({
+    path: input.path,
+    deniedRoots: deniedRootsFor(input.scope),
+    denyRegistryRawWrite: input.denyRegistryRawWrite,
+    ...(input.scope.registryRoot === undefined
+      ? {}
+      : { registryRoot: input.scope.registryRoot }),
+    reasons: {
+      authPathDenied: AccessDecisionReason.AuthPathDenied,
+      dockerSocketDenied: AccessDecisionReason.DockerSocketDenied,
+      gitInternalPathDenied: AccessDecisionReason.GitInternalPathDenied,
+      registryRawWriteDenied: AccessDecisionReason.RegistryRawWriteDenied,
+    },
   });
-}
-
-function parseRemoteTrackingBranch(
-  value: string,
-): { readonly remote: string; readonly branch: string } | null {
-  const slash = value.indexOf("/");
-  if (slash <= 0 || slash === value.length - 1) return null;
-  return {
-    remote: value.slice(0, slash),
-    branch: value.slice(slash + 1),
-  };
-}
-
-function uniqueStrings(values: readonly string[]): readonly string[] {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
