@@ -1685,8 +1685,10 @@ describe("codex goal MCP server", () => {
     const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
     const workspaceRoot = join(root, "workspaces");
     const legacyWorkspaceRoot = join(root, "legacy-workspaces");
+    const realLegacyWorkspaceRoot = join(root, "real-legacy-workspaces");
     const sourceWorkspacePath = join(workspaceRoot, "infinity-context-main");
-    const orphanWorkspace = join(legacyWorkspaceRoot, "infinity-context-memory-old-v1");
+    const orphanWorkspace = join(realLegacyWorkspaceRoot, "infinity-context-memory-old-v1");
+    const observedOrphanWorkspace = join(legacyWorkspaceRoot, "infinity-context-memory-old-v1");
     const linkedOrphanTarget = join(root, "linked-workspaces", "infinity-context-memory-linked-target-v1");
     const linkedOrphanWorkspace = join(legacyWorkspaceRoot, "infinity-context-memory-linked-v1");
     const brokenWorkspace = join(legacyWorkspaceRoot, "infinity-context-memory-broken-v1");
@@ -1717,6 +1719,8 @@ describe("codex goal MCP server", () => {
       await git(orphanWorkspace, ["add", "memory.py"]);
       await git(orphanWorkspace, ["commit", "-m", "test: orphan base"]);
       await writeFile(join(orphanWorkspace, "memory.py"), "value = 2\n");
+      await mkdir(legacyWorkspaceRoot, { recursive: true });
+      await symlink(orphanWorkspace, observedOrphanWorkspace);
       await mkdir(linkedOrphanTarget, { recursive: true });
       await gitInitRepository(linkedOrphanTarget);
       await writeFile(join(linkedOrphanTarget, "linked.py"), "value = 1\n");
@@ -1959,7 +1963,6 @@ describe("codex goal MCP server", () => {
             statusPath,
             patchPath,
           },
-          notes: [{ status: "duplicate", text: "output already represented" }],
         }, null, 2)}\n`,
       );
 

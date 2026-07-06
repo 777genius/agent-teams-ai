@@ -103,6 +103,49 @@ describe("buildControlledAgentLiveControllerState", () => {
     });
     expect(live.safeMessage).toContain("provider status probe failed");
   });
+
+  it("does not count blocked controllers as autonomous live capacity", () => {
+    const owner = processOwner("owner-1");
+    const runningSession = controlledSession({
+      owner,
+      status: ControlledAgentRunStatus.Running,
+    });
+
+    const observedBlocked = buildControlledAgentLiveControllerState({
+      session: runningSession,
+      providerAttached: true,
+      currentOwner: owner,
+      providerObservedStatus: ControlledAgentRunStatus.Blocked,
+    });
+
+    expect(observedBlocked).toMatchObject({
+      providerRunnerAttached: true,
+      live: false,
+      ownerMatches: true,
+      persistedStatus: "running",
+      providerObservedStatus: "blocked",
+    });
+    expect(observedBlocked.safeMessage).toContain("observed provider status is not running");
+
+    const persistedBlocked = buildControlledAgentLiveControllerState({
+      session: controlledSession({
+        owner,
+        status: ControlledAgentRunStatus.Blocked,
+      }),
+      providerAttached: true,
+      currentOwner: owner,
+      providerObservedStatus: ControlledAgentRunStatus.Running,
+    });
+
+    expect(persistedBlocked).toMatchObject({
+      providerRunnerAttached: true,
+      live: false,
+      ownerMatches: true,
+      persistedStatus: "blocked",
+      providerObservedStatus: "running",
+    });
+    expect(persistedBlocked.safeMessage).toContain("persisted controller status is not running");
+  });
 });
 
 function processOwner(ownerId: string): ControlledAgentProcessOwner {
