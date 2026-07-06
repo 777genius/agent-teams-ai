@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ControllerSupervisorObservedStatus,
+  controllerSupervisorDeliverableGuidanceSignature,
   controllerSupervisorHasDeliverableGuidance,
   controllerSupervisorHasAvailableAccounts,
   controllerSupervisorJobArgs,
@@ -115,6 +116,26 @@ describe("codex goal MCP client supervisor helpers", () => {
       decision: { pendingCount: 3, deliverableCount: 0 },
     })).toBe(false);
     expect(controllerSupervisorHasDeliverableGuidance({ ok: false })).toBe(false);
+  });
+
+  it("builds stable deliverable guidance signatures from signal ids", () => {
+    expect(controllerSupervisorDeliverableGuidanceSignature({
+      ok: true,
+      decision: {
+        deliverableSignals: [
+          { signal: { signalId: "signal-a" } },
+          { signalId: "signal-b" },
+        ],
+      },
+    })).toBe("signal-a,signal-b");
+    expect(controllerSupervisorDeliverableGuidanceSignature({
+      ok: true,
+      decision: { deliverableCount: 2 },
+    })).toBe("count:2");
+    expect(controllerSupervisorDeliverableGuidanceSignature({
+      ok: true,
+      decision: { deliverableCount: 0 },
+    })).toBeUndefined();
   });
 
   it("continues only while project accounts remain available", () => {

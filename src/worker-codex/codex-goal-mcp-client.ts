@@ -85,6 +85,7 @@ export async function superviseCodexGoalProjectController(input: {
   try {
     let start: unknown = null;
     let lastStatus: unknown = start;
+    let lastGuidanceRestartSignature: string | undefined;
     while (!input.signal?.aborted) {
       start = parseMcpJsonResult(await client.callTool({
         name: "codex_goal_project_controller_start",
@@ -113,6 +114,35 @@ export async function superviseCodexGoalProjectController(input: {
           return { ok: false, start, finalStatus: status };
         }
         const runStatus = controllerSupervisorObservedStatus(status);
+        if (runStatus === ControllerSupervisorObservedStatus.Running) {
+          const controlDecision = parseMcpJsonResult(await client.callTool({
+            name: "codex_goal_control_decision",
+            arguments: controllerSupervisorJobArgs(input.args),
+          }));
+          if (controlDecision !== undefined) {
+            input.onEvent?.({ type: "control_decision", result: controlDecision });
+          }
+          const guidanceSignature = controllerSupervisorDeliverableGuidanceSignature(
+            controlDecision,
+          );
+          if (
+            mcpResultOk(controlDecision) &&
+            guidanceSignature !== undefined &&
+            guidanceSignature !== lastGuidanceRestartSignature
+          ) {
+            lastGuidanceRestartSignature = guidanceSignature;
+            const stop = parseMcpJsonResult(await client.callTool({
+              name: "codex_goal_project_controller_stop",
+              arguments: {
+                ...input.args,
+                reason: "controller_supervisor_guidance_restart",
+              },
+            }));
+            input.onEvent?.({ type: "stop", result: stop });
+            if (!mcpResultOk(stop)) return { ok: false, start, finalStatus: status, stop };
+            break;
+          }
+        }
         if (runStatus !== undefined && controllerSupervisorStatusIsTerminal(runStatus)) {
           const reconcile = parseMcpJsonResult(await client.callTool({
             name: "codex_goal_project_controller_reconcile",
@@ -260,6 +290,38 @@ export function controllerSupervisorHasDeliverableGuidance(result: unknown): boo
     ? decision?.signals
     : undefined;
   return Array.isArray(signals) && signals.length > 0;
+}
+
+export function controllerSupervisorDeliverableGuidanceSignature(
+  result: unknown,
+): string | undefined {
+  if (!controllerSupervisorHasDeliverableGuidance(result)) return undefined;
+  const decision = nestedRecord(result, "decision");
+  const signals = Array.isArray(decision?.deliverableSignals)
+    ? decision?.deliverableSignals
+    : Array.isArray(decision?.signals)
+    ? decision?.signals
+    : undefined;
+  if (Array.isArray(signals) && signals.length > 0) {
+    const ids = signals
+      .map((item) => {
+        if (!isRecord(item)) return undefined;
+        if (typeof item.signalId === "string") return item.signalId;
+        if (typeof item.id === "string") return item.id;
+        const signal = item.signal;
+        return isRecord(signal) && typeof signal.signalId === "string"
+          ? signal.signalId
+          : undefined;
+      })
+      .filter((value): value is string => value !== undefined);
+    if (ids.length > 0) return ids.join(",");
+  }
+  const count = decision?.deliverableCount ??
+    decision?.deliverableGuidanceCount ??
+    decision?.pendingDeliverableCount ??
+    (isRecord(result) ? result.deliverableCount : undefined) ??
+    (isRecord(result) ? result.deliverableGuidanceCount : undefined);
+  return typeof count === "number" && count > 0 ? `count:${count}` : undefined;
 }
 
 export function controllerSupervisorNextCapacityRetryDelayMs(

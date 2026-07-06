@@ -4649,7 +4649,12 @@ export function projectControllerPendingGuidancePromptContext(input: {
     };
   }[];
 }): string | undefined {
-  const deliverable = input.deliverableSignals.slice(0, 5);
+  const deliverable = input.deliverableSignals
+    .slice()
+    .sort((left, right) =>
+      right.signal.createdAt.getTime() - left.signal.createdAt.getTime()
+    )
+    .slice(0, 5);
   if (deliverable.length === 0) return undefined;
 
   const lines = [

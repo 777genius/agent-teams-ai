@@ -41,9 +41,9 @@ describe("codex goal MCP server", () => {
       deliverableSignals: Array.from({ length: 6 }, (_, index) => ({
         signal: {
           createdAt: new Date(`2026-07-06T10:0${index}:00.000Z`),
-          createdBy: index === 0 ? "operator" : "orchestrator",
-          priority: index === 0 ? "high" : "normal",
-          body: index === 0
+          createdBy: index === 5 ? "operator" : "orchestrator",
+          priority: index === 5 ? "high" : "normal",
+          body: index === 5
             ? `Refill S10 workers with token ${"a".repeat(48)} and keep capacity high.`
             : `Guidance ${index}`,
         },
