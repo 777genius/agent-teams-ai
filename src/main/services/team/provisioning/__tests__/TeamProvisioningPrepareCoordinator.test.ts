@@ -5,8 +5,14 @@ import {
   createInMemoryProviderProbeCachePort,
   TeamProvisioningPrepareCoordinator,
 } from '../TeamProvisioningPrepareCoordinator';
+import { createProbeCacheKey } from '../TeamProvisioningProviderPreflight';
 
-import type { TeamProvisioningPrepareCoordinatorPorts } from '../TeamProvisioningPrepareCoordinator';
+import type {
+  CachedProbeResult,
+  ProbeResult,
+  ProviderProbeCachePort,
+  TeamProvisioningPrepareCoordinatorPorts,
+} from '../TeamProvisioningPrepareCoordinator';
 import type { TeamCreateRequest } from '@shared/types';
 
 function createCoordinator(
@@ -14,12 +20,9 @@ function createCoordinator(
 ): TeamProvisioningPrepareCoordinator {
   return new TeamProvisioningPrepareCoordinator(
     createDefaultTeamProvisioningPrepareCoordinatorPorts({
-      getCachedOrProbeResult: vi.fn().mockResolvedValue({
-        claudePath: '/fake/claude',
-        authSource: 'none',
-      }),
       validatePrepareCwd: vi.fn().mockResolvedValue(undefined),
-      getFreshCachedProbeResult: vi.fn().mockReturnValue(null),
+      resolveClaudeBinaryPath: vi.fn().mockResolvedValue('/fake/claude'),
+      probeClaudeRuntime: vi.fn().mockResolvedValue({}),
       buildProvisioningEnv: vi.fn().mockResolvedValue({
         env: { PATH: '/bin' },
         authSource: 'none',
@@ -31,17 +34,31 @@ function createCoordinator(
   );
 }
 
+function createProviderProbeCacheFake(
+  overrides: Partial<ProviderProbeCachePort> = {}
+): ProviderProbeCachePort {
+  return {
+    get: vi.fn(() => null),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getOrCreateInFlight: vi.fn((_cacheKey: string, create: () => Promise<ProbeResult | null>) =>
+      create()
+    ),
+    ...overrides,
+  };
+}
+
 describe('TeamProvisioningPrepareCoordinator', () => {
   it('coalesces matching prepare requests and returns cloned results', async () => {
-    let releaseProbe: ((value: { claudePath: string; authSource: 'none' }) => void) | null = null;
-    const getCachedOrProbeResult = vi.fn(
+    let releaseProbe: ((value: { warning?: string }) => void) | null = null;
+    const probeClaudeRuntime = vi.fn(
       () =>
-        new Promise<{ claudePath: string; authSource: 'none' }>((resolve) => {
+        new Promise<{ warning?: string }>((resolve) => {
           releaseProbe = resolve;
         })
     );
     const coordinator = createCoordinator({
-      getCachedOrProbeResult,
+      probeClaudeRuntime,
       runProviderOneShotDiagnostic: vi.fn().mockResolvedValue({ warning: 'diagnostic note' }),
     });
 
@@ -55,16 +72,14 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     });
 
     await vi.waitFor(() => expect(releaseProbe).not.toBeNull());
-    const release = releaseProbe as
-      | ((value: { claudePath: string; authSource: 'none' }) => void)
-      | null;
+    const release = releaseProbe as ((value: { warning?: string }) => void) | null;
     if (!release) {
       throw new Error('Expected probe release callback to be registered.');
     }
-    release({ claudePath: '/fake/claude', authSource: 'none' });
+    release({});
     const [firstResult, secondResult] = await Promise.all([first, second]);
 
-    expect(getCachedOrProbeResult).toHaveBeenCalledOnce();
+    expect(probeClaudeRuntime).toHaveBeenCalledOnce();
     expect(firstResult).toEqual(secondResult);
     expect(firstResult).not.toBe(secondResult);
 
@@ -73,18 +88,61 @@ describe('TeamProvisioningPrepareCoordinator', () => {
   });
 
   it('clears one probe cache entry per requested provider when forceFresh is set', async () => {
-    const clearProbeCache = vi.fn();
-    const coordinator = createCoordinator({ clearProbeCache });
+    const cachedResult = (cacheKey: string): CachedProbeResult => ({
+      cacheKey,
+      claudePath: '/fake/claude',
+      authSource: 'none',
+      cachedAtMs: 1,
+    });
+    const deleteProbeCache = vi.fn();
+    const providerProbeCache = createProviderProbeCacheFake({
+      delete: deleteProbeCache,
+      get: vi.fn((cacheKey: string) => cachedResult(cacheKey)),
+    });
+    const coordinator = createCoordinator({ providerProbeCache });
 
     await coordinator.prepareForProvisioning('/workspace/force-fresh-prepare', {
       forceFresh: true,
       providerIds: ['anthropic', 'codex', 'codex'],
     });
 
-    expect(clearProbeCache.mock.calls).toEqual([
-      ['/workspace/force-fresh-prepare', 'anthropic'],
-      ['/workspace/force-fresh-prepare', 'codex'],
+    expect(deleteProbeCache).toHaveBeenCalledWith(
+      createProbeCacheKey('/workspace/force-fresh-prepare', 'anthropic')
+    );
+    expect(deleteProbeCache).toHaveBeenCalledWith(
+      createProbeCacheKey('/workspace/force-fresh-prepare', 'codex')
+    );
+    expect(deleteProbeCache.mock.calls).toEqual([
+      [createProbeCacheKey('/workspace/force-fresh-prepare', 'anthropic')],
+      [createProbeCacheKey('/workspace/force-fresh-prepare', 'codex')],
     ]);
+  });
+
+  it('uses the injected probe cache port for prepare cache hits', async () => {
+    const cwd = '/workspace/prepare-cache-hit';
+    const cacheKey = createProbeCacheKey(cwd, 'codex');
+    const getProbeCache = vi.fn((requestedKey: string): CachedProbeResult | null => {
+      if (requestedKey !== cacheKey) {
+        return null;
+      }
+      return {
+        cacheKey,
+        claudePath: '/fake/claude',
+        authSource: 'codex_runtime',
+        cachedAtMs: 1,
+      };
+    });
+    const providerProbeCache = createProviderProbeCacheFake({ get: getProbeCache });
+    const probeClaudeRuntime = vi.fn().mockResolvedValue({});
+    const coordinator = createCoordinator({
+      providerProbeCache,
+      probeClaudeRuntime,
+    });
+
+    await coordinator.prepareForProvisioning(cwd, { providerId: 'codex' });
+
+    expect(getProbeCache).toHaveBeenCalledWith(cacheKey);
+    expect(probeClaudeRuntime).not.toHaveBeenCalled();
   });
 
   it('materializes non-Anthropic teammate defaults once per provider through ports', async () => {

@@ -187,15 +187,6 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     opts: { cwd: string; env: NodeJS.ProcessEnv; timeout: number }
   ): Promise<{ stdout: string }>;
   validatePrepareCwd?(cwd: string): Promise<void>;
-  getFreshCachedProbeResult?(
-    cwd: string,
-    providerId: TeamProviderId | undefined
-  ): CachedProbeResult | null;
-  clearProbeCache?(cwd: string, providerId: TeamProviderId | undefined): void;
-  getCachedOrProbeResult?(
-    cwd: string,
-    providerId: TeamProviderId | undefined
-  ): Promise<ProbeResult | null>;
   verifySelectedProviderModels?(input: {
     claudePath: string;
     cwd: string;
@@ -233,17 +224,10 @@ export class TeamProvisioningPrepareCoordinator {
     try {
       const cwd = process.cwd();
       const providerId: TeamProviderId = 'anthropic';
-      if (
-        (this.ports.getFreshCachedProbeResult ?? this.getFreshCachedProbeResult.bind(this))(
-          cwd,
-          providerId
-        )
-      ) {
+      if (this.getFreshCachedProbeResult(cwd, providerId)) {
         return;
       }
-      const result = await (
-        this.ports.getCachedOrProbeResult ?? this.getCachedOrProbeResult.bind(this)
-      )(cwd, providerId);
+      const result = await this.getCachedOrProbeResult(cwd, providerId);
       if (!result) return;
       this.ports.info('CLI warmup completed');
     } catch (error) {
@@ -342,10 +326,7 @@ export class TeamProvisioningPrepareCoordinator {
 
     if (opts?.forceFresh) {
       for (const providerId of providerIds) {
-        (this.ports.clearProbeCache ?? this.clearProbeCache.bind(this))(
-          targetCwdForValidation,
-          providerId
-        );
+        this.clearProbeCache(targetCwdForValidation, providerId);
       }
     }
 
@@ -435,15 +416,8 @@ export class TeamProvisioningPrepareCoordinator {
         continue;
       }
 
-      const cached = (
-        this.ports.getFreshCachedProbeResult ?? this.getFreshCachedProbeResult.bind(this)
-      )(targetCwdForValidation, providerId);
-      const probeResult =
-        cached ??
-        (await (this.ports.getCachedOrProbeResult ?? this.getCachedOrProbeResult.bind(this))(
-          targetCwd,
-          providerId
-        ));
+      const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
+      const probeResult = cached ?? (await this.getCachedOrProbeResult(targetCwd, providerId));
       if (!probeResult?.claudePath) {
         throw buildMissingCliError();
       }
