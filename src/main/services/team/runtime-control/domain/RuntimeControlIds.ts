@@ -84,6 +84,12 @@ export interface RuntimeControlEventIdInput {
   occurredAt: string;
 }
 
+export interface RuntimeControlCommandEventIdInput {
+  providerId: RuntimeControlProviderId;
+  eventType: string;
+  commandId: RuntimeControlCommandId;
+}
+
 export function createRuntimeControlCommandId(value: string): RuntimeControlCommandId {
   return normalizeRuntimeControlId(value, 'commandId') as RuntimeControlCommandId;
 }
@@ -170,6 +176,19 @@ export function buildRuntimeControlEventId(
       normalizeRuntimeControlIdPart(input.eventType, 'eventType'),
       normalizeRuntimeControlIdPart(input.commandId, 'commandId'),
       normalizeRuntimeControlIdPart(input.occurredAt, 'occurredAt'),
+    ].join(':')
+  );
+}
+
+export function buildRuntimeControlCommandEventId(
+  input: RuntimeControlCommandEventIdInput
+): RuntimeControlEventId {
+  assertRuntimeControlProviderId(input.providerId);
+  return createRuntimeControlEventId(
+    [
+      input.providerId,
+      normalizeRuntimeControlIdPart(input.eventType, 'eventType'),
+      normalizeRuntimeControlIdPart(input.commandId, 'commandId'),
     ].join(':')
   );
 }

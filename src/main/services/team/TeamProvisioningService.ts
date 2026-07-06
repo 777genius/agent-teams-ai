@@ -530,10 +530,7 @@ import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 import { getConfiguredCliCommandLabel } from './cliFlavor';
 import { boundLaunchDiagnostics } from './progressPayload';
-import {
-  createOpenCodeRuntimeControlApi,
-  createOpenCodeRuntimeControlRouter,
-} from './runtime-control';
+import { createTeamRuntimeControlCompatibilityApi } from './runtime-control';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   choosePreferredLaunchSnapshot,
@@ -1614,8 +1611,8 @@ export class TeamProvisioningService {
     | ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>)
     | null = null;
   private readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
-  private readonly openCodeRuntimeControlApi = createOpenCodeRuntimeControlApi({
-    runtimeControl: createOpenCodeRuntimeControlRouter({
+  private readonly openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApi({
+    openCode: {
       recordOpenCodeRuntimeBootstrapCheckin: (raw) =>
         this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeBootstrapCheckin(raw),
       deliverOpenCodeRuntimeMessage: (raw) =>
@@ -1624,7 +1621,7 @@ export class TeamProvisioningService {
         this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeTaskEvent(raw),
       recordOpenCodeRuntimeHeartbeat: (raw) =>
         this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeHeartbeat(raw),
-    }),
+    },
     resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
   });
 

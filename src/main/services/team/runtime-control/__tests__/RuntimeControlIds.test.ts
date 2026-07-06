@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildRuntimeBootstrapCheckinCommandId,
+  buildRuntimeControlCommandEventId,
   buildRuntimeControlCommandId,
   buildRuntimeControlEventId,
   buildRuntimeDeliverMessageCommandId,
@@ -107,5 +108,25 @@ describe('RuntimeControlIds', () => {
         occurredAt: '2026-01-01T00:00:00.000Z',
       })
     ).toThrow('Invalid runtime control provider: codex');
+  });
+
+  it('builds idempotent event ids from provider, event type, and command id', () => {
+    const commandId = buildRuntimeDeliverMessageCommandId({
+      providerId: 'opencode',
+      teamName: 'Team',
+      laneId: 'lane-1',
+      runId: 'run-1',
+      idempotencyKey: 'message-key-1',
+    });
+
+    expect(
+      buildRuntimeControlCommandEventId({
+        providerId: 'opencode',
+        eventType: 'RuntimeMessageDelivered',
+        commandId,
+      })
+    ).toBe(
+      'opencode:RuntimeMessageDelivered:opencode%3Adeliver-message%3ATeam%3Alane-1%3Arun-1%3Amessage-key-1'
+    );
   });
 });

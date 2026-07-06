@@ -9,6 +9,7 @@ export {
   createOpenCodeRuntimeControlProvider,
   createOpenCodeRuntimeControlRouter,
 } from './application/OpenCodeRuntimeControlProvider';
+export type { RuntimeControlEventSink } from './application/RuntimeControlPorts';
 export type {
   RuntimeControlProviderOperation,
   RuntimeControlProviderRoutingErrorReason,
@@ -17,6 +18,8 @@ export {
   RuntimeControlProviderRegistry,
   RuntimeControlProviderRoutingError,
 } from './application/RuntimeControlProviderRegistry';
+export type { TeamRuntimeControlCompatibilityApiPorts } from './application/TeamRuntimeControlCompatibility';
+export { createTeamRuntimeControlCompatibilityApi } from './application/TeamRuntimeControlCompatibility';
 export type {
   OpenCodeRuntimeControlAck,
   RuntimeControlAck,
@@ -51,8 +54,11 @@ export type {
   RuntimePermissionPendingSyncedEvent,
   RuntimeTaskEventRecordedEvent,
 } from './domain/RuntimeControlEvent';
+export type { RuntimeControlEventFactoryOptions } from './domain/RuntimeControlEventFactory';
+export { createRuntimeControlEventFromAck } from './domain/RuntimeControlEventFactory';
 export type {
   RuntimeBootstrapCheckinCommandIdInput,
+  RuntimeControlCommandEventIdInput,
   RuntimeControlCommandId,
   RuntimeControlCommandIdPartsInput,
   RuntimeControlEventId,
@@ -70,6 +76,7 @@ export type {
 } from './domain/RuntimeControlIds';
 export {
   buildRuntimeBootstrapCheckinCommandId,
+  buildRuntimeControlCommandEventId,
   buildRuntimeControlCommandId,
   buildRuntimeControlEventId,
   buildRuntimeDeliverMessageCommandId,
@@ -88,4 +95,5 @@ export {
   isRuntimeControlProviderId,
   RUNTIME_CONTROL_PROVIDER_IDS,
 } from './domain/RuntimeControlProvider';
+export type { RuntimeControlServiceOptions } from './RuntimeControlService';
 export { RuntimeControlService } from './RuntimeControlService';

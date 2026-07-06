@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildRuntimeBootstrapCheckinCommandId,
+  buildRuntimeControlCommandEventId,
   buildRuntimeControlCommandId,
   RuntimeControlProviderRegistry,
   RuntimeControlProviderRoutingError,
@@ -108,6 +109,57 @@ describe('RuntimeControlService', () => {
       'Runtime control provider opencode does not support deliverMessage',
     ]);
   });
+
+  it('emits idempotent command-result events through the optional event sink', async () => {
+    const command = createDeliverCommand();
+    const ack = createAck({
+      state: 'delivered',
+      idempotencyKey: command.idempotencyKey,
+      location: { inbox: 'user.json' },
+    });
+    const deliverMessage = vi.fn(async () => ack);
+    const record = vi.fn();
+    const service = new RuntimeControlService({
+      providers: [
+        {
+          providerId: 'opencode',
+          deliverMessage,
+        },
+      ],
+      eventSink: { record },
+    });
+
+    await expect(service.deliverMessage(command)).resolves.toBe(ack);
+    await expect(service.deliverMessage(command)).resolves.toBe(ack);
+
+    const expectedEventId = buildRuntimeControlCommandEventId({
+      providerId: 'opencode',
+      eventType: 'RuntimeMessageDelivered',
+      commandId: command.commandId,
+    });
+    expect(record).toHaveBeenCalledTimes(2);
+    expect(record).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventId: expectedEventId,
+        type: 'RuntimeMessageDelivered',
+        providerId: 'opencode',
+        teamName: 'Team',
+        runId: 'run-1',
+        laneId: 'lane-1',
+        commandId: command.commandId,
+        idempotencyKey: 'message-key-1',
+        fromMemberName: 'Builder',
+        location: { inbox: 'user.json' },
+      })
+    );
+    expect(record).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        eventId: expectedEventId,
+      })
+    );
+  });
 });
 
 function createBootstrapCommand(
@@ -148,6 +200,7 @@ function createDeliverCommand(): RuntimeDeliverMessageCommand {
     providerId: 'opencode',
     teamName: 'Team',
     runId: 'run-1',
+    laneId: 'lane-1',
     idempotencyKey: 'message-key-1',
     fromMemberName: 'Builder',
     runtimeSessionId: 'session-1',
@@ -157,7 +210,7 @@ function createDeliverCommand(): RuntimeDeliverMessageCommand {
   };
 }
 
-function createAck(): RuntimeControlAck {
+function createAck(overrides: Partial<RuntimeControlAck> = {}): RuntimeControlAck {
   return {
     ok: true,
     providerId: 'opencode',
@@ -168,5 +221,6 @@ function createAck(): RuntimeControlAck {
     runtimeSessionId: 'session-1',
     diagnostics: [],
     observedAt: OBSERVED_AT,
+    ...overrides,
   };
 }
