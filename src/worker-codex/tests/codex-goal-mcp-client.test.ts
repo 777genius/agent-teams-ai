@@ -7,6 +7,7 @@ import {
   controllerSupervisorNextCapacityRetryDelayMs,
   controllerSupervisorObservedStatus,
   controllerSupervisorStatusIsTerminal,
+  controllerSupervisorStatusRequiresControlDecision,
   controllerSupervisorTerminalStatusCanRetry,
 } from "../codex-goal-mcp-client";
 
@@ -51,6 +52,21 @@ describe("codex goal MCP client supervisor helpers", () => {
     expect(controllerSupervisorStatusIsTerminal(
       ControllerSupervisorObservedStatus.Failed,
     )).toBe(true);
+  });
+
+  it("requests control decisions only for blocked project controllers", () => {
+    expect(controllerSupervisorStatusRequiresControlDecision(
+      ControllerSupervisorObservedStatus.Blocked,
+    )).toBe(true);
+    expect(controllerSupervisorStatusRequiresControlDecision(
+      ControllerSupervisorObservedStatus.Failed,
+    )).toBe(false);
+    expect(controllerSupervisorStatusRequiresControlDecision(
+      ControllerSupervisorObservedStatus.Completed,
+    )).toBe(false);
+    expect(controllerSupervisorStatusRequiresControlDecision(
+      ControllerSupervisorObservedStatus.Running,
+    )).toBe(false);
   });
 
   it("retries failed project controllers only after quota failures", () => {

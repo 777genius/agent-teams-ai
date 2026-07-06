@@ -119,7 +119,7 @@ export async function superviseCodexGoalProjectController(input: {
             arguments: input.args,
           }));
           input.onEvent?.({ type: "reconcile", result: reconcile });
-          const controlDecision = status === ControllerSupervisorObservedStatus.Blocked
+          const controlDecision = controllerSupervisorStatusRequiresControlDecision(runStatus)
             ? parseMcpJsonResult(await client.callTool({
               name: "codex_goal_control_decision",
               arguments: controllerSupervisorJobArgs(input.args),
@@ -210,6 +210,12 @@ export function controllerSupervisorStatusIsTerminal(
 ): boolean {
   return status !== ControllerSupervisorObservedStatus.Planned &&
     status !== ControllerSupervisorObservedStatus.Running;
+}
+
+export function controllerSupervisorStatusRequiresControlDecision(
+  status: ControllerSupervisorObservedStatus,
+): boolean {
+  return status === ControllerSupervisorObservedStatus.Blocked;
 }
 
 export function controllerSupervisorTerminalStatusCanRetry(
