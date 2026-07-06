@@ -151,6 +151,7 @@ import {
   resolveCodexGoalWorkerLiveness,
   shellQuote,
   startCodexGoalTmux,
+  stopCodexGoalDirectProcess,
   stopCodexGoalTmux,
   tailCodexGoalLog,
   type CodexGoalLaunchInput,
@@ -3383,11 +3384,44 @@ function codexProjectControlPorts(input: {
         return operationResult(command.preview);
       },
       async stopWorker() {
-        if (!input.stopLaunch?.tmuxSession) {
-          throw new Error("project_control_stop_tmux_required");
+        if (!input.stopLaunch) {
+          throw new Error("project_control_stop_launch_required");
         }
-        const command = await stopCodexGoalTmux(input.stopLaunch.tmuxSession);
-        return operationResult(command.preview);
+        const status = await collectCodexGoalStatus(statusInput(input.stopLaunch));
+        if (input.stopLaunch.tmuxSession) {
+          if (status.tmuxAlive === false) {
+            return noopOperationResult(
+              buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
+              "Worker tmux session is already gone.",
+            );
+          }
+          try {
+            const command = await stopCodexGoalTmux(input.stopLaunch.tmuxSession);
+            return operationResult(command.preview);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (/can't find session|no server running/i.test(message)) {
+              return noopOperationResult(
+                buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
+                "Worker tmux session is already gone.",
+              );
+            }
+            throw error;
+          }
+        }
+        const command = stopCodexGoalDirectProcess(status);
+        if (command.status === "terminated") {
+          return operationResult(command.preview);
+        }
+        if (command.status === "process_gone" || command.status === "pid_missing") {
+          return noopOperationResult(
+            command.preview,
+            command.status === "process_gone"
+              ? "Worker process is already gone."
+              : "Worker has no direct process pid to stop.",
+          );
+        }
+        throw new Error("project_control_stop_untrusted_process");
       },
     },
     workspace: {
@@ -5400,39 +5434,31 @@ async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
     staleAfterMs: 10 * 60_000,
     tailLines: 20,
   });
-  if (!loaded.launch.tmuxSession) {
-    return mcpJson({
-      ok: false,
-      reason: "tmux_session_required",
-      controllerJobId: controller.controller.jobId,
-      jobId: loaded.manifest.jobId,
-      status,
-      brief,
-    });
-  }
-  const stopCommand = buildCodexGoalStopTmuxCommand(loaded.launch.tmuxSession);
-  if (!status.tmuxAlive && !args.forceStop) {
-    return mcpJson({
-      ok: false,
-      reason: "worker_not_running",
-      controllerJobId: controller.controller.jobId,
-      jobId: loaded.manifest.jobId,
-      tmuxSession: loaded.launch.tmuxSession,
-      stopCommand: stopCommand.preview,
-      status,
-      brief,
-      requiredOverride: "forceStop",
-    });
-  }
-  if (!brief.silentStale && !brief.heartbeatOnlyNoOutput && !args.forceStop) {
+  const progressStale = status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  const workerLiveness = resolveCodexGoalWorkerLiveness({
+    status,
+    progressStale,
+  });
+  const stopCommandPreview = loaded.launch.tmuxSession
+    ? buildCodexGoalStopTmuxCommand(loaded.launch.tmuxSession).preview
+    : status.progressPid === undefined
+    ? "no direct process pid"
+    : `kill -TERM ${status.progressPid}`;
+  if (
+    workerLiveness.alive &&
+    !brief.silentStale &&
+    !brief.heartbeatOnlyNoOutput &&
+    !args.forceStop
+  ) {
     return mcpJson({
       ok: false,
       reason: "worker_not_silent_stale_or_heartbeat_only_no_output",
       controllerJobId: controller.controller.jobId,
       jobId: loaded.manifest.jobId,
-      tmuxSession: loaded.launch.tmuxSession,
+      ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
       requiredOverride: "forceStop",
-      stopCommand: stopCommand.preview,
+      stopCommand: stopCommandPreview,
       status,
       brief,
     });
@@ -5443,8 +5469,8 @@ async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
       reason: "confirm_stop_required",
       controllerJobId: controller.controller.jobId,
       jobId: loaded.manifest.jobId,
-      tmuxSession: loaded.launch.tmuxSession,
-      stopCommand: stopCommand.preview,
+      ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
+      stopCommand: stopCommandPreview,
       auditPath: projectControlAuditPath(controller.controller),
       status,
       brief,
@@ -5466,7 +5492,7 @@ async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
     registryRoot: controller.registryRootDir,
     workspacePath: loaded.launch.config.workspacePath,
     ...(realWorkspacePath ? { realWorkspacePath } : {}),
-    tmuxSession: loaded.launch.tmuxSession,
+    ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
   });
   await writeCodexGoalStoppedProgress({
     progressPath: loaded.launch.config.progressPath ?? codexGoalProgressPath({
@@ -5481,8 +5507,8 @@ async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
     jobId: loaded.manifest.jobId,
     taskId: loaded.launch.config.taskId,
     jobRootDir: loaded.launch.config.jobRootDir,
-    tmuxSession: loaded.launch.tmuxSession,
-    stopCommand: String(result.resourceId ?? stopCommand.preview),
+    ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
+    stopCommand: String(result.resourceId ?? stopCommandPreview),
     forceStop: Boolean(args.forceStop),
     statusBefore: status,
     statusAfter,
@@ -5496,7 +5522,7 @@ async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
     auditPath: projectControlAuditPath(controller.controller),
     jobId: loaded.manifest.jobId,
     taskId: loaded.launch.config.taskId,
-    tmuxSession: loaded.launch.tmuxSession,
+    ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
     stopEventPath,
     statusBefore: status,
     statusAfter,
@@ -6423,7 +6449,7 @@ async function writeCodexGoalStopEvent(input: {
   readonly jobId: string;
   readonly taskId: string;
   readonly jobRootDir: string;
-  readonly tmuxSession: string;
+  readonly tmuxSession?: string;
   readonly stopCommand: string;
   readonly forceStop: boolean;
   readonly statusBefore: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
@@ -6439,7 +6465,7 @@ async function writeCodexGoalStopEvent(input: {
       jobId: input.jobId,
       taskId: input.taskId,
       stoppedAt: new Date().toISOString(),
-      tmuxSession: input.tmuxSession,
+      ...(input.tmuxSession === undefined ? {} : { tmuxSession: input.tmuxSession }),
       stopCommand: input.stopCommand,
       forceStop: input.forceStop,
       reason: input.brief.silentStale

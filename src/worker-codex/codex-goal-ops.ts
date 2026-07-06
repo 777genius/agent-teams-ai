@@ -54,6 +54,12 @@ export type CodexGoalTmuxCommand = {
   readonly preview: string;
 };
 
+export type CodexGoalDirectStopCommand = {
+  readonly preview: string;
+  readonly status: "terminated" | "process_gone" | "pid_missing" | "untrusted_process";
+  readonly pid?: number;
+};
+
 export type CodexGoalStatusInput = {
   readonly jobRootDir?: string;
   readonly taskId?: string;
@@ -374,6 +380,55 @@ export async function stopCodexGoalTmux(
   return command;
 }
 
+export function stopCodexGoalDirectProcess(
+  status: CodexGoalStatus,
+): CodexGoalDirectStopCommand {
+  const pid = status.progressPid;
+  if (pid === undefined) {
+    return {
+      preview: "no direct process pid",
+      status: "pid_missing",
+    };
+  }
+  const preview = `kill -TERM ${pid}`;
+  if (status.progressProcessAlive !== true) {
+    return {
+      preview,
+      status: "process_gone",
+      pid,
+    };
+  }
+  if (!isTrustedCodexGoalDirectStopProcess(status.progressCommand)) {
+    return {
+      preview,
+      status: "untrusted_process",
+      pid,
+    };
+  }
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { readonly code?: unknown }).code === "ESRCH"
+    ) {
+      return {
+        preview,
+        status: "process_gone",
+        pid,
+      };
+    }
+    throw error;
+  }
+  return {
+    preview,
+    status: "terminated",
+    pid,
+  };
+}
+
 export async function collectCodexGoalStatus(
   input: CodexGoalStatusInput,
 ): Promise<CodexGoalStatus> {
@@ -591,6 +646,13 @@ function isTrustedCodexGoalProgressProcess(command: string | undefined): boolean
   const trimmed = command.trim();
   if (trimmed.length === 0) return false;
   return !(trimmed.startsWith("[") && trimmed.endsWith("]"));
+}
+
+function isTrustedCodexGoalDirectStopProcess(command: string | undefined): boolean {
+  if (!isTrustedCodexGoalProgressProcess(command)) return false;
+  const trimmed = command?.trim() ?? "";
+  return /\bsubscription-runtime-codex-goal\b/.test(trimmed) ||
+    /\bcodex-goal-cli\.js\b/.test(trimmed);
 }
 
 export async function reconcileCodexGoalRuntimeResult(

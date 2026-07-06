@@ -3,7 +3,7 @@ import { access, chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   AccessBoundary,
@@ -26,6 +26,7 @@ import {
   reconcileCodexGoalRuntimeResult,
   resolveCodexGoalWorkerLiveness,
   startCodexGoalTmux,
+  stopCodexGoalDirectProcess,
   summarizeCodexGoalProcessTree,
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
@@ -1044,6 +1045,57 @@ describe("codex goal ops", () => {
       freshProgressAlive: false,
       aliveReason: RunProcessAliveReason.Unknown,
     });
+  });
+
+  it("stops only trusted no-tmux direct worker pids", () => {
+    const kill = vi.spyOn(process, "kill").mockImplementation((() => true) as typeof process.kill);
+    try {
+      expect(stopCodexGoalDirectProcess({
+        progressPid: 123,
+        progressProcessAlive: true,
+        progressCommand: "node subscription-runtime-codex-goal run --no-tmux",
+        recommendedAction: "wait_for_worker",
+        warnings: [],
+      })).toEqual({
+        preview: "kill -TERM 123",
+        status: "terminated",
+        pid: 123,
+      });
+      expect(kill).toHaveBeenCalledWith(123, "SIGTERM");
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it("refuses untrusted no-tmux direct worker pids without signaling them", () => {
+    const kill = vi.spyOn(process, "kill").mockImplementation((() => true) as typeof process.kill);
+    try {
+      expect(stopCodexGoalDirectProcess({
+        progressPid: 123,
+        progressProcessAlive: true,
+        progressCommand: "[kworker/R-slub_]",
+        recommendedAction: "wait_for_worker",
+        warnings: [],
+      })).toEqual({
+        preview: "kill -TERM 123",
+        status: "untrusted_process",
+        pid: 123,
+      });
+      expect(stopCodexGoalDirectProcess({
+        progressPid: 124,
+        progressProcessAlive: true,
+        progressCommand: "bash unrelated-script.sh",
+        recommendedAction: "wait_for_worker",
+        warnings: [],
+      })).toEqual({
+        preview: "kill -TERM 124",
+        status: "untrusted_process",
+        pid: 124,
+      });
+      expect(kill).not.toHaveBeenCalled();
+    } finally {
+      kill.mockRestore();
+    }
   });
 
   it("keeps a live dirty worker in wait state instead of manual review", async () => {
