@@ -839,6 +839,113 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("updates controller consumed-output ledger roots through scoped repair only", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-controller-scope-repair-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const controllerWorkspace = join(root, "workspaces", "infinity-context-controller");
+    const controlRoot = join(root, "control");
+    const ledgerRoot = join(controlRoot, "dirty-worktree-drain");
+    const baseScope = {
+      projectId: "infinity-context",
+      readRoots: [controlRoot, join(root, "workspaces")],
+      workspaceRoots: [join(root, "workspaces")],
+      worktreeRoots: [join(root, "worktrees")],
+      registryRoot: registryRootDir,
+      deniedRoots: [join(root, "secrets")],
+      jobIdPrefixes: ["infinity-context-"],
+      tmuxSessionPrefixes: ["infinity-context-"],
+      allowedAccountIds: ["account-a"],
+    };
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: controllerWorkspace,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: baseScope,
+      });
+
+      const proposedScope = {
+        ...baseScope,
+        consumedOutputLedgerRoots: [ledgerRoot],
+      };
+      const preview = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: proposedScope,
+        },
+      );
+      expect(preview).toMatchObject({
+        ok: false,
+        reason: "confirm_update_required",
+        proposedConsumedOutputLedgerRoots: [ledgerRoot],
+      });
+
+      const updated = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: proposedScope,
+          confirmUpdate: true,
+        },
+      );
+      expect(updated).toMatchObject({
+        ok: true,
+        manifest: {
+          projectAccessScope: {
+            consumedOutputLedgerRoots: [ledgerRoot],
+          },
+        },
+      });
+
+      const widened = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: {
+            ...proposedScope,
+            readRoots: [...baseScope.readRoots, "/outside"],
+          },
+          confirmUpdate: true,
+        },
+      );
+      expect(widened).toMatchObject({
+        ok: false,
+        error: "project_control_scope_readRoots_repair_denied",
+      });
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("denies generic start for project-scoped controller jobs", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-generic-start-"));
     const registryRootDir = join(root, "worker-jobs", "registry");

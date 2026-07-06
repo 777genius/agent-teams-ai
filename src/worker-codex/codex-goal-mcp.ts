@@ -311,6 +311,7 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly confirmCreate?: boolean;
   readonly confirmCreateWorktree?: boolean;
   readonly confirmIntegrate?: boolean;
+  readonly confirmUpdate?: boolean;
   readonly confirmPush?: boolean;
   readonly confirmStart?: boolean;
   readonly confirmStop?: boolean;
@@ -1927,6 +1928,24 @@ export function createCodexGoalMcpServer(
   );
 
   server.registerTool(
+    "codex_goal_project_update_controller_scope",
+    {
+      title: "Project Control Update Controller Scope",
+      description:
+        "Safely repair limited ProjectScopedControl controller scope fields through a brokered manifest update path.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        projectAccessScope: z.record(z.string(), z.unknown()).optional(),
+        confirmUpdate: z.boolean().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlUpdateControllerScope(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
     "codex_goal_project_controller_launch_plan",
     {
       title: "Project Controller Controlled-Agent Launch Plan",
@@ -2683,6 +2702,53 @@ async function projectControlAdmissionSnapshot(
     registryRootDir: controller.registryRootDir,
     snapshot: snapshot as unknown as JsonObject,
     ...(decision ? { decision: decision as unknown as JsonObject } : {}),
+  });
+}
+
+async function projectControlUpdateControllerScope(
+  args: ProjectControlMcpArgs,
+) {
+  const controller = await loadProjectControlController(args);
+  const proposedScope = parseCodexGoalProjectAccessScope(
+    args.projectAccessScope,
+    "projectAccessScope",
+  );
+  if (!proposedScope) {
+    throw new Error("project_control_project_access_scope_required");
+  }
+  assertProjectControlScopeRepairAllowed({
+    existing: controller.scope,
+    proposed: proposedScope,
+  });
+
+  if (booleanValue(args.confirmUpdate) !== true) {
+    return mcpJson({
+      ok: false,
+      reason: "confirm_update_required",
+      mode: "project_control_update_controller_scope",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      auditPath: projectControlAuditPath(controller.controller),
+      currentConsumedOutputLedgerRoots:
+        controller.scope.consumedOutputLedgerRoots ?? [],
+      proposedConsumedOutputLedgerRoots:
+        proposedScope.consumedOutputLedgerRoots ?? [],
+    });
+  }
+
+  const manifest = await updateCodexGoalJob({
+    registryRootDir: controller.registryRootDir,
+    jobId: controller.controller.jobId,
+    patch: { projectAccessScope: proposedScope },
+  });
+  return mcpJson({
+    ok: true,
+    mode: "project_control_update_controller_scope",
+    controllerJobId: controller.controller.jobId,
+    registryRootDir: controller.registryRootDir,
+    auditPath: projectControlAuditPath(controller.controller),
+    manifest,
+    summary: summarizeCodexGoalJob(manifest, controller.registryRootDir),
   });
 }
 
@@ -5519,6 +5585,64 @@ function projectControlChildScope(
       ? { allowedAccountIds: parent.allowedAccountIds }
       : {}),
   };
+}
+
+const PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS = [
+  "projectId",
+  "projectSlug",
+  "readRoots",
+  "observedWorkspaceRoots",
+  "isolatedWorkspaceRoot",
+  "workspaceRoots",
+  "worktreeRoots",
+  "registryRoot",
+  "authRoot",
+  "deniedRoots",
+  "jobIdPrefixes",
+  "tmuxSessionPrefixes",
+  "allowedBranches",
+  "allowedGitRemotes",
+  "allowedAccountIds",
+  "allowForcePush",
+] as const satisfies readonly (keyof ProjectAccessScope)[];
+
+function assertProjectControlScopeRepairAllowed(input: {
+  readonly existing: ProjectAccessScope;
+  readonly proposed: ProjectAccessScope;
+}): void {
+  for (const field of PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS) {
+    if (
+      projectScopeFieldFingerprint(input.existing[field]) !==
+        projectScopeFieldFingerprint(input.proposed[field])
+    ) {
+      throw new Error(`project_control_scope_${field}_repair_denied`);
+    }
+  }
+  const allowedRoots = uniqueProjectControlStrings([
+    ...(input.existing.readRoots ?? []),
+    ...(input.existing.workspaceRoots ?? []),
+    ...(input.existing.worktreeRoots ?? []),
+    ...(input.existing.isolatedWorkspaceRoot
+      ? [input.existing.isolatedWorkspaceRoot]
+      : []),
+    ...(input.existing.registryRoot ? [input.existing.registryRoot] : []),
+  ]);
+  const deniedRoots = input.existing.deniedRoots ?? [];
+  for (const root of input.proposed.consumedOutputLedgerRoots ?? []) {
+    if (!pathInsideAnyProjectRoot(root, allowedRoots)) {
+      throw new Error("project_control_consumed_output_ledger_root_outside_scope");
+    }
+    if (pathInsideAnyProjectRoot(root, deniedRoots)) {
+      throw new Error("project_control_consumed_output_ledger_root_denied");
+    }
+  }
+}
+
+function projectScopeFieldFingerprint(value: unknown): string {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.map((item) => String(item)));
+  }
+  return JSON.stringify(value ?? null);
 }
 
 function uniqueProjectControlStrings(values: readonly string[]): readonly string[] {
