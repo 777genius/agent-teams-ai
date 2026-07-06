@@ -8,6 +8,29 @@ export interface TeamProvisioningExpiringRuntimeSnapshotCacheEntry<TSnapshot> {
   snapshot: TSnapshot;
 }
 
+export interface TeamProvisioningAgentRuntimeSnapshotLike {
+  runId: string | null;
+}
+
+export interface TeamProvisioningAgentRuntimeSnapshotCachePort<
+  TAgentRuntimeSnapshot extends TeamProvisioningAgentRuntimeSnapshotLike,
+> {
+  getCachedAgentRuntimeSnapshot(
+    teamName: string,
+    runId: string | null,
+    nowMs?: number
+  ): TAgentRuntimeSnapshot | null;
+  rememberAgentRuntimeSnapshot(params: {
+    teamName: string;
+    runId: string | null;
+    generationAtStart: number;
+    snapshot: TAgentRuntimeSnapshot;
+    ttlMs: number;
+    nowMs?: number;
+  }): void;
+  getRuntimeSnapshotCacheGeneration(teamName: string): number;
+}
+
 export interface TeamProvisioningLiveRuntimeMetadataCacheEntry<TMetadata> {
   expiresAtMs: number;
   metadata: TMetadata;
@@ -28,7 +51,7 @@ export interface TeamProvisioningMemberSpawnStatusesInFlightEntry<TSnapshot> {
 }
 
 export interface TeamProvisioningRuntimeSnapshotCachePorts<
-  TAgentRuntimeSnapshot,
+  TAgentRuntimeSnapshot extends TeamProvisioningAgentRuntimeSnapshotLike,
   TLiveRuntimeMetadata,
   TMemberSpawnStatusesSnapshot,
   TPersistedTeamConfigCacheEntry,
@@ -53,11 +76,11 @@ export interface TeamProvisioningRuntimeSnapshotCachePorts<
 }
 
 export class TeamProvisioningRuntimeSnapshotCacheBoundary<
-  TAgentRuntimeSnapshot,
+  TAgentRuntimeSnapshot extends TeamProvisioningAgentRuntimeSnapshotLike,
   TLiveRuntimeMetadata,
   TMemberSpawnStatusesSnapshot,
   TPersistedTeamConfigCacheEntry,
-> {
+> implements TeamProvisioningAgentRuntimeSnapshotCachePort<TAgentRuntimeSnapshot> {
   private readonly generationByScope = new Map<
     TeamProvisioningRuntimeSnapshotCacheScope,
     Map<string, number>
@@ -77,6 +100,38 @@ export class TeamProvisioningRuntimeSnapshotCacheBoundary<
 
   getRuntimeSnapshotCacheGeneration(teamName: string): number {
     return this.getGeneration(TeamProvisioningRuntimeSnapshotCacheScope.RuntimeSnapshot, teamName);
+  }
+
+  getCachedAgentRuntimeSnapshot(
+    teamName: string,
+    runId: string | null,
+    nowMs = Date.now()
+  ): TAgentRuntimeSnapshot | null {
+    const cached = this.ports.agentRuntimeSnapshotCache.get(teamName);
+    if (!cached || cached.expiresAtMs <= nowMs || cached.snapshot.runId !== runId) {
+      return null;
+    }
+    return cached.snapshot;
+  }
+
+  rememberAgentRuntimeSnapshot(params: {
+    teamName: string;
+    runId: string | null;
+    generationAtStart: number;
+    snapshot: TAgentRuntimeSnapshot;
+    ttlMs: number;
+    nowMs?: number;
+  }): void {
+    if (
+      this.getRuntimeSnapshotCacheGeneration(params.teamName) !== params.generationAtStart ||
+      params.snapshot.runId !== params.runId
+    ) {
+      return;
+    }
+    this.ports.agentRuntimeSnapshotCache.set(params.teamName, {
+      expiresAtMs: (params.nowMs ?? Date.now()) + params.ttlMs,
+      snapshot: params.snapshot,
+    });
   }
 
   getMemberSpawnStatusesCacheGeneration(teamName: string): number {

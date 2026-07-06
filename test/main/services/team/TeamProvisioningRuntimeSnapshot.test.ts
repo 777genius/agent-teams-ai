@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchSnapshot,
-  TeamAgentRuntimeSnapshot,
   TeamConfig,
 } from '@shared/types';
 
@@ -250,10 +249,6 @@ describe('TeamProvisioningRuntimeSnapshot', () => {
         },
       },
     };
-    const snapshotCache = new Map<
-      string,
-      { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
-    >();
     const resourceHistory = new TeamAgentRuntimeResourceHistory({
       historyLimit: 60,
       minSampleIntervalMs: 0,
@@ -328,10 +323,10 @@ describe('TeamProvisioningRuntimeSnapshot', () => {
             }
           : undefined,
       agentRuntimeResourceHistory: resourceHistory,
-      agentRuntimeSnapshotCache: snapshotCache,
       getRuntimeSnapshotCacheGeneration: () => 1,
       getTrackedRunId: () => null,
       getAgentRuntimeSnapshotCacheTtlMs: () => 0,
+      rememberAgentRuntimeSnapshot: () => undefined,
       logDebug: () => undefined,
     });
 

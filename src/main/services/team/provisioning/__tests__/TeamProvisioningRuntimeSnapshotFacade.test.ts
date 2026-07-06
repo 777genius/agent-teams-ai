@@ -1,6 +1,7 @@
 import { TeamAgentRuntimeResourceHistory } from '@main/services/team/TeamAgentRuntimeResourceHistory';
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamProvisioningRuntimeSnapshotCacheBoundary } from '../TeamProvisioningRuntimeSnapshotCache';
 import {
   TeamProvisioningRuntimeSnapshotFacade,
   type TeamProvisioningRuntimeSnapshotFacadePorts,
@@ -34,12 +35,23 @@ function createFacadeHarness(
   } = {}
 ) {
   let runId: string | null = null;
-  let generation = 0;
   let buildCount = 0;
   const agentRuntimeSnapshotCache = new Map<
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
   >();
+  const runtimeSnapshotCache = new TeamProvisioningRuntimeSnapshotCacheBoundary<
+    TeamAgentRuntimeSnapshot,
+    Map<string, unknown>,
+    MemberSpawnStatusesSnapshot,
+    TeamConfig
+  >({
+    agentRuntimeSnapshotCache,
+    liveTeamAgentRuntimeMetadataCache: new Map(),
+    persistedTeamConfigCache: new Map(),
+    memberSpawnStatusesSnapshotCache: new Map(),
+    memberSpawnStatusesInFlightByTeam: new Map(),
+  });
   const resourceHistory = new TeamAgentRuntimeResourceHistory({
     historyLimit: 10,
     minSampleIntervalMs: 0,
@@ -76,8 +88,7 @@ function createFacadeHarness(
       buildRuntimeProcessLoadStats: () => undefined,
       agentRuntimeResourceHistory: resourceHistory,
     }),
-    agentRuntimeSnapshotCache,
-    getRuntimeSnapshotCacheGeneration: () => generation,
+    runtimeSnapshotCache,
     getTrackedRunId: () => runId,
     getAgentRuntimeSnapshotCacheTtlMs: () => options.ttlMs ?? 60_000,
     ...(options.buildTeamAgentRuntimeSnapshot
@@ -94,7 +105,7 @@ function createFacadeHarness(
       runId = nextRunId;
     },
     incrementGeneration: () => {
-      generation += 1;
+      runtimeSnapshotCache.invalidateRuntimeSnapshotCaches('alpha');
     },
   };
 }

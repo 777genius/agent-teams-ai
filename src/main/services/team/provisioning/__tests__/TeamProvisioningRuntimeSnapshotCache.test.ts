@@ -79,6 +79,61 @@ describe('TeamProvisioningRuntimeSnapshotCacheBoundary', () => {
     expect(boundary.getMemberSpawnStatusesCacheGeneration('alpha')).toBe(0);
   });
 
+  it('reads and writes agent runtime snapshots through the boundary', () => {
+    const { boundary, agentRuntimeSnapshotCache } = createCacheBoundary();
+
+    boundary.rememberAgentRuntimeSnapshot({
+      teamName: 'alpha',
+      runId: 'run-1',
+      generationAtStart: 0,
+      snapshot: { runId: 'run-1' },
+      ttlMs: 500,
+      nowMs: 1_000,
+    });
+
+    expect(boundary.getCachedAgentRuntimeSnapshot('alpha', 'run-1', 1_499)).toEqual({
+      runId: 'run-1',
+    });
+    expect(boundary.getCachedAgentRuntimeSnapshot('alpha', 'run-2', 1_499)).toBeNull();
+    expect(boundary.getCachedAgentRuntimeSnapshot('alpha', 'run-1', 1_500)).toBeNull();
+    expect(agentRuntimeSnapshotCache.get('alpha')).toMatchObject({
+      expiresAtMs: 1_500,
+      snapshot: { runId: 'run-1' },
+    });
+  });
+
+  it('does not cache an agent runtime snapshot for a mismatched tracked run', () => {
+    const { boundary, agentRuntimeSnapshotCache } = createCacheBoundary();
+
+    boundary.rememberAgentRuntimeSnapshot({
+      teamName: 'alpha',
+      runId: 'run-2',
+      generationAtStart: 0,
+      snapshot: { runId: 'run-1' },
+      ttlMs: 500,
+      nowMs: 1_000,
+    });
+
+    expect(agentRuntimeSnapshotCache.has('alpha')).toBe(false);
+    expect(boundary.getCachedAgentRuntimeSnapshot('alpha', 'run-1', 1_001)).toBeNull();
+  });
+
+  it('does not cache an agent runtime snapshot after the generation changes', () => {
+    const { boundary, agentRuntimeSnapshotCache } = createCacheBoundary();
+    boundary.invalidateRuntimeSnapshotCaches('alpha');
+
+    boundary.rememberAgentRuntimeSnapshot({
+      teamName: 'alpha',
+      runId: 'run-1',
+      generationAtStart: 0,
+      snapshot: { runId: 'run-1' },
+      ttlMs: 500,
+      nowMs: 1_000,
+    });
+
+    expect(agentRuntimeSnapshotCache.has('alpha')).toBe(false);
+  });
+
   it('clears runtime snapshot caches without clearing member spawn status caches', () => {
     const {
       boundary,

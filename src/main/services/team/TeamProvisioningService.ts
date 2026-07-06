@@ -1889,9 +1889,7 @@ export class TeamProvisioningService {
         this.getLiveTeamAgentRuntimeMetadata(targetTeamName),
       createRuntimeSnapshotResourceSamplingPorts: () =>
         this.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
-      agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
-      getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
-        this.getRuntimeSnapshotCacheGeneration(targetTeamName),
+      runtimeSnapshotCache: this.runtimeSnapshotCacheBoundary,
       getTrackedRunId: (targetTeamName) => this.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
         this.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),

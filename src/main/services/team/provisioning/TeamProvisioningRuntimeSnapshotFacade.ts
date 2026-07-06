@@ -7,6 +7,7 @@ import {
 
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
+import type { TeamProvisioningAgentRuntimeSnapshotCachePort } from './TeamProvisioningRuntimeSnapshotCache';
 import type {
   MemberSpawnStatusesSnapshot,
   PersistedTeamLaunchSnapshot,
@@ -19,7 +20,9 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
-type BuildTeamAgentRuntimeSnapshotParams = Parameters<typeof buildTeamAgentRuntimeSnapshotHelper>[0];
+type BuildTeamAgentRuntimeSnapshotParams = Parameters<
+  typeof buildTeamAgentRuntimeSnapshotHelper
+>[0];
 
 export interface TeamProvisioningRuntimeSnapshotFacadePorts {
   runs: ReadonlyMap<string, TeamProvisioningRuntimeSnapshotRun>;
@@ -45,11 +48,7 @@ export interface TeamProvisioningRuntimeSnapshotFacadePorts {
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
   createRuntimeSnapshotResourceSamplingPorts(): TeamProvisioningRuntimeSnapshotResourceSamplingPorts;
-  agentRuntimeSnapshotCache: Map<
-    string,
-    { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
-  >;
-  getRuntimeSnapshotCacheGeneration(teamName: string): number;
+  runtimeSnapshotCache: TeamProvisioningAgentRuntimeSnapshotCachePort<TeamAgentRuntimeSnapshot>;
   getTrackedRunId(teamName: string): string | null;
   getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number;
   buildTeamAgentRuntimeSnapshot?(
@@ -72,12 +71,13 @@ export class TeamProvisioningRuntimeSnapshotFacade {
 
   async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
     const runId = this.ports.getTrackedRunId(teamName);
-    const cached = this.ports.agentRuntimeSnapshotCache.get(teamName);
-    if (cached && cached.expiresAtMs > Date.now() && cached.snapshot.runId === runId) {
-      return cached.snapshot;
+    const cached = this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId);
+    if (cached) {
+      return cached;
     }
 
-    const generationAtStart = this.ports.getRuntimeSnapshotCacheGeneration(teamName);
+    const generationAtStart =
+      this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(teamName);
     const existingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
     if (existingRequest?.runIdAtStart === runId) {
       return existingRequest.promise;
@@ -121,12 +121,13 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
         this.ports.getLiveTeamAgentRuntimeMetadata(targetTeamName),
       ...this.ports.createRuntimeSnapshotResourceSamplingPorts(),
-      agentRuntimeSnapshotCache: this.ports.agentRuntimeSnapshotCache,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
-        this.ports.getRuntimeSnapshotCacheGeneration(targetTeamName),
+        this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(targetTeamName),
       getTrackedRunId: (targetTeamName) => this.ports.getTrackedRunId(targetTeamName),
       getAgentRuntimeSnapshotCacheTtlMs: (targetTeamName, targetRunId) =>
         this.ports.getAgentRuntimeSnapshotCacheTtlMs(targetTeamName, targetRunId),
+      rememberAgentRuntimeSnapshot: (params) =>
+        this.ports.runtimeSnapshotCache.rememberAgentRuntimeSnapshot(params),
       logDebug: (message) => this.ports.logDebug(message),
     });
   }

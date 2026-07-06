@@ -154,6 +154,16 @@ interface RuntimeSnapshotCacheAccess {
   getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number;
 }
 
+interface RuntimeSnapshotAgentCacheWriteAccess {
+  rememberAgentRuntimeSnapshot(params: {
+    teamName: string;
+    runId: string | null;
+    generationAtStart: number;
+    snapshot: TeamAgentRuntimeSnapshot;
+    ttlMs: number;
+  }): void;
+}
+
 interface RuntimeSnapshotLogging {
   logDebug(message: string): void;
 }
@@ -625,13 +635,10 @@ export async function buildTeamAgentRuntimeSnapshot(
     getLiveTeamAgentRuntimeMetadata(
       teamName: string
     ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
-    agentRuntimeSnapshotCache: Map<
-      string,
-      { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
-    >;
   } & TeamProvisioningRuntimeSnapshotResourceSamplingPorts &
     RuntimeSnapshotStores &
     RuntimeSnapshotCacheAccess &
+    RuntimeSnapshotAgentCacheWriteAccess &
     RuntimeSnapshotLogging
 ): Promise<TeamAgentRuntimeSnapshot> {
   const updatedAt = nowIso();
@@ -1213,10 +1220,12 @@ export async function buildTeamAgentRuntimeSnapshot(
     params.getRuntimeSnapshotCacheGeneration(params.teamName) === params.generationAtStart &&
     params.getTrackedRunId(params.teamName) === params.runId
   ) {
-    params.agentRuntimeSnapshotCache.set(params.teamName, {
-      expiresAtMs:
-        Date.now() + params.getAgentRuntimeSnapshotCacheTtlMs(params.teamName, params.runId),
+    params.rememberAgentRuntimeSnapshot({
+      teamName: params.teamName,
+      runId: params.runId,
+      generationAtStart: params.generationAtStart,
       snapshot,
+      ttlMs: params.getAgentRuntimeSnapshotCacheTtlMs(params.teamName, params.runId),
     });
   }
   return snapshot;
