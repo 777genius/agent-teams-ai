@@ -104,6 +104,7 @@ import {
   TeamProvisioningBootstrapTranscriptFacade,
   type TeamProvisioningBootstrapTranscriptMemberLogsPort,
 } from './provisioning/TeamProvisioningBootstrapTranscriptFacade';
+import { readTeamProvisioningClaudeLogs } from './provisioning/TeamProvisioningClaudeLogs';
 import {
   addPermissionRulesToSettings as addClaudePermissionRulesToSettings,
   type ClaudePermissionSettingsFilePorts,
@@ -227,7 +228,6 @@ import {
 import { createTeamProvisioningLiveLaunchSnapshotBoundary } from './provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { createTeamProvisioningLiveLeadMessagePortsBoundary } from './provisioning/TeamProvisioningLiveLeadMessagePortsFactory';
 import { createTeamProvisioningLiveRuntimeMetadataPorts } from './provisioning/TeamProvisioningLiveRuntimeMetadataPortsFactory';
-import { sliceClaudeLogs } from './provisioning/TeamProvisioningLogSlice';
 import { relayMemberInboxMessagesWithPorts } from './provisioning/TeamProvisioningMemberInboxRelayFlow';
 import {
   type LiveRosterAttachReason,
@@ -2904,24 +2904,13 @@ export class TeamProvisioningService {
     teamName: string,
     query?: { offset?: number; limit?: number }
   ): Promise<{ lines: string[]; total: number; hasMore: boolean; updatedAt?: string }> {
-    const runId = this.runTracking.getTrackedRunId(teamName);
-    if (runId) {
-      const run = this.runs.get(runId);
-      if (run) {
-        return sliceClaudeLogs(run.claudeLogLines, run.claudeLogsUpdatedAt, query);
-      }
-    }
-
-    const retained = this.retainedClaudeLogsByTeam.get(teamName);
-    if (!retained) {
-      const transcriptSnapshot = await this.getPersistedTranscriptClaudeLogs(teamName);
-      if (!transcriptSnapshot) {
-        return { lines: [], total: 0, hasMore: false };
-      }
-      return sliceClaudeLogs(transcriptSnapshot.lines, transcriptSnapshot.updatedAt, query);
-    }
-
-    return sliceClaudeLogs(retained.lines, retained.updatedAt, query);
+    return readTeamProvisioningClaudeLogs(teamName, query, {
+      runTracking: this.runTracking,
+      runs: this.runs,
+      retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
+      readPersistedTranscriptClaudeLogs: (candidateTeamName) =>
+        this.getPersistedTranscriptClaudeLogs(candidateTeamName),
+    });
   }
 
   /**
