@@ -173,6 +173,7 @@ import {
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
+const codexGoalObjectiveMaxChars = 4000;
 const execFileAsync = promisify(execFile);
 const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
   runtimeVersion: serverVersion,
@@ -193,6 +194,7 @@ type GoalMcpArgs = {
   readonly stateRootDir?: string;
   readonly workspacePath?: string;
   readonly promptPath?: string;
+  readonly codexGoalObjective?: string;
   readonly taskId?: string;
   readonly accounts?: string | readonly string[];
   readonly outputPath?: string;
@@ -2432,6 +2434,9 @@ async function goalLaunchInput(args: GoalMcpArgs): Promise<CodexGoalLaunchInput>
     authRootDir,
     workspacePath,
     promptPath,
+    ...(stringValue(merged.codexGoalObjective)
+      ? { codexGoalObjective: stringValue(merged.codexGoalObjective) as string }
+      : {}),
     taskId,
     accounts,
     outputPath: resolvePath(
@@ -9003,6 +9008,9 @@ function goalInputSchema(): Record<string, z.ZodTypeAny> {
     stateRootDir: z.string().optional(),
     workspacePath: z.string().optional(),
     promptPath: z.string().optional(),
+    codexGoalObjective: z.string().max(codexGoalObjectiveMaxChars).describe(
+      "Short app-server goal objective, max 4000 characters. For long instructions, keep the full task in promptPath and reference docs/files here.",
+    ).optional(),
     taskId: z.string().optional(),
     accounts: z.union([z.string(), z.array(z.string())]).optional(),
     outputPath: z.string().optional(),

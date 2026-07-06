@@ -118,6 +118,40 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("advertises codexGoalObjective max length in job tool schemas", async () => {
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "codex-goal-mcp-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      const tools = await client.listTools();
+      const createJobTool = (tools.tools ?? []).find(
+        (tool) => tool.name === "codex_goal_create_job",
+      );
+      const objectiveSchema = (
+        createJobTool?.inputSchema.properties as Record<string, unknown>
+      )?.codexGoalObjective as
+        | { readonly maxLength?: number; readonly description?: string }
+        | undefined;
+
+      expect(objectiveSchema).toMatchObject({
+        maxLength: 4000,
+        description: expect.stringContaining("max 4000 characters"),
+      });
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("treats restricted tmux probes as unavailable instead of throwing", async () => {
     const calls: string[][] = [];
     const available = await hasTmux((args) => {
