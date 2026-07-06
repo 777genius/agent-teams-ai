@@ -1906,9 +1906,7 @@ describe("Codex provider adapter", () => {
   });
 
   it("reports overlong app-server goal objectives before goal set", async () => {
-    const workspace = await mkdtemp(
-      join(tmpdir(), "codex-app-goal-objective-test-"),
-    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-objective-test-"));
     const fakeFactory = new FakeAppServerFactory();
     const driver = new CodexJsonAgentDriver({
       engine: new CodexAppServerExecutionEngine({
@@ -1948,9 +1946,9 @@ describe("Codex provider adapter", () => {
           },
         },
       });
-      expect(
-        fakeFactory.requests.map((request) => request.method),
-      ).not.toContain("thread/goal/set");
+      expect(fakeFactory.requests.map((request) => request.method)).not.toContain(
+        "thread/goal/set",
+      );
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -3226,9 +3224,7 @@ describe("Codex provider adapter", () => {
   });
 
   it("uses a bounded app-server startup timeout separate from task timeout", async () => {
-    const workspace = await mkdtemp(
-      join(tmpdir(), "codex-app-init-timeout-test-"),
-    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-init-timeout-test-"));
     const fakeFactory = new FakeAppServerFactory({
       suppressInitializeResponse: true,
     });
@@ -3269,33 +3265,28 @@ describe("Codex provider adapter", () => {
   });
 
   it("rejects invalid app-server startup timeout options", () => {
-    expect(
-      () =>
-        new CodexAppServerExecutionEngine({
-          codexBinaryPath: "/bin/codex-test",
-          timeoutMs: 0,
-        }),
+    expect(() =>
+      new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        timeoutMs: 0,
+      })
     ).toThrow("codex_app_server_timeout_invalid");
-    expect(
-      () =>
-        new CodexAppServerExecutionEngine({
-          codexBinaryPath: "/bin/codex-test",
-          startupTimeoutMs: 0,
-        }),
+    expect(() =>
+      new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        startupTimeoutMs: 0,
+      })
     ).toThrow("codex_app_server_startup_timeout_invalid");
-    expect(
-      () =>
-        new CodexAppServerExecutionEngine({
-          codexBinaryPath: "/bin/codex-test",
-          startupTimeoutMs: 1.5,
-        }),
+    expect(() =>
+      new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        startupTimeoutMs: 1.5,
+      })
     ).toThrow("codex_app_server_startup_timeout_invalid");
   });
 
   it("classifies app-server initialize usage limits as quota limited", async () => {
-    const workspace = await mkdtemp(
-      join(tmpdir(), "codex-app-init-quota-test-"),
-    );
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-init-quota-test-"));
     const fakeFactory = new FakeAppServerFactory({
       initializeError: "You've hit your usage limit.",
     });
