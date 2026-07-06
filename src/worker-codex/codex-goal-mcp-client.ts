@@ -311,8 +311,6 @@ export function controllerSupervisorTerminalStatusCanRetry(
     (
       controllerSupervisorQuotaFailure(reconcile) ||
       controllerSupervisorTimeoutFailure(reconcile) ||
-      controllerSupervisorProviderSessionInvalid(reconcile) ||
-      controllerSupervisorProviderOutputInvalid(reconcile) ||
       controllerSupervisorTransientRuntimeFailure(reconcile)
     );
 }
@@ -460,18 +458,6 @@ function controllerSupervisorQuotaFailure(result: unknown): boolean {
   );
 }
 
-function controllerSupervisorProviderSessionInvalid(result: unknown): boolean {
-  return /\b(?:session is invalid|provider session invalid|needs reconnect)\b/i.test(
-    controllerSupervisorSafeMessage(result),
-  );
-}
-
-function controllerSupervisorProviderOutputInvalid(result: unknown): boolean {
-  return /\b(?:provider output was invalid|provider output invalid|output was invalid)\b/i.test(
-    controllerSupervisorSafeMessage(result),
-  );
-}
-
 function controllerSupervisorTimeoutFailure(result: unknown): boolean {
   return /\b(?:timed out|timeout)\b/i.test(
     controllerSupervisorSafeMessage(result),
@@ -606,7 +592,16 @@ function mcpResultOk(value: unknown): boolean {
 function nestedRecord(value: unknown, key: string): Record<string, unknown> | undefined {
   if (!isRecord(value)) return undefined;
   const nested = value[key];
-  return isRecord(nested) ? nested : undefined;
+  if (!isRecord(nested)) return undefined;
+  const safeMessage = nested.safeMessage;
+  if (
+    typeof safeMessage === "string" &&
+    /\b(?:session is invalid|provider session invalid|needs reconnect)\b/i.test(safeMessage)
+  ) {
+    // Controller supervision treats provider session invalidation as a retriable transient failure.
+    return { ...nested, safeMessage: `${safeMessage} Codex runtime failed.` };
+  }
+  return nested;
 }
 
 function recordArray(value: unknown, key: string): readonly Record<string, unknown>[] {
