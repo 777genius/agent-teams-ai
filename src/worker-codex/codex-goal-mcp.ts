@@ -2825,13 +2825,73 @@ function assertProjectControlRepairAccountsAllowed(input: {
   }
 }
 
+const projectAdmissionSnapshotCache = new Map<
+  string,
+  { readonly expiresAtMs: number; readonly snapshot: ProjectAdmissionSnapshot }
+>();
+
+function projectAdmissionCacheTtlMs(): number {
+  const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS ?? "0");
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.min(raw, 120_000);
+}
+
+function projectAdmissionMaxJobSummaries(): number {
+  const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MAX_JOB_SUMMARIES ?? "0");
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.floor(raw);
+}
+
+function projectAdmissionCacheKey(input: {
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+}): string {
+  return JSON.stringify({
+    registryRootDir: input.registryRootDir,
+    projectId: input.scope.projectId,
+    jobIdPrefixes: input.scope.jobIdPrefixes ?? [],
+    workspaceRoots: input.scope.workspaceRoots ?? [],
+    worktreeRoots: input.scope.worktreeRoots ?? [],
+    observedWorkspaceRoots: input.scope.observedWorkspaceRoots ?? [],
+    consumedOutputLedgerRoots: input.scope.consumedOutputLedgerRoots ?? [],
+  });
+}
+
+async function readCodexProjectAdmissionSnapshot(input: {
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+}): Promise<ProjectAdmissionSnapshot> {
+  const ttlMs = projectAdmissionCacheTtlMs();
+  if (ttlMs <= 0) return buildCodexProjectAdmissionSnapshot(input);
+  const key = projectAdmissionCacheKey(input);
+  const now = Date.now();
+  const cached = projectAdmissionSnapshotCache.get(key);
+  if (cached && cached.expiresAtMs > now) return cached.snapshot;
+  const snapshot = await buildCodexProjectAdmissionSnapshot(input);
+  projectAdmissionSnapshotCache.set(key, {
+    expiresAtMs: now + ttlMs,
+    snapshot,
+  });
+  return snapshot;
+}
+
+function limitCodexProjectSummaries(
+  summaries: readonly CodexGoalJobSummary[],
+): readonly CodexGoalJobSummary[] {
+  const max = projectAdmissionMaxJobSummaries();
+  if (max <= 0 || summaries.length <= max) return summaries;
+  return [...summaries]
+    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+    .slice(-max);
+}
+
 function codexProjectAdmissionGate(input: {
   readonly registryRootDir: string;
   readonly scope: ProjectAccessScope;
 }): ProjectAdmissionGate {
   return {
     async evaluate(request) {
-      const snapshot = await buildCodexProjectAdmissionSnapshot(input);
+      const snapshot = await readCodexProjectAdmissionSnapshot(input);
       return evaluateProjectAdmission({
         request: {
           ...request,
@@ -2869,8 +2929,8 @@ async function buildCodexProjectAdmissionSnapshot(input: {
     });
     summaries = [];
   }
-  const projectSummaries = summaries.filter((summary) =>
-    matchesProjectControlPrefix(summary.jobId, prefixes)
+  const projectSummaries = limitCodexProjectSummaries(
+    summaries.filter((summary) => matchesProjectControlPrefix(summary.jobId, prefixes)),
   );
   const overviewSummaries: CodexGoalJobSummary[] = [];
   for (const summary of projectSummaries) {
