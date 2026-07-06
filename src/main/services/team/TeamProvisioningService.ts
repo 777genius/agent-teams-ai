@@ -19,7 +19,6 @@ import {
   killTrackedCliProcesses,
   spawnCli,
 } from '@main/utils/childProcess';
-import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
@@ -396,6 +395,7 @@ import {
   auditRegisteredMemberSpawnStatuses as auditRegisteredMemberSpawnStatusesHelper,
   readRegisteredTeamMemberNamesFromConfig,
 } from './provisioning/TeamProvisioningRegisteredMemberAudit';
+import { tryReadRegularFileUtf8 } from './provisioning/TeamProvisioningRegularFileRead';
 import {
   extractCliLogsFromRun,
   type RetainedClaudeLogsSnapshot,
@@ -648,37 +648,6 @@ const claudePermissionSettingsFilePorts: ClaudePermissionSettingsFilePorts = {
 
 function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
   return getRuntimeFailureLabelForRequest(run.request);
-}
-
-async function tryReadRegularFileUtf8(
-  filePath: string,
-  opts: { timeoutMs: number; maxBytes: number }
-): Promise<string | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.stat(filePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
-
-  if (!stat.isFile() || stat.size > opts.maxBytes) {
-    return null;
-  }
-
-  try {
-    return await readFileUtf8WithTimeout(filePath, opts.timeoutMs);
-  } catch (error) {
-    if (error instanceof FileReadTimeoutError) {
-      return null;
-    }
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
 }
 
 export class TeamProvisioningService {

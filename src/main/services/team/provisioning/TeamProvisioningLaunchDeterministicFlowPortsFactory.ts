@@ -1,6 +1,4 @@
-import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
@@ -21,6 +19,7 @@ import {
 } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import { type TeamProvisioningLaunchExpectedMembersPorts } from './TeamProvisioningLaunchExpectedMembers';
 import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningProviderRuntimeFacade';
+import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
 import { type RuntimeTurnSettledEnvironmentProvider } from './TeamProvisioningRuntimeTurnSettledPlanning';
 import { type WorkspaceTrustWorkspaceCollectionPorts } from './TeamProvisioningWorkspaceTrust';
 
@@ -124,37 +123,6 @@ export interface TeamProvisioningLaunchDeterministicFlowBoundary<TMixedSecondary
     request: TeamLaunchRequest;
     setup: PreparedDeterministicLaunchSetup<TMixedSecondaryLane>;
   }): RunDeterministicLaunchRunFlowPorts<TMixedSecondaryLane>;
-}
-
-async function tryReadRegularFileUtf8(
-  filePath: string,
-  opts: { timeoutMs: number; maxBytes: number }
-): Promise<string | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.stat(filePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
-
-  if (!stat.isFile() || stat.size > opts.maxBytes) {
-    return null;
-  }
-
-  try {
-    return await readFileUtf8WithTimeout(filePath, opts.timeoutMs);
-  } catch (error) {
-    if (error instanceof FileReadTimeoutError) {
-      return null;
-    }
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
 }
 
 function assertPreparedSetup<TMixedSecondaryLane>(

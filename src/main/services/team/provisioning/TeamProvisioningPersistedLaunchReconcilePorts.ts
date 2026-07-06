@@ -1,7 +1,5 @@
-import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isMeaningfulBootstrapCheckInMessage } from '@shared/utils/inboxNoise';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import {
@@ -35,6 +33,7 @@ import {
   type ReconcilePersistedLaunchStatePorts,
   reconcilePersistedLaunchStateWithPorts,
 } from './TeamProvisioningPersistedLaunchReconciliation';
+import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
 import { mergeRuntimeDiagnostics } from './TeamProvisioningRuntimeMetadata';
 
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
@@ -65,37 +64,6 @@ export interface TeamProvisioningPersistedLaunchReconcilePortsInput extends Pick
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-async function tryReadRegularFileUtf8(
-  filePath: string,
-  opts: { timeoutMs: number; maxBytes: number }
-): Promise<string | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.stat(filePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
-
-  if (!stat.isFile() || stat.size > opts.maxBytes) {
-    return null;
-  }
-
-  try {
-    return await readFileUtf8WithTimeout(filePath, opts.timeoutMs);
-  } catch (error) {
-    if (error instanceof FileReadTimeoutError) {
-      return null;
-    }
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    return null;
-  }
 }
 
 export function createTeamProvisioningPersistedLaunchReconcilePorts(
