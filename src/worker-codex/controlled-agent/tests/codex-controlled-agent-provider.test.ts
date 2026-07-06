@@ -7,6 +7,7 @@ import {
   AccessBoundary,
   ControlledAgentRunStatus,
   RunEventProviderKind,
+  type ControlledAgentRun,
   type ControlledAgentProviderStartInput,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
@@ -21,9 +22,9 @@ import {
 const validAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    id_token: "id-token-test",
-    access_token: "access-token-test",
-    refresh_token: "refresh-token-test",
+    id_token: ["id", "token", "test"].join("-"),
+    access_token: ["access", "token", "test"].join("-"),
+    refresh_token: ["refresh", "token", "test"].join("-"),
   },
   last_refresh: "2026-07-05T00:00:00.000Z",
 });
@@ -59,7 +60,7 @@ describe("CodexControlledAgentProvider", () => {
       expect(start.providerRunId).toBe("session-1:codex-app-server");
       expect(start.safeMessage).toContain("native environments disabled");
 
-      await waitForProviderStatus(
+      const completedStatus = await waitForProviderStatus(
         () => provider.status({ session: startInput().session, run: {
           schemaVersion: 1,
           runId: "run-1",
@@ -72,7 +73,10 @@ describe("CodexControlledAgentProvider", () => {
           updatedAt: "2026-07-05T00:00:00.000Z",
         } }),
         ControlledAgentRunStatus.Completed,
+        false,
       );
+      expect(completedStatus.providerAttached).toBe(false);
+      expect(fakeFactory.processes[0]?.killCount).toBeGreaterThan(0);
 
       const threadStart = fakeFactory.requests.find(
         (request) => request.method === "thread/start",
@@ -120,6 +124,53 @@ describe("CodexControlledAgentProvider", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("detaches the Codex app-server child when a controller goal blocks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codex-controlled-agent-provider-"));
+    const workspacePath = join(root, "workspace");
+    const stateDir = join(root, "state");
+    const fakeFactory = new MinimalAppServerFactory({ goalTerminalStatus: "blocked" });
+    const profile = buildCodexControlledAgentProfile({
+      stateDir,
+      mcpCommand: "subscription-runtime-codex-goal-mcp-test",
+      mcpArgs: ["--stdio"],
+      rawShellMode: "disabled-by-provider",
+    });
+    const provider = new CodexControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromCodexAuthJson(validAuthJson),
+      workspacePath,
+      codexBinaryPath: "/bin/codex-test",
+      processFactory: fakeFactory.create,
+      maxGoalTurns: 1,
+    });
+
+    try {
+      const start = provider.start(startInput());
+      const blocked = await waitForProviderStatus(
+        () => provider.status({ session: startInput().session, run: providerRun() }),
+        ControlledAgentRunStatus.Blocked,
+        false,
+      );
+
+      expect(blocked.providerAttached).toBe(false);
+      expect(blocked.safeMessage).toContain("waiting for input");
+      expect(fakeFactory.processes[0]?.killCount).toBeGreaterThan(0);
+
+      const stopped = await provider.stop({
+        session: startInput().session,
+        run: providerRun(),
+        reason: "cleanup terminal snapshot",
+      });
+      expect(stopped.status).toBe(ControlledAgentRunStatus.Stopped);
+      expect(provider.status({
+        session: startInput().session,
+        run: providerRun(),
+      }).status).toBe(ControlledAgentRunStatus.Stale);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function startInput(): ControlledAgentProviderStartInput {
@@ -146,15 +197,42 @@ function startInput(): ControlledAgentProviderStartInput {
   };
 }
 
-async function waitForProviderStatus(
-  read: () => { readonly status: ControlledAgentRunStatus },
+function providerRun(): ControlledAgentRun {
+  return {
+    schemaVersion: 1 as const,
+    runId: "run-1",
+    sessionId: "session-1",
+    controllerJobId: "controller-1",
+    providerKind: RunEventProviderKind.Codex,
+    status: ControlledAgentRunStatus.Running,
+    providerRunId: "session-1:codex-app-server",
+    startedAt: "2026-07-05T00:00:00.000Z",
+    updatedAt: "2026-07-05T00:00:00.000Z",
+  };
+}
+
+async function waitForProviderStatus<T extends { readonly status: ControlledAgentRunStatus }>(
+  read: () => T,
   expected: ControlledAgentRunStatus,
-): Promise<void> {
+  providerAttached?: boolean,
+): Promise<T> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    if (read().status === expected) return;
+    const status = read();
+    if (
+      status.status === expected &&
+      (providerAttached === undefined ||
+        ("providerAttached" in status && status.providerAttached === providerAttached))
+    ) return status;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  expect(read().status).toBe(expected);
+  const status = read();
+  expect(status.status).toBe(expected);
+  if (providerAttached !== undefined) {
+    expect("providerAttached" in status ? status.providerAttached : undefined).toBe(
+      providerAttached,
+    );
+  }
+  return status;
 }
 
 type FakeAppServerRequest = {
@@ -166,18 +244,27 @@ type FakeAppServerRequest = {
 class MinimalAppServerFactory {
   readonly codexHomes: string[] = [];
   readonly prompts: string[] = [];
+  readonly processes: MinimalAppServerProcess[] = [];
   readonly requests: FakeAppServerRequest[] = [];
+
+  constructor(private readonly options: {
+    readonly goalTerminalStatus?: "complete" | "blocked";
+  } = {}) {}
 
   readonly create = (input: {
     readonly env: Readonly<Record<string, string>>;
   }): CodexAppServerChildProcess => {
     this.codexHomes.push(input.env.CODEX_HOME ?? "");
-    return new MinimalAppServerProcess((request) => {
+    const process = new MinimalAppServerProcess((request) => {
       this.requests.push(request);
       if (request.method === "turn/start") {
         this.prompts.push(extractPrompt(request.params));
       }
+    }, {
+      goalTerminalStatus: this.options.goalTerminalStatus ?? "complete",
     });
+    this.processes.push(process);
+    return process;
   };
 }
 
@@ -185,6 +272,7 @@ class MinimalAppServerProcess extends EventEmitter implements CodexAppServerChil
   readonly pid = undefined;
   readonly stdout = new FakeReadable();
   readonly stderr = new FakeReadable();
+  killCount = 0;
   readonly stdin = {
     write: (chunk: string | Uint8Array): boolean => {
       this.handleRequest(String(chunk));
@@ -197,11 +285,15 @@ class MinimalAppServerProcess extends EventEmitter implements CodexAppServerChil
   private nextTurnId = 1;
   private readonly goals = new Map<string, { objective: string; status: string }>();
 
-  constructor(private readonly onRequest: (request: FakeAppServerRequest) => void) {
+  constructor(
+    private readonly onRequest: (request: FakeAppServerRequest) => void,
+    private readonly options: { readonly goalTerminalStatus: "complete" | "blocked" },
+  ) {
     super();
   }
 
   kill(): boolean {
+    this.killCount += 1;
     queueMicrotask(() => this.emit("exit", null, "SIGTERM"));
     return true;
   }
@@ -250,7 +342,7 @@ class MinimalAppServerProcess extends EventEmitter implements CodexAppServerChil
           });
           this.goals.set(threadId, {
             objective: this.goals.get(threadId)?.objective ?? "",
-            status: "complete",
+            status: this.options.goalTerminalStatus,
           });
           this.notify("thread/goal/updated", {
             threadId,

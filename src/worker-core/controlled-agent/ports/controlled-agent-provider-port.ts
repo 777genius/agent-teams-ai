@@ -22,6 +22,7 @@ export type ControlledAgentProviderStatusInput = {
 export type ControlledAgentProviderStatusResult = {
   readonly status: ControlledAgentRunStatus;
   readonly providerRunId?: string;
+  readonly providerAttached?: boolean;
   readonly safeMessage?: string;
   readonly observedAt?: string;
 };

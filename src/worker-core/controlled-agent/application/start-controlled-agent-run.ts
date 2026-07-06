@@ -52,9 +52,12 @@ export type StartControlledAgentRunResult =
     }
   | {
       readonly ok: false;
-      readonly reason: StartControlledAgentRunBlockReason.ExistingActiveRun;
+      readonly reason:
+        | StartControlledAgentRunBlockReason.ExistingActiveRun
+        | StartControlledAgentRunBlockReason.ExistingActiveRunCleanupFailed;
       readonly session: ControlledAgentSession;
       readonly run: ControlledAgentRun;
+      readonly safeMessage?: string;
     }
   | {
       readonly ok: false;
@@ -66,6 +69,7 @@ export type StartControlledAgentRunResult =
 
 export enum StartControlledAgentRunBlockReason {
   ExistingActiveRun = "existing_active_run",
+  ExistingActiveRunCleanupFailed = "existing_active_run_cleanup_failed",
 }
 
 export class StartControlledAgentRunUseCase {
@@ -97,6 +101,21 @@ export class StartControlledAgentRunUseCase {
         ? "Controlled-agent active run has no owner metadata and exceeded the ownerless recovery threshold."
         : "Controlled-agent owner process is no longer live.";
       const now = (this.deps.clock?.now() ?? new Date()).toISOString();
+      try {
+        await this.deps.provider.stop({
+          session: existingSession,
+          run: existingRun,
+          reason: staleSafeMessage,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          reason: StartControlledAgentRunBlockReason.ExistingActiveRunCleanupFailed,
+          session: existingSession,
+          run: existingRun,
+          safeMessage: error instanceof Error ? error.message : String(error),
+        };
+      }
       await this.deps.stateStore?.saveRun({
         ...existingRun,
         status: ControlledAgentRunStatus.Failed,

@@ -47,32 +47,48 @@ export type CodexControlledAgentProviderOptions = {
   readonly maxGoalTurns?: number;
 };
 
-type ActiveCodexControllerRun = {
+type AttachedCodexControllerRun = {
+  readonly providerAttached: true;
   readonly abortController: AbortController;
   readonly driver: CodexJsonAgentDriver;
   status: ControlledAgentRunStatus;
   safeMessage?: string;
   completedAt?: string;
+  cleanupPromise?: Promise<boolean>;
 };
 
+type DetachedCodexControllerRun = {
+  readonly providerAttached: false;
+  readonly status: ControlledAgentRunStatus;
+  readonly safeMessage?: string;
+  readonly completedAt: string;
+};
+
+type CodexControllerRunRecord =
+  | AttachedCodexControllerRun
+  | DetachedCodexControllerRun;
+
 export class CodexControlledAgentProvider implements ControlledAgentProviderPort {
-  private readonly runs = new Map<string, ActiveCodexControllerRun>();
+  private readonly runs = new Map<string, CodexControllerRunRecord>();
 
   constructor(private readonly options: CodexControlledAgentProviderOptions) {}
 
   start(input: ControlledAgentProviderStartInput): ControlledAgentProviderStartResult {
     const providerRunId = `${input.session.sessionId}:codex-app-server`;
-    if (this.runs.has(providerRunId)) {
+    const existing = this.runs.get(providerRunId);
+    if (existing?.providerAttached === true) {
       return {
         providerRunId,
         safeMessage: "Codex controlled-agent run is already active.",
       };
     }
+    this.runs.delete(providerRunId);
 
     const abortController = new AbortController();
     const redactor = this.options.redactor ?? new DefaultRedactor();
     const driver = this.createDriver();
-    const active: ActiveCodexControllerRun = {
+    const active: AttachedCodexControllerRun = {
+      providerAttached: true,
       abortController,
       driver,
       status: ControlledAgentRunStatus.Running,
@@ -101,6 +117,7 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
       redactor,
       abortSignal: abortController.signal,
     }).then((result) => {
+      if (abortController.signal.aborted) return;
       active.status = result.status === "completed"
         ? ControlledAgentRunStatus.Completed
         : result.status === "waiting_for_input"
@@ -118,6 +135,8 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
         : ControlledAgentRunStatus.Failed;
       active.safeMessage = error instanceof Error ? error.message : String(error);
       active.completedAt = new Date().toISOString();
+    }).finally(() => {
+      void this.detachActiveRun(providerRunId, active);
     });
 
     return {
@@ -136,6 +155,7 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
       return {
         status: ControlledAgentRunStatus.Stale,
         providerRunId,
+        providerAttached: false,
         safeMessage: "Codex controlled-agent run is not active in this process.",
         observedAt: new Date().toISOString(),
       };
@@ -143,6 +163,7 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
     return {
       status: active.status,
       providerRunId,
+      providerAttached: active.providerAttached,
       ...(active.safeMessage === undefined ? {} : {
         safeMessage: active.safeMessage,
       }),
@@ -162,17 +183,64 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
         stoppedAt: new Date().toISOString(),
       };
     }
+    if (!active.providerAttached) {
+      this.runs.delete(providerRunId);
+      return {
+        status: ControlledAgentRunStatus.Stopped,
+        safeMessage: input.reason ?? active.safeMessage ?? "stopped",
+        stoppedAt: active.completedAt,
+      };
+    }
     active.abortController.abort();
-    await active.driver.dispose();
     active.status = ControlledAgentRunStatus.Stopped;
     active.safeMessage = input.reason ?? "stopped";
     active.completedAt = new Date().toISOString();
+    const detached = await this.detachActiveRun(providerRunId, active);
+    if (!detached) {
+      throw new Error(active.safeMessage ?? "Codex controlled-agent provider cleanup failed.");
+    }
     this.runs.delete(providerRunId);
     return {
       status: ControlledAgentRunStatus.Stopped,
       safeMessage: active.safeMessage,
       stoppedAt: active.completedAt,
     };
+  }
+
+  private async detachActiveRun(
+    providerRunId: string,
+    active: AttachedCodexControllerRun,
+  ): Promise<boolean> {
+    if (active.cleanupPromise) return active.cleanupPromise;
+    const cleanupPromise = (async () => {
+      try {
+        await active.driver.dispose();
+        const completedAt = active.completedAt ?? new Date().toISOString();
+        active.completedAt = completedAt;
+        if (this.runs.get(providerRunId) === active) {
+          this.runs.set(providerRunId, {
+            providerAttached: false,
+            status: active.status,
+            ...(active.safeMessage === undefined ? {} : {
+              safeMessage: active.safeMessage,
+            }),
+            completedAt,
+          });
+        }
+        return true;
+      } catch (error) {
+        active.status = ControlledAgentRunStatus.Failed;
+        active.safeMessage =
+          `Codex controlled-agent provider cleanup failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        active.completedAt = new Date().toISOString();
+        delete active.cleanupPromise;
+        return false;
+      }
+    })();
+    active.cleanupPromise = cleanupPromise;
+    return cleanupPromise;
   }
 
   private createDriver(): CodexJsonAgentDriver {

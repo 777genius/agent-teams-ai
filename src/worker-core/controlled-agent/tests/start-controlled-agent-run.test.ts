@@ -267,17 +267,23 @@ describe("startControlledAgentRun", () => {
 
   it("starts a new run after marking an old ownerless run failed when recovery is enabled", async () => {
     const providerStarts: ControlledAgentSession[] = [];
+    const providerCalls: string[] = [];
     const savedSessions: ControlledAgentSession[] = [];
     const savedRuns: ControlledAgentRun[] = [];
     const provider: ControlledAgentProviderPort = {
       start(input) {
+        providerCalls.push("start");
         providerStarts.push(input.session);
         return { providerRunId: "provider-run-2" };
       },
       status() {
         return { status: ControlledAgentRunStatus.Running };
       },
-      stop() {
+      stop(input) {
+        providerCalls.push("stop");
+        expect(input.reason).toBe(
+          "Controlled-agent active run has no owner metadata and exceeded the ownerless recovery threshold.",
+        );
         return { status: ControlledAgentRunStatus.Stopped };
       },
     };
@@ -313,6 +319,7 @@ describe("startControlledAgentRun", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ownerless recovery");
+    expect(providerCalls).toEqual(["stop", "start"]);
     expect(providerStarts).toHaveLength(1);
     expect(savedRuns[0]).toMatchObject({
       runId: "run-existing",
@@ -336,17 +343,21 @@ describe("startControlledAgentRun", () => {
       hostname: "host-a",
     });
     const providerStarts: ControlledAgentSession[] = [];
+    const providerCalls: string[] = [];
     const savedSessions: ControlledAgentSession[] = [];
     const savedRuns: ControlledAgentRun[] = [];
     const provider: ControlledAgentProviderPort = {
       start(input) {
+        providerCalls.push("start");
         providerStarts.push(input.session);
         return { providerRunId: "provider-run-2" };
       },
       status() {
         return { status: ControlledAgentRunStatus.Running };
       },
-      stop() {
+      stop(input) {
+        providerCalls.push("stop");
+        expect(input.reason).toBe("Controlled-agent owner process is no longer live.");
         return { status: ControlledAgentRunStatus.Stopped };
       },
     };
@@ -382,6 +393,7 @@ describe("startControlledAgentRun", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected stale owner recovery");
+    expect(providerCalls).toEqual(["stop", "start"]);
     expect(providerStarts).toHaveLength(1);
     expect(savedRuns[0]).toMatchObject({
       runId: "run-existing",

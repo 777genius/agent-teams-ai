@@ -20,6 +20,7 @@ export enum ReconcileControlledAgentRunReason {
   ProviderStillRunning = "provider_still_running",
   ProviderTerminalStatus = "provider_terminal_status",
   ProviderStatusFailed = "provider_status_failed",
+  ProviderCleanupFailed = "provider_cleanup_failed",
 }
 
 export type ReconcileControlledAgentRunResult =
@@ -36,7 +37,8 @@ export type ReconcileControlledAgentRunResult =
       readonly reason:
         | ReconcileControlledAgentRunReason.SessionMissing
         | ReconcileControlledAgentRunReason.RunMissing
-        | ReconcileControlledAgentRunReason.ProviderStatusFailed;
+        | ReconcileControlledAgentRunReason.ProviderStatusFailed
+        | ReconcileControlledAgentRunReason.ProviderCleanupFailed;
       readonly session?: ControlledAgentSession;
       readonly run?: ControlledAgentRun;
       readonly safeMessage?: string;
@@ -99,6 +101,36 @@ export class ReconcileControlledAgentRunUseCase {
     }
 
     const now = observed.observedAt ?? (this.deps.clock?.now() ?? new Date()).toISOString();
+    if (isTerminalStatus(observed.status)) {
+      try {
+        const cleanup = await this.deps.provider.stop({
+          session,
+          run,
+          reason: `controlled_agent_reconcile_terminal:${observed.status}`,
+        });
+        if (
+          observed.providerAttached === true &&
+          cleanup.status === ControlledAgentRunStatus.Failed
+        ) {
+          return {
+            ok: false,
+            reason: ReconcileControlledAgentRunReason.ProviderCleanupFailed,
+            session,
+            run,
+            safeMessage: cleanup.safeMessage ??
+              "Provider reported failed cleanup for an attached controlled-agent run.",
+          };
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          reason: ReconcileControlledAgentRunReason.ProviderCleanupFailed,
+          session,
+          run,
+          safeMessage: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
     const reconciledRun: ControlledAgentRun = {
       ...run,
       status: observed.status,
