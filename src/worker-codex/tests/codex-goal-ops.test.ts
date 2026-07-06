@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   AccessBoundary,
+  NetworkAccessMode,
   RunProcessAliveReason,
   RunProcessSupervisorKind,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -71,6 +72,38 @@ describe("codex goal ops", () => {
     expect(() => buildCodexGoalTmuxCommand(launch)).toThrow(
       /codex_goal_access_boundary_blocked/,
     );
+  });
+
+  it("does not pass global extra writable roots into project-scoped launches", async () => {
+    const fixture = await createGoalFixture();
+    const previous = process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS;
+    process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS = "/unsafe/global";
+    try {
+      const regular = buildCodexGoalNoTmuxCommand(launchInput(fixture.config, fixture.root));
+      expect(regular).toContain("SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS");
+      expect(regular).toContain("/unsafe/global");
+
+      const scoped = buildCodexGoalNoTmuxCommand(launchInput({
+        ...fixture.config,
+        accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [fixture.config.workspacePath],
+          jobIdPrefixes: ["infinity-context-"],
+        },
+      }, fixture.root));
+      expect(scoped).toContain("--project-access-scope-json");
+      expect(scoped).not.toContain("SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS");
+      expect(scoped).not.toContain("/unsafe/global");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS;
+      } else {
+        process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS = previous;
+      }
+      await rm(fixture.root, { recursive: true, force: true });
+    }
   });
 
   it("creates job-root and artifact directories before starting tmux", async () => {

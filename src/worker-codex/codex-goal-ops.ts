@@ -270,8 +270,9 @@ export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string
   if (config.requireGitWorkspace === false) args.push("--no-require-git-workspace");
   if (config.prewarmOnStart) args.push("--prewarm");
   const envAssignments: string[] = [];
-  const extraWritableRoots =
-    process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS?.trim();
+  const extraWritableRoots = config.projectAccessScope
+    ? ""
+    : process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS?.trim();
   if (extraWritableRoots) {
     envAssignments.push(
       `SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS=${shellQuote(extraWritableRoots)}`,

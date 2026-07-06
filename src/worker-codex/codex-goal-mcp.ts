@@ -301,6 +301,8 @@ type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly path?: string;
   readonly sourceWorkspacePath?: string;
   readonly baseBranch?: string;
+  readonly sourceRef?: string;
+  readonly newBranch?: string;
   readonly workspacePath?: string;
   readonly branch?: string;
   readonly remote?: string;
@@ -2086,6 +2088,8 @@ export function createCodexGoalMcpServer(
         sourceWorkspacePath: z.string().optional(),
         path: z.string().optional(),
         baseBranch: z.string().optional(),
+        sourceRef: z.string().optional(),
+        newBranch: z.string().optional(),
         workerRole: z.enum([
           ProjectAdmissionWorkerRole.Producer,
           ProjectAdmissionWorkerRole.Fastgate,
@@ -3298,6 +3302,8 @@ type CodexGoalProjectCreateWorktreeInput = {
   readonly realSourceWorkspacePath?: string;
   readonly path: string;
   readonly baseBranch?: string;
+  readonly sourceRef?: string;
+  readonly newBranch?: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
 };
@@ -3437,15 +3443,18 @@ function codexProjectControlPorts(input: {
           recursive: true,
           mode: 0o700,
         });
+        const sourceRef =
+          input.createWorktreeInput.sourceRef ?? input.createWorktreeInput.baseBranch;
         const args = [
           "-C",
           input.createWorktreeInput.sourceWorkspacePath,
           "worktree",
           "add",
-          input.createWorktreeInput.path,
-          ...(input.createWorktreeInput.baseBranch
-            ? [input.createWorktreeInput.baseBranch]
+          ...(input.createWorktreeInput.newBranch
+            ? ["-b", input.createWorktreeInput.newBranch]
             : []),
+          input.createWorktreeInput.path,
+          ...(sourceRef ? [sourceRef] : []),
         ];
         await execGit(args);
         return operationResult(input.createWorktreeInput.path);
@@ -4541,8 +4550,14 @@ async function projectControlCreateCodexGoalJob(args: ProjectControlMcpArgs) {
   const accessBoundary =
     requested.accessBoundary ?? AccessBoundary.IsolatedWorkspaceWrite;
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
+  const accounts = await projectControlDefaultAccountNames({
+    ...(requested.authRootDir ? { authRootDir: requested.authRootDir } : {}),
+    requestedAccounts: requested.accounts,
+    allowedAccountIds: controller.scope.allowedAccountIds ?? [],
+  });
   const createManifest: CodexGoalJobManifestInput = {
     ...requested,
+    accounts,
     accessBoundary,
     projectAccessScope: projectControlChildScope(
       controller.scope,
@@ -4665,6 +4680,10 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
 
   const baseBranch = stringValue(args.baseBranch) ?? "origin/main";
   assertSafeGitRefName(baseBranch, "baseBranch");
+  const sourceRef = stringValue(args.sourceRef);
+  if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
+  const newBranch = stringValue(args.newBranch);
+  if (newBranch) assertSafeGitRefName(newBranch, "newBranch");
   const realSourceWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     sourceWorkspacePath,
     controller.scope,
@@ -4674,6 +4693,8 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
     path: createManifest.workspacePath,
     baseBranch,
+    ...(sourceRef ? { sourceRef } : {}),
+    ...(newBranch ? { newBranch } : {}),
     workerRole: role,
     ...(createManifest.tags ? { tags: createManifest.tags } : {}),
   };
@@ -4928,6 +4949,11 @@ async function projectControlCreateWorktree(args: ProjectControlMcpArgs) {
   const path = projectControlPathArg(args, args.path, "path");
   const baseBranch = stringValue(args.baseBranch);
   if (baseBranch) assertSafeGitRefName(baseBranch, "baseBranch");
+  const sourceRef = stringValue(args.sourceRef);
+  if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
+  const newBranch = stringValue(args.newBranch);
+  if (newBranch) assertSafeGitRefName(newBranch, "newBranch");
+  const effectiveSourceRef = sourceRef ?? baseBranch;
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
   const realSourceWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     sourceWorkspacePath,
@@ -4938,6 +4964,8 @@ async function projectControlCreateWorktree(args: ProjectControlMcpArgs) {
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
     path,
     ...(baseBranch ? { baseBranch } : {}),
+    ...(sourceRef ? { sourceRef } : {}),
+    ...(newBranch ? { newBranch } : {}),
     ...(workerRole ? { workerRole } : {}),
   };
 
@@ -4953,8 +4981,9 @@ async function projectControlCreateWorktree(args: ProjectControlMcpArgs) {
         sourceWorkspacePath,
         "worktree",
         "add",
+        ...(newBranch ? ["-b", newBranch] : []),
         path,
-        ...(baseBranch ? [baseBranch] : []),
+        ...(effectiveSourceRef ? [effectiveSourceRef] : []),
       ],
     });
   }
@@ -9275,6 +9304,25 @@ function accountNames(value: unknown): readonly string[] {
     return value.split(",").map((item) => item.trim()).filter(Boolean);
   }
   return [];
+}
+
+async function projectControlDefaultAccountNames(input: {
+  readonly authRootDir?: string;
+  readonly requestedAccounts: readonly string[];
+  readonly allowedAccountIds: readonly string[];
+}): Promise<readonly string[]> {
+  if (!input.authRootDir) return input.requestedAccounts;
+  const allowed = new Set(input.allowedAccountIds);
+  const slots = await listCodexGoalAccountStatuses({
+    authRootDir: input.authRootDir,
+  });
+  const readyAccounts = slots
+    .filter((slot) =>
+      slot.status === "ready" &&
+      (allowed.size === 0 || allowed.has(slot.name))
+    )
+    .map((slot) => slot.name);
+  return readyAccounts.length > 0 ? readyAccounts : input.requestedAccounts;
 }
 
 function signalIdList(value: unknown): readonly string[] {

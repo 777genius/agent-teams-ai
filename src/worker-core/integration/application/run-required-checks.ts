@@ -1,5 +1,6 @@
 import {
   CheckRunStatus,
+  IntegrationAttemptStatus,
   markChecksRunning,
   recordCheckRuns,
   type IntegrationAttempt,
@@ -26,6 +27,12 @@ export async function runRequiredChecks(
   input: RunRequiredChecksInput,
 ): Promise<IntegrationAttempt> {
   const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
+  if (
+    attempt.status === IntegrationAttemptStatus.ChecksRunning ||
+    attempt.status === IntegrationAttemptStatus.ChecksPassed
+  ) {
+    return attempt;
+  }
   const startedAt = nowIso(deps.clock);
   const running = markChecksRunning(attempt, startedAt);
   await deps.store.update(running);

@@ -232,6 +232,35 @@ describe("ProjectControlBroker", () => {
     expect(calls).toEqual([]);
   });
 
+  it("creates worktrees from allowed source refs onto worker branches", async () => {
+    const calls: string[] = [];
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, [], allowAdmission()));
+
+    await expect(broker.createWorktree({
+      sourceWorkspacePath: "/work/infinity-context",
+      path: "/work/infinity-context-child",
+      sourceRef: "main",
+      newBranch: "refactor/infinity-child-v1",
+    })).resolves.toMatchObject({ status: "applied" });
+
+    await expect(broker.createWorktree({
+      sourceWorkspacePath: "/work/infinity-context",
+      path: "/work/infinity-context-child-2",
+      sourceRef: "main",
+      newBranch: "feature/private",
+    })).rejects.toMatchObject({
+      decision: {
+        allowed: false,
+        reason: AccessDecisionReason.BranchDenied,
+      },
+    });
+
+    expect(calls).toEqual(["worktree:/work/infinity-context-child"]);
+  });
+
   it("does not let isolated workspace writers become coordinators", async () => {
     const calls: string[] = [];
     const broker = new ProjectControlBroker({

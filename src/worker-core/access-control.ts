@@ -145,6 +145,8 @@ export type ProjectWorktreeAccessRequest = {
   readonly sourceWorkspacePath?: string;
   readonly realSourceWorkspacePath?: string;
   readonly baseBranch?: string;
+  readonly sourceRef?: string;
+  readonly newBranch?: string;
 };
 
 export type ProjectGitAccessRequest = {
@@ -507,15 +509,23 @@ class DefaultAccessPolicyService implements AccessPolicyService {
         AccessDecisionReason.MissingProjectScope,
       );
     }
-    const branchDecision = request.baseBranch
-      ? this.worktreeBaseBranchDecision(ProjectOperation.CreateWorktree, {
+    for (const branch of [
+      request.baseBranch,
+      request.sourceRef,
+      request.newBranch,
+    ]) {
+      if (!branch) continue;
+      const branchDecision = this.worktreeBaseBranchDecision(
+        ProjectOperation.CreateWorktree,
+        {
           ...(request.sourceWorkspacePath
             ? { workspacePath: request.sourceWorkspacePath }
             : {}),
-          branch: request.baseBranch,
-        })
-      : undefined;
-    if (branchDecision && !branchDecision.allowed) return branchDecision;
+          branch,
+        },
+      );
+      if (!branchDecision.allowed) return branchDecision;
+    }
     if (
       request.sourceWorkspacePath &&
       !pathInsideAnyRoot(request.sourceWorkspacePath, scopedWorkspaceRoots(scope))
