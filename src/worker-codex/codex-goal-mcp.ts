@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
 import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
@@ -105,6 +105,7 @@ import {
   type WorkerControlSignal,
   type WorkerControlSignalView,
   type WorkerControlTarget,
+  type ControlledAgentProcessOwner,
   type ControlledAgentProviderPort,
   type ControlledAgentSession,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -3569,6 +3570,7 @@ async function projectControllerStart(args: ProjectControllerLaunchPlanMcpArgs) 
     stateStore: state.store,
     events: state.store,
     owner: controlledAgentProcessOwner,
+    ownerLiveness: { isLive: controlledAgentOwnerIsLive },
     ...(capacityAccountId === undefined ? {} : {
       capacity: {
         accountId: capacityAccountId,
@@ -9144,6 +9146,17 @@ function mcpJson(value: JsonObject) {
     content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
     structuredContent: value,
   };
+}
+
+function controlledAgentOwnerIsLive(owner: ControlledAgentProcessOwner): boolean {
+  if (owner.hostname !== undefined && owner.hostname !== hostname()) return true;
+  if (owner.pid === undefined) return true;
+  try {
+    process.kill(owner.pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function withMcpErrors(

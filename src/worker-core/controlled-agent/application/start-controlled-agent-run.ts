@@ -27,6 +27,9 @@ export type StartControlledAgentRunDeps = {
   readonly stateStore?: ControllerStateStorePort;
   readonly events?: ControlledAgentEventPort;
   readonly owner?: ControlledAgentProcessOwner;
+  readonly ownerLiveness?: {
+    isLive(owner: ControlledAgentProcessOwner): boolean | Promise<boolean>;
+  };
   readonly capacity?: {
     readonly accountId: string;
     readonly demand?: WorkerRuntimeDemand;
@@ -81,12 +84,27 @@ export class StartControlledAgentRunUseCase {
       existingRun &&
       existingRun.status === ControlledAgentRunStatus.Running
     ) {
-      return {
-        ok: false,
-        reason: StartControlledAgentRunBlockReason.ExistingActiveRun,
-        session: existingSession,
-        run: existingRun,
-      };
+      if (await this.existingRunOwnerIsLive(existingRun)) {
+        return {
+          ok: false,
+          reason: StartControlledAgentRunBlockReason.ExistingActiveRun,
+          session: existingSession,
+          run: existingRun,
+        };
+      }
+      const now = (this.deps.clock?.now() ?? new Date()).toISOString();
+      await this.deps.stateStore?.saveRun({
+        ...existingRun,
+        status: ControlledAgentRunStatus.Failed,
+        safeMessage: "Controlled-agent owner process is no longer live.",
+        stoppedAt: now,
+        updatedAt: now,
+      });
+      await this.deps.stateStore?.saveSession({
+        ...existingSession,
+        status: ControlledAgentRunStatus.Failed,
+        updatedAt: now,
+      });
     }
     const now = (this.deps.clock?.now() ?? new Date()).toISOString();
     const runId = this.deps.idGenerator?.randomId() ?? randomUUID();
@@ -148,6 +166,13 @@ export class StartControlledAgentRunUseCase {
       run,
       provider,
     };
+  }
+
+  private async existingRunOwnerIsLive(run: ControlledAgentRun): Promise<boolean> {
+    if (run.owner === undefined || this.deps.ownerLiveness === undefined) {
+      return true;
+    }
+    return await this.deps.ownerLiveness.isLive(run.owner);
   }
 }
 

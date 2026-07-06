@@ -264,6 +264,76 @@ describe("startControlledAgentRun", () => {
     expect(result.reason).toBe("existing_active_run");
     expect(result.run.runId).toBe("run-existing");
   });
+
+  it("starts a new run after marking a stale owner run failed", async () => {
+    const staleOwner = buildControlledAgentProcessOwner({
+      kind: ControlledAgentProcessOwnerKind.DurableMcp,
+      ownerId: "owner-stale",
+      now: new Date("2026-07-05T10:50:00.000Z"),
+      pid: 111,
+      hostname: "host-a",
+    });
+    const providerStarts: ControlledAgentSession[] = [];
+    const savedSessions: ControlledAgentSession[] = [];
+    const savedRuns: ControlledAgentRun[] = [];
+    const provider: ControlledAgentProviderPort = {
+      start(input) {
+        providerStarts.push(input.session);
+        return { providerRunId: "provider-run-2" };
+      },
+      status() {
+        return { status: ControlledAgentRunStatus.Running };
+      },
+      stop() {
+        return { status: ControlledAgentRunStatus.Stopped };
+      },
+    };
+
+    const result = await startControlledAgentRun(launchInput(true), {
+      provider,
+      ownerLiveness: { isLive: () => false },
+      stateStore: {
+        readSession() {
+          return { ...activeSession(), owner: staleOwner };
+        },
+        saveSession(session) {
+          savedSessions.push(session);
+        },
+        readRun() {
+          return { ...activeRun(), owner: staleOwner };
+        },
+        readLatestRunForSession() {
+          return { ...activeRun(), owner: staleOwner };
+        },
+        saveRun(run) {
+          savedRuns.push(run);
+        },
+      },
+      clock: { now: () => new Date("2026-07-05T11:00:00.000Z") },
+      idGenerator: {
+        randomId: (() => {
+          const ids = ["run-2", "event-1"];
+          return () => ids.shift() ?? "unused";
+        })(),
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected stale owner recovery");
+    expect(providerStarts).toHaveLength(1);
+    expect(savedRuns[0]).toMatchObject({
+      runId: "run-existing",
+      status: ControlledAgentRunStatus.Failed,
+      stoppedAt: "2026-07-05T11:00:00.000Z",
+      safeMessage: "Controlled-agent owner process is no longer live.",
+    });
+    expect(savedSessions[0]).toMatchObject({
+      status: ControlledAgentRunStatus.Failed,
+      activeRunId: "run-existing",
+    });
+    expect(result.run.runId).toBe("run-2");
+    expect(result.run.providerRunId).toBe("provider-run-2");
+  });
 });
 
 function launchInput(canDisableRawShell: boolean): ControlledAgentLaunchPlanInput {
