@@ -119,6 +119,9 @@ export async function superviseCodexGoalProjectController(input: {
             name: "codex_goal_control_decision",
             arguments: controllerSupervisorJobArgs(input.args),
           }));
+          if (controlDecision !== undefined) {
+            input.onEvent?.({ type: "control_decision", result: controlDecision });
+          }
           const guidanceSignature = controllerSupervisorDeliverableGuidanceSignature(
             controlDecision,
           );
@@ -127,7 +130,6 @@ export async function superviseCodexGoalProjectController(input: {
             guidanceSignature !== undefined &&
             guidanceSignature !== lastGuidanceRestartSignature
           ) {
-            input.onEvent?.({ type: "control_decision", result: controlDecision });
             lastGuidanceRestartSignature = guidanceSignature;
             const stop = parseMcpJsonResult(await client.callTool({
               name: "codex_goal_project_controller_stop",
