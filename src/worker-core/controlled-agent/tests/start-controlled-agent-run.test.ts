@@ -265,6 +265,68 @@ describe("startControlledAgentRun", () => {
     expect(result.run.runId).toBe("run-existing");
   });
 
+  it("starts a new run after marking an old ownerless run failed when recovery is enabled", async () => {
+    const providerStarts: ControlledAgentSession[] = [];
+    const savedSessions: ControlledAgentSession[] = [];
+    const savedRuns: ControlledAgentRun[] = [];
+    const provider: ControlledAgentProviderPort = {
+      start(input) {
+        providerStarts.push(input.session);
+        return { providerRunId: "provider-run-2" };
+      },
+      status() {
+        return { status: ControlledAgentRunStatus.Running };
+      },
+      stop() {
+        return { status: ControlledAgentRunStatus.Stopped };
+      },
+    };
+
+    const result = await startControlledAgentRun(launchInput(true), {
+      provider,
+      recoverOwnerlessActiveRunAfterMs: 10 * 60 * 1000,
+      stateStore: {
+        readSession() {
+          return activeSession();
+        },
+        saveSession(session) {
+          savedSessions.push(session);
+        },
+        readRun() {
+          return activeRun();
+        },
+        readLatestRunForSession() {
+          return activeRun();
+        },
+        saveRun(run) {
+          savedRuns.push(run);
+        },
+      },
+      clock: { now: () => new Date("2026-07-05T11:15:01.000Z") },
+      idGenerator: {
+        randomId: (() => {
+          const ids = ["run-2", "event-1"];
+          return () => ids.shift() ?? "unused";
+        })(),
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ownerless recovery");
+    expect(providerStarts).toHaveLength(1);
+    expect(savedRuns[0]).toMatchObject({
+      runId: "run-existing",
+      status: ControlledAgentRunStatus.Failed,
+      safeMessage:
+        "Controlled-agent active run has no owner metadata and exceeded the ownerless recovery threshold.",
+    });
+    expect(savedSessions[0]).toMatchObject({
+      status: ControlledAgentRunStatus.Failed,
+    });
+    expect(result.run.runId).toBe("run-2");
+    expect(result.run.providerRunId).toBe("provider-run-2");
+  });
+
   it("starts a new run after marking a stale owner run failed", async () => {
     const staleOwner = buildControlledAgentProcessOwner({
       kind: ControlledAgentProcessOwnerKind.DurableMcp,

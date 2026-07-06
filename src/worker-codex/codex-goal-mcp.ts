@@ -4092,6 +4092,7 @@ async function projectControllerStart(args: ProjectControllerLaunchPlanMcpArgs) 
     events: state.store,
     owner: controlledAgentProcessOwner,
     ownerLiveness: { isLive: controlledAgentOwnerIsLive },
+    recoverOwnerlessActiveRunAfterMs: 10 * 60 * 1000,
     ...(capacityAccountId === undefined ? {} : {
       capacity: {
         accountId: capacityAccountId,

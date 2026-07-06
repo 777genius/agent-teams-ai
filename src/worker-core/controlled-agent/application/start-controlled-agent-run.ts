@@ -30,6 +30,7 @@ export type StartControlledAgentRunDeps = {
   readonly ownerLiveness?: {
     isLive(owner: ControlledAgentProcessOwner): boolean | Promise<boolean>;
   };
+  readonly recoverOwnerlessActiveRunAfterMs?: number;
   readonly capacity?: {
     readonly accountId: string;
     readonly demand?: WorkerRuntimeDemand;
@@ -92,11 +93,14 @@ export class StartControlledAgentRunUseCase {
           run: existingRun,
         };
       }
+      const staleSafeMessage = existingRun.owner === undefined
+        ? "Controlled-agent active run has no owner metadata and exceeded the ownerless recovery threshold."
+        : "Controlled-agent owner process is no longer live.";
       const now = (this.deps.clock?.now() ?? new Date()).toISOString();
       await this.deps.stateStore?.saveRun({
         ...existingRun,
         status: ControlledAgentRunStatus.Failed,
-        safeMessage: "Controlled-agent owner process is no longer live.",
+        safeMessage: staleSafeMessage,
         stoppedAt: now,
         updatedAt: now,
       });
@@ -169,7 +173,19 @@ export class StartControlledAgentRunUseCase {
   }
 
   private async existingRunOwnerIsLive(run: ControlledAgentRun): Promise<boolean> {
-    if (run.owner === undefined || this.deps.ownerLiveness === undefined) {
+    if (run.owner === undefined) {
+      const thresholdMs = this.deps.recoverOwnerlessActiveRunAfterMs;
+      if (thresholdMs === undefined) {
+        return true;
+      }
+      const referenceTime = Date.parse(run.updatedAt ?? run.startedAt);
+      if (!Number.isFinite(referenceTime)) {
+        return true;
+      }
+      const now = this.deps.clock?.now() ?? new Date();
+      return now.getTime() - referenceTime < thresholdMs;
+    }
+    if (this.deps.ownerLiveness === undefined) {
       return true;
     }
     return await this.deps.ownerLiveness.isLive(run.owner);
