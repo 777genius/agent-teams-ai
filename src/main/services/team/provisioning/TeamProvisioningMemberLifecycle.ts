@@ -52,7 +52,6 @@ import {
 } from './TeamProvisioningMemberIdentity';
 import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
 import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
-import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
@@ -75,6 +74,7 @@ import type { TeamRuntimeLaunchResult, TeamRuntimeMemberLaunchEvidence } from '.
 import type { TeamMcpConfigBuilder } from '../TeamMcpConfigBuilder';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type {
   EffortLevel,
