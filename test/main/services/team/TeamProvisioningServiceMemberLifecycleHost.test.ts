@@ -13,6 +13,23 @@ type MemberLifecycleHostProbe = {
     teamMetaStore: {
       getMeta(teamName: string): Promise<unknown>;
     };
+    buildTrackedMemberMcpLaunchConfig(input: {
+      cwd: string;
+      mcpPolicy?: unknown;
+      run: { id: string };
+    }): Promise<unknown>;
+    removeTrackedMemberMcpLaunchConfig(run: { id: string }, config: unknown): Promise<void>;
+  };
+};
+
+type MemberMcpLaunchConfigProvisionerProbe = {
+  memberMcpLaunchConfigProvisioner: {
+    buildTrackedMemberMcpLaunchConfig(input: {
+      cwd: string;
+      mcpPolicy?: unknown;
+      run: { id: string };
+    }): Promise<unknown>;
+    removeTrackedMemberMcpLaunchConfig(run: { id: string }, config: unknown): Promise<void>;
   };
 };
 
@@ -93,5 +110,33 @@ describe('TeamProvisioningService member lifecycle host', () => {
       (host as { enqueueDirectRestartPrompt?: unknown }).enqueueDirectRestartPrompt
     ).toBeUndefined();
     expect(calls).toEqual([]);
+  });
+
+  it('lazily resolves the member MCP launch config provisioner', async () => {
+    const service = new TeamProvisioningService();
+    const serviceProbe = service as unknown as MemberLifecycleHostProbe &
+      MemberMcpLaunchConfigProvisionerProbe;
+    const calls: string[] = [];
+    serviceProbe.memberMcpLaunchConfigProvisioner = {
+      async buildTrackedMemberMcpLaunchConfig(input) {
+        calls.push(`build:${input.run.id}:${input.cwd}`);
+        return { configPath: '/tmp/member-mcp.json' };
+      },
+      async removeTrackedMemberMcpLaunchConfig(run, config) {
+        calls.push(`remove:${run.id}:${config ? 'config' : 'none'}`);
+      },
+    };
+
+    const config = await serviceProbe.memberLifecycleHost.buildTrackedMemberMcpLaunchConfig({
+      cwd: '/repo',
+      mcpPolicy: undefined,
+      run: { id: 'run-lazy' },
+    });
+    await serviceProbe.memberLifecycleHost.removeTrackedMemberMcpLaunchConfig(
+      { id: 'run-lazy' },
+      config
+    );
+
+    expect(calls).toEqual(['build:run-lazy:/repo', 'remove:run-lazy:config']);
   });
 });
