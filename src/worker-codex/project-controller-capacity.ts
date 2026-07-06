@@ -3,11 +3,20 @@ import { join } from "node:path";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import type { WorkerRuntimeDemand } from "@vioxen/subscription-runtime/worker-core";
 
+export function isProjectControllerProviderSessionInvalid(
+  safeMessage: string | undefined,
+): boolean {
+  return /\b(?:session is invalid|provider session invalid|needs reconnect|provider account session is unavailable)\b/i.test(
+    safeMessage ?? "",
+  );
+}
+
 export type ProjectControllerRuntimeConfig = {
   readonly model?: string;
   readonly reasoningEffort?: string;
   readonly serviceTier?: string;
   readonly quotaCooldownMs?: number;
+  readonly reconnectCooldownMs?: number;
 };
 
 export type ProjectControllerCapacityRun = {
@@ -45,54 +54,76 @@ export function recordProjectControllerCapacitySignal(
 ): boolean {
   if (input.run.status !== "failed") return false;
   if (!input.run.capacityAccountId) return false;
-  const observedAt = input.observedAt ?? new Date();
-  const store = new LocalFileWorkerAccountCapacityStore({
-    rootDir: join(input.stateRootDir, "worker-account-capacity"),
+
+  const signal = projectControllerCapacityFailureSignal({
+    safeMessage: input.run.safeMessage,
+    config: input.config,
+    observedAt: input.observedAt ?? new Date(),
   });
-  if (isProjectControllerQuotaFailure(input.run.safeMessage)) {
-    store.observe({
-      accountId: input.run.capacityAccountId,
-      demand: input.run.capacityDemand ?? projectControllerCapacityDemand(input.config),
-      capacity: {
-        availability: "cooldown",
-        reason: "quota_limited",
-        cooldownUntil: new Date(
-          observedAt.getTime() + (input.config.quotaCooldownMs ?? 15 * 60 * 1000),
-        ),
-      },
-      observedAt,
-      sourceWorkerId: input.controllerJobId,
-    });
-    return true;
-  }
-  if (isProjectControllerProviderSessionInvalid(input.run.safeMessage)) {
-    store.observe({
-      accountId: input.run.capacityAccountId,
-      demand: input.run.capacityDemand ?? projectControllerCapacityDemand(input.config),
-      capacity: {
-        availability: "quota_exhausted",
-        reason: "provider_session_invalid",
-      },
-      observedAt,
-      sourceWorkerId: input.controllerJobId,
-    });
-    return true;
-  }
-  return false;
+  if (!signal) return false;
+
+  new LocalFileWorkerAccountCapacityStore({
+    rootDir: join(input.stateRootDir, "worker-account-capacity"),
+  }).observe({
+    accountId: input.run.capacityAccountId,
+    demand: input.run.capacityDemand ?? projectControllerCapacityDemand(input.config),
+    capacity: signal.capacity,
+    observedAt: signal.observedAt,
+    sourceWorkerId: input.controllerJobId,
+  });
+  return true;
 }
 
-export function isProjectControllerProviderSessionInvalid(
-  safeMessage: string | undefined,
-): boolean {
-  return /\b(?:session is invalid|provider session invalid|needs reconnect)\b/i.test(
-    safeMessage ?? "",
-  );
+function projectControllerCapacityFailureSignal(input: {
+  readonly safeMessage: string | undefined;
+  readonly config: ProjectControllerRuntimeConfig;
+  readonly observedAt: Date;
+}) {
+  if (isProjectControllerQuotaFailure(input.safeMessage)) {
+    return {
+      observedAt: input.observedAt,
+      capacity: {
+        availability: "cooldown" as const,
+        reason: "quota_limited",
+        cooldownUntil: new Date(
+          input.observedAt.getTime() +
+            (input.config.quotaCooldownMs ?? 15 * 60 * 1000),
+        ),
+      },
+    };
+  }
+
+  if (isProjectControllerSessionInvalidFailure(input.safeMessage)) {
+    return {
+      observedAt: input.observedAt,
+      capacity: {
+        availability: "cooldown" as const,
+        reason: "provider_session_invalid",
+        cooldownUntil: new Date(
+          input.observedAt.getTime() +
+            (input.config.reconnectCooldownMs ??
+              input.config.quotaCooldownMs ??
+              15 * 60 * 1000),
+        ),
+      },
+    };
+  }
+
+  return null;
 }
 
 export function isProjectControllerQuotaFailure(
   safeMessage: string | undefined,
 ): boolean {
   return /\b(?:quota|billing limit|usage limit|rate limit)\b/i.test(
+    safeMessage ?? "",
+  );
+}
+
+export function isProjectControllerSessionInvalidFailure(
+  safeMessage: string | undefined,
+): boolean {
+  return /\b(?:session is invalid|provider account session is unavailable)\b/i.test(
     safeMessage ?? "",
   );
 }
