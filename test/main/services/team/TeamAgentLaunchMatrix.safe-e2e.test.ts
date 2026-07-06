@@ -5195,7 +5195,7 @@ describe('Team agent launch matrix safe e2e', () => {
     });
   });
 
-  it('marks a finished OpenCode secondary lane without runtime evidence as retryable failure', async () => {
+  it('keeps a finished OpenCode secondary lane without runtime evidence pending', async () => {
     const teamName = 'mixed-missing-opencode-evidence-safe-e2e';
     await writeMixedTeamConfig({ teamName, projectPath });
     const svc = new TeamProvisioningService();
@@ -5222,13 +5222,14 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(snapshot.members.bob).toMatchObject({
       providerId: 'opencode',
       laneId: 'secondary:opencode:bob',
-      launchState: 'failed_to_start',
-      hardFailure: true,
-      hardFailureReason: 'opencode_runtime_evidence_missing',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
       runtimeDiagnostic: 'OpenCode secondary lane finished without committed runtime evidence.',
     });
     expect(snapshot.summary).toMatchObject({
-      failedCount: 1,
+      failedCount: 0,
+      pendingCount: 2,
     });
   });
 
