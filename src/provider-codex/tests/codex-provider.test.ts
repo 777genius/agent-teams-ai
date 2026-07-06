@@ -2653,6 +2653,58 @@ describe("Codex provider adapter", () => {
     }
   });
 
+  it("suppresses inherited extra writable roots for scoped app-server workers", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-app-sandbox-scope-test-"));
+    const fakeFactory = new FakeAppServerFactory();
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        sourceEnv: {
+          SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS: "/var/data/quanta/control",
+          SUBSCRIPTION_RUNTIME_CODEX_SUPPRESS_EXTRA_WRITABLE_ROOTS: "1",
+        },
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "review",
+          prompt: "scoped workspace sandbox policy task",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      const threadStart = fakeFactory.requests.find(
+        (request) => request.method === "thread/start",
+      );
+      const turnStart = fakeFactory.requests.find(
+        (request) => request.method === "turn/start",
+      );
+      expect(threadStart?.params).toMatchObject({
+        runtimeWorkspaceRoots: [workspace],
+      });
+      expect(turnStart?.params).toMatchObject({
+        sandboxPolicy: {
+          type: "workspaceWrite",
+          writableRoots: [workspace],
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("denies app-server command approval requests through command approval policy", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-command-approval-test-"));
     const reviewedCommands: unknown[] = [];

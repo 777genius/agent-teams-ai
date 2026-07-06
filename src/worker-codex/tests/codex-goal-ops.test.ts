@@ -94,7 +94,8 @@ describe("codex goal ops", () => {
         },
       }, fixture.root));
       expect(scoped).toContain("--project-access-scope-json");
-      expect(scoped).not.toContain("SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS");
+      expect(scoped).toContain("SUBSCRIPTION_RUNTIME_CODEX_SUPPRESS_EXTRA_WRITABLE_ROOTS=1");
+      expect(scoped).toContain("SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS=");
       expect(scoped).not.toContain("/unsafe/global");
     } finally {
       if (previous === undefined) {

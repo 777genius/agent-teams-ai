@@ -178,6 +178,9 @@ function uniqueNonEmptyStrings(values: readonly string[]): readonly string[] {
 function codexExtraWritableRootsFromEnv(
   sourceEnv: Readonly<Record<string, string | undefined>> | undefined,
 ): readonly string[] {
+  if (sourceEnv?.SUBSCRIPTION_RUNTIME_CODEX_SUPPRESS_EXTRA_WRITABLE_ROOTS === "1") {
+    return [];
+  }
   const raw = sourceEnv?.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS;
   if (!raw) return [];
   return uniqueNonEmptyStrings(raw.split(/[,\n:]/u));
