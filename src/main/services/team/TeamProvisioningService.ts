@@ -242,6 +242,7 @@ import {
   type TeamProvisioningMemberLifecycleHostFactoryPortGroups,
 } from './provisioning/TeamProvisioningMemberLifecycleHostFactory';
 import { createTeamProvisioningMemberLifecycleOperationRunner } from './provisioning/TeamProvisioningMemberLifecycleOperationRunner';
+import { createTeamProvisioningMemberLifecycleOperationUseCases } from './provisioning/TeamProvisioningMemberLifecycleOperationUseCases';
 import { createTeamProvisioningMemberLifecycleServiceUseCases } from './provisioning/TeamProvisioningMemberLifecycleServiceUseCases';
 import { TeamProvisioningMemberMcpLaunchConfigProvisioner } from './provisioning/TeamProvisioningMemberMcpLaunchConfig';
 import {
@@ -1355,10 +1356,13 @@ export class TeamProvisioningService {
     appendDirectProcessRuntimeEvent: createAppendDirectProcessRuntimeEventUseCase(
       createNodeAppendDirectProcessRuntimeEventUseCasePorts({ nowIso })
     ),
-    operationRunner: this.memberLifecycleOperationRunner,
     nowIso,
     randomUUID,
   });
+  private readonly memberLifecycleOperationUseCases =
+    createTeamProvisioningMemberLifecycleOperationUseCases({
+      operationRunner: this.memberLifecycleOperationRunner,
+    });
   private readonly memberLifecycleHost = createTeamProvisioningMemberLifecycleHostFromPortGroups<
     ProvisioningRun,
     MixedSecondaryRuntimeLaneState
@@ -1755,7 +1759,10 @@ export class TeamProvisioningService {
           this.launchSingleMixedSecondaryLane(run, lane),
         getMixedSecondaryLaunchPhase: (run) => this.getMixedSecondaryLaunchPhase(run),
       },
-      useCases: this.memberLifecycleUseCases,
+      useCases: {
+        ...this.memberLifecycleUseCases,
+        ...this.memberLifecycleOperationUseCases,
+      },
     };
   }
 
