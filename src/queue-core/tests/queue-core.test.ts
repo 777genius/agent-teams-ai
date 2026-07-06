@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 import { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
 import {
   InMemorySubscriptionTaskQueue,
+  QueueProcessorStateKind,
   SubscriptionQueueProcessor,
+  SubscriptionQueueEnqueueStatus,
+  SubscriptionQueueError,
+  SubscriptionQueueErrorCodeKind,
+  SubscriptionQueueFailureStatus,
+  SubscriptionTaskStatusKind,
+  assertRetryPolicy,
   computeBackoffDelayMs,
   type SubscriptionQueueClaim,
   type SubscriptionTaskQueuePort,
@@ -14,6 +21,18 @@ import type {
 } from "@vioxen/subscription-runtime/worker-core";
 
 describe("subscription queue core", () => {
+  it("keeps queue discriminators string-compatible through exported enums", () => {
+    expect(SubscriptionTaskStatusKind.Queued).toBe("queued");
+    expect(SubscriptionQueueEnqueueStatus.Accepted).toBe("accepted");
+    expect(SubscriptionQueueFailureStatus.RetryScheduled).toBe(
+      "retry_scheduled",
+    );
+    expect(QueueProcessorStateKind.Stopped).toBe("stopped");
+    expect(SubscriptionQueueErrorCodeKind.Duplicate).toBe(
+      "subscription_queue_duplicate",
+    );
+  });
+
   it("deduplicates enqueue by idempotency key", async () => {
     const queue = new InMemorySubscriptionTaskQueue<string, string>({
       queueId: "test",
@@ -38,8 +57,16 @@ describe("subscription queue core", () => {
     const queue = new InMemorySubscriptionTaskQueue<string, string>({
       queueId: "test",
     });
-    await queue.enqueue({ taskId: "task-1", job: "job", maxAttempts: 2 });
-    const claim = await queue.claim({ leaseTtlMs: 60_000 });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      maxAttempts: 2,
+      runAfter: new Date("2026-05-31T00:00:00.000Z"),
+    });
+    const claim = await queue.claim({
+      leaseTtlMs: 60_000,
+      now: new Date("2026-05-31T00:00:00.000Z"),
+    });
     expect(claim?.task.taskId).toBe("task-1");
     if (!claim) throw new Error("missing_claim");
 
@@ -73,6 +100,39 @@ describe("subscription queue core", () => {
       result: "ok",
     });
     await expect(queue.size({ includeDelayed: true })).resolves.toBe(0);
+  });
+
+  it("reclaims expired in-memory leases without consuming attempts", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "lease-expiry",
+    });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      maxAttempts: 2,
+      runAfter: new Date("2026-05-31T00:00:00.000Z"),
+    });
+
+    const first = await queue.claim({
+      leaseTtlMs: 10,
+      now: new Date("2026-05-31T00:00:00.000Z"),
+    });
+    if (!first) throw new Error("missing_first_claim");
+
+    await expect(
+      queue.claim({
+        leaseTtlMs: 10,
+        now: new Date("2026-05-31T00:00:00.009Z"),
+      }),
+    ).resolves.toBeNull();
+
+    const reclaimed = await queue.claim({
+      leaseTtlMs: 10,
+      now: new Date("2026-05-31T00:00:00.010Z"),
+    });
+    expect(reclaimed?.task.taskId).toBe("task-1");
+    expect(reclaimed?.task.attempt).toBe(1);
+    expect(reclaimed?.leaseId).not.toBe(first.leaseId);
   });
 
   it("processes queued work through a bounded worker pool", async () => {
@@ -183,6 +243,41 @@ describe("subscription queue core", () => {
     await expect(queue.size({ includeDelayed: true })).resolves.toBe(1);
   });
 
+  it("passes idempotency and abort context through the queue processor port", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "processor-port",
+    });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      idempotencyKey: "idem-1",
+    });
+    const runOptions: unknown[] = [];
+    const processor = new SubscriptionQueueProcessor<string, string>({
+      queue,
+      workerPool: {
+        stats: () => ({}),
+        run: async (_job, options) => {
+          runOptions.push(options);
+          return "ok";
+        },
+      },
+      idleDelayMs: 5,
+    });
+    processor.start();
+
+    await eventually(async () => {
+      expect(processor.stats().completed).toBe(1);
+    });
+    await processor.stop();
+
+    expect(runOptions).toHaveLength(1);
+    expect(runOptions[0]).toMatchObject({ idempotencyKey: "idem-1" });
+    expect(
+      (runOptions[0] as { abortSignal?: AbortSignal }).abortSignal?.aborted,
+    ).toBe(false);
+  });
+
   it("releases claims that resolve after stop without starting new work", async () => {
     const queue = new DeferredClaimQueue();
     const runs: unknown[] = [];
@@ -237,6 +332,16 @@ describe("subscription queue core", () => {
         },
       }),
     ).toBe(250);
+  });
+
+  it("rejects invalid retry policies with a queue-domain error", () => {
+    expect(() =>
+      assertRetryPolicy({
+        maxAttempts: 0,
+        baseDelayMs: 100,
+        maxDelayMs: 100,
+      }),
+    ).toThrowError(SubscriptionQueueError);
   });
 });
 
