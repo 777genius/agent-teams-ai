@@ -5,6 +5,9 @@ import {
   SubscriptionQueueErrorCodeKind,
   SubscriptionQueueFailureStatus,
   SubscriptionTaskStatusKind,
+  assertSubscriptionQueueClaimInput,
+  assertSubscriptionQueueEnqueueInput,
+  assertSubscriptionQueueId,
   computeBackoffDelayMs,
   type SubscriptionQueueClaim,
   type SubscriptionQueueEnqueueInput,
@@ -35,12 +38,7 @@ export class InMemorySubscriptionTaskQueue<
   private closed = false;
 
   constructor(options: { readonly queueId: string }) {
-    if (!options.queueId.trim()) {
-      throw new SubscriptionQueueError(
-        SubscriptionQueueErrorCodeKind.Closed,
-        "Queue id is required.",
-      );
-    }
+    assertSubscriptionQueueId(options.queueId);
     this.queueId = options.queueId;
   }
 
@@ -48,6 +46,7 @@ export class InMemorySubscriptionTaskQueue<
     input: SubscriptionQueueEnqueueInput<Job>,
   ): Promise<SubscriptionQueueEnqueueResult> {
     this.assertOpen();
+    assertSubscriptionQueueEnqueueInput(input);
     if (input.idempotencyKey) {
       const existingTaskId = this.idempotency.get(input.idempotencyKey);
       if (existingTaskId) {
@@ -65,14 +64,15 @@ export class InMemorySubscriptionTaskQueue<
         "Task id already exists.",
       );
     }
+    const now = new Date();
     const task: SubscriptionQueueTask<Job> = {
       taskId,
       job: input.job,
       attempt: 1,
       maxAttempts: input.maxAttempts ?? 3,
       ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
-      runAfter: input.runAfter ?? new Date(),
-      createdAt: new Date(),
+      runAfter: input.runAfter ?? now,
+      createdAt: now,
       metadata: input.metadata ?? {},
     };
     this.records.set(taskId, {
@@ -93,6 +93,7 @@ export class InMemorySubscriptionTaskQueue<
     readonly now?: Date;
   }): Promise<SubscriptionQueueClaim<Job> | null> {
     this.assertOpen();
+    assertSubscriptionQueueClaimInput(input);
     const now = input.now ?? new Date();
     for (const record of this.records.values()) {
       if (!isClaimable(record, now)) continue;
