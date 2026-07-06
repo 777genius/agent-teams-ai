@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ControllerSupervisorObservedStatus,
+  codexGoalMcpToolTimeoutMs,
   controllerSupervisorDeliverableGuidanceSignature,
   controllerSupervisorHasDeliverableGuidance,
   controllerSupervisorHasAvailableAccounts,
@@ -13,6 +14,13 @@ import {
 } from "../codex-goal-mcp-client";
 
 describe("codex goal MCP client supervisor helpers", () => {
+  it("uses extended MCP request timeout for project-control tools", () => {
+    expect(codexGoalMcpToolTimeoutMs("codex_goal_project_refill_worker")).toBe(300_000);
+    expect(codexGoalMcpToolTimeoutMs("codex_goal_project_start")).toBe(300_000);
+    expect(codexGoalMcpToolTimeoutMs("codex_goal_project_controller_status")).toBe(300_000);
+    expect(codexGoalMcpToolTimeoutMs("codex_goal_brief")).toBeUndefined();
+  });
+
   it("reads nested provider status before persisted run status", () => {
     expect(controllerSupervisorObservedStatus({
       ok: true,

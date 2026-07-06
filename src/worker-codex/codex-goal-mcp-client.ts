@@ -53,11 +53,12 @@ export async function callCodexGoalMcpTool(input: {
   readonly name: string;
   readonly args?: JsonRecord;
 }): Promise<unknown> {
+  const timeout = codexGoalMcpToolTimeoutMs(input.name);
   return withCodexGoalMcpClient(async (client) =>
     parseMcpJsonResult(await client.callTool({
       name: input.name,
       arguments: input.args ?? {},
-    }))
+    }, undefined, timeout === undefined ? undefined : { timeout }))
   );
 }
 
@@ -371,6 +372,13 @@ function controllerSupervisorCooldownInstants(result: unknown): readonly number[
     if (Number.isFinite(instant)) instants.push(instant);
   }
   return instants;
+}
+
+export function codexGoalMcpToolTimeoutMs(name: string): number | undefined {
+  if (name.startsWith("codex_goal_project_")) {
+    return 300_000;
+  }
+  return undefined;
 }
 
 function controllerSupervisorStatusValue(
