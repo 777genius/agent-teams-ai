@@ -402,7 +402,11 @@ import {
   type TeamProvisioningProviderRuntimeCompatibility,
   type TeamProvisioningProviderRuntimeFacade,
 } from './provisioning/TeamProvisioningProviderRuntimeFacade';
-import { createTeamProvisioningReevaluateMemberLaunchStatusBoundary } from './provisioning/TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
+import {
+  createTeamProvisioningReevaluateMemberLaunchStatusBoundary,
+  createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService,
+  type TeamProvisioningReevaluateMemberLaunchStatusServiceHost,
+} from './provisioning/TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
 import {
   auditRegisteredMemberSpawnStatuses as auditRegisteredMemberSpawnStatusesHelper,
   readRegisteredTeamMemberNamesFromConfig,
@@ -1347,43 +1351,16 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     )
   );
   private readonly reevaluateMemberLaunchStatusBoundary =
-    createTeamProvisioningReevaluateMemberLaunchStatusBoundary<ProvisioningRun>({
-      nowIso,
-      nowMs: () => Date.now(),
-      service: {
-        refreshMemberSpawnStatusesFromLeadInbox: (targetRun) =>
-          this.refreshMemberSpawnStatusesFromLeadInbox(targetRun),
-        maybeAuditMemberSpawnStatuses: (targetRun, options) =>
-          this.maybeAuditMemberSpawnStatuses(targetRun, options),
-        getLiveTeamAgentRuntimeMetadata: (teamName) =>
-          this.getLiveTeamAgentRuntimeMetadata(teamName),
-        isOpenCodeSecondaryLaneMemberInRun,
-        getOpenCodeBootstrapStallReconciliationPorts: () =>
-          this.getOpenCodeBootstrapStallReconciliationPorts(),
-        setMemberSpawnStatus: (targetRun, targetMember, status, error, livenessSource) =>
-          this.setMemberSpawnStatus(targetRun, targetMember, status, error, livenessSource),
-        emitMemberSpawnChange: (targetRun, targetMember) =>
-          this.emitMemberSpawnChange(targetRun, targetMember),
-        scheduleOpenCodeBootstrapStallReevaluation: (
-          targetRun,
-          targetMember,
-          firstSpawnAcceptedAt
-        ) =>
-          this.scheduleOpenCodeBootstrapStallReevaluation(
-            targetRun,
-            targetMember,
-            firstSpawnAcceptedAt
-          ),
-        syncMemberTaskActivityForRuntimeTransition: (targetRun, targetMember, previous, next, at) =>
-          this.syncMemberTaskActivityForRuntimeTransition(
-            targetRun,
-            targetMember,
-            previous,
-            next,
-            at
-          ),
-      },
-    });
+    createTeamProvisioningReevaluateMemberLaunchStatusBoundary<ProvisioningRun>(
+      createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService(
+        this as unknown as TeamProvisioningReevaluateMemberLaunchStatusServiceHost<ProvisioningRun>,
+        {
+          nowIso,
+          nowMs: () => Date.now(),
+          isOpenCodeSecondaryLaneMemberInRun,
+        }
+      )
+    );
   private readonly mixedSecondaryLaneWiring =
     createTeamProvisioningMixedSecondaryLaneWiring<ProvisioningRun>({
       service: {

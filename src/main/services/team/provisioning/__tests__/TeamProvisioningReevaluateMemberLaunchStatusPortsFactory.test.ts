@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningReevaluateMemberLaunchStatusBoundary,
+  createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService,
   createTeamProvisioningReevaluateMemberLaunchStatusPorts,
+  type TeamProvisioningReevaluateMemberLaunchStatusServiceHost,
 } from '../TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
 
 import type { ReevaluateMemberLaunchStatusRunLike } from '../TeamProvisioningReevaluateMemberLaunchStatus';
@@ -112,6 +114,59 @@ describe('createTeamProvisioningReevaluateMemberLaunchStatusPorts', () => {
       previous,
       next,
       NOW
+    );
+  });
+
+  it('builds reevaluate member launch status deps from service-shaped dependencies', async () => {
+    const targetRun = run();
+    const reconciliationPorts = createReconciliationPorts();
+    const isOpenCodeSecondaryLaneMemberInRun = vi.fn(() => true);
+    const service = {
+      refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
+      maybeAuditMemberSpawnStatuses: vi.fn(async () => undefined),
+      getLiveTeamAgentRuntimeMetadata: vi.fn(async () => new Map()),
+      getOpenCodeBootstrapStallReconciliationPorts: vi.fn(() => reconciliationPorts),
+      setMemberSpawnStatus: vi.fn(),
+      emitMemberSpawnChange: vi.fn(),
+      scheduleOpenCodeBootstrapStallReevaluation: vi.fn(),
+      syncMemberTaskActivityForRuntimeTransition: vi.fn(),
+    } satisfies TeamProvisioningReevaluateMemberLaunchStatusServiceHost<ReevaluateMemberLaunchStatusRunLike>;
+
+    const ports = createTeamProvisioningReevaluateMemberLaunchStatusPorts(
+      createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService(service, {
+        nowIso: () => NOW,
+        nowMs: () => NOW_MS,
+        isOpenCodeSecondaryLaneMemberInRun,
+      })
+    );
+
+    await ports.refreshMemberSpawnStatusesFromLeadInbox(targetRun);
+    await ports.maybeAuditMemberSpawnStatuses(targetRun, { force: true });
+    ports.isOpenCodeSecondaryLaneMemberInRun(targetRun, 'Worker');
+    ports.setMemberSpawnStatus(targetRun, 'Worker', 'online');
+    ports.emitMemberSpawnChange(targetRun, 'Worker');
+    ports.scheduleOpenCodeBootstrapStallReevaluation(targetRun, 'Worker', ACCEPTED_AT);
+
+    expect(ports.nowIso()).toBe(NOW);
+    expect(ports.nowMs()).toBe(NOW_MS);
+    expect(ports.reconcileOpenCodeBootstrapStallPorts).toBe(reconciliationPorts);
+    expect(service.refreshMemberSpawnStatusesFromLeadInbox).toHaveBeenCalledWith(targetRun);
+    expect(service.maybeAuditMemberSpawnStatuses).toHaveBeenCalledWith(targetRun, {
+      force: true,
+    });
+    expect(isOpenCodeSecondaryLaneMemberInRun).toHaveBeenCalledWith(targetRun, 'Worker');
+    expect(service.setMemberSpawnStatus).toHaveBeenCalledWith(
+      targetRun,
+      'Worker',
+      'online',
+      undefined,
+      undefined
+    );
+    expect(service.emitMemberSpawnChange).toHaveBeenCalledWith(targetRun, 'Worker');
+    expect(service.scheduleOpenCodeBootstrapStallReevaluation).toHaveBeenCalledWith(
+      targetRun,
+      'Worker',
+      ACCEPTED_AT
     );
   });
 });

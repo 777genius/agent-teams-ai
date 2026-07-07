@@ -51,6 +51,50 @@ export interface TeamProvisioningReevaluateMemberLaunchStatusPortsFactoryDeps<
   service: TeamProvisioningReevaluateMemberLaunchStatusServiceAdapter<TRun>;
 }
 
+export interface TeamProvisioningReevaluateMemberLaunchStatusServiceHost<
+  TRun extends ReevaluateMemberLaunchStatusRunLike,
+> {
+  refreshMemberSpawnStatusesFromLeadInbox(run: TRun): Promise<void>;
+  maybeAuditMemberSpawnStatuses(run: TRun, options: { force: true }): Promise<void>;
+  getLiveTeamAgentRuntimeMetadata(
+    teamName: string
+  ): Promise<ReadonlyMap<string, LiveTeamAgentRuntimeMetadata>>;
+  getOpenCodeBootstrapStallReconciliationPorts(): ReevaluateMemberLaunchStatusPorts<TRun>['reconcileOpenCodeBootstrapStallPorts'];
+  setMemberSpawnStatus(
+    run: TRun,
+    memberName: string,
+    status: MemberSpawnStatus,
+    error?: string,
+    livenessSource?: MemberSpawnLivenessSource
+  ): void;
+  emitMemberSpawnChange(run: TRun, memberName: string): void;
+  scheduleOpenCodeBootstrapStallReevaluation(
+    run: TRun,
+    memberName: string,
+    firstSpawnAcceptedAt: string
+  ): void;
+  syncMemberTaskActivityForRuntimeTransition(
+    run: TRun,
+    memberName: string,
+    previous: MemberSpawnStatusEntry,
+    next: MemberSpawnStatusEntry,
+    observedAt: string
+  ): void;
+}
+
+export interface TeamProvisioningReevaluateMemberLaunchStatusServiceHostOptions<
+  TRun extends ReevaluateMemberLaunchStatusRunLike,
+> {
+  nowIso(): string;
+  nowMs(): number;
+  isOpenCodeSecondaryLaneMemberInRun(
+    run: TRun,
+    memberName: string
+  ): ReturnType<
+    TeamProvisioningReevaluateMemberLaunchStatusServiceAdapter<TRun>['isOpenCodeSecondaryLaneMemberInRun']
+  >;
+}
+
 export interface TeamProvisioningReevaluateMemberLaunchStatusBoundary<
   TRun extends ReevaluateMemberLaunchStatusRunLike,
 > {
@@ -93,6 +137,43 @@ export function createTeamProvisioningReevaluateMemberLaunchStatusPorts<
         next,
         observedAt
       ),
+  };
+}
+
+export function createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService<
+  TRun extends ReevaluateMemberLaunchStatusRunLike,
+>(
+  service: TeamProvisioningReevaluateMemberLaunchStatusServiceHost<TRun>,
+  options: TeamProvisioningReevaluateMemberLaunchStatusServiceHostOptions<TRun>
+): TeamProvisioningReevaluateMemberLaunchStatusPortsFactoryDeps<TRun> {
+  return {
+    nowIso: options.nowIso,
+    nowMs: options.nowMs,
+    service: {
+      refreshMemberSpawnStatusesFromLeadInbox: (run) =>
+        service.refreshMemberSpawnStatusesFromLeadInbox(run),
+      maybeAuditMemberSpawnStatuses: (run, auditOptions) =>
+        service.maybeAuditMemberSpawnStatuses(run, auditOptions),
+      getLiveTeamAgentRuntimeMetadata: (teamName) =>
+        service.getLiveTeamAgentRuntimeMetadata(teamName),
+      isOpenCodeSecondaryLaneMemberInRun: (run, memberName) =>
+        options.isOpenCodeSecondaryLaneMemberInRun(run, memberName),
+      getOpenCodeBootstrapStallReconciliationPorts: () =>
+        service.getOpenCodeBootstrapStallReconciliationPorts(),
+      setMemberSpawnStatus: (run, memberName, status, error, livenessSource) =>
+        service.setMemberSpawnStatus(run, memberName, status, error, livenessSource),
+      emitMemberSpawnChange: (run, memberName) => service.emitMemberSpawnChange(run, memberName),
+      scheduleOpenCodeBootstrapStallReevaluation: (run, memberName, firstSpawnAcceptedAt) =>
+        service.scheduleOpenCodeBootstrapStallReevaluation(run, memberName, firstSpawnAcceptedAt),
+      syncMemberTaskActivityForRuntimeTransition: (run, memberName, previous, next, observedAt) =>
+        service.syncMemberTaskActivityForRuntimeTransition(
+          run,
+          memberName,
+          previous,
+          next,
+          observedAt
+        ),
+    },
   };
 }
 
