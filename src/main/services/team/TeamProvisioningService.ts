@@ -447,7 +447,10 @@ import {
   isOpenCodeRuntimeRecipientFromSources,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
-import { createDefaultTeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSamplingFactory';
+import {
+  createDefaultTeamProvisioningRuntimeResourceSampling,
+  DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS,
+} from './provisioning/TeamProvisioningRuntimeResourceSamplingFactory';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
   type PersistedRuntimeMemberLike,
@@ -631,6 +634,15 @@ function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
 }
 
 export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade<ProvisioningRun> {
+  static RUNTIME_PROCESS_TABLE_TIMEOUT_MS =
+    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.processTableTimeoutMs;
+  static RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS =
+    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.windowsProcessTableTimeoutMs;
+  static RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS =
+    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.pidusageBatchTimeoutMs;
+  static RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES =
+    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.processUsageCacheMaxEntries;
+
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
   private readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary =
@@ -1149,7 +1161,22 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         this.getRuntimeSnapshotCacheGeneration(teamName),
       getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
     },
-    { logDebug: (message) => logger.debug(message) }
+    { logDebug: (message) => logger.debug(message) },
+    {
+      ...DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS,
+      get processTableTimeoutMs() {
+        return TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS;
+      },
+      get windowsProcessTableTimeoutMs() {
+        return TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS;
+      },
+      get pidusageBatchTimeoutMs() {
+        return TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS;
+      },
+      get processUsageCacheMaxEntries() {
+        return TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES;
+      },
+    }
   );
   private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
   private readonly runtimeSnapshotFacade!: TeamProvisioningRuntimeProjection['runtimeSnapshotFacade'];
@@ -1565,9 +1592,15 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       runTracking: this.runTracking,
       hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
       readBootstrapRuntimeState,
-      teamMetaStore: this.teamMetaStore,
-      membersMetaStore: this.membersMetaStore,
-      launchStateStore: this.launchStateStore,
+      teamMetaStore: {
+        getMeta: (targetTeamName) => this.teamMetaStore.getMeta(targetTeamName),
+      },
+      membersMetaStore: {
+        getMembers: (targetTeamName) => this.membersMetaStore.getMembers(targetTeamName),
+      },
+      launchStateStore: {
+        read: (targetTeamName) => this.launchStateStore.read(targetTeamName),
+      },
       readConfigSnapshot: (targetTeamName) => this.readConfigSnapshot(targetTeamName),
       readPersistedRuntimeMembers: (targetTeamName) =>
         this.readPersistedRuntimeMembers(targetTeamName),

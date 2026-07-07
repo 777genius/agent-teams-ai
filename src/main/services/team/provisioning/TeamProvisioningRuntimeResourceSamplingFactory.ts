@@ -6,7 +6,7 @@ import type {
   RuntimeResourceSamplingOptions,
 } from './TeamProvisioningRuntimeResourceSampling';
 
-const DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS = {
+export const DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS = {
   processTableTimeoutMs: 1_500,
   windowsProcessTableTimeoutMs: 1_500,
   livenessProcessTableCacheTtlMs: 5_000,
@@ -26,11 +26,8 @@ const DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS = {
 
 export function createDefaultTeamProvisioningRuntimeResourceSampling(
   cacheAccess: RuntimeResourceSamplingCacheAccess,
-  logPorts: RuntimeResourceSamplingLogPorts
+  logPorts: RuntimeResourceSamplingLogPorts,
+  options: RuntimeResourceSamplingOptions = DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS
 ): TeamProvisioningRuntimeResourceSampling {
-  return new TeamProvisioningRuntimeResourceSampling(
-    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS,
-    cacheAccess,
-    logPorts
-  );
+  return new TeamProvisioningRuntimeResourceSampling(options, cacheAccess, logPorts);
 }
