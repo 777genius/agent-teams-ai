@@ -2,7 +2,7 @@
 import { execFile } from "node:child_process";
 import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -45,9 +45,7 @@ import {
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
   ProjectControlBroker,
-  RunEventCompactionSafetyMode,
   RunEventProviderKind,
-  RunEventType,
   WorkerControlService,
   assessBaseRevision,
   assessWorkerHealth,
@@ -62,9 +60,6 @@ import {
   decideRunObservation,
   describeProjectControlSurface,
   evaluateProjectAdmission,
-  isRunEventCompactionSafetyMode,
-  isRunEventProviderKind,
-  isRunEventType,
   projectRunObservationEvents,
   projectRunReadModelsFromEvents,
   pushApprovedCommit,
@@ -80,9 +75,7 @@ import {
   readConsumedOutputLedgers,
   type BaseRevisionStatus,
   type ConsumedOutputLedger,
-  type RuntimeResultArtifact,
   type RunEventReadResult,
-  type RunEventRetentionPolicy,
   type RunObservationSnapshot,
   type ProjectAccessScope,
   type ProjectAdmissionGate,
@@ -195,6 +188,72 @@ import {
   startProjectControlOperationRunner,
   type JsonRecord as ProjectControlOperationJsonRecord,
 } from "./project-control-operation-lifecycle";
+import {
+  accountNames,
+  booleanValue,
+  dateValue,
+  numberValue,
+  positiveIntegerValue,
+  putIfDefined,
+  requiredRawString,
+  requiredString,
+  resolvePath,
+  stringValue,
+  stringsFromValue,
+  tagValues,
+  workerReportModeValue,
+} from "./codex-goal-mcp-values";
+import {
+  jobIdInputSchema,
+  jobRegistryInputSchema,
+  optionalRunEventProviderKind,
+  registryRootFromArgs,
+  runEventRetentionPolicyFromArgs,
+  runEventRootFromArgs,
+  runEventTypeFilter,
+  type AccountPoolMcpArgs,
+  type AgentRunEventCompactionMcpArgs,
+  type AgentRunEventsMcpArgs,
+  type AgentRunProjectEventsMcpArgs,
+  type AgentRunStateMcpArgs,
+  type AgentRunWatchMcpArgs,
+  type GoalMcpArgs,
+  type JobAccountPoolMcpArgs,
+  type JobBriefMcpArgs,
+  type JobCreateMcpArgs,
+  type JobDecisionMcpArgs,
+  type JobHandoffMcpArgs,
+  type JobIdMcpArgs,
+  type JobLifecycleMcpArgs,
+  type JobOverviewMcpArgs,
+  type JobRegistryMcpArgs,
+  type JobResultReconcileMcpArgs,
+  type JobUpdateMcpArgs,
+  type JobWatchMcpArgs,
+  type ProjectControllerLaunchPlanMcpArgs,
+  type ProjectControlMcpArgs,
+  type StartMcpArgs,
+  type WorkerControlMcpArgs,
+} from "./codex-goal-mcp-inputs";
+import {
+  accountOperatorLabel,
+  availableCodexGoalAccountSlots,
+  codexAccountReloginInstructions,
+  codexAccountStatusPayload,
+  dedupeCodexGoalAccountSlots,
+  duplicateAccountGroups,
+  visibleCodexGoalAccountPoolSlots,
+} from "./codex-goal-mcp-accounts";
+import {
+  readRuntimeResultBrief,
+  safeTail,
+} from "./codex-goal-mcp-runtime-result";
+import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers";
+export {
+  availableCodexGoalAccountSlots,
+  dedupeCodexGoalAccountSlots,
+  visibleCodexGoalAccountPoolSlots,
+} from "./codex-goal-mcp-accounts";
 
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
@@ -210,268 +269,6 @@ const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
 const controlledAgentProviders = new Map<string, ControlledAgentProviderPort>();
 
 type JsonObject = Readonly<Record<string, unknown>>;
-
-type GoalMcpArgs = {
-  readonly jobId?: string;
-  readonly configPath?: string;
-  readonly jobRootDir?: string;
-  readonly authRootDir?: string;
-  readonly stateRootDir?: string;
-  readonly workspacePath?: string;
-  readonly promptPath?: string;
-  readonly codexGoalObjective?: string;
-  readonly taskId?: string;
-  readonly accounts?: string | readonly string[];
-  readonly outputPath?: string;
-  readonly progressPath?: string;
-  readonly progressHeartbeatMs?: number;
-  readonly codexBinaryPath?: string;
-  readonly model?: string;
-  readonly reasoningEffort?: CodexGoalRunConfig["reasoningEffort"];
-  readonly serviceTier?: CodexGoalRunConfig["serviceTier"];
-  readonly executionEngine?: CodexGoalRunConfig["executionEngine"];
-  readonly taskTimeoutMs?: number;
-  readonly appServerStartupTimeoutMs?: number;
-  readonly staleLockMs?: number;
-  readonly maxAccountCycles?: number;
-  readonly editMode?: CodexGoalRunConfig["editMode"];
-  readonly providerSandboxMode?: CodexGoalRunConfig["providerSandboxMode"];
-  readonly accessBoundary?: CodexGoalRunConfig["accessBoundary"];
-  readonly projectAccessScope?: CodexGoalRunConfig["projectAccessScope"];
-  readonly allowDangerFullAccess?: boolean;
-  readonly networkAccess?: CodexGoalRunConfig["networkAccess"];
-  readonly allowDuplicateAccountIdentities?: boolean;
-  readonly requireGitWorkspace?: boolean;
-  readonly prewarmOnStart?: boolean;
-  readonly workerReportMode?: CodexGoalRunConfig["workerReportMode"];
-  readonly tmuxSession?: string;
-  readonly cwd?: string;
-  readonly logPath?: string;
-  readonly outputFormat?: CodexGoalOutputFormat;
-};
-
-type StartMcpArgs = GoalMcpArgs & {
-  readonly registryRootDir?: string;
-  readonly confirmStart?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly forceStart?: boolean;
-};
-
-type JobRegistryMcpArgs = {
-  readonly registryRootDir?: string;
-  readonly cwd?: string;
-};
-
-type JobOverviewMcpArgs = JobRegistryMcpArgs & {
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly limit?: number;
-  readonly jobIdPrefix?: string;
-};
-
-type JobWatchMcpArgs = JobOverviewMcpArgs & {
-  readonly jobIds?: string | readonly string[];
-  readonly continueSafeJobs?: boolean;
-  readonly maxContinuesPerRun?: number;
-  readonly skipDoctor?: boolean;
-};
-
-type AgentRunWatchMcpArgs = JobOverviewMcpArgs & {
-  readonly providerKind?: string;
-  readonly jobId?: string;
-  readonly jobIds?: string | readonly string[];
-  readonly stateRootDir?: string;
-  readonly runArtifactsRootDir?: string;
-  readonly includeChangedFiles?: boolean;
-  readonly includeLogTail?: boolean;
-};
-
-type AgentRunEventsMcpArgs = AgentRunWatchMcpArgs & {
-  readonly eventRootDir?: string;
-  readonly cursor?: string;
-  readonly type?: string | readonly string[];
-  readonly types?: string | readonly string[];
-};
-
-type AgentRunStateMcpArgs = AgentRunWatchMcpArgs & {
-  readonly eventRootDir?: string;
-};
-
-type AgentRunEventCompactionMcpArgs = JobRegistryMcpArgs & {
-  readonly eventRootDir?: string;
-  readonly keepEventsAfter?: string;
-  readonly keepLatestEventsPerRun?: number;
-  readonly compactDeliveredEvents?: boolean;
-  readonly dropInvalidLines?: boolean;
-  readonly safetyMode?: string;
-  readonly confirmCompact?: boolean;
-};
-
-type AgentRunProjectEventsMcpArgs = AgentRunEventsMcpArgs & {
-  readonly hostId?: string;
-};
-
-type JobIdMcpArgs = JobRegistryMcpArgs & {
-  readonly jobId?: string;
-};
-
-type JobCreateMcpArgs = GoalMcpArgs & JobIdMcpArgs & {
-  readonly description?: string;
-  readonly tags?: readonly string[] | string;
-  readonly overwrite?: boolean;
-};
-
-type JobUpdateMcpArgs = JobIdMcpArgs & Partial<JobCreateMcpArgs>;
-
-type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
-  readonly controllerJobId?: string;
-  readonly path?: string;
-  readonly sourceWorkspacePath?: string;
-  readonly baseBranch?: string;
-  readonly sourceRef?: string;
-  readonly newBranch?: string;
-  readonly workspacePath?: string;
-  readonly branch?: string;
-  readonly remote?: string;
-  readonly force?: boolean;
-  readonly commitSha?: string;
-  readonly confirmCreate?: boolean;
-  readonly confirmCreateWorktree?: boolean;
-  readonly confirmIntegrate?: boolean;
-  readonly confirmUpdate?: boolean;
-  readonly confirmPush?: boolean;
-  readonly confirmStart?: boolean;
-  readonly confirmStop?: boolean;
-  readonly forceStart?: boolean;
-  readonly forceStop?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly note?: string;
-  readonly overwrite?: boolean;
-  readonly promptBody?: string;
-  readonly confirmRefill?: boolean;
-  readonly confirmRepair?: boolean;
-  readonly startWorker?: boolean;
-  readonly workerRole?: string;
-  readonly dependencyBootstrap?: string;
-  readonly confirmDependencyBootstrap?: boolean;
-  readonly operation?: string;
-  readonly includeDetails?: boolean;
-  readonly maxDebtItems?: number;
-  readonly executionMode?: string;
-  readonly operationId?: string;
-  readonly includeResult?: boolean;
-};
-
-type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
-  readonly providerKind?: string;
-  readonly stateDir?: string;
-  readonly sessionArtifactPath?: string;
-  readonly claudePath?: string;
-  readonly mcpServerName?: string;
-  readonly mcpCommand?: string;
-  readonly mcpArgs?: readonly string[] | string;
-  readonly mcpCwd?: string;
-  readonly rawShellMode?: "disabled-by-provider" | "sandboxed-deny-rules-only";
-  readonly maxGoalTurns?: number;
-  readonly reason?: string;
-  readonly deliveryAttemptId?: string;
-};
-
-type JobLifecycleMcpArgs = JobIdMcpArgs & {
-  readonly confirmContinue?: boolean;
-  readonly confirmRecover?: boolean;
-  readonly confirmStop?: boolean;
-  readonly confirmPause?: boolean;
-  readonly forceStart?: boolean;
-  readonly forceStop?: boolean;
-  readonly forcePause?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly reason?: string;
-};
-
-type JobResultReconcileMcpArgs = JobBriefMcpArgs & {
-  readonly forceWrite?: boolean;
-  readonly preservePatch?: boolean;
-};
-
-type JobBriefMcpArgs = JobIdMcpArgs & {
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly targetCommit?: string;
-  readonly targetWorkspacePath?: string;
-};
-
-type JobDecisionMcpArgs = JobBriefMcpArgs & {
-  readonly includeRegistryConflicts?: boolean;
-};
-
-type JobHandoffMcpArgs = JobBriefMcpArgs & {
-  readonly includeCliFallback?: boolean;
-};
-
-type JobAccountPoolMcpArgs = JobIdMcpArgs & {
-  readonly poolRootDir?: string;
-  readonly account?: string;
-};
-
-type WorkerControlMcpArgs = JobIdMcpArgs & {
-  readonly intent?: WorkerControlIntent;
-  readonly deliveryMode?: WorkerControlDeliveryMode;
-  readonly body?: string;
-  readonly createdBy?: WorkerControlActor;
-  readonly callerKind?: WorkerControlActor;
-  readonly callerActor?: WorkerControlActor;
-  readonly callerId?: string;
-  readonly priority?: WorkerControlPriority;
-  readonly idempotencyKey?: string;
-  readonly expiresAt?: string;
-  readonly supersedesSignalIds?: string | readonly string[];
-  readonly signalId?: string;
-  readonly supersededBySignalId?: string;
-  readonly reason?: string;
-  readonly includeBodies?: boolean;
-  readonly repair?: boolean;
-  readonly acceptedStaleAfterMs?: number;
-};
-
-type AccountPoolMcpArgs = {
-  readonly poolRootDir?: string;
-  readonly pool?: string;
-  readonly authRootDir?: string;
-  readonly stateRootDir?: string;
-  readonly accounts?: string | readonly string[];
-};
-
-type CodexGoalLifecycleMarkerSpec = {
-  readonly type: "pause_request" | "maintenance_pause" | "review" | "stop_event";
-  readonly suffix: string;
-  readonly timestampKeys: readonly string[];
-};
-
-const lifecycleMarkerSpecs: readonly CodexGoalLifecycleMarkerSpec[] = [
-  {
-    type: "pause_request",
-    suffix: "pause-request.json",
-    timestampKeys: ["requestedAt"],
-  },
-  {
-    type: "maintenance_pause",
-    suffix: "maintenance-pause.json",
-    timestampKeys: ["pausedAt"],
-  },
-  {
-    type: "review",
-    suffix: "review.json",
-    timestampKeys: ["reviewedAt"],
-  },
-  {
-    type: "stop_event",
-    suffix: "stop-event.json",
-    timestampKeys: ["stoppedAt"],
-  },
-];
 
 export type CodexGoalMcpServerOptions = {
   readonly activeAttemptRegistry?: ActiveAttemptRegistry;
@@ -6137,77 +5934,6 @@ async function codexGoalAccountCapacityFacts(
   }
 }
 
-async function codexAccountStatusPayload(input: {
-  readonly authRootDir: string;
-  readonly stateRootDir?: string;
-  readonly accounts?: readonly string[];
-  readonly liveCheck?: boolean;
-  readonly codexBinaryPath?: string;
-  readonly liveCheckTimeoutMs?: number;
-}) {
-  const slots = await listCodexGoalAccountStatuses({
-    authRootDir: input.authRootDir,
-    ...(input.accounts?.length ? { accounts: input.accounts } : {}),
-    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-    ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
-    ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
-    ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
-  });
-  const duplicates = duplicateAccountGroups(slots);
-  const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
-  const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
-  const readySlots = slots.filter((slot) => slot.status === "ready");
-  const missingSlots = slots.filter((slot) => slot.status === "auth_missing");
-  const invalidSlots = slots.filter((slot) => slot.status === "auth_invalid");
-  const capacityBlockedSlots = slots.filter((slot) =>
-    slot.capacityAvailability && slot.capacityAvailability !== "available"
-  );
-  return {
-    ok: availableDedupedSlots.length > 0,
-    authRootDir: input.authRootDir,
-    capacityAware: Boolean(input.stateRootDir),
-    liveCheck: Boolean(input.liveCheck),
-    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-    count: slots.length,
-    available: availableDedupedSlots.length,
-    hasAvailableAccount: availableDedupedSlots.length > 0,
-    summary: {
-      configured: slots.length,
-      ready: readySlots.length,
-      missing: missingSlots.length,
-      invalid: invalidSlots.length,
-      deduped: dedupedSlots.length,
-      availableDeduped: availableDedupedSlots.length,
-      capacityBlocked: capacityBlockedSlots.length,
-      duplicateGroups: duplicates.length,
-    },
-    accounts: slots,
-    slots,
-    duplicates,
-    dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
-    availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
-    dedupedAccountLabels: dedupedSlots.map(accountOperatorLabel),
-    availableDedupedAccountLabels: availableDedupedSlots.map(accountOperatorLabel),
-    dedupeRecommendation: duplicates.length
-      ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
-      : "No duplicate identity groups detected.",
-  };
-}
-
-function codexAccountReloginInstructions(input: {
-  readonly authRootDir: string;
-  readonly account: string;
-  readonly afterLoginInstruction: string;
-}): readonly string[] {
-  return [
-    "This is a manual relogin flow. It does not automate browser login.",
-    `mkdir -p ${shellText(join(input.authRootDir, input.account))}`,
-    `test ! -f ${shellText(join(input.authRootDir, input.account, "auth.json"))} || cp ${shellText(join(input.authRootDir, input.account, "auth.json"))} ${shellText(join(input.authRootDir, input.account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
-    `CODEX_HOME=${shellText(join(input.authRootDir, input.account))} codex login --device-auth`,
-    input.afterLoginInstruction,
-  ];
-}
-
 async function continueStoredJob(
   args: JobLifecycleMcpArgs,
   options: {
@@ -7734,90 +7460,6 @@ async function buildCodexGoalOverviewItem(input: {
   }
 }
 
-function jobRegistryInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    registryRootDir: z.string().optional(),
-    cwd: z.string().optional(),
-  };
-}
-
-function jobIdInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    ...jobRegistryInputSchema(),
-    jobId: z.string().optional(),
-  };
-}
-
-function registryRootFromArgs(args: JobRegistryMcpArgs): string {
-  return resolveCodexGoalJobRegistryRoot({
-    ...(args.registryRootDir ? { registryRootDir: args.registryRootDir } : {}),
-    ...(args.cwd ? { cwd: args.cwd } : {}),
-  });
-}
-
-function runEventRootFromArgs(
-  args: AgentRunEventsMcpArgs,
-  registryRootDir: string,
-): string {
-  const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
-  return stringValue(args.eventRootDir)
-    ? resolvePath(cwd, stringValue(args.eventRootDir) as string)
-    : join(registryRootDir, ".run-events");
-}
-
-function optionalRunEventProviderKind(
-  value: unknown,
-): RunEventProviderKind | undefined {
-  const text = stringValue(value);
-  if (text === undefined) return undefined;
-  if (isRunEventProviderKind(text)) return text;
-  throw new Error(`unsupported run event provider kind: ${text}`);
-}
-
-function runEventTypeFilter(args: AgentRunEventsMcpArgs): {
-  readonly types?: readonly RunEventType[];
-} {
-  const values = [
-    ...stringsFromValue(args.type),
-    ...stringsFromValue(args.types),
-  ];
-  if (values.length === 0) return {};
-  return {
-    types: values.map((value) => {
-      if (!isRunEventType(value)) {
-        throw new Error(`unsupported run event type: ${value}`);
-      }
-      return value;
-    }),
-  };
-}
-
-function runEventRetentionPolicyFromArgs(
-  args: AgentRunEventCompactionMcpArgs,
-): RunEventRetentionPolicy {
-  const safetyMode = optionalRunEventCompactionSafetyMode(args.safetyMode);
-  const keepEventsAfter = stringValue(args.keepEventsAfter);
-  const keepLatestEventsPerRun = numberValue(args.keepLatestEventsPerRun);
-  const compactDeliveredEvents = booleanValue(args.compactDeliveredEvents);
-  const dropInvalidLines = booleanValue(args.dropInvalidLines);
-  return {
-    ...(safetyMode === undefined ? {} : { safetyMode }),
-    ...(keepEventsAfter === undefined ? {} : { keepEventsAfter }),
-    ...(keepLatestEventsPerRun === undefined ? {} : { keepLatestEventsPerRun }),
-    ...(compactDeliveredEvents === undefined ? {} : { compactDeliveredEvents }),
-    ...(dropInvalidLines === undefined ? {} : { dropInvalidLines }),
-  };
-}
-
-function optionalRunEventCompactionSafetyMode(
-  value: unknown,
-): RunEventCompactionSafetyMode | undefined {
-  const text = stringValue(value);
-  if (text === undefined) return undefined;
-  if (isRunEventCompactionSafetyMode(text)) return text;
-  throw new Error(`unsupported run event compaction safety mode: ${text}`);
-}
-
 function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestInput {
   const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
   const jobId = requiredRawString(args.jobId, "jobId");
@@ -8962,76 +8604,6 @@ function buildCodexGoalHandoff(input: {
   };
 }
 
-async function readCodexGoalLifecycleMarkers(input: {
-  readonly jobRootDir: string;
-  readonly taskId: string;
-}): Promise<readonly JsonObject[]> {
-  const markers = await Promise.all(
-    lifecycleMarkerSpecs.map((spec) =>
-      readCodexGoalLifecycleMarker({
-        ...input,
-        spec,
-      }),
-    ),
-  );
-  return markers
-    .filter((marker): marker is JsonObject => marker !== undefined)
-    .sort((left, right) =>
-      Date.parse(String(right.timestamp ?? right.updatedAt ?? "0")) -
-      Date.parse(String(left.timestamp ?? left.updatedAt ?? "0"))
-    );
-}
-
-async function readCodexGoalLifecycleMarker(input: {
-  readonly jobRootDir: string;
-  readonly taskId: string;
-  readonly spec: CodexGoalLifecycleMarkerSpec;
-}): Promise<JsonObject | undefined> {
-  const markerPath = join(input.jobRootDir, `${input.taskId}.${input.spec.suffix}`);
-  try {
-    const [metadata, raw] = await Promise.all([
-      stat(markerPath),
-      readFile(markerPath, "utf8"),
-    ]);
-    const parsed = parseLifecycleMarker(raw);
-    const timestamp = firstStringKey(parsed, input.spec.timestampKeys);
-    const brief = isRecord(parsed.brief) ? parsed.brief : {};
-    return {
-      type: input.spec.type,
-      markerPath,
-      updatedAt: metadata.mtime.toISOString(),
-      ...(timestamp ? { timestamp } : {}),
-      ...(typeof parsed.reason === "string" ? { reason: redactText(parsed.reason) } : {}),
-      ...(typeof parsed.mode === "string" ? { mode: redactText(parsed.mode) } : {}),
-      ...(typeof parsed.note === "string" ? { note: truncateText(redactText(parsed.note), 300) } : {}),
-      ...(typeof parsed.forceStop === "boolean" ? { forceStop: parsed.forceStop } : {}),
-      ...(typeof parsed.forcePause === "boolean" ? { forcePause: parsed.forcePause } : {}),
-      ...(typeof brief.silentStale === "boolean" ? { silentStale: brief.silentStale } : {}),
-      ...(typeof brief.lastProgressAt === "string"
-        ? { lastProgressAt: brief.lastProgressAt }
-        : {}),
-      ...(typeof brief.lastProgressAgeMs === "number"
-        ? { lastProgressAgeMs: brief.lastProgressAgeMs }
-        : {}),
-      ...(typeof brief.logByteLength === "number"
-        ? { logByteLength: brief.logByteLength }
-        : {}),
-      ...(typeof parsed.schemaVersion === "number" ? { schemaVersion: parsed.schemaVersion } : {}),
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-function parseLifecycleMarker(raw: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
 function latestIsoDate(values: readonly (string | undefined)[]): string | undefined {
   const latest = values
     .map((value) => value ? { value, time: Date.parse(value) } : undefined)
@@ -9048,17 +8620,6 @@ function isoAgeMs(value: string | undefined): number | undefined {
   return Number.isFinite(time) ? Date.now() - time : undefined;
 }
 
-function firstStringKey(
-  record: Record<string, unknown>,
-  keys: readonly string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) return redactText(value.trim());
-  }
-  return undefined;
-}
-
 function redactText(value: string): string {
   return new DefaultRedactor().redact(value);
 }
@@ -9070,112 +8631,6 @@ function truncateText(value: string, maxLength: number): string {
 
 function cliFallbackToolCommand(tool: string, args: JsonObject): string {
   return `subscription-runtime-codex-goal tool ${tool} --args-json ${shellText(JSON.stringify(args))}`;
-}
-
-async function readRuntimeResultBrief(path: string): Promise<{
-  readonly currentAccount?: string;
-  readonly lastFailureReason?: string;
-  readonly updatedAt?: string;
-  readonly strict?: boolean;
-  readonly baseCommit?: string;
-  readonly patchPath?: string;
-  readonly summaryPath?: string;
-  readonly artifacts?: readonly RuntimeResultArtifact[];
-}> {
-  try {
-    const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
-    if (!isRecord(parsed)) return {};
-    const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : [];
-    const lastAttempt = lastRecord(attempts);
-    const artifacts = runtimeResultArtifacts(parsed.artifacts);
-    const patchPath = runtimeResultArtifactPath(artifacts, "patch");
-    const summaryPath = runtimeResultArtifactPath(artifacts, "summary");
-    const baseCommit = runtimeResultBaseCommit(parsed);
-    return {
-      ...(isRecord(lastAttempt) && typeof lastAttempt.accountId === "string"
-        ? { currentAccount: lastAttempt.accountId }
-        : {}),
-      ...(typeof parsed.reason === "string"
-        ? { lastFailureReason: parsed.reason }
-        : {}),
-      ...(typeof parsed.updatedAt === "string"
-        ? { updatedAt: parsed.updatedAt }
-        : isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
-          ? { updatedAt: parsed.task.updatedAt }
-          : {}),
-      ...(baseCommit === undefined ? {} : { baseCommit }),
-      ...(patchPath === undefined ? {} : { patchPath }),
-      ...(summaryPath === undefined ? {} : { summaryPath }),
-      ...(artifacts.length === 0 ? {} : { artifacts }),
-      strict: isStrictRuntimeResultBrief(parsed),
-    };
-  } catch {
-    return {};
-  }
-}
-
-function runtimeResultArtifacts(value: unknown): readonly RuntimeResultArtifact[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item): RuntimeResultArtifact[] => {
-    if (!isRecord(item) || typeof item.kind !== "string") return [];
-    return [{
-      kind: item.kind,
-      ...(typeof item.path === "string" ? { path: item.path } : {}),
-      ...(typeof item.byteLength === "number" ? { byteLength: item.byteLength } : {}),
-    }];
-  });
-}
-
-function runtimeResultArtifactPath(
-  artifacts: readonly RuntimeResultArtifact[],
-  kind: string,
-): string | undefined {
-  return artifacts.find((artifact) =>
-    artifact.kind === kind && typeof artifact.path === "string"
-  )?.path;
-}
-
-function runtimeResultBaseCommit(parsed: Record<string, unknown>): string | undefined {
-  if (typeof parsed.baseCommit === "string" && parsed.baseCommit.trim()) {
-    return parsed.baseCommit.trim();
-  }
-  if (
-    isRecord(parsed.details) &&
-    typeof parsed.details.baseCommit === "string" &&
-    parsed.details.baseCommit.trim()
-  ) {
-    return parsed.details.baseCommit.trim();
-  }
-  return undefined;
-}
-
-function isStrictRuntimeResultBrief(parsed: Record<string, unknown>): boolean {
-  return (
-    typeof parsed.status === "string" &&
-    Array.isArray(parsed.changedFiles) &&
-    parsed.changedFiles.every((item) => typeof item === "string") &&
-    Array.isArray(parsed.evidence) &&
-    parsed.evidence.every((item) => typeof item === "string") &&
-    Array.isArray(parsed.blockers) &&
-    parsed.blockers.every((item) => typeof item === "string") &&
-    typeof parsed.nextAction === "string"
-  );
-}
-
-function lastRecord(values: readonly unknown[]): Record<string, unknown> | undefined {
-  for (let index = values.length - 1; index >= 0; index -= 1) {
-    const value = values[index];
-    if (isRecord(value)) return value;
-  }
-  return undefined;
-}
-
-async function safeTail(path: string, lines: number): Promise<string> {
-  try {
-    return await tailCodexGoalLog(path, lines);
-  } catch {
-    return "";
-  }
 }
 
 function nextActionForStatus(action: string): JsonObject {
@@ -9295,126 +8750,6 @@ async function listAccountPools(
   return pools.filter((pool) => (pool.accountCount as number) > 0);
 }
 
-function duplicateAccountGroups(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-): readonly JsonObject[] {
-  const groups = new Map<string, typeof slots>();
-  for (const slot of slots) {
-    if (!slot.identityHashPrefix) continue;
-    groups.set(slot.identityHashPrefix, [
-      ...(groups.get(slot.identityHashPrefix) ?? []),
-      slot,
-    ]);
-  }
-  return [...groups.entries()]
-    .filter(([, group]) => group.length > 1)
-    .map(([identityHashPrefix, group]) => ({
-      identityHashPrefix,
-      slots: group.map((slot) => ({
-        name: slot.name,
-        operatorLabel: slot.operatorLabel,
-        displayName: slot.displayName,
-        email: slot.email,
-        shortName: slot.shortName,
-        status: slot.status,
-        lastRefreshAt: slot.lastRefreshAt,
-        expiresAt: slot.expiresAt,
-      })),
-      preferredSlot: preferredAccountSlot(group)?.name,
-      preferredSlotLabel: preferredAccountSlot(group)
-        ? accountOperatorLabel(preferredAccountSlot(group)!)
-        : undefined,
-    }));
-}
-
-function accountOperatorLabel(
-  slot: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number],
-): string {
-  return slot.operatorLabel ?? slot.displayName ?? slot.email ?? slot.name;
-}
-
-export function dedupeCodexGoalAccountSlots(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  const byIdentity = new Map<string, typeof slots[number]>();
-  const uniqueSlots: typeof slots[number][] = [];
-  for (const slot of slots) {
-    const key = slot.identityHashPrefix;
-    if (!key) {
-      uniqueSlots.push(slot);
-      continue;
-    }
-    const existing = byIdentity.get(key);
-    const preferred = existing ? preferredAccountSlot([existing, slot]) : slot;
-    if (preferred) byIdentity.set(key, preferred);
-  }
-  const duplicateIdentities = new Set(
-    duplicateAccountGroups(slots)
-      .map((group) => group.identityHashPrefix)
-      .filter((value): value is string => typeof value === "string"),
-  );
-  for (const slot of slots) {
-    if (!slot.identityHashPrefix || duplicateIdentities.has(slot.identityHashPrefix)) {
-      continue;
-    }
-    uniqueSlots.push(slot);
-  }
-  return [
-    ...uniqueSlots,
-    ...[...byIdentity.entries()]
-      .filter(([identity]) => duplicateIdentities.has(identity))
-      .map(([, slot]) => slot),
-  ];
-}
-
-export function availableCodexGoalAccountSlots(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  return slots.filter(isAccountSlotAvailable);
-}
-
-export function visibleCodexGoalAccountPoolSlots(
-  poolName: string,
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  const likelyAuthPool = isLikelyAuthPoolName(poolName);
-  return slots.filter((slot) =>
-    slot.status !== "auth_missing" ||
-    likelyAuthPool,
-  );
-}
-
-function preferredAccountSlot(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  return [...slots].sort((left, right) => {
-    const leftReady = left.schedulerEligible ? 1 : 0;
-    const rightReady = right.schedulerEligible ? 1 : 0;
-    if (leftReady !== rightReady) return rightReady - leftReady;
-    return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
-      Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
-  })[0];
-}
-
-function isAccountSlotAvailable(
-  slot: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number],
-): boolean {
-  return slot.schedulerEligible;
-}
-
-function isLikelyAuthPoolName(name: string): boolean {
-  return /codex/i.test(name) &&
-    /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
-}
-
-function tagValues(value: unknown): readonly string[] {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-
 function extractRecentCommands(logTail: string): readonly string[] {
   const commands: string[] = [];
   for (const line of logTail.split(/\r?\n/)) {
@@ -9445,10 +8780,6 @@ function redactLogTail(logTail: string): string {
     .split(/\r?\n/)
     .map((line) => redactCommand(line))
     .join("\n");
-}
-
-function putIfDefined(target: Record<string, unknown>, key: string, value: unknown): void {
-  if (value !== undefined) target[key] = value;
 }
 
 function registerCodexGoalPrompts(server: McpServer): void {
@@ -9628,16 +8959,6 @@ function mergeDefined(...items: readonly JsonObject[]): JsonObject {
   return merged;
 }
 
-function accountNames(value: unknown): readonly string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-
 async function projectControlDefaultAccountNames(input: {
   readonly authRootDir?: string;
   readonly requestedAccounts: readonly string[];
@@ -9798,61 +9119,6 @@ function workerControlReceiptJson(
 
 function jobIdsFromValue(value: unknown): readonly string[] {
   return accountNames(value);
-}
-
-function stringsFromValue(value: unknown): readonly string[] {
-  return accountNames(value);
-}
-
-function requiredString(value: unknown, name: string, cwd: string): string {
-  return resolvePath(cwd, requiredRawString(value, name));
-}
-
-function requiredRawString(value: unknown, name: string): string {
-  const text = stringValue(value);
-  if (!text) throw new Error(`${name} is required`);
-  return text;
-}
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function numberValue(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function dateValue(value: unknown): Date | undefined {
-  if (typeof value !== "string") return undefined;
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date : undefined;
-}
-
-function positiveIntegerValue(value: unknown, name: string): number | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive integer`);
-  }
-  return value;
-}
-
-function booleanValue(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function workerReportModeValue(
-  value: unknown,
-): CodexGoalRunConfig["workerReportMode"] | undefined {
-  if (value === undefined) return undefined;
-  if (value === "runtime-only" || value === "structured-output") return value;
-  throw new Error("workerReportMode must be runtime-only or structured-output");
-}
-
-function resolvePath(cwd: string, value: string): string {
-  const expanded = value.startsWith("~/")
-    ? join(homedir(), value.slice(2))
-    : value;
-  return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }
 
 function mcpJson(value: JsonObject) {

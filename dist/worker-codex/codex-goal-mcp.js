@@ -2,7 +2,7 @@
 import { execFile } from "node:child_process";
 import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -13,7 +13,7 @@ import { DefaultRedactor, } from "@vioxen/subscription-runtime/core";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import { LocalIntegrationAttemptStore, LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalFileWorkerControlInboxStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { LocalGitIntegrationAdapter, LocalProjectCheckRunner, LocalWorkspaceIntegrationLock, SimpleSecretScanner, buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
-import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, buildWorkerStatusView, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, isRunEventCompactionSafetyMode, isRunEventProviderKind, isRunEventType, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, buildWorkerStatusView, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, codexGoalObjectiveMaxChars, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
@@ -29,6 +29,12 @@ import { LocalGitRevisionReader } from "./codex-goal-git-revision.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
 import { createProjectControlOperation, patchProjectControlOperation, projectControlOperationExecutionMode, projectControlOperationView, projectControlOperationsRoot, readProjectControlOperationById, startProjectControlOperationRunner, } from "./project-control-operation-lifecycle.js";
+import { accountNames, booleanValue, dateValue, numberValue, positiveIntegerValue, putIfDefined, requiredRawString, requiredString, resolvePath, stringValue, tagValues, workerReportModeValue, } from "./codex-goal-mcp-values.js";
+import { jobIdInputSchema, jobRegistryInputSchema, optionalRunEventProviderKind, registryRootFromArgs, runEventRetentionPolicyFromArgs, runEventRootFromArgs, runEventTypeFilter, } from "./codex-goal-mcp-inputs.js";
+import { accountOperatorLabel, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, dedupeCodexGoalAccountSlots, duplicateAccountGroups, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
+import { readRuntimeResultBrief, safeTail, } from "./codex-goal-mcp-runtime-result.js";
+import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers.js";
+export { availableCodexGoalAccountSlots, dedupeCodexGoalAccountSlots, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
@@ -41,28 +47,6 @@ const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
     pid: process.pid,
 });
 const controlledAgentProviders = new Map();
-const lifecycleMarkerSpecs = [
-    {
-        type: "pause_request",
-        suffix: "pause-request.json",
-        timestampKeys: ["requestedAt"],
-    },
-    {
-        type: "maintenance_pause",
-        suffix: "maintenance-pause.json",
-        timestampKeys: ["pausedAt"],
-    },
-    {
-        type: "review",
-        suffix: "review.json",
-        timestampKeys: ["reviewedAt"],
-    },
-    {
-        type: "stop_event",
-        suffix: "stop-event.json",
-        timestampKeys: ["stoppedAt"],
-    },
-];
 export function createCodexGoalMcpServer(options = {}) {
     const server = new McpServer({
         name: "subscription-runtime-codex-goal",
@@ -4588,62 +4572,6 @@ async function codexGoalAccountCapacityFacts(manifest) {
         };
     }
 }
-async function codexAccountStatusPayload(input) {
-    const slots = await listCodexGoalAccountStatuses({
-        authRootDir: input.authRootDir,
-        ...(input.accounts?.length ? { accounts: input.accounts } : {}),
-        ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-        ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
-        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
-        ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
-    });
-    const duplicates = duplicateAccountGroups(slots);
-    const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
-    const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
-    const readySlots = slots.filter((slot) => slot.status === "ready");
-    const missingSlots = slots.filter((slot) => slot.status === "auth_missing");
-    const invalidSlots = slots.filter((slot) => slot.status === "auth_invalid");
-    const capacityBlockedSlots = slots.filter((slot) => slot.capacityAvailability && slot.capacityAvailability !== "available");
-    return {
-        ok: availableDedupedSlots.length > 0,
-        authRootDir: input.authRootDir,
-        capacityAware: Boolean(input.stateRootDir),
-        liveCheck: Boolean(input.liveCheck),
-        ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-        count: slots.length,
-        available: availableDedupedSlots.length,
-        hasAvailableAccount: availableDedupedSlots.length > 0,
-        summary: {
-            configured: slots.length,
-            ready: readySlots.length,
-            missing: missingSlots.length,
-            invalid: invalidSlots.length,
-            deduped: dedupedSlots.length,
-            availableDeduped: availableDedupedSlots.length,
-            capacityBlocked: capacityBlockedSlots.length,
-            duplicateGroups: duplicates.length,
-        },
-        accounts: slots,
-        slots,
-        duplicates,
-        dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
-        availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
-        dedupedAccountLabels: dedupedSlots.map(accountOperatorLabel),
-        availableDedupedAccountLabels: availableDedupedSlots.map(accountOperatorLabel),
-        dedupeRecommendation: duplicates.length
-            ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
-            : "No duplicate identity groups detected.",
-    };
-}
-function codexAccountReloginInstructions(input) {
-    return [
-        "This is a manual relogin flow. It does not automate browser login.",
-        `mkdir -p ${shellText(join(input.authRootDir, input.account))}`,
-        `test ! -f ${shellText(join(input.authRootDir, input.account, "auth.json"))} || cp ${shellText(join(input.authRootDir, input.account, "auth.json"))} ${shellText(join(input.authRootDir, input.account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
-        `CODEX_HOME=${shellText(join(input.authRootDir, input.account))} codex login --device-auth`,
-        input.afterLoginInstruction,
-    ];
-}
 async function continueStoredJob(args, options) {
     const loaded = await loadJobLaunch(args);
     const projectControlDenial = projectControlGenericToolDenial({
@@ -5996,76 +5924,6 @@ async function buildCodexGoalOverviewItem(input) {
         };
     }
 }
-function jobRegistryInputSchema() {
-    return {
-        registryRootDir: z.string().optional(),
-        cwd: z.string().optional(),
-    };
-}
-function jobIdInputSchema() {
-    return {
-        ...jobRegistryInputSchema(),
-        jobId: z.string().optional(),
-    };
-}
-function registryRootFromArgs(args) {
-    return resolveCodexGoalJobRegistryRoot({
-        ...(args.registryRootDir ? { registryRootDir: args.registryRootDir } : {}),
-        ...(args.cwd ? { cwd: args.cwd } : {}),
-    });
-}
-function runEventRootFromArgs(args, registryRootDir) {
-    const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
-    return stringValue(args.eventRootDir)
-        ? resolvePath(cwd, stringValue(args.eventRootDir))
-        : join(registryRootDir, ".run-events");
-}
-function optionalRunEventProviderKind(value) {
-    const text = stringValue(value);
-    if (text === undefined)
-        return undefined;
-    if (isRunEventProviderKind(text))
-        return text;
-    throw new Error(`unsupported run event provider kind: ${text}`);
-}
-function runEventTypeFilter(args) {
-    const values = [
-        ...stringsFromValue(args.type),
-        ...stringsFromValue(args.types),
-    ];
-    if (values.length === 0)
-        return {};
-    return {
-        types: values.map((value) => {
-            if (!isRunEventType(value)) {
-                throw new Error(`unsupported run event type: ${value}`);
-            }
-            return value;
-        }),
-    };
-}
-function runEventRetentionPolicyFromArgs(args) {
-    const safetyMode = optionalRunEventCompactionSafetyMode(args.safetyMode);
-    const keepEventsAfter = stringValue(args.keepEventsAfter);
-    const keepLatestEventsPerRun = numberValue(args.keepLatestEventsPerRun);
-    const compactDeliveredEvents = booleanValue(args.compactDeliveredEvents);
-    const dropInvalidLines = booleanValue(args.dropInvalidLines);
-    return {
-        ...(safetyMode === undefined ? {} : { safetyMode }),
-        ...(keepEventsAfter === undefined ? {} : { keepEventsAfter }),
-        ...(keepLatestEventsPerRun === undefined ? {} : { keepLatestEventsPerRun }),
-        ...(compactDeliveredEvents === undefined ? {} : { compactDeliveredEvents }),
-        ...(dropInvalidLines === undefined ? {} : { dropInvalidLines }),
-    };
-}
-function optionalRunEventCompactionSafetyMode(value) {
-    const text = stringValue(value);
-    if (text === undefined)
-        return undefined;
-    if (isRunEventCompactionSafetyMode(text))
-        return text;
-    throw new Error(`unsupported run event compaction safety mode: ${text}`);
-}
 function jobManifestInputFromArgs(args) {
     const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
     const jobId = requiredRawString(args.jobId, "jobId");
@@ -7051,62 +6909,6 @@ function buildCodexGoalHandoff(input) {
         })),
     };
 }
-async function readCodexGoalLifecycleMarkers(input) {
-    const markers = await Promise.all(lifecycleMarkerSpecs.map((spec) => readCodexGoalLifecycleMarker({
-        ...input,
-        spec,
-    })));
-    return markers
-        .filter((marker) => marker !== undefined)
-        .sort((left, right) => Date.parse(String(right.timestamp ?? right.updatedAt ?? "0")) -
-        Date.parse(String(left.timestamp ?? left.updatedAt ?? "0")));
-}
-async function readCodexGoalLifecycleMarker(input) {
-    const markerPath = join(input.jobRootDir, `${input.taskId}.${input.spec.suffix}`);
-    try {
-        const [metadata, raw] = await Promise.all([
-            stat(markerPath),
-            readFile(markerPath, "utf8"),
-        ]);
-        const parsed = parseLifecycleMarker(raw);
-        const timestamp = firstStringKey(parsed, input.spec.timestampKeys);
-        const brief = isRecord(parsed.brief) ? parsed.brief : {};
-        return {
-            type: input.spec.type,
-            markerPath,
-            updatedAt: metadata.mtime.toISOString(),
-            ...(timestamp ? { timestamp } : {}),
-            ...(typeof parsed.reason === "string" ? { reason: redactText(parsed.reason) } : {}),
-            ...(typeof parsed.mode === "string" ? { mode: redactText(parsed.mode) } : {}),
-            ...(typeof parsed.note === "string" ? { note: truncateText(redactText(parsed.note), 300) } : {}),
-            ...(typeof parsed.forceStop === "boolean" ? { forceStop: parsed.forceStop } : {}),
-            ...(typeof parsed.forcePause === "boolean" ? { forcePause: parsed.forcePause } : {}),
-            ...(typeof brief.silentStale === "boolean" ? { silentStale: brief.silentStale } : {}),
-            ...(typeof brief.lastProgressAt === "string"
-                ? { lastProgressAt: brief.lastProgressAt }
-                : {}),
-            ...(typeof brief.lastProgressAgeMs === "number"
-                ? { lastProgressAgeMs: brief.lastProgressAgeMs }
-                : {}),
-            ...(typeof brief.logByteLength === "number"
-                ? { logByteLength: brief.logByteLength }
-                : {}),
-            ...(typeof parsed.schemaVersion === "number" ? { schemaVersion: parsed.schemaVersion } : {}),
-        };
-    }
-    catch {
-        return undefined;
-    }
-}
-function parseLifecycleMarker(raw) {
-    try {
-        const parsed = JSON.parse(raw);
-        return isRecord(parsed) ? parsed : {};
-    }
-    catch {
-        return {};
-    }
-}
 function latestIsoDate(values) {
     const latest = values
         .map((value) => value ? { value, time: Date.parse(value) } : undefined)
@@ -7120,14 +6922,6 @@ function isoAgeMs(value) {
     const time = Date.parse(value);
     return Number.isFinite(time) ? Date.now() - time : undefined;
 }
-function firstStringKey(record, keys) {
-    for (const key of keys) {
-        const value = record[key];
-        if (typeof value === "string" && value.trim())
-            return redactText(value.trim());
-    }
-    return undefined;
-}
 function redactText(value) {
     return new DefaultRedactor().redact(value);
 }
@@ -7138,93 +6932,6 @@ function truncateText(value, maxLength) {
 }
 function cliFallbackToolCommand(tool, args) {
     return `subscription-runtime-codex-goal tool ${tool} --args-json ${shellText(JSON.stringify(args))}`;
-}
-async function readRuntimeResultBrief(path) {
-    try {
-        const parsed = JSON.parse(await readFile(path, "utf8"));
-        if (!isRecord(parsed))
-            return {};
-        const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : [];
-        const lastAttempt = lastRecord(attempts);
-        const artifacts = runtimeResultArtifacts(parsed.artifacts);
-        const patchPath = runtimeResultArtifactPath(artifacts, "patch");
-        const summaryPath = runtimeResultArtifactPath(artifacts, "summary");
-        const baseCommit = runtimeResultBaseCommit(parsed);
-        return {
-            ...(isRecord(lastAttempt) && typeof lastAttempt.accountId === "string"
-                ? { currentAccount: lastAttempt.accountId }
-                : {}),
-            ...(typeof parsed.reason === "string"
-                ? { lastFailureReason: parsed.reason }
-                : {}),
-            ...(typeof parsed.updatedAt === "string"
-                ? { updatedAt: parsed.updatedAt }
-                : isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
-                    ? { updatedAt: parsed.task.updatedAt }
-                    : {}),
-            ...(baseCommit === undefined ? {} : { baseCommit }),
-            ...(patchPath === undefined ? {} : { patchPath }),
-            ...(summaryPath === undefined ? {} : { summaryPath }),
-            ...(artifacts.length === 0 ? {} : { artifacts }),
-            strict: isStrictRuntimeResultBrief(parsed),
-        };
-    }
-    catch {
-        return {};
-    }
-}
-function runtimeResultArtifacts(value) {
-    if (!Array.isArray(value))
-        return [];
-    return value.flatMap((item) => {
-        if (!isRecord(item) || typeof item.kind !== "string")
-            return [];
-        return [{
-                kind: item.kind,
-                ...(typeof item.path === "string" ? { path: item.path } : {}),
-                ...(typeof item.byteLength === "number" ? { byteLength: item.byteLength } : {}),
-            }];
-    });
-}
-function runtimeResultArtifactPath(artifacts, kind) {
-    return artifacts.find((artifact) => artifact.kind === kind && typeof artifact.path === "string")?.path;
-}
-function runtimeResultBaseCommit(parsed) {
-    if (typeof parsed.baseCommit === "string" && parsed.baseCommit.trim()) {
-        return parsed.baseCommit.trim();
-    }
-    if (isRecord(parsed.details) &&
-        typeof parsed.details.baseCommit === "string" &&
-        parsed.details.baseCommit.trim()) {
-        return parsed.details.baseCommit.trim();
-    }
-    return undefined;
-}
-function isStrictRuntimeResultBrief(parsed) {
-    return (typeof parsed.status === "string" &&
-        Array.isArray(parsed.changedFiles) &&
-        parsed.changedFiles.every((item) => typeof item === "string") &&
-        Array.isArray(parsed.evidence) &&
-        parsed.evidence.every((item) => typeof item === "string") &&
-        Array.isArray(parsed.blockers) &&
-        parsed.blockers.every((item) => typeof item === "string") &&
-        typeof parsed.nextAction === "string");
-}
-function lastRecord(values) {
-    for (let index = values.length - 1; index >= 0; index -= 1) {
-        const value = values[index];
-        if (isRecord(value))
-            return value;
-    }
-    return undefined;
-}
-async function safeTail(path, lines) {
-    try {
-        return await tailCodexGoalLog(path, lines);
-    }
-    catch {
-        return "";
-    }
 }
 function nextActionForStatus(action) {
     if (action === "wait_for_worker") {
@@ -7324,102 +7031,6 @@ async function listAccountPools(poolRootDir, stateRootDir) {
     }));
     return pools.filter((pool) => pool.accountCount > 0);
 }
-function duplicateAccountGroups(slots) {
-    const groups = new Map();
-    for (const slot of slots) {
-        if (!slot.identityHashPrefix)
-            continue;
-        groups.set(slot.identityHashPrefix, [
-            ...(groups.get(slot.identityHashPrefix) ?? []),
-            slot,
-        ]);
-    }
-    return [...groups.entries()]
-        .filter(([, group]) => group.length > 1)
-        .map(([identityHashPrefix, group]) => ({
-        identityHashPrefix,
-        slots: group.map((slot) => ({
-            name: slot.name,
-            operatorLabel: slot.operatorLabel,
-            displayName: slot.displayName,
-            email: slot.email,
-            shortName: slot.shortName,
-            status: slot.status,
-            lastRefreshAt: slot.lastRefreshAt,
-            expiresAt: slot.expiresAt,
-        })),
-        preferredSlot: preferredAccountSlot(group)?.name,
-        preferredSlotLabel: preferredAccountSlot(group)
-            ? accountOperatorLabel(preferredAccountSlot(group))
-            : undefined,
-    }));
-}
-function accountOperatorLabel(slot) {
-    return slot.operatorLabel ?? slot.displayName ?? slot.email ?? slot.name;
-}
-export function dedupeCodexGoalAccountSlots(slots) {
-    const byIdentity = new Map();
-    const uniqueSlots = [];
-    for (const slot of slots) {
-        const key = slot.identityHashPrefix;
-        if (!key) {
-            uniqueSlots.push(slot);
-            continue;
-        }
-        const existing = byIdentity.get(key);
-        const preferred = existing ? preferredAccountSlot([existing, slot]) : slot;
-        if (preferred)
-            byIdentity.set(key, preferred);
-    }
-    const duplicateIdentities = new Set(duplicateAccountGroups(slots)
-        .map((group) => group.identityHashPrefix)
-        .filter((value) => typeof value === "string"));
-    for (const slot of slots) {
-        if (!slot.identityHashPrefix || duplicateIdentities.has(slot.identityHashPrefix)) {
-            continue;
-        }
-        uniqueSlots.push(slot);
-    }
-    return [
-        ...uniqueSlots,
-        ...[...byIdentity.entries()]
-            .filter(([identity]) => duplicateIdentities.has(identity))
-            .map(([, slot]) => slot),
-    ];
-}
-export function availableCodexGoalAccountSlots(slots) {
-    return slots.filter(isAccountSlotAvailable);
-}
-export function visibleCodexGoalAccountPoolSlots(poolName, slots) {
-    const likelyAuthPool = isLikelyAuthPoolName(poolName);
-    return slots.filter((slot) => slot.status !== "auth_missing" ||
-        likelyAuthPool);
-}
-function preferredAccountSlot(slots) {
-    return [...slots].sort((left, right) => {
-        const leftReady = left.schedulerEligible ? 1 : 0;
-        const rightReady = right.schedulerEligible ? 1 : 0;
-        if (leftReady !== rightReady)
-            return rightReady - leftReady;
-        return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
-            Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
-    })[0];
-}
-function isAccountSlotAvailable(slot) {
-    return slot.schedulerEligible;
-}
-function isLikelyAuthPoolName(name) {
-    return /codex/i.test(name) &&
-        /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
-}
-function tagValues(value) {
-    if (Array.isArray(value))
-        return value.map((item) => String(item).trim()).filter(Boolean);
-    if (typeof value === "string") {
-        return value.split(",").map((item) => item.trim()).filter(Boolean);
-    }
-    return [];
-}
 function extractRecentCommands(logTail) {
     const commands = [];
     for (const line of logTail.split(/\r?\n/)) {
@@ -7450,10 +7061,6 @@ function redactLogTail(logTail) {
         .split(/\r?\n/)
         .map((line) => redactCommand(line))
         .join("\n");
-}
-function putIfDefined(target, key, value) {
-    if (value !== undefined)
-        target[key] = value;
 }
 function registerCodexGoalPrompts(server) {
     for (const prompt of [
@@ -7614,15 +7221,6 @@ function mergeDefined(...items) {
     }
     return merged;
 }
-function accountNames(value) {
-    if (Array.isArray(value)) {
-        return value.map((item) => String(item).trim()).filter(Boolean);
-    }
-    if (typeof value === "string") {
-        return value.split(",").map((item) => item.trim()).filter(Boolean);
-    }
-    return [];
-}
 async function projectControlDefaultAccountNames(input) {
     if (!input.authRootDir)
         return input.requestedAccounts;
@@ -7741,54 +7339,6 @@ function workerControlReceiptJson(receipt) {
 }
 function jobIdsFromValue(value) {
     return accountNames(value);
-}
-function stringsFromValue(value) {
-    return accountNames(value);
-}
-function requiredString(value, name, cwd) {
-    return resolvePath(cwd, requiredRawString(value, name));
-}
-function requiredRawString(value, name) {
-    const text = stringValue(value);
-    if (!text)
-        throw new Error(`${name} is required`);
-    return text;
-}
-function stringValue(value) {
-    return typeof value === "string" && value.trim() ? value : undefined;
-}
-function numberValue(value) {
-    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-function dateValue(value) {
-    if (typeof value !== "string")
-        return undefined;
-    const date = new Date(value);
-    return Number.isFinite(date.getTime()) ? date : undefined;
-}
-function positiveIntegerValue(value, name) {
-    if (value === undefined)
-        return undefined;
-    if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-        throw new Error(`${name} must be a positive integer`);
-    }
-    return value;
-}
-function booleanValue(value) {
-    return typeof value === "boolean" ? value : undefined;
-}
-function workerReportModeValue(value) {
-    if (value === undefined)
-        return undefined;
-    if (value === "runtime-only" || value === "structured-output")
-        return value;
-    throw new Error("workerReportMode must be runtime-only or structured-output");
-}
-function resolvePath(cwd, value) {
-    const expanded = value.startsWith("~/")
-        ? join(homedir(), value.slice(2))
-        : value;
-    return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }
 function mcpJson(value) {
     return {
