@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
   createTeamProvisioningMemberSpawnStatusesSnapshotPorts,
   createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary,
+  type TeamProvisioningMemberSpawnStatusesSnapshotServiceHost,
 } from '../TeamProvisioningMemberSpawnStatusSnapshotPortsFactory';
 
 import type { MemberSpawnStatusRun } from '../TeamProvisioningMemberSpawnSnapshots';
@@ -334,5 +336,73 @@ describe('TeamProvisioningMemberSpawnStatusSnapshotPortsFactory', () => {
     expect(getPersistedLaunchMemberNames).toHaveBeenCalledWith(persistedSnapshot);
     expect(nowMs).toHaveBeenCalledTimes(1);
     expect(nowIso).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds snapshot ports from service-shaped dependencies', async () => {
+    const targetRun = run();
+    const snapshotCache = new Map();
+    const inFlightByTeam = new Map();
+    const persistedSnapshot = createLaunchSnapshot();
+    const readTaskActivityRepairLaunchSnapshot = vi.fn(async () => persistedSnapshot);
+    const repairStaleTaskActivityIntervalsOnce = vi.fn();
+    const resumeActiveIntervalsForMembers = vi.fn();
+    const service = {
+      runs: new Map([['run-1', targetRun]]),
+      memberSpawnStatusesSnapshotCache: snapshotCache,
+      memberSpawnStatusesInFlightByTeam: inFlightByTeam,
+      getMemberSpawnStatusesCacheGeneration: vi.fn(() => 17),
+      runTracking: {
+        getTrackedRunId: vi.fn(() => 'run-1'),
+      },
+      configTaskActivityBoundary: {
+        readTaskActivityRepairLaunchSnapshot,
+        repairStaleTaskActivityIntervalsOnce,
+      },
+      reconcilePersistedLaunchState: vi.fn(async () => ({
+        snapshot: persistedSnapshot,
+        statuses: { Builder: status() },
+      })),
+      attachLiveRuntimeMetadataToStatuses: vi.fn(async (_teamName, statuses) => statuses),
+      getOpenCodeSecondaryBootstrapPendingMemberNames: vi.fn(() => new Set(['Builder'])),
+      taskActivityIntervalService: {
+        resumeActiveIntervalsForMembers,
+      },
+      refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
+      maybeAuditMemberSpawnStatuses: vi.fn(async () => undefined),
+      persistLaunchStateSnapshot: vi.fn(async () => undefined),
+      launchStateStore: {
+        read: vi.fn(async () => persistedSnapshot),
+      },
+      syncRunMemberSpawnStatusesFromSnapshot: vi.fn(),
+      buildLiveLaunchSnapshotForRun: vi.fn(() => persistedSnapshot),
+      membersMetaStore: {
+        getMembers: vi.fn(async () => [{ name: 'Builder' }]),
+      },
+    } as unknown as TeamProvisioningMemberSpawnStatusesSnapshotServiceHost<MemberSpawnStatusRun>;
+
+    const ports = createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary(
+      createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService(service)
+    );
+
+    expect(ports.getRun('run-1')).toBe(targetRun);
+    expect(ports.cache.snapshotCache).toBe(snapshotCache);
+    expect(ports.cache.inFlightByTeam).toBe(inFlightByTeam);
+    expect(ports.cache.getCacheGeneration('team-a')).toBe(17);
+    expect(ports.cache.getTrackedRunId('team-a')).toBe('run-1');
+    await expect(ports.persisted.readTaskActivityRepairLaunchSnapshot('team-a')).resolves.toBe(
+      persistedSnapshot
+    );
+    ports.persisted.repairStaleTaskActivityIntervalsOnce('team-a', persistedSnapshot);
+    ports.persisted.resumeActiveTaskActivityForMembers('team-a', ['Builder'], NOW);
+    expect(ports.live.buildRuntimeSpawnStatusRecord(targetRun).Builder.status).toBe('online');
+    expect(ports.live.filterRemovedMembersFromLaunchSnapshot(persistedSnapshot, [])).toBe(
+      persistedSnapshot
+    );
+    expect(ports.live.getPersistedLaunchMemberNames(persistedSnapshot)).toEqual(['Builder']);
+    expect(typeof ports.nowIso()).toBe('string');
+
+    expect(readTaskActivityRepairLaunchSnapshot).toHaveBeenCalledWith('team-a');
+    expect(repairStaleTaskActivityIntervalsOnce).toHaveBeenCalledWith('team-a', persistedSnapshot);
+    expect(resumeActiveIntervalsForMembers).toHaveBeenCalledWith('team-a', ['Builder'], NOW);
   });
 });

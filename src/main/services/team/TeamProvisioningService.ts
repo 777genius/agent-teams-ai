@@ -262,7 +262,11 @@ import {
   createInitialMemberSpawnStatusEntry,
   MEMBER_LAUNCH_GRACE_MS,
 } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
-import { createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary } from './provisioning/TeamProvisioningMemberSpawnStatusSnapshotPortsFactory';
+import {
+  createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
+  createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary,
+  type TeamProvisioningMemberSpawnStatusesSnapshotServiceHost,
+} from './provisioning/TeamProvisioningMemberSpawnStatusSnapshotPortsFactory';
 import {
   buildRuntimeSpawnStatusRecord as buildRuntimeSpawnStatusRecordHelper,
   filterRemovedMembersFromLaunchSnapshot,
@@ -2218,47 +2222,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   }
 
   private createMemberSpawnStatusesSnapshotPorts() {
-    return createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary<ProvisioningRun>({
-      runs: this.runs,
-      cache: {
-        snapshotCache: this.memberSpawnStatusesSnapshotCache,
-        inFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
-      },
-      getCacheGeneration: (teamName) => this.getMemberSpawnStatusesCacheGeneration(teamName),
-      runTracking: this.runTracking,
-      readTaskActivityRepairLaunchSnapshot: (teamName) =>
-        this.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(teamName),
-      repairStaleTaskActivityIntervalsOnce: (teamName, launchSnapshot) =>
-        this.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
-          teamName,
-          launchSnapshot
-        ),
-      reconcilePersistedLaunchState: (teamName) => this.reconcilePersistedLaunchState(teamName),
-      attachLiveRuntimeMetadataToStatuses: (teamName, statuses, options) =>
-        this.attachLiveRuntimeMetadataToStatuses(teamName, statuses, options),
-      getOpenCodeSecondaryBootstrapPendingMemberNames: (snapshot) =>
-        this.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
-      taskActivityIntervalService: this.taskActivityIntervalService,
-      refreshMemberSpawnStatusesFromLeadInbox: (run) =>
-        this.refreshMemberSpawnStatusesFromLeadInbox(run),
-      maybeAuditMemberSpawnStatuses: (run) => this.maybeAuditMemberSpawnStatuses(run),
-      persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
-      launchStateStore: this.launchStateStore,
-      syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
-        this.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot),
-      buildLiveLaunchSnapshotForRun: (run, phase) => this.buildLiveLaunchSnapshotForRun(run, phase),
-      buildRuntimeSpawnStatusRecord: buildRuntimeSpawnStatusRecordHelper,
-      membersMetaStore: this.membersMetaStore,
-      filterRemovedMembersFromLaunchSnapshot: (snapshot, metaMembers) =>
-        filterRemovedMembersFromLaunchSnapshot(
-          snapshot,
-          metaMembers,
-          getPersistedLaunchMemberNames(snapshot)
-        ),
-      getPersistedLaunchMemberNames,
-      nowMs: () => Date.now(),
-      nowIso,
-    });
+    return createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary<ProvisioningRun>(
+      createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService(
+        this as unknown as TeamProvisioningMemberSpawnStatusesSnapshotServiceHost<ProvisioningRun>
+      )
+    );
   }
 
   private resolveOpenCodeMemberIdentityFromDirectory(
