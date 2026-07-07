@@ -8,9 +8,19 @@ import { createLogger } from '@shared/utils/logger';
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
+  MemberWorkSyncMetricEventRecord,
+  MemberWorkSyncOutboxEnsureRecordInput,
+  MemberWorkSyncOutboxEnsureRecordResult,
+  MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncStatusRecord,
+  MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
-import type { InternalStorageGateway } from '../../core/application/ports';
+import type {
+  InternalStorageGateway,
+  MemberWorkSyncStorageGateway,
+} from '../../core/application/ports';
 import type {
   InternalStorageWorkerData,
   InternalStorageWorkerRequest,
@@ -69,7 +79,9 @@ function resolveWorkerPath(): string | null {
  * time (SQLite access is serialized anyway); a timeout or worker crash rejects
  * all in-flight requests and the worker is recreated on the next call.
  */
-export class InternalStorageWorkerClient implements InternalStorageGateway {
+export class InternalStorageWorkerClient
+  implements InternalStorageGateway, MemberWorkSyncStorageGateway
+{
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
   private pending = new Map<string, PendingEntry>();
@@ -135,6 +147,150 @@ export class InternalStorageWorkerClient implements InternalStorageGateway {
 
   async recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void> {
     await this.call('storeImports.record', { storeId, teamName, entryCount });
+  }
+
+  async statusRead(
+    teamName: string,
+    memberKey: string
+  ): Promise<MemberWorkSyncStatusRecord | null> {
+    return (await this.call('mws.status.read', {
+      teamName,
+      memberKey,
+    })) as MemberWorkSyncStatusRecord | null;
+  }
+
+  async statusWrite(
+    record: MemberWorkSyncStatusRecord,
+    events: MemberWorkSyncMetricEventRecord[]
+  ): Promise<void> {
+    await this.call('mws.status.write', { record, events });
+  }
+
+  async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
+    return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
+  }
+
+  async metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {
+    return (await this.call('mws.metricEvents.list', {
+      teamName,
+    })) as MemberWorkSyncMetricEventRecord[];
+  }
+
+  async reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void> {
+    await this.call('mws.reports.append', { record });
+  }
+
+  async reportsListPending(teamName: string): Promise<MemberWorkSyncReportIntentRecord[]> {
+    return (await this.call('mws.reports.listPending', {
+      teamName,
+    })) as MemberWorkSyncReportIntentRecord[];
+  }
+
+  async reportsMarkProcessed(
+    teamName: string,
+    id: string,
+    result: { status: string; resultCode: string; processedAt: string }
+  ): Promise<void> {
+    await this.call('mws.reports.markProcessed', { teamName, id, ...result });
+  }
+
+  async outboxEnsurePending(
+    input: MemberWorkSyncOutboxEnsureRecordInput
+  ): Promise<MemberWorkSyncOutboxEnsureRecordResult> {
+    return (await this.call(
+      'mws.outbox.ensurePending',
+      input
+    )) as MemberWorkSyncOutboxEnsureRecordResult;
+  }
+
+  async outboxClaimDue(input: {
+    teamName: string;
+    claimedBy: string;
+    nowIso: string;
+    limit: number;
+  }): Promise<MemberWorkSyncOutboxItemRecord[]> {
+    return (await this.call('mws.outbox.claimDue', input)) as MemberWorkSyncOutboxItemRecord[];
+  }
+
+  async outboxMarkDelivered(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    deliveredMessageId: string;
+    deliveryState: string | null;
+    deliveryDiagnosticsJson: string | null;
+    nowIso: string;
+  }): Promise<void> {
+    await this.call('mws.outbox.markDelivered', input);
+  }
+
+  async outboxMarkSuperseded(input: {
+    teamName: string;
+    id: string;
+    reason: string;
+    nowIso: string;
+  }): Promise<void> {
+    await this.call('mws.outbox.markSuperseded', input);
+  }
+
+  async outboxMarkFailed(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    error: string;
+    retryable: boolean;
+    nextAttemptAt: string | null;
+    nowIso: string;
+  }): Promise<void> {
+    await this.call('mws.outbox.markFailed', input);
+  }
+
+  async outboxCountRecentDelivered(input: {
+    teamName: string;
+    memberKey: string;
+    sinceIso: string;
+    workSyncIntentKeyPrefix: string | null;
+  }): Promise<number> {
+    return (await this.call('mws.outbox.countRecentDelivered', input)) as number;
+  }
+
+  async outboxCountDeliveredForAgenda(input: {
+    teamName: string;
+    memberKey: string;
+    agendaFingerprint: string;
+    sinceIso: string | null;
+  }): Promise<number> {
+    return (await this.call('mws.outbox.countDeliveredForAgenda', input)) as number;
+  }
+
+  async outboxFindDeliveredReviewPickupEventIds(input: {
+    teamName: string;
+    memberKey: string;
+    reviewRequestEventIds: string[];
+  }): Promise<string[]> {
+    return (await this.call('mws.outbox.findDeliveredReviewPickupEventIds', input)) as string[];
+  }
+
+  async outboxFindRecentRecoveryByIntent(input: {
+    teamName: string;
+    memberKey: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<MemberWorkSyncOutboxItemRecord | null> {
+    return (await this.call(
+      'mws.outbox.findRecentRecoveryByIntent',
+      input
+    )) as MemberWorkSyncOutboxItemRecord | null;
+  }
+
+  async listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords> {
+    return (await this.call('mws.snapshot.list', {
+      teamName,
+    })) as MemberWorkSyncTeamSnapshotRecords;
+  }
+
+  async importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
+    await this.call('mws.importTeam', { teamName, snapshot });
   }
 
   async close(): Promise<void> {

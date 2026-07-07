@@ -25,6 +25,7 @@ import { BackendSelectingTaskStallJournalStore } from './BackendSelectingTaskSta
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
+import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
 
@@ -35,9 +36,20 @@ export interface InternalStorageFeatureDeps {
   userDataPath: string;
 }
 
+export interface InternalStorageMemberWorkSyncBackend {
+  gateway: MemberWorkSyncStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
+  /**
+   * Raw SQLite backend handle for the member-work-sync feature, which builds
+   * its own store on top (its ports live in that feature). Null when the
+   * worker bundle is unavailable — the caller stays on its JSON store.
+   */
+  memberWorkSyncBackend: InternalStorageMemberWorkSyncBackend | null;
   getBackendKind(): InternalStorageBackendKind;
   dispose(): Promise<void>;
 }
@@ -63,6 +75,7 @@ export function createInternalStorageFeature(
     return {
       taskStallJournalStore: jsonStallStore,
       taskCommentNotificationJournalStore: jsonCommentStore,
+      memberWorkSyncBackend: null,
       getBackendKind: () => 'json-fallback',
       dispose: async () => undefined,
     };
@@ -111,6 +124,7 @@ export function createInternalStorageFeature(
       sqliteCommentStore,
       jsonCommentStore
     ),
+    memberWorkSyncBackend: { gateway: client, selector },
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
   };

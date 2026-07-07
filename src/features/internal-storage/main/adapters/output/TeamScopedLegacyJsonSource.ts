@@ -41,28 +41,36 @@ export class TeamScopedLegacyJsonSource<TRecord> implements LegacyJsonStoreSourc
   }
 
   async archive(teamName: string): Promise<void> {
-    const filePath = this.options.getFilePath(teamName);
-    const archivePath = await this.pickFreeArchivePath(filePath);
-    try {
-      await fs.promises.rename(filePath, archivePath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return;
-      }
-      throw error;
-    }
+    await archiveFileWithGenerations(this.options.getFilePath(teamName));
   }
+}
 
-  private async pickFreeArchivePath(filePath: string): Promise<string> {
-    const base = `${filePath}${PRE_SQLITE_ARCHIVE_SUFFIX}`;
-    for (let attempt = 0; attempt < MAX_ARCHIVE_ATTEMPTS; attempt += 1) {
-      const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
-      try {
-        await fs.promises.access(candidate);
-      } catch {
-        return candidate;
-      }
+/**
+ * Renames a legacy file to its *.pre-sqlite archive (never deletes). Repeated
+ * migrations get numbered suffixes so every generation stays recoverable.
+ * A missing file is a no-op.
+ */
+export async function archiveFileWithGenerations(filePath: string): Promise<void> {
+  const archivePath = await pickFreeArchivePath(filePath);
+  try {
+    await fs.promises.rename(filePath, archivePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
     }
-    throw new Error(`No free archive slot for ${base} after ${MAX_ARCHIVE_ATTEMPTS} attempts`);
+    throw error;
   }
+}
+
+async function pickFreeArchivePath(filePath: string): Promise<string> {
+  const base = `${filePath}${PRE_SQLITE_ARCHIVE_SUFFIX}`;
+  for (let attempt = 0; attempt < MAX_ARCHIVE_ATTEMPTS; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
+    try {
+      await fs.promises.access(candidate);
+    } catch {
+      return candidate;
+    }
+  }
+  throw new Error(`No free archive slot for ${base} after ${MAX_ARCHIVE_ATTEMPTS} attempts`);
 }

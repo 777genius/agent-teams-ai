@@ -18,6 +18,7 @@ import { TeamInboxMemberWorkSyncNudgeSink } from '../adapters/output/TeamInboxMe
 import { TeamRuntimeTurnSettledTargetResolver } from '../adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import { TeamTaskAgendaSource } from '../adapters/output/TeamTaskAgendaSource';
 import { TeamTaskStallJournalWorkSyncCooldown } from '../adapters/output/TeamTaskStallJournalWorkSyncCooldown';
+import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
 import { ClaudeStopHookPayloadNormalizer } from '../infrastructure/ClaudeStopHookPayloadNormalizer';
 import { CodexNativeTurnSettledPayloadNormalizer } from '../infrastructure/CodexNativeTurnSettledPayloadNormalizer';
 import { CompositeMemberWorkSyncBusySignal } from '../infrastructure/CompositeMemberWorkSyncBusySignal';
@@ -25,18 +26,23 @@ import { CompositeRuntimeTurnSettledPayloadNormalizer } from '../infrastructure/
 import { FileMemberWorkSyncAuditJournal } from '../infrastructure/FileMemberWorkSyncAuditJournal';
 import { FileRuntimeTurnSettledEventStore } from '../infrastructure/FileRuntimeTurnSettledEventStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '../infrastructure/HmacMemberWorkSyncReportTokenAdapter';
-import { JsonMemberWorkSyncStore } from '../infrastructure/JsonMemberWorkSyncStore';
+import {
+  buildPendingReportIntentId,
+  JsonMemberWorkSyncStore,
+} from '../infrastructure/JsonMemberWorkSyncStore';
 import {
   MemberWorkSyncEventQueue,
   type MemberWorkSyncQueueDiagnostics,
 } from '../infrastructure/MemberWorkSyncEventQueue';
 import { MemberWorkSyncNudgeDispatchScheduler } from '../infrastructure/MemberWorkSyncNudgeDispatchScheduler';
+import { MemberWorkSyncSqliteImporter } from '../infrastructure/MemberWorkSyncSqliteImporter';
 import { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
 import { MemberWorkSyncToolActivityBusySignal } from '../infrastructure/MemberWorkSyncToolActivityBusySignal';
 import { NodeHashAdapter } from '../infrastructure/NodeHashAdapter';
 import { OpenCodeTurnSettledPayloadNormalizer } from '../infrastructure/OpenCodeTurnSettledPayloadNormalizer';
 import { RuntimeTurnSettledDrainScheduler } from '../infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RuntimeTurnSettledSpoolInitializer } from '../infrastructure/RuntimeTurnSettledSpoolInitializer';
+import { SqliteMemberWorkSyncStore } from '../infrastructure/SqliteMemberWorkSyncStore';
 import { SystemClockAdapter } from '../infrastructure/SystemClockAdapter';
 
 import type {
@@ -56,6 +62,7 @@ import type {
   MemberWorkSyncReviewPickupEscalationPort,
 } from '../../core/application';
 import type { RuntimeTurnSettledProvider } from '../../core/domain';
+import type { InternalStorageMemberWorkSyncBackend } from '@features/internal-storage/main';
 import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
@@ -272,6 +279,12 @@ export function createMemberWorkSyncFeature(deps: {
   resolveControlUrl?: () => Promise<string | null> | string | null;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
+  /**
+   * SQLite backend handle from the internal-storage feature. When present,
+   * persistence routes through SQLite (with the JSON store as the session
+   * fallback and one-time legacy import); when absent, JSON stays primary.
+   */
+  internalStorageBackend?: InternalStorageMemberWorkSyncBackend | null;
   logger?: MemberWorkSyncLoggerPort;
 }): MemberWorkSyncFeatureFacade {
   const clock = new SystemClockAdapter();
@@ -296,10 +309,25 @@ export function createMemberWorkSyncFeature(deps: {
   });
   const storePaths = new MemberWorkSyncStorePaths(deps.teamsBasePath);
   const auditJournal = new FileMemberWorkSyncAuditJournal(storePaths, deps.logger);
-  const store = new JsonMemberWorkSyncStore(storePaths, {
+  const jsonStore = new JsonMemberWorkSyncStore(storePaths, {
     auditJournal,
     logger: deps.logger,
   });
+  const store = deps.internalStorageBackend
+    ? new BackendSelectingMemberWorkSyncStore(
+        deps.internalStorageBackend.selector,
+        new SqliteMemberWorkSyncStore({
+          gateway: deps.internalStorageBackend.gateway,
+          importer: new MemberWorkSyncSqliteImporter({
+            gateway: deps.internalStorageBackend.gateway,
+            jsonStore,
+            logger: deps.logger,
+          }),
+          buildReportIntentId: buildPendingReportIntentId,
+        }),
+        jsonStore
+      )
+    : jsonStore;
   const runtimeTurnSettledSpool = new RuntimeTurnSettledSpoolInitializer(deps.teamsBasePath);
   const runtimeTurnSettledStore = new FileRuntimeTurnSettledEventStore({
     paths: runtimeTurnSettledSpool.getPaths(),

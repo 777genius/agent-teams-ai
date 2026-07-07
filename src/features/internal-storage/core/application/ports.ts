@@ -1,6 +1,13 @@
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
+  MemberWorkSyncMetricEventRecord,
+  MemberWorkSyncOutboxEnsureRecordInput,
+  MemberWorkSyncOutboxEnsureRecordResult,
+  MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncStatusRecord,
+  MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
 
@@ -32,6 +39,89 @@ export interface InternalStorageGateway {
   recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void>;
   /** WAL checkpoint + close; the worker is terminated afterwards. */
   close(): Promise<void>;
+}
+
+/**
+ * Member-work-sync persistence over the SQLite worker. This is message
+ * delivery state: every mutating call is a single worker-side transaction
+ * with the JSON store's exact semantics (terminal statuses are immutable,
+ * attemptGeneration is an optimistic lock, stale claims become claimable).
+ */
+export interface MemberWorkSyncStorageGateway {
+  ping(): Promise<InternalStorageBackendInfo>;
+  statusRead(teamName: string, memberKey: string): Promise<MemberWorkSyncStatusRecord | null>;
+  statusWrite(
+    record: MemberWorkSyncStatusRecord,
+    events: MemberWorkSyncMetricEventRecord[]
+  ): Promise<void>;
+  statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]>;
+  metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]>;
+  reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void>;
+  reportsListPending(teamName: string): Promise<MemberWorkSyncReportIntentRecord[]>;
+  reportsMarkProcessed(
+    teamName: string,
+    id: string,
+    result: { status: string; resultCode: string; processedAt: string }
+  ): Promise<void>;
+  outboxEnsurePending(
+    input: MemberWorkSyncOutboxEnsureRecordInput
+  ): Promise<MemberWorkSyncOutboxEnsureRecordResult>;
+  outboxClaimDue(input: {
+    teamName: string;
+    claimedBy: string;
+    nowIso: string;
+    limit: number;
+  }): Promise<MemberWorkSyncOutboxItemRecord[]>;
+  outboxMarkDelivered(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    deliveredMessageId: string;
+    deliveryState: string | null;
+    deliveryDiagnosticsJson: string | null;
+    nowIso: string;
+  }): Promise<void>;
+  outboxMarkSuperseded(input: {
+    teamName: string;
+    id: string;
+    reason: string;
+    nowIso: string;
+  }): Promise<void>;
+  outboxMarkFailed(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    error: string;
+    retryable: boolean;
+    nextAttemptAt: string | null;
+    nowIso: string;
+  }): Promise<void>;
+  outboxCountRecentDelivered(input: {
+    teamName: string;
+    memberKey: string;
+    sinceIso: string;
+    workSyncIntentKeyPrefix: string | null;
+  }): Promise<number>;
+  outboxCountDeliveredForAgenda(input: {
+    teamName: string;
+    memberKey: string;
+    agendaFingerprint: string;
+    sinceIso: string | null;
+  }): Promise<number>;
+  outboxFindDeliveredReviewPickupEventIds(input: {
+    teamName: string;
+    memberKey: string;
+    reviewRequestEventIds: string[];
+  }): Promise<string[]>;
+  outboxFindRecentRecoveryByIntent(input: {
+    teamName: string;
+    memberKey: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<MemberWorkSyncOutboxItemRecord | null>;
+  listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords>;
+  importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void>;
+  recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void>;
 }
 
 /**

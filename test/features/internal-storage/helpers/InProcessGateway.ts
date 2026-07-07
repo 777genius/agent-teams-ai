@@ -1,14 +1,154 @@
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
+  MemberWorkSyncMetricEventRecord,
+  MemberWorkSyncOutboxEnsureRecordInput,
+  MemberWorkSyncOutboxEnsureRecordResult,
+  MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncStatusRecord,
+  MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '@features/internal-storage/contracts/internalStorageContracts';
-import type { InternalStorageGateway } from '@features/internal-storage/core/application/ports';
+import type {
+  InternalStorageGateway,
+  MemberWorkSyncStorageGateway,
+} from '@features/internal-storage/core/application/ports';
 import type { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 
 /** In-process gateway: same op handlers the worker uses, minus the thread hop. */
-export class InProcessGateway implements InternalStorageGateway {
+export class InProcessGateway implements InternalStorageGateway, MemberWorkSyncStorageGateway {
   constructor(private readonly core: InternalStorageWorkerCore) {}
+
+  private op<T>(op: string, payload: unknown): Promise<T> {
+    return Promise.resolve(this.core.handle(op as never, payload as never) as T);
+  }
+
+  statusRead(teamName: string, memberKey: string): Promise<MemberWorkSyncStatusRecord | null> {
+    return this.op('mws.status.read', { teamName, memberKey });
+  }
+
+  statusWrite(
+    record: MemberWorkSyncStatusRecord,
+    events: MemberWorkSyncMetricEventRecord[]
+  ): Promise<void> {
+    return this.op('mws.status.write', { record, events });
+  }
+
+  statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
+    return this.op('mws.status.list', { teamName });
+  }
+
+  metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {
+    return this.op('mws.metricEvents.list', { teamName });
+  }
+
+  reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void> {
+    return this.op('mws.reports.append', { record });
+  }
+
+  reportsListPending(teamName: string): Promise<MemberWorkSyncReportIntentRecord[]> {
+    return this.op('mws.reports.listPending', { teamName });
+  }
+
+  reportsMarkProcessed(
+    teamName: string,
+    id: string,
+    result: { status: string; resultCode: string; processedAt: string }
+  ): Promise<void> {
+    return this.op('mws.reports.markProcessed', { teamName, id, ...result });
+  }
+
+  outboxEnsurePending(
+    input: MemberWorkSyncOutboxEnsureRecordInput
+  ): Promise<MemberWorkSyncOutboxEnsureRecordResult> {
+    return this.op('mws.outbox.ensurePending', input);
+  }
+
+  outboxClaimDue(input: {
+    teamName: string;
+    claimedBy: string;
+    nowIso: string;
+    limit: number;
+  }): Promise<MemberWorkSyncOutboxItemRecord[]> {
+    return this.op('mws.outbox.claimDue', input);
+  }
+
+  outboxMarkDelivered(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    deliveredMessageId: string;
+    deliveryState: string | null;
+    deliveryDiagnosticsJson: string | null;
+    nowIso: string;
+  }): Promise<void> {
+    return this.op('mws.outbox.markDelivered', input);
+  }
+
+  outboxMarkSuperseded(input: {
+    teamName: string;
+    id: string;
+    reason: string;
+    nowIso: string;
+  }): Promise<void> {
+    return this.op('mws.outbox.markSuperseded', input);
+  }
+
+  outboxMarkFailed(input: {
+    teamName: string;
+    id: string;
+    attemptGeneration: number;
+    error: string;
+    retryable: boolean;
+    nextAttemptAt: string | null;
+    nowIso: string;
+  }): Promise<void> {
+    return this.op('mws.outbox.markFailed', input);
+  }
+
+  outboxCountRecentDelivered(input: {
+    teamName: string;
+    memberKey: string;
+    sinceIso: string;
+    workSyncIntentKeyPrefix: string | null;
+  }): Promise<number> {
+    return this.op('mws.outbox.countRecentDelivered', input);
+  }
+
+  outboxCountDeliveredForAgenda(input: {
+    teamName: string;
+    memberKey: string;
+    agendaFingerprint: string;
+    sinceIso: string | null;
+  }): Promise<number> {
+    return this.op('mws.outbox.countDeliveredForAgenda', input);
+  }
+
+  outboxFindDeliveredReviewPickupEventIds(input: {
+    teamName: string;
+    memberKey: string;
+    reviewRequestEventIds: string[];
+  }): Promise<string[]> {
+    return this.op('mws.outbox.findDeliveredReviewPickupEventIds', input);
+  }
+
+  outboxFindRecentRecoveryByIntent(input: {
+    teamName: string;
+    memberKey: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<MemberWorkSyncOutboxItemRecord | null> {
+    return this.op('mws.outbox.findRecentRecoveryByIntent', input);
+  }
+
+  listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords> {
+    return this.op('mws.snapshot.list', { teamName });
+  }
+
+  importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
+    return this.op('mws.importTeam', { teamName, snapshot });
+  }
 
   ping(): Promise<InternalStorageBackendInfo> {
     return Promise.resolve(this.core.handle('ping', {}) as InternalStorageBackendInfo);

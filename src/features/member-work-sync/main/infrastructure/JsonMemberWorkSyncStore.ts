@@ -1,7 +1,7 @@
 import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createHash } from 'crypto';
-import { mkdir, readdir, readFile } from 'fs/promises';
+import { access, mkdir, readdir, readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
@@ -40,12 +40,24 @@ interface LegacyStatusFile {
   };
 }
 
+/**
+ * Everything the JSON backend persisted for one team, read for the one-time
+ * import into SQLite. filesToArchive lists every file the snapshot came from.
+ */
+export interface MemberWorkSyncStoreSnapshot {
+  statuses: MemberWorkSyncStatus[];
+  reportIntents: MemberWorkSyncReportIntent[];
+  outboxItems: MemberWorkSyncOutboxItem[];
+  metricEvents: MemberWorkSyncMetricEvent[];
+  filesToArchive: string[];
+}
+
 interface MemberStatusFile {
   schemaVersion: 2;
   status: MemberWorkSyncStatus;
 }
 
-interface MetricsIndexMember {
+export interface MetricsIndexMember {
   memberName: string;
   state: MemberWorkSyncStatusState;
   agendaFingerprint: string;
@@ -54,7 +66,7 @@ interface MetricsIndexMember {
   providerId?: string;
 }
 
-interface MetricsIndexFile {
+export interface MetricsIndexFile {
   schemaVersion: 2;
   members: Record<string, MetricsIndexMember>;
   recentEvents: MemberWorkSyncMetricEvent[];
@@ -119,11 +131,11 @@ export interface JsonMemberWorkSyncStoreDeps {
   now?: () => Date;
 }
 
-function normalizeMemberKey(memberName: unknown): string {
+export function normalizeMemberKey(memberName: unknown): string {
   return typeof memberName === 'string' ? memberName.trim().toLowerCase() : '';
 }
 
-function normalizeTeamKey(teamName: unknown): string {
+export function normalizeTeamKey(teamName: unknown): string {
   return typeof teamName === 'string' ? teamName.trim().toLowerCase() : '';
 }
 
@@ -360,7 +372,7 @@ function stableStringify(value: unknown): string {
     .join(',')}}`;
 }
 
-function buildPendingReportIntentId(request: MemberWorkSyncReportRequest): string {
+export function buildPendingReportIntentId(request: MemberWorkSyncReportRequest): string {
   const taskIds = [...new Set(request.taskIds ?? [])].sort();
   const payload = {
     teamName: request.teamName,
@@ -395,7 +407,7 @@ function buildMetricEventId(status: MemberWorkSyncStatus, kind: MemberWorkSyncMe
     .digest('hex')}`;
 }
 
-function buildMetricEvents(status: MemberWorkSyncStatus): MemberWorkSyncMetricEvent[] {
+export function buildMetricEvents(status: MemberWorkSyncStatus): MemberWorkSyncMetricEvent[] {
   const base = {
     teamName: status.teamName,
     memberName: status.memberName,
@@ -476,7 +488,7 @@ function updateMetricsMember(
   appendMetricEvents(file, status);
 }
 
-function toMetrics(teamName: string, file: MetricsIndexFile): MemberWorkSyncTeamMetrics {
+export function toMetrics(teamName: string, file: MetricsIndexFile): MemberWorkSyncTeamMetrics {
   const stateCounts = emptyStateCounts();
   const members = Object.values(file.members);
   let actionableItemCount = 0;
@@ -1152,6 +1164,102 @@ export class JsonMemberWorkSyncStore
       ...(latest.deliveredMessageId ? { deliveredMessageId: latest.deliveredMessageId } : {}),
       payloadHash: latest.payloadHash,
       updatedAt: latest.updatedAt,
+    };
+  }
+
+  /**
+   * Reads everything this backend persisted for a team, for the one-time
+   * import into SQLite. Returns null when no member-work-sync files exist.
+   * File-format knowledge (v1 legacy, v2 per-member, indexes) stays inside
+   * this module. Ownership filters match the index-repair paths, so foreign
+   * or malformed entries are excluded the same way repairs exclude them.
+   */
+  async readSnapshotForImport(teamName: string): Promise<MemberWorkSyncStoreSnapshot | null> {
+    const candidateFiles = [
+      this.paths.getLegacyStatusPath(teamName),
+      this.paths.getLegacyPendingReportsPath(teamName),
+      this.paths.getLegacyOutboxPath(teamName),
+      this.paths.getMetricsIndexPath(teamName),
+      this.paths.getOutboxIndexPath(teamName),
+      this.paths.getPendingReportsIndexPath(teamName),
+    ];
+    for (const memberName of await this.scanMemberNames(teamName)) {
+      candidateFiles.push(
+        this.paths.getMemberStatusPath(teamName, memberName),
+        this.paths.getMemberReportsPath(teamName, memberName),
+        this.paths.getMemberOutboxPath(teamName, memberName)
+      );
+    }
+    const filesToArchive: string[] = [];
+    for (const filePath of candidateFiles) {
+      try {
+        await access(filePath);
+        filesToArchive.push(filePath);
+      } catch {
+        // Absent files are simply not part of the snapshot.
+      }
+    }
+    if (filesToArchive.length === 0) {
+      return null;
+    }
+
+    const statuses = new Map<string, MemberWorkSyncStatus>();
+    for (const status of await this.scanMemberStatuses(teamName)) {
+      statuses.set(normalizeMemberKey(status.memberName), status);
+    }
+    const legacyStatus = await this.readLegacyStatusFile(teamName);
+    for (const [memberKey, status] of Object.entries(legacyStatus.members)) {
+      const key = normalizeMemberKey(status.memberName) || normalizeMemberKey(memberKey);
+      if (!statuses.has(key)) {
+        statuses.set(key, status);
+      }
+    }
+
+    const reportIntents = new Map<string, MemberWorkSyncReportIntent>();
+    for (const { memberName, reports } of await this.scanMemberReports(teamName)) {
+      for (const intent of Object.values(reports.intents)) {
+        if (isReportIntentOwnedBy(teamName, memberName, intent)) {
+          reportIntents.set(intent.id, intent);
+        }
+      }
+    }
+    for (const intent of Object.values((await this.readLegacyPendingFile(teamName)).intents)) {
+      if (
+        !reportIntents.has(intent.id) &&
+        isReportIntentOwnedBy(teamName, intent.memberName, intent)
+      ) {
+        reportIntents.set(intent.id, intent);
+      }
+    }
+
+    const outboxItems = new Map<string, MemberWorkSyncOutboxItem>();
+    for (const { memberName, outbox } of await this.scanMemberOutboxes(teamName)) {
+      for (const item of Object.values(outbox.items)) {
+        if (isOutboxItemOwnedBy(teamName, memberName, item)) {
+          outboxItems.set(item.id, item);
+        }
+      }
+    }
+    for (const item of Object.values((await this.readLegacyOutboxFile(teamName)).items)) {
+      if (!outboxItems.has(item.id) && isOutboxItemOwnedBy(teamName, item.memberName, item)) {
+        outboxItems.set(item.id, item);
+      }
+    }
+
+    const metricEvents = new Map<string, MemberWorkSyncMetricEvent>();
+    for (const event of legacyStatus.metrics?.recentEvents ?? []) {
+      metricEvents.set(event.id, event);
+    }
+    for (const event of (await this.readMetricsIndexFile(teamName)).recentEvents) {
+      metricEvents.set(event.id, event);
+    }
+
+    return {
+      statuses: [...statuses.values()],
+      reportIntents: [...reportIntents.values()],
+      outboxItems: [...outboxItems.values()],
+      metricEvents: [...metricEvents.values()],
+      filesToArchive,
     };
   }
 

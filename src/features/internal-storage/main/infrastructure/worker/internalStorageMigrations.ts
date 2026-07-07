@@ -64,6 +64,76 @@ const MIGRATIONS: InternalStorageMigration[] = [
       )`,
     ],
   },
+  {
+    version: 3,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS member_work_sync_status (
+        team_name TEXT NOT NULL,
+        member_key TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        state TEXT NOT NULL,
+        evaluated_at TEXT NOT NULL,
+        provider_id TEXT,
+        status_json TEXT NOT NULL,
+        PRIMARY KEY (team_name, member_key)
+      )`,
+      `CREATE TABLE IF NOT EXISTS member_work_sync_report_intents (
+        team_name TEXT NOT NULL,
+        id TEXT NOT NULL,
+        member_key TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        processed_at TEXT,
+        result_code TEXT,
+        request_json TEXT NOT NULL,
+        PRIMARY KEY (team_name, id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_report_intents_pending
+        ON member_work_sync_report_intents (team_name, status, recorded_at)`,
+      `CREATE TABLE IF NOT EXISTS member_work_sync_outbox (
+        team_name TEXT NOT NULL,
+        id TEXT NOT NULL,
+        member_key TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        agenda_fingerprint TEXT NOT NULL,
+        payload_hash TEXT NOT NULL,
+        status TEXT NOT NULL,
+        attempt_generation INTEGER NOT NULL,
+        claimed_by TEXT,
+        claimed_at TEXT,
+        delivered_message_id TEXT,
+        delivery_state TEXT,
+        last_error TEXT,
+        next_attempt_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        work_sync_intent TEXT NOT NULL,
+        work_sync_intent_key TEXT,
+        review_request_event_ids_json TEXT,
+        delivery_diagnostics_json TEXT,
+        payload_json TEXT NOT NULL,
+        PRIMARY KEY (team_name, id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_outbox_due
+        ON member_work_sync_outbox (team_name, status, next_attempt_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_outbox_member
+        ON member_work_sync_outbox (team_name, member_key, status)`,
+      `CREATE TABLE IF NOT EXISTS member_work_sync_metric_events (
+        team_name TEXT NOT NULL,
+        id TEXT NOT NULL,
+        member_key TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        event_json TEXT NOT NULL,
+        PRIMARY KEY (team_name, id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_metric_events_recent
+        ON member_work_sync_metric_events (team_name, recorded_at)`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

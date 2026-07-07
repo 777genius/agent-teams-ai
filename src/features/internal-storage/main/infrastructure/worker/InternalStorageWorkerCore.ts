@@ -15,6 +15,7 @@ import {
   stallJournalEntries,
   storeImports,
 } from './internalStorageSchema';
+import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
 
 import type {
   CommentJournalEntryRecord,
@@ -52,6 +53,7 @@ interface OpenState {
  */
 export class InternalStorageWorkerCore {
   private state: OpenState | null = null;
+  private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
 
@@ -86,8 +88,12 @@ export class InternalStorageWorkerCore {
       case 'close':
         this.close();
         return null;
-      default:
+      default: {
+        if (typeof op === 'string' && op.startsWith('mws.')) {
+          return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
+        }
         throw new Error(`Unknown internal-storage op: ${String(op)}`);
+      }
     }
   }
 

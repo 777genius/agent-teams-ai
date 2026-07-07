@@ -2329,6 +2329,7 @@ async function initializeServices(): Promise<void> {
     taskReader: new TeamTaskReader(),
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
+    internalStorageBackend: internalStorageFeature?.memberWorkSyncBackend ?? null,
     isTeamActive: isTeamActiveForMemberWorkSync,
     isMemberActive: isMemberActiveForMemberWorkSync,
     canDispatchNudges: canDispatchMemberWorkSyncNudges,

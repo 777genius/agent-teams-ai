@@ -28,6 +28,9 @@ export type InternalStorageWorkerRequest =
       op: 'storeImports.record';
       payload: { storeId: string; teamName: string; entryCount: number };
     }
+  // Member-work-sync ops share one wire shape; the typed client methods and
+  // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
+  | { id: string; op: `mws.${string}`; payload: unknown }
   | { id: string; op: 'close'; payload: Record<string, never> };
 
 export type InternalStorageWorkerOp = InternalStorageWorkerRequest['op'];
